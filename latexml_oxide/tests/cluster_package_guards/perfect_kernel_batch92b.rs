@@ -262,42 +262,46 @@ fn a_numbered_entry_whose_lines_marks_lead_is_split_at_them() {
     None,
     &[
       "C Ann Able [1] | line:names",
-      "  a Univ X | api:leading-mark api:split-by-marks",
+      "  a Univ X | api:leading-mark",
       "C Bob Baker [2] | line:names",
-      "  a Univ Y, Town | api:leading-mark api:split-by-marks",
+      "  a Univ Y, Town | api:leading-mark",
       "C Cid Cole [1,2] | line:names",
-      "  a Univ X | api:leading-mark api:split-by-marks",
-      "  a Univ Y, Town | api:leading-mark api:split-by-marks",
+      "  a Univ X | api:leading-mark",
+      "  a Univ Y, Town | api:leading-mark",
     ],
   );
   // (a closing line of contacts alone continues the entry above it — 1507.05963's `\\ \email{cessen@phys.au.dk}`,
-  // which held the split back, so the whole institute went to the names marked 1, tagged; the address its speller's)
+  // which held the split back, so the whole institute went to the names marked 1, tagged; the address its speller's —
+  // since 99a the frontmatter API's Cut parts the call and labels the address for its speller, `api:label`, OD #954)
   assert_reading(
     repro!("aa_institute_lines_led_by_marks_email_line_continues.tex"),
     None,
     &[
       "C Ann Able [1] | line:names",
-      "  a Univ X | api:leading-mark api:split-by-marks",
-      "  c email ann.able@y.org | api:leading-mark api:split-by-marks api:inner-contact owner:inner-email \
-       owner:spelled",
+      "  a Univ X | api:leading-mark",
+      "  c email ann.able@y.org | api:label",
       "C Bob Baker [2] | line:names",
-      "  a Univ Y | api:leading-mark api:split-by-marks",
+      "  a Univ Y | api:leading-mark",
       "C Cid Cole [1,2] | line:names",
-      "  a Univ X | api:leading-mark api:split-by-marks",
-      "  a Univ Y | api:leading-mark api:split-by-marks",
+      "  a Univ X | api:leading-mark",
+      "  a Univ Y | api:leading-mark",
     ],
   );
   // (a closing line of text holds the split back: the entry holds marks of its own no split read, so its number is no
   // reading of the names' hand marks; astro-ph0405186, 2208.05114 — and aa's sole institute is `_share=authors` since
   // 92c r2 (OD #932: aa.cls prints it unnumbered, only `\inst{n}` picks it), so the hand-marked names leave it the
   // block's, as today's XML; it was the first name's, untagged, an honest disagreement)
+  // — since 99a the frontmatter API's Cut parts the call at its marks before either engine reads it (OD #954), so each
+  // name takes its entry, the closing line continuing the entry above it as an unmarked line does in a marked list
+  // (`affiliation_calls`, 2609.19448)
   assert_reading(
     repro!("aa_institute_lines_led_by_marks_text_line_is_no_split.tex"),
     None,
     &[
       "C Ann Able [1] | line:names",
+      "  a Univ X | api:leading-mark",
       "C Bob Baker [2] | line:names",
-      "B affiliation Univ X Univ Y Contact: X Office | api:labelseq label:unrequested owner:block",
+      "  a Univ Y Contact: X Office | api:leading-mark",
     ],
   );
 }

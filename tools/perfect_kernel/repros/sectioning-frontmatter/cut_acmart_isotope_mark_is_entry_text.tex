@@ -1,0 +1,17 @@
+% mechanism: the Cut's boundary (OD #954, `notes::split_marked_pieces`): a number mark no name requests, after a word
+%   and a plain space, is the entry's own text (an isotope), not the next entry's label; the `\quad` before a requested
+%   mark still parts the entries
+% witness: none (the reviewer's sibling of 2506.18881's `\quad` cut; the 63i isotope `$^{2}$Laboratory for $^{3}$He`)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 / 1 Laboratory for 3 He Studies 2 Univ B / X"
+% engines: rust int126b: both authors "1Laboratory for 3He Studies 2Univ B, X"; perl: the same one contact
+% expect:  0 errors, 0 warnings; Ann "1Laboratory for 3He Studies", Bob "2Univ B, X"
+% status:  RED (int126b) -> GREEN (99a) — perfect_kernel_batch99a::an_isotope_mark_is_its_entrys_text
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$}
+\affiliation{\institution{$^1$Laboratory for $^3$He Studies \quad $^2$Univ B}\country{X}}
+\maketitle
+Text.
+\end{document}

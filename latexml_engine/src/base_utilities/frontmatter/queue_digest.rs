@@ -573,6 +573,30 @@ fn label_ink(d: &Digested, out: &mut PrintedLabel, in_picture: bool) {
   }
 }
 
+/// A name mark's labels with a number range spelled out: `1-4` requests 1, 2, 3 and 4 (`Bauer$^{1-4}$`, 2012.15817 —
+/// read as its ends, the 2 and 3 entries were not hers), and so does the en-dash `--` spells before its ligature
+/// (`$^{1\text{--}5}$`, 2507.06232). A falling range, or one of more than 50 numbers, stays as written. The one reading
+/// of a range, the frontmatter observer's (`resolver::labels`) and the kernel's labels' ([`clean_frontmatter_labels`]:
+/// the names' requests, the frontmatter API's Cut, `relocate_annotations`; batch 99a, OXIDIZED_DESIGN_DIVERGENCES #954).
+pub(in crate::base_utilities) fn spelled_ranges(labels: Vec<String>) -> Vec<String> {
+  const DASHES: [char; 3] = ['-', '\u{2013}', '\u{2212}'];
+  labels
+    .into_iter()
+    .flat_map(|label| {
+      let range = label.split_once(DASHES).and_then(|(a, b)| {
+        Some((
+          a.trim().parse::<u32>().ok()?,
+          b.trim_start_matches(DASHES).trim().parse::<u32>().ok()?,
+        ))
+      });
+      match range {
+        Some((a, b)) if a < b && b - a <= 50 => (a..=b).map(|n| n.to_string()).collect(),
+        _ => vec![label],
+      }
+    })
+    .collect()
+}
+
 /// Perl: cleanFrontmatterLabels($labels, $prefix). Rust also parts the labels at the spacing ([`SPACING_IN_LABEL`]), on
 /// both sides of the match: the mark an author requests and the one an affiliation sets (OXIDIZED_DESIGN #52(o)).
 pub(in crate::base_utilities) fn clean_frontmatter_labels(
@@ -614,6 +638,13 @@ pub(in crate::base_utilities) fn clean_frontmatter_labels(
       false => vec![piece],
     })
     .collect();
+  // (a number range is each number of it: `$^{1-4}$` requests 1, 2, 3 and 4, [`spelled_ranges`])
+  let pieces = spelled_ranges(
+    pieces
+      .into_iter()
+      .map(|piece| piece.trim().to_string())
+      .collect(),
+  );
   for label in pieces {
     let label = label.trim();
     // INTENTIONAL DIVERGENCE (OXIDIZED_DESIGN #34, KNOWN_PERL_ERRORS #31,

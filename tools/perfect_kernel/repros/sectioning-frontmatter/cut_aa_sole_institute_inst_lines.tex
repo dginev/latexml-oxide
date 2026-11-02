@@ -1,0 +1,21 @@
+% mechanism: the API's Cut (OD #954) of aa's sole `\institute` (`labelseq=affiliation,_share=authors`, the marks
+%   replacing both): its `\inst{n}` lines, read as the `\textsuperscript{n}` aa.cls:759 prints, and an `\inst{*}` line
+%   holding only an address, which becomes the e-mail of the author showing `*` with no empty entry left
+% witness: 2410.00577 (`\institute{\inst{1}Instituto de Astrofísica de Canarias…\\ … \inst{10}…\\
+%   \inst{*}\email{atanas.stefanov@iac.es}}`: every institute on one nameless creator)
+% oracle:  pdflatex (TL 2025, 2410.00577's aa.cls) 0 errors: "Ann Able1, ∗ , Bob Baker2 , and Cat Cole1 / 1 Univ A /
+%   2 Univ B / ∗ e-mail: ann@a.edu"
+% engines: rust int126b: a nameless creator holding "Univ AUniv B", Ann the e-mail; perl: aa.cls.ltxml one
+%   institute of the last author
+% expect:  0 errors, 0 warnings; Ann "1Univ A" and the e-mail, Bob "2Univ B", Cat "1Univ A"
+% status:  RED (int126b) -> GREEN (99a) — perfect_kernel_batch99a::a_sole_institute_is_cut_at_its_inst_marks
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1,*} \and Bob Baker\inst{2} \and Cat Cole\inst{1}}
+\institute{\inst{1}Univ A\\ \inst{2}Univ B\\ \inst{*}\email{ann@a.edu}}
+\abstract{Abs.}
+\maketitle
+Text.
+\end{document}

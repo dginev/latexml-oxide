@@ -299,11 +299,26 @@ LoadDefinitions!({
   // jfm.cls: \def\corresp#1{\unskip\thanks{#1}} — corresponding author
   // text routed via \thanks.
   DefMacro!("\\corresp{}", "\\thanks{#1}");
-  // \affiliation{...} — institution list, preserve as ltx:note.
-  DefMacro!(
-    "\\affiliation{}",
-    "\\@add@frontmatter{ltx:note}[role=affiliation]{#1}"
-  );
+  // jfm.cls:680 `\newcommand\affiliation[1]{\gdef\@affiliation{#1}}`, printed once under the names (:733 `{\normalfont
+  // \small \@affiliation \par}`). A list its marks label (`$^1$Institut …, $^2$School of Engineering …` under
+  // `Randriamampianina$^1$, Fr\"uh$^2$`; the template's `\aff{1}`) is the names' affiliations, each entry the authors'
+  // showing its mark (the frontmatter API's Cut: OXIDIZED_DESIGN_DIVERGENCES #954; census127 witnesses physics0607157,
+  // 1302.1594), a sole entry every author's; an unmarked one stays the note it was.
+  DefMacro!("\\affiliation{}", sub[(affiliation)] {
+    let marked = leads_with_mark(&affiliation) && queued_creators_have_marks();
+    Ok(if marked {
+      Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+        Some(mouth::tokenize_internal("annotate=all")),
+        Some(affiliation)
+      ])
+    } else {
+      let mut note = mouth::tokenize_internal("\\@add@frontmatter{ltx:note}[role=affiliation]").unlist();
+      note.push(T_BEGIN!());
+      note.extend(affiliation.unlist());
+      note.push(T_END!());
+      Tokens::new(note)
+    })
+  });
   // \keywords{...} — JFM has its own keywords macro.
   DefMacro!("\\keywords{}", "\\@add@frontmatter{ltx:keywords}{#1}");
 });

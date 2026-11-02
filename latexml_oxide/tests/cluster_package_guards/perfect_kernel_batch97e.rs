@@ -151,12 +151,13 @@ fn sv_support_is_written() {
 /// inst_support is written (`inst_support_sty.rs` `written: true`), the family of the classes whose `\author` it
 /// reads (ws-procs*, ws-ijmp*, appolb, egpubl, aprim10, rspublic, ias): a ws-procs `\address{$^1$…\\ $^2$…}` — each
 /// line an `address` of its marked names (2302.00492, 1607.07434, 1603.06146, 0809.4766; census repro u1). Before, both
-/// lines the last author's one address.
+/// lines the last author's one address. Since 99a the API's Cut parts the call before the writer reads it (OD #954).
 #[test]
 fn inst_support_is_written() {
-  assert_written(
-    repro!("ws_procs_address_lines_written.tex"),
-    &[
+  let tex = repro!("ws_procs_address_lines_written.tex");
+  let (written, _, _, writer) = assert_reading(
+    tex,
+    Some(&[
       &["Ann Able 1", "address=1 Univ A, Town A"],
       &[
         "Bob Baker 1,2",
@@ -164,17 +165,21 @@ fn inst_support_is_written() {
         "address=2 Univ B, Town B",
       ],
       &["Cy Cole 2", "address=2 Univ B, Town B"],
-    ],
+    ]),
     &[
       "C Ann Able [1] | line:names mark:after-comma",
-      "  a Univ A, Town A | api:leading-mark api:split-by-marks",
+      "  a Univ A, Town A | api:leading-mark",
       "C Bob Baker [1,2] | line:names sep:comma mark:after-comma",
-      "  a Univ A, Town A | api:leading-mark api:split-by-marks",
-      "  a Univ B, Town B | api:leading-mark api:split-by-marks",
+      "  a Univ A, Town A | api:leading-mark",
+      "  a Univ B, Town B | api:leading-mark",
       "C Cy Cole [2] | line:names sep:word",
-      "  a Univ B, Town B | api:leading-mark api:split-by-marks",
+      "  a Univ B, Town B | api:leading-mark",
     ],
   );
+  // (since 99a the frontmatter API's Cut gives today's the reading's entries, OXIDIZED_DESIGN_DIVERGENCES #954: nothing
+  // left for the writer to write)
+  assert_eq!(writer, "same", "the writer's outcome");
+  assert_eq!(default_mode_creators(tex), written, "the default mode");
 }
 
 /// The writer's block-line cut reads an accented line's letters as it prints them (`writer::plan::span_tokens`, both
@@ -251,16 +256,25 @@ fn a_reparted_entry_keeps_todays_address_role() {
 
 /// A letter-spaced name is one name (`events::lexer::letter_spaced_word_space`): jfm's `\ns` between the words of a
 /// name set letter by letter with `\ls` is its word space, not a gap parting two names (1510.04254, 1403.3574,
-/// astro-ph0406083: each name read as two or three, re-parted by the writer in 97e r1). The reading is today's.
+/// astro-ph0406083: each name read as two or three, re-parted by the writer in 97e r1). The reading is today's. Since 99a
+/// jfm's marked `\affiliation` list is the names' affiliations, cut at its marks by the frontmatter API
+/// (OXIDIZED_DESIGN_DIVERGENCES #954; was one note at the block).
 #[test]
 fn a_letter_spaced_name_is_one_name() {
   let tex = repro!("jfm_letter_spaced_name_is_one_name.tex");
   let (xml, _, _, writer) = assert_reading(
     tex,
-    Some(&[&["A N N A. A B L E 1"], &["C Y C O L E 2"]]),
+    Some(
+      &[&["A N N A. A B L E 1", "affiliation=1 Univ A, Town A"], &[
+        "C Y C O L E 2",
+        "affiliation=2 Univ B, Town B",
+      ]],
+    ),
     &[
       "C A N N A. A B L E [1] | line:names",
+      "  a Univ A, Town A | api:leading-mark",
       "C C Y C O L E [2] | line:names",
+      "  a Univ B, Town B | api:leading-mark",
     ],
   );
   assert_eq!(writer, "same", "the writer's outcome");

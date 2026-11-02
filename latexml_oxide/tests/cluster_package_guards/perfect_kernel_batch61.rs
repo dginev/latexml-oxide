@@ -7089,7 +7089,6 @@ Text.
       "\\documentclass{{iopart}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{{authors}}}\n{addresses}\n\\maketitle\nText.\n\\end{{document}}"
     ))
   };
-  let shared = |rest: &str| format!("<creator role=\"author\">{rest}</creator>");
   assert_eq!(
     iopart(
       r"Ann Able$^1$, Bob Baker$^2$ and Cy Dee$^2$",
@@ -7139,7 +7138,8 @@ Text.
     ]
   );
   // A list whose addresses only follow its affiliations gives them to the authors in order when there is one for
-  // each, else to the shared creator below the authors (#159), one contact an address (77o r3: the raw line was one
+  // each, else each to the author it spells (since batch 99a: the placement order's step 2 before step 4), else to the
+  // shared creator below the authors (#159), one contact an address (77o r3: the raw line was one
   // Semiverbatim contact, 1802.07182's `$\,$` shown as `$ $`) — 2609.06094's shape: two authors request mark 2, two
   // addresses, a legend after. (The legend on the last author is the unmarked-row placement of before, not pinned
   // as intended.) A footnote-symbol legend after the run, `$^\dagger$ Corresponding author`, is no affiliation the
@@ -7156,8 +7156,16 @@ Text.
 \end{document}"
     ),
     vec![
-      creator(false, "Ann Able", &affiliation(" Univ A")),
-      creator(true, "Bob Baker", &affiliation(" Univ B")),
+      creator(
+        false,
+        "Ann Able",
+        &format!("{}{}", affiliation(" Univ A"), email_tt("ann@x.y", 1))
+      ),
+      creator(
+        true,
+        "Bob Baker",
+        &format!("{}{}", affiliation(" Univ B"), email_tt("bob@x.y", 2))
+      ),
       creator(
         true,
         "Cy Dee",
@@ -7167,11 +7175,6 @@ Text.
           affiliation(" Univ B")
         )
       ),
-      shared(&format!(
-        "{}{}",
-        email_tt("ann@x.y", 1),
-        email_tt("bob@x.y", 2)
-      ))
     ]
   );
   assert_eq!(

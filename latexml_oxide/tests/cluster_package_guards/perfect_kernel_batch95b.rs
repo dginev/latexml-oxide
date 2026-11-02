@@ -108,12 +108,12 @@ fn acmart_is_written() {
     ],
     &[
       "C Ann Able [1] | line:names",
-      "  a Univ X | api:leading-mark api:split-by-marks",
+      "  a Univ X | api:leading-mark",
       "  c email ann.able@x.org | api:annotate:last ruling3:written-out owner:spelled",
       "C Bob Baker [2] | line:names sep:comma",
-      "  a Univ Y | api:leading-mark api:split-by-marks",
+      "  a Univ Y | api:leading-mark",
       "C Cid Cole [1] | line:names sep:word",
-      "  a Univ X | api:leading-mark api:split-by-marks",
+      "  a Univ X | api:leading-mark",
       "  c email cid.cole@x.org | api:annotate:last ruling3:written-out owner:spelled",
     ],
   );
@@ -430,13 +430,15 @@ fn an_unwritten_familys_call_is_kept_as_today() {
     ]),
     &[
       "C Ann Able [1] | line:names",
-      "  a Univ X, Town | api:leading-mark api:split-by-marks",
+      "  a Univ X, Town | api:leading-mark",
       "C Bob Baker [1] | line:names sep:comma",
-      "  a Univ X, Town | api:leading-mark api:split-by-marks",
+      "  a Univ X, Town | api:leading-mark",
       "C Cy Cole [2] | line:names sep:word",
-      "  a Univ Y, City | api:leading-mark api:split-by-marks",
+      "  a Univ Y, City | api:leading-mark",
     ],
   );
-  assert_eq!(writer, "written", "the writer's outcome");
+  // (since 99a the frontmatter API's Cut gives today's the reading's entries, OXIDIZED_DESIGN_DIVERGENCES #954: nothing
+  // left for the writer to write)
+  assert_eq!(writer, "same", "the writer's outcome");
   assert_eq!(default_mode_creators(tex), written, "the default mode");
 }

@@ -102,8 +102,9 @@ Text.
 /// `Ann Able$^{1}$, Bob Baker$^{1,\star}$` is cut at its marks — Univ A both names', the starred legend a
 /// correspondence note of Bob, who shows the star, its ink kept as styled label markup (the label-text ruling) — the
 /// note's `mark` the star, which the name then shows no more (one mark on the page, `apply::show_legend_mark`: review
-/// rev94a r5). Was: the whole call, legend and all, both names' affiliation. Shape
-/// `perfect_kernel_batchfms2a2r8::API_LEGEND`.
+/// rev94a r5). Was: the whole call, legend and all, both names' affiliation. Since 99a the API's Cut parts the call
+/// (OXIDIZED_DESIGN_DIVERGENCES #954), each entry showing its mark as printed (`<sup><text font="italic">1</text></sup>`,
+/// the math it is written in; the writer's cut had set it upright). Shape `perfect_kernel_batchfms2a2r8::API_LEGEND`.
 #[test]
 fn a_marked_affiliation_is_cut_at_its_marks() {
   let tex = r"\documentclass[aps,prl]{revtex4-2}
@@ -119,17 +120,25 @@ Text.
 \end{document}";
   assert_eq!(creators(tex, true), [
     "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text>\
-     </sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ A, City\
-     </contact></creator>",
+     </sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" \
+     xml:id=\"id2.1\">1</text></sup>Univ A, City</contact></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" \
      xml:id=\"id3.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup \
-     xml:id=\"id4\">1</sup>Univ A, City</contact><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" \
+     xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">1</text></sup>Univ A, City</contact><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" \
      mark=\"⋆\" role=\"thanks\" xml:id=\"id5\"><sup xml:id=\"id5.1\">⋆</sup>corresponding author, e-mail: bob@x.org</note>\
      </creator>",
   ]);
+  // (unset, the writer off: since 99a the frontmatter API's Cut parts the call at its marks before it is queued
+  // (OXIDIZED_DESIGN_DIVERGENCES #954), so Ann's entry holds no legend; the legend, whose star no name's request the
+  // old reader answers, lands once at the block — the writer makes it Bob's note)
   let today = creators(tex, false);
   assert!(
-    today.iter().all(|c| c.contains("corresponding author")),
+    !today[0].contains("corresponding author")
+      && today
+        .iter()
+        .filter(|c| c.contains("corresponding author"))
+        .count()
+        == 1,
     "{today:?}"
   );
 }

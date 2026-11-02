@@ -20,6 +20,43 @@ pub fn affiliation_calls(
   marks_are_labels: bool,
   authors_queued: bool,
 ) -> Result<Vec<Token>> {
+  let add = |attr: Option<Tokens>, entry: Tokens| {
+    Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr, Some(entry)]).unlist())
+  };
+  entry_calls(
+    &EntryCall {
+      add:                    &add,
+      labelled_address_lines: false,
+    },
+    attr,
+    marked_attr,
+    unmarked_attr,
+    stuff,
+    marks_are_labels,
+    authors_queued,
+  )
+}
+
+/// How [`entry_calls`] adds an entry: the call made of its attributes and content, and whether an address line behind
+/// an e-mail label is an address line of the list (the frontmatter API's Cut, [`cut_marked_contact`]) or text of the
+/// entry above it (a binding's own list).
+struct EntryCall<'a> {
+  add:                    &'a dyn Fn(Option<Tokens>, Tokens) -> Result<Vec<Token>>,
+  labelled_address_lines: bool,
+}
+
+/// [`affiliation_calls`], each entry's call made by `add` (its attributes, its content) — the frontmatter API's Cut
+/// ([`cut_marked_contact`]) adds an entry with the call that held the list, its role and wrapper kept.
+fn entry_calls(
+  call: &EntryCall,
+  attr: Option<Tokens>,
+  marked_attr: Option<Tokens>,
+  unmarked_attr: Option<Tokens>,
+  stuff: Tokens,
+  marks_are_labels: bool,
+  authors_queued: bool,
+) -> Result<Vec<Token>> {
+  let EntryCall { add, labelled_address_lines } = *call;
   let mut calls: Vec<Token> = Vec::new();
   // Consume `\\[len]` row-break optionals before splitting (KNOWN_PERL_ERRORS #75).
   let stuff = rewrite_ordinal_superscripts(strip_linebreak_options(unalias_mark_commands(stuff)));
@@ -46,7 +83,16 @@ pub fn affiliation_calls(
           .iter()
           .any(|d| matches!(d, SplitDelim::Token(a) if a == t))
       });
-      if authors_queued && author_mark_position(&line).is_none() && line_is_email_list(&line) {
+      // (in a list the frontmatter API cuts, an address line behind an e-mail label is one too, its addresses the run's:
+      // `email: agupta@…, orion@…` closing an aa `\institute`, astro-ph0405186 — its label the contacts' own name,
+      // `email_line_calls`; a binding's own list keeps such a line in the entry above it, which the observer's writer
+      // reads: IEEEtran's `\IEEEauthorblockA{$^\dag$…\\ … \\ E-mail: …}`, 2308.05546)
+      let address_line = if labelled_address_lines {
+        line_addresses(&line).is_some()
+      } else {
+        line_is_email_list(&line)
+      };
+      if authors_queued && author_mark_position(&line).is_none() && address_line {
         // (`\and` separates entries, and runs: `Univ A \\ a@x \and b@y` is two)
         if !in_run || across_and {
           let under = (follows_entry && !across_and).then(|| {
@@ -102,13 +148,7 @@ pub fn affiliation_calls(
         follows_entry = true;
       }
     } else {
-      calls.extend(
-        Invocation!(T_CS!("\\lx@add@affiliation"), vec![
-          attr.clone(),
-          Some(line)
-        ])
-        .unlist(),
-      );
+      calls.extend(add(attr.clone(), line)?);
     }
   }
   let email_calls = place_address_runs(address_runs, &mut marked_entries, 0)?;
@@ -132,26 +172,272 @@ pub fn affiliation_calls(
       && author_mark_position(&entry).is_none()
       && !starts_with_footnote_symbol(&entry)
     {
-      calls.extend(
-        Invocation!(T_CS!("\\lx@add@affiliation"), vec![
-          Some(unmarked.clone()),
-          Some(entry)
-        ])
-        .unlist(),
-      );
+      calls.extend(add(Some(unmarked.clone()), entry)?);
       continue;
     }
     let withsup = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(entry)]);
-    calls.extend(
-      Invocation!(T_CS!("\\lx@add@affiliation"), vec![
-        marked_attr.clone(),
-        Some(withsup)
-      ])
-      .unlist(),
-    );
+    calls.extend(add(marked_attr.clone(), withsup)?);
   }
   calls.extend(email_calls);
   Ok(calls)
+}
+
+/// The contact roles the frontmatter API's Cut reads ([`cut_marked_contact`]): the ones a printed list of entries is
+/// labelled by marks in (an affiliation, an alternate one, an address).
+const CUT_ROLES: [&str; 3] = ["affiliation", "altaffiliation", "address"];
+
+/// The keys a Cut entry does not keep from the call that held its list: the marks are its labels, so a declared
+/// sequence (`labelseq`) or sharing (`_share=authors`) no longer places it (FRONTMATTER_SINGLE_ENGINE_PLAN step 1
+/// before step 3: no convention outranks a mark, rulings R1, R3).
+const CUT_DROPPED_KEYS: [&str; 2] = ["labelseq", "_share"];
+
+/// The frontmatter API's Cut (FRONTMATTER_SINGLE_ENGINE_PLAN "The target model", placement step 0: "one item per
+/// printed entry; marked lists cut at their marks"), for every binding: an affiliation, alternate affiliation or address
+/// contact (`\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=…]{…}`, which `\lx@add@affiliation`,
+/// `\lx@add@address`, `\lx@add@altaffiliation` and `\lx@add@contact` queue through) whose content holds two or more
+/// entries each led by a printed mark that a queued name requests is queued as one contact per entry, each labelled by
+/// its mark (`\lx@affiliation@withsup`), so the names showing a mark take its entry (step 1) and an entry no name
+/// requests lands once at the block (step 4, OD #159). The calls, or `None` for a contact to queue as it is: any other
+/// role; a call whose binding placed it (`label=`, `_unsplit`); a list already cut (its content `\lx@affiliation@withsup`);
+/// content no mark leads, or holding fewer than two requested marks (`Joint Institute, \textsuperscript{1}Univ A and
+/// \textsuperscript{2}Univ B` is one entry; `$^1$Univ A` one).
+///
+/// The cutter is the author blocks' ([`affiliation_calls`]: lines at `\\`, `\quad` and the `\and` family, a line at each
+/// space-preceded mark, a wrapper repeated on each piece, an address line placed as the list's), and every spelling of
+/// a mark is read by the shared readers first: lines set in one-argument line wrappers
+/// (`relocate::wrapped_lines_as_lines`), a superscript on a spacing nucleus, in `\( … \)` or in a box of its own
+/// (`relocate::spaced_marks_as_marks`, `spaced_mark_at`: `${}^{a}$`, `${\,\!}^1$`, `\mbox{${\ }^{1}$}`), and a class's
+/// `\inst{n}` (aa.cls:759 `\def\inst#1{\unskip\hbox{$^{#1}$}}`, mem.cls:318, llncs) written as the
+/// `\textsuperscript{n}` it prints. Witnesses (census127 cluster 2): acmart's `\institution{$^1$ Tsinghua University,
+/// China; $^2$ Tencent Inc., China}` (2602.11605), `\institution{\textsuperscript{1}… \quad \textsuperscript{2}…}`
+/// (2506.18881, cidr's 2408.03013), a raw class's `\affil`/`\institute` store (asp2006's 1002.4968, mem's
+/// astro-ph0701509: 40 authors each given all 16 institutes), aa's sole `\institute{\inst{1}…\\ \inst{2}…\\
+/// \inst{*}\email{…}}` (2410.00577). OXIDIZED_DESIGN_DIVERGENCES #954.
+pub(in crate::base_utilities) fn cut_marked_contact(
+  parenttag: &Tokens,
+  tag: &Tokens,
+  kv: Option<&KeyVals>,
+  content: &Tokens,
+) -> Result<Option<Tokens>> {
+  if tag.to_string() != "ltx:contact" {
+    return Ok(None);
+  }
+  let Some(kv) = kv else {
+    return Ok(None);
+  };
+  let role = kv
+    .get_value("role")
+    .map(ToString::to_string)
+    .unwrap_or_default();
+  if !CUT_ROLES.contains(&role.as_str())
+    || kv.get_value("label").is_some()
+    || kv.get_value("_unsplit").is_some()
+  {
+    return Ok(None);
+  }
+  // (the content inside the affiliation's own wrapper, `\lx@add@affiliation`'s `\lx@affiliation@withinst{…}`, which
+  // each entry keeps)
+  let within = content.unlist_ref();
+  let withinst = within.len() >= 3
+    && within[0] == T_CS!("\\lx@affiliation@withinst")
+    && within[1].get_catcode() == Catcode::BEGIN
+    && skip_group(within, 1) == within.len();
+  let list = if withinst {
+    Tokens::new(within[2..within.len() - 1].to_vec())
+  } else {
+    content.clone()
+  };
+  if list.unlist_ref().iter().find(|t| **t != T_SPACE!())
+    == Some(&T_CS!("\\lx@affiliation@withsup"))
+  {
+    return Ok(None);
+  }
+  let list = printed_marks_as_marks(list);
+  if !holds_requested_marked_entries(&list) {
+    return Ok(None);
+  }
+  // (the declarations the list opens with, in force on every entry as on the whole contact — `\itshape $^1$Univ A\\
+  // $^2$Univ B`, `{\bfseries $^3$Lab C\\ $^4$Lab D}`: each entry keeps them, as the observer writer's cut keeps the font
+  // open before a piece, review rev94b r3 B1)
+  let opening = notes_lead_declarations(&list);
+  // (the call's own attributes, without the ones its marks replace)
+  let mut attr: Vec<Token> = Vec::new();
+  for item in split_tokens(kv.revert()?, vec![T_OTHER!(",").into()]) {
+    let key = item.to_string();
+    let key = key.split('=').next().unwrap_or_default().trim();
+    if key.is_empty() || CUT_DROPPED_KEYS.contains(&key) {
+      continue;
+    }
+    if !attr.is_empty() {
+      attr.push(T_OTHER!(","));
+    }
+    attr.extend(item.unlist());
+  }
+  let attr = Some(Tokens::new(attr));
+  let add = |attr: Option<Tokens>, entry: Tokens| {
+    // (each marked entry shows the mark that labels it, `_markshown`: `\lx@annotate@frontmatter@now` — but an address
+    // line, whose address becomes the e-mail contact of the authors showing its mark, which leaves the mark no entry:
+    // aa's `\inst{*}\email{…}`, 2410.00577)
+    let v = entry.unlist_ref();
+    let marked = v.len() >= 3
+      && v[0] == T_CS!("\\lx@affiliation@withsup")
+      && v[1].get_catcode() == Catcode::BEGIN
+      && skip_group(v, 1) == v.len();
+    let attr = if marked
+      && leading_line_label(&Tokens::new(v[2..v.len() - 1].to_vec()))
+        .is_none_or(|(_, _, rest)| !line_is_email_list(&rest))
+    {
+      let mut shown = attr.map(Tokens::unlist).unwrap_or_default();
+      if !shown.is_empty() {
+        shown.push(T_OTHER!(","));
+      }
+      shown.extend(mouth::tokenize_internal("_markshown=true").unlist());
+      Some(Tokens::new(shown))
+    } else {
+      attr
+    };
+    let entry = with_opening(entry, &opening);
+    let entry = if withinst {
+      Invocation!(T_CS!("\\lx@affiliation@withinst"), vec![Some(entry)])
+    } else {
+      entry
+    };
+    let mut call = vec![T_CS!("\\lx@annotate@frontmatter"), T_BEGIN!()];
+    call.extend(parenttag.unlist_ref().iter().copied());
+    call.extend([T_END!(), T_BEGIN!()]);
+    call.extend(tag.unlist_ref().iter().copied());
+    call.push(T_END!());
+    if let Some(attr) = attr {
+      call.push(T_OTHER!("["));
+      call.extend(attr.unlist());
+      call.push(T_OTHER!("]"));
+    }
+    call.push(T_BEGIN!());
+    call.extend(entry.unlist());
+    call.push(T_END!());
+    Ok(call)
+  };
+  let call = EntryCall {
+    add:                    &add,
+    labelled_address_lines: true,
+  };
+  let calls = entry_calls(&call, attr.clone(), attr, None, list, true, true)?;
+  DebugFeature!(
+    "frontmatter",
+    "FRONT cut {role} at its marks: {}",
+    Tokens::new(calls.clone())
+  );
+  Ok(Some(Tokens::new(calls)))
+}
+
+/// `list` with the marks spelled otherwise written as the plain marks they print, for the Cut's readers
+/// ([`cut_marked_contact`]): lines in one-argument line wrappers as lines (`relocate::wrapped_lines_as_lines`), a
+/// superscript spelled otherwise as `$^{…}$` (`relocate::spaced_marks_as_marks`), a class's `\inst{n}` as
+/// `\textsuperscript{n}`.
+fn printed_marks_as_marks(list: Tokens) -> Tokens {
+  // (a list wholly in one group, `{\bfseries $^3$Lab C\\ $^4$Lab D}`, is its content: the contact is a group of its own)
+  let v = list.unlist_ref();
+  let start = v.iter().position(|t| *t != T_SPACE!()).unwrap_or(v.len());
+  let end = v
+    .iter()
+    .rposition(|t| *t != T_SPACE!())
+    .map_or(0, |i| i + 1);
+  let list = if start < end
+    && v[start].get_catcode() == Catcode::BEGIN
+    && skip_group(v, start) == end
+    && split_top_level_lines(&v[start + 1..end - 1]).len() > 1
+  {
+    Tokens::new(v[start + 1..end - 1].to_vec())
+  } else {
+    list
+  };
+  let list = wrapped_lines_as_lines(&list).unwrap_or(list);
+  let list = spaced_marks_as_marks(&list).unwrap_or(list);
+  if !list.unlist_ref().contains(&T_CS!("\\inst")) {
+    return list;
+  }
+  Tokens::new(
+    list
+      .unlist()
+      .into_iter()
+      .map(|t| {
+        if t == T_CS!("\\inst") {
+          T_CS!("\\textsuperscript")
+        } else {
+          t
+        }
+      })
+      .collect(),
+  )
+}
+
+/// The declarations `list` opens with before its first entry's mark (`\itshape`, `\small`, `\color{red}`:
+/// `notes::lead_declarations`), its leading spaces and groups past.
+fn notes_lead_declarations(list: &Tokens) -> Vec<Token> {
+  let v = list.unlist_ref();
+  let start = v.iter().position(|t| *t != T_SPACE!()).unwrap_or(v.len());
+  lead_declarations(&v[start..])
+}
+
+/// `entry` (an entry of the Cut, `\lx@affiliation@withsup{…}` or the line itself) with the list's opening declarations
+/// at its head, where it does not open with them already (the first entry).
+fn with_opening(entry: Tokens, opening: &[Token]) -> Tokens {
+  if opening.is_empty() {
+    return entry;
+  }
+  let v = entry.unlist_ref();
+  let wrapped = v.len() >= 3
+    && v[0] == T_CS!("\\lx@affiliation@withsup")
+    && v[1].get_catcode() == Catcode::BEGIN
+    && skip_group(v, 1) == v.len();
+  let inner = if wrapped { &v[2..v.len() - 1] } else { &v[..] };
+  let lead = inner
+    .iter()
+    .position(|t| *t != T_SPACE!())
+    .unwrap_or(inner.len());
+  if inner[lead..].starts_with(opening) {
+    return entry;
+  }
+  let mut out: Vec<Token> = Vec::with_capacity(v.len() + opening.len() + 1);
+  if wrapped {
+    out.extend_from_slice(&v[..2]);
+  }
+  out.extend_from_slice(opening);
+  out.extend_from_slice(&inner[lead..]);
+  if wrapped {
+    out.push(v[v.len() - 1]);
+  }
+  Tokens::new(out)
+}
+
+/// Does `list` hold two or more entries, cut as [`affiliation_calls`] cuts them, led by marks of distinct labels that
+/// queued names request ([`requesting_authors`]), its first printed line led by a mark ([`marker_leads`])?
+fn holds_requested_marked_entries(list: &Tokens) -> bool {
+  let authors = queued_author_marks();
+  if authors.is_empty() {
+    return false;
+  }
+  let lines: Vec<Tokens> = split_tokens_delimited(list.clone(), affil_splits())
+    .into_iter()
+    .map(|(_, line)| line)
+    .filter(|line| !line.is_empty() && !prints_nothing(line))
+    .collect();
+  if !lines.first().is_some_and(marker_leads) {
+    return false;
+  }
+  let mut labels: Vec<String> = Vec::new();
+  for line in lines.into_iter().filter(marker_leads) {
+    for piece in split_wrapped_affiliation_marks(line) {
+      if let Some(mark) = entry_mark(piece.unlist_ref())
+        && !requesting_authors(&authors, &mark).is_empty()
+        && let Some(label) = mark_label(&mark)
+        && !labels.contains(&label)
+      {
+        labels.push(label);
+      }
+    }
+  }
+  labels.len() >= 2
 }
 
 /// A class-numbered institute list as its title page prints it: llncs.cls:870-885 `\institutename` (copied by
@@ -268,6 +554,15 @@ pub(in crate::base_utilities) fn shared_affiliation_calls(
   Ok(calls)
 }
 
+/// The addresses of an address line of a marked list: a line of addresses only (`email_addresses`), or one behind an
+/// e-mail label (`email: a@x, b@y`: `split_email_label`), whose label `email_line_calls` keeps as the contacts' name.
+pub(in crate::base_utilities) fn line_addresses(line: &Tokens) -> Option<Vec<String>> {
+  email_addresses(line).or_else(|| match split_email_label(line) {
+    (Some(_), rest) => email_addresses(&rest),
+    _ => None,
+  })
+}
+
 /// A run of consecutive address lines in a marked affiliation list, with the entry it follows (when the line before
 /// it was that entry, not across `\and`) and the length that entry had when the run was read: where a continuation
 /// goes.
@@ -319,7 +614,7 @@ fn place_address_runs(
     let counts: Vec<usize> = run
       .lines
       .iter()
-      .map(|(_, line)| email_addresses(line).map_or(0, |a| a.len()))
+      .map(|(_, line)| line_addresses(line).map_or(0, |a| a.len()))
       .collect();
     let total: usize = counts.iter().sum();
     let mut calls = Vec::new();
@@ -351,8 +646,22 @@ fn place_address_runs(
         }
       },
       _ => {
+        // (an address the run's place leaves to no author still goes to the one it spells, before the block: the
+        // placement order's step 2 before step 4 — aa's `\institute{$^{1}$Univ X\\ $^{2}$Univ Y\\ \email{ann.able@y.org}}`
+        // under three names, 1507.05963, cut at its marks by the frontmatter API, OXIDIZED_DESIGN_DIVERGENCES #954)
+        let keys = queued_author_name_keys();
         for (_, line) in run.lines {
-          calls.extend(email_line_calls(line, AddressPlacement::Shared)?);
+          let owners: Vec<Option<usize>> = line_addresses(&line)
+            .unwrap_or_default()
+            .iter()
+            .map(|address| spelled_owner(&keys, address).map(|owner| owner + 1))
+            .collect();
+          let placement = if owners.iter().any(Option::is_some) {
+            AddressPlacement::Settled(owners)
+          } else {
+            AddressPlacement::Shared
+          };
+          calls.extend(email_line_calls(line, placement)?);
         }
       },
     }

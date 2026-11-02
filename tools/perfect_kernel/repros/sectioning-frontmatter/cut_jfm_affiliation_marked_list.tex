@@ -1,0 +1,17 @@
+% mechanism: jfm's `\affiliation` list led by marks the names show is the names' affiliations (jfm_cls.rs, through
+%   `\lx@add@affiliation` and the API's Cut, OD #954), not one note at the block
+% witness: physics0607157 (`\affiliation{ $^1$ Institut de Recherche … $^2$School of Engineering … $^3$Atmospheric …}`),
+%   1302.1594 (census127 cluster 2)
+% oracle:  pdflatex (TL 2025, 1302.1594's jfm.cls) 0 errors: "By Ann Able1 , Bob Baker2 and Cat Cole1 / 1 Univ A, 2 Univ B"
+% engines: rust int126b: one `<note role="affiliation">` at the block, the creators none; perl: no jfm binding
+% expect:  0 errors, 0 warnings; Ann and Cat "1Univ A", Bob "2Univ B"
+% status:  RED (int126b) -> GREEN (99a) — perfect_kernel_batch99a::a_jfm_affiliation_list_is_cut_at_its_marks
+% preload: ar5iv.sty
+\documentclass{jfm}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ and Cat Cole$^1$}
+\affiliation{$^1$Univ A, $^2$Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

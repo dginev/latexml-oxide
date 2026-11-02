@@ -51,10 +51,12 @@ fn webofc_authors_take_their_institutes() {
     "class-bindings/webofc/webofc_authors_take_their_institutes.tex",
     ("webofc.cls", "class-bindings/webofc/webofc.cls")
   );
+  // (the institute before the e-mail its `\thanks` holds, which prints in the footer: user ruling R8, print order —
+  // `relocate::before_note_contacts`, batch 99a; was the e-mail first)
   let ann = format!(
     "{} {}",
-    contact("email", "ann@x.org"),
-    contact("affiliation", "Univ A")
+    contact("affiliation", "Univ A"),
+    contact("email", "ann@x.org")
   );
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", &ann),
@@ -135,13 +137,15 @@ fn llncs_author_line_break_options_with_inst_marks() {
 #[test]
 fn aa_thanks_email_leaves_no_empty_note() {
   let xml = repro_with!("class-bindings/aa_thanks_email_leaves_no_empty_note.tex",);
+  // (the institute before the e-mail its `\thanks` holds, which prints in the footer: user ruling R8, print order —
+  // `relocate::before_note_contacts`, batch 99a; was the e-mail first)
   let ann = format!(
     "{} {}",
+    contact("affiliation", "Univ A"),
     contact(
       "email",
       r#"<text font="typewriter" xml:id="id1">ann@x.org</text>"#
-    ),
-    contact("affiliation", "Univ A")
+    )
   );
   let bob = contact("affiliation", "Univ B");
   assert_eq!(creators(&xml), [

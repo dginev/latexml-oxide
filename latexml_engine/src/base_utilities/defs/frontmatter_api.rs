@@ -452,6 +452,14 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // according to the attachment criterion in options keyvals.
   DefPrimitive!("\\lx@annotate@frontmatter {} {} OptionalKeyVals:Frontmatter {}",
     sub[(parenttag, tag, kv, content)] {
+    // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #954): the Cut, placement step 0 for every binding — an affiliation,
+    // alternate affiliation or address holding two or more entries led by marks the queued names request is queued
+    // as one contact per entry, each labelled by its mark ([`cut_marked_contact`]); read again from here, so the
+    // frontmatter observer's ledger records the entries too (`queue_front_matter`).
+    if let Some(calls) = cut_marked_contact(&parenttag, &tag, kv.as_ref(), &content)? {
+      unread(calls);
+      return Ok(Vec::new());
+    }
     // Perl: queueFrontMatter($stomach, ToString($tag), $kv,
     //   Invocation(T_CS('\lx@annotate@frontmatter@now'), $parenttag, $tag, $kv, $content))
     let mut inv_tokens: Vec<Token> = vec![T_CS!("\\lx@annotate@frontmatter@now")];
@@ -552,11 +560,19 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
               _ => inherited,
             };
             options.insert("_label".to_string(), label);
+            // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #954): a contact inside a name's note (`\thanks{\email{…}}`)
+            // prints in the footer, after the block's entries (user ruling R8, print order): relocated entries go
+            // before it (`relocate_annotations`)
+            if last.attr.get("_for").map(String::as_str) == Some("ltx:note") {
+              options.insert("_innote".to_string(), "true".to_string());
+            }
           }
         let mut stub_attr = TagAttrs::default();
         stub_attr.insert("role".to_string(), "pending".to_string());
         stub_attr.insert("_annotations".to_string(),
           options.get("_label").cloned().unwrap_or_default());
+        // (what the stub annotates: a contact digested inside it knows it is a note's, `_innote` above)
+        stub_attr.insert("_for".to_string(), tag.clone());
         let stub = TagData {
           tag: parenttag.clone(),
           attr: stub_attr,
@@ -574,7 +590,17 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // (a contact led by a mark of its own, which labels no one — a legend, `$^\dagger$Corresponding author`, or a mark
     // no author carries — is no answer to an author's label request, nor passes over the authors one answers)
     let legend = marker_leads(&content);
-    let xcontent = digest_frontmatter_item(&tag, content)?;
+    // (an entry of the Cut shows the mark that labels it while it is digested: `\lx@sup@setlabel@affiliation`,
+    // OXIDIZED_DESIGN_DIVERGENCES #954)
+    let mark_shown = options.remove("_markshown").is_some();
+    if mark_shown {
+      assign_value("lx_affiliation_mark_shown", Stored::Bool(true), Some(Scope::Global));
+    }
+    let xcontent = digest_frontmatter_item(&tag, content);
+    if mark_shown {
+      assign_value("lx_affiliation_mark_shown", Stored::Bool(false), Some(Scope::Global));
+    }
+    let xcontent = xcontent?;
     // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #803, #916; user rulings 2026-10-21, 2026-10-30): a note that prints
     // nothing is none, whatever its label. `\fnsep\thanks{\email{…}}` (webofc; aa's `\fnmsep\thanks{\email{…}}`) moves
     // the e-mail into the author's contact and left an empty `<note role="thanks"/>`, a visible mark opening a note with

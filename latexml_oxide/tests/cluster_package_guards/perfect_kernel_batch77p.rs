@@ -57,13 +57,14 @@ fn affiliation(text: &str) -> String {
 }
 
 /// `\textbf{Ann Able}\textsuperscript{1}\;\;\textbf{Bob Baker}\textsuperscript{2}` (2610.20409): two authors, each
-/// with the affiliation its mark names (was one creator "Ann Able  Bob Baker" holding both).
+/// with the affiliation its mark names (was one creator "Ann Able  Bob Baker" holding both). The `\;` parting the two
+/// entries is trimmed with the separator (`notes::trim_trailing_separator`, batch 99a; was "Univ A ").
 #[test]
 fn thin_space_run_separates_names() {
   let xml = convert_repro!("author_thin_space_run_separates_names.tex");
   assert_no_merged_names(&xml);
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &affiliation("Univ A ")),
+    creator(true, "Ann Able", &affiliation("Univ A")),
     creator(false, "Bob Baker", &affiliation("Univ B")),
   ]);
 }
@@ -1113,9 +1114,11 @@ fn email_gap_counts_every_author() {
   assert_no_merged_names(&xml);
   let email =
     |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
+  // (the spacing and the comma parting two entries trimmed, `notes::trim_trailing_separator`, batch 99a: were
+  // "Xidian University, " and "Microsoft Research Asia ")
   let (xidian, msra) = (
-    affiliation("Xidian University, "),
-    affiliation("Microsoft Research Asia "),
+    affiliation("Xidian University"),
+    affiliation("Microsoft Research Asia"),
   );
   assert_eq!(creators(&xml), [
     creator(

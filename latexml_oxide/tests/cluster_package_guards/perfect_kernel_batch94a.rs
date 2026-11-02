@@ -1205,10 +1205,10 @@ fn a_legend_of_several_symbols_shows_its_mark() {
   ]];
   assert_reading(tex, Some(xml), &[
     "C Ann Able [1,††] | line:names",
-    "  a Univ X | api:leading-mark api:split-by-marks owner:group",
-    "  n Corresponding author | api:leading-mark api:split-by-marks api:legend",
+    "  a Univ X | api:leading-mark",
+    "  n Corresponding author | api:leading-mark api:legend",
     "C Bob Baker [1] | line:names sep:word",
-    "  a Univ X | api:leading-mark api:split-by-marks owner:group",
+    "  a Univ X | api:leading-mark",
   ]);
   let xml = default_mode_xml(tex);
   assert_eq!(personnames(&xml), [
@@ -1274,11 +1274,11 @@ fn a_repeated_symbol_beside_a_legend_is_its_own_mark() {
       ]],
       &[
         "C Ann Able [1,†,†] | line:names mark:parted",
-        "  a Univ X | api:leading-mark api:split-by-marks owner:group",
-        "  n Corresponding author | api:leading-mark api:split-by-marks api:legend ruling1:parted",
+        "  a Univ X | api:leading-mark",
+        "  n Corresponding author | api:leading-mark api:legend ruling1:parted",
         "C Bob Baker [1,†] | line:names sep:word",
-        "  a Univ X | api:leading-mark api:split-by-marks owner:group",
-        "  n Corresponding author | api:leading-mark api:split-by-marks api:legend",
+        "  a Univ X | api:leading-mark",
+        "  n Corresponding author | api:leading-mark api:legend",
       ],
       &[
         "<personname>Ann Able<sup><text font=\"italic\">1,††</text></sup></personname>",
@@ -1318,10 +1318,10 @@ fn a_repeated_symbol_beside_a_legend_is_its_own_mark() {
       ]],
       &[
         "C Ann Able [1,*,♠] | line:names",
-        "  a Univ X | api:leading-mark api:split-by-marks owner:group",
-        "  n Corresponding author | api:leading-mark api:split-by-marks api:legend ruling1:parted",
+        "  a Univ X | api:leading-mark",
+        "  n Corresponding author | api:leading-mark api:legend ruling1:parted",
         "C Bob Baker [1] | line:names sep:word",
-        "  a Univ X | api:leading-mark api:split-by-marks owner:group",
+        "  a Univ X | api:leading-mark",
       ],
       &[
         "<personname>Ann Able<sup><text font=\"italic\">1♠</text></sup></personname>",

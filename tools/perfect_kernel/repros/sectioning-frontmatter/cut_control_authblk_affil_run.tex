@@ -1,0 +1,19 @@
+% mechanism: control for the API's Cut (OD #954): authblk's `\affil` holding a marked run is cut by the binding's own
+%   call (`\lx@add@affiliation@marked`, `affiliation_calls`) before it reaches the API, which cuts nothing more
+% witness: 1002.4968's shape under authblk (census127 cluster 2)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 , and Cat Cole1 / 1 Univ A 2 Univ B"
+% engines: rust int126b: Ann and Cat "Univ A", Bob "Univ B"; perl: authblk.sty.ltxml one affiliation of each
+% expect:  0 errors, 0 warnings; unchanged
+% status:  GREEN (int126b, 99a) — perfect_kernel_batch99a::a_binding_cut_list_is_not_cut_again
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Ann Able$^1$}
+\author{Bob Baker$^2$}
+\author{Cat Cole$^1$}
+\affil{$^1$Univ A $^2$Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -4,11 +4,47 @@ use super::*;
 
 /// The `\lx@add@email` calls for a line of addresses in an author block (`a@x, b@y`, `{a,b}@dom`), placed as
 /// `placement` says: one call per address, a whole-line wrapper repeated on each, or the line itself when it holds one
-/// address (`\href{mailto:a@x}{a@x}` stays a link); else the line as one contact. OXIDIZED_DESIGN #52(j).
+/// address (`\href{mailto:a@x}{a@x}` stays a link); else the line as one contact. OXIDIZED_DESIGN #52(j). A line led
+/// by an e-mail label (`email: a@x, b@y`, `E-mails: …`) gives each contact that label as its name (label text is
+/// markup, never dropped: FIDELITY_CHARTER §1; OXIDIZED_DESIGN_DIVERGENCES #954, astro-ph0405186).
 pub(in crate::base_utilities) fn email_line_calls(
   line: Tokens,
   placement: AddressPlacement,
 ) -> Result<Vec<Token>> {
+  let (label, rest) = split_email_label(&line);
+  let Some(label) = label.filter(|_| !line_is_email_list(&line) && line_is_email_list(&rest))
+  else {
+    return unlabelled_email_line_calls(line, placement);
+  };
+  let calls = unlabelled_email_line_calls(rest, placement)?;
+  let mut name: Vec<Token> = mouth::tokenize_internal("name=").unlist();
+  name.push(T_BEGIN!());
+  name.extend(label.unlist());
+  name.push(T_ACTIVE!('~'));
+  name.push(T_END!());
+  let mut out = Vec::with_capacity(calls.len());
+  let mut i = 0;
+  while i < calls.len() {
+    out.push(calls[i]);
+    if calls[i] == T_CS!("\\lx@add@email") {
+      if calls.get(i + 1) == Some(&T_OTHER!("[")) {
+        out.push(T_OTHER!("["));
+        out.extend(name.iter().copied());
+        out.push(T_OTHER!(","));
+        i += 1;
+      } else {
+        out.push(T_OTHER!("["));
+        out.extend(name.iter().copied());
+        out.push(T_OTHER!("]"));
+      }
+    }
+    i += 1;
+  }
+  Ok(out)
+}
+
+/// [`email_line_calls`] of a line no e-mail label leads.
+fn unlabelled_email_line_calls(line: Tokens, placement: AddressPlacement) -> Result<Vec<Token>> {
   let mut calls = Vec::new();
   // A wrapper is kept on each address (`\texttt`, `\small`, `\url`), but an email command's (`\email`, `\mailto`,
   // `\emailaddr`) is the contact `\lx@add@email` stands for — nested, it made a second (empty) contact and advanced
@@ -700,7 +736,7 @@ pub(in crate::base_utilities) fn run_in_author_order(
   let keys = queued_author_name_keys();
   let addresses: Vec<String> = lines
     .iter()
-    .flat_map(|(_, line)| email_addresses(line).unwrap_or_default())
+    .flat_map(|(_, line)| line_addresses(line).unwrap_or_default())
     .collect();
   addresses_in_order(&keys, &addresses, offset)
 }

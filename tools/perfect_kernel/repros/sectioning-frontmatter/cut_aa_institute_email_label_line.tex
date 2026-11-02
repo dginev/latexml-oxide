@@ -1,0 +1,22 @@
+% mechanism: an address line behind an e-mail label (`email: a@x, b@y, c@y`) closing a list the API cuts (OD #954) is
+%   the list's address run (`affiliation_calls`), each address its speller's, not text of the entry above it
+% witness: astro-ph0405186 (aa: `\institute{$^1$ … \\ $^2$ … \\ email: agupta@…, orion@…, ashok@…, joshi@…}`; the
+%   A/B of 99a's first build glued the line into entry 2)
+% oracle:  pdflatex (TL 2025, 2410.00577's aa.cls) 0 errors: "Ann Able1 , Bob Baker2 and Cat Cole2 / 1 Univ A, Town /
+%   2 Univ B, City / email: ann@a.edu, bob@b.edu, cat@b.edu"
+% engines: rust int126b: one affiliation "1 Univ A, Town 2 Univ B, City" on a nameless creator, each author its
+%   e-mail; perl: aa.cls.ltxml one institute of the last author
+% expect:  0 errors, 0 warnings; each author its entry and its e-mail
+% status:  RED (int126b) -> GREEN (99a) — perfect_kernel_batch99a::a_sole_institute_is_cut_at_its_inst_marks
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$ \and Cat Cole$^{2}$}
+\institute{$^1$ Univ A, Town \\
+$^2$ Univ B, City \\
+email: ann@a.edu, bob@b.edu, cat@b.edu}
+\abstract{Abs.}
+\maketitle
+Text.
+\end{document}

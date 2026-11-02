@@ -1,0 +1,17 @@
+% mechanism: a mark on a spacing nucleus (`${}^a$`) is read by the shared reader (`relocate::spaced_marks_as_marks`,
+%   now past the address part's wrapper) as the `$^{a}$` it prints, so the Cut (OD #954) parts the entries at it
+% witness: hep-ph0408088 (`${}^a$Deutsches Elektronen-Synchrotron DESY …\\ ${}^b$CERN …`; its document-defined store is
+%   printed into the body: coverage, 98c/99b), 1203.0253 (`\llap{${}^1$}`), 2112.13115 (`${\,\!}^1$`, 98e r2)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Ablea , Bob Bakerb , Cat Colea / a Univ A b Univ B / X"
+% engines: rust int126b: every author "aUniv A bUniv B, X"; perl: the same one contact
+% expect:  0 errors, 0 warnings; Ann and Cat "aUniv A", Bob "bUniv B, X"
+% status:  RED (int126b) -> GREEN (99a) — perfect_kernel_batch99a::every_mark_spelling_parts_the_entries
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able${}^a$, Bob Baker${}^b$, Cat Cole${}^a$}
+\affiliation{\institution{${}^a$Univ A \quad ${}^b$Univ B}\country{X}}
+\maketitle
+Text.
+\end{document}

@@ -769,11 +769,11 @@ fn api_affiliation_parts_by_its_marks() {
     ),
     [
       "C Ann Able [*] | line:names",
-      "  a Univ A, City | api:leading-mark api:split-by-marks",
+      "  a Univ A, City | api:leading-mark",
       "C Bob Baker [+] | line:names sep:comma",
-      "  a Univ B, Town | api:leading-mark api:split-by-marks",
+      "  a Univ B, Town | api:leading-mark",
       "C Cat Cole [*] | line:names sep:word",
-      "  a Univ A, City | api:leading-mark api:split-by-marks",
+      "  a Univ A, City | api:leading-mark",
     ]
   );
   assert_eq!(

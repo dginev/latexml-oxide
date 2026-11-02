@@ -1,0 +1,18 @@
+% mechanism: the frontmatter API's Cut (OXIDIZED_DESIGN_DIVERGENCES #954; placement step 0): acmart's one
+%   `\institution` holding two entries each led by a mark the names request is cut at its marks, inside the address
+%   part's wrapper and at the `\quad` between them, one affiliation contact per entry, each labelled and showing its mark
+% witness: 2506.18881 (`\institution{\textsuperscript{1}The University of Adelaide\quad \textsuperscript{2}University
+%   of New South Wales}`), 2602.11605, 2408.03013 (census127 cluster 2)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 , Cat Cole1 / 1 Univ A 2 Univ B / X"
+% engines: rust int126b: every author "1Univ A 2Univ B, X"; perl: acmart.cls.ltxml:91 the same one contact
+% expect:  0 errors, 0 warnings; Ann and Cat "1Univ A", Bob "2Univ B, X"
+% status:  RED (int126b) -> GREEN (99a) — perfect_kernel_batch99a::an_institution_is_cut_at_its_marks
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$, Cat Cole$^1$}
+\affiliation{\institution{$^1$Univ A \quad $^2$Univ B}\country{X}}
+\maketitle
+Text.
+\end{document}

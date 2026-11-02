@@ -372,14 +372,16 @@ fn a_notes_item_prints_after_the_author_block() {
     ]),
     &[
       "C Ann Able [1] | line:names",
-      "  a Univ A, City A | api:leading-mark api:split-by-marks",
+      "  a Univ A, City A | api:leading-mark",
       "  c email ann@a.org | note:adjacent ruling4:inner-contact",
       "C Bob Baker [2] | line:names",
-      "  a Univ B, City B | api:leading-mark api:split-by-marks",
+      "  a Univ B, City B | api:leading-mark",
       "D note ann@a.org | note:adjacent ruling4:emptied",
     ],
   );
-  assert_eq!(reading.3, "written");
+  // (since 99a the frontmatter API's Cut gives today's the reading's entries, and the old reader places them before
+  // the note's e-mail, OXIDIZED_DESIGN_DIVERGENCES #954: nothing left for the writer to write)
+  assert_eq!(reading.3, "same");
 }
 
 /// aa's sole institute read as llncs's (review rev92c r2 B-2; OD #932), on the three paths of the shared row

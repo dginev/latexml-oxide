@@ -1,0 +1,17 @@
+% mechanism: control for the API's Cut (OD #954): aa's `\institute{A \and B}`, numbered by the class and split by the
+%   binding (`\lx@splitting`, `labelseq=affiliation`)
+% witness: the brief's aa control (census127 cluster 2)
+% oracle:  pdflatex (TL 2025, 2410.00577's aa.cls) 0 errors: "Ann Able1 , Bob Baker2 , and Cat Cole1 / 1 Univ A / 2 Univ B"
+% engines: rust int126b: Ann and Cat "Univ A", Bob "Univ B"; perl: aa.cls.ltxml the same
+% expect:  0 errors, 0 warnings; unchanged
+% status:  GREEN (int126b, 99a) — perfect_kernel_batch99a::a_binding_cut_list_is_not_cut_again
+% preload: ar5iv.sty
+\documentclass{aa}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2} \and Cat Cole\inst{1}}
+\institute{Univ A \and Univ B}
+\begin{document}
+\abstract{Abs.}
+\maketitle
+Text.
+\end{document}

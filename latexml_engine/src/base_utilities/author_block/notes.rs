@@ -204,12 +204,35 @@ fn split_before_affiliation_marks(tokens: Tokens) -> Vec<Tokens> {
 /// (`…Univ C,\\ \textsuperscript{4}Univ D`); before a line continuing it the comma is the institution's own, as
 /// pdflatex prints it ("Université Laval,\\ pavillon …", 1507.08653).
 pub(in crate::base_utilities) fn trim_trailing_separator(mut toks: Vec<Token>) -> Vec<Token> {
-  while toks.last() == Some(&T_SPACE!()) {
+  // (and the spacing that parts two entries on one line, `$^1$Univ A \quad $^2$Univ B`, `~~~`: [`is_spacing`]; and a
+  // line break left at a piece's end, `{\bfseries $^3$Lab C\\ $^4$Lab D}`'s first)
+  while toks
+    .last()
+    .is_some_and(|t| is_spacing(t) || *t == T_CS!("\\\\") || *t == T_CS!("\\newline"))
+  {
+    toks.pop();
+  }
+  // (and the conjunction that joins the last two entries of a run, `$^2$Univ B and $^3$Univ C`, `\&`: no word of the
+  // entry before it — a word of its own, after a space or a comma)
+  let n = toks.len();
+  let and_word = n >= 4
+    && toks[n - 3..]
+      .iter()
+      .map(ToString::to_string)
+      .eq(["a", "n", "d"])
+    && (is_spacing(&toks[n - 4]) || toks[n - 4] == T_OTHER!(","));
+  let ampersand = n >= 2 && toks[n - 1] == T_CS!("\\&") && is_spacing(&toks[n - 2]);
+  if and_word {
+    toks.truncate(n - 3);
+  } else if ampersand {
+    toks.truncate(n - 1);
+  }
+  while toks.last().is_some_and(is_spacing) {
     toks.pop();
   }
   if toks.last() == Some(&T_OTHER!(",")) || toks.last() == Some(&T_OTHER!(";")) {
     toks.pop();
-    while toks.last() == Some(&T_SPACE!()) {
+    while toks.last().is_some_and(is_spacing) {
       toks.pop();
     }
   }
@@ -220,6 +243,24 @@ pub(in crate::base_utilities) fn trim_trailing_separator(mut toks: Vec<Token>) -
 /// $^3$Univ C`), where a lead that prints nothing is a separator, not the start of the first institution.
 fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Vec<Tokens> {
   let toks = tokens.unlist();
+  // (the marks the queued names request, when they carry any: a number or letter mark none of them requests, after a
+  // word and a plain space, is the entry's own text — `$^1$Laboratory for $^3$He Studies`, the isotope — not the next
+  // entry's label; after a separator or wider spacing it still parts the entries)
+  let authors = queued_author_marks();
+  let names_marked = authors.iter().any(|marks| !marks.is_empty());
+  let unrequested_text_mark = |at: usize, current: &[Token]| {
+    if !names_marked {
+      return false;
+    }
+    let before = current.iter().rev().find(|t| **t != T_SPACE!());
+    let after_word = before
+      .is_some_and(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+      && before.is_some_and(|t| *t != T_OTHER!(",") && *t != T_OTHER!(";"));
+    after_word
+      && mark_operands(&toks[at..])
+        .first()
+        .is_some_and(|mark| !is_symbol_mark(mark) && requesting_authors(&authors, mark).is_empty())
+  };
   let mut segments: Vec<Tokens> = Vec::new();
   let mut current: Vec<Token> = Vec::new();
   // A boundary only outside every group: a cut inside `{…}` would leave the pieces unbalanced (a mark
@@ -243,7 +284,12 @@ fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Vec<Tokens> {
         && current.iter().any(|t| t.get_catcode() == Catcode::CS)
         && leading_unprinted_end(&current) == current.len()
     };
-    if is_mark_start && depth == 0 && current.last() == Some(&T_SPACE!()) {
+    // (a space, or wider spacing: `$^1$Univ A \quad $^2$Univ B` inside a wrapper, `~~~`; 2506.18881)
+    if is_mark_start
+      && depth == 0
+      && current.last().is_some_and(is_spacing)
+      && !unrequested_text_mark(i, &current)
+    {
       if prints_nothing() {
         // …nor is the space between it and the mark the institution's
         while current.last() == Some(&T_SPACE!()) {
@@ -361,7 +407,7 @@ pub(in crate::base_utilities) const PARAMETERLESS_SPACING: [&str; 7] = [
 
 /// The declarations among a line's unprinted lead, its spacing left out (`\small\vspace{1mm}\noindent\it` → `\small`,
 /// `\noindent`, `\it`; [`leading_unprinted_end`]; 2407.15815).
-fn lead_declarations(v: &[Token]) -> Vec<Token> {
+pub(in crate::base_utilities) fn lead_declarations(v: &[Token]) -> Vec<Token> {
   let mut declarations = Vec::new();
   let mut i = 0;
   loop {

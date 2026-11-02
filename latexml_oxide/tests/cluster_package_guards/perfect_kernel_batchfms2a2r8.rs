@@ -422,10 +422,10 @@ Text.
 fn an_api_entrys_legend_is_a_note() {
   assert_eq!(tuples(API_LEGEND), [
     "C Ann Able [1] | line:names",
-    "  a Univ A, City | api:leading-mark api:split-by-marks owner:group",
+    "  a Univ A, City | api:leading-mark",
     "C Bob Baker [1,⋆] | line:names sep:comma",
-    "  a Univ A, City | api:leading-mark api:split-by-marks owner:group",
-    "  n corresponding author, e-mail: bob@x.org | api:leading-mark api:split-by-marks api:legend",
+    "  a Univ A, City | api:leading-mark",
+    "  n corresponding author, e-mail: bob@x.org | api:leading-mark api:legend",
   ]);
 }
 

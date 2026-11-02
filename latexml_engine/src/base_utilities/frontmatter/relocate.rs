@@ -370,6 +370,7 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
           DebugFeature!("frontmatter", "FRONT Moving annotation for {label}");
           let mut target = target;
           document.append_clone(&mut target, vec![note.clone()])?;
+          before_note_contacts(&target, &note);
           contact_in_title_as_note(document, &target)?;
           held.touched(&target);
         }
@@ -418,6 +419,7 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
           for owner in named {
             let mut owner = owner.clone();
             document.append_clone(&mut owner, vec![note.clone()])?;
+            before_note_contacts(&owner, &note);
             held.touched(&owner);
           }
         } else {
@@ -553,6 +555,26 @@ fn contact_in_title_as_note(document: &mut Document, target: &Node) -> Result<()
   document.add_class(&mut note, &s!("ltx_note_frontmatter ltx_thanks_{kind}"))
 }
 
+/// The copy of `note` just appended to `target` moved before the first contact the creator's own note made (`_innote`:
+/// `Ann Able$^{1}$\thanks{\email{…}}`), which prints in the footer, after the block's entries (user ruling R8, print
+/// order — aa's institute the frontmatter API cuts under such a name, 2212.07438; OXIDIZED_DESIGN_DIVERGENCES #954).
+fn before_note_contacts(target: &Node, note: &Node) {
+  if note.get_attribute("_innote").is_some() {
+    return;
+  }
+  let children = element_nodes(target);
+  if let (Some(mut moved), Some(mut footer)) = (
+    children.last().cloned(),
+    children
+      .iter()
+      .find(|c| c.get_attribute("_innote").is_some())
+      .cloned(),
+  ) && footer != moved
+  {
+    let _ = footer.add_prev_sibling(&mut moved);
+  }
+}
+
 /// The marks a creator's name shows: each `<ltx:sup>`'s (`\textsuperscript{a}`), and each formula's that is a mark
 /// (`$^{a}$`, `$^{1,2}$`, `$\,{}^{a,b}$` — 2311.14432 — `$\rm ^{1}$`: [`fm_read_formula`], which reads the formula as
 /// digested, before the math is rewritten into an `<ltx:sup>`), from their printed text ([`printed_marks`]). A script on
@@ -625,8 +647,26 @@ fn split_marks(script: &str, past: fn(&str) -> &str) -> Vec<String> {
     }
   }
   items.push(&script[start..]);
-  items
+  // (a number range is each number of it, `1-4`, `1--4`, the printed `1–4`/`1−4`: `queue_digest::spelled_ranges`, the one
+  // reader of a range — Bauer's `$^{1-4}$`, 2012.15817)
+  let items: Vec<String> = items
     .into_iter()
+    .flat_map(|item| {
+      let cleaned: String = past(item)
+        .chars()
+        .filter(|c| !c.is_whitespace() && *c != '{' && *c != '}')
+        .collect();
+      let spelled = spelled_ranges(vec![cleaned.clone()]);
+      if spelled.len() > 1 {
+        spelled
+      } else {
+        vec![item.to_string()]
+      }
+    })
+    .collect();
+  items
+    .iter()
+    .map(String::as_str)
     .filter_map(|item| {
       // (a number in brackets or parentheses is the number: `$^{[1],[2]}$` against the line's `$^1$`, 1803.06822; so is
       // one after a footnote symbol glued to it, `\textsuperscript{*3}`, 2412.01183)
@@ -1312,8 +1352,20 @@ pub(in crate::base_utilities) fn spaced_mark_at(
 pub fn spaced_marks_as_marks(content: &Tokens) -> Option<Tokens> {
   let tokens = content.unlist_ref();
   let switch = |t: &Token| MARK_SWITCHES.iter().any(|cs| *t == T_CS!(*cs));
-  let lead = tokens.iter().position(|t| {
-    *t != T_SPACE!() && *t != T_BEGIN!() && *t != T_CS!("\\noindent") && !switch(t)
+  // (past a one-argument wrapper the block opens with, `\institution{${}^a$Univ A \quad ${}^b$Univ B}` — acmart's
+  // address part, as the Cut reads it, `cut_marked_contact` — a mark command or a box of its own excepted)
+  let wrapper = |i: usize| {
+    let t = &tokens[i];
+    t.get_catcode() == Catcode::CS
+      && tokens
+        .get(i + 1)
+        .is_some_and(|n| n.get_catcode() == Catcode::BEGIN)
+      && !is_mark_command(t)
+      && !LINE_BOXES.iter().any(|cs| *t == T_CS!(*cs))
+  };
+  let lead = (0..tokens.len()).find(|&i| {
+    let t = &tokens[i];
+    *t != T_SPACE!() && *t != T_BEGIN!() && *t != T_CS!("\\noindent") && !switch(t) && !wrapper(i)
   })?;
   spaced_mark_at(tokens, lead)?;
   let (_, requested) = queued_name_marks();

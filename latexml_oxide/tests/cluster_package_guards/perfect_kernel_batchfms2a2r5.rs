@@ -253,9 +253,9 @@ fn a_glued_mark_opens_the_next_entry() {
   // (an API creator requests the marks its name shows, as a names line's: `\author{Ann Able$^{1}$}` under acmart)
   assert_eq!(tuples(GLUED), [
     "C Ann Able [1] | api:creator",
-    "  a Univ A, City | api:leading-mark api:split-by-marks",
+    "  a Univ A, City | api:leading-mark",
     "C Bob Baker [2] | api:creator",
-    "  a Univ B, Town | api:leading-mark api:split-by-marks",
+    "  a Univ B, Town | api:leading-mark",
   ]);
 }
 

@@ -244,7 +244,29 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // $^{3}$He`: the isotope's, 63i review; repro affiliation_line_inner_superscript_is_its_text).
     let mut labelled = false;
     with_pending_entry_attr(|attr| labelled = attr.contains_key("_bymark"));
+    // (in an entry of the frontmatter API's Cut, which shows its marks as printed, a later superscript is the one it
+    // writes, in its own mode: `$^{1}$Lab $\frac{a}{b^{1}}$ Lab`'s fraction keeps its script, review 90a r3 probe AFg10)
+    let plain_sup = || {
+      let plain = if lookup_bool("IN_MATH") {
+        T_CS!("\\lx@frontmatter@plainsup")
+      } else {
+        T_CS!("\\lx@frontmatter@plaintextsuperscript")
+      };
+      (lookup_bool("lx_affiliation_mark_shown") && lookup_meaning(&plain).is_some())
+        .then_some(plain)
+    };
+    // (read again as the plain superscript where it stands, so a script keeps its base: `b^{1}`)
+    let read_plain = |plain: Token, operand: Tokens| {
+      let mut sup = vec![plain, T_BEGIN!()];
+      sup.extend(operand.unlist());
+      sup.push(T_END!());
+      unread(Tokens::new(sup));
+    };
     if labelled {
+      if let Some(plain) = plain_sup() {
+        read_plain(plain, operand);
+        return Ok(Vec::new());
+      }
       return Ok(vec![digest(Invocation!(
         T_CS!("\\lx@frontmatter@keepsup"),
         vec![Some(operand)]
@@ -278,8 +300,15 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
         attr.remove("_annotations");
       },
     });
+    // (an entry the frontmatter API's Cut made keeps the mark it prints, as the observer writer's cut keeps it: label
+    // text is markup, never dropped — FIDELITY_CHARTER §1, review rev98e S1; `_markshown`, set while
+    // `\lx@annotate@frontmatter@now` digests the entry, and a later superscript in it as written, above)
+    if let Some(plain) = plain_sup() {
+      read_plain(plain, operand);
+    }
     Ok(Vec::new())
   });
+
   // `\lx@let@superscript\cs` — `\let` the superscript catcode's definition key
   // (the `^` a digested SUPER token runs) to `\cs`, locally. Perl
   // (Base_Utility.pool.ltxml:729-737) writes `\let^\cs`, but `\let` names its

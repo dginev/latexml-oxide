@@ -1,0 +1,15 @@
+% mechanism: control for the API's Cut (OD #954): IEEEtran's `\IEEEauthorblockA` lines, cut by the binding's own call
+% witness: the brief's IEEE shape (census127 cluster 2: `\IEEEauthorblockA{$^1$A\\ $^2$B}`)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 , Cat Cole1 / 1 Univ A / 2 Univ B"
+% engines: rust int126b: Ann and Cat "Univ A", Bob "Univ B"; perl: IEEEtran.cls.ltxml one affiliation of the block
+% expect:  0 errors, 0 warnings; unchanged
+% status:  GREEN (int126b, 99a) — perfect_kernel_batch99a::a_binding_cut_list_is_not_cut_again
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^1$, Bob Baker$^2$, Cat Cole$^1$}
+\IEEEauthorblockA{$^1$Univ A\\ $^2$Univ B}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

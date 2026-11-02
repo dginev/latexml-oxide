@@ -754,10 +754,10 @@ fn an_api_piece_keeps_the_font_open_before_it() {
       &["Dan Doe", "address=4 Lab D, Place"],
     ],
     Some(&[
-      "<sup>1</sup><text font=\"italic\">Univ A, Town</text>",
-      "<sup>2</sup><text font=\"italic\">Univ B, City</text>",
-      "<sup>3</sup><text font=\"bold\">Lab C, Place</text>",
-      "<sup>4</sup><text font=\"bold\">Lab D, Place</text>",
+      "<sup><text font=\"italic\">1</text></sup><text font=\"italic\">Univ A, Town</text>",
+      "<sup><text font=\"italic\">2</text></sup><text font=\"italic\">Univ B, City</text>",
+      "<sup><text font=\"italic\">3</text></sup><text font=\"bold\">Lab C, Place</text>",
+      "<sup><text font=\"italic\">4</text></sup><text font=\"bold\">Lab D, Place</text>",
     ]),
     None,
   );

@@ -48,34 +48,35 @@ fn a_formula_printing_only_floating_scripts_is_a_mark() {
     "affiliation=Univ Y",
     "email=bob.baker@y.org",
   ]]);
-  for (tex, want) in [
+  // (the amsart address since 99a cut at its marks by the frontmatter API before either engine reads it, OD #954:
+  // nothing left for the writer to write, `same`)
+  for (tex, outcome, want) in [
     (
       include_str!(
         "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_font_switched_address_mark_keys_its_entry.tex"
       ),
+      "written",
       &switched,
     ),
     (
       include_str!(
         "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_font_switched_marks_on_names_and_braced.tex"
       ),
+      "written",
       &switched,
     ),
     (
       include_str!(
         "../../../tools/perfect_kernel/repros/sectioning-frontmatter/amsart_address_mark_spaced_after_its_script_is_a_mark.tex"
       ),
+      "same",
       &owned(&[&["Ann Able 1", "address=1 Univ X"], &[
         "Bob Baker 2",
         "address=2 Univ Y",
       ]]),
     ),
   ] {
-    assert_eq!(
-      converted(tex),
-      ("written".to_string(), want.clone()),
-      "{tex}"
-    );
+    assert_eq!(converted(tex), (outcome.to_string(), want.clone()), "{tex}");
   }
 }
 
@@ -164,6 +165,7 @@ fn a_script_inside_a_two_dimensional_layout_ends_no_line() {
       ]]),
     ),
   ] {
-    assert_eq!(converted(tex), ("written".to_string(), want), "{tex}");
+    // (since 99a the frontmatter API's Cut parts each address before either engine reads it, OD #954: `same`)
+    assert_eq!(converted(tex), ("same".to_string(), want), "{tex}");
   }
 }

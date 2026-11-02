@@ -98,12 +98,13 @@ fn team_piece_of_a_names_line_is_a_collaboration() {
 }
 
 /// A `(XYZ Collaboration)` line under revtex's marked names (2410.11607): no part of the last name, where Perl's weld
-/// (Base_Utility.pool.ltxml:700-701) put it — each name's collaboration.
+/// (Base_Utility.pool.ltxml:700-701) put it — each name's collaboration. The line break closing an entry is no part of
+/// it (`notes::trim_trailing_separator`, batch 99a; was a trailing `<break/>`).
 #[test]
 fn collaboration_line_under_marked_names_is_each_names() {
   let xml = both_ways(repro!("author_collaboration_line_welded_into_last_name"));
-  let one = r#"<contact name="Affiliation: " role="affiliation"><text font="italic" xml:id="ID"> Institute of One, Town 100000, Country<break/></text></contact>"#;
-  let two = r#"<contact name="Affiliation: " role="affiliation"><text font="italic" xml:id="ID"> University of Two, City 200000, Country<break/></text></contact>"#;
+  let one = r#"<contact name="Affiliation: " role="affiliation"><text font="italic" xml:id="ID"> Institute of One, Town 100000, Country</text></contact>"#;
+  let two = r#"<contact name="Affiliation: " role="affiliation"><text font="italic" xml:id="ID"> University of Two, City 200000, Country</text></contact>"#;
   let at = |contact: &str, id: &str| contact.replace("ID", id);
   let xyz = r#"<contact role="collaboration">(XYZ Collaboration)</contact>"#;
   assert_eq!(creators(&xml), [
@@ -129,8 +130,8 @@ fn collaboration_line_under_marked_names_is_each_names() {
 #[test]
 fn collaboration_heading_and_its_closing_piece_are_one_contact() {
   let xml = both_ways(repro!("author_collaboration_heading_and_closing_line_once"));
-  let one = r#"<contact name="Affiliation: " role="affiliation"><text font="italic" xml:id="ID"> Institute of One, Town 100000, Country<break/></text></contact>"#;
-  let two = r#"<contact name="Affiliation: " role="affiliation"><text font="italic" xml:id="ID"> University of Two, City 200000, Country<break/></text></contact>"#;
+  let one = r#"<contact name="Affiliation: " role="affiliation"><text font="italic" xml:id="ID"> Institute of One, Town 100000, Country</text></contact>"#;
+  let two = r#"<contact name="Affiliation: " role="affiliation"><text font="italic" xml:id="ID"> University of Two, City 200000, Country</text></contact>"#;
   let at = |contact: &str, id: &str| contact.replace("ID", id);
   let xyz = r#"<contact role="collaboration">XYZ Collaboration</contact>"#;
   assert_eq!(creators(&xml), [
