@@ -2,7 +2,7 @@
 //! Perl: IEEEtran.cls.ltxml — 458 lines
 use crate::{
   engine::{
-    base_utilities::names_continue,
+    base_utilities::{names_continue, notes_only_line},
     latex_constructs::{FontUnit, set_theorem_within_display, symbol_box_size},
   },
   package::caption_sty,
@@ -1441,53 +1441,50 @@ fn name_memberships(tokens: Vec<Token>) -> Vec<Token> {
   out
 }
 
-/// Whether `line` holds one `\IEEEmembership{…}` and else only spacing and authors' notes (`\thanks{…}`,
-/// `\footnote{…}`): a grade on the line after its name ([`name_memberships`]).
+/// Whether `line` holds one `\IEEEmembership{…}` and else only spacing or authors' notes alone ([`notes_only_line`]:
+/// `\thanks{…}`, `\footnote{…}`): a grade on the line after its name ([`name_memberships`]).
 fn grade_only_line(line: &[Token]) -> bool {
   let spacing = |t: &Token| *t == T_SPACE!() || *t == T_ACTIVE!('~') || *t == T_CS!("\\par");
-  let group_end = |from: usize| -> Option<usize> {
-    let mut at = from;
-    while line.get(at).is_some_and(|t| *t == T_SPACE!()) {
-      at += 1;
-    }
-    if line.get(at).is_none_or(|t| t.code != Catcode::BEGIN) {
-      return None;
-    }
-    let mut level = 0usize;
-    for (j, t) in line.iter().enumerate().skip(at) {
-      match t.code {
-        Catcode::BEGIN => level += 1,
-        Catcode::END => {
-          level -= 1;
-          if level == 0 {
-            return Some(j + 1);
-          }
-        },
-        _ => {},
-      }
-    }
-    None
-  };
   let mut grades = 0;
+  let mut rest: Vec<Token> = Vec::with_capacity(line.len());
+  let mut depth = 0usize;
   let mut i = 0;
   while i < line.len() {
-    let t = &line[i];
-    if spacing(t) {
-      i += 1;
-    } else if *t == T_CS!("\\IEEEmembership")
-      || *t == T_CS!("\\thanks")
-      || *t == T_CS!("\\footnote")
-    {
-      grades += usize::from(*t == T_CS!("\\IEEEmembership"));
-      match group_end(i + 1) {
-        Some(end) => i = end,
-        None => return false,
+    let t = line[i];
+    if depth == 0 && t == T_CS!("\\IEEEmembership") {
+      let open = i
+        + 1
+        + line[i + 1..]
+          .iter()
+          .take_while(|t| **t == T_SPACE!())
+          .count();
+      if line.get(open).is_none_or(|t| t.code != Catcode::BEGIN) {
+        return false;
       }
-    } else {
-      return false;
+      let mut level = 0usize;
+      let Some(close) = line[open..].iter().position(|t| {
+        match t.code {
+          Catcode::BEGIN => level += 1,
+          Catcode::END => level -= 1,
+          _ => {},
+        }
+        level == 0
+      }) else {
+        return false;
+      };
+      grades += 1;
+      i = open + close + 1;
+      continue;
     }
+    match t.code {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ => {},
+    }
+    rest.push(t);
+    i += 1;
   }
-  grades == 1
+  grades == 1 && (rest.iter().all(spacing) || notes_only_line(&rest))
 }
 
 /// `tokens` without the full stop or semicolon that closes them right after a grade: one at the top level that only

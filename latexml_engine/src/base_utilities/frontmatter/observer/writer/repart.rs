@@ -48,8 +48,8 @@ use super::{
     words_without_marks,
   },
   plan::{
-    Key, Made, Owner, Place, api_call, block_items, block_span_tokens, creator_items, difference,
-    pair_names, place_of, reading_order,
+    Key, Made, Owner, Place, api_call, block_address_tokens, block_items, block_span_tokens,
+    creator_items, difference, held_as_pubnote, pair_names, place_of, reading_order,
   },
   *,
 };
@@ -93,6 +93,9 @@ pub(super) struct Repart {
   block:      Vec<Item>,
   /// the words the blocks printed as separators between names (`SepKind::Word`: "and"), which no creator keeps
   separators: Vec<String>,
+  /// the words of the domains of the e-mails made ([`Made::Email`]), which a brace list prints once for all its
+  /// addresses (`\{ann,cat\}@a.edu`) and each address written out prints again
+  domains:    Vec<String>,
 }
 
 impl Repart {
@@ -208,9 +211,17 @@ fn item_source(key: &Key, assoc: &Assoc, todays: &BTreeMap<Key, Node>) -> Option
     {
       Made::Legend
     },
+    // (an e-mail today's prints in no item of its own — a boxed block's row of addresses, today's inside the one
+    // creator holding the `tabular`: `\texttt{\{ann,cat\}@a.edu, bob@b.edu}`, 2609.39183, 2507.07465 —, made from the
+    // reading's address, as it spells it out of the list)
+    Kind::Contact(ref role) if role == "email" => Made::Email,
     _ => return None,
   };
   let tokens = match assoc.source? {
+    // (an e-mail of an API call, a list the call printed whole, is written out by the plan's own write-out, never made
+    // here: `ruling3:written-out`)
+    (index, Some(span)) if made == Made::Email => block_address_tokens(index, span, &assoc.text)?,
+    (_, None) if made == Made::Email => return None,
     (index, Some(span)) => {
       let span = entry_span(index, span, &key.1).unwrap_or(span);
       // (a made affiliation carries no entry mark, as today's copies hold none; a legend keeps its mark's ink, the
@@ -223,7 +234,7 @@ fn item_source(key: &Key, assoc: &Assoc, todays: &BTreeMap<Key, Node>) -> Option
     made,
     role: match made {
       Made::Affiliation => todays_role.unwrap_or_else(|| assoc.role.clone()),
-      Made::Legend => assoc.role.clone(),
+      Made::Legend | Made::Email => assoc.role.clone(),
     },
     tokens,
     label: assoc.label.clone(),
@@ -374,6 +385,12 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
     {
       return declined(&s!("a name naming no person: {}", c.name));
     }
+    // (nor a name the reading joined across an alignment's cells: names in two columns are two people, never one —
+    // `K.~Ashwin Kumar& \mbox{\ \ } & Amol Deshpande & …`, 1302.4168, written one creator once its e-mails could be
+    // made, batch 100c; today's stays)
+    if joined_across_cells(c) {
+      return declined(&s!("a name joined across an alignment's cells: {}", c.name));
+    }
   }
   // (a one-word name parted from today's name at a comma is the given name of a name written surname first, `Smith,
   // Jr., John`: uncertain, so today's stays)
@@ -463,8 +480,15 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
           ]
           .contains(&w.as_str())
         }));
-    // (a line an entry is continued over, labelled or not: the label is its first line's)
-    person || lines_of(assoc).iter().any(|line| may_name_a_person(line))
+    // (a line an entry is continued over, labelled or not: the label is its first line's; and each row of the block an
+    // item joins, on its own — never a run of words inside one, so `Carnegie Mellon University` stays an institution)
+    let rows = joined_rows(assoc);
+    person
+      || lines_of(assoc).iter().any(|line| may_name_a_person(line))
+      || (rows.len() > 1
+        && rows
+          .iter()
+          .any(|(row, whole)| *whole && may_name_a_person(row)))
   };
   // (the labels the reading's entries answer)
   let answered: Vec<String> = resolved
@@ -477,6 +501,7 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
     .collect();
   let mut creators = Vec::new();
   let mut blocks: Vec<usize> = Vec::new();
+  let mut domains = Vec::new();
   for (index, c) in resolved.creators.iter().enumerate() {
     if c.name.trim().is_empty() {
       continue;
@@ -492,6 +517,11 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
       let Some(item) = item_source(&key, assoc, &todays) else {
         return declined(&s!("an item with nothing to write it from: {key:?}"));
       };
+      if let Item::Make { made: Made::Email, .. } = item
+        && let Some((_, domain)) = assoc.text.rsplit_once('@')
+      {
+        domains.extend(words(domain));
+      }
       if let Item::Make { .. } = item {
         if !balanced(&assoc.text) {
           return declined(&s!("an item whose brackets do not close: {}", assoc.text));
@@ -562,9 +592,19 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
   assocs.sort_by_key(|(key, a)| print_place(&key.0, a));
   let mut block = Vec::new();
   for (key, assoc) in assocs {
+    // (a note of the block's today's prints as a document pubnote is held there: none is written)
+    if held_as_pubnote(front, &key, &[(Owner::Block, assoc)]) {
+      continue;
+    }
     let Some(item) = item_source(&key, assoc, &todays) else {
       return declined(&s!("a block item with nothing to write it from: {key:?}"));
     };
+    // (an e-mail no name spells is the block's, a block-level contact that makes no creator of no name (FIDELITY_CHARTER
+    // §4, 2026-11-01) — which the writer has no form for: today's stays, `rp/w_block.tex`, 2605.09461 — SYNC_STATUS
+    // M1)
+    if let Item::Make { made: Made::Email, .. } = item {
+      return declined(&s!("a block e-mail no name spells: {key:?}"));
+    }
     if matches!(item, Item::Make { .. })
       && (by_words(assoc) || takes_a_creator(assoc) || reads_as_a_person(assoc))
     {
@@ -576,7 +616,12 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
     block.push(item);
   }
   let separators = blocks.into_iter().flat_map(separator_words).collect();
-  Some(Repart { creators, block, separators })
+  Some(Repart {
+    creators,
+    block,
+    separators,
+    domains,
+  })
 }
 
 /// Whether a reading creator's name opens a line or row of its block that no names row above it leads to: the Name
@@ -622,6 +667,117 @@ fn opens_a_row_under_no_names(c: &RCreator, before: &RCreator) -> bool {
       e.kind == EventKind::Name && !text.is_empty() && before.ends_with(&text)
     })
   })
+}
+
+/// Whether the reading joined a creator's name of Name events with nothing but layout between them
+/// (`name:layout-joined`, the resolver's `joins_previous`) where an alignment's cell boundary is among that layout: the
+/// name's words run on from one cell into the next.
+fn joined_across_cells(c: &RCreator) -> bool {
+  if !c.rule.contains("name:layout-joined") {
+    return false;
+  }
+  let name = words(&c.name);
+  with_ledger(|ledger| {
+    let Some(Entry::Author(block)) = ledger.entries.get(c.source) else {
+      return false;
+    };
+    let Outcome::Events { events, .. } = &block.outcome else {
+      return false;
+    };
+    let events = read_events(events);
+    let Some(at) = events.iter().position(|e| {
+      let text = words(&e.text);
+      e.kind == EventKind::Name && !text.is_empty() && name.starts_with(&text)
+    }) else {
+      return false;
+    };
+    let mut read = words(&events[at].text).len();
+    let mut cell = false;
+    for e in &events[at + 1..] {
+      if read >= name.len() {
+        break;
+      }
+      match e.kind {
+        EventKind::Layout => cell |= e.role.as_deref() == Some("cell"),
+        EventKind::Name => {
+          let text = words(&e.text);
+          if text.is_empty() || !name[read..].starts_with(&text) {
+            return false;
+          }
+          if cell {
+            return true;
+          }
+          read += text.len();
+        },
+        _ => return false,
+      }
+    }
+    false
+  })
+}
+
+/// The rows of its block an item's text joins: the Name events from the one its source span starts at, each whose words
+/// run on the item's words read so far, others' rows between them passed over (an e-mail row another item holds); for
+/// each, its text and whether it is a whole row — a line, a cell or a spaced-apart piece of its own, no comma, word or
+/// other ink parting it from the text beside it ([`whole_row`]). A whole row may name a person the joined text does not
+/// read as: `\FormatAuthor{Alessandro Chiesa}{…}{EPFL} \FormatAuthor{Zihan Hu}{…}{EPFL}`, two nested `tabular`s in one
+/// cell, made "EPFL Zihan Hu EPFL" Chiesa's affiliation (2609.37429, review rev100c B1); the affiliation counterpart of
+/// [`joined_across_cells`]. A comma's piece is no row: `University of California, San Diego` (2103.14969), `Nanjing
+/// University, Nanjing, China` (2609.21619). Empty when the item starts at no Name event of its span.
+fn joined_rows(assoc: &Assoc) -> Vec<(String, bool)> {
+  let Some((index, Some(span))) = assoc.source else {
+    return Vec::new();
+  };
+  let text = words(&assoc.text);
+  with_ledger(|ledger| {
+    let Some(Entry::Author(block)) = ledger.entries.get(index) else {
+      return Vec::new();
+    };
+    let Outcome::Events { events, .. } = &block.outcome else {
+      return Vec::new();
+    };
+    let events = read_events(events);
+    let Some(first) = events
+      .iter()
+      .position(|e| e.kind == EventKind::Name && e.span.is_some_and(|s| s.0 == span.0))
+    else {
+      return Vec::new();
+    };
+    let (mut rows, mut read) = (Vec::new(), 0);
+    for (at, e) in events.iter().enumerate().skip(first) {
+      if read >= text.len() {
+        break;
+      }
+      if e.kind != EventKind::Name {
+        continue;
+      }
+      let row = words(&e.text);
+      if row.is_empty() || !text[read..].starts_with(&row) {
+        if rows.is_empty() {
+          return rows;
+        }
+        continue;
+      }
+      read += row.len();
+      rows.push((e.text.clone(), whole_row(&events, at)));
+    }
+    rows
+  })
+}
+
+/// Whether the Name event at `at` is a whole row of its block: on each side, past the layout and the marks and notes it
+/// carries, the block's start or end, a line break, a cell or alignment boundary, or a spacing run.
+fn whole_row(events: &[Event], at: usize) -> bool {
+  let bound = |e: &Event| match e.kind {
+    EventKind::Break | EventKind::Sep(SepKind::Gap { .. }) => Some(true),
+    EventKind::Layout => {
+      matches!(e.role.as_deref(), Some("cell" | "\\lx@begin@alignment")).then_some(true)
+    },
+    EventKind::Mark | EventKind::Note => None,
+    _ => Some(false),
+  };
+  events[..at].iter().rev().find_map(bound).unwrap_or(true)
+    && events[at + 1..].iter().find_map(bound).unwrap_or(true)
 }
 
 /// Whether a written name is no one name: it prints nothing, or, outside its brackets, a separator the blocks part
@@ -1580,12 +1736,18 @@ pub(super) fn apply(
   };
   lost.retain(&mut unprinted);
   added.retain(&mut unprinted);
+  // (a word of an e-mail's domain that today's prints is the print's, however many addresses written out of its brace
+  // list repeat it: `\{ann,cat\}@a.edu`'s `a.edu`, once on the page, twice in Ann's and Cat's contacts — 2609.39183,
+  // 2507.07465)
+  let printed = creator_words(&today);
+  added.retain(|word| !(repart.domains.contains(word) && printed.contains(word)));
   let built_front = Front {
     creators: named
       .into_iter()
       .filter(|c| !c.name.trim().is_empty())
       .collect(),
     nameless,
+    pubnotes: front.pubnotes.clone(),
   };
   let reads = difference(resolved, &built_front);
   let dispossessed = dispossessed(&today, &built_front.creators);
@@ -1768,6 +1930,7 @@ mod tests {
       creators: Vec::new(),
       block,
       separators: Vec::new(),
+      domains: Vec::new(),
     };
     assert!(!repart(Vec::new()).makes_block_items());
     assert!(!repart(vec![Item::Copy(node.clone())]).makes_block_items());

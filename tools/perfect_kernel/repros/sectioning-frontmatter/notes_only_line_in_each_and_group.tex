@@ -1,0 +1,13 @@
+% mechanism: notes_only_line_after_the_names_is_theirs.tex in each `\and` group: the line ends at the next `\and`.
+% oracle:  pdflatex 0 errors
+% engines: rust int127a: two document pubnotes; perl the same (empty affiliations)
+% expect:  0 errors; Ann: affiliation "Univ A, Town."; Bob: "Univ B, City."; no document pubnote
+% status:  GREEN (100c)
+\documentclass{article}
+\usepackage{graphicx}
+\title{T}
+\author{Ann Able$^{1}$\\ \thanks{$^{1}$Univ A, Town.} \and Bob Baker$^{2}$\\ \thanks{$^{2}$Univ B, City.}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

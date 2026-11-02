@@ -843,3 +843,59 @@ pub(in crate::base_utilities) const ACCENT_COMMANDS: &[&str] = &[
   "\\'", "\\`", "\\^", "\\\"", "\\~", "\\=", "\\.", "\\u", "\\v", "\\H", "\\c", "\\d", "\\b",
   "\\t", "\\r", "\\k",
 ];
+
+/// Whether an author block's `line` holds authors' notes only: one or more `\thanks{…}`, `\footnote{…}` or
+/// `\IEEEcompsocitemizethanks{…}` (each with an optional `[…]`), and else only spacing (spaces, `~`, `\par`). Such a
+/// line prints no text where it stands, only its notes' marks: the notes are the line's above, as written without the
+/// `\\` before them (`author_block/preprocess.rs` `notes_line_joins_names`; the IEEE reader's grade-and-notes line,
+/// `grade_only_line`).
+pub fn notes_only_line(line: &[Token]) -> bool {
+  line_notes(line).is_some_and(|notes| !notes.is_empty())
+}
+
+/// The notes of a line of notes only ([`notes_only_line`]), each the span `(start, end)` of `line` from its command
+/// through its closing brace; `None` when the line holds other ink.
+pub(in crate::base_utilities) fn line_notes(line: &[Token]) -> Option<Vec<(usize, usize)>> {
+  let spacing = |t: &Token| *t == T_SPACE!() || *t == T_ACTIVE!('~') || *t == T_CS!("\\par");
+  let past_spaces = |mut at: usize| {
+    while line.get(at) == Some(&T_SPACE!()) {
+      at += 1;
+    }
+    at
+  };
+  let mut notes = Vec::new();
+  let mut i = 0;
+  while i < line.len() {
+    let t = &line[i];
+    if spacing(t) {
+      i += 1;
+    } else if *t == T_CS!("\\thanks")
+      || *t == T_CS!("\\footnote")
+      || *t == T_CS!("\\IEEEcompsocitemizethanks")
+    {
+      let mut at = past_spaces(i + 1);
+      if line.get(at) == Some(&T_OTHER!("[")) {
+        let close = line[at..].iter().position(|t| *t == T_OTHER!("]"))?;
+        at = past_spaces(at + close + 1);
+      }
+      if line
+        .get(at)
+        .is_none_or(|t| t.get_catcode() != Catcode::BEGIN)
+      {
+        return None;
+      }
+      let end = skip_group(line, at);
+      if line
+        .get(end.wrapping_sub(1))
+        .is_none_or(|t| t.get_catcode() != Catcode::END)
+      {
+        return None;
+      }
+      notes.push((i, end));
+      i = end;
+    } else {
+      return None;
+    }
+  }
+  Some(notes)
+}

@@ -31,6 +31,10 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
   // (an empty mark prints nothing and is no mark: `\textsuperscript{}Univ. Grenoble Alpes…` leaves the block unmarked,
   // its line every name's; [`drop_empty_marks`])
   let stuff = drop_empty_marks(stuff);
+  // (a line of notes only after a `\\` joins the line above, its notes the names': `… and Cat Cole$^{1}$\\
+  // \thanks{$^{1}$…}`, 2609.17106, 2411.05212, 2312.10807; [`notes_line_joins_names`], OXIDIZED_DESIGN_DIVERGENCES
+  // #957) — its notes no name requests the document's, added after the block's calls
+  let (stuff, document_notes) = notes_line_joins_names(stuff);
   // Beyond-Perl (surpasses Perl; KNOWN_PERL_ERRORS #100): IJCAI-style author
   // blocks — ijcai97.sty and its derivatives (e.g. the ttm.sty in
   // arXiv:2401.03955) — pack names, `\affiliations` and a comma-separated
@@ -53,6 +57,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
     out.extend(stuff.unlist());
     out.push(T_CS!("\\affiliations"));
     out.push(T_CS!("\\done"));
+    out.extend(document_notes);
     return Ok(Tokens::new(out));
   }
   let mut calls: Vec<Token> = Vec::new();
@@ -1850,6 +1855,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
       calls.extend(url_contact_call(line, owner, url)?);
     }
   }
+  calls.extend(document_notes);
   Ok(Tokens::new(calls))
 }
 

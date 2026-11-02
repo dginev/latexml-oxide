@@ -1,0 +1,20 @@
+% mechanism: a line of notes only after the names (OD #957) that mixes notes the names' marks request with one no mark
+%   labels (`\thanks{This work was funded by …}`): only the requested notes are the names'; the other is the
+%   document's, as the line read whole made it (`notes_the_names_request`, author_block/preprocess.rs: `\thanks` there is
+%   `\lx@add@pubnote@thanks`, FIDELITY_CHARTER R1). 100c r1 joined the line whole, and the funding note went to the
+%   last name (review rev100c S1).
+% witness: 2609.17106 (the funding note on Markus Vincze), 2312.10807 (`$^{*}$Equal contribution` under
+%   `\IEEEauthorrefmark{1}` on Alois Knoll)
+% oracle:  pdflatex 0 errors; "Ann Able1 , Bob Bell1", the notes' marks on the line under it; footnotes
+%   "∗1Univ A, Town.", "†This work was funded by Grant X."
+% engines: rust int127a: two bare creators, both notes document pubnotes; 100c r1: Univ A both authors', the funding
+%   note Bob's; perl as int127a
+% expect:  0 errors; Ann: Univ A, Town.; Bob: Univ A, Town.; the funding note one document pubnote
+% status:  GREEN (100c r2)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1}$, Bob Bell$^{1}$\\ \thanks{$^{1}$Univ A, Town.}\thanks{This work was funded by Grant X.}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

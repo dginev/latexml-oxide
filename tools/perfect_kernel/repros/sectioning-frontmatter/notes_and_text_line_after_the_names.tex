@@ -1,0 +1,15 @@
+% mechanism: a line after `\\` holding a note AND text is no notes-only line: it stays a line, read by the mark inside
+%   its note (`author_mark_position`), and the note is the document's. pdflatex prints "∗ 2 Univ B, City" under the names,
+%   the note "∗ 1 Univ A, Town." a footnote of the block. Out of 100c's mechanism (SYNC_STATUS row 100c).
+% oracle:  pdflatex 0 errors
+% engines: rust 100c: Bob Univ B, the note a document pubnote; perl the same
+% expect:  0 errors; Ann holds Univ A
+% status:  RED
+\documentclass{article}
+\usepackage{graphicx}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$\\ \thanks{$^{1}$Univ A, Town.} $^{2}$Univ B, City}
+\begin{document}
+\maketitle
+Text.
+\end{document}

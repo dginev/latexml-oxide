@@ -18919,3 +18919,30 @@ Body.
 Not fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #928 round 9): the text is kept, with 0 warnings, but on a creator of no
 name after the two authors rather than on Ann Able (SYNC_STATUS "A `\thanks` opening with `\label` sits on a nameless
 creator"; RED catalog repro sectioning-frontmatter/llncs_thanks_label_on_a_nameless_creator).
+
+## 1206. A line of notes only after an author block's `\\` becomes an empty affiliation, its notes the document's
+
+`\lx@add@authors` (Base_Utility.pool.ltxml:687-712) splits a marked block at `\\` and reads each line by the position of
+its first superscript (`positionOf($line, @authorsup_markers)`, :700), counting one inside a `\thanks`: a line holding
+only notes (`\\ \thanks{$^{1}$…}`) is an affiliation entry (`$p < 8`), whose `\lx@affiliation@withsup` content digests
+to nothing, while the notes become document pubnotes; a `\\[3.0ex]` before them is not consumed and makes a creator
+"[3.0ex]" holding them. Minimal trigger:
+
+```latex
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1,*}$, Bob Baker$^{2}$ and Cat Cole$^{1}$\\
+\thanks{$^{1}$Ann Able and Cat Cole are with Univ A, Town.}%
+\thanks{$^{2}$Bob Baker is with Univ B, City.}%
+\thanks{$^{*}$Work done at Lab C.}}
+\begin{document}
+\maketitle
+Text.
+\end{document}
+% pdflatex: the names, the notes' marks "†‡∗" under them, three footnotes; 0 errors
+% Perl (/usr/local/bin/latexml, run): Ann Able an empty affiliation contact; Bob Baker and Cat Cole bare; the three
+%   notes document pubnotes
+```
+
+Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #957): the break is taken out, the notes the names'. Witnesses 2609.17106,
+2411.05212, 2312.10807.

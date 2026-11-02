@@ -113,6 +113,21 @@ pub(super) fn make(
         content: vec![TagContent::Box(digested)],
       }
     },
+    Made::Email => {
+      // (an e-mail contact as `\lx@add@email` makes one, and as [`email_contact`] names one: role `email`, the
+      // class's e-mail label; its content the address in its row's fonts)
+      let digested = digest_frontmatter_item("ltx:contact", tokens.clone())?;
+      let mut attr = TagAttrs::default();
+      attr.insert("role".to_string(), "email".to_string());
+      if let Some(name) = get_frontmatter_name(None, "ltx:contact", "email")? {
+        attr.insert("name".to_string(), name);
+      }
+      TagData {
+        tag: "ltx:contact".to_string(),
+        attr,
+        content: vec![TagContent::Box(digested)],
+      }
+    },
   };
   let saved = document.get_node().clone();
   document.set_node(owner);

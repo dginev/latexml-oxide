@@ -20354,7 +20354,7 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    defines: the colour keeps its earlier definition — the ieeeaccess binding's CMYK, ieeeaccess_cls.rs:32 —, at Info;
    a name the driver's model defines first takes the alternate the model's binding gives, `\lx@color@alternate@<model>`
    — the spotcolor binding keeps each `\AddSpotColor`'s CMYK, spotcolor.sty:31-41, scaled by the tint —, else black;
-   color_sty.rs `driver_color_model`, `driver_alternate_color`, KNOWN_PERL_ERRORS #958; 2007.03025, 2009.04554,
+   color_sty.rs `driver_color_model`, `driver_alternate_color`, KNOWN_PERL_ERRORS #957; 2007.03025, 2009.04554,
    2011.07807, 2209.03883, 2209.12464, 2609.20467). Open: aipcheck.tex:53-54 reads
    `\fmtversion` as `#1/#2/#3` (pre-2020 LaTeX; TL 2025's is `2024-11-01`, pdflatex errs the same: 0806.2199, 3
    Errors).
@@ -20384,7 +20384,7 @@ from `input_definitions_impl` after the binding's `\ver@` and from `input`'s `.t
    prints only in `\ATLAS@TitleHeader` under `datetop`, :567, which `cernpreprint` skips: 1902.05892, 1904.03536).
    jgcc.cls:397's `\copyrightinfo{}{}` (2309.03819, 2401.15504) prints nothing, as amsart.cls:723-727's
    `\@setcopyright` prints no copyright without a year (ams_support_sty.rs `\lx@ams@add@copyright`, the one test
-   of both `\copyrightinfo`s; Perl's ams_support.sty.ltxml:139 adds ", ", KNOWN_PERL_ERRORS #959). The walk's roots
+   of both `\copyrightinfo`s; Perl's ams_support.sty.ltxml:139 adds ", ", KNOWN_PERL_ERRORS #958). The walk's roots
    are broad and err toward keeping a default: every raw `\ps@…` page style and `\@oddhead`/`\@evenhead`, so a default
    a copy prints only in a running head shows in the document, which LaTeXML has no running heads for.
 11. *Renamed natbib copies* (72a r4, main-session scope). A class copy that loads a renamed copy of natbib —
@@ -30132,3 +30132,106 @@ base runs: long tail 88.34 → 90.42 % per creator, 86.98 → 88.69 % per paper;
 96.65 → 96.74 %; 99 creators from wrong to right (63 + 36), none from right to wrong. Instructions (`perf stat -e instructions:u`) against 99b0: +0.5 % on 2608.28486 (22 names, 6 labelled lines; round 1
 +4.7 %), +0.0 % on 1812.07638 (200 names); round 1's +1.2 % (2607.20672: one more speculative run), −0.3 % (2609.39929,
 unrouted).
+
+### 957. A line of notes only after an author block's `\\` is the line above's, its notes the names' (Perl: a line of its own, read as an affiliation by the mark inside its first note, its notes the document's)
+
+**What** (batch 100c; census127 cluster 6). `\lx@add@authors` (`add_authors_calls_sectioned`, author_block/dispatch.rs)
+takes out, before it reads the block's lines, a `\\` (with its `*`, its `[len]` and any spacer `\\` after it) that
+opens a line of notes only — `\thanks{…}`, `\footnote{…}` or `\IEEEcompsocitemizethanks{…}`, each with an optional
+`[…]`, and spacing (`author_block/notes.rs` `notes_only_line`, `author_block/preprocess.rs` `notes_line_joins_names`).
+Only that misreading is undone: a block whose names carry marks (`has_author_marks`, outside its notes) and a line
+whose notes do (`author_mark_position`), after a names line — its `\and` group's first, or one whose marks follow its
+text (`marker_leads` false): after an affiliation or an `Emails: …` line the notes stay a line (joined, 1911.03356's
+address list no longer read as one, every address lost its author; control repro
+`notes_only_line_after_an_emails_line_stays`); only a break at the block's top level, outside braces and environments,
+and only up to the next `\\` or `\and`. The notes then follow the names line as if written without the break, and are
+read as such notes are: a marked note (`\thanks{$^{1}$…}`) the contact of the names requesting its mark. Only notes
+a name requests join (`notes_the_names_request`): the mark leading a note's text — a superscript or mark command before
+any letter, or a math group of no letter it opens with (`$*$`) — keys a label the names' marks request (`mark_keys`:
+each comma piece, and a glued `1*` as `1` and `*` too, 2411.05212). A line of no requested note stays a line; on a
+line mixing both, a note no name requests (`\thanks{This work was funded by …}`, 2609.17106; a symbol only a note
+prints, 2312.10807's `$^{*}$Equal contribution` under `\IEEEauthorrefmark{1}`) stays the document's, a `<pubnote>`, as
+the line read whole made it, and not the last name's note (FIDELITY_CHARTER R1; review rev100c S1): it is taken out of
+the block and added after the block's calls, its `\thanks` written `\lx@add@pubnote@thanks`, its `\footnote`
+`\lx@add@pubnote` — what they mean digested in a contact (queue_digest.rs) —, so no mark its text prints is read as a
+name's (`$^{\dagger}$Corresponding author`). A mixed line whose unrequested note is no plain `\thanks{…}` or
+`\footnote{…}` stays a line. The observer reads it so too: on a notes-only line under names that mixes them, the
+resolver gives an unrequested note to the block (`resolver/blocks.rs`, rule `note:unrequested`), and the writer holds
+such a block note where today's prints it as a pubnote (`writer/plan.rs` `held_as_pubnote`, `Front::pubnotes`), so a
+written paper stays written (2609.17106: its six authors' e-mails and the `∗` legend on the two starred authors). A
+note on an address line (`note:address-line`) is not held so: the writer still declines there (SYNC_STATUS row 100c). A line of
+unmarked notes stays a line: in a marked block it continues the entry above as it would joined, and in an unmarked
+block its notes are the document's, no author's by position — batch 86d's reading (`without_stop_after_grade`:
+2112.14209, 2409.11755, 2510.15773, 2605.22853), which moved such notes onto a `\\`-line on purpose. IEEEtran's own
+reader of a grade-and-notes line (`ieeetran_cls.rs` `grade_only_line`) is now "one `\IEEEmembership{…}`, then
+`notes_only_line`".
+
+**Why.** pdflatex prints only the notes' marks on such a line, the notes as footnotes: the line holds no text of its
+own. Read as a line, it led with the mark inside its first note — `author_mark_position` (author_block/marks.rs) counts a
+`^` inside a `\thanks`, `has_author_marks` skips it; the disagreement stays, cited at the preprocess — so it took the
+leading-mark branch as one affiliation labelled `1` whose content digested to nothing, answering mark 1, while its notes
+went to the document as `<pubnote>`s; the observer read the block right and its writer, holding creators only, declined.
+Perl does the same (Base_Utility.pool.ltxml:702-712; KNOWN_PERL_ERRORS #1206), a `\\[3.0ex]` making it a creator
+"[3.0ex]" besides. Witnesses 2609.17106 (ieeeconf, names over two lines), 2411.05212 (ieeeconf), 2312.10807 (IEEEtran,
+`\\[3.0ex]`): every author now holds the affiliation its mark requests; 2312.10807's two legend notes, whose `*`
+and `†` no name's `\IEEEauthorrefmark{n}` is keyed to (SYNC_STATUS row 100c), stay document pubnotes. A line holding a note and text (`\\ \thanks{$^1$Univ A.} $^2$Univ
+B`) stays a line (RED repro `notes_and_text_line_after_the_names`).
+
+**Guards** `perfect_kernel_batch100c::{a_notes_only_line_after_the_names_is_theirs,
+a_notes_only_line_past_a_starred_break_a_spacer_or_in_an_and_group,
+a_notes_only_line_stays_a_line_after_unmarked_names_or_an_emails_line, a_note_no_name_requests_stays_the_documents}`
+(the boundary, and the mixed line; `perfect_kernel_batch86d::ieee_membership_kept_after_closing_stop` pins the IEEE variants); repros
+sectioning-frontmatter/`notes_only_line_after_the_names_is_theirs`, `notes_only_line_after_ieee_names_is_theirs`,
+`notes_only_line_after_a_gap_is_the_names` (each equal to `notes_only_line_without_a_break_control`),
+`notes_only_line_after_a_starred_break_and_a_spacer`, `notes_only_line_in_each_and_group`,
+`notes_only_line_after_unmarked_names`, `notes_only_line_after_an_emails_line_stays` (controls),
+`notes_only_line_with_a_note_no_name_requests`; RED `notes_only_line_unmarked_under_a_marked_names_line` (an unmarked
+note alone on its line under marked names goes to the last name, int127a the same; SYNC_STATUS row 100c).
+
+### 958. A boxed author block's re-part writes the e-mails the reading spells out of its rows, and a `\resizebox`'s sizes print no name (Perl: one creator holding the whole `tabular`)
+
+**What** (batch 100c; census127 cluster 3, SYNC_STATUS M1/M5). The frontmatter observer's writer re-parts a boxed
+author block (a `tabular`, `minipage`, `\parbox` or `\resizebox` in `\author`, which the old reader keeps whole in one
+`personname`) by the reading (OD #928). An e-mail the reading gives a creator that today's prints in no item of its own
+is now made (`observer/writer/plan.rs` `Made::Email`, `repart.rs` `item_source`, `apply.rs` `make`): an `ltx:contact
+role=email` named as `\lx@add@email` names one (`get_frontmatter_name(None, "ltx:contact", "email")`, as
+`email_contact`), its content the reading's address — one written out of a brace list, `\{ann,cat\}@a.edu`'s
+`cat@a.edu` — in the fonts it prints in in the block (`plan::block_address_tokens`: each group holding it that a text
+font command opens or a font declaration starts, and the declarations before it in its group; in an alignment, those of
+its cell and those before the alignment). The re-part's word check counts a domain word the print shows once as printed
+however many written-out addresses repeat it (`Repart::domains`). An e-mail of an API call is never made here (the
+plan's write-out has it). `\Gscale@@box` (graphics_sty.rs, `\resizebox`'s box) joins the lexer's `KEYED_CONSTRUCTORS`
+(observer/events/mod.rs): its height type and sizes are no ink. A fail-safe comes with it: the re-part declines a name
+the reading joined across an alignment's cells (`repart.rs` `joined_across_cells`, over the resolver's
+`name:layout-joined`): `K.~Ashwin Kumar& \mbox{\ \ } & Amol Deshpande & …` (1302.4168) read as one name, written
+one person once its e-mails could be made; today's creator stays (RED repro `boxed_block_names_in_two_columns`: the
+resolver's `joins_previous` joins across a cell boundary, SYNC_STATUS row 100c). A second fail-safe: the re-part
+declines a made item whose text joins two or more of the block's Name events (from the one its source span starts at,
+each one's words running on the item's, others' between passed over; `repart.rs` `joined_rows`) when one of them that
+is a whole row — a line, a cell or a spaced-apart piece, no comma, word or other ink beside it (`whole_row`) — may on
+its own name a person (`may_name_a_person`). Rows, never runs of words inside one (`Carnegie Mellon University` is no
+person), and never a comma's piece (`University of California, San Diego`, 2103.14969; `Nanjing University, Nanjing,
+China`, 2609.21619). 2609.37429's `\FormatAuthor{Alessandro Chiesa}{…}{EPFL} \FormatAuthor{Zihan Hu}{…}{EPFL}` (two nested
+`tabular`s in one cell) was read as one name whose institution row runs on over the second person's rows and written
+Chiesa holding the affiliation "EPFL Zihan Hu zihan.hu@epfl.ch EPFL"; today's one creator now stays (review rev100c B1;
+RED repro `boxed_block_two_people_in_one_cell`: two creators are right).
+
+**Why.** The reading had every address right and `item_source` made only affiliations and legends, so the re-part
+declined ("an item with nothing to write it from: (Contact("email"), …)") and the whole block stayed one creator, a
+`tabular` inside its name; a `\resizebox` printed "0pt" into the names to the lexer. Witnesses 2609.39183,
+2507.07465, 2107.12423 (`\resizebox`), 2603.10436 (`\parbox`), 2608.20401: each author now its own creator with its
+affiliations and its e-mail. **Not done (3B, deferred):** an e-mail no name spells (`lab@a.edu`) is the block's, a
+block-level contact that invents no nameless creator (FIDELITY_CHARTER §4, 2026-11-01); the writer has no such form but
+OD #159's nameless creator, so the re-part declines on it ("a block e-mail no name spells") and today's one creator
+stays (2605.09461, 2609.36484; RED repro `boxed_block_emails_no_name_spells`).
+
+**Guards** `perfect_kernel_batch100c::{a_boxed_blocks_emails_are_their_names_contacts,
+names_joined_across_cells_are_never_one_written_person, a_person_in_a_row_an_item_joins_is_never_a_contact,
+a_resizebox_round_a_boxed_block_prints_no_size}`; repros sectioning-frontmatter/`boxed_block_emails_written_out_of_a_brace_list`,
+`boxed_block_email_in_a_grouped_font`, `boxed_block_email_in_a_cell_font`, `boxed_block_resizebox_sizes_print_nothing`.
+Updated: `perfect_kernel_batch97b::marked_address_piece_is_no_person` (revtex `A.~Able$^{1}$, B.~in der
+Baker$^{2}$, b.baker@two.edu$^{*}$`) now reads two creators, the address B. in der Baker's by its spelling, 0 errors —
+its one creator with a `merged_creators` Error was the fail-safe while the re-part could make no e-mail item. Its name
+reads `<sup>2,∗</sup>`: the reading gave the `∗` printed after the address to the name (`mark:after-comma`), which
+needs the made e-mail item to carry a mark (RED repro `author_marked_email_piece_mark_moves_to_the_name`, SYNC_STATUS
+row 100c).

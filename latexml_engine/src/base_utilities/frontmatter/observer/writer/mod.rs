@@ -662,6 +662,7 @@ mod tests {
         name:  String::new(),
         items: Vec::new(),
       }],
+      pubnotes: Vec::new(),
     };
     assert!(!writes_a_nameless_creator([Owner::Block], &nameless));
     // (only an item made from the queued tokens counts: a copy of today's, a cut block line no name requests — the

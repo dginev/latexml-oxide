@@ -50,6 +50,9 @@ pub(super) enum Made {
   Affiliation,
   /// a note of the names showing its mark (the kernel's author note markup, `\lx@add@thanks`)
   Legend,
+  /// an e-mail contact printing the reading's address, written out of its brace list as the reading spells it, in the
+  /// fonts of its row ([`block_address_tokens`]: 2609.39183, 2507.07465)
+  Email,
 }
 
 /// One operation on today's frontmatter.
@@ -333,11 +336,27 @@ pub(super) fn difference(resolved: &Resolved, front: &Front) -> Option<String> {
   for key in want.keys().chain(have.keys()) {
     let w = owners(want.get(key).into_iter().flatten().map(|(o, _)| *o));
     let h = owners(have.get(key).into_iter().flatten().map(|(o, ..)| *o));
-    if w != h {
+    if w != h
+      && !(h.is_empty() && held_as_pubnote(front, key, want.get(key).map_or(&[], Vec::as_slice)))
+    {
       return Some(s!("{:?} {}: reading {w:?}, written {h:?}", key.0, key.1));
     }
   }
   None
+}
+
+/// Whether the reading gives a note to the author block alone (`wants`) that today's prints as one of the document's
+/// publication notes (`Front::pubnotes`): the block's note is the document's, held where the reading wants it, though
+/// `held` reads no pubnote. Only a note no name requests on a line of notes the names' marks label
+/// (`note:unrequested`: `\\ \thanks{$^{1}$Univ A}\thanks{This work was funded by …}`, 2609.17106; OD #957, review
+/// rev100c S1) — a note on an address line (`note:address-line`) still declines, SYNC_STATUS row 100c.
+pub(super) fn held_as_pubnote(front: &Front, key: &Key, wants: &[(Owner, &Assoc)]) -> bool {
+  key.0 == Kind::Note
+    && !wants.is_empty()
+    && wants
+      .iter()
+      .all(|(o, a)| *o == Owner::Block && rule_has(a, "note:unrequested"))
+    && front.pubnotes.contains(&key.1)
 }
 
 /// The API call at ledger index `index`.
@@ -581,6 +600,120 @@ pub(super) fn block_span_tokens(
       font.is_some(),
     )?;
     Some(entry_tokens(font, wrap, tokens))
+  })
+}
+
+/// The tokens of an e-mail contact printing `address`, an address the reading reads at `span` of the block at ledger
+/// index `index`: the address's text, as the reading spells it — one address written out of a brace list
+/// (`\{ann,cat\}@a.edu`'s `cat@a.edu`) is the text of no span — inside the fonts it prints in there: each group
+/// holding it that a text font command opens (`\texttt{…}`) or a font declaration starts (`{\scriptsize\ttfamily …}`),
+/// and the declarations before it in its own group — in an alignment's cell, those of the cell (each cell a group of
+/// its own: `\tt\small` before it in a `tabular` cell), and those before the alignment, which every cell starts in.
+/// `None` when the index is no rehearsed block.
+pub(super) fn block_address_tokens(
+  index: usize,
+  span: (u16, u16),
+  address: &str,
+) -> Option<Tokens> {
+  /// One group open at the address: the text font command opening it, its declarations so far, and where its
+  /// alignment's cells start among them (the declarations before the alignment).
+  struct Open {
+    command:      Option<Token>,
+    declarations: Vec<Token>,
+    cells:        Option<usize>,
+  }
+  const ALIGNMENTS: [&str; 6] = [
+    "tabular",
+    "tabular*",
+    "tabularx",
+    "tabulary",
+    "array",
+    "longtable",
+  ];
+  with_ledger(|ledger| {
+    let Some(Entry::Author(block)) = ledger.entries.get(index) else {
+      return None;
+    };
+    let content = block.tokens.unlist_ref();
+    let at = usize::from(span.0).checked_sub(block.range.0)?;
+    let declaration = |t: &Token| font_declaration(t) || *t == T_CS!("\\tt");
+    // (the environment a `\begin` or `\end` at `k` names, when it is an alignment)
+    let alignment = |k: usize| {
+      let name: String = content
+        .get(k + 1..)?
+        .iter()
+        .skip(1)
+        .take_while(|t| t.get_catcode() != Catcode::END)
+        .map(ToString::to_string)
+        .collect();
+      (content.get(k + 1)?.get_catcode() == Catcode::BEGIN && ALIGNMENTS.contains(&name.as_str()))
+        .then_some(())
+    };
+    let mut groups: Vec<Open> = vec![Open {
+      command:      None,
+      declarations: Vec::new(),
+      cells:        None,
+    }];
+    let text_font = |t: &Token| text_font_command(t) || *t == T_CS!("\\emph");
+    for (k, t) in content.iter().enumerate() {
+      // (up to the address's first ink: its span may open with the fonts it prints in, `\texttt{\{ann,cat\}@a.edu}`)
+      if k >= at
+        && !(matches!(t.get_catcode(), Catcode::BEGIN | Catcode::SPACE)
+          || text_font(t)
+          || declaration(t))
+      {
+        break;
+      }
+      let Some(group) = groups.last_mut() else {
+        break;
+      };
+      match t.get_catcode() {
+        Catcode::BEGIN => {
+          let command = k
+            .checked_sub(1)
+            .map(|b| content[b])
+            .filter(|c| text_font(c));
+          groups.push(Open {
+            command,
+            declarations: Vec::new(),
+            cells: None,
+          });
+        },
+        Catcode::END => {
+          if groups.len() > 1 {
+            groups.pop();
+          }
+        },
+        _ if *t == T_CS!("\\begin") && alignment(k).is_some() => {
+          group.cells = Some(group.declarations.len());
+        },
+        _ if *t == T_CS!("\\end") && alignment(k).is_some() => {
+          if let Some(cells) = group.cells.take() {
+            group.declarations.truncate(cells);
+          }
+        },
+        _ if *t == T_CS!("\\\\") || *t == T_ALIGN!() => {
+          if let Some(cells) = group.cells {
+            group.declarations.truncate(cells);
+          }
+        },
+        _ if declaration(t) => group.declarations.push(*t),
+        _ => {},
+      }
+    }
+    let mut out = Vec::new();
+    let mut closes = 0;
+    for group in &groups {
+      if group.command.is_some() || !group.declarations.is_empty() {
+        out.extend(group.command);
+        out.push(T_BEGIN!());
+        out.extend(group.declarations.iter().copied());
+        closes += 1;
+      }
+    }
+    out.extend(ExplodeText!(address));
+    out.extend(std::iter::repeat_n(T_END!(), closes));
+    Some(Tokens::new(out))
   })
 }
 
@@ -1597,7 +1730,9 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
     let w = owners(wants.iter().map(|(o, _)| *o));
     let h = owners(holds.iter().map(|(o, ..)| *o));
     let (added, removed) = (minus(&w, &h), minus(&h, &w));
-    if added.is_empty() && removed.is_empty() {
+    if (added.is_empty() && removed.is_empty())
+      || (h.is_empty() && held_as_pubnote(front, &key, wants))
+    {
       continue;
     }
     // (an affiliation that is one of the paper's own names, given to an author: a name the reading took for an entry —

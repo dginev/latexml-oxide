@@ -56,11 +56,13 @@ pub(super) struct Creator {
   pub items: Vec<Item>,
 }
 
-/// Today's frontmatter: the named creators in document order, and the nameless ones (the author block's own, OD #159).
+/// Today's frontmatter: the named creators in document order, the nameless ones (the author block's own, OD #159), and
+/// the texts of the document's publication notes (`plan::held_as_pubnote`).
 #[derive(Debug, Clone, Default)]
 pub(super) struct Front {
   pub creators: Vec<Creator>,
   pub nameless: Vec<Creator>,
+  pub pubnotes: Vec<String>,
 }
 
 /// Text compared by its letters and digits alone, lowercased (`ab_audit fmshadow`'s `norm`).
@@ -801,6 +803,12 @@ pub(super) fn read(document: &mut Document) -> Front {
       front.nameless.push(creator);
     } else {
       front.creators.push(creator);
+    }
+  }
+  for node in document.findnodes("//ltx:pubnote", None) {
+    let key = norm(&text_without_marks(&node));
+    if !key.is_empty() {
+      front.pubnotes.push(key);
     }
   }
   front

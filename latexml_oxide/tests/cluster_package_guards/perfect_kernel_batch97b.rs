@@ -128,24 +128,18 @@ fn marked_list_split_keeps_its_printed_separators() {
 }
 
 /// A marked piece that is an address and no name is no marked name (review rev97a S1, synthetic): the line is no list by
-/// its marks, one creator as before 97a, its two marked names a reported merge — not a creator `b.baker@two.edu`. A
-/// marked name with its address beside it is a name (imsart's `\ead`, 2107.03920; emulateapj's `\authoremail`,
-/// astro-ph9812176, which the first reading of this rule merged): the list splits.
+/// its marks — not a creator `b.baker@two.edu`. Since batch 100c the observer's writer writes the block as the reading
+/// reads it, two people and the address the second's by its spelling (OXIDIZED_DESIGN_DIVERGENCES #958, `Made::Email`),
+/// no longer one creator holding the line with its two marked names reported (`merged_creators`, the fail-safe while the
+/// re-part could make no e-mail item). A marked name with its address beside it is a name (imsart's `\ead`,
+/// 2107.03920; emulateapj's `\authoremail`, astro-ph9812176, which the first reading of this rule merged): the list
+/// splits.
 #[test]
 fn marked_address_piece_is_no_person() {
-  let (log, xml) = both_ways(repro!("author_marked_email_piece_is_no_person"), 1);
-  assert_eq!(
-    log
-      .lines()
-      .filter(|l| l.starts_with("Error:frontmatter:merged_creators"))
-      .count(),
-    1,
-    "{log}"
-  );
-  assert!(log.contains("One author holds 2 names"), "{log}");
+  let (_, xml) = both_ways(repro!("author_marked_email_piece_is_no_person"), 0);
   assert_eq!(
     xml,
-    r#"<title>A Title</title> <creator role="author"> <personname>A. Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup>, B. in der Baker<sup xml:id="id2"><text font="italic" xml:id="id2.1">2</text></sup>, b.baker@two.edu<sup xml:id="id3">*</sup></personname> <contact name="Affiliation: " role="affiliation">Institute of One</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Body text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>A. Able</personname> <contact name="Affiliation: " role="affiliation">Institute of One</contact> </creator> <creator role="author"> <personname>B. in der Baker<sup xml:id="id1">2,∗</sup></personname> <contact name="Email: " role="email">b.baker@two.edu</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Body text.</p> </para>"#
   );
   let tex = repro!("author_marked_email_piece_is_no_person");
   let beside = tex.replace(

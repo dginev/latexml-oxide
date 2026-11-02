@@ -447,9 +447,27 @@ impl Resolver {
             .copied()
             .filter(|e| e.kind == EventKind::Note)
             .collect();
+          // (a line of notes only mixing notes a name's mark requests with one no mark labels: the requested notes their
+          // names', the other the block's, no name's by its place — as the old reader joins such a line, OD #957
+          // `notes_the_names_request`: `\\ \thanks{$^{1}$Univ A}\thanks{This work was funded by …}`, 2609.17106,
+          // review rev100c S1; a line of unrequested notes alone stays the line owner's, as today's, SYNC_STATUS 100c)
           if text.is_empty() {
-            for note in notes {
-              self.note(index, note, above.last().copied(), "note:line-owner");
+            let live = self.live();
+            let requested = |note: &Event| {
+              leading_mark(note).is_some_and(|(labels, _)| {
+                labels
+                  .iter()
+                  .any(|l| !label_owners(&self.out.creators, &live, l).is_empty())
+              })
+            };
+            let asked: Vec<bool> = notes.iter().map(|note| requested(note)).collect();
+            let mixed = asked.contains(&true);
+            for (note, asked) in notes.into_iter().zip(asked) {
+              if mixed && !asked {
+                self.note(index, note, None, "note:line-owner note:unrequested");
+              } else {
+                self.note(index, note, above.last().copied(), "note:line-owner");
+              }
             }
             continue;
           }

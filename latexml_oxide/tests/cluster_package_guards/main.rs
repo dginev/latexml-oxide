@@ -137,6 +137,7 @@ mod noexpand_marker_texweb;
 mod nomencl_inline;
 mod nomencl_nomentbl;
 mod perfect_kernel_batch100a;
+mod perfect_kernel_batch100c;
 /// Red/green guards for perfect-kernel batch 50 (PLANS P50 …).
 mod perfect_kernel_batch50;
 mod perfect_kernel_batch51;
