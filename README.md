@@ -49,6 +49,9 @@ each a single, fully self-contained executable.
 
 You still need a working TeX installation, **TeX Live or MiKTeX**, at runtime, to resolve TeX packages, classes and fonts.
 A few external tools are called as subprocesses, mainly to convert graphics files.
+The binaries embed TeX format dumps for the TeX Live releases they were built with; with any
+other TeX tree (a Linux distribution's TeX Live, or one updated since), the first conversion
+builds the formats once (about 10 s) into a per-user cache.
 
 The steps below use a version variable — set it to the release you want:
 ```
@@ -177,30 +180,11 @@ The `.deb` declares all of these, so `apt install ./latexml-oxide_*.deb` pulls t
 $ cargo +nightly install latexml
 ```
 
-This builds the `latexml_oxide` CLI from source, so it needs a recent Rust
-**nightly**, the system build dependencies listed under
-[Build from source](#build-from-source) below, and a TeX distribution at runtime
-like every other install route.
-
-**It starts slower than the prebuilt binaries — until you generate the dumps
-once.** The releases embed precompiled TeX kernel dumps for a 5-year TeX Live
-window; those are generated at release time and are far too large to ship in a
-crate, so a fresh `cargo install` reconstructs the kernel state at every startup.
-Conversions themselves run at the same speed — only startup pays.
-
-To get the fast startup, generate the dumps for *your* TeX Live once. `--init`
-writes to `./resources/dumps/`, and the binary looks in
-`<its own dir>/../resources/dumps`, so run it from the parent of `bin/`:
-
-```
-$ cd ~/.cargo && latexml_oxide --init=plain.tex && latexml_oxide --init=latex.ltx
-```
-
-That writes `~/.cargo/resources/dumps/{plain,latex}.YYYY.dump.txt`, which the
-binary at `~/.cargo/bin/latexml_oxide` then finds on every run. Prefer somewhere
-else? Point `LATEXML_DUMP_DIR` at it instead. Re-run after a TeX Live upgrade —
-dumps are per-TL-year (this is the same "build the formats once" step TeX itself
-does with `fmtutil`).
+This builds the `latexml_oxide` CLI from source, so it needs the prerequisites under
+[Build from source](#build-from-source) below, and a TeX distribution at runtime.
+The crate ships no TeX format dumps: the first conversion builds them for your TeX Live
+(about 10 s) into a per-user cache directory (`LATEXML_FORMAT_CACHE` to choose it), and
+later runs reuse them until TeX Live changes.
 
 **As a library:**
 
@@ -219,39 +203,53 @@ For finer control (preloads, search paths, `--whatsin`, split, encoding, …), d
 
 ### Build from source
 
-Requires a recent Rust `nightly` to compile.
+**1. Prerequisites.** Rust via [rustup](https://rustup.rs) — the checked-in
+`rust-toolchain.toml` selects the nightly toolchain (with rustfmt and clippy) the project
+needs — plus libxml2, libxslt and a TeX Live installation:
 
-You need the same non-Perl OS dependencies as [LaTeXML](https://math.nist.gov/~BMiller/LaTeXML/get.html), adapted for Rust.
+* **Ubuntu / Debian**
+  ```
+  $ sudo apt install pkg-config libxml2-dev libxslt1-dev libkpathsea-dev mold \
+                     texlive texlive-latex-extra texlive-science texlive-bibtex-extra \
+                     texlive-publishers imagemagick ghostscript poppler-utils
+  ```
+  On x86_64 Linux the build links with `mold` (`.cargo/config.toml`), so install it on
+  any distribution.
+* **macOS** (Homebrew)
+  ```
+  $ brew install pkgconf libxml2 libxslt texlive
+  $ export PKG_CONFIG_PATH="$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig"
+  ```
+  libxml2 and libxslt are keg-only, hence the export (put it in your shell profile).
+  MacTeX/BasicTeX works too: it ships no `libkpathsea`, so the build falls back to its
+  `kpsewhich` (`/Library/TeX/texbin` on `PATH`), with slightly slower cold file lookups.
+* **Windows** (MSVC toolchain, PowerShell)
+  ```
+  > vcpkg install libxml2:x64-windows-static-md libxslt:x64-windows-static-md
+  > $env:VCPKG_ROOT = "<your vcpkg directory>"
+  > $env:VCPKGRS_TRIPLET = "x64-windows-static-md"
+  ```
+  plus TeX Live for Windows, and LLVM for `bindgen` (set `LIBCLANG_PATH` if it is not
+  found) — as in `.github/workflows/windows-ci-manual-trigger.yml`.
 
-Example for Ubuntu:
+**2. Build and test**, from the repository root:
+
 ```
-$ sudo apt install libxml2-dev libxslt1-dev texlive-latex-base imagemagick ghostscript libkpathsea-dev libkpathsea6 mold \
-                   texlive texlive-latex-extra texlive-science \
-                   texlive-bibtex-extra texlive-publishers poppler-utils
+cargo build
+tools/make_formats.sh          # Windows: tools\make_formats.ps1
+cargo build
+cargo test
 ```
 
-Example for macOS (Apple Silicon / arm64; the full test suite runs on macOS CI):
+`make_formats` runs the new binary with `--init=plain.tex` and `--init=latex.ltx` against
+your TeX Live, writing the kernel format dumps to `resources/dumps/`; the second
+`cargo build` embeds them in the binary. **Rerun the last three steps after updating TeX
+Live:** a dump is used only with the TeX files it was built from, and without one every
+executable — each test binary included — first builds its own format into a per-user
+cache, which is slow.
 
-```
-$ brew install libxml2 libxslt texlive
-$ export PKG_CONFIG_PATH="$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig"
-$ cargo build --bin latexml_oxide
-```
-
-libxml2 and libxslt are keg-only in Homebrew, hence the `PKG_CONFIG_PATH` export
-(put it in your shell profile for regular work).
-Homebrew's `texlive` ships `libkpathsea` + `kpathsea.pc`, so the build links it in-process.
-
-**Using MacTeX/BasicTeX instead?** That works too. MacTeX ships *no* `libkpathsea` at all
-(no header, no dylib, no `.pc`), so the build prints a one-time `kpathsea_sys` notice and
-falls back to resolving TeX files through your distribution's own `kpsewhich` executable
-(`/Library/TeX/texbin` must be on PATH — the MacTeX installer sets this up).
-Same conversions, slightly slower cold file lookups. You still need `brew install libxml2 libxslt` either way.
-
-`mutool` (MuPDF) and `pdftocairo` (poppler-utils) are optional but recommended:
-they convert PDF figures faster than ImageMagick. latexml-oxide tries the
-available delegates fastest-first and falls back through the chain, so a figure is
-never lost when a tool is missing.
+[`cargo-nextest`](https://nexte.st) (`cargo install cargo-nextest`) runs the same suite
+several times faster: `cargo nextest run --workspace`.
 
 ### Build profiles
 
@@ -263,12 +261,10 @@ distribution binaries (`maxperf` / `maxperf-cortex`). Use the default profile
 
 ### Development Tips
 
-To enable linting quality control via rustfmt and clippy, you can activate the included hooks via:
-```bash
-$ rustup component add rustfmt --toolchain nightly
-$ rustup component add clippy --toolchain nightly
-$ git config --local core.hooksPath .githooks/
-```
+The first build points this checkout's `core.hooksPath` at `.githooks/`; its pre-push
+hook runs `tools/lint.sh` — rustfmt, clippy with `-D warnings`, rustdoc and the other
+checks CI's `lint` job runs — and blocks the push on a failure. Run it directly to check
+before pushing.
 
 This workspace is heavy for rust-analyzer (large proc-macro bodies); the checked-in `.vscode/settings.json`
 ships a stability profile that keeps the IDE responsive.
@@ -279,11 +275,8 @@ To generate the project documentation locally, run:
 $ cargo doc --workspace --no-deps --open
 ```
 
-**IMPORTANT:** There is a compile-time plugin that collects the files in the test suite.
-So when adding a new test `[name].tex` and `[name].xml` pair of files, you may need to
-manually execute `cargo clean` to rediscover the entry. On a related note, running
-`cargo clean` every few days of active development frees up a lot of disk space
-taken by stale builds.
+Test fixtures (`[name].tex` + `[name].xml` pairs) are discovered at compile time: after
+adding one, run `cargo clean` so the build finds it.
 
 ### Build features
 
