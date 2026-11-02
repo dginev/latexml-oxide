@@ -29706,9 +29706,12 @@ more distinct labels, `requesting_authors`) is read again as one call per entry 
 `\and` family, a line at each mark after spacing, a wrapper repeated on each piece, an address line placed as the list's),
 each entry labelled by its mark (`\lx@affiliation@withsup`) and showing it (`_markshown`: the mark, and any later
 superscript in the entry, read again as the plain superscript, so `$^{1}$Lab $\frac{a}{b^{1}}$ Lab` keeps its fraction's
-script; a math mark then renders as the shared float-script rewrite renders every frontmatter mark, a name's too,
-`tex_math.rs` `FLOATSUPERSCRIPT` → `<sup><text font="italic">1</text></sup>`, where TeX sets a script's digits and
-symbols upright from family 0 — SYNC_STATUS row 99a, "math→sup mark font"). Being re-read before `queue_front_matter`, the entries are what the frontmatter observer's ledger
+script; read again braced as it was written — the Cut's reader of a mark on a spacing nucleus keeps a script's braces
+as written too (`relocate::spaced_marks_written`: `${}^1$` as `$^1$`, hep-ph0007234) — so a shown mark renders as the
+uncut contact rendered it — `$^*$`, `$^1$` upright, `$^o$` italic, a braced `$^{1}$` as the shared float-script rewrite renders a braced script, `tex_math.rs`
+`FLOATSUPERSCRIPT` → `<sup><text font="italic">1</text></sup>`; review rev99a2 S-c: round 2 had re-read every mark
+braced, so 2209.09217's `$^*$` turned italic; names' marks are left as they render, SYNC_STATUS row 99a "math→sup mark
+font"). Being re-read before `queue_front_matter`, the entries are what the frontmatter observer's ledger
 records too, so the two engines read the same items (the writer, which cut such calls itself for its written families,
 finds `same` where it wrote before). Left as they were: any other role; a call whose binding placed it (`label=`,
 `_unsplit`, REVTeX's fail-safe); a list already cut (`\lx@affiliation@withsup`, every binding's own `affiliation_calls`
@@ -29752,20 +29755,44 @@ no author's place claims goes to the author it spells before the block (`place_a
 aa's `\institute{$^{1}$…\\ $^{2}$…\\ \email{ann.able@y.org}}`, 1507.05963; IEEEtran's `tufo@`/`svy@` under two
 marks; aistats' `{gil,hal}@g.edu` under a row of three); and a relocated entry takes the place its call had in the queue
 (R8, print order): `\lx@annotate@frontmatter@now` records each annotation's ordinal as the queue is digested
-(`_queued`), a contact inside a name's note the footer's (`FOOTER_ORDINAL`: `Ann Able$^{1}$\thanks{\email{…}}` prints
-the address after every entry of the block, 2212.07438, webofc 2409.01693), and an annotation appended by its label or
-moved to the author its address spells goes before the first of its creator's annotations queued after it
-(`relocate::at_queue_position`: `relocate_annotations`, `insert::respell_emails`) — the Cut's entries of amsart's
+(`_queued`), offset by its print zone (`relocate::NAMES_ZONE` 0, `BLOCK_ZONE` 2^40, the default, `FOOTER_ZONE` 2^41):
+a contact inside a name's note is the footer's (`Ann Able$^{1}$\thanks{\email{…}}` prints the address after every
+entry of the block, 2212.07438, webofc 2409.01693), and a binding declares the zone of a contact its class prints apart
+from the block (`_zone=names`: elsarticle's unlabelled `\address`, printed into `\elsauthors` with the names,
+elsarticle.cls:665, 1710.03753; `_zone=footer`: REVTeX's `\email`, a front-matter footnote, 2312.02779, and aa's
+`\mail`) — the API names no class. An annotation `relocate_annotations` appends by its label, or gives to the authors
+its orphan label names, goes before the first of its creator's annotations in a later zone or queued after it in its
+own (`relocate::at_queue_position`; `insert::respell_emails` does not call it, an address moved to its speller is
+appended); a contact attached when digested keeps the queue's order (REVTeX's `\email` before an unmarked
+`\affiliation` stays first) — the Cut's entries of amsart's
 `\address{${}^{1}$…\\ ${}^{2}$…}` before the `\email` after it (2509.03485), acmart's before its `\email` (2112.12060,
 2209.09217), a binding's own label-relocated list too (REVTeX 3's institute, hep-th9805210; authblk's `\affil[1]`
 before an unlabelled `\affil`); 99a's first round appended them after every contact attached when digested.
 
 **Parts after the wrapper** (`affiliations::shared_closing_parts`, the Cut's): a list held in a wrapper and followed by
 parts of their own (`\institution{$^1$A \quad $^2$B}\country{X}`; pdflatex prints "X" on a line under both entries)
-gives each entry the address parts, repeated as the opening declarations are, and a part holding a link or an address
-(`\country{Project page: \href{…}{…}}`, 2506.18881) once to the block (`label=addresses:block`); 99a's first round gave
-both to the last entry alone (int126b: every author). A separator closing an unwrapped list's last entry is trimmed
+gives each entry the address parts, repeated as the opening declarations are — a reading of a part the entries
+share, which the PDF prints once under all of them (`\institution{$^1$Univ A, Paris \quad $^2$Univ B,
+Berlin}\country{Germany}` gives "Univ A, Paris, Germany", text pdflatex never prints: RED
+`cut_acmart_closing_part_composes_unprinted_text_red`, review rev99a2 S-d) —, a part holding a link or an address
+(`\country{Project page: \href{…}{…}}`, 2506.18881) once to the block (`label=addresses:block`), and a part whose
+argument is spacing alone (a space, a tie, `\relax`, a spacing command: `\country{~}`, 2605.18872) to none; a part a
+macro prints (`\city{\cty}`) is shared (review rev99a2 S-a: round 2 tested for letters only and dropped "Germany").
+99a's first round gave every part to the last entry alone (int126b: every author). A separator closing an unwrapped list's last entry is trimmed
 (`…Paris,⏎}`, 2009.04283; review rev99a N1).
+
+**One printed list, one Cut** (review rev99a2 B1; 2312.02779's five identical REVTeX `\affiliation{{$^1$}…Belfast…\\
+{$^2$}…Trinity…}`, one after each name). The Cut decides when the call is queued, from the names queued so far, so the
+early copies of a list repeated after each name were left whole (one requested mark) and a later copy cut: its entries
+reach every requester by label, and the early names held the whole list and their entry. Now each cut entry names its
+list (`_cutlist`, a key of the role and the list as the Cut reads it, `affiliations::cut_list_key`), as a binding's own
+cut of a marked list does (`\lx@add@affiliation@marked`, `binding_cut_list_attr`: REVTeX's binding cuts the copy after
+the first name itself); a copy queued after the list is cut adds no entries (`cut_list_queued`); and when the list is
+cut, each earlier uncut copy of it gives way (`place_uncut_copies`) when every name it reaches — its run, the names
+queued since the last contact of its role, or every name for `annotate=all` — requests one of the list's marks: it
+leaves the queue (and the observer's ledger, `ledger::record_cut_copy`), and a stand-in records its place for those
+names (`\lx@cut@copy@place`), which the entry each takes keeps (`relocate::at_queue_position`, R8). A copy reaching a
+name that requests none of the marks stays as it is.
 
 **The decision, one predicate**: `affiliations::holds_requested_marked_entries` (public), the list's marks read as the
 Cut reads them, is the one test a reader of a store's marked entries asks (batch 99b's `requested_marks_held` at
@@ -29792,17 +29819,28 @@ nameless creator → each author its own, `\inst{*}\email{…}` the e-mail of th
 popint125a papers with a multi-mark affiliation-like call) against int126b, the second round's code (review rev99a):
 337 changed (the final code on them: 334 changed, E 435 → 431, F 2 → 2), E 22,725 → 22,722, F 56 → 56, two papers with
 more errors that are noise (1111.1264: both sides abort, rc 134, base 20 errors twice, ours 21 and 23; 2311.05131: ours
-timed out under load, alone both 121 s and identical); `fm_checks.py`: no merged or lost creator, no address shared
-wider, no frontmatter growth, 9 affiliation-growth rows each a blob cut into its entries, 15 word-loss rows each the
+timed out under load, alone both 121 s and identical); `fm_checks.py`: no merged or lost creator, no frontmatter growth
+(its whole-text comparison missed the repeated list of 2312.02779, an entry held beside the larger contact holding it:
+round 3's blocker), 9 affiliation-growth rows each a blob cut into its entries, 15 word-loss rows each the
 copies of a block removed (hep-ex0106079 15,905 → 3,608 words: 92 authors each the whole list). Print order (R8), every
 changed creator whose contacts are the same but reordered, read against pdflatex's text (pages 1-3, compiled in scratch;
 the dev sets' draw texts): 152 creators closer to the print order, 12 as close, 2 further — 1710.03753 (elsarticle prints
 an unlabelled `\address` with the names, elsarticle.cls:665, before the labelled ones, so the queue's order is not its
-print order) and 2312.02779 (REVTeX's `\email`, a footnote, queued before the `\affiliation` the Cut parts; since this
-batch's first round) — the print-zone residual, SYNC_STATUS row 99a; 10 papers pdflatex could not compile, read against
+print order) and 2312.02779 (the repeated list above, not an order residual) — both fixed in round 3; 10 papers pdflatex could not compile, read against
 their source, all closer. dev20k D3 97.14 % → 97.44 % per creator, 96.56 % → 96.72 % per paper (25 papers better, 1
 worse: 2009.04283, the deferred template line); the long-tail set 88.34 % → 89.70 % / 86.98 % → 88.28 % (9 better, none
 worse).
+
+**Round 3's A/B** (review rev99a2; `pop99a.tsv` against int126b, RL 99a7; the final code on its changed set, RL 99a8):
+349 changed, E 22,725 → 22,727 (1111.1264, both sides abort: noise), F 56 → 56; the final code 340 changed, E 386 → 385,
+F 3 → 3. `fm_checks.py`: no creator merged or lost, no address shared wider, no growth, no contact held inside a longer
+one of its creator (check 6, which 2312.02779 had failed), no fragment (check 7); the 9 growth and 6 word-type rows and
+the 15 word-loss rows round 2's (blobs cut, copies removed). Print order: 248 reordered creators closer to pdflatex's
+text, 35 as close, none further (26 more in 6 REVTeX papers pdflatex cannot compile: each the e-mail moved after the
+affiliations, the footer zone). Marks: no paper's affiliation marks gain or lose italic against int126b (340 read).
+Scorer, the current one (int126b's dev20k restated 97.22 % / 96.67 %): dev20k 97.22 % → 97.52 % per creator, 96.67 % →
+96.84 % per paper (24 papers better, 1 worse: 2009.04283, deferred); the long-tail set 88.34 % → 89.70 % / 86.98 % →
+88.28 % (9 better, none worse) — round 2's figures, no dev paper changed score between the rounds.
 
 **Guards** `perfect_kernel_batch99a::{an_institution_is_cut_at_its_marks, an_isotope_mark_is_its_entrys_text,
 every_mark_spelling_parts_the_entries, a_sole_institute_is_cut_at_its_inst_marks,
@@ -29835,6 +29873,15 @@ ptephy_unlabelled_affil_after_labelled_reaches_all}`, `perfect_kernel_batch63::{
 elsarticle_labelled_unlabelled_affiliation}`, `perfect_kernel_batch61::marked_affiliation_review_shapes` (the legend
 after Univ B), `perfect_kernel_batch68u::beilstein_authors_carry_their_numbered_affiliations` (the "Email:" line after
 the addresses), `perfect_kernel_batch97b::aa_mail_entry_whose_address_is_a_contact_is_given_back` (the institute before
-the `\mail` contact; the e-mail after it is the print-zone residual); the address parts every entry's
-(`perfect_kernel_batch99a::{an_institution_is_cut_at_its_marks, every_mark_spelling_parts_the_entries}`, r1 had given
-`\country{X}` to the last entry alone).
+the `\mail` contact; the e-mail after it: both attached when digested, which print zones do not reorder); the address
+parts every entry's (`perfect_kernel_batch99a::{an_institution_is_cut_at_its_marks,
+every_mark_spelling_parts_the_entries}`, r1 had given `\country{X}` to the last entry alone). Round 3 (review rev99a2):
+`perfect_kernel_batch99a::{one_printed_list_is_cut_once, a_contact_keeps_its_print_zone,
+a_cut_entry_shows_its_mark_as_written}` (new; repros `cut_once_*`, `order_zone_*`, `cut_acmart_marks_shown_as_written`,
+RED → GREEN) and `cut_acmart_institution_macro_part_is_shared` on `an_institution_is_cut_at_its_marks`; changed, each
+back to base's form of a shown mark (`$^1$` upright, round 2 had set it italic): `perfect_kernel_batch77d::names_parted_only_by_marks_are_split`,
+`perfect_kernel_batch94b::an_api_piece_keeps_the_font_open_before_it`,
+`perfect_kernel_batchfms2b::a_marked_affiliation_is_cut_at_its_marks`; to the footer zone of REVTeX's `\email` (the
+e-mails after the departments): `perfect_kernel_batch98e::a_mark_on_a_spacing_nucleus_leads_its_line`. RED, deferred:
+`cut_acmart_closing_part_composes_unprinted_text_red` (S-d), `cut_acmart_uncut_call_after_a_cut_list_red` (S-b),
+`inblock_glued_repeated_label_is_entry_text_red` (2204.02412, the observer writer's in-block cutter).

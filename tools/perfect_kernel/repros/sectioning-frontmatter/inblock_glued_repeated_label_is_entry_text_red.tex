@@ -1,0 +1,19 @@
+% mechanism: (RED, deferred: the observer's in-block cutter) in an in-block affiliation line a mark glued to the word
+%   before it whose label also heads the line (`$^3$Center … (CAP$^3$), Univ Z`) is the entry's text (one list labels
+%   each entry once, the S1 rule of `notes::split_marked_pieces`); the frontmatter observer's writer, reading the
+%   block's events, cuts the line there
+% witness: 2204.02412 (mnras `\author{… Andrea V. Macci\`o$^{2,3,4}$ … \\ $^3$Center for Astro, Particle and Planetary
+%   Physics (CAP$^3$), New York University Abu Dhabi\\ …}`; int125a whole, int126b and 99a split)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1, Bob Baker2,3 / 1Univ X, Town / 2Univ Y, City / 3Center for Astro
+%   (CAP3), Univ Z"
+% engines: rust int126b, 99a: Bob "Center for Astro (CAP" and ", Univ Z"; the API alone (writer off): one entry
+% expect:  0 errors, 0 warnings; Bob "Univ Y, City", "Center for Astro (CAP3), Univ Z"
+% status:  RED (int126b, 99a) — deferred (SYNC row 99a: the observer's events-side cutter needs the S1 rule); no guard
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2,3}$ \\ $^1$Univ X, Town \\ $^2$Univ Y, City \\ $^3$Center for Astro (CAP$^3$), Univ Z}
+\maketitle
+Text.
+\end{document}

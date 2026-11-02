@@ -1,0 +1,16 @@
+% mechanism: one printed list, one Cut (OD #954): the entry an author takes in place of its uncut copy keeps that
+%   copy's place among the author's contacts (`\lx@cut@copy@place`, `relocate::at_queue_position`; R8 print order)
+% witness: review rev99a2 B1 (2312.02779's shape, amsart's `\address` then `\email`)
+% oracle:  pdflatex (TL 2025) 0 errors: Ann's address list, then "E-mail address: ann@x.org"; Bob's after
+% engines: rust int126b: Ann "1 Univ A", her e-mail; 99a r2: Ann the whole list, "1 Univ A" after her e-mail
+% expect:  0 errors, 0 warnings; Ann "1 Univ A" then her e-mail; Bob "2 Univ B" then his
+% status:  RED (99a r2) -> GREEN (99a r3) — perfect_kernel_batch99a::one_printed_list_is_cut_once
+% preload: ar5iv.sty
+\documentclass{amsart}\begin{document}\title{T}
+\author{Ann Able${}^{1}$}
+\address{${}^{1}$Univ A\\ ${}^{2}$Univ B}
+\email{ann@x.org}
+\author{Bob Baker${}^{2}$}
+\address{${}^{1}$Univ A\\ ${}^{2}$Univ B}
+\email{bob@y.org}
+\maketitle Text.\end{document}

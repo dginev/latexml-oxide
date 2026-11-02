@@ -271,7 +271,7 @@ x
 /// they stayed one creator and the merge check flagged it with one `Error:frontmatter:merged_creators` (77d r1 had
 /// dropped that Error, a silent merge); now no Error, and the `\&` still parts the last name. Since 99a jfm's marked
 /// `\affiliation` lines are the names' affiliations (the frontmatter API's Cut, OXIDIZED_DESIGN_DIVERGENCES #954; was one
-/// note at the block).
+/// note at the block), each showing its mark as written (`$^1$` upright; 99a r2 had set it italic, review rev99a2 S-c).
 #[test]
 fn names_parted_only_by_marks_are_split() {
   let (log, xml) = convert_with(
@@ -292,9 +292,9 @@ x
   assert_eq!(
     found,
     [
-      r#"<creator role="author"> <personname>FLORIAN REETZ<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2"><text font="italic" xml:id="id2.1">1</text></sup> Univ A</contact> </creator>"#,
-      r#"<creator before=" " role="author"> <personname>PRIYA SUBRAMANIAN<sup xml:id="id3"><text font="italic" xml:id="id3.1">2,3</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup> Univ B</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5"><text font="italic" xml:id="id5.1">3</text></sup> Univ C</contact> </creator>"#,
-      r#"<creator before=" " role="author"> <personname>TOBIAS M. SCHNEIDER<sup xml:id="id6">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id7"><text font="italic" xml:id="id7.1">1</text></sup> Univ A</contact> </creator>"#,
+      r#"<creator role="author"> <personname>FLORIAN REETZ<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup> Univ A</contact> </creator>"#,
+      r#"<creator before=" " role="author"> <personname>PRIYA SUBRAMANIAN<sup xml:id="id3"><text font="italic" xml:id="id3.1">2,3</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup> Univ B</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">3</sup> Univ C</contact> </creator>"#,
+      r#"<creator before=" " role="author"> <personname>TOBIAS M. SCHNEIDER<sup xml:id="id6">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id7">1</sup> Univ A</contact> </creator>"#,
     ],
     "{xml}"
   );

@@ -140,16 +140,18 @@ fn the_fail_safe_fires_only_for_labelled_lines() {
 fn a_mark_on_a_spacing_nucleus_leads_its_line() {
   let xml = both_ways(repro!("revtex_nucleus_marks_lead_their_lines"));
   assert_eq!(creators(&xml), [
+    // (each e-mail after the departments: REVTeX prints `\email` in the front matter's footnotes, its print zone the
+    // footer's — 99a r3, OXIDIZED_DESIGN_DIVERGENCES #954)
     vec![
       "Ann Able 1 , 2",
-      "email=able@x.edu",
       "affiliation=Department of Mathematics",
       "affiliation=and Department of Physics, The Univ, City, USA",
+      "email=able@x.edu",
     ],
     vec![
       "Bob Baker 1",
-      "email=baker@x.edu",
       "affiliation=Department of Mathematics",
+      "email=baker@x.edu",
     ],
   ]);
   let xml = both_ways(repro!("revtex_boxed_nucleus_marks_lead_their_lines"));

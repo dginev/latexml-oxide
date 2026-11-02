@@ -237,16 +237,7 @@ pub(in crate::base_utilities) fn cut_marked_contact(
   }
   // (the content inside the affiliation's own wrapper, `\lx@add@affiliation`'s `\lx@affiliation@withinst{…}`, which
   // each entry keeps)
-  let within = content.unlist_ref();
-  let withinst = within.len() >= 3
-    && within[0] == T_CS!("\\lx@affiliation@withinst")
-    && within[1].get_catcode() == Catcode::BEGIN
-    && skip_group(within, 1) == within.len();
-  let list = if withinst {
-    Tokens::new(within[2..within.len() - 1].to_vec())
-  } else {
-    content.clone()
-  };
+  let (withinst, list) = within_inst(content);
   if list.unlist_ref().iter().find(|t| **t != T_SPACE!())
     == Some(&T_CS!("\\lx@affiliation@withsup"))
   {
@@ -255,6 +246,19 @@ pub(in crate::base_utilities) fn cut_marked_contact(
   let list = printed_marks_as_marks(list);
   if !requested_marked_entries_in(&list) {
     return Ok(None);
+  }
+  // (one printed list, one Cut: a list repeated after each author's name, 2312.02779's five identical
+  // `\affiliation{{$^1$}…Belfast…\\ {$^2$}…Trinity…}`, is cut once — a later copy adds no entries, as the cut one's
+  // reach every author requesting their marks by label, and the copies queued before the cut, uncut while too few names
+  // were queued to request two of its marks, give way to it: review rev99a2 B1, [`place_uncut_copies`])
+  let key = cut_list_key(parenttag, &role, &list);
+  place_uncut_copies(parenttag, &role, &key, &list);
+  if cut_list_queued(&key) {
+    DebugFeature!(
+      "frontmatter",
+      "FRONT cut {role}: a copy of a list already cut"
+    );
+    return Ok(Some(Tokens::new(Vec::new())));
   }
   // (the parts after a wrapper that holds the entries, `\institution{$^1$A \quad $^2$B}\country{X}`: an address part
   // every entry shares, repeated on each as the opening declarations are; a part holding a link, `\country{Project page:
@@ -279,6 +283,11 @@ pub(in crate::base_utilities) fn cut_marked_contact(
     }
     attr.extend(item.unlist());
   }
+  // (and the list each entry came from, [`CUT_LIST`])
+  if !attr.is_empty() {
+    attr.push(T_OTHER!(","));
+  }
+  attr.extend(mouth::tokenize_internal(TeXString::assembled(s!("{CUT_LIST}={key}"))).unlist());
   let attr = Some(Tokens::new(attr));
   let add = |attr: Option<Tokens>, entry: Tokens| {
     // (each marked entry shows the mark that labels it, `_markshown`: `\lx@annotate@frontmatter@now` — but an address
@@ -332,6 +341,181 @@ pub(in crate::base_utilities) fn cut_marked_contact(
   Ok(Some(Tokens::new(calls)))
 }
 
+/// The content of a contact inside the affiliation's own wrapper (`\lx@affiliation@withinst{…}`, which
+/// `\lx@add@affiliation` puts around it), and whether it was in it.
+fn within_inst(content: &Tokens) -> (bool, Tokens) {
+  let within = content.unlist_ref();
+  let withinst = within.len() >= 3
+    && within[0] == T_CS!("\\lx@affiliation@withinst")
+    && within[1].get_catcode() == Catcode::BEGIN
+    && skip_group(within, 1) == within.len();
+  if withinst {
+    (true, Tokens::new(within[2..within.len() - 1].to_vec()))
+  } else {
+    (false, content.clone())
+  }
+}
+
+/// The attribute of an entry of the Cut ([`cut_marked_contact`]) naming the printed list it came from
+/// ([`cut_list_key`]): a copy of the list queued again adds no entries ([`cut_list_queued`]), and an entry relocated to
+/// an author keeps the place the author's own uncut copy had (`relocate::at_queue_position`, [`CUT_COPY_PLACE`]).
+pub(in crate::base_utilities) const CUT_LIST: &str = "_cutlist";
+
+/// The state key prefix of the place (queue ordinal) an author's uncut copy of a cut list held, `{CUT_COPY_PLACE}{key}:
+/// author:{n}` ([`place_uncut_copies`], `\lx@cut@copy@place`).
+pub(in crate::base_utilities) const CUT_COPY_PLACE: &str = "lx_cut_copy_place:";
+
+/// The tag of the queue entry that stands where an uncut copy of a cut list was ([`place_uncut_copies`]): it makes no
+/// element, only records the copy's place.
+const CUT_COPY_TAG: &str = "lx:cut-copy";
+
+/// The key of a printed list the Cut reads (`list`, its marks written as the plain marks they print,
+/// [`printed_marks_as_marks`]) of a contact of `role` annotating `parenttag`: two calls holding the same list have the
+/// same key.
+fn cut_list_key(parenttag: &Tokens, role: &str, list: &Tokens) -> String {
+  use std::hash::{Hash, Hasher};
+  let mut hasher = std::hash::DefaultHasher::new();
+  (parenttag.to_string(), role, list.to_string()).hash(&mut hasher);
+  s!("{:016x}", hasher.finish())
+}
+
+/// The attribute naming an affiliation list a binding's own cutter cuts into its marked entries
+/// (`\lx@add@affiliation@marked`, [`affiliation_calls`]), as the frontmatter API's Cut names its entries ([`CUT_LIST`]):
+/// one printed list is cut once, by whichever cutter comes first — revtex's `\affiliation{{$^1$}Univ A\\ {$^2$}Univ B}`
+/// after the first name, cut by the binding, and the same `\affiliation` after the later names, which the Cut would cut
+/// again (review rev99a2 d1).
+pub(in crate::base_utilities) fn binding_cut_list_attr(list: &Tokens) -> Tokens {
+  let key = cut_list_key(
+    &mouth::tokenize_internal("ltx:creator"),
+    "affiliation",
+    &printed_marks_as_marks(list.clone()),
+  );
+  mouth::tokenize_internal(TeXString::assembled(s!("{CUT_LIST}={key}")))
+}
+
+/// Does the queue hold the entries of the printed list `key`, cut already ([`CUT_LIST`])?
+fn cut_list_queued(key: &str) -> bool {
+  with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue
+      .iter()
+      .any(|entry| entry.1.get(CUT_LIST).map(String::as_str) == Some(key)),
+    _ => false,
+  })
+}
+
+/// The queued copies of the printed list `key` (of a contact of `role` annotating `parenttag`, its entries led by the
+/// marks of `list`) that the Cut left uncut — queued while too few names were queued to request two of its marks
+/// (amsart's `\author{Ann Able${}^{1}$}\address{${}^{1}$Univ A\\ ${}^{2}$Univ B}\author{Bob Baker${}^{2}$}` and the same
+/// `\address` again: review rev99a2 d2; 2312.02779's REVTeX `\affiliation` after each name) — give way to its entries:
+/// each is taken out of the queue when every name it reaches requests one of the list's marks, so each of them takes
+/// its entry by its mark instead of the whole list; an entry stands in its place that records it for those names, so
+/// the entry each takes keeps the copy's place among its contacts (user ruling R8, print order:
+/// `relocate::at_queue_position`). The names a copy reaches are its run's — those queued after the last contact of its
+/// role before it, which covers one placed on the name before it and a run's (`annotate=run`, `new`) — or every name
+/// queued before it for one annotating them all (`annotate=all`, a number); a copy reaching a name that requests none of
+/// the list's marks, or no name, stays as it is (no name loses the list it prints).
+fn place_uncut_copies(parenttag: &Tokens, role: &str, key: &str, list: &Tokens) {
+  let marks = requested_entry_marks(list);
+  let requests = |operands: &[Vec<Token>]| {
+    marks
+      .iter()
+      .any(|mark| !requesting_authors(&[operands.to_vec()], mark).is_empty())
+  };
+  let queue: Vec<RawFrontmatter> = with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue.clone(),
+    _ => Vec::new(),
+  });
+  let mut removed: Vec<Tokens> = Vec::new();
+  let mut places: Vec<(usize, Tokens)> = Vec::new();
+  {
+    let mut authors: Vec<(usize, usize, Vec<Vec<Token>>)> = Vec::new();
+    let mut last_of_role: Option<usize> = None;
+    for (at, (tag, attr, command)) in queue.iter().enumerate() {
+      if tag == "ltx:creator" && attr.get("role").map(String::as_str) == Some("author") {
+        authors.push((
+          at,
+          authors.len() + 1,
+          author_mark_operands(command.unlist_ref()),
+        ));
+        continue;
+      }
+      if tag != "ltx:contact" || attr.get("role").map(String::as_str) != Some(role) {
+        continue;
+      }
+      let since = last_of_role.replace(at);
+      let v = command.unlist_ref();
+      if attr.contains_key("label")
+        || attr.contains_key("_unsplit")
+        || attr.contains_key(CUT_LIST)
+        || v.first() != Some(&T_CS!("\\lx@annotate@frontmatter@now"))
+        || !annotates(v, parenttag)
+      {
+        continue;
+      }
+      let (_, copy) = within_inst(&last_group(command));
+      if cut_list_key(parenttag, role, &printed_marks_as_marks(copy)) != key {
+        continue;
+      }
+      let all = attr
+        .get("annotate")
+        .is_some_and(|a| a == "all" || a.parse::<usize>().is_ok());
+      let reach: Vec<&(usize, usize, Vec<Vec<Token>>)> = authors
+        .iter()
+        .filter(|(position, ..)| all || since.is_none_or(|since| *position > since))
+        .collect();
+      if reach.is_empty() || !reach.iter().all(|(.., operands)| requests(operands)) {
+        continue;
+      }
+      let names: Vec<String> = reach.iter().map(|(_, n, _)| n.to_string()).collect();
+      DebugFeature!(
+        "frontmatter",
+        "FRONT cut {role}: an uncut copy of the list gives way to it, for authors {}",
+        names.join(",")
+      );
+      removed.push(last_group(command));
+      let mut place = vec![T_CS!("\\lx@cut@copy@place"), T_BEGIN!()];
+      place.extend(text_tokens(key));
+      place.extend([T_END!(), T_BEGIN!()]);
+      place.extend(text_tokens(&names.join(",")));
+      place.extend([T_END!(), T_BEGIN!()]);
+      place.extend(text_tokens(attr.get("_zone").map_or("", String::as_str)));
+      place.push(T_END!());
+      places.push((at, Tokens::new(place)));
+    }
+  }
+  if places.is_empty() {
+    return;
+  }
+  // (each copy's queue entry, the same one: nothing was queued since it was read)
+  with_value_mut("frontmatter_raw", |val_opt| {
+    if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = val_opt {
+      for (at, place) in places {
+        if let Some(entry) = queue.get_mut(at) {
+          *entry = (CUT_COPY_TAG.to_string(), TagAttrs::default(), place);
+        }
+      }
+    }
+  });
+  // (the frontmatter observer's ledger: the calls taken out, as a clear's, `ledger::record_clear`)
+  if fm_shadow_enabled() {
+    for content in removed {
+      record_cut_copy(role, &content);
+    }
+  }
+}
+
+/// Does the queued `\lx@annotate@frontmatter@now{parenttag}…` call `command` annotate `parenttag`?
+fn annotates(command: &[Token], parenttag: &Tokens) -> bool {
+  if command
+    .get(1)
+    .is_none_or(|t| t.get_catcode() != Catcode::BEGIN)
+  {
+    return false;
+  }
+  let end = skip_group(command, 1);
+  end > 2 && command[2..end - 1] == *parenttag.unlist_ref()
+}
+
 /// `list` with the marks spelled otherwise written as the plain marks they print, for the Cut's readers
 /// ([`cut_marked_contact`]): lines in one-argument line wrappers as lines (`relocate::wrapped_lines_as_lines`), a
 /// superscript spelled otherwise as `$^{…}$` (`relocate::spaced_marks_as_marks`), a class's `\inst{n}` as
@@ -354,7 +538,7 @@ fn printed_marks_as_marks(list: Tokens) -> Tokens {
     list
   };
   let list = wrapped_lines_as_lines(&list).unwrap_or(list);
-  let list = spaced_marks_as_marks(&list).unwrap_or(list);
+  let list = spaced_marks_written(&list, true).unwrap_or(list);
   // (`\inst` by its meaning, the one-argument mark it prints: `separators::inst_prints_its_mark`)
   if !list.unlist_ref().contains(&T_CS!("\\inst")) || !inst_prints_its_mark() {
     return list;
@@ -441,7 +625,8 @@ fn with_closing(entry: Tokens, closing: &[Token]) -> Tokens {
 /// `list` led by a wrapper holding its marked entries and followed by parts of its own (`\institution{$^1$A \quad
 /// $^2$B}\country{X}`, acmart's address parts; pdflatex prints "X" on a line under both entries): the wrapper alone, the
 /// parts every entry shares (an address part), and the parts the block holds once (one holding a link or an address,
-/// `\country{Project page: \href{…}{…}}`, 2506.18881: no author's address); a part that prints nothing is none of them.
+/// `\country{Project page: \href{…}{…}}`, 2506.18881: no author's address); a part whose argument is spacing alone (a
+/// space, a tie, `\relax`, a spacing command) is none of them.
 /// Each part is a command and its argument, none a mark; any other list is returned as it is.
 fn shared_closing_parts(list: Tokens) -> (Tokens, Vec<Token>, Vec<Tokens>) {
   let v = list.unlist_ref();
@@ -491,12 +676,16 @@ fn shared_closing_parts(list: Tokens) -> (Tokens, Vec<Token>, Vec<Tokens>) {
           .any(|cs| *t == T_CS!(*cs))
     })
   };
-  // (a part that prints nothing, `\country{~}` written to satisfy the class, is no entry's: repeated, or left on the
-  // last entry, it printed ", ," there — 2605.18872)
+  // (a part whose argument is spacing alone, `\country{~}` written to satisfy the class, is no entry's: repeated, or
+  // left on the last entry, it printed ", ," there — 2605.18872; any other command in it may print, a macro's text
+  // `\city{\cty}`, so the part is shared: review rev99a2 S-a, probe s3d)
   let inert = |part: &[Token]| {
-    !part[1..]
-      .iter()
-      .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+    part[1..].iter().all(|t| {
+      matches!(t.get_catcode(), Catcode::BEGIN | Catcode::END)
+        || *t == T_CS!("\\relax")
+        || is_spacing(t)
+        || is_spacing_command(t)
+    })
   };
   let (mut shared, mut block) = (Vec::new(), Vec::new());
   for part in parts {
@@ -550,10 +739,14 @@ pub fn holds_requested_marked_entries(list: &Tokens) -> bool {
 }
 
 /// [`holds_requested_marked_entries`] of a list whose marks are written as the plain marks they print.
-fn requested_marked_entries_in(list: &Tokens) -> bool {
+fn requested_marked_entries_in(list: &Tokens) -> bool { requested_entry_marks(list).len() >= 2 }
+
+/// The marks, of distinct labels, leading the entries of `list` (its marks written as the plain marks they print) that
+/// queued names request — none when its first printed line is not led by a mark ([`requested_marked_entries_in`]).
+fn requested_entry_marks(list: &Tokens) -> Vec<Vec<Token>> {
   let authors = queued_author_marks();
   if authors.is_empty() {
-    return false;
+    return Vec::new();
   }
   let lines: Vec<Tokens> = split_tokens_delimited(list.clone(), affil_splits())
     .into_iter()
@@ -561,9 +754,10 @@ fn requested_marked_entries_in(list: &Tokens) -> bool {
     .filter(|line| !line.is_empty() && !prints_nothing(line))
     .collect();
   if !lines.first().is_some_and(marker_leads) {
-    return false;
+    return Vec::new();
   }
   let mut labels: Vec<String> = Vec::new();
+  let mut marks: Vec<Vec<Token>> = Vec::new();
   for line in lines.into_iter().filter(marker_leads) {
     for piece in split_wrapped_affiliation_marks(line) {
       if let Some(mark) = entry_mark(piece.unlist_ref())
@@ -572,10 +766,11 @@ fn requested_marked_entries_in(list: &Tokens) -> bool {
         && !labels.contains(&label)
       {
         labels.push(label);
+        marks.push(mark);
       }
     }
   }
-  labels.len() >= 2
+  marks
 }
 
 /// A class-numbered institute list as its title page prints it: llncs.cls:870-885 `\institutename` (copied by

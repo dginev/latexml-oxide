@@ -562,9 +562,28 @@ pub(in crate::base_utilities) const QUEUE_ORDINAL: &str = "_queued";
 /// The state counter of [`QUEUE_ORDINAL`].
 pub(in crate::base_utilities) const QUEUE_ORDINAL_COUNTER: &str = "lx_frontmatter_queue_ordinal";
 
-/// The place of an annotation made inside a name's note (`Ann Able$^{1}$\thanks{\email{…}}`): the footer, after every
-/// entry the block prints, whenever it was queued — its queue place plus this.
-pub(in crate::base_utilities) const FOOTER_ORDINAL: i64 = 1 << 40;
+/// The print zones of an author block, each an offset added to an annotation's queue place ([`QUEUE_ORDINAL`]), so a
+/// creator's contacts are ordered by zone, then by queue (user ruling R8, print order): the names' zone (a contact the
+/// class prints with the names, above the block's entries: elsarticle.cls:665 `\@address` adds an unlabelled `\address`
+/// to `\elsauthors`, 1710.03753), the block's (the default: an entry printed under the names), and the footer's (a
+/// contact printed as a footnote, after every entry of the block, whenever it was queued: revtex's `\email`, 2312.02779;
+/// aa's `\mail`; any contact made inside a name's note, `Ann Able$^{1}$\thanks{\email{…}}`). A binding declares a
+/// contact's zone where its class prints it apart from the block (`_zone=names`, `_zone=footer`: [`zone_offset`]); the
+/// API names no class.
+pub(in crate::base_utilities) const NAMES_ZONE: i64 = 0;
+/// The block's zone ([`NAMES_ZONE`]).
+pub(in crate::base_utilities) const BLOCK_ZONE: i64 = 1 << 40;
+/// The footer's zone ([`NAMES_ZONE`]).
+pub(in crate::base_utilities) const FOOTER_ZONE: i64 = 1 << 41;
+
+/// The offset of the print zone a contact's `_zone` key declares ([`NAMES_ZONE`]): `names`, `footer`, else the block's.
+pub(in crate::base_utilities) fn zone_offset(zone: Option<&str>) -> i64 {
+  match zone.map(str::trim) {
+    Some("names") => NAMES_ZONE,
+    Some("footer") => FOOTER_ZONE,
+    _ => BLOCK_ZONE,
+  }
+}
 
 /// The roles of the annotations printed in the author block itself, under or beside the names: an affiliation, an
 /// address ([`at_queue_position`]).
@@ -590,9 +609,27 @@ pub(in crate::base_utilities) fn at_queue_position(target: &Node) {
   let Some(mut moved) = children.last().cloned() else {
     return;
   };
-  let Some(at) = place(&moved) else {
+  let Some(mut at) = place(&moved) else {
     return;
   };
+  // (an entry of a printed list the Cut cut, which an uncut copy of the list printed for this author earlier, keeps
+  // that copy's place: `affiliations::place_uncut_copies`, `\lx@cut@copy@place`)
+  if let Some(key) = moved.get_attribute(CUT_LIST)
+    && let Some(copy) = target
+      .get_attribute("_annotations")
+      .unwrap_or_default()
+      .split(',')
+      .filter(|label| label.starts_with("author:"))
+      .find_map(
+        |label| match lookup_value(&s!("{CUT_COPY_PLACE}{key}:{label}")) {
+          Some(Stored::Int(copy)) => Some(copy),
+          _ => None,
+        },
+      )
+  {
+    at = copy;
+    let _ = moved.set_attribute(QUEUE_ORDINAL, &at.to_string());
+  }
   if !moved
     .get_attribute("role")
     .is_some_and(|role| BLOCK_ROLES.contains(&role.as_str()))
@@ -1389,6 +1426,16 @@ pub(in crate::base_utilities) fn spaced_mark_at(
 /// block's are (review rev98e S2): when such a mark leads the block, each such mark of a label the names request.
 /// `None` otherwise — a nucleus mark later in a line of a block no such mark leads stays as written (`${}^{3}$He`).
 pub fn spaced_marks_as_marks(content: &Tokens) -> Option<Tokens> {
+  spaced_marks_written(content, false)
+}
+
+/// [`spaced_marks_as_marks`], each script braced as it was written when `as_written` (`${}^1$` as `$^1$`, `${}^{1}$` as
+/// `$^{1}$`): the frontmatter API's Cut shows the mark it reads, and a braced script renders otherwise
+/// (`affiliations::printed_marks_as_marks`; review rev99a2 S-c, hep-ph0007234's `${}^1$`).
+pub(in crate::base_utilities) fn spaced_marks_written(
+  content: &Tokens,
+  as_written: bool,
+) -> Option<Tokens> {
   let tokens = content.unlist_ref();
   let switch = |t: &Token| MARK_SWITCHES.iter().any(|cs| *t == T_CS!(*cs));
   // (past a one-argument wrapper the block opens with, `\institution{${}^a$Univ A \quad ${}^b$Univ B}` — acmart's
@@ -1422,9 +1469,23 @@ pub fn spaced_marks_as_marks(content: &Tokens) -> Option<Tokens> {
     if let Some((operand, next)) = spaced_mark_at(tokens, i)
       && requests(&operand)
     {
-      out.extend([T_MATH!(), T_SUPER!(), T_BEGIN!()]);
-      out.extend(operand);
-      out.extend([T_END!(), T_MATH!()]);
+      // (a script of one token written without braces, `${}^1$`)
+      let bare = as_written
+        && operand.len() == 1
+        && tokens[i..next]
+          .iter()
+          .rposition(|t| *t == T_SUPER!())
+          .and_then(|sup| tokens[i + sup + 1..next].iter().find(|t| **t != T_SPACE!()))
+          .is_some_and(|t| t.get_catcode() != Catcode::BEGIN);
+      out.extend([T_MATH!(), T_SUPER!()]);
+      if bare {
+        out.extend(operand);
+      } else {
+        out.push(T_BEGIN!());
+        out.extend(operand);
+        out.push(T_END!());
+      }
+      out.push(T_MATH!());
       changed = true;
       i = next;
     } else {

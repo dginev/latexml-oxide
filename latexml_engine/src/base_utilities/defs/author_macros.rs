@@ -126,7 +126,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // optional attributes place it (apa7's unnumbered list, `annotate=all`).
   DefMacro!("\\lx@add@affiliation@marked[]{}", sub[(attr, stuff)] {
     if affiliation_is_marked(&stuff) {
-      Ok(Tokens::new(affiliation_calls(None, None, None, stuff, true, true)?))
+      // (its marked entries name the list, which the frontmatter API's Cut then cuts no second time: `CUT_LIST`)
+      let named = Some(binding_cut_list_attr(&stuff));
+      Ok(Tokens::new(affiliation_calls(None, named, None, stuff, true, true)?))
     } else {
       Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr, Some(stuff)]))
     }
@@ -236,6 +238,11 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     Ok(Vec::new())
   });
   DefPrimitive!(T_CS!("\\lx@sup@setlabel@affiliation"), None, {
+    // (whether the operand is a group, `^{1}`, or a token, `^*`: a shown mark is read again as it was written, so it
+    // prints in the form its superscript gives it — TeX sets a braced script's box apart, and the float-script rewrite
+    // makes `^{1}` italic where `^*` and `^1` stay upright, as the uncut contact had them: review rev99a2 S-c)
+    skip_spaces()?;
+    let braced = if_next(T_BEGIN!())?;
     let (operand, notes) = frontmatter_sup_operand_and_notes()?;
     if let Some(notes) = notes {
       unread(notes);
@@ -255,11 +262,16 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       (lookup_bool("lx_affiliation_mark_shown") && lookup_meaning(&plain).is_some())
         .then_some(plain)
     };
-    // (read again as the plain superscript where it stands, so a script keeps its base: `b^{1}`)
+    // (read again as the plain superscript where it stands, so a script keeps its base: `b^{1}`; braced as written)
     let read_plain = |plain: Token, operand: Tokens| {
-      let mut sup = vec![plain, T_BEGIN!()];
+      let mut sup = vec![plain];
+      if braced {
+        sup.push(T_BEGIN!());
+      }
       sup.extend(operand.unlist());
-      sup.push(T_END!());
+      if braced {
+        sup.push(T_END!());
+      }
       unread(Tokens::new(sup));
     };
     if labelled {

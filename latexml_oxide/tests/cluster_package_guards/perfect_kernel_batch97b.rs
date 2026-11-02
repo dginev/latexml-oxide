@@ -77,7 +77,8 @@ fn aa_mail_is_labelled_as_its_copy_prints_it() {
 /// contact, as int123a held them (`give_back_entries`). Witnesses 1005.3784, astro-ph0107243. Since 99a r2 the
 /// institute goes before the `\mail` contact queued after it (R8: `relocate::at_queue_position`, OD #954; it had
 /// followed it); pdflatex prints the "Correspondence to" footnote after the institute's e-mail too, which the placement
-/// by role does not reach — an e-mail stays where its label put it (the print-zone residual, SYNC_STATUS row 99a).
+/// by role does not reach: `\mail` is declared the footer's (`_zone=footer`, 99a r3), but print zones reorder only a
+/// relocated entry, and both contacts here are attached when digested (SYNC_STATUS row 99a).
 #[test]
 fn aa_mail_entry_whose_address_is_a_contact_is_given_back() {
   let (_, xml) = both_ways(repro!("aa_mail_repeated_address_stays_labelled"), 0);

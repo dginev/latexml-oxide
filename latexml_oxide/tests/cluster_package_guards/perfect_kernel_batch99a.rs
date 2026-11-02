@@ -158,6 +158,15 @@ fn an_institution_is_cut_at_its_marks() {
       vec!["affiliation=Project page: example.org"],
     ]
   );
+  // (a part a macro prints, `\city{\cty}`, is every entry's too: only spacing is no part — review rev99a2 S-a, 99a r2
+  // dropped "Germany")
+  assert_eq!(
+    both_ways(repro!("cut_acmart_institution_macro_part_is_shared"), &[]),
+    [
+      vec!["Ann Able 1", "affiliation=1 Univ A , Germany , X"],
+      vec!["Bob Baker 2", "affiliation=2 Univ B , Germany , X"],
+    ]
+  );
   assert_eq!(
     both_ways(repro!("cut_amsart_address_list_closing_comma"), &[]),
     [vec!["Ann Able 1", "address=1 Univ A"], vec![
@@ -399,5 +408,141 @@ fn a_relocated_entry_keeps_its_calls_place() {
       "affiliation=Univ B",
       "email=ann@x.org"
     ]]
+  );
+}
+
+/// One printed list, one Cut (review rev99a2 B1; `affiliations::place_uncut_copies`, `cut_list_queued`,
+/// `binding_cut_list_attr`): the same marked list after each name is cut once. A copy queued before the cut, uncut while
+/// the queued names requested fewer than two of its marks, gives way to the cut entries, which reach every name
+/// requesting their marks by label (amsart's `\address` after each `\author`, rev99a2 d2; REVTeX's `\affiliation`
+/// after each name, 2312.02779: Trinity on Patterson only, one Belfast entry each), each taking the copy's place among
+/// its name's contacts (amsart's `\address` then `\email`); a copy after the cut adds none (rev99a2 d4); nor does the
+/// API cut again a list a binding cut itself (REVTeX's `\lx@add@affiliation@marked`, rev99a2 d1). Was (99a r2): the
+/// early names the whole list plus their entry, the later copies' entries twice.
+#[test]
+fn one_printed_list_is_cut_once() {
+  assert_eq!(
+    both_ways(
+      repro!("cut_once_amsart_repeated_address_after_each_name"),
+      &[]
+    ),
+    [vec!["Ann Able 1", "address=1 Univ A"], vec![
+      "Bob Baker 2",
+      "address=2 Univ B"
+    ]]
+  );
+  assert_eq!(
+    both_ways(repro!("cut_once_amsart_repeat_after_the_cut"), &[]),
+    [
+      vec!["Ann Able 1", "address=1 Univ A"],
+      vec!["Bob Baker 2", "address=2 Univ B"],
+      vec!["Cy Cole 1", "address=1 Univ A"],
+    ]
+  );
+  assert_eq!(
+    both_ways(repro!("cut_once_amsart_copy_keeps_its_place"), &[]),
+    [
+      vec!["Ann Able 1", "address=1 Univ A", "email=ann@x.org"],
+      vec!["Bob Baker 2", "address=2 Univ B", "email=bob@y.org"],
+    ]
+  );
+  assert_eq!(
+    both_ways(repro!("cut_once_revtex_affiliation_after_each_name"), &[]),
+    [
+      vec!["Zed Zorn", "email=zed@x.org", "affiliation=Univ Z, Zurich"],
+      vec!["Ann Able 1", "affiliation=1 Univ A, Town, Road A, City"],
+      vec!["Bob Baker 1", "affiliation=1 Univ A, Town, Road A, City"],
+      vec!["Di Dunn 2", "affiliation=2 Univ B, Dublin"],
+      vec![
+        "Ed Eck 1",
+        "affiliation=1 Univ A, Town, Road A, City",
+        "email=ed@x.org"
+      ],
+    ]
+  );
+  assert_eq!(
+    both_ways(repro!("cut_once_revtex_binding_cut_list_repeated"), &[]),
+    [
+      vec!["Ann Able 1", "affiliation=Univ A"],
+      vec!["Bob Baker 2", "affiliation=Univ B"],
+      vec!["Cy Cole 1", "affiliation=Univ A"],
+    ]
+  );
+}
+
+/// A contact keeps the print zone its binding declares (`relocate::NAMES_ZONE`, `BLOCK_ZONE`, `FOOTER_ZONE`; `_zone=`),
+/// so a relocated entry goes after a contact printed with the names and before one printed in the footer, whenever each
+/// was queued: elsarticle's unlabelled `\address` (printed into `\elsauthors`, elsarticle.cls:665) before the labelled
+/// one relocated to the same author (1710.03753), REVTeX's `\email` (a front-matter footnote) after the entry the Cut
+/// makes of a later marked `\affiliation` (2312.02779). Was (99a r2): the queue's order.
+#[test]
+fn a_contact_keeps_its_print_zone() {
+  assert_eq!(
+    both_ways(repro!("order_zone_elsarticle_unlabelled_address"), &[]),
+    [vec!["Ann Able", "address=Univ X, Town", "address=Dept A"]]
+  );
+  assert_eq!(
+    both_ways(
+      repro!("order_zone_revtex_email_before_marked_affiliation"),
+      &[]
+    ),
+    [
+      vec!["Ann Able 1", "affiliation=Univ A", "email=ann@x.org"],
+      vec!["Bob Baker 2", "affiliation=Univ B"],
+    ]
+  );
+}
+
+/// A cut entry shows its leading mark in the form its superscript gives it, as the uncut contact (and int126b's writer
+/// cut) had it: `$^*$` and `$^1$` upright, `$^o$` italic — `\lx@sup@setlabel@affiliation` reads the shown mark again
+/// braced as it was written (review rev99a2 S-c; 2209.09217's `$^*$`, which 99a r2 set italic, as every mark), a mark on
+/// a spacing nucleus too, which the Cut's reader writes as the plain mark braced as written (`${}^1$` upright,
+/// `${}^{2}$` italic: `relocate::spaced_marks_written`; hep-ph0007234).
+#[test]
+fn a_cut_entry_shows_its_mark_as_written() {
+  let tex = repro!("cut_acmart_marks_shown_as_written");
+  assert_eq!(both_ways(tex, &[]), [
+    vec!["Ann Able *", "affiliation=∗ : Univ A , X"],
+    vec!["Bob Baker o", "affiliation=o : Univ B , X"],
+    vec!["Cy Cole 1", "affiliation=1 : Univ C , X"],
+  ]);
+  // (the XML without its ids, `<sup xml:id="id2">` read as `<sup>`)
+  let without_ids = |xml: &str| {
+    let mut plain = String::with_capacity(xml.len());
+    let mut rest = xml;
+    while let Some(at) = rest.find(" xml:id=\"") {
+      plain.push_str(&rest[..at]);
+      rest = &rest[at + 9..];
+      rest = rest.split_once('"').map_or("", |(_, after)| after);
+    }
+    plain.push_str(rest);
+    plain
+  };
+  let nucleus = repro!("cut_amsart_nucleus_marks_shown_as_written");
+  assert_eq!(both_ways(nucleus, &[]), [
+    vec!["Ann Able 1", "address=1 Univ A"],
+    vec!["Bob Baker 2", "address=2 Univ B"],
+  ]);
+  let plain = without_ids(&convert(nucleus, &[], false, false).1);
+  assert!(
+    plain.contains("<sup>1</sup>Univ A</contact>")
+      && plain.contains("<sup><text font=\"italic\">2</text></sup>Univ B</contact>"),
+    "{plain}"
+  );
+  let (_, xml) = convert(tex, &[], false, false);
+  let plain = without_ids(&xml);
+  let institutions: Vec<&str> = plain
+    .split("<text class=\"ltx_affiliation_institution\">")
+    .skip(1)
+    .map(|rest| rest.split("</text>, ").next().unwrap_or_default())
+    .collect();
+  assert_eq!(
+    institutions,
+    [
+      "<sup>∗</sup>: Univ A",
+      "<sup><text font=\"italic\">o</text></sup>: Univ B",
+      "<sup>1</sup>: Univ C"
+    ],
+    "{xml}"
   );
 }

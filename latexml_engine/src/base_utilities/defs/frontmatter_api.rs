@@ -480,6 +480,19 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     queue_front_matter(&tag.to_string(), kv.as_ref(), Tokens::new(inv_tokens));
   });
 
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #954): where an uncut copy of a printed list the Cut cut later stood in the
+  // queue (`affiliations::place_uncut_copies`): its place, an annotation's ordinal, recorded for the authors it
+  // reached, whose entry of the list keeps it (`relocate::at_queue_position`).
+  DefPrimitive!("\\lx@cut@copy@place {}{}{}", sub[(key, authors, zone)] {
+    let ordinal = lookup_int(QUEUE_ORDINAL_COUNTER) + 1;
+    assign_value(QUEUE_ORDINAL_COUNTER, Stored::Int(ordinal), Some(Scope::Global));
+    let place = zone_offset(Some(zone.to_string().as_str())) + ordinal;
+    for author in authors.to_string().split(',') {
+      assign_value(&s!("{CUT_COPY_PLACE}{key}:author:{author}"), Stored::Int(place), Some(Scope::Global));
+    }
+    Ok(Vec::new())
+  });
+
   DefPrimitive!("\\lx@annotate@frontmatter@now {}{} OptionalKeyVals:Frontmatter {}",
     sub[(parenttag_tks, tag_tks, kv, content)] {
     let parenttag = parenttag_tks.to_string();
@@ -536,6 +549,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // digested in order, so the n-th annotation digested is the n-th queued
     let ordinal = lookup_int(QUEUE_ORDINAL_COUNTER) + 1;
     assign_value(QUEUE_ORDINAL_COUNTER, Stored::Int(ordinal), Some(Scope::Global));
+    // (in the print zone its binding declares, `_zone`: `relocate::NAMES_ZONE`)
+    let zone = zone_offset(options.remove("_zone").as_deref());
     let mut in_note = false;
 
     // Snapshot the parent entries (those not role=pending), inherit labels
@@ -567,7 +582,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
             };
             options.insert("_label".to_string(), label);
             // (a contact inside a name's note, `\thanks{\email{…}}`, prints in the footer, after every entry of the
-            // block: its place is the footer's, `FOOTER_ORDINAL`)
+            // block: its place is the footer's, `FOOTER_ZONE`)
             in_note = last.attr.get("_for").map(String::as_str) == Some("ltx:note");
           }
         let mut stub_attr = TagAttrs::default();
@@ -591,7 +606,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     });
     options.insert(
       QUEUE_ORDINAL.to_string(),
-      (if in_note { FOOTER_ORDINAL + ordinal } else { ordinal }).to_string(),
+      (if in_note { FOOTER_ZONE } else { zone } + ordinal).to_string(),
     );
     let nparents = parent_indices.len();
     // (a contact led by a mark of its own, which labels no one — a legend, `$^\dagger$Corresponding author`, or a mark

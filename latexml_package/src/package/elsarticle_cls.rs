@@ -90,6 +90,16 @@ LoadDefinitions!({
   // leaves it at OT1; divergence from Perl.
   RequirePackage!("fontenc", options => vec!["T1".to_string()]);
   RequirePackage!("elsart_support_core");
+  // elsarticle.cls:656-668: a labelled `\address[a]{…}` goes to the address list under the names (`\elsaddress`), an
+  // unlabelled one into the names list itself (`\@address` into `\elsauthors`), printed with the names, above every
+  // labelled one — its print zone the names' (`_zone=names`, OXIDIZED_DESIGN_DIVERGENCES #954; 1710.03753, where the
+  // unlabelled `University of North Dakota` went after the labelled department); the core's `\address` otherwise.
+  DefMacro!("\\address OptionalSemiverbatim {}",
+    "\\if\\relax\\detokenize{#1}\\relax\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi\
+     {\\lx@els@shared{\\lx@add@contact[label={},role=address,_zone=names]}\
+       {\\lx@add@contact[label={},role=address,annotate=run,_zone=names]}}\
+     {\\lx@els@shared{\\lx@add@contact[label={#1},role=address]}\
+       {\\lx@add@contact[label={#1},role=address,annotate=run]}}{#2}");
   // elsarticle.cls:1200-1236 `\newproof`: the environment steps a counter as `\newtheorem` does (`\@prf` is
   // `\refstepcounter`, so a `\label` in it names that number; `\newproof{x}[y]{…}` steps y's, `\@oprf`; `{…}[within]`
   // numbers within it, `\@xnprf`), but its head (`\@beginproof`, `\@opargbeginproof`) prints only the name, in small

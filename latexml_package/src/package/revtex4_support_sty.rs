@@ -144,12 +144,15 @@ LoadDefinitions!({
   // `\homepage{http://www.nhn.ou.edu/%7Emilton}` (0712.3811) is the address, where a `%` comment swallowed the rest
   // of the document, every `\label` with it (KNOWN_PERL_ERRORS #1149). One call `\email[]{}`, as an author-block line
   // reads it (`perfect_kernel_batch64::email_command_option_on_author_line`).
-  DefMacro!("\\email[Default:\\lx@contact@email@name] UrlSemiverbatim",    "\\lx@add@email[name={#1}]{\\lx@address@textfont{#2}}");
+  // (an e-mail is printed in the front matter's footnotes, revtex4-2.cls:2404-2413 `\@email` into `\frontmatter@footnote`:
+  // after the affiliations under the names, whenever it is queued — its print zone the footer's, `_zone=footer`,
+  // OXIDIZED_DESIGN_DIVERGENCES #954; 2312.02779)
+  DefMacro!("\\email[Default:\\lx@contact@email@name] UrlSemiverbatim",    "\\lx@add@email[name={#1},_zone=footer]{\\lx@address@textfont{#2}}");
   DefMacro!("\\homepage[Default:\\lx@contact@url@name] UrlSemiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
   // `\@email{label}{address}` closes the class's group. A class that re-dresses `\email` over them (cej.cls:88
   // `\renewcommand*\email[1][E-mail: ]{\begingroup\sanitize@url\@email{#1}}`; 0710.1022, 1201.4230 and 5 more) left
   // the group open without them, `%` other to the end of the document.
-  DefMacro!("\\@email{} Semiverbatim",    "\\endgroup\\lx@add@email[name={#1}]{\\lx@address@textfont{#2}}");
+  DefMacro!("\\@email{} Semiverbatim",    "\\endgroup\\lx@add@email[name={#1},_zone=footer]{\\lx@address@textfont{#2}}");
   DefMacro!("\\@homepage{} Semiverbatim", "\\endgroup\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
   DefMacro!("\\thanks[Default:\\lx@contact@thanks@name]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
   // revtex4-2.cls:2472-2493 (revtex4.cls, revtex4-1.cls alike): the front-matter footnote under `\thanks` and the

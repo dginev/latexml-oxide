@@ -743,10 +743,8 @@ fn a_cut_entry_keeps_the_font_open_before_it() {
 /// effect where it starts — the content's head switch (`\itshape $^1$…\\ $^2$…`) and an enclosing group's
 /// (`{\bfseries $^3$…\\ $^4$…}`): the first had been on no piece, the second on the first piece only. Distinct from
 /// `a_cut_entry_keeps_the_font_open_before_it`: an API call's rehearsal, not the author block's. Since 99a the API's Cut
-/// parts the call (OXIDIZED_DESIGN_DIVERGENCES #954) and each mark renders as the shared float-script rewrite renders a
-/// frontmatter mark (`tex_math.rs` FLOATSUPERSCRIPT, a name's too: `<sup><text font="italic">1</text></sup>`); TeX sets
-/// a script's digits upright (family 0; the PDF holds CMR6/CMR7 only), the writer's cut had: the SYNC_STATUS row 99a
-/// residual "math→sup mark font", pinned here as it is.
+/// parts the call (OXIDIZED_DESIGN_DIVERGENCES #954), each entry showing its mark read again as written (`$^1$`, upright,
+/// as the writer's cut had it and TeX sets it: 99a r2 had set it italic, review rev99a2 S-c).
 #[test]
 fn an_api_piece_keeps_the_font_open_before_it() {
   assert_written(
@@ -758,10 +756,10 @@ fn an_api_piece_keeps_the_font_open_before_it() {
       &["Dan Doe", "address=4 Lab D, Place"],
     ],
     Some(&[
-      "<sup><text font=\"italic\">1</text></sup><text font=\"italic\">Univ A, Town</text>",
-      "<sup><text font=\"italic\">2</text></sup><text font=\"italic\">Univ B, City</text>",
-      "<sup><text font=\"italic\">3</text></sup><text font=\"bold\">Lab C, Place</text>",
-      "<sup><text font=\"italic\">4</text></sup><text font=\"bold\">Lab D, Place</text>",
+      "<sup>1</sup><text font=\"italic\">Univ A, Town</text>",
+      "<sup>2</sup><text font=\"italic\">Univ B, City</text>",
+      "<sup>3</sup><text font=\"bold\">Lab C, Place</text>",
+      "<sup>4</sup><text font=\"bold\">Lab D, Place</text>",
     ]),
     None,
   );

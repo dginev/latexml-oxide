@@ -940,6 +940,33 @@ pub(in crate::base_utilities) fn record_clear(tag: &str, attr: &[(&str, &str)]) 
   });
 }
 
+/// Record that the frontmatter API's Cut took an uncut copy of a printed list it cut out of the queue (`content`, a
+/// contact of `role`: `affiliations::place_uncut_copies`), under the shadow switch only: the first such call queued
+/// since the last flush and not cleared is cleared, as [`record_clear`] clears the calls a dequeue removes.
+pub(in crate::base_utilities) fn record_cut_copy(role: &str, content: &Tokens) {
+  if !records_now() {
+    return;
+  }
+  let content = queued_affiliation_text(content);
+  with_ledger(|ledger| {
+    let flushes = ledger.flushes;
+    if let Some(call) = ledger.entries.iter_mut().find_map(|entry| match entry {
+      Entry::Api(call)
+        if call.epoch == flushes
+          && call.tag == "ltx:contact"
+          && call.role == role
+          && !call.cleared
+          && call.content == content =>
+      {
+        Some(call)
+      },
+      _ => None,
+    }) {
+      call.cleared = true;
+    }
+  });
+}
+
 /// The last value of `key` in a call's recorded attributes (`role=affiliation,label=a`), as the queue's attribute hash
 /// keeps it (`queue_front_matter`: the last value of a repeated key); empty when it has none. It mirrors the dequeue's
 /// match on any attribute, which no caller uses today — every clear passes only `role` (Perl

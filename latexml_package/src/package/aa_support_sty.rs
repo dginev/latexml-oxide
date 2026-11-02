@@ -142,10 +142,12 @@ LoadDefinitions!({
   // copies only store it (`\newcommand*\mail[1]{\renewcommand*\aa@mail{#1}}`, 2007.14739's :965-966, which nothing
   // reads; 297 papers, 2012.11607, 2606.29508) and print neither the address nor a label, so the item has none. Read
   // off the copy's code, not its version; no copy shipped (1209.2606), Perl's label (aa_support.sty.ltxml:118-119).
+  // (printed in the footnote, after the institutes under the names, whenever it is queued: its print zone the footer's,
+  // `_zone=footer`, OXIDIZED_DESIGN_DIVERGENCES #954)
   if shipped_class_text("aa")?.is_some_and(|text| !class_code_contains(&text, "\\mailname")) {
-    DefMacro!("\\mail {}", "\\lx@add@address[name={}]{#1}");
+    DefMacro!("\\mail {}", "\\lx@add@address[name={},_zone=footer]{#1}");
   } else {
-    DefMacro!("\\mail {}", "\\lx@add@address[name={\\mailname}]{#1}");
+    DefMacro!("\\mail {}", "\\lx@add@address[name={\\mailname},_zone=footer]{#1}");
   }
   DefMacro!("\\doi{}", "\\lx@add@pubnote[role=doi]{#1}");
   DefMacro!("\\DOI{}", "\\lx@add@pubnote[role=doi]{#1}");

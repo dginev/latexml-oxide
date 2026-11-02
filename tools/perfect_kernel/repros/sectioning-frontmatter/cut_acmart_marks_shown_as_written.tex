@@ -1,0 +1,16 @@
+% mechanism: a cut entry shows its leading mark in the form its superscript gives it, as the uncut contact had it
+%   (`\lx@sup@setlabel@affiliation` reads the shown mark again braced as written: `^*`, `^1` upright, `^o` italic)
+% witness: 2209.09217 (`\affiliation{$^*$: Electrical \& Computer Engineering, $^o$: Mechanical …}`; review rev99a2 S-c)
+% oracle:  pdflatex (TL 2025) 0 errors: "∗: Univ A, o: Univ B, 1: Univ C / X" (∗ and 1 upright, o math italic)
+% engines: rust int126b: ∗ and 1 upright, o italic (the writer's cut); 99a r2: all three italic
+% expect:  0 errors, 0 warnings; Ann "∗: Univ A, X", Bob "o: Univ B, X", Cy "1: Univ C, X", only the o italic
+% status:  RED (99a r2) -> GREEN (99a r3) — perfect_kernel_batch99a::a_cut_entry_shows_its_mark_as_written
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able$^*$, Bob Baker$^o$, Cy Cole$^1$}
+\affiliation{\institution{$^*$: Univ A, $^o$: Univ B, $^1$: Univ C}\country{X}}
+\maketitle
+Text.
+\end{document}
