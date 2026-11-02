@@ -1675,7 +1675,11 @@ impl Resolver {
     for ((_, carriers), emails) in merged {
       let spelled: Vec<Option<usize>> = emails
         .iter()
-        .map(|(assoc, _)| self.spelled(&assoc.text, &live))
+        .map(|(assoc, _)| {
+          (!assoc.rule.contains(ENTRY_MAILBOX))
+            .then(|| self.spelled(&assoc.text, &live))
+            .flatten()
+        })
         .collect();
       let symbol = emails.iter().any(|(_, symbol)| *symbol);
       let addressed = self.addressed(&carriers);
@@ -1921,7 +1925,15 @@ impl Resolver {
       let symbol_line = first.rule.contains("ruling2:symbol-line");
       let addressed = self.addressed(&carriers);
       let all: Vec<&String> = runs.iter().flat_map(|r| &r.addresses).collect();
-      let spelled: Vec<Option<usize>> = all.iter().map(|a| self.spelled(a, &live)).collect();
+      // (a two-letter mailbox the entry's own words name spells no one: `ai@` under "AI Lab", review rev100b S3)
+      let spelled: Vec<Option<usize>> = all
+        .iter()
+        .map(|a| {
+          (!is_entry_word_mailbox(a, &lined))
+            .then(|| self.spelled(a, &live))
+            .flatten()
+        })
+        .collect();
       // (FIDELITY_CHARTER §4's chain, the one both engines run (`entry_address_owners`, OXIDIZED_DESIGN_DIVERGENCES
       // #956), over each run: one per carrier at its place only within one run, every spelled one of it agreeing — an
       // address another run prints is no place of the order, `Dept X, Univ Y, ann@x.org, Phone 123, office@x.org` under
@@ -1929,7 +1941,7 @@ impl Resolver {
       // not part stays where it prints: no address of anyone's)
       let mut at = 0usize;
       let mut kept_runs: Vec<AddressRun> = Vec::new();
-      let mut placed: Vec<(String, Option<Vec<usize>>, &'static str)> = Vec::new();
+      let mut placed: Vec<(String, Vec<usize>, &'static str)> = Vec::new();
       for run in &runs {
         let len = run.addresses.len();
         if run
@@ -1958,7 +1970,7 @@ impl Resolver {
         }
         kept_runs.push(run.clone());
         for (address, (who, tag)) in run.addresses.iter().zip(owners) {
-          placed.push((address.clone(), who, tag));
+          placed.extend(who.map(|who| (address.clone(), who, tag)));
         }
       }
       if kept_runs.is_empty() {
@@ -1989,13 +2001,8 @@ impl Resolver {
           source: first.source,
           target: None,
         };
-        match who {
-          Some(who) => {
-            for owner in who {
-              emails.push((Some(owner), assoc.clone()));
-            }
-          },
-          None => emails.push((None, assoc)),
+        for owner in who {
+          emails.push((Some(owner), assoc.clone()));
         }
       }
       if !keeps_words {

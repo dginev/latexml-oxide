@@ -420,7 +420,7 @@ fn link_entry_addresses(document: &mut Document) -> Result<()> {
   // holds them: an address is never duplicated — 2208.10784's `bala@` on its author by one copy of a shared entry)
   let mut to_block: Vec<(String, Node)> = Vec::new();
   let mut taken_away: Vec<Node> = Vec::new();
-  for (_, entry_keys, held) in groups {
+  for (entry_text, entry_keys, held) in groups {
     // (in print order: the order their calls were digested in, `QUEUE_ORDINAL`)
     let mut mine: Vec<Node> = emails
       .iter()
@@ -472,7 +472,12 @@ fn link_entry_addresses(document: &mut Document) -> Result<()> {
         (!lists_local_parts(text) && !is_pattern_address(text)).then(|| vec![text.to_string()])
       }
     };
-    mine.retain(|email| readable(&email.get_content()).is_some());
+    // (a contact printing several addresses and more — an ORCID's link, math, a note — is never written out: it stays
+    // whole where its call placed it, [`prints_text_only`]; 2308.02269, review rev100b B1)
+    mine.retain(|email| {
+      readable(&email.get_content())
+        .is_some_and(|listed| listed.len() < 2 || prints_text_only(email))
+    });
     if mine.is_empty() {
       continue;
     }
@@ -507,6 +512,7 @@ fn link_entry_addresses(document: &mut Document) -> Result<()> {
           .split_whitespace()
           .find(|word| word.contains('@'))
           .map(|word| word.trim_matches(|c: char| !c.is_alphanumeric()))
+          .filter(|address| !is_entry_word_mailbox(address, &entry_text))
           .and_then(|address| spelled_owner(&keys, address))
       })
       .collect();
@@ -694,6 +700,17 @@ fn link_entry_addresses(document: &mut Document) -> Result<()> {
     }
   }
   Ok(())
+}
+
+/// Whether `node` prints text alone: every element under it a font wrapper (`ltx:text`) or an address's link (an
+/// `ltx:ref` printing an `@`, `\url{{a,b}@x}`), so writing one of its addresses out ([`set_written_out`]) drops nothing
+/// it prints — not an ORCID's `ltx:ref` (2308.02269's `\orcidID` glued to an address line, review rev100b B1), math,
+/// a note.
+fn prints_text_only(node: &Node) -> bool {
+  element_nodes(node).iter().all(|child| {
+    let address_link = child.get_name() == "ref" && child.get_content().contains('@');
+    (child.get_name() == "text" || address_link) && prints_text_only(child)
+  })
 }
 
 /// A copy of an e-mail contact printing several addresses made the contact of one, `address`: written in the font

@@ -1,0 +1,19 @@
+% An authblk entry's address line with a `\thanks` glued after it: no line of addresses alone (`prints_addresses_only`),
+% the note no letter of an address. Review rev100b B1's sibling probe.
+% witness: (synthetic; the shape of 2308.02269 with a note)
+% oracle:  pdflatex 0 errors: "Univ X, Town", "{qq1, zz2}@x.org" + note mark, footnote "Corresponding."
+% engines: rust int127a = 0 errors, qq1@ on Ann, zz2@ on Bob, the note a pubnote; 100b r1 = `qq1@x.orgCorresponding`
+%          on Ann and `zz2@x.orgCorresponding` on Bob; perl = not run
+% expect:  0 errors, 0 warnings; Ann: Univ X + qq1@; Bob: Univ X + zz2@; the note a thanks pubnote
+% status:  RED (100b r1) -> GREEN (100b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann Able}
+\author[1]{Bob Baker}
+\affil[1]{Univ X, Town \\ \{qq1, zz2\}@x.org\thanks{Corresponding.}}
+\maketitle
+Body.
+\end{document}

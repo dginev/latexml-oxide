@@ -364,9 +364,13 @@ impl NameKeys {
         .filter(|word| word.chars().count() >= 3)
         .cloned()
         .collect(),
+      // (a name particle is no surname of its own: `Ana de Souza` spells no `de@`, review rev100b S3)
       short_surnames: later
         .iter()
-        .filter(|word| word.chars().count() == 2)
+        .filter(|word| {
+          word.chars().count() == 2
+            && !matches!(word.as_str(), "de" | "la" | "da" | "le" | "di" | "du")
+        })
         .cloned()
         .collect(),
       given: Some(first.clone()).filter(|word| word.chars().count() >= 3),
@@ -710,6 +714,26 @@ pub(in crate::base_utilities) fn is_pattern_address(address: &str) -> bool {
     })
 }
 
+/// Whether `address` is a mailbox its entry names, no one's surname: its local part two letters alone (digits aside,
+/// as a short surname spells one, [`NameKeys`]) that are a word the entry prints beside its addresses (`ai@x.org` under
+/// "AI Lab, Univ X" and Wei Ai, review rev100b S3). The Link step reads it as spelling no one.
+pub(in crate::base_utilities) fn is_entry_word_mailbox(address: &str, entry: &str) -> bool {
+  let local: String = address
+    .split('@')
+    .next()
+    .unwrap_or_default()
+    .chars()
+    .filter(|c| c.is_alphabetic())
+    .flat_map(char::to_lowercase)
+    .collect();
+  local.chars().count() == 2
+    && entry
+      .split_whitespace()
+      .filter(|word| !word.contains('@'))
+      .flat_map(|word| word.split(|c: char| !c.is_alphabetic()))
+      .any(|word| word.to_lowercase() == local)
+}
+
 /// The owners FIDELITY_CHARTER §4's chain gives the e-mail addresses printed inside an affiliation-kind entry (an
 /// affiliation, alternate affiliation or address: its lines of addresses, its e-mail calls), the one Link step both
 /// engines run — the author block's at the flush (`insert::link_entry_addresses`) and the frontmatter observer's
@@ -720,7 +744,8 @@ pub(in crate::base_utilities) fn is_pattern_address(address: &str) -> bool {
 /// document has one author, whose every address is (the charter's "the group's only author"). Each address of `run`, in
 /// order: the author it spells (`owner:spelled`); else the entry's only carrier, when it is the entry's one address no
 /// one spells, no other address of the entry spells that carrier and the carrier holds none of its own
-/// (`owner:only-carrier`: `{steen, sund}@…` under Steen alone is two people's); else, on a symbol-led line, every carrier (`owner:carriers`, the charter's "every symbol
+/// (`owner:only-carrier`: `{steen, sund}@…` under Steen alone is two people's); else, on a symbol-led line, every carrier
+/// no other address of the entry spells (`owner:carriers`, the charter's "every symbol
 /// carrier", 2026-10-30 — before the order, so `$^\dagger$alpha@x.org, beta@y.org` under two carriers of `\dagger` is
 /// both carriers'); else, the run's addresses one per carrier that every spelled one agrees with, the carrier at its
 /// place (`owner:order`, OD #805); else `None`, the block's, once (`owner:block`: ruling E, main session 2026-11-02 —
@@ -746,6 +771,14 @@ pub fn entry_address_owners(
       .iter()
       .zip(carriers)
       .all(|(s, c)| s.is_none_or(|s| s == *c));
+  // (the symbol carriers no other address of the entry spells, as the only-carrier step excludes them: 1907.01388's
+  // `* chinarentao@163.com, zhutou@ustc.edu` under Tao Ren* and Tao Zhou* gives `zhutou@` to Zhou alone, review rev100b
+  // S1; none left, the order and the block decide)
+  let free: Vec<usize> = carriers
+    .iter()
+    .copied()
+    .filter(|c| !spelled.contains(&Some(*c)))
+    .collect();
   run
     .clone()
     .map(|at| match (spelled[at], carriers) {
@@ -757,7 +790,7 @@ pub fn entry_address_owners(
         (Some(vec![*only]), "owner:only-carrier")
       },
       (None, [] | [_]) => (None, "owner:block"),
-      (None, _) if symbol_line => (Some(carriers.to_vec()), "owner:carriers"),
+      (None, _) if symbol_line && !free.is_empty() => (Some(free.clone()), "owner:carriers"),
       (None, _) if in_order => (Some(vec![carriers[at - run.start]]), "owner:order"),
       (None, _) => (None, "owner:block"),
     })

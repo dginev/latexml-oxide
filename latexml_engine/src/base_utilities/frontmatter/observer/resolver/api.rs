@@ -585,21 +585,32 @@ impl Resolver {
       // (a leading mark of content no `\lx@affiliation@withsup` wraps is ruling 1's reading, not today's: today's
       // attaches the entry where its `annotate=` puts it — what its contact grid sees, `distribute_upfront`)
       let first_pending = self.pending.len();
+      // (a two-letter mailbox the entry's own words name spells no one, `ENTRY_MAILBOX`: `ai@` under "AI Lab", review
+      // rev100b S3)
+      let mailbox = |address: &str| {
+        if is_entry_word_mailbox(address, &text) {
+          ENTRY_MAILBOX
+        } else {
+          ""
+        }
+      };
       for contact in inner {
         // (an e-mail call printing several addresses, a braced group `\email{\{ann,bob\}@x.org}` in an `\institute`
         // entry: each address written out, to the author of the document it spells — `answer_pending`)
         let addresses = written_out(&contact);
         if addresses.is_empty() {
+          let tag = mailbox(&contact.text);
           self.pending.push((labels.clone(), false, Assoc {
-            rule: s!("{label_rule} api:inner-contact"),
+            rule: s!("{label_rule} api:inner-contact{tag}"),
             label: labels.first().cloned(),
             ..contact
           }));
           continue;
         }
         for address in addresses {
+          let tag = mailbox(&address);
           self.pending.push((labels.clone(), false, Assoc {
-            rule: s!("{label_rule} api:inner-contact ruling3:written-out"),
+            rule: s!("{label_rule} api:inner-contact ruling3:written-out{tag}"),
             label: labels.first().cloned(),
             text: address,
             ..contact.clone()
@@ -850,13 +861,23 @@ impl Resolver {
       let (emails, others): (Vec<Assoc>, Vec<Assoc>) = inner
         .into_iter()
         .partition(|contact| contact.role == "email");
+      // (a two-letter mailbox the entry's own words name spells no one, `ENTRY_MAILBOX`: `ai@` under "AI Lab", review
+      // rev100b S3)
+      let mailbox = |address: &str| {
+        if is_entry_word_mailbox(address, &text) {
+          ENTRY_MAILBOX
+        } else {
+          ""
+        }
+      };
       for contact in emails {
         let written = written_out(&contact);
         if written.is_empty() {
+          let tag = mailbox(&contact.text);
           self.entry_emails.push((
             carriers.clone(),
             Assoc {
-              rule: s!("{rule} api:inner-contact"),
+              rule: s!("{rule} api:inner-contact{tag}"),
               ..contact
             },
             false,
@@ -864,10 +885,11 @@ impl Resolver {
           continue;
         }
         for address in written {
+          let tag = mailbox(&address);
           self.entry_emails.push((
             carriers.clone(),
             Assoc {
-              rule: s!("{rule} api:inner-contact ruling3:written-out"),
+              rule: s!("{rule} api:inner-contact ruling3:written-out{tag}"),
               text: address,
               ..contact.clone()
             },

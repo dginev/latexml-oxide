@@ -649,6 +649,10 @@ impl Resolver {
 /// The one of `names` an address spells (`spelled_owners`), if one — none for a list of local parts the address reader
 /// could not part (`lists_local_parts`); each name read by its base letters ([`base_letters`]), as an address spells it
 /// ([`Resolver::spelled`]; the writer's check of an address today's holds on the creator it spells, `writer::plan`).
+/// The rule tag of an entry's e-mail whose two-letter local part is a word the entry prints, a mailbox spelling no one
+/// (`email_owners::is_entry_word_mailbox`; review rev100b S3).
+const ENTRY_MAILBOX: &str = " api:entry-mailbox";
+
 pub(in crate::base_utilities::frontmatter::observer) fn spelled_name(
   names: &[&str],
   address: &str,

@@ -8,7 +8,8 @@
 //! (`ADDRESS_GROUP_SEPARATORS`) and a two-letter surname (`NameKeys`). Each guard converts its repros under
 //! `tools/perfect_kernel/repros/sectioning-frontmatter/` and asserts no Error or Warning and every creator's name and
 //! contacts (role and text) in order, the block's own creator last. Witnesses 2502.01754, 2602.21641, 2307.02047,
-//! 1901.09107, 0902.3918, 1909.00276, astro-ph0512555, 1002.3223, cond-mat0202268, 2608.22602.
+//! 1901.09107, 0902.3918, 1909.00276, astro-ph0512555, 1002.3223, cond-mat0202268, 2608.22602; review rev100b's
+//! 2308.02269 (an ORCID glued to an address line) and 1907.01388 (a symbol carrier another address spells).
 use latexml::util::test::convert_files_with;
 
 use super::{
@@ -149,6 +150,20 @@ fn the_link_chain_over_an_entrys_addresses() {
     ],
     &["Cat Cole 2", "affiliation=Univ B, City"],
   ]);
+  // (an address no one spells goes to the symbol carriers no other address of the entry spells: 1907.01388's `zhutou@`
+  // to Tao Zhou alone, review rev100b S1. Red (100b r1): `qz77@` on Ann too)
+  assert_creators(
+    repro!("address_family_symbol_carrier_spelled_elsewhere"),
+    &[
+      &[
+        "Ann Able *",
+        "affiliation=Univ X, Town",
+        "email=ann.able@x.org",
+      ],
+      &["Bob Baker", "affiliation=Univ X, Town"],
+      &["Cat Cole *", "affiliation=Univ Y, Town", "email=qz77@y.org"],
+    ],
+  );
   assert_creators(repro!("address_family_symbol_line_addresses"), &[
     &[
       "Ann Able †",
@@ -167,7 +182,10 @@ fn the_link_chain_over_an_entrys_addresses() {
 }
 
 /// A two-letter surname spells a local part of its letters alone (`an107@` Weili An's), where the initials of another
-/// name are the same letters (Anusuya Nallathambi's "an"): the surname's spelling wins the tie (2608.22602).
+/// name are the same letters (Anusuya Nallathambi's "an"): the surname's spelling wins the tie (2608.22602). Not a word
+/// of the entry's own text (`ai@` under "AI Lab" and Wei Ai), nor a name particle (`de@` under Ana de Souza): those
+/// spell no one, and the chain gives them to the block (review rev100b S3). Red (100b r1): `ai@` on Wei Ai, `de@` on
+/// Ana de Souza.
 #[test]
 fn a_two_letter_surname_spells_its_local_part() {
   assert_creators(repro!("address_family_two_letter_surname"), &[
@@ -178,6 +196,62 @@ fn a_two_letter_surname_spells_its_local_part() {
       "email=anallat@p.edu",
     ],
   ]);
+  assert_creators(repro!("address_family_entry_word_mailbox"), &[
+    &["Wei Ai", "affiliation=AI Lab, Univ X, Town"],
+    &["Bob Baker", "affiliation=AI Lab, Univ X, Town"],
+    &["email=ai@x.org"],
+  ]);
+  assert_creators(repro!("address_family_particle_mailbox"), &[
+    &["Ana de Souza", "affiliation=Univ X, Town"],
+    &["Bob Baker", "affiliation=Univ X, Town"],
+    &["email=de@x.org"],
+  ]);
+}
+
+/// An address line with another call glued after it — an ORCID (2308.02269's `\url{{arim,sue}@…}\orcidID{…}`), a
+/// `\thanks` — is no line of addresses alone: the Kind step leaves it in the entry (`prints_addresses_only`), and a
+/// contact printing several addresses and more is never written out (`insert::prints_text_only`); each address its
+/// author's, each ORCID kept (review rev100b B1). Red (100b r1): `qq1@x.org0000-0002-2701-0271` and the first ORCID
+/// lost; `qq1@x.orgCorresponding`.
+#[test]
+fn an_address_line_holding_another_call_stays_whole() {
+  let xml = assert_creators(repro!("address_family_line_with_orcid"), &[
+    &[
+      "Ann Able",
+      "affiliation=Univ X, Town",
+      "email=qq1@x.org",
+      "orcid=",
+    ],
+    &[
+      "Bob Baker",
+      "affiliation=Univ X, Town",
+      "email=zz2@x.org",
+      "orcid=",
+    ],
+    &[
+      "Cat Cole",
+      "affiliation=Univ Y, Town",
+      "email=cole@y.org",
+      "orcid=",
+    ],
+  ]);
+  for (orcid, count) in [("0000-0002-2701-0271", 2), ("0000-0001-6269-9353", 1)] {
+    assert_eq!(
+      xml
+        .matches(&format!("href=\"https://orcid.org/{orcid}\""))
+        .count(),
+      count,
+      "{xml}"
+    );
+  }
+  let xml = assert_creators(repro!("address_family_line_with_thanks"), &[
+    &["Ann Able", "affiliation=Univ X, Town", "email=qq1@x.org"],
+    &["Bob Baker", "affiliation=Univ X, Town", "email=zz2@x.org"],
+  ]);
+  assert!(
+    xml.contains("<pubnote role=\"thanks\">Corresponding.</pubnote>"),
+    "{xml}"
+  );
 }
 
 /// A note inside an affiliation printing a labelled address alone — REVTeX's `\footnote{Electronic address: …}`

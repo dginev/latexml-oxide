@@ -395,12 +395,16 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
   // (a line of e-mail commands is e-mails already, the class's own contacts with the label it prints — llncs's
   // `\email{…}` "E-mail", 2008.05861's `\email{\{jlwang,yhliu\}@…}, \email{jianbo@…}` —, digested inside the entry
   // and so its addresses: left as it is)
+  // (a line holding any other command — an ORCID, a note, a symbol — is no line of addresses alone: it stays in the
+  // entry as it prints, its addresses the text reading's, [`prints_addresses_only`]; 2308.02269's
+  // `\url{{arim,sue}@ist.hokudai.ac.jp}\orcidID{0000-0002-2701-0271}` had read the ORCID's digits into the domain and
+  // lost the ORCID, review rev100b B1)
   let addresses_of = |line: &Tokens| {
     let command = line
       .unlist_ref()
       .iter()
       .any(|t| t.get_catcode() == Catcode::CS && is_email_wrapper(t));
-    (!command)
+    (!command && prints_addresses_only(line))
       .then(|| line_addresses(line))
       .flatten()
       .filter(|addresses| {
@@ -662,6 +666,62 @@ fn balanced(tokens: &[Token]) -> bool {
     }
   }
   depth == 0
+}
+
+/// The commands a line of addresses alone prints them with, beside the font and size commands
+/// ([`NAME_TEXT_COMMANDS`], [`FONT_SWITCH`]) and the spacing ([`is_spacing`], [`is_spacing_command`],
+/// [`is_line_separator`]): the url and link commands, the printed braces, underscore and bar of a list of local parts
+/// ([`email_addresses`]), and the boxes and no-ops round them.
+const ADDRESS_LINE_COMMANDS: &[&str] = &[
+  "\\url",
+  "\\href",
+  "\\nolinkurl",
+  "\\path",
+  "\\{",
+  "\\}",
+  "\\_",
+  "\\lbrace",
+  "\\rbrace",
+  "\\textbraceleft",
+  "\\textbraceright",
+  "\\textunderscore",
+  "\\mid",
+  "\\vert",
+  "\\mathtt",
+  "\\texttt",
+  // (a text command printing its argument: `\text{sgadgil@stanford.edu}`, 2011.11850; `\verb"ndr@…"`, astro-ph0002160)
+  "\\text",
+  "\\verb",
+  "\\protect",
+  "\\relax",
+  "\\mbox",
+  "\\hbox",
+  "\\par",
+  "\\noindent",
+  "\\quad",
+  "\\smallskip",
+  "\\medskip",
+  "\\bigskip",
+];
+
+/// Whether `line` holds no command but those a line of addresses alone prints them with ([`ADDRESS_LINE_COMMANDS`], the
+/// font, size and spacing commands; a command whose arguments print no letter, `\color{…}`, `\hspace{…}`, aside:
+/// [`without_non_printing_arguments`]). Any other — `\orcidID{…}` (2308.02269), `\thanks{…}`, `$^\dagger$` — prints
+/// more than the addresses, and the line stays in its entry as it prints (review rev100b B1).
+fn prints_addresses_only(line: &Tokens) -> bool {
+  without_non_printing_arguments(line.unlist_ref())
+    .iter()
+    .all(|t| {
+      t.get_catcode() != Catcode::CS
+        || is_spacing(t)
+        || is_spacing_command(t)
+        || is_line_separator(t)
+        || t.with_str(|s| {
+          NAME_TEXT_COMMANDS.contains(&s)
+            || FONT_SWITCH.is_match(s)
+            || ADDRESS_LINE_COMMANDS.contains(&s)
+        })
+    })
 }
 
 /// A line led by a printed mark (`$^1$…`, `\textsuperscript{1}…`, the font switches before it kept: `{\tt $^1$\{aable,

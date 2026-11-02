@@ -1,0 +1,20 @@
+% An institute's address line with another call glued after it (`\url{{…}@x}\orcidID{…}`): no line of addresses alone,
+% so the Kind step leaves it in the entry (`prints_addresses_only`); a contact printing several addresses and more is
+% never written out (`insert::prints_text_only`). Review rev100b B1.
+% witness: 2308.02269
+% oracle:  pdflatex 0 errors: "Univ X, Town", "{qq1,zz2}@x.org" + ORCID icon, "Univ Y, Town", "cole@y.org" + ORCID icon
+% engines: rust int127a = 0 errors, each address its author's, an ORCID on each; 100b r1 = the ORCID's digits read into
+%          the domain (`qq1@x.org0000-0002-2701-0271`), the ORCID lost; perl = not run
+% expect:  0 errors, 0 warnings; Ann: Univ X + qq1@ + ORCID; Bob: Univ X + zz2@ + ORCID; Cat: Univ Y + cole@ + ORCID
+% status:  RED (100b r1) -> GREEN (100b r2)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1} \and Cat Cole\inst{2}}
+\institute{Univ X, Town
+\\\url{{qq1,zz2}@x.org}\orcidID{0000-0002-2701-0271}
+\and Univ Y, Town \\\url{cole@y.org}\orcidID{0000-0001-6269-9353}}
+\maketitle
+Body.
+\end{document}
