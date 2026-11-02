@@ -1,0 +1,16 @@
+% mechanism: one marked list labels each entry once (`notes::split_marked_pieces`): a requested label that also heads an
+%   entry after a separator is entry text where it is glued to the word before it (`for $^{2}$H`, the isotope)
+% witness: review rev99a S1 probe p10 (99a r1 cut "1Inst. for" / "2H Research" / "2Univ B")
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1, Bob Baker2 / 1Inst. for 2H Research    2Univ B / X"
+% engines: rust int126b: both authors the whole call; 99a r1: Bob given "2H Research"
+% expect:  0 errors, 0 warnings; Ann "1Inst. for 2H Research, X", Bob "2Univ B, X"
+% status:  RED (99a r1) -> GREEN (99a r2) — perfect_kernel_batch99a::an_isotope_mark_is_its_entrys_text
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$}
+\affiliation{\institution{$^1$Inst.\ for $^{2}$H Research \quad $^2$Univ B}\country{X}}
+\maketitle
+Text.
+\end{document}

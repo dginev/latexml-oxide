@@ -740,8 +740,8 @@ fn authblk_affil_after_unmarked_author() {
 }
 
 /// authblk's `\affil{$^3$Z}` whose mark no author carries (a typo; r2 review probe b5): Z is the run's, under both
-/// authors as printed, and no creator without a name holds it. (Z precedes X on Ann: a mark-picked affiliation reaches
-/// its authors after the run's.)
+/// authors as printed, and no creator without a name holds it. X before Z on Ann, as authblk prints them (Since 99a r2 in print order (R8: a relocated entry takes its call's place in the queue, `relocate::at_queue_position`, OD #954); Z had
+/// preceded X: a mark-picked affiliation reached its authors after the run's).
 #[test]
 fn authblk_typo_mark_affil_runs() {
   let xml = convert_repro!("author_authblk_typo_mark_affil_runs.tex");
@@ -749,7 +749,7 @@ fn authblk_typo_mark_affil_runs() {
     creator(
       true,
       "Ann",
-      &[marked_affiliation("id1", "3", "Z"), affiliation("X")].join(" ")
+      &[affiliation("X"), marked_affiliation("id1", "3", "Z")].join(" ")
     ),
     creator(
       false,
@@ -837,7 +837,8 @@ fn authblk_marked_affil_keeps_its_comma() {
 /// authblk author: the name's spelling, shown in place, not an affiliation request. A name whose superscript text
 /// follows is no list (`author_marks_end_name`, 77n r4), so it stays whole as int32a writes it; read as a mark on the
 /// list path it left the name, "Craig MRae" (`rewrite_in_word_superscripts` keeps it there, 77n r3). The italic "c" is
-/// int32a's font residual, not pdflatex's: `$^{\mathrm{c}}$` prints an upright c (77n r4 review).
+/// int32a's font residual, not pdflatex's: `$^{\mathrm{c}}$` prints an upright c (77n r4 review). Ann Able's Univ X
+/// before Univ Y, as authblk prints them (since 99a r2 in print order, R8: `relocate::at_queue_position`, OD #954).
 #[test]
 fn authblk_superscript_inside_a_name_stays() {
   let xml = convert_repro!("author_authblk_superscript_inside_a_name.tex");
@@ -854,7 +855,7 @@ fn authblk_superscript_inside_a_name_stays() {
     creator(
       false,
       "Ann Able",
-      &[affiliation("Univ Y"), affiliation("Univ X")].join(" ")
+      &[affiliation("Univ X"), affiliation("Univ Y")].join(" ")
     ),
   ]);
 }
@@ -1071,11 +1072,12 @@ fn authblk_affil_in_author_between_marked_ones() {
 /// run, so Univ Y is both authors', as authblk prints it under its note and Perl's `annotate=new` gives it (int32a; 77n
 /// r5 gave it to Bob only). Univ X on Bob, which authblk's `\AB@thenote` prints too, is a SYNC row.
 /// 95b (authblk written, OD #942): Univ X on Bob too, as `\AB@thenote` prints it (`ruling1:thenote`) — the SYNC row's.
+/// Univ X before Univ Y on both, as authblk prints them (since 99a r2 in print order, R8: `relocate::at_queue_position`, OD #954).
 #[test]
 fn authblk_labelled_author_shares_the_run() {
   let xml = convert_repro!("author_authblk_labelled_author_shares_run.tex");
   assert_eq!(creators(&xml), [
-    "<creator role=\"author\"> <personname>Ann</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> </creator>",
+    "<creator role=\"author\"> <personname>Ann</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> </creator>",
     "<creator before=\" \" role=\"author\"> <personname>Bob</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> </creator>",
   ]);
 }
@@ -1216,7 +1218,7 @@ fn authblk_second_mark_then_text_still_requests() {
 
 /// ptephy's `\affil{}{Univ Z}` after `\affil{1}{Univ X}\affil{2}{Univ Y}` (r5 review probe t02; t04; witnesses
 /// 1605.07339, 2311.07297, 1902.10888): every author of the run answered, so Univ Z is the whole run's, as the class
-/// prints it under all of the names (77n r5: Bob's only).
+/// prints it under all of the names (77n r5: Bob's only). Each author's in print order, Univ Z last (Since 99a r2 in print order (R8: a relocated entry takes its call's place in the queue, `relocate::at_queue_position`, OD #954)).
 #[test]
 fn ptephy_unlabelled_affil_after_labelled_reaches_all() {
   let xml = convert_repro!("author_ptephy_unlabelled_affil_after_labelled.tex");
@@ -1224,18 +1226,18 @@ fn ptephy_unlabelled_affil_after_labelled_reaches_all() {
     creator(
       true,
       "Ann",
-      &[affiliation("Univ Z"), affiliation("Univ X")].join(" ")
+      &[affiliation("Univ X"), affiliation("Univ Z")].join(" ")
     ),
     creator(
       false,
       "Bob",
-      &[affiliation("Univ Z"), affiliation("Univ Y")].join(" ")
+      &[affiliation("Univ Y"), affiliation("Univ Z")].join(" ")
     ),
   ]);
 }
 
 /// opex3's `\address{Univ Z}` after mark-picked addresses (r5 review probe o04): every author answered, Univ Z is both
-/// authors' (int32a; 77n r5: Bob Baker's only).
+/// authors' (int32a; 77n r5: Bob Baker's only). Each author's in print order, Univ Z last (Since 99a r2 in print order (R8: a relocated entry takes its call's place in the queue, `relocate::at_queue_position`, OD #954)).
 #[test]
 fn opex3_unmarked_address_after_marked_reaches_all() {
   let xml = convert_repro!("author_opex3_unmarked_address_after_marked.tex");
@@ -1243,18 +1245,19 @@ fn opex3_unmarked_address_after_marked_reaches_all() {
     creator(
       true,
       "Ann Able",
-      &[affiliation("Univ Z"), affiliation("Univ X")].join(" ")
+      &[affiliation("Univ X"), affiliation("Univ Z")].join(" ")
     ),
     creator(
       false,
       "Bob Baker",
-      &[affiliation("Univ Z"), affiliation("Univ Y")].join(" ")
+      &[affiliation("Univ Y"), affiliation("Univ Z")].join(" ")
     ),
   ]);
 }
 
 /// authblk's unmarked `\affil{Univ Z}` after the mark-picked affiliations of every author (r5 review probe r01; g06):
-/// both authors', printed under the block (77n r5: Bob's only; int32a: Univ X on Bob as well).
+/// both authors', printed under the block (77n r5: Bob's only; int32a: Univ X on Bob as well). Each author's in print
+/// order, Univ Z last (Since 99a r2 in print order (R8: a relocated entry takes its call's place in the queue, `relocate::at_queue_position`, OD #954)).
 #[test]
 fn authblk_unmarked_affil_after_all_marked_reaches_all() {
   let xml = convert_repro!("author_authblk_unmarked_affil_after_all_marked.tex");
@@ -1262,12 +1265,12 @@ fn authblk_unmarked_affil_after_all_marked_reaches_all() {
     creator(
       true,
       "Ann",
-      &[affiliation("Univ Z"), affiliation("Univ X")].join(" ")
+      &[affiliation("Univ X"), affiliation("Univ Z")].join(" ")
     ),
     creator(
       false,
       "Bob",
-      &[affiliation("Univ Z"), affiliation("Univ Y")].join(" ")
+      &[affiliation("Univ Y"), affiliation("Univ Z")].join(" ")
     ),
   ]);
 }
@@ -1452,13 +1455,14 @@ fn authblk_glued_symbols_in_one_author_block() {
 /// An `\author[1]` and another author's mark `$^{1}$` picking the same mark-led `\affil{$^1$Univ X}` (r6 review probe
 /// f2): authblk prints the label as the superscript the mark is, so Bob Baker keeps Univ X beside the run's Univ Y
 /// (int32a: both; 77n r3-r6: Univ Y only). Ann Able's Univ Y is the SYNC row of authblk's `\AB@thenote`.
-/// 95b (authblk written, OD #942): Univ Y on Ann Able too, as `\AB@thenote` prints it — the SYNC row's.
+/// 95b (authblk written, OD #942): Univ Y on Ann Able too, as `\AB@thenote` prints it — the SYNC row's. Univ X before
+/// Univ Y on both, as authblk prints them (since 99a r2 in print order, R8: `relocate::at_queue_position`, OD #954).
 #[test]
 fn authblk_labelled_author_and_marked_affil() {
   let xml = convert_repro!("author_authblk_labelled_author_and_marked_affil.tex");
   assert_eq!(creators(&xml), [
     "<creator role=\"author\"> <personname>Ann Able</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> </creator>",
-    "<creator before=\" \" role=\"author\"> <personname>Bob Baker</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> </creator>",
+    "<creator before=\" \" role=\"author\"> <personname>Bob Baker</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> </creator>",
   ]);
 }
 
@@ -1468,7 +1472,8 @@ fn authblk_labelled_author_and_marked_affil() {
 #[test]
 fn authblk_marked_author_and_labelled_affil() {
   let xml = convert_repro!("author_authblk_marked_author_and_labelled_affil.tex");
-  let both = [affiliation("Univ Y"), affiliation("Univ X")].join(" ");
+  // (Univ X before Univ Y, as authblk prints them: since 99a r2 in print order, R8: `relocate::at_queue_position`, OD #954)
+  let both = [affiliation("Univ X"), affiliation("Univ Y")].join(" ");
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", &both),
     creator(false, "Bob Baker", &both),

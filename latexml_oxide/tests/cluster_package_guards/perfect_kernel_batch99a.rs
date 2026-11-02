@@ -14,8 +14,9 @@
 //! `\quad`, a `;` or a `\\` between entries), the boundary that keeps a mark no name requests as the entry's text, the
 //! shared reader of a nucleus mark and a name's tie mark, a declared sequence and sharing replaced by the marks (aa's
 //! sole institute, `\inst{n}` read as the mark it prints, an address-only entry), a raw package's store
-//! (`\lx@add@affiliation`'s `\lx@affiliation@withinst` wrapper kept), a binding's declaration (jfm), and the bindings'
-//! own cuts left as they are (authblk, IEEEtran, aa's `\and`).
+//! (`\lx@add@affiliation`'s `\lx@affiliation@withinst` wrapper kept), a binding's declaration (jfm), the bindings'
+//! own cuts left as they are (authblk, IEEEtran, aa's `\and`), and the place a relocated entry takes among its
+//! creator's contacts (its call's in the queue, R8: review rev99a B1).
 use std::{path::Path, process::Command};
 
 use super::{
@@ -115,16 +116,19 @@ fn both_ways(tex: &str, files: &[(&str, &str)]) -> Vec<Vec<String>> {
 
 /// acmart's one `\institution` holding marked entries is cut at its marks in the API (`cut_marked_contact`, through
 /// `\lx@add@contact[role=affiliation,annotate=new]`): the address part's wrapper repeated on each piece, the entries
-/// parted by a `\quad` (2506.18881), after a `;` it trims (2602.11605) and by a run and a `\\` line (cidr's 2408.03013),
-/// what follows the wrapper (`\country{X}`) with the last. Each entry shows its mark. Was: every author the whole call.
+/// parted by a `\quad` (2506.18881), after a `;` it trims (2602.11605) and by a run and a `\\` line (cidr's 2408.03013).
+/// The address parts after the wrapper (`\country{X}`, printed on a line under every entry) are each entry's, a part
+/// holding a link (2506.18881's `\country{Project page: \href…}`) the block's, once (`shared_closing_parts`, review
+/// rev99a S3; 99a r1 gave both to the last entry alone); a separator closing an unwrapped list's last entry is trimmed
+/// (2009.04283's `$^2$Inria …,⏎}`, review rev99a N1). Each entry shows its mark. Was: every author the whole call.
 #[test]
 fn an_institution_is_cut_at_its_marks() {
   assert_eq!(
     both_ways(repro!("cut_acmart_institution_entries_at_their_marks"), &[]),
     [
-      vec!["Ann Able 1", "affiliation=1 Univ A"],
+      vec!["Ann Able 1", "affiliation=1 Univ A , X"],
       vec!["Bob Baker 2", "affiliation=2 Univ B , X"],
-      vec!["Cat Cole 1", "affiliation=1 Univ A"],
+      vec!["Cat Cole 1", "affiliation=1 Univ A , X"],
     ]
   );
   assert_eq!(
@@ -133,31 +137,94 @@ fn an_institution_is_cut_at_its_marks() {
       &[]
     ),
     [
-      vec!["Ann Able 1", "affiliation=1 Univ A, Town"],
+      vec!["Ann Able 1", "affiliation=1 Univ A, Town , X"],
       vec!["Bob Baker 2", "affiliation=2 Univ B, City , X"],
-      vec!["Cat Cole 1", "affiliation=1 Univ A, Town"],
+      vec!["Cat Cole 1", "affiliation=1 Univ A, Town , X"],
     ]
   );
   assert_eq!(
     both_ways(repro!("cut_acmart_institution_lines_and_runs"), &[]),
     [
-      vec!["Ann Able 1", "affiliation=1 Univ A"],
-      vec!["Bob Baker 2", "affiliation=2 Univ B"],
+      vec!["Ann Able 1", "affiliation=1 Univ A , X"],
+      vec!["Bob Baker 2", "affiliation=2 Univ B , X"],
       vec!["Cat Cole 3", "affiliation=3 Univ C , X"],
     ]
   );
+  assert_eq!(
+    both_ways(repro!("cut_acmart_institution_link_part_to_the_block"), &[]),
+    [
+      vec!["Ann Able 1", "affiliation=1 Univ A , X"],
+      vec!["Bob Baker 2", "affiliation=2 Univ B , X"],
+      vec!["affiliation=Project page: example.org"],
+    ]
+  );
+  assert_eq!(
+    both_ways(repro!("cut_amsart_address_list_closing_comma"), &[]),
+    [vec!["Ann Able 1", "address=1 Univ A"], vec![
+      "Bob Baker 2",
+      "address=2 Univ B"
+    ],]
+  );
 }
 
-/// A number mark no queued name requests, after a word and a plain space, is its entry's text, not the next entry's
-/// label (`notes::split_marked_pieces`: `$^1$Laboratory for $^3$He Studies`, the 63i isotope); the `\quad` before the
-/// requested `$^2$` still parts the entries. Was: both authors the whole call.
+/// A mark that heads no entry is its entry's text (`notes::split_marked_pieces`), the `\quad` before the next entry's
+/// mark still parting the entries: a number mark no queued name requests glued to the word before it (`$^1$Laboratory
+/// for $^3$He Studies`, the 63i isotope); a requested one glued there whose label heads an entry after a separator too
+/// (`for $^{2}$H Research \quad $^2$Univ B`: one list labels each entry once) or that breaks the running sequence before
+/// it goes on (`$^1$Lab for $^3$He Studies \quad $^2$Univ B`; review rev99a S1); an unrequested symbol only spacing
+/// follows (`$^1$Univ A $^\dagger$ \quad $^2$Univ B`, review rev99a S5: 99a r1 put the "†" on a nameless creator).
+/// Was: every author the whole call.
 #[test]
 fn an_isotope_mark_is_its_entrys_text() {
   assert_eq!(
     both_ways(repro!("cut_acmart_isotope_mark_is_entry_text"), &[]),
     [
-      vec!["Ann Able 1", "affiliation=1 Laboratory for 3 He Studies"],
+      vec![
+        "Ann Able 1",
+        "affiliation=1 Laboratory for 3 He Studies , X"
+      ],
       vec!["Bob Baker 2", "affiliation=2 Univ B , X"],
+    ]
+  );
+  assert_eq!(
+    both_ways(repro!("cut_acmart_glued_repeated_label_is_entry_text"), &[]),
+    [
+      vec!["Ann Able 1", "affiliation=1 Inst. for 2 H Research , X"],
+      vec!["Bob Baker 2", "affiliation=2 Univ B , X"],
+    ]
+  );
+  assert_eq!(
+    both_ways(
+      repro!("cut_acmart_glued_mark_breaking_the_sequence_is_entry_text"),
+      &[]
+    ),
+    [
+      vec!["Ann Able 1", "affiliation=1 Lab for 3 He Studies , X"],
+      vec!["Bob Baker 2", "affiliation=2 Univ B , X"],
+      vec!["Cat Cole 2,3", "affiliation=2 Univ B , X"],
+    ]
+  );
+  assert_eq!(
+    both_ways(
+      repro!("cut_acmart_unrequested_symbol_heading_nothing_is_entry_text"),
+      &[]
+    ),
+    [vec!["Ann Able 1", "affiliation=1 Univ A † , X"], vec![
+      "Bob Baker 2",
+      "affiliation=2 Univ B , X"
+    ],]
+  );
+  // (the control: a run-in list of plain spaces written out of order still parts at each mark — the sequence rule reads
+  // a list a separator parts)
+  assert_eq!(
+    both_ways(
+      repro!("cut_acmart_out_of_order_run_in_list_parts_at_each_mark"),
+      &[]
+    ),
+    [
+      vec!["Ann Able 1", "affiliation=1 Univ A , X"],
+      vec!["Bob Baker 2", "affiliation=2 Univ B , X"],
+      vec!["Cat Cole 3", "affiliation=3 Univ C , X"],
     ]
   );
 }
@@ -170,27 +237,27 @@ fn an_isotope_mark_is_its_entrys_text() {
 #[test]
 fn every_mark_spelling_parts_the_entries() {
   assert_eq!(both_ways(repro!("cut_acmart_nucleus_marks"), &[]), [
-    vec!["Ann Able a", "affiliation=a Univ A"],
+    vec!["Ann Able a", "affiliation=a Univ A , X"],
     vec!["Bob Baker b", "affiliation=b Univ B , X"],
-    vec!["Cat Cole a", "affiliation=a Univ A"],
+    vec!["Cat Cole a", "affiliation=a Univ A , X"],
   ]);
   assert_eq!(both_ways(repro!("cut_acmart_tie_marks"), &[]), [
     vec![
       "Ann Able a , b",
-      "affiliation=a Univ A",
+      "affiliation=a Univ A , X",
       "affiliation=b Univ B , X"
     ],
-    vec!["Bob Baker a", "affiliation=a Univ A"],
+    vec!["Bob Baker a", "affiliation=a Univ A , X"],
     vec!["Cat Cole b", "affiliation=b Univ B , X"],
   ]);
   assert_eq!(both_ways(repro!("cut_acmart_range_marks"), &[]), [
     vec![
       "Ann Able 1-3",
-      "affiliation=1 Univ A",
-      "affiliation=2 Univ B",
+      "affiliation=1 Univ A , X",
+      "affiliation=2 Univ B , X",
       "affiliation=3 Univ C , X"
     ],
-    vec!["Bob Baker 2", "affiliation=2 Univ B"],
+    vec!["Bob Baker 2", "affiliation=2 Univ B , X"],
     vec!["Cat Cole 3", "affiliation=3 Univ C , X"],
   ]);
 }
@@ -199,7 +266,8 @@ fn every_mark_spelling_parts_the_entries() {
 /// read as the `\textsuperscript{n}` aa.cls:759 prints, and an `\inst{*}` line holding only an address — the e-mail of
 /// the author showing `*`, no empty entry left (2410.00577); and its address line behind an `email:` label, the list's
 /// address run, each address its speller's (`affiliation_calls`, astro-ph0405186). Was: one nameless creator holding
-/// every institute.
+/// every institute. `\inst` is read by its meaning (`separators::inst_prints_its_mark`): a document's
+/// `\newcommand{\inst}{Institute}` is its word (review rev99a S2: 99a r1 dropped "Institute" with no Warning).
 #[test]
 fn a_sole_institute_is_cut_at_its_inst_marks() {
   assert_eq!(
@@ -208,6 +276,13 @@ fn a_sole_institute_is_cut_at_its_inst_marks() {
       vec!["Ann Able", "affiliation=1 Univ A", "email=ann@a.edu"],
       vec!["Bob Baker", "affiliation=2 Univ B"],
       vec!["Cat Cole", "affiliation=1 Univ A"],
+    ]
+  );
+  assert_eq!(
+    both_ways(repro!("cut_acmart_inst_word_macro_is_text"), &[]),
+    [
+      vec!["Ann Able 1", "affiliation=1 Institute for Physics , X"],
+      vec!["Bob Baker 2", "affiliation=2 Univ B , X"],
     ]
   );
   assert_eq!(
@@ -292,4 +367,37 @@ fn a_binding_cut_list_is_not_cut_again() {
     vec!["Bob Baker 2", "affiliation=Univ B"],
     vec!["Cat Cole 1", "affiliation=Univ A"],
   ]);
+}
+
+/// A relocated entry takes the place its call had in the queue (user ruling R8, print order: `relocate::at_queue_position`
+/// over the `_queued` ordinal `\lx@annotate@frontmatter@now` records): the entries the API's Cut makes of amsart's
+/// `\address{${}^{1}$…\\ ${}^{2}$…}` go before the `\email` queued after it (2509.03485; review rev99a B1 probe o1), a
+/// binding's own label-relocated entries too — authblk's `\affil[1]` before the unlabelled `\affil` queued after it,
+/// REVTeX's marked `\affiliation` lines before the `\email` (hep-th9805210, 2112.12060, 2209.09217). Was (99a r1): the
+/// later contact first, attached when it was digested, the relocated entries appended after it.
+#[test]
+fn a_relocated_entry_keeps_its_calls_place() {
+  assert_eq!(
+    both_ways(repro!("cut_order_amsart_address_before_email"), &[]),
+    [vec![
+      "Ann Able 1,2",
+      "address=1 Univ A, Town",
+      "address=2 Univ B, City",
+      "email=ann@x.org"
+    ]]
+  );
+  assert_eq!(
+    both_ways(repro!("cut_order_authblk_affil_before_later_contact"), &[]),
+    [vec!["Ann Able", "affiliation=Univ A", "affiliation=Univ C"]]
+  );
+  assert_eq!(
+    both_ways(repro!("cut_order_revtex_affiliation_list_before_email"), &[
+    ]),
+    [vec![
+      "Ann Able 1,2",
+      "affiliation=Univ A",
+      "affiliation=Univ B",
+      "email=ann@x.org"
+    ]]
+  );
 }

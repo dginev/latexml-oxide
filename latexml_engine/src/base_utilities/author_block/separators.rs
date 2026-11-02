@@ -582,6 +582,26 @@ fn inst_takes_back_space() -> bool {
   lead.is_some_and(|t| t == T_CS!("\\unskip") || t == T_CS!("\\lx@request@frontmatter@annotation"))
 }
 
+/// Does the document's `\inst` print its one argument as a raised mark — the inst convention's
+/// ([`inst_takes_back_space`]: aa.cls:759 `\def\inst#1{\unskip\hbox{$^{#1}$}}`, mem.cls:318, llncs), or a definition of
+/// one parameter that raises it (beamerbasetitle.sty:169 `\textsuperscript{#1}`, a document's `$^{#1}$`)? By its
+/// meaning, not its name: a document's `\newcommand{\inst}{Institute}` is a word (review rev99a S2).
+pub(in crate::base_utilities) fn inst_prints_its_mark() -> bool {
+  if inst_takes_back_space() {
+    return true;
+  }
+  let Ok(Some(defn)) = lookup_definition(&T_CS!("\\inst")) else {
+    return false;
+  };
+  let one_argument = defn.get_parameters().is_some_and(|p| {
+    let params = p.get_parameters();
+    params.len() == 1 && !params[0].optional
+  });
+  one_argument
+    && matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(body))
+      if body.unlist_ref().iter().any(|t| *t == T_SUPER!() || is_mark_command(t)))
+}
+
 pub fn and_split(cs: Token, tokens: Tokens) -> Vec<Token> {
   // Perl: SplitTokens($tokens, T_CS('\and'))
   // Only split on \and. The meaning-based check in split_tokens also matches

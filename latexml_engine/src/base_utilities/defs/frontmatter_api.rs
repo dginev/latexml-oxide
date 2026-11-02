@@ -531,6 +531,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       None => { options.remove("name"); },
     }
     options.insert("_label".to_string(), labels.join(","));
+    // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #954): the annotation's place in the queue, which a relocated one keeps
+    // among its creator's annotations (user ruling R8, print order: `relocate::at_queue_position`) — the queue is
+    // digested in order, so the n-th annotation digested is the n-th queued
+    let ordinal = lookup_int(QUEUE_ORDINAL_COUNTER) + 1;
+    assign_value(QUEUE_ORDINAL_COUNTER, Stored::Int(ordinal), Some(Scope::Global));
+    let mut in_note = false;
 
     // Snapshot the parent entries (those not role=pending), inherit labels
     // from an enclosing pending entry, and push a tentative stub entry —
@@ -560,18 +566,15 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
               _ => inherited,
             };
             options.insert("_label".to_string(), label);
-            // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #954): a contact inside a name's note (`\thanks{\email{…}}`)
-            // prints in the footer, after the block's entries (user ruling R8, print order): relocated entries go
-            // before it (`relocate_annotations`)
-            if last.attr.get("_for").map(String::as_str) == Some("ltx:note") {
-              options.insert("_innote".to_string(), "true".to_string());
-            }
+            // (a contact inside a name's note, `\thanks{\email{…}}`, prints in the footer, after every entry of the
+            // block: its place is the footer's, `FOOTER_ORDINAL`)
+            in_note = last.attr.get("_for").map(String::as_str) == Some("ltx:note");
           }
         let mut stub_attr = TagAttrs::default();
         stub_attr.insert("role".to_string(), "pending".to_string());
         stub_attr.insert("_annotations".to_string(),
           options.get("_label").cloned().unwrap_or_default());
-        // (what the stub annotates: a contact digested inside it knows it is a note's, `_innote` above)
+        // (what the stub annotates: a contact digested inside it knows it is a note's, `in_note` above)
         stub_attr.insert("_for".to_string(), tag.clone());
         let stub = TagData {
           tag: parenttag.clone(),
@@ -586,6 +589,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
         (Vec::new(), 0)
       }
     });
+    options.insert(
+      QUEUE_ORDINAL.to_string(),
+      (if in_note { FOOTER_ORDINAL + ordinal } else { ordinal }).to_string(),
+    );
     let nparents = parent_indices.len();
     // (a contact led by a mark of its own, which labels no one — a legend, `$^\dagger$Corresponding author`, or a mark
     // no author carries — is no answer to an author's label request, nor passes over the authors one answers)

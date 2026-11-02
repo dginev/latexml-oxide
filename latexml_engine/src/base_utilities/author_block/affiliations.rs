@@ -253,9 +253,15 @@ pub(in crate::base_utilities) fn cut_marked_contact(
     return Ok(None);
   }
   let list = printed_marks_as_marks(list);
-  if !holds_requested_marked_entries(&list) {
+  if !requested_marked_entries_in(&list) {
     return Ok(None);
   }
+  // (the parts after a wrapper that holds the entries, `\institution{$^1$A \quad $^2$B}\country{X}`: an address part
+  // every entry shares, repeated on each as the opening declarations are; a part holding a link, `\country{Project page:
+  // \href{…}{…}}`, the block's, once — review rev99a S3, 2506.18881)
+  let (list, closing, block_parts) = shared_closing_parts(list);
+  // (nothing follows the list's last entry: a separator closing it is none of its text, `…Paris,⏎}`, 2009.04283)
+  let list = Tokens::new(trim_trailing_separator(list.unlist()));
   // (the declarations the list opens with, in force on every entry as on the whole contact — `\itshape $^1$Univ A\\
   // $^2$Univ B`, `{\bfseries $^3$Lab C\\ $^4$Lab D}`: each entry keeps them, as the observer writer's cut keeps the font
   // open before a piece, review rev94b r3 B1)
@@ -296,32 +302,28 @@ pub(in crate::base_utilities) fn cut_marked_contact(
     } else {
       attr
     };
-    let entry = with_opening(entry, &opening);
-    let entry = if withinst {
-      Invocation!(T_CS!("\\lx@affiliation@withinst"), vec![Some(entry)])
-    } else {
-      entry
-    };
-    let mut call = vec![T_CS!("\\lx@annotate@frontmatter"), T_BEGIN!()];
-    call.extend(parenttag.unlist_ref().iter().copied());
-    call.extend([T_END!(), T_BEGIN!()]);
-    call.extend(tag.unlist_ref().iter().copied());
-    call.push(T_END!());
-    if let Some(attr) = attr {
-      call.push(T_OTHER!("["));
-      call.extend(attr.unlist());
-      call.push(T_OTHER!("]"));
-    }
-    call.push(T_BEGIN!());
-    call.extend(entry.unlist());
-    call.push(T_END!());
-    Ok(call)
+    let entry = with_closing(with_opening(entry, &opening), &closing);
+    annotate_call(parenttag, tag, attr, entry, withinst)
   };
   let call = EntryCall {
     add:                    &add,
     labelled_address_lines: true,
   };
-  let calls = entry_calls(&call, attr.clone(), attr, None, list, true, true)?;
+  let mut calls = entry_calls(&call, attr.clone(), attr.clone(), None, list, true, true)?;
+  for part in block_parts {
+    let mut block = attr.clone().map(Tokens::unlist).unwrap_or_default();
+    if !block.is_empty() {
+      block.push(T_OTHER!(","));
+    }
+    block.extend(mouth::tokenize_internal("label=addresses:block").unlist());
+    calls.extend(annotate_call(
+      parenttag,
+      tag,
+      Some(Tokens::new(block)),
+      part,
+      withinst,
+    )?);
+  }
   DebugFeature!(
     "frontmatter",
     "FRONT cut {role} at its marks: {}",
@@ -353,7 +355,8 @@ fn printed_marks_as_marks(list: Tokens) -> Tokens {
   };
   let list = wrapped_lines_as_lines(&list).unwrap_or(list);
   let list = spaced_marks_as_marks(&list).unwrap_or(list);
-  if !list.unlist_ref().contains(&T_CS!("\\inst")) {
+  // (`\inst` by its meaning, the one-argument mark it prints: `separators::inst_prints_its_mark`)
+  if !list.unlist_ref().contains(&T_CS!("\\inst")) || !inst_prints_its_mark() {
     return list;
   }
   Tokens::new(
@@ -410,9 +413,144 @@ fn with_opening(entry: Tokens, opening: &[Token]) -> Tokens {
   Tokens::new(out)
 }
 
-/// Does `list` hold two or more entries, cut as [`affiliation_calls`] cuts them, led by marks of distinct labels that
-/// queued names request ([`requesting_authors`]), its first printed line led by a mark ([`marker_leads`])?
-fn holds_requested_marked_entries(list: &Tokens) -> bool {
+/// `entry` (an entry of the Cut, `\lx@affiliation@withsup{…}` or the line itself) with the parts every entry of the list
+/// shares at its end ([`shared_closing_parts`]), inside the mark's wrapper as [`with_opening`] puts the declarations.
+fn with_closing(entry: Tokens, closing: &[Token]) -> Tokens {
+  if closing.is_empty() {
+    return entry;
+  }
+  let mut v = entry.unlist();
+  let wrapped = v.len() >= 3
+    && v[0] == T_CS!("\\lx@affiliation@withsup")
+    && v[1].get_catcode() == Catcode::BEGIN
+    && skip_group(&v, 1) == v.len();
+  // (an entry that prints nothing, the empty piece before a list's first mark, `\institution{ $^1$…}`, stays as it is)
+  let inner = if wrapped { &v[2..v.len() - 1] } else { &v[..] };
+  if !inner
+    .iter()
+    .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER) || is_author_mark(t))
+  {
+    return Tokens::new(v);
+  }
+  let close = if wrapped { v.pop() } else { None };
+  v.extend_from_slice(closing);
+  v.extend(close);
+  Tokens::new(v)
+}
+
+/// `list` led by a wrapper holding its marked entries and followed by parts of its own (`\institution{$^1$A \quad
+/// $^2$B}\country{X}`, acmart's address parts; pdflatex prints "X" on a line under both entries): the wrapper alone, the
+/// parts every entry shares (an address part), and the parts the block holds once (one holding a link or an address,
+/// `\country{Project page: \href{…}{…}}`, 2506.18881: no author's address); a part that prints nothing is none of them.
+/// Each part is a command and its argument, none a mark; any other list is returned as it is.
+fn shared_closing_parts(list: Tokens) -> (Tokens, Vec<Token>, Vec<Tokens>) {
+  let v = list.unlist_ref();
+  let start = v.iter().position(|t| *t != T_SPACE!()).unwrap_or(v.len());
+  let wrapper = v.get(start).is_some_and(|t| {
+    t.get_catcode() == Catcode::CS
+      && !is_mark_command(t)
+      && !LINE_BOXES.iter().any(|cs| *t == T_CS!(*cs))
+  }) && v
+    .get(start + 1)
+    .is_some_and(|t| t.get_catcode() == Catcode::BEGIN);
+  if !wrapper {
+    return (list, Vec::new(), Vec::new());
+  }
+  let after = skip_group(v, start + 1);
+  let mut parts: Vec<Vec<Token>> = Vec::new();
+  let mut i = after;
+  while i < v.len() {
+    if v[i] == T_SPACE!() {
+      i += 1;
+      continue;
+    }
+    if v[i].get_catcode() != Catcode::CS
+      || is_mark_command(&v[i])
+      || v
+        .get(i + 1)
+        .is_none_or(|t| t.get_catcode() != Catcode::BEGIN)
+    {
+      return (list, Vec::new(), Vec::new());
+    }
+    let end = skip_group(v, i + 1);
+    let part = &v[i..end];
+    if part.iter().any(is_author_mark) {
+      return (list, Vec::new(), Vec::new());
+    }
+    parts.push(part.to_vec());
+    i = end;
+  }
+  if parts.is_empty() {
+    return (list, Vec::new(), Vec::new());
+  }
+  let links = |part: &[Token]| {
+    part.iter().any(|t| {
+      *t == T_OTHER!("@")
+        || ["\\href", "\\url", "\\email", "\\mailto"]
+          .iter()
+          .any(|cs| *t == T_CS!(*cs))
+    })
+  };
+  // (a part that prints nothing, `\country{~}` written to satisfy the class, is no entry's: repeated, or left on the
+  // last entry, it printed ", ," there — 2605.18872)
+  let inert = |part: &[Token]| {
+    !part[1..]
+      .iter()
+      .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+  };
+  let (mut shared, mut block) = (Vec::new(), Vec::new());
+  for part in parts {
+    if inert(&part) {
+      continue;
+    } else if links(&part) {
+      block.push(Tokens::new(part));
+    } else {
+      shared.extend(part);
+    }
+  }
+  (Tokens::new(v[..after].to_vec()), shared, block)
+}
+
+/// The `\lx@annotate@frontmatter{parenttag}{tag}[attr]{entry}` call of an entry of the Cut ([`cut_marked_contact`]), in
+/// the affiliation's own wrapper when the list was (`withinst`).
+fn annotate_call(
+  parenttag: &Tokens,
+  tag: &Tokens,
+  attr: Option<Tokens>,
+  entry: Tokens,
+  withinst: bool,
+) -> Result<Vec<Token>> {
+  let entry = if withinst {
+    Invocation!(T_CS!("\\lx@affiliation@withinst"), vec![Some(entry)])
+  } else {
+    entry
+  };
+  let mut call = vec![T_CS!("\\lx@annotate@frontmatter"), T_BEGIN!()];
+  call.extend(parenttag.unlist_ref().iter().copied());
+  call.extend([T_END!(), T_BEGIN!()]);
+  call.extend(tag.unlist_ref().iter().copied());
+  call.push(T_END!());
+  if let Some(attr) = attr {
+    call.push(T_OTHER!("["));
+    call.extend(attr.unlist());
+    call.push(T_OTHER!("]"));
+  }
+  call.push(T_BEGIN!());
+  call.extend(entry.unlist());
+  call.push(T_END!());
+  Ok(call)
+}
+
+/// The frontmatter API's Cut decision (`cut_marked_contact`), the one predicate every reader of a store's marked
+/// entries asks: does `list` hold two or more entries, cut as [`affiliation_calls`] cuts them, led by marks of distinct
+/// labels that queued names request (`requesting_authors`), its first printed line led by a mark (`marker_leads`) —
+/// its marks read as the Cut reads them, whatever their spelling (`printed_marks_as_marks`)?
+pub fn holds_requested_marked_entries(list: &Tokens) -> bool {
+  requested_marked_entries_in(&printed_marks_as_marks(list.clone()))
+}
+
+/// [`holds_requested_marked_entries`] of a list whose marks are written as the plain marks they print.
+fn requested_marked_entries_in(list: &Tokens) -> bool {
   let authors = queued_author_marks();
   if authors.is_empty() {
     return false;

@@ -74,13 +74,16 @@ fn aa_mail_is_labelled_as_its_copy_prints_it() {
 
 /// The `\mail` entry whose address the institute prints too (`\email`): its take-out would make no contact, the address
 /// already one, so its label would be printed nowhere — the writer gives the entry back whole, beside the e-mail
-/// contact, as int123a held them (`give_back_entries`). Witnesses 1005.3784, astro-ph0107243.
+/// contact, as int123a held them (`give_back_entries`). Witnesses 1005.3784, astro-ph0107243. Since 99a r2 the
+/// institute goes before the `\mail` contact queued after it (R8: `relocate::at_queue_position`, OD #954; it had
+/// followed it); pdflatex prints the "Correspondence to" footnote after the institute's e-mail too, which the placement
+/// by role does not reach — an e-mail stays where its label put it (the print-zone residual, SYNC_STATUS row 99a).
 #[test]
 fn aa_mail_entry_whose_address_is_a_contact_is_given_back() {
   let (_, xml) = both_ways(repro!("aa_mail_repeated_address_stays_labelled"), 0);
   assert_eq!(
     xml,
-    r#"<title>T</title> <creator role="author"> <personname>A. Smith</personname> <contact name="Correspondence to " role="address">smith@x.org</contact> <contact name="Affiliation: " role="affiliation">Univ. X, Y</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">smith@x.org</text></contact> </creator> <date role="creation">Received 2010</date> <para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para>"#
+    r#"<title>T</title> <creator role="author"> <personname>A. Smith</personname> <contact name="Affiliation: " role="affiliation">Univ. X, Y</contact> <contact name="Correspondence to " role="address">smith@x.org</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">smith@x.org</text></contact> </creator> <date role="creation">Received 2010</date> <para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para>"#
   );
 }
 

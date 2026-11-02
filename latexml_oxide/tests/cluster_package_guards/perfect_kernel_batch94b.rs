@@ -742,7 +742,11 @@ fn a_cut_entry_keeps_the_font_open_before_it() {
 /// Review rev94b r3 B1, the API's path (`plan::cut`, an API call's content cut by its marks): each piece in the font in
 /// effect where it starts — the content's head switch (`\itshape $^1$…\\ $^2$…`) and an enclosing group's
 /// (`{\bfseries $^3$…\\ $^4$…}`): the first had been on no piece, the second on the first piece only. Distinct from
-/// `a_cut_entry_keeps_the_font_open_before_it`: an API call's rehearsal, not the author block's.
+/// `a_cut_entry_keeps_the_font_open_before_it`: an API call's rehearsal, not the author block's. Since 99a the API's Cut
+/// parts the call (OXIDIZED_DESIGN_DIVERGENCES #954) and each mark renders as the shared float-script rewrite renders a
+/// frontmatter mark (`tex_math.rs` FLOATSUPERSCRIPT, a name's too: `<sup><text font="italic">1</text></sup>`); TeX sets
+/// a script's digits upright (family 0; the PDF holds CMR6/CMR7 only), the writer's cut had: the SYNC_STATUS row 99a
+/// residual "math→sup mark font", pinned here as it is.
 #[test]
 fn an_api_piece_keeps_the_font_open_before_it() {
   assert_written(

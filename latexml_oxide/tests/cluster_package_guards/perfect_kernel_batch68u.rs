@@ -297,7 +297,8 @@ fn a_raw_class_keywords_environment_collecting_its_body_sets_the_keywords() {
 }
 
 /// class-bindings/beilstein_author_affiliation_numbers: each author carries the affiliations numbered after it and
-/// those its marks name, the corresponding author its e-mail (pdflatex: "Ann Able1, 2 , Bob Baker∗1 and Carl Cole3").
+/// those its marks name, the corresponding author its e-mail (pdflatex: "Ann Able1, 2 , Bob Baker∗1 and Carl Cole3"),
+/// after the addresses, as the class prints its "Email:" line (since 99a r2, R8: `relocate::at_queue_position`, OD #954).
 /// Before 68u r2: an author named `*`, and no affiliation.
 #[test]
 fn beilstein_authors_carry_their_numbered_affiliations() {
@@ -312,7 +313,7 @@ fn beilstein_authors_carry_their_numbered_affiliations() {
   assert_eq!(
     front_block(&xml),
     normalize_markup(
-      r#"<title>The Title</title><creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">First University</contact><contact name="Affiliation: " role="affiliation">Second Institute</contact></creator><creator before="  " role="author"><personname>Bob Baker</personname><contact name="Email: " role="email">bob@example.org</contact><contact name="Affiliation: " role="affiliation">First University</contact></creator><creator before="  " role="author"><personname>Carl Cole</personname><contact name="Affiliation: " role="affiliation">Third Lab</contact></creator><abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>Abs.</p></abstract>"#
+      r#"<title>The Title</title><creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">First University</contact><contact name="Affiliation: " role="affiliation">Second Institute</contact></creator><creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">First University</contact><contact name="Email: " role="email">bob@example.org</contact></creator><creator before="  " role="author"><personname>Carl Cole</personname><contact name="Affiliation: " role="affiliation">Third Lab</contact></creator><abstract inlist="toc" name="Abstract" xml:id="abstract1"><p>Abs.</p></abstract>"#
     ),
     "{xml}"
   );

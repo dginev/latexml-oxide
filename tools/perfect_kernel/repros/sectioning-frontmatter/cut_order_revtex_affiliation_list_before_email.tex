@@ -1,0 +1,19 @@
+% mechanism: a label-relocated entry of a binding's own list takes the place its call had in the queue (R8 print
+%   order; `relocate::at_queue_position`, OD #954): REVTeX's marked `\affiliation` lines (98e's reader) go before the
+%   `\email` queued after them
+% witness: hep-th9805210 (REVTeX 3: the institute after the abstract's `\address` lines); review rev99a B1
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1,2 / 1Univ A / 2Univ B", the footnote "∗ ann@x.org"
+% engines: rust int126b and 99a r1: see the guard
+% expect:  0 errors, 0 warnings; Ann's contacts: affiliation 1, affiliation 2, e-mail
+% status:  RED (99a r1) -> GREEN (99a r2) — perfect_kernel_batch99a::a_relocated_entry_keeps_its_calls_place
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$}
+\affiliation{$^1$Univ A\\ $^2$Univ B}
+\email{ann@x.org}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Text.
+\end{document}

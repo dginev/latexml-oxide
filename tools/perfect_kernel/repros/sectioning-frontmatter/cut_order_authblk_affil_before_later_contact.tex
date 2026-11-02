@@ -1,0 +1,20 @@
+% mechanism: a label-relocated entry of a binding's own list takes the place its call had in the queue (R8 print
+%   order; `relocate::at_queue_position`, OD #954): authblk's `\affil[1]{Univ A}` goes before the unlabelled
+%   `\affil{Univ C}` queued after it, which attaches to Ann when it is digested
+% witness: review rev99a B1 (the rule covers bindings' label-relocated lists)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 / 1Univ A / Univ C"
+% engines: rust int126b and 99a r1: Univ C before Univ A
+% expect:  0 errors, 0 warnings; Ann's contacts: Univ A, Univ C
+% status:  RED (99a r1) -> GREEN (99a r2) — perfect_kernel_batch99a::a_relocated_entry_keeps_its_calls_place
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann Able}
+\affil[1]{Univ A}
+\affil{Univ C}
+\date{}
+\maketitle
+Text.
+\end{document}

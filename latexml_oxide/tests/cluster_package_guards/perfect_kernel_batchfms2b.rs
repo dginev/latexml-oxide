@@ -103,8 +103,10 @@ Text.
 /// correspondence note of Bob, who shows the star, its ink kept as styled label markup (the label-text ruling) — the
 /// note's `mark` the star, which the name then shows no more (one mark on the page, `apply::show_legend_mark`: review
 /// rev94a r5). Was: the whole call, legend and all, both names' affiliation. Since 99a the API's Cut parts the call
-/// (OXIDIZED_DESIGN_DIVERGENCES #954), each entry showing its mark as printed (`<sup><text font="italic">1</text></sup>`,
-/// the math it is written in; the writer's cut had set it upright). Shape `perfect_kernel_batchfms2a2r8::API_LEGEND`.
+/// (OXIDIZED_DESIGN_DIVERGENCES #954), each entry showing its mark as the shared float-script rewrite renders a
+/// frontmatter mark, a name's too (`tex_math.rs` FLOATSUPERSCRIPT: `<sup><text font="italic">1</text></sup>`); TeX sets
+/// a script's digits upright (family 0), as the writer's cut had — the SYNC_STATUS row 99a residual "math→sup mark
+/// font", pinned here as it is. Shape `perfect_kernel_batchfms2a2r8::API_LEGEND`.
 #[test]
 fn a_marked_affiliation_is_cut_at_its_marks() {
   let tex = r"\documentclass[aps,prl]{revtex4-2}

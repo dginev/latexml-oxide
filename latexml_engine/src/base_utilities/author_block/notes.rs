@@ -248,19 +248,64 @@ fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Vec<Tokens> {
   // entry's label; after a separator or wider spacing it still parts the entries)
   let authors = queued_author_marks();
   let names_marked = authors.iter().any(|marks| !marks.is_empty());
-  let unrequested_text_mark = |at: usize, current: &[Token]| {
+  // (each mark outside every group: where it starts, the label it sets, whether it is glued to the word before it —
+  // a plain space between, no separator: no spacing command, line break, comma or semicolon — and where it ends)
+  let marks = top_level_marks(&toks);
+  let text_mark = |at: usize, last_head: Option<&str>| {
     if !names_marked {
       return false;
     }
-    let before = current.iter().rev().find(|t| **t != T_SPACE!());
-    let after_word = before
-      .is_some_and(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
-      && before.is_some_and(|t| *t != T_OTHER!(",") && *t != T_OTHER!(";"));
-    after_word
-      && mark_operands(&toks[at..])
-        .first()
-        .is_some_and(|mark| !is_symbol_mark(mark) && requesting_authors(&authors, mark).is_empty())
+    let Some(k) = marks.iter().position(|m| m.at == at) else {
+      return false;
+    };
+    let mark = &marks[k];
+    let requested = mark
+      .operand
+      .as_ref()
+      .is_some_and(|operand| !requesting_authors(&authors, operand).is_empty());
+    // (a mark no name requests that heads nothing — only spacing or a separator follows it before the next mark or the
+    // end: `$^1$Univ A $^\dagger$ \quad $^2$Univ B` — is its entry's text, a symbol too; review rev99a S5)
+    let next = marks.get(k + 1).map_or(toks.len(), |m| m.at);
+    let heads_nothing = toks[mark.end.min(next)..next]
+      .iter()
+      .all(|t| is_spacing(t) || *t == T_OTHER!(",") || *t == T_OTHER!(";"));
+    if !requested && heads_nothing {
+      return true;
+    }
+    if !mark.glued {
+      return false;
+    }
+    // (glued to a word: a number or letter mark no name requests is the entry's own text — the isotope; one list labels
+    // each entry once, so a label that also heads an entry after a separator is text where it is glued, `$^1$Inst.\ for
+    // $^{2}$H Research \quad $^2$Univ B`, and so is one that breaks the list's running sequence before the sequence
+    // goes on, `$^1$Lab for $^3$He Studies \quad $^2$Univ B`; review rev99a S1)
+    let symbol = mark
+      .operand
+      .as_ref()
+      .is_none_or(|operand| is_symbol_mark(operand));
+    if !symbol && !requested {
+      return true;
+    }
+    let Some(label) = mark.label.as_deref() else {
+      return false;
+    };
+    let heads_elsewhere = marks
+      .iter()
+      .any(|m| m.at != at && !m.glued && m.label.as_deref() == Some(label));
+    // (in a list whose entries a separator parts — a later mark after one — not a run-in list of plain spaces, where a
+    // list written out of order, `$^1$Univ A $^3$Univ C $^2$Univ B`, still parts at each mark)
+    let separated = marks.iter().skip(1).any(|m| m.at != at && !m.glued);
+    let breaks_sequence = separated
+      && last_head.and_then(successor).is_some_and(|expected| {
+        expected != label
+          && marks[k + 1..]
+            .iter()
+            .any(|m| m.label.as_deref() == Some(expected.as_str()))
+      });
+    heads_elsewhere || breaks_sequence
   };
+  // (the label of the last mark that opened a piece)
+  let mut last_head: Option<String> = marks.first().and_then(|m| m.label.clone());
   let mut segments: Vec<Tokens> = Vec::new();
   let mut current: Vec<Token> = Vec::new();
   // A boundary only outside every group: a cut inside `{…}` would leave the pieces unbalanced (a mark
@@ -288,8 +333,11 @@ fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Vec<Tokens> {
     if is_mark_start
       && depth == 0
       && current.last().is_some_and(is_spacing)
-      && !unrequested_text_mark(i, &current)
+      && !text_mark(i, last_head.as_deref())
     {
+      if let Some(m) = marks.iter().find(|m| m.at == i) {
+        last_head.clone_from(&m.label);
+      }
       if prints_nothing() {
         // …nor is the space between it and the mark the institution's
         while current.last() == Some(&T_SPACE!()) {
@@ -316,6 +364,76 @@ fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Vec<Tokens> {
     segments.push(Tokens::new(current));
   }
   segments
+}
+
+/// A mark [`split_marked_pieces`] reads outside every group: where it starts and ends, its operand and the label it
+/// sets, and whether it is glued to the word before it (only a plain space between).
+struct ListMark {
+  at:      usize,
+  end:     usize,
+  operand: Option<Vec<Token>>,
+  label:   Option<String>,
+  glued:   bool,
+}
+
+/// The marks of `toks` outside every group, in order (`$^{…}$`, a mark command: [`is_mark_command`]).
+fn top_level_marks(toks: &[Token]) -> Vec<ListMark> {
+  let mut marks = Vec::new();
+  let mut depth = 0usize;
+  for (i, t) in toks.iter().enumerate() {
+    let dollar_super = *t == T_MATH!() && toks.get(i + 1).is_some_and(|n| *n == T_SUPER!());
+    if depth == 0 && (dollar_super || is_mark_command(t)) {
+      let operand_at = if dollar_super { i + 2 } else { i + 1 };
+      let read = sup_operand_at(toks, operand_at);
+      let end = match &read {
+        Some((_, next)) if dollar_super && toks.get(*next) == Some(&T_MATH!()) => next + 1,
+        Some((_, next)) => *next,
+        None => i + 1,
+      };
+      let operand = read.map(|(operand, _)| operand);
+      let label = operand.as_deref().and_then(mark_label);
+      let before = toks[..i].iter().rev().find(|t| **t != T_SPACE!());
+      let glued = toks[..i].last() == Some(&T_SPACE!())
+        && before.is_some_and(|t| {
+          matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER)
+            && *t != T_OTHER!(",")
+            && *t != T_OTHER!(";")
+        });
+      marks.push(ListMark {
+        at: i,
+        end,
+        operand,
+        label,
+        glued,
+      });
+    }
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ => {},
+    }
+  }
+  marks
+}
+
+/// The label after `label` in a running sequence of marks: the next number (`1` → `2`), the next letter (`a` → `b`).
+fn successor(label: &str) -> Option<String> {
+  let bare = label.rsplit(':').next().unwrap_or(label);
+  let next = if let Ok(n) = bare.parse::<u32>() {
+    (n + 1).to_string()
+  } else {
+    let mut chars = bare.chars();
+    match (chars.next(), chars.next()) {
+      (Some(c), None) if c.is_ascii_alphabetic() && c != 'z' && c != 'Z' => {
+        char::from(c as u8 + 1).to_string()
+      },
+      _ => return None,
+    }
+  };
+  Some(match label.rsplit_once(':') {
+    Some((prefix, _)) => s!("{prefix}:{next}"),
+    None => next,
+  })
 }
 
 /// [`split_before_affiliation_marks`] for a marker-led affiliation line that opens with a font command or a group

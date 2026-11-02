@@ -4059,7 +4059,8 @@ fn interspeech_author_list_argument() {
 }
 
 /// 63w: `\affiliation[nocounter]{…}{…}{…}`, an affiliation the class prints unnumbered, all the authors' (2506.10653
-/// Interspeech.cls:152-176). Repro sectioning-frontmatter/interspeech_affiliation_nocounter.
+/// Interspeech.cls:152-176). Repro sectioning-frontmatter/interspeech_affiliation_nocounter. University A before Lab B,
+/// as printed (since 99a r2 in print order (R8: `relocate::at_queue_position`, OD #954)).
 #[test]
 fn interspeech_affiliation_nocounter() {
   let xml = interspeech_xml(
@@ -4070,11 +4071,11 @@ fn interspeech_affiliation_nocounter() {
   );
   assert_eq!(
     element_with(&xml, "creator", "Ada Byron"),
-    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Lab B, Company B, Country B</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n  </creator>"
+    "<creator role=\"author\">\n    <personname>Ada Byron</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Lab B, Company B, Country B</contact>\n  </creator>"
   );
   assert_eq!(
     element_with(&xml, "creator", "Bo Li"),
-    "<creator before=\"  \" role=\"author\">\n    <personname>Bo Li</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Lab B, Company B, Country B</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n  </creator>"
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bo Li</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">University A, City A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Lab B, Company B, Country B</contact>\n  </creator>"
   );
   assert_eq!(
     element_with(&xml, "creator", "Cy Dee"),
@@ -4528,7 +4529,8 @@ fn elsarticle_unlabelled_addresses_shared() {
 }
 
 /// 63y: in a labelled elsarticle document an unlabelled `\affiliation` names no author and stays the last's, as in
-/// Perl (2609.07780). Repro sectioning-frontmatter/elsarticle_labelled_unlabelled_affiliation.
+/// Perl (2609.07780). Repro sectioning-frontmatter/elsarticle_labelled_unlabelled_affiliation. Univ A before the
+/// unmarked line, as elsarticle.cls:634-653 prints both `\affiliation`s, in call order (since 99a r2 in print order (R8: `relocate::at_queue_position`, OD #954)).
 #[test]
 fn elsarticle_labelled_unlabelled_affiliation() {
   let tex = include_str!(
@@ -4536,7 +4538,7 @@ fn elsarticle_labelled_unlabelled_affiliation() {
   );
   assert_eq!(creators_63x(tex), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Corresponding: Ann Able</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Corresponding: Ann Able</contact>\n  </creator>",
   ]);
 }
 

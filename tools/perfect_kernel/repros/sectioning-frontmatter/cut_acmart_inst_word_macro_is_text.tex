@@ -1,0 +1,17 @@
+% mechanism: `\inst` is read as a mark by its meaning (`separators::inst_prints_its_mark`: a one-argument definition that
+%   raises it, or the inst convention's), not by its name: a document's `\newcommand{\inst}{Institute}` is a word
+% witness: review rev99a S2 probe q1 (99a r1: "1 for Physics", the word "Institute" lost with no Warning)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1, Bob Baker2 / 1Institute for Physics    2Univ B / X"
+% engines: rust int126b: both authors the whole call; 99a r1: "Institute" dropped
+% expect:  0 errors, 0 warnings; Ann "1Institute for Physics, X", Bob "2Univ B, X"
+% status:  RED (99a r1) -> GREEN (99a r2) — perfect_kernel_batch99a::a_sole_institute_is_cut_at_its_inst_marks
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\newcommand{\inst}{Institute}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$}
+\affiliation{\institution{$^1$\inst{} for Physics \quad $^2$Univ B}\country{X}}
+\maketitle
+Text.
+\end{document}

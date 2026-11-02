@@ -370,8 +370,8 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
           DebugFeature!("frontmatter", "FRONT Moving annotation for {label}");
           let mut target = target;
           document.append_clone(&mut target, vec![note.clone()])?;
-          before_note_contacts(&target, &note);
           contact_in_title_as_note(document, &target)?;
+          at_queue_position(&target);
           held.touched(&target);
         }
       } else {
@@ -419,7 +419,7 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
           for owner in named {
             let mut owner = owner.clone();
             document.append_clone(&mut owner, vec![note.clone()])?;
-            before_note_contacts(&owner, &note);
+            at_queue_position(&owner);
             held.touched(&owner);
           }
         } else {
@@ -555,23 +555,62 @@ fn contact_in_title_as_note(document: &mut Document, target: &Node) -> Result<()
   document.add_class(&mut note, &s!("ltx_note_frontmatter ltx_thanks_{kind}"))
 }
 
-/// The copy of `note` just appended to `target` moved before the first contact the creator's own note made (`_innote`:
-/// `Ann Able$^{1}$\thanks{\email{…}}`), which prints in the footer, after the block's entries (user ruling R8, print
-/// order — aa's institute the frontmatter API cuts under such a name, 2212.07438; OXIDIZED_DESIGN_DIVERGENCES #954).
-fn before_note_contacts(target: &Node, note: &Node) {
-  if note.get_attribute("_innote").is_some() {
+/// The annotation attribute holding its place in the frontmatter queue (set by `\lx@annotate@frontmatter@now`, in the
+/// order the queue is digested): [`at_queue_position`].
+pub(in crate::base_utilities) const QUEUE_ORDINAL: &str = "_queued";
+
+/// The state counter of [`QUEUE_ORDINAL`].
+pub(in crate::base_utilities) const QUEUE_ORDINAL_COUNTER: &str = "lx_frontmatter_queue_ordinal";
+
+/// The place of an annotation made inside a name's note (`Ann Able$^{1}$\thanks{\email{…}}`): the footer, after every
+/// entry the block prints, whenever it was queued — its queue place plus this.
+pub(in crate::base_utilities) const FOOTER_ORDINAL: i64 = 1 << 40;
+
+/// The roles of the annotations printed in the author block itself, under or beside the names: an affiliation, an
+/// address ([`at_queue_position`]).
+const BLOCK_ROLES: [&str; 2] = ["affiliation", "address"];
+
+/// The annotation just appended to `target` (its last element child) moved to the place its call had in the queue:
+/// before the first of `target`'s annotations queued after it ([`QUEUE_ORDINAL`]). Rust-only (user ruling R8, print
+/// order: a creator's contacts follow the order the PDF prints them; OXIDIZED_DESIGN_DIVERGENCES #954): an annotation
+/// placed by its label is appended once every annotation is digested, after the ones attached when they were digested
+/// — amsart's `\address{${}^{1}$Univ A\\ ${}^{2}$Univ B}` cut at its marks went after the `\email` that follows it
+/// (2509.03485), acmart's marked `\affiliation` after its `\email` (2112.12060, 2209.09217), REVTeX 3's marked institute
+/// after the abstract's `\address` lines (hep-th9805210), an aa institute after the address its name's
+/// `\thanks{\email{…}}` prints in the footer (2212.07438, webofc 2409.01693). Only an entry the block prints (an
+/// affiliation, an address: [`BLOCK_ROLES`]): a note a reference labels — elsarticle's `\cortext`/`\fntext`, aastex's
+/// `\altaffiltext` — prints in the footer, after the block, where it is appended.
+pub(in crate::base_utilities) fn at_queue_position(target: &Node) {
+  let place = |node: &Node| {
+    node
+      .get_attribute(QUEUE_ORDINAL)
+      .and_then(|n| n.parse::<i64>().ok())
+  };
+  let children = element_nodes(target);
+  let Some(mut moved) = children.last().cloned() else {
+    return;
+  };
+  let Some(at) = place(&moved) else {
+    return;
+  };
+  if !moved
+    .get_attribute("role")
+    .is_some_and(|role| BLOCK_ROLES.contains(&role.as_str()))
+  {
     return;
   }
-  let children = element_nodes(target);
-  if let (Some(mut moved), Some(mut footer)) = (
-    children.last().cloned(),
-    children
-      .iter()
-      .find(|c| c.get_attribute("_innote").is_some())
-      .cloned(),
-  ) && footer != moved
+  // (a collaboration is the names row's, printed before every entry under it, whenever its call came: `\author{Ann
+  // Able$^{1}$ \and The XYZ Collaboration \\ $^{1}$Univ X}`, `perfect_kernel_batch97d`)
+  if let Some(mut later) = children
+    .iter()
+    .find(|c| {
+      **c != moved
+        && place(c).is_some_and(|p| p > at)
+        && c.get_attribute("role").as_deref() != Some("collaboration")
+    })
+    .cloned()
   {
-    let _ = footer.add_prev_sibling(&mut moved);
+    let _ = later.add_prev_sibling(&mut moved);
   }
 }
 
@@ -1112,7 +1151,7 @@ const LINE_MACROS: [&str; 3] = ["\\centerline", "\\leftline", "\\rightline"];
 /// two set side by side are one line — unless marks lead them, the first and another, which part the entries as they
 /// part them on one line, a box no mark leads going on with the entry before it (`\mbox{$^{1}$Univ A}\mbox{$^{2}$Univ
 /// B,}\mbox{Town}`, 1412.5812).
-const LINE_BOXES: [&str; 2] = ["\\mbox", "\\hbox"];
+pub(in crate::base_utilities) const LINE_BOXES: [&str; 2] = ["\\mbox", "\\hbox"];
 
 /// The lines a line of an affiliation block sets with one-argument line wrappers ([`LINE_MACROS`]: one line each;
 /// [`LINE_BOXES`]: one box that is the whole line, or boxes marks lead), each the wrapper's argument; `None` for a line

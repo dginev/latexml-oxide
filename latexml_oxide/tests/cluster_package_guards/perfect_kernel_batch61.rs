@@ -7169,10 +7169,11 @@ Text.
       creator(
         true,
         "Cy Dee",
+        // (Univ B before the legend, as printed: since 99a r2 in print order (R8: `relocate::at_queue_position`, OD #954))
         &format!(
           "{}{}",
-          affiliation("* Equal contribution"),
-          affiliation(" Univ B")
+          affiliation(" Univ B"),
+          affiliation("* Equal contribution")
         )
       ),
     ]
