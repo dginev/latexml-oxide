@@ -8,7 +8,7 @@
 %          `\email@toks`, printed by its refused `\maketitle`)
 % oracle:  pdflatex 0 errors: "A Title*", "Ann Able", footnote "* Supported by the Danish Council for Independent
 %          Research.", "Abstract", "An abstract."
-% engines: rust 98c0 = 0 errors, 0 warnings, the note lost (a bare * after the title); perl = 0 errors, the note lost
+% engines: rust 98c0 = 0 errors, 0 warnings, the note lost (a bare * after the title); perl = 0 errors, the note kept as <pubnote role="note"> (OmniBus \titlenote, OmniBus.cls.ltxml:245; rev98c B1)
 % expect:  0 errors, 1 warning (frontmatter:unclaimed, \tntoks); the sole author's <ltx:creator> holding
 %          <ltx:note role="note">Supported by the Danish Council for Independent Research.</ltx:note>
 % status:  RED (98c0) -> GREEN (98c)

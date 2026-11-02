@@ -29613,7 +29613,7 @@ none worse; `fm_checks.py`: no creator merged or lost, no address shared wider, 
 census, 1,000 seeded `\author` papers of its 30k sample), for the shared predicates (`visible_name_text`,
 `spacer_line`): 0 changed.
 
-### 953. A raw class's store that only its own title-page code prints, which no frontmatter owner claims, is a note of the author block (Perl: lost)
+### 953. A raw class's store that only its own title-page code prints, which no frontmatter owner claims, is a note of the author block (Perl: kept by OmniBus, in another shape)
 
 **What** (brief 98c; the unclaimed-text net, stages A1 and A2; FIDELITY_CHARTER §4 "No printed frontmatter word is
 lost"). At `\maketitle` the candidates are the control sequences the class's title-page code reads
@@ -29659,8 +29659,12 @@ its author-block rows are not handed on when they only repeat the names (`repeat
 and "and" between the names as separators).
 
 **Why.** FIDELITY_CHARTER §4 (user 2026-11-01): printed frontmatter text that no owner claims is written at the block as
-a note with a counted Warning, only for lines of several unmatched words. Perl drops every such store (no binding, its
-`\@maketitle` relaxed, latex_constructs.pool.ltxml:1105); a surpass.
+a note with a counted Warning, only for lines of several unmatched words. **This restores a Rust-only loss, not a
+surpass** (review rev98c B1, corrected 2026-11-01): Perl does not raw-load these classes; OmniBus keeps the text — `\titlenote` → `\lx@add@pubnote[role=note]` (OmniBus.cls.ltxml:245), so 1206.6940 keeps both title notes as
+`<pubnote role="note">`, and authblk-code `\affil` (OmniBus.cls.ltxml:93) keeps the affiliation as a paragraph before
+the title, garbled. Interpreting the raw class is what lost it. The divergence is the shape: we write an `ltx:note` in
+the block's shared creator (OD #159), Perl a document-level pubnote or a paragraph. The one witness where Perl loses
+the text too is aaskaii 2606.24738 (Perl 108 lost words).
 
 **Witnesses** (98c0 → 98c): copernicus 0712.1312, 1203.6297, 1405.5752 (`\AB@affillist`, 3-7 lines), esapub2005
 1401.4706, oasics 1709.00722 (under the authblk binding), sig-alternate 1206.6940 (`\tntoks`, `\tntokstwo`), 1601.00073,
