@@ -1,0 +1,32 @@
+% A raw class's run-in `\affil` (iopjournal.cls:113, OD #955) under names whose comma-list marks request lettered lines
+% (`$^{1,a}$`, `$^{2,b}$`, `$^{3,a}$`), the frontmatter observer declining to re-part the authors over the ORCID links
+% (`\orcid{https://orcid.org/…}` under a class `\orcid` that prefixes the URL again). Each line went to the API as
+% `\lx@add@affiliation[annotate=run]`, so every author of the run held every line; the line led by a printed label a
+% name requests is now that label's (`label={affiliation:a}`, frontmatter_stores.rs `contact_line_call`), which the
+% kernel pairs with the names requesting it (review rev99b B1; FIDELITY_CHARTER "One placement order", R1).
+% witness: 2512.20289 (iopjournal; also 2609.15125, 2607.25849, 1603.07668, 1704.03333)
+% oracle:  pdflatex 0 errors: "Ann Able1,a (iD), Bob Baker2,b (iD) and Cy Cole3,a (iD)", "aUniv A, Town", "bUniv B, City"
+% engines: rust 99b0 = 0 errors, 0 warnings, both lines one body paragraph; rust 99b r1 = every author holds both lines;
+%          perl = no raw class load (OmniBus `\affil`)
+% expect:  0 errors, 0 warnings; Ann Able and Cy Cole hold <contact role="affiliation">a Univ A, Town</contact>, Bob
+%          Baker <contact role="affiliation">b Univ B, City</contact>; the body holds only "Text."
+% status:  RED (99b r1) -> GREEN (99b r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipor.cls}
+\ProvidesClass{ipor}\LoadClass{article}
+\RequirePackage{hyperref}
+\renewcommand{\author}[1]{{\raggedright #1\par}}
+\newcommand{\affil}[1]{{\small\raggedright #1}}
+\newcommand{\orcid}[1]{\href{https://orcid.org/#1}{(iD)}}
+\end{filecontents*}
+\documentclass{ipor}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,a}$\orcid{https://orcid.org/0009-0009-1414-288X}, Bob Baker$^{2,b}$\orcid{https://orcid.org/0000-0003-1431-2884} and Cy Cole$^{3,a}$\orcid{https://orcid.org/0000-0002-6069-9031}}
+
+\affil{$^a$ Univ A, Town}\\
+\affil{$^b$ Univ B, City}\\
+
+\maketitle
+Text.
+\end{document}

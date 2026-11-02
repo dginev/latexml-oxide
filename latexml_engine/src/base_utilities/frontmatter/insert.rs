@@ -964,14 +964,26 @@ pub(in crate::base_utilities) fn add_annotation_labels(
         .filter(|key| !key.is_empty() && !pictured.iter().any(|p| p == key)),
     );
     let labels = attr.get("_annotations").cloned().unwrap_or_default();
+    // (an annotation being digested — a contact's stub, `role=pending` — whose label is the mark its content requests
+    // again is that one label: the relocation reads a stub's labels as one key, so `affiliation:1,affiliation:1` was no
+    // creator's, an orphan on the nameless block creator — a rerouted `\affil{$^1$…}` given `label={affiliation:1}`
+    // (frontmatter_stores.rs `contact_line_call`) digested under the author markup, pasa.cls:33, 2005.09266)
+    let pending = attr.get("role").map(String::as_str) == Some("pending");
+    let fresh: Vec<&str> = label
+      .split(',')
+      .filter(|piece| !(pending && labels.split(',').any(|known| known == *piece)))
+      .collect();
+    let label = fresh.join(",");
     let newval = if labels.is_empty() {
       label.clone()
+    } else if label.is_empty() {
+      labels
     } else {
       s!("{labels},{label}")
     };
     DebugFeature!("frontmatter", "FRONT add annotation label {label}");
     attr.insert("_annotations".to_string(), newval);
-    if in_text {
+    if in_text && !label.is_empty() {
       let text_marks = attr.get("_textmarks").cloned().unwrap_or_default();
       let newval = if text_marks.is_empty() {
         label.clone()

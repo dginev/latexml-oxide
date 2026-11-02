@@ -163,7 +163,9 @@ fn body_text(xml: &str) -> String {
 fn a_raw_class_in_place_address_is_the_api() {
   let tex = repro!("raw_class_in_place_address_is_the_api.tex");
   // (the marks the written addresses answer no longer shown on the names, as today's takes those its own entries answer
-  // — review rev94a r2 S3, `hide_answered_marks`; each address keeps the mark it prints)
+  // — review rev94a r2 S3, `hide_answered_marks`; each address keeps the mark it prints; each line the label its
+  // leading mark gives it, `label=` — `api:label`, no longer `api:leading-mark` —, frontmatter_stores.rs
+  // `contact_line_call`, review rev99b B1)
   let xml: &[&[&str]] = &[
     &[
       "Ann Able",
@@ -175,14 +177,15 @@ fn a_raw_class_in_place_address_is_the_api() {
   ];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [1] | line:names",
-    "  a Univ A, Town, Country | api:leading-mark",
+    "  a Univ A, Town, Country | api:label ruling1:request",
     "  c email ann@a.edu | api:annotate:last owner:spelled",
     "C Bob Baker [1] | line:names sep:comma",
-    "  a Univ A, Town, Country | api:leading-mark",
+    "  a Univ A, Town, Country | api:label ruling1:request",
     "C Cy Cole [2] | line:names sep:word",
-    "  a Univ B, City, Country | api:leading-mark",
+    "  a Univ B, City, Country | api:label ruling1:request",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  // (the kernel pairs each line by its label already, so the observer writes nothing: `same`, no longer `written`)
+  assert_eq!(reading.3, Value::from("same"));
   assert_eq!(default_mode_creators(tex), owned(xml));
   let (log, xml) = default_mode(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
@@ -204,7 +207,8 @@ fn a_raw_class_in_place_address_is_the_api() {
 #[test]
 fn a_raw_style_buffered_address_is_the_api() {
   let tex = repro!("raw_style_buffered_address_is_the_api.tex");
-  // (the answered marks no longer shown on the names — review rev94a r2 S3)
+  // (the answered marks no longer shown on the names — review rev94a r2 S3; each line labelled by its leading mark,
+  // `api:label`, review rev99b B1)
   let xml: &[&[&str]] = &[
     &[
       "Ann Able",
@@ -215,12 +219,13 @@ fn a_raw_style_buffered_address_is_the_api() {
   ];
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [1,2] | line:names",
-    "  a Univ A, Town | api:leading-mark",
-    "  a Univ B, City | api:leading-mark",
+    "  a Univ A, Town | api:label ruling1:request",
+    "  a Univ B, City | api:label ruling1:request",
     "C Bob Baker [3] | line:names sep:comma",
-    "  a Lab C, Place | api:leading-mark",
+    "  a Lab C, Place | api:label ruling1:request",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  // (the kernel pairs each line by its label already, so the observer writes nothing: `same`, no longer `written`)
+  assert_eq!(reading.3, Value::from("same"));
   assert_eq!(default_mode_creators(tex), owned(xml));
   let (_, xml) = default_mode(tex);
   assert!(!body_text(&xml).contains("Univ"), "{xml}");

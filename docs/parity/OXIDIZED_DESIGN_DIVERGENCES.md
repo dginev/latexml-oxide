@@ -29916,8 +29916,12 @@ in a `\@name` store) nor the in-place reroute (OD #936: a line break in the sett
   \relax\end{splitaddress}\fi}` (2607.20672), eph.cls:325 `\def\epl@institute{\epl@institute@makeup{#1}}`
   (nlin0310001), iau.cls:1515 `\expandafter\protected@xdef\csname affil\the\affilcount\endcsname{#1}` (2510.16758,
   2607.25849), alta.cls:58's pure store in a store not named `\@…` (2609.39929). The setter runs as the file's own
-  (`\lx@class@displaced@<name>`) inside an assignment journal (`\lx@displaced@begin`/`\lx@displaced@end`), which
-  records, of each macro the call changed, the part that holds the argument (sect05.rs `assigned_parts_holding`, the
+  (`\lx@class@displaced@<name>`) under a meaning recorder (`\lx@displaced@begin`/`\lx@displaced@end`; state.rs
+  `begin_meaning_recorder` — no assignment journal, which does not nest: the setter's own code may open one, the
+  speculative read of a mark it prints, utarticle.cls:125's `\address` → `\@makeadmark{\@tempb}`, 1209.6020, whose
+  names lost their printed marks under the journal, review rev99b B4; kept in the state, so a document that stops inside
+  a call leaves none open to the next one a worker converts, S1), which records, of each macro the call changed, the
+  part that holds the argument (sect05.rs `assigned_parts_holding`, the
   replay records' reader, compared by its characters: `\protected@xdef` expands our accents, `\`` to `\lxaccentgrave`;
   an argument of fewer than two letters is no record) — the class's own record of the value, its provenance. At
   `\maketitle` (`\lx@store@defaults`, before K11's stores — an editor store makes its creator after the authors'
@@ -29931,19 +29935,53 @@ in a `\@name` store) nor the in-place reroute (OD #936: a line break in the sett
   `for the degree of \@degree\ in \@dept\\`; the guards `perfect_kernel_batch68u::a_raw_class_store_another_macro_reads_stays_the_classs`,
   `perfect_kernel_batch79a::a_store_in_one_line_with_class_text_stays_the_class_line`,
   `perfect_kernel_batch61::uiucthesis_title_page_is_replayed` pin it) —: the deposit and the replay take each part out of
-  its macro (`lx_replay_records`, `\lx@replay@records`), never by its text, and each call's argument is the creators' contact through the in-place API of its kind
-  (`\lx@add@affiliation[annotate=run]`, `\lx@add@address[annotate=run]`), one entry per line led by a printed label
-  (`displaced_entries`: `relocate::split_top_level_lines`, `relocate::leading_line_label`, the shared reader; the
+  its macro (`lx_replay_records`, `\lx@replay@records`), never by its text, and each call's argument is the creators'
+  contacts through the API of its kind (`\lx@add@affiliation`, `\lx@add@address`), one entry per line led by a printed
+  label (`displaced_entries`: `relocate::split_top_level_lines`, `relocate::leading_line_label`, the shared reader; the
   unlabelled lines before the first label one entry; no labelled line, the whole argument one entry), its `\label`s
-  taken out (`without_labels`). The API reads each entry's leading mark as its label and pairs it with the names
-  requesting it; several marked entries on one line the names request, which no line split cuts, land once at the block
-  (`label={addresses:block},_unsplit=true`, the REVTeX binding's fail-safe, FRONTMATTER_SINGLE_ENGINE_PLAN "The structure
-  model" step 4), where the frontmatter observer reads them by their marks — never the whole list copied onto each
-  author (1812.07638's 64 run-in institutes under 200 names, which the run gave every author: 220,900 → 802,017 words
-  before the fail-safe); the API's Cut of such an entry is batch 99a's. A record whose entry leads with a mark no
-  author requests (`displaced_in_doubt`, `queue_digest.rs` `placed_authors_requesting`) stays the class's text, as an
-  in-place line in doubt does; one the title page does not print (a running head, a switch that is off) moves nowhere;
-  without a speculative run nothing moves. The unclaimed-text net (#953) takes no macro a displaced call wrote.
+  taken out (`without_labels`). An `\and` list the class's title page numbers (caosp.sty:519-527's `\institutename`,
+  astro-ph9805069) is cut at its `\and`s, entry n led by n (`class_numbered_institutes`, the shared reader K11's
+  store route uses). Each entry is placed by its leading label (`contact_line_call`, below). A record whose entry
+  leads with a mark no author requests (`displaced_in_doubt`, `queue_digest.rs` `placed_authors_requesting`) stays the
+  class's text, as an in-place line in doubt does, and so does a call holding the class's own entry separators
+  (`displaced_argument_in_doubt`): an `\and` its title page does not number — the kernel prints it " and ", which gave
+  astro-ph9805069's four institutes as one contact of every author with "and" written in three times, review rev99b B2;
+  sifrev.cls's own `\split@rg`, 1704.03333 — or a `\\` or `\par` a title-page macro reading the store defines anew to
+  number or mark the entry after it (`ClassReaders::separators_redefined`, `numbers_or_marks`: `\def\\{\par
+  \stepcounter{adr}$^{\theadr}$}`; one still a line break, `\def\\{, }`, separates the lines as the kernel's does). One
+  the title page does not print (a running head, a switch that is off) moves nowhere; without a speculative run nothing
+  moves. The unclaimed-text net (#953) takes no macro a displaced call wrote.
+- **A line's place** (`contact_line_call`; the displaced and run-in routes, and #936's in-place and stored setters'
+  calls of one entry, `by_its_label`): a line led by a printed label a name requests (`names_request_label`: a queued
+  author's mark read as `\lx@sup@request@affiliation` reads it, or one of the flush, or one a `\maketitle` placed) is
+  that label's (`label={affiliation:<key>}`, the mark keyed by its printed text as `\lx@sup@setlabel@affiliation` keys
+  it, `line_mark_label`; a hand-printed number, `affiliation:<n>`; the label's characters taken as text, so a symbol
+  mark's `#` is no parameter token, 0807.3896), and the kernel pairs it with the names requesting it, later ones too
+  (2608.19687's interleaved `\author`/`\affil` lines: `Anshu Gupta $^{1,2}$` after lines 1 and 2); any other line — led
+  by no label, by a hand-printed number no name requests (user ruling R2), or by a mark no name requests by its label (a
+  glued symbol run, `$^{*+}$`, requests `*` and `+` only by the frontmatter observer's parting, 0807.3896) — goes under
+  the names of its run (`annotate=run`), capped at its own run where a labelled line stands in the kernel's
+  (`run_cap_past_labels`: a labelled contact waits for its label and ends no run, so 2608.19687's `\affil{$^10$…}` —
+  `$^10$`, no mark a line reader reads — reached every author since line 2). An
+  in-place or stored call holding several labelled entries (jetpl.cls's stored `\address{$^{\#}$… \\ $^*$… \\ $^+$…}`) is
+  the observer's to cut, the font open before each entry kept (`\lx@fm@entry@font`, review rev94b r3 B1), as before. A
+  stub that requests the label it already carries is that one label (insert.rs `add_annotation_labels`: pasa.cls's
+  `\affil{$^1$…}` inside `\author{…}`, digested under the author markup, read `affiliation:1,affiliation:1` and went to the
+  nameless block creator, 2005.09266). Under `annotate=run` alone every author of the run held every
+  line whenever the frontmatter observer declined to re-part them (review rev99b B1: 2512.20289's lettered lines under
+  `$^{1,a}$`, `$^{2,b}$`, `$^{3,a}$`, the observer declining over the ORCID links; 2609.15125's `\affil{$^1$…}` …
+  `\affil{$^3$…}` all Sarazin's; 2607.25849's affiliation 2 Ercolino's too; 1603.07668; 1704.03333; the in-place route's
+  lines the same in the base). Marks win (FIDELITY_CHARTER "One placement order", R1). A line holding several marks
+  the names request, which no line split cuts, lands once at the block (`label={addresses:block},_unsplit=true`, the
+  REVTeX binding's fail-safe, FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model" step 4), which the frontmatter
+  observer reads by its marks — never the whole list copied onto each author (1812.07638's 64 run-in institutes under
+  200 names, which the run gave every author: 220,900 → 802,017 words before the fail-safe); the API's Cut of such an
+  entry is batch 99a's. A line keeps its printed mark, as the class prints it; the names no longer show a mark a line
+  answers (`hide_answered_marks`). A labelled line that is a legend — a footnote-symbol mark and a correspondence,
+  contribution or address-change text (queue_digest.rs `legend_note_kind`, `classify_thanks`: `$^*$Author to whom any
+  correspondence should be addressed.`) — is a note of the names carrying the symbol (`ltx:note role=thanks`, its mark
+  the symbol), as the observer writes it when it re-parts the names: as an affiliation it was 2609.15125's every author's
+  contact, and with labels 2602.03759's, 2604.08878's and 2607.12158's carriers' affiliation.
 - **A run-in setter** (`run_in_contact_setter`): one of #936's names, of one argument, that the file defined to print
   its argument where it is called as text with no line break of its own — iopjournal.cls:108 `\newcommand{\affil}[1]
   {{\fontsize{8}{10}\selectfont \raggedright \if@anonymous \phantom{#1} \else #1 \fi}}`, a paragraph by the blank lines
@@ -29954,6 +29992,15 @@ in a `\@name` store) nor the in-place reroute (OD #936: a line break in the sett
   the authors set and not placed (`title_block_line`), led by no mark no author requests —, never inside a creator's
   own content (a call there is part of the name's text), and not a line holding several marks the names request,
   which the in-place API does not cut (`relocate::requested_marks_held`): else the class's line where it stands.
+- **Where a rerouted setter decides** (review rev99b B3): the rerouted contact setters (#936's, the run-in ones), the
+  displaced setters and their deciders (`\lx@class@contact`, `@stored`, `@runin`, `@optional`) are protected, so a call
+  inside a class's `\protected@xdef` store stays in the store as written and decides where it is digested — iau.cls:1516's
+  numbered `\affiliation` store around 2607.25849's inline `\email` (iau.cls:4107) had the decider expand at store
+  time, bake its API call into `\affil0` and fire it at the deposit, giving the address to the editors' creator and
+  leaving "email: " in the body. An in-place, stored or run-in call holding an `\and` list its class does not number is
+  the class's line too (`unnumbered_and_list`: sifrev.cls's `\institute`, 1704.03333). A call digested in the title page's deposit (`lx_depositing_frontmatter_fields`) — one
+  a store the displaced route left the class's kept as written — is the class's line (`in_the_title_page_deposit`).
+
 **Why.** FIDELITY_CHARTER §4: the text is displaced, not lost — the class prints it on its title page under the
 names, which the deposit put in the body — so it moves to its owners, once (the body copy taken out by provenance,
 never duplicated, never dropped). Beyond Perl, which does not read the shipped class and gives the paper OmniBus's
@@ -29967,18 +30014,51 @@ neither reroute reads; a dispatcher-following reader or an ifacconf binding decl
 document defines (1804.02826's `\long\def\address#1{…}`). A call holding the class's own entry markup — a frontmatter setter
 of its own (2607.25849's `\affiliation{email: \email{…}\\ $^1$…}`) or a raw macro with parameters other than a mark
 (cta-author.cls's `\address{\add{1}{…}\add{2}{…}\email{…}}`, 2307.11112, whose three authors were read as one when it
-was routed whole) — is in doubt and stays the class's text (`displaced_argument_in_doubt`). (b) The API's pairing, not
-routing (batch 99a, step 1): names with a comma-list mark (`$^{1,2}$`) leave every line to the run, so 2607.25849's
-`\affiliation{$^2$…}` is each of its three authors', Ercolino's too; 2609.15125's marks before `\orcid{…}` the same.
+was routed whole), or lines led by `\footnotemark[n]` (simauth.cls:190's `\address`, 1603.07668: the marks only the names'
+own `\footnotemark[n]` pair, which no line reader reads) — is in doubt and stays the class's text
+(`displaced_argument_in_doubt`), as does an `\and` list a
+class numbers with code of its own (sifrev.cls's `\split@rg`, 1704.03333: the numbers its title page prints are lost
+in the base too). (b) A legend's mark: a labelled legend line is its carrier's note (`legend_note_kind`, below), but a name
+that shows the symbol in a superscript of its own (`\lx@frontmatter@keepsup`, `Zhixin Lu$^{1*}$`, 2602.03759) keeps it
+beside the note's mark — the frontmatter observer's `show_legend_mark` takes it out of the name, the kernel's line route
+does not. (c) A displaced
+call's entries are cut at its lines, so a font switch opening the call (`\address{\itshape $^1$… \\ $^2$…}`) reaches the
+first entry only — the in-place route's observer Cut carries it (`\lx@fm@entry@font`), the displaced route does not. (d)
+Order (R8): the relocation places a labelled contact after the creator's directly attached ones, so a run-in or in-place
+`\email` line comes before the labelled affiliations printed above it (2412.06969, 2503.13373; RED repro
+`run_in_lines_a_run_places_keep_their_order`); the run would keep the order but cannot tell at the call whether a later
+`\author` requests the label (2608.19687) — the relocation's placement, batch 99a's relocate.rs. (e)
+A label the class's own code prints outside the store, before it (`\noindent$^{1}$\enspace\@institute`), stays in the body
+without its entry (repro `displaced_class_numbered_and_institutes_go_by_their_numbers`; caosp's `\llap` label prints none).
+
 **Guards** `perfect_kernel_batch99b::{a_marked_address_store_the_class_title_page_prints_is_each_authors_line,
 a_numbered_affiliation_store_is_its_sole_authors, a_run_in_affiliation_setter_line_is_its_marked_authors}`; repros
 sectioning-frontmatter/`displaced_marked_address_store_printed_by_the_class_title_page`,
 `displaced_numbered_affiliation_store_under_one_author`, `run_in_affiliation_setter_without_a_line_break` (RED 99b0 →
 GREEN 99b), `displaced_store_printed_only_in_a_running_head_stays` (negative);
 `a_run_in_institute_store_holding_several_marks_is_cut_at_the_block`, repro `displaced_run_in_institutes_are_cut_at_the_block`.
-**Batch 99b's A/B** (`pop99b.tsv`, 6,383 papers: every popint125a `rawcls` paper, longtail3k, the witnesses, 98c's
-changed papers; and the census's 31 dev20k cluster papers) against 99b0: 24 + 7 changed (29 distinct), E and F unchanged, no word
-loss, the body/frontmatter 5-gram overlap unchanged on every changed paper, no creator merged or lost (`fm_checks.py`;
-2307.11112's merge, from `\add{…}` routed whole, is why such a call is in doubt). Scorer D3 on the base runs: long tail
-88.34 → 90.31 % per creator, 86.98 → 88.66 % per paper (10 papers better, none worse); dev20k 97.14 → 97.21 %, 96.56 →
-96.63 % (6 better, none worse). Instructions +1.2 % (2607.20672: one more speculative run), −0.3 % (2609.39929, unrouted).
+Round 2 (review rev99b): `a_run_in_line_led_by_a_requested_mark_is_its_names_when_the_observer_declines` (B1; repros
+`run_in_marked_lines_go_by_their_marks_when_the_observer_declines`,
+`run_in_numbered_lines_under_a_collaboration_go_by_their_marks`,
+`in_place_marked_lines_go_by_their_marks_when_the_observer_declines`),
+`an_and_list_in_a_displaced_store_goes_by_the_class_numbers_or_stays_the_classs` (B2; `displaced_class_numbered_and_institutes_go_by_their_numbers`,
+`displaced_and_institutes_the_class_does_not_number_stay_the_classs`, `displaced_lines_a_title_page_separator_numbers_stay_the_classs`),
+`a_rerouted_setter_inside_a_class_xdef_store_decides_where_it_is_digested` (B3;
+`run_in_email_inside_a_class_xdef_store_stays_the_classs`), `a_displaced_setter_printing_a_mark_keeps_the_names_marks`
+(B4; `displaced_setter_printing_a_mark_keeps_the_names_marks`); the legend note in the B1 guard
+(`run_in_legend_line_is_a_note_of_its_carrier`); `perfect_kernel_batch94b::{a_raw_class_in_place_address_is_the_api,
+a_raw_style_buffered_address_is_the_api}` read each line as labelled (`api:label`) and the observer writing nothing
+(`same`), the owners unchanged.
+
+**Batch 99b's A/B** (round 2; `pop99b.tsv`, 6,383 papers: every popint125a `rawcls` paper, longtail3k, the witnesses,
+98c's changed papers; and the census's 31 dev20k cluster papers; 6,388 converted) against 99b0: 30 frontmatter changes (lt 22, dev 6,
+witnesses 2; rawcls and keep98c none) and 2 math-only (hep-ph0502035, 1703.06800: the math parser's time budget), E 2,529 → 2,529, F 16 → 16, no creator merged or lost and no address held by more
+creators (`fm_checks.py`), each changed paper's labelled lines on the names showing their marks, read against the
+pdflatex text (1412.5171's word count is its B side's 180 s wall clock under load: alone both sides finish in ~145 s
+with the same frontmatter, every differing line math). Round 1's "no word loss" missed the content its owners got wrong
+— every author holding every line where the observer declined (B1), " and " written into an `\and` list (B2), an
+e-mail address taken out of its line (B3), the names' printed marks (B4) — which no word count sees. Scorer D3 on the
+base runs: long tail 88.34 → 90.42 % per creator, 86.98 → 88.69 % per paper; dev20k (its s3 base) 97.20 → 97.29 %,
+96.65 → 96.74 %; 99 creators from wrong to right (63 + 36), none from right to wrong. Instructions (`perf stat -e instructions:u`) against 99b0: +0.5 % on 2608.28486 (22 names, 6 labelled lines; round 1
++4.7 %), +0.0 % on 1812.07638 (200 names); round 1's +1.2 % (2607.20672: one more speculative run), −0.3 % (2609.39929,
+unrouted).

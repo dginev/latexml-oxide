@@ -877,6 +877,90 @@ pub fn authors_show_marks() -> bool {
     })
 }
 
+/// The affiliation label a contact line's leading mark `operand` sets, keyed by its printed text as
+/// `\lx@sup@setlabel@affiliation` keys a marked line's first mark (author_macros.rs; OXIDIZED_DESIGN_DIVERGENCES #919):
+/// what a displaced or run-in setter's labelled line is given as its `label=` (frontmatter_stores.rs
+/// `contact_line_call`).
+pub fn line_mark_label(operand: &Tokens) -> Result<Option<String>> {
+  let printed = printed_label(operand)?;
+  Ok(
+    match &printed {
+      Some(printed) => clean_frontmatter_labels(&printed.text, "affiliation"),
+      None => clean_frontmatter_labels(&operand.to_string(), "affiliation"),
+    }
+    .into_iter()
+    .next(),
+  )
+}
+
+/// Whether a name requests the affiliation label `label` (`affiliation:<key>`): a queued author's mark, read as
+/// `\lx@sup@request@affiliation` reads it (by its printed text, `frontmatter_label_keys`), or an author of the flush
+/// being digested or one a `\maketitle` placed ([`digested_authors_requesting`], [`placed_authors_requesting`]).
+pub fn names_request_label(label: &str) -> Result<bool> {
+  let Some(key) = label.strip_prefix("affiliation:") else {
+    return Ok(false);
+  };
+  for operand in queued_author_marks().into_iter().flatten() {
+    if frontmatter_label_keys(&Tokens::new(operand), "affiliation")?
+      .iter()
+      .any(|requested| requested == label)
+    {
+      return Ok(true);
+    }
+  }
+  Ok(digested_authors_requesting(key) || placed_authors_requesting(key))
+}
+
+/// The note kind of a contact line led by a footnote-symbol mark (`operand`, `is_symbol_mark`: `$^*$`, `$^\dagger$`)
+/// whose text is a legend — correspondence, a contribution, an address change (`classify_thanks`) —: a note of the
+/// names carrying the symbol, not their affiliation, as the frontmatter observer writes it (`show_legend_mark`), so a
+/// labelled line keeps the kind it had when the observer re-parted the names (2602.03759, 2604.08878, 2607.12158; review
+/// rev99b B1's legend, 2609.15125). `None` for any other line (frontmatter_stores.rs `contact_line_call`).
+pub fn legend_note_kind(operand: &[Token], line: &Tokens) -> Option<&'static str> {
+  if !is_symbol_mark(operand) {
+    return None;
+  }
+  match classify_thanks(line.clone().untex_string().as_ref()) {
+    kind @ ("correspondence" | "contribution" | "address") => Some(kind),
+    _ => None,
+  }
+}
+
+/// The cap a contact of `role` placed by its run (`annotate=run:N`) needs when a labelled contact of the role stands in
+/// that run: the kernel's run reaches every author since the last contact it attached — a labelled one waits for its
+/// label and ends no run —, which gave a later unlabelled line every author since the run's start (2608.19687's
+/// `\affil{$^10$…}`, its `$^10$` no mark a line reader reads, after the labelled `\affil{$^8$…}` and `\affil{$^9$…}`: every
+/// author since line 2); the line's own run is the authors queued since the contact of the role before them. `None`
+/// when no labelled contact stands in the run (the kernel's run is that).
+pub fn run_cap_past_labels(role: &str) -> Option<usize> {
+  with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => {
+      let (mut seen_author, mut cap, mut capped, mut labelled) = (false, 0usize, false, false);
+      for entry in queue.iter().rev() {
+        let entry_role = entry.1.get("role").map(String::as_str);
+        if entry.0 == "ltx:creator" && entry_role == Some("author") {
+          seen_author = true;
+          if !capped {
+            cap += 1;
+          }
+        } else if entry.0 == "ltx:contact" && entry_role == Some(role) {
+          let labelled_contact = entry.1.contains_key("label");
+          labelled |= labelled_contact;
+          if seen_author {
+            // (the contact before this line's authors ends its own run; an unlabelled one ends the kernel's)
+            capped = true;
+            if !labelled_contact {
+              break;
+            }
+          }
+        }
+      }
+      (labelled && cap >= 1).then_some(cap)
+    },
+    _ => None,
+  })
+}
+
 /// The author creators queued and not yet digested.
 pub(in crate::base_utilities) fn queued_author_count() -> usize {
   with_value("frontmatter_raw", |v| match v {

@@ -1,0 +1,25 @@
+% A raw class's displaced `\institute` store holding an `\and` list its title page does not number (`\def\and{\par
+% \noindent}` where it prints the store): `\and` is the class's own entry markup, which the kernel prints " and ", so
+% the call is in doubt and stays the class's text where its title page prints it (`displaced_argument_in_doubt`; review
+% rev99b B2; sifrev.cls's own `\split@rg` over `\and`, 1704.03333).
+% witness: astro-ph9805069, 1704.03333 (sifrev)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker", "Univ A, Town", "Univ B, City"
+% engines: rust 99b0 = 0 errors, 0 warnings, the entries body paragraphs; rust 99b r1 = "Univ A, Town and Univ B, City"
+%          under both authors; perl = no raw class load (OmniBus `\institute`)
+% expect:  0 errors, 0 warnings; no contact; "Univ A, Town" and "Univ B, City" body paragraphs, no " and "
+% status:  RED (99b r1) -> GREEN (99b r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{cauinst.cls}
+\ProvidesClass{cauinst}\LoadClass{article}
+\def\institute#1{\gdef\@institute{\it #1}}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\end{center}
+  {\small\begingroup\def\and{\par\noindent}\noindent\@institute\par\endgroup}\vskip1em}
+\end{filecontents*}
+\documentclass{cauinst}
+\begin{document}
+\title{A Title}
+\author{Ann Able and Bob Baker}
+\institute{Univ A, Town \and Univ B, City}
+\maketitle
+Text.
+\end{document}

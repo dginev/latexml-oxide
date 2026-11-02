@@ -440,6 +440,9 @@ pub struct State {
   pub copy_class_loads:        Vec<(u32, Vec<String>)>,
   /// The open assignment journal, if any ([`begin_assignment_journal`]).
   journal:                     Option<AssignmentJournal>,
+  /// The open meaning recorders, innermost last ([`begin_meaning_recorder`]): each the meanings assigned since it
+  /// began, with the value each had then.
+  meaning_recorders:           Vec<rustc_hash::FxHashMap<SymStr, Option<Stored>>>,
 }
 
 /// One class loaded ([`ClassLoadFrame`]): its file name (`article.cls`), the names its load frame assigned a macro (the
@@ -572,6 +575,7 @@ impl Default for State {
       class_load_frames:       Vec::new(),
       copy_class_loads:        Vec::new(),
       journal:                 None,
+      meaning_recorders:       Vec::new(),
     }
   }
 }
@@ -1035,6 +1039,9 @@ impl State {
   /// Record `key`'s bindings in the open assignment journal before its first assignment since the journal began.
   #[inline]
   fn journal_touch(&mut self, table_name: TableName, key: SymStr) {
+    if table_name == TableName::Meaning && !self.meaning_recorders.is_empty() {
+      self.record_meaning(key);
+    }
     // (a journal whose guard is gone is stale: nothing records into it until the next begin discards it)
     if !JOURNAL_GUARD_LIVE.get() {
       return;
@@ -1059,6 +1066,19 @@ impl State {
       if let Some(standing) = standing {
         journal.fallback.insert(key, standing);
       }
+    }
+  }
+
+  /// Record `key`'s meaning in each open meaning recorder before its first assignment since that recorder began
+  /// ([`begin_meaning_recorder`]).
+  #[cold]
+  fn record_meaning(&mut self, key: SymStr) {
+    let then = self
+      .meaning
+      .get(&key)
+      .and_then(|values| values.front().cloned());
+    for recorder in &mut self.meaning_recorders {
+      recorder.entry(key).or_insert_with(|| then.clone());
     }
   }
 
@@ -5510,8 +5530,8 @@ pub fn rebind_let_copies(cs: &Token, new: &Stored) -> usize {
   let own = meaning_key(cs);
   let mut rebound = 0;
   let mut state = state_mut!();
-  // (the keys holding a copy, journaled before they are rewritten in place)
-  if state.journal.is_some() {
+  // (the keys holding a copy, journaled — and recorded — before they are rewritten in place)
+  if state.journal.is_some() || !state.meaning_recorders.is_empty() {
     let copies: Vec<SymStr> = state
       .meaning
       .iter()
@@ -5584,6 +5604,28 @@ pub fn begin_assignment_journal() -> Option<AssignmentJournalGuard> {
   });
   JOURNAL_GUARD_LIVE.set(true);
   Some(AssignmentJournalGuard { open: true })
+}
+
+/// Begin recording which meanings are assigned, each with its value before its first assignment since
+/// ([`end_meaning_recorder`]): what [`AssignmentJournalGuard::assigned`] reads of [`TableName::Meaning`], without the
+/// journal — recorders nest, and a journal (a speculative run's, a replay's) may open and close inside one. Made for a
+/// displaced setter's call (frontmatter_stores.rs `\lx@displaced@begin`), whose own code may run a speculative label
+/// read (queue_digest.rs `speculative_label_ink`: utarticle.cls:125's `\address` prints its `\@makeadmark{\@tempb}`,
+/// 1209.6020). Kept in the state, so a document that stops inside a call leaves none to the next.
+pub fn begin_meaning_recorder() {
+  state_mut!()
+    .meaning_recorders
+    .push(rustc_hash::FxHashMap::default());
+}
+
+/// Close the innermost meaning recorder ([`begin_meaning_recorder`]): the meanings assigned since it began, each with
+/// its value then (`None`: unbound). Empty when none is open.
+pub fn end_meaning_recorder() -> Vec<(SymStr, Option<Stored>)> {
+  state_mut!()
+    .meaning_recorders
+    .pop()
+    .map(|recorded| recorded.into_iter().collect())
+    .unwrap_or_default()
 }
 
 #[thread_local]
