@@ -329,9 +329,6 @@ pub(crate) fn load() -> Result<()> {
       expire_state_unlocked();
       boxes.push(r?);
     }
-    if first_begin {
-      crate::frontmatter_stores::note_document_hooks(false);
-    }
     // The begin-document hooks have run (their tests of `\chapter` got TeX's answer): a `\chapter` the class left
     // undefined reads LaTeXML's chapter from here, with one Warning (OXIDIZED_DESIGN #734).
     if first_begin {
@@ -404,8 +401,15 @@ pub(crate) fn load() -> Result<()> {
     if first_begin {
       assign_value("@document@preamble@afterend@done", true, Some(Scope::Global));
     }
+    // (what the hooks made, `begindocument/end`'s too, is a class default for the unclaimed-text net: read after them,
+    // frontmatter_stores.rs `note_document_hooks`)
     if !inline_hooks.is_empty() {
+      if first_begin {
+        inline_hooks.push(T_CS!("\\lx@net@document@hooks@done"));
+      }
       unread(Tokens::new(inline_hooks));
+    } else if first_begin {
+      crate::frontmatter_stores::note_document_hooks(false);
     }
     whatsit.set_font(lookup_font().unwrap()); // Start w/ whatever font was last selected.
     leave_horizontal_internal();

@@ -3164,17 +3164,57 @@ fn note_replay_records(
   arg: &Tokens,
   skip: &[SymStr],
 ) -> Vec<SymStr> {
-  let ink = |toks: &[Token]| -> Vec<Token> {
-    toks
-      .iter()
-      .copied()
-      .filter(|t| t.get_catcode() != Catcode::SPACE)
-      .collect()
+  let mut records = match lookup_value("lx_replay_records") {
+    Some(Stored::VecDequeStored(records)) => records,
+    _ => VecDeque::new(),
   };
-  let arg = ink(arg.unlist_ref());
   let mut recorded = Vec::new();
+  for (key, part) in assigned_parts_holding(assigned, arg, skip, false) {
+    records.push_back(Stored::VecDequeStored(VecDeque::from([
+      Stored::String(pin(with(key, ToString::to_string))),
+      Stored::Tokens(Tokens::new(part)),
+    ])));
+    recorded.push(key);
+  }
+  assign_value(
+    "lx_replay_records",
+    Stored::VecDequeStored(records),
+    Some(Scope::Global),
+  );
+  recorded
+}
+
+/// The tokens of `toks` a record compares ([`assigned_parts_holding`]): its ink, without spaces; `characters`, its
+/// characters alone — no control sequence, brace or space —, for a part an `\xdef` made, whose robust commands it
+/// expanded (`\protected@xdef`'s `\protect`, our `\`` as `\lxaccentgrave`: iau.cls:1515's `\affiliation`, 2510.16758).
+fn record_ink(toks: &[Token], characters: bool) -> Vec<Token> {
+  toks
+    .iter()
+    .copied()
+    .filter(|t| match t.get_catcode() {
+      Catcode::SPACE => false,
+      Catcode::CS | Catcode::ACTIVE | Catcode::BEGIN | Catcode::END => !characters,
+      _ => true,
+    })
+    .collect()
+}
+
+/// Of the meanings an assignment journal saw assigned (`assigned`, each with its value before), the parameterless
+/// token-list macros (not `skip`) whose new part holds `arg` ([`record_ink`], its `characters` alone when asked): each macro's key and that part — the old
+/// value's longest common prefix and suffix stay, and the middle between them is what the assignments put in (a tail
+/// appended, a head prepended, text inserted before a sentinel: `\def\tp@tmp##1\tp@end{\gdef\tp@block{##1#1\tp@end}}`),
+/// or the whole new value when the old one does not split that way. The class's own records of an argument
+/// ([`note_replay_records`]; frontmatter_stores.rs `\lx@displaced@end`).
+pub(crate) fn assigned_parts_holding(
+  assigned: &[(SymStr, Option<Stored>)],
+  arg: &Tokens,
+  skip: &[SymStr],
+  characters: bool,
+) -> Vec<(SymStr, Vec<Token>)> {
+  let arg = record_ink(arg.unlist_ref(), characters);
+  let mut parts = Vec::new();
   if arg.is_empty() {
-    return recorded;
+    return parts;
   }
   // a parameterless token-list macro's body (an empty one stored as `None`)
   let value = |m: Option<&Stored>| -> Option<Vec<Token>> {
@@ -3193,10 +3233,6 @@ fn note_replay_records(
       Some(_) => None,
     }
   };
-  let mut records = match lookup_value("lx_replay_records") {
-    Some(Stored::VecDequeStored(records)) => records,
-    _ => VecDeque::new(),
-  };
   for (key, before) in assigned {
     let name = with(*key, ToString::to_string);
     if !name.starts_with('\\') || skip.contains(key) {
@@ -3210,10 +3246,6 @@ fn note_replay_records(
     let Some(now) = value(now.as_ref()) else {
       continue;
     };
-    // What the replay put in: the old value's longest common prefix and suffix stay, and the middle between them is
-    // the replay's — a tail appended (no suffix), a head prepended (no prefix), or text inserted before a sentinel
-    // (`\def\tp@tmp##1\tp@end{\gdef\tp@block{##1#1\tp@end}}`). Only when the old value does not split that way is the
-    // whole value the replay's.
     let part = match value(before.as_ref()) {
       Some(old) if now.len() >= old.len() => {
         let prefix = now.iter().zip(&old).take_while(|(a, b)| a == b).count();
@@ -3232,21 +3264,12 @@ fn note_replay_records(
       },
       _ => now,
     };
-    let held = ink(&part);
+    let held = record_ink(&part, characters);
     if held.len() >= arg.len() && held.windows(arg.len()).any(|w| w == arg.as_slice()) {
-      records.push_back(Stored::VecDequeStored(VecDeque::from([
-        Stored::String(pin(name)),
-        Stored::Tokens(Tokens::new(part)),
-      ])));
-      recorded.push(*key);
+      parts.push((*key, part));
     }
   }
-  assign_value(
-    "lx_replay_records",
-    Stored::VecDequeStored(records),
-    Some(Scope::Global),
-  );
-  recorded
+  parts
 }
 
 /// [`replay_class_setter`] (`call` = the call's `[opt]{arg}`) and [`replay_class_begin_code`] (`call` = `None`).
@@ -4521,7 +4544,7 @@ const SECTIONAL_UNITS: [&str; 9] = [
 /// `\begin{@genabstract}{abstract}`, whose `\@getgenabstext#1\end #2` scans the body). One that ends in a
 /// primitive taking none (frontiersFPHY.cls:523 `\par`, memo-l.cls:84 `\indent`, lipics `\ignorespaces`) is: a reader
 /// inside the code reads the code's own rest (frontiersFPHY.cls:521's `\fontfamily{\sfdefault}`).
-fn tail_reads_ahead(tokens: &[Token]) -> bool {
+pub(crate) fn tail_reads_ahead(tokens: &[Token]) -> bool {
   let mut i = tokens.len();
   let next = |i: &mut usize| -> Option<Token> {
     while *i > 0 {
@@ -4803,6 +4826,13 @@ pub(crate) fn keep_class_author_reader() {
       .is_some_and(|p| !p.get_parameters().is_empty())
   {
     return;
+  }
+  // (a raw file's `\@author` made since the reader was kept, which is no reader, replaces it: the title page prints that
+  // one — review rev98c N2; the same definition, a later file's load that left it, keeps it)
+  if let Some(Stored::Expandable(kept)) = lookup_value(CLASS_AUTHOR_READER)
+    && !Rc::ptr_eq(&kept, &d)
+  {
+    assign_value(CLASS_AUTHOR_READER, Stored::None, Some(Scope::Global));
   }
   let Some(ExpansionBody::Tokens(body)) = d.get_expansion() else {
     return;

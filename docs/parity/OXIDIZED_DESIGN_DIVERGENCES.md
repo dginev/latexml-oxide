@@ -28047,7 +28047,8 @@ the API's when the file's code says it sets a title-page line (`in_place_contact
 code (`executed_code`: what its definitions store left out) prints the argument where it is called — at its top level,
 in a plain group, or in an argument a face, a box or a link prints, or that a macro the raw file defined prints, a few
 levels down (`prints_argument`, `command_arguments`; ae100prg's `\email` = `\vspace*{5pt}\address{E-mail: \mailto{#1}}`)
-— beside a line break (`LINE_BREAKS`: `\par`, `\\`, `\vskip`, `\item`, …); or (b) one that appends the argument to a
+— beside a line break (`LINE_BREAKS`: `\par`, `\\`, `\vskip`, `\item`, …; one that prints it as text with none, a
+run-in setter, is the API's only where its call stands as a line of its own, OD #955); or (b) one that appends the argument to a
 store the class's own `\author` — the definition the lock refused, `\lx@dropped@author`, and the raw macros it calls —
 writes too (`class_author_stores`: 11lomcon's `\@aabuffer`, jetpl's `\@authoraddress`; amsart copies' `\addresses`,
 nyjm.cls, smfart.cls, birkart.cls, whose `\enddoc@text` prints the list) — not the kernel's own `\@author`, whose
@@ -29625,17 +29626,26 @@ file's or of the document's writes and no macro of the format's, the pools' or t
 not a shorthand the document only defines, 2609.05055's `\newcommand\SL{\mathrm{SL}}`): a parameterless macro the
 document made (`DefinitionOrigin::Document`; not a raw file's default, not a replayed class setter's store, not one the
 begin-document hooks made, `note_document_hooks`) or a token register whose contents differ from those it had when the
-raw files before it loaded (`note_raw_register_defaults`); its value holds text of its own (`holds_text`: a character
+raw files before it loaded (`note_raw_register_defaults`) or, for one the begin-document hooks changed, from those the
+hooks left (`note_document_hooks`, after `\AtBeginDocument`'s and the `begindocument/end` hook's code, which
+`\begin{document}` reads after itself, `\lx@net@document@hooks@done`: a class's `\AtBeginDocument{\setjournal{…}}`
+filling its `\jtoks` is the class's text; review rev98c S2); its value holds text of its own (`holds_text`: a character
 the code that runs typesets, not `\markboth`'s argument nor a font switch's robust wrapper — oasics.cls:544's
 `\@titlerunning`); not blank, not a store K11 or the kernel owns (`frontmatter_owned_stores`), not one holding such a
 store, not `\jobname` (the engine's), not an internal `\lx@…`. What the title page prints of them is decided by the
 existing sentinel runs (`before_title_page_runs`, joined to K11's runs, which a run the net's sentinels end is made
 again without them), a register given its sentinel as `\reg={…}` (`sentinel_definitions`), the refused begin codes run
 after the title page in a run of their own (`net_begin_code_tokens`: in the environment, `\@currenvir` set, its `\end`
-given and gobbled, read from a mouth of its own, `speculative_isolated_run`); a begin code that reaches a raw macro with
+given and gobbled, read from a mouth of its own, `speculative_isolated_run`) — what only they print is handed on when the
+document opens the environment after that `\maketitle` (`hand_net_begin_code_stores`, from `\lx@abstract@class@setters`
+after the class's begin code is replayed there), with the values it then has; never opened, or opened before
+`\maketitle`, nothing printed it (review rev98c S1: pdflatex prints the title note's mark alone, or an empty footnote) —;
+a begin code that reaches a raw macro with
 a delimited parameter collects its body and is not run (`collects_its_body`: smfart.cls:510 `\@getgenabstext#1\end #2`,
 nrc1.cls:1558; run alone they read on to the document's end, 2206.03779 and 1910.12640 timed out). Each candidate
-printed and typeset by no kept deposit or replay is handed on (`hand_net_stores`) as
+printed and typeset by no kept deposit or replay is handed on (`hand_net_stores`; its `\label`s taken out,
+`without_labels`: a label in a title-page store names nothing of ours, and inside the note it asked for an annotation
+no entry answers, review rev98c S3) as
 `\lx@annotate@frontmatter{ltx:creator}{ltx:note}[role=note,label=addresses:block,_net=<name>]`: the block's shared
 nameless creator below the authors (#159), a sole author's own. When the frontmatter is placed (insert.rs
 `keep_unclaimed_net_notes`) a note line (split at `ltx:break`/`ltx:p`) is kept only with 3 or more distinct content
@@ -29654,7 +29664,8 @@ define `\@author`; the speculative run of the whole title page (`title_page_prin
 (`\lx@class@author@reader`), as pdflatex does. The kernel's `\author` (Perl latex_constructs.pool.ltxml:1076-1079
 `\def\@author{#2}`) or a binding's (authblk_sty.rs, under oasics.cls) replaces it, though it is the only code printing
 copernicus.cls:1329-1352's `\AB@affillist`. Kept at the raw load rather than in the kernel's `\author`: under the
-authblk binding the kernel's `\author` never runs (1709.00722). A K11 off-table store printed there is K11's as before;
+authblk binding the kernel's `\author` never runs (1709.00722). A later raw file's `\@author` that is no reader replaces
+the kept one (review rev98c N2). A K11 off-table store printed there is K11's as before;
 its author-block rows are not handed on when they only repeat the names (`repeats_creator_names`, which now reads commas
 and "and" between the names as separators).
 
@@ -29681,7 +29692,12 @@ a_title_note_register_only_the_class_abstract_prints_is_a_note,
 a_store_the_frontmatter_holds_or_the_class_owns_is_no_note}`; repros
 sectioning-frontmatter/`net_affiliation_list_printed_only_by_the_class_author_is_a_block_note`,
 `net_title_note_register_printed_only_by_the_class_abstract_is_a_note` (RED → GREEN),
-`net_store_the_frontmatter_holds_or_the_class_owns_is_no_note` (negative).
+`net_store_the_frontmatter_holds_or_the_class_owns_is_no_note` (negative); review rev98c's S1-S3
+`perfect_kernel_batch99b::{a_begin_code_note_waits_for_the_document_to_open_the_environment,
+a_register_a_class_begin_document_hook_fills_is_no_note, a_label_in_a_net_store_is_no_orphaned_annotation}`, repros
+`net_title_note_register_without_the_abstract_is_no_note`, `net_title_note_register_abstract_before_maketitle_is_no_note`,
+`net_register_a_class_begin_document_hook_fills_is_no_note`, `net_store_label_is_no_orphaned_annotation` (RED 98c →
+GREEN 99b).
 
 **Batch 98c's A/B** (`pop98c.tsv`, 3,914 papers: the census's family A, every popint125a `rawcls` paper, 500 seeded
 others) against its base: 27 changed, E 1,494 → 1,494, F 10 → 9 (1203.4558, a wall-clock load), no word loss,
@@ -29885,3 +29901,84 @@ back to base's form of a shown mark (`$^1$` upright, round 2 had set it italic):
 e-mails after the departments): `perfect_kernel_batch98e::a_mark_on_a_spacing_nucleus_leads_its_line`. RED, deferred:
 `cut_acmart_closing_part_composes_unprinted_text_red` (S-d), `cut_acmart_uncut_call_after_a_cut_list_red` (S-b),
 `inblock_glued_repeated_label_is_entry_text_red` (2204.02412, the observer writer's in-block cutter).
+
+### 955. A raw class's affiliation or address that its own title page prints into the body is the creators' contact: a setter that stores it among code of its own, by what its call recorded; a setter that prints it with no line break of its own, where its call stands as a line (Perl: the shipped class is not read; OmniBus's setters feed the API)
+**What** (brief 99b; census127 dev20k cluster 4 and the long tail's Coverage clusters; FIDELITY_CHARTER §4, displaced
+text moves). Two shapes of a raw file's own frontmatter setter neither K11 (`pure_stores`: a pure store of the argument
+in a `\@name` store) nor the in-place reroute (OD #936: a line break in the setter's own code) took, so the kernel's
+`\maketitle` deposit or the call itself printed the line into the body below the names, every author with no contact.
+- **A displaced store** (frontmatter_stores.rs `reroute_displaced_setters`, after K11's and the in-place reroutes of a raw
+  class, or of a raw package read outside a raw class's read — one inside it is the class's, K11 taking its setters first
+  at the class's end: apa6.cls's pure-store `\affiliation` after ftnright.sty, 1710.02566, 1902.06122): a table setter of an affiliation or address (`STORE_SETTERS`' `\lx@add@store@affiliations`,
+  `\lx@add@address` names, `displaced_api`) the file defined, of one argument, whose executed code does not print the
+  argument where it is called and whose body writes it into a definition (`written_stores`, a `\csname`-named one too),
+  its last command reading nothing past the call (`tail_reads_ahead`): rstransa.cls:1154 `\gdef\@address{#1\ifaffbreak
+  \relax\end{splitaddress}\fi}` (2607.20672), eph.cls:325 `\def\epl@institute{\epl@institute@makeup{#1}}`
+  (nlin0310001), iau.cls:1515 `\expandafter\protected@xdef\csname affil\the\affilcount\endcsname{#1}` (2510.16758,
+  2607.25849), alta.cls:58's pure store in a store not named `\@…` (2609.39929). The setter runs as the file's own
+  (`\lx@class@displaced@<name>`) inside an assignment journal (`\lx@displaced@begin`/`\lx@displaced@end`), which
+  records, of each macro the call changed, the part that holds the argument (sect05.rs `assigned_parts_holding`, the
+  replay records' reader, compared by its characters: `\protected@xdef` expands our accents, `\`` to `\lxaccentgrave`;
+  an argument of fewer than two letters is no record) — the class's own record of the value, its provenance. At
+  `\maketitle` (`\lx@store@defaults`, before K11's stores — an editor store makes its creator after the authors'
+  contacts — and before the deposit; `route_and_hand_displaced`), of the records whose part still stands in its macro
+  (a later call that replaced it leaves none), those whose macro the class's whole title page prints in its
+  speculative sentinel runs (`sentinel_runs` of `title_page_print_tokens`, the confirming run for a plain value) are
+  routed — unless K11's own rules for a store leave it to the class, its pure-store body test aside
+  (`displaced_store_stays_the_classs`: a raw macro that is no title-page code reads it, `ClassReaders::read_by_other_code`,
+  a class's `\signature` printing `\@where`; or the title page prints it glued to the class's text or in one line with
+  another value the frontmatter does not carry, `ClassReaders::store_lines` with the document's values, uiucthesis.cls:177
+  `for the degree of \@degree\ in \@dept\\`; the guards `perfect_kernel_batch68u::a_raw_class_store_another_macro_reads_stays_the_classs`,
+  `perfect_kernel_batch79a::a_store_in_one_line_with_class_text_stays_the_class_line`,
+  `perfect_kernel_batch61::uiucthesis_title_page_is_replayed` pin it) —: the deposit and the replay take each part out of
+  its macro (`lx_replay_records`, `\lx@replay@records`), never by its text, and each call's argument is the creators' contact through the in-place API of its kind
+  (`\lx@add@affiliation[annotate=run]`, `\lx@add@address[annotate=run]`), one entry per line led by a printed label
+  (`displaced_entries`: `relocate::split_top_level_lines`, `relocate::leading_line_label`, the shared reader; the
+  unlabelled lines before the first label one entry; no labelled line, the whole argument one entry), its `\label`s
+  taken out (`without_labels`). The API reads each entry's leading mark as its label and pairs it with the names
+  requesting it; several marked entries on one line the names request, which no line split cuts, land once at the block
+  (`label={addresses:block},_unsplit=true`, the REVTeX binding's fail-safe, FRONTMATTER_SINGLE_ENGINE_PLAN "The structure
+  model" step 4), where the frontmatter observer reads them by their marks — never the whole list copied onto each
+  author (1812.07638's 64 run-in institutes under 200 names, which the run gave every author: 220,900 → 802,017 words
+  before the fail-safe); the API's Cut of such an entry is batch 99a's. A record whose entry leads with a mark no
+  author requests (`displaced_in_doubt`, `queue_digest.rs` `placed_authors_requesting`) stays the class's text, as an
+  in-place line in doubt does; one the title page does not print (a running head, a switch that is off) moves nowhere;
+  without a speculative run nothing moves. The unclaimed-text net (#953) takes no macro a displaced call wrote.
+- **A run-in setter** (`run_in_contact_setter`): one of #936's names, of one argument, that the file defined to print
+  its argument where it is called as text with no line break of its own — iopjournal.cls:108 `\newcommand{\affil}[1]
+  {{\fontsize{8}{10}\selectfont \raggedright \if@anonymous \phantom{#1} \else #1 \fi}}`, a paragraph by the blank lines
+  the document puts around each call (2608.28486, 2512.15449, 2602.03759, 2606.14342, 2609.32125) —, none of math, a
+  superscript, a note or a raised box in its executed code (`MARK_OR_NOTE`: agujournal2019.cls's `\def\affil#1{$^{#1}$
+  \ignorespaces}` is a mark), reading nothing past the call. Its call is the API's (`\lx@class@contact@runin`,
+  `class_contact_run_in`) only as a line of its own in the title block — between paragraphs at the body's own level,
+  the authors set and not placed (`title_block_line`), led by no mark no author requests —, never inside a creator's
+  own content (a call there is part of the name's text), and not a line holding several marks the names request,
+  which the in-place API does not cut (`relocate::requested_marks_held`): else the class's line where it stands.
+**Why.** FIDELITY_CHARTER §4: the text is displaced, not lost — the class prints it on its title page under the
+names, which the deposit put in the body — so it moves to its owners, once (the body copy taken out by provenance,
+never duplicated, never dropped). Beyond Perl, which does not read the shipped class and gives the paper OmniBus's
+`\address`/`\affiliation` (OmniBus.cls.ltxml:77-94).
+**Not reached** (counter-example triage). (a) Missing generality, deferred: a setter of `[opt]{arg}` storing through a
+class list macro (xiaomiev.cls:137 `\addtolist[#1]{#2}{\affiliationlist}…`, 2604.26839: the mark is the optional
+argument); a dispatcher (ifacconf.cls:1196 `\address` = `\@ifstar{…}{\@ifnextchar[…}`, elsart-style keys `\author[First]`
+/ `\address[First]`, 1111.1311 and 25 hidden long-tail papers: it prints in place through `\address@optarg[#1]#2`, which
+neither reroute reads; a dispatcher-following reader or an ifacconf binding declaration); a title page set in a
+`tcolorbox`, whose text the speculative run's ink reader does not reach (alta.cls:86-99, 2609.39929); a setter the
+document defines (1804.02826's `\long\def\address#1{…}`). A call holding the class's own entry markup — a frontmatter setter
+of its own (2607.25849's `\affiliation{email: \email{…}\\ $^1$…}`) or a raw macro with parameters other than a mark
+(cta-author.cls's `\address{\add{1}{…}\add{2}{…}\email{…}}`, 2307.11112, whose three authors were read as one when it
+was routed whole) — is in doubt and stays the class's text (`displaced_argument_in_doubt`). (b) The API's pairing, not
+routing (batch 99a, step 1): names with a comma-list mark (`$^{1,2}$`) leave every line to the run, so 2607.25849's
+`\affiliation{$^2$…}` is each of its three authors', Ercolino's too; 2609.15125's marks before `\orcid{…}` the same.
+**Guards** `perfect_kernel_batch99b::{a_marked_address_store_the_class_title_page_prints_is_each_authors_line,
+a_numbered_affiliation_store_is_its_sole_authors, a_run_in_affiliation_setter_line_is_its_marked_authors}`; repros
+sectioning-frontmatter/`displaced_marked_address_store_printed_by_the_class_title_page`,
+`displaced_numbered_affiliation_store_under_one_author`, `run_in_affiliation_setter_without_a_line_break` (RED 99b0 →
+GREEN 99b), `displaced_store_printed_only_in_a_running_head_stays` (negative);
+`a_run_in_institute_store_holding_several_marks_is_cut_at_the_block`, repro `displaced_run_in_institutes_are_cut_at_the_block`.
+**Batch 99b's A/B** (`pop99b.tsv`, 6,383 papers: every popint125a `rawcls` paper, longtail3k, the witnesses, 98c's
+changed papers; and the census's 31 dev20k cluster papers) against 99b0: 24 + 7 changed (29 distinct), E and F unchanged, no word
+loss, the body/frontmatter 5-gram overlap unchanged on every changed paper, no creator merged or lost (`fm_checks.py`;
+2307.11112's merge, from `\add{…}` routed whole, is why such a call is in doubt). Scorer D3 on the base runs: long tail
+88.34 → 90.31 % per creator, 86.98 → 88.66 % per paper (10 papers better, none worse); dev20k 97.14 → 97.21 %, 96.56 →
+96.63 % (6 better, none worse). Instructions +1.2 % (2607.20672: one more speculative run), −0.3 % (2609.39929, unrouted).

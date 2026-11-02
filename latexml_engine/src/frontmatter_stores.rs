@@ -52,6 +52,13 @@
 //! lines of 3 or more words no frontmatter field holds (`net_candidates`, `hand_net_stores`; insert.rs
 //! `keep_unclaimed_net_notes`): copernicus's `\AB@affillist`, read only by its own `\@author` (sect05.rs
 //! `keep_class_author_reader`; 0712.1312), sig-alternate's `\tntoks`, read only by its refused `{abstract}` (1206.6940).
+//!
+//! Displaced text (99b, OD #955): a raw file's affiliation or address setter that stores its argument for its title page
+//! among code of its own, which K11's pure-store test leaves (rstransa's `\gdef\@address{#1\ifaffbreak…\fi}`, iau's
+//! numbered `\csname affil\the\affilcount\endcsname`), runs in an assignment journal recording what it stored
+//! (`reroute_displaced_setters`); at `\maketitle` what the title page prints of it is the creators' contacts, taken out of
+//! the deposit by that record (`route_and_hand_displaced`). An in-place setter with no line break of its own (iopjournal's
+//! `\affil`) is the API's where its call stands as a line (`run_in_contact_setter`).
 use std::collections::VecDeque;
 
 use latexml_core::{
@@ -854,6 +861,18 @@ impl ClassReaders {
       .is_some_and(|readers| {
         !readers.is_empty() && readers.iter().all(|cs| self.title_page.contains(cs))
       })
+  }
+
+  /// Does a macro a raw file defined that is not title-page code read `store` (itself aside, an accumulator reading its
+  /// own value)? The store is then that code's too (K11's rule (a), [`store_setter_body`]): letter.cls:155's `\address`
+  /// for `\opening`, a class's `\signature` printing `\@where` (displaced setters, [`displaced_store_stays_the_classs`]).
+  fn read_by_other_code(&self, store: &Token) -> bool {
+    let name = store.get_cs_name();
+    self.readers.get(&name).is_some_and(|readers| {
+      readers
+        .iter()
+        .any(|cs| *cs != name && !self.title_page.contains(cs))
+    })
   }
 
   /// The title-page macros that read `store`, with their bodies.
@@ -2036,7 +2055,8 @@ fn prints_argument(code: &[Token], arg: usize, depth: usize) -> bool {
 /// (cond-mat0611585). Its argument number when it is one, and whether it prints the line where it is called (else it
 /// stores it for the title page). Anything else stays the class's: a mark
 /// (agujournal2019.cls `\def\affil#1{$^{#1}$\ignorespaces}`), an inline face of an address used inside a note or a line
-/// (`\newcommand{\email}[1]{\texttt{#1}}`, `\href{mailto:#1}{#1}`), a footnote (ecai.cls `\institute` =
+/// (`\newcommand{\email}[1]{\texttt{#1}}`, `\href{mailto:#1}{#1}`: a run-in setter, [`run_in_contact_setter`], the API's
+/// only where its call stands as a line of its own), a footnote (ecai.cls `\institute` =
 /// `\thanks{#1}`), a store only its own title page reads (K11's; interspeech.cls's `\gdef\@address{#1\\}`;
 /// spr-sola-addons.sty:317's `\add@xtok\adresses@list{…}`, 2005.09586), a `\message` that prints nothing
 /// (dmtcs-episciences.cls), a switch or a dispatcher without the argument (jmlr2e.sty `\def\email{\hfill\small\sc}`,
@@ -2081,6 +2101,71 @@ fn in_place_contact_setter(name: &str) -> Result<Option<(usize, bool)>> {
       .any(|s| author_stores.contains(s))
       .then_some((arg, false)),
   )
+}
+
+/// What sets an argument as a mark or a note rather than a line: a superscript or subscript, a note, a raised box, math.
+const MARK_OR_NOTE: &[&str] = &[
+  "\\textsuperscript",
+  "\\textsubscript",
+  "\\footnote",
+  "\\footnotetext",
+  "\\thanks",
+  "\\marginpar",
+  "\\raisebox",
+  "\\ensuremath",
+  "\\sp",
+  "\\sb",
+];
+
+/// Whether the raw file's own `\<name>` — one of [`IN_PLACE_CONTACT_SETTERS`], of one argument, which
+/// [`in_place_contact_setter`] did not take — prints its argument where it is called as text, with no line break of its
+/// own: iopjournal.cls:108 `\newcommand{\affil}[1]{{\fontsize{8}{10}\selectfont \raggedright \if@anonymous \phantom{#1}
+/// \else #1 \fi}}`, a paragraph of its own by the blank lines the document puts around each call (2608.28486,
+/// 2512.15449, 2602.03759, 2606.14342, 2609.32125). Not a mark — math, a superscript, a note or a raised box anywhere in
+/// its executed code ([`MARK_OR_NOTE`]: agujournal2019.cls's `\def\affil#1{$^{#1}$\ignorespaces}`) — and not a setter
+/// whose code reads past the call (`tail_reads_ahead`). Its call is the API's only as a line of its own in the title
+/// block ([`class_contact_run_in`]).
+fn run_in_contact_setter(name: &str) -> bool {
+  let Some(Stored::Expandable(defn)) = lookup_meaning(&T_CS!(&s!("\\{name}"))) else {
+    return false;
+  };
+  if !defn.get_parameters().is_some_and(
+    |p| matches!(p.get_parameters().as_slice(), [only] if !only.optional && undelimited(only)),
+  ) {
+    return false;
+  }
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return false;
+  };
+  let body = body.unlist_ref();
+  let executed = executed_code(body);
+  prints_argument(&executed, 1, 0)
+    && !executed.iter().any(|t| {
+      matches!(
+        t.get_catcode(),
+        Catcode::MATH | Catcode::SUPER | Catcode::SUB
+      ) || cs_in(t, MARK_OR_NOTE)
+    })
+    && !crate::latex_constructs::tail_reads_ahead(body)
+}
+
+/// A rerouted run-in setter's call ([`run_in_contact_setter`]): `api` where it stands as a line of its own in the title
+/// block — between paragraphs at the body's own level, the authors set and not yet placed ([`title_block_line`]), its
+/// line led by no mark no author requests and holding at most one the names request (`relocate::requested_marks_held`)
+/// —, else `class`; never inside a creator's own content, where a call printing
+/// no line of its own is part of the name's text.
+fn class_contact_run_in(api: Tokens, class: Tokens) -> Tokens {
+  let line = last_group(&class);
+  // (a line holding several marks the names request — `\affil{$^1$Univ A, $^2$Univ B}` run in — is no one entry the
+  // run's authors share, and the in-place API does not cut it: the class's line, as before)
+  if title_block_line(true)
+    && !leads_with_unrequested_mark(line)
+    && requested_marks_held(&Tokens::new(line.to_vec())) <= 1
+  {
+    api
+  } else {
+    class
+  }
 }
 
 /// A rerouted setter's call ([`reroute_in_place_contact_setters`]): `api` where the line it sets is a contact of the
@@ -2548,14 +2633,17 @@ pub fn reroute_in_place_contact_setters(file: &str) -> Result<()> {
   // `\address`)
   let mut setters = Vec::new();
   for (name, api) in IN_PLACE_CONTACT_SETTERS {
-    if defined_by_a_raw_file(name)?
-      && let Some((arg, in_place)) = in_place_contact_setter(name)?
-    {
-      setters.push((*name, *api, arg, in_place));
+    if !defined_by_a_raw_file(name)? {
+      continue;
+    }
+    if let Some((arg, in_place)) = in_place_contact_setter(name)? {
+      setters.push((*name, *api, arg, in_place, false));
+    } else if run_in_contact_setter(name) {
+      setters.push((*name, *api, 1, true, true));
     }
   }
   let mut rerouted = Vec::new();
-  for (name, api, arg, in_place) in setters {
+  for (name, api, arg, in_place, run_in) in setters {
     let (params, api, class_args) = if arg == 2 {
       (
         convert_latex_args(2, Some(Tokens::new(Vec::new())))?,
@@ -2578,7 +2666,9 @@ pub fn reroute_in_place_contact_setters(file: &str) -> Result<()> {
     Let!(T_CS!(&s!("\\lx@class@contact@{name}")), cs, Scope::Global);
     // (a setter that prints its line where it is called decides by where the call stands, `\lx@class@contact`; one
     // that stores it for the title page sets a title-page line wherever it is called, `\lx@class@contact@stored`)
-    let decider = if in_place {
+    let decider = if run_in {
+      "\\lx@class@contact@runin"
+    } else if in_place {
       "\\lx@class@contact"
     } else {
       "\\lx@class@contact@stored"
@@ -2617,6 +2707,458 @@ pub fn reroute_in_place_contact_setters(file: &str) -> Result<()> {
     );
   }
   Ok(())
+}
+
+/// The in-place API a table setter's call reaches when its store is an affiliation or an address of the creators that
+/// the class's title page prints into the body ([`reroute_displaced_setters`]): its table API's kind
+/// (`STORE_SETTERS`: `\lx@add@store@affiliations`, `\lx@add@address`) as a line under the names (`annotate=run`, as
+/// [`IN_PLACE_CONTACT_SETTERS`]' are).
+fn displaced_api(name: &str) -> Option<&'static str> {
+  let (_, api) = STORE_SETTERS.iter().find(|(n, _)| *n == name)?;
+  if api.starts_with("\\lx@add@store@affiliations") {
+    Some("\\lx@add@affiliation[annotate=run]")
+  } else if api.starts_with("\\lx@add@address") {
+    Some("\\lx@add@address[annotate=run]")
+  } else {
+    None
+  }
+}
+
+/// Is the raw file's own `\<name>` a setter that stores its argument for the title page without printing it ([`
+/// reroute_displaced_setters`]): a macro of one argument, still the file's own definition (neither K11 nor the in-place
+/// reroute took it), whose executed code ([`executed_code`]) does not print the argument where it is called
+/// ([`prints_argument`]), whose body writes it into a definition ([`written_stores`]: a `\gdef`, `\xdef`, `\g@addto@macro`,
+/// a `\csname`-named one) and whose last command reads nothing after the call (`tail_reads_ahead`)?
+fn displaced_setter(name: &str) -> bool {
+  let Some(Stored::Expandable(defn)) = lookup_meaning(&T_CS!(&s!("\\{name}"))) else {
+    return false;
+  };
+  if defn.get_origin() != DefinitionOrigin::File
+    || !defn.get_parameters().is_some_and(
+      |p| matches!(p.get_parameters().as_slice(), [only] if !only.optional && undelimited(only)),
+    )
+  {
+    return false;
+  }
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return false;
+  };
+  let body = body.unlist_ref();
+  !prints_argument(&executed_code(body), 1, 0)
+    && written_stores(body, Some(1))
+      .iter()
+      .any(|(_, holds)| *holds)
+    && !crate::latex_constructs::tail_reads_ahead(body)
+}
+
+/// After a raw class, or a raw package read outside a raw class's read, loaded, and K11 and the in-place reroute had
+/// their pick (apa6.cls's `\affiliation`, a pure store K11 takes at the class's end, after ftnright.sty its read loads;
+/// 1710.02566): each table setter of an
+/// affiliation or an address (`displaced_api`) the file defined that stores its argument for the title page without
+/// printing it (`displaced_setter`) — rstransa.cls:1154 `\gdef\@address{#1\ifaffbreak\relax\end{splitaddress}\fi}`
+/// (2607.20672), alta.cls:58 `\gdef\alta@affiliation{#1}` (2609.39929), eph.cls:325
+/// `\def\epl@institute{\epl@institute@makeup{#1}}` (nlin0310001), iau.cls:1515's numbered `\protected@xdef\csname
+/// affil\the\affilcount\endcsname{#1}` (2510.16758, 2607.25849): a store K11's pure-store test (`pure_stores`, a `\@name`
+/// store) does not take, which the kernel's `\maketitle` deposit (sect05.rs `\lx@deposit@maketitle`) printed into the
+/// body under the names, every author with no contact. The setter runs as the file's own (`\lx@class@displaced@<name>`),
+/// inside an assignment journal (`\lx@displaced@begin`, `\lx@displaced@end`) that records, of each macro it changed, the
+/// part that holds the call's argument (sect05.rs `assigned_parts_holding`): the class's own record of the value, its
+/// provenance. At `\maketitle` the title page's speculative run decides which of them it prints
+/// (`route_and_hand_displaced`); those are the creators' contacts through the API, and the deposit takes them out of
+/// the class's macros (`\lx@replay@records`), never by their text. OXIDIZED_DESIGN_DIVERGENCES #954.
+pub fn reroute_displaced_setters(file: &str) -> Result<()> {
+  let mut rerouted: Vec<&str> = Vec::new();
+  // (not a setter K11 or the in-place reroute took: theirs, from this file's load or an earlier one's)
+  let k11 = lookup_string("lx_rerouted_stores");
+  for (name, _) in STORE_SETTERS {
+    if displaced_api(name).is_none()
+      || rerouted.contains(name)
+      || k11.split(',').any(|n| n == *name)
+      || lookup_meaning(&T_CS!(&s!("\\lx@class@contact@rerouted@{name}"))).is_some()
+      || defined_by_a_binding(name)?
+    {
+      continue;
+    }
+    if !displaced_setter(name) {
+      continue;
+    }
+    let cs = T_CS!(&s!("\\{name}"));
+    Let!(T_CS!(&s!("\\lx@class@displaced@{name}")), cs, Scope::Global);
+    let body = mouth::tokenize_internal(TeXString::assembled(s!(
+      "\\lx@displaced@begin\\lx@class@displaced@{name}{{#1}}\\lx@displaced@end{{{name}}}{{#1}}"
+    )));
+    DefMacro!(cs, convert_latex_args(1, None)?, body, scope => Some(Scope::Global));
+    rerouted.push(name);
+  }
+  if !rerouted.is_empty() {
+    Info!(
+      "frontmatter",
+      file,
+      s!(
+        "The raw file's setters that store an affiliation or address for its title page record what they store: \\{}",
+        rerouted.join(", \\")
+      )
+    );
+  }
+  Ok(())
+}
+
+thread_local! {
+  /// The assignment journal a displaced setter's call runs in (`\lx@displaced@begin` … `\lx@displaced@end`).
+  static DISPLACED_JOURNAL: std::cell::RefCell<Option<AssignmentJournalGuard>> =
+    const { std::cell::RefCell::new(None) };
+}
+
+/// The state holding the displaced setters' records (`\lx@displaced@end`): each the setter's name, the macro it
+/// changed, the part of it that holds the call's argument, and the argument.
+const DISPLACED_RECORDS: &str = "lx_displaced_records";
+
+/// A displaced setter's record ([`DISPLACED_RECORDS`]).
+struct DisplacedRecord {
+  setter: String,
+  store:  Token,
+  part:   Vec<Token>,
+  arg:    Tokens,
+}
+
+/// The records of the displaced setters' calls whose part still stands in its macro ([`DISPLACED_RECORDS`]): a call
+/// whose value a later call replaced (`\gdef\@address{…}` twice) is no longer printed by anything.
+fn displaced_records() -> Vec<DisplacedRecord> {
+  let Some(Stored::VecDequeStored(records)) = lookup_value(DISPLACED_RECORDS) else {
+    return Vec::new();
+  };
+  let mut out = Vec::new();
+  for record in &records {
+    let Stored::VecDequeStored(fields) = record else {
+      continue;
+    };
+    let (
+      Some(Stored::String(setter)),
+      Some(Stored::String(store)),
+      Some(Stored::Tokens(part)),
+      Some(Stored::Tokens(arg)),
+    ) = (fields.front(), fields.get(1), fields.get(2), fields.get(3))
+    else {
+      continue;
+    };
+    let store = T_CS!(&with(*store, ToString::to_string));
+    let part = part.unlist_ref().to_vec();
+    let stands = parameterless_body(&store).is_some_and(|body| {
+      let body = body.unlist_ref();
+      !part.is_empty()
+        && body.len() >= part.len()
+        && body.windows(part.len()).any(|w| w == part.as_slice())
+    });
+    if stands {
+      out.push(DisplacedRecord {
+        setter: with(*setter, ToString::to_string),
+        store,
+        part,
+        arg: arg.clone(),
+      });
+    }
+  }
+  out
+}
+
+/// `tokens` without its `\label{…}`s: a label in a title-page store has nothing of ours to name (the replay of a class
+/// setter gobbles them, sect05.rs `\lx@replay@inert`), and inside a frontmatter entry it asks for an annotation no
+/// entry answers ("Orphaned frontmatter annotation", review rev98c S3).
+fn without_labels(tokens: &Tokens) -> Tokens {
+  let toks = tokens.unlist_ref();
+  let mut out = Vec::with_capacity(toks.len());
+  let mut i = 0;
+  while i < toks.len() {
+    if toks[i] == T_CS!("\\label") {
+      let k = skip_spaces(toks, i + 1);
+      if let Some(past) = group_end(toks, k) {
+        i = past;
+        continue;
+      }
+    }
+    out.push(toks[i]);
+    i += 1;
+  }
+  Tokens::new(out)
+}
+
+/// The entries of a displaced setter's argument: its lines (`\\`, `\par`, `relocate::split_top_level_lines`), an entry
+/// starting at each line led by a printed label (`relocate::leading_line_label`, the shared reader: `$^{1}$`,
+/// `\textsuperscript{1}`, `${}^{1}$`, a hand-printed `1)`), an unlabelled line the entry's before it, the unlabelled
+/// lines before the first label one entry — rstransa's `\address{$^{1}$… \\ $^{2}$…}`, each line an author's;
+/// 2607.25849's `\affiliation{email: \email{…}\\ $^1$Argelander-Institut …}` —; the whole argument one entry when no
+/// line leads with a label (one address over two lines). Marks inside one line are the API's to cut.
+fn displaced_entries(arg: &Tokens) -> Vec<Tokens> {
+  use crate::base_utilities::{leading_line_label, split_top_level_lines};
+  let toks = arg.unlist_ref();
+  let lines: Vec<&[Token]> = split_top_level_lines(toks)
+    .into_iter()
+    .filter(|line| line.iter().any(|t| *t != T_SPACE!()))
+    .collect();
+  let labelled = |line: &[Token]| leading_line_label(&Tokens::new(line.to_vec())).is_some();
+  if lines.len() < 2 || !lines.iter().any(|line| labelled(line)) {
+    return vec![arg.clone()];
+  }
+  let mut entries: Vec<Vec<Token>> = Vec::new();
+  for line in lines {
+    match entries.last_mut() {
+      Some(entry) if !labelled(line) => {
+        entry.push(T_CS!("\\\\"));
+        entry.extend_from_slice(line);
+      },
+      _ => entries.push(line.to_vec()),
+    }
+  }
+  // (each without the spaces around it: the space after a `\\` is no part of the next entry)
+  entries
+    .into_iter()
+    .map(|entry| {
+      let start = entry
+        .iter()
+        .position(|t| *t != T_SPACE!())
+        .unwrap_or(entry.len());
+      let end = entry
+        .iter()
+        .rposition(|t| *t != T_SPACE!())
+        .map_or(start, |e| e + 1);
+      Tokens::new(entry[start..end.max(start)].to_vec())
+    })
+    .collect()
+}
+
+/// Are the entries of a displaced setter's call in doubt: one leads with a mark no author requests — queued, or placed
+/// by the `\maketitle` that reads them (`placed_authors_requesting`) — under names showing marks, as an in-place
+/// setter's line in doubt stays the class's ([`leads_with_unrequested_mark`])?
+fn displaced_in_doubt(entries: &[Tokens]) -> bool {
+  entries.iter().any(|entry| {
+    leading_mark_operand(entry.unlist_ref()).is_some_and(|operand| {
+      operand
+        .iter()
+        .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+        && authors_show_marks()
+        && queued_authors_requesting(&operand).is_empty()
+        && !placed_authors_requesting(&Tokens::new(operand.clone()).to_string())
+    })
+  })
+}
+
+/// Does a displaced setter's argument hold the class's own structure, which the API cannot read as an entry's text: a
+/// frontmatter setter of its own (a table name, [`IN_PLACE_CONTACT_SETTERS`]' `\email`, a `\thanks` or `\footnote`:
+/// 2607.25849's `\affiliation{email: \email{…}\\ $^1$…}`), or a macro of the raw files' with parameters other than a
+/// mark the readers read ([`leading_mark`]'s `\inst`, `\textsuperscript`) — cta-author.cls's `\address{\add{1}{…}
+/// \add{2}{…}\email{…}}`, whose entries and marks only its `\add` makes (2307.11112: routed whole, the three authors were
+/// read as one)? Then the call is in doubt and stays the class's text.
+fn displaced_argument_in_doubt(arg: &Tokens) -> bool {
+  arg.unlist_ref().iter().any(|t| {
+    if t.get_catcode() != Catcode::CS
+      || t.with_cs_name(|n| matches!(n, "\\inst" | "\\textsuperscript" | "\\@textsuperscript"))
+    {
+      return false;
+    }
+    let setter = t.with_cs_name(|n| {
+      let bare = n.trim_start_matches('\\');
+      STORE_SETTERS.iter().any(|(name, _)| *name == bare)
+        || IN_PLACE_CONTACT_SETTERS
+          .iter()
+          .any(|(name, _)| *name == bare)
+        || matches!(n, "\\thanks" | "\\footnote" | "\\footnotetext")
+    });
+    setter
+      || matches!(lookup_meaning(t), Some(Stored::Expandable(d))
+        if d.get_origin() == DefinitionOrigin::File
+          && d.get_parameters().is_some_and(|p| !p.get_parameters().is_empty()))
+  })
+}
+
+/// At `\maketitle` (`\lx@store@defaults`, before K11's stores are handed on — an editor store makes its creator after
+/// the authors' contacts, `harvest_stores` — and before the title-page deposit): the displaced setters' records
+/// ([`displaced_records`]) whose macro the class's whole title page prints, by its speculative sentinel runs
+/// (`sentinel_runs` of `title_page_print_tokens`, the two-sentinel rule's confirming run for a plain value,
+/// [`confirmed_printed`]), are routed ([`route_displaced`]) and handed on ([`hand_displaced_stores`]). Without a run made,
+/// nothing is: the class's text stays where its title page prints it. Once.
+fn route_and_hand_displaced() -> Result<Vec<Digested>> {
+  if lookup_bool("lx_displaced_decided")
+    || lookup_bool("lx_depositing_class_maketitle")
+    || lookup_bool("lx_replaying_class_setter")
+  {
+    return Ok(Vec::new());
+  }
+  let records = displaced_records();
+  if records.is_empty() || !has_author_creators() {
+    return Ok(Vec::new());
+  }
+  assign_value("lx_displaced_decided", true, Some(Scope::Global));
+  let mut stores: Vec<Token> = Vec::new();
+  for record in &records {
+    if !stores.contains(&record.store) {
+      stores.push(record.store);
+    }
+  }
+  use crate::latex_constructs::title_page_print_tokens;
+  let Some((printed, letters)) = sentinel_runs(&stores, &title_page_print_tokens, true)? else {
+    return Ok(Vec::new());
+  };
+  let printed = if printed.split(',').any(|name| {
+    stores
+      .iter()
+      .find(|t| t.with_str(|cs| cs == name))
+      .and_then(parameterless_body)
+      .as_ref()
+      .and_then(plain_value_text)
+      .is_some()
+  }) {
+    match crate::latex_constructs::speculative_title_page_run(title_page_print_tokens(&[]))? {
+      crate::latex_constructs::SpeculativeRun::Printed(real) => {
+        confirmed_printed(&stores, &printed, &letters, &real)
+      },
+      _ => printed,
+    }
+  } else {
+    printed
+  };
+  DebugFeature!(
+    "frontmatter",
+    "FRONT displaced stores printed by the title page: [{printed}] of {}",
+    stores.len()
+  );
+  route_displaced(records, &printed);
+  hand_displaced_stores()
+}
+
+/// Does a displaced setter's store stay the class's by the rules K11 applies to its own stores ([`store_setter_body`],
+/// [`reroute_raw_class_stores`]) — the pure-store test of its body aside, which is what the displaced route loosens: a
+/// macro of the raw files' that is no title-page code reads it ([`ClassReaders::read_by_other_code`]), or the title page
+/// prints it glued to the class's text or in one line with another value the frontmatter does not carry
+/// ([`ClassReaders::store_lines`], judged with the document's values: uiucthesis.cls:177 `for the degree of \@degree\ in
+/// \@dept\\`, zzfmd's `{\@jinfo, \@address\par}`)? A store named by computation (`\csname affil\the\affilcount
+/// \endcsname`) has no static reader, and none of these holds for it.
+fn displaced_store_stays_the_classs(
+  store: &Token,
+  readers: &ClassReaders,
+  carried: &[Token],
+) -> bool {
+  if readers.read_by_other_code(store) {
+    return true;
+  }
+  let lines = readers.store_lines(store, &|t: &Token| carried.contains(t));
+  lines.glued || lines.others.iter().any(prints_as_a_value)
+}
+
+/// The displaced setters' records whose macro the title page prints (`printed`, the names of the printed stores) are
+/// routed ([`route_and_hand_displaced`]) — the deposit and the replay take each part out of its macro
+/// (`lx_replay_records`, sect05.rs `\lx@replay@records`), and [`hand_displaced_stores`] hands each call's argument to
+/// the API — while K11's reader and line rules leave the store to them ([`displaced_store_stays_the_classs`]) and no
+/// entry is in doubt ([`displaced_in_doubt`], [`displaced_argument_in_doubt`]); the rest stay the class's text.
+fn route_displaced(records: Vec<DisplacedRecord>, printed: &str) {
+  let printed: Vec<&str> = printed.split(',').filter(|n| !n.is_empty()).collect();
+  let mut replay = match lookup_value("lx_replay_records") {
+    Some(Stored::VecDequeStored(records)) => records,
+    _ => VecDeque::new(),
+  };
+  let mut routed = VecDeque::new();
+  let readers = ClassReaders::survey();
+  let mut carried = frontmatter_owned_stores();
+  carried.extend(records.iter().map(|r| r.store));
+  for record in records {
+    if !record.store.with_str(|cs| printed.contains(&cs)) {
+      continue;
+    }
+    if displaced_store_stays_the_classs(&record.store, &readers, &carried) {
+      Info!(
+        "frontmatter",
+        s!("\\{}", record.setter),
+        s!(
+          "\\{} stays the class's: other code of the class reads its store, or its title page prints it in one line with another value",
+          record.setter
+        )
+      );
+      continue;
+    }
+    let entries = displaced_entries(&record.arg);
+    if displaced_in_doubt(&entries) || displaced_argument_in_doubt(&record.arg) {
+      Info!(
+        "frontmatter",
+        s!("\\{}", record.setter),
+        s!(
+          "\\{} leads with a mark no author requests, or holds the class's own entry markup: its line stays where the class's title page prints it",
+          record.setter
+        )
+      );
+      continue;
+    }
+    replay.push_back(Stored::VecDequeStored(VecDeque::from([
+      Stored::String(pin(record.store.with_str(ToString::to_string))),
+      Stored::Tokens(Tokens::new(record.part)),
+    ])));
+    routed.push_back(Stored::VecDequeStored(VecDeque::from([
+      Stored::String(pin(record.setter)),
+      Stored::Tokens(record.arg),
+    ])));
+  }
+  if routed.is_empty() {
+    return;
+  }
+  assign_value(
+    "lx_replay_records",
+    Stored::VecDequeStored(replay),
+    Some(Scope::Global),
+  );
+  assign_value(
+    "lx_displaced_routed",
+    Stored::VecDequeStored(routed),
+    Some(Scope::Global),
+  );
+}
+
+/// Each routed displaced call ([`route_displaced`]) as the API's contacts of the creators, in the order the document made them — an entry each
+/// ([`displaced_entries`]), through the in-place API of its kind ([`displaced_api`]: `\lx@add@affiliation[annotate=run]`,
+/// `\lx@add@address[annotate=run]`), which reads its leading mark as its label and cuts several marked entries of one
+/// line; labels gobbled ([`without_labels`]). Once.
+fn hand_displaced_stores() -> Result<Vec<Digested>> {
+  let Some(Stored::VecDequeStored(routed)) = lookup_value("lx_displaced_routed") else {
+    return Ok(Vec::new());
+  };
+  assign_value("lx_displaced_routed", Stored::None, Some(Scope::Global));
+  let mut calls: Vec<Token> = Vec::new();
+  for record in &routed {
+    let Stored::VecDequeStored(fields) = record else {
+      continue;
+    };
+    let (Some(Stored::String(setter)), Some(Stored::Tokens(arg))) = (fields.front(), fields.get(1))
+    else {
+      continue;
+    };
+    let setter = with(*setter, ToString::to_string);
+    let Some(api) = displaced_api(&setter) else {
+      continue;
+    };
+    for entry in displaced_entries(&without_labels(arg)) {
+      // (an entry holding several marks the names request, which no line split cuts — `\institute{$^1$Univ A,
+      // $^2$Univ B, …}` run in, 1812.07638's 64 institutes under 200 names —, is no one entry a run shares: it lands
+      // once at the block, `_unsplit` for the API's Cut to read by its marks, as the REVTeX binding's fail-safe;
+      // FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model" step 4)
+      let api = if requested_marks_held(&entry) > 1 {
+        api.replacen("annotate=run", "label={addresses:block},_unsplit=true", 1)
+      } else {
+        api.to_string()
+      };
+      calls.extend(mouth::tokenize_internal(TeXString::assembled(api)).unlist());
+      calls.push(T_BEGIN!());
+      calls.extend(entry.unlist());
+      calls.push(T_END!());
+    }
+    Info!(
+      "frontmatter",
+      s!("\\{setter}"),
+      s!(
+        "The class's title page prints what \\{setter} stored: the creators' contacts, taken out of the title page's deposit"
+      )
+    );
+  }
+  if calls.is_empty() {
+    return Ok(Vec::new());
+  }
+  Ok(vec![digest_store_calls(calls)?])
 }
 
 /// Reroute every table setter the raw class `cls` defined as a store; a binding's own setter
@@ -3908,12 +4450,15 @@ pub fn before_title_page_runs() -> Result<()> {
   } else {
     offtable_candidates()
   };
-  // (the unclaimed-text net's candidates: [`net_candidates`])
+  // (the unclaimed-text net's candidates: [`net_candidates`]; not a macro a displaced setter's call wrote, whose text
+  // the creators' contacts hold, [`route_and_hand_displaced`])
   let mut net = if lookup_bool("lx_net_handed") {
     Vec::new()
   } else {
     net_candidates()
   };
+  let displaced: Vec<Token> = displaced_records().into_iter().map(|r| r.store).collect();
+  net.retain(|store| !displaced.contains(store));
   if rerouted.is_empty() && offtable.is_empty() && net.is_empty() {
     return Ok(());
   }
@@ -3991,6 +4536,7 @@ pub fn before_title_page_runs() -> Result<()> {
     "FRONT title-page sentinels: printed [{printed}] of {} candidate stores; the letters run: {letters}",
     all.len()
   );
+
   // (the deposit's and the replay's runs, over K11's off-table stores and the net's candidates; one that cannot be
   // made or kept with the net's is made again without them, and the net decides nothing)
   let typeset_runs = |stores: &[Token]| -> Result<Option<(String, String)>> {
@@ -4052,8 +4598,12 @@ pub fn before_title_page_runs() -> Result<()> {
     assign_value("lx_sentinel_ran", true, Some(Scope::Global));
   }
   if !net.is_empty() {
-    let mut net_printed = of(&printed, &net);
-    // (A2: what the refused begin codes of the frontmatter environments print, [`net_begin_code_tokens`])
+    let net_printed = of(&printed, &net);
+    // (A2: what the refused begin codes of the frontmatter environments print, [`net_begin_code_tokens`] — and the
+    // title page does not —, handed on only when the document opens the environment after this `\maketitle`
+    // ([`hand_net_begin_code_stores`]): the class prints it then, with the values it then has; never opened, or opened
+    // before, nothing printed it there (review rev98c S1))
+    let mut net_begin = String::new();
     if net_begin_code_tokens(&[]).is_some()
       && let Some((list, _)) = sentinel_runs_with(
         &net,
@@ -4064,13 +4614,18 @@ pub fn before_title_page_runs() -> Result<()> {
     {
       for name in list.split(',').filter(|n| !n.is_empty()) {
         if !net_printed.split(',').any(|n| n == name) {
-          if !net_printed.is_empty() {
-            net_printed.push(',');
+          if !net_begin.is_empty() {
+            net_begin.push(',');
           }
-          net_printed.push_str(name);
+          net_begin.push_str(name);
         }
       }
     }
+    assign_value(
+      "lx_sentinel_net_begin",
+      Stored::String(pin(net_begin)),
+      Some(Scope::Global),
+    );
     for (run, list) in [
       ("printed", net_printed),
       ("deposit", of(&deposit, &net)),
@@ -4363,15 +4918,23 @@ fn net_value_changed(cs: &Token, owned: &[Token]) -> bool {
   }
 }
 
+/// What [`note_document_hooks`] reads before the begin-document hooks: the Document-origin definitions, by address,
+/// each kept alive with them so no address is reused by a definition made since (review rev98c N1); and the token
+/// registers' contents.
+type HooksBefore = (FxHashSet<usize>, Vec<Stored>, HashMap<SymStr, Tokens>);
+
 thread_local! {
-  /// The Document-origin definitions before the begin-document hooks ran (`note_document_hooks`), by address.
-  static NET_HOOKS_BEFORE: std::cell::RefCell<FxHashSet<usize>> =
-    std::cell::RefCell::new(FxHashSet::default());
+  /// [`HooksBefore`], from the snapshot before the hooks ran.
+  static NET_HOOKS_BEFORE: std::cell::RefCell<HooksBefore> =
+    std::cell::RefCell::new((FxHashSet::default(), Vec::new(), HashMap::default()));
 }
 
 /// Around the begin-document hooks (sect02.rs `\begin{document}`): before them (`before`), the Document-origin
-/// definitions that exist; after them, each one they made is recorded as the hooks' (`lx_net_hook_<name>`), a class
-/// default for the net (`net_value_changed`).
+/// definitions that exist and the token registers' contents; after them — `\AtBeginDocument`'s, and the
+/// `begindocument/end` hook's, which `\begin{document}` reads after itself (`\lx@net@document@hooks@done`) —, each
+/// definition they made is recorded as the hooks' (`lx_net_hook_<name>`), and each token register they changed has the
+/// contents they left as its raw default (`lx_net_toks_default_<name>`): a class default for the net
+/// (`net_value_changed`), as a class's `\AtBeginDocument{\setjournal{…}}` filling `\jtoks` is (review rev98c S2).
 pub fn note_document_hooks(before: bool) {
   if !lookup_bool("lx_net_raw_loaded") {
     return;
@@ -4383,16 +4946,44 @@ pub fn note_document_hooks(before: bool) {
   let made = current_meanings_where(
     |stored| matches!(stored, Stored::Expandable(d) if d.get_origin() == DefinitionOrigin::Document),
   );
+  let registers = current_meanings_where(
+    |stored| matches!(stored, Stored::Register(r) if matches!(r.register_type, RegisterType::Tokens)),
+  );
+  let contents = |key: &SymStr| -> Tokens {
+    with(*key, |name| match lookup_register_quiet(name) {
+      Some(RegisterValue::Tokens(value)) => value,
+      _ => Tokens::default(),
+    })
+  };
   if before {
     let set: FxHashSet<usize> = made.iter().filter_map(|(_, m)| address(m)).collect();
-    NET_HOOKS_BEFORE.with(|c| *c.borrow_mut() = set);
+    let kept: Vec<Stored> = made.into_iter().map(|(_, m)| m).collect();
+    let toks: HashMap<SymStr, Tokens> = registers
+      .iter()
+      .map(|(key, _)| (*key, contents(key)))
+      .collect();
+    NET_HOOKS_BEFORE.with(|c| *c.borrow_mut() = (set, kept, toks));
     return;
   }
-  let set = NET_HOOKS_BEFORE.with(|c| std::mem::take(&mut *c.borrow_mut()));
+  let (set, _kept, toks) = NET_HOOKS_BEFORE.with(|c| std::mem::take(&mut *c.borrow_mut()));
   for (key, meaning) in made {
     if address(&meaning).is_some_and(|a| !set.contains(&a)) {
       let name = with(key, ToString::to_string);
       assign_value(&s!("lx_net_hook_{name}"), meaning, Some(Scope::Global));
+    }
+  }
+  for (key, _) in registers {
+    let now = contents(&key);
+    if toks
+      .get(&key)
+      .is_none_or(|was| was.unlist_ref() != now.unlist_ref())
+    {
+      let name = with(key, ToString::to_string);
+      assign_value(
+        &s!("lx_net_toks_default_{name}"),
+        Stored::Tokens(now),
+        Some(Scope::Global),
+      );
     }
   }
 }
@@ -4495,11 +5086,44 @@ fn hand_net_stores() -> Result<Vec<Digested>> {
   if lookup_bool("lx_title_page_replay_kept") {
     typeset.extend(sentinel_list("net_replay"));
   }
-  let mut calls: Vec<Token> = Vec::new();
   let handed: Vec<SymStr> = sentinel_list("net_printed")
     .into_iter()
     .filter(|key| !typeset.contains(key))
     .collect();
+  net_note_calls(handed)
+}
+
+/// When the document opens a frontmatter environment after the `\maketitle` that ran the net (`\lx@abstract@class@setters`,
+/// right after the class's refused begin code is replayed there): the net's candidates only that begin code prints
+/// (`lx_sentinel_net_begin`, [`before_title_page_runs`]), as notes of the author block, their values as they are now
+/// (sig-alternate.cls:736-790's `\the\tntoks` under `{abstract}`: 1206.6940, cs0405006). Once; not after the authors
+/// were sealed. A document that never opens the environment, or opens it before `\maketitle`, prints none of them
+/// (review rev98c S1: noabs, absfirst).
+pub fn hand_net_begin_code_stores() -> Result<()> {
+  if !lookup_bool("lx_net_ran")
+    || lookup_bool("lx_depositing_frontmatter_fields")
+    || lookup_bool("lx_replaying_class_setter")
+    || frontmatter_entry_sealed("ltx:creator", "author")
+  {
+    return Ok(());
+  }
+  let pending = sentinel_list("net_begin");
+  if pending.is_empty() {
+    return Ok(());
+  }
+  assign_value(
+    "lx_sentinel_net_begin",
+    Stored::String(pin("")),
+    Some(Scope::Global),
+  );
+  // (frontmatter entries queued, no box of their own)
+  let _ = net_note_calls(pending)?;
+  Ok(())
+}
+
+/// The net's notes ([`hand_net_stores`]) of the stores `handed`, digested.
+fn net_note_calls(handed: Vec<SymStr>) -> Result<Vec<Digested>> {
+  let mut calls: Vec<Token> = Vec::new();
   let class_text = net_class_text(&handed);
   for (key, class_text) in handed.into_iter().zip(class_text) {
     let name = with(key, ToString::to_string);
@@ -4520,7 +5144,7 @@ fn hand_net_stores() -> Result<Vec<Digested>> {
       .unlist(),
     );
     calls.push(T_BEGIN!());
-    calls.extend(value.unlist());
+    calls.extend(without_labels(&value).unlist());
     calls.push(T_END!());
     Info!(
       "frontmatter",
@@ -6871,7 +7495,10 @@ LoadDefinitions!({
   DefPrimitive!("\\lx@store@defaults", sub[_args] {
     verify_title_page_labels()?;
     hand_copy_frontmatter_defaults();
-    let harvested = harvest_stores(true)?;
+    // (the displaced setters' calls the title page prints, the authors' contacts before any store makes a creator of
+    // its own: [`route_and_hand_displaced`])
+    let mut harvested = route_and_hand_displaced()?;
+    harvested.extend(harvest_stores(true)?);
     Ok(harvested)
   });
   // The first token of the kernel abstract's body (`\lx@begin@abstract`, base_utilities.rs), in the frame it is
@@ -6916,6 +7543,7 @@ LoadDefinitions!({
       assign_value("lx_abstract_braceless", false, Some(Scope::Global));
     } else {
       crate::latex_constructs::replay_class_begin_code("abstract", &keep_out)?;
+      hand_net_begin_code_stores()?;
     }
     for ((name, api, definer, own), defined) in setters.into_iter().zip(defined) {
       let cs = T_CS!(&s!("\\{name}"));
@@ -6987,6 +7615,66 @@ LoadDefinitions!({
     crate::latex_constructs::keep_class_author_reader();
     reroute_raw_class_stores(&cls)?;
     reroute_in_place_contact_setters(&cls)?;
+    reroute_displaced_setters(&cls)?;
+  });
+  // After the begin-document hooks, the `begindocument/end` one too, which `\begin{document}` reads after itself
+  // (sect02.rs): what they made is a class default for the net ([`note_document_hooks`]).
+  DefPrimitive!("\\lx@net@document@hooks@done", {
+    note_document_hooks(false);
+  });
+  // A displaced setter's call ([`reroute_displaced_setters`]): the file's own setter runs inside an assignment journal,
+  // and what it stored of its argument is recorded ([`DISPLACED_RECORDS`]). Not in a speculative run or a replay, whose
+  // own journal is open (journals do not nest) and whose stores are undone.
+  DefPrimitive!("\\lx@displaced@begin", {
+    // (a journal a call left open, its end never reached, is closed with what it saw)
+    if let Some(stale) = DISPLACED_JOURNAL.with(|j| j.borrow_mut().take()) {
+      stale.keep();
+    }
+    if !lookup_bool("lx_replaying_class_setter")
+      && !lookup_bool("lx_depositing_class_maketitle")
+      && let Some(journal) = begin_assignment_journal()
+    {
+      DISPLACED_JOURNAL.with(|j| *j.borrow_mut() = Some(journal));
+    }
+  });
+  DefPrimitive!("\\lx@displaced@end{}{}", sub[(name, arg)] {
+    let Some(journal) = DISPLACED_JOURNAL.with(|j| j.borrow_mut().take()) else {
+      DebugFeature!("frontmatter", "FRONT displaced {name}: no journal");
+      return Ok(Vec::new());
+    };
+    let assigned = journal.assigned(TableName::Meaning);
+    journal.keep();
+    let name = name.to_string();
+    // (an argument of fewer than two letters is no affiliation's or address's text a part could be told by)
+    let letters = arg.unlist_ref().iter().filter(|t| t.get_catcode() == Catcode::LETTER).count();
+    let parts = if letters < 2 {
+      Vec::new()
+    } else {
+      crate::latex_constructs::assigned_parts_holding(&assigned, &arg, &[], true)
+    };
+    DebugFeature!(
+      "frontmatter",
+      "FRONT displaced {name}: assigned [{}], {} part(s)",
+      assigned.iter().map(|(k, _)| with(*k, ToString::to_string)).collect::<Vec<_>>().join(","),
+      parts.len()
+    );
+    if parts.is_empty() {
+      return Ok(Vec::new());
+    }
+    let mut records = match lookup_value(DISPLACED_RECORDS) {
+      Some(Stored::VecDequeStored(records)) => records,
+      _ => VecDeque::new(),
+    };
+    for (key, part) in parts {
+      records.push_back(Stored::VecDequeStored(VecDeque::from([
+        Stored::String(pin(name.trim())),
+        Stored::String(key),
+        Stored::Tokens(Tokens::new(part)),
+        Stored::Tokens(arg.clone()),
+      ])));
+    }
+    assign_value(DISPLACED_RECORDS, Stored::VecDequeStored(records), Some(Scope::Global));
+    Ok(Vec::new())
   });
   // A rerouted contact setter's call that prints its line where it is called ([`class_contact`]).
   DefMacro!("\\lx@class@contact{}{}", sub[(api, class)] {
@@ -7000,6 +7688,10 @@ LoadDefinitions!({
   // print, and it was lost)
   DefMacro!("\\lx@class@contact@stored{}{}", sub[(api, class)] {
     Ok(class_contact(api, class, false))
+  });
+  // …and the call of a rerouted setter that prints its argument with no line break of its own ([`run_in_contact_setter`])
+  DefMacro!("\\lx@class@contact@runin{}{}", sub[(api, class)] {
+    Ok(class_contact_run_in(api, class))
   });
   // …and the call of a rerouted `[optional]{mandatory}` setter: the setter's name, whether it prints its line where it
   // is called, its two arguments ([`optional_contact`])
@@ -7080,5 +7772,9 @@ LoadDefinitions!({
       reroute_raw_package_stores(&sty)?;
     }
     reroute_in_place_contact_setters(&sty)?;
+    // (a package a raw class's read loads is that class's, its setters K11's to take first at the class's end)
+    if !in_a_raw_class_read() {
+      reroute_displaced_setters(&sty)?;
+    }
   });
 });

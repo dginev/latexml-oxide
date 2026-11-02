@@ -828,6 +828,29 @@ pub fn digested_authors_requesting(key: &str) -> bool {
       .any(|requested| labels.iter().any(|l| l == requested))
 }
 
+/// Whether an author creator already digested — a `\maketitle` placed it — requests the affiliation label `key`: the
+/// labels its printed marks request (`_annotations`), what [`digested_authors_requesting`] reads of a flush in progress,
+/// read after it (frontmatter_stores.rs `displaced_in_doubt`, at `\maketitle`).
+pub fn placed_authors_requesting(key: &str) -> bool {
+  let labels = clean_frontmatter_labels(key, "affiliation");
+  !labels.is_empty()
+    && with_value("frontmatter", |v| match v {
+      Some(Stored::HashTagData(frontmatter)) => {
+        frontmatter.get("ltx:creator").is_some_and(|creators| {
+          creators
+            .iter()
+            .filter(|c| c.attr.get("role").map(String::as_str) == Some("author"))
+            .any(|c| {
+              c.attr.get("_annotations").is_some_and(|requested| {
+                requested.split(',').any(|r| labels.iter().any(|l| l == r))
+              })
+            })
+        })
+      },
+      _ => false,
+    })
+}
+
 /// Whether an author's name shows a mark — a queued author's, or one of the flush being digested
 /// ([`digested_authors_requesting`]'s): what a contact's leading mark is read against (`frontmatter_stores.rs`
 /// `leads_with_unrequested_mark`) — with none, the marks the names print are not read.

@@ -1,0 +1,28 @@
+% A displaced store whose one line holds several marked entries the names request (`\institute{$^{1}$Univ A, $^{2}$Univ
+% B}` run in, 1812.07638's 64 institutes under 200 names) is no one entry the authors' run shares: given to the run it
+% copied the whole list onto every author (220,900 → 802,017 words in 1812.07638). It lands once at the block
+% (frontmatter_stores.rs `hand_displaced_stores`: `label={addresses:block},_unsplit=true`, the REVTeX binding's
+% fail-safe, FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model" step 4), where the frontmatter observer reads it by its
+% marks: each entry its requesting authors'.
+% witness: 1812.07638 (subdepth.sty `\institute`), nlin0310001 (eph)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2 and Cy Cole1", "1 Univ A, Town, 2 Univ B, City"
+% engines: rust 99b0 = 0 errors, 0 warnings, the line a body paragraph, no contact; perl = no raw class load
+% expect:  0 errors, 0 warnings; Ann Able and Cy Cole hold <contact role="affiliation">1Univ A, Town</contact>, Bob
+%          Baker <contact role="affiliation">2Univ B, City</contact>; the body holds only "Text."
+% status:  RED (99b0) -> GREEN (99b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{dsinst.cls}
+\ProvidesClass{dsinst}\LoadClass{article}
+\newcommand{\institute}[1]{\gdef\ds@inst{{\itshape #1}}}
+\let\ds@inst\empty
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\vskip1em
+  {\small\ds@inst\par}\end{center}}
+\end{filecontents*}
+\documentclass{dsinst}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$ and Cy Cole$^{1}$}
+\institute{$^{1}$Univ A, Town, $^{2}$Univ B, City}
+\maketitle
+Text.
+\end{document}
