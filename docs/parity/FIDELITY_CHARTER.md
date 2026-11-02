@@ -97,6 +97,9 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   that evidence: spelling decides among them, as above (1204.1484: `montaldo@`, `piu@` under Caddeo's call).
 - **The marks shown on a name are its requests for labelled affiliations**; a name's label is the name alone
   (2026-10-21, rank 93).
+- **"Deceased" is an annotation on the author, of the same kind as "Corresponding author"** (2026-11-02): a legend
+  line `$^\dagger$Deceased` is a note of the names carrying its symbol, never an affiliation, read by the shared kind
+  reader (`classify_thanks`) alongside correspondence, contribution and address change.
 - **A footnote-list symbol (`\dag` included) that starts a line labels that line**; the line goes to the authors who
   carry the symbol, affiliation or legend alike (2026-10-21). An e-mail address on such a line that spells none of the
   carriers is every carrier's — the symbol-line rule wins over "not guessed onto an author" there (2026-10-30, "every

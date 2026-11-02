@@ -29975,8 +29975,9 @@ in a `\@name` store) nor the in-place reroute (OD #936: a line break in the sett
   the names request, which no line split cuts, lands once at the block (`label={addresses:block},_unsplit=true`, the
   REVTeX binding's fail-safe, FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model" step 4), which the frontmatter
   observer reads by its marks — never the whole list copied onto each author (1812.07638's 64 run-in institutes under
-  200 names, which the run gave every author: 220,900 → 802,017 words before the fail-safe); the API's Cut of such an
-  entry is batch 99a's. A line keeps its printed mark, as the class prints it; the names no longer show a mark a line
+  200 names, which the run gave every author: 220,900 → 802,017 words before the fail-safe); batch 99a's Cut skips such a call (it carries `label=` /
+  `_unsplit`, `affiliations.rs` `cut_marked_contact`), so handing it to the Cut is a composition follow-up (SYNC row
+  "99b", rev99b2 answer 5). A line keeps its printed mark, as the class prints it; the names no longer show a mark a line
   answers (`hide_answered_marks`). A labelled line that is a legend — a footnote-symbol mark and a correspondence,
   contribution or address-change text (queue_digest.rs `legend_note_kind`, `classify_thanks`: `$^*$Author to whom any
   correspondence should be addressed.`) — is a note of the names carrying the symbol (`ltx:note role=thanks`, its mark
@@ -30027,9 +30028,16 @@ first entry only — the in-place route's observer Cut carries it (`\lx@fm@entry
 Order (R8): the relocation places a labelled contact after the creator's directly attached ones, so a run-in or in-place
 `\email` line comes before the labelled affiliations printed above it (2412.06969, 2503.13373; RED repro
 `run_in_lines_a_run_places_keep_their_order`); the run would keep the order but cannot tell at the call whether a later
-`\author` requests the label (2608.19687) — the relocation's placement, batch 99a's relocate.rs. (e)
+`\author` requests the label (2608.19687) — the relocation's placement, batch 99a's relocate.rs. Fixed in bundle
+int127a by 99a's `relocate::at_queue_position` (a relocated affiliation takes its call's queue place): on the integrated
+binary the papers rev99b2 found (2412.06969, 2503.13373, 2512.20289, 2603.07344, 2607.12158, 2609.01336, 2609.32125)
+and 2608.28486 print their affiliations before the e-mail, as pdflatex does. (e)
 A label the class's own code prints outside the store, before it (`\noindent$^{1}$\enspace\@institute`), stays in the body
 without its entry (repro `displaced_class_numbered_and_institutes_go_by_their_numbers`; caosp's `\llap` label prints none).
+(f) A line led by a control-sequence footnote symbol that no name requests (`\affil{$^\dagger$Deceased}`) is not read
+as unrequested — `leads_with_unrequested_mark` and `displaced_in_doubt` count letter/other tokens only — so it goes to
+every author of the run on the run-in, displaced and observer-declined routes (review rev99b2 F2; probes
+`rev99b2/probes/q4c`, `q4d`; synthetic; base kept it in the body).
 
 **Guards** `perfect_kernel_batch99b::{a_marked_address_store_the_class_title_page_prints_is_each_authors_line,
 a_numbered_affiliation_store_is_its_sole_authors, a_run_in_affiliation_setter_line_is_its_marked_authors}`; repros
