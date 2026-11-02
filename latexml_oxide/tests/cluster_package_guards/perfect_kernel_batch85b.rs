@@ -354,21 +354,22 @@ fn llncs_ambiguous_spelling_is_no_place() {
   ]);
 }
 
-/// 1701.08125: the e-mail call split by owner sets `cms@` on Christian Müller-Schloer and keeps the printed braces of
-/// the list of local parts no one owns, `{stomforde|bsick}@uni-kassel.de`, the block's. Red (85b r1): its braces lost.
+/// 1701.08125: the e-mail call split by owner sets `cms@` on Christian Müller-Schloer. Red (85b r1): the braces of the
+/// list of local parts lost. Since 100b (OD #956) a `|` parts a group's local parts as `,` and `;` do
+/// (`ADDRESS_GROUP_SEPARATORS`): `{stomforde|bsick}@uni-kassel.de` is Sven Tomforde's and Bernhard Sick's addresses,
+/// each the author it spells — it had stayed one contact on the block.
 #[test]
 fn llncs_listed_local_parts_keep_their_braces() {
   let institute = "affiliation=Intelligent Embedded Systems Lab, University of Kassel, Germany Institute for Systems \
                    Engineering, Leibniz University of Hannover";
   assert_creators(repro!("llncs_listed_local_parts_keep_their_braces.tex"), &[
-    &["Sven Tomforde", institute],
-    &["Bernhard Sick", institute],
+    &["Sven Tomforde", institute, "email=stomforde@uni-kassel.de"],
+    &["Bernhard Sick", institute, "email=bsick@uni-kassel.de"],
     &[
       "Christian Müller-Schloer",
       institute,
       "email=cms@sra.uni-hanover.de",
     ],
-    &["email={stomforde|bsick}@uni-kassel.de"],
   ]);
 }
 

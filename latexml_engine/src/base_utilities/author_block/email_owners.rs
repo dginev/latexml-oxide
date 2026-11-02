@@ -306,6 +306,9 @@ pub(in crate::base_utilities) struct NameKeys {
   /// the name's words after the first that have three letters or more (`Ph.~Boucaud` "boucaud",
   /// `J.~Rodr\'iguez-Quintero` "rodriguez", "quintero")
   surnames: Vec<String>,
+  /// the name's words after the first of two letters (`Weili An` "an", `Wei Li` "li"), which spell only a local part of
+  /// those letters alone, digits aside (`an107@purdue.edu` Weili An's, not Anusuya Nallathambi's initials "an", 2608.22602)
+  short_surnames: Vec<String>,
   /// its first word, when it has three letters or more (`Ahna R. Girshick` "ahna"; not the initial of `J.~Smith`)
   given: Option<String>,
   /// the spellings an address opens with that join two of its words: the first word's initial and a later word of two
@@ -359,6 +362,11 @@ impl NameKeys {
       surnames: later
         .iter()
         .filter(|word| word.chars().count() >= 3)
+        .cloned()
+        .collect(),
+      short_surnames: later
+        .iter()
+        .filter(|word| word.chars().count() == 2)
         .cloned()
         .collect(),
       given: Some(first.clone()).filter(|word| word.chars().count() >= 3),
@@ -498,7 +506,12 @@ pub(in crate::base_utilities) fn spelled_owners(
   let scores: Vec<(usize, usize)> = name_keys
     .iter()
     .map(|keys| {
-      let surname: usize = keys.surnames.iter().map(surname_score).sum();
+      let surname: usize = keys.surnames.iter().map(surname_score).sum::<usize>()
+        + keys
+          .short_surnames
+          .iter()
+          .find(|short| **short == local)
+          .map_or(0, |short| short.chars().count());
       (
         (surname + keys.given.as_ref().map_or(0, given_score)).max(joined_score(keys)),
         surname,
@@ -662,4 +675,91 @@ pub(in crate::base_utilities) fn prints_nothing(line: &Tokens) -> bool {
     }
   }
   true
+}
+
+/// Whether an e-mail address is a pattern for the authors' addresses, not one of them: its local part is only the words
+/// of a name template (`FirstName.LastName@SIT.Fraunhofer.de`, `{firstname.lastname}@…`, `name.surname@…`; 2006.12418).
+pub(in crate::base_utilities) fn is_pattern_address(address: &str) -> bool {
+  let Some((local, _)) = address.split_once('@') else {
+    return false;
+  };
+  let words: Vec<String> = local
+    .split(|c: char| !c.is_alphanumeric())
+    .filter(|w| !w.is_empty())
+    .map(str::to_lowercase)
+    .collect();
+  !words.is_empty()
+    && words.iter().all(|w| {
+      matches!(
+        w.as_str(),
+        "first"
+          | "last"
+          | "firstname"
+          | "lastname"
+          | "name"
+          | "surname"
+          | "givenname"
+          | "familyname"
+          | "given"
+          | "family"
+          | "initial"
+          | "initials"
+          | "fname"
+          | "lname"
+      )
+    })
+}
+
+/// The owners FIDELITY_CHARTER §4's chain gives the e-mail addresses printed inside an affiliation-kind entry (an
+/// affiliation, alternate affiliation or address: its lines of addresses, its e-mail calls), the one Link step both
+/// engines run — the author block's at the flush (`insert::link_entry_addresses`) and the frontmatter observer's
+/// reading (`Resolver::take_out_entry_addresses`, `Resolver::answer_inner_emails`). `spelled` is each address of the
+/// entry's the author it spells (any live author: [`spelled_owner`]), `run` the addresses read here (one run of them,
+/// in print order), `carriers` the authors holding the entry, in order, and `symbol_line` whether a footnote symbol
+/// leads the entry, `addressed` the carriers holding an address of their own beside it, and `sole_author` whether the
+/// document has one author, whose every address is (the charter's "the group's only author"). Each address of `run`, in
+/// order: the author it spells (`owner:spelled`); else the entry's only carrier, when it is the entry's one address no
+/// one spells, no other address of the entry spells that carrier and the carrier holds none of its own
+/// (`owner:only-carrier`: `{steen, sund}@…` under Steen alone is two people's); else, on a symbol-led line, every carrier (`owner:carriers`, the charter's "every symbol
+/// carrier", 2026-10-30 — before the order, so `$^\dagger$alpha@x.org, beta@y.org` under two carriers of `\dagger` is
+/// both carriers'); else, the run's addresses one per carrier that every spelled one agrees with, the carrier at its
+/// place (`owner:order`, OD #805); else `None`, the block's, once (`owner:block`: ruling E, main session 2026-11-02 —
+/// the charter's step 4 wins over the "stays in the entry" fail-safe of OD #938; astro-ph0512555's `Email:dzg@,
+/// xywang@, hyf@` under four carriers of entry 2). Surname-first initials (`dzg` for Z. G. Dai) are not read: a false
+/// match is worse than the block.
+pub fn entry_address_owners(
+  spelled: &[Option<usize>],
+  run: std::ops::Range<usize>,
+  carriers: &[usize],
+  symbol_line: bool,
+  addressed: &[usize],
+  sole_author: bool,
+) -> Vec<(Option<Vec<usize>>, &'static str)> {
+  // (the only carrier's only where the entry prints that one address no one spells and the carrier holds none of its own:
+  // several unspelled under one name are no one name's — 2403.17706's `1022041122@, 1223045440@, hhp@` under Haiping
+  // Huang's second institute, 2506.06908's welded entry under Chenzhi Xu —, nor is one under a name already holding its
+  // own — 2411.17073's `bull@` under Awais Naeem, `awais.naeem@` his)
+  let unspelled = spelled.iter().filter(|s| s.is_none()).count();
+  let in_order = run.len() == carriers.len()
+    && carriers.len() >= 2
+    && spelled[run.clone()]
+      .iter()
+      .zip(carriers)
+      .all(|(s, c)| s.is_none_or(|s| s == *c));
+  run
+    .clone()
+    .map(|at| match (spelled[at], carriers) {
+      (Some(owner), _) => (Some(vec![owner]), "owner:spelled"),
+      (None, [only])
+        if sole_author
+          || (!spelled.contains(&Some(*only)) && unspelled == 1 && !addressed.contains(only)) =>
+      {
+        (Some(vec![*only]), "owner:only-carrier")
+      },
+      (None, [] | [_]) => (None, "owner:block"),
+      (None, _) if symbol_line => (Some(carriers.to_vec()), "owner:carriers"),
+      (None, _) if in_order => (Some(vec![carriers[at - run.start]]), "owner:order"),
+      (None, _) => (None, "owner:block"),
+    })
+    .collect()
 }

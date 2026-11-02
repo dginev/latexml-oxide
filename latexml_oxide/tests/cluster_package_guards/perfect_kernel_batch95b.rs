@@ -47,49 +47,60 @@ pub(super) fn assert_written(tex: &str, xml: &[&[&str]], shadow: &[&str]) {
 /// holding the whole line as an affiliation.
 #[test]
 fn ieeetran_is_written() {
-  assert_written(
-    repro!("ieeetran_entry_addresses_written.tex"),
-    &[
+  // (since 100b, OD #956, today's kinds the e-mail line itself at the API and places it by the chain the reading runs:
+  // the reading reads the entry's e-mails, `api:inner-contact owner:inner-email`, and the writer has nothing to write)
+  let tex = repro!("ieeetran_entry_addresses_written.tex");
+  let (written, _, _, writer) = assert_reading(
+    tex,
+    Some(&[
       &["Ann Able 1", "affiliation=Univ X", "email=ann.able@x.org"],
       &["Bob Baker 1", "affiliation=Univ X", "email=bbaker@x.org"],
       &["Cid Cole 2", "affiliation=Univ Y", "email=cid@y.org"],
-    ],
+    ]),
     &[
       "C Ann Able [1] | line:names",
       "  a Univ X | api:leading-mark",
-      "  c email ann.able@x.org | api:annotate:new owner:entry-address owner:spelled",
+      "  c email ann.able@x.org | api:annotate:new api:inner-contact owner:inner-email owner:spelled",
       "C Bob Baker [1] | line:names sep:comma",
       "  a Univ X | api:leading-mark",
-      "  c email bbaker@x.org | api:annotate:new owner:entry-address owner:spelled",
+      "  c email bbaker@x.org | api:annotate:new api:inner-contact owner:inner-email owner:spelled",
       "C Cid Cole [2] | line:names sep:word",
       "  a Univ Y | api:leading-mark",
-      "  c email cid@y.org | api:annotate:new owner:entry-address owner:spelled",
+      "  c email cid@y.org | api:annotate:new api:inner-contact owner:inner-email owner:spelled",
     ],
   );
+  assert_eq!(writer, "same", "the writer's outcome");
+  assert_eq!(default_mode_creators(tex), written, "the default mode");
 }
 
 /// An address taken out of an entry with one carrier, spelling no one, is that carrier's (`owner:only-carrier`,
 /// FIDELITY_CHARTER §4's chain) and written: `owner:entry-address` is a change tag (`resolver::CHANGE_TAGS`, as OD #938
 /// names it), so the writer writes every owner the take-out decided, not only a spelled one (0707.1008's
 /// `\IEEEauthorblockA{ETH Zurich\\ … Email: lapidoth@isi.ee.ethz.ch}`; 36 IEEEtran census papers). Distinct from
-/// `ieeetran_is_written`: the owner by the entry, not by spelling.
+/// `ieeetran_is_written`: the owner by the entry, not by spelling. Since 100b (OD #956) the author block's Kind step
+/// takes the e-mail line out of the entry at the API, so the reading reads it as the entry's e-mail
+/// (`api:inner-contact owner:inner-email`, the chain both engines run) and today's holds it already: the writer has
+/// nothing to write (`same`), the owners unchanged.
 #[test]
 fn an_entry_address_of_its_only_carrier_is_written() {
-  assert_written(
-    repro!("ieeetran_entry_address_of_its_only_carrier.tex"),
-    &[
+  let tex = repro!("ieeetran_entry_address_of_its_only_carrier.tex");
+  let (written, _, _, writer) = assert_reading(
+    tex,
+    Some(&[
       &["Ann Able", "affiliation=Univ X", "email=office@x.org"],
       &["Bob Baker", "affiliation=Univ Y", "email=bob@y.org"],
-    ],
+    ]),
     &[
       "C Ann Able [] | line:names",
-      "  a Univ X | api:annotate:new ruling3:address-out",
-      "  c email office@x.org | api:annotate:new owner:entry-address owner:only-carrier",
+      "  a Univ X | api:annotate:new",
+      "  c email office@x.org | api:annotate:new api:inner-contact owner:inner-email owner:only-carrier",
       "C Bob Baker [] | line:names",
-      "  a Univ Y | api:annotate:new ruling3:address-out",
-      "  c email bob@y.org | api:annotate:new owner:entry-address owner:spelled",
+      "  a Univ Y | api:annotate:new",
+      "  c email bob@y.org | api:annotate:new api:inner-contact owner:inner-email owner:spelled",
     ],
   );
+  assert_eq!(writer, "same", "the writer's outcome");
+  assert_eq!(default_mode_creators(tex), written, "the default mode");
 }
 
 /// acmart is written under its own conventions (`acmart_cls.rs` `FRONTMATTER_CONVENTIONS`, no longer `undeclared`): an
@@ -357,19 +368,24 @@ fn an_entry_number_no_name_shows_stays_in_the_block() {
 /// the writer also declines an affiliation spelling an author's name it would give an author, `writer::plan`). The
 /// `keep_as_today` rule still holds for a call no family is known to have made (`policy::UNOBSERVED_BINDING`). One
 /// guard for the outcomes: the paper left as today's, a paper written in its other items (iopart's `\address`), and a
-/// written family's setter in a binding declaring none still written (REVTeX 3's `\address`).
+/// written family's setter in a binding declaring none still written (REVTeX 3's `\address`). Since 100b (OD #956)
+/// today's places the institutes' e-mails itself by the chain the reading runs (`insert::link_entry_addresses`): each
+/// the author it spells, the institutes still the block's.
 #[test]
 fn an_unwritten_familys_call_is_kept_as_today() {
   let tex = repro!("svjour3_institute_names_at_with_authblk.tex");
   let (written, _, _, writer) = assert_reading(
     tex,
-    Some(&[&["Ann Able"], &["Bob Baker"], &["Cid Cole"], &[
-      "affiliation=A. Able",
-      "affiliation=Univ X, Town",
-      "email=ann@x.org",
-      "affiliation=Univ Y, City",
-      "email=cid@y.org",
-    ]]),
+    Some(&[
+      &["Ann Able", "email=ann@x.org"],
+      &["Bob Baker"],
+      &["Cid Cole", "email=cid@y.org"],
+      &[
+        "affiliation=A. Able",
+        "affiliation=Univ X, Town",
+        "affiliation=Univ Y, City",
+      ],
+    ]),
     &[
       "C Ann Able [1] | line:names",
       "  a A. Able | api:labelseq ruling1:thenote",

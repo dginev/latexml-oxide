@@ -98,9 +98,12 @@ fn jheppub_family_is_written() {
 /// were the block's). Before, every carrier of the institute held its whole address list.
 #[test]
 fn sv_support_is_written() {
-  assert_written(
-    repro!("svproc_institute_email_list_written.tex"),
-    &[
+  // (since 100b, OD #956, today's writes the institute's e-mail list out itself at the flush by the chain the reading
+  // runs, `insert::link_entry_addresses`: the writer has nothing left to write, `same`)
+  let tex = repro!("svproc_institute_email_list_written.tex");
+  let (written, _, _, writer) = assert_reading(
+    tex,
+    Some(&[
       &[
         "Ann Able",
         "affiliation=Univ A, Town A",
@@ -112,7 +115,7 @@ fn sv_support_is_written() {
         "email=baker@a.org",
       ],
       &["Cy Cole", "affiliation=Univ B, Town B", "email=cy@b.org"],
-    ],
+    ]),
     &[
       "C Ann Able [1] | line:names",
       "  a Univ A, Town A | api:labelseq",
@@ -125,6 +128,8 @@ fn sv_support_is_written() {
       "  c email cy@b.org | api:labelseq api:inner-contact owner:inner-email owner:only-carrier",
     ],
   );
+  assert_eq!(writer, "same", "the writer's outcome");
+  assert_eq!(default_mode_creators(tex), written, "the default mode");
   assert_written(
     repro!("svproc_hand_marks_institutes_written.tex"),
     &[

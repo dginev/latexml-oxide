@@ -485,5 +485,7 @@ fn an_email_group_with_its_domain_after_the_brace() {
       "  c email cid@mail.b.edu | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
     ],
   );
-  assert_eq!(reading.3, "written");
+  // (since 100b, OD #956, today's writes the group out itself at the flush, `insert::link_entry_addresses`: the
+  // writer has nothing left to write)
+  assert_eq!(reading.3, "same");
 }

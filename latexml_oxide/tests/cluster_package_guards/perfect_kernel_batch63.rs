@@ -4335,15 +4335,17 @@ fn iopart_authblk_author_wins() {
 /// 63x: a conditional around IEEE author blocks (`\ifdefined\x \IEEEauthorblockN{…} \else … \fi`) keeps its tokens as
 /// written: only the true branch's authors, no empty affiliation, no nameless creator (the `\if`, `\else` and `\fi`
 /// were wrapped as bare affiliation text). Witness 2407.02944. Repro
-/// sectioning-frontmatter/ieeetran_author_block_conditional.
+/// sectioning-frontmatter/ieeetran_author_block_conditional. Since 100b (OD #956, ruling E) the address line of the
+/// institute both names share, spelling neither, is the block's, once — it had stayed welded into the affiliation.
 #[test]
 fn ieeetran_author_block_conditional() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieeetran_author_block_conditional.tex"
   );
   assert_eq!(creators_63x(tex), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A <break/>a@b.c</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A <break/>a@b.c</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <contact name=\"Email: \" role=\"email\">a@b.c</contact>\n  </creator>",
   ]);
 }
 

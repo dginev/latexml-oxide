@@ -106,6 +106,9 @@ recovery cases are recorded here with their witnesses. Each OPEN_ROWS row named 
     Witness 1908.06645.
   - An unbalanced `\hspace{` in the author line swallows the next author. Perl reads it the same way; reported by the
     dev lost-words census and not yet reproduced. Witness 1605.04229.
+  - Marks inside an e-mail template's domain: `$\{$name.surname$\}$ @ $^1$polytechnique.edu, $^2$inria.fr`. Reading
+    a mark after an `@` as the domain's label would cut every address whose domain a footnote mark follows. The line is
+    kept as printed. Witness 2009.04283; RED `sectioning-frontmatter/cut_acmart_template_address_line_red` (batch 100b).
 - **FM-14** a class setter that builds the kernel's `\@author` from its stores (jfpc.cls:188-191; 1503.05530).
 - **FM-15** vmsta 2018+ `\author@optarg` names made by `\csname`; a replayed `\maketitle` prints the author line
   and the e-mail line twice (1806.03850, 1810.09667, 2012.03249).

@@ -89,6 +89,7 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   distribute_upfront_contacts(document)?;
   let answered = answered_labels(document);
   relocate_annotations(document)?;
+  link_entry_addresses(document)?;
   respell_emails(document)?;
   show_unanswered_marks(document, &answered)?;
   drop_empty_contacts(document)?;
@@ -316,6 +317,433 @@ fn drop_empty_contacts(document: &mut Document) -> Result<()> {
     }
   }
   Ok(())
+}
+
+/// The Link step for the addresses printed inside an affiliation-kind entry (OXIDIZED_DESIGN_DIVERGENCES #956): every
+/// e-mail digested inside one (an `\email` in an `\institute` entry, an address line the Kind step made one,
+/// `affiliations::kind_entry_addresses`), wherever its label or call placed it, goes where FIDELITY_CHARTER §4's chain
+/// over that entry puts it ([`entry_address_owners`], the frontmatter observer's chain too): the author it spells, else
+/// the entry's only carrier, else every carrier of a symbol-led entry, else one per carrier in order, else the block's
+/// own creator, once (ruling E, main session 2026-11-02). The entry's carriers are the authors holding it after
+/// relocation (an entry of addresses alone stays as their carrier, empty, until `drop_empty_contacts`), else those
+/// holding its e-mails. Each placed e-mail follows the entry on its owner (user ruling R8, print order). An entry whose
+/// e-mails already stand as the chain puts them is left as it is. Witnesses: 2502.01754, 2602.21641, 2307.02047,
+/// 1901.09107, 0902.3918, 1909.00276, astro-ph0512555; guards `perfect_kernel_batch100b`.
+fn link_entry_addresses(document: &mut Document) -> Result<()> {
+  let emails = document.findnodes(
+    &s!("//ltx:creator/ltx:contact[@role='email'][@{ENTRY_KEY}]"),
+    None,
+  );
+  if emails.is_empty() {
+    return Ok(());
+  }
+  let authors = document.findnodes("//ltx:creator[@role='author'][ltx:personname]", None);
+  let names: Vec<String> = authors
+    .iter()
+    .map(|author| {
+      document
+        .findnode("ltx:personname", Some(author))
+        .map(|person| person.get_content())
+        .unwrap_or_default()
+    })
+    .collect();
+  // (each name read by its base letters, as the frontmatter observer's chain reads it: `joze.rozanec@` spells Jože M.
+  // Rožanec, 2105.01929 — `resolver::base_letters`)
+  let keys: Vec<NameKeys> = names
+    .iter()
+    .map(|name| NameKeys::of(&Tokens::new(ExplodeText!(&resolver::base_letters(name)))))
+    .collect();
+  let position = |creator: &Node| authors.iter().position(|a| a == creator);
+  // (each entry's holders, with their copies of it; the entries of one printed text are one: the same affiliation set
+  // apart for each author, aastex's `\affil` after each name, its address no one carrier's by being printed under each —
+  // as the frontmatter observer's reading groups its prints, 2212.12876)
+  // (an entry's printed text, its keys, its holders with their copies)
+  type EntryGroup = (String, Vec<String>, Vec<(usize, Node)>);
+  let mut groups: Vec<EntryGroup> = Vec::new();
+  for email in &emails {
+    let key = email.get_attribute(ENTRY_KEY).unwrap_or_default();
+    if groups
+      .iter()
+      .any(|(_, entry_keys, _)| entry_keys.contains(&key))
+    {
+      continue;
+    }
+    let held: Vec<(usize, Node)> = document
+      .findnodes(
+        &s!("//ltx:creator/ltx:contact[@{ENTRY_KEY}='{key}'][@role!='email']"),
+        None,
+      )
+      .into_iter()
+      .filter_map(|entry| {
+        let at = position(&entry.get_parent()?)?;
+        Some((at, entry))
+      })
+      .collect();
+    // (an entry of addresses alone is its addresses: two such calls printing the same list, REVTeX's
+    // `\altaffiliation[Authors for Correspondence: ]{Email: nikhil@…, bala@…}` after each of two names, are one —
+    // 2208.10784)
+    let text = held
+      .first()
+      .map(|(_, entry)| {
+        entry
+          .get_content()
+          .split_whitespace()
+          .collect::<Vec<_>>()
+          .join(" ")
+      })
+      .filter(|text| !text.is_empty())
+      .unwrap_or_else(|| {
+        let mut own: Vec<&Node> = emails
+          .iter()
+          .filter(|e| e.get_attribute(ENTRY_KEY).as_deref() == Some(key.as_str()))
+          .collect();
+        own.sort_by_key(|e| {
+          e.get_attribute(QUEUE_ORDINAL)
+            .and_then(|n| n.parse::<i64>().ok())
+            .unwrap_or(i64::MAX)
+        });
+        let addresses: Vec<String> = own
+          .iter()
+          .map(|e| e.get_content().trim().to_string())
+          .collect();
+        s!("\u{1}{}", addresses.join("\u{2}"))
+      });
+    match groups.iter_mut().find(|(t, ..)| *t == text) {
+      Some((_, entry_keys, all)) => {
+        entry_keys.push(key);
+        all.extend(held);
+      },
+      None => groups.push((text, vec![key], held)),
+    }
+  }
+  // (the addresses each entry leaves to the block, given once after every entry is placed, and only where no author
+  // holds them: an address is never duplicated — 2208.10784's `bala@` on its author by one copy of a shared entry)
+  let mut to_block: Vec<(String, Node)> = Vec::new();
+  let mut taken_away: Vec<Node> = Vec::new();
+  for (_, entry_keys, held) in groups {
+    // (in print order: the order their calls were digested in, `QUEUE_ORDINAL`)
+    let mut mine: Vec<Node> = emails
+      .iter()
+      .filter(|e| {
+        e.get_attribute(ENTRY_KEY)
+          .is_some_and(|k| entry_keys.contains(&k))
+      })
+      .cloned()
+      .collect();
+    mine.sort_by_key(|e| {
+      e.get_attribute(QUEUE_ORDINAL)
+        .and_then(|n| n.parse::<i64>().ok())
+        .unwrap_or(i64::MAX)
+    });
+    let key = entry_keys.join(",");
+    let mut carriers: Vec<usize> = held.iter().map(|(at, _)| *at).collect();
+    if carriers.is_empty() {
+      carriers = mine
+        .iter()
+        .filter_map(|e| position(&e.get_parent()?))
+        .collect();
+    }
+    carriers.sort_unstable();
+    carriers.dedup();
+    // (its addresses, one each, in print order; each with the authors holding it now — an e-mail printing several,
+    // `\email{a|b@x.org}` inside a line of the entry, written out, each its own, as the frontmatter observer reads it:
+    // `resolver::addresses_in`)
+    // (an e-mail printing addresses alone, several written out; one printing a template, a list the reader could not
+    // part or a group beside words — `{ann,bob}@a.org (corresponding)`, 92c — is no one's address: it stays where its
+    // call placed it, as the frontmatter observer's reading leaves it)
+    let readable = |content: &str| {
+      let listed = resolver::addresses_in(content);
+      let (_, rest) = resolver::address_take_out(content, &[]);
+      // (an e-mail label beside a group keeps it whole, as the frontmatter observer's group write-out does:
+      // `Emails: {ann,bob}@a.org`, 92c)
+      let words: Vec<&str> = content
+        .split(|c: char| c.is_whitespace() || ",;:".contains(c))
+        .filter(|w| !w.is_empty())
+        .collect();
+      // (a label of one word or two, "Electronic Addresses", 1509.07506)
+      let labelled = words.iter().any(|w| is_email_label(w))
+        || words.windows(2).any(|pair| is_email_label(&pair.join(" ")));
+      if listed.len() > 1 && !labelled {
+        (!rest.chars().any(char::is_alphanumeric)).then_some(listed)
+      } else if listed.len() > 1 {
+        None
+      } else {
+        let text = content.trim();
+        (!lists_local_parts(text) && !is_pattern_address(text)).then(|| vec![text.to_string()])
+      }
+    };
+    mine.retain(|email| readable(&email.get_content()).is_some());
+    if mine.is_empty() {
+      continue;
+    }
+    let mut addresses: Vec<(String, Node, Vec<Option<usize>>)> = Vec::new();
+    let mut written: Vec<(Node, String)> = Vec::new();
+    for email in &mine {
+      let content = email.get_content();
+      let listed = readable(&content).unwrap_or_default();
+      let texts: Vec<String> = if listed.len() > 1 {
+        written.extend(
+          listed
+            .iter()
+            .map(|address| (email.clone(), address.clone())),
+        );
+        listed
+      } else {
+        vec![content.trim().to_string()]
+      };
+      let holder = email.get_parent().and_then(|p| position(&p));
+      for text in texts {
+        match addresses.iter_mut().find(|(t, ..)| *t == text) {
+          Some((.., holders)) => holders.push(holder),
+          None => addresses.push((text, email.clone(), vec![holder])),
+        }
+      }
+    }
+    let symbol = mine.iter().any(|e| e.get_attribute(ENTRY_SYMBOL).is_some());
+    let spelled: Vec<Option<usize>> = addresses
+      .iter()
+      .map(|(text, ..)| {
+        text
+          .split_whitespace()
+          .find(|word| word.contains('@'))
+          .map(|word| word.trim_matches(|c: char| !c.is_alphanumeric()))
+          .and_then(|address| spelled_owner(&keys, address))
+      })
+      .collect();
+    // (an e-mail command the author wrote inside the entry, holding one address, keeps the one author its own call
+    // placed it on, unless it spells another: FIDELITY_CHARTER §4 #420, an author's own call holding one address keeps
+    // it — jmlr's `\Name{…} \Email{costis@…}` under a misread `\AND`, 2002.00057, 1504.01446, 2509.23923; not an
+    // address the Kind step took out of the entry's text, `ENTRY_KINDED`)
+    let own_call: Vec<Option<usize>> = addresses
+      .iter()
+      .zip(&spelled)
+      .map(|((text, _, holders), spelled)| {
+        let written_by_author = mine.iter().any(|e| {
+          e.get_attribute(ENTRY_KINDED).is_none() && e.get_content().trim() == text.as_str()
+        });
+        match holders.as_slice() {
+          [Some(holder)]
+            if written_by_author
+              && !written.iter().any(|(_, a)| a == text)
+              && spelled.is_none_or(|s| s == *holder) =>
+          {
+            Some(*holder)
+          },
+          _ => None,
+        }
+      })
+      .collect();
+    // (the carriers holding an address of their own, outside this entry)
+    let addressed: Vec<usize> = carriers
+      .iter()
+      .copied()
+      .filter(|&c| {
+        element_nodes(&authors[c]).iter().any(|n| {
+          n.get_name() == "contact"
+            && n.get_attribute("role").as_deref() == Some("email")
+            && !mine.contains(n)
+        })
+      })
+      .collect();
+    let owners: Vec<(Option<Vec<usize>>, &'static str)> = entry_address_owners(
+      &spelled,
+      0..addresses.len(),
+      &carriers,
+      symbol,
+      &addressed,
+      authors.len() == 1,
+    )
+    .into_iter()
+    .zip(&own_call)
+    .map(|(owner, own)| match own {
+      Some(holder) => (Some(vec![*holder]), "owner:call"),
+      None => owner,
+    })
+    .collect();
+    // (already as the chain puts them: left as they are)
+    let settled = written.is_empty()
+      && addresses
+        .iter()
+        .zip(&owners)
+        .all(|((.., holders), (to, _))| {
+          let mut now: Vec<Option<usize>> = holders.clone();
+          now.sort_unstable();
+          let want: Vec<Option<usize>> = match to {
+            Some(to) => {
+              let mut to: Vec<Option<usize>> = to.iter().map(|&a| Some(a)).collect();
+              to.sort_unstable();
+              to
+            },
+            None => vec![None],
+          };
+          now == want
+        });
+    if settled {
+      // (each after the entry on its holder, in print order: an inner e-mail an `annotate=` placed is attached before
+      // the entry it was digested in)
+      for (at, entry) in &held {
+        let mut anchor = entry.clone();
+        for email in &mine {
+          if email.get_parent().as_ref() == Some(&authors[*at]) {
+            let mut email = email.clone();
+            if anchor.add_next_sibling(&mut email).is_ok() {
+              anchor = email;
+            }
+          }
+        }
+      }
+      continue;
+    }
+    DebugFeature!(
+      "frontmatter",
+      "FRONT link entry {key}: carriers {carriers:?}, owners {:?}",
+      owners
+    );
+    let emptied: Vec<Node> = mine.iter().filter_map(Node::get_parent).collect();
+    // (the copies made while the entry's e-mails still stand, the templates; those taken away after)
+    let mut after: HashMap<usize, Node> = HashMap::default();
+    for ((text, template, _), (to, _)) in addresses.iter().zip(owners) {
+      match to {
+        Some(to) => {
+          for owner in to {
+            let mut author = authors[owner].clone();
+            if element_nodes(&author).iter().any(|c| {
+              !mine.contains(c)
+                && c.get_name() == "contact"
+                && c.get_attribute("role").as_deref() == Some("email")
+                && c.get_content().trim() == text.as_str()
+            }) {
+              continue;
+            }
+            document.append_clone(&mut author, vec![template.clone()])?;
+            let Some(mut placed) = element_nodes(&author).last().cloned() else {
+              continue;
+            };
+            if written
+              .iter()
+              .any(|(node, address)| node == template && *address == *text)
+            {
+              set_written_out(&placed, text);
+            }
+            // (after the entry, or the address placed after it before)
+            let anchor = after.get(&owner).cloned().or_else(|| {
+              held
+                .iter()
+                .filter(|(at, _)| *at == owner)
+                .map(|(_, entry)| entry.clone())
+                .next_back()
+            });
+            if let Some(mut anchor) = anchor
+              && anchor.add_next_sibling(&mut placed).is_err()
+            {
+              continue;
+            }
+            after.insert(owner, placed);
+          }
+        },
+        None => {
+          let Some(mut block) = block_creator(document, &authors)? else {
+            continue;
+          };
+          document.append_clone(&mut block, vec![template.clone()])?;
+          if let Some(placed) = element_nodes(&block).last().cloned() {
+            if written
+              .iter()
+              .any(|(node, address)| node == template && *address == *text)
+            {
+              set_written_out(&placed, text);
+            }
+            to_block.push((text.clone(), placed));
+          }
+        },
+      }
+    }
+    for email in &mine {
+      document.remove_node(email.clone());
+    }
+    taken_away.extend(emptied);
+  }
+  // (a block copy an author holds, or a second one on the block, goes)
+  let mut on_block: Vec<String> = Vec::new();
+  for (text, placed) in to_block {
+    let held = authors.iter().any(|author| {
+      element_nodes(author).iter().any(|c| {
+        c.get_name() == "contact"
+          && c.get_attribute("role").as_deref() == Some("email")
+          && c.get_content().trim() == text
+      })
+    });
+    if held || on_block.contains(&text) {
+      if let Some(parent) = placed.get_parent() {
+        taken_away.push(parent);
+      }
+      document.remove_node(placed);
+    } else {
+      on_block.push(text);
+    }
+  }
+  // (a nameless creator the moves emptied is none)
+  for creator in taken_away {
+    if creator.get_name() == "creator"
+      && document
+        .findnode("ltx:personname", Some(&creator))
+        .is_none()
+      && element_nodes(&creator).is_empty()
+    {
+      document.remove_node(creator);
+    }
+  }
+  Ok(())
+}
+
+/// A copy of an e-mail contact printing several addresses made the contact of one, `address`: written in the font
+/// wrapper the whole contact printed in (`<text font="typewriter">`, llncs's `\email`, 64zc), else as the contact's text.
+fn set_written_out(contact: &Node, address: &str) {
+  let mut node = contact.clone();
+  loop {
+    let children = node.get_child_nodes();
+    let elements: Vec<&Node> = children
+      .iter()
+      .filter(|c| c.get_type() == Some(NodeType::ElementNode))
+      .collect();
+    let bare_text = children
+      .iter()
+      .any(|c| c.get_type() == Some(NodeType::TextNode) && !c.get_content().trim().is_empty());
+    match elements.as_slice() {
+      [only] if !bare_text => node = (*only).clone(),
+      _ => break,
+    }
+  }
+  let _ = node.set_content(address);
+}
+
+/// The author block's own creator (OD #159): the first nameless author creator after the named ones, else a new one
+/// after the last of them.
+fn block_creator(document: &mut Document, authors: &[Node]) -> Result<Option<Node>> {
+  if let Some(creator) = document
+    .findnodes("//ltx:creator[@role='author'][not(ltx:personname)]", None)
+    .into_iter()
+    .next()
+  {
+    return Ok(Some(creator));
+  }
+  let Some(mut last) = authors.last().cloned() else {
+    return Ok(None);
+  };
+  let Some(parent) = last.get_parent() else {
+    return Ok(None);
+  };
+  let saved = document.get_node().clone();
+  document.set_node(&parent);
+  let mut attributes = HashMap::default();
+  attributes.insert("role".to_string(), "author".to_string());
+  let mut creator = document.open_element("ltx:creator", Some(attributes), None)?;
+  document.close_element("ltx:creator")?;
+  document.set_node(&saved);
+  if last.add_next_sibling(&mut creator).is_err() {
+    return Ok(None);
+  }
+  Ok(Some(creator))
 }
 
 /// FIDELITY_CHARTER §4, "ownership by evidence, never by bare position": an e-mail contact one address alone fills,

@@ -830,6 +830,55 @@ impl Resolver {
     let reached = owners.iter().any(Option::is_some);
     let candidates = self.live();
     let mut kept_inner = Vec::new();
+    // (the e-mails inside an affiliation-kind entry are its addresses, in print order, placed by FIDELITY_CHARTER §4's
+    // chain over the entry's carriers with the labelled entries' (`answer_inner_emails`) — the chain today's runs at the
+    // flush, `insert::link_entry_addresses`, OXIDIZED_DESIGN_DIVERGENCES #956; authblk's `\affil[ ]{\texttt{\{…\}@x}}`
+    // under the last author, 2602.21641, 2307.02047: no part of today's upfront grid, which copied them onto every owner)
+    let inner = if reached && matches!(role, "affiliation" | "address" | "altaffiliation") {
+      let carriers: Vec<usize> = owners.iter().flatten().copied().collect();
+      // (an entry of addresses alone is a contact today's attaches all the same, empty, until its e-mails are placed:
+      // its carriers hold its role, so a later `annotate=new` entry's run stops at them — IEEEtran's
+      // `\IEEEauthorblockA{snbnix@gmail.com}` under each name, 2003.10933, as `empty_entry_holds_its_role`)
+      if text.is_empty() && !note {
+        for &c in &carriers {
+          self.roles[c].push(role.to_string());
+        }
+        self
+          .empty_piled
+          .push((index, role.to_string(), carriers.clone()));
+      }
+      let (emails, others): (Vec<Assoc>, Vec<Assoc>) = inner
+        .into_iter()
+        .partition(|contact| contact.role == "email");
+      for contact in emails {
+        let written = written_out(&contact);
+        if written.is_empty() {
+          self.entry_emails.push((
+            carriers.clone(),
+            Assoc {
+              rule: s!("{rule} api:inner-contact"),
+              ..contact
+            },
+            false,
+          ));
+          continue;
+        }
+        for address in written {
+          self.entry_emails.push((
+            carriers.clone(),
+            Assoc {
+              rule: s!("{rule} api:inner-contact ruling3:written-out"),
+              text: address,
+              ..contact.clone()
+            },
+            false,
+          ));
+        }
+      }
+      others
+    } else {
+      inner
+    };
     for contact in inner {
       let addresses = written_out(&contact);
       if addresses.is_empty() || !reached {

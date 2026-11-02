@@ -461,7 +461,9 @@ fn a_mailto_link_address_moves_whole_into_its_email() {
 
 /// B5, S1 (1911.11406): the e-mail contacts made of an entry's addresses are named by the label word the cut took
 /// (`E-mail: `, as an e-mail line's label names its contacts; the class's `Email: ` only without one), and several for
-/// one owner come out in print order (95c: "Email: ", in the order of their keys). Whole elements.
+/// one owner come out in print order (95c: "Email: ", in the order of their keys). Whole elements. Since 100b the two
+/// addresses spell Ann Able, as the witness's `mr\_oboudi@yahoo.com and mr\_oboudi@shirazu.ac.ir` spell their author: two
+/// addresses no one spells under one name are no one carrier's (OD #956's only-carrier step, 2403.17706).
 #[test]
 fn entry_emails_are_named_by_their_label_in_print_order() {
   let tex = repro!("entry_address_label_names_contacts_in_print_order.tex");
@@ -469,24 +471,24 @@ fn entry_emails_are_named_by_their_label_in_print_order() {
     &[
       "Ann Able",
       "affiliation=Univ X",
-      "email=zed@x.org",
-      "email=quux@y.org",
+      "email=zed.able@x.org",
+      "email=quux.able@y.org",
     ],
     &["Bob Baker", "affiliation=Univ Y", "email=bob@y.org"],
   ];
   assert_reading(tex, Some(xml), &[
     "C Ann Able [1] | line:names",
     "  a Univ X | ruling1:request ruling3:address-out",
-    "  c email zed@x.org | ruling1:request owner:entry-address owner:only-carrier",
-    "  c email quux@y.org | ruling1:request owner:entry-address owner:only-carrier",
+    "  c email zed.able@x.org | ruling1:request owner:entry-address owner:spelled",
+    "  c email quux.able@y.org | ruling1:request owner:entry-address owner:spelled",
     "C Bob Baker [2] | line:names sep:comma",
     "  a Univ Y | ruling1:request ruling3:address-out",
     "  c email bob@y.org | ruling1:request owner:entry-address owner:spelled",
   ]);
   assert_eq!(default_mode_elements(tex), [
     "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" \
-     role=\"affiliation\"> Univ X</contact><contact name=\"E-mail: \" role=\"email\">zed@x.org</contact><contact \
-     name=\"E-mail: \" role=\"email\">quux@y.org</contact></creator>",
+     role=\"affiliation\"> Univ X</contact><contact name=\"E-mail: \" role=\"email\">zed.able@x.org</contact><contact \
+     name=\"E-mail: \" role=\"email\">quux.able@y.org</contact></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" \
      role=\"affiliation\"> Univ Y</contact><contact name=\"Email:\u{a0}\" role=\"email\">bob@y.org</contact></creator>",
   ]);

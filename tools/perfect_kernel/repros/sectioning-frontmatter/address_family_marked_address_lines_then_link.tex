@@ -1,0 +1,20 @@
+% Mark-led address lines in a kernel author block, then a link line closing it (shape C): each line is the e-mails of the
+% authors showing its mark (the first line of a marked entry, `kind_entry_addresses`' `mark_led_addresses`).
+% witness: 1901.09107
+% oracle:  pdflatex 0 errors: "$^1${aable, ccole}@a.edu", "$^2$bbaker@b.edu", "x.org"
+% engines: rust int127a = 0 errors; each address line an affiliation of its mark's carriers; perl = the same, the link welded
+% expect:  0 errors, 0 warnings; Ann: Univ A + aable@; Bob: Univ B + bbaker@; Cat: Univ A + ccole@; the url at the block
+% status:  RED (int127a) -> GREEN (100b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$, Cat Cole$^1$ \\
+$^1$Univ A \quad $^2$Univ B \\
+{\tt $^1$\{aable, ccole\}@a.edu} \\
+{\tt $^2$bbaker@b.edu} \\
+\href{https://x.org}{x.org}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

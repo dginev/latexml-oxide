@@ -1,0 +1,17 @@
+% A `|`-separated brace list in llncs `\email` (shape D): `|` parts a group as `,` and `;` do, in both readers
+% (`ADDRESS_GROUP_SEPARATORS`).
+% witness: 0902.3918
+% oracle:  pdflatex 0 errors: "{aable|bbaker}@a.edu", "ccole@b.edu"
+% engines: rust int127a = 0 errors; `{aable|bbaker}@a.edu` on a nameless creator; perl = on both carriers
+% expect:  0 errors, 0 warnings; Ann: Univ A + aable@; Bob: Univ A + bbaker@; Cat: Univ B + ccole@; no nameless creator
+% status:  RED (int127a) -> GREEN (100b)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1} \and Cat Cole\inst{2}}
+\institute{Univ A\\ \email{\{aable|bbaker\}@a.edu} \and
+  Univ B\\ \email{ccole@b.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

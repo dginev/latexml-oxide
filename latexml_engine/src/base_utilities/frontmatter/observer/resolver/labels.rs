@@ -3,6 +3,7 @@
 //! and contact roles.
 
 use super::*;
+use crate::base_utilities::author_block::{ADDRESS_GROUP_SEPARATORS, UNBRACED_LIST_SEPARATORS};
 
 /// `key=value` of an attribute string (`role=affiliation,label=a`), braces stripped: a repeated key's last value, as
 /// `KeyVals::get_value` reads it (the ledger keeps every pair in source order: `role=affiliation,role=address`).
@@ -487,7 +488,9 @@ pub fn addresses_in(text: &str) -> Vec<String> {
         .chars()
         .take_while(|c| !c.is_whitespace() && !",;()<>{}".contains(*c))
         .collect();
-      for local in rest[open + 1..close].split(',') {
+      // (the local parts parted as the author block's reader parts them: a comma, a semicolon, a `|` — llncs's
+      // `\email{\{ivan|carolin\}@…}`, 0902.3918, 1909.00276; `author_block::ADDRESS_GROUP_SEPARATORS`)
+      for local in rest[open + 1..close].split(ADDRESS_GROUP_SEPARATORS) {
         let local = local.trim();
         if !local.is_empty() && domain.contains('.') {
           out.push(format!("{local}@{}", domain.trim_end_matches('.')));
@@ -574,7 +577,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn address_runs(
       .and_then(|_| domain_at(close + 2 + gap))
     {
       let locals: Vec<&str> = inner
-        .split(|c: char| c.is_whitespace() || ",;|".contains(c))
+        .split(|c: char| c.is_whitespace() || ADDRESS_GROUP_SEPARATORS.contains(&c))
         .filter(|p| !p.is_empty())
         .collect();
       (!locals.is_empty() && locals.iter().all(|p| local(p)))
@@ -607,7 +610,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn address_runs(
     text[..at]
       .chars()
       .next_back()
-      .is_none_or(|c| c.is_whitespace() || "({[<:;,".contains(c))
+      .is_none_or(|c| c.is_whitespace() || "({[<:;,|".contains(c))
   };
   let mut plain: Vec<AddressRun> = Vec::new();
   for (at, _) in text.match_indices('@') {
@@ -636,7 +639,12 @@ pub(in crate::base_utilities::frontmatter::observer) fn address_runs(
     loop {
       let before = text[..head].trim_end();
       let gap = head - before.len();
-      let Some(comma) = before.strip_suffix(',') else {
+      // (a comma parts them, or a `|`: `robert.holland15|e.chotzoglou16|b.kainz@imperial.ac.uk`, 1909.00276 — the
+      // author block's reader's parting too, `email_addresses`)
+      let Some(comma) = before
+        .strip_suffix(',')
+        .or_else(|| before.strip_suffix('|'))
+      else {
         break;
       };
       let word_end = comma.len();
@@ -840,9 +848,14 @@ pub(in crate::base_utilities::frontmatter::observer) fn listed_addresses(
   spells: &dyn Fn(&str) -> bool,
 ) -> Option<Vec<String>> {
   let runs = address_runs(text, spells);
-  let labelled = text
+  let words: Vec<&str> = text
     .split(|c: char| c.is_whitespace() || ",;:".contains(c))
-    .any(|w| !w.is_empty() && is_email_label(w));
+    .filter(|w| !w.is_empty())
+    .collect();
+  // (a label of one word or two: "Emails", "Electronic Addresses", 1509.07506 — today's reads it alike,
+  // `insert::link_entry_addresses`)
+  let labelled = words.iter().any(|w| is_email_label(w))
+    || words.windows(2).any(|pair| is_email_label(&pair.join(" ")));
   let addresses: Vec<String> = runs.iter().flat_map(|r| r.addresses.clone()).collect();
   (addresses.len() >= 2 && !labelled && strip_address_runs(text, &runs).is_empty())
     .then_some(addresses)
@@ -993,7 +1006,23 @@ pub(super) fn plain_addresses(text: &str) -> Vec<String> {
       w.split_once('@')
         .is_some_and(|(local, domain)| !local.is_empty() && domain.contains('.'))
     })
-    .map(str::to_string)
+    // (local parts a `|` or a `/` parts before the one domain, each at it: `robert.holland15|e.chotzoglou16|
+    // b.kainz@imperial.ac.uk`, 1909.00276; `deleo/walrod/vaz@ime.unicamp.br`, hep-ph9906243 — as the author block's
+    // reader reads them, `email_addresses`)
+    .flat_map(|w| match w.split_once('@') {
+      Some((local, domain))
+        if local.contains(UNBRACED_LIST_SEPARATORS)
+          && local
+            .split(UNBRACED_LIST_SEPARATORS)
+            .all(|part| !part.is_empty() && part.chars().all(is_local_char)) =>
+      {
+        local
+          .split(UNBRACED_LIST_SEPARATORS)
+          .map(|part| s!("{part}@{domain}"))
+          .collect()
+      },
+      _ => vec![w.to_string()],
+    })
     .collect()
 }
 
@@ -1321,37 +1350,4 @@ pub(super) fn parted_label(label: &str, known: &[String], symbols: bool) -> Opti
   }
   parts.reverse();
   Some(parts)
-}
-
-/// Whether an e-mail address is a pattern for the authors' addresses, not one of them: its local part is only the words
-/// of a name template (`FirstName.LastName@SIT.Fraunhofer.de`, `{firstname.lastname}@…`, `name.surname@…`; 2006.12418).
-pub(super) fn is_pattern_address(address: &str) -> bool {
-  let Some((local, _)) = address.split_once('@') else {
-    return false;
-  };
-  let words: Vec<String> = local
-    .split(|c: char| !c.is_alphanumeric())
-    .filter(|w| !w.is_empty())
-    .map(str::to_lowercase)
-    .collect();
-  !words.is_empty()
-    && words.iter().all(|w| {
-      matches!(
-        w.as_str(),
-        "first"
-          | "last"
-          | "firstname"
-          | "lastname"
-          | "name"
-          | "surname"
-          | "givenname"
-          | "familyname"
-          | "given"
-          | "family"
-          | "initial"
-          | "initials"
-          | "fname"
-          | "lname"
-      )
-    })
 }

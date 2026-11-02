@@ -460,6 +460,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       unread(calls);
       return Ok(Vec::new());
     }
+    // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #956): the Kind step for the addresses an affiliation-kind entry prints, after
+    // the Cut, each of its pieces once: its lines of addresses are e-mails digested inside it, the entry's addresses,
+    // which the Link step places (`kind_entry_addresses`, `insert::link_entry_addresses`).
+    let content = kind_entry_addresses(&tag, kv.as_ref(), &content)?.unwrap_or(content);
     // Perl: queueFrontMatter($stomach, ToString($tag), $kv,
     //   Invocation(T_CS('\lx@annotate@frontmatter@now'), $parenttag, $tag, $kv, $content))
     let mut inv_tokens: Vec<Token> = vec![T_CS!("\\lx@annotate@frontmatter@now")];
@@ -553,6 +557,34 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     let zone = zone_offset(options.remove("_zone").as_deref());
     let mut in_note = false;
 
+    // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #956): an affiliation-kind entry's key, which the e-mails digested inside it
+    // inherit (an `\email` in an `\institute` entry, an address line `kind_entry_addresses` made one), so the Link step
+    // reads them as that entry's addresses, its carriers the authors holding it (`insert::link_entry_addresses`); and
+    // whether a footnote symbol leads the entry, whose unspelled addresses are every carrier's (FIDELITY_CHARTER §4).
+    let entry_key = (tag == "ltx:contact" && CUT_ROLES.contains(&role.as_str())).then(|| {
+      let key = lookup_int(ENTRY_KEY_COUNTER) + 1;
+      assign_value(ENTRY_KEY_COUNTER, Stored::Int(key), Some(Scope::Global));
+      key.to_string()
+    });
+    // (or a footnote symbol its call's label is, authblk's `\affil[*]{a@x, b@y}`: the entry the names showing `*` carry,
+    // as the frontmatter observer's reading takes a symbol label — 1907.01388)
+    let symbol_label = options.get("label").is_some_and(|label| {
+      let label = label.trim();
+      !label.is_empty() && label.chars().all(events::is_fnsymbol)
+    });
+    let entry_symbol = entry_key.is_some() && (led_by_footnote_symbol(&content) || symbol_label);
+    if let Some(entry) = &entry_key {
+      options.insert(ENTRY_KEY.to_string(), entry.clone());
+    } else if role == "email" {
+      // (an e-mail digested inside such an entry: the entry's, `ENTRY_DIGESTING`)
+      let digesting = lookup_string(ENTRY_DIGESTING);
+      if let Some((entry, symbol)) = digesting.split_once(':') {
+        options.insert(ENTRY_KEY.to_string(), entry.to_string());
+        if symbol == "symbol" {
+          options.insert(ENTRY_SYMBOL.to_string(), "true".to_string());
+        }
+      }
+    }
     // Snapshot the parent entries (those not role=pending), inherit labels
     // from an enclosing pending entry, and push a tentative stub entry —
     // in case digestion changes labels!
@@ -618,7 +650,16 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     if mark_shown {
       assign_value("lx_affiliation_mark_shown", Stored::Bool(true), Some(Scope::Global));
     }
+    // (the entry being digested, whose e-mails are its addresses: its key while its content is digested, OD #956)
+    let enclosing_entry = lookup_string(ENTRY_DIGESTING);
+    if let Some(entry) = &entry_key {
+      let symbol = if entry_symbol { "symbol" } else { "" };
+      assign_value(ENTRY_DIGESTING, Stored::String(pin(s!("{entry}:{symbol}"))), Some(Scope::Global));
+    }
     let xcontent = digest_frontmatter_item(&tag, content);
+    if entry_key.is_some() {
+      assign_value(ENTRY_DIGESTING, Stored::String(pin(enclosing_entry)), Some(Scope::Global));
+    }
     if mark_shown {
       assign_value("lx_affiliation_mark_shown", Stored::Bool(false), Some(Scope::Global));
     }

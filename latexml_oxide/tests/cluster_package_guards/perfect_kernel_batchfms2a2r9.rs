@@ -131,7 +131,8 @@ Text.
 /// \IEEEauthorblockA{National Center …} …}` holds two institutions, and r8 made the whole a legend note of the starred
 /// names (1903.06934); it is their affiliation again, as r7 read it. An entry printing the legend and an address only
 /// stays a legend (1902.02631's `These authors contributed equally to this work \\ E-mail: …`), the role change tagged
-/// `api:legend`.
+/// `api:legend` — since 100b (OD #956) without its e-mail line, which the author block's Kind step takes out at the API as
+/// the entry's e-mail, its owner the name it spells (`owner:inner-email owner:spelled`).
 #[test]
 fn an_api_legend_holding_an_institution_is_an_affiliation() {
   // (the whole tuple list, Bob's and the institutions' text included — review revfms2a2_9 finding 2: a substring test
@@ -150,7 +151,8 @@ fn an_api_legend_holding_an_institution_is_an_affiliation() {
       "  a Equal Contribution Univ A National Center in Town | api:leading-mark ruling3:address-out",
       "  c email bob@x.org | api:leading-mark owner:entry-address owner:spelled",
       "C Cat Cole [†] | line:names",
-      "  n These authors contributed equally E-mail: cat@x.org | api:leading-mark api:legend",
+      "  c email cat@x.org | api:leading-mark api:inner-contact owner:inner-email owner:spelled",
+      "  n These authors contributed equally | api:leading-mark api:legend",
     ]
   );
 }

@@ -17,11 +17,28 @@ pub(in crate::base_utilities) fn email_line_calls(
     return unlabelled_email_line_calls(line, placement);
   };
   let calls = unlabelled_email_line_calls(rest, placement)?;
+  Ok(named_email_calls(calls, &label))
+}
+
+/// The `\lx@add@email` calls `calls`, each named by `label` (`name={<label>~}`), as an e-mail line's label names its
+/// contacts ([`email_line_calls`]).
+pub(in crate::base_utilities) fn named_email_calls(
+  calls: Vec<Token>,
+  label: &Tokens,
+) -> Vec<Token> {
   let mut name: Vec<Token> = mouth::tokenize_internal("name=").unlist();
   name.push(T_BEGIN!());
-  name.extend(label.unlist());
+  name.extend(label.unlist_ref().iter().copied());
   name.push(T_ACTIVE!('~'));
   name.push(T_END!());
+  optioned_email_calls(calls, &name)
+}
+
+/// The `\lx@add@email` calls `calls`, each given the key-value `option` (`name={…}`) first among its options.
+pub(in crate::base_utilities) fn optioned_email_calls(
+  calls: Vec<Token>,
+  option: &[Token],
+) -> Vec<Token> {
   let mut out = Vec::with_capacity(calls.len());
   let mut i = 0;
   while i < calls.len() {
@@ -29,18 +46,18 @@ pub(in crate::base_utilities) fn email_line_calls(
     if calls[i] == T_CS!("\\lx@add@email") {
       if calls.get(i + 1) == Some(&T_OTHER!("[")) {
         out.push(T_OTHER!("["));
-        out.extend(name.iter().copied());
+        out.extend(option.iter().copied());
         out.push(T_OTHER!(","));
         i += 1;
       } else {
         out.push(T_OTHER!("["));
-        out.extend(name.iter().copied());
+        out.extend(option.iter().copied());
         out.push(T_OTHER!("]"));
       }
     }
     i += 1;
   }
-  Ok(out)
+  out
 }
 
 /// [`email_line_calls`] of a line no e-mail label leads.
@@ -111,6 +128,7 @@ fn unlabelled_email_line_calls(line: Tokens, placement: AddressPlacement) -> Res
       .iter()
       .map(|_| Some(mouth::tokenize_internal("labelseq=author")))
       .collect(),
+    AddressPlacement::Inner if !addrs.is_empty() => addrs.iter().map(|_| None).collect(),
     AddressPlacement::Shared if addrs.len() > 1 => addrs
       .iter()
       .map(|_| Some(mouth::tokenize_internal("label=addresses:block")))

@@ -28395,7 +28395,10 @@ one address per carrier that every spelled one of the run agrees with, by place 
 prints is no place of the order: `Dept X, Univ Y, ann@x.org, Phone 123, office@x.org` under two authors leaves
 `office@` the block's). A run
 holding an address the chain cannot attribute (it would be the block's) stays in the entry as today's prints it — the
-fail-safe. The entry keeps the rest of its words (`ruling3:address-out`; an entry of addresses alone is gone); each
+fail-safe, now of this text reading only (OD #956): a line or note of addresses the author block kinds at the API goes to
+the block once (ruling E, main session 2026-11-02, TENTATIVE: FIDELITY_CHARTER §4 step 4 wins — astro-ph0512555's
+`Email:dzg@,xywang@,hyf@`), and the chain is the one both engines run (`email_owners::entry_address_owners`), its carriers
+every holder of a print of the entry's text. The entry keeps the rest of its words (`ruling3:address-out`; an entry of addresses alone is gone); each
 e-mail is one per print and owner (`owner:entry-address`, a change tag). The writer cuts today's item by the same lexer
 over its printed segments (`dom::address_cut`, marks a space, a line break a line's end — the reading reads an API
 entry's lines too, `events_lined_text`; only the runs the reading holds as e-mails), in place (`plan::Op::CutAddresses`;
@@ -30132,6 +30135,90 @@ base runs: long tail 88.34 → 90.42 % per creator, 86.98 → 88.69 % per paper;
 96.65 → 96.74 %; 99 creators from wrong to right (63 + 36), none from right to wrong. Instructions (`perf stat -e instructions:u`) against 99b0: +0.5 % on 2608.28486 (22 names, 6 labelled lines; round 1
 +4.7 %), +0.0 % on 1812.07638 (200 names); round 1's +1.2 % (2607.20672: one more speculative run), −0.3 % (2609.39929,
 unrouted).
+
+### 956. An e-mail address printed inside an affiliation-kind entry is the entry's e-mail in both engines: its lines and notes of addresses are kinded once at the API, and one Link chain places every e-mail of an entry (Perl: the address stays in the affiliation's text, copied onto every carrier; an `\email` inside an entry one contact on its label's owners; a note in an `\affiliation` a document `<pubnote>`)
+
+**Defect** (census127 cluster 1, the address family: 191 dev20k papers copy an address-bearing affiliation to 2+
+holders). The old reader kinded no address inside an affiliation, alternate affiliation or address entry: authblk's
+`\affil{Univ \\ Town \\ \{a,…\}@x}` gave every author the brace list as affiliation text (2502.01754),
+`\affil[ ]{\texttt{\{a,b,c\}@x}}` made it the last author's affiliation (2602.21641, 2307.02047), the kernel's mark-led
+`{\tt $^1$\{…\}@x}` lines were affiliations of the mark's carriers when a link line closed the block (1901.09107),
+llncs's `\email{\{ivan|carolin\}@x}` and `\email{robert.holland15|e.chotzoglou16|b.kainz@x}` were one contact on a
+nameless creator (0902.3918, 1909.00276), aaspp4's `$^3$…;\\ Email:dzg@, xywang@, hyf@` was welded into the entry on
+every carrier (astro-ph0512555; `place_address_runs` spliced the run back), and REVTeX's
+`\affiliation{…\footnote{Electronic address: x}}` / revtex 3's `\address{…\thanks{Corresponding authors e-mail: x}}`
+were document `<pubnote>`s (1002.3223, cond-mat0202268; Perl-origin, Base_Utility.pool.ltxml:331). The frontmatter
+observer read some of them (`take_out_entry_addresses`, OD #938), but its writer never runs on API-only papers.
+
+**Fix (the structure model's Kind and Link, one call site, one chain).**
+- **Kind**, `affiliations::kind_entry_addresses`, at `\lx@annotate@frontmatter` right after the Cut (OD #954; each cut
+  piece passes once): an affiliation-kind contact's lines (`affil_splits`) read by the author block's reader of an
+  address line (`line_addresses`: a list, a brace group, one behind an e-mail label) — or, on a marked entry's first
+  line, the rest behind the mark (`mark_led_addresses`) — and its notes (`\footnote`, `\thanks`) printing a labelled
+  address alone (`note_addresses`: a label of at most four words ending in e-mail words, "Electronic address" now one,
+  the label the contacts' name) leave the entry and are e-mail calls digested at its end (`AddressPlacement::Inner`,
+  `email_line_calls`). An entry of addresses alone stays, empty, as their carrier and is dropped at the flush; the
+  class's own name for it (`\mail`'s "Correspondence to", `\altaffiliation[E-mail address: ]`) names its e-mails (not a
+  role default, not an empty one). Left as they are: an e-mail command's line (`\email{…}`: the class's label kept,
+  llncs's "E-mail"), a template or a list the reader cannot part, an entry a class shares among every author
+  (`_share=authors`, llncs's one `\institute`: the shared row's own reading, OD #901; 1103.2027). Lines only: an address
+  inside a line of other words is the observer's text reading's alone (residual, SYNC 100b).
+- **Entry key**: `\lx@annotate@frontmatter@now` gives every affiliation-kind contact a key (`_entry`) and whether a
+  footnote symbol leads it (`_entrysymbol`); every e-mail digested while its content is digested (`ENTRY_DIGESTING`)
+  takes them — an `\email` the author wrote there as well as the Kind step's calls.
+- **Link**, `email_owners::entry_address_owners`, the one chain both engines run (FIDELITY_CHARTER §4): the author an
+  address spells (any live author; names read by their base letters, `joze.rozanec@` Jože M. Rožanec's, 2105.01929) →
+  the entry's only carrier, when it is the entry's one address no one spells, no other address of the entry spells that
+  carrier and the carrier holds no address of its own — any address of a one-author document is its author's
+  (1806.11431) — (2403.17706's `1022041122@, 1223045440@, hhp@` under Haiping Huang's second institute are three
+  people's, 2411.17073's `bull@` is not Awais Naeem's beside his `awais.naeem@`) → every carrier of a symbol-led entry —
+  a printed symbol or a symbol its call's label is, authblk's `\affil[*]{…}` (1907.01388) — (before the order, the
+  charter's "every symbol carrier") → one per carrier in order, every spelled one agreeing → the block, once (ruling E,
+  TENTATIVE, main session 2026-11-02; surname-first initials, `dzg` for Z. G. Dai, are not read). Today's runs it at the
+  flush (`insert::link_entry_addresses`, after `relocate_annotations`, before `respell_emails`): an entry's carriers are
+  the authors holding a copy of its printed text (the same affiliation set after each name is one entry, 2212.12876; an
+  entry of addresses alone is its address list, 2208.10784), else those holding its e-mails; an e-mail printing
+  addresses alone is written out (`resolver::addresses_in`, in the font it printed in), a labelled group or one beside
+  words left whole; an address an author already holds is not put on the block too; an e-mail command the author wrote
+  inside the entry holding one address keeps the one author its own call placed it on unless it spells another
+  (FIDELITY_CHARTER §4 #420; jmlr's `\Name{…} \Email{costis@…}` under a misread `\AND`, 2002.00057, 1504.01446,
+  2509.23923); each placed e-mail follows the entry on its owner (R8). The observer runs it in `answer_inner_emails` —
+  every e-mail inside an entry, labelled or not (`api.rs` defers an unlabelled entry's, which it had copied onto every
+  owner and so into the upfront grid, 2307.02047; an entry of addresses alone still holds its role for a later
+  `annotate=new` run, as today's empty contact does, 2003.10933), entries printing the same addresses together — and in
+  `take_out_entry_addresses` over the carriers of every print of a text; there a run the chain would give the block
+  stays in the entry (the text reading's fail-safe: the writer declines a paper whose re-part needs a block creator for
+  it, 2401.08092's names re-part lost).
+- `place_address_runs` gives every run under an affiliation back to its entry — but one address under an affiliation one
+  author requests, still made that author's contact there (a raw class's store's `\email` prints nowhere left in the
+  entry, astro-ph0701846): the Kind step takes it out.
+- **Readers, one separator set**: `|` parts a group's local parts like `,` and `;` (`ADDRESS_GROUP_SEPARATORS`, both
+  readers; `$\mid$`, `\vert` print one, 2110.02026), an unbraced `a|b@x` or `a/b@x` too (`UNBRACED_LIST_SEPARATORS`,
+  hep-ph9906243's `deleo/walrod/vaz@…`; `email_addresses`, the observer's `plain_addresses`/`address_runs`); an e-mail
+  label glued to an address (`Email:aable@a.edu`, `(E-mail:bogdan@…`, astro-ph0404330) is no part of it, and any other
+  colon before the `@` makes no address; a two-letter surname spells a local part of its letters alone
+  (`NameKeys::short_surnames`: `an107@` Weili An's, not Anusuya Nallathambi's initials, 2608.22602).
+
+**Beyond Perl** in all of it; F (a note in an affiliation) mirrors the class's own `\email`, which prints the same note.
+
+**Guards** `perfect_kernel_batch100b::{an_address_line_of_an_entry_is_its_authors_emails,
+an_entry_of_addresses_alone_is_no_affiliation, mark_led_address_lines_are_their_marks_emails,
+a_bar_parts_the_local_parts_of_a_list, the_link_chain_over_an_entrys_addresses,
+a_two_letter_surname_spells_its_local_part, an_address_note_in_an_affiliation_is_its_email}`; repros
+sectioning-frontmatter/`address_family_*` (catalog only: `address_family_marked_address_lines_small`,
+`address_family_marked_address_unspelled`, `address_family_email_line_spelled`). Guards updated to the new reading:
+`perfect_kernel_batch63::ieeetran_author_block_conditional` (the shared institute's `a@b.c` the block's),
+`perfect_kernel_batch97e::sv_support_is_written` (today's writes it, the writer `same`),
+`perfect_kernel_batch64::ieee_refmark_address_and_marks_in_a_line` (`sund@` the block's, no longer welded),
+`perfect_kernel_batch85b::llncs_listed_local_parts_keep_their_braces` (the `|` list parted),
+`perfect_kernel_batch95c::entry_emails_are_named_by_their_label_in_print_order` (its synthetic addresses now spell their
+author, as the witness 1911.11406's do), `perfect_kernel_batch95b::{ieeetran_is_written,
+an_entry_address_of_its_only_carrier_is_written, an_unwritten_familys_call_is_kept_as_today}`,
+`perfect_kernel_batch92c::an_email_group_with_its_domain_after_the_brace` (today's writes it, the writer `same`),
+`perfect_kernel_batch97b::aa_mail_entry_whose_address_is_a_contact_is_given_back` (role `email`),
+`perfect_kernel_batchfms2a2r9::an_api_legend_holding_an_institution_is_an_affiliation` (the legend's e-mail line its
+speller's). Pathological, deferred: 2009.04283's `$\{$name.surname$\}$ @ $^1$polytechnique.edu, $^2$inria.fr` (marks
+inside the domain; RED `cut_acmart_template_address_line_red`).
 
 ### 957. A line of notes only after an author block's `\\` is the line above's, its notes the names' (Perl: a line of its own, read as an affiliation by the mark inside its first note, its notes the document's)
 

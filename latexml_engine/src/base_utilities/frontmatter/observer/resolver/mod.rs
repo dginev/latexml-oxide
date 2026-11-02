@@ -356,6 +356,9 @@ struct Resolver {
   /// the e-mail calls printing several addresses alone (brief 95c G3): each call's addresses, its contact, its own
   /// authors and its rule — placed once every name is read (`answer_listed_emails`)
   listed_emails:    Vec<(Vec<String>, Assoc, Vec<usize>, String)>,
+  /// the e-mails inside an unlabelled affiliation-kind entry an API call made, with the entry's carriers — placed with
+  /// the labelled entries' (`answer_inner_emails`), the entries printing the same addresses together (OD #956)
+  entry_emails:     Vec<(Vec<usize>, Assoc, bool)>,
   /// the marks a name's notes show on it (creator, label: `Ann\footnote[1]{…}` shows `∗`), what an entry led by the
   /// same `\footnotemark` answers (`answer_pending`; 1607.07280)
   note_marks:       Vec<(usize, String)>,
@@ -479,6 +482,7 @@ impl Resolver {
       note_links:       Vec::new(),
       document_emails:  Vec::new(),
       listed_emails:    Vec::new(),
+      entry_emails:     Vec::new(),
       note_marks:       Vec::new(),
       notes_marked:     true,
       parted:           Vec::new(),

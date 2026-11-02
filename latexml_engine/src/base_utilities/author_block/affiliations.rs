@@ -184,7 +184,8 @@ fn entry_calls(
 
 /// The contact roles the frontmatter API's Cut reads ([`cut_marked_contact`]): the ones a printed list of entries is
 /// labelled by marks in (an affiliation, an alternate one, an address).
-const CUT_ROLES: [&str; 3] = ["affiliation", "altaffiliation", "address"];
+pub(in crate::base_utilities) const CUT_ROLES: [&str; 3] =
+  ["affiliation", "altaffiliation", "address"];
 
 /// The keys a Cut entry does not keep from the call that held its list: the marks are its labels, so a declared
 /// sequence (`labelseq`) or sharing (`_share=authors`) no longer places it (FRONTMATTER_SINGLE_ENGINE_PLAN step 1
@@ -339,6 +340,380 @@ pub(in crate::base_utilities) fn cut_marked_contact(
     Tokens::new(calls.clone())
   );
   Ok(Some(Tokens::new(calls)))
+}
+
+/// The Kind step for the addresses printed inside an affiliation-kind entry (FRONTMATTER_SINGLE_ENGINE_PLAN "The structure
+/// model"; census127 cluster 1, the address family), at the frontmatter API's one call site after the Cut
+/// (`\lx@annotate@frontmatter`, each piece of the Cut passing once): an affiliation, alternate affiliation or address
+/// contact ([`CUT_ROLES`]) holding a line of e-mail addresses — a list (`\{aable, bbaker, ccole\}@a.edu`, `a@x, b@y`),
+/// one behind an e-mail label (`Email: a@x, b@y`, its label the contacts' name), an e-mail command's (`\email{…}`), or
+/// the rest of the entry's first line behind the mark that labels it (`{\tt $^1$\{aable, ccole\}@a.edu}`, the marked
+/// entry the author block cut it as) — is that entry's content without those lines, each address an e-mail call digested
+/// inside it ([`AddressPlacement::Inner`], `email_line_calls`): an e-mail of the entry's, whose owners the Link step
+/// gives (`email_owners::entry_address_owners`, by the `_entry` key `\lx@annotate@frontmatter@now` gives the entry and
+/// its inner contacts). An entry of addresses alone stays as their carrier, empty, and is dropped once they are placed
+/// (`insert::drop_empty_contacts`). `None` for any other contact, or one holding no such line. The lines are read by the
+/// author block's reader of an address line ([`line_addresses`]): an address inside a line of other words (`Univ X,
+/// Town; ann@x.org`) is the frontmatter observer's text reading's alone (`Resolver::take_out_entry_addresses`). A
+/// template (`\{firstname.lastname\}@x.org`, [`is_pattern_address`]) or a list the reader could not part
+/// ([`lists_local_parts`]) stays where it prints. Witnesses: authblk's `\affil{… \\ \{…\}@x}` (2502.01754) and
+/// `\affil[ ]{\texttt{\{…\}@x}}` (2602.21641, 2307.02047), the kernel's `{\tt $^1$\{…\}@x}` lines (1901.09107), llncs's
+/// `\email{\{ivan|carolin\}@x}` (0902.3918, 1909.00276), aaspp4's `$^3$…;\\ Email: dzg@, xywang@, hyf@`
+/// (astro-ph0512555).
+pub(in crate::base_utilities) fn kind_entry_addresses(
+  tag: &Tokens,
+  kv: Option<&KeyVals>,
+  content: &Tokens,
+) -> Result<Option<Tokens>> {
+  if tag.to_string() != "ltx:contact"
+    || !content
+      .unlist_ref()
+      .iter()
+      .any(|t| t.with_str(|s| s == "@"))
+  {
+    return Ok(None);
+  }
+  let role = kv
+    .and_then(|kv| kv.get_value("role"))
+    .map(ToString::to_string)
+    .unwrap_or_default();
+  // (an entry a class shares among every author, llncs's one `\institute`, `_share=authors`: its lines of addresses are
+  // the shared row's, placed by the same chain where the row is read — `shared_row::row_email_calls`, OD #901;
+  // 1103.2027)
+  if !CUT_ROLES.contains(&role.as_str()) || kv.is_some_and(|kv| kv.get_value("_share").is_some()) {
+    return Ok(None);
+  }
+  let (withinst, inner) = within_inst(content);
+  let (withsup, inner) = within_wrapper(&inner, "\\lx@affiliation@withsup");
+  // (a footnote of the entry's holding addresses alone, behind a label or none — REVTeX's `\affiliation{Univ A,
+  // Town\footnote{Electronic address: aable@a.edu}}`, the note the class's own `\email` prints (revtex4-2.cls:2404):
+  // its addresses the entry's, as an address line's; Perl keeps the footnote a `<pubnote>` of the document,
+  // Base_Utility.pool.ltxml:331 — 1002.3223, cond-mat0202268)
+  let (inner, footnotes) = take_address_footnotes(inner);
+  // (a line the reader takes out: its addresses read, none a template or a list it could not part, and its groups
+  // balanced, so the entry left is)
+  // (a line of e-mail commands is e-mails already, the class's own contacts with the label it prints — llncs's
+  // `\email{…}` "E-mail", 2008.05861's `\email{\{jlwang,yhliu\}@…}, \email{jianbo@…}` —, digested inside the entry
+  // and so its addresses: left as it is)
+  let addresses_of = |line: &Tokens| {
+    let command = line
+      .unlist_ref()
+      .iter()
+      .any(|t| t.get_catcode() == Catcode::CS && is_email_wrapper(t));
+    (!command)
+      .then(|| line_addresses(line))
+      .flatten()
+      .filter(|addresses| {
+        balanced(line.unlist_ref())
+          && addresses
+            .iter()
+            .all(|a| !is_pattern_address(a) && !lists_local_parts(a))
+      })
+  };
+  let mut kept: Vec<(Vec<Token>, Vec<Token>)> = Vec::new();
+  let mut address_lines: Vec<Tokens> = Vec::new();
+  let mut first = true;
+  // (whether the entry prints anything but addresses, its mark aside)
+  let mut prints_else = false;
+  for (delimiter, line) in split_tokens_delimited(inner, affil_splits()) {
+    let printed = !line.is_empty() && !prints_nothing(&line);
+    // (the first line of a marked entry: the mark that labels it kept, the addresses behind it the entry's)
+    if printed
+      && first
+      && withsup
+      && let Some((mark, rest)) = mark_led_addresses(&line)
+      && addresses_of(&rest).is_some()
+    {
+      kept.push((delimiter, mark));
+      address_lines.push(rest);
+      first = false;
+      continue;
+    }
+    // (a line a mark leads is no address line: its mark is no letter of an address, `$^2$bob@y.org`)
+    if printed && author_mark_position(&line).is_none() && addresses_of(&line).is_some() {
+      address_lines.push(line);
+      first = false;
+      continue;
+    }
+    first &= !printed;
+    prints_else |= printed;
+    kept.push((delimiter, line.unlist()));
+  }
+  if address_lines.is_empty() && footnotes.is_empty() {
+    return Ok(None);
+  }
+  let mut entry: Vec<Token> = Vec::new();
+  for (delimiter, line) in kept {
+    if !entry.is_empty() {
+      entry.extend(delimiter);
+    }
+    entry.extend(line);
+  }
+  let mut entry = trim_trailing_separator(entry);
+  // (an entry of addresses alone that the class names, `\mail{…}`'s "Correspondence to", REVTeX's
+  // `\altaffiliation[E-mail address: ]{…}`: its name the e-mails' — where no label of their own names them; 0709.0811,
+  // astro-ph0108379, cond-mat0703234, 1402.3092)
+  let entry_name: Option<Vec<Token>> = (!prints_else && footnotes.is_empty())
+    .then(|| kv.and_then(|kv| kv.revert().ok()))
+    .flatten()
+    .and_then(|attrs| {
+      split_tokens(attrs, vec![T_OTHER!(",").into()])
+        .into_iter()
+        .find(|item| item.to_string().trim_start().starts_with("name="))
+        .map(Tokens::unlist)
+    })
+    // (not the role's own default, `\lx@contact@altaffiliation@name` — "Alternate Affiliation:" names no e-mail, 0812.4856
+    // —, nor an empty one, which names nothing: aa's `\mail` copy, 97b)
+    .filter(|name| {
+      let value = name.iter().skip_while(|t| **t != T_OTHER!("=")).skip(1);
+      !name
+        .iter()
+        .any(|t| t.get_catcode() == Catcode::CS && t.with_str(|s| s.starts_with("\\lx@contact@")))
+        && value.clone().any(|t| {
+          matches!(
+            t.get_catcode(),
+            Catcode::LETTER | Catcode::OTHER | Catcode::CS
+          )
+        })
+    });
+  // (each e-mail the Kind step made says so, `ENTRY_KINDED`: an e-mail command the author wrote inside the entry is
+  // placed by its own call where it holds one address, `insert::link_entry_addresses`)
+  let kinded = mouth::tokenize_internal(TeXString::assembled(s!("{ENTRY_KINDED}=true"))).unlist();
+  for line in address_lines {
+    // (the class's name before the line's own label where both print: aa's `\mail{e-mail: x}`, "Correspondence to
+    // e-mail:", 0805.1001; REVTeX's `\altaffiliation[Authors for Correspondence: ]{Email: …}`, 2208.10784)
+    let (label, rest) = split_email_label(&line);
+    let calls = match (&entry_name, label) {
+      (Some(name), None) => {
+        optioned_email_calls(email_line_calls(line, AddressPlacement::Inner)?, name)
+      },
+      (Some(name), Some(label)) if line_is_email_list(&rest) && !line_is_email_list(&line) => {
+        let value: Vec<Token> = name
+          .iter()
+          .copied()
+          .skip_while(|t| *t != T_OTHER!("="))
+          .skip(1)
+          .filter(|t| !matches!(t.get_catcode(), Catcode::BEGIN | Catcode::END))
+          .collect();
+        let mut both = value;
+        if both.last().is_some_and(|t| !is_spacing(t)) {
+          both.push(T_SPACE!());
+        }
+        both.extend(label.unlist());
+        named_email_calls(
+          email_line_calls(rest, AddressPlacement::Inner)?,
+          &Tokens::new(both),
+        )
+      },
+      _ => email_line_calls(line, AddressPlacement::Inner)?,
+    };
+    entry.extend(optioned_email_calls(calls, &kinded));
+  }
+  for (label, line) in footnotes {
+    let calls = email_line_calls(line, AddressPlacement::Inner)?;
+    let calls = match label {
+      Some(label) => named_email_calls(calls, &label),
+      None => calls,
+    };
+    entry.extend(optioned_email_calls(calls, &kinded));
+  }
+  let mut entry = Tokens::new(entry);
+  if withsup {
+    entry = Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(entry)]);
+  }
+  if withinst {
+    entry = Invocation!(T_CS!("\\lx@affiliation@withinst"), vec![Some(entry)]);
+  }
+  DebugFeature!(
+    "frontmatter",
+    "FRONT kind {role}: its address lines the entry's e-mails: {entry}"
+  );
+  Ok(Some(entry))
+}
+
+/// The attribute naming the affiliation-kind entry an e-mail was digested inside, and the entry itself (its key, a count
+/// of such entries: `\lx@annotate@frontmatter@now`), by which the Link step reads the entry's addresses and carriers
+/// (`insert::link_entry_addresses`; OXIDIZED_DESIGN_DIVERGENCES #956).
+pub(in crate::base_utilities) const ENTRY_KEY: &str = "_entry";
+
+/// The attribute saying a footnote symbol leads the entry [`ENTRY_KEY`] names (`$^\dagger$…`), whose addresses no
+/// carrier spells are every carrier's (FIDELITY_CHARTER §4, "every symbol carrier").
+pub(in crate::base_utilities) const ENTRY_SYMBOL: &str = "_entrysymbol";
+
+/// The attribute of an e-mail the Kind step made of an entry's line or note ([`kind_entry_addresses`]), as against an
+/// e-mail command the author wrote inside the entry, which its own call places where it holds one address
+/// (FIDELITY_CHARTER §4 #420; `insert::link_entry_addresses`).
+pub(in crate::base_utilities) const ENTRY_KINDED: &str = "_kinded";
+
+/// The state key naming the affiliation-kind entry whose content is being digested (`<key>:symbol` or `<key>:`), whose
+/// e-mails take its [`ENTRY_KEY`] (and its [`ENTRY_SYMBOL`]); empty outside one.
+pub(in crate::base_utilities) const ENTRY_DIGESTING: &str = "lx_frontmatter_entry_digesting";
+
+/// The state key counting the affiliation-kind entries given an [`ENTRY_KEY`].
+pub(in crate::base_utilities) const ENTRY_KEY_COUNTER: &str = "lx_frontmatter_entry_key";
+
+/// Whether a footnote symbol leads an entry's content (in the affiliation's own wrappers): a text symbol (`* Equal
+/// contribution`, `\dag …`, [`starts_with_footnote_symbol`]) or a superscript one (`$^\dagger$Univ X`).
+pub(in crate::base_utilities) fn led_by_footnote_symbol(content: &Tokens) -> bool {
+  let (_, inner) = within_inst(content);
+  let (_, inner) = within_wrapper(&inner, "\\lx@affiliation@withsup");
+  starts_with_footnote_symbol(&inner)
+    || (marker_leads(&inner)
+      && entry_mark(inner.unlist_ref()).is_some_and(|mark| is_symbol_mark(&mark)))
+}
+
+/// `content` without the notes (`\footnote{…}`, `\thanks{…}`, an optional mark aside) that print a line of addresses
+/// alone, behind a label or none, and those lines, each with the label its contacts are named by when the line's own
+/// reader does not read it ([`note_addresses`]; [`kind_entry_addresses`]).
+fn take_address_footnotes(content: Tokens) -> (Tokens, Vec<(Option<Tokens>, Tokens)>) {
+  let v = content.unlist_ref();
+  let note_cs = [T_CS!("\\footnote"), T_CS!("\\thanks")];
+  if !v.iter().any(|t| note_cs.contains(t)) {
+    return (content, Vec::new());
+  }
+  let mut kept: Vec<Token> = Vec::with_capacity(v.len());
+  let mut lines: Vec<(Option<Tokens>, Tokens)> = Vec::new();
+  let mut i = 0;
+  while i < v.len() {
+    if note_cs.contains(&v[i]) {
+      let mut open = i + 1;
+      while v.get(open) == Some(&T_SPACE!()) {
+        open += 1;
+      }
+      // (its optional mark, `\footnote[2]{…}`)
+      if v.get(open) == Some(&T_OTHER!("["))
+        && let Some(close) = v[open..].iter().position(|t| *t == T_OTHER!("]"))
+      {
+        open += close + 1;
+        while v.get(open) == Some(&T_SPACE!()) {
+          open += 1;
+        }
+      }
+      if v
+        .get(open)
+        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+      {
+        let end = skip_group(v, open);
+        if end <= v.len()
+          && end >= open + 2
+          && let Some(line) = note_addresses(&Tokens::new(v[open + 1..end - 1].to_vec()))
+        {
+          lines.push(line);
+          i = end;
+          continue;
+        }
+      }
+    }
+    kept.push(v[i]);
+    i += 1;
+  }
+  (Tokens::new(kept), lines)
+}
+
+/// The addresses line a note prints when it prints addresses alone: one [`line_addresses`] reads (a list, one behind
+/// an e-mail label), or one behind a label ending in an e-mail label's words before its colon (`Corresponding authors
+/// e-mail: cecilia.pennetta@unile.it`, cond-mat0202268; REVTeX's `Electronic address: …`, 1002.3223) — the label then
+/// given apart, the contacts' name. None a template or a list the reader could not part.
+fn note_addresses(note: &Tokens) -> Option<(Option<Tokens>, Tokens)> {
+  let real = |addresses: Vec<String>| {
+    addresses
+      .iter()
+      .all(|a| !is_pattern_address(a) && !lists_local_parts(a))
+  };
+  if line_addresses(note).is_some_and(real) {
+    return Some((None, note.clone()));
+  }
+  let v = note.unlist_ref();
+  let colon = v.iter().position(|t| *t == T_OTHER!(":"))?;
+  let label: Vec<Token> = v[..colon]
+    .iter()
+    .copied()
+    .skip_while(|t| *t == T_SPACE!())
+    .collect();
+  let text = visible_name_text(&label);
+  let words: Vec<&str> = text.split_whitespace().collect();
+  // (a label of a few words — `Corresponding authors e-mail`; a sentence before its colon is the note's text, `X. Zhang
+  // and L. Duan are with …, Singapore. E-mail`, 1710.05616)
+  let labelled = words.len() <= 4
+    && (1..=2.min(words.len())).any(|n| is_email_label(&words[words.len() - n..].join(" ")));
+  let rest = Tokens::new(
+    v[colon + 1..]
+      .iter()
+      .copied()
+      .skip_while(is_spacing)
+      .collect(),
+  );
+  (labelled && email_addresses(&rest).is_some_and(real)).then(|| {
+    let mut label = label;
+    label.push(T_OTHER!(":"));
+    (Some(Tokens::new(label)), rest)
+  })
+}
+
+/// Whether `tokens` closes every group it opens, none before it opens it.
+fn balanced(tokens: &[Token]) -> bool {
+  let mut depth = 0usize;
+  for t in tokens {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END if depth == 0 => return false,
+      Catcode::END => depth -= 1,
+      _ => {},
+    }
+  }
+  depth == 0
+}
+
+/// A line led by a printed mark (`$^1$…`, `\textsuperscript{1}…`, the font switches before it kept: `{\tt $^1$\{aable,
+/// ccole\}@a.edu}`, a group round the whole line read inside), parted into the mark and what follows it, each in the
+/// line's group: `None` for a line no printed mark leads (`relocate::leading_line_label`; a number typed by hand is no
+/// mark here).
+fn mark_led_addresses(line: &Tokens) -> Option<(Vec<Token>, Tokens)> {
+  let v = line.unlist_ref();
+  let grouped = v.len() >= 2 && v[0].get_catcode() == Catcode::BEGIN && skip_group(v, 0) == v.len();
+  let inner = if grouped { &v[1..v.len() - 1] } else { v };
+  let (_, typed, rest) = leading_line_label(&Tokens::new(inner.to_vec()))?;
+  if typed {
+    return None;
+  }
+  // (the rest is the switches before the mark and the tokens after it, those a tail of the line)
+  let lead = inner
+    .iter()
+    .take_while(|t| {
+      **t == T_SPACE!()
+        || (t.get_catcode() == Catcode::CS && t.with_str(|s| MARK_SWITCHES.contains(&s)))
+    })
+    .count();
+  let tail = &rest.unlist_ref()[lead.min(rest.unlist_ref().len())..];
+  let mark = &inner[..inner.len().checked_sub(tail.len())?];
+  let wrap = |tokens: Vec<Token>| {
+    if grouped {
+      let mut out = vec![v[0]];
+      out.extend(tokens);
+      out.push(v[v.len() - 1]);
+      out
+    } else {
+      tokens
+    }
+  };
+  let mut address = inner[..lead].to_vec();
+  address.extend_from_slice(tail);
+  Some((wrap(mark.to_vec()), Tokens::new(wrap(address))))
+}
+
+/// The content of `content` inside the one-argument wrapper `cs` round all of it (`\lx@affiliation@withsup{…}`), and
+/// whether it was.
+fn within_wrapper(content: &Tokens, cs: &str) -> (bool, Tokens) {
+  let v = content.unlist_ref();
+  if v.len() >= 3
+    && v[0] == T_CS!(cs)
+    && v[1].get_catcode() == Catcode::BEGIN
+    && skip_group(v, 1) == v.len()
+  {
+    (true, Tokens::new(v[2..v.len() - 1].to_vec()))
+  } else {
+    (false, content.clone())
+  }
 }
 
 /// The content of a contact inside the affiliation's own wrapper (`\lx@affiliation@withinst{…}`, which
@@ -909,9 +1284,9 @@ struct AddressRun {
 /// whose it is:
 /// - when the list puts addresses under its affiliations — it has one, or a run sits between two (2609.19448
 ///   `$^1$Department\\University\\\texttt{david.abel@ed.ac.uk}\\[2ex]$^2$…`) — one address under an affiliation
-///   exactly one author requests is that author's; any other run under an affiliation continues it, as the PDF prints
-///   it, claiming no author (an affiliation several authors share, or several addresses under one author's, which
-///   may be everyone's);
+///   exactly one author requests is that author's; any other run under an affiliation goes back into that entry, whose
+///   Kind step takes it out as the entry's e-mails and whose Link step places them (the author each spells, the entry's
+///   only carrier, …, else the block once: [`kind_entry_addresses`], OD #956);
 /// - else the run is the block's: one address for each author goes to the authors in order (llncs
 ///   `\institute{$^1$A \\ $^2$B \\ \email{a@x} \\ \email{b@y}}`), any other is one contact an address on the shared
 ///   creator below the authors (#159) — by order, 2609.06094's four addresses for six authors had given Jindong
@@ -952,9 +1327,17 @@ fn place_address_runs(
     let total: usize = counts.iter().sum();
     let mut calls = Vec::new();
     match run.under {
+      // (a run under an affiliation is that entry's: it goes back into it, whose Kind step takes its addresses out as
+      // the entry's e-mails and whose Link step places them — the author each spells, the entry's only carrier, every
+      // carrier of a symbol-led one, one per carrier in order, else the block once: `kind_entry_addresses`,
+      // `email_owners::entry_address_owners`, OXIDIZED_DESIGN_DIVERGENCES #956; it no longer stays in the entry's text,
+      // 2609.19448's one address under one author's affiliation still that author's)
       Some((entry, at)) if under_affiliations => {
         let requesting = entry_mark(&entries[entry])
           .map_or_else(Vec::new, |mark| requesting_authors(&authors, &mark));
+        // (one address under an affiliation one author requests is that author's, its line made the contact here: an
+        // e-mail command a raw class's store holds, `\email{hyf@…}` under `\inst{1}`'s institute, prints nowhere if
+        // left in the entry — astro-ph0701846)
         if let ([author], 1) = (requesting.as_slice(), total) {
           for (_, line) in run.lines {
             calls.extend(email_line_calls(
@@ -1279,4 +1662,8 @@ pub(in crate::base_utilities) enum AddressPlacement {
   /// that led it (`$^*$zq77@x.edu` under `Ann Able$^{1,*}$`; main-session decision 3 on the 77p r11 questions;
   /// 2605.01818's `$^*$nbes@itu.dk` on the ∗ author).
   Marked(Vec<usize>),
+  /// Each address its own contact, with no placement of its own: an address line of an affiliation-kind entry, digested
+  /// inside it, the entry's address — its owners the entry's Link step gives ([`kind_entry_addresses`],
+  /// `email_owners::entry_address_owners`).
+  Inner,
 }

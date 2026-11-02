@@ -448,9 +448,15 @@ fn contact_word_form(word: &str) -> String {
     .to_lowercase()
 }
 
-/// Is `text` an e-mail label's words ("E-mail", "Emails", "E-mail address"; [`CONTACT_WORDS`])?
+/// Is `text` an e-mail label's words ("E-mail", "Emails", "E-mail address"; [`CONTACT_WORDS`]; "Electronic address")?
 pub(in crate::base_utilities) fn is_email_label(text: &str) -> bool {
   let text = contact_word_form(text);
+  // (REVTeX's own label, "Electronic address" (revtex4-2.cls `\email`'s note), and "Electronic mail")
+  if let Some(after) = text.strip_prefix("electronic")
+    && ["address", "addresses", "mail"].contains(&after)
+  {
+    return true;
+  }
   let (emails, rest) = CONTACT_WORDS.split_at(2);
   let addresses = &rest[..2];
   emails.iter().any(|email| {
@@ -968,6 +974,15 @@ fn url_arguments_printed(v: &[Token]) -> Vec<Token> {
   out
 }
 
+/// The characters that part the local parts of a braced group sharing one domain (`\{ann, bob\}@x.org`, `\{ann;
+/// bob\}@x.org`, `\{ann|bob\}@x.org`): the one separator set of both readers of a group, [`email_addresses`] and the
+/// frontmatter observer's (`addresses_in`, `address_runs`).
+pub(in crate::base_utilities) const ADDRESS_GROUP_SEPARATORS: [char; 3] = [',', ';', '|'];
+
+/// The characters that part local parts sharing one domain with no braces round them (`a|b@x.org`, `a/b@x.org`): both
+/// readers' ([`email_addresses`], the frontmatter observer's `plain_addresses`).
+pub(in crate::base_utilities) const UNBRACED_LIST_SEPARATORS: [char; 2] = ['|', '/'];
+
 /// Parse an email line into its individual address strings, or `None` if the line
 /// is not an email list. Two forms are recognized, and mixed (after skipping
 /// wrapper commands and grouping — the visible letter/other/space chars are read,
@@ -1034,6 +1049,9 @@ pub(in crate::base_utilities) fn email_addresses(line: &Tokens) -> Option<Vec<St
         "\\{" | "\\lbrace" | "\\textbraceleft" => visible.push('{'),
         "\\}" | "\\rbrace" | "\\textbraceright" => visible.push('}'),
         "\\_" | "\\textunderscore" => visible.push('_'),
+        // (a bar between local parts in math, `\{malcolm.crowe $\mid$ carolyn.begg\}@uws.ac.uk`, 2110.02026: a `|`,
+        // [`ADDRESS_GROUP_SEPARATORS`])
+        "\\mid" | "\\vert" => visible.push('|'),
         _ => {},
       }),
       _ => {},
@@ -1069,9 +1087,11 @@ pub(in crate::base_utilities) fn email_addresses(line: &Tokens) -> Option<Vec<St
         if !domain.starts_with('@') || !is_part(&domain[1..]) {
           return None;
         }
-        // (a `;` parts them as a comma does: `\{hjjang; dychoi; …\}@vclab.kaist.ac.kr`, 2607.16926)
+        // (a `;` parts them as a comma does: `\{hjjang; dychoi; …\}@vclab.kaist.ac.kr`, 2607.16926; so does a `|`,
+        // llncs's `\email{\{ivan|carolin\}@…}`, 0902.3918, 1909.00276 — the separators the frontmatter observer's
+        // `addresses_in` and `address_runs` part a group at too, [`ADDRESS_GROUP_SEPARATORS`])
         for local in list[..close]
-          .split([',', ';'])
+          .split(ADDRESS_GROUP_SEPARATORS)
           .map(str::trim)
           .filter(|p| !p.is_empty())
         {
@@ -1094,8 +1114,46 @@ pub(in crate::base_utilities) fn email_addresses(line: &Tokens) -> Option<Vec<St
     if let Some(item) = item.filter(|item| !item.is_empty()) {
       for item in item.split_whitespace() {
         let item = item.trim_end_matches([';', '.']);
-        // (a local part before the `@`: a handle, `@aable`, is no address, the r6 re-review's w4)
-        if !item.contains('@') || item.starts_with('@') || item.contains(['{', '}']) {
+        // (an e-mail label glued to the address, `Email:aable@a.edu`, `(E-mail:bogdan@…` — astro-ph0512555,
+        // astro-ph0404330: the address after it; any other colon before the `@` is no address, below)
+        let item = match item
+          .split_once('@')
+          .and_then(|(local, _)| local.rsplit_once(':'))
+        {
+          Some((label, _)) if is_email_label(label.trim_start_matches('(')) => {
+            &item[label.len() + 1..]
+          },
+          _ => item,
+        };
+        // (local parts a `|` or a `/` parts before one domain, with no braces: llncs's `\email{robert.holland15|
+        // e.chotzoglou16|b.kainz@imperial.ac.uk}`, 1909.00276; `deleo/walrod/vaz@ime.unicamp.br`, hep-ph9906243 — each
+        // at the domain, as a braced group's are, [`UNBRACED_LIST_SEPARATORS`])
+        if let Some((local, domain)) = item.split_once('@')
+          && local.contains(UNBRACED_LIST_SEPARATORS)
+          && !domain.contains('@')
+        {
+          let parts: Vec<&str> = local.split(UNBRACED_LIST_SEPARATORS).collect();
+          if parts.iter().all(|part| {
+            !part.is_empty()
+              && part
+                .chars()
+                .all(|c| c.is_alphanumeric() || "._+-".contains(c))
+          }) {
+            out.extend(parts.iter().map(|part| format!("{part}@{domain}")));
+            continue;
+          }
+        }
+        // (a local part before the `@`: a handle, `@aable`, is no address, the r6 re-review's w4; nor one holding a
+        // colon, a label glued to it — `Email:aable@a.edu`, whose label `split_email_label` reads, emulateapj's
+        // astro-ph0512555 shape — OXIDIZED_DESIGN_DIVERGENCES #956)
+        if !item.contains('@')
+          || item.starts_with('@')
+          || item.contains(['{', '}'])
+          || item
+            .split('@')
+            .next()
+            .is_some_and(|local| local.contains(':'))
+        {
           return None;
         }
         out.push(item.to_string());
