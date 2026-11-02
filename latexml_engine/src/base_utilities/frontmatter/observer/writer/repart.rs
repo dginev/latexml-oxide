@@ -1497,7 +1497,8 @@ pub(super) fn apply(
       complete = false;
     }
     // (a mark the name's own note prints is shown by it: `Daya Guo\footnotemark[1]`'s `*`, 1909.05311)
-    let asterisk = |m: &str| m.replace('\u{2217}', "*");
+    // (`*` and `∗` one mark, as the labels are keyed: `queue_digest::one_asterisk`)
+    let asterisk = one_asterisk;
     let shown: Vec<String> = in_name
       .iter()
       .filter_map(|note| note.get_attribute("mark"))

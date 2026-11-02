@@ -568,7 +568,8 @@ fn hide_answered_marks(document: &mut Document, resolved: &Resolved) {
   let Some(pairs) = plan::pair_names(resolved, &front) else {
     return;
   };
-  let unify = |m: &str| m.replace('\u{2217}', "*");
+  // (the printed glyphs keyed as the labels are, `*` and `∗` one: `queue_digest::one_asterisk`)
+  let unify = one_asterisk;
   for (i, j) in pairs {
     let c = &resolved.creators[i];
     let answered: Vec<String> = c

@@ -1,0 +1,26 @@
+% A displaced store (`\def\affiliation#1{\gdef\@affil{\it #1}}`, printed by the class's `\@maketitle`, OD #955) whose
+% last line leads with a control-sequence footnote symbol no name requests (`$^\dagger$Deceased` under `Ann
+% Able$^{1}$, Bob Baker$^{2}$`): the call is in doubt, as one holding an unrequested letter or digit is, and stays the
+% class's text where its title page prints it (frontmatter_stores.rs `displaced_in_doubt`, `is_a_mark`; review rev99b2
+% F2, where "†Deceased" went to every author).
+% witness: review rev99b2 probe q4d (synthetic)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2", "1Univ A, Town", "2Univ B, City", "†Deceased"
+% engines: rust int127a = each author's own line and "†Deceased" an affiliation of both; perl = no raw class load
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker hold no contact, their marks shown; the body holds the
+%          three lines as the class prints them, then "Text."
+% status:  RED (int127a) -> GREEN (100a)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{dsdec.cls}
+\ProvidesClass{dsdec}\LoadClass{article}
+\def\affiliation#1{\gdef\@affil{\it #1}}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\end{center}
+  {\small\@affil\par}\vskip1em}
+\end{filecontents*}
+\documentclass{dsdec}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$}
+\affiliation{$^1$Univ A, Town\\ $^2$Univ B, City\\ $^\dagger$Deceased}
+\maketitle
+Text.
+\end{document}

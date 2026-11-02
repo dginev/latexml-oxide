@@ -10,6 +10,9 @@ use super::*;
 /// The funding words are read as words (`funding_word`), not inside one: "erc" in "Perception" or "Commerce", "nsf"
 /// in "transfer", "fund" in "Fundamental" read an institution as a funder, so its line was no affiliation (2509.05368
 /// "Machine Perception", OXIDIZED_DESIGN_DIVERGENCES #880).
+/// "Deceased", as a word, is an annotation on the author of the same kind as "Corresponding author" (FIDELITY_CHARTER §4,
+/// user ruling 2026-11-02): a legend line `$^\dagger$Deceased` is its carriers' note, `ltx_thanks_deceased` (0708.2630's
+/// `$^*$Deceased`, 1003.2628's `\address{{\addrdagger}Deceased on …}`, 1510.03948's `$^\dagger$deceased`).
 /// Witnesses: arXiv 2512.24601 (correspondence), 1510.02728 (funding),
 /// 2506.06941 "Equal contribution", 2609.32870 "Equal advising." (contribution). Explicitly best-effort.
 pub(in crate::base_utilities) fn classify_thanks(text: &str) -> &'static str {
@@ -22,6 +25,11 @@ pub(in crate::base_utilities) fn classify_thanks(text: &str) -> &'static str {
   // review rev94a r2 S1)
   } else if (t.contains("equal") && t.contains("contribut")) || equal_share(&t) {
     "contribution"
+  } else if t
+    .split(|c: char| !c.is_alphanumeric())
+    .any(|w| w == "deceased")
+  {
+    "deceased"
   } else if t.contains("now at") || t.contains("present address") || t.contains("current address") {
     "address"
   } else if t.split(|c: char| !c.is_alphanumeric()).any(funding_word) {
@@ -29,6 +37,19 @@ pub(in crate::base_utilities) fn classify_thanks(text: &str) -> &'static str {
   } else {
     "note"
   }
+}
+
+/// Whether a note's visible text opens with the word "deceased" (`†Deceased 3 March 2021; formerly at Univ C`): an
+/// annotation on the author even where an institution follows it, while a text naming an institution with the word
+/// (`Department of Deceased Estates, Univ C`) is an affiliation — the reading of the kernel's line route
+/// (`queue_digest::legend_note_kind`) and of the frontmatter observer (`is_legend_text`) alike (review rev100a S2, probes
+/// e1, e2, d9).
+pub(in crate::base_utilities) fn opens_with_deceased(text: &str) -> bool {
+  text.split_whitespace().next().is_some_and(|word| {
+    word
+      .trim_matches(|c: char| !c.is_alphanumeric())
+      .eq_ignore_ascii_case("deceased")
+  })
 }
 
 /// Whether a lowercased note says an equal share of advising: "equal" or "equally" next to a word of advising,

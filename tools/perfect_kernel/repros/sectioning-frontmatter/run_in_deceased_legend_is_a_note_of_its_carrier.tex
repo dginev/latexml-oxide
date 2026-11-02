@@ -1,0 +1,35 @@
+% A raw class's run-in `\affil` legend lines led by footnote symbols the names carry: `$^\dagger$Deceased` under `Ann
+% Able$^{1,\dagger}$`, `$^*$Present address: …` under `Bob Baker$^{2,*}$`. "Deceased" is an annotation on the author of
+% the same kind as "Corresponding author" (FIDELITY_CHARTER §4, user ruling 2026-11-02): the line is its carrier's note
+% (`<note role="thanks" class="… ltx_thanks_deceased">`), read by the shared kind reader (`classify_thanks`'s
+% `deceased`, queue_digest.rs `legend_note_kind`), never an affiliation; the address change stays Bob's note.
+% witness: review rev99b2 probe q4e (synthetic; the legend family of 2609.15125, 2602.03759, 2604.08878, 2607.12158)
+% oracle:  pdflatex 0 errors: "Ann Able1,†, Bob Baker2,∗", "1Univ A, Town", "2Univ B, City", "†Deceased", "∗Present
+%          address: Univ X, Village"
+% engines: rust int127a = "†Deceased" Ann Able's affiliation contact; perl = no raw class load (OmniBus `\affil`)
+% expect:  0 errors, 0 warnings; Ann Able holds her affiliation and <note class="ltx_note_frontmatter
+%          ltx_thanks_deceased" mark="†" role="thanks">†Deceased</note>; Bob Baker his affiliation and the address note;
+%          the body holds only "Text."
+% status:  RED (int127a) -> GREEN (100a)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipdec.cls}
+\ProvidesClass{ipdec}\LoadClass{article}
+\renewcommand{\author}[1]{{\raggedright #1\par}}
+\newcommand{\affil}[1]{{\small\raggedright #1}}
+\end{filecontents*}
+\documentclass{ipdec}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,\dagger}$, Bob Baker$^{2,*}$}
+
+\affil{$^1$Univ A, Town}
+
+\affil{$^2$Univ B, City}
+
+\affil{$^\dagger$Deceased}
+
+\affil{$^*$Present address: Univ X, Village}
+
+\maketitle
+Text.
+\end{document}

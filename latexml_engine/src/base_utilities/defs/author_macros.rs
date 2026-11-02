@@ -231,7 +231,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
     // (keyed by the operand's printed text: refactor stage 4, OXIDIZED_DESIGN_DIVERGENCES #919)
     let (label, pictured) = frontmatter_label_request(&operand, "affiliation")?;
-    add_annotation_labels(label.join(","), true, pictured);
+    // (a requested asterisk shows as it prints: one requested in text is `*` — `show_unanswered_marks`' text marks —
+    // unless the operand prints another form, which its key reads `*` too: icrc2009's `\IEEEauthorrefmark{1}` sets the
+    // math `∗`, 0909.3754, 0912.0896, 2609.25589; `one_asterisk`, review rev100a B1)
+    let in_text =
+      !(label.iter().any(|l| l == "affiliation:*") && prints_another_asterisk(&operand)?);
+    add_annotation_labels(label.join(","), in_text, pictured);
     if let Some(notes) = notes {
       unread(notes);
     }

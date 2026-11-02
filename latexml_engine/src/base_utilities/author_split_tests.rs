@@ -694,6 +694,74 @@ fn classify_thanks_reads_funding_words_whole() {
   );
 }
 
+/// 100a: "Deceased", as a word and in any case, is an annotation on the author of the same kind as "Corresponding
+/// author" (FIDELITY_CHARTER §4, user ruling 2026-11-02): the `deceased` kind, `ltx_thanks_deceased` on a thanks note,
+/// a legend line its carriers' note (`legend_note_kind`, review rev99b2 q4e). Not inside another word ("Predeceased").
+#[test]
+fn classify_thanks_reads_deceased_as_a_word() {
+  for deceased in [
+    "Deceased",
+    "deceased.",
+    "(Deceased)",
+    "DECEASED",
+    "Deceased 12 March 2020",
+  ] {
+    assert_eq!(classify_thanks(deceased), "deceased", "{deceased}");
+  }
+  assert_eq!(classify_thanks("Predeceased by his wife"), "note");
+  assert_eq!(
+    classify_thanks("Corresponding author; deceased"),
+    "correspondence"
+  );
+}
+
+/// 100a r2: "Deceased" opens a note's text where the word comes first, behind its mark (`opens_with_deceased`); an
+/// institution named with it inside does not (review rev100a S2).
+#[test]
+fn opens_with_deceased_reads_the_first_word() {
+  assert!(opens_with_deceased("Deceased"));
+  assert!(opens_with_deceased(
+    "\u{2020}Deceased 3 March 2021; formerly at Univ C"
+  ));
+  assert!(opens_with_deceased(" (deceased)"));
+  assert!(!opens_with_deceased(
+    "Department of Deceased Estates, Univ C"
+  ));
+  assert!(!opens_with_deceased("Predeceased"));
+}
+
+/// 100a r2: an asterisk is one key however it is written or printed — `*`, `∗` (U+2217), `⁎`, `✱`, `＊`, `\ast`,
+/// `\textasteriskcentered` — on both sides of a match, the name's request and the line's label (`one_asterisk`, review
+/// rev100a B1; user ruling 2026-11-02: all asterisks are the same key); a glyph run keeps its parts.
+#[test]
+fn clean_frontmatter_labels_keys_an_asterisk_one_way() {
+  for spelled in [
+    "*",
+    "\u{2217}",
+    "\u{204E}",
+    "\u{2731}",
+    "\u{FF0A}",
+    "\\ast",
+    "\\textasteriskcentered",
+    "{\\ast}",
+  ] {
+    assert_eq!(
+      clean_frontmatter_labels(spelled, "affiliation"),
+      ["affiliation:*"],
+      "{spelled}"
+    );
+  }
+  assert_eq!(clean_frontmatter_labels("1,\u{2217}", "affiliation"), [
+    "affiliation:1",
+    "affiliation:*"
+  ]);
+  assert_eq!(clean_frontmatter_labels("1\u{2217}", ""), ["1*"]);
+  assert_eq!(clean_frontmatter_labels("1,\u{2731}", "affiliation"), [
+    "affiliation:1",
+    "affiliation:*"
+  ]);
+}
+
 /// 78u: a note written inside a mark is taken out after it, the mark's labels left (2512.05464), and a mark holding
 /// only a note goes (2212.00809).
 #[test]

@@ -2234,9 +2234,10 @@ fn class_contact_run_in(api: Tokens, class: Tokens) -> Result<Tokens> {
   }
   let line = last_group(&class);
   // (a line holding several marks the names request — `\affil{$^1$Univ A, $^2$Univ B}` run in — is no one entry the
-  // run's authors share, and the in-place API does not cut it: the class's line, as before)
+  // run's authors share: the class's line, as before. The API's Cut would cut it (`contact_line_call`), but routing a
+  // run-in line holding several marks is a change of its own, measured on its own population; SYNC row "99b" (e))
   if !(title_block_line(true)
-    && !leads_with_unrequested_mark(line)
+    && !leads_with_unrequested_mark(line)?
     && requested_marks_held(&Tokens::new(line.to_vec())) <= 1)
   {
     return Ok(class);
@@ -2285,7 +2286,7 @@ fn class_contact(api: Tokens, class: Tokens, in_place: bool) -> Result<Tokens> {
   }
   if creator_entry_in_progress()
     || (title_block_line(in_place)
-      && !(in_place && leads_with_unrequested_mark(last_group(&class))))
+      && !(in_place && leads_with_unrequested_mark(last_group(&class))?))
   {
     by_its_label(api, last_group(&class))
   } else {
@@ -2315,9 +2316,10 @@ fn by_its_label(api: Tokens, line: &[Token]) -> Result<Tokens> {
     return Ok(api);
   }
   // (one entry only: a call whose lines are each led by a label of their own — jetpl.cls's stored `\address{$^{\#}$ … \\
-  // $^*$ … \\ $^+$ …}`, 0807.3896, which the label of its first line alone gave to the first author — is the frontmatter
-  // observer's to cut, the font open before each entry kept (`\lx@fm@entry@font`) or the call left whole where it
-  // cannot cut it, review rev94b r3 B1: as before, under its run)
+  // $^*$ … \\ $^+$ …}`, 0807.3896, which the label of its first line alone gave to the first author — goes as it is,
+  // under its run, review rev94b r3 B1: the frontmatter API's Cut cuts it at the marks the names request
+  // (`cut_marked_contact`, OD #954), each entry its requesters' and one no name requests the block's; a call the Cut
+  // declines is the frontmatter observer's, the font open before each entry kept (`\lx@fm@entry@font`), or whole)
   if displaced_entries(&Tokens::new(line.to_vec())).len() > 1 {
     return Ok(api);
   }
@@ -2427,20 +2429,44 @@ fn leading_mark(line: &[Token]) -> Option<(Vec<Token>, Option<usize>)> {
   Some((operand, whole))
 }
 
+/// Whether a leading mark's `operand` labels its line: what it prints, read by its printed text as the line's label is
+/// (`queue_digest::prints_a_mark`, the reading of `line_mark_label`): a letter or a digit (`$^{a}$`, `\inst{3}`), any
+/// other character (`$^*$`, `$^{+}$`), or whatever symbol a command prints (`$^\dagger$`, `$^{\ddagger}$`, `$^{\#}$`,
+/// `$^\bigstar$`, `$^\clubsuit$`, `\textsuperscript{\textdagger}`) — not spacing alone, nor a command printing nothing
+/// (review rev99b2 F2 and rev100a S1: symbol commands were read as no mark, so `\affil{$^\dagger$Deceased}` or
+/// `\affil{$^\bigstar$Deceased}`, which no name requests, went to every author of the run).
+fn is_a_mark(operand: &[Token]) -> Result<bool> { prints_a_mark(operand) }
+
 /// Whether `line` leads with a printed mark ([`leading_mark_operand`]) whose label no author's name requests at the
 /// call, queued or digested in the flush (`queued_authors_requesting`, `digested_authors_requesting`), the names showing
 /// marks of their own (`authors_show_marks`): a contact line no creator asks for, which the API would give to a creator
 /// of no name (review rev94b r3 B2: orph3's `\address[\inst{3}]{Lab C, Place}`, orph6's `\affil{\inst{3}Lab C, Place}`
-/// under `Ann Able\inst{1} and Bob Baker\inst{2}`).
-fn leads_with_unrequested_mark(line: &[Token]) -> bool {
-  leading_mark_operand(line).is_some_and(|operand| {
-    operand
-      .iter()
-      .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
-      && authors_show_marks()
+/// under `Ann Able\inst{1} and Bob Baker\inst{2}`), or every author of the run (review rev99b2 F2: `\affil{$^\dagger$
+/// Deceased}` under `Ann Able$^{1}$, Bob Baker$^{2}$`, a control-sequence symbol, [`is_a_mark`]).
+fn leads_with_unrequested_mark(line: &[Token]) -> Result<bool> {
+  let Some(operand) = leading_mark_operand(line) else {
+    return Ok(false);
+  };
+  Ok(
+    authors_show_marks()
       && queued_authors_requesting(&operand).is_empty()
       && !digested_authors_requesting(&Tokens::new(operand.clone()).to_string())
-  })
+      && is_a_mark(&operand)?
+      && !requested_as_printed(&operand)?,
+  )
+}
+
+/// Whether a name requests the label a leading mark's `operand` prints — read by its printed text, as
+/// [`contact_line_call`] places the line (`line_mark_label`, `names_request_label`), through the one key both sides are
+/// keyed by (`queue_digest::clean_frontmatter_labels`, an asterisk one way however written: `one_asterisk`) —, where the
+/// readers by the operand as written miss a mark spelled otherwise on the name (`\affil{\textsuperscript{\dag}Deceased}`
+/// under `Ann Able$^{1,\dagger}$`; `$^\ast$` under `$^{1,*}$` and `$^*$` under `$^{1,\ast}$`, review rev100a B1): such a
+/// line is its carriers', not in doubt ([`is_a_mark`], review rev99b2 F2).
+fn requested_as_printed(operand: &[Token]) -> Result<bool> {
+  match line_mark_label(&Tokens::new(operand.to_vec()))? {
+    Some(label) => names_request_label(&label),
+    None => Ok(false),
+  }
 }
 
 /// A rerouted `[optional]{mandatory}` setter's call (`\lx@class@contact@optional`): the API call its optional argument
@@ -2520,7 +2546,7 @@ fn optional_contact(name: &str, in_place: bool, opt: Tokens, arg: Tokens) -> Res
   if mark {
     // (a mark no author requests at the call is in doubt — review rev94b r3 B2: the address it labels a nameless
     // creator's; an in-place setter's line the class's, printed once, review rev94b r6 B1: [`class_contact`])
-    if leads_with_unrequested_mark(&opt_tokens) {
+    if leads_with_unrequested_mark(&opt_tokens)? {
       return if in_place {
         Ok(class)
       } else {
@@ -2857,28 +2883,42 @@ fn displaced_api(name: &str) -> Option<&'static str> {
 /// requests by its label (a glued symbol run, `$^{*+}$`, requests `*` and `+` only by the frontmatter observer's parting,
 /// 0807.3896) — goes under the names of its run (`annotate=run`, as [`IN_PLACE_CONTACT_SETTERS`]' lines do), capped at
 /// its own run where a labelled line stands in the kernel's (`run_cap_past_labels`: a labelled contact ends no run,
-/// 2608.19687's `\affil{$^10$…}` reached every author since line 2). A line holding several
-/// marks the names request, which no line split cuts, lands once at the block for the API's Cut to read by its marks
-/// (`_unsplit`, the REVTeX binding's fail-safe: 1812.07638's 64 institutes run in under 200 names). The line keeps its
-/// printed mark, as the class prints it.
+/// 2608.19687's `\affil{$^10$…}` reached every author since line 2). A line holding several entries led by marks the
+/// names request (`holds_requested_marked_entries`, the API's Cut decision, its one reader: `\institute{$^{1}$Univ A,
+/// $^{2}$Univ B}` run in, 1812.07638's 64 institutes under 200 names) is the call bare, no label and no run, which the
+/// frontmatter API's Cut (`cut_marked_contact`, OD #954) cuts once into one entry per mark, each its requesting names',
+/// one no name requests the block's (SYNC row "99b" (e)). A line holding several requested marks that the Cut cannot cut
+/// — set in a box or an environment, or not led by one — lands once at the block for the frontmatter observer to read by
+/// its marks (`_unsplit`, the REVTeX binding's fail-safe). The line keeps its printed mark, as the class prints it.
 fn contact_line_call(head: &str, line: &Tokens) -> Result<Tokens> {
-  let mut call = mouth::tokenize_internal(TeXString::assembled(s!("{head}["))).unlist();
+  let mut call = mouth::tokenize_internal(TeXString::assembled(s!("{head}"))).unlist();
+  if holds_requested_marked_entries(line) {
+    call.push(T_BEGIN!());
+    call.extend(line.unlist_ref().iter().copied());
+    call.push(T_END!());
+    return Ok(Tokens::new(call));
+  }
+  call.push(T_OTHER!("["));
   if requested_marks_held(line) > 1 {
     call.extend(mouth::tokenize_internal("label={addresses:block},_unsplit=true").unlist());
   } else {
-    let mut legend = None;
+    let (mut legend, mut glyph) = (None, None);
     let label = match leading_line_label(line) {
       Some((key, typed, _)) => {
         let operand = (!typed)
           .then(|| leading_mark_operand(line.unlist_ref()))
           .flatten();
-        let label = match &operand {
-          Some(operand) => line_mark_label(&Tokens::new(operand.clone()))?,
-          None => Some(s!("affiliation:{key}")),
+        let (label, printed_glyph) = match &operand {
+          Some(operand) => match line_mark(&Tokens::new(operand.clone()))? {
+            Some((label, glyph)) => (Some(label), Some(glyph)),
+            None => (None, None),
+          },
+          None => (Some(s!("affiliation:{key}")), None),
         };
         legend = operand
           .as_deref()
-          .and_then(|operand| legend_note_kind(operand, line));
+          .and_then(|operand| legend_note_kind(operand, printed_glyph.as_deref(), line));
+        glyph = printed_glyph;
         match label {
           Some(label) if names_request_label(&label)? => Some(label),
           _ => None,
@@ -2887,9 +2927,12 @@ fn contact_line_call(head: &str, line: &Tokens) -> Result<Tokens> {
       None => None,
     };
     // (a legend its symbol labels — `$^*$Author to whom any correspondence should be addressed.` — is a note of the names
-    // carrying the symbol, its mark the symbol as printed: `legend_note_kind`)
+    // carrying the symbol, its mark the symbol as the line prints it: `legend_note_kind`; `line_mark`, `$^\ast$`'s `∗`,
+    // which the label keys `*`)
     if let (Some(label), Some(kind)) = (&label, legend) {
-      let glyph = label.strip_prefix("affiliation:").unwrap_or(label);
+      let glyph = glyph
+        .as_deref()
+        .unwrap_or_else(|| label.strip_prefix("affiliation:").unwrap_or(label));
       let mut note = mouth::tokenize_internal(TeXString::assembled(s!(
         "\\lx@annotate@frontmatter{{ltx:creator}}{{ltx:note}}[role=thanks,class={{ltx_note_frontmatter ltx_thanks_{kind}}},label={{"
       )))
@@ -3143,20 +3186,23 @@ fn displaced_entries(arg: &Tokens) -> Vec<Tokens> {
     .collect()
 }
 
-/// Are the entries of a displaced setter's call in doubt: one leads with a mark no author requests — queued, or placed
-/// by the `\maketitle` that reads them (`placed_authors_requesting`) — under names showing marks, as an in-place
-/// setter's line in doubt stays the class's ([`leads_with_unrequested_mark`])?
-fn displaced_in_doubt(entries: &[Tokens]) -> bool {
-  entries.iter().any(|entry| {
-    leading_mark_operand(entry.unlist_ref()).is_some_and(|operand| {
-      operand
-        .iter()
-        .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
-        && authors_show_marks()
-        && queued_authors_requesting(&operand).is_empty()
-        && !placed_authors_requesting(&Tokens::new(operand.clone()).to_string())
-    })
-  })
+/// Are the entries of a displaced setter's call in doubt: one leads with a mark ([`is_a_mark`], a control-sequence symbol
+/// too: `$^\dagger$Deceased`, review rev99b2 F2) no author requests — queued, or placed by the `\maketitle` that reads
+/// them (`placed_authors_requesting`) — under names showing marks, as an in-place setter's line in doubt stays the
+/// class's ([`leads_with_unrequested_mark`])?
+fn displaced_in_doubt(entries: &[Tokens]) -> Result<bool> {
+  for entry in entries {
+    if let Some(operand) = leading_mark_operand(entry.unlist_ref())
+      && authors_show_marks()
+      && queued_authors_requesting(&operand).is_empty()
+      && !placed_authors_requesting(&Tokens::new(operand.clone()).to_string())
+      && is_a_mark(&operand)?
+      && !requested_as_printed(&operand)?
+    {
+      return Ok(true);
+    }
+  }
+  Ok(false)
 }
 
 /// Does a contact line hold an `\and` list the class's title page does not number (`class_numbered_institutes` reads one
@@ -3270,7 +3316,7 @@ fn route_and_hand_displaced() -> Result<Vec<Digested>> {
     "FRONT displaced stores printed by the title page: [{printed}] of {}",
     stores.len()
   );
-  route_displaced(records, &printed);
+  route_displaced(records, &printed)?;
   hand_displaced_stores()
 }
 
@@ -3298,7 +3344,7 @@ fn displaced_store_stays_the_classs(
 /// (`lx_replay_records`, sect05.rs `\lx@replay@records`), and [`hand_displaced_stores`] hands each call's argument to
 /// the API — while K11's reader and line rules leave the store to them ([`displaced_store_stays_the_classs`]) and no
 /// entry is in doubt ([`displaced_in_doubt`], [`displaced_argument_in_doubt`]); the rest stay the class's text.
-fn route_displaced(records: Vec<DisplacedRecord>, printed: &str) {
+fn route_displaced(records: Vec<DisplacedRecord>, printed: &str) -> Result<()> {
   let printed: Vec<&str> = printed.split(',').filter(|n| !n.is_empty()).collect();
   let mut replay = match lookup_value("lx_replay_records") {
     Some(Stored::VecDequeStored(records)) => records,
@@ -3325,7 +3371,7 @@ fn route_displaced(records: Vec<DisplacedRecord>, printed: &str) {
     }
     let entries = displaced_entries(&record.arg);
     let redefined = readers.separators_redefined(&record.store, &[T_CS!("\\\\"), T_CS!("\\par")]);
-    if displaced_in_doubt(&entries) || displaced_argument_in_doubt(&record.arg, &redefined) {
+    if displaced_in_doubt(&entries)? || displaced_argument_in_doubt(&record.arg, &redefined) {
       Info!(
         "frontmatter",
         s!("\\{}", record.setter),
@@ -3346,7 +3392,7 @@ fn route_displaced(records: Vec<DisplacedRecord>, printed: &str) {
     ])));
   }
   if routed.is_empty() {
-    return;
+    return Ok(());
   }
   assign_value(
     "lx_replay_records",
@@ -3358,6 +3404,7 @@ fn route_displaced(records: Vec<DisplacedRecord>, printed: &str) {
     Stored::VecDequeStored(routed),
     Some(Scope::Global),
   );
+  Ok(())
 }
 
 /// Each routed displaced call ([`route_displaced`]) as the API's contacts of the creators, in the order the document

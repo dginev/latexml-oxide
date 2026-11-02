@@ -1,0 +1,31 @@
+% A raw class's in-place `\affil` (ending its paragraph) legend `$^\ast$Corresponding author` under `Ann Able$^{1,*}$`:
+% both print ∗, one key (queue_digest.rs `clean_frontmatter_labels`, `one_asterisk`), so the line is Ann Able's
+% correspondence note, as int127a made it; keyed apart, batch 100a r1 left it the class's text in the body (review
+% rev100a B1).
+% witness: review rev100a probe q/p2d (synthetic; the legend family of 2602.03759, 2604.08878)
+% oracle:  pdflatex 0 errors: "Ann Able1,∗, Bob Baker2", "1Univ A, Town", "2Univ B, City", "∗Corresponding author"
+% engines: rust int127a = Ann Able's correspondence note; rust 100a r1 = the class's text in the body, "Ann Able∗";
+%          perl = no raw class load (OmniBus `\affil`)
+% expect:  0 errors, 0 warnings; Ann Able holds "1Univ A, Town" and <note class="ltx_note_frontmatter
+%          ltx_thanks_correspondence" mark="∗" role="thanks">∗Corresponding author</note>; Bob Baker "2Univ B, City"
+% status:  RED (100a r1) -> GREEN (100a r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipmast.cls}
+\ProvidesClass{ipmast}\LoadClass{article}
+\renewcommand{\author}[1]{{\raggedright #1\par}}
+\newcommand{\affil}[1]{{\small\raggedright #1\par}}
+\end{filecontents*}
+\documentclass{ipmast}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,*}$, Bob Baker$^{2}$}
+
+\affil{$^1$Univ A, Town}
+
+\affil{$^2$Univ B, City}
+
+\affil{$^\ast$Corresponding author}
+
+\maketitle
+Text.
+\end{document}

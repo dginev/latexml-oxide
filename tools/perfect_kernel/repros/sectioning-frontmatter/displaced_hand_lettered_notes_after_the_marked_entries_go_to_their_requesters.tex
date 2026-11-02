@@ -1,0 +1,37 @@
+% A displaced store (moriond.sty's `\address`, appending `\small\it #1` to the buffer its `\maketitle` prints) holding
+% the marked institutes, then, after `\\`, hand-printed letter notes `a) …` `b) …` on one line, which the names request
+% beside their institute (`$^{1,a}$`, `$^{2,b}$`). pdflatex prints the notes below the institutes, each the requesting
+% names'. Batch 99a's Cut reads the superscript marks only: the notes are the text of the last entry, so every author
+% of that institute holds every note — and the authors requesting them hold none.
+% witness: hep-ex0106079 (moriond.sty, 75 authors; `$^{12}$ YerPhI, Yerevan, Armenia.\\ a) also at UCEH … g) on leave
+%          of absence of YerPhI …`: the five YerPhI authors each hold all seven notes; moriond_web.tex:160-170)
+% oracle:  pdflatex 0 errors: "Ann Able1,a, Bob Baker2, Cy Cole2,b", "1 Univ A, Town. 2 Univ B, City.", "a) also at Lab
+%          X, Place b) now at Lab Y, Place"
+% engines: rust 100a r2 = Bob Baker and Cy Cole hold "2Univ B, City.a) also at Lab X, Place b) now at Lab Y, Place";
+%          perl = no raw class load
+% expect:  0 errors, 0 warnings; Ann Able holds "1Univ A, Town." and the note "a) also at Lab X, Place"; Bob Baker
+%          "2Univ B, City."; Cy Cole "2Univ B, City." and "b) now at Lab Y, Place"
+% status:  RED (100a r2). Tentative ruling (main session 2026-11-02): a hand-printed `x)` some name's mark requests is
+%          its entry's label, read by the Cut's entry reader. Deferred: here only `a)` leads a line; `b)` stands
+%          mid-line, so the reading is of mid-line hand-printed labels, beyond the Cut's line-leading reader (SYNC row
+%          "100a").
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{morhl.cls}
+\ProvidesClass{morhl}\LoadClass{article}
+\def\@aabuffer{}
+\def\author#1{\expandafter\def\expandafter\@aabuffer\expandafter{\@aabuffer \small\rm #1\relax \par}}
+\def\address#1{\expandafter\def\expandafter\@aabuffer\expandafter{\@aabuffer \small\it #1\relax \par\vspace{1em}}}
+\def\maketitle{\begin{center}{\bf \@title \par}\vskip 2em\@aabuffer\relax\end{center}\par\gdef\@aabuffer{}}
+\end{filecontents*}
+\documentclass{morhl}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,a}$, Bob Baker$^{2}$, Cy Cole$^{2,b}$}
+\address{$^{1}$ Univ A, Town.
+$^{2}$ Univ B, City.\\
+a) also at Lab X, Place
+b) now at Lab Y, Place
+}
+\maketitle
+Text.
+\end{document}

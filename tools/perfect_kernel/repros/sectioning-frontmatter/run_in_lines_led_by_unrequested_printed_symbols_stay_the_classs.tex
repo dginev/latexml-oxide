@@ -1,0 +1,37 @@
+% A raw class's run-in `\affil` lines led by symbols a command prints that no name requests — a suit (`$^\spadesuit$`,
+% under names marked `$^{\clubsuit}$` and `$^{\heartsuit}$`: suits label affiliations as digits do, 2601.05633) and a
+% text-mode dagger (`\textsuperscript{\textdagger}`) — are in doubt, as a line led by an unrequested digit or `$^\dagger$`
+% is: the class's text where it prints, no author's contact. The doubt reader reads a mark by what it prints
+% (frontmatter_stores.rs `is_a_mark` = queue_digest.rs `prints_a_mark`, the printed-text reading of `line_mark_label`),
+% so `\bigstar`, `\natural`, `\flat`, the suits and `\textdagger` are marks too; read by a list of footnote symbols, they
+% were no mark and each line went to every author of the run (review rev100a S1).
+% witness: review rev100a probes q/su1, q/tx1 (synthetic; s/riu08, s/ipu08, s/dsu08, s/riu11, s/riu12 the same reader)
+% oracle:  pdflatex 0 errors: "Ann Able♣, Bob Baker♡", "♣Univ A, Town", "♡Univ B, City", "♠Univ C, Village",
+%          "†Deceased"
+% engines: rust int127a and 100a r1 = "♠Univ C, Village" and "†Deceased" affiliations of both authors; perl = no raw
+%          class load (OmniBus `\affil`)
+% expect:  0 errors, 0 warnings; Ann Able holds "♣Univ A, Town", Bob Baker "♡Univ B, City", nothing else; the body holds
+%          "♠Univ C, Village", "†Deceased" and "Text."
+% status:  RED (100a r1) -> GREEN (100a r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{risuit.cls}
+\ProvidesClass{risuit}\LoadClass{article}
+\renewcommand{\author}[1]{{\raggedright #1\par}}
+\newcommand{\affil}[1]{{\small\raggedright #1}}
+\end{filecontents*}
+\documentclass{risuit}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{\clubsuit}$, Bob Baker$^{\heartsuit}$}
+
+\affil{$^\clubsuit$Univ A, Town}
+
+\affil{$^\heartsuit$Univ B, City}
+
+\affil{$^\spadesuit$Univ C, Village}
+
+\affil{\textsuperscript{\textdagger}Deceased}
+
+\maketitle
+Text.
+\end{document}

@@ -30,7 +30,7 @@ macro_rules! repro {
 /// them the net's `unclaimed`, and that both give the same XML; returns it, each whitespace run one space, from its
 /// `<title>` to its end.
 #[track_caller]
-fn converted(tex: &str, warnings: usize) -> String {
+pub(super) fn converted(tex: &str, warnings: usize) -> String {
   let mut xmls = Vec::new();
   for streaming in [false, true] {
     let (log, xml) = cli_conversion(tex, streaming);

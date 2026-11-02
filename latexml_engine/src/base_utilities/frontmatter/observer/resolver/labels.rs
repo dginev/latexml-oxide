@@ -53,7 +53,7 @@ pub(super) fn is_symbol_char(c: char) -> bool { events::is_fnsymbol(c) }
 
 /// One mark's labels (ruling 1's split): at commas and spaces; a run of one footnote symbol is one label (`**`), a
 /// symbol glued to a label another (`*1` → `*`, `1`); parentheses and brackets around a label dropped (`(a)`); the
-/// math asterisk `∗` read as `*`, the formula `\|`'s `∥` as `‖` (0806.2911).
+/// asterisk forms (`∗`, `✱`, …) read as `*`, the formula `\|`'s `∥` as `‖` (0806.2911).
 pub fn mark_labels(label: &str) -> Vec<String> {
   // (a `fuzzy:<name>` label — svjour's `\institute` entry after `\at`, a name with its spaces — is one label, never
   // split: review revfms2a2 finding 2, 0807.3898, 2403.09642)
@@ -107,7 +107,8 @@ pub fn mark_labels(label: &str) -> Vec<String> {
     // where both requested `†` and a `\dag` author took the `\={\dag}` line —; a run is one such character repeated)
     let mut characters: Vec<String> = Vec::new();
     for c in part.chars().map(|c| match c {
-      '\u{2217}' => '*',
+      // (every asterisk form one key, user ruling 2026-11-02: `queue_digest::one_asterisk`)
+      c if ASTERISK_FORMS.contains(&c) => '*',
       '\u{2225}' => '‖',
       c => c,
     }) {
@@ -426,14 +427,17 @@ pub(super) fn later_line_is_names(
 }
 
 /// Whether a labelled entry's text is a legend (a note on its authors) rather than their affiliation: what
-/// `classify_thanks` reads as correspondence, a contribution, an address change or funding — funding only when the text
-/// does not read as an institution (an institution named for its funder is an affiliation; before batch 78u's
-/// whole-word match `classify_thanks`'s "erc" test also matched inside "Perception": `2 Guangdong Laboratory of Machine
-/// Perception and Intelligent Computing`, 2509.05368).
+/// `classify_thanks` reads as correspondence, a contribution, an address change, an author deceased or funding — funding
+/// and a death only when the text does not read as an institution (an institution named for its funder is an
+/// affiliation; before batch 78u's whole-word match `classify_thanks`'s "erc" test also matched inside "Perception": `2
+/// Guangdong Laboratory of Machine Perception and Intelligent Computing`, 2509.05368; `Department of Deceased Estates,
+/// Univ C` is an affiliation, `Deceased 3 March 2021; formerly at Univ C` a legend, the word opening it —
+/// `opens_with_deceased` —, as the kernel's line route reads them, `queue_digest::legend_note_kind`, review rev100a S2).
 pub(super) fn is_legend_text(text: &str) -> bool {
   match classify_thanks(text) {
     "note" => false,
     "funding" => !reads_as_affiliation(&text_tokens(text)),
+    "deceased" => opens_with_deceased(text) || !reads_as_affiliation(&text_tokens(text)),
     _ => true,
   }
 }

@@ -597,8 +597,41 @@ pub(in crate::base_utilities) fn spelled_ranges(labels: Vec<String>) -> Vec<Stri
     .collect()
 }
 
+/// The asterisk forms a mark may print or be written in: ASCII `*`, the math asterisk `∗` (U+2217, what `$^*$` and
+/// `$^\ast$` print), the low asterisk `⁎` (U+204E), the heavy asterisk `✱` (U+2731) and the full-width `＊` (U+FF0A).
+pub(in crate::base_utilities) const ASTERISK_FORMS: [char; 5] =
+  ['*', '\u{2217}', '\u{204E}', '\u{2731}', '\u{FF0A}'];
+
+/// The one key of an asterisk mark, however it is written or printed: every form of [`ASTERISK_FORMS`], and a label
+/// spelled `\ast` or `\textasteriskcentered`, all read `*` — "all asterisks are the same key, they are visually
+/// identical to readers" (user ruling 2026-11-02, FIDELITY_CHARTER §4). The key [`clean_frontmatter_labels`] gives both
+/// sides of a match, the mark a name requests and the label a line sets (review rev100a B1: a legend `$^\ast$Deceased`
+/// under `Ann Able$^{1,*}$` keyed `∗` against the name's `*`, so no name seemed to request it and the line was in doubt,
+/// the class's text). The readers of printed glyphs (the frontmatter observer writer's shown marks) read them by it too.
+pub(in crate::base_utilities) fn one_asterisk(text: &str) -> String {
+  match text {
+    "\\ast" | "\\textasteriskcentered" => "*".to_string(),
+    _ => text
+      .chars()
+      .map(|c| if ASTERISK_FORMS.contains(&c) { '*' } else { c })
+      .collect(),
+  }
+}
+
+/// Whether a mark's `operand` prints an asterisk other than the text `*` (`∗`, `✱`, …: [`ASTERISK_FORMS`]), which
+/// [`one_asterisk`] keys `*` too: the form an unanswered request shows on the name (`\lx@sup@request@affiliation`).
+pub(in crate::base_utilities) fn prints_another_asterisk(operand: &Tokens) -> Result<bool> {
+  Ok(printed_label(operand)?.is_some_and(|printed| {
+    printed
+      .text
+      .chars()
+      .any(|c| c != '*' && ASTERISK_FORMS.contains(&c))
+  }))
+}
+
 /// Perl: cleanFrontmatterLabels($labels, $prefix). Rust also parts the labels at the spacing ([`SPACING_IN_LABEL`]), on
-/// both sides of the match: the mark an author requests and the one an affiliation sets (OXIDIZED_DESIGN #52(o)).
+/// both sides of the match: the mark an author requests and the one an affiliation sets (OXIDIZED_DESIGN #52(o)); and
+/// keys an asterisk one way, written or printed ([`one_asterisk`]).
 pub(in crate::base_utilities) fn clean_frontmatter_labels(
   labels: &str,
   prefix: &str,
@@ -671,6 +704,11 @@ pub(in crate::base_utilities) fn clean_frontmatter_labels(
     };
     label = SPACES_RE.replace_all(&label, "_").into_owned();
     label.retain(|c| !matches!(c, '{' | '}' | '(' | ')'));
+    // (the asterisk keyed one way however it is written or printed: [`one_asterisk`])
+    let label = match label.split_once(':') {
+      Some((head, bare)) if head == prefix => s!("{head}:{}", one_asterisk(bare)),
+      _ => one_asterisk(&label),
+    };
     cleaned.push(label);
   }
   cleaned
@@ -882,15 +920,32 @@ pub fn authors_show_marks() -> bool {
 /// what a displaced or run-in setter's labelled line is given as its `label=` (frontmatter_stores.rs
 /// `contact_line_call`).
 pub fn line_mark_label(operand: &Tokens) -> Result<Option<String>> {
+  Ok(line_mark(operand)?.map(|(label, _)| label))
+}
+
+/// [`line_mark_label`], and the mark's glyph as the line prints it: the label's key, but the asterisk form the operand
+/// prints (`$^\ast$`'s `∗`, a `✱`), which the key reads `*` (`one_asterisk`) — a legend's note shows the mark its line
+/// prints (frontmatter_stores.rs `contact_line_call`'s `mark=`).
+pub fn line_mark(operand: &Tokens) -> Result<Option<(String, String)>> {
   let printed = printed_label(operand)?;
-  Ok(
-    match &printed {
-      Some(printed) => clean_frontmatter_labels(&printed.text, "affiliation"),
-      None => clean_frontmatter_labels(&operand.to_string(), "affiliation"),
-    }
-    .into_iter()
-    .next(),
-  )
+  let label = match &printed {
+    Some(printed) => clean_frontmatter_labels(&printed.text, "affiliation"),
+    None => clean_frontmatter_labels(&operand.to_string(), "affiliation"),
+  }
+  .into_iter()
+  .next();
+  Ok(label.map(|label| {
+    let key = label.strip_prefix("affiliation:").unwrap_or(&label);
+    let glyph = match &printed {
+      Some(printed) if key == "*" => printed
+        .text
+        .chars()
+        .find(|c| ASTERISK_FORMS.contains(c))
+        .map_or_else(|| key.to_string(), String::from),
+      _ => key.to_string(),
+    };
+    (label, glyph)
+  }))
 }
 
 /// Whether a name requests the affiliation label `label` (`affiliation:<key>`): a queued author's mark, read as
@@ -911,19 +966,69 @@ pub fn names_request_label(label: &str) -> Result<bool> {
   Ok(digested_authors_requesting(key) || placed_authors_requesting(key))
 }
 
-/// The note kind of a contact line led by a footnote-symbol mark (`operand`, `is_symbol_mark`: `$^*$`, `$^\dagger$`)
-/// whose text is a legend — correspondence, a contribution, an address change (`classify_thanks`) —: a note of the
-/// names carrying the symbol, not their affiliation, as the frontmatter observer writes it (`show_legend_mark`), so a
-/// labelled line keeps the kind it had when the observer re-parted the names (2602.03759, 2604.08878, 2607.12158; review
-/// rev99b B1's legend, 2609.15125). `None` for any other line (frontmatter_stores.rs `contact_line_call`).
-pub fn legend_note_kind(operand: &[Token], line: &Tokens) -> Option<&'static str> {
-  if !is_symbol_mark(operand) {
+/// The note kind of a contact line led by a footnote-symbol mark (`operand`, `is_symbol_mark`: `$^*$`, `$^\dagger$`; or
+/// one whose printed `glyph`, `line_mark`'s, is a footnote symbol: `\textsuperscript{\textasteriskcentered}`) whose text
+/// is a legend — correspondence, a contribution, an author deceased, an address change (`classify_thanks`)
+/// —: a note of the names carrying the symbol, not their affiliation, as the frontmatter observer writes it
+/// (`show_legend_mark`), so a labelled line keeps the kind it had when the observer re-parted the names (2602.03759,
+/// 2604.08878, 2607.12158; review rev99b B1's legend, 2609.15125; `$^\dagger$Deceased`, an annotation on the author of the
+/// same kind as "Corresponding author", FIDELITY_CHARTER §4, review rev99b2 q4e). `None` for any other line
+/// (frontmatter_stores.rs `contact_line_call`).
+pub fn legend_note_kind(
+  operand: &[Token],
+  glyph: Option<&str>,
+  line: &Tokens,
+) -> Option<&'static str> {
+  // (the symbol read by what the operand prints too, `glyph` — `line_mark`'s, as the doubt test reads a mark: a text-mode
+  // `\textsuperscript{\textasteriskcentered}` or `\textsuperscript{\textdagger}` prints the footnote symbol the math
+  // `\ast`, `\dagger` do, review rev100a S1's one reader)
+  let printed_symbol =
+    || glyph.is_some_and(|glyph| is_footnote_symbol_operand(&ExplodeText!(glyph)));
+  if !is_symbol_mark(operand) && !printed_symbol() {
     return None;
   }
   match classify_thanks(line.clone().untex_string().as_ref()) {
     kind @ ("correspondence" | "contribution" | "address") => Some(kind),
+    // (an institution named with the word is an affiliation, `$^\dagger$Department of Deceased Estates, Univ C`, unless
+    // the word opens the text, `$^\dagger$Deceased 3 March 2021; formerly at Univ C`: `opens_with_deceased`, as the
+    // frontmatter observer reads it, `is_legend_text` — review rev100a S2)
+    "deceased"
+      if opens_with_deceased(&visible_name_text(line.unlist_ref()))
+        || !reads_as_affiliation(line) =>
+    {
+      Some("deceased")
+    },
     _ => None,
   }
+}
+
+/// Whether a contact line's leading mark `operand` prints a mark, read by its printed text as the line's label is
+/// ([`line_mark`]'s reading, [`printed_label`]): a letter, a digit or any other character (`$^{a}$`, `\inst{3}`,
+/// `$^*$`, `$^{+}$`), or whatever a command prints (`$^\dagger$`, `$^\bigstar$`, `$^\natural$`, `$^\flat$`, the suits —
+/// affiliation labels as digits are, 2601.05633 —, `\textsuperscript{\textdagger}`) — not spacing alone, nor a command
+/// printing nothing. Where no printed text is read (inside an open assignment journal, a digestion that erred) its
+/// spelling is: a footnote symbol (`is_symbol_mark`) or a character. For the readers outside the
+/// author blocks that ask whether a contact line leads with a mark (frontmatter_stores.rs `leads_with_unrequested_mark`,
+/// `displaced_in_doubt`: review rev99b2 F2, where `\dagger` was read as no mark; review rev100a S1, where `\bigstar`,
+/// `\natural`, `\flat`, the suits and `\textdagger` were, so `\affil{$^\bigstar$Deceased}` no name requests went to every
+/// author of the run).
+pub(crate) fn prints_a_mark(operand: &[Token]) -> Result<bool> {
+  let character = |t: &Token| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER);
+  let plain = operand.iter().all(|t| {
+    character(t)
+      || matches!(
+        t.get_catcode(),
+        Catcode::SPACE | Catcode::BEGIN | Catcode::END
+      )
+  });
+  if plain {
+    return Ok(operand.iter().any(character));
+  }
+  Ok(
+    printed_label(&Tokens::new(operand.to_vec()))?.is_some()
+      || is_symbol_mark(operand)
+      || operand.iter().any(character),
+  )
 }
 
 /// The cap a contact of `role` placed by its run (`annotate=run:N`) needs when a labelled contact of the role stands in

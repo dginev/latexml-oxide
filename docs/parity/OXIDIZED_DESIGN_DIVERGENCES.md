@@ -7119,7 +7119,8 @@ class="ltx_note_frontmatter ltx_thanks_<kind>">` attached to the creator (`base_
 `\lx@add@thanks` else-branch). It reuses the existing `ltx:note` footnote template (a superscript
 `ltx_note_mark` on the author + `ltx_note_outer`/`ltx_note_content`), so a theme can place it as a
 margin/footnote note. `<kind>` is a **best-effort** keyword classifier (`classify_thanks`):
-`correspondence` / `funding` / `contribution` / `address` / `note`. The class hooks
+`correspondence` / `funding` / `contribution` / `deceased` (the word, an annotation on the author of the same
+kind as "Corresponding author": FIDELITY_CHARTER §4, batch 100a, #955) / `address` / `note`. The class hooks
 (`ltx_note_frontmatter`, `ltx_role_thanks`, `ltx_thanks_<kind>`) let theme designers style each
 kind. Requires: adding `ltx:note` to `ltx:creator`'s content model
 (`LaTeXML.model` + `LaTeXML-structure.rng`/`.rnc`) — else `open_element` auto-closes the creator
@@ -29963,24 +29964,35 @@ in a `\@name` store) nor the in-place reroute (OD #936: a line break in the sett
   the names of its run (`annotate=run`), capped at its own run where a labelled line stands in the kernel's
   (`run_cap_past_labels`: a labelled contact waits for its label and ends no run, so 2608.19687's `\affil{$^10$…}` —
   `$^10$`, no mark a line reader reads — reached every author since line 2). An
-  in-place or stored call holding several labelled entries (jetpl.cls's stored `\address{$^{\#}$… \\ $^*$… \\ $^+$…}`) is
-  the observer's to cut, the font open before each entry kept (`\lx@fm@entry@font`, review rev94b r3 B1), as before. A
+  in-place or stored call holding several labelled entries (jetpl.cls's stored `\address{$^{\#}$… \\ $^*$… \\ $^+$…}`,
+  0807.3896) goes under its run as it is (review rev94b r3 B1), where batch 99a's Cut (`cut_marked_contact`, #954)
+  cuts it at the marks the names request; a call the Cut declines is the observer's, the font open before each entry
+  kept (`\lx@fm@entry@font`), or whole. A
   stub that requests the label it already carries is that one label (insert.rs `add_annotation_labels`: pasa.cls's
   `\affil{$^1$…}` inside `\author{…}`, digested under the author markup, read `affiliation:1,affiliation:1` and went to the
   nameless block creator, 2005.09266). Under `annotate=run` alone every author of the run held every
   line whenever the frontmatter observer declined to re-part them (review rev99b B1: 2512.20289's lettered lines under
   `$^{1,a}$`, `$^{2,b}$`, `$^{3,a}$`, the observer declining over the ORCID links; 2609.15125's `\affil{$^1$…}` …
   `\affil{$^3$…}` all Sarazin's; 2607.25849's affiliation 2 Ercolino's too; 1603.07668; 1704.03333; the in-place route's
-  lines the same in the base). Marks win (FIDELITY_CHARTER "One placement order", R1). A line holding several marks
-  the names request, which no line split cuts, lands once at the block (`label={addresses:block},_unsplit=true`, the
-  REVTeX binding's fail-safe, FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model" step 4), which the frontmatter
-  observer reads by its marks — never the whole list copied onto each author (1812.07638's 64 run-in institutes under
-  200 names, which the run gave every author: 220,900 → 802,017 words before the fail-safe); batch 99a's Cut skips such a call (it carries `label=` /
-  `_unsplit`, `affiliations.rs` `cut_marked_contact`), so handing it to the Cut is a composition follow-up (SYNC row
-  "99b", rev99b2 answer 5). A line keeps its printed mark, as the class prints it; the names no longer show a mark a line
+  lines the same in the base). Marks win (FIDELITY_CHARTER "One placement order", R1). A line holding several entries
+  led by marks the names request (`affiliations::holds_requested_marked_entries`, the Cut's own decision, its one
+  reader) is the API call bare — no `label`, no run —, which batch 99a's Cut (#954) cuts once into an entry per mark,
+  each its requesters', one no name requests the block's: never the whole list copied onto each author (1812.07638's 64
+  run-in institutes under 200 names, which the run gave every author: 220,900 → 802,017 words), and, where the
+  frontmatter observer declines (ORCID links in the names), no longer one nameless creator's whole list (batch 100a,
+  SYNC row "99b" (e): in bundle int127a the `_unsplit` route took the line before the Cut, undoing 99a's cut of
+  asp2006's `\affil` store, 1002.4968, and moriond.sty's `\address`, hep-ex0106079 — each a nameless creator holding the
+  whole list again; restored, 1002.4968's D3 0/9 → 9/9 creators). A line holding several requested marks the Cut cannot cut (set in a box or an environment, or
+  not led by a mark: `relocate::requested_marks_held`) lands once at the block (`label={addresses:block},_unsplit=true`,
+  the REVTeX binding's fail-safe, FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model" step 4), which the observer
+  reads by its marks. A line keeps its printed mark, as the class prints it; the names no longer show a mark a line
   answers (`hide_answered_marks`). A labelled line that is a legend — a footnote-symbol mark and a correspondence,
-  contribution or address-change text (queue_digest.rs `legend_note_kind`, `classify_thanks`: `$^*$Author to whom any
-  correspondence should be addressed.`) — is a note of the names carrying the symbol (`ltx:note role=thanks`, its mark
+  contribution, deceased or address-change text (queue_digest.rs `legend_note_kind`, `classify_thanks`: `$^*$Author to
+  whom any correspondence should be addressed.`; `$^\dagger$Deceased`, an annotation on the author of the same kind as
+  "Corresponding author", FIDELITY_CHARTER §4, user ruling 2026-11-02 — the observer's `is_legend_text` and its
+  `api:leading-mark` legend read the kind too, so a block line or a binding's symbol-led entry is its carriers' note,
+  `ltx_thanks_deceased`: 0708.2630's three `$^*$Deceased` authors, 1003.2628's `\addrdagger` line — an address twice on
+  Stoneham before —, 1510.03948's `$^\dagger$deceased`) — is a note of the names carrying the symbol (`ltx:note role=thanks`, its mark
   the symbol), as the observer writes it when it re-parts the names: as an affiliation it was 2609.15125's every author's
   contact, and with labels 2602.03759's, 2604.08878's and 2607.12158's carriers' affiliation.
 - **A run-in setter** (`run_in_contact_setter`): one of #936's names, of one argument, that the file defined to print
@@ -29991,8 +30003,10 @@ in a `\@name` store) nor the in-place reroute (OD #936: a line break in the sett
   \ignorespaces}` is a mark), reading nothing past the call. Its call is the API's (`\lx@class@contact@runin`,
   `class_contact_run_in`) only as a line of its own in the title block — between paragraphs at the body's own level,
   the authors set and not placed (`title_block_line`), led by no mark no author requests —, never inside a creator's
-  own content (a call there is part of the name's text), and not a line holding several marks the names request,
-  which the in-place API does not cut (`relocate::requested_marks_held`): else the class's line where it stands.
+  own content (a call there is part of the name's text), and not a line holding several marks the names request
+  (`relocate::requested_marks_held`): else the class's line where it stands. The API's Cut would cut such a line
+  (`contact_line_call`), but routing a run-in line of several marks changes which lines leave the body, its own
+  population to measure: deferred.
 - **Where a rerouted setter decides** (review rev99b B3): the rerouted contact setters (#936's, the run-in ones), the
   displaced setters and their deciders (`\lx@class@contact`, `@stored`, `@runin`, `@optional`) are protected, so a call
   inside a class's `\protected@xdef` store stays in the store as written and decides where it is digested — iau.cls:1516's
@@ -30034,10 +30048,58 @@ binary the papers rev99b2 found (2412.06969, 2503.13373, 2512.20289, 2603.07344,
 and 2608.28486 print their affiliations before the e-mail, as pdflatex does. (e)
 A label the class's own code prints outside the store, before it (`\noindent$^{1}$\enspace\@institute`), stays in the body
 without its entry (repro `displaced_class_numbered_and_institutes_go_by_their_numbers`; caosp's `\llap` label prints none).
-(f) A line led by a control-sequence footnote symbol that no name requests (`\affil{$^\dagger$Deceased}`) is not read
-as unrequested — `leads_with_unrequested_mark` and `displaced_in_doubt` count letter/other tokens only — so it goes to
-every author of the run on the run-in, displaced and observer-declined routes (review rev99b2 F2; probes
-`rev99b2/probes/q4c`, `q4d`; synthetic; base kept it in the body).
+(f) Fixed in batch 100a: a line led by a control-sequence footnote symbol that no name requests
+(`\affil{$^\dagger$Deceased}`) went to every author of the run on the run-in, in-place, displaced and observer-declined
+routes, since `leads_with_unrequested_mark` and `displaced_in_doubt` counted letter/other tokens only (review rev99b2 F2;
+probes `rev99b2/probes/q4c`, `q4d`, `q4g`, `q4h`; synthetic). Both now read a mark by `is_a_mark` — what the operand
+prints, the printed-text reading of `line_mark_label` (queue_digest.rs `prints_a_mark`; its spelling where no printed text
+is read): a letter, a digit, any other character, or whatever symbol a command prints, so `\bigstar`, `\natural`, `\flat`,
+the suits (affiliation labels as digits are, 2601.05633) and `\textdagger` are marks too (review rev100a S1: read by a
+list of footnote symbols they were none, and `\affil{$^\bigstar$Deceased}` went to every author) — and a mark is
+requested by its printed text as well as by its operand (`requested_as_printed`: `line_mark_label`,
+`names_request_label`, the reading `contact_line_call` places the line by), so `\textsuperscript{\dag}Deceased` under
+`Ann Able$^{1,\dagger}$` stays her note. One key for both sides (review rev100a B1; user ruling 2026-11-02: "all
+asterisks are the same key, they are visually identical to readers", FIDELITY_CHARTER §4): the names' requests
+(`frontmatter_label_request`) and the line's label (`line_mark_label`) go through `clean_frontmatter_labels`, which keys
+every asterisk one way — written `*`, `\ast` or `\textasteriskcentered`, printed `*`, `∗` (U+2217), `⁎` (U+204E), `✱`
+(U+2731) or `＊` (U+FF0A) (`one_asterisk`, `ASTERISK_FORMS`) — the line's printed `∗` had been keyed apart from the
+name's plain `*`, so `$^\ast$Deceased` under `Ann Able$^{1,*}$` was in doubt (the class's text; a displaced store lost
+every affiliation) and `$^*$` under `$^{1,\ast}$` too; a legend note's `mark=` stays the glyph its line prints
+(`line_mark`), and a legend is read by that printed glyph as well as by its operand (`legend_note_kind`:
+`\textsuperscript{\textasteriskcentered}Deceased` is a note as `$^*$Deceased` is), and a requested asterisk no line
+answers still shows on the name as its operand prints it (`prints_another_asterisk`: icrc2009's `\IEEEauthorrefmark{1}`
+sets the math `∗` though read in text, 0909.3754, 0912.0896, 2609.25589). The frontmatter observer reads printed
+glyphs by the same forms (`one_asterisk` in its writer's `show_legend_mark`, `hide_answered_marks`, `repeated_symbols` and
+re-part; `ASTERISK_FORMS` in `resolver::mark_labels` and `lines.rs`'s `mark_text_symbols`); `insert.rs`'s and
+`affiliations.rs`'s `∗`→`*` glyph maps (batch 100b's files) still read U+2217 only. "Deceased" is a legend only where the text does not read as an affiliation (`reads_as_affiliation`) or opens with
+the word (`opens_with_deceased`), on the kernel's line route (`legend_note_kind`) and in the observer (`is_legend_text`)
+alike (review rev100a S2: `$^\dagger$Department of Deceased Estates, Univ C` an affiliation, as REVTeX's binding read it;
+`$^\dagger$Deceased 3 March 2021; formerly at Univ C` a note).
+
+**Batch 100a guards** `perfect_kernel_batch100a::{a_deceased_legend_is_a_note_of_its_carriers,
+a_run_in_or_in_place_line_led_by_an_unrequested_symbol_stays_the_classs,
+a_displaced_line_led_by_an_unrequested_symbol_stays_the_classs, a_routed_line_of_several_requested_entries_is_cut_by_the_api,
+run_in_lines_keep_their_print_order}` (repros `run_in_deceased_legend_is_a_note_of_its_carrier`,
+`author_block_deceased_legend_is_a_note_of_its_carrier`, `binding_symbol_led_deceased_entry_is_a_note_of_its_carrier`,
+`run_in_line_led_by_an_unrequested_symbol_stays_the_classs`, `in_place_line_led_by_an_unrequested_symbol_stays_the_classs`,
+`run_in_symbol_line_spelled_otherwise_is_its_carriers_note`, `displaced_line_led_by_an_unrequested_symbol_stays_the_classs`,
+`displaced_line_of_several_requested_entries_is_cut_by_the_api`, `in_place_line_of_several_requested_entries_is_cut_by_the_api`,
+and (d)'s `run_in_lines_a_run_places_keep_their_order`, GREEN since int127a); round 2 (review rev100a)
+`{an_asterisk_keys_alike_written_or_printed, a_line_led_by_a_printed_symbol_no_name_requests_stays_the_classs,
+deceased_naming_an_institution_is_an_affiliation}` (repros `run_in_asterisk_legend_under_a_math_asterisk_mark_is_its_carriers_note`,
+`run_in_text_asterisk_legend_under_an_asterisk_mark_is_its_carriers_note`,
+`run_in_math_asterisk_legend_under_an_asterisk_mark_is_its_carriers_note`,
+`displaced_math_asterisk_line_under_an_asterisk_mark_is_its_carriers`,
+`in_place_math_asterisk_legend_under_an_asterisk_mark_is_its_carriers_note`,
+`run_in_lines_led_by_unrequested_printed_symbols_stay_the_classs`, `run_in_deceased_named_institution_is_an_affiliation`,
+`run_in_deceased_legend_naming_an_institution_is_a_note`); unit
+`author_split_tests::{classify_thanks_reads_deceased_as_a_word, clean_frontmatter_labels_keys_an_asterisk_one_way,
+opens_with_deceased_reads_the_first_word}`. Residual of the Cut the handover reaches (99a's own
+output, restored): a list's trailing hand-labelled note lines (`a) also at UCEH …` … `g) …`, `b)` onward mid-line) join
+its last entry, so hep-ex0106079's five `$^{12}$` authors hold them, and an unmarked trailing note line (`Both authors
+contributed equally.`) joins the last entry's text (RED repros
+`displaced_hand_lettered_notes_after_the_marked_entries_go_to_their_requesters`,
+`displaced_unmarked_trailing_note_line_is_the_blocks`; SYNC row "100a").
 
 **Guards** `perfect_kernel_batch99b::{a_marked_address_store_the_class_title_page_prints_is_each_authors_line,
 a_numbered_affiliation_store_is_its_sole_authors, a_run_in_affiliation_setter_line_is_its_marked_authors}`; repros

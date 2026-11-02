@@ -219,14 +219,15 @@ pub(super) fn glue_shown_runs(events: &[Event]) -> Vec<Event> {
     .collect()
 }
 
-/// A mark's label as [`mark_labels`] reads its characters (trimmed, the math asterisk `∗` as `*`, the formula `\|`'s `∥`
+/// A mark's label as [`mark_labels`] reads its characters (trimmed, every asterisk form as `*`, the formula `\|`'s `∥`
 /// as `‖`).
 fn mark_text_symbols(label: &str) -> String {
   label
     .trim()
     .chars()
     .map(|c| match c {
-      '\u{2217}' => '*',
+      // (every asterisk form one key, user ruling 2026-11-02: `queue_digest::one_asterisk`)
+      c if ASTERISK_FORMS.contains(&c) => '*',
       '\u{2225}' => '‖',
       c => c,
     })

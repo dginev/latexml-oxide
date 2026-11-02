@@ -543,7 +543,8 @@ impl Resolver {
       label_rule = "api:leading-mark line:continued";
     }
     // (an affiliation entry a symbol leads — a footnote symbol or a mark glyph — whose text names the corresponding
-    // author or an equal contribution is that legend, a note of the names showing the mark, as a block's labelled line
+    // author, an equal contribution or an author deceased (an annotation of the same kind, FIDELITY_CHARTER §4, user
+    // ruling 2026-11-02) is that legend, a note of the names showing the mark, as a block's labelled line
     // reads it (`labelled_entries`): revtex's `\affiliation{$^1$Dept … \\ $^\star${corresponding author, e-mail:
     // stefano@duke.edu}}` under `Curtarolo$^{1,\star}$` was his affiliation, 0812.1531 — review revfms2a2_7 finding 8;
     // acmart's `\country{$^1$SJTU, $^2$Infinigence-AI, $^*$Equal contributions}`, 2409.11440. Only those: the call
@@ -567,7 +568,10 @@ impl Resolver {
       && labels
         .iter()
         .all(|l| !l.is_empty() && !l.chars().any(char::is_alphanumeric))
-      && matches!(classify_thanks(&text), "correspondence" | "contribution")
+      && matches!(
+        classify_thanks(&text),
+        "correspondence" | "contribution" | "deceased"
+      )
       && (split || !entry_affiliation);
     let assoc = Assoc {
       role:   if legend { "legend" } else { role }.to_string(),

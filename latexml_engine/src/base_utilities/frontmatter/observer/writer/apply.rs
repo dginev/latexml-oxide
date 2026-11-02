@@ -152,7 +152,8 @@ pub(super) fn make(
 /// mark twice — with no `mark` the page set the note's default `†` beside the name's `*` (review rev94a r5: f08's
 /// "Observatory*†", k01's `Ann Able$^*$, Bob Baker\\ $^*$Equal contribution`).
 fn show_legend_mark(document: &mut Document, owner: &Node, note: &Node, label: &str) -> Result<()> {
-  let unify = |m: &str| m.replace('\u{2217}', "*");
+  // (the printed glyphs keyed as the labels are, `*` and `∗` one: `queue_digest::one_asterisk`)
+  let unify = one_asterisk;
   let leading = dom::segments(note, false)
     .into_iter()
     .find_map(|seg| match seg {
@@ -322,7 +323,7 @@ fn token_runs(tokens: &[Node]) -> Vec<Vec<Node>> {
 /// A run of a formula's mark tokens parted into its marks of one symbol each: adjacent tokens printing the same glyph
 /// are one mark (`**`, `††`), a different glyph starts the next (`*†` is `*` and `†`).
 fn repeated_symbols(run: Vec<Node>) -> Vec<Vec<Node>> {
-  let glyph = |token: &Node| token.get_content().trim().replace('\u{2217}', "*");
+  let glyph = |token: &Node| one_asterisk(token.get_content().trim());
   let mut symbols: Vec<Vec<Node>> = Vec::new();
   for token in run {
     match symbols.last_mut() {
