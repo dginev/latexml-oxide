@@ -817,14 +817,14 @@ pub(super) fn place(
   owner: &Node,
   who: Owner,
   new: &Node,
-  order: &BTreeMap<(Owner, Key), Place>,
+  order: &BTreeMap<(Owner, Key), (Place, usize)>,
 ) -> bool {
   let items = read_creator(owner).items;
   // (within one print, an entry's own text before the contacts and notes it holds: `Univ X \\ \email{…}`)
   let place_of = |item: &dom::Item| {
     order
       .get(&(who, (item.kind.clone(), item.key.clone())))
-      .map(|place| (*place, item.kind.clone()))
+      .map(|(place, n)| (*place, item.kind.clone(), *n))
   };
   let Some(at) = items
     .iter()
@@ -847,15 +847,16 @@ pub(super) fn place(
 
 /// Whether the reading prints an item placed at `a` after one at `b`: a note's item after the author block's (aa's
 /// `\offprints` e-mail below the institutes, review rev92c r2 B-1), then by their blocks or calls, then within one by
-/// their spans — or, neither spanned, an entry's own text before what it holds (`Univ X \\ \email{…}`). One spanned
+/// their spans, one span's items of a kind by their place in the reading (the addresses of one line, 2311.01166) — or,
+/// neither spanned, an entry's own text before what it holds (`Univ X \\ \email{…}`). One spanned
 /// and one not in the same block are not ordered: a span is a position in the block, its absence none (an
 /// `\institute`'s legend line cut at its span and the address line before it, which the row parted out with no span:
 /// the legend had gone before the address it prints after, `perfect_kernel_batch61::marked_affiliation_review_shapes`).
-fn prints_after(a: &(Place, dom::Kind), b: &(Place, dom::Kind)) -> bool {
-  let ((anote, ai, (af, astart)), akind) = a;
-  let ((bnote, bi, (bf, bstart)), bkind) = b;
+fn prints_after(a: &(Place, dom::Kind, usize), b: &(Place, dom::Kind, usize)) -> bool {
+  let ((anote, ai, (af, astart)), akind, an) = a;
+  let ((bnote, bi, (bf, bstart)), bkind, bn) = b;
   match ((anote, ai).cmp(&(bnote, bi)), af, bf) {
-    (std::cmp::Ordering::Equal, 0, 0) => (astart, akind) > (bstart, bkind),
+    (std::cmp::Ordering::Equal, 0, 0) => (astart, akind, an) > (bstart, bkind, bn),
     (std::cmp::Ordering::Equal, 1, 1) => akind > bkind,
     (std::cmp::Ordering::Equal, ..) => false,
     (order, ..) => order == std::cmp::Ordering::Greater,

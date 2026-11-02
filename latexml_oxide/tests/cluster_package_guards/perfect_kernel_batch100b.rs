@@ -9,7 +9,8 @@
 //! `tools/perfect_kernel/repros/sectioning-frontmatter/` and asserts no Error or Warning and every creator's name and
 //! contacts (role and text) in order, the block's own creator last. Witnesses 2502.01754, 2602.21641, 2307.02047,
 //! 1901.09107, 0902.3918, 1909.00276, astro-ph0512555, 1002.3223, cond-mat0202268, 2608.22602; review rev100b's
-//! 2308.02269 (an ORCID glued to an address line) and 1907.01388 (a symbol carrier another address spells).
+//! 2308.02269 (an ORCID glued to an address line) and 1907.01388 (a symbol carrier another address spells); review
+//! rev100b2's 2311.01166 (the writer's copies in print order, the line's font), 1804.05417 and 2410.24095 (the font).
 use latexml::util::test::convert_files_with;
 
 use super::{
@@ -206,6 +207,132 @@ fn a_two_letter_surname_spells_its_local_part() {
     &["Bob Baker", "affiliation=Univ X, Town"],
     &["email=de@x.org"],
   ]);
+  // (a particle is one only before another word of the name, `Thanh Le`'s `le@`; a state code after a comma names no
+  // mailbox, "Cambridge, MA 02138" and Jun Ma's `ma@`: review rev100b2 S3, red on 100b r2, both the block's)
+  assert_creators(repro!("address_family_surname_particle_state_code"), &[
+    &["Thanh Le", "affiliation=Univ X, Town", "email=le@x.org"],
+    &["Bob Baker", "affiliation=Univ X, Town"],
+    &[
+      "Jun Ma",
+      "affiliation=Harvard, Cambridge, MA 02138",
+      "email=ma@harvard.edu",
+    ],
+    &["Cat Cole", "affiliation=Harvard, Cambridge, MA 02138"],
+  ]);
+}
+
+/// A symbol-led line's brace list under several carriers (2311.01166's `$^\ddag$\tt\{kyding,ycwang12,zhxu13,sjwang3,
+/// congliu2\}@iflytek.com`): the frontmatter observer's writer copies the unspelled addresses onto the carriers the
+/// flush's chain left out (Keyu Ding, Cong Liu), and every carrier's e-mails come in the order the line prints them —
+/// the writer's print-order pass orders one span's items by their place in the reading (`plan::reading_order`), not
+/// by the order of their texts. Distinct from the Link-chain guards: the writer's copy path. Red (100b r2): Keyu Ding's
+/// sjwang3 before ycwang12, Cong Liu's congliu2 first (review rev100b2 B1).
+#[test]
+fn copied_addresses_keep_the_lines_print_order() {
+  let shared = [
+    "ycwang12@iflytek.com",
+    "zhxu13@iflytek.com",
+    "sjwang3@iflytek.com",
+  ]
+  .map(|a| format!("email={a}"));
+  let carrier = |name: &str, before: &[&str], after: &[&str]| -> Vec<String> {
+    let mut out = vec![name.to_string()];
+    out.extend(before.iter().map(|s| (*s).to_string()));
+    out.extend(shared.iter().cloned());
+    out.extend(after.iter().map(|s| (*s).to_string()));
+    out
+  };
+  let lab = "affiliation=iFLYTEK Research, China";
+  let univ = "affiliation=University of Science and Technology of China";
+  let want = [
+    carrier(
+      "Keyu Ding",
+      &[
+        univ,
+        lab,
+        "email=kyding@ustc.edu.cn",
+        "email=kyding@iflytek.com",
+      ],
+      &[],
+    ),
+    carrier("Yongcan Wang", &[lab], &[]),
+    carrier("Zihang Xu", &[lab], &[]),
+    carrier("Zhenzhen Jia", &[lab], &[]),
+    carrier("Shijin Wang", &[lab], &[]),
+    carrier("Cong Liu", &[lab], &["email=congliu2@iflytek.com"]),
+    vec![
+      "Enhong Chen".to_string(),
+      univ.to_string(),
+      "email=cheneh@ustc.edu.cn".to_string(),
+    ],
+  ];
+  let want: Vec<Vec<&str>> = want
+    .iter()
+    .map(|c| c.iter().map(String::as_str).collect())
+    .collect();
+  let want: Vec<&[&str]> = want.iter().map(Vec::as_slice).collect();
+  let xml = assert_creators(repro!("address_family_symbol_list_print_order"), &want);
+  // (each address in the line's `\tt`, review rev100b2 #2)
+  assert_eq!(
+    (
+      xml.matches("role=\"email\">").count(),
+      xml
+        .matches("role=\"email\"><text font=\"typewriter\"")
+        .count()
+    ),
+    (22, 22),
+    "{xml}"
+  );
+}
+
+/// The addresses an entry's line prints, written out one e-mail each by the Kind step, keep the font the line printed
+/// them in (`email_lines::in_line_font`): a group's declaration, `{\tt \{able, baker\}@x.org}` (1804.05417), and a
+/// wrapper round each group of the line, `\texttt{\{cole, dorn\}@y.org}, \texttt{eden@z.org}` (2410.24095), and a
+/// declaration repeated before the next address, `{\tt\small fay@w.org, \tt\small \{gil, hal\}@v.org}` (2311.04698),
+/// and a font inside a whole-line wrapper, `\small{\texttt{\{ivy, jon\}@u.org}}` (2002.07720). Red (100b r2): every
+/// address plain text (review rev100b2 #2, the reviewer's p15).
+#[test]
+fn written_out_addresses_keep_the_lines_font() {
+  let xml = assert_creators(repro!("address_family_line_font"), &[
+    &["Ann Able", "affiliation=Univ X, Town", "email=able@x.org"],
+    &["Bob Baker", "affiliation=Univ X, Town", "email=baker@x.org"],
+    &["Cat Cole", "affiliation=Univ Y, City", "email=cole@y.org"],
+    &["Dan Dorn", "affiliation=Univ Y, City", "email=dorn@y.org"],
+    &["Eve Eden", "affiliation=Univ Y, City", "email=eden@z.org"],
+    &["Fay Fox", "affiliation=Univ Z, Port", "email=fay@w.org"],
+    &["Gil Gray", "affiliation=Univ Z, Port", "email=gil@v.org"],
+    &["Hal Hill", "affiliation=Univ Z, Port", "email=hal@v.org"],
+    &["Ivy Ink", "affiliation=Univ W, Bay", "email=ivy@u.org"],
+    &["Jon Jay", "affiliation=Univ W, Bay", "email=jon@u.org"],
+  ]);
+  // (each e-mail contact one address, in the line's typewriter font)
+  let contacts: Vec<&str> = xml
+    .split("role=\"email\">")
+    .skip(1)
+    .filter_map(|c| c.split("</contact>").next())
+    .collect();
+  let typewriter: Vec<&str> = contacts
+    .iter()
+    .filter_map(|c| c.strip_prefix("<text font=\"typewriter\""))
+    .filter_map(|c| c.split('>').nth(1)?.strip_suffix("</text"))
+    .collect();
+  assert_eq!(
+    typewriter,
+    [
+      "able@x.org",
+      "baker@x.org",
+      "cole@y.org",
+      "dorn@y.org",
+      "eden@z.org",
+      "fay@w.org",
+      "gil@v.org",
+      "hal@v.org",
+      "ivy@u.org",
+      "jon@u.org"
+    ],
+    "{xml}"
+  );
+  assert_eq!(contacts.len(), 10, "{xml}");
 }
 
 /// An address line with another call glued after it — an ORCID (2308.02269's `\url{{arim,sue}@…}\orcidID{…}`), a

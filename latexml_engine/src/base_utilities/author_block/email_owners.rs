@@ -364,14 +364,17 @@ impl NameKeys {
         .filter(|word| word.chars().count() >= 3)
         .cloned()
         .collect(),
-      // (a name particle is no surname of its own: `Ana de Souza` spells no `de@`, review rev100b S3)
+      // (a name particle another word of the name follows is no surname of its own: `Ana de Souza` spells no `de@`,
+      // review rev100b S3; the last word is the surname whatever it reads, `Thanh Le`'s `le@`, review rev100b2 S3)
       short_surnames: later
         .iter()
-        .filter(|word| {
+        .enumerate()
+        .filter(|(at, word)| {
           word.chars().count() == 2
-            && !matches!(word.as_str(), "de" | "la" | "da" | "le" | "di" | "du")
+            && (*at + 1 == later.len()
+              || !matches!(word.as_str(), "de" | "la" | "da" | "le" | "di" | "du"))
         })
-        .cloned()
+        .map(|(_, word)| word.clone())
         .collect(),
       given: Some(first.clone()).filter(|word| word.chars().count() >= 3),
       joined,
@@ -716,7 +719,8 @@ pub(in crate::base_utilities) fn is_pattern_address(address: &str) -> bool {
 
 /// Whether `address` is a mailbox its entry names, no one's surname: its local part two letters alone (digits aside,
 /// as a short surname spells one, [`NameKeys`]) that are a word the entry prints beside its addresses (`ai@x.org` under
-/// "AI Lab, Univ X" and Wei Ai, review rev100b S3). The Link step reads it as spelling no one.
+/// "AI Lab, Univ X" and Wei Ai, review rev100b S3). A state code after a comma is no such word: "Cambridge, MA 02138"
+/// leaves Jun Ma's `ma@` his (review rev100b2 S3). The Link step reads it as spelling no one.
 pub(in crate::base_utilities) fn is_entry_word_mailbox(address: &str, entry: &str) -> bool {
   let local: String = address
     .split('@')
@@ -726,12 +730,33 @@ pub(in crate::base_utilities) fn is_entry_word_mailbox(address: &str, entry: &st
     .filter(|c| c.is_alphabetic())
     .flat_map(char::to_lowercase)
     .collect();
-  local.chars().count() == 2
-    && entry
-      .split_whitespace()
-      .filter(|word| !word.contains('@'))
-      .flat_map(|word| word.split(|c: char| !c.is_alphabetic()))
-      .any(|word| word.to_lowercase() == local)
+  if local.chars().count() != 2 {
+    return false;
+  }
+  // (each word of letters, with whether a comma is the last mark before it)
+  let mut words: Vec<(String, bool)> = Vec::new();
+  let mut after_comma = false;
+  for raw in entry.split_whitespace().filter(|word| !word.contains('@')) {
+    let mut word = String::new();
+    for c in raw.chars() {
+      if c.is_alphabetic() {
+        word.push(c);
+        continue;
+      }
+      if !word.is_empty() {
+        words.push((std::mem::take(&mut word), after_comma));
+      }
+      after_comma = c == ',';
+    }
+    if !word.is_empty() {
+      words.push((word, after_comma));
+      after_comma = false;
+    }
+  }
+  words.iter().any(|(word, after_comma)| {
+    let state_code = *after_comma && word.chars().all(|c| c.is_uppercase());
+    word.to_lowercase() == local && !state_code
+  })
 }
 
 /// The owners FIDELITY_CHARTER §4's chain gives the e-mail addresses printed inside an affiliation-kind entry (an

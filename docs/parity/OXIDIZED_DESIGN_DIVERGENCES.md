@@ -30157,7 +30157,10 @@ observer read some of them (`take_out_entry_addresses`, OD #938), but its writer
   line, the rest behind the mark (`mark_led_addresses`) — and its notes (`\footnote`, `\thanks`) printing a labelled
   address alone (`note_addresses`: a label of at most four words ending in e-mail words, "Electronic address" now one,
   the label the contacts' name) leave the entry and are e-mail calls digested at its end (`AddressPlacement::Inner`,
-  `email_line_calls`). An entry of addresses alone stays, empty, as their carrier and is dropped at the flush; the
+  `email_line_calls`), each written-out address in the font the line printed it in — the declarations and wrappers
+  round every `@` of the line, when they are one (`email_lines::in_line_font`: `{\tt \{…\}@x}`, 1804.05417;
+  `$^\ddag$\tt\{…\}@x`, 2311.01166; `\texttt{\{…\}@x}, \texttt{…@y}`, 2410.24095; a line whose `@`s print in
+  different fonts keeps its addresses plain). An entry of addresses alone stays, empty, as their carrier and is dropped at the flush; the
   class's own name for it (`\mail`'s "Correspondence to", `\altaffiliation[E-mail address: ]`) names its e-mails (not a
   role default, not an empty one). Left as they are: an e-mail command's line (`\email{…}`: the class's label kept,
   llncs's "E-mail"), a template or a list the reader cannot part, an entry a class shares among every author
@@ -30186,7 +30189,9 @@ observer read some of them (`take_out_entry_addresses`, OD #938), but its writer
   words left whole, and one printing more than text — an ORCID's link, math — never (`insert::prints_text_only`); an address an author already holds is not put on the block too; an e-mail command the author wrote
   inside the entry holding one address keeps the one author its own call placed it on unless it spells another
   (FIDELITY_CHARTER §4 #420; jmlr's `\Name{…} \Email{costis@…}` under a misread `\AND`, 2002.00057, 1504.01446,
-  2509.23923); each placed e-mail follows the entry on its owner (R8). The observer runs it in `answer_inner_emails` —
+  2509.23923); each placed e-mail follows the entry on its owner (R8). Where the observer's writer copies an address
+  onto an owner today's chain left it off, the copies of one span go by their place in the reading, not by their texts
+  (`writer::plan::reading_order`, `apply::prints_after`: 2311.01166's `sjwang3@` had come before `ycwang12@`). The observer runs it in `answer_inner_emails` —
   every e-mail inside an entry, labelled or not (`api.rs` defers an unlabelled entry's, which it had copied onto every
   owner and so into the upfront grid, 2307.02047; an entry of addresses alone still holds its role for a later
   `annotate=new` run, as today's empty contact does, 2003.10933), entries printing the same addresses together — and in
@@ -30202,9 +30207,10 @@ observer read some of them (`take_out_entry_addresses`, OD #938), but its writer
   label glued to an address (`Email:aable@a.edu`, `(E-mail:bogdan@…`, astro-ph0404330) is no part of it, and any other
   colon before the `@` makes no address; a two-letter surname spells a local part of its letters alone
   (`NameKeys::short_surnames`: `an107@` Weili An's, not Anusuya Nallathambi's initials, 2608.22602) — not a name
-  particle (`de`, `la`, `da`, `le`, `di`, `du`), nor two letters that are a word of the address's own entry, its mailbox
-  (`ai@` under "AI Lab" and Wei Ai: `email_owners::is_entry_word_mailbox`, read in both engines; the observer's
-  labelled-entry e-mails carry it as the `api:entry-mailbox` tag).
+  particle another word of the name follows (`de`, `la`, `da`, `le`, `di`, `du`: Ana de Souza spells no `de@`, Thanh
+  Le's `le@` is his), nor two letters that are a word of the address's own entry, its mailbox (`ai@` under "AI Lab" and
+  Wei Ai: `email_owners::is_entry_word_mailbox`, read in both engines; the observer's labelled-entry e-mails carry it as
+  the `api:entry-mailbox` tag) — a state code after a comma is no such word ("Cambridge, MA 02138", Jun Ma's `ma@`).
 
 **Beyond Perl** in all of it; F (a note in an affiliation) mirrors the class's own `\email`, which prints the same note.
 
@@ -30212,7 +30218,8 @@ observer read some of them (`take_out_entry_addresses`, OD #938), but its writer
 an_entry_of_addresses_alone_is_no_affiliation, mark_led_address_lines_are_their_marks_emails,
 a_bar_parts_the_local_parts_of_a_list, the_link_chain_over_an_entrys_addresses,
 a_two_letter_surname_spells_its_local_part, an_address_note_in_an_affiliation_is_its_email,
-an_address_line_holding_another_call_stays_whole}`; repros
+an_address_line_holding_another_call_stays_whole, copied_addresses_keep_the_lines_print_order,
+written_out_addresses_keep_the_lines_font}`; repros
 sectioning-frontmatter/`address_family_*` (catalog only: `address_family_marked_address_lines_small`,
 `address_family_marked_address_unspelled`, `address_family_email_line_spelled`). Guards updated to the new reading:
 `perfect_kernel_batch63::ieeetran_author_block_conditional` (the shared institute's `a@b.c` the block's),

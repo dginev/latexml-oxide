@@ -1,0 +1,23 @@
+% A two-letter last word of a name is its surname whatever it reads (`Thanh Le`'s `le@`: a particle is one only before
+% another word of the name, `NameKeys::short_surnames`), and a state code after a comma is no word naming the entry's
+% mailbox ("Cambridge, MA 02138" leaves Jun Ma's `ma@` his, `email_owners::is_entry_word_mailbox`). Review rev100b2 S3
+% (the reviewer's p14).
+% witness: (synthetic)
+% oracle:  pdflatex 0 errors: "Univ X, Town", "le@x.org", "Harvard, Cambridge, MA 02138", "ma@harvard.edu"
+% engines: rust int127a = 0 errors, each address in its entry's text; 100b r2 = both addresses the block's; perl = not run
+% expect:  0 errors, 0 warnings; Thanh Le: le@x.org; Jun Ma: ma@harvard.edu
+% status:  RED (100b r2) -> GREEN (100b r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Thanh Le}
+\author[1]{Bob Baker}
+\author[2]{Jun Ma}
+\author[2]{Cat Cole}
+\affil[1]{Univ X, Town \\ le@x.org}
+\affil[2]{Harvard, Cambridge, MA 02138 \\ ma@harvard.edu}
+\maketitle
+Body.
+\end{document}

@@ -1435,7 +1435,7 @@ fn slice_name(
 
 /// A written creator's items in the reading's print order, by the writer's own pass (`apply::place`; rev92c S1): its
 /// notes stay where they were written, as the pass leaves them.
-fn in_print_order(owner: &Node, who: Owner, order: &BTreeMap<(Owner, Key), Place>) {
+fn in_print_order(owner: &Node, who: Owner, order: &BTreeMap<(Owner, Key), (Place, usize)>) {
   let items: Vec<Node> = read_creator(owner)
     .items
     .into_iter()

@@ -118,14 +118,15 @@ impl Op {
 }
 
 /// The plan: its operations, the document's creator of each resolved creator, and where each of the reading's items
-/// prints ([`Place`]), which places the items the operations add among an owner's (rev92c S1).
+/// prints ([`Place`], with its place among its owner's items in the reading), which places the items the operations
+/// add among an owner's (rev92c S1).
 #[derive(Debug, Clone)]
 pub(super) struct Plan {
   pub ops:      Vec<Op>,
   /// the resolved creators' names, whom an address spells (the address reader's, `Op::CutAddresses`)
   pub names:    Vec<String>,
   pub creators: BTreeMap<usize, Node>,
-  pub order:    BTreeMap<(Owner, Key), Place>,
+  pub order:    BTreeMap<(Owner, Key), (Place, usize)>,
 }
 
 pub(super) type Key = (Kind, String);
@@ -2117,15 +2118,32 @@ fn later_marks(node: &Node) -> Vec<String> {
     .collect()
 }
 
-/// Where each of the reading's items prints, by its owner and key ([`Place`]): what the print-order pass places an
-/// owner's items by (`apply::place`).
-pub(super) fn reading_order(resolved: &Resolved) -> BTreeMap<(Owner, Key), Place> {
+/// Where each of the reading's items prints, by its owner and key ([`Place`]), and its place among the owner's items in
+/// the reading — the order of the addresses one span prints, which its start alone does not part: what the print-order
+/// pass places an owner's items by (`apply::place`; 2311.01166's `$^\ddag$\tt\{kyding,ycwang12,zhxu13,sjwang3,
+/// congliu2\}@iflytek.com`, the addresses copied onto Keyu Ding and Cong Liu in the order of their texts, review
+/// rev100b2 B1).
+pub(super) fn reading_order(resolved: &Resolved) -> BTreeMap<(Owner, Key), (Place, usize)> {
+  let mut seq: BTreeMap<(Owner, Key), usize> = BTreeMap::new();
+  let named = resolved
+    .creators
+    .iter()
+    .enumerate()
+    .filter(|(_, c)| !c.name.trim().is_empty())
+    .map(|(i, c)| (Owner::Creator(i), creator_items(c)));
+  for (owner, items) in named.chain([(Owner::Block, block_items(resolved))]) {
+    for (n, (key, _)) in items.into_iter().enumerate() {
+      seq.entry((owner, key)).or_insert(n);
+    }
+  }
   wanted(resolved)
     .iter()
     .flat_map(|(key, wants)| {
-      wants
-        .iter()
-        .filter_map(|(owner, a)| place_of(a, &key.0).map(|place| ((*owner, key.clone()), place)))
+      wants.iter().filter_map(|(owner, a)| {
+        let at = (*owner, key.clone());
+        let n = seq.get(&at).copied().unwrap_or(usize::MAX);
+        place_of(a, &key.0).map(|place| (at, (place, n)))
+      })
     })
     .collect()
 }

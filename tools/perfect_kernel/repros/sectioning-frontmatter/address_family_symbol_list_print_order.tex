@@ -1,0 +1,31 @@
+% A symbol-led line's brace list under several carriers (`$^\ddag$\tt\{kyding,ycwang12,zhxu13,sjwang3,congliu2\}@…`):
+% every carrier's addresses in the order the line prints them, whichever pass places them — the frontmatter observer's
+% writer copies the unspelled ones onto Keyu Ding and Cong Liu, which the flush's chain does not give them (S1), and the
+% copies are placed by their place in the reading, not by their texts (`writer::plan::reading_order`); each address in
+% the line's `\tt`. Review rev100b2 B1, #2.
+% witness: 2311.01166
+% oracle:  pdflatex 0 errors: "†{kyding,cheneh}@ustc.edu.cn", "‡{kyding,ycwang12,zhxu13,sjwang3,congliu2}@iflytek.com"
+% engines: rust int127a = 0 errors, print order, 22 typewriter; 100b r2 = sjwang3, ycwang12, zhxu13 after kyding@ and
+%          congliu2@ first on Cong Liu, 0 typewriter; perl = not run
+% expect:  0 errors, 0 warnings; each creator's e-mails in print order, each address typewriter
+% status:  RED (100b r2) -> GREEN (100b r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{
+Keyu Ding$^\dag$$^\ddag$,
+Yongcan Wang$^\ddag$,
+Zihang Xu$^\ddag$,
+Zhenzhen Jia$^\ddag$,
+Shijin Wang$^\ddag$,
+Cong Liu$^\ddag$,
+Enhong Chen$^\dag$
+\\
+{$^\dag$University of Science and Technology of China} \\
+{$^\ddag$iFLYTEK Research, China} \\
+$^\dag$\tt\{kyding,cheneh\}@ustc.edu.cn\\
+$^\ddag$\tt\{kyding,ycwang12,zhxu13,sjwang3,congliu2\}@iflytek.com}
+\maketitle
+Body.
+\end{document}

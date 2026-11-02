@@ -63,6 +63,8 @@ pub(in crate::base_utilities) fn optioned_email_calls(
 /// [`email_line_calls`] of a line no e-mail label leads.
 fn unlabelled_email_line_calls(line: Tokens, placement: AddressPlacement) -> Result<Vec<Token>> {
   let mut calls = Vec::new();
+  // (an entry's line written out address by address: each in the font the line printed it in, [`in_line_font`])
+  let inner = matches!(placement, AddressPlacement::Inner);
   // A wrapper is kept on each address (`\texttt`, `\small`, `\url`), but an email command's (`\email`, `\mailto`,
   // `\emailaddr`) is the contact `\lx@add@email` stands for — nested, it made a second (empty) contact and advanced
   // the `labelseq` count twice, so the second address found no author (llncs `\institute{… \\ \email{a@x, b@y}}`).
@@ -163,10 +165,103 @@ fn unlabelled_email_line_calls(line: Tokens, placement: AddressPlacement) -> Res
     return Ok(calls);
   }
   for (address, opts) in address_tokens(&line, addrs)?.into_iter().zip(options) {
+    let address = if inner {
+      in_line_font(&line, address)
+    } else {
+      address
+    };
     calls.extend(Invocation!(T_CS!("\\lx@add@email"), vec![opts, Some(address)]).unlist());
   }
   Ok(calls)
 }
+
+/// `address`, one of the addresses `line` prints, in the font `line` printed it in: the font and size declarations
+/// ([`NAME_TEXT_COMMANDS`]) and wrappers (`\texttt{…}`, [`FONT_WRAPPERS`]) around every `@` the line prints, when they
+/// are one — `{\tt \{able, baker\}@x.org}` (1804.05417), `$^\ddag$\tt\{kyding,ycwang12,…\}@iflytek.com` (2311.01166),
+/// `\texttt{\{czhang, htwai, manchoso\}@se.cuhk.edu.hk}, \texttt{shangyuanliu@…}` (2410.24095) —, each written out in a
+/// group of its own: `{\tt able@x.org}`, as a line printing one address is digested whole (review rev100b2 #2). A line
+/// whose `@`s print in different fonts keeps `address` as it is; a whole-line wrapper ([`address_tokens`] repeats it)
+/// is read inside.
+fn in_line_font(line: &Tokens, address: Tokens) -> Tokens {
+  // (a whole-line wrapper [`address_tokens`] repeats on each address already: the font inside it read —
+  // `\small{\texttt{\{g.marra,alessandro.betti\}@unifi.it}}`, 2002.07720)
+  let inner = match whole_line_cs_wrapper(line) {
+    Some((cmd, _)) if is_email_wrapper(&cmd) => return address,
+    Some((_, inner)) => inner,
+    None => line.clone(),
+  };
+  let v = inner.unlist_ref();
+  // (each group's font: the declarations and wrappers in force, in order — a wrapper `\texttt` followed by the group
+  // it sets)
+  let mut frames: Vec<Vec<(Token, bool)>> = vec![Vec::new()];
+  let mut wrapper: Option<Token> = None;
+  let mut at_signs: Vec<Vec<(Token, bool)>> = Vec::new();
+  for t in v {
+    match t.get_catcode() {
+      Catcode::BEGIN => {
+        let mut font = frames.last().cloned().unwrap_or_default();
+        font.extend(wrapper.take().map(|w| (w, true)));
+        frames.push(font);
+      },
+      Catcode::END => {
+        wrapper = None;
+        if frames.len() > 1 {
+          frames.pop();
+        }
+      },
+      Catcode::CS if t.with_str(|s| FONT_WRAPPERS.contains(&s)) => wrapper = Some(*t),
+      Catcode::CS if t.with_str(|s| NAME_TEXT_COMMANDS.contains(&s)) => {
+        wrapper = None;
+        // (a declaration repeated before the next address is in force once: `{\tt\small a@x, \tt\small
+        // \{b,c\}@y}`, 2311.04698)
+        if let Some(font) = frames.last_mut()
+          && !font.contains(&(*t, false))
+        {
+          font.push((*t, false));
+        }
+      },
+      Catcode::SPACE => {},
+      _ => {
+        wrapper = None;
+        if t.with_str(|s| s == "@") {
+          at_signs.push(frames.last().cloned().unwrap_or_default());
+        }
+      },
+    }
+  }
+  let Some(font) = at_signs
+    .first()
+    .filter(|font| !font.is_empty() && at_signs.iter().all(|other| other == *font))
+  else {
+    return address;
+  };
+  let mut out = vec![T_BEGIN!()];
+  for (cmd, wraps) in font {
+    out.push(*cmd);
+    if *wraps {
+      out.push(T_BEGIN!());
+    }
+  }
+  out.extend(address.unlist());
+  out.extend(font.iter().filter(|(_, wraps)| *wraps).map(|_| T_END!()));
+  out.push(T_END!());
+  Tokens::new(out)
+}
+
+/// The font commands taking the text they set as their argument ([`in_line_font`]).
+const FONT_WRAPPERS: &[&str] = &[
+  "\\texttt",
+  "\\textbf",
+  "\\textit",
+  "\\textsc",
+  "\\textsl",
+  "\\textup",
+  "\\textmd",
+  "\\textrm",
+  "\\textsf",
+  "\\textnormal",
+  "\\emph",
+];
 
 /// Whether `cmd` is an email command (`\email`, `\mailto`, `\emailaddr`): the contact `\lx@add@email` stands for.
 pub(in crate::base_utilities) fn is_email_wrapper(cmd: &Token) -> bool {
