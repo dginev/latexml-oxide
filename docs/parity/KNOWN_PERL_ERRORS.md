@@ -8823,7 +8823,8 @@ gives 13.88893pt.
 
 Rust (58g): `\font` without `at` takes the TFM design size (times `scaled`) when the TFM is found (tex_fonts.rs,
 `Tfm::design_size`); otherwise Perl's rule. The plain dump's manfnt (plain.tex:467 `\font\preloaded=manfnt`) records its
-parameters at 655360sp where Perl's dump has 65536sp; `\font\x=cmr11` is 10.95pt. Guard
+parameters at 655360sp where Perl's dump has 65536sp; `\font\x=cmr11` is 10.95pt once mktextfm has generated
+cmr11.tfm (TeX Live ships none), else 11pt — guards use shipped TFMs (cmr17, bbm17). Guard
 `perfect_kernel_batch58::raw_font_scales_by_design_size`; repro `fonts-nfss/raw_font_scales_by_design_size`.
 
 ## 410. A font selected by `\font` outlives the next font selection, and math characters take it
