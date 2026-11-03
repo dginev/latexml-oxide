@@ -481,14 +481,21 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
           .contains(&w.as_str())
         }));
     // (a line an entry is continued over, labelled or not: the label is its first line's; and each row of the block an
-    // item joins, on its own — never a run of words inside one, so `Carnegie Mellon University` stays an institution)
+    // item joins, on its own — never a run of words inside one, so `Carnegie Mellon University` stays an institution —
+    // save the first row of an item a mark labels, the line the mark makes the entry: `$^{\#}$\,Hellebore Capital
+    // Management\\ 63 Avenue …` is the `#` affiliation, though its words may name a person (1507.08137, batch 101c))
     let rows = joined_rows(assoc);
+    let labelled = assoc
+      .label
+      .as_deref()
+      .is_some_and(|l| l.chars().any(|c| !c.is_whitespace()));
     person
       || lines_of(assoc).iter().any(|line| may_name_a_person(line))
       || (rows.len() > 1
         && rows
           .iter()
-          .any(|(row, whole)| *whole && may_name_a_person(row)))
+          .enumerate()
+          .any(|(k, (row, whole))| *whole && !(k == 0 && labelled) && may_name_a_person(row)))
   };
   // (the labels the reading's entries answer)
   let answered: Vec<String> = resolved
@@ -723,7 +730,8 @@ fn joined_across_cells(c: &RCreator) -> bool {
 /// read as: `\FormatAuthor{Alessandro Chiesa}{…}{EPFL} \FormatAuthor{Zihan Hu}{…}{EPFL}`, two nested `tabular`s in one
 /// cell, made "EPFL Zihan Hu EPFL" Chiesa's affiliation (2609.37429, review rev100c B1); the affiliation counterpart of
 /// [`joined_across_cells`]. A comma's piece is no row: `University of California, San Diego` (2103.14969), `Nanjing
-/// University, Nanjing, China` (2609.21619). Empty when the item starts at no Name event of its span.
+/// University, Nanjing, China` (2609.21619). Empty when the item starts at no Name event of its span. The caller passes
+/// over the first row of an item a mark labels (1507.08137).
 fn joined_rows(assoc: &Assoc) -> Vec<(String, bool)> {
   let Some((index, Some(span))) = assoc.source else {
     return Vec::new();

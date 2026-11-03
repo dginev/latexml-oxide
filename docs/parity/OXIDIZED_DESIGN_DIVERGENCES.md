@@ -30314,9 +30314,12 @@ resolver's `joins_previous` joins across a cell boundary, SYNC_STATUS row 100c).
 declines a made item whose text joins two or more of the block's Name events (from the one its source span starts at,
 each one's words running on the item's, others' between passed over; `repart.rs` `joined_rows`) when one of them that
 is a whole row — a line, a cell or a spaced-apart piece, no comma, word or other ink beside it (`whole_row`) — may on
-its own name a person (`may_name_a_person`). Rows, never runs of words inside one (`Carnegie Mellon University` is no
-person), and never a comma's piece (`University of California, San Diego`, 2103.14969; `Nanjing University, Nanjing,
-China`, 2609.21619). 2609.37429's `\FormatAuthor{Alessandro Chiesa}{…}{EPFL} \FormatAuthor{Zihan Hu}{…}{EPFL}` (two nested
+its own name a person (`may_name_a_person`), save the first row of an item a mark labels, the line the mark makes the
+entry (`$^{\#}$\,Hellebore Capital Management\\ 63 Avenue …` is the `#` affiliation: 1507.08137, four authors one
+creator and a `merged_creators` Error until batch 101c; guard
+`perfect_kernel_batch101c::a_marked_entrys_first_row_that_reads_as_a_name_stays_the_entry`). Rows, never runs of words
+inside one (`Carnegie Mellon University` is no person), and never a comma's piece (`University of California, San
+Diego`, 2103.14969; `Nanjing University, Nanjing, China`, 2609.21619). 2609.37429's `\FormatAuthor{Alessandro Chiesa}{…}{EPFL} \FormatAuthor{Zihan Hu}{…}{EPFL}` (two nested
 `tabular`s in one cell) was read as one name whose institution row runs on over the second person's rows and written
 Chiesa holding the affiliation "EPFL Zihan Hu zihan.hu@epfl.ch EPFL"; today's one creator now stays (review rev100c B1;
 RED repro `boxed_block_two_people_in_one_cell`: two creators are right).
