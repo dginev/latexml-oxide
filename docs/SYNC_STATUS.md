@@ -450,6 +450,20 @@ KNOWN_PERL_ERRORS cross-reference when one applies. Perl-origin defects go to `p
   lost in the build, where the first formula the math parser could not read (`(a,b`) took the latched Fatal for its own
   (`take_last_resource_fatal`, parser.rs) and the converter wrote an empty file. The phases after digestion get the
   guard's budget afresh. Guard `perfect_kernel_batch80a::iflimit_fatal_keeps_the_document_before_it`.
+- **hyperref's `\Hy@driver` was `hpdftex` whatever the output mode (101a)**: hyperref_sty.rs defined it as a constant,
+  so a shipped siamart copy (siamart251216.cls:1302-1336 `\ifpdf\else\usepackage{hypdvips}\fi`) under the DVI persona
+  (`\pdfoutput=0`, K6) met hypdvips.sty:27-36's "Wrong hyperref driver `hpdftex.def' selected!" Error — 14 papers of
+  the cortex 2605/2606 reruns (2605.04427, 2605.04786, 2605.05043, 2605.08634, 2605.14933, 2605.26592, 2605.28291,
+  2605.17732, 2606.08053, 2606.13198, 2606.14937, 2606.15203, 2606.16251, 2606.22191, 2606.26900) and 1703.08345. It is
+  now what hyperref.sty's `\Hy@AtEndOfPackage` (:4246-4407) settles on: `hpdftex` under `\ifpdf` whatever option
+  (`hluatex` under the `luatex` profile), `hxetex` under XeTeX, else the last DVI driver option, the class's global ones
+  read first (`dvipdfmx` → `hdvipdfm`, …), defaulting to `hdvips`; `\Hy@PutCatalog` (hypdvips.sty:3091-3108) is
+  hpdftex.def:40's draft-mode `\@gobble` (Perl's binding defines neither). Under DVI, hrefhide.sty:153-166 now raises
+  "Producing not a pdf file", as latex+dvips does. Residual: hyperref's wrong-driver-option Errors (`[dvips]` in PDF
+  mode, `[pdftex]` in DVI mode, hyperref.sty:2528-2563) are not raised, and the `driverfallback` key (ctex's
+  `driverfallback=dvipdfmx`, ctex-engine-pdftex.def:493) is not honoured; hypdvips.sty:2002
+  `\g@addto@macro{\endfigure}` is dropped with Perl's Warning (`\endfigure` a constructor, Package.pm:2542). Guards
+  `perfect_kernel_batch101a::{siamart_copy_loads_hypdvips_in_dvi_mode, hyperref_driver_follows_the_output_mode}`.
 
 ## Current status
 

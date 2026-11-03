@@ -555,11 +555,19 @@ LoadDefinitions!({
   });
   DefMacro!("\\Hurl Semiverbatim", "\\texttt{#1}");
 
-  // Internals raw hyperref-dependent packages test or call: hyperref.sty:2555
-  // sets `\Hy@driver` to `hpdftex` under pdfTeX (hrefhide.sty:154 compares it
-  // against `\hrefhide@driver`); :1788 `\HyPsd@UTFviii` is the PDF-string
-  // UTF-8 octet setup — no pdfstrings here (dvdcoll/pdfnotiz.sty:263, ucalgmthesis).
-  DefMacro!("\\Hy@driver", "hpdftex");
+  // Internals raw hyperref-dependent packages test or call. `\Hy@driver` is the driver file hyperref.sty's
+  // `\Hy@AtEndOfPackage` (:4246-4407) settles on, from the output mode the persona gives (`\pdfoutput`, K6) — not a
+  // constant `hpdftex`: a shipped siamart copy (siamart251216.cls:1302-1336) loads hypdvips.sty under `\ifpdf…\else`,
+  // and hypdvips.sty:27-36 errs unless the driver is `hdvips` (2605.04427, 2606.08053, 1703.08345, 14 papers of the
+  // arXiv 2605/2606 reruns). hrefhide.sty:154 compares it against `hpdftex`; scrartcl.cls:1018-1027, hyperxmp.sty:2118
+  // and ctex-engine-pdftex.def:503 test it too. `\Hy@PutCatalog` is the driver's catalog writer, called at
+  // `\AtEndDocument` by hypdvips.sty:3091-3108: every driver's writes a PDF object (hpdftex.def:40-42
+  // `\pdfcatalog`, pdfmark.def:57 `\pdfmark`), none of which we make, so it is hpdftex.def's draft-mode `\@gobble`.
+  // :1788 `\HyPsd@UTFviii` is the PDF-string UTF-8 octet setup — no pdfstrings here (dvdcoll/pdfnotiz.sty:263,
+  // ucalgmthesis). Guards: `perfect_kernel_batch101a::{hyperref_driver_follows_the_output_mode,
+  // siamart_copy_loads_hypdvips_in_dvi_mode}`.
+  RawTeX!(&hyperref_driver_tex());
+  RawTeX!(r"\let\Hy@PutCatalog\@gobble");
   def_macro_noop("\\HyPsd@UTFviii")?;
   // hyperref.sty:1185 `\let\HyPsd@AMSclassfix\relax` and the PDF-string
   // conversion routines pdfnotiz.sty:251-351 calls raw (dvdcoll).
@@ -1993,6 +2001,55 @@ LoadDefinitions!({
 \ExplSyntaxOff"
   );
 });
+
+/// hyperref's DVI-mode driver options and the driver file each selects (hyperref.sty:2578-2718: `nativepdf`,
+/// `pdfmark`, `ps2pdf` are `hdvips`; `dvipdfm` is `hdvipdfm`). The PDF-mode and engine options (`pdftex`, `luatex`,
+/// `xetex`, `vtex`, `hitex`) are absent: in DVI mode they select no driver (an Error in hyperref, which we do not raise)
+/// and leave the default.
+const HYPERREF_DVI_DRIVER_OPTIONS: [(&str, &str); 11] = [
+  ("dvips", "hdvips"),
+  ("nativepdf", "hdvips"),
+  ("pdfmark", "hdvips"),
+  ("ps2pdf", "hdvips"),
+  ("dvipdfm", "hdvipdfm"),
+  ("dvipdfmx", "hdvipdfm"),
+  ("hypertex", "hypertex"),
+  ("dviwindo", "hdviwind"),
+  ("dvipsone", "hdvipson"),
+  ("textures", "htexture"),
+  ("tex4ht", "htex4ht"),
+];
+
+/// The TeX that sets `\Hy@driver` as hyperref.sty's `\Hy@AtEndOfPackage` (:4246-4407) leaves it. In PDF mode (`\ifpdf`,
+/// which follows `\pdfoutput`) the driver is forced to `hpdftex` (`hluatex` under the `luatex` profile, hyperref's
+/// `\pdfextension` test; :4251-4265), whatever option was given; under XeTeX to `hxetex` (:4280-4292). In DVI mode the
+/// last driver option given wins, kvoptions' `\ProcessKeyvalOptions{Hyp}` (:4066) reading the class's global options
+/// before the package's own; with none, `\Hy@defaultdriver` = `hdvips` (:4339, :4371).
+fn hyperref_driver_tex() -> String {
+  let mut given: Vec<String> = Vec::new();
+  for key in ["class_options", "opt@hyperref.sty"] {
+    for item in lookup_vecdeque(key).unwrap_or_default() {
+      match item {
+        Stored::String(s) => given.push(with(s, |s| s.trim().to_string())),
+        Stored::Strings(ss) => given.extend(ss.iter().map(|s| with(*s, |s| s.trim().to_string()))),
+        _ => {},
+      }
+    }
+  }
+  let dvi_driver = given
+    .iter()
+    .rev()
+    .find_map(|option| {
+      HYPERREF_DVI_DRIVER_OPTIONS
+        .iter()
+        .find(|(name, _)| name == option)
+        .map(|(_, driver)| *driver)
+    })
+    .unwrap_or("hdvips");
+  s!(
+    "\\ifpdf\\ifluatex\\def\\Hy@driver{{hluatex}}\\else\\def\\Hy@driver{{hpdftex}}\\fi\\else\\ifxetex\\def\\Hy@driver{{hxetex}}\\else\\def\\Hy@driver{{{dvi_driver}}}\\fi\\fi"
+  )
+}
 
 /// The text accents of a PDF string and their combining characters (puenc.def's `\DeclareTextAccent`s).
 const PDF_ACCENTS: &[(&str, char)] = &[
