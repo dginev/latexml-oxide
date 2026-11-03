@@ -777,6 +777,53 @@ pub(in crate::base_utilities) fn take_author_annotations(line: &Tokens) -> (Toke
   (Tokens::new(kept), taken)
 }
 
+/// An address line carrying notes (`\texttt{a@x, b@y}\thanks{Submitted …}`, 2605.23553; 2304.05485's copyright
+/// `\thanks`, 1710.01254, 1803.07937, 2603.09888, 2608.24641) is still an address line: the line without its notes
+/// ([`take_author_annotations`]) and the blank lines and spaces it then ends with, and the notes as the document's ([`document_note_call`]), when the rest is an address
+/// line by the caller's reader (`is_address_line`) and every note taken is a plain `\thanks{…}` or `\footnote{…}` — as
+/// they digested in the contact the line made before (a pubnote), now after the block's calls. Read whole, the note's
+/// text is no address (`email_addresses` reads the printed text), so the line was an affiliation: the last name's, or
+/// every name's. `None` for a line with no note, a rest that is no address line, or a note of another kind
+/// (`\thanksref`, `\altaffilmark`, `\thanks[…]{…}`), each line read as before. `email_addresses` itself keeps reading
+/// the note: [`address_tokens`] would drop a note it skipped.
+pub(in crate::base_utilities) fn address_line_notes(
+  line: &Tokens,
+  is_address_line: impl Fn(&Tokens) -> Result<bool>,
+) -> Result<Option<(Tokens, Vec<Token>)>> {
+  if !line
+    .unlist_ref()
+    .iter()
+    .any(|t| *t == T_CS!("\\thanks") || *t == T_CS!("\\footnote"))
+  {
+    return Ok(None);
+  }
+  let (rest, taken) = take_author_annotations(line);
+  // (without the blank lines and spaces before the notes, which print nothing there: the address a line's wrapper
+  // holds whole, its font kept — 2605.23553's `\texttt{…}<blank lines>\thanks{…}`)
+  let mut rest = rest.unlist();
+  while rest
+    .last()
+    .is_some_and(|t| *t == T_SPACE!() || *t == T_CS!("\\par"))
+  {
+    rest.pop();
+  }
+  let rest = Tokens::new(rest);
+  if taken.is_empty() || !is_address_line(&rest)? {
+    return Ok(None);
+  }
+  let Some(spans) = line_notes(&taken) else {
+    return Ok(None);
+  };
+  let mut notes = Vec::with_capacity(taken.len());
+  for (start, end) in spans {
+    let Some(call) = document_note_call(&taken[start..end]) else {
+      return Ok(None);
+    };
+    notes.extend(call);
+  }
+  Ok(Some((rest, notes)))
+}
+
 /// The operand of an affiliation entry's first mark, which `\lx@sup@setlabel@affiliation` labels it by (a later
 /// superscript in the entry is its text, 63i).
 pub(in crate::base_utilities) fn entry_mark(entry: &[Token]) -> Option<Vec<Token>> {

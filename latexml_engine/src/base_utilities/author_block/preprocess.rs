@@ -451,8 +451,8 @@ pub(in crate::base_utilities) fn notes_line_joins_names(stuff: Tokens) -> (Token
 /// `None` when it stays a line: a note joins when the mark leading it is one the names request (`requested`,
 /// [`mark_keys`]); a note no name requests (`\thanks{This work was funded by …}`, a symbol only a note prints,
 /// 2312.10807's `$^{*}$Equal contribution` under `\IEEEauthorrefmark{1}`) is the document's, as the line read whole made
-/// it — digested in a contact, `\thanks` is `\lx@add@pubnote@thanks` and `\footnote` `\lx@add@pubnote` (queue_digest.rs)
-/// —, not the last name's (FIDELITY_CHARTER R1: 2609.17106's funding note on Markus Vincze, review rev100c S1); taken
+/// it — digested in a contact, `\thanks` is `\lx@add@pubnote@thanks` and `\footnote` `\lx@add@pubnote` (queue_digest.rs,
+/// [`document_note_call`]) —, not the last name's (FIDELITY_CHARTER R1: 2609.17106's funding note on Markus Vincze, review rev100c S1); taken
 /// out of the block, so no mark its text prints is read as a name's (`$^{\dagger}$Corresponding author`). No note
 /// requested, or one of the document's that is no plain `\thanks{…}` or `\footnote{…}`: the line stays.
 fn notes_the_names_request(
@@ -483,16 +483,7 @@ fn notes_the_names_request(
       continue;
     }
     // (no `[…]` before its text: an optional argument is no pubnote's)
-    let plain = !line[start..end]
-      .iter()
-      .take_while(|t| t.get_catcode() != Catcode::BEGIN)
-      .any(|t| *t == T_OTHER!("["));
-    document.push(match line[start] {
-      t if plain && t == T_CS!("\\thanks") => T_CS!("\\lx@add@pubnote@thanks"),
-      t if plain && t == T_CS!("\\footnote") => T_CS!("\\lx@add@pubnote"),
-      _ => return None,
-    });
-    document.extend_from_slice(&line[start + 1..end]);
+    document.extend(document_note_call(&line[start..end])?);
   }
   joined.extend_from_slice(&line[at..]);
   Some((joined, document))

@@ -350,13 +350,14 @@ pub(super) fn difference(resolved: &Resolved, front: &Front) -> Option<String> {
 /// publication notes (`Front::pubnotes`): the block's note is the document's, held where the reading wants it, though
 /// `held` reads no pubnote. Only a note no name requests on a line of notes the names' marks label
 /// (`note:unrequested`: `\\ \thanks{$^{1}$Univ A}\thanks{This work was funded by …}`, 2609.17106; OD #957, review
-/// rev100c S1) — a note on an address line (`note:address-line`) still declines, SYNC_STATUS row 100c.
+/// rev100c S1), and a note on an address line (`note:address-line`), which the token reader takes out as the document's
+/// (`author_block::address_line_notes`, batch 101b: `… \\ \texttt{a@x, b@y}\thanks{Submitted …}`, 2605.23553).
 pub(super) fn held_as_pubnote(front: &Front, key: &Key, wants: &[(Owner, &Assoc)]) -> bool {
   key.0 == Kind::Note
     && !wants.is_empty()
-    && wants
-      .iter()
-      .all(|(o, a)| *o == Owner::Block && rule_has(a, "note:unrequested"))
+    && wants.iter().all(|(o, a)| {
+      *o == Owner::Block && (rule_has(a, "note:unrequested") || rule_has(a, "note:address-line"))
+    })
     && front.pubnotes.contains(&key.1)
 }
 

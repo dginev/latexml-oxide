@@ -853,6 +853,28 @@ pub fn notes_only_line(line: &[Token]) -> bool {
   line_notes(line).is_some_and(|notes| !notes.is_empty())
 }
 
+/// A note an author block takes out as the document's, as it digests in a contact: `\thanks{…}` the
+/// `\lx@add@pubnote@thanks{…}` and `\footnote{…}` the `\lx@add@pubnote{…}` `digestFrontmatterItem` binds them to there
+/// (Perl Base_Utility.pool.ltxml:331-332, queue_digest.rs) — `note` one note's span, its command through its closing
+/// brace. `None` for a note of another command, or with a `[…]` before its text, which no pubnote takes: such a note
+/// stays where it stands. The one conversion of a line of notes no name requests (`notes_the_names_request`) and of an
+/// address line's notes (`address_line_notes`).
+pub(in crate::base_utilities) fn document_note_call(note: &[Token]) -> Option<Vec<Token>> {
+  let plain = !note
+    .iter()
+    .take_while(|t| t.get_catcode() != Catcode::BEGIN)
+    .any(|t| *t == T_OTHER!("["));
+  let call = match note.first()? {
+    t if plain && *t == T_CS!("\\thanks") => T_CS!("\\lx@add@pubnote@thanks"),
+    t if plain && *t == T_CS!("\\footnote") => T_CS!("\\lx@add@pubnote"),
+    _ => return None,
+  };
+  let mut out = Vec::with_capacity(note.len());
+  out.push(call);
+  out.extend_from_slice(&note[1..]);
+  Some(out)
+}
+
 /// The notes of a line of notes only ([`notes_only_line`]), each the span `(start, end)` of `line` from its command
 /// through its closing brace; `None` when the line holds other ink.
 pub(in crate::base_utilities) fn line_notes(line: &[Token]) -> Option<Vec<(usize, usize)>> {

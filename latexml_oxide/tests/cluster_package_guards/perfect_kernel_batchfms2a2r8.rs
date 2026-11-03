@@ -200,21 +200,24 @@ Text.
 /// Review revfms2a2_7 finding 2 (main-session decision 4 on r7): a note no name holds — one on an address line — has
 /// no owner to fall back to: its only link went to the block as a url contact (and on to a sole author by
 /// `sole_author_takes_the_block`, 2103.05251's shape); now it stays in the note's text, and a link spelling an author
-/// is that author's. The note itself stays the block's (a sole author's).
+/// is that author's. The note itself stays the block's (a sole author's). Since 101b today's reads the address line
+/// carrying the note as one too (`author_block::address_line_notes`; it was an affiliation, the writer held back at
+/// the first e-mail), its note the document's pubnote, where the writer holds the block's (`plan::held_as_pubnote`):
+/// the one-link shape reads as today's; the writer still holds back the others, at Ann's page (a url contact today's
+/// leaves in the note) and at the sole author's note (today's the document's).
 #[test]
 fn an_ownerless_notes_link_is_never_the_blocks() {
+  assert_eq!(tuples(OWNERLESS_ONE), [
+    "C Ann Able [] | line:names",
+    "  c email ann@x.org | owner:spelled ruling3:one-per-print",
+    "C Bob Baker [] | line:names sep:column",
+    "  c email bob@x.org | owner:spelled ruling3:one-per-print",
+    "B thanks Code: https://example.org/proj/tool | note:address-line",
+  ]);
   assert_eq!(
-    super::perfect_kernel_batchfms2a1::held("Contact(\"email\") annxorg", || tuples(OWNERLESS_ONE)),
-    [
-      "C Ann Able [] | line:names",
-      "  c email ann@x.org | owner:spelled ruling3:one-per-print",
-      "C Bob Baker [] | line:names sep:column",
-      "  c email bob@x.org | owner:spelled ruling3:one-per-print",
-      "B thanks Code: https://example.org/proj/tool | note:address-line",
-    ]
-  );
-  assert_eq!(
-    super::perfect_kernel_batchfms2a1::held("Contact(\"email\") annxorg", || tuples(OWNERLESS)),
+    super::perfect_kernel_batchfms2a1::held("Contact(\"url\") httpswwwannableorg", || tuples(
+      OWNERLESS
+    )),
     [
       "C Ann Able [] | line:names",
       "  c email ann@x.org | owner:spelled ruling3:one-per-print",
@@ -225,7 +228,7 @@ fn an_ownerless_notes_link_is_never_the_blocks() {
     ]
   );
   assert_eq!(
-    super::perfect_kernel_batchfms2a1::held("Contact(\"email\") annxorg", || tuples(
+    super::perfect_kernel_batchfms2a1::held("Note codehttpsgithubcomannabletool", || tuples(
       OWNERLESS_SOLE
     )),
     [

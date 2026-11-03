@@ -66,7 +66,7 @@ fix; `?` = judgement call. Baseline re-captured by `tools/author_markup_char.py
 | czipreprint | `\author` + `*`/orcid | 2, affils+orcid+email | ✓ |
 | ieee_authorblock (2602.05517) | `\IEEEauthorblockN{1ˢᵗ Name}` | `1st Alice Smith`, `2nd Bob Jones` | ? ordinal in name |
 | ieee_membership (2508.00603) | `Name, \IEEEmembership{…}, and Name…\thanks` | Alice, **EMPTY, EMPTY**, Bob, **EMPTY**::thanks | ✗ 3 phantom empty creators |
-| ieee_linebreak_optarg (2605.23553) | lazy `\\[1em]` block | 3 authors; shared emails land on last author | ? email distribution |
+| ieee_linebreak_optarg (2605.23553) | lazy `\\[1em]` block | 3 authors, affils by number, e-mails by address | ✓ (the paper's second address line carries its submission `\thanks`, which made it the last author's affiliation: an address line since 101b, the note the document's — OD #52(j)) |
 | inst_affiliation_dedup | shared institute | 1, deduped affils | ✓ |
 | jmlr_name | structured `\author` | 2, thanks+email+affil | ✓ |
 | llncs_and_institutes (2605.00347) | `\institute{A \and B}`, "…and…" names | 2, affils+email (institution "and" intact) | ✓ #52 |

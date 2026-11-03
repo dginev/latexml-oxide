@@ -1780,6 +1780,21 @@ unwrapped llncs `\email` loses the class's `E-mail` contact name for the generic
 email line still places by `labelseq=author`; a trailing `$^\dagger$` legend makes a one-affiliation list count as
 several, so its addresses go by order rather than continue the affiliation (neither misplaces one); apa7
 affiliations given with no names are not kept.
+An address line carrying a note (`\texttt{a@x, b@y}\thanks{Submitted …}`) is still an address line (101b): the reader
+reads the printed text, so read whole the note's words made the line an affiliation — of the last name in a marked
+block (2605.23553's second line, "cy.cole@…, dan.dorn@…", Dan Dorn's), of every name in an unmarked one. One helper,
+`author_block/email_lines.rs` `address_line_notes`, takes the notes off a line whose rest is an address line by the
+caller's own reader (the marked block's `line_is_email_list` / `labelled_email_line`, the unmarked block's
+`line_emails`, a marked list's `entry_calls`), and makes them the document's pubnotes, added after the block's calls in
+print order — as they digested in the contact before (`\thanks` → `\lx@add@pubnote@thanks`, `\footnote` →
+`\lx@add@pubnote`, Base_Utility.pool.ltxml:331-332; the one conversion `notes.rs` `document_note_call`, shared with
+`notes_the_names_request`). A per-author class's cautious reading keeps giving a line's notes to its name, as Perl adds
+that `\author` whole. A note of another kind (`\thanksref`, `\altaffilmark`, `\thanks[…]{…}`) leaves the line read as
+before; `email_addresses` itself still reads the note, since `address_tokens` would drop a note it skipped. The
+observer's writer holds a block note on an address line (`note:address-line`) as today's pubnote
+(`writer/plan.rs` `held_as_pubnote`), so both engines read these lines alike. Perl: no e-mail contact, every address
+welded into an affiliation (KNOWN_PERL_ERRORS #75). Witnesses 2605.23553, 2304.05485, 1710.01254, 1803.07937,
+2603.09888, 2608.24641; guards `perfect_kernel_batch101b`.
 Guards `06_cluster_frontmatter::frontmatter_shared_email_distribution` (fixtures
 `frontmatter_email_{distributed,grouped,single_shared}.tex`), `perfect_kernel_batch61::marked_affiliation_review_shapes`.
 

@@ -35,6 +35,9 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
   // \thanks{$^{1}$…}`, 2609.17106, 2411.05212, 2312.10807; [`notes_line_joins_names`], OXIDIZED_DESIGN_DIVERGENCES
   // #957) — its notes no name requests the document's, added after the block's calls
   let (stuff, document_notes) = notes_line_joins_names(stuff);
+  // (the notes an address line carries, the document's, added after those, in print order: [`address_line_notes`],
+  // 2605.23553)
+  let mut address_notes: Vec<Token> = Vec::new();
   // Beyond-Perl (surpasses Perl; KNOWN_PERL_ERRORS #100): IJCAI-style author
   // blocks — ijcai97.sty and its derivatives (e.g. the ttm.sty in
   // arXiv:2401.03955) — pack names, `\affiliations` and a comma-separated
@@ -258,6 +261,17 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
             // a continuation of the previous affiliation — give it its own email
             // contact so it is shown once instead of being welded into an
             // affiliation's text (KNOWN_PERL_ERRORS #75, witness 2605.23553).
+            // …and so is one carrying notes, its notes the document's ([`address_line_notes`]: 2605.23553's
+            // `\texttt{…}\thanks{This manuscript has been submitted …}`, read whole an affiliation of the last name)
+            let line = match address_line_notes(&line, |rest| {
+              Ok(line_is_email_list(rest) || labelled_email_line(rest)?.is_some())
+            })? {
+              Some((rest, notes)) => {
+                address_notes.extend(notes);
+                rest
+              },
+              None => line,
+            };
             if line_is_email_list(&line) {
               entries.push((AuthorLineKind::Email, line));
             } else if let Some(email_line) = labelled_email_line(&line)? {
@@ -1456,6 +1470,22 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
       spans.push((first, bodies.len() - 1, affils));
     }
     // (the names an address on any e-mail line of the block spells, whom elimination gives no other address)
+    // (an address line carrying notes is one, its notes the document's — as Perl adds the article `\author`'s lines,
+    // nested, where a `\thanks` is a pubnote; a per-author class binding gives its line's notes to the name, below:
+    // [`address_line_notes`], `Ann Able, Bob Baker \\ Univ X \\ \texttt{a@x, b@y}\thanks{…}`, 2605.23553's sibling;
+    // 2304.05485, 2608.24641)
+    if !cautious {
+      for (_, _, affils) in &mut spans {
+        for line in affils.iter_mut() {
+          if let Some((rest, notes)) =
+            address_line_notes(line, |rest| Ok(line_emails(rest)?.is_some()))?
+          {
+            *line = rest;
+            address_notes.extend(notes);
+          }
+        }
+      }
+    }
     let mut block_addresses: Vec<String> = Vec::new();
     // (and, by group and line, how many of a line's addresses no name spells and no rule has placed yet: while another
     // line holds one, no name goes by elimination, [`owners_by_elimination`] — another line of the group, for the
@@ -1856,6 +1886,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
     }
   }
   calls.extend(document_notes);
+  calls.extend(address_notes);
   Ok(Tokens::new(calls))
 }
 

@@ -69,6 +69,8 @@ fn entry_calls(
   let mut address_runs: Vec<AddressRun> = Vec::new();
   let mut in_run = false;
   let mut follows_entry = false;
+  // (the notes of the list's address lines, the document's: [`address_line_notes`])
+  let mut address_notes: Vec<Token> = Vec::new();
   for (delimiter, line) in split_tokens_delimited(stuff, affil_splits()) {
     // Skip empty segments (e.g. a trailing \\ or a line that was wholly
     // consumed by an \email/\url) so they don't become blank affiliations.
@@ -87,11 +89,27 @@ fn entry_calls(
       // `email: agupta@…, orion@…` closing an aa `\institute`, astro-ph0405186 — its label the contacts' own name,
       // `email_line_calls`; a binding's own list keeps such a line in the entry above it, which the observer's writer
       // reads: IEEEtran's `\IEEEauthorblockA{$^\dag$…\\ … \\ E-mail: …}`, 2308.05546)
-      let address_line = if labelled_address_lines {
-        line_addresses(&line).is_some()
-      } else {
-        line_is_email_list(&line)
+      let is_address_line = |line: &Tokens| {
+        if labelled_address_lines {
+          line_addresses(line).is_some()
+        } else {
+          line_is_email_list(line)
+        }
       };
+      // (…and one carrying notes, its notes the document's, after the list's calls: [`address_line_notes`],
+      // `\institute{$^{1}$Univ X \\ $^{2}$Univ Y \\ \texttt{a@x, b@y}\thanks{…}}`, as 2605.23553's author block)
+      let line = match (authors_queued && author_mark_position(&line).is_none())
+        .then(|| address_line_notes(&line, |rest| Ok(is_address_line(rest))))
+        .transpose()?
+        .flatten()
+      {
+        Some((rest, notes)) => {
+          address_notes.extend(notes);
+          rest
+        },
+        None => line,
+      };
+      let address_line = is_address_line(&line);
       if authors_queued && author_mark_position(&line).is_none() && address_line {
         // (`\and` separates entries, and runs: `Univ A \\ a@x \and b@y` is two)
         if !in_run || across_and {
@@ -179,6 +197,7 @@ fn entry_calls(
     calls.extend(add(marked_attr.clone(), withsup)?);
   }
   calls.extend(email_calls);
+  calls.extend(address_notes);
   Ok(calls)
 }
 

@@ -1,0 +1,19 @@
+% mechanism: a marked block's labelled e-mail line carrying a `\thanks` (`E-mail: \texttt{a@x, b@y}\thanks{…}`): the
+%   labelled line read without the note (`labelled_email_line`), its addresses each spelled author's. OD #52(j).
+% witness: 2605.23553 (its shape, labelled)
+% oracle:  pdflatex 0 errors
+% engines: rust int129a: the line welded into Bob Baker's affiliation ("Univ Y, Italy<break/>E-mail: …")
+% expect:  0 errors, 0 warnings; each creator its affiliation and its own "E-mail: " contact; one pubnote
+% status:  GREEN (101b)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{
+Ann Able\textsuperscript{1}, Bob Baker\textsuperscript{2} \\
+\textsuperscript{1}Univ X, Italy \\
+\textsuperscript{2}Univ Y, Italy \\
+E-mail: \texttt{ann.able@x.it, bob.baker@y.it}\thanks{Submitted somewhere.}
+}
+\maketitle
+Body.
+\end{document}
