@@ -47,7 +47,10 @@ fn siamart_copy_loads_hypdvips_in_dvi_mode() {
 /// `hpdftex` whatever option is given (`[dvips]` forced, :4251-4265; the default persona), the `luatex` profile
 /// `hluatex`; DVI mode takes the last driver option, the class's global ones read before the package's own (:4066),
 /// and defaults to `hdvips` (:4339). hrefhide.sty:153-166 then raises "Producing not a pdf file" under DVI, as
-/// latex+dvips does; `perfect_kernel_batch54::singleton_internal_surface` keeps the PDF default.
+/// latex+dvips does; `perfect_kernel_batch54::singleton_internal_surface` keeps the PDF default. Two shapes pin a
+/// RESIDUAL, not TeX: `[dvips]` in PDF mode and `[pdftex]` in DVI mode get the driver pdflatex/latex picks, but real
+/// TeX also raises hyperref.sty:2528-2563's "Wrong DVI mode driver option" / "Wrong driver option" Error, which we do
+/// not (base did not either; SYNC_STATUS row 101a, review rev101a finding 1).
 #[test]
 fn hyperref_driver_follows_the_output_mode() {
   let doc = |mode: &str, class: &str, package: &str| {
@@ -90,7 +93,11 @@ fn hyperref_driver_follows_the_output_mode() {
     ),
   ] {
     let (log, xml) = convert_with(&doc(mode, class, package), preload);
-    assert_eq!(error_count(&log), 0, "{mode}{class}{package}: {log}");
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{mode}{class}{package}: {log}"
+    );
     assert!(
       xml.contains(&format!("Driver: {driver}.")),
       "{mode}{class}{package} {preload:?} wants {driver}: {xml}"

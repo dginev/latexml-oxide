@@ -463,7 +463,14 @@ KNOWN_PERL_ERRORS cross-reference when one applies. Perl-origin defects go to `p
   mode, `[pdftex]` in DVI mode, hyperref.sty:2528-2563) are not raised, and the `driverfallback` key (ctex's
   `driverfallback=dvipdfmx`, ctex-engine-pdftex.def:493) is not honoured; hypdvips.sty:2002
   `\g@addto@macro{\endfigure}` is dropped with Perl's Warning (`\endfigure` a constructor, Package.pm:2542). Guards
-  `perfect_kernel_batch101a::{siamart_copy_loads_hypdvips_in_dvi_mode, hyperref_driver_follows_the_output_mode}`.
+  `perfect_kernel_batch101a::{siamart_copy_loads_hypdvips_in_dvi_mode, hyperref_driver_follows_the_output_mode}` (the
+  latter's `[dvips]`-in-PDF and `[pdftex]`-in-DVI shapes pin the missing wrong-option Error, not TeX). Review rev101a:
+  SHIP (driver matched latex/pdflatex/xelatex/lualatex on every probe; PDF-persona probes byte-identical to base). Also
+  not modelled, no witness: `tex4ht` in DVI (`\Hy@texhttrue`, colorlinks), `customdriver`, the `\DocumentMetadata`
+  `hgeneric-testphase` path (hyperref.sty:2738-2750), a user `\Hy@defaultdriver`. Under DVI hypdvips.sty now runs to
+  its end and redefines `\begin`, `\end`, `\@sect`, `\bibitem`, `\@footnotetext`, `\contentsline` (base stopped at :31);
+  the witnesses and a feature-rich probe came out byte-identical, but a later unlocking of those kernel macros brings
+  them into play.
 
 ## Current status
 
