@@ -30160,7 +30160,10 @@ observer read some of them (`take_out_entry_addresses`, OD #938), but its writer
   `email_line_calls`), each written-out address in the font the line printed it in — the declarations and wrappers
   round every `@` of the line, when they are one (`email_lines::in_line_font`: `{\tt \{…\}@x}`, 1804.05417;
   `$^\ddag$\tt\{…\}@x`, 2311.01166; `\texttt{\{…\}@x}, \texttt{…@y}`, 2410.24095; a line whose `@`s print in
-  different fonts keeps its addresses plain). An entry of addresses alone stays, empty, as their carrier and is dropped at the flush; the
+  different fonts keeps its addresses plain — and so, wrongly, does a line one of whose `@`s is in `\href`'s URL
+  argument, which prints nothing: `\href{mailto:a@x}{\texttt{a@x}}, \texttt{\{b, c\}@y}` gives plain `b@`, `c@` and
+  drops `a@`'s `\texttt`, where base kept all three typewriter; RED repro
+  `address_family_href_url_at_is_no_printed_font`, review rev100b3, SYNC_STATUS row 100b). An entry of addresses alone stays, empty, as their carrier and is dropped at the flush; the
   class's own name for it (`\mail`'s "Correspondence to", `\altaffiliation[E-mail address: ]`) names its e-mails (not a
   role default, not an empty one). Left as they are: an e-mail command's line (`\email{…}`: the class's label kept,
   llncs's "E-mail"), a template or a list the reader cannot part, an entry a class shares among every author
