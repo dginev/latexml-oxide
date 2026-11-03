@@ -1786,7 +1786,9 @@ block (2605.23553's second line, "cy.cole@…, dan.dorn@…", Dan Dorn's), of ev
 `author_block/email_lines.rs` `address_line_notes`, takes the notes off a line whose rest is an address line by the
 caller's own reader (the marked block's `line_is_email_list` / `labelled_email_line`, the unmarked block's
 `line_emails`, a marked list's `entry_calls`), and makes them the document's pubnotes, added after the block's calls in
-print order — as they digested in the contact before (`\thanks` → `\lx@add@pubnote@thanks`, `\footnote` →
+print order among themselves — not among the block's other notes: a note on a later affiliation line is added in
+place, so it now precedes an earlier address line's note (RED repro `address_line_note_order_after_a_later_note`, review
+rev101b finding 1; base kept print order) — as they digested in the contact before (`\thanks` → `\lx@add@pubnote@thanks`, `\footnote` →
 `\lx@add@pubnote`, Base_Utility.pool.ltxml:331-332; the one conversion `notes.rs` `document_note_call`, shared with
 `notes_the_names_request`). A per-author class's cautious reading keeps giving a line's notes to its name, as Perl adds
 that `\author` whole. A note of another kind (`\thanksref`, `\altaffilmark`, `\thanks[…]{…}`) leaves the line read as
