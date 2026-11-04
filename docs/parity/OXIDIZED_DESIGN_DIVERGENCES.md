@@ -29814,6 +29814,33 @@ gain their title and creators (no note left), and 4 differ only in timing-bound 
 103 → 87 (16 fixed, 3 fewer, none newly flagged). Instructions: +0.1 % on raw-class papers the net leaves alone,
 +0.5-0.7 % on the witnesses (`perf stat -e instructions:u`, 2110.07616, gr-qc0609124, 0712.1312, 1709.00722).
 
+**105a: the lines below the floor** (brief 105a; FIDELITY_CHARTER §4, every loss counted). A note line with fewer
+than 3 unclaimed content words was removed with no Warning. Now `keep_unclaimed_net_notes` reads each line with
+unclaimed words by its shape: a line of e-mail addresses alone (`resolver::addresses_in` and `only_addresses`, the
+frontmatter reader's address-line test) is the e-mail contacts of the note's creator — the block's nameless creator or
+the sole author (#159), no invented owner — each address no kept text holds, at any length, with no Warning (aaskaiid.sty
+`\email@toks`: 2606.27706, 2607.25721; 98c's notes of 2606.24738, 2606.25049, 2606.25830 become contacts); a line whose
+unclaimed words are all a code's or a date's, or that prints a code no kept text prints (`code_pieces`: digits and
+letters parted by dots or run together, `98.80.Cq`, `20N05`, `H.2.4`; `code_or_date_word`: a month's name, a year), is
+kept as the note's line, with the note's Warning; any other line with unclaimed words goes, and its store raises one
+`Warning:frontmatter:unclaimed` naming it and the words ("The title page prints \<store> with N word(s) no frontmatter
+field holds, too few to keep as a note: …"; sig-alternate-2013's `\tntoks` "corresponding authors", 2103.14934). The
+floor of 3 stands for prose (the lost-words bar's ruling is open); a store at its class default stays no candidate
+(tADR2e 1509.08973, cup-journal 2302.11911, pending the placeholder ruling). Guards `perfect_kernel_batch105a::{
+an_address_line_below_the_floor_is_an_email_contact, a_code_or_date_line_below_the_floor_is_a_note_line,
+a_short_unshaped_store_is_counted_and_not_kept}`; repros sectioning-frontmatter/`net_shaped_store_below_the_floor_is_kept`,
+`net_short_store_is_counted_not_kept` (RED int132a1 → GREEN 105a). An `ltx:ERROR`'s text in a note line is no printed word (an undefined `\songti`'s name, 2601.14329). A/B
+(`pop105a.tsv`, 3,946 converted: 98c's `pop98c.tsv` — the census's family A, every popint125a `rawcls` paper, 500
+others — and the census129 Bundle 3 witnesses; base int132a1): 14 changed, E 1,493 → 1,493, F 9 → 9, 0 worse
+(1203.4558's base side a wall-clock timeout, 1309.5800 one timing-bound math Warning), `fm_checks.py` 1-7 clean; 5
+aaskaiid papers gain 15 e-mail contacts (3 notes become contacts), 6 papers raise 11 new Warnings, each read against
+the source: printed document text below the floor — ucbthesis/ucthesis `\@degree` "Doctor of Philosophy", `\@field`,
+`\@campus` (1908.08926, math9910078, math-ph0412032), SCIS2020cn's postcode `100875` (2206.01007), e-jc's dateline
+"TBD" (2410.15356), 2103.14934's "corresponding authors" —, no class boilerplate; no new note line (no real paper's
+short line had a code's or a date's shape). The census129 Bundle 3 witnesses (54) rescored: 2 reach 0 lost words
+(2606.27706, 2607.25721), 1 more carries the Warning for its loss (2103.14934); the other 51 lose their words outside
+the net's lines — the classes are SYNC_STATUS row "105a".
+
 ### 954. A contact holding two or more marked entries is cut at its marks in the frontmatter API, for every binding (Perl: one contact, the marks printed in it)
 
 **What** (batch 99a; FRONTMATTER_SINGLE_ENGINE_PLAN "The target model", placement step 0: "one item per printed

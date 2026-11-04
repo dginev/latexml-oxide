@@ -170,7 +170,7 @@ fn text_outside(node: &Node, skip: &[Node], out: &mut String) {
 }
 
 /// A note's lines ([`keep_unclaimed_net_notes`]): what stands between its `ltx:break`s, each `ltx:p` apart, with the
-/// break that ends it.
+/// break that ends it; the text of an `ltx:ERROR` in it left out.
 fn net_note_lines(parent: &Node, lines: &mut Vec<(Vec<Node>, String)>) {
   let mut line: (Vec<Node>, String) = (Vec::new(), String::new());
   for child in parent.get_child_nodes() {
@@ -184,8 +184,11 @@ fn net_note_lines(parent: &Node, lines: &mut Vec<(Vec<Node>, String)>) {
       }
       net_note_lines(&child, lines);
     } else {
-      line.1.push_str(&child.get_content());
-      line.1.push(' ');
+      // (an error's text is no printed word: an undefined `\songti`'s name, 2601.14329)
+      if !(element && child.get_name() == "ERROR") {
+        line.1.push_str(&child.get_content());
+        line.1.push(' ');
+      }
       line.0.push(child);
     }
   }
@@ -217,13 +220,84 @@ fn trim_edge_breaks(document: &mut Document, note: &Node) {
   }
 }
 
+/// The classification codes `text` prints, folded ([`resolver::base_letters`], lower-cased), which the net keeps below
+/// its floor ([`keep_unclaimed_net_notes`]): a piece of digits and letters, a digit in it, its letters at most 3 to a
+/// run, parted by dots or dashes or run together with the digits — a PACS code `98.80.Cq` (europhys `\Pacs`,
+/// cond-mat9812194), an MSC code `20N05` (ourlematema `\MSC`, 1909.06690; basm `\MSC`, 1601.01922), an ACM class
+/// `H.2.4`; not a bare number (OD #953, 105a).
+fn code_pieces(text: &str) -> Vec<String> {
+  resolver::base_letters(text)
+    .to_lowercase()
+    .split(|c: char| c.is_whitespace() || ",;:()[]".contains(c))
+    .map(|piece| piece.trim_matches(|c: char| c == '.' || c == '-'))
+    .filter(|piece| {
+      let runs: Vec<&str> = piece
+        .split(['.', '-'])
+        .filter(|run| !run.is_empty())
+        .collect();
+      let letter_runs_short = runs.iter().all(|run| {
+        run
+          .split(|c: char| c.is_ascii_digit())
+          .all(|letters| letters.len() <= 3)
+      });
+      piece.chars().any(|c| c.is_ascii_digit())
+        && piece
+          .chars()
+          .all(|c| c.is_ascii_alphanumeric() || c == '.' || c == '-')
+        && letter_runs_short
+        && (runs.len() > 1 || piece.chars().any(|c| c.is_ascii_alphabetic()))
+    })
+    .map(ToString::to_string)
+    .collect()
+}
+
+/// Is the content word `word` ([`net_content_words`], folded) a date's — a month's name, a year — or part of a code
+/// `codes` holds ([`code_pieces`])? The words the net keeps below its floor ([`keep_unclaimed_net_notes`]).
+fn code_or_date_word(word: &str, codes: &[String]) -> bool {
+  const MONTHS: &[&str] = &[
+    "january",
+    "february",
+    "march",
+    "april",
+    "may",
+    "june",
+    "july",
+    "august",
+    "september",
+    "october",
+    "november",
+    "december",
+    "jan",
+    "feb",
+    "mar",
+    "apr",
+    "jun",
+    "jul",
+    "aug",
+    "sep",
+    "sept",
+    "oct",
+    "nov",
+    "dec",
+  ];
+  MONTHS.contains(&word)
+    || (word.len() == 4 && matches!(word.parse::<u32>(), Ok(1800..=2100)))
+    || codes.iter().any(|code| code.contains(word))
+}
+
 /// The unclaimed-text net's notes (frontmatter_stores.rs `hand_net_stores`: what a raw class's title page prints of a
-/// store no frontmatter owner claims, OXIDIZED_DESIGN_DIVERGENCES #953), once the frontmatter is placed: a note line
-/// (split at `ltx:break` and `ltx:p`, [`net_note_lines`]) is kept whole only when it holds 3 or more distinct content
-/// words ([`net_content_words`]) that neither the frontmatter nor the text set before it holds — the whole document's
-/// text but the net's notes: the deposit's paragraphs, the creators (`\AB@names` repeats the names), the abstract —
-/// else it goes; a note left without a line goes, with a nameless creator it leaves empty. Each kept note is reported
-/// (FIDELITY_CHARTER §4: printed text no owner claims, kept beside the frontmatter, counted).
+/// store no frontmatter owner claims, OXIDIZED_DESIGN_DIVERGENCES #953), once the frontmatter is placed: each note line
+/// (split at `ltx:break` and `ltx:p`, [`net_note_lines`]) is read by its distinct content words
+/// ([`net_content_words`]) that neither the frontmatter nor the text set before it holds — the whole document's text but
+/// the net's notes: the deposit's paragraphs, the creators (`\AB@names` repeats the names), the abstract — nor the
+/// class's own code in the store (`net_class_text`). A line with none goes (it repeats what is kept). A line of e-mail
+/// addresses alone ([`resolver::only_addresses`]) is the e-mail contacts of the note's creator — the block's nameless
+/// one or the sole author (OD #159), no invented owner — each address no text kept holds (aaskaiid.sty's
+/// `\email@toks`, 2606.27706, 2607.25721). Else a line is kept whole with 3 or more such words, or with fewer when they
+/// are all a code's or a date's ([`code_or_date_word`]); otherwise it goes, its words counted. A note left without a
+/// line goes, with a nameless creator it leaves empty. A store's kept lines raise one Warning, and its lost words one
+/// more (FIDELITY_CHARTER §4: printed text no owner claims, kept beside the frontmatter or lost, counted —
+/// 2103.14934's "corresponding authors" below the floor; 105a).
 fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
   let notes = document.findnodes("//ltx:note[@_net]", None);
   if notes.is_empty() {
@@ -235,6 +309,9 @@ fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
   let mut claimed_text = String::new();
   text_outside(&root, &notes, &mut claimed_text);
   let claimed: HashSet<String> = net_content_words(&claimed_text).into_iter().collect();
+  let mut written: Vec<String> = resolver::addresses_in(&claimed_text);
+  let claimed_folded = resolver::base_letters(&claimed_text).to_lowercase();
+  let email_name = get_frontmatter_name(None, "ltx:contact", "email")?;
   for mut note in notes {
     let store = note.get_attribute("_net").unwrap_or_default();
     // (and the words of the class's own code in the store, frontmatter_stores.rs `net_class_text`)
@@ -245,6 +322,8 @@ fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
     let mut lines = Vec::new();
     net_note_lines(&note, &mut lines);
     let mut kept = 0usize;
+    let mut lost: Vec<String> = Vec::new();
+    let mut addresses: Vec<String> = Vec::new();
     for (nodes, text) in lines {
       let mut unmatched: Vec<String> = net_content_words(&text)
         .into_iter()
@@ -252,9 +331,27 @@ fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
         .collect();
       unmatched.sort();
       unmatched.dedup();
-      if unmatched.len() >= 3 {
+      let listed = resolver::addresses_in(&text);
+      // (its codes no text kept prints: an MSC code's letters and digits are no content words, `20N05`)
+      let codes: Vec<String> = code_pieces(&text)
+        .into_iter()
+        .filter(|code| !claimed_folded.contains(code.as_str()))
+        .collect();
+      if !unmatched.is_empty() && !listed.is_empty() && resolver::only_addresses(&text) {
+        for address in listed {
+          if !written.contains(&address) {
+            written.push(address.clone());
+            addresses.push(address);
+          }
+        }
+      } else if unmatched.len() >= 3
+        || ((!unmatched.is_empty() || !codes.is_empty())
+          && unmatched.iter().all(|word| code_or_date_word(word, &codes)))
+      {
         kept += 1;
         continue;
+      } else {
+        lost.extend(unmatched);
       }
       for node in nodes {
         document.remove_node(node);
@@ -267,9 +364,41 @@ fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
       }
     }
     let creator = note.get_parent();
+    // (the addresses, the note's creator's e-mail contacts where the note stands)
+    if let Some(creator) = creator.as_ref() {
+      let saved = document.get_node().clone();
+      document.set_node(creator);
+      for address in &addresses {
+        let mut attributes = HashMap::default();
+        attributes.insert("role".to_string(), "email".to_string());
+        if let Some(name) = email_name.as_ref() {
+          attributes.insert("name".to_string(), name.clone());
+        }
+        let mut contact = document.open_element("ltx:contact", Some(attributes), None)?;
+        contact.append_text(address).ok();
+        document.close_element("ltx:contact")?;
+        contact.unlink_node();
+        note.add_prev_sibling(&mut contact).ok();
+      }
+      document.set_node(&saved);
+    }
+    lost.sort();
+    lost.dedup();
+    if !lost.is_empty() {
+      Warn!(
+        "frontmatter",
+        "unclaimed",
+        s!(
+          "The title page prints \\{store} with {} word(s) no frontmatter field holds, too few to keep as a note: {}",
+          lost.len(),
+          lost.join(" ")
+        )
+      );
+    }
     if kept == 0 {
       document.remove_node(note);
-      if let Some(creator) = creator
+      if addresses.is_empty()
+        && let Some(creator) = creator
         && creator.get_name() == "creator"
         && element_nodes(&creator).is_empty()
       {

@@ -1,0 +1,29 @@
+% A raw class's store only its own `\@author` prints, holding one word no frontmatter field holds and no shape the net
+% keeps below its floor (no address, code or date; insert.rs `keep_unclaimed_net_notes`): not written (the floor of 3
+% content words stands for prose), but counted — one `Warning:frontmatter:unclaimed` naming the store and its word
+% (FIDELITY_CHARTER §4, every loss counted). A store left at its class default (a placeholder, `\@recd`'s "Received 00
+% Month 20XX") is no candidate: nothing, and no Warning.
+% witness: 2103.14934 (sig-alternate-2013 `\tntoks`, "corresponding authors" below the floor); the placeholder rule:
+%          tADR2e 1509.08973, cup-journal 2302.11911
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able", "Funded by: Lunarfund", "Received 00 Month 20XX", "Text."
+% engines: rust int132a1 = 0 errors, 0 warnings, the word lost silently; perl = 0 errors (the raw class is not loaded:
+%          OmniBus), the word lost
+% expect:  0 errors, 1 warning (frontmatter:unclaimed, \@grant "lunarfund"); no <ltx:note>
+% status:  RED (int132a1) -> GREEN (105a)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{netshort.cls}
+\ProvidesClass{netshort}\LoadClass{article}
+\def\@anames{}\def\@grant{}\def\@recd{Received 00 Month 20XX}
+\renewcommand\author[1]{\gdef\@anames{#1}}
+\newcommand\grant[1]{\gdef\@grant{\ignorespaces#1}}
+\newcommand\recd[1]{\gdef\@recd{\ignorespaces#1}}
+\renewcommand\@author{\@anames\\Funded by: \@grant\\\@recd}
+\end{filecontents*}
+\documentclass{netshort}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\grant{Lunarfund}
+\maketitle
+Text.
+\end{document}

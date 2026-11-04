@@ -30,7 +30,7 @@ fn squash(xml: &str) -> String { xml.split_whitespace().collect::<Vec<_>>().join
 /// Converts `tex` from the binary eager and `--streaming`, checks each has no Error, `unclaimed` net Warnings and no
 /// other, and that both give the same XML; returns it squashed, from its `<title>` to its end.
 #[track_caller]
-fn converted(tex: &str, unclaimed: usize) -> String {
+pub(super) fn converted(tex: &str, unclaimed: usize) -> String {
   let mut xmls = Vec::new();
   for streaming in [false, true] {
     let (log, xml) = cli_conversion(tex, streaming);

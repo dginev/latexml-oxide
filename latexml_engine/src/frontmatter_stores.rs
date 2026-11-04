@@ -52,6 +52,9 @@
 //! lines of 3 or more words no frontmatter field holds (`net_candidates`, `hand_net_stores`; insert.rs
 //! `keep_unclaimed_net_notes`): copernicus's `\AB@affillist`, read only by its own `\@author` (sect05.rs
 //! `keep_class_author_reader`; 0712.1312), sig-alternate's `\tntoks`, read only by its refused `{abstract}` (1206.6940).
+//! Below that floor (105a) a line of addresses alone is the e-mail contacts of the note's creator (aaskaiid.sty's
+//! `\email@toks`, 2606.27706, 2607.25721), a code's or a date's line is kept, and any other is counted in a Warning
+//! naming its store and words (2103.14934).
 //!
 //! Displaced text (99b, OD #955): a raw file's affiliation or address setter that stores its argument for its title page
 //! among code of its own, which K11's pure-store test leaves (rstransa's `\gdef\@address{#1\ifaffbreak…\fi}`, iau's

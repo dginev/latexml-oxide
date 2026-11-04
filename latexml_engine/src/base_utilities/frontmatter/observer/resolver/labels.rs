@@ -1159,7 +1159,7 @@ pub(super) fn is_one_address(text: &str) -> bool {
 
 /// Whether `text` holds nothing but e-mail addresses (`{ann,bob}@x.org` one of them; an "E-mail:" before them,
 /// separators between).
-pub(super) fn only_addresses(text: &str) -> bool {
+pub fn only_addresses(text: &str) -> bool {
   // (a braced group of local parts before `@` is its address's)
   let mut flat = String::new();
   let mut rest = text;

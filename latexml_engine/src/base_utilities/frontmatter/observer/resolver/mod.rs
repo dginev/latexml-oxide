@@ -262,7 +262,7 @@ pub(in crate::base_utilities::frontmatter::observer) use labels::{
   AddressRun, address_cuts, address_runs, listed_addresses, strip_address_runs,
 };
 // (named, as the prelude has its own of these names: the resolver's shadow them)
-pub use labels::{address_take_out, addresses_in, mark_labels};
+pub use labels::{address_take_out, addresses_in, mark_labels, only_addresses};
 use labels::{text_tokens, *};
 use lines::*;
 pub(in crate::base_utilities::frontmatter::observer) use lines::{
