@@ -1271,29 +1271,28 @@ fn requested_entry_marks(list: &Tokens) -> Vec<Vec<Token>> {
 /// preprint.cls:233-256, 2405.16615) redefines `\and` to step the institute counter and print `$^{\theinst}$` before the
 /// next entry, the first numbered 1 — so the n-th `\and` entry of the `\@institute` store is affiliation n, which the
 /// authors' numeric marks pick (`$^{1}$`, `$^2$`). `stuff` with each entry led by its number as a superscript, when the
-/// class carries that `\institutename` (a counter stepped by its `\and`), the store holds at least two `\and` entries and
-/// no mark of its own, and the queued authors carry marks that are all numbers; else `None` (the entries annotate every
-/// author, `\lx@add@store@affiliations`). Was each author given every institute (2405.16615; SYNC_STATUS row 153).
-pub fn class_numbered_institutes(stuff: &Tokens) -> Option<Tokens> {
-  let numbers_its_entries = matches!(lookup_definition_stored(&T_CS!("\\institutename")),
+/// class numbers the entries of its `store` (named by its control sequence, `\@institute`), the store holds at least two
+/// `\and` entries and no mark of its own, and the queued authors' marks request numbers ([`numbered_marks_requested`]);
+/// else `None` (the entries annotate every author, `\lx@add@store@affiliations`). Whether the class numbers them is
+/// what its own title page printed in the speculative run frontmatter_stores.rs `note_and_numbering` made of the store
+/// (`lx_and_numbered_<store>`: the sentinel entries each printed after its number, in `\and` order — sab.cls:404-426's
+/// and edpsci.cls's `\refstepcounter{inst}`, 2308.05831, 2308.05830, 2501.08874, baaa.cls 2206.02830, comsis2.cls
+/// 2207.09249; batch 104b); with no such run (no store, none could be made), the class's `\institutename` read as
+/// before: a `\def\and` stepping a counter (`\stepcounter`). Was each author given every institute (2405.16615; SYNC_STATUS
+/// row 153; the sab family, SYNC_STATUS row "104b").
+pub fn class_numbered_institutes(stuff: &Tokens, store: Option<&str>) -> Option<Tokens> {
+  let run = store.and_then(|store| match lookup_value(&s!("lx_and_numbered_{store}")) {
+    Some(Stored::Bool(numbered)) => Some(numbered),
+    _ => None,
+  });
+  let numbers_its_entries = run.unwrap_or_else(|| {
+    matches!(lookup_definition_stored(&T_CS!("\\institutename")),
     Ok(Some(Stored::Expandable(definition)))
       if matches!(definition.get_expansion(), Some(ExpansionBody::Tokens(body))
         if body.unlist_ref().windows(2).any(|w| w[0] == T_CS!("\\def") && w[1] == T_CS!("\\and"))
-          && body.unlist_ref().contains(&T_CS!("\\stepcounter"))));
-  if !numbers_its_entries || author_mark_position(stuff).is_some() {
-    return None;
-  }
-  let marks: Vec<String> = queued_author_marks()
-    .into_iter()
-    .flatten()
-    .map(|operand| Tokens::new(operand).to_string())
-    .collect();
-  let numeric = |mark: &String| {
-    mark
-      .split(',')
-      .all(|piece| !piece.trim().is_empty() && piece.trim().chars().all(|c| c.is_ascii_digit()))
-  };
-  if marks.is_empty() || !marks.iter().all(numeric) {
+          && body.unlist_ref().contains(&T_CS!("\\stepcounter"))))
+  });
+  if !numbers_its_entries || author_mark_position(stuff).is_some() || !numbered_marks_requested() {
     return None;
   }
   let entries = split_tokens(stuff.clone(), vec![T_CS!("\\and").into()]);
@@ -1311,6 +1310,27 @@ pub fn class_numbered_institutes(stuff: &Tokens) -> Option<Tokens> {
     out.extend(entry.unlist());
   }
   Some(Tokens::new(out))
+}
+
+/// Do the queued authors' marks request numbered entries: each mark a comma list of numbers (`\inst{1,2}`), at least
+/// one, beside which only symbols stand — a legend's `\textsuperscript{\dag}`, `*` (comsis2.cls's names, 2207.09249), an
+/// empty piece (edpsci's `\inst{1,2}$^{,}$`, 2501.08874) —, never a letter label (`\inst{a}`), which no number answers?
+pub fn numbered_marks_requested() -> bool {
+  let mut numbers = false;
+  for operand in queued_author_marks().into_iter().flatten() {
+    for piece in Tokens::new(operand).to_string().split(',') {
+      let piece = piece.trim();
+      if piece.is_empty() || piece.starts_with('\\') || !piece.chars().any(|c| c.is_alphanumeric())
+      {
+        continue;
+      }
+      if !piece.chars().all(|c| c.is_ascii_digit()) {
+        return false;
+      }
+      numbers = true;
+    }
+  }
+  numbers
 }
 
 /// Whether an affiliation a class gives after its authors is a marked list ([`affiliation_calls`]): it has a mark, and the

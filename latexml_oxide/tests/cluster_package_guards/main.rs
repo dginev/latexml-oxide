@@ -147,6 +147,7 @@ mod perfect_kernel_batch103a;
 mod perfect_kernel_batch103b;
 mod perfect_kernel_batch103c;
 mod perfect_kernel_batch104a;
+mod perfect_kernel_batch104b;
 mod perfect_kernel_batch104c;
 mod perfect_kernel_batch104d;
 mod perfect_kernel_batch131fix;

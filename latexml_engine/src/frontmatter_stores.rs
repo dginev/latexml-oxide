@@ -2320,7 +2320,7 @@ fn by_its_label(api: Tokens, line: &[Token]) -> Result<Tokens> {
   // under its run, review rev94b r3 B1: the frontmatter API's Cut cuts it at the marks the names request
   // (`cut_marked_contact`, OD #954), each entry its requesters' and one no name requests the block's; a call the Cut
   // declines is the frontmatter observer's, the font open before each entry kept (`\lx@fm@entry@font`), or whole)
-  if displaced_entries(&Tokens::new(line.to_vec())).len() > 1 {
+  if displaced_entries(&Tokens::new(line.to_vec()), None).len() > 1 {
     return Ok(api);
   }
   contact_line_call(&head.to_string(), &Tokens::new(line.to_vec()))
@@ -3138,12 +3138,12 @@ fn without_labels(tokens: &Tokens) -> Tokens {
 /// lines before the first label one entry — rstransa's `\address{$^{1}$… \\ $^{2}$…}`, each line an author's;
 /// 2607.25849's `\affiliation{email: \email{…}\\ $^1$Argelander-Institut …}` —; the whole argument one entry when no
 /// line leads with a label (one address over two lines). Marks inside one line are the API's to cut.
-fn displaced_entries(arg: &Tokens) -> Vec<Tokens> {
+fn displaced_entries(arg: &Tokens, store: Option<&str>) -> Vec<Tokens> {
   use crate::base_utilities::{leading_line_label, split_top_level_lines};
   // (an `\and` list the class's title page numbers: entry n labelled n, `class_numbered_institutes` — caosp.sty:519-527's
   // `\institutename`, astro-ph9805069; review rev99b B2)
   if arg.unlist_ref().contains(&T_CS!("\\and"))
-    && let Some(numbered) = class_numbered_institutes(arg)
+    && let Some(numbered) = class_numbered_institutes(arg, store)
   {
     return split_tokens(numbered, vec![T_CS!("\\and").into()])
       .into_iter()
@@ -3210,8 +3210,9 @@ fn displaced_in_doubt(entries: &[Tokens]) -> Result<bool> {
 /// line (`displaced_argument_in_doubt`; [`kernel_and_list`]; review rev99b B2: astro-ph9805069's
 /// four institutes as one contact with "and" written in; sifrev.cls's `\institute`, its own `\split@rg` over `\and`,
 /// 1704.03333).
-fn unnumbered_and_list(line: &[Token]) -> bool {
-  line.contains(&T_CS!("\\and")) && class_numbered_institutes(&Tokens::new(line.to_vec())).is_none()
+fn unnumbered_and_list(line: &[Token], store: Option<&str>) -> bool {
+  line.contains(&T_CS!("\\and"))
+    && class_numbered_institutes(&Tokens::new(line.to_vec()), store).is_none()
 }
 
 /// [`unnumbered_and_list`], for a line a rerouted in-place, stored or run-in setter's call hands the API where it is
@@ -3219,7 +3220,7 @@ fn unnumbered_and_list(line: &[Token]) -> bool {
 /// constructor, " and "), which invents the word — a class or a binding defining `\and` for its lines has the API print
 /// that (smfart.cls's `\address{Nazi Boni University, … \and Université …}`, "&", 2508.07946).
 fn kernel_and_list(line: &[Token]) -> bool {
-  unnumbered_and_list(line)
+  unnumbered_and_list(line, None)
     && matches!(lookup_meaning(&T_CS!("\\and")), Some(Stored::Constructor(defn))
       if matches!(defn.origin, DefinitionOrigin::Pool | DefinitionOrigin::Unknown))
 }
@@ -3232,13 +3233,14 @@ fn kernel_and_list(line: &[Token]) -> bool {
 /// mark the readers read ([`leading_mark`]'s `\inst`, `\textsuperscript`) — cta-author.cls's `\address{\add{1}{…}
 /// \add{2}{…}\email{…}}`, whose entries and marks only its `\add` makes (2307.11112: routed whole, the three authors were
 /// read as one)? Then the call is in doubt and stays the class's text.
-fn displaced_argument_in_doubt(arg: &Tokens, redefined: &[Token]) -> bool {
+fn displaced_argument_in_doubt(arg: &Tokens, store: Option<&str>, redefined: &[Token]) -> bool {
   // (the class's own entry separators: an `\and` list its title page does not number — `class_numbered_institutes`
   // reads one that it does —, whose `\and` the kernel prints " and " (astro-ph9805069's four institutes as one
   // contact of every author, "and" written three times; sifrev.cls's own `\split@rg`, 1704.03333; review rev99b B2), and
   // a `\\` or `\par` the title page defines anew where it prints the store (`separators_redefined`))
   let toks = arg.unlist_ref();
-  if unnumbered_and_list(toks) || redefined.iter().any(|separator| toks.contains(separator)) {
+  if unnumbered_and_list(toks, store) || redefined.iter().any(|separator| toks.contains(separator))
+  {
     return true;
   }
   toks.iter().any(|t| {
@@ -3369,9 +3371,15 @@ fn route_displaced(records: Vec<DisplacedRecord>, printed: &str) -> Result<()> {
       );
       continue;
     }
-    let entries = displaced_entries(&record.arg);
+    let store = record.store.with_str(ToString::to_string);
+    if record.arg.unlist_ref().contains(&T_CS!("\\and")) {
+      note_and_numbering(&record.store)?;
+    }
+    let entries = displaced_entries(&record.arg, Some(&store));
     let redefined = readers.separators_redefined(&record.store, &[T_CS!("\\\\"), T_CS!("\\par")]);
-    if displaced_in_doubt(&entries)? || displaced_argument_in_doubt(&record.arg, &redefined) {
+    if displaced_in_doubt(&entries)?
+      || displaced_argument_in_doubt(&record.arg, Some(&store), &redefined)
+    {
       Info!(
         "frontmatter",
         s!("\\{}", record.setter),
@@ -3389,6 +3397,7 @@ fn route_displaced(records: Vec<DisplacedRecord>, printed: &str) -> Result<()> {
     routed.push_back(Stored::VecDequeStored(VecDeque::from([
       Stored::String(pin(record.setter)),
       Stored::Tokens(record.arg),
+      Stored::String(pin(store)),
     ])));
   }
   if routed.is_empty() {
@@ -3429,7 +3438,11 @@ fn hand_displaced_stores() -> Result<Vec<Digested>> {
     let Some(api) = displaced_api(&setter) else {
       continue;
     };
-    for entry in displaced_entries(&without_labels(arg)) {
+    let store = match fields.get(2) {
+      Some(Stored::String(store)) => Some(with(*store, ToString::to_string)),
+      _ => None,
+    };
+    for entry in displaced_entries(&without_labels(arg), store.as_deref()) {
       calls.extend(contact_line_call(api, &entry)?.unlist());
     }
     Info!(
@@ -4442,6 +4455,74 @@ fn sentinel_runs_with(
     sentinels_printed(stores, &lowered, &digits),
     letters,
   )))
+}
+
+/// How many `\and` entries [`note_and_numbering`] gives the store it tries: three, so the second and third entries' numbers
+/// stand between two sentinels, where no other text of the title page is.
+const AND_NUMBERING_ENTRIES: usize = 3;
+
+/// Whether the class's own title page numbers the `\and` entries of `store` (`\@institute`), recorded once per store as
+/// `lx_and_numbered_<store>` for `affiliations::class_numbered_institutes` — the class's own output as the provenance of
+/// the numbering, as the sentinel runs are of what it prints ([`sentinel_runs`]): one speculative run of the whole title
+/// page ([`title_page_print_tokens`]) with the store set to an `\and` list of letter sentinels ([`sentinel`]), which
+/// numbers them when it printed each entry right after its number in `\and` order ([`printed_after_their_numbers`]) —
+/// sab.cls:404-426's `\institutename`, `\def\and{\par\refstepcounter{inst}…$^{\theinst}$\enspace}` (2308.05831,
+/// 2308.05830; edpsci.cls:327-345, 2501.08874; baaa.cls:590-614, 2206.02830), comsis2.cls:831-836's
+/// `\stepcounter{@inst}` (2207.09249). Only when the queued authors' marks request numbers
+/// (`affiliations::numbered_marks_requested`); nothing is recorded when no run could be made or its text does not hold the entries (the class's
+/// `\institutename` is then read as before).
+pub(crate) fn note_and_numbering(store: &Token) -> Result<()> {
+  use crate::latex_constructs::{
+    SpeculativeRun, speculative_title_page_run, title_page_print_tokens,
+  };
+  let key = s!("lx_and_numbered_{}", store.with_str(ToString::to_string));
+  if lookup_value(&key).is_some() || !numbered_marks_requested() {
+    return Ok(());
+  }
+  let mut defs = vec![T_CS!("\\def"), *store, T_BEGIN!()];
+  for i in 0..AND_NUMBERING_ENTRIES {
+    if i > 0 {
+      defs.extend([T_SPACE!(), T_CS!("\\and"), T_SPACE!()]);
+    }
+    defs.extend(
+      mouth::tokenize_internal(TeXString::assembled(sentinel(i, Sentinel::Letters))).unlist(),
+    );
+  }
+  defs.push(T_END!());
+  let SpeculativeRun::Printed(text) = speculative_title_page_run(title_page_print_tokens(&defs))?
+  else {
+    return Ok(());
+  };
+  let numbered = printed_after_their_numbers(&text.to_lowercase(), AND_NUMBERING_ENTRIES);
+  DebugFeature!(
+    "frontmatter",
+    "FRONT {key}: the title page numbers the store's \\and entries: {numbered:?}"
+  );
+  if let Some(numbered) = numbered {
+    assign_value(&key, Stored::Bool(numbered), Some(Scope::Global));
+  }
+  Ok(())
+}
+
+/// Did a run's lower-cased text print the letter sentinels `0..entries` ([`sentinel_found`]) each right after its number
+/// (`1`, `2`, …, any non-alphanumeric — a space, a `.`, a `)` — between them): the digits ending the text between the
+/// previous sentinel and this one are its number, for the first one the digits before it ending in `1` (the authors'
+/// marks may print right before it, "Cole1,2" then "1")? `None` when the text does not hold them all in order: the run
+/// does not show the store (raa.cls sets its title page in a header box the run's text does not reach, 2003.13998,
+/// 2511.10805), so it says nothing of its numbering.
+fn printed_after_their_numbers(text: &str, entries: usize) -> Option<bool> {
+  let mut from = 0;
+  let mut numbered = true;
+  for i in 0..entries {
+    let found = sentinel_found(i, Sentinel::Letters);
+    let at = text[from..].find(&found).map(|k| from + k)?;
+    let before = text[from..at].trim_end_matches(|c: char| !c.is_alphanumeric());
+    let digits = &before[before.trim_end_matches(|c: char| c.is_ascii_digit()).len()..];
+    let number = (i + 1).to_string();
+    numbered &= digits == number || (i == 0 && digits.ends_with(&number));
+    from = at + found.len();
+  }
+  Some(numbered)
 }
 
 /// A store's value as plain text — characters and spaces only, at least one character —, without its spaces; `None`
@@ -7544,6 +7625,14 @@ pub fn harvest_stores(at_maketitle: bool) -> Result<Vec<Digested>> {
       assign_value(&s!("lx_store_handed_{name}"), true, Some(Scope::Global));
       continue;
     }
+    // (an `\and` list of affiliations: whether the class's title page numbers its entries, which the authors' numeric
+    // marks pick — `class_numbered_institutes`, at `\lx@add@store@affiliations`)
+    if at_maketitle
+      && api.starts_with("\\lx@add@store@affiliations")
+      && value.unlist_ref().contains(&T_CS!("\\and"))
+    {
+      note_and_numbering(&T_CS!(&s!("\\{store}")))?;
+    }
     handed.push(store);
     note_store_handed(name);
     // (what the title page prints of it is the class's title page's, its title-page provenance, base_utilities
@@ -7602,7 +7691,7 @@ LoadDefinitions!({
     let name = name.to_string();
     // (an llncs-style `\institute{A \and B}` the class numbers 1, 2 on its title page: the entries labelled by their
     // numbers, which the authors' numeric marks — `$^{1}$`, `\inst{1}` — request, `class_numbered_institutes`)
-    let (stuff, numbered) = match class_numbered_institutes(&stuff) {
+    let (stuff, numbered) = match class_numbered_institutes(&stuff, Some(&s!("\\{}", store_of(&name)))) {
       Some(numbered) => (numbered, true),
       None => (stuff, false),
     };

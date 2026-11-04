@@ -1,0 +1,59 @@
+% A raw class's `\institute{A \and B \and C}` store (K11's pure store) that its title page numbers in `\and` order:
+% sab.cls:402-444's `\institutename` (also edpsci.cls:325-367, baaa.cls:586-644, verbatim here), whose `\and` is
+% `\par\refstepcounter{inst}…$^{\theinst}$\enspace` — a `\refstepcounter`, which the old static reading of
+% `\institutename` (a `\def\and` with `\stepcounter`) missed, so every author held every institute and kept its
+% `\inst{n}` mark. The class's own speculative title-page run now shows each sentinel entry printed after its number
+% (frontmatter_stores.rs `note_and_numbering`), so entry n is labelled n and goes to the names requesting it
+% (`class_numbered_institutes`); a symbol mark beside the numbers (`$^{*}$`, comsis2.cls's `\textsuperscript{\dag}`
+% legends) no longer stops it (`numbered_marks_requested`).
+% witness: 2308.05831, 2308.05830 (sab), 2501.08874 (edpsci), 2206.02830 (baaa)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2∗ , Cy Cole3 and Dan Dole2", "1 Univ A, Town", "2 Univ B, City",
+%          "3 Univ C, Place"
+% engines: rust int131a = 0 errors, 0 warnings, every author all three institutes, marks kept;
+%          perl = no raw class load (OmniBus `\institute`)
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, Town", Bob Baker (mark *) "Univ B, City", Cy Cole "Univ C, Place",
+%          Dan Dole "Univ B, City"; the numeric marks hidden
+% status:  RED (int131a) -> GREEN (104b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{sabinst.cls}
+\ProvidesClass{sabinst}\LoadClass{article}
+\newcounter{inst}
+\newdimen\instindent
+\def\institute#1{\gdef\@institute{#1}}
+\def\institutename{\par
+ \begingroup
+ \parindent=0pt
+ \parskip=0pt
+ \refstepcounter{inst}%July 2009
+ \def\and{\par\refstepcounter{inst}%July 2009
+ \hangindent\instindent
+ \noindent
+ \hbox to\instindent{\hss$^{\theinst}$\enspace}\ignorespaces}%
+ \setbox0=\vbox{\def\thanks##1{}\@institute}
+ \ifnum\value{inst}>9\relax\setbox0=\hbox{$^{88}$\enspace}%
+                 \else\setbox0=\hbox{$^{8}$\enspace}\fi
+ \instindent=\wd0\relax
+ \ifnum\value{inst}=1\relax
+ \else
+   \setcounter{inst}{1}%
+   \hangindent\instindent
+   \noindent
+   \hbox to\instindent{\hss$^{\theinst}$\enspace}\ignorespaces
+ \fi
+ \small
+ \ignorespaces
+ \@institute\par
+ \endgroup}
+\def\inst#1{\unskip$^{#1}$}
+\def\@maketitle{\newpage\noindent{\Large\@title\par}\vskip6pt
+  {\large\noindent\ignorespaces\@author\par}\vskip6pt
+  \small\rm\leftskip=.8cm\rightskip=\leftskip\institutename}
+\end{filecontents*}
+\documentclass{sabinst}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1}, Bob Baker\inst{2}$^{*}$, Cy Cole\inst{3} and Dan Dole\inst{2}}
+\institute{Univ A, Town \and Univ B, City \and Univ C, Place}
+\maketitle
+Text.
+\end{document}

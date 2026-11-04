@@ -22750,12 +22750,30 @@ A raw class carrying llncs's `\institutename` (llncs.cls:870-885; copied by prep
 `\institute{A \and B}` list with each `\and` stepping the institute counter and printing the number before the next
 entry, the first numbered 1. The K11 store path (`\lx@add@store@affiliations`, frontmatter_stores.rs) saw unmarked
 entries and gave every author every entry (`annotate=all`): 2405.16615's two authors each held Imperial College and
-Edinburgh. Ours: when the class's `\institutename` redefines `\and` with a `\stepcounter`, the store holds at least two
-`\and` entries and no mark, and the queued authors' marks are all numbers, the entries are led by their numbers as the
-title page prints them (`class_numbered_institutes`, base_utilities/author_block/affiliations.rs) and labelled by them, so `$^{1}$`/`$^2$` — or
-the class's `\inst{1,2}`/`\inst2` (2512.08621) — pick one each. Perl reads such a class raw (its `\institute` the class's). Repro
-sectioning-frontmatter/class_numbered_institutes_go_by_the_authors_marks (with numinst.cls); guards
-`perfect_kernel_batch77t::{class_numbered_institutes_go_by_the_authors_marks, class_numbered_institutes_go_by_inst_marks}`.
+Edinburgh. Ours: when the class numbers the store's entries, the store holds at least two `\and` entries and no mark,
+and the queued authors' marks request numbers, the entries are led by their numbers as the title page prints them
+(`class_numbered_institutes`, base_utilities/author_block/affiliations.rs) and labelled by them, so `$^{1}$`/`$^2$` — or
+the class's `\inst{1,2}`/`\inst2` (2512.08621) — pick one each. Whether the class numbers them is read from its own
+output (batch 104b, census129 cluster 3): one speculative run of the whole title page with the store set to an `\and`
+list of three letter sentinels (frontmatter_stores.rs `note_and_numbering`, at `\maketitle`, K11's store route and the
+displaced route of #955), numbered when each sentinel printed right after its number in order
+(`printed_after_their_numbers`; recorded as `lx_and_numbered_<store>`) — sab.cls:404-426's and edpsci.cls's, baaa.cls's
+`\refstepcounter{inst}`, which the earlier reading of `\institutename`'s body (a `\def\and` with `\stepcounter`) missed
+(2308.05831, 2308.05830, 2501.08874, 2206.02830; 2102.09010, 2504.01277; 1701.08962's my_NSP: every author held every
+institute). That reading remains where no run is made (an in-place line, no store) and where the run's text does not
+hold the sentinel entries, which says nothing of the numbering: raa.cls's title page is not typeset by the run, and
+reading that as "not numbered" gave every raa, raa_rb, raa_twocolumn and cjaa author every institute (2003.13998,
+2511.10805, 2511.06927, astro-ph0701846). The marks request numbers when each is a comma list of numbers beside which
+only symbols stand (a legend's `$^{*}$`, `\textsuperscript{\dag}`; edpsci's empty `$^{,}$` piece), never a letter label
+(`numbered_marks_requested`). Perl reads such a class raw (its `\institute` the class's). Repros
+sectioning-frontmatter/class_numbered_institutes_go_by_the_authors_marks (with numinst.cls),
+raw_class_refstepcounter_numbered_institutes_go_by_their_numbers, raw_class_unnumbered_and_institutes_stay_every_authors
+(control), raw_class_numbered_institutes_the_run_does_not_print_keep_their_numbers; guards `perfect_kernel_batch77t::{class_numbered_institutes_go_by_the_authors_marks,
+class_numbered_institutes_go_by_inst_marks}`, `perfect_kernel_batch104b::{a_refstepcounter_numbered_and_list_goes_by_the_authors_numbers,
+an_unnumbered_and_list_stays_every_authors, a_numbered_and_list_the_run_does_not_print_keeps_its_numbers}`. Not read (RED catalog repros, SYNC_STATUS row "104b"): a numbered store
+whose last entry carries the names' legend lines (raw_class_numbered_institutes_with_legend_lines, comsis2 2207.09249),
+and a displaced store whose printer other class code calls too
+(displaced_numbered_institutes_also_printed_after_the_bibliography, caosp 1401.6818).
 
 ### 792. An llncs `\\` line reading as an affiliation is the affiliation of the names over it
 
@@ -30027,7 +30045,7 @@ in a `\@name` store) nor the in-place reroute (OD #936: a line break in the sett
   label (`displaced_entries`: `relocate::split_top_level_lines`, `relocate::leading_line_label`, the shared reader; the
   unlabelled lines before the first label one entry; no labelled line, the whole argument one entry), its `\label`s
   taken out (`without_labels`). An `\and` list the class's title page numbers (caosp.sty:519-527's `\institutename`,
-  astro-ph9805069) is cut at its `\and`s, entry n led by n (`class_numbered_institutes`, the shared reader K11's
+  astro-ph9805069; as its speculative run shows, `note_and_numbering`, #791) is cut at its `\and`s, entry n led by n (`class_numbered_institutes`, the shared reader K11's
   store route uses). Each entry is placed by its leading label (`contact_line_call`, below). A record whose entry
   leads with a mark no author requests (`displaced_in_doubt`, `queue_digest.rs` `placed_authors_requesting`) stays the
   class's text, as an in-place line in doubt does, and so does a call holding the class's own entry separators
