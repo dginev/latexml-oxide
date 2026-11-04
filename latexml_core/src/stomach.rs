@@ -2110,6 +2110,14 @@ pub fn salvage_pending_box_lists(drop_innermost: bool) -> Vec<Digested> {
   acc
 }
 
+/// Empty the stack of tokens being invoked, after a recovered Fatal (Perl `hardYankProcessing`, Common/Error.pm:329
+/// `$$stomach{token_stack} = []`, run for every Fatal). `invoke_token` pops its entry only on a normal exit, so every
+/// `?` exit between the push and the pop leaves one: a `Stomach:Recursion` Fatal leaves the whole `MAXSTACK` of them,
+/// and the next digestion after the recovery — the build's own, a frontmatter name read at insert time — failed its
+/// first push with a second, ghost Fatal and stopped the build (2410.07647: 886 words to 96; 2105.02599). Called by the
+/// recovery arms beside [`salvage_pending_box_lists`], after the Fatal is logged (the message lists the stack).
+pub fn clear_token_stack() { stomach_mut!().token_stack.clear(); }
+
 /// Stomach-level cycle guard: only once `box_list` has grown far past any
 /// flushed-document size (a normal `box_list` is drained as paragraphs/boxes
 /// complete and stays small) do we record the digest-push stream and look for

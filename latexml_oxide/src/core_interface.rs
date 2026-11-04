@@ -399,6 +399,9 @@ fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
         "digest_internal",
         &format!("digest_internal: error during recovery digestion: {:?}", e),
       );
+      // (the tokens the failed invocations left on the stack go, as Perl's `hardYankProcessing` empties it for every
+      // Fatal: left there, the next digestion — the build's — failed its first push, 2410.07647, 2105.02599)
+      stomach::clear_token_stack();
       // Recover what the failed body already digested. Without this the
       // "still produce partial output" intent above only worked when the
       // failure landed in a LATER body — a Fatal inside the FIRST one left
@@ -1463,6 +1466,8 @@ impl DigestionAPI for Core {
           // Safe because everything salvaged is absorbed, spilled and freed
           // immediately below.
           boxes.extend(stomach::salvage_pending_box_lists(false));
+          // (and the stack of tokens being invoked, which the build's digestion pushes onto again: 2410.07647)
+          stomach::clear_token_stack();
           fatal_stop = true;
           true
         },

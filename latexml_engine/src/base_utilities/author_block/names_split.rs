@@ -939,7 +939,9 @@ fn notes_to_the_name_before(pieces: Vec<(Vec<Token>, Tokens)>) -> Vec<(Vec<Token
 
 /// A name separator written at the edge of a wrapper is the line's (`\textbf{Hang Xu$^{2}$,}`, 2310.10477;
 /// `\textbf{, Jinyang Guo}`, 2505.02214), and a wrapper holding only one (`\textbf{,}`, 2403.11004; `{\rm and}`,
-/// 2401.03205) is that separator: the font of a comma or an "and" is not a name's (KNOWN_PERL_ERRORS #552).
+/// 2401.03205) is that separator: the font of a comma or an "and" is not a name's (KNOWN_PERL_ERRORS #552). A comma
+/// closing a link's printed text is the line's too (`\href{https://orcid.org/…}{\includegraphics{ORCIDiD.png}, }`,
+/// 2110.07418: each name its own iD; guard `perfect_kernel_batch131fix::orcid_icon_link_closing_with_the_comma_parts_the_names`).
 pub(in crate::base_utilities) fn hoist_wrapped_separators(line: Tokens) -> Tokens {
   let v = line.unlist();
   let and = [T_LETTER!("a"), T_LETTER!("n"), T_LETTER!("d")];
@@ -968,14 +970,29 @@ pub(in crate::base_utilities) fn hoist_wrapped_separators(line: Tokens) -> Token
       i = end;
       continue;
     }
-    let command = t.get_catcode() == Catcode::CS
+    // (a link's printed text is a wrapper too, its address passed over: `C. J.~Law$^{5,8}$\href{https://orcid.org/…}
+    // {\includegraphics[scale=0.08]{ORCIDiD.png}, }%⏎S. Burke-Spolaor`, 2110.07418 — the comma between the two names
+    // printed inside the ORCID icon's link; only its edge comma moves out, so no link is dropped)
+    let link_ink = (t == T_CS!("\\href")
       && v
         .get(i + 1)
+        .is_some_and(|n| n.get_catcode() == Catcode::BEGIN))
+    .then(|| skip_group(&v, i + 1))
+    .filter(|&ink| {
+      v.get(ink)
         .is_some_and(|n| n.get_catcode() == Catcode::BEGIN)
-      && !is_footnote_mark(&t)
-      && !is_name_annotation(&t)
-      && !is_author_mark(&t);
-    let open = if command {
+    });
+    let command = link_ink.is_some()
+      || t.get_catcode() == Catcode::CS
+        && v
+          .get(i + 1)
+          .is_some_and(|n| n.get_catcode() == Catcode::BEGIN)
+        && !is_footnote_mark(&t)
+        && !is_name_annotation(&t)
+        && !is_author_mark(&t);
+    let open = if let Some(ink) = link_ink {
+      ink
+    } else if command {
       i + 1
     } else if t.get_catcode() == Catcode::BEGIN {
       i
@@ -1024,7 +1041,9 @@ pub(in crate::base_utilities) fn hoist_wrapped_separators(line: Tokens) -> Token
       out.extend_from_slice(content);
       out.push(v[close]);
     };
-    if trimmed == [T_OTHER!(",")] {
+    if link_ink.is_some() && !(trimmed.len() > 1 && trimmed.last() == Some(&T_OTHER!(","))) {
+      out.extend_from_slice(&v[i..end]);
+    } else if trimmed == [T_OTHER!(",")] {
       out.extend([T_OTHER!(","), T_SPACE!()]);
     } else if trimmed == and {
       out.push(T_SPACE!());

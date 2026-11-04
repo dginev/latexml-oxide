@@ -701,6 +701,14 @@ fn link_entry_addresses(document: &mut Document) -> Result<()> {
       // (a label of one word or two, "Electronic Addresses", 1509.07506)
       let labelled = words.iter().any(|w| is_email_label(w))
         || words.windows(2).any(|pair| is_email_label(&pair.join(" ")));
+      // (a list written without spaces whose every part spells one author, each its own, is written out, its capitals
+      // as printed: `M.R.Pestalozzi,a.chrysostomou,j.l.collett@herts.ac.uk`, astro-ph0612088 — whole, it was copied onto
+      // all three; `spelled_unspaced_list`)
+      if let Some(spelled) =
+        spelled_unspaced_list(content, &|part| spelled_owner(&keys, &s!("{part}@x.org")))
+      {
+        return Some(spelled);
+      }
       if listed.len() > 1 && !labelled {
         (!rest.chars().any(char::is_alphanumeric) && taken == listed).then_some(listed)
       } else if listed.len() > 1 {

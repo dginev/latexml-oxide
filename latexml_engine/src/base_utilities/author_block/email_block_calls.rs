@@ -1018,7 +1018,10 @@ pub(in crate::base_utilities) fn ends_a_listed_run(local: &str) -> bool {
 /// reads. A list is a run of comma pieces with no space or `;` between, each a local part ([`is_listed_local_part`]) —
 /// the first one may follow a label or a bracket glued to it, `Email:ann,bob@x.org` — ending in one address
 /// ([`ends_a_listed_run`]); a piece of a braced group is left to the group readers, and a word no address follows is
-/// left as it is.
+/// left as it is. A run glued to a word before it that is no local part — `M.R.Pestalozzi,a.chrysostomou,
+/// j.l.collett@herts.ac.uk`, astro-ph0612088 — is no list but one word the readers cannot part: left whole, as on base
+/// (written out, its first part was lost and the whole word copied onto every carrier of its entry); one whose every
+/// part spells an author is written out by [`spelled_unspaced_list`].
 pub(in crate::base_utilities) fn write_out_unspaced_lists(text: &str) -> String {
   let mut out = String::with_capacity(text.len());
   for chunk in text.split_inclusive(|c: char| c.is_whitespace() || c == ';') {
@@ -1031,12 +1034,16 @@ pub(in crate::base_utilities) fn write_out_unspaced_lists(text: &str) -> String 
     let mut pieces: Vec<String> = Vec::new();
     // (the local parts read so far, the first with the label or bracket glued before it)
     let mut pending: Vec<(&str, &str)> = Vec::new();
+    // (whether the piece before is a word no local part — a contact's word aside, `email,ann,bob@x.org` — and whether
+    // the pending run opened after one)
+    let mut after_word = false;
+    let mut glued = false;
     let flush = |pending: &mut Vec<(&str, &str)>, pieces: &mut Vec<String>| {
       pieces.extend(pending.drain(..).map(|(before, word)| s!("{before}{word}")));
     };
     for piece in body.split(',') {
       if let Some((local, domain)) = piece.split_once('@') {
-        if !pending.is_empty() && ends_a_listed_run(local) {
+        if !pending.is_empty() && !glued && ends_a_listed_run(local) {
           pieces.extend(
             pending
               .drain(..)
@@ -1046,6 +1053,7 @@ pub(in crate::base_utilities) fn write_out_unspaced_lists(text: &str) -> String 
           flush(&mut pending, &mut pieces);
         }
         pieces.push(piece.to_string());
+        after_word = false;
         continue;
       }
       let (before, word) = match piece.rfind([':', '(', '[', '<']) {
@@ -1053,10 +1061,14 @@ pub(in crate::base_utilities) fn write_out_unspaced_lists(text: &str) -> String 
         _ => ("", piece),
       };
       if is_listed_local_part(word) {
+        if pending.is_empty() {
+          glued = after_word && before.is_empty();
+        }
         pending.push((before, word));
       } else {
         flush(&mut pending, &mut pieces);
         pieces.push(piece.to_string());
+        after_word = !piece.is_empty() && !names_a_contact(piece);
       }
     }
     flush(&mut pending, &mut pieces);
@@ -1064,6 +1076,48 @@ pub(in crate::base_utilities) fn write_out_unspaced_lists(text: &str) -> String 
     out.push_str(separator);
   }
   out
+}
+
+/// A list of local parts written without spaces before one domain, `text` whole (spaces round it aside), whose every
+/// part spells exactly one author, each a different one (`owner`, letter case ignored as the spelling reads it), each
+/// part at the domain, as the source writes it: `M.R.Pestalozzi,a.chrysostomou,j.l.collett@herts.ac.uk` under the three
+/// names, astro-ph0612088 — a capitalised part, which [`write_out_unspaced_lists`] leaves whole, is a local part when it
+/// spells its author. `None` for any other text: an address is never invented.
+pub(in crate::base_utilities) fn spelled_unspaced_list(
+  text: &str,
+  owner: &dyn Fn(&str) -> Option<usize>,
+) -> Option<Vec<String>> {
+  let text = text.trim();
+  if text.contains(|c: char| c.is_whitespace() || "{};|/".contains(c)) {
+    return None;
+  }
+  let (list, domain) = text.split_once('@')?;
+  let domain_ok = domain.contains('.')
+    && !domain.starts_with(['.', '-'])
+    && !domain.ends_with(['.', '-'])
+    && domain
+      .chars()
+      .all(|c| c.is_ascii_alphanumeric() || ".-".contains(c));
+  let parts: Vec<&str> = list.split(',').collect();
+  if !domain_ok || parts.len() < 2 {
+    return None;
+  }
+  let mut owners: Vec<usize> = Vec::with_capacity(parts.len());
+  for part in &parts {
+    if part.chars().nth(1).is_none()
+      || part.starts_with('.')
+      || !part.chars().all(is_local_char)
+      || !part.chars().any(|c| c.is_ascii_alphabetic())
+    {
+      return None;
+    }
+    let one = owner(part)?;
+    if owners.contains(&one) {
+      return None;
+    }
+    owners.push(one);
+  }
+  Some(parts.iter().map(|part| s!("{part}@{domain}")).collect())
 }
 
 /// Parse an email line into its individual address strings, or `None` if the line

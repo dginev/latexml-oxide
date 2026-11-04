@@ -1145,4 +1145,47 @@ fn email_addresses_write_out_unspaced_lists() {
     email_addresses(&tk("ann@a.edu; dzyang, ashishbshah@fb.com")),
     None
   );
+  // (int131fix: a run glued to a word that is no local part is no list — left whole, no part cut out of it; a contact's
+  // word before it is a label, astro-ph0612088)
+  assert_eq!(
+    write_out_unspaced_lists("M.R.Pestalozzi,a.chrysostomou,j.l.collett@herts.ac.uk"),
+    "M.R.Pestalozzi,a.chrysostomou,j.l.collett@herts.ac.uk"
+  );
+  assert_eq!(
+    write_out_unspaced_lists("email,ann,bob@x.org"),
+    "email,ann@x.org,bob@x.org"
+  );
+  assert_eq!(
+    write_out_unspaced_lists("ann@a.edu,dzyang,ashishbshah@fb.com"),
+    "ann@a.edu,dzyang@fb.com,ashishbshah@fb.com"
+  );
+}
+
+#[test]
+fn spelled_unspaced_list_writes_out_a_list_of_spelled_parts() {
+  setup();
+  // (int131fix, astro-ph0612088: every part spells one author, each a different one, capitals as printed)
+  let names = ["M. R. Pestalozzi", "A. Chrysostomou", "J. L. Collett"];
+  let keys: Vec<NameKeys> = names.iter().map(|&n| NameKeys::of(&tk(n))).collect();
+  let owner = |part: &str| spelled_owner(&keys, &s!("{part}@x.org"));
+  assert_eq!(
+    spelled_unspaced_list(
+      "M.R.Pestalozzi,a.chrysostomou,j.l.collett@herts.ac.uk",
+      &owner
+    ),
+    Some(vec![
+      s!("M.R.Pestalozzi@herts.ac.uk"),
+      s!("a.chrysostomou@herts.ac.uk"),
+      s!("j.l.collett@herts.ac.uk")
+    ])
+  );
+  // (a part spelling no one, two parts of one author, a spaced list, one address: none)
+  for text in [
+    "M.R.Pestalozzi,info,j.l.collett@herts.ac.uk",
+    "pestalozzi,m.pestalozzi@herts.ac.uk",
+    "M.R.Pestalozzi, a.chrysostomou@herts.ac.uk",
+    "j.l.collett@herts.ac.uk",
+  ] {
+    assert_eq!(spelled_unspaced_list(text, &owner), None, "{text}");
+  }
 }

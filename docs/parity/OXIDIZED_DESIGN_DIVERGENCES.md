@@ -18185,7 +18185,12 @@ class's own `\csname\string\cs\endcsname` reaches it, and the replay of a refuse
 `\\cs` internal; a locked `\renewenvironment` is refused whole (its stores recorded), and a `\newcommand` of a defined
 name defines none, as LaTeX's. Residuals: the internal reads `[…]` as
 an optional argument, as our `\@yargdef` does, where LaTeX's requires the brackets; an active character gets none (its
-`\string` names another control sequence). Witnesses 1510.00296, 1704.01336, 1207.2066, 2003.00661 (Fatal → 0 errors), 2210.02246 (cmfne's author lines).
+`\string` names another control sequence). The internal is named as `\string` prints the command: the null control
+sequence's is `\\csname\endcsname` (tex.web §263) — named `"\\" + "\"`, it was `\\` itself, so
+`\expandafter\newcommand\expandafter{\csname\endcsname}[1][x]{…}` (changes' `\csname\Changes@commandname\endcsname`
+with its `\Changes@commandname` undefined in our binding) replaced the line break, and a `{#1\\}` body recursed to a
+Fatal (2410.07647: F 1 → 0, 870 → 23,196 words; int131fix, guard
+`perfect_kernel_batch131fix::null_cs_optional_internal_keeps_the_line_break`). Witnesses 1510.00296, 1704.01336, 1207.2066, 2003.00661 (Fatal → 0 errors), 2210.02246 (cmfne's author lines).
 Guards `perfect_kernel_batch66b::{newcommand_optional_argument_defines_its_internal_macro,
 every_xargdef_declarator_defines_the_internal_macro, refused_dblarg_setter_reaches_its_internal}`; repros
 `macro-state/newcommand_optional_internal_cs`, `sectioning-frontmatter/refused_dblarg_setter_reaches_its_internal`.
@@ -30257,6 +30262,13 @@ observer read some of them (`take_out_entry_addresses`, OD #938), but its writer
   spaces keeps `address_runs`' word test alone, `E-mail: ann, b@x.org`, review rev103a2 — a mixed list with one spaced
   comma too, `ann, bob,c@x.org`, review rev103a3 n6); 2112.00969's `ann@a.edu;
   dzyang,ashishbshah@fb.com`, whose `dzyang` the flush's write-out had dropped while the take-out cut it, batch 103a);
+  a run glued by its comma to a word before it that is no local part is no list, the word left whole as on base
+  (`M.R.Pestalozzi,a.chrysostomou,j.l.collett@herts.ac.uk`: written out, `M.R.Pestalozzi` was cut off, the readings
+  disagreed and the label copied the whole word onto all three carriers; a contact's word before it, `email,ann,bob@`,
+  is a label), and at the flush a list written without spaces whose every part spells one author, each its own, is
+  written out with its capitals as printed (`spelled_unspaced_list`, `insert::link_entry_addresses`: each of the three
+  on its author; astro-ph0612088, int131fix, guard
+  `perfect_kernel_batch131fix::unspaced_list_whose_every_part_spells_an_author_is_written_out`);
   the flush writes an e-mail out only where its two readings (`addresses_in`, `address_take_out`) agree, else it stays
   whole where its call put it (a spaced list not opening the line, `ann@a.edu; dzyang, ashishbshah@fb.com`); an e-mail
   label glued to an address (`Email:aable@a.edu`, `(E-mail:bogdan@…`, astro-ph0404330) is no part of it, and any other
@@ -30481,6 +30493,17 @@ acmart's `\orcid{X}` beside the name's `\orcidicon{X}` link, 2501.02380, review 
 `a_repeated_orcid_is_one_contact`; repros sectioning-frontmatter/`author_orcid_icon_after_comma_marks_is_the_names`,
 `author_orcid_href_printing_text_stays`, class-bindings/`mnras_orcid_icon_after_comma_marks_is_the_names`,
 `acmart_orcid_and_its_icon_link_one_contact` (RED → GREEN).
+
+A comma closing an ORCID icon link's printed text is the name list's separator (int131fix): `C. J.~Law$^{5,8}$\href{https://orcid.org/…}{\includegraphics[scale=0.08]{ORCIDiD.png}, }%⏎S. Burke-Spolaor$^{2,6,7}$…`
+(2110.07418, nature) prints the comma inside the link, so the line did not part there (int130a: one creator "C. J. Law,
+S. Burke-Spolaor" holding both links) and the link's ORCID contact dropped the ", " ("C. J. LawS. Burke-Spolaor"). A
+link's printed text is a wrapper for `hoist_wrapped_separators` (names_split.rs), its address passed over, and only a
+closing comma moves out after it (a link of a comma or an "and" alone, or a leading comma, stays whole): each name its
+own iD. `\lx@author@href` keeps a separator (`,`, `;`) its ink prints after the icon where it prints, for the routes
+that do not part the line. Guard `perfect_kernel_batch131fix::orcid_icon_link_closing_with_the_comma_parts_the_names`;
+repro sectioning-frontmatter/`author_orcid_icon_link_closing_with_the_comma`, `author_orcid_icon_link_closing_with_a_semicolon` (RED → GREEN). Left (base and int131a
+alike): `D. Li$^{1,12}$ \href{…}{\includegraphics{…}\footnotemark[1] },` — the icon set off by a space, its footnote
+mark inside the link — is a nameless creator holding the link (2110.07418).
 
 ### 961. An affiliation whose whole text is a legend is its carriers' note, read once where every route meets (Perl: an affiliation contact, as the binding or block reader made it)
 

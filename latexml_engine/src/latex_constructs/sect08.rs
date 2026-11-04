@@ -1950,7 +1950,8 @@ pub(crate) fn load() -> Result<()> {
 /// `\\cs␣`). A starred
 /// declarator's internal is not `\long` either (`\l@ngrel@x`, :1229-1233). It reads `[…]` as `\@yargdef` does here (an
 /// optional argument, where LaTeX's requires the brackets). Not for an active character, whose `\string` names another
-/// control sequence (`~`'s would be `\~`). A `\renewcommand`, `\DeclareRobustCommand` or `\newenvironment` the lock
+/// control sequence (`~`'s would be `\~`). The null control sequence's is `\\csname\endcsname`, as `\string` prints it
+/// (tex.web §263), never `\\` (2410.07647; guard `perfect_kernel_batch131fix::null_cs_optional_internal_keeps_the_line_break`). A `\renewcommand`, `\DeclareRobustCommand` or `\newenvironment` the lock
 /// refuses still defines its internal, as `\@xargdef` does: only `\csname\string\cs\endcsname` reaches it, the class's own
 /// code, and that is how the class's refused setter is replayed (cmfne.cls:462-483 `\renewcommand{\author}[2][]` then
 /// the `\@dblarg` `\edef`, whose `\firstshortauthor` its `\enddoc@text` prints; 2210.02246). No binding defines or calls
@@ -1962,7 +1963,16 @@ fn define_optional_internal(cs: &Token, nargs: usize, body: &Tokens, star: bool)
   if cs.get_catcode() != Catcode::CS {
     return Ok(());
   }
-  let internal = T_CS!(s!("\\{}", cs.to_string()));
+  // (named as `\string` prints the command: the null control sequence's `\csname\endcsname` (tex.web §263), whose
+  // internal is `\\csname\endcsname` — `"\\" + "\"` named `\\` itself, so `\expandafter\newcommand\expandafter
+  // {\csname\endcsname}[1][x]{…}` replaced the line break: 2410.07647, changes' `\csname\Changes@commandname\endcsname`)
+  let name = cs.to_string();
+  let printed = if name == "\\" {
+    "\\csname\\endcsname"
+  } else {
+    name.as_str()
+  };
+  let internal = T_CS!(s!("\\{}", printed));
   DefMacro!(
     internal,
     convert_latex_args(nargs, Some(Tokens!()))?,

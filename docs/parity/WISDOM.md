@@ -3111,3 +3111,21 @@ names any it misses.
 a binding may still change the schema while digesting). A digest-time rule keyed on "can this element hold X" silently
 never fires. Record what the rule needs on the whatsit at digest (an `after_digest` property, e.g. the frontmatter
 field the `\par` was digested in) and ask the model in the constructor (`frontmatter_paragraph_break`, OD #766).
+
+---
+
+## 101. A recovered Fatal must reset every stack the unwinding left — a stale entry turns the next digestion into a ghost Fatal
+
+`invoke_token` (latexml_core/src/stomach.rs) pushes each invoked token onto `token_stack` and pops it only on a normal
+exit; every `?` between push and pop leaves its entry. A `Stomach:Recursion` Fatal leaves the whole `MAXSTACK`. The
+recovery arms that keep the document (`core_interface.rs` `digest_step_guarded`'s Err arm, the streaming loop's
+resource stop, `streaming_restart::release_before_rerun`) reset the box lists (`salvage_pending_box_lists`) but kept the
+stack, so the first digestion after them — the build's own (a frontmatter name read at insert time,
+`get_frontmatter_name`) — failed its first push with a second Fatal naming the same stack, and the build stopped early
+(2410.07647 kept 96 of int130a's 886 words in the Bundle 1 A/B; 2105.02599 0 words). Perl's `hardYankProcessing` (Common/Error.pm:329) empties
+`token_stack` for every Fatal; `stomach::clear_token_stack` now does in each arm. **Method:** a second Fatal whose
+message repeats the first one's stack is a stale-state ghost, not a new failure — list what the failing frame pushes
+(token stack, boxing, frames, mode, `CURRENT_TOKEN`) and check that each recovery arm resets it, against
+`hardYankProcessing`'s list. Guard `perfect_kernel_batch131fix::a_recovered_fatal_leaves_no_token_stack_behind`. Open:
+an RAII pop in `invoke_token` (as `local_current_token_guard`) would cover a caught error that never reaches a recovery
+arm (SYNC "token-stack RAII" row).

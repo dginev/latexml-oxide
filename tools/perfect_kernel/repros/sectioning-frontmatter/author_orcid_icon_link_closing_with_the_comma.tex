@@ -1,0 +1,25 @@
+% mechanism: the comma between two names printed inside an ORCID icon's link (`\href{…}{\includegraphics{…}, }`) is the
+%   name list's (`hoist_wrapped_separators`, names_split.rs, a link's printed text a wrapper), so the line parts there
+%   and each name has its own iD; `\lx@author@href` keeps a separator its ink prints after the icon where it prints
+%   (OXIDIZED_DESIGN_DIVERGENCES #960). Base merged the two names into one creator, "Ann Able, Bob Baker", both links
+%   in its personname; 103b r2 made each link the creator's ORCID contact and lost the ", " ("Ann AbleBob Baker")
+% witness: 2110.07418 (nature, `C. J.~Law$^{5,8}$\href{https://orcid.org/0000-0002-4119-9963}{\includegraphics
+%   [scale=0.08]{ORCIDiD.png}, }%⏎S. Burke-Spolaor$^{2,6,7}$\href{…}{…},`)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 [icon], Bob Baker2 [icon], Carl Cole1"
+% engines: rust int130a: one creator "Ann Able, Bob Baker" holding both links; int131a: "Ann AbleBob Baker", the comma
+%   lost; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able (0000-0002-1825-0097), Bob Baker (0000-0001-5109-3700), Carl Cole, each
+%   personname the name and its mark
+% status:  RED (int131a) -> GREEN (131fix) —
+%   perfect_kernel_batch131fix::orcid_icon_link_closing_with_the_comma_parts_the_names
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx,hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$\href{https://orcid.org/0000-0002-1825-0097}{\includegraphics[scale=0.05]{example-image}, }%
+Bob Baker$^{2}$\href{https://orcid.org/0000-0001-5109-3700}{\includegraphics[scale=0.05]{example-image}},
+Carl Cole$^{1}$}
+\maketitle
+Text.
+\end{document}

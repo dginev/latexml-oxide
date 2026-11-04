@@ -743,7 +743,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // `\inst{1,\href{…}{iD}}`), a mark's math, which the marks reader shows again from its tokens
   // (`$^{1,\href{…}{\orcidicon}}$`) — where a contact made was lost: the mark keeps what it printed before. Any other
   // link — another address, `\href`'s options — is the `\href` it was. A primitive: what the ink prints is read by
-  // digesting it (`ink_prints_text`).
+  // digesting it (`ink_prints_text`). A separator the ink prints after the icon (`{icon, }` between two names,
+  // 2110.07418) stays where it prints.
   DefPrimitive!("\\lx@author@href[]{}{}", sub[(options, url, ink)] {
     if options.is_none()
       && !lookup_bool("IN_MATH")
@@ -759,7 +760,20 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
         && id.to_string() != address.to_string()
         && ink_prints_text(&ink)? == Some(false)
       {
-        unread(Invocation!(T_CS!("\\lx@add@orcid"), vec![None, Some(id)]));
+        // (a separator the link prints after its icon is the name list's, kept where it prints: `\href{…}{icon, }`
+        // between two names, 2110.07418 — its ", " was lost with the link)
+        let v = ink.unlist_ref();
+        let tail = v.len()
+          - v
+            .iter()
+            .rev()
+            .take_while(|t| **t == T_SPACE!() || **t == T_OTHER!(",") || **t == T_OTHER!(";"))
+            .count();
+        let mut out = Invocation!(T_CS!("\\lx@add@orcid"), vec![None, Some(id)]).unlist();
+        if v[tail..].iter().any(|t| *t != T_SPACE!()) {
+          out.extend_from_slice(&v[tail..]);
+        }
+        unread(Tokens::new(out));
         return Ok(Vec::new());
       }
     }
