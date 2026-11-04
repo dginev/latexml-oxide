@@ -319,6 +319,11 @@ thread_local! {
 fn hard_yank_processing(boxes: Vec<Digested>) {
   RESCUED_BOXES.with(|r| *r.borrow_mut() = boxes);
   gullet::flush();
+  // (Perl's `hardYankProcessing` empties the token stack too, Common/Error.pm:329: a re-raised resource Fatal —
+  // `Timeout:Convert`, the RSS fuse, `TokenLimit`, `PushbackLimit` — is salvaged and built, and a stale stack would
+  // fail that build's first push as a ghost recursion Fatal, as the recovery arms' clear guards against (2410.07647,
+  // 2105.02599; review rev131fix finding 1). The recursion Fatal's message already holds its stack, stomach.rs.)
+  stomach::clear_token_stack();
 }
 
 fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {

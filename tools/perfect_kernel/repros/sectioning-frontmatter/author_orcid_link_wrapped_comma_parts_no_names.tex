@@ -1,0 +1,18 @@
+% mechanism: the ORCID-link separator readers (`\lx@author@href`'s trailing-separator scan, frontmatter_fields.rs, and
+%   `hoist_wrapped_separators`, names_split.rs) see only a bare `,`/`;` at the end of the link's printed text, not one
+%   inside a wrapper (`\textsuperscript{,}`), so the names it parts in the print stay one creator
+% witness: synthetic, review rev131fix finding 2 (probe r2d); sibling author_orcid_icon_link_closing_with_the_comma (GREEN)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able, Bob Baker"
+% engines: rust 131fix and int131a: one creator "Ann AbleBob Baker" plus an ORCID contact; int130a: one creator with an
+%   empty link; perl: not run
+% expect:  0 errors; two creators, Ann Able (her iD) and Bob Baker
+% status:  RED
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able\href{https://orcid.org/0000-0002-1825-0097}{\textsuperscript{,}}Bob Baker}
+\maketitle
+Text.
+\end{document}
