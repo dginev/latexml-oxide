@@ -99,18 +99,26 @@ fn an_unsplit_labelled_address_block_lands_once_at_the_block() {
   assert_eq!(creators(&xml), [vec!["A. One 1"], vec!["B. Two 2"], vec![
     "affiliation=1 Alpha University, Beijing 2 Beta Institute, Rome"
   ],]);
-  // (the same under `\affiliation` without `groupedaddress`, in a `\parbox` — review rev98e S2's fs3 — and in a
-  // `tabular`, its opener past, 0911.3234)
-  for tex in [
-    repro!("revtex_parbox_affiliation_lines_land_once"),
-    repro!("revtex_tabular_affiliation_lines_land_once"),
-  ] {
-    assert_eq!(creators(&both_ways(tex)), [
-      vec!["Ann Able 1"],
-      vec!["Bob Baker 2"],
-      vec!["affiliation=1 Univ A, Town 2 Univ B, City"],
-    ]);
-  }
+  // (the same under `\affiliation` without `groupedaddress`, in a `\parbox` — review rev98e S2's fs3)
+  assert_eq!(
+    creators(&both_ways(repro!(
+      "revtex_parbox_affiliation_lines_land_once"
+    ))),
+    [vec!["Ann Able 1"], vec!["Bob Baker 2"], vec![
+      "affiliation=1 Univ A, Town 2 Univ B, City"
+    ],]
+  );
+  // (a one-column `tabular`'s rows are lines the reader reads, `relocate::tabular_rows` (batch 104c, 2606.28962): each
+  // author the row its mark labels, as pdflatex prints them, no fail-safe — 0911.3234; was once at the block)
+  assert_eq!(
+    creators(&both_ways(repro!(
+      "revtex_tabular_affiliation_lines_land_once"
+    ))),
+    [vec!["Ann Able 1", "affiliation=Univ A, Town"], vec![
+      "Bob Baker 2",
+      "affiliation=Univ B, City"
+    ],]
+  );
 }
 
 /// The fail-safe fires only for a block of two or more lines led by labels the names request (review rev98e S2): lines

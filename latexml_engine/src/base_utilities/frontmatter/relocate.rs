@@ -1267,18 +1267,26 @@ fn wrapped_line_pieces(line: &[Token]) -> Option<Vec<Vec<Token>>> {
 /// \centerline{$^{2}$Univ B}}`, the D0 author lists of hep-ex0409040 and hep-ex0612013; `\mbox{$^{1}$Univ A}\\ …`)
 /// written as the lines they print, `\\` between them — so its lines are read as lines, each by its leading label —
 /// when a wrapped line leads with a mark ([`leads_with_mark`]); `None` otherwise (`\address{\centerline{Univ A}}` keeps
-/// its wrapper). The wrapper's alignment is dropped with it, as a `\\` line's is none.
+/// its wrapper). The wrapper's alignment is dropped with it, as a `\\` line's is none. So are the rows of a one-column
+/// `tabular` that is the whole line (`tabular_rows`: `\IEEEauthorblockA{\begin{tabular}{c} $^{1}$ Univ A \\ $^{2}$
+/// Univ B \\ …\end{tabular}}`, 2606.28962; revtex's 0911.3234), and the commands set side by side whose arguments marks
+/// lead, each with the commands after it, the command kept (`side_by_side_wrapper_lines`: acmart's
+/// `\institution{$^1$Univ A}\institution{$^2$Univ B}`, 2006.16977).
 pub fn wrapped_lines_as_lines(content: &Tokens) -> Option<Tokens> {
   let mut lines: Vec<Vec<Token>> = Vec::new();
   let mut labelled = false;
   let mut unwrapped = false;
   for line in split_top_level_lines(content.unlist_ref()) {
-    match wrapped_line_pieces(line) {
+    match wrapped_line_pieces(line)
+      .or_else(|| tabular_rows(line))
+      .or_else(|| side_by_side_wrapper_lines(line))
+    {
       Some(pieces) => {
         unwrapped = true;
-        labelled |= pieces
-          .iter()
-          .any(|piece| leads_with_mark(&Tokens::new(piece.clone())));
+        labelled |= pieces.iter().any(|piece| {
+          let piece = Tokens::new(piece.clone());
+          leads_with_mark(&piece) || marker_leads(&piece)
+        });
         lines.extend(pieces);
       },
       None => lines.push(line.to_vec()),
@@ -1295,6 +1303,107 @@ pub fn wrapped_lines_as_lines(content: &Tokens) -> Option<Tokens> {
     out.extend(line);
   }
   Some(Tokens::new(out))
+}
+
+/// The rows of a one-column `tabular` that is the whole of `line` (`\begin{tabular}{c} $^{1}$ Univ A \\ $^{2}$ Univ B
+/// \\ \{…\}@… \\ \vspace{-0.3cm} \end{tabular}`, an `\IEEEauthorblockA`'s, 2606.28962: pdflatex prints each row a line,
+/// "1 Univ A / 2 Univ B / …"), each row's content; `None` for any other line, or a tabular with a column break (`&`: cells
+/// side by side, whose rows are no lines of one list).
+fn tabular_rows(line: &[Token]) -> Option<Vec<Vec<Token>>> {
+  let past_spacing = |mut i: usize| {
+    while line
+      .get(i)
+      .is_some_and(|t| *t == T_SPACE!() || *t == T_CS!("\\par"))
+    {
+      i += 1;
+    }
+    i
+  };
+  // (`{tabular}` after `\begin` or `\end`: where its name group ends)
+  let names_tabular = |at: usize| {
+    let open = past_spacing(at);
+    (line.get(open)?.get_catcode() == Catcode::BEGIN).then_some(())?;
+    let end = skip_group(line, open);
+    (Tokens::new(line.get(open + 1..end.checked_sub(1)?)?.to_vec()).to_string() == "tabular")
+      .then_some(end)
+  };
+  let begin = past_spacing(0);
+  if line.get(begin) != Some(&T_CS!("\\begin")) {
+    return None;
+  }
+  let mut i = past_spacing(names_tabular(begin + 1)?);
+  // (its position, `[t]`, and its column spec)
+  if line.get(i) == Some(&T_OTHER!("[")) {
+    i += line[i..].iter().position(|t| *t == T_OTHER!("]"))? + 1;
+    i = past_spacing(i);
+  }
+  if line.get(i)?.get_catcode() != Catcode::BEGIN {
+    return None;
+  }
+  let body_start = skip_group(line, i);
+  let end = line.iter().rposition(|t| *t == T_CS!("\\end"))?;
+  if end < body_start || past_spacing(names_tabular(end + 1)?) != line.len() {
+    return None;
+  }
+  let body = &line[body_start..end];
+  let mut depth = 0usize;
+  for t in body {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      Catcode::ALIGN if depth == 0 => return None,
+      _ => {},
+    }
+  }
+  Some(
+    split_top_level_lines(body)
+      .into_iter()
+      .map(<[Token]>::to_vec)
+      .collect(),
+  )
+}
+
+/// The lines a line of one-argument commands set side by side prints as a marked list's entries
+/// (`\institution{$^1$Univ A}\institution{$^2$Univ B}\country{X}`, acmart's address parts, where pdflatex prints
+/// "1 Univ A / 2 Univ B / X": 2006.16977): a line at each command whose argument a mark leads (`notes::marker_leads`),
+/// holding it and the commands after it up to the next, each command kept — as each piece of one wrapper the Cut parts
+/// at its marks keeps it (`notes::split_wrapped_affiliation_marks`). `None` unless marks lead the first command's
+/// argument and another's, or for a line holding anything but such commands and spacing: a mark command, a line macro
+/// or box ([`wrapped_line_pieces`]), a note's command (`\thanks`, `\footnote`).
+fn side_by_side_wrapper_lines(line: &[Token]) -> Option<Vec<Vec<Token>>> {
+  let mut lines: Vec<Vec<Token>> = Vec::new();
+  let mut marked = 0;
+  let mut i = 0;
+  while i < line.len() {
+    if is_spacing(&line[i]) {
+      i += 1;
+      continue;
+    }
+    let t = line[i];
+    let command = t.get_catcode() == Catcode::CS
+      && !is_mark_command(&t)
+      && !LINE_MACROS.iter().any(|cs| t == T_CS!(*cs))
+      && !LINE_BOXES.iter().any(|cs| t == T_CS!(*cs))
+      && !t.with_str(is_name_note_command)
+      && line
+        .get(i + 1)
+        .is_some_and(|n| n.get_catcode() == Catcode::BEGIN);
+    if !command {
+      return None;
+    }
+    let end = skip_group(line, i + 1);
+    let leads = marker_leads(&Tokens::new(line[i..end].to_vec()));
+    match lines.last_mut() {
+      Some(last) if !leads => last.extend_from_slice(&line[i..end]),
+      None if !leads => return None,
+      _ => {
+        marked += 1;
+        lines.push(line[i..end].to_vec());
+      },
+    }
+    i = end;
+  }
+  (marked >= 2).then_some(lines)
 }
 
 /// The spacing a superscript's empty nucleus may hold, which prints no glyph: the spacing commands
@@ -1427,8 +1536,10 @@ pub(in crate::base_utilities) fn spaced_mark_at(
 /// `\( … \)`, in a box of their own) (`${\,\!}^1$Department of Applied
 /// Mathematics …\\ and ${\,\!}^2$Department of Physics …`, 2112.13115; `\mbox{${\ }^{1}$} Department of Physics …`,
 /// 0807.4407), written with the plain marks they print, `$^{1}$`, so its lines are read by their marks as a `$^{1}$`
-/// block's are (review rev98e S2): when such a mark leads the block, each such mark of a label the names request.
-/// `None` otherwise — a nucleus mark later in a line of a block no such mark leads stays as written (`${}^{3}$He`).
+/// block's are (review rev98e S2): when such a mark, or a plain `$^{…}$`, leads the block, each such mark of a label the
+/// names request (`$^1$CITI Laboratory, INRIA, $\quad ^2$LTCI, …`, 2106.01286), and a number set in math alone at a
+/// line's start (`$1$ Gazi University …\\ $2$ Ankara …`, 0708.2552, 0909.5340). `None` otherwise — a nucleus mark in a
+/// block no mark leads stays as written (`${}^{3}$He`).
 pub fn spaced_marks_as_marks(content: &Tokens) -> Option<Tokens> {
   spaced_marks_written(content, false)
 }
@@ -1457,7 +1568,23 @@ pub(in crate::base_utilities) fn spaced_marks_written(
     let t = &tokens[i];
     *t != T_SPACE!() && *t != T_BEGIN!() && *t != T_CS!("\\noindent") && !switch(t) && !wrapper(i)
   })?;
-  spaced_mark_at(tokens, lead)?;
+  // (a number set in math at a line's start, no superscript, `$1$ Gazi University …\\ $2$ Ankara University …`, is the
+  // mark it labels the line with where the names request it — 0708.2552; 0909.5340's `$1$` line over `$^2$`-led ones:
+  // [`math_number_mark_at`])
+  let mark_at = |i: usize| {
+    spaced_mark_at(tokens, i).or_else(|| {
+      (i == lead || at_line_start(tokens, i))
+        .then(|| math_number_mark_at(tokens, i))
+        .flatten()
+    })
+  };
+  // (or a plain mark leads it, and a mark spelled otherwise leads a later entry: IEEEtran's `$^{1}$CITI Laboratory, INRIA,
+  // $\quad ^2$LTCI, … $\quad ^3$Technion`, 2106.01286)
+  if mark_at(lead).is_none()
+    && !(tokens[lead].get_catcode() == Catcode::MATH && tokens.get(lead + 1) == Some(&T_SUPER!()))
+  {
+    return None;
+  }
   let (_, requested) = queued_name_marks();
   let requests = |operand: &[Token]| {
     let mut mark = vec![T_MATH!(), T_SUPER!(), T_BEGIN!()];
@@ -1470,7 +1597,7 @@ pub(in crate::base_utilities) fn spaced_marks_written(
   let mut changed = false;
   let mut i = 0;
   while i < tokens.len() {
-    if let Some((operand, next)) = spaced_mark_at(tokens, i)
+    if let Some((operand, next)) = mark_at(i)
       && requests(&operand)
     {
       // (a script of one token written without braces, `${}^1$`)
@@ -1498,6 +1625,52 @@ pub(in crate::base_utilities) fn spaced_marks_written(
     }
   }
   changed.then(|| Tokens::new(out))
+}
+
+/// A number set in math alone at `at`, `$1$`, `$ 12 $`: its digits and where the formula ends ([`spaced_marks_written`]
+/// reads one at a line's start as the mark it labels the line with).
+fn math_number_mark_at(tokens: &[Token], at: usize) -> Option<(Vec<Token>, usize)> {
+  if tokens.get(at)?.get_catcode() != Catcode::MATH {
+    return None;
+  }
+  let past_spaces = |mut i: usize| {
+    while tokens.get(i) == Some(&T_SPACE!()) {
+      i += 1;
+    }
+    i
+  };
+  let start = past_spaces(at + 1);
+  let digits = tokens[start..]
+    .iter()
+    .take_while(|t| {
+      t.get_catcode() == Catcode::OTHER && t.with_str(|s| s.chars().all(|c| c.is_ascii_digit()))
+    })
+    .count();
+  let close = past_spaces(start + digits);
+  (digits > 0
+    && tokens
+      .get(close)
+      .is_some_and(|t| t.get_catcode() == Catcode::MATH))
+  .then(|| (tokens[start..start + digits].to_vec(), close + 1))
+}
+
+/// Does a line of `tokens` start at `i` — only spaces between it and a `\\` before it, or that `\\`'s optional
+/// length (`\\[5pt]`)?
+fn at_line_start(tokens: &[Token], i: usize) -> bool {
+  let mut j = i;
+  while j > 0 && tokens[j - 1] == T_SPACE!() {
+    j -= 1;
+  }
+  if j > 0
+    && tokens[j - 1] == T_OTHER!("]")
+    && let Some(open) = tokens[..j - 1].iter().rposition(|t| *t == T_OTHER!("["))
+  {
+    j = open;
+    while j > 0 && tokens[j - 1] == T_SPACE!() {
+      j -= 1;
+    }
+  }
+  j > 0 && tokens[j - 1].defined_as(&T_CS!("\\\\"))
 }
 
 /// How many lines of an affiliation block lead with a superscript mark of a label the names request — its own lines and

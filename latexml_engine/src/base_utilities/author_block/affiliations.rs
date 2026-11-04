@@ -59,6 +59,11 @@ fn entry_calls(
   let EntryCall { add, labelled_address_lines } = *call;
   let mut calls: Vec<Token> = Vec::new();
   // Consume `\\[len]` row-break optionals before splitting (KNOWN_PERL_ERRORS #75).
+  // (the lines a list sets in wrappers, a one-column tabular's rows, commands side by side, read as lines, as the
+  // frontmatter API's Cut reads them — `relocate::wrapped_lines_as_lines`: IEEEtran's `\IEEEauthorblockA{\begin{tabular}{c}
+  // $^{1}$ Univ A \\ $^{2}$ Univ B \\ …\end{tabular}}`, 2606.28962)
+  let stuff = wrapped_lines_as_lines(&stuff).unwrap_or(stuff);
+  let stuff = spaced_marks_as_marks(&stuff).unwrap_or(stuff);
   let stuff = rewrite_ordinal_superscripts(strip_linebreak_options(unalias_mark_commands(stuff)));
   let with_sup = marks_are_labels && author_mark_position(&stuff).is_some();
   // In a marked list, the affiliations it names, each a mark-led line (or a piece of one) with the unmarked lines
@@ -224,8 +229,9 @@ const CUT_DROPPED_KEYS: [&str; 2] = ["labelseq", "_share"];
 ///
 /// The cutter is the author blocks' ([`affiliation_calls`]: lines at `\\`, `\quad` and the `\and` family, a line at each
 /// space-preceded mark, a wrapper repeated on each piece, an address line placed as the list's), and every spelling of
-/// a mark is read by the shared readers first: lines set in one-argument line wrappers
-/// (`relocate::wrapped_lines_as_lines`), a superscript on a spacing nucleus, in `\( … \)` or in a box of its own
+/// a mark is read by the shared readers first: lines set in one-argument line wrappers, a one-column tabular's rows and
+/// commands set side by side whose arguments marks lead (`relocate::wrapped_lines_as_lines`: 2606.28962, 2006.16977;
+/// OD #964), a superscript on a spacing nucleus, in `\( … \)` or in a box of its own
 /// (`relocate::spaced_marks_as_marks`, `spaced_mark_at`: `${}^{a}$`, `${\,\!}^1$`, `\mbox{${\ }^{1}$}`), and a class's
 /// `\inst{n}` (aa.cls:759 `\def\inst#1{\unskip\hbox{$^{#1}$}}`, mem.cls:318, llncs) written as the
 /// `\textsuperscript{n}` it prints. Witnesses (census127 cluster 2): acmart's `\institution{$^1$ Tsinghua University,
@@ -1109,7 +1115,27 @@ fn shared_closing_parts(list: Tokens) -> (Tokens, Vec<Token>, Vec<Tokens>) {
   if !wrapper {
     return (list, Vec::new(), Vec::new());
   }
-  let after = skip_group(v, start + 1);
+  let mut after = skip_group(v, start + 1);
+  // (the wrappers set side by side, one line each, `\institution{$^1$A}\\ \institution{$^2$B}` as
+  // `relocate::wrapped_lines_as_lines` reads them, hold the entries alike: 2006.16977)
+  loop {
+    let next = (after..v.len())
+      .find(|&i| v[i] != T_SPACE!())
+      .unwrap_or(v.len());
+    let line = (next + 1..v.len())
+      .find(|&i| v[i] != T_SPACE!())
+      .unwrap_or(v.len());
+    if v.get(next) == Some(&T_CS!("\\\\"))
+      && v.get(line) == v.get(start)
+      && v
+        .get(line + 1)
+        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+    {
+      after = skip_group(v, line + 1);
+    } else {
+      break;
+    }
+  }
   let mut parts: Vec<Vec<Token>> = Vec::new();
   let mut i = after;
   while i < v.len() {

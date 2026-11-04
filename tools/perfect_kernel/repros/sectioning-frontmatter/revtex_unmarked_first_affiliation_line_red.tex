@@ -1,0 +1,21 @@
+% mechanism: REVTeX's group rule (`group_or_marked_affiliation`): an `\affiliation` whose first line no mark leads goes to
+%   the block once (the fail-safe, `_unsplit`), though the names request marks 2 and 3 of its later lines and REVTeX
+%   numbers the first line 1 itself (superscriptaddress)
+% witness: 1903.07834 (census129 cluster 4: `\affiliation{\textit{Department of Physics \& Astronomy, Wayne State …}\\
+%   $^{2}$\textit{…Buffalo…}\\ $^{3}$\textit{…New York University…}}`)
+% oracle:  pdflatex (TL 2025, revtex4-1) 0 errors: "Ann Able1 , Bob Baker2 , Cat Cole3 , Dan Dorn1 / 1 / Univ A, Town /
+%   2 / Univ B, City / 3 / …"
+% engines: rust int131a0 and 104c: no author an affiliation, a nameless creator "Univ A, Town2Univ B, City3Univ C,
+%   Village"; perl: one affiliation, every author's
+% expect:  0 errors, 0 warnings; Ann and Dan "Univ A, Town", Bob "Univ B, City", Cat "Univ C, Village"
+% status:  RED (104c) — an unmarked first line read as the class's mark 1 is one paper's special case, deferred
+%   (SYNC_STATUS row 104c); no guard
+% preload: ar5iv.sty
+\documentclass[aps,superscriptaddress]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$,~Bob Baker$^{2}$,~Cat Cole$^{3}$,~Dan Dorn}
+\affiliation{\textit{Univ A, Town}\\ $^{2}$\textit{Univ B, City}\\ $^{3}$\textit{Univ C, Village}}
+\maketitle
+Text.
+\end{document}

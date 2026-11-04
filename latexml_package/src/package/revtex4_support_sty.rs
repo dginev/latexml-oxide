@@ -1029,7 +1029,8 @@ pub(crate) fn group_or_marked_affiliation(content: Tokens, annotate: &str) -> Re
   let marked = leads_with_mark(&content);
   // (the fail-safe, FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model" step 4: a block of two or more lines led by
   // labels the names request that this reader cannot cut into those lines — set in a box or an environment,
-  // `\address{\parbox{\linewidth}{$^{1}$Univ A\\ $^{2}$Univ B}}`, 0911.3234's `\begin{tabular}{c}…` — is no one entry a
+  // `\address{\parbox{\linewidth}{$^{1}$Univ A\\ $^{2}$Univ B}}` (a one-column tabular's rows are lines the reader
+  // reads, `wrapped_lines_as_lines`: 0911.3234's `\begin{tabular}{c}…`, batch 104c) — is no one entry a
   // group shares: it lands once at the block, `addresses:block` (OD #159), never a copy on each author
   // of the group; declared `_unsplit=true`, so the frontmatter observer still reads its lines by their own marks. Marks
   // inside one line's text, `Joint Institute, \textsuperscript{1}Univ A and \textsuperscript{2}Univ B, City` printed once

@@ -1,14 +1,16 @@
-% mechanism: the fail-safe of REVTeX's group rule (revtex4_support_sty.rs `group_or_marked_affiliation`,
-%   `relocate::requested_mark_lines`): two lines led by requested labels inside a `tabular` — the environment's opener
-%   and column argument past — are a block of labelled lines the reader cannot cut: once at the block.
+% mechanism: REVTeX's group rule (revtex4_support_sty.rs `group_or_marked_affiliation`) reads the rows of a one-column
+%   `tabular` that is the whole `\affiliation` as its lines (`relocate::wrapped_lines_as_lines` → `tabular_rows`, batch
+%   104c, OXIDIZED_DESIGN_DIVERGENCES #964): each row led by a requested label its names' entry
 % witness: 0911.3234 (`\affiliation{\begin{tabular}{c} $^{1}$B2 Institute … \\ $^{2}$State Key Laboratory …
-%   \end{tabular}}`: 98e r1 once on the block, 98a the whole on each)
+%   \end{tabular}}`: 98e r1 once on the block, 98a the whole on each); 2606.28962 (the IEEEtran blockA shape)
 % oracle:  pdflatex (TL 2025, revtex4-1) 0 errors: "Ann Able1 and Bob Baker2 / 1 Univ A, Town / 2 Univ B, City"
-% engines: rust 98a: the whole on each; 98e r1: once at the block
-% expect:  0 errors, 0 warnings; the names none, the block (a nameless creator) the two lines once
-% status:  GREEN (98e) for the fail-safe (once at the block); the per-author cut RED, pathological — defer (author abuse,
-%   review rev98e / the coordinator's directive (b): one `\affiliation` holds one institution, REVTeX's own
-%   assumption, and a box or table of numbered lines in it contradicts it; no recovery)
+% engines: rust 98a: the whole on each; 98e r1 .. int131a0: once at the block (the fail-safe: rows not read as lines);
+%   104c: each author its row
+% expect:  0 errors, 0 warnings; Ann "Univ A, Town", Bob "Univ B, City"
+% status:  GREEN (98e) for the fail-safe -> GREEN (104c) per author — perfect_kernel_batch98e::
+%   an_unsplit_labelled_address_block_lands_once_at_the_block (the 98e deferral of the per-author cut, "a box or table
+%   of numbered lines contradicts REVTeX's one-institution assumption", superseded by brief 104c's "a tabular's rows are
+%   lines"; the `\parbox` block keeps the fail-safe)
 % preload: ar5iv.sty
 \documentclass[aps,prl]{revtex4-1}
 \begin{document}

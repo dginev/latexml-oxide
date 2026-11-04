@@ -586,7 +586,8 @@ pub(in crate::base_utilities) fn email_command_calls(
 }
 
 /// Space between an email label and its addresses, or between addresses: a space, a tie, or a spacing command
-/// (`E-mail:~\email{x}`, `E-mail:\ \email{x}`).
+/// (`E-mail:~\email{x}`, `E-mail:\ \email{x}`) — the control return a line ending in `\` leaves among them, which
+/// latex.ltx:558 `\def\^^M{\ }` prints as a space (`$^1$Univ A \ \ \ \⏎ $^2$Univ B`, 2510.25684).
 pub(in crate::base_utilities) fn is_spacing(t: &Token) -> bool {
   *t == T_SPACE!()
     || *t == T_ACTIVE!('~')
@@ -594,6 +595,7 @@ pub(in crate::base_utilities) fn is_spacing(t: &Token) -> bool {
       && matches!(
         t.to_string().as_str(),
         "\\ "
+          | "\\\r"
           | "\\,"
           | "\\;"
           | "\\:"

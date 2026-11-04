@@ -29265,7 +29265,8 @@ A/B (11,333 papers: popint125a_s10k + the census aas family + wrapped blocks): 7
 - **The fail-safe fires only for a block of labelled lines** (review rev98e S2; `relocate::requested_mark_lines`): two
   or more lines — the block's own and those of the boxes, groups and environments it sets them in, split at every
   `\\` — led by labels the names request, past spaces, font switches, `\noindent`/`\nonumber`, box openers and an
-  environment's opener with its own arguments (`\begin{tabular}{c}`: 0911.3234 once on the block), a mark the binding
+  environment's opener with its own arguments (`\begin{tabular}{c}`: 0911.3234 once on the block — since 104c a
+  one-column tabular's rows are read as lines, each author its row, OD #964), a mark the binding
   does not cut included. Marks inside one line's text are no such block: `\affiliation{Joint Institute,
   \textsuperscript{1}Univ A and \textsuperscript{2}Univ B, City}`, printed once under both names, is the group's entry,
   a copy on each (FIDELITY_CHARTER; 97b, 98a), where 98e r1 had made it a nameless block. **A mark spelled
@@ -29792,7 +29793,8 @@ path: authblk, IEEEtran, REVTeX, llncs); fewer than two requested labels (`Joint
 name requests lands once at the block (OD #159).
 
 **Every spelling, the shared readers.** Before the cut a list's marks are written as the marks they print: lines in
-one-argument line wrappers (`relocate::wrapped_lines_as_lines`), a superscript on a spacing nucleus, in `\( … \)` or a
+one-argument line wrappers (`relocate::wrapped_lines_as_lines`; since 104c also a one-column tabular's rows and
+commands set side by side, OD #964), a superscript on a spacing nucleus, in `\( … \)` or a
 box of its own (`relocate::spaced_marks_as_marks` over `spaced_mark_at`, now past a one-argument wrapper the list opens
 with: acmart's `\institution{${}^a$…}`), a class's `\inst{n}` as the `\textsuperscript{n}` it prints (aa.cls:759,
 mem.cls:318) — by its meaning, `separators::inst_prints_its_mark` (the inst convention's, or a one-argument definition
@@ -30658,3 +30660,46 @@ with a cell naming no author, left in its columns, gives its creators column-maj
 Cy, Bob against pdflatex's Ann, Bob, Cy; owners right); an IEEE ordinal names line the kernel does not split
 (`2\textsuperscript{nd} Marzana Khatun {3\textsuperscript{rd} Rolf Jung}`, 2503.04159; 1806.11431) stays one creator,
 the writer's re-part reading the ordinals as marks.
+### 964. The marked-list readers read a one-column tabular's rows, commands set side by side, a control return and a number in math as the lines, spacing and marks pdflatex prints (Perl: one contact, the marks printed in it)
+
+**What** (batch 104c; census129 cluster 4, "marked runs 99a's Cut leaves whole"). The readers the frontmatter API's Cut
+(OD #954, `cut_marked_contact`) and the author blocks' cutter (`affiliations::entry_calls`, behind every binding's
+`affiliation_calls`) read a list through now read:
+- **commands set side by side** whose arguments marks lead (`relocate::side_by_side_wrapper_lines`, inside
+  `wrapped_lines_as_lines`): acmart's `\institution{$^1$Univ A}\institution{$^2$Univ B}\country{X}` — sigconf prints
+  each `\institution` a line (acmart.cls:2623 `#1\par`) — is two entries, each its own `\institution`; the address
+  parts after the last are every entry's (`shared_closing_parts` reads a run of the same wrapper on `\\` lines). Not a
+  mark command, a line macro or box, a note's command (`\thanks`, `\footnote`). Witness 2006.16977.
+- **a control return** as spacing (`email_block_calls::is_spacing`: latex.ltx:558 `\def\^^M{\ }`): a line ending in `\`
+  leaves `\^^M` before the next line's mark, which then parts the entries as `\ ` does. Witness 2510.25684
+  (`$^1$University of Wisconsin-Madison \ \ \ \⏎ $^2$…`).
+- **a one-column tabular's rows** (`relocate::tabular_rows`): a `tabular` that is a whole line, with no `&` at its top
+  level, is its rows as lines. Witness 2606.28962 (`\IEEEauthorblockA{\begin{tabular}{c} $^{1}$ … \\ $^{2}$ … \\
+  \{…\}@… \\ \vspace{-0.3cm}\end{tabular}}`); REVTeX's group rule reads it too, so 0911.3234's tabular `\affiliation`
+  goes to each author by its rows' marks (98e's fail-safe had put it once at the block; a `\parbox` keeps the fail-safe).
+- **a mark on a spacing nucleus after a plain one** (`relocate::spaced_marks_written`, which `entry_calls` now applies
+  as REVTeX's group rule does): the list may open with a plain `$^{1}$`. Witness 2106.01286 (`$^1$CITI Laboratory,
+  INRIA, $\quad ^2$LTCI, … $\quad ^3$Technion`).
+- **a number set in math alone at a line's start** (`relocate::math_number_mark_at`, at the list's first mark or after a
+  `\\`/`\\[len]`): `$1$` is mark 1 where the queued names request it (`$^1$`). Witnesses 0708.2552 (`\affiliation{ $1$
+  Gazi University, …\\ $2$ Ankara University, …}`), 0909.5340 (a `$1$` first line over `$^2$`-led ones).
+
+**Why.** pdflatex prints each of these as marked lines (FIDELITY_CHARTER §4: an entry is its mark's names'); read as
+one entry, the whole run was every author's or the block's. Perl has no Cut (OD #954).
+
+**Open** (one paper each; RED repros, no guard; SYNC_STATUS row 104c): an unmarked line before the marked ones keeps the
+list whole — svjour3's correspondence lines `\Letter~~ Name \\ $~\quad~~$ e-mail \\[5pt] $^1\quad$ …` (2205.14113;
+repro sectioning-frontmatter/`svjour3_institute_unmarked_lead_lines_red`) and REVTeX's unmarked
+first `\affiliation` line, which the class numbers 1 itself (1903.07834, `revtex_unmarked_first_affiliation_line_red`);
+aa's `\and` inside a document macro's group, `\institute{A \rev{\and B \and C}}` (2407.09799, class-bindings/
+`aa_institute_and_inside_a_macro_group_red`). Outside this reading (census129 cluster 4's other papers): an address
+macro line (`\mailsa`, llncs 1604.03221), a second author block in the document (2006.15775), ieeeconf's kernel
+`\author` line (2110.11491), authblk's `\affil[\hspace{-1ex}]` label (2502.06575), a legend on an entry (2609.38081).
+
+**Guards** `perfect_kernel_batch104c::{institutions_side_by_side_are_entries, a_control_return_parts_marked_entries,
+tabular_rows_are_marked_entries, a_spaced_mark_after_a_plain_lead_parts_entries, math_number_marks_label_lines}` (repros
+sectioning-frontmatter/`cut_acmart_institutions_side_by_side`, `cut_acmart_institution_control_return_parts_entries`,
+`ieee_blocka_tabular_rows_are_entries`, `ieee_blocka_spaced_marks_after_a_plain_lead`,
+`revtex_math_number_marks_label_lines`, `revtex_math_number_first_mark_over_superscripts`, RED → GREEN); updated
+`perfect_kernel_batch98e::an_unsplit_labelled_address_block_lands_once_at_the_block` (the tabular repro
+class-bindings/`revtex_tabular_affiliation_lines_land_once` now each author's row, as pdflatex prints it).
