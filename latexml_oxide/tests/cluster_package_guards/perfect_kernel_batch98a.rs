@@ -29,14 +29,20 @@ macro_rules! repro {
 /// Collaboration: Ann Able" as one name. Distinct from its sibling on the same decline: svjour's `{The XYZ
 /// Collaboration}\\[2ex]Ann Able\inst{1}`, parted by the line alone (1805.08173), still declines, today's one creator
 /// kept (the bracketed remark `(XYZ Collaboration)\\ \\`: `perfect_kernel_batch97e::a_collaboration_heading_is_no_creator`).
+/// Since 103b the llncs split reads the heading itself (`split_author_calls`): Ann Able's collaboration contact, the
+/// heading's note a thanks pubnote, the reading's entry declined by the writer as a kernel colon heading is (OD #946;
+/// charter §4: a collaboration is a contact on its names, no creator).
 #[test]
 fn a_collaboration_heading_a_separator_parts_is_an_entry() {
   let tex = repro!("llncs_collaboration_colon_heading_keeps_first_name.tex");
-  let (xml, _, _, writer) = assert_reading(
+  let (xml, _, notes, writer) = assert_reading(
     tex,
     Some(&[
-      &["XYZ Collaboration"],
-      &["Ann Able", "affiliation=Univ A"],
+      &[
+        "Ann Able",
+        "collaboration=XYZ Collaboration",
+        "affiliation=Univ A",
+      ],
       &["Bob Baker", "affiliation=Univ B"],
     ]),
     &[
@@ -48,7 +54,18 @@ fn a_collaboration_heading_a_separator_parts_is_an_entry() {
       "  a Univ B | api:labelseq",
     ],
   );
-  assert_eq!(writer, "written", "the writer's outcome");
+  // (today's reader reads the heading as llncs's split reads it since 103b — the collaboration of the name after it,
+  // its note a thanks pubnote, as the kernel's author line does — so the writer declines as for a kernel colon
+  // heading, OXIDIZED_DESIGN_DIVERGENCES #946: today's XML kept)
+  assert_eq!(
+    writer, "declined: the creators' names",
+    "the writer's outcome"
+  );
+  assert_eq!(
+    notes,
+    ["Corresponding author: Ann Able"],
+    "the heading's note"
+  );
   assert_eq!(default_mode_creators(tex), xml, "the default mode");
 
   let tex = repro!("svjour_collaboration_line_heading_is_no_creator.tex");

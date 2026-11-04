@@ -336,13 +336,20 @@ fn name_and_remark(piece: &Tokens) -> Option<(Tokens, Tokens)> {
 /// A name and its collaboration remark with the name's annotations the remark holds moved onto the name — a note
 /// reference, a footnote, a `\thanks` (`is_name_annotation`, `is_footnote_mark`) and its arguments: `Jan Fiete
 /// Grosse-Oetringhaus (for the ALICE\fnref{col1} Collaboration)` (1408.0414, 1408.5384) is the name's `\fnref`, which
-/// in the contact asked for a label no creator answers (two `Warning:unexpected:annotation`).
+/// in the contact asked for a label no creator answers (two `Warning:unexpected:annotation`); so are the marks and
+/// notes after the remark and llncs's `\fnmsep` (webofc's `\fnsep`) between them (`Laure Massacrier on behalf of the
+/// LHCb Collaboration\inst{1,2}\fnsep\thanks{\email{…}}`, 1512.03605: her institutes and e-mail).
 fn name_takes_annotations(name: Tokens, remark: Tokens) -> (Tokens, Tokens) {
   let v = remark.unlist_ref();
   let (mut kept, mut moved) = (Vec::with_capacity(v.len()), Vec::new());
   let mut i = 0;
   while i < v.len() {
     let t = v[i];
+    if t == T_CS!("\\fnmsep") || t == T_CS!("\\fnsep") {
+      moved.push(t);
+      i += 1;
+      continue;
+    }
     if t.get_catcode() != Catcode::CS || !(is_name_annotation(&t) || is_footnote_mark(&t)) {
       kept.push(t);
       i += 1;
@@ -574,6 +581,63 @@ pub(in crate::base_utilities) fn collaboration_split(
   }
   flush(&mut named, &mut out, first);
   Some(out)
+}
+
+/// The `\lx@add@author` calls of a name list a binding splits at its commas, " and " and " \& "
+/// (`\lx@add@author@split`: llncs, aa, inst_support, sv_support, webofc, ptephy), each piece one author, with the
+/// collaborations it names read out of the names ([`collaboration_split`]) as the kernel's author line reads them: a
+/// contact on the names it covers ([`Collaborations`]), made in the content of the name before it, no part of a name —
+/// the remark after a name's marks and notes (webofc's `\author{F. Curciarello\inst{1,2}\fnsep\thanks{\email{…}} on
+/// behalf of the KLOE-2 Collaboration}`, 1502.05517; `… for the CMS Collaboration`, 1904.12569; `…\ (for the PHENIX
+/// Collaboration)`, 2411.14337; `~for the IceCube Collaboration \footnote{…}`, 1611.00816) or before them, which go to
+/// the name (`Laure Massacrier on behalf of the LHCb Collaboration\inst{1,2}\fnsep\thanks{…}`, 1512.03605;
+/// [`name_takes_annotations`]).
+pub(in crate::base_utilities) fn split_author_calls(
+  keyvals: Option<Tokens>,
+  names: Tokens,
+) -> Result<Vec<Token>> {
+  let author = |name: Tokens| -> Result<Vec<Token>> {
+    Ok(Invocation!(T_CS!("\\lx@add@author"), vec![keyvals.clone(), Some(name)]).unlist())
+  };
+  let Some(pieces) = collaboration_split(&names, false) else {
+    let mut calls = Vec::new();
+    for name in split_author_line(names) {
+      calls.extend(author(name)?);
+    }
+    return Ok(calls);
+  };
+  // (each name's content, the contacts of the collaborations after it at its end, where they print — after the name and
+  // the marks and notes it carries, as the kernel's reader makes a names-line piece's in the last name's content)
+  let mut named: Vec<Vec<Token>> = Vec::new();
+  let mut calls = Vec::new();
+  let mut collaborations = Collaborations::default();
+  for piece in pieces {
+    if let Some((text, _)) = unwrapped_collaboration(&piece) {
+      let made = collaborations.read(text)?;
+      match named.last_mut() {
+        Some(name) => name.extend(made),
+        None => calls.extend(made),
+      }
+      continue;
+    }
+    // (a heading's collaboration after the name's words, before its notes, [`heading_place`])
+    let headed = collaborations.author()?;
+    let v = piece.unlist_ref();
+    let at = if headed.is_empty() {
+      v.len()
+    } else {
+      heading_place(v)
+    };
+    let mut name = v[..at].to_vec();
+    name.extend(headed);
+    name.extend_from_slice(&v[at..]);
+    named.push(name);
+  }
+  for name in named {
+    calls.extend(author(Tokens::new(name))?);
+  }
+  calls.extend(collaborations.finish()?);
+  Ok(calls)
 }
 
 /// The collaboration a piece wrapped by [`collaboration_split`] holds, and the names of its group after it when the

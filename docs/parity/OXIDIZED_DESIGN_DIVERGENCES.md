@@ -29061,9 +29061,11 @@ the whole line one creator with `Error:frontmatter:merged_creators` (2212.06489,
 last name; 0910.4381 1 (149 names) → 150, its six unseparated non-MAGIC names one reported merge; 1511.01102 the line
 every name's affiliation → their collaboration.
 
-**Left.** aa's own `\and` split (`\lx@splitting`, aa_cls.rs) and the IEEE block reader read no collaboration (`\small
-H.E.S.S. Collaboration \and …`, 1912.05868; `\IEEEauthorblockN{J.K. de Jong\IEEEauthorrefmark{2}for the MINOS
-collaboration.}`, 1111.2718); a lone `\author{The ATLAS and CMS Collaborations}` under svjour3 stays two creators (RED
+**Left.** aa's own `\and` split (`\lx@splitting`, aa_cls.rs) reads no `\and` piece that is only a collaboration (`\small
+H.E.S.S. Collaboration \and …`, 1912.05868), nor a heading over the pieces after its own (llncs `\author{XYZ
+Collaboration: Ann Able\inst{1} \and Bob Baker\inst{2}}`: Bob Baker carries none) — since 103b each piece's own
+collaboration is read (`split_author_calls`, below) —; the IEEE block reader reads none
+(`\IEEEauthorblockN{J.K. de Jong\IEEEauthorrefmark{2}for the MINOS collaboration.}`, 1111.2718); a lone `\author{The ATLAS and CMS Collaborations}` under svjour3 stays two creators (RED
 `author_collaboration_name_with_and_stays_one`); the reading's heading over later lines and its line under one name
 (resolver/blocks.rs). Guards `perfect_kernel_batch97d` (nine); changed, to the contact: `perfect_kernel_batch94a` (five:
 `what_a_name_held_is_written_where_the_reading_puts_it`, `a_bracket_holds_its_and`, `a_bracket_after_a_mark_is_the_names`,
@@ -29092,6 +29094,22 @@ sectioning-frontmatter/`author_collaboration_line_keeps_its_print_order`,
 `pos_speaker_marked_with_collaboration_keeps_his_contacts`, `elsarticle_collaboration_remark_note_reference_is_the_names`,
 `iopart_collaboration_heading_keeps_the_names_words` (RED → GREEN); `author_team_piece_mark_labels_its_own_line` RED catalog (a team piece's own mark labels a line no author
 asks for: the block's, as any such line).
+
+**Batch 103b** (census129 cluster 5 (C)). A name list a binding splits at its commas, " and " and " \& "
+(`\lx@add@author@split`: llncs, aa, inst_support, sv_support, webofc, ptephy) reads its collaborations as the kernel's
+author line does (`split_author_calls`, collaborations.rs; `collaboration_split` on each `\lx@splitting` piece): the
+remark after a name's marks and notes, `F. Curciarello\inst{1,2}\fnsep\thanks{\email{…}} on behalf of the KLOE-2
+Collaboration` (webofc, 1502.05517; 1904.12569 `for the CMS Collaboration`, 2411.14337 `\ (for the PHENIX
+Collaboration)`, 1611.00816 `~for the IceCube Collaboration \footnote{…}`), and before them, the marks, notes and
+`\fnmsep`/`\fnsep` after the remark the name's (`name_takes_annotations`: 1512.03605's `Laure Massacrier on behalf of
+the LHCb Collaboration\inst{1,2}\fnsep\thanks{…}` keeps her institutes and e-mail). The contact is made in the content of
+the name before it; a colon heading in the piece is the next name's (llncs, the observer's writer then declines as for
+the kernel's colon heading: `perfect_kernel_batch98a::a_collaboration_heading_a_separator_parts_is_an_entry`, updated
+from the heading as a creator; its note stays a thanks pubnote). Not read: a remark inside the name's own group or
+name-part argument (2406.15355 `\lastname{Schmier for the ALICE collaboration}`; 1206.2546 mem
+`M. \,{Tluczykont\inst{1}~{for~the~H.E.S.S.~Collaboration}}\inst{2}`). Guard
+`perfect_kernel_batch103b::webofc_collaboration_after_the_notes_is_a_contact`; repro
+class-bindings/webofc/`webofc_collaboration_after_the_notes_is_a_contact` (RED → GREEN).
 
 ### 947. The declarations around an author block's alignment environment go with it, and spacing after its close is no part of the block; AASTeX's `\affiliation` is REVTeX's (Perl: one creator per `\author`, the block kept whole; aastex's affiliation the last author's)
 
@@ -30407,3 +30425,28 @@ the binding's `\affil` through a `\let` alias loses its typography (RED repro
 a_raw_class_copy_of_authblk_affil_keeps_the_bindings_affiliations, a_refused_affil_still_runs_for_its_stores}`; repros
 `sectioning-frontmatter/authblk_affil_copy/`. **Not reached**: an `\email` built from the same code under a new name
 (ACL/NAACL: 2406.11632, 1904.03969; RED repro `authblk_email_from_affil_code`, SYNC_STATUS row 102a).
+
+### 960. An ORCID link in an author's name that prints no word is the author's ORCID contact, its icon no part of the name (Perl: the link and its picture stay in the personname)
+
+**Perl behavior**: hyperref's `\href` inside `\author{…}` is digested as the name's text, so the `\orcidicon` template's
+`\newcommand{\orcidA}{\href{https://orcid.org/…}{\orcidicon}}` (a TikZ "iD" badge) after a name puts
+`<ref href="https://orcid.org/…"><picture>…</picture></ref>` inside `<personname>`. **Rust before**: the same (census129
+cluster 5 (O): 2507.12319 and 2406.08258 revtex4-2, 2503.04867 IEEEtran; 9 dev20k papers).
+
+**Rust behavior**: while an author's content is digested (`\lx@author@withinst`, which the kernel's `\lx@add@author`
+wraps every name in) `\href` is `\lx@author@href` (frontmatter_fields.rs; a defined `\href` only, saved once so a nested
+author restores the document's). A link whose address, expanded as hyperref expands it, is an orcid.org record
+(`orcid_id`: `https://orcid.org/\orcidauthorA` — the template's `\xdef` runs before the iD's macro is defined) and whose
+ink prints no letter outside a picture (`ink_prints_letters`, queue_digest.rs: plain characters as written, anything
+else digested in a speculative run as a label's operand is, the text nodes of a pgf/TikZ picture not counted; a box,
+a graphic, a rule, the iD's digits) is `\lx@add@orcid{<iD>}`, the kernel's ORCID contact (`<contact role="orcid"><ref
+class="ltx_orcid" …>` with the logo), and its ink is dropped. Kept as before: an ink printing a letter — the linked name
+(`\href{https://orcid.org/…}{T.J.C. Bezerra}`, 2606.03745; 2301.02927, 2312.16289, 2601.06085), and a plain `iD` —,
+`\href`'s options, a link in a note or contact digested inside the name (`creator_name_in_progress`: `\thanks{See
+\href{https://orcid.org/…}{his record}.}`), and a link inside a mark (`reading_label`, math: `\inst{1,\href{…}{iD}}`,
+`$^{1,\href{…}{\orcidicon}}$`), where a contact made was lost — that mark still shows its text without the link, as
+before. orcidlink's `\orcidlink` in a name keeps its `ltx_orcid` link in the personname (Perl the same). Guard
+`perfect_kernel_batch103b::an_orcid_link_in_a_name_is_the_authors_orcid`; updated
+`perfect_kernel_batchfms2a2r9::the_rehearsal_leaves_the_conversion_unchanged` (its `\usebox` icons in names are now ORCID
+contacts; the switch on and off still byte-identical); repro sectioning-frontmatter/`author_orcid_href_icon_is_the_orcid`
+(RED → GREEN).

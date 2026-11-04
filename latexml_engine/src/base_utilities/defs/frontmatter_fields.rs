@@ -52,10 +52,11 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // save/restore pair, not a group: author content may carry a `\\` line
   // break (keyval2e-guide `\author{Name \Email{…}\\Preston, …}`), and an
   // extra `\bgroup…\egroup` around it adds one more mode-check error per
-  // author.
+  // author. An ORCID link in the name is the author's ORCID (`\lx@author@href`, batch 103b; a defined `\href` only,
+  // and saved once, so a nested author restores the document's).
   DefMacro!(
     "\\lx@author@withinst{}",
-    "\\let\\lx@saved@inst\\inst\\def\\inst##1{\\lx@inst@mark{##1}}\\lx@author@markup@begin\\expandafter\\lx@author@markup@run\\expandafter{\\lx@author@markup@unprovide}{#1}\\let\\inst\\lx@saved@inst"
+    "\\let\\lx@saved@inst\\inst\\def\\inst##1{\\lx@inst@mark{##1}}\\ifx\\href\\lx@author@href\\else\\let\\lx@saved@href\\href\\ifx\\href\\@undefined\\else\\let\\href\\lx@author@href\\fi\\fi\\lx@author@markup@begin\\expandafter\\lx@author@markup@run\\expandafter{\\lx@author@markup@unprovide}{#1}\\let\\inst\\lx@saved@inst\\let\\href\\lx@saved@href"
   );
   // A raw class's own author markup — `\fnms`/`\snm`/`\inits`/`\degs`/`\roles`, its `\orcid` — is often defined only
   // inside the class's `\author` (IOS-Book-Article.cls:1146-1184, econsocart.cls:2095-2160), which the locked kernel
@@ -728,6 +729,51 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid,#1]{\\expandafter\\lx@orcidlink\\expandafter{\\lx@orcid@id{#2}}{\\lx@orcidlogo}}"
   );
   DefMacro!("\\lx@orcid@id Semiverbatim", sub[(id)] { Ok(orcid_id(id)) });
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #960): an `\href` to an ORCID record in an author's name that prints no
+  // word — the TikZ "iD" icon of the `\orcidicon` template (`\newcommand{\orcidA}{\href{https://orcid.org/…}
+  // {\orcidicon}}`, `\author{M. Ahumada \orcidA{}}`: 2507.12319, 2503.04867, 2406.08258), a logo graphic, the iD's
+  // digits — is the author's ORCID, the contact `\lx@add@orcid` makes, and its ink no part of the name (Perl: the link
+  // and its picture stay in the personname). One printing a letter outside a picture is the linked name and stays
+  // (`\href{https://orcid.org/…}{T.J.C. Bezerra}`, 2606.03745; 2301.02927, 2312.16289, 2601.06085), the ORCID read off
+  // it as before. In force for the name's content only (`\lx@author@withinst`), not for a note or contact digested
+  // inside it (`creator_name_in_progress`: `\thanks{See \href{https://orcid.org/…}{his record}.}` keeps its words), nor
+  // for a mark — a label's operand read for its printed text (`reading_label`: `\inst{1,\href{…}{iD}}`), a mark's
+  // math, which the marks reader shows again from its tokens (`$^{1,\href{…}{\orcidicon}}$`) — where a contact made
+  // was lost: the mark keeps what it printed before. Any other link — another address, `\href`'s options — is the
+  // `\href` it was. A primitive: what the ink prints is read by digesting it (`ink_prints_letters`).
+  DefPrimitive!("\\lx@author@href[]{}{}", sub[(options, url, ink)] {
+    if options.is_none()
+      && !lookup_bool("IN_MATH")
+      && !reading_label()
+      && creator_name_in_progress()
+      && url.to_string().to_ascii_lowercase().contains("orcid.org/")
+    {
+      // (the address expanded, as hyperref expands it: the template's `\xdef` ran before the iD's macro was defined,
+      // `https://orcid.org/\orcidauthorA`, 2507.12319)
+      let address = Expand!(url.clone());
+      let id = orcid_id(address.clone());
+      if !id.unlist_ref().is_empty()
+        && id.to_string() != address.to_string()
+        && ink_prints_letters(&ink)? == Some(false)
+      {
+        unread(Invocation!(T_CS!("\\lx@add@orcid"), vec![None, Some(id)]));
+        return Ok(Vec::new());
+      }
+    }
+    let mut out = vec![T_CS!("\\lx@saved@href")];
+    if let Some(options) = options {
+      out.push(T_OTHER!("["));
+      out.extend(options.unlist());
+      out.push(T_OTHER!("]"));
+    }
+    out.push(T_BEGIN!());
+    out.extend(url.unlist());
+    out.push(T_END!());
+    out.push(T_BEGIN!());
+    out.extend(ink.unlist());
+    out.push(T_END!());
+    unread(Tokens::new(out));
+  });
   // Beyond-Perl (OXIDIZED_DESIGN #52): the arXiv "\thanks abuse" idiom smuggles
   // affiliations into an author \thanks{...}, linking them to authors by a
   // leading superscript mark ($^{n}$ / \textsuperscript{n}). \thanks is

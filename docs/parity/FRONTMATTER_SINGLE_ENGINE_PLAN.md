@@ -37,8 +37,9 @@ findings become their acceptance witnesses.
   | leading mark as label | `author_macros.rs:127`, `revtex4_support_sty.rs:1006` | `api:leading-mark` |
   | marked names split | `names_split.rs` | `lines.rs:467` |
 - **Binding-private splits.**
-  - In the core bindings: llncs (`llncs_cls.rs:134-261`), aa (`aa_cls.rs:64-100`, `\lx@add@author@split` never
-    reaches the collaboration reader: 2206.00684), sv_support (`sv_support_sty.rs:79-143`, an inner `\email` inherits
+  - In the core bindings: llncs (`llncs_cls.rs:134-261`), aa (`aa_cls.rs:64-100`, `\lx@add@author@split` reaches
+    the collaboration reader one `\and` piece at a time since 103b — a heading over later pieces covers none of them:
+    2206.00684), sv_support (`sv_support_sty.rs:79-143`, an inner `\email` inherits
     the piece's label: C1), inst_support, webofc, revtex/aastex `group_or_marked_affiliation` (a binding deciding
     "marks or run" by token tests: F1).
   - Contrib parsers: ptephy, osa_journal, epl, eptcs, aistats, interspeech, gretsi, l_aa, apa7, cpc_hepnp (≈3.9k

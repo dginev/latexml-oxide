@@ -417,6 +417,32 @@ pub(in crate::base_utilities) fn printed_label(operand: &Tokens) -> Result<Optio
   )
 }
 
+/// Whether `ink` prints a letter outside a picture (an author's ORCID link printing the name, not an icon: the
+/// frontmatter's `\lx@author@href`), read as [`printed_label`] reads a label's operand — plain characters as written,
+/// anything else digested in a speculative run of its own whose text nodes inside a pgf/TikZ picture do not count (the
+/// `\orcidicon` template's "ID"); `None` when it cannot be read (an open journal, an operand that errs) or while a label
+/// is read.
+pub(in crate::base_utilities) fn ink_prints_letters(ink: &Tokens) -> Result<Option<bool>> {
+  let tokens = ink.unlist_ref();
+  if tokens.iter().all(|t| {
+    matches!(
+      t.get_catcode(),
+      Catcode::LETTER | Catcode::OTHER | Catcode::SPACE | Catcode::BEGIN | Catcode::END
+    )
+  }) {
+    return Ok(Some(
+      tokens.iter().any(|t| t.get_catcode() == Catcode::LETTER),
+    ));
+  }
+  if reading_label() {
+    return Ok(None);
+  }
+  READING_LABEL.with(|r| r.set(true));
+  let printed = speculative_label_ink(ink.clone());
+  READING_LABEL.with(|r| r.set(false));
+  Ok(printed?.map(|p| p.outside_pictures.chars().any(char::is_alphabetic)))
+}
+
 thread_local! {
   /// While a label's operand is digested ([`printed_label`]): a frontmatter mark inside it (`\inst{\inst{1}}`) requests
   /// and sets nothing ([`reading_label`]).
@@ -824,6 +850,23 @@ pub fn creator_entry_in_progress() -> bool {
         .iter()
         .any(|e| matches!(e.content.first(), Some(TagContent::PlaceKeeper)))
     }),
+    _ => false,
+  })
+}
+
+/// Whether a creator's own content is being digested — its name, not an annotation digested inside it (a note, a
+/// contact), whose pending stub is then the creator entry in progress ([`creator_entry_in_progress`]).
+pub fn creator_name_in_progress() -> bool {
+  with_value("frontmatter", |v| match v {
+    Some(Stored::HashTagData(frnt)) => frnt
+      .get("ltx:creator")
+      .and_then(|list| {
+        list
+          .iter()
+          .rev()
+          .find(|e| matches!(e.content.first(), Some(TagContent::PlaceKeeper)))
+      })
+      .is_some_and(|e| e.attr.get("role").map(String::as_str) != Some("pending")),
     _ => false,
   })
 }

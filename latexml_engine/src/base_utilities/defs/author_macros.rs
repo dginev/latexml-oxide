@@ -111,14 +111,11 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // A name list where a binding has no lines or affiliations to read: each name `split_author_line` finds (comma,
   // " and ", " \& ") is an author of its own, the keyvals given to each (`\author{R. Braun\inst{1} and W. B.
   // Burton\inst{2}}`, astro-ph9810433; `\IEEEauthorblockN{Clemens Paul Zengler, Niels Troldborg, Mac Gaunaa.}`,
-  // 2410.19527).
+  // 2410.19527). A collaboration the list names beside its names is a contact on them, no part of a name
+  // (`split_author_calls`, batch 103b: webofc's `… on behalf of the KLOE-2 Collaboration` after the notes, 1502.05517).
   DefMacro!("\\lx@add@author@split[]{}", sub[(keyvals, names)] {
     record_author_call("\\lx@add@author@split", &names, false, false, keyvals.as_ref(), false);
-    let mut calls: Vec<Token> = Vec::new();
-    for name in split_author_line(names) {
-      calls.extend(Invocation!(T_CS!("\\lx@add@author"), vec![keyvals.clone(), Some(name)]).unlist());
-    }
-    Ok(Tokens::new(calls))
+    Ok(Tokens::new(split_author_calls(keyvals, names)?))
   });
   // That class's affiliation command, under its authors (informs4.cls:1199 `\AFF{$^a$Univ A}`): when the queued authors
   // carry marks, its marked lines are affiliations labelled by their marks, which go to the authors requesting them

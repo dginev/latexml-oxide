@@ -175,8 +175,9 @@ fn the_rehearsal_leaves_the_conversion_unchanged() {
       include_str!(
         "../../../tools/perfect_kernel/repros/sectioning-frontmatter/observer_rehearsal_leaves_a_used_box_unchanged.tex"
       ),
+      // (the link's icon in the name is the author's ORCID contact, batch 103b: the box is printed in the body only)
       &[
-        r#"<ref class="ltx_href" href="https://orcid.org/0000-0002-1828-8183"><rule height="9.0pt" width="9.0pt"/></ref>"#,
+        r#"<contact role="orcid"><ref class="ltx_orcid" href="https://orcid.org/0000-0002-1828-8183" title="ORCID 0000-0002-1828-8183">"#,
       ],
       &["<text xml:id="],
     ),
@@ -185,9 +186,12 @@ fn the_rehearsal_leaves_the_conversion_unchanged() {
       include_str!(
         "../../../tools/perfect_kernel/repros/sectioning-frontmatter/observer_rehearsal_leaves_a_shared_box_unchanged.tex"
       ),
+      // (the icons in the names are the authors' ORCID contacts, batch 103b; the line read as an affiliation prints
+      // the box)
       &[
-        r#"<ref class="ltx_href" href="https://orcid.org/0000-0003-2623-5206"><rule height="6.0pt" width="6.0pt"/></ref>"#,
-        r#"<ref class="ltx_href" href="https://orcid.org/0000-0001-5109-3700"><rule height="6.0pt" width="6.0pt"/></ref>"#,
+        r#"<contact role="orcid"><ref class="ltx_orcid" href="https://orcid.org/0000-0003-2623-5206" title="ORCID 0000-0003-2623-5206">"#,
+        r#"<ref class="ltx_href" href="https://orcid.org/0000-0002-1825-0097"><rule height="6.0pt" width="6.0pt"/></ref>"#,
+        r#"<contact role="orcid"><ref class="ltx_orcid" href="https://orcid.org/0000-0001-5109-3700" title="ORCID 0000-0001-5109-3700">"#,
       ],
       &["<text xml:id="],
     ),
