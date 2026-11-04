@@ -1,0 +1,25 @@
+% Controls of the Kind step for a legend (`affiliations::legend_entry_call`): an institution named with a role word stays
+% an affiliation — "Facebook (work done while at JHU/APL)" (the work's circumstances not opening it), "Center for Equal
+% Opportunity" (no legend), "Project Lead Institute, Univ D" and "Department of Equal Contribution Studies, Univ C" (a
+% legend's words, and an institution: `reads_as_affiliation`).
+% witness: 1702.02684 (authblk, `\affil[2]{Facebook (work done while at JHU/APL)}`); the rest synthetic
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2, Cat Cole3, and Dan Dee4", the four affiliations
+% engines: rust int130a = each an affiliation
+% expect:  0 errors, 0 warnings; each author holds the one affiliation of their label, no note
+% status:  GREEN (int130a, 103c)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann Able}
+\author[2]{Bob Baker}
+\author[3]{Cat Cole}
+\author[4]{Dan Dee}
+\affil[1]{Facebook (work done while at JHU/APL)}
+\affil[2]{Center for Equal Opportunity}
+\affil[3]{Department of Equal Contribution Studies, Univ C}
+\affil[4]{Project Lead Institute, Univ D}
+\maketitle
+Text.
+\end{document}

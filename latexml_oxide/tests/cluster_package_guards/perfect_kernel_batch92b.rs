@@ -622,21 +622,11 @@ fn spacing_parts_a_marks_labels() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_picture_text_is_its_label.tex"
     ),
     Some(&[
-      &[
-        "Ann Able",
-        "affiliation=Univ One",
-        "affiliation=Corresponding A",
-      ],
-      &[
-        "Bob Baker",
-        "affiliation=Univ Two",
-        "affiliation=Corresponding B",
-      ],
-      &[
-        "Cid Cole",
-        "affiliation=Univ Three",
-        "affiliation=Corresponding C",
-      ],
+      // (each "Corresponding" line its carrier's note since 103c, which this view of contacts does not list; the
+      // reading's tuples below still give each to its picture label's name: `insert::kind_legend_contacts`, OD #961)
+      &["Ann Able", "affiliation=Univ One"],
+      &["Bob Baker", "affiliation=Univ Two"],
+      &["Cid Cole", "affiliation=Univ Three"],
       &["Dee Dunn", "affiliation=Univ Four"],
       &["Eve Esse e"],
       &["Fay Fox f"],

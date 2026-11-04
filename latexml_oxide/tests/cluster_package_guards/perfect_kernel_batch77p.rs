@@ -1804,7 +1804,10 @@ fn symbol_row_note_line_is_the_blocks() {
       r#"Cat Cole<sup xml:id="id3">†</sup>"#,
       &affiliation("Univ A")
     ),
-    shared(&affiliation("Equal contribution")),
+    // (the block's legend its note since 103c, no institution: `insert::kind_legend_contacts`, OD #961)
+    shared(
+      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="" role="thanks" xml:id="id4">Equal contribution</note>"#
+    ),
   ]);
 }
 
@@ -2119,7 +2122,10 @@ fn empty_mark_is_no_mark() {
 
 /// A line led by a compound symbol mark (`$^{\dagger\ddagger}$`) names the names carrying all its symbols, a single
 /// symbol every name carrying it (2602.19190; batch 77p r10 A/B): Univ A on both dagger names, "Project lead" Bob
-/// Baker's alone. Was "Project lead" on Ann Able too (77p r9, r10 w2: the line read by its first symbol).
+/// Baker's alone. Was "Project lead" on Ann Able too (77p r9, r10 w2: the line read by its first symbol). Since 103c
+/// the legend is Bob Baker's note, a project role being a contribution (`classify_thanks`'s `project_role`; SYNC row
+/// 97c (d)), no longer his affiliation; its `mark` is the run's first symbol, as the observer's writer reads a compound
+/// label (`show_legend_mark`; the printed `†‡` stays in its text).
 #[test]
 fn compound_legend_mark_names_its_carrier() {
   let xml = convert_repro!("author_compound_legend_mark_names_its_carrier.tex");
@@ -2130,7 +2136,9 @@ fn compound_legend_mark_names_its_carrier() {
     creator(
       false,
       r#"Bob Baker<sup xml:id="id2">†‡</sup>"#,
-      &format!("{univ_a} {}", affiliation("Project lead"))
+      &format!(
+        r#"{univ_a} <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id3"><sup xml:id="id3.1"><text font="italic" xml:id="id3.1.1">†‡</text></sup> Project lead</note>"#
+      )
     ),
   ]);
 }

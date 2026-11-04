@@ -246,7 +246,8 @@ fn note_macro_among_names_is_the_names_note() {
       "Ann Able",
       &format!(
         "{} {}",
-        thanks("note", "id1", "Co-first authors."),
+        // (a joint first authorship a contribution since 103c, `classify_thanks`'s `project_role`)
+        thanks("contribution", "id1", "Co-first authors."),
         affiliation("Univ A")
       )
     ),
@@ -274,15 +275,16 @@ fn note_macro_among_names_is_the_names_note() {
 }
 
 /// A row of names ending in a wrapped comma (`\textbf{B}$^{x}$\textrm{,} \\`, 2512.18601) is continued by the next
-/// row: five authors, the legend Ann Able's and Bob Baker's.
+/// row: five authors, the legend Ann Able's and Bob Baker's — their note since 103c, a core contribution and an address
+/// template, no institution (`insert::kind_legend_contacts`, OD #961; was their affiliation).
 #[test]
 fn wrapped_comma_ends_a_row_of_names() {
   let xml = convert_repro!("author_wrapped_comma_ends_a_row.tex");
   assert_no_merged_names(&xml);
   let legend = |id: &str| {
-    affiliation(&format!(
-      r#"Core Contributor<break/><text font="typewriter" xml:id="{id}">{{first}}.{{last}}@kensho.com</text>"#
-    ))
+    format!(
+      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="♢" role="thanks" xml:id="{id}">Core Contributor<break/><text font="typewriter" xml:id="{id}.1">{{first}}.{{last}}@kensho.com</text></note>"#
+    )
   };
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", &legend("id1")),

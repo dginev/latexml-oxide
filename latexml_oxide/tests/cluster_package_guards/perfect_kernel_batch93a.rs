@@ -200,7 +200,8 @@ fn a_compound_symbol_mark_names_the_names_carrying_all() {
       "  a Univ A | ruling2:symbol-line",
       "C Bob Baker [†,‡] | line:names sep:gap",
       "  a Univ A | ruling2:symbol-line ruling1:parted",
-      "  a Project lead | ruling2:symbol-line ruling1:parted",
+      // (a project role a legend since 103c, `classify_thanks`'s `project_role`)
+      "  n Project lead | ruling2:symbol-line ruling1:parted",
     ],
   );
 }

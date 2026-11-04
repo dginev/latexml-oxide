@@ -15,6 +15,11 @@ use super::*;
 /// `$^*$Deceased`, 1003.2628's `\address{{\addrdagger}Deceased on …}`, 1510.03948's `$^\dagger$deceased`).
 /// Witnesses: arXiv 2512.24601 (correspondence), 1510.02728 (funding),
 /// 2506.06941 "Equal contribution", 2609.32870 "Equal advising." (contribution). Explicitly best-effort.
+/// An author's part in the work is a contribution too (batch 103c, census129 cluster 6): a project role, read as a
+/// phrase of whole words ([`project_role`]: "†Project lead", 2609.18514, 2609.19719; "Joint first authors.",
+/// 2608.22772; "Core Contribution", 2408.15240), and the work's own circumstances where they open the text ([`opens_with_work_done`]:
+/// "Work done during an internship", 2106.09776, 2502.02407) — not "Facebook (work done while at JHU/APL)", an
+/// institution the author is at (1702.02684).
 pub(in crate::base_utilities) fn classify_thanks(text: &str) -> &'static str {
   let t = text.to_lowercase();
   if t.contains("correspond") {
@@ -23,7 +28,11 @@ pub(in crate::base_utilities) fn classify_thanks(text: &str) -> &'static str {
   // 2609.32870's legend line, a note as "Equal contribution" is, review rev94a S4; the share a phrase, the two words
   // side by side: not "I thank my advisor for equally generous support", nor the "Equal Opportunity Advisory Board",
   // review rev94a r2 S1)
-  } else if (t.contains("equal") && t.contains("contribut")) || equal_share(&t) {
+  } else if (t.contains("equal") && t.contains("contribut"))
+    || equal_share(&t)
+    || project_role(&t)
+    || opens_with_work_done(&t)
+  {
     "contribution"
   } else if t
     .split(|c: char| !c.is_alphanumeric())
@@ -69,6 +78,108 @@ fn equal_share(text: &str) -> bool {
     .windows(2)
     .any(|pair| (equal(pair[0]) && shared(pair[1])) || (shared(pair[0]) && equal(pair[1])))
 }
+
+/// The lowercased words of `text`, letters and digits (`co-first` is two).
+fn note_words(text: &str) -> Vec<&str> {
+  text
+    .split(|c: char| !c.is_alphanumeric())
+    .filter(|w| !w.is_empty())
+    .collect()
+}
+
+/// Whether a lowercased note names an author's role in the project, as a phrase of whole words ([`classify_thanks`]):
+/// "project lead" (or "leader", "leads"), "joint first author(s)", "co-first author(s)", "core contribution" or "core
+/// contributor(s)", "senior author(s)" or "senior authorship" ("these authors share senior authorship", 2503.10710) — not
+/// "Project Leadership Institute", nor "Core Facility".
+fn project_role(text: &str) -> bool {
+  let words = note_words(text);
+  let author = |w: &str| w == "author" || w == "authors";
+  words.windows(2).any(|pair| {
+    (pair[0] == "project" && matches!(pair[1], "lead" | "leader" | "leads" | "leaders"))
+      || (pair[0] == "core" && matches!(pair[1], "contribution" | "contributor" | "contributors"))
+      || (pair[0] == "senior" && matches!(pair[1], "author" | "authors" | "authorship"))
+  }) || words
+    .windows(3)
+    .any(|three| matches!(three[0], "joint" | "co") && three[1] == "first" && author(three[2]))
+}
+
+/// Whether a lowercased note opens with the circumstances of the author's work, behind any mark: "work done during …",
+/// "work done while …", "work was done during …", "work done as an intern" ([`classify_thanks`]) — the opening words
+/// only, as [`opens_with_deceased`] reads its word: "Facebook (work done while at JHU/APL)" names the institution
+/// first (1702.02684).
+fn opens_with_work_done(text: &str) -> bool {
+  let words = note_words(text);
+  let rest = match words.as_slice() {
+    ["work", "was", "done", rest @ ..] | ["work", "done", rest @ ..] => rest,
+    _ => return false,
+  };
+  matches!(rest.first(), Some(&("during" | "while" | "as")))
+}
+
+/// The kind of an affiliation-kind entry whose whole text is a legend — annotations on its authors, with no institution
+/// (FIDELITY_CHARTER §4): correspondence, a contribution (an equal share, a project role, the work's circumstances) or an
+/// author deceased ([`classify_thanks`]). The text is read without its addresses and their e-mail labels (`ann@x.org`,
+/// "Email:", [`is_email_label`]: its e-mails stay the entry's), in pieces parted at its marks, brackets, commas, colons,
+/// semicolons and lines ([`LEGEND_SEPARATORS`]; `|`, a line break as the caller writes it): "Equal contribution.|*
+/// Correspondence:" (2609.03342) is two legends, "Corresponding author: Ann Able" a legend and the name it gives. Every
+/// piece is a legend that names no institution by its words ([`reads_as_affiliation`]: "Department of Equal Contribution
+/// Studies, Univ A" is one; "Deceased" opening it, [`opens_with_deceased`], is a legend whatever follows, as the line
+/// route and the frontmatter observer read it), a name ([`name_count`]) or its initials ("(Y.W.)"), or prints one letter at most (the "(s)" of "corresponding author(s): Xiaofan Xu, Hua Zhu", 2609.08556), and one piece at
+/// least is a legend. `None` for any other text: a mixed line is the affiliation it names ("DeepAuto.ai († : Equal
+/// advising)", 2609.34327; "ByteDance *equal contribution", 2404.02132; "Facebook (work done while at JHU/APL)",
+/// 1702.02684), and an address change and funding stay as the call declares them (an institution is named for its
+/// funder as often). The kind is the whole text's ([`classify_thanks`]: correspondence first). The frontmatter API's Kind
+/// step for a legend (`insert::kind_legend_contacts`, OXIDIZED_DESIGN_DIVERGENCES #961).
+pub(in crate::base_utilities) fn entry_legend_kind(text: &str) -> Option<&'static str> {
+  if opens_with_deceased(text) {
+    return Some("deceased");
+  }
+  let text = text
+    .split_whitespace()
+    .filter(|word| {
+      !word.contains('@')
+        && !is_email_label(word.trim_matches(|c: char| !c.is_alphanumeric() && c != '-'))
+    })
+    .collect::<Vec<_>>()
+    .join(" ");
+  let legend = |piece: &str| {
+    let affiliation = || reads_as_affiliation(&Tokens::new(ExplodeText!(piece)));
+    match classify_thanks(piece) {
+      "correspondence" | "contribution" => !affiliation(),
+      "deceased" => opens_with_deceased(piece) || !affiliation(),
+      _ => false,
+    }
+  };
+  let mut legends = 0;
+  for piece in text.split(|c: char| LEGEND_SEPARATORS.contains(c)) {
+    let piece = piece.trim();
+    // (a piece of one letter at most is none — the plural's "(s)" of "corresponding author(s):", 2609.08556)
+    if piece.chars().filter(|c| c.is_alphabetic()).count() < 2 {
+      continue;
+    }
+    // (a name's initials, "Y.W.", "A.-M. K.", are a name: each capital followed by its period — not "GEELY.")
+    let initials = {
+      let letters: Vec<char> = piece.chars().filter(|c| !matches!(c, '-' | ' ')).collect();
+      letters.len() >= 2
+        && letters
+          .chunks(2)
+          .all(|pair| pair.len() == 2 && pair[0].is_uppercase() && pair[1] == '.')
+    };
+    if legend(piece) {
+      legends += 1;
+    } else if name_count(piece) == 0 && !initials {
+      return None;
+    }
+  }
+  match classify_thanks(&text) {
+    kind @ ("correspondence" | "contribution" | "deceased") if legends > 0 => Some(kind),
+    _ => None,
+  }
+}
+
+/// Where [`entry_legend_kind`] parts a text into its pieces: the footnote symbols marks print, brackets, a comma, colon
+/// or semicolon, and `|` (a line, as `insert::kind_legend_contacts` writes a line break).
+pub(in crate::base_utilities) const LEGEND_SEPARATORS: &str = "*∗⁎✱†‡§¶⋆★☆♠♣♥♦♮♭♯()[]{},:;|";
 
 /// Whether a lowercased word of a note names funding ([`classify_thanks`]): "support" and its forms ("supported",
 /// "supporting"), "grant" and "grants", "fund" and its forms ("funded", "funding", "funds"; not "fundamental"), a

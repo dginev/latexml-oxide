@@ -177,16 +177,10 @@ fn a_label_spelled_with_a_command_is_read_to_it() {
     repro!("authblk_label_spelled_with_a_command.tex"),
     &[
       &["Ann Able", "affiliation=Univ X"],
-      &[
-        "Bob Baker*",
-        "affiliation=Univ Y",
-        "affiliation=Equal contribution.",
-      ],
-      &[
-        "Cid Cole*",
-        "affiliation=Univ X",
-        "affiliation=Equal contribution.",
-      ],
+      // (the starred legend each starred name's note since 103c, which this view of contacts does not list; the
+      // reading's tuples below still give it to both: `insert::kind_legend_contacts`, OD #961)
+      &["Bob Baker*", "affiliation=Univ Y"],
+      &["Cid Cole*", "affiliation=Univ X"],
       &["Dee Dunn", "affiliation=Univ Z"],
     ],
     &[

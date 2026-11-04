@@ -97,6 +97,8 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   // (FM S2b: a written family's paper, where it differs from the observer's reading by the writer's operations alone,
   // written as the reading has it — under the shadow switch only; OXIDIZED_DESIGN_DIVERGENCES #837 "S2b")
   write_observed_frontmatter(document)?;
+  // (an affiliation that is a legend, read once every route has placed it: its carriers' note, OD #961)
+  kind_legend_contacts(document)?;
   // (the authors as written: a name the writer re-parted holds one person, OD #928)
   flag_merged_creators(document)?;
   // (the unclaimed-text net's notes: their lines no frontmatter field and no text already set holds)
@@ -286,6 +288,119 @@ fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
     );
   }
   Ok(())
+}
+
+/// The Kind step for a legend (FIDELITY_CHARTER §4, author annotations are notes; census129 cluster 6;
+/// OXIDIZED_DESIGN_DIVERGENCES #961), where every route that makes an affiliation meets — once the frontmatter is
+/// placed, its addresses linked and the frontmatter observer's writing done: authblk's labelled `\affil[*]{Corresponding
+/// author}` (under article, wlscirep, googledeepmind, osajnl), an `\institute` entry the Cut made
+/// (`\textsuperscript{$\dagger$}Joint first authors.`, 2608.22772), an author block's line (`$^\ast$ Corresponding
+/// author.`, 2310.15190, 2111.01415; `$\dagger$Project lead`, 2609.18514, 2609.19719), IEEEtran's
+/// `\IEEEauthorblockA{\IEEEauthorrefmark{4}These authors contributed equally}` (2410.12184) — a creator's affiliation
+/// contact whose whole text, its addresses aside, is a legend ([`entry_legend_kind`]: correspondence, a contribution, an
+/// author deceased; no institution) is its carriers' note in its place (`ltx:note role=thanks`, `ltx_thanks_<kind>`), as
+/// a legend line's note is (`queue_digest::legend_note_kind`, `resolver::is_legend_text`). Its mark is the superscript
+/// its text opens with, as printed, else the label it was placed by (`_label`: authblk's `*`, IEEEtran's
+/// `\IEEEauthorrefmark{4}`'s `4`), else none — an empty `mark`, where a note's default is `†`: `\affil[ ]{Corresponding author: …}` prints none (2412.14916,
+/// 2305.02090). Its carriers stay the contact's, and so do the e-mails its line printed (2409.05386's `ago@`, the
+/// author's e-mail contact as before). Left as they are: a contact the class names otherwise than an affiliation (a
+/// `name` but the role's default), an institution named with a legend's words ("Department of Equal Contribution
+/// Studies, Univ C"), a mixed line (`Facebook (work done while at JHU/APL)`, 1702.02684; `DeepAuto.ai († : Equal
+/// advising)`, 2609.34327). Guards `perfect_kernel_batch103c`.
+fn kind_legend_contacts(document: &mut Document) -> Result<()> {
+  let contacts = document.findnodes("//ltx:creator/ltx:contact[@role='affiliation']", None);
+  if contacts.is_empty() {
+    return Ok(());
+  }
+  let default_name = get_frontmatter_name(None, "ltx:contact", "affiliation")?;
+  for contact in contacts {
+    if contact.get_attribute("name") != default_name {
+      continue;
+    }
+    // (its printed text, a line break at any depth parting its lines, a mark set apart, a note inside it — a
+    // `\footnotemark`'s — none of it: `entry_legend_kind` reads it without its addresses, which stay where they print)
+    let mut text = String::new();
+    legend_text(&contact, &mut text);
+    if !text.chars().any(char::is_alphabetic) {
+      continue;
+    }
+    let Some(kind) = entry_legend_kind(&text) else {
+      continue;
+    };
+    // (the superscript its text opens with, as printed — `†‡` of `$^{\dagger\ddagger}$Project lead`, 2602.19190 —, else
+    // the label it was placed by)
+    let printed = element_nodes(&contact)
+      .first()
+      .filter(|first| {
+        first.get_name() == "sup"
+          && contact
+            .get_first_child()
+            .is_some_and(|child| child == **first || child.get_content().trim().is_empty())
+      })
+      .map(|sup| sup.get_content().trim().to_string())
+      .filter(|mark| !mark.is_empty());
+    let mark = printed
+      .or_else(|| {
+        contact.get_attribute("_label").and_then(|label| {
+          clean_frontmatter_labels(&label, "")
+            .into_iter()
+            .find_map(|label| match label.split_once(':') {
+              Some(("affiliation", key)) => Some(key.to_string()),
+              None => Some(label),
+              _ => None,
+            })
+            .map(|key| {
+              key
+                .chars()
+                .filter(|c| *c != '$' && *c != '_')
+                .collect::<String>()
+            })
+            .filter(|key| !key.is_empty())
+        })
+      })
+      .unwrap_or_default();
+    DebugFeature!(
+      "frontmatter",
+      "FRONT kind affiliation: a legend, its carriers' {kind} note: {text}"
+    );
+    let mut note = document.rename_node(contact, "ltx:note", true)?;
+    note.remove_attribute("name").ok();
+    document.set_attribute(&mut note, "role", "thanks")?;
+    document.set_attribute(
+      &mut note,
+      "class",
+      &s!("ltx_note_frontmatter ltx_thanks_{kind}"),
+    )?;
+    // (an empty mark set as it is, which `Document::set_attribute` skips: the note prints no mark)
+    if mark.is_empty() {
+      note.set_attribute("mark", "").ok();
+    } else {
+      document.set_attribute(&mut note, "mark", &mark)?;
+    }
+  }
+  Ok(())
+}
+
+/// The printed text of a contact for the Kind step for a legend ([`kind_legend_contacts`]): its text, a line break
+/// (`ltx:break`, at any depth: `{\small corresponding author \\ SSE, CUHKSZ}`, 2303.06042) written `|`, a superscript
+/// set apart by spaces, a note inside it (`\footnotemark`'s tags, 2504.19724) left out.
+fn legend_text(node: &Node, text: &mut String) {
+  for child in node.get_child_nodes() {
+    if child.get_type() != Some(NodeType::ElementNode) {
+      text.push_str(&child.get_content());
+      continue;
+    }
+    match child.get_name().as_str() {
+      "break" => text.push_str(" | "),
+      "note" => {},
+      "sup" => {
+        text.push(' ');
+        legend_text(&child, text);
+        text.push(' ');
+      },
+      _ => legend_text(&child, text),
+    }
+  }
 }
 
 /// A contact of no content — a template's `\curraddr{}`, `\urladdr{}`, `\dedicatory{}`, aastex's `\nocollaboration` —

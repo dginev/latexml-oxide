@@ -367,7 +367,8 @@ fn jheppub_emailadd_corresponding_author_note() {
 
 /// The one `\emailAdd` address goes to the one author whose mark's legend names the corresponding author (`\author[a,*]`
 /// under `\affiliation[*]{Corresponding author}`): Cat Cole (user ruling 2026-10-21). Red (78f r1): the author block's;
-/// int47a: Ann Able's. Witness 1304.1216 (the legend as an affiliation, `\affiliation[f]{\textcolor{blue}{Corresponding
+/// int47a: Ann Able's. The legend is Cat Cole's note since 103c, no longer an affiliation (`insert::kind_legend_contacts`,
+/// OD #961). Witness 1304.1216 (the legend as an affiliation, `\affiliation[f]{\textcolor{blue}{Corresponding
 /// authors}}`, carried by two; its addresses each spelled); 2308.06532's `*` has no legend (its guard is
 /// `jheppub_emailadd_address_naming_correspondence_goes_to_the_star`). Repro
 /// sectioning-frontmatter/jheppub_emailadd_corresponding_author_star_legend.
@@ -383,8 +384,8 @@ fn jheppub_emailadd_corresponding_author_star_legend() {
       "Cat Cole",
       &format!(
         "{univ_a} {} {}",
-        contact("affiliation", "Corresponding author"),
-        email("id1", "zq77@x.org")
+        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id1">Corresponding author</note>"#,
+        email("id2", "zq77@x.org")
       )
     ),
   ]);
@@ -398,12 +399,17 @@ fn jheppub_emailadd_corresponding_author_star_legend() {
 fn jheppub_emailadd_two_marked_authors_stay_the_blocks() {
   let xml = convert_repro!("jheppub_emailadd_two_marked_authors_stay_the_blocks.tex");
   let univ_a = contact("affiliation", "Univ A");
-  let legend = contact("affiliation", "Corresponding authors");
+  // (the legend each carrier's note since 103c: `insert::kind_legend_contacts`, OD #961)
+  let legend = |id: &str| {
+    format!(
+      r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="{id}">Corresponding authors</note>"#
+    )
+  };
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &format!("{univ_a} {legend}")),
+    creator(true, "Ann Able", &format!("{univ_a} {}", legend("id1"))),
     creator(false, "Bob Baker", &univ_a),
-    creator(false, "Cat Cole", &format!("{univ_a} {legend}")),
-    block(&email("id1", "zq77@x.org")),
+    creator(false, "Cat Cole", &format!("{univ_a} {}", legend("id2"))),
+    block(&email("id3", "zq77@x.org")),
   ]);
 }
 
@@ -578,10 +584,11 @@ fn jheppub_emailadd_note_owners_are_a_set() {
       "Cat Cole",
       &format!(
         "{univ_a} {}",
-        contact("affiliation", "Corresponding author")
+        // (the legend Cat Cole's note since 103c: `insert::kind_legend_contacts`, OD #961)
+        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id1">Corresponding author</note>"#
       )
     ),
-    block(&email("id1", "zq77@x.org")),
+    block(&email("id2", "zq77@x.org")),
   ]);
 }
 

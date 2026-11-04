@@ -1,0 +1,25 @@
+% llncs's one `\institute` holding the institute and two legend lines, `\textsuperscript{$\dagger$}Joint first authors.`
+% and `\textsuperscript{*}Corresponding author.`, under `Ann Able\textsuperscript{$\dagger$} \and Bob
+% Baker\textsuperscript{$\dagger$} \and Cat Cole\textsuperscript{*}`: the API's Cut cuts the institute at its marks, and
+% each legend entry is its carriers' note (`affiliations::legend_entry_call`, the Kind step every route meets) — the `†`
+% one had been an affiliation of Able and Baker beside the `*` one already a note (census129 cluster 6, repro L).
+% witness: 2608.22772 (llncs; census129 repro L)
+% oracle:  pdflatex 0 errors: "Ann Able† , Bob Baker† , and Cat Cole*", "Univ A, Town", "† Joint first authors. *
+%          Corresponding author."
+% engines: rust int130a = Able and Baker each hold <contact role="affiliation">Joint first authors.</contact>, Cole a
+%          ltx_thanks_correspondence note; perl = the whole institute and both legends on Able alone (0 errors)
+% expect:  0 errors, 0 warnings; every author holds "Univ A, Town"; Able and Baker each a ltx_thanks_contribution note
+%          mark="†" "Joint first authors.", Cole the ltx_thanks_correspondence note "Corresponding author."; no
+%          affiliation of either legend's text
+% status:  RED (int130a) -> GREEN (103c)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{$\dagger$} \and Bob Baker\textsuperscript{$\dagger$} \and Cat Cole\textsuperscript{*}}
+\institute{Univ A, Town\\
+\textsuperscript{$\dagger$}Joint first authors. \quad
+\textsuperscript{*}Corresponding author.}
+\maketitle
+Text.
+\end{document}

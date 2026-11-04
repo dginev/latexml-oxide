@@ -649,7 +649,6 @@ fn classify_thanks_reads_funding_words_whole() {
     "Guangdong Laboratory of Machine Perception and Intelligent Computing",
     "Tata Institute of Fundamental Research, Mumbai",
     "Centre de Recherche en Informatique",
-    "Work done during an internship on transfer learning",
     "Nihon University, Tokyo",
     "Konrad-Zuse-Zentrum",
   ] {
@@ -675,6 +674,11 @@ fn classify_thanks_reads_funding_words_whole() {
     classify_thanks("These authors contributed equally"),
     "contribution"
   );
+  // ("nsf" inside "transfer" is no funder; the work's circumstances, opening the note, are a contribution since 103c)
+  assert_eq!(
+    classify_thanks("Work done during an internship on transfer learning"),
+    "contribution"
+  );
   // (an equal share of advising is a phrase, its two words side by side: 2609.32870's "Equal advising." — and not a
   // thanks to an advisor or a board's name, review rev94a r2 S1)
   for share in [
@@ -692,6 +696,91 @@ fn classify_thanks_reads_funding_words_whole() {
     classify_thanks("Member of the Equal Opportunity Advisory Board."),
     "note"
   );
+}
+
+/// 103c: an author's part in the work is a contribution (census129 cluster 6) — a project role, a phrase of whole words
+/// ("†Project lead", 2609.18514; "Joint first authors.", 2608.22772; "Core Contribution", 2408.15240), and the work's
+/// circumstances where they open the note ("Work done during an internship", 2106.09776) — not a word of an
+/// institution's name ("Project Leadership Institute", "Core Facility") nor circumstances after an institution
+/// ("Facebook (work done while at JHU/APL)", 1702.02684); and a legend entry is legends, names and addresses alone,
+/// no institution (`entry_legend_kind`: "DeepAuto.ai († : Equal advising)", 2609.34327, is mixed).
+#[test]
+fn classify_thanks_reads_project_roles_and_the_works_circumstances() {
+  for contribution in [
+    "\u{2020}Project lead",
+    "Project Leader.",
+    "Joint first authors.",
+    "Co-first authors",
+    "Core Contribution",
+    "core contributors",
+    "Work done during an internship",
+    "Work was done while at Google",
+    "* Work done as an intern at Adobe",
+    "these authors share senior authorship",
+  ] {
+    assert_eq!(
+      classify_thanks(contribution),
+      "contribution",
+      "{contribution}"
+    );
+  }
+  for note in [
+    "Project Leadership Institute, Univ A",
+    "Core Facility for Imaging",
+    "Facebook (work done while at JHU/APL)",
+    "Majority of work done at IIT Hyderabad",
+    "First authors meeting",
+  ] {
+    assert_eq!(classify_thanks(note), "note", "{note}");
+  }
+  setup();
+  assert_eq!(
+    entry_legend_kind("Joint first authors."),
+    Some("contribution")
+  );
+  assert_eq!(
+    entry_legend_kind("Corresponding author:"),
+    Some("correspondence")
+  );
+  assert_eq!(
+    entry_legend_kind("Corresponding author: Ann Able"),
+    Some("correspondence")
+  );
+  assert_eq!(
+    entry_legend_kind("Deceased 3 March 2021; formerly at Univ C"),
+    Some("deceased")
+  );
+  assert_eq!(
+    entry_legend_kind("Equal contribution. | * Correspondence: chaokun@tsinghua.edu.cn"),
+    Some("correspondence")
+  );
+  assert_eq!(
+    entry_legend_kind("Corresponding authors. Email: yunhui@x.jp (Y.W.) nomura@x.jp (M.N.)"),
+    Some("correspondence")
+  );
+  assert_eq!(
+    entry_legend_kind("Corresponding author, email: loizides@ikf.uni-frankfurt.de"),
+    Some("correspondence")
+  );
+  assert_eq!(
+    entry_legend_kind("corresponding author(s): Xiaofan Xu, Hua Zhu"),
+    Some("correspondence")
+  );
+  for affiliation in [
+    "corresponding author | SSE, CUHKSZ FNii, CUHKSZ",
+    "DeepAuto.ai (\u{2020} : Equal advising)",
+    "ByteDance *equal contribution",
+    "GEELY. * means equal contribution",
+    "Corresponding author | Proceedings of a workshop",
+    "Corresponding author: Univ A, Town",
+    "Department of Equal Contribution Studies, Univ C",
+    "Project Lead Institute, Univ D",
+    "Facebook (work done while at JHU/APL)",
+    "Univ A, Town",
+    "Present address: Univ X, Village",
+  ] {
+    assert_eq!(entry_legend_kind(affiliation), None, "{affiliation}");
+  }
 }
 
 /// 100a: "Deceased", as a word and in any case, is an annotation on the author of the same kind as "Corresponding
