@@ -74,8 +74,10 @@ fn a_cas_unlabelled_affiliation_is_every_authors() {
 /// since the entry before it, as elsarticle reads an unlabelled `\address` (`annotate=run`; 2202.06096). cas-dc's
 /// `Ann; Univ A; Bob; Cat; Univ B`: Ann Able Univ A, Bob Baker and Cat Cole Univ B; cas-sc's interleaved `Ann; Univ A;
 /// Bob; Univ B`: each author the entry after it. Red (104d r1): every author both; int130a: Bob Baker none in the
-/// first, the second green. Repros class-bindings/cas_unlabelled_affiliations_are_their_runs,
-/// cas_unlabelled_affiliations_interleaved_are_their_authors.
+/// first, the second green. Two entries after the whole row, `Ann; Bob; Univ A; Univ B`, are that one run's, each
+/// author both (main-session decision, review rev104d2 finding 1: the PDF prints "Ann Able, Bob Baker" over both
+/// lines; int130a paired them by position). Repros class-bindings/cas_unlabelled_affiliations_are_their_runs,
+/// cas_unlabelled_affiliations_interleaved_are_their_authors, cas_unlabelled_affiliations_after_the_row_are_its_runs.
 #[test]
 fn cas_unlabelled_affiliations_are_their_runs() {
   let entry = |org: &str, town: &str| {
@@ -106,6 +108,23 @@ fn cas_unlabelled_affiliations_are_their_runs() {
       &entry("A", "Town"),
       r#" <creator before=" " role="author"> <personname>Bob Baker</personname> "#,
       &entry("B", "City"),
+    ]
+    .concat()
+  );
+  let both = [
+    r#"<contact name="Affiliation: " role="affiliation">Univ A, Town, Land</contact> "#,
+    r#"<contact name="Affiliation: " role="affiliation">Univ B, City, Land</contact> </creator>"#,
+  ]
+  .concat();
+  assert_eq!(
+    clean_creators(include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/cas_unlabelled_affiliations_after_the_row_are_its_runs.tex"
+    )),
+    [
+      r#"<creator role="author"> <personname>Ann Able</personname> "#,
+      &both,
+      r#" <creator before=" " role="author"> <personname>Bob Baker</personname> "#,
+      &both,
     ]
     .concat()
   );

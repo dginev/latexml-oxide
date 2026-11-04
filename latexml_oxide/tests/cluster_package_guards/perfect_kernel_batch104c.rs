@@ -215,7 +215,7 @@ fn an_isotope_nucleus_mark_is_text() {
   );
 }
 
-/// A mark on a spacing nucleus after a conjunction, `Univ X, and ${}^2$Lab Y`, `Univ X and ${}^2$Lab Y \& ${}^3$Inst
+/// A mark on a spacing nucleus after the word `and` or `\&`, `Univ X, and ${}^2$Lab Y`, `Univ X and ${}^2$Lab Y \& ${}^3$Inst
 /// Z`, labels its entry as one after a comma does: the "and" before it is no word an isotope is glued to
 /// (`relocate::spaced_marks_written`'s `in_word`; review rev104c2 F1). Red (104c r2): Ann "Univ X, and 2Lab Y", Bob
 /// none (int131a0 as here; the conjunction is the glue between entries, dropped as int131a0 drops it). Repros revtex_nucleus_mark_after_a_conjunction_parts_entries,

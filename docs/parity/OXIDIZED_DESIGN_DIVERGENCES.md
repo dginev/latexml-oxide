@@ -30746,16 +30746,21 @@ an_aastex7_correspondent_address_list_is_spelled}`; repros class-bindings/`aaste
   too. Witness 2106.01286 (`$^1$CITI Laboratory, INRIA, $\quad ^2$LTCI, … $\quad ^3$Technion`). Not a nucleus mark
   glued to the word before it (plain spaces only, no separator, its nucleus printing no gap) and to a letter run after
   it: `Lab for ${}^{3}$He Physics` is the isotope, the entry's text, as `notes::split_marked_pieces` reads a glued
-  `$^{3}$He` (review rev104c S2: written as `$^{3}$`, its digit was taken as a label and lost). A conjunction before
-  the mark is glue as a comma is, `Univ X, and ${}^2$Lab Y`, `Univ X \& ${}^3$Inst Z`: it labels its entry (review
-  rev104c2 F1).
+  `$^{3}$He` (review rev104c S2: written as `$^{3}$`, its digit was taken as a label and lost). The word `and` (any
+  case) or `\&` before the mark is glue as a comma is, `Univ X, and ${}^2$Lab Y`, `Univ X \& ${}^3$Inst Z`: it
+  labels its entry (review rev104c2 F1); other conjunctions (`et`, `und`) are not read and fall into the plain-space
+  shape (review rev104c3 finding 4). Open (RED, review rev104c3 finding 1): after `and` a mark glued to a letter run
+  some author requests (`Dept of Physics and ${}^{3}$He Lab` under a `$^3$` author) parts the line, "and" and the digit
+  lost (repro `revtex_isotope_mark_after_and_is_text_red`).
 - **a number set in math alone at a line's start** (`relocate::math_number_mark_at`, at the list's first mark or after a
   `\\`/`\\[len]`): `$1$` is mark 1 where the queued names request it (`$^1$`). Witnesses 0708.2552 (`\affiliation{ $1$
   Gazi University, …\\ $2$ Ankara University, …}`), 0909.5340 (a `$1$` first line over `$^2$`-led ones). Not one
   with an ordinal suffix glued to it (`ordinal_suffix_at`, `symbols::is_ordinal_suffix`: a whole letter run `st`, `nd`,
   `rd`, `th`, a `\textsuperscript{th}`, a `$^{nd}$`): `$3$rd floor` prints "3rd", the entry's text (review rev104c S1),
   but an uppercase `St` before a `.` or a space and a capital is the word "Saint", `$1$St. Petersburg`, `$3$St
-  Andrews`, the line's mark read (review rev104c2 F3; a lowercase `$1$st Floor` stays the ordinal); a
+  Andrews`, the line's mark read (review rev104c2 F3; a lowercase `$1$st Floor` stays the ordinal; open, RED: `$1$St
+  Floor` loses its digit, `revtex_math_number_mark_before_st_floor_red`, and a tie, `$1$St~Andrews`, is not read as
+  Saint, review rev104c3 findings 2 and 5); a
   word glued otherwise is the line's text after its mark (0909.5340's `$1$Department`), and no space after the number
   nor a list opened by one is required (1511.00510's `$5$` line under a `$^1$` first line).
 

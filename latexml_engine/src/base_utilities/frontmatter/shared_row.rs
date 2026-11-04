@@ -64,7 +64,8 @@ pub(in crate::base_utilities) fn share_row_contacts(
     .collect();
   // (a row contact that declares a run too, `annotate=run` — cas's unlabelled `\affiliation`, `cas_labelled_entry` —
   // is every author's only when it is the only one so declared: with two or more, each is its run's, the authors since
-  // the one before it, by authoring order, as elsarticle reads an unlabelled `\address`; 2202.06096)
+  // the one before it, by authoring order, as elsarticle reads an unlabelled `\address`; 2202.06096. Counted across
+  // the whole queue, not per author group: cas's `{augroup}` is undefined in the binding, SYNC_STATUS row 104d)
   let runs: Vec<usize> = (0..commands.len())
     .filter(|at| {
       let (tag, attrs, _) = &commands[*at];

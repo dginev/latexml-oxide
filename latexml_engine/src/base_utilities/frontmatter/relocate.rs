@@ -1643,7 +1643,7 @@ pub(in crate::base_utilities) fn spaced_marks_written(
   // [`math_number_mark_at`])
   // (not a mark glued to the word before it — plain spaces between, no separator, its nucleus printing no gap — and to
   // a letter run after it, `Lab for ${}^{3}$He Physics`: the isotope, the entry's text, as `notes::split_marked_pieces`
-  // reads a glued `$^{3}$He`; review rev104c S2. After a comma, a conjunction or a gap it labels its entry, `INRIA,
+  // reads a glued `$^{3}$He`; review rev104c S2. After a comma, the word `and`, `\&` or a gap it labels its entry, `INRIA,
   // $\quad ^2$LTCI`, `Univ X, and ${}^2$Lab Y`, `Univ X \& ${}^3$Inst Z`: review rev104c2 F1)
   let glued_before = |i: usize| {
     let Some(end) = tokens[..i].iter().rposition(|t| *t != T_SPACE!()) else {
