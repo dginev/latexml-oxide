@@ -5867,7 +5867,7 @@ LaTeXML 0.8.8 mis-handles the same grid (SHARED-FAILURE, Perl-origin).
 genuine grid to row-major before emitting creators (`transpose_ieee_author_grid`). The
 transpose is guarded TIGHTLY: it fires only for a REGULAR grid — ≥2 `\and` columns,
 every column the SAME number of top-level `\\` rows, that count ≥2, every cell that prints
-something naming an author (a `\IEEEauthorblockN`; #961: a column's rows of blocks or text
+something naming an author (a `\IEEEauthorblockN`; #962: a column's rows of blocks or text
 under its name, 2605.15804, are that author's). A single-row `\and`
 author list (no top-level `\\`) and `\\` used only INSIDE `\IEEEauthorblockA{…\\…}`
 (nested, brace-depth > 0) are left in their declared order untouched.
@@ -5886,7 +5886,7 @@ transposed + a single-row control proven un-reordered).
 
 **Bare text between blocks (63x).** The same `\author` dispatch wraps bare text left between the blocks (a loose email
 after `\IEEEauthorblockA`, 1901.07768) in `\IEEEauthorblockA{…}` — a run that prints nothing or holds notes only
-is no block, and a wrapped run ends without its line break (#961); a run holding a conditional's own tokens
+is no block, and a wrapped run ends without its line break (#962); a run holding a conditional's own tokens
 (`\ifdefined\hpcacameraready \IEEEauthorblockN{…}… \else … \fi`, 2407.02944) keeps the conditional's own tokens as
 written (an `\if…` with the test its primitive reads, each `\else`/`\or`/`\fi`) and wraps the bare text between them
 piece by piece, since wrapped whole the `\if` and its `\else`/`\fi` landed in different arguments: `Error:expected:\fi`,
@@ -30605,7 +30605,7 @@ legend sentence holding commas (1703.07724's "The authors wish it to be known th
 authors should be regarded as Joint First Authors.": a comma parts a piece, which keeps "Entity, legend" lines
 affiliations), a legend beside a link (2403.03314) and an obfuscated address (2605.00769's `amir[dot]norouzi[at]…`)
 stay affiliations.
-### 961. An IEEE `\IEEEauthorblockA` shared by a names line goes on every name, whatever layout or notes stand before it; a refmark-led address line is its marks' (Perl: one creator holding the whole block)
+### 962. An IEEE `\IEEEauthorblockA` shared by a names line goes on every name, whatever layout or notes stand before it; a refmark-led address line is its marks' (Perl: one creator holding the whole block)
 
 **Perl behavior**: IEEEtran.cls.ltxml maps `\IEEEauthorblockN{…}` and `\IEEEauthorblockA{…}` to their text, so
 `\author{\IEEEauthorblockN{Ann Able, Bob Baker and Cy Cole}⏎⏎\IEEEauthorblockA{University of X, City\\ Email:
@@ -30635,11 +30635,25 @@ names an author (`\IEEEauthorblockN`/`\authorblockN`); a column's rows of blocks
 `leading_line_label` reads a mark command or an alias of one (`is_mark_command`, marks.rs) as `\textsuperscript`, so
 the mark-led address line is its marks' e-mails: bob@x.edu Bob's, ms1801@x.edu (no name spells it, three names carry
 its mark) the block's, as the Kind step's "else the block". The kernel's "a contact printing nothing claims its
-authors" stays (revtex `\noaffiliation`, aastex `\nocollaboration`). The empty block had hidden two older defects,
-which the shape without the blank line or note shows on the base too: a names line holding a parenthesized nickname
-under a shared block is one merged creator (`\IEEEauthorblockN{Daniel (Yue) Zhang*, Yang Zhang*\thanks{…}, Dong
-Wang}`, 1909.04111), and an `\authorblockA` holding the next author's blocks by a missing brace gives that block to
-the author before too (2105.06537). Guards `perfect_kernel_batch104a` (5); repros
+authors" stays (revtex `\noaffiliation`, aastex `\nocollaboration`). A run of notes and parts printing nothing
+(`\thanks{…}\vspace{2mm}`) is notes too: `document_notes` leaves the rest out once it prints nothing. A names line
+the kernel does not split (`\IEEEauthorblockN{Daniel (Yue) Zhang*, Yang Zhang*\thanks{…}, Dong Wang}`, 1909.04111;
+`name_count`) is re-parted by the observer's writer, each name holding the shared block: the re-part gate
+(`writer/repart.rs`, "an item given more authors by no ruling") accepts an item the API's `annotate=new` or `run` run
+gives every name (`api:annotate:new`, `api:annotate:run`) as it does the block reader's `owner:annotate:run`, when one
+of today's creators held it and no name of today's prints a mark before its first word: a re-part takes a name's
+marks out, as the reading has them, so the IEEE ordinal template (`1\textsuperscript{st} Milin Patel`) would print
+"1 Milin Patel" (2503.04159, 1806.11431, 2406.04658 stay as today's; `ordinal_names` the control). An `\and`
+at the top level of an `\IEEEauthorblockA`/`\authorblockA` argument that a block macro follows starts the next author,
+as pdflatex prints two columns (a brace missing after the first author's block, `\authorblockA{…\\ \and
+\authorblockN{Hadas Kress-Gazit}\authorblockA{…}}}`, 2105.06537): the binding closes the argument before the `\and`,
+reads the rest as top-level blocks and drops the argument's own closing brace (the first top-level `}` no bare run
+opened); before, the second author's blocks were the first's too (the base kept them apart only while the `\thanks`
+before Wil Thomason's block was wrapped into an empty block). Guards `perfect_kernel_batch104a` (9); repros
 `sectioning-frontmatter/ieee_shared_block/`. **Not reached** (RED repros, SYNC_STATUS row 104a): an explicit
 `\IEEEauthorblockA{}` before the shared block (`explicit_empty_block`), and an "Email:" line with a refmark before each
-address, still one entry labelled by its first mark (`email_line_marked_addresses`; 2209.10056, 2109.15322).
+address, still one entry labelled by its first mark (`email_line_marked_addresses`; 2209.10056, 2109.15322); a grid
+with a cell naming no author, left in its columns, gives its creators column-major (`mixed_grid_column_major`: Ann,
+Cy, Bob against pdflatex's Ann, Bob, Cy; owners right); an IEEE ordinal names line the kernel does not split
+(`2\textsuperscript{nd} Marzana Khatun {3\textsuperscript{rd} Rolf Jung}`, 2503.04159; 1806.11431) stays one creator,
+the writer's re-part reading the ordinals as marks.

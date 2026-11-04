@@ -1044,21 +1044,32 @@ pub fn notes_only_line(line: &[Token]) -> bool {
   line_notes(line).is_some_and(|notes| !notes.is_empty())
 }
 
-/// A line of notes only ([`notes_only_line`]) as the document's notes, as an author block digests them in a contact
-/// (`document_note_call`; a note no pubnote takes as written), its spacing left out: the IEEEtran binding's bare run
-/// of notes between the names and their shared block (`\IEEEauthorblockN{…}\thanks{…}\IEEEauthorblockA{…}`, 1508.00691,
-/// ieeetran_cls.rs `wrap_bare_author_block_text`). `None` for a line holding other ink.
+/// A line of notes and of parts printing nothing ([`prints_nothing`]: `\thanks{…}\vspace{2mm}`) as the document's notes,
+/// as an author block digests them in a contact (`document_note_call`; a note no pubnote takes as written), the rest
+/// left out: the IEEEtran binding's bare run of notes between the names and their shared block
+/// (`\IEEEauthorblockN{…}\thanks{…}\IEEEauthorblockA{…}`, 1508.00691, ieeetran_cls.rs `wrap_bare_author_block_text`).
+/// `None` for a line holding other ink.
 pub fn document_notes(line: &[Token]) -> Option<Vec<Token>> {
-  let spans = line_notes(line)?;
   let mut out = Vec::with_capacity(line.len());
-  for (start, end) in spans {
-    let note = &line[start..end];
-    match document_note_call(note) {
-      Some(call) => out.extend(call),
-      None => out.extend_from_slice(note),
+  let mut rest = Vec::new();
+  let mut i = 0;
+  while i < line.len() {
+    match note_end(line, i) {
+      Some(end) => {
+        let note = &line[i..end];
+        match document_note_call(note) {
+          Some(call) => out.extend(call),
+          None => out.extend_from_slice(note),
+        }
+        i = end;
+      },
+      None => {
+        rest.push(line[i]);
+        i += 1;
+      },
     }
   }
-  Some(out)
+  prints_nothing(&Tokens::new(rest)).then_some(out)
 }
 
 /// A note an author block takes out as the document's, as it digests in a contact: `\thanks{…}` the
@@ -1087,45 +1098,50 @@ pub(in crate::base_utilities) fn document_note_call(note: &[Token]) -> Option<Ve
 /// through its closing brace; `None` when the line holds other ink.
 pub(in crate::base_utilities) fn line_notes(line: &[Token]) -> Option<Vec<(usize, usize)>> {
   let spacing = |t: &Token| *t == T_SPACE!() || *t == T_ACTIVE!('~') || *t == T_CS!("\\par");
+  let mut notes = Vec::new();
+  let mut i = 0;
+  while i < line.len() {
+    if spacing(&line[i]) {
+      i += 1;
+    } else {
+      let end = note_end(line, i)?;
+      notes.push((i, end));
+      i = end;
+    }
+  }
+  Some(notes)
+}
+
+/// The end of the note opening at `line[i]`: a `\thanks`, `\footnote` or `\IEEEcompsocitemizethanks`, its `[…]` and
+/// its braced text; `None` for another token or a note not so written.
+fn note_end(line: &[Token], i: usize) -> Option<usize> {
   let past_spaces = |mut at: usize| {
     while line.get(at) == Some(&T_SPACE!()) {
       at += 1;
     }
     at
   };
-  let mut notes = Vec::new();
-  let mut i = 0;
-  while i < line.len() {
-    let t = &line[i];
-    if spacing(t) {
-      i += 1;
-    } else if *t == T_CS!("\\thanks")
-      || *t == T_CS!("\\footnote")
-      || *t == T_CS!("\\IEEEcompsocitemizethanks")
-    {
-      let mut at = past_spaces(i + 1);
-      if line.get(at) == Some(&T_OTHER!("[")) {
-        let close = line[at..].iter().position(|t| *t == T_OTHER!("]"))?;
-        at = past_spaces(at + close + 1);
-      }
-      if line
-        .get(at)
-        .is_none_or(|t| t.get_catcode() != Catcode::BEGIN)
-      {
-        return None;
-      }
-      let end = skip_group(line, at);
-      if line
-        .get(end.wrapping_sub(1))
-        .is_none_or(|t| t.get_catcode() != Catcode::END)
-      {
-        return None;
-      }
-      notes.push((i, end));
-      i = end;
-    } else {
-      return None;
-    }
+  let t = line.get(i)?;
+  if *t != T_CS!("\\thanks")
+    && *t != T_CS!("\\footnote")
+    && *t != T_CS!("\\IEEEcompsocitemizethanks")
+  {
+    return None;
   }
-  Some(notes)
+  let mut at = past_spaces(i + 1);
+  if line.get(at) == Some(&T_OTHER!("[")) {
+    let close = line[at..].iter().position(|t| *t == T_OTHER!("]"))?;
+    at = past_spaces(at + close + 1);
+  }
+  if line
+    .get(at)
+    .is_none_or(|t| t.get_catcode() != Catcode::BEGIN)
+  {
+    return None;
+  }
+  let end = skip_group(line, at);
+  line
+    .get(end.wrapping_sub(1))
+    .is_some_and(|t| t.get_catcode() == Catcode::END)
+    .then_some(end)
 }

@@ -1328,6 +1328,19 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
   let mut out: Vec<Token> = Vec::new();
   let mut run: Vec<Token> = Vec::new();
   let mut open_in_blocks = 0i32;
+  // An `\and` at the top level of an affiliation block's argument that a block macro follows starts the next author,
+  // as pdflatex prints it (a brace missing after the first author's block: `\authorblockA{…\\ \and
+  // \authorblockN{Hadas Kress-Gazit} \authorblockA{…}}}`, 2105.06537). The argument is closed before the `\and`, the
+  // rest read as top-level blocks, and the argument's own closing brace — the first top-level `}` no run opened —
+  // dropped (`unclosed`, `run_depth`): copied whole, the second author's blocks were the first author's too.
+  let mut unclosed = 0usize;
+  let mut run_depth = 0usize;
+  let block_follows = |from: usize| {
+    toks[from..]
+      .iter()
+      .find(|v| **v != T_SPACE!() && **v != T_CS!("\\par"))
+      .is_some_and(is_block)
+  };
   let mut i = 0;
   while i < toks.len() {
     let t = toks[i];
@@ -1341,6 +1354,11 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
         let mut depth = 0;
         while i < toks.len() {
           let u = toks[i];
+          if affiliation && depth == 1 && u == T_CS!("\\and") && block_follows(i + 1) {
+            out.push(T_END!());
+            unclosed += 1;
+            break;
+          }
           match u.get_catcode() {
             Catcode::BEGIN => depth += 1,
             Catcode::END => depth -= 1,
@@ -1363,6 +1381,16 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
       out.push(t);
       i += 1;
     } else {
+      match t.get_catcode() {
+        Catcode::BEGIN => run_depth += 1,
+        Catcode::END if run_depth > 0 => run_depth -= 1,
+        Catcode::END if unclosed > 0 => {
+          unclosed -= 1;
+          i += 1;
+          continue;
+        },
+        _ => {},
+      }
       run.push(t);
       i += 1;
     }

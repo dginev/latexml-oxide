@@ -1,0 +1,19 @@
+% mechanism: one names line the kernel does not split (`name_count`: `Ann (Al) Able*, Bob Baker*\thanks{…}, Cy Cole`)
+%   over the shared block; the observer's writer re-parts it into three names, each holding the block — an item the
+%   API's `annotate=new` run gives every name (`api:annotate:new`, repart.rs gate), as `owner:annotate:run`
+% witness: 1909.04111
+% oracle:  pdflatex 0 errors: "Ann (Al) Able*, Bob Baker*, Cy Cole / University of X, City / ann@x.edu, bob@x.edu, cy@x.edu"
+% engines: rust int130a: Ann, Bob e-mail only, Cy the affiliation; 104a: one creator holding all three names
+% expect:  0 errors, 0 warnings; three creators, each University of X, City, the note and their own e-mail
+% status:  RED (104a) -> GREEN (104a r2)
+% preload: ar5iv.sty
+\documentclass[10pt, conference, compsocconf]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann (Al) Able*, Bob Baker*\thanks{*The first two authors contributed equally to this work.}, Cy Cole}
+
+\IEEEauthorblockA{University of X, City\\
+ann@x.edu, bob@x.edu, cy@x.edu}}
+\maketitle
+Text.
+\end{document}

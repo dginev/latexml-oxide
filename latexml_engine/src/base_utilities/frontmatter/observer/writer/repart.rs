@@ -305,13 +305,24 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
     }
   }
   // (nor by today's API: an unlabelled annotation of the run of new authors is every name of the run's, as today's API
-  // attaches it — today's old reader merged names across two runs, so fewer of today's creators held it: 1805.12376)
+  // attaches it — today's old reader merged names across two runs, so fewer of today's creators held it: 1805.12376.
+  // The block reader's run (`owner:annotate:run`), and the API's (`api:annotate:new`, `api:annotate:run`) when one of
+  // today's creators held it — the names line the kernel does not split under an IEEE block, 1909.04111, OD #962 —
+  // and no name of today's prints a mark before its first word: a re-part takes a name's marks out, as the reading
+  // has them, so an IEEE ordinal `1\textsuperscript{st} Milin Patel` would print "1 Milin Patel" (2503.04159,
+  // 1806.11431, 2406.04658))
+  let mark_led = front.creators.iter().any(|t| mark_before_name(&t.node));
+  let by_run = |a: &Assoc, held: usize| {
+    rule_has(a, "owner:annotate:run")
+      || (held <= 1
+        && !mark_led
+        && (rule_has(a, "api:annotate:new") || rule_has(a, "api:annotate:run")))
+  };
   if let Some((key, _)) = owners.iter().find(|(key, assocs)| {
-    assocs.len() > holders.get(*key).copied().unwrap_or(0).max(1)
+    let held = holders.get(*key).copied().unwrap_or(0);
+    assocs.len() > held.max(1)
       && !assocs.iter().all(|(_, a)| writes(a))
-      && !assocs
-        .iter()
-        .all(|(_, a)| rule_has(a, "owner:annotate:run"))
+      && !assocs.iter().all(|(_, a)| by_run(a, held))
   }) {
     return declined(&s!("an item given more authors by no ruling: {key:?}"));
   }
@@ -1133,6 +1144,23 @@ fn personname_words(node: &Node) -> Vec<String> {
     .filter(|child| document::get_node_qname(child) == pin("ltx:personname"))
     .flat_map(|child| words(&words_without_marks(child)))
     .collect()
+}
+
+/// Whether a creator's personname prints a mark before its first word's letters (`1<sup>st</sup> Milin Patel`, the
+/// IEEE ordinal template; [`segments`]).
+fn mark_before_name(node: &Node) -> bool {
+  let letters = |text: &str| text.chars().any(char::is_alphabetic);
+  elements(node)
+    .iter()
+    .filter(|child| document::get_node_qname(child) == pin("ltx:personname"))
+    .flat_map(|child| segments(child, false))
+    .find_map(|seg| match seg {
+      Seg::Hidden(mark) if !is(&mark, "ltx:tags") => Some(true),
+      Seg::Text(text) if letters(&text.get_content()) => Some(false),
+      Seg::Atom(_, text) if letters(&text) => Some(false),
+      _ => None,
+    })
+    .unwrap_or(false)
 }
 
 /// Where the run `name` ends in `words` at or after `from`, if it is there.

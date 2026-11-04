@@ -192,7 +192,7 @@ the environment is the class's `\par\bigskip`), `abstract_keywords_setter_that_o
 does not use its argument is the class's own, its warning the one diagnostic); the supplement repro's in-place keywords
 now keep the class's label (its own definition), as its oracle prints.
 
-## ieee_shared_block/* (104a; OXIDIZED_DESIGN_DIVERGENCES #961)
+## ieee_shared_block/* (104a; OXIDIZED_DESIGN_DIVERGENCES #962)
 
 RUST-ONLY (Perl: one creator holding the whole block). `wrap_bare_author_block_text` (ieeetran_cls.rs) wrapped every
 bare run between IEEE blocks in `\IEEEauthorblockA{…}`; a run printing nothing (`blank_line`, `vspace`,
@@ -207,5 +207,10 @@ relocate.rs `leading_line_label` compared with `\textsuperscript` literally; now
 `explicit_empty_block` (an empty `\IEEEauthorblockA{}` still claims the names; needs a binding-declared rule) and
 `email_line_marked_addresses` (2209.10056, 2109.15322; `affiliations.rs` `entry_calls`). Invalid input under TL 2025
 (not kept): a group around a block, `{\small \IEEEauthorblockA{…}}` — IEEEtran's author `\halign` rejects it
-(cs0507001 ships an older IEEEtran.cls). Guards `perfect_kernel_batch104a` (5).
+(cs0507001 ships an older IEEEtran.cls). Round 2: `starred_names_one_line` (1909.04111) — the writer's re-part gate
+(`writer/repart.rs`) accepts the API's `api:annotate:new`/`run` items, so the unsplit names line becomes three
+creators; `and_inside_a_block`, `and_inside_a_block_thanks` (2105.06537) — an `\and` that a block macro follows inside
+an affiliation block's argument closes it and starts the next author; `thanks_vspace` — a run of notes and spacing is
+the document's notes (`document_notes`); `ordinal_names` (2503.04159, 1806.11431, 2406.04658) the CONTROL that the gate's API exemption needs one holder of today's and no name opening with a mark (a re-part would take the IEEE ordinal's `\textsuperscript{st}` out). RED, no guard: `mixed_grid_column_major` (a grid left in its columns gives
+column-major creators; SYNC row 104a). Guards `perfect_kernel_batch104a` (9).
 

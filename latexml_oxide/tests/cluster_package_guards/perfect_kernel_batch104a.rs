@@ -1,11 +1,15 @@
-//! Red/green guards for batch 104a: IEEE address blocks (OXIDIZED_DESIGN_DIVERGENCES #961). A shared
+//! Red/green guards for batch 104a: IEEE address blocks (OXIDIZED_DESIGN_DIVERGENCES #962). A shared
 //! `\IEEEauthorblockA` goes on every name of the `\IEEEauthorblockN` above it: a run between them that prints nothing
 //! (a blank line, `\vspace`, `\\[2mm]`; 1401.2118, 1705.03529) or holds notes only (`\thanks`, 1508.00691) is no
 //! affiliation block (ieeetran_cls.rs `wrap_bare_author_block_text`), and printed text there is wrapped without the
 //! line break it ends with; an `\and`×`\\` grid with a row naming no author stays in its columns
 //! (`transpose_ieee_author_grid`, 2605.15804). A refmark-led address line belongs to its marks (relocate.rs
 //! `leading_line_label` reads `\IEEEauthorrefmark` as `\textsuperscript`; 2301.03018, 2510.06608). Perl merges each
-//! block into one creator; ours lost the affiliation of every name but the last, with 0 Errors.
+//! block into one creator; ours lost the affiliation of every name but the last, with 0 Errors. Round 2: the writer's
+//! re-part of a names line the kernel does not split accepts the API's `annotate=new` run (repart.rs; 1909.04111; not
+//! over an IEEE ordinal name, 2503.04159), an
+//! `\and` inside an affiliation block's argument starts the next author (2105.06537), and a run of notes and spacing
+//! is notes.
 use super::{
   convert_with,
   perfect_kernel_batch46::{error_count, warning_count},
@@ -157,4 +161,110 @@ fn a_refmark_led_address_line_is_its_marks_addresses() {
       .all(|field| !(field.starts_with("affiliation=") && field.contains('@'))),
     "{xml}"
   );
+}
+
+/// One names line the kernel does not split (`Ann (Al) Able*, Bob Baker*\thanks{…}, Cy Cole`, 1909.04111) is re-parted
+/// by the observer's writer, the shared block on each name: the API's `annotate=new` run gives it every name of the run
+/// (`api:annotate:new`), a ruling the re-part gate accepts as it does `owner:annotate:run` (repart.rs). Distinct: the
+/// writer's path, not the binding's. Ann and Bob keep the note, as on the base. Red before: one
+/// creator holding all three names.
+#[test]
+fn a_names_line_the_writer_re_parts_gives_each_name_the_shared_block() {
+  let xml = convert_clean(repro!("starred_names_one_line.tex"));
+  let x = "affiliation=University of X, City";
+  assert_eq!(creators(&xml), vec![
+    creator(&["Ann (Al) Able", x, "email=ann@x.edu"]),
+    creator(&["Bob Baker", x, "email=bob@x.edu"]),
+    creator(&["Cy Cole", x, "email=cy@x.edu"]),
+  ]);
+  assert_eq!(
+    xml
+      .matches(r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks""#)
+      .count(),
+    2,
+    "{xml}"
+  );
+  assert_eq!(
+    xml
+      .matches(">*The first two authors contributed equally to this work.</note>")
+      .count(),
+    2,
+    "{xml}"
+  );
+}
+
+/// An `\and` at the top level of an `\IEEEauthorblockA` argument that a block macro follows (a missing brace,
+/// 2105.06537) starts the next author, as pdflatex prints it: the binding closes the argument before the `\and` and
+/// drops one closing brace after the blocks. With a `\thanks` before the first block (the paper's shape) the note
+/// stays the document's. Red before: Ann also held Bob's block, her own ending in " and ".
+#[test]
+fn an_and_inside_a_block_argument_starts_the_next_author() {
+  let expected = vec![
+    creator(&[
+      "Ann Able",
+      "affiliation=Department of A University A",
+      "email=ann@x.edu",
+    ]),
+    creator(&[
+      "Bob Baker",
+      "affiliation=School of B University B",
+      "email=bob@y.edu",
+    ]),
+  ];
+  for (tex, notes) in [
+    (repro!("and_inside_a_block.tex"), 0),
+    (repro!("and_inside_a_block_thanks.tex"), 1),
+  ] {
+    let xml = convert_clean(tex);
+    assert_eq!(creators(&xml), expected, "{xml}");
+    assert_eq!(
+      xml
+        .matches(r#"<pubnote role="thanks">Ann is supported by a fellowship.</pubnote>"#)
+        .count(),
+      notes,
+      "{xml}"
+    );
+  }
+}
+
+/// A run of notes and spacing (`\thanks{…}\vspace{2mm}`) before the shared block is the document's notes: the parts
+/// printing nothing are left out before the notes-only test (`document_notes`). Distinct from the notes-only run: the
+/// mixed run. Red before: Ann held her e-mail only.
+#[test]
+fn a_run_of_notes_and_spacing_before_the_block_is_the_documents_note() {
+  let xml = convert_clean(repro!("thanks_vspace.tex"));
+  let x = "affiliation=University of X";
+  assert_eq!(creators(&xml), vec![
+    creator(&["Ann Able", x, "email=ann@x.edu"]),
+    creator(&["Bob Baker", x, "email=bob@x.edu"]),
+  ]);
+  assert_eq!(xml.matches("<pubnote").count(), 1, "{xml}");
+  assert!(
+    xml.contains(r#"<pubnote role="thanks">Corresponding author: Bob Baker.</pubnote>"#),
+    "{xml}"
+  );
+}
+
+/// The control of the re-part above: a re-part takes a name's marks out, so the gate accepts the API's run items only
+/// when no name of today's prints a mark before its first word — the IEEE ordinal template (`1\textsuperscript{st}
+/// Ann Able`, 2503.04159, 1806.11431, 2406.04658) stays as written. Distinct: the gate's decline. Red with the gate
+/// accepting every API run item: "1 Ann Able", "2 Bob Baker 3rd", "Cy Cole".
+#[test]
+fn a_names_line_printing_ordinal_marks_is_not_re_parted() {
+  let xml = convert_clean(repro!("ordinal_names.tex"));
+  assert_eq!(creators(&xml), vec![
+    creator(&["1 st Ann Able", "affiliation=Univ X", "email=ann@x.edu"]),
+    creator(&[
+      "2 nd Bob Baker 3 rd Cy Cole",
+      "affiliation=Univ Y",
+      "email=bob@y.edu",
+      "email=cy@y.edu"
+    ]),
+  ]);
+  for ordinal in ["st", "nd", "rd"] {
+    assert!(
+      xml.contains(&format!(r#"">{ordinal}</sup>"#)),
+      "{ordinal}: {xml}"
+    );
+  }
 }
