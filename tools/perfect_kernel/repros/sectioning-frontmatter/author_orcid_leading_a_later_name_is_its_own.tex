@@ -1,0 +1,20 @@
+% mechanism: 103b r2's move of an icon after a name's comma marks (`marks_before_glued_commas`, separators.rs) tests only
+%   whether the FIRST name opens with an icon, so a later name's own leading icon (`\orcidB~Bob Baker`, tied to it) moves
+%   to the name before (OXIDIZED_DESIGN_DIVERGENCES #960 "Open"); the fix reads each icon: one followed by a tie or
+%   glued to the next name is that name's
+% witness: synthetic, review rev103b2 q5 (article) and q5m (mnras); no corpus paper shows it
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able,1 iD Bob Baker,2 Carl Cole1", the icon tied to Bob's name
+% engines: rust 103b r2: Ann Able holds 0000-0001-5109-3700; 103b r1: Bob Baker's contact; int130a: the icon as ink in
+%   Bob Baker's personname; perl: not run
+% expect:  0 errors; Bob Baker 0000-0001-5109-3700, Ann Able and Carl Cole no ORCID, each personname the name alone
+% status:  RED
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx,hyperref}
+\newcommand{\orcidB}{\href{https://orcid.org/0000-0001-5109-3700}{\includegraphics[width=1em]{example-image}}}
+\begin{document}
+\title{T}
+\author{Ann Able,$^{1}$\orcidB~Bob Baker,$^{2}$ Carl Cole$^{1}$}
+\maketitle
+Text.
+\end{document}

@@ -737,12 +737,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // name (`\href{https://orcid.org/…}{T.J.C. Bezerra}`, 2606.03745; 2301.02927, 2312.16289, 2601.06085), the ORCID read
   // off it as before, or the iD printed (`\href{https://orcid.org/0000-0002-1825-0097}{0000-0002-1825-0097}`, review
   // rev103b S1). A creator holding the iD already keeps one contact of it (`drop_repeated_orcids`: acmart's `\orcid{…}`
-  // beside the name's link, 2501.02380). In force for the name's content only (`\lx@author@withinst`), not for a note or contact digested
-  // inside it (`creator_name_in_progress`: `\thanks{See \href{https://orcid.org/…}{his record}.}` keeps its words), nor
-  // for a mark — a label's operand read for its printed text (`reading_label`: `\inst{1,\href{…}{iD}}`), a mark's
-  // math, which the marks reader shows again from its tokens (`$^{1,\href{…}{\orcidicon}}$`) — where a contact made
-  // was lost: the mark keeps what it printed before. Any other link — another address, `\href`'s options — is the
-  // `\href` it was. A primitive: what the ink prints is read by digesting it (`ink_prints_text`).
+  // beside the name's link, 2501.02380). In force for the name's content only (`\lx@author@withinst`), not for a note
+  // or contact digested inside it (`creator_name_in_progress`: `\thanks{See \href{https://orcid.org/…}{his record}.}`
+  // keeps its words), nor for a mark — a label's operand read for its printed text (`reading_label`:
+  // `\inst{1,\href{…}{iD}}`), a mark's math, which the marks reader shows again from its tokens
+  // (`$^{1,\href{…}{\orcidicon}}$`) — where a contact made was lost: the mark keeps what it printed before. Any other
+  // link — another address, `\href`'s options — is the `\href` it was. A primitive: what the ink prints is read by
+  // digesting it (`ink_prints_text`).
   DefPrimitive!("\\lx@author@href[]{}{}", sub[(options, url, ink)] {
     if options.is_none()
       && !lookup_bool("IN_MATH")

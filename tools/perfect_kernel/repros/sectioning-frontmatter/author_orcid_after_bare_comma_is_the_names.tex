@@ -1,0 +1,22 @@
+% mechanism: an ORCID icon link glued to a name's comma with no mark before it is that name's in the print (set against
+%   its comma, the space after it), but the kernel's comma split puts it in the next name's piece, which
+%   `\lx@author@href` makes the next name's ORCID contact (OXIDIZED_DESIGN_DIVERGENCES #960 "Open")
+% witness: synthetic, review rev103b2 q3; sibling author_orcid_icon_after_comma_marks_is_the_names (the marked shape, GREEN)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able,iD Bob Baker,iD Carl ColeiD", each icon after its own name
+% engines: rust 103b r2: Ann Able no ORCID, Bob Baker Ann's iD, Carl Cole Bob's and his own; int130a: the same
+%   misplacement as ink in the personnames; perl: not run
+% expect:  0 errors; Ann Able 0000-0002-1825-0097, Bob Baker 0000-0001-5109-3700, Carl Cole 0000-0002-1694-233X,
+%   each personname the name alone
+% status:  RED
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx,hyperref}
+\newcommand{\orcidA}{\href{https://orcid.org/0000-0002-1825-0097}{\includegraphics[width=1em]{example-image}}}
+\newcommand{\orcidB}{\href{https://orcid.org/0000-0001-5109-3700}{\includegraphics[width=1em]{example-image}}}
+\newcommand{\orcidC}{\href{https://orcid.org/0000-0002-1694-233X}{\includegraphics[width=1em]{example-image}}}
+\begin{document}
+\title{T}
+\author{Ann Able,\orcidA{} Bob Baker,\orcidB{} Carl Cole\orcidC{}}
+\maketitle
+Text.
+\end{document}

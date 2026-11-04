@@ -30458,15 +30458,22 @@ contacts; the switch on and off still byte-identical); repro sectioning-frontmat
 (RED → GREEN).
 
 An icon link glued after the marks and notes that follow a name's comma is that name's, as the marks are
-(`marks_before_glued_commas` moves it before the comma with them, `leading_orcid_icon_end`, separators.rs): `\href` to an
-orcid.org record printing no letter or digit as its tokens read, `\orcidlink{…}`, `\orcidID{…}`, or a macro whose body
-is one such link (`\orcidAT`, `\orcidicon{0000-…}`, `\orcidA{}`). `Ashley Hai Tung Tan,$^{1}$\thanks{…}\orcidAT⏎
+(`marks_before_glued_commas` moves it before the comma with them, `leading_orcid_icon_end`, separators.rs): `\href` to
+an orcid.org record printing no letter or digit as its tokens read, `\orcidlink{…}`, `\orcidID{…}`, or a macro whose
+body is one such link (`\orcidAT`, `\orcidicon{0000-…}`, `\orcidA{}`). `Ashley Hai Tung Tan,$^{1}$\thanks{…}\orcidAT⏎
 Christian Wolf,$^{1,2}$\orcidChrisW⏎…` (mnras, 2605.03577) split after the comma gave each author the next one's iD
 (review rev103b B1). Not when the names open with their icons (`\orcidA~Ann Able,$^{1}$\orcidB~Bob Baker`: each the name
-after it, as 2603.26792's `\href{…}{icon}~{Name}`), and not an icon glued to the comma with no mark before it. A creator
-holding one iD twice keeps its first contact of it (`drop_repeated_orcids`, insert.rs: acmart's `\orcid{X}` beside the
-name's `\orcidicon{X}` link, 2501.02380, review rev103b S2; Perl keeps a repeated `\orcid` twice,
-Base_Utility.pool.ltxml:659-660); two iDs are two contacts. Guards (`perfect_kernel_batch103b`)
+after it, as 2603.26792's `\href{…}{icon}~{Name}`). Open (review rev103b2, synthetic, RED repros): an icon glued to the
+comma with no mark before it (`Ann Able,\orcidA{} Bob Baker,\orcidB{} Carl Cole\orcidC{}`) is the previous name's in the
+print, set against its comma, but stays in the next name's piece and becomes that name's ORCID (Bob holds Ann's iD, Carl
+both B's and C's; int130a misplaces it as ink alike) —
+sectioning-frontmatter/`author_orcid_after_bare_comma_is_the_names`; and the leading-icon test reads the first name
+only, so a later name's own leading icon in a list whose first name opens with none (`Ann Able,$^{1}$\orcidB~Bob
+Baker,$^{2}$`) moves to the name before (Ann holds Bob's iD; int130a kept it as ink in Bob's name, round 1 Bob's
+contact) — `author_orcid_leading_a_later_name_is_its_own`; an icon followed by a tie or glued to the next name is that
+name's, per icon. A creator holding one iD twice keeps its first contact of it (`drop_repeated_orcids`, insert.rs:
+acmart's `\orcid{X}` beside the name's `\orcidicon{X}` link, 2501.02380, review rev103b S2; Perl keeps a repeated
+`\orcid` twice, Base_Utility.pool.ltxml:659-660); two iDs are two contacts. Guards (`perfect_kernel_batch103b`)
 `an_orcid_icon_after_a_names_comma_is_its_own`, `an_orcid_link_printing_text_stays_printed`,
 `a_repeated_orcid_is_one_contact`; repros sectioning-frontmatter/`author_orcid_icon_after_comma_marks_is_the_names`,
 `author_orcid_href_printing_text_stays`, class-bindings/`mnras_orcid_icon_after_comma_marks_is_the_names`,
