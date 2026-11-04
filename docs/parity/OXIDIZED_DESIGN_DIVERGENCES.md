@@ -30388,7 +30388,13 @@ flags kept (`\def\affil#1{\gdef\lastaff{#1}}`'s `\lastaff`, which the document p
 authblk and defines its own `\affil` loads unlocked and keeps it (lni_cls.rs, which also re-runs authblk's
 `\affil`), and so does a raw file a binding reads with `InputDefinitions` (unlocked, as Perl's `loadLTXML`). The page
 prints the same text through either definition (the copy's meaning is authblk's), so keeping the binding's meaning is
-the faithful reading of what pdflatex prints. Guards `perfect_kernel_batch102a::{a_documents_copy_of_authblk_affil_keeps_the_bindings_affiliations,
+the faithful reading of what pdflatex prints. A definition that is NOT a copy is refused the same way (D1, OD #500): its
+text becomes the binding's affiliation wherever pdflatex prints it — a `\thanks` footnote or a class's own
+`\@affiliations` block (base lost the first and left the second unattached), a small italic paragraph after
+`\maketitle` (review rev102a p2: base kept it there; now a contact, its font gone), and a `\def` that prints nothing
+under the name (the guard `a_refused_affil_still_runs_for_its_stores` pins that contact, beyond TeX). A wrapper round
+the binding's `\affil` through a `\let` alias loses its typography (RED repro
+`authblk_affil_copy/wrapper_keeps_its_font`; no wrapper in the 30k census's 1,215 authblk papers). Guards `perfect_kernel_batch102a::{a_documents_copy_of_authblk_affil_keeps_the_bindings_affiliations,
 a_raw_class_copy_of_authblk_affil_keeps_the_bindings_affiliations, a_refused_affil_still_runs_for_its_stores}`; repros
 `sectioning-frontmatter/authblk_affil_copy/`. **Not reached**: an `\email` built from the same code under a new name
 (ACL/NAACL: 2406.11632, 1904.03969; RED repro `authblk_email_from_affil_code`, SYNC_STATUS row 102a).

@@ -5,7 +5,8 @@
 % oracle:  pdflatex 0 errors: "A Title", "Ann Able", "Last: Univ X."
 % engines: rust int129a = 0 errors; Ann Able alone, "Last: Univ X."
 % expect:  0 errors, 0 warnings; Ann Able with the affiliation "Univ X"; the body "Last: Univ X."
-% status:  CONTROL (102a)
+% status:  RED (int129a: Ann Able alone) -> GREEN (102a); the contact goes beyond TeX, which prints no affiliation
+%          under the name: under the D1 lock (OD #500) a refused definition's text is the binding's affiliation (OD #959)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{authblk}

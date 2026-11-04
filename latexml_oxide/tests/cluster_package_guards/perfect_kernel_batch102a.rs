@@ -18,6 +18,15 @@ fn creators(xml: &str) -> String {
   xml[start..end].to_string()
 }
 
+/// Asserts each text occurs exactly once in the whole document: the replay of a refused body must not print an
+/// affiliation a second time (review rev102a N4).
+fn each_once(xml: &str, texts: &[&str]) {
+  let xml = xml.split_whitespace().collect::<Vec<_>>().join(" ");
+  for text in texts {
+    assert_eq!(xml.matches(text).count(), 1, "{text} once in: {xml}");
+  }
+}
+
 fn affiliation(text: &str) -> String {
   format!(r#"<contact name="Affiliation: " role="affiliation">{text}</contact>"#)
 }
@@ -43,6 +52,10 @@ fn a_documents_copy_of_authblk_affil_keeps_the_bindings_affiliations() {
     let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
     assert_eq!(creators(&xml), expected);
+    each_once(&xml, &[
+      "Astrophysics Group, Cavendish Laboratory, Cambridge",
+      "Kavli Institute for Cosmology, Cambridge",
+    ]);
   }
 }
 
@@ -74,6 +87,10 @@ fn a_raw_class_copy_of_authblk_affil_keeps_the_bindings_affiliations() {
       affiliation("Inst. of Gadgets, Univ Y")
     )
   );
+  each_once(&xml, &[
+    "Dept. of Widgets, Univ X",
+    "Inst. of Gadgets, Univ Y",
+  ]);
 }
 
 /// The replay of the refused body: a document's `\def\affil#1{\gdef\lastaff{#1}}` keeps the store its body makes,
