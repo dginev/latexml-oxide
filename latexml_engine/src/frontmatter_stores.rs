@@ -5169,11 +5169,20 @@ fn net_begin_code_tokens(inject: &[Token]) -> Option<Tokens> {
 fn holds_text(value: &Tokens) -> bool {
   executed_code(value.unlist_ref())
     .iter()
-    .any(|t| match t.get_catcode() {
-      Catcode::LETTER | Catcode::OTHER => true,
-      Catcode::ACTIVE => t.with_str(|text| !text.is_ascii()),
-      _ => false,
-    })
+    .any(prints_a_character)
+}
+
+/// Whether a token prints a character of its own: a letter, an other, or a non-ASCII active character (the glyph
+/// inputenc maps it to). One test for what the net reads as a store's text ([`holds_text`]) and as the class's own text
+/// in it ([`net_class_text`]): with the second reading ASCII letters only, a class label set in CJK or Cyrillic
+/// (`\gdef\@xa{作者单位：#1}` after CJKutf8 or `[T2A]{fontenc}`) was text the store holds and not the class's, and was
+/// kept as an unclaimed note (review rev105a2 finding 1).
+fn prints_a_character(t: &Token) -> bool {
+  match t.get_catcode() {
+    Catcode::LETTER | Catcode::OTHER => true,
+    Catcode::ACTIVE => t.with_str(|text| !text.is_ascii()),
+    _ => false,
+  }
 }
 
 /// The stores a setter of a raw file's or of the document's writes — a definition's or a `\let`'s name, a token
@@ -5393,10 +5402,38 @@ fn note_raw_register_defaults() {
 fn net_class_text(stores: &[SymStr]) -> Vec<String> {
   let letters = |body: &[Token], out: &mut String| {
     let mut param = false;
+    // (a run of active bytes, one token per byte of a UTF-8 character as CJKutf8 or inputenc reads the class file —
+    // `作` is the three active tokens `ä½\u{9c}` — is read as the character its macros print, so it matches the text the
+    // store prints: review rev105a2 finding 1)
+    let mut bytes: Vec<u8> = Vec::new();
+    let flush = |bytes: &mut Vec<u8>, out: &mut String| {
+      if !bytes.is_empty() {
+        out.push_str(&String::from_utf8_lossy(bytes));
+        bytes.clear();
+      }
+    };
     for t in body {
+      let byte = (t.get_catcode() == Catcode::ACTIVE)
+        .then(|| {
+          t.with_str(|c| {
+            let mut chars = c.chars();
+            match (chars.next(), chars.next()) {
+              (Some(ch), None) if ('\u{80}'..='\u{ff}').contains(&ch) => Some(ch as u8),
+              _ => None,
+            }
+          })
+        })
+        .flatten();
+      if let Some(byte) = byte
+        && !param
+      {
+        bytes.push(byte);
+        continue;
+      }
+      flush(&mut bytes, out);
       match t.get_catcode() {
         Catcode::PARAM => param = true,
-        Catcode::LETTER | Catcode::OTHER if !std::mem::take(&mut param) => {
+        _ if prints_a_character(t) && !std::mem::take(&mut param) => {
           t.with_str(|c| out.push_str(c));
         },
         _ => {
@@ -5405,6 +5442,7 @@ fn net_class_text(stores: &[SymStr]) -> Vec<String> {
         },
       }
     }
+    flush(&mut bytes, out);
     out.push(' ');
   };
   let setters = current_meanings_where(

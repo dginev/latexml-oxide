@@ -29832,7 +29832,7 @@ authors", 2103.14934). A line's words (`net_content_words`) are the scorer's ASC
 letter runs (`Москва`) and each Han ideograph or kana as a word of its own (`unspaced_script`), so a Chinese line clears
 the floor (2206.01007's `\address` "北京师范大学天文系，100875，北京", 2601.14329's `\institude` "1)北京航空航天大学
 物理学院，北京"); a store whose only letters are non-ASCII active characters (`[T2A]{fontenc}`'s Cyrillic, through
-t2aenc.dfu's `\DeclareUnicodeCharacter`) holds text (`frontmatter_stores.rs` `holds_text`). An `ltx:ERROR`'s text, at
+t2aenc.dfu's `\DeclareUnicodeCharacter`) holds text (`frontmatter_stores.rs` `holds_text`), and the class's own text in a store (`net_class_text`) is read by the same character test (`prints_a_character`), a run of active bytes read as the UTF-8 character its macros print (CJKutf8 reads a class file one active token per byte, `作` = `ä½\u{9c}`), so a class label set in CJK or Cyrillic (`\gdef\@xa{作者单位：#1}`) is the class's text, not an unclaimed note (review rev105a2 finding 1; repro `net_class_label_in_cjk_is_class_text`). An `ltx:ERROR`'s text, at
 any depth in the line, is no printed word (`text_without_errors`: an undefined `\songti`'s name inside
 physics_report.sty's `{\songti\zihao{-4}#2}`, 2601.14329). The floor of 3 stands for prose, and the code keeps the
 shaped lines below the charter's tentative floor, pending the user's ruling on FIDELITY_CHARTER §4's floor. **Known
