@@ -32,6 +32,10 @@ pub(in crate::base_utilities) fn whole_line_group(tokens: &Tokens) -> Option<(Ve
 /// and a document's `\newcommand{\inst}[1]{$^{#1}$}` take back no space, so `Ann Able\inst{1}, \inst{2}Bob Baker` is
 /// Bob's 2 there; and not when the names open with their `\inst`s (`\inst{1}Ann Able, \inst{2}Bob Baker`, each its
 /// own, as `marker_leads` keeps `$^1$Ann Able, $^2$Bob Baker`; rev78f probes c01, c08, c09).
+/// An ORCID icon link glued among them goes too ([`leading_orcid_icon_end`]): `Ashley Hai Tung Tan,$^{1}$\thanks{…}
+/// \orcidAT⏎Christian Wolf,$^{1,2}$\orcidChrisW` prints each icon after its name's marks, and split after the comma
+/// each was the next name's ORCID (2605.03577, mnras; review rev103b B1). Not when the names open with their icons
+/// (`\orcidA~Ann Able,$^{1}$\orcidB~Bob Baker`: each icon the name after it, as 2603.26792's `\href{…}{icon}~{Name}`).
 pub(in crate::base_utilities) fn marks_before_glued_commas(line: Tokens) -> Tokens {
   let inst = inst_takes_back_space();
   let inst_leads = || {
@@ -41,6 +45,11 @@ pub(in crate::base_utilities) fn marks_before_glued_commas(line: Tokens) -> Toke
   if marker_leads(&line) || (inst && inst_leads()) {
     return line;
   }
+  let icons = {
+    let v = line.unlist_ref();
+    // (spacing alone before it: a parameterless icon macro reads as a declaration to `leading_unprinted_end`)
+    leading_orcid_icon_end(&v[leading_spacing_end(v)..]) == 0
+  };
   let src = line.unlist();
   let mut out: Vec<Token> = Vec::with_capacity(src.len());
   let mut pending_comma: Option<Token> = None;
@@ -54,7 +63,7 @@ pub(in crate::base_utilities) fn marks_before_glued_commas(line: Tokens) -> Toke
       _ => {},
     }
     if depth == 0 && t == T_OTHER!(",") {
-      let end = leading_inst_marks_end(&src[i + 1..], inst);
+      let end = glued_marks_end(&src[i + 1..], inst, icons);
       if end > 0 {
         out.extend_from_slice(&src[i + 1..i + 1 + end]);
         pending_comma = Some(t);
@@ -553,6 +562,115 @@ fn leading_inst_marks_end(tokens: &[Token], inst: bool) -> usize {
       _ => return i,
     }
   }
+}
+
+/// [`leading_inst_marks_end`] with the ORCID icon links glued among the marks ([`leading_orcid_icon_end`], when
+/// `icons`): `$^{1}$\thanks{…}\orcidAT` (2605.03577). An icon glued to the comma with no mark before it is left where
+/// it stands, which of the two names it is beside telling nothing.
+fn glued_marks_end(tokens: &[Token], inst: bool, icons: bool) -> usize {
+  let mut i = leading_inst_marks_end(tokens, inst);
+  if i == 0 || !icons {
+    return i;
+  }
+  loop {
+    let icon = leading_orcid_icon_end(&tokens[i..]);
+    if icon == 0 {
+      return i;
+    }
+    i += icon;
+    i += leading_inst_marks_end(&tokens[i..], inst);
+  }
+}
+
+/// The index past an ORCID icon link that opens `tokens` (0 when none): an `\href` to an orcid.org record printing no
+/// letter or digit as its tokens read ([`link_texts`]: an `\includegraphics`, a box, an icon macro — what
+/// `\lx@author@href` makes the ORCID contact, OXIDIZED_DESIGN_DIVERGENCES #960), orcidlink's `\orcidlink{…}`, llncs's
+/// `\orcidID{…}`, or a macro whose body is one such link (`\newcommand{\orcidAT}{\href{https://orcid.org/…}{\orcidicon}}`,
+/// 2605.03577; one of required arguments, `\orcidicon{0000-…}`, 2501.02380) with its arguments — after a
+/// parameterless one its empty group (`\orcidA{}`). A linked name (`\href{https://orcid.org/…}{Bob Baker}`) is none.
+fn leading_orcid_icon_end(tokens: &[Token]) -> usize { orcid_icon_end_within(tokens, 0) }
+
+/// [`leading_orcid_icon_end`], `depth` macros deep.
+fn orcid_icon_end_within(tokens: &[Token], depth: usize) -> usize {
+  let Some(&first) = tokens.first() else {
+    return 0;
+  };
+  let group_after = |at: usize| {
+    let open = at
+      + tokens[at.min(tokens.len())..]
+        .iter()
+        .take_while(|t| **t == T_SPACE!())
+        .count();
+    tokens
+      .get(open)
+      .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+      .then(|| skip_group(tokens, open))
+  };
+  if first == T_CS!("\\orcidlink") || first == T_CS!("\\orcidID") {
+    return group_after(1).unwrap_or(0);
+  }
+  if first == T_CS!("\\href") {
+    let ((open, close), (ink_open, ink_close)) = link_arguments(tokens, 0);
+    let url = Tokens::new(tokens[open..close].to_vec()).to_string();
+    let (_, printed) = link_texts(tokens, 0);
+    let groups = tokens
+      .get(open)
+      .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+      && tokens
+        .get(ink_open)
+        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN);
+    return if groups
+      && url.to_ascii_lowercase().contains("orcid.org/")
+      && !printed.chars().any(char::is_alphanumeric)
+    {
+      ink_close
+    } else {
+      0
+    };
+  }
+  if depth > 2 || first.get_catcode() != Catcode::CS || lookup_conditional(&first).is_some() {
+    return 0;
+  }
+  let Ok(Some(defn)) = lookup_definition(&first) else {
+    return 0;
+  };
+  let params = defn
+    .get_parameters()
+    .map_or(0, |p| p.get_parameters().len());
+  if !defn.is_expandable()
+    || defn
+      .get_parameters()
+      .is_some_and(|p| p.get_parameters().iter().any(|param| param.optional))
+  {
+    return 0;
+  }
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return 0;
+  };
+  let body = body.unlist_ref();
+  let start = body.iter().take_while(|t| **t == T_SPACE!()).count();
+  let end = body.len() - body.iter().rev().take_while(|t| **t == T_SPACE!()).count();
+  if start >= end || start + orcid_icon_end_within(&body[start..end], depth + 1) != end {
+    return 0;
+  }
+  let mut i = 1;
+  for _ in 0..params {
+    match group_after(i) {
+      Some(next) => i = next,
+      None => return 0,
+    }
+  }
+  if params == 0
+    && tokens
+      .get(i)
+      .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+    && tokens
+      .get(i + 1)
+      .is_some_and(|t| t.get_catcode() == Catcode::END)
+  {
+    i += 2;
+  }
+  i
 }
 
 /// Whether the document's `\inst` is the inst convention's mark, which takes back the space before it: its meaning starts

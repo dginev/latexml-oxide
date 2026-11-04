@@ -417,12 +417,12 @@ pub(in crate::base_utilities) fn printed_label(operand: &Tokens) -> Result<Optio
   )
 }
 
-/// Whether `ink` prints a letter outside a picture (an author's ORCID link printing the name, not an icon: the
-/// frontmatter's `\lx@author@href`), read as [`printed_label`] reads a label's operand — plain characters as written,
+/// Whether `ink` prints a letter or a digit outside a picture (an author's ORCID link printing the name or the iD, not an
+/// icon: the frontmatter's `\lx@author@href`), read as [`printed_label`] reads a label's operand — plain characters as written,
 /// anything else digested in a speculative run of its own whose text nodes inside a pgf/TikZ picture do not count (the
 /// `\orcidicon` template's "ID"); `None` when it cannot be read (an open journal, an operand that errs) or while a label
 /// is read.
-pub(in crate::base_utilities) fn ink_prints_letters(ink: &Tokens) -> Result<Option<bool>> {
+pub(in crate::base_utilities) fn ink_prints_text(ink: &Tokens) -> Result<Option<bool>> {
   let tokens = ink.unlist_ref();
   if tokens.iter().all(|t| {
     matches!(
@@ -430,9 +430,9 @@ pub(in crate::base_utilities) fn ink_prints_letters(ink: &Tokens) -> Result<Opti
       Catcode::LETTER | Catcode::OTHER | Catcode::SPACE | Catcode::BEGIN | Catcode::END
     )
   }) {
-    return Ok(Some(
-      tokens.iter().any(|t| t.get_catcode() == Catcode::LETTER),
-    ));
+    return Ok(Some(tokens.iter().any(|t| {
+      t.get_catcode() == Catcode::LETTER || t.with_str(|s| s.chars().any(char::is_alphanumeric))
+    })));
   }
   if reading_label() {
     return Ok(None);
@@ -440,7 +440,7 @@ pub(in crate::base_utilities) fn ink_prints_letters(ink: &Tokens) -> Result<Opti
   READING_LABEL.with(|r| r.set(true));
   let printed = speculative_label_ink(ink.clone());
   READING_LABEL.with(|r| r.set(false));
-  Ok(printed?.map(|p| p.outside_pictures.chars().any(char::is_alphabetic)))
+  Ok(printed?.map(|p| p.outside_pictures.chars().any(char::is_alphanumeric)))
 }
 
 thread_local! {

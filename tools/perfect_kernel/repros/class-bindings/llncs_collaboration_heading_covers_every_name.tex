@@ -1,0 +1,25 @@
+% mechanism: a collaboration heading before an `\and` list of names (`XYZ Collaboration: Ann Able\inst{1} \and …`) is
+%   the collaboration of every name it heads; the split reads it as the remark of the first name only
+%   (`split_author_calls`, OXIDIZED_DESIGN_DIVERGENCES #946)
+% witness: 2206.00684 (aa, `GRAVITY+ Collaboration\thanks{…}: R.~Abuter\inst{8} \and …`; the 98a witness), 2503.15310
+%   (aa, `Euclid Collaboration: M.~Walmsley\orcid{…}\thanks{…}\inst{…} \and …`), 2507.12116 (aaEC, the same); review
+%   rev103b S3; sibling llncs_collaboration_colon_heading_keeps_first_name (its two-name note shape, guarded)
+% oracle:  pdflatex (TL 2025 llncs.cls) 0 errors: "XYZ Collaboration: Ann Able1 , Bob Baker2 , and Cat Cole1"
+% engines: rust 103b r2: Ann Able's `contact role="collaboration"` "XYZ Collaboration", Bob Baker and Cat Cole none
+%   (nothing lost); perl: not run
+% expect:  0 errors, 0 warnings; Ann Able, Bob Baker and Cat Cole each a `contact role="collaboration"` "XYZ
+%   Collaboration" with their institutes
+% status:  RED (103b r2) — no guard; SYNC_STATUS row "103b residual: a collaboration heading over an \and list"
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{XYZ Collaboration: Ann Able\inst{1}
+\and Bob Baker\inst{2}
+\and Cat Cole\inst{1}}
+\institute{Univ A \and Univ B}
+\maketitle
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

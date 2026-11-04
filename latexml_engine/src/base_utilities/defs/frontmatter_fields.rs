@@ -731,16 +731,18 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefMacro!("\\lx@orcid@id Semiverbatim", sub[(id)] { Ok(orcid_id(id)) });
   // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #960): an `\href` to an ORCID record in an author's name that prints no
   // word — the TikZ "iD" icon of the `\orcidicon` template (`\newcommand{\orcidA}{\href{https://orcid.org/…}
-  // {\orcidicon}}`, `\author{M. Ahumada \orcidA{}}`: 2507.12319, 2503.04867, 2406.08258), a logo graphic, the iD's
-  // digits — is the author's ORCID, the contact `\lx@add@orcid` makes, and its ink no part of the name (Perl: the link
-  // and its picture stay in the personname). One printing a letter outside a picture is the linked name and stays
-  // (`\href{https://orcid.org/…}{T.J.C. Bezerra}`, 2606.03745; 2301.02927, 2312.16289, 2601.06085), the ORCID read off
-  // it as before. In force for the name's content only (`\lx@author@withinst`), not for a note or contact digested
+  // {\orcidicon}}`, `\author{M. Ahumada \orcidA{}}`: 2507.12319, 2503.04867, 2406.08258), a logo graphic — is the
+  // author's ORCID, the contact `\lx@add@orcid` makes, and its ink no part of the name (Perl: the link and its picture
+  // stay in the personname). One printing a letter or a digit outside a picture is printed text and stays: the linked
+  // name (`\href{https://orcid.org/…}{T.J.C. Bezerra}`, 2606.03745; 2301.02927, 2312.16289, 2601.06085), the ORCID read
+  // off it as before, or the iD printed (`\href{https://orcid.org/0000-0002-1825-0097}{0000-0002-1825-0097}`, review
+  // rev103b S1). A creator holding the iD already keeps one contact of it (`drop_repeated_orcids`: acmart's `\orcid{…}`
+  // beside the name's link, 2501.02380). In force for the name's content only (`\lx@author@withinst`), not for a note or contact digested
   // inside it (`creator_name_in_progress`: `\thanks{See \href{https://orcid.org/…}{his record}.}` keeps its words), nor
   // for a mark — a label's operand read for its printed text (`reading_label`: `\inst{1,\href{…}{iD}}`), a mark's
   // math, which the marks reader shows again from its tokens (`$^{1,\href{…}{\orcidicon}}$`) — where a contact made
   // was lost: the mark keeps what it printed before. Any other link — another address, `\href`'s options — is the
-  // `\href` it was. A primitive: what the ink prints is read by digesting it (`ink_prints_letters`).
+  // `\href` it was. A primitive: what the ink prints is read by digesting it (`ink_prints_text`).
   DefPrimitive!("\\lx@author@href[]{}{}", sub[(options, url, ink)] {
     if options.is_none()
       && !lookup_bool("IN_MATH")
@@ -754,7 +756,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       let id = orcid_id(address.clone());
       if !id.unlist_ref().is_empty()
         && id.to_string() != address.to_string()
-        && ink_prints_letters(&ink)? == Some(false)
+        && ink_prints_text(&ink)? == Some(false)
       {
         unread(Invocation!(T_CS!("\\lx@add@orcid"), vec![None, Some(id)]));
         return Ok(Vec::new());

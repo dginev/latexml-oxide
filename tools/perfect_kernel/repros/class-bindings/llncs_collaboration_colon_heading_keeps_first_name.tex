@@ -5,9 +5,12 @@
 % engines: rust 97b/97c = "XYZ Collaboration | Ann Able | Bob Baker" (the heading re-parted); int126a (97e r2) =
 %          "XYZ Collaboration: Ann Able | Bob Baker" (the writer declined: "a name naming no person", read only by the
 %          separator before the heading, which the first piece has none of — review rev126a B1)
-% expect:  0 errors, 0 warnings; the writer writes: "XYZ Collaboration" (its note), "Ann Able" (Univ A), "Bob Baker"
-%          (Univ B)
-% status:  RED (int126a) -> GREEN (98a) — perfect_kernel_batch98a::a_collaboration_heading_a_separator_parts_is_an_entry
+% expect:  0 errors, 0 warnings; since 103b: "Ann Able" (`contact role="collaboration"` "XYZ Collaboration", Univ A;
+%          the heading's note a thanks pubnote), "Bob Baker" (Univ B); the writer declines, today's XML kept (98a: the
+%          writer wrote "XYZ Collaboration" with its note as an entry); a heading over every name of a longer list:
+%          llncs_collaboration_heading_covers_every_name (RED)
+% status:  RED (int126a) -> GREEN (98a; 103b: the collaboration a contact) —
+%          perfect_kernel_batch98a::a_collaboration_heading_a_separator_parts_is_a_contact_the_writer_declines
 % preload: ar5iv.sty
 \documentclass{llncs}
 \begin{document}

@@ -93,6 +93,7 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   respell_emails(document)?;
   show_unanswered_marks(document, &answered)?;
   drop_empty_contacts(document)?;
+  drop_repeated_orcids(document);
   // (FM S2b: a written family's paper, where it differs from the observer's reading by the writer's operations alone,
   // written as the reading has it — under the shadow switch only; OXIDIZED_DESIGN_DIVERGENCES #837 "S2b")
   write_observed_frontmatter(document)?;
@@ -317,6 +318,38 @@ fn drop_empty_contacts(document: &mut Document) -> Result<()> {
     }
   }
   Ok(())
+}
+
+/// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #960): a creator holding one ORCID iD twice keeps its first contact of it —
+/// acmart's `\orcid{0000-0001-9164-7747}` beside the name's `\orcidicon{0000-0001-9164-7747}` link, which
+/// `\lx@author@href` made the same contact (2501.02380; review rev103b S2). The iD is the contact's link, else its text;
+/// two iDs are two contacts. Perl keeps a repeated `\orcid` twice (Base_Utility.pool.ltxml:659-660).
+fn drop_repeated_orcids(document: &mut Document) {
+  for creator in document.findnodes("//ltx:creator", None) {
+    let mut seen: Vec<String> = Vec::new();
+    for contact in element_nodes(&creator) {
+      if contact.get_name() != "contact"
+        || contact.get_attribute("role").as_deref() != Some("orcid")
+      {
+        continue;
+      }
+      let id = document
+        .findnodes(".//ltx:ref[@href]", Some(&contact))
+        .first()
+        .and_then(|link| link.get_attribute("href"))
+        .unwrap_or_else(|| contact.get_content())
+        .trim()
+        .to_string();
+      if id.is_empty() {
+        continue;
+      }
+      if seen.contains(&id) {
+        document.remove_node(contact);
+      } else {
+        seen.push(id);
+      }
+    }
+  }
 }
 
 /// The Link step for the addresses printed inside an affiliation-kind entry (OXIDIZED_DESIGN_DIVERGENCES #956): every

@@ -22,8 +22,9 @@ macro_rules! repro {
 }
 
 /// llncs `\author{XYZ Collaboration\thanks{…}: Ann Able\inst{1} \and Bob Baker\inst{2}}` prints "XYZ Collaboration⋆ :
-/// Ann Able1 and Bob Baker2": the colon parts the heading from the first name, so the heading is an entry of the list
-/// (97b's and 97c's reading, 2206.00684's GRAVITY+ Collaboration; 2407.21626's `\and The ABC Collaboration\thanks{…}:
+/// Ann Able1 and Bob Baker2": the colon parts the heading from the first name. Since 103b the heading is Ann Able's
+/// `contact role="collaboration"` and the writer declines (the outcome this guard is named for); 98a read it as an entry
+/// of the list (97b's and 97c's reading, 2206.00684's GRAVITY+ Collaboration; 2407.21626's `\and The ABC Collaboration\thanks{…}:
 /// Fay Fox` is parted by the separator before it). int126a declined the re-part — its "a name naming no person" read
 /// only the separator before the heading, which the first piece has none of — and the old reader wrote "XYZ
 /// Collaboration: Ann Able" as one name. Distinct from its sibling on the same decline: svjour's `{The XYZ
@@ -33,7 +34,7 @@ macro_rules! repro {
 /// heading's note a thanks pubnote, the reading's entry declined by the writer as a kernel colon heading is (OD #946;
 /// charter §4: a collaboration is a contact on its names, no creator).
 #[test]
-fn a_collaboration_heading_a_separator_parts_is_an_entry() {
+fn a_collaboration_heading_a_separator_parts_is_a_contact_the_writer_declines() {
   let tex = repro!("llncs_collaboration_colon_heading_keeps_first_name.tex");
   let (xml, _, notes, writer) = assert_reading(
     tex,

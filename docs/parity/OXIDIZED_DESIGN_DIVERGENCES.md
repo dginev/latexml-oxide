@@ -29104,8 +29104,11 @@ Collaboration)`, 1611.00816 `~for the IceCube Collaboration \footnote{…}`), an
 `\fnmsep`/`\fnsep` after the remark the name's (`name_takes_annotations`: 1512.03605's `Laure Massacrier on behalf of
 the LHCb Collaboration\inst{1,2}\fnsep\thanks{…}` keeps her institutes and e-mail). The contact is made in the content of
 the name before it; a colon heading in the piece is the next name's (llncs, the observer's writer then declines as for
-the kernel's colon heading: `perfect_kernel_batch98a::a_collaboration_heading_a_separator_parts_is_an_entry`, updated
-from the heading as a creator; its note stays a thanks pubnote). Not read: a remark inside the name's own group or
+the kernel's colon heading:
+`perfect_kernel_batch98a::a_collaboration_heading_a_separator_parts_is_a_contact_the_writer_declines`, updated from the
+heading as a creator; its note stays a thanks pubnote). A heading over an `\and` list is the first name's only (the
+GRAVITY+ and Euclid lists, 2206.00684, 2503.15310, 2507.12116; nothing lost): RED repro
+class-bindings/`llncs_collaboration_heading_covers_every_name`, SYNC_STATUS "103b residual". Not read: a remark inside the name's own group or
 name-part argument (2406.15355 `\lastname{Schmier for the ALICE collaboration}`; 1206.2546 mem
 `M. \,{Tluczykont\inst{1}~{for~the~H.E.S.S.~Collaboration}}\inst{2}`). Guard
 `perfect_kernel_batch103b::webofc_collaboration_after_the_notes_is_a_contact`; repro
@@ -29459,8 +29462,9 @@ as the merged creator did).
   reader and Perl read it — `\author{GRAVITY+ Collaboration\thanks{…}: R.~Abuter\inst{8} \and …}` (aa, 2206.00684),
   the first piece, has none before it and its colon after it; read by the separator before alone, int126a declined it
   and wrote "GRAVITY+ Collaboration: R. Abuter" as one name (review rev126a B1, 98a; guard
-  `perfect_kernel_batch98a::a_collaboration_heading_a_separator_parts_is_an_entry`, with svjour's `{The XYZ
-  Collaboration}\\[2ex]Ann Able`, which still declines).
+  `perfect_kernel_batch98a::a_collaboration_heading_a_separator_parts_is_a_contact_the_writer_declines` (since 103b the
+  heading Ann Able's collaboration contact, the writer declining), with svjour's `{The XYZ Collaboration}\\[2ex]Ann
+  Able`, which still declines).
 
 **Required witness 2608.25509** (svproc, 97c's regression): every affiliation on its authors as pdflatex prints them
 (Gautier 1, 2; Guillermit 1; Porez 2; Rousset 1; Chablat 2); the two spelled addresses on Porez and Chablat, the three
@@ -30437,11 +30441,13 @@ cluster 5 (O): 2507.12319 and 2406.08258 revtex4-2, 2503.04867 IEEEtran; 9 dev20
 wraps every name in) `\href` is `\lx@author@href` (frontmatter_fields.rs; a defined `\href` only, saved once so a nested
 author restores the document's). A link whose address, expanded as hyperref expands it, is an orcid.org record
 (`orcid_id`: `https://orcid.org/\orcidauthorA` — the template's `\xdef` runs before the iD's macro is defined) and whose
-ink prints no letter outside a picture (`ink_prints_letters`, queue_digest.rs: plain characters as written, anything
-else digested in a speculative run as a label's operand is, the text nodes of a pgf/TikZ picture not counted; a box,
-a graphic, a rule, the iD's digits) is `\lx@add@orcid{<iD>}`, the kernel's ORCID contact (`<contact role="orcid"><ref
-class="ltx_orcid" …>` with the logo), and its ink is dropped. Kept as before: an ink printing a letter — the linked name
-(`\href{https://orcid.org/…}{T.J.C. Bezerra}`, 2606.03745; 2301.02927, 2312.16289, 2601.06085), and a plain `iD` —,
+ink prints no letter or digit outside a picture (`ink_prints_text`, queue_digest.rs: plain characters as written,
+anything else digested in a speculative run as a label's operand is, the text nodes of a pgf/TikZ picture not counted;
+a box, a graphic, a rule) is `\lx@add@orcid{<iD>}`, the kernel's ORCID contact (`<contact role="orcid"><ref
+class="ltx_orcid" …>` with the logo), and its ink is dropped. Kept as before: an ink printing a letter or a digit,
+printed text — the linked name (`\href{https://orcid.org/…}{T.J.C. Bezerra}`, 2606.03745; 2301.02927, 2312.16289,
+2601.06085), the iD printed as its digits (`\href{https://orcid.org/0000-0002-1825-0097}{0000-0002-1825-0097}`, with or
+without an `X` checksum, review rev103b S1), a plain `iD` —,
 `\href`'s options, a link in a note or contact digested inside the name (`creator_name_in_progress`: `\thanks{See
 \href{https://orcid.org/…}{his record}.}`), and a link inside a mark (`reading_label`, math: `\inst{1,\href{…}{iD}}`,
 `$^{1,\href{…}{\orcidicon}}$`), where a contact made was lost — that mark still shows its text without the link, as
@@ -30450,3 +30456,18 @@ before. orcidlink's `\orcidlink` in a name keeps its `ltx_orcid` link in the per
 `perfect_kernel_batchfms2a2r9::the_rehearsal_leaves_the_conversion_unchanged` (its `\usebox` icons in names are now ORCID
 contacts; the switch on and off still byte-identical); repro sectioning-frontmatter/`author_orcid_href_icon_is_the_orcid`
 (RED → GREEN).
+
+An icon link glued after the marks and notes that follow a name's comma is that name's, as the marks are
+(`marks_before_glued_commas` moves it before the comma with them, `leading_orcid_icon_end`, separators.rs): `\href` to an
+orcid.org record printing no letter or digit as its tokens read, `\orcidlink{…}`, `\orcidID{…}`, or a macro whose body
+is one such link (`\orcidAT`, `\orcidicon{0000-…}`, `\orcidA{}`). `Ashley Hai Tung Tan,$^{1}$\thanks{…}\orcidAT⏎
+Christian Wolf,$^{1,2}$\orcidChrisW⏎…` (mnras, 2605.03577) split after the comma gave each author the next one's iD
+(review rev103b B1). Not when the names open with their icons (`\orcidA~Ann Able,$^{1}$\orcidB~Bob Baker`: each the name
+after it, as 2603.26792's `\href{…}{icon}~{Name}`), and not an icon glued to the comma with no mark before it. A creator
+holding one iD twice keeps its first contact of it (`drop_repeated_orcids`, insert.rs: acmart's `\orcid{X}` beside the
+name's `\orcidicon{X}` link, 2501.02380, review rev103b S2; Perl keeps a repeated `\orcid` twice,
+Base_Utility.pool.ltxml:659-660); two iDs are two contacts. Guards (`perfect_kernel_batch103b`)
+`an_orcid_icon_after_a_names_comma_is_its_own`, `an_orcid_link_printing_text_stays_printed`,
+`a_repeated_orcid_is_one_contact`; repros sectioning-frontmatter/`author_orcid_icon_after_comma_marks_is_the_names`,
+`author_orcid_href_printing_text_stays`, class-bindings/`mnras_orcid_icon_after_comma_marks_is_the_names`,
+`acmart_orcid_and_its_icon_link_one_contact` (RED → GREEN).
