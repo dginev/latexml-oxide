@@ -1,0 +1,14 @@
+% A raw class's copy of authblk's `\affil` after `\RequirePackage{authblk}` (abcopy.cls, oasics.cls:610's shape) is
+% refused by the binding's lock and replayed: each author keeps the affiliation its mark picks, and the class's
+% `\@author` layout of `\AB@affillist` is no longer left to the unclaimed-text net (OXIDIZED_DESIGN_DIVERGENCES #959).
+% witness: 1709.00722 (oasics), 2503.02336 (eurocg25.cls); dagman.cls the same (1701.09007)
+% oracle:  pdflatex (abcopy.cls beside it) 0 errors: "Ann Able1 and Bob Baker2", "1 Dept. of Widgets, Univ X", "2 Inst. of Gadgets, Univ Y"
+% engines: rust int129a = 0 errors, 1 Warning (frontmatter:unclaimed \AB@affillist); both affiliations a note of the author block, no author's
+% expect:  0 errors, 0 warnings; Ann Able with "Dept. of Widgets, Univ X", Bob Baker with "Inst. of Gadgets, Univ Y"
+% status:  RED (int129a) -> GREEN (102a)
+% preload: ar5iv.sty
+\documentclass{abcopy}
+\title{A Title}
+\author[1]{Ann Able}\author[2]{Bob Baker}
+\affil[1]{Dept. of Widgets, Univ X}\affil[2]{Inst. of Gadgets, Univ Y}
+\begin{document}\maketitle Body text.\end{document}

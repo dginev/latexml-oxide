@@ -222,8 +222,23 @@ pub fn define_author_and_affil() -> Result<()> {
   // lines do (`\lx@add@affiliation@marked`) — beyond authblk, whose `\AB@thenote` prints it under the whole block
   // (OXIDIZED_DESIGN #765). A footnote symbol (`$^*$Equal contribution`) or a mark no author carries (a typo, an author
   // without marks after marked ones) keeps authblk's run: a label no one requests would go to a nameless author.
+  // LOCKED, as the kernel's `\title`/`\author` are (sect05.rs): a document's, class's or package's own `\affil` is
+  // refused, and its body still runs first for its side effects, its output discarded (`\lx@replay@class@setter`,
+  // OXIDIZED_DESIGN #482), so the affiliation stays the binding's contact. The JOSS template's copy of authblk's own
+  // `\affil` code (paper_joss.tex:162-182, a `\renewcommand{\affil}[2][]` that differs from authblk.sty:148-167 only in
+  // typography) put every affiliation in `\AB@authors`, which nothing prints here (2504.08081, 2310.11002, 2107.08407,
+  // 2507.13341, 2604.08855); and so did the raw classes that copy it after `\RequirePackage{authblk}`, oasics.cls:610
+  // (1709.00722) and eurocg25.cls (2503.02336), dagman.cls:696 the same (1701.09007; lipics-v2016.cls:611 is read as
+  // its binding's stand-in copy, which declines it unrecorded: 1603.00928). A redefinition that takes arguments is refused at
+  // every origin (state.rs `install_definition`, OXIDIZED_DESIGN #500); a binding that loads authblk and defines its
+  // own `\affil` loads unlocked and keeps it (lni_cls.rs). OXIDIZED_DESIGN_DIVERGENCES #959.
   DefMacro!("\\affil OptionalSemiverbatim {}", sub[(label, affil)] {
     let label = label.unwrap_or_default();
+    let replay = Invocation!(T_CS!("\\lx@replay@class@setter"), vec![
+      Some(Tokens::new(Explode!("affil"))),
+      Some(label.clone()),
+      Some(affil.clone())
+    ]);
     let run = affil_run();
     let call = if !label.is_empty() {
       Invocation!("\\lx@add@contact[role=affiliation,annotate=1,label={#1}]{#2}", vec![
@@ -244,11 +259,12 @@ pub fn define_author_and_affil() -> Result<()> {
       Invocation!("\\lx@add@contact[role=affiliation,annotate=run]{#1}", vec![Some(affil)])
     };
     Ok(Tokens::new([
+      replay.unlist(),
       call.unlist(),
       Invocation!(T_CS!("\\lx@AB@affil@state"), vec![Some(label)]).unlist(),
     ]
     .concat()))
-  }, robust => true);
+  }, robust => true, locked => true);
   Ok(())
 }
 

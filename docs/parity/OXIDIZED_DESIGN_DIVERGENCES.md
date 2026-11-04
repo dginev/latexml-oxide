@@ -29699,13 +29699,14 @@ the block's shared creator (OD #159), Perl a document-level pubnote or a paragra
 the text too is aaskaii 2606.24738 (Perl 108 lost words).
 
 **Witnesses** (98c0 → 98c): copernicus 0712.1312, 1203.6297, 1405.5752 (`\AB@affillist`, 3-7 lines), esapub2005
-1401.4706, oasics 1709.00722 (under the authblk binding), sig-alternate 1206.6940 (`\tntoks`, `\tntokstwo`), 1601.00073,
+1401.4706, oasics 1709.00722 (under the authblk binding; since #959 its `\affil` copy is refused and its
+affiliations are the binding's contacts, the note gone as their duplicate), sig-alternate 1206.6940 (`\tntoks`, `\tntokstwo`), 1601.00073,
 1805.02241, sigkddExp 2601.20031, sig-alt-full cs0405006 (`\tntoks`, printed by the refused `{abstract}` begin code),
 aaskaiid.sty 2606.24738, 2606.25049, 2606.25830 (`\email@toks`), bullsrsl 2405.12817, 2603.08101, astro-ph0106091,
 2607.26558; memsait astro-ph0102098, astro-ph9909366 (`\@opening`, whose value holds the document's `\title` and
 `\author`: digested as the note's content they make the title and creators, and the note is left empty). Not reached:
-2310.11002 (its `\AB@affillist` is read by authblk.sty's own `\@author`, which the authblk binding replaces: routing,
-batch R), raa (1404.3644 …: the deposit dropped for the kernel's `\end{flushleft}\endgroup` error, R0), cccconf
+2310.11002 (its `\AB@affillist` is read by authblk.sty's own `\@author`, which the authblk binding replaces; its
+`\affil` copy refused by the binding's lock since #959, its affiliations are contacts), raa (1404.3644 …: the deposit dropped for the kernel's `\end{flushleft}\endgroup` error, R0), cccconf
 (1702.07637: its title page is printed by `\keywords`/`\section`, deferred), 1-2-word losses (below the threshold).
 
 **Guards** `perfect_kernel_batch98c::{an_affiliation_list_only_the_class_author_prints_is_a_note_of_the_block,
@@ -30360,3 +30361,34 @@ its one creator with a `merged_creators` Error was the fail-safe while the re-pa
 reads `<sup>2,∗</sup>`: the reading gave the `∗` printed after the address to the name (`mark:after-comma`), which
 needs the made e-mail item to carry a mark (RED repro `author_marked_email_piece_mark_moves_to_the_name`, SYNC_STATUS
 row 100c).
+
+### 959. authblk's `\affil` is locked: a document's or raw class's own `\affil` is refused and replayed, the affiliations stay the binding's (Perl: the redefinition replaces the binding's, its affiliations lost with 6-8 Errors)
+
+**Perl behavior**: authblk.sty.ltxml:57 defines `\affil` unlocked, so a later `\renewcommand\affil` replaces it. The
+JOSS template copies authblk's own `\affil` code (paper_joss.tex:162-182, a `\renewcommand{\affil}[2][]` that differs
+from authblk.sty:148-167 only in typography); it `\xdef`s `\AB@authors`, `\AB@las`, `\AB@au@str`, which Perl's binding
+never defines (authblk.sty.ltxml:22-61): 6-8 Errors, and every affiliation lost. **Rust before**: the binding defines
+those names (authblk_sty.rs, run 340), so the copy ran clean and put every affiliation in `\AB@authors`, which only
+authblk.sty:168-171's `\@author` prints and the binding replaces: the creators kept no affiliation, with 0 Errors and
+0 Warnings (2504.08081, 2310.11002, 2107.08407, 2507.13341, 2604.08855; dev lost-words census mechanism A). The raw
+classes that copy it after `\RequirePackage{authblk}` — oasics.cls:610, eurocg25.cls, dagman.cls:696 — did the same,
+their `\@author` layout of `\AB@affillist` left to the unclaimed-text net (#953) as a note of the author block with a
+`Warning:frontmatter:unclaimed` (1709.00722, 2503.02336; 1701.09007 calls no `\affil`). lipics-v2016.cls:611's copy
+is read as its binding's stand-in copy (`copy_provides_refuses_locked`, state.rs), which declines a locked name without
+a record, so it is not replayed (1603.00928 unchanged).
+
+**Rust behavior**: `\affil` is `locked => true` (robust, as authblk.sty:148's `\newcommand` is; the inner `\affil␣` gets
+`:locked@files`, dialect.rs). A redefinition that takes arguments is refused at every origin, the document's too
+(state.rs `install_definition`: only a parameterless value definition becomes the meaning, #500); a `\let\affil…`
+still goes through, as Perl's `Let` checks no lock (2208.01579's `\let\affil\MEETaddress` unchanged). The refused body
+is kept as `\lx@dropped@affil` and run first by the binding's `\affil` through the kernel's replay
+(`\lx@replay@class@setter{affil}{label}{text}`, #482): its output discarded, the frontmatter frozen, its stores and
+flags kept (`\def\affil#1{\gdef\lastaff{#1}}`'s `\lastaff`, which the document prints), the accumulators it fills
+(`\AB@authors`, `\AB@affillist`) its records, taken out of a class title page's deposit. A binding that loads
+authblk and defines its own `\affil` loads unlocked and keeps it (lni_cls.rs, which also re-runs authblk's
+`\affil`), and so does a raw file a binding reads with `InputDefinitions` (unlocked, as Perl's `loadLTXML`). The page
+prints the same text through either definition (the copy's meaning is authblk's), so keeping the binding's meaning is
+the faithful reading of what pdflatex prints. Guards `perfect_kernel_batch102a::{a_documents_copy_of_authblk_affil_keeps_the_bindings_affiliations,
+a_raw_class_copy_of_authblk_affil_keeps_the_bindings_affiliations, a_refused_affil_still_runs_for_its_stores}`; repros
+`sectioning-frontmatter/authblk_affil_copy/`. **Not reached**: an `\email` built from the same code under a new name
+(ACL/NAACL: 2406.11632, 1904.03969; RED repro `authblk_email_from_affil_code`, SYNC_STATUS row 102a).
