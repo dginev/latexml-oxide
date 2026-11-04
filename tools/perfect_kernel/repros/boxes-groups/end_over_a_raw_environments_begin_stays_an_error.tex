@@ -1,8 +1,9 @@
 % Negative control: `\end{X}` over a raw `\newenvironment{Y}`'s `\begin{Y}` (a plain group recording an environment
 % of its own) and the `\begingroup` Y's begin code opened is LaTeX's `\@badend` ("\begin{bad} ended by
 % \end{center}"), and stays the error it is: the environment open is Y, not X (stomach.rs
-% end_environment_over_plain_groups refuses when a group above X binds `current_environment` or the open
-% environment is not X, the check `\end{X}`'s "Can't close environment" just ran). The flushleft/myenv
+% end_environment_over_plain_groups refuses when a group above X records an environment other than X, or the
+% open environment is not X, the check `\end{X}`'s "Can't close environment" just ran; a group recording X itself,
+% an inner X the branch already ended, is passed: review rev98d2 finding 2). The flushleft/myenv
 % variant (`\newenvironment{myenv}{\begingroup\itshape}{\endgroup}`, `\begin{flushleft}\begin{myenv}A
 % words.\end{flushleft}B words.\end{myenv}C words.`) is the same path.
 % witness: synthetic (control for 1404.3644's raa.cls:322-349 shape)

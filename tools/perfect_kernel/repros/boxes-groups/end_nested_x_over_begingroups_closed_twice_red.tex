@@ -1,0 +1,15 @@
+% mechanism: X nested in X, each with a `\begingroup` opened inside it, ended by three `\end{center}` and a final
+%   `\endgroup`: TeX closes the inner center's group at the second `\end{center}` and the outer at the third; ours ends
+%   the inner X at the first, then reads the second against the outer and raises one Error (stomach.rs
+%   end_environment_over_plain_groups; review rev98d2 finding 1, same mechanism as round 1)
+% witness: none (review rev98d2 probe q5)
+% oracle:  pdflatex (TL 2025) 0 errors: "A words. B words. C words. D words.E words."
+% engines: rust int132a1 3 errors, 1 warning; 98d rounds 1 and 2 1 E / 1 W
+% expect:  0 errors, 0 warnings
+% status:  RED (98d r2) — open, SYNC row 98d; no guard
+% preload: ar5iv.sty
+\documentclass{article}
+\newenvironment{bad}{\begingroup}{\endgroup}
+\begin{document}
+\begin{center}\begingroup\begin{center}\begingroup A words.\end{center}B words.\end{center}C words.\end{center}D words.\endgroup E words.
+\end{document}
