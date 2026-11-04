@@ -656,9 +656,19 @@ pub(in crate::base_utilities::frontmatter::observer) fn address_runs(
       }
       let word = &text[word_start..word_end];
       // (each part a local part of letters: a digit run before the address is no part of a list — `Tel:5551234,info@x.org`
-      // is no `5551234@x.org`, `ORCID 0000-0002-1825-0097,ann@x.org` no `0000-…@x.org`; brief 95c r2 B3 — the readers'
-      // one test, `author_block::is_listed_local_part`)
-      if !is_listed_local_part(word) || !boundary_before(word_start) {
+      // is no `5551234@x.org`, `ORCID 0000-0002-1825-0097,ann@x.org` no `0000-…@x.org`; brief 95c r2 B3. A part with
+      // no space after its comma takes the unspaced list's checks, the readers' one test
+      // `author_block::is_listed_local_part`; a part with one, the spaced-list rule's word test alone, so a labelled
+      // `E-mail: ann, b@x.org` keeps `ann@` — review rev103a2 B1)
+      let part_ok = if gap > 0 {
+        !word.is_empty()
+          && !word.starts_with('.')
+          && !word.chars().any(|c| c.is_ascii_uppercase())
+          && word.chars().any(|c| c.is_ascii_alphabetic())
+      } else {
+        is_listed_local_part(word)
+      };
+      if !part_ok || !boundary_before(word_start) {
         break;
       }
       spaced |= gap > 0;
@@ -672,9 +682,10 @@ pub(in crate::base_utilities::frontmatter::observer) fn address_runs(
         || before.ends_with(['(', '{', '[', '<', ':'])
         || label_word_before(text, at, false).is_some()
     };
-    // (an initial ends no list: `smith,j@x.org` — the readers' one test, `author_block::ends_a_listed_run`)
+    // (an initial ends no unspaced list: `smith,j@x.org` — the readers' one test, `author_block::ends_a_listed_run`; a
+    // spaced one, `E-mail: ann, b@x.org`, the spaced-list rule's)
     let list_ok = !locals.is_empty()
-      && ends_a_listed_run(local)
+      && (spaced || ends_a_listed_run(local))
       && (!spaced
         || locals.iter().all(|(_, w)| spells(w)) && spells(local)
         || opens(locals.last().map_or(start, |(s, _)| *s)));

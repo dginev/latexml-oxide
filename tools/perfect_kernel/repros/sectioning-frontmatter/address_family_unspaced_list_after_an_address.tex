@@ -1,0 +1,15 @@
+% An unspaced list after an address on a `;`-parted kernel address line (`ann@x.org; jd,ann2@x.org`): the list is
+% written out (`write_out_unspaced_lists`), each local part at the shared domain, the author it spells (the main
+% session's shared-domain ruling): `jd@` on Joe Doe by initials, `ann2@` on Ann Able (review rev103a2, probe m2).
+% witness: none (synthetic; the list shape of 2112.00969)
+% oracle:  pdflatex 0 errors: "Univ X / ann@x.org; jd,ann2@x.org"
+% engines: rust int130a = 0 errors, the whole line Joe Doe's affiliation, `Univ X` with no carrier's e-mail
+% expect:  0 errors, 0 warnings; Ann Able: ann@x.org + ann2@x.org; Joe Doe: Univ X + jd@x.org
+% status:  GREEN (103a r2, kept as a control)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}\author{Ann Able \and Joe Doe\\ Univ X\\ ann@x.org; jd,ann2@x.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -78,6 +78,12 @@ fn an_unspaced_list_of_local_parts_is_written_out() {
       "email=ashishbshah@fb.com",
     ],
   ]);
+  // (the control after an address on the kernel block, review rev103a2 probe m2: each local part the author it
+  // spells, by the shared-domain ruling — `jd@` Joe Doe's initials, `ann2@` Ann Able's)
+  assert_creators(repro!("address_family_unspaced_list_after_an_address"), &[
+    &["Ann Able", "email=ann@x.org", "email=ann2@x.org"],
+    &["Joe Doe", "affiliation=Univ X", "email=jd@x.org"],
+  ]);
   assert_creators(repro!("address_family_spaced_list_stays_whole"), &[
     &["Ann Able", "affiliation=Univ A"],
     &[
@@ -142,8 +148,10 @@ fn a_contact_word_glued_to_an_address_is_no_local_part() {
 
 /// Review rev103a S1: a one-letter word is an initial — it ends no list (`smith,j@x.org`,
 /// `author_block::ends_a_listed_run`: the kernel block, as on base) and is no piece of one (`d,ashishbshah@fb.com`:
-/// the take-out leaves the `d` in the e-mail's rest, so the flush keeps the e-mail whole on its carriers). Red (103a
-/// r1): `smith@x.org` and a nameless `j@x.org`, `Univ X` moved; a nameless `d@fb.com` (int130a: `d` lost).
+/// the take-out leaves the `d` in the e-mail's rest, so the flush keeps the e-mail whole on its carriers). The second
+/// case pins a trade (review rev103a2 NIT): the `d` is no longer lost, but the whole e-mail, `ann@a.edu` with it, sits
+/// on Dan Yang and Ash Shah, none on Ann Able. Red (103a r1): `smith@x.org` and a nameless `j@x.org`, `Univ X` moved;
+/// a nameless `d@fb.com` (int130a: `d` lost).
 #[test]
 fn a_one_letter_word_is_an_initial_not_a_local_part() {
   assert_creators(
@@ -192,5 +200,28 @@ fn an_email_its_two_readings_read_apart_stays_whole() {
         "email=dzyang, ashishbshah@fb.com; ann@a.edu",
       ],
     ],
+  );
+}
+
+/// Review rev103a2 B1: the unspaced list's checks (no one-letter word, no contact word: `is_listed_local_part`,
+/// `ends_a_listed_run`) are that list's alone; a part with a space after its comma takes `address_runs`' spaced-list
+/// rule as on base (int130a), so a labelled spaced list keeps its one-letter mailbox (`E-mail: ann, b@x.org`) and a
+/// one-letter first part does not split the line (`E-mail: a, bob@x.org`, base alike: the whole line the last author's
+/// affiliation). Red (103a r2): Bob Baker's affiliation "E-mail: ann", `ann@x.org` lost; "E-mail: a" split off.
+#[test]
+fn a_spaced_list_takes_the_spaced_list_rule() {
+  assert_creators(
+    repro!("address_family_spaced_list_one_letter_last_kept"),
+    &[&["Ann Able", "affiliation=Univ X", "email=ann@x.org"], &[
+      "Bob Baker",
+      "email=b@x.org",
+    ]],
+  );
+  assert_creators(
+    repro!("address_family_spaced_list_one_letter_piece_kept"),
+    &[&["Ann Able", "affiliation=Univ X"], &[
+      "Bob Baker",
+      "affiliation=E-mail: a, bob@x.org",
+    ]],
   );
 }

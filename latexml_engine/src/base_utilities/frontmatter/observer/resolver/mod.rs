@@ -1335,6 +1335,16 @@ mod tests {
       read("smith,j@x.org, doe@x.org", &none).1,
       owned(&["j@x.org", "doe@x.org"])
     );
+    // (a spaced list takes the spaced-list rule, as on base: the unspaced list's checks are that list's alone — review
+    // rev103a2 B1)
+    assert_eq!(
+      read("E-mail: ann, b@x.org", &none).1,
+      owned(&["ann@x.org", "b@x.org"])
+    );
+    assert_eq!(
+      read("E-mail: a, bob@x.org", &none).1,
+      owned(&["a@x.org", "bob@x.org"])
+    );
     // (prose before one address: no list — a capital, or a word spelling no one mid-text, 0705.3421)
     assert_eq!(
       read(
