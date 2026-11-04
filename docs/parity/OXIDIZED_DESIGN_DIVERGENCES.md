@@ -30224,7 +30224,13 @@ observer read some of them (`take_out_entry_addresses`, OD #938), but its writer
   entry, astro-ph0701846): the Kind step takes it out.
 - **Readers, one separator set**: `|` parts a group's local parts like `,` and `;` (`ADDRESS_GROUP_SEPARATORS`, both
   readers; `$\mid$`, `\vert` print one, 2110.02026), an unbraced `a|b@x` or `a/b@x` too (`UNBRACED_LIST_SEPARATORS`,
-  hep-ph9906243's `deleo/walrod/vaz@…`; `email_addresses`, the observer's `plain_addresses`/`address_runs`); an e-mail
+  hep-ph9906243's `deleo/walrod/vaz@…`; `email_addresses`, the observer's `plain_addresses`/`address_runs`), and a
+  comma list of local parts written without spaces, `a,b,c@x`, inside a `;`- or `,`-parted line, each part at the
+  domain by the one function both readers call (`write_out_unspaced_lists`, `is_listed_local_part`: lowercase, a
+  letter, no space after the comma — `address_runs`' list rule; 2112.00969's `ann@a.edu; dzyang,ashishbshah@fb.com`,
+  whose `dzyang` the flush's write-out had dropped while the take-out cut it, batch 103a); the flush writes an e-mail
+  out only where its two readings (`addresses_in`, `address_take_out`) agree, else it stays whole where its call put
+  it (a spaced list not opening the line, `ann@a.edu; dzyang, ashishbshah@fb.com`); an e-mail
   label glued to an address (`Email:aable@a.edu`, `(E-mail:bogdan@…`, astro-ph0404330) is no part of it, and any other
   colon before the `@` makes no address; a two-letter surname spells a local part of its letters alone
   (`NameKeys::short_surnames`: `an107@` Weili An's, not Anusuya Nallathambi's initials, 2608.22602) — not a name

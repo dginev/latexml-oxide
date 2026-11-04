@@ -983,6 +983,78 @@ pub(in crate::base_utilities) const ADDRESS_GROUP_SEPARATORS: [char; 3] = [',', 
 /// readers' ([`email_addresses`], the frontmatter observer's `plain_addresses`).
 pub(in crate::base_utilities) const UNBRACED_LIST_SEPARATORS: [char; 2] = ['|', '/'];
 
+/// A character of an address's local part as the readers take it (`ann.able`, `j_doe`, `b+x`).
+pub(in crate::base_utilities) fn is_local_char(c: char) -> bool {
+  c.is_ascii_alphanumeric() || "._+-".contains(c)
+}
+
+/// Whether `word` may be a local part of a list written without spaces before one domain (`dzyang,ashishbshah@fb.com`,
+/// 2112.00969; `saro,borgani,tornator@oats.inaf.it`, 0810.2791 — the main session's ruling): lowercase letters, digits
+/// and `._+-`, a letter among them, no `.` first. A digit run is none (`Tel:5551234,info@x.org` is no `5551234@x.org`,
+/// brief 95c r2 B3), nor a capitalised word (`Germany,foo@bar.de`). The one test of every reader of such a list:
+/// [`write_out_unspaced_lists`], the frontmatter observer's `address_runs`.
+pub(in crate::base_utilities) fn is_listed_local_part(word: &str) -> bool {
+  !word.is_empty()
+    && !word.starts_with('.')
+    && word.chars().all(is_local_char)
+    && !word.chars().any(|c| c.is_ascii_uppercase())
+    && word.chars().any(|c| c.is_ascii_alphabetic())
+}
+
+/// `text` with each list of local parts written without spaces before one domain written out, each part at the domain
+/// (`ann@a.edu; dzyang,ashishbshah@fb.com` → `ann@a.edu; dzyang@fb.com,ashishbshah@fb.com`, 2112.00969), as a braced
+/// list's are: the one reading of the address readers, the author block's ([`email_addresses`]) and the frontmatter
+/// observer's (`plain_addresses`; its `address_runs` reads the list alike), so neither drops a local part the other
+/// reads. A list is a run of comma pieces with no space or `;` between, each a local part ([`is_listed_local_part`]) —
+/// the first one may follow a label or a bracket glued to it, `Email:a,b@x.org` — ending in one address; a piece of a
+/// braced group is left to the group readers, and a word no address follows is left as it is.
+pub(in crate::base_utilities) fn write_out_unspaced_lists(text: &str) -> String {
+  let mut out = String::with_capacity(text.len());
+  for chunk in text.split_inclusive(|c: char| c.is_whitespace() || c == ';') {
+    let body = chunk.trim_end_matches(|c: char| c.is_whitespace() || c == ';');
+    let separator = &chunk[body.len()..];
+    if !body.contains(',') || !body.contains('@') || body.contains(['{', '}']) {
+      out.push_str(chunk);
+      continue;
+    }
+    let mut pieces: Vec<String> = Vec::new();
+    // (the local parts read so far, the first with the label or bracket glued before it)
+    let mut pending: Vec<(&str, &str)> = Vec::new();
+    let flush = |pending: &mut Vec<(&str, &str)>, pieces: &mut Vec<String>| {
+      pieces.extend(pending.drain(..).map(|(before, word)| s!("{before}{word}")));
+    };
+    for piece in body.split(',') {
+      if let Some((local, domain)) = piece.split_once('@') {
+        if !pending.is_empty() && !local.is_empty() && local.chars().all(is_local_char) {
+          pieces.extend(
+            pending
+              .drain(..)
+              .map(|(before, word)| s!("{before}{word}@{domain}")),
+          );
+        } else {
+          flush(&mut pending, &mut pieces);
+        }
+        pieces.push(piece.to_string());
+        continue;
+      }
+      let (before, word) = match piece.rfind([':', '(', '[', '<']) {
+        Some(at) if pending.is_empty() => piece.split_at(at + 1),
+        _ => ("", piece),
+      };
+      if is_listed_local_part(word) {
+        pending.push((before, word));
+      } else {
+        flush(&mut pending, &mut pieces);
+        pieces.push(piece.to_string());
+      }
+    }
+    flush(&mut pending, &mut pieces);
+    out.push_str(&pieces.join(","));
+    out.push_str(separator);
+  }
+  out
+}
+
 /// Parse an email line into its individual address strings, or `None` if the line
 /// is not an email list. Two forms are recognized, and mixed (after skipping
 /// wrapper commands and grouping — the visible letter/other/space chars are read,
@@ -993,6 +1065,9 @@ pub(in crate::base_utilities) const UNBRACED_LIST_SEPARATORS: [char; 2] = ['|', 
 ///   compact form co-located authors use for one shared address per person; a line
 ///   may hold several groups (`{a,b}@x, {c,d}@y`, 2402.02746; `{a,b}@x, c@y`,
 ///   2410.19160).
+/// - **Unspaced list** — `a,b,c@dom` (no space after the commas): each local part at the
+///   domain, as a braced list's ([`write_out_unspaced_lists`]; `ann@a.edu;
+///   dzyang,ashishbshah@fb.com`, 2112.00969).
 ///
 /// A prose affiliation line ("Dept. of Foo, University of Pisa, Italy") has no `@`,
 /// and a place before an address (`Berlin, Germany, foo@bar.de`) is a bare word, so
@@ -1061,6 +1136,10 @@ pub(in crate::base_utilities) fn email_addresses(line: &Tokens) -> Option<Vec<St
   if !v.contains('@') {
     return None;
   }
+  // (a list of local parts written without spaces before one domain, each at it: `ann@a.edu; dzyang,ashishbshah@fb.com`,
+  // 2112.00969 — the frontmatter observer's reading too, [`write_out_unspaced_lists`])
+  let written = write_out_unspaced_lists(v);
+  let v = written.as_str();
   // Items at commas outside the braces: each a full address, or a braced list of local parts taking the domain after
   // its `}` (`{a,b,c}@dom` → a@dom, b@dom, c@dom). A bare word is no address, so a place before an address
   // (`Berlin, Germany, foo@bar.de`) leaves the line no email list.

@@ -451,9 +451,12 @@ fn link_entry_addresses(document: &mut Document) -> Result<()> {
     // (an e-mail printing addresses alone, several written out; one printing a template, a list the reader could not
     // part or a group beside words — `{ann,bob}@a.org (corresponding)`, 92c — is no one's address: it stays where its
     // call placed it, as the frontmatter observer's reading leaves it)
+    // (written out only where the two readings of it agree — the addresses it prints, `addresses_in`, and the runs its
+    // take-out cuts, `address_take_out` —, so no local part one of them reads is lost: the take-out had cut
+    // `dzyang,ashishbshah@fb.com` whole while the list held `ashishbshah@` alone, 2112.00969; else it stays whole)
     let readable = |content: &str| {
       let listed = resolver::addresses_in(content);
-      let (_, rest) = resolver::address_take_out(content, &[]);
+      let (taken, rest) = resolver::address_take_out(content, &[]);
       // (an e-mail label beside a group keeps it whole, as the frontmatter observer's group write-out does:
       // `Emails: {ann,bob}@a.org`, 92c)
       let words: Vec<&str> = content
@@ -464,7 +467,7 @@ fn link_entry_addresses(document: &mut Document) -> Result<()> {
       let labelled = words.iter().any(|w| is_email_label(w))
         || words.windows(2).any(|pair| is_email_label(&pair.join(" ")));
       if listed.len() > 1 && !labelled {
-        (!rest.chars().any(char::is_alphanumeric)).then_some(listed)
+        (!rest.chars().any(char::is_alphanumeric) && taken == listed).then_some(listed)
       } else if listed.len() > 1 {
         None
       } else {

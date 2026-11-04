@@ -1,0 +1,121 @@
+//! Red/green guards for batch 103a: a list of local parts written without spaces before one domain
+//! (`dzyang,ashishbshah@fb.com`) inside a `;`- or `,`-parted e-mail line is written out, each local part at the domain,
+//! by the one reading both address readers share (latexml_engine/src/base_utilities/author_block/email_block_calls.rs
+//! `write_out_unspaced_lists`: the author block's `email_addresses`, the frontmatter observer's `plain_addresses`), and
+//! the flush's Link step writes an e-mail out only where the two readings of it agree, so no local part is ever lost
+//! (frontmatter/insert.rs `link_entry_addresses`; OXIDIZED_DESIGN_DIVERGENCES #956). Code paths: the flush's
+//! write-out of an e-mail an `\inst`-marked institute prints, and the address reader on llncs's shared institute row
+//! (`shared_row::row_email_calls`) and on a hand-marked institute list (`affiliations::place_address_runs`). Each guard
+//! converts its repros under `tools/perfect_kernel/repros/sectioning-frontmatter/` and asserts no Error or Warning and
+//! every creator's name and contacts (role and text) in order. Witness 2112.00969 (batch 100b's regression: `dzyang`
+//! lost).
+use latexml::util::test::convert_files_with;
+
+use super::{
+  perfect_kernel_batch46::{error_count, warning_count},
+  perfect_kernel_batch84b::creators,
+};
+
+macro_rules! repro {
+  ($name:literal) => {
+    include_str!(concat!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+      $name,
+      ".tex"
+    ))
+  };
+}
+
+/// Converts `tex`, checks it has no Error and no Warning and that its creators are `expected` (each its name, then each
+/// contact as `role=text`).
+#[track_caller]
+fn assert_creators(tex: &str, expected: &[&[&str]]) {
+  let (log, xml) = convert_files_with(tex, &[], Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let want: Vec<Vec<String>> = expected
+    .iter()
+    .map(|c| c.iter().map(|s| (*s).to_string()).collect())
+    .collect();
+  assert_eq!(creators(&xml), want, "{xml}");
+}
+
+/// The flush's write-out of an `\inst`-marked institute's e-mail (2112.00969): the unspaced list after a `;` or a `,`,
+/// or alone, is each local part at the domain, the author it spells — "David Z. Yang" by initials and surname too. Red
+/// (int130a): `dzyang` nowhere in the XML; alone, the list one address of a nameless creator. The control: a spaced
+/// list not opening the line is no reader's, so the e-mail stays whole on its carriers, nothing lost.
+#[test]
+fn an_unspaced_list_of_local_parts_is_written_out() {
+  for (tex, dan) in [
+    (
+      repro!("address_family_unspaced_list_semicolon_line"),
+      "Dan Yang",
+    ),
+    (
+      repro!("address_family_unspaced_list_comma_line"),
+      "Dan Yang",
+    ),
+    (
+      repro!("address_family_unspaced_list_initials_spelled"),
+      "David Z. Yang",
+    ),
+  ] {
+    assert_creators(tex, &[
+      &["Ann Able", "affiliation=Univ A", "email=ann@a.edu"],
+      &[dan, "affiliation=Meta AI", "email=dzyang@fb.com"],
+      &[
+        "Ash Shah",
+        "affiliation=Meta AI",
+        "email=ashishbshah@fb.com",
+      ],
+    ]);
+  }
+  assert_creators(repro!("address_family_unspaced_list_alone"), &[
+    &["Ann Able", "affiliation=Univ A"],
+    &["Dan Yang", "affiliation=Meta AI", "email=dzyang@fb.com"],
+    &[
+      "Ash Shah",
+      "affiliation=Meta AI",
+      "email=ashishbshah@fb.com",
+    ],
+  ]);
+  assert_creators(repro!("address_family_spaced_list_stays_whole"), &[
+    &["Ann Able", "affiliation=Univ A"],
+    &[
+      "Dan Yang",
+      "affiliation=Meta AI",
+      "email=ann@a.edu; dzyang, ashishbshah@fb.com",
+    ],
+    &[
+      "Ash Shah",
+      "affiliation=Meta AI",
+      "email=ann@a.edu; dzyang, ashishbshah@fb.com",
+    ],
+  ]);
+}
+
+/// The author block's address reader (`email_addresses`) on llncs's one institute: the shared row (no `\inst` marks,
+/// `shared_row::row_email_calls`) and a list whose entries hand-printed marks label (`$^1$ … $^2$ …`, the witness's
+/// shape, 2112.00969: `affiliations::place_address_runs`). The line's unspaced list is written out, each address the
+/// author it spells. Red (int130a): the shared row's line one address of a nameless creator; the marked list's
+/// `dzyang` lost.
+#[test]
+fn an_unspaced_list_in_a_shared_institute_is_written_out() {
+  assert_creators(repro!("address_family_unspaced_list_shared_institute"), &[
+    &["Ann Able", "affiliation=Meta AI", "email=ann@a.edu"],
+    &["Dan Yang", "affiliation=Meta AI", "email=dzyang@fb.com"],
+    &[
+      "Ash Shah",
+      "affiliation=Meta AI",
+      "email=ashishbshah@fb.com",
+    ],
+  ]);
+  assert_creators(repro!("address_family_unspaced_list_marked_institute"), &[
+    &["Ann Able", "affiliation=Univ A", "email=ann@a.edu"],
+    &["Dan Yang", "affiliation=Meta AI", "email=dzyang@fb.com"],
+    &[
+      "Ash Shah",
+      "affiliation=Meta AI",
+      "email=ashishbshah@fb.com",
+    ],
+  ]);
+}

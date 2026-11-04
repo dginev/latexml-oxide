@@ -1,0 +1,18 @@
+% Shape E with a space after the list's comma, inside a `;`-parted llncs `\email` under `\inst` marks: a spaced list
+% not opening the line is read by no reader (`address_runs`' list rule), so the e-mail stays whole where its call
+% placed it; no local part is lost.
+% witness: 2112.00969 (the list's shape)
+% oracle:  pdflatex 0 errors: "ann@a.edu; dzyang, ashishbshah@fb.com"
+% engines: rust int130a = 0 errors; the whole e-mail on both institute-2 carriers
+% expect:  0 errors, 0 warnings; Ann: Univ A; Dan Yang and Ash Shah: Meta AI + the whole e-mail
+% status:  GREEN (int130a, kept as a control)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Dan Yang\inst{2} \and Ash Shah\inst{2}}
+\institute{Univ A \and Meta AI\\
+\email{ann@a.edu; dzyang, ashishbshah@fb.com}}
+\maketitle
+Text.
+\end{document}

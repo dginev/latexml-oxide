@@ -143,6 +143,7 @@ mod perfect_kernel_batch101a;
 mod perfect_kernel_batch101b;
 mod perfect_kernel_batch101c;
 mod perfect_kernel_batch102a;
+mod perfect_kernel_batch103a;
 /// Red/green guards for perfect-kernel batch 50 (PLANS P50 …).
 mod perfect_kernel_batch50;
 mod perfect_kernel_batch51;

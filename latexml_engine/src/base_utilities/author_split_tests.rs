@@ -961,3 +961,33 @@ fn a_contact_call_in_a_name_is_no_name_text() {
   assert_eq!(visible_name_text(headed.unlist_ref()), "C West");
   assert_eq!(spelled_owners(&[NameKeys::of(&headed)], "cwest@x.edu"), [0]);
 }
+
+#[test]
+fn email_addresses_write_out_unspaced_lists() {
+  setup();
+  // (batch 103a: a list of local parts written without spaces before one domain, inside a `;`- or `,`-parted line, is
+  // each part at the domain — the frontmatter observer's reading too; 2112.00969)
+  for line in [
+    "ann@a.edu; dzyang,ashishbshah@fb.com",
+    "ann@a.edu, dzyang,ashishbshah@fb.com",
+    "\\texttt{ann@a.edu; dzyang,ashishbshah@fb.com}",
+  ] {
+    assert_eq!(
+      email_addresses(&tk(line)),
+      Some(vec![
+        s!("ann@a.edu"),
+        s!("dzyang@fb.com"),
+        s!("ashishbshah@fb.com")
+      ]),
+      "{line}"
+    );
+  }
+  // (a capitalised word or a digit run is no local part: no address invented, the line no list)
+  assert_eq!(email_addresses(&tk("Berlin,Germany,foo@bar.de")), None);
+  assert_eq!(email_addresses(&tk("5551234,info@x.org")), None);
+  // (a spaced list is no list the reader parts)
+  assert_eq!(
+    email_addresses(&tk("ann@a.edu; dzyang, ashishbshah@fb.com")),
+    None
+  );
+}

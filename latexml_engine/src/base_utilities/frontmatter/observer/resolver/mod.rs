@@ -1249,6 +1249,20 @@ mod tests {
       "ann@x.org",
       "bob@x.org"
     ]);
+    // (batch 103a: a list of local parts written without spaces is each part at the domain, as `address_runs` and the
+    // author block's `email_addresses` read it — `dzyang` was dropped, 2112.00969; a capitalised word or a digit run is
+    // no part of it, and a spaced list is not written out)
+    assert_eq!(addresses_in("ann@a.edu; dzyang,ashishbshah@fb.com"), [
+      "ann@a.edu",
+      "dzyang@fb.com",
+      "ashishbshah@fb.com"
+    ]);
+    assert_eq!(addresses_in("Berlin,Germany,foo@bar.de"), ["foo@bar.de"]);
+    assert_eq!(addresses_in("Tel:5551234,info@x.org"), ["info@x.org"]);
+    assert_eq!(addresses_in("ann@a.edu; dzyang, ashishbshah@fb.com"), [
+      "ann@a.edu",
+      "ashishbshah@fb.com"
+    ]);
     assert!(!only_addresses("Barcelona, SPAIN. ann@x.org"));
     assert!(is_one_address("mailto:ann@x.org"));
     assert!(!is_one_address("https://x.org"));

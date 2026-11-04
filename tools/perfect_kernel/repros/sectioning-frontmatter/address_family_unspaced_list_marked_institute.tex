@@ -1,0 +1,19 @@
+% Shape E in one llncs `\institute` whose entries hand-printed marks label (`$^1$ … $^2$ …`), the witness's own shape:
+% the marked list's address line (`affiliations::place_address_runs`, read by `line_addresses`/`email_addresses`) is
+% each local part at the domain, the author it spells (`write_out_unspaced_lists`).
+% witness: 2112.00969
+% oracle:  pdflatex 0 errors: "ann@a.edu; dzyang,ashishbshah@fb.com"
+% engines: rust int130a = 0 errors; `dzyang` nowhere in the XML, Ash Shah `ashishbshah@fb.com`
+% expect:  0 errors, 0 warnings; Ann: Univ A + ann@; Dan Yang: Meta AI + dzyang@fb.com; Ash Shah: Meta AI +
+%          ashishbshah@fb.com
+% status:  RED (int130a) -> GREEN (103a)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Dan Yang\inst{2} \and Ash Shah\inst{2}}
+\institute{$^1$ Univ A $^2$ Meta AI\\
+\email{ann@a.edu; dzyang,ashishbshah@fb.com}}
+\maketitle
+Text.
+\end{document}

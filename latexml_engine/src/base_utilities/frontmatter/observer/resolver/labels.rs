@@ -3,7 +3,10 @@
 //! and contact roles.
 
 use super::*;
-use crate::base_utilities::author_block::{ADDRESS_GROUP_SEPARATORS, UNBRACED_LIST_SEPARATORS};
+use crate::base_utilities::author_block::{
+  ADDRESS_GROUP_SEPARATORS, UNBRACED_LIST_SEPARATORS, is_listed_local_part, is_local_char,
+  write_out_unspaced_lists,
+};
 
 /// `key=value` of an attribute string (`role=affiliation,label=a`), braces stripped: a repeated key's last value, as
 /// `KeyVals::get_value` reads it (the ledger keeps every pair in source order: `role=affiliation,role=address`).
@@ -531,9 +534,6 @@ pub(in crate::base_utilities::frontmatter::observer) struct AddressRun {
   pub label:     Option<String>,
 }
 
-/// A character of an address's local part as the reader takes it (`ann.able`, `j_doe`, `b+x`).
-fn is_local_char(c: char) -> bool { c.is_ascii_alphanumeric() || "._+-".contains(c) }
-
 /// The e-mail address runs printed in `text`, in print order ([`AddressRun`]): a braced group (`{ann,bob}@x.org`,
 /// `{ann@mails, bob@mail}.x.edu`, `{ann,bob@x.org}`, `{ann@x.org, bob@y.org}` — the forms [`addresses_in`] reads), a
 /// list of local parts sharing the domain, each part lowercase (`saro,borgani,tornator@oats.inaf.it`, 0810.2791;
@@ -656,13 +656,9 @@ pub(in crate::base_utilities::frontmatter::observer) fn address_runs(
       }
       let word = &text[word_start..word_end];
       // (each part a local part of letters: a digit run before the address is no part of a list — `Tel:5551234,info@x.org`
-      // is no `5551234@x.org`, `ORCID 0000-0002-1825-0097,ann@x.org` no `0000-…@x.org`; brief 95c r2 B3)
-      if word.is_empty()
-        || word.starts_with('.')
-        || word.chars().any(|c| c.is_ascii_uppercase())
-        || !word.chars().any(|c| c.is_ascii_alphabetic())
-        || !boundary_before(word_start)
-      {
+      // is no `5551234@x.org`, `ORCID 0000-0002-1825-0097,ann@x.org` no `0000-…@x.org`; brief 95c r2 B3 — the readers'
+      // one test, `author_block::is_listed_local_part`)
+      if !is_listed_local_part(word) || !boundary_before(word_start) {
         break;
       }
       spaced |= gap > 0;
@@ -987,9 +983,11 @@ fn domain_inside_group(inner: &str) -> Option<Vec<String>> {
   )
 }
 
-/// The plain addresses of `text` (no braced group).
+/// The plain addresses of `text` (no braced group); a list of local parts written without spaces before one domain
+/// written out, each part at it (`ann@a.edu; dzyang,ashishbshah@fb.com`, 2112.00969 — `dzyang` was lost: the author
+/// block's reading too, `author_block::write_out_unspaced_lists`).
 pub(super) fn plain_addresses(text: &str) -> Vec<String> {
-  text
+  write_out_unspaced_lists(text)
     .split(|c: char| c.is_whitespace() || ",;<>()[]{}".contains(c))
     .map(|w| {
       let w = w.trim_matches(|c: char| ".:".contains(c));
