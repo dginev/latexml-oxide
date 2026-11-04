@@ -5163,11 +5163,17 @@ fn net_begin_code_tokens(inject: &[Token]) -> Option<Tokens> {
 /// Does a store's value hold text of its own — a character the code that runs typesets ([`executed_code`]: not a
 /// definition's body nor a running head's argument)? A value that is only code prints no text of its own: oasics.cls:544
 /// `\titlerunning` stores `{\let\footnote\@gobble\markboth{#1}{#1}}`, a font switch's robust wrapper `\protect\itshape`
-/// (1709.00722, 2206.03779); a sentinel in its place would read as printed.
+/// (1709.00722, 2206.03779); a sentinel in its place would read as printed. A non-ASCII active character is a
+/// character too: the glyph inputenc maps it to (`Москва` under `[T2A]{fontenc}`, each letter active through
+/// t2aenc.dfu's `\DeclareUnicodeCharacter`; 105a r2), unlike an ASCII one (`~`, a tie).
 fn holds_text(value: &Tokens) -> bool {
   executed_code(value.unlist_ref())
     .iter()
-    .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+    .any(|t| match t.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER => true,
+      Catcode::ACTIVE => t.with_str(|text| !text.is_ascii()),
+      _ => false,
+    })
 }
 
 /// The stores a setter of a raw file's or of the document's writes — a definition's or a `\let`'s name, a token

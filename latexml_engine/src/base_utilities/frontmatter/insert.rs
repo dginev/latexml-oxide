@@ -107,8 +107,11 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
 }
 
 /// The words a note line counts for [`keep_unclaimed_net_notes`] (the frontmatter scorer's, fm_scorer/score_tiers.py
-/// `content_words`): its letter runs of two letters or more outside the stop words and its digit runs of three or more,
-/// folded — accents dropped ([`resolver::base_letters`]), lower-cased.
+/// `content_words`, and its stop words): its letter runs of two letters or more outside the stop words and its digit
+/// runs of three or more, folded — accents dropped ([`resolver::base_letters`]), lower-cased — in printed order. Beyond
+/// the scorer's ASCII runs, a run of any script's letters is a word (`Москва`), and each Han ideograph or kana, of
+/// scripts written without spaces, is a word of its own (2206.01007's `北京师范大学天文系`, 2601.14329's
+/// `北京航空航天大学`; 105a r2).
 fn net_content_words(text: &str) -> Vec<String> {
   const STOPWORDS: &[&str] = &[
     "a", "an", "the", "of", "and", "or", "in", "on", "at", "for", "to", "from", "by", "with",
@@ -123,7 +126,7 @@ fn net_content_words(text: &str) -> Vec<String> {
   let mut letters = false;
   let flush = |run: &mut String, letters: bool, words: &mut Vec<String>| {
     let keep = if letters {
-      run.len() >= 2 && !STOPWORDS.contains(&run.as_str())
+      run.chars().count() >= 2 && !STOPWORDS.contains(&run.as_str())
     } else {
       run.len() >= 3
     };
@@ -134,7 +137,14 @@ fn net_content_words(text: &str) -> Vec<String> {
     }
   };
   for c in folded.chars() {
-    let kind = if c.is_ascii_lowercase() {
+    if unspaced_script(c) {
+      if !run.is_empty() {
+        flush(&mut run, letters, &mut words);
+      }
+      words.push(c.to_string());
+      continue;
+    }
+    let kind = if c.is_alphabetic() {
       Some(true)
     } else if c.is_ascii_digit() {
       Some(false)
@@ -155,6 +165,19 @@ fn net_content_words(text: &str) -> Vec<String> {
   words
 }
 
+/// Is `c` a Han ideograph or a kana — a letter of a script written without spaces between its words, each counted as a
+/// word of its own ([`net_content_words`])?
+fn unspaced_script(c: char) -> bool {
+  matches!(c,
+    '\u{3040}'..='\u{30FF}' // Hiragana, Katakana
+    | '\u{31F0}'..='\u{31FF}' // Katakana phonetic extensions
+    | '\u{3400}'..='\u{4DBF}' // CJK Unified Ideographs Extension A
+    | '\u{4E00}'..='\u{9FFF}' // CJK Unified Ideographs
+    | '\u{F900}'..='\u{FAFF}' // CJK Compatibility Ideographs
+    | '\u{20000}'..='\u{3134F}' // CJK Unified Ideographs Extensions B-G
+  )
+}
+
 /// The text of `node` without what the nodes `skip` hold.
 fn text_outside(node: &Node, skip: &[Node], out: &mut String) {
   for child in node.get_child_nodes() {
@@ -169,8 +192,22 @@ fn text_outside(node: &Node, skip: &[Node], out: &mut String) {
   }
 }
 
+/// The text of `node` without the text of an `ltx:ERROR` at any depth in it (an error's text is no printed word: an
+/// undefined `\songti`'s name in the group `{\songti\zihao{-4}#2}`, physics_report.sty, 2601.14329).
+fn text_without_errors(node: &Node, out: &mut String) {
+  if node.get_type() == Some(NodeType::ElementNode) {
+    if node.get_name() != "ERROR" {
+      for child in node.get_child_nodes() {
+        text_without_errors(&child, out);
+      }
+    }
+  } else {
+    out.push_str(&node.get_content());
+  }
+}
+
 /// A note's lines ([`keep_unclaimed_net_notes`]): what stands between its `ltx:break`s, each `ltx:p` apart, with the
-/// break that ends it; the text of an `ltx:ERROR` in it left out.
+/// break that ends it; the text of an `ltx:ERROR` in it, at any depth, left out ([`text_without_errors`]).
 fn net_note_lines(parent: &Node, lines: &mut Vec<(Vec<Node>, String)>) {
   let mut line: (Vec<Node>, String) = (Vec::new(), String::new());
   for child in parent.get_child_nodes() {
@@ -184,11 +221,8 @@ fn net_note_lines(parent: &Node, lines: &mut Vec<(Vec<Node>, String)>) {
       }
       net_note_lines(&child, lines);
     } else {
-      // (an error's text is no printed word: an undefined `\songti`'s name, 2601.14329)
-      if !(element && child.get_name() == "ERROR") {
-        line.1.push_str(&child.get_content());
-        line.1.push(' ');
-      }
+      text_without_errors(&child, &mut line.1);
+      line.1.push(' ');
       line.0.push(child);
     }
   }
@@ -254,6 +288,29 @@ fn code_pieces(text: &str) -> Vec<String> {
 /// Is the content word `word` ([`net_content_words`], folded) a date's — a month's name, a year — or part of a code
 /// `codes` holds ([`code_pieces`])? The words the net keeps below its floor ([`keep_unclaimed_net_notes`]).
 fn code_or_date_word(word: &str, codes: &[String]) -> bool {
+  date_word(word) || codes.iter().any(|code| code.contains(word))
+}
+
+/// The label a code's or a date's line leads with, of its content words `words` ([`net_content_words`], in printed
+/// order): a dateline's (received, accepted, revised, published, submitted; any case, a colon after it or not) before a
+/// date's word ([`date_word`]: "Received: 2021", "Accepted 2021"), or a classification's (MSC, PACS; a year after it or
+/// not) on a line that prints a code `codes` holds ("MSC 2020: 05C12"). Kept below the floor with the line's code or
+/// date words ([`keep_unclaimed_net_notes`]); a leading word of no such list is none ("ICML 2021", "Room 101"; 105a r2).
+fn leading_label<'w>(words: &'w [String], codes: &[String]) -> Option<&'w str> {
+  const DATELINE: &[&str] = &["received", "accepted", "revised", "published", "submitted"];
+  let (first, rest) = words.split_first()?;
+  let label = if DATELINE.contains(&first.as_str()) {
+    rest.iter().any(|word| date_word(word))
+  } else {
+    matches!(first.as_str(), "msc" | "pacs") && !codes.is_empty()
+  };
+  label.then_some(first.as_str())
+}
+
+/// Is the content word `word` ([`net_content_words`], folded) a date's: an English month's name, whole or shortened, or
+/// a year (1800-2100)? A month of another language is none (`mars 2021`, counted; the RED repro
+/// `net_non_english_month_line_red`).
+fn date_word(word: &str) -> bool {
   const MONTHS: &[&str] = &[
     "january",
     "february",
@@ -280,9 +337,7 @@ fn code_or_date_word(word: &str, codes: &[String]) -> bool {
     "nov",
     "dec",
   ];
-  MONTHS.contains(&word)
-    || (word.len() == 4 && matches!(word.parse::<u32>(), Ok(1800..=2100)))
-    || codes.iter().any(|code| code.contains(word))
+  MONTHS.contains(&word) || (word.len() == 4 && matches!(word.parse::<u32>(), Ok(1800..=2100)))
 }
 
 /// The unclaimed-text net's notes (frontmatter_stores.rs `hand_net_stores`: what a raw class's title page prints of a
@@ -290,14 +345,15 @@ fn code_or_date_word(word: &str, codes: &[String]) -> bool {
 /// (split at `ltx:break` and `ltx:p`, [`net_note_lines`]) is read by its distinct content words
 /// ([`net_content_words`]) that neither the frontmatter nor the text set before it holds — the whole document's text but
 /// the net's notes: the deposit's paragraphs, the creators (`\AB@names` repeats the names), the abstract — nor the
-/// class's own code in the store (`net_class_text`). A line with none goes (it repeats what is kept). A line of e-mail
-/// addresses alone ([`resolver::only_addresses`]) is the e-mail contacts of the note's creator — the block's nameless
-/// one or the sole author (OD #159), no invented owner — each address no text kept holds (aaskaiid.sty's
-/// `\email@toks`, 2606.27706, 2607.25721). Else a line is kept whole with 3 or more such words, or with fewer when they
-/// are all a code's or a date's ([`code_or_date_word`]); otherwise it goes, its words counted. A note left without a
-/// line goes, with a nameless creator it leaves empty. A store's kept lines raise one Warning, and its lost words one
-/// more (FIDELITY_CHARTER §4: printed text no owner claims, kept beside the frontmatter or lost, counted —
-/// 2103.14934's "corresponding authors" below the floor; 105a).
+/// class's own code in the store (`net_class_text`). A line of e-mail addresses alone ([`resolver::only_addresses`]) is
+/// the e-mail contacts of the note's creator — the block's nameless one or the sole author (OD #159), no invented owner
+/// — each address no text kept holds, whether or not its words are used elsewhere (aaskaiid.sty's `\email@toks`,
+/// 2606.27706, 2607.25721). Else a line with no such word goes (it repeats what is kept); a line is kept whole with 3 or
+/// more, or with fewer when they are all a code's or a date's ([`code_or_date_word`]) or the label such a line leads
+/// with ([`leading_label`]); otherwise it goes, its words counted. A note left without a line goes, with a nameless
+/// creator it leaves empty. A store's kept lines raise one Warning, and its lost words one more, in printed order
+/// (FIDELITY_CHARTER §4: printed text no owner claims, kept beside the frontmatter or lost, counted — 2103.14934's
+/// "corresponding authors" below the floor; 105a).
 fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
   let notes = document.findnodes("//ltx:note[@_net]", None);
   if notes.is_empty() {
@@ -325,19 +381,24 @@ fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
     let mut lost: Vec<String> = Vec::new();
     let mut addresses: Vec<String> = Vec::new();
     for (nodes, text) in lines {
-      let mut unmatched: Vec<String> = net_content_words(&text)
-        .into_iter()
-        .filter(|word| !claimed.contains(word) && !class.contains(word))
-        .collect();
-      unmatched.sort();
-      unmatched.dedup();
+      let words = net_content_words(&text);
+      // (distinct, in printed order)
+      let mut unmatched: Vec<String> = Vec::new();
+      for word in &words {
+        if !claimed.contains(word) && !class.contains(word) && !unmatched.contains(word) {
+          unmatched.push(word.clone());
+        }
+      }
       let listed = resolver::addresses_in(&text);
       // (its codes no text kept prints: an MSC code's letters and digits are no content words, `20N05`)
       let codes: Vec<String> = code_pieces(&text)
         .into_iter()
         .filter(|code| !claimed_folded.contains(code.as_str()))
         .collect();
-      if !unmatched.is_empty() && !listed.is_empty() && resolver::only_addresses(&text) {
+      let label = leading_label(&words, &codes);
+      // (an address line: its addresses no kept text holds, whether or not their words are used elsewhere — a title's
+      // word in the domain; one every address of which is written repeats what is kept)
+      if !listed.is_empty() && resolver::only_addresses(&text) {
         for address in listed {
           if !written.contains(&address) {
             written.push(address.clone());
@@ -346,12 +407,18 @@ fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
         }
       } else if unmatched.len() >= 3
         || ((!unmatched.is_empty() || !codes.is_empty())
-          && unmatched.iter().all(|word| code_or_date_word(word, &codes)))
+          && unmatched
+            .iter()
+            .all(|word| Some(word.as_str()) == label || code_or_date_word(word, &codes)))
       {
         kept += 1;
         continue;
       } else {
-        lost.extend(unmatched);
+        for word in unmatched {
+          if !lost.contains(&word) {
+            lost.push(word);
+          }
+        }
       }
       for node in nodes {
         document.remove_node(node);
@@ -382,8 +449,6 @@ fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
       }
       document.set_node(&saved);
     }
-    lost.sort();
-    lost.dedup();
     if !lost.is_empty() {
       Warn!(
         "frontmatter",

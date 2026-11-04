@@ -29815,31 +29815,49 @@ gain their title and creators (no note left), and 4 differ only in timing-bound 
 +0.5-0.7 % on the witnesses (`perf stat -e instructions:u`, 2110.07616, gr-qc0609124, 0712.1312, 1709.00722).
 
 **105a: the lines below the floor** (brief 105a; FIDELITY_CHARTER §4, every loss counted). A note line with fewer
-than 3 unclaimed content words was removed with no Warning. Now `keep_unclaimed_net_notes` reads each line with
-unclaimed words by its shape: a line of e-mail addresses alone (`resolver::addresses_in` and `only_addresses`, the
-frontmatter reader's address-line test) is the e-mail contacts of the note's creator — the block's nameless creator or
-the sole author (#159), no invented owner — each address no kept text holds, at any length, with no Warning (aaskaiid.sty
-`\email@toks`: 2606.27706, 2607.25721; 98c's notes of 2606.24738, 2606.25049, 2606.25830 become contacts); a line whose
-unclaimed words are all a code's or a date's, or that prints a code no kept text prints (`code_pieces`: digits and
-letters parted by dots or run together, `98.80.Cq`, `20N05`, `H.2.4`; `code_or_date_word`: a month's name, a year), is
-kept as the note's line, with the note's Warning; any other line with unclaimed words goes, and its store raises one
-`Warning:frontmatter:unclaimed` naming it and the words ("The title page prints \<store> with N word(s) no frontmatter
-field holds, too few to keep as a note: …"; sig-alternate-2013's `\tntoks` "corresponding authors", 2103.14934). The
-floor of 3 stands for prose (the lost-words bar's ruling is open); a store at its class default stays no candidate
-(tADR2e 1509.08973, cup-journal 2302.11911, pending the placeholder ruling). Guards `perfect_kernel_batch105a::{
+than 3 unclaimed content words was removed with no Warning. Now `keep_unclaimed_net_notes` reads each line by its
+shape: a line of e-mail addresses alone (`resolver::addresses_in` and `only_addresses`, the frontmatter reader's
+address-line test) is the e-mail contacts of the note's creator — the block's nameless creator or the sole author
+(#159), no invented owner — each address no kept text holds, at any length, whether or not its words are used elsewhere
+(a title word in the domain), with no Warning (aaskaiid.sty `\email@toks`: 2606.27706, 2607.25721; 98c's notes of
+2606.24738, 2606.25049, 2606.25830 become contacts); a line whose unclaimed words are all a code's or a date's, or that
+prints a code no kept text prints (`code_pieces`: digits and letters parted by dots or run together, `98.80.Cq`,
+`20N05`, `H.2.4`; `code_or_date_word`/`date_word`: an English month's name, a year), or the label such a line leads
+with (`leading_label`: received, accepted, revised, published, submitted before a date's word; MSC, PACS on a line
+that prints a code — "Received: 2021", "MSC 2020: 05C12"; not "ICML 2021", "Room 101", "Vol. 3", "Paris 7"), is kept as
+the note's line, with the note's Warning; any other line with unclaimed words goes, and its store raises one
+`Warning:frontmatter:unclaimed` naming it and the words, distinct, in printed order ("The title page prints \<store>
+with N word(s) no frontmatter field holds, too few to keep as a note: …"; sig-alternate-2013's `\tntoks` "corresponding
+authors", 2103.14934). A line's words (`net_content_words`) are the scorer's ASCII runs and, beyond them, any script's
+letter runs (`Москва`) and each Han ideograph or kana as a word of its own (`unspaced_script`), so a Chinese line clears
+the floor (2206.01007's `\address` "北京师范大学天文系，100875，北京", 2601.14329's `\institude` "1)北京航空航天大学
+物理学院，北京"); a store whose only letters are non-ASCII active characters (`[T2A]{fontenc}`'s Cyrillic, through
+t2aenc.dfu's `\DeclareUnicodeCharacter`) holds text (`frontmatter_stores.rs` `holds_text`). An `ltx:ERROR`'s text, at
+any depth in the line, is no printed word (`text_without_errors`: an undefined `\songti`'s name inside
+physics_report.sty's `{\songti\zihao{-4}#2}`, 2601.14329). The floor of 3 stands for prose, and the code keeps the
+shaped lines below the charter's tentative floor, pending the user's ruling on FIDELITY_CHARTER §4's floor. **Known
+gap:** class-default placeholders are not net candidates, pending the placeholder ruling (2302.11911, 1509.08973;
+the charter counts a printed placeholder as words like any other; RED repro
+`net_class_default_placeholder_is_counted_red`); a date in another language's months is counted and not kept (`mars
+2021`, RED repro `net_non_english_month_line_red`). Guards `perfect_kernel_batch105a::{
 an_address_line_below_the_floor_is_an_email_contact, a_code_or_date_line_below_the_floor_is_a_note_line,
-a_short_unshaped_store_is_counted_and_not_kept}`; repros sectioning-frontmatter/`net_shaped_store_below_the_floor_is_kept`,
-`net_short_store_is_counted_not_kept` (RED int132a1 → GREEN 105a). An `ltx:ERROR`'s text in a note line is no printed word (an undefined `\songti`'s name, 2601.14329). A/B
-(`pop105a.tsv`, 3,946 converted: 98c's `pop98c.tsv` — the census's family A, every popint125a `rawcls` paper, 500
-others — and the census129 Bundle 3 witnesses; base int132a1): 14 changed, E 1,493 → 1,493, F 9 → 9, 0 worse
-(1203.4558's base side a wall-clock timeout, 1309.5800 one timing-bound math Warning), `fm_checks.py` 1-7 clean; 5
-aaskaiid papers gain 15 e-mail contacts (3 notes become contacts), 6 papers raise 11 new Warnings, each read against
-the source: printed document text below the floor — ucbthesis/ucthesis `\@degree` "Doctor of Philosophy", `\@field`,
-`\@campus` (1908.08926, math9910078, math-ph0412032), SCIS2020cn's postcode `100875` (2206.01007), e-jc's dateline
-"TBD" (2410.15356), 2103.14934's "corresponding authors" —, no class boilerplate; no new note line (no real paper's
-short line had a code's or a date's shape). The census129 Bundle 3 witnesses (54) rescored: 2 reach 0 lost words
-(2606.27706, 2607.25721), 1 more carries the Warning for its loss (2103.14934); the other 51 lose their words outside
-the net's lines — the classes are SYNC_STATUS row "105a".
+a_labelled_code_or_date_line_below_the_floor_is_a_note_line, a_line_in_another_script_is_counted,
+an_error_at_depth_in_a_note_line_is_no_word, a_short_unshaped_store_is_counted_and_not_kept}`; repros
+sectioning-frontmatter/`net_shaped_store_below_the_floor_is_kept`, `net_short_store_is_counted_not_kept` (RED int132a1
+→ GREEN 105a), `net_labelled_code_or_date_line_is_kept`, `net_non_latin_store_lines_are_counted`,
+`net_line_words_skip_an_error_at_depth` (RED 105a r1 → GREEN 105a r2). A/B (`pop105a.tsv`, 3,946 converted: 98c's
+`pop98c.tsv` — the census's family A, every popint125a `rawcls` paper, 500 others — and the census129 Bundle 3
+witnesses; both sides on the int132a dumps): vs int132a1 12 changed, E 1,493 → 1,493, F 9 → 9, 0 worse,
+`fm_checks.py` 1-7 clean; 5 aaskaiid papers gain 15 e-mail contacts (3 notes become contacts); 2 papers gain a note
+line, each an affiliation the title page prints, with its Warning (2206.01007, 2601.14329); 5 papers raise 10 new
+Warnings for lost words, each read against the source: printed document text below the floor — ucbthesis/ucthesis
+`\@degree` "Doctor of Philosophy", `\@field`, `\@campus` (1908.08926, math9910078, math-ph0412032), e-jc's dateline
+"TBD" (2410.15356), 2103.14934's "corresponding authors" —, no class boilerplate; the XML of those 5 unchanged. (Round
+1's tally, 6 papers with 11 Warnings, was 7 with 12: it missed 2601.14329's "songti" Warning on the int131b dumps; that
+one and 2206.01007's postcode Warning are now the kept Chinese lines.) Vs 105a r1: 3 changed — the 2 kept lines and 2103.14934's words in printed order; the 5
+aaskaiid papers byte-identical. The census129 Bundle 3 witnesses (54) rescored: 2 reach 0 lost words (2606.27706,
+2607.25721), 1 more carries the Warning for its loss (2103.14934); the other 51 lose their words outside the net's
+lines — the classes are SYNC_STATUS row "105a".
 
 ### 954. A contact holding two or more marked entries is cut at its marks in the frontmatter API, for every binding (Perl: one contact, the marks printed in it)
 

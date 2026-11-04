@@ -1,0 +1,25 @@
+% mechanism: (RED, pending the placeholder ruling) a raw class's store left at its class default — a template
+%   placeholder its title page prints, `\@recd`'s "Received 00 Month 20XX" — is no candidate of the unclaimed-text net
+%   (frontmatter_stores.rs `net_candidates`: made by the document, not a raw default), so the printed placeholder goes
+%   with no Warning. FIDELITY_CHARTER §4 counts printed template placeholders as words like any other.
+% witness: cup-journal 2302.11911, tADR2e 1509.08973; review rev105a S3
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able", "Received 00 Month 20XX", "Text."
+% engines: rust 105a r2 = 0 errors, 0 warnings, the placeholder lost silently; perl = 0 errors (the raw class is not
+%   loaded: OmniBus), lost
+% expect:  0 errors; the placeholder kept as the net's note line or counted, with one Warning:frontmatter:unclaimed
+% status:  RED (105a r2) — known gap, pending the placeholder ruling (OD #953, SYNC row "105a"); no guard
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{netplace.cls}
+\ProvidesClass{netplace}\LoadClass{article}
+\def\@anames{}\def\@recd{Received 00 Month 20XX}
+\renewcommand\author[1]{\gdef\@anames{#1}}
+\newcommand\recd[1]{\gdef\@recd{\ignorespaces#1}}
+\renewcommand\@author{\@anames\\\@recd}
+\end{filecontents*}
+\documentclass{netplace}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\maketitle
+Text.
+\end{document}
