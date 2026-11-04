@@ -703,9 +703,13 @@ fn classify_thanks_reads_funding_words_whole() {
 /// circumstances where they open the note ("Work done during an internship", 2106.09776) — not a word of an
 /// institution's name ("Project Leadership Institute", "Core Facility") nor circumstances after an institution
 /// ("Facebook (work done while at JHU/APL)", 1702.02684); and a legend entry is legends, names and addresses alone,
-/// no institution (`entry_legend_kind`: "DeepAuto.ai († : Equal advising)", 2609.34327, is mixed).
+/// no institution (`entry_legend_kind`: "DeepAuto.ai († : Equal advising)", 2609.34327, is mixed; a name in it is a
+/// carrier's, not "Google DeepMind", review rev103c S2). The role readings an institution's name can hold
+/// (`role_contribution`) count only where every piece of the text is a legend (review rev103c S1).
 #[test]
 fn classify_thanks_reads_project_roles_and_the_works_circumstances() {
+  // (the role readings read the text's pieces, `reads_as_affiliation`: a State, as a conversion has)
+  setup();
   for contribution in [
     "\u{2020}Project lead",
     "Project Leader.",
@@ -717,6 +721,9 @@ fn classify_thanks_reads_project_roles_and_the_works_circumstances() {
     "Work was done while at Google",
     "* Work done as an intern at Adobe",
     "these authors share senior authorship",
+    // (a caller's TeX source, read as it prints)
+    "$^{\\dagger}$Project leader.",
+    "\\textsuperscript{$\\dagger$}Joint first authors.",
   ] {
     assert_eq!(
       classify_thanks(contribution),
@@ -733,37 +740,78 @@ fn classify_thanks_reads_project_roles_and_the_works_circumstances() {
   ] {
     assert_eq!(classify_thanks(note), "note", "{note}");
   }
-  setup();
+  for role in [
+    "Project lead",
+    "Core Contributor Network, Paris",
+    "Work done during an internship",
+  ] {
+    assert!(role_contribution(role), "{role}");
+  }
+  for share in [
+    "Equal contribution",
+    "These authors contributed equally",
+    "Equal advising.",
+    "Corresponding author",
+  ] {
+    assert!(!role_contribution(share), "{share}");
+  }
+  // (a role reads as a contribution only where every piece of the text is a legend — `classify_thanks`'s gate for every
+  // reader of the kind, review rev103c S1; a role naming its author is the Kind step's, which knows its carriers)
+  for affiliation in [
+    "Project Lead Institute, Univ D",
+    "Core Contributor Network, Paris",
+    "Senior Author Program, Acme Corp",
+    "Project lead: Yi Yang",
+  ] {
+    assert_eq!(classify_thanks(affiliation), "note", "{affiliation}");
+  }
   assert_eq!(
-    entry_legend_kind("Joint first authors."),
+    classify_thanks("Equal contribution, Univ A"),
+    "contribution"
+  );
+  // (the entry's carriers, as their personnames print: a name in a legend is one of theirs, review rev103c S2)
+  let carriers: Vec<String> = ["Ann Able1,*", "Xiaofan Xu", "Hua Zhu"]
+    .map(String::from)
+    .to_vec();
+  assert_eq!(
+    entry_legend_kind("Joint first authors.", &carriers),
     Some("contribution")
   );
   assert_eq!(
-    entry_legend_kind("Corresponding author:"),
+    entry_legend_kind("Corresponding author:", &carriers),
     Some("correspondence")
   );
   assert_eq!(
-    entry_legend_kind("Corresponding author: Ann Able"),
+    entry_legend_kind("Corresponding author: Ann Able", &carriers),
     Some("correspondence")
   );
   assert_eq!(
-    entry_legend_kind("Deceased 3 March 2021; formerly at Univ C"),
+    entry_legend_kind("Deceased 3 March 2021; formerly at Univ C", &carriers),
     Some("deceased")
   );
   assert_eq!(
-    entry_legend_kind("Equal contribution. | * Correspondence: chaokun@tsinghua.edu.cn"),
+    entry_legend_kind(
+      "Equal contribution. | * Correspondence: chaokun@tsinghua.edu.cn",
+      &carriers
+    ),
     Some("correspondence")
   );
   assert_eq!(
-    entry_legend_kind("Corresponding authors. Email: yunhui@x.jp (Y.W.) nomura@x.jp (M.N.)"),
+    entry_legend_kind(
+      "Corresponding authors. Email: yunhui@x.jp (Y.W.) nomura@x.jp (M.N.)",
+      &carriers
+    ),
     Some("correspondence")
   );
   assert_eq!(
-    entry_legend_kind("Corresponding author, email: loizides@ikf.uni-frankfurt.de"),
+    entry_legend_kind(
+      "Corresponding author, email: loizides@ikf.uni-frankfurt.de",
+      &carriers
+    ),
     Some("correspondence")
   );
   assert_eq!(
-    entry_legend_kind("corresponding author(s): Xiaofan Xu, Hua Zhu"),
+    entry_legend_kind("corresponding author(s): Xiaofan Xu, Hua Zhu", &carriers),
     Some("correspondence")
   );
   for affiliation in [
@@ -778,8 +826,16 @@ fn classify_thanks_reads_project_roles_and_the_works_circumstances() {
     "Facebook (work done while at JHU/APL)",
     "Univ A, Town",
     "Present address: Univ X, Village",
+    // (a company's name shaped as a person's, no carrier's: review rev103c S2)
+    "Equal contribution, Google DeepMind",
+    "Work done while at Google, Mountain View",
+    "Corresponding author: Bob Baker",
   ] {
-    assert_eq!(entry_legend_kind(affiliation), None, "{affiliation}");
+    assert_eq!(
+      entry_legend_kind(affiliation, &carriers),
+      None,
+      "{affiliation}"
+    );
   }
 }
 

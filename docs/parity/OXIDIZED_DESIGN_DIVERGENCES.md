@@ -7138,7 +7138,8 @@ class="ltx_note_frontmatter ltx_thanks_<kind>">` attached to the creator (`base_
 margin/footnote note. `<kind>` is a **best-effort** keyword classifier (`classify_thanks`):
 `correspondence` / `funding` / `contribution` (an equal share; since batch 103c, #961, also a project role read as a
 phrase of whole words — "project lead", "joint first author", "co-first author", "core contribution" — and the work's
-circumstances opening the note, "Work done during/while/as …") / `deceased` (the word, an annotation on the author of
+circumstances opening the note, "Work done during/while/as …", where every piece of the note is a legend: not "Project
+Lead Institute, Univ D") / `deceased` (the word, an annotation on the author of
 the same kind as "Corresponding author": FIDELITY_CHARTER §4, batch 100a, #955) / `address` / `note`. The class hooks
 (`ltx_note_frontmatter`, `ltx_role_thanks`, `ltx_thanks_<kind>`) let theme designers style each
 kind. Requires: adding `ltx:note` to `ltx:creator`'s content model
@@ -30497,45 +30498,67 @@ affiliation beside the "*" legend already a note), and 18 others.
 **Fix (the Kind step for a legend).** `insert::kind_legend_contacts`, at the frontmatter flush after the placement, the
 Link step and the observer's writing — the one place every route that makes an affiliation meets: a creator's
 `ltx:contact role="affiliation"` carrying the role's default name whose printed text is a legend
-(`notes::entry_legend_kind`) is renamed in place to `ltx:note role="thanks"`, `ltx_note_frontmatter ltx_thanks_<kind>`, its
+(`notes::entry_legend_kind`) and that prints a mark is renamed in place to `ltx:note role="thanks"`, `ltx_note_frontmatter ltx_thanks_<kind>`, its
 carriers and its e-mails as they were (the addresses its line printed were already taken out where a route takes them:
 2409.05386's `ago@` stays Ororbia's e-mail contact; one left in its text stays there). The reader: the text without its
 addresses and their e-mail labels, parted at marks, brackets, commas, colons, semicolons and line breaks (a nested note,
 `\footnotemark`'s, is not read); every piece a legend that names no institution (`reads_as_affiliation`; "Deceased"
-opening the text a legend whatever follows, #955), a name or its initials, or no letters, and one piece a legend. So a
-mixed line stays an affiliation ("DeepAuto.ai († : Equal advising)", 2609.34327; "ByteDance *equal contribution",
-2404.02132; "Facebook (work done while at JHU/APL)", 1702.02684; "Corresponding author \\ Proceedings of a workshop"),
-and so do an address change and funding (an institution is named for its funder as often). The note's `mark` is the
-superscript its text opens with, else its label's key (authblk's `*`, IEEEtran's `4`), else empty — an unlabelled
-`\affil[ ]{Corresponding author: …}` prints no mark, where a note's default mark is `†` (2412.14916, 2305.02090).
+opening the text a legend whatever follows, #955), a name one of its carriers' personnames spells (`spells_a_carrier`;
+a nameless creator, an author block's own, carries for every author: 2609.08556's "corresponding author(s): Xiaofan Xu,
+Hua Zhu"), initials, or no letters, and one piece a legend. So a mixed line stays an affiliation ("DeepAuto.ai († :
+Equal advising)", 2609.34327; "ByteDance *equal contribution", 2404.02132; "Facebook (work done while at JHU/APL)",
+1702.02684; "Corresponding author \\ Proceedings of a workshop"; "Equal contribution, Google DeepMind", a company's name
+shaped as a person's that no carrier has, review rev103c S2), and so do an address change and funding (an institution
+is named for its funder as often). The note's `mark` is the superscript its text opens with, else its label's key
+whole (authblk's `*`, IEEEtran's `4`, 2602.19190's `$^{*\dag}$Project lead: Yi Yang` `*†`). **A legend that prints no
+mark stays the affiliation it was** (main-session ruling 2026-11-04, review rev103c B1): a note shows its text only
+behind its mark (`ltx_note_mark` holds the mark, `ltx_note_outer` is `display:none` until hovered, LaTeXML.css:513,525),
+so an empty mark leaves nothing to reach it by — an unlabelled `\affil[ ]{Corresponding author: …}` (2412.14916,
+2305.02090, 2609.07982), an author block's unmarked line (2004.11569, 2607.01136), a symbol printed as text and not as
+the label (2011.02402's "∗ Equally contributed", 2410.12405, 2602.22712); 18 papers of the A/B.
 `classify_thanks` (#156) reads an author's part in the work as a contribution: a project role as whole words ("project
 lead/leader", "joint/co-first author(s)", "core contribution/contributor(s)", "senior author(s)/authorship") and the
-work's circumstances opening the note ("Work done during/while/as …"); the observer's legend reading shares it, so its
-writer now writes "†Project lead" and "Joint first authors." as legends (show_legend_mark hides the name's mark the note
-shows), and a creator `\thanks{Work done during an internship}` is `ltx_thanks_contribution` (was `ltx_thanks_note`).
+work's circumstances opening the note ("Work done during/while/as …") — only where every piece of the text, read as it
+prints (`printed_words`: a caller's `$^{\dagger}$`, `\textsuperscript` out), is a legend (`entry_legend_kind` with no
+carriers); else the text reads as it would without them. That one gate serves every reader of the kind — the kernel's
+line route (`queue_digest::legend_note_kind`), the observer's legend reading (`is_legend_text`), the line readers'
+`classify_thanks(..) == "note"` tests, a `\thanks`'s CSS kind — so an institution named with a role's words
+("$^{\dagger}$Project Lead Institute, Univ D", "$^{\ddagger}$Core Contributor Network, Paris") is an affiliation on
+every route, as on base (review rev103c S1; the Kind step reads its pieces with the readings ungated, `thanks_kind`).
+"Project lead: Yi Yang" names its author, so it is the Kind step's, which knows its carriers. The observer's writer
+writes "†Project lead" and "Joint first authors." as legends (show_legend_mark hides the name's mark the note shows),
+and a creator `\thanks{Work done during an internship}` is `ltx_thanks_contribution` (was `ltx_thanks_note`).
 
 **Beyond Perl**: Perl keeps every legend an affiliation contact (FIDELITY_CHARTER §4: author annotations are notes).
-Measured (A/B 103c vs int130a, 1,881 papers: the 87, the witnesses, 800 phrase-bearing and 1,000 control papers of
-int125a_s10k): 129 papers held a legend as an affiliation, 14 still do (9 mixed lines, rightly; 5 misses below); 125 papers
-changed, E 1,883 = 1,883, F 5 = 5, no creator merged or lost, no e-mail moved, no printed word lost.
+Measured (A/B 103c r1 vs int130a, 1,881 papers: the 87, the witnesses, 800 phrase-bearing and 1,000 control papers of
+int125a_s10k): 129 papers held a legend as an affiliation; 125 papers changed, E 1,883 = 1,883, F 5 = 5. After the
+review's fixes (re-A/B of the 125 changed papers + 2602.19190 vs int130a): 107 papers change, 104 of them a legend now a
+marked note, none with an empty mark (the 18 unmarked legends back to base); E 11 = 11, F 0 = 0, words +6; `fm_checks`
+0 creators merged or lost, 0 e-mails moved, 0 word types lost — no printed word lost in the XML and the rendered page.
+The gate returns two `\thanks{Work done during an internship at Microsoft Research Asia.}` CSS kinds to `ltx_thanks_note`
+(2110.15064, 2410.24211: an institution named after the circumstances).
 
 **Guards** `perfect_kernel_batch103c::{an_affiliation_that_is_a_legend_is_its_carriers_note,
 a_project_role_or_joint_first_authorship_is_a_contribution_note, institutions_named_with_legend_words_stay_affiliations}`,
 unit `author_split_tests::classify_thanks_reads_project_roles_and_the_works_circumstances`; repros
-`sectioning-frontmatter/legend_kind_*`. Guards updated to the new reading (each legend now its carriers' note, or the CSS
-kind of a note): `perfect_kernel_batch61::marked_affiliation_review_shapes`, `perfect_kernel_batch63::elsarticle_labelled_unlabelled_affiliation`,
-`perfect_kernel_batch77n::{note_macro_among_names_is_the_names_note, wrapped_comma_ends_a_row_of_names}`,
-`perfect_kernel_batch77p::{compound_legend_mark_names_its_carrier, symbol_row_note_line_is_the_blocks}`,
-`perfect_kernel_batch77y::{correspondence_line_under_welded_lines_is_the_blocks, mark_led_line_under_symbol_lines_is_no_names,
-notes_under_welded_lines_are_the_blocks, unnamed_line_under_symbol_lines_stays_the_blocks}`,
+`sectioning-frontmatter/legend_kind_*` (the controls `legend_kind_institutions_named_with_role_words_stay` and
+`legend_kind_symbol_led_institutions_stay`, review rev103c S1/S2). Guards updated to the new reading (each marked legend
+now its carriers' note, or the CSS kind of a note): `perfect_kernel_batch77n::{note_macro_among_names_is_the_names_note,
+wrapped_comma_ends_a_row_of_names}`, `perfect_kernel_batch77p::compound_legend_mark_names_its_carrier`,
+`perfect_kernel_batch77y::mark_led_line_under_symbol_lines_is_no_names`,
 `perfect_kernel_batch78f::{jheppub_emailadd_corresponding_author_star_legend, jheppub_emailadd_note_owners_are_a_set,
 jheppub_emailadd_two_marked_authors_stay_the_blocks}`, `perfect_kernel_batch78u::author_thanks_inside_a_mark_keeps_the_mark_and_the_note`,
 `perfect_kernel_batch92b::spacing_parts_a_marks_labels` and `perfect_kernel_batch95b::a_label_spelled_with_a_command_is_read_to_it`
-(their contact views no longer list the legend; the reading's tuples still give it to its carriers),
-`perfect_kernel_batch93a::a_compound_symbol_mark_names_the_names_carrying_all` (the reading's `n`). **Not reached**: a legend's
-carriers (an unlabelled `\affil[ ]{Corresponding author: Dominik Chevalier …}` stays on the run's last author, 2412.14916;
-the Link question, not the Kind); a compound label's note mark is the run's first symbol (`show_legend_mark`: "†" for a
-printed "†‡", 2602.19190); "Work done before joining Google DeepMind" (2603.23994), funding legends (1604.05657), a
+(their contact views no longer list the legend; `perfect_kernel_batch103c::creator_notes` pins each note, its mark and
+its carrier), `perfect_kernel_batch93a::a_compound_symbol_mark_names_the_names_carrying_all` (the reading's `n`). The
+unmarked legends of `perfect_kernel_batch61::marked_affiliation_review_shapes`, `perfect_kernel_batch63::elsarticle_labelled_unlabelled_affiliation`,
+`perfect_kernel_batch77p::symbol_row_note_line_is_the_blocks` and `perfect_kernel_batch77y::{correspondence_line_under_welded_lines_is_the_blocks,
+notes_under_welded_lines_are_the_blocks, unnamed_line_under_symbol_lines_stays_the_blocks}` stay affiliations, as on
+base. **Not reached**: an unmarked legend (above); a legend's carriers (an unlabelled `\affil[ ]{Corresponding author:
+Dominik Chevalier …}` stays on the run's last author, 2412.14916; the Link question, not the Kind); a compound label's
+note mark, where the observer's writer writes it, is the run's first symbol (`show_legend_mark`: "†" for a printed
+"†‡", 77p's `compound_legend_mark_names_its_carrier`; the Kind step keeps a label's key whole, 2602.19190's "*†"); "Work
+done before joining Google DeepMind" (2603.23994), funding legends (1604.05657), a
 legend sentence holding commas (1703.07724's "The authors wish it to be known that, in their opinion, the first two
 authors should be regarded as Joint First Authors.": a comma parts a piece, which keeps "Entity, legend" lines
 affiliations), a legend beside a link (2403.03314) and an obfuscated address (2605.00769's `amir[dot]norouzi[at]…`)

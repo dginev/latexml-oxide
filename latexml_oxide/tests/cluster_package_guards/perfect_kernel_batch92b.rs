@@ -622,8 +622,9 @@ fn spacing_parts_a_marks_labels() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_picture_text_is_its_label.tex"
     ),
     Some(&[
-      // (each "Corresponding" line its carrier's note since 103c, which this view of contacts does not list; the
-      // reading's tuples below still give each to its picture label's name: `insert::kind_legend_contacts`, OD #961)
+      // (each "Corresponding" line its carrier's note since 103c, which this view of contacts does not list — the notes'
+      // view below pins it; the reading's tuples still give each to its picture label's name:
+      // `insert::kind_legend_contacts`, OD #961)
       &["Ann Able", "affiliation=Univ One"],
       &["Bob Baker", "affiliation=Univ Two"],
       &["Cid Cole", "affiliation=Univ Three"],
@@ -648,6 +649,21 @@ fn spacing_parts_a_marks_labels() {
       "C Fay Fox [f,f] | line:names sep:column",
       "C Gus Gray [g,g] | line:names sep:column",
     ],
+  );
+  // (where each "Corresponding" legend goes: its picture label's name's note, marked by that label — review rev103c S3)
+  assert_eq!(
+    super::perfect_kernel_batch103c::creator_notes(include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_picture_text_is_its_label.tex"
+    )),
+    [
+      vec!["Ann Able", "note[a]=Corresponding A"],
+      vec!["Bob Baker", "note[b]=Corresponding B"],
+      vec!["Cid Cole", "note[c]=Corresponding C"],
+      vec!["Dee Dunn"],
+      vec!["Eve Esse e"],
+      vec!["Fay Fox f"],
+      vec!["Gus Gray g"],
+    ]
   );
   // (the same through a mark command, `\inst` (llncs.cls's, `\lx@request@frontmatter@annotation`): a label the name
   // requests in a picture and plainly is shown, in either order — review rev92b_r4 B1)

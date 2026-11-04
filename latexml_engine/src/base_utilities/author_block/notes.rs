@@ -20,7 +20,54 @@ use super::*;
 /// 2608.22772; "Core Contribution", 2408.15240), and the work's own circumstances where they open the text ([`opens_with_work_done`]:
 /// "Work done during an internship", 2106.09776, 2502.02407) — not "Facebook (work done while at JHU/APL)", an
 /// institution the author is at (1702.02684).
+///
+/// The role readings are the ones an institution's name can hold ("Project Lead Institute, Univ D", "Core Contributor
+/// Network, Paris", "Senior Author Program, Acme Corp"), so a text reads by them only where every piece of it is a
+/// legend, as the Kind step reads an entry with no carrier's name in it ([`entry_legend_kind`]); else it reads as it
+/// would without them — one gate for every reader of the kind (the kernel's line route `queue_digest::legend_note_kind`,
+/// the frontmatter observer `resolver::is_legend_text`, the line readers' `== "note"` tests, a `\thanks`'s CSS kind),
+/// review rev103c S1. "Project lead: Yi Yang" (2602.19190) is left to the Kind step, which knows its carriers.
 pub(in crate::base_utilities) fn classify_thanks(text: &str) -> &'static str {
+  match thanks_kind(text, true) {
+    "contribution"
+      if role_contribution(text) && entry_legend_kind(&printed_words(text), &[]).is_none() =>
+    {
+      thanks_kind(text, false)
+    },
+    kind => kind,
+  }
+}
+
+/// A note's text as it prints, for [`classify_thanks`]'s gate: a caller's TeX source (`$^{\dagger}$Project leader.`, a
+/// `\thanks`'s untexed tokens) without its control words and the math, group and tie characters around them — the
+/// pieces then read are words, not `^{\dagger`.
+fn printed_words(text: &str) -> String {
+  let mut out = String::with_capacity(text.len());
+  let mut chars = text.chars().peekable();
+  while let Some(c) = chars.next() {
+    match c {
+      '\\' => {
+        // (a control word and the letters of its name; a control symbol, `\,`, its one character)
+        if chars.peek().is_some_and(|n| n.is_ascii_alphabetic()) {
+          while chars.peek().is_some_and(|n| n.is_ascii_alphabetic()) {
+            chars.next();
+          }
+        } else {
+          chars.next();
+        }
+        out.push(' ');
+      },
+      '$' | '^' | '_' | '{' | '}' | '~' => out.push(' '),
+      _ => out.push(c),
+    }
+  }
+  out
+}
+
+/// [`classify_thanks`]'s reading, with an author's part in the work read as a contribution when `roles`
+/// ([`project_role`], [`opens_with_work_done`]) whatever else the text names — the Kind step's reading of its pieces
+/// ([`entry_legend_kind`]).
+fn thanks_kind(text: &str, roles: bool) -> &'static str {
   let t = text.to_lowercase();
   if t.contains("correspond") {
     "correspondence"
@@ -30,8 +77,7 @@ pub(in crate::base_utilities) fn classify_thanks(text: &str) -> &'static str {
   // review rev94a r2 S1)
   } else if (t.contains("equal") && t.contains("contribut"))
     || equal_share(&t)
-    || project_role(&t)
-    || opens_with_work_done(&t)
+    || (roles && (project_role(&t) || opens_with_work_done(&t)))
   {
     "contribution"
   } else if t
@@ -103,6 +149,12 @@ fn project_role(text: &str) -> bool {
     .any(|three| matches!(three[0], "joint" | "co") && three[1] == "first" && author(three[2]))
 }
 
+/// Whether `text` reads as a contribution by an author's part in the work alone ([`project_role`],
+/// [`opens_with_work_done`]), not by an equal share ([`classify_thanks`]'s gate).
+pub(in crate::base_utilities) fn role_contribution(text: &str) -> bool {
+  thanks_kind(text, true) == "contribution" && thanks_kind(text, false) != "contribution"
+}
+
 /// Whether a lowercased note opens with the circumstances of the author's work, behind any mark: "work done during …",
 /// "work done while …", "work was done during …", "work done as an intern" ([`classify_thanks`]) — the opening words
 /// only, as [`opens_with_deceased`] reads its word: "Facebook (work done while at JHU/APL)" names the institution
@@ -124,13 +176,19 @@ fn opens_with_work_done(text: &str) -> bool {
 /// Correspondence:" (2609.03342) is two legends, "Corresponding author: Ann Able" a legend and the name it gives. Every
 /// piece is a legend that names no institution by its words ([`reads_as_affiliation`]: "Department of Equal Contribution
 /// Studies, Univ A" is one; "Deceased" opening it, [`opens_with_deceased`], is a legend whatever follows, as the line
-/// route and the frontmatter observer read it), a name ([`name_count`]) or its initials ("(Y.W.)"), or prints one letter at most (the "(s)" of "corresponding author(s): Xiaofan Xu, Hua Zhu", 2609.08556), and one piece at
-/// least is a legend. `None` for any other text: a mixed line is the affiliation it names ("DeepAuto.ai († : Equal
-/// advising)", 2609.34327; "ByteDance *equal contribution", 2404.02132; "Facebook (work done while at JHU/APL)",
-/// 1702.02684), and an address change and funding stay as the call declares them (an institution is named for its
-/// funder as often). The kind is the whole text's ([`classify_thanks`]: correspondence first). The frontmatter API's Kind
-/// step for a legend (`insert::kind_legend_contacts`, OXIDIZED_DESIGN_DIVERGENCES #961).
-pub(in crate::base_utilities) fn entry_legend_kind(text: &str) -> Option<&'static str> {
+/// route and the frontmatter observer read it), a name of one of its `carriers` (the personnames holding the entry, as
+/// printed: [`spells_a_carrier`]) or initials ("(Y.W.)"), or prints one letter at most (the "(s)" of "corresponding
+/// author(s): Xiaofan Xu, Hua Zhu", 2609.08556), and one piece at least is a legend. `None` for any other text: a mixed
+/// line is the affiliation it names ("DeepAuto.ai († : Equal advising)", 2609.34327; "ByteDance *equal contribution",
+/// 2404.02132; "Facebook (work done while at JHU/APL)", 1702.02684; "Equal contribution, Google DeepMind", a company's
+/// name shaped as a person's, review rev103c S2), and an address change and funding stay as the call declares them (an
+/// institution is named for its funder as often). The kind is the whole text's ([`classify_thanks`]: correspondence
+/// first). The frontmatter API's Kind step for a legend (`insert::kind_legend_contacts`, OXIDIZED_DESIGN_DIVERGENCES
+/// #961).
+pub(in crate::base_utilities) fn entry_legend_kind(
+  text: &str,
+  carriers: &[String],
+) -> Option<&'static str> {
   if opens_with_deceased(text) {
     return Some("deceased");
   }
@@ -144,7 +202,7 @@ pub(in crate::base_utilities) fn entry_legend_kind(text: &str) -> Option<&'stati
     .join(" ");
   let legend = |piece: &str| {
     let affiliation = || reads_as_affiliation(&Tokens::new(ExplodeText!(piece)));
-    match classify_thanks(piece) {
+    match thanks_kind(piece, true) {
       "correspondence" | "contribution" => !affiliation(),
       "deceased" => opens_with_deceased(piece) || !affiliation(),
       _ => false,
@@ -167,14 +225,36 @@ pub(in crate::base_utilities) fn entry_legend_kind(text: &str) -> Option<&'stati
     };
     if legend(piece) {
       legends += 1;
-    } else if name_count(piece) == 0 && !initials {
+    } else if !initials
+      && (!spells_a_carrier(piece, carriers)
+        || reads_as_affiliation(&Tokens::new(ExplodeText!(piece))))
+    {
       return None;
     }
   }
-  match classify_thanks(&text) {
+  match thanks_kind(&text, true) {
     kind @ ("correspondence" | "contribution" | "deceased") if legends > 0 => Some(kind),
     _ => None,
   }
+}
+
+/// Whether a piece of a legend's text spells one of its `carriers` by name ([`entry_legend_kind`]): each of its words of
+/// two letters or more is a word of one carrier's name, as printed (case aside; its marks, digits and initials not
+/// read), and it holds one at least — "Ann Able", "A. King" for Alice King; not "Google DeepMind", "Mountain View".
+fn spells_a_carrier(piece: &str, carriers: &[String]) -> bool {
+  let words = |text: &str| -> Vec<String> {
+    text
+      .split(|c: char| !c.is_alphabetic())
+      .filter(|w| w.chars().count() >= 2)
+      .map(str::to_lowercase)
+      .collect()
+  };
+  let spelled = words(piece);
+  !spelled.is_empty()
+    && carriers.iter().any(|carrier| {
+      let name = words(carrier);
+      spelled.iter().all(|word| name.contains(word))
+    })
 }
 
 /// Where [`entry_legend_kind`] parts a text into its pieces: the footnote symbols marks print, brackets, a comma, colon

@@ -7173,8 +7173,7 @@ Text.
         &format!(
           "{}{}",
           affiliation(" Univ B"),
-          // (the legend Cy Dee's note since 103c, no institution: `insert::kind_legend_contacts`, OD #961)
-          r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="" role="thanks" xml:id="id3">* Equal contribution</note>"#
+          affiliation("* Equal contribution")
         )
       ),
     ]

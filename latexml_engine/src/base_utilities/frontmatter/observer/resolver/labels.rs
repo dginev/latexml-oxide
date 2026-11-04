@@ -436,7 +436,10 @@ pub(super) fn later_line_is_names(
 /// affiliation; before batch 78u's whole-word match `classify_thanks`'s "erc" test also matched inside "Perception": `2
 /// Guangdong Laboratory of Machine Perception and Intelligent Computing`, 2509.05368; `Department of Deceased Estates,
 /// Univ C` is an affiliation, `Deceased 3 March 2021; formerly at Univ C` a legend, the word opening it —
-/// `opens_with_deceased` —, as the kernel's line route reads them, `queue_digest::legend_note_kind`, review rev100a S2).
+/// `opens_with_deceased` —, as the kernel's line route reads them, `queue_digest::legend_note_kind`, review rev100a S2);
+/// a contribution read by an author's part in the work alone only where every piece of the text is a legend
+/// (`classify_thanks`'s gate: "Project Lead Institute, Univ D" is an affiliation, "Project lead" a legend; review rev103c
+/// S1).
 pub(super) fn is_legend_text(text: &str) -> bool {
   match classify_thanks(text) {
     "note" => false,

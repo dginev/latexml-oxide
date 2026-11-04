@@ -1804,10 +1804,7 @@ fn symbol_row_note_line_is_the_blocks() {
       r#"Cat Cole<sup xml:id="id3">†</sup>"#,
       &affiliation("Univ A")
     ),
-    // (the block's legend its note since 103c, no institution: `insert::kind_legend_contacts`, OD #961)
-    shared(
-      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="" role="thanks" xml:id="id4">Equal contribution</note>"#
-    ),
+    shared(&affiliation("Equal contribution")),
   ]);
 }
 

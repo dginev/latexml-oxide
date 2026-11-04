@@ -301,35 +301,58 @@ fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
 /// author deceased; no institution) is its carriers' note in its place (`ltx:note role=thanks`, `ltx_thanks_<kind>`), as
 /// a legend line's note is (`queue_digest::legend_note_kind`, `resolver::is_legend_text`). Its mark is the superscript
 /// its text opens with, as printed, else the label it was placed by (`_label`: authblk's `*`, IEEEtran's
-/// `\IEEEauthorrefmark{4}`'s `4`), else none — an empty `mark`, where a note's default is `†`: `\affil[ ]{Corresponding author: …}` prints none (2412.14916,
-/// 2305.02090). Its carriers stay the contact's, and so do the e-mails its line printed (2409.05386's `ago@`, the
-/// author's e-mail contact as before). Left as they are: a contact the class names otherwise than an affiliation (a
-/// `name` but the role's default), an institution named with a legend's words ("Department of Equal Contribution
-/// Studies, Univ C"), a mixed line (`Facebook (work done while at JHU/APL)`, 1702.02684; `DeepAuto.ai († : Equal
-/// advising)`, 2609.34327). Guards `perfect_kernel_batch103c`.
+/// `\IEEEauthorrefmark{4}`'s `4`). Its carriers stay the contact's, and so do the e-mails its line printed
+/// (2409.05386's `ago@`, the author's e-mail contact as before). Left as they are: a legend that prints no mark
+/// (`\affil[ ]{Corresponding author: …}`, 2412.14916, 2305.02090: a note shows its text only behind its mark, so an
+/// unmarked one is unreachable on the rendered page; review rev103c B1), a contact the class names otherwise than an
+/// affiliation (a `name` but the role's default), an institution named with a legend's words ("Department of Equal
+/// Contribution Studies, Univ C"), a mixed line (`Facebook (work done while at JHU/APL)`, 1702.02684; `DeepAuto.ai († :
+/// Equal advising)`, 2609.34327; "Equal contribution, Google DeepMind", a name no carrier has). Guards
+/// `perfect_kernel_batch103c`.
 fn kind_legend_contacts(document: &mut Document) -> Result<()> {
   let contacts = document.findnodes("//ltx:creator/ltx:contact[@role='affiliation']", None);
   if contacts.is_empty() {
     return Ok(());
   }
   let default_name = get_frontmatter_name(None, "ltx:contact", "affiliation")?;
+  // (its printed text, a line break at any depth parting its lines, a mark set apart, a note inside it — a
+  // `\footnotemark`'s — none of it: `entry_legend_kind` reads it without its addresses, which stay where they print)
+  let mut read = Vec::new();
   for contact in contacts {
     if contact.get_attribute("name") != default_name {
       continue;
     }
-    // (its printed text, a line break at any depth parting its lines, a mark set apart, a note inside it — a
-    // `\footnotemark`'s — none of it: `entry_legend_kind` reads it without its addresses, which stay where they print)
     let mut text = String::new();
     legend_text(&contact, &mut text);
-    if !text.chars().any(char::is_alphabetic) {
-      continue;
+    if text.chars().any(char::is_alphabetic) {
+      read.push((contact, text));
     }
-    let Some(kind) = entry_legend_kind(&text) else {
-      continue;
-    };
-    // (the superscript its text opens with, as printed — `†‡` of `$^{\dagger\ddagger}$Project lead`, 2602.19190 —, else
-    // the label it was placed by)
-    let printed = element_nodes(&contact)
+  }
+  // (the entry's carriers, each creator holding a copy of its text: their personnames as printed, which a name in the
+  // legend must spell, review rev103c S2; a nameless creator — an author block's own, holding the block's legends —
+  // carries for every author: "corresponding author(s): Xiaofan Xu, Hua Zhu", 2609.08556; 1507.04774, 2503.10710)
+  let authors: Vec<String> = document
+    .findnodes("//ltx:creator/ltx:personname", None)
+    .iter()
+    .map(Node::get_content)
+    .collect();
+  let mut carriers: HashMap<&str, Vec<String>> = HashMap::default();
+  for (contact, text) in &read {
+    let name = contact.get_parent().and_then(|creator| {
+      element_nodes(&creator)
+        .into_iter()
+        .find(|child| child.get_name() == "personname")
+    });
+    let entry = carriers.entry(text.as_str()).or_default();
+    match name {
+      Some(personname) => entry.push(personname.get_content()),
+      None => entry.extend(authors.iter().cloned()),
+    }
+  }
+  for (contact, text) in &read {
+    // (the superscript its text opens with, as printed, else the label it was placed by — `*†` of 2602.19190's
+    // `$^{*\dag}$Project lead: Yi Yang (…)`, the label's key whole)
+    let printed = element_nodes(contact)
       .first()
       .filter(|first| {
         first.get_name() == "sup"
@@ -359,11 +382,20 @@ fn kind_legend_contacts(document: &mut Document) -> Result<()> {
         })
       })
       .unwrap_or_default();
+    // (a legend that prints no mark stays the affiliation it was: a note's text shows only behind its mark, and an empty
+    // one shows nothing to reach it by — `\affil[ ]{Corresponding author: …}`, 2412.14916, 2305.02090; review rev103c
+    // B1, main-session ruling 2026-11-04)
+    if mark.is_empty() {
+      continue;
+    }
+    let Some(kind) = entry_legend_kind(text, &carriers[text.as_str()]) else {
+      continue;
+    };
     DebugFeature!(
       "frontmatter",
       "FRONT kind affiliation: a legend, its carriers' {kind} note: {text}"
     );
-    let mut note = document.rename_node(contact, "ltx:note", true)?;
+    let mut note = document.rename_node(contact.clone(), "ltx:note", true)?;
     note.remove_attribute("name").ok();
     document.set_attribute(&mut note, "role", "thanks")?;
     document.set_attribute(
@@ -371,12 +403,7 @@ fn kind_legend_contacts(document: &mut Document) -> Result<()> {
       "class",
       &s!("ltx_note_frontmatter ltx_thanks_{kind}"),
     )?;
-    // (an empty mark set as it is, which `Document::set_attribute` skips: the note prints no mark)
-    if mark.is_empty() {
-      note.set_attribute("mark", "").ok();
-    } else {
-      document.set_attribute(&mut note, "mark", &mark)?;
-    }
+    document.set_attribute(&mut note, "mark", &mark)?;
   }
   Ok(())
 }

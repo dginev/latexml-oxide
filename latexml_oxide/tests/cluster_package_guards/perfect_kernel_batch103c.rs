@@ -6,7 +6,47 @@
 //! observer's legend reading (`is_legend_text`) shares. Each guard converts its repro under
 //! `tools/perfect_kernel/repros/sectioning-frontmatter/` from the binary, eager and `--streaming`, and asserts the
 //! frontmatter it makes whole.
-use super::perfect_kernel_batch99b::converted;
+use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
+
+use super::{perfect_kernel_batch84b::text, perfect_kernel_batch99b::converted};
+
+/// The frontmatter notes of `tex`'s creators, converted in process (clean): per creator its personname's text, then
+/// each `ltx:note` it holds as `note[<mark>]=<text>`, in order — the view a guard's contacts view (`creators`) leaves
+/// out (review rev103c S3: `perfect_kernel_batch92b`, `perfect_kernel_batch95b`).
+#[track_caller]
+pub(super) fn creator_notes(tex: &str) -> Vec<Vec<String>> {
+  let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| {});
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  xml
+    .match_indices("<creator ")
+    .map(|(start, _)| {
+      let end = start + xml[start..].find("</creator>").expect("closed creator");
+      let creator = &xml[start..end];
+      let mut out = Vec::new();
+      if let Some(at) = creator.find("<personname>") {
+        let close = at
+          + creator[at..]
+            .find("</personname>")
+            .expect("closed personname");
+        out.push(text(&creator[at + "<personname>".len()..close]));
+      }
+      for (at, _) in creator.match_indices("<note ") {
+        let open_end = at + creator[at..].find('>').expect("note tag");
+        let mark = creator[at..open_end]
+          .split("mark=\"")
+          .nth(1)
+          .and_then(|m| m.split('"').next())
+          .unwrap_or("");
+        let close = open_end + creator[open_end..].find("</note>").expect("closed note");
+        out.push(format!(
+          "note[{mark}]={}",
+          text(&creator[open_end + 1..close])
+        ));
+      }
+      out
+    })
+    .collect()
+}
 
 macro_rules! repro {
   ($name:literal) => {
@@ -20,10 +60,12 @@ macro_rules! repro {
 
 /// An affiliation a binding or an author block placed whose whole text is a legend is its carriers' note, its mark the
 /// label it was placed by: authblk's `\affil[$\dagger$]{These authors contributed equally.}` and `\affil[*]{Corresponding
-/// author: bob@a.edu}` (its address still Bob Baker's e-mail contact; 2409.05386, 2603.21906, wlscirep's 1611.06677), an
-/// unlabelled `\affil[ ]{Corresponding author: Ann Able (ann@a.edu)}` (no mark, the address Ann Able's as it spells her;
-/// 2412.14916, 2305.02090), and IEEEtran's `\IEEEauthorblockA{\IEEEauthorrefmark{3}These authors contributed equally}`
-/// (a number its mark; 2410.12184). Each had been an affiliation contact of the same carriers.
+/// author: bob@a.edu}` (its address still Bob Baker's e-mail contact; 2409.05386, 2603.21906, wlscirep's 1611.06677) and
+/// IEEEtran's `\IEEEauthorblockA{\IEEEauthorrefmark{3}These authors contributed equally}` (a number its mark;
+/// 2410.12184). Each had been an affiliation contact of the same carriers. An unlabelled `\affil[ ]{Corresponding
+/// author: Ann Able (ann@a.edu)}` prints no mark and stays the affiliation it was, as int130a writes it (a note shows its
+/// text only behind its mark; review rev103c B1, main-session ruling 2026-11-04), the address Ann Able's as it spells her
+/// (2412.14916, 2305.02090).
 #[test]
 fn an_affiliation_that_is_a_legend_is_its_carriers_note() {
   assert_eq!(
@@ -35,7 +77,16 @@ fn an_affiliation_that_is_a_legend_is_its_carriers_note() {
       repro!("legend_kind_authblk_unlabelled_corresponding_author"),
       0
     ),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Email: " role="email">ann@a.edu</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="" role="thanks" xml:id="id1">Corresponding author: Ann Able</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Email: " role="email">ann@a.edu</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Affiliation: " role="affiliation">Corresponding author: Ann Able</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+  );
+  // (a labelled legend no author requests sits on a nameless creator, which carries for every author: the name it
+  // spells is an author's, review rev103c S2; 2609.08556, 1507.04774, 2503.10710)
+  assert_eq!(
+    converted(
+      repro!("legend_kind_authblk_unrequested_label_names_an_author"),
+      0
+    ),
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Email: " role="email">ann@a.edu</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <creator role="author"> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="†" role="thanks" xml:id="id1">Corresponding author: Ann Able</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
   assert_eq!(
     converted(repro!("legend_kind_ieee_numbered_legend"), 0),
@@ -61,7 +112,12 @@ fn a_project_role_or_joint_first_authorship_is_a_contribution_note() {
 
 /// Controls: an institution named with a legend's words stays an affiliation — "Facebook (work done while at JHU/APL)"
 /// (1702.02684: the work's circumstances not opening it), "Center for Equal Opportunity", "Department of Equal
-/// Contribution Studies, Univ C" and "Project Lead Institute, Univ D" (`reads_as_affiliation`).
+/// Contribution Studies, Univ C" and "Project Lead Institute, Univ D" (`reads_as_affiliation`), and "Equal contribution,
+/// Google DeepMind", a company's name shaped as a person's that no carrier has (`spells_a_carrier`, review rev103c S2).
+/// The same names on the kernel `\author` block's symbol-led lines, which the line route and the frontmatter observer
+/// read (`$^{\dagger}$Project Lead Institute, Univ D`, `$^{\ddagger}$Core Contributor Network, Paris`, `$^{*}$Senior
+/// Author Program, Acme Corp`): each its carrier's affiliation, as int130a writes it (`classify_thanks` reads a role only
+/// where every piece of the text is a legend, the gate of every reader of the kind; review rev103c S1).
 #[test]
 fn institutions_named_with_legend_words_stay_affiliations() {
   assert_eq!(
@@ -69,6 +125,10 @@ fn institutions_named_with_legend_words_stay_affiliations() {
       repro!("legend_kind_institutions_named_with_role_words_stay"),
       0
     ),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Facebook (work done while at JHU/APL)</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Center for Equal Opportunity</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Department of Equal Contribution Studies, Univ C</contact> </creator> <creator before=" " role="author"> <personname>Dan Dee</personname> <contact name="Affiliation: " role="affiliation">Project Lead Institute, Univ D</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Facebook (work done while at JHU/APL)</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Center for Equal Opportunity</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Department of Equal Contribution Studies, Univ C</contact> </creator> <creator before=" " role="author"> <personname>Dan Dee</personname> <contact name="Affiliation: " role="affiliation">Project Lead Institute, Univ D</contact> </creator> <creator before=" " role="author"> <personname>Eve Eyre</personname> <contact name="Affiliation: " role="affiliation">Equal contribution, Google DeepMind</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+  );
+  assert_eq!(
+    converted(repro!("legend_kind_symbol_led_institutions_stay"), 0),
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">†</sup></personname> <contact name="Affiliation: " role="affiliation">Project Lead Institute, Univ D</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">‡</sup></personname> <contact name="Affiliation: " role="affiliation">Core Contributor Network, Paris</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole<sup xml:id="id3">*</sup></personname> <contact name="Affiliation: " role="affiliation">Senior Author Program, Acme Corp</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }

@@ -177,8 +177,8 @@ fn a_label_spelled_with_a_command_is_read_to_it() {
     repro!("authblk_label_spelled_with_a_command.tex"),
     &[
       &["Ann Able", "affiliation=Univ X"],
-      // (the starred legend each starred name's note since 103c, which this view of contacts does not list; the
-      // reading's tuples below still give it to both: `insert::kind_legend_contacts`, OD #961)
+      // (the starred legend each starred name's note since 103c, which this view of contacts does not list — the
+      // notes' view below pins it; the reading's tuples still give it to both: `insert::kind_legend_contacts`, OD #961)
       &["Bob Baker*", "affiliation=Univ Y"],
       &["Cid Cole*", "affiliation=Univ X"],
       &["Dee Dunn", "affiliation=Univ Z"],
@@ -195,6 +195,18 @@ fn a_label_spelled_with_a_command_is_read_to_it() {
       "C Dee Dunn [3] | line:names mark:parted",
       "  a Univ Z | api:label ruling1:parted",
     ],
+  );
+  // (where the starred legend goes: each starred name's note, marked `*` — review rev103c S3)
+  assert_eq!(
+    super::perfect_kernel_batch103c::creator_notes(repro!(
+      "authblk_label_spelled_with_a_command.tex"
+    )),
+    [
+      vec!["Ann Able"],
+      vec!["Bob Baker*", "note[*]=Equal contribution."],
+      vec!["Cid Cole*", "note[*]=Equal contribution."],
+      vec!["Dee Dunn"],
+    ]
   );
 }
 

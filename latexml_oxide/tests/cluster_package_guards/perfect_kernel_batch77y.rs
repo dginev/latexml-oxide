@@ -464,14 +464,7 @@ fn unnamed_line_under_symbol_lines_stays_the_blocks() {
           &marked("Bob Baker", "id2", "‡"),
           &affiliation("Univ B")
         ),
-        // (the legend the block's note since 103c, no institution: `insert::kind_legend_contacts`, OD #961)
-        shared(&if line == "Equal Contribution" {
-          format!(
-            r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="" role="thanks" xml:id="id3">{line}</note>"#
-          )
-        } else {
-          affiliation(line)
-        }),
+        shared(&affiliation(line)),
       ],
       "{line}"
     );
@@ -504,10 +497,9 @@ fn correspondence_line_under_welded_lines_is_the_blocks() {
         affiliation("University B")
       )
     ),
-    // (the block's legend its note since 103c, its address in its text as before: `insert::kind_legend_contacts`)
-    shared(
-      r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="" role="thanks" xml:id="id3">Corresponding Author: <text font="typewriter" xml:id="id3.1">zq77@gmail.com</text></note>"#
-    ),
+    shared(&affiliation(
+      r#"Corresponding Author: <text font="typewriter" xml:id="id3">zq77@gmail.com</text>"#
+    )),
   ]);
 }
 
@@ -540,8 +532,7 @@ fn notes_under_welded_lines_are_the_blocks() {
     shared(&format!(
       "{} {}",
       affiliation("Preprint. Under review."),
-      // (the correspondence legend the block's note since 103c: `insert::kind_legend_contacts`, OD #961)
-      r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="" role="thanks" xml:id="id3">Corresponding author: Ann Able</note>"#
+      affiliation("Corresponding author: Ann Able")
     )),
   ]);
 }

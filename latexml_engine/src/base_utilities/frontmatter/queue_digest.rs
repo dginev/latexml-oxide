@@ -1030,6 +1030,9 @@ pub fn legend_note_kind(
   if !is_symbol_mark(operand) && !printed_symbol() {
     return None;
   }
+  // (a project role or the work's circumstances read in an institution's name — `$^\dagger$Project Lead Institute,
+  // Univ D`, `$^\ddagger$Core Contributor Network, Paris` — is no contribution: `classify_thanks`'s gate, review rev103c
+  // S1)
   match classify_thanks(line.clone().untex_string().as_ref()) {
     kind @ ("correspondence" | "contribution" | "address") => Some(kind),
     // (an institution named with the word is an affiliation, `$^\dagger$Department of Deceased Estates, Univ C`, unless

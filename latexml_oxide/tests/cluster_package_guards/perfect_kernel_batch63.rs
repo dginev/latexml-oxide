@@ -4533,8 +4533,8 @@ fn elsarticle_unlabelled_addresses_shared() {
 /// 63y: in a labelled elsarticle document an unlabelled `\affiliation` names no author and stays the last's, as in
 /// Perl (2609.07780). Repro sectioning-frontmatter/elsarticle_labelled_unlabelled_affiliation. Univ A before the
 /// unmarked line, as elsarticle.cls:634-653 prints both `\affiliation`s, in call order (since 99a r2 in print order (R8: `relocate::at_queue_position`, OD #954)).
-/// The unmarked line is a correspondence legend, Bob Baker's note since 103c (no institution: `insert::kind_legend_contacts`,
-/// OD #961), no longer an affiliation; its place is unchanged.
+/// The unmarked line is a correspondence legend that prints no mark, so it stays the affiliation it was
+/// (`insert::kind_legend_contacts`, OD #961: an unmarked note is unreachable on the page, review rev103c B1).
 #[test]
 fn elsarticle_labelled_unlabelled_affiliation() {
   let tex = include_str!(
@@ -4542,7 +4542,7 @@ fn elsarticle_labelled_unlabelled_affiliation() {
   );
   assert_eq!(creators_63x(tex), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"\" role=\"thanks\" xml:id=\"id1\">Corresponding: Ann Able</note>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Corresponding: Ann Able</contact>\n  </creator>",
   ]);
 }
 
