@@ -108,17 +108,8 @@ fn an_unsplit_labelled_address_block_lands_once_at_the_block() {
       "affiliation=1 Univ A, Town 2 Univ B, City"
     ],]
   );
-  // (a one-column `tabular`'s rows are lines the reader reads, `relocate::tabular_rows` (batch 104c, 2606.28962): each
-  // author the row its mark labels, as pdflatex prints them, no fail-safe — 0911.3234; was once at the block)
-  assert_eq!(
-    creators(&both_ways(repro!(
-      "revtex_tabular_affiliation_lines_land_once"
-    ))),
-    [vec!["Ann Able 1", "affiliation=Univ A, Town"], vec![
-      "Bob Baker 2",
-      "affiliation=Univ B, City"
-    ],]
-  );
+  // (a one-column `tabular`'s rows are lines the reader reads, no such block: each author the row its mark labels —
+  // 0911.3234, `perfect_kernel_batch104c::tabular_rows_are_marked_entries`)
 }
 
 /// The fail-safe fires only for a block of two or more lines led by labels the names request (review rev98e S2): lines

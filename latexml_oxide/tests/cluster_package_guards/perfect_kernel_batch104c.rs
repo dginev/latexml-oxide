@@ -70,9 +70,32 @@ fn a_control_return_parts_marked_entries() {
 
 /// IEEEtran's `\IEEEauthorblockA` holding a one-column tabular: its rows the list's lines (`relocate::tabular_rows`),
 /// each marked row its names' entry and the address row their e-mails. Red (int131a0): Ann and Cat "Univ A, Town 2 Univ
-/// B, City {aable, ccole}@a.edu, bbaker@b.edu", Bob nothing. Repro ieee_blocka_tabular_rows_are_entries.
+/// B, City {aable, ccole}@a.edu, bbaker@b.edu", Bob nothing. Repro ieee_blocka_tabular_rows_are_entries. The tabular's
+/// rules print no text and drop out of the rows (review rev104c S3; red 104c r1: 2 Errors "\noalign cannot be used
+/// here" for `\hline`, 3 Errors and 3 Warnings for `\cline{1-1}` and booktabs' rules): repros
+/// ieee_blocka_tabular_rules_print_no_line, ieee_blocka_tabular_booktabs_rules_print_no_line. And REVTeX's group rule
+/// reads the rows as lines too, each author the row its mark labels, as pdflatex prints them (0911.3234; 98e's
+/// fail-safe had put the block once at the block): repro class-bindings/revtex_tabular_affiliation_rows_go_by_their_marks.
 #[test]
 fn tabular_rows_are_marked_entries() {
+  let rows = [vec!["Ann Able 1", "affiliation=Univ A, Town"], vec![
+    "Bob Baker 2",
+    "affiliation=Univ B, City",
+  ]];
+  assert_eq!(
+    clean_creators(repro!("ieee_blocka_tabular_rules_print_no_line")),
+    rows
+  );
+  assert_eq!(
+    clean_creators(repro!("ieee_blocka_tabular_booktabs_rules_print_no_line")),
+    rows
+  );
+  assert_eq!(
+    clean_creators(include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/revtex_tabular_affiliation_rows_go_by_their_marks.tex"
+    )),
+    rows
+  );
   assert_eq!(
     clean_creators(repro!("ieee_blocka_tabular_rows_are_entries")),
     [
@@ -141,6 +164,53 @@ fn math_number_marks_label_lines() {
     [
       vec!["Ann Able 1,2", "affiliation=Univ A", "affiliation=Univ B"],
       vec!["Bob Baker 3", "affiliation=Univ C"],
+    ]
+  );
+}
+
+/// A number set in math at a line's start with an ordinal suffix glued to it, `$3$rd floor`, `$2$nd Floor`, is the
+/// entry's text, no mark (`relocate::math_number_mark_at`; review rev104c S1): the line stays its entry's, the digit kept.
+/// Red (104c r1): Cat "rd floor, Physics Bldg" and "Univ C"; Bob "nd Floor, Bldg C Univ B, City". Repros
+/// revtex_ordinal_number_line_is_entry_text, revtex_ordinal_number_line_under_number_marks.
+#[test]
+fn an_ordinal_number_is_no_mark() {
+  assert_eq!(
+    clean_creators(repro!("revtex_ordinal_number_line_is_entry_text")),
+    [
+      vec![
+        "Ann Able 1",
+        "affiliation=Univ A, Town 3 rd floor, Physics Bldg"
+      ],
+      vec!["Bob Baker 2", "affiliation=Univ B, City"],
+      vec!["Cat Cole 3", "affiliation=Univ C"],
+    ]
+  );
+  assert_eq!(
+    clean_creators(repro!("revtex_ordinal_number_line_under_number_marks")),
+    [
+      vec!["Ann Able 1", "affiliation=Univ A, Town 2 nd Floor, Bldg C"],
+      vec!["Bob Baker 2", "affiliation=Univ B, City"],
+    ]
+  );
+}
+
+/// A mark on a spacing nucleus glued to the word before it and to a letter run after it, `Lab for ${}^{3}$He Physics`,
+/// is the isotope, the entry's text, in a list a plain `$^1$` leads (`relocate::spaced_marks_written`; review rev104c
+/// S2): the digit kept. Red (104c r1): Cat "He Physics, Town", the "3" lost. The line is still parted at the isotope,
+/// "3He Physics, Town" Cat's, as int131a0 parts it (pdflatex prints it one line, Ann's): a reading before this batch,
+/// open in SYNC_STATUS row 104c. Repro revtex_nucleus_isotope_after_a_plain_lead_is_text.
+#[test]
+fn an_isotope_nucleus_mark_is_text() {
+  assert_eq!(
+    clean_creators(repro!("revtex_nucleus_isotope_after_a_plain_lead_is_text")),
+    [
+      vec!["Ann Able 1", "affiliation=1 Univ A, Lab for"],
+      vec!["Bob Baker 2", "affiliation=Univ B, City"],
+      vec![
+        "Cat Cole 3",
+        "affiliation=3 He Physics, Town",
+        "affiliation=Univ C"
+      ],
     ]
   );
 }

@@ -1352,15 +1352,85 @@ fn tabular_rows(line: &[Token]) -> Option<Vec<Vec<Token>>> {
       Catcode::BEGIN => depth += 1,
       Catcode::END => depth = depth.saturating_sub(1),
       Catcode::ALIGN if depth == 0 => return None,
+      // (vertical material between the rows, which may print text: no list of lines)
+      _ if depth == 0 && *t == T_CS!("\\noalign") => return None,
       _ => {},
     }
   }
   Some(
     split_top_level_lines(body)
       .into_iter()
-      .map(<[Token]>::to_vec)
+      .map(without_tabular_rules)
       .collect(),
   )
+}
+
+/// A tabular row without the rules set between the rows, which print no text and, a line's, are an alignment's only
+/// (`\hline` outside one: "\noalign cannot be used here", review rev104c S3): `\hline`, `\cline{2-3}`, `\hhline{…}`, and
+/// booktabs' `\toprule[w]`, `\midrule[w]`, `\bottomrule[w]`, `\cmidrule[w](lr){2-3}`, `\addlinespace[w]`,
+/// `\specialrule{w}{a}{b}` (booktabs.sty:62-80, 136).
+fn without_tabular_rules(row: &[Token]) -> Vec<Token> {
+  // (each rule's arguments: how many groups after its optional `[…]` and booktabs' `(…)` trim)
+  const RULES: [(&str, usize); 9] = [
+    ("\\hline", 0),
+    ("\\cline", 1),
+    ("\\hhline", 1),
+    ("\\toprule", 0),
+    ("\\midrule", 0),
+    ("\\bottomrule", 0),
+    ("\\cmidrule", 1),
+    ("\\addlinespace", 0),
+    ("\\specialrule", 3),
+  ];
+  let past_spaces = |mut i: usize| {
+    while row.get(i) == Some(&T_SPACE!()) {
+      i += 1;
+    }
+    i
+  };
+  // (a delimited optional, `[1pt]`, `(lr)`, at `i` past its spaces: where it ends)
+  let optional = |i: usize, open: &str, close: &str| {
+    let at = past_spaces(i);
+    if row.get(at) != Some(&T_OTHER!(open)) {
+      return None;
+    }
+    row[at..]
+      .iter()
+      .position(|t| *t == T_OTHER!(close))
+      .map(|k| at + k + 1)
+  };
+  let mut out = Vec::with_capacity(row.len());
+  let mut depth = 0usize;
+  let mut i = 0;
+  while i < row.len() {
+    let t = row[i];
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ => {},
+    }
+    if depth == 0
+      && let Some(&(_, groups)) = RULES.iter().find(|(cs, _)| t == T_CS!(*cs))
+    {
+      let mut next = i + 1;
+      next = optional(next, "[", "]").unwrap_or(next);
+      next = optional(next, "(", ")").unwrap_or(next);
+      for _ in 0..groups {
+        let open = past_spaces(next);
+        if row
+          .get(open)
+          .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+        {
+          next = skip_group(row, open);
+        }
+      }
+      i = next;
+      continue;
+    }
+    out.push(t);
+    i += 1;
+  }
+  out
 }
 
 /// The lines a line of one-argument commands set side by side prints as a marked list's entries
@@ -1571,12 +1641,36 @@ pub(in crate::base_utilities) fn spaced_marks_written(
   // (a number set in math at a line's start, no superscript, `$1$ Gazi University …\\ $2$ Ankara University …`, is the
   // mark it labels the line with where the names request it — 0708.2552; 0909.5340's `$1$` line over `$^2$`-led ones:
   // [`math_number_mark_at`])
+  // (not a mark glued to the word before it — plain spaces between, no separator, its nucleus printing no gap — and to
+  // a letter run after it, `Lab for ${}^{3}$He Physics`: the isotope, the entry's text, as `notes::split_marked_pieces`
+  // reads a glued `$^{3}$He`; review rev104c S2. After a comma or a gap it labels its entry, `INRIA, $\quad ^2$LTCI`)
+  let in_word = |i: usize, next: usize| {
+    i != lead
+      && !at_line_start(tokens, i)
+      && tokens
+        .get(next)
+        .is_some_and(|t| t.get_catcode() == Catcode::LETTER)
+      && tokens[..i]
+        .iter()
+        .rev()
+        .find(|t| **t != T_SPACE!())
+        .is_some_and(|t| {
+          t.get_catcode() == Catcode::LETTER
+            || (t.get_catcode() == Catcode::OTHER
+              && t.with_str(|s| s.chars().all(|c| c.is_ascii_digit())))
+        })
+      && !tokens[i..next].iter().any(|t| {
+        is_spacing(t) && *t != T_SPACE!() && *t != T_CS!("\\,") && *t != T_CS!("\\thinspace")
+      })
+  };
   let mark_at = |i: usize| {
-    spaced_mark_at(tokens, i).or_else(|| {
-      (i == lead || at_line_start(tokens, i))
-        .then(|| math_number_mark_at(tokens, i))
-        .flatten()
-    })
+    spaced_mark_at(tokens, i)
+      .filter(|(_, next)| !in_word(i, *next))
+      .or_else(|| {
+        (i == lead || at_line_start(tokens, i))
+          .then(|| math_number_mark_at(tokens, i))
+          .flatten()
+      })
   };
   // (or a plain mark leads it, and a mark spelled otherwise leads a later entry: IEEEtran's `$^{1}$CITI Laboratory, INRIA,
   // $\quad ^2$LTCI, … $\quad ^3$Technion`, 2106.01286)
@@ -1628,7 +1722,9 @@ pub(in crate::base_utilities) fn spaced_marks_written(
 }
 
 /// A number set in math alone at `at`, `$1$`, `$ 12 $`: its digits and where the formula ends ([`spaced_marks_written`]
-/// reads one at a line's start as the mark it labels the line with).
+/// reads one at a line's start as the mark it labels the line with). `None` when an ordinal suffix is glued to it
+/// ([`ordinal_suffix_at`]): `$3$rd floor`, `$2$nd Floor` print "3rd", "2nd", the entry's text (review rev104c S1) — a
+/// word glued to it otherwise is the line's text after its mark (`$1$Department of …`, 0909.5340).
 fn math_number_mark_at(tokens: &[Token], at: usize) -> Option<(Vec<Token>, usize)> {
   if tokens.get(at)?.get_catcode() != Catcode::MATH {
     return None;
@@ -1650,8 +1746,35 @@ fn math_number_mark_at(tokens: &[Token], at: usize) -> Option<(Vec<Token>, usize
   (digits > 0
     && tokens
       .get(close)
-      .is_some_and(|t| t.get_catcode() == Catcode::MATH))
+      .is_some_and(|t| t.get_catcode() == Catcode::MATH)
+    && !ordinal_suffix_at(tokens, close + 1))
   .then(|| (tokens[start..start + digits].to_vec(), close + 1))
+}
+
+/// Does an ordinal suffix start at `at`, glued to the number before it ([`is_ordinal_suffix`]): a run of letters that
+/// is the whole word, `rd` before a space or a comma, not the `St` of `Stanford`; a `\textsuperscript{th}`; a `$^{nd}$`?
+fn ordinal_suffix_at(tokens: &[Token], at: usize) -> bool {
+  let letters = tokens[at.min(tokens.len())..]
+    .iter()
+    .take_while(|t| t.get_catcode() == Catcode::LETTER)
+    .count();
+  if letters > 0 {
+    return is_ordinal_suffix(&tokens[at..at + letters]);
+  }
+  match tokens.get(at) {
+    Some(t) if *t == T_CS!("\\textsuperscript") => {
+      sup_operand_at(tokens, at + 1).is_some_and(|(operand, _)| is_ordinal_suffix(&operand))
+    },
+    Some(t) if t.get_catcode() == Catcode::MATH && tokens.get(at + 1) == Some(&T_SUPER!()) => {
+      sup_operand_at(tokens, at + 2).is_some_and(|(operand, next)| {
+        is_ordinal_suffix(&operand)
+          && tokens
+            .get(next)
+            .is_some_and(|t| t.get_catcode() == Catcode::MATH)
+      })
+    },
+    _ => false,
+  }
 }
 
 /// Does a line of `tokens` start at `i` — only spaces between it and a `\\` before it, or that `\\`'s optional

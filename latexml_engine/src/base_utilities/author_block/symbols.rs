@@ -466,28 +466,32 @@ pub(in crate::base_utilities) fn keepsup(sym: Vec<Token>) -> Vec<Token> {
   v
 }
 
+/// Is `operand` an ordinal suffix, `st`, `nd`, `rd` or `th` in any case, a font wrapper around it aside (`$^{\rm th}$`,
+/// `\textsuperscript{\mathrm{nd}}`)? Shared by [`rewrite_ordinal_superscripts`] and `relocate::math_number_mark_at`
+/// (`$3$rd floor` is no mark: review rev104c S1).
+pub(in crate::base_utilities) fn is_ordinal_suffix(operand: &[Token]) -> bool {
+  const FONT_WRAPPERS: &[&str] = &[
+    "\\rm", "\\mathrm", "\\textrm", "\\text", "\\mbox", "\\textup", "\\mathup", "\\it", "\\mathit",
+    "\\textit", "\\bf", "\\mathbf", "\\textbf", "\\sf", "\\mathsf", "\\textsf",
+  ];
+  let text: String = operand
+    .iter()
+    .filter(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+    .map(|t| t.with_str(str::to_lowercase))
+    .collect();
+  operand.iter().all(|t| match t.get_catcode() {
+    Catcode::LETTER | Catcode::OTHER | Catcode::SPACE | Catcode::BEGIN | Catcode::END => true,
+    Catcode::CS => FONT_WRAPPERS.iter().any(|w| *t == T_CS!(*w)),
+    _ => false,
+  }) && matches!(text.as_str(), "st" | "nd" | "rd" | "th")
+}
+
 /// Rewrite an ordinal suffix superscript after a numeral (`5\textsuperscript{th}`, `21$^{st}$`) onto a visible
 /// superscript: it is the number's, not an affiliation mark, so a marked list is not split at it nor labelled by it
 /// (repro sectioning-frontmatter/affiliation_line_superscript_ordinal_is_not_a_mark; iopart's
 /// `\address{$^1$Univ A, 5 \textsuperscript{th} floor}`, 2609.01831).
 pub(in crate::base_utilities) fn rewrite_ordinal_superscripts(tokens: Tokens) -> Tokens {
-  // The suffix as written, a font wrapper around it aside (`$^{\rm th}$`, `\textsuperscript{\mathrm{nd}}`).
-  const FONT_WRAPPERS: &[&str] = &[
-    "\\rm", "\\mathrm", "\\textrm", "\\text", "\\mbox", "\\textup", "\\mathup", "\\it", "\\mathit",
-    "\\textit", "\\bf", "\\mathbf", "\\textbf", "\\sf", "\\mathsf", "\\textsf",
-  ];
-  let is_ordinal = |operand: &[Token]| {
-    let text: String = operand
-      .iter()
-      .filter(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
-      .map(|t| t.with_str(str::to_lowercase))
-      .collect();
-    operand.iter().all(|t| match t.get_catcode() {
-      Catcode::LETTER | Catcode::OTHER | Catcode::SPACE | Catcode::BEGIN | Catcode::END => true,
-      Catcode::CS => FONT_WRAPPERS.iter().any(|w| *t == T_CS!(*w)),
-      _ => false,
-    }) && matches!(text.as_str(), "st" | "nd" | "rd" | "th")
-  };
+  let is_ordinal = is_ordinal_suffix;
   let is_digit = |t: &Token| {
     t.get_catcode() == Catcode::OTHER
       && t.with_str(|s| !s.is_empty() && s.chars().all(|c| c.is_ascii_digit()))

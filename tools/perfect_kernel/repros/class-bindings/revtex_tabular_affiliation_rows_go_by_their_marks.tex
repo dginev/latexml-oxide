@@ -7,8 +7,9 @@
 % engines: rust 98a: the whole on each; 98e r1 .. int131a0: once at the block (the fail-safe: rows not read as lines);
 %   104c: each author its row
 % expect:  0 errors, 0 warnings; Ann "Univ A, Town", Bob "Univ B, City"
-% status:  GREEN (98e) for the fail-safe -> GREEN (104c) per author — perfect_kernel_batch98e::
-%   an_unsplit_labelled_address_block_lands_once_at_the_block (the 98e deferral of the per-author cut, "a box or table
+% status:  GREEN (98e) for the fail-safe -> GREEN (104c) per author — perfect_kernel_batch104c::
+%   tabular_rows_are_marked_entries (was revtex_tabular_affiliation_lines_land_once under perfect_kernel_batch98e::
+%   an_unsplit_labelled_address_block_lands_once_at_the_block; the 98e deferral of the per-author cut, "a box or table
 %   of numbered lines contradicts REVTeX's one-institution assumption", superseded by brief 104c's "a tabular's rows are
 %   lines"; the `\parbox` block keeps the fail-safe)
 % preload: ar5iv.sty

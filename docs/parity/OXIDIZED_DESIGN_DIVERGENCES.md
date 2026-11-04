@@ -29342,7 +29342,8 @@ by the binding); repros class-bindings/
 `revtex_marks_inside_one_line_are_the_groups_entry`, `revtex_tie_nucleus_marks_lead_their_lines` (RED → GREEN),
 `revtex_braced_script_marks_lead_their_lines`,
 `revtex_unread_mark_lines_go_by_their_marks`, `revtex_parbox_affiliation_lines_land_once`,
-`revtex_tabular_affiliation_lines_land_once` (GREEN); the writer's `the_writer_never_writes_a_nameless_creator` asserts
+`revtex_tabular_affiliation_lines_land_once` (GREEN; since 104c each author's row, renamed
+`revtex_tabular_affiliation_rows_go_by_their_marks`, OD #964); the writer's `the_writer_never_writes_a_nameless_creator` asserts
 the exception.
 
 ### 948. Every remaining observer-writer family is written in one batch (ijcai, inst_support, iopart, jheppub, jinstpub, jcappub, jpconf, sv_support and every binding owning `\author` with no declaration); a block line's letters are read as printed, a re-parted entry keeps today's role, a letter-spaced name's word space is no gap, an e-mail's corresponding owner is one of the authors it is printed for, a name read as an entry is never written onto an author; an elsarticle key is answered by its keys alone, and a name the re-part makes that names no person declines (Perl: the old reader's output, no observer)
@@ -30673,16 +30674,27 @@ the writer's re-part reading the ordinals as marks.
 - **a control return** as spacing (`email_block_calls::is_spacing`: latex.ltx:558 `\def\^^M{\ }`): a line ending in `\`
   leaves `\^^M` before the next line's mark, which then parts the entries as `\ ` does. Witness 2510.25684
   (`$^1$University of Wisconsin-Madison \ \ \ \⏎ $^2$…`).
-- **a one-column tabular's rows** (`relocate::tabular_rows`): a `tabular` that is a whole line, with no `&` at its top
-  level, is its rows as lines. Witness 2606.28962 (`\IEEEauthorblockA{\begin{tabular}{c} $^{1}$ … \\ $^{2}$ … \\
+- **a tabular's rows** (`relocate::tabular_rows`): a `tabular` that is a whole line is its rows as lines. The test
+  rejects only a `&` at the body's top level (cells side by side) and a `\noalign` (vertical material that may print
+  text); the column spec is not read, so a `{cc}` tabular whose rows hold no `&` qualifies. The rules set between the
+  rows print no text and drop out (`without_tabular_rules`: `\hline`, `\cline{…}`, `\hhline{…}`, booktabs.sty:62-80,
+  136's `\toprule`/`\midrule`/`\bottomrule`/`\cmidrule`/`\addlinespace`/`\specialrule` with their optionals) — left in a
+  line outside the alignment, `\hline` raised "\noalign cannot be used here" (review rev104c S3). Witness 2606.28962 (`\IEEEauthorblockA{\begin{tabular}{c} $^{1}$ … \\ $^{2}$ … \\
   \{…\}@… \\ \vspace{-0.3cm}\end{tabular}}`); REVTeX's group rule reads it too, so 0911.3234's tabular `\affiliation`
   goes to each author by its rows' marks (98e's fail-safe had put it once at the block; a `\parbox` keeps the fail-safe).
 - **a mark on a spacing nucleus after a plain one** (`relocate::spaced_marks_written`, which `entry_calls` now applies
-  as REVTeX's group rule does): the list may open with a plain `$^{1}$`. Witness 2106.01286 (`$^1$CITI Laboratory,
-  INRIA, $\quad ^2$LTCI, … $\quad ^3$Technion`).
+  as REVTeX's group rule does): the list may open with a plain `$^{1}$`, and that lead turns on the `$N$` reading below
+  too. Witness 2106.01286 (`$^1$CITI Laboratory, INRIA, $\quad ^2$LTCI, … $\quad ^3$Technion`). Not a nucleus mark
+  glued to the word before it (plain spaces only, no separator, its nucleus printing no gap) and to a letter run after
+  it: `Lab for ${}^{3}$He Physics` is the isotope, the entry's text, as `notes::split_marked_pieces` reads a glued
+  `$^{3}$He` (review rev104c S2: written as `$^{3}$`, its digit was taken as a label and lost).
 - **a number set in math alone at a line's start** (`relocate::math_number_mark_at`, at the list's first mark or after a
   `\\`/`\\[len]`): `$1$` is mark 1 where the queued names request it (`$^1$`). Witnesses 0708.2552 (`\affiliation{ $1$
-  Gazi University, …\\ $2$ Ankara University, …}`), 0909.5340 (a `$1$` first line over `$^2$`-led ones).
+  Gazi University, …\\ $2$ Ankara University, …}`), 0909.5340 (a `$1$` first line over `$^2$`-led ones). Not one
+  with an ordinal suffix glued to it (`ordinal_suffix_at`, `symbols::is_ordinal_suffix`: a whole letter run `st`, `nd`,
+  `rd`, `th`, a `\textsuperscript{th}`, a `$^{nd}$`): `$3$rd floor` prints "3rd", the entry's text (review rev104c S1); a
+  word glued otherwise is the line's text after its mark (0909.5340's `$1$Department`), and no space after the number
+  nor a list opened by one is required (1511.00510's `$5$` line under a `$^1$` first line).
 
 **Why.** pdflatex prints each of these as marked lines (FIDELITY_CHARTER §4: an entry is its mark's names'); read as
 one entry, the whole run was every author's or the block's. Perl has no Cut (OD #954).
@@ -30692,7 +30704,11 @@ list whole — svjour3's correspondence lines `\Letter~~ Name \\ $~\quad~~$ e-ma
 repro sectioning-frontmatter/`svjour3_institute_unmarked_lead_lines_red`) and REVTeX's unmarked
 first `\affiliation` line, which the class numbers 1 itself (1903.07834, `revtex_unmarked_first_affiliation_line_red`);
 aa's `\and` inside a document macro's group, `\institute{A \rev{\and B \and C}}` (2407.09799, class-bindings/
-`aa_institute_and_inside_a_macro_group_red`). Outside this reading (census129 cluster 4's other papers): an address
+`aa_institute_and_inside_a_macro_group_red`). Readings before this batch, int131a0 the same: a tabular's lines after
+it go to its last entry only, `\affiliation{\begin{tabular}{c}$^1$Univ A\\ $^2$Univ B\end{tabular}\\ Joint Lab}` (pdflatex
+prints "Joint Lab" under both; review rev104c p12); the isotope line above is still parted at its mark, "3He Physics,
+Town" Cat's (`revtex_nucleus_isotope_after_a_plain_lead_is_text`); `$3$\textsuperscript{rd} floor` at a line's start
+loses its "rd", "3 floor" a nameless creator's. Outside this reading (census129 cluster 4's other papers): an address
 macro line (`\mailsa`, llncs 1604.03221), a second author block in the document (2006.15775), ieeeconf's kernel
 `\author` line (2110.11491), authblk's `\affil[\hspace{-1ex}]` label (2502.06575), a legend on an entry (2609.38081).
 
@@ -30700,6 +30716,11 @@ macro line (`\mailsa`, llncs 1604.03221), a second author block in the document 
 tabular_rows_are_marked_entries, a_spaced_mark_after_a_plain_lead_parts_entries, math_number_marks_label_lines}` (repros
 sectioning-frontmatter/`cut_acmart_institutions_side_by_side`, `cut_acmart_institution_control_return_parts_entries`,
 `ieee_blocka_tabular_rows_are_entries`, `ieee_blocka_spaced_marks_after_a_plain_lead`,
-`revtex_math_number_marks_label_lines`, `revtex_math_number_first_mark_over_superscripts`, RED → GREEN); updated
-`perfect_kernel_batch98e::an_unsplit_labelled_address_block_lands_once_at_the_block` (the tabular repro
-class-bindings/`revtex_tabular_affiliation_lines_land_once` now each author's row, as pdflatex prints it).
+`revtex_math_number_marks_label_lines`, `revtex_math_number_first_mark_over_superscripts`, RED → GREEN); r2 (review
+rev104c) `an_ordinal_number_is_no_mark`, `an_isotope_nucleus_mark_is_text` (repros `revtex_ordinal_number_line_is_entry_text`,
+`revtex_ordinal_number_line_under_number_marks`, `revtex_nucleus_isotope_after_a_plain_lead_is_text`) and
+`tabular_rows_are_marked_entries`'s rule repros (`ieee_blocka_tabular_rules_print_no_line`,
+`ieee_blocka_tabular_booktabs_rules_print_no_line`), RED (104c r1) → GREEN. The REVTeX tabular repro, each author's
+row as pdflatex prints it, is class-bindings/`revtex_tabular_affiliation_rows_go_by_their_marks` (was
+`revtex_tabular_affiliation_lines_land_once`), now asserted by `tabular_rows_are_marked_entries` (moved from
+`perfect_kernel_batch98e::an_unsplit_labelled_address_block_lands_once_at_the_block`, whose cases are the fail-safe's).
