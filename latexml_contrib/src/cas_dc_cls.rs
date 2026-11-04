@@ -180,7 +180,8 @@ LoadDefinitions!({
   // `\lx@add@author@keyvals` (base_utilities.rs: `orcid=` → contact, the
   // production keys dropped).
   // The marks link the author to the affiliations labelled with them (cas-common.sty:895-940 `\author[1,2]{…}`,
-  // :1252-1266 `\affiliation[1]{…}`); unmarked, an affiliation goes to the author before it.
+  // :1252-1266 `\affiliation[1]{…}`); unmarked, an affiliation is every author's, or under marked authors the author's
+  // before it (`cas_labelled_entry`; 2201.00009, 2511.22218, 2106.02306, 2606.24054).
   // (the names are split as the kernel splits an author list, at commas, `\and` and the word "and": cas prints the
   // argument as written, `\author[a]{Cy Cee and Dee Dee}` two people; review of 63u)
   // (the marks are read as the letters cas prints, `cas_mark_labels`: `\author[1,2]` under `\address[a]…\address[b]`
@@ -188,7 +189,14 @@ LoadDefinitions!({
   // Univ X and Univ Y, review of 88b r1)
   DefMacro!("\\author[]{}[]", sub[(marks, name, keys)] {
     let name: Tokens = name;
-    let mut out = mouth::tokenize_internal("\\lx@add@authors@append[annotations=").unlist();
+    // (a marked author: from here on an unlabelled entry is the unmarked authors', `cas_labelled_entry`)
+    let marked = marks.as_ref().is_some_and(|marks| !marks.to_string().trim().is_empty());
+    let mut out = if marked {
+      mouth::tokenize_internal("\\gdef\\lx@cas@labelled{}").unlist()
+    } else {
+      Vec::new()
+    };
+    out.extend(mouth::tokenize_internal("\\lx@add@authors@append[annotations=").unlist());
     out.push(T_BEGIN!());
     out.extend(cas_mark_labels(marks));
     out.extend([T_END!(), T_OTHER!("]"), T_BEGIN!()]);
@@ -388,6 +396,15 @@ fn cas_labelled_entry(label: Option<Tokens>, keys: Option<Tokens>) -> Vec<Token>
   // (a label read as the letter cas prints before the line is one that prints, `_labelprints`: the mark a legend's note
   // shows, OXIDIZED_DESIGN_DIVERGENCES #961, 2303.06763)
   let prints = printed.is_some();
+  // (an unlabelled entry under no marked author is every author's, before it and after it, as cas prints it under the
+  // whole row of names — `_share=authors`, OXIDIZED_DESIGN_DIVERGENCES #901 —, as elsarticle's unlabelled `\address`
+  // is the run's: `\author{Ann}\affiliation{organization={Univ A}}\author{Bob}\author{Cat}` prints "Ann, Bob and Cat /
+  // Univ A" — 2201.00009, 2511.22218, 2106.02306, 2606.24054. Once an author is marked, the marks link the entries
+  // (FIDELITY_CHARTER §4 R1) and an unlabelled one stays the author's before it, as elsarticle's does)
+  let shared = printed.is_none()
+    && text.is_empty()
+    && !foot
+    && lookup_meaning(&T_CS!("\\lx@cas@labelled")).is_none();
   let mut out = mouth::tokenize_internal("\\lx@add@contact[label=").unlist();
   out.push(T_BEGIN!());
   out.extend(printed.unwrap_or(label));
@@ -395,6 +412,8 @@ fn cas_labelled_entry(label: Option<Tokens>, keys: Option<Tokens>) -> Vec<Token>
   out.extend(
     mouth::tokenize_internal(if prints {
       ",role=affiliation,_labelprints=true]"
+    } else if shared {
+      ",role=affiliation,_share={authors}]"
     } else {
       ",role=affiliation]"
     })

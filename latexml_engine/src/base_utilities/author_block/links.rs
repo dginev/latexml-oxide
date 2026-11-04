@@ -685,11 +685,16 @@ pub(in crate::base_utilities) fn is_role_mailbox(address: &str) -> bool {
 
 /// Whether the local part of the e-mail address `address` ([`address_text`]) holds a list the address reader could not
 /// part (`\{luoyanyan,…,fengjunlan\}it@chinamobile.com`, 2605.27805; the r8 re-review's finding 4, probe t5): its
-/// letters run together spell one of the names it lists, so it spells no one, the block's (user ruling R10).
+/// letters run together spell one of the names it lists, so it spells no one, the block's (user ruling R10). One local
+/// part in printed braces is no list: `\{raffaele.perego\}@isti.cnr.it` spells Raffaele Perego (2403.13468).
 pub(in crate::base_utilities) fn lists_local_parts(address: &str) -> bool {
-  address
-    .split_once('@')
-    .is_some_and(|(local, _)| local.contains([',', ';', '|', '{', '}']))
+  address.split_once('@').is_some_and(|(local, _)| {
+    let lone = local
+      .strip_prefix('{')
+      .and_then(|inner| inner.strip_suffix('}'))
+      .is_some_and(|inner| !inner.is_empty() && !inner.contains(['{', '}']));
+    local.contains([',', ';', '|']) || (local.contains(['{', '}']) && !lone)
+  })
 }
 
 /// The one name (index into `name_keys`) the local part of `address` spells ([`spelled_owners`]), or `None` when no name or

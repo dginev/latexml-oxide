@@ -216,16 +216,13 @@ LoadDefinitions!({
     DefMacro!("\\homepage[Default:\\lx@contact@url@name] Semiverbatim", "\\lx@add@url[name={#1}]{\\lx@address@textfont{#2}}");
   }
   if requested.starts_with("aastex7") {
-    // (one `\lx@add@` call, so an author line holding `\email{…}` reads it as the class's frontmatter command:
-    // `adds_to_frontmatter`)
-    DefMacro!("\\email[]{}", "\\lx@add@aas@email{#1}{#2}");
+    // (the corresponding author's `\email` is aas_support_sty.rs's `\lx@add@aas@email`, every 6+ version's; here, where
+    // no other `\email` prints, the correspondent's wherever it stands: 2608.02190 ahead of the authors, 2608.00173 after
+    // them)
+    Let!("\\lx@aas@corresp@anywhere", "\\relax");
     // `\cofirstauthor` (aastex701.cls:13330-13337) sets the flag and prints nothing; AASTeX 7's only, so a 6.x paper's own
     // `\newcommand\cofirstauthor` stands.
     DefMacro!("\\cofirstauthor", "\\global\\lx@aas@correspauthortrue\\global\\let\\lx@aas@correspondent\\empty");
-    DefMacro!("\\lx@add@aas@email{}{}",
-      "\\iflx@aas@correspauthor\\expandafter\\lx@aas@email@corresp\\else\\expandafter\\lx@aas@email@author\\fi{#1}{#2}\\global\\lx@aas@correspauthorfalse");
-    DefMacro!("\\lx@aas@email@corresp{}{}",
-      "\\ifx\\lx@aas@correspondent\\empty\\lx@add@email{\\lx@address@textfont{#2}}\\else\\lx@add@email[label={fuzzy:\\lx@aas@correspondent}]{\\lx@address@textfont{#2}}\\fi");
     DefMacro!("\\lx@aas@email@author{}{}", sub[(option, address)] {
       // (a printed address in the current font, aastex701.cls:2455-2456 and :13348; the metadata is its text;
       // 2501.12613's `j_serna@…`)

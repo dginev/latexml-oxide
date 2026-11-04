@@ -1,0 +1,26 @@
+% mechanism: the `\email` after `\correspondingauthor{X}` before any `\author` is X's (aas_support_sty.rs
+%   `\lx@add@aas@email`, every AASTeX 6+ version's: aastex631.cls:6917-6931 prints it in the footnote after
+%   "Corresponding author: X"; aastex701.cls:13341-13353 alike); the flag is the next `\email`'s and an `\author` ends
+%   it, so a further `\email` is read as before; after an author the 6.x reading stands (OXIDIZED_DESIGN_DIVERGENCES
+%   #963)
+% witness: 2601.19870, 2408.08166, 2206.11167, 2010.09756 (census129 Repro A, `aas1.tex`; batch 104d L2)
+% oracle:  pdflatex with 2601.19870's aastex631.cls copy: 0 errors; "Ann Able", "Bob Baker", the footnotes
+%   "Corresponding author: Ann Able" / "ann.able@a.edu" / "help@x.org"
+% engines: rust int130a: ann.able@a.edu and help@x.org on a nameless creator; perl: both addresses dropped
+% expect:  0 errors, 0 warnings; Ann Able holds Univ A, the correspondent contact and ann.able@a.edu; Bob Baker Univ B;
+%   help@x.org, which no name owns, stays on the nameless block creator
+% status:  RED (int130a) -> GREEN (104d)
+% preload: ar5iv.sty
+\documentclass{aastex631}
+\begin{document}
+\title{T}
+\correspondingauthor{Ann Able}
+\email{ann.able@a.edu}
+\email{help@x.org}
+\author{Ann Able}
+\affiliation{Univ A, Town}
+\author{Bob Baker}
+\affiliation{Univ B, City}
+\begin{abstract}Abs.\end{abstract}
+Text.
+\end{document}

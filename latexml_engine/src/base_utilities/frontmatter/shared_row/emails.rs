@@ -7,7 +7,7 @@ use super::*;
 const NOTE_COMMANDS: [&str; 3] = ["\\thanks", "\\footnote", "\\footnotetext"];
 
 /// The separators that print nothing of their own before an e-mail call, which go with it: spaces, commas, semicolons,
-/// a line break, spacing.
+/// a line break, spacing, a space factor's `\@` (`USA;\@ Email: \email{…}`, 2602.18622).
 fn is_call_separator(t: &Token) -> bool {
   matches!(t.get_catcode(), Catcode::SPACE)
     || *t == T_OTHER!(",")
@@ -17,7 +17,7 @@ fn is_call_separator(t: &Token) -> bool {
       && t.with_str(|name| {
         matches!(
           name,
-          "\\\\" | "\\newline" | "\\quad" | "\\qquad" | "\\ " | "\\enspace" | "\\hfill"
+          "\\\\" | "\\newline" | "\\quad" | "\\qquad" | "\\ " | "\\enspace" | "\\hfill" | "\\@"
         )
       }))
 }

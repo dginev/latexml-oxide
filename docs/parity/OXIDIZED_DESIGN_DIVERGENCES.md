@@ -26065,6 +26065,21 @@ several names spell by its place, SYNC_STATUS) and `llncs_unknown_email_label_st
 re-review's s17, s23 above); guards `perfect_kernel_batch85b::*`,
 `frontmatter_llncs_institute_shared_email`; the 77t llncs guards carry the `\institute{Inst A}` on every author.
 
+Batch 104d (census129 Bundle 2b): cas-sc/cas-dc declare the same sharing for an unlabelled `\affiliation`/`\address`
+under no marked author (cas_dc_cls.rs `cas_labelled_entry`): cas-common.sty prints its entry list under the whole row
+of names, so `\author{Ann}\affiliation{organization={Univ A}}\author{Bob}\author{Cat}` prints "Ann, Bob and Cat / Univ
+A" and the entry is every author's, before it and after it (it had been the author's before it; 2201.00009,
+2511.22218, 2106.02306, 2606.24054; an entry above every author had been a nameless creator's); once an `\author[…]`
+is marked, the marks link the labelled entries and an unlabelled one stays the author's before it (R1), as
+elsarticle's `\lx@els@shared` reads its own. On a row's line a space factor's `\@` is a call separator
+(`is_call_separator`), so `…, USA;\@ Email: \email{\{alopez3,jmuirhead,cpinciroli\}@wpi.edu}` (2602.18622) is an
+e-mail line parted by owner, no longer the block's whole with its label. And one local part in printed braces is no
+list (`links::lists_local_parts`, both engines' spelled step): `\{raffaele.perego\}@isti.cnr.it` spells Raffaele
+Perego under an institute three authors carry (2403.13468; it had been the block's). Guards
+`perfect_kernel_batch104d::{a_cas_unlabelled_affiliation_is_every_authors,
+an_llncs_labelled_email_list_on_the_institute_line_is_spelled, an_llncs_lone_braced_address_is_its_spellers}`;
+updated `perfect_kernel_batch63::cas_affiliation_before_authors_shared` (the entry above two authors now on both).
+
 ### 902. imsart's `{keyword}` blocks are the VTeX classes' markup; an amsart document's own stored `\subjclass`/`\keywords` reach the frontmatter (Perl: one keyword kept; lost)
 
 imsart.sty (shipped with each paper, not in TeX Live) writes its keywords and subject classification as
@@ -30661,6 +30676,32 @@ with a cell naming no author, left in its columns, gives its creators column-maj
 Cy, Bob against pdflatex's Ann, Bob, Cy; owners right); an IEEE ordinal names line the kernel does not split
 (`2\textsuperscript{nd} Marzana Khatun {3\textsuperscript{rd} Rolf Jung}`, 2503.04159; 1806.11431) stays one creator,
 the writer's re-part reading the ordinals as marks.
+### 963. AASTeX 6's `\email` after `\correspondingauthor{X}` before any `\author` is X's (Perl: dropped)
+
+**Perl behavior**: aas_support.sty.ltxml:122 `\email` is `\lx@add@email`, the contact of the author before it, for
+every AASTeX version; `\correspondingauthor{X}` (:115) is a `role=correspondent` contact labelled `fuzzy:X`. An
+`\email` before the first `\author` (`\correspondingauthor{Ann Able}\email{ann.able@a.edu}\author{Ann Able}…`, census129
+Repro A) has no author and is dropped. **Rust before**: the address on a nameless creator (95 dev20k aastex6x papers
+with an e-mail there; 2601.19870, 2408.08166, 2206.11167, 2010.09756).
+
+**Rust behavior**: aastex631.cls:6917-6931 prints the address in the footnote right after "Corresponding author: X"
+(pdflatex: "Corresponding author: Ann Able / ann.able@a.edu"), as aastex701.cls:13341-13353 does, so the `\email`
+after `\correspondingauthor{X}` names X: aas_support_sty.rs's `\email` is `\lx@add@aas@email`, AASTeX 7's dispatch
+made every 6+ version's — the flag `\iflx@aas@correspauthor` is the next `\email`'s and an `\author` ends it
+(aastex701.cls:12678). The address takes the correspondent's `fuzzy:X` label (placed by the name it spells,
+`named_creators`) when it is one address, X one name, and, in AASTeX 6, no `\author` precedes it; otherwise it is read
+as any `\email` (`\lx@aas@email@list`, the plain `\lx@add@email`): after an author, the author's before it, an
+address spelling another author moving to that one (FIDELITY_CHARTER §4, OD #938) — the label would have taken it off
+its author where X names no author whole (`\author{Yukun Huang (黄宇坤)}…\correspondingauthor{Yukun Huang}\email{…}`,
+2511.16056) —; a list of several addresses (`\correspondingauthor{Lile Wang, Shenzhen Xu}\email{lilew@pku.edu.cn,
+xushenzhen@pku.edu.cn}`, 2511.09481; 1803.06255, 2602.01373) each by the name it spells; a correspondent of several
+names (`\correspondingauthor{Jiacheng Meng \& Cheng Li}`, 2008.13733) labels no single address. AASTeX 7, whose other
+`\email`s print nothing, labels it wherever it stands (`\lx@aas@corresp@anywhere`; 2608.02190, 2608.00173). AASTeX 5.x
+and emulateapj keep their own `\email`. Guards
+`perfect_kernel_batch104d::{an_aastex6_email_after_correspondingauthor_is_the_correspondents,
+an_aastex7_correspondent_address_list_is_spelled}`; repros class-bindings/`aastex631_correspondingauthor_email_is_the_correspondents`,
+`aastex7_correspondingauthor_address_list_is_spelled` (RED → GREEN).
+
 ### 964. The marked-list readers read a one-column tabular's rows, commands set side by side, a control return and a number in math as the lines, spacing and marks pdflatex prints (Perl: one contact, the marks printed in it)
 
 **What** (batch 104c; census129 cluster 4, "marked runs 99a's Cut leaves whole"). The readers the frontmatter API's Cut

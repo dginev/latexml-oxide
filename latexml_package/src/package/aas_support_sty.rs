@@ -161,8 +161,8 @@ LoadDefinitions!({
 
   // \email[]{addr} applies to previous author
   // \correspondingauthor{name}
-  // The flag and name are AASTeX 7's (aastex701.cls:13318-13328), for its `\email` (aastex_cls.rs): the address after a
-  // `\correspondingauthor{X}` is X's, wherever it stands.
+  // The flag and name are AASTeX 7's (aastex701.cls:13318-13328), for the `\email` below (every 6+ version's): the
+  // address after a `\correspondingauthor{X}` is X's, wherever it stands.
   RawTeX!(r"\newif\iflx@aas@correspauthor\let\lx@aas@correspondent\empty");
   DefMacro!("\\correspondingauthor{}",
     "\\global\\lx@aas@correspauthortrue\\gdef\\lx@aas@correspondent{#1}\\lx@add@contact[role=correspondent,label={fuzzy:#1}]{#1}");
@@ -282,7 +282,50 @@ LoadDefinitions!({
   // title footnote "Email: …", :2455-2456): the option is no part of the address (2608.21320; Perl's `\email{}`,
   // aas_support.sty.ltxml:122, left "[" as the address and "show]…" in the body).
   // (in the current font, aastex631.cls:6924-6930 `\href{mailto: #1}{#1}`; 2301.02349, 2101.08512)
-  DefMacro!("\\email[]{}",        "\\lx@add@email{\\lx@address@textfont{#2}}");
+  // The address after a `\correspondingauthor{X}` before any `\author` is X's: aastex631.cls:6917-6931 prints it in the
+  // footnote after "Corresponding author: X" (Repro A, `\correspondingauthor{Ann Able}\email{…}\author{Ann Able}…`,
+  // prints "Corresponding author: Ann Able / ann.able@a.edu": 2601.19870, 2408.08166, 2206.11167, 2010.09756), as
+  // AASTeX 7's (aastex701.cls:13341-13353) prints it wherever it stands; the flag is the next `\email`'s and an `\author`
+  // ends it. Perl's `\email` (aas_support.sty.ltxml:122) gave it to the author before it, none there, and dropped it
+  // (OXIDIZED_DESIGN_DIVERGENCES #963). (one `\lx@add@` call, so an author line holding `\email{…}` reads it as the
+  // class's frontmatter command: `adds_to_frontmatter`)
+  DefMacro!("\\email[]{}",        "\\lx@add@aas@email{#1}{#2}");
+  DefMacro!("\\lx@add@aas@email{}{}",
+    "\\iflx@aas@correspauthor\\expandafter\\lx@aas@email@corresp\\else\\expandafter\\lx@aas@email@author\\fi{#1}{#2}\\global\\lx@aas@correspauthorfalse");
+  // The correspondent's address is the one the `fuzzy:X` label names when X is one name and the address one address
+  // and, in AASTeX 6, no `\author` precedes it; else it is read as any `\email` (`\lx@aas@email@list`): after an author,
+  // the author's before it, an address spelling another author moving to that one (FIDELITY_CHARTER §4, OD #938) — a
+  // label naming no author whole would have taken it off its author: `\author{Yukun Huang (黄宇坤)}…
+  // \correspondingauthor{Yukun Huang}\email{…}`, 2511.16056 —; a list of several addresses
+  // (`\correspondingauthor{Lile Wang, Shenzhen Xu}\email{lilew@pku.edu.cn, xushenzhen@pku.edu.cn}`, 2511.09481) each by
+  // the name it spells; a correspondent of several names (`\correspondingauthor{Jiacheng Meng \& Cheng Li}`, 2008.13733)
+  // labels no one address. AASTeX 7, whose other `\email`s print nothing, reads it so wherever it stands
+  // (`\lx@aas@corresp@anywhere`, aastex_cls.rs).
+  DefMacro!("\\lx@aas@email@corresp{}{}", sub[(_option, address)] {
+    let text = address.to_string();
+    let local = text.split('@').next().unwrap_or("");
+    let several = text.matches('@').count() > 1 || local.contains([',', ';', '|']);
+    let mut correspondent = String::new();
+    if let Some(defn) = lookup_definition(&T_CS!("\\lx@aas@correspondent"))?
+      && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+    {
+      correspondent = body.to_string();
+    }
+    let names = correspondent.contains([',', ';', '&']) || correspondent.contains(" and ");
+    let authored = lookup_meaning(&T_CS!("\\lx@aas@authored")).is_some()
+      && lookup_meaning(&T_CS!("\\lx@aas@corresp@anywhere")).is_none();
+    let call = if several || names || authored {
+      "\\lx@aas@email@list"
+    } else {
+      "\\lx@aas@email@correspondent"
+    };
+    Ok(Invocation!(T_CS!(call), vec![Some(address)]))
+  });
+  DefMacro!("\\lx@aas@email@correspondent{}",
+    "\\ifx\\lx@aas@correspondent\\empty\\lx@add@email{\\lx@address@textfont{#1}}\\else\\lx@add@email[label={fuzzy:\\lx@aas@correspondent}]{\\lx@address@textfont{#1}}\\fi");
+  DefMacro!("\\lx@aas@email@list{}", "\\lx@add@email{\\lx@address@textfont{#1}}");
+  // (any other address the author's before it; AASTeX 7's is its own, aastex_cls.rs)
+  DefMacro!("\\lx@aas@email@author{}{}", "\\lx@add@email{\\lx@address@textfont{#2}}");
 
   // \collaboration{n}{name} applies to previous authors w/o collab; n is how many to SHOW
   // \nocollaboration{n} ditto, but says they are not in a collaboration group.

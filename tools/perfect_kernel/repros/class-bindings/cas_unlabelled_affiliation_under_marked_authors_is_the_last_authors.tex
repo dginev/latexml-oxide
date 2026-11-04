@@ -1,0 +1,25 @@
+% mechanism: control of cas_unlabelled_affiliation_is_every_authors — under marked authors the marks link the
+%   labelled entries (`\affiliation[1]`, `[2]`, printed "a", "b") and an unlabelled entry stays the author's before
+%   it, never an author's whose marks request affiliations (FIDELITY_CHARTER §4 R1)
+% witness: batch 104d L1 control (census129)
+% oracle:  pdflatex (TL 2025 cas-sc.cls) 0 errors: "Ann Able a , Bob Baker b and Cat Cole" / "a Univ A, Town, Land" /
+%   "b Univ B, City, Land" / "Univ C, Burg, Land"
+% engines: rust int130a: as expected
+% expect:  0 errors, 0 warnings; Ann Able holds Univ A, Bob Baker Univ B, Cat Cole Univ C
+% status:  GREEN (int130a, 104d)
+% preload: ar5iv.sty
+\documentclass{cas-sc}
+\begin{document}
+\shorttitle{T}
+\shortauthors{A. Able et al.}
+\title[mode=title]{T}
+\author[1]{Ann Able}
+\author[2]{Bob Baker}
+\author{Cat Cole}
+\affiliation[1]{organization={Univ A}, city={Town}, country={Land}}
+\affiliation[2]{organization={Univ B}, city={City}, country={Land}}
+\affiliation{organization={Univ C}, city={Burg}, country={Land}}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Text.
+\end{document}

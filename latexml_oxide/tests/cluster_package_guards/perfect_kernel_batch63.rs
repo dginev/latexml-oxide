@@ -4250,17 +4250,17 @@ fn cas_affiliation_before_author() {
   ]);
 }
 
-/// 63x: the same above two authors is shared, in a creator of its own BELOW them, where a shared note prints (it was
-/// promoted in place, above the authors). Repro sectioning-frontmatter/cas_affiliation_before_authors_shared.
+/// 63x: the same above two authors is every author's, as cas prints it under the whole row of names (batch 104d L1,
+/// `_share=authors`; it was a creator of its own below them, and before that promoted in place, above the authors).
+/// Repro sectioning-frontmatter/cas_affiliation_before_authors_shared.
 #[test]
 fn cas_affiliation_before_authors_shared() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/cas_affiliation_before_authors_shared.tex"
   );
   assert_eq!(creators_63x(tex), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Bee</personname>\n  </creator>",
-    "<creator role=\"author\">\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ Before, Xland</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ Before, Xland</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ Before, Xland</contact>\n  </creator>",
   ]);
 }
 
