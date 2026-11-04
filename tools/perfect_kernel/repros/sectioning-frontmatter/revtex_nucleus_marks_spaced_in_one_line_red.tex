@@ -1,0 +1,19 @@
+% mechanism: nucleus marks parted by plain spaces only inside one line, `${}^1$Univ X ${}^2$Lab Y`: each author gets
+%   the right entry, but the mark digits stay in the contact text (the plain-space glue rule of
+%   `relocate::spaced_marks_written`'s `in_word` keeps the second mark unread as `$^{2}$`, OXIDIZED_DESIGN_DIVERGENCES
+%   #964; review rev104c2 F2)
+% witness: none (review rev104c2 probe q2)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "1Univ X 2Lab Y"
+% engines: rust int131a0 and 104c r1: Ann "Univ X", Bob "Lab Y"; 104c r2, r3: Ann "1Univ X", Bob "2Lab Y"
+% expect:  0 errors, 0 warnings; Ann "Univ X", Bob "Lab Y", no mark digit in either
+% status:  RED (104c r2) — open, SYNC_STATUS row 104c (the price of the plain-space glue rule); no guard
+% preload: ar5iv.sty
+\documentclass[aps,superscriptaddress]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able $^1$}
+\author{Bob Baker $^2$}
+\affiliation{${}^1$Univ X ${}^2$Lab Y}
+\maketitle
+Text.
+\end{document}

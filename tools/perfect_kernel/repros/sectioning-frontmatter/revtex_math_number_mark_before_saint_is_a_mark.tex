@@ -1,0 +1,22 @@
+% mechanism: a number set in math at a line's start before an uppercase `St` followed by `.` or by a space and a
+%   capital, `$1$St. Petersburg`, `$3$St Andrews`, is the line's mark, the word "Saint" after it; a lowercase `st`,
+%   `$1$st Floor`, is the ordinal, the entry's text (`relocate::ordinal_suffix_at`, OXIDIZED_DESIGN_DIVERGENCES #964;
+%   review rev104c2 F3)
+% witness: none (review rev104c2 probe q7; the `$N$` reading's witnesses 0708.2552, 0909.5340)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "1St. Petersburg State University / 1st Floor, Bldg C / 2Univ B /
+%   3St Andrews University"
+% engines: rust int131a0 and 104c r2: every author the whole block; 104c r1: each author its own (q7)
+% expect:  0 errors, 0 warnings; Ann "St. Petersburg State University" with "1st Floor, Bldg C", Bob "Univ B", Cat
+%   "St Andrews University"
+% status:  RED (104c r2) -> GREEN (104c r3) — perfect_kernel_batch104c::a_saint_after_a_math_number_is_a_word
+% preload: ar5iv.sty
+\documentclass[aps,superscriptaddress]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able $^1$}
+\author{Bob Baker $^2$}
+\author{Cat Cole $^3$}
+\affiliation{$1$St. Petersburg State University\\ $1$st Floor, Bldg C\\ $2$Univ B\\ $3$St Andrews University}
+\maketitle
+Text.
+\end{document}

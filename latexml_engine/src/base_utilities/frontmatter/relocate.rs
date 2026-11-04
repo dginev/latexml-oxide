@@ -1643,22 +1643,35 @@ pub(in crate::base_utilities) fn spaced_marks_written(
   // [`math_number_mark_at`])
   // (not a mark glued to the word before it — plain spaces between, no separator, its nucleus printing no gap — and to
   // a letter run after it, `Lab for ${}^{3}$He Physics`: the isotope, the entry's text, as `notes::split_marked_pieces`
-  // reads a glued `$^{3}$He`; review rev104c S2. After a comma or a gap it labels its entry, `INRIA, $\quad ^2$LTCI`)
+  // reads a glued `$^{3}$He`; review rev104c S2. After a comma, a conjunction or a gap it labels its entry, `INRIA,
+  // $\quad ^2$LTCI`, `Univ X, and ${}^2$Lab Y`, `Univ X \& ${}^3$Inst Z`: review rev104c2 F1)
+  let glued_before = |i: usize| {
+    let Some(end) = tokens[..i].iter().rposition(|t| *t != T_SPACE!()) else {
+      return false;
+    };
+    let t = &tokens[end];
+    if t.get_catcode() == Catcode::OTHER {
+      return t.with_str(|s| s.chars().all(|c| c.is_ascii_digit()));
+    }
+    let start = tokens[..=end]
+      .iter()
+      .rposition(|t| t.get_catcode() != Catcode::LETTER)
+      .map_or(0, |p| p + 1);
+    start <= end
+      && !(end + 1 - start == 3
+        && tokens[start..=end]
+          .iter()
+          .map(|t| t.with_str(str::to_lowercase))
+          .collect::<String>()
+          == "and")
+  };
   let in_word = |i: usize, next: usize| {
     i != lead
       && !at_line_start(tokens, i)
       && tokens
         .get(next)
         .is_some_and(|t| t.get_catcode() == Catcode::LETTER)
-      && tokens[..i]
-        .iter()
-        .rev()
-        .find(|t| **t != T_SPACE!())
-        .is_some_and(|t| {
-          t.get_catcode() == Catcode::LETTER
-            || (t.get_catcode() == Catcode::OTHER
-              && t.with_str(|s| s.chars().all(|c| c.is_ascii_digit())))
-        })
+      && glued_before(i)
       && !tokens[i..next].iter().any(|t| {
         is_spacing(t) && *t != T_SPACE!() && *t != T_CS!("\\,") && *t != T_CS!("\\thinspace")
       })
@@ -1752,14 +1765,23 @@ fn math_number_mark_at(tokens: &[Token], at: usize) -> Option<(Vec<Token>, usize
 }
 
 /// Does an ordinal suffix start at `at`, glued to the number before it ([`is_ordinal_suffix`]): a run of letters that
-/// is the whole word, `rd` before a space or a comma, not the `St` of `Stanford`; a `\textsuperscript{th}`; a `$^{nd}$`?
+/// is the whole word, `rd` before a space or a comma, not the `St` of `Stanford`, nor an uppercase `St` before a `.` or
+/// a space and a capital, the word "Saint" (`$1$St. Petersburg`, `$3$St Andrews`; review rev104c2 F3 — a lowercase
+/// `$1$st Floor` is the ordinal); a `\textsuperscript{th}`; a `$^{nd}$`?
 fn ordinal_suffix_at(tokens: &[Token], at: usize) -> bool {
   let letters = tokens[at.min(tokens.len())..]
     .iter()
     .take_while(|t| t.get_catcode() == Catcode::LETTER)
     .count();
   if letters > 0 {
-    return is_ordinal_suffix(&tokens[at..at + letters]);
+    let saint = letters == 2
+      && tokens[at] == T_LETTER!("S")
+      && (tokens.get(at + 2) == Some(&T_OTHER!("."))
+        || (tokens.get(at + 2) == Some(&T_SPACE!())
+          && tokens.get(at + 3).is_some_and(|t| {
+            t.get_catcode() == Catcode::LETTER && t.with_str(|s| s.starts_with(char::is_uppercase))
+          })));
+    return !saint && is_ordinal_suffix(&tokens[at..at + letters]);
   }
   match tokens.get(at) {
     Some(t) if *t == T_CS!("\\textsuperscript") => {

@@ -30687,12 +30687,16 @@ the writer's re-part reading the ordinals as marks.
   too. Witness 2106.01286 (`$^1$CITI Laboratory, INRIA, $\quad ^2$LTCI, … $\quad ^3$Technion`). Not a nucleus mark
   glued to the word before it (plain spaces only, no separator, its nucleus printing no gap) and to a letter run after
   it: `Lab for ${}^{3}$He Physics` is the isotope, the entry's text, as `notes::split_marked_pieces` reads a glued
-  `$^{3}$He` (review rev104c S2: written as `$^{3}$`, its digit was taken as a label and lost).
+  `$^{3}$He` (review rev104c S2: written as `$^{3}$`, its digit was taken as a label and lost). A conjunction before
+  the mark is glue as a comma is, `Univ X, and ${}^2$Lab Y`, `Univ X \& ${}^3$Inst Z`: it labels its entry (review
+  rev104c2 F1).
 - **a number set in math alone at a line's start** (`relocate::math_number_mark_at`, at the list's first mark or after a
   `\\`/`\\[len]`): `$1$` is mark 1 where the queued names request it (`$^1$`). Witnesses 0708.2552 (`\affiliation{ $1$
   Gazi University, …\\ $2$ Ankara University, …}`), 0909.5340 (a `$1$` first line over `$^2$`-led ones). Not one
   with an ordinal suffix glued to it (`ordinal_suffix_at`, `symbols::is_ordinal_suffix`: a whole letter run `st`, `nd`,
-  `rd`, `th`, a `\textsuperscript{th}`, a `$^{nd}$`): `$3$rd floor` prints "3rd", the entry's text (review rev104c S1); a
+  `rd`, `th`, a `\textsuperscript{th}`, a `$^{nd}$`): `$3$rd floor` prints "3rd", the entry's text (review rev104c S1),
+  but an uppercase `St` before a `.` or a space and a capital is the word "Saint", `$1$St. Petersburg`, `$3$St
+  Andrews`, the line's mark read (review rev104c2 F3; a lowercase `$1$st Floor` stays the ordinal); a
   word glued otherwise is the line's text after its mark (0909.5340's `$1$Department`), and no space after the number
   nor a list opened by one is required (1511.00510's `$5$` line under a `$^1$` first line).
 
@@ -30708,7 +30712,10 @@ aa's `\and` inside a document macro's group, `\institute{A \rev{\and B \and C}}`
 it go to its last entry only, `\affiliation{\begin{tabular}{c}$^1$Univ A\\ $^2$Univ B\end{tabular}\\ Joint Lab}` (pdflatex
 prints "Joint Lab" under both; review rev104c p12); the isotope line above is still parted at its mark, "3He Physics,
 Town" Cat's (`revtex_nucleus_isotope_after_a_plain_lead_is_text`); `$3$\textsuperscript{rd} floor` at a line's start
-loses its "rd", "3 floor" a nameless creator's. Outside this reading (census129 cluster 4's other papers): an address
+loses its "rd", "3 floor" a nameless creator's. Nucleus marks parted by plain spaces inside one line, `${}^1$Univ X
+${}^2$Lab Y`, give each author the right entry but leave the mark digits in the contact text ("1Univ X", "2Lab Y";
+int131a0 "Univ X", "Lab Y"): the price of the plain-space glue rule (review rev104c2 F2;
+`revtex_nucleus_marks_spaced_in_one_line_red`). Outside this reading (census129 cluster 4's other papers): an address
 macro line (`\mailsa`, llncs 1604.03221), a second author block in the document (2006.15775), ieeeconf's kernel
 `\author` line (2110.11491), authblk's `\affil[\hspace{-1ex}]` label (2502.06575), a legend on an entry (2609.38081).
 
@@ -30724,3 +30731,6 @@ rev104c) `an_ordinal_number_is_no_mark`, `an_isotope_nucleus_mark_is_text` (repr
 row as pdflatex prints it, is class-bindings/`revtex_tabular_affiliation_rows_go_by_their_marks` (was
 `revtex_tabular_affiliation_lines_land_once`), now asserted by `tabular_rows_are_marked_entries` (moved from
 `perfect_kernel_batch98e::an_unsplit_labelled_address_block_lands_once_at_the_block`, whose cases are the fail-safe's).
+r3 (review rev104c2) `a_conjunction_before_a_nucleus_mark_parts_entries` (repros
+`revtex_nucleus_mark_after_a_conjunction_parts_entries`, `revtex_nucleus_mark_after_bare_and_or_ampersand_parts_entries`)
+and `a_saint_after_a_math_number_is_a_word` (`revtex_math_number_mark_before_saint_is_a_mark`), RED (104c r2) → GREEN.

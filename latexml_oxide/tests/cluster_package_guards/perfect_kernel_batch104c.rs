@@ -214,3 +214,52 @@ fn an_isotope_nucleus_mark_is_text() {
     ]
   );
 }
+
+/// A mark on a spacing nucleus after a conjunction, `Univ X, and ${}^2$Lab Y`, `Univ X and ${}^2$Lab Y \& ${}^3$Inst
+/// Z`, labels its entry as one after a comma does: the "and" before it is no word an isotope is glued to
+/// (`relocate::spaced_marks_written`'s `in_word`; review rev104c2 F1). Red (104c r2): Ann "Univ X, and 2Lab Y", Bob
+/// none (int131a0 as here; the conjunction is the glue between entries, dropped as int131a0 drops it). Repros revtex_nucleus_mark_after_a_conjunction_parts_entries,
+/// revtex_nucleus_mark_after_bare_and_or_ampersand_parts_entries. Distinct from `an_isotope_nucleus_mark_is_text`: the
+/// glue rule's exception, not its rule.
+#[test]
+fn a_conjunction_before_a_nucleus_mark_parts_entries() {
+  assert_eq!(
+    clean_creators(repro!(
+      "revtex_nucleus_mark_after_a_conjunction_parts_entries"
+    )),
+    [vec!["Ann Able 1", "affiliation=Univ X"], vec![
+      "Bob Baker 2",
+      "affiliation=Lab Y"
+    ],]
+  );
+  assert_eq!(
+    clean_creators(repro!(
+      "revtex_nucleus_mark_after_bare_and_or_ampersand_parts_entries"
+    )),
+    [
+      vec!["Ann Able 1", "affiliation=Univ X"],
+      vec!["Bob Baker 2", "affiliation=Lab Y"],
+      vec!["Cat Cole 3", "affiliation=Inst Z"],
+    ]
+  );
+}
+
+/// A number set in math at a line's start before an uppercase `St` followed by `.` or by a space and a capital,
+/// `$1$St. Petersburg`, `$3$St Andrews`, is the line's mark, "Saint" the line's first word; a lowercase `$1$st Floor`
+/// is still the ordinal, the entry's text (`relocate::ordinal_suffix_at`; review rev104c2 F3). Red (104c r2): every
+/// author the whole block. Repro revtex_math_number_mark_before_saint_is_a_mark. Distinct from
+/// `an_ordinal_number_is_no_mark`: the suffix test's exception, the mark read.
+#[test]
+fn a_saint_after_a_math_number_is_a_word() {
+  assert_eq!(
+    clean_creators(repro!("revtex_math_number_mark_before_saint_is_a_mark")),
+    [
+      vec![
+        "Ann Able 1",
+        "affiliation=St. Petersburg State University 1 st Floor, Bldg C"
+      ],
+      vec!["Bob Baker 2", "affiliation=Univ B"],
+      vec!["Cat Cole 3", "affiliation=St Andrews University"],
+    ]
+  );
+}
