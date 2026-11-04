@@ -991,14 +991,24 @@ pub(in crate::base_utilities) fn is_local_char(c: char) -> bool {
 /// Whether `word` may be a local part of a list written without spaces before one domain (`dzyang,ashishbshah@fb.com`,
 /// 2112.00969; `saro,borgani,tornator@oats.inaf.it`, 0810.2791 — the main session's ruling): lowercase letters, digits
 /// and `._+-`, a letter among them, no `.` first. A digit run is none (`Tel:5551234,info@x.org` is no `5551234@x.org`,
-/// brief 95c r2 B3), nor a capitalised word (`Germany,foo@bar.de`). The one test of every reader of such a list:
+/// brief 95c r2 B3), nor a capitalised word (`Germany,foo@bar.de`), nor a word naming a contact (`email,ann@x.org`,
+/// `contact,bob@a.edu` are no `email@x.org`, `contact@a.edu`: [`names_a_contact`], review rev103a B1), nor one letter, an
+/// initial (`d,ashishbshah@fb.com`; rev103a S1, [`ends_a_listed_run`]). The one test of every reader of such a list:
 /// [`write_out_unspaced_lists`], the frontmatter observer's `address_runs`.
 pub(in crate::base_utilities) fn is_listed_local_part(word: &str) -> bool {
-  !word.is_empty()
+  word.chars().nth(1).is_some()
     && !word.starts_with('.')
     && word.chars().all(is_local_char)
     && !word.chars().any(|c| c.is_ascii_uppercase())
     && word.chars().any(|c| c.is_ascii_alphabetic())
+    && !names_a_contact(word)
+}
+
+/// Whether the local part `local` of the address after a list of local parts ([`is_listed_local_part`]) may end the
+/// list: more than one letter — `smith,j@x.org` prints a surname and an initial, no `smith@x.org` (review rev103a S1).
+/// The one test of every reader of such a list, as [`is_listed_local_part`].
+pub(in crate::base_utilities) fn ends_a_listed_run(local: &str) -> bool {
+  local.chars().nth(1).is_some() && local.chars().all(is_local_char)
 }
 
 /// `text` with each list of local parts written without spaces before one domain written out, each part at the domain
@@ -1006,8 +1016,9 @@ pub(in crate::base_utilities) fn is_listed_local_part(word: &str) -> bool {
 /// list's are: the one reading of the address readers, the author block's ([`email_addresses`]) and the frontmatter
 /// observer's (`plain_addresses`; its `address_runs` reads the list alike), so neither drops a local part the other
 /// reads. A list is a run of comma pieces with no space or `;` between, each a local part ([`is_listed_local_part`]) —
-/// the first one may follow a label or a bracket glued to it, `Email:a,b@x.org` — ending in one address; a piece of a
-/// braced group is left to the group readers, and a word no address follows is left as it is.
+/// the first one may follow a label or a bracket glued to it, `Email:ann,bob@x.org` — ending in one address
+/// ([`ends_a_listed_run`]); a piece of a braced group is left to the group readers, and a word no address follows is
+/// left as it is.
 pub(in crate::base_utilities) fn write_out_unspaced_lists(text: &str) -> String {
   let mut out = String::with_capacity(text.len());
   for chunk in text.split_inclusive(|c: char| c.is_whitespace() || c == ';') {
@@ -1025,7 +1036,7 @@ pub(in crate::base_utilities) fn write_out_unspaced_lists(text: &str) -> String 
     };
     for piece in body.split(',') {
       if let Some((local, domain)) = piece.split_once('@') {
-        if !pending.is_empty() && !local.is_empty() && local.chars().all(is_local_char) {
+        if !pending.is_empty() && ends_a_listed_run(local) {
           pieces.extend(
             pending
               .drain(..)
@@ -1065,7 +1076,7 @@ pub(in crate::base_utilities) fn write_out_unspaced_lists(text: &str) -> String 
 ///   compact form co-located authors use for one shared address per person; a line
 ///   may hold several groups (`{a,b}@x, {c,d}@y`, 2402.02746; `{a,b}@x, c@y`,
 ///   2410.19160).
-/// - **Unspaced list** — `a,b,c@dom` (no space after the commas): each local part at the
+/// - **Unspaced list** — `ann,bob,cy@dom` (no space after the commas): each local part at the
 ///   domain, as a braced list's ([`write_out_unspaced_lists`]; `ann@a.edu;
 ///   dzyang,ashishbshah@fb.com`, 2112.00969).
 ///

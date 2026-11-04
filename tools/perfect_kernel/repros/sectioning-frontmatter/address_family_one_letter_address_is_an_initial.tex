@@ -1,0 +1,16 @@
+% A one-letter local part after a comma (`smith,j@x.org`) prints a surname and an initial: it ends no unspaced list
+% (`author_block::ends_a_listed_run`, review rev103a S1, probe q3), so no `smith@x.org` is invented and the line is
+% read as on base. Pins an imperfection, base alike: the whole line one affiliation of the last author.
+% witness: none (synthetic)
+% oracle:  pdflatex 0 errors: "Univ X / smith,j@x.org, doe@x.org"
+% engines: rust int130a = 0 errors, the base output below; rust 103a r1 = `smith@x.org` on John Smith, `j@x.org` on
+%          a nameless creator, `Univ X` moved to Jane Doe
+% expect:  0 errors, 0 warnings; John Smith: Univ X; Jane Doe: "smith,j@x.org, doe@x.org" (affiliation)
+% status:  RED (103a r1) -> GREEN (103a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}\author{John Smith \and Jane Doe\\ Univ X\\ smith,j@x.org, doe@x.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}

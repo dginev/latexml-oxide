@@ -1,0 +1,17 @@
+% A word naming a contact glued to an address inside an llncs `\email` of the shared institute (`contact,bob@a.edu`)
+% is no local part of an unspaced list (`is_listed_local_part` / `names_a_contact`, review rev103a B1, probe q11): the
+% e-mail stays whole, as on base. Pins an imperfection, base alike: the whole e-mail on a nameless creator.
+% witness: none (synthetic; the list shape of 2112.00969)
+% oracle:  pdflatex 0 errors: "Univ A / ann@a.edu; contact,bob@a.edu"
+% engines: rust int130a = 0 errors, the base output below; rust 103a r1 = `contact@a.edu` on a nameless creator
+% expect:  0 errors, 0 warnings; Ann Able, Bob Baker: Univ A; a nameless creator: the whole e-mail; no `contact@a.edu`
+% status:  RED (103a r1) -> GREEN (103a r2)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Univ A\\ \email{ann@a.edu; contact,bob@a.edu}}
+\maketitle
+Text.
+\end{document}

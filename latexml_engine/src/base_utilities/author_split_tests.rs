@@ -985,6 +985,16 @@ fn email_addresses_write_out_unspaced_lists() {
   // (a capitalised word or a digit run is no local part: no address invented, the line no list)
   assert_eq!(email_addresses(&tk("Berlin,Germany,foo@bar.de")), None);
   assert_eq!(email_addresses(&tk("5551234,info@x.org")), None);
+  // (review rev103a B1, S1: a word naming a contact or an initial is no local part, nor does an initial end a list —
+  // no `email@x.org`, `contact@a.edu`, `d@fb.com`, `smith@x.org` invented, the line no list)
+  for line in [
+    "email,ann@x.org, bob@x.org",
+    "ann@a.edu; contact,bob@a.edu",
+    "ann@a.edu; d,ashishbshah@fb.com",
+    "smith,j@x.org, doe@x.org",
+  ] {
+    assert_eq!(email_addresses(&tk(line)), None, "{line}");
+  }
   // (a spaced list is no list the reader parts)
   assert_eq!(
     email_addresses(&tk("ann@a.edu; dzyang, ashishbshah@fb.com")),

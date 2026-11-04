@@ -1259,6 +1259,19 @@ mod tests {
     ]);
     assert_eq!(addresses_in("Berlin,Germany,foo@bar.de"), ["foo@bar.de"]);
     assert_eq!(addresses_in("Tel:5551234,info@x.org"), ["info@x.org"]);
+    // (review rev103a B1, S1: a word naming a contact, an initial, is no part of it)
+    assert_eq!(addresses_in("email,ann@x.org, bob@x.org"), [
+      "ann@x.org",
+      "bob@x.org"
+    ]);
+    assert_eq!(addresses_in("ann@a.edu; d,ashishbshah@fb.com"), [
+      "ann@a.edu",
+      "ashishbshah@fb.com"
+    ]);
+    assert_eq!(addresses_in("smith,j@x.org, doe@x.org"), [
+      "j@x.org",
+      "doe@x.org"
+    ]);
     assert_eq!(addresses_in("ann@a.edu; dzyang, ashishbshah@fb.com"), [
       "ann@a.edu",
       "ashishbshah@fb.com"
@@ -1308,6 +1321,19 @@ mod tests {
     assert_eq!(
       read("cid, dee@x.org", &none).1,
       owned(&["cid@x.org", "dee@x.org"])
+    );
+    // (a word naming a contact or an initial is no part of a list, nor does an initial end one: review rev103a B1, S1)
+    assert_eq!(
+      read("email,ann@x.org, bob@x.org", &none).1,
+      owned(&["ann@x.org", "bob@x.org"])
+    );
+    assert_eq!(
+      read("ann@a.edu; d,ashishbshah@fb.com", &none).1,
+      owned(&["ann@a.edu", "ashishbshah@fb.com"])
+    );
+    assert_eq!(
+      read("smith,j@x.org, doe@x.org", &none).1,
+      owned(&["j@x.org", "doe@x.org"])
     );
     // (prose before one address: no list — a capital, or a word spelling no one mid-text, 0705.3421)
     assert_eq!(

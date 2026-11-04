@@ -1,0 +1,19 @@
+% A spaced list opening an llncs `\email` (`dzyang, ashishbshah@fb.com; ann@a.edu`): the take-out (`address_runs`, a
+% list opening the text) reads `dzyang@`, the printed-address reader (`addresses_in`) does not, so the flush's
+% write-out declines it (`insert::link_entry_addresses`, the `taken == listed` gate, review rev103a NIT) and the e-mail
+% stays whole on its carriers; no local part is lost.
+% witness: none (synthetic; the list shape of 2112.00969)
+% oracle:  pdflatex 0 errors: "Meta AI / dzyang, ashishbshah@fb.com; ann@a.edu"
+% engines: rust int130a = 0 errors, `dzyang` nowhere in the XML (ann@ on Ann, ashishbshah@ on Ash Shah)
+% expect:  0 errors, 0 warnings; Ann Able: Univ A; Dan Yang, Ash Shah: Meta AI + the whole e-mail
+% status:  RED (int130a) -> GREEN (103a)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Dan Yang\inst{2} \and Ash Shah\inst{2}}
+\institute{Univ A \and Meta AI\\
+\email{dzyang, ashishbshah@fb.com; ann@a.edu}}
+\maketitle
+Text.
+\end{document}

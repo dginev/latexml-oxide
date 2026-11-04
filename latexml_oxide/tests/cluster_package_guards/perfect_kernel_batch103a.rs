@@ -119,3 +119,78 @@ fn an_unspaced_list_in_a_shared_institute_is_written_out() {
     ],
   ]);
 }
+
+/// Review rev103a B1: a word naming a contact glued to an address (`email,ann@x.org`, `contact,bob@a.edu`) is no local
+/// part of a list (`author_block::is_listed_local_part` / `names_a_contact`), so no address is invented and the line
+/// reads as on base (int130a) — whole on the kernel block's last author (article) or on llncs's nameless e-mail creator
+/// of the shared institute. Red (103a r1): a nameless creator holding `email@x.org`, `contact@a.edu`.
+#[test]
+fn a_contact_word_glued_to_an_address_is_no_local_part() {
+  assert_creators(repro!("address_family_contact_word_glued_stays_whole"), &[
+    &["Ann Able", "affiliation=Univ X"],
+    &["Bob Baker", "affiliation=email,ann@x.org, bob@x.org"],
+  ]);
+  assert_creators(
+    repro!("address_family_contact_word_glued_in_email_stays_whole"),
+    &[
+      &["Ann Able", "affiliation=Univ A"],
+      &["Bob Baker", "affiliation=Univ A"],
+      &["email=ann@a.edu; contact,bob@a.edu"],
+    ],
+  );
+}
+
+/// Review rev103a S1: a one-letter word is an initial — it ends no list (`smith,j@x.org`,
+/// `author_block::ends_a_listed_run`: the kernel block, as on base) and is no piece of one (`d,ashishbshah@fb.com`:
+/// the take-out leaves the `d` in the e-mail's rest, so the flush keeps the e-mail whole on its carriers). Red (103a
+/// r1): `smith@x.org` and a nameless `j@x.org`, `Univ X` moved; a nameless `d@fb.com` (int130a: `d` lost).
+#[test]
+fn a_one_letter_word_is_an_initial_not_a_local_part() {
+  assert_creators(
+    repro!("address_family_one_letter_address_is_an_initial"),
+    &[&["John Smith", "affiliation=Univ X"], &[
+      "Jane Doe",
+      "affiliation=smith,j@x.org, doe@x.org",
+    ]],
+  );
+  assert_creators(
+    repro!("address_family_one_letter_piece_is_no_local_part"),
+    &[
+      &["Ann Able", "affiliation=Univ A"],
+      &[
+        "Dan Yang",
+        "affiliation=Meta AI",
+        "email=ann@a.edu; d,ashishbshah@fb.com",
+      ],
+      &[
+        "Ash Shah",
+        "affiliation=Meta AI",
+        "email=ann@a.edu; d,ashishbshah@fb.com",
+      ],
+    ],
+  );
+}
+
+/// The flush's `taken == listed` gate (frontmatter/insert.rs `link_entry_addresses`, review rev103a NIT): a spaced list
+/// opening the e-mail is the take-out's (`address_runs`) and not the printed-address reader's (`addresses_in`), so the
+/// two readings disagree and the e-mail stays whole on its carriers. Red (int130a, no gate): `dzyang` lost, the two
+/// other addresses written out.
+#[test]
+fn an_email_its_two_readings_read_apart_stays_whole() {
+  assert_creators(
+    repro!("address_family_spaced_list_opening_the_line_stays_whole"),
+    &[
+      &["Ann Able", "affiliation=Univ A"],
+      &[
+        "Dan Yang",
+        "affiliation=Meta AI",
+        "email=dzyang, ashishbshah@fb.com; ann@a.edu",
+      ],
+      &[
+        "Ash Shah",
+        "affiliation=Meta AI",
+        "email=dzyang, ashishbshah@fb.com; ann@a.edu",
+      ],
+    ],
+  );
+}

@@ -4,8 +4,8 @@
 
 use super::*;
 use crate::base_utilities::author_block::{
-  ADDRESS_GROUP_SEPARATORS, UNBRACED_LIST_SEPARATORS, is_listed_local_part, is_local_char,
-  write_out_unspaced_lists,
+  ADDRESS_GROUP_SEPARATORS, UNBRACED_LIST_SEPARATORS, ends_a_listed_run, is_listed_local_part,
+  is_local_char, write_out_unspaced_lists,
 };
 
 /// `key=value` of an attribute string (`role=affiliation,label=a`), braces stripped: a repeated key's last value, as
@@ -632,7 +632,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn address_runs(
     if start == at || !boundary_before(start) {
       continue;
     }
-    // (the list of local parts before it: `a,b@x`, `a, b@x`)
+    // (the list of local parts before it: `ann,bob@x`, `ann, bob@x`)
     let mut locals: Vec<(usize, &str)> = Vec::new();
     let mut spaced = false;
     let mut head = start;
@@ -672,7 +672,9 @@ pub(in crate::base_utilities::frontmatter::observer) fn address_runs(
         || before.ends_with(['(', '{', '[', '<', ':'])
         || label_word_before(text, at, false).is_some()
     };
+    // (an initial ends no list: `smith,j@x.org` — the readers' one test, `author_block::ends_a_listed_run`)
     let list_ok = !locals.is_empty()
+      && ends_a_listed_run(local)
       && (!spaced
         || locals.iter().all(|(_, w)| spells(w)) && spells(local)
         || opens(locals.last().map_or(start, |(s, _)| *s)));
