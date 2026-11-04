@@ -306,8 +306,8 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
   }
   // (nor by today's API: an unlabelled annotation of the run of new authors is every name of the run's, as today's API
   // attaches it — today's old reader merged names across two runs, so fewer of today's creators held it: 1805.12376.
-  // The block reader's run (`owner:annotate:run`), and the API's (`api:annotate:new`, `api:annotate:run`) when one of
-  // today's creators held it — the names line the kernel does not split under an IEEE block, 1909.04111, OD #962 —
+  // The block reader's run (`owner:annotate:run`), and the API's (`api:annotate:new`, `api:annotate:run`) when at most
+  // one of today's creators held it — the names line the kernel does not split under an IEEE block, 1909.04111, OD #962 —
   // and no name of today's prints a mark before its first word: a re-part takes a name's marks out, as the reading
   // has them, so an IEEE ordinal `1\textsuperscript{st} Milin Patel` would print "1 Milin Patel" (2503.04159,
   // 1806.11431, 2406.04658))

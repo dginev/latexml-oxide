@@ -30640,8 +30640,9 @@ authors" stays (revtex `\noaffiliation`, aastex `\nocollaboration`). A run of no
 the kernel does not split (`\IEEEauthorblockN{Daniel (Yue) Zhang*, Yang Zhang*\thanks{…}, Dong Wang}`, 1909.04111;
 `name_count`) is re-parted by the observer's writer, each name holding the shared block: the re-part gate
 (`writer/repart.rs`, "an item given more authors by no ruling") accepts an item the API's `annotate=new` or `run` run
-gives every name (`api:annotate:new`, `api:annotate:run`) as it does the block reader's `owner:annotate:run`, when one
-of today's creators held it and no name of today's prints a mark before its first word: a re-part takes a name's
+gives every name (`api:annotate:new`, `api:annotate:run`) as it does the block reader's `owner:annotate:run`, when at
+most one of today's creators held it and no name of today's prints a mark before its first word — in every class, not
+IEEE's alone (1911.01005 acmart; revtex `\author{Ann (Al) Able*, Bob Baker*}\affiliation{…}`, review rev104a2) — a re-part takes a name's
 marks out, as the reading has them, so the IEEE ordinal template (`1\textsuperscript{st} Milin Patel`) would print
 "1 Milin Patel" (2503.04159, 1806.11431, 2406.04658 stay as today's; `ordinal_names` the control). An `\and`
 at the top level of an `\IEEEauthorblockA`/`\authorblockA` argument that a block macro follows starts the next author,
