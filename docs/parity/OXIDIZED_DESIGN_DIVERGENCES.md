@@ -30229,7 +30229,8 @@ observer read some of them (`take_out_entry_addresses`, OD #938), but its writer
   domain by the one function both readers call (`write_out_unspaced_lists`, `is_listed_local_part`: lowercase, a
   letter, no space after the comma — `address_runs`' list rule —, never a word naming a contact, `email,ann@x.org`,
   nor one letter, an initial, which ends no list either, `smith,j@x.org`: `ends_a_listed_run` (a list written with
-  spaces keeps `address_runs`' word test alone, `E-mail: ann, b@x.org`, review rev103a2); 2112.00969's `ann@a.edu;
+  spaces keeps `address_runs`' word test alone, `E-mail: ann, b@x.org`, review rev103a2 — a mixed list with one spaced
+  comma too, `ann, bob,c@x.org`, review rev103a3 n6); 2112.00969's `ann@a.edu;
   dzyang,ashishbshah@fb.com`, whose `dzyang` the flush's write-out had dropped while the take-out cut it, batch 103a);
   the flush writes an e-mail out only where its two readings (`addresses_in`, `address_take_out`) agree, else it stays
   whole where its call put it (a spaced list not opening the line, `ann@a.edu; dzyang, ashishbshah@fb.com`); an e-mail

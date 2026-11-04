@@ -1,0 +1,16 @@
+% mechanism: after an e-mail label, a tie after a list comma (`E-mail: ann,~bob,~cy@x.org`) is read into the e-mail
+%   contact as a literal `˜` (U+02DC, not the space the tie prints), so the list is never parted: one contact
+%   `ann,˜bob,˜cy@x.org` on the last author, Ann and Bob with no e-mail (pre-existing on int130a; review rev103a3 P1,
+%   probes n3, n5) — the e-mail reader keeps the active `~`'s ink where it should read its space; not root-caused
+% witness: none (synthetic); sibling address_family_spaced_list_one_letter_last_kept (the spaced list, GREEN)
+% oracle:  pdflatex (TL 2025) 0 errors: "Univ X / E-mail: ann, bob, cy@x.org"
+% engines: rust int130a, 103a r2, 103a r3: Cy Coe `email=ann,˜bob,˜cy@x.org`, Ann Able and Bob Baker none; perl: not run
+% expect:  0 errors; Ann Able ann@x.org, Bob Baker bob@x.org, Cy Coe cy@x.org; no `˜` in any contact
+% status:  RED
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}\author{Ann Able \and Bob Baker \and Cy Coe\\ Univ X\\ E-mail: ann,~bob,~cy@x.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}
