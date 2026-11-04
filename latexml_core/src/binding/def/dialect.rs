@@ -1746,13 +1746,14 @@ pub fn def_environment(
     Some(ref emode) => {
       let emode = emode.clone();
       let own_end = T_CS!(end_name.as_str());
+      let own_name = name.clone();
       let emode_closure = Rc::new(move |_whatsit: &mut Whatsit| {
         // `\end{X}` over a `\begingroup` the class opened inside X (raa.cls:322-349): it closes that group and X,
         // and X's group stays for the class's `\endgroup` (stomach.rs `end_environment_over_plain_groups`).
-        if end_environment_over_plain_groups(own_end)? {
+        if end_environment_over_plain_groups(&own_name, own_end)? {
           return Ok(Vec::new());
         }
-        // Perl Package.pm L1944-1945:
+        // Perl Package.pm L1961-1962:
         //   # Switch mode (w/stack frame pop), OR egroup
         //   ($mode ? (sub { $_[0]->endMode($mode) }) : sub { $_[0]->egroup; }),
         // endMode(mode) with no second arg defaults to noframe=0 — it DOES

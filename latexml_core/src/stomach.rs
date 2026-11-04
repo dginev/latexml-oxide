@@ -1150,18 +1150,32 @@ pub fn environment_ended_by_group() -> bool { is_value_bound("lx@env@ended@by@gr
 /// Perl ends the mode against the plain group instead and errors (Stomach.pm:544-550 "Attempt to end mode"); with
 /// the error a raw class's title-page deposit was dropped — title, authors, abstract and keywords (KNOWN_PERL_ERRORS
 /// #1207, OXIDIZED_DESIGN_DIVERGENCES #965). Only that shape acts: every frame above X a plain `\begingroup` group
-/// (no mode, no box, no environment of its own), X's frame the `\begin{X}` of this very `\end{X}`, and X neither a
-/// math environment nor one whose begin code opened a box group — where TeX itself errs. Otherwise false, and the
-/// caller's `end_mode` raises today's Error. Witnesses 1404.3644, 1304.5354, 1508.02561, 1509.00139, 2004.06992,
+/// (no mode, no box, no environment marker, and no environment recorded but X's own — not a raw `\newenvironment`'s
+/// `\begin{Y}`; an X this branch ended earlier, its group still open, records X), the environment open X itself
+/// (`\@checkend`), X's frame the `\begin{X}` of this very `\end{X}`, and X neither a math environment nor one whose
+/// begin code opened a box group — where TeX itself errs (`\@badend`, or the box's own group). Otherwise false, and
+/// the caller's `end_mode` raises today's Error. Witnesses 1404.3644, 1304.5354, 1508.02561, 1509.00139, 2004.06992,
 /// 2110.11117, 2306.16795, 1604.05586, 2003.13998, 2102.01352, 2511.10805 (raa, raa_twocolumn). Guards
 /// `perfect_kernel_batch98d::*`.
-pub fn end_environment_over_plain_groups(end: Token) -> Result<bool> {
+pub fn end_environment_over_plain_groups(name: &str, end: Token) -> Result<bool> {
+  // The `\@checkend` the caller's `unexpected_end_closure` just ran: the environment open is X, and no group above
+  // X's frame records another (a raw `\newenvironment`'s `\begin{Y}`) — else LaTeX's `\@badend`. A group recording X
+  // is an X this branch ended earlier (`\begin{X}\begin{X}\begingroup … \end{X}…\end{X}`), as TeX's `\@currenvir`.
+  if lookup_string("current_environment") != name {
+    return Ok(false);
+  }
   let depth = get_frame_depth();
+  let records_only_x = |frame: usize| {
+    !is_value_bound("current_environment", Some(frame))
+      || matches!(value_in_frame("current_environment", frame),
+        Some(Stored::String(open)) if arena::with(open, |open| open == name))
+  };
   let plain_group = |frame: usize| {
     matches!(
       value_in_frame("groupNonBoxing", frame),
       Some(Stored::Bool(true))
     ) && is_value_bound("groupNonBoxing", Some(frame))
+      && records_only_x(frame)
       && [
         "BOUND_MODE",
         "lx@env@begin@end",

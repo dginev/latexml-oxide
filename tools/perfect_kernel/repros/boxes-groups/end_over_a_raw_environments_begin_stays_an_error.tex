@@ -1,0 +1,19 @@
+% Negative control: `\end{X}` over a raw `\newenvironment{Y}`'s `\begin{Y}` (a plain group recording an environment
+% of its own) and the `\begingroup` Y's begin code opened is LaTeX's `\@badend` ("\begin{bad} ended by
+% \end{center}"), and stays the error it is: the environment open is Y, not X (stomach.rs
+% end_environment_over_plain_groups refuses when a group above X binds `current_environment` or the open
+% environment is not X, the check `\end{X}`'s "Can't close environment" just ran). The flushleft/myenv
+% variant (`\newenvironment{myenv}{\begingroup\itshape}{\endgroup}`, `\begin{flushleft}\begin{myenv}A
+% words.\end{flushleft}B words.\end{myenv}C words.`) is the same path.
+% witness: synthetic (control for 1404.3644's raa.cls:322-349 shape)
+% oracle:  pdflatex 2 errors (\begin{bad} ended by \end{center}; \begin{center} ended by \end{bad}): ill-formed on
+%          purpose; "X words." "Y words." "Z words."
+% engines: rust int132a1 = 2 errors, 1 warning; rust 98d round 1 = 1 error, 0 warnings; perl = 4 errors, 1 warning
+% expect:  2 errors, 1 warning, as int132a1; the words kept
+% status:  GREEN (control; guard perfect_kernel_batch98d::end_over_begingroup_without_its_environment_stays_an_error)
+% preload: ar5iv.sty
+\documentclass{article}
+\newenvironment{bad}{\begingroup}{\endgroup}
+\begin{document}
+\begin{center}\begin{bad}X words.\end{center}Y words.\end{bad}Z words.
+\end{document}

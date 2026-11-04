@@ -111,7 +111,10 @@ fn unclosed_nested_itemize_at_end_document() {
 /// group and the quote, as TeX scopes it (stomach.rs `end_environment_over_plain_groups`, OXIDIZED_DESIGN_DIVERGENCES
 /// #965): each quote ends at its `\end{quote}` and "Middle." and "After." are paragraphs after it, with no Error for the
 /// `\end` (65c: 2, the `\end{quote}`s against the `\begingroup`, which TeX does not raise); the quotes' groups are the
-/// open environments the `\end{document}` Warning lists. Repro boxes-groups/unclosed_nested_environments_keep_their_text.
+/// open environments the `\end{document}` Warning lists. Known gap (OD #965): a quote's layout state does not reach the
+/// paragraphs ended before its group's `\endgroup` — pdflatex indents "Middle." one level and "Q2."/"After." two (the
+/// quote's `\leftskip` lasts until that `\endgroup`); ours sets them flat. Repro
+/// boxes-groups/unclosed_nested_environments_keep_their_text.
 #[test]
 fn unclosed_nested_environments_keep_their_text() {
   let tex = include_str!(

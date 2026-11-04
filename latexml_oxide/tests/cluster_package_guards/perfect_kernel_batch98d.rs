@@ -4,10 +4,11 @@
 //! `\endgroup` (latex.ltx:15384-15393) closes the innermost group and the class's own `\endgroup` closes X's. Ours, as
 //! Perl, raised "Attempt to end mode" (Perl Stomach.pm:544-550), and the error held in the speculative title-page
 //! deposit dropped raa's abstract and keywords. One code path (stomach.rs `end_environment_over_plain_groups`, called
-//! by every DefEnvironment's `\end{X}`): the innermost plain group popped, X's mode and box ended, X's frame kept as
-//! the plain group the next `\endgroup` closes. Distinct guards: the shape in the main galley and in a box; TeX's
-//! scoping across it (one inner group, X's frame on top after the pop, and two, X's frame below another); the refusals
-//! (another environment's `\end`, an `\end` with no `\begin` below); and the raw class's title page it unblocks.
+//! by the `\end{X}` of every DefEnvironment that declares a mode): the innermost plain group popped, X's mode and box
+//! ended, X's frame kept as the plain group the next `\endgroup` closes. Distinct guards: the shape in the main galley
+//! and in a box; TeX's scoping across it (one inner group, X's frame on top after the pop, and two, X's frame below
+//! another; X nested in X); the refusals (another environment's `\end`, an `\end` with no `\begin` below, an `\end` over a raw
+//! environment's `\begin`); and the raw class's title page it unblocks.
 //! Witnesses 1404.3644, 1304.5354, 1508.02561, 1509.00139, 2004.06992, 2110.11117, 2306.16795, 1604.05586,
 //! 2003.13998, 2102.01352 (raa), 2511.10805 (raa_twocolumn). Repros under `tools/perfect_kernel/repros/`.
 use latexml::util::test::{assert_element, convert_with};
@@ -60,7 +61,9 @@ fn end_closes_a_begingroup_opened_inside_the_environment() {
 
 /// TeX's scoping: `\end{X}` undoes only the innermost group; what X set before the class's `\begingroup` lasts until
 /// the `\endgroup` that closes X's group, and each further `\endgroup` closes one more — with one inner group (X's
-/// frame on top once it is popped) and with two (X's frame below the outer one). The text is pdflatex's.
+/// frame on top once it is popped) and with two (X's frame below the outer one); and the same environment nested, where
+/// the outer `\end{center}` meets the inner center's still-open group, which records "center" as TeX's `\@currenvir`
+/// does — not a raw environment's `\begin{Y}`. The text is pdflatex's.
 #[test]
 fn end_over_begingroups_keeps_tex_scoping() {
   let xml = convert_counted(
@@ -81,11 +84,33 @@ fn end_over_begingroups_keeps_tex_scoping() {
       <para xml:id="p4"><p xml:id="p4.1">Kept [yes][yes][no].Then [yes][no].Last [no][no].</p></para>
     </document>"#,
   );
+  let xml = convert_counted(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/end_nested_same_environment_over_begingroup_keeps_tex_scoping.tex"
+    ),
+    0,
+    0,
+  );
+  assert_element(
+    &xml,
+    "document",
+    &[],
+    r#"<document xmlns="http://dlmf.nist.gov/LaTeXML">
+      <logical-block xml:id="id1">
+        <para xml:id="p1">
+          <p align="center" xml:id="p1.1">A words.</p>
+          <p align="center" xml:id="p1.2">B words.</p>
+        </para>
+      </logical-block>
+      <para xml:id="p2"><p xml:id="p2.1">C words.D words.</p></para>
+    </document>"#,
+  );
 }
 
-/// The refusals keep today's diagnostics, both LaTeX's `\@badend` too: another environment's `\end{Y}` over the
-/// class's group inside `\begin{X}` (pdflatex 1 error), and an `\end{X}` with no `\begin{X}` below the group
-/// (pdflatex 2). The words stay.
+/// The refusals keep today's diagnostics, each LaTeX's `\@badend` too: another environment's `\end{Y}` over the
+/// class's group inside `\begin{X}` (pdflatex 1 error), an `\end{X}` with no `\begin{X}` below the group
+/// (pdflatex 2), and an `\end{X}` over a raw `\newenvironment`'s `\begin{Y}` and its begin code's `\begingroup` —
+/// plain groups, but the environment open is Y (pdflatex 2). The words stay.
 #[test]
 fn end_over_begingroup_without_its_environment_stays_an_error() {
   let xml = convert_counted(
@@ -108,6 +133,19 @@ fn end_over_begingroup_without_its_environment_stays_an_error() {
   );
   assert!(
     xml.contains("Bare words.") && xml.contains("After words."),
+    "{xml}"
+  );
+  let xml = convert_counted(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/boxes-groups/end_over_a_raw_environments_begin_stays_an_error.tex"
+    ),
+    2,
+    1,
+  );
+  assert!(
+    ["X words.", "Y words.", "Z words."]
+      .iter()
+      .all(|words| xml.contains(words)),
     "{xml}"
   );
 }

@@ -8,7 +8,8 @@
 %          present the abstract words here.", "Key words: stars: general, galaxies: photometry"
 % engines: rust int132a1 = 0 errors, 1 warning (`\end{document}` with open groups); the deposit dropped ("raised 2
 %          error(s)"), the abstract a pubnote; in 1404.3644 the abstract and keywords lost; perl = 0 errors here (no raw
-%          class: OmniBus); on the witnesses' raa.cls the Error at `\end{flushleft}`
+%          class: OmniBus); on the witnesses too Perl never loads raa.cls ("Can't find binding for class raa (using
+%          OmniBus)"), so it has no `\end{flushleft}` Error there; it errs on the bare shape (KNOWN_PERL_ERRORS #1207)
 % expect:  0 errors, 0 warnings; title, both authors with their institute, the class's "Abstract" and "Key words"
 %          paragraphs kept
 % status:  RED (int132a1) -> GREEN (98d; guard perfect_kernel_batch98d::a_raa_title_page_keeps_its_abstract_and_keywords)
