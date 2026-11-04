@@ -2,7 +2,7 @@
 //! Perl: IEEEtran.cls.ltxml — 458 lines
 use crate::{
   engine::{
-    base_utilities::{names_continue, notes_only_line},
+    base_utilities::{document_notes, names_continue, notes_only_line, prints_nothing},
     latex_constructs::{FontUnit, set_theorem_within_display, symbol_box_size},
   },
   package::caption_sty,
@@ -1102,7 +1102,8 @@ fn split_top_level(tokens: &[Token], delim: &Token) -> Vec<Vec<Token>> {
 /// creators come out row-major. Guarded TIGHTLY: only a REGULAR grid (≥2 columns,
 /// every column the SAME number of rows ≥2) is reordered. A single-row `\and` list
 /// (no top-level `\\`) and `\\` used only INSIDE `\IEEEauthorblockA{…\\…}` (nested,
-/// depth>0) are left exactly as declared. Surpass-Perl divergence: OXIDIZED_DESIGN
+/// depth>0) are left exactly as declared, and so is a grid with a cell naming no author (a column's affiliation rows
+/// under its name, 2605.15804). Surpass-Perl divergence: OXIDIZED_DESIGN
 /// #128 (shared upstream bug KNOWN_PERL_ERRORS #94).
 fn transpose_ieee_author_grid(body: Tokens) -> Tokens {
   let toks = body.unlist();
@@ -1117,6 +1118,19 @@ fn transpose_ieee_author_grid(body: Tokens) -> Tokens {
   let rows = grid[0].len();
   // Only a REGULAR grid transposes: same row count in every column, and ≥2 rows.
   if rows < 2 || grid.iter().any(|c| c.len() != rows) {
+    return Tokens::new(toks);
+  }
+  // And a grid of authors: every cell that prints something (`prints_nothing`) names one. A row of a column's blocks
+  // or text without a name is its author's, below the name as printed (`\IEEEauthorblockN{Ann Able} \textit{School
+  // X}\\ \IEEEauthorblockA{Dept Y\\ City} \and …`, 2605.15804: transposed, every `\IEEEauthorblockA` of that row went
+  // to the last author of the row above).
+  let names = |cell: &Vec<Token>| {
+    prints_nothing(&Tokens::new(cell.clone()))
+      || cell
+        .iter()
+        .any(|t| *t == T_CS!("\\IEEEauthorblockN") || *t == T_CS!("\\authorblockN"))
+  };
+  if !grid.iter().flatten().all(names) {
     return Tokens::new(toks);
   }
   let and = T_CS!("\\and");
@@ -1136,16 +1150,15 @@ fn transpose_ieee_author_grid(body: Tokens) -> Tokens {
   Tokens::new(out)
 }
 
-/// Wrap each top-level bare-text run in an IEEE author BLOCK body in
-/// `\IEEEauthorblockA{...}` so it attaches to the current creator as an affiliation
-/// instead of digesting into the document body. A block macro (`\IEEEauthorblockN/A`,
-/// `\authorblockN/A`) plus its balanced `{...}` argument is copied verbatim; `\and`
-/// and whitespace-only gaps pass through untouched. Without this, the trailing bare
-/// email in `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…} \{…\}@host}` (the `\{`/`\}`
-/// are catcode-12 literal-brace control symbols, so the email sits at brace-depth 0 =
-/// top level) is ordinary horizontal text and `\lx@IEEE@author@blocks` digests it into
-/// the document body as the first paragraph. Real Perl LaTeXML bundles the WHOLE author
-/// argument into `<personname>` (`\lx@add@authors`), so the tail never leaks —
+/// Wrap each top-level bare-text run in an IEEE author BLOCK body in `\IEEEauthorblockA{...}` so it attaches to the
+/// current creator as an affiliation instead of digesting into the document body. A block macro
+/// (`\IEEEauthorblockN/A`, `\authorblockN/A`) plus its balanced `{...}` argument is copied verbatim; `\and` passes
+/// through untouched, a run that prints nothing (`prints_nothing`: spaces, line and paragraph breaks, `\vspace`) as its
+/// spaces and braces, and a run of notes before an `\IEEEauthorblockA` as the document's notes. Without this, the
+/// trailing bare email in `\author{\IEEEauthorblockN{…}\IEEEauthorblockA{…} \{…\}@host}` (the `\{`/`\}` are
+/// catcode-12 literal-brace control symbols, so the email sits at brace-depth 0 = top level) is ordinary horizontal
+/// text and `\lx@IEEE@author@blocks` digests it into the document body as the first paragraph. Real Perl LaTeXML
+/// bundles the WHOLE author argument into `<personname>` (`\lx@add@authors`), so the tail never leaks —
 /// GENUINE-RUST-ONLY. Witness arXiv 1901.07768 (`\{anuja, seth.gilbert, tankl\}@comp.nus.edu.sg`).
 fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
   let toks = body.unlist();
@@ -1155,19 +1168,82 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
       || *t == T_CS!("\\authorblockN")
       || *t == T_CS!("\\authorblockA")
   };
-  fn wrap(run: &mut Vec<Token>, out: &mut Vec<Token>) {
-    // The line break between two blocks (`\IEEEauthorblockN{…}\\ \IEEEauthorblockA{…}`, 2410.19527) is layout:
-    // wrapped, it was an empty affiliation of the block's authors.
-    let gap = |t: &Token| *t == T_SPACE!() || *t == T_CS!("\\\\") || *t == T_CS!("\\newline");
-    if run.iter().any(|t| !gap(t)) {
-      // Non-empty bare run → route to the creator as an affiliation.
+  fn wrap(run: &mut Vec<Token>, out: &mut Vec<Token>, before_affiliation: bool) {
+    // the spans of the run's line breaks: `\\` with its `*` and `[…]`, `\newline`
+    let mut breaks: Vec<(usize, usize)> = Vec::new();
+    let mut i = 0;
+    while i < run.len() {
+      if run[i] == T_CS!("\\\\") || run[i] == T_CS!("\\newline") {
+        let double_backslash = run[i] == T_CS!("\\\\");
+        let past_spaces = |mut at: usize| {
+          while run.get(at) == Some(&T_SPACE!()) {
+            at += 1;
+          }
+          at
+        };
+        let mut end = i + 1;
+        if double_backslash && run.get(past_spaces(end)) == Some(&T_OTHER!("*")) {
+          end = past_spaces(end) + 1;
+        }
+        if double_backslash && run.get(past_spaces(end)) == Some(&T_OTHER!("[")) {
+          let open = past_spaces(end);
+          if let Some(close) = run[open..].iter().position(|t| *t == T_OTHER!("]")) {
+            end = open + close + 1;
+          }
+        }
+        breaks.push((i, end));
+        i = end;
+      } else {
+        i += 1;
+      }
+    }
+    let in_break = |at: usize| breaks.iter().any(|&(from, to)| (from..to).contains(&at));
+    let printed: Vec<Token> = run
+      .iter()
+      .enumerate()
+      .filter(|(at, _)| !in_break(*at))
+      .map(|(_, t)| *t)
+      .collect();
+    if prints_nothing(&Tokens::new(printed.clone())) {
+      // Layout, not a block: the line break between two blocks (`\IEEEauthorblockN{…}\\ \IEEEauthorblockA{…}`,
+      // 2410.19527), a paragraph break or a `\vspace` (1401.2118, 1705.03529). Wrapped, it was an affiliation printing
+      // nothing that took the block's authors before the shared `\IEEEauthorblockA` (`annotate=new`), which then
+      // reached the last only. Its spaces and its braces pass through: a group it opens or closes around a block
+      // (`\authorblockN{…}\\ {\small \authorblockA{…}}\\ \and`, cs0507001) stays balanced.
+      out.extend(run.iter().filter(|t| {
+        matches!(
+          t.get_catcode(),
+          Catcode::SPACE | Catcode::BEGIN | Catcode::END
+        )
+      }));
+    } else if let Some(notes) =
+      document_notes(&printed).filter(|notes| before_affiliation && !notes.is_empty())
+    {
+      // The authors' notes between the names and their shared block (`\thanks{…}`, 1508.00691) stay the document's
+      // notes, as in a block: wrapped, they were such an affiliation printing nothing. Notes no `\IEEEauthorblockA`
+      // follows are wrapped as before, so the block reader still reads them (the e-mails of
+      // `\thanks{E-mail: \{lins, shahmohm, helgamal\}@ece.osu.edu.}` after the names, 0710.2705; the note a name's mark
+      // requests, 1504.01072).
+      out.extend(notes);
+    } else {
+      // Printed text → route to the creator as an affiliation, without the line break it ends with
+      // (`\IEEEauthorblockN{Ann Able} \textit{School X}\\ \IEEEauthorblockA{…}`, 2605.15804: kept, it sent every
+      // later block to the last creator).
+      let mut end = run.len();
+      loop {
+        while end > 0 && run[end - 1] == T_SPACE!() {
+          end -= 1;
+        }
+        match breaks.iter().find(|&&(_, to)| to == end) {
+          Some(&(from, _)) => end = from,
+          None => break,
+        }
+      }
+      run.truncate(end);
       out.push(T_CS!("\\IEEEauthorblockA"));
       out.push(T_BEGIN!());
       out.append(run);
       out.push(T_END!());
-    } else {
-      // whitespace-only gap: pass its spaces through
-      out.extend(run.iter().filter(|t| **t == T_SPACE!()));
     }
     run.clear();
   }
@@ -1178,7 +1254,12 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
   // `open_in_blocks` counts the conditionals a block's argument opened and left open (`\IEEEauthorblockA{… \if\x1
   // a@b.c} \vspace{-5mm} \else x@y.z \fi`, 2606.17718): the bare run's `\else`/`\fi` are theirs, so the run is wrapped
   // whole, as before the piecewise split (63x), and its own net depth closes them.
-  fn flush(run: &mut Vec<Token>, out: &mut Vec<Token>, open_in_blocks: &mut i32) {
+  fn flush(
+    run: &mut Vec<Token>,
+    out: &mut Vec<Token>,
+    open_in_blocks: &mut i32,
+    before_affiliation: bool,
+  ) {
     let mut depth = 0i32;
     let mut whole = true;
     for t in run.iter() {
@@ -1192,11 +1273,11 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
     }
     if *open_in_blocks > 0 {
       *open_in_blocks = (*open_in_blocks + depth).max(0);
-      wrap(run, out);
+      wrap(run, out, before_affiliation);
       return;
     }
     if whole && depth == 0 {
-      wrap(run, out);
+      wrap(run, out, before_affiliation);
       return;
     }
     let mut piece: Vec<Token> = Vec::new();
@@ -1206,7 +1287,7 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
         piece.push(t);
         continue;
       };
-      wrap(&mut piece, out);
+      wrap(&mut piece, out, false);
       out.push(t);
       if kind != ConditionalType::If {
         continue;
@@ -1242,7 +1323,7 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
       }
     }
     drop(tokens);
-    wrap(&mut piece, out);
+    wrap(&mut piece, out, before_affiliation);
   }
   let mut out: Vec<Token> = Vec::new();
   let mut run: Vec<Token> = Vec::new();
@@ -1251,7 +1332,8 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
   while i < toks.len() {
     let t = toks[i];
     if is_block(&t) {
-      flush(&mut run, &mut out, &mut open_in_blocks);
+      let affiliation = t == T_CS!("\\IEEEauthorblockA") || t == T_CS!("\\authorblockA");
+      flush(&mut run, &mut out, &mut open_in_blocks, affiliation);
       out.push(t);
       i += 1;
       // Copy the block's balanced `{...}` argument verbatim.
@@ -1277,7 +1359,7 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
         }
       }
     } else if t == T_CS!("\\and") {
-      flush(&mut run, &mut out, &mut open_in_blocks);
+      flush(&mut run, &mut out, &mut open_in_blocks, false);
       out.push(t);
       i += 1;
     } else {
@@ -1285,7 +1367,7 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
       i += 1;
     }
   }
-  flush(&mut run, &mut out, &mut open_in_blocks);
+  flush(&mut run, &mut out, &mut open_in_blocks, false);
   Tokens::new(out)
 }
 

@@ -1,0 +1,19 @@
+% mechanism: a paragraph break between `\IEEEauthorblockN` and the shared `\IEEEauthorblockA` is layout, not an affiliation
+%   block (ieeetran_cls.rs `wrap_bare_author_block_text`): wrapped, it was an affiliation printing nothing that claimed
+%   Ann and Bob (`annotate=new`), and the real block reached Cy only. Perl: one creator holding the whole block.
+% witness: 1401.2118, 1705.03529
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker and Cy Cole / University of X, City / Email: {ann, bob, cy}@x.edu"
+% engines: rust int131a: Ann, Bob e-mail only, Cy the affiliation; perl: one creator
+% expect:  0 errors, 0 warnings; each author University of X, City and their own e-mail
+% status:  RED (int131a) -> GREEN (104a)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able, Bob Baker and Cy Cole}
+
+\IEEEauthorblockA{University of X, City\\
+Email: \{ann, bob, cy\}@x.edu}}
+\maketitle
+Text.
+\end{document}

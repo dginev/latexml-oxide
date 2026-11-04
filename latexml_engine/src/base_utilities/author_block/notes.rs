@@ -1044,6 +1044,23 @@ pub fn notes_only_line(line: &[Token]) -> bool {
   line_notes(line).is_some_and(|notes| !notes.is_empty())
 }
 
+/// A line of notes only ([`notes_only_line`]) as the document's notes, as an author block digests them in a contact
+/// (`document_note_call`; a note no pubnote takes as written), its spacing left out: the IEEEtran binding's bare run
+/// of notes between the names and their shared block (`\IEEEauthorblockN{…}\thanks{…}\IEEEauthorblockA{…}`, 1508.00691,
+/// ieeetran_cls.rs `wrap_bare_author_block_text`). `None` for a line holding other ink.
+pub fn document_notes(line: &[Token]) -> Option<Vec<Token>> {
+  let spans = line_notes(line)?;
+  let mut out = Vec::with_capacity(line.len());
+  for (start, end) in spans {
+    let note = &line[start..end];
+    match document_note_call(note) {
+      Some(call) => out.extend(call),
+      None => out.extend_from_slice(note),
+    }
+  }
+  Some(out)
+}
+
 /// A note an author block takes out as the document's, as it digests in a contact: `\thanks{…}` the
 /// `\lx@add@pubnote@thanks{…}` and `\footnote{…}` the `\lx@add@pubnote{…}` `digestFrontmatterItem` binds them to there
 /// (Perl Base_Utility.pool.ltxml:331-332, queue_digest.rs) — `note` one note's span, its command through its closing

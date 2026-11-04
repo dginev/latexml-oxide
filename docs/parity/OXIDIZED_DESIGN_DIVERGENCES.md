@@ -5866,7 +5866,9 @@ LaTeXML 0.8.8 mis-handles the same grid (SHARED-FAILURE, Perl-origin).
 **Rust behavior**: the IEEEtran `\author` dispatch (`ieeetran_cls.rs`) transposes a
 genuine grid to row-major before emitting creators (`transpose_ieee_author_grid`). The
 transpose is guarded TIGHTLY: it fires only for a REGULAR grid — ≥2 `\and` columns,
-every column the SAME number of top-level `\\` rows, that count ≥2. A single-row `\and`
+every column the SAME number of top-level `\\` rows, that count ≥2, every cell that prints
+something naming an author (a `\IEEEauthorblockN`; #961: a column's rows of blocks or text
+under its name, 2605.15804, are that author's). A single-row `\and`
 author list (no top-level `\\`) and `\\` used only INSIDE `\IEEEauthorblockA{…\\…}`
 (nested, brace-depth > 0) are left in their declared order untouched.
 
@@ -5883,7 +5885,8 @@ KNOWN_PERL_ERRORS #94.
 transposed + a single-row control proven un-reordered).
 
 **Bare text between blocks (63x).** The same `\author` dispatch wraps bare text left between the blocks (a loose email
-after `\IEEEauthorblockA`, 1901.07768) in `\IEEEauthorblockA{…}`; a run holding a conditional's own tokens
+after `\IEEEauthorblockA`, 1901.07768) in `\IEEEauthorblockA{…}` — a run that prints nothing or holds notes only
+is no block, and a wrapped run ends without its line break (#961); a run holding a conditional's own tokens
 (`\ifdefined\hpcacameraready \IEEEauthorblockN{…}… \else … \fi`, 2407.02944) keeps the conditional's own tokens as
 written (an `\if…` with the test its primitive reads, each `\else`/`\or`/`\fi`) and wraps the bare text between them
 piece by piece, since wrapped whole the `\if` and its `\else`/`\fi` landed in different arguments: `Error:expected:\fi`,
@@ -30602,3 +30605,41 @@ legend sentence holding commas (1703.07724's "The authors wish it to be known th
 authors should be regarded as Joint First Authors.": a comma parts a piece, which keeps "Entity, legend" lines
 affiliations), a legend beside a link (2403.03314) and an obfuscated address (2605.00769's `amir[dot]norouzi[at]…`)
 stay affiliations.
+### 961. An IEEE `\IEEEauthorblockA` shared by a names line goes on every name, whatever layout or notes stand before it; a refmark-led address line is its marks' (Perl: one creator holding the whole block)
+
+**Perl behavior**: IEEEtran.cls.ltxml maps `\IEEEauthorblockN{…}` and `\IEEEauthorblockA{…}` to their text, so
+`\author{\IEEEauthorblockN{Ann Able, Bob Baker and Cy Cole}⏎⏎\IEEEauthorblockA{University of X, City\\ Email:
+\{ann, bob, cy\}@x.edu}}` is one creator holding names, affiliation and addresses. **Rust before**: the binding reads
+each block (`\lx@add@authors@append`, `\lx@add@affiliation@marked[annotate=new]`; OD #128 "Bare text between blocks")
+and wrapped every bare top-level run between blocks in `\IEEEauthorblockA{…}` (`wrap_bare_author_block_text`,
+ieeetran_cls.rs). A run printing nothing — a blank line (1401.2118, 1705.03529), a `\vspace`, a `\\[2mm]` — or holding
+only a `\thanks` (1508.00691) became an affiliation printing nothing that took the names before it (`annotate=new`),
+so the real block reached the last name only: every other author lost the affiliation, with 0 Errors (dev20k: 10
+papers, also 1708.09492, 1909.04111, 2105.14731, 2304.07909, 2404.12786, 2510.06250, 2608.23934). Printed text ending
+in `\\` under each `\and` column's name (`\IEEEauthorblockN{Ann Able} \textit{School X}\\ \IEEEauthorblockA{…}`,
+2605.15804) made a regular `\and`×`\\` grid, which `transpose_ieee_author_grid` read as row-major: the
+`\IEEEauthorblockA` row went to the last author. And an `\IEEEauthorrefmark{1}`-led address line
+(`\IEEEauthorrefmark{1}\{ms1801, bob\}@x.edu`, 2301.03018, 2510.06608) stayed an affiliation of every mark-1 author:
+`relocate.rs` `leading_line_label` compared the first token with `\textsuperscript` literally, so the Kind step
+(`affiliations.rs` `kind_entry_addresses`, OD #956) never took its addresses out.
+
+**Rust behavior**: a bare run that prints nothing once its line breaks (`\\` with its `*` and `[…]`, `\newline`) are
+left out (`prints_nothing`, email_owners.rs, now `pub`) passes through as its spaces and braces (a group it opens
+around a block stays balanced: `{\small \authorblockA{…}}`, cs0507001); a run of notes only before an
+`\IEEEauthorblockA` is the document's notes, as in a block (`document_notes`, notes.rs: `\thanks` the
+`\lx@add@pubnote@thanks`), and one no block follows is wrapped as before, so the block reader still reads it (the
+e-mails of `\thanks{E-mail: \{lins, shahmohm, helgamal\}@ece.osu.edu.}` after the names, 0710.2705; a note a name's
+mark requests, 1504.01072); printed text is wrapped without the line breaks and spaces it
+ends with. A grid transposes only when every cell that prints something
+names an author (`\IEEEauthorblockN`/`\authorblockN`); a column's rows of blocks or text are its author's, as printed.
+`leading_line_label` reads a mark command or an alias of one (`is_mark_command`, marks.rs) as `\textsuperscript`, so
+the mark-led address line is its marks' e-mails: bob@x.edu Bob's, ms1801@x.edu (no name spells it, three names carry
+its mark) the block's, as the Kind step's "else the block". The kernel's "a contact printing nothing claims its
+authors" stays (revtex `\noaffiliation`, aastex `\nocollaboration`). The empty block had hidden two older defects,
+which the shape without the blank line or note shows on the base too: a names line holding a parenthesized nickname
+under a shared block is one merged creator (`\IEEEauthorblockN{Daniel (Yue) Zhang*, Yang Zhang*\thanks{…}, Dong
+Wang}`, 1909.04111), and an `\authorblockA` holding the next author's blocks by a missing brace gives that block to
+the author before too (2105.06537). Guards `perfect_kernel_batch104a` (5); repros
+`sectioning-frontmatter/ieee_shared_block/`. **Not reached** (RED repros, SYNC_STATUS row 104a): an explicit
+`\IEEEauthorblockA{}` before the shared block (`explicit_empty_block`), and an "Email:" line with a refmark before each
+address, still one entry labelled by its first mark (`email_line_marked_addresses`; 2209.10056, 2109.15322).

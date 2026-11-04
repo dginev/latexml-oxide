@@ -1033,7 +1033,8 @@ pub fn mark_spelling_printed(text: &str) -> String {
 }
 
 /// The label an affiliation line leads with, whether it was typed by hand, and the line without it: a superscript
-/// mark (`$^{1}$`, `$^1$`, `\textsuperscript{1}`, or spelled otherwise, `spaced_mark_at`: `${}^{1}$`, `\( ^{1} \)`) or a
+/// mark (`$^{1}$`, `$^1$`, `\textsuperscript{1}` or another mark command, `\IEEEauthorrefmark{1}`, or spelled
+/// otherwise, `spaced_mark_at`: `${}^{1}$`, `\( ^{1} \)`) or a
 /// hand-printed number (`1 Univ A`, `2) Univ B`, `3. Univ C`), behind the spaces and the font and size switches it is set in (`\scriptsize 2) Osservatorio …`, kept). `None` for a
 /// line leading with neither (user ruling R2, 2026-11-01: a hand-printed leading number is a label wherever the names
 /// request numbers).
@@ -1083,7 +1084,10 @@ pub fn leading_line_label(content: &Tokens) -> Option<(String, bool, Tokens)> {
       next + 1,
     );
   }
-  if first == T_CS!("\\textsuperscript") {
+  // (a mark command or an alias of one, `is_mark_command`: IEEEtran's `\IEEEauthorrefmark{1}\{ms1801,
+  // bob\}@x.edu` address line as `\textsuperscript{1}`'s, 2301.03018, 2510.06608; read literally, its addresses
+  // stayed an affiliation of every mark-1 author)
+  if is_mark_command(&first) {
     let (operand, next) = sup_operand_at(tokens, at + 1)?;
     return rebuilt(
       mark_key(Tokens::new(operand).untex_string().as_ref()),

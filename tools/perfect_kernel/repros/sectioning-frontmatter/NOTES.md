@@ -191,3 +191,21 @@ code, not keywords "alpha" + a stray ", beta, gamma"), `keywords_environment_bar
 the environment is the class's `\par\bigskip`), `abstract_keywords_setter_that_only_warns` (kwwarn.cls: a setter that
 does not use its argument is the class's own, its warning the one diagnostic); the supplement repro's in-place keywords
 now keep the class's label (its own definition), as its oracle prints.
+
+## ieee_shared_block/* (104a; OXIDIZED_DESIGN_DIVERGENCES #961)
+
+RUST-ONLY (Perl: one creator holding the whole block). `wrap_bare_author_block_text` (ieeetran_cls.rs) wrapped every
+bare run between IEEE blocks in `\IEEEauthorblockA{…}`; a run printing nothing (`blank_line`, `vspace`,
+`line_break_with_length`; 1401.2118, 1705.03529) or of notes (`thanks`; 1508.00691) became an affiliation printing
+nothing that took the names before the shared block (`annotate=new`). Fix: such a run is layout (`prints_nothing`,
+its spaces and braces kept) or, before an `\IEEEauthorblockA`, the document's notes (`document_notes`);
+`notes_after_the_names_without_a_block` (0710.2705) is the CONTROL that notes no block follows stay wrapped.
+`printed_text_line_break` (2605.15804): its `\\` made a regular `\and`×`\\` grid, transposed (`transpose_ieee_author_grid`,
+OD #128); a grid now transposes only when every printing cell names an author (`printed_text_control` the CONTROL;
+`printed_text_line_break_one_author` the trailing-`\\` trim). `refmark_led_address_line` (2301.03018, 2510.06608):
+relocate.rs `leading_line_label` compared with `\textsuperscript` literally; now `is_mark_command`. RED, no guard:
+`explicit_empty_block` (an empty `\IEEEauthorblockA{}` still claims the names; needs a binding-declared rule) and
+`email_line_marked_addresses` (2209.10056, 2109.15322; `affiliations.rs` `entry_calls`). Invalid input under TL 2025
+(not kept): a group around a block, `{\small \IEEEauthorblockA{…}}` — IEEEtran's author `\halign` rejects it
+(cs0507001 ships an older IEEEtran.cls). Guards `perfect_kernel_batch104a` (5).
+

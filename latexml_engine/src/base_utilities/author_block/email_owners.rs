@@ -638,11 +638,11 @@ pub(in crate::base_utilities) fn unspelled_addresses(
     .count()
 }
 
-/// Whether `line` prints nothing: spacing ([`leading_spacing_end`], `\vspace{2pt}`), a paragraph break, and the groups, font and size
+/// Whether `line` prints nothing: spacing (`leading_spacing_end`, `\vspace{2pt}`), a paragraph break, and the groups, font and size
 /// commands around them (`\large{~~}`, 2609.05430); a strut, an alignment declaration, an environment's `\begin{…}` or
 /// `\end{…}` itself (`\end{@IEEEauthorhalign}\hfill\strut`, 2309.15562's IEEE block, whose environment name had read as an
 /// address, then as an empty affiliation).
-pub(in crate::base_utilities) fn prints_nothing(line: &Tokens) -> bool {
+pub fn prints_nothing(line: &Tokens) -> bool {
   let v = line.unlist_ref();
   let mut i = 0;
   while i < v.len() {
