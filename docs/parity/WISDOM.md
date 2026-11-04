@@ -3129,3 +3129,17 @@ message repeats the first one's stack is a stale-state ghost, not a new failure 
 `hardYankProcessing`'s list. Guard `perfect_kernel_batch131fix::a_recovered_fatal_leaves_no_token_stack_behind`. Open:
 an RAII pop in `invoke_token` (as `local_current_token_guard`) would cover a caught error that never reaches a recovery
 arm (SYNC "token-stack RAII" row).
+
+
+## 102. An environment's mode frame under plain groups ends by frame surgery, not by popping
+
+LaTeXML's environment frame is TeX's `\begin` group and LaTeXML's mode frame at once; TeX's groups are untyped, so
+`\begin{X}\begingroup … \end{X}\endgroup` (raa.cls:322-349) is legal and Perl's `endMode` errs on it (KNOWN_PERL_ERRORS
+#1207). To end X without breaking the group count: pop only the innermost group (the one `\end`'s `\endgroup` closes),
+then unbind X's mode keys in X's own frame wherever it sits (`state.rs` `unbind_value_in_frame`: a frame's values sit
+in the key's value stack after the counts the frames above it made — Perl State.pm:280-286 `valueInFrame`'s offset),
+flip its `groupNonBoxing` in place (`replace_value_in_frame`) and drop its boxing level. Popping all the inner groups at
+once (the obvious reading) is wrong past one group: pdflatex's `\begin{center}\begingroup\begingroup … \end{center}
+\endgroup\endgroup` keeps the outer inner group's values after `\end{center}` (`Kept [yes][yes][no]`), until the next
+`\endgroup`. Guard
+`perfect_kernel_batch98d::end_over_begingroups_keeps_tex_scoping`; OXIDIZED_DESIGN_DIVERGENCES #965.

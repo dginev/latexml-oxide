@@ -18946,3 +18946,26 @@ Text.
 
 Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #957): the break is taken out, the notes the names'. Witnesses 2609.17106,
 2411.05212, 2312.10807.
+
+## 1207. `\end{X}` over a `\begingroup` opened inside X is an error, and the environment stays open
+
+`\end{X}` of a DefEnvironment ends X's mode (Package.pm:1944-1945 `endMode`), which requires the mode frame on top
+(Stomach.pm:527-550); a plain `\begingroup` group opened inside X and closed after `\end{X}` — legal TeX, since
+`\end`'s `\endgroup` closes whichever group is innermost (latex.ltx:15384-15393, tex.web §1063-1069) — makes it
+`Error:unexpected:\end{X} Attempt to end mode …`, and the environment is never closed (later
+`_CaptureBlock_`/`ltx:document` malformed errors). raa.cls:322-349 `\institutename` has this shape. Minimal trigger:
+
+```latex
+\documentclass{article}
+\def\inst{\par\begin{flushleft}\begingroup\parindent=0pt Institute words here.\par\end{flushleft}\endgroup}
+\begin{document}
+\inst
+Abstract words after.
+\end{document}
+% pdflatex: 0 errors, "Institute words here." then "Abstract words after."
+% Perl (/usr/local/bin/latexml, run): Error:unexpected:\end{flushleft} Attempt to end mode restricted_horizontal, then
+%   malformed ltx:_CaptureBlock_ / ltx:document errors; "Abstract words after." inside the flushleft block
+```
+
+Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #965): the inner group and X end at `\end{X}`, X's group stays open for the
+class's `\endgroup`. Witnesses 1404.3644, 2003.13998, 2511.10805 (raa lineage).

@@ -106,21 +106,28 @@ fn unclosed_nested_itemize_at_end_document() {
   ]);
 }
 
-/// 65c: the 64zf review shape — each `{quote}`'s `\end{quote}` closes a `\begingroup` instead (the two errors), so
-/// both quotes are still open, one inside the other, at `\end{document}`; the second keeps "Q2." and "After.". Repro
-/// boxes-groups/unclosed_nested_environments_keep_their_text.
+/// 65c: the 64zf review shape — each `{quote}`'s `\end{quote}` closes the `\begingroup` opened inside it, so both
+/// quotes' groups are still open at `\end{document}` and every word is kept. Since 98d the `\end{quote}` closes that
+/// group and the quote, as TeX scopes it (stomach.rs `end_environment_over_plain_groups`, OXIDIZED_DESIGN_DIVERGENCES
+/// #965): each quote ends at its `\end{quote}` and "Middle." and "After." are paragraphs after it, with no Error for the
+/// `\end` (65c: 2, the `\end{quote}`s against the `\begingroup`, which TeX does not raise); the quotes' groups are the
+/// open environments the `\end{document}` Warning lists. Repro boxes-groups/unclosed_nested_environments_keep_their_text.
 #[test]
 fn unclosed_nested_environments_keep_their_text() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/boxes-groups/unclosed_nested_environments_keep_their_text.tex"
   );
-  let (_log, xml) = convert_counted(tex, 2, 1);
+  let (log, xml) = convert_counted(tex, 0, 1);
   assert_element(
     &xml,
-    "quote",
-    &["xml:id=\"p1.2\""],
-    "<quote xml:id=\"p1.2\">\n      <p xml:id=\"p1.2.1\">Q1.\nMiddle.</p>\n      <quote xml:id=\"p1.2.2\">\n        <p xml:id=\"p1.2.2.1\">Q2.\nAfter.</p>\n      </quote>\n    </quote>",
+    "para",
+    &["xml:id=\"p1\""],
+    "<para xml:id=\"p1\">\n    <p xml:id=\"p1.1\">Before.</p>\n    <quote xml:id=\"p1.2\">\n      <p xml:id=\"p1.2.1\">Q1.</p>\n    </quote>\n    <p xml:id=\"p1.3\">Middle.</p>\n    <quote xml:id=\"p1.4\">\n      <p xml:id=\"p1.4.1\">Q2.</p>\n    </quote>\n    <p xml:id=\"p1.5\">After.</p>\n  </para>",
   );
+  assert_open_environment_lines(&log, &[
+    "Environment quote opened by \\begin{quote} ",
+    "Environment quote opened by \\begin{quote} ",
+  ]);
 }
 
 /// 65c: conditionals still open at `\end{document}` are closed and reported after the environments, as Perl does

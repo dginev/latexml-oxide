@@ -4740,6 +4740,52 @@ pub fn value_in_frame(key: &str, frame: usize) -> Option<Stored> {
   state.value.get(&key_sym).and_then(|v| v.get(p)).cloned()
 }
 
+/// The position in `key`'s value stack of the binding stack frame `frame` (0 = innermost) made, and how many it made
+/// there (0 when it made none).
+fn frame_binding_span(state: &State, key_sym: SymStr, frame: usize) -> (usize, usize) {
+  let count = |f: &UndoFrame| {
+    f.table(TableName::Value)
+      .get(&key_sym)
+      .copied()
+      .unwrap_or(0)
+  };
+  let offset = state.undo.iter().take(frame).map(count).sum();
+  (offset, state.undo.get(frame).map_or(0, count))
+}
+
+/// Undoes the bindings of `key` that stack frame `frame` (0 = innermost) made — what popping that frame would undo,
+/// for this key alone — and leaves the frames above it as they are.
+pub fn unbind_value_in_frame(key: &str, frame: usize) {
+  let key_sym = arena::pin(key);
+  let mut state = state_mut!();
+  let (offset, count) = frame_binding_span(&state, key_sym, frame);
+  if count == 0 {
+    return;
+  }
+  state.journal_touch(TableName::Value, key_sym);
+  if let Some(f) = state.undo.get_mut(frame) {
+    f.table_mut(TableName::Value).remove(&key_sym);
+  }
+  if let Some(values) = state.value.get_mut(&key_sym) {
+    let end = (offset + count).min(values.len());
+    values.drain(offset.min(end)..end);
+  }
+}
+
+/// Replaces the value `key` has in stack frame `frame` (0 = innermost), which must have bound it; returns the value
+/// it had there, `None` when the frame made no binding of `key` (and nothing is changed).
+pub fn replace_value_in_frame(key: &str, frame: usize, value: Stored) -> Option<Stored> {
+  let key_sym = arena::pin(key);
+  let mut state = state_mut!();
+  let (offset, count) = frame_binding_span(&state, key_sym, frame);
+  if count == 0 {
+    return None;
+  }
+  state.journal_touch(TableName::Value, key_sym);
+  let slot = state.value.get_mut(&key_sym)?.get_mut(offset)?;
+  Some(std::mem::replace(slot, value))
+}
+
 /// The stack frame (0 = innermost) that made the `n`-th newest binding of `key` (0 = the binding in force), for
 /// [`value_in_frame`]: which group a value was set in.
 pub fn frame_of_binding(key: &str, n: usize) -> Option<usize> {

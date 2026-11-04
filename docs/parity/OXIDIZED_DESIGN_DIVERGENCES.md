@@ -30816,3 +30816,43 @@ row as pdflatex prints it, is class-bindings/`revtex_tabular_affiliation_rows_go
 r3 (review rev104c2) `a_conjunction_before_a_nucleus_mark_parts_entries` (repros
 `revtex_nucleus_mark_after_a_conjunction_parts_entries`, `revtex_nucleus_mark_after_bare_and_or_ampersand_parts_entries`)
 and `a_saint_after_a_math_number_is_a_word` (`revtex_math_number_mark_before_saint_is_a_mark`), RED (104c r2) → GREEN.
+
+
+### 965. `\end{X}` over a `\begingroup` opened inside X closes that group and X, and X's group stays open for the next `\endgroup`, as TeX scopes it (Perl: Error "Attempt to end mode", the environment left open)
+
+**What** (batch 98d; SYNC row "The unclaimed-text net" R0, census129 §5 "raa lineage, title deposit dropped").
+raa.cls:322-349 `\institutename` is `\begin{flushleft}\begingroup … \end{flushleft}\endgroup` — legal TeX: groups are
+untyped between `\begingroup` and `\endgroup` (tex.web §1063-1069), `\end{X}` is `\endX` + `\@checkend{X}` +
+`\endgroup` (latex.ltx:15384-15393, `\@checkend` reading `\@currenvir`, still X), so `\end{flushleft}`'s `\endgroup`
+closes the class's group and the class's `\endgroup` closes the one `\begin{flushleft}` opened. A DefEnvironment's
+`\end{X}` ends X's mode frame (Perl Package.pm:1944-1945 `endMode`), which the plain group above it shadowed: Perl and
+we raised `Error:unexpected:\end{flushleft} Attempt to end mode …` (Stomach.pm:544-550, `stomach.rs` `end_mode_opt`)
+and left the environment open to the document's end. In a raw class's speculative `\@maketitle` deposit
+(`sect05.rs` `\lx@deposit@maketitle`) the held errors then dropped the whole title page — raa's abstract and keywords
+lost, with no Warning. On the raa witnesses themselves Perl loads no raw class (raa.cls is "missing", OmniBus
+stands in), so it keeps their abstract: the loss was ours alone, through the raw-class deposit; the `\end{X}` Error
+is Perl's on the shape itself (KNOWN_PERL_ERRORS #1207).
+
+**Now** (`stomach.rs` `end_environment_over_plain_groups`, called first by every DefEnvironment's `\end{X}`,
+`dialect.rs`): when every frame above X's own is a plain `\begingroup` group (non-boxing, no mode, no environment
+marker) and the first frame below them is the `\begin{X}` of this `\end{X}` (`lx@env@begin@end`), `\end{X}`
+- pops the innermost group only, its local values undone (`\end`'s one `\endgroup`);
+- ends X: its paragraph, mode (`BOUND_MODE`/`MODE`/`IN_MATH` unbound in X's frame), boxing level and own
+  `beforeAfterGroup` work end there, so X's element closes where `\end{X}` stands;
+- keeps X's frame as a plain non-boxing group holding X's other local values (`\@currenvir`, `\\`, a value set before
+  the class's `\begingroup`) until the `\endgroup` that closes it — with two inner groups the second `\endgroup` closes
+  the outer one and the third X's, pdflatex's scoping. The frame surgery is `state.rs` `unbind_value_in_frame` /
+  `replace_value_in_frame` (Perl State.pm:280-286 `valueInFrame`'s offset rule).
+
+An Info (`unexpected`) records it. Not for: another environment's `\end{Y}` (LaTeX's `\@badend`) or an `\end{X}` with no
+`\begin{X}` frame below the groups (both keep today's Errors), a box or brace frame between (TeX errs), a math
+environment (TeX's `$$` against a semi-simple group errs) or one whose begin code opened a box group (`TexGroup::Box`).
+Not for the bare `\X … \endX` form (its `\endX` keeps the batch-66t Warning; no witness). Perl Error: KNOWN_PERL_ERRORS
+#1207. **Witnesses** 1404.3644, 1304.5354, 1508.02561, 1509.00139, 2004.06992, 2110.11117, 2306.16795, 1604.05586,
+2003.13998, 2102.01352 (raa), 2511.10805 (raa_twocolumn); the long tail's raa ×20, cjaa ×2, chjaa ×2, raa06, raa_rb,
+raa_twocolumn. **Guards** `perfect_kernel_batch98d::{end_closes_a_begingroup_opened_inside_the_environment,
+end_over_begingroups_keeps_tex_scoping, end_over_begingroup_without_its_environment_stays_an_error,
+a_raa_title_page_keeps_its_abstract_and_keywords}` (repros boxes-groups/`end_flushleft_closes_a_begingroup_opened_inside_it`,
+`end_environment_over_begingroups_keeps_tex_scoping`, `end_other_environment_over_begingroup_stays_an_error`,
+`end_without_its_begin_over_begingroup_stays_an_error`; sectioning-frontmatter/
+`raw_class_institutes_in_flushleft_begingroup_keep_the_title_page`), RED (int132a1) → GREEN.

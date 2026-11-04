@@ -786,9 +786,15 @@ pub fn push_stack_frame(nobox: bool) {
 /// Execute tokens stored on beforeAfterGroup (if any); done before popping a stack frame.
 /// Perl: sub executeBeforeAfterGroup (Stomach.pm lines 286-295)
 pub fn execute_before_after_group() -> Result<()> {
-  if let Some(Stored::VecDequeStored(beforeafter)) = remove_value("beforeAfterGroup")
-    && !beforeafter.is_empty()
-  {
+  match remove_value("beforeAfterGroup") {
+    Some(Stored::VecDequeStored(beforeafter)) => digest_before_after_group(beforeafter),
+    _ => Ok(()),
+  }
+}
+
+/// Digests a frame's `beforeAfterGroup` tokens into the current box list ([`execute_before_after_group`]).
+fn digest_before_after_group(beforeafter: VecDeque<Stored>) -> Result<()> {
+  if !beforeafter.is_empty() {
     let mut result = Vec::with_capacity(beforeafter.len());
     for beforeafter_frame in beforeafter.into_iter() {
       match beforeafter_frame {
@@ -1129,6 +1135,100 @@ fn close_environment_frame(closer: Token, semi_simple: bool) -> Result<bool> {
 /// end code TeX never runs then (`\end`'s hooks, latex.ltx:15386-15393; a
 /// theorem's end mark and postwork) is skipped by the bindings that emit it.
 pub fn environment_ended_by_group() -> bool { is_value_bound("lx@env@ended@by@group", Some(0)) }
+
+/// `\end{X}` met while plain `\begingroup` groups opened inside X stand above X's own frame — raa.cls:322-349
+/// `\institutename`: `\begin{flushleft}\begingroup … \end{flushleft}\endgroup`. That is TeX's scoping, not an error:
+/// groups are untyped between `\begingroup` and `\endgroup` (tex.web §1063-1069), so `\end{X}`'s `\endgroup`
+/// (latex.ltx:15384-15393 `\end` = `\endX` + `\@checkend` + `\endgroup`; `\@checkend` reads `\@currenvir`, still X)
+/// closes the innermost one, and the class's own `\endgroup` closes the group `\begin{X}` opened. Here, as there:
+/// * the innermost plain group is popped, its local values undone (`\end`'s `\endgroup`);
+/// * X ends: its open paragraph, its mode and its boxing level end here, so its element ends where `\end{X}` stands
+///   and its own `beforeAfterGroup` work (an alignment, `\@add@centering`) acts on its body;
+/// * X's frame stays open as a plain `\begingroup` group, keeping X's other local values (its `\@currenvir`, `\\`, a
+///   value set before the class's `\begingroup`) until the `\endgroup` that closes it.
+///
+/// Perl ends the mode against the plain group instead and errors (Stomach.pm:544-550 "Attempt to end mode"); with
+/// the error a raw class's title-page deposit was dropped — title, authors, abstract and keywords (KNOWN_PERL_ERRORS
+/// #1207, OXIDIZED_DESIGN_DIVERGENCES #965). Only that shape acts: every frame above X a plain `\begingroup` group
+/// (no mode, no box, no environment of its own), X's frame the `\begin{X}` of this very `\end{X}`, and X neither a
+/// math environment nor one whose begin code opened a box group — where TeX itself errs. Otherwise false, and the
+/// caller's `end_mode` raises today's Error. Witnesses 1404.3644, 1304.5354, 1508.02561, 1509.00139, 2004.06992,
+/// 2110.11117, 2306.16795, 1604.05586, 2003.13998, 2102.01352, 2511.10805 (raa, raa_twocolumn). Guards
+/// `perfect_kernel_batch98d::*`.
+pub fn end_environment_over_plain_groups(end: Token) -> Result<bool> {
+  let depth = get_frame_depth();
+  let plain_group = |frame: usize| {
+    matches!(
+      value_in_frame("groupNonBoxing", frame),
+      Some(Stored::Bool(true))
+    ) && is_value_bound("groupNonBoxing", Some(frame))
+      && [
+        "BOUND_MODE",
+        "lx@env@begin@end",
+        "lx@env@bare@end",
+        "lx@env@ended@by@group",
+      ]
+      .iter()
+      .all(|key| !is_value_bound(key, Some(frame)))
+  };
+  let mut frame = 0;
+  while frame < depth && plain_group(frame) {
+    frame += 1;
+  }
+  if frame == 0 || frame >= depth {
+    return Ok(false);
+  }
+  let own_frame = is_value_bound("lx@env@begin@end", Some(frame))
+    && matches!(value_in_frame("lx@env@begin@end", frame), Some(Stored::Token(t)) if t == end);
+  let frame_string = |key: &str| match value_in_frame(key, frame) {
+    Some(Stored::String(value)) if is_value_bound(key, Some(frame)) => {
+      arena::with(value, str::to_string)
+    },
+    _ => String::new(),
+  };
+  let bound_mode = frame_string("BOUND_MODE");
+  let box_group = frame_string("lx@env@tex@group") == TexGroup::Box.as_str();
+  if !own_frame || bound_mode.is_empty() || bound_mode.ends_with("math") || box_group {
+    return Ok(false);
+  }
+  Info!(
+    "unexpected",
+    end,
+    s!(
+      "{end} closes the \\begingroup opened inside the environment ({frame} open above it); the environment's own \
+       group stays open for the next \\endgroup"
+    )
+  );
+  if bound_mode.ends_with("vertical") {
+    leave_horizontal_internal();
+  }
+  // `\end`'s `\endgroup`: the innermost group only.
+  pop_stack_frame(true)?;
+  let own = frame - 1;
+  // X's element-closing work, run in its body as `end_mode`'s pop runs it.
+  if let Some(Stored::VecDequeStored(work)) = replace_value_in_frame(
+    "beforeAfterGroup",
+    own,
+    Stored::VecDequeStored(VecDeque::new()),
+  ) {
+    digest_before_after_group(work)?;
+  }
+  // X's mode and environment markers go; the rest of its frame is now a plain group's.
+  for key in [
+    "BOUND_MODE",
+    "MODE",
+    "IN_MATH",
+    "lx@env@begin@end",
+    "lx@env@tex@group",
+    "lx@until@terminal",
+    "lx@until@depth",
+  ] {
+    unbind_value_in_frame(key, own);
+  }
+  replace_value_in_frame("groupNonBoxing", own, Stored::Bool(true));
+  stomach_mut!().boxing.pop();
+  Ok(true)
+}
 
 pub fn bgroup() {
   push_stack_frame(false);

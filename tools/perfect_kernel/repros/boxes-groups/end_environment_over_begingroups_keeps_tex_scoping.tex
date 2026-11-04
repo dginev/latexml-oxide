@@ -1,0 +1,22 @@
+% TeX's scoping across `\end{X}` over `\begingroup`s opened inside X: `\end{X}`'s `\endgroup` undoes only the
+% innermost group; a value X set before the inner `\begingroup` lasts until the `\endgroup` that closes X's own group,
+% and each further `\endgroup` closes one more (tex.web §1063-1069; latex.ltx:15384-15393). One inner group (the raa
+% shape) and two.
+% witness: 1404.3644 (raa.cls:322-349); the two-group case is synthetic
+% oracle:  pdflatex 0 errors: "One." "Kept [yes][no].After [no]." "Two." "Kept [yes][yes][no].Then [yes][no].Last
+%          [no][no]."
+% engines: rust int132a1 = 2 errors, 1 warning (`Attempt to end mode internal_vertical` at each `\end`); perl = 4 errors, 1 warning (the
+%          same two, then the capture blocks)
+% expect:  0 errors, 0 warnings; the pdflatex text, "One." left-aligned and "Two." centred in their own paragraphs
+% status:  RED (int132a1) -> GREEN (98d; guard perfect_kernel_batch98d::end_over_begingroups_keeps_tex_scoping)
+% preload: ar5iv.sty
+\documentclass{article}
+\def\state#1{[\ifdefined#1yes\else no\fi]}
+\begin{document}
+\begin{flushleft}\def\envval{}\begingroup\def\innerval{}One.\par\end{flushleft}Kept \state\envval\state\innerval.\endgroup
+After \state\envval.
+
+\begin{center}\def\envtwo{}\begingroup\def\outertwo{}\begingroup\def\innertwo{}Two.\par\end{center}Kept \state\envtwo\state\outertwo\state\innertwo.\endgroup
+Then \state\envtwo\state\outertwo.\endgroup
+Last \state\envtwo\state\outertwo.
+\end{document}
