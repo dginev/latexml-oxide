@@ -116,6 +116,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // Rust-only: the store an unclaimed-text net note was handed on from (frontmatter_stores.rs `hand_net_stores`), read
   // where the note is placed (insert.rs `keep_unclaimed_net_notes`; OXIDIZED_DESIGN_DIVERGENCES #953).
   DefKeyVal!("Frontmatter", "_net", "Semiverbatim");
+  // Rust-only: a contact whose label its binding prints with the line (authblk's `\affil[x]`, jheppub's
+  // `\affiliation[x]`, cas's letter: `affiliations::LABEL_PRINTS`), read by the Kind step for a legend
+  // (insert.rs `kind_legend_contacts`; OXIDIZED_DESIGN_DIVERGENCES #961). Declared: an unknown key is reported
+  // (`Info:undefined`), and that report changed what osajnl's speculative title-page run read (its `\vphantom{M}`
+  // was lost: 2203.08703, 2206.12157, 2311.18459, 2411.07865).
+  DefKeyVal!("Frontmatter", "_labelprints", "");
 
   // Rust-only: `\lx@label@ref{<key>}`, the label a binding recorded for `key` once later input was read
   // ([`set_label_ref`]: cas's `\stmRef`, which LaTeX reads from the `.aux` of the run before), nothing for one never
@@ -526,7 +532,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       assign_mapping(&s!("num_{tag}"), &role, Some(Stored::Int(n)));
       if let Some(labelseq) = options.get("labelseq")
         && !labelseq.is_empty() {
-          labels.push(clean_label(&n.to_string(), Some(labelseq)).into_owned());
+          let label = clean_label(&n.to_string(), Some(labelseq)).into_owned();
+          // (a label of the entry's place, which no mark printed: `SEQUENCE_LABEL`, OD #961)
+          options.insert(SEQUENCE_LABEL.to_string(), label.clone());
+          labels.push(label);
         }
     }
     // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #805): a contact of a sequenced list (`\lx@add@contact@placed[owner=sequence]`)

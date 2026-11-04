@@ -143,8 +143,11 @@ LoadDefinitions!({
 /// inside an `\author`, the e-mail list printed under the affiliations, and the dedication.
 #[rustfmt::skip]
 pub fn jhep_contact_markup() -> Result<()> {
+  // (its label printed before the line, jheppub.sty `\item[$^{#1}$]`: one that prints, `_labelprints`, the mark a
+  // legend's note shows, OXIDIZED_DESIGN_DIVERGENCES #961; jcappub's `\affiliation[*]{Corresponding author}`,
+  // 2204.11919)
   DefMacro!("\\affiliation OptionalSemiverbatim {}",
-    "\\lx@add@contact[role=affiliation,label={#1}]{#2}");
+    "\\lx@add@contact[role=affiliation,label={#1},_labelprints=true]{#2}");
   // jheppub.sty:84-89 `\newcommand\note[2][]`: a footnote's text without its mark, for use inside `\author`; the
   // optional argument is the mark it prints the text under (the footnote counter then not stepped), else the next
   // footnote number. Perl's jheppub.sty.ltxml:39 `\note{}` takes one argument, so `\note[*]{Corresponding authors.}`

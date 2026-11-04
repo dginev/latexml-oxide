@@ -1,0 +1,26 @@
+% svjour3's `\institute{A. Able (\email{…}) \and B. Baker (corresponding author, \email{…}) \and C. Cole … \at Org}`
+% under `\author{Ann Able \and Bob Baker \and Cat Cole}`: the institutes are labelled by their place, a number neither
+% svjour3 nor svjour_blank prints, and no name prints a mark. The legend line naming Bob Baker
+% stays the affiliation it is (`insert::kind_legend_contacts`: a legend is a note only under a mark its carriers' names
+% print, or a label its binding prints; review rev103c2 B-A).
+% witness: 1507.04774 (svjour_blank, `A. King (corresponding author, \email{aking@dwavesys.com})`)
+% oracle:  pdflatex (svjour3.cls from 1507.04774, TL 2025) 0 errors: "Ann Able · Bob Baker · Cat Cole",
+%          "A. Able (E-mail: ann@a.org) · B. Baker (corresponding author, E-mail: bob@a.org) · C. Cole (E-mail:
+%          cat@a.org) Org Inc., Town"
+% engines: rust int130a = the three lines affiliations of a nameless creator; rust 103c r2 = the second a note mark="2"
+% expect:  0 errors, 0 warnings; each author with the e-mail its line printed; a nameless creator holding "A. Able ()",
+%          "B. Baker (corresponding author, )" and the `\at` piece "Org Inc., Town" as affiliations (the last line's
+%          "C. Cole" read as its author's name, as int130a); no note
+% status:  RED (103c r2) -> GREEN (103c r3)
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker \and Cat Cole}
+\institute{A. Able (\email{ann@a.org})
+  \and B. Baker (corresponding author, \email{bob@a.org})
+  \and C. Cole (\email{cat@a.org}) \at Org Inc., Town}
+\date{}
+\maketitle
+Text.
+\end{document}

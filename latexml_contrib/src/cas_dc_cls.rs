@@ -385,11 +385,21 @@ fn cas_labelled_entry(label: Option<Tokens>, keys: Option<Tokens>) -> Vec<Token>
       cas_letter_tokens(counter, &label)
     })
   };
+  // (a label read as the letter cas prints before the line is one that prints, `_labelprints`: the mark a legend's note
+  // shows, OXIDIZED_DESIGN_DIVERGENCES #961, 2303.06763)
+  let prints = printed.is_some();
   let mut out = mouth::tokenize_internal("\\lx@add@contact[label=").unlist();
   out.push(T_BEGIN!());
   out.extend(printed.unwrap_or(label));
   out.push(T_END!());
-  out.extend(mouth::tokenize_internal(",role=affiliation]").unlist());
+  out.extend(
+    mouth::tokenize_internal(if prints {
+      ",role=affiliation,_labelprints=true]"
+    } else {
+      ",role=affiliation]"
+    })
+    .unlist(),
+  );
   out
 }
 

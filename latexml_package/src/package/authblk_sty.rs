@@ -240,8 +240,10 @@ pub fn define_author_and_affil() -> Result<()> {
       Some(affil.clone())
     ]);
     let run = affil_run();
+    // (the label printed as written before the line, `\AB@affilnote`, authblk.sty:142: the mark a legend's note shows,
+    // `_labelprints`, OXIDIZED_DESIGN_DIVERGENCES #961)
     let call = if !label.is_empty() {
-      Invocation!("\\lx@add@contact[role=affiliation,annotate=1,label={#1}]{#2}", vec![
+      Invocation!("\\lx@add@contact[role=affiliation,annotate=1,label={#1},_labelprints=true]{#2}", vec![
         Some(label.clone()),
         Some(affil)
       ])

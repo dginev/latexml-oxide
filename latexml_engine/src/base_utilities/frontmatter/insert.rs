@@ -299,10 +299,13 @@ fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
 /// `\IEEEauthorblockA{\IEEEauthorrefmark{4}These authors contributed equally}` (2410.12184) — a creator's affiliation
 /// contact whose whole text, its addresses aside, is a legend ([`entry_legend_kind`]: correspondence, a contribution, an
 /// author deceased; no institution) is its carriers' note in its place (`ltx:note role=thanks`, `ltx_thanks_<kind>`), as
-/// a legend line's note is (`queue_digest::legend_note_kind`, `resolver::is_legend_text`). Its mark is the superscript
-/// its text opens with, as printed, else the label it was placed by (`_label`: authblk's `*`, IEEEtran's
-/// `\IEEEauthorrefmark{4}`'s `4`). Its carriers stay the contact's, and so do the e-mails its line printed
-/// (2409.05386's `ago@`, the author's e-mail contact as before). Left as they are: a legend that prints no mark
+/// a legend line's note is (`queue_digest::legend_note_kind`, `resolver::is_legend_text`). Its mark is one that prints:
+/// the superscript its text opens with, else a label it was placed by (`_label`) that a carrier's name shows
+/// (IEEEtran's `\IEEEauthorrefmark{4}`'s `4`), that a printed mark gave, or that its binding prints ([`LABEL_PRINTS`]:
+/// authblk's `*`); a binding's key (icml's `intern`, 2106.09776) or an entry's place ([`SEQUENCE_LABEL`]: svjour's
+/// `affiliation:2`, 1507.04774) is no mark (review rev103c2 B-A). Its carriers stay the contact's, and so do the
+/// e-mails its line printed (2409.05386's `ago@`, the author's e-mail contact as before). Left as they are: a legend
+/// that prints no mark
 /// (`\affil[ ]{Corresponding author: …}`, 2412.14916, 2305.02090: a note shows its text only behind its mark, so an
 /// unmarked one is unreachable on the rendered page; review rev103c B1), a contact the class names otherwise than an
 /// affiliation (a `name` but the role's default), an institution named with a legend's words ("Department of Equal
@@ -336,6 +339,8 @@ fn kind_legend_contacts(document: &mut Document) -> Result<()> {
     .iter()
     .map(Node::get_content)
     .collect();
+  // (the author creators, a nameless creator's carriers)
+  let named_creators = document.findnodes("//ltx:creator[ltx:personname]", None);
   let mut carriers: HashMap<&str, Vec<String>> = HashMap::default();
   for (contact, text) in &read {
     let name = contact.get_parent().and_then(|creator| {
@@ -350,8 +355,7 @@ fn kind_legend_contacts(document: &mut Document) -> Result<()> {
     }
   }
   for (contact, text) in &read {
-    // (the superscript its text opens with, as printed, else the label it was placed by — `*†` of 2602.19190's
-    // `$^{*\dag}$Project lead: Yi Yang (…)`, the label's key whole)
+    // (the superscript its text opens with, as printed)
     let printed = element_nodes(contact)
       .first()
       .filter(|first| {
@@ -362,24 +366,72 @@ fn kind_legend_contacts(document: &mut Document) -> Result<()> {
       })
       .map(|sup| sup.get_content().trim().to_string())
       .filter(|mark| !mark.is_empty());
+    // (else a key of a label it was placed by that a printed mark gave or that prints, whole — `*†` of 2602.19190's
+    // `$^{*\dag}$Project lead: Yi Yang (…)`; review rev103c2 B-A): an `affiliation:K` label read off a printed
+    // superscript (the marks path, the Cut, the observer's writer: 2609.03342, 2503.10710) but not one of the entry's
+    // place (`SEQUENCE_LABEL`: svjour's `\institute{… \and …}`, 1507.04774), a key a carrier's name shows or requests
+    // by its superscript (IEEEtran's `\IEEEauthorrefmark{4}` as `Tayal<sup>4</sup>`, 2410.12184), or a label its
+    // binding prints before the line (`LABEL_PRINTS`: authblk's `\affil[*]`, jheppub's `\affiliation[*]`, 2204.11919;
+    // cas's letter, 2303.06763) — the carrier's own among several (`\affil[1,2]`: Ann's "1", Bob's "2", 2301.13111).
+    // A binding's key prints no mark (icml's `\icmlaffiliation{intern}{…}`, whose number icml prints: 2106.09776): no
+    // mark, so it stays an affiliation.
     let mark = printed
       .or_else(|| {
-        contact.get_attribute("_label").and_then(|label| {
-          clean_frontmatter_labels(&label, "")
+        // (each key, and whether a printed mark gave it: an `affiliation:K` label not of the entry's place)
+        let place = contact.get_attribute(SEQUENCE_LABEL).unwrap_or_default();
+        let keys: Vec<(String, bool)> =
+          clean_frontmatter_labels(&contact.get_attribute("_label")?, "")
             .into_iter()
-            .find_map(|label| match label.split_once(':') {
-              Some(("affiliation", key)) => Some(key.to_string()),
-              None => Some(label),
+            .filter_map(|label| match label.split_once(':') {
+              Some(("affiliation", key)) => Some((label_key(key), label != place)),
+              None => Some((label_key(&label), false)),
               _ => None,
             })
-            .map(|key| {
-              key
-                .chars()
-                .filter(|c| *c != '$' && *c != '_')
-                .collect::<String>()
-            })
-            .filter(|key| !key.is_empty())
-        })
+            .filter(|(key, _)| !key.is_empty())
+            .collect();
+        let creator = contact.get_parent()?;
+        let prints = contact.get_attribute(LABEL_PRINTS).is_some();
+        let named = element_nodes(&creator)
+          .iter()
+          .any(|child| child.get_name() == "personname");
+        let holders = if named {
+          std::slice::from_ref(&creator)
+        } else {
+          named_creators.as_slice()
+        };
+        // (the marks the carriers' names show, and those they request by a printed superscript — `affiliation:K`, read
+        // as the name prints it, `\lx@sup@request@affiliation`; a binding's `annotations={…}` may be keys)
+        let mut shown: Vec<String> = Vec::new();
+        for holder in holders {
+          // (each of a superscript's marks: `Bridgeford<sup>1,†</sup>`, 2503.10710)
+          for sup in document.findnodes("ltx:personname//ltx:sup", Some(holder)) {
+            shown.extend(sup.get_content().split(',').map(mark_form));
+          }
+          let requests = holder.get_attribute("_annotations").unwrap_or_default();
+          shown.extend(
+            requests
+              .split(',')
+              .filter_map(|label| label.strip_prefix("affiliation:"))
+              .map(mark_form),
+          );
+        }
+        // (the creator's own requests, which pick its mark among several)
+        let requested: Vec<String> = creator
+          .get_attribute("_annotations")
+          .unwrap_or_default()
+          .split(',')
+          .map(|label| label_key(label.split_once(':').map_or(label, |(_, key)| key)))
+          .collect();
+        let marks: Vec<&String> = keys
+          .iter()
+          .filter(|(key, marked)| *marked || prints || shown.contains(&mark_form(key)))
+          .map(|(key, _)| key)
+          .collect();
+        marks
+          .iter()
+          .find(|key| requested.contains(key))
+          .or(marks.first())
+          .map(|key| (*key).clone())
       })
       .unwrap_or_default();
     // (a legend that prints no mark stays the affiliation it was: a note's text shows only behind its mark, and an empty
@@ -429,6 +481,14 @@ fn legend_text(node: &Node, text: &mut String) {
     }
   }
 }
+
+/// A label's key as a mark prints it, for the Kind step for a legend ([`kind_legend_contacts`]): its math shifts and
+/// the spaces a label's words are joined by (`_`) left out (`$†$`: †).
+fn label_key(label: &str) -> String { label.chars().filter(|c| *c != '$' && *c != '_').collect() }
+
+/// A mark as [`kind_legend_contacts`] compares it with the marks a name shows: its label key ([`label_key`]), trimmed,
+/// the math asterisk read as the text one (`$^{1,*}$` prints `∗`, the label is `*`: 2503.10710).
+fn mark_form(mark: &str) -> String { label_key(mark.trim()).replace('∗', "*") }
 
 /// A contact of no content — a template's `\curraddr{}`, `\urladdr{}`, `\dedicatory{}`, aastex's `\nocollaboration` —
 /// is no contact: its name label printed over nothing ("Current address:"), where pdflatex prints nothing (58 of the

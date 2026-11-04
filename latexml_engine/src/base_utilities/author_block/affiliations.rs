@@ -563,6 +563,20 @@ pub(in crate::base_utilities) const ENTRY_KEY: &str = "_entry";
 /// carrier spells are every carrier's (FIDELITY_CHARTER §4, "every symbol carrier").
 pub(in crate::base_utilities) const ENTRY_SYMBOL: &str = "_entrysymbol";
 
+/// The attribute (and `\lx@add@contact` option, a declared `Frontmatter` key) of a contact whose label its binding
+/// prints before its line, as written: authblk's `\affil[x]` (`\AB@affilnote`, authblk.sty:142), jheppub's
+/// `\affiliation[x]` (`\item[$^{#1}$]`), cas's letter (`cas_labelled_entry`). The Kind step for a legend gives a note
+/// only a mark that prints (`insert::kind_legend_contacts`, OXIDIZED_DESIGN_DIVERGENCES #961): a binding's key
+/// (icml's `\icmlaffiliation{intern}{…}`) is none.
+pub(in crate::base_utilities) const LABEL_PRINTS: &str = "_labelprints";
+
+/// The attribute of a contact labelled by its place among its role's entries (`labelseq`: svjour's and llncs's
+/// `\institute{… \and …}`, aa's): the label `\lx@annotate@frontmatter@now` gave it, a number no mark printed — the
+/// Kind step for a legend reads it as a mark only where a carrier's name shows or requests it
+/// (`insert::kind_legend_contacts`, OXIDIZED_DESIGN_DIVERGENCES #961; 1507.04774's svjour_blank prints none). Any other
+/// `affiliation:K` label was read off a printed mark (the marks path, the Cut, the observer's writer).
+pub(in crate::base_utilities) const SEQUENCE_LABEL: &str = "_seqlabel";
+
 /// The attribute of an e-mail the Kind step made of an entry's line or note ([`kind_entry_addresses`]), as against an
 /// e-mail command the author wrote inside the entry, which its own call places where it holds one address
 /// (FIDELITY_CHARTER §4 #420; `insert::link_entry_addresses`).

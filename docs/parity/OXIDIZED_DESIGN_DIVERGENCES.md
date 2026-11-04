@@ -30509,13 +30509,26 @@ Hua Zhu"), initials, or no letters, and one piece a legend. So a mixed line stay
 Equal advising)", 2609.34327; "ByteDance *equal contribution", 2404.02132; "Facebook (work done while at JHU/APL)",
 1702.02684; "Corresponding author \\ Proceedings of a workshop"; "Equal contribution, Google DeepMind", a company's name
 shaped as a person's that no carrier has, review rev103c S2), and so do an address change and funding (an institution
-is named for its funder as often). The note's `mark` is the superscript its text opens with, else its label's key
-whole (authblk's `*`, IEEEtran's `4`, 2602.19190's `$^{*\dag}$Project lead: Yi Yang` `*†`). **A legend that prints no
-mark stays the affiliation it was** (main-session ruling 2026-11-04, review rev103c B1): a note shows its text only
-behind its mark (`ltx_note_mark` holds the mark, `ltx_note_outer` is `display:none` until hovered, LaTeXML.css:513,525),
-so an empty mark leaves nothing to reach it by — an unlabelled `\affil[ ]{Corresponding author: …}` (2412.14916,
+is named for its funder as often). The note's `mark` is a mark that prints: the superscript its text opens with, else
+a key of the label it was placed by, whole (2602.19190's `$^{*\dag}$Project lead: Yi Yang` `*†`), that a printed mark
+gave or that prints — an `affiliation:K` label read off a printed superscript (the marks path, the Cut, the observer's
+writer: 2609.03342, 2503.10710), a key a carrier's name shows or requests by its superscript (`Tayal<sup>4</sup>`,
+2410.12184; `Bridgeford$^{1,\dagger}$`), or a label its binding prints before the line (`_labelprints`,
+`affiliations::LABEL_PRINTS`, a declared `Frontmatter` key: authblk's `\affil[*]`, authblk.sty:142 `\AB@affilnote`;
+jheppub's and jcappub's `\affiliation[*]`, `\item[$^{#1}$]`, 2204.11919; cas's letter, `cas_labelled_entry`, 2303.06763)
+— the carrier's own among several (`\affil[1,2]{These authors contributed equally}`: Ann's "1", Bob's "2", 2301.13111).
+**A legend that prints no mark stays the affiliation it was**, whatever its route (main-session ruling 2026-11-04,
+review rev103c B1, rev103c2 B-A): a note shows its text only behind its mark (`ltx_note_mark` holds the mark,
+`ltx_note_outer` is `display:none` until hovered, LaTeXML.css:513,525), so an empty mark leaves nothing to reach it by
+and a mark the page never prints names nothing on it — an unlabelled `\affil[ ]{Corresponding author: …}` (2412.14916,
 2305.02090, 2609.07982), an author block's unmarked line (2004.11569, 2607.01136), a symbol printed as text and not as
-the label (2011.02402's "∗ Equally contributed", 2410.12405, 2602.22712); 18 papers of the A/B.
+the label (2011.02402's "∗ Equally contributed", 2410.12405, 2602.22712) — 18 papers of the A/B — and a binding's key
+or an entry's place: icml's `\icmlaffiliation{intern}{Work done during an internship}` (a key; icml prints the
+affiliation's number, "3": 2106.09776), svjour's `\institute{… \and A. King (corresponding author, …) \and …}`
+(`affiliation:2` by its place, `labelseq`, recorded as `_seqlabel`, `affiliations::SEQUENCE_LABEL`; svjour_blank
+prints no number and no name a mark: 1507.04774). IEEEtran prints `\IEEEauthorrefmark{n}` as the n-th footnote symbol
+(`*` for 1); the binding's `\textsuperscript{#1}` (ieeetran_cls.rs) prints the number in the names, so the note's mark
+is the number they show (2205.00125, 2410.12184, 2504.18719, 2507.23474, 2603.14786; open in SYNC row 103c).
 `classify_thanks` (#156) reads an author's part in the work as a contribution: a project role as whole words ("project
 lead/leader", "joint/co-first author(s)", "core contribution/contributor(s)", "senior author(s)/authorship") and the
 work's circumstances opening the note ("Work done during/while/as …") — only where every piece of the text, read as it
@@ -30539,7 +30552,10 @@ The gate returns two `\thanks{Work done during an internship at Microsoft Resear
 (2110.15064, 2410.24211: an institution named after the circumstances).
 
 **Guards** `perfect_kernel_batch103c::{an_affiliation_that_is_a_legend_is_its_carriers_note,
-a_project_role_or_joint_first_authorship_is_a_contribution_note, institutions_named_with_legend_words_stay_affiliations}`,
+a_project_role_or_joint_first_authorship_is_a_contribution_note, institutions_named_with_legend_words_stay_affiliations,
+a_legend_whose_label_prints_no_mark_stays_an_affiliation}` (repros `legend_kind_icml_keyed_legend_stays`,
+`legend_kind_svjour_institute_sequence_stays`, `legend_kind_authblk_multilabel_legend_marks_each_carrier`: review
+rev103c2 B-A),
 unit `author_split_tests::classify_thanks_reads_project_roles_and_the_works_circumstances`; repros
 `sectioning-frontmatter/legend_kind_*` (the controls `legend_kind_institutions_named_with_role_words_stay` and
 `legend_kind_symbol_led_institutions_stay`, review rev103c S1/S2). Guards updated to the new reading (each marked legend
