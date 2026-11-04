@@ -1,14 +1,13 @@
-% mechanism: a cas-sc/cas-dc unlabelled `\affiliation` (or `\address`) under no marked author is every author's,
-%   before it and after it, as cas-common.sty prints the entry list under the whole row of names (`cas_labelled_entry`
-%   declares it `_share=authors`, OXIDIZED_DESIGN_DIVERGENCES #901) — the reading elsarticle's unlabelled `\address`
-%   has; once an author is marked the marks link the entries and an unlabelled one stays the author's before it
-%   (the companion cas_unlabelled_affiliation_under_marked_authors_is_the_last_authors)
+% mechanism: a cas-sc/cas-dc group's ONE unlabelled `\affiliation` (or `\address`) under no marked author is every
+%   author's, before it and after it, as cas-common.sty prints the entry list under the whole row of names
+%   (`cas_labelled_entry` declares it `_share=authors,annotate=run`, OXIDIZED_DESIGN_DIVERGENCES #901); two or more are
+%   each its run's (the companion cas_unlabelled_affiliations_are_their_runs); once an author is marked the marks link
+%   the entries and an unlabelled one stays the author's before it (the companion
+%   cas_unlabelled_affiliation_under_marked_authors_is_the_last_authors)
 % witness: 2201.00009, 2511.22218, 2106.02306, 2606.24054 (census129 longtail; batch 104d L1)
-% oracle:  pdflatex (TL 2025 cas-sc.cls) 0 errors: "Ann Able, Bob Baker and Cat Cole" / "Univ A, Town, Land" /
-%   "Univ B, City, Land"
-% engines: rust int130a: Univ A on Ann Able alone, Univ B on Bob Baker alone; perl: OmniBus's `\affiliation`, the keys
-%   as text
-% expect:  0 errors, 0 warnings; each of the three authors holds Univ A and Univ B, Ann Able her e-mail too
+% oracle:  pdflatex (TL 2025 cas-sc.cls) 0 errors: "Ann Able, Bob Baker and Cat Cole" / "Univ A, Town, Land"
+% engines: rust int130a: Univ A on Ann Able alone; perl: OmniBus's `\affiliation`, the keys as text
+% expect:  0 errors, 0 warnings; each of the three authors holds Univ A, Ann Able her e-mail too
 % status:  RED (int130a) -> GREEN (104d)
 % preload: ar5iv.sty
 \documentclass{cas-sc}
@@ -20,7 +19,6 @@
 \ead{ann@a.edu}
 \affiliation{organization={Univ A}, city={Town}, country={Land}}
 \author{Bob Baker}
-\affiliation{organization={Univ B}, city={City}, country={Land}}
 \author{Cat Cole}
 \begin{abstract}Abs.\end{abstract}
 \maketitle

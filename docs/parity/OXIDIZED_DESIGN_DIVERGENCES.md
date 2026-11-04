@@ -26066,19 +26066,33 @@ re-review's s17, s23 above); guards `perfect_kernel_batch85b::*`,
 `frontmatter_llncs_institute_shared_email`; the 77t llncs guards carry the `\institute{Inst A}` on every author.
 
 Batch 104d (census129 Bundle 2b): cas-sc/cas-dc declare the same sharing for an unlabelled `\affiliation`/`\address`
-under no marked author (cas_dc_cls.rs `cas_labelled_entry`): cas-common.sty prints its entry list under the whole row
-of names, so `\author{Ann}\affiliation{organization={Univ A}}\author{Bob}\author{Cat}` prints "Ann, Bob and Cat / Univ
-A" and the entry is every author's, before it and after it (it had been the author's before it; 2201.00009,
-2511.22218, 2106.02306, 2606.24054; an entry above every author had been a nameless creator's); once an `\author[…]`
-is marked, the marks link the labelled entries and an unlabelled one stays the author's before it (R1), as
-elsarticle's `\lx@els@shared` reads its own. On a row's line a space factor's `\@` is a call separator
-(`is_call_separator`), so `…, USA;\@ Email: \email{\{alopez3,jmuirhead,cpinciroli\}@wpi.edu}` (2602.18622) is an
-e-mail line parted by owner, no longer the block's whole with its label. And one local part in printed braces is no
-list (`links::lists_local_parts`, both engines' spelled step): `\{raffaele.perego\}@isti.cnr.it` spells Raffaele
-Perego under an institute three authors carry (2403.13468; it had been the block's). Guards
-`perfect_kernel_batch104d::{a_cas_unlabelled_affiliation_is_every_authors,
+under no marked author (cas_dc_cls.rs `cas_labelled_entry`), with a run as well: `_share=authors,annotate=run`.
+cas-common.sty prints its entry list under the whole row of names, so the PDF decides one entry and cannot decide
+several. **One** such entry in the queue is every author's, before it and after it:
+`\author{Ann}\affiliation{organization={Univ A}}\author{Bob}\author{Cat}` prints "Ann, Bob and Cat / Univ A"
+(2201.00009, 2511.22218, 2106.02306, 2606.24054; it had been the author's before it, and an entry above every author a
+nameless creator's). **Two or more** are each its run's, the authors since the entry before it, read by authoring
+order as elsarticle reads an unlabelled `\address` (`annotate=run`, `\lx@els@shared`; main-session decision, review
+rev104d B1): `share_row_contacts` drops `_share` from every row contact declaring `annotate=run` when there are
+several, so `\author{Liu}\address{RC}\author{Sun}\author{Zhang}\address{UCAS}` is Liu's RC, Sun's and Zhang's UCAS
+(2202.06096; round 1 had given every author both) and the interleaved `Ann; X; Bob; Y` each author the entry after
+it. llncs's and aa's `_share` entries declare no run and are unchanged. Once an `\author[…]` is marked, the marks link
+the labelled entries and an unlabelled one stays the author's before it (R1), as elsarticle's own does. Under runs an
+author after the last entry has none (`Ann; X; Bob; Y; Cat`: Cat none), and an entry above every author is the
+block's, as elsarticle's. On a row's line a space factor's `\@` is a call separator (`is_call_separator`), so `…,
+USA;\@ Email: \email{\{alopez3,jmuirhead,cpinciroli\}@wpi.edu}` (2602.18622) is an e-mail line parted by owner, no
+longer the block's whole with its label; the e-mail label a row's call or line prints before its addresses (`Email:`,
+`E-mails:`, `email_label_before`, `split_email_label`) names each contact made of it, whole or parted
+(`\lx@row@email@named`, `name={<label>~}` as `named_email_calls` names an e-mail line's), over the class's own e-mail
+name (llncs's never-printed "E-mail "), as the take-out's label word names a cut entry's contacts (OD #944,
+`plan::holder_label`; round 1 had named each part "E-mail ", the printed "Email:" lost). And one local part in printed
+braces is no list (`links::lists_local_parts`, both engines' spelled step): `\{raffaele.perego\}@isti.cnr.it` spells
+Raffaele Perego under an institute three authors carry (2403.13468; it had been the block's). Guards
+`perfect_kernel_batch104d::{a_cas_unlabelled_affiliation_is_every_authors, cas_unlabelled_affiliations_are_their_runs,
 an_llncs_labelled_email_list_on_the_institute_line_is_spelled, an_llncs_lone_braced_address_is_its_spellers}`;
-updated `perfect_kernel_batch63::cas_affiliation_before_authors_shared` (the entry above two authors now on both).
+updated `perfect_kernel_batch63::cas_affiliation_before_authors_shared` (the one entry above two authors now on both).
+Open: cas's `{augroup}` environment is undefined in the binding (`Error:undefined:{augroup}`, int130a the same), so an
+entry shared within one author group is read across the groups (SYNC row 104d).
 
 ### 902. imsart's `{keyword}` blocks are the VTeX classes' markup; an amsart document's own stored `\subjclass`/`\keywords` reach the frontmatter (Perl: one keyword kept; lost)
 
@@ -30697,7 +30711,11 @@ its author where X names no author whole (`\author{Yukun Huang (黄宇坤)}…\c
 xushenzhen@pku.edu.cn}`, 2511.09481; 1803.06255, 2602.01373) each by the name it spells; a correspondent of several
 names (`\correspondingauthor{Jiacheng Meng \& Cheng Li}`, 2008.13733) labels no single address. AASTeX 7, whose other
 `\email`s print nothing, labels it wherever it stands (`\lx@aas@corresp@anywhere`; 2608.02190, 2608.00173). AASTeX 5.x
-and emulateapj keep their own `\email`. Guards
+and emulateapj keep their own `\email`. So one address under a correspondent of one name, before any author, is that
+name's; several addresses, or several names, are each read by spelling. Open (RED repro class-bindings/
+`aastex631_correspondingauthor_after_authors_email_is_the_named_authors`, review rev104d P1): after every `\author`,
+`\correspondingauthor{Ann Able}\email{xq1@a.edu}` stays the last author's (Bob Baker's) where the PDF names Ann Able;
+fix sketch: take the label when it matches an author's name whole. Guards
 `perfect_kernel_batch104d::{an_aastex6_email_after_correspondingauthor_is_the_correspondents,
 an_aastex7_correspondent_address_list_is_spelled}`; repros class-bindings/`aastex631_correspondingauthor_email_is_the_correspondents`,
 `aastex7_correspondingauthor_address_list_is_spelled` (RED → GREEN).

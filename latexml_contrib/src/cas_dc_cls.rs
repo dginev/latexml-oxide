@@ -180,8 +180,9 @@ LoadDefinitions!({
   // `\lx@add@author@keyvals` (base_utilities.rs: `orcid=` → contact, the
   // production keys dropped).
   // The marks link the author to the affiliations labelled with them (cas-common.sty:895-940 `\author[1,2]{…}`,
-  // :1252-1266 `\affiliation[1]{…}`); unmarked, an affiliation is every author's, or under marked authors the author's
-  // before it (`cas_labelled_entry`; 2201.00009, 2511.22218, 2106.02306, 2606.24054).
+  // :1252-1266 `\affiliation[1]{…}`); unmarked, a group's one affiliation is every author's, several are each its run's,
+  // and under marked authors one is the author's before it (`cas_labelled_entry`; 2201.00009, 2511.22218, 2106.02306,
+  // 2606.24054; 2202.06096).
   // (the names are split as the kernel splits an author list, at commas, `\and` and the word "and": cas prints the
   // argument as written, `\author[a]{Cy Cee and Dee Dee}` two people; review of 63u)
   // (the marks are read as the letters cas prints, `cas_mark_labels`: `\author[1,2]` under `\address[a]…\address[b]`
@@ -396,11 +397,15 @@ fn cas_labelled_entry(label: Option<Tokens>, keys: Option<Tokens>) -> Vec<Token>
   // (a label read as the letter cas prints before the line is one that prints, `_labelprints`: the mark a legend's note
   // shows, OXIDIZED_DESIGN_DIVERGENCES #961, 2303.06763)
   let prints = printed.is_some();
-  // (an unlabelled entry under no marked author is every author's, before it and after it, as cas prints it under the
-  // whole row of names — `_share=authors`, OXIDIZED_DESIGN_DIVERGENCES #901 —, as elsarticle's unlabelled `\address`
-  // is the run's: `\author{Ann}\affiliation{organization={Univ A}}\author{Bob}\author{Cat}` prints "Ann, Bob and Cat /
-  // Univ A" — 2201.00009, 2511.22218, 2106.02306, 2606.24054. Once an author is marked, the marks link the entries
-  // (FIDELITY_CHARTER §4 R1) and an unlabelled one stays the author's before it, as elsarticle's does)
+  // (an unlabelled entry under no marked author: cas prints the entry list under the whole row of names, so the
+  // group's one entry is every author's, before it and after it — `\author{Ann}\affiliation{organization={Univ
+  // A}}\author{Bob}\author{Cat}` prints "Ann, Bob and Cat / Univ A", 2201.00009, 2511.22218, 2106.02306, 2606.24054 —;
+  // with two or more the PDF cannot tell whose each is, and each is its run's, the authors since the entry before it,
+  // read by authoring order as elsarticle reads an unlabelled `\address` (`annotate=run`, `\lx@els@shared`):
+  // `\author{Liu}\address{RC}\author{Sun}\author{Zhang}\address{UCAS}` is Liu's RC, Sun's and Zhang's UCAS
+  // (2202.06096). Declared `_share=authors,annotate=run`: `share_row_contacts` shares such an entry only when it is the
+  // only one, OXIDIZED_DESIGN_DIVERGENCES #901. Once an author is marked, the marks link the entries (FIDELITY_CHARTER
+  // §4 R1) and an unlabelled one stays the author's before it, as elsarticle's does)
   let shared = printed.is_none()
     && text.is_empty()
     && !foot
@@ -413,7 +418,7 @@ fn cas_labelled_entry(label: Option<Tokens>, keys: Option<Tokens>) -> Vec<Token>
     mouth::tokenize_internal(if prints {
       ",role=affiliation,_labelprints=true]"
     } else if shared {
-      ",role=affiliation,_share={authors}]"
+      ",role=affiliation,_share={authors},annotate=run]"
     } else {
       ",role=affiliation]"
     })

@@ -470,6 +470,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // its owner's label (`row:atN`, or `addresses:block`; `share_row_contacts`), `#2` set in the class command's font. A
   // class whose own e-mail contact has a name of its own sets it here (llncs's `\emailname`).
   DefMacro!("\\lx@row@email{}{}", "\\lx@add@email[label={#1}]{#2}");
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #901): such an address under the e-mail label printed before it (`Email:
+  // \email{\{a,b\}@x}`, 2602.18622), which names it whatever name the class's own e-mail contact has, as an e-mail
+  // line's label names its contacts (`named_email_calls`): `#2` the label.
+  DefMacro!(
+    "\\lx@row@email@named{}{}{}",
+    "\\lx@add@email[name={#2~},label={#1}]{#3}"
+  );
   // Rust-only: a contact a class's command gives apart from the names (OSA's `\email{x@y}` and `\homepage{…}` after
   // the author groups, opex3.sty:52/:57), placed among the queued authors by [`placed_contact_owner`] (`label=author:N`,
   // or the mark's own label, or `label=addresses:block`, the shared creator of #159). `#1` is the contact's keyvals

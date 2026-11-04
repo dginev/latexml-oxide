@@ -23,7 +23,9 @@ pub(in crate::base_utilities) const SHARED_ROW_LABEL: &str = "row:shared";
 /// 1509.00818, 1609.01220, 1809.11127, 1910.11599, 2011.00616, 2101.06781, 2106.04289, 2205.06740, 2207.04574,
 /// 2207.11464, 2306.03360, 2405.11276, 2502.08785, 2511.12796, 2603.26486, 2604.20229, 2402.19043; and, marked by
 /// hand or by a paper's macro that no one answers, 1804.05870, 2007.07423, 2102.12877, 2403.11865, 2607.02596).
-/// Several institutes are numbered and paired by no one (2207.06953): not shared.
+/// Several institutes are numbered and paired by no one (2207.06953): not shared. A contact that declares a run as well
+/// (`_share=authors,annotate=run`: cas's unlabelled `\affiliation`, 2201.00009) is shared only when it is the only one
+/// so declared; two or more are each its run's, the binding's `annotate=run` (2202.06096).
 ///
 /// Shaped in the queue, before anything is digested: each author requests the shared label (`row:shared`, at the start
 /// of its content, while its entry is the one being digested) and the contact sets it as its own
@@ -60,6 +62,22 @@ pub(in crate::base_utilities) fn share_row_contacts(
   let authors: Vec<usize> = (0..commands.len())
     .filter(|at| is_author(&commands[*at]))
     .collect();
+  // (a row contact that declares a run too, `annotate=run` — cas's unlabelled `\affiliation`, `cas_labelled_entry` —
+  // is every author's only when it is the only one so declared: with two or more, each is its run's, the authors since
+  // the one before it, by authoring order, as elsarticle reads an unlabelled `\address`; 2202.06096)
+  let runs: Vec<usize> = (0..commands.len())
+    .filter(|at| {
+      let (tag, attrs, _) = &commands[*at];
+      tag == "ltx:contact"
+        && attrs.contains_key("_share")
+        && attrs.get("annotate").map(String::as_str) == Some("run")
+    })
+    .collect();
+  if runs.len() > 1 {
+    for at in runs {
+      commands[at].1.remove("_share");
+    }
+  }
   // (each row contact, and whether it is shared: no `\inst{n}` picks it)
   let mut rows: Vec<(usize, bool)> = Vec::new();
   for at in 0..commands.len() {

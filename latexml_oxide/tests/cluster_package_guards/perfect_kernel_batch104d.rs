@@ -1,7 +1,7 @@
 //! Red/green guards for batch 104d: link lists — a block or a corresponding-author line names its owners (census129
-//! Bundle 2b). (L1) a cas-sc/cas-dc unlabelled `\affiliation` under no marked author is every author's, as cas prints
-//! it under the whole row of names (`_share=authors`, OXIDIZED_DESIGN_DIVERGENCES #901; 2201.00009, 2511.22218,
-//! 2106.02306, 2606.24054). (L2) AASTeX 6's `\email` after `\correspondingauthor{X}` before any `\author` is X's
+//! Bundle 2b). (L1) a cas-sc/cas-dc group's one unlabelled `\affiliation` under no marked author is every author's, as
+//! cas prints it under the whole row of names (`_share=authors`, OXIDIZED_DESIGN_DIVERGENCES #901; 2201.00009,
+//! 2511.22218, 2106.02306, 2606.24054); two or more are each its run's (`annotate=run`, 2202.06096). (L2) AASTeX 6's `\email` after `\correspondingauthor{X}` before any `\author` is X's
 //! (OXIDIZED_DESIGN_DIVERGENCES #963; 2601.19870, 2408.08166, 2206.11167, 2010.09756), and (L3) an address list after
 //! it is placed address by address (2511.09481). (L4) llncs institute e-mails placed by spelling: an `Email:` list
 //! after `;\@` on the institute's line (2602.18622), one local part in printed braces (2403.13468). Each guard
@@ -28,16 +28,16 @@ fn clean_creators(source: &str) -> String {
   creators(&xml)
 }
 
-/// (L1) cas-sc's `\author{Ann}\affiliation{…}\author{Bob}\affiliation{…}\author{Cat}`, no marks: each affiliation is
-/// every author's, before it and after it. Red (int130a): Univ A on Ann Able alone, Univ B on Bob Baker alone. The
-/// control: under `\author[1]`/`\author[2]` the labelled entries go by their marks and the unlabelled Univ C stays the
-/// last author's (FIDELITY_CHARTER §4 R1; green before and after). Repros class-bindings/
-/// cas_unlabelled_affiliation_is_every_authors, cas_unlabelled_affiliation_under_marked_authors_is_the_last_authors.
+/// (L1) cas-sc's `\author{Ann}\affiliation{…}\author{Bob}\author{Cat}`, no marks: the group's one unlabelled
+/// affiliation is every author's, before it and after it. Red (int130a): Univ A on Ann Able alone. The control: under
+/// `\author[1]`/`\author[2]` the labelled entries go by their marks and the unlabelled Univ C stays the last author's
+/// (FIDELITY_CHARTER §4 R1; green before and after). Repros class-bindings/cas_unlabelled_affiliation_is_every_authors,
+/// cas_unlabelled_affiliation_under_marked_authors_is_the_last_authors.
 #[test]
 fn a_cas_unlabelled_affiliation_is_every_authors() {
   let shared = |town: &str| {
     format!(
-      r#"<contact name="Affiliation: " role="affiliation">Univ A, Town, Land</contact> <contact name="Affiliation: " role="affiliation">Univ B, City, Land</contact> </creator>{town}"#
+      r#"<contact name="Affiliation: " role="affiliation">Univ A, Town, Land</contact> </creator>{town}"#
     )
   };
   assert_eq!(
@@ -67,6 +67,47 @@ fn a_cas_unlabelled_affiliation_is_every_authors() {
       r#"<creator before=" " role="author"> <personname>Cat Cole</personname> "#,
       r#"<contact name="Affiliation: " role="affiliation">Univ C, Burg, Land</contact> </creator>"#,
     )
+  );
+}
+
+/// (L1, brief 104d r2 B1) two or more unlabelled cas entries under no marked author: each is its run's, the authors
+/// since the entry before it, as elsarticle reads an unlabelled `\address` (`annotate=run`; 2202.06096). cas-dc's
+/// `Ann; Univ A; Bob; Cat; Univ B`: Ann Able Univ A, Bob Baker and Cat Cole Univ B; cas-sc's interleaved `Ann; Univ A;
+/// Bob; Univ B`: each author the entry after it. Red (104d r1): every author both; int130a: Bob Baker none in the
+/// first, the second green. Repros class-bindings/cas_unlabelled_affiliations_are_their_runs,
+/// cas_unlabelled_affiliations_interleaved_are_their_authors.
+#[test]
+fn cas_unlabelled_affiliations_are_their_runs() {
+  let entry = |org: &str, town: &str| {
+    format!(
+      r#"<contact name="Affiliation: " role="affiliation">Univ {org}, {town}, Land</contact> </creator>"#
+    )
+  };
+  assert_eq!(
+    clean_creators(include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/cas_unlabelled_affiliations_are_their_runs.tex"
+    )),
+    [
+      r#"<creator role="author"> <personname>Ann Able</personname> "#,
+      &entry("A", "Town"),
+      r#" <creator before=" " role="author"> <personname>Bob Baker</personname> "#,
+      &entry("B", "City"),
+      r#" <creator before=" " role="author"> <personname>Cat Cole</personname> "#,
+      &entry("B", "City"),
+    ]
+    .concat()
+  );
+  assert_eq!(
+    clean_creators(include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/cas_unlabelled_affiliations_interleaved_are_their_authors.tex"
+    )),
+    [
+      r#"<creator role="author"> <personname>Ann Able</personname> "#,
+      &entry("A", "Town"),
+      r#" <creator before=" " role="author"> <personname>Bob Baker</personname> "#,
+      &entry("B", "City"),
+    ]
+    .concat()
   );
 }
 
@@ -117,15 +158,18 @@ fn an_aastex7_correspondent_address_list_is_spelled() {
 }
 
 /// (L4) llncs's sole institute `Dept.\ of Robotics, Univ A, Town, USA;\@ Email: \email{\{aable,bbaker,ccole\}@a.edu}
-/// \\ \email{info@a.edu}`: each listed address the author it spells, the institute's text without the line's `;`;
-/// info@a.edu, which no name spells, the block's. Red (int130a): " Email: {aable,bbaker,ccole}@a.edu" whole on a
-/// nameless creator. Repro class-bindings/llncs_sole_institute_labelled_email_list_is_spelled.
+/// \\ \email{info@a.edu}`: each listed address the author it spells, named by the printed "Email:" the list was split
+/// under (brief 104d r2 S2, FIDELITY_CHARTER §4), the institute's text without the line's `;`; info@a.edu, which no
+/// name spells, the block's, with llncs's own name (no label printed before it). Red (int130a): " Email:
+/// {aable,bbaker,ccole}@a.edu" whole on a nameless creator; 104d r1: each part named "E-mail ", the label lost. Repro
+/// class-bindings/llncs_sole_institute_labelled_email_list_is_spelled.
 #[test]
 fn an_llncs_labelled_email_list_on_the_institute_line_is_spelled() {
   let institute = r#"<contact name="Affiliation: " role="affiliation">Dept. of Robotics, Univ A, Town, USA</contact> "#;
   let email = |id: u8, address: &str| {
+    let name = if id == 4 { "E-mail " } else { "Email: " };
     format!(
-      r#"<contact name="E-mail " role="email"><text font="typewriter" xml:id="id{id}">{address}</text></contact> </creator>"#
+      r#"<contact name="{name}" role="email"><text font="typewriter" xml:id="id{id}">{address}</text></contact> </creator>"#
     )
   };
   assert_eq!(

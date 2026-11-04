@@ -72,7 +72,7 @@ fn note_argument(tokens: &[Token], at: usize, to: usize) -> Option<(usize, usize
 
 /// One e-mail call of a row contact ([`row_email_calls`]): its span, the separators before it with it; where its
 /// command stands; the command; its argument; whether it is written inside a note of the contact (`\thanks{Mail me at
-/// \email{…}}`).
+/// \email{…}}`); the e-mail label printed before it, which its span takes ([`email_label_before`]).
 struct EmailCall {
   start:   usize,
   at:      usize,
@@ -80,6 +80,7 @@ struct EmailCall {
   cs:      Token,
   arg:     Vec<Token>,
   in_note: bool,
+  label:   Option<Vec<Token>>,
 }
 
 /// The e-mail calls in `tokens[from..to]`: each class e-mail command ([`is_email_command`]) and its argument group, with
@@ -114,8 +115,10 @@ fn email_calls_in(
         while !in_note && start > from && is_call_separator(&tokens[start - 1]) {
           start -= 1;
         }
-        // (and the label printed before it, which the contact's own name says: `Email: \email{…}`, 2102.12877)
+        // (and the label printed before it, which names the call's contacts: `Email: \email{…}`, 2102.12877)
+        let mut label_tokens = None;
         if !in_note && let Some(label) = email_label_before(tokens, from, start) {
+          label_tokens = Some(tokens[label..start].to_vec());
           start = label;
           while start > from && is_call_separator(&tokens[start - 1]) {
             start -= 1;
@@ -128,6 +131,7 @@ fn email_calls_in(
           cs: t,
           arg: tokens[arg + 1..end - 1].to_vec(),
           in_note,
+          label: label_tokens,
         });
         at = end;
         continue;
@@ -142,7 +146,9 @@ fn email_calls_in(
 /// contact. Its span in the contact (the separators before it with it); the addresses read from it, if it is read; its
 /// tokens as one piece; each address apart, when it may be parted; whether it is an e-mail (else a line no reader
 /// parts, which is the block's as written on the shared path and stays its picked authors' on the `\inst` path, an
-/// affiliation as the institute is).
+/// affiliation as the institute is); the e-mail label printed before it, which names each of its pieces (`Email:`, the
+/// take-out's label word, as `plan::holder_label` names a cut entry's contacts: a list split by owner keeps it on each
+/// part, 2602.18622), else the class's own name.
 struct EmailUnit {
   start: usize,
   end:   usize,
@@ -150,6 +156,7 @@ struct EmailUnit {
   whole: Tokens,
   parts: Option<Vec<Tokens>>,
   email: bool,
+  name:  Option<Tokens>,
 }
 
 /// A piece of a row contact's e-mail lines ([`row_email_calls`]): its unit, its owner, its address when read alone, its
@@ -288,6 +295,12 @@ pub(super) fn row_email_calls(
       whole: Tokens::new(whole),
       parts,
       email: true,
+      // (a label of its own before it, `Corresponding author, Email:`, is in its text already)
+      name: call
+        .label
+        .clone()
+        .filter(|_| before.is_none())
+        .map(Tokens::new),
     })
   };
   // The units, in order: each line of several authors' contact holding an address outside the calls, whole; each other
@@ -339,6 +352,7 @@ pub(super) fn row_email_calls(
           whole: Tokens::new(tokens[from..to].to_vec()),
           parts: None,
           email: false,
+          name:  None,
         }];
         break;
       } else {
@@ -347,10 +361,11 @@ pub(super) fn row_email_calls(
         // — it had been a nameless affiliation, review rev92c r2 S-3)
         let mut unit = unit;
         if !unit.email
-          && let (Some(_), rest) = split_email_label(&unit.whole)
+          && let (Some(label), rest) = split_email_label(&unit.whole)
         {
           unit.email = true;
           unit.whole = rest;
+          unit.name = Some(label);
         }
         units.push(unit);
         continue;
@@ -422,6 +437,8 @@ pub(super) fn row_email_calls(
       pieces[*at].1 = author;
     }
   }
+  // (each unit's printed e-mail label, by its place among the units before any is dropped)
+  let unit_names: Vec<Option<Tokens>> = units.iter().map(|unit| unit.name.clone()).collect();
   // (a picked contact: the marks decide its authors, and the block is no fail-safe of theirs — a unit no address of
   // which its reader finds an owner for stays in the contact as written, its picked authors', as int114a gives it:
   // 2109.05583's template, 2307.04136's unread `\email`; of a group written out by owner, an address no one is found
@@ -447,12 +464,19 @@ pub(super) fn row_email_calls(
     }
   }
   let mut placed: PlacedEmails = Vec::new();
-  for (_, owner, _, content, email) in pieces {
+  for (at, owner, _, content, email) in pieces {
     let call = if email {
-      Invocation!(T_CS!("\\lx@row@email"), vec![
-        Some(mouth::tokenize_internal(TeXString::assembled(label(owner)))),
-        Some(content)
-      ])
+      match &unit_names[at] {
+        Some(name) => Invocation!(T_CS!("\\lx@row@email@named"), vec![
+          Some(mouth::tokenize_internal(TeXString::assembled(label(owner)))),
+          Some(name.clone()),
+          Some(content)
+        ]),
+        None => Invocation!(T_CS!("\\lx@row@email"), vec![
+          Some(mouth::tokenize_internal(TeXString::assembled(label(owner)))),
+          Some(content)
+        ]),
+      }
     } else {
       Invocation!(T_CS!("\\lx@add@affiliation"), vec![
         Some(mouth::tokenize_internal(TeXString::assembled(s!(
@@ -843,6 +867,7 @@ fn raw_line_unit(tokens: &[Token], sep: usize, from: usize, to: usize) -> Result
     whole,
     parts,
     email,
+    name: email_label.filter(|_| email),
   })
 }
 
