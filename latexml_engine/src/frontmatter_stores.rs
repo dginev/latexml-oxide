@@ -5406,11 +5406,25 @@ fn net_class_text(stores: &[SymStr]) -> Vec<String> {
     // `作` is the three active tokens `ä½\u{9c}` — is read as the character its macros print, so it matches the text the
     // store prints: review rev105a2 finding 1)
     let mut bytes: Vec<u8> = Vec::new();
+    // (each valid UTF-8 sequence its character; a byte outside one its own Latin-1 character, as `[latin1]{inputenc}`
+    // reads `é` as one active byte: review rev105a3 finding 2)
     let flush = |bytes: &mut Vec<u8>, out: &mut String| {
-      if !bytes.is_empty() {
-        out.push_str(&String::from_utf8_lossy(bytes));
-        bytes.clear();
+      let mut rest: &[u8] = bytes;
+      while !rest.is_empty() {
+        match std::str::from_utf8(rest) {
+          Ok(text) => {
+            out.push_str(text);
+            break;
+          },
+          Err(error) => {
+            let (valid, invalid) = rest.split_at(error.valid_up_to());
+            out.push_str(std::str::from_utf8(valid).unwrap_or_default());
+            out.push(char::from(invalid[0]));
+            rest = &invalid[1..];
+          },
+        }
       }
+      bytes.clear();
     };
     for t in body {
       let byte = (t.get_catcode() == Catcode::ACTIVE)
@@ -5453,11 +5467,16 @@ fn net_class_text(stores: &[SymStr]) -> Vec<String> {
     .map(|key| {
       let store = T_CS!(&with(*key, ToString::to_string));
       let mut out = String::new();
+      // (each body once: a `\let` or `\futurelet` copy of a setter is the same code — `\@ifnextchar`'s `\@let@token`
+      // holds `\xa` after peeking at it — and its words are the class's text once, not twice: review rev105a3 finding 1)
+      let mut read: Vec<&Vec<Token>> = Vec::new();
       for (_, setter) in &setters {
         if let Stored::Expandable(d) = setter
           && let Some(ExpansionBody::Tokens(body)) = d.get_expansion()
           && body.unlist_ref().contains(&store)
+          && !read.contains(&body.unlist_ref())
         {
+          read.push(body.unlist_ref());
           letters(body.unlist_ref(), &mut out);
         }
       }

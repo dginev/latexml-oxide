@@ -370,11 +370,13 @@ fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
   let email_name = get_frontmatter_name(None, "ltx:contact", "email")?;
   for mut note in notes {
     let store = note.get_attribute("_net").unwrap_or_default();
-    // (and the words of the class's own code in the store, frontmatter_stores.rs `net_class_text`)
-    let class: HashSet<String> =
-      net_content_words(&lookup_string(&s!("lx_net_class_text_{store}")))
-        .into_iter()
-        .collect();
+    // (and the words of the class's own code in the store, frontmatter_stores.rs `net_class_text`, as a multiset: each
+    // occurrence in the class's text accounts for one in the line, so a label's `单位` does not take the document's
+    // own `单位` with it — each Han ideograph is a word, `作者单位：#1` around `单位甲`; review rev105a3 finding 1)
+    let mut class: HashMap<String, usize> = HashMap::default();
+    for word in net_content_words(&lookup_string(&s!("lx_net_class_text_{store}"))) {
+      *class.entry(word).or_default() += 1;
+    }
     let mut lines = Vec::new();
     net_note_lines(&note, &mut lines);
     let mut kept = 0usize;
@@ -384,8 +386,18 @@ fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
       let words = net_content_words(&text);
       // (distinct, in printed order)
       let mut unmatched: Vec<String> = Vec::new();
+      let mut class_left = class.clone();
       for word in &words {
-        if !claimed.contains(word) && !class.contains(word) && !unmatched.contains(word) {
+        if claimed.contains(word) {
+          continue;
+        }
+        if let Some(left) = class_left.get_mut(word)
+          && *left > 0
+        {
+          *left -= 1;
+          continue;
+        }
+        if !unmatched.contains(word) {
           unmatched.push(word.clone());
         }
       }

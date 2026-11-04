@@ -107,22 +107,35 @@ fn a_line_in_another_script_is_counted() {
   );
 }
 
-/// An undefined font switch inside the store's bold group leaves its `ltx:ERROR` in the line's `ltx:text`: its text is
-/// no printed word, so the Warning names "lunarfund" alone (2601.14329's `{\songti\zihao{-4}#2}`). The fixture errs on
-/// purpose (pdflatex too). Distinct path: `text_without_errors`.
 /// A class's own label in Chinese around the author's argument (`\gdef\@xa{作者单位：#1}` after CJKutf8, which reads the
 /// class file one active token per UTF-8 byte) is the class's text, not the store's: the line repeats the label and the
 /// author's name, no note and no Warning. Red (105a r2): `<note>作者单位：Ann Able</note>` and a Warning — the class text
 /// read LETTER and OTHER tokens only, and its active bytes did not spell the printed label (review rev105a2 finding 1;
 /// frontmatter_stores.rs `prints_a_character`, `net_class_text`). Distinct path: the class-text reader.
+///
+/// The class's text is subtracted as a multiset, once per occurrence and once per setter body (`\@ifnextchar`'s
+/// `\@let@token` holds a copy of `\xa`): with the document's own `单位甲` the label's `单位` takes only its own two
+/// characters, and the line keeps the document's `单位甲` as the net's note, with its Warning (review rev105a3 finding 1:
+/// the line went with a Warning naming `甲` alone). A Latin-1 label under `[latin1]{inputenc}`, one active byte per
+/// accented letter, is the class's text too (finding 2: a false Warning "universite geneve").
 #[test]
 fn a_class_label_in_cjk_is_the_classs_text() {
+  let plain = r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#;
+  let tex = repro!("net_class_label_in_cjk_is_class_text");
+  assert_eq!(converted(tex, 0), plain);
   assert_eq!(
-    converted(repro!("net_class_label_in_cjk_is_class_text"), 0),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    converted(&tex.replace("\\xa{Ann Able}", "\\xa{单位甲}"), 1),
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <note role="note" xml:id="id1">作者单位：单位甲</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+  );
+  assert_eq!(
+    converted(repro!("net_class_label_in_latin1_is_class_text"), 0),
+    plain
   );
 }
 
+/// An undefined font switch inside the store's bold group leaves its `ltx:ERROR` in the line's `ltx:text`: its text is
+/// no printed word, so the Warning names "lunarfund" alone (2601.14329's `{\songti\zihao{-4}#2}`). The fixture errs on
+/// purpose (pdflatex too). Distinct path: `text_without_errors`.
 #[test]
 fn an_error_at_depth_in_a_note_line_is_no_word() {
   let tex = repro!("net_line_words_skip_an_error_at_depth");
