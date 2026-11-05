@@ -179,10 +179,12 @@ fn a_mark_on_a_spacing_nucleus_leads_its_line() {
 /// A sub-lettered mark goes by its number (review rev98e B1): `23A` under multi-digit numbering is `23` and `A`, never
 /// `2`, `3` and `A`, and the `$^{23}$` line is never parted into `2` and `3` — D. Four the 23 line alone (its `(A)` a
 /// sub-entry, R6), B. Two and C. Three not (2007.02542, 1507.02068); with a line no name requests, it goes once to the
-/// block with its printed `b` (S1), and without one the same reading. Since 107b the kernel's reader reads the
-/// `{\it …}` group's lines as the block's (`wrapper_over_lines_as_lines`) and gives these creators itself, the writer
-/// writing nothing: the block's line is the kernel's shared orphan, which shows no mark (as
-/// `perfect_kernel_batch61::author_marks_link_their_affiliations` pins it) — its `b` an open question (107b report).
+/// block, and without one the same reading. Since 107b the kernel's reader reads the `{\it …}` group's lines as the
+/// block's (`wrapper_over_lines_as_lines`) and gives these creators itself, the writer writing nothing: the block's
+/// line is the kernel's shared orphan, which shows no mark (as `perfect_kernel_batch61::author_marks_link_their_affiliations`
+/// pins it). Only the marks a name requests matter to the frontmatter, so the orphan's printed `b` need not be kept (user
+/// ruling 2026-11-05, replacing rev98e S1); its words are, once, on the block's creator and on no author
+/// ([`once_on_the_block`]).
 #[test]
 fn a_sub_lettered_mark_goes_by_its_number() {
   let collaboration = "collaboration=(X Collaboration)";
@@ -210,6 +212,24 @@ fn a_sub_lettered_mark_goes_by_its_number() {
   expected.push(vec!["affiliation=Also at Eps College, Bergen"]);
   let xml = both_ways(repro!("revtex_sub_lettered_mark_goes_by_its_number"));
   assert_eq!(creators(&xml), expected);
+  once_on_the_block(&xml, "Also at Eps College, Bergen");
+}
+
+/// The words of a line no name requests (an orphan mark's) print once in the document, on the block's creator — the
+/// creator with no name — and on no author (user ruling 2026-11-05: the orphan's mark need not be kept, its words must,
+/// never lost and never an author's).
+#[track_caller]
+fn once_on_the_block(xml: &str, words: &str) {
+  assert_eq!(xml.matches(words).count(), 1, "{words:?} once in {xml}");
+  let holders: Vec<Vec<String>> = creators(xml)
+    .into_iter()
+    .filter(|creator| creator.iter().any(|item| item.contains(words)))
+    .collect();
+  assert_eq!(holders.len(), 1, "{words:?} on one creator: {holders:?}");
+  assert!(
+    holders[0].iter().all(|item| item.contains('=')),
+    "{words:?} on the block's creator, which has no name: {holders:?}"
+  );
 }
 
 /// The writer's cut of an author block's own lines: a line whose label no name requests (`$^{b}$`) goes once to the
@@ -234,10 +254,12 @@ fn a_block_line_no_name_requests_goes_once_to_the_block() {
     "revtex_block_line_no_name_requests_goes_to_the_block"
   ));
   // (the line kept its printed `b` while the writer cut it — review rev98e S1; since 107b the kernel's reader gives it
-  // to the block as its shared orphans are, no mark shown: an open question, 107b report)
+  // to the block as its shared orphans are, no mark shown, and its words once on the block's creator: user ruling
+  // 2026-11-05, [`once_on_the_block`])
   assert_eq!(creators(&xml), [a.clone(), b.clone(), c.clone(), vec![
     "affiliation=Also at Eps College, Bergen"
   ],]);
+  once_on_the_block(&xml, "Also at Eps College, Bergen");
   let xml = both_ways(repro!("revtex_block_lines_all_answered"));
   assert_eq!(creators(&xml), [a.clone(), b.clone(), c.clone()]);
   let xml = both_ways(repro!("revtex_block_lines_every_label_requested"));

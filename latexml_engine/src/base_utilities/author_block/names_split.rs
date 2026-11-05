@@ -419,7 +419,17 @@ fn sole_input_file(content: &[Token]) -> Option<Tokens> {
   }
   let name: String = name.iter().map(|t| t.to_string()).collect();
   let path = find_file(&name, None).or_else(|| find_file(&s!("{name}.tex"), None))?;
-  let text = std::fs::read_to_string(&path).ok()?;
+  // (its bytes decoded as a mouth decodes them, a Latin-1 line as its bytes — `mouth::decode_input_bytes` —, and each
+  // command matched whole: `\inputencoding`, `\includegraphics` are none of them; the rev107b review's N3)
+  let text = mouth::decode_input_bytes(&std::fs::read(&path).ok()?);
+  let holds = |cs: &str| {
+    text.match_indices(cs).any(|(at, _)| {
+      !text[at + cs.len()..]
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic())
+    })
+  };
   if [
     "\\catcode",
     "\\makeatletter",
@@ -429,7 +439,7 @@ fn sole_input_file(content: &[Token]) -> Option<Tokens> {
     "\\include",
   ]
   .iter()
-  .any(|cs| text.contains(cs))
+  .any(|cs| holds(cs))
   {
     return None;
   }

@@ -18,6 +18,8 @@ pub(super) struct Lexer {
   gap_width:         f64,
   gap_fill:          bool,
   gap_span:          Option<(u16, u16)>,
+  /// the spacing character the run opened with, when it is one printed character so far (a space or a tie)
+  gap_char:          Option<char>,
   /// the line has shown ink (a name, a mark, a contact) since its last break
   line_inked:        bool,
   /// the font of the last name run
@@ -63,6 +65,7 @@ impl Lexer {
     self.gap_width = 0.0;
     self.gap_fill = false;
     self.gap_span = None;
+    self.gap_char = None;
   }
 
   /// Emit the pending gap when it separates (else it is dropped: an interword space at a boundary).
@@ -239,6 +242,16 @@ impl Lexer {
         continue;
       }
       if c.is_whitespace() {
+        let word = match c {
+          ' ' | '\n' => Some(' '),
+          '\u{a0}' => Some(c),
+          _ => None,
+        };
+        if self.ties_the_gap(word) {
+          self.gap_span = join_span(self.gap_span, span);
+          continue;
+        }
+        self.gap_char = if self.gap_items == 0 { word } else { None };
         self.gap_items += 1;
         self.gap_width += space_width(c);
         self.gap_span = join_span(self.gap_span, span);
@@ -273,8 +286,34 @@ impl Lexer {
     }
   }
 
-  pub(super) fn space(&mut self, width: f64, fill: bool, span: Option<(u16, u16)>) {
+  /// Whether the word space or tie `word` and the one spacing character the pending gap holds are a space and a tie,
+  /// read as one word space of a name, the tie (the gap's character then spent): `N.~B. ~Li$^{22}$` in the BESIII list
+  /// of 340 (1202.2048) — read as a gap of two items, "N. B." was initials after `Lei~Li$^{1}$,` and both one name
+  /// written surname first, which declined the writer's reading of the whole block, its sub-lettered marks with it (the
+  /// rev107b review's B2); a tie and a space, `V.G.~ Kagramanova` (0802.4349), alike.
+  fn ties_the_gap(&mut self, word: Option<char>) -> bool {
+    let tie = self.gap_items == 1
+      && !self.gap_fill
+      && word.is_some_and(|c| self.gap_char.is_some_and(|first| first != c));
+    if tie {
+      self.gap_char = None;
+    }
+    tie
+  }
+
+  pub(super) fn space(
+    &mut self,
+    width: f64,
+    fill: bool,
+    span: Option<(u16, u16)>,
+    word: Option<char>,
+  ) {
     self.flush_symbol();
+    if self.ties_the_gap(word) {
+      self.gap_span = join_span(self.gap_span, span);
+      return;
+    }
+    self.gap_char = if self.gap_items == 0 { word } else { None };
     self.gap_items = self.gap_items.saturating_add(1);
     self.gap_width += width;
     self.gap_fill |= fill;

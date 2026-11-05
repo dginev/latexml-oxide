@@ -1,0 +1,16 @@
+% The same two lines inside a `\parbox`, whose lines are the block's (`wrapper_over_lines_as_lines`): the second is
+% more names of the row (`space_parted_rows_joined`).
+% witness: synthetic (review rev107b B1, probe q09: introduced by 107b r1, int138a parted the four names)
+% oracle:  pdflatex 0 errors: "Ann Able Bob Baker", "Cat Cole Dan Dee"
+% engines: rust int138a = four creators; 107b r1 = three, Bob Baker holding the affiliation "Cat Cole", 0 errors
+%          (silent); Perl one creator
+% expect:  0 errors, 0 warnings; four creators, no affiliation
+% status:  RED (107b r1) -> GREEN (107b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\parbox{\textwidth}{\centering Ann Able \quad Bob Baker\\ Cat Cole \quad Dan Dee}}
+\maketitle
+Body.
+\end{document}

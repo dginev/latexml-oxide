@@ -1595,10 +1595,12 @@ pub(in crate::base_utilities) fn flag_merged_creators(document: &mut Document) -
     let names = names.max(lines.iter().map(|(n, _)| *n).max().unwrap_or(0));
     // (a line set in mixed case holding an acronym names an institution, not a person: `Vage Egiazarian <break/>IST
     // Austria`, 2504.20039, is one name over its affiliation)
-    let names = if lines.len() >= 2 && lines.iter().all(|&(n, acronym)| n > 0 && !acronym) {
-      names.max(lines.iter().map(|(n, _)| *n).sum())
+    let by_lines = lines.len() >= 2 && lines.iter().all(|&(n, acronym)| n > 0 && !acronym);
+    let (names, line_names) = if by_lines {
+      let sum = lines.iter().map(|(n, _)| *n).sum();
+      (names.max(sum), names < sum)
     } else {
-      names
+      (names, false)
     };
     // (and a names line kept whole two or more of whose pieces are marked names, `A.~Able$^{1}$, B.~in der Baker,
     // C.~Cole$^{1}$`: the merge its marks contradict, whatever its names' shape — the count of marked names the cautious
@@ -1610,7 +1612,24 @@ pub(in crate::base_utilities) fn flag_merged_creators(document: &mut Document) -
         .and_then(|n| n.parse().ok())
         .unwrap_or(0),
     );
-    if names >= 2 {
+    // (counted by its lines, each one name, the line under a name may be the next author's or the name's own
+    // affiliation welded to it — `Bob Baker <break/>Carnegie Mellon`, a line no institution word marks as one: the
+    // wording says which reading, the rev107b review's N2)
+    if names >= 2 && line_names && lines.iter().all(|&(n, _)| n == 1) {
+      let shown = plain
+        .split(PERSONNAME_LINE_BREAK)
+        .map(|line| line.split_whitespace().collect::<Vec<_>>().join(" "))
+        .filter(|line| line.chars().any(char::is_alphabetic))
+        .collect::<Vec<_>>()
+        .join(" / ");
+      Error!(
+        "frontmatter",
+        "merged_creators",
+        s!(
+          "One author holds {names} lines that each read as a name: \"{shown}\"; the names a line break parts, or a name and the line under it (its affiliation), were not told apart"
+        )
+      );
+    } else if names >= 2 {
       Error!(
         "frontmatter",
         "merged_creators",
@@ -1618,7 +1637,36 @@ pub(in crate::base_utilities) fn flag_merged_creators(document: &mut Document) -
           "One author holds {names} names: \"{text}\"; the separators between them were not recognized"
         )
       );
+    } else if names == 0 && reads_as_a_line_under_names(&text) {
+      // (a creator whose name is a line under the names — a legend's or an affiliation's text, `also at the Moscow
+      // Institute of Physics and Technology, Moscow, Russia` of 1202.2048's `$^{a}$` legend: the rev107b review's B2 —
+      // is never silent)
+      Error!(
+        "frontmatter",
+        "creator_not_a_name",
+        s!(
+          "An author's name reads as no name: \"{text}\"; a line under the names (an affiliation or a legend) was read as an author"
+        )
+      );
     }
   }
   Ok(())
+}
+
+/// Whether a personname's text reads as a line under the names, no name: it opens with a word in lower case that is no
+/// name particle ([`NAME_PARTICLES`]: `van der Berg` opens a name) and no article, holds a word naming an institution
+/// ([`non_name_word`]), no address and no name ([`name_count`]) — a legend's text (`also at the Moscow Institute of
+/// Physics and Technology, Moscow, Russia`, `on leave from …`, `now at …`; 1309.4007's `e-mail:` line) or an
+/// affiliation's (`at the University of X`). A collaboration or a team named as an author opens with a capital or an
+/// article (`The ATLAS Collaboration`, `the ATLAS Collaboration`, `the PE11 team of Kepler WG#1`) and is not read.
+fn reads_as_a_line_under_names(text: &str) -> bool {
+  let Some(first) = text.split_whitespace().next() else {
+    return false;
+  };
+  first.chars().next().is_some_and(char::is_lowercase)
+    && !NAME_PARTICLES.contains(&first)
+    && !["the", "a", "an", "and"].contains(&first)
+    && !text.contains('@')
+    && name_count(text) == 0
+    && text.split_whitespace().any(non_name_word)
 }

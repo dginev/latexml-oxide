@@ -1,0 +1,18 @@
+% A font command over one line of `\quad`-parted names under a row of marked names: more names (the marked
+% reader's names line, `space_parted_name_line` seeing through the whole-line wrapper), not the last name's
+% continuation.
+% witness: 2507.19054 (neurips_2025: `\\ \textbf{Ludwig Schmidt \quad Serena Yeung-Levy} \\`; review rev107b S2,
+%          probe q01)
+% oracle:  pdflatex 0 errors: "Ann Able1 Cat Cole", "Bob Baker Dan Dee", "Stanford University"
+% engines: rust int138a = Cat Cole holding "Bob Baker Dan Dee" (silent); 107b r1 = the same, 1 merged_creators Error;
+%          Perl one creator
+% expect:  0 errors, 0 warnings; four creators, each "Stanford University"
+% status:  RED (107b r1) -> GREEN (107b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \quad Cat Cole \\ \textbf{Bob Baker \quad Dan Dee} \\ Stanford University}
+\maketitle
+Body.
+\end{document}

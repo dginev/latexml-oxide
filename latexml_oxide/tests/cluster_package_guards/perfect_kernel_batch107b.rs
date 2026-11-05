@@ -6,10 +6,14 @@
 //! surname that is an institution's word after an initial is a marked name (1901.10843); authblk's "and" inside a
 //! whole-list group (2506.23337); a sole `\input{file}` read as its content (2609.38746). And the detector
 //! (`flag_merged_creators`) reads each printed line of a personname alone. Each guard converts its repro and asserts
-//! the error and warning counts and every creator whole.
+//! the error and warning counts and every creator whole. Round 2 (review rev107b): a line of names horizontal space
+//! alone parts is a names line, never an affiliation (`space_parted_rows_joined`; 1203.0321, 2507.19054); a space
+//! before a tie is a tie in the observer's lexer and a legend line leads its line through its wrappers (1202.2048); a
+//! creator named by a legend is an Error; `sole_input_file` matches its refusing commands whole.
 use super::{
   convert_files_with,
   perfect_kernel_batch46::{error_count, warning_count},
+  perfect_kernel_batch84b,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -412,5 +416,339 @@ fn a_name_and_the_line_under_it_stay_one_author_and_affiliation() {
       0
     ),
     control
+  );
+}
+
+// Round 2 (review rev107b).
+
+/// A line of names horizontal space alone parts is a names line, never an affiliation of the name above it
+/// (`space_parted_rows_joined`, review rev107b B1): under the names line, more names of its row — at the top level, in
+/// a `\parbox` (introduced by 107b r1: int138a parted the four), two rows over the institution they share —; under a
+/// line under the names, the next group's names, each row its own affiliation. Red (107b r1): Bob Baker held the
+/// affiliation "Cat Cole" (r04: Cat Cole "Dan Dee"), silent. Repros sectioning-frontmatter/
+/// author_quad_names_lines_unmarked_are_one_row, author_parbox_quad_names_lines_unmarked_are_one_row,
+/// author_parbox_quad_names_rows_share_the_line_under, author_quad_names_line_after_an_affiliation_opens_the_next_group.
+#[test]
+fn a_space_parted_names_line_is_names_never_an_affiliation() {
+  let four = concat!(
+    r#"<creator role="author"> <personname>Ann Able</personname> </creator> "#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> </creator> "#,
+    r#"<creator before=" " role="author"> <personname>Cat Cole</personname> </creator> "#,
+    r#"<creator before=" " role="author"> <personname>Dan Dee</personname> </creator>"#,
+  );
+  assert_eq!(
+    counted_creators(
+      repro!("author_quad_names_lines_unmarked_are_one_row"),
+      &[],
+      0
+    ),
+    four
+  );
+  assert_eq!(
+    counted_creators(
+      repro!("author_parbox_quad_names_lines_unmarked_are_one_row"),
+      &[],
+      0
+    ),
+    four
+  );
+  let at = |name: &str, before: bool, university: &str| {
+    format!(
+      r#"<creator {}role="author"> <personname>{name}</personname> <contact name="Affiliation: " role="affiliation">{university}</contact> </creator>"#,
+      if before { r#"before=" " "# } else { "" }
+    )
+  };
+  let alpha = "University of Alpha";
+  assert_eq!(
+    counted_creators(
+      repro!("author_parbox_quad_names_rows_share_the_line_under"),
+      &[],
+      0
+    ),
+    [
+      at("Ann Able", false, alpha),
+      at("Bob Baker", true, alpha),
+      at("Cat Cole", true, alpha),
+      at("Dan Dee", true, alpha),
+      at("Eve Eden", true, alpha),
+    ]
+    .join(" ")
+  );
+  assert_eq!(
+    counted_creators(
+      repro!("author_quad_names_line_after_an_affiliation_opens_the_next_group"),
+      &[],
+      0
+    ),
+    [
+      at("Ann Able", false, alpha),
+      at("Bob Baker", true, alpha),
+      at("Cat Cole", true, "University of Beta"),
+      at("Dan Dee", true, "University of Beta"),
+    ]
+    .join(" ")
+  );
+}
+
+/// A font command over one line of `\quad`-parted names parts them (`space_parted_name_line` through the whole-line
+/// wrapper, review rev107b S2): under a marked row (the marked reader: more names, not the last name's continuation) and
+/// under a row marked by footnote symbols alone (the unmarked reader's rows). Red (107b r1): Cat Cole held the
+/// wrapper's names, one merged_creators Error. Witness 2507.19054. Repros sectioning-frontmatter/
+/// author_bold_quad_names_line_under_a_marked_row, author_bold_quad_names_line_under_a_symbol_marked_row.
+#[test]
+fn a_font_command_over_quad_parted_names_parts_them() {
+  let at = |name: &str, before: bool| {
+    format!(
+      r#"<creator {}role="author"> <personname>{name}</personname> <contact name="Affiliation: " role="affiliation">Stanford University</contact> </creator>"#,
+      if before { r#"before=" " "# } else { "" }
+    )
+  };
+  assert_eq!(
+    counted_creators(
+      repro!("author_bold_quad_names_line_under_a_marked_row"),
+      &[],
+      0
+    ),
+    [
+      at(r#"Ann Able<sup xml:id="id1">1</sup>"#, false),
+      at("Cat Cole", true),
+      at("Bob Baker", true),
+      at("Dan Dee", true),
+    ]
+    .join(" ")
+  );
+  assert_eq!(
+    counted_creators(
+      repro!("author_bold_quad_names_line_under_a_symbol_marked_row"),
+      &[],
+      0
+    ),
+    [
+      at(r#"Ann Able<sup xml:id="id1">⋆</sup>"#, false),
+      at(r#"Bob Baker<sup xml:id="id2">⋆,†</sup>"#, true),
+      at("Cat Cole", true),
+      at("Dan Dee", true),
+      at("Eve Eden", true),
+    ]
+    .join(" ")
+  );
+}
+
+/// The BESIII-shaped block's creators, each its name and contacts in order ([`semantic_creators`]).
+fn besiii_creators() -> Vec<Vec<&'static str>> {
+  let collaboration = "collaboration=(X Collaboration)";
+  vec![
+    vec!["A. Able", collaboration, "affiliation=Univ N1, City"],
+    vec![
+      "B. Baker 10a",
+      collaboration,
+      "affiliation=Univ N10, City",
+      "affiliation=also at Inst Alpha, Moscow",
+    ],
+    vec!["C. Cole", collaboration, "affiliation=Univ N2, City"],
+    vec![
+      "D. Dee 12b",
+      collaboration,
+      "affiliation=Univ N12, City",
+      "affiliation=on leave from Inst Beta, Kiev",
+    ],
+    vec!["Lei Li", collaboration, "affiliation=Univ N1, City"],
+    vec!["N. B. Li", collaboration, "affiliation=Univ N11, City"],
+    vec!["Q. J. Li", collaboration, "affiliation=Univ N1, City"],
+    // (the institutes no name requests, once on the block's creator)
+    vec![
+      "affiliation=Univ N3, City",
+      "affiliation=Univ N4, City",
+      "affiliation=Univ N5, City",
+      "affiliation=Univ N6, City",
+      "affiliation=Univ N7, City",
+      "affiliation=Univ N8, City",
+      "affiliation=Univ N9, City",
+    ],
+  ]
+}
+
+/// Converts `tex`, checks it has no Error and no Warning, and returns every creator's name and contacts
+/// (`perfect_kernel_batch84b::creators`).
+#[track_caller]
+fn semantic_creators(tex: &str) -> Vec<Vec<String>> {
+  let (log, xml) = convert_files_with(tex, &[], Some(PRELOAD));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  perfect_kernel_batch84b::creators(&xml)
+}
+
+/// A space before a tie is a tie (the lexer, review rev107b B2): the BESIII block with `N.~B. ~Li$^{11}$` reads as the
+/// control without the space — the reading's names as printed, its sub-lettered marks kept (`$^{10a}$` the
+/// institute 10 and the `a` legend; the glued mark shown on the name, as a mark the writer parts is, 2007.02542's
+/// `D.~Four$^{23A}$`) — and its `$^{a}$` legend after `\vspace` inside the line's two wrappers leads its line
+/// (`marker_leads`), never an author. Red (107b r1): a creator named "also at Inst Alpha, Moscow", B. Baker and D. Dee
+/// no institute and no legend, silent. Witness 1202.2048. Repros sectioning-frontmatter/
+/// author_besiii_space_before_tie_keeps_sub_lettered_marks, author_besiii_sub_lettered_marks_tie_control.
+#[test]
+fn a_space_before_a_tie_keeps_the_blocks_sub_lettered_marks() {
+  assert_eq!(
+    semantic_creators(repro!("author_besiii_sub_lettered_marks_tie_control")),
+    besiii_creators()
+  );
+  assert_eq!(
+    semantic_creators(repro!(
+      "author_besiii_space_before_tie_keeps_sub_lettered_marks"
+    )),
+    besiii_creators()
+  );
+}
+
+/// 1202.2048's BESIII block as written (review rev107b B2): 340 creators, every one named, no legend a creator, and each
+/// sub-lettered name its number's institute and its letter's legend (`E.~Boger$^{18a}$`, `I.~Denysenko$^{18b}$`,
+/// `S.~P.~Pacetti$^{17c}$`, `A.~Sarantsev$^{18d}$`, `C.~P.~Shen$^{36e}$`), each legend on the names requesting it alone,
+/// and the spaced-tie `N.~B. ~Li$^{22}$` one name. Red (107b r1): 342 creators, the `a` legend one and a nameless one
+/// holding the others, the sub-lettered names no institute 18. Repro
+/// sectioning-frontmatter/author_besiii_block_sub_lettered_marks_1202_2048.
+#[test]
+fn the_1202_2048_besiii_block_gives_every_name_its_lines() {
+  let creators = semantic_creators(repro!("author_besiii_block_sub_lettered_marks_1202_2048"));
+  assert_eq!(creators.len(), 340);
+  assert!(
+    creators
+      .iter()
+      .all(|c| c.first().is_some_and(|name| !name.contains('='))),
+    "every creator named: {creators:?}"
+  );
+  let collaboration = "collaboration=(BESIII Collaboration)";
+  let jinr = "affiliation=Joint Institute for Nuclear Research, 141980 Dubna, Russia";
+  let a = "affiliation=also at the Moscow Institute of Physics and Technology, Moscow, Russia";
+  let expected: [&[&str]; 9] = [
+    &["E. Boger 18a", collaboration, jinr, a],
+    &["G. Chelkov 18a", collaboration, jinr, a],
+    &["A. Zhemchugov 18a", collaboration, jinr, a],
+    &[
+      "I. Denysenko 18b",
+      collaboration,
+      jinr,
+      "affiliation=on leave from the Bogolyubov Institute for Theoretical Physics, Kiev, Ukraine",
+    ],
+    &[
+      "S. P. Pacetti 17c",
+      collaboration,
+      "affiliation=INFN Laboratori Nazionali di Frascati , Frascati, Italy",
+      "affiliation=Currently at University of Perugia and INFN, Perugia, Italy",
+    ],
+    &[
+      "A. Sarantsev 18d",
+      collaboration,
+      jinr,
+      "affiliation=also at the PNPI, Gatchina, Russia",
+    ],
+    &[
+      "C. P. Shen 36e",
+      collaboration,
+      "affiliation=University of Hawaii, Honolulu, Hawaii 96822, USA",
+      "affiliation=now at Nagoya University, Nagoya, Japan",
+    ],
+    &[
+      "N. B. Li",
+      collaboration,
+      "affiliation=Nanjing Normal University, Nanjing 210046, P. R. China",
+    ],
+    &[
+      "W. L. Yuan",
+      collaboration,
+      "affiliation=Nanjing Normal University, Nanjing 210046, P. R. China",
+    ],
+  ];
+  for creator in expected {
+    let found: Vec<&Vec<String>> = creators.iter().filter(|c| c[0] == creator[0]).collect();
+    assert_eq!(found, [&creator
+      .iter()
+      .map(|s| s.to_string())
+      .collect::<Vec<_>>()]);
+  }
+  // (each legend on the names its letter's marks request, and on no other)
+  for (legend, holders) in [
+    ("Moscow Institute of Physics", 3),
+    ("Bogolyubov Institute", 1),
+    ("University of Perugia", 1),
+    ("PNPI, Gatchina", 1),
+    ("now at Nagoya University", 1),
+  ] {
+    assert_eq!(
+      creators
+        .iter()
+        .filter(|c| c.iter().any(|item| item.contains(legend)))
+        .count(),
+      holders,
+      "{legend}"
+    );
+  }
+}
+
+/// The detector's readings of round 2 (review rev107b B2, N2): a creator named by a legend's text (`also at …`) is a
+/// `creator_not_a_name` Error, never silent; a name over a line under it, each line reading as a name, is counted by
+/// its lines and worded so. Repros sectioning-frontmatter/author_legend_line_read_as_an_author_is_flagged,
+/// author_name_over_unmarked_line_counted_by_its_lines.
+#[test]
+fn a_creator_named_by_a_legend_is_flagged() {
+  let (log, xml) = convert_files_with(
+    repro!("author_legend_line_read_as_an_author_is_flagged"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert!(
+    log.contains(concat!(
+      "Error:frontmatter:creator_not_a_name An author's name reads as no name: \"also at the Moscow Institute of ",
+      "Physics\"; a line under the names (an affiliation or a legend) was read as an author"
+    )),
+    "{log}"
+  );
+  assert_eq!(perfect_kernel_batch84b::creators(&xml), [
+    vec!["Ann Able"],
+    vec!["also at the Moscow Institute of Physics"]
+  ]);
+  let (log, xml) = convert_files_with(
+    repro!("author_name_over_unmarked_line_counted_by_its_lines"),
+    &[],
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert!(
+    log.contains(concat!(
+      "Error:frontmatter:merged_creators One author holds 2 lines that each read as a name: \"Bob Baker / Carnegie ",
+      "Mellon\"; the names a line break parts, or a name and the line under it (its affiliation), were not told apart"
+    )),
+    "{log}"
+  );
+  assert_eq!(perfect_kernel_batch84b::creators(&xml), [
+    vec!["Ann Able 1"],
+    vec!["Bob Baker Carnegie Mellon 2"]
+  ]);
+}
+
+/// A sole `\input` file opening with `\inputencoding` is read as its content (`sole_input_file` matches its refusing
+/// commands whole, review rev107b N3). Red (107b r1): one creator, 1 merged_creators Error. Repro
+/// sectioning-frontmatter/input_names_block/author_input_file_with_inputencoding_is_read.
+#[test]
+fn a_sole_input_file_opening_with_inputencoding_is_read() {
+  assert_eq!(
+    counted_creators(
+      include_str!(concat!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/input_names_block/",
+        "author_input_file_with_inputencoding_is_read.tex"
+      )),
+      &[(
+        "author_grid_enc.tex",
+        include_str!(concat!(
+          "../../../tools/perfect_kernel/repros/sectioning-frontmatter/input_names_block/",
+          "author_grid_enc.tex"
+        )),
+      )],
+      0,
+    ),
+    concat!(
+      r#"<creator role="author"> <personname>Ann Able</personname> "#,
+      r#"<contact name="Affiliation: " role="affiliation">University of Alpha</contact> </creator> "#,
+      r#"<creator before=" " role="author"> <personname>Bob Baker</personname> "#,
+      r#"<contact name="Affiliation: " role="affiliation">University of Beta</contact> </creator>"#,
+    )
   );
 }

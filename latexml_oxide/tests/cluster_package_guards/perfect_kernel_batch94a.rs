@@ -140,10 +140,12 @@ fn an_entry_of_several_pieces_is_written_whole() {
       "affiliation=Department of Physics, Univ Y, Japan",
     ],
   ];
+  // (`and~ Bob`: since 107b r2 a tie and the space beside it are one word space, the lexer's `ties_the_gap`, so the
+  // word "and" parts the names, no gap of two items)
   let reading = assert_reading(tex, Some(xml), &[
     "C Ann Able [1] | line:names",
     "  a Department of Physics and Astronomy, Univ X, Japan | ruling1:request",
-    "C Bob Baker [2] | line:names sep:gap",
+    "C Bob Baker [2] | line:names sep:word",
     "  a Department of Physics, Univ Y, Japan | ruling1:request",
   ]);
   assert_eq!(reading.3, Value::from("written"));

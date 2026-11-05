@@ -712,10 +712,18 @@ pub(in crate::base_utilities) fn marker_leads(line: &Tokens) -> bool {
   // authors, 2407.15815; `\kern2pt$^{1}$Univ A`).
   let printed = |tokens: &[Token]| Tokens::new(tokens[leading_unprinted_end(tokens)..].to_vec());
   let line = &printed(line.unlist_ref());
-  let probe = match leading_wrapper(line) {
-    Some((_, inner, _)) => printed(inner.unlist_ref()),
-    None => line.clone(),
-  };
+  // (through each wrapper that opens the line and holds a mark, the wrappers a line keeps of the block's —
+  // `{\small{\it \vspace{0.2cm} $^{a}$ also at …}}`, a legend line of 1202.2048's `\begin{small} … {\it …}` once
+  // [`wrapper_over_lines_as_lines`] gives each line its wrappers: read past one wrapper only, the spacing's letters
+  // before the mark made the legend an author)
+  let mut probe = line.clone();
+  while let Some((_, inner, _)) = leading_wrapper(&probe) {
+    let inner = printed(inner.unlist_ref());
+    if author_mark_position(&inner).is_none() {
+      break;
+    }
+    probe = inner;
+  }
   match author_mark_position(&probe) {
     Some(p) => !name_precedes_marker(&probe, p),
     // No mark inside the wrapper (`{}$^1$Univ A`, `\noindent{}$^1$…`): the whole line decides, as before.

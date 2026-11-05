@@ -611,6 +611,8 @@ enum Atom {
     width: f64,
     fill:  bool,
     span:  Option<(u16, u16)>,
+    /// the one character it prints when it is a word space or a tie (` `, U+00A0), which the lexer reads together
+    word:  Option<char>,
   },
   Event(Event),
 }
@@ -680,7 +682,13 @@ impl Walker {
               text.chars().map(space_width).sum()
             }
           });
-          self.atoms.push(Atom::Space { width, fill, span });
+          let mut chars = text.chars();
+          let word = match (chars.next(), chars.next()) {
+            (Some(' ' | '\n'), None) if !fill && width <= INTERWORD => Some(' '),
+            (Some('\u{a0}'), None) if !fill && width <= INTERWORD => Some('\u{a0}'),
+            _ => None,
+          };
+          self.atoms.push(Atom::Space { width, fill, span, word });
         } else {
           self.atoms.push(Atom::Ink {
             text,
@@ -1058,6 +1066,7 @@ impl Walker {
             width,
             fill: false,
             span: box_span(d),
+            word: None,
           });
         }
         self.atoms.extend(inside.into_iter().filter(|atom| {
@@ -1205,6 +1214,7 @@ impl Walker {
           width,
           fill: false,
           span: box_span(d),
+          word: None,
         });
       }
       return;
@@ -1660,7 +1670,7 @@ pub(in crate::base_utilities) fn lex_events(digested: &Digested) -> Vec<Event> {
   for atom in walker.atoms {
     match atom {
       Atom::Ink { text, span, font, nest } => lexer.ink(&text, span, font, nest),
-      Atom::Space { width, fill, span } => lexer.space(width, fill, span),
+      Atom::Space { width, fill, span, word } => lexer.space(width, fill, span, word),
       Atom::Event(event) => lexer.push_event(event),
     }
   }

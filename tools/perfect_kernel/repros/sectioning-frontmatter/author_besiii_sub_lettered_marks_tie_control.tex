@@ -1,0 +1,46 @@
+% The control of author_besiii_space_before_tie_keeps_sub_lettered_marks: the same block, `N.~B.~Li$^{11}$` written
+% without the space before its tie.
+% witness: 1202.2048 (review rev107b B2, probe s12)
+% oracle:  pdflatex 0 errors: as author_besiii_space_before_tie_keeps_sub_lettered_marks
+% engines: rust 107b r1 = seven creators as expected (the writer's re-part of the kernel's legend creator); Perl one
+%          creator
+% expect:  0 errors, 0 warnings; seven creators, B. Baker Univ N10 and the a legend, D. Dee Univ N12 and the b
+%          legend, the institutes no name requests on the block's nameless creator
+% status:  GREEN (107b r1) -> GREEN (107b r2, no legend creator made)
+% preload: ar5iv.sty
+\documentclass[preprint,11pt]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{
+\begin{small}
+A.~Able$^{1}$, B.~Baker$^{10a}$, C.~Cole$^{2}$, D.~Dee$^{12b}$, Lei~Li$^{1}$, N.~B.~Li$^{11}$, Q.~J.~Li$^{1}$
+\\
+\vspace{0.2cm}
+(X Collaboration)\\
+\vspace{0.2cm} {\it
+$^{1}$ Univ N1, City\\
+$^{2}$ Univ N2, City\\
+$^{3}$ Univ N3, City\\
+$^{4}$ Univ N4, City\\
+$^{5}$ Univ N5, City\\
+$^{6}$ Univ N6, City\\
+$^{7}$ Univ N7, City\\
+$^{8}$ Univ N8, City\\
+$^{9}$ Univ N9, City\\
+$^{10}$ Univ N10, City\\
+$^{11}$ Univ N11, City\\
+$^{12}$ Univ N12, City\\
+\vspace{0.2cm}
+$^{a}$ also at Inst Alpha, Moscow\\
+$^{b}$ on leave from Inst Beta, Kiev\\
+\vspace{7cm}
+}
+\end{small}
+}
+\begin{abstract}
+A.
+\end{abstract}
+\end{frontmatter}
+Body.
+\end{document}

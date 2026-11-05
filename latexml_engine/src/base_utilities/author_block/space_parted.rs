@@ -142,6 +142,75 @@ pub(in crate::base_utilities) fn space_parted_names(line: Tokens) -> Tokens {
   }
 }
 
+/// Whether `line` is a line of two or more names parted by horizontal space alone ([`space_parted_names`] parts it),
+/// at its top level or inside one wrapper over the whole line, a font command or a group of declarations
+/// (`\textbf{Ludwig Schmidt \quad Serena Yeung-Levy}` under a row of names, the NeurIPS block of 2507.19054). Such a
+/// line is a names line wherever it stands, never an affiliation of the name above it: `Ann Able \quad Bob Baker\\ Cat
+/// Cole \quad Dan Dee` is four authors, where Cat Cole had been Bob Baker's affiliation (the rev107b review's B1, probes
+/// r01, q09, r04). A line naming an institution beside a name parts nothing (`John Smith\quad Bell Labs`: every piece
+/// must read as a name), so an unmarked institution under one name stays its affiliation (user ruling R12).
+pub(in crate::base_utilities) fn space_parted_name_line(line: &Tokens) -> bool {
+  let parts = |tokens: Tokens| {
+    let spaced = spaced_name_separators(tokens);
+    space_parted_names(spaced.clone()).unlist_ref() != spaced.unlist_ref()
+  };
+  parts(line.clone())
+    || whole_line_cs_wrapper(line)
+      .is_some_and(|(cs, inner)| cs.with_str(|cs| NAME_TEXT_COMMANDS.contains(&cs)) && parts(inner))
+    || whole_line_group(line).is_some_and(|(_, inner)| parts(inner))
+}
+
+/// An unmarked author block with each line of names parted by horizontal space alone ([`space_parted_name_line`]) under
+/// another line written as its own row of the names: after the block's names line — the first line, one an `\and`
+/// opens, or such a line — the line break is the space between two names (`\quad`), the line more names of the row
+/// above; after a line under the names (an affiliation, a gap), an `\and`, the line the next author group's names
+/// (1203.0321's `F. Inti Pelupessy\hspace{0.5cm}Simon Portegies Zwart` under the first row's institution, welded into
+/// it).
+/// The block's groups are parted at `\and` and `\quad` before its lines (`author_group_splits`), so read as written
+/// `Ann Able \quad Bob Baker\\ Cat Cole \quad Dan Dee` gave Bob Baker the affiliation "Cat Cole" (in a `\parbox`
+/// too, once [`wrapper_over_lines_as_lines`] gives its lines to the block: the rev107b review's B1, probes q09, r01, r04;
+/// `\\ \textbf{Ludwig Schmidt \quad Serena Yeung-Levy} \\` under a row of names, 2507.19054). A line naming an
+/// institution parts nothing, so an unmarked line under one name stays its affiliation (user ruling R12), and a row of
+/// addresses set by position under the names (`A \quad B \\ Univ A \quad Univ B`) stays one. A line of names a
+/// comma parts is the comma rules' (`names_continue`), as before.
+pub(in crate::base_utilities) fn space_parted_rows_joined(stuff: Tokens) -> Tokens {
+  let pieces = split_tokens_delimited(stuff.clone(), author_line_breaks());
+  if pieces.len() < 2 {
+    return stuff;
+  }
+  let opens_a_group = |piece: &Tokens| split_tokens(piece.clone(), author_and_splits()).len() > 1;
+  let mut out: Vec<Token> = Vec::with_capacity(stuff.unlist_ref().len() + pieces.len());
+  let mut changed = false;
+  // (whether the line before is a names line by where it stands)
+  let mut names_line = true;
+  for (at, (delimiter, piece)) in pieces.into_iter().enumerate() {
+    let opens = opens_a_group(&piece);
+    // (a comma list is the comma's, read as before — `names_continue`: `… Antoine Garcon,$^{1}$\\ Peter W.
+    // Graham,$^{2}$ Derek F. Jackson Kimball,$^{3}$ …`, 1901.10843, its separators printed as the commas)
+    let row = at > 0
+      && !opens
+      && !visible_name_text(piece.unlist_ref()).contains(',')
+      && space_parted_name_line(&piece);
+    if at > 0 {
+      if row {
+        out.push(if names_line {
+          T_CS!("\\quad")
+        } else {
+          T_CS!("\\and")
+        });
+        changed = true;
+      } else {
+        out.extend(delimiter);
+      }
+      out.push(T_SPACE!());
+    }
+    names_line = at == 0 || row || opens;
+    out.extend(piece.unlist());
+    out.push(T_SPACE!());
+  }
+  if changed { Tokens::new(out) } else { stuff }
+}
+
 /// Where the wrapper at `v[i]` ends when the name it holds ends in the name's marks or notes ([`name_marks_end`]): a
 /// font command over a group ([`NAME_TEXT_COMMANDS`]: `\textbf{Ann Able\textsuperscript{1}}`) or a group
 /// (`{\bf Ann Able$^{1}$}`), a name letter before its marks. A wrapper prints its marks where its name ends, so a
