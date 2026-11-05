@@ -333,7 +333,7 @@ impl Resolver {
   /// `\c@Maxaffil`, 2 unless the document set it), each unlabelled author requests its number and each unlabelled
   /// `\affil` is labelled by its number (ruling 1: `\author[1]{Ann}\author{Bob}\affil[1]{X}\affil{Y}` prints Y under
   /// "Ann¹ Bob¹" both, `\author[a]{Ann}` under Bob alone — 2605.25017); else each stays on its run. With no `\affil`
-  /// at all no note prints (authblk.sty:167: `\@author` is `\AB@author` while `\AB@affillist` is empty), so no author
+  /// at all no note prints (authblk.sty:168: `\@author` is `\AB@author` while `\AB@affillist` is empty), so no author
   /// requests one: a class setting `\setcounter{Maxaffil}{0}` under an `\author` whose own lines carry the marks
   /// (`$^1$Fudan University $^2$ByteDance Seed`) had every author request entry 1 (2510.24320, 2608.24199,
   /// 2609.35561; batch 107e).

@@ -1,0 +1,18 @@
+% mechanism: the sibling of cut_run_legend_line_after_font_wrapped_entries with the legend in a font command of its own
+%   (`\textit{$^*$Equal Contribution}`): the writer cuts it with its mark from inside the wrapper, as it cuts the entries
+%   (`writer::plan::wrapped_entry_mark`, its mark kept: a legend's text keeps its mark's ink)
+% witness: 2609.38081 (iclr `\textnormal{$^{*}$Co-senior authors}` under `\textnormal{$^{1}$… \quad $^{2}$…}` lines),
+%   2601.12823 (`{\small\texttt{$^{\star}$Corresponding author: …}}`); review rev107e finding 1's sibling
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Lee1,∗ , Bob Ray2,∗ , Cy Do2 / 1 Univ A 2 Univ B / ∗ Equal Contribution"
+% engines: rust int139a, 107e (r1): Ann one contact "Univ A 2 Univ B * Equal Contribution", Bob and Cy none
+% expect:  0 errors, 0 warnings; Ann "Univ A" + note "∗ Equal Contribution"; Bob "Univ B" + the same note; Cy "Univ B"
+% status:  RED (107e r1) -> GREEN (107e r2) — perfect_kernel_batch107e::a_legend_after_a_wrapped_run_is_its_carriers_notes
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Lee$^{1,*}$, Bob Ray$^{2,*}$, Cy Do$^{2}$\\
+\textbf{$^1$Univ A}  \textbf{$^2$Univ B}\\
+\textit{$^*$Equal Contribution}}
+\maketitle
+\end{document}

@@ -700,11 +700,17 @@ struct ListMark {
 /// A mark heading an entry from inside a group at `toks[i]`, outside every other group: a group the mark alone fills
 /// (`{$^2$} ETH Zurich`, 2203.16586's cvpr line `\small {$^1$} Beijing Institute of Technology {$^2$} ETH Zurich …`), or
 /// one entry's own wrapper — a text font command's argument or a group, past the declarations opening it — that the
-/// mark opens (`\textit{$^2$CSIRO Data61}`, 2508.07190's `\textit{$^1$…} $|$ \textit{$^2$…}`; `{\it $^2$Univ B}`). The
-/// mark's operand, and where what it labels starts: past the group a mark alone fills, past the mark inside a wrapper.
-/// A mark command's own group (`\textsuperscript{2}`) is the mark itself, read as one; a note's (`\thanks{$^1$…}`) none.
+/// mark opens (`\textit{$^2$CSIRO Data61}`, 2508.07190's `\textit{$^1$…} $|$ \textit{$^2$…}`; `{\it $^2$Univ B}`;
+/// 2605.25195's `\textbf{$^1$Fudan University}  \textbf{$^2$Tencent Hunyuan}`). The mark's operand, and where what it
+/// labels starts: past the group a mark alone fills, past the mark inside a wrapper. A wrapper is the entry's own only
+/// where it holds the whole entry — nothing but a separator after it ([`trim_trailing_separator`]) up to the next mark or
+/// line break: a font group whose text goes on after it is the entry's text, its mark an isotope's (`Univ A,
+/// \textit{$^{2}$H} Lab, Rome $^{2}$Univ B`, `Lab for \textit{$^{3}$He} Studies`; review rev107e finding 3). A mark
+/// command's own group (`\textsuperscript{2}`) is the mark itself, read as one; a note's (`\thanks{$^1$…}`, an argument
+/// of a name annotation, [`is_name_annotation`]) none.
 fn wrapped_mark_at(toks: &[Token], i: usize) -> Option<(Vec<Token>, usize)> {
   let open = match toks[i].get_catcode() {
+    Catcode::BEGIN if i > 0 && is_name_annotation(&toks[i - 1]) => return None,
     Catcode::BEGIN => i,
     Catcode::CS
       if is_text_font_command(&toks[i])
@@ -735,14 +741,53 @@ fn wrapped_mark_at(toks: &[Token], i: usize) -> Option<(Vec<Token>, usize)> {
   while inner.get(next) == Some(&T_SPACE!()) {
     next += 1;
   }
-  Some((
-    operand,
-    if next == inner.len() {
-      close
-    } else {
-      open + 1 + next
-    },
-  ))
+  if next == inner.len() {
+    return Some((operand, close));
+  }
+  // (what follows the wrapper up to the next mark or line break: a separator alone, else the wrapper is no entry's own)
+  let mut k = close;
+  while k < toks.len() && !opens_entry_or_line(toks, k) {
+    k += 1;
+  }
+  // (or a lead that prints nothing before it, `\hfill`, `\vspace{1mm}`)
+  let after = &toks[close.min(k)..k];
+  let separator = |piece: &[Token]| trim_trailing_separator(piece.to_vec()).is_empty();
+  (separator(after) || separator(&after[leading_unprinted_end(after)..]))
+    .then_some((operand, open + 1 + next))
+}
+
+/// Whether `toks[k]` opens a mark ([`wrapped_mark_at`]'s scan past a wrapper): a superscript formula, a mark command, a
+/// group or text font command whose content a mark leads — or a line break, a paragraph's end (2603.19086's last entry
+/// `\textit{$^5$CSIRO Data61}` before a blank line).
+fn opens_entry_or_line(toks: &[Token], k: usize) -> bool {
+  let t = &toks[k];
+  if *t == T_CS!("\\\\") || *t == T_CS!("\\newline") || *t == T_CS!("\\par") || is_mark_command(t) {
+    return true;
+  }
+  if t.get_catcode() == Catcode::MATH {
+    return toks.get(k + 1) == Some(&T_SUPER!());
+  }
+  let brace = match t.get_catcode() {
+    Catcode::BEGIN => k,
+    Catcode::CS if is_text_font_command(t) => k + 1,
+    _ => return false,
+  };
+  if toks
+    .get(brace)
+    .is_none_or(|t| t.get_catcode() != Catcode::BEGIN)
+  {
+    return false;
+  }
+  let close = skip_group(toks, brace).min(toks.len());
+  let inner = &toks[brace + 1..close.saturating_sub(1).max(brace + 1)];
+  let mut j = leading_unprinted_end(inner);
+  while inner.get(j) == Some(&T_SPACE!()) {
+    j += 1;
+  }
+  inner.get(j).is_some_and(|t| {
+    is_mark_command(t)
+      || (t.get_catcode() == Catcode::MATH && inner.get(j + 1) == Some(&T_SUPER!()))
+  })
 }
 
 /// The marks of `toks` outside every group, in order (`$^{…}$`, a mark command: [`is_mark_command`]; a mark heading an

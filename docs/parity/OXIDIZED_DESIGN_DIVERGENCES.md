@@ -30390,7 +30390,7 @@ the entry above it (`affiliations::blank_line_marks_dropped`, in the block reade
 mark no line prints (`relocate::requested_marks_unprinted`): the head is labelled by it — superscriptaddress numbers it
 and prints the number once, after the call's last name — and the lines are cut (2109.01501, 1903.07834: the block had
 gone to a nameless creator); otherwise the fail-safe stands. The `;` control: `\affiliation{Dept. A; Univ B}` with no
-mark after its `;` stays one entry. And authblk prints no note without an `\affil` (authblk.sty:167
+mark after its `;` stays one entry. And authblk prints no note without an `\affil` (authblk.sty:168
 `\ifx\AB@affillist\AB@empty\AB@author`), so under `\setcounter{Maxaffil}{0}` with the marks written on the `\author`
 lines no author requests the thenote's 1 (`Resolver::thenote_finish`; 2510.24320, 2608.24199, 2609.35561, 2503.04130,
 2512.05325, 2605.21951: the mark-2 holders had entry 1 too). A/B `pop107e.tsv` (1,162: the 12 census witnesses, 650 dev20k/dev3
@@ -30405,6 +30405,29 @@ on later pieces (`\small {$^1$} A {$^2$} B`: only A in 90 %) and shows no mark, 
 (gr-qc0611116) — each call its own entry by REVTeX's convention — and PoS's `\footnotesize` group inside `\author`
 (1509.01480) are not read. Guards `perfect_kernel_batch107e::*` (6); repros sectioning-frontmatter/`cut_run_*`,
 `cut_revtex_*`, `cut_lines_*` (7 RED → GREEN, 4 GREEN controls).
+
+**Batch 107e round 2** (review rev107e). (1) A legend line under a run whose entries sit in font commands their marks
+open (`\textbf{$^1$A}  \textbf{$^2$B}\\ $^*$ Equal Contribution, …`) is read by the observer's writer as under a plain
+run: the observer's Mark event of a mark digested inside a wrapper is the wrapper's box, so its span covered the entry
+and the writer's line cut (`block_span_tokens`) found no mark before it and declined; `writer::plan::wrapped_entry_mark`
+takes the mark's own formula before the entry's ink and opens the wrapper again round the entry made (its font kept),
+when the wrapper closes where the entry ends; a legend in a wrapper of its own is cut with its mark (2609.38081's
+`\textnormal{$^{*}$Co-senior authors}`, 2601.12823's `{\small\texttt{$^{\star}$Corresponding author: …}}`: the legend
+had been the last entry's affiliation text). The kernel alone welds such a legend into the last entry, after a plain
+run as after a wrapped one (the author block reader's "a note continues the affiliation above", batch 64k): a paper the
+writer declines keeps it so — 2605.25195, declined over its `{\url{…}}` line (the reading gives it the last names row,
+`line:contact R12:row-above`; the kernel, the block). (2) REVTeX's head over marked lines is read only where every
+top-level line of the tail, a blank one aside, opens with a mark and no group or environment holds one
+(`revtex4_support_sty::marks_lead_every_line`); else the whole call is the 98e fail-safe's (`$^{2}$Univ B\\
+\parbox{…}{$^{3}$Inst C\\ $^{4}$Lab D}` under the head: the block creator's, as before 107e). (3) A wrapper is an entry's
+own (`notes::wrapped_mark_at`) only where nothing but a separator (`trim_trailing_separator`; an unprinted lead such as
+`\hfill` aside) follows it up to the next mark, line break or paragraph end (2603.19086's last entry before a blank
+line): `Univ A, \textit{$^{2}$H} Lab, Rome $^{2}$Univ B` and `Lab for \textit{$^{3}$He} Studies` keep the isotope in
+the entry; and a group that is a name annotation's argument (`\thanks{$^1$…}`, `is_name_annotation`) is no
+wrapper. Not fixed, as before 107e: the plain `$^{1}$Lab for $^{3}$He Studies, $^{2}$Univ B, $^{3}$Inst C` and
+`$^{1}$Univ A, $^{2}$H Lab, Rome $^{2}$Univ B` are cut at the isotope. Guards
+`perfect_kernel_batch107e::{a_legend_after_a_wrapped_run_is_its_carriers_notes,
+an_unmarked_head_over_an_unreadable_tail_is_the_blocks, a_wrapped_isotope_is_entry_text}`.
 
 ### 955. A raw class's affiliation or address that its own title page prints into the body is the creators' contact: a setter that stores it among code of its own, by what its call recorded; a setter that prints it with no line break of its own, where its call stands as a line (Perl: the shipped class is not read; OmniBus's setters feed the API)
 **What** (brief 99b; census127 dev20k cluster 4 and the long tail's Coverage clusters; FIDELITY_CHARTER §4, displaced

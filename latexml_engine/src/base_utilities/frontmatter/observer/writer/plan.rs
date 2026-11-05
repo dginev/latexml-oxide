@@ -578,12 +578,21 @@ pub(super) fn block_span_tokens(
       return None;
     };
     // (the event printed last before the line, a layout change aside)
-    let mark = events
+    let mut mark = events
       .iter()
       .rev()
       .find(|e| e.kind != EventKind::Layout && e.span.is_some_and(|(_, e)| e <= span.0))
       .filter(|e| e.kind == EventKind::Mark)
       .and_then(|e| e.span);
+    // (or the mark heading the entry from inside the entry's own wrapper, `\textbf{$^2$Univ B}`: its own formula, the
+    // wrapper opened again round the entry made — [`wrapped_entry_mark`])
+    let wrapper = mark
+      .is_none()
+      .then(|| wrapped_entry_mark(events, block.tokens.unlist_ref(), block.range.0, span))
+      .flatten();
+    if let Some((own, _)) = &wrapper {
+      mark = Some(*own);
+    }
     let labelled = events
       .iter()
       .find(|e| e.kind == EventKind::Contact && e.label.is_some() && e.span == Some(span));
@@ -601,8 +610,108 @@ pub(super) fn block_span_tokens(
       with_mark,
       font.is_some(),
     )?;
+    let tokens = match wrapper {
+      Some((_, opening)) => {
+        let mut wrapped = opening;
+        wrapped.extend(
+          tokens
+            .unlist()
+            .into_iter()
+            .skip_while(|t| t.get_catcode() == Catcode::SPACE),
+        );
+        wrapped.push(T_END!());
+        Tokens::new(wrapped)
+      },
+      None => tokens,
+    };
     Some(entry_tokens(font, wrap, tokens))
   })
+}
+
+/// A mark heading the entry at `span` from inside the entry's own wrapper — a text font command's argument
+/// (`\textbf{$^2$Tencent Hunyuan}`, 2605.25195's `\textbf{$^1$Fudan University}  \textbf{$^2$Tencent Hunyuan}\\ $^*$
+/// Equal Contribution, …`) or a group opened by font declarations (`{\it $^2$Univ B}`) that closes where the entry ends —
+/// in `content`, a block's tokens from position `base`: the Mark event is the wrapper's box, so its span covers the whole
+/// wrapper, the entry inside it. The span of the mark's own formula just before the entry's ink
+/// ([`mark_formula_start`]), and the wrapper's opening tokens, to open it again round the entry made (the cut keeps its
+/// font) — `None` when the event before the entry is no Mark covering it, or the wrapper holds more than the mark and the
+/// entry (the kernel's cut reads such a mark as one, `notes::wrapped_mark_at`).
+fn wrapped_entry_mark(
+  events: &[Event],
+  content: &[Token],
+  base: usize,
+  span: (u16, u16),
+) -> Option<((u16, u16), Vec<Token>)> {
+  let (start, end) = events
+    .iter()
+    .rev()
+    .find(|e| e.kind != EventKind::Layout && e.span.is_some_and(|(s, _)| s < span.0))
+    .filter(|e| e.kind == EventKind::Mark)?
+    .span?;
+  if end < span.1 {
+    return None;
+  }
+  let at = |p: u16| usize::from(p).checked_sub(base);
+  let (open, from, to, past) = (at(start)?, at(span.0)?, at(span.1)?, at(end)?);
+  // (the wrapper's closing brace, its last token: only spaces between it and the entry's end)
+  let close = past.checked_sub(1)?;
+  if content.get(close)?.get_catcode() != Catcode::END
+    || content
+      .get(to..close)?
+      .iter()
+      .any(|t| t.get_catcode() != Catcode::SPACE)
+  {
+    return None;
+  }
+  // (the mark's own formula, just before the entry's ink and the spaces before it)
+  let mut ink = from;
+  while ink > open && content[ink - 1].get_catcode() == Catcode::SPACE {
+    ink -= 1;
+  }
+  let formula = mark_formula_start(content, ink);
+  if formula >= ink || formula <= open {
+    return None;
+  }
+  // (the wrapper's opening: a text font command and its brace, or a brace and the declarations after it)
+  let opening = &content[open..formula];
+  let space = |t: &Token| t.get_catcode() == Catcode::SPACE;
+  let brace = match opening[0].get_catcode() {
+    Catcode::CS
+      if (text_font_command(&opening[0]) || is_cs(&opening[0], "\\emph"))
+        && opening
+          .get(1)
+          .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+        && opening[2..].iter().all(space) =>
+    {
+      open + 1
+    },
+    Catcode::BEGIN if opening[1..].iter().all(|t| space(t) || font_declaration(t)) => open,
+    _ => return None,
+  };
+  // (that brace closes at the wrapper's last token)
+  let mut depth = 0usize;
+  for (i, t) in content.iter().enumerate().take(past).skip(brace) {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => {
+        depth -= 1;
+        if depth == 0 && i != close {
+          return None;
+        }
+      },
+      _ => {},
+    }
+  }
+  if depth != 0 {
+    return None;
+  }
+  Some((
+    (
+      u16::try_from(base + formula).ok()?,
+      u16::try_from(base + ink).ok()?,
+    ),
+    opening.to_vec(),
+  ))
 }
 
 /// The tokens of an e-mail contact printing `address`, an address the reading reads at `span` of the block at ledger

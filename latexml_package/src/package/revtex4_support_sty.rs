@@ -990,7 +990,8 @@ fn preprint_printed() -> bool {
 /// An affiliation block's unmarked first entry and the lines after it that marks lead, when its marks are all on those
 /// lines (`Univ A, Nagoya \\ $^2$Univ B \\ $^3$Inst C`): the entry's lines up to the first top-level line a mark leads,
 /// and the rest, from that line; `None` when no top-level line after the first is led by a mark, the head holds a mark,
-/// or the head prints nothing ([`group_or_marked_affiliation`]).
+/// the head prints nothing, or the rest is not marked lines alone ([`marks_lead_every_line`]) — then the fail-safe of
+/// [`group_or_marked_affiliation`] holds the whole block.
 fn unmarked_head_over_marked_lines(content: &Tokens) -> Option<(Tokens, Tokens)> {
   let v = content.unlist_ref();
   let mut depth = 0usize;
@@ -1009,7 +1010,8 @@ fn unmarked_head_over_marked_lines(content: &Tokens) -> Option<(Tokens, Tokens)>
         if !leads_with_mark(&tail) {
           continue;
         }
-        return (author_mark_position(&head).is_none()
+        return (marks_lead_every_line(&tail)
+          && author_mark_position(&head).is_none()
           && head
             .unlist_ref()
             .iter()
@@ -1020,6 +1022,43 @@ fn unmarked_head_over_marked_lines(content: &Tokens) -> Option<(Tokens, Tokens)>
     }
   }
   None
+}
+
+/// Whether `tail`, the marked rest of an affiliation block after its unmarked first entry, is lines the marked reader
+/// reads whole ([`unmarked_head_over_marked_lines`]): every top-level line, a blank one aside, opens with a mark, and no
+/// group (a box's argument, a font group) or environment holds a mark — `$^{2}$Univ B\\ \parbox{\linewidth}{$^{3}$Inst
+/// C\\ $^{4}$Lab D}` is not, its boxed lines no cut reads (review rev107e finding 2: Inst C and Lab D one entry, the
+/// head on a nameless creator).
+fn marks_lead_every_line(tail: &Tokens) -> bool {
+  let v = tail.unlist_ref();
+  if v.iter().any(|t| *t == T_CS!("\\begin")) {
+    return false;
+  }
+  split_top_level_lines(v).into_iter().all(|line| {
+    if line.iter().all(|t| *t == T_SPACE!()) {
+      return true;
+    }
+    // (each top-level group's content, from its opening brace)
+    let (mut depth, mut open) = (0usize, 0usize);
+    for (i, t) in line.iter().enumerate() {
+      match t.get_catcode() {
+        Catcode::BEGIN => {
+          if depth == 0 {
+            open = i + 1;
+          }
+          depth += 1;
+        },
+        Catcode::END if depth > 0 => {
+          depth -= 1;
+          if depth == 0 && !content_marks(&Tokens::new(line[open..i].to_vec())).is_empty() {
+            return false;
+          }
+        },
+        _ => {},
+      }
+    }
+    depth == 0 && leads_with_mark(&Tokens::new(line.to_vec()))
+  })
 }
 
 /// REVTeX's `\affiliation{…}` call: a mark-led line no group shares goes to the authors showing its
