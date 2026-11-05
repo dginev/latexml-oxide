@@ -1,0 +1,16 @@
+% mechanism: control — an `\affiliation` holding one institution with a `;` and no mark after it is one entry
+% witness: (the brief's careful case beside 0902.3613)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able and Bob Baker / Dept. A; Univ B, Lisbon"
+% engines: rust int139a: as expected
+% expect:  0 errors, 0 warnings; Ann and Bob each "Dept. A; Univ B, Lisbon"
+% status:  GREEN (int139a, control) — perfect_kernel_batch107e::a_revtex_call_is_cut_at_its_spaced_marks
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\affiliation{Dept. A; Univ B, Lisbon}
+\maketitle
+Text.
+\end{document}

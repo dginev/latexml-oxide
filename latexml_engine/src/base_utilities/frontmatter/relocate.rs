@@ -1175,6 +1175,22 @@ pub fn requested_marks_held(content: &Tokens) -> usize {
   held.len()
 }
 
+/// The marks the queued authors' names show as superscripts (`queued_name_marks`) that `content` prints nowhere, each
+/// once, in the names' order: the label an affiliation block's unmarked entry carries where the names request one its
+/// marked lines do not print (REVTeX's `\affiliation{Univ A \\ $^2$Univ B \\ $^3$Inst C}` under `Ann$^{1,2}$`,
+/// `Bob$^{2,3}$`: 1 — 2109.01501, 1903.07834).
+pub fn requested_marks_unprinted(content: &Tokens) -> Vec<String> {
+  let (_, requested) = queued_name_marks();
+  let printed: Vec<String> = content_marks(content).iter().map(|m| mark_key(m)).collect();
+  let mut out: Vec<String> = Vec::new();
+  for key in requested {
+    if !key.is_empty() && !printed.contains(&key) && !out.contains(&key) {
+      out.push(key);
+    }
+  }
+  out
+}
+
 /// The items of `tokens` separated by `\\` at its top level, outside every group and `\begin`…`\end` environment.
 pub fn split_top_level_lines(tokens: &[Token]) -> Vec<&[Token]> {
   let (mut items, mut start, mut depth, mut envs) = (Vec::new(), 0, 0usize, 0usize);
@@ -1495,7 +1511,7 @@ fn is_nucleus_spacing(t: &Token) -> bool {
 
 /// The token readers' one reading of a superscript mark spelled other than `$^{1}$`/`\textsuperscript{1}` at `at`, as the
 /// digested formula prints it — a superscript on a spacing nucleus, `${\,\!}^{1}$`, `${}^1$`, `${\ }^{1}$`, `$~^{1}$`
-/// (2112.13115, 1211.5032), the script braced whole, `${^1}$`, one in `\( … \)` with or without one, `\( ^{1} \)`, or a
+/// (2112.13115, 1211.5032), `$ ^1$` (0902.3613), the script braced whole, `${^1}$`, one in `\( … \)` with or without one, `\( ^{1} \)`, or a
 /// box holding only a mark,
 /// `\mbox{${\ }^{1}$}` (0807.4407): the mark's operand and where the mark ends; `None` for any other token there (a
 /// plain `$^{1}$` included, which every reader reads already). Shared by `notes::leads_with_mark`,
@@ -1590,7 +1606,9 @@ pub(in crate::base_utilities) fn spaced_mark_at(
       .iter()
       .take_while(|t| is_nucleus_spacing(t))
       .count();
-    if spacing == 0 {
+    // (plain spaces alone are a nucleus too: math mode skips them, so `$ ^1$` is `$^1$` — tex.web §1045, a space in
+    // math does nothing; 0902.3613's revtex `\affiliation{$ ^1$Instituto …; \ $ ^2$Dept …; $ ^3$Dept …}`)
+    if spacing == 0 && open == at + 1 {
       return None;
     }
     open + spacing

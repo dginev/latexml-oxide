@@ -65,6 +65,7 @@ fn entry_calls(
   let stuff = wrapped_lines_as_lines(&stuff).unwrap_or(stuff);
   let stuff = spaced_marks_as_marks(&stuff).unwrap_or(stuff);
   let stuff = rewrite_ordinal_superscripts(strip_linebreak_options(unalias_mark_commands(stuff)));
+  let stuff = blank_line_marks_dropped(stuff);
   let with_sup = marks_are_labels && author_mark_position(&stuff).is_some();
   // In a marked list, the affiliations it names, each a mark-led line (or a piece of one) with the unmarked lines
   // that follow it.
@@ -204,6 +205,73 @@ fn entry_calls(
   calls.extend(email_calls);
   calls.extend(address_notes);
   Ok(calls)
+}
+
+/// `stuff` without the marks opening a line that print no label — a superscript of spacing alone (`$^{\;}$`, `$^{~}$`,
+/// `\textsuperscript{\,}`), braces, spaces and `\relax` aside: such a line is unmarked, so it continues the entry above
+/// it as any unmarked line does, not an entry of its own (mnras 2303.08793's `$^{8}$Institute for Quantum Computing …,
+/// Waterloo, \\ $^{\;}$Ontario N2L 3G1, Canada`, which pdflatex prints under entry 8 with no label; the line had gone to
+/// the last name). Read by the author block's reader (`dispatch::add_authors_calls_sectioned`) and by every list's cutter
+/// ([`entry_calls`]). A blank mark elsewhere is left to the mark readers (`email_lines::drop_empty_marks`).
+pub(in crate::base_utilities) fn blank_line_marks_dropped(stuff: Tokens) -> Tokens {
+  let v = stuff.unlist_ref();
+  let blank = |range: &[Token]| {
+    range.iter().all(|t| {
+      matches!(
+        t.get_catcode(),
+        Catcode::BEGIN | Catcode::END | Catcode::SPACE
+      ) || *t == T_CS!("\\relax")
+        || is_spacing(t)
+    })
+  };
+  // (the mark at `i`, a line's first token: where it ends when it prints no label)
+  let blank_mark_end = |i: usize| -> Option<usize> {
+    let (operand, closing) =
+      if v[i].get_catcode() == Catcode::MATH && v.get(i + 1) == Some(&T_SUPER!()) {
+        (i + 2, true)
+      } else if is_mark_command(&v[i]) {
+        (
+          i + 1 + v[i + 1..].iter().take_while(|t| **t == T_SPACE!()).count(),
+          false,
+        )
+      } else {
+        return None;
+      };
+    if v.get(operand)?.get_catcode() != Catcode::BEGIN {
+      return None;
+    }
+    let close = skip_group(v, operand);
+    if close > v.len() || !blank(&v[operand..close]) {
+      return None;
+    }
+    if closing {
+      (v.get(close)?.get_catcode() == Catcode::MATH).then_some(close + 1)
+    } else {
+      Some(close)
+    }
+  };
+  let mut out: Vec<Token> = Vec::with_capacity(v.len());
+  let mut line_start = true;
+  let mut i = 0;
+  let mut dropped = false;
+  while i < v.len() {
+    let t = v[i];
+    if line_start && t == T_SPACE!() {
+      out.push(t);
+      i += 1;
+      continue;
+    }
+    if line_start && let Some(end) = blank_mark_end(i) {
+      i = end;
+      dropped = true;
+      line_start = false;
+      continue;
+    }
+    line_start = t == T_CS!("\\\\") || t == T_CS!("\\newline");
+    out.push(t);
+    i += 1;
+  }
+  if dropped { Tokens::new(out) } else { stuff }
 }
 
 /// The contact roles the frontmatter API's Cut reads ([`cut_marked_contact`]): the ones a printed list of entries is

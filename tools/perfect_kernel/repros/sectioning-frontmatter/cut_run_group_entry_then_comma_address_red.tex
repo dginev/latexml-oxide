@@ -1,0 +1,13 @@
+% RED (rev107e2 finding 1, the font-group twin of cut_run_wrapped_entry_then_comma_address_red.tex): `{\small $^1$Univ
+%   A}, Rome {\small $^2$Inst B}, Paris` — the same decline in 107e r2, the same base result.
+% witness: none (synthetic)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Lee1 and Bob Ray2 / 1Univ A, Rome 2Inst B, Paris"
+% engines: rust 107e r2 (46908df2db): one entry on Ann, Bob none
+% expect:  0 errors; Ann Lee: "Univ A, Rome"; Bob Ray: "Inst B, Paris"
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Lee$^{1}$ and Bob Ray$^{2}$\\
+{\small $^1$Univ A}, Rome {\small $^2$Inst B}, Paris}
+\maketitle
+\end{document}

@@ -1,0 +1,21 @@
+% mechanism: a mark right after a comma parts a run (`Lisbon,\IEEEauthorrefmark{2}Univ B`): the separator is a cut point
+%   as a space is (`notes::split_marked_pieces`)
+% witness: 2411.03010 (IEEEtran blockA `\IEEEauthorrefmark{1}\IEEEauthorrefmark{3}Instituto Superior Técnico,\IEEEauthorrefmark{2}…`
+%   beside an e-mail blockA)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able∗ , Bob Baker† , Cy Cole‡ / ∗‡ Univ A, Lisbon,† Univ B, ∗†‡ Inst C / ∗ ann@a.pt,† bob@b.pt,‡ cy@a.pt"
+% engines: rust int139a: Ann "‡Univ A, Lisbon,†Univ B" and "†‡Inst C", Bob and Cy no affiliation, cy@a.pt a nameless creator's
+% expect:  0 errors, 0 warnings; Ann Univ A + Inst C, Bob Univ B + Inst C, Cy Univ A + Inst C, each their e-mail
+%   (residual: an entry led by two marks is labelled by the first, the second printed as its text: "‡ Univ A")
+% status:  RED (int139a) -> GREEN (107e) — perfect_kernel_batch107e::a_mark_after_a_comma_parts_the_run
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{
+   \IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2}, Cy Cole\IEEEauthorrefmark{3}}
+   \IEEEauthorblockA{\IEEEauthorrefmark{1}\IEEEauthorrefmark{3}Univ A, Lisbon,\IEEEauthorrefmark{2}Univ B, \IEEEauthorrefmark{1}\IEEEauthorrefmark{2}\IEEEauthorrefmark{3}Inst C}
+    \IEEEauthorblockA{\IEEEauthorrefmark{1}ann@a.pt,\IEEEauthorrefmark{2}bob@b.pt,\IEEEauthorrefmark{3}cy@a.pt}
+}
+\maketitle
+Text.
+\end{document}

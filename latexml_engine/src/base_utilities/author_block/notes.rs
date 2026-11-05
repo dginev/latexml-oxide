@@ -487,6 +487,15 @@ pub(in crate::base_utilities) fn trim_trailing_separator(mut toks: Vec<Token>) -
   while toks.last().is_some_and(is_spacing) {
     toks.pop();
   }
+  // (a separator glyph between two entries, `\textit{$^1$A} $|$ \textit{$^2$B}` — 2508.07190 —, `A \textbullet{} B`: no
+  // glyph of either entry, [`separator_glyph_len`])
+  let glyph = separator_glyph_len(&toks);
+  if glyph > 0 {
+    toks.truncate(toks.len() - glyph);
+    while toks.last().is_some_and(is_spacing) {
+      toks.pop();
+    }
+  }
   if toks.last() == Some(&T_OTHER!(",")) || toks.last() == Some(&T_OTHER!(";")) {
     toks.pop();
     while toks.last().is_some_and(is_spacing) {
@@ -494,6 +503,55 @@ pub(in crate::base_utilities) fn trim_trailing_separator(mut toks: Vec<Token>) -
     }
   }
   toks
+}
+
+/// The glyphs a run of entries is parted by between their marks, set in math (`|`, `\vert`, `\mid`, `\cdot`,
+/// `\bullet`, `\diamond`) or as text (`|`, `\textbar`, `\textbullet`, `\textperiodcentered`).
+const SEPARATOR_GLYPHS: &[&str] = &["|", "\\vert", "\\mid", "\\cdot", "\\bullet", "\\diamond"];
+
+/// The length of the separator glyph closing `toks` after a space, when it does: a formula of one separator glyph alone
+/// (`$|$`, `$\cdot$`: [`SEPARATOR_GLYPHS`]), or a text one (`|`, `\textbar{}`, `\textbullet`), else 0. After a space
+/// only: a glyph glued to a word is the entry's (`A|B`).
+fn separator_glyph_len(toks: &[Token]) -> usize {
+  let n = toks.len();
+  let spaced = |at: usize| at > 0 && is_spacing(&toks[at - 1]);
+  let glyph = |t: &Token| SEPARATOR_GLYPHS.iter().any(|g| t.with_str(|s| s == *g));
+  // (`$|$`, `$ \cdot $`)
+  if n >= 3 && toks[n - 1].get_catcode() == Catcode::MATH {
+    let open = toks[..n - 1]
+      .iter()
+      .rposition(|t| t.get_catcode() == Catcode::MATH);
+    if let Some(open) = open {
+      let inner: Vec<&Token> = toks[open + 1..n - 1]
+        .iter()
+        .filter(|t| **t != T_SPACE!())
+        .collect();
+      if inner.len() == 1 && glyph(inner[0]) && spaced(open) {
+        return n - open;
+      }
+    }
+    return 0;
+  }
+  // (`\textbar{}`, `\textbullet`)
+  let mut end = n;
+  if end >= 2
+    && toks[end - 1].get_catcode() == Catcode::END
+    && toks[end - 2].get_catcode() == Catcode::BEGIN
+  {
+    end -= 2;
+  }
+  if end >= 1
+    && ["\\textbar", "\\textbullet", "\\textperiodcentered"]
+      .iter()
+      .any(|cs| toks[end - 1] == T_CS!(*cs))
+    && spaced(end - 1)
+  {
+    return n - (end - 1);
+  }
+  if n >= 1 && toks[n - 1] == T_OTHER!("|") && spaced(n - 1) {
+    return 1;
+  }
+  0
 }
 
 /// [`split_before_affiliation_marks`] of a line (`line_start`) or of what follows a wrapper in one (`{…} \vspace{1mm}
@@ -570,7 +628,10 @@ fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Vec<Tokens> {
   let mut depth = 0usize;
   for (i, t) in toks.iter().enumerate() {
     let dollar_super = *t == T_MATH!() && toks.get(i + 1).is_some_and(|n| *n == T_SUPER!());
-    let is_mark_start = dollar_super || is_mark_command(t);
+    // (and a mark heading its entry from a group of its own or from the entry's wrapper, `{$^2$} ETH Zurich`,
+    // `\textit{$^2$CSIRO Data61}`: [`wrapped_mark_at`], read at the top level only)
+    let is_mark_start =
+      dollar_super || is_mark_command(t) || (depth == 0 && marks.iter().any(|m| m.at == i));
     // Only treat a mark as an affiliation boundary when it is preceded by
     // whitespace (institutions are space-separated). A mark glued to the
     // preceding text — e.g. a superscript INSIDE an institution name,
@@ -587,9 +648,12 @@ fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Vec<Tokens> {
         && leading_unprinted_end(&current) == current.len()
     };
     // (a space, or wider spacing: `$^1$Univ A \quad $^2$Univ B` inside a wrapper, `~~~`; 2506.18881)
+    // (or a separator with no space after it, `Lisbon,\IEEEauthorrefmark{2}Univ B` — 2411.03010's IEEE blockA run)
     if is_mark_start
       && depth == 0
-      && current.last().is_some_and(is_spacing)
+      && current
+        .last()
+        .is_some_and(|t| is_spacing(t) || *t == T_OTHER!(",") || *t == T_OTHER!(";"))
       && !text_mark(i, last_head.as_deref())
     {
       if let Some(m) = marks.iter().find(|m| m.at == i) {
@@ -633,15 +697,115 @@ struct ListMark {
   glued:   bool,
 }
 
-/// The marks of `toks` outside every group, in order (`$^{…}$`, a mark command: [`is_mark_command`]).
+/// A mark heading an entry from inside a group at `toks[i]`, outside every other group: a group the mark alone fills
+/// (`{$^2$} ETH Zurich`, 2203.16586's cvpr line `\small {$^1$} Beijing Institute of Technology {$^2$} ETH Zurich …`), or
+/// one entry's own wrapper — a text font command's argument or a group, past the declarations opening it — that the
+/// mark opens (`\textit{$^2$CSIRO Data61}`, 2508.07190's `\textit{$^1$…} $|$ \textit{$^2$…}`; `{\it $^2$Univ B}`;
+/// 2605.25195's `\textbf{$^1$Fudan University}  \textbf{$^2$Tencent Hunyuan}`). The mark's operand, and where what it
+/// labels starts: past the group a mark alone fills, past the mark inside a wrapper. A wrapper is the entry's own only
+/// where it holds the whole entry — nothing but a separator after it ([`trim_trailing_separator`]) up to the next mark or
+/// line break: a font group whose text goes on after it is the entry's text, its mark an isotope's (`Univ A,
+/// \textit{$^{2}$H} Lab, Rome $^{2}$Univ B`, `Lab for \textit{$^{3}$He} Studies`; review rev107e finding 3). A mark
+/// command's own group (`\textsuperscript{2}`) is the mark itself, read as one; a note's (`\thanks{$^1$…}`, an argument
+/// of a name annotation, [`is_name_annotation`]) none.
+fn wrapped_mark_at(toks: &[Token], i: usize) -> Option<(Vec<Token>, usize)> {
+  let open = match toks[i].get_catcode() {
+    Catcode::BEGIN if i > 0 && is_name_annotation(&toks[i - 1]) => return None,
+    Catcode::BEGIN => i,
+    Catcode::CS
+      if is_text_font_command(&toks[i])
+        && toks
+          .get(i + 1)
+          .is_some_and(|t| t.get_catcode() == Catcode::BEGIN) =>
+    {
+      i + 1
+    },
+    _ => return None,
+  };
+  let close = skip_group(toks, open);
+  let inner = toks.get(open + 1..close.checked_sub(1)?)?;
+  let mut j = leading_unprinted_end(inner);
+  while inner.get(j) == Some(&T_SPACE!()) {
+    j += 1;
+  }
+  let dollar_super =
+    inner.get(j)?.get_catcode() == Catcode::MATH && inner.get(j + 1) == Some(&T_SUPER!());
+  let (operand, mut next) = if dollar_super {
+    let (operand, next) = sup_operand_at(inner, j + 2)?;
+    (inner.get(next)?.get_catcode() == Catcode::MATH).then_some((operand, next + 1))?
+  } else if is_mark_command(&inner[j]) {
+    sup_operand_at(inner, j + 1)?
+  } else {
+    return None;
+  };
+  while inner.get(next) == Some(&T_SPACE!()) {
+    next += 1;
+  }
+  if next == inner.len() {
+    return Some((operand, close));
+  }
+  // (what follows the wrapper up to the next mark or line break: a separator alone, else the wrapper is no entry's own)
+  let mut k = close;
+  while k < toks.len() && !opens_entry_or_line(toks, k) {
+    k += 1;
+  }
+  // (or a lead that prints nothing before it, `\hfill`, `\vspace{1mm}`)
+  let after = &toks[close.min(k)..k];
+  let separator = |piece: &[Token]| trim_trailing_separator(piece.to_vec()).is_empty();
+  (separator(after) || separator(&after[leading_unprinted_end(after)..]))
+    .then_some((operand, open + 1 + next))
+}
+
+/// Whether `toks[k]` opens a mark ([`wrapped_mark_at`]'s scan past a wrapper): a superscript formula, a mark command, a
+/// group or text font command whose content a mark leads — or a line break, a paragraph's end (2603.19086's last entry
+/// `\textit{$^5$CSIRO Data61}` before a blank line).
+fn opens_entry_or_line(toks: &[Token], k: usize) -> bool {
+  let t = &toks[k];
+  if *t == T_CS!("\\\\") || *t == T_CS!("\\newline") || *t == T_CS!("\\par") || is_mark_command(t) {
+    return true;
+  }
+  if t.get_catcode() == Catcode::MATH {
+    return toks.get(k + 1) == Some(&T_SUPER!());
+  }
+  let brace = match t.get_catcode() {
+    Catcode::BEGIN => k,
+    Catcode::CS if is_text_font_command(t) => k + 1,
+    _ => return false,
+  };
+  if toks
+    .get(brace)
+    .is_none_or(|t| t.get_catcode() != Catcode::BEGIN)
+  {
+    return false;
+  }
+  let close = skip_group(toks, brace).min(toks.len());
+  let inner = &toks[brace + 1..close.saturating_sub(1).max(brace + 1)];
+  let mut j = leading_unprinted_end(inner);
+  while inner.get(j) == Some(&T_SPACE!()) {
+    j += 1;
+  }
+  inner.get(j).is_some_and(|t| {
+    is_mark_command(t)
+      || (t.get_catcode() == Catcode::MATH && inner.get(j + 1) == Some(&T_SUPER!()))
+  })
+}
+
+/// The marks of `toks` outside every group, in order (`$^{…}$`, a mark command: [`is_mark_command`]; a mark heading an
+/// entry from a group of its own or from the entry's wrapper, [`wrapped_mark_at`]).
 fn top_level_marks(toks: &[Token]) -> Vec<ListMark> {
   let mut marks = Vec::new();
   let mut depth = 0usize;
   for (i, t) in toks.iter().enumerate() {
     let dollar_super = *t == T_MATH!() && toks.get(i + 1).is_some_and(|n| *n == T_SUPER!());
-    if depth == 0 && (dollar_super || is_mark_command(t)) {
+    let wrapped = (depth == 0 && !dollar_super && !is_mark_command(t))
+      .then(|| wrapped_mark_at(toks, i))
+      .flatten();
+    if depth == 0 && (dollar_super || is_mark_command(t) || wrapped.is_some()) {
       let operand_at = if dollar_super { i + 2 } else { i + 1 };
-      let read = sup_operand_at(toks, operand_at);
+      let read = match wrapped {
+        Some((operand, end)) => Some((operand, end)),
+        None => sup_operand_at(toks, operand_at),
+      };
       let end = match &read {
         Some((_, next)) if dollar_super && toks.get(*next) == Some(&T_MATH!()) => next + 1,
         Some((_, next)) => *next,

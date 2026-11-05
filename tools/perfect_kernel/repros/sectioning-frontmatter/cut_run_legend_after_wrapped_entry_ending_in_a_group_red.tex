@@ -1,0 +1,20 @@
+% RED (rev107e2 finding 2, synthetic; same on 107e r1): a legend line under a wrapped run whose last entry ends inside a
+%   nested group, `\textbf{$^2$Univ B, \emph{Rome}}`. `writer::plan::wrapped_entry_mark` (plan.rs ~660-689) gives up when
+%   a nested group sits at either end of the entry, the writer declines the block, and finding 1 of rev107e returns: Bob
+%   and Cy hold "Univ B, Rome * Equal Contribution, † Project Leader" as affiliation text (still better than the base,
+%   where Ann held everything). Fix: allow the closing braces of groups opened inside the span between the entry's end
+%   and the wrapper's close.
+% witness: none (synthetic; the real shape 2605.25195 declines for its URL line, recorded in SYNC 107e)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Lee1,∗, Bob Ray2,∗, Cy Do2,† / 1Univ A 2Univ B, Rome /
+%   ∗Equal Contribution, †Project Leader"
+% engines: rust 107e r2 (46908df2db): the legend glued into Univ B on Bob and Cy
+% expect:  0 errors; Ann: "Univ A" + note "Equal Contribution"; Bob: "Univ B, Rome" + note "Equal Contribution"; Cy:
+%   "Univ B, Rome" + note "Project Leader"
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Lee$^{1,*}$, Bob Ray$^{2,*}$, Cy Do$^{2,\dagger}$\\
+\textbf{$^1$Univ A}  \textbf{$^2$Univ B, \emph{Rome}}\\
+$^*$ Equal Contribution, $^\dagger$ Project Leader}
+\maketitle
+\end{document}

@@ -1,0 +1,20 @@
+% mechanism: a mark opening a line that prints no label (`$^{\;}$`) is no mark: the line continues the entry above
+%   (`affiliations::blank_line_marks_dropped`, in the block reader and every cutter)
+% witness: 2303.08793 (mnras `$^{8}$Institute for Quantum Computing …, Waterloo, \\ $^{\;}$Ontario N2L 3G1, Canada`)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able,1 Bob Baker,2 Cy Cole1 / 1 Univ A, 1 Long Street, Waterloo, / Ontario N2L 3G1, Canada / 2 Univ B, Tokyo, Japan"
+% engines: rust int139a: "Ontario N2L 3G1, Canada" its own contact on Cy Cole, the last holder of entry 1
+% expect:  0 errors, 0 warnings; Ann and Cy "Univ A, 1 Long Street, Waterloo, Ontario N2L 3G1, Canada", Bob "Univ B, Tokyo, Japan"
+% status:  RED (int139a) -> GREEN (107e) — perfect_kernel_batch107e::a_blank_mark_line_continues_the_entry
+% preload: ar5iv.sty
+\documentclass{mnras}
+\begin{document}
+\title{T}
+\author[A. Able et al.]{Ann Able,$^{1}$ Bob Baker,$^{2}$ Cy Cole$^{1}$
+\\
+$^{1}$Univ A, 1 Long Street, Waterloo, \\
+$^{\;}$Ontario N2L 3G1, Canada \\
+$^{2}$Univ B, Tokyo, Japan
+}
+\maketitle
+Text.
+\end{document}

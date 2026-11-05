@@ -332,10 +332,14 @@ impl Resolver {
   /// authblk's notes once every call is read: when the marks show (a label was given, or the counter passed
   /// `\c@Maxaffil`, 2 unless the document set it), each unlabelled author requests its number and each unlabelled
   /// `\affil` is labelled by its number (ruling 1: `\author[1]{Ann}\author{Bob}\affil[1]{X}\affil{Y}` prints Y under
-  /// "Ann¹ Bob¹" both, `\author[a]{Ann}` under Bob alone — 2605.25017); else each stays on its run.
+  /// "Ann¹ Bob¹" both, `\author[a]{Ann}` under Bob alone — 2605.25017); else each stays on its run. With no `\affil`
+  /// at all no note prints (authblk.sty:168: `\@author` is `\AB@author` while `\AB@affillist` is empty), so no author
+  /// requests one: a class setting `\setcounter{Maxaffil}{0}` under an `\author` whose own lines carry the marks
+  /// (`$^1$Fudan University $^2$ByteDance Seed`) had every author request entry 1 (2510.24320, 2608.24199,
+  /// 2609.35561; batch 107e).
   pub(super) fn thenote_finish(&mut self) {
     let note = std::mem::take(&mut self.thenote);
-    if note.affils.is_empty() && note.run_of.is_empty() {
+    if (note.affils.is_empty() && note.run_of.is_empty()) || !note.affil {
       return;
     }
     let shown = note.labelled || note.counter as i64 > note.maxaffil.unwrap_or(2);
