@@ -1,0 +1,36 @@
+% RED (html_feedback #7233, synthetic): a `{…}@domain` list split over two `\texttt` lines (`\\` between) with one
+%   entry that spells no author (`xq.zz`) is not read as addresses at all: both lines stay glued into the last
+%   affiliation, "Department of Physics, University of Beta {ann.able,xq.zz, cy.coe}@alpha.edu", every e-mail
+%   unlinked, no Warning. The one-line list with the same entry reads right (each spelled address on its author), so
+%   only the split-list path lacks the per-entry fail-safe. Twin of email_list_umlaut_transliteration_split_red.tex.
+% witness: html_feedback #7233 (the split Jülich list; its unspelled entry was `mo.schaeffler`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: the list printed on two lines under the two affiliations
+% engines: rust int138a (106t on a783b56cce): 3 creators, Cy Coe's affiliation holds the whole list, 0 warnings; rust
+%   107a r1: xq.zz@ on the block creator
+% expect:  0 errors, 0 warnings; ann.able@alpha.edu on Ann Able, xq.zz@alpha.edu on Bo Baker, cy.coe@alpha.edu on Cy Coe,
+%   each affiliation only its institution. The split list follows the one-line form's placement order (FIDELITY_CHARTER
+%   §4, the main session's ruling on review rev107a finding 4): the author an entry spells; else the consistent
+%   author-order list — three addresses for three authors, `ann.able` and `cy.coe` at their authors' places
+%   (OXIDIZED_DESIGN_DIVERGENCES #805), so `xq.zz`, second, is Bo Baker's; else elimination (77p r4); else the block
+%   (OD #159's block creator). Round 1 expected the block, skipping the order and elimination steps.
+% status:  RED (int138a) -> GREEN (107a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\title{A Title}
+\author{%
+  Ann Able$^{1}$ \\
+  \and
+  Bo Baker$^{1}$ \\
+  \and
+  Cy Coe$^{2}$ \\
+  \and
+ {\normalfont $^1$University of Alpha} \\
+ {\normalfont $^2$Department of Physics, University of Beta} \\
+ \texttt{\{ann.able,xq.zz,}\\
+ \texttt{cy.coe\}@alpha.edu}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

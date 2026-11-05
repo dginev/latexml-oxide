@@ -1,0 +1,26 @@
+% A surname's six-letter prefix scored on letters the given name already matched: `andrea.rossi@` scored Andrea
+%   Andreassen 12 ("andrea" as given name, and again as the first six letters of "andreassen") over Andrea Rossi's 11
+%   ("andrea" + "rossi"). The prefix fallback reads only the local part's letters outside the given name's match
+%   (`email_owners::spelled_owners`; OXIDIZED_DESIGN_DIVERGENCES #970). Pre-existing, ASCII names; the twin
+%   email_list_nordic_given_name_prefix.tex is the same reuse reached through the transliteration.
+% witness: review rev107a finding 2 (probe p/andrea.tex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: three names over "1University of Alpha" and
+%   "{andrea.rossi,aable}@alpha.dk"
+% engines: rust int138a and 107a r1: `andrea.rossi@` on Andrea Andreassen
+% expect:  0 errors, 0 warnings; andrea.rossi@ on Andrea Rossi, aable@ on Ann Able, none on Andrea Andreassen
+% status:  RED (int138a, 107a r1) -> GREEN (107a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\title{A Title}
+\author{%
+  Andrea Andreassen$^{1}$ \and
+  Andrea Rossi$^{1}$ \and
+  Ann Able$^{1}$ \\
+ {\normalfont $^1$University of Alpha} \\
+ \texttt{\{andrea.rossi,aable\}@alpha.dk}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -303,14 +303,14 @@ pub(in crate::base_utilities) struct EmailAddress {
 /// its notes aside (1706.03762's `Ashish Vaswani\thanks{… Noam proposed …}` is not "noam").
 #[derive(Clone, Debug, Default)]
 pub(in crate::base_utilities) struct NameKeys {
-  /// the name's words after the first that have three letters or more (`Ph.~Boucaud` "boucaud",
-  /// `J.~Rodr\'iguez-Quintero` "rodriguez", "quintero")
-  surnames: Vec<String>,
+  /// the name's words after the first that have three letters or more, counted in their base spelling ([`SpelledWord`]:
+  /// `Ph.~Boucaud` "boucaud", `J.~Rodr\'iguez-Quintero` "rodriguez", "quintero")
+  surnames: Vec<SpelledWord>,
   /// the name's words after the first of two letters (`Weili An` "an", `Wei Li` "li"), which spell only a local part of
   /// those letters alone, digits aside (`an107@purdue.edu` Weili An's, not Anusuya Nallathambi's initials "an", 2608.22602)
   short_surnames: Vec<String>,
   /// its first word, when it has three letters or more (`Ahna R. Girshick` "ahna"; not the initial of `J.~Smith`)
-  given: Option<String>,
+  given: Option<SpelledWord>,
   /// the spellings an address opens with that join two of its words: the first word's initial and a later word of two
   /// letters or more (`Prathamjyot Singh` "psingh", 2608.10670's `psingh1_be22@…` among three Singhs; `Tianjian Li`
   /// "tli", 2606.23525's `tli104@…`; `Karamvir Singh Batra` "kbatra"), a later word before the whole first, the
@@ -321,24 +321,98 @@ pub(in crate::base_utilities) struct NameKeys {
   /// 2407.00382's `jw2423@cam.ac.uk`), which only a local part of those letters alone spells
   pub(in crate::base_utilities) joined: Vec<String>,
   pub(in crate::base_utilities) initials: Vec<String>,
+  /// the same keys of the name's transliterated spelling, where it differs from the base letters (`Schäffler`
+  /// "schaeffler" beside "schaffler", [`resolver::transliterated`]): a name scores the better of its two spellings
+  transliterated: Option<Box<NameKeys>>,
+}
+
+/// A word of a name, as [`spelled_owners`] scores it: its letters (as an address spells them), and its length class —
+/// the letters of its base spelling, which decide whether it is a surname whose first six letters spell it, a given
+/// name a local part may hold anywhere, or a short word only a local part of its letters alone spells: the
+/// transliteration never lifts a word over a threshold (`Wei L\"u`'s "lue" spells no `bluesky@`, review rev107a
+/// finding 3; OXIDIZED_DESIGN_DIVERGENCES #970).
+#[derive(Clone, Debug, Default)]
+pub(in crate::base_utilities) struct SpelledWord {
+  text:    String,
+  letters: usize,
 }
 
 impl NameKeys {
+  /// The keys of a name as an address spells it: its letters folded to their base letters (`Martínez` "martinez",
+  /// [`resolver::base_letters`]) and, beside those, transliterated (`Schäffler` "schaeffler", `Wei{\ss}enborn`
+  /// "weissenborn", `Hj\o rth` "hjoerth", [`resolver::transliterated`]; html_feedback #7233, OXIDIZED_DESIGN_DIVERGENCES
+  /// #970) — a letter written with an accent or letter command read as the letter it prints ([`spelling_name_text`]).
   pub(in crate::base_utilities) fn of(name: &Tokens) -> NameKeys {
-    let text = visible_name_text(name.unlist_ref());
-    let words: Vec<String> = text
-      .split(|c: char| !c.is_alphabetic())
-      .filter(|word| !word.is_empty())
-      .map(str::to_lowercase)
-      .collect();
+    let text = spelling_name_text(name.unlist_ref());
+    let base = resolver::base_letters(&text);
+    let transliterated = resolver::base_letters(&resolver::transliterated(&text));
+    let base_words = name_words(&base);
+    let classes: Vec<usize> = base_words.iter().map(|word| word.chars().count()).collect();
+    let mut keys = NameKeys::of_words(&base_words, &classes);
+    if transliterated != base {
+      // (each transliterated word in its base spelling's length class, the words one for one; else its own)
+      let words = name_words(&transliterated);
+      let own: Vec<usize> = words.iter().map(|word| word.chars().count()).collect();
+      let classes = if words.len() == classes.len() {
+        &classes
+      } else {
+        &own
+      };
+      keys.transliterated = Some(Box::new(NameKeys::of_words(&words, classes)));
+    }
+    keys
+  }
+
+  /// The keys of a name as it prints, its letters unfolded, and of its transliteration (`Müller` "mueller", the
+  /// letters [`resolver::transliteration`] spells, the others as printed): whom `insert::respell_emails` and the
+  /// frontmatter observer's `Resolver::respell_emails` move an author's e-mail to, an address spelling that author as
+  /// printed — a transliterated spelling is one (user ruling 2026-11-05: `joerg.mueller@` is Jörg Müller's, "also
+  /// written Joerg Mueller"; `\email{mueller-group@x.de}` on Anna Smith's own call moves to `\author{J\"org M\"uller}`
+  /// as its ASCII twin does, FIDELITY_CHARTER §4 #420), a base-letter fold is not (`muller-group@` stays). Each word in
+  /// its printed length class ([`SpelledWord`]); a tie between a literal and a transliterated spelling is a tie
+  /// (`mueller@` beside Hans Mueller and Jörg Müller moves to neither, user ruling 2026-11-05).
+  pub(in crate::base_utilities) fn as_printed(name: &Tokens) -> NameKeys {
+    let printed = name_words(&visible_name_text(name.unlist_ref()));
+    let classes: Vec<usize> = printed.iter().map(|word| word.chars().count()).collect();
+    let mut keys = NameKeys::of_words(&printed, &classes);
+    let transliterated = name_words(&resolver::transliterated(&spelling_name_text(
+      name.unlist_ref(),
+    )));
+    if transliterated != printed {
+      let own: Vec<usize> = transliterated
+        .iter()
+        .map(|word| word.chars().count())
+        .collect();
+      let classes = if transliterated.len() == classes.len() {
+        &classes
+      } else {
+        &own
+      };
+      keys.transliterated = Some(Box::new(NameKeys::of_words(&transliterated, classes)));
+    }
+    keys
+  }
+
+  /// The name's spellings: its base letters', and its transliterated one where it has one.
+  pub(in crate::base_utilities) fn spellings(&self) -> impl Iterator<Item = &NameKeys> {
+    std::iter::once(self).chain(self.transliterated.as_deref())
+  }
+
+  /// The keys of a name's `words`, each in its length class (`classes`, its letters in the base spelling: [`SpelledWord`]).
+  fn of_words(words: &[String], classes: &[usize]) -> NameKeys {
     let Some((first, later)) = words.split_first() else {
       return NameKeys::default();
     };
+    let class = |at: usize| classes.get(at).copied().unwrap_or_default();
     let initial: String = first.chars().take(1).collect();
     let mut joined: Vec<String> = Vec::new();
-    for word in later.iter().filter(|word| word.chars().count() >= 2) {
+    for (_, word) in later
+      .iter()
+      .enumerate()
+      .filter(|(at, _)| class(at + 1) >= 2)
+    {
       joined.push(format!("{initial}{word}"));
-      if first.chars().count() >= 2 {
+      if class(0) >= 2 {
         joined.push(format!("{word}{first}"));
         joined.push(format!("{first}{word}"));
       }
@@ -346,7 +420,7 @@ impl NameKeys {
     // (the initials of every word before the last, then the last: `Kai-Wei Chang` "kwchang", 2604.01354)
     if let Some((last, before)) = words.split_last()
       && before.len() >= 2
-      && last.chars().count() >= 2
+      && class(words.len() - 1) >= 2
     {
       let initials: String = before
         .iter()
@@ -361,8 +435,12 @@ impl NameKeys {
     NameKeys {
       surnames: later
         .iter()
-        .filter(|word| word.chars().count() >= 3)
-        .cloned()
+        .enumerate()
+        .filter(|(at, _)| class(at + 1) >= 3)
+        .map(|(at, word)| SpelledWord {
+          text:    word.clone(),
+          letters: class(at + 1),
+        })
         .collect(),
       // (a name particle another word of the name follows is no surname of its own: `Ana de Souza` spells no `de@`,
       // review rev100b S3; the last word is the surname whatever it reads, `Thanh Le`'s `le@`, review rev100b2 S3)
@@ -370,13 +448,16 @@ impl NameKeys {
         .iter()
         .enumerate()
         .filter(|(at, word)| {
-          word.chars().count() == 2
+          class(at + 1) == 2
             && (*at + 1 == later.len()
               || !matches!(word.as_str(), "de" | "la" | "da" | "le" | "di" | "du"))
         })
         .map(|(_, word)| word.clone())
         .collect(),
-      given: Some(first.clone()).filter(|word| word.chars().count() >= 3),
+      given: (class(0) >= 3).then(|| SpelledWord {
+        text:    first.clone(),
+        letters: class(0),
+      }),
       joined,
       initials: [
         Some(initials.clone()),
@@ -392,8 +473,18 @@ impl NameKeys {
       .flatten()
       .filter(|initials: &String| initials.chars().count() >= 2)
       .collect(),
+      transliterated: None,
     }
   }
+}
+
+/// A name's words, lowercased: its runs of letters.
+fn name_words(text: &str) -> Vec<String> {
+  text
+    .split(|c: char| !c.is_alphabetic())
+    .filter(|word| !word.is_empty())
+    .map(str::to_lowercase)
+    .collect()
 }
 
 /// An address's letters and other characters, as [`spelled_owners`] reads them.
@@ -453,21 +544,33 @@ pub(in crate::base_utilities) fn spelled_owners(
     .filter(|c| c.is_alphabetic())
     .collect::<String>()
     .to_lowercase();
-  let surname_score = |key: &String| {
-    if local.contains(key.as_str()) {
-      key.chars().count()
-    } else if key.chars().count() >= 6 && local.contains(&key.chars().take(6).collect::<String>()) {
+  // (a surname's first six letters only outside the letters its given name matched (`given`, their place in the local
+  // part): `andrea.rossi@` is Andrea Rossi's, not Andrea Andreassen's "andrea" counted twice, `soeren.hansen@` Søren
+  // Hansen's, not Søren Sørensen's — review rev107a finding 2)
+  let surname_score = |key: &SpelledWord, given: Option<(usize, usize)>| {
+    let prefix: String = key.text.chars().take(6).collect();
+    let outside = |prefix: &str| match given {
+      Some((start, end)) => local[..start].contains(prefix) || local[end..].contains(prefix),
+      None => local.contains(prefix),
+    };
+    if local.contains(key.text.as_str()) {
+      key.text.chars().count()
+    } else if key.letters >= 6 && outside(&prefix) {
       6
     } else {
       0
     }
   };
-  let given_score = |given: &String| {
-    let length = given.chars().count();
-    if local.starts_with(given.as_str()) || (length >= 4 && local.contains(given.as_str())) {
-      length
+  // (where the given name stands in the local part: opening it, or anywhere when it has four letters or more)
+  let given_place = |given: &SpelledWord| {
+    if local.starts_with(given.text.as_str()) {
+      Some((0, given.text.len()))
+    } else if given.letters >= 4 {
+      local
+        .find(given.text.as_str())
+        .map(|at| (at, at + given.text.len()))
     } else {
-      0
+      None
     }
   };
   // (a joined spelling the local part opens with, its length; the initials, the local part's letters alone)
@@ -510,19 +613,37 @@ pub(in crate::base_utilities) fn spelled_owners(
   // the better of its words spelled apart and a joined spelling, never both added: one spelling of the letters is
   // counted once (`khan.muhammad@ieee.org` scores 12 for Khan Muhammad, "muhammad" and "khan" apart, and 12 for
   // Muhammad Haris Khan, "khanmuhammad" joined, and goes to the surname's spelling, 2602.07835).
+  // (a name's score the better of its spellings', its base letters' and its transliterated one's: `mo.schaeffler@`
+  // Moritz Schäffler's, html_feedback #7233. A tie between a name spelled literally and one spelled through the
+  // transliteration is a tie — an address carries no umlaut, so `mueller@` spells Hans Mueller and Jörg Müller alike
+  // and is neither's by its spelling (user ruling 2026-11-05, on review rev107a finding 1); the rest of the placement
+  // order decides it)
   let scores: Vec<(usize, usize)> = name_keys
     .iter()
     .map(|keys| {
-      let surname: usize = keys.surnames.iter().map(surname_score).sum::<usize>()
-        + keys
-          .short_surnames
-          .iter()
-          .find(|short| **short == local)
-          .map_or(0, |short| short.chars().count());
-      (
-        (surname + keys.given.as_ref().map_or(0, given_score)).max(joined_score(keys)),
-        surname,
-      )
+      keys
+        .spellings()
+        .map(|keys| {
+          let given = keys
+            .given
+            .as_ref()
+            .and_then(|given| Some((given, given_place(given)?)));
+          let place = given.map(|(_, place)| place);
+          let surname: usize = keys
+            .surnames
+            .iter()
+            .map(|key| surname_score(key, place))
+            .sum::<usize>()
+            + keys
+              .short_surnames
+              .iter()
+              .find(|short| **short == local)
+              .map_or(0, |short| short.chars().count());
+          let given = given.map_or(0, |(given, _)| given.text.chars().count());
+          ((surname + given).max(joined_score(keys)), surname)
+        })
+        .max()
+        .unwrap_or((0, 0))
     })
     .collect();
   let best = scores.iter().copied().max().unwrap_or((0, 0));
@@ -831,6 +952,68 @@ pub fn entry_address_owners(
       (None, _) if symbol_line && !free.is_empty() => (Some(free.clone()), "owner:carriers"),
       (None, _) if in_order => (Some(vec![carriers[at - run.start]]), "owner:order"),
       (None, _) => (None, "owner:block"),
+    })
+    .collect()
+}
+
+/// The owners of the addresses of a `{…}@domain` list set over several lines, which the Kind step for an address line
+/// took out of an affiliation-kind entry (`insert::link_entry_addresses`, the list's `LINE_LIST`), placed as the author
+/// block's reader places the list on one line (FIDELITY_CHARTER §4's order, review rev107a finding 4; html_feedback
+/// #7233): `name_keys` every author's, in order; `addresses` the list's, in print order; `spelled` each one's owner as the
+/// Link step reads it ([`spelled_owner`], an entry's word aside: [`is_entry_word_mailbox`]); `taken` the authors an
+/// address outside the list spells or who hold one; `spelled_elsewhere` whether an address outside the list spells an
+/// author; `elsewhere_open` whether one outside it spells no one and is placed on no author. Each address: the author it
+/// spells (`owner:spelled`); else, the list one address per author that every spelled one agrees with and no address
+/// outside it spells an author, the author at its place (`owner:order`, OXIDIZED_DESIGN_DIVERGENCES #805 —
+/// 2305.13191's `wshui@`, `drot@`, `ballemig@`); else the only author's, where there is one (`owner:only-author`, the
+/// charter's "the group's only author", as [`entry_address_owners`]' `sole_author` — 2311.03226); else by elimination
+/// (`owner:elimination`, batch 77p r4, [`owners_by_elimination`] — 1808.00588's `kdm@`); else `None`, the block's
+/// (`owner:block`, OD #159's block creator).
+pub(in crate::base_utilities) fn list_owners(
+  name_keys: &[NameKeys],
+  addresses: &[String],
+  spelled: &[Option<usize>],
+  taken: &[bool],
+  spelled_elsewhere: bool,
+  elsewhere_open: bool,
+) -> Vec<(Option<usize>, &'static str)> {
+  let in_order = addresses.len() == name_keys.len()
+    && name_keys.len() >= 2
+    && !spelled_elsewhere
+    && spelled
+      .iter()
+      .enumerate()
+      .all(|(at, owner)| owner.is_none_or(|owner| owner == at));
+  if in_order {
+    return spelled
+      .iter()
+      .enumerate()
+      .map(|(at, owner)| match owner {
+        Some(owner) => (Some(*owner), "owner:spelled"),
+        None => (Some(at), "owner:order"),
+      })
+      .collect();
+  }
+  if let [_] = name_keys {
+    return spelled
+      .iter()
+      .map(|owner| match owner {
+        Some(owner) => (Some(*owner), "owner:spelled"),
+        None => (Some(0), "owner:only-author"),
+      })
+      .collect();
+  }
+  owners_by_elimination(name_keys, addresses, taken, elsewhere_open)
+    .into_iter()
+    .zip(spelled)
+    .zip(addresses)
+    .map(|((owner, spelled), address)| match (spelled, owner) {
+      (Some(owner), _) => (Some(*owner), "owner:spelled"),
+      // (an address the elimination reads as spelled that the Link step does not — an entry's word — is the block's)
+      (None, Some(owner)) if spelled_owner(name_keys, address).is_none() => {
+        (Some(owner), "owner:elimination")
+      },
+      _ => (None, "owner:block"),
     })
     .collect()
 }

@@ -1,0 +1,35 @@
+% Sibling of email_list_split_unspelled_entry_glued_red.tex: the `\{…\}@domain` list set over three lines, each in a
+%   in no wrapper (`\{ann.able,\\ xq.zz,yy.ww,\\ cy.coe\}@alpha.edu`), two entries spelling no author. Each line is an
+%   entry line of its own in the affiliation the author block welded them into (not one font wrapper holding the line
+%   breaks, as the twin's `\texttt` lines are), so the Kind step for an address line joins the lines a printed brace
+%   opens and a later one closes (`insert::entry_lines`) and reads them as the one list (OXIDIZED_DESIGN_DIVERGENCES
+%   #970).
+% witness: html_feedback #7233 (its list split over two `\texttt` lines)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "{ann.able," / "xq.zz,yy.ww," / "cy.coe}@alpha.edu" under
+%   the two affiliations
+% engines: rust int138a: the three lines glued into Cy Coe's affiliation, 0 warnings
+% expect:  0 errors, 0 warnings; ann.able@ on Ann Able, cy.coe@ on Cy Coe, xq.zz@ and yy.ww@ on the block creator (four
+%   addresses for three authors: no author order; two addresses left for one name: no elimination), each affiliation
+%   only its institution
+% status:  RED (int138a) -> GREEN (107a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\title{A Title}
+\author{%
+  Ann Able$^{1}$ \\
+  \and
+  Bo Baker$^{1}$ \\
+  \and
+  Cy Coe$^{2}$ \\
+  \and
+ {\normalfont $^1$University of Alpha} \\
+ {\normalfont $^2$Department of Physics, University of Beta} \\
+ \{ann.able,\\
+ xq.zz,yy.ww,\\
+ cy.coe\}@alpha.edu
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1108,6 +1108,48 @@ fn a_contact_call_in_a_name_is_no_name_text() {
 }
 
 #[test]
+fn a_name_spells_by_its_base_letters_and_its_transliteration() {
+  setup();
+  // (html_feedback #7233, OD #970: an accent or letter command written in the source, or the letter itself, spells by
+  // its base letter and by its transliteration; as printed (`as_printed`, whom an e-mail moves to) by its
+  // transliteration too, a spelling of the name as printed (user ruling 2026-11-05), never by a base-letter fold of a
+  // letter it prints (FIDELITY_CHARTER §4 #420: `muller-group@` stays))
+  for (name, local, base) in [
+    (r#"Moritz Sch\"affler"#, "mo.schaeffler", "m.schaffler"),
+    (r#"Moritz Sch\"{a}ffler"#, "mo.schaeffler", "m.schaffler"),
+    ("Moritz Schäffler", "mo.schaeffler", "m.schaffler"),
+    (r"Gus Wei{\ss}enborn", "g.weissenborn", "g.weisenborn"),
+    ("Gus Weißenborn", "g.weissenborn", "g.weisenborn"),
+    (r"Ida Hj\o rth", "i.hjoerth", "i.hjorth"),
+    (r"Jon Fl\aa ten", "j.flaaten", "j.flaten"),
+    (r"Jon Fl\r{a}ten", "j.flaaten", "j.flaten"),
+    (r"Mads S\ae ther", "m.saether", "m.sather"),
+  ] {
+    let keys = [NameKeys::of(&tk(name))];
+    assert_eq!(spelled_owners(&keys, &s!("{local}@x.org")), [0], "{name}");
+    assert_eq!(spelled_owners(&keys, &s!("{base}@x.org")), [0], "{name}");
+    let printed = [NameKeys::as_printed(&tk(name))];
+    assert_eq!(
+      spelled_owners(&printed, &s!("{local}@x.org")),
+      [0],
+      "{name}"
+    );
+    if !name.contains('\\') {
+      assert!(
+        spelled_owners(&printed, &s!("{base}@x.org")).is_empty(),
+        "{name}"
+      );
+    }
+  }
+  // (no looser matching otherwise: another accent's letter has no transliteration, `\'e` is e alone, one spelling)
+  assert_eq!(NameKeys::of(&tk(r"Ren\'e Ruiz")).spellings().count(), 1);
+  assert_eq!(
+    visible_name_text(tk(r#"Sch\"affler"#).unlist_ref()),
+    "Schaffler"
+  );
+}
+
+#[test]
 fn email_addresses_write_out_unspaced_lists() {
   setup();
   // (batch 103a: a list of local parts written without spaces before one domain, inside a `;`- or `,`-parted line, is

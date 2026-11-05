@@ -1029,6 +1029,24 @@ pub(in crate::base_utilities) fn letter_command(cs: &str) -> Option<char> {
   }
 }
 
+/// The letter a letter command prints where that is no base letter of its own ([`letter_command`] gives the base one):
+/// `\ss` ß, `\o` ø, `\aa` å, `\ae` æ, `\oe` œ, upper case likewise (latex.ltx's `\ss`, `\o`, `\aa`, `\ae`, `\oe`, the
+/// letters a name's spelling transliterates, `name_text::spelling_name_text`).
+pub(in crate::base_utilities) fn printed_letter_command(cs: &str) -> Option<char> {
+  Some(match cs {
+    "\\ss" => 'ß',
+    "\\o" => 'ø',
+    "\\O" => 'Ø',
+    "\\aa" => 'å',
+    "\\AA" => 'Å',
+    "\\ae" => 'æ',
+    "\\AE" => 'Æ',
+    "\\oe" => 'œ',
+    "\\OE" => 'Œ',
+    _ => return None,
+  })
+}
+
 /// The accent commands of latex.ltx / LaTeX's text encodings, whose argument is one letter of the word.
 pub(in crate::base_utilities) const ACCENT_COMMANDS: &[&str] = &[
   "\\'", "\\`", "\\^", "\\\"", "\\~", "\\=", "\\.", "\\u", "\\v", "\\H", "\\c", "\\d", "\\b",

@@ -31134,7 +31134,8 @@ label where it carries the role's own name (`carry_printed_label`: `Email corres
 observer's text reading's, the fail-safe): an address beside words with no label (`Univ A, Town, see data@a.org for
 data`), a run a tag follows (`a@x (Matvey)`, 2512.10975), a template (`{name.surname}@`, 2009.04283; `Contact:
 forename.surname@`, 2410.09681 — `is_pattern_address` reads forename and its kin, review rev106a S2), a line break
-inside a font wrapper (`\small\textit{Correspondence:} …\\`, 2311.04121), a phrase-led alternate affiliation
+inside a font wrapper (`\small\textit{Correspondence:} …\\`, 2311.04121; one inside a printed brace list, or between its
+brace and its domain, is read: #970), a phrase-led alternate affiliation
 ("Correspondence should be sent to a, b and c.", 1209.3452), a group whose domain follows the brace with no dot
 (`{a@mails., b@}tsinghua.edu.cn`, 2602.07769), an affiliation the observer's writer makes (mn2e's "Contact e-mail:",
 2008.08137), and an address left inside a legend note (2312.10429, 2501.04244).
@@ -31394,3 +31395,78 @@ whose text-only drops are undone, now as int134b (0808.4092, 1106.1785, 2608.296
 now as int134b (2005.03567, 2302.04271, 2307.05833, 2402.07705); E 902 = 902, F 1 = 1, W 9,294 = 9,294. Round 1's 57
 dev20k witnesses re-scored: 187 → 213 of 247 creators right, 26 flipped right, 0 wrong (round 1's dedupe of the four
 two-call papers is undone in round 2).
+
+### 970. A name spells by its base letters and its transliteration; a `{…}@domain` list set over several lines is one address list (Perl: an address spells no one; the list stays in the affiliation's text)
+
+**Defect** (html_feedback #7233, Bundle 5 ADDR-b). (1) An address spelled a name by its base letters alone:
+`mo.schaeffler@` spelled no one for "Moritz Schäffler" ("schaffler"), nor `bo.baecker@` for `Bo B\"acker`. The
+author block's text reader (`visible_name_text`) drops an accent command and keeps its base letter, and the
+frontmatter observer's callers folded the digested name with `resolver::base_letters` before building its keys, so the
+transliteration was lost twice (WISDOM #103). (2) A `\{…\}@domain` list set over two `\texttt` lines (`\\` between)
+was never read as addresses when one entry spelled no author: the author block welds both lines into the affiliation
+above them; the frontmatter observer's reading takes a list out only when every entry has an owner (its fail-safe:
+the writer makes no block creator); and the flush's Kind step for an address line (#966) declined a line holding a
+line break. The reporter's seven e-mails stayed glued into Kesselheim's "Department of Physics, University of
+Cologne", silently.
+
+**Fix (1), one place.** `NameKeys::of` reads the name's letters as printed (`name_text::spelling_name_text`: an
+accent or letter command whose letter has a transliteration is that letter — `\"a` ä, `\"{u}` ü, `\r a` å, `{\ss}`
+ß, `\o` ø, `\aa` å, `\ae` æ, `\oe` œ) and keys both folds of them: `resolver::base_letters` (now also `æ` a, `œ` o,
+`ß` s, as the author block's `letter_command` reads `\ae`, `\oe`, `\ss`) and `resolver::transliterated` over the one
+letter table `resolver::transliteration` (ä ae, ö oe, ü ue, ß ss, å aa, ø oe, æ ae, œ oe; upper case likewise). A name
+scores the better of its two spellings (`spelled_owners`); no threshold moved: a word's length class (surname of three
+letters or more, short surname, a given name held anywhere, the six-letter prefix) is its base spelling's
+(`SpelledWord`: `Wei L\"u`'s "lue" stays a short surname, so `bluesky@` spells no one). A tie between a literal and a
+transliterated spelling is a tie: an address carries no umlaut, so `mueller@` beside Hans Mueller and Jörg Müller is
+neither's by its spelling, and the rest of the placement order decides it (user ruling 2026-11-05, dropping review
+rev107a finding 1's tie-break). A surname's six-letter prefix scores only the local part's letters
+outside its given name's match (`andrea.rossi@` Andrea Rossi's, not Andrea Andreassen's "andrea" counted twice — a
+pre-existing wrong owner; `soeren.hansen@` Søren Hansen's beside Søren Sørensen). Every spelling site passes the name
+unfolded: the author block's e-mail readers, the flush's Link step and `kind_address_lines`, both `respell_emails`,
+the observer's `spelled_name`, `links::link_prints_a_handle`. Whom an e-mail moves to (both `respell_emails`) is picked
+by the name as printed and its transliteration, a spelling of the name as printed (`NameKeys::as_printed`; user ruling
+2026-11-05: `joerg.mueller@` is Jörg Müller's, "also written Joerg Mueller"): an AASTeX 5
+`\author{J\"org M\"uller and Ann Able}\email{joerg.mueller@x.org}` goes to Müller, and FIDELITY_CHARTER §4 #420's
+example, `\email{mueller-group@x.de}` on Anna Smith's own call beside `\author{J\"org M\"uller}`, moves to him as
+its ASCII twin does; a base-letter fold only keeps an address on its holder (`muller-group@` stays hers, #938).
+
+**Fix (2), at the flush.** The Kind step for an address line reads a list set over several lines as one line: a line
+break inside a printed brace the line opened (`LineText::read`, a newline in the line's text), or between its closing
+brace and the `@` of its domain (`domain_goes_on`; 1902.04228's `{majid,…}` / `@deakin.edu.au`); the entry lines a
+brace opens and a later one closes are joined, with the breaks between them (`entry_lines`); and where the author
+block made the list's lines contacts of their own (an `\and` column's lines: the head an affiliation `{ann.able,…,`,
+the tail an e-mail `xq.zz,cy.coe}@x`), those contacts are joined onto the head's line when the joined line is a line
+of addresses alone (`join_split_address_contacts`). Its addresses (`LINE_LIST`) are placed over every author as the
+author block's reader places the list on one line, FIDELITY_CHARTER §4's order (`email_owners::list_owners`): the
+author an entry spells; else the consistent author-order list — one address per author, every spelled one at its
+author's place, no address outside the list spelling an author (#805; 2305.13191's `wshui@`, `drot@`, `ballemig@`);
+else the group's only author (the charter's step, as #966's chain has it: 2311.03226); else elimination (77p r4, `owners_by_elimination`; 1808.00588's `kdm@` to Klaus McDonald-Maier); else the block
+creator (#159; the charter as amended 2026-11-05). A line's mark still wins (#966, ruling R1). The `@` after a closing
+brace opens a domain only when the word after it holds a dot (`opens_with_domain`: `lib\{core\}` / `@alpha\_lab on
+Twitter` is no list). A split list the step declines (a tag after it, a line break at depth 0 inside the same font
+wrapper, a list the reader cannot part) stays as printed and is counted, once per printed list:
+`Warning:frontmatter:address-list` (2408.05517, 2609.38967).
+
+**Left, one line each.** The observer's reading keeps a split list with an unspelled entry in the affiliation (its fail-safe; the flush cuts it
+after the writer). A list after a depth-0 line break inside one font wrapper stays (1805.08616 unwarned, one line;
+2408.05517, 2609.38967 warned; #966's 2311.04121 exclusion). The
+`$^*$` legend read as a nameless creator beside unspelled list entries
+(`email_list_unspelled_entries_legend_becomes_creator_red.tex`) is unchanged.
+
+**Reach.** A/B `pop107a.tsv` vs int138a (1,404 converted: the 855 dev20k/dev3 papers whose creators' names hold ä ö ü
+ß å ø æ and an e-mail, the 51 with `}@` in an affiliation, a 500 control from `popint125a_s10k`): 20 papers changed
+their frontmatter, all better — 14 e-mails now on the author they spell through the transliteration (from a nameless
+block creator or a coauthor: 1412.5014, 1604.03736, 1703.09356, 1810.12251, 1902.06839, 2006.04121, 2306.01584,
+2312.12282, 2402.06922, 2407.04582, astro-ph0407386, astro-ph0703720, astro-ph9809079; aa's `\mail{Kuemmel@}` on M.W.
+Kümmel, astro-ph9911175) and 6 split lists read, no longer copied onto every holder (2305.13191, 2305.14174,
+1902.04228; 1808.00588, 2310.14817, 2311.03226 from lines read as contacts of their own); 2 more papers gained one
+`address-list` Warning each (2408.05517, 2609.38967); 1811.05727 (control) differed in one formula's parse under load
+and is byte-identical alone. E 701 = 701, F 2 = 2; `fm_checks.py` 1-7 clean. Re-scored (score2 + score_tiers on both
+sides): 5 creators flipped right (2305.13191, 2305.14174 ×2, 2402.06922, astro-ph0703720), 5 flipped "wrong" by the
+scorer's own source readings, ours right (1808.00588 ×4: it reads the split list's parts as affiliations; 2407.04582:
+it gives llncs's institute e-mail list by structure, `l.brueche@` to the institute's other carriers). **Guards**
+`perfect_kernel_batch107a` (7; repros sectioning-frontmatter/`email_list_*`, `email_handle_after_brace_no_list`,
+`amsart_email_transliterated_coauthor_moves`, `aastex_email_call_transliterated_author`)
+and `base_utilities::author_split_tests::a_name_spells_by_its_base_letters_and_its_transliteration`, RED (int138a) →
+GREEN; `perfect_kernel_batch95c::an_own_email_spelling_a_coauthor_only_by_base_letters_stays` (#420, base letters)
+green unchanged.

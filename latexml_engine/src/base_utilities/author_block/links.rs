@@ -375,6 +375,7 @@ pub(in crate::base_utilities) fn link_prints_a_handle(line: &Tokens, keys: &[Nam
     && !printed.contains('@')
     && keys
       .iter()
+      .flat_map(NameKeys::spellings)
       .any(|keys| keys.joined.contains(&letters) || keys.initials.contains(&letters))
 }
 

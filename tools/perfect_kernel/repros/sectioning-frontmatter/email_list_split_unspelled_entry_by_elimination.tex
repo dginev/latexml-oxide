@@ -1,0 +1,35 @@
+% Sibling of email_list_split_unspelled_entry_glued_red.tex, the chain's elimination step: the `\{…\}@domain` list set
+%   over two `\texttt` lines lists four addresses for four authors out of their order (`cy.coe` second), one spelling no
+%   one (`qq77`). No author order (`cy.coe@` at Bo Baker's place), so by elimination: the one address no name spells
+%   goes to the one name no address spells, Bo Baker (batch 77p r4, `owners_by_elimination`), as the author block's
+%   reader places the same list on one line (FIDELITY_CHARTER §4's order; `email_owners::list_owners`;
+%   OXIDIZED_DESIGN_DIVERGENCES #970).
+% witness: 1808.00588 (`kdm@essex.ac.uk` to Klaus McDonald-Maier, the one name left); review rev107a finding 4
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "{ann.able,cy.coe," / "dee.dorn,qq77}@alpha.edu" under the
+%   two affiliations
+% engines: rust int138a: both lines glued into Cy Coe's and Dee Dorn's affiliation; rust 107a r1: `qq77@` on the block
+%   creator
+% expect:  0 errors, 0 warnings; ann.able@ on Ann Able, qq77@ on Bo Baker, cy.coe@ on Cy Coe, dee.dorn@ on Dee Dorn
+% status:  RED (int138a, 107a r1) -> GREEN (107a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\title{A Title}
+\author{%
+  Ann Able$^{1}$ \\
+  \and
+  Bo Baker$^{1}$ \\
+  \and
+  Cy Coe$^{2}$ \\
+  \and
+  Dee Dorn$^{2}$ \\
+  \and
+ {\normalfont $^1$University of Alpha} \\
+ {\normalfont $^2$Department of Physics, University of Beta} \\
+ \texttt{\{ann.able,cy.coe,}\\
+ \texttt{dee.dorn,qq77\}@alpha.edu}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

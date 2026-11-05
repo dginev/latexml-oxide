@@ -3153,3 +3153,24 @@ once (the obvious reading) is wrong past one group: pdflatex's `\begin{center}\b
 \endgroup\endgroup` keeps the outer inner group's values after `\end{center}` (`Kept [yes][yes][no]`), until the next
 `\endgroup`. Guard
 `perfect_kernel_batch98d::end_over_begingroups_keeps_tex_scoping`; OXIDIZED_DESIGN_DIVERGENCES #965.
+
+
+## 103. A name's spelling by an address is decided where the name's text is read, not by folding its text afterwards
+
+An address spells a name by its base letters (`Martínez` "martinez") and by the conventional transliteration of its
+letters (`Schäffler` "schaeffler": ä ae, ö oe, ü ue, ß ss, å aa, ø oe, æ ae, œ oe). Both are folds of the letter as it
+prints, so both must be taken from that letter: two readings lose it first. The author block's text reader
+(`visible_name_text`) drops an accent command and keeps its base letter (`Sch\"affler` "Schaffler", `{\ss}` "s"), and
+the frontmatter observer's callers folded the digested name with `base_letters` before building its keys — after
+either, "schaeffler" is unrecoverable, and the two readers disagreed (`\"a` in the source vs `ä` in the digested
+name). The fix is one reader of the printed letter (`spelling_name_text`: an accent or letter command whose letter has
+a transliteration read as that letter) and one place that folds it both ways (`NameKeys::of` over
+`resolver::base_letters` and `resolver::transliterated`), every caller passing the name unfolded. Whom an author's own
+e-mail moves to is the name as printed or transliterated, never base-folded (`NameKeys::as_printed`; user ruling
+2026-11-05, FIDELITY_CHARTER §4 #420). A second
+spelling is a second chance to match, so it must not also change the rules a match is judged by: the transliteration
+lengthens words ("lu" "lue"), so every length threshold reads the base spelling (`SpelledWord`); and a match through
+it weighs the same as a literal one — an address carries no umlaut, so `mueller@` beside Hans Mueller and Jörg Müller
+is a genuine tie (user ruling 2026-11-05). Guards
+`base_utilities::author_split_tests::a_name_spells_by_its_base_letters_and_its_transliteration`,
+`perfect_kernel_batch107a`; OXIDIZED_DESIGN_DIVERGENCES #970.
