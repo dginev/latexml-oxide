@@ -627,6 +627,12 @@ pub(in crate::base_utilities) fn written_membership_out(name: &[Token]) -> Optio
     if grade.is_empty() || !is_membership_grade(&visible_name_text(&grade)) {
       continue;
     }
+    // (one grade, the line's last: a names line printing a grade before it holds a name after a grade, `Ann Able,
+    // \textit{Member, IEEE}; Bob Baker, \textit{Fellow, IEEE}`, whose grades all stay — taking out the last alone would
+    // leave the names before it one creator: 1510.03162, 2507.19818)
+    if holds_grade(head) {
+      return None;
+    }
     let mut out = head[..head
       .iter()
       .rposition(|t| !is_spacing(t))
@@ -640,6 +646,17 @@ pub(in crate::base_utilities) fn written_membership_out(name: &[Token]) -> Optio
     return Some(out);
   }
   None
+}
+
+/// Whether a names line prints a membership grade or a part of one ([`is_membership_part`]) between its names'
+/// separators — a comma, a semicolon, an "and".
+fn holds_grade(line: &[Token]) -> bool {
+  visible_name_text(line)
+    .replace('~', " ")
+    .split([',', ';'])
+    .flat_map(|piece| piece.split(" and "))
+    .map(str::trim)
+    .any(|piece| !piece.is_empty() && is_membership_part(piece))
 }
 
 /// Where the name line a creator's content holds begins and ends: inside the block reader's `\lx@author@withsup{…}` and

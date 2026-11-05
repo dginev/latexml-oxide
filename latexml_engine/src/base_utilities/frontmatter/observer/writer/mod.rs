@@ -276,6 +276,9 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
   // addresses out of whole again there, and every e-mail call the reading wrote out address by address one contact
   // again on the authors its call's placement gives it — the take-out and the write-out are the plan's,
   // `take_out_again`: 2308.10621; 2109.07363, brief 95e)
+  // (a membership grade the reading left out of a name is the name's again where today's holds no contact of it:
+  // `give_back_grades`)
+  let resolved = give_back_grades(&resolved, &front);
   let taken_out = resolved.clone();
   let resolved = give_back_addresses(&resolved, &dom::Front::default(), true)?;
   let Some(resolved) = repart::concede(&resolved, &front) else {
@@ -376,6 +379,41 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
   let outcome = difference.map_or_else(|| "written".to_string(), |d| s!("written-different: {d}"));
   with_ledger(|ledger| ledger.writer = Some(outcome));
   Ok(())
+}
+
+/// The reading `resolved` with each membership grade it left out of a name (`name:membership`, resolver/lines.rs) given
+/// back to the name — its text after the name's comma, a qualifier the name joins (`name:qualifier`), as the reading
+/// read it before OXIDIZED_DESIGN_DIVERGENCES #967 — where today's holds no contact of its role and text: the reading
+/// leaves a grade out of the name only where `\lx@add@author` took it out (`membership_read_out`), which it never does
+/// out of a macro's text (`\IEEEauthorblockN{\AuthorOne,~\AuthorTwo,~…}`, each `\AuthorN` "Name, {\em{Grade, IEEE}}",
+/// 1510.03162) nor out of a membership the author filled with the next name (`\IEEEmembership{Member,~IEEE, Hua~Wei,
+/// Member,~IEEE}`, 2507.19818). A grade the re-part has nothing to write from, or two authors' alike that today's holds
+/// once, would decline it and leave the names line one creator.
+fn give_back_grades(resolved: &Resolved, front: &dom::Front) -> Resolved {
+  let held: BTreeSet<plan::Key> = front
+    .creators
+    .iter()
+    .chain(&front.nameless)
+    .flat_map(|c| &c.items)
+    .filter(|item| !item.key.is_empty())
+    .map(|item| (item.kind.clone(), item.key.clone()))
+    .collect();
+  let mut out = resolved.clone();
+  for c in &mut out.creators {
+    let (given, kept): (Vec<Assoc>, Vec<Assoc>) =
+      std::mem::take(&mut c.contacts).into_iter().partition(|a| {
+        a.rule.split_whitespace().any(|t| t == "name:membership")
+          && !held.contains(&plan::contact_key(a))
+      });
+    c.contacts = kept;
+    for grade in given {
+      c.name = s!("{}, {}", c.name, grade.text);
+      if !c.rule.split_whitespace().any(|t| t == "name:qualifier") {
+        c.rule.push_str(" name:qualifier");
+      }
+    }
+  }
+  out
 }
 
 /// The reading `resolved` with each entry it took printed addresses out of (`Resolved::taken`, brief 95c) given back as

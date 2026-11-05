@@ -31098,8 +31098,11 @@ token bodies, now read first), the one call every author route makes:
   Member, IEEE`, `Member, OSA` unbraced — or an abbreviated grade before its society, ascelike's `M.ASCE`) is
   `\lx@add@contact[role=membership]{…}` in its own markup, right after the name; the marks, notes and block-reader
   contact calls written after it (`\thanks{…}`, `\lx@add@affiliation[annotate=3]{…}`: 1611.04834) stay the name's,
-  after it, as they print. A degree or suffix (`Ph.D., P.E.`, `Jr.`) still qualifies the name; a document's own
-  `\IEEEmembership` definition keeps its meaning (63l).
+  after it, as they print. Only one grade, the line's last: a line printing a grade or a part of one before it between
+  its separators (`holds_grade`) holds a name after a grade, and every grade stays (`\textbf{Ann Able, \textit{Member,
+  IEEE}; Bob Baker}, \textit{Fellow, IEEE}`: taking the last out alone left the names before it one creator). A degree
+  or suffix (`Ph.D., P.E.`, `Jr.`) still qualifies the name; a document's own `\IEEEmembership` definition keeps its
+  meaning (63l).
 - **A framed collaboration as the whole author** (`whole_name_collaboration`, author_block/collaborations.rs): content
   naming a collaboration framed as a remark (`Framing::Framed`: "on behalf of", "for", "representing", brackets), with no
   note or mark of its own and authors queued before it, is the collaboration contact of every author before it that
@@ -31112,35 +31115,51 @@ token bodies, now read first), the one call every author route makes:
   (`name_and_remark`), leaves the command; its contact (`annotate=new`) follows the creator, so it covers the names of
   the line. With the collaboration out of the last name, the observer's writer re-parts 0907.0548's names as before.
 - **A remark after the notes** (`name_and_remark`, `speaks_for_after_notes`): after a name carrying a note or mark
-  (`annotated`), "for" / "on behalf of" and at most six words opening with a capital, no address, is the author's
-  collaboration contact, as a collaboration's remark there is.
+  (`annotated`), "for" / "on behalf of" and at most six words naming a group — acronyms or slashed names (`CAPP/IBS`,
+  `CMS`) or a team's word, "the"/"and"/"of" between them; no digit, no address — is the author's collaboration
+  contact, as a collaboration's remark there is. A funding line, a company or a person (`for NSF Grant 123`, `for ACME
+  Corp`, `on behalf of Ed Eve`) stays the name's (review rev106c).
 - **The observer's reading** (resolver/lines.rs, `is_membership_part`): a grade, or the pieces the line's commas cut it
   into (`\textit{Senior Member}, \textit{IEEE}`), after a name's comma is that name's `membership` item, no part of
   the name, so the writer's re-part finds each reading name in today's names (vgtc's `\author{Stephen Kasica; Charles
   Berret; and Tamara Munzner, \textit{Senior Member}, \textit{IEEE}}`, 2009.02373: with the grade still in the
-  reading's name the re-part declined and the `;`-joined names stayed one creator).
+  reading's name the re-part declined and the `;`-joined names stayed one creator). The writer gives a grade back to
+  its name (`name:qualifier`, as before) where today's holds no contact of its role and text (writer/mod.rs
+  `give_back_grades`), so the reading leaves a grade out only where `\lx@add@author` took it out — never out of a
+  macro's text (`\IEEEauthorblockN{\AuthorOne,~\AuthorTwo,~…}`, each `\AuthorN` "Name, {\em{Grade, IEEE}}",
+  1510.03162) nor out of a membership the author filled with the next name (`\IEEEmembership{Member,~IEEE, Hua~Wei,
+  Member,~IEEE}`, 2507.19818). A grade the re-part had nothing to write from, or two authors' alike today's held once,
+  declined it and left the line one creator (the bundle A/B int136a vs int135e).
 - A content of fewer than three tokens is no name line to look into (`name_line_span`; an author line opened by layout,
   `\vspace{-2em}\hspace{-25pt}…`, 2002.03043, 1307.6590, panicked the first build).
 
-Guards `perfect_kernel_batch106c` (8: `a_written_membership_grade_is_the_authors_contact`,
+Guards `perfect_kernel_batch106c` (12: `a_written_membership_grade_is_the_authors_contact`,
 `a_written_membership_grade_in_a_name_block_is_the_authors_contact`,
 `an_author_on_behalf_of_a_collaboration_is_the_authors_contact`,
 `a_collaboration_line_in_a_raw_name_block_is_the_names_contact`,
 `a_collaboration_remark_in_a_raw_name_block_is_the_authors_contact`,
 `a_remark_after_the_notes_naming_whom_the_author_speaks_for_is_a_contact`,
-`a_written_grade_leaves_the_readings_name_too`, `an_author_line_opened_by_layout_is_read_safely`; repros
+`a_written_grade_leaves_the_readings_name_too`, `an_author_line_opened_by_layout_is_read_safely`, and r2's
+`macro_printed_names_with_grades_stay_apart`, `a_membership_holding_the_next_name_stays_apart`,
+`a_grade_before_a_later_name_keeps_the_line_whole`, `a_remark_naming_no_group_stays_the_names`; repros
 sectioning-frontmatter/`author_semicolon_names_written_grade_are_reparted`,
 `author_spacing_opened_name_lines_read_safely`, `author_written_membership_grade_is_a_contact`, `author_block_written_membership_grade_is_a_contact`,
 `elsarticle_author_on_behalf_of_collaboration_is_a_contact`, `author_raw_name_block_collaboration_line_is_a_contact`,
 `author_raw_name_block_collaboration_remark_is_a_contact`, class-bindings/webofc/
-`webofc_remark_after_the_notes_is_a_contact`; RED int134b, the last two RED on 106c's first build → GREEN). Updated to the new output:
+`webofc_remark_after_the_notes_is_a_contact`, sectioning-frontmatter/`ieee_block_macro_names_with_grades_stay_apart`,
+`ieee_membership_holding_a_name_stays_apart`, `author_grade_before_a_later_name_stays_whole`,
+`collab_for_remark_not_a_group`; RED int134b, the last two of the first eight RED on 106c's first build, r2's four RED
+on 106c r1 → GREEN). Updated to the new output:
 `perfect_kernel_batch63::author_ieee_member_grade_is_not_a_name` (1611.04834's grades contacts),
 `perfect_kernel_batch65a::asce_membership_grade_qualifies_the_name` (`M.ASCE`, `F.ASCE`, `A.M.ASCE`, `M. ASCE`
 contacts; `Ph.D., P.E.` kept), `perfect_kernel_batch64qa::ptephy_names_without_separator` (the collaborator a contact,
 four creators).
 
 Left (one line each): a grade inside a group round the whole name (`{\bf Ann Able, Member, IEEE}`) or with no comma
-before it (`Ann Able \textit{Fellow, IEEE}`) stays in the name; a remark inside a name-part argument or group
+before it (`Ann Able \textit{Fellow, IEEE}`) stays in the name; so do the grades a macro prints (1510.03162) and every
+grade of a line printing two or more in one `\lx@add@author` (reading each grade out in place is a second
+contact-per-name step); a `;` list with several grades is mis-split as on the base (`Ann Able, \textit{Member, IEEE};
+Bob Baker, \textit{Fellow, IEEE}`: "Member, IEEE; Bob Baker, Fellow, IEEE" one creator); a remark inside a name-part argument or group
 (2406.15355 `\lastname{Schmier for the ALICE collaboration}`, 1206.2546) as before; `\samethanks` / `\footnotemark[n]`
 in a name keeps a mark-only `<note role="footnotemark">` (Perl the same; pairing it with the `\thanks` of its number is a
 Link step: repro `author_samethanks_mark_is_the_same_note`, 2110.07431, 2402.06922, 2502.19103); an ORCID link inside a
