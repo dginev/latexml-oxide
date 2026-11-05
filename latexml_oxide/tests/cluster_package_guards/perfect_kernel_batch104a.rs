@@ -200,15 +200,16 @@ fn a_names_line_the_writer_re_parts_gives_each_name_the_shared_block() {
 #[test]
 fn an_and_inside_a_block_argument_starts_the_next_author() {
   let expected = vec![
+    // (each e-mail first, as its block prints it: R8, since 107c r2 — review rev107c N1)
     creator(&[
       "Ann Able",
-      "affiliation=Department of A University A",
       "email=ann@x.edu",
+      "affiliation=Department of A University A",
     ]),
     creator(&[
       "Bob Baker",
-      "affiliation=School of B University B",
       "email=bob@y.edu",
+      "affiliation=School of B University B",
     ]),
   ];
   for (tex, notes) in [

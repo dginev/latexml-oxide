@@ -151,7 +151,7 @@ fn osa_style_marked_addresses() {
   );
   assert_eq!(creators(&xml), vec![
     "<creator role=\"author\">\n    <personname>T. Kotani</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">LESIA, Observatoire de Paris, Meudon, France</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>S. Lacour</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">LESIA, Observatoire de Paris, Meudon, France</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">School of Physics, Sydney University, NSW 2006, Australia</contact>\n    <contact name=\"Corresponding author: \" role=\"email\">sylvestre.lacour@obspm.fr</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>S. Lacour</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">LESIA, Observatoire de Paris, Meudon, France</contact>\n    <contact name=\"Affiliation: \" role=\"affiliation\">School of Physics, Sydney University, NSW 2006, Australia</contact>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id1\">Corresponding author</note>\n    <contact name=\"Email: \" role=\"email\">sylvestre.lacour@obspm.fr</contact>\n  </creator>",
     "<creator before=\"  \" role=\"author\">\n    <personname>P. Tuthill</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">School of Physics, Sydney University, NSW 2006, Australia</contact>\n  </creator>",
   ]);
   assert_element(
@@ -400,14 +400,16 @@ fn epl_email_forms_among_names() {
 }
 
 /// 64u: an OSA `\address` line naming an email address is the email of the author carrying its mark, named by its
-/// label (0705.1274, 1006.2188, 1011.1336). Repro sectioning-frontmatter/osa_style_address_email_line.
+/// label (0705.1274, 1006.2188, 1011.1336); since 107c r2 a correspondence label is the owner's note before the
+/// e-mail, which the class's name names (FIDELITY_CHARTER §4, review rev107c N4). Repro
+/// sectioning-frontmatter/osa_style_address_email_line.
 #[test]
 fn osa_style_address_email_line() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/osa_style_address_email_line.tex"
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>A. Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A, City A</contact>\n    <contact name=\"Corresponding author: \" role=\"email\">able@x.edu</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>A. Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A, City A</contact>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id1\">Corresponding author</note>\n    <contact name=\"Email: \" role=\"email\">able@x.edu</contact>\n  </creator>",
     "<creator before=\"  \" role=\"author\">\n    <personname>B. Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B, City B</contact>\n  </creator>",
   ]);
 }
@@ -676,7 +678,7 @@ fn osa_email_line_mark_shapes() {
     )),
     vec![
       "<creator role=\"author\">\n    <personname>A. Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact>\n  </creator>",
-      "<creator before=\"  \" role=\"author\">\n    <personname>B. Baker<sup xml:id=\"id1\">*</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact>\n    <contact name=\"Corresponding author : \" role=\"email\">baker@x.fr</contact>\n  </creator>",
+      "<creator before=\"  \" role=\"author\">\n    <personname>B. Baker<sup xml:id=\"id1\">*</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id2\">Corresponding author</note>\n    <contact name=\"Email: \" role=\"email\">baker@x.fr</contact>\n  </creator>",
     ]
   );
 }

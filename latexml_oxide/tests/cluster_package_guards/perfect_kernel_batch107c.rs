@@ -9,7 +9,9 @@
 //! marked legend is its carriers' note, a link line (labelled or not, alone or ending an entry) a URL or ORCID contact,
 //! a dedication the paper's pubnote. Each guard converts its repro under
 //! `tools/perfect_kernel/repros/sectioning-frontmatter/` from the binary, eager and `--streaming`, with 0 errors and 0
-//! warnings, and asserts the frontmatter whole.
+//! warnings, and asserts the frontmatter whole. Round 2 (review rev107c): the Link step's only-author step and glued
+//! marks, the correspondence note a label's role phrase makes (`insert::write_role_notes`), a marked dedication line its
+//! carriers' note, a dedication's end, and the notes' and first e-mail line's print order.
 use super::perfect_kernel_batch99b::converted;
 
 macro_rules! repro {
@@ -66,13 +68,41 @@ fn address_lines_a_font_wrapper_holds_leave_their_affiliation() {
 }
 
 /// Contact words and "to" before an address, no colon, are its label (`$^{*}$ Corresponding\ to\ bbaker@a.edu`): the
-/// line leaves the affiliation, its e-mail the name's carrying `*`, named as printed (2606.31381). Distinct: the label
-/// reading (`address_line_cut`, `at_list_boundary`).
+/// line leaves the affiliation, its e-mail the name's carrying `*` (2606.31381); and a correspondence phrase opening an
+/// e-mail's label, by any route, is the owner's correspondence note before the e-mail, with the line's mark, the e-mail
+/// keeping the label's rest or its role's name (review rev107c N4, the main session's Q6 reading of FIDELITY_CHARTER
+/// §4). Distinct: the label reading (`address_line_cut`) and the note (`insert::write_role_notes`).
 #[test]
-fn a_contact_label_ending_in_to_names_its_email() {
+fn a_correspondence_label_is_its_owners_note() {
   assert_eq!(
     converted(repro!("addr_line_corresponding_to"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A,<break/>Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ A,<break/>Town</contact> <contact name="Corresponding to " role="email">bbaker@a.edu</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A,<break/>Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ A,<break/>Town</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id2"><sup xml:id="id2.1">*</sup>Corresponding to</note> <contact name="Email: " role="email">bbaker@a.edu</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+}
+
+/// A paper of one author makes no block creator: an address line whose mark no name shows or requests
+/// (`{\small * Corresponding author, E-mail: qz@a.org}` under `Ann Able$^{a}$*`) is the only author's — FIDELITY_CHARTER
+/// §4's "the group's only author" before the block (1711.00192, review rev107c B1); and a mark glued to a name as text
+/// (`Ann Able$^{a}$*`) is that name's when a line opens with it, so the same line under two names is Ann's. The role
+/// phrase before the label is the owner's note (`write_role_notes`). A nameless creator holding names the reader did not
+/// part makes it no one-author paper (1102.4967: the addresses stay there). Distinct: the Link step's only-author step and
+/// its glued-mark reading (`link_entry_addresses`, `glued_name_marks`).
+#[test]
+fn a_sole_or_glued_marked_authors_address_is_never_the_blocks() {
+  assert_eq!(
+    converted(
+      repro!("addr_line_one_named_author_beside_unparted_names"),
+      0
+    ),
+    r##"<title>T</title> <creator role="author"> <personname>Cat Cole<sup xml:id="id1">‡</sup></personname> <contact name="Affiliation: " role="affiliation">Univ C, Village</contact> <contact name="Email: " role="email">ccole@c.edu</contact> </creator> <creator role="author"> <contact name="Affiliation: " role="affiliation">Ann Able, Bob Baker<sup xml:id="id2">†</sup> and</contact> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Affiliation: " role="affiliation">Univ B, City</contact> <contact name="Email: " role="email">aable@a.edu</contact> <contact name="Email: " role="email">bbaker@b.edu</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+  assert_eq!(
+    converted(repro!("addr_line_sole_author_unanswered_mark"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able*</personname> <contact name="Affiliation: " role="affiliation"><text fontsize="90%" xml:id="id1">Univ A, Town,<break/>Country.</text></contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id2"><sup xml:id="id2.1">*</sup>Corresponding author</note> <contact name="E-mail: " role="email"><text fontsize="90%" xml:id="id3">qz@a.org</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+  assert_eq!(
+    converted(repro!("addr_line_mark_glued_to_name"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able*</personname> <contact name="Affiliation: " role="affiliation"><text fontsize="90%" xml:id="id1">Univ A, Town,<break/>Country.</text></contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id2"><sup xml:id="id2.1">*</sup>Corresponding author</note> <contact name="E-mail: " role="email"><text fontsize="90%" xml:id="id3">qz@a.org</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><text fontsize="90%" xml:id="id4">Univ A, Town,<break/>Country.</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -84,7 +114,7 @@ fn a_contact_label_ending_in_to_names_its_email() {
 fn marked_role_phrases_are_their_carriers_notes() {
   assert_eq!(
     converted(repro!("legend_kind_role_phrases"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id1"><sup xml:id="id1.1">†</sup>First author</note> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1"><text font="italic" xml:id="id2.1.1">∗</text></sup>Joint co-authors</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id3"><sup xml:id="id3.1"><text font="italic" xml:id="id3.1.1">∗</text></sup>Joint co-authors</note> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗∗" role="thanks" xml:id="id4"><sup xml:id="id4.1"><text font="italic" xml:id="id4.1.1">∗∗</text></sup>Joint senior co-authors</note> </creator> <creator before=" " role="author"> <personname>Dan Dee</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="⋆" role="thanks" xml:id="id5"><sup xml:id="id5.1"><Math mode="inline" tex="\star" text="star" xml:id="m4"> <XMath xml:id="m4.1"> <XMTok name="star" role="MULOP">⋆</XMTok> </XMath> </Math></sup>Work performed during internship at Acme</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id1"><sup xml:id="id1.1"><text font="italic" xml:id="id1.1.1">∗</text></sup>Joint co-authors</note> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id2"><sup xml:id="id2.1">†</sup>First author</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id3"><sup xml:id="id3.1"><text font="italic" xml:id="id3.1.1">∗</text></sup>Joint co-authors</note> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗∗" role="thanks" xml:id="id4"><sup xml:id="id4.1"><text font="italic" xml:id="id4.1.1">∗∗</text></sup>Joint senior co-authors</note> </creator> <creator before=" " role="author"> <personname>Dan Dee</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="⋆" role="thanks" xml:id="id5"><sup xml:id="id5.1"><Math mode="inline" tex="\star" text="star" xml:id="m4"> <XMath xml:id="m4.1"> <XMTok name="star" role="MULOP">⋆</XMTok> </XMath> </Math></sup>Work performed during internship at Acme</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -105,17 +135,35 @@ fn link_lines_are_link_contacts() {
   );
   assert_eq!(
     converted(repro!("legend_kind_link_lines_entry"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact role="orcid"><ref class="ltx_url" font="typewriter" href="https://orcid.org/0000-0002-1825-0097">https://orcid.org/0000-0002-1825-0097</ref></contact> <contact name="URL: " role="url"><ref class="ltx_url" font="typewriter" href="https://a.org/ann">https://a.org/ann</ref></contact> <contact name="Email: " role="email"><ref class="ltx_href" href="mailto:ann@a.org">ann@a.org</ref></contact> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">†</sup></personname> <contact name="Email: " role="email"><ref class="ltx_href" href="mailto:bob@b.org">bob@b.org</ref></contact> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Email: " role="email"><ref class="ltx_href" href="mailto:ann@a.org">ann@a.org</ref></contact> <contact role="orcid"><ref class="ltx_url" font="typewriter" href="https://orcid.org/0000-0002-1825-0097">https://orcid.org/0000-0002-1825-0097</ref></contact> <contact name="URL: " role="url"><ref class="ltx_url" font="typewriter" href="https://a.org/ann">https://a.org/ann</ref></contact> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">†</sup></personname> <contact name="Email: " role="email"><ref class="ltx_href" href="mailto:bob@b.org">bob@b.org</ref></contact> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
 /// A dedication set as an author block's last lines (`\centerline{This work is dedicated to Professor C. Dee}\\
 /// \centerline{on the occasion of his birthday}`) is the paper's dedication pubnote, once, after the creators; the
 /// affiliation it was glued to keeps its own line (0910.1386). Distinct: `kind_dedication_lines`.
+///
+/// It ends at the first later line that reads as something else ("Present address: …", "Supported by NSF grant 123"),
+/// which stays where it was (review rev107c S2); its lines' breaks are one each (N3). A line led by a mark a name
+/// requests is no dedication but its carriers' note, as "Deceased" is — the observer's legend reading
+/// (`$^\dagger$In memory of Bob Baker, …`) and the flush's (`$^2$Dedicated to the memory of …`, `legend_mark`): review
+/// rev107c S1.
 #[test]
 fn a_dedication_is_the_papers_pubnote() {
   assert_eq!(
+    converted(repro!("legend_kind_dedication_ends_at_other_lines"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B, City<break/>Present address: Univ C, Village<break/>Supported by NSF grant 123</contact> </creator> <pubnote role="dedication">This work is dedicated to Professor C. Dee<break/>on the occasion of his birthday</pubnote> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+  assert_eq!(
+    converted(repro!("legend_kind_marked_dedication_line"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_note" mark="†" role="thanks" xml:id="id1"><sup xml:id="id1.1">†</sup>In memory of Bob Baker, who passed away during this work</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+  assert_eq!(
+    converted(repro!("legend_kind_marked_dedication_entry"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_note" mark="2" role="thanks" xml:id="id1">Dedicated to the memory of his teacher C. Dee</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+  assert_eq!(
     converted(repro!("legend_kind_dedication_line"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"> Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"> Univ B</contact> </creator> <pubnote role="dedication"><text class="ltx_align_center" xml:id="id1">This work is dedicated to Professor C. Dee</text><break/><break/><text class="ltx_align_center" xml:id="id2">on the occasion of his birthday</text></pubnote> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"> Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"> Univ B</contact> </creator> <pubnote role="dedication"><text class="ltx_align_center" xml:id="id1">This work is dedicated to Professor C. Dee</text><break/><text class="ltx_align_center" xml:id="id2">on the occasion of his birthday</text></pubnote> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }

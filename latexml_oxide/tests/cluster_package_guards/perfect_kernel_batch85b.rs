@@ -520,6 +520,18 @@ fn llncs_address_lines_are_each_owners() {
     &["Jorge A. Navas", both],
     &["Andrew E. Santosa"],
   ]);
+  // (a later bracketed list under the same marks, read since 107c: each address its picked speller's, the institute its
+  // picked authors' without it — review rev107c, the `[…]` form's marks path)
+  let picked_bracketed = bracketed.replace(
+    r"\author{Joxan Jaffar \and Jorge A. Navas \and Andrew E. Santosa}",
+    r"\author{Joxan Jaffar\inst{1} \and Jorge A. Navas\inst{1} \and Andrew E. Santosa}",
+  );
+  assert_ne!(picked_bracketed, bracketed);
+  assert_creators(&picked_bracketed, &[
+    &["Joxan Jaffar", institute, "email=joxan@comp.nus.edu.sg"],
+    &["Jorge A. Navas", institute, "email=navas@comp.nus.edu.sg"],
+    &["Andrew E. Santosa"],
+  ]);
   // (a read unit no author owns: a template address, 2109.05583's shape — an entry's one-address `\email`, placed by
   // FIDELITY_CHARTER §4's chain since 92b's G3 (OD #917), the block's: two carriers, none spelled nor marked the
   // corresponding author; written so since llncs is written, 92c, OD #923 — 85b r5 had kept it on the picked authors;

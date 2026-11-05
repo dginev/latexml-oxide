@@ -1326,4 +1326,29 @@ fn an_address_line_cut_reads_the_label_as_printed() {
     ]))
   );
   assert_eq!(cut("Univ A, please write to ann@a.edu", false), None);
+  // (107c r2: a correspondence role phrase before the label, marks alone before it, is the label's own — the line whole,
+  // the phrase its owner's note at the flush, 1711.00192 —; one after other words is not)
+  assert_eq!(
+    cut(" * Corresponding author, E-mail: qz@a.org ", false),
+    Some((0, Some("Corresponding author, E-mail".to_string()), vec![
+      "qz@a.org".to_string()
+    ]))
+  );
+  let worded = "Univ A, Corresponding author, E-mail: qz@a.org";
+  assert_eq!(
+    cut(worded, false),
+    Some((
+      "Univ A, Corresponding author".len(),
+      Some("E-mail".to_string()),
+      vec!["qz@a.org".to_string()]
+    ))
+  );
+  // (107c r2: a stop the cut strands after a list's separator goes with the addresses, 1503.09120 — review rev107c N2;
+  // a stop ending the words stays, above)
+  assert_eq!(
+    cut("Valparaiso, IN 46383, USA; . wen.lu@valpo.edu", false),
+    Some(("Valparaiso, IN 46383, USA".len(), None, vec![
+      "wen.lu@valpo.edu".to_string()
+    ]))
+  );
 }

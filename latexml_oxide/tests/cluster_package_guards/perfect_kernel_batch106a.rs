@@ -44,13 +44,13 @@ fn an_address_line_after_authorcr_leaves_the_affil() {
 }
 
 /// A marked line of a contact's words before an address — the mark an unparsed formula (`$^{\ast}$`), the address a
-/// `\href{mailto:…}` link — leaves the entry, the words the e-mail's name as printed: "Corresponding author: "
-/// (2609.21085).
+/// `\href{mailto:…}` link — leaves the entry (2609.21085); since 107c r2 its correspondence words are the owner's
+/// note, with the line's mark, the e-mail named by its role (FIDELITY_CHARTER §4, review rev107c N4).
 #[test]
 fn a_marked_contact_label_line_leaves_the_affil() {
   assert_eq!(
     converted(repro!("addr_line_authblk_corresponding_author_mark"), 0),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">∗</text></sup></personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Corresponding author: " role="email"><text font="typewriter" xml:id="id2">ann.able@a.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">∗</text></sup></personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1">∗</sup>Corresponding author</note> <contact name="Email: " role="email"><text font="typewriter" xml:id="id3">ann.able@a.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }
 

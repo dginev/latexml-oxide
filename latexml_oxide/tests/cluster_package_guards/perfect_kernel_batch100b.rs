@@ -383,7 +383,7 @@ fn an_address_line_holding_another_call_stays_whole() {
 
 /// A note inside an affiliation printing a labelled address alone — REVTeX's `\footnote{Electronic address: …}`
 /// (1002.3223), a `\thanks{Corresponding author e-mail: …}` (cond-mat0202268) — is the entry's e-mail, named by the
-/// label, and no note. Red (int127a): a document `<pubnote>` each; the `\thanks` text nowhere in the frontmatter.
+/// label, and no note (its correspondence words the owner's correspondence note since 107c r2). Red (int127a): a document `<pubnote>` each; the `\thanks` text nowhere in the frontmatter.
 #[test]
 fn an_address_note_in_an_affiliation_is_its_email() {
   let xml = assert_creators(repro!("address_family_revtex_affiliation_footnote"), &[
@@ -406,10 +406,16 @@ fn an_address_note_in_an_affiliation_is_its_email() {
     &["Ann Able", "affiliation=Univ A, Town", "email=aable@a.edu"],
     &["Bob Baker", "affiliation=Univ A, Town"],
   ]);
+  // (its label's correspondence words Ann's note before it, the e-mail named by the rest, since 107c r2:
+  // FIDELITY_CHARTER §4, review rev107c N4)
   assert!(
     xml.contains(
-      "<contact name=\"Corresponding author e-mail:\u{a0}\" role=\"email\">aable@a.edu</contact>"
+      "<note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id1\">Corresponding author</note>"
     ),
+    "{xml}"
+  );
+  assert!(
+    xml.contains("<contact name=\"e-mail:\u{a0}\" role=\"email\">aable@a.edu</contact>"),
     "{xml}"
   );
 }

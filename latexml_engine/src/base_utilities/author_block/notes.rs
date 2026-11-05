@@ -113,6 +113,35 @@ pub(in crate::base_utilities) fn opens_with_deceased(text: &str) -> bool {
   })
 }
 
+/// Whether a line's text opens a dedication, the marks before it aside (`insert::kind_dedication_lines`, 107c): "Dedicated
+/// to …", "This work (paper, article, thesis, volume) is dedicated to …", "To the memory of …", "In memory of …". Read
+/// by the frontmatter observer too: a dedication behind a name's symbol is its carriers' legend
+/// (`resolver::is_legend_text`, review rev107c S1).
+pub(in crate::base_utilities) fn opens_a_dedication(text: &str) -> bool {
+  let words: Vec<String> = text
+    .trim_start_matches(|c: char| !c.is_alphabetic())
+    .split(|c: char| !c.is_alphanumeric())
+    .filter(|w| !w.is_empty())
+    .map(str::to_lowercase)
+    .collect();
+  let words: Vec<&str> = words.iter().map(String::as_str).collect();
+  matches!(
+    words.as_slice(),
+    ["dedicated", "to", _, ..]
+      | [
+        "this",
+        "work" | "paper" | "article" | "thesis" | "volume" | "note",
+        "is",
+        "dedicated",
+        "to",
+        _,
+        ..
+      ]
+      | ["to", "the", "memory", "of", _, ..]
+      | ["in", "memory", "of", _, ..]
+  )
+}
+
 /// Whether a lowercased note says an equal share of advising: "equal" or "equally" next to a word of advising,
 /// supervising or mentoring, either side ("equal advising", "supervised equally") — [`classify_thanks`].
 fn equal_share(text: &str) -> bool {

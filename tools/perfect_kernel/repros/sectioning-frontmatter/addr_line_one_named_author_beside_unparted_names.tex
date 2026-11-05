@@ -1,0 +1,23 @@
+% IEEEtran names typed before the first `\IEEEauthorblockN` (`\author{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2}
+% and \IEEEauthorblockN{Cat Cole\IEEEauthorrefmark{3}} …}`): the reader parts one name, and the others stay in a nameless
+% creator with their blocks. That is no one-author paper: the only-author step (FIDELITY_CHARTER §4) does not give
+% `aable@`, `bbaker@` to Cat Cole; they stay with the nameless creator, as before (107c r2's A/B).
+% witness: 1102.4967 (`Rizwan Ghaffar\IEEEauthorrefmark{1}, Dimitris Toumpakaris\IEEEauthorrefmark{2} and
+%          \IEEEauthorblockN{Jungwon Lee\IEEEauthorrefmark{3}}`)
+% oracle:  pdflatex 0 errors: "Ann Able∗ , Bob Baker† and Cat Cole‡", "∗ Univ A, Town, Email: aable@a.edu", "† Univ B,
+%          City, Email: bbaker@b.edu", "‡ Univ C, Village, Email: ccole@c.edu"
+% engines: rust 107c r2 before this fix = aable@, bbaker@ on Cat Cole
+% expect:  0 errors, 0 warnings; Cole: Univ C, ccole@c.edu; the nameless creator: the names, Univ A, Univ B, aable@,
+%          bbaker@ (the names' parting is another mechanism)
+% status:  GREEN (107c r1) -> RED (107c r2 draft) -> GREEN (107c r2)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2} and \IEEEauthorblockN{Cat Cole\IEEEauthorrefmark{3}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A, Town, Email: aable@a.edu}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Univ B, City, Email: bbaker@b.edu}
+\IEEEauthorblockA{\IEEEauthorrefmark{3}Univ C, Village, Email: ccole@c.edu}}
+\maketitle
+Text.
+\end{document}

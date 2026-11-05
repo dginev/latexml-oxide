@@ -442,7 +442,9 @@ pub(super) fn later_line_is_names(
 /// S1).
 pub(super) fn is_legend_text(text: &str) -> bool {
   match classify_thanks(text) {
-    "note" => false,
+    // (a dedication's words, which only a symbol's line reads as a legend — `$^\dagger$In memory of Bob Baker, …` under
+    // Bob Baker$^{1,\dagger}$, its carriers' note; review rev107c S1)
+    "note" => opens_a_dedication(text),
     "funding" => !reads_as_affiliation(&text_tokens(text)),
     "deceased" => opens_with_deceased(text) || !reads_as_affiliation(&text_tokens(text)),
     _ => true,
