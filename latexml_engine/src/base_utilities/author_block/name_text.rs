@@ -499,8 +499,9 @@ pub(in crate::base_utilities) fn ends_with_abbreviation(name: &str) -> bool {
   initial || NAME_SUFFIXES.contains(&format!("{word}.").as_str()) || word == "al" || word == "et.al"
 }
 
-/// The societies whose membership grade follows an author's name (`Senior Member, IEEE`).
-const NAME_GRADE_SOCIETIES: &[&str] = &[
+/// The societies whose membership grade follows an author's name (`Senior Member, IEEE`), or stands on a line of its own
+/// (`frontmatter::insert::reads_as_membership_grade`).
+pub(in crate::base_utilities) const NAME_GRADE_SOCIETIES: &[&str] = &[
   "IEEE", "ACM", "OSA", "SPIE", "IET", "IEICE", "AAAI", "SIAM", "APS", "IAPR", "IFAC", "ASCE",
   "ASME",
 ];

@@ -777,17 +777,22 @@ pub(in crate::base_utilities) fn get_frontmatter_name(
   Ok(None)
 }
 
+/// Whether the entry being made is LATE ([`LATE_ENTRY`]): set after `\maketitle` placed the frontmatter, queued after
+/// `\lx@frontmatterhere`'s flush or digested in place after it.
+pub(in crate::base_utilities) fn frontmatter_entry_is_late() -> bool {
+  if lookup_bool("lx_frontmatter_flushing") {
+    lookup_bool("lx_frontmatter_entry_late")
+  } else {
+    lookup_bool("lx_frontmatter_here_digested")
+  }
+}
+
 /// Push an entry to frontmatter{tag}, returning its index
 /// (Perl holds a direct entry ref instead). An entry set after `\maketitle` placed the frontmatter — queued after
 /// `\lx@frontmatterhere`'s flush, or digested in place after it (`{abstract}`) — is LATE ([`LATE_ENTRY`]): its element
 /// is the one a late abstract's placement may move (`place_abstract_after_cover`, OXIDIZED_DESIGN_DIVERGENCES #903).
 pub(in crate::base_utilities) fn frontmatter_push(tag: &str, mut entry: TagData) -> usize {
-  let late = if lookup_bool("lx_frontmatter_flushing") {
-    lookup_bool("lx_frontmatter_entry_late")
-  } else {
-    lookup_bool("lx_frontmatter_here_digested")
-  };
-  if late {
+  if frontmatter_entry_is_late() {
     entry
       .attr
       .insert(LATE_ENTRY.to_string(), "true".to_string());

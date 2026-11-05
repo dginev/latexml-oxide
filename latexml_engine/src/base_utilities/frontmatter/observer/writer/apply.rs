@@ -148,7 +148,7 @@ pub(super) fn make(
   if made == Made::Legend
     && let (Some(note), Some(label)) = (elements(owner).pop(), label)
   {
-    show_legend_mark(document, owner, &note, label)?;
+    show_legend_mark(document, owner, &note, label, template)?;
   }
   if let Some(before) = before
     && let Some(mut new) = elements(owner).pop()
@@ -166,7 +166,13 @@ pub(super) fn make(
 /// superscript of the name's own (`$^*$`, `\lx@frontmatter@keepsup`) or one shown for no entry beside it printed the
 /// mark twice — with no `mark` the page set the note's default `†` beside the name's `*` (review rev94a r5: f08's
 /// "Observatory*†", k01's `Ann Able$^*$, Bob Baker\\ $^*$Equal contribution`).
-fn show_legend_mark(document: &mut Document, owner: &Node, note: &Node, label: &str) -> Result<()> {
+fn show_legend_mark(
+  document: &mut Document,
+  owner: &Node,
+  note: &Node,
+  label: &str,
+  template: Option<&Node>,
+) -> Result<()> {
   // (the printed glyphs keyed as the labels are, `*` and `∗` one: `queue_digest::one_asterisk`)
   let unify = one_asterisk;
   let leading = dom::segments(note, false)
@@ -204,7 +210,27 @@ fn show_legend_mark(document: &mut Document, owner: &Node, note: &Node, label: &
   let mut note = note.clone();
   document.set_attribute(&mut note, "mark", &mark)?;
   let shown: Vec<String> = glyphs.iter().map(|g| unify(g)).collect();
+  // (the keys of the line the legend was, as its label gives them — an author reference mark's number, `{1}` of
+  // `\IEEEauthorblockA{\IEEEauthorrefmark{1}…}`, where the reading has its printed glyph)
+  let keys: Option<Vec<String>> = template
+    .and_then(|template| template.get_attribute("_label"))
+    .filter(|labels| !labels.is_empty())
+    .map(|labels| {
+      labels
+        .split(',')
+        .map(|l| unify(l.strip_prefix("affiliation:").unwrap_or(l).trim()))
+        .collect()
+    });
   for sup in document.findnodes("ltx:personname//ltx:sup", Some(owner)) {
+    // (an author reference mark is the mark its number keys, whatever symbol it prints: IEEEtran's
+    // `\IEEEauthorrefmark{1}` prints the `∗` of a `\IEEEauthorrefmark{*}` legend and stays, the mark of its own line —
+    // review rev106b S2; `relocate::sup_marks`, OXIDIZED_DESIGN_DIVERGENCES #968 — where a `{1}` legend's `∗` is taken,
+    // 2504.18719)
+    if let (Some(refmarks), Some(keys)) = (sup.get_attribute("_refmark"), keys.as_ref())
+      && !refmarks.split(',').any(|k| keys.contains(&unify(k.trim())))
+    {
+      continue;
+    }
     let text = sup.get_content();
     let kept: Vec<&str> = text
       .split(',')

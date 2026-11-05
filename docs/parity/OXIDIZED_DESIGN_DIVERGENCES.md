@@ -31099,7 +31099,11 @@ mark as the superscript symbol it prints (`printed_refmarks`), so the block read
 annotated by footnote symbols (2312.10807, 2409.20550, 2602.11758's `Jianzhu Ma\textsuperscript{1}\authorrefmark{2}`
 "Ma1†", no longer HKUST's); a block whose other-form numbers label no line keeps the numbers (1910.10075's
 `\IEEEauthorrefmark{1}\textsuperscript{1}` names over refmark-led blockA lines). The observer keys the mark by its
-number too (`\lx@fm@obs@mark`). Without IEEEtran's `\raisebox{0pt}[0pt][0pt]` and `\footnotesize`; `*` in its text form
+number too (`\lx@fm@obs@mark`), and the observer writer's legend step, which reads the printed glyph, takes a reference
+mark off a name only where its number is a label of the line the legend was (`writer::apply::show_legend_mark`, the
+replaced contact's `_label`: `\IEEEauthorrefmark{1}\IEEEauthorrefmark{*}` over an `\IEEEauthorrefmark{*}` legend
+keeps the `{1}` mark's `∗`, review rev106b S2; a `{1}` legend's `∗` is taken, 2504.18719; repro
+`ieee_refmark_beside_a_starred_legend`, guard `a_refmark_printing_a_legends_glyph_keeps_it`). Without IEEEtran's `\raisebox{0pt}[0pt][0pt]` and `\footnotesize`; `*` in its text form
 (`\textasteriskcentered`, Perl's `*`), one key with `∗` (`one_asterisk`).
 
 **Beyond Perl**: Perl binds `\IEEEauthorrefmark` with no argument (IEEEtran.cls.ltxml:154). Measured (A/B `pop106b3.tsv`
@@ -31109,7 +31113,11 @@ on base; 2312.10807 and 2602.11758 paired as printed; 14 the dedupe of #969, 3 i
 words −262 (the duplicates); `fm_checks.py` 1-7: no creator merged or lost, no address shared more, no growth, no
 fragment, the word types lost the refmarks' digits. **Not reached**: the
 observer writer's re-part shows an unanswered reference mark's number (synthetic `ieee_affil_block_after_a_marked_block_of_two`,
-"Ann Able 1"; no real paper of the A/B); 2409.20550's `\thanks{\IEEEauthorrefmark{1} Corresponding author.}` stays a
+"Ann Able 1"; no real paper of the A/B); a refmark ≥ 10 among other-form marks is written as its roman numeral and
+read as a letter label, answered and so taken off the name and its note ("Ann Able1x", "x Visiting scholar" in the PDF;
+review rev106b N2, synthetic); the writer's legend note under `\thanks{$^1$…}` beside a refmark block keeps a math `∗`
+where the names show `*` (rev106b N3); a math toggle by `\(…\)` or `\ensuremath` is not seen by `printed_refmarks`
+(N4, suspected); 2409.20550's `\thanks{\IEEEauthorrefmark{1} Corresponding author.}` stays a
 document note; a block whose reference marks label lines and whose other-form numbers also label lines with the same
 numbers is read by the symbols (none in the A/B). **Guards** `perfect_kernel_batch106b::{a_refmark_among_digit_marks_is_the_symbol_it_prints,
 refmark_blocks_pair_and_print_their_symbols}` (repros `ieee_refmark_mixed_with_digit_marks`,
@@ -31126,46 +31134,67 @@ ieee_refmark_address_and_marks_in_a_line, ieee_refmark_orcid_digits_are_no_name}
 `perfect_kernel_batch77n::ieee_uppercase_names_split_with_grades`, `regress_2605_clusters::ieeetj_is_ieeetran` (ieeetj.cls
 :3166 prints the symbols, 2405.01673's copy).
 
-### 969. An affiliation that is a URL or a membership grade is the block's link or its carriers' grade, and a contact a creator holds twice is held once, read where every route meets (Perl: an affiliation contact per call, copied onto every holder)
+### 969. An affiliation that is a URL or a membership grade is the block's link or its carriers' grade, and an entry a creator holds twice is held once, read where every route meets (Perl: an affiliation contact per call, copied onto every holder)
 
 **Defect** (census132 LEGEND and the KIND-misc duplicate pocket; scorer `aff_unexplained`, `duplicate_contact`). A
 line printing a URL alone under an author block — IEEEtran's `{\texttt{\url{https://github.com/…}}}` after
 `\IEEEauthorblockA{…}\\`, which the binding wraps into a block of its own (2511.18438), an author block's link line
 (2507.19490) — was an affiliation on every author; IEEE_lsens's `\IEEEauthorieeemembermark{2}Senior Member, IEEE` line
-(a raw class's mark) an affiliation (2310.02678, 2505.15137); and two routes placing one entry on one author gave it
-twice: REVTeX's `\affiliation` under a single `\author` (2311.16348, 1207.1783, 2006.15775, 1407.0849, 2302.04271,
-2402.07705, 1207.6694, 1206.0114), a marked list's line repeated under a later name (easychair 1204.6725), PoS, aa,
-cas-sc, aastex631, article, elsarticle (1909.05984, 2005.03567, 2108.00864, 2307.05833, 2405.14358, 2501.11284,
-2603.14883).
+(a raw class's mark) an affiliation (2310.02678, 2505.15137); and one entry reached one author twice: one call placed
+twice by two routes (a revtex group's affiliations, 1207.1783, 2006.15775, 1207.6694, 1206.0114; PoS's "on behalf of the
+Fermi-LAT Collaboration", given to every name and twice to the last when the empty name after it is coalesced into it,
+1909.05984; 2108.00864, 2405.14358, 2501.11284, 2603.14883), a marked line written again under a later name, whose label
+the first name's mark requests twice (easychair 1204.6725), a supplement's `\author{…}\affiliation{…}` written again
+after `\maketitle` (2311.16348, 1407.0849).
 
 **Fix.** At the frontmatter flush after the legend Kind step (#961), `insert::kind_link_and_grade_contacts`: a creator's
 affiliation contact carrying the role's default name whose whole printed text is one link printing as a URL does (its
 target, `http(s)://…`, `www.…`: `sole_link`; a department's name set as a link stays, 1812.03371) is a `url` contact —
-the block's own creator's, once, when several creators hold it (`block_creator`, #159), else its holder's; one whose
-text is a membership grade ("Senior Member, IEEE", "Graduate Student Member, IEEE", "Life Fellow, IEEE", "Member, ACM":
-grade words, "Member" or "Fellow", a comma, a society's acronym; one per line: `reads_as_membership_grade`) is its
-carriers' `membership` contact, as IEEEtran's `\IEEEmembership` makes one (ieeetran_cls.rs `\lx@IEEE@membership`).
-Then `insert::drop_repeated_contacts`: two contacts of one role and one name on one creator whose printed text is the
-same, marks (`ltx:sup`) and notes aside, spacing and case folded, keep the first in print order; a copy on another
-creator stays (a shared entry is each holder's), and so does one under another printed label — aa's `\mail{smith@x.org}`
-"Correspondence to" beside the institute's `\email{smith@x.org}`, both in the PDF (`perfect_kernel_batch97b`; in the
-A/B only amsart 2603.10589's `\address[Georgiev]`/`\address[Vatev]` pair). The PDFs of the three read print each once (2311.16348, 1204.6725, 1207.1783). Generic:
-no class names.
+the block's own creator's, once (`block_creator`, #159), when it is the block's line: no mark labels it and every author
+holds a copy (2511.18438); else each holder's, a line a mark labels its owners' (`\IEEEauthorblockA{\IEEEauthorrefmark{1}
+\url{…}}`). One whose text is a membership grade ("Senior Member, IEEE", "Graduate Student Member, IEEE", "Life Fellow,
+IEEE", "Member, ACM": grade words, "Member" or "Fellow", a comma, a society whose grades follow a name — the names
+reader's `NAME_GRADE_SOCIETIES`, IEEE, ACM, OSA, ASCE, …; one per line: `reads_as_membership_grade`; "Senior Fellow,
+IAS" is a position) is its carriers' `membership` contact, as IEEEtran's `\IEEEmembership` makes one (ieeetran_cls.rs
+`\lx@IEEE@membership`). Then `insert::drop_repeated_contacts`: two contacts of one role and one name on one creator
+printing the same text (spacing aside; case, marks and notes kept) keep the first in print order where they are one
+entry — copies of one source call (`_source`: the annotation's queue ordinal, set when `\lx@annotate@frontmatter@now`
+digests it, else the entry's own at insertion; every copy keeps it, and the e-mails the address-line Kind step makes of
+an entry take it), lines of one label (`_label`), or a call made after `\maketitle` placed the frontmatter (`_latecall`,
+`queue_digest::frontmatter_entry_is_late`) restating one the creator holds. Two printed lines that share their text are
+two entries, both kept: an address's "Groningen" and the next one's (0808.4092, 1106.1785, 2608.29625, 2609.05568,
+2406.03340, where 106b r1's text-only key dropped printed lines, review rev106b B1), amsart e-mails differing in case,
+an address written again with a footnote of its own, aa's `\thanks{\email{x}}` beside the institute's `\email{x}`, both
+printed (2005.03567), aa's `\mail{x}` "Correspondence to" beside the `\email{x}` (two names, `perfect_kernel_batch97b`).
+A copy on another creator stays (a shared entry is each holder's). Generic: no class names.
 
-**Not reached** (one line each): a sentence holding a URL ("Simulation results are shown in https://…", 2310.15190);
-an amsart `\author{Name\\ \today}` dateline, an affiliation (1910.12289; one dev paper, below the 500-paper bar); a
-legend line read into the last name (`$\bigstar$ project lead, $\diamondsuit$ joint first author, $\heartsuit$
-directional lead`, 2402.14804: suits are no footnote symbols); "This paper has been accepted in CVPR 2024" after an
-affiliation's break (2406.05205). Kept by #961's ruling (an unmarked legend stays an affiliation): 2607.01136,
-2602.22712, 2410.12405, 2412.14916, 2305.02090, 2609.07982, 2404.05566, 2602.14008 (a mixed line). Scorer limits (ours
-right): 2406.05205's `∗`-keyed C2PS, 1301.2179's marked "Current affiliation:" lines, 1704.07766, 2603.21906.
-**Guards** `perfect_kernel_batch106b::{a_link_line_and_a_grade_line_are_no_affiliations, a_contact_held_twice_keeps_the_first}`
-(repros `legend_kind_link_line_is_the_blocks`, `legend_kind_membership_grade_line` with its linked-affiliation control,
-`contact_twice_keeps_the_first`), RED (int134b) → GREEN; re-pinned `perfect_kernel_batch61::marked_affiliation_review_shapes`
-(each author's two `$^1$ Univ A` rows, one text, held once). Measured (A/B `pop106b.tsv` vs int134b, 991 papers: the 58
+**Not reached** (one line each): two calls of one author printing one text that the class prints once — REVTeX's two
+`\email{x}` (2402.07705, one "†" footnote in the PDF), its two `\thanks{These authors contributed equally}`
+(2302.04271) —, a class's merge of equal entries, which no binding declares; aastex's `\correspondingauthor{Name
+\altaffiliation{1}}` beside `\author{Name\altaffiliation{1}}` (2307.05833); a late call's affiliation under a later
+`\author` lands on the last author (`\maketitle … \author{A}\affiliation{X}` in a two-author revtex paper: B holds X),
+and the late `\author{A}` prints "A" in the body, where pdflatex prints nothing (int134b alike); a sentence holding a URL ("Simulation results are shown in https://…", 2310.15190); an amsart
+`\author{Name\\ \today}` dateline, an affiliation (1910.12289; one dev paper, below the 500-paper bar); a legend line
+read into the last name (`$\bigstar$ project lead, $\diamondsuit$ joint first author, $\heartsuit$ directional lead`,
+2402.14804: suits are no footnote symbols); "This paper has been accepted in CVPR 2024" after an affiliation's break
+(2406.05205). Kept by #961's ruling (an unmarked legend stays an affiliation): 2607.01136, 2602.22712, 2410.12405,
+2412.14916, 2305.02090, 2609.07982, 2404.05566, 2602.14008 (a mixed line). Scorer limits (ours right): 2406.05205's
+`∗`-keyed C2PS, 1301.2179's marked "Current affiliation:" lines, 1704.07766, 2603.21906.
+**Guards** `perfect_kernel_batch106b::{a_link_line_and_a_grade_line_are_no_affiliations, a_contact_held_twice_keeps_the_first,
+two_printed_lines_alike_both_stay, a_late_restatement_is_held_once}` (repros `legend_kind_link_line_is_the_blocks`,
+`legend_kind_membership_grade_line` with its linked-affiliation control, `legend_kind_marked_link_line_stays_its_owners`,
+`legend_kind_position_is_no_grade`, `contact_twice_keeps_the_first`, `contact_twice_two_lines_alike_both_stay`,
+`contact_twice_two_calls_alike_amsart`, `contact_twice_late_restatement`), RED (int134b, or 106b r1 for the round-2
+shapes) → GREEN; re-pinned `perfect_kernel_batch61::marked_affiliation_review_shapes` (each author's two `$^1$ Univ A`
+rows, one label's line, held once). Measured (A/B `pop106b.tsv` vs int134b, 991 papers: the 58
 witnesses, 165 dev20k papers whose int133a output holds a repeated contact or legend words in an affiliation, the 280
-refmark papers of #968, 495 random `popint125a_s10k` controls): 250 changed, all frontmatter, 3 of the controls (two
-revtex repeats, 1207.6694 and 1206.0114, and a repeated `[` fragment, 2606.07639); 55 a contact held twice now once,
-5 a link or a grade, the rest #968's; E 1,637 = 1,637, F 2 = 2, W 18,456 = 18,456; `fm_checks.py` 1-7 clean but the
-word types lost (refmark digits; "Affiliation", 2507.19490's link renamed URL). The 57 dev20k witnesses re-scored
-(score_tiers, both sides converted alike): 187 → 213 of 247 creators right, 26 flipped right, 0 wrong.
+refmark papers of #968, 495 random `popint125a_s10k` controls; round 2's binary): 223 changed, all frontmatter; 31 an
+entry held twice now once (one call placed twice, one label's line or a late restatement; 18 of them read against
+their sources and the `FRONT a contact held twice` trace), 4 a link or a grade, the rest #968's; against round 1, 28 papers
+whose text-only drops are undone, now as int134b (0808.4092, 1106.1785, 2608.29625, 2609.05568, 2406.03340, 2005.03567,
+2209.07123's `[` fragments, 2211.09064's `???@???`, 2407.03658's template lines, …), no other paper different; E 1,637
+= 1,637, F 2 = 2, W 18,456 = 18,456; `fm_checks.py` 1-7 clean but the word types lost (refmark digits; "Affiliation",
+2507.19490's link renamed URL). The IEEE subset `pop106b3.tsv` (340): 200 changed, as round 1 but four two-call papers
+now as int134b (2005.03567, 2302.04271, 2307.05833, 2402.07705); E 902 = 902, F 1 = 1, W 9,294 = 9,294. Round 1's 57
+dev20k witnesses re-scored: 187 → 213 of 247 creators right, 26 flipped right, 0 wrong (round 1's dedupe of the four
+two-call papers is undone in round 2).

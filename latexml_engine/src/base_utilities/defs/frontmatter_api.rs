@@ -649,6 +649,14 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       QUEUE_ORDINAL.to_string(),
       (if in_note { FOOTER_ZONE } else { zone } + ordinal).to_string(),
     );
+    // (the call's own: every creator its entry is given to, and every copy of it, keep it; and whether the call came
+    // after `\maketitle` placed the frontmatter — `drop_repeated_contacts`)
+    if tag == "ltx:contact" {
+      options.insert(CONTACT_SOURCE.to_string(), ordinal.to_string());
+      if frontmatter_entry_is_late() {
+        options.insert(CONTACT_LATE.to_string(), "true".to_string());
+      }
+    }
     let nparents = parent_indices.len();
     // (a contact led by a mark of its own, which labels no one — a legend, `$^\dagger$Corresponding author`, or a mark
     // no author carries — is no answer to an author's label request, nor passes over the authors one answers)

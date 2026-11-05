@@ -108,9 +108,9 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   // (an affiliation that is a legend, read once every route has placed it: its carriers' note, OD #961)
   kind_legend_contacts(document)?;
   // (an affiliation that is a link or a membership grade, read where the legend's is: the block's link, its carriers'
-  // grade, OD #968)
+  // grade, OD #969)
   kind_link_and_grade_contacts(document)?;
-  // (a contact a creator holds twice, once every route and Kind step has placed it: its first, OD #968)
+  // (a contact a creator holds twice, once every route and Kind step has placed it: its first, OD #969)
   drop_repeated_contacts(document);
   // (the authors as written: a name the writer re-parted holds one person, OD #928)
   flag_merged_creators(document)?;
@@ -694,12 +694,12 @@ fn kind_legend_contacts(document: &mut Document) -> Result<()> {
 }
 
 /// The Kind step for a link and a membership grade (FIDELITY_CHARTER §4; census132 LEGEND; OXIDIZED_DESIGN_DIVERGENCES
-/// #968), where the legend's is ([`kind_legend_contacts`]): a creator's affiliation contact carrying the role's
+/// #969), where the legend's is ([`kind_legend_contacts`]): a creator's affiliation contact carrying the role's
 /// default name whose whole printed text is
 /// - one link ([`sole_link`]: `{\texttt{\url{https://github.com/…}}}` under IEEEtran's `\IEEEauthorblockA{…}\\`, which
 ///   the binding wraps into a block of its own, 2511.18438) is a URL contact (`role=url`, as an author block's link line
-///   is one, `author_block::links::is_link_line`): the block's own creator's, once, when several creators hold it (a
-///   block's line copied to every author), else its holder's;
+///   is one, `author_block::links::is_link_line`): the block's own creator's, once, when it is the block's line — no
+///   mark labels it and every author holds a copy —, else each holder's (a line a mark labels is its owners');
 /// - a membership grade ([`reads_as_membership_grade`]: "Senior Member, IEEE" behind IEEE_lsens's
 ///   `\IEEEauthorieeemembermark{2}`, a raw class's mark, 2310.02678, 2505.15137) is its carriers' `membership` contact,
 ///   as IEEEtran's `\IEEEmembership` makes one (ieeetran_cls.rs `\lx@IEEE@membership`).
@@ -745,28 +745,39 @@ fn kind_link_and_grade_contacts(document: &mut Document) -> Result<()> {
       "FRONT kind affiliation: a link, {} copies: {link}",
       copies.len()
     );
-    let mut kept = copies[0].clone();
     let mut holders: Vec<Node> = Vec::new();
     for holder in copies.iter().filter_map(Node::get_parent) {
       if !holders.contains(&holder) {
         holders.push(holder);
       }
     }
-    if holders.len() > 1 {
-      let Some(mut block) = block_creator(document, &authors)? else {
-        continue;
+    // (the block's line: no mark labels it, and every author holds it — 2511.18438's line under all four names; a line a
+    // mark labels is its owners', `\IEEEauthorblockA{\IEEEauthorrefmark{1}\url{…}}` under the names marked 1)
+    let unlabelled = copies.iter().all(|copy| {
+      copy
+        .get_attribute("_label")
+        .is_none_or(|label| label.is_empty())
+    });
+    let kept =
+      if unlabelled && authors.len() > 1 && authors.iter().all(|author| holders.contains(author)) {
+        let Some(mut block) = block_creator(document, &authors)? else {
+          continue;
+        };
+        document.append_clone(&mut block, vec![copies[0].clone()])?;
+        let Some(placed) = element_nodes(&block).last().cloned() else {
+          continue;
+        };
+        for copy in copies {
+          document.remove_node(copy);
+        }
+        vec![placed]
+      } else {
+        copies
       };
-      document.append_clone(&mut block, vec![kept.clone()])?;
-      let Some(placed) = element_nodes(&block).last().cloned() else {
-        continue;
-      };
-      for copy in copies {
-        document.remove_node(copy);
-      }
-      kept = placed;
+    for mut copy in kept {
+      document.set_attribute(&mut copy, "role", "url")?;
+      set_role_name(document, &mut copy, "url")?;
     }
-    document.set_attribute(&mut kept, "role", "url")?;
-    set_role_name(document, &mut kept, "url")?;
   }
   Ok(())
 }
@@ -819,8 +830,9 @@ fn sole_link(document: &mut Document, contact: &Node) -> Option<String> {
 
 /// Whether a contact's text ([`legend_text`]) is a membership grade in a society, its marks aside: "Senior Member,
 /// IEEE", "Graduate Student Member, IEEE", "Life Fellow, IEEE", "Member, ACM" — grade words, then "Member" or "Fellow",
-/// a comma and the society's acronym (a word of capitals) — one per line ("Graduate Student Member, IEEE | Senior
-/// Member, IEEE"). Not "Member of Technical Staff, Bell Labs", nor "Fellow, Trinity College".
+/// a comma and a society whose grades follow a name (`NAME_GRADE_SOCIETIES`, the names reader's: IEEE, ACM, OSA, ASCE,
+/// …) — one per line ("Graduate Student Member, IEEE | Senior Member, IEEE"). Not "Member of Technical Staff, Bell
+/// Labs", "Fellow, Trinity College", nor a position at an institute ("Senior Fellow, IAS": review rev106b S3).
 fn reads_as_membership_grade(text: &str) -> bool {
   const GRADES: &[&str] = &[
     "life",
@@ -847,8 +859,7 @@ fn reads_as_membership_grade(text: &str) -> bool {
     matches!(words.split_last(), Some((last, before))
       if matches!(last.to_lowercase().as_str(), "member" | "fellow")
         && before.iter().all(|w| GRADES.contains(&w.to_lowercase().as_str())))
-      && matches!(society.as_slice(), [acronym]
-        if acronym.chars().count() >= 2 && acronym.chars().all(|c| c.is_ascii_uppercase()))
+      && matches!(society.as_slice(), [society] if NAME_GRADE_SOCIETIES.contains(society))
   };
   let lines: Vec<&str> = text
     .split('|')
@@ -858,52 +869,85 @@ fn reads_as_membership_grade(text: &str) -> bool {
   !lines.is_empty() && lines.iter().all(|line| grade(line))
 }
 
-/// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #969): a creator holding one contact twice — two of one role and one name
-/// whose printed text, marks aside (its `ltx:sup`s and notes), is the same, its spacing and case folded — keeps the
-/// first, in print order. Two names are two printed labels, both kept: aa's `\mail{smith@x.org}` "Correspondence to"
-/// beside the institute's `\email{smith@x.org}`, which the PDF prints twice (perfect_kernel_batch97b). Two routes placing one entry on the same
-/// author made the copies: REVTeX's `\affiliation` under a single `\author` (2311.16348), a marked list's line under a
-/// name given again by a later name's mark (easychair's `$^{1}$Tsinghua University` under each of two names,
-/// 1204.6725), a revtex group's affiliations doubled (1207.1783, 2006.15775, 1407.0849, 2302.04271, 2402.07705). A
-/// copy on another creator stays: a shared entry is each holder's. Perl writes each call's contact (Base_Utility.pool.ltxml
-/// :659-660).
+/// The attribute naming the source call a contact was made by — an annotation's, its queue ordinal when it was digested
+/// (`\lx@annotate@frontmatter@now`), else the entry's own when it is inserted (`insert_frontmatter_entry`) — which
+/// every copy of it keeps (the entry given to several creators, a relocated annotation's `append_clone`, the writer's
+/// copies, a creator coalesced into another) and the e-mails the Kind step makes of its address lines take
+/// ([`kind_address_lines`]): [`drop_repeated_contacts`].
+pub(in crate::base_utilities) const CONTACT_SOURCE: &str = "_source";
+
+/// The attribute of a contact a call made after `\maketitle` placed the frontmatter (`queue_digest::
+/// frontmatter_entry_is_late`): a supplement's `\author{…}\affiliation{…}` written again, which no title prints
+/// (2311.16348, 1407.0849): [`drop_repeated_contacts`].
+pub(in crate::base_utilities) const CONTACT_LATE: &str = "_latecall";
+
+/// The state counter of the [`CONTACT_SOURCE`] of a contact no annotation made.
+const CONTACT_SOURCE_COUNTER: &str = "lx_frontmatter_contact_source";
+
+/// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #969): a creator holding one entry twice — two contacts of one role and one
+/// name printing the same text (its spacing aside; case, marks and notes kept) — keeps the first, in print order, where
+/// the two are one entry:
+/// - copies of one source call ([`CONTACT_SOURCE`]), which two routes placed on it: PoS's "on behalf of the Fermi-LAT
+///   Collaboration", given to every name, twice on the last when the empty name after it is coalesced into it
+///   (1909.05984); a revtex group's affiliations doubled (1207.1783, 2006.15775);
+/// - lines of one label (`_label`): a marked line written again under a later name, easychair's `$^{1}$Tsinghua
+///   University` under each of two names, which the first name's mark 1 requests twice (1204.6725);
+/// - a call made after `\maketitle` placed the frontmatter ([`CONTACT_LATE`]) restating one the creator holds: a
+///   supplement's `\author{…}\affiliation{…}` written again, which no title prints (2311.16348, 1407.0849).
+///
+/// Two printed lines that share their text are two entries, both kept: an address's "Groningen" and the next one's
+/// (0808.4092, 1106.1785), amsart's `\email{Ann.Able@x.org}` and `\email{ann.able@x.org}`, a second address carrying a
+/// footnote of its own, aa's `\thanks{\email{x}}` beside the institute's `\email{x}` (2005.03567, each printed), aa's
+/// `\mail{x}` "Correspondence to" beside the `\email{x}` (two names, perfect_kernel_batch97b). A copy on another creator
+/// stays: a shared entry is each holder's. Perl writes each call's contact (Base_Utility.pool.ltxml :659-660). Guards
+/// `perfect_kernel_batch106b`.
 fn drop_repeated_contacts(document: &mut Document) {
-  fn printed(node: &Node, text: &mut String) {
-    for child in node.get_child_nodes() {
-      if child.get_type() != Some(NodeType::ElementNode) {
-        text.push_str(&child.get_content());
-        text.push(' ');
-      } else if !matches!(child.get_name().as_str(), "sup" | "note") {
-        printed(&child, text);
-        text.push(' ');
-      }
-    }
-  }
   for creator in document.findnodes("//ltx:creator", None) {
-    let mut seen: Vec<(String, String, String)> = Vec::new();
+    // (each entry held: its identity, role, name and printed text)
+    let mut seen: Vec<(String, Option<String>, Option<String>, String)> = Vec::new();
     for contact in element_nodes(&creator) {
       if contact.get_name() != "contact" {
         continue;
       }
-      let mut text = String::new();
-      printed(&contact, &mut text);
-      let text = text
+      let text = contact
+        .get_content()
         .split_whitespace()
         .collect::<Vec<_>>()
-        .join(" ")
-        .to_lowercase();
+        .join(" ");
       if text.is_empty() {
         continue;
       }
-      let key = (
-        contact.get_attribute("role").unwrap_or_default(),
-        contact.get_attribute("name").unwrap_or_default(),
-        text,
-      );
-      if seen.contains(&key) {
+      let identities: Vec<String> = [
+        contact
+          .get_attribute(CONTACT_SOURCE)
+          .map(|source| s!("source:{source}")),
+        contact
+          .get_attribute("_label")
+          .filter(|label| !label.is_empty())
+          .map(|label| s!("label:{label}")),
+      ]
+      .into_iter()
+      .flatten()
+      .collect();
+      let (role, name) = (contact.get_attribute("role"), contact.get_attribute("name"));
+      let late = contact.has_attribute(CONTACT_LATE);
+      let held = |identity: Option<&String>| {
+        seen.iter().any(|(i, r, n, t)| {
+          identity.is_none_or(|identity| i == identity) && *r == role && *n == name && *t == text
+        })
+      };
+      if (late && held(None)) || identities.iter().any(|identity| held(Some(identity))) {
+        DebugFeature!(
+          "frontmatter",
+          "FRONT a contact held twice ({identities:?}): {text}"
+        );
         document.remove_node(contact);
+      } else if identities.is_empty() {
+        seen.push((String::new(), role, name, text));
       } else {
-        seen.push(key);
+        for identity in identities {
+          seen.push((identity, role.clone(), name.clone(), text.clone()));
+        }
       }
     }
   }
@@ -1644,6 +1688,10 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
       }
       if let Some(ordinal) = entry.get_attribute(QUEUE_ORDINAL) {
         attributes.insert(QUEUE_ORDINAL.to_string(), ordinal);
+      }
+      // (the entry's source, which a copy of the entry's makes its addresses' too: `drop_repeated_contacts`)
+      if let Some(source) = entry.get_attribute(CONTACT_SOURCE) {
+        attributes.insert(CONTACT_SOURCE.to_string(), source);
       }
       // (in the entry's font, the addresses in theirs)
       if let Some(entry_font) = entry.get_attribute("_font") {
@@ -2636,6 +2684,17 @@ pub(in crate::base_utilities) fn insert_frontmatter_entry(
     attributes.insert("_force_font".to_string(), "true".to_string());
   }
   let from_store = attributes.contains_key("_store");
+  // (a contact's source entry, which every copy of it keeps — its call's, an annotation's, else its own here:
+  // `drop_repeated_contacts`)
+  if tag == "ltx:contact" && !attributes.contains_key(CONTACT_SOURCE) {
+    let source = lookup_int(CONTACT_SOURCE_COUNTER) + 1;
+    assign_value(
+      CONTACT_SOURCE_COUNTER,
+      Stored::Int(source),
+      Some(Scope::Global),
+    );
+    attributes.insert(CONTACT_SOURCE.to_string(), s!("inserted:{source}"));
+  }
   let opened = document.open_element(tag, Some(attributes), font.as_ref())?;
   for item in content {
     insert_frontmatter_rec(document, item)?;
