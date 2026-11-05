@@ -4,9 +4,10 @@
 %   glyph is not kept.
 % witness: review rev94a r8 z/z07
 % oracle:  pdflatex 0 errors: "Ann Able∗, Bob Baker / ∗Univ X / Univ Y"
-% engines: rust 93a, 94a r8, r9: Ann Able `<sup>1</sup>`; perl: no mark (`\IEEEauthorrefmark` empty, IEEEtran.cls.ltxml:154)
-% expect:  0 errors, 0 warnings; Ann Able's mark shown as ∗
-% status:  RED (catalog, no guard)
+% engines: rust 93a, 94a r8, r9: Ann Able `<sup>1</sup>`; 106b: `<sup>*</sup>`, Univ X Ann Able's; perl: no mark
+%   (`\IEEEauthorrefmark` empty, IEEEtran.cls.ltxml:154)
+% expect:  0 errors, 0 warnings; Ann Able's mark shown as ∗ (the text form `*`, as `\@fnsymbol` sets it in text)
+% status:  RED (catalog) -> GREEN (106b; OD #968, guarded by perfect_kernel_batch106b::refmark_blocks_pair_and_print_their_symbols)
 % preload: ar5iv.sty
 \documentclass{IEEEtran}
 \begin{document}

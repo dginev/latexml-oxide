@@ -349,14 +349,14 @@ fn ieeetrantools_under_ieeetran_keeps_class_author_marks() {
     &xml,
     "creator",
     &[r#"role="author""#],
-    "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">1</sup></personname><contact \
+    "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">*</sup></personname><contact \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\">Uni One, City</contact></creator>",
   );
   assert_element(
     &xml,
     "creator",
     &["before=\"\u{2003}\u{2003}\""],
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id2\">2</sup></personname><contact \
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id2\">†</sup></personname><contact \
      name=\"Affiliation:\u{a0}\" role=\"affiliation\">Uni Two, Town</contact></creator>",
   );
   let tex = "\\documentclass{IEEEtran}\n\\usepackage{amsthm}\n\\usepackage{IEEEtrantools}\n\\begin{document}\n\
@@ -367,7 +367,7 @@ fn ieeetrantools_under_ieeetran_keeps_class_author_marks() {
     &xml,
     "personname",
     &[],
-    r#"<personname>A<sup xml:id="id1">2</sup></personname>"#,
+    r#"<personname>A<sup xml:id="id1">†</sup></personname>"#,
   );
 }
 

@@ -1,0 +1,19 @@
+% A marked list repeating an affiliation line under a later name (`$^{1}$Univ A` under Ann and again under Bob) gave Ann
+% the line twice; a creator holding one contact twice keeps the first.
+% witness: 1204.6725 (easychair), 2311.16348, 1207.1783, 2006.15775, 1407.0849
+% oracle:  pdflatex 0 errors: "Ann Able1,2", "1 Univ A, City A", "2 Univ B, City B", "Bob Bell1", "1 Univ A, City A"
+% engines: rust int134b = 0 errors; Ann holds Univ A twice; perl = one creator per line, unpaired
+% expect:  0 errors, 0 warnings; Ann Univ A, Univ B; Bob Univ A
+% status:  RED (int134b) -> GREEN (106b)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{Contact twice}
+\author{Ann Able$^{1,2}$\\
+$^{1}$Univ A, City A\\
+$^{2}$Univ B, City B\\
+Bob Bell$^{1}$\\
+$^{1}$Univ A, City A}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -203,6 +203,46 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     "\\lx@add@contact@placed[role=email,owner=sequence]{}{#1}"
   );
 
+  // What an author reference mark (IEEEtran's `\IEEEauthorrefmark{n}`) prints for its operand, `\lx@author@refmark@symbol`:
+  // the operand itself (`\lx@author@refmark@arabic`), unless the class binding declares its own (ieeetran_cls.rs: the
+  // footnote symbol sequence, IEEEtran.cls:4543; IEEEoj's binding lets it back to the number, IEEEoj.cls:3186). A label reader (`queue_digest::printed_label`) reads its number: the symbols a class's reference
+  // marks print are one to one with their numbers, so the marks pair among themselves as they print, and a label a
+  // superscript sets in another form is told apart by the class's author block, which writes a reference mark mixed
+  // with other marks as the symbol it prints (OXIDIZED_DESIGN_DIVERGENCES #968; 2312.10807).
+  DefMacro!("\\lx@author@refmark@arabic{}", "#1");
+  Let!("\\lx@author@refmark@symbol", "\\lx@author@refmark@arabic");
+  DefMacro!("\\lx@author@refmark@printed{}", sub[(operand)] {
+    Ok(if reading_label() {
+      operand
+    } else {
+      let symbol = Invocation!(T_CS!("\\lx@author@refmark@symbol"), vec![Some(operand.clone())]);
+      Invocation!(T_CS!("\\lx@author@refmark@shown"), vec![Some(operand), Some(symbol)])
+    })
+  });
+  // (the symbol as it prints, its superscript keyed by the number, `_refmark`: the readers of the marks a name shows —
+  // `relocate::shown_marks`, the Kind steps' — read the mark by its number, as its label is, where its symbol is no
+  // label mark: 2311.03600's `Jakob Hollenstein\IEEEauthorrefmark{1}` answers `\IEEEauthorblockA{\IEEEauthorrefmark{1}…}`)
+  DefConstructor!("\\lx@author@refmark@shown Semiverbatim {}", "#2",
+  after_construct => sub[document, whatsit] {
+    let key = whatsit.get_arg(1).map(ToString::to_string).unwrap_or_default();
+    // (the superscript holding it, past the font wrappers inside it)
+    let mut node = Some(document.get_node().clone());
+    while let Some(at) = node.as_ref()
+      && !matches!(at.get_name().as_str(), "sup" | "personname" | "contact" | "creator" | "note")
+    {
+      node = at.get_parent();
+    }
+    if let Some(mut sup) = node.filter(|at| at.get_name() == "sup")
+      && !key.trim().is_empty()
+    {
+      let key = match sup.get_attribute("_refmark") {
+        Some(before) => s!("{before},{}", key.trim()),
+        None => key.trim().to_string(),
+      };
+      document.set_attribute(&mut sup, "_refmark", &key)?;
+    }
+  });
+
   // Superscript markers in author/affiliation blocks carry the affiliation
   // number. Both sides use the "affiliation" prefix so the author's requested
   // annotation ("affiliation:N") exactly matches the affiliation's label
@@ -233,7 +273,30 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // math `∗`, 0909.3754, 0912.0896, 2609.25589; `one_asterisk`, review rev100a B1)
     let in_text =
       !(label.iter().any(|l| l == "affiliation:*") && prints_another_asterisk(&operand)?);
+    // (an author reference mark keys by its number and prints its symbol, which a request nothing answers shows:
+    // 2408.02464's `Gus Gray\IEEEauthorrefmark{1}` stays "Gus Gray∗"; OXIDIZED_DESIGN_DIVERGENCES #968)
+    let mut shown = None;
+    if let [first, rest @ ..] = operand.unlist_ref().as_slice()
+      && *first == T_CS!("\\lx@author@refmark@printed")
+      && let Some(key) = label.first()
+    {
+      let mut symbol = vec![T_CS!("\\lx@author@refmark@symbol")];
+      symbol.extend_from_slice(rest);
+      if let Some(printed) = printed_label(&Tokens::new(symbol))? {
+        shown = Some(s!("{key}={}", printed.text));
+      }
+    }
     add_annotation_labels(label.join(","), in_text, pictured);
+    if let Some(shown) = shown {
+      with_pending_entry_attr(move |attr| {
+        let mut all = attr.get("_refmarkshown").cloned().unwrap_or_default();
+        if !all.is_empty() {
+          all.push(';');
+        }
+        all.push_str(&shown);
+        attr.insert("_refmarkshown".to_string(), all);
+      });
+    }
     if let Some(notes) = notes {
       unread(notes);
     }

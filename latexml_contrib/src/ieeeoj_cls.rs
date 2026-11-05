@@ -16,6 +16,9 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("IEEEtran");
+  // IEEEoj.cls:3183-3186 (2309.03038's copy): `\IEEEauthorrefmark{n}` prints the number, IEEEtran's footnote symbols
+  // commented out — the kernel's arabic form of the reference mark (author_macros.rs, OXIDIZED_DESIGN_DIVERGENCES #968).
+  Let!("\\lx@author@refmark@symbol", "\\lx@author@refmark@arabic");
   // ieeeoj.cls:1809-1827 (2608.19980's copy) `\@makecaption`: a table's caption "TABLE 1. text" on one line, as a
   // figure's "FIGURE 1. text", in place of IEEEtran's label over the text (ieeetran_cls.rs); caption, when loaded,
   // replaces it (caption_sty.rs). The names and numbers (:1667, 1867-1869): figures "FIGURE", tables arabic, in place of

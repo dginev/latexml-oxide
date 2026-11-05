@@ -11845,7 +11845,7 @@ author_block_in_macro, ieeetran_author_list_in_macro, author_names_in_command_ar
   `\IEEEauthorblockA{…}` as one `\lx@add@affiliation` (:145), so a marked block — `\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ
   A \\ \IEEEauthorrefmark{2}Univ B}` — is one affiliation, given to no author by its marks; `\IEEEauthorblockN` is
   its argument (:144), one creator however many names it holds. (IEEEtran.cls:4543 prints `\IEEEauthorrefmark{1}` as
-  `*`, `{2}` as `†`, outside `transmag`; the binding prints the digit — a residual, now that the marks are link keys.)
+  `*`, `{2}` as `†`, outside `transmag`; the binding prints the symbol too since 106b, OXIDIZED_DESIGN_DIVERGENCES #968.)
 - An author mark that no affiliation answers (`Bob Bee$^1$` with no `$^1$` line): Perl reads it as a request and takes
   it out of the name, so the printed mark is lost.
 - An algorithm2e block in an `{algorithmic}` `\STATE` (`\STATE \For{…}{body}`, 2301.04312, 1904.07272, 2302.08012,

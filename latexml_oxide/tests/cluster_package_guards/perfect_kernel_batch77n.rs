@@ -133,21 +133,21 @@ fn ieee_uppercase_names_split_with_grades() {
   let marked =
     |name: &str, id: &str, mark: &str| format!(r#"{name}<sup xml:id="{id}">{mark}</sup>"#);
   assert_eq!(creators(&xml), [
-    creator(true, &marked("ANN ABLE", "id1", "1"), ""),
-    creator(false, &marked("BOB BAKER", "id2", "2"), ""),
+    creator(true, &marked("ANN ABLE", "id1", "*"), ""),
+    creator(false, &marked("BOB BAKER", "id2", "†"), ""),
     creator(
       false,
-      &marked("CAT COLE", "id3", "2"),
+      &marked("CAT COLE", "id3", "†"),
       &membership("SENIOR, IEEE")
     ),
     creator(
       false,
-      &marked("DAN DORN", "id4", "3"),
+      &marked("DAN DORN", "id4", "‡"),
       &membership("SENIOR, IEEE")
     ),
     creator(
       false,
-      &marked("EVE ESS", "id5", "2"),
+      &marked("EVE ESS", "id5", "†"),
       &membership("Fellow, IEEE")
     ),
   ]);

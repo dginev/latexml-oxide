@@ -523,7 +523,7 @@ fn author_ieee_blockn_name_list_splits() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_name_list_splits.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Clemens Paul Zengler<sup xml:id=\"id1\">1</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Technical University of Denmark.</contact></creator>",
+      "<creator role=\"author\"><personname>Clemens Paul Zengler<sup xml:id=\"id1\">*</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Technical University of Denmark.</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Niels Troldborg</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Technical University of Denmark.</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Mac Gaunaa</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Technical University of Denmark.</contact></creator>",
     ],
@@ -2629,7 +2629,7 @@ fn ieee_grade_comma_before_a_break_continues_names() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_grade_comma_before_a_break_continues_names.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Gus Gray<sup xml:id=\"id1\">1</sup></personname></creator>",
+      "<creator role=\"author\"><personname>Gus Gray<sup xml:id=\"id1\">*</sup></personname></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Hal Hill</personname></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ida Ivy</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Jon Jay</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact></creator>",

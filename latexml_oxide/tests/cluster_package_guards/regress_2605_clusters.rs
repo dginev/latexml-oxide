@@ -530,11 +530,11 @@ fn ieeetj_is_ieeetran() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert!(
-    xml.contains("<personname>Alice Smith<sup>1</sup></personname>"),
+    xml.contains("<personname>Alice Smith<sup>*</sup></personname>"),
     "{xml}"
   );
   assert!(
-    xml.contains("<personname>Bob Jones<sup>1</sup></personname>"),
+    xml.contains("<personname>Bob Jones<sup>*</sup></personname>"),
     "{xml}"
   );
   assert!(

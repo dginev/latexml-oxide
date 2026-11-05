@@ -7278,9 +7278,10 @@ Text.
     Some("ar5iv.sty"),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  // (each `Univ A` row goes to both authors by its mark, as before)
+  // (each `Univ A` row goes to both authors by its mark, as before; the two rows' one text held once, 106b's
+  // `drop_repeated_contacts`, OD #969)
   let row = |text: &str| format!("<contact role=\"authorblock\">{text}</contact>");
-  let rows = |own: &str| format!("{}{}{}", row(own), row(" Univ A"), row(" Univ A"));
+  let rows = |own: &str| format!("{}{}", row(own), row(" Univ A"));
   assert_eq!(creators_of(&xml), vec![
     creator(false, "Ann Able", &rows("ann@x.y")),
     creator(true, "Bob Baker", &rows("bob@x.y"))

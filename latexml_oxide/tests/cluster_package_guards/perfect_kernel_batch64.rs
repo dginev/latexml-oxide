@@ -57,10 +57,10 @@ fn ieee_refmark_address_and_marks_in_a_line() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_refmark_address_and_marks_in_a_line.tex"
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Ben Steen<sup xml:id=\"id1\">1</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Microsoft Data &amp; AI</contact>\n    <contact name=\"Email: \" role=\"email\">steen@microsoft.com</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Mic Tufo<sup xml:id=\"id2\">2</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Google</contact>\n    <contact name=\"Email: \" role=\"email\">tufo@google.com</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Alex Svy<sup xml:id=\"id3\">3</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Google DeepMind</contact>\n    <contact name=\"Email: \" role=\"email\">svy@google.com</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Dem Hespe<sup xml:id=\"id4\">4</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text font=\"italic\" xml:id=\"id5\">Independent</text></contact>\n    <contact name=\"Email: \" role=\"email\">dem.hespe@outlook.com</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ben Steen<sup xml:id=\"id1\">*</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Microsoft Data &amp; AI</contact>\n    <contact name=\"Email: \" role=\"email\">steen@microsoft.com</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Mic Tufo<sup xml:id=\"id2\">†</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Google</contact>\n    <contact name=\"Email: \" role=\"email\">tufo@google.com</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Alex Svy<sup xml:id=\"id3\">‡</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Google DeepMind</contact>\n    <contact name=\"Email: \" role=\"email\">svy@google.com</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Dem Hespe<sup xml:id=\"id4\">§</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text font=\"italic\" xml:id=\"id5\">Independent</text></contact>\n    <contact name=\"Email: \" role=\"email\">dem.hespe@outlook.com</contact>\n  </creator>",
     "<creator role=\"author\">\n    <contact name=\"Email: \" role=\"email\">sund@microsoft.com</contact>\n  </creator>",
   ]);
 }
@@ -73,9 +73,9 @@ fn ieee_refmark_orcid_digits_are_no_name() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_refmark_orcid_digits_are_no_name.tex"
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Ole Schu<sup xml:id=\"id1\">1</sup><ref class=\"ltx_href\" href=\"https://orcid.org/0000-0001-8953-1075\">iD</ref></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text font=\"italic\" xml:id=\"id2\">Lab A</text>, Stuttgart</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Mark Hahn<sup xml:id=\"id3\">2</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text font=\"italic\" xml:id=\"id4\">Firm B</text>, Ulm</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Nic Schein<sup xml:id=\"id5\">1</sup><ref class=\"ltx_href\" href=\"https://orcid.org/0000-0002-5176-6159\">iD</ref></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text font=\"italic\" xml:id=\"id6\">Lab A</text>, Stuttgart</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ole Schu<sup xml:id=\"id1\">*</sup><ref class=\"ltx_href\" href=\"https://orcid.org/0000-0001-8953-1075\">iD</ref></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text font=\"italic\" xml:id=\"id2\">Lab A</text>, Stuttgart</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Mark Hahn<sup xml:id=\"id3\">†</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text font=\"italic\" xml:id=\"id4\">Firm B</text>, Ulm</contact>\n  </creator>",
+    "<creator before=\"  \" role=\"author\">\n    <personname>Nic Schein<sup xml:id=\"id5\">*</sup><ref class=\"ltx_href\" href=\"https://orcid.org/0000-0002-5176-6159\">iD</ref></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text font=\"italic\" xml:id=\"id6\">Lab A</text>, Stuttgart</contact>\n  </creator>",
   ]);
 }
 
@@ -197,8 +197,8 @@ fn ieee_refmark_unanswered_stays_printed() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_refmark_unanswered_stays_printed.tex"
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id2\">2</sup></personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id3\"><sup xml:id=\"id3.1\">1</sup>Equal contribution. <sup xml:id=\"id3.2\">2</sup>Corresponding author.</note>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">*</sup></personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id2\">†</sup></personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id3\"><sup xml:id=\"id3.1\">*</sup>Equal contribution. <sup xml:id=\"id3.2\">†</sup>Corresponding author.</note>\n  </creator>",
   ]);
 }
 

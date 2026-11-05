@@ -353,6 +353,8 @@ LoadDefinitions!({
   DefMacro!("\\author[]{}", sub[(_short, body)] {
     // (a document's own `\IEEEmembership` keeps its meaning: `\def\IEEEmembership#1{\textit{#1}}` in 2408.00647)
     let ours = class_membership()?;
+    // (a reference mark among other marks is the symbol it prints: 2312.10807, OXIDIZED_DESIGN_DIVERGENCES #968)
+    let body = printed_refmarks(body);
     let (target, body) = if body.to_string().contains("authorblockN") {
       // Transpose a genuine `\and`×`\\` grid to row-major reading order first
       // (arXiv:2403.16405); a single-row `\and` list is returned unchanged. Then
@@ -434,9 +436,20 @@ LoadDefinitions!({
   // \IEEEauthorrefmark{n} — a superscript affiliation/footnote marker after an
   // author name. Perl binds `\IEEEauthorrefmark` with NO argument (''), so a
   // real `\IEEEauthorrefmark{2}` leaks its `{2}` as literal text ("Lei Chen2",
-  // witness 2404.07847). Take the argument and render it as a superscript
-  // (beyond-Perl): "Lei Chen²", matching pdfTeX and preserving the marker.
-  DefMacro!("\\IEEEauthorrefmark{}", "\\textsuperscript{#1}");
+  // witness 2404.07847). Take the argument and print it as IEEEtran.cls:4540-4546 does (beyond-Perl): the n-th
+  // footnote symbol, raised — `* † ‡ § ¶ ‖ ** †† ‡‡`, then lower-case roman numerals from 10 —, the number itself
+  // only under `transmag` (:4541): "Lei Chen†" (2312.10807's `Oier Mees$^3$\IEEEauthorrefmark{1}` prints "Oier
+  // Mees3∗"). The symbol is declared to the kernel's hook (`\lx@author@refmark@symbol`, author_macros.rs), whose
+  // label readers key the mark by its number, one to one with the symbols the class's marks print, so a block marked
+  // with them alone pairs as it did; a block mixing them with other marks is read by the symbols
+  // (`printed_refmarks`, below; OXIDIZED_DESIGN_DIVERGENCES #968). Without IEEEtran's `\raisebox{0pt}[0pt][0pt]` (a
+  // zero-size box in the name) and its `\footnotesize`; the symbols in their text forms, as `\@fnsymbol`'s
+  // `\TextOrMath` sets them in text.
+  RawTeX!(r"\def\lx@author@refmark@symbol#1{\ifCLASSOPTIONtransmag #1\else\ifcase#1\or
+\textasteriskcentered\or\textdagger\or\textdaggerdbl\or\textsection\or\textparagraph\or\textbardbl\or
+\textasteriskcentered\textasteriskcentered\or\textdagger\textdagger\or\textdaggerdbl\textdaggerdbl
+\else\romannumeral#1\fi\fi}");
+  DefMacro!("\\IEEEauthorrefmark{}", "\\textsuperscript{\\lx@author@refmark@printed{#1}}");
   def_macro_noop("\\IEEEtriggeratref{}")?;
   // IEEEtran.cls:6153 `\def\IEEEpubid#1{\def\@IEEEpubid{#1}…}`: the publisher's ID line at the first page's foot, the
   // argument alone — no label, and no "pubid: " before it (Perl's IEEEtran.cls.ltxml:157 content)
@@ -1397,6 +1410,216 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
   }
   flush(&mut run, &mut out, &mut open_in_blocks, false);
   Tokens::new(out)
+}
+
+/// An author block whose reference marks (`\IEEEauthorrefmark{n}`, `\authorrefmark{n}`) share a number with a mark of
+/// another form that labels a line (`\thanks{$^1$TUM}`, `\IEEEauthorblockA{$^{1}$Univ A}`) with each reference mark
+/// written as the superscript symbol it prints (IEEEtran.cls:4543-4546: `*`, `\dagger`, `\ddagger`, `\S`, `\P`, `\|`,
+/// then doubled, then roman numerals): there its number is no label of that line — 2312.10807's `Oier
+/// Mees$^3$\IEEEauthorrefmark{1}` prints "Mees3∗" under `\thanks{$^1$TUM}` and `\thanks{$^{*}$Equal contribution}`, its
+/// `∗` that legend's and not TUM's (2409.20550's `Yanlin Wang$^{1}$\IEEEauthorrefmark{1}` over
+/// `\IEEEauthorblockA{$^{1}$Sun Yat-sen University}` and `\thanks{\IEEEauthorrefmark{1} Corresponding author.}`) —, so
+/// the block reads as one labelled with numbers and annotated with footnote symbols. Any other block is left as it is:
+/// the numbers key its reference marks one to one with the symbols they print (`\lx@author@refmark@symbol`), as labels
+/// — those that label its lines (1910.10075's `\IEEEauthorblockA{\IEEEauthorrefmark{1}University of Cambridge …}` under
+/// names marked `\IEEEauthorrefmark{1}\textsuperscript{1}`, whose `1` labels no line) or none (2411.01611); under
+/// `transmag` (:4541), IEEEoj (IEEEoj.cls:3186) and ieeeaccess's `\authorrefmark` (ieeeaccess.cls:453) they print
+/// their numbers.
+fn printed_refmarks(body: Tokens) -> Tokens {
+  // (a class printing the number — `transmag`, IEEEoj's `\textsuperscript{#1}` — prints no symbol to read)
+  if T_CS!("\\ifCLASSOPTIONtransmag").defined_as(&T_CS!("\\iftrue"))
+    || T_CS!("\\lx@author@refmark@symbol").defined_as(&T_CS!("\\lx@author@refmark@arabic"))
+  {
+    return body;
+  }
+  // (`\authorrefmark` only as IEEEtran lets it, :6312; ieeeaccess.cls:453 prints its number)
+  let legacy = T_CS!("\\authorrefmark").defined_as(&T_CS!("\\IEEEauthorrefmark"));
+  let refmark =
+    |t: &Token| *t == T_CS!("\\IEEEauthorrefmark") || (legacy && *t == T_CS!("\\authorrefmark"));
+  let v = body.unlist_ref();
+  // the end of the group opening at `at` (one past its close), or of the one token there
+  let operand_end = |at: usize| -> usize {
+    if v.get(at).is_some_and(|t| t.get_catcode() == Catcode::BEGIN) {
+      let mut depth = 0usize;
+      for (j, t) in v.iter().enumerate().skip(at) {
+        match t.get_catcode() {
+          Catcode::BEGIN => depth += 1,
+          Catcode::END => {
+            depth -= 1;
+            if depth == 0 {
+              return j + 1;
+            }
+          },
+          _ => {},
+        }
+      }
+      v.len()
+    } else {
+      (at + 1).min(v.len())
+    }
+  };
+  let skip_spaces = |mut at: usize| {
+    while v.get(at) == Some(&T_SPACE!()) {
+      at += 1;
+    }
+    at
+  };
+  // (whether the mark at `at` leads a line — the block's first, one after `\\`, `\quad` or `\and`, a `\thanks{…}`'s or
+  // an `\IEEEauthorblockA{…}`'s —, spaces and math shifts before it: the label of that line; 2602.11758's
+  // `\textsuperscript{1}Tsinghua University\quad \textsuperscript{2}HKUST(Guangzhou)`)
+  let leads_a_line = |at: usize| {
+    let mut j = at;
+    while j > 0 && matches!(v[j - 1].get_catcode(), Catcode::SPACE | Catcode::MATH) {
+      j -= 1;
+    }
+    // (a line break, or the spacing and `\and` an affiliation list parts its entries by: `affil_splits`)
+    if j == 0
+      || [
+        T_CS!("\\\\"),
+        T_CS!("\\newline"),
+        T_CS!("\\quad"),
+        T_CS!("\\qquad"),
+        T_CS!("\\and"),
+        T_CS!("\\And"),
+        T_CS!("\\AND"),
+      ]
+      .contains(&v[j - 1])
+    {
+      return true;
+    }
+    let mut k = j - 1;
+    if v[k].get_catcode() != Catcode::BEGIN {
+      return false;
+    }
+    while k > 0 && v[k - 1] == T_SPACE!() {
+      k -= 1;
+    }
+    k > 0
+      && [
+        T_CS!("\\thanks"),
+        T_CS!("\\footnote"),
+        T_CS!("\\IEEEauthorblockA"),
+        T_CS!("\\authorblockA"),
+      ]
+      .contains(&v[k - 1])
+  };
+  // (each reference mark's number and the tokens it spans; the numbers of the other marks that label a line)
+  let mut marks: Vec<(usize, usize, u32)> = Vec::new();
+  let mut line_numbers: Vec<u32> = Vec::new();
+  let mut i = 0;
+  while i < v.len() {
+    let t = v[i];
+    if refmark(&t) {
+      let at = skip_spaces(i + 1);
+      let end = operand_end(at);
+      let digits: String = v[at..end]
+        .iter()
+        .filter(|t| {
+          !matches!(
+            t.get_catcode(),
+            Catcode::BEGIN | Catcode::END | Catcode::SPACE
+          )
+        })
+        .map(ToString::to_string)
+        .collect();
+      if let Ok(n) = digits.parse::<u32>() {
+        marks.push((i, end, n));
+      }
+      i = end.max(i + 1);
+    } else if t.get_catcode() == Catcode::SUPER || t == T_CS!("\\textsuperscript") {
+      let end = operand_end(skip_spaces(i + 1));
+      if leads_a_line(i) {
+        // (its numbers: `$^{1,2}$`'s 1 and 2)
+        let operand: String = v[i + 1..end].iter().map(ToString::to_string).collect();
+        line_numbers.extend(
+          operand
+            .split(|c: char| !c.is_ascii_digit())
+            .filter_map(|n| n.parse::<u32>().ok()),
+        );
+      }
+      i = end.max(i + 1);
+    } else {
+      i += 1;
+    }
+  }
+  if !marks.iter().any(|(_, _, n)| line_numbers.contains(n)) {
+    return body;
+  }
+  let symbol = |n: u32| -> Vec<Token> {
+    let one = |k: u32| match k {
+      1 => vec![T_OTHER!("*")],
+      2 => vec![T_CS!("\\dagger")],
+      3 => vec![T_CS!("\\ddagger")],
+      4 => vec![T_CS!("\\S")],
+      5 => vec![T_CS!("\\P")],
+      _ => vec![T_CS!("\\|")],
+    };
+    match n {
+      1..=6 => one(n),
+      7..=9 => [one(n - 6), one(n - 6)].concat(),
+      _ => Vec::new(),
+    }
+  };
+  let mut out: Vec<Token> = Vec::with_capacity(v.len());
+  let mut from = 0;
+  let mut in_math = false;
+  for (start, end, n) in marks {
+    for t in &v[from..start] {
+      if t.get_catcode() == Catcode::MATH {
+        in_math = !in_math;
+      }
+      out.push(*t);
+    }
+    from = end;
+    let sym = symbol(n);
+    // (a number of 10 or more prints its roman numeral, a lettered mark; 0 prints nothing)
+    if sym.is_empty() {
+      if n >= 10 {
+        out.extend([T_CS!("\\textsuperscript"), T_BEGIN!()]);
+        out.extend(roman_numeral(n).chars().map(|c| T_LETTER!(&c.to_string())));
+        out.push(T_END!());
+      }
+      continue;
+    }
+    if !in_math {
+      out.push(T_MATH!());
+    }
+    out.extend([T_SUPER!(), T_BEGIN!()]);
+    out.extend(sym);
+    out.push(T_END!());
+    if !in_math {
+      out.push(T_MATH!());
+    }
+  }
+  out.extend_from_slice(&v[from..]);
+  Tokens::new(out)
+}
+
+/// `n` in lower-case roman numerals (TeX's `\romannumeral`).
+fn roman_numeral(mut n: u32) -> String {
+  const PARTS: &[(u32, &str)] = &[
+    (1000, "m"),
+    (900, "cm"),
+    (500, "d"),
+    (400, "cd"),
+    (100, "c"),
+    (90, "xc"),
+    (50, "l"),
+    (40, "xl"),
+    (10, "x"),
+    (9, "ix"),
+    (5, "v"),
+    (4, "iv"),
+    (1, "i"),
+  ];
+  let mut out = String::new();
+  for (value, part) in PARTS {
+    while n >= *value {
+      out.push_str(part);
+      n -= value;
+    }
+  }
+  out
 }
 
 /// An author list with each `\IEEEmembership{…}` of its name lines — before the first `\\` of each `\and` group —

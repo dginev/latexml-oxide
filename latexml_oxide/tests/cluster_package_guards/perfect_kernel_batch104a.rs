@@ -148,10 +148,10 @@ fn a_refmark_led_address_line_is_its_marks_addresses() {
   let x = "affiliation=Univ X, City";
   let found = creators(&xml);
   assert_eq!(found, vec![
-    creator(&["Ann Able 1", x]),
-    creator(&["Bob Baker 1", x, "email=bob@x.edu"]),
-    creator(&["Dan Dove 1", x]),
-    creator(&["Cy Cole 2", "affiliation=Univ Y, Town", "email=cy@y.edu"]),
+    creator(&["Ann Able *", x]),
+    creator(&["Bob Baker *", x, "email=bob@x.edu"]),
+    creator(&["Dan Dove *", x]),
+    creator(&["Cy Cole †", "affiliation=Univ Y, Town", "email=cy@y.edu"]),
     creator(&["email=ms1801@x.edu"]),
   ]);
   assert!(

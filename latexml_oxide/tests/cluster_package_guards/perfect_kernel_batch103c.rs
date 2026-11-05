@@ -101,7 +101,7 @@ fn an_affiliation_that_is_a_legend_is_its_carriers_note() {
   );
   assert_eq!(
     converted(repro!("legend_kind_ieee_numbered_legend"), 0),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup><sup xml:id="id2">3</sup></personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="3" role="thanks" xml:id="id3">These authors contributed equally</note> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4">2</sup><sup xml:id="id5">3</sup></personname> <contact name="Affiliation: " role="affiliation">Univ B, City</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="3" role="thanks" xml:id="id6">These authors contributed equally</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup><sup xml:id="id2">‡</sup></personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="‡" role="thanks" xml:id="id3">These authors contributed equally</note> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4">†</sup><sup xml:id="id5">‡</sup></personname> <contact name="Affiliation: " role="affiliation">Univ B, City</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="‡" role="thanks" xml:id="id6">These authors contributed equally</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }
 

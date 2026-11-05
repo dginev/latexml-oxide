@@ -662,12 +662,23 @@ pub(in crate::base_utilities) fn shown_marks(
   let mut marks: Vec<String> = document
     .findnodes("ltx:personname//ltx:sup", Some(creator))
     .iter()
-    .flat_map(|sup| printed_marks(&sup.get_content()))
+    .flat_map(sup_marks)
     .collect();
   for math in document.findnodes("ltx:personname//ltx:Math", Some(creator)) {
     if let FmFormulaMarks::Marks(scripts) = fm_read_formula(&math) {
       marks.extend(scripts.iter().flat_map(|script| printed_marks(script)));
     }
+  }
+  marks
+}
+
+/// The marks a name's superscript shows ([`printed_marks`]), and the numbers of the author reference marks it prints
+/// (`_refmark`, `\lx@author@refmark@shown`: IEEEtran's `\IEEEauthorrefmark{1}` prints `∗`, a symbol no label mark,
+/// keyed 1 as its label is; OXIDIZED_DESIGN_DIVERGENCES #968).
+pub(in crate::base_utilities) fn sup_marks(sup: &Node) -> Vec<String> {
+  let mut marks = printed_marks(&sup.get_content());
+  if let Some(keys) = sup.get_attribute("_refmark") {
+    marks.extend(keys.split(',').map(str::to_string));
   }
   marks
 }

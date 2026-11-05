@@ -8,6 +8,9 @@ use crate::shipped_class::{class_option_given, shipped_class_loads_or};
 
 LoadDefinitions!({
   LoadClass!("IEEEtran");
+  // ieeeaccess.cls:453 (2106.14273's copy) `\def\authorrefmark#1{\textsuperscript{#1}}`: the class's own reference mark
+  // prints the number (IEEEtran's `\IEEEauthorrefmark` the footnote symbol; OXIDIZED_DESIGN_DIVERGENCES #968).
+  DefMacro!("\\authorrefmark{}", "\\textsuperscript{#1}");
   // ieeeaccess.cls:212-245 (1910.07402's copy) `\@makecaption`: a table's caption "TABLE 1. text" on one line, as a
   // figure's "FIGURE 1. text", in place of IEEEtran's label over the text (ieeetran_cls.rs); caption, when loaded,
   // replaces it (caption_sty.rs). The names and numbers (:244-262): figures "FIGURE", tables arabic, Roman under the

@@ -107,6 +107,11 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   }
   // (an affiliation that is a legend, read once every route has placed it: its carriers' note, OD #961)
   kind_legend_contacts(document)?;
+  // (an affiliation that is a link or a membership grade, read where the legend's is: the block's link, its carriers'
+  // grade, OD #968)
+  kind_link_and_grade_contacts(document)?;
+  // (a contact a creator holds twice, once every route and Kind step has placed it: its first, OD #968)
+  drop_repeated_contacts(document);
   // (the authors as written: a name the writer re-parted holds one person, OD #928)
   flag_merged_creators(document)?;
   // (the unclaimed-text net's notes: their lines no frontmatter field and no text already set holds)
@@ -618,10 +623,17 @@ fn kind_legend_contacts(document: &mut Document) -> Result<()> {
         // (the marks the carriers' names show, and those they request by a printed superscript — `affiliation:K`, read
         // as the name prints it, `\lx@sup@request@affiliation`; a binding's `annotations={…}` may be keys)
         let mut shown: Vec<String> = Vec::new();
+        // (an author reference mark's number, as its label keys it, and the symbol it prints: `relocate::sup_marks`;
+        // IEEEtran's `\IEEEauthorrefmark{4}` keys 4 and prints `§`, the note's mark, 2410.12184)
+        let mut refmarks: Vec<(String, String)> = Vec::new();
         for holder in holders {
           // (each of a superscript's marks: `Bridgeford<sup>1,†</sup>`, 2503.10710)
           for sup in document.findnodes("ltx:personname//ltx:sup", Some(holder)) {
             shown.extend(sup.get_content().split(',').map(mark_form));
+            if let Some(key) = sup.get_attribute("_refmark") {
+              shown.push(mark_form(&key));
+              refmarks.push((mark_form(&key), sup.get_content().trim().to_string()));
+            }
           }
           let requests = holder.get_attribute("_annotations").unwrap_or_default();
           shown.extend(
@@ -647,7 +659,12 @@ fn kind_legend_contacts(document: &mut Document) -> Result<()> {
           .iter()
           .find(|key| requested.contains(key))
           .or(marks.first())
-          .map(|key| (*key).clone())
+          .map(|key| {
+            refmarks
+              .iter()
+              .find(|(number, printed)| *number == mark_form(key) && !printed.is_empty())
+              .map_or_else(|| (*key).clone(), |(_, printed)| printed.clone())
+          })
       })
       .unwrap_or_default();
     // (a legend that prints no mark stays the affiliation it was: a note's text shows only behind its mark, and an empty
@@ -674,6 +691,222 @@ fn kind_legend_contacts(document: &mut Document) -> Result<()> {
     document.set_attribute(&mut note, "mark", &mark)?;
   }
   Ok(())
+}
+
+/// The Kind step for a link and a membership grade (FIDELITY_CHARTER §4; census132 LEGEND; OXIDIZED_DESIGN_DIVERGENCES
+/// #968), where the legend's is ([`kind_legend_contacts`]): a creator's affiliation contact carrying the role's
+/// default name whose whole printed text is
+/// - one link ([`sole_link`]: `{\texttt{\url{https://github.com/…}}}` under IEEEtran's `\IEEEauthorblockA{…}\\`, which
+///   the binding wraps into a block of its own, 2511.18438) is a URL contact (`role=url`, as an author block's link line
+///   is one, `author_block::links::is_link_line`): the block's own creator's, once, when several creators hold it (a
+///   block's line copied to every author), else its holder's;
+/// - a membership grade ([`reads_as_membership_grade`]: "Senior Member, IEEE" behind IEEE_lsens's
+///   `\IEEEauthorieeemembermark{2}`, a raw class's mark, 2310.02678, 2505.15137) is its carriers' `membership` contact,
+///   as IEEEtran's `\IEEEmembership` makes one (ieeetran_cls.rs `\lx@IEEE@membership`).
+///
+/// Its printed text stays, and so do its carriers. Guards `perfect_kernel_batch106b`.
+fn kind_link_and_grade_contacts(document: &mut Document) -> Result<()> {
+  let contacts = document.findnodes("//ltx:creator/ltx:contact[@role='affiliation']", None);
+  if contacts.is_empty() {
+    return Ok(());
+  }
+  let default_name = get_frontmatter_name(None, "ltx:contact", "affiliation")?;
+  // (each link's copies, in print order)
+  let mut links: Vec<(String, Vec<Node>)> = Vec::new();
+  for mut contact in contacts {
+    if contact.get_attribute("name") != default_name {
+      continue;
+    }
+    if let Some(link) = sole_link(document, &contact) {
+      match links.iter_mut().find(|(href, _)| *href == link) {
+        Some((_, copies)) => copies.push(contact),
+        None => links.push((link, vec![contact])),
+      }
+      continue;
+    }
+    let mut text = String::new();
+    legend_text(&contact, &mut text);
+    if reads_as_membership_grade(&text) {
+      DebugFeature!(
+        "frontmatter",
+        "FRONT kind affiliation: a membership grade: {text}"
+      );
+      document.set_attribute(&mut contact, "role", "membership")?;
+      set_role_name(document, &mut contact, "membership")?;
+    }
+  }
+  if links.is_empty() {
+    return Ok(());
+  }
+  let authors = document.findnodes("//ltx:creator[@role='author'][ltx:personname]", None);
+  for (link, copies) in links {
+    DebugFeature!(
+      "frontmatter",
+      "FRONT kind affiliation: a link, {} copies: {link}",
+      copies.len()
+    );
+    let mut kept = copies[0].clone();
+    let mut holders: Vec<Node> = Vec::new();
+    for holder in copies.iter().filter_map(Node::get_parent) {
+      if !holders.contains(&holder) {
+        holders.push(holder);
+      }
+    }
+    if holders.len() > 1 {
+      let Some(mut block) = block_creator(document, &authors)? else {
+        continue;
+      };
+      document.append_clone(&mut block, vec![kept.clone()])?;
+      let Some(placed) = element_nodes(&block).last().cloned() else {
+        continue;
+      };
+      for copy in copies {
+        document.remove_node(copy);
+      }
+      kept = placed;
+    }
+    document.set_attribute(&mut kept, "role", "url")?;
+    set_role_name(document, &mut kept, "url")?;
+  }
+  Ok(())
+}
+
+/// `contact` named as its class names a contact of `role` (`get_frontmatter_name`; no name when the class gives none).
+fn set_role_name(document: &mut Document, contact: &mut Node, role: &str) -> Result<()> {
+  match get_frontmatter_name(None, "ltx:contact", role)? {
+    Some(name) => document.set_attribute(contact, "name", &name)?,
+    None => {
+      contact.remove_attribute("name").ok();
+    },
+  }
+  Ok(())
+}
+
+/// The target of the one link a contact's whole printed text is (an `ltx:ref` with an `href`, in whatever text, font
+/// or line break wrappers, printing all the contact prints but its spacing and a closing stop) and that prints as a URL
+/// does (its target, or `http(s)://…`, `www.…`); `None` for any other.
+fn sole_link(document: &mut Document, contact: &Node) -> Option<String> {
+  let refs = document.findnodes(".//ltx:ref[@href]", Some(contact));
+  let [link] = refs.as_slice() else {
+    return None;
+  };
+  let printed = |text: String| {
+    text
+      .chars()
+      .filter(|c| !c.is_whitespace())
+      .collect::<String>()
+      .trim_end_matches(['.', ','])
+      .to_string()
+  };
+  let shown = printed(link.get_content());
+  let href = link.get_attribute("href")?;
+  // (a link printing its own target, as a URL prints: `https://…`, `www.…`, or the target without its scheme — not a
+  // department's name set as a link, 1812.03371's `\href{…}{Department of Mathematics, Harvey Mudd College}`)
+  let bare = |text: &str| {
+    text
+      .trim_start_matches("https://")
+      .trim_start_matches("http://")
+      .trim_start_matches("www.")
+      .trim_end_matches('/')
+      .to_lowercase()
+  };
+  let url_like = shown.starts_with("http://")
+    || shown.starts_with("https://")
+    || shown.starts_with("www.")
+    || bare(&shown) == bare(&href);
+  (!shown.is_empty() && url_like && shown == printed(contact.get_content())).then_some(href)
+}
+
+/// Whether a contact's text ([`legend_text`]) is a membership grade in a society, its marks aside: "Senior Member,
+/// IEEE", "Graduate Student Member, IEEE", "Life Fellow, IEEE", "Member, ACM" — grade words, then "Member" or "Fellow",
+/// a comma and the society's acronym (a word of capitals) — one per line ("Graduate Student Member, IEEE | Senior
+/// Member, IEEE"). Not "Member of Technical Staff, Bell Labs", nor "Fellow, Trinity College".
+fn reads_as_membership_grade(text: &str) -> bool {
+  const GRADES: &[&str] = &[
+    "life",
+    "senior",
+    "graduate",
+    "student",
+    "associate",
+    "honorary",
+    "distinguished",
+    "affiliate",
+  ];
+  let grade = |line: &str| {
+    let Some((grade, society)) = line.split_once(',') else {
+      return false;
+    };
+    let words: Vec<&str> = grade
+      .split(|c: char| !c.is_alphanumeric())
+      .filter(|w| !w.is_empty())
+      .collect();
+    let society: Vec<&str> = society
+      .split(|c: char| !c.is_alphanumeric())
+      .filter(|w| !w.is_empty())
+      .collect();
+    matches!(words.split_last(), Some((last, before))
+      if matches!(last.to_lowercase().as_str(), "member" | "fellow")
+        && before.iter().all(|w| GRADES.contains(&w.to_lowercase().as_str())))
+      && matches!(society.as_slice(), [acronym]
+        if acronym.chars().count() >= 2 && acronym.chars().all(|c| c.is_ascii_uppercase()))
+  };
+  let lines: Vec<&str> = text
+    .split('|')
+    .map(str::trim)
+    .filter(|line| line.chars().any(char::is_alphanumeric))
+    .collect();
+  !lines.is_empty() && lines.iter().all(|line| grade(line))
+}
+
+/// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #969): a creator holding one contact twice — two of one role and one name
+/// whose printed text, marks aside (its `ltx:sup`s and notes), is the same, its spacing and case folded — keeps the
+/// first, in print order. Two names are two printed labels, both kept: aa's `\mail{smith@x.org}` "Correspondence to"
+/// beside the institute's `\email{smith@x.org}`, which the PDF prints twice (perfect_kernel_batch97b). Two routes placing one entry on the same
+/// author made the copies: REVTeX's `\affiliation` under a single `\author` (2311.16348), a marked list's line under a
+/// name given again by a later name's mark (easychair's `$^{1}$Tsinghua University` under each of two names,
+/// 1204.6725), a revtex group's affiliations doubled (1207.1783, 2006.15775, 1407.0849, 2302.04271, 2402.07705). A
+/// copy on another creator stays: a shared entry is each holder's. Perl writes each call's contact (Base_Utility.pool.ltxml
+/// :659-660).
+fn drop_repeated_contacts(document: &mut Document) {
+  fn printed(node: &Node, text: &mut String) {
+    for child in node.get_child_nodes() {
+      if child.get_type() != Some(NodeType::ElementNode) {
+        text.push_str(&child.get_content());
+        text.push(' ');
+      } else if !matches!(child.get_name().as_str(), "sup" | "note") {
+        printed(&child, text);
+        text.push(' ');
+      }
+    }
+  }
+  for creator in document.findnodes("//ltx:creator", None) {
+    let mut seen: Vec<(String, String, String)> = Vec::new();
+    for contact in element_nodes(&creator) {
+      if contact.get_name() != "contact" {
+        continue;
+      }
+      let mut text = String::new();
+      printed(&contact, &mut text);
+      let text = text
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_lowercase();
+      if text.is_empty() {
+        continue;
+      }
+      let key = (
+        contact.get_attribute("role").unwrap_or_default(),
+        contact.get_attribute("name").unwrap_or_default(),
+        text,
+      );
+      if seen.contains(&key) {
+        document.remove_node(contact);
+      } else {
+        seen.push(key);
+      }
+    }
+  }
 }
 
 /// The printed text of a contact for the Kind step for a legend ([`kind_legend_contacts`]): its text, a line break
@@ -1811,6 +2044,10 @@ fn author_mark_keys(document: &mut Document, authors: &[Node]) -> Vec<Vec<String
       let mut keys: Vec<String> = Vec::new();
       for sup in document.findnodes("ltx:personname//ltx:sup", Some(author)) {
         keys.extend(printed_mark_keys(&sup.get_content()));
+        // (an author reference mark's number, as its label keys it: `relocate::sup_marks`)
+        if let Some(refmarks) = sup.get_attribute("_refmark") {
+          keys.extend(refmarks.split(',').map(str::to_string));
+        }
       }
       // (a mark the name still holds as a formula, not yet parsed: aastex's `\author{J. E. Beckman$^{1,2}$}`,
       // astro-ph0005055)
@@ -2502,7 +2739,18 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
       {
         continue;
       }
-      let Some(mut text) = unanswered_mark_text(mark) else {
+      // (an author reference mark prints its symbol, keyed by its number: `_refmarkshown`, the request's)
+      let refmark = creator
+        .get_attribute("_refmarkshown")
+        .unwrap_or_default()
+        .split(';')
+        .find_map(|pair| {
+          pair
+            .split_once('=')
+            .filter(|(key, _)| *key == label)
+            .map(|(_, shown)| shown.to_string())
+        });
+      let Some(mut text) = refmark.or_else(|| unanswered_mark_text(mark)) else {
         continue;
       };
       // (the glyph follows the mark's mode: a `*` requested in text is `*`, in math `∗`)

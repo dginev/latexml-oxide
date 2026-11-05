@@ -1140,7 +1140,7 @@ fn an_affil_after_a_run_of_names_is_the_runs() {
 fn an_ieee_affiliation_block_after_a_marked_block_is_the_next_names() {
   let tex = repro!("ieee_affil_block_after_a_marked_block.tex");
   let xml: &[&[&str]] = &[
-    &["Ann Able 1", "affiliation=Univ X"],
+    &["Ann Able *", "affiliation=Univ X"],
     &["Bob Baker", "affiliation=Univ Y"],
     &["Cid Cole", "affiliation=Univ Y"],
   ];
@@ -1154,6 +1154,8 @@ fn an_ieee_affiliation_block_after_a_marked_block_is_the_next_names() {
   ]);
   assert_eq!(default_mode_creators(tex), owned(xml));
   let tex = repro!("ieee_affil_block_after_a_marked_block_of_two.tex");
+  // (the writer's re-part shows a reference mark's number, "1", where IEEEtran prints `∗`: a residual of 106b, SYNC row
+  // 106b — no real paper of its A/B shows one)
   let xml: &[&[&str]] = &[&["Ann Able 1", "affiliation=Univ X"], &["Bob Baker"], &[
     "Cid Cole",
     "affiliation=Univ Y",
