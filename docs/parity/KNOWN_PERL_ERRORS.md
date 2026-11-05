@@ -18969,3 +18969,52 @@ Abstract words after.
 
 Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #965): the inner group and X end at `\end{X}`, X's group stays open for the
 class's `\endgroup`. Witnesses 1404.3644, 2003.13998, 2511.10805 (raa lineage).
+
+## 1208. quantumarticle's `\ead` passes its optional argument on, so the e-mail address is lost
+
+quantumarticle.cls.ltxml:47 `DefMacro('\ead[]{}', '\email{#1}')` hands `\email` the optional label (`#1`, usually
+empty), not the address (`#2`); the class's own `\ead[2][]` (quantumarticle.cls:1355-1362) prints `\email{#2}` on
+the title page's foot ("Ann Able: ann.able@lunarcollege.org"). Perl gives an empty `<contact role="email"/>`, and the
+address is nowhere. Minimal trigger:
+
+```latex
+\documentclass[a4paper]{quantumarticle}
+\pdfoutput=1
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\ead{ann.able@lunarcollege.org}
+\affiliation{Lunar College}
+\maketitle
+Body text.
+\end{document}
+```
+
+Kept as is in Rust (quantumarticle_cls.rs ports it); the loss is counted by the title-page check's second source
+(OXIDIZED_DESIGN_DIVERGENCES #953 "106t", repro sectioning-frontmatter/`check_binding_command_drops_its_argument.tex`,
+guard `perfect_kernel_batch106t::a_binding_command_that_drops_its_argument_is_counted`). Witness 2209.07123.
+
+## 1209. `\lx@begin@abstract[]` reads the document's `[…]` after `\begin{abstract}` as its attributes
+
+latex_constructs.pool.ltxml:1130 `\begin{abstract}` → `\lx@begin@abstract`, which takes an optional argument
+(Base_Utility.pool.ltxml:619) and passes it to `\lx@add@frontmatter@until{ltx:abstract}[#1]` as keyvals. LaTeX's
+`{abstract}` (article.cls, elsarticle.cls) takes none, so pdflatex prints a following `[Summary]` as the abstract's
+first word; Perl reads it as an attribute and the word is lost. Minimal trigger:
+
+```latex
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\author{Ann Able}
+\begin{abstract}[Summary]
+Text of the abstract.
+\end{abstract}
+\end{frontmatter}
+Body.
+\end{document}
+```
+
+Kept as is in Rust (frontmatter_fields.rs ports it); the loss is counted by the title-page check's second source
+(OXIDIZED_DESIGN_DIVERGENCES #953 "106t", repro sectioning-frontmatter/`check_internal_command_reads_documents_optional.tex`,
+guard `perfect_kernel_batch106t::an_internal_command_reading_the_documents_text_is_counted`). Witness 2104.14704.

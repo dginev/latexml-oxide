@@ -8675,8 +8675,9 @@ mod sect05;
 pub use sect05::note_title_page_part;
 pub(crate) use sect05::{
   SpeculativeRun, assigned_parts_holding, class_author_reader_body, keep_class_author_reader,
-  replay_class_begin_code, speculative_isolated_run, speculative_title_page_run, tail_reads_ahead,
-  title_page_deposit_tokens, title_page_print_tokens, title_page_replay_tokens,
+  replay_class_begin_code, speculative_isolated_run, speculative_title_page_run,
+  speculative_word_run, tail_reads_ahead, title_page_deposit_tokens, title_page_print_tokens,
+  title_page_replay_tokens,
 };
 mod reference_math_slots;
 mod sect06;

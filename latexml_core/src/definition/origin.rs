@@ -62,6 +62,18 @@ impl DefinitionOrigin {
   pub fn is_latexml_owned(self) -> bool {
     !matches!(self, DefinitionOrigin::File | DefinitionOrigin::Document)
   }
+
+  /// Is this definition a binding's — its own code, a fallback class's guess, a stand-in, a borrowing — rather than the
+  /// kernel's (a pool, a dump, a format) or the document's (`state::note_dropped_argument`)?
+  pub fn is_binding_made(self) -> bool {
+    matches!(
+      self,
+      DefinitionOrigin::Binding
+        | DefinitionOrigin::Fallback
+        | DefinitionOrigin::Stub
+        | DefinitionOrigin::Borrowed
+    )
+  }
 }
 
 thread_local! {
@@ -193,6 +205,10 @@ thread_local! {
 const COPY_DEFAULT_WATCH: u8 = 1;
 /// [`watch_frontmatter_setter_calls`]' watch: the frontmatter observer's.
 const FRONTMATTER_WATCH: u8 = 2;
+/// [`watch_document_calls`]' watch: the title-page check's (`state::note_document_call`).
+const DOCUMENT_CALL_WATCH: u8 = 4;
+/// [`watch_dropped_arguments`]' watch: the title-page check's (`state::note_dropped_argument`).
+const DROPPED_ARGUMENT_WATCH: u8 = 8;
 
 /// Are frontmatter setter calls observed ([`watch_setter_calls`], [`watch_frontmatter_setter_calls`])? Read at every
 /// macro call, so a flag.
@@ -203,6 +219,71 @@ pub fn frontmatter_watch() -> bool { SETTER_WATCH.with(|c| c.get()) & FRONTMATTE
 
 /// Is [`watch_setter_calls`]' watch on?
 pub fn copy_default_watch() -> bool { SETTER_WATCH.with(|c| c.get()) & COPY_DEFAULT_WATCH != 0 }
+
+/// Is one of the setter watches of [`watch_setter_calls`] and [`watch_frontmatter_setter_calls`] on (the calls
+/// `state::note_setter_call` reads)?
+pub fn setter_name_watch() -> bool {
+  SETTER_WATCH.with(|c| c.get()) & (COPY_DEFAULT_WATCH | FRONTMATTER_WATCH) != 0
+}
+
+/// Is [`watch_document_calls`]' watch on?
+pub fn document_call_watch() -> bool { SETTER_WATCH.with(|c| c.get()) & DOCUMENT_CALL_WATCH != 0 }
+
+/// Is [`watch_dropped_arguments`]' watch on?
+pub fn dropped_argument_watch() -> bool {
+  SETTER_WATCH.with(|c| c.get()) & DROPPED_ARGUMENT_WATCH != 0
+}
+
+/// Observe (`true`) or stop observing the required arguments a binding's macro drops (`state::note_dropped_argument`):
+/// while a frontmatter entry the document gave is digested (latexml_engine `title_page_check`); the watch it replaces.
+pub fn watch_dropped_arguments(on: bool) -> bool {
+  SETTER_WATCH.with(|c| {
+    let was = c.get() & DROPPED_ARGUMENT_WATCH != 0;
+    c.set(if on {
+      c.get() | DROPPED_ARGUMENT_WATCH
+    } else {
+      c.get() & !DROPPED_ARGUMENT_WATCH
+    });
+    was
+  })
+}
+
+thread_local! {
+  /// Whether [`watch_document_calls`] is on, and whether the gullet reads a mouth of the document's text now
+  /// ([`note_document_mouth`]): the watch flag is set only while both hold, so no macro a package, a class or a
+  /// binding's own text calls takes the watched path.
+  static DOCUMENT_CALLS_WATCHED: Cell<(bool, bool)> = const { Cell::new((false, false)) };
+}
+
+/// Set the watch flag of [`watch_document_calls`] from `DOCUMENT_CALLS_WATCHED`.
+fn sync_document_call_watch() {
+  let (on, document_mouth) = DOCUMENT_CALLS_WATCHED.with(Cell::get);
+  SETTER_WATCH.with(|c| {
+    c.set(if on && document_mouth {
+      c.get() | DOCUMENT_CALL_WATCH
+    } else {
+      c.get() & !DOCUMENT_CALL_WATCH
+    })
+  });
+}
+
+/// Observe (`true`) or stop observing the calls of LaTeXML's own macros the document's text makes, their arguments read
+/// from it (`state::note_document_call`): the title-page check's second source, what the document gave a binding's
+/// frontmatter commands (latexml_engine `base_utilities::frontmatter::title_page_check`). On from a conversion's
+/// start until its frontmatter is sealed; observed only while the gullet reads the document's text
+/// ([`note_document_mouth`]).
+pub fn watch_document_calls(on: bool) {
+  DOCUMENT_CALLS_WATCHED.with(|c| c.set((on, c.get().1)));
+  sync_document_call_watch();
+}
+
+/// The gullet's current mouth changed: does it read the document's own text (`Mouth::is_document_text`)?
+pub fn note_document_mouth(document_text: bool) {
+  if DOCUMENT_CALLS_WATCHED.with(Cell::get).1 != document_text {
+    DOCUMENT_CALLS_WATCHED.with(|c| c.set((c.get().0, document_text)));
+    sync_document_call_watch();
+  }
+}
 
 /// Observe the calls of the setters `names` from now on (`state::note_setter_call`): a stand-in's copy stored a
 /// default of their field, which the document's own call replaces whatever its value.
@@ -322,8 +403,10 @@ pub fn reset_copy_provides() {
   STAND_IN_OWN_CODE.with(|c| c.set(false));
   STAND_IN_LOADER_OWN_CODE.with(|c| c.set(false));
   STAND_IN_BASE_CLASS.with(|c| c.set(false));
-  // (the frontmatter observer's watch is its own, set at its reset: `watch_frontmatter_setter_calls`)
-  SETTER_WATCH.with(|c| c.set(c.get() & FRONTMATTER_WATCH));
+  // (the frontmatter observer's watch and the title-page check's are their own, set at their resets:
+  // `watch_frontmatter_setter_calls`, `watch_document_calls`, `watch_dropped_arguments`)
+  SETTER_WATCH
+    .with(|c| c.set(c.get() & (FRONTMATTER_WATCH | DOCUMENT_CALL_WATCH | DROPPED_ARGUMENT_WATCH)));
   COPY_PROVIDES.with(|c| c.set(0));
   COPY_PROVIDES_STACK.with(|s| s.borrow_mut().clear());
 }

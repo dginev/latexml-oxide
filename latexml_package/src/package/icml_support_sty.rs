@@ -77,8 +77,9 @@ fn icml_support(follow_paper_copy: bool) -> Result<()> {
   // notes). Our binding intercepts icml2016/2017/2018 but had omitted it, so a
   // paper using `\comment{…}` (via arxiv.sty → `\RequirePackage{icml2018}`) hit
   // `undefined:\comment` where Perl (which loads icml2018) is clean. Gobbling
-  // is the intended, source-faithful behavior. Witness 1803.00942.
-  DefMacro!("\\comment{}", "");
+  // is the intended, source-faithful behavior, the binding's declared drop (the title-page check wants none of it,
+  // OXIDIZED_DESIGN_DIVERGENCES #953 "106t"). Witness 1803.00942.
+  DefMacro!("\\comment{}", "", drops => [1]);
 
   // Frontmatter
   Let!("\\icmltitle", "\\title");

@@ -511,6 +511,10 @@ impl Mouth {
   /// Whether this mouth reads a file (see [`MouthOptions::file_level`]).
   pub fn is_file_level(&self) -> bool { self.file_level }
 
+  /// Whether this mouth reads the document's own text: a content file (`binding::content::load_tex_content`, the
+  /// converter's in-memory source), its notes on and not read for definitions — no package's, class's or binding's.
+  pub fn is_document_text(&self) -> bool { self.notes && !self.fordefinitions }
+
   pub fn new(text: &str, options: Option<MouthOptions>) -> Result<Self> {
     let mut mouth = match options {
       None => Mouth {

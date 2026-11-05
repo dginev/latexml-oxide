@@ -1,0 +1,25 @@
+% A binding macro's drop that the real package makes too, declared on the binding's definition, is no loss: hyperref's
+% `\texorpdfstring{<TeX>}{<PDF string>}` prints its first argument and hands its second to the PDF bookmarks only
+% (hyperref.sty, `\pdfstringdef`), so pdflatex prints "ΛCDM" and "H0", never "LambdaCDM" or "Hubble". The binding's
+% `DefMacro!("\\texorpdfstring{}{}", "#1", drops => [2])` declares #2 dropped by design (`Expandable::dropped_by_design`,
+% its expansion unchanged), so the title-page check's drop watch (`state::note_dropped_argument`, while the title's
+% entry digests) wants none of it. 106t r2 counted "lambdacdm".
+% witness: 2306.06741 (revtex4-1, `\texorpdfstring{$Y(4230)…$}{Lg}` in `\title`: r2 warned "lg"), 2306.06006 (amsart,
+%          "lg"); the reviewer's rev106t syn/p1.tex
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Constraints on ΛCDM models", "Ann Able", "Abstract", "We
+%          test the H0 tension.", "Text." (no "LambdaCDM", no "Hubble")
+% engines: rust int135e = 0 errors, 0 warnings; 106t r2 = 0 errors, 1 warning ("lambdacdm"); perl = not run
+% expect:  0 errors, 0 warnings
+% status:  GREEN (int135e) -> RED (106t r2) -> GREEN (106t r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\title{Constraints on \texorpdfstring{$\Lambda$CDM}{LambdaCDM} models}
+\author{Ann Able}
+\begin{document}
+\maketitle
+\begin{abstract}
+We test the \texorpdfstring{$H_0$}{Hubble} tension.
+\end{abstract}
+Text.
+\end{document}

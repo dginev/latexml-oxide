@@ -168,8 +168,9 @@ LoadDefinitions!({
   def_macro_noop("\\cormark[]")?; // mark only, no body
   // cas-common.sty:224 `\NewDocumentCommand \corref { m }`: the label of the `\cortext` it marks, no text (an optional
   // `\corref[]` left `cor1` typeset after the name or as a paragraph, 2303.00352's "Enrique García-Macíascor1"; the
-  // mark's link to its `\cortext` is not built)
-  def_macro_noop("\\corref{}")?;
+  // mark's link to its `\cortext` is not built); the key, which prints nothing, is the binding's declared drop, so the
+  // title-page check wants none of it (OXIDIZED_DESIGN_DIVERGENCES #953 "106t")
+  DefMacro!("\\corref{}", "", drops => [1]);
   // cas-common.sty:895 `\RenewDocumentCommand\author{O{} m O{}}` —
   // `\author[affil-marks]{name}[type=editor, auid=…, orcid=…]`, once per
   // author (cas-sc-sample.tex:58-97: four calls). The inst_support shape

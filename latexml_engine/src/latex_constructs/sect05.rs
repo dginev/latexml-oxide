@@ -5111,6 +5111,17 @@ pub(crate) fn speculative_isolated_run(tokens: Tokens) -> Result<SpeculativeRun>
   speculative_run(tokens, true, ink_text, None)
 }
 
+/// [`speculative_isolated_run`], its text read with where its words end ([`ink_word_text`], each `\insert`'s material
+/// after an [`INK_INSERT`]), the field ledger put back as [`note_title_page_print`] puts it back: what an argument a
+/// binding's frontmatter command never digests prints (`base_utilities::frontmatter::title_page_check`
+/// `end_frontmatter_entry_digestion`, OXIDIZED_DESIGN_DIVERGENCES #953 "106t").
+pub(crate) fn speculative_word_run(tokens: Tokens) -> Result<SpeculativeRun> {
+  let ledger = FieldLedgerScope::begin();
+  let run = speculative_run(tokens, true, ink_word_text, Some(INK_INSERT));
+  drop(ledger);
+  run
+}
+
 /// latex.ltx's `\thanks` (ltsect.dtx `\thanks`): a footnote mark, its text appended to `\@thanks`, which only the
 /// `\maketitle` that runs `\@thanks` prints (article.cls's, after `\@maketitle`: [`note_title_page_print`]).
 const LATEX_THANKS: &str = r"\long\def\thanks#1{\footnotemark\protected@xdef\@thanks{\@thanks\protect\footnotetext[\the\c@footnote]{#1}}}";

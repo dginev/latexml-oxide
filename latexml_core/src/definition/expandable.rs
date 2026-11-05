@@ -81,6 +81,11 @@ pub struct ExpandableOptions {
   /// `[\protect\citeauthoryear…]` label and otherwise calls the `\bibitem` it saved): it extends the name rather
   /// than replacing it, so a provide-only load installs it too (`state::provide_only_declines`).
   pub extends:            bool,
+  /// The arguments (their numbers, `#n`) this binding macro drops by design: the real package or class prints nothing of
+  /// them (hyperref's `\texorpdfstring` #2, the PDF bookmark's text), or they are page furniture (FIDELITY_CHARTER §2).
+  /// The title-page check wants none of their words (`state::DocumentArgument::used`, OXIDIZED_DESIGN_DIVERGENCES #953
+  /// "106t"); the expansion is unchanged ([`Expandable::dropped_by_design`]).
+  pub drops:              &'static [u8],
 }
 
 #[derive(Debug, Clone)]
@@ -111,6 +116,9 @@ pub struct Expandable {
   pub yields_calls:       bool,
   /// The token-list body's [`Tokens::substitution_plan`], built at the first call that substitutes.
   pub plan:               std::cell::OnceCell<Box<[BodyPiece]>>,
+  /// The arguments the binding declares this macro drops by design ([`ExpandableOptions::drops`]), bit `n` for `#n`.
+  /// Not part of the meaning (`PartialEq`).
+  pub dropped_by_design:  u16,
 }
 impl Default for Expandable {
   fn default() -> Self {
@@ -129,6 +137,7 @@ impl Default for Expandable {
       origin:             crate::definition::origin::current_origin(),
       yields_calls:       false,
       plan:               std::cell::OnceCell::new(),
+      dropped_by_design:  0,
     }
   }
 }
@@ -179,8 +188,10 @@ impl Definition for Expandable {
 
   /// Expand the expandable control sequence. This should be carried out by the Gullet.
   fn invoke(&self, once_only: bool) -> Result<Tokens> {
-    if crate::definition::origin::setter_watch() && note_setter_call(&self.cs) {
-      return self.expand_noted(once_only);
+    if crate::definition::origin::setter_watch()
+      && let Some(watched) = self.watched_call()
+    {
+      return self.expand_watched(once_only, watched);
     }
     self.expand(once_only)
   }
@@ -190,8 +201,10 @@ impl Definition for Expandable {
   /// ([`crate::gullet::unread_substituted`]). Closures, argument-only definitions and a frontmatter setter (whose
   /// expansion is noted, as [`Self::invoke`] notes it) take the general path.
   fn invoke_onto_input(&self, once_only: bool) -> Result<()> {
-    if crate::definition::origin::setter_watch() && note_setter_call(&self.cs) {
-      crate::gullet::unread_expansion(self.expand_noted(once_only)?);
+    if crate::definition::origin::setter_watch()
+      && let Some(watched) = self.watched_call()
+    {
+      crate::gullet::unread_expansion(self.expand_watched(once_only, watched)?);
       return Ok(());
     }
     if self.yields_calls
@@ -238,20 +251,115 @@ impl Definition for Expandable {
   }
 }
 
+/// What a setter watch observes of a macro call ([`Expandable::watched_call`]).
+#[derive(Clone, Copy)]
+struct WatchedCall {
+  /// a frontmatter setter's: its expansion noted ([`note_frontmatter_setter_expansion`])
+  noted:    bool,
+  /// a document call's: its arguments kept ([`note_document_call`])
+  recorded: bool,
+  /// a binding macro's while the document's frontmatter entry is digested: the arguments it drops kept
+  /// ([`note_dropped_argument`])
+  dropping: bool,
+}
+
 impl Expandable {
-  /// [`Self::expand`] for a frontmatter setter ([`note_setter_call`]): its expansion noted once its arguments are read,
-  /// the input after them what it is read before (the frontmatter observer's ledger).
+  /// What a setter watch (`definition::origin::setter_watch`) observes of this call, if anything: a frontmatter setter's
+  /// ([`note_setter_call`], whose expansion is noted), a call of LaTeXML's own macro that reads its arguments from the
+  /// document's text (`origin::document_call_watch`, [`crate::gullet::reading_document_text`]: its arguments kept,
+  /// [`note_document_call`]), and a binding's macro called while a frontmatter entry the document gave is digested
+  /// (`origin::dropped_argument_watch`, `DefinitionOrigin::is_binding_made`: the arguments it drops kept,
+  /// [`note_dropped_argument`]).
   #[cold]
   #[inline(never)]
-  fn expand_noted(&self, once_only: bool) -> Result<Tokens> {
-    let expansion = self.expand(once_only)?;
-    note_frontmatter_setter_expansion(&self.cs);
+  fn watched_call(&self) -> Option<WatchedCall> {
+    let noted = crate::definition::origin::setter_name_watch() && note_setter_call(&self.cs);
+    let recorded = crate::definition::origin::document_call_watch()
+      && self.paramlist.is_some()
+      && self.origin.is_latexml_owned()
+      && crate::gullet::reading_document_text();
+    let dropping = crate::definition::origin::dropped_argument_watch()
+      && self.paramlist.is_some()
+      && self.origin.is_binding_made()
+      && !matches!(self.expansion, Some(ExpansionBody::Closure(_)));
+    (noted || recorded || dropping).then_some(WatchedCall { noted, recorded, dropping })
+  }
+
+  /// [`Self::expand`] for a watched call ([`Self::watched_call`]): a frontmatter setter's expansion noted once its
+  /// arguments are read, the input after them what it is read before (the frontmatter observer's ledger); a document
+  /// call's arguments kept, each with whether its parameter is optional and whether the body names it (the title-page
+  /// check); and the required arguments a binding's macro drops while a document's frontmatter entry is digested.
+  #[cold]
+  #[inline(never)]
+  fn expand_watched(&self, once_only: bool, watched: WatchedCall) -> Result<Tokens> {
+    let expansion = if watched.recorded || watched.dropping {
+      let mut captured = None;
+      let expansion = self.expand_capturing::<true>(once_only, &mut captured)?;
+      if let (Some(args), Some(parms)) = (captured, self.paramlist.as_ref()) {
+        let parameters = parms.get_parameters();
+        let optional = parameters
+          .iter()
+          .filter(|parameter| !parameter.novalue)
+          .map(|parameter| parameter.optional);
+        // (a parameter a token body never names, `#n`, is dropped by the call: quantumarticle's `\ead[]{}` →
+        // `\email{#1}` drops the address; a closure's use is unknown, so its arguments are taken as handed on; one the
+        // binding declares dropped by design is accounted for — hyperref's `\texorpdfstring` #2, 2306.06741; and only
+        // a binding's drop can lose what pdflatex prints: the kernel's is TeX's own, as the format's `\@firstoftwo{T}{F}`
+        // drops the branch ifthen's `\ifthenelse` does not take around a document's `\title`, 2202.08832)
+        let used = |at: usize| {
+          !self.origin.is_binding_made()
+            || self.dropped_by_design & (1 << at) != 0
+            || match self.expansion.as_ref() {
+              Some(ExpansionBody::Tokens(body)) => names_parameter(body, at),
+              Some(ExpansionBody::Closure(_)) => true,
+              None => false,
+            }
+        };
+        let args: Vec<DocumentArgument> = optional
+          .zip(args.iter())
+          .enumerate()
+          .filter_map(|(at, (optional, arg))| match arg {
+            ArgWrap::Tokens(tokens) => Some(DocumentArgument {
+              number: at + 1,
+              optional,
+              used: used(at + 1),
+              tokens: tokens.clone(),
+            }),
+            _ => None,
+          })
+          .collect();
+        if watched.dropping {
+          for arg in args.iter().filter(|arg| !arg.optional && !arg.used) {
+            note_dropped_argument(self.cs, arg);
+          }
+        }
+        if watched.recorded {
+          note_document_call(self.cs, args);
+        }
+      }
+      expansion
+    } else {
+      self.expand(once_only)?
+    };
+    if watched.noted {
+      note_frontmatter_setter_expansion(&self.cs);
+    }
     Ok(expansion)
   }
 
   /// The expansion of a call ([`Definition::invoke`]), its arguments read.
   #[inline(always)]
   fn expand(&self, once_only: bool) -> Result<Tokens> {
+    self.expand_capturing::<false>(once_only, &mut None)
+  }
+
+  /// [`Self::expand`], its arguments copied into `captured` when `CAPTURE` ([`Self::expand_watched`]).
+  #[inline(always)]
+  fn expand_capturing<const CAPTURE: bool>(
+    &self,
+    once_only: bool,
+    captured: &mut Option<Vec<ArgWrap>>,
+  ) -> Result<Tokens> {
     // Perl shortcut for "trivial" macros that were tracing- or
     // profiling-aware. Neither tracing nor profiling is implemented
     // in the Rust port (the returned `_tracing` / `_profiled` values
@@ -276,6 +384,9 @@ impl Expandable {
         } else {
           Vec::new()
         };
+        if CAPTURE {
+          *captured = Some(args.clone());
+        }
         // Profiling: not implemented (Perl: startProfiling($profiled, 'expand'))
         let result = closure(args)?;
         // Tracing: Perl prints tracingCSName ==> tracetoString(result)
@@ -301,6 +412,9 @@ impl Expandable {
           } else {
             Vec::new()
           };
+          if CAPTURE {
+            *captured = Some(args.clone());
+          }
           if self.has_cc_arg {
             // Do we actually need to substitute the args in?
             // Pre-size: one entry per argument; avoids Vec doublings on
@@ -321,7 +435,10 @@ impl Expandable {
       None => {
         // we always need to read the arguments, for e.g. things like \@gobble
         if let Some(ref parms) = self.paramlist {
-          self.read_call_arguments(parms)?;
+          let args = self.read_call_arguments(parms)?;
+          if CAPTURE {
+            *captured = args;
+          }
         }
         Ok(NO_TOKENS)
       },
@@ -577,9 +694,20 @@ impl Expandable {
             )),
       has_cc_arg,
       alias: traits.alias,
+      dropped_by_design: traits
+        .drops
+        .iter()
+        .fold(0, |bits, &number| bits | 1 << number),
       ..Expandable::default()
     })
   }
+}
+
+/// Does the token body `body` name its parameter `#number` (an argument token, `Catcode::ARG`)?
+fn names_parameter(body: &Tokens, number: usize) -> bool {
+  body.unlist_ref().iter().any(|token| {
+    token.get_catcode() == Catcode::ARG && token.with_str(|text| text == number.to_string())
+  })
 }
 
 #[cfg(test)]

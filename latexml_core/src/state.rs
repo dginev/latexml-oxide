@@ -2468,6 +2468,143 @@ pub fn open_frontmatter_setter() -> Option<(usize, Token)> {
   })
 }
 
+/// A call of one of LaTeXML's own macros (a binding's or the kernel's) that read its arguments from the document's own
+/// text ([`note_document_call`]): the title-page check's second source.
+#[derive(Debug, Clone)]
+pub struct DocumentCall {
+  /// the macro called
+  pub cs:   Token,
+  /// its arguments as read, kept once: every entry made inside the call shares them ([`claim_open_document_calls`])
+  pub args: CallArguments,
+  /// the input after its arguments: its expansion is read before it (open while [`gullet::input_unread_since`])
+  mark:     gullet::InputMark,
+  /// the entry queued inside it first, by the title-page check's count ([`claim_open_document_calls`])
+  claimed:  Option<usize>,
+}
+
+/// The arguments a [`DocumentCall`] read, shared by the entries made inside it.
+pub type CallArguments = Rc<[DocumentArgument]>;
+
+/// An argument a [`DocumentCall`] read.
+#[derive(Debug, Clone)]
+pub struct DocumentArgument {
+  /// its parameter's number (`#n`)
+  pub number:   usize,
+  /// its parameter is optional
+  pub optional: bool,
+  /// the call's body names it (`#n`), or its use is unknown (a closure's): it is handed on; or the macro is the kernel's,
+  /// whose drop is TeX's own, or the binding declares it dropped by design (`Expandable::dropped_by_design`): no loss
+  pub used:     bool,
+  /// the tokens read
+  pub tokens:   Tokens,
+}
+
+thread_local! {
+  /// The document calls whose expansions are still being read ([`note_document_call`]), innermost last.
+  static DOCUMENT_CALLS: RefCell<Vec<DocumentCall>> = const { RefCell::new(Vec::new()) };
+}
+
+/// A macro of LaTeXML's own read its arguments `args` from the document's text (`Expandable::invoke`, while
+/// [`crate::definition::origin::document_call_watch`]): kept while its expansion is read, the calls whose expansions
+/// ended dropped. An argument-less call is not kept.
+pub fn note_document_call(cs: Token, args: Vec<DocumentArgument>) {
+  let mark = gullet::input_mark();
+  DOCUMENT_CALLS.with(|calls| {
+    let mut calls = calls.borrow_mut();
+    calls.retain(|call| gullet::input_unread_since(&call.mark));
+    if args.iter().any(|arg| !arg.tokens.is_empty()) {
+      calls.push(DocumentCall {
+        cs,
+        args: args.into(),
+        mark,
+        claimed: None,
+      });
+    }
+  });
+}
+
+/// The document calls whose expansions are being read now ([`note_document_call`]), for an entry `claimer` the
+/// frontmatter API queues inside them (latexml_engine `title_page_check::note_frontmatter_entry`): `None` when there are
+/// none, else the claimer of the outermost (the entry an earlier one inside the same call made, or `claimer`), those no
+/// entry claimed before, outermost first, now `claimer`'s, and the arguments of them all — shared, not copied: an
+/// `\author` of 3,000 names joined by `\and` makes 3,000 entries inside one call.
+pub fn claim_open_document_calls(
+  claimer: usize,
+) -> Option<(usize, Vec<DocumentCall>, Vec<CallArguments>)> {
+  DOCUMENT_CALLS.with(|calls| {
+    let mut calls = calls.borrow_mut();
+    calls.retain(|call| gullet::input_unread_since(&call.mark));
+    let outermost = calls.first()?.claimed.unwrap_or(claimer);
+    let arguments = calls.iter().map(|call| Rc::clone(&call.args)).collect();
+    let mut claimed = Vec::new();
+    for call in calls.iter_mut().filter(|call| call.claimed.is_none()) {
+      call.claimed = Some(claimer);
+      claimed.push(call.clone());
+    }
+    Some((outermost, claimed, arguments))
+  })
+}
+
+thread_local! {
+  /// The arguments binding macros dropped while the watch was on ([`note_dropped_argument`]).
+  static DROPPED_ARGUMENTS: RefCell<Vec<DroppedArgument>> = const { RefCell::new(Vec::new()) };
+}
+
+/// An argument a macro dropped, which the title-page check digests itself ([`note_dropped_argument`]; latexml_engine
+/// `title_page_check::never_digested`).
+#[derive(Debug, Clone)]
+pub struct DroppedArgument {
+  /// the macro that dropped it
+  pub cs:     Token,
+  /// its parameter's number (`#n`)
+  pub number: usize,
+  /// the tokens read
+  pub tokens: Tokens,
+}
+
+/// A binding's macro `cs` dropped its required argument `argument` — its token body never names it, nor does the
+/// binding declare it dropped by design (`Expandable::dropped_by_design`) — while a frontmatter entry the document gave
+/// is digested (`Expandable::invoke`, while [`crate::definition::origin::dropped_argument_watch`]): kept for the
+/// title-page check (latexml_engine `title_page_check`, IEEEtran's `\lx@IEEE@membership@drop`). A blank argument is
+/// not kept.
+pub fn note_dropped_argument(cs: Token, argument: &DocumentArgument) {
+  if argument.tokens.unlist_ref().iter().any(|token| {
+    !matches!(
+      token.get_catcode(),
+      Catcode::SPACE | Catcode::BEGIN | Catcode::END
+    )
+  }) {
+    DROPPED_ARGUMENTS.with(|dropped| {
+      dropped.borrow_mut().push(DroppedArgument {
+        cs,
+        number: argument.number,
+        tokens: argument.tokens.clone(),
+      })
+    });
+  }
+}
+
+/// The arguments binding macros dropped ([`note_dropped_argument`]) since the count `from`, taken; with `from` the
+/// count before them, for a nested watch.
+pub fn take_dropped_arguments(from: usize) -> Vec<DroppedArgument> {
+  DROPPED_ARGUMENTS.with(|dropped| {
+    let mut dropped = dropped.borrow_mut();
+    let from = from.min(dropped.len());
+    dropped.split_off(from)
+  })
+}
+
+/// How many arguments binding macros dropped so far ([`note_dropped_argument`]): a watch's start.
+pub fn dropped_argument_count() -> usize {
+  DROPPED_ARGUMENTS.with(|dropped| dropped.borrow().len())
+}
+
+/// Forget the document calls ([`note_document_call`]): a conversion's start.
+pub fn reset_document_calls() {
+  DOCUMENT_CALLS.with(|calls| calls.borrow_mut().clear());
+  DROPPED_ARGUMENTS.with(|dropped| dropped.borrow_mut().clear());
+}
+
 /// Was the watched setter `cs` called outside a stand-in copy's read ([`note_setter_call`])?
 pub fn setter_called(cs: &Token) -> bool {
   lookup_bool(&cs.with_cs_name(|name| s!("{name}:called")))

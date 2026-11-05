@@ -23,6 +23,17 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
     return;
   }
   let queue = frontmatter_queue_name();
+  // (the document's frontmatter commands this entry is made in, for the title-page check: OXIDIZED_DESIGN_DIVERGENCES
+  // #953 "106t")
+  note_frontmatter_entry(
+    tag,
+    attr
+      .and_then(|kv| kv.get_value("role"))
+      .map(|role| role.to_string())
+      .as_deref()
+      .unwrap_or(""),
+    Some(&command),
+  );
   // (the frontmatter observer's ledger, under its shadow switch only: OXIDIZED_DESIGN_DIVERGENCES #837)
   if fm_shadow_enabled() {
     record_api_call(tag, attr, &command);
@@ -303,6 +314,14 @@ pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
   if fm_shadow_enabled() {
     record_clear(tag, attr);
   }
+  // (and the title-page check's: what the calls it removes were given is no longer wanted, #953 "106t")
+  note_frontmatter_clear(
+    tag,
+    attr
+      .iter()
+      .find(|(key, _)| *key == "role")
+      .map(|(_, role)| *role),
+  );
   note_document_sets_front_matter(
     tag,
     attr

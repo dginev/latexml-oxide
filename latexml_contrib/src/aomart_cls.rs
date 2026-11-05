@@ -21,9 +21,13 @@ LoadDefinitions!({
   // Name parts emit inline.
   DefMacro!("\\givenname{}", "#1");
   DefMacro!("\\surname{}", "#1");
+  // aomart.cls:357-366 `\subject{primary|secondary}{scheme}{codes}`: the scheme (#2, "MSC2010") is printed only under the
+  // class's `printscheme` option, off by default (:64-66) — the binding's declared drop, which the title-page check
+  // wants none of (OXIDIZED_DESIGN_DIVERGENCES #953 "106t").
   DefMacro!(
     "\\subject{}{}{}",
-    "\\@add@frontmatter{ltx:classification}[scheme=#1]{#3}"
+    "\\@add@frontmatter{ltx:classification}[scheme=#1]{#3}",
+    drops => [2]
   );
   DefMacro!(
     "\\published{}",

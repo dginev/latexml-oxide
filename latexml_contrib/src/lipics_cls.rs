@@ -377,7 +377,10 @@ LoadDefinitions!({
   // abstract when set (1507.03682's copy :391-393, `\doiHeading\doi{\@DOI}`; the class itself sets it empty, :643),
   // once, as a pubnote at `\maketitle` labelled as the class prints it, `\doiHeading` "Digital Object Identifier" (:637;
   // FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #915); `\volumeinfo{editors}{n}{event}
-  // {volume}{issue}{first page}` the event, the note `\event` makes.
+  // {volume}{issue}{first page}` the event, the note `\event` makes; the editors, their count and the page numbers the
+  // first page's copyright line prints beside it (1507.03682's copy :123-140, `\copyrightline`) are page furniture
+  // (FIDELITY_CHARTER §2) — the binding's declared drop, which the title-page check wants none of
+  // (OXIDIZED_DESIGN_DIVERGENCES #953 "106t").
   {
     let _guess = OriginGuard::new(DefinitionOrigin::Fallback);
     RawTeX!(
@@ -388,7 +391,8 @@ LoadDefinitions!({
     );
     DefMacro!(
       "\\volumeinfo{}{}{}{}{}{}",
-      "\\if\\relax\\detokenize{#3}\\relax\\else\\@add@frontmatter{ltx:note}[role=event]{#3}\\fi"
+      "\\if\\relax\\detokenize{#3}\\relax\\else\\@add@frontmatter{ltx:note}[role=event]{#3}\\fi",
+      drops => [1, 2, 4, 5, 6]
     );
   }
   RawTeX!(

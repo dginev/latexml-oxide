@@ -780,8 +780,9 @@ LoadDefinitions!({
   });
   Let!("\\reference", "\\bibitem");
 
-  // Perl L282-284
-  def_macro_noop("\\comment{}")?;
+  // Perl L282-284; the binding's declared drop (the title-page check wants none of it, OXIDIZED_DESIGN_DIVERGENCES #953
+  // "106t")
+  DefMacro!("\\comment{}", "", drops => [1]);
   DefMacro!("\\etal",         "\\textit{et al.}");
   def_macro_noop("\\firstsection")?;
 

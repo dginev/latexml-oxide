@@ -8,8 +8,8 @@
 //! by the next abstract until a flush (`frontmatter_clear_command_form`). Each later late abstract follows the cover
 //! lines printed before it (`place_later_abstract`, cover_order.rs). Witnesses: 1006.5288 (amsart), 2406.04383 (ceurart),
 //! 2404.04417 (elsarticle: an empty later `{abstract}` had cleared the only one), 2305.00493 (sn-jnl). Each guard
-//! converts its repro under `tools/perfect_kernel/repros/sectioning-frontmatter/` and asserts no Error or Warning and
-//! the abstracts whole. One guard per path: the kernel `{abstract}` after `\maketitle` (amsart, the witness's shape),
+//! converts its repro under `tools/perfect_kernel/repros/sectioning-frontmatter/` and asserts no Error or Warning (but
+//! the amsart repro's counted `[R\'esum\'e]`, 106t) and the abstracts whole. One guard per path: the kernel `{abstract}` after `\maketitle` (amsart, the witness's shape),
 //! the same path under other classes (article, IEEEtran with its accumulating keywords), the repeat dropped (`@until`
 //! and `@now`), the command form given twice before `\maketitle` (sn-jnl), and the second late abstract's placement
 //! (its streamed build: `114_streaming_structure::streaming_late_abstract_follows_its_cover`). The flipped pre-86i
@@ -42,10 +42,22 @@ fn convert_clean(tex: &str) -> String {
 
 /// 1006.5288's shape: amsart's two `{abstract}`s after `\maketitle`, both printed where they stand (amsart.cls:854).
 /// The second replaced the first, with its in-abstract keywords and MSC lines; both are kept, in source order, as the
-/// vendored Perl keeps them.
+/// vendored Perl keeps them. amsart's `{abstract}` takes no optional argument, so pdflatex prints the second's
+/// `[R\'esum\'e]` before its text, which the kernel's `\lx@begin@abstract[]` reads as attributes (KNOWN_PERL_ERRORS
+/// #1209): the loss is counted, the one Warning of the title-page check's second source (OD #953 "106t").
 #[test]
 fn second_abstract_after_maketitle_is_kept() {
-  let xml = convert_clean(repro!("second_abstract_after_maketitle_amsart.tex"));
+  let (log, xml) = convert_with(
+    repro!("second_abstract_after_maketitle_amsart.tex"),
+    Some(PRELOAD),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains(
+      "Warning:frontmatter:unclaimed The document's frontmatter commands were given 1 word(s) that its output does not hold: resume"
+    ),
+    "{log}"
+  );
   assert_eq!(root_order(&xml), [
     "title", "creator", "abstract", "abstract", "section"
   ]);

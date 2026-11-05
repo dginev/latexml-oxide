@@ -29913,12 +29913,12 @@ Warning, each a real loss read against pdflatex (or the source where pdflatex fa
 1504.05444, 1505.01270, 1609.08464, 2010.04386, 1709.02056, 1806.07548, 0912.1248, and by its source 1309.0234,
 1906.10531), mnras's `\date` the binding replaces with `\pubyear{\date{year}}` (2506.15059). **Silent still** (the
 print does not reach the words): no deposit runs — a binding's own `\maketitle` (daj 1510.08733, 2112.09352,
-elsarticle 2104.14704, aastex 2507.16700, 2603.06433), no `\maketitle` reached (cup-journal's
+elsarticle 2104.14704 — counted by 106t's second source, below —, aastex 2507.16700, 2603.06433), no `\maketitle` reached (cup-journal's
 `\g@addto@macro\document{\maketitle}`, 2302.11911, 2508.08363, 2607.18758, …: our `\document` is no macro, the
 append fails — RED repro sectioning-frontmatter/`title_page_from_begin_document_is_unchecked`); the replay does not reach the class's
 title-page code (opendatalab's `\let\oldmaketitle\maketitle` copying the locked kernel's, 2601.09733; cccconf's
 `\keywords`/`\section`, 1702.07637); a binding's fields outside `\@author` (quantumarticle `\ead`, 2209.07123; IEEEtran
-grades, 1511.03982); the scorer's artefacts (census132 §3). **Known edge:** a class's literal word equal to a word the
+grades, 1511.03982 — both counted by 106t's second source, below); the scorer's artefacts (census132 §3). **Known edge:** a class's literal word equal to a word the
 document writes is counted as the document's (77i's "OPEN", which `\svc{open}` writes): the check reads the print's
 text, not where each printed letter came from. Guards `perfect_kernel_batch106s::{
 a_class_store_the_net_misses_is_counted, a_note_prints_only_where_the_class_flushes_it,
@@ -29933,6 +29933,94 @@ Guards updated for losses now counted:
 `perfect_kernel_batch59::discarded_replay_takes_back_its_stubs` ("Extra info." of a dropped replay),
 `perfect_kernel_batch77i::store_tested_against_a_word_is_not_printed` (the class's "OPEN", lost with the dropped
 deposit), `perfect_kernel_batch91a::cpc_hepnp_is_not_routed_until_91c` (the e-mail).
+
+**106t: the second source — what TeX makes of what the document gave its frontmatter commands** (brief 106t; review
+rev106s open question 1; main-session rule (A) of r1's report: digest, never read tokens). The print is read only where
+the kernel's deposit runs: a class binding that writes its own frontmatter (daj, elsarticle, aastex, revtex, IEEEtran)
+has no print run, and a binding's command may drop what pdflatex prints. **The calls:** while the document's own text
+is read (`Mouth::is_document_text`, a content file's mouth; the setter watch's flag set only then,
+`origin::watch_document_calls` / `note_document_mouth`, cleared when the frontmatter is first sealed), each call of a
+LaTeXML macro (kernel or binding origin) whose arguments are read from that text keeps them, each with whether its
+parameter is optional and whether the macro's token body names it, `#n` (`Expandable::watched_call`,
+`state::note_document_call`, `DocumentArgument::used`; a closure's arguments count as handed on). When the frontmatter API
+queues an entry inside such calls (`queue_front_matter`, `\lx@add@frontmatter@until`:
+`title_page_check::note_frontmatter_entry`), they are the document's frontmatter commands; the entries made inside one
+call are one record group (`claim_open_document_calls`). **What is wanted, all of it digested** (TeX settles letters
+across commands, environment arguments, nested optionals, conditional branches, glue keywords, mark arguments — each a
+false alarm of r1's token reading, 42 guards): (1) the entry's own digested content, read by `ink_word_text` as the
+print is, when the API digests it (`begin_frontmatter_entry_digestion` / `end_frontmatter_entry_digestion`, matched by
+the queued invocation's content; no extra run); (2) the arguments no entry digests (`never_digested`): a required one
+a binding's frontmatter command's body never names (quantumarticle's `\ead[]{}` → `\email{#1}` drops the address,
+KNOWN_PERL_ERRORS #1208, 2209.07123), and an optional one an internal command (a name with `@`) reads from the
+document's text (`\begin{abstract}[Summary]` → `\lx@begin@abstract[]`, #1209, elsarticle 2104.14704; amsart's
+`[R\'esum\'e]`, 1006.5288's shape); (3) the required arguments a binding-made macro (`DefinitionOrigin::is_binding_made`:
+binding, fallback, stub, borrowed — never the kernel's selectors) drops while the document's entry digests
+(`origin::watch_dropped_arguments`, `state::note_dropped_argument`), when the document wrote them (`writes`: a contiguous
+run of the record's arguments — xkeyval's `\@nil`-delimited plumbing under a raw `\ead[label=e1,mark]` is none; digested,
+it looped to a Timeout Fatal, 2101.10506): IEEEtran's `\lx@IEEE@membership@drop` over a grade it cannot place
+(1511.03982), jmlr's `\titletag[1]{}` over the title's `\thanks` (2211.07413). (2) and (3) are digested once each,
+speculatively, when the entry is digested (sect05.rs `speculative_word_run`: `speculative_run` in a mouth of its own, read
+by `ink_word_text`, a `\thanks` set apart; its state rolled back with the journal it opens, so it leaves no trace).
+**Only a binding's drop counts** (106t r3): a kernel macro's drop is TeX's own — the format's `\@firstoftwo{T}{F}`, which
+ifthen's `\ifthenelse` ends in, reads both branches from the document's text around its `\title` and abstract and drops
+the one not taken, as pdflatex does (2202.08832; r3's first census build counted the untaken branch's "physics") —
+so both drop readers take a non-binding macro's arguments as accounted for (`DocumentArgument::used`,
+`DefinitionOrigin::is_binding_made`). **A binding's declared drop** (main-session ruling (b), 106t r2: a binding's by-design drop of an argument that sees the
+document's frontmatter text counts as a loss unless the binding declares it; every loss counted, failing toward
+flagging): the binding names the arguments on its own definition, `DefMacro!(…, drops => [n, …])`
+(`ExpandableOptions::drops` → `Expandable::dropped_by_design`, a bit per `#n`; the expansion unchanged), and both drop
+readers take a declared argument as accounted for (`DocumentArgument::used`). Declared only where the real package or
+class prints nothing of the argument, or prints it as page furniture (FIDELITY_CHARTER §2), each checked against the
+real file: hyperref's `\texorpdfstring` #2 (the PDF bookmark's string; 2306.06741's `{Lg}`, 2306.06006), dmtcs's
+`\publicationdetails` #5 (a link target only), lipics's `\volumeinfo` #1, #2, #4-#6 (the copyright line's editors and
+pages, 1507.03682's `\copyrightline`), lmcs's `\lmcsheading` #1-#4, #7 (#1 unused, the rest the first page's head:
+2306.08266's lmcs.cls:502-521), aomart's `\subject` #2 (printed only under `printscheme`, aomart.cls:64-66, 357-366),
+midl's `\orcid` #1 (a linked logo, midl.cls:106), cas's `\corref` #1 (a key), icml's `\comment` (icml2018.sty:709
+`\long\def\comment#1{}`) and OmniBus's (Perl OmniBus.cls.ltxml:282-284). Left undeclared, since the real class prints
+them: dmtcs's `\publicationdata` #5-#6 (the received and accepted dates, 2309.12265's copy :277-289), ceurart's
+`\emailauthor`/`\urlauthor` #2 and `\orcidauthor` (the name's initials and surname beside each address,
+2511.11770's ceurart.cls:665-757). **Not wanted:** of a command the document writes (no `@`) its optional
+arguments (`\author[a]`, `\email[show]`, `\title[short]`); a command that queues nothing (aas_support's gobbled
+`\shortauthors`); `ltx:toctitle`; a record group whose leading entry the API removes (`\lx@clear@frontmatter`,
+`note_frontmatter_clear`: LaTeX's replacing `\author`, #406, with the contacts its block parted off,
+`perfect_kernel_batch59::author_superseded_keeps_contacts_with_owners`); an entry queued after the title page was made
+but one printed where it stands (an abstract); an entry that typesets nothing. Binding-hidden content needs no flag:
+lipics anonymous, informs blind review and IEEEtran conference mode never digest the hidden text. Words both sources
+want are counted once; the source gate, the net's words and the class-text Info are the print's; the Warning says which
+source it read ("The document's frontmatter commands were given N word(s) …"). The source reading skips the spaces
+after an accent (`Universit{\" a}t`, 2406.18504). **Coverage** (the 98 lost-words papers): 24 → 28 (26 all, 2 some):
+2209.07123, 2104.14704, 1511.03982, 2211.07413. **Silent still**, by rule (A) — r1's token reading named them: a raw
+class's or `.sty`'s macro that stores what its own title page prints, with no print run (no `\maketitle`: imsart copies
+2101.10506, 2203.00070 under `{frontmatter}`; no kept run: docclass_edit 1107.2462 — the print's reach, 106s); a word one
+command's argument and the text after it make (aa's `\email jose.cernicharo@…`, an undelimited argument: 2110.09105);
+daj's thanks (1510.08733, 2112.09352: the binding keeps the kernel's replacing `\author` where tocbase.cls:644-660
+accumulates, a content fix); europhys `\Pacs` (cond-mat9610136, cond-mat9812194, cond-mat9906132), cpcHACK 0706.0578;
+non-UTF-8 sources (0906.3407). **False alarms:** none over a 500-paper bound-class control from `popint125a_s10k`
+(revtex4 107, revtex4-1 77, IEEEtran 74, acmart 45, llncs 26, elsarticle 26, …) and 500 random. A/B (`pop106t.tsv`, 1,097
+converted; vs int135e-rel, both on the int135e dumps): the XML byte-identical in every one, E 1,969 = 1,969, F 4 = 4,
+Warnings +4 (the 4 above). **Cost** (`instructions:u`, int135e-rel vs 106t r2, 20 bound-class papers): +0.19 % (median −0.05 %, at most +1.80 %, 2507.07700).
+**Memory:** a document call's arguments are kept once (`state::CallArguments`, an `Rc<[DocumentArgument]>`), shared by
+every entry made inside it — r2 copied them per entry, quadratic in the entries one call makes (rev106t: 3,000 names
+joined by `\and` 202 MB → 2.54 GB, 5,500 names `Fatal:Timeout:MemoryBudget` at `--max-memory=8192`); rev106t's
+big1/big3/big4/big5 now peak within +1/+1/+10/+4 % of int135e. **r3 census** (3,000 papers of `popint125a_s10k`,
+holdout excluded): 2 new Warnings, both real losses pdflatex prints (1706.05664, pasj01's author list
+`OHAMA$^{1}, $\textcolor{black}{Asao…}` loses the comma inside the math: "OHAMAAsao"; 2511.20003, IEEEtran's "Senior
+Member, IEEE"), 0 false alarms. A/B (`pop106t.tsv` + the census, 4,080 converted, vs int135e-rel): XML byte-identical
+in 4,079 (1811.05727: a body equation at the math parser's ASF second-chance wall-clock deadline, 47 or 48 unparsed on
+r3 alone), E 10,279 = 10,279, F 20 = 20, Warnings +6 (the 4 above and those 2). Cost (same 20 papers): +0.17 % (median
+−0.09 %, at most +1.75 %). Guards `perfect_kernel_batch106t::{a_binding_command_that_drops_its_argument_is_counted,
+an_internal_command_reading_the_documents_text_is_counted, a_bound_class_with_nothing_lost_counts_nothing,
+a_replaced_authors_words_are_not_wanted, a_binding_macro_dropping_the_documents_text_inside_an_entry_is_counted,
+a_bindings_own_plumbing_is_no_dropped_text, a_drop_pdflatex_makes_too_is_no_loss,
+many_entries_of_one_call_share_its_arguments}`; repros `check_declared_drop_bookmark_text_unwanted`,
+`check_declared_drop_of_a_frontmatter_command_unwanted`, `check_kernel_selector_drop_is_texs_own`,
+`check_many_entries_of_one_call_share_its_arguments` (RED 106t r2 → GREEN), and sectioning-frontmatter/`check_binding_command_drops_its_argument`,
+`check_internal_command_reads_documents_optional`, `check_binding_macro_drops_inside_an_entry` (RED int135e → GREEN),
+`check_binding_plumbing_is_no_dropped_text` (RED on the unfiltered build), `check_bound_class_nothing_lost`,
+`check_bound_class_running_heads_unwanted`, `check_replaced_author_is_not_wanted` (negative). Guards updated for losses
+now counted: `perfect_kernel_batch86i::second_abstract_after_maketitle_is_kept` (amsart's `[R\'esum\'e]`, which pdflatex
+prints), `perfect_kernel_batch86d::ieee_membership_kept_after_closing_stop` (its pinned-residual variants drop the grade
+pdflatex prints, "and Farshid Alambeigi Member, IEEE.").
 
 ### 954. A contact holding two or more marked entries is cut at its marks in the frontmatter API, for every binding (Perl: one contact, the marks printed in it)
 

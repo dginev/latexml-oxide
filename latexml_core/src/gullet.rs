@@ -587,10 +587,22 @@ pub fn scale_token_limit_to_source(source_bytes: usize) {
   }
 }
 
+/// Tell the setter watches whether the current mouth reads the document's own text
+/// (`definition::origin::note_document_mouth`), after the mouth changed.
+fn note_current_mouth(gullet: &Gullet) {
+  crate::definition::origin::note_document_mouth(
+    gullet
+      .runtime
+      .as_ref()
+      .is_some_and(|rt| rt.mouth.is_document_text()),
+  );
+}
+
 /// Initialize (or reset, if reentrant) a Gullet to its default empty state.
 pub fn initialize_gullet() {
   let mut gullet = gullet_mut!();
   gullet.runtime = None;
+  crate::definition::origin::note_document_mouth(false);
   gullet.mouthstack = VecDeque::new();
   gullet.pending_comments = VecDeque::new();
   // Fresh per-conversion backstop: a prior book-scale conversion in this
@@ -839,6 +851,7 @@ pub fn open_mouth_with(mouth: Mouth, autoclose: bool, boundary: BalancedBoundary
     eof_seen: false,
     pushback: Vec::with_capacity(128),
   });
+  note_current_mouth(&gullet);
 }
 
 /// Mark the CURRENT mouth as an eTeX file level whose end inserts the
@@ -902,6 +915,7 @@ pub fn close_mouth(forced: bool) -> Result<()> {
     }
     if shift_from_mouthstack {
       gullet.runtime = gullet.mouthstack.pop_front();
+      note_current_mouth(&gullet);
     }
   }
   // Insurance for a marked mouth closed before it ever ran dry (a forced
@@ -1901,6 +1915,16 @@ pub struct InputMark {
   pushback: usize,
   below:    Option<Token>,
   mouth:    (usize, usize, usize, usize),
+}
+
+/// Is the next token read straight from the document's own text — nothing pushed back, the mouth a content file's
+/// ([`Mouth::is_document_text`])? A macro called now reads its arguments from what the document wrote
+/// (`state::note_document_call`).
+pub fn reading_document_text() -> bool {
+  gullet!()
+    .runtime
+    .as_ref()
+    .is_some_and(|rt| rt.pushback.is_empty() && rt.mouth.is_document_text())
 }
 
 /// Mark the input as it stands: everything still to be read now ([`input_unread_since`]). What is pushed back after
@@ -5158,6 +5182,7 @@ pub fn flush() {
     eof_seen:        false,
   });
   g.mouthstack = VecDeque::new();
+  note_current_mouth(&g);
 }
 
 /// Execute a function with a mutable reference to the current mouth

@@ -1,0 +1,29 @@
+% A class binding's frontmatter command drops what the document gave it: quantumarticle.cls:1355-1362 `\ead[2][]`
+% passes its address (#2) on to `\email`, which prints it on the title page's foot ("Ann Able: ann.able@…"), while the
+% binding's `\ead[]{}` (quantumarticle_cls.rs, as Perl's quantumarticle.cls.ltxml:47) passes its optional first
+% argument, so the e-mail contact is empty and the address lost. The binding writes the frontmatter itself, so the
+% title-page check has no print of it to read; its second source is what TeX makes of what the document gave the
+% binding's frontmatter commands — the calls of LaTeXML's macros reading the document's own text, inside whose expansion
+% the frontmatter API queues an entry (title_page_check.rs `note_frontmatter_entry`): the entry as digested, and an
+% argument the macro's body never names (`\ead`'s `#2`, `never_digested`) digested once speculatively, `\ead`'s
+% optional label out — and counts each word of it the output does not hold, one `Warning:frontmatter:unclaimed`.
+% FIDELITY_CHARTER §4: every residual loss counted.
+% witness: quantumarticle 2209.07123 (`\ead{stefan.loeffler@tuwien.ac.at}`: "loeffler tuwien")
+% oracle:  pdflatex 1 error, TL 2025's quantumarticle.cls itself ("LaTeX hooks Error: Sorting rule for
+%          'begindocument' hook applied too late", also on an empty document: a harness limit); the text: "A Title",
+%          "Ann Able", "Lunar College", "Body text.", the page foot's "Ann Able: ann.able@lunarcollege.org"
+% engines: rust int135e = 0 errors, 0 warnings, the address lost silently; perl = 0 errors, the e-mail contact empty
+%          (KNOWN_PERL_ERRORS "quantumarticle's `\ead` passes its optional argument")
+% expect:  0 errors, 1 warning (frontmatter:unclaimed "lunarcollege org"); the frontmatter unchanged
+% status:  RED (int135e) -> GREEN (106t)
+% preload: ar5iv.sty
+\documentclass[a4paper]{quantumarticle}
+\pdfoutput=1
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\ead{ann.able@lunarcollege.org}
+\affiliation{Lunar College}
+\maketitle
+Body text.
+\end{document}

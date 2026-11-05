@@ -264,11 +264,22 @@ fn ieee_membership_kept_after_closing_stop() {
   ];
   for (tex, expected, pubnotes) in variants {
     let (log, xml) = convert_with(&tex, Some(PRELOAD));
+    // (the pinned residual drops the grade pdflatex prints, "and Farshid Alambeigi Member, IEEE.": counted by the
+    // title-page check's second source, OD #953 "106t")
+    let lost_grade = tex.contains(partly_block);
     assert_eq!(
       (error_count(&log), warning_count(&log)),
-      (0, 0),
+      (0, usize::from(lost_grade)),
       "{tex}\n{log}"
     );
+    if lost_grade {
+      assert!(
+        log.contains(
+          "Warning:frontmatter:unclaimed The document's frontmatter commands were given 2 word(s) that its output does not hold: member ieee"
+        ),
+        "{tex}\n{log}"
+      );
+    }
     assert_eq!(creators(&xml), expected, "{tex}\n{xml}");
     // (`creators` reads no `<note>`: every note's place, an author's or the document's)
     let expected_notes: Vec<(String, String)> = pubnotes

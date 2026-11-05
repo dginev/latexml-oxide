@@ -284,8 +284,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       );
     }
     let index = frontmatter_push(&tag, entry);
+    // (the title-page check's watch over a frontmatter command's entry: #953 "106t")
+    let watch = begin_frontmatter_entry_digestion(Some(&content), None);
     // REPLACE only 'place_keeper'!!
-    let digested = digest_frontmatter_item(&tag, content)?;
+    let digested = digest_frontmatter_item(&tag, content);
+    end_frontmatter_entry_digestion(watch, digested.as_ref().ok())?;
+    let digested = digested?;
     // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #803, #916; user rulings 2026-10-21, 2026-10-30): a document's note that
     // prints nothing is none, whatever its label — one whose whole content our own extraction moved out (A&A's
     // `\offprints{\email{…}}` makes the address a contact and left an empty "Preprint: " note: astro-ph0405280,
@@ -403,6 +407,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
         frontmatter_clear_command_form(&tag, key);
       }
     }
+    // (the document's frontmatter commands this entry is made in, for the title-page check: `queue_front_matter`)
+    let checked = note_frontmatter_entry(&tag, &role, None);
     let index = frontmatter_push(&tag, entry);
     // the body's own paragraph breaks are the field's (`frontmatter_paragraph_break`); the enclosing notes come back
     // after it
@@ -412,10 +418,16 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // `\@startsection@hook` inside an unbalanced `\abstract{…`) ends the
     // body from there: `digest_next_body` records the terminal and depth on
     // this frame, `until_terminal_inside_group` (stomach.rs) acts.
+    // (the title-page check's watch over a frontmatter command's entry: #953 "106t")
+    let watch = begin_frontmatter_entry_digestion(None, checked);
     let body = digest_next_body(Some(end));
     assign_value("lx_frontmatter_par_item", enclosing.0.unwrap_or(Stored::None), Some(Scope::Local));
     assign_value("lx_frontmatter_par_depth", enclosing.1.unwrap_or(Stored::None), Some(Scope::Local));
-    let digested = Digested::from(List::new(body?));
+    let digested = body.map(|body| Digested::from(List::new(body)));
+    // (an entry that typesets nothing is removed, below: no words of it are wanted)
+    let kept = digested.as_ref().ok().filter(|digested| typesets_content(digested));
+    end_frontmatter_entry_digestion(watch, kept)?;
+    let digested = digested?;
     // A body that typesets nothing adds no entry: an abstract (keywords, classification) with no authored content is
     // no frontmatter, whatever ended it — a heading that closed it before its first line (scrartcl's
     // `\begin{abstract}\section*{Abstract:} …`, 1507.08575; user ruling 2026-10-18, sect05.rs
@@ -673,7 +685,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       let symbol = if entry_symbol { "symbol" } else { "" };
       assign_value(ENTRY_DIGESTING, Stored::String(pin(s!("{entry}:{symbol}"))), Some(Scope::Global));
     }
+    // (the title-page check's watch over a frontmatter command's entry: #953 "106t")
+    let watch = begin_frontmatter_entry_digestion(Some(&content), None);
     let xcontent = digest_frontmatter_item(&tag, content);
+    end_frontmatter_entry_digestion(watch, xcontent.as_ref().ok())?;
     if entry_key.is_some() {
       assign_value(ENTRY_DIGESTING, Stored::String(pin(enclosing_entry)), Some(Scope::Global));
     }

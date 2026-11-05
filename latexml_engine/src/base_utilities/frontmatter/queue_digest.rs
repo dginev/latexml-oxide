@@ -1194,6 +1194,9 @@ pub fn seal_digested_frontmatter() {
     let level = lookup_mapping_int("frontmatter_digested", &key);
     if lookup_mapping_int("frontmatter_sealed", &key) < level {
       assign_mapping("frontmatter_sealed", &key, Some(Stored::Int(level)));
+      // (the frontmatter's commands are behind: the title-page check stops watching the document's calls, which cost
+      // every macro call of the body, `title_page_check::note_frontmatter_entry`)
+      definition::origin::watch_document_calls(false);
     }
   }
 }

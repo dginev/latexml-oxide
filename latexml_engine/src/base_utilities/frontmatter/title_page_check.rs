@@ -15,10 +15,20 @@
 //! is named in one `Warning:frontmatter:unclaimed`, in printed order; a word the unclaimed-text net already counted
 //! (insert.rs `keep_unclaimed_net_notes`, [`note_net_counted`]) is not counted again. Witnesses: 2007.07526 (amsart's
 //! author lines), the cpc-hepnp `\email` (1504.05444), raa 1304.5354, memsait astro-ph0102098, JUSTC 2409.17603.
+//!
+//! Beside the print, a second source (#953 "106t"): what TeX makes of what the document gave its frontmatter commands —
+//! the calls of LaTeXML's own macros that read their arguments from the document's text, inside whose expansion the
+//! frontmatter API queues an entry ([`note_frontmatter_entry`]) — is wanted too, as digested, never read off the tokens:
+//! the entry's own digested content ([`end_frontmatter_entry_digestion`]), and the arguments no entry digests
+//! (`never_digested`, and those a binding's macro drops while the entry is digested), digested once speculatively. A class binding that writes its own frontmatter has no print
+//! run, and a binding's command may drop what pdflatex prints (quantumarticle's `\ead`, 2209.07123;
+//! `\begin{abstract}[Summary]`, elsarticle 2104.14704). What a later call replaced is not wanted
+//! ([`note_frontmatter_clear`]).
 
 use std::cell::RefCell;
 
 use super::*;
+use crate::latex_constructs::{SpeculativeRun, speculative_word_run};
 
 /// The text the title page printed ([`note_title_page_printed`]).
 const PRINTED: &str = "lx_title_page_printed";
@@ -60,10 +70,291 @@ thread_local! {
   static SPILLED: RefCell<SpilledWords> = RefCell::new(SpilledWords::default());
 }
 
-/// Forget the words spilled (`SPILLED`): a new conversion starts with none (latexml_oxide's `prepare_session` and
-/// `initialize_session`).
+/// Forget the words spilled (`SPILLED`) and what the frontmatter commands were given (`CALLED`): a new conversion starts
+/// with none (latexml_oxide's `prepare_session` and `initialize_session`), watching the document's calls
+/// ([`note_frontmatter_entry`]).
 pub fn reset_title_page_check() {
   SPILLED.with_borrow_mut(|spilled| *spilled = SpilledWords::default());
+  CALLED.with_borrow_mut(Vec::clear);
+  NEXT_ID.set(0);
+  reset_document_calls();
+  definition::origin::watch_document_calls(true);
+  // (a conversion a caught panic ended inside an entry's digestion left the drop watch on: OD #953 "106t")
+  definition::origin::watch_dropped_arguments(false);
+}
+
+/// What the document gave one of its frontmatter commands, as digested ([`note_frontmatter_entry`]): the entry queued
+/// inside it (its tag and role), the text its digested content prints and that of the arguments it never digests.
+struct CalledText {
+  /// the record's own number, for [`begin_frontmatter_entry_digestion`]
+  id:       usize,
+  /// the number of the record of the first entry made inside the same document call: the call's (an `\author`'s
+  /// creator, then the contacts it parts off), which a later call that replaces it replaces whole
+  /// ([`note_frontmatter_clear`])
+  call:     usize,
+  tag:      String,
+  role:     String,
+  /// the entry's queued invocation (`\lx@add@frontmatter@now…{<content>}`), which its digestion is matched to; none for
+  /// an entry whose body is digested where it stands (`\lx@add@frontmatter@until`, an abstract)
+  command:  Option<Tokens>,
+  /// the arguments of the calls the entry was made in that no entry digests (`never_digested`), digested
+  /// speculatively once the entry is ([`end_frontmatter_entry_digestion`])
+  pending:  Vec<DroppedArgument>,
+  /// the arguments of the calls the entry was made in, as the document wrote them: an argument a binding's macro drops
+  /// while the entry is digested is the document's text when one of them holds it ([`end_frontmatter_entry_digestion`])
+  written:  Vec<CallArguments>,
+  /// the entry was digested: `text` is what it prints
+  digested: bool,
+  text:     String,
+}
+
+thread_local! {
+  /// What the document gave its frontmatter commands ([`note_frontmatter_entry`]), this conversion's, in call order:
+  /// the check's second source, read beside the title page's print; a call a later one replaced taken out
+  /// ([`note_frontmatter_clear`]).
+  static CALLED: RefCell<Vec<CalledText>> = const { RefCell::new(Vec::new()) };
+  /// The number the next record of `CALLED` takes.
+  static NEXT_ID: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// The frontmatter API removes the entries `tag` (of role `role`, when given) queued before (`queue.rs`
+/// `dequeue_front_matter`, `\lx@clear@frontmatter`): what the commands that queued them were given is no longer wanted —
+/// the binding declares them replaced, as LaTeX's `\author` replaces the author before it (`\def\@author{#1}`: of
+/// article's `\author{Ann Able}\author{Bob Baker}` the title page prints Bob Baker alone, DIVERGENCES #406).
+pub fn note_frontmatter_clear(tag: &str, role: Option<&str>) {
+  if definition::origin::copy_provides() != 0 {
+    return;
+  }
+  let cleared = |call: &CalledText| call.tag == tag && role.is_none_or(|role| role == call.role);
+  CALLED.with_borrow_mut(|called| {
+    // (with the entries made inside the same call: the e-mails a replaced author block parted off, perfect_kernel_batch59
+    // `author_superseded_keeps_contacts_with_owners`)
+    let calls: HashSet<usize> = called
+      .iter()
+      .filter(|call| call.id == call.call && cleared(call))
+      .map(|call| call.id)
+      .collect();
+    called.retain(|call| !cleared(call) && !calls.contains(&call.call));
+  });
+}
+
+/// The frontmatter API queues an entry `tag` of role `role` (`queue.rs` `queue_front_matter`, its invocation
+/// `command`; `\lx@add@frontmatter@until`, none): when it is made inside the calls of LaTeXML's own macros that read
+/// their arguments from the document's own text (`state::claim_open_document_calls`, noted by `Expandable::invoke`),
+/// those are the document's frontmatter commands, and what TeX makes of what it gave them is wanted in the output as
+/// the title page's print is — a binding's `\maketitle` has no print run (daj, elsarticle, aastex: their bindings write
+/// the frontmatter), and a binding's command may drop what pdflatex prints. TeX settles every shape: the entry's own
+/// digested content is read when it is digested ([`end_frontmatter_entry_digestion`], by [`ink_word_text`] as the
+/// print is), and an argument no entry digests (`never_digested`, or one a binding's macro drops while the entry is
+/// digested) is digested once then, speculatively. The record's
+/// number, for an entry digested where it stands. What the binding declares is what it places: a command it only
+/// stores (a running head's `\def\@shorttitle{…}`, a field its class never prints) queues nothing and is no
+/// frontmatter command; nor is a running head the API holds as one (`ltx:toctitle`). Not after the authors are sealed
+/// (a supplement's), nor after the title page was made (but an entry printed where it stands, an abstract), nor while a
+/// raw class's setter replays, a speculative run digests or a stand-in copy is read.
+pub fn note_frontmatter_entry(tag: &str, role: &str, command: Option<&Tokens>) -> Option<usize> {
+  if tag == "ltx:toctitle"
+    || definition::origin::copy_provides() != 0
+    || lookup_bool("lx_replaying_class_setter")
+    || frontmatter_entry_sealed("ltx:creator", "author")
+    // (an entry queued after the title page was made is printed by none, but one printed where it stands — an
+    // abstract after `\maketitle`: lxaddr's late `\author{Bob B}`, perfect_kernel_batch59)
+    || (lookup_bool("lx_frontmatter_here_digested") && !PRINTED_WHERE_THEY_STAND.contains(&tag))
+  {
+    return None;
+  }
+  let id = NEXT_ID.replace(NEXT_ID.get() + 1);
+  let (call, calls, written) = claim_open_document_calls(id)?;
+  let mut pending = Vec::new();
+  for call in &calls {
+    pending.extend(never_digested(call));
+  }
+  CALLED.with_borrow_mut(|called| {
+    called.push(CalledText {
+      id,
+      call,
+      tag: tag.to_string(),
+      role: role.to_string(),
+      command: command.cloned(),
+      pending,
+      written,
+      digested: false,
+      text: String::new(),
+    });
+    Some(id)
+  })
+}
+
+/// The arguments of the document's frontmatter command `call` that no entry digests, which the check digests itself
+/// ([`note_frontmatter_entry`]): a required one the macro's body never names (`state::DocumentArgument::used`: the
+/// binding drops it — quantumarticle's `\ead[]{}` → `\email{#1}` passes on the optional label, not the address,
+/// KNOWN_PERL_ERRORS #1208, 2209.07123; not one the binding declares dropped by design, `drops => [n]`: aomart's
+/// `\subject` scheme, which the class prints only under `printscheme`), and an optional one an internal command (a name with `@`) reads from the
+/// document's text, which is the document's text pdflatex prints: `\begin{abstract}[Summary]`, where LaTeX's
+/// `{abstract}` takes none and the kernel's `\lx@begin@abstract[]` reads it as the entry's attributes (#1209,
+/// elsarticle 2104.14704). Every other argument is handed on, digested into an entry, whose text is read; an optional
+/// argument of a command the document writes is LaTeX's, unprinted (`\title[<running head>]`, `\author[<labels>]`).
+fn never_digested(call: &DocumentCall) -> impl Iterator<Item = DroppedArgument> + '_ {
+  let internal = call.cs.with_cs_name(|name| name.contains('@'));
+  call
+    .args
+    .iter()
+    .filter(move |arg| !arg.tokens.is_empty() && if arg.optional { internal } else { !arg.used })
+    .map(|arg| DroppedArgument {
+      cs:     call.cs,
+      number: arg.number,
+      tokens: arg.tokens.clone(),
+    })
+}
+
+/// The watch over the digestion of an entry a frontmatter command of the document's queued
+/// ([`begin_frontmatter_entry_digestion`]).
+pub struct EntryDigestion {
+  /// the record's number
+  id:   usize,
+  /// the count of dropped arguments when it began (`state::dropped_argument_count`)
+  from: usize,
+  /// whether the watch was on before it (an entry digested inside another's)
+  was:  bool,
+}
+
+/// The frontmatter API is about to digest an entry (`\lx@add@frontmatter@now`, `\lx@annotate@frontmatter@now`:
+/// `content`, its queued content; `\lx@add@frontmatter@until`: the record `id` [`note_frontmatter_entry`] gave): when a
+/// frontmatter command of the document's queued it, the arguments a binding's macro drops while it is digested are
+/// watched (`state::note_dropped_argument`: IEEEtran's `\lx@IEEE@membership@drop` over a grade it cannot place,
+/// 1511.03982; jmlr's `\titletag[1]{}` over a published-version note, 2211.07413) until
+/// [`end_frontmatter_entry_digestion`]. Not while a raw class's setter replays or a speculative run digests.
+pub fn begin_frontmatter_entry_digestion(
+  content: Option<&Tokens>,
+  id: Option<usize>,
+) -> Option<EntryDigestion> {
+  if lookup_bool("lx_replaying_class_setter") {
+    return None;
+  }
+  let id = CALLED.with_borrow_mut(|called| {
+    let call = called.iter_mut().find(|call| {
+      !call.digested
+        && match (id, content, call.command.as_ref()) {
+          (Some(id), ..) => call.id == id,
+          (None, Some(content), Some(command)) => queued_content_is(command, content),
+          _ => false,
+        }
+    })?;
+    call.digested = true;
+    Some(call.id)
+  })?;
+  Some(EntryDigestion {
+    id,
+    from: dropped_argument_count(),
+    was: definition::origin::watch_dropped_arguments(true),
+  })
+}
+
+/// The frontmatter API digested the entry `watch` watches ([`begin_frontmatter_entry_digestion`]) into `digested` (none
+/// when its digestion failed or the API removed it, printing nothing): what it prints is wanted ([`ink_word_text`], as
+/// the title page's print is read), and then what the arguments no entry digests print — a frontmatter command's
+/// (`never_digested`) and those a binding's macro dropped while it was digested —, each digested once,
+/// speculatively, as the title page's run is (sect05.rs `speculative_word_run`): when no run can be made or kept,
+/// nothing of it is wanted.
+pub fn end_frontmatter_entry_digestion(
+  watch: Option<EntryDigestion>,
+  digested: Option<&Digested>,
+) -> Result<()> {
+  let Some(EntryDigestion { id, from, was }) = watch else {
+    return Ok(());
+  };
+  definition::origin::watch_dropped_arguments(was);
+  let dropped = take_dropped_arguments(from);
+  let Some(digested) = digested else {
+    return Ok(());
+  };
+  let Some(pending) = CALLED.with_borrow_mut(|called| {
+    let call = record_mut(called, id)?;
+    ink_word_text(digested, &mut call.text);
+    let mut pending = std::mem::take(&mut call.pending);
+    // (only what the document wrote: a binding's own plumbing — xkeyval's `\@nil`-delimited pieces, 2101.10506 — is no
+    // text of the document's)
+    pending.extend(
+      dropped
+        .into_iter()
+        .filter(|dropped| writes(&call.written, &dropped.tokens)),
+    );
+    Some(pending)
+  }) else {
+    return Ok(());
+  };
+  let mut text = String::new();
+  for DroppedArgument { cs, number, tokens } in pending {
+    DebugFeature!(
+      "frontmatter",
+      "FRONT the check digests {cs}'s #{number}, which no entry digests: {tokens}"
+    );
+    // (a note's text set apart from the text around its mark, as its footnote prints it: jmlr's
+    // `\titletag{\thanks{Published as an article in …}}`, 2211.07413)
+    let mut run = vec![T_BEGIN!()];
+    run.extend(mouth::tokenize_internal(DROPPED_THANKS).unlist());
+    run.extend(tokens.unlist());
+    run.push(T_END!());
+    if let SpeculativeRun::Printed(printed) = speculative_word_run(Tokens::new(run))? {
+      text.push('\n');
+      text.push_str(&printed);
+    }
+  }
+  CALLED.with_borrow_mut(|called| {
+    if let Some(call) = record_mut(called, id) {
+      call.text.push_str(&text);
+      // (a print noted before cut the spill notes to its words: these are wanted too)
+      let words = wanted_words(&resolver::base_letters(&call.text).to_lowercase()).words;
+      SPILLED.with_borrow_mut(|spilled| {
+        if let Some(wanted) = spilled.wanted.as_mut() {
+          wanted.words.extend(words);
+        }
+      });
+    }
+  });
+  Ok(())
+}
+
+/// The record `id` of `CALLED` (whose records are in number order: [`note_frontmatter_entry`]).
+fn record_mut(called: &mut [CalledText], id: usize) -> Option<&mut CalledText> {
+  let at = called.binary_search_by_key(&id, |call| call.id).ok()?;
+  called.get_mut(at)
+}
+
+/// Does one of the arguments of the calls `written` hold the tokens `tokens` as written, its spaces at either end aside?
+fn writes(written: &[CallArguments], tokens: &Tokens) -> bool {
+  let tokens = tokens.unlist_ref();
+  let space = |token: &Token| token.get_catcode() == Catcode::SPACE;
+  let Some(start) = tokens.iter().position(|token| !space(token)) else {
+    return false;
+  };
+  let end = tokens
+    .iter()
+    .rposition(|token| !space(token))
+    .map_or(start, |end| end + 1);
+  let tokens = &tokens[start..end];
+  written.iter().flat_map(|call| call.iter()).any(|argument| {
+    argument
+      .tokens
+      .unlist_ref()
+      .windows(tokens.len())
+      .any(|window| window == tokens)
+  })
+}
+
+/// LaTeX's `\thanks` in a dropped argument's run ([`end_frontmatter_entry_digestion`]): its text, apart from the words
+/// around its mark.
+const DROPPED_THANKS: &str = r"\long\def\thanks#1{ #1 }";
+
+/// Is `content` the content of the queued invocation `command` (`…{<content>}`, its last argument)?
+fn queued_content_is(command: &Tokens, content: &Tokens) -> bool {
+  let (command, content) = (command.unlist_ref(), content.unlist_ref());
+  command.len() >= content.len() + 2
+    && command
+      .last()
+      .is_some_and(|t| t.get_catcode() == Catcode::END)
+    && command[command.len() - content.len() - 2].get_catcode() == Catcode::BEGIN
+    && command[command.len() - content.len() - 1..command.len() - 1] == *content
 }
 
 /// How many distinct words the spill notes hold (`SPILLED`), for `--debug=frontmatter`.
@@ -622,6 +913,7 @@ fn source_words(text: &str, definitions: bool, words: &mut HashSet<String>) {
         if name.is_empty() {
           // (a control symbol: an accent's, a discretionary's, an italic correction's and `\%` print no letter, any
           // other a space)
+          let accent = matches!(scan.peek(), Some('\'' | '`' | '^' | '"' | '~' | '=' | '.'));
           match scan.peek() {
             Some('\'' | '`' | '^' | '"' | '~' | '=' | '.' | '%' | '-' | '/') | None => {},
             Some(_) => {
@@ -630,6 +922,10 @@ fn source_words(text: &str, definitions: bool, words: &mut HashSet<String>) {
             },
           }
           scan.at += 1;
+          // (an accent reads its argument past the spaces before it: `Universit{\" a}t` is "Universitat", 2406.18504)
+          if accent {
+            scan.skip_spaces();
+          }
           continue;
         }
         scan.skip_spaces();
@@ -720,8 +1016,19 @@ fn document_source_words() -> HashSet<String> {
 /// others are the class's own text (a label, a placeholder at its class default, a running head's words), tallied in
 /// an Info (`frontmatter:class_text`, the placeholder ruling pending). Writes nothing.
 pub fn check_title_page_words(document: &Document) -> Result<()> {
-  let printed = lookup_string(PRINTED);
-  if printed.trim().is_empty() {
+  // (and after it what the document gave its frontmatter commands, the second source: [`note_frontmatter_entry`])
+  let print = lookup_string(PRINTED);
+  let mut printed = print.clone();
+  CALLED.with_borrow(|called| {
+    for call in called {
+      printed.push(INK_INSERT);
+      printed.push_str(&call.text);
+    }
+  });
+  if printed
+    .trim_matches(|c: char| c.is_whitespace() || c == INK_INSERT)
+    .is_empty()
+  {
     return Ok(());
   }
   let Some(root) = document.get_document().get_root_element() else {
@@ -734,15 +1041,16 @@ pub fn check_title_page_words(document: &Document) -> Result<()> {
     "FRONT the spill notes hold {} word(s)",
     spilled_word_count()
   );
-  // (in three steps, each only while a printed word is unheld — cheapest first: the frontmatter's text, the whole
-  // document's text, its attribute values)
+  // (in three steps, each only while a printed word is unheld — cheapest first: the frontmatter's text and attribute
+  // values, the whole document's text, its attribute values)
   let front: Vec<Node> = element_nodes(&root)
     .into_iter()
     .filter(|child| FRONT_ELEMENTS.contains(&child.get_name().as_str()))
     .collect();
   let mut claimed: HashSet<String> = HashSet::default();
   for node in &front {
-    claimed.extend(output_words(node, Some(&wanted), false));
+    // (with their attributes: a contact's `name`, an e-mail's `href`, which the frontmatter commands' words often are)
+    claimed.extend(output_words(node, Some(&wanted), true));
   }
   let mut source: Option<HashSet<String>> = None;
   let mut held_all = |claimed: &HashSet<String>| {
@@ -754,6 +1062,11 @@ pub fn check_title_page_words(document: &Document) -> Result<()> {
   if held_all(&claimed) {
     return Ok(());
   }
+  DebugFeature!(
+    "frontmatter",
+    "FRONT the check's words the frontmatter does not hold: {}",
+    unclaimed_words(&folded, &claimed, &mut HashSet::default).join(" ")
+  );
   claimed.extend(output_words(&root, Some(&wanted), false));
   SPILLED.with_borrow(|spilled| {
     for word in &spilled.words {
@@ -778,12 +1091,30 @@ pub fn check_title_page_words(document: &Document) -> Result<()> {
     .into_iter()
     .partition(|word| source.contains(word));
   if !lost.is_empty() {
+    // (the words the frontmatter commands were given alone, not the print's, are said so)
+    let print_words = wanted_words(&resolver::base_letters(&print).to_lowercase()).words;
+    let printed = lost
+      .iter()
+      .filter(|word| print_words.contains(*word))
+      .count();
+    let source = if printed == lost.len() {
+      "The title page prints"
+    } else if printed == 0 {
+      "The document's frontmatter commands were given"
+    } else {
+      "The title page prints, or the document's frontmatter commands were given,"
+    };
     Warn!(
       "frontmatter",
       "unclaimed",
       s!(
-        "The title page prints {} word(s) of the document's that its output does not hold: {}",
+        "{source} {} word(s){} that its output does not hold: {}",
         lost.len(),
+        if printed == 0 {
+          ""
+        } else {
+          " of the document's"
+        },
         lost.join(" ")
       )
     );

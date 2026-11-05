@@ -2538,6 +2538,11 @@ macro_rules! defi_opts {
     -> {$kind, $( [ $key @ $val ] )*
       [ mathstyle @ Some($literal.to_string()) ] })
   };
+  // drops: the argument numbers a binding macro drops by design (`ExpandableOptions::drops`), `drops => [2]`
+  (@munch ( $(,)? drops $(:)?$(=>)? [ $($number:literal),* $(,)? ] $($next:tt)*)
+    -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {
+    defi_opts!(@munch ($($next)*) -> {$kind, $([$key @ $val])* [drops @ &[$($number),*]]})
+  };
   // misc ident with literal value
   (@munch ( $(,)? $id:ident $(:)?$(=>)? $lit:literal $($next:tt)*)
     -> {$kind:ident, $([$key:ident @ $val:expr_2021])*}) => {

@@ -17,6 +17,8 @@ LoadDefinitions!({
   DefMacro!("\\midljointauthortext{}", "\\nametag{\\thanks{#1}}");
   def_macro_noop("\\midlotherjointauthor")?;
   DefMacro!("\\midlacknowledgments{}", "\\acks{#1}");
-  DefMacro!("\\orcid{}", "");
+  // midl.cls:106 `\orcid#1`: a linked ORCID logo, no text of the id — the binding's declared drop, which the title-page
+  // check wants none of (OXIDIZED_DESIGN_DIVERGENCES #953 "106t").
+  DefMacro!("\\orcid{}", "", drops => [1]);
   DefMacro!("\\jmlrpages{}", ""); // jmlr.cls:559 is 1-arg; swallow it (no body leak)
 });

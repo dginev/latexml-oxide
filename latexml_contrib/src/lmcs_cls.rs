@@ -93,11 +93,14 @@ LoadDefinitions!({
   // `\lmcsheading{doi}{pages}{line}{line}{submitted}{published}{extra}` (lmcs.cls:499 in 2306.08266's copy, :376 in
   // 1103.0510's LMCS.cls: seven arguments in every version) sets the first page's running head, page furniture but for
   // the two dates, which are the paper's: "Submitted Jun. 16, 2023", "Published Mar. 20, 2024" (2306.08266). Four
-  // arguments were read, so the dates were left in the document's first paragraph.
+  // arguments were read, so the dates were left in the document's first paragraph. The rest is the binding's declared
+  // drop, which the title-page check wants none of (OXIDIZED_DESIGN_DIVERGENCES #953 "106t"): the class names no #1, and
+  // prints #2-#4 and #7 in the first page's head (2306.08266's lmcs.cls:502-521), page furniture (FIDELITY_CHARTER §2).
   DefMacro!(
     "\\lmcsheading{}{}{}{}{}{}{}",
     "\\if\\relax\\detokenize{#5}\\relax\\else\\lx@add@date[role=submitted,name={Submitted }]{#5}\\fi\
-     \\if\\relax\\detokenize{#6}\\relax\\else\\lx@add@date[role=published,name={Published }]{#6}\\fi"
+     \\if\\relax\\detokenize{#6}\\relax\\else\\lx@add@date[role=published,name={Published }]{#6}\\fi",
+    drops => [1, 2, 3, 4, 7]
   );
   // \lmcsorcid{orcid-id} — render as a plain link rather than the
   // tikz/XeTeXLinkBox logo construction. Within an `\author` it is the author's ORCID contact (below).

@@ -1271,7 +1271,9 @@ LoadDefinitions!({
   // 4.1 Replacement macros
 
   // \texorpdfstring{TeXString}{PDFstring}
-  DefMacro!("\\texorpdfstring{}{}", "#1");
+  // The PDF string (#2) goes to the bookmarks only; nothing of it is printed: the binding's declared drop, which the
+  // title-page check wants none of (OXIDIZED_DESIGN_DIVERGENCES #953 "106t"; 2306.06741's `{$Y(4230)…$}{Lg}`, 2306.06006).
+  DefMacro!("\\texorpdfstring{}{}", "#1", drops => [2]);
 
   // Perl hyperref.sty.ltxml L413-416: guard against redefinition, then Let
   // the pdfstringdef hooks to sensible no-ops. The guard matters: dhucs /

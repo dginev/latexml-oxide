@@ -6,7 +6,9 @@
 % oracle:  pdflatex 0 errors: "Abstract. English words. Keywords: alpha. MSC: 60G51." then
 %          "Abstract. [Résumé] Mots français."
 % engines: perl (vendored HEAD) 0 errors, both abstracts. rust int117a: 0 errors, only "Mots français.".
-% expect:  0 errors, 0 warnings; two `ltx:abstract`s, "English words. Keywords: alpha. MSC: 60G51." first.
+% expect:  0 errors, 1 warning (frontmatter:unclaimed "resume": amsart's `{abstract}` takes no optional argument and
+%          pdflatex prints "[Résumé]", which `\lx@begin@abstract[]` reads as attributes, KNOWN_PERL_ERRORS #1209 — counted
+%          since 106t); two `ltx:abstract`s, "English words. Keywords: alpha. MSC: 60G51." first.
 % status:  RED (int117a) -> GREEN (86i)
 \documentclass{amsart}
 \begin{document}
