@@ -31143,8 +31143,10 @@ line printing a URL alone under an author block — IEEEtran's `{\texttt{\url{ht
 (a raw class's mark) an affiliation (2310.02678, 2505.15137); and one entry reached one author twice: one call placed
 twice by two routes (a revtex group's affiliations, 1207.1783, 2006.15775, 1207.6694, 1206.0114; PoS's "on behalf of the
 Fermi-LAT Collaboration", given to every name and twice to the last when the empty name after it is coalesced into it,
-1909.05984; 2108.00864, 2405.14358, 2501.11284, 2603.14883), a marked line written again under a later name, whose label
-the first name's mark requests twice (easychair 1204.6725), a supplement's `\author{…}\affiliation{…}` written again
+1909.05984; 2108.00864, 2405.14358, 2501.11284), a marked line written again under a later name, whose label
+the first name's mark requests twice (easychair 1204.6725), two calls under one label (2603.14883's two
+`\cortext[cor]{Corresponding author}`; sn-jnl's `\affil*[1]{Rotman…}` and `\affil[1]{Rotman…}`, 2608.23810, printed
+twice by pdflatex), a supplement's `\author{…}\affiliation{…}` written again
 after `\maketitle` (2311.16348, 1407.0849).
 
 **Fix.** At the frontmatter flush after the legend Kind step (#961), `insert::kind_link_and_grade_contacts`: a creator's
@@ -31161,8 +31163,9 @@ printing the same text (spacing aside; case, marks and notes kept) keep the firs
 entry — copies of one source call (`_source`: the annotation's queue ordinal, set when `\lx@annotate@frontmatter@now`
 digests it, else the entry's own at insertion; every copy keeps it, and the e-mails the address-line Kind step makes of
 an entry take it), lines of one label (`_label`), or a call made after `\maketitle` placed the frontmatter (`_latecall`,
-`queue_digest::frontmatter_entry_is_late`) restating one the creator holds. Two printed lines that share their text are
-two entries, both kept: an address's "Groningen" and the next one's (0808.4092, 1106.1785, 2608.29625, 2609.05568,
+`queue_digest::frontmatter_entry_is_late`) restating one the creator holds. Two printed lines of different entries that
+share their text are two entries, both kept (lines of one label are one entry, printed twice or not — the label's
+reading, 2608.23810): an address's "Groningen" and the next one's (0808.4092, 1106.1785, 2608.29625, 2609.05568,
 2406.03340, where 106b r1's text-only key dropped printed lines, review rev106b B1), amsart e-mails differing in case,
 an address written again with a footnote of its own, aa's `\thanks{\email{x}}` beside the institute's `\email{x}`, both
 printed (2005.03567), aa's `\mail{x}` "Correspondence to" beside the `\email{x}` (two names, `perfect_kernel_batch97b`).
