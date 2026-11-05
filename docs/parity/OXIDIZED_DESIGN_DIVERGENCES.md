@@ -30161,13 +30161,20 @@ definitions out (`\providecommand{\URLprefix}{URL: }` is its BibTeX style's; its
 mechanism** (the print's reach or a content loss, each one paper of dev3; SYNC row 107d): an `\ead` a raw elsarticle
 copy writes to the `.aux` (`\immediate\write\@auxout{\string\emailauthor…}`), printed only on pdflatex's second run
 (nj_style 1401.7920); a class title page gated on a counter its refused `\author` advances (CUP-JNL-DTM's `\aucount`,
-2305.00867); a raw copy of a bound class whose store only the bound class's internals print (aeb_emulateapj_2010's
-`\alt@affil@toks`, read by revtex's `\@author@finish`, 1011.2770); a style printing its title block from `{abstract}`
+2305.00867); a raw copy of a bound class whose store only its own `\@author@finish` prints (aeb_emulateapj_2010's
+`\alt@affil@toks`: the copy's redefinition, :460-468, emits `\affiliation{\the\alt@affil@toks}` and calls revtex's
+— under the revtex4-1 binding neither runs, 1011.2770); a style printing its title block from `{abstract}`
 (bosonai_techreport.sty, 2605.02209); a class's `\ifthenelse{\authorslen > 1}` over xstring's `\StrLen`
 (naverlabseurope, 2408.05088); a grade a document macro hands IEEEtran's drop (`\SeMieee` → `\IEEEmembership`,
-2503.14354, not `writes`); and 2310.07393's "Campus", whose first letter our empty `\@listi` lets a class's
-`\xdef{… \let\@listi\@listI Campus}` take (two Errors, the net's note holding "ampus"; no net word claimed and
-unwritten). Guards `perfect_kernel_batch107d::{elsarticle_frontmatter_end_notes_the_title_page,
+2503.14354, not `writes`); and 2310.07393's "Space Robotics" and "Campus", whose first letters (`S`, `C`) our empty `\@listi` lets a
+class's `\xdef{… \let\@listi\@listI Campus}` take (two Errors, "pace Robotics" and "ampus"; no net word claimed
+and unwritten) — not a Perl parity gap: Perl defines no `\@listi`, ours is a Rust-only stand-in
+(`latex_constructs_rust_only.rs:515-524`); TeX's `size10.clo:63` body decides it (rev107d N3). With no
+`SOURCEDIRECTORY` (literal or stdin input) every content file reads as the document's, as before (N4). **RED
+residuals (rev107d, synthetic only):** a trigger notes a print where `\maketitle` never runs — `\let\maketitle\relax`,
+an appended `\if@notitle\else\maketitle\fi` — a false Warning
+(`check_title_page_relaxed_maketitle_no_false_warning_red`; S1); a title page `\input` from a sibling directory
+reads as a package's (S2: by origin, a TeX installation tree's file is a package's, would fix it). Guards `perfect_kernel_batch107d::{elsarticle_frontmatter_end_notes_the_title_page,
 a_maketitle_inside_frontmatter_keeps_its_print, a_title_page_appended_to_document_is_counted,
 no_title_page_printed_is_unchecked, package_and_bibtex_text_is_not_the_documents}`; repros sectioning-frontmatter/`check_elsarticle_frontmatter_end_prints_the_title_page`,
 `check_title_page_from_begin_document_is_counted` (RED int139a1 → GREEN), `check_elsarticle_maketitle_inside_frontmatter_keeps_its_print`,
