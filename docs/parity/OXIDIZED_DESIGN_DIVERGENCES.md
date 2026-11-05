@@ -30977,7 +30977,7 @@ inside a font wrapper (`\small\textit{Correspondence:} …\\`, 2311.04121), a ph
 
 **Reach.** The 40 witnesses re-scored (score_tiers, both sides converted alike): 22 papers better, 51 creators flip
 right, 0 wrong (149 → 200 of 224); 2608.22602 0 → 10 of 13 (`an107` spells Weili An, its surname with digits, and is hers;
-`chris241` and `chand158` spell no author and go to the block). A/B `pop106a.tsv` (2,888: the 40 witnesses, the 2,348 `popint125a_s10k` papers
+`chris241` and `chand158` spell no author and go to the block). An unbraced shared-domain list is read as the braced one is: 2404.00915 prints `tyhuang, yhliu@mae.cuhk.edu.hk`, and Tianyu Huang holds `tyhuang@mae.cuhk.edu.hk` — the usual reading of such a list, but a reading (review rev106a2). A/B `pop106a.tsv` (2,888: the 40 witnesses, the 2,348 `popint125a_s10k` papers
 whose preamble prints an address outside an e-mail command, 500 others; vs int133a, 2,881 converted): 67 changed, all
 frontmatter (24 witnesses, 43 of the selection, 0 of the 500), E 9,754 → 9,754, F 19 → 19, W 42,902 → 42,902;
 e-mail contacts 19 → 187 (27 on the block); `fm_checks.py` 1-7: no creator merged or lost, no address shared more, no

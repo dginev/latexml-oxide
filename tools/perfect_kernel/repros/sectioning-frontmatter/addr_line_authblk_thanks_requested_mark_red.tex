@@ -1,0 +1,19 @@
+% authblk `Carl Dee\thanks{Corresponding author.}` and the line `$^*$Email: wr@x.org` under the shared [1]: pdflatex
+% prints "Carl Dee∗1" — the \thanks note's implicit fnsymbol mark is the `*` the line answers, so the address is Carl's.
+% `author_mark_keys` (frontmatter/insert.rs) reads only `ltx:note[@mark]`; the thanks note carries no @mark (review
+% rev106a2 S2).
+% witness: synthetic (rev106a2 q5)
+% oracle:  pdflatex 0 errors: "Ann Bee1 and Carl Dee∗1" / "1Univ X" / "∗Email: wr@x.org" / footnote "∗Corresponding author."
+% engines: rust 106a r2: the address at the block as `<sup>∗</sup>wr@x.org` (nothing lost or misattributed)
+% expect:  0 errors, 0 warnings; wr@x.org on Carl Dee, named "Email: "
+% status: RED (synthetic; Bundle 4 residual — read the thanks note's implicit fnsymbol mark)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author[1]{Ann Bee}
+\author[1]{Carl Dee\thanks{Corresponding author.}}
+\affil[1]{Univ X\authorcr $^*$Email: wr@x.org}
+\begin{document}
+\maketitle
+Hello.
+\end{document}
