@@ -89,7 +89,7 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   distribute_upfront_contacts(document)?;
   let answered = answered_labels(document);
   relocate_annotations(document)?;
-  link_entry_addresses(document)?;
+  link_entry_addresses(document, None)?;
   respell_emails(document)?;
   show_unanswered_marks(document, &answered)?;
   drop_empty_contacts(document)?;
@@ -97,6 +97,13 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   // (FM S2b: a written family's paper, where it differs from the observer's reading by the writer's operations alone,
   // written as the reading has it — under the shadow switch only; OXIDIZED_DESIGN_DIVERGENCES #837 "S2b")
   write_observed_frontmatter(document)?;
+  // (an entry's line of addresses, read once every route has placed the entry and the observer's writing is done: its
+  // addresses the entry's e-mails, placed by the Link step; OD #966)
+  let kinded = kind_address_lines(document)?;
+  if !kinded.is_empty() {
+    link_entry_addresses(document, Some(&kinded))?;
+    drop_empty_contacts(document)?;
+  }
   // (an affiliation that is a legend, read once every route has placed it: its carriers' note, OD #961)
   kind_legend_contacts(document)?;
   // (the authors as written: a name the writer re-parted holds one person, OD #928)
@@ -770,15 +777,27 @@ fn drop_repeated_orcids(document: &mut Document) {
 /// holding its e-mails. Each placed e-mail follows the entry on its owner (user ruling R8, print order). An entry whose
 /// e-mails already stand as the chain puts them is left as it is. Witnesses: 2502.01754, 2602.21641, 2307.02047,
 /// 1901.09107, 0902.3918, 1909.00276, astro-ph0512555; guards `perfect_kernel_batch100b`.
-fn link_entry_addresses(document: &mut Document) -> Result<()> {
-  let emails = document.findnodes(
-    &s!("//ltx:creator/ltx:contact[@role='email'][@{ENTRY_KEY}]"),
-    None,
-  );
+fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>) -> Result<()> {
+  // (`only`: the entries whose e-mails the Kind step for an address line made after the first pass, OD #966)
+  let emails: Vec<Node> = document
+    .findnodes(
+      &s!("//ltx:creator/ltx:contact[@role='email'][@{ENTRY_KEY}]"),
+      None,
+    )
+    .into_iter()
+    .filter(|email| {
+      only.is_none_or(|keys| {
+        email
+          .get_attribute(ENTRY_KEY)
+          .is_some_and(|key| keys.contains(&key))
+      })
+    })
+    .collect();
   if emails.is_empty() {
     return Ok(());
   }
   let authors = document.findnodes("//ltx:creator[@role='author'][ltx:personname]", None);
+  let default_name = get_frontmatter_name(None, "ltx:contact", "email")?;
   let names: Vec<String> = authors
     .iter()
     .map(|author| {
@@ -1065,12 +1084,15 @@ fn link_entry_addresses(document: &mut Document) -> Result<()> {
         Some(to) => {
           for owner in to {
             let mut author = authors[owner].clone();
-            if element_nodes(&author).iter().any(|c| {
+            if let Some(held) = element_nodes(&author).into_iter().find(|c| {
               !mine.contains(c)
                 && c.get_name() == "contact"
                 && c.get_attribute("role").as_deref() == Some("email")
                 && c.get_content().trim() == text.as_str()
             }) {
+              if only.is_some() {
+                carry_printed_label(template, held, default_name.as_deref());
+              }
               continue;
             }
             document.append_clone(&mut author, vec![template.clone()])?;
@@ -1124,14 +1146,19 @@ fn link_entry_addresses(document: &mut Document) -> Result<()> {
   // (a block copy an author holds, or a second one on the block, goes)
   let mut on_block: Vec<String> = Vec::new();
   for (text, placed) in to_block {
-    let held = authors.iter().any(|author| {
-      element_nodes(author).iter().any(|c| {
+    let held = authors.iter().find_map(|author| {
+      element_nodes(author).into_iter().find(|c| {
         c.get_name() == "contact"
           && c.get_attribute("role").as_deref() == Some("email")
           && c.get_content().trim() == text
       })
     });
-    if held || on_block.contains(&text) {
+    if let Some(held) = held.clone()
+      && only.is_some()
+    {
+      carry_printed_label(&placed, held, default_name.as_deref());
+    }
+    if held.is_some() || on_block.contains(&text) {
       if let Some(parent) = placed.get_parent() {
         taken_away.push(parent);
       }
@@ -1152,6 +1179,428 @@ fn link_entry_addresses(document: &mut Document) -> Result<()> {
     }
   }
   Ok(())
+}
+
+/// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #966): the Kind step for a line of addresses inside an affiliation-kind entry
+/// (an affiliation, alternate affiliation or address, [`CUT_ROLES`]), read at the flush, where every route that makes
+/// the entry meets — a class's block (IEEEtran's `\IEEEauthorblockA{… \\ E-mail: a@x, \{b, c\}@y, and d@z}`,
+/// 2302.02638; one built of a document's macros, `\IEEEauthorblockA{\hpcaaffiliation\\\hpcaemail}`, 2608.22602),
+/// authblk's `\affil{… \authorcr Email: {\tt\{…\}@ufl.edu}}` (2111.01631, 2309.05601), an author block's line
+/// (`\normalsize{$^*$These authors contributed equally. \\ Email: a@x, b@y}`, 2207.11193) —, each entry relocated to
+/// its holders and the frontmatter observer's writing done (so the writer reads today's frontmatter as before: run
+/// ahead of it, the pass made the writer decline 1509.06333's IEEE names re-part and 2501.04244's notes), before the
+/// Kind step for a legend. The token-level Kind step (`affiliations::kind_entry_addresses`) reads a line its tokens
+/// show; this reads the line as it printed, past a document's macros, `\authorcr`, a font switch, a connective "and", a
+/// mark before an address. A line (the entry's children between two `ltx:break`s) whose printed text, a mark aside (a
+/// superscript or a formula printing footnote symbols or a number: [`is_mark_text`]), is one run of addresses
+/// (`resolver::address_runs`, the reader the frontmatter observer takes them out by) behind a label or none — an e-mail
+/// label ("E-mail:", "Emails:", "(email: …)") or the words naming a contact ("Corresponding author:",
+/// "Correspondence:", 2609.21085, 2502.19130) — leaves the entry, with the line break before it; a line whose words
+/// come before the label (`∗To whom correspondence should be addressed; E-mail: x`, 1111.6932, 1808.02718,
+/// astro-ph0306103; `…, USA. Corresponding author: x`, 2305.01135) gives up the label and the run, its words staying
+/// ([`address_line_cut`]). Each address becomes an e-mail contact of the entry on each holder (its `ENTRY_KEY`; made by
+/// the Kind step, `ENTRY_KINDED`), named by the label as printed (FIDELITY_CHARTER §4: no printed text dropped), else
+/// by the class's name of an entry of this line alone, else by the role's own, in the font it printed in; the Link
+/// step, run again over these entries alone, places them by the charter's chain ([`link_entry_addresses`]: the author
+/// it spells, else the entry's only carrier, …, else the block once), a label going onto an address an author holds
+/// already ([`carry_printed_label`]). An entry whose only line opens with a mark and is a contact's words before its
+/// addresses (`∗Corresponding author: x`) keeps the words, the legend the Kind step for a legend reads
+/// ([`kind_legend_contacts`]). Left as they print (the frontmatter observer's text reading's): an address beside words
+/// with no label (`Univ A, Town, ann@x.org`), a template or a list the reader could not part (`{name.surname}@x`,
+/// [`is_pattern_address`], [`lists_local_parts`]), a run a tag follows (`a@x (Matvey)`, 2512.10975), a line holding a
+/// formula, a note or a link that is no address's. Returns the keys of the entries it took lines out of. Guards
+/// `perfect_kernel_batch106a`.
+fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
+  let mut kinded: HashSet<String> = HashSet::default();
+  let entries: Vec<Node> = document
+    .findnodes(&s!("//ltx:creator/ltx:contact[@{ENTRY_KEY}]"), None)
+    .into_iter()
+    .filter(|entry| {
+      entry
+        .get_attribute("role")
+        .is_some_and(|role| CUT_ROLES.contains(&role.as_str()))
+        && entry.get_content().contains('@')
+    })
+    .collect();
+  if entries.is_empty() {
+    return Ok(kinded);
+  }
+  // (the authors' names read as the Link step reads them, for a list's parts that spell one: `address_runs`)
+  let keys: Vec<NameKeys> = document
+    .findnodes("//ltx:creator[@role='author']/ltx:personname", None)
+    .iter()
+    .map(|name| {
+      NameKeys::of(&Tokens::new(ExplodeText!(&resolver::base_letters(
+        &name.get_content()
+      ))))
+    })
+    .collect();
+  let spells = |local: &str| spelled_owner(&keys, &s!("{local}@x.org")).is_some();
+  let default_name = get_frontmatter_name(None, "ltx:contact", "email")?;
+  for entry in entries {
+    let Some(creator) = entry.get_parent() else {
+      continue;
+    };
+    let entry_name = entry.get_attribute("name");
+    let role_name = get_frontmatter_name(
+      None,
+      "ltx:contact",
+      &entry.get_attribute("role").unwrap_or_default(),
+    )?;
+    let lines = entry_lines(&entry);
+    let printed_lines = lines
+      .iter()
+      .filter(|(nodes, _)| nodes.iter().any(|n| !n.get_content().trim().is_empty()))
+      .count();
+    // (a footnote symbol leading the entry: its unspelled addresses every carrier's, as `led_by_footnote_symbol` reads
+    // the entry's tokens)
+    let symbol = element_nodes(&entry).first().is_some_and(|first| {
+      first.get_name() == "sup"
+        && entry
+          .get_first_child()
+          .is_some_and(|child| child == *first || child.get_content().trim().is_empty())
+        && first.get_content().trim().chars().any(events::is_fnsymbol)
+    });
+    let mut made: Vec<(String, String, Option<String>)> = Vec::new();
+    for (at, (nodes, break_before)) in lines.iter().enumerate() {
+      let mut line = LineText::default();
+      if !nodes.iter().all(|node| line.read(node)) {
+        continue;
+      }
+      // (a legend the Kind step for a legend can make a note of: the entry's only line, opened by a mark)
+      let legend = printed_lines == 1 && line.opens_with_mark();
+      let Some(cut) = address_line_cut(&line.text, &spells, legend) else {
+        continue;
+      };
+      DebugFeature!(
+        "frontmatter",
+        "FRONT kind address line: {:?} of {:?}, label {:?}",
+        cut.addresses,
+        line.text,
+        cut.label
+      );
+      let font = line.address_font(cut.address_start, &entry);
+      // (the label it printed; else, an entry of this line alone that its class names — REVTeX's
+      // `\altaffiliation[Electronic address: ]{…}` —, the class's name, as the token-level Kind step gives it)
+      let name = match &cut.label {
+        Some(label) => Some(s!("{label}: ")),
+        None if cut.start == 0 && printed_lines == 1 && entry_name != role_name => {
+          entry_name.clone()
+        },
+        None => default_name.clone(),
+      };
+      for address in &cut.addresses {
+        made.push((
+          name.clone().unwrap_or_default(),
+          address.clone(),
+          font.clone(),
+        ));
+      }
+      if cut.start == 0 {
+        // (the whole line, with the break before it — the one after it, the entry's first line)
+        for node in nodes {
+          document.remove_node(node.clone());
+        }
+        let separator = break_before
+          .clone()
+          .or_else(|| lines.get(at + 1).and_then(|(_, next)| next.clone()));
+        if let Some(separator) = separator
+          && separator.get_parent().is_some()
+        {
+          document.remove_node(separator);
+        }
+      } else {
+        line.cut_from(document, cut.start);
+      }
+    }
+    if made.is_empty() {
+      continue;
+    }
+    let key = entry.get_attribute(ENTRY_KEY).unwrap_or_default();
+    kinded.insert(key.clone());
+    let saved = document.get_node().clone();
+    document.set_node(&creator);
+    for (name, address, font) in made {
+      let mut attributes: HashMap<String, String> = HashMap::default();
+      attributes.insert("role".to_string(), "email".to_string());
+      if !name.is_empty() {
+        attributes.insert("name".to_string(), name);
+      }
+      attributes.insert(ENTRY_KEY.to_string(), key.clone());
+      attributes.insert(ENTRY_KINDED.to_string(), "true".to_string());
+      if symbol {
+        attributes.insert(ENTRY_SYMBOL.to_string(), "true".to_string());
+      }
+      if let Some(ordinal) = entry.get_attribute(QUEUE_ORDINAL) {
+        attributes.insert(QUEUE_ORDINAL.to_string(), ordinal);
+      }
+      // (in the entry's font, the addresses in theirs)
+      if let Some(entry_font) = entry.get_attribute("_font") {
+        attributes.insert("_font".to_string(), entry_font);
+      }
+      let mut contact = document.open_element("ltx:contact", Some(attributes), None)?;
+      match font {
+        Some(font) => {
+          let mut wrapper_attributes: HashMap<String, String> = HashMap::default();
+          wrapper_attributes.insert("_font".to_string(), font);
+          let mut wrapper = document.open_element("ltx:text", Some(wrapper_attributes), None)?;
+          let _ = wrapper.set_content(&address);
+          document.close_element("ltx:text")?;
+        },
+        None => {
+          let _ = contact.set_content(&address);
+        },
+      }
+      document.close_element("ltx:contact")?;
+    }
+    document.set_node(&saved);
+  }
+  Ok(kinded)
+}
+
+/// An entry's lines for [`kind_address_lines`]: its children between two line breaks (`ltx:break`), each with the break
+/// before it (none for the first).
+fn entry_lines(entry: &Node) -> Vec<(Vec<Node>, Option<Node>)> {
+  let mut lines: Vec<(Vec<Node>, Option<Node>)> = vec![(Vec::new(), None)];
+  for child in entry.get_child_nodes() {
+    if child.get_type() == Some(NodeType::ElementNode) && child.get_name() == "break" {
+      lines.push((Vec::new(), Some(child)));
+    } else if let Some((nodes, _)) = lines.last_mut() {
+      nodes.push(child);
+    }
+  }
+  lines
+}
+
+/// Whether a superscript's text is a mark ([`kind_address_lines`]): footnote symbols, numbers and their commas, or one
+/// letter (`$^a$`).
+fn is_mark_text(text: &str) -> bool {
+  let text = text.trim();
+  !text.is_empty()
+    && (text
+      .chars()
+      .all(|c| c.is_ascii_digit() || events::is_fnsymbol(c) || c == ',' || c.is_whitespace())
+      || (text.chars().count() == 1 && text.chars().all(|c| c.is_ascii_lowercase())))
+}
+
+/// A line's printed text as [`kind_address_lines`] reads it, each text node's place in it and each mark's (a space).
+#[derive(Default)]
+struct LineText {
+  text:   String,
+  pieces: Vec<(Node, usize, usize)>,
+}
+
+impl LineText {
+  /// Reads `node` into the line: its text; a font wrapper's (`ltx:text`) and an address's link's (an `ltx:ref` printing
+  /// an `@`) children; a mark ([`is_mark_text`], a superscript or a formula printing one) as a space. `false` for
+  /// anything else — another formula, a note, another link, a nested line break —, which the line is no line of
+  /// addresses beside.
+  fn read(&mut self, node: &Node) -> bool {
+    match node.get_type() {
+      Some(NodeType::TextNode) => {
+        let start = self.text.len();
+        self.text.push_str(&node.get_content());
+        self.pieces.push((node.clone(), start, self.text.len()));
+        true
+      },
+      Some(NodeType::ElementNode) => match node.get_name().as_str() {
+        "text" => node.get_child_nodes().iter().all(|child| self.read(child)),
+        "ref" if node.get_content().contains('@') => {
+          node.get_child_nodes().iter().all(|child| self.read(child))
+        },
+        // (a mark set as a superscript, or as a formula not yet parsed: `$^{\ast}$`, 2609.21085)
+        "sup" | "Math" if is_mark_text(&node.get_content()) => {
+          let start = self.text.len();
+          self.text.push(' ');
+          self.pieces.push((node.clone(), start, start + 1));
+          true
+        },
+        _ => false,
+      },
+      _ => true,
+    }
+  }
+
+  /// Whether a mark opens the line (its first piece that prints: a superscript or a formula read as a mark).
+  fn opens_with_mark(&self) -> bool {
+    self
+      .pieces
+      .iter()
+      .find(|(node, ..)| {
+        node.get_type() != Some(NodeType::TextNode) || !node.get_content().trim().is_empty()
+      })
+      .is_some_and(|(node, ..)| node.get_type() == Some(NodeType::ElementNode))
+  }
+
+  /// The font the line's addresses printed in where it is not the entry's (its `_font`): that of the wrapper below
+  /// `entry` round the text holding the first `@` after `from` (`{\tt …}`'s typewriter, 2111.01631).
+  fn address_font(&self, from: usize, entry: &Node) -> Option<String> {
+    let (node, ..) = self.pieces.iter().find(|(node, start, end)| {
+      *end > from
+        && node.get_type() == Some(NodeType::TextNode)
+        && node.get_content()[from.saturating_sub(*start)..].contains('@')
+    })?;
+    let wrapper = node.get_parent().filter(|parent| parent != entry)?;
+    let font = wrapper.get_attribute("_font")?;
+    (entry.get_attribute("_font").as_ref() != Some(&font)).then_some(font)
+  }
+
+  /// Takes the line's text from byte `cut` on out of the document: each text node after it, the one it falls in cut
+  /// short, each mark after it, and each wrapper they leave empty.
+  fn cut_from(&self, document: &mut Document, cut: usize) {
+    let mut parents: Vec<Node> = Vec::new();
+    for (node, start, end) in &self.pieces {
+      if *start >= cut {
+        if let Some(parent) = node.get_parent() {
+          parents.push(parent);
+        }
+        document.remove_node(node.clone());
+      } else if *end > cut {
+        let content = node.get_content();
+        let mut node = node.clone();
+        let _ = node.set_content(&content[..cut - start]);
+      }
+    }
+    for parent in parents {
+      let mut at = Some(parent);
+      while let Some(node) = at {
+        if node.get_type() != Some(NodeType::ElementNode)
+          || !matches!(node.get_name().as_str(), "text" | "ref")
+          || !node.get_content().trim().is_empty()
+          || !element_nodes(&node).is_empty()
+        {
+          break;
+        }
+        at = node.get_parent();
+        document.remove_node(node);
+      }
+    }
+  }
+}
+
+/// The address line [`kind_address_lines`] takes out of an entry's line: where its cut starts in the line's text (0 for
+/// the whole line), the label it printed, its addresses, and where they start.
+#[derive(Debug, PartialEq, Eq)]
+pub(in crate::base_utilities) struct AddressLineCut {
+  pub start:         usize,
+  pub label:         Option<String>,
+  pub addresses:     Vec<String>,
+  pub address_start: usize,
+}
+
+/// The cut of a line's text that is a line of addresses ([`kind_address_lines`]): its last run of addresses
+/// (`resolver::address_runs`), nothing but separators after it, a template or a list the reader could not part none of
+/// them; before it, its label — the e-mail label the run took and the words naming a contact before it
+/// ("Corresponding author:", "Contact e-mail:", [`names_a_contact`]) — and before that nothing printed but marks and
+/// separators (the whole line), or words a label follows (the label and the run go, the words stay). `legend`: the line
+/// is the entry's only one and a mark opens it, so a contact's words with no e-mail word before its addresses stay as
+/// the legend the Kind step for a legend makes its carriers' note ([`kind_legend_contacts`]); an unmarked one would
+/// stay an affiliation there, so its words name the e-mails instead (77y's block line `Corresponding Author: …`).
+pub(in crate::base_utilities) fn address_line_cut(
+  text: &str,
+  spells: &dyn Fn(&str) -> bool,
+  legend: bool,
+) -> Option<AddressLineCut> {
+  let runs = resolver::address_runs(text, spells);
+  let run = runs.last()?;
+  if text[run.end..].chars().any(char::is_alphanumeric)
+    || run
+      .addresses
+      .iter()
+      .any(|address| is_pattern_address(address) || lists_local_parts(address))
+  {
+    return None;
+  }
+  // (where the addresses start: after the run's own label and an opening bracket round it)
+  let address_start = run.label.as_ref().map_or(run.start, |label| {
+    text[run.start..]
+      .find(label.as_str())
+      .map_or(run.start, |at| run.start + at + label.len())
+  });
+  let address_start = address_start
+    + text[address_start..]
+      .find(|c: char| !c.is_whitespace() && !"([<".contains(c))
+      .unwrap_or(0);
+  // (the words naming a contact before it, back to the first that names none)
+  let head = &text[..run.start];
+  let mut label_start = head.len();
+  let trimmed = head.trim_end();
+  if run.label.is_some() || trimmed.ends_with(':') {
+    let mut words = trimmed.trim_end_matches(':').trim_end();
+    loop {
+      let word_start = words.rfind(char::is_whitespace).map_or(0, |at| {
+        at + words[at..].chars().next().map_or(1, char::len_utf8)
+      });
+      let word = &words[word_start..];
+      if word.is_empty() || !names_a_contact(word) {
+        break;
+      }
+      label_start = word_start;
+      words = words[..word_start].trim_end();
+    }
+  }
+  let separator = |c: char| c.is_whitespace() || ",;:-\u{2013}\u{2014}".contains(c);
+  let rest = text[..label_start].trim_end_matches(separator);
+  let label = text[label_start..address_start]
+    .trim()
+    .trim_start_matches(|c: char| "([<".contains(c))
+    .trim_end_matches(|c: char| separator(c) || "([<".contains(c))
+    .split_whitespace()
+    .collect::<Vec<_>>()
+    .join(" ");
+  let label = (!label.is_empty()).then_some(label);
+  let emailed = label.as_deref().is_some_and(|label| {
+    let words: Vec<&str> = label.split_whitespace().collect();
+    words.iter().any(|w| is_email_label(w))
+      || words.windows(2).any(|pair| is_email_label(&pair.join(" ")))
+  });
+  let whole = !rest.chars().any(char::is_alphanumeric);
+  let addresses = run.addresses.clone();
+  if whole && legend && label.is_some() && !emailed {
+    // (an entry that is a contact's words before its addresses alone: the words stay, its legend)
+    return Some(AddressLineCut {
+      start: text[..address_start]
+        .trim_end_matches(|c: char| separator(c) || "([<".contains(c))
+        .len(),
+      label: None,
+      addresses,
+      address_start,
+    });
+  }
+  if whole {
+    return Some(AddressLineCut {
+      start: 0,
+      label,
+      addresses,
+      address_start,
+    });
+  }
+  // (words before: only behind a label, and the label at a list's or a sentence's boundary)
+  let bounded =
+    (run.label.is_some() && label_start == head.len()) || rest.ends_with(['.', ';', ',', ')']);
+  (label.is_some() && bounded).then_some(AddressLineCut {
+    start: rest.len(),
+    label,
+    addresses,
+    address_start,
+  })
+}
+
+/// The label an address line printed before an address an author holds already ([`kind_address_lines`], OD #966): the
+/// held e-mail contact takes it where it carries the role's own name — `Email corresponding author:` before
+/// `da_salim@…`, which S. H. Shekh's `\email` holds (2605.16453) —, so no printed word goes with the copy dropped.
+fn carry_printed_label(copy: &Node, mut held: Node, default_name: Option<&str>) {
+  let Some(label) = copy.get_attribute("name") else {
+    return;
+  };
+  let held_name = held.get_attribute("name");
+  if Some(label.as_str()) != default_name
+    && held_name
+      .as_deref()
+      .is_none_or(|name| Some(name) == default_name)
+  {
+    let _ = held.set_attribute("name", &label);
+  }
 }
 
 /// Whether `node` prints text alone: every element under it a font wrapper (`ltx:text`) or an address's link (an

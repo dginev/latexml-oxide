@@ -1189,3 +1189,45 @@ fn spelled_unspaced_list_writes_out_a_list_of_spelled_parts() {
     assert_eq!(spelled_unspaced_list(text, &owner), None, "{text}");
   }
 }
+
+/// The Kind step for an entry's address line reads a line's label as printed (`insert::address_line_cut`, OD #966): a
+/// bracketed e-mail label is the label without its bracket (hep-ph0611390's `(email: braghin@…)` had left `(email` in
+/// the entry; 1009.1145's `[email:…]`); words before an e-mail label stay (1111.6932); a contact's words alone before
+/// the addresses of a legend line (an entry's only line, a mark opening it) stay as its legend, else they name the
+/// e-mails; an address beside words with no label and a tagged run are no line of addresses.
+#[test]
+fn an_address_line_cut_reads_the_label_as_printed() {
+  let none = |_: &str| false;
+  let cut = |text: &str, only: bool| {
+    address_line_cut(text, &none, only).map(|cut| (cut.start, cut.label, cut.addresses))
+  };
+  assert_eq!(
+    cut("(email: braghin@if.usp.br) ", true),
+    Some((0, Some("email".to_string()), vec![
+      "braghin@if.usp.br".to_string()
+    ]))
+  );
+  let legend = " To whom correspondence should be addressed; E-mail: ann.able@a.edu";
+  assert_eq!(
+    cut(legend, false),
+    Some(
+      (legend.find(';').unwrap(), Some("E-mail".to_string()), vec![
+        "ann.able@a.edu".to_string()
+      ])
+    )
+  );
+  assert_eq!(
+    cut(" Corresponding author: ann.able@a.edu", true),
+    Some((" Corresponding author".len(), None, vec![
+      "ann.able@a.edu".to_string()
+    ]))
+  );
+  assert_eq!(
+    cut(" Corresponding author: ann.able@a.edu", false),
+    Some((0, Some("Corresponding author".to_string()), vec![
+      "ann.able@a.edu".to_string()
+    ]))
+  );
+  assert_eq!(cut("Univ A, Town, see data@a.org for data", false), None);
+  assert_eq!(cut("ann.able@a.edu (Ann), bbaker@a.edu (Bob)", false), None);
+}

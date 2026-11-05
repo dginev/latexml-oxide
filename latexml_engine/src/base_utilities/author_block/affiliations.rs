@@ -379,7 +379,9 @@ pub(in crate::base_utilities) fn cut_marked_contact(
 /// its inner contacts). An entry of addresses alone stays as their carrier, empty, and is dropped once they are placed
 /// (`insert::drop_empty_contacts`). `None` for any other contact, or one holding no such line. The lines are read by the
 /// author block's reader of an address line ([`line_addresses`]): an address inside a line of other words (`Univ X,
-/// Town; ann@x.org`) is the frontmatter observer's text reading's alone (`Resolver::take_out_entry_addresses`). A
+/// Town; ann@x.org`) is the frontmatter observer's text reading's alone (`Resolver::take_out_entry_addresses`), and a
+/// line these tokens do not show — a document's macro, `\authorcr`, a connective "and" — the flush's Kind step's, which
+/// reads it as printed (`insert::kind_address_lines`, OD #966; 2608.22602, 2111.01631, 2302.02638). A
 /// template (`\{firstname.lastname\}@x.org`, [`is_pattern_address`]) or a list the reader could not part
 /// ([`lists_local_parts`]) stays where it prints. Witnesses: authblk's `\affil{… \\ \{…\}@x}` (2502.01754) and
 /// `\affil[ ]{\texttt{\{…\}@x}}` (2602.21641, 2307.02047), the kernel's `{\tt $^1$\{…\}@x}` lines (1901.09107), llncs's

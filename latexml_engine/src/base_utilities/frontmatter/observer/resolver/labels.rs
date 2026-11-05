@@ -530,7 +530,7 @@ pub fn addresses_in(text: &str) -> Vec<String> {
 /// of local parts sharing the domain), and the label word as printed, when it took one (the e-mail contact's name, as
 /// an e-mail line's label names its contacts: `author_block::labelled_emails`, brief 95c r2 B5).
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(in crate::base_utilities::frontmatter::observer) struct AddressRun {
+pub(in crate::base_utilities::frontmatter) struct AddressRun {
   pub start:     usize,
   pub end:       usize,
   pub addresses: Vec<String>,
@@ -544,7 +544,7 @@ pub(in crate::base_utilities::frontmatter::observer) struct AddressRun {
 /// with spaces, `hyunjun.jung, p.ruhkamp, b.busam@tum.de` (2308.10621), only where each of its parts `spells` an author
 /// or the list opens the text, a parenthesis, a brace or a label — else prose before one address: `Univ X, uk, ann@x.org`),
 /// and a plain address. Runs separated only by commas, semicolons, spaces or "and" are one run.
-pub(in crate::base_utilities::frontmatter::observer) fn address_runs(
+pub(in crate::base_utilities::frontmatter) fn address_runs(
   text: &str,
   spells: &dyn Fn(&str) -> bool,
 ) -> Vec<AddressRun> {

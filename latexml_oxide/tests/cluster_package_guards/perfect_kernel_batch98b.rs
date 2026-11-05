@@ -84,7 +84,8 @@ fn leading_spacer_lines_are_no_names_line() {
 }
 
 /// An author block of affiliation lines and no name (1804.00021's `\authorblockA` with its names commented out;
-/// int126a: no creator) keeps its lines on the block's creator, an empty name over them (`<personname/>`), as Perl does.
+/// int126a: no creator) keeps its lines on the block's creator, an empty name over them (`<personname/>`), as Perl does;
+/// since 106a its "Email:" line is the block's e-mail contact (the Kind step for an entry's address line, OD #966).
 #[test]
 fn nameless_block_keeps_its_lines() {
   let xml = both_ways(repro!(
@@ -93,7 +94,10 @@ fn nameless_block_keeps_its_lines() {
   ));
   assert_eq!(
     creators(&xml),
-    owned(&[&["affiliation=Center for Data Science (CDS) University of X Email: ann@x.edu"]])
+    owned(&[&[
+      "affiliation=Center for Data Science (CDS) University of X",
+      "email=ann@x.edu"
+    ]])
   );
   assert!(xml.contains("<personname/>"), "{xml}");
 }

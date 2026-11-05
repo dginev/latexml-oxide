@@ -206,8 +206,11 @@ fn an_email_its_two_readings_read_apart_stays_whole() {
 /// Review rev103a2 B1: the unspaced list's checks (no one-letter word, no contact word: `is_listed_local_part`,
 /// `ends_a_listed_run`) are that list's alone; a part with a space after its comma takes `address_runs`' spaced-list
 /// rule as on base (int130a), so a labelled spaced list keeps its one-letter mailbox (`E-mail: ann, b@x.org`) and a
-/// one-letter first part does not split the line (`E-mail: a, bob@x.org`, base alike: the whole line the last author's
-/// affiliation). Red (103a r2): Bob Baker's affiliation "E-mail: ann", `ann@x.org` lost; "E-mail: a" split off.
+/// one-letter first part does not split the line (`E-mail: a, bob@x.org`: no affiliation "E-mail: a" beside the
+/// e-mail). Red (103a r2): Bob Baker's affiliation "E-mail: ann", `ann@x.org` lost; "E-mail: a" split off. Since 106a
+/// the whole line is addresses, as `address_runs` reads it (the Kind step for an entry's address line, OD #966):
+/// `bob@x.org` Bob Baker's, `a@x.org`, spelling no one, the block's (int133a: the whole line Bob Baker's affiliation,
+/// the imperfection this pinned).
 #[test]
 fn a_spaced_list_takes_the_spaced_list_rule() {
   assert_creators(
@@ -219,9 +222,10 @@ fn a_spaced_list_takes_the_spaced_list_rule() {
   );
   assert_creators(
     repro!("address_family_spaced_list_one_letter_piece_kept"),
-    &[&["Ann Able", "affiliation=Univ X"], &[
-      "Bob Baker",
-      "affiliation=E-mail: a, bob@x.org",
-    ]],
+    &[
+      &["Ann Able", "affiliation=Univ X"],
+      &["Bob Baker", "email=bob@x.org"],
+      &["email=a@x.org"],
+    ],
   );
 }

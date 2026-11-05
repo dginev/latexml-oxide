@@ -1,0 +1,23 @@
+% A REVTeX author block in `\author{…}` whose last entry is `\normalsize{$^*$These authors contributed equally. \\
+% Email: ann.able@a.edu, bob.baker@a.edu}`: the "Email:" line leaves the entry; each address is its spelled author's
+% e-mail (OD #966).
+% witness: 2207.11193 (revtex4-2)
+% oracle:  pdflatex 0 errors: "Ann Able1,∗ , Bob Baker1,∗ , Cat Cole1,2", "1 Univ A, Town", "2 Univ B, City",
+%          "∗ These authors contributed equally.", "Email: ann.able@a.edu, bob.baker@a.edu"
+% engines: rust int133a = the Email line inside Cat Cole's second affiliation
+% expect:  0 errors, 0 warnings; Able: Univ A, ann.able@a.edu; Baker: Univ A, bob.baker@a.edu; Cole: Univ A and
+%          "Univ B, City ∗These authors contributed equally."
+\documentclass[aps,pra,superscriptaddress]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,*}$, Bob Baker$^{1,*}$, Cat Cole$^{1,2}$ \\
+\normalsize{$^{1}$Univ A, Town}\\
+\normalsize{$^{2}$Univ B, City} \\
+\normalsize{$^*$These authors contributed equally. \\
+Email: ann.able@a.edu, bob.baker@a.edu}}
+\begin{abstract}
+Abs.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

@@ -2535,9 +2535,10 @@ Hello.
     &xml,
     "creator",
     &[],
-    // The contact's name ends in a no-break space.
+    // (the line of an address alone is the author's e-mail since 106a, the Kind step for an entry's address line, OD
+    // #966; it had been an affiliation) The contact's name ends in a no-break space.
     &format!(
-      r#"<creator role="author"><personname>A. Author</personname><contact name="Affiliation:{}" role="affiliation"><text font="typewriter" xml:id="id1">a@b.c</text></contact></creator>"#,
+      r#"<creator role="author"><personname>A. Author</personname><contact name="Email:{}" role="email"><text font="typewriter" xml:id="id1">a@b.c</text></contact></creator>"#,
       '\u{a0}'
     ),
   );
