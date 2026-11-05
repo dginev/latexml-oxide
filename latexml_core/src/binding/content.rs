@@ -3101,6 +3101,25 @@ fn load_tex_definitions(
   Ok(())
 }
 
+/// The state value listing the files read as the document's content ([`load_tex_content`]: the main file, each
+/// `\input`/`\include` of content, a `literal:` source as its text), parted by NUL: the document's own text, which
+/// the title-page check reads for the words the document wrote (latexml_engine
+/// `base_utilities::frontmatter::title_page_check`). Rust-only.
+pub const CONTENT_FILES: &str = "lx_content_files";
+
+/// Note `path` as one of the document's content files ([`CONTENT_FILES`]), once.
+fn note_content_file(path: &str) {
+  let mut files = lookup_string(CONTENT_FILES);
+  if files.split('\0').any(|file| file == path) {
+    return;
+  }
+  if !files.is_empty() {
+    files.push('\0');
+  }
+  files.push_str(path);
+  assign_value(CONTENT_FILES, files, Some(Scope::Global));
+}
+
 pub fn load_tex_content(path: &str, _options: InputOptions) -> Result<()> {
   // If there is a file-specific declaration file (name_tex.rs), load it first!
   // TODO: is this `.latexml` variation still relevant in the Rust port?
@@ -3111,6 +3130,7 @@ pub fn load_tex_content(path: &str, _options: InputOptions) -> Result<()> {
     false
   };
 
+  note_content_file(path);
   // Open a mouth for that TeX content
   // Empty virtual files exist too (see load_definitions above).
   let cached_opt = crate::binding::virtual_files::vfs_read(path);

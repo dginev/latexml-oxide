@@ -741,6 +741,104 @@ pub fn ink_text(d: &Digested, out: &mut String) {
   }
 }
 
+/// The whatsits whose ink holds no word for [`ink_word_text`]: a script, in text or math, which sets a mark
+/// (`Ann Able\textsuperscript{ua}`, `$^{a,b}$`). A formula's own letters stay: a raw class's tabular is LaTeX's
+/// `\hbox\bgroup$…$` (icrc29.cls:591 `\@authortable`, the author names inside it, astro-ph0507347).
+const WORDLESS: &[&str] = &[
+  "\\textsuperscript",
+  "\\textsubscript",
+  "\\lx@post@superscript",
+  "\\lx@post@subscript",
+  "\\lx@floating@superscript",
+  "\\lx@floating@subscript",
+];
+
+/// The mark a speculative run read by [`ink_word_text`] sets before each `\insert`'s material (sect05.rs
+/// `speculative_run`): what follows it is the page foot's, not the title page's text running on.
+pub const INK_INSERT: char = '\u{3}';
+
+/// The mark [`ink_word_text`] sets at the edges of a whatsit that prints: no word ends there in the text it reads
+/// (`Jos\'e`, `\textbf{Ab}le`), but where a word does not continue across it, the pieces are words of their own
+/// (`\centerline{Ann Able}\centerline{MIT}`, "Able" and "MIT").
+pub const INK_SEAM: char = '\u{1}';
+
+/// The text digested material typesets, as [`ink_text`] reads it, with where its words end: a space for a whatsit that
+/// prints nothing (a line break, `\par`, a skip) and around each alignment cell, and [`INK_SEAM`] at the edges of a
+/// whatsit that prints (a font switch, a box, an accent), where the text runs on in print but a line may end. The
+/// title page's printed words (`base_utilities::frontmatter::title_page_check`).
+pub fn ink_word_text(d: &Digested, out: &mut String) {
+  // (spacing — a phantom's invisible ink, a kern, `\quad` — and a script print no word: a script is a mark)
+  if let DigestedData::Whatsit(w) = d.data()
+    && (is_spacing_item(d)
+      || WORDLESS.contains(&w.borrow().get_definition().get_cs_name().as_ref()))
+  {
+    out.push(' ');
+    return;
+  }
+  match d.data() {
+    DigestedData::TBox(b) => {
+      if let Ok(s) = b.borrow().get_string() {
+        out.push_str(&s);
+      }
+    },
+    DigestedData::List(l) => {
+      for child in l.borrow().boxes.iter() {
+        ink_word_text(child, out);
+      }
+    },
+    DigestedData::Whatsit(w) => {
+      let mut inner = String::new();
+      {
+        let w = w.borrow();
+        if let Some(Stored::Digested(a)) = w.get_property("alignment").as_deref() {
+          ink_word_text(a, &mut inner);
+        }
+        // (each argument a field of its own: `\lx@note`'s type, "footnote", and its text are no one word; a quantity —
+        // `\scalebox{0.85}`'s factor, a skip — and an environment's required argument — a column specification,
+        // `{CJK}`'s `{UTF8}{gbsn}` — no text)
+        let mut hidden = settings_arguments(&w);
+        // (a note's type, the second argument of each of our `\lx@note…` constructors, `footnote`, prints nothing)
+        if w.get_definition().get_cs_name().starts_with("\\lx@note") {
+          hidden.resize(hidden.len().max(2), false);
+          hidden[1] = true;
+        }
+        for (i, (arg, shown)) in w.get_args().iter().zip(shown_arguments(&w)).enumerate() {
+          if shown
+            && !hidden.get(i).copied().unwrap_or(false)
+            && let Some(arg) = arg
+          {
+            inner.push(INK_SEAM);
+            ink_word_text(arg, &mut inner);
+            inner.push(INK_SEAM);
+          }
+        }
+        if let Ok(Some(body)) = w.get_body() {
+          ink_word_text(&body, &mut inner);
+        }
+      }
+      if inner.chars().all(|c| c.is_whitespace() || c == INK_SEAM) {
+        out.push(' ');
+      } else {
+        out.push(INK_SEAM);
+        out.push_str(&inner);
+        out.push(INK_SEAM);
+      }
+    },
+    DigestedData::Alignment(a) => {
+      for row in a.borrow().rows() {
+        for cell in row.get_columns() {
+          if let Some(boxes) = cell.boxes.as_ref() {
+            out.push(' ');
+            ink_word_text(boxes, out);
+            out.push(' ');
+          }
+        }
+      }
+    },
+    _ => {},
+  }
+}
+
 /// The constructors that print a verbatim argument as it is — a URL, an e-mail address, a DOI —, each with which of its
 /// arguments it shows (by position), for [`shown_arguments`]: llncs.cls's `\url` (llncs_cls.rs), hyperref's
 /// `\nolinkurl`, aas's `\@@email`, the OmniBus `\lx@doi`, natbib's `\harvardurl`. A constructor's replacement is
@@ -787,6 +885,40 @@ pub(crate) fn shown_arguments(w: &Whatsit) -> Vec<bool> {
     .iter()
     .enumerate()
     .map(|(i, kind)| *kind == 2 || (*kind == 1 && shown.get(i).copied().unwrap_or(false)))
+    .collect()
+}
+
+/// Which arguments of the whatsit `w` print no text of their own by their parameter's type, for [`ink_word_text`]: a
+/// quantity (a number, a float, a dimension, a glue) and, when `w` is an environment's (it has a body), a required
+/// argument, which sets the environment up (`{tabular}`'s columns, `{minipage}`'s width, `{CJK}`'s encoding and
+/// font) where an optional one may name it (`{theorem}[Name]`); none when its parameters cannot be matched to them.
+fn settings_arguments(w: &Whatsit) -> Vec<bool> {
+  let types: Vec<SymStr> = w
+    .get_definition()
+    .get_parameters()
+    .map(|params| {
+      params
+        .get_parameters()
+        .into_iter()
+        .filter(|p| !p.novalue)
+        .map(|p| p.name)
+        .collect()
+    })
+    .unwrap_or_default();
+  if types.len() != w.get_args().len() {
+    return Vec::new();
+  }
+  let environment = matches!(w.get_body(), Ok(Some(_)));
+  types
+    .iter()
+    .map(|t| {
+      with(*t, |name| {
+        ["Number", "Float", "Dimension", "Glue", "Skip", "Integer"]
+          .iter()
+          .any(|kind| name.contains(kind))
+          || (environment && !name.starts_with("Optional"))
+      })
+    })
     .collect()
 }
 

@@ -1392,9 +1392,13 @@ impl DigestionAPI for Core {
     document.literal_placeholders = true;
     // The math parser's `d`-token evidence is the whole document's, read before its rewrites (as the eager path
     // reads it): each subtree's as it spills, the spine's before pass 2.
-    if !state::get_nomathparse_flag() {
-      document.spill_observer = Some(latexml_math_parser::read_differential_evidence);
-    }
+    // So are the output's words the title-page check looks for (latexml_engine `title_page_check`): each subtree's
+    // as it spills, the spine's when the document closes.
+    document.spill_observer = Some(if state::get_nomathparse_flag() {
+      observe_spilled_words
+    } else {
+      observe_spilled_evidence_and_words
+    });
     // Spill segments are an intermediate that pass 2 re-serializes; the
     // indentation pass 1 used to emit was generated, written, read back,
     // parsed into ~40M text nodes and then deleted again. See `spill_flat`.
@@ -2755,6 +2759,18 @@ fn renumber_collect_dfs(
     }
     renumber_collect_dfs(&child, xml_ns, id_entries, idref_entries);
   }
+}
+
+/// The spill observer of a `--streaming` run with no math parsing: the spilled subtree's words, for the title-page
+/// check (latexml_engine `base_utilities::frontmatter::title_page_check`).
+fn observe_spilled_words(_document: &Document, node: &libxml::tree::Node) {
+  latexml_engine::base_utilities::note_spilled_words(node);
+}
+
+/// The spill observer of a `--streaming` run: the math parser's `d`-token evidence, then the spilled subtree's words.
+fn observe_spilled_evidence_and_words(document: &Document, node: &libxml::tree::Node) {
+  latexml_math_parser::read_differential_evidence(document, node);
+  observe_spilled_words(document, node);
 }
 
 #[cfg(test)]

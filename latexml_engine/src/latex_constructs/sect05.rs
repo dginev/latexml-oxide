@@ -1368,6 +1368,8 @@ pub(crate) fn load() -> Result<()> {
     // What the class's title page prints, decided by TeX: the speculative sentinel runs (frontmatter_stores.rs
     // `before_title_page_runs`), made in the state the deposit and the replay below meet.
     crate::frontmatter_stores::before_title_page_runs()?;
+    // (and what the whole title page prints, in that state: its words, checked against the output's)
+    note_title_page_print()?;
     // Both deposits null the title fields, so a `{titlepage}` either lays out
     // builds no `ltx:titlepage` (the `{titlepage}` constructor's `fields`).
     AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
@@ -5091,7 +5093,7 @@ pub(crate) enum SpeculativeRun {
 /// other Fatal is the run's alone — the document never makes it, and a sentinel value may cause it —, discarded with
 /// its diagnostics (an Info says so): [`SpeculativeRun::Aborted`].
 pub(crate) fn speculative_title_page_run(tokens: Tokens) -> Result<SpeculativeRun> {
-  speculative_run(tokens, false)
+  speculative_run(tokens, false, ink_text, None)
 }
 
 /// [`speculative_title_page_run`] reading from a mouth of its own: code that reads ahead past `tokens` — an
@@ -5099,11 +5101,51 @@ pub(crate) fn speculative_title_page_run(tokens: Tokens) -> Result<SpeculativeRu
 /// meets the end of its input, never the document's text. The unclaimed-text net's run of the refused begin codes
 /// (frontmatter_stores.rs `net_begin_code_tokens`).
 pub(crate) fn speculative_isolated_run(tokens: Tokens) -> Result<SpeculativeRun> {
-  speculative_run(tokens, true)
+  speculative_run(tokens, true, ink_text, None)
 }
 
-/// [`speculative_title_page_run`], in a mouth of its own when `isolated` ([`speculative_isolated_run`]).
-fn speculative_run(tokens: Tokens, isolated: bool) -> Result<SpeculativeRun> {
+/// What the class's whole title page prints at this `\maketitle` ([`title_page_print_tokens`], its fields holding the
+/// document's values), read with where its words end ([`ink_word_text`]) and noted for the check of its words against
+/// the output (`base_utilities::frontmatter::title_page_check`, OXIDIZED_DESIGN_DIVERGENCES #953). `\today` prints
+/// nothing in it: the conversion's date is no word of the document's (a class printing `\@date` at its default); an
+/// author's note (`\thanks`) prints its text set apart, as its footnote is (`Ann Able\thanks{Lunar Institute}` is no
+/// word "AbleLunar"). Not inside a deposit or a replay (the title page they run is this one), nor when no run can be
+/// made or kept.
+pub(crate) fn note_title_page_print() -> Result<()> {
+  if lookup_bool("lx_depositing_class_maketitle") || lookup_bool("lx_replaying_class_setter") {
+    return Ok(());
+  }
+  let inject = mouth::tokenize_internal(r"\let\today\@empty\long\def\thanks#1{ #1 }").unlist();
+  // (the field ledger put back and the boxes the run stamped unstamped, as the observer's rehearsal does: a register's
+  // box `\usebox` hands back to the fields, stamped, became an `ltx:text` of its own in the document)
+  let ledger = FieldLedgerScope::begin();
+  let run = speculative_run(
+    title_page_print_tokens(&inject),
+    false,
+    ink_word_text,
+    Some(INK_INSERT),
+  );
+  drop(ledger);
+  if let SpeculativeRun::Printed(text) = run? {
+    DebugFeature!(
+      "frontmatter",
+      "FRONT the title page prints: {}",
+      text.replace(INK_SEAM, "|")
+    );
+    note_title_page_printed(&text);
+  }
+  Ok(())
+}
+
+/// [`speculative_title_page_run`], in a mouth of its own when `isolated` ([`speculative_isolated_run`]), its text read
+/// by `read` ([`ink_text`], or [`ink_word_text`] where its words are counted: [`note_title_page_print`]), each
+/// `\insert`'s material after `insert_mark` when one is given.
+fn speculative_run(
+  tokens: Tokens,
+  isolated: bool,
+  read: fn(&Digested, &mut String),
+  insert_mark: Option<char>,
+) -> Result<SpeculativeRun> {
   let Some(journal) = begin_assignment_journal() else {
     return Ok(SpeculativeRun::Unavailable);
   };
@@ -5156,9 +5198,10 @@ fn speculative_run(tokens: Tokens, isolated: bool) -> Result<SpeculativeRun> {
   let text = match &result {
     Ok(digested) => {
       let mut text = String::new();
-      ink_text(digested, &mut text);
+      read(digested, &mut text);
       for insert in &inserts {
-        ink_text(insert, &mut text);
+        text.extend(insert_mark);
+        read(insert, &mut text);
       }
       Some(text)
     },

@@ -120,7 +120,7 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
 /// the scorer's ASCII runs, a run of any script's letters is a word (`Москва`), and each Han ideograph or kana, of
 /// scripts written without spaces, is a word of its own (2206.01007's `北京师范大学天文系`, 2601.14329's
 /// `北京航空航天大学`; 105a r2).
-fn net_content_words(text: &str) -> Vec<String> {
+pub(super) fn net_content_words(text: &str) -> Vec<String> {
   const STOPWORDS: &[&str] = &[
     "a", "an", "the", "of", "and", "or", "in", "on", "at", "for", "to", "from", "by", "with",
     "via", "de", "la", "le", "les", "du", "des", "del", "della", "di", "da", "do", "dos", "das",
@@ -470,6 +470,8 @@ fn keep_unclaimed_net_notes(document: &mut Document) -> Result<()> {
       document.set_node(&saved);
     }
     if !lost.is_empty() {
+      // (named once: the title-page check counts no word named here again, `title_page_check`)
+      note_net_counted(&lost);
       Warn!(
         "frontmatter",
         "unclaimed",

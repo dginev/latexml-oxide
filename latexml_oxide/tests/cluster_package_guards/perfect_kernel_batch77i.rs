@@ -588,12 +588,27 @@ fn store_printed_in_a_title_page_thanks_keeps_its_value() {
 
 /// r3 review finding 7: a store the title page tests against a word, printing the class's own word for it
 /// (`\ifx\@vc\@open OPEN\else\@vc\fi`), is not handed on — the run with the document's own values does not print its
-/// value; a store printed plainly is.
+/// value; a store printed plainly is. The class's "OPEN" is printed and, its deposit dropped for the undefined
+/// internal, lost: the title-page check counts it, one Warning (106s, `title_page_check`; the document's `\svc{open}`
+/// writes the word too).
 #[test]
 fn store_tested_against_a_word_is_not_printed() {
-  let (xml, flat) = convert_clean(include_str!(
+  let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/store_tested_against_a_word_is_not_printed.tex"
-  ));
+  );
+  let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains(
+      "Warning:frontmatter:unclaimed The title page prints 1 word(s) of the document's that its output does not hold: open"
+    ),
+    "{log}"
+  );
+  assert!(!log.contains("Fatal:"), "{log}");
+  if let Some(lines) = latexml::util::test::rng_error_count(&xml) {
+    assert_eq!(lines, 0, "jing:\n{xml}");
+  }
+  let flat = xml.split_whitespace().collect::<Vec<_>>().join(" ");
   assert_element(&xml, "pubnote", &[], r#"<pubnote>dee</pubnote>"#);
   assert_eq!(flat.matches("<pubnote").count(), 1, "{xml}");
   assert!(!flat.contains(">open<"), "{xml}");

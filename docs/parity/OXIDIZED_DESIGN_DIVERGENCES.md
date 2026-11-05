@@ -29859,6 +29859,61 @@ aaskaiid papers byte-identical. The census129 Bundle 3 witnesses (54) rescored: 
 2607.25721), 1 more carries the Warning for its loss (2103.14934); the other 51 lose their words outside the net's
 lines — the classes are SYNC_STATUS row "105a".
 
+**106s: the title-page check** (brief 106s; FIDELITY_CHARTER §4 as amended 2026-11-04, every residual loss counted by
+a Warning). The net counts only what it hands on; a loss on any other path — a store it cannot name, code it does not
+walk, a binding's reader, a dropped deposit or replay — was silent. Now a check, which writes no content and changes no
+XML, compares the title page's printed words with the whole output. **The print:** at each `\maketitle` the kernel's
+deposit (`\lx@deposit@maketitle`, after `before_title_page_runs`) runs the whole title page once more as pdflatex runs
+it (sect05.rs `note_title_page_print`: `title_page_print_tokens`, the class's refused `\maketitle` when replayable,
+else `\@maketitle` — a raw file's, a binding's, or LaTeX's printing `\@title`, `\@author`, `\@date`), with `\today`
+empty (the conversion's date is no document word) and `\thanks` printing its text set apart, inside a
+`FieldLedgerScope` (a `\usebox` box the fields hand back stays unstamped; without it the box became an `ltx:text` of
+its own, `perfect_kernel_batchfms2a2r9`). Its text is read by `ink_word_text` (util_text.rs): a space for a whatsit
+that prints nothing, spacing (a phantom's ink, `is_spacing_item`) and a script (`\textsuperscript`, a math script: a
+mark), around each alignment cell; a seam (`INK_SEAM`) at a printing whatsit's and each of its arguments' edges; no
+quantity argument and no environment's required argument (`settings_arguments`: `{CJK}`'s `{UTF8}{gbsn}`); a mark
+(`INK_INSERT`) before an `\insert`'s material. The print of the latest `\maketitle` before the authors are sealed is
+the one checked (a later one supersedes, #406; a supplement's after the seal is none, `frontmatter_entry_sealed`).
+**The check** (`Tag ltx:document after_close_late`; base_utilities/frontmatter/title_page_check.rs
+`check_title_page_words`): each content word of the print (`net_content_words`, the scorer's) is looked for in the
+output — every text node and attribute value of the document (not `_…`), stretches of up to 6 pieces across element
+edges joined (`Bob <text>Bak</text>and`), under `--streaming` each spilled subtree's words (`note_spilled_words`, the
+spill observer); a seamed run counts its pieces when the output holds one of them or the whole is no word of the
+source; a run the print opens or ends with against no space may run on into the document's text ("SHOWNBody.");
+words the net already named are not counted again (`note_net_counted`). A word the output lacks is the document's
+when its own source writes it (`source_words` over `binding::content::CONTENT_FILES`, the files read as content —
+comments, `filecontents` bodies and `\begin`/`\end` names out, a control word a space, an accent nothing, `\o`-style
+text symbols their letters): named, distinct and in printed order, in one `Warning:frontmatter:unclaimed` ("The title
+page prints N word(s) of the document's that its output does not hold: …"). Any other is the class's own text — a
+label, a placeholder at its default, a running head's —, tallied in an Info (`frontmatter:class_text`), not a Warning,
+pending the placeholder ruling. **Coverage** (the 56 dev20k + 42 long-tail lost-words papers of int133a): before 1
+names all its lost words in a Warning (2103.14934; 2410.15356 warns without naming them), 97 silent; after 24 (22
+all, 2 some: 15 of the 56 dev, 9 of the 42 long tail — raa 1304.5354, ab 1508.04926, 1511.07638, ametsoc 2004.13105,
+2408.12585, amsart 2007.07526, homework 2304.08300, JUSTC 2409.17603, memsait astro-ph0102098, astro-ph9909366,
+astro-ph0005436, icrc29 astro-ph0507347, mem 0805.4214, 1311.4988, tADR2e 2312.02510, chjaa astro-ph0609644,
+astro-ph0612749, article 2008.02713, 2401.04073, 2404.07719, and three the census tags the scorer's whose output
+glues the word — 2504.21411, 2510.12317, hep-th0606194), 74 silent: 19 the scorer's artefacts, 15 with no print run,
+40 whose words the print does not reach (or the output holds elsewhere). **False alarms:** none found — on a 500-paper control from `popint125a_s10k` 10 papers gain the
+Warning, each a real loss read against pdflatex (or the source where pdflatex fails): cpc-hepnp's `\email` (9:
+1504.05444, 1505.01270, 1609.08464, 2010.04386, 1709.02056, 1806.07548, 0912.1248, and by its source 1309.0234,
+1906.10531), mnras's `\date` the binding replaces with `\pubyear{\date{year}}` (2506.15059). **Silent still** (the
+print does not reach the words): no deposit runs — a binding's own `\maketitle` (daj 1510.08733, 2112.09352,
+elsarticle 2104.14704, aastex 2507.16700, 2603.06433), no `\maketitle` reached (cup-journal's
+`\g@addto@macro\document{\maketitle}`, 2302.11911, 2508.08363, 2607.18758, …); the replay does not reach the class's
+title-page code (opendatalab's `\let\oldmaketitle\maketitle` copying the locked kernel's, 2601.09733; cccconf's
+`\keywords`/`\section`, 1702.07637); a binding's fields outside `\@author` (quantumarticle `\ead`, 2209.07123; IEEEtran
+grades, 1511.03982); the scorer's artefacts (census132 §3). Guards `perfect_kernel_batch106s::{
+a_class_store_the_net_misses_is_counted, a_binding_losing_author_lines_is_counted,
+a_title_page_whose_words_are_kept_counts_nothing, a_word_a_spilled_subtree_holds_is_no_loss}`; repros
+sectioning-frontmatter/`check_class_store_the_net_misses_is_counted`, `check_binding_author_lines_lost_are_counted`
+(RED int133a → GREEN 106s), `check_nothing_lost_is_no_warning` (negative). A/B (`pop106s.tsv`, 1,098: the 98 lost-words papers, the 500 control, 500 random from `popint125a_s10k`; vs int133a-rel, both on the int133a dumps): 1,091 converted, the XML byte-identical in every one, words 17,003,939 both sides, F 7 → 7, E 1,961 → 1,960 (1111.1264, whose Errors before its deterministic Fatal vary 20-22 run to run on either binary), Warnings 16,942 → 16,984 (+1 in each of 42 papers: 23 lost-words, 10 control, 9 random). **Cost** (`perf stat -e
+instructions:u`, int133a-rel vs 106s-rel): +0.04 % over 20 random raw-class papers of the control (median +0.06 %,
+at most +0.8 %); +1.9 % over 20 raw-class lost-words papers, which pay the whole scan (median +2.7 %, at most +4.2 %).
+Guards updated for losses now counted:
+`perfect_kernel_batch59::discarded_replay_takes_back_its_stubs` ("Extra info." of a dropped replay),
+`perfect_kernel_batch77i::store_tested_against_a_word_is_not_printed` (the class's "OPEN", lost with the dropped
+deposit), `perfect_kernel_batch91a::cpc_hepnp_is_not_routed_until_91c` (the e-mail).
+
 ### 954. A contact holding two or more marked entries is cut at its marks in the frontmatter API, for every binding (Perl: one contact, the marks printed in it)
 
 **What** (batch 99a; FRONTMATTER_SINGLE_ENGINE_PLAN "The target model", placement step 0: "one item per printed

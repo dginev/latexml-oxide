@@ -1052,12 +1052,16 @@ fn discarded_replay_takes_back_its_stubs() {
     )],
   );
   // a class body that reaches an undefined internal through a defined helper (the gate checks the body's own
-  // vocabulary): the replay is discarded with its stub
+  // vocabulary): the replay is discarded with its stub — and with it "Extra info.", which pdflatex prints after the
+  // error, counted by the title-page check (106s: a loss of printed words, `title_page_check`)
   assert_elements_with(
     "\\documentclass{article}\n\\def\\helper{\\undefinedthing}\n\\renewcommand\\maketitle{\\helper Extra info.}\n\\title{T}\n\\begin{document}\n\\maketitle\nBody \\undefinedthing{} end.\n\\end{document}\n",
     RAW,
-    (1, 0),
-    &["The token T_CS[\\undefinedthing] is not defined."],
+    (1, 1),
+    &[
+      "The token T_CS[\\undefinedthing] is not defined.",
+      "The title page prints 2 word(s) of the document's that its output does not hold: extra info",
+    ],
     &[(
       "para",
       "p1",

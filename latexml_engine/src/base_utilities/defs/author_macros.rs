@@ -524,6 +524,11 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       insert_frontmatter(document)?;
     }
   });
+  // The title page's printed words against the whole output, once the document is built: each word the document wrote
+  // that it lost is counted (`title_page_check`; FIDELITY_CHARTER §4). A check: it writes nothing. Rust-only.
+  Tag!("ltx:document", after_close_late => sub[document, _root] {
+    check_title_page_words(document)?;
+  });
 
   // A `\maketitle` that typesets authors an `\author` set after the last flush replaces
   // the ones that flush digested (`add_authors_calls`; DIVERGENCES #406). First in

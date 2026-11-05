@@ -168,6 +168,12 @@ pub fn write_dump(
       skipped += 1;
       continue;
     }
+    // Skip the files a run read as content (`binding::content::CONTENT_FILES`): the format's own sources are no
+    // document's text, and a dumped list would stand in a conversion's for the files it reads.
+    if matches!(*table, TableName::Value) && key_str == crate::binding::content::CONTENT_FILES {
+      skipped += 1;
+      continue;
+    }
 
     // Skip the file-IO bookkeeping family (`is_file_io_bookkeeping`). The
     // dump is applied WHILE the document's preload is being read (the
