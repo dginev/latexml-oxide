@@ -399,7 +399,8 @@ fn horizontal_space_run(tokens: &[Token]) -> (usize, usize, bool) {
 /// when what follows it is a mark or a note of the name before it ([`leading_marks_end`]: `$^{a,b}$`,
 /// `\textsuperscript{1}`, `\thanks{…}`) that no entry text follows — a comma, `;`, the word "and", a separator, a line
 /// break, a separating run of spacing (a separating space, or two or more spacing commands, OXIDIZED_DESIGN #52(o)) or
-/// the end come after it —, so the space is the name's: `Oleg L.\hspace*{2mm}$^{\rm a,b}$, Sergei B.` (0905.3658).
+/// the end come after it —, so the space is the name's: `Oleg L.\hspace*{2mm}$^{\rm a,b}$, Sergei B.` (0905.3658). A
+/// `\footnotemark[n]` is such a mark here, `\protect` before a mark no text ([`own_marks_end`]).
 /// `None` before a mark that leads an entry (`$^1$Univ A\quad$^2$Univ B`, an affiliation line's two entries; with one
 /// tie or control space after the mark, the entry's own, `$^1$~Univ A\quad$^2$~Univ B` and `\textsuperscript{2}\ Univ
 /// B`, whose two universities read as one) and before anything else.
@@ -408,7 +409,7 @@ fn space_before_own_mark(src: &[Token], start: usize) -> Option<usize> {
     return None;
   }
   let end = start + horizontal_space_run(&src[start..]).0;
-  let marks = leading_marks_end(&src[end..]);
+  let marks = own_marks_end(&src[end..]);
   if marks == 0 {
     return None;
   }
@@ -429,6 +430,28 @@ fn space_before_own_mark(src: &[Token], start: usize) -> Option<usize> {
     Some(_) => and_word_end(rest, false).is_some(),
   };
   own.then_some(end)
+}
+
+/// [`leading_marks_end`], with what a name also sets as its own mark after a space: a `\footnotemark[n]`, and `\protect`
+/// before a mark (`Zhengyi Han\hspace{0.1em}\protect\footnotemark[1]`, 2609.40220, a creator of the mark alone once
+/// authblk's gate read the space, `has_author_block_separator`).
+fn own_marks_end(tokens: &[Token]) -> usize {
+  let mut end = 0;
+  loop {
+    let at = end + usize::from(tokens.get(end) == Some(&T_CS!("\\protect")));
+    let next = if tokens.get(at).is_some_and(is_footnote_mark) {
+      let optional = (tokens.get(at + 1) == Some(&T_OTHER!("[")))
+        .then(|| tokens[at + 1..].iter().position(|t| *t == T_OTHER!("]")))
+        .flatten();
+      at + 1 + optional.map_or(0, |close| close + 1)
+    } else {
+      at + leading_marks_end(&tokens[at..])
+    };
+    if next == at {
+      return end;
+    }
+    end = next;
+  }
 }
 
 /// `tokens` with each math group of its top level that holds only spacing — `$\qquad$` — written as that spacing,
@@ -628,9 +651,120 @@ fn row_entry_count(tokens: &[Token]) -> usize {
   count
 }
 
+/// Whether a line of an author block holds e-mail addresses and nothing else that reads as a word: a bare list, in its
+/// wrapper or link (`\texttt{a@x}`, `(a@x)`, `\href{mailto:a@x}{a@x}`), behind an e-mail label (`E-mail: a@x`). No name
+/// stands on it, so it names no one ([`resolver::only_addresses`]).
+pub(in crate::base_utilities) fn address_only_line(line: &Tokens) -> bool {
+  let text = visible_name_text(line.unlist_ref());
+  line_is_email_list(line)
+    || (!resolver::addresses_in(&text).is_empty() && resolver::only_addresses(&text))
+    || email_commands_alone(line)
+}
+
+/// Whether a line holds a class's `\email{…}` commands and nothing else (`\email{a@x}\qquad \email{b@y}`, 2404.04659,
+/// whose second was a creator).
+fn email_commands_alone(line: &Tokens) -> bool {
+  let v = line.unlist_ref();
+  let mut seen = false;
+  let mut i = 0;
+  while i < v.len() {
+    if v[i] == T_CS!("\\email") && v.get(i + 1) == Some(&T_BEGIN!()) {
+      seen = true;
+      i = skip_group(v, i + 1);
+    } else if v[i].get_catcode() == Catcode::SPACE || is_line_separator(&v[i]) {
+      i += 1;
+    } else {
+      return false;
+    }
+  }
+  seen
+}
+
+/// Whether a line of an author block prints an icon or a graphic and no word (`\orcidlink{…}`,
+/// `\includegraphics{…}`): every command on it an ORCID icon's, one whose arguments print no name
+/// ([`NON_PRINTING_ARGUMENTS`]) or a font's, one such at least, no text left. A macro might print a name (`\AuthorOne
+/// \quad \AuthorTwo`), which only its expansion tells.
+pub(in crate::base_utilities) fn names_no_one(line: &Tokens) -> bool {
+  let v = line.unlist_ref();
+  let annotation = |t: &Token| {
+    t.get_catcode() == Catcode::CS
+      && t.with_str(|s| {
+        matches!(s, "\\orcidlink" | "\\orcidID" | "\\lx@aas@checkorcid")
+          || NON_PRINTING_ARGUMENTS.iter().any(|(c, ..)| *c == s)
+      })
+  };
+  v.iter().any(annotation)
+    && v.iter().all(|t| {
+      t.get_catcode() != Catcode::CS
+        || annotation(t)
+        || t.with_str(|s| NAME_TEXT_COMMANDS.contains(&s))
+    })
+    && !visible_name_text(&printed_words(v))
+      .chars()
+      .any(char::is_alphanumeric)
+}
+
 /// A token that ends an author line's row of names: a line break, or the `\and` family.
 fn is_row_break(t: &Token) -> bool {
   t.with_str(|s| matches!(s, "\\\\" | "\\newline" | "\\and" | "\\And" | "\\AND"))
+}
+
+/// Whether the lines under an unmarked author line's names read as more names and nothing tells them from an
+/// institution: each a name by its words, styled as the names line is, with no address, link, note or mark on it
+/// (`Ann Able\\ Bob Baker`, `Ann Able\quad Bob Baker\\ Cat Cole`; 2610.38214's `\\ Stefano Soatto` under two rows of
+/// names; not `Ann Able\\ Meta AI`, an acronym beside a word in small letters, as `flag_merged_creators` reads a line,
+/// nor `\\ \textit{Univ X}`, nor `\\ University of X`). The kernel's read gives such a line to the names above it as
+/// their affiliation (Perl's first-line rule), a name made an affiliation where it is one; a binding that reads an
+/// `\author` as one name otherwise must not route it there unread: authblk's `\author` (2610.38214). A row of names
+/// parted by horizontal space goes on with the names first (`space_parted_rows_joined`), as the kernel reads it.
+pub fn lines_under_names_read_as_names(stuff: &Tokens) -> bool {
+  let prepared = rewrite_symbol_superscripts(normalize_hspace_separators(strip_linebreak_options(
+    drop_empty_marks(stuff.clone()),
+  )));
+  if has_author_marks(&prepared) {
+    return false;
+  }
+  let joined = space_parted_rows_joined(prepared);
+  let lines: Vec<Tokens> = split_tokens(joined, author_line_breaks())
+    .into_iter()
+    .filter(|line| spacing_end(line.unlist_ref()) > 0 && !prints_nothing(line))
+    .collect();
+  let Some((names, under)) = lines.split_first() else {
+    return false;
+  };
+  let reads_as_a_name = |line: &Tokens| {
+    let text = visible_name_text(line.unlist_ref());
+    let bare = outside_notes(line.unlist_ref()).len() == line.unlist_ref().len();
+    bare
+      && name_count(text.trim()) >= 1
+      && !text.contains('@')
+      && !holds_mixed_case_acronym(&text)
+      && !is_link_line(line)
+      && !collaboration_line(line)
+      && classify_thanks(&text) == "note"
+      && leading_markup(line) == leading_markup(names)
+  };
+  !under.is_empty() && under.iter().all(reads_as_a_name)
+}
+
+/// `stuff` with its top-level line breaks (a `\\`, its options read with it; `\newline`) written as `\quad`: lines
+/// under the names read as more names ([`lines_under_names_read_as_names`]), the row they print in.
+pub fn line_breaks_as_name_separators(stuff: &Tokens) -> Tokens {
+  let mut out: Vec<Token> = Vec::new();
+  let mut depth = 0usize;
+  for t in strip_linebreak_options(stuff.clone()).unlist() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ => {},
+    }
+    if depth == 0 && (t == T_CS!("\\\\") || t == T_CS!("\\newline")) {
+      out.push(T_CS!("\\quad"));
+    } else {
+      out.push(t);
+    }
+  }
+  Tokens::new(out)
 }
 
 /// How many names an author line lists up to its first line break ([`is_row_break`]): each piece between its

@@ -964,10 +964,11 @@ fn authblk_combined_mark_affil_runs() {
   ]);
 }
 
-/// authblk `\author`s whose marks a line or text follows (`Ann Able$^{1}$\\ ann@x.org`, `Bob Baker$^{2}$ (bob@x.org)`,
-/// `Cat Cole$^{3}$ \orcidlink{…}`; r3 review probes m2, m7, m8, m9) stay single names (`author_marks_end_name`): each
-/// mark where it is written (77n r3 read them as lists, dropping Ann Able's "1" before the `\\` and moving Bob Baker's
-/// after his address, Cat Cole's after the ORCID link).
+/// authblk `\author`s whose marks text follows (`Bob Baker$^{2}$ (bob@x.org)`, `Cat Cole$^{3}$ \orcidlink{…}`; r3 review
+/// probes m2, m8, m9) stay single names (`author_marks_end_name`): each mark where it is written (77n r3 read them as
+/// lists, moving Bob Baker's after his address, Cat Cole's after the ORCID link). One a line follows (`Ann
+/// Able$^{1}$\\ ann@x.org`, m7) reaches the kernel read by its `\\` since 108a: her mark where it is written, the line
+/// her e-mail (int139a: in her name).
 #[test]
 fn authblk_mark_before_a_line_stays_in_place() {
   let xml = convert_repro!("author_authblk_mark_before_line_stays.tex");
@@ -976,8 +977,8 @@ fn authblk_mark_before_a_line_stays_in_place() {
   assert_eq!(creators(&xml), [
     creator(
       true,
-      r#"Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup><break/>ann@x.org"#,
-      &both
+      r#"Ann Able<sup xml:id="id1">1</sup>"#,
+      &format!(r#"{both} <contact name="Email: " role="email">ann@x.org</contact>"#)
     ),
     creator(
       false,
@@ -1432,9 +1433,9 @@ fn authblk_glued_symbol_mark_answered_by_its_affil() {
 }
 
 /// A whole author block in one authblk `\author`, its marks glued to symbols (`$^{1\ast}$`, `$^{1\dagger}$`) and its
-/// legends inside it (2605.10201's shape): one creator, the block as printed — its glued marks request their labels
-/// only, so nothing is appended to the name (77n r6: "∗,†" after the last legend). Its three names are one author, a
-/// merge: since 107b the detector reads the names line alone (`flag_merged_creators`), one `merged_creators` Error.
+/// legends inside it (2605.10201's shape): its `\\` reaches the kernel read since 108a, which reads the block: three
+/// creators, each mark's affiliation and each symbol's legend on the creators showing it (int139a: one creator, the
+/// block as printed, one `merged_creators` Error).
 #[test]
 fn authblk_glued_symbols_in_one_author_block() {
   let (log, xml) = convert_with(
@@ -1443,27 +1444,13 @@ fn authblk_glued_symbols_in_one_author_block() {
     ),
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
-  assert!(
-    log.contains("Error:frontmatter:merged_creators One author holds 3 names"),
-    "{log}"
-  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let xml = squash(&xml);
-  let bold_marked = |id: &str, name: &str, mark: &str| {
-    format!(
-      r#"<text font="bold" xml:id="{id}">{name}<sup xml:id="{id}.1"><text font="italic" xml:id="{id}.1.1">{mark}</text></sup></text>"#
-    )
-  };
-  assert_eq!(creators(&xml), [creator(
-    true,
-    &format!(
-      r#"{} {} {} <break/><sup xml:id="id4">1</sup>Univ X <sup xml:id="id5">2</sup>Univ Y <sup xml:id="id6"><text font="italic" xml:id="id6.1">∗</text></sup> Equal contribution <sup xml:id="id7">†</sup> Corresponding author"#,
-      bold_marked("id1", "Ann Able", "1∗"),
-      bold_marked("id2", "Bob Baker", "2∗"),
-      bold_marked("id3", "Cat Cole", "1†"),
-    ),
-    ""
-  )]);
+  assert_eq!(creators(&xml), [
+    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id1"><sup xml:id="id1.1"><text font="italic" xml:id="id1.1.1">∗</text></sup> Equal contribution</note> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ Y</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1"><text font="italic" xml:id="id2.1.1">∗</text></sup> Equal contribution</note> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="†" role="thanks" xml:id="id3">Corresponding author</note> </creator>"#,
+  ]);
 }
 
 /// An `\author[1]` and another author's mark `$^{1}$` picking the same mark-led `\affil{$^1$Univ X}` (r6 review probe

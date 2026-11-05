@@ -1,0 +1,15 @@
+% mechanism: authblk's `\author` reads a whole argument as one name unless it holds a separator; the kernel's author read parts names at `\qquad`, no notes
+% witness: 2610.08541 family (`Mark Bedaywi \quad Scott Emmons`, 2608.05327)
+% oracle:  pdflatex: 0 errors; three names apart
+% engines: rust int139a: one creator holding the three names; perl (authblk.sty.ltxml:52-55, read): one creator
+% expect:  0 errors; three creators
+% status:  RED (int139a) -> GREEN (108a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able \qquad Bob Baker \qquad Cat Cole}
+\maketitle
+Text.
+\end{document}

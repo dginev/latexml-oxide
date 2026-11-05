@@ -215,12 +215,13 @@ fn ieee_membership_kept_after_closing_stop() {
     "Susheela Sharma$^{1}$, Sarah Go$^{1}$",
     "Susheela Sharma$^{*1}$, Sarah Go$^{1}$",
   );
-  // (95b, OD #942: the written reading gives the numbered note to every name its mark labels, the `$^{*1}$` one's too)
-  let star_first_creators: &[&[&str]] = &[&["Susheela Sharma", thanks], &["Sarah Go", thanks], &[
-    "Farshid Alambeigi",
-    "membership=Member, IEEE",
-    thanks,
-  ]];
+  // (95b, OD #942: the written reading gives the numbered note to every name its mark labels, the `$^{*1}$` one's too; its
+  // printed star shown since 108a r2, `glued_marks`, 2505.22662 — this row pinned the star lost)
+  let star_first_creators: &[&[&str]] = &[
+    &["Susheela Sharma *", thanks],
+    &["Sarah Go", thanks],
+    &["Farshid Alambeigi", "membership=Member, IEEE", thanks],
+  ];
   let stop_line = "affiliation=and Farshid Alambeigi .";
   let partly_creators: &[&[&str]] = &[&["Susheela Sharma *", stop_line], &["Sarah Go", stop_line]];
   let variants: [Variant; 11] = [

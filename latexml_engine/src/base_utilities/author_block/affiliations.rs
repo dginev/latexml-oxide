@@ -66,6 +66,7 @@ fn entry_calls(
   let stuff = spaced_marks_as_marks(&stuff).unwrap_or(stuff);
   let stuff = rewrite_ordinal_superscripts(strip_linebreak_options(unalias_mark_commands(stuff)));
   let stuff = blank_line_marks_dropped(stuff);
+  let stuff = glued_line_marks_as_marks(stuff, true);
   let with_sup = marks_are_labels && author_mark_position(&stuff).is_some();
   // In a marked list, the affiliations it names, each a mark-led line (or a piece of one) with the unmarked lines
   // that follow it.

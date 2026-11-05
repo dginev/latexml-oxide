@@ -146,6 +146,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
     // clean no-marker branch where (1)'s `\quad`s split all six authors.
     let stuff = normalize_hspace_separators(stuff);
     let stuff = join_icons_to_links(stuff);
+    let stuff = glued_line_marks_as_marks(stuff, false);
     let stuff = rewrite_symbol_superscripts(stuff);
     let stuff = rewrite_ordinal_superscripts(stuff);
     rewrite_in_word_superscripts(stuff)
@@ -1070,7 +1071,23 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
     // anyone)
     let mut headings: Vec<Tokens> = Vec::new();
     let mut named_any = false;
-    for (delimiter, block) in split_tokens_delimited(stuff, author_group_splits()) {
+    // (the addresses and the nameless pieces no name came before, for the first names after them: [`address_only_line`],
+    // [`names_no_one`])
+    let mut leading_addresses: Vec<Tokens> = Vec::new();
+    let mut leading_nameless: Vec<Token> = Vec::new();
+    let pieces_of_block = split_tokens_delimited(stuff, author_group_splits());
+    // (by piece, whether horizontal space parts it from the next, for a line of names after a row's addresses, below)
+    let spaced_after: Vec<bool> = pieces_of_block
+      .iter()
+      .skip(1)
+      .map(|(delimiter, _)| {
+        delimiter
+          .first()
+          .is_some_and(|d| *d == T_CS!("\\quad") || *d == T_CS!("\\qquad"))
+      })
+      .chain(std::iter::once(false))
+      .collect();
+    for ((delimiter, block), row_goes_on) in pieces_of_block.into_iter().zip(spaced_after) {
       spaced &= delimiter
         .first()
         .is_some_and(|d| *d == T_CS!("\\quad") || *d == T_CS!("\\qquad"));
@@ -1117,6 +1134,83 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
         for line in link_run_lines(piece) {
           gaps.push(std::mem::take(&mut gap));
           lines.push(line);
+        }
+      }
+      // A piece that prints no name is no person (as a marked line of addresses is none, rev97a S1, OD #944): a piece
+      // with nothing to read, an `\orcidlink` or a graphic after the name (`Ann Able\quad\orcidlink{…}`), is the name's;
+      // one of addresses alone is lines under the names before it, the row's list when it goes on with a line of them,
+      // `Xinyu Wu \quad Jiansong Deng\\ \small \texttt{xinyu97@…}\quad \texttt{dengjs@…}` (2609.02424, where the second
+      // address was a creator), `Ann Able\quad ann@x.org`, `\quad(ann@x.org)`, `\quad\href{mailto:…}{…}` — a line of
+      // addresses never names the block, nor does one under a link (`{\LARGE \href{https://sherpa.ai/}{Sherpa.ai}}\\
+      // research@sherpa.ai`, 2609.25082: below). What no name came before waits for the first that does.
+      if !lines.is_empty() && lines.iter().all(names_no_one) {
+        let piece: Vec<Token> = lines.into_iter().flat_map(Tokens::unlist).collect();
+        match blocks
+          .last_mut()
+          .and_then(|(_, groups)| groups.last_mut())
+          .and_then(|(names, _)| names.last_mut())
+        {
+          Some(name) => {
+            let mut held = std::mem::take(name).unlist();
+            held.extend(piece);
+            *name = Tokens::new(held);
+          },
+          None => leading_nameless.extend(piece),
+        }
+        spaced = true;
+        continue;
+      }
+      let addresses_at = lines
+        .iter()
+        .position(address_only_line)
+        .filter(|at| lines[..*at].iter().all(prints_a_url));
+      if let Some(at) = addresses_at {
+        let end = at
+          + lines[at..]
+            .iter()
+            .take_while(|line| address_only_line(line))
+            .count();
+        let addresses: Vec<Tokens> = lines.drain(at..end).collect();
+        gaps.drain(at..end.min(gaps.len()));
+        let above = blocks
+          .last_mut()
+          .and_then(|(_, groups)| groups.last_mut())
+          .map(|(_, affils)| affils);
+        match above {
+          Some(affils) => {
+            for (at, line) in addresses.into_iter().enumerate() {
+              // (a row's addresses a space parts are the one line they print on, a list as `a@x~~~~b@y` is)
+              match affils.last_mut() {
+                Some(last) if at == 0 && spaced && address_only_line(last) => {
+                  let mut joined = std::mem::take(last).unlist();
+                  joined.extend([T_SPACE!(), T_ACTIVE!('~'), T_ACTIVE!('~'), T_SPACE!()]);
+                  joined.extend(line.unlist());
+                  *last = Tokens::new(joined);
+                },
+                _ => affils.push(line),
+              }
+            }
+            // (and what comes after them is under the row as well — `… \\ a@x \quad b@y \\ Univ X`; a line of notes, a
+            // link, an ORCID, 2606.09024, 2609.05531, 2610.34467; `{\it DeepMind Paris, France}`, 2201.12909; `Princeton
+            // Language and Intelligence`, 2606.11499 — unless it opens the next row of names, more of them beside it:
+            // `… \\ a@x \quad b@y \\ Cat Cole \quad Dan Dee`)
+            if !(row_goes_on
+              && lines
+                .first()
+                .is_some_and(|line| name_count(&visible_name_text(line.unlist_ref())) > 0))
+            {
+              affils.append(&mut lines);
+            }
+          },
+          None => leading_addresses.extend(addresses),
+        }
+        // (nothing else on the piece: no names, the row goes on; a line under them starts the next author)
+        if lines.is_empty() {
+          spaced = true;
+          continue;
+        }
+        if at == 0 {
+          spaced = false;
         }
       }
       // …but a block the line break opens whose first line is an institution a footnote symbol of the names before it
@@ -1249,9 +1343,18 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
       // block goes with the lines under its names
       // (`\url{…} \\ Ann Able \\ Univ A`, the r5 re-review's u17), a block of link lines alone is the whole block's
       // (`Ann Able \\ Univ A \and \url{…}`, u16), not a creator named by its URL.
-      let leading_links = (0..lines.len())
-        .take_while(|at| prints_a_url(&lines[*at]))
-        .count();
+      // (…but with no other name before it and addresses under it, a link printing a bare address is the block's name:
+      // `{\LARGE \href{https://sherpa.ai/}{Sherpa.ai}}\\ research@sherpa.ai`, 2609.25082)
+      let leading_links = if addresses_at.is_some_and(|at| at > 0)
+        && blocks.iter().all(|(_, groups)| groups.is_empty())
+        && lines.first().is_some_and(link_prints_a_bare_address)
+      {
+        0
+      } else {
+        (0..lines.len())
+          .take_while(|at| prints_a_url(&lines[*at]))
+          .count()
+      };
       if leading_links == lines.len() && !lines.is_empty() {
         block_links.append(&mut lines);
         continue;
@@ -1273,7 +1376,14 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
       for (names_line, mut affils) in groups {
         last_names_line = Some(names_line.clone());
         affils.splice(0..0, std::mem::take(&mut links));
-        let mut names = split_names(names_line);
+        affils.splice(0..0, std::mem::take(&mut leading_addresses));
+        let mut names = split_names(if leading_nameless.is_empty() {
+          names_line
+        } else {
+          let mut held = std::mem::take(&mut leading_nameless);
+          held.extend(names_line.unlist());
+          Tokens::new(held)
+        });
         // (a group that is only a collaboration's name, before names of the call's — `\small H.E.S.S. Collaboration
         // \and H.~Abdalla \inst{…} \and …`, 1912.05868 — is a heading over them, [`Collaborations`])
         if affils.is_empty() && names.len() == 1 && collaboration_line(&names[0]) {
@@ -1349,6 +1459,14 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
       }
       blocks.push((spaced, pairs));
       spaced = true;
+    }
+    // (addresses or an icon with no name in the call at all: a nameless author's, as printed, none of them a name —
+    // `\author{research@x.ai}`, `\author{\includegraphics{logo}}`)
+    if !leading_addresses.is_empty() || !leading_nameless.is_empty() {
+      blocks.push((false, vec![(
+        vec![Tokens::new(std::mem::take(&mut leading_nameless))],
+        std::mem::take(&mut leading_addresses),
+      )]));
     }
     // (a heading no names came after: a trailing `\and` group, every name's before it that carries no collaboration
     // yet, as with marks — `\author{Ann Able \\ Univ X \and Bob Baker \\ Univ Y \and The XYZ Collaboration}`,

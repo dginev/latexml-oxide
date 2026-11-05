@@ -1,0 +1,16 @@
+% mechanism: an `\affil` whose first piece a mark leads is the marked list's; only a piece with no mark at all is the block's (`unmarked_before_carried_marks`)
+% witness: 2505.00989
+% oracle:  pdflatex: 0 errors; the legend, Univ X and Univ Y under the names
+% engines: rust 108a r2 first build: the legend and Univ X one block line, the labels lost; int139a: as expected here
+% expect:  0 errors; Ann Able Univ X, Bob Baker Univ Y and the legend
+% status:  GREEN (int139a) -> GREEN (108a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \quad Bob Baker$^{2,*}$}
+\affil{$^{*}$Corresponding author\\ $^{1}$Univ X \quad $^{2}$Univ Y}
+\maketitle
+Text.
+\end{document}

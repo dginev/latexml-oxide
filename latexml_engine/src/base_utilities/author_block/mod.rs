@@ -5,6 +5,8 @@ use super::*;
 mod affiliations;
 pub use affiliations::*;
 mod email_lines;
+// (authblk's `\affil` reads a line with its empty marks gone: authblk_sty.rs `holds_a_mark_authors_carry`)
+pub use email_lines::drop_empty_marks;
 pub(super) use email_lines::*;
 mod preprocess;
 pub(super) use preprocess::*;
@@ -23,6 +25,7 @@ pub use rows::*;
 mod row_emails;
 pub use row_emails::*;
 mod symbols;
+pub use symbols::glued_line_marks_as_marks;
 pub(super) use symbols::*;
 mod notes;
 pub use notes::*;

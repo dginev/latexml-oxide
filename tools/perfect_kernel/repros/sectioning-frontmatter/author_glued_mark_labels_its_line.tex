@@ -1,0 +1,15 @@
+% mechanism: a glued mark that leads a line labels it by its number, the symbol part of the label; the name's symbol shows (`glued_line_marks_as_marks`)
+% witness: 2606.23258
+% oracle:  pdflatex: 0 errors; both names *1, *1 Kyoto
+% engines: rust int139a: no star on the names; `1*`: "* Univ X"
+% expect:  0 errors; two creators, each its star and Univ X
+% status:  RED (int139a) -> GREEN (108a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{*1}$, Bob Baker$^{*1}$\\ $^{*1}$Univ X}
+\maketitle
+Text.
+\end{document}

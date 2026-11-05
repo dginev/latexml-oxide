@@ -1,0 +1,15 @@
+% mechanism: an unanswered number glued before a symbol shows before it, as printed (`show_unanswered_marks`)
+% witness: 2610.07087
+% oracle:  pdflatex: 0 errors; Ann Able 1*, Bob Baker 2
+% engines: rust 108a r1: the star, then the number
+% expect:  0 errors; marks 1 * and 2 on the two creators
+% status:  RED (108a r1) -> GREEN (108a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1*}$ \quad Bob Baker$^{2}$}
+\maketitle
+Text.
+\end{document}

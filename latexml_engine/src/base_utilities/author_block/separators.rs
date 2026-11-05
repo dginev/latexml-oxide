@@ -1389,6 +1389,23 @@ pub(in crate::base_utilities) fn author_group_splits() -> Vec<SplitDelim> {
   splits
 }
 
+/// Whether an author argument holds a separator the kernel's author read parts it at: as that read sees it
+/// (`normalize_hspace_separators`: `\hspace`, `\hfill` and a spacing run between two names as `\quad`; the space a name
+/// sets before its own note or mark none) it splits at `author_group_splits` or at the line breaks of
+/// `author_affil_splits` into two pieces or more that are not empty. [`split_tokens`] leaves a note's argument, a group
+/// and math alone. For a binding that reads an `\author` with none as one name: authblk's.
+pub fn has_author_block_separator(stuff: &Tokens) -> bool {
+  let separators = author_group_splits()
+    .into_iter()
+    .chain(author_affil_splits())
+    .collect();
+  split_tokens(normalize_hspace_separators(stuff.clone()), separators)
+    .iter()
+    .filter(|piece| !piece.is_empty())
+    .count()
+    > 1
+}
+
 /// The `\and` family only — the HARD author boundary the superscript-marker
 /// branch groups on FIRST, so a marker-less line never merges into an author
 /// from a previous `\and` group (html_feedback#1021 F2; OXIDIZED_DESIGN #52(g)).

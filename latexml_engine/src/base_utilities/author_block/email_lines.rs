@@ -916,7 +916,7 @@ pub(in crate::base_utilities) fn addresses_in_order(
     .all(|(at, address)| spelled_owner(keys, address).is_none_or(|owner| owner == offset + at))
 }
 
-/// `tokens` without the marks that print nothing: a mark command's empty argument (`\textsuperscript{}`, [`mark_commands`])
+/// `tokens` without the marks that print nothing: a mark command's empty argument (`\textsuperscript{}`, `mark_commands`)
 /// and an empty math superscript (`$^{}$`), spaces and `\relax` aside, when the block holds no other mark. An empty mark is no mark
 /// (user ruling R11 2026-10-20): it makes no block a marked one (2604.19440's `\textsuperscript{}Univ. Grenoble Alpes,
 /// …` under four unmarked names, which pdflatex prints with no mark, an affiliation of all four). In a block other marks
@@ -924,10 +924,10 @@ pub(in crate::base_utilities) fn addresses_in_order(
 /// own (2604.22129's `Robert Maier\textsuperscript{}~~~Aljaz Bozic\textsuperscript{}` beside `David
 /// Recasens\textsuperscript{\rm 1}`, which a marked block's marker-less pieces would weld into one creator). A note's
 /// text is the note's, not the block's marks: what a `\thanks`, `\footnote` or `\footnotetext` (or a document's note
-/// command, [`is_note_macro`]) holds is kept as written, so the note is read on what the author wrote — by the XML's
+/// command, `is_note_macro`) holds is kept as written, so the note is read on what the author wrote — by the XML's
 /// no-ink test as by the frontmatter observer's rehearsal of the same block (`\thanks{\textsuperscript{}}`: taken out,
 /// the XML's note was empty and dropped where the observer's kept it; OXIDIZED_DESIGN_DIVERGENCES #916).
-pub(in crate::base_utilities) fn drop_empty_marks(tokens: Tokens) -> Tokens {
+pub fn drop_empty_marks(tokens: Tokens) -> Tokens {
   let original = tokens.clone();
   let v = tokens.unlist();
   // (a `\relax` in it prints nothing either: `Ann Able\textsuperscript{\relax}, Bob Baker`, the r7 re-review's n10)

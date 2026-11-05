@@ -1704,6 +1704,66 @@ that is the pre-existing #52 comma tradeoff the default `\author` already makes,
 divergence; the label and single-name (no-comma) authblk paths stay Perl-faithful. Guard:
 `06_cluster_frontmatter::frontmatter_authblk_comma_list`.
 
+**Batch 108a: every separator the kernel's author read parts a block at reaches it.** An unlabelled authblk `\author`
+with no `\and`, comma, "and" word or end mark was one name: `A\thanks{…} \qquad B\thanks{…} \qquad C\thanks{…}` one
+`personname` holding the three, every note after it, each note's author lost; `A\thanks{…}\\ Dept. of Physics` the name
+`ADept. of Physics`. Perl's authblk has the single creator too (`\and`/`\And` only, authblk.sty.ltxml:52-55); plain
+`article` parted them. `authblk_sty::has_separated_names` now routes to `\lx@add@authors@list` when
+`has_author_block_separator` finds two non-empty pieces: `normalize_hspace_separators` (so `\hspace`, `\hfill`, a spacing
+run, `$\qquad$` count, and the space a name sets before its own note or `\footnotemark` does not, `own_marks_end`:
+`Zhengyi Han\hspace{0.1em}\protect\footnotemark[1]`, 2609.40220, in plain `article` too, a creator of the mark alone) then
+`split_tokens` at
+`author_group_splits` and `author_affil_splits`' line breaks, which skips notes, groups and math; a group or font command
+around the whole is transparent, as for the "and" word. No `\thanks` boundary is a separator (simulated on 64 papers: 6-7
+wrong, none fixed whole). What the kernel read then does with a line is article's, including its misreadings:
+`Dr.\quad Ann Able`, `Ann Able\quad Ph.D.` and `J.\hspace{1pt}Smith` part as two (0 real cases in about 54k papers; RED
+`authblk_title_suffix_one_name_red`, `authblk_small_hspace_in_name_red`). Witnesses: 2610.06709 (`\qquad`), 2610.18435 (`\hspace{2.5em}`), 2610.28573 (`\quad\quad`),
+2610.06737, 2610.23936, 2605.10201 (one creator → 8, its legends read); 2609.17614, 2303.15964, 1509.08403, 2610.10873
+(`\\`); 2609.29752, 2610.11655, 2610.13276, 2610.24224 (the mark no creator); unchanged 2610.39888, 2610.04525,
+2610.19494, 2610.17900, 2610.03185. Guards `perfect_kernel_batch108a`; updated
+`perfect_kernel_batch77n::{authblk_mark_before_a_line_stays_in_place, authblk_glued_symbols_in_one_author_block}`, which
+pinned the line inside the name and the merge.
+
+**Batch 108a round 2 (review rev108a): an Error goes only because the output became right.**
+- *A line under the names that reads as a name.* The kernel's read gives it to the names above as their affiliation
+  (Perl's first-line rule), so the new route silenced the merged Error with a false attribution: 2610.38214's "Stefano
+  Soatto" an affiliation of the other eleven. No word tells such a line from an organization: `\\ Waymo LLC` (2404.19531),
+  `\\ Physical Intelligence` (2505.23705), `\\ UC San Diego` (2601.06328), `\\ World Agents` (2610.37518), `\\ Welo Data`
+  (2610.27304) stand under rows of names exactly so, so `row_of_names` is unchanged and a lone last row is not read as
+  names by its place. The rule, authblk's only (`rows::lines_under_names_read_as_names`: every line under the names a name
+  by its words, styled as the names line, no address, link, note or mark, no mixed-case acronym): with an `\affil` next the
+  block's institution is printed there, so each line is more names (`authblk_sty::lines_of_names_before_affil`, the line
+  breaks written `\quad`); otherwise `has_separated_names` declines and the argument stays one name, base's output with
+  the `merged_creators` Error counted (`Ann Able\\ Bob Baker`, `Ann Able\quad Bob Baker\\ Cat Cole`, `Ann Able\\ Google
+  DeepMind`). A line with an institution word, an acronym (`Meta AI`), an address, or other markup still goes under the
+  names. Plain `article` keeps Perl's silent reading.
+- *The `\affil` run.* `run:N` counts the queued authors; the writer may part a queued author the kernel welded (`Ann
+  Able$^*$ \\ Bob Baker$^*$ \\ Cat Cole$^\dagger$`), which took the first name out of the run (2609.33075). The cap now ends
+  a run only between two `\author` calls (`Resolver::record_run`, `RCreator::source`), and `repart::plan`'s `same_run`
+  lets such a run reach the parted names.
+- *A glued mark.* `split_glued_symbol` reads symbol-first too (`\textsuperscript{*1}`, 2505.22662, whose `*1` was lost
+  silently on the comma route as well); `glued_marks` parts a list (`$^{1,2*}$`, `$^{*1,2}$`) and writes marks and symbols
+  in the order they print. An unanswered mark shows before a symbol written after it (`show_unanswered_marks`, by the
+  order of `_annotations`: 2610.07087's `1*` read `*1`). A glued mark that leads a line labels it by its number
+  (`glued_line_marks_as_marks`: `$^{*1}$Kyoto University`, 2606.23258; `$^{1*}$Univ X` read "* Univ X"). A composite mark
+  no entry answers and nothing shows is counted (`count_lost_marks`, `Warning:frontmatter:unanswered_mark_lost`: `$^{a-b}$`);
+  a label keyed by a macro's spelling is not, nothing saying what it prints.
+- *A piece with no name is no person* (as the marked path's address rule, rev97a S1, OD #944). In the unmarked read an
+  address-only piece or line (`rows::address_only_line`) is a line under the names before it, a row's addresses one list
+  (`Xinyu Wu \quad Jiansong Deng\\ \texttt{xinyu97@…}\quad \texttt{dengjs@…}`, 2609.02424; also plain `article`, `\{manning`
+  a creator on 2505.13898), and what follows it stays under the row unless a space-parted row of names goes on (`\\ Princeton
+  Language and Intelligence`, 2606.11499; `\\ {\it DeepMind Paris, France}`, 2201.12909). Before any name it waits for the first
+  name; with none in the call it is a nameless author's contact. A link printing a bare address over an address line names
+  the block (`{\LARGE \href{https://sherpa.ai/}{Sherpa.ai}}\\ research@sherpa.ai`, 2609.25082). A piece printing only an
+  icon is the name's before it (`rows::names_no_one`: `Ann Able\quad\orcidlink{…}`); a macro may print a name, so `\AuthorOne
+  \quad \AuthorTwo` stays two.
+- *An empty mark.* `\affil{\textsuperscript{}~UCLA \quad \textsuperscript{2}~Northwestern…}` (2505.14999): the first piece, no
+  mark, is the block's (`unmarked_before_carried_marks`; ruling R12), the marked rest goes by its marks: UCLA is not on
+  `Luo$^2$`. An author whose number no line answers keeps it shown.
+
+Guards `perfect_kernel_batch108a` (10 more). Updated: `perfect_kernel_batch86d::ieee_membership_kept_after_closing_stop` and
+`perfect_kernel_batch104c::a_control_return_parts_marked_entries`, which pinned a printed star lost or welded to its list.
+
 **(i) `\hspace` separates co-authors; footnote-symbol marks render instead of vanishing.**
 Two composable normalizations applied to the `\author` argument BEFORE branch selection
 (`normalize_hspace_separators` + `rewrite_symbol_superscripts`), addressing

@@ -1,0 +1,15 @@
+% mechanism: a thin `\hspace` inside a name parts nothing
+% witness: rev108a S1 (synthetic; 0 real cases in about 54k papers)
+% oracle:  pdflatex: 0 errors; J. Smith
+% engines: rust 108a: creators "J." and "Smith"; int139a: one creator
+% expect:  0 errors; one creator
+% status:  RED (108a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{J.\hspace{1pt}Smith}
+\maketitle
+Text.
+\end{document}

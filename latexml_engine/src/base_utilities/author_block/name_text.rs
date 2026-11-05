@@ -927,7 +927,7 @@ pub(in crate::base_utilities) fn marked_after_name(name: &Tokens) -> bool {
 
 /// The markup an author line opens with, before its first letter: its control sequences and the groups they open
 /// (`{\small\em Bartol …}` → `{`, `\small`, `\em`; `T. Stelzer` → none). Lines styled alike share it.
-fn leading_markup(line: &Tokens) -> Vec<Token> {
+pub(in crate::base_utilities) fn leading_markup(line: &Tokens) -> Vec<Token> {
   line
     .unlist_ref()
     .iter()
@@ -1587,7 +1587,7 @@ fn personname_text(node: &Node, marks_part: bool) -> String {
 /// Whether `line` holds a word of two or more capitals and no small letter or dot (`IST`, `NVIDIA`; not the initials
 /// `J.-F.`) beside a word that has small letters: an acronym in a mixed-case line, an institution's (`IST Austria`);
 /// not a line set all in capitals (`KHIEM HONG PHAN`).
-fn holds_mixed_case_acronym(line: &str) -> bool {
+pub(in crate::base_utilities) fn holds_mixed_case_acronym(line: &str) -> bool {
   let words: Vec<&str> = line
     .split_whitespace()
     .map(|w| w.trim_matches(|c: char| !c.is_alphabetic()))

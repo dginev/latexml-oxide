@@ -1,0 +1,15 @@
+% mechanism: a piece of addresses alone is a contact, the row's list when it goes on with a line of them (`address_only_line`)
+% witness: 2609.02424
+% oracle:  pdflatex: 0 errors; two names, two addresses under them
+% engines: rust 108a r1: a third creator named by the second address; int139a: one creator holding all, no Error
+% expect:  0 errors; two creators, each its address
+% status:  RED (108a r1) -> GREEN (108a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able\quad Bob Baker\\ \small \texttt{ann@x.org}\quad \texttt{bob@y.org}}
+\maketitle
+Text.
+\end{document}

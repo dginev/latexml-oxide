@@ -101,7 +101,15 @@ impl Resolver {
           if !run.is_empty() && self.ends_a_run(c, role) {
             break;
           }
-          if cap.is_some_and(|cap| run.len() >= cap) {
+          // (the cap, the authors queued when the contact was called, ends the run only between two `\author` calls: a
+          // line of names the reading parts where the kernel's read welded them is one queued author, every name of the
+          // call the run's — `Ann Able$^*$ \\ Bob Baker$^*$ \\ Cat Cole$^\dagger$`, two queued over three names, whose first
+          // lost the `\affil`, 2609.33075)
+          if cap.is_some_and(|cap| run.len() >= cap)
+            && run.last().is_none_or(|last: &usize| {
+              self.out.creators[*last].source != self.out.creators[c].source
+            })
+          {
             break;
           }
           if reached_unanswered && answered(c) {
