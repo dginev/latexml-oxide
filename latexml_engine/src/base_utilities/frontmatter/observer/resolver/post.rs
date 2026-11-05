@@ -582,7 +582,7 @@ impl Resolver {
           && !live
             .iter()
             .position(|&at| at == c)
-            .is_some_and(|holder| name_spells(&based[holder], address))
+            .is_some_and(|holder| own_call_keeps(&based[holder], address))
         {
           moves.push((c, i, live[*owner]));
         }

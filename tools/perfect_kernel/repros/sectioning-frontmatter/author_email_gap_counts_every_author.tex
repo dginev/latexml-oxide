@@ -4,10 +4,12 @@
 % oracle:  pdflatex 0 errors: the lines as written, under the affiliations
 % engines: rust 77p r5 = 0 errors; nnwang@ Dongsheng Li's (only he was left between Zhipeng Xu and De Cheng once the
 %          other line spelled Zilong Wang and Xinyang Jiang), then dongsli@ Nannan Wang's; int34a one contact each line
-% expect:  0 errors, 0 warnings; xu_zhipeng@, dcheng@, wangzilong@, xinyangjiang@ on their owners; since 107f
-%          nnwang@ Nannan Wang's by its spelling ("nwang" ending the word), then dongsli@ Dongsheng Li's by
-%          elimination (one address and one name left); the gap rule's case is author_email_gap_counts_every_author_unspelled
-% status:  RED (77p r5) -> GREEN (77p r6); re-pinned 107f
+% expect:  0 errors, 0 warnings; xu_zhipeng@, dcheng@, wangzilong@, xinyangjiang@ on their owners; nnwang@ and
+%          dongsli@ the block's: Nannan Wang's joined "nwang" ends the word without opening it, a weak spelling that
+%          never breaks the tie "wang" makes with Zilong Wang (107f r2), and the gap then holds three authors (107f r1
+%          had given them to Nannan Wang and Dongsheng Li); the gap rule's own case is
+%          author_email_gap_counts_every_author_unspelled
+% status:  RED (77p r5) -> GREEN (77p r6); re-pinned 107f r1, back to the block in 107f r2
 \documentclass{article}
 \title{T}
 \author{Zhipeng Xu\textsuperscript{\rm 1}, Zilong Wang\textsuperscript{\rm 2}, Xinyang Jiang\textsuperscript{\rm 2},

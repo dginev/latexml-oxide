@@ -22,8 +22,10 @@ struct ListedAddress {
 /// address as an e-mail to its owner, by the placement order: the author whose name is printed beside it, the strongest
 /// evidence; else the author it spells; else, among the contact's carriers, the consistent order or the elimination
 /// (`email_owners::list_owners`); else the block's own creator (OD #159), once. The names printed beside the addresses
-/// are no e-mail's text. The contact's other words stay its carriers' (`Corresponding authors:`); a contact left with
-/// none is dropped. An e-mail keeps the call's name (`Corresponding author`, which `write_role_notes` then makes each
+/// are no e-mail's text. The contact's other nodes stay its carriers', as printed — only the address spans and the
+/// separators beside them are cut out of it, in place ([`cut_ranges`], [`cut_printed`]): its words (`Corresponding
+/// authors:`; an "and"/"or" outside the list), links, breaks and math (2311.15476's DOI link, review rev107f B2); a
+/// contact left with no word is dropped. An e-mail keeps the call's name (`Corresponding author`, which `write_role_notes` then makes each
 /// owner's correspondence note); a note's addresses take the e-mail's own. Read once every route has placed the
 /// contacts, before the correspondence labels (census138 ADDR-b, brief 107f). A contact one creator holds is parted only
 /// where every address has an author's name beside it; an e-mail whose list prints other words, or a list none of whose
@@ -103,7 +105,8 @@ pub(super) fn distribute_address_lists(document: &mut Document) -> Result<()> {
         }
       })
       .collect();
-    let rest = remainder(&text, &spans, !is_email);
+    let cuts = cut_ranges(&text, &spans, !is_email);
+    let rest = without_ranges(&text, &cuts);
     if is_email && rest.chars().any(char::is_alphanumeric) {
       continue;
     }
@@ -191,13 +194,11 @@ pub(super) fn distribute_address_lists(document: &mut Document) -> Result<()> {
         },
       }
     }
-    // (the list's other words stay its carriers'; nothing left, the contact goes)
-    for (_, mut list) in holders {
+    // (the list's other nodes stay its carriers', as printed — its words, links, breaks and math (2311.15476's DOI
+    // link, review rev107f B2); nothing left, the contact goes)
+    for (_, list) in holders {
       if rest.chars().any(char::is_alphanumeric) {
-        for mut child in list.get_child_nodes() {
-          child.unlink_node();
-        }
-        list.append_text(&rest)?;
+        cut_printed(document, &list, &cuts);
       } else {
         document.remove_node(list);
       }
@@ -312,62 +313,173 @@ fn listed_addresses(text: &str) -> Vec<ListedAddress> {
   out
 }
 
-/// The words of `text` its listed addresses leave ([`listed_addresses`]): their `spans` cut, the separators and the
-/// "and" between them and the brackets they leave empty dropped, a line's end a space (`Corresponding Authors (a; b)`
-/// leaves "Corresponding Authors", `Corresponding authors:\n a; b` "Corresponding authors:"); `strip_label`, an e-mail
-/// label left with nothing after it dropped too.
-fn remainder(text: &str, spans: &[std::ops::Range<usize>], strip_label: bool) -> String {
+/// The bytes of a contact's printed `text` ([`printed_text`]) its listed addresses take ([`listed_addresses`]), which
+/// [`cut_printed`] cuts out of the contact: their `spans`; between two of them, the separators — spaces, line breaks,
+/// `;` `,` `&` and an "and" or "or", only there; and around each run of them, the space before it, the brackets it
+/// leaves empty (`Corresponding Authors (a; b)` leaves "Corresponding Authors"), a `;` or `,` after it, a stop after it
+/// where a label or nothing opens it (`Corresponding authors:\\ a; b.` leaves "Corresponding authors:"). `strip_label`:
+/// an e-mail label opening the run after other words too, with that stop (`… addressed. Email: a or b.` leaves
+/// `… addressed.`, 2307.11827; a correspondent's own `e-mail: a, b, c` keeps its one word, 2409.06261; an e-mail's own
+/// label stays, so its list stays whole as printed: `Emails: \{ann,bob\}@a.org`, perfect_kernel_batch92c).
+fn cut_ranges(
+  text: &str,
+  spans: &[std::ops::Range<usize>],
+  strip_label: bool,
+) -> Vec<std::ops::Range<usize>> {
+  let mut spans = spans.to_vec();
+  spans.sort_by_key(|span| (span.start, span.end));
+  spans.dedup();
+  // (the runs of addresses only separators part)
+  let separators = |gap: &str| {
+    gap
+      .split(|c: char| c.is_whitespace() || ";,&".contains(c))
+      .all(|word| word.is_empty() || word == "and" || word == "or")
+  };
+  let mut runs: Vec<(usize, usize)> = Vec::new();
+  for span in spans {
+    match runs.last_mut() {
+      Some((_, end)) if span.start < *end => {},
+      Some((_, end)) if separators(&text[*end..span.start]) => *end = span.end,
+      _ => runs.push((span.start, span.end)),
+    }
+  }
+  let space_after = |at: usize| at + (text[at..].len() - text[at..].trim_start().len());
+  let space_before = |at: usize| text[..at].trim_end().len();
+  let mut cuts: Vec<std::ops::Range<usize>> = Vec::new();
+  for (start, end) in runs {
+    let (mut lo, mut hi) = (space_before(start), end);
+    let next = space_after(end);
+    let opener = text[..lo].trim_end();
+    if opener.ends_with('(') && text[next..].starts_with(')') {
+      lo = space_before(lo - 1);
+      hi = next + 1;
+    } else if text[next..].starts_with([';', ','])
+      || (text[next..].starts_with('.')
+        && (opener.ends_with(':') || opener.trim_matches([';', ',', ':']).is_empty()))
+    {
+      hi = next + 1;
+    }
+    if strip_label {
+      let head = text[..lo].trim_end();
+      // (past the last space, whatever its width: a no-break space is two bytes)
+      let word = head
+        .char_indices()
+        .rev()
+        .find(|(_, c)| c.is_whitespace())
+        .map_or(0, |(at, c)| at + c.len_utf8());
+      let label = &head[word..];
+      if label.ends_with(':')
+        && is_email_label(label.trim_end_matches(':'))
+        && text[..word].chars().any(char::is_alphanumeric)
+      {
+        lo = space_before(word);
+      }
+    }
+    // (a run opening the text, a stray `:` or `;` before it aside, takes the space after it)
+    if text[..lo]
+      .trim_matches(|c: char| c.is_whitespace() || ";,:".contains(c))
+      .is_empty()
+    {
+      lo = 0;
+      hi = space_after(hi);
+    }
+    cuts.push(lo..hi);
+  }
+  cuts
+}
+
+/// `text` without the bytes of `cuts` ([`cut_ranges`]).
+fn without_ranges(text: &str, cuts: &[std::ops::Range<usize>]) -> String {
   let mut kept = String::new();
   let mut at = 0;
-  let mut spans = spans.to_vec();
-  spans.dedup();
-  for span in spans {
-    if span.start >= at {
-      kept.push_str(&text[at..span.start]);
-      kept.push(' ');
-      at = span.end;
-    }
+  for cut in cuts {
+    kept.push_str(&text[at..cut.start.max(at)]);
+    at = at.max(cut.end);
   }
   kept.push_str(&text[at.min(text.len())..]);
-  let words: Vec<&str> = kept
-    .split_whitespace()
-    .filter(|word| !matches!(*word, ";" | "," | "and" | "&" | "&amp;" | "or"))
-    .collect();
-  let mut rest = words.join(" ");
-  loop {
-    let before = rest.clone();
-    for empty in ["()", "( )", "[]", "[ ]"] {
-      rest = rest.replace(empty, "");
-    }
-    rest = rest
-      .trim()
-      .trim_end_matches([';', ',', '&'])
-      .trim_start_matches([';', ',', ':'])
-      .trim()
-      .to_string();
-    // (a note's e-mail label its addresses left, and a stop after it: `… addressed. Email: or .` leaves `… addressed.`,
-    // 2307.11827 — `strip_label`; an e-mail's own label stays, so its list stays whole as printed: `Emails:
-    // \{ann,bob\}@a.org`, perfect_kernel_batch92c)
-    if strip_label
-      && let Some(head) = rest.strip_suffix('.').map(str::trim_end)
-      && head.ends_with(':')
-    {
-      rest = head.to_string();
-    }
-    // (only after other words: a correspondent's `e-mail: a, b, c` keeps its label, the annotation's one word —
-    // 2409.06261)
-    let (head, label) = rest.rsplit_once(' ').unwrap_or(("", rest.as_str()));
-    if strip_label
-      && head.chars().any(char::is_alphanumeric)
-      && label.ends_with(':')
-      && is_email_label(label.trim_end_matches(':'))
-    {
-      let head = head.trim_end().to_string();
-      rest = head;
-    }
-    if rest == before {
-      break;
+  kept
+}
+
+/// Cuts the bytes `cuts` of a contact's printed text ([`printed_text`], [`cut_ranges`]) out of the contact, in place:
+/// each text node keeps its other characters, a line break or an element all of whose printed text is cut goes, and
+/// every other node stays as it is — the note's words, links, breaks and math (review rev107f B2: 2311.15476's
+/// `Corresponding authors: … DOI: \href{…}`).
+fn cut_printed(document: &mut Document, contact: &Node, cuts: &[std::ops::Range<usize>]) {
+  // (a snapshot of the printed pieces, each with its bytes of the printed text: the text nodes, the breaks, the
+  // elements around them)
+  enum Piece {
+    Text(Node, std::ops::Range<usize>),
+    Element(Node, std::ops::Range<usize>),
+  }
+  fn walk(node: &Node, at: &mut usize, pieces: &mut Vec<Piece>) {
+    for child in node.get_child_nodes() {
+      if child.get_type() == Some(NodeType::ElementNode) {
+        let start = *at;
+        if child.get_name() == "break" {
+          *at += 1;
+        } else {
+          walk(&child, at, pieces);
+        }
+        pieces.push(Piece::Element(child, start..*at));
+      } else {
+        let len = child.get_content().len();
+        if matches!(
+          child.get_type(),
+          Some(NodeType::TextNode | NodeType::CDataSectionNode)
+        ) {
+          pieces.push(Piece::Text(child, *at..*at + len));
+        }
+        *at += len;
+      }
     }
   }
-  rest.split_whitespace().collect::<Vec<_>>().join(" ")
+  let mut pieces: Vec<Piece> = Vec::new();
+  walk(contact, &mut 0, &mut pieces);
+  let covered = |range: &std::ops::Range<usize>| {
+    !range.is_empty()
+      && cuts
+        .iter()
+        .any(|cut| cut.start <= range.start && range.end <= cut.end)
+  };
+  // (the outermost elements wholly cut go whole; the text inside them with them)
+  let mut gone: Vec<std::ops::Range<usize>> = Vec::new();
+  let inside = |gone: &[std::ops::Range<usize>], range: &std::ops::Range<usize>| {
+    gone
+      .iter()
+      .any(|g| g.start <= range.start && range.end <= g.end && !range.is_empty())
+  };
+  // (outermost first: an element's piece follows its children's, so walk the snapshot from the end)
+  for piece in pieces.iter().rev() {
+    if let Piece::Element(node, range) = piece
+      && covered(range)
+      && !inside(&gone, range)
+    {
+      gone.push(range.clone());
+      document.remove_node(node.clone());
+    }
+  }
+  for piece in &pieces {
+    let Piece::Text(node, range) = piece else {
+      continue;
+    };
+    if inside(&gone, range) {
+      continue;
+    }
+    let content = node.get_content();
+    let local: Vec<std::ops::Range<usize>> = cuts
+      .iter()
+      .filter(|cut| cut.start < range.end && range.start < cut.end)
+      .map(|cut| cut.start.max(range.start) - range.start..cut.end.min(range.end) - range.start)
+      .collect();
+    if local.is_empty() {
+      continue;
+    }
+    let kept = without_ranges(&content, &local);
+    let mut node = node.clone();
+    if kept.is_empty() {
+      node.unlink_node();
+    } else {
+      let _ = node.set_content(&kept);
+    }
+  }
 }

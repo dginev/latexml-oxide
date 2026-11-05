@@ -31433,7 +31433,7 @@ FIDELITY_CHARTER §4's "the group's only author" comes before the block, an unan
 `{\small * Corresponding author, E-mail: mathematic@126.com}` under Jian Shi alone had gone to a nameless creator,
 B1) — where no nameless author creator stands beside the one named author: one holding names the reader did not part is
 more authors (1102.4967's `Rizwan Ghaffar\IEEEauthorrefmark{1}, Dimitris Toumpakaris\IEEEauthorrefmark{2} and
-\IEEEauthorblockN{Jungwon Lee…}`, whose addresses stay there; the r2 A/B). **Ruled and fixed (rev107c2 finding 2; user ruling 2026-11-05, "Sole author"; 107f):** in a one-author group an orphan line's contacts and notes are that sole author's — §4's "the group's only author" beats §2's orphan rule there, the orphan mark not kept as a label — and the owner never depends on other lines: the skip now keys on a nameless creator holding names the reader did not part (`nameless_creator_holds_names`: a contact of its, e-mails, links and notes aside, whose words read as a name, `name_count`; 1102.4967's stays), not on a #159 block creator or an orphan line's; an orphan line labelled in the author's own mark series (`$^{b}$ Univ B, City` beside her `$^{a}$`) still goes to the block creator. Guards `perfect_kernel_batch107f::a_sole_authors_orphan_line_is_hers_beside_a_block_creator` (repros `addr_line_sole_author_orphan_star`, `_with_block`). B1 itself is fixed by (2) alone. (2) A mark glued to a name as text (`Jian Shi$^{a}$*`, a `\textasteriskcentered`, a ✉ — `is_mark_glyph` reads the
+\IEEEauthorblockN{Jungwon Lee…}`, whose addresses stay there; the r2 A/B). **Ruled and fixed (rev107c2 finding 2; user ruling 2026-11-05, "Sole author"; 107f):** in a one-author group an orphan line's contacts and notes are that sole author's — §4's "the group's only author" beats §2's orphan rule there, the orphan mark not kept as a label — and the owner never depends on other lines: the skip now keys on a nameless creator holding names the reader did not part (`nameless_creator_holds_names`: a contact of its, e-mails, links and notes aside, whose words read as a name, `name_count`; 1102.4967's stays), not on a #159 block creator or an orphan line's; an orphan line labelled in the author's own mark series (`$^{b}$ Univ B, City` beside her `$^{a}$`) still goes to the block creator — an e-mail line so labelled too (`$^{b}$ E-mail: lab@b.org`, review rev107f finding 4): the only-author step takes no address whose line mark, or the mark its block creator holds it by (`_bymark`), no name answers and shares the series — a number, a letter or a symbol — of a mark the author shows (`mark_series`); a `*` beside her `$^{a}$` is hers. Guards `perfect_kernel_batch107f::{a_sole_authors_orphan_line_is_hers_beside_a_block_creator, a_sole_authors_own_series_orphan_line_is_the_blocks}` (repros `addr_line_sole_author_orphan_star`, `_with_block`, `addr_line_sole_author_unanswered_mark_email_is_blocks`). B1 itself is fixed by (2) alone. (2) A mark glued to a name as text (`Jian Shi$^{a}$*`, a `\textasteriskcentered`, a ✉ — `is_mark_glyph` reads the
 envelope too) answers a line that opens with it (`glued_name_marks`; no request of its own, so a line no name answers
 is read as before). (3) **"Corresponding author" is an annotation on the author** (charter §4; the main session's Q6
 reading, review N4): an e-mail contact whose label opens with a correspondence role phrase (`correspondence_phrase`:
@@ -31825,20 +31825,39 @@ and `base_utilities::author_split_tests::a_name_spells_by_its_base_letters_and_i
 GREEN; `perfect_kernel_batch95c::an_own_email_spelling_a_coauthor_only_by_base_letters_stays` (#420, base letters)
 green unchanged.
 
-**Amended (107f; census138 EMAILSPELL, 3 papers).** (1) **A spelling is a whole name part**: a surname or given name
-spells only a run of the local part's words — inside one word, at its start or its end, or, four letters or more,
-between initials (two letters at most on either side: `kmfonsecar@` K. M. Fonseca Romero's, 1202.4210; `rjosem@` José
-M. Rodríguez-Nogales', 1809.06911; `vemarinc@` Víctor Marín's, 2311.18024 — the A/B's three papers the brief's literal
-"never inside a word" lost; a three-letter word so placed spells nothing: `yvanwy@` no "van", Wei Yin's under his
-`\at`, 2202.02002; `byang@` no "yan", 2602.00582), never strictly inside another word nor across a separator (`.` `_` `-`, a digit;
-`spelled_owners`' word bounds) — so REVTeX's `\author{Lay Kee Ang}\email{ricky\_ang@sutd.edu.sg}` is Ang's, not
-Shengyuan A. Yang's ("yang" across the `_`, 2604.02636), and `bangkok@`, `zhangwei@` spell no Ang; a truncated surname's
-first letters (six or more) must likewise end or start a word (`mkaufman@` Kaufmann's). A joined spelling ending a word
-whole spells it as one opening the local part does (`sechenqi@` Qi Chen's "chenqi", 2003.00397); an apostrophe inside a
-name's word joins it (`D'Amico` "damico", `damicos@`, 2606.17317). An escaped `\_` reads as the `_` it prints
-(`address_text`). Initials and 107a's length classes and prefix rule are unchanged. (2) **An own call keeps an address its own name spells**, however
-another name scores (#420's own call): both `respell_emails` move an e-mail only where its holder's name spells it not
-at all (`name_spells`), so amsart's `\author{Yang Zhang}…\email{yang91@…}` stays his beside Hengyun Yang (1707.09730).
+**Amended (107f; census138 EMAILSPELL, 3 papers; round 2 on review rev107f).** (1) **One boundary predicate**
+(`LocalPart::standing`, `LocalPart::joined_standing`; brief 107f r2, replacing r1's A/B-tuned thresholds): a name's
+key counts where it stands in the local part — its letters, with words parted by `.` `_` `-`, a digit, any other
+character, its start and its end. *At full strength*: a whole word, a word's prefix or suffix (`ricky_ang@` Lay Kee
+Ang's, not Shengyuan A. Yang's "yang" across the `_`, 2604.02636; `kee.ang@`, `ang2@`), or strictly inside a word
+between the name's own initials, at most two characters on each side, counted in characters (`rjosem@` José M.
+Rodríguez-Nogales', 1809.06911; `kmfonsecar@` K. M. Fonseca Romero's, 1202.4210). *Weakly*: a key of five letters or
+more between any letters, two at most on each side (`vemarinc@` Víctor Marín's, 2311.18024), and a joined spelling
+ending a word it does not open (`sechenqi@` Qi Chen's "chenqi", 2003.00397; a joined spelling opening a word counts at
+full strength, its separators read through: `j.huang@`). *Not at all*: a shorter key between other letters (`yvanwy@`
+no "van", 2202.02002; `byang@` no "yan", 2602.00582; `mycheng@` no Enhong Chen's "chen", 2603.07528; `bangkok@`,
+`zhangwei@` no "ang"), a key across a separator, a joined spelling inside a word or of fewer than five letters ending
+one (`pyli@` no Yanan Li's "yli", 2105.07637). A truncated surname's first six letters or more stand by the same
+predicate (`mkaufman@` Kaufmann's). **A weak spelling never decides** (`spelled_owners`): it owns an address only no
+other name spells; where several do, the names are ranked with and without their weak spellings, and the two rankings
+agreeing give the owner, else every name either ranks first ties — and the placement order goes on (the list's order,
+the elimination, the block). Nothing is guessed (FIDELITY_CHARTER §4): 2510.24320's `\{tgui,qz,xjhuang\}@fudan.edu.cn`
+no longer gives `xjhuang@` to Jixuan Huang by "jhuang" over Xuanjing Huang's "huang" (review rev107f B1: it stays the
+block's, as on int139a), and `xywang@` beside Yi Wang and Xiaoyu Wang goes to Xiaoyu Wang by the elimination once
+`yiwang@` is Yi Wang's. The threshold, five letters, is chosen once on the round-2 A/B over `pop107f.tsv` (4,583 papers): at
+four letters no paper changes, at six 2311.18024's `vemarinc@` (Víctor Marín's "marin") is lost; a four-letter key
+between other letters is a word's letters ("chen" in `mycheng@`, 2603.07528). The same predicate costs three papers r1 had placed right, each the block's again as on int139a: 2602.23777's
+`nnwang@` (Nannan Wang's "nwang", weak, ties with Zilong Wang's "wang"; then `dongsli@`), 2310.05782's `csjwang@`
+(Jiashuo Wang), 2501.11284's `yyzhang@` (Yingying Zhang) — a tie only an elimination among the tied names could part. An apostrophe
+inside a name's word joins it (`D'Amico` "damico", `damicos@`, 2606.17317); an escaped `\_` reads as the `_` it prints
+(`address_text`). Initials and 107a's length classes and prefix rule are unchanged. (2) **An own call keeps an address
+only a key of its holder's name is a whole word of, or opens** (`own_call_keeps`, read by both `respell_emails`; #420's
+own call; review rev107f finding 3): a surname, the given name or a joined spelling opening a word of the local part, a
+short surname or the initials a whole word — so amsart's `\author{Yang Zhang}…\email{yang91@…}` stays his beside
+Hengyun Yang (1707.09730) and `ricky_ang@` Lay Kee Ang's (2604.02636), while `sanderson@` on Mark Anderson's call (the
+tail of a longer spelling) moves to Lee Sanderson and `anderson@` on Peter Andersen's (a truncation) to Maria Anderson.
+It costs 2511.18493, where `minhnnhat@` printed under Nhat Ho ("nhat" ends it) goes to Anh-Minh Phan ("minh" opens it),
+as on int139a.
 (3) A call made after `\maketitle` placed the frontmatter (`CONTACT_LATE`) restating a contact the creator holds from an
 earlier call is no contact of the upfront grid `distribute_upfront_contacts` reads: llncs's restated unlabelled second
 `\email` beside the first on the last author had read as a grid of one address per author, handing the first to Lv
@@ -31850,7 +31869,12 @@ blockA nested in another for the list's last line, digested and placed first —
 a_restated_supplement_email_is_no_upfront_pile, a_split_list_whose_tail_was_placed_first_is_joined}` (repros
 sectioning-frontmatter/`email_spell_surname_inside_another_word`, `email_spell_own_call_name_also_matches`,
 `llncs_supplement_restated_email_not_copied`, `email_list_ieee_nested_blocka_tail_first`) and unit
-`author_split_tests::a_name_spells_a_run_of_the_local_parts_words`, RED (int139a3) → GREEN. Left: a local part with no
+`author_split_tests::a_name_spells_a_run_of_the_local_parts_words`, RED (int139a3) → GREEN; round 2
+`perfect_kernel_batch107f::{a_joined_suffix_spelling_never_breaks_a_surname_tie, an_own_call_keeps_only_an_address_its_name_opens}`
+(repros `email_spell_joined_suffix_breaks_surname_tie`, `email_own_call_suffix_spelling_moves`,
+`email_own_call_truncated_surname_moves`) and units `author_split_tests::{a_weak_spelling_never_decides_between_names,
+an_own_call_keeps_only_a_word_its_name_opens}`, RED (107f r1) → GREEN; `perfect_kernel_batch77p::email_gap_counts_every_author`
+re-pinned back to the block for `nnwang@`, `dongsli@`. Left: a local part with no
 separator still spells a surname it ends with (`rickyang@` is Yang's as much as Ang's: the longer wins); 2009.10916's
 own two addresses under Bo Li's institute stay where today's route puts them (both his; without the supplement the
 observer's writer gives both to the block, "several unspelled under one name").
@@ -31886,8 +31910,18 @@ addresses take the e-mail's own. Parted only where it is a list for several peop
 or one whose every address has an author's name beside it; an e-mail whose list prints other words (`\{ann,bob\}@a.org
 (corresponding)`, perfect_kernel_batch92c), a list none of whose addresses finds an author (PoS's `\speaker`
 e-mail line, whose names are no creators yet at the flush, 1711.04132), or a document with a name not yet written is
-left as printed. The remainder drops the separators, an "and"/"or" between addresses, brackets left empty and an
-e-mail label left with nothing (`… addressed. Email: a @ x or b @ y.` leaves `… addressed.`, 2307.11827).
+left as printed. The list is cut out of the contact in place (`cut_ranges`, `cut_printed`; round 2, review rev107f B2):
+the address spans (with a name printed beside one, where it is an author's); between two addresses the separators —
+spaces, line breaks, `;` `,` `&`, an "and" or "or", dropped only there; around a run of them the space before it,
+brackets it leaves empty, a `;` or `,` after it, a stop after it where a label or nothing opens it; in a note, an
+e-mail label opening the run after other words (`… addressed. Email: a @ x or b @ y.` leaves `… addressed.`,
+2307.11827). Each text node keeps its other characters, an element all of whose text is cut goes, and every other node
+stays: 2311.15476's `\cortext` keeps "Corresponding authors:", its break and its DOI link (doi.org links 16, as on
+int139a; r1 had rebuilt the note as text, 14), and a note's math and its words' "and"/"or" stay. Guard
+`perfect_kernel_batch107f::a_shared_note_keeps_its_other_nodes_as_printed` (repro
+`email_list_shared_note_keeps_prose_and_markup`), RED (107f r1) → GREEN. Round-2 A/B over `pop107f.tsv` vs int139a4
+(int139a + 107e): 39 changed, all frontmatter (13 witnesses, 26 selected, 0 controls), E 2,869 = 2,869, F 7 = 7,
+Warnings equal, `fm_checks.py` 1-7 clean; the 38 papers r1 also changed hold the creators r1 gave them.
 Witnesses: 2009.14655 (Xia and Liang each their address and the "Corresponding author" note), 2507.07920, 2302.03296
 (`zjsong@` Zhijian Song's, `Chenxizhang@` Chenxi Zhang's), 2508.07950 (`chunfeng.lian@` Lian's, `cong6406@` Cong's;
 `wzy218@`, `jhma@` — the list in reverse author order, which the order step does not read — the block creator's).

@@ -1108,8 +1108,9 @@ fn email_elimination_waits_on_the_other_lines() {
 /// (2602.23777, the r5 re-review's probe q4): an unspelled `zq9@` between `xu_zhipeng@` and `dcheng@` has three authors
 /// between their owners, so it is not Dongsheng Li's, nor `dongsli@` then anyone's by elimination; both are the
 /// block's, on the shared creator (user ruling R10 2026-10-20; 77p r9 put them on the last name). The witness's own
-/// `nnwang@` spells Nannan Wang since 107f (a joined spelling, "nwang", ending the word whole: brief 107f), and then
-/// `dongsli@` is Dongsheng Li's, the one address and the one name left — re-pinned 107f.
+/// `nnwang@` is the same case: Nannan Wang's joined "nwang" ends the word without opening it, a weak spelling that
+/// never breaks the tie "wang" makes with Zilong Wang (brief 107f r2, the one boundary predicate; review rev107f B1),
+/// so it and `dongsli@` are the block's (107f r1 had given them to Nannan Wang and Dongsheng Li).
 #[test]
 fn email_gap_counts_every_author() {
   let xml = convert_repro!("author_email_gap_counts_every_author.tex");
@@ -1138,11 +1139,7 @@ fn email_gap_counts_every_author() {
       "Xinyang Jiang",
       &format!("{msra} {}", email("xinyangjiang@microsoft.com"))
     ),
-    creator(
-      false,
-      "Dongsheng Li",
-      &format!("{msra} {}", email("dongsli@microsoft.com"))
-    ),
+    creator(false, "Dongsheng Li", &msra),
     creator(
       false,
       "De Cheng",
@@ -1152,11 +1149,12 @@ fn email_gap_counts_every_author() {
         email("dcheng@xidian.edu.cn")
       )
     ),
-    creator(
-      false,
-      "Nannan Wang",
-      &format!("{xidian} {}", email("nnwang@xidian.edu.cn"))
-    ),
+    creator(false, "Nannan Wang", &xidian),
+    shared(&format!(
+      "{} {}",
+      email("nnwang@xidian.edu.cn"),
+      email("dongsli@microsoft.com")
+    )),
   ]);
   let xml = convert_repro!("author_email_gap_counts_every_author_unspelled.tex");
   assert_no_merged_names(&xml);

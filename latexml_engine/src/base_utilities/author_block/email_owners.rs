@@ -587,6 +587,110 @@ pub(in crate::base_utilities) fn address_owners(
   spelled_owners(name_keys, &address_text(address))
 }
 
+/// The fewest letters a key spells an address with strictly inside a word of its local part, between letters that are
+/// none of the name's initials, or as a joined spelling ending a word it does not open ([`LocalPart::standing`],
+/// [`LocalPart::joined_standing`]) — a weak spelling (brief 107f r2: one threshold, chosen once on the pop107f A/B).
+const WEAK_KEY_LETTERS: usize = 5;
+
+/// How a key's letters stand among a local part's words ([`LocalPart::standing`]): at full strength, or weakly — a
+/// spelling that owns an address only no other name spells, and never decides between names that do ([`spelled_owners`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum Standing {
+  Weak,
+  Full,
+}
+
+/// An address's local part as [`spelled_owners`] reads it: its letters, lowercased, and where its words meet (`bounds`,
+/// byte offsets into `letters`): its separators — `.` `_` `-`, a digit, any other character —, its start and its end.
+struct LocalPart {
+  letters: String,
+  bounds:  Vec<usize>,
+}
+
+impl LocalPart {
+  fn of(address: &str) -> Option<LocalPart> {
+    let raw = address.split('@').next()?;
+    let mut letters = String::new();
+    let mut bounds: Vec<usize> = vec![0];
+    for c in raw.chars() {
+      if c.is_alphabetic() {
+        letters.extend(c.to_lowercase());
+      } else if bounds.last() != Some(&letters.len()) {
+        bounds.push(letters.len());
+      }
+    }
+    if bounds.last() != Some(&letters.len()) {
+      bounds.push(letters.len());
+    }
+    Some(LocalPart { letters, bounds })
+  }
+
+  /// Every place `key` stands in the letters, overlapping ones too.
+  fn places(&self, key: &str) -> Vec<usize> {
+    if key.is_empty() {
+      return Vec::new();
+    }
+    (0..self.letters.len())
+      .filter(|&at| self.letters.is_char_boundary(at) && self.letters[at..].starts_with(key))
+      .collect()
+  }
+
+  /// The word holding the letters at `start..end`, or `None` when they run across a separator.
+  fn word_around(&self, start: usize, end: usize) -> Option<(usize, usize)> {
+    if self.bounds.iter().any(|&b| start < b && b < end) {
+      return None;
+    }
+    let before = self.bounds.iter().copied().filter(|&b| b <= start).max()?;
+    let after = self.bounds.iter().copied().filter(|&b| b >= end).min()?;
+    Some((before, after))
+  }
+
+  /// THE boundary predicate (brief 107f r2, on review rev107f's Q1): how a name's key at `start..end` stands. At full
+  /// strength when it is a whole word, or a word's prefix or suffix (`ricky_ang@` Lay Kee Ang's "ang", `yang91@`,
+  /// `kee.ang@`), or strictly inside a word between the name's own initials (`own`), at most two letters on each side
+  /// (`rjosem@` José M. Rodríguez-Nogales', 1809.06911; `kmfonsecar@` K. M. Fonseca Romero's, 1202.4210); weakly when a
+  /// key of [`WEAK_KEY_LETTERS`] letters or more stands there between any letters, two at most on each side (`vemarinc@`
+  /// Víctor Marín's, 2311.18024); else not at all — a shorter key between other letters is a word's letters (`yvanwy@`
+  /// no "van", 2202.02002; `byang@` no "yan", 2602.00582; `mycheng@` no Enhong Chen's "chen", 2603.07528; `bangkok@` no
+  /// "ang"), and no key runs across a separator (`ricky_ang@` is no Shengyuan A. Yang's "yang", 2604.02636). The sides
+  /// are counted in characters (review rev107f finding 5).
+  fn standing(&self, start: usize, end: usize, own: &str) -> Option<Standing> {
+    let (before, after) = self.word_around(start, end)?;
+    if start == before || end == after {
+      return Some(Standing::Full);
+    }
+    let (lead, trail) = (&self.letters[before..start], &self.letters[end..after]);
+    if lead.chars().count() > 2 || trail.chars().count() > 2 {
+      return None;
+    }
+    let initials = |letters: &str| letters.chars().all(|c| own.contains(c));
+    if initials(lead) && initials(trail) {
+      Some(Standing::Full)
+    } else if self.letters[start..end].chars().count() >= WEAK_KEY_LETTERS {
+      Some(Standing::Weak)
+    } else {
+      None
+    }
+  }
+
+  /// How a joined spelling (`NameKeys::joined`) at `start..end` stands: at full strength opening a word, its separators
+  /// read through (`jhuang@`, `j.huang@`, `nlp.wangyi@`); weakly ending a word it does not open, at
+  /// [`WEAK_KEY_LETTERS`] letters or more (`sechenqi@` Qi Chen's "chenqi", 2003.00397; `xjhuang@`'s "jhuang", which is
+  /// no tie-break between Jixuan Huang and Xuanjing Huang, 2510.24320 — review rev107f B1; `pyli@` no Yanan Li's "yli",
+  /// 2105.07637); else not at all.
+  fn joined_standing(&self, start: usize, end: usize) -> Option<Standing> {
+    if self.bounds.contains(&start) {
+      Some(Standing::Full)
+    } else if self.bounds.contains(&end)
+      && self.letters[start..end].chars().count() >= WEAK_KEY_LETTERS
+    {
+      Some(Standing::Weak)
+    } else {
+      None
+    }
+  }
+}
+
 /// The names (indices into `name_keys`) the local part of `address` spells best: each name scores the letters of its
 /// keys the local part holds — a surname whole, or its first six letters (`leyaouan@…` for "A.~Le~Yaouanc"); the given
 /// name it opens with, or holds when the given name has four letters or more (2603.24730's
@@ -595,82 +699,38 @@ pub(in crate::base_utilities) fn address_owners(
 /// that scores better (the better of the two, never their sum: 2602.07835) — and the highest scores own it: a longer
 /// spelling outranks a key it holds (`fucheng.fuc@…` is Cheng Fu's, not Jiawei Chen's, 2403.00801; `wangchiew@…`
 /// Wang-Chiew Tan's, not Xiaolan Wang's, 2104.01371; `yipengzhang97@…` Yipeng Zhang's, not Xiaoying Zhang's,
-/// 2406.06326), a tie going to the surname's spelling. No name when none scores. A surname or given name spells only
-/// a run of the local part's words — inside one word, at its start or its end, never strictly inside another word nor
-/// across a separator (`.` `_` `-`, a digit): `ricky_ang@` is Lay Kee Ang's, not Shengyuan A. Yang's (2604.02636;
-/// census138 EMAILSPELL, OXIDIZED_DESIGN_DIVERGENCES #970 "107f").
+/// 2406.06326), a tie going to the surname's spelling. No name when none scores.
+///
+/// Each key counts only where the one boundary predicate places it ([`LocalPart::standing`], [`LocalPart::joined_standing`];
+/// census138 EMAILSPELL, OXIDIZED_DESIGN_DIVERGENCES #970 "107f"). A weak spelling owns an address only no other name
+/// spells; where another does, the names are ranked by their full-strength spellings, and a weak one never decides: the
+/// two rankings agreeing, their owner; else every name either ranks first — a tie, which the rest of the placement
+/// order (the list's order, the elimination, the block) decides. Nothing is guessed (FIDELITY_CHARTER §4): `xjhuang@`
+/// beside Jixuan Huang and Xuanjing Huang is a tie (each "huang" ending the word; Jixuan's "jhuang" weak, review rev107f
+/// B1, 2510.24320), and so is `xywang@` beside Yi Wang and Xiaoyu Wang, which the elimination gives to Xiaoyu Wang once
+/// `yiwang@` is Yi Wang's.
 pub(in crate::base_utilities) fn spelled_owners(
   name_keys: &[NameKeys],
   address: &str,
 ) -> Vec<usize> {
-  let Some(raw) = address.split('@').next() else {
+  let Some(part) = LocalPart::of(address) else {
     return Vec::new();
   };
-  // (its letters, lowercased, and where its words meet: its separators — `.` `_` `-`, a digit, any other character —,
-  // its start and its end)
-  let mut local = String::new();
-  let mut bounds: Vec<usize> = vec![0];
-  for c in raw.chars() {
-    if c.is_alphabetic() {
-      local.extend(c.to_lowercase());
-    } else if bounds.last() != Some(&local.len()) {
-      bounds.push(local.len());
-    }
-  }
-  if bounds.last() != Some(&local.len()) {
-    bounds.push(local.len());
-  }
-  let local = local;
-  // (a key's letters at `start..end` are a run of the local part's words: inside one word, its start or its end — or
-  // between initials, two letters at most on either side, each an initial of the name's own words (`own`: `rjosem@`
-  // José M. Rodríguez-Nogales', 1809.06911; `kmfonsecar@` K. M. Fonseca Romero's, 1202.4210), any letters for a key of
-  // five letters or more (`vemarinc@` Víctor Marín's, 2311.18024) — the A/B's three papers the literal "never inside a
-  // word" lost; a shorter key between other letters is a word's letters: `yvanwy@` no "van" (2202.02002), `byang@` no
-  // "yan" (2602.00582), `mycheng@` no Enhong Chen's "chen" (2603.07528). Never across a separator: `ricky_ang@` spells
-  // Lay Kee Ang's "ang", not Shengyuan A. Yang's "yang" across the `_`, 2604.02636; `zhangwei@` and `bangkok@` no "ang"
-  // — census138 EMAILSPELL, brief 107f)
-  let at_bounds = |start: usize, end: usize, own: &str| {
-    if bounds.iter().any(|&b| start < b && b < end) {
-      return false;
-    }
-    let before = bounds
-      .iter()
-      .copied()
-      .filter(|&b| b <= start)
-      .max()
-      .unwrap_or(0);
-    let after = bounds
-      .iter()
-      .copied()
-      .filter(|&b| b >= end)
-      .min()
-      .unwrap_or(local.len());
-    let initials = |letters: &str| letters.chars().all(|c| own.contains(c));
-    start == before
-      || end == after
-      || (start - before <= 2
-        && after - end <= 2
-        && (end - start >= 5 || (initials(&local[before..start]) && initials(&local[end..after]))))
-  };
-  // (every place `key` stands in the local part, overlapping ones too)
-  let places = |key: &str| -> Vec<usize> {
-    if key.is_empty() {
-      return Vec::new();
-    }
-    (0..local.len())
-      .filter(|&at| local.is_char_boundary(at) && local[at..].starts_with(key))
-      .collect()
-  };
+  let local = part.letters.as_str();
+  // (`weak`: whether a weak spelling counts — every name's scores are taken twice, with and without)
+  let counts =
+    |standing: Option<Standing>, weak: bool| standing.is_some_and(|s| weak || s == Standing::Full);
   // (a surname's first six letters only outside the letters its given name matched (`given`, their place in the local
   // part): `andrea.rossi@` is Andrea Rossi's, not Andrea Andreassen's "andrea" counted twice, `soeren.hansen@` Søren
-  // Hansen's, not Søren Sørensen's — review rev107a finding 2). A truncated surname is a word's run as a whole one is:
-  // the longest of the surname's first letters standing there, six or more, ends where the word ends or starts where it
-  // starts (`mkaufman@` for Kaufmann, `leyaouan@` for Le Yaouanc)
-  let surname_score = |key: &SpelledWord, given: Option<(usize, usize)>, own: &str| {
+  // Hansen's, not Søren Sørensen's — review rev107a finding 2). A truncated surname stands as a whole one does: the
+  // longest of the surname's first letters standing there, six or more (`mkaufman@` for Kaufmann, `leyaouan@` for Le
+  // Yaouanc)
+  let surname_score = |key: &SpelledWord, given: Option<(usize, usize)>, own: &str, weak: bool| {
     let len = key.text.len();
-    if places(&key.text)
+    if part
+      .places(&key.text)
       .into_iter()
-      .any(|at| at_bounds(at, at + len, own))
+      .any(|at| counts(part.standing(at, at + len, own), weak))
     {
       return key.text.chars().count();
     }
@@ -682,26 +742,26 @@ pub(in crate::base_utilities) fn spelled_owners(
       Some((start, end)) => at + prefix.len() <= start || at >= end,
       None => true,
     };
-    let truncated = places(&prefix).into_iter().any(|at| {
+    let truncated = part.places(&prefix).into_iter().any(|at| {
       let held = local[at..]
         .chars()
         .zip(key.text.chars())
         .take_while(|(a, b)| a == b)
         .map(|(a, _)| a.len_utf8())
         .sum::<usize>();
-      outside(at) && at_bounds(at, at + held, own)
+      outside(at) && counts(part.standing(at, at + held, own), weak)
     });
     if truncated { 6 } else { 0 }
   };
-  // (where the given name stands in the local part: opening it, or anywhere when it has four letters or more — a run
-  // of its words, as a surname's)
-  let given_place = |given: &SpelledWord, own: &str| {
+  // (where the given name stands in the local part: opening it, or anywhere when it has four letters or more)
+  let given_place = |given: &SpelledWord, own: &str, weak: bool| {
     let len = given.text.len();
-    let fits = |at: usize| at_bounds(at, at + len, own);
+    let fits = |at: usize| counts(part.standing(at, at + len, own), weak);
     if local.starts_with(given.text.as_str()) && fits(0) {
       Some((0, len))
     } else if given.letters >= 4 {
-      places(&given.text)
+      part
+        .places(&given.text)
         .into_iter()
         .find(|&at| fits(at))
         .map(|at| (at, at + len))
@@ -709,27 +769,22 @@ pub(in crate::base_utilities) fn spelled_owners(
       None
     }
   };
-  // (a joined spelling the local part opens with, its length; the initials, the local part's letters alone)
+  // (a joined spelling standing in the local part, its length; the initials, the local part's letters alone)
   // (or its first six letters or more, as a surname's: a truncated family-first spelling, `zhuzhenh22@` for Zhenhao
   // Zhu, `chenyuxi22@` for Yuxiang Chen, 2602.03328, 2609.11716; the r7 re-review's finding 9 — scored the letters it
   // holds less one, below a spelling whole of as many: `wangyu@` is Yu Wang's "wangyu", not Yuxin Wang's "wangyuxin",
   // `liyang@` Yang Li's, not Yangfan Li's; the r8 re-review's finding 3 — where the local part ends there; one going on
   // past a shared start scores its six letters, as before)
-  let joined_score = |keys: &NameKeys| {
+  let joined_score = |keys: &NameKeys, weak: bool| {
     keys
       .joined
       .iter()
       .filter_map(|key| {
-        // (or one of five letters or more ending a word of the local part whole: `sechenqi@` Qi Chen's "chenqi"
-        // (2003.00397), `nnwang@` Nannan Wang's "nwang" (2602.23777) — a surname inside a word no longer spells it,
-        // brief 107f; a shorter one is a word's letters, `pyli@` no Yanan Li's "yli", 2105.07637)
-        let ends_a_word = || {
-          key.chars().count() >= 5
-            && places(key)
-              .into_iter()
-              .any(|at| bounds.contains(&(at + key.len())))
-        };
-        if local.starts_with(key.as_str()) || ends_a_word() {
+        if part
+          .places(key)
+          .into_iter()
+          .any(|at| counts(part.joined_standing(at, at + key.len()), weak))
+        {
           Some(key.chars().count())
         } else {
           let held = local
@@ -763,50 +818,97 @@ pub(in crate::base_utilities) fn spelled_owners(
   // transliteration is a tie — an address carries no umlaut, so `mueller@` spells Hans Mueller and Jörg Müller alike
   // and is neither's by its spelling (user ruling 2026-11-05, on review rev107a finding 1); the rest of the placement
   // order decides it)
-  let scores: Vec<(usize, usize)> = name_keys
-    .iter()
-    .map(|keys| {
-      keys
-        .spellings()
-        .map(|keys| {
-          // (the initials of the name's words, which a part of it inside a word may stand between: `at_bounds`)
-          let own = keys.initials.first().map_or("", String::as_str);
-          let given = keys
-            .given
-            .as_ref()
-            .and_then(|given| Some((given, given_place(given, own)?)));
-          let place = given.map(|(_, place)| place);
-          let surname: usize = keys
-            .surnames
-            .iter()
-            .map(|key| surname_score(key, place, own))
-            .sum::<usize>()
-            + keys
-              .short_surnames
+  let scores = |weak: bool| -> Vec<(usize, usize)> {
+    name_keys
+      .iter()
+      .map(|keys| {
+        keys
+          .spellings()
+          .map(|keys| {
+            // (the initials of the name's words, which a part of it inside a word may stand between: `standing`)
+            let own = keys.initials.first().map_or("", String::as_str);
+            let given = keys
+              .given
+              .as_ref()
+              .and_then(|given| Some((given, given_place(given, own, weak)?)));
+            let place = given.map(|(_, place)| place);
+            let surname: usize = keys
+              .surnames
               .iter()
-              .find(|short| **short == local)
-              .map_or(0, |short| short.chars().count());
-          let given = given.map_or(0, |(given, _)| given.text.chars().count());
-          ((surname + given).max(joined_score(keys)), surname)
-        })
-        .max()
-        .unwrap_or((0, 0))
-    })
-    .collect();
-  let best = scores.iter().copied().max().unwrap_or((0, 0));
-  if best.0 == 0 {
-    return Vec::new();
+              .map(|key| surname_score(key, place, own, weak))
+              .sum::<usize>()
+              + keys
+                .short_surnames
+                .iter()
+                .find(|short| **short == local)
+                .map_or(0, |short| short.chars().count());
+            let given = given.map_or(0, |(given, _)| given.text.chars().count());
+            ((surname + given).max(joined_score(keys, weak)), surname)
+          })
+          .max()
+          .unwrap_or((0, 0))
+      })
+      .collect()
+  };
+  let all = scores(true);
+  let spelling: Vec<usize> = (0..all.len()).filter(|&at| all[at].0 > 0).collect();
+  if spelling.len() < 2 {
+    return spelling;
   }
-  (0..scores.len()).filter(|at| scores[*at] == best).collect()
+  // (several names spell it: ranked with their weak spellings and without; where a weak one would decide, a tie)
+  let first = |scores: &[(usize, usize)]| -> Vec<usize> {
+    let best = scores.iter().copied().max().unwrap_or((0, 0));
+    if best.0 == 0 {
+      return spelling.clone();
+    }
+    (0..scores.len()).filter(|&at| scores[at] == best).collect()
+  };
+  let mut owners = first(&all);
+  for at in first(&scores(false)) {
+    if !owners.contains(&at) {
+      owners.push(at);
+    }
+  }
+  owners.sort_unstable();
+  owners
 }
 
-/// Whether the name `keys` stands for spells `address` at all ([`spelled_owners`] scores it), however another name
-/// scores: an author's own call keeps an address its own name spells (FIDELITY_CHARTER §4 #420: amsart's
-/// `\author{Yang Zhang}…\email{yang91@…}` beside Hengyun Yang, 1707.09730; revtex's `\author{Lay Kee Ang}\email{ricky\_ang@…}`,
-/// 2604.02636 — census138 EMAILSPELL), where `insert::respell_emails` and the observer's `Resolver::respell_emails`
-/// would move it to the name spelling it better.
-pub(in crate::base_utilities) fn name_spells(keys: &NameKeys, address: &str) -> bool {
-  !spelled_owners(std::slice::from_ref(keys), address).is_empty()
+/// Whether an author's own call keeps `address` though another name spells it better (FIDELITY_CHARTER §4 #420): a key
+/// of the holder's name `keys` is a whole word of the local part or opens one — a surname, the given name or a joined
+/// spelling opening a word (amsart's `\author{Yang Zhang}…\email{yang91@…}` beside Hengyun Yang, 1707.09730; revtex's
+/// `\author{Lay Kee Ang}\email{ricky\_ang@…}`, 2604.02636 — census138 EMAILSPELL), a short surname or the initials a
+/// whole word. Not the tail of a longer spelling (`sanderson@` on Mark Anderson's call is Lee Sanderson's), nor a
+/// truncation (`anderson@` on Peter Andersen's is Maria Anderson's — review rev107f finding 3; #420's count, 22 of 24
+/// addresses set after the last author his). Read by `insert::respell_emails` and the observer's
+/// `Resolver::respell_emails`, which else move it to the name spelling it better.
+pub(in crate::base_utilities) fn own_call_keeps(keys: &NameKeys, address: &str) -> bool {
+  let Some(part) = LocalPart::of(address) else {
+    return false;
+  };
+  let opens = |key: &str| {
+    part
+      .places(key)
+      .into_iter()
+      .any(|at| part.bounds.contains(&at) && part.word_around(at, at + key.len()).is_some())
+  };
+  let whole = |key: &str| {
+    part
+      .places(key)
+      .into_iter()
+      .any(|at| part.word_around(at, at + key.len()) == Some((at, at + key.len())))
+  };
+  keys.spellings().any(|keys| {
+    keys.surnames.iter().any(|key| opens(&key.text))
+      || keys.given.as_ref().is_some_and(|key| opens(&key.text))
+      || keys.joined.iter().any(|key| {
+        part
+          .places(key)
+          .into_iter()
+          .any(|at| part.bounds.contains(&at))
+      })
+      || keys.short_surnames.iter().any(|key| whole(key))
+      || keys.initials.iter().any(|key| whole(key))
+  })
 }
 
 /// The owner (index into `name_keys`) of each of a line's `addresses`: the one name it spells ([`spelled_owner`]); and,

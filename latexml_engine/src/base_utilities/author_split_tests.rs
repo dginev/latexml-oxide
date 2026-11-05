@@ -1198,6 +1198,75 @@ fn a_name_spells_a_run_of_the_local_parts_words() {
 }
 
 #[test]
+fn a_weak_spelling_never_decides_between_names() {
+  setup();
+  // (brief 107f r2, the one boundary predicate: a joined spelling ending a word it does not open, or a key of five
+  // letters or more strictly inside a word between letters that are none of the name's initials, owns an address only
+  // no other name spells — review rev107f B1, 2510.24320)
+  let keys = [
+    NameKeys::of(&tk("Jixuan Huang")),
+    NameKeys::of(&tk("Xuanjing Huang")),
+  ];
+  assert_eq!(spelled_owners(&keys, "xjhuang@x.cn"), [0, 1]);
+  assert_eq!(spelled_owners(&keys, "jhuang@x.cn"), [0]);
+  assert_eq!(spelled_owners(&keys, "x.jhuang@x.cn"), [0]);
+  let keys = [
+    NameKeys::of(&tk("Yi Wang")),
+    NameKeys::of(&tk("Xiaoyu Wang")),
+  ];
+  assert_eq!(spelled_owners(&keys, "yiwang@x.cn"), [0]);
+  assert_eq!(spelled_owners(&keys, "xywang@x.cn"), [0, 1]);
+  // (uncontested, a weak spelling owns it: `sechenqi@` Qi Chen's "chenqi", 2003.00397; `vemarinc@` Víctor Marín's
+  // "marin", 2311.18024; contested by a whole word, it never wins: `vemarinc@` beside a Vemarin)
+  let keys = [NameKeys::of(&tk("Qi Chen")), NameKeys::of(&tk("Wei Chen"))];
+  assert_eq!(spelled_owners(&keys, "sechenqi@x.cn"), [0]);
+  let keys = [
+    NameKeys::of(&tk("Victor Marin")),
+    NameKeys::of(&tk("Ann Vemarinc")),
+  ];
+  assert_eq!(spelled_owners(&keys, "vemarinc@x.co"), [1]);
+  // (the sides of a key inside a word are counted in characters, not bytes: two accented letters are two)
+  let keys = [
+    NameKeys::of(&tk("Victor Marin")),
+    NameKeys::of(&tk("Ann Able")),
+  ];
+  assert_eq!(spelled_owners(&keys, "vémarinc@x.co"), [0]);
+  assert!(spelled_owners(&keys, "véémarinc@x.co").is_empty());
+}
+
+#[test]
+fn an_own_call_keeps_only_a_word_its_name_opens() {
+  setup();
+  // (FIDELITY_CHARTER §4 #420, review rev107f finding 3: a key of the holder's name a whole word of the local part or
+  // opening one — `yang91@` Yang Zhang's, 1707.09730; `ricky_ang@` Lay Kee Ang's, 2604.02636 —, not the tail of a
+  // longer spelling, nor a truncation)
+  assert!(own_call_keeps(
+    &NameKeys::of(&tk("Yang Zhang")),
+    "yang91@x.edu"
+  ));
+  assert!(own_call_keeps(
+    &NameKeys::of(&tk("Lay Kee Ang")),
+    "ricky_ang@x.edu"
+  ));
+  assert!(own_call_keeps(
+    &NameKeys::of(&tk("Yang Zhang")),
+    "yzhang@x.edu"
+  ));
+  assert!(!own_call_keeps(
+    &NameKeys::of(&tk("Mark Anderson")),
+    "sanderson@y.edu"
+  ));
+  assert!(!own_call_keeps(
+    &NameKeys::of(&tk("Peter Andersen")),
+    "anderson@y.edu"
+  ));
+  assert!(!own_call_keeps(
+    &NameKeys::of(&tk("Bo Li")),
+    "bangkok@y.edu"
+  ));
+}
+
+#[test]
 fn a_name_spells_by_its_base_letters_and_its_transliteration() {
   setup();
   // (html_feedback #7233, OD #970: an accent or letter command written in the source, or the letter itself, spells by

@@ -1,7 +1,10 @@
 //! Red/green guards for batch 107f (census138 ADDR-b and EMAILSPELL, 107c's open items; Bundle 5;
-//! OXIDIZED_DESIGN_DIVERGENCES #966, #970, #805 amended, #972). E-mail ownership: (1) a name spells an address only as
-//! a run of its local part's words, and an author's own call keeps an address its own name spells
-//! (`email_owners::spelled_owners`, `name_spells`, both `respell_emails`); (2) a restated supplement's e-mail is no
+//! OXIDIZED_DESIGN_DIVERGENCES #966, #970, #805 amended, #972). E-mail ownership: (1) a name spells an address only
+//! where the one boundary predicate places its key — a word, a word's prefix or suffix, between the name's own
+//! initials; a weak spelling (a long key between other letters, a joined key ending a word it does not open) never
+//! decides between names (`email_owners::LocalPart::standing`, `spelled_owners`) —, and an author's own call keeps an
+//! address only a key of its own name is a whole word of or opens (`email_owners::own_call_keeps`, both
+//! `respell_emails`; round 2, review rev107f B1 and finding 3); (2) a restated supplement's e-mail is no
 //! upfront pile (`insert::distribute_upfront_contacts`); (3) a list in math braces is the list it prints
 //! (`email_owners::math_braces_as_printed`); (4) a contact printing a list of addresses for several people is parted
 //! into each address's e-mail on its owner — the name printed beside it, else the placement order
@@ -9,7 +12,9 @@
 //! (`insert::join_split_address_contacts`); (6) a role tag after an address is its owner's correspondence note
 //! (`insert::role_tag`); (7) a held correspondence note keeps the e-mail's label (`insert::write_role_notes`); (8) a sole
 //! author's orphan line is hers beside a block creator (`insert::link_entry_addresses`, user ruling 2026-11-05 "Sole
-//! author"). Each guard converts its repro under `tools/perfect_kernel/repros/sectioning-frontmatter/` from the binary,
+//! author") — unless its mark is in her own mark series (`insert::mark_series`, round 2, review rev107f finding 4); (9)
+//! a shared note's addresses are cut out of it in place, its other nodes kept (`address_lists::cut_printed`, round 2,
+//! review rev107f B2). Each guard converts its repro under `tools/perfect_kernel/repros/sectioning-frontmatter/` from the binary,
 //! eager and `--streaming`, with 0 errors and 0 warnings, and asserts the frontmatter whole.
 use super::perfect_kernel_batch99b::converted;
 
@@ -140,5 +145,59 @@ fn a_sole_authors_orphan_line_is_hers_beside_a_block_creator() {
   assert_eq!(
     converted(repro!("addr_line_sole_author_orphan_star_with_block"), 0),
     r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><text fontsize="90%" xml:id="id1">Univ A, Town,<break/>Country.</text></contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id2"><sup xml:id="id2.1">*</sup>Corresponding author</note> <contact name="E-mail: " role="email"><text fontsize="90%" xml:id="id3">qz@a.org</text></contact> </creator> <creator role="author"> <contact name="Affiliation: " role="affiliation"><text fontsize="90%" xml:id="id4"> Univ B, City</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+}
+
+/// A joined spelling ending a word it does not open is weak: Yi Wang's "ywang" in `xywang@` never breaks the tie
+/// "wang" makes with Xiaoyu Wang, so the elimination gives `xywang@` to Xiaoyu Wang once `yiwang@` is Yi Wang's
+/// (review rev107f B1; 2510.24320's `xjhuang@`, which Jixuan Huang's "jhuang" took from Xuanjing Huang). Distinct: the
+/// weak standing of `LocalPart::joined_standing` in `spelled_owners`' two rankings.
+#[test]
+fn a_joined_suffix_spelling_never_breaks_a_surname_tie() {
+  assert_eq!(
+    converted(repro!("email_spell_joined_suffix_breaks_surname_tie"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Yi Wang</personname> <contact name="Affiliation: " role="affiliation">Univ. A</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">yiwang@a.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Xiaoyu Wang</personname> <contact name="Affiliation: " role="affiliation">Univ. A</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id2">xywang@a.edu</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para>"##
+  );
+}
+
+/// An author's own call keeps an address another name spells better only where a key of the holder's name is a whole
+/// word of the local part or opens one (FIDELITY_CHARTER §4 #420): Mark Anderson's "anderson" is the tail of
+/// `sanderson@`, Peter Andersen's "anders" a truncation of `anderson@`, so each moves to the author it spells whole
+/// (review rev107f finding 3). Distinct: `own_call_keeps` in both `respell_emails`.
+#[test]
+fn an_own_call_keeps_only_an_address_its_name_opens() {
+  assert_eq!(
+    converted(repro!("email_own_call_suffix_spelling_moves"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Lee Sanderson</personname> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> <contact name="Email: " role="email">sanderson@y.edu</contact> </creator> <creator before=" " role="author"> <personname>Mark Anderson</personname> <contact name="Affiliation: " role="affiliation">Univ Y, City</contact> </creator> <abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">A.</p> </abstract> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+  assert_eq!(
+    converted(repro!("email_own_call_truncated_surname_moves"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Maria Anderson</personname> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> <contact name="Email: " role="email">anderson@y.edu</contact> </creator> <creator before=" " role="author"> <personname>Peter Andersen</personname> <contact name="Affiliation: " role="affiliation">Univ Y, City</contact> </creator> <abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">A.</p> </abstract> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+}
+
+/// A shared corresponding-author note whose addresses are distributed keeps every other node in place — its words
+/// ("and" and "or" outside the list), its math — only the address spans and the separators beside them cut (review
+/// rev107f B2; 2311.15476's DOI link and break). Distinct: `address_lists::cut_printed`.
+#[test]
+fn a_shared_note_keeps_its_other_nodes_as_printed() {
+  assert_eq!(
+    converted(repro!("email_list_shared_note_keeps_prose_and_markup"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Address: " role="address">Univ X, Town</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Corresponding author: " role="correspondent">Corresponding authors: Funded by NSF and DOE or ERC, grant <Math mode="inline" tex="N^{2}" text="N ^ 2" xml:id="m1a"> <XMath xml:id="m1a.1"> <XMApp xml:id="m1a.1.1"> <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/> <XMTok font="italic" role="UNKNOWN">N</XMTok> <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok> </XMApp> </XMath> </Math>.</contact> <contact name="Email: " role="email">cole.c@x.org</contact> <contact name="Address: " role="address">Univ X, Town</contact> </creator> <creator before=" " role="author"> <personname>Dan Dee</personname> <contact name="Corresponding author: " role="correspondent">Corresponding authors: Funded by NSF and DOE or ERC, grant <Math mode="inline" tex="N^{2}" text="N ^ 2" xml:id="m1b"> <XMath xml:id="m1b.1"> <XMApp xml:id="m1b.1.1"> <XMTok role="SUPERSCRIPTOP" scriptpos="post1"/> <XMTok font="italic" role="UNKNOWN">N</XMTok> <XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok> </XMApp> </XMath> </Math>.</contact> <contact name="Email: " role="email">q77@y.org</contact> <contact name="Address: " role="address">Univ Y, City</contact> </creator> <abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">A.</p> </abstract> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+}
+
+/// A sole author's orphan e-mail line labelled in her own mark series (`$^{b}$ E-mail: lab@b.org` beside
+/// `Ann Able$^{a}$`) is the block creator's, as its `$^{b}$ Univ B, City` sibling is; a `*` line beside her stays hers
+/// (`a_sole_authors_orphan_line_is_hers_beside_a_block_creator`). FIDELITY_CHARTER "Sole author", user 2026-11-05;
+/// review rev107f finding 4. Distinct: `insert::mark_series` in the only-author step.
+#[test]
+fn a_sole_authors_own_series_orphan_line_is_the_blocks() {
+  assert_eq!(
+    converted(
+      repro!("addr_line_sole_author_unanswered_mark_email_is_blocks"),
+      0
+    ),
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><text fontsize="90%" xml:id="id1">Univ A, Town.</text></contact> </creator> <creator role="author"> <contact name="Affiliation: " role="affiliation"><text fontsize="90%" xml:id="id2"> Univ B, City</text></contact> <contact name="E-mail: " role="email"><text fontsize="90%" xml:id="id3">lab@b.org</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }

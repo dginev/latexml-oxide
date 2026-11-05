@@ -1764,6 +1764,42 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
         Some((!answering.is_empty()).then_some(answering))
       })
       .collect();
+    // (each address's line labelled by a mark in the sole author's own mark series, which no name answers: its
+    // `LINE_MARK`, or the mark its block creator holds it by — `mark_series`)
+    let own_series_orphan: Vec<bool> = addresses
+      .iter()
+      .map(|(_, template, _)| {
+        if !sole_author {
+          return false;
+        }
+        let mut line_marks: Vec<String> = template.get_attribute(LINE_MARK).into_iter().collect();
+        if let Some(parent) = template.get_parent()
+          && position(&parent).is_none()
+        {
+          line_marks.extend(
+            parent
+              .get_attribute("_bymark")
+              .unwrap_or_default()
+              .split(',')
+              .filter(|mark| !mark.is_empty())
+              .map(str::to_string),
+          );
+        }
+        let (marks, glued) = author_marks.get_or_insert_with(|| {
+          (
+            author_mark_keys(document, &authors),
+            glued_name_marks(document, &authors),
+          )
+        });
+        line_marks.iter().any(|mark| {
+          answering_or_glued(marks, glued, mark).is_empty()
+            && marks
+              .iter()
+              .flatten()
+              .any(|own| mark_series(own).is_some_and(|series| mark_series(mark) == Some(series)))
+        })
+      })
+      .collect();
     // (a `{…}@domain` list set over several lines, the Kind step's: placed as its one-line form, [`list_placements`])
     let listed = list_placements(document, &authors, &keys, &addresses, &spelled, &mine);
     let owners: Vec<(Option<Vec<usize>>, &'static str)> = entry_address_owners(
@@ -1786,9 +1822,12 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
     })
     // (a paper of one author makes no block creator: the charter's "the group's only author" comes before the block,
     // a line's unanswered mark too — 1711.00192's `{\small * Corresponding author, E-mail: …}` under Jian Shi alone,
-    // review rev107c B1)
-    .map(|(to, rule)| match to {
-      None if sole_author => (Some(vec![0]), "owner:only-author"),
+    // review rev107c B1 —, unless the mark is in the author's own mark series: `$^{b}$ E-mail: lab@b.org` beside
+    // `Ann Able$^{a}$` is the block creator's, as its `$^{b}$ Univ B, City` sibling is (FIDELITY_CHARTER "Sole author",
+    // user 2026-11-05; review rev107f finding 4))
+    .zip(&own_series_orphan)
+    .map(|((to, rule), own_series)| match to {
+      None if sole_author && !own_series => (Some(vec![0]), "owner:only-author"),
       to => (to, rule),
     })
     .collect();
@@ -3365,6 +3404,20 @@ fn glued_name_marks(document: &mut Document, authors: &[Node]) -> Vec<Vec<String
 /// Each author's mark keys, in author order ([`author_mark_keys`], [`glued_name_marks`]).
 type MarkKeys = Vec<Vec<String>>;
 
+/// A mark's series, by its first character: a number, a letter, or a symbol (`*`, `†`, `$\star$`) — the series an
+/// orphan line's mark shares with the sole author's own (`$^{b}$` beside her `$^{a}$`, FIDELITY_CHARTER "Sole author",
+/// user 2026-11-05: still the block creator's; a `*` beside her `$^{a}$` hers). `None` for an empty mark.
+fn mark_series(mark: &str) -> Option<u8> {
+  let first = mark.trim().chars().next()?;
+  Some(if first.is_ascii_digit() {
+    0
+  } else if first.is_alphabetic() {
+    1
+  } else {
+    2
+  })
+}
+
 /// An entry's line ([`entry_lines`]): its nodes, and the line break before it (none for the first).
 type EntryLine = (Vec<Node>, Option<Node>);
 
@@ -3583,11 +3636,13 @@ fn respell_emails(document: &mut Document) -> Result<()> {
       else {
         continue;
       };
-      // (an e-mail its holder's own name spells stays, however another name scores: `yang91@` on Yang Zhang's own call
-      // beside Hengyun Yang, 1707.09730; `ricky_ang@` on Lay Kee Ang's, 2604.02636 — FIDELITY_CHARTER §4 #420)
+      // (an e-mail a key of its holder's own name is a whole word of, or opens one of, stays, however another name
+      // scores: `yang91@` on Yang Zhang's own call beside Hengyun Yang, 1707.09730; `ricky_ang@` on Lay Kee Ang's,
+      // 2604.02636 — FIDELITY_CHARTER §4 #420; not the tail of a longer spelling nor a truncation, `sanderson@` on Mark
+      // Anderson's call, review rev107f finding 3: `own_call_keeps`)
       if let Some(owner) = spelled_owner(&keys, address)
         && owner != at
-        && !name_spells(&base_keys[at], address)
+        && !own_call_keeps(&base_keys[at], address)
       {
         moves.push((contact, owner));
       }
