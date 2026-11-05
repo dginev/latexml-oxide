@@ -1,0 +1,23 @@
+% A publisher class shipped in the paper's directory (`jcls.cls`, written by filecontents here) whose label the output
+% loses: its words count as the author's text, so the check warns "corresponding" where a class_text Info is due —
+% `raw_read_paths` includes any `.cls` in the source directory (title_page_check.rs; review rev106s2 S3).
+% witness: synthetic (rev106s2 s4b); cpc-hepnp.cls ships in 0802.2579, 0912.1248, 1806.07548 (0 such Warnings in the A/B)
+% oracle:  pdflatex 0 errors: "A Title / Ann Able1" + footnote "1 Corresponding author: ann.able@lunar.org"
+% engines: rust 106s r2: 1 Warning naming "corresponding lunar org"
+% expect:  the class's label word "corresponding" in the class_text Info, the document's address words in the Warning
+% status: RED (106s residual — leave the \documentclass/\LoadClass files out of the author's text)
+\begin{filecontents*}[overwrite]{jcls.cls}
+\ProvidesClass{jcls}\LoadClass{article}
+\newcommand\corr[1]{\expandafter\gdef\csname nc@corr\endcsname{#1}}
+\def\jc@lab{}\g@addto@macro\jc@lab{Corresponding author}
+\renewcommand\maketitle{\par\begingroup\centering{\Large\@title\par}%
+  {\@author\thanks{\jc@lab: \csname nc@corr\endcsname}\par}\@thanks\endgroup}
+\end{filecontents*}
+\documentclass{jcls}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\corr{ann.able@lunar.org}
+\maketitle
+Text.
+\end{document}
