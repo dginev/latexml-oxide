@@ -31443,6 +31443,12 @@ glued to an affiliation, each its addresses' e-mails placed by the Link step as 
   1707.04775), pieces ending in a dot or the `@` before the domain after the brace (`\{junwei@link., lizhen@\}cuhk.edu.cn`,
   2108.00873, 2605.01350; 2602.07769, the fail-safe above), local parts sharing the tail after the brace
   (`\{fikadu.t.dagefu, …\}.civ@mail.mil`, 1908.06816).
+**An address starts where its font does (review rev107g, 2203.06585).** `Hangzhou, China.{\tt\footnotesize xiangzy@zju.edu.cn}`
+reads as the token `China.xiangzy@…` in the printed text; `LineText::address_font_start` starts it at the text node holding its `@` when what
+stands before that node is one glued run in another font, so "China." stays with the entry and the address is `xiangzy@zju.edu.cn`. Guard
+`perfect_kernel_batch107g::an_address_starts_at_its_font`. The observer writer's reader (`resolver::address_runs`) reads printed text with no
+fonts: that route still gives `China.aable@…`, as the base does (`addr_line_glued_word_before_a_font_observer_route_red.tex`).
+
 **Round 2 (107c r2, review rev107c).** (1) **A paper of one author gives an unanswered line to that author — unless a nameless creator stands beside it** (`link_entry_addresses`):
 FIDELITY_CHARTER §4's "the group's only author" comes before the block, an unanswered line mark included (1711.00192's
 `{\small * Corresponding author, E-mail: mathematic@126.com}` under Jian Shi alone had gone to a nameless creator,
@@ -31851,8 +31857,8 @@ more after two letters at most, whatever follows it (`vemarinc@` Víctor Marín'
 2004.06253; `eetanggz@` Guozhi Tang's, 2106.10681; `ylwanguestc@` Yinglong Wang's, 2208.05114), and a joined spelling of
 five letters or more ending a word it does not open (`sechenqi@` Qi Chen's "chenqi", 2003.00397; a joined spelling opening a
 word counts at full strength, its separators read through: `j.huang@`). *Not at all*: a key of three letters between other
-letters (`yvanwy@` no "van", 2202.02002; `byang@` no "yan", 2602.00582; `bangkok@`, `zhangwei@` no "ang"; 2112.09029's
-`levtalor@` no L. Tal-Or's "tal", below), a key after three letters or more that does not end the word, a key across a
+letters (`yvanwy@` no "van", 2202.02002; `byang@` no "yan", 2602.00582; `bangkok@`, `zhangwei@` no "ang"; `lev|tal` no
+three-letter key: 2112.09029's `levtalor@` is spelled by the joined surname below), a key after three letters or more that does not end the word, a key across a
 separator, a joined spelling inside a word or of fewer than five letters ending one (`pyli@` no Yanan Li's "yli",
 2105.07637). A truncated surname's first six letters or more stand by the same
 predicate (`mkaufman@` Kaufmann's). **A weak spelling never decides** (`spelled_owners`): it owns an address only no
@@ -31908,8 +31914,10 @@ a_weak_four_letter_surname_owns_only_an_unclaimed_address}` (repros `email_own_c
 `email_own_call_opening_key_of_longer_spelling_moves{,_twin}`, `email_own_call_misread_name_word_gives_way`,
 `email_own_call_tie_keeps_the_call`, `email_weak_four_letter_surname_inside_a_word_after_the_last_author`,
 `email_weak_four_letter_surname_opens_after_two_letters`, `email_own_call_weak_spelling_of_another_name_stays`), RED (int139a) →
-GREEN. Left: 2112.09029's `levtalor@` (L. Tal-Or) is the block's, on base his: "tal" a three-letter key after "lev", and the
-name holds no joined surname "talor" (a new key, left open: brief 107g). A local part with no
+GREEN. **A hyphen-linked surname has a joined key with its hyphen dropped** (`NameKeys::of`, `hyphenated_surname`: `L. Tal-Or`
+"talor", a spelling as printed, as `Wang-Chiew` "wangchiew" already is; the name's last word only, so `de Vries` stays apart): where it
+ends a word it does not open, it is weak and owns only an address no other name spells (2112.09029 `levtalor@`, review rev107g; census of
+the 20k and 10k int139a runs: 16 hyphen-joined rows, 15 on their true holder, 1 a combined string, 0 false owners). A local part with no
 separator still spells a surname it ends with (`rickyang@` is Yang's as much as Ang's: the longer wins); 2009.10916's
 own two addresses under Bo Li's institute stay where today's route puts them (both his; without the supplement the
 observer's writer gives both to the block, "several unspelled under one name").

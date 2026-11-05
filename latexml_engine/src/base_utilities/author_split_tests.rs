@@ -1241,8 +1241,8 @@ fn a_weak_spelling_never_decides_between_names() {
   assert_eq!(spelled_owners(&keys, "vémarinc@x.co"), [0]);
   assert!(spelled_owners(&keys, "véémarinc@x.co").is_empty());
   // (brief 107g: a four-letter surname, after two letters at most, whatever follows it: `tpengqy@` Q. Y. Peng's, 2004.06253;
-  // `eetanggz@` Guozhi Tang's, 2106.10681; `ylwanguestc@` Yinglong Wang's, 2208.05114. A three-letter one never: `levtalor@`
-  // no "tal", 2112.09029 (open); after three letters never)
+  // `eetanggz@` Guozhi Tang's, 2106.10681; `ylwanguestc@` Yinglong Wang's, 2208.05114. After three letters never. A
+  // hyphen-linked surname joined: `levtalor@` L. Tal-Or's, 2112.09029, review rev107g)
   let keys = [
     NameKeys::of(&tk("Q. Y. Peng")),
     NameKeys::of(&tk("Guozhi Tang")),
@@ -1252,7 +1252,7 @@ fn a_weak_spelling_never_decides_between_names() {
   assert_eq!(spelled_owners(&keys, "tpengqy@x.cn"), [0]);
   assert_eq!(spelled_owners(&keys, "eetanggz@x.cn"), [1]);
   assert_eq!(spelled_owners(&keys, "ylwanguestc@x.cn"), [2]);
-  assert!(spelled_owners(&keys, "levtalor@x.il").is_empty());
+  assert_eq!(spelled_owners(&keys, "levtalor@x.il"), [3]);
   assert_eq!(spelled_owners(&keys, "abcpeng7@x.il"), [0]);
   assert!(spelled_owners(&keys, "abcpengxy@x.il").is_empty());
 }

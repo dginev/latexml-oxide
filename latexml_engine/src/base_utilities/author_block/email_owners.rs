@@ -402,8 +402,11 @@ impl NameKeys {
       } else {
         &own
       };
-      keys.transliterated = Some(Box::new(NameKeys::of_words(&words, classes)));
+      let mut spelled = NameKeys::of_words(&words, classes);
+      spelled.joined.extend(hyphenated_surname(&transliterated));
+      keys.transliterated = Some(Box::new(spelled));
     }
+    keys.joined.extend(hyphenated_surname(&base));
     keys
   }
 
@@ -527,6 +530,20 @@ impl NameKeys {
 /// A name's words, lowercased: its runs of letters, an apostrophe between two letters inside its word (`D'Amico`
 /// "damico", whose address `damicos@` holds it whole, 2606.17317; `Gol'dshtein` "goldshtein" — brief 107f, where a
 /// surname spells only a run of the local part's words).
+/// A hyphen-linked surname with its hyphen dropped, a spelling as printed (`L. Tal-Or` "talor": `levtalor@`, 2112.09029,
+/// review rev107g), as a hyphenated given name's already is (`Wang-Chiew` "wangchiew"). The name's last word only, its
+/// parts all letters: spaced words stay apart (`de Vries`). A joined key, so where it ends a word it does not open it is
+/// a weak spelling ([`LocalPart::joined_standing`]) and owns only an address no other name spells.
+fn hyphenated_surname(text: &str) -> Option<String> {
+  let last = text.split_whitespace().last()?;
+  let parts: Vec<&str> = last.split(['-', '\u{2010}', '\u{2011}']).collect();
+  (parts.len() >= 2
+    && parts
+      .iter()
+      .all(|part| !part.is_empty() && part.chars().all(char::is_alphabetic)))
+  .then(|| parts.concat().to_lowercase())
+}
+
 fn name_words(text: &str) -> Vec<String> {
   let chars: Vec<char> = text.chars().collect();
   let text: String = chars

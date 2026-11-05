@@ -160,3 +160,14 @@ fn a_wrapper_over_plain_lines_stays_one_entry() {
     r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">1. Department of Statistics, <break/>Faculty of Sciences, Utrecht University</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id1">*Corresponding author</note> <contact name="Email: " role="email"><text font="typewriter" xml:id="id2">ann@x.org</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">1. Department of Statistics, <break/>Faculty of Sciences, Utrecht University</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id3">bob@x.org</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para>"##
   );
 }
+
+/// An address starts where its font does, the word glued before it staying with the entry's text (2203.06585, review
+/// rev107g), on the kernel's `kind_address_lines`; the observer's route is `addr_line_glued_word_before_a_font_observer_route_red`.
+/// Distinct: no other guard has a font boundary inside an address's token.
+#[test]
+fn an_address_starts_at_its_font() {
+  assert_eq!(
+    converted(repro!("addr_line_glued_word_before_a_font_of_its_own"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Ann Able and Bob Baker are with Univ A, Town, China.</contact> <contact name="Email: " role="email"><text font="typewriter" fontsize="80%" xml:id="id1">aable@a.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Ann Able and Bob Baker are with Univ A, Town, China.</contact> <contact name="Email: " role="email"><text font="typewriter" fontsize="80%" xml:id="id2">bbaker@a.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Cy Coe</personname> <contact name="Affiliation: " role="affiliation">Cy Coe, corresponding author, is with Univ B, City, China.</contact> <contact name="Email: " role="email"><text font="typewriter" fontsize="80%" xml:id="id3">ccoe@b.edu</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+}

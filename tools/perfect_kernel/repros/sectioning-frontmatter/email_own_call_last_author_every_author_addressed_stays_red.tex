@@ -1,0 +1,12 @@
+% RED (rev107g finding 5, synthetic, equal to base, worse than int139a): `last` in `own_call_keeps` only means "the holder is
+%   last". Every author has an own `\email`, yet the last one moves to a weak spelling. 0 last-holder rows in 3 dev runs (40k papers).
+%   Fix: also require that no other author holds an address (2004.06253 has none), and count whole-word initials for the holder.
+% witness: none (synthetic)
+% expect:  0 errors; each address stays on its call
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Xiangmin Shen}\email{sx@x.cn}\author{Husheng Yu}\email{yhsheng@x.cn}
+\maketitle
+Body.
+\end{document}

@@ -2193,7 +2193,7 @@ fn email_address_word(text: &str) -> Option<String> {
 /// contact words and "to" (`Corresponding\ to\ x@y`, 2606.31381), the lines a font wrapper holds ([`entry_lines`]:
 /// 2603.02131, 2104.11106) and a list's other printed forms (`[a, b]@x`, `{a, b} @ x`, `{a@p., b@}x.y`, `{a, b}.civ@x`:
 /// `resolver::address_runs`; 2405.17925, 1707.04775, 2108.00873, 2605.01350, 1908.06816) are read as well (107c). Left as
-/// they print (the frontmatter observer's text reading's): an address glued to the word before it (`smith,j@x.org`) or
+/// they print (the frontmatter observer's text reading's): an address glued to the word before it (`smith,j@x.org`; one in a font of its own starts at that font, `China.{\\tt x@y}`, 2203.06585) or
 /// beside prose (`see data@a.org for data`), a template or a list the reader could not part (`{name.surname}@x`,
 /// [`is_pattern_address`], [`lists_local_parts`]), a run a tag follows (`a@x (Matvey)`, 2512.10975), a line holding a
 /// formula, a note or a link that is no address's. Returns the keys of the entries it took lines out of. Guards
@@ -2268,7 +2268,7 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
       let cut = read
         .then(|| address_line_cut(&line.text, &spells, legend))
         .flatten();
-      let Some(cut) = cut else {
+      let Some(mut cut) = cut else {
         // (a list of local parts set over several lines, which the line's reading declines — a formula or a note in
         // it, a template, a list the reader cannot part —, stays where it prints, counted: never silently an
         // affiliation's text, html_feedback #7233)
@@ -2287,6 +2287,20 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
         kept_before |= prints;
         continue;
       };
+      // (an address starts where its font does, the word glued before it staying with the entry's text: `Hangzhou,
+      // China.{\\tt xiangzy@zju.edu.cn}` is no address `China.xiangzy@`, 2203.06585, review rev107g)
+      if cut.label.is_none()
+        && let Some(start) = line.address_font_start(cut.address_start)
+      {
+        let glued = line.text[cut.address_start..start].to_string();
+        if let Some(address) = cut.addresses.first_mut()
+          && let Some(rest) = address.strip_prefix(glued.as_str()).map(str::to_string)
+        {
+          *address = rest;
+          cut.address_start = start;
+          cut.start = start;
+        }
+      }
       // (a whole line before every line the entry keeps prints before the entry's text: R8, its e-mail placed before the
       // entry, `\IEEEauthorblockA{\href{mailto:…}{…}\\ \url{https://orcid.org/…}\\ …}`, 2206.10577 — review rev107c N1)
       let first = cut.start == 0 && !kept_before;
@@ -2850,6 +2864,27 @@ impl LineText {
     let wrapper = node.get_parent().filter(|parent| parent != entry)?;
     let font = wrapper.get_attribute("_font")?;
     (entry.get_attribute("_font").as_ref() != Some(&font)).then_some(font)
+  }
+
+  /// Where the address from byte `from` on starts in a font of its own: the place of the text node holding its `@`, when
+  /// what stands before that node back to `from` is one glued run in another font (`China.` before `{\\tt xiangzy@…}`,
+  /// [`kind_address_lines`]).
+  fn address_font_start(&self, from: usize) -> Option<usize> {
+    let at = self.pieces.iter().position(|(node, start, end)| {
+      *end > from
+        && node.get_type() == Some(NodeType::TextNode)
+        && node.get_content()[from.saturating_sub(*start)..].contains('@')
+    })?;
+    let (node, start, _) = &self.pieces[at];
+    let glued = self.text.get(from..*start).filter(|run| !run.is_empty())?;
+    let (before, ..) = self.pieces.get(at.checked_sub(1)?)?;
+    let font = |piece: &Node| {
+      piece
+        .get_parent()
+        .and_then(|parent| parent.get_attribute("_font"))
+    };
+    (!glued.chars().any(char::is_whitespace) && !glued.contains('@') && font(before) != font(node))
+      .then_some(*start)
   }
 
   /// Takes the line's text from byte `cut` on out of the document: each text node after it, the one it falls in cut
