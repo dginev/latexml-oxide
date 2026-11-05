@@ -614,6 +614,11 @@ fn source_words(text: &str, definitions: bool, words: &mut HashSet<String>) {
           scan.at += 1;
         }
         let name: String = scan.chars[from..scan.at].iter().collect();
+        // (a control word the author spaced off ends the word in the glued reading too: `Ann Able\break and Bob` is
+        // "Able" and "and" — `\break` digests to nothing, so the print runs them on, and only the source's own space
+        // keeps "ableand" from reading as the document's word (batch77d `author_and_after_a_break_in_a_wrapper.tex`);
+        // `Babe\cb{s}` written on runs on, "Babes", 2007.07526)
+        let spaced_off = scan.peek().is_some_and(char::is_whitespace);
         if name.is_empty() {
           // (a control symbol: an accent's, a discretionary's, an italic correction's and `\%` print no letter, any
           // other a space)
@@ -646,6 +651,9 @@ fn source_words(text: &str, definitions: bool, words: &mut HashSet<String>) {
           spaced.push_str(letters);
         } else if !ACCENT_WORDS.contains(&name.as_str()) {
           spaced.push(' ');
+          if spaced_off {
+            glued.push(' ');
+          }
         }
       },
       '{' | '}' => spaced.push(' '),
