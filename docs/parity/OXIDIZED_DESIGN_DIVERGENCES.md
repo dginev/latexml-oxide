@@ -31848,7 +31848,7 @@ block's, as on int139a), and `xywang@` beside Yi Wang and Xiaoyu Wang goes to Xi
 four letters no paper changes, at six 2311.18024's `vemarinc@` (Víctor Marín's "marin") is lost; a four-letter key
 between other letters is a word's letters ("chen" in `mycheng@`, 2603.07528). The same predicate costs three papers r1 had placed right, each the block's again as on int139a: 2602.23777's
 `nnwang@` (Nannan Wang's "nwang", weak, ties with Zilong Wang's "wang"; then `dongsli@`), 2310.05782's `csjwang@`
-(Jiashuo Wang), 2501.11284's `yyzhang@` (Yingying Zhang) — a tie only an elimination among the tied names could part. An apostrophe
+(Jiashuo Wang), 2501.11284's `yyzhang@` (Yingying Zhang) — ties an elimination among the tied names could part for the first two; not for `yyzhang@`, which ties Yingying, Muhan and Debing Zhang with Debing holding no address, so two names remain (rev107f2). An apostrophe
 inside a name's word joins it (`D'Amico` "damico", `damicos@`, 2606.17317); an escaped `\_` reads as the `_` it prints
 (`address_text`). Initials and 107a's length classes and prefix rule are unchanged. (2) **An own call keeps an address
 only a key of its holder's name is a whole word of, or opens** (`own_call_keeps`, read by both `respell_emails`; #420's
