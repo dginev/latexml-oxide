@@ -1,0 +1,26 @@
+% A dedication set under an article author block, `This work is dedicated to Professor C. Dee\\ on the occasion of his
+% birthday`, then `Present address: Univ C, Village\\ Supported by NSF grant 123`: the dedication ends at the first line
+% that reads as something else (a note of another kind, an address, a mark's line, an affiliation); those lines stay
+% where they were (review rev107c S2: 107c r2).
+% witness: 0910.1386 (the dedication's two lines; the later lines are the reviewer's f4 shape set on lines of their own)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2", "1Univ A, Town", "2Univ B, City", "This work is dedicated to
+%          Professor C. Dee", "on the occasion of his birthday", "Present address: Univ C, Village", "Supported by NSF
+%          grant 123"
+% engines: rust 107c r1 = all four lines one dedication pubnote
+% expect:  0 errors, 0 warnings; the dedication pubnote of its two lines; Baker keeps Univ B with the last two lines
+% status:  RED (107c r1) -> GREEN (107c r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$\\
+$^1$Univ A, Town\\
+$^2$Univ B, City\\
+This work is dedicated to Professor C. Dee\\
+on the occasion of his birthday\\
+Present address: Univ C, Village\\
+Supported by NSF grant 123}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

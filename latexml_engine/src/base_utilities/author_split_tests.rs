@@ -1281,4 +1281,74 @@ fn an_address_line_cut_reads_the_label_as_printed() {
   assert_eq!(cut("Univ A [Fax: 12, E-mail: a@x.org]", false), None);
   // (a balanced bracket before the label does not)
   assert!(cut("Univ A (Dept B), E-mail: a@x.org", false).is_some());
+  // (107c: an unlabelled tail of addresses after a list's or a sentence's boundary — 2602.07392, 1903.04089,
+  // 1204.4622 —, never one beside a word: "Univ A, Town, see data@a.org" stays prose)
+  let tail = "Dept A, Univ A; aable@a.edu, bbaker@a.edu";
+  assert_eq!(
+    cut(tail, false),
+    Some((tail.find(';').unwrap(), None, vec![
+      "aable@a.edu".to_string(),
+      "bbaker@a.edu".to_string()
+    ]))
+  );
+  assert_eq!(
+    cut("Univ A, ann@a.edu", false),
+    Some(("Univ A".len(), None, vec!["ann@a.edu".to_string()]))
+  );
+  assert_eq!(
+    cut("Street 1, Town. ann@a.edu", false),
+    Some(("Street 1, Town.".len(), None, vec!["ann@a.edu".to_string()]))
+  );
+  assert_eq!(cut("Univ A, Town, see data@a.org", false), None);
+  // (a word glued to its address, an initial's list, or contact words alone stay: review rev103a S1, B1)
+  assert_eq!(cut("smith,j@x.org, doe@x.org", false), None);
+  assert_eq!(cut("email,ann@x.org, bob@x.org", false), None);
+  // (a word before the comma that may be the list's local part: no partial cut, 2003.08808; a brace's list is its own
+  // boundary, 2309.06986)
+  assert_eq!(
+    cut("Ottawa, Canada, mmoza102, wslee@uottawa.ca", false),
+    None
+  );
+  let braced = "Haifa, Israel {avico@, arielba@}technion.ac.il, ami@gmail.com.";
+  assert_eq!(
+    cut(braced, false),
+    Some(("Haifa, Israel".len(), None, vec![
+      "avico@technion.ac.il".to_string(),
+      "arielba@technion.ac.il".to_string(),
+      "ami@gmail.com".to_string()
+    ]))
+  );
+  // (107c: contact words and "to", no colon, a label: 2606.31381; "write to" stays prose)
+  assert_eq!(
+    cut(" Corresponding to ann@a.edu", false),
+    Some((0, Some("Corresponding to".to_string()), vec![
+      "ann@a.edu".to_string()
+    ]))
+  );
+  assert_eq!(cut("Univ A, please write to ann@a.edu", false), None);
+  // (107c r2: a correspondence role phrase before the label, marks alone before it, is the label's own — the line whole,
+  // the phrase its owner's note at the flush, 1711.00192 —; one after other words is not)
+  assert_eq!(
+    cut(" * Corresponding author, E-mail: qz@a.org ", false),
+    Some((0, Some("Corresponding author, E-mail".to_string()), vec![
+      "qz@a.org".to_string()
+    ]))
+  );
+  let worded = "Univ A, Corresponding author, E-mail: qz@a.org";
+  assert_eq!(
+    cut(worded, false),
+    Some((
+      "Univ A, Corresponding author".len(),
+      Some("E-mail".to_string()),
+      vec!["qz@a.org".to_string()]
+    ))
+  );
+  // (107c r2: a stop the cut strands after a list's separator goes with the addresses, 1503.09120 — review rev107c N2;
+  // a stop ending the words stays, above)
+  assert_eq!(
+    cut("Valparaiso, IN 46383, USA; . wen.lu@valpo.edu", false),
+    Some(("Valparaiso, IN 46383, USA".len(), None, vec![
+      "wen.lu@valpo.edu".to_string()
+    ]))
+  );
 }

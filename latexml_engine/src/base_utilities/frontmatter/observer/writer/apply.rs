@@ -845,6 +845,17 @@ pub(super) fn place(
   new: &Node,
   order: &BTreeMap<(Owner, Key), (Place, usize)>,
 ) -> bool {
+  place_among(owner, who, new, order, |_| true)
+}
+
+/// [`place`] among the owner's items `among` admits: a note among its notes alone ([`apply`]'s last pass).
+fn place_among(
+  owner: &Node,
+  who: Owner,
+  new: &Node,
+  order: &BTreeMap<(Owner, Key), (Place, usize)>,
+  among: impl Fn(&dom::Item) -> bool,
+) -> bool {
   let items = read_creator(owner).items;
   // (within one print, an entry's own text before the contacts and notes it holds: `Univ X \\ \email{…}`)
   let place_of = |item: &dom::Item| {
@@ -861,7 +872,7 @@ pub(super) fn place(
   };
   if let Some(next) = items
     .iter()
-    .filter(|item| item.movable && item.node != *new)
+    .filter(|item| item.movable && item.node != *new && among(item))
     .find(|item| place_of(item).is_some_and(|p| prints_after(&p, &at)))
   {
     let mut next = next.node.clone();
@@ -1065,6 +1076,20 @@ pub(super) fn apply(document: &mut Document, front: &Front, plan: &Plan) -> Resu
         .collect();
       for item in items {
         place(owner, *who, &item, &plan.order);
+      }
+      // (its notes among themselves in the reading's order, user ruling R8: a legend made last after one that replaced
+      // today's item in its place — `$^{*}$Joint co-authors` printed before `\textsuperscript{\dag}First author`,
+      // 2403.05680, 2609.03429; review rev107c S3)
+      let notes: Vec<Node> = read_creator(owner)
+        .items
+        .into_iter()
+        .filter(|item| item.movable && item.kind == dom::Kind::Note)
+        .map(|item| item.node)
+        .collect();
+      for note in notes {
+        place_among(owner, *who, &note, &plan.order, |item| {
+          item.kind == dom::Kind::Note
+        });
       }
     }
   }

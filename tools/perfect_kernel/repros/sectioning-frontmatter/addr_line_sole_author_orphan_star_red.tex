@@ -1,0 +1,25 @@
+% RED (rev107c2 finding 2, synthetic; owner AWAITS A RULING): one author whose mark `$^{a}$` is answered, plus an
+%   orphan `* Corresponding author, E-mail: qz@a.org` line no name requests. 107c's sole-author step gives the line
+%   (a note + the e-mail) to Ann; its twin addr_line_sole_author_orphan_star_with_block_red.tex, which adds one more
+%   orphan line, sends the identical `*` line to a block creator, because 107c skips the step whenever a nameless
+%   creator exists (insert.rs ~1505 / ~1790). One line's owner must not depend on an unrelated line. FIDELITY_CHARTER
+%   §2 (2026-11-05) reads "the line's words are kept, once, on the block creator, never on an author" (written for
+%   multi-author orphan legends); the base glued the line into Ann's affiliation in both. Question to the user:
+%   orphan mark vs the only author.
+% witness: none (synthetic) — rev107c2 probe p2/o2; B1's real witness 1711.00192 is fixed by the glued-mark reading
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able a / a Univ A, Town, / Country. / * Corresponding
+%   author, E-mail: qz@a.org"
+% engines: rust 107c (473dfa036d): Ann holds Univ A, the "* Corresponding author" note and qz@a.org
+% expect:  0 errors; the same owner for the `*` line here and in the twin, as ruled
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{a}$\\
+{\small $^{a}$Univ A, Town,}\\
+{\small Country.}\\
+{\small * Corresponding author, E-mail: qz@a.org }\\
+}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

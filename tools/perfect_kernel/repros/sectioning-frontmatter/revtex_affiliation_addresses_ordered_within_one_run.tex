@@ -6,7 +6,8 @@
 % oracle:  pdflatex 0 errors: "Ann Able and Bob Baker" over "Dept X, Univ Y, ann@x.org, Phone 123, office@x.org"
 % engines: rust 95c: office@x.org Bob Baker's by place, "Univ Y,  Phone 123"; rust int123a: the affiliation whole on
 %   both; perl: the same
-% expect:  0 errors, 0 warnings; both "Dept X, Univ Y, Phone 123, office@x.org", Ann Able ann@x.org
+% expect:  0 errors, 0 warnings; both "Dept X, Univ Y, Phone 123", Ann Able ann@x.org, office@x.org the block
+%          creator's e-mail (107c: the tail after the comma leaves the entry; it had stayed in it)
 % status:  RED (95c) -> GREEN (95c-r2)
 % preload: ar5iv.sty
 \documentclass{revtex4-2}
