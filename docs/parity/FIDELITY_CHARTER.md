@@ -88,7 +88,8 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
 - **An author's own call holding one address keeps it** (2026-10-29, #420): when an `\email` (or the class's
   equivalent) belongs to one author's own call — amsart's `\author{A}\address{…}\email{x}`, one address — the class's
   structure says one address per author, and spelling does not move it (`\author{Anna Smith}…\email{mueller-group@x.de}`
-  stays Anna Smith's beside `\author{J\"org M\"uller}`, whom it spells by base letters alone). An address that spells
+  stays Anna Smith's beside `\author{J\"org M\"uller}`, whom it spells only through the transliteration ü → ue —
+  corrected 2026-11-05, review rev107a: "muller", the base letters, is not in "muellergroup"). An address that spells
   another author as printed does move (its ASCII twin, beside `\author{Jorg Mueller}`, does; amended to match the data,
   user 2026-10-31): measured 2026-10-31 (brief 95c r3, OD #938), the corresponding author's address set after the last
   `\author` or `\correspondingauthor` is the author it spells on 22 real papers of a 347-paper respell population
