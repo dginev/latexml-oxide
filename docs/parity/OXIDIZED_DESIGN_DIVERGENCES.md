@@ -30933,8 +30933,8 @@ placement, the Link step and the frontmatter observer's writing, before the Kind
 every route that makes the entry meets, each holder's copy in place. Run before the writer, it made the writer decline
 its re-parts (1509.06333's IEEE names merged, 2501.04244's notes lost), so the writer reads today's frontmatter as
 before. An entry's line — its children between two `ltx:break`s — is read as printed: text, font wrappers, an
-address's link, a mark as a space (a superscript or a not yet parsed formula printing footnote symbols, numbers or one
-letter); anything else (a formula, a note, another link) makes it no line of addresses. Its last address run
+address's link, a mark (a superscript or a not yet parsed formula printing footnote symbols, asterisks of any form,
+numbers or one letter; or the symbols a text opening the line prints) kept with its place; anything else (a formula, a note, another link) makes it no line of addresses. Its last address run
 (`resolver::address_runs`, the reader the observer takes addresses out by: braced groups, shared-domain lists, "and",
 brackets, the e-mail label word), with nothing but separators after it and no template or list the reader cannot part
 (`is_pattern_address`, `lists_local_parts`), and its label — the run's e-mail label with the contact words before it
@@ -30951,21 +30951,33 @@ hep-ph0611390; `[email: …]`, 1009.1145) — are read by `address_line_cut`:
 Each address becomes an e-mail contact on each holder of the entry (`_entry`, `_kinded`), named by the label as printed
 (FIDELITY_CHARTER §4: no printed text dropped — "Corresponding author: ", "E-mail: "), else by the class's name of an
 entry of this line alone (REVTeX's `\altaffiliation[Electronic address: ]`), else the role's own, in the font the
-address printed in (`_font`). The Link step (`link_entry_addresses`, run again over these entries alone) places them by
-the charter's chain: the author it spells, else the entry's only carrier, else every carrier of a symbol-led entry,
-else one per carrier in order, else the block once. A copy an author holds already gives that contact its printed
+address printed in (`_font`), with the marks that lead it on the line (`_linemark`: the line's opening mark and any
+before the address, else the previous address's — `$**$ email: cx@…, c\_dee@…` leads both, gr-qc0207058; `$^1$a@x,
+$^2$b@y` each its own, 1706.04764, 2505.11901 — or, where marks follow the addresses, the ones after each). The Link
+step (`link_entry_addresses`, run again over these entries alone) places them by the charter's chain (user ruling R1,
+marks win): the author it spells; else, for a mark-led address, the authors whose names answer the mark (a superscript
+of the name, a note's mark, a request in `_annotations`; keyed as printed, `printed_mark_keys`: a run of one symbol one
+key, every asterisk form one — user ruling 2026-11-02 — so `∗∗` is I. Chowdhury's and `∗` S. Biswas's in
+gr-qc0207058), or the block where none does, never the positional steps (a mark the entry's several carriers all
+answer and no one else is the entry's own and says no more than the entry: `$^{1}$Instituto …, Spain. E-mail: eca@…`
+under two names carrying `1`, astro-ph0005055, goes on down the chain, as does a mark where no name shows or requests
+any); else the entry's only carrier, else every
+carrier of a symbol-led entry, else one per carrier in order, else the block once. A mark the cut takes out that no name
+answers is shown before the first address it leads (`show_line_marks`: authblk's `$^\dagger$Email: zq@…` under names
+without `†` gives the block `<sup>†</sup>zq@…`; review rev106a S1). A copy an author holds already gives that contact its printed
 label where it carries the role's own name (`carry_printed_label`: `Email corresponding author:` onto S. H. Shekh's
 `\email{da\_salim@…}`, 2605.16453). An entry left empty is dropped (`drop_empty_contacts`). Left as printed (the
 observer's text reading's, the fail-safe): an address beside words with no label (`Univ A, Town, see data@a.org for
-data`), a run a tag follows (`a@x (Matvey)`, 2512.10975), a template (`{name.surname}@`, 2009.04283), a line break
+data`), a run a tag follows (`a@x (Matvey)`, 2512.10975), a template (`{name.surname}@`, 2009.04283; `Contact:
+forename.surname@`, 2410.09681 — `is_pattern_address` reads forename and its kin, review rev106a S2), a line break
 inside a font wrapper (`\small\textit{Correspondence:} …\\`, 2311.04121), a phrase-led alternate affiliation
 ("Correspondence should be sent to a, b and c.", 1209.3452), a group whose domain follows the brace with no dot
 (`{a@mails., b@}tsinghua.edu.cn`, 2602.07769), an affiliation the observer's writer makes (mn2e's "Contact e-mail:",
 2008.08137), and an address left inside a legend note (2312.10429, 2501.04244).
 
 **Reach.** The 40 witnesses re-scored (score_tiers, both sides converted alike): 22 papers better, 51 creators flip
-right, 0 wrong (149 → 200 of 224); 2608.22602 0 → 10 of 13 (three addresses spell no author and go to the block:
-`an107`, `chris241`, `chand158`). A/B `pop106a.tsv` (2,888: the 40 witnesses, the 2,348 `popint125a_s10k` papers
+right, 0 wrong (149 → 200 of 224); 2608.22602 0 → 10 of 13 (`an107` spells Weili An, its surname with digits, and is hers;
+`chris241` and `chand158` spell no author and go to the block). A/B `pop106a.tsv` (2,888: the 40 witnesses, the 2,348 `popint125a_s10k` papers
 whose preamble prints an address outside an e-mail command, 500 others; vs int133a, 2,881 converted): 67 changed, all
 frontmatter (24 witnesses, 43 of the selection, 0 of the 500), E 9,754 → 9,754, F 19 → 19, W 42,902 → 42,902;
 e-mail contacts 19 → 187 (27 on the block); `fm_checks.py` 1-7: no creator merged or lost, no address shared more, no
@@ -30976,3 +30988,12 @@ growth, no fragment; the word types lost are dropped contacts' role names. **Gua
 pinned, now `bob@` Bob Baker's and `a@` the block's), `perfect_kernel_batch98b::nameless_block_keeps_its_lines`,
 `perfect_kernel_batch77y::correspondence_line_under_welded_lines_is_the_blocks`,
 `perfect_kernel_batch61::ijcai_marker_names_a_document_defines_are_author_text` (each address line now an e-mail).
+Round 2 (review rev106a: B1 a line's mark read as a space, S1 an unanswered mark lost, S2 `forename.surname@` an
+e-mail): the line marks above, `show_line_marks`, `is_pattern_address`'s forename kin. A/B `pop106a.tsv` vs int133a: 67
+changed, all frontmatter (vs round 1: gr-qc0207058 fixed, 2410.09681's template line kept whole as on int133a, and
+1804.01937 a base-side harness timeout — alone, both sides time out at 180 s with 1 Fatal, 6 errors); E/F/W equal;
+`fm_checks.py` 1-7 clean. The 40 witnesses: 150 → 201 of 226 creators right, 51 flipped right, 0 wrong (as round 1).
+Guards `perfect_kernel_batch106a::a_line_mark_gives_its_addresses_to_the_names_answering_it` (repros
+`addr_line_revtex_mark_led_lines`, `addr_line_authblk_numbered_marks`),
+`::an_unanswered_line_mark_stays_printed_before_its_address` (`addr_line_authblk_unanswered_mark_shown`), and
+`::unlabelled_tagged_and_template_lines_stay` with a `Contact: forename.surname@` line, RED (round 1) → GREEN.

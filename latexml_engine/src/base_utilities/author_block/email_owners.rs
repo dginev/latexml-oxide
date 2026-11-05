@@ -685,7 +685,8 @@ pub fn prints_nothing(line: &Tokens) -> bool {
 }
 
 /// Whether an e-mail address is a pattern for the authors' addresses, not one of them: its local part is only the words
-/// of a name template (`FirstName.LastName@SIT.Fraunhofer.de`, `{firstname.lastname}@…`, `name.surname@…`; 2006.12418).
+/// of a name template (`FirstName.LastName@SIT.Fraunhofer.de`, `{firstname.lastname}@…`, `name.surname@…`; 2006.12418;
+/// `forename.surname@tu-dortmund.de`, 2410.09681, review rev106a S2).
 pub(in crate::base_utilities) fn is_pattern_address(address: &str) -> bool {
   let Some((local, _)) = address.split_once('@') else {
     return false;
@@ -713,6 +714,18 @@ pub(in crate::base_utilities) fn is_pattern_address(address: &str) -> bool {
           | "initials"
           | "fname"
           | "lname"
+          | "forename"
+          | "forenames"
+          | "firstnames"
+          | "givennames"
+          | "middle"
+          | "middlename"
+          | "lastnames"
+          | "surnames"
+          | "familynames"
+          | "vorname"
+          | "nachname"
+          | "prenom"
       )
     })
 }

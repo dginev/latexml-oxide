@@ -66,12 +66,41 @@ fn an_email_label_after_a_legends_words_leaves_with_its_address() {
 }
 
 /// The fail-safe: an address beside words with no label (`see data@a.org for data`), a run tags follow (`ann.able@a.edu
-/// (Ann)`, 2512.10975) and a template (`\{firstname.lastname\}@a.edu`, 2009.04283) are no lines of addresses; the entry
-/// stays as it printed, every author's.
+/// (Ann)`, 2512.10975) and a template, bare or labelled (`\{firstname.lastname\}@a.edu`, 2009.04283; `Contact:
+/// forename.surname@a.edu`, 2410.09681, review rev106a S2), are no lines of addresses; the entry stays as it printed,
+/// every author's.
 #[test]
 fn unlabelled_tagged_and_template_lines_stay() {
   assert_eq!(
     converted(repro!("addr_line_ieee_unlabelled_and_tagged_lines_stay"), 0),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town, see data@a.org for data<break/>ann.able@a.edu (Ann), bbaker@a.edu (Bob)<break/>{firstname.lastname}@a.edu</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town, see data@a.org for data<break/>ann.able@a.edu (Ann), bbaker@a.edu (Bob)<break/>{firstname.lastname}@a.edu</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town, see data@a.org for data<break/>ann.able@a.edu (Ann), bbaker@a.edu (Bob)<break/>{firstname.lastname}@a.edu</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town, see data@a.org for data<break/>ann.able@a.edu (Ann), bbaker@a.edu (Bob)<break/>{firstname.lastname}@a.edu<break/>Contact: forename.surname@a.edu</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town, see data@a.org for data<break/>ann.able@a.edu (Ann), bbaker@a.edu (Bob)<break/>{firstname.lastname}@a.edu<break/>Contact: forename.surname@a.edu</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town, see data@a.org for data<break/>ann.able@a.edu (Ann), bbaker@a.edu (Bob)<break/>{firstname.lastname}@a.edu<break/>Contact: forename.surname@a.edu</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+  );
+}
+
+/// Marks win (user ruling R1; review rev106a B1): the mark leading a line is the key of its unspelled addresses — the
+/// authors whose names answer it own them, never the only-carrier or order step. gr-qc0207058's REVTeX block `$**$
+/// email: cx@x.org, c\_dee@y.org`: `cx@` is C. Dee's, whose name carries `∗∗` (an asterisk run one key, every form one:
+/// user ruling 2026-11-02), not Ann Bee's of `∗a),b)`; and authblk's numbers before each address, `Emails: $^1$zz@x.org,
+/// $^2$qq@y.org` in Carl Dee's entry alone: `zz@` is Ann Bee's, whose name requests `1` (1706.04764, 2505.11901).
+#[test]
+fn a_line_mark_gives_its_addresses_to_the_names_answering_it() {
+  assert_eq!(
+    converted(repro!("addr_line_revtex_mark_led_lines"), 0),
+    r#"<title>T</title> <creator role="author"> <personname>Ann Bee<sup xml:id="id1"><text font="italic" xml:id="id1.1">∗a),b)</text></sup></personname> <contact name="Affiliation: " role="affiliation">a) Univ X, West Bengal,</contact> <contact name="Affiliation: " role="affiliation">India, Pin.-741235</contact> <contact name="Affiliation: " role="affiliation">b) IUCAA, Pune 411 007, India</contact> <contact name="email: " role="email">abee@x.org</contact> </creator> <creator before=" " role="author"> <personname>C. Dee<sup xml:id="id2"><text font="italic" xml:id="id2.1">∗∗a)</text></sup></personname> <contact name="Affiliation: " role="affiliation">a) Univ X, West Bengal,</contact> <contact name="Affiliation: " role="affiliation">India, Pin.-741235</contact> <contact name="Affiliation: " role="affiliation">b) IUCAA, Pune 411 007, India</contact> <contact name="email: " role="email">cx@x.org</contact> <contact name="email: " role="email">c_dee@y.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Hello.</p> </para>"#
+  );
+  assert_eq!(
+    converted(repro!("addr_line_authblk_numbered_marks"), 0),
+    r#"<title>T</title> <creator role="author"> <personname>Ann Bee</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> <contact name="Emails: " role="email">zz@x.org</contact> </creator> <creator before=" " role="author"> <personname>Carl Dee</personname> <contact name="Affiliation: " role="affiliation">Univ Y</contact> <contact name="Emails: " role="email">qq@y.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Hello.</p> </para>"#
+  );
+}
+
+/// A line's mark no name answers stays printed (review rev106a S1): authblk's `\affil[1]{Univ X\authorcr
+/// $^\dagger$Email: zq@x.org, ab@x.org}` under two names carrying no `†` — `ab@` its spelled Ann Bee's, `zq@` the
+/// block's (an unanswered mark, so neither carrier's), the `†` before it.
+#[test]
+fn an_unanswered_line_mark_stays_printed_before_its_address() {
+  assert_eq!(
+    converted(repro!("addr_line_authblk_unanswered_mark_shown"), 0),
+    r#"<title>T</title> <creator role="author"> <personname>Ann Bee</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> <contact name="Email: " role="email">ab@x.org</contact> </creator> <creator before=" " role="author"> <personname>Carl Dee</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator role="author"> <contact name="Email: " role="email"><sup xml:id="id1">†</sup>zq@x.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Hello.</p> </para>"#
   );
 }
