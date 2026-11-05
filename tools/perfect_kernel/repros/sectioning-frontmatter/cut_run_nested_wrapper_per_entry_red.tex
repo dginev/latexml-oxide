@@ -1,0 +1,18 @@
+% RED (rev107e2 finding 2, PRE-EXISTING on every binary): nested wrappers per entry, `\textbf{\textit{$^1$Univ A}}
+%   \textbf{\textit{$^2$Univ B}}` with a legend line below. The kernel's cut misses nested wrappers and the writer's
+%   `wrapped_entry_mark` declines, so Ann holds everything and the names keep their marks ("Bob Ray 2,∗", "Cy Do 2,†").
+%   Fix: peel nested wrappers that close at the same token and reopen each around its entry.
+% witness: none (synthetic)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Lee1,∗, Bob Ray2,∗, Cy Do2,† / 1Univ A 2Univ B /
+%   ∗Equal Contribution, †Project Leader"
+% engines: rust int139a3, 107e r1, 107e r2: Ann holds all, marks in the names
+% expect:  0 errors; as cut_run_legend_line_after_font_wrapped_entries.tex (s1): Ann "Univ A", Bob and Cy "Univ B", the
+%   ∗/† notes on their carriers, no marks in the names
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Lee$^{1,*}$, Bob Ray$^{2,*}$, Cy Do$^{2,\dagger}$\\
+\textbf{\textit{$^1$Univ A}}  \textbf{\textit{$^2$Univ B}}\\
+$^*$ Equal Contribution, $^\dagger$ Project Leader}
+\maketitle
+\end{document}
