@@ -22986,6 +22986,10 @@ jheppub_emailadd_out_of_order_by_spelling}; guards `perfect_kernel_batch78f::{jh
 jheppub_emailadd_one_call_lists_the_authors, jheppub_emailadd_out_of_order_by_spelling}`,
 `perfect_kernel_batch78e::jinstpub_emails_go_to_the_authors_they_spell`.
 
+**Amended (107f).** `\lx@split@addresses` reads a brace set in math as the brace it prints
+(`\emailAdd{$\{$a, b$\}$@x}`, `email_owners::math_braces_as_printed`, #972), so such a list is an address each as the
+text-brace list is.
+
 ### 806. iopart's `\ead` goes to the author it spells, not the last author
 
 iopart.cls:363-364 `\def\ead#1{\vspace*{5pt}\address{E-mail: \mailto{#1}}}`, `\def\mailto#1{{\tt #1}}`: the address
@@ -31374,7 +31378,7 @@ FIDELITY_CHARTER §4's "the group's only author" comes before the block, an unan
 `{\small * Corresponding author, E-mail: mathematic@126.com}` under Jian Shi alone had gone to a nameless creator,
 B1) — where no nameless author creator stands beside the one named author: one holding names the reader did not part is
 more authors (1102.4967's `Rizwan Ghaffar\IEEEauthorrefmark{1}, Dimitris Toumpakaris\IEEEauthorrefmark{2} and
-\IEEEauthorblockN{Jungwon Lee…}`, whose addresses stay there; the r2 A/B). **Open (rev107c2 finding 2, synthetic):** the skip keys on an artefact — a #159 block creator or an orphan legend line makes the same nameless creator, so the identical `*` line goes to the author in `addr_line_sole_author_orphan_star_red.tex` and to the block in its `_with_block_red.tex` twin; FIDELITY_CHARTER §2's orphan rule ("on the block creator, never on an author", 2026-11-05) and §4's "the group's only author" disagree for a one-author paper, a question for the user. B1 itself is fixed by (2) alone. (2) A mark glued to a name as text (`Jian Shi$^{a}$*`, a `\textasteriskcentered`, a ✉ — `is_mark_glyph` reads the
+\IEEEauthorblockN{Jungwon Lee…}`, whose addresses stay there; the r2 A/B). **Ruled and fixed (rev107c2 finding 2; user ruling 2026-11-05, "Sole author"; 107f):** in a one-author group an orphan line's contacts and notes are that sole author's — §4's "the group's only author" beats §2's orphan rule there, the orphan mark not kept as a label — and the owner never depends on other lines: the skip now keys on a nameless creator holding names the reader did not part (`nameless_creator_holds_names`: a contact of its, e-mails, links and notes aside, whose words read as a name, `name_count`; 1102.4967's stays), not on a #159 block creator or an orphan line's; an orphan line labelled in the author's own mark series (`$^{b}$ Univ B, City` beside her `$^{a}$`) still goes to the block creator. Guards `perfect_kernel_batch107f::a_sole_authors_orphan_line_is_hers_beside_a_block_creator` (repros `addr_line_sole_author_orphan_star`, `_with_block`). B1 itself is fixed by (2) alone. (2) A mark glued to a name as text (`Jian Shi$^{a}$*`, a `\textasteriskcentered`, a ✉ — `is_mark_glyph` reads the
 envelope too) answers a line that opens with it (`glued_name_marks`; no request of its own, so a line no name answers
 is read as before). (3) **"Corresponding author" is an annotation on the author** (charter §4; the main session's Q6
 reading, review N4): an e-mail contact whose label opens with a correspondence role phrase (`correspondence_phrase`:
@@ -31388,9 +31392,7 @@ the token-level Kind step, `affiliations::kind_entry_addresses`; user ruling R8:
 (5) A stop the tail cut strands after a list's separator goes with the addresses (`…, USA; . wen.lu@…`, 1503.09120,
 once the token-level step took the first address out — N2). (6) `drop_emptied_wrappers` reads each wrapper once and
 decides every removal before removing the outermost of each emptied chain, so no node is read after it is freed (S4).
-**Not reached** (one line each): a run a role tag follows, `Email: x@y (Corresponding Author)` (2503.14354) and `a@x,
-b@y (* corresponding author)` (2210.14319) — the label form is settled above, the tag after the address is not yet read;
-"Correspondence:"/"Correspondence to:" labels stay the e-mail's name; a correspondence note the author block's route
+**Not reached** (one line each): "Correspondence:"/"Correspondence to:" labels stay the e-mail's name; a correspondence note the author block's route
 makes carries no mark where its line's mark was consumed before the flush (77p's `$^*$Corresponding author:
 \href{…}`, as before); a ✉ line the observer's writer parts (`{\small \Letter{} Corresponding author, E-mail: …}`
 leaves "🖂 Corresponding author" in the affiliation, as on int139a0); two addresses parted only by ". " under authblk
@@ -31420,6 +31422,22 @@ each a correspondence label now its owner's note before the e-mail, the e-mail n
 `perfect_kernel_batch77p::symbol_led_email_label_is_an_email_line`, `perfect_kernel_batch64u::{osa_style_address_email_line,
 osa_style_marked_addresses, osa_email_line_mark_shapes}`, `perfect_kernel_batch100b::an_address_note_in_an_affiliation_is_its_email`;
 and, each e-mail first as its block prints it (4), `perfect_kernel_batch104a::an_and_inside_a_block_argument_starts_the_next_author`.
+
+**Amended (107f; 107c's open item, review rev107c2 finding 1).** (1) **A role tag after an address is its owner's
+note** (FIDELITY_CHARTER §4: "Corresponding author" is an annotation on the author): a line ending in a bracket that
+holds a correspondence role phrase and nothing else but a mark (`role_tag`: `Email: skvishvakarma@… \textbf{(Corresponding
+Author)}` under IEEE blockAs, 2503.14354; `xychen@…, wangcs@… (* corresponding author)` glued to an affiliation,
+2210.14319) is cut without the tag (`address_line_cut` over `address_line_cut_untagged`), and the tag is the last
+address's — the one it follows —: its phrase opens that e-mail's name, so `write_role_notes` makes it the owner's
+correspondence note, and its mark is the e-mail's line mark (`LINE_MARK`), shown on the note; the e-mail's text is the
+address alone. A tag that is no role phrase (`a@x (Matvey)`, 2512.10975) still keeps the run as printed. (2)
+`write_role_notes` checks for a correspondence note the creator holds already before it cuts the label's phrase: an
+author holding one that says another thing (`\thanks{To whom correspondence should be addressed.}`) keeps the e-mail's
+label as printed (`Corresponding author: `) instead of losing the phrase to a Warning-counted gap; one holding the note
+this step made of the same phrase (an author's two e-mails under REVTeX's `\email[Corresponding authors:\\]{a, b}`,
+2504.10237) has the phrase already, and the label is cut as before. **Guards** `perfect_kernel_batch107f::{a_role_tag_after_an_address_is_its_owners_note,
+a_held_correspondence_note_keeps_the_email_label}` (repros sectioning-frontmatter/`email_role_tag_after_address_ieee`,
+`email_role_tag_marked_after_list`, `email_label_correspondence_beside_thanks_note`), RED (int139a3) → GREEN.
 
 ### 967. A tail inside the personname — a membership grade written after the name's comma, a collaboration an author stands for — is the author's contact, read where every author route meets (Perl: the personname's text, or a creator of its own)
 
@@ -31751,3 +31769,80 @@ it gives llncs's institute e-mail list by structure, `l.brueche@` to the institu
 and `base_utilities::author_split_tests::a_name_spells_by_its_base_letters_and_its_transliteration`, RED (int138a) →
 GREEN; `perfect_kernel_batch95c::an_own_email_spelling_a_coauthor_only_by_base_letters_stays` (#420, base letters)
 green unchanged.
+
+**Amended (107f; census138 EMAILSPELL, 3 papers).** (1) **A spelling is a whole name part**: a surname or given name
+spells only a run of the local part's words — inside one word, at its start or its end, or, four letters or more,
+between initials (two letters at most on either side: `kmfonsecar@` K. M. Fonseca Romero's, 1202.4210; `rjosem@` José
+M. Rodríguez-Nogales', 1809.06911; `vemarinc@` Víctor Marín's, 2311.18024 — the A/B's three papers the brief's literal
+"never inside a word" lost; a three-letter word so placed spells nothing: `yvanwy@` no "van", Wei Yin's under his
+`\at`, 2202.02002; `byang@` no "yan", 2602.00582), never strictly inside another word nor across a separator (`.` `_` `-`, a digit;
+`spelled_owners`' word bounds) — so REVTeX's `\author{Lay Kee Ang}\email{ricky\_ang@sutd.edu.sg}` is Ang's, not
+Shengyuan A. Yang's ("yang" across the `_`, 2604.02636), and `bangkok@`, `zhangwei@` spell no Ang; a truncated surname's
+first letters (six or more) must likewise end or start a word (`mkaufman@` Kaufmann's). A joined spelling ending a word
+whole spells it as one opening the local part does (`sechenqi@` Qi Chen's "chenqi", 2003.00397); an apostrophe inside a
+name's word joins it (`D'Amico` "damico", `damicos@`, 2606.17317). An escaped `\_` reads as the `_` it prints
+(`address_text`). Initials and 107a's length classes and prefix rule are unchanged. (2) **An own call keeps an address its own name spells**, however
+another name scores (#420's own call): both `respell_emails` move an e-mail only where its holder's name spells it not
+at all (`name_spells`), so amsart's `\author{Yang Zhang}…\email{yang91@…}` stays his beside Hengyun Yang (1707.09730).
+(3) A call made after `\maketitle` placed the frontmatter (`CONTACT_LATE`) restating a contact the creator holds from an
+earlier call is no contact of the upfront grid `distribute_upfront_contacts` reads: llncs's restated unlabelled second
+`\email` beside the first on the last author had read as a grid of one address per author, handing the first to Lv
+Tang (2009.10916); the copy is dropped as a restatement (#969). Late calls of their own still are (1303.3079's
+`\email`s in a footnote after `\maketitle`; 2112.13371, 2304.02709, 2605.03923's address blocks at the end). (4) A split list's tail placed just before its head — an IEEE
+blockA nested in another for the list's last line, digested and placed first — is joined to the head
+(`join_split_address_contacts`, 2410.15681: six e-mails, where two affiliations of the last author stood). **Guards**
+`perfect_kernel_batch107f::{an_address_spells_only_a_run_of_its_words, an_own_call_keeps_an_address_its_name_spells,
+a_restated_supplement_email_is_no_upfront_pile, a_split_list_whose_tail_was_placed_first_is_joined}` (repros
+sectioning-frontmatter/`email_spell_surname_inside_another_word`, `email_spell_own_call_name_also_matches`,
+`llncs_supplement_restated_email_not_copied`, `email_list_ieee_nested_blocka_tail_first`) and unit
+`author_split_tests::a_name_spells_a_run_of_the_local_parts_words`, RED (int139a3) → GREEN. Left: a local part with no
+separator still spells a surname it ends with (`rickyang@` is Yang's as much as Ang's: the longer wins); 2009.10916's
+own two addresses under Bo Li's institute stay where today's route puts them (both his; without the supplement the
+observer's writer gives both to the block, "several unspelled under one name").
+
+### 972. A list of addresses one contact prints for several people is each address's e-mail on its owner; a brace set in math is the brace it prints (Perl: the list stays one contact, copied onto every holder; `${$a,b$}$@x` one address)
+
+**Defect** (census138 ADDR-b; dev3 int138a: 8 papers, 0.083 pp per paper). (1) A class's verbatim `\email` argument
+(llncs's `\email Semiverbatim`, Perl llncs.cls.ltxml:54; KNOWN_PERL_ERRORS #1210) reads `$\{$fargyriou,mikebekos,symvonis$\}$@math.ntua.gr` with
+its math shifts as characters, so the list was one unread address "${$…$}$@…" on a nameless creator (1106.2694,
+2308.00146, 1602.04934); pdflatex typesets the math and prints "{fargyriou,mikebekos,symvonis}@math.ntua.gr". (2) A
+contact printing a list of addresses for several people stayed one contact: elsarticle's shared `\cortext[cor1]{Corresponding
+authors:\\zjsong@…; Chenxizhang@…}` and REVTeX's `\thanks{Corresponding Authors (a; b; c; d)}` were copied whole to
+each carrier (2302.03296, 2508.07950), and the names printed beside the addresses (`\email{: xiazh@… (Zhenhua Xia);
+lianghongstefanie@… (Hong Liang)}` on Hong Liang's call, 2009.14655; `\cortext{… Abrar Faiyaz (abrar\_faiyaz@…) and Md
+Nasir Uddin (nasir\_uddin@…)}`, 2507.07920) were text of the one e-mail or note.
+
+**Fix (1)** (`email_owners::math_braces_as_printed`, in `\lx@add@email` and `\lx@split@addresses`): `$\{$`, `$\lbrace$`
+are the `\{` they print, `$\}$`, `$\rbrace$` the `\}`, the shifts read as characters or as shifts; anything else in math
+stays. The list is then read as the text-brace list everywhere it already is (the Link step, the observer). A braced
+group of one local part, `$\{$meier.schindler$\}$@…` (1602.04934: a typo for a comma, as printed), stays one address,
+now printed "{meier.schindler}@…".
+
+**Fix (2)** (`address_lists::distribute_address_lists`, at the flush after the Kind step for an address line, before
+`write_role_notes`): a contact of an author — an e-mail, a correspondent or a thanks contact — printing two addresses or
+more (`listed_addresses`: plain addresses, a braced group written out, each with the name printed in brackets after it
+or before its bracketed address) gives each address as an e-mail to its owner by FIDELITY_CHARTER §4's order: the author
+whose name is printed beside it (by its letters, base-folded; the strongest evidence, above spelling); else the author it
+spells; else, among the contact's carriers, the consistent order or the elimination (`email_owners::list_owners`); else
+the block's own creator (#159), once. The printed names are no e-mail's text. The contact's other words stay its
+carriers' ("Corresponding authors:"), a contact left with none dropped; an e-mail keeps the call's name (REVTeX's
+`\email[Corresponding author]`, which `write_role_notes` then makes each owner's note), a correspondent's or thanks'
+addresses take the e-mail's own. Parted only where it is a list for several people: a contact two creators or more hold,
+or one whose every address has an author's name beside it; an e-mail whose list prints other words (`\{ann,bob\}@a.org
+(corresponding)`, perfect_kernel_batch92c), a list none of whose addresses finds an author (PoS's `\speaker`
+e-mail line, whose names are no creators yet at the flush, 1711.04132), or a document with a name not yet written is
+left as printed. The remainder drops the separators, an "and"/"or" between addresses, brackets left empty and an
+e-mail label left with nothing (`… addressed. Email: a @ x or b @ y.` leaves `… addressed.`, 2307.11827).
+Witnesses: 2009.14655 (Xia and Liang each their address and the "Corresponding author" note), 2507.07920, 2302.03296
+(`zjsong@` Zhijian Song's, `Chenxizhang@` Chenxi Zhang's), 2508.07950 (`chunfeng.lian@` Lian's, `cong6406@` Cong's;
+`wzy218@`, `jhma@` — the list in reverse author order, which the order step does not read — the block creator's).
+
+**Reach.** A/B `pop107f.tsv` (4,589: the 15 witnesses of A–D, the 4,074 dev20k/dev3 papers whose output holds an e-mail on a creator its name shares no whole part with, a list contact, a math-brace or a bracketed name beside an address, 500 `popint125a_s10k` controls; 4,583 converted) vs int139a3: 43 papers changed, all frontmatter (13 witnesses, 30 selected, 0 controls — 1811.05727's one formula parsed differently under load, byte-identical alone), E 2,869 = 2,869, F 7 = 7, Warnings equal on the final binary; `fm_checks.py` 1-7: no creator merged or lost, no e-mail held by more creators, no growth, no fragment. Every changed paper read against its source and PDF: better, or the `$` signs gone only (1602.04934, 2404.14236). Re-score of the 43 (score2 + score_tiers, both sides): 17 papers' verdicts changed, 63 → 87 of their 95 creators right; the two the scorer calls worse are its limits (2410.15681: its source reading keeps the blockA address lines as affiliations; 2602.00582: it gives `byang@` to Kangjia Yan by the substring "yan", where `\icmlcorrespondingauthor{Jilin Hu}{byang@…}` prints Jilin Hu). The A/B rounds settled the spelling rule's limits (OD #970 "107f") and two fail-safes here (a list finding no author, 1711.04132; the upfront grid's late calls, 1303.3079).
+
+**Guards** `perfect_kernel_batch107f::{a_math_brace_list_is_the_list_it_prints, an_address_list_on_a_contact_is_distributed_not_copied}`
+(repros sectioning-frontmatter/`email_list_llncs_math_braces`, `email_list_revtex_names_after_addresses`,
+`email_list_elsarticle_names_before_addresses`, `email_list_elsarticle_shared_cortext`, `email_list_revtex_shared_thanks`)
+and unit `author_split_tests::a_name_spells_a_run_of_the_local_parts_words` (the math braces), RED (int139a3) → GREEN.
+**Left** (one line each): a note (`ltx:note`) holding a list for its carriers is not parted (only contacts); initials tags
+`a@x (X.X.); b@y (M.Y.)` match no printed name (2002.08904); an unbraced list beside a printed name not in brackets
+(`Ann Able: a@x`) is not read as a name; a list in reverse author order stays unplaced (2508.07950).

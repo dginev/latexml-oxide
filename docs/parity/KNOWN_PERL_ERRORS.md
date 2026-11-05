@@ -19018,3 +19018,26 @@ Body.
 Kept as is in Rust (frontmatter_fields.rs ports it); the loss is counted by the title-page check's second source
 (OXIDIZED_DESIGN_DIVERGENCES #953 "106t", repro sectioning-frontmatter/`check_internal_command_reads_documents_optional.tex`,
 guard `perfect_kernel_batch106t::an_internal_command_reading_the_documents_text_is_counted`). Witness 2104.14704.
+
+## 1210. A class's verbatim `\email` argument prints a brace set in math with its `$` signs: `${$a,b$}$@x`
+
+llncs.cls.ltxml:54 `DefMacro('\email Semiverbatim', …)` reads the address with State.pm `beginSemiverbatim`'s
+SPECIALS (`$` among them, State.pm:119, :594) as characters, so a list of local parts in math braces — a common
+llncs idiom, since `\email` is `{\tt #1}` in llncs.cls and pdflatex typesets the math, "{a,b}@x" — becomes the text
+"${$a,b$}$@x": no list, no address of anyone. Minimal trigger:
+
+```latex
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1}}
+\institute{Univ X, Town\\ \email{$\{$aable,bbaker$\}$@x.org}}
+\maketitle
+Text.
+\end{document}
+```
+
+Rust reads `$\{$`, `$\lbrace$` as the `\{` they print and `$\}$`, `$\rbrace$` as the `\}` in `\lx@add@email` and
+`\lx@split@addresses` (`email_owners::math_braces_as_printed`, OXIDIZED_DESIGN_DIVERGENCES #972), so the list is an
+address each. Witnesses 1106.2694, 2308.00146, 1602.04934; guard `perfect_kernel_batch107f::a_math_brace_list_is_the_list_it_prints`.
+

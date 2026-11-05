@@ -209,6 +209,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // them, not "{yangqq" and "yangjh}@ipp.ac.cn"; `op{list}` whole when it is no list of addresses (2011.05971's
   // `\emailAdd{nikolay.bobev, anthony.charles, valentin.reys @kuleuven.be}`, the bare local parts no address).
   DefMacro!("\\lx@split@addresses{}{}", sub[(op, list)] {
+    // (a brace set in math is the brace it prints: `$\{$a, b$\}$@x`, `math_braces_as_printed`, OD #972)
+    let list = math_braces_as_printed(&list);
     // (at the commas and at an " and ": `\ead{cpires@fisica.ufpb.br and psilva@fisica.ufpb.br}`, 0710.2104, 1003.0073)
     let pieces: Vec<Tokens> = split_tokens(list.clone(), vec![
       SplitDelim::Token(T_OTHER!(",")),

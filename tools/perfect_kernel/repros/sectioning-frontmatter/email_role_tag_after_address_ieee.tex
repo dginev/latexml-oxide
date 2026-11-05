@@ -1,0 +1,21 @@
+% A role tag after an address, `Email: dkdee@y.org \textbf{(Corresponding Author)}` under IEEE blockAs: the tag is a
+%   correspondence note on the address's owner (FIDELITY_CHARTER §4: "Corresponding author" is an annotation on the
+%   author), the e-mail's text the address alone (`role_tag`, OD #966 "107f"; 107c's open item).
+% witness: 2503.14354 (`Email: skvishvakarma@iiti.ac.in \textbf{(Corresponding Author)}\\` after three blockAs)
+% oracle:  pdflatex 0 errors: "Ann Able∗, Bob Baker∗ and Dan Kumar Dee†", "∗ Univ X, Town", "† Univ Y, City",
+%   "Email: dkdee@y.org (Corresponding Author)"
+% engines: rust int139a3 = the line an affiliation "Email: dkdee@y.org (Corresponding Author)" of every author
+% expect:  0 errors, 0 warnings; Dan Kumar Dee: Univ Y, the "Corresponding Author" note, dkdee@y.org named "Email: "
+% status:  RED (int139a3) -> GREEN (107f)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{1} and Dan Kumar Dee\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ X, Town}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Univ Y, City}
+Email: dkdee@y.org \textbf{(Corresponding Author)}\\
+}
+\maketitle
+Text.
+\end{document}

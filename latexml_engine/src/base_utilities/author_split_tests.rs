@@ -1108,6 +1108,96 @@ fn a_contact_call_in_a_name_is_no_name_text() {
 }
 
 #[test]
+fn a_name_spells_a_run_of_the_local_parts_words() {
+  setup();
+  // (census138 EMAILSPELL, brief 107f B, OD #970 "107f": a surname or given name spells a run of the local part's words
+  // — inside one word, at its start or its end; never strictly inside another word, nor across a separator)
+  let keys = [
+    NameKeys::of(&tk("Shengyuan A. Yang")),
+    NameKeys::of(&tk("Lay Kee Ang")),
+  ];
+  assert_eq!(spelled_owners(&keys, "ricky_ang@x.edu"), [1]);
+  assert_eq!(spelled_owners(&keys, "ang2@x.edu"), [1]);
+  assert_eq!(spelled_owners(&keys, "kee.ang@x.edu"), [1]);
+  assert_eq!(spelled_owners(&keys, "shengyuan.yang@x.edu"), [0]);
+  assert!(spelled_owners(&keys, "bangkok@x.edu").is_empty());
+  assert!(spelled_owners(&keys, "zhangwei@x.edu").is_empty());
+  // (between initials, two letters at most on either side: `kmfonsecar@`, 1202.4210; `vemarinc@`, 2311.18024)
+  let keys = [
+    NameKeys::of(&tk("K. M. Fonseca Romero")),
+    NameKeys::of(&tk("Ann Able")),
+  ];
+  assert_eq!(spelled_owners(&keys, "kmfonsecar@x.co"), [0]);
+  let keys = [
+    NameKeys::of(&tk("Victor Marin")),
+    NameKeys::of(&tk("Ann Able")),
+  ];
+  assert_eq!(spelled_owners(&keys, "vemarinc@x.co"), [0]);
+  // (a three-letter word between letters is no name part: `yvanwy@` is no "van", 2202.02002; `byang@` no "yan", 2602.00582)
+  let keys = [
+    NameKeys::of(&tk("Anton van den Hengel")),
+    NameKeys::of(&tk("Kangjia Yan")),
+  ];
+  assert!(spelled_owners(&keys, "yvanwy@x.com").is_empty());
+  assert!(spelled_owners(&keys, "byang@x.cn").is_empty());
+  // (between the name's own initials a shorter part does: `rjosem@`, 1809.06911; another name's `mycheng@` is not
+  // Enhong Chen's, 2603.07528; a joined spelling ending a word spells only at five letters, `pyli@` no "yli", 2105.07637)
+  let keys = [
+    NameKeys::of(&tk("Jose M. Rodriguez-Nogales")),
+    NameKeys::of(&tk("Enhong Chen")),
+  ];
+  assert_eq!(spelled_owners(&keys, "rjosem@x.es"), [0]);
+  assert!(spelled_owners(&keys, "mycheng@x.cn").is_empty());
+  let keys = [
+    NameKeys::of(&tk("Pengyang Li")),
+    NameKeys::of(&tk("Yanan Li")),
+  ];
+  assert!(spelled_owners(&keys, "pyli@x.com").is_empty());
+  // (a truncated surname's letters end or start a word as a whole one does: `mkaufman@` Kaufmann's; one strictly inside
+  // a word spells no one)
+  let keys = [NameKeys::of(&tk("Michael Kaufmann"))];
+  assert_eq!(spelled_owners(&keys, "mkaufman@x.de"), [0]);
+  assert_eq!(spelled_owners(&keys, "kaufma.m@x.de"), [0]);
+  assert!(spelled_owners(&keys, "abckaufmay@x.de").is_empty());
+  // (a joined spelling ending a word whole spells it, `sechenqi@` Qi Chen's "chenqi", 2003.00397; an apostrophe inside
+  // a name's word joins it, `damicos@` Simone D'Amico's "damico", 2606.17317)
+  let keys = [
+    NameKeys::of(&tk("Qi Chen")),
+    NameKeys::of(&tk("Mingkui Tan")),
+  ];
+  assert_eq!(spelled_owners(&keys, "sechenqi@x.cn"), [0]);
+  let keys = [
+    NameKeys::of(&tk("Simone D'Amico")),
+    NameKeys::of(&tk("Ann Able")),
+  ];
+  assert_eq!(spelled_owners(&keys, "damicos@x.edu"), [0]);
+  // (an escaped underscore parts the words: `address_text`)
+  assert_eq!(
+    address_owners(
+      &[
+        NameKeys::of(&tk("Lay Kee Ang")),
+        NameKeys::of(&tk("Shengyuan A. Yang"))
+      ],
+      &tk(r"ricky\_ang@x.edu")
+    ),
+    [0]
+  );
+  // (a brace set in math is the brace it prints: `math_braces_as_printed`, OD #972)
+  assert_eq!(
+    math_braces_as_printed(&tk(r"$\{$a,b$\}$@x.org")).to_string(),
+    tk(r"\{a,b\}@x.org").to_string()
+  );
+  assert_eq!(
+    math_braces_as_printed(&tk(r"$\lbrace$a$\rbrace$@x.org")).to_string(),
+    tk(r"\{a\}@x.org").to_string()
+  );
+  assert_eq!(
+    math_braces_as_printed(&tk(r"$x$@y.org")).to_string(),
+    tk(r"$x$@y.org").to_string()
+  );
+}
+
+#[test]
 fn a_name_spells_by_its_base_letters_and_its_transliteration() {
   setup();
   // (html_feedback #7233, OD #970: an accent or letter command written in the source, or the letter itself, spells by

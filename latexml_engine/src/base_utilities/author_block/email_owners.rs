@@ -293,6 +293,50 @@ fn split_top_level_list(tokens: &[Token]) -> Vec<Tokens> {
   items
 }
 
+/// An address's tokens as TeX prints them where a brace is set in math: `$\{$`, `$\lbrace$` the brace `\{`, `$\}$`,
+/// `$\rbrace$` the brace `\}` — the math shifts read as characters (a class's verbatim `\email` argument: llncs's
+/// `\email{$\{$fargyriou,mikebekos,symvonis$\}$@math.ntua.gr}`, 1106.2694, 2308.00146, 1602.04934) or as shifts —, so
+/// a list of local parts in math braces is the list in text braces (`\lx@add@email`, `\lx@split@addresses`; census138
+/// ADDR-b, OXIDIZED_DESIGN_DIVERGENCES #972). Anything else in math stays as it is.
+pub(in crate::base_utilities) fn math_braces_as_printed(address: &Tokens) -> Tokens {
+  let v = address.unlist_ref();
+  let shift = |t: &Token| *t == T_OTHER!("$") || t.get_catcode() == Catcode::MATH;
+  let brace = |t: &Token| {
+    if *t == T_CS!("\\{") || *t == T_CS!("\\lbrace") {
+      Some(T_CS!("\\{"))
+    } else if *t == T_CS!("\\}") || *t == T_CS!("\\rbrace") {
+      Some(T_CS!("\\}"))
+    } else {
+      None
+    }
+  };
+  let spaces = |from: usize| {
+    from
+      + v[from.min(v.len())..]
+        .iter()
+        .take_while(|t| **t == T_SPACE!())
+        .count()
+  };
+  let mut out: Vec<Token> = Vec::with_capacity(v.len());
+  let mut at = 0;
+  while at < v.len() {
+    if shift(&v[at]) {
+      let inner = spaces(at + 1);
+      if let Some(printed) = v.get(inner).and_then(brace) {
+        let close = spaces(inner + 1);
+        if v.get(close).is_some_and(shift) {
+          out.push(printed);
+          at = close + 1;
+          continue;
+        }
+      }
+    }
+    out.push(v[at]);
+    at += 1;
+  }
+  Tokens::new(out)
+}
+
 /// One address of an email line, and the class's email command that gave it (`\email{x}`), if any.
 pub(in crate::base_utilities) struct EmailAddress {
   pub(in crate::base_utilities) address: Tokens,
@@ -480,8 +524,22 @@ impl NameKeys {
   }
 }
 
-/// A name's words, lowercased: its runs of letters.
+/// A name's words, lowercased: its runs of letters, an apostrophe between two letters inside its word (`D'Amico`
+/// "damico", whose address `damicos@` holds it whole, 2606.17317; `Gol'dshtein` "goldshtein" — brief 107f, where a
+/// surname spells only a run of the local part's words).
 fn name_words(text: &str) -> Vec<String> {
+  let chars: Vec<char> = text.chars().collect();
+  let text: String = chars
+    .iter()
+    .enumerate()
+    .filter(|&(at, c)| {
+      !(matches!(c, '\'' | '\u{2019}' | '\u{02bc}')
+        && at > 0
+        && chars[at - 1].is_alphabetic()
+        && chars.get(at + 1).is_some_and(|next| next.is_alphabetic()))
+    })
+    .map(|(_, c)| *c)
+    .collect();
   text
     .split(|c: char| !c.is_alphabetic())
     .filter(|word| !word.is_empty())
@@ -494,10 +552,14 @@ pub(in crate::base_utilities) fn address_text(address: &Tokens) -> String {
   // (a colour, a font, a scale is no letter of it, [`without_non_printing_arguments`]: 2604.19440, 2609.25669)
   let printed = without_non_printing_arguments(address.unlist_ref());
   let v = printed.as_slice();
+  // (an escaped underscore prints one, and parts the local part's words: `ricky\_ang@`, 2604.02636 — [`spelled_owners`])
   let text = |v: &[Token]| -> String {
     v.iter()
-      .filter(|t| matches!(t.code, Catcode::LETTER | Catcode::OTHER))
-      .map(|t| t.to_string())
+      .filter_map(|t| match t.code {
+        Catcode::LETTER | Catcode::OTHER => Some(t.to_string()),
+        _ if *t == T_CS!("\\_") || *t == T_CS!("\\textunderscore") => Some("_".to_string()),
+        _ => None,
+      })
       .collect()
   };
   // `\href{mailto:t}{p}`: the address it prints, not its target and the printed one run together; its target's, past
@@ -533,44 +595,116 @@ pub(in crate::base_utilities) fn address_owners(
 /// that scores better (the better of the two, never their sum: 2602.07835) — and the highest scores own it: a longer
 /// spelling outranks a key it holds (`fucheng.fuc@…` is Cheng Fu's, not Jiawei Chen's, 2403.00801; `wangchiew@…`
 /// Wang-Chiew Tan's, not Xiaolan Wang's, 2104.01371; `yipengzhang97@…` Yipeng Zhang's, not Xiaoying Zhang's,
-/// 2406.06326), a tie going to the surname's spelling. No name when none scores.
+/// 2406.06326), a tie going to the surname's spelling. No name when none scores. A surname or given name spells only
+/// a run of the local part's words — inside one word, at its start or its end, never strictly inside another word nor
+/// across a separator (`.` `_` `-`, a digit): `ricky_ang@` is Lay Kee Ang's, not Shengyuan A. Yang's (2604.02636;
+/// census138 EMAILSPELL, OXIDIZED_DESIGN_DIVERGENCES #970 "107f").
 pub(in crate::base_utilities) fn spelled_owners(
   name_keys: &[NameKeys],
   address: &str,
 ) -> Vec<usize> {
-  let Some(local) = address.split('@').next() else {
+  let Some(raw) = address.split('@').next() else {
     return Vec::new();
   };
-  let local: String = local
-    .chars()
-    .filter(|c| c.is_alphabetic())
-    .collect::<String>()
-    .to_lowercase();
+  // (its letters, lowercased, and where its words meet: its separators — `.` `_` `-`, a digit, any other character —,
+  // its start and its end)
+  let mut local = String::new();
+  let mut bounds: Vec<usize> = vec![0];
+  for c in raw.chars() {
+    if c.is_alphabetic() {
+      local.extend(c.to_lowercase());
+    } else if bounds.last() != Some(&local.len()) {
+      bounds.push(local.len());
+    }
+  }
+  if bounds.last() != Some(&local.len()) {
+    bounds.push(local.len());
+  }
+  let local = local;
+  // (a key's letters at `start..end` are a run of the local part's words: inside one word, its start or its end — or
+  // between initials, two letters at most on either side, each an initial of the name's own words (`own`: `rjosem@`
+  // José M. Rodríguez-Nogales', 1809.06911; `kmfonsecar@` K. M. Fonseca Romero's, 1202.4210), any letters for a key of
+  // five letters or more (`vemarinc@` Víctor Marín's, 2311.18024) — the A/B's three papers the literal "never inside a
+  // word" lost; a shorter key between other letters is a word's letters: `yvanwy@` no "van" (2202.02002), `byang@` no
+  // "yan" (2602.00582), `mycheng@` no Enhong Chen's "chen" (2603.07528). Never across a separator: `ricky_ang@` spells
+  // Lay Kee Ang's "ang", not Shengyuan A. Yang's "yang" across the `_`, 2604.02636; `zhangwei@` and `bangkok@` no "ang"
+  // — census138 EMAILSPELL, brief 107f)
+  let at_bounds = |start: usize, end: usize, own: &str| {
+    if bounds.iter().any(|&b| start < b && b < end) {
+      return false;
+    }
+    let before = bounds
+      .iter()
+      .copied()
+      .filter(|&b| b <= start)
+      .max()
+      .unwrap_or(0);
+    let after = bounds
+      .iter()
+      .copied()
+      .filter(|&b| b >= end)
+      .min()
+      .unwrap_or(local.len());
+    let initials = |letters: &str| letters.chars().all(|c| own.contains(c));
+    start == before
+      || end == after
+      || (start - before <= 2
+        && after - end <= 2
+        && (end - start >= 5 || (initials(&local[before..start]) && initials(&local[end..after]))))
+  };
+  // (every place `key` stands in the local part, overlapping ones too)
+  let places = |key: &str| -> Vec<usize> {
+    if key.is_empty() {
+      return Vec::new();
+    }
+    (0..local.len())
+      .filter(|&at| local.is_char_boundary(at) && local[at..].starts_with(key))
+      .collect()
+  };
   // (a surname's first six letters only outside the letters its given name matched (`given`, their place in the local
   // part): `andrea.rossi@` is Andrea Rossi's, not Andrea Andreassen's "andrea" counted twice, `soeren.hansen@` Søren
-  // Hansen's, not Søren Sørensen's — review rev107a finding 2)
-  let surname_score = |key: &SpelledWord, given: Option<(usize, usize)>| {
-    let prefix: String = key.text.chars().take(6).collect();
-    let outside = |prefix: &str| match given {
-      Some((start, end)) => local[..start].contains(prefix) || local[end..].contains(prefix),
-      None => local.contains(prefix),
-    };
-    if local.contains(key.text.as_str()) {
-      key.text.chars().count()
-    } else if key.letters >= 6 && outside(&prefix) {
-      6
-    } else {
-      0
+  // Hansen's, not Søren Sørensen's — review rev107a finding 2). A truncated surname is a word's run as a whole one is:
+  // the longest of the surname's first letters standing there, six or more, ends where the word ends or starts where it
+  // starts (`mkaufman@` for Kaufmann, `leyaouan@` for Le Yaouanc)
+  let surname_score = |key: &SpelledWord, given: Option<(usize, usize)>, own: &str| {
+    let len = key.text.len();
+    if places(&key.text)
+      .into_iter()
+      .any(|at| at_bounds(at, at + len, own))
+    {
+      return key.text.chars().count();
     }
+    if key.letters < 6 {
+      return 0;
+    }
+    let prefix: String = key.text.chars().take(6).collect();
+    let outside = |at: usize| match given {
+      Some((start, end)) => at + prefix.len() <= start || at >= end,
+      None => true,
+    };
+    let truncated = places(&prefix).into_iter().any(|at| {
+      let held = local[at..]
+        .chars()
+        .zip(key.text.chars())
+        .take_while(|(a, b)| a == b)
+        .map(|(a, _)| a.len_utf8())
+        .sum::<usize>();
+      outside(at) && at_bounds(at, at + held, own)
+    });
+    if truncated { 6 } else { 0 }
   };
-  // (where the given name stands in the local part: opening it, or anywhere when it has four letters or more)
-  let given_place = |given: &SpelledWord| {
-    if local.starts_with(given.text.as_str()) {
-      Some((0, given.text.len()))
+  // (where the given name stands in the local part: opening it, or anywhere when it has four letters or more — a run
+  // of its words, as a surname's)
+  let given_place = |given: &SpelledWord, own: &str| {
+    let len = given.text.len();
+    let fits = |at: usize| at_bounds(at, at + len, own);
+    if local.starts_with(given.text.as_str()) && fits(0) {
+      Some((0, len))
     } else if given.letters >= 4 {
-      local
-        .find(given.text.as_str())
-        .map(|at| (at, at + given.text.len()))
+      places(&given.text)
+        .into_iter()
+        .find(|&at| fits(at))
+        .map(|at| (at, at + len))
     } else {
       None
     }
@@ -586,7 +720,16 @@ pub(in crate::base_utilities) fn spelled_owners(
       .joined
       .iter()
       .filter_map(|key| {
-        if local.starts_with(key.as_str()) {
+        // (or one of five letters or more ending a word of the local part whole: `sechenqi@` Qi Chen's "chenqi"
+        // (2003.00397), `nnwang@` Nannan Wang's "nwang" (2602.23777) — a surname inside a word no longer spells it,
+        // brief 107f; a shorter one is a word's letters, `pyli@` no Yanan Li's "yli", 2105.07637)
+        let ends_a_word = || {
+          key.chars().count() >= 5
+            && places(key)
+              .into_iter()
+              .any(|at| bounds.contains(&(at + key.len())))
+        };
+        if local.starts_with(key.as_str()) || ends_a_word() {
           Some(key.chars().count())
         } else {
           let held = local
@@ -626,15 +769,17 @@ pub(in crate::base_utilities) fn spelled_owners(
       keys
         .spellings()
         .map(|keys| {
+          // (the initials of the name's words, which a part of it inside a word may stand between: `at_bounds`)
+          let own = keys.initials.first().map_or("", String::as_str);
           let given = keys
             .given
             .as_ref()
-            .and_then(|given| Some((given, given_place(given)?)));
+            .and_then(|given| Some((given, given_place(given, own)?)));
           let place = given.map(|(_, place)| place);
           let surname: usize = keys
             .surnames
             .iter()
-            .map(|key| surname_score(key, place))
+            .map(|key| surname_score(key, place, own))
             .sum::<usize>()
             + keys
               .short_surnames
@@ -653,6 +798,15 @@ pub(in crate::base_utilities) fn spelled_owners(
     return Vec::new();
   }
   (0..scores.len()).filter(|at| scores[*at] == best).collect()
+}
+
+/// Whether the name `keys` stands for spells `address` at all ([`spelled_owners`] scores it), however another name
+/// scores: an author's own call keeps an address its own name spells (FIDELITY_CHARTER §4 #420: amsart's
+/// `\author{Yang Zhang}…\email{yang91@…}` beside Hengyun Yang, 1707.09730; revtex's `\author{Lay Kee Ang}\email{ricky\_ang@…}`,
+/// 2604.02636 — census138 EMAILSPELL), where `insert::respell_emails` and the observer's `Resolver::respell_emails`
+/// would move it to the name spelling it better.
+pub(in crate::base_utilities) fn name_spells(keys: &NameKeys, address: &str) -> bool {
+  !spelled_owners(std::slice::from_ref(keys), address).is_empty()
 }
 
 /// The owner (index into `name_keys`) of each of a line's `addresses`: the one name it spells ([`spelled_owner`]); and,

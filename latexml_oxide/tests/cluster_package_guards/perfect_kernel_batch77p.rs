@@ -1105,9 +1105,11 @@ fn email_elimination_waits_on_the_other_lines() {
 }
 
 /// The run of addresses between two spelled owners counts every author between them, spelled on another line or not
-/// (2602.23777, the r5 re-review's probe q4): `nnwang@` between `xu_zhipeng@` and `dcheng@` has three authors between
-/// their owners, so it is not Dongsheng Li's, nor `dongsli@` then Nannan Wang's by elimination; both are the block's,
-/// on the shared creator (user ruling R10 2026-10-20; 77p r9 put them on the last name).
+/// (2602.23777, the r5 re-review's probe q4): an unspelled `zq9@` between `xu_zhipeng@` and `dcheng@` has three authors
+/// between their owners, so it is not Dongsheng Li's, nor `dongsli@` then anyone's by elimination; both are the
+/// block's, on the shared creator (user ruling R10 2026-10-20; 77p r9 put them on the last name). The witness's own
+/// `nnwang@` spells Nannan Wang since 107f (a joined spelling, "nwang", ending the word whole: brief 107f), and then
+/// `dongsli@` is Dongsheng Li's, the one address and the one name left — re-pinned 107f.
 #[test]
 fn email_gap_counts_every_author() {
   let xml = convert_repro!("author_email_gap_counts_every_author.tex");
@@ -1120,6 +1122,44 @@ fn email_gap_counts_every_author() {
     affiliation("Xidian University"),
     affiliation("Microsoft Research Asia"),
   );
+  assert_eq!(creators(&xml), [
+    creator(
+      true,
+      "Zhipeng Xu",
+      &format!("{xidian} {}", email("xu_zhipeng@stu.xidian.edu.cn"))
+    ),
+    creator(
+      false,
+      "Zilong Wang",
+      &format!("{msra} {}", email("wangzilong@microsoft.com"))
+    ),
+    creator(
+      false,
+      "Xinyang Jiang",
+      &format!("{msra} {}", email("xinyangjiang@microsoft.com"))
+    ),
+    creator(
+      false,
+      "Dongsheng Li",
+      &format!("{msra} {}", email("dongsli@microsoft.com"))
+    ),
+    creator(
+      false,
+      "De Cheng",
+      &format!(
+        "{xidian} {} {}",
+        affiliation("NEL "),
+        email("dcheng@xidian.edu.cn")
+      )
+    ),
+    creator(
+      false,
+      "Nannan Wang",
+      &format!("{xidian} {}", email("nnwang@xidian.edu.cn"))
+    ),
+  ]);
+  let xml = convert_repro!("author_email_gap_counts_every_author_unspelled.tex");
+  assert_no_merged_names(&xml);
   assert_eq!(creators(&xml), [
     creator(
       true,
@@ -1149,7 +1189,7 @@ fn email_gap_counts_every_author() {
     creator(false, "Nannan Wang", &xidian),
     shared(&format!(
       "{} {}",
-      email("nnwang@xidian.edu.cn"),
+      email("zq9@xidian.edu.cn"),
       email("dongsli@microsoft.com")
     )),
   ]);

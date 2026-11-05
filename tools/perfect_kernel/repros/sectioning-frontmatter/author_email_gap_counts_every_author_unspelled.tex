@@ -1,0 +1,22 @@
+% The run between two spelled owners counts every author between them (`email_owners::owners_by_elimination`): an
+%   unspelled `zq9@` between `xu_zhipeng@` (Zhipeng Xu) and `dcheng@` (De Cheng) has three authors between their owners,
+%   so it is none of theirs, and `dongsli@` on the next line goes by no elimination while `zq9@` is open: both the
+%   block's (user ruling R10 2026-10-20). The twin of author_email_gap_counts_every_author.tex, whose `nnwang@` spells
+%   Nannan Wang since 107f (a joined spelling ending a word whole) — kept so the gap rule keeps its case.
+% witness: 2602.23777 (shape; synthetic address), the 77p r5 re-review's probe q4
+% oracle:  pdflatex 0 errors: the lines as written, under the affiliations
+% engines: rust 107f = as expected
+% expect:  0 errors, 0 warnings; xu_zhipeng@, dcheng@, wangzilong@, xinyangjiang@ on their owners; zq9@ and dongsli@
+%   the block creator's
+% status:  GREEN (107f; the gap rule's own case, moved from its twin)
+\documentclass{article}
+\title{T}
+\author{Zhipeng Xu\textsuperscript{\rm 1}, Zilong Wang\textsuperscript{\rm 2}, Xinyang Jiang\textsuperscript{\rm 2},
+Dongsheng Li\textsuperscript{\rm 2}, De Cheng\textsuperscript{\rm 1,3}, Nannan Wang\textsuperscript{\rm 1} \\
+\textsuperscript{1}Xidian University,\; \textsuperscript{2}Microsoft Research Asia\; \\ \textsuperscript{3}NEL\; \\
+\tt \small xu\_zhipeng@stu.xidian.edu.cn,  \{zq9,dcheng\}@xidian.edu.cn \\
+\tt \small \{wangzilong, xinyangjiang, dongsli\}@microsoft.com}
+\begin{document}
+\maketitle
+Text.
+\end{document}

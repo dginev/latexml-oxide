@@ -461,10 +461,22 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     "\\lx@add@currentaddress[]{}",
     "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=currentaddress,#1]{#2}"
   );
-  DefMacro!(
-    "\\lx@add@email [] Semiverbatim",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=email,#1]{#2}"
-  );
+  // (Rust-only, OXIDIZED_DESIGN_DIVERGENCES #972: the address as TeX prints it, a brace set in math a brace —
+  // `\email{$\{$a,b$\}$@x}` prints "{a,b}@x", which the class's verbatim reading kept as "${$a,b$}$@x": llncs's
+  // 1106.2694, 2308.00146, 1602.04934 — [`math_braces_as_printed`])
+  DefMacro!("\\lx@add@email [] Semiverbatim", sub[(attr, address)] {
+    let address: Tokens = address;
+    let mut keyvals: Vec<Token> = mouth::tokenize_internal("role=email,").unlist();
+    if let Some(attr) = attr {
+      keyvals.extend(attr.unlist());
+    }
+    Ok(Invocation!(T_CS!("\\lx@annotate@frontmatter"), vec![
+      Some(mouth::tokenize_internal("ltx:creator")),
+      Some(mouth::tokenize_internal("ltx:contact")),
+      Some(Tokens::new(keyvals)),
+      Some(math_braces_as_printed(&address))
+    ]))
+  });
   // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #901): an address of the e-mail line under a whole row of names, placed by
   // its owner's label (`row:atN`, or `addresses:block`; `share_row_contacts`), `#2` set in the class command's font. A
   // class whose own e-mail contact has a name of its own sets it here (llncs's `\emailname`).

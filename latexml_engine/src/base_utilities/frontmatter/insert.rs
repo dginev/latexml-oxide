@@ -105,6 +105,8 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
     link_entry_addresses(document, Some(&kinded))?;
     drop_empty_contacts(document)?;
   }
+  // (a list of addresses one contact prints for several people, each its owner's e-mail: census138 ADDR-b, OD #972)
+  distribute_address_lists(document)?;
   // (an e-mail's correspondence label, read once every address is placed: its owner's note, review rev107c N4)
   write_role_notes(document)?;
   if !kinded.is_empty() {
@@ -1499,13 +1501,12 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
     return Ok(());
   }
   let authors = document.findnodes("//ltx:creator[@role='author'][ltx:personname]", None);
-  // (one author, and no author creator without a name beside it: a nameless one holding names the reader did not part
-  // is more authors — 1102.4967's "Rizwan Ghaffar, Dimitris Toumpakaris and" beside Jungwon Lee, whose addresses are
-  // not his; review of 107c r2's A/B)
-  let sole_author = authors.len() == 1
-    && document
-      .findnodes("//ltx:creator[@role='author'][not(ltx:personname)]", None)
-      .is_empty();
+  // (one author, and no author creator without a name beside it that holds names the reader did not part, which are
+  // more authors — 1102.4967's "Rizwan Ghaffar, Dimitris Toumpakaris and" beside Jungwon Lee, whose addresses are not
+  // his; review of 107c r2's A/B. The block's own creator (OD #159) or an orphan line's is no author: a line's owner
+  // never depends on another line — user ruling 2026-11-05, "Sole author": `* Corresponding author, E-mail: qz@a.org`
+  // under `Ann Able$^{a}$` is Ann's beside an orphan `$^{b}$ Univ B, City` too, rev107c2 finding 2)
+  let sole_author = authors.len() == 1 && !nameless_creator_holds_names(document);
   let default_name = get_frontmatter_name(None, "ltx:contact", "email")?;
   let names: Vec<String> = authors
     .iter()
@@ -2234,10 +2235,12 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
       // the entry, review rev106a S1)
       let marks = line.marks();
       let mut shown: Vec<usize> = Vec::new();
-      for (address, leading) in cut
+      let last = cut.addresses.len().saturating_sub(1);
+      for (n, (address, leading)) in cut
         .addresses
         .iter()
         .zip(address_marks(&line.text, &marks, &cut))
+        .enumerate()
       {
         let mark = (!leading.is_empty()).then(|| {
           leading
@@ -2246,6 +2249,21 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
             .collect::<Vec<_>>()
             .join(",")
         });
+        // (a role tag after the last address is its owner's correspondence note, its mark the address's line mark:
+        // `Email: x@y (Corresponding Author)`, 2503.14354; `(* corresponding author)`, 2210.14319 — [`role_tag`])
+        let (name, mark) = match &cut.role_tag {
+          Some((phrase, tag_mark)) if n == last => (
+            Some(s!(
+              "{phrase}, {}",
+              name
+                .clone()
+                .or_else(|| default_name.clone())
+                .unwrap_or_default()
+            )),
+            mark.or_else(|| tag_mark.clone()),
+          ),
+          _ => (name.clone(), mark),
+        };
         let show: Vec<&str> = leading
           .iter()
           .filter(|&&i| {
@@ -2402,18 +2420,31 @@ fn join_split_address_contacts(document: &mut Document) -> Result<()> {
           open += brace_depth(&contacts[next].get_content());
           open <= 0
         });
-      let Some(close) = close.filter(|&close| contacts[close].get_content().contains("}@")) else {
-        at += 1;
-        continue;
+      let close = close.filter(|&close| contacts[close].get_content().contains("}@"));
+      // (or the one contact just before the head, where the tail was placed first: a nested `\IEEEauthorblockA` holding
+      // the list's last line, `\IEEEauthorblockA{{\{a, b,} \IEEEauthorblockA{c\}@x}}`, is digested — and placed — inside
+      // the outer one, before it; 2410.15681: brief 107f)
+      let before = (close.is_none() && at > 0).then(|| at - 1).filter(|&tail| {
+        let text = contacts[tail].get_content();
+        contacts[tail]
+          .get_attribute("role")
+          .is_some_and(|role| role == "email" || CUT_ROLES.contains(&role.as_str()))
+          && text.contains("}@")
+          && brace_depth(&last_line) + brace_depth(&text) <= 0
+      });
+      let tails: Vec<Node> = match (close, before) {
+        (Some(close), _) => contacts[at + 1..=close].to_vec(),
+        (None, Some(tail)) => vec![contacts[tail].clone()],
+        (None, None) => {
+          at += 1;
+          continue;
+        },
       };
-      let tail: Vec<String> = contacts[at + 1..=close]
-        .iter()
-        .map(Node::get_content)
-        .collect();
+      let tail: Vec<String> = tails.iter().map(Node::get_content).collect();
       let joined = format!("{last_line}\n{}", tail.join("\n"));
       if address_line_cut(&joined, &spells, false).is_some_and(|cut| cut.start == 0) {
         let mut head = head.clone();
-        for tail in &contacts[at + 1..=close] {
+        for tail in &tails {
           let mut separator = Node::new("break", None, document.get_document())?;
           if let Some(namespace) = head.get_namespace() {
             let _ = separator.set_namespace(&namespace);
@@ -2435,7 +2466,7 @@ fn join_split_address_contacts(document: &mut Document) -> Result<()> {
           )
         );
       }
-      at = close + 1;
+      at = close.map_or(at + 1, |close| close + 1);
     }
   }
   Ok(())
@@ -2808,6 +2839,62 @@ pub(in crate::base_utilities) struct AddressLineCut {
   pub label:         Option<String>,
   pub addresses:     Vec<String>,
   pub address_start: usize,
+  /// a role tag after the last address, its correspondence phrase and the mark it prints, if one ([`role_tag`])
+  pub role_tag:      Option<(String, Option<String>)>,
+}
+
+/// A role tag ending a line after its addresses: a bracket holding a correspondence role phrase and nothing else but a
+/// mark before it (`skvishvakarma@… \textbf{(Corresponding Author)}`, 2503.14354; `xychen@…, wangcs@… (* corresponding
+/// author)`, 2210.14319) — FIDELITY_CHARTER §4, "Corresponding author" is an annotation on the author: where the tag
+/// starts, the phrase and the mark. The tag after the last address is that address's ([`kind_address_lines`]: the
+/// phrase its owner's correspondence note, `write_role_notes`; the mark its line mark), the e-mail's text the address
+/// alone (brief 107f C, 107c's open item).
+fn role_tag(text: &str) -> Option<(usize, String, Option<String>)> {
+  let end = text.trim_end();
+  let end = end.strip_suffix(['.', ';', ',']).map_or(end, str::trim_end);
+  let trimmed = end.strip_suffix(')')?;
+  let open = trimmed.rfind('(')?;
+  let inner = &trimmed[open + 1..];
+  let phrase_at = inner.find(char::is_alphabetic)?;
+  let mark: String = inner[..phrase_at]
+    .chars()
+    .filter(|c| !c.is_whitespace())
+    .collect();
+  if mark.chars().any(char::is_alphanumeric) {
+    return None;
+  }
+  let phrase = inner[phrase_at..].trim_end();
+  if correspondence_phrase(phrase) != Some(phrase.len()) {
+    return None;
+  }
+  // (right after an address: its domain's last letter before the bracket)
+  let before = text[..open].trim_end();
+  let last_word = before
+    .rsplit(char::is_whitespace)
+    .next()
+    .unwrap_or_default();
+  (last_word.contains('@') && before.ends_with(char::is_alphanumeric)).then(|| {
+    (
+      open,
+      phrase.split_whitespace().collect::<Vec<_>>().join(" "),
+      (!mark.is_empty()).then_some(mark),
+    )
+  })
+}
+
+/// [`address_line_cut_untagged`] of a line, a role tag after its addresses read apart ([`role_tag`]).
+pub(in crate::base_utilities) fn address_line_cut(
+  text: &str,
+  spells: &dyn Fn(&str) -> bool,
+  legend: bool,
+) -> Option<AddressLineCut> {
+  if let Some((tag_start, phrase, mark)) = role_tag(text)
+    && let Some(mut cut) = address_line_cut_untagged(&text[..tag_start], spells, legend)
+  {
+    cut.role_tag = Some((phrase, mark));
+    return Some(cut);
+  }
+  address_line_cut_untagged(text, spells, legend)
 }
 
 /// The cut of a line's text that is a line of addresses ([`kind_address_lines`]): its last run of addresses
@@ -2818,7 +2905,7 @@ pub(in crate::base_utilities) struct AddressLineCut {
 /// is the entry's only one and a mark opens it, so a contact's words with no e-mail word before its addresses stay as
 /// the legend the Kind step for a legend makes its carriers' note ([`kind_legend_contacts`]); an unmarked one would
 /// stay an affiliation there, so its words name the e-mails instead (77y's block line `Corresponding Author: …`).
-pub(in crate::base_utilities) fn address_line_cut(
+fn address_line_cut_untagged(
   text: &str,
   spells: &dyn Fn(&str) -> bool,
   legend: bool,
@@ -2909,6 +2996,7 @@ pub(in crate::base_utilities) fn address_line_cut(
       label: None,
       addresses,
       address_start,
+      role_tag: None,
     });
   }
   if whole {
@@ -2917,6 +3005,7 @@ pub(in crate::base_utilities) fn address_line_cut(
       label,
       addresses,
       address_start,
+      role_tag: None,
     });
   }
   // (words before: only behind a label, and the label at a list's or a sentence's boundary — never inside a bracket the
@@ -2962,6 +3051,7 @@ pub(in crate::base_utilities) fn address_line_cut(
     label,
     addresses,
     address_start,
+    role_tag: None,
   })
 }
 
@@ -3000,7 +3090,8 @@ fn correspondence_phrase(label: &str) -> Option<usize> {
 /// route it was made, gives the phrase to a correspondence note of the creator holding it — the address's owner, the
 /// block's own creator where the address went there — before it, as printed (R8), with the mark its line printed
 /// ([`LINE_MARK`]); it keeps the label's rest ("E-mail: "), else its role's name. A creator holding a correspondence note
-/// already keeps that one (review rev107c N4, the main session's Q6 ruling).
+/// already keeps that one, and the e-mail its label as printed (review rev107c N4, the main session's Q6 ruling; rev107c2
+/// finding 1).
 fn write_role_notes(document: &mut Document) -> Result<()> {
   let contacts = document.findnodes("//ltx:creator/ltx:contact[@role='email'][@name]", None);
   let default_name = get_frontmatter_name(None, "ltx:contact", "email")?;
@@ -3013,6 +3104,30 @@ fn write_role_notes(document: &mut Document) -> Result<()> {
       continue;
     };
     let phrase = name[..end].split_whitespace().collect::<Vec<_>>().join(" ");
+    // (a creator holding a correspondence note already keeps that one; where the note says another thing — a `\thanks{To
+    // whom correspondence should be addressed.}` — the e-mail keeps its label as printed, so the phrase is not lost
+    // (review rev107c2 finding 1, `email_label_correspondence_beside_thanks_note`); one this step made of the same
+    // phrase holds it already — an author's two e-mails under REVTeX's `\email[Corresponding authors:]{a, b}`,
+    // 2504.10237)
+    let notes: Vec<String> = element_nodes(&creator)
+      .iter()
+      .filter(|child| {
+        child.get_name() == "note"
+          && child
+            .get_attribute("class")
+            .is_some_and(|class| class.contains("ltx_thanks_correspondence"))
+      })
+      .map(|note| note.get_content())
+      .collect();
+    let same_phrase = notes.iter().any(|note| {
+      note
+        .trim_start_matches(|c: char| !c.is_alphabetic())
+        .trim()
+        .eq_ignore_ascii_case(&phrase)
+    });
+    if !notes.is_empty() && !same_phrase {
+      continue;
+    }
     let remainder = name[end..]
       .trim_start_matches(|c: char| c.is_whitespace() || ",;:-\u{2013}\u{2014}".contains(c));
     match (remainder.chars().any(char::is_alphanumeric), &default_name) {
@@ -3022,13 +3137,7 @@ fn write_role_notes(document: &mut Document) -> Result<()> {
         contact.remove_attribute("name").ok();
       },
     }
-    let noted = element_nodes(&creator).iter().any(|child| {
-      child.get_name() == "note"
-        && child
-          .get_attribute("class")
-          .is_some_and(|class| class.contains("ltx_thanks_correspondence"))
-    });
-    if noted {
+    if same_phrase {
       continue;
     }
     DebugFeature!(
@@ -3357,9 +3466,38 @@ fn set_written_out(contact: &Node, address: &str) {
   let _ = node.set_content(address);
 }
 
+/// Whether a nameless author creator holds names the reader did not part: a contact of its, an e-mail, link or note
+/// aside, whose printed words read as one name or more (`name_count`, its marks left out) — 1102.4967's IEEE
+/// `Rizwan Ghaffar, Dimitris Toumpakaris$^\dagger$ and` beside `\IEEEauthorblockN{Jungwon Lee…}`. The block's own
+/// creator (OD #159) holding the block's contacts, or an orphan line's (`Univ B, City`), holds none
+/// ([`link_entry_addresses`]'s only-author step; user ruling 2026-11-05, "Sole author").
+fn nameless_creator_holds_names(document: &mut Document) -> bool {
+  document
+    .findnodes(
+      "//ltx:creator[@role='author'][not(ltx:personname)]/ltx:contact[not(@role='email') and not(@role='url') and not(@role='orcid')]",
+      None,
+    )
+    .iter()
+    .any(|contact| {
+      let text: String = contact
+        .get_content()
+        .chars()
+        .filter(|c| c.is_alphanumeric() || c.is_whitespace() || ",.-'\u{2019}&".contains(*c))
+        .collect();
+      // (a list left open, `… and`, ends at its last name)
+      let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+      let text = text
+        .strip_suffix(" and")
+        .or_else(|| text.strip_suffix(" &"))
+        .unwrap_or(&text)
+        .trim_end_matches(',');
+      name_count(text) > 0
+    })
+}
+
 /// The author block's own creator (OD #159): the first nameless author creator after the named ones, else a new one
 /// after the last of them.
-fn block_creator(document: &mut Document, authors: &[Node]) -> Result<Option<Node>> {
+pub(super) fn block_creator(document: &mut Document, authors: &[Node]) -> Result<Option<Node>> {
   if let Some(creator) = document
     .findnodes("//ltx:creator[@role='author'][not(ltx:personname)]", None)
     .into_iter()
@@ -3445,9 +3583,11 @@ fn respell_emails(document: &mut Document) -> Result<()> {
       else {
         continue;
       };
+      // (an e-mail its holder's own name spells stays, however another name scores: `yang91@` on Yang Zhang's own call
+      // beside Hengyun Yang, 1707.09730; `ricky_ang@` on Lay Kee Ang's, 2604.02636 — FIDELITY_CHARTER §4 #420)
       if let Some(owner) = spelled_owner(&keys, address)
         && owner != at
-        && !spelled_owners(&base_keys, address).contains(&at)
+        && !name_spells(&base_keys[at], address)
       {
         moves.push((contact, owner));
       }
@@ -3601,13 +3741,39 @@ fn distribute_upfront_contacts(document: &mut Document) -> Result<()> {
   if n < 2 {
     return Ok(());
   }
+  // (a call made after `\maketitle` placed the frontmatter ([`CONTACT_LATE`]) restating a contact the creator holds
+  // from an earlier call — a supplement's restatement — is no contact of the pile: llncs's restated `\institute` put a
+  // second `\email{libraboli@…}` beside the first on Bo Li, the last author, and the two read as a grid of one each,
+  // handing the first to Lv Tang, who prints none (2009.10916: census138 EMAILSPELL, brief 107f);
+  // `drop_repeated_contacts` drops the copy. Late calls of their own still are: 1303.3079's `\email`s in a footnote
+  // after `\maketitle`)
+  let printed = |x: &Node| {
+    (
+      x.get_attribute("role"),
+      x.get_content()
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" "),
+    )
+  };
   let contacts_of = |c: &Node| -> Vec<Node> {
-    c.get_child_nodes()
+    let all: Vec<Node> = c
+      .get_child_nodes()
       .into_iter()
       .filter(|x| {
         x.get_type() == Some(NodeType::ElementNode)
           && with(document::get_node_qname(x), |q| q == "ltx:contact")
       })
+      .collect();
+    all
+      .iter()
+      .filter(|x| {
+        !x.has_attribute(CONTACT_LATE)
+          || !all
+            .iter()
+            .any(|y| !y.has_attribute(CONTACT_LATE) && printed(y) == printed(x))
+      })
+      .cloned()
       .collect()
   };
   // Signature: only the LAST author carries any contacts.

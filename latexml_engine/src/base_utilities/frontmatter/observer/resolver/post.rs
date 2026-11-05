@@ -575,9 +575,10 @@ impl Resolver {
           && !lists_local_parts(address)
           && let [owner] = spelled_owners(&printed, address).as_slice()
           && live[*owner] != c
-          && !spelled_owners(&based, address)
+          && !live
             .iter()
-            .any(|&at| live[at] == c)
+            .position(|&at| at == c)
+            .is_some_and(|holder| name_spells(&based[holder], address))
         {
           moves.push((c, i, live[*owner]));
         }
