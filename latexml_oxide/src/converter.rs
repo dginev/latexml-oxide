@@ -602,6 +602,8 @@ impl Converter {
     latexml_core::document::reset_field_provenance();
     // …and so is the frontmatter observer's shadow ledger (OXIDIZED_DESIGN_DIVERGENCES #837)
     latexml_engine::base_utilities::reset_fm_shadow();
+    // …and the title-page check's spill notes (OXIDIZED_DESIGN_DIVERGENCES #953)
+    latexml_engine::base_utilities::reset_title_page_check();
     // The main source's kind, for the preloads below and the document's PDF mode
     // (`core_interface::establish_pdf_output_mode`).
     state::set_plain_tex_document(self.compile_route.plain_tex);
@@ -1157,6 +1159,7 @@ impl Converter {
     // ledger would lift nothing here (OXIDIZED_DESIGN #715).
     latexml_core::document::reset_field_provenance();
     latexml_engine::base_utilities::reset_fm_shadow();
+    latexml_engine::base_utilities::reset_title_page_check();
     // The files read raw and the stand-in copies' provides-modes are this conversion's: a CLI run over several files
     // (`latexml_oxide t.tex u.tex`) or a worker reusing its thread starts each with none, so the second paper's copy
     // is read too (OXIDIZED_DESIGN_DIVERGENCES #731).

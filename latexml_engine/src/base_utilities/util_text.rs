@@ -763,9 +763,10 @@ pub const INK_INSERT: char = '\u{3}';
 pub const INK_SEAM: char = '\u{1}';
 
 /// The text digested material typesets, as [`ink_text`] reads it, with where its words end: a space for a whatsit that
-/// prints nothing (a line break, `\par`, a skip) and around each alignment cell, and [`INK_SEAM`] at the edges of a
-/// whatsit that prints (a font switch, a box, an accent), where the text runs on in print but a line may end. The
-/// title page's printed words (`base_utilities::frontmatter::title_page_check`).
+/// prints nothing (a line break, `\par`, a skip), and [`INK_SEAM`] at the edges of a whatsit that prints (a font
+/// switch, a box, an accent) and of each alignment cell, where the text runs on in print but a line may end — an
+/// accent built as an alignment runs on (combelow's `\cb{s}`, `Babe\cb{s}-Bolyai` "Babes", 2007.07526), an author
+/// table's cells end their words. The title page's printed words (`base_utilities::frontmatter::title_page_check`).
 pub fn ink_word_text(d: &Digested, out: &mut String) {
   // (spacing — a phantom's invisible ink, a kern, `\quad` — and a script print no word: a script is a mark)
   if let DigestedData::Whatsit(w) = d.data()
@@ -828,9 +829,9 @@ pub fn ink_word_text(d: &Digested, out: &mut String) {
       for row in a.borrow().rows() {
         for cell in row.get_columns() {
           if let Some(boxes) = cell.boxes.as_ref() {
-            out.push(' ');
+            out.push(INK_SEAM);
             ink_word_text(boxes, out);
-            out.push(' ');
+            out.push(INK_SEAM);
           }
         }
       }

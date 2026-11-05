@@ -1514,8 +1514,15 @@ pub(crate) fn load() -> Result<()> {
   });
 
   // LaTeX's `\maketitle` as a speculative run of the class's title page runs it (`title_page_print_tokens`): its
-  // `\@maketitle`, in a group (article.cls:191-207, its `\\thanks` gobbled by the run).
-  DefMacro!("\\lx@print@maketitle", r"\begingroup\@maketitle\endgroup");
+  // `\@maketitle`, in a group (article.cls:191-207), then the authors' notes
+  // (`\lx@print@thanks`): article.cls's `\maketitle` runs `\@thanks` after it. Only the title-page check's run
+  // (`note_title_page_print`) flushes them, where `\thanks` appends to `\@thanks` as latex.ltx's does; the net's runs
+  // print a note in place (`\@firstofone`), and run nothing here.
+  DefMacro!(
+    "\\lx@print@maketitle",
+    r"\begingroup\@maketitle\lx@print@thanks\endgroup"
+  );
+  DefMacro!("\\lx@print@thanks", "");
   // …with the class's own `\@author` that the kernel's or a binding's `\author` replaced (`keep_class_author_reader`),
   // locally: pdflatex's title page prints that one.
   DefPrimitive!("\\lx@class@author@reader", {
@@ -5104,27 +5111,47 @@ pub(crate) fn speculative_isolated_run(tokens: Tokens) -> Result<SpeculativeRun>
   speculative_run(tokens, true, ink_text, None)
 }
 
+/// latex.ltx's `\thanks` (ltsect.dtx `\thanks`): a footnote mark, its text appended to `\@thanks`, which only the
+/// `\maketitle` that runs `\@thanks` prints (article.cls's, after `\@maketitle`: [`note_title_page_print`]).
+const LATEX_THANKS: &str = r"\long\def\thanks#1{\footnotemark\protected@xdef\@thanks{\@thanks\protect\footnotetext[\the\c@footnote]{#1}}}";
+
 /// What the class's whole title page prints at this `\maketitle` ([`title_page_print_tokens`], its fields holding the
 /// document's values), read with where its words end ([`ink_word_text`]) and noted for the check of its words against
 /// the output (`base_utilities::frontmatter::title_page_check`, OXIDIZED_DESIGN_DIVERGENCES #953). `\today` prints
-/// nothing in it: the conversion's date is no word of the document's (a class printing `\@date` at its default); an
-/// author's note (`\thanks`) prints its text set apart, as its footnote is (`Ann Able\thanks{Lunar Institute}` is no
-/// word "AbleLunar"). Not inside a deposit or a replay (the title page they run is this one), nor when no run can be
-/// made or kept.
+/// nothing in it: the conversion's date is no word of the document's (a class printing `\@date` at its default). An
+/// author's note (`\thanks`) is the class's own when a raw file defined one (`\lx@dropped@thanks` where the kernel's
+/// lock refused it), else latex.ltx's ([`LATEX_THANKS`]): its text prints where `\@thanks` runs — LaTeX's
+/// `\maketitle` (`\lx@print@thanks`), or a class's own that runs it —, set apart as its footnote is (`Ann
+/// Able\thanks{Lunar Institute}` is no word "AbleLunar"), and nowhere when the class never runs it (review probe p3:
+/// drcls's `\maketitle` runs `\thanks{Draft}` with no `\@thanks`, and pdflatex prints no "Draft"). Not inside a
+/// deposit or a replay (the title page they run is this one), nor when no run can be made or kept.
 pub(crate) fn note_title_page_print() -> Result<()> {
   if lookup_bool("lx_depositing_class_maketitle") || lookup_bool("lx_replaying_class_setter") {
     return Ok(());
   }
-  let inject = mouth::tokenize_internal(r"\let\today\@empty\long\def\thanks#1{ #1 }").unlist();
+  let class_thanks = |cs: &str| matches!(lookup_meaning(&T_CS!(cs)), Some(Stored::Expandable(ref d)) if !d.get_origin().is_latexml_owned());
+  let thanks = if lookup_meaning(&T_CS!("\\lx@dropped@thanks")).is_some() {
+    r"\let\thanks\lx@dropped@thanks"
+  } else if class_thanks("\\thanks") {
+    r"\let\thanks\lx@check@thanks"
+  } else {
+    LATEX_THANKS
+  };
+  let inject = mouth::tokenize_internal(TeXString::assembled(s!(
+    r"\let\today\@empty{thanks}\def\lx@print@thanks{{\@thanks}}"
+  )))
+  .unlist();
+  // (the class's own `\thanks` kept aside before the run sets the net's in its place)
+  let mut tokens = mouth::tokenize_internal(r"{\let\lx@check@thanks\thanks").unlist();
+  // (and the Infos building the run gives — a `\maketitle` body not replayable — are the deposit's, which gives them)
+  let hold = util::logger::DiagnosticsHold::begin();
+  tokens.extend(title_page_print_tokens(&inject).unlist());
+  hold.discard();
+  tokens.push(T_END!());
   // (the field ledger put back and the boxes the run stamped unstamped, as the observer's rehearsal does: a register's
   // box `\usebox` hands back to the fields, stamped, became an `ltx:text` of its own in the document)
   let ledger = FieldLedgerScope::begin();
-  let run = speculative_run(
-    title_page_print_tokens(&inject),
-    false,
-    ink_word_text,
-    Some(INK_INSERT),
-  );
+  let run = speculative_run(Tokens::new(tokens), false, ink_word_text, Some(INK_INSERT));
   drop(ledger);
   if let SpeculativeRun::Printed(text) = run? {
     DebugFeature!(

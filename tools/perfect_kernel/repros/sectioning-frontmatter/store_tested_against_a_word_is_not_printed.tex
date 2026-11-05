@@ -6,8 +6,10 @@
 % witness: none (synthetic; review probe `ctx2` of 77i r3).
 % oracle:  pdflatex 1 error (the deliberate `\undefinedthing`): "C:OPEN", "D:dee".
 % engines: rust 77i r3: `<pubnote>open</pubnote>`.
-% expect:  0 errors, 0 warnings; `<pubnote>dee</pubnote>` the only pubnote; no "open".
-% status:  RED (77i r3) -> GREEN (77i r4)
+% expect:  0 errors, 1 warning — the title-page check's (106s, frontmatter:unclaimed "open": the class's "OPEN" is
+%          printed and lost with the deposit, and the document's `\svc{open}` writes the word); `<pubnote>dee</pubnote>`
+%          the only pubnote; no "open".
+% status:  RED (77i r3) -> GREEN (77i r4); the Warning since 106s
 \begin{filecontents*}[overwrite]{rcword.cls}
 \ProvidesClass{rcword}
 \LoadClass{article}

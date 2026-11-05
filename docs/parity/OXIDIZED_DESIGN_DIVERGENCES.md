@@ -29865,12 +29865,16 @@ walk, a binding's reader, a dropped deposit or replay — was silent. Now a chec
 XML, compares the title page's printed words with the whole output. **The print:** at each `\maketitle` the kernel's
 deposit (`\lx@deposit@maketitle`, after `before_title_page_runs`) runs the whole title page once more as pdflatex runs
 it (sect05.rs `note_title_page_print`: `title_page_print_tokens`, the class's refused `\maketitle` when replayable,
-else `\@maketitle` — a raw file's, a binding's, or LaTeX's printing `\@title`, `\@author`, `\@date`), with `\today`
-empty (the conversion's date is no document word) and `\thanks` printing its text set apart, inside a
-`FieldLedgerScope` (a `\usebox` box the fields hand back stays unstamped; without it the box became an `ltx:text` of
+else `\@maketitle` — a raw file's, a binding's, or LaTeX's printing `\@title`, `\@author`, `\@date`, then `\@thanks` as
+article.cls's `\maketitle` does, `\lx@print@thanks`), with `\today` empty (the conversion's date is no document word)
+and `\thanks` latex.ltx's (`LATEX_THANKS`: a mark, its text appended to `\@thanks`) unless a raw file defined its own
+(kept, or the `\lx@dropped@thanks` the lock left): a note prints, set apart, only where `\@thanks` runs, and nowhere
+when the class never runs it (review rev106s B1, probe p3: drcls's unflushed `\thanks{Draft}`, which r1 counted),
+inside a `FieldLedgerScope` (a `\usebox` box the fields hand back stays unstamped; without it the box became an `ltx:text` of
 its own, `perfect_kernel_batchfms2a2r9`). Its text is read by `ink_word_text` (util_text.rs): a space for a whatsit
 that prints nothing, spacing (a phantom's ink, `is_spacing_item`) and a script (`\textsuperscript`, a math script: a
-mark), around each alignment cell; a seam (`INK_SEAM`) at a printing whatsit's and each of its arguments' edges; no
+mark); a seam (`INK_SEAM`) at a printing whatsit's and each of its arguments' edges and around each alignment cell (an
+accent built as an alignment runs on: combelow's `Babe\cb{s}` is "babes", 2007.07526, which r1 parted to "babe"); no
 quantity argument and no environment's required argument (`settings_arguments`: `{CJK}`'s `{UTF8}{gbsn}`); a mark
 (`INK_INSERT`) before an `\insert`'s material. The print of the latest `\maketitle` before the authors are sealed is
 the one checked (a later one supersedes, #406; a supplement's after the seal is none, `frontmatter_entry_sealed`).
@@ -29878,12 +29882,20 @@ the one checked (a later one supersedes, #406; a supplement's after the seal is 
 `check_title_page_words`): each content word of the print (`net_content_words`, the scorer's) is looked for in the
 output — every text node and attribute value of the document (not `_…`), stretches of up to 6 pieces across element
 edges joined (`Bob <text>Bak</text>and`), under `--streaming` each spilled subtree's words (`note_spilled_words`, the
-spill observer); a seamed run counts its pieces when the output holds one of them or the whole is no word of the
+spill observer, into a per-conversion thread-local set of distinct words, `SpilledWords`, reset by
+`reset_title_page_check`, nothing pinned in the arena; once a title page printed, only the words it wants — review
+rev106s B2: r1 copied all the words so far into the arena per spilled subtree, and an 8,000-section `--streaming
+--max-memory=1400` document ran out at 1,206 MB, where int133a peaks at 386 MB and r2 at 389 MB; 1605.02624's pass-1
+RSS 289 MB on both); a seamed run counts its pieces when the output holds one of them or the whole is no word of the
 source; a run the print opens or ends with against no space may run on into the document's text ("SHOWNBody.");
 words the net already named are not counted again (`note_net_counted`). A word the output lacks is the document's
-when its own source writes it (`source_words` over `binding::content::CONTENT_FILES`, the files read as content —
-comments, `filecontents` bodies and `\begin`/`\end` names out, a control word a space, an accent nothing, `\o`-style
-text symbols their letters): named, distinct and in printed order, in one `Warning:frontmatter:unclaimed` ("The title
+when its own source writes it (`source_words` over the files read as content, `binding::content::CONTENT_FILES`, and
+the files of the document's own directory read as definitions, `binding::content::raw_read_paths` — a style the author
+wrote, probe p7_sty —, their definitions' replacement texts out, `Definer`; UTF-8, else Latin-1, 0802.2579 —
+comments, `filecontents` bodies, `\begin`/`\end` names and the keys and options of `keyed_arguments` out
+(`\documentclass[draft]`, `\usepackage[…]`, `\label`, `\ref`/`\cref` and kin, `\cite` and kin, file and counter names,
+`\hyphenation`: probe p4, au.cls 1205.1106), a control word nothing and the spaces after it skipped and, in a second
+reading, a space, an accent nothing, `\o`-style text symbols their letters): named, distinct and in printed order, in one `Warning:frontmatter:unclaimed` ("The title
 page prints N word(s) of the document's that its output does not hold: …"). Any other is the class's own text — a
 label, a placeholder at its default, a running head's —, tallied in an Info (`frontmatter:class_text`), not a Warning,
 pending the placeholder ruling. **Coverage** (the 56 dev20k + 42 long-tail lost-words papers of int133a): before 1
@@ -29899,14 +29911,19 @@ Warning, each a real loss read against pdflatex (or the source where pdflatex fa
 1906.10531), mnras's `\date` the binding replaces with `\pubyear{\date{year}}` (2506.15059). **Silent still** (the
 print does not reach the words): no deposit runs — a binding's own `\maketitle` (daj 1510.08733, 2112.09352,
 elsarticle 2104.14704, aastex 2507.16700, 2603.06433), no `\maketitle` reached (cup-journal's
-`\g@addto@macro\document{\maketitle}`, 2302.11911, 2508.08363, 2607.18758, …); the replay does not reach the class's
+`\g@addto@macro\document{\maketitle}`, 2302.11911, 2508.08363, 2607.18758, …: our `\document` is no macro, the
+append fails — RED repro sectioning-frontmatter/`title_page_from_begin_document_is_unchecked`); the replay does not reach the class's
 title-page code (opendatalab's `\let\oldmaketitle\maketitle` copying the locked kernel's, 2601.09733; cccconf's
 `\keywords`/`\section`, 1702.07637); a binding's fields outside `\@author` (quantumarticle `\ead`, 2209.07123; IEEEtran
-grades, 1511.03982); the scorer's artefacts (census132 §3). Guards `perfect_kernel_batch106s::{
-a_class_store_the_net_misses_is_counted, a_binding_losing_author_lines_is_counted,
+grades, 1511.03982); the scorer's artefacts (census132 §3). **Known edge:** a class's literal word equal to a word the
+document writes is counted as the document's (77i's "OPEN", which `\svc{open}` writes): the check reads the print's
+text, not where each printed letter came from. Guards `perfect_kernel_batch106s::{
+a_class_store_the_net_misses_is_counted, a_note_prints_only_where_the_class_flushes_it,
+the_documents_own_files_write_its_words, a_binding_losing_author_lines_is_counted,
 a_title_page_whose_words_are_kept_counts_nothing, a_word_a_spilled_subtree_holds_is_no_loss}`; repros
 sectioning-frontmatter/`check_class_store_the_net_misses_is_counted`, `check_binding_author_lines_lost_are_counted`
-(RED int133a → GREEN 106s), `check_nothing_lost_is_no_warning` (negative). A/B (`pop106s.tsv`, 1,098: the 98 lost-words papers, the 500 control, 500 random from `popint125a_s10k`; vs int133a-rel, both on the int133a dumps): 1,091 converted, the XML byte-identical in every one, words 17,003,939 both sides, F 7 → 7, E 1,961 → 1,960 (1111.1264, whose Errors before its deterministic Fatal vary 20-22 run to run on either binary), Warnings 16,942 → 16,984 (+1 in each of 42 papers: 23 lost-words, 10 control, 9 random). **Cost** (`perf stat -e
+(RED int133a → GREEN 106s), `check_unflushed_thanks_prints_nothing`, `check_document_style_words_are_counted` (RED
+106s r1 → GREEN r2), `check_nothing_lost_is_no_warning` (negative). A/B (`pop106s.tsv`, 1,098: the 98 lost-words papers, the 500 control, 500 random from `popint125a_s10k`; vs int133a-rel, both on the int133a dumps): 1,091 converted, the XML byte-identical in every one, words 17,003,939 both sides, F 7 → 7, E 1,961 → 1,960 (1111.1264, whose Errors before its deterministic Fatal vary 20-22 run to run on either binary), Warnings 16,942 → 16,984 (+1 in each of 42 papers: 23 lost-words, 10 control, 9 random). **Cost** (`perf stat -e
 instructions:u`, int133a-rel vs 106s-rel): +0.04 % over 20 random raw-class papers of the control (median +0.06 %,
 at most +0.8 %); +1.9 % over 20 raw-class lost-words papers, which pay the whole scan (median +2.7 %, at most +4.2 %).
 Guards updated for losses now counted:

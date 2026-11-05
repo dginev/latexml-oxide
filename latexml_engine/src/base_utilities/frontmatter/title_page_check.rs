@@ -9,18 +9,19 @@
 //! the output, cheapest first while one is unheld: the frontmatter's text, the whole document's, the subtrees a
 //! `--streaming` run spilled ([`note_spilled_words`]), its attribute values (a contact's `name`, a link's `href`, what
 //! a constructor set from an argument). A word the output does not hold is lost; it is counted when the document's own
-//! source writes it ([`source_words`]: the files read as content, `binding::content::CONTENT_FILES`), else it is the
+//! source writes it ([`source_words`]: the files read as content, `binding::content::CONTENT_FILES`, and those of its
+//! own directory read as definitions, [`document_source_words`]), else it is the
 //! class's text — a label, a placeholder at its default, a running head's — tallied apart in an Info. Every lost word
 //! is named in one `Warning:frontmatter:unclaimed`, in printed order; a word the unclaimed-text net already counted
 //! (insert.rs `keep_unclaimed_net_notes`, [`note_net_counted`]) is not counted again. Witnesses: 2007.07526 (amsart's
 //! author lines), the cpc-hepnp `\email` (1504.05444), raa 1304.5354, memsait astro-ph0102098, JUSTC 2409.17603.
 
+use std::cell::RefCell;
+
 use super::*;
 
 /// The text the title page printed ([`note_title_page_printed`]).
 const PRINTED: &str = "lx_title_page_printed";
-/// The content words of the subtrees a `--streaming` run spilled ([`note_spilled_words`]).
-const SPILLED: &str = "lx_spilled_words";
 /// The words the unclaimed-text net counted in a Warning of its own ([`note_net_counted`]).
 const NET_COUNTED: &str = "lx_net_counted_words";
 
@@ -33,6 +34,57 @@ pub fn note_title_page_printed(text: &str) {
     return;
   }
   assign_value(PRINTED, Stored::String(pin(text)), Some(Scope::Global));
+  // (the words spilled so far, cut to those this print wants, which alone the later spills keep)
+  let wanted = wanted_words(&resolver::base_letters(text).to_lowercase());
+  SPILLED.with_borrow_mut(|spilled| {
+    let words = std::mem::take(&mut spilled.words);
+    for word in &words {
+      claim(&wanted, word, &mut spilled.words);
+    }
+    spilled.wanted = Some(wanted);
+  });
+}
+
+/// The content words of the subtrees a `--streaming` run spilled ([`note_spilled_words`]), this conversion's: each
+/// distinct word once, and once a title page printed only those it wants (`wanted`), so the notes stay as small as the
+/// title page however much the run spills (review rev106s: an 8,000-section document's spill notes, a copy of all the
+/// words so far per spilled subtree, ran it out of its memory budget). Reset with the conversion
+/// ([`reset_title_page_check`]); held apart from the state, so nothing of it is pinned in the arena or journaled.
+#[derive(Default)]
+struct SpilledWords {
+  words:  HashSet<String>,
+  wanted: Option<Wanted>,
+}
+
+thread_local! {
+  static SPILLED: RefCell<SpilledWords> = RefCell::new(SpilledWords::default());
+}
+
+/// Forget the words spilled (`SPILLED`): a new conversion starts with none (latexml_oxide's `prepare_session` and
+/// `initialize_session`).
+pub fn reset_title_page_check() {
+  SPILLED.with_borrow_mut(|spilled| *spilled = SpilledWords::default());
+}
+
+/// How many distinct words the spill notes hold (`SPILLED`), for `--debug=frontmatter`.
+fn spilled_word_count() -> usize { SPILLED.with_borrow(|spilled| spilled.words.len()) }
+
+/// Add to `claimed` what the output word `word` claims of `wanted`: itself when the print wants it, and each word the
+/// print's own text opens or ends with that `word` continues ([`continues`]).
+fn claim(wanted: &Wanted, word: &str, claimed: &mut HashSet<String>) {
+  if wanted.words.contains(word) {
+    claimed.insert(word.to_string());
+  }
+  for open in wanted
+    .opens
+    .iter()
+    .filter(|open| continues(word, open, false))
+  {
+    claimed.insert(open.clone());
+  }
+  for end in wanted.ends.iter().filter(|end| continues(word, end, true)) {
+    claimed.insert(end.clone());
+  }
 }
 
 /// Note the words the unclaimed-text net named in its Warning (insert.rs `keep_unclaimed_net_notes`): counted once.
@@ -155,23 +207,11 @@ fn output_words(node: &Node, wanted: Option<&Wanted>, attributes: bool) -> HashS
   let mut words = HashSet::default();
   let mut keep = |word: &str| match wanted {
     None => {
-      words.insert(word.to_string());
-    },
-    Some(wanted) => {
-      if wanted.words.contains(word) {
+      if !words.contains(word) {
         words.insert(word.to_string());
       }
-      for open in wanted
-        .opens
-        .iter()
-        .filter(|open| continues(word, open, false))
-      {
-        words.insert(open.clone());
-      }
-      for end in wanted.ends.iter().filter(|end| continues(word, end, true)) {
-        words.insert(end.clone());
-      }
     },
+    Some(wanted) => claim(wanted, word, &mut words),
   };
   let mut joined = String::new();
   for run in folded.split(|c: char| !(c.is_alphanumeric() || c == EDGE)) {
@@ -198,14 +238,14 @@ fn output_words(node: &Node, wanted: Option<&Wanted>, attributes: bool) -> HashS
 
 /// Note the content words of a subtree a `--streaming` run spills (latexml_oxide's `Document::spill_observer`): the
 /// output holds them, though the document's tree no longer does when it closes. What it spills before a title page
-/// printed is noted too: the title page may print it (an abstract set before `\maketitle`).
+/// printed is noted too, each distinct word once: the title page may print it (an abstract set before `\maketitle`);
+/// after, only the words the print wants (`SPILLED`). A later title page superseding the first wants its own words
+/// among those the first kept (a spill between two `\maketitle`s of words only the second prints is not seen).
 pub fn note_spilled_words(node: &Node) {
-  let mut all = lookup_string(SPILLED);
-  for word in output_words(node, None, true) {
-    all.push(' ');
-    all.push_str(&word);
-  }
-  assign_value(SPILLED, Stored::String(pin(all)), Some(Scope::Global));
+  SPILLED.with_borrow_mut(|spilled| {
+    let SpilledWords { words, wanted } = spilled;
+    words.extend(output_words(node, wanted.as_ref(), true));
+  });
 }
 
 /// The runs of letters and digits of the folded print `folded` ([`resolver::base_letters`]; an [`INK_SEAM`] inside
@@ -319,12 +359,217 @@ const LETTER_SYMBOLS: &[(&str, &str)] = &[
 /// The accents written as a control word of one letter (`\c{c}`, `\v{s}`, `\H{o}`), which print no letter of their own.
 const ACCENT_WORDS: &[&str] = &["c", "v", "u", "H", "d", "b", "t", "k", "r"];
 
-/// The words the document's own source writes: the content words of `text` (a content file's) read as letters —
-/// its comments, a `filecontents` environment's body (a file it writes, a class's or a package's text) and the names
-/// of `\begin`/`\end`'s environments out, a control word a space but a text symbol its letters ([`LETTER_SYMBOLS`])
-/// and an accent nothing (`M\"{u}ller` "Muller", `Fran\c{c}ois` "Francois"), the braces read both as nothing and as a
-/// space (`\author{Ann}{MIT}`, `{\bf A}ble`).
-fn source_words(text: &str, words: &mut HashSet<String>) {
+/// How many required arguments of the control word `name` are keys or options, which print no word of the document's
+/// (its optional ones all are): a class's or package's name and options (`\documentclass[draft]{…}`: review probe p4,
+/// where a class prints "Draft" for the option), a cross-reference's or citation's key (`\label`, `\ref`, `\eqref`,
+/// `\cref`, `\cite`, `\citep`, …), a file's name, a counter's, a key-value family's, and the hyphenation exceptions a
+/// class lists (au.cls's `\hyphenation{… key-stroke}`, 1205.1106: its "Key words" label is the class's). `None` for
+/// any other.
+fn keyed_arguments(name: &str) -> Option<usize> {
+  match name {
+    "PassOptionsToPackage" | "PassOptionsToClass" | "define@key" => Some(2),
+    "hyphenation" | "ExecuteOptions" => Some(1),
+    "documentclass"
+    | "documentstyle"
+    | "usepackage"
+    | "RequirePackage"
+    | "RequirePackageWithOptions"
+    | "LoadClass"
+    | "LoadClassWithOptions"
+    | "ProvidesClass"
+    | "ProvidesPackage"
+    | "ProvidesFile"
+    | "NeedsTeXFormat"
+    | "DeclareOption"
+    | "label"
+    | "bibliography"
+    | "bibliographystyle"
+    | "bibitem"
+    | "input"
+    | "include"
+    | "includeonly"
+    | "IfFileExists"
+    | "InputIfFileExists"
+    | "includegraphics"
+    | "graphicspath"
+    | "usetikzlibrary"
+    | "hypersetup"
+    | "newcounter"
+    | "setcounter"
+    | "addtocounter"
+    | "stepcounter"
+    | "refstepcounter"
+    | "pagestyle"
+    | "thispagestyle" => Some(1),
+    _ if name != "hyperref" && name.ends_with("ref") => Some(1),
+    _ if name.to_ascii_lowercase().contains("cite") => Some(1),
+    _ => None,
+  }
+}
+
+/// The definers whose replacement texts a definitions file's words leave out ([`source_words`]), by the shape of what
+/// follows them: `\def\cs<parameters>{…}`, `\newcommand{\cs}[n][default]{…}`, `\newenvironment{name}[n]{…}{…}`, and
+/// xparse's, which take an argument specification before the body.
+#[derive(Clone, Copy)]
+enum Definer {
+  Def,
+  Command,
+  Environment,
+  DocumentCommand,
+  DocumentEnvironment,
+}
+
+impl Definer {
+  fn of(name: &str) -> Option<Definer> {
+    Some(match name {
+      "def" | "gdef" | "edef" | "xdef" => Definer::Def,
+      "newcommand" | "renewcommand" | "providecommand" | "DeclareRobustCommand" | "@namedef" => {
+        Definer::Command
+      },
+      "newenvironment" | "renewenvironment" => Definer::Environment,
+      "NewDocumentCommand"
+      | "RenewDocumentCommand"
+      | "ProvideDocumentCommand"
+      | "DeclareDocumentCommand" => Definer::DocumentCommand,
+      "NewDocumentEnvironment"
+      | "RenewDocumentEnvironment"
+      | "ProvideDocumentEnvironment"
+      | "DeclareDocumentEnvironment" => Definer::DocumentEnvironment,
+      _ => return None,
+    })
+  }
+}
+
+/// A reader of source text for [`source_words`], its comments out.
+struct SourceScan {
+  chars: Vec<char>,
+  at:    usize,
+}
+
+impl SourceScan {
+  fn peek(&self) -> Option<char> { self.chars.get(self.at).copied() }
+
+  fn skip_spaces(&mut self) {
+    while self.peek().is_some_and(char::is_whitespace) {
+      self.at += 1;
+    }
+  }
+
+  /// Skip a group from `open` to its `close`, nested, an escaped character (`\}`) none of them; `false` when the next
+  /// character does not open one.
+  fn skip_group(&mut self, open: char, close: char) -> bool {
+    if self.peek() != Some(open) {
+      return false;
+    }
+    let mut depth = 0usize;
+    while let Some(c) = self.peek() {
+      self.at += 1;
+      if c == '\\' {
+        self.at += 1;
+      } else if c == open {
+        depth += 1;
+      } else if c == close {
+        depth -= 1;
+        if depth == 0 {
+          break;
+        }
+      }
+    }
+    true
+  }
+
+  /// Skip a control sequence (`\cs`, `\@x`, `\{`) or one character.
+  fn skip_token(&mut self) {
+    if self.peek() == Some('\\') {
+      self.at += 1;
+      let from = self.at;
+      while self
+        .peek()
+        .is_some_and(|c| c.is_ascii_alphabetic() || c == '@')
+      {
+        self.at += 1;
+      }
+      if self.at == from {
+        self.at += 1;
+      }
+    } else {
+      self.at += 1;
+    }
+  }
+
+  /// Skip the optional arguments ahead (`[…]`, a star).
+  fn skip_options(&mut self) {
+    loop {
+      self.skip_spaces();
+      if self.peek() == Some('*') {
+        self.at += 1;
+      } else if !self.skip_group('[', ']') {
+        break;
+      }
+    }
+  }
+
+  /// Skip a name: a braced one (`{\cs}`, `{env}`) or a control sequence.
+  fn skip_name(&mut self) {
+    self.skip_spaces();
+    if !self.skip_group('{', '}') {
+      self.skip_token();
+    }
+  }
+
+  /// Skip `count` required arguments, and the optional ones around them.
+  fn skip_arguments(&mut self, count: usize) {
+    for _ in 0..count {
+      self.skip_options();
+      if !self.skip_group('{', '}') {
+        break;
+      }
+    }
+    self.skip_options();
+  }
+
+  /// Skip what follows a definer: the name defined, its parameters and its replacement text(s).
+  fn skip_definition(&mut self, definer: Definer) {
+    match definer {
+      Definer::Def => {
+        self.skip_spaces();
+        self.skip_token();
+        while self.peek().is_some_and(|c| c != '{') {
+          self.skip_token();
+        }
+        self.skip_group('{', '}');
+      },
+      Definer::Command => {
+        self.skip_options();
+        self.skip_name();
+        self.skip_arguments(1);
+      },
+      Definer::Environment => {
+        self.skip_options();
+        self.skip_name();
+        self.skip_arguments(2);
+      },
+      Definer::DocumentCommand => {
+        self.skip_name();
+        self.skip_arguments(2);
+      },
+      Definer::DocumentEnvironment => {
+        self.skip_name();
+        self.skip_arguments(3);
+      },
+    }
+  }
+}
+
+/// The words the document's own source writes: the content words of `text` read as letters — its comments, a
+/// `filecontents` environment's body (a file it writes, a class's or a package's text), the names of `\begin`/`\end`'s
+/// environments and the keys and options of [`keyed_arguments`] out; a control word nothing and the spaces after it
+/// skipped, as TeX skips them (`Babe\cb{s}` "Babes", 2007.07526), but a text symbol its letters ([`LETTER_SYMBOLS`]:
+/// `Bj{\o}rn` "Bjorn") — and, since some print a space (`\quad`), a space too, in a second reading; an accent nothing
+/// (`M\"{u}ller` "Muller", `Fran\c{c}ois` "Francois"); the braces read both as nothing and as a space (`\author{Ann}{MIT}`,
+/// `{\bf A}ble`). With `definitions` (a package's or class's file of the document's: [`document_source_words`]), the
+/// replacement texts of its definitions out too ([`Definer`]): a class's label is its own text, not the document's.
+fn source_words(text: &str, definitions: bool, words: &mut HashSet<String>) {
   let mut plain = String::new();
   let mut rest = text;
   while let Some(at) = rest.find("\\begin{filecontents") {
@@ -339,76 +584,123 @@ fn source_words(text: &str, words: &mut HashSet<String>) {
     }
   }
   plain.push_str(rest);
-  let (mut glued, mut spaced) = (String::new(), String::new());
+  // (the comments out, each line ending in a space)
+  let mut chars = Vec::with_capacity(plain.len());
   for line in plain.lines() {
-    let mut chars = line.chars().peekable();
-    while let Some(c) = chars.next() {
+    let mut line = line.chars();
+    while let Some(c) = line.next() {
       match c {
         '%' => break,
         '\\' => {
-          let mut name = String::new();
-          while let Some(&next) = chars.peek() {
-            if next.is_ascii_alphabetic() || next == '@' {
-              name.push(next);
-              chars.next();
-            } else {
-              break;
-            }
-          }
-          if name.is_empty() {
-            // (a control symbol: an accent's prints no letter of its own, `\%` none, any other a space)
-            match chars.next() {
-              Some('\'' | '`' | '^' | '"' | '~' | '=' | '.' | '%') | None => {},
-              Some(_) => {
-                glued.push(' ');
-                spaced.push(' ');
-              },
-            }
-          } else if name == "begin" || name == "end" {
-            // (the environment's name: `\begin{abstract}`)
-            if chars.peek() == Some(&'{') {
-              for next in chars.by_ref() {
-                if next == '}' {
-                  break;
-                }
-              }
-            }
-            glued.push(' ');
-            spaced.push(' ');
-          } else if let Some((_, letters)) = LETTER_SYMBOLS.iter().find(|(n, _)| *n == name) {
-            glued.push_str(letters);
-            spaced.push_str(letters);
-          } else if !ACCENT_WORDS.contains(&name.as_str()) {
-            glued.push(' ');
-            spaced.push(' ');
-          }
+          chars.push(c);
+          chars.extend(line.next());
         },
-        '{' | '}' => spaced.push(' '),
-        c => {
-          glued.push(c);
-          spaced.push(c);
-        },
+        c => chars.push(c),
       }
     }
-    glued.push(' ');
-    spaced.push(' ');
+    chars.push('\n');
+  }
+  let mut scan = SourceScan { chars, at: 0 };
+  let (mut glued, mut spaced) = (String::new(), String::new());
+  while let Some(c) = scan.peek() {
+    scan.at += 1;
+    match c {
+      '\\' => {
+        let from = scan.at;
+        while scan
+          .peek()
+          .is_some_and(|next| next.is_ascii_alphabetic() || next == '@')
+        {
+          scan.at += 1;
+        }
+        let name: String = scan.chars[from..scan.at].iter().collect();
+        if name.is_empty() {
+          // (a control symbol: an accent's, a discretionary's, an italic correction's and `\%` print no letter, any
+          // other a space)
+          match scan.peek() {
+            Some('\'' | '`' | '^' | '"' | '~' | '=' | '.' | '%' | '-' | '/') | None => {},
+            Some(_) => {
+              glued.push(' ');
+              spaced.push(' ');
+            },
+          }
+          scan.at += 1;
+          continue;
+        }
+        scan.skip_spaces();
+        if name == "begin" || name == "end" {
+          // (the environment's name: `\begin{abstract}`)
+          scan.skip_group('{', '}');
+          glued.push(' ');
+          spaced.push(' ');
+        } else if let Some(count) = keyed_arguments(&name) {
+          scan.skip_arguments(count);
+          glued.push(' ');
+          spaced.push(' ');
+        } else if let Some(definer) = Definer::of(&name).filter(|_| definitions) {
+          scan.skip_definition(definer);
+          glued.push(' ');
+          spaced.push(' ');
+        } else if let Some((_, letters)) = LETTER_SYMBOLS.iter().find(|(n, _)| *n == name) {
+          glued.push_str(letters);
+          spaced.push_str(letters);
+        } else if !ACCENT_WORDS.contains(&name.as_str()) {
+          spaced.push(' ');
+        }
+      },
+      '{' | '}' => spaced.push(' '),
+      c => {
+        glued.push(c);
+        spaced.push(c);
+      },
+    }
   }
   words.extend(net_content_words(&glued));
   words.extend(net_content_words(&spaced));
 }
 
-/// The words the document's own content files write ([`source_words`]; `binding::content::CONTENT_FILES`): a virtual
-/// file's text (`filecontents`), else the file's on disk; a `literal:` source its own text.
+/// The text of the file at `path`: UTF-8, else Latin-1 (an older paper's source in ISO-8859-1, 0802.2579: its accented
+/// letters are its words', never a replacement character parting them).
+fn read_source(path: &str) -> Option<String> {
+  let bytes = std::fs::read(path).ok()?;
+  Some(
+    String::from_utf8(bytes)
+      .unwrap_or_else(|e| e.into_bytes().into_iter().map(char::from).collect()),
+  )
+}
+
+/// The words the document's own source writes ([`source_words`]): its content files' (`binding::content::CONTENT_FILES`:
+/// a virtual file's text, `filecontents`, else the file's on disk; a `literal:` source its own text), and those of
+/// each file its own directory holds that was read as definitions (`binding::content::raw_read_paths`: a style the
+/// author wrote, `\AtBeginDocument{\corr{ann.able@lunar.org}}`, review probe p7_sty), their definitions' replacement
+/// texts out. A file a `filecontents` environment wrote is not read again: its body is a class's or a package's text.
 fn document_source_words() -> HashSet<String> {
   let mut words = HashSet::default();
   let files = lookup_string(CONTENT_FILES);
   for file in files.split('\0').filter(|file| !file.is_empty()) {
     if let Some(text) = file.strip_prefix("literal:") {
-      source_words(text, &mut words);
+      source_words(text, false, &mut words);
     } else if let Some(text) = vfs_read(file) {
-      source_words(&text, &mut words);
-    } else if let Ok(bytes) = std::fs::read(file) {
-      source_words(&String::from_utf8_lossy(&bytes), &mut words);
+      source_words(&text, false, &mut words);
+    } else if let Some(text) = read_source(file) {
+      source_words(&text, false, &mut words);
+    }
+  }
+  let source_directory = lookup_string("SOURCEDIRECTORY");
+  if source_directory.is_empty() {
+    return words;
+  }
+  let Ok(directory) = std::fs::canonicalize(&source_directory) else {
+    return words;
+  };
+  for file in raw_read_paths() {
+    let path = std::path::Path::new(&file);
+    if path.starts_with(&directory)
+      && vfs_read(&file).is_none()
+      && path.is_file()
+      && let Some(text) = read_source(&file)
+    {
+      source_words(&text, true, &mut words);
     }
   }
   words
@@ -429,6 +721,11 @@ pub fn check_title_page_words(document: &Document) -> Result<()> {
   };
   let folded = resolver::base_letters(&printed).to_lowercase();
   let wanted = wanted_words(&folded);
+  DebugFeature!(
+    "frontmatter",
+    "FRONT the spill notes hold {} word(s)",
+    spilled_word_count()
+  );
   // (in three steps, each only while a printed word is unheld — cheapest first: the frontmatter's text, the whole
   // document's text, its attribute values)
   let front: Vec<Node> = element_nodes(&root)
@@ -450,23 +747,13 @@ pub fn check_title_page_words(document: &Document) -> Result<()> {
     return Ok(());
   }
   claimed.extend(output_words(&root, Some(&wanted), false));
-  for word in lookup_string(SPILLED)
-    .split(' ')
-    .chain(lookup_string(NET_COUNTED).split(' '))
-  {
-    if wanted.words.contains(word) {
-      claimed.insert(word.to_string());
+  SPILLED.with_borrow(|spilled| {
+    for word in &spilled.words {
+      claim(&wanted, word, &mut claimed);
     }
-    for open in wanted
-      .opens
-      .iter()
-      .filter(|open| continues(word, open, false))
-    {
-      claimed.insert(open.clone());
-    }
-    for end in wanted.ends.iter().filter(|end| continues(word, end, true)) {
-      claimed.insert(end.clone());
-    }
+  });
+  for word in lookup_string(NET_COUNTED).split(' ') {
+    claim(&wanted, word, &mut claimed);
   }
   if held_all(&claimed) {
     return Ok(());

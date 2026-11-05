@@ -130,7 +130,7 @@ fn just_unmarked_address_under_several_names_is_every_name_s() {
 /// address the class's centred body paragraph, and the e-mail in the `\@thanks` the kernel's `\maketitle` never sets.
 /// Distinct from the guard above: it pins that `cpc-hepnp` is not routed through the `just` binding. The lost e-mail,
 /// which the class's title page prints in its `\@thanks` footnote, is counted by the title-page check: one Warning
-/// naming "org" ("ann" is the creator's; 106s, `title_page_check`; the control's 8 cpc-hepnp papers of 500, 1504.05444).
+/// naming "org" ("ann" is the creator's; 106s, `title_page_check`; 9 cpc-hepnp papers of 500 random, 1504.05444).
 #[test]
 fn cpc_hepnp_is_not_routed_until_91c() {
   let tex = repro!("cpc_hepnp_unmarked_address_under_several_names.tex");

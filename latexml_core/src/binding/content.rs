@@ -2395,6 +2395,13 @@ fn read_raw_already(pathname: &str) -> bool {
   RAW_READ_PATHS.with(|paths| paths.borrow().contains(&path))
 }
 
+/// The files read raw as definitions in this conversion (`RAW_READ_PATHS`), canonical: the title-page check reads
+/// those of the document's own directory for the words the author wrote (latexml_engine
+/// `base_utilities::frontmatter::title_page_check`). Rust-only.
+pub fn raw_read_paths() -> Vec<String> {
+  RAW_READ_PATHS.with(|paths| paths.borrow().iter().cloned().collect())
+}
+
 /// Forget the files read raw: a new conversion starts with none (`reset_thread_engine`).
 pub fn reset_raw_read_paths() { RAW_READ_PATHS.with(|paths| paths.borrow_mut().clear()); }
 
