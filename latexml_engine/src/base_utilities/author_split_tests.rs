@@ -1111,8 +1111,9 @@ fn a_contact_call_in_a_name_is_no_name_text() {
 fn a_name_spells_by_its_base_letters_and_its_transliteration() {
   setup();
   // (html_feedback #7233, OD #970: an accent or letter command written in the source, or the letter itself, spells by
-  // its base letter and by its transliteration — never by its transliteration as printed, `as_printed`, FIDELITY_CHARTER
-  // §4 #420)
+  // its base letter and by its transliteration; as printed (`as_printed`, whom an e-mail moves to) by its
+  // transliteration too, a spelling of the name as printed (user ruling 2026-11-05), never by a base-letter fold of a
+  // letter it prints (FIDELITY_CHARTER §4 #420: `muller-group@` stays))
   for (name, local, base) in [
     (r#"Moritz Sch\"affler"#, "mo.schaeffler", "m.schaffler"),
     (r#"Moritz Sch\"{a}ffler"#, "mo.schaeffler", "m.schaffler"),
@@ -1127,10 +1128,18 @@ fn a_name_spells_by_its_base_letters_and_its_transliteration() {
     let keys = [NameKeys::of(&tk(name))];
     assert_eq!(spelled_owners(&keys, &s!("{local}@x.org")), [0], "{name}");
     assert_eq!(spelled_owners(&keys, &s!("{base}@x.org")), [0], "{name}");
-    assert!(
-      spelled_owners(&[NameKeys::as_printed(&tk(name))], &s!("{local}@x.org")).is_empty(),
+    let printed = [NameKeys::as_printed(&tk(name))];
+    assert_eq!(
+      spelled_owners(&printed, &s!("{local}@x.org")),
+      [0],
       "{name}"
     );
+    if !name.contains('\\') {
+      assert!(
+        spelled_owners(&printed, &s!("{base}@x.org")).is_empty(),
+        "{name}"
+      );
+    }
   }
   // (no looser matching otherwise: another accent's letter has no transliteration, `\'e` is e alone, one spelling)
   assert_eq!(NameKeys::of(&tk(r"Ren\'e Ruiz")).spellings().count(), 1);

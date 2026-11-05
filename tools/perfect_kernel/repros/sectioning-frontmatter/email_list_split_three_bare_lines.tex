@@ -8,8 +8,9 @@
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "{ann.able," / "xq.zz,yy.ww," / "cy.coe}@alpha.edu" under
 %   the two affiliations
 % engines: rust int138a: the three lines glued into Cy Coe's affiliation, 0 warnings
-% expect:  0 errors, 0 warnings; ann.able@ on Ann Able, cy.coe@ on Cy Coe, xq.zz@ and yy.ww@ on the block creator, each
-%   affiliation only its institution
+% expect:  0 errors, 0 warnings; ann.able@ on Ann Able, cy.coe@ on Cy Coe, xq.zz@ and yy.ww@ on the block creator (four
+%   addresses for three authors: no author order; two addresses left for one name: no elimination), each affiliation
+%   only its institution
 % status:  RED (int138a) -> GREEN (107a)
 % preload: ar5iv.sty
 \documentclass{article}

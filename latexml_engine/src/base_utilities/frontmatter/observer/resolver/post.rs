@@ -534,18 +534,18 @@ impl Resolver {
   /// its call's position (`api:annotate:*`, the upfront grid's included), goes to the one author its address spells — an
   /// AASTeX 5 `\email{able@x.org}` after `\author{Ann Able and Bob Baker}` (0911.3506, 1506.04035: 92 of the 688 aas
   /// census papers); a copy that author holds already is dropped; one a label placed stays. After the grid and the
-  /// labels, as today's `insert::respell_emails` — its target picked by the names as printed (`NameKeys::as_printed`),
-  /// base letters and the transliteration only keeping an address on the holder it spells so (Anna Smith's own
-  /// `\email{muller-group@x.de}`, `\email{mueller-group@x.de}` stays hers though by base letters or the transliteration
-  /// it spells Jörg Müller, FIDELITY_CHARTER §4 #420; 2410.00275's `javier.martinez@` stays on Javier Martínez-López;
-  /// brief 95c r2 B1, OXIDIZED_DESIGN_DIVERGENCES #970).
+  /// labels, as today's `insert::respell_emails` — its target picked by the names as printed, a transliterated
+  /// spelling counted as one (`NameKeys::as_printed`; user ruling 2026-11-05: Anna Smith's own
+  /// `\email{mueller-group@x.de}` moves to Jörg Müller), base letters only keeping an address on the holder it spells so
+  /// (`\email{muller-group@x.de}` stays hers, FIDELITY_CHARTER §4 #420; 2410.00275's `javier.martinez@` stays on Javier
+  /// Martínez-López; brief 95c r2 B1, OXIDIZED_DESIGN_DIVERGENCES #970).
   pub(super) fn respell_emails(&mut self) {
     let live = self.live();
     if live.len() < 2 {
       return;
     }
-    // (as printed, whom an address moves to; as an address spells it — base letters, the transliteration — which only
-    // keeps an address on the author it spells so: `mueller-group@` on Anna Smith's own call beside Jörg Müller, #420)
+    // (as printed and transliterated, whom an address moves to; as an address spells it — base letters too — which only
+    // keeps an address on the author it spells so: `muller-group@` on Anna Smith's own call beside Jörg Müller, #420)
     let keys = |spelled: bool| -> Vec<NameKeys> {
       live
         .iter()

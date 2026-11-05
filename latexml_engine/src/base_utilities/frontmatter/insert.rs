@@ -1263,12 +1263,9 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
     let spelled: Vec<Option<usize>> = addresses
       .iter()
       .map(|(text, ..)| {
-        text
-          .split_whitespace()
-          .find(|word| word.contains('@'))
-          .map(|word| word.trim_matches(|c: char| !c.is_alphanumeric()))
+        email_address_word(text)
           .filter(|address| !is_entry_word_mailbox(address, &entry_text))
-          .and_then(|address| spelled_owner(&keys, address))
+          .and_then(|address| spelled_owner(&keys, &address))
       })
       .collect();
     // (an e-mail command the author wrote inside the entry, holding one address, keeps the one author its own call
@@ -1330,6 +1327,8 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
         Some((!answering.is_empty()).then_some(answering))
       })
       .collect();
+    // (a `{…}@domain` list set over several lines, the Kind step's: placed as its one-line form, [`list_placements`])
+    let listed = list_placements(document, &authors, &keys, &addresses, &spelled, &mine);
     let owners: Vec<(Option<Vec<usize>>, &'static str)> = entry_address_owners(
       &spelled,
       0..addresses.len(),
@@ -1341,11 +1340,12 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
     .into_iter()
     .zip(&own_call)
     .zip(marked)
-    .map(|((owner, own), marked)| match (own, marked) {
+    .zip(listed)
+    .map(|(((owner, own), marked), listed)| match (own, marked) {
       (Some(holder), _) => (Some(vec![*holder]), "owner:call"),
       (None, Some(Some(answering))) => (Some(answering), "owner:mark"),
       (None, Some(None)) => (None, "block:unanswered-mark"),
-      (None, None) => owner,
+      (None, None) => listed.unwrap_or(owner),
     })
     .collect();
     // (already as the chain puts them: left as they are)
@@ -1492,6 +1492,116 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
   Ok(())
 }
 
+/// An address's owners, by the Link step (`None`, the block's), and the rule that placed it.
+type Placement = (Option<Vec<usize>>, &'static str);
+
+/// The placements of the addresses of each `{…}@domain` list set over several lines among a Link step entry's
+/// `addresses` ([`link_entry_addresses`]; the Kind step's [`LINE_LIST`]), `None` for an address of no such list: the
+/// author block's reader's placement of the list on one line, over every author (`authors`, keyed `keys`), not the
+/// entry's carriers — the author an entry spells (`spelled`), else in author order, else the only author, else by
+/// elimination, else the block (`email_owners::list_owners`; FIDELITY_CHARTER §4, review rev107a finding 4: 2305.13191, 1808.00588). `mine`
+/// the entry's e-mails, which hold no address of their own outside the list.
+fn list_placements(
+  document: &mut Document,
+  authors: &[Node],
+  keys: &[NameKeys],
+  addresses: &[(String, Node, Vec<Option<usize>>)],
+  spelled: &[Option<usize>],
+  mine: &[Node],
+) -> Vec<Option<Placement>> {
+  let mut listed: Vec<Option<Placement>> = vec![None; addresses.len()];
+  let address_word = |text: &str| email_address_word(text).unwrap_or_default();
+  let mut lists: Vec<String> = Vec::new();
+  for (_, template, _) in addresses {
+    if let Some(list) = template.get_attribute(LINE_LIST)
+      && !lists.contains(&list)
+    {
+      lists.push(list);
+    }
+  }
+  for list in lists {
+    let members: Vec<usize> = (0..addresses.len())
+      .filter(|&at| addresses[at].1.get_attribute(LINE_LIST).as_deref() == Some(list.as_str()))
+      .collect();
+    let texts: Vec<String> = members
+      .iter()
+      .map(|&at| address_word(&addresses[at].0))
+      .collect();
+    // (the e-mails outside the list: those an author holds, and those no author does — the block's, or this entry's
+    // others —, by the address they print)
+    let mut held_elsewhere: Vec<(usize, String)> = Vec::new();
+    for (at, author) in authors.iter().enumerate() {
+      for contact in element_nodes(author) {
+        if contact.get_name() == "contact"
+          && contact.get_attribute("role").as_deref() == Some("email")
+          && contact.get_attribute(LINE_LIST).as_deref() != Some(list.as_str())
+          && !mine.contains(&contact)
+        {
+          held_elsewhere.push((at, address_word(&contact.get_content())));
+        }
+      }
+    }
+    let unheld_elsewhere: Vec<String> = document
+      .findnodes(
+        "//ltx:creator[not(ltx:personname)]/ltx:contact[@role='email']",
+        None,
+      )
+      .iter()
+      .map(|contact| address_word(&contact.get_content()))
+      .chain(
+        (0..addresses.len())
+          .filter(|at| !members.contains(at))
+          .map(|at| address_word(&addresses[at].0)),
+      )
+      .collect();
+    let mut taken = vec![false; authors.len()];
+    for (holder, address) in &held_elsewhere {
+      taken[*holder] = true;
+      if let Some(owner) = spelled_owner(keys, address) {
+        taken[owner] = true;
+      }
+    }
+    let mut spelled_elsewhere = false;
+    for address in &unheld_elsewhere {
+      if let Some(owner) = spelled_owner(keys, address) {
+        taken[owner] = true;
+        spelled_elsewhere = true;
+      }
+    }
+    spelled_elsewhere |= held_elsewhere
+      .iter()
+      .any(|(_, address)| spelled_owner(keys, address).is_some());
+    let elsewhere_open = unheld_elsewhere
+      .iter()
+      .any(|address| spelled_owner(keys, address).is_none() && !is_role_mailbox(address));
+    let member_spelled: Vec<Option<usize>> = members.iter().map(|&at| spelled[at]).collect();
+    let owners = list_owners(
+      keys,
+      &texts,
+      &member_spelled,
+      &taken,
+      spelled_elsewhere,
+      elsewhere_open,
+    );
+    for (at, (owner, rule)) in members.into_iter().zip(owners) {
+      listed[at] = Some((owner.map(|owner| vec![owner]), rule));
+    }
+  }
+  listed
+}
+
+/// The address an e-mail's text prints: its word holding an `@`, its edge punctuation aside.
+fn email_address_word(text: &str) -> Option<String> {
+  text
+    .split_whitespace()
+    .find(|word| word.contains('@'))
+    .map(|word| {
+      word
+        .trim_matches(|c: char| !c.is_alphanumeric())
+        .to_string()
+    })
+}
+
 /// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #966): the Kind step for a line of addresses inside an affiliation-kind entry
 /// (an affiliation, alternate affiliation or address, [`CUT_ROLES`]), read at the flush, where every route that makes
 /// the entry meets — a class's block (IEEEtran's `\IEEEauthorblockA{… \\ E-mail: a@x, \{b, c\}@y, and d@z}`,
@@ -1616,6 +1726,15 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
         cut.label
       );
       let font = line.address_font(cut.address_start, &entry);
+      // (a list set over several lines — a line break inside its printed brace, or between the brace and its domain:
+      // `LineText::read` —, one list however many holders print it, whose addresses the Link step places as the
+      // one-line form's, [`LINE_LIST`])
+      let list = (!line.breaks.is_empty()).then(|| {
+        s!(
+          "{}:{at}",
+          entry.get_attribute(ENTRY_KEY).unwrap_or_default()
+        )
+      });
       // (the label it printed; else, an entry of this line alone that its class names — REVTeX's
       // `\altaffiliation[Electronic address: ]{…}` —, the class's name, as the token-level Kind step gives it)
       let name = match &cut.label {
@@ -1659,6 +1778,7 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
           font.clone(),
           mark,
           (!show.is_empty()).then(|| show.join("")),
+          list.clone(),
         ));
       }
       if cut.start == 0 {
@@ -1685,7 +1805,7 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
     kinded.insert(key.clone());
     let saved = document.get_node().clone();
     document.set_node(&creator);
-    for (name, address, font, mark, show) in made {
+    for (name, address, font, mark, show, list) in made {
       let mut attributes: HashMap<String, String> = HashMap::default();
       attributes.insert("role".to_string(), "email".to_string());
       if !name.is_empty() {
@@ -1696,6 +1816,9 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
       }
       if let Some(show) = show {
         attributes.insert(LINE_MARK_SHOWN.to_string(), show);
+      }
+      if let Some(list) = list {
+        attributes.insert(LINE_LIST.to_string(), list);
       }
       attributes.insert(ENTRY_KEY.to_string(), key.clone());
       attributes.insert(ENTRY_KINDED.to_string(), "true".to_string());
@@ -1824,11 +1947,12 @@ fn join_split_address_contacts(document: &mut Document) -> Result<()> {
 }
 
 /// An address [`kind_address_lines`] reads off an entry's line: its e-mail's name, its text, its font, the marks leading
-/// it ([`LINE_MARK`]) and the marks it shows — those no name answers, which the line printed and its cut takes out
-/// ([`LINE_MARK_SHOWN`]).
+/// it ([`LINE_MARK`]), the marks it shows — those no name answers, which the line printed and its cut takes out
+/// ([`LINE_MARK_SHOWN`]) — and the list set over several lines it is an address of ([`LINE_LIST`]).
 type MadeAddress = (
   String,
   String,
+  Option<String>,
   Option<String>,
   Option<String>,
   Option<String>,
@@ -1926,7 +2050,7 @@ fn split_address_list(nodes: &[Node]) -> bool {
         if depth == 0 {
           let rest = &text[open + at + 1..];
           let after = rest.trim_start_matches(|c: char| c.is_whitespace());
-          return after.starts_with('@')
+          return opens_with_domain(after)
             && text[open..open + at + 1 + (rest.len() - after.len())].contains('\u{2028}');
         }
       },
@@ -1937,11 +2061,25 @@ fn split_address_list(nodes: &[Node]) -> bool {
 }
 
 /// Whether a line ending at `before` and the line `after` it are one address list's, its domain set on the next line:
-/// the first closes a printed brace list (`{majid,…,svetha.venkatesh}`), the second opens with its `@` (`@deakin.edu.au`,
-/// 1902.04228).
+/// the first closes a printed brace list (`{majid,…,svetha.venkatesh}`), the second opens with its `@` and domain
+/// (`@deakin.edu.au`, 1902.04228; [`opens_with_domain`]).
 fn domain_goes_on(before: &str, after: &str) -> bool {
   let before = before.trim_end();
-  before.ends_with('}') && before.contains('{') && after.trim_start().starts_with('@')
+  before.ends_with('}') && before.contains('{') && opens_with_domain(after.trim_start())
+}
+
+/// Whether `text` opens with an `@` and a domain: a word with a dot inside it (`@fz-juelich.de`), not a handle
+/// (`lib\{core\}` / `@alpha\_lab on Twitter` is no list of addresses, review rev107a finding 5).
+fn opens_with_domain(text: &str) -> bool {
+  text.strip_prefix('@').is_some_and(|rest| {
+    let domain: String = rest
+      .chars()
+      .take_while(|c| !c.is_whitespace() && !",;()".contains(*c))
+      .collect();
+    domain
+      .trim_end_matches(|c: char| !c.is_alphanumeric())
+      .contains('.')
+  })
 }
 
 /// The printed braces `text` opens and leaves open (negative: closes more than it opens).
@@ -2239,6 +2377,14 @@ const LINE_MARK: &str = "_linemark";
 /// it ([`kind_address_lines`]): the mark, shown before the address once it is placed ([`show_line_marks`]).
 const LINE_MARK_SHOWN: &str = "_linemarkshown";
 
+/// The attribute of an e-mail the Kind step for an address line made of a `{…}@domain` list set over several lines
+/// ([`kind_address_lines`]): the list's key (its entry's and line's), by which the Link step places the list's addresses
+/// as the author block's reader places its one-line form — the author each spells; else a list of one address per
+/// author that every spelled one agrees with, the author at its place (OXIDIZED_DESIGN_DIVERGENCES #805); else the
+/// only author's; else by elimination (batch 77p r4, `owners_by_elimination`); else the block (FIDELITY_CHARTER §4, review rev107a finding 4:
+/// [`link_entry_addresses`], `email_owners::list_owners`).
+const LINE_LIST: &str = "_linelist";
+
 /// The marks each address of a line's cut ([`AddressLineCut`]) goes with, as indices into the line's `marks`
 /// ([`LineText::marks`]): the marks counted are the line's opening one and those the cut takes out (from its `start`).
 /// Marks leading the addresses (the first counted mark before the first address): those after the address before it
@@ -2494,12 +2640,13 @@ fn respell_emails(document: &mut Document) -> Result<()> {
   if authors.len() < 2 {
     return Ok(());
   }
-  // (each name read as printed, whom an address is moved to (`NameKeys::as_printed`); and as an address spells it —
-  // base letters, the transliteration (`NameKeys::of`) — which only keep an address on the author it spells so:
-  // `javier.martinez@ugr.es` spells Javier Martínez-López, its holder, by base letters, so it stays, though as printed
-  // it spells Carlos Javier Navarro alone (brief 95c G6, 2410.00275); `muller-group@x.de`, `mueller-group@x.de` on Anna
-  // Smith's own `\email` stay, though by base letters or the transliteration they spell Jörg Müller — no target is
-  // picked by either (brief 95c r2 B1, FIDELITY_CHARTER §4 #420, OXIDIZED_DESIGN_DIVERGENCES #970))
+  // (each name read as printed, a transliterated spelling counted as one — whom an address is moved to
+  // (`NameKeys::as_printed`: `joerg.mueller@` Jörg Müller's, user ruling 2026-11-05) —; and as an address spells it —
+  // base letters too (`NameKeys::of`) — which only keeps an address on the author it spells so: `javier.martinez@ugr.es`
+  // spells Javier Martínez-López, its holder, by base letters, so it stays, though as printed it spells Carlos Javier
+  // Navarro alone (brief 95c G6, 2410.00275); `muller-group@x.de` on Anna Smith's own `\email` stays, though by base
+  // letters it spells Jörg Müller — no target is picked by them (brief 95c r2 B1, FIDELITY_CHARTER §4 #420) —, where
+  // `mueller-group@x.de` moves to him, as its ASCII twin beside `Jorg Mueller` does (OXIDIZED_DESIGN_DIVERGENCES #970))
   let names: Vec<String> = authors
     .iter()
     .map(|author| {

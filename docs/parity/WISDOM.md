@@ -3166,6 +3166,11 @@ either, "schaeffler" is unrecoverable, and the two readers disagreed (`\"a` in t
 name). The fix is one reader of the printed letter (`spelling_name_text`: an accent or letter command whose letter has
 a transliteration read as that letter) and one place that folds it both ways (`NameKeys::of` over
 `resolver::base_letters` and `resolver::transliterated`), every caller passing the name unfolded. Whom an author's own
-e-mail moves to stays the name as printed, unfolded (`NameKeys::as_printed`, FIDELITY_CHARTER §4 #420). Guards
+e-mail moves to is the name as printed or transliterated, never base-folded (`NameKeys::as_printed`; user ruling
+2026-11-05, FIDELITY_CHARTER §4 #420). A second
+spelling is a second chance to match, so it must not also change the rules a match is judged by: the transliteration
+lengthens words ("lu" "lue"), so every length threshold reads the base spelling (`SpelledWord`); and a match through
+it weighs the same as a literal one — an address carries no umlaut, so `mueller@` beside Hans Mueller and Jörg Müller
+is a genuine tie (user ruling 2026-11-05). Guards
 `base_utilities::author_split_tests::a_name_spells_by_its_base_letters_and_its_transliteration`,
 `perfect_kernel_batch107a`; OXIDIZED_DESIGN_DIVERGENCES #970.

@@ -1,0 +1,27 @@
+% No address list: an affiliation line ending in a printed brace (`project \texttt{lib\{core\}}`) and the next line
+%   opening with an `@` handle (`@alpha\_lab on Twitter`). The split-list reader (`insert::split_address_list`,
+%   `domain_goes_on`) takes the text after `@` for a domain only when it holds a dot (`insert::opens_with_domain`), so
+%   no `Warning:frontmatter:address-list` fires for it (OXIDIZED_DESIGN_DIVERGENCES #970). The two lines stay the
+%   affiliation's, as on int138a (pre-existing: `@alpha_lab` read as part of the shared affiliation).
+% witness: review rev107a finding 5 (probe p/code.tex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "1University of Alpha, project lib{core}" / "@alpha_lab on
+%   Twitter" / "ann.able@alpha.edu"
+% engines: rust int138a: as expected, 0 warnings; rust 107a r1: 1 Warning:frontmatter:address-list
+% expect:  0 errors, 0 warnings; ann.able@ on Ann Able, both affiliations "University of Alpha, project lib{core}" /
+%   "@alpha_lab on Twitter"
+% status:  RED (107a r1) -> GREEN (107a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\title{A Title}
+\author{%
+  Ann Able$^{1}$ \and
+  Bo Baker$^{1}$ \\
+ {\normalfont $^1$University of Alpha, project \texttt{lib\{core\}}} \\
+ {\normalfont @alpha\_lab on Twitter} \\
+ \texttt{ann.able@alpha.edu}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}
