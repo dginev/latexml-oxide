@@ -30,7 +30,11 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
 - **Generated content follows Perl**: a table of contents a class's `\maketitle` prints (JHEP/JINST) is not emitted;
   the reader's navigation comes from the HTML (2026-10-21).
 - **Label text is markup, never stray content and never dropped**: "E-mail:", "Keywords:", "Require:" become an
-  element or attribute CSS can style or hide (2026-10).
+  element or attribute CSS can style or hide (2026-10). **A frontmatter mark matters only where it is used** (user
+  2026-11-05, "we only care about marks that are used, at least from a frontmatter standpoint"): a printed mark no
+  name requests (an orphan legend line's `$^{b}$`) is not kept as a label; the line's words are kept, once, on the
+  block creator, never on an author. (The witnesses checked carry no orphan: 2007.02542's "unrequested" 23/24/51/63
+  are requested as `$^{23A}$`…, its letters a-l all requested; 1507.02068 and 1202.2048 likewise.)
 - **An empty presentational shell left by our own restructuring is not emitted**: a thanks note whose entire content
   became contacts (OD #803, 2026-10-21). An author's own empty `\thanks{}` is not emitted either (2026-10-30, superseding
   2026-10-21's "stays": pdflatex prints a bare mark, and an empty note only adds a "Thanks:" label over nothing).
