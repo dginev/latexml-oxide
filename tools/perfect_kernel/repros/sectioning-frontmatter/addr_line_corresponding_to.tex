@@ -1,0 +1,19 @@
+% An article author block's last line `$^{*}$ Corresponding\ to\ bbaker@a.edu`: contact words and "to" before the
+% address, with no colon, are its label; the line leaves the affiliation, and the address is the e-mail of the name
+% carrying `*` (107c).
+% witness: 2606.31381 (`$^{*}$ Corresponding\ to\ lingxiao.wang@…`)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker1*", "1Univ A, Town", "* Corresponding to bbaker@a.edu"
+% engines: rust int139a0 = the line glued into the affiliation of both
+% expect:  0 errors, 0 warnings; both Univ A, Town; Baker + bbaker@a.edu named "Corresponding to "
+% status:  RED (int139a0) -> GREEN (107c)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^1$ and Bob Baker$^{1*}$\\
+$^1$Univ A,\\ Town\\
+$^{*}$ Corresponding\ to\ bbaker@a.edu}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

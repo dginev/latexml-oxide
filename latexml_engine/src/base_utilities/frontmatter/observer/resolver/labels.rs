@@ -5,7 +5,7 @@
 use super::*;
 use crate::base_utilities::author_block::{
   ADDRESS_GROUP_SEPARATORS, UNBRACED_LIST_SEPARATORS, ends_a_listed_run, is_listed_local_part,
-  is_local_char, write_out_unspaced_lists,
+  is_local_char, names_a_contact, write_out_unspaced_lists,
 };
 
 /// `key=value` of an attribute string (`role=affiliation,label=a`), braces stripped: a repeated key's last value, as
@@ -558,13 +558,19 @@ pub(in crate::base_utilities::frontmatter) fn address_runs(
       .then(|| (from + domain.len(), domain.to_string()))
   };
   let mut runs: Vec<AddressRun> = Vec::new();
-  // (braced groups)
+  // (braced groups; a bracketed list of local parts before its domain reads as one, `Email: [i.iudice,
+  // d.pascarella]@cira.it`, 2405.17925: 107c)
   let mut from = 0;
-  while let Some(open) = text[from..].find('{').map(|o| from + o) {
+  while let Some(open) = text[from..].find(['{', '[']).map(|o| from + o) {
+    let (opening, closing) = if text[open..].starts_with('{') {
+      ('{', '}')
+    } else {
+      ('[', ']')
+    };
     let Some(close) = text[open + 1..]
-      .find(['{', '}'])
+      .find([opening, closing])
       .map(|c| open + 1 + c)
-      .filter(|&c| text[c..].starts_with('}'))
+      .filter(|&c| text[c..].starts_with(closing))
     else {
       from = open + 1;
       continue;
@@ -572,12 +578,16 @@ pub(in crate::base_utilities::frontmatter) fn address_runs(
     let inner = &text[open + 1..close];
     let after = &text[close + 1..];
     let local = |p: &str| !p.is_empty() && p.chars().all(is_local_char);
-    // (spaces before the `@` are the group's: `\{ ann, bob \} @x.org`, 2311.14729)
+    // (spaces round the `@` are the group's: `\{ ann, bob \} @x.org`, 2311.14729; `\{aremonda, skrebs\} @
+    // know-center.at`, 2104.11106, `{\tt \{ tchakra2, rao \} @ asu.edu}`, 1707.04775: 107c)
     let gap = after.len() - after.trim_start().len();
+    let at_gap = after.trim_start().strip_prefix('@').map_or(0, |domain| {
+      domain.len() - domain.trim_start_matches([' ', '\t']).len()
+    });
     let found = if let Some((end, domain)) = after
       .trim_start()
       .strip_prefix('@')
-      .and_then(|_| domain_at(close + 2 + gap))
+      .and_then(|_| domain_at(close + 2 + gap + at_gap))
     {
       let locals: Vec<&str> = inner
         .split(|c: char| c.is_whitespace() || ADDRESS_GROUP_SEPARATORS.contains(&c))
@@ -585,6 +595,8 @@ pub(in crate::base_utilities::frontmatter) fn address_runs(
         .collect();
       (!locals.is_empty() && locals.iter().all(|p| local(p)))
         .then(|| (end, locals.iter().map(|l| s!("{l}@{domain}")).collect()))
+    } else if opening == '[' {
+      None
     } else if let Some((group, taken)) = domain_after_group(inner, after) {
       Some((close + 1 + taken, group))
     } else if let Some(group) = domain_inside_group(inner) {
@@ -785,7 +797,17 @@ fn at_list_boundary(text: &str, run: &AddressRun) -> bool {
     .next()
     .filter(|w| !w.is_empty());
   let tagged = after.starts_with(['(', '[']);
-  ((before_ok && (after_ok || !prose(word_after))) || (after_ok && !prose(word_before))) && !tagged
+  // (a contact's words and "to" before it are its label, not prose: `Corresponding\ to\ lingxiao.wang@…`
+  // (2606.31381), "Correspondence to"; "write to a@z.org." stays prose: 107c)
+  let label_to = word_before.is_some_and(|word| word.eq_ignore_ascii_case("to"))
+    && before
+      .trim_end()
+      .rsplit_once(char::is_whitespace)
+      .and_then(|(head, _)| head.trim_end().rsplit(char::is_whitespace).next())
+      .is_some_and(names_a_contact);
+  ((before_ok && (after_ok || !prose(word_after)))
+    || (after_ok && (label_to || !prose(word_before))))
+    && !tagged
 }
 
 /// Whether an address run ending at `end` of `text` ends a list's item there: the text's or a line's end, a separator
@@ -944,35 +966,45 @@ pub(in crate::base_utilities::frontmatter::observer) fn strip_address_runs(
   out.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// A braced group of addresses each missing the domain the text prints after the group's brace (`inner` =
-/// `xxh22@mails, huichen@mail`, `after` = `.tsinghua.edu.cn, …`): each address with that domain, and the length of
-/// `after` the domain takes; `None` for any other group (a piece with no `@` or two, or no domain after the brace).
+/// A braced group of addresses each ending in what the text prints right after the group's brace, written out: each
+/// piece joined to that tail (`after` up to a space or a separator, its closing stop aside) where every joined piece is
+/// one address (one `@`, a local part, a dotted domain) — the domain after the brace, `{xxh22@mails,
+/// huichen@mail}.tsinghua.edu.cn` (2407.18899), or after pieces each ending in a dot or the `@`, `{junwei@link.,
+/// lizhen@}cuhk.edu.cn` (2108.00873, 2605.01350, 2602.07769: 107c); the parts' shared tail after local parts,
+/// `{fikadu.t.dagefu, brian.m.sadler6}.civ@mail.mil` (1908.06816: 107c). Returns the addresses and the length of `after`
+/// the tail takes; `None` for any other group (a piece with a space, an `@` too many or none, no tail).
 fn domain_after_group(inner: &str, after: &str) -> Option<(Vec<String>, usize)> {
-  let rest = after.strip_prefix('.')?;
-  let domain: String = rest
+  let tail: String = after
     .chars()
-    .take_while(|c| !c.is_whitespace() && !",;()<>{}".contains(*c))
+    .take_while(|c| !c.is_whitespace() && !",;()<>{}[]".contains(*c))
     .collect();
-  let domain = domain.trim_end_matches('.');
-  if domain.is_empty() {
+  let tail = tail.trim_end_matches('.');
+  if tail.is_empty() {
     return None;
   }
   let pieces: Vec<&str> = inner.split(',').map(str::trim).collect();
-  let whole = |p: &str| {
-    p.split_once('@').is_some_and(|(local, sub)| {
-      !local.is_empty()
-        && !sub.is_empty()
-        && !p.contains(|c: char| c.is_whitespace())
-        && !sub.contains('@')
-    })
+  // (each piece one address with the tail: an `@` in the piece or in the tail, never both; the piece and the tail
+  // meeting at a dot or the `@` — `link.` + `cuhk.edu.cn`, `mails` + `.tsinghua…`, `sadler6` + `.civ@…`)
+  let address = |piece: &str| -> Option<String> {
+    let meets = piece.ends_with(['.', '@']) || tail.starts_with(['.', '@']);
+    let joined = s!("{piece}{tail}");
+    let (local, domain) = joined.split_once('@')?;
+    let ok = meets
+      && !piece.is_empty()
+      && (piece.contains('@') != tail.contains('@'))
+      && !local.is_empty()
+      && local.chars().all(is_local_char)
+      && !local.starts_with('.')
+      && domain.contains('.')
+      && !domain.contains("..")
+      && !domain.starts_with('.')
+      && domain
+        .chars()
+        .all(|c| c.is_ascii_alphanumeric() || ".-".contains(c));
+    ok.then_some(joined)
   };
-  if !pieces.iter().all(|p| whole(p)) {
-    return None;
-  }
-  Some((
-    pieces.iter().map(|p| format!("{p}.{domain}")).collect(),
-    1 + domain.len(),
-  ))
+  let addresses: Option<Vec<String>> = pieces.iter().map(|piece| address(piece)).collect();
+  Some((addresses?, tail.len()))
 }
 
 /// A braced group of local parts whose last holds the one `@` and the shared domain (`blaz.skrlj,senja.pollak@ijs.si`),

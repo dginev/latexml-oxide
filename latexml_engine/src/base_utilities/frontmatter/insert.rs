@@ -106,6 +106,8 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
     drop_empty_contacts(document)?;
     show_line_marks(document)?;
   }
+  // (an affiliation's dedication lines, read once every route has placed it: the paper's dedication, 107c)
+  kind_dedication_lines(document)?;
   // (an affiliation that is a legend, read once every route has placed it: its carriers' note, OD #961)
   kind_legend_contacts(document)?;
   // (an affiliation that is a link or a membership grade, read where the legend's is: the block's link, its carriers'
@@ -694,13 +696,131 @@ fn kind_legend_contacts(document: &mut Document) -> Result<()> {
   Ok(())
 }
 
+/// The Kind step for a dedication (FIDELITY_CHARTER §4: no printed word lost, each kept where it belongs; census138
+/// LEGEND: 107c), where the legend's is ([`kind_legend_contacts`]): an affiliation-kind contact's lines from the first
+/// that opens a dedication ([`opens_a_dedication`]: "This work is dedicated to Professor Roger Temam" set under the
+/// author block, `\centerline{…}\\ \centerline{on the occasion of his seventieth birthday}`, 0910.1386) to its end are
+/// the paper's dedication — not an affiliation of its holders and no note of theirs, a legend no name's mark points to —
+/// written once, as a class's `\dedication` writes one (`ltx:pubnote role=dedication`, aa_support_sty.rs; no label, as
+/// the block prints none), after the last creator; every holder's copy gives them up, and a contact left empty goes.
+fn kind_dedication_lines(document: &mut Document) -> Result<()> {
+  let contacts: Vec<Node> = document
+    .findnodes("//ltx:creator/ltx:contact", None)
+    .into_iter()
+    .filter(|contact| {
+      contact
+        .get_attribute("role")
+        .is_some_and(|role| CUT_ROLES.contains(&role.as_str()))
+    })
+    .collect();
+  let mut written: Vec<String> = Vec::new();
+  for contact in contacts {
+    let lines = entry_lines(&contact);
+    let Some(from) = lines.iter().position(|(nodes, _)| {
+      let text: String = nodes.iter().map(Node::get_content).collect();
+      opens_a_dedication(&text)
+    }) else {
+      continue;
+    };
+    let mut dedication: Vec<Node> = Vec::new();
+    for (at, (nodes, before)) in lines.iter().enumerate().skip(from) {
+      if at > from {
+        dedication.extend(before.clone());
+      }
+      dedication.extend(nodes.iter().cloned());
+    }
+    let text = dedication
+      .iter()
+      .map(Node::get_content)
+      .collect::<String>()
+      .split_whitespace()
+      .collect::<Vec<_>>()
+      .join(" ");
+    DebugFeature!(
+      "frontmatter",
+      "FRONT kind affiliation: a dedication: {text}"
+    );
+    if !written.contains(&text) {
+      written.push(text);
+      let Some(last) = document.findnodes("//ltx:creator", None).last().cloned() else {
+        continue;
+      };
+      let Some(parent) = last.get_parent() else {
+        continue;
+      };
+      let saved = document.get_node().clone();
+      document.set_node(&parent);
+      let mut attributes: HashMap<String, String> = HashMap::default();
+      attributes.insert("role".to_string(), "dedication".to_string());
+      let mut note = document.open_element("ltx:pubnote", Some(attributes), None)?;
+      document.close_element("ltx:pubnote")?;
+      document.set_node(&saved);
+      // (its lines, without the line breaks at its edges)
+      let inner: Vec<Node> = dedication
+        .iter()
+        .skip_while(|node| node.get_name() == "break")
+        .cloned()
+        .collect();
+      document.append_clone(&mut note, inner)?;
+      note.unlink_node();
+      let mut last = last;
+      last.add_next_sibling(&mut note)?;
+      trim_edge_breaks(document, &note);
+    }
+    if let Some((_, Some(before))) = lines.get(from) {
+      document.remove_node(before.clone());
+    }
+    for node in dedication {
+      document.remove_node(node);
+    }
+    // (and the blank lines it leaves at the contact's end: `\mbox{ }\\` before it, 0910.1386)
+    while let Some(last) = contact.get_last_child()
+      && (last.get_name() == "break"
+        || (last.get_content().trim().is_empty() && element_nodes(&last).is_empty()))
+    {
+      document.remove_node(last);
+    }
+  }
+  drop_empty_contacts(document)
+}
+
+/// Whether a line's text opens a dedication ([`kind_dedication_lines`]): "Dedicated to …", "This work (paper, article,
+/// thesis, volume) is dedicated to …", "To the memory of …", "In memory of …".
+fn opens_a_dedication(text: &str) -> bool {
+  let words: Vec<String> = text
+    .split(|c: char| !c.is_alphanumeric())
+    .filter(|w| !w.is_empty())
+    .map(str::to_lowercase)
+    .collect();
+  let words: Vec<&str> = words.iter().map(String::as_str).collect();
+  matches!(
+    words.as_slice(),
+    ["dedicated", "to", _, ..]
+      | [
+        "this",
+        "work" | "paper" | "article" | "thesis" | "volume" | "note",
+        "is",
+        "dedicated",
+        "to",
+        _,
+        ..
+      ]
+      | ["to", "the", "memory", "of", _, ..]
+      | ["in", "memory", "of", _, ..]
+  )
+}
+
 /// The Kind step for a link and a membership grade (FIDELITY_CHARTER §4; census132 LEGEND; OXIDIZED_DESIGN_DIVERGENCES
 /// #969), where the legend's is ([`kind_legend_contacts`]): a creator's affiliation contact carrying the role's
 /// default name whose whole printed text is
 /// - one link ([`sole_link`]: `{\texttt{\url{https://github.com/…}}}` under IEEEtran's `\IEEEauthorblockA{…}\\`, which
 ///   the binding wraps into a block of its own, 2511.18438) is a URL contact (`role=url`, as an author block's link line
 ///   is one, `author_block::links::is_link_line`): the block's own creator's, once, when it is the block's line — no
-///   mark labels it and every author holds a copy —, else each holder's (a line a mark labels is its owners');
+///   mark labels it and every author holds a copy —, else each holder's (a line a mark labels is its owners'); a short
+///   label before it that names a link (`Project website:`, `\textbf{Website: }`: [`link_label`]) is the contact's
+///   name, as printed (2609.03591, 2502.19820: 107c); an entry whose every line is one such link is a contact per line
+///   ([`split_link_lines`]), one to `orcid.org` an ORCID contact (IEEEtran's `\IEEEauthorblockA{\href{mailto:…}{…}\\
+///   \url{https://orcid.org/…}\\ \url{https://members.loria.fr/AClement}}`, 2206.10577: 107c);
 /// - a membership grade ([`reads_as_membership_grade`]: "Senior Member, IEEE" behind IEEE_lsens's
 ///   `\IEEEauthorieeemembermark{2}`, a raw class's mark, 2310.02678, 2505.15137) is its carriers' `membership` contact,
 ///   as IEEEtran's `\IEEEmembership` makes one (ieeetran_cls.rs `\lx@IEEE@membership`).
@@ -712,11 +832,27 @@ fn kind_link_and_grade_contacts(document: &mut Document) -> Result<()> {
     return Ok(());
   }
   let default_name = get_frontmatter_name(None, "ltx:contact", "affiliation")?;
+  // (an entry of link lines, a contact per line)
+  let mut read: Vec<Node> = Vec::with_capacity(contacts.len());
+  for contact in contacts {
+    let copies = if contact.get_attribute("name") == default_name {
+      split_link_lines(document, &contact)?
+    } else {
+      Vec::new()
+    };
+    read.push(contact);
+    read.extend(copies);
+  }
   // (each link's copies, in print order)
   let mut links: Vec<(String, Vec<Node>)> = Vec::new();
-  for mut contact in contacts {
-    if contact.get_attribute("name") != default_name {
+  for mut contact in read {
+    if contact.get_parent().is_none() || contact.get_attribute("name") != default_name {
       continue;
+    }
+    // (a label naming the link before it: the contact's name, as printed)
+    if let Some((label, link)) = link_label(document, &contact) {
+      strip_before_link(document, &contact, &link);
+      document.set_attribute(&mut contact, LINK_LABEL, &s!("{label} "))?;
     }
     if let Some(link) = sole_link(document, &contact) {
       match links.iter_mut().find(|(href, _)| *href == link) {
@@ -775,12 +911,220 @@ fn kind_link_and_grade_contacts(document: &mut Document) -> Result<()> {
       } else {
         copies
       };
+    let role = if link.contains("orcid.org/") {
+      "orcid"
+    } else {
+      "url"
+    };
     for mut copy in kept {
-      document.set_attribute(&mut copy, "role", "url")?;
-      set_role_name(document, &mut copy, "url")?;
+      document.set_attribute(&mut copy, "role", role)?;
+      match copy.get_attribute(LINK_LABEL) {
+        Some(label) => {
+          document.set_attribute(&mut copy, "name", &label)?;
+          copy.remove_attribute(LINK_LABEL).ok();
+        },
+        None => set_role_name(document, &mut copy, role)?,
+      }
     }
   }
   Ok(())
+}
+
+/// The attribute of a link contact whose label [`kind_link_and_grade_contacts`] read off its text ([`link_label`]):
+/// the label as printed, the contact's name once it is placed.
+const LINK_LABEL: &str = "_linklabel";
+
+/// The words a link's label ends in ([`link_label`]): "Project website:", "Homepage:", "Code:", "Project page:".
+const LINK_LABEL_WORDS: &[&str] = &[
+  "website",
+  "websites",
+  "site",
+  "homepage",
+  "page",
+  "url",
+  "web",
+  "code",
+  "github",
+  "repository",
+  "repo",
+  "demo",
+  "project",
+  "data",
+  "dataset",
+];
+
+/// The label printed before the one link a contact's text holds, on one line — one to three words, the last naming a
+/// link, and a colon ([`is_link_label`]): `Project website: {\small\href{…}{https://…}}` (2609.03591), `\textbf{Website: }
+/// \href{…}{https://…}` (2502.19820) — where the link prints as a URL does and nothing follows it but a stop: the label
+/// as printed, and the link. `None` for any other text.
+fn link_label(document: &mut Document, contact: &Node) -> Option<(String, Node)> {
+  if !document.findnodes(".//ltx:break", Some(contact)).is_empty() {
+    return None;
+  }
+  let refs = document.findnodes(".//ltx:ref[@href]", Some(contact));
+  let [link] = refs.as_slice() else {
+    return None;
+  };
+  let label = printed_link_label(&contact.get_content(), link)?;
+  is_link_label(&label).then(|| (label, link.clone()))
+}
+
+/// The text printed before `link` in `text` (a line's), its spacing collapsed, where the link prints as a URL does
+/// ([`prints_as_url`]) and nothing follows it but a stop; `None` otherwise.
+fn printed_link_label(text: &str, link: &Node) -> Option<String> {
+  let href = link.get_attribute("href")?;
+  let shown = link.get_content();
+  let shown = shown.trim();
+  let at = text.find(shown)?;
+  let after = text[at + shown.len()..].trim();
+  (!shown.is_empty()
+    && after.trim_end_matches(['.', ',']).is_empty()
+    && prints_as_url(shown, &href))
+  .then(|| text[..at].split_whitespace().collect::<Vec<_>>().join(" "))
+}
+
+/// Whether `label` names a link ([`link_label`]): one to three words of letters, the last one of [`LINK_LABEL_WORDS`],
+/// and a colon.
+fn is_link_label(label: &str) -> bool {
+  let Some(words) = label.strip_suffix(':') else {
+    return false;
+  };
+  let words: Vec<&str> = words.split_whitespace().collect();
+  (1..=3).contains(&words.len())
+    && words
+      .iter()
+      .all(|word| word.chars().all(|c| c.is_alphabetic() || c == '-'))
+    && words
+      .last()
+      .is_some_and(|word| LINK_LABEL_WORDS.contains(&word.to_lowercase().as_str()))
+}
+
+/// Removes from `parent` everything printed before `link` (the label [`link_label`] read): each node before it, and
+/// before it inside each wrapper holding it.
+fn strip_before_link(document: &mut Document, parent: &Node, link: &Node) {
+  let mut holders: Vec<Node> = Vec::new();
+  let mut at = link.get_parent();
+  while let Some(node) = at {
+    if node == *parent {
+      break;
+    }
+    at = node.get_parent();
+    holders.push(node);
+  }
+  for child in parent.get_child_nodes() {
+    if child == *link {
+      return;
+    }
+    if holders.contains(&child) {
+      strip_before_link(document, &child, link);
+      return;
+    }
+    document.remove_node(child);
+  }
+}
+
+/// Whether a link printing `shown` with target `href` prints as a URL does: `https://…`, `www.…`, or its target without
+/// the scheme — not a department's name set as a link (1812.03371's `\href{…}{Department of Mathematics, Harvey Mudd
+/// College}`).
+fn prints_as_url(shown: &str, href: &str) -> bool {
+  let bare = |text: &str| {
+    text
+      .trim_start_matches("https://")
+      .trim_start_matches("http://")
+      .trim_start_matches("www.")
+      .trim_end_matches('/')
+      .to_lowercase()
+  };
+  shown.starts_with("http://")
+    || shown.starts_with("https://")
+    || shown.starts_with("www.")
+    || bare(shown) == bare(href)
+}
+
+/// An affiliation contact's link lines (each of its children between two line breaks one link printing as a URL does,
+/// [`prints_as_url`], behind a link's label or none, [`is_link_label`], and nothing else), parted off: those ending it
+/// after a line of other text (`\IEEEauthorblockA{\textsuperscript{2}Univ B\\ Project website: {\href{…}{…}}}`: 107c),
+/// or, where every line is one and there are two or more, each but the first (an author's own block of links,
+/// `\url{https://orcid.org/…}\\ \url{https://members.loria.fr/AClement}`, 2206.10577: 107c) — a copy of the contact
+/// per line, holding it, after the contact in print order. Returns the copies made.
+fn split_link_lines(document: &mut Document, contact: &Node) -> Result<Vec<Node>> {
+  let mut lines: Vec<Vec<Node>> = vec![Vec::new()];
+  for child in contact.get_child_nodes() {
+    if child.get_type() == Some(NodeType::ElementNode) && child.get_name() == "break" {
+      lines.push(Vec::new());
+    } else if (child.get_type() != Some(NodeType::TextNode)
+      || !child.get_content().trim().is_empty())
+      && let Some(line) = lines.last_mut()
+    {
+      line.push(child);
+    }
+  }
+  lines.retain(|line| !line.is_empty());
+  let link_line = |document: &mut Document, line: &[Node]| -> bool {
+    let mut refs: Vec<Node> = Vec::new();
+    for node in line {
+      if node.get_type() == Some(NodeType::ElementNode) && node.get_name() == "ref" {
+        refs.push(node.clone());
+      } else if node.get_type() == Some(NodeType::ElementNode) {
+        refs.extend(document.findnodes(".//ltx:ref[@href]", Some(node)));
+      }
+    }
+    let [link] = refs.as_slice() else {
+      return false;
+    };
+    let text: String = line.iter().map(Node::get_content).collect();
+    printed_link_label(&text, link).is_some_and(|label| label.is_empty() || is_link_label(&label))
+  };
+  let links: Vec<bool> = lines.iter().map(|line| link_line(document, line)).collect();
+  let first = links.iter().rposition(|link| !link).map_or(1, |at| at + 1);
+  if lines.len() < 2 || first >= lines.len() {
+    return Ok(Vec::new());
+  }
+  let Some(mut creator) = contact.get_parent() else {
+    return Ok(Vec::new());
+  };
+  let mut copies: Vec<Node> = Vec::new();
+  let mut previous = contact.clone();
+  for keep in first..lines.len() {
+    document.append_clone(&mut creator, vec![contact.clone()])?;
+    let Some(mut copy) = element_nodes(&creator).last().cloned() else {
+      continue;
+    };
+    copy.unlink_node();
+    previous.add_next_sibling(&mut copy)?;
+    keep_only_lines(document, &copy, keep..keep + 1);
+    previous = copy.clone();
+    copies.push(copy);
+  }
+  keep_only_lines(document, contact, 0..first);
+  Ok(copies)
+}
+
+/// Removes from `contact` every printed line outside `keep` ([`split_link_lines`]), and the line breaks of the lines it
+/// removes and at its edges.
+fn keep_only_lines(document: &mut Document, contact: &Node, keep: std::ops::Range<usize>) {
+  let mut line = 0;
+  let mut printed = false;
+  for child in contact.get_child_nodes() {
+    if child.get_type() == Some(NodeType::ElementNode) && child.get_name() == "break" {
+      if printed {
+        line += 1;
+        printed = false;
+      }
+      // (a break inside the lines kept stays: one before their first line or after their last goes)
+      if !(keep.start < line && line < keep.end) {
+        document.remove_node(child);
+      }
+      continue;
+    }
+    let prints =
+      child.get_type() != Some(NodeType::TextNode) || !child.get_content().trim().is_empty();
+    printed |= prints;
+    if !keep.contains(&line) && prints {
+      document.remove_node(child);
+    }
+  }
+  trim_edge_breaks(document, contact);
 }
 
 /// `contact` named as its class names a contact of `role` (`get_frontmatter_name`; no name when the class gives none).
@@ -812,21 +1156,9 @@ fn sole_link(document: &mut Document, contact: &Node) -> Option<String> {
   };
   let shown = printed(link.get_content());
   let href = link.get_attribute("href")?;
-  // (a link printing its own target, as a URL prints: `https://…`, `www.…`, or the target without its scheme — not a
-  // department's name set as a link, 1812.03371's `\href{…}{Department of Mathematics, Harvey Mudd College}`)
-  let bare = |text: &str| {
-    text
-      .trim_start_matches("https://")
-      .trim_start_matches("http://")
-      .trim_start_matches("www.")
-      .trim_end_matches('/')
-      .to_lowercase()
-  };
-  let url_like = shown.starts_with("http://")
-    || shown.starts_with("https://")
-    || shown.starts_with("www.")
-    || bare(&shown) == bare(&href);
-  (!shown.is_empty() && url_like && shown == printed(contact.get_content())).then_some(href)
+  // (a link printing its own target, as a URL prints: [`prints_as_url`])
+  (!shown.is_empty() && prints_as_url(&shown, &href) && shown == printed(contact.get_content()))
+    .then_some(href)
 }
 
 /// Whether a contact's text ([`legend_text`]) is a membership grade in a society, its marks aside: "Senior Member,
@@ -1629,8 +1961,13 @@ fn email_address_word(text: &str) -> Option<String> {
 /// an address an author holds already ([`carry_printed_label`]), a mark no name answers shown before the first address
 /// it leads ([`show_line_marks`]). An entry whose only line opens with a mark and is a contact's words before its
 /// addresses (`∗Corresponding author: x`) keeps the words, the legend the Kind step for a legend reads
-/// ([`kind_legend_contacts`]). Left as they print (the frontmatter observer's text reading's): an address beside words
-/// with no label (`Univ A, Town, ann@x.org`), a template or a list the reader could not part (`{name.surname}@x`,
+/// ([`kind_legend_contacts`]). An unlabelled tail of addresses after a `;`, a comma or a full stop and a space (`…,
+/// China; lha@…, xuey@…`, 2602.07392; `University of Maryland, jda@…`, 1903.04089; 1701.07541, 1204.4622), a label of
+/// contact words and "to" (`Corresponding\ to\ x@y`, 2606.31381), the lines a font wrapper holds ([`entry_lines`]:
+/// 2603.02131, 2104.11106) and a list's other printed forms (`[a, b]@x`, `{a, b} @ x`, `{a@p., b@}x.y`, `{a, b}.civ@x`:
+/// `resolver::address_runs`; 2405.17925, 1707.04775, 2108.00873, 2605.01350, 1908.06816) are read as well (107c). Left as
+/// they print (the frontmatter observer's text reading's): an address glued to the word before it (`smith,j@x.org`) or
+/// beside prose (`see data@a.org for data`), a template or a list the reader could not part (`{name.surname}@x`,
 /// [`is_pattern_address`], [`lists_local_parts`]), a run a tag follows (`a@x (Matvey)`, 2512.10975), a line holding a
 /// formula, a note or a link that is no address's. Returns the keys of the entries it took lines out of. Guards
 /// `perfect_kernel_batch106a`.
@@ -1738,6 +2075,8 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
       // (the label it printed; else, an entry of this line alone that its class names — REVTeX's
       // `\altaffiliation[Electronic address: ]{…}` —, the class's name, as the token-level Kind step gives it)
       let name = match &cut.label {
+        // (a label ending in its connective, printed with no colon: "Corresponding to ")
+        Some(label) if label.to_lowercase().ends_with(" to") => Some(s!("{label} ")),
         Some(label) => Some(s!("{label}: ")),
         None if cut.start == 0 && printed_lines == 1 && entry_name != role_name => {
           entry_name.clone()
@@ -1782,8 +2121,11 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
         ));
       }
       if cut.start == 0 {
-        // (the whole line, with the break before it — the one after it, the entry's first line)
+        // (the whole line, with the break before it — the one after it, the entry's first line —, and each font
+        // wrapper it leaves empty)
+        let mut parents: Vec<Node> = Vec::new();
         for node in nodes {
+          parents.extend(node.get_parent());
           document.remove_node(node.clone());
         }
         let separator = break_before
@@ -1792,8 +2134,10 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
         if let Some(separator) = separator
           && separator.get_parent().is_some()
         {
+          parents.extend(separator.get_parent());
           document.remove_node(separator);
         }
+        drop_emptied_wrappers(document, parents);
       } else {
         line.cut_from(document, cut.start);
       }
@@ -1961,16 +2305,31 @@ type MadeAddress = (
 /// An entry's lines for [`kind_address_lines`]: its children between two line breaks (`ltx:break`), each with the break
 /// before it (none for the first). Lines a printed brace opens and a later line closes are one, the breaks between them
 /// its own (a list of local parts set over two lines, `\texttt{\{ann.able,xq.zz,}\\ \texttt{cy.coe\}@alpha.edu}`:
-/// html_feedback #7233, [`LineText::read`]); a brace no later line closes joins nothing.
+/// html_feedback #7233, [`LineText::read`]); a brace no later line closes joins nothing. A font wrapper (`ltx:text`)
+/// holding line breaks of its own is read through, its children lines like the entry's: a font declaration's reach
+/// over the lines after it (`\scriptsize{$^1$Dept …} \\ … \scriptsize{$^\ast$~Correspondence: \texttt{a@x} and
+/// \texttt{b@y}}`, 2603.02131; `\author{…\\ $^1$ Know-Center - Graz, Austria \\ \{aremonda, …\} @ know-center.at}`,
+/// 2104.11106: 107c).
 fn entry_lines(entry: &Node) -> Vec<(Vec<Node>, Option<Node>)> {
-  let mut lines: Vec<(Vec<Node>, Option<Node>)> = vec![(Vec::new(), None)];
-  for child in entry.get_child_nodes() {
-    if child.get_type() == Some(NodeType::ElementNode) && child.get_name() == "break" {
-      lines.push((Vec::new(), Some(child)));
-    } else if let Some((nodes, _)) = lines.last_mut() {
-      nodes.push(child);
+  fn read_lines(parent: &Node, lines: &mut Vec<(Vec<Node>, Option<Node>)>) {
+    for child in parent.get_child_nodes() {
+      let element = child.get_type() == Some(NodeType::ElementNode);
+      if element && child.get_name() == "break" {
+        lines.push((Vec::new(), Some(child)));
+      } else if element
+        && child.get_name() == "text"
+        && child.get_child_nodes().iter().any(|grandchild| {
+          grandchild.get_type() == Some(NodeType::ElementNode) && grandchild.get_name() == "break"
+        })
+      {
+        read_lines(&child, lines);
+      } else if let Some((nodes, _)) = lines.last_mut() {
+        nodes.push(child);
+      }
     }
   }
+  let mut lines: Vec<(Vec<Node>, Option<Node>)> = vec![(Vec::new(), None)];
+  read_lines(entry, &mut lines);
   let depth = |nodes: &[Node]| -> isize {
     nodes
       .iter()
@@ -2134,6 +2493,8 @@ impl LineText {
         "ref" if node.get_content().contains('@') => {
           node.get_child_nodes().iter().all(|child| self.read(child))
         },
+        // (an empty superscript, which prints nothing: `\textsuperscript{}\{…\}.civ@mail.mil`, 1908.06816: 107c)
+        "sup" if node.get_content().trim().is_empty() && element_nodes(node).is_empty() => true,
         // (a mark set as a superscript, or as a formula not yet parsed: `$^{\ast}$`, 2609.21085)
         "sup" | "Math" if is_mark_text(&node.get_content()) => {
           let start = self.text.len();
@@ -2237,19 +2598,25 @@ impl LineText {
         let _ = node.set_content(&content[..cut - start]);
       }
     }
-    for parent in parents {
-      let mut at = Some(parent);
-      while let Some(node) = at {
-        if node.get_type() != Some(NodeType::ElementNode)
-          || !matches!(node.get_name().as_str(), "text" | "ref")
-          || !node.get_content().trim().is_empty()
-          || !element_nodes(&node).is_empty()
-        {
-          break;
-        }
-        at = node.get_parent();
-        document.remove_node(node);
+    drop_emptied_wrappers(document, parents);
+  }
+}
+
+/// Removes each of `parents` — the wrappers a line's cut took nodes out of ([`kind_address_lines`]) — that the cut left
+/// empty (a font wrapper or a link printing nothing, holding no element), and each wrapper above it it leaves so.
+fn drop_emptied_wrappers(document: &mut Document, parents: Vec<Node>) {
+  for parent in parents {
+    let mut at = Some(parent);
+    while let Some(node) = at {
+      if node.get_type() != Some(NodeType::ElementNode)
+        || !matches!(node.get_name().as_str(), "text" | "ref")
+        || !node.get_content().trim().is_empty()
+        || !element_nodes(&node).is_empty()
+      {
+        break;
       }
+      at = node.get_parent();
+      document.remove_node(node);
     }
   }
 }
@@ -2297,12 +2664,24 @@ pub(in crate::base_utilities) fn address_line_cut(
     + text[address_start..]
       .find(|c: char| !c.is_whitespace() && !"([<".contains(c))
       .unwrap_or(0);
-  // (the words naming a contact before it, back to the first that names none)
+  // (the words naming a contact before it, back to the first that names none; a "to" after them, with no colon, the
+  // label's own: `$^{*}$ Corresponding\ to\ lingxiao.wang@…`, 2606.31381: 107c)
   let head = &text[..run.start];
   let mut label_start = head.len();
   let trimmed = head.trim_end();
-  if run.label.is_some() || trimmed.ends_with(':') {
-    let mut words = trimmed.trim_end_matches(':').trim_end();
+  let connective = trimmed
+    .rsplit_once(char::is_whitespace)
+    .filter(|(before, to)| {
+      to.eq_ignore_ascii_case("to")
+        && before
+          .trim_end()
+          .rsplit(char::is_whitespace)
+          .next()
+          .is_some_and(names_a_contact)
+    })
+    .map(|(before, _)| before.trim_end());
+  if run.label.is_some() || trimmed.ends_with(':') || connective.is_some() {
+    let mut words = connective.unwrap_or_else(|| trimmed.trim_end_matches(':').trim_end());
     loop {
       let word_start = words.rfind(char::is_whitespace).map_or(0, |at| {
         at + words[at..].chars().next().map_or(1, char::len_utf8)
@@ -2360,7 +2739,29 @@ pub(in crate::base_utilities) fn address_line_cut(
   }
   let bounded =
     (run.label.is_some() && label_start == head.len()) || rest.ends_with(['.', ';', ',', ')']);
-  (label.is_some() && bounded).then_some(AddressLineCut {
+  // (or no label: the line's tail after a list's or a sentence's boundary and a space — `…, China; lha@…, xuey@…`
+  // (2602.07392), `…, USA; yalinwu@…` (1701.07541), `University of Maryland, jda@…` (1903.04089), `…Canada. \{hoyer,
+  // jrashid\}@ucalgary.ca` (1204.4622) —, or a printed brace's or bracket's list, its own boundary (`Haifa, Israel
+  // \{avico@, orengal@alumni.\}technion.ac.il, amiravni83@…`, 2309.06986): addresses alone, never an affiliation's text,
+  // 107c. Not a word glued to its address (`smith,j@x.org`, an initial's list, review rev103a S1), a word before the
+  // comma that may be a local part of the list (`Canada, mmoza102, wslee@…`, 2003.08808; `India ee13d015,
+  // ramkrishna@…`, 1805.00710: no partial list cut), nor contact words alone (`email,ann@x.org`))
+  let gap = &text[rest.len()..label_start];
+  let words: Vec<&str> = rest
+    .split(|c: char| c.is_whitespace() || ",;:.".contains(c))
+    .filter(|word| !word.is_empty())
+    .collect();
+  let listed_before = gap.contains(',')
+    && !gap.contains(';')
+    && words.last().is_some_and(|word| is_listed_local_part(word));
+  let opens_a_list = text[run.start..].starts_with(['{', '[']);
+  let tail = label.is_none()
+    && (opens_a_list
+      || ((rest.ends_with('.') || gap.contains([';', ',']))
+        && text[..label_start].ends_with(char::is_whitespace)
+        && !listed_before))
+    && !words.iter().all(|word| names_a_contact(word));
+  ((label.is_some() && bounded) || tail).then_some(AddressLineCut {
     start: rest.len(),
     label,
     addresses,

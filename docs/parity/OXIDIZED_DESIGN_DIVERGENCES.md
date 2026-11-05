@@ -30864,6 +30864,24 @@ legend sentence holding commas (1703.07724's "The authors wish it to be known th
 authors should be regarded as Joint First Authors.": a comma parts a piece, which keeps "Entity, legend" lines
 affiliations), a legend beside a link (2403.03314) and an obfuscated address (2605.00769's `amir[dot]norouzi[at]…`)
 stay affiliations.
+
+**Amended (107c; census138 LEGEND).** `classify_thanks` reads three more role phrases, each in the words the note prints
+(`printed_words`: the observer's writer classifies a legend's untexed tokens, `\textsuperscript{$\star$}Work …`): "joint
+co-author(s)" and "joint senior co-author(s)" (2403.05680), a note that is "first author(s)" and nothing else
+(`\textsuperscript{*}First author`, 2609.03429; "The first author is supported by …" stays funding), and "work performed
+during/while/as …" opening the note (2503.04130's ⋆ legend "Work performed during internship at NVIDIA", on its four ⋆
+carriers). An institution named after the circumstances keeps the gate's reading (the Kind step's piece is no legend
+where `reads_as_affiliation` reads it, as for 2110.15064). **A dedication is the paper's** (`kind_dedication_lines`, run
+before this Kind step): an affiliation-kind contact's lines from the first that opens a dedication ("Dedicated to …",
+"This work/paper/article/thesis/volume/note is dedicated to …", "To the memory of …", "In memory of …") to its end are
+one `ltx:pubnote role=dedication`, as a class's `\dedication` makes one (aa_support_sty.rs; no label, as the block prints
+none), after the last creator, once; each holder's copy gives them up with the blank lines before them (0910.1386's
+`\mbox{ }\\ \centerline{This work is dedicated to Professor Roger Temam}\\ \centerline{on the occasion of his seventieth
+birthday}` under the last address). No author's mark points to a dedication, so 103c's ruling (an unmarked legend stays
+an affiliation) does not reach it: it is no author's note and no affiliation. **Guards**
+`perfect_kernel_batch107c::{marked_role_phrases_are_their_carriers_notes, a_dedication_is_the_papers_pubnote}` (repros
+`legend_kind_role_phrases`, `legend_kind_dedication_line`), RED (int139a0) → GREEN.
+
 ### 962. An IEEE `\IEEEauthorblockA` shared by a names line goes on every name, whatever layout or notes stand before it; a refmark-led address line is its marks' (Perl: one creator holding the whole block)
 
 **Perl behavior**: IEEEtran.cls.ltxml maps `\IEEEauthorblockN{…}` and `\IEEEauthorblockA{…}` to their text, so
@@ -31137,7 +31155,7 @@ forename.surname@`, 2410.09681 — `is_pattern_address` reads forename and its k
 inside a font wrapper (`\small\textit{Correspondence:} …\\`, 2311.04121; one inside a printed brace list, or between its
 brace and its domain, is read: #970), a phrase-led alternate affiliation
 ("Correspondence should be sent to a, b and c.", 1209.3452), a group whose domain follows the brace with no dot
-(`{a@mails., b@}tsinghua.edu.cn`, 2602.07769), an affiliation the observer's writer makes (mn2e's "Contact e-mail:",
+(`{a@mails., b@}tsinghua.edu.cn`, 2602.07769; read since 107c), an affiliation the observer's writer makes (mn2e's "Contact e-mail:",
 2008.08137), and an address left inside a legend note (2312.10429, 2501.04244).
 
 **Reach.** The 40 witnesses re-scored (score_tiers, both sides converted alike): 22 papers better, 51 creators flip
@@ -31162,6 +31180,41 @@ Guards `perfect_kernel_batch106a::a_line_mark_gives_its_addresses_to_the_names_a
 `addr_line_revtex_mark_led_lines`, `addr_line_authblk_numbered_marks`),
 `::an_unanswered_line_mark_stays_printed_before_its_address` (`addr_line_authblk_unanswered_mark_shown`), and
 `::unlabelled_tagged_and_template_lines_stay` with a `Contact: forename.surname@` line, RED (round 1) → GREEN.
+
+**Amended (107c; census138 ADDR-a: 19 dev3 papers, 52 creators).** The cut reads five more shapes of an address line
+glued to an affiliation, each its addresses' e-mails placed by the Link step as above (FIDELITY_CHARTER §4):
+- an unlabelled tail after a `;`, a comma or a full stop and a space (`address_line_cut`): `…, China; lha@…, xuey@…`
+  (2602.07392), `…, USA; yalinwu@…` (1701.07541), `University of Maryland, jda@…` (1903.04089), `…Canada.
+  \{hoyer,\,jrashid\}@ucalgary.ca` (1204.4622) — not a word glued to its address (`smith,j@x.org`, review rev103a S1),
+  contact words alone (`email,ann@x.org`, rev103a B1) or prose (`see data@a.org for data`), which stay;
+- contact words and "to", no colon, as the label (`$^{*}$ Corresponding\ to\ x@y`, 2606.31381; `at_list_boundary` no
+  longer reads that "to" as prose, "write to a@z.org" still is), the e-mail named "Corresponding to ";
+- the lines of a font wrapper that holds line breaks (`entry_lines`: `\scriptsize{…}\\ … \scriptsize{$^\ast$~Correspondence:
+  \texttt{a} and \texttt{b}}`, 2603.02131; 2104.11106), the wrappers a whole-line cut empties dropped;
+- an empty superscript printing nothing (`\textsuperscript{}\{…\}.civ@mail.mil`, 1908.06816);
+- a list's other printed forms (`resolver::address_runs`, `domain_after_group`): local parts in square brackets
+  (`Email: [i.iudice, …]@cira.it`, 2405.17925), a group spaced round its `@` (`\{a, b\} @ know-center.at`, 2104.11106;
+  1707.04775), pieces ending in a dot or the `@` before the domain after the brace (`\{junwei@link., lizhen@\}cuhk.edu.cn`,
+  2108.00873, 2605.01350; 2602.07769, the fail-safe above), local parts sharing the tail after the brace
+  (`\{fikadu.t.dagefu, …\}.civ@mail.mil`, 1908.06816).
+**Not reached** (one line each): a run a role tag follows, `Email: x@y (Corresponding Author)` (2503.14354) and `a@x,
+b@y (* corresponding author)` (2210.14319) — where the tag's words go is open; a template line (`Emails:
+name.surname@polito.it, …`, 2401.15236); a run tagged by its owners' initials (`$^\dagger$ a@x (X.X.); b@y (M.Y.)`,
+2002.08904, ADDR-b's); a sentence (`Correspondence concerning this article should be addressed to F. B. at x@y.`,
+2208.12334); authblk's `\affil[ ]{Email}` label entry (2009.11285, AUTHBLK's blank key); PoS's speaker e-mail on the
+mark-1 entry (1412.5940); an address inside a legend note (the kernel's symbol-led line, `$^\ast$~Correspondence: a@x`
+outside a wrapper). **Guards** `perfect_kernel_batch107c::{an_address_tail_after_a_boundary_leaves_its_affiliation,
+a_list_in_its_other_printed_forms_leaves_its_affiliation, address_lines_a_font_wrapper_holds_leave_their_affiliation,
+a_contact_label_ending_in_to_names_its_email}` (repros `addr_tail_authblk_after_comma_and_stop`,
+`addr_line_ieee_bracket_list`, `addr_line_group_domain_after_brace`, `addr_line_ieee_shared_tail_list`,
+`addr_line_spaced_at_and_font_wrapped_lines`, `addr_line_corresponding_to`), unit
+`author_split_tests::an_address_line_cut_reads_the_label_as_printed` (the tail and "to" cases) and
+`resolver::tests::address_runs_read_bracketed_spaced_and_joined_groups`, RED (int139a0) → GREEN. Re-pinned, each
+address now out of the affiliation: `perfect_kernel_batch63::author_place_before_address_is_affiliation`,
+`perfect_kernel_batch95c::an_unspelled_address_is_placed_by_order_only_within_its_run` (the block's),
+`perfect_kernel_batch99a::{a_raw_store_is_cut_at_its_marks, an_institution_is_cut_at_its_marks}` (the link part a url
+contact, #969), `perfect_kernel_batch85b::llncs_address_lines_are_each_owners` (its unread line now `(joxan,
+navas)@…`: a parenthesized list stays unread).
 
 ### 967. A tail inside the personname — a membership grade written after the name's comma, a collaboration an author stands for — is the author's contact, read where every author route meets (Perl: the personname's text, or a creator of its own)
 
@@ -31395,6 +31448,20 @@ whose text-only drops are undone, now as int134b (0808.4092, 1106.1785, 2608.296
 now as int134b (2005.03567, 2302.04271, 2307.05833, 2402.07705); E 902 = 902, F 1 = 1, W 9,294 = 9,294. Round 1's 57
 dev20k witnesses re-scored: 187 → 213 of 247 creators right, 26 flipped right, 0 wrong (round 1's dedupe of the four
 two-call papers is undone in round 2).
+
+**Amended (107c; census138 LEGEND).** A link line is read in three more shapes, each a link contact (`url`, or `orcid`
+for an `orcid.org/` link), placed as above:
+- behind a label naming it, one to three words ending in a link's noun and a colon (`link_label`, `LINK_LABEL_WORDS`:
+  "Project website:", "Website:", "Homepage:", "Code:"), the label the contact's name as printed — 2609.03591's
+  `\IEEEauthorblockA{Project website: {\small\href{…}{…}}}` under 10 names (the block creator's, once), 2502.19820's
+  `\textbf{Website: } \href{…}{…}`;
+- ending an entry after a line of other text (`split_link_lines`: `\IEEEauthorblockA{… \\ Project website: \href{…}}`),
+  parted off into the entry's holders' own contact;
+- an entry of two lines or more, each one link (`\url{https://orcid.org/…}\\ \url{https://members.loria.fr/AClement}`,
+  2206.10577), a contact per line in print order.
+A label read across a line break is none. **Guards** `perfect_kernel_batch107c::link_lines_are_link_contacts` (repros
+`legend_kind_labelled_link_line`, `legend_kind_labelled_link_line_is_the_blocks`, `legend_kind_link_lines_entry`), RED
+(int139a0) → GREEN.
 
 ### 970. A name spells by its base letters and its transliteration; a `{…}@domain` list set over several lines is one address list (Perl: an address spells no one; the list stays in the affiliation's text)
 

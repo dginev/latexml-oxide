@@ -119,7 +119,8 @@ fn both_ways(tex: &str, files: &[(&str, &str)]) -> Vec<Vec<String>> {
 /// parted by a `\quad` (2506.18881), after a `;` it trims (2602.11605) and by a run and a `\\` line (cidr's 2408.03013).
 /// The address parts after the wrapper (`\country{X}`, printed on a line under every entry) are each entry's, a part
 /// holding a link (2506.18881's `\country{Project page: \href…}`) the block's, once (`shared_closing_parts`, review
-/// rev99a S3; 99a r1 gave both to the last entry alone); a separator closing an unwrapped list's last entry is trimmed
+/// rev99a S3; 99a r1 gave both to the last entry alone) — since 107c its URL contact, named "Project page: " (OD #969
+/// amended; it was an affiliation); a separator closing an unwrapped list's last entry is trimmed
 /// (2009.04283's `$^2$Inria …,⏎}`, review rev99a N1). Each entry shows its mark. Was: every author the whole call.
 #[test]
 fn an_institution_is_cut_at_its_marks() {
@@ -155,7 +156,7 @@ fn an_institution_is_cut_at_its_marks() {
     [
       vec!["Ann Able 1", "affiliation=1 Univ A , X"],
       vec!["Bob Baker 2", "affiliation=2 Univ B , X"],
-      vec!["affiliation=Project page: example.org"],
+      vec!["url=example.org"],
     ]
   );
   // (a part a macro prints, `\city{\cty}`, is every entry's too: only spacing is no part — review rev99a2 S-a, 99a r2
@@ -332,13 +333,10 @@ fn a_raw_store_is_cut_at_its_marks() {
     vec!["Bob Baker", "affiliation=2 Univ B"],
     vec!["Cat Cole", "affiliation=1 Univ A"],
   ]);
-  // (the old reader alone: the store cut by the API, its address still in the entry it is printed in — the take-out of
-  // an entry's address by its spelling is the observer's, OD #938)
-  assert_eq!(today, [
-    vec!["Ann Able", "affiliation=1 Univ A"],
-    vec!["Bob Baker", "affiliation=2 Univ B; ann@a.edu"],
-    vec!["Cat Cole", "affiliation=1 Univ A"],
-  ]);
+  // (the old reader alone: the store cut by the API, and since 107c its address — the entry's tail after `;` — taken
+  // out at the flush by the Kind step for an address line, as the observer takes it out (OD #938, #966 amended); it
+  // had stayed in the entry it is printed in, `2 Univ B; ann@a.edu`)
+  assert_eq!(today, written);
 }
 
 /// jfm's `\affiliation` list led by marks the names show is the names' affiliations (jfm_cls.rs, through
