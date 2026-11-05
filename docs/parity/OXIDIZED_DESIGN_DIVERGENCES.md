@@ -21956,7 +21956,9 @@ invented `<pubnote>sec:intro</pubnote>`); url.sty's and hyperref's `\url` keep t
 one is printed, review probes `fn`, `fnt`); it gobbles `\label`, `\index`. A Fatal of a speculative run that is not a
 resource Fatal of the conversion (deadline, memory budget, token budget, conditional ids) and whose run was undone is
 the run's alone — a runaway limit of the run's own expansion (the pushback, a recursion) too, the latch unset
-(`unlatch_runaway_fatal`) and the box lists and conditionals the run left open unwound (user ruling 2026-10-19:
+(`unlatch_runaway_fatal`), the box lists the run left open unwound, and the stack of tokens being invoked and the
+active conditionals put back as the run found them, however it ended (`stomach::StomachMark`; 2502.10606, 2003.03814)
+(user ruling 2026-10-19:
 VisionStyle.cls's `\MakeUppercase` of a title holding its non-robust `\small` loops in pdflatex too, astro-ph0203021;
 guard `perfect_kernel_batch77r::speculative_title_run_runaway_is_discarded`) — a sentinel value
 may cause it —: it is discarded with the run's diagnostics (an Info says so) and run (1) printed nothing

@@ -3137,6 +3137,7 @@ journal), but the token stack and the conditional stack are no assignments. 2502
 depth and every conditional frame with its state) is taken before each such run and put back on every exit, `Ok` too
 — around the whole sequence where runs read one text in pieces: the observer rehearses an author list block by block,
 and a conditional opened in one block's run is closed in the next's (2606.17718), as TeX reads the list in one pass.
+The mark restores on drop as well: a run's propagated Fatal (`?`) must not skip it.
 Guards `perfect_kernel_batch106s::{a_runaway_run_leaves_no_ghost_fatal, a_run_keeps_the_documents_open_conditional}`.
 
 

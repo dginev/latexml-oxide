@@ -1863,6 +1863,9 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
       groups.entry(index).or_default().push(key.clone());
     }
   }
+  // (the calls' contents rehearsed in sequence share the conditionals, as the shadow's API-call rehearsals do, and the
+  // document gets them back as they were after the last, however the loop ends: `StomachMark`)
+  let cuts_mark = StomachMark::take();
   for (index, keys) in groups {
     let Some(call) = api_call(index) else {
       return Ok(declined("no API call"));
@@ -1913,6 +1916,7 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
     }
     held_only.retain(|k| *k != whole);
   }
+  cuts_mark.restore();
   // the reading's entries of an author block's own lines, today's one item joining them (or a legend line, today's an
   // affiliation)
   cut_block_lines(&want, &have, &mut wanted_only, &mut held_only, &mut ops);

@@ -196,13 +196,14 @@ fn note_mark_quietly(value: i64) -> Result<String> {
   let latched_before = resource_fatal_latched();
   let depth = get_frame_depth();
   let boxes = box_lists_mark();
-  // (the tokens being invoked and the conditionals put back however the print ends: `StomachMark`)
+  // (the tokens being invoked and the conditionals put back however the print ends, after a failed print's unwinding:
+  // `StomachMark`)
   let stomach_mark = StomachMark::take();
   let printed = printed_footnote_mark(value);
-  stomach_mark.restore();
   let failed = hold.errors_raised() > 0;
   match printed {
     Ok(printed) => {
+      stomach_mark.restore();
       hold.discard();
       Ok(if failed { String::new() } else { printed })
     },
@@ -224,6 +225,7 @@ fn note_mark_quietly(value: i64) -> Result<String> {
         Ok(())
       });
       unwind_box_lists_to(boxes);
+      stomach_mark.restore();
       hold.discard();
       unwound?;
       Ok(String::new())

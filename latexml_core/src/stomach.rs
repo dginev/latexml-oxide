@@ -2253,28 +2253,43 @@ pub fn truncate_token_stack(depth: usize) { stomach_mut!().token_stack.truncate(
 /// a conditional opened in one block's run closed in the next's (2606.17718's `\IEEEauthorblockA{… \if… E-mail: …}
 /// \else … \fi`), so its shadow takes the mark around the whole sequence and each rehearsal puts back only its token
 /// stack ([`truncate_token_stack`]).
+/// Put back on drop too, so every exit restores — a `?` that propagates a run's Fatal included (review rev135c S1) —,
+/// except while a panic unwinds (the state may be borrowed).
 pub struct StomachMark {
-  tokens:       usize,
-  conditionals: Vec<(
-    Rc<RefCell<crate::definition::conditional::IfFrame>>,
-    crate::definition::conditional::IfFrame,
-  )>,
+  saved: Option<(usize, StackedConditionals)>,
 }
+
+/// The active conditionals, each with its state ([`if_stack_snapshot`]).
+type StackedConditionals = Vec<(
+  Rc<RefCell<crate::definition::conditional::IfFrame>>,
+  crate::definition::conditional::IfFrame,
+)>;
 
 impl StomachMark {
   /// The stack of tokens being invoked and the active conditionals as they are now.
   pub fn take() -> StomachMark {
     StomachMark {
-      tokens:       token_stack_depth(),
-      conditionals: if_stack_snapshot(),
+      saved: Some((token_stack_depth(), if_stack_snapshot())),
     }
   }
 
   /// Put both back as [`StomachMark::take`] found them: the tokens a failed invocation left on the stack dropped, the
   /// conditionals the run opened dropped and those it closed open again.
-  pub fn restore(self) {
-    truncate_token_stack(self.tokens);
-    restore_if_stack(self.conditionals);
+  pub fn restore(mut self) { self.put_back(); }
+
+  fn put_back(&mut self) {
+    if let Some((tokens, conditionals)) = self.saved.take() {
+      truncate_token_stack(tokens);
+      restore_if_stack(conditionals);
+    }
+  }
+}
+
+impl Drop for StomachMark {
+  fn drop(&mut self) {
+    if !std::thread::panicking() {
+      self.put_back();
+    }
   }
 }
 
