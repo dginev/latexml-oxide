@@ -1010,27 +1010,36 @@ pub(in crate::base_utilities) fn is_text_font_command(t: &Token) -> bool {
 /// box its declarations but its paragraph layout ([`PARAGRAPH_LAYOUT`]) as [`names_in_wrapper`] reads a box around
 /// names; a line of spacing only (`\vspace{7cm}`) is dropped. The wrapper opens its line (spacing before it) and ends
 /// it (spacing after it); a wrapper inside a line it so wraps is unwrapped the same way, its style added. A note's or a
-/// mark's argument is no wrapper (`\thanks{A\\B}`). OXIDIZED_DESIGN_DIVERGENCES #897.
+/// mark's argument is no wrapper (`\thanks{A\\B}`). Only over lines of names or marked entries
+/// ([`wrapper_holds_names_or_marks`]): plain lines under the names (`{\small Department of Mathematics,\\ Central
+/// University,\\ India.}`, 2404.17162, 2405.20895, 2106.11727, astro-ph0412305, 0902.2761, 2509.02924) stay one wrapper,
+/// one entry. OXIDIZED_DESIGN_DIVERGENCES #897.
 pub(in crate::base_utilities) fn wrapper_over_lines_as_lines(tokens: Tokens) -> Tokens {
-  match wrapper_lines_read(tokens.unlist_ref(), &[]) {
+  match wrapper_lines_read(tokens.unlist_ref(), &[], true) {
     Some(lines) => Tokens::new(lines),
     None => tokens,
   }
 }
 
 /// [`wrapper_over_lines_as_lines`] over `v` under the wrappers `style` (outermost first): `None` when no wrapper in `v`
-/// holds lines and `style` is empty, `v` as written.
-fn wrapper_lines_read(v: &[Token], style: &[LineWrap]) -> Option<Vec<Token>> {
+/// holds lines and `style` is empty, `v` as written. `opening`: whether `v` opens the block, so that its first line holds
+/// its names.
+fn wrapper_lines_read(v: &[Token], style: &[LineWrap], opening: bool) -> Option<Vec<Token>> {
   let pieces = split_top_level_lines(v);
   let mut changed = false;
   let mut lines: Vec<Vec<Token>> = Vec::with_capacity(pieces.len());
+  let mut opening = opening;
   for piece in pieces {
-    match line_wrapper(piece) {
+    let opens = opening;
+    opening &= only_spacing(piece);
+    let wrapper =
+      line_wrapper(piece).filter(|(_, inner)| opens || wrapper_holds_names_or_marks(inner));
+    match wrapper {
       Some((wrap, inner)) => {
         let mut inner_style = style.to_vec();
         inner_style.extend(wrap);
         let content = paragraph_environments_as_breaks(&inner);
-        lines.push(wrapper_lines_read(&content, &inner_style).unwrap_or(content));
+        lines.push(wrapper_lines_read(&content, &inner_style, opens).unwrap_or(content));
         changed = true;
       },
       None if style.is_empty() => lines.push(piece.to_vec()),
@@ -1052,6 +1061,16 @@ fn wrapper_lines_read(v: &[Token], style: &[LineWrap]) -> Option<Vec<Token>> {
     out.extend(line);
   }
   Some(out)
+}
+
+/// Whether a wrapper under the block's first line holds lines of names or marked entries (107b's purpose: 1202.2048,
+/// 2311.03613), so that the lines are the block's: a mark ([`has_author_marks`]), or a line of names horizontal space
+/// parts ([`space_parted_name_line`]).
+fn wrapper_holds_names_or_marks(inner: &[Token]) -> bool {
+  has_author_marks(&Tokens::new(inner.to_vec()))
+    || split_top_level_lines(inner)
+      .into_iter()
+      .any(|line| space_parted_name_line(&Tokens::new(line.to_vec())))
 }
 
 /// `line` in the wrappers `style`, innermost last.

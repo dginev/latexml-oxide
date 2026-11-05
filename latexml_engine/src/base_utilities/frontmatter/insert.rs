@@ -1736,13 +1736,15 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
     // (an unspelled address its line's mark leads, the Kind step's for an address line, `LINE_MARK`: the authors whose
     // names answer the mark, else the block — marks win, user ruling R1 2026-11-01; never the only-carrier or order
     // step: gr-qc0207058's `$**$ email: indrani@…` is I. Chowdhury's, whose name carries `∗∗`, review rev106a B1)
+    // (`mark_lists`: the lists no mark places, read as one line's list: `list_placements`)
+    let mut mark_lists: Vec<Vec<usize>> = Vec::new();
     let marked: Vec<Option<Option<Vec<usize>>>> = addresses
       .iter()
       .zip(&spelled)
-      .map(|((_, template, _), spelled)| {
+      .map(|((_, template, _), spelled_here)| {
         let mark = template
           .get_attribute(LINE_MARK)
-          .filter(|_| spelled.is_none())?;
+          .filter(|_| spelled_here.is_none())?;
         let (marks, glued) = author_marks.get_or_insert_with(|| {
           (
             author_mark_keys(document, &authors),
@@ -1760,6 +1762,40 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
         }
         if answering.len() > 1 && answering == carriers {
           return None;
+        }
+        // (a list of addresses is one per person, not every carrier's, where a sibling spells an author who does not
+        // answer the mark, or the entry names one: spelling, then elimination, else the block. 2102.08716's `*equal
+        // contributions. David Macêdo, Pedro Dreyer, Teresa Ludermir, and Cleber Zanchettin are with …
+        // {dlm,phdl,cz,tbl}@…` under two `*` names; 2412.13509's `hmfu@`, whose list spells the others. A lone address
+        // on a line a shared symbol labels stays every carrier's: user ruling 2026-10-30)
+        let members: Vec<usize> = (0..addresses.len())
+          .filter(|&at| {
+            addresses[at].1.get_attribute(LINE_MARK).as_deref() == Some(mark.as_str())
+              && addresses[at].1.get_attribute(LINE_LIST).is_none()
+          })
+          .collect();
+        if answering.len() > 1 && members.len() > 1 {
+          let beyond_the_mark = |author: usize| !answering.contains(&author);
+          if members
+            .iter()
+            .any(|&at| spelled[at].is_some_and(beyond_the_mark))
+            || (0..names.len()).any(|author| {
+              beyond_the_mark(author) && text_prints_name(&entry_text, &names[author])
+            })
+          {
+            if !mark_lists.contains(&members) {
+              mark_lists.push(members);
+            }
+            return None;
+          }
+          // (the carriers no sibling spells, as the only-carrier step excludes them: `entry_address_owners`' `free`,
+          // 1907.01388's `zhutou@`)
+          let free: Vec<usize> = answering
+            .iter()
+            .copied()
+            .filter(|author| !spelled.contains(&Some(*author)))
+            .collect();
+          return Some((!free.is_empty()).then_some(free));
         }
         Some((!answering.is_empty()).then_some(answering))
       })
@@ -1801,7 +1837,15 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
       })
       .collect();
     // (a `{…}@domain` list set over several lines, the Kind step's: placed as its one-line form, [`list_placements`])
-    let listed = list_placements(document, &authors, &keys, &addresses, &spelled, &mine);
+    let listed = list_placements(
+      document,
+      &authors,
+      &keys,
+      &addresses,
+      &spelled,
+      &mine,
+      &mark_lists,
+    );
     let owners: Vec<(Option<Vec<usize>>, &'static str)> = entry_address_owners(
       &spelled,
       0..addresses.len(),
@@ -2007,7 +2051,8 @@ type Placement = (Option<Vec<usize>>, &'static str);
 /// author block's reader's placement of the list on one line, over every author (`authors`, keyed `keys`), not the
 /// entry's carriers — the author an entry spells (`spelled`), else in author order, else the only author, else by
 /// elimination, else the block (`email_owners::list_owners`; FIDELITY_CHARTER §4, review rev107a finding 4: 2305.13191, 1808.00588). `mine`
-/// the entry's e-mails, which hold no address of their own outside the list.
+/// the entry's e-mails, which hold no address of their own outside the list. `mark_lists`, placed the same way: the lists
+/// of a line a mark leads that are no carriers' (the addresses' places in `addresses`; 2102.08716, 2412.13509).
 fn list_placements(
   document: &mut Document,
   authors: &[Node],
@@ -2015,21 +2060,25 @@ fn list_placements(
   addresses: &[(String, Node, Vec<Option<usize>>)],
   spelled: &[Option<usize>],
   mine: &[Node],
+  mark_lists: &[Vec<usize>],
 ) -> Vec<Option<Placement>> {
   let mut listed: Vec<Option<Placement>> = vec![None; addresses.len()];
   let address_word = |text: &str| email_address_word(text).unwrap_or_default();
-  let mut lists: Vec<String> = Vec::new();
+  let mut lists: Vec<(Option<String>, Vec<usize>)> = Vec::new();
   for (_, template, _) in addresses {
     if let Some(list) = template.get_attribute(LINE_LIST)
-      && !lists.contains(&list)
+      && !lists
+        .iter()
+        .any(|(listed, _)| listed.as_deref() == Some(list.as_str()))
     {
-      lists.push(list);
+      let members: Vec<usize> = (0..addresses.len())
+        .filter(|&at| addresses[at].1.get_attribute(LINE_LIST).as_deref() == Some(list.as_str()))
+        .collect();
+      lists.push((Some(list), members));
     }
   }
-  for list in lists {
-    let members: Vec<usize> = (0..addresses.len())
-      .filter(|&at| addresses[at].1.get_attribute(LINE_LIST).as_deref() == Some(list.as_str()))
-      .collect();
+  lists.extend(mark_lists.iter().map(|members| (None, members.clone())));
+  for (list, members) in lists {
     let texts: Vec<String> = members
       .iter()
       .map(|&at| address_word(&addresses[at].0))
@@ -2041,7 +2090,7 @@ fn list_placements(
       for contact in element_nodes(author) {
         if contact.get_name() == "contact"
           && contact.get_attribute("role").as_deref() == Some("email")
-          && contact.get_attribute(LINE_LIST).as_deref() != Some(list.as_str())
+          && (list.is_none() || contact.get_attribute(LINE_LIST) != list)
           && !mine.contains(&contact)
         {
           held_elsewhere.push((at, address_word(&contact.get_content())));
@@ -2054,6 +2103,9 @@ fn list_placements(
         None,
       )
       .iter()
+      // (a line's list a mark leads may wait on the block's creator, 2102.08716's legend: its own addresses are not
+      // elsewhere)
+      .filter(|contact| list.is_some() || !mine.contains(contact))
       .map(|contact| address_word(&contact.get_content()))
       .chain(
         (0..addresses.len())
@@ -3636,13 +3688,18 @@ fn respell_emails(document: &mut Document) -> Result<()> {
       else {
         continue;
       };
-      // (an e-mail a key of its holder's own name is a whole word of, or opens one of, stays, however another name
-      // scores: `yang91@` on Yang Zhang's own call beside Hengyun Yang, 1707.09730; `ricky_ang@` on Lay Kee Ang's,
-      // 2604.02636 — FIDELITY_CHARTER §4 #420; not the tail of a longer spelling nor a truncation, `sanderson@` on Mark
-      // Anderson's call, review rev107f finding 3: `own_call_keeps`)
+      // (an e-mail its holder's own name spells as well as another's stays: a tie never moves an own call, `yang91@` on
+      // Yang Zhang's own call beside Hengyun Yang, 1707.09730; `ricky_ang@` on Lay Kee Ang's, 2604.02636 — FIDELITY_CHARTER
+      // §4 #420; a longer spelling does, `sanderson@` on Mark Anderson's call, review rev107f finding 3, `dongsu.kim@` on
+      // Jang Soo Kim's, 0902.4311: `own_call_keeps`)
       if let Some(owner) = spelled_owner(&keys, address)
         && owner != at
-        && !own_call_keeps(&base_keys[at], address)
+        && !own_call_keeps(
+          &base_keys[at],
+          &keys[owner],
+          address,
+          at + 1 == authors.len(),
+        )
       {
         moves.push((contact, owner));
       }
@@ -3654,11 +3711,13 @@ fn respell_emails(document: &mut Document) -> Result<()> {
       .findnodes("ltx:contact[@role='email']", Some(&authors[owner]))
       .iter()
       .any(|c| c.get_content().trim() == address.trim());
+    // (one the owner's own call printed too stays: duplicates the author printed stay, FIDELITY_CHARTER §2 — amsart's
+    // `\email{deborah.oliveira@…}` under Deborah and under Roberto Oliveira, 2502.15891)
     if !held {
       let mut target = authors[owner].clone();
       document.append_clone(&mut target, vec![contact.clone()])?;
+      document.remove_node(contact);
     }
-    document.remove_node(contact);
   }
   Ok(())
 }

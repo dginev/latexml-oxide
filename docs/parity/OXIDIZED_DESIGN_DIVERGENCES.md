@@ -25857,6 +25857,15 @@ block was one creator holding every name (Perl the same, silently). Each rule is
   `\quad`-parted names over a `\\`: "Botian Shi <break/>Chiyu Wang" parted). An article `\author{Ann Able \\
   University of Alpha}` and its `\parbox` form stay one author and her affiliation (R12). A font command around both
   lines (`\textbf{A \\ Univ}`) is invalid in article's tabular `\@author` (pdflatex errs) but reads the same.
+  **107g:** only over lines of names or marked entries (`wrapper_holds_names_or_marks`): under the block's first line a
+  wrapper is transparent where it holds a mark or a line of names horizontal space parts; over plain lines it stays one
+  entry, as the base read it (`{\small Department of Mathematics,\\ Central University,\\ …}`: 2404.17162, 2405.20895,
+  2106.11727, astro-ph0412305, 0902.2761, 2509.02924, 2608.04869, and 2010.09850's two institutes in one `\parbox`, the same
+  shape, words equal, one affiliation as on base). The wrapper opening the block keeps 107b's reading. The cost of the
+  unwrapped reading (`Dept,\\ Univ,\\ City` cut at each line, the base's too) stays. Guards
+  `perfect_kernel_batch107g::a_wrapper_over_plain_lines_stays_one_entry` (repros `author_wrapper_over_plain_lines_stays_one_entry`,
+  `author_group_over_plain_lines_stays_one_entry`, `author_group_legend_line_is_a_note_as_unwrapped`: a `{*Corresponding
+  author}` in a group a note, as unwrapped, once the wrapper beside it is one entry).
 - *A wrapper whose name ends in its marks ends where they do* (`space_parted_names`, `wrapped_name_marks_end`):
   `\textbf{Youngho Cho\textsuperscript{1}} \⏎\textbf{Junho Kim\textsuperscript{1}}` parts as the marks and space
   after a bare name do (2608.29120: 5 → 9 creators; "Dan Dee Eve Eden Fay Fox" one creator and the last name lost
@@ -25925,12 +25934,13 @@ changed dev papers: right creators 11 → 452 of 450 → 452 decided.
   one word-space or tie character it prints): an interword space and a tie beside it are one word space of a name,
   not a gap of two. 1202.2048's `Lei~Li$^{1}$, N.~B. ~Li$^{22}$` read "N. B." as initials after "Lei Li," and the two
   one name written surname first, so the writer declined the whole block and its sub-lettered marks with it
-  (`$^{18a}$`: the sub-lettered names had no institute 18). **Known residual:** a sub-lettered mark the writer answers
+  (`$^{18a}$`: the sub-lettered names had no institute 18). **107g:** only inside one name (`Lexer::run_awaits_its_name`:
+  one word so far, or words ending in an initial); after a whole name a tie and a space are a gap of two, the gap between
+  two names (1805.06045's `Alexander Gasnikov~\IEEEmembership{}⏎ Nikolay Malkovsky~…` one creator on int139a; `Ann Able
+  ~Bob Baker`). Guard `perfect_kernel_batch107g::a_tie_and_a_space_are_one_word_space_only_inside_a_name`. **Known residual:** a sub-lettered mark the writer answers
   stays shown on the name (`E. Boger18a`; 2007.02542's `D. Four 23A`), against FIDELITY_CHARTER §4 "a name's label is
   the name alone" (rank 93) and the other names of the same block, whose answered marks are not shown — pinned as is by
-  `besiii_creators` and batch98e until fixed (review rev107b2 F3). A space before or after a tie between two unmarked
-  whole names now welds them (`Ann Able ~Bob Baker`: RED `author_space_tie_between_two_names_red`, rev107b2 F2,
-  synthetic only; the 15 space+tie papers of a 10k scan hold it inside one name or behind a mark).
+  `besiii_creators` and batch98e until fixed (review rev107b2 F3).
 - *A legend line never becomes a personname* (`marker_leads` reads through every wrapper that opens the line and
   holds a mark): `{\small{\it \vspace{0.2cm} $^{a}$ also at …}}`, a legend line once `wrapper_over_lines_as_lines`
   gives each line its wrappers, read past one wrapper only, had the spacing's letters before its mark and was an
@@ -31370,7 +31380,12 @@ step (`link_entry_addresses`, run again over these entries alone) places them by
 marks win): the author it spells; else, for a mark-led address, the authors whose names answer the mark (a superscript
 of the name, a note's mark, a request in `_annotations`; keyed as printed, `printed_mark_keys`: a run of one symbol one
 key, every asterisk form one — user ruling 2026-11-02 — so `∗∗` is I. Chowdhury's and `∗` S. Biswas's in
-gr-qc0207058), or the block where none does, never the positional steps (a mark the entry's several carriers all
+gr-qc0207058), or the block where none does, never the positional steps (an address list, that is, addresses its mark
+leads with siblings, one of them spelling an author who does not answer the mark or its entry naming one, is one per person,
+not every carrier's: spelling, then elimination as one line's list, else the block — `mark_lists`, 107g: 2102.08716's
+`*equal contributions. David Macêdo, …, and Cleber Zanchettin are with … \{dlm,phdl,cz,tbl\}@…` under two `*` names, 2412.13509's
+`hmfu@`; siblings spelling only carriers leave the free carriers, `entry_address_owners`' `free`; a lone address on a line a
+shared symbol labels stays every carrier's, user ruling 2026-10-30; a mark the entry's several carriers all
 answer and no one else is the entry's own and says no more than the entry: `$^{1}$Instituto …, Spain. E-mail: eca@…`
 under two names carrying `1`, astro-ph0005055, goes on down the chain, as does a mark where no name shows or requests
 any); else the entry's only carrier, else every
@@ -31831,33 +31846,47 @@ key counts where it stands in the local part — its letters, with words parted 
 character, its start and its end. *At full strength*: a whole word, a word's prefix or suffix (`ricky_ang@` Lay Kee
 Ang's, not Shengyuan A. Yang's "yang" across the `_`, 2604.02636; `kee.ang@`, `ang2@`), or strictly inside a word
 between the name's own initials, at most two characters on each side, counted in characters (`rjosem@` José M.
-Rodríguez-Nogales', 1809.06911; `kmfonsecar@` K. M. Fonseca Romero's, 1202.4210). *Weakly*: a key of five letters or
-more between any letters, two at most on each side (`vemarinc@` Víctor Marín's, 2311.18024), and a joined spelling
-ending a word it does not open (`sechenqi@` Qi Chen's "chenqi", 2003.00397; a joined spelling opening a word counts at
-full strength, its separators read through: `j.huang@`). *Not at all*: a shorter key between other letters (`yvanwy@`
-no "van", 2202.02002; `byang@` no "yan", 2602.00582; `mycheng@` no Enhong Chen's "chen", 2603.07528; `bangkok@`,
-`zhangwei@` no "ang"), a key across a separator, a joined spelling inside a word or of fewer than five letters ending
-one (`pyli@` no Yanan Li's "yli", 2105.07637). A truncated surname's first six letters or more stand by the same
+Rodríguez-Nogales', 1809.06911; `kmfonsecar@` K. M. Fonseca Romero's, 1202.4210). *Weakly*: a key of four letters or
+more after two letters at most, whatever follows it (`vemarinc@` Víctor Marín's, 2311.18024; 107g: `tpengqy@` Q. Y. Peng's,
+2004.06253; `eetanggz@` Guozhi Tang's, 2106.10681; `ylwanguestc@` Yinglong Wang's, 2208.05114), and a joined spelling of
+five letters or more ending a word it does not open (`sechenqi@` Qi Chen's "chenqi", 2003.00397; a joined spelling opening a
+word counts at full strength, its separators read through: `j.huang@`). *Not at all*: a key of three letters between other
+letters (`yvanwy@` no "van", 2202.02002; `byang@` no "yan", 2602.00582; `bangkok@`, `zhangwei@` no "ang"; 2112.09029's
+`levtalor@` no L. Tal-Or's "tal", below), a key after three letters or more that does not end the word, a key across a
+separator, a joined spelling inside a word or of fewer than five letters ending one (`pyli@` no Yanan Li's "yli",
+2105.07637). A truncated surname's first six letters or more stand by the same
 predicate (`mkaufman@` Kaufmann's). **A weak spelling never decides** (`spelled_owners`): it owns an address only no
 other name spells; where several do, the names are ranked with and without their weak spellings, and the two rankings
 agreeing give the owner, else every name either ranks first ties — and the placement order goes on (the list's order,
 the elimination, the block). Nothing is guessed (FIDELITY_CHARTER §4): 2510.24320's `\{tgui,qz,xjhuang\}@fudan.edu.cn`
 no longer gives `xjhuang@` to Jixuan Huang by "jhuang" over Xuanjing Huang's "huang" (review rev107f B1: it stays the
 block's, as on int139a), and `xywang@` beside Yi Wang and Xiaoyu Wang goes to Xiaoyu Wang by the elimination once
-`yiwang@` is Yi Wang's. The threshold, five letters, is chosen once on the round-2 A/B over `pop107f.tsv` (4,583 papers): at
-four letters no paper changes, at six 2311.18024's `vemarinc@` (Víctor Marín's "marin") is lost; a four-letter key
-between other letters is a word's letters ("chen" in `mycheng@`, 2603.07528). The same predicate costs three papers r1 had placed right, each the block's again as on int139a: 2602.23777's
+`yiwang@` is Yi Wang's. The threshold is four letters (107g, on the A/B over `pop107g.tsv`, 1,073 papers, the bundle's 553
+changed among them: five's "no paper changes" of `pop107f.tsv` held only there; at six 2311.18024's `vemarinc@` is lost). Four
+letters after two at most, whatever follows, against five with two at most on each side, moves 5 holders: 2004.06253,
+2106.10681, 2208.05114 right (the first two the threshold, the last the free side), and 2411.01273's `yhsheng@` and
+2609.11148's `zhonggong.hc@` wrong, each an own call, which (2) keeps; `mycheng@` is Mingyue Cheng's whole surname at full
+strength, over Enhong Chen's weak "chen" (2603.07528). Every name weak, the longer spelling owns it, a tie left a tie (no
+tie-break by the surname: `sechenqi@` Qi Chen's beside a Wei Chen, `kkwongar@` no one's beside Hiu Tung Wong and Wong
+Kam-Kwai, 2608.26715). The same predicate costs three papers r1 had placed right, each the block's again as on int139a: 2602.23777's
 `nnwang@` (Nannan Wang's "nwang", weak, ties with Zilong Wang's "wang"; then `dongsli@`), 2310.05782's `csjwang@`
 (Jiashuo Wang), 2501.11284's `yyzhang@` (Yingying Zhang) — ties an elimination among the tied names could part for the first two; not for `yyzhang@`, which ties Yingying, Muhan and Debing Zhang with Debing holding no address, so two names remain (rev107f2). An apostrophe
 inside a name's word joins it (`D'Amico` "damico", `damicos@`, 2606.17317); an escaped `\_` reads as the `_` it prints
-(`address_text`). Initials and 107a's length classes and prefix rule are unchanged. (2) **An own call keeps an address
-only a key of its holder's name is a whole word of, or opens** (`own_call_keeps`, read by both `respell_emails`; #420's
-own call; review rev107f finding 3): a surname, the given name or a joined spelling opening a word of the local part, a
-short surname or the initials a whole word — so amsart's `\author{Yang Zhang}…\email{yang91@…}` stays his beside
-Hengyun Yang (1707.09730) and `ricky_ang@` Lay Kee Ang's (2604.02636), while `sanderson@` on Mark Anderson's call (the
-tail of a longer spelling) moves to Lee Sanderson and `anderson@` on Peter Andersen's (a truncation) to Maria Anderson.
-It costs 2511.18493, where `minhnnhat@` printed under Nhat Ho ("nhat" ends it) goes to Anh-Minh Phan ("minh" opens it),
-as on int139a.
+(`address_text`). Initials and 107a's length classes and prefix rule are unchanged. (2) **An own call moves only if
+another name's full-strength score is strictly higher; a tie never moves it** (`own_call_keeps`, read by both
+`respell_emails`; #420's own call; 107g, on rev107f2 finding 1, replacing r2's "a key of the holder's name is a whole word
+of the address or opens one"): amsart's `\author{Yang Zhang}…\email{yang91@…}` stays his beside Hengyun Yang (1707.09730),
+`ricky_ang@` Lay Kee Ang's (2604.02636), and `minhnnhat@` printed under Nhat Ho his beside Anh-Minh Phan (2511.18493: "nhat"
+ends it, "minh" opens it, four letters each), while a longer spelling moves whichever part of it the holder's key is:
+`sanderson@` on Mark Anderson's call, `anderson@` on Peter Andersen's (review rev107f finding 3), `angela.rossi@` on Lay Kee
+Ang's, `dongsu.kim@` on Jang Soo Kim's (0902.4311), `giordano.pola@` on Gianni Pola's (0907.3301), `zx.liang55@` on Yi
+Liang's (1008.3764), `filippo.neri.email@` on the misread creator "Italy. email" (2107.06981). A weak spelling moves no own
+call (`yhsheng@` on Husheng Yu's, no Xiangmin Shen's "shen", 2411.01273; `zhonggong.hc@` on Chao Huang's, no Wang Hong's
+"hong", 2609.11148), but for an address set after the last author, which no name's position claims, the holder's name not
+standing there even weakly (`tpengqy@` after Y. J. Shang is Q. Y. Peng's, 2004.06253; #420's count, 22 of 24 his;
+`kkwongar@` stays on Wong Kam-Kwai beside Hiu Tung Wong, 2608.26715). An address the better speller's own call printed too
+stays on both (§2 "duplicates the author printed stay": `deborah.oliveira@` under Deborah and under Roberto Oliveira,
+2502.15891); r2's rule had kept it by "oliveira opening a word".
 (3) A call made after `\maketitle` placed the frontmatter (`CONTACT_LATE`) restating a contact the creator holds from an
 earlier call is no contact of the upfront grid `distribute_upfront_contacts` reads: llncs's restated unlabelled second
 `\email` beside the first on the last author had read as a grid of one address per author, handing the first to Lv
@@ -31873,8 +31902,14 @@ sectioning-frontmatter/`email_spell_surname_inside_another_word`, `email_spell_o
 `perfect_kernel_batch107f::{a_joined_suffix_spelling_never_breaks_a_surname_tie, an_own_call_keeps_only_an_address_its_name_opens}`
 (repros `email_spell_joined_suffix_breaks_surname_tie`, `email_own_call_suffix_spelling_moves`,
 `email_own_call_truncated_surname_moves`) and units `author_split_tests::{a_weak_spelling_never_decides_between_names,
-an_own_call_keeps_only_a_word_its_name_opens}`, RED (107f r1) → GREEN; `perfect_kernel_batch77p::email_gap_counts_every_author`
-re-pinned back to the block for `nnwang@`, `dongsli@`. Left: a local part with no
+an_own_call_moves_only_to_a_strictly_better_full_spelling}`, RED (107f r1) → GREEN; `perfect_kernel_batch77p::email_gap_counts_every_author`
+re-pinned back to the block for `nnwang@`, `dongsli@`; 107g `perfect_kernel_batch107g::{an_own_call_moves_only_to_a_strictly_better_full_spelling,
+a_weak_four_letter_surname_owns_only_an_unclaimed_address}` (repros `email_own_call_longer_spelling_of_a_shared_surname_moves`,
+`email_own_call_opening_key_of_longer_spelling_moves{,_twin}`, `email_own_call_misread_name_word_gives_way`,
+`email_own_call_tie_keeps_the_call`, `email_weak_four_letter_surname_inside_a_word_after_the_last_author`,
+`email_weak_four_letter_surname_opens_after_two_letters`, `email_own_call_weak_spelling_of_another_name_stays`), RED (int139a) →
+GREEN. Left: 2112.09029's `levtalor@` (L. Tal-Or) is the block's, on base his: "tal" a three-letter key after "lev", and the
+name holds no joined surname "talor" (a new key, left open: brief 107g). A local part with no
 separator still spells a surname it ends with (`rickyang@` is Yang's as much as Ang's: the longer wins); 2009.10916's
 own two addresses under Bo Li's institute stay where today's route puts them (both his; without the supplement the
 observer's writer gives both to the block, "several unspelled under one name").

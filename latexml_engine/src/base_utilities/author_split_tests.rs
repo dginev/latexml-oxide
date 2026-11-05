@@ -1140,14 +1140,16 @@ fn a_name_spells_a_run_of_the_local_parts_words() {
   ];
   assert!(spelled_owners(&keys, "yvanwy@x.com").is_empty());
   assert!(spelled_owners(&keys, "byang@x.cn").is_empty());
-  // (between the name's own initials a shorter part does: `rjosem@`, 1809.06911; another name's `mycheng@` is not
-  // Enhong Chen's, 2603.07528; a joined spelling ending a word spells only at five letters, `pyli@` no "yli", 2105.07637)
+  // (between the name's own initials a shorter part does: `rjosem@`, 1809.06911; `mycheng@` is Mingyue Cheng's, whose
+  // whole surname ends the word, not Enhong Chen's, weak, 2603.07528; a joined spelling ending a word spells only at five
+  // letters, `pyli@` no "yli", 2105.07637)
   let keys = [
     NameKeys::of(&tk("Jose M. Rodriguez-Nogales")),
     NameKeys::of(&tk("Enhong Chen")),
+    NameKeys::of(&tk("Mingyue Cheng")),
   ];
   assert_eq!(spelled_owners(&keys, "rjosem@x.es"), [0]);
-  assert!(spelled_owners(&keys, "mycheng@x.cn").is_empty());
+  assert_eq!(spelled_owners(&keys, "mycheng@x.cn"), [2]);
   let keys = [
     NameKeys::of(&tk("Pengyang Li")),
     NameKeys::of(&tk("Yanan Li")),
@@ -1200,7 +1202,7 @@ fn a_name_spells_a_run_of_the_local_parts_words() {
 #[test]
 fn a_weak_spelling_never_decides_between_names() {
   setup();
-  // (brief 107f r2, the one boundary predicate: a joined spelling ending a word it does not open, or a key of five
+  // (brief 107f r2, the one boundary predicate: a joined spelling ending a word it does not open, or a key of four
   // letters or more strictly inside a word between letters that are none of the name's initials, owns an address only
   // no other name spells — review rev107f B1, 2510.24320)
   let keys = [
@@ -1220,6 +1222,12 @@ fn a_weak_spelling_never_decides_between_names() {
   // "marin", 2311.18024; contested by a whole word, it never wins: `vemarinc@` beside a Vemarin)
   let keys = [NameKeys::of(&tk("Qi Chen")), NameKeys::of(&tk("Wei Chen"))];
   assert_eq!(spelled_owners(&keys, "sechenqi@x.cn"), [0]);
+  // (all of them weak, as long: no tie-break by the surname, `kkwongar@` beside two Wongs, 2608.26715)
+  let keys = [
+    NameKeys::of(&tk("Hiu Tung Wong")),
+    NameKeys::of(&tk("Wong Kam-Kwai")),
+  ];
+  assert_eq!(spelled_owners(&keys, "kkwongar@x.hk"), [0, 1]);
   let keys = [
     NameKeys::of(&tk("Victor Marin")),
     NameKeys::of(&tk("Ann Vemarinc")),
@@ -1232,38 +1240,69 @@ fn a_weak_spelling_never_decides_between_names() {
   ];
   assert_eq!(spelled_owners(&keys, "vémarinc@x.co"), [0]);
   assert!(spelled_owners(&keys, "véémarinc@x.co").is_empty());
+  // (brief 107g: a four-letter surname, after two letters at most, whatever follows it: `tpengqy@` Q. Y. Peng's, 2004.06253;
+  // `eetanggz@` Guozhi Tang's, 2106.10681; `ylwanguestc@` Yinglong Wang's, 2208.05114. A three-letter one never: `levtalor@`
+  // no "tal", 2112.09029 (open); after three letters never)
+  let keys = [
+    NameKeys::of(&tk("Q. Y. Peng")),
+    NameKeys::of(&tk("Guozhi Tang")),
+    NameKeys::of(&tk("Yinglong Wang")),
+    NameKeys::of(&tk("L. Tal-Or")),
+  ];
+  assert_eq!(spelled_owners(&keys, "tpengqy@x.cn"), [0]);
+  assert_eq!(spelled_owners(&keys, "eetanggz@x.cn"), [1]);
+  assert_eq!(spelled_owners(&keys, "ylwanguestc@x.cn"), [2]);
+  assert!(spelled_owners(&keys, "levtalor@x.il").is_empty());
+  assert_eq!(spelled_owners(&keys, "abcpeng7@x.il"), [0]);
+  assert!(spelled_owners(&keys, "abcpengxy@x.il").is_empty());
 }
 
 #[test]
-fn an_own_call_keeps_only_a_word_its_name_opens() {
+fn an_own_call_moves_only_to_a_strictly_better_full_spelling() {
   setup();
-  // (FIDELITY_CHARTER §4 #420, review rev107f finding 3: a key of the holder's name a whole word of the local part or
-  // opening one — `yang91@` Yang Zhang's, 1707.09730; `ricky_ang@` Lay Kee Ang's, 2604.02636 —, not the tail of a
-  // longer spelling, nor a truncation)
-  assert!(own_call_keeps(
-    &NameKeys::of(&tk("Yang Zhang")),
-    "yang91@x.edu"
+  // (FIDELITY_CHARTER §4 #420, brief 107g, rev107f2 finding 1: a tie keeps it — `yang91@` Yang Zhang's beside Hengyun Yang,
+  // 1707.09730; `minhnnhat@` Nhat Ho's beside Anh-Minh Phan, 2511.18493; `ricky_ang@` Lay Kee Ang's, 2604.02636)
+  let keeps = |holder: &'static str, owner: &'static str, address: &str| {
+    own_call_keeps(
+      &NameKeys::of(&tk(holder)),
+      &NameKeys::of(&tk(owner)),
+      address,
+      false,
+    )
+  };
+  assert!(keeps("Yang Zhang", "Hengyun Yang", "yang91@x.edu"));
+  assert!(keeps("Nhat Ho", "Anh-Minh Phan", "minhnnhat@x.edu"));
+  assert!(keeps("Lay Kee Ang", "Shengyuan A. Yang", "ricky_ang@x.edu"));
+  assert!(keeps("Yang Zhang", "Hengyun Yang", "yzhang@x.edu"));
+  // (a longer spelling moves it, whichever part of it the holder's key is: its tail, a truncation, its head — 0902.4311,
+  // 0907.3301, 1008.3764, 2107.06981; review rev107f finding 3)
+  assert!(!keeps("Mark Anderson", "Lee Sanderson", "sanderson@y.edu"));
+  assert!(!keeps("Peter Andersen", "Maria Anderson", "anderson@y.edu"));
+  assert!(!keeps("Lay Kee Ang", "Angela Rossi", "angela.rossi@y.edu"));
+  assert!(!keeps("Jang Soo Kim", "Dongsu Kim", "dongsu.kim@x.kr"));
+  assert!(!keeps("Gianni Pola", "Giordano Pola", "giordano.pola@x.it"));
+  assert!(!keeps("Yi Liang", "Zhu-Xing Liang", "zx.liang55@x.cn"));
+  assert!(!keeps(
+    "Italy. email",
+    "Filippo Neri",
+    "filippo.neri.email@x.com"
   ));
-  assert!(own_call_keeps(
-    &NameKeys::of(&tk("Lay Kee Ang")),
-    "ricky_ang@x.edu"
-  ));
-  assert!(own_call_keeps(
-    &NameKeys::of(&tk("Yang Zhang")),
-    "yzhang@x.edu"
-  ));
-  assert!(!own_call_keeps(
-    &NameKeys::of(&tk("Mark Anderson")),
-    "sanderson@y.edu"
-  ));
-  assert!(!own_call_keeps(
-    &NameKeys::of(&tk("Peter Andersen")),
-    "anderson@y.edu"
-  ));
-  assert!(!own_call_keeps(
-    &NameKeys::of(&tk("Bo Li")),
-    "bangkok@y.edu"
-  ));
+  // (a weak spelling moves no own call — 2411.01273, 2609.11148 —, but for an address set after the last author, its
+  // holder's name not standing there: 2004.06253)
+  assert!(keeps("Husheng Yu", "Xiangmin Shen", "yhsheng@y.edu"));
+  assert!(keeps("Chao Huang", "Wang Hong", "zhonggong.hc@y.edu"));
+  let last = |holder: &'static str, owner: &'static str, address: &str| {
+    own_call_keeps(
+      &NameKeys::of(&tk(holder)),
+      &NameKeys::of(&tk(owner)),
+      address,
+      true,
+    )
+  };
+  assert!(!last("Y. J. Shang", "Q. Y. Peng", "tpengqy@y.edu"));
+  assert!(last("Yang Zhang", "Hengyun Yang", "yang91@y.edu"));
+  // (the holder's name standing there weakly: 2608.26715's `kkwongar@` on the last author, Wong Kam-Kwai)
+  assert!(last("Wong Kam-Kwai", "Hiu Tung Wong", "kkwongar@y.edu"));
 }
 
 #[test]

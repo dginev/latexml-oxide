@@ -1,0 +1,18 @@
+% GREEN (brief 107g, mechanism 1's sibling): an address the better speller's own call printed too stays on both: duplicates the
+%   author printed stay (FIDELITY_CHARTER §2); the own-call predicate moves it, and the move has nowhere to go.
+% witness: 2502.15891 (`deborah.oliveira@` under Deborah and under Roberto Oliveira)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors; the address printed under both names
+% engines: int138a: on Deborah alone; int139a: on both
+% expect:  0 errors; the address on Deborah Oliveira and on Roberto Oliveira
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Deborah Oliveira}
+\address{IMPA, Rio}
+\email{deborah.oliveira@impa.br}
+\author{Roberto Oliveira}
+\address{IMPA, Rio}
+\email{deborah.oliveira@impa.br}
+\maketitle
+Body.
+\end{document}
