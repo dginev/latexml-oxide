@@ -444,11 +444,13 @@ enum NoteLink {
 /// authblk's `\AB@thenote` state (authblk.sty:114-118, 148-151), read in call order: the `affil` counter, stepped at
 /// the first `\author` after an `\affil` (`\ifnewaffil`); whether any label was given (which sets `Maxaffil` to 0,
 /// so the marks show); `\c@Maxaffil` at the last block's call; each unlabelled author's number; each unlabelled
-/// `\affil`'s number, with the rule tag its run placement carries.
+/// `\affil`'s number, with the rule tag its run placement carries; and whether any `\affil` was given, without which
+/// authblk prints `\AB@author`, the names with no note (authblk.sty:167 `\ifx\AB@affillist\AB@empty\AB@author`).
 #[derive(Default)]
 struct TheNote {
   counter:  usize,
   newaffil: bool,
+  affil:    bool,
   labelled: bool,
   maxaffil: Option<i64>,
   run_of:   Vec<(usize, usize)>,

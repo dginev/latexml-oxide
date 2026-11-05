@@ -31,6 +31,9 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
   // (an empty mark prints nothing and is no mark: `\textsuperscript{}Univ. Grenoble Alpes…` leaves the block unmarked,
   // its line every name's; [`drop_empty_marks`])
   let stuff = drop_empty_marks(stuff);
+  // (a mark opening a line that prints no label, `\\ $^{\;}$Ontario N2L 3G1, Canada`, is none: the line continues the
+  // entry above it, 2303.08793; [`blank_line_marks_dropped`])
+  let stuff = blank_line_marks_dropped(stuff);
   // (a line of notes only after a `\\` joins the line above, its notes the names': `… and Cat Cole$^{1}$\\
   // \thanks{$^{1}$…}`, 2609.17106, 2411.05212, 2312.10807; [`notes_line_joins_names`], OXIDIZED_DESIGN_DIVERGENCES
   // #957) — its notes no name requests the document's, added after the block's calls

@@ -1,0 +1,21 @@
+% mechanism: control — `\parbox`-wrapped marked lines under `\parbox`-wrapped names (107b's transparent wrapper)
+% witness: 1901.11031 (mn2e; right on int139a, after 107b)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker 1 , Cy Cole 2 / 1 Univ A, Los Angeles, CA 90095, USA / 2 Univ B, …"
+% engines: rust int139a: as expected
+% expect:  0 errors, 0 warnings; Ann and Bob "Univ A, …", Cy "Univ B, …"
+% status:  GREEN (int139a, control; no guard: 107b's wrapper guards)
+% preload: ar5iv.sty
+\documentclass{mnras}
+\begin{document}
+\title{T}
+\author[Able et al.]{\parbox{\textwidth}{
+Ann Able$^{1}$, Bob Baker $^{1}$, Cy Cole $^{2}$}
+\\
+\parbox{\textwidth}{
+$^{1}$Univ A, Los Angeles,
+CA 90095, USA\\
+$^{2}$Univ B, Pasadena, CA 91109, USA
+}}
+\maketitle
+Text.
+\end{document}

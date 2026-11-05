@@ -987,6 +987,41 @@ fn preprint_printed() -> bool {
   }
 }
 
+/// An affiliation block's unmarked first entry and the lines after it that marks lead, when its marks are all on those
+/// lines (`Univ A, Nagoya \\ $^2$Univ B \\ $^3$Inst C`): the entry's lines up to the first top-level line a mark leads,
+/// and the rest, from that line; `None` when no top-level line after the first is led by a mark, the head holds a mark,
+/// or the head prints nothing ([`group_or_marked_affiliation`]).
+fn unmarked_head_over_marked_lines(content: &Tokens) -> Option<(Tokens, Tokens)> {
+  let v = content.unlist_ref();
+  let mut depth = 0usize;
+  for (i, t) in v.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ if depth == 0 && t.defined_as(&T_CS!("\\\\")) => {
+        // (the spaces before the `\\` no text of the entry's)
+        let end = v[..i]
+          .iter()
+          .rposition(|t| *t != T_SPACE!())
+          .map_or(0, |e| e + 1);
+        let head = Tokens::new(v[..end].to_vec());
+        let tail = Tokens::new(v[i + 1..].to_vec());
+        if !leads_with_mark(&tail) {
+          continue;
+        }
+        return (author_mark_position(&head).is_none()
+          && head
+            .unlist_ref()
+            .iter()
+            .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER)))
+        .then_some((head, tail));
+      },
+      _ => {},
+    }
+  }
+  None
+}
+
 /// REVTeX's `\affiliation{…}` call: a mark-led line no group shares goes to the authors showing its
 /// marks (`\lx@add@affiliation@marked`), any other to the group before it (`annotate=<annotate>`, REVTeX's `run`),
 /// declared `_grouped=true` to the frontmatter observer when one mark is the group's. AASTeX's `\affiliation`/`\affil`
@@ -1041,6 +1076,27 @@ pub(crate) fn group_or_marked_affiliation(content: Tokens, annotate: &str) -> Re
     && requested_marks_held(&content) > 1
     && requested_mark_lines(&content) > 1
   {
+    // (an unmarked first entry over lines its marks lead, `\affiliation{Institute of Materials …, Japan \\ $^2$Waseda
+    // Research Institute …\\ $^3$Toyota …}` under `Imoto$^{1,2}$, Imada$^{2,3}$ and Oshiyama`: the first entry is the
+    // one mark the names request that no line prints — superscriptaddress numbers it 1 and prints the number once, after
+    // the call's last name — so it is the names' showing that mark, the marked lines after it the names' showing
+    // theirs; 2109.01501, 1903.07834, whose whole block went to a nameless creator. Only where exactly one such mark is
+    // requested and the marked lines are the block's own top-level lines: else the fail-safe below. The last name
+    // revtex prints the number on, when it shows no mark of its own, is not read here: it holds none of the block, as
+    // before)
+    if let Some((head, tail)) = unmarked_head_over_marked_lines(&content)
+      && let [label] = requested_marks_unprinted(&content).as_slice()
+    {
+      let mut calls = Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+        Some(mouth::tokenize_internal(TeXString::assembled(s!(
+          "label={{affiliation:{label}}}"
+        )))),
+        Some(head)
+      ])
+      .unlist();
+      calls.extend(group_or_marked_affiliation(tail, annotate)?.unlist());
+      return Ok(Tokens::new(calls));
+    }
     let keyvals = mouth::tokenize_internal("label={addresses:block},_unsplit=true");
     return Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![
       Some(keyvals),

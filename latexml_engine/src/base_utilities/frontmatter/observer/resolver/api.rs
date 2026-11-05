@@ -356,6 +356,7 @@ impl Resolver {
     let thenote_affil = policy.thenote && role == "affiliation";
     if thenote_affil {
       self.thenote.newaffil = true;
+      self.thenote.affil = true;
       if attr_value(attrs, "label").is_some_and(|l| !l.is_empty()) {
         self.thenote.labelled = true;
       }

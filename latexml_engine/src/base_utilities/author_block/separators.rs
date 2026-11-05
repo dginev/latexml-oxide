@@ -989,8 +989,8 @@ enum LineWrap {
 }
 
 /// The font commands whose argument [`wrapper_over_lines_as_lines`] gives each line: [`NAME_TEXT_COMMANDS`]' `\text…` ones
-/// and `\emph`.
-fn is_text_font_command(t: &Token) -> bool {
+/// and `\emph` — and that wrap one entry of a run (`notes::wrapped_mark_at`).
+pub(in crate::base_utilities) fn is_text_font_command(t: &Token) -> bool {
   t.get_catcode() == Catcode::CS
     && t.with_str(|cs| {
       NAME_TEXT_COMMANDS.contains(&cs) && (cs.starts_with("\\text") || cs == "\\emph")
