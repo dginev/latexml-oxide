@@ -1,0 +1,32 @@
+% RED (html_feedback #7233, synthetic): a `{…}@domain` list split over two `\texttt` lines (`\\` between) with one
+%   entry that spells no author (`xq.zz`) is not read as addresses at all: both lines stay glued into the last
+%   affiliation, "Department of Physics, University of Beta {ann.able,xq.zz, cy.coe}@alpha.edu", every e-mail
+%   unlinked, no Warning. The one-line list with the same entry reads right (each spelled address on its author), so
+%   only the split-list path lacks the per-entry fail-safe. Twin of email_list_umlaut_transliteration_split_red.tex.
+% witness: html_feedback #7233 (the split Jülich list; its unspelled entry was `mo.schaeffler`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: the list printed on two lines under the two affiliations
+% engines: rust int138a (106t on a783b56cce): 3 creators, Cy Coe's affiliation holds the whole list, 0 warnings
+% expect:  0 errors; ann.able@alpha.edu on Ann Able, cy.coe@alpha.edu on Cy Coe, xq.zz@alpha.edu on the block creator
+%   (FIDELITY_CHARTER §4 "else the block"; user 2026-11-05: block addresses may live on #159's block creator), each
+%   affiliation only its institution
+% status:  RED (int138a) -> GREEN (107a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\title{A Title}
+\author{%
+  Ann Able$^{1}$ \\
+  \and
+  Bo Baker$^{1}$ \\
+  \and
+  Cy Coe$^{2}$ \\
+  \and
+ {\normalfont $^1$University of Alpha} \\
+ {\normalfont $^2$Department of Physics, University of Beta} \\
+ \texttt{\{ann.able,xq.zz,}\\
+ \texttt{cy.coe\}@alpha.edu}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

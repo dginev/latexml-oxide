@@ -99,6 +99,7 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   write_observed_frontmatter(document)?;
   // (an entry's line of addresses, read once every route has placed the entry and the observer's writing is done: its
   // addresses the entry's e-mails, placed by the Link step; OD #966)
+  join_split_address_contacts(document)?;
   let kinded = kind_address_lines(document)?;
   if !kinded.is_empty() {
     link_entry_addresses(document, Some(&kinded))?;
@@ -1087,11 +1088,12 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
         .unwrap_or_default()
     })
     .collect();
-  // (each name read by its base letters, as the frontmatter observer's chain reads it: `joze.rozanec@` spells Jože M.
-  // Rožanec, 2105.01929 — `resolver::base_letters`)
+  // (each name read as an address spells it, as the frontmatter observer's chain reads it: by its base letters,
+  // `joze.rozanec@` spells Jože M. Rožanec, 2105.01929 — `resolver::base_letters` —, and its transliteration,
+  // `bo.baecker@` Bo Bäcker, html_feedback #7233 — `NameKeys::of`)
   let keys: Vec<NameKeys> = names
     .iter()
-    .map(|name| NameKeys::of(&Tokens::new(ExplodeText!(&resolver::base_letters(name)))))
+    .map(|name| NameKeys::of(&Tokens::new(ExplodeText!(name))))
     .collect();
   let position = |creator: &Node| authors.iter().position(|a| a == creator);
   // (the marks each author's name shows or requests, read where an address line's mark asks)
@@ -1541,11 +1543,7 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
   let keys: Vec<NameKeys> = document
     .findnodes("//ltx:creator[@role='author']/ltx:personname", None)
     .iter()
-    .map(|name| {
-      NameKeys::of(&Tokens::new(ExplodeText!(&resolver::base_letters(
-        &name.get_content()
-      ))))
-    })
+    .map(|name| NameKeys::of(&Tokens::new(ExplodeText!(&name.get_content()))))
     .collect();
   let spells = |local: &str| spelled_owner(&keys, &s!("{local}@x.org")).is_some();
   let default_name = get_frontmatter_name(None, "ltx:contact", "email")?;
@@ -1557,6 +1555,8 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
     "frontmatter",
     "FRONT kind address line: the authors' marks {author_marks:?}"
   );
+  // (the split lists left unread, each warned of once however many holders print it)
+  let mut warned: HashSet<String> = HashSet::default();
   for entry in entries {
     let Some(creator) = entry.get_parent() else {
       continue;
@@ -1584,12 +1584,28 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
     let mut made: Vec<MadeAddress> = Vec::new();
     for (at, (nodes, break_before)) in lines.iter().enumerate() {
       let mut line = LineText::default();
-      if !nodes.iter().all(|node| line.read(node)) {
-        continue;
-      }
+      let read = nodes.iter().all(|node| line.read(node));
       // (a legend the Kind step for a legend can make a note of: the entry's only line, opened by a mark)
       let legend = printed_lines == 1 && line.opens_with_mark();
-      let Some(cut) = address_line_cut(&line.text, &spells, legend) else {
+      let cut = read
+        .then(|| address_line_cut(&line.text, &spells, legend))
+        .flatten();
+      let Some(cut) = cut else {
+        // (a list of local parts set over several lines, which the line's reading declines — a formula or a note in
+        // it, a template, a list the reader cannot part —, stays where it prints, counted: never silently an
+        // affiliation's text, html_feedback #7233)
+        let printed: String = nodes.iter().map(Node::get_content).collect();
+        if split_address_list(nodes) && warned.insert(printed.clone()) {
+          Warn!(
+            "frontmatter",
+            "address-list",
+            s!(
+              "A list of e-mail addresses set over several lines stays in the {} it prints in, unread: {}",
+              entry.get_attribute("role").unwrap_or_default(),
+              printed.split_whitespace().collect::<Vec<_>>().join(" ")
+            )
+          );
+        }
         continue;
       };
       DebugFeature!(
@@ -1717,6 +1733,96 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
   Ok(kinded)
 }
 
+/// A `{…}@domain` list set over several lines that the author block read as contacts of their own — its head an
+/// affiliation-kind entry leaving a printed brace open (`{e.de.bruyn,mo.schaeffler,…,`), its tail the contacts after it
+/// that close it before an `@` (`s.kesselheim,a.bazarova}@fz-juelich.de`, an e-mail contact): the tail joined onto the
+/// head's line, a line break between them, where the joined line is a line of addresses alone ([`address_line_cut`]), so
+/// the Kind step for an address line reads it as one list ([`entry_lines`]; a `\And` column's lines, html_feedback
+/// #7233's layout); else left as they print, counted (`Warning:frontmatter:address-list`).
+fn join_split_address_contacts(document: &mut Document) -> Result<()> {
+  let keys: Vec<NameKeys> = document
+    .findnodes("//ltx:creator[@role='author']/ltx:personname", None)
+    .iter()
+    .map(|name| NameKeys::of(&Tokens::new(ExplodeText!(&name.get_content()))))
+    .collect();
+  let spells = |local: &str| spelled_owner(&keys, &s!("{local}@x.org")).is_some();
+  let mut warned: HashSet<String> = HashSet::default();
+  for creator in document.findnodes("//ltx:creator", None) {
+    let contacts: Vec<Node> = element_nodes(&creator)
+      .into_iter()
+      .filter(|node| node.get_name() == "contact")
+      .collect();
+    let mut at = 0;
+    while at < contacts.len() {
+      let head = &contacts[at];
+      let role = head.get_attribute("role").unwrap_or_default();
+      // (the head's last line, after its last line break)
+      let last_line: String = head
+        .get_child_nodes()
+        .iter()
+        .rev()
+        .take_while(|node| {
+          node.get_name() != "break" || node.get_type() != Some(NodeType::ElementNode)
+        })
+        .map(Node::get_content)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+      let mut open = brace_depth(&last_line);
+      if !CUT_ROLES.contains(&role.as_str()) || open <= 0 || head.get_content().contains('@') {
+        at += 1;
+        continue;
+      }
+      let close = (at + 1..contacts.len())
+        .take_while(|&next| {
+          contacts[next]
+            .get_attribute("role")
+            .is_some_and(|role| role == "email" || CUT_ROLES.contains(&role.as_str()))
+        })
+        .find(|&next| {
+          open += brace_depth(&contacts[next].get_content());
+          open <= 0
+        });
+      let Some(close) = close.filter(|&close| contacts[close].get_content().contains("}@")) else {
+        at += 1;
+        continue;
+      };
+      let tail: Vec<String> = contacts[at + 1..=close]
+        .iter()
+        .map(Node::get_content)
+        .collect();
+      let joined = format!("{last_line}\n{}", tail.join("\n"));
+      if address_line_cut(&joined, &spells, false).is_some_and(|cut| cut.start == 0) {
+        let mut head = head.clone();
+        for tail in &contacts[at + 1..=close] {
+          let mut separator = Node::new("break", None, document.get_document())?;
+          if let Some(namespace) = head.get_namespace() {
+            let _ = separator.set_namespace(&namespace);
+          }
+          head.add_child(&mut separator)?;
+          for mut child in tail.get_child_nodes() {
+            child.unlink_node();
+            head.add_child(&mut child)?;
+          }
+          document.remove_node(tail.clone());
+        }
+      } else if warned.insert(joined.clone()) {
+        Warn!(
+          "frontmatter",
+          "address-list",
+          s!(
+            "A list of e-mail addresses set over several lines stays in the {role} it prints in, unread: {}",
+            joined.split_whitespace().collect::<Vec<_>>().join(" ")
+          )
+        );
+      }
+      at = close + 1;
+    }
+  }
+  Ok(())
+}
+
 /// An address [`kind_address_lines`] reads off an entry's line: its e-mail's name, its text, its font, the marks leading
 /// it ([`LINE_MARK`]) and the marks it shows — those no name answers, which the line printed and its cut takes out
 /// ([`LINE_MARK_SHOWN`]).
@@ -1729,7 +1835,9 @@ type MadeAddress = (
 );
 
 /// An entry's lines for [`kind_address_lines`]: its children between two line breaks (`ltx:break`), each with the break
-/// before it (none for the first).
+/// before it (none for the first). Lines a printed brace opens and a later line closes are one, the breaks between them
+/// its own (a list of local parts set over two lines, `\texttt{\{ann.able,xq.zz,}\\ \texttt{cy.coe\}@alpha.edu}`:
+/// html_feedback #7233, [`LineText::read`]); a brace no later line closes joins nothing.
 fn entry_lines(entry: &Node) -> Vec<(Vec<Node>, Option<Node>)> {
   let mut lines: Vec<(Vec<Node>, Option<Node>)> = vec![(Vec::new(), None)];
   for child in entry.get_child_nodes() {
@@ -1739,7 +1847,110 @@ fn entry_lines(entry: &Node) -> Vec<(Vec<Node>, Option<Node>)> {
       nodes.push(child);
     }
   }
-  lines
+  let depth = |nodes: &[Node]| -> isize {
+    nodes
+      .iter()
+      .map(|node| brace_depth(&node.get_content()))
+      .sum()
+  };
+  let mut joined: Vec<(Vec<Node>, Option<Node>)> = Vec::with_capacity(lines.len());
+  let mut at = 0;
+  while at < lines.len() {
+    let mut open = depth(&lines[at].0);
+    let text = |nodes: &[Node]| nodes.iter().map(Node::get_content).collect::<String>();
+    let close = (open > 0)
+      .then(|| {
+        (at + 1..lines.len()).find(|&next| {
+          open += depth(&lines[next].0);
+          open <= 0
+        })
+      })
+      .flatten()
+      .map(|close| {
+        // (and the domain set on the line after the brace closes, `}` / `@x`)
+        let goes_on = lines
+          .get(close + 1)
+          .is_some_and(|(next, _)| domain_goes_on(&text(&lines[close].0), &text(next)));
+        close + usize::from(goes_on)
+      })
+      .or_else(|| {
+        lines
+          .get(at + 1)
+          .filter(|(next, _)| domain_goes_on(&text(&lines[at].0), &text(next)))
+          .map(|_| at + 1)
+      });
+    let (mut nodes, before) = lines[at].clone();
+    if let Some(close) = close {
+      for (more, between) in &lines[at + 1..=close] {
+        nodes.extend(between.clone());
+        nodes.extend(more.iter().cloned());
+      }
+      joined.push((nodes, before));
+      at = close + 1;
+    } else {
+      joined.push((nodes, before));
+      at += 1;
+    }
+  }
+  joined
+}
+
+/// Whether an entry's line `nodes` is a list of local parts set over several lines: a line break, nested or not, between
+/// a printed brace and the `@` after the brace that closes it (`{a,b,` / `c}@x`; `{a,b}` / `@x`).
+fn split_address_list(nodes: &[Node]) -> bool {
+  // (the line's text, each line break in it a line separator)
+  fn printed(node: &Node, text: &mut String) {
+    match node.get_type() {
+      Some(NodeType::ElementNode) if node.get_name() == "break" => text.push('\u{2028}'),
+      Some(NodeType::ElementNode) => {
+        for child in node.get_child_nodes() {
+          printed(&child, text);
+        }
+      },
+      _ => text.push_str(&node.get_content()),
+    }
+  }
+  let mut text = String::new();
+  for node in nodes {
+    printed(node, &mut text);
+  }
+  let Some(open) = text.find('{') else {
+    return false;
+  };
+  let mut depth = 0isize;
+  for (at, c) in text[open..].char_indices() {
+    match c {
+      '{' => depth += 1,
+      '}' => {
+        depth -= 1;
+        if depth == 0 {
+          let rest = &text[open + at + 1..];
+          let after = rest.trim_start_matches(|c: char| c.is_whitespace());
+          return after.starts_with('@')
+            && text[open..open + at + 1 + (rest.len() - after.len())].contains('\u{2028}');
+        }
+      },
+      _ => {},
+    }
+  }
+  false
+}
+
+/// Whether a line ending at `before` and the line `after` it are one address list's, its domain set on the next line:
+/// the first closes a printed brace list (`{majid,…,svetha.venkatesh}`), the second opens with its `@` (`@deakin.edu.au`,
+/// 1902.04228).
+fn domain_goes_on(before: &str, after: &str) -> bool {
+  let before = before.trim_end();
+  before.ends_with('}') && before.contains('{') && after.trim_start().starts_with('@')
+}
+
+/// The printed braces `text` opens and leaves open (negative: closes more than it opens).
+fn brace_depth(text: &str) -> isize {
+  text.chars().fold(0, |depth, c| match c {
+    '{' => depth + 1,
+    '}' => depth - 1,
+    _ => depth,
+  })
 }
 
 /// Whether a character is a mark's symbol for [`kind_address_lines`]: a footnote symbol (`events::is_fnsymbol`) or an
@@ -1757,18 +1968,21 @@ fn is_mark_text(text: &str) -> bool {
       || (text.chars().count() == 1 && text.chars().all(|c| c.is_ascii_lowercase())))
 }
 
-/// A line's printed text as [`kind_address_lines`] reads it, each text node's place in it and each mark's (a space).
+/// A line's printed text as [`kind_address_lines`] reads it, each text node's place in it and each mark's (a space), and
+/// the line breaks inside a printed brace it holds, each with its place (a newline).
 #[derive(Default)]
 struct LineText {
   text:   String,
   pieces: Vec<(Node, usize, usize)>,
+  breaks: Vec<(Node, usize)>,
 }
 
 impl LineText {
   /// Reads `node` into the line: its text; a font wrapper's (`ltx:text`) and an address's link's (an `ltx:ref` printing
-  /// an `@`) children; a mark ([`is_mark_text`], a superscript or a formula printing one) as a space. `false` for
-  /// anything else — another formula, a note, another link, a nested line break —, which the line is no line of
-  /// addresses beside.
+  /// an `@`) children; a mark ([`is_mark_text`], a superscript or a formula printing one) as a space; a line break
+  /// inside a printed brace the line opened, as a newline (a list of local parts set over two lines, html_feedback
+  /// #7233: [`entry_lines`]). `false` for anything else — another formula, a note, another link, another line break —,
+  /// which the line is no line of addresses beside.
   fn read(&mut self, node: &Node) -> bool {
     match node.get_type() {
       Some(NodeType::TextNode) => {
@@ -1787,6 +2001,21 @@ impl LineText {
           let start = self.text.len();
           self.text.push(' ');
           self.pieces.push((node.clone(), start, start + 1));
+          true
+        },
+        "break" if brace_depth(&self.text) > 0 => {
+          self.breaks.push((node.clone(), self.text.len()));
+          self.text.push('\n');
+          true
+        },
+        // (or a line break between a list's closing brace and its domain, which goes on with no space: `{…}` / `@x`,
+        // 1902.04228)
+        "break"
+          if node
+            .get_next_sibling()
+            .is_some_and(|next| domain_goes_on(&self.text, &next.get_content())) =>
+        {
+          self.breaks.push((node.clone(), self.text.len()));
           true
         },
         _ => false,
@@ -1850,6 +2079,14 @@ impl LineText {
   /// short, each mark after it, and each wrapper they leave empty.
   fn cut_from(&self, document: &mut Document, cut: usize) {
     let mut parents: Vec<Node> = Vec::new();
+    for (node, at) in &self.breaks {
+      if *at >= cut {
+        if let Some(parent) = node.get_parent() {
+          parents.push(parent);
+        }
+        document.remove_node(node.clone());
+      }
+    }
     for (node, start, end) in &self.pieces {
       if *start >= cut {
         if let Some(parent) = node.get_parent() {
@@ -2257,11 +2494,12 @@ fn respell_emails(document: &mut Document) -> Result<()> {
   if authors.len() < 2 {
     return Ok(());
   }
-  // (each name read as printed, whom an address is moved to; and by its base letters, which only keep an address on
-  // the author it spells so: `javier.martinez@ugr.es` spells Javier Martínez-López, its holder, by base letters, so it
-  // stays, though as printed it spells Carlos Javier Navarro alone (brief 95c G6, 2410.00275); `muller-group@x.de` on
-  // Anna Smith's own `\email` stays, though by base letters it spells Jörg Müller — no target is picked by base letters
-  // (brief 95c r2 B1, FIDELITY_CHARTER §4 #420))
+  // (each name read as printed, whom an address is moved to (`NameKeys::as_printed`); and as an address spells it —
+  // base letters, the transliteration (`NameKeys::of`) — which only keep an address on the author it spells so:
+  // `javier.martinez@ugr.es` spells Javier Martínez-López, its holder, by base letters, so it stays, though as printed
+  // it spells Carlos Javier Navarro alone (brief 95c G6, 2410.00275); `muller-group@x.de`, `mueller-group@x.de` on Anna
+  // Smith's own `\email` stay, though by base letters or the transliteration they spell Jörg Müller — no target is
+  // picked by either (brief 95c r2 B1, FIDELITY_CHARTER §4 #420, OXIDIZED_DESIGN_DIVERGENCES #970))
   let names: Vec<String> = authors
     .iter()
     .map(|author| {
@@ -2273,11 +2511,11 @@ fn respell_emails(document: &mut Document) -> Result<()> {
     .collect();
   let keys: Vec<NameKeys> = names
     .iter()
-    .map(|name| NameKeys::of(&Tokens::new(ExplodeText!(name))))
+    .map(|name| NameKeys::as_printed(&Tokens::new(ExplodeText!(name))))
     .collect();
   let base_keys: Vec<NameKeys> = names
     .iter()
-    .map(|name| NameKeys::of(&Tokens::new(ExplodeText!(&resolver::base_letters(name)))))
+    .map(|name| NameKeys::of(&Tokens::new(ExplodeText!(name))))
     .collect();
   let mut moves: Vec<(Node, usize)> = Vec::new();
   for (at, author) in authors.iter().enumerate() {

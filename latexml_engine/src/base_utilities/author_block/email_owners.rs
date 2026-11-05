@@ -321,11 +321,41 @@ pub(in crate::base_utilities) struct NameKeys {
   /// 2407.00382's `jw2423@cam.ac.uk`), which only a local part of those letters alone spells
   pub(in crate::base_utilities) joined: Vec<String>,
   pub(in crate::base_utilities) initials: Vec<String>,
+  /// the same keys of the name's transliterated spelling, where it differs from the base letters (`Schäffler`
+  /// "schaeffler" beside "schaffler", [`resolver::transliterated`]): a name scores the better of its two spellings
+  transliterated: Option<Box<NameKeys>>,
 }
 
 impl NameKeys {
+  /// The keys of a name as an address spells it: its letters folded to their base letters (`Martínez` "martinez",
+  /// [`resolver::base_letters`]) and, beside those, transliterated (`Schäffler` "schaeffler", `Wei{\ss}enborn`
+  /// "weissenborn", `Hj\o rth` "hjoerth", [`resolver::transliterated`]; html_feedback #7233, OXIDIZED_DESIGN_DIVERGENCES
+  /// #970) — a letter written with an accent or letter command read as the letter it prints ([`spelling_name_text`]).
   pub(in crate::base_utilities) fn of(name: &Tokens) -> NameKeys {
-    let text = visible_name_text(name.unlist_ref());
+    let text = spelling_name_text(name.unlist_ref());
+    let base = resolver::base_letters(&text);
+    let transliterated = resolver::base_letters(&resolver::transliterated(&text));
+    let mut keys = NameKeys::of_text(&base);
+    if transliterated != base {
+      keys.transliterated = Some(Box::new(NameKeys::of_text(&transliterated)));
+    }
+    keys
+  }
+
+  /// The keys of a name as it prints, its letters unfolded and untransliterated: whom `insert::respell_emails` moves an
+  /// author's own e-mail to, an address spelling that author as printed (FIDELITY_CHARTER §4 #420: `mueller-group@`
+  /// spells Jörg Müller only through the transliteration and stays on Anna Smith's own call).
+  pub(in crate::base_utilities) fn as_printed(name: &Tokens) -> NameKeys {
+    NameKeys::of_text(&visible_name_text(name.unlist_ref()))
+  }
+
+  /// The name's spellings: its base letters', and its transliterated one where it has one.
+  pub(in crate::base_utilities) fn spellings(&self) -> impl Iterator<Item = &NameKeys> {
+    std::iter::once(self).chain(self.transliterated.as_deref())
+  }
+
+  /// The keys of a name's text, read as it is.
+  fn of_text(text: &str) -> NameKeys {
     let words: Vec<String> = text
       .split(|c: char| !c.is_alphabetic())
       .filter(|word| !word.is_empty())
@@ -392,6 +422,7 @@ impl NameKeys {
       .flatten()
       .filter(|initials: &String| initials.chars().count() >= 2)
       .collect(),
+      transliterated: None,
     }
   }
 }
@@ -510,19 +541,27 @@ pub(in crate::base_utilities) fn spelled_owners(
   // the better of its words spelled apart and a joined spelling, never both added: one spelling of the letters is
   // counted once (`khan.muhammad@ieee.org` scores 12 for Khan Muhammad, "muhammad" and "khan" apart, and 12 for
   // Muhammad Haris Khan, "khanmuhammad" joined, and goes to the surname's spelling, 2602.07835).
+  // (a name's score the better of its spellings', its base letters' and its transliterated one's: `mo.schaeffler@`
+  // Moritz Schäffler's, html_feedback #7233)
   let scores: Vec<(usize, usize)> = name_keys
     .iter()
     .map(|keys| {
-      let surname: usize = keys.surnames.iter().map(surname_score).sum::<usize>()
-        + keys
-          .short_surnames
-          .iter()
-          .find(|short| **short == local)
-          .map_or(0, |short| short.chars().count());
-      (
-        (surname + keys.given.as_ref().map_or(0, given_score)).max(joined_score(keys)),
-        surname,
-      )
+      keys
+        .spellings()
+        .map(|keys| {
+          let surname: usize = keys.surnames.iter().map(surname_score).sum::<usize>()
+            + keys
+              .short_surnames
+              .iter()
+              .find(|short| **short == local)
+              .map_or(0, |short| short.chars().count());
+          (
+            (surname + keys.given.as_ref().map_or(0, given_score)).max(joined_score(keys)),
+            surname,
+          )
+        })
+        .max()
+        .unwrap_or((0, 0))
     })
     .collect();
   let best = scores.iter().copied().max().unwrap_or((0, 0));

@@ -7,6 +7,20 @@ use super::*;
 /// ([`NAME_ANNOTATIONS`]). `{\it D.A. Johnston}` reads "D.A. Johnston", `Avi Shporer\altaffilmark{1}` "Avi Shporer",
 /// `Plech\'a\v{c}` "Plechac", `Zheng \& Jordi` "Zheng & Jordi".
 pub(in crate::base_utilities) fn visible_name_text(tokens: &[Token]) -> String {
+  name_text(tokens, false)
+}
+
+/// The visible text of a name as an address spells it ([`NameKeys::of`]): [`visible_name_text`], but a letter an accent
+/// or letter command writes that has a conventional transliteration ([`resolver::transliteration`]: `\"a` ä, `{\ss}`
+/// ß, `\o` ø, `\aa` and `\r{a}` å, `\ae` æ, `\oe` œ) is that letter, not its base letter alone — the base letter is
+/// one fold of it ([`resolver::base_letters`]) and the transliteration another, which the accent dropped here would
+/// lose (`Sch\"affler` "schaeffler" as `Schäffler` reads, html_feedback #7233; OXIDIZED_DESIGN_DIVERGENCES #970).
+pub(in crate::base_utilities) fn spelling_name_text(tokens: &[Token]) -> String {
+  name_text(tokens, true)
+}
+
+/// [`visible_name_text`]; `spelling`: the letters with a transliteration kept whole ([`spelling_name_text`]).
+fn name_text(tokens: &[Token], spelling: bool) -> String {
   let mut text = String::new();
   let mut i = 0;
   while i < tokens.len() {
@@ -23,8 +37,13 @@ pub(in crate::base_utilities) fn visible_name_text(tokens: &[Token]) -> String {
           text.push_str(" and ");
         } else if let Some(letter) = t.with_str(letter_command) {
           // a letter written as a command (`{\L}ukasz`, `\O stergaard`) is that letter, the spaces ending the
-          // command's name aside
-          text.push(letter);
+          // command's name aside (the letter it prints, where an address may spell it by its transliteration)
+          match t.with_str(printed_letter_command) {
+            Some(printed) if spelling && resolver::transliteration(printed).is_some() => {
+              text.push(printed)
+            },
+            _ => text.push(letter),
+          }
           while tokens.get(i + 1) == Some(&T_SPACE!()) {
             i += 1;
           }
@@ -49,6 +68,12 @@ pub(in crate::base_utilities) fn visible_name_text(tokens: &[Token]) -> String {
         if t.with_str(|s| ACCENT_COMMANDS.contains(&s)) {
           while tokens.get(i) == Some(&T_SPACE!()) {
             i += 1;
+          }
+          // (the accented letter, where it has a transliteration and an address may spell it so: `\"a`, `\"{u}`, `\r a`)
+          if spelling && let Some((letter, end)) = accented_letter(&t, tokens, i) {
+            text.push(letter);
+            i = end;
+            continue;
           }
         }
         // a control word's optional argument is no text (`\parbox[c]{\textwidth}{…}`, 2504.03146), nor is glue
@@ -159,6 +184,39 @@ pub(in crate::base_utilities) fn visible_name_text(tokens: &[Token]) -> String {
     i += 1;
   }
   text
+}
+
+/// The letter the accent command `accent` makes of its operand at `i` (a letter, or a group of one letter) when that
+/// letter has a transliteration ([`resolver::transliteration`]: `\"a` ä, `\"{U}` Ü, `\r a` å), with the index after
+/// the operand; `None` for any other.
+fn accented_letter(accent: &Token, tokens: &[Token], i: usize) -> Option<(char, usize)> {
+  use unicode_normalization::UnicodeNormalization;
+  let mark = accent.with_str(|s| match s {
+    "\\\"" => Some('\u{308}'),
+    "\\r" => Some('\u{30A}'),
+    _ => None,
+  })?;
+  let (letter, end) = match tokens.get(i)?.get_catcode() {
+    Catcode::BEGIN
+      if tokens
+        .get(i + 2)
+        .is_some_and(|t| t.get_catcode() == Catcode::END) =>
+    {
+      (tokens.get(i + 1)?, i + 3)
+    },
+    _ => (tokens.get(i)?, i + 1),
+  };
+  if !matches!(letter.get_catcode(), Catcode::LETTER | Catcode::OTHER) {
+    return None;
+  }
+  let base = letter.with_str(|s| {
+    let mut chars = s.chars();
+    chars.next().filter(|_| chars.next().is_none())
+  })?;
+  let composed: String = [base, mark].iter().collect::<String>().nfc().collect();
+  let mut chars = composed.chars();
+  let one = chars.next().filter(|_| chars.next().is_none())?;
+  resolver::transliteration(one).map(|_| (one, end))
 }
 
 /// The index after a script's operand at `i`: a brace group, a command with its brace group (`^\mathrm{ab}`), or one

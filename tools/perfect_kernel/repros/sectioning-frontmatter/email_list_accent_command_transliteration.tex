@@ -1,0 +1,24 @@
+% A one-line `\{…\}@domain` list, out of the authors' order, whose every local part spells its author only through the
+%   conventional transliteration of a letter the name writes with an accent command: `B\"acker` "baecker" (ä -> ae),
+%   `Wei{\ss}enborn` "weissenborn" (ß -> ss), `Hj\o rth` "hjoerth" (ø -> oe), `Fl\aa ten` "flaaten" (å -> aa). Names
+%   were keyed by their base letters alone ("backer", "weisenborn", "hjorth", "flaten"), which no local part holds, so
+%   no address spelled anyone and the block's line reader gave them out by position, each to the wrong author
+%   (OXIDIZED_DESIGN_DIVERGENCES #970).
+% witness: html_feedback #7233 (`mo.schaeffler` for Moritz Schäffler; `Sch\"affler` the same)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Bo Bäcker1 Gus Weißenborn1 Ida Hjørth1 Jon Flåten1 /
+%   1University of Alpha / {j.flaaten,i.hjoerth,g.weissenborn,bo.baecker}@alpha.edu"
+% engines: rust int138a: j.flaaten@ on Bo Bäcker, i.hjoerth@ on Gus Weißenborn, … (by position, reversed)
+% expect:  0 errors, 0 warnings; each address on the author it spells, University of Alpha on each
+% status:  RED (int138a) -> GREEN (107a)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{A Title}
+\author{%
+  Bo B\"acker$^{1}$ \and Gus Wei{\ss}enborn$^{1}$ \and Ida Hj\o rth$^{1}$ \and Jon Fl\aa ten$^{1}$ \\
+  $^1$University of Alpha \\
+  \texttt{\{j.flaaten,i.hjoerth,g.weissenborn,bo.baecker\}@alpha.edu}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

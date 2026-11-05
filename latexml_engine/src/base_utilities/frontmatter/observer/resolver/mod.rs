@@ -618,9 +618,10 @@ impl Resolver {
 
   /// The one candidate an address spells (`spelled_owners`), if one — none for a list of local parts the address
   /// reader could not part (`(npalmer|pwg)@dcs.warwick.ac.uk`, cs0607047: several authors' address, the block's by user
-  /// ruling R10, as today's `spelled_owner` reads it — `lists_local_parts`). A name is read by its base letters, as
-  /// an address spells it: the digested name's accents dropped (`Ștefan Ciobâcă` "stefan", "ciobaca", 2001.09649's
-  /// `stefan.ciobaca@`), as the old reader's source reading drops the accent commands.
+  /// ruling R10, as today's `spelled_owner` reads it — `lists_local_parts`). A name is read as an address spells it
+  /// (`NameKeys::of`): by its base letters, the digested name's accents dropped (`Ștefan Ciobâcă` "stefan", "ciobaca",
+  /// 2001.09649's `stefan.ciobaca@`), and by its transliteration (`Schäffler` "schaeffler", html_feedback #7233), as the
+  /// old reader's source reading reads the accent commands.
   fn spelled(&self, address: &str, candidates: &[usize]) -> Option<usize> {
     let names: Vec<&str> = candidates
       .iter()
@@ -653,8 +654,8 @@ impl Resolver {
 const ENTRY_MAILBOX: &str = " api:entry-mailbox";
 
 /// The one of `names` an address spells (`spelled_owners`), if one — none for a list of local parts the address reader
-/// could not part (`lists_local_parts`); each name read by its base letters ([`base_letters`]), as an address spells it
-/// ([`Resolver::spelled`]; the writer's check of an address today's holds on the creator it spells, `writer::plan`).
+/// could not part (`lists_local_parts`); each name read as an address spells it, by its base letters ([`base_letters`])
+/// and its transliteration ([`transliterated`], both `NameKeys::of`; [`Resolver::spelled`]; the writer's check of an address today's holds on the creator it spells, `writer::plan`).
 pub(in crate::base_utilities::frontmatter::observer) fn spelled_name(
   names: &[&str],
   address: &str,
@@ -664,7 +665,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn spelled_name(
   }
   let keys: Vec<NameKeys> = names
     .iter()
-    .map(|name| NameKeys::of(&text_tokens(&base_letters(name))))
+    .map(|name| NameKeys::of(&text_tokens(name)))
     .collect();
   match spelled_owners(&keys, address).as_slice() {
     [one] => Some(*one),
@@ -673,8 +674,9 @@ pub(in crate::base_utilities::frontmatter::observer) fn spelled_name(
 }
 
 /// `text` with its letters' accents dropped (canonical decomposition, the combining marks aside), and the letters
-/// that decompose to none their base letter (`ł` l, `ø` o, `đ` d, `ı` i) — as an address spells a name (the reading's
-/// and `insert::respell_emails`').
+/// that decompose to none their base letter (`ł` l, `ø` o, `đ` d, `ı` i; `æ` a, `œ` o, `ß` s, as the author block's
+/// reading of `\ae`, `\oe`, `{\ss}` gives them, `author_block::letter_command`) — as an address spells a name (the
+/// reading's and `insert::respell_emails`'), one fold of it; the transliteration another ([`transliterated`]).
 pub(in crate::base_utilities) fn base_letters(text: &str) -> String {
   use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
   text
@@ -688,9 +690,48 @@ pub(in crate::base_utilities) fn base_letters(text: &str) -> String {
       'đ' => 'd',
       'Đ' => 'D',
       'ı' => 'i',
+      'æ' => 'a',
+      'Æ' => 'A',
+      'œ' => 'o',
+      'Œ' => 'O',
+      'ß' => 's',
       c => c,
     })
     .collect()
+}
+
+/// The conventional transliteration of a letter, where it has one: the German umlauts and sharp s (`ä` ae, `ö` oe, `ü`
+/// ue, `ß` ss) and the Nordic letters (`å` aa, `ø` oe, `æ` ae), `œ` oe; upper case likewise. The one letter table every
+/// spelling of a name by an address reads ([`transliterated`], `NameKeys::of`; `mo.schaeffler@` for Moritz Schäffler,
+/// html_feedback #7233; OXIDIZED_DESIGN_DIVERGENCES #970).
+pub(in crate::base_utilities) fn transliteration(c: char) -> Option<&'static str> {
+  Some(match c {
+    'ä' | 'æ' => "ae",
+    'ö' | 'ø' | 'œ' => "oe",
+    'ü' => "ue",
+    'ß' => "ss",
+    'å' => "aa",
+    'Ä' | 'Æ' => "Ae",
+    'Ö' | 'Ø' | 'Œ' => "Oe",
+    'Ü' => "Ue",
+    'ẞ' => "SS",
+    'Å' => "Aa",
+    _ => return None,
+  })
+}
+
+/// `text` with each letter that has a conventional transliteration written so ([`transliteration`]), its other
+/// characters as they are (composed first: `a` and a combining diaeresis are `ä`).
+pub(in crate::base_utilities) fn transliterated(text: &str) -> String {
+  use unicode_normalization::UnicodeNormalization;
+  let mut out = String::with_capacity(text.len());
+  for c in text.nfc() {
+    match transliteration(c) {
+      Some(spelled) => out.push_str(spelled),
+      None => out.push(c),
+    }
+  }
+  out
 }
 
 /// Resolve a document's ledger (its inputs in call order), each block under the conventions its binding declared

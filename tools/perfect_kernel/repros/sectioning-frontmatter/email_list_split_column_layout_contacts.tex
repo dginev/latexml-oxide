@@ -1,0 +1,30 @@
+% html_feedback #7233's layout: `\and` columns, each name over its institution lines, and the `{…}@domain` list set over
+%   two `\texttt` lines in the last column. The author block reads each line of the column as a contact of its own: the
+%   list's head `{ann.able,mo.schaeffler,` an affiliation, its tail `xq.zz,cy.coe}@alpha.edu` an e-mail of one bogus
+%   address, both on Cy Coe. The flush joins the contacts a printed brace spans into one line of addresses
+%   (`insert::join_split_address_contacts`), which the Kind step for an address line reads as the one list:
+%   `mo.schaeffler@` Moritz Schäffler's through the transliteration (ä -> ae), `xq.zz@`, spelling no one, the block
+%   creator's (FIDELITY_CHARTER §4 "else the block"; OXIDIZED_DESIGN_DIVERGENCES #970).
+% witness: html_feedback #7233 (NeurIPS `\And` block, `{e.de.bruyn,mo.schaeffler,…,u.upadhyay,}\\`
+%   `{s.kesselheim,a.bazarova}@fz-juelich.de`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able / Univ Alpha  Moritz Schäffler / Univ Alpha  Cy Coe /
+%   Univ Beta / {ann.able,mo.schaeffler, / xq.zz,cy.coe}@alpha.edu"
+% engines: rust int138a: Cy Coe holds an affiliation "{ann.able,mo.schaeffler," and an e-mail
+%   "xq.zz,cy.coe}@alpha.edu", 0 warnings
+% expect:  0 errors, 0 warnings; ann.able@ on Ann Able, mo.schaeffler@ on Moritz Schäffler, cy.coe@ on Cy Coe, xq.zz@ on
+%   the block creator; each author only their institution
+% status:  RED (int138a) -> GREEN (107a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\title{A Title}
+\author{%
+  Ann Able \\ University of Alpha \and
+  Moritz Schäffler \\ University of Alpha \and
+  Cy Coe \\ University of Beta \\
+  \texttt{\{ann.able,mo.schaeffler,}\\ \texttt{xq.zz,cy.coe\}@alpha.edu}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

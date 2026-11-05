@@ -534,26 +534,28 @@ impl Resolver {
   /// its call's position (`api:annotate:*`, the upfront grid's included), goes to the one author its address spells — an
   /// AASTeX 5 `\email{able@x.org}` after `\author{Ann Able and Bob Baker}` (0911.3506, 1506.04035: 92 of the 688 aas
   /// census papers); a copy that author holds already is dropped; one a label placed stays. After the grid and the
-  /// labels, as today's `insert::respell_emails` — its target picked by the names as printed, base letters only keeping
-  /// an address on the holder it spells so (Anna Smith's own `\email{muller-group@x.de}` stays hers though by base
-  /// letters it spells Jörg Müller, FIDELITY_CHARTER §4 #420; 2410.00275's `javier.martinez@` stays on Javier
-  /// Martínez-López; brief 95c r2 B1).
+  /// labels, as today's `insert::respell_emails` — its target picked by the names as printed (`NameKeys::as_printed`),
+  /// base letters and the transliteration only keeping an address on the holder it spells so (Anna Smith's own
+  /// `\email{muller-group@x.de}`, `\email{mueller-group@x.de}` stays hers though by base letters or the transliteration
+  /// it spells Jörg Müller, FIDELITY_CHARTER §4 #420; 2410.00275's `javier.martinez@` stays on Javier Martínez-López;
+  /// brief 95c r2 B1, OXIDIZED_DESIGN_DIVERGENCES #970).
   pub(super) fn respell_emails(&mut self) {
     let live = self.live();
     if live.len() < 2 {
       return;
     }
-    let keys = |base: bool| -> Vec<NameKeys> {
+    // (as printed, whom an address moves to; as an address spells it — base letters, the transliteration — which only
+    // keeps an address on the author it spells so: `mueller-group@` on Anna Smith's own call beside Jörg Müller, #420)
+    let keys = |spelled: bool| -> Vec<NameKeys> {
       live
         .iter()
         .map(|&c| {
-          let name = &self.out.creators[c].name;
-          let name = if base {
-            base_letters(name)
+          let name = text_tokens(&self.out.creators[c].name);
+          if spelled {
+            NameKeys::of(&name)
           } else {
-            name.clone()
-          };
-          NameKeys::of(&text_tokens(&name))
+            NameKeys::as_printed(&name)
+          }
         })
         .collect()
     };
