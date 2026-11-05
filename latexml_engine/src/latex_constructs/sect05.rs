@@ -5089,7 +5089,7 @@ pub(crate) enum SpeculativeRun {
 /// its output is discarded, its assignments undone (`AssignmentJournalGuard::rollback`), its diagnostics discarded and
 /// its terminal output muted,
 /// the groups it left open closed in a reading context of their own (as `replay_dropped_class_code` closes a
-/// setter's). While it runs the frontmatter is frozen and no refused setter is replayed (`lx_replaying_class_setter`),
+/// setter's), the tokens being invoked and the active conditionals put back as they were ([`StomachMark`]). While it runs the frontmatter is frozen and no refused setter is replayed (`lx_replaying_class_setter`),
 /// a `{titlepage}` builds no `ltx:titlepage` (`lx_depositing_frontmatter_fields`) and no deposit re-enters
 /// (`lx_depositing_class_maketitle`). [`SpeculativeRun::Unavailable`] when no journal can open (one is already open)
 /// or when the run's assignments could not be undone (it then keeps its diagnostics, and the global assignments it
@@ -5192,7 +5192,8 @@ fn speculative_run(
   let muted = SuppressLogOutputGuard::new(true);
   let depth = get_frame_depth();
   let boxes = box_lists_mark();
-  let conditionals = if_stack_depth();
+  // (the tokens being invoked and the conditionals as they are, put back however the run ends: `StomachMark`)
+  let stomach_mark = StomachMark::take();
   // (what an `\insert` in it sets is stashed for after the title page, tex_inserts.rs — printed by it all the same, at
   // the page foot: its text follows the run's, so a store and the label the class prints before it there are printed,
   // as they are inline in Perl, and taken out of the deposit with it, `note_store_handed`)
@@ -5222,6 +5223,7 @@ fn speculative_run(
     expire_local_box_list();
     Ok(())
   });
+  stomach_mark.restore();
   let text = match &result {
     Ok(digested) => {
       let mut text = String::new();
@@ -5257,11 +5259,8 @@ fn speculative_run(
     }
     hold.discard();
     unwound?;
-    // (and the box lists and conditionals the failed digestion left open)
+    // (and the box lists the failed digestion left open)
     unwind_box_lists_to(boxes);
-    while if_stack_depth() > conditionals {
-      pop_if_frame();
-    }
     Info!(
       "frontmatter",
       "\\maketitle",

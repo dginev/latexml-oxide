@@ -469,7 +469,8 @@ fn speculative_label_ink(tokens: Tokens) -> Result<Option<PrintedLabel>> {
   let muted = SuppressLogOutputGuard::new(true);
   let depth = get_frame_depth();
   let boxes = box_lists_mark();
-  let conditionals = if_stack_depth();
+  // (the tokens being invoked and the conditionals put back however the run ends: `StomachMark`)
+  let stomach_mark = StomachMark::take();
   // (the field ledger put back and the boxes it stamped unstamped, as the observer's rehearsal does: a `\usebox` in
   // the operand hands back a register's box, which the run's serial would otherwise stay on)
   let ledger_scope = FieldLedgerScope::begin();
@@ -491,6 +492,7 @@ fn speculative_label_ink(tokens: Tokens) -> Result<Option<PrintedLabel>> {
     expire_local_box_list();
     Ok(())
   });
+  stomach_mark.restore();
   let printed = result.as_ref().ok().map(|digested| {
     let mut printed = PrintedLabel::default();
     label_ink(digested, &mut printed, false);
@@ -508,9 +510,6 @@ fn speculative_label_ink(tokens: Tokens) -> Result<Option<PrintedLabel>> {
     hold.discard();
     unwound?;
     unwind_box_lists_to(boxes);
-    while if_stack_depth() > conditionals {
-      pop_if_frame();
-    }
     return Ok(None);
   }
   if undone {

@@ -196,8 +196,10 @@ fn note_mark_quietly(value: i64) -> Result<String> {
   let latched_before = resource_fatal_latched();
   let depth = get_frame_depth();
   let boxes = box_lists_mark();
-  let conditionals = if_stack_depth();
+  // (the tokens being invoked and the conditionals put back however the print ends: `StomachMark`)
+  let stomach_mark = StomachMark::take();
   let printed = printed_footnote_mark(value);
+  stomach_mark.restore();
   let failed = hold.errors_raised() > 0;
   match printed {
     Ok(printed) => {
@@ -222,9 +224,6 @@ fn note_mark_quietly(value: i64) -> Result<String> {
         Ok(())
       });
       unwind_box_lists_to(boxes);
-      while if_stack_depth() > conditionals {
-        pop_if_frame();
-      }
       hold.discard();
       unwound?;
       Ok(String::new())
@@ -400,7 +399,8 @@ pub(in crate::base_utilities) fn rehearse<R>(
   let silent = SilenceProgressNotesGuard::new();
   let depth = get_frame_depth();
   let boxes = box_lists_mark();
-  let conditionals = if_stack_depth();
+  // (the tokens being invoked and the conditionals put back however the run ends: `StomachMark`)
+  let stomach_mark = StomachMark::take();
   let ledger_scope = FieldLedgerScope::begin();
   REHEARSING.with(|r| r.set(true));
   FOOTNOTE_STEPS.with(|steps| steps.set(0));
@@ -436,6 +436,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
     expire_local_box_list();
     Ok(())
   });
+  stomach_mark.restore();
   expire_current_token();
   let value = match &result {
     Ok(digested) => Some(inspect(digested)),
@@ -472,9 +473,6 @@ pub(in crate::base_utilities) fn rehearse<R>(
     hold.discard();
     unwound?;
     unwind_box_lists_to(boxes);
-    while if_stack_depth() > conditionals {
-      pop_if_frame();
-    }
     return Ok(Rehearsal::Skipped(SkipReason::Fatal));
   }
   if undone {

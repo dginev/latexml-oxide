@@ -1,0 +1,17 @@
+% A speculative run of the title page that ends in a runaway Fatal of its own — discarded with it, as the document never
+% runs it (sect05.rs `speculative_run`) — leaves the stomach as it found it (`StomachMark`): before, the run's
+% `Stomach:Recursion` left the whole stack of tokens being invoked behind, and the class's real `\maketitle` failed its
+% first push with a ghost Fatal of its own — the whole document lost. Three notes, the last holding a fourth, make the
+% title-page check's run of LaTeX's `\thanks` (note_title_page_print) recurse.
+% witness: 2502.10606 (ieeeconf; an e-mail `\thanks` inside a `\thanks`: 8,054 words to 0 on 106s)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able†‡∗", "Text.", and the page foot's
+%          "∗ One.", "† Two.", "‡ Three.§" (pdflatex prints no "Four.")
+% engines: rust int134b = 0 errors, 0 fatal; rust 106s (int135b) = 1 Fatal (Stomach:Recursion), the output an empty stub
+% expect:  0 errors, 0 fatal; the title, the author and the body text kept
+\documentclass{article}
+\title{A Title}
+\author{Ann Able\thanks{One.}\thanks{Two.}\thanks{Three.\thanks{Four.}}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -3128,7 +3128,14 @@ message repeats the first one's stack is a stale-state ghost, not a new failure 
 (token stack, boxing, frames, mode, `CURRENT_TOKEN`) and check that each recovery arm resets it, against
 `hardYankProcessing`'s list. Guard `perfect_kernel_batch131fix::a_recovered_fatal_leaves_no_token_stack_behind`. Open:
 an RAII pop in `invoke_token` (as `local_current_token_guard`) would cover a caught error that never reaches a recovery
-arm (SYNC "token-stack RAII" row).
+arm (SYNC "token-stack RAII" row). **A speculative run is such a catcher**, and its stale state need not be an error's:
+the frontmatter's title-page runs, rehearsals and label reads discard their output and undo their assignments (the
+journal), but the token stack and the conditional stack are no assignments. 2502.10606: a run's discarded
+`Stomach:Recursion` left `MAXSTACK` tokens and the real `\maketitle` died of the ghost; 2003.03814: a run that ended
+*normally* had closed, with a `\fi` of its own, a conditional the document opened before it (CUP-JNL-DCE.cls:505
+`\keywords` leaves its `\ifx` open), and the document's own `\fi` then had none. `stomach::StomachMark` (the token-stack
+depth and every conditional frame with its state) is taken before each such run and put back on every exit, `Ok` too.
+Guards `perfect_kernel_batch106s::{a_runaway_run_leaves_no_ghost_fatal, a_run_keeps_the_documents_open_conditional}`.
 
 
 ## 102. An environment's mode frame under plain groups ends by frame surgery, not by popping

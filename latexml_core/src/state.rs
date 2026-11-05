@@ -4134,6 +4134,34 @@ pub fn pop_if_frame() -> Option<Rc<RefCell<crate::definition::conditional::IfFra
 }
 /// The number of active conditionals.
 pub fn if_stack_depth() -> usize { state!().if_stack.len() }
+/// The active conditionals, each with its state as it is now, for [`restore_if_stack`] to put back.
+pub fn if_stack_snapshot() -> Vec<(
+  Rc<RefCell<crate::definition::conditional::IfFrame>>,
+  crate::definition::conditional::IfFrame,
+)> {
+  state!()
+    .if_stack
+    .iter()
+    .map(|frame| (Rc::clone(frame), frame.borrow().clone()))
+    .collect()
+}
+/// Put the active conditionals back as [`if_stack_snapshot`] took them: the frames it held, their state as it was —
+/// those a run opened dropped, those it closed (a `\fi` of its own matching one opened before it) open again.
+pub fn restore_if_stack(
+  snapshot: Vec<(
+    Rc<RefCell<crate::definition::conditional::IfFrame>>,
+    crate::definition::conditional::IfFrame,
+  )>,
+) {
+  let frames = snapshot
+    .into_iter()
+    .map(|(frame, saved)| {
+      *frame.borrow_mut() = saved;
+      frame
+    })
+    .collect();
+  state_mut!().if_stack = frames;
+}
 /// Perl `$LaTeXML::IF_LIMIT`: the runaway ceiling on conditional ids
 /// (`0` = unlimited), set by `latexml.sty`'s `iflimit` option.
 pub fn if_limit() -> i64 { state!().if_limit }

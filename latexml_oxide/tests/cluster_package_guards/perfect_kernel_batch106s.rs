@@ -86,7 +86,10 @@ fn a_note_prints_only_where_the_class_flushes_it() {
 }
 
 /// Converts the files `files` (name, bytes; the first the main file) with the binary, eager, and returns its log.
-fn cli_conversion_of(files: &[(&str, &[u8])]) -> String {
+fn cli_conversion_of(files: &[(&str, &[u8])]) -> String { cli_files_conversion(files).0 }
+
+/// [`cli_conversion_of`]'s log, and its XML squashed (each whitespace run one space) from its `<title>` to its end.
+fn cli_files_conversion(files: &[(&str, &[u8])]) -> (String, String) {
   let workdir = tempfile::tempdir().expect("create tempdir");
   for (name, bytes) in files {
     std::fs::write(workdir.path().join(name), bytes).expect("write a source file");
@@ -103,7 +106,61 @@ fn cli_conversion_of(files: &[(&str, &[u8])]) -> String {
     .current_dir(workdir.path())
     .output()
     .expect("spawn latexml_oxide");
-  String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "")
+  let log = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+  let xml = std::fs::read_to_string(workdir.path().join("t.xml")).unwrap_or_default();
+  let xml = xml.split_whitespace().collect::<Vec<_>>().join(" ");
+  let start = xml.find("<title>").unwrap_or(0);
+  let end = xml[start..]
+    .find("</document>")
+    .map_or(xml.len(), |end| start + end);
+  (log, xml[start..end].trim_end().to_string())
+}
+
+/// A run of the title page that ends in a runaway Fatal of its own — discarded with it, an Info says so — leaves the
+/// stomach as it found it (`latexml_core::stomach::StomachMark`): three notes, the last holding a fourth, make the
+/// check's run of latex.ltx's `\thanks` recurse, and its `Stomach:Recursion` left the whole stack of tokens being
+/// invoked behind, so the class's real `\maketitle` failed its first push with a ghost Fatal and the document was lost
+/// (2502.10606, ieeeconf: 8,054 words to 0 on 106s r2). The document as the base converts it. Distinct path: a
+/// speculative run's discarded Fatal. That run printing nothing, the check counts nothing on this title page (SYNC row
+/// 106s residual).
+#[test]
+fn a_runaway_run_leaves_no_ghost_fatal() {
+  let tex = repro!("check_run_runaway_leaves_no_ghost_fatal");
+  assert_eq!(
+    converted(tex, 0),
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">One.</note> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2">Two.</note> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id3">Three.</note> </creator> <pubnote role="thanks">Four.</pubnote> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+  );
+  let (log, _) = cli_conversion(tex, false);
+  assert!(
+    log.contains(
+      "A speculative run of the class's title page ended in a Fatal error, discarded with it"
+    ),
+    "{log}"
+  );
+}
+
+/// A run of the title page puts back the conditionals the document had open (`StomachMark`): CUP-JNL-DCE.cls:505's
+/// `\keywords` leaves its `\ifx` open, the `\fi` inside `\@keywords`, which the class's `\printkeywords` balances
+/// (2003.03814). The check's run printed `\@keywords` and so closed the document's `\ifx`: the class's real
+/// `\maketitle` raised "Didn't expect a \fi", its deposit was dropped, and the keywords, handed on as a note of the
+/// author block, raised a second. The keywords where the class prints them, as on the base; no Error, no Warning.
+/// Distinct path: a run's `\fi` matching a conditional opened before it.
+#[test]
+fn a_run_keeps_the_documents_open_conditional() {
+  let tex = repro!("check_run_keeps_the_documents_open_conditional");
+  let cls = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/check_dangling_keywords.cls"
+  );
+  let (log, xml) = cli_files_conversion(&[
+    ("t.tex", tex.as_bytes()),
+    ("check_dangling_keywords.cls", cls.as_bytes()),
+  ]);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!log.contains("deposit was dropped"), "{log}");
+  assert_eq!(
+    xml,
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <pagination role="newpage"/> <para xml:id="p1"> <p xml:id="p1.1"><text xml:id="p1.1.1"/></p> </para> <para xml:id="p2"> <p xml:id="p2.1"><text font="bold" xml:id="p2.1.1">Keywords: inverse problems; tomography</text></p> </para> <para xml:id="p3"> <p xml:id="p3.1">Text.</p> </para>"#
+  );
 }
 
 /// The author's own words outside the content files (review rev106s S4): a style of the document's directory read as

@@ -2232,6 +2232,41 @@ pub fn salvage_pending_box_lists(drop_innermost: bool) -> Vec<Digested> {
 /// recovery arms beside [`salvage_pending_box_lists`], after the Fatal is logged (the message lists the stack).
 pub fn clear_token_stack() { stomach_mut!().token_stack.clear(); }
 
+/// What a speculative digestion — one whose output is discarded and whose assignments its journal undoes (the
+/// frontmatter's title-page runs, rehearsals and label reads) — must leave as it found it besides its assignments: the
+/// stack of tokens being invoked and the active conditionals. Taken before the run, put back however it ends
+/// ([`StomachMark::restore`]): the document never runs the run's tokens. A runaway Fatal the run raised and discarded
+/// (a `Stomach:Recursion`) left the whole `MAXSTACK` of tokens on the stack, and the document's next digestion failed
+/// its first push with a ghost Fatal of its own (2502.10606's `\thanks` inside a `\thanks`, all 8,054 words lost, as
+/// [`clear_token_stack`]'s 2410.07647); a `\fi` of the run's closing a conditional the document opened before it left
+/// that conditional closed for the document, whose own `\fi` then had none (2003.03814: CUP-JNL-DCE.cls:505 `\keywords`
+/// leaves its `\ifx` open, `\fi` inside `\@keywords`, which `\printkeywords` balances; the title-page run's
+/// `\printkeywords` closed it and the class's real `\maketitle` raised "Didn't expect a \fi").
+pub struct StomachMark {
+  tokens:       usize,
+  conditionals: Vec<(
+    Rc<RefCell<crate::definition::conditional::IfFrame>>,
+    crate::definition::conditional::IfFrame,
+  )>,
+}
+
+impl StomachMark {
+  /// The stack of tokens being invoked and the active conditionals as they are now.
+  pub fn take() -> StomachMark {
+    StomachMark {
+      tokens:       stomach!().token_stack.len(),
+      conditionals: if_stack_snapshot(),
+    }
+  }
+
+  /// Put both back as [`StomachMark::take`] found them: the tokens a failed invocation left on the stack dropped, the
+  /// conditionals the run opened dropped and those it closed open again.
+  pub fn restore(self) {
+    stomach_mut!().token_stack.truncate(self.tokens);
+    restore_if_stack(self.conditionals);
+  }
+}
+
 /// Stomach-level cycle guard: only once `box_list` has grown far past any
 /// flushed-document size (a normal `box_list` is drained as paragraphs/boxes
 /// complete and stays small) do we record the digest-push stream and look for
