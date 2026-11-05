@@ -1,0 +1,29 @@
+% Sibling of email_list_split_unspelled_entry_glued_red.tex: a `\{…\}@domain` list split over two `\texttt` lines whose
+%   every entry spells no author — only the consistent author-order list places it (one address per author, none spelled
+%   against its place, none outside the list spelling an author: `email_owners::list_owners` `owner:order`,
+%   OXIDIZED_DESIGN_DIVERGENCES #805, #970); elimination returns early when nothing is spelled, so this repro fails
+%   without the order step (review rev107a2 finding 2; the reviewer's probe `nonesplit`).
+% witness: none (synthetic; the order step's own guard — 2305.13191's entries are elimination's)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "{xq1,zz2," / "ww3}@alpha.edu" under the two affiliations
+% engines: rust int138a: both lines glued into Cy Coe's affiliation, 0 warnings; 107a r2: xq1@ Ann, zz2@ Bo, ww3@ Cy
+% expect:  0 errors, 0 warnings; xq1@alpha.edu on Ann Able, zz2@alpha.edu on Bo Baker, ww3@alpha.edu on Cy Coe
+% status:  RED (int138a) -> GREEN (107a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\title{A Title}
+\author{%
+  Ann Able$^{1}$ \\
+  \and
+  Bo Baker$^{1}$ \\
+  \and
+  Cy Coe$^{2}$ \\
+  \and
+ {\normalfont $^1$University of Alpha} \\
+ {\normalfont $^2$Department of Physics, University of Beta} \\
+\texttt{\{xq1,zz2,}\\ \texttt{ww3\}@alpha.edu}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

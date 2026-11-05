@@ -370,7 +370,9 @@ impl NameKeys {
   /// written Joerg Mueller"; `\email{mueller-group@x.de}` on Anna Smith's own call moves to `\author{J\"org M\"uller}`
   /// as its ASCII twin does, FIDELITY_CHARTER §4 #420), a base-letter fold is not (`muller-group@` stays). Each word in
   /// its printed length class ([`SpelledWord`]); a tie between a literal and a transliterated spelling is a tie
-  /// (`mueller@` beside Hans Mueller and Jörg Müller moves to neither, user ruling 2026-11-05).
+  /// (`mueller@` beside Hans Mueller and Jörg Müller moves to neither, user ruling 2026-11-05). It expects the name's
+  /// digested tokens, as both respelling sites pass them: an undigested `Sch\"affler` reads through
+  /// [`visible_name_text`]'s accent fold as "Schaffler", whose base fold it then spells (review rev107a2 N3).
   pub(in crate::base_utilities) fn as_printed(name: &Tokens) -> NameKeys {
     let printed = name_words(&visible_name_text(name.unlist_ref()));
     let classes: Vec<usize> = printed.iter().map(|word| word.chars().count()).collect();
@@ -964,10 +966,11 @@ pub fn entry_address_owners(
 /// address outside the list spells or who hold one; `spelled_elsewhere` whether an address outside the list spells an
 /// author; `elsewhere_open` whether one outside it spells no one and is placed on no author. Each address: the author it
 /// spells (`owner:spelled`); else, the list one address per author that every spelled one agrees with and no address
-/// outside it spells an author, the author at its place (`owner:order`, OXIDIZED_DESIGN_DIVERGENCES #805 —
-/// 2305.13191's `wshui@`, `drot@`, `ballemig@`); else the only author's, where there is one (`owner:only-author`, the
+/// outside it spells an author, the author at its place (`owner:order`, OXIDIZED_DESIGN_DIVERGENCES #805 — the
+/// synthetic `email_list_split_order_only`); else the only author's, where there is one (`owner:only-author`, the
 /// charter's "the group's only author", as [`entry_address_owners`]' `sole_author` — 2311.03226); else by elimination
-/// (`owner:elimination`, batch 77p r4, [`owners_by_elimination`] — 1808.00588's `kdm@`); else `None`, the block's
+/// (`owner:elimination`, batch 77p r4, [`owners_by_elimination`] — 1808.00588's `kdm@`; 2305.13191's `wshui@`, `drot@`,
+/// `ballemig@`, 9 entries for 10 names); else `None`, the block's
 /// (`owner:block`, OD #159's block creator).
 pub(in crate::base_utilities) fn list_owners(
   name_keys: &[NameKeys],

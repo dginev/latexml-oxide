@@ -170,7 +170,8 @@ fn an_email_moves_to_the_author_it_spells_through_the_transliteration() {
 /// the author an entry spells; else the consistent author-order list — the twin `\texttt` lines (one font wrapper
 /// holding the line break, `LineText::read`) and the domain set on the line after the closing brace (`{…}` /
 /// `@alpha.edu`, `domain_goes_on`: 1902.04228), three addresses for three authors, so `xq.zz@`, second, is Bo Baker's
-/// (OD #805; 2305.13191's `wshui@`, `drot@`, `ballemig@`); else elimination — four addresses for four authors out of
+/// (OD #805; `email_list_split_order_only`, every entry unspelled, is the order step's own case — elimination never
+/// starts there, review rev107a2 finding 2); else elimination — four addresses for four authors out of
 /// their order, `qq77@` the one left beside Bo Baker, the one name left (batch 77p r4; 1808.00588's `kdm@`); else the
 /// block creator (OD #159) — three bare lines (each an entry line of its own, `entry_lines` joins them), four addresses
 /// for three authors, two unspelled. Red (int138a): the lines glued into the affiliation, 0 warnings; round 1 gave each
@@ -212,6 +213,16 @@ fn a_split_address_list_is_read_whatever_its_entries_spell() {
   assert_eq!(
     creators_with(repro!("email_list_domain_on_next_line"), (0, 0)),
     by_order
+  );
+  // (only the order step places it: no entry spells an author, so elimination never starts)
+  assert_eq!(
+    creators_with(repro!("email_list_split_order_only"), (0, 0)),
+    alpha_beta(
+      r#"<text font="typewriter">xq1@alpha.edu</text>"#,
+      r#"<text font="typewriter">zz2@alpha.edu</text>"#,
+      "Bo Baker",
+      r#"<text font="typewriter">ww3@alpha.edu</text>"#,
+    )
   );
   let author = |before: &str, name: &str, institution: &str, address: &str| {
     format!(

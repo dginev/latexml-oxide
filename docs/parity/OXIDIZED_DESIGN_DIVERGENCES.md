@@ -31439,8 +31439,12 @@ the tail an e-mail `xq.zz,cy.coe}@x`), those contacts are joined onto the head's
 of addresses alone (`join_split_address_contacts`). Its addresses (`LINE_LIST`) are placed over every author as the
 author block's reader places the list on one line, FIDELITY_CHARTER §4's order (`email_owners::list_owners`): the
 author an entry spells; else the consistent author-order list — one address per author, every spelled one at its
-author's place, no address outside the list spelling an author (#805; 2305.13191's `wshui@`, `drot@`, `ballemig@`);
-else the group's only author (the charter's step, as #966's chain has it: 2311.03226); else elimination (77p r4, `owners_by_elimination`; 1808.00588's `kdm@` to Klaus McDonald-Maier); else the block
+author's place, no address outside the list spelling an author (#805; synthetic `email_list_split_order_only`: three
+unspelled entries under three authors — stricter than the observer, which counts only the block's own addresses: it
+can only miss a placement, never pick a wrong owner, review rev107a2); else the group's only author (the charter's step,
+as #966's chain has it: 2311.03226); else elimination (77p r4, `owners_by_elimination`; 1808.00588's `kdm@` to Klaus
+McDonald-Maier; 2305.13191's `wshui@`, `drot@`, `ballemig@` — 9 entries for 10 names, as many left as names left);
+else the block
 creator (#159; the charter as amended 2026-11-05). A line's mark still wins (#966, ruling R1). The `@` after a closing
 brace opens a domain only when the word after it holds a dot (`opens_with_domain`: `lib\{core\}` / `@alpha\_lab on
 Twitter` is no list). A split list the step declines (a tag after it, a line break at depth 0 inside the same font
@@ -31453,7 +31457,11 @@ after the writer). A list after a depth-0 line break inside one font wrapper sta
 `$^*$` legend read as a nameless creator beside unspelled list entries
 (`email_list_unspelled_entries_legend_becomes_creator_red.tex`) is unchanged.
 
-**Reach.** A/B `pop107a.tsv` vs int138a (1,404 converted: the 855 dev20k/dev3 papers whose creators' names hold ä ö ü
+**Reach (round 2, final).** The same A/B vs int138a: 23 papers changed their frontmatter, all better — round 1's 20
+plus three e-mails moved by the transliteration ruling (1502.02658 `akuepper@` to Andreas H.W. Küpper, astro-ph0611772
+`cthoene@` to Christina C. Thöne, hep-th9710082 `c.koehl@` to C Köhl); vs round 1, 5 changed (those three, 2305.13191
+and 1808.00588 placed by the chain above), none worse; dropping a literal-print tie-break (user 2026-11-05: a tie)
+changed none. **Round 1** (the record): A/B `pop107a.tsv` vs int138a (1,404 converted: the 855 dev20k/dev3 papers whose creators' names hold ä ö ü
 ß å ø æ and an e-mail, the 51 with `}@` in an affiliation, a 500 control from `popint125a_s10k`): 20 papers changed
 their frontmatter, all better — 14 e-mails now on the author they spell through the transliteration (from a nameless
 block creator or a coauthor: 1412.5014, 1604.03736, 1703.09356, 1810.12251, 1902.06839, 2006.04121, 2306.01584,
