@@ -1,0 +1,15 @@
+% RED (review rev106c2 S2, synthetic): 106c r2's "for X" rule reads a lone acronym as a group — "for ESA", "for
+% IBM" become collaboration contacts (collaborations.rs speaks_for_after_notes); a company or agency is no collaboration
+% (int135e keeps them in the personname). No text lost, the role wrong. "for the H.E.S.S. Collaboration" and "for the
+% Pierre Auger Collaboration" stay contacts; "for The Boeing Company" stays the name's. OD #967.
+% witness: none (synthetic)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape)
+% engines: rust int135e = the remarks in their personnames; rust 106c r2 = for ESA, for IBM collaboration contacts
+% expect:  a lone acronym stays the name's unless a team word names a group
+\documentclass{article}
+\title{A Title}
+\author{Ann Able$^{1}$ for The Boeing Company \and Bob Baker$^{2}$ on behalf of Ed Eve and Fay Fox \and Cy Coe$^{3}$ for ESA \and Di Dee$^{4}$ for the H.E.S.S. Collaboration \and Ed Eve$^{5}$ for the Pierre Auger Collaboration \and Fay Fox$^{6}$ for IBM and NASA}
+\begin{document}
+\maketitle
+Text.
+\end{document}

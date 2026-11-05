@@ -31117,19 +31117,28 @@ token bodies, now read first), the one call every author route makes:
 - **A remark after the notes** (`name_and_remark`, `speaks_for_after_notes`): after a name carrying a note or mark
   (`annotated`), "for" / "on behalf of" and at most six words naming a group — acronyms or slashed names (`CAPP/IBS`,
   `CMS`) or a team's word, "the"/"and"/"of" between them; no digit, no address — is the author's collaboration
-  contact, as a collaboration's remark there is. A funding line, a company or a person (`for NSF Grant 123`, `for ACME
-  Corp`, `on behalf of Ed Eve`) stays the name's (review rev106c).
+  contact, as a collaboration's remark there is. A funding line, a company named in words or a person (`for NSF Grant 123`,
+  `for ACME Corp`, `on behalf of Ed Eve`) stays the name's (review rev106c); a lone acronym is read as a group — `for
+  IBM`, `for ESA` cannot be told from `for CMS` by their words (RED `collab_for_lone_acronym_is_no_group_red.tex`,
+  review rev106c2 S2: a contact of the wrong role, no text lost).
 - **The observer's reading** (resolver/lines.rs, `is_membership_part`): a grade, or the pieces the line's commas cut it
   into (`\textit{Senior Member}, \textit{IEEE}`), after a name's comma is that name's `membership` item, no part of
   the name, so the writer's re-part finds each reading name in today's names (vgtc's `\author{Stephen Kasica; Charles
   Berret; and Tamara Munzner, \textit{Senior Member}, \textit{IEEE}}`, 2009.02373: with the grade still in the
   reading's name the re-part declined and the `;`-joined names stayed one creator). The writer gives a grade back to
   its name (`name:qualifier`, as before) where today's holds no contact of its role and text (writer/mod.rs
-  `give_back_grades`), so the reading leaves a grade out only where `\lx@add@author` took it out — never out of a
+  `give_back_grades`), so the reading leaves a grade out only where `\lx@add@author` took it out or today's holds the
+  same grade as a contact — never out of a
   macro's text (`\IEEEauthorblockN{\AuthorOne,~\AuthorTwo,~…}`, each `\AuthorN` "Name, {\em{Grade, IEEE}}",
   1510.03162) nor out of a membership the author filled with the next name (`\IEEEmembership{Member,~IEEE, Hua~Wei,
   Member,~IEEE}`, 2507.19818). A grade the re-part had nothing to write from, or two authors' alike today's held once,
-  declined it and left the line one creator (the bundle A/B int136a vs int135e).
+  declined it and left the line one creator (the bundle A/B int136a vs int135e). **RED (review rev106c2 S1,
+  synthetic):** the give-back decides document-wide — a contact of that grade on any author (a binding-made
+  `\IEEEmembership`) keeps another author's identical grade out of its name, and the merge returns:
+  `grade_given_back_per_creator_red.tex` (3 → 2 creators, silently), `grade_macro_names_and_membership_one_block_red.tex`
+  (3 → 1, with an Error), `grade_macro_block_beside_written_grade_red.tex` (3 → 2, with an Error; r1 too). The fix
+  decides per creator, matching today's creator by name; no real paper found (the grade-macro papers 1510.03162,
+  1803.08650, 1412.0349, 1809.06699, 1406.1340 are as on int135e).
 - A content of fewer than three tokens is no name line to look into (`name_line_span`; an author line opened by layout,
   `\vspace{-2em}\hspace{-25pt}…`, 2002.03043, 1307.6590, panicked the first build).
 

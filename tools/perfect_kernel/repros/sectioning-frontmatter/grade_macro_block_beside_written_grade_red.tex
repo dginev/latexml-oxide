@@ -1,0 +1,18 @@
+% RED (review rev106c2 S1, synthetic): an IEEE conference title page with one block's written grade and a second
+% block of grade-printing macros — the document-wide give-back merges the second block's two names (also on r1).
+% OD #967.
+% witness: none (synthetic)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape)
+% engines: rust int135e = 3 creators; rust 106c r1/r2 = 2 creators + Error:frontmatter:merged_creators
+% expect:  3 creators
+\documentclass[conference]{IEEEtran}
+\newcommand{\AuthorOne}{Ann~Able, {\em{Member, IEEE}}}
+\newcommand{\AuthorTwo}{Bob~Baker, {\em{Fellow, IEEE}}}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Dan~Dee, Member, IEEE}\IEEEauthorblockA{Univ X}
+\and
+\IEEEauthorblockN{\AuthorOne,~\AuthorTwo}\IEEEauthorblockA{Univ Y}}
+\maketitle
+Text.
+\end{document}

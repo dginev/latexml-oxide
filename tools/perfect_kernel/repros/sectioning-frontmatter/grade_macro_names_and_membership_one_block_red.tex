@@ -1,0 +1,16 @@
+% RED (review rev106c2 S1, synthetic): macro-printed names with grades and a trailing \IEEEmembership in one
+% \IEEEauthorblockN — the document-wide give-back (writer/mod.rs give_back_grades) leaves the line one creator
+% (Error:frontmatter:merged_creators). OD #967.
+% witness: none (synthetic; the 1510.03162 shape plus a third name with \IEEEmembership)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape)
+% engines: rust int135e = 3 creators; rust 106c r2 = 1 creator + Error
+% expect:  3 creators
+\documentclass[journal]{IEEEtran}
+\newcommand{\AuthorOne}{Ann~Able, {\em{Member, IEEE}}}
+\newcommand{\AuthorTwo}{Bob~Baker, {\em{Fellow, IEEE}}}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{\AuthorOne,~\AuthorTwo,~and~Cy~Coe,~\IEEEmembership{Member,~IEEE}}}
+\maketitle
+Text.
+\end{document}
