@@ -1693,7 +1693,13 @@ pub(in crate::base_utilities) fn address_line_cut(
       address_start,
     });
   }
-  // (words before: only behind a label, and the label at a list's or a sentence's boundary)
+  // (words before: only behind a label, and the label at a list's or a sentence's boundary — never inside a bracket the
+  // words open and the cut's tail closes: `(Fax: +31-20/44-47999, E-mail: stefan@nat.vu.nl)` stays as printed, its
+  // bracket whole (physics0308076, bundle int134a `fm_checks.py` check 7), as on int133a)
+  let opens = |open: char, close: char| rest.matches(open).count() > rest.matches(close).count();
+  if opens('(', ')') || opens('[', ']') {
+    return None;
+  }
   let bounded =
     (run.label.is_some() && label_start == head.len()) || rest.ends_with(['.', ';', ',', ')']);
   (label.is_some() && bounded).then_some(AddressLineCut {

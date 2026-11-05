@@ -1230,4 +1230,13 @@ fn an_address_line_cut_reads_the_label_as_printed() {
   );
   assert_eq!(cut("Univ A, Town, see data@a.org for data", false), None);
   assert_eq!(cut("ann.able@a.edu (Ann), bbaker@a.edu (Bob)", false), None);
+  // (a cut that would leave the words before it an open bracket its tail closes declines — the line stays as printed:
+  // `(Fax: +31-20/44-47999, E-mail: stefan@nat.vu.nl)`, physics0308076, bundle int134a fm_checks check 7)
+  assert_eq!(
+    cut("(Fax: +31-20/44-47999, E-mail: stefan@nat.vu.nl)", false),
+    None
+  );
+  assert_eq!(cut("Univ A [Fax: 12, E-mail: a@x.org]", false), None);
+  // (a balanced bracket before the label does not)
+  assert!(cut("Univ A (Dept B), E-mail: a@x.org", false).is_some());
 }
