@@ -1,0 +1,19 @@
+% IEEEtran's `\IEEEauthorblockA{Army Lab, Town\\}` followed by `\{dan.dee, eve.eng\}.civ@x.mil\\`: the group's parts
+% share the tail after the brace (`.civ@x.mil`), each written out (dan.dee.civ@x.mil), so the line is a line of
+% addresses and each its spelled author's e-mail, not an affiliation of the last name (107c).
+% witness: 1908.06816 (`\textsuperscript{}\{fikadu.t.dagefu, …\}.civ@mail.mil`)
+% oracle:  pdflatex 0 errors: "Dan Dee, Eve Eng", "Army Lab, Town", "{dan.dee, eve.eng}.civ@x.mil"
+% engines: rust int139a0 = the list an affiliation of Eve Eng
+% expect:  0 errors, 0 warnings; Dee: Army Lab, Town + dan.dee.civ@x.mil; Eng: Army Lab, Town + eve.eng.civ@x.mil
+% status:  RED (int139a0) -> GREEN (107c)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Dan Dee, Eve Eng}
+\IEEEauthorblockA{Army Lab, Town\\}
+\textsuperscript{}\{dan.dee, eve.eng\}.civ@x.mil\\
+}
+\maketitle
+Text.
+\end{document}

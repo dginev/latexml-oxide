@@ -7,7 +7,7 @@
 % engines: rust int126b: the old reader every author "1 Univ A, 2 Univ B; ann@a.edu", the observer's writer re-cut it
 %   (declining the witnesses'), Bob's entry keeping the address; perl: the store raw, OmniBus
 % expect:  0 errors, 0 warnings; Ann "1 Univ A" and the e-mail, Bob "2 Univ B", Cat "1 Univ A"; the writer off, the
-%   entries cut, the address in Bob's
+%   entries cut, the address in Bob's (since 107c the flush takes it out there too: as written)
 % status:  RED (int126b) -> GREEN (99a) — perfect_kernel_batch99a::a_raw_store_is_cut_at_its_marks
 % preload: ar5iv.sty
 \documentclass{article}

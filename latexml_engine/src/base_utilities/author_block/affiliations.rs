@@ -511,6 +511,8 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
   };
   let mut kept: Vec<(Vec<Token>, Vec<Token>)> = Vec::new();
   let mut address_lines: Vec<Tokens> = Vec::new();
+  // (for each address line, whether no line the entry keeps prints before it)
+  let mut leading: Vec<bool> = Vec::new();
   let mut first = true;
   // (whether the entry prints anything but addresses, its mark aside)
   let mut prints_else = false;
@@ -525,12 +527,14 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
     {
       kept.push((delimiter, mark));
       address_lines.push(rest);
+      leading.push(false);
       first = false;
       continue;
     }
     // (a line a mark leads is no address line: its mark is no letter of an address, `$^2$bob@y.org`)
     if printed && author_mark_position(&line).is_none() && addresses_of(&line).is_some() {
       address_lines.push(line);
+      leading.push(!prints_else);
       first = false;
       continue;
     }
@@ -578,7 +582,19 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
   // (each e-mail the Kind step made says so, `ENTRY_KINDED`: an e-mail command the author wrote inside the entry is
   // placed by its own call where it holds one address, `insert::link_entry_addresses`)
   let kinded = mouth::tokenize_internal(TeXString::assembled(s!("{ENTRY_KINDED}=true"))).unlist();
-  for line in address_lines {
+  // (a line printed before every line the entry keeps, its e-mails placed before the entry: user ruling R8,
+  // `\IEEEauthorblockA{\href{mailto:ann@a.org}{ann@a.org}\\ \url{https://orcid.org/…}\\ …}`, 2206.10577 — review
+  // rev107c N1, `insert::LINE_FIRST`)
+  let kinded_first = mouth::tokenize_internal(TeXString::assembled(s!(
+    "{ENTRY_KINDED}=true,{LINE_FIRST}=true"
+  )))
+  .unlist();
+  for (line, leading) in address_lines.into_iter().zip(leading) {
+    let kinded = if leading && prints_else {
+      &kinded_first
+    } else {
+      &kinded
+    };
     // (the class's name before the line's own label where both print: aa's `\mail{e-mail: x}`, "Correspondence to
     // e-mail:", 0805.1001; REVTeX's `\altaffiliation[Authors for Correspondence: ]{Email: …}`, 2208.10784)
     let (label, rest) = split_email_label(&line);
@@ -606,7 +622,7 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
       },
       _ => email_line_calls(line, AddressPlacement::Inner)?,
     };
-    entry.extend(optioned_email_calls(calls, &kinded));
+    entry.extend(optioned_email_calls(calls, kinded));
   }
   for (label, line) in footnotes {
     let calls = email_line_calls(line, AddressPlacement::Inner)?;

@@ -1,0 +1,22 @@
+% A braced group whose addresses end in what follows the brace: `{\tt \{aable@link., bbaker@link., ccole@\}a.edu.cn}`
+% (each part ends in a dot or an `@`, and the domain after the brace goes on with no dot): each written out
+% (aable@link.a.edu.cn, ccole@a.edu.cn), so the line leaves the affiliation and each address is its spelled author's
+% e-mail (107c).
+% witness: 2108.00873 (`\{junwei@link., …, lizhen@\}cuhk.edu.cn`), 2605.01350 (`\{…@nlp.,okazaki@\}comp.isct.ac.jp,`),
+%          2602.07769 (`{a@mails., b@}tsinghua.edu.cn`, OD #966's fail-safe)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker1 Cat Cole2", "1Univ A 2Univ C",
+%          "{aable@link., bbaker@link., ccole@}a.edu.cn"
+% engines: rust int139a0 = each line glued into the affiliation before it
+% expect:  0 errors, 0 warnings; each author their own e-mail; Able, Baker Univ A; Cole Univ C
+% status:  RED (int139a0) -> GREEN (107c)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^1$ \quad Bob Baker$^1$ \quad Cat Cole$^2$\\
+$^1$Univ A \quad $^2$Univ C\\
+{\tt\small \{aable@link., bbaker@link., ccole@\}a.edu.cn}}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

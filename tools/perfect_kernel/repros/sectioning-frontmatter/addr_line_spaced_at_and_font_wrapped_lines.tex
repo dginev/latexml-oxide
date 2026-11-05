@@ -1,0 +1,26 @@
+% An article author block whose lines a font declaration wraps together, `\author{… \\ \scriptsize{$^1$Univ A, Town}
+% \\ \scriptsize{\{aable, bbaker\} @ a.edu} \\ \scriptsize{$^2$Univ C, City} \\ \scriptsize{E-mail: \texttt{ccole@c.edu}}}`
+% (`\scriptsize` reaches past its braces): each address line leaves the
+% affiliation it is glued to (OD #966's cut, the lines of a font wrapper: 107c), the list spaced round its `@` read as
+% `{aable, bbaker}@a.edu` is.
+% witness: 2104.11106 (`\{a, …\} @ know-center.at` in a wrapper), 1707.04775 (`{\tt \{ a, b \} @ asu.edu}`),
+%          2603.02131 (`\scriptsize{…}` lines, its last `$^\ast$~Correspondence: \texttt{a} and \texttt{b}`)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker1, Cat Cole2∗", "1Univ A, Town", "{aable, bbaker} @ a.edu",
+%          "2Univ C, City", "E-mail: ccole@c.edu"
+% engines: rust int139a0 = each address line glued into the affiliation before it
+% expect:  0 errors, 0 warnings; Able, Baker: Univ A, Town + their own e-mail; Cole: Univ C, City + ccole@c.edu,
+%          named "E-mail: "
+% status:  RED (int139a0) -> GREEN (107c)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^1$, Cat Cole$^{2}$\\
+\scriptsize{$^1$Univ A, Town}\\
+\scriptsize{\{aable, bbaker\} @ a.edu}\\
+\scriptsize{$^2$Univ C, City}\\
+\scriptsize{E-mail: \texttt{ccole@c.edu}}}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

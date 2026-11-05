@@ -1,0 +1,23 @@
+% A dedication set as the last lines of an article author block, `\centerline{This work is dedicated to Professor C.
+% Dee}\\ \centerline{on the occasion of his birthday}`: it is the paper's dedication (a `pubnote` of role dedication,
+% as a class's `\dedication` makes one), once, never an affiliation of the last author (107c).
+% witness: 0910.1386 (`\centerline{This work is dedicated to Professor Roger Temam}\\ \centerline{on the occasion of his
+%          seventieth birthday}`)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker2", "1Univ A", "2Univ B", "This work is dedicated to Professor C. Dee",
+%          "on the occasion of his birthday"
+% engines: rust int139a0 = the dedication an affiliation of Bob Baker
+% expect:  0 errors, 0 warnings; Able Univ A, Baker Univ B; a dedication pubnote with both lines
+% status:  RED (int139a0) -> GREEN (107c)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able${}^{1}$ \quad Bob Baker${}^{2}$\\
+${}^1$ Univ A\\
+${}^2$ Univ B\\
+\mbox{ }\\
+\centerline{This work is dedicated to Professor C. Dee}\\ \centerline{on the occasion of his birthday}}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

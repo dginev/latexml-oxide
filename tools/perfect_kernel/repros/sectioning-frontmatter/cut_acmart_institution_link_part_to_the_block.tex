@@ -6,6 +6,7 @@
 % oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1, Bob Baker2 / 1Univ A    2Univ B / X / Project page: example.org"
 % engines: rust int126b: both authors the whole call; 99a r1: Bob alone given "X" and the page
 % expect:  0 errors, 0 warnings; Ann "1Univ A, X", Bob "2Univ B, X", the project page once on the block
+%          (a url contact named "Project page: " since 107c)
 % status:  RED (99a r1) -> GREEN (99a r2) — perfect_kernel_batch99a::an_institution_is_cut_at_its_marks
 % preload: ar5iv.sty
 \documentclass[sigconf]{acmart}

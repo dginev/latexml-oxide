@@ -77,7 +77,13 @@ fn thanks_kind(text: &str, roles: bool) -> &'static str {
   // review rev94a r2 S1)
   } else if (t.contains("equal") && t.contains("contribut"))
     || equal_share(&t)
-    || (roles && (project_role(&t) || opens_with_work_done(&t)))
+    || (roles && {
+      // (the role read in the words the note prints, its caller's control words and math out: the frontmatter
+      // observer's writer reads a legend's untexed tokens, `\textsuperscript{$\star$}Work performed during …`,
+      // 2503.04130: 107c)
+      let printed = printed_words(&t);
+      project_role(&printed) || opens_with_work_done(&printed)
+    })
   {
     "contribution"
   } else if t
@@ -107,6 +113,35 @@ pub(in crate::base_utilities) fn opens_with_deceased(text: &str) -> bool {
   })
 }
 
+/// Whether a line's text opens a dedication, the marks before it aside (`insert::kind_dedication_lines`, 107c): "Dedicated
+/// to …", "This work (paper, article, thesis, volume) is dedicated to …", "To the memory of …", "In memory of …". Read
+/// by the frontmatter observer too: a dedication behind a name's symbol is its carriers' legend
+/// (`resolver::is_legend_text`, review rev107c S1).
+pub(in crate::base_utilities) fn opens_a_dedication(text: &str) -> bool {
+  let words: Vec<String> = text
+    .trim_start_matches(|c: char| !c.is_alphabetic())
+    .split(|c: char| !c.is_alphanumeric())
+    .filter(|w| !w.is_empty())
+    .map(str::to_lowercase)
+    .collect();
+  let words: Vec<&str> = words.iter().map(String::as_str).collect();
+  matches!(
+    words.as_slice(),
+    ["dedicated", "to", _, ..]
+      | [
+        "this",
+        "work" | "paper" | "article" | "thesis" | "volume" | "note",
+        "is",
+        "dedicated",
+        "to",
+        _,
+        ..
+      ]
+      | ["to", "the", "memory", "of", _, ..]
+      | ["in", "memory", "of", _, ..]
+  )
+}
+
 /// Whether a lowercased note says an equal share of advising: "equal" or "equally" next to a word of advising,
 /// supervising or mentoring, either side ("equal advising", "supervised equally") — [`classify_thanks`].
 fn equal_share(text: &str) -> bool {
@@ -134,9 +169,11 @@ fn note_words(text: &str) -> Vec<&str> {
 }
 
 /// Whether a lowercased note names an author's role in the project, as a phrase of whole words ([`classify_thanks`]):
-/// "project lead" (or "leader", "leads"), "joint first author(s)", "co-first author(s)", "core contribution" or "core
-/// contributor(s)", "senior author(s)" or "senior authorship" ("these authors share senior authorship", 2503.10710) — not
-/// "Project Leadership Institute", nor "Core Facility".
+/// "project lead" (or "leader", "leads"), "joint first author(s)", "co-first author(s)", "joint co-author(s)" and "joint
+/// senior co-author(s)" (2403.05680: 107c), "core contribution" or "core contributor(s)", "senior author(s)" or "senior
+/// authorship" ("these authors share senior authorship", 2503.10710) — not "Project Leadership Institute", nor "Core
+/// Facility" — and a note that is "first author(s)" and nothing else (`\textsuperscript{*}First author`, 2609.03429:
+/// 107c; "The first author is supported by …" is funding).
 fn project_role(text: &str) -> bool {
   let words = note_words(text);
   let author = |w: &str| w == "author" || w == "authors";
@@ -147,6 +184,13 @@ fn project_role(text: &str) -> bool {
   }) || words
     .windows(3)
     .any(|three| matches!(three[0], "joint" | "co") && three[1] == "first" && author(three[2]))
+    || words
+      .windows(3)
+      .any(|three| three[0] == "joint" && three[1] == "co" && author(three[2]))
+    || words
+      .windows(4)
+      .any(|four| four[0] == "joint" && four[1] == "senior" && four[2] == "co" && author(four[3]))
+    || matches!(words.as_slice(), [first, who] if *first == "first" && author(who))
 }
 
 /// Whether `text` reads as a contribution by an author's part in the work alone ([`project_role`],
@@ -156,13 +200,14 @@ pub(in crate::base_utilities) fn role_contribution(text: &str) -> bool {
 }
 
 /// Whether a lowercased note opens with the circumstances of the author's work, behind any mark: "work done during …",
-/// "work done while …", "work was done during …", "work done as an intern" ([`classify_thanks`]) — the opening words
-/// only, as [`opens_with_deceased`] reads its word: "Facebook (work done while at JHU/APL)" names the institution
-/// first (1702.02684).
+/// "work done while …", "work was done during …", "work done as an intern", "work performed during …" (2503.04130: 107c)
+/// ([`classify_thanks`]) — the opening words only, as [`opens_with_deceased`] reads its word: "Facebook (work done while
+/// at JHU/APL)" names the institution first (1702.02684).
 fn opens_with_work_done(text: &str) -> bool {
   let words = note_words(text);
   let rest = match words.as_slice() {
-    ["work", "was", "done", rest @ ..] | ["work", "done", rest @ ..] => rest,
+    ["work", "was", "done" | "performed", rest @ ..]
+    | ["work", "done" | "performed", rest @ ..] => rest,
     _ => return false,
   };
   matches!(rest.first(), Some(&("during" | "while" | "as")))

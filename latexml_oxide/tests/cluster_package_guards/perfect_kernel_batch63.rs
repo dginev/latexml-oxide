@@ -2763,8 +2763,10 @@ fn author_email_underscore_kept() {
   );
 }
 
-/// 63m: a bare word before an address is no local part (`Berlin, Germany, foo@bar.de` invents no address); the line
-/// is the names' affiliation. Repro sectioning-frontmatter/author_place_before_address_is_affiliation.
+/// 63m: a bare word before an address is no local part (`Berlin, Germany, foo@bar.de` invents no `germany@bar.de`);
+/// the line is the names' affiliation, its unlabelled tail address (after the comma and a space) the block creator's
+/// e-mail, spelling no one (107c, OD #966 amended; was: the address inside the affiliation of both). Repro
+/// sectioning-frontmatter/author_place_before_address_is_affiliation.
 #[test]
 fn author_place_before_address_is_affiliation() {
   assert_creators(
@@ -2772,8 +2774,9 @@ fn author_place_before_address_is_affiliation() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_place_before_address_is_affiliation.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Berlin, Germany, foo@bar.de</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Berlin, Germany, foo@bar.de</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Berlin, Germany</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Berlin, Germany</contact></creator>",
+      "<creator role=\"author\"><contact name=\"Email:\u{a0}\" role=\"email\">foo@bar.de</contact></creator>",
     ],
   );
 }

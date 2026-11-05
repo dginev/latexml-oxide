@@ -429,7 +429,8 @@ fn llncs_corresponding_author_takes_the_left_address() {
 /// an `Email:` label before it the contact's name (0712.2737), `\href{mailto:…}{…}` its spelled owner's (2408.03209,
 /// s30); 1307.8067's `\urldef`'d `\mailsa` read as the text it prints. A line of the shared institute the reader cannot
 /// read is the block's as written, an affiliation; the institute's own first line holding one keeps the whole
-/// institute at the block (1706.02124; int114a's placement). Under `\inst{1}` marks the marks decide the institute's
+/// institute at the block (1706.02124; int114a's placement; since 107c a brace list on it is read, each address its
+/// speller's, and a bracketed list is read as the braced one). Under `\inst{1}` marks the marks decide the institute's
 /// authors: a line the reader cannot read, first or later, stays in it, as written, its picked authors' (int114a's
 /// placement; the r3 re-review's n31-n33, the r4 re-review's q25). Red (85b r2): the address text in every author's
 /// affiliation; (85b r3) the picked first line at the block; (85b r4) the picked later line at the block. Since 95c (OD
@@ -467,23 +468,33 @@ fn llncs_address_lines_are_each_owners() {
     &["Jorge A. Navas", institute, "email=navas@comp.nus.edu.sg"],
     &["Andrew E. Santosa", institute],
   ]);
-  let unread = tex.replace(line, r" {\tt [joxan, navas]@comp.nus.edu.sg} \\");
+  // (a bracketed list is read as the braced one since 107c — each address its speller's, OD #966 amended)
+  let bracketed = tex.replace(line, r" {\tt [joxan, navas]@comp.nus.edu.sg} \\");
+  assert_creators(&bracketed, &[
+    &["Joxan Jaffar", institute, "email=joxan@comp.nus.edu.sg"],
+    &["Jorge A. Navas", institute, "email=navas@comp.nus.edu.sg"],
+    &["Andrew E. Santosa", institute],
+  ]);
+  // (a list the reader does not part, `(joxan, navas)@…`: the line the block's as written)
+  let unread = tex.replace(line, r" {\tt (joxan, navas)@comp.nus.edu.sg} \\");
   assert_creators(&unread, &[
     &["Joxan Jaffar", institute],
     &["Jorge A. Navas", institute],
     &["Andrew E. Santosa", institute],
-    &["affiliation=[joxan, navas]@comp.nus.edu.sg"],
+    &["affiliation=(joxan, navas)@comp.nus.edu.sg"],
   ]);
   let first = tex.replace(
     &format!("National University of Singapore\\\\\n{line}"),
     r"National University of Singapore {\tt \{joxan,navas,andrews\}@comp.nus.edu.sg}",
   );
   assert_ne!(first, tex);
+  // (the first line's brace list is read since 107c — a printed brace's list is its own boundary, OD #966 amended —, each
+  // address its speller's; the institute stays the block's, as before)
   assert_creators(&first, &[
-    &["Joxan Jaffar"],
-    &["Jorge A. Navas"],
-    &["Andrew E. Santosa"],
-    &["affiliation=National University of Singapore {joxan,navas,andrews}@comp.nus.edu.sg"],
+    &["Joxan Jaffar", "email=joxan@comp.nus.edu.sg"],
+    &["Jorge A. Navas", "email=navas@comp.nus.edu.sg"],
+    &["Andrew E. Santosa", "email=andrews@comp.nus.edu.sg"],
+    &["affiliation=National University of Singapore"],
   ]);
   // (the same first line under `\inst{1}` on every name: the picked institute stays its authors', as written, the marks
   // answered — int114a's placement; the r3 re-review's n31-n33, where 85b r3 sent it to the block and showed the marks)
@@ -503,10 +514,22 @@ fn llncs_address_lines_are_each_owners() {
     r"\author{Joxan Jaffar\inst{1} \and Jorge A. Navas\inst{1} \and Andrew E. Santosa}",
   );
   assert_ne!(picked_later, unread);
-  let both = "affiliation=National University of Singapore [joxan, navas]@comp.nus.edu.sg";
+  let both = "affiliation=National University of Singapore (joxan, navas)@comp.nus.edu.sg";
   assert_creators(&picked_later, &[
     &["Joxan Jaffar", both],
     &["Jorge A. Navas", both],
+    &["Andrew E. Santosa"],
+  ]);
+  // (a later bracketed list under the same marks, read since 107c: each address its picked speller's, the institute its
+  // picked authors' without it — review rev107c, the `[…]` form's marks path)
+  let picked_bracketed = bracketed.replace(
+    r"\author{Joxan Jaffar \and Jorge A. Navas \and Andrew E. Santosa}",
+    r"\author{Joxan Jaffar\inst{1} \and Jorge A. Navas\inst{1} \and Andrew E. Santosa}",
+  );
+  assert_ne!(picked_bracketed, bracketed);
+  assert_creators(&picked_bracketed, &[
+    &["Joxan Jaffar", institute, "email=joxan@comp.nus.edu.sg"],
+    &["Jorge A. Navas", institute, "email=navas@comp.nus.edu.sg"],
     &["Andrew E. Santosa"],
   ]);
   // (a read unit no author owns: a template address, 2109.05583's shape — an entry's one-address `\email`, placed by

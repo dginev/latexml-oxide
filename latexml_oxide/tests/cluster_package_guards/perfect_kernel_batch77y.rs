@@ -474,7 +474,9 @@ fn unnamed_line_under_symbol_lines_stays_the_blocks() {
 /// A correspondence line under a symbol row's welded institutions (2604.02904's `Corresponding Author:
 /// \texttt{aliwazirjam@gmail.com}`) is no continuation line: the block's (the 77y review's finding 3). Was an
 /// affiliation of the names carrying the last institution's mark (77y r1); int38b the block's affiliation. Since 106a
-/// the block's e-mail contact, named by the printed label (the Kind step for an entry's address line, OD #966).
+/// the block's e-mail contact (the Kind step for an entry's address line, OD #966); since 107c r2 its label's
+/// correspondence words the block creator's note before it, the e-mail named by its role (review rev107c N4: the note
+/// goes with the address).
 #[test]
 fn correspondence_line_under_welded_lines_is_the_blocks() {
   let xml = convert_repro!("author_symbol_lines_welded_then_correspondence.tex");
@@ -499,7 +501,7 @@ fn correspondence_line_under_welded_lines_is_the_blocks() {
       )
     ),
     shared(
-      r#"<contact name="Corresponding Author: " role="email"><text font="typewriter" xml:id="id3">zq77@gmail.com</text></contact>"#
+      r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id3">Corresponding Author</note> <contact name="Email: " role="email"><text font="typewriter" xml:id="id4">zq77@gmail.com</text></contact>"#
     ),
   ]);
 }

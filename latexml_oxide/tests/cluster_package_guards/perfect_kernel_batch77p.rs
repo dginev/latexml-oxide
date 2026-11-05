@@ -1702,7 +1702,8 @@ fn labelled_list_of_linked_addresses_is_an_email_line() {
 
 /// A footnote symbol before an e-mail line's label is the line's mark (`$^*$Corresponding author: \href{mailto:…}`,
 /// the r5 re-review's residual 9, probe u23): the address Ann Able's, the name it spells. Was welded into Univ A on both
-/// names.
+/// names. Since 107c r2 the label's correspondence words are Ann's note before it, the e-mail named by its role
+/// (FIDELITY_CHARTER §4, review rev107c N4).
 #[test]
 fn symbol_led_email_label_is_an_email_line() {
   let xml = convert_repro!("author_email_row_symbol_led_label.tex");
@@ -1713,8 +1714,9 @@ fn symbol_led_email_label_is_an_email_line() {
       true,
       r#"Ann Able<sup xml:id="id1">∗</sup>"#,
       &format!(
-        "{univ_a} {}",
-        mailto_email("Corresponding author", "aable@x.edu", "aable@x.edu")
+        "{univ_a} {} {}",
+        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id2">Corresponding author</note>"#,
+        mailto_email("Email", "aable@x.edu", "aable@x.edu")
       )
     ),
     creator(false, "Bob Baker", &univ_a),

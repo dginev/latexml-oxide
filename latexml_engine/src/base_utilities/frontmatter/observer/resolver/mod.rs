@@ -1326,6 +1326,47 @@ mod tests {
     assert!(!is_one_address("https://x.org"));
   }
 
+  /// 107c: a list's other printed forms read as its braced one — local parts in square brackets before the domain
+  /// (2405.17925), a group spaced round its `@` (2104.11106, 1707.04775), pieces ending in a dot or an `@` before the
+  /// domain after the brace (2108.00873, 2605.01350), local parts sharing the tail after the brace (1908.06816) — and a
+  /// group whose joined pieces are no addresses read as none.
+  #[test]
+  fn address_runs_read_bracketed_spaced_and_joined_groups() {
+    let none = |_: &str| false;
+    let read = |text: &str| -> Vec<String> {
+      address_runs(text, &none)
+        .into_iter()
+        .flat_map(|r| r.addresses)
+        .collect()
+    };
+    assert_eq!(read("Email: [i.iudice, d.pascarella]@cira.it"), [
+      "i.iudice@cira.it",
+      "d.pascarella@cira.it"
+    ]);
+    assert_eq!(read("{aremonda, skrebs} @ know-center.at"), [
+      "aremonda@know-center.at",
+      "skrebs@know-center.at"
+    ]);
+    assert_eq!(
+      read("{junwei@link., lizhen@}cuhk.edu.cn, s.kevin.zhou@gmail.com"),
+      [
+        "junwei@link.cuhk.edu.cn",
+        "lizhen@cuhk.edu.cn",
+        "s.kevin.zhou@gmail.com"
+      ]
+    );
+    assert_eq!(read("{fikadu.t.dagefu, brian.m.sadler6}.civ@mail.mil"), [
+      "fikadu.t.dagefu.civ@mail.mil",
+      "brian.m.sadler6.civ@mail.mil"
+    ]);
+    assert_eq!(read("{xxh22@mails, huichen@mail}.tsinghua.edu.cn"), [
+      "xxh22@mails.tsinghua.edu.cn",
+      "huichen@mail.tsinghua.edu.cn"
+    ]);
+    assert!(read("{Dept A, Univ B}.civ@x.mil").is_empty());
+    assert!(read("[1] Univ A, Town").is_empty());
+  }
+
   /// Brief 95c: the address reader of an entry's printed text — each run's addresses written out, its range with the
   /// label word and parentheses, the separators a cut strands taken with it.
   #[test]

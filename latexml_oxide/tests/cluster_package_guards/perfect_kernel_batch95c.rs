@@ -495,22 +495,21 @@ fn entry_emails_are_named_by_their_label_in_print_order() {
 }
 
 /// S2, N1: an unspelled address of an entry two authors carry goes to one by place only within one run — revtex's
-/// `\affiliation{Dept X, Univ Y, ann@x.org, Phone 123, office@x.org}` gives `office@x.org` to the block (it stays in
-/// the entry), as the charter does (95c gave it to Bob Baker by place); the cut of `ann@x.org` keeps one space ("Univ Y,
-/// Phone 123"; 95c left two). Whole elements.
+/// `\affiliation{Dept X, Univ Y, ann@x.org, Phone 123, office@x.org}` gives `office@x.org` to the block, as the charter
+/// does (95c gave it to Bob Baker by place): since 107c the flush's Kind step takes it out of the entry as the block
+/// creator's e-mail (the line's tail after a comma; it had stayed in the entry); the cut of `ann@x.org` keeps one space
+/// ("Univ Y, Phone 123"; 95c left two). Whole elements.
 #[test]
 fn an_unspelled_address_is_placed_by_order_only_within_its_run() {
   let tex = repro!("revtex_affiliation_addresses_ordered_within_one_run.tex");
   let xml: &[&[&str]] = &[
     &[
       "Ann Able",
-      "affiliation=Dept X, Univ Y, Phone 123, office@x.org",
+      "affiliation=Dept X, Univ Y, Phone 123",
       "email=ann@x.org",
     ],
-    &[
-      "Bob Baker",
-      "affiliation=Dept X, Univ Y, Phone 123, office@x.org",
-    ],
+    &["Bob Baker", "affiliation=Dept X, Univ Y, Phone 123"],
+    &["email=office@x.org"],
   ];
   assert_reading(tex, Some(xml), &[
     "C Ann Able [] | line:names",
@@ -521,10 +520,11 @@ fn an_unspelled_address_is_placed_by_order_only_within_its_run() {
   ]);
   assert_eq!(default_mode_elements(tex), [
     "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" \
-     role=\"affiliation\">Dept X, Univ Y, Phone 123, office@x.org</contact><contact name=\"Email:\u{a0}\" \
+     role=\"affiliation\">Dept X, Univ Y, Phone 123</contact><contact name=\"Email:\u{a0}\" \
      role=\"email\">ann@x.org</contact></creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" \
-     role=\"affiliation\">Dept X, Univ Y, Phone 123, office@x.org</contact></creator>",
+     role=\"affiliation\">Dept X, Univ Y, Phone 123</contact></creator>",
+    "<creator role=\"author\"><contact name=\"Email:\u{a0}\" role=\"email\">office@x.org</contact></creator>",
   ]);
 }
 
