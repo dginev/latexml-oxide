@@ -1,0 +1,22 @@
+% mechanism: a remark after a name's notes naming whom the author speaks for — "for" or "on behalf of" and a few
+%   words of a name, no collaboration word (`… \thanks{\email{…}} for CAPP/IBS`) — is no part of the name: the
+%   author's collaboration contact, as a collaboration's remark there is (`name_and_remark`'s
+%   `speaks_for_after_notes`, author_block/collaborations.rs; OXIDIZED_DESIGN_DIVERGENCES #967).
+% witness: 1702.03664 (webofc: `\author{Eleni Petrakou\inst{1}\fnsep\thanks{\email{petrakou@ibs.re.kr}} for
+%   CAPP/IBS}`); census132 row 10 (NAMETAIL)
+% oracle:  pdflatex (TL 2025, the stand-in class) 0 errors: "Ann Able1,1 for CAPP/IBS", "Univ A, Korea", the footnote
+%   "1 e-mail: ann@a.edu"
+% engines: rust int134b: personname "Ann Able for CAPP/IBS"; perl: no webofc binding, the name the same
+% expect:  0 errors, 0 warnings; personname "Ann Able", her institute, e-mail and the collaboration contact "for
+%   CAPP/IBS"
+% status:  RED (int134b) -> GREEN (106c)
+% preload: ar5iv.sty
+\documentclass[epj]{webofc}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}\fnsep\thanks{\email{ann@a.edu}} for CAPP/IBS}
+\institute{Univ A, Korea}
+\abstract{A.}
+\maketitle
+Text.
+\end{document}

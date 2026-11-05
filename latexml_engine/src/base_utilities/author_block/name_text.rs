@@ -541,7 +541,16 @@ pub(in crate::base_utilities) fn is_name_qualifier(text: &str) -> bool {
   }) {
     return true;
   }
-  let words: Vec<&str> = text.split([' ', ',']).filter(|w| !w.is_empty()).collect();
+  grade_words(text, false)
+}
+
+/// Whether `text`'s words are all a membership grade's or its society's (`Senior Member, IEEE`); with `ranked`, one of
+/// them the grade's rank (`Member`, `Fellow`), so a society alone is none.
+fn grade_words(text: &str, ranked: bool) -> bool {
+  let words: Vec<&str> = text
+    .split(|c: char| c.is_whitespace() || c == ',' || c == '~')
+    .filter(|w| !w.is_empty())
+    .collect();
   let grade = |w: &&str| {
     [
       "Life",
@@ -558,6 +567,182 @@ pub(in crate::base_utilities) fn is_name_qualifier(text: &str) -> bool {
     && words
       .iter()
       .all(|w| grade(w) || NAME_GRADE_SOCIETIES.contains(w))
+    && (!ranked || words.iter().any(|w| ["Member", "Fellow"].contains(w)))
+}
+
+/// Whether `text` is a professional membership grade as an author writes it after the name and its comma: the words of
+/// one ([`grade_words`]: `Fellow, IEEE`, `Senior Member, IEEE`, `Member, OSA`), or an abbreviated grade before its
+/// society (`M.ASCE`, `A. M. ASCE`; [`NAME_GRADE_ABBREVIATIONS`]).
+pub(in crate::base_utilities) fn is_membership_grade(text: &str) -> bool {
+  let text = strip_glued_marks(text);
+  let compact: String = text.chars().filter(|c| !c.is_whitespace()).collect();
+  grade_words(text, true)
+    || NAME_GRADE_ABBREVIATIONS.iter().any(|grade| {
+      compact
+        .strip_prefix(grade)
+        .is_some_and(|society| NAME_GRADE_SOCIETIES.contains(&society))
+    })
+}
+
+/// Whether `text` is a membership grade or a part of one the names line's commas cut it into (`Senior Member`, `IEEE`
+/// of `\textit{Senior Member}, \textit{IEEE}`, 2009.02373): [`is_name_qualifier`]'s grades, no suffix, degree or "et
+/// al.". The frontmatter observer's reading leaves it out of the name before it, as `\lx@add@author` takes the grade out
+/// of the name ([`written_membership_out`]).
+pub(in crate::base_utilities) fn is_membership_part(text: &str) -> bool {
+  let text = strip_glued_marks(text);
+  let compact: String = text.chars().filter(|c| !c.is_whitespace()).collect();
+  grade_words(text, false)
+    || NAME_GRADE_ABBREVIATIONS.iter().any(|grade| {
+      compact
+        .strip_prefix(grade)
+        .is_some_and(|society| NAME_GRADE_SOCIETIES.contains(&society))
+    })
+}
+
+/// A name with the membership grade written after its comma taken out as the author's `membership` contact: `Cat
+/// Cole\textsuperscript{1}, \textit{Fellow, IEEE}` is "Cat Cole" and the contact "Fellow, IEEE" in its italics, the
+/// contact IEEEtran's `\IEEEmembership` makes of the grade it prints (ieeetran_cls.rs `\lx@IEEE@membership`;
+/// 2107.05093, 2302.11403, 2602.16174), and so are `Bob Baker, Member, OSA` and ascelike's `Matthew R. Kuhn, M.ASCE`
+/// (ascexmpl.tex:48). The grade is the text after the first comma of the name's own (outside its groups and math) after
+/// which only a grade is printed ([`is_membership_grade`]); the marks and notes written after it stay the name's, after
+/// the contact, as they print after the grade. `None` when the name ends in no such grade (`John Smith, Jr.`, `Jane
+/// Doe, MD, PhD` qualify the name).
+pub(in crate::base_utilities) fn written_membership_out(name: &[Token]) -> Option<Vec<Token>> {
+  let (mut depth, mut in_math) = (0i32, false);
+  for (c, t) in name.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      Catcode::MATH => in_math = !in_math,
+      _ => {},
+    }
+    if depth != 0 || in_math || *t != T_OTHER!(",") {
+      continue;
+    }
+    let head = &name[..c];
+    if !visible_name_text(head).chars().any(char::is_alphabetic) {
+      continue;
+    }
+    let (grade, annotations) = grade_and_annotations(&name[c + 1..]);
+    if grade.is_empty() || !is_membership_grade(&visible_name_text(&grade)) {
+      continue;
+    }
+    let mut out = head[..head
+      .iter()
+      .rposition(|t| !is_spacing(t))
+      .map_or(0, |k| k + 1)]
+      .to_vec();
+    out.extend(TokenizeInternal!(r"\lx@add@contact[role=membership]").unlist());
+    out.push(T_BEGIN!());
+    out.extend(grade);
+    out.push(T_END!());
+    out.extend(annotations);
+    return Some(out);
+  }
+  None
+}
+
+/// Where the name line a creator's content holds begins and ends: inside the block reader's `\lx@author@withsup{…}` and
+/// a command the name line is set in as its one argument (a raw IEEE class's `\IEEEauthorblockN{…}`, which the kernel's
+/// split puts round each name: icrc2009, 0907.0548, 1111.2718), each holding the whole content; the whole content
+/// otherwise.
+pub(in crate::base_utilities) fn name_line_span(v: &[Token]) -> (usize, usize) {
+  let (mut start, mut end) = (0, v.len());
+  for _ in 0..2 {
+    while end > start && v[end - 1] == T_SPACE!() {
+      end -= 1;
+    }
+    if end - start < 3 {
+      break;
+    }
+    let cs = v[start];
+    if cs.get_catcode() != Catcode::CS
+      || v[start + 1].get_catcode() != Catcode::BEGIN
+      || skip_group(&v[..end], start + 1) != end
+      || (cs != T_CS!("\\lx@author@withsup")
+        && (is_name_annotation(&cs)
+          || is_footnote_mark(&cs)
+          || is_author_mark(&cs)
+          || cs.with_str(|n| n.starts_with("\\lx@"))))
+    {
+      break;
+    }
+    start += 2;
+    end -= 1;
+  }
+  (start, end)
+}
+
+/// A creator's content as `\lx@add@author` reads it (frontmatter_fields.rs): the membership grade its name line writes
+/// after the name's comma the author's contact ([`written_membership_out`]), inside what the line is set in
+/// ([`name_line_span`]) as in a bare name.
+pub(in crate::base_utilities) fn membership_read_out(content: Tokens) -> Tokens {
+  let v = content.unlist_ref();
+  let (start, end) = name_line_span(v);
+  match written_membership_out(&v[start..end]) {
+    Some(name) => {
+      let mut out = v[..start].to_vec();
+      out.extend(name);
+      out.extend_from_slice(&v[end..]);
+      Tokens::new(out)
+    },
+    None => content,
+  }
+}
+
+/// What follows a name's comma parted into the text it prints, its spacing trimmed, and the marks and notes written in
+/// it (a note or mark command with its arguments, [`is_name_annotation`], [`is_footnote_mark`], [`is_mark_command`]; a
+/// formula, `$^{1}$`; a block reader's contact call after the name, `\lx@add@affiliation[annotate=3]{…}`: 1611.04834's
+/// `and Warren J. Gross, \emph{Senior Member, IEEE}\\ Department …`).
+fn grade_and_annotations(tail: &[Token]) -> (Vec<Token>, Vec<Token>) {
+  let kernel_call = |t: &Token| t.with_str(|s| s.starts_with("\\lx@add@"));
+  let (mut text, mut annotations) = (Vec::new(), Vec::new());
+  let mut i = 0;
+  while i < tail.len() {
+    let t = tail[i];
+    let start = i;
+    i += 1;
+    if t.get_catcode() == Catcode::MATH {
+      while i < tail.len() && tail[i].get_catcode() != Catcode::MATH {
+        i += 1;
+      }
+      i = (i + 1).min(tail.len());
+      annotations.extend_from_slice(&tail[start..i]);
+    } else if t.get_catcode() == Catcode::CS
+      && (is_name_annotation(&t) || is_footnote_mark(&t) || is_mark_command(&t) || kernel_call(&t))
+    {
+      if tail.get(i) == Some(&T_OTHER!("["))
+        && let Some(close) = tail[i..].iter().position(|u| *u == T_OTHER!("]"))
+      {
+        i += close + 1;
+      }
+      if kernel_call(&t) {
+        while tail
+          .get(i)
+          .is_some_and(|u| u.get_catcode() == Catcode::BEGIN)
+        {
+          i = skip_group(tail, i).min(tail.len());
+        }
+      } else if !is_footnote_mark(&t) {
+        i = skip_group(tail, i).min(tail.len());
+      }
+      annotations.extend_from_slice(&tail[start..i]);
+    } else if t.get_catcode() == Catcode::BEGIN {
+      i = skip_group(tail, start).min(tail.len());
+      text.extend_from_slice(&tail[start..i]);
+    } else {
+      text.push(t);
+    }
+  }
+  let from = text
+    .iter()
+    .position(|t| !is_spacing(t))
+    .unwrap_or(text.len());
+  let to = text
+    .iter()
+    .rposition(|t| !is_spacing(t))
+    .map_or(from, |k| k + 1);
+  (text[from..to].to_vec(), annotations)
 }
 
 /// The parts of an author-line text that may each be one name: split at commas, " and " and " & ", a leading "and"

@@ -1,0 +1,26 @@
+% mechanism: a collaboration remark after the name and its marks inside a raw class's name-block command
+%   (`\IEEEauthorblockN{A.B. de Able \IEEEauthorrefmark{1}\IEEEauthorrefmark{2}for the XYZ collaboration.}`) is the
+%   author's collaboration contact (`wrapped_collaboration_out` reading `name_and_remark`; OXIDIZED_DESIGN_DIVERGENCES
+%   #967).
+% witness: 1111.2718 (icrc2009: `\IEEEauthorblockN{J.K. de Jong \IEEEauthorrefmark{1}\IEEEauthorrefmark{2}for the
+%   MINOS collaboration.}`); census132 row 10 (NAMETAIL)
+% oracle:  pdflatex (TL 2025) 0 errors: "A.B. de Able 12 for the XYZ collaboration.", "1 Univ A, USA 2 now at Univ B, UK"
+% engines: rust int134b: personname "A.B. de Able for the XYZ collaboration<sup>2</sup>", one affiliation holding both
+%   lines; perl: the personname "A.B. de Able 12for the XYZ collaboration", one affiliation
+% expect:  0 errors, 0 warnings; one creator "A.B. de Able", the collaboration contact, the two affiliations its marks
+%   name
+% status:  RED (int134b) -> GREEN (106c)
+% preload: ar5iv.sty
+\documentclass{article}
+\providecommand\IEEEauthorblockN[1]{#1}
+\providecommand\IEEEauthorblockA[1]{#1}
+\providecommand\IEEEauthorrefmark[1]{\textsuperscript{#1}}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{A.B. de Able \IEEEauthorrefmark{1}\IEEEauthorrefmark{2}for the XYZ collaboration.}
+  \\
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A, USA}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}now at Univ B, UK}}
+\maketitle
+Text.
+\end{document}

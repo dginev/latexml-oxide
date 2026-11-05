@@ -21,14 +21,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   );
 
   // careful: the "name", #2, can contain much more than just the name!
-  DefMacro!(
-    "\\lx@add@creator [] {}",
-    "\\lx@add@frontmatter{ltx:creator}[role=author,#1]{\\lx@personname{\\lx@author@withinst{#2}}}"
-  );
-  DefMacro!(
-    "\\lx@add@author[]{}",
-    "\\lx@add@frontmatter{ltx:creator}[role=author,#1]{\\lx@personname{\\lx@author@withinst{#2}}}"
-  );
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #967): a membership grade the name writes after its comma (`Cat Cole,
+  // \textit{Fellow, IEEE}`, 2107.05093, 2302.11403, 2602.16174) is the author's `membership` contact, no part of the
+  // name (`membership_read_out`); and an author's whole content that is a collaboration framed as a remark
+  // (elsarticle's `\author{On behalf of the KM3NeT Consortium}`, 1201.5050) is the collaboration contact of the authors
+  // before it (`whole_name_collaboration`), no creator. Perl: both the personname's text.
+  DefMacro!("\\lx@add@creator [] {}", sub[(attr, name)] { creator_call(attr, name, false) });
+  DefMacro!("\\lx@add@author[]{}", sub[(attr, name)] { creator_call(attr, name, true) });
   // Author content is digested at `\author` time, before a class's title
   // box can define `\inst` (bfhsciposter.cls:445,476 sets it to a
   // superscript inside its title box; beamerbasetitle.sty:262
@@ -867,4 +866,35 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     Ok(Tokens::new(calls))
   });
   Ok(())
+}
+
+/// `\lx@add@author[attr]{name}` and `\lx@add@creator[attr]{name}` (Base_Utility.pool.ltxml `\lx@add@creator`): the
+/// creator `\lx@add@frontmatter{ltx:creator}[role=author,attr]{\lx@personname{\lx@author@withinst{name}}}`, its
+/// name's written membership grade taken out as its contact ([`membership_read_out`]); for `\lx@add@author`
+/// (`collaboration`), a whole content naming a framed collaboration the contact of the authors before it
+/// ([`whole_name_collaboration`]).
+fn creator_call(attr: Option<Tokens>, name: Tokens, collaboration: bool) -> Result<Tokens> {
+  if collaboration && let Some(contact) = whole_name_collaboration(&name)? {
+    return Ok(contact);
+  }
+  let (name, after) = match collaboration
+    .then(|| wrapped_collaboration_out(&name))
+    .transpose()?
+    .flatten()
+  {
+    Some((name, contact)) => (name, Some(contact)),
+    None => (name, None),
+  };
+  let name = membership_read_out(name);
+  let mut out = TokenizeInternal!(r"\lx@add@frontmatter{ltx:creator}[role=author,").unlist();
+  if let Some(attr) = attr {
+    out.extend(attr.unlist());
+  }
+  out.extend(TokenizeInternal!(r"]{\lx@personname{\lx@author@withinst{").unlist());
+  out.extend(name.unlist());
+  out.extend([T_END!(), T_END!(), T_END!()]);
+  if let Some(after) = after {
+    out.extend(after.unlist());
+  }
+  Ok(Tokens::new(out))
 }

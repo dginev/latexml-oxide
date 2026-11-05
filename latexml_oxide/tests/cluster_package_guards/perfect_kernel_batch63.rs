@@ -449,7 +449,9 @@ fn author_bare_and_line_separates_authors() {
 }
 
 /// 63e: a line opening with "and" before a name continues the names, and a written membership grade (`\emph{Member,
-/// IEEE}`) stays with the name before it (1611.04834). Repro sectioning-frontmatter/author_ieee_member_grade_is_not_a_name.
+/// IEEE}`) is no name of its own (1611.04834); since 106c (OXIDIZED_DESIGN_DIVERGENCES #967) it is the name's
+/// `membership` contact, no part of the personname, as IEEEtran's `\IEEEmembership` makes it. Repro
+/// sectioning-frontmatter/author_ieee_member_grade_is_not_a_name.
 #[test]
 fn author_ieee_member_grade_is_not_a_name() {
   assert_creators(
@@ -458,8 +460,8 @@ fn author_ieee_member_grade_is_not_a_name() {
     ),
     &[
       "<creator role=\"author\"><personname>Carlo Condo</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Electrical and Computer Engineering, McGill University</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Pascal Giard, <emph font=\"italic\" xml:id=\"id1\">Member, IEEE</emph></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Electrical and Computer Engineering, McGill University</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Warren J. Gross, <emph font=\"italic\" xml:id=\"id2\">Senior Member, IEEE</emph></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Electrical and Computer Engineering, McGill University</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Pascal Giard</personname><contact role=\"membership\"><emph font=\"italic\" xml:id=\"id1\">Member, IEEE</emph></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Electrical and Computer Engineering, McGill University</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Warren J. Gross</personname><contact role=\"membership\"><emph font=\"italic\" xml:id=\"id2\">Senior Member, IEEE</emph></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Electrical and Computer Engineering, McGill University</contact></creator>",
     ],
   );
 }

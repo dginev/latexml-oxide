@@ -960,7 +960,8 @@ After text.
 }
 
 /// An ASCE membership grade before the society after the name, glued or spaced (ascexmpl.tex:48 `Matthew R. Kuhn,
-/// M.ASCE`), qualifies the name, as `Member, IEEE` and `PhD` do: no creator of its own, and no merged-author error.
+/// M.ASCE`), is no creator of its own, and no merged-author error; since 106c (OXIDIZED_DESIGN_DIVERGENCES #967) it is
+/// the author's `membership` contact, as `Member, IEEE` is, while a degree (`Ph.D., P.E.`) still qualifies the name.
 /// Repro sectioning-frontmatter/asce_membership_grade_qualifies_the_name.
 #[test]
 fn asce_membership_grade_qualifies_the_name() {
@@ -974,9 +975,9 @@ fn asce_membership_grade_qualifies_the_name() {
       c[start..start + c[start..].find("</personname>").expect("closed")].to_string()
     })
     .collect();
-  assert_eq!(
-    names,
-    vec!["Matthew R. Kuhn, M.ASCE", "Second Author"],
+  assert_eq!(names, vec!["Matthew R. Kuhn", "Second Author"], "{xml}");
+  assert!(
+    creators(&xml)[0].contains(r#"<contact role="membership">M.ASCE</contact>"#),
     "{xml}"
   );
   let xml = convert_clean(
@@ -990,10 +991,10 @@ Text.
   assert_eq!(
     creators(&xml),
     vec![
-      r#"<creator role="author"><personname>Jane Roe, F.ASCE</personname></creator>"#,
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>John Doe, A.M.ASCE</personname></creator>",
+      r#"<creator role="author"><personname>Jane Roe</personname><contact role="membership">F.ASCE</contact></creator>"#,
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>John Doe</personname><contact role=\"membership\">A.M.ASCE</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ann Able, Ph.D., P.E.</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ann Ross, M. ASCE</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ann Ross</personname><contact role=\"membership\">M. ASCE</contact></creator>",
     ],
     "{xml}"
   );

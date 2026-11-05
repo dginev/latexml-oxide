@@ -790,6 +790,8 @@ impl Resolver {
     let mut made: Vec<usize> = Vec::new();
     // the separator before the next name, and whether a mark after a comma waits for the next name
     let mut last_sep: Option<&Event> = None;
+    // (the membership contact a grade after a name's comma made: its creator, the event, the contact)
+    let mut grade_at: Option<(usize, usize, usize)> = None;
     let mut waiting: Vec<String> = Vec::new();
     // (of them, the labels a `\footnotemark` printed: `fn_requests`)
     let mut waiting_fn: Vec<String> = Vec::new();
@@ -966,6 +968,39 @@ impl Resolver {
             && (is_name_qualifier(&event.text) || is_name_remark(&event.text)) =>
         {
           let c = *made.last().expect("a name");
+          // (but a membership grade written after the comma is the author's `membership` contact, no part of the name
+          // today's names print: `Tamara Munzner, \textit{Senior Member}, \textit{IEEE}`, 2009.02373 — as
+          // `\lx@add@author` reads it, OXIDIZED_DESIGN_DIVERGENCES #967)
+          if is_membership_part(&event.text) {
+            // (its parts the commas cut, `Senior Member` and `IEEE`, one contact)
+            match grade_at {
+              Some((owner, at, contact)) if owner == c && i <= at + 2 => {
+                let text = &mut self.out.creators[c].contacts[contact].text;
+                *text = s!("{text}, {}", event.text);
+              },
+              _ => {
+                let contact = self.out.creators[c].contacts.len();
+                self.attach(
+                  Some(c),
+                  Assoc {
+                    role:   "membership".into(),
+                    text:   event.text.clone(),
+                    label:  None,
+                    rule:   "name:membership".into(),
+                    source: Some((index, event.span)),
+                    target: None,
+                  },
+                  false,
+                );
+                grade_at = Some((c, i, contact));
+                last_sep = None;
+                continue;
+              },
+            }
+            grade_at = grade_at.map(|(owner, _, contact)| (owner, i, contact));
+            last_sep = None;
+            continue;
+          }
           let creator = &mut self.out.creators[c];
           let glue = if last_sep.is_some_and(|s| s.kind == EventKind::Sep(SepKind::Comma)) {
             ", "

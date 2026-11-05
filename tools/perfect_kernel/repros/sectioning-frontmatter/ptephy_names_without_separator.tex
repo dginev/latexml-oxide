@@ -6,9 +6,10 @@
 %          `newlogo`, TL 2025) 0 errors: "Ann Able^{1,2} Bob Baker^{1,∗} Cy Coe^2", on the next line "Di Dee^1", then
 %          "(The X Collaboration)" in bold
 % engines: rust 64h4 = 1 error (\name undefined)
-% expect:  0 errors; five creators, Ann with Univ A and Lab B, Bob with Univ A, the email and his ∗,
-%          Cy with Lab B, Di with Univ A, "(The X Collaboration)" with none
-% status:  RED (base) -> GREEN (64qa)
+% expect:  0 errors; four creators, Ann with Univ A and Lab B, Bob with Univ A, the email and his ∗,
+%          Cy with Lab B, Di with Univ A, each the collaboration contact "(The X Collaboration)" (106c, OD #967;
+%          FIDELITY_CHARTER §4 — 64qa made it a fifth creator with none)
+% status:  RED (base) -> GREEN (64qa) -> GREEN (106c)
 % preload: ar5iv.sty
 \documentclass{ptephy}
 \providecommand\collaborator[1]{\textbf{#1}\par}

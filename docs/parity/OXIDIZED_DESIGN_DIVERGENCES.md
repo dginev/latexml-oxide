@@ -15246,7 +15246,8 @@ per-class rule:
   (`{\bf Daniel Boyanovsky, Da- Shin Lee}`, hep-th9212083; 2608.16650); aastex's `\altaffilmark` written after the
   comma that follows its name stays with that name (astro-ph0302534); a generational suffix or degree (`Jr.`, `III`,
   `MD`, `PhD`) or a written membership grade (`\emph{Member, IEEE}`, the society alone only from a short list of
-  societies) rejoins the name before it with the separator written between them, instead of becoming an author — an
+  societies) rejoins the name before it with the separator written between them, instead of becoming an author (the
+  grade then the author's `membership` contact, #967) — an
   all-capitals name (`WEI LI`) stays a name. A piece of marks and notes only (`only_marks_and_notes`: spaces, a note or
   mark command with its argument, a superscript, math holding only those —
   `~\IEEEmembership{Senior Member,~IEEE,}\thanks{…}`, 1510.02728; `$^{*}$`) joins the name before it without its
@@ -31071,6 +31072,81 @@ Guards `perfect_kernel_batch106a::a_line_mark_gives_its_addresses_to_the_names_a
 `addr_line_revtex_mark_led_lines`, `addr_line_authblk_numbered_marks`),
 `::an_unanswered_line_mark_stays_printed_before_its_address` (`addr_line_authblk_unanswered_mark_shown`), and
 `::unlabelled_tagged_and_template_lines_stay` with a `Contact: forename.surname@` line, RED (round 1) → GREEN.
+
+### 967. A tail inside the personname — a membership grade written after the name's comma, a collaboration an author stands for — is the author's contact, read where every author route meets (Perl: the personname's text, or a creator of its own)
+
+**Defect** (census132 row 10, NAMETAIL; dev20k int133a: 15 papers, 22 creators, 0.119 pp per paper). Text that is no
+name stayed in `<personname>`: a membership grade written after the name's comma (`Pei-Yung Hsiao\textsuperscript{3},
+\textit{Member, IEEE}`, 2107.05093; `\IEEEauthorblockN{Massimiliano Di Ventra, {\it Fellow, IEEE}}`, 2302.11403;
+`\IEEEauthorblockN{…, and Melike Erol-Kantarci, \textit{Fellow, IEEE}}`, 2602.16174) — IEEEtran's own
+`\IEEEmembership` makes the grade the author's `membership` contact (ieeetran_cls.rs `\lx@IEEE@membership`), the
+written form did not; a collaboration inside a raw class's name-block command, which the kernel's split sets round each
+name (icrc2009's `\IEEEauthorblockN{… Monica Brigida\IEEEauthorrefmark{3}\\on behalf of the \emph{Fermi}-LAT
+Collaboration}`, 0907.0548; `\IEEEauthorblockN{J.K. de Jong \IEEEauthorrefmark{1}\IEEEauthorrefmark{2}for the MINOS
+collaboration.}`, 1111.2718), which the author line's collaboration reading (#946) does not look into; a remark after
+the name's notes naming whom the author speaks for with no collaboration word (webofc `Eleni
+Petrakou\inst{1}\fnsep\thanks{…} for CAPP/IBS`, 1702.03664); and an `\author` whose whole content is a framed
+collaboration (elsarticle's `\author{On behalf of the KM3NeT Consortium}` after its three authors, 1201.5050), a
+creator of its own.
+
+**Fix.** `\lx@add@author` and `\lx@add@creator` (frontmatter_fields.rs `creator_call`; Perl Base_Utility.pool.ltxml's
+token bodies, now read first), the one call every author route makes:
+- **A written grade** (`membership_read_out`, author_block/name_text.rs `written_membership_out`): the text after the
+  first comma of the name line's own — outside its groups and math, inside the block reader's `\lx@author@withsup{…}` and
+  a command the line is set in as its one argument (`name_line_span`) — after which only a grade prints
+  (`is_membership_grade`: grade and society words with a rank, `Member`/`Fellow`, among them — `Fellow, IEEE`, `Senior
+  Member, IEEE`, `Member, OSA` unbraced — or an abbreviated grade before its society, ascelike's `M.ASCE`) is
+  `\lx@add@contact[role=membership]{…}` in its own markup, right after the name; the marks, notes and block-reader
+  contact calls written after it (`\thanks{…}`, `\lx@add@affiliation[annotate=3]{…}`: 1611.04834) stay the name's,
+  after it, as they print. A degree or suffix (`Ph.D., P.E.`, `Jr.`) still qualifies the name; a document's own
+  `\IEEEmembership` definition keeps its meaning (63l).
+- **A framed collaboration as the whole author** (`whole_name_collaboration`, author_block/collaborations.rs): content
+  naming a collaboration framed as a remark (`Framing::Framed`: "on behalf of", "for", "representing", brackets), with no
+  note or mark of its own and authors queued before it, is the collaboration contact of every author before it that
+  carries none (`annotate=new`, as aastex's `\collaboration`, aas_support.sty.ltxml:126), no creator (FIDELITY_CHARTER
+  §4). ptephy's `\collaborator{(The X Collaboration)}` (2101.03480, 2404.08725) is now its four names' contact. An
+  unframed one alone stays a creator (`\collab{The XYZ Collaboration}`, webofc's `\and The SND Collaboration`,
+  1912.05868).
+- **A collaboration inside a name-block command** (`wrapped_collaboration_out`): a line of its own after the name's last
+  `\\` that reads as a framed collaboration line (`collaboration_line_reading`), or a remark after the name
+  (`name_and_remark`), leaves the command; its contact (`annotate=new`) follows the creator, so it covers the names of
+  the line. With the collaboration out of the last name, the observer's writer re-parts 0907.0548's names as before.
+- **A remark after the notes** (`name_and_remark`, `speaks_for_after_notes`): after a name carrying a note or mark
+  (`annotated`), "for" / "on behalf of" and at most six words opening with a capital, no address, is the author's
+  collaboration contact, as a collaboration's remark there is.
+- **The observer's reading** (resolver/lines.rs, `is_membership_part`): a grade, or the pieces the line's commas cut it
+  into (`\textit{Senior Member}, \textit{IEEE}`), after a name's comma is that name's `membership` item, no part of
+  the name, so the writer's re-part finds each reading name in today's names (vgtc's `\author{Stephen Kasica; Charles
+  Berret; and Tamara Munzner, \textit{Senior Member}, \textit{IEEE}}`, 2009.02373: with the grade still in the
+  reading's name the re-part declined and the `;`-joined names stayed one creator).
+- A content of fewer than three tokens is no name line to look into (`name_line_span`; an author line opened by layout,
+  `\vspace{-2em}\hspace{-25pt}…`, 2002.03043, 1307.6590, panicked the first build).
+
+Guards `perfect_kernel_batch106c` (8: `a_written_membership_grade_is_the_authors_contact`,
+`a_written_membership_grade_in_a_name_block_is_the_authors_contact`,
+`an_author_on_behalf_of_a_collaboration_is_the_authors_contact`,
+`a_collaboration_line_in_a_raw_name_block_is_the_names_contact`,
+`a_collaboration_remark_in_a_raw_name_block_is_the_authors_contact`,
+`a_remark_after_the_notes_naming_whom_the_author_speaks_for_is_a_contact`,
+`a_written_grade_leaves_the_readings_name_too`, `an_author_line_opened_by_layout_is_read_safely`; repros
+sectioning-frontmatter/`author_semicolon_names_written_grade_are_reparted`,
+`author_spacing_opened_name_lines_read_safely`, `author_written_membership_grade_is_a_contact`, `author_block_written_membership_grade_is_a_contact`,
+`elsarticle_author_on_behalf_of_collaboration_is_a_contact`, `author_raw_name_block_collaboration_line_is_a_contact`,
+`author_raw_name_block_collaboration_remark_is_a_contact`, class-bindings/webofc/
+`webofc_remark_after_the_notes_is_a_contact`; RED int134b, the last two RED on 106c's first build → GREEN). Updated to the new output:
+`perfect_kernel_batch63::author_ieee_member_grade_is_not_a_name` (1611.04834's grades contacts),
+`perfect_kernel_batch65a::asce_membership_grade_qualifies_the_name` (`M.ASCE`, `F.ASCE`, `A.M.ASCE`, `M. ASCE`
+contacts; `Ph.D., P.E.` kept), `perfect_kernel_batch64qa::ptephy_names_without_separator` (the collaborator a contact,
+four creators).
+
+Left (one line each): a grade inside a group round the whole name (`{\bf Ann Able, Member, IEEE}`) or with no comma
+before it (`Ann Able \textit{Fellow, IEEE}`) stays in the name; a remark inside a name-part argument or group
+(2406.15355 `\lastname{Schmier for the ALICE collaboration}`, 1206.2546) as before; `\samethanks` / `\footnotemark[n]`
+in a name keeps a mark-only `<note role="footnotemark">` (Perl the same; pairing it with the `\thanks` of its number is a
+Link step: repro `author_samethanks_mark_is_the_same_note`, 2110.07431, 2402.06922, 2502.19103); an ORCID link inside a
+math mark printing "iD" (`$^{\href{https://orcid.org/…}{\textsf{iD}},}$`, 2411.15376) and the IEEE ordinal template
+(`1\textsuperscript{st}Piotr Przymus`, 2504.03863) stay printed in the name, as #960 and the writer's ordinal reading
+(repart.rs, 2503.04159) keep them.
 
 ### 968. IEEEtran's `\IEEEauthorrefmark{n}` prints the n-th footnote symbol, keyed by its number among its kind and read as the symbol among marks of another form (Perl: no argument, its `{n}` printed as name text)
 

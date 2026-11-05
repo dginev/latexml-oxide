@@ -5,8 +5,9 @@
 % witness: ascelike/ascexmpl.
 % oracle:  pdflatex 0 errors: "Matthew R. Kuhn, M.ASCE1 / Second Author2 / ...".
 % engines: rust s149: creators "Matthew R. Kuhn", "M.ASCE"; rust 65a: "Matthew R. Kuhn, M.ASCE"; perl: one creator.
-% expect:  0 errors; two creators, "Matthew R. Kuhn, M.ASCE" and "Second Author", each with its affiliation.
-% status:  RED (base) -> GREEN (65a)
+% expect:  0 errors; two creators, "Matthew R. Kuhn" (his grade "M.ASCE" his membership contact, 106c, OD #967) and
+%   "Second Author", each with its affiliation.
+% status:  RED (base) -> GREEN (65a: "Matthew R. Kuhn, M.ASCE" one personname) -> GREEN (106c: the grade a contact)
 % preload: ar5iv.sty
 % Guard: perfect_kernel_batch65a::asce_membership_grade_qualifies_the_name.
 \documentclass{article}

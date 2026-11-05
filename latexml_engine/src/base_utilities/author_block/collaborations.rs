@@ -324,13 +324,50 @@ fn name_and_remark(piece: &Tokens) -> Option<(Tokens, Tokens)> {
     }
     let name = Tokens::new(v[..spacing_end(&v[..j])].to_vec());
     let remark = Tokens::new(v[j..].to_vec());
-    if reads_as_collaboration(&visible_name_text(remark.unlist_ref()), false)
+    let remark_text = visible_name_text(remark.unlist_ref());
+    if (reads_as_collaboration(&remark_text, false)
+      || (annotated(&v[..j]) && speaks_for_after_notes(&remark_text)))
       && reads_as_one_name(&name)
     {
       return Some(name_takes_annotations(name, remark));
     }
   }
   None
+}
+
+/// Whether a name carries a note or a mark: a note or mark command ([`is_name_annotation`], [`is_footnote_mark`],
+/// [`is_author_mark`]), a superscript or a formula.
+fn annotated(name: &[Token]) -> bool {
+  name.iter().any(|t| {
+    *t == T_SUPER!()
+      || t.get_catcode() == Catcode::MATH
+      || (t.get_catcode() == Catcode::CS
+        && (is_name_annotation(t)
+          || is_footnote_mark(t)
+          || is_author_mark(t)
+          || *t == T_CS!("\\inst")))
+  })
+}
+
+/// Whether the text after a name's notes is a remark naming whom the author speaks for, whatever it names: "for" or "on
+/// behalf of", then a few words of a name (`Eleni Petrakou\inst{1}\fnsep\thanks{…} for CAPP/IBS`, webofc, 1702.03664) —
+/// the name ended at its notes, so the remark is no part of it, a collaboration contact as a collaboration's remark is
+/// ([`name_and_remark`]). Not a phrase of more than six words, an address, or one going on in lowercase (`for
+/// discussions`).
+fn speaks_for_after_notes(text: &str) -> bool {
+  let lower = text.trim().to_lowercase();
+  let Some(rest) = ["for ", "on behalf of "]
+    .iter()
+    .find_map(|p| lower.starts_with(p).then(|| text.trim()[p.len()..].trim()))
+  else {
+    return false;
+  };
+  let words: Vec<&str> = rest.split_whitespace().collect();
+  let named = words
+    .iter()
+    .find(|w| !w.eq_ignore_ascii_case("the"))
+    .is_some_and(|w| w.chars().next().is_some_and(char::is_uppercase));
+  named && words.len() <= 6 && !rest.contains('@')
 }
 
 /// A name and its collaboration remark with the name's annotations the remark holds moved onto the name — a note
@@ -682,6 +719,93 @@ pub(in crate::base_utilities) fn collaboration_in_lines(text: Tokens, after: usi
   v.extend(text.unlist());
   v.push(T_END!());
   Tokens::new(v)
+}
+
+/// A creator's whole content that names a collaboration the authors made before it speak for, framed as a remark
+/// ([`Framing::Framed`]: "on behalf of", "for", "representing", brackets) — elsarticle's `\author{On behalf of the KM3NeT
+/// Consortium}` after its three authors (1201.5050), which pdflatex prints in the names line: the collaboration contact
+/// of every author before it that carries none (`annotate=new`, [`collaboration_contact_call`]), no creator. Not
+/// without an author before it, nor with a note or mark of its own; a collaboration named alone (`\collab{The XYZ
+/// Collaboration}`, webofc's `\and The SND Collaboration`, 1912.05868) stays a creator, as before.
+pub(in crate::base_utilities) fn whole_name_collaboration(
+  content: &Tokens,
+) -> Result<Option<Tokens>> {
+  let v = content.unlist_ref();
+  let (start, end) = name_line_span(v);
+  let inner = &v[start..end];
+  if queued_author_count() == 0
+    || inner.iter().any(|t| {
+      t.get_catcode() == Catcode::CS
+        && (is_name_annotation(t) || is_footnote_mark(t) || is_author_mark(t))
+    })
+  {
+    return Ok(None);
+  }
+  if collaboration_framing(&visible_name_text(inner), false, true) != Some(Framing::Framed) {
+    return Ok(None);
+  }
+  Ok(Some(Tokens::new(collaboration_contact_call(
+    &Tokens::new(inner.to_vec()),
+    None,
+  )?)))
+}
+
+/// The collaboration a creator's name line ends with inside the command it is set in ([`name_line_span`]), which the
+/// author line's own reading ([`collaboration_split`]) does not look into: a line of its own after the name's `\\`
+/// (`\IEEEauthorblockN{… Monica Brigida\IEEEauthorrefmark{3}\\on behalf of the \emph{Fermi}-LAT Collaboration}`,
+/// icrc2009's raw IEEE block, 0907.0548) or a remark after the name ([`name_and_remark`]: `\IEEEauthorblockN{J.K. de
+/// Jong \IEEEauthorrefmark{1}\IEEEauthorrefmark{2}for the MINOS collaboration.}`, 1111.2718). The content without it,
+/// and its contact, made after the creator: every author before it that carries none, as a collaboration after the
+/// names covers the names of their line (`annotate=new`, [`collaboration_contact_call`]). `None` for a bare name line,
+/// which the author line's reading read.
+pub(in crate::base_utilities) fn wrapped_collaboration_out(
+  content: &Tokens,
+) -> Result<Option<(Tokens, Tokens)>> {
+  let v = content.unlist_ref();
+  let (start, end) = name_line_span(v);
+  if start == 0 || (start == 2 && v[0] == T_CS!("\\lx@author@withsup")) {
+    return Ok(None);
+  }
+  let line = &v[start..end];
+  let mut depth = 0i32;
+  let breaks: Vec<usize> = (0..line.len())
+    .filter(|&k| {
+      match line[k].get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth -= 1,
+        _ => {},
+      }
+      depth == 0 && line[k] == T_CS!("\\\\")
+    })
+    .collect();
+  let split = if let [.., last] = breaks.as_slice() {
+    let mut from = last + 1;
+    if line.get(from) == Some(&T_OTHER!("*")) {
+      from += 1;
+    }
+    if line.get(from) == Some(&T_OTHER!("["))
+      && let Some(close) = line[from..].iter().position(|u| *u == T_OTHER!("]"))
+    {
+      from += close + 1;
+    }
+    let rest = Tokens::new(line[from..].to_vec());
+    let name = &line[..spacing_end(&line[..*last])];
+    (visible_name_text(name).chars().any(char::is_alphabetic)
+      && matches!(collaboration_line_reading(&rest), Some(f) if f != Framing::Unframed))
+    .then(|| (Tokens::new(name.to_vec()), rest))
+  } else {
+    name_and_remark(&Tokens::new(line.to_vec()))
+  };
+  let Some((name, remark)) = split else {
+    return Ok(None);
+  };
+  let mut out = v[..start].to_vec();
+  out.extend(name.unlist());
+  out.extend_from_slice(&v[end..]);
+  Ok(Some((
+    Tokens::new(out),
+    Tokens::new(collaboration_contact_call(&remark, None)?),
+  )))
 }
 
 /// The text a collaboration's contact holds: as written, without the layout around it (`\center`, `\vspace{0.2cm}`)

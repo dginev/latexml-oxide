@@ -306,8 +306,9 @@ fn ptephy_v1_authblk_interleaved() {
 }
 
 /// 64qa: two `\name`s with only a line break (or a commented-out comma) between them are two people, as the class
-/// prints them side by side (2210.05569, 1512.04524, 2101.03480); `\collaborator` (ptephy_v1.cls:1403) is one more
-/// (2101.03480, 2404.08725). Repro
+/// prints them side by side (2210.05569, 1512.04524, 2101.03480); `\collaborator{(The X Collaboration)}`
+/// (ptephy_v1.cls:1403; 2101.03480, 2404.08725) was one more creator until 106c, and is now the collaboration contact
+/// of the four names before it (FIDELITY_CHARTER §4, OXIDIZED_DESIGN_DIVERGENCES #967). Repro
 /// sectioning-frontmatter/ptephy_names_without_separator.
 #[test]
 fn ptephy_names_without_separator() {
@@ -315,10 +316,9 @@ fn ptephy_names_without_separator() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ptephy_names_without_separator.tex"
   ));
   assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Lab B</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id1\">∗</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">bob@example.org</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Coe</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Lab B</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Di Dee</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>(The X Collaboration)</personname>\n  </creator>"
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact role=\"collaboration\">(The X Collaboration)</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Lab B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id1\">∗</sup></personname>\n    <contact role=\"collaboration\">(The X Collaboration)</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">bob@example.org</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Coe</personname>\n    <contact role=\"collaboration\">(The X Collaboration)</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Lab B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Di Dee</personname>\n    <contact role=\"collaboration\">(The X Collaboration)</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>"
   ]);
 }
