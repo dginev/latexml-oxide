@@ -140,6 +140,10 @@ fn read_at_flush() -> Result<()> {
       })
       .collect()
   });
+  // (the blocks rehearsed in sequence share the conditionals, as TeX reads the author list in one pass — a block's run
+  // opens one the next block's closes, 2606.17718 — and the document gets them back as they were after the last:
+  // `StomachMark`)
+  let blocks_mark = StomachMark::take();
   for i in pending {
     let Some(block) = with_ledger(|ledger| match ledger.entries.get(i) {
       Some(Entry::Author(block)) => Some(block.clone()),
@@ -177,6 +181,7 @@ fn read_at_flush() -> Result<()> {
       }
     });
   }
+  blocks_mark.restore();
   // the API calls made outside the blocks' expansions: their contents rehearsed and lexed as a block's are (the
   // resolver reads an affiliation's leading marks and text, an e-mail's address, a creator's name from them)
   let calls: Vec<(usize, Tokens)> = with_ledger(|ledger| {
@@ -190,6 +195,7 @@ fn read_at_flush() -> Result<()> {
       })
       .collect()
   });
+  let calls_mark = StomachMark::take();
   for (i, content) in calls {
     let events = if content.is_empty() {
       Some(Vec::new())
@@ -210,6 +216,7 @@ fn read_at_flush() -> Result<()> {
       });
     }
   }
+  calls_mark.restore();
   Ok(())
 }
 

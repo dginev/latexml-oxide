@@ -399,8 +399,11 @@ pub(in crate::base_utilities) fn rehearse<R>(
   let silent = SilenceProgressNotesGuard::new();
   let depth = get_frame_depth();
   let boxes = box_lists_mark();
-  // (the tokens being invoked and the conditionals put back however the run ends: `StomachMark`)
-  let stomach_mark = StomachMark::take();
+  // (the tokens being invoked put back however the run ends; the conditionals are the sequence's, put back by the
+  // shadow after the last block — a block's run may open one the next block's closes, as TeX reads the list in one
+  // pass, 2606.17718 — and only those of a failed run here: `StomachMark`)
+  let tokens_depth = token_stack_depth();
+  let conditionals = if_stack_depth();
   let ledger_scope = FieldLedgerScope::begin();
   REHEARSING.with(|r| r.set(true));
   FOOTNOTE_STEPS.with(|steps| steps.set(0));
@@ -436,7 +439,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
     expire_local_box_list();
     Ok(())
   });
-  stomach_mark.restore();
+  truncate_token_stack(tokens_depth);
   expire_current_token();
   let value = match &result {
     Ok(digested) => Some(inspect(digested)),
@@ -473,6 +476,9 @@ pub(in crate::base_utilities) fn rehearse<R>(
     hold.discard();
     unwound?;
     unwind_box_lists_to(boxes);
+    while if_stack_depth() > conditionals {
+      pop_if_frame();
+    }
     return Ok(Rehearsal::Skipped(SkipReason::Fatal));
   }
   if undone {

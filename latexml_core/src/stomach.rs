@@ -2232,6 +2232,13 @@ pub fn salvage_pending_box_lists(drop_innermost: bool) -> Vec<Digested> {
 /// recovery arms beside [`salvage_pending_box_lists`], after the Fatal is logged (the message lists the stack).
 pub fn clear_token_stack() { stomach_mut!().token_stack.clear(); }
 
+/// The depth of the stack of tokens being invoked, for [`truncate_token_stack`] to put back.
+pub fn token_stack_depth() -> usize { stomach!().token_stack.len() }
+
+/// Drop the tokens above `depth` ([`token_stack_depth`]) that failed invocations left on the stack of tokens being
+/// invoked (see [`clear_token_stack`]).
+pub fn truncate_token_stack(depth: usize) { stomach_mut!().token_stack.truncate(depth); }
+
 /// What a speculative digestion — one whose output is discarded and whose assignments its journal undoes (the
 /// frontmatter's title-page runs, rehearsals and label reads) — must leave as it found it besides its assignments: the
 /// stack of tokens being invoked and the active conditionals. Taken before the run, put back however it ends
@@ -2241,7 +2248,11 @@ pub fn clear_token_stack() { stomach_mut!().token_stack.clear(); }
 /// [`clear_token_stack`]'s 2410.07647); a `\fi` of the run's closing a conditional the document opened before it left
 /// that conditional closed for the document, whose own `\fi` then had none (2003.03814: CUP-JNL-DCE.cls:505 `\keywords`
 /// leaves its `\ifx` open, `\fi` inside `\@keywords`, which `\printkeywords` balances; the title-page run's
-/// `\printkeywords` closed it and the class's real `\maketitle` raised "Didn't expect a \fi").
+/// `\printkeywords` closed it and the class's real `\maketitle` raised "Didn't expect a \fi"). Runs that read one text
+/// in pieces share its conditionals as TeX reads it, in one pass: the observer rehearses an author list block by block,
+/// a conditional opened in one block's run closed in the next's (2606.17718's `\IEEEauthorblockA{… \if… E-mail: …}
+/// \else … \fi`), so its shadow takes the mark around the whole sequence and each rehearsal puts back only its token
+/// stack ([`truncate_token_stack`]).
 pub struct StomachMark {
   tokens:       usize,
   conditionals: Vec<(
@@ -2254,7 +2265,7 @@ impl StomachMark {
   /// The stack of tokens being invoked and the active conditionals as they are now.
   pub fn take() -> StomachMark {
     StomachMark {
-      tokens:       stomach!().token_stack.len(),
+      tokens:       token_stack_depth(),
       conditionals: if_stack_snapshot(),
     }
   }
@@ -2262,7 +2273,7 @@ impl StomachMark {
   /// Put both back as [`StomachMark::take`] found them: the tokens a failed invocation left on the stack dropped, the
   /// conditionals the run opened dropped and those it closed open again.
   pub fn restore(self) {
-    stomach_mut!().token_stack.truncate(self.tokens);
+    truncate_token_stack(self.tokens);
     restore_if_stack(self.conditionals);
   }
 }

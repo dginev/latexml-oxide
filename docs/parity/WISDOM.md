@@ -3134,7 +3134,9 @@ journal), but the token stack and the conditional stack are no assignments. 2502
 `Stomach:Recursion` left `MAXSTACK` tokens and the real `\maketitle` died of the ghost; 2003.03814: a run that ended
 *normally* had closed, with a `\fi` of its own, a conditional the document opened before it (CUP-JNL-DCE.cls:505
 `\keywords` leaves its `\ifx` open), and the document's own `\fi` then had none. `stomach::StomachMark` (the token-stack
-depth and every conditional frame with its state) is taken before each such run and put back on every exit, `Ok` too.
+depth and every conditional frame with its state) is taken before each such run and put back on every exit, `Ok` too
+— around the whole sequence where runs read one text in pieces: the observer rehearses an author list block by block,
+and a conditional opened in one block's run is closed in the next's (2606.17718), as TeX reads the list in one pass.
 Guards `perfect_kernel_batch106s::{a_runaway_run_leaves_no_ghost_fatal, a_run_keeps_the_documents_open_conditional}`.
 
 
