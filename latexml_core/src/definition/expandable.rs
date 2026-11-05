@@ -694,10 +694,11 @@ impl Expandable {
             )),
       has_cc_arg,
       alias: traits.alias,
-      dropped_by_design: traits
-        .drops
-        .iter()
-        .fold(0, |bits, &number| bits | 1 << number),
+      dropped_by_design: traits.drops.iter().fold(0, |bits, &number| {
+        // (a macro's arguments are #1-#9: a bit each in the u16)
+        debug_assert!(number <= 9, "a dropped argument number past #9: {number}");
+        bits | 1 << number
+      }),
       ..Expandable::default()
     })
   }

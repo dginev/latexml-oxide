@@ -29964,7 +29964,8 @@ by `ink_word_text`, a `\thanks` set apart; its state rolled back with the journa
 **Only a binding's drop counts** (106t r3): a kernel macro's drop is TeX's own — the format's `\@firstoftwo{T}{F}`, which
 ifthen's `\ifthenelse` ends in, reads both branches from the document's text around its `\title` and abstract and drops
 the one not taken, as pdflatex does (2202.08832; r3's first census build counted the untaken branch's "physics") —
-so both drop readers take a non-binding macro's arguments as accounted for (`DocumentArgument::used`,
+so both drop readers take a non-binding macro's required arguments as accounted for (an internal command's optional
+argument is read whatever its origin, which keeps the kernel Pool's `\lx@begin@abstract[Summary]`, 2104.14704, counted) (`DocumentArgument::used`,
 `DefinitionOrigin::is_binding_made`). **A binding's declared drop** (main-session ruling (b), 106t r2: a binding's by-design drop of an argument that sees the
 document's frontmatter text counts as a loss unless the binding declares it; every loss counted, failing toward
 flagging): the binding names the arguments on its own definition, `DefMacro!(…, drops => [n, …])`
