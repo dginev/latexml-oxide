@@ -16,9 +16,17 @@ to it, and where the brief is more specific, the brief wins.
   checkout (`/home/deyan/git/latexml-oxide/LaTeXML/`; it is absent in worktrees); never write there.
 - `export CARGO_TARGET_DIR=/home/deyan/data/pk_wt_target/<batch>`; build and test under the brief's `taskset -c` and
   `-j`. Scratch: `~/data/pk_wt/scratch_<batch>/`.
-- Env for tests and probes: `source /home/deyan/data/pk_agents/main/scratch_356a0c47/tenv.sh`, then
-  `export LATEXML_DUMP_DIR=/home/deyan/data/pk_agents/vendor_dumps<base>/resources/dumps` (tenv.sh's own dump dir is
-  stale). A log line "built from another TeX tree; not used" means the probe ran on the wrong dump: fix the env, rerun.
+- Env for tests and probes: `source /home/deyan/data/pk_agents/main/kit/tenv.sh`, then
+  `export LATEXML_DUMP_DIR=/home/deyan/data/pk_agents/vendor_dumps<base>/resources/dumps` when the base is not int138a.
+  A log line "built from another TeX tree; not used" means the probe ran on the wrong dump: fix the env, rerun.
+- Scripts: the shared kit, `/home/deyan/data/pk_agents/main/kit/README.md` (user 2026-11-05: reuse and improve scripts
+  with the same purpose, no one-off copies). It covers converting, probing, creators show/diff, populations, A/B and
+  scoring.
+  - Extend a kit script in place (a flag, an env var, a `creators.py` subcommand), keeping its usage line working.
+  - Never fork a copy into scratch. Scratch holds outputs; a truly batch-specific one-off goes in `<scratch>/bin/`.
+  - At batch end, delete those one-offs, large logs, unzipped sources and the staging binaries/dumps you built (keep the
+    final `<batch>-rel` and the base).
+  - Name every kit script you extended in the report.
 - Performance: judge by `perf stat -e instructions:u`, never wall time (the host runs other work); rerun a timeout
   before believing it.
 
@@ -77,9 +85,10 @@ to it, and where the brief is more specific, the brief wins.
   `~/data/pk_agents/main/ab_66bundle/pop<pop>.tsv` (from `~/data/pk_agents/main/census/who_uses.py --class X --sample all
   --label L --out …`, or the brief's). Launch `systemd-run --user --unit=ab-<label>
   --working-directory=/home/deyan/data/pk_agents/main/ab_66bundle --setenv=POP=<pop> --setenv=AB_CPUS=<cores>
-  --setenv=PAR=<par> --setenv=RL=<label> /bin/bash scripts/run_ab67int20.sh <label> <base>` — LABELS, not paths (a path
+  --setenv=PAR=<par> --setenv=RL=<label> /bin/bash scripts/run_ab2.sh <label> <base>` — LABELS, not paths (a path
   gives an all-zero A/B that reads clean). Check `systemctl --user is-active ab-<label>` right after, and that the TOTAL
-  row has nonzero words; read it with `python3 -I scripts/analyze_pop.py r<label> <pop>`.
+  row has nonzero words; read it with `python3 -I scripts/analyze_pop2.py r<label> <pop>` (with the `r`) and
+  `python3 -I scripts/fm_checks.py <label>`. Build the population with `kit/pop.py`.
 - Every worse paper is root-caused. Before calling it a regression, rerun it alone on both binaries; a paper whose base
   alone varies (a memory abort, a load timeout) is noise — report it with both counts.
 - Final commit only: `GATE_TREE=<your worktree> CARGO_TARGET_DIR=<your target> GATE_CPUS=<the brief's> bash
