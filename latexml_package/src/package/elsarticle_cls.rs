@@ -90,6 +90,12 @@ LoadDefinitions!({
   // leaves it at OT1; divergence from Perl.
   RequirePackage!("fontenc", options => vec!["T1".to_string()]);
   RequirePackage!("elsart_support_core");
+  // elsarticle.cls:1303 `\newenvironment{frontmatter}{}{\maketitle}`: the class prints its title page at
+  // `\end{frontmatter}`, where the core's empty primitive runs no `\maketitle` of ours. The print is noted there for the
+  // title-page check (`\lx@note@title@page`, when no `\maketitle` noted one; nothing typeset), so a word the document
+  // adds to the title page after its setters is counted (2312.03765's `\subjclass`, `\gdef\@title{\@oldtitle
+  // \footnotetext{…}}`; OXIDIZED_DESIGN_DIVERGENCES #953 "107d").
+  Let!("\\end{frontmatter}", "\\lx@note@title@page");
   // elsarticle.cls:656-668: a labelled `\address[a]{…}` goes to the address list under the names (`\elsaddress`), an
   // unlabelled one into the names list itself (`\@address` into `\elsauthors`), printed with the names, above every
   // labelled one — its print zone the names' (`_zone=names`, OXIDIZED_DESIGN_DIVERGENCES #954; 1710.03753, where the

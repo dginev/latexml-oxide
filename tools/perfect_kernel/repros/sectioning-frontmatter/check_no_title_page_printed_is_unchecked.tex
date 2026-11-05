@@ -1,0 +1,23 @@
+% A class whose title page the document never prints — no `\maketitle`, no trigger of the class's own — is not
+% checked: pdflatex prints none of its stores, so a store only its `\@maketitle` prints is no lost word. The frontmatter
+% still holds the title and the author from their setters. FIDELITY_CHARTER §4: a Warning names words really printed
+% and really missing; the print is noted only where the class prints (`\maketitle`, elsarticle's `\end{frontmatter}`,
+% a `\maketitle` appended to `\document`: OD #953 "107d").
+% witness: control (brief 107d: "a title page that never printed stays unchecked, with no false Warning")
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Text." alone
+% engines: rust int139a1 = 0 errors, 0 warnings; perl = 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings, no frontmatter:class_text Info
+% status:  GREEN (negative)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{notitlepage.cls}
+\ProvidesClass{notitlepage}\LoadClass{article}
+\def\nt@corr{}\newcommand\corr[1]{\gdef\nt@corr{#1}}
+\def\@maketitle{\begin{center}{\Large\@title\par}{\@author\par}{Corresponding: \nt@corr\par}\end{center}}
+\end{filecontents*}
+\documentclass{notitlepage}
+\title{A Title}
+\author{Ann Able}
+\corr{ann.able@lunar.org}
+\begin{document}
+Text.
+\end{document}

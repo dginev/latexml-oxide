@@ -403,13 +403,24 @@ pub(crate) fn load() -> Result<()> {
     }
     // (what the hooks made, `begindocument/end`'s too, is a class default for the unclaimed-text net: read after them,
     // frontmatter_stores.rs `note_document_hooks`)
+    // (and a `\maketitle` a raw class appended to `\document`, which latex.ltx runs at its very end, after
+    // `begindocument/end`: its print noted for the title-page check, `\lx@note@title@page`; cup-journal 2207.13252)
+    let title_page = first_begin && lookup_bool("lx_title_page_at_begin_document");
     if !inline_hooks.is_empty() {
       if first_begin {
         inline_hooks.push(T_CS!("\\lx@net@document@hooks@done"));
       }
+      if title_page {
+        inline_hooks.push(T_CS!("\\lx@note@title@page"));
+      }
       unread(Tokens::new(inline_hooks));
-    } else if first_begin {
-      crate::frontmatter_stores::note_document_hooks(false);
+    } else {
+      if first_begin {
+        crate::frontmatter_stores::note_document_hooks(false);
+      }
+      if title_page {
+        unread(Tokens!(T_CS!("\\lx@note@title@page")));
+      }
     }
     whatsit.set_font(lookup_font().unwrap()); // Start w/ whatever font was last selected.
     leave_horizontal_internal();

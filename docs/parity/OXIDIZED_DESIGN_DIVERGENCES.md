@@ -30031,7 +30031,7 @@ Warning, each a real loss read against pdflatex (or the source where pdflatex fa
 print does not reach the words): no deposit runs — a binding's own `\maketitle` (daj 1510.08733, 2112.09352,
 elsarticle 2104.14704 — counted by 106t's second source, below —, aastex 2507.16700, 2603.06433), no `\maketitle` reached (cup-journal's
 `\g@addto@macro\document{\maketitle}`, 2302.11911, 2508.08363, 2607.18758, …: our `\document` is no macro, the
-append fails — RED repro sectioning-frontmatter/`title_page_from_begin_document_is_unchecked`); the replay does not reach the class's
+append fails — counted since 107d, below: its print noted at `\begin{document}`'s end, repro sectioning-frontmatter/`check_title_page_from_begin_document_is_counted`); the replay does not reach the class's
 title-page code (opendatalab's `\let\oldmaketitle\maketitle` copying the locked kernel's, 2601.09733; cccconf's
 `\keywords`/`\section`, 1702.07637); a binding's fields outside `\@author` (quantumarticle `\ead`, 2209.07123; IEEEtran
 grades, 1511.03982 — both counted by 106t's second source, below); the scorer's artefacts (census132 §3). **Known edge:** a class's literal word equal to a word the
@@ -30138,6 +30138,41 @@ many_entries_of_one_call_share_its_arguments}`; repros `check_declared_drop_book
 now counted: `perfect_kernel_batch86i::second_abstract_after_maketitle_is_kept` (amsart's `[R\'esum\'e]`, which pdflatex
 prints), `perfect_kernel_batch86d::ieee_membership_kept_after_closing_stop` (its pinned-residual variants drop the grade
 pdflatex prints, "and Farshid Alambeigi Member, IEEE.").
+
+**107d: the print where the class prints its title page from a trigger of its own** (brief 107d; FIDELITY_CHARTER §4,
+every residual loss counted). The print was noted only at our `\maketitle`'s deposit; a class that prints its title page
+without one had no print, and only the second source was read. A kernel primitive, `\lx@note@title@page` (sect05.rs),
+notes the print (`note_title_page_print`: nothing typeset, no deposit, no net) when no print was noted yet
+(`title_page_check::title_page_noted`: a later `\maketitle` supersedes it, as a second one does; one before it keeps its
+own print, whose fields ours empties), at the trigger the class prints from: (1) a binding's — elsarticle's
+`\end{frontmatter}` (elsarticle.cls:1303 `\newenvironment{frontmatter}{}{\maketitle}`; the core's empty primitive, Perl
+PR #2767), let to it in elsarticle_cls.rs: 2312.03765's `\subjclass`, `\gdef\@title{\@oldtitle\footnotetext{…}}`, a
+title footnote no setter sees; (2) a raw class's — a `\g@addto@macro{\document}{…}` holding `\maketitle`, which our
+constructor `\document` refuses as Perl does (the `Warning:unexpected:\document` kept), is recorded
+(`lx_title_page_at_begin_document`) and the print noted at the end of `\begin{document}`, after `begindocument/end`,
+where latex.ltx runs appended code (sect02.rs; cup-journal.cls:1014: 2207.13252 — the `\alsoaffiliation`, the e-mail,
+the DOI and the dates —, 2603.00371, 2302.11911, 2508.08363, 2607.18758). A class whose title page never prints (no
+`\maketitle`, no trigger) stays unchecked: the print is never noted at the frontmatter's placement. **The source gate**
+(`document_source_words`), which the new prints reach on raw journal styles over the binding (medima.sty's journal
+header and its `\printFirstPageNotes` "URL:", 2507.07920, 2201.10981, 2409.09188, false Warnings on the first A/B):
+a content file is the document's only when its own directory holds it (a package's `\input` of a TeX Live file —
+translations' `translations-basic-dictionary-english.trsl`, "Contents" — is none), and a `.bbl` is read with its
+definitions out (`\providecommand{\URLprefix}{URL: }` is its BibTeX style's; its entries stay the document's). **Not this
+mechanism** (the print's reach or a content loss, each one paper of dev3; SYNC row 107d): an `\ead` a raw elsarticle
+copy writes to the `.aux` (`\immediate\write\@auxout{\string\emailauthor…}`), printed only on pdflatex's second run
+(nj_style 1401.7920); a class title page gated on a counter its refused `\author` advances (CUP-JNL-DTM's `\aucount`,
+2305.00867); a raw copy of a bound class whose store only the bound class's internals print (aeb_emulateapj_2010's
+`\alt@affil@toks`, read by revtex's `\@author@finish`, 1011.2770); a style printing its title block from `{abstract}`
+(bosonai_techreport.sty, 2605.02209); a class's `\ifthenelse{\authorslen > 1}` over xstring's `\StrLen`
+(naverlabseurope, 2408.05088); a grade a document macro hands IEEEtran's drop (`\SeMieee` → `\IEEEmembership`,
+2503.14354, not `writes`); and 2310.07393's "Campus", whose first letter our empty `\@listi` lets a class's
+`\xdef{… \let\@listi\@listI Campus}` take (two Errors, the net's note holding "ampus"; no net word claimed and
+unwritten). Guards `perfect_kernel_batch107d::{elsarticle_frontmatter_end_notes_the_title_page,
+a_maketitle_inside_frontmatter_keeps_its_print, a_title_page_appended_to_document_is_counted,
+no_title_page_printed_is_unchecked, package_and_bibtex_text_is_not_the_documents}`; repros sectioning-frontmatter/`check_elsarticle_frontmatter_end_prints_the_title_page`,
+`check_title_page_from_begin_document_is_counted` (RED int139a1 → GREEN), `check_elsarticle_maketitle_inside_frontmatter_keeps_its_print`,
+`check_no_title_page_printed_is_unchecked` (negative), `check_package_and_bibtex_text_is_not_the_documents` (RED int139a1 → GREEN). dev3's lost-words-counted line (the 21 lost-words papers' logs):
+5 all / 0 some / 16 silent → 7 / 1 / 13. A/B: `pop107d.tsv` (3,562: the 10 witnesses, the 2,982 dev3/dev20k papers with `\author`/`\title` and no `\maketitle`, 47 more with `\altaffiltext`, 23 with the net's "kept as a note", 500 random of `popint125a_s10k`; holdout excluded) vs int139a1-rel, both on the int138a dumps: 3,552 converted, the XML byte-identical in every one, E 1,346 = 1,346, F 8 = 8, words equal; Warnings +7, one each, every one a real loss read against the PDF (cup-journal 2207.13252, 2302.11911, 2410.19985, 2508.08363, 2603.00371, 2607.18758; elsarticle 2312.03765); 7 class-text Infos more (elsarticle + medima/jasr journal headers: 2006.08179, 2007.15546, 2201.10981, 2403.04024, 2407.18673, 2409.09188, 2507.07920); no check line of the base changed.
 
 ### 954. A contact holding two or more marked entries is cut at its marks in the frontmatter API, for every binding (Perl: one contact, the marks printed in it)
 

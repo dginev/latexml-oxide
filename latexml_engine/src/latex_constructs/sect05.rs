@@ -619,6 +619,15 @@ pub(crate) fn load() -> Result<()> {
     // (a stand-in's copy's append to the document hooks registers nothing: `state::copy_provides_defers_hook_write`;
     // qm2008_abs.cls's ltxgrid page grid, 0805.2253)
     if !copy_provides_defers_hook_write(&cs) {
+      // (a `\maketitle` appended to our constructor `\document`, which refuses the addition as Perl does: the class
+      // prints its title page at the end of `\begin{document}`, cup-journal.cls:1014 — noted there for the title-page
+      // check, `\lx@note@title@page`; 2207.13252, 2603.00371)
+      if cs == T_CS!("\\document")
+        && lookup_definition(&cs)?.is_some_and(|defn| !defn.is_expandable())
+        && tokens.unlist_ref().contains(&T_CS!("\\maketitle"))
+      {
+        AssignValue!("lx_title_page_at_begin_document" => true, Some(Scope::Global));
+      }
       AddToMacro!(cs, tokens);
     }
   });
@@ -1359,6 +1368,18 @@ pub(crate) fn load() -> Result<()> {
     },
     reversion => ""
   );
+  // The class prints its title page here, from a trigger of its own that runs no `\maketitle` of ours (FIDELITY_CHARTER
+  // §4, every residual loss counted; OXIDIZED_DESIGN_DIVERGENCES #953 "107d"): elsarticle's `\end{frontmatter}`
+  // (elsarticle.cls:1303 `\newenvironment{frontmatter}{}{\maketitle}`, an empty primitive in the binding; 2312.03765),
+  // a `\maketitle` a raw class appends to `\document` (cup-journal.cls:1014 `\g@addto@macro{\document}{\maketitle}`,
+  // which our constructor `\document` refuses; 2207.13252, 2603.00371). What it prints is noted for the title-page check
+  // only — no deposit, no net, nothing typeset — and only when no `\maketitle` noted a print (a later one supersedes it,
+  // as a second `\maketitle` does).
+  DefPrimitive!("\\lx@note@title@page", {
+    if !title_page_noted() {
+      note_title_page_print()?;
+    }
+  });
   // A primitive, not a macro: the deposit is digested first and kept only
   // when it produced content. A class whose `\@maketitle` typesets nothing
   // but captured stores (ptptex, every field in the frontmatter) yields

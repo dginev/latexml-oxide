@@ -9,8 +9,8 @@
 //! the output, cheapest first while one is unheld: the frontmatter's text, the whole document's, the subtrees a
 //! `--streaming` run spilled ([`note_spilled_words`]), its attribute values (a contact's `name`, a link's `href`, what
 //! a constructor set from an argument). A word the output does not hold is lost; it is counted when the document's own
-//! source writes it ([`source_words`]: the files read as content, `binding::content::CONTENT_FILES`, and those of its
-//! own directory read as definitions, [`document_source_words`]), else it is the
+//! source writes it ([`source_words`]: the files of its own directory read as content, `binding::content::CONTENT_FILES`,
+//! a `.bbl`'s definitions out, and those read as definitions, [`document_source_words`]), else it is the
 //! class's text — a label, a placeholder at its default, a running head's — tallied apart in an Info. Every lost word
 //! is named in one `Warning:frontmatter:unclaimed`, in printed order; a word the unclaimed-text net already counted
 //! (insert.rs `keep_unclaimed_net_notes`, [`note_net_counted`]) is not counted again. Witnesses: 2007.07526 (amsart's
@@ -54,6 +54,11 @@ pub fn note_title_page_printed(text: &str) {
     spilled.wanted = Some(wanted);
   });
 }
+
+/// Was a title page's print noted ([`note_title_page_printed`])? A class's title page printed from a trigger of its own
+/// — elsarticle's `\end{frontmatter}`, a `\maketitle` a raw class appends to `\document` — is noted there only when no
+/// `\maketitle` noted one (sect05.rs `\lx@note@title@page`).
+pub fn title_page_noted() -> bool { lookup_value(PRINTED).is_some() }
 
 /// The content words of the subtrees a `--streaming` run spilled ([`note_spilled_words`]), this conversion's: each
 /// distinct word once, and once a title page printed only those it wants (`wanted`), so the notes stay as small as the
@@ -974,27 +979,41 @@ fn read_source(path: &str) -> Option<String> {
 }
 
 /// The words the document's own source writes ([`source_words`]): its content files' (`binding::content::CONTENT_FILES`:
-/// a virtual file's text, `filecontents`, else the file's on disk; a `literal:` source its own text), and those of
+/// a virtual file's text, `filecontents`, else the file's on disk when its own directory holds it — a package's `\input`
+/// of a TeX Live file is none —; a `literal:` source its own text; a `.bbl`'s definitions out, its style's), and those of
 /// each file its own directory holds that was read as definitions (`binding::content::raw_read_paths`: a style the
 /// author wrote, `\AtBeginDocument{\corr{ann.able@lunar.org}}`, review probe p7_sty), their definitions' replacement
 /// texts out. A file a `filecontents` environment wrote is not read again: its body is a class's or a package's text.
 fn document_source_words() -> HashSet<String> {
   let mut words = HashSet::default();
+  let source_directory = lookup_string("SOURCEDIRECTORY");
+  let directory = (!source_directory.is_empty())
+    .then(|| std::fs::canonicalize(&source_directory).ok())
+    .flatten();
+  // (a file read as content from outside the document's directory is a package's, not the document's: translations'
+  // `\input` of its TeX Live dictionaries, `translations-basic-dictionary-english.trsl`, writes "Contents" — counted
+  // as the document's word when medima.sty's journal header printed it, 2507.07920. A `.bbl` is BibTeX's output: its
+  // definitions are its style's, `\providecommand{\URLprefix}{URL: }` — 2201.10981, 2409.09188 —, its entries the
+  // document's; OD #953 "107d")
+  let own = |file: &str| {
+    directory.as_ref().is_none_or(|directory| {
+      std::fs::canonicalize(file).is_ok_and(|path| path.starts_with(directory))
+    })
+  };
   let files = lookup_string(CONTENT_FILES);
   for file in files.split('\0').filter(|file| !file.is_empty()) {
+    let definitions = file.ends_with(".bbl");
     if let Some(text) = file.strip_prefix("literal:") {
       source_words(text, false, &mut words);
     } else if let Some(text) = vfs_read(file) {
-      source_words(&text, false, &mut words);
-    } else if let Some(text) = read_source(file) {
-      source_words(&text, false, &mut words);
+      source_words(&text, definitions, &mut words);
+    } else if own(file)
+      && let Some(text) = read_source(file)
+    {
+      source_words(&text, definitions, &mut words);
     }
   }
-  let source_directory = lookup_string("SOURCEDIRECTORY");
-  if source_directory.is_empty() {
-    return words;
-  }
-  let Ok(directory) = std::fs::canonicalize(&source_directory) else {
+  let Some(directory) = directory else {
     return words;
   };
   for file in raw_read_paths() {
@@ -1087,6 +1106,12 @@ pub fn check_title_page_words(document: &Document) -> Result<()> {
     return Ok(());
   }
   let source = source.unwrap_or_else(document_source_words);
+  DebugFeature!(
+    "frontmatter",
+    "FRONT the check's source: the content files {} and the definitions files of {}",
+    lookup_string(CONTENT_FILES).replace('\0', ", "),
+    lookup_string("SOURCEDIRECTORY")
+  );
   let (lost, class): (Vec<String>, Vec<String>) = unclaimed
     .into_iter()
     .partition(|word| source.contains(word));
