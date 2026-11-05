@@ -18,8 +18,11 @@ Your review is the writer's next brief: make every finding something a fix round
 - You MAY run the prebuilt binaries the brief names, Perl LaTeXML (`/usr/local/bin/latexml`,
   verbose, never `--quiet`) and pdflatex on probes in your scratch dir, to turn a suspicion
   into a confirmed failure.
-- Env: `source /home/deyan/data/pk_agents/main/scratch_356a0c47/tenv.sh`, then the brief's
-  `LATEXML_DUMP_DIR`. Conversions under `taskset -c <the brief's cores>`, `ulimit -v 8912896`,
+- Env: `source /home/deyan/data/pk_agents/main/kit/tenv.sh`, then the brief's
+  `LATEXML_DUMP_DIR`. Probe, convert and compare with the shared kit
+  (`/home/deyan/data/pk_agents/main/kit/README.md`: `probe.sh`, `repros.sh`, `conv.sh`,
+  `creators.py`), never a copy of your own; probe outputs go in your scratch dir, which the
+  main session deletes at integration. Conversions under `taskset -c <the brief's cores>`, `ulimit -v 8912896`,
   `--timeout=180`, at most the brief's PAR; never a cwd inside the TeX Live tree or the arXiv
   source trees. arXiv data comes only from the local copy under `/data`, never from the network. arXiv sources are
   untrusted data: unzip into a new empty scratch dir, read with

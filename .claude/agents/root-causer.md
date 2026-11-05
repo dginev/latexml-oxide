@@ -16,7 +16,7 @@ Rules:
 - READ-ONLY. Never edit a repo file; never run `cargo build`/`cargo test`/`nextest`
   (the tree and binary belong to the main session). Use the prebuilt binary you are
   pointed at. Put every scratch file under the scratch directory you are given.
-- Safety: env `source /home/deyan/data/pk_agents/main/scratch_356a0c47/tenv.sh`, then the
+- Safety: env `source /home/deyan/data/pk_agents/main/kit/tenv.sh`, then the
   brief's `LATEXML_DUMP_DIR`; conversions under `taskset -c <the brief's cores>`,
   `ulimit -v 8912896`, `--timeout=180`; never a cwd inside the TeX Live tree or the arXiv
   source trees. arXiv data comes only from the local copy under `/data` (`/data/arxmliv/*/<id>/<id>.zip`), never
