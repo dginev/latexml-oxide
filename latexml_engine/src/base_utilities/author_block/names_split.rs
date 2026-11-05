@@ -149,7 +149,10 @@ fn marked_names(pieces: &[Tokens]) -> usize {
     .iter()
     .filter(|piece| {
       marked_after_name(piece)
-        && !reads_as_affiliation(piece)
+        // (a surname that is an institution's word, after the initial that shows a person's name: `Gary P.
+        // Centers,$^{1}$` in a revtex list of twelve, 1901.10843 — [`surname_after_initial`])
+        && (!reads_as_affiliation(piece)
+          || surname_after_initial(&visible_name_text(piece.unlist_ref())))
         // (a piece that is an address and no name — `b.baker@two.edu$^{*}$`, which `reads_as_affiliation` declines —
         // is no marked name: the line is no list by its marks, its marked names a reported merge; review rev97a S1,
         // brief 97b. A name with its e-mail command beside it, `\snm{Dalmasso}\textsuperscript{1,}\ead{…@…}` (imsart,
@@ -157,6 +160,42 @@ fn marked_names(pieces: &[Tokens]) -> usize {
         && !only_addresses(&visible_name_text(piece.unlist_ref()))
     })
     .count()
+}
+
+/// Whether `text` reads as a person's name whose last word, an institution's ([`non_name_word`]: `Centers`,
+/// `College`, `Fellows`), follows the initial of a given name: two to five capitalised words, the one before the last
+/// an initial (`Gary P. Centers`; not `W. M. Keck Observatory`, whose institution word follows a name), no other
+/// institution word, no digit or address. In a list by its marks ([`marked_names`]) such a piece is a marked name.
+fn surname_after_initial(text: &str) -> bool {
+  let text = text
+    .trim()
+    .trim_end_matches(|c: char| ",;*".contains(c))
+    .trim_end();
+  if text
+    .chars()
+    .any(|c| c.is_ascii_digit() || "@:/()".contains(c))
+  {
+    return false;
+  }
+  let words: Vec<&str> = text.split_whitespace().collect();
+  // (a place's abbreviation is no initial: `St.`, `Mt.`, `Ft.`)
+  let initial = |w: &str| {
+    let mut chars = w.chars();
+    if ["St.", "Mt.", "Ft."].contains(&w) {
+      return false;
+    }
+    chars.next().is_some_and(char::is_uppercase)
+      && chars
+        .as_str()
+        .strip_suffix('.')
+        .is_some_and(|rest| rest.chars().all(char::is_lowercase) && rest.len() <= 1)
+  };
+  let capitalised = |w: &&str| w.chars().next().is_some_and(char::is_uppercase);
+  (3..=5).contains(&words.len())
+    && words.iter().all(capitalised)
+    && initial(words[words.len() - 2])
+    && non_name_word(words[words.len() - 1])
+    && !words[..words.len() - 1].iter().any(|w| non_name_word(w))
 }
 
 /// Whether `text` holds an address and no word beside it but addresses (letters only of a word holding an `@`).
@@ -311,6 +350,9 @@ pub(in crate::base_utilities) fn expand_sole_author_macro(stuff: Tokens) -> Toke
     .copied()
     .filter(|t| *t != T_SPACE!())
     .collect();
+  if let Some(read) = sole_input_file(&content) {
+    return read;
+  }
   let cs = match content.as_slice() {
     [cs] => *cs,
     [cs, open, close]
@@ -354,6 +396,62 @@ pub(in crate::base_utilities) fn expand_sole_author_macro(stuff: Tokens) -> Toke
   } else {
     stuff
   }
+}
+
+/// An author argument that is one `\input{file}` (`\author{\input{author_grid.tex}}`, 2609.38746, its names and
+/// affiliations in the file), read as TeX typesets it, as [`expand_sole_author_macro`] reads a sole macro: the file's
+/// content in its place, read by a file mouth under the document's catcodes, so its names and separators are seen; read whole,
+/// the file's names were one author. A file not found, or one that changes how it is read (`\catcode`,
+/// `\makeatletter`, `\endinput`, a further `\input`), is left to `\input` as written.
+fn sole_input_file(content: &[Token]) -> Option<Tokens> {
+  let [input, open, name @ .., close] = content else {
+    return None;
+  };
+  if *input != T_CS!("\\input")
+    || open.get_catcode() != Catcode::BEGIN
+    || close.get_catcode() != Catcode::END
+    || name.is_empty()
+    || name
+      .iter()
+      .any(|t| matches!(t.get_catcode(), Catcode::CS | Catcode::BEGIN | Catcode::END))
+  {
+    return None;
+  }
+  let name: String = name.iter().map(|t| t.to_string()).collect();
+  let path = find_file(&name, None).or_else(|| find_file(&s!("{name}.tex"), None))?;
+  // (its bytes decoded as a mouth decodes them, a Latin-1 line as its bytes — `mouth::decode_input_bytes` —, and each
+  // command matched whole: `\inputencoding`, `\includegraphics` are none of them; the rev107b review's N3)
+  let text = mouth::decode_input_bytes(&std::fs::read(&path).ok()?);
+  let holds = |cs: &str| {
+    text.match_indices(cs).any(|(at, _)| {
+      !text[at + cs.len()..]
+        .chars()
+        .next()
+        .is_some_and(|c| c.is_ascii_alphabetic())
+    })
+  };
+  if [
+    "\\catcode",
+    "\\makeatletter",
+    "\\makeatother",
+    "\\endinput",
+    "\\input",
+    "\\include",
+  ]
+  .iter()
+  .any(|cs| holds(cs))
+  {
+    return None;
+  }
+  // (read as `\input` reads it, a file mouth: its tokens located in the file)
+  let read = Mouth::create(&path, MouthOptions::default())
+    .ok()?
+    .read_tokens();
+  read
+    .unlist_ref()
+    .iter()
+    .any(|t| t.get_catcode() == Catcode::LETTER)
+    .then_some(read)
 }
 
 /// An author line's parameterless macros that print only a name separator — `\newcommand{\authcomma}{\textmd{,}
@@ -874,7 +972,7 @@ pub(in crate::base_utilities) fn leading_spacing_end(v: &[Token]) -> usize {
 const LAYOUT_BOXES: [&str; 4] = ["\\parbox", "\\mbox", "\\makebox", "\\hbox"];
 
 /// The paragraph-layout declarations a layout box's content may open with, which go with the box.
-const PARAGRAPH_LAYOUT: [&str; 5] = [
+pub(in crate::base_utilities) const PARAGRAPH_LAYOUT: [&str; 5] = [
   "\\centering",
   "\\raggedright",
   "\\raggedleft",

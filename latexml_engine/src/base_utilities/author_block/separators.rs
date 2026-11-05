@@ -979,6 +979,254 @@ pub(in crate::base_utilities) fn trailing_alignment_environment_as_lines(tokens:
   Tokens::new(toks)
 }
 
+/// How a wrapper around an author block's lines styles each of them ([`wrapper_over_lines_as_lines`]).
+#[derive(Clone)]
+enum LineWrap {
+  /// declarations, the line in a group of them (`{\small …}`, `\begin{small}…\end{small}`, a parbox's `\Large`)
+  Declarations(Vec<Token>),
+  /// a font command, the line its argument (`\textsc{…}`)
+  Command(Token),
+}
+
+/// The font commands whose argument [`wrapper_over_lines_as_lines`] gives each line: [`NAME_TEXT_COMMANDS`]' `\text…` ones
+/// and `\emph`.
+fn is_text_font_command(t: &Token) -> bool {
+  t.get_catcode() == Catcode::CS
+    && t.with_str(|cs| {
+      NAME_TEXT_COMMANDS.contains(&cs) && (cs.starts_with("\\text") || cs == "\\emph")
+    })
+}
+
+/// A wrapper around lines of an author block is each line's: a font command (`\textsc{A$^{1,2}$ B$^{3}$, C$^{4}$\\
+/// (The KMTNet Collaboration)\\}`, aastex 2306.04870), a group or an environment of declarations (`{\it $^{1}$ Univ A\\
+/// $^{2}$ Univ B}`, `\begin{small} names \\ (BESIII Collaboration)\\ … \end{small}`, elsarticle 1202.2048) or a
+/// `\parbox` that lays the lines out (`\parbox{\textwidth}{\Large A,$^{1,2}$ B,$^{3}$ … \begin{center} (DES
+/// Collaboration) \end{center}}`, mnras 2311.03613; `\parbox{\linewidth}{\centering A$^{1}$ \quad B$^{1}$ \\ C$^{2}$
+/// \quad D$^{1}$}`, 2306.04988) holding a `\\` or a paragraph-layout environment (`center`, `flushleft`, `flushright`,
+/// which set their content as a line of its own) at its top level is written as one wrapper per line, its lines
+/// joined by `\\` — `\textsc{A}\\\textsc{B}` prints as `\textsc{A\\B}` does —, so the block's lines are read as
+/// written at its top level: hidden in the wrapper, every line was one author's name (`Ann Able$^{1}$ Bob Baker$^{3}$
+/// …<break/>(The KMTNet Collaboration)`), or a `\\` inside it parted no names. Each line keeps the wrapper's style, a
+/// box its declarations but its paragraph layout ([`PARAGRAPH_LAYOUT`]) as [`names_in_wrapper`] reads a box around
+/// names; a line of spacing only (`\vspace{7cm}`) is dropped. The wrapper opens its line (spacing before it) and ends
+/// it (spacing after it); a wrapper inside a line it so wraps is unwrapped the same way, its style added. A note's or a
+/// mark's argument is no wrapper (`\thanks{A\\B}`). OXIDIZED_DESIGN_DIVERGENCES #897.
+pub(in crate::base_utilities) fn wrapper_over_lines_as_lines(tokens: Tokens) -> Tokens {
+  match wrapper_lines_read(tokens.unlist_ref(), &[]) {
+    Some(lines) => Tokens::new(lines),
+    None => tokens,
+  }
+}
+
+/// [`wrapper_over_lines_as_lines`] over `v` under the wrappers `style` (outermost first): `None` when no wrapper in `v`
+/// holds lines and `style` is empty, `v` as written.
+fn wrapper_lines_read(v: &[Token], style: &[LineWrap]) -> Option<Vec<Token>> {
+  let pieces = split_top_level_lines(v);
+  let mut changed = false;
+  let mut lines: Vec<Vec<Token>> = Vec::with_capacity(pieces.len());
+  for piece in pieces {
+    match line_wrapper(piece) {
+      Some((wrap, inner)) => {
+        let mut inner_style = style.to_vec();
+        inner_style.extend(wrap);
+        let content = paragraph_environments_as_breaks(&inner);
+        lines.push(wrapper_lines_read(&content, &inner_style).unwrap_or(content));
+        changed = true;
+      },
+      None if style.is_empty() => lines.push(piece.to_vec()),
+      None if only_spacing(piece) => lines.push(Vec::new()),
+      None => lines.push(styled_line(piece, style)),
+    }
+  }
+  if !changed && style.is_empty() {
+    return None;
+  }
+  let mut out: Vec<Token> = Vec::with_capacity(v.len() + 8);
+  for line in lines
+    .into_iter()
+    .filter(|line| style.is_empty() || !line.is_empty())
+  {
+    if !out.is_empty() {
+      out.push(T_CS!("\\\\"));
+    }
+    out.extend(line);
+  }
+  Some(out)
+}
+
+/// `line` in the wrappers `style`, innermost last.
+fn styled_line(line: &[Token], style: &[LineWrap]) -> Vec<Token> {
+  let mut out = line.to_vec();
+  for wrap in style.iter().rev() {
+    let mut wrapped = Vec::with_capacity(out.len() + 4);
+    match wrap {
+      LineWrap::Declarations(declarations) => {
+        if declarations.iter().all(|t| *t == T_SPACE!()) {
+          continue;
+        }
+        wrapped.push(T_BEGIN!());
+        wrapped.extend(declarations.iter().copied());
+        wrapped.extend(out);
+        wrapped.push(T_END!());
+      },
+      LineWrap::Command(cs) => {
+        wrapped.push(*cs);
+        wrapped.push(T_BEGIN!());
+        wrapped.extend(out);
+        wrapped.push(T_END!());
+      },
+    }
+    out = wrapped;
+  }
+  out
+}
+
+/// The wrapper `line` is, spacing around it ([`wrapper_over_lines_as_lines`]): its style and its content, when the content
+/// holds lines (a top-level `\\` or paragraph-layout environment).
+fn line_wrapper(line: &[Token]) -> Option<(Vec<LineWrap>, Vec<Token>)> {
+  let start = leading_spacing_end(line);
+  let t = *line.get(start)?;
+  let (wrap, open, close) = if t == T_CS!("\\begin") {
+    let stream: VecDeque<Token> = line[start + 1..].iter().copied().collect();
+    let span = environment_closes_ahead(&stream)?;
+    let name_end = (start + 2..line.len()).find(|&k| line[k].get_catcode() == Catcode::END)?;
+    let name: String = line[start + 2..name_end]
+      .iter()
+      .map(|t| t.to_string())
+      .collect();
+    let close = start + 1 + span;
+    let end_cs = (name_end + 1..close)
+      .rev()
+      .find(|&k| line[k] == T_CS!("\\end"))?;
+    let cs = s!("\\{name}");
+    let wrap = if matches!(name.as_str(), "center" | "flushleft" | "flushright") {
+      Vec::new()
+    } else if is_wrapping_declaration(&cs) && !PARAGRAPH_LAYOUT.contains(&cs.as_str()) {
+      vec![LineWrap::Declarations(vec![T_CS!(cs.as_str())])]
+    } else {
+      return None;
+    };
+    (wrap, (name_end + 1, end_cs), close)
+  } else if t.get_catcode() == Catcode::BEGIN {
+    let end = skip_group(line, start);
+    if end > line.len() || line[end - 1].get_catcode() != Catcode::END {
+      return None;
+    }
+    let inner = &line[start + 1..end - 1];
+    let declarations = opening_declarations(&Tokens::new(inner.to_vec()));
+    (
+      vec![LineWrap::Declarations(declarations.clone())],
+      (start + 1 + declarations.len(), end - 1),
+      end,
+    )
+  } else if is_text_font_command(&t) || t == T_CS!("\\parbox") {
+    let mut i = start + 1;
+    let mut last = None;
+    loop {
+      match line.get(i) {
+        Some(u) if *u == T_OTHER!("[") => {
+          i += line[i..].iter().position(|w| *w == T_OTHER!("]"))? + 1
+        },
+        Some(u) if u.get_catcode() == Catcode::BEGIN => {
+          let end = skip_group(line, i);
+          if end > line.len() || line[end - 1].get_catcode() != Catcode::END {
+            return None;
+          }
+          last = Some((i, end));
+          i = end;
+          if t != T_CS!("\\parbox") {
+            break;
+          }
+        },
+        Some(u) if *u == T_SPACE!() && t == T_CS!("\\parbox") => i += 1,
+        _ => break,
+      }
+    }
+    let (open, end) = last?;
+    if t == T_CS!("\\parbox") {
+      // (`\parbox[pos][height][inner-pos]{width}{text}`: its text the last argument, its width the one before)
+      let groups = line[start + 1..end]
+        .iter()
+        .scan(0i32, |depth, u| {
+          let opens = *depth == 0 && u.get_catcode() == Catcode::BEGIN;
+          match u.get_catcode() {
+            Catcode::BEGIN => *depth += 1,
+            Catcode::END => *depth -= 1,
+            _ => {},
+          }
+          Some(opens)
+        })
+        .filter(|opens| *opens)
+        .count();
+      if groups != 2 {
+        return None;
+      }
+      let inner = &line[open + 1..end - 1];
+      let declarations = opening_declarations(&Tokens::new(inner.to_vec()));
+      let style: Vec<Token> = declarations
+        .iter()
+        .copied()
+        .filter(|u| !PARAGRAPH_LAYOUT.iter().any(|cs| *u == T_CS!(*cs)))
+        .collect();
+      (
+        vec![LineWrap::Declarations(style)],
+        (open + 1 + declarations.len(), end - 1),
+        end,
+      )
+    } else {
+      (vec![LineWrap::Command(t)], (open + 1, end - 1), end)
+    }
+  } else {
+    return None;
+  };
+  if close > line.len() || !only_spacing(&line[close..]) {
+    return None;
+  }
+  let inner = line[open.0..open.1].to_vec();
+  let holds_lines = split_top_level_lines(&inner).len() > 1
+    || paragraph_environments_as_breaks(&inner).len() != inner.len();
+  holds_lines.then_some((wrap, inner))
+}
+
+/// `v` with each top-level paragraph-layout environment (`center`, `flushleft`, `flushright`) written as the line of
+/// its own it sets: `\\` before and after its content.
+fn paragraph_environments_as_breaks(v: &[Token]) -> Vec<Token> {
+  let mut out: Vec<Token> = Vec::with_capacity(v.len());
+  let mut depth = 0i32;
+  let mut i = 0;
+  while i < v.len() {
+    let t = v[i];
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ => {},
+    }
+    if depth == 0 && t == T_CS!("\\begin") {
+      let stream: VecDeque<Token> = v[i + 1..].iter().copied().collect();
+      if let Some(span) = environment_closes_ahead(&stream)
+        && let Some(name_end) = (i + 2..v.len()).find(|&k| v[k].get_catcode() == Catcode::END)
+      {
+        let name: String = v[i + 2..name_end].iter().map(|t| t.to_string()).collect();
+        let close = i + 1 + span;
+        if matches!(name.as_str(), "center" | "flushleft" | "flushright")
+          && let Some(end_cs) = (name_end + 1..close)
+            .rev()
+            .find(|&k| v[k] == T_CS!("\\end"))
+        {
+          out.push(T_CS!("\\\\"));
+          out.extend_from_slice(&v[name_end + 1..end_cs]);
+          out.push(T_CS!("\\\\"));
+          i = close;
+          continue;
+        }
+      }
+    }
+    out.push(t);
+    i += 1;
+  }
+  out
+}
+
 /// An author block's parameterless macro whose expansion closes the title page's tabular and opens another — the ACM
 /// SIG template's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`, set inside the class's own author tabular
 /// (sig-alternate.cls:283's `\alignauthor` juggles the same way) — is the line break it prints between the names

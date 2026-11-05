@@ -1,0 +1,12 @@
+% Control (R12): an article `\author{Ann Able \\ University of Alpha}` is one author and the affiliation under her.
+% oracle:  pdflatex 0 errors: "Ann Able", "University of Alpha"
+% engines: rust int138a = one creator with the affiliation (control); Perl one creator "Ann Able University of Alpha"
+% expect:  0 errors, 0 warnings; one creator, its affiliation
+% status:  GREEN (int138a, 107b)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \\ University of Alpha}
+\maketitle
+\end{document}

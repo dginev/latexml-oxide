@@ -1,0 +1,16 @@
+% RED (review rev107b2 F2, synthetic only): a space beside a tie between two whole unmarked names welds them (`Ann Able
+%   ~Bob Baker`; the observer's lexer `ties_the_gap`, batch 107b r2, reads space + tie as one word space so that
+%   1202.2048's `N.~B. ~Li` stays one name): one creator "Ann Able Bob Baker", no merged_creators Error.
+% witness: none (synthetic; the 15 space+tie author blocks of a 10k scan hold it inside one name or behind a mark)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able Bob Baker" (two interword glues)
+% engines: rust int138a: two creators; 107b r2: one, silent
+% expect:  two creators (Ann Able, Bob Baker), or one with a counted merged_creators Error
+% status:  RED (107b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able ~Bob Baker}
+\maketitle
+Body.
+\end{document}

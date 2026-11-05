@@ -155,7 +155,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
   // its row, not an author line, so the whole family keeps the author content whole: a `tabular*`/`tabularx` author
   // block was split at its row ends, leaving the alignment open across the pieces (2609.34061, 34965, 39374, 39909;
   // KNOWN_PERL_ERRORS #502).
-  if [
+  let kept_whole = [
     "{tabular}",
     "{tabular*}",
     "{tabularx}",
@@ -166,8 +166,15 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
     "\\halign",
   ]
   .iter()
-  .any(|form| stuff_string.contains(form))
-  {
+  .any(|form| stuff_string.contains(form));
+  // (a wrapper around the block's lines is each line's, the lines read as written at the top level —
+  // [`wrapper_over_lines_as_lines`], 2311.03613, 2306.04870, 1202.2048, 2306.04988 —; not in a block kept whole)
+  let stuff = if kept_whole {
+    stuff
+  } else {
+    wrapper_over_lines_as_lines(stuff)
+  };
+  if kept_whole {
     let stuff = lines_prepared(strip_linebreak_options(written));
     calls
       .extend(Invocation!(T_CS!("\\lx@add@author"), vec![keyvals.clone(), Some(stuff)]).unlist());
@@ -283,9 +290,13 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
             } else if entries
               .last()
               .is_some_and(|(kind, _)| *kind == AuthorLineKind::Author)
-              && last_names
+              && (last_names
                 .as_ref()
                 .is_some_and(|names| names_list_continues(names, &line))
+                // (a line of names horizontal space alone parts is more names, however styled: `Ann Able$^{1}$ \quad
+                // Cat Cole \\ \textbf{Bob Baker \quad Dan Dee}`, 2507.19054's row — welded, Cat Cole held them,
+                // [`space_parted_name_line`])
+                || space_parted_name_line(&line))
             {
               // An unfinished name list goes on past the break, as in an unmarked block ([`names_continue`]):
               // `Gus Gray\IEEEauthorrefmark{1}, …, Ida Ivy,~\IEEEmembership{Fellow,~IEEE,}\\ Jon Jay, … and~Kim
@@ -1038,6 +1049,9 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
     // Perl's @authorsplits shares the comma); witness arXiv:2606.00315.
     // (a group: its names and the lines under them)
     type Group = (Vec<Tokens>, Vec<Tokens>);
+    // (a line of names horizontal space alone parts is the names' row, not a line under them:
+    // [`space_parted_rows_joined`])
+    let stuff = space_parted_rows_joined(stuff);
     // Each block's groups, with whether only horizontal space (`\quad`, `\qquad`, the `\hspace`/`\hfill` and spacing
     // runs `normalize_hspace_separators` makes `\quad`) parts it from the block before.
     let mut blocks: Vec<(bool, Vec<Group>)> = Vec::new();

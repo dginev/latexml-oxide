@@ -191,7 +191,9 @@ fn inst_support_is_written() {
 /// sides accent-folded, `resolver::base_letters`): an accent command (`Ca\~nada`) and a text symbol (`\i`, latex.ltx's
 /// OT1 `\chardef` glyph, read through the encoding's font map) — 1009.1371 (73 creators, every one wrong before),
 /// 2401.03603. Before, the span's letters ("Canada", "Astrofsica") were not the key's and the cut declined: two
-/// `ltx_parbox` contacts.
+/// `ltx_parbox` contacts. Since 107b the kernel's reader reads the two `\parbox`es' lines as the block's
+/// (`wrapper_over_lines_as_lines`, 2311.03613): today's creators are the reading's, the writer has nothing to write
+/// (`same`), and no box is left in a contact either way.
 #[test]
 fn a_block_line_with_accents_is_cut() {
   for (tex, line) in [
@@ -214,15 +216,17 @@ fn a_block_line_with_accents_is_cut() {
       "  a Uni One, City | ruling1:request".to_string(),
       format!("  a {line} | ruling1:request"),
     ];
-    assert_written(
+    let (written, _, _, writer) = assert_reading(
       tex,
-      &[
+      Some(&[
         &["A. Able", "affiliation=Uni One, City"],
         &["B. Baker", &second],
         &["C. Cole", "affiliation=Uni One, City", &second],
-      ],
+      ]),
       &shadow.iter().map(String::as_str).collect::<Vec<_>>(),
     );
+    assert_eq!(writer, "same", "the writer's outcome");
+    assert_eq!(default_mode_creators(tex), written, "the default mode");
     // (no box of today's left in a contact: each made from its line's tokens)
     let (log, xml, ()) = convert_with_setup_then(
       tex,

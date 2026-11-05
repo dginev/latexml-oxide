@@ -565,8 +565,12 @@ pub(in crate::base_utilities) const NAME_GRADE_SOCIETIES: &[&str] = &[
 ];
 /// The abbreviated grades glued to a society's name (`M.ASCE`, `F.ASCE`, `A.M.ASCE`: ascelike's own
 /// `\author[1]{Matthew R. Kuhn, M.ASCE}`, ascexmpl.tex:48; ASCE's Student, Associate, full and Distinguished Members
-/// and Fellows).
-const NAME_GRADE_ABBREVIATIONS: &[&str] = &["S.M.", "A.M.", "M.", "F.", "Dist.M."];
+/// and Fellows), and IEEE's written without dots (`SMIEEE`, `FIEEE`, `MIEEE`, `LSMIEEE`: its Senior, full, Life, Life
+/// Senior, Graduate Student and Student Members and its Fellows and Life Fellows; `Krishan K. Tiwari$^1$,
+/// \textit{SMIEEE}, Eckhard Grass$^{1,2}$, …`, 1906.01719).
+const NAME_GRADE_ABBREVIATIONS: &[&str] = &[
+  "S.M.", "A.M.", "M.", "F.", "Dist.M.", "SM", "M", "F", "LM", "LSM", "LF", "GSM", "S",
+];
 /// Generational suffixes and academic degrees written after a name, comma-separated (`John Smith, Jr.`, `Jane Doe,
 /// MD, PhD`).
 pub(in crate::base_utilities) const NAME_SUFFIXES: &[&str] = &[
@@ -1533,17 +1537,38 @@ fn is_name_mark(node: &Node, qname: SymStr) -> bool {
       && matches!(fm_read_formula(node), FmFormulaMarks::Marks(_)))
 }
 
+/// Where a `<ltx:personname>`'s printed lines part in [`personname_text`]: at a `<ltx:break/>` and at the edges of a
+/// paragraph or a box's block (`\parbox{…}{A, B \begin{center}(X Collaboration)\end{center}}`'s `<ltx:p>`s). A
+/// whitespace character, so the whole text reads with it as with a space.
+const PERSONNAME_LINE_BREAK: char = '\u{2028}';
+
+/// The elements whose edges part a personname's printed lines ([`PERSONNAME_LINE_BREAK`]).
+const PERSONNAME_LINE_ELEMENTS: [&str; 6] = [
+  "ltx:break",
+  "ltx:p",
+  "ltx:para",
+  "ltx:inline-para",
+  "ltx:inline-block",
+  "ltx:block",
+];
+
 /// The text a `<ltx:personname>` shows, without its marks and notes (`ltx:sup`, `ltx:note`, math); an element
-/// (a `<ltx:break/>`, a cell) parts the words around it. With `marks_part`, each mark ([`is_name_mark`]) reads as a
-/// comma, as an author's mark after a name ends it.
+/// (a `<ltx:break/>`, a cell) parts the words around it, a line's edge ([`PERSONNAME_LINE_ELEMENTS`]) with a
+/// [`PERSONNAME_LINE_BREAK`]. With `marks_part`, each mark ([`is_name_mark`]) reads as a comma, as an author's mark
+/// after a name ends it.
 fn personname_text(node: &Node, marks_part: bool) -> String {
   let mut text = String::new();
   for child in node.get_child_nodes() {
     match child.get_type() {
       Some(NodeType::TextNode) => text.push_str(&child.get_content()),
       Some(NodeType::ElementNode) => {
-        text.push(' ');
         let qname = document::get_node_qname(&child);
+        let edge = if with(qname, |q| PERSONNAME_LINE_ELEMENTS.contains(&q)) {
+          PERSONNAME_LINE_BREAK
+        } else {
+          ' '
+        };
+        text.push(edge);
         if marks_part && is_name_mark(&child, qname) {
           text.push(',');
         } else if !with(qname, |q| {
@@ -1551,12 +1576,38 @@ fn personname_text(node: &Node, marks_part: bool) -> String {
         }) {
           text.push_str(&personname_text(&child, marks_part));
         }
-        text.push(' ');
+        text.push(edge);
       },
       _ => {},
     }
   }
   text
+}
+
+/// Whether `line` holds a word of two or more capitals and no small letter or dot (`IST`, `NVIDIA`; not the initials
+/// `J.-F.`) beside a word that has small letters: an acronym in a mixed-case line, an institution's (`IST Austria`);
+/// not a line set all in capitals (`KHIEM HONG PHAN`).
+fn holds_mixed_case_acronym(line: &str) -> bool {
+  let words: Vec<&str> = line
+    .split_whitespace()
+    .map(|w| w.trim_matches(|c: char| !c.is_alphabetic()))
+    .filter(|w| w.chars().any(char::is_alphabetic))
+    .collect();
+  let acronym = |w: &&str| {
+    w.chars().filter(|c| c.is_uppercase()).count() >= 2
+      && !w.chars().any(|c| c.is_lowercase() || c == '.')
+  };
+  words.iter().any(acronym) && words.iter().any(|w| w.chars().any(char::is_lowercase))
+}
+
+/// How many names a personname's text reads as ([`name_count`]), its marks as written or each read as a comma
+/// ([`personname_text`]'s two readings, `plain` and `marked`): the plain reading when it finds two or more, else the
+/// larger.
+fn personname_name_count(plain: &str, marked: &str) -> usize {
+  match name_count(plain) {
+    n if n >= 2 => n,
+    n => n.max(name_count(marked)),
+  }
 }
 
 /// A frontmatter author whose name reads as two or more people ("Ann Able and Bob Baker") lost the boundaries between
@@ -1568,19 +1619,46 @@ pub(in crate::base_utilities) fn flag_merged_creators(document: &mut Document) -
     document.findnodes("//ltx:creator[@role='author'][not(@_merged_checked)]", None)
   {
     document.set_attribute(&mut creator, "_merged_checked", "1")?;
-    // An author block laid out as a tabular is kept whole on purpose (`add_authors_calls`; Perl
+    // An author block laid out as a tabular or a minipage is kept whole on purpose (`add_authors_calls`; Perl
     // Base_Utility.pool.ltxml:693): its names are there, in their layout.
-    let Some(person) = document.findnode("ltx:personname[not(.//ltx:tabular)]", Some(&creator))
-    else {
+    let Some(person) = document.findnode(
+      "ltx:personname[not(.//ltx:tabular) and not(.//ltx:inline-block[contains(@class, 'ltx_minipage')])]",
+      Some(&creator),
+    ) else {
       continue;
     };
-    let text = personname_text(&person, false);
-    let text = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let plain = personname_text(&person, false);
+    let marked = personname_text(&person, true);
+    let text = plain.split_whitespace().collect::<Vec<_>>().join(" ");
     // (a mark after a name ends it, as an author's mark stands: names parted only by marks and spacing,
     // `FLORIAN REETZ$^1$ \ns PRIYA SUBRAMANIAN$^{2,3}$`, 1911.02873, read as one name without them)
-    let names = match name_count(&text) {
-      n if n >= 2 => n,
-      n => n.max(name_count(&personname_text(&person, true))),
+    let names = personname_name_count(&text, &marked.replace(PERSONNAME_LINE_BREAK, " "));
+    // (and each printed line read alone, so that a line that names no one beside the names does not hide them: a
+    // names paragraph above its collaboration's, `\parbox{\textwidth}{\Large A,$^{1,2}$ B,$^{3}$ … \begin{center} (DES
+    // Collaboration) \end{center}}`, 2311.03613 (55 names); names lines above their affiliations' line,
+    // `\textbf{A$^{1}$\thanks{…}, B$^{1}$, …} \\ \textbf{…} \\ $^{1}$MIT \qquad $^{2}$NUS`, 2609.38746: one line of two
+    // or more names is a merge; so are two or more lines each of names and nothing else, `Botian Shi <break/>Chiyu
+    // Wang`, 2306.04988 — names a `\\` parted. OXIDIZED_DESIGN_DIVERGENCES #897)
+    let lines: Vec<(usize, bool)> = plain
+      .split(PERSONNAME_LINE_BREAK)
+      .zip(marked.split(PERSONNAME_LINE_BREAK))
+      .filter(|(line, _)| line.chars().any(char::is_alphabetic))
+      .map(|(line, marked_line)| {
+        (
+          personname_name_count(line, marked_line),
+          holds_mixed_case_acronym(line),
+        )
+      })
+      .collect();
+    let names = names.max(lines.iter().map(|(n, _)| *n).max().unwrap_or(0));
+    // (a line set in mixed case holding an acronym names an institution, not a person: `Vage Egiazarian <break/>IST
+    // Austria`, 2504.20039, is one name over its affiliation)
+    let by_lines = lines.len() >= 2 && lines.iter().all(|&(n, acronym)| n > 0 && !acronym);
+    let (names, line_names) = if by_lines {
+      let sum = lines.iter().map(|(n, _)| *n).sum();
+      (names.max(sum), names < sum)
+    } else {
+      (names, false)
     };
     // (and a names line kept whole two or more of whose pieces are marked names, `A.~Able$^{1}$, B.~in der Baker,
     // C.~Cole$^{1}$`: the merge its marks contradict, whatever its names' shape — the count of marked names the cautious
@@ -1592,7 +1670,24 @@ pub(in crate::base_utilities) fn flag_merged_creators(document: &mut Document) -
         .and_then(|n| n.parse().ok())
         .unwrap_or(0),
     );
-    if names >= 2 {
+    // (counted by its lines, each one name, the line under a name may be the next author's or the name's own
+    // affiliation welded to it — `Bob Baker <break/>Carnegie Mellon`, a line no institution word marks as one: the
+    // wording says which reading, the rev107b review's N2)
+    if names >= 2 && line_names && lines.iter().all(|&(n, _)| n == 1) {
+      let shown = plain
+        .split(PERSONNAME_LINE_BREAK)
+        .map(|line| line.split_whitespace().collect::<Vec<_>>().join(" "))
+        .filter(|line| line.chars().any(char::is_alphabetic))
+        .collect::<Vec<_>>()
+        .join(" / ");
+      Error!(
+        "frontmatter",
+        "merged_creators",
+        s!(
+          "One author holds {names} lines that each read as a name: \"{shown}\"; the names a line break parts, or a name and the line under it (its affiliation), were not told apart"
+        )
+      );
+    } else if names >= 2 {
       Error!(
         "frontmatter",
         "merged_creators",
@@ -1600,7 +1695,36 @@ pub(in crate::base_utilities) fn flag_merged_creators(document: &mut Document) -
           "One author holds {names} names: \"{text}\"; the separators between them were not recognized"
         )
       );
+    } else if names == 0 && reads_as_a_line_under_names(&text) {
+      // (a creator whose name is a line under the names — a legend's or an affiliation's text, `also at the Moscow
+      // Institute of Physics and Technology, Moscow, Russia` of 1202.2048's `$^{a}$` legend: the rev107b review's B2 —
+      // is never silent)
+      Error!(
+        "frontmatter",
+        "creator_not_a_name",
+        s!(
+          "An author's name reads as no name: \"{text}\"; a line under the names (an affiliation or a legend) was read as an author"
+        )
+      );
     }
   }
   Ok(())
+}
+
+/// Whether a personname's text reads as a line under the names, no name: it opens with a word in lower case that is no
+/// name particle ([`NAME_PARTICLES`]: `van der Berg` opens a name) and no article, holds a word naming an institution
+/// ([`non_name_word`]), no address and no name ([`name_count`]) — a legend's text (`also at the Moscow Institute of
+/// Physics and Technology, Moscow, Russia`, `on leave from …`, `now at …`; 1309.4007's `e-mail:` line) or an
+/// affiliation's (`at the University of X`). A collaboration or a team named as an author opens with a capital or an
+/// article (`The ATLAS Collaboration`, `the ATLAS Collaboration`, `the PE11 team of Kepler WG#1`) and is not read.
+fn reads_as_a_line_under_names(text: &str) -> bool {
+  let Some(first) = text.split_whitespace().next() else {
+    return false;
+  };
+  first.chars().next().is_some_and(char::is_lowercase)
+    && !NAME_PARTICLES.contains(&first)
+    && !["the", "a", "an", "and"].contains(&first)
+    && !text.contains('@')
+    && name_count(text) == 0
+    && text.split_whitespace().any(non_name_word)
 }

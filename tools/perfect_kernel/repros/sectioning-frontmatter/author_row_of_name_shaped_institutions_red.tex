@@ -1,0 +1,17 @@
+% RED (review rev107b2 F1, synthetic only): a row of name-shaped institutions with no institution word under one name
+%   (`Ann Able\\ Carnegie Mellon \quad Johns Hopkins`) parts as a names line (`space_parted.rs` `space_parted_name_line`,
+%   batch 107b r2): "Carnegie Mellon" and "Johns Hopkins" become creators, silently. R12 wants the unmarked line under
+%   one name as that name's affiliation.
+% witness: none (synthetic; a popint125a_s10k scan of unmarked comma-free \quad rows found 6 rows in 5 papers, all real names)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able" / "Carnegie Mellon Johns Hopkins"
+% engines: rust int138a: Ann Able + affiliation Carnegie Mellon, "Johns Hopkins" a creator; 107b r2: 3 creators
+% expect:  0 errors; one creator Ann Able holding the line (one affiliation, or two) — no institution as a creator
+% status:  RED (int138a, 107b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\\ Carnegie Mellon \quad Johns Hopkins}
+\maketitle
+Body.
+\end{document}

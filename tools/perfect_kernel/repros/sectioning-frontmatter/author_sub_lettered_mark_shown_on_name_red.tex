@@ -1,0 +1,79 @@
+% RED (review rev107b2 F3): a sub-lettered mark the writer answers stays shown on the name (`B. Baker$^{18a}$` →
+%   "B. Baker18a"), while the same block's other names drop their answered marks — against FIDELITY_CHARTER §4 "a name's
+%   label is the name alone" (2026-10-21, rank 93). Pinned as is by perfect_kernel_batch107b's besiii_creators.
+% witness: 1202.2048 (BESIII: E. Boger18a, G. Chelkov18a, I. Denysenko18b, A. Sarantsev18d, X. Y. Shen36e); 2007.02542
+%   (`D.~Four$^{23A}$`)
+% oracle:  pdflatex (TL 2025) prints the mark as a superscript after the name — a link to its entries, not name text
+% engines: rust 107b r2: personname "B. Baker" + <sup>18a</sup>; the unlettered names' personnames hold the name alone
+% expect:  every answered mark out of the personname (each name its entries 18 and a, the legend on its requesters)
+% status:  RED (107b r2)
+% preload: ar5iv.sty
+\documentclass[preprint,11pt]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{
+\begin{small}
+A.~Able$^{1}$, B.~Baker$^{18a}$, C.~Cole$^{10}$, D.~Dee$^{36b}$, Lei~Li$^{1}$, N.~B.~Li$^{22}$, Q.~J.~Li$^{1}$
+\\
+\vspace{0.2cm}
+(X Collaboration)\\
+\vspace{0.2cm} {\it
+$^{1}$ Univ N1, City\\
+$^{2}$ Univ N2, City\\
+$^{3}$ Univ N3, City\\
+$^{4}$ Univ N4, City\\
+$^{5}$ Univ N5, City\\
+$^{6}$ Univ N6, City\\
+$^{7}$ Univ N7, City\\
+$^{8}$ Univ N8, City\\
+$^{9}$ Univ N9, City\\
+$^{10}$ Univ N10, City\\
+$^{11}$ Univ N11, City\\
+$^{12}$ Univ N12, City\\
+$^{13}$ Univ N13, City\\
+$^{14}$ Univ N14, City\\
+$^{15}$ Univ N15, City\\
+$^{16}$ Univ N16, City\\
+$^{17}$ Univ N17, City\\
+$^{18}$ Univ N18, City\\
+$^{19}$ Univ N19, City\\
+$^{20}$ Univ N20, City\\
+$^{21}$ Univ N21, City\\
+$^{22}$ Univ N22, City\\
+$^{23}$ Univ N23, City\\
+$^{24}$ Univ N24, City\\
+$^{25}$ Univ N25, City\\
+$^{26}$ Univ N26, City\\
+$^{27}$ Univ N27, City\\
+$^{28}$ Univ N28, City\\
+$^{29}$ Univ N29, City\\
+$^{30}$ Univ N30, City\\
+$^{31}$ Univ N31, City\\
+$^{32}$ Univ N32, City\\
+$^{33}$ Univ N33, City\\
+$^{34}$ Univ N34, City\\
+$^{35}$ Univ N35, City\\
+$^{36}$ Univ N36, City\\
+$^{37}$ Univ N37, City\\
+$^{38}$ Univ N38, City\\
+$^{39}$ Univ N39, City\\
+$^{40}$ Univ N40, City\\
+$^{41}$ Univ N41, City\\
+$^{42}$ Univ N42, City\\
+$^{43}$ Univ N43, City\\
+$^{44}$ Univ N44, City\\
+\vspace{0.2cm}
+$^{a}$ also at Inst Alpha, Moscow\\
+$^{b}$ on leave from Inst Beta, Kiev\\
+$^{c}$ now at Inst Gamma, Nagoya\\
+\vspace{7cm}
+}
+\end{small}
+}
+\begin{abstract}
+A.
+\end{abstract}
+\end{frontmatter}
+Body.
+\end{document}
