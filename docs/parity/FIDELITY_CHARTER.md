@@ -33,7 +33,10 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   element or attribute CSS can style or hide (2026-10). **A frontmatter mark matters only where it is used** (user
   2026-11-05, "we only care about marks that are used, at least from a frontmatter standpoint"): a printed mark no
   name requests (an orphan legend line's `$^{b}$`) is not kept as a label; the line's words are kept, once, on the
-  block creator, never on an author. (The witnesses checked carry no orphan: 2007.02542's "unrequested" 23/24/51/63
+  block creator, never on an author — **except in a one-author group** (user 2026-11-05, "Sole author"): there §4's
+  "the group's only author" holds, and an orphan line (`* Corresponding author, E-mail: qz@a.org` under `Ann Able$^{a}$`)
+  gives its contacts and notes to that author; an orphan in the author's own mark series (`$^{b}$ Univ B` beside
+  her `$^{a}$`) is still the block creator's. The owner never depends on another line. (The witnesses checked carry no orphan: 2007.02542's "unrequested" 23/24/51/63
   are requested as `$^{23A}$`…, its letters a-l all requested; 1507.02068 and 1202.2048 likewise.)
 - **An empty presentational shell left by our own restructuring is not emitted**: a thanks note whose entire content
   became contacts (OD #803, 2026-10-21). An author's own empty `\thanks{}` is not emitted either (2026-10-30, superseding
