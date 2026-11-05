@@ -169,9 +169,46 @@ fn author_call(label: Option<Tokens>, author: Tokens) -> Result<Tokens> {
 }
 
 /// Whether `author` holds the word "and" at its top level, between spaces or ties (not inside a note's argument or a
-/// group: `\thanks{Ann Able and Bob Baker are with X}`).
+/// group: `\thanks{Ann Able and Bob Baker are with X}`). A group or a font command around the whole of it is
+/// transparent: `{Nikolai N. Leonenko\textsuperscript{a}\thanks{…} ~and Andrey Pepelyshev\textsuperscript{a}}`
+/// (2506.23337), `\textbf{Ann Able and Bob Baker}` hold it at their top level.
 fn has_top_level_and_word(author: &Tokens) -> bool {
-  let v = author.unlist_ref();
+  let all = author.unlist_ref();
+  let start = all
+    .iter()
+    .position(|t| *t != T_SPACE!())
+    .unwrap_or(all.len());
+  let end = all
+    .iter()
+    .rposition(|t| *t != T_SPACE!())
+    .map_or(start, |e| e + 1);
+  let v = &all[start..end];
+  // (the group a wrapper opens: `{…}`, `\cmd{…}`, when it closes on the last token)
+  let open = match v.first().map(Token::get_catcode) {
+    Some(Catcode::BEGIN) => Some(0),
+    Some(Catcode::CS)
+      if v[0].with_str(|cs| {
+        (cs.starts_with("\\text") && cs != "\\textsuperscript") || cs == "\\emph"
+      }) && v.get(1).is_some_and(|t| t.get_catcode() == Catcode::BEGIN) =>
+    {
+      Some(1)
+    },
+    _ => None,
+  };
+  if let Some(open) = open {
+    let mut depth = 0i32;
+    let close = (open..v.len()).find(|&k| {
+      match v[k].get_catcode() {
+        Catcode::BEGIN => depth += 1,
+        Catcode::END => depth -= 1,
+        _ => {},
+      }
+      depth == 0
+    });
+    if close == Some(v.len() - 1) && v.len() > open + 2 {
+      return has_top_level_and_word(&Tokens::new(v[open + 1..v.len() - 1].to_vec()));
+    }
+  }
   let gap = |t: Option<&Token>| t.is_some_and(|t| *t == T_SPACE!() || *t == T_ACTIVE!('~'));
   let mut depth = 0i32;
   (0..v.len()).any(|i| {

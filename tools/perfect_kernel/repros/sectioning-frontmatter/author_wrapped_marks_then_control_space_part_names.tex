@@ -1,0 +1,31 @@
+% Names each in `\textbf{Name\textsuperscript{n}}`, parted by a line-ending `\` (a control space) — the marks inside
+% the wrapper end the name as after it — with `\footnotemark[2]` after two, the `\footnotetext` on a line of its own.
+% witness: 2608.29120 (`\textbf{Youngho Cho\textsuperscript{1}} \⏎ \textbf{Junho Kim\textsuperscript{1}} \⏎ …
+%          \textbf{Heeseung Kim\textsuperscript{5}}\footnotemark[2] \⏎ …`)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker2 Cat Cole3", "Dan Dee1 Eve Eden1 Fay Fox2† Gus Gray1,2†", the
+%          affiliation lines, the footnote "† Corresponding authors."
+% engines: rust int138a = "Dan Dee Eve Eden Fay Fox†" one creator, Gus Gray lost, 0 errors (silent); Perl one creator
+% expect:  0 errors, 0 warnings; seven creators, Fay Fox and Gus Gray each with the note, each its affiliations
+% status:  RED (int138a) -> GREEN (107b)
+% preload: ar5iv.sty
+\documentclass[11pt]{article}
+
+\title{T}
+\author{
+\textbf{Ann Able\textsuperscript{1}} \quad 
+\textbf{Bob Baker\textsuperscript{2}} \quad
+\textbf{Cat Cole\textsuperscript{3}}
+\\
+\textbf{Dan Dee\textsuperscript{1}} \
+\textbf{Eve Eden\textsuperscript{1}} \
+\textbf{Fay Fox\textsuperscript{2}}\footnotemark[2] \
+\textbf{Gus Gray\textsuperscript{1,2}}\footnotemark[2]
+\\
+\footnotetext[2]{Corresponding authors.}
+\\
+\textsuperscript{1}University of Alpha \quad \textsuperscript{2}University of Beta \\
+\textsuperscript{3}University of Gamma
+}
+\begin{document}
+\maketitle
+\end{document}

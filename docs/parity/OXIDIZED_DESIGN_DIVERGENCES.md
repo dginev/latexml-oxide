@@ -25837,6 +25837,68 @@ had given each author the next one's mark and note) — repro `author_lapped_com
 (`Jia-Bin Huang{$^{2}$} ~ David W. Jacobs{$^{2}$}`, 2406.09417; repro and guard
 `author_grouped_marks_then_space_separate_names`).
 
+**107b (census138 row 3, MERGED): wrappers are transparent, one rule per separator; the detector reads lines.**
+Perl's `SplitTokens` passes over groups, and our splitters stopped at a wrapper's edge in the ways below; each such
+block was one creator holding every name (Perl the same, silently). Each rule is general, no class named:
+- *A wrapper around the block's lines is each line's* (`wrapper_over_lines_as_lines`, author_block/separators.rs, in
+  `add_authors_calls`' `lines_prepared` after the alignment unwrapping): a text font command, a group or an
+  environment of declarations, or a `\parbox` (its declarations kept on each line, its paragraph layout and the box
+  dropped, as `names_in_wrapper` reads a box around names), opening and ending its line and holding a top-level `\\`
+  or a `center`/`flushleft`/`flushright` paragraph (its own line), is written as one wrapper per line joined by `\\`;
+  a wrapper inside a wrapped line is unwrapped too, its style added; a line of spacing only is dropped. Witnesses
+  2311.03613 (mnras `\parbox{\textwidth}{\Large A,$^{1,2}$ … \begin{center} (DES Collaboration) \end{center}}
+  \vspace{0.4cm}\\ \parbox{…}{$^{1}$…\\…}`: 1 → 55 creators), 1202.2048 (elsarticle `\begin{small} names \\ (BESIII
+  Collaboration)\\ {\it $^{1}$ … \\ …}\end{small}`: 1 → 342 creators — 340 names and 2 legend lines), 2306.04870
+  (aastex `\textsc{A$^{1,2}$⏎B$^{3}$, … \\ (The KMTNet Collaboration)\\}`: 1 → 20), 2306.04988 (a `\parbox` of
+  `\quad`-parted names over a `\\`: "Botian Shi <break/>Chiyu Wang" parted). An article `\author{Ann Able \\
+  University of Alpha}` and its `\parbox` form stay one author and her affiliation (R12). A font command around both
+  lines (`\textbf{A \\ Univ}`) is invalid in article's tabular `\@author` (pdflatex errs) but reads the same.
+- *A wrapper whose name ends in its marks ends where they do* (`space_parted_names`, `wrapped_name_marks_end`):
+  `\textbf{Youngho Cho\textsuperscript{1}} \⏎\textbf{Junho Kim\textsuperscript{1}}` parts as the marks and space
+  after a bare name do (2608.29120: 5 → 9 creators; "Dan Dee Eve Eden Fay Fox" one creator and the last name lost
+  before).
+- *IEEE's dotless grades qualify the name before them* (`NAME_GRADE_ABBREVIATIONS`: `SM`, `M`, `F`, `LM`, `LSM`,
+  `LF`, `GSM`, `S` glued to a society, `SMIEEE`, `FIEEE`): 1906.01719's `\IEEEauthorblockN{Krishan K. Tiwari$^1$,
+  \textit{SMIEEE}, Eckhard Grass$^{1,2}$, …}` reads as four names, each grade its author's membership contact (#967).
+- *A surname that is an institution's word after an initial is a marked name* (`marked_names`,
+  `surname_after_initial`): `Gary P. Centers,$^{1}$` in revtex4-1's one-call list (1901.10843: 1 → 12 creators);
+  only in a list by its marks, the last word after a capital initial, no other institution word (`W. M. Keck
+  Observatory` stays an institution; `St.`/`Mt.`/`Ft.` are no initials).
+- *authblk's "and" test sees through a group or font command around the whole list* (authblk_sty.rs
+  `has_top_level_and_word`): `{A\textsuperscript{a}\thanks{…} ~and B\textsuperscript{a}}` (2506.23337: 1 → 2).
+- *A sole `\input{file}` argument is read as the file's content* (`expand_sole_author_macro`'s `sole_input_file`, a
+  file mouth, as `\input` reads it), unless the file changes how it is read (`\catcode`, `\makeatletter`,
+  `\endinput`, a further `\input`/`\include`): 2609.38746 `\author{\input{author_grid.tex}}` 1 → 7.
+- *The detector reads each printed line alone* (`flag_merged_creators`, name_text.rs `personname_text`'s
+  `PERSONNAME_LINE_BREAK` at a `<ltx:break/>` and a paragraph's or box's edge): a line of two or more names is a
+  merge, and so are two or more lines each of names and nothing else, none a mixed-case line holding an acronym
+  (`holds_mixed_case_acronym`: `Vage Egiazarian <break/>IST Austria`, 2504.20039, is a name over its institution); a
+  line naming no one (a collaboration's, the affiliations') no longer hides the names beside it. The 3 silent census witnesses (2311.03613, 2609.38746,
+  2306.04988) and 2401.12049 read so; a block kept whole in a tabular or a minipage (the Perl fallback,
+  Base_Utility.pool.ltxml:693) is still not read. A `\shortstack{Ann Able\\ Bob Baker}` is flagged, and so is a
+  refused `\input` file's names line.
+
+Repros sectioning-frontmatter/`author_parbox_names_above_collaboration_paragraph`,
+`author_declaration_environment_over_names_and_affiliation_lines`, `aastex_textsc_wrapper_over_names_and_collaboration_line`,
+`author_parbox_quad_names_over_a_break_then_link_line`, `author_wrapped_marks_then_control_space_part_names`,
+`ieee_dotless_membership_abbreviations_between_names`, `revtex_marked_list_surname_after_initial_is_a_name`,
+`authblk_group_wrapped_tie_and_parts_names`, `author_merged_lines_are_flagged`, `author_name_break_affiliation_control`,
+`author_wrapped_name_break_affiliation_control`, `author_name_over_acronym_institution_is_not_flagged`,
+`input_names_block/*`; guards `perfect_kernel_batch107b::*` (11);
+updated `perfect_kernel_batch77n::authblk_glued_symbols_in_one_author_block` (its kept-whole block of three names now
+one `merged_creators` Error), `perfect_kernel_batch97e::a_block_line_with_accents_is_cut` (the kernel reads the two
+boxes: writer `same`), `perfect_kernel_batch98e::{a_sub_lettered_mark_goes_by_its_number,
+a_block_line_no_name_requests_goes_once_to_the_block}` (the `{\it …}` group's lines read by the kernel's reader, its
+unrequested `$^{b}$` line the block's shared orphan, which shows no mark — `perfect_kernel_batch61::
+author_marks_link_their_affiliations`' convention, where the writer's cut had kept the `b`: open, SYNC row 107b),
+`perfect_kernel_batchfms2a1::{input_field_events_carry_no_span, shadow_switch_leaves_the_xml_unchanged}` (the `\input`
+field no longer merged, 0 Errors). A/B (`pop107b.tsv`, 794 papers: the 9 witnesses, 287 dev papers with a
+`merged_creators` Error or a personname holding two or more commas or a name after a break, 498 controls) vs
+int138a: 37 changed, 18 in their XML (each a merge parted, 0 creators merged or lost), 19 in their log alone (new
+`merged_creators` Errors, each a real merge read against the PDF; with the final build gr-qc0305076's three
+`J.-F. Pascual-Sánchez`/`A. San Miguel`/`F. Vicente` lines a 20th); E 809 → 823, F 2 = 2. Census re-score of the 16
+changed dev papers: right creators 11 → 452 of 450 → 452 decided.
+
 ### 898. eptcs.cls: `\institute` and `\email` inside `\author` are each a line under the names (Perl: no binding)
 
 eptcs.cls (Electronic Proceedings in Theoretical Computer Science; v1.5-v1.7, shipped with each paper, not in TeX Live)

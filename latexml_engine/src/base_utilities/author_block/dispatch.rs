@@ -155,7 +155,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
   // its row, not an author line, so the whole family keeps the author content whole: a `tabular*`/`tabularx` author
   // block was split at its row ends, leaving the alignment open across the pieces (2609.34061, 34965, 39374, 39909;
   // KNOWN_PERL_ERRORS #502).
-  if [
+  let kept_whole = [
     "{tabular}",
     "{tabular*}",
     "{tabularx}",
@@ -166,8 +166,15 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
     "\\halign",
   ]
   .iter()
-  .any(|form| stuff_string.contains(form))
-  {
+  .any(|form| stuff_string.contains(form));
+  // (a wrapper around the block's lines is each line's, the lines read as written at the top level —
+  // [`wrapper_over_lines_as_lines`], 2311.03613, 2306.04870, 1202.2048, 2306.04988 —; not in a block kept whole)
+  let stuff = if kept_whole {
+    stuff
+  } else {
+    wrapper_over_lines_as_lines(stuff)
+  };
+  if kept_whole {
     let stuff = lines_prepared(strip_linebreak_options(written));
     calls
       .extend(Invocation!(T_CS!("\\lx@add@author"), vec![keyvals.clone(), Some(stuff)]).unlist());

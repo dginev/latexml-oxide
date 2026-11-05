@@ -60,6 +60,20 @@ pub(in crate::base_utilities) fn space_parted_names(line: Tokens) -> Tokens {
           continue;
         }
       } else {
+        // (a wrapper whose name ends in its marks ends where they do: `\textbf{Youngho Cho\textsuperscript{1}} \⏎
+        // \textbf{Junho Kim\textsuperscript{1}}`, 2608.29120 — the wrapper is transparent, [`wrapped_name_marks_end`])
+        if let Some(end) = wrapped_name_marks_end(v, i) {
+          let marks = name_marks_end(v, end);
+          let gap = space_run_end(v, marks);
+          if gap > marks && names_before(&v[piece_start..end]) && begins_a_name(v, gap, false) {
+            cuts.push((marks, gap));
+            piece_start = gap;
+            i = gap;
+          } else {
+            i = marks;
+          }
+          continue;
+        }
         let marks = name_marks_end(v, i);
         if marks > i {
           let gap = space_run_end(v, marks);
@@ -126,6 +140,34 @@ pub(in crate::base_utilities) fn space_parted_names(line: Tokens) -> Tokens {
   } else {
     line
   }
+}
+
+/// Where the wrapper at `v[i]` ends when the name it holds ends in the name's marks or notes ([`name_marks_end`]): a
+/// font command over a group ([`NAME_TEXT_COMMANDS`]: `\textbf{Ann Able\textsuperscript{1}}`) or a group
+/// (`{\bf Ann Able$^{1}$}`), a name letter before its marks. A wrapper prints its marks where its name ends, so a
+/// space after it parts the next name as after the marks themselves (2608.29120).
+fn wrapped_name_marks_end(v: &[Token], i: usize) -> Option<usize> {
+  let t = v.get(i)?;
+  let open = if t.get_catcode() == Catcode::BEGIN {
+    i
+  } else if t.get_catcode() == Catcode::CS
+    && t.with_str(|cs| NAME_TEXT_COMMANDS.contains(&cs))
+    && v
+      .get(i + 1)
+      .is_some_and(|g| g.get_catcode() == Catcode::BEGIN)
+  {
+    i + 1
+  } else {
+    return None;
+  };
+  let end = skip_group(v, open);
+  if end > v.len() || end < open + 3 || v[end - 1].get_catcode() != Catcode::END {
+    return None;
+  }
+  let inner = &v[open + 1..end - 1];
+  (0..inner.len())
+    .find(|&k| k > 0 && name_marks_end(inner, k) == inner.len() && names_before(&inner[..k]))
+    .map(|_| end)
 }
 
 /// Whether a piece of an author line prints a letter of name text ([`visible_name_text`]: not a graphic's file name,

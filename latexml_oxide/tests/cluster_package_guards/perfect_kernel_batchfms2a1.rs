@@ -713,7 +713,8 @@ fn font_switch_inside_a_run_keeps_the_name() {
 
 /// Tokens an `\input` in the field reads come from the file, not the field, and carry no position (review revfms2a1_2
 /// finding 3; OXIDIZED_DESIGN_DIVERGENCES #837): their events have no span, and the `\and` the file holds separates
-/// the names the token analyser merges.
+/// the names. Since 107b the token analyser reads a sole `\input{file}` as the file's content too (`sole_input_file`,
+/// 2609.38746): it no longer merges them, so no `merged_creators` Error.
 #[test]
 fn input_field_events_carry_no_span() {
   let (log, _, json) = convert_files_with_setup_then(
@@ -726,9 +727,7 @@ fn input_field_events_carry_no_span() {
     || set_fm_shadow_override(Some(true)),
     |_| fm_shadow_json(),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
-  // (the one Error is the token analyser's, named: review revfms2a1_3 nit 2)
-  assert!(log.contains("Error:frontmatter:merged_creators"), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let json: Value = serde_json::from_str(&json).expect("json");
   assert_eq!(block_spans(&json), [vec![
     ("N:Ann Able".to_string(), None),
@@ -814,9 +813,9 @@ fn shadow_switch_leaves_the_xml_unchanged() {
       ),
       (2, 0),
     ),
-    // (the token analyser cannot see the `\and` the file holds: one Error, `merged_creators`, as on int51a — what
-    // the observer reads past, `input_field_events_carry_no_span`)
-    (doc("", r"\input{auth_names}", "Body after."), (1, 0)),
+    // (the token analyser reads the sole `\input`'s file since 107b, `sole_input_file`, and so sees the `\and` it
+    // holds: no `merged_creators` Error, which int51a-106t raised — `input_field_events_carry_no_span`)
+    (doc("", r"\input{auth_names}", "Body after."), (0, 0)),
   ];
   let files = [("auth_names.tex", AUTH_NAMES)];
   for (tex, counts) in cases {
@@ -853,7 +852,7 @@ fn shadow_switch_leaves_the_xml_unchanged() {
     );
     if tex.contains(r"\input{auth_names}") {
       assert!(
-        off_log.contains("Error:frontmatter:merged_creators"),
+        !off_log.contains("Error:frontmatter:merged_creators"),
         "{tex}\n{off_log}"
       );
     }

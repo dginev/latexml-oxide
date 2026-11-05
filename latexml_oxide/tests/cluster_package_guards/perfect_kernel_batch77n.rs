@@ -1433,10 +1433,22 @@ fn authblk_glued_symbol_mark_answered_by_its_affil() {
 
 /// A whole author block in one authblk `\author`, its marks glued to symbols (`$^{1\ast}$`, `$^{1\dagger}$`) and its
 /// legends inside it (2605.10201's shape): one creator, the block as printed — its glued marks request their labels
-/// only, so nothing is appended to the name (77n r6: "∗,†" after the last legend).
+/// only, so nothing is appended to the name (77n r6: "∗,†" after the last legend). Its three names are one author, a
+/// merge: since 107b the detector reads the names line alone (`flag_merged_creators`), one `merged_creators` Error.
 #[test]
 fn authblk_glued_symbols_in_one_author_block() {
-  let xml = convert_repro!("author_authblk_glued_symbols_in_one_author_block.tex");
+  let (log, xml) = convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_authblk_glued_symbols_in_one_author_block.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert!(
+    log.contains("Error:frontmatter:merged_creators One author holds 3 names"),
+    "{log}"
+  );
+  let xml = squash(&xml);
   let bold_marked = |id: &str, name: &str, mark: &str| {
     format!(
       r#"<text font="bold" xml:id="{id}">{name}<sup xml:id="{id}.1"><text font="italic" xml:id="{id}.1.1">{mark}</text></sup></text>"#
