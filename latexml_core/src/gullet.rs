@@ -759,6 +759,23 @@ pub fn unread_expansion(tokens: Tokens) {
   }
 }
 
+/// [`unread_expansion`] of one token.
+#[inline]
+pub fn unread_expansion_one(token: Token) {
+  if let Some(ref mut runtime) = gullet_mut!().runtime {
+    runtime.pushback.push(token);
+  }
+}
+
+/// [`unread_expansion`] of the tokens `\expandafter` saved: `rest` goes back behind `first`, so `first` reads next.
+#[inline]
+pub fn unread_expansion_saved(first: Token, rest: Vec<Token>) {
+  if let Some(ref mut runtime) = gullet_mut!().runtime {
+    runtime.pushback.extend(rest.iter().rev().copied());
+    runtime.pushback.push(first);
+  }
+}
+
 /// [`unread_expansion`] of a macro body with its parameters substituted (`Tokens::substitute_parameters`),
 /// without building the list first: tex.web `macro_call` (§390) puts the body on the input as stored and the
 /// arguments where its `out_param`s are. The pieces go onto the pushback stack last first, each reversed;
