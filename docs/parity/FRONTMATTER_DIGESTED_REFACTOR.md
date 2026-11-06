@@ -6,6 +6,8 @@ natural variations from authors into a compact semantic representation with mark
 this doc is its living plan. The inventory it rests on is `~/data/pk_agents/main/agent_reports/2026-10-29_fm_inventory.md`
 (read-only sweep of 3c65814c1a; 29 rows, every pointer `file:line`).
 
+**Status (2026-11-06):** the old engine's removal before the merge is this refactor's Stages 7-8; the batches are Z0-Z23 in [`FRONTMATTER_SINGLE_ENGINE_PLAN.md`](FRONTMATTER_SINGLE_ENGINE_PLAN.md) "The path". Stages 1 and 4 landed; Stages 2, 3 and 5 had not.
+
 ## The principle
 
 1. A decision reads **what TeX made of the input**: the observer's events, or the digested XML (`ltx:sup`,
