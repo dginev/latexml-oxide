@@ -1764,10 +1764,34 @@ pub fn read_token_required(what: &str) -> Result<Option<Token>> {
 }
 
 pub fn read_token() -> Result<Option<Token>> {
+  let first = read_internal_token_checked(CommentSink::Pending)?;
+  // The usual token: no alignment is being read, so it ends no column, and it is no `\dont_expand`.
+  if let CheckedRead::Tok(token) = first
+    && !has_reading_alignment()
+    && !(token.code == Catcode::CS && token.text == pin!("\\dont_expand"))
+  {
+    match token.get_catcode() {
+      Catcode::BEGIN => increment_align_group_count(),
+      Catcode::END => decrement_align_group_count(),
+      _ => {},
+    }
+    return Ok(Some(token));
+  }
+  read_token_after(first)
+}
+
+/// [`read_token`] given what its first read found, in full: the alignment and `\dont_expand` cases.
+#[inline(never)]
+fn read_token_after(first: CheckedRead) -> Result<Option<Token>> {
   let mut next_token: Option<Token>;
+  let mut read = Some(first);
   loop {
     // Combined checkpoint + raw read + cycle fingerprint, one borrow.
-    next_token = match read_internal_token_checked(CommentSink::Pending)? {
+    let this_read = match read.take() {
+      Some(this_read) => this_read,
+      None => read_internal_token_checked(CommentSink::Pending)?,
+    };
+    next_token = match this_read {
       CheckedRead::NoRuntime => return Ok(None),
       // A marked eTeX pseudo-file (`\scantokens`) end is NOT crossed here:
       // its `\everyeof` payload was already read at the file's own level
