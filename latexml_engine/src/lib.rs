@@ -40,6 +40,8 @@ mod base_schema; // Perl: Base_Schema.pool.ltxml
 pub mod base_utilities; // Perl: Base_Utility.pool.ltxml
 pub mod base_xmath;
 pub mod frontmatter_stores; // K11: raw classes' title-page stores → frontmatter API // Perl: Base_XMath.pool.ltxml // Perl: Base_Deprecated.pool.ltxml
+// A native `\__fp_parse:n`, OXIDIZED_DESIGN_DIVERGENCES #973
+pub mod l3fp_native;
 
 // TeX_*.pool.ltxml
 pub mod tex_box; // Perl: TeX_Box.pool.ltxml

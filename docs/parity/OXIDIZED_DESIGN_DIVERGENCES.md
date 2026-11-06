@@ -32212,3 +32212,54 @@ and unit `author_split_tests::a_name_spells_a_run_of_the_local_parts_words` (the
 **Left** (one line each): a note (`ltx:note`) holding a list for its carriers is not parted (only contacts); initials tags
 `a@x (X.X.); b@y (M.Y.)` match no printed name (2002.08904); an unbraced list beside a printed name not in brackets
 (`Ann Able: a@x`) is not read as a name; a list in reverse author order stays unplaced (2508.07950).
+
+### 973. `\__fp_parse:n` is native: the same tokens as the macro's f-expansion, from a port of l3fp's arithmetic
+
+Perl has no native l3fp; every `\fp_set:Nn` is about 40k token reads here as there. `latexml_engine/src/l3fp_native/` replaces
+the one door, `\__fp_parse:n` (expl3-code.tex:17313), which `\fp_set:Nn`, `\fp_eval:n`, `\fp_compare:nNnTF`, `\fpeval`, siunitx's
+raw code and l3draw all go through. A pure speedup with no output change: the expansion is exactly what the macro's f-expansion
+yields, `\s__fp \__fp_chk:w <kind> <sign> {<exp>}{<b1>}{<b2>}{<b3>}{<b4>} \__fp_sep:` (or `0 0 \s__fp_exact`, `2 0 \s__fp_exact`,
+the `\s__fp_underflow` zero of `round(0.4)`), returned as a list through the ordinary macro call, so `invoke_expansion` stamps a
+frontmatter field's provenance on it as it does on any macro's.
+
+**The fail-safe.** On anything not handled with certainty the call expands to the raw macro, kept as `\lx@fp@parse@raw:n`, on the
+original argument tokens: a tuple, `nan`, `rand`, `randint`, `em`, `ex`, a user's fp variable or function, every flag or message
+(invalid operation, division by zero, overflow, underflow), a conditional or a primitive in the argument, an active character, a
+brace group. The native path has no side effect before its answer. It reads in the macro parser's order (`\__fp_parse_expand:w`:
+an argument's skip of spaces, then `get_x_token`, expanding until an unexpandable token and swallowing one space), but on a stack
+of its own, and substitutes only what changes no state: a macro with a token-list body; `\number`, `\the`, `\dim_to_fp:n`,
+`\fp_to_decimal:n`, `\fp_use:N` of a plain register, one dimension or a nested expression; `\csname` of a name that already means
+something (of a new one it defines `\relax`, so that is the raw macro's). A macro behind a space an expansion left is read
+unexpanded by the raw parser (`1\x`, `\def\x{ \y}`), so it declines. A dimension's value comes from the engine's own reader over
+a text checked to be `<decimal><unit>`, on which that reader can report nothing.
+
+**The arithmetic is a port, not a reimplementation.** `+ - * /`, `sqrt` and the number reader round correctly to 16 digits in the
+TeX (ties to even, `\__fp_round_digit:Nw`), so exact `u128` arithmetic with a sticky digit gives the same digits (`num.rs`).
+`exp`, `ln`, `^`, the sines and tangents and their inverses, `fact` do not: their block operations (`\__fp_fixed_mul:wwn`,
+`\__fp_fixed_mul_sub_back:wwwn`, `\__fp_fixed_div_int:wwN`, `\__fp_ep_div:wwwwn`, `\__fp_ep_isqrt:wwn`), `\numexpr`'s rounding
+division, the Taylor loops, the argument reductions and both intarrays are translated one for one, truncations included
+(`fixed.rs`, `func.rs`, `tables.rs`). No `f64` comes near a value.
+
+**Years.** Installed at the end of `LoadFormat('latex')`, after the dump's apply: the dumps do not change, and a later raw
+`expl3-code.tex` simply wins. Only over l3fp sources it was held against, by `\ExplLoaderFileDate` and the door's own body:
+2025-11-06 (TL 2025) and 2026-01-19 (the host's Debian tree), which differ in the door's `\group_align_safe_begin:` alone. Any
+other year keeps its macro, because before 2025 the separator was `;` and the numerics are unverified here.
+
+`LATEXML_L3FP_NATIVE=0` keeps the raw macro; `LATEXML_L3FP_CHECK=1` runs both on every call and reports an Error naming the
+argument where the token lists differ; `LATEXML_L3FP_TRACE=1` prints the answers and the fallbacks by reason at the thread's end.
+
+**The proof.** The self-check over the census, the 346 of 2,374 TeX Live manuals and 52 of 1,995 arXiv papers (seeded from those using
+`siunitx`, `xfp`, `l3draw`, `pgf-interference` or `\fp`) that reach l3fp: 1,192,411 calls, 0 mismatches, 95.3 % answered natively on
+the manuals, 97.6 % on the papers. pdflatex as oracle (`kit/l3fp_oracle.sh`, `-no-shell-escape`, TL 2025): 36 families, 100,000 seeded
+operations each, in the shapes that matter (16-digit mantissas, ties, exponent limits, angles next to multiples of pi/4, huge and
+tiny angles, literals past 16 digits, registers, composed expressions): 3,600,000 operations, 0 mismatches, `\fp_to_tl`; on the host's
+expl3 2026-01-19, 35 families at 5,000 each, 0 mismatches. `run_doc.sh` over the 353 manuals, base P1 and native and
+`LATEXML_L3FP_NATIVE=0`: 350 compared, Errors and Warnings equal, XML equal but `l3kernel/source3`, which varies on its own: a big
+document's streaming yields fall by RSS, and the base's own runs under load give two hashes (SYNC_STATUS "l3kernel/source3"). A/B of
+2,495 papers (`popP2`: the census's 2,000 and 500 controls) against P1: 0 changed, E 7,795 = 7,795, F 77 = 77.
+
+Guards `perfect_kernel_batchp2::{the_hard_values_are_pdflatexs, a_seeded_slice_matches_pdflatex, what_it_declines_is_the_raw_macros,
+it_expands_when_the_raw_parser_does, an_expression_in_a_printed_title_stays_a_field}` (repros `expl3/l3fp_*`), each both ways byte-identical.
+**Left, each a fallback (speed only):** `\numexpr` and `\dimexpr` of more than one number; `\pgfkeysvalueof`, `\arabic` and other
+native-bodied macros; conditionals; macros with delimited parameters; `\seq_item:Nn`, `\clist_item:nn`; `\__fp_parse_o:n`
+(`\fp_step_*`).

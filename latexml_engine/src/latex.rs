@@ -212,6 +212,9 @@ LoadDefinitions!({
   // `\UseRawInputEncoding`, `\ltx@hard@MessageBreak`) never register.
   InnerPool!(latex_constructs_rust_only);
 
+  // The native `\\__fp_parse:n`, once the format's l3fp is in (the dump does not carry it): OXIDIZED_DESIGN_DIVERGENCES #973.
+  crate::l3fp_native::install()?;
+
   // Retry any PA/MPA let-aliases whose target wasn't defined at
   // dump-load time (they were queued rather than silently dropped).
   // Classic example: `\let\a=\@tabacckludge` — `\@tabacckludge`

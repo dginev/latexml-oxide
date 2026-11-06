@@ -344,6 +344,27 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-11-06 — a native `\__fp_parse:n` (pk/P2)
+
+Basis: `perf stat -e instructions:u`, release, `kit/perf_lever.sh` (ledger row `P2`), XML byte-identical to base P1 on every row.
+`\__fp_parse:n` (expl3-code.tex:17313) is l3fp's one door; `latexml_engine/src/l3fp_native/` answers it with exactly the tokens of the
+macro's f-expansion, or hands over to the raw macro (OXIDIZED_DESIGN_DIVERGENCES #973).
+
+| Document | P1 instructions | P2 | wall, P1 → P2 (idle siblings) |
+|---|---:|---:|---:|
+| `b1_fp1000` | 69.31 G | **1.64 G, -97.6 %** | |
+| `pgf-interference-en` | 2,155 G | **425 G, -80.3 %** | 150.2 → 30.1 s |
+| `pgf-interference-de` | 2,158 G | **427 G, -80.2 %** | 151.0 → 31.5 s |
+| `b0_empty` (the install's cost) | 3.918 G | 3.916 G | |
+| `b5_fill1000`, `b3_addplot500` (no l3fp) | 12.01 G, 24.54 G | 12.01 G, 24.55 G | |
+
+What is left of `pgf-interference` is its `\fill` and `\colorlet` per pixel. Census (a call is one `\__fp_parse:n`): the TeX Live
+manuals, 1,164,240 calls in 346 documents, 95.3 % native; a seeded 2,000 arXiv papers using `siunitx`, `xfp`, `l3draw` or `\fp`, 28,171
+calls in 52 papers (`ar5iv.sty`'s siunitx binding does not reach l3fp), 97.6 % native. Top fallbacks on the manuals, each only
+speed left on the table: `\exp_after:wN` by way of `\exp_args:*` and `\seq_item:Nn` (22.6k), `\arabic` (5.3k), `\box_wd:N` in a
+`\dim_ratio:nn` (4k), `\pgfkeysvalueof` (5.7k), conditionals `\if_int_compare:w`, `\if:w` (4.4k), `\the` of `\numexpr` (2k), `rand` (1.4k),
+`em` and `ex` (1.1k). `kit/l3fp_census.py` over logs of `LATEXML_L3FP_TRACE=1` names them with a sample argument.
+
 ### 2026-11-06 — interpreter hot paths, the pk/P1 levers
 
 Basis: `perf stat -e instructions:u`, release, the TikZ audit's benchmarks (`~/data/pk_agents/main/tikz_perf/audit/`) under `[rawstyles,rawclasses,luatex]latexml.sty`, XML byte-identical to the base on every row (`kit/perf_lever.sh`, ledger `~/data/pk_agents/main/perf_ledger.tsv`). `b0_empty` loads `pgf-interference` and `pgfplots` and typesets nothing; "article" is a plain article with amsmath under `ar5iv.sty`.
