@@ -362,10 +362,8 @@ impl PartialEq for Token {
 // the worker's whole lifetime. Ordinary papers' arenas are 8-21 MB, inside the
 // span, so for them the memo is as before. A map keyed by symbol bounds it
 // too, but costs +0.5 % instructions on typical papers (the 24-paper C2 set).
-thread_local! {
-  static NOEXPAND_FAMILY_MEMO: std::cell::RefCell<Vec<u8>> =
-    const { std::cell::RefCell::new(Vec::new()) };
-}
+#[thread_local]
+static NOEXPAND_FAMILY_MEMO: std::cell::RefCell<Vec<u8>> = std::cell::RefCell::new(Vec::new());
 /// The arena byte span the [`Token::is_noexpand_family`] memo covers (64 MiB).
 const NOEXPAND_MEMO_SPAN: usize = 1 << 26;
 
@@ -373,7 +371,7 @@ const NOEXPAND_MEMO_SPAN: usize = 1 << 26;
 /// `arena::reset()` — symbol indices are reused after a reset, so stale
 /// entries would alias unrelated strings (same bug class as the REPORT-map
 /// fix, `7b64a48ad1`).
-pub fn reset_noexpand_family_memo() { NOEXPAND_FAMILY_MEMO.with(|m| m.borrow_mut().clear()); }
+pub fn reset_noexpand_family_memo() { NOEXPAND_FAMILY_MEMO.borrow_mut().clear(); }
 
 /// Name of the bare no-op control sequence `\noexpand` collapses to, and the
 /// prefix of every member of the no-expand family. See [`Token::is_noexpand_family`].
@@ -1201,10 +1199,13 @@ impl Token {
   /// fallback). The bare `\special_relax` (no suffix) is the no-shadow case
   /// (`\dont_expand` at end-of-input). `\x01` is never valid in a CS name or as
   /// an active char, so the encoding is unambiguous.
+  #[inline]
   pub fn is_noexpand_family(&self) -> bool {
-    if self.code != Catcode::CS {
-      return false;
-    }
+    self.code == Catcode::CS && self.names_noexpand_family()
+  }
+
+  /// [`Self::is_noexpand_family`] of a control sequence.
+  fn names_noexpand_family(&self) -> bool {
     // Per-symbol memo: this runs ×2 per CS token via `state::meaning_key`
     // (read_x_token decides whether to expand, invoke_token how to invoke),
     // and the string-prefix probe was ~2% of digest self-time (2026-08-23
@@ -1214,25 +1215,30 @@ impl Token {
     // `reset_thread_engine` (symbol indices are reused after `arena::reset`).
     use string_interner::Symbol;
     let idx = self.text.to_usize();
-    let memoized = idx < NOEXPAND_MEMO_SPAN;
-    if memoized {
-      let cached = NOEXPAND_FAMILY_MEMO.with(|m| m.borrow().get(idx).copied().unwrap_or(0));
+    if idx < NOEXPAND_MEMO_SPAN {
+      let cached = NOEXPAND_FAMILY_MEMO.borrow().get(idx).copied().unwrap_or(0);
       if cached != 0 {
         return cached == 2;
       }
     }
+    self.read_noexpand_family(idx)
+  }
+
+  /// The first look at a symbol: its text decides, and the answer goes in the memo. Kept out of line, as
+  /// [`Self::noexpand_shadowed`] runs for every token of an argument and must stay small enough to inline its test.
+  #[cold]
+  #[inline(never)]
+  fn read_noexpand_family(&self, idx: usize) -> bool {
     let is_family = self.with_str(|s| {
       s.starts_with(NOEXPAND_PREFIX)
         && (s.len() == NOEXPAND_PREFIX.len() || s.as_bytes()[NOEXPAND_PREFIX.len()] == NOEXPAND_SEP)
     });
-    if memoized {
-      NOEXPAND_FAMILY_MEMO.with(|m| {
-        let mut memo = m.borrow_mut();
-        if memo.len() <= idx {
-          memo.resize(idx + 1, 0);
-        }
-        memo[idx] = if is_family { 2 } else { 1 };
-      });
+    if idx < NOEXPAND_MEMO_SPAN {
+      let mut memo = NOEXPAND_FAMILY_MEMO.borrow_mut();
+      if memo.len() <= idx {
+        memo.resize(idx + 1, 0);
+      }
+      memo[idx] = if is_family { 2 } else { 1 };
     }
     is_family
   }
@@ -1240,10 +1246,19 @@ impl Token {
   /// Recover the shadowed token from a `\special_relax`-family token, if it
   /// shadows one (i.e. not the bare `\special_relax`). The shadowed token is a
   /// CS (text begins `\`) or an active char.
+  #[inline]
   pub fn noexpand_shadowed(&self) -> Option<Token> {
-    if !self.is_noexpand_family() {
-      return None;
+    if self.is_noexpand_family() {
+      self.shadowed_by_noexpand()
+    } else {
+      None
     }
+  }
+
+  /// [`Self::noexpand_shadowed`] of a member of the family.
+  #[cold]
+  #[inline(never)]
+  fn shadowed_by_noexpand(&self) -> Option<Token> {
     // Compute the owned shadowed name + its catcode INSIDE the `with_str`
     // borrow, then `arena::pin` it OUTSIDE. `with_str`'s `s` (hence `rest`)
     // aliases the arena's append-only buffer; a re-entrant `arena::pin(rest)`
