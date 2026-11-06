@@ -901,10 +901,12 @@ fn streaming_pass2(
     // half's pass A over the whole core XML).
     let frag_xml = libxml::parser::Parser::default()
       .parse_string(&store.wrapped_segment(seg)?)
-      .map_err(|e| Error {
-        target:   ErrorTarget::Internal,
-        category: ErrorCategory::Libxml,
-        message:  s!("cannot re-parse staged segment {seg}: {e}"),
+      .map_err(|e| {
+        Error::from(latexml_core::common::error::ErrorData {
+          target:   ErrorTarget::Internal,
+          category: ErrorCategory::Libxml,
+          message:  s!("cannot re-parse staged segment {seg}: {e}"),
+        })
       })?;
     let mut out = String::new();
     {
@@ -1373,7 +1375,7 @@ impl DigestionAPI for Core {
         && avail < need
       {
         stomach::set_fragment_yield_budget(None);
-        return Err(Error {
+        return Err(Error::from(latexml_core::common::error::ErrorData {
           target:   ErrorTarget::Timeout,
           category: ErrorCategory::MemoryBudget,
           message:  s!(
@@ -1382,7 +1384,7 @@ impl DigestionAPI for Core {
             store.dir().display(),
             avail / (1024 * 1024)
           ),
-        });
+        }));
       }
     }
     document.set_spill_store(store);

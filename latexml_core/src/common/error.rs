@@ -574,11 +574,11 @@ pub fn record_last_fatal(e: &Error) {
     _ => return,
   };
   LAST_RESOURCE_FATAL.with(|c| {
-    *c.borrow_mut() = Some(Error {
+    *c.borrow_mut() = Some(Error::from(ErrorData {
       target: ErrorTarget::Timeout,
       category,
       message: e.message.clone(),
-    });
+    }));
   });
   RESOURCE_FATAL_SEEN.with(|c| c.set(true));
 }
@@ -994,11 +994,11 @@ macro_rules! Fatal {
   ($target:expr_2021, $category:expr_2021, $message:expr_2021) => {{
     {
       use $crate::common::error::{Error as LatexmlError, ErrorCategory::*, ErrorTarget::*};
-      let __fatal_err = LatexmlError {
+      let __fatal_err = LatexmlError::from($crate::common::error::ErrorData {
         target:   $target,
         category: $category,
         message:  $message.to_string(),
-      };
+      });
       if $crate::common::error::is_demote_fatals() {
         // Demoted context (bibliography post-processing): count and log as
         // an ERROR — the problem is real and must be visible/accounted —
@@ -1031,11 +1031,11 @@ macro_rules! Fatal {
 macro_rules! fatal {
   ($target:expr_2021, $category:expr_2021, $message:expr_2021) => {{
     use $crate::common::error::{Error as LatexmlError, ErrorCategory::*, ErrorTarget::*};
-    let __fatal_err = LatexmlError {
+    let __fatal_err = LatexmlError::from($crate::common::error::ErrorData {
       target:   $target,
       category: $category,
       message:  $message.to_string(),
-    };
+    });
     // Same contract as `Fatal!`: the `Fatal:` line and the sticky count are
     // written HERE, at the raise (Perl `Fatal` prints before it dies), so a
     // swallowed `Err` can neither lose the line nor the status.
@@ -1161,10 +1161,30 @@ macro_rules! NoteSTDERR {
 pub type Result<T> = result::Result<T, Error>;
 
 #[derive(Debug)]
-pub struct Error {
+pub struct Error(Box<ErrorData>);
+
+/// What an [`Error`] says. Boxed there so that a `Result` costs a pointer: the interpreter's hottest calls
+/// (`read_token`, `read_x_token`, an argument's read) return `Result`s, and at this struct's size each went through
+/// stack memory instead of registers (`clippy::result_large_err`).
+#[derive(Debug)]
+pub struct ErrorData {
   pub target:   ErrorTarget,
   pub category: ErrorCategory,
   pub message:  String,
+}
+
+impl From<ErrorData> for Error {
+  fn from(data: ErrorData) -> Self { Error(Box::new(data)) }
+}
+
+impl std::ops::Deref for Error {
+  type Target = ErrorData;
+
+  fn deref(&self) -> &ErrorData { &self.0 }
+}
+
+impl std::ops::DerefMut for Error {
+  fn deref_mut(&mut self) -> &mut ErrorData { &mut self.0 }
 }
 impl ErrorTrait for Error {}
 // SAFETY: `Error` contains a `Locator` which embeds a Rc<RefCell<Mouth>> — !Send/!Sync
@@ -1296,13 +1316,13 @@ impl Error {
     LAST_FATAL_LOGGED.with(|c| *c.borrow_mut() = Some(key));
   }
   pub fn todo() -> Self {
-    Error {
+    Error::from(ErrorData {
       target:   ErrorTarget::Internal,
       category: ErrorCategory::ToDo,
       message:  String::from(
         "This section of the code is not yet implemented / ported over from Perl.",
       ),
-    }
+    })
   }
 }
 
@@ -1313,80 +1333,80 @@ macro_rules! unported {
 
 impl From<io::Error> for Error {
   fn from(err: io::Error) -> Error {
-    Error {
+    Error::from(ErrorData {
       target:   ErrorTarget::Mouth,
       category: ErrorCategory::Io(err),
       message:  s!("IO error"),
-    }
+    })
   }
 }
 
 impl From<Box<dyn ErrorTrait>> for Error {
   fn from(err: Box<dyn ErrorTrait>) -> Error {
-    Error {
+    Error::from(ErrorData {
       target:   ErrorTarget::Document,
       message:  err.to_string(),
       category: ErrorCategory::Generic(err),
-    }
+    })
   }
 }
 impl From<Box<dyn ErrorTrait + Send + Sync>> for Error {
   fn from(err: Box<dyn ErrorTrait + Send + Sync>) -> Error {
-    Error {
+    Error::from(ErrorData {
       target:   ErrorTarget::Document,
       message:  err.to_string(),
       category: ErrorCategory::Generic(err),
-    }
+    })
   }
 }
 
 impl From<String> for Error {
   fn from(err: String) -> Error {
-    Error {
+    Error::from(ErrorData {
       target:   ErrorTarget::Document,
       category: ErrorCategory::Generic(From::from(err.clone())),
       message:  err,
-    }
+    })
   }
 }
 
 impl<'a> From<&'a str> for Error {
   fn from(err: &'a str) -> Error {
-    Error {
+    Error::from(ErrorData {
       target:   ErrorTarget::Document,
       category: ErrorCategory::Generic(From::from(err.to_owned())),
       message:  err.to_owned(),
-    }
+    })
   }
 }
 
 impl From<()> for Error {
   fn from(_e: ()) -> Error {
-    Error {
+    Error::from(ErrorData {
       target:   ErrorTarget::Document,
       category: ErrorCategory::Libxml,
       message:  s!("LibXML error"),
-    }
+    })
   }
 }
 
 impl From<ParseIntError> for Error {
   fn from(err: ParseIntError) -> Error {
-    Error {
+    Error::from(ErrorData {
       target:   ErrorTarget::Document,
       message:  err.to_string(),
       category: ErrorCategory::Generic(Box::new(err)),
-    }
+    })
   }
 }
 
 impl From<ParseFloatError> for Error {
   fn from(err: ParseFloatError) -> Error {
-    Error {
+    Error::from(ErrorData {
       target:   ErrorTarget::Document,
       message:  err.to_string(),
       category: ErrorCategory::Generic(Box::new(err)),
-    }
+    })
   }
 }
 

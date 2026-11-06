@@ -172,11 +172,11 @@ fn unescape(s: &str) -> String {
 }
 
 fn index_error(details: String) -> Error {
-  Error {
+  Error::from(crate::common::error::ErrorData {
     target:   ErrorTarget::Internal,
     category: ErrorCategory::Unexpected,
     message:  format!("fragment-index: {details}"),
-  }
+  })
 }
 
 #[cfg(test)]

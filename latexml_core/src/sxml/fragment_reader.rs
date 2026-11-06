@@ -82,11 +82,11 @@ impl FragmentReader {
 }
 
 fn reader_error(details: String) -> Error {
-  Error {
+  Error::from(crate::common::error::ErrorData {
     target:   ErrorTarget::Internal,
     category: ErrorCategory::Libxml,
     message:  format!("fragment-reader: {details}"),
-  }
+  })
 }
 
 #[cfg(test)]

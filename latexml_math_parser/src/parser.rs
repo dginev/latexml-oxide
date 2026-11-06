@@ -706,11 +706,11 @@ fn resource_fatal_from_message(msg: &str) -> Option<Error> {
   } else {
     return None;
   };
-  Some(Error {
+  Some(Error::from(latexml_core::common::error::ErrorData {
     target: ErrorTarget::Timeout,
     category,
     message: msg.to_string(),
-  })
+  }))
 }
 
 impl MathParser {
@@ -2788,10 +2788,12 @@ impl MathParser {
       let parse_result = self
         .engine
         .run_recognizer(ByteScanner::new(Cursor::new(input)))
-        .map_err(|e| Error {
-          target:   latexml_core::ErrorTarget::MathParser,
-          category: latexml_core::ErrorCategory::FailedParse,
-          message:  e.to_string(),
+        .map_err(|e| {
+          Error::from(latexml_core::common::error::ErrorData {
+            target:   latexml_core::ErrorTarget::MathParser,
+            category: latexml_core::ErrorCategory::FailedParse,
+            message:  e.to_string(),
+          })
         })?;
       if *PARSE_LEXEMES_DBG {
         eprintln!("PARSE_LEXEMES_RECOGNIZED");

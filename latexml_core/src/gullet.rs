@@ -1308,7 +1308,9 @@ fn read_internal_token_checked(sink: CommentSink) -> Result<CheckedRead> {
     if g.progress + 1 < g.full_read_at
       && (matches!(sink, CommentSink::Pending) || g.pending_comments.is_empty())
       && let Some(rt) = g.runtime.as_mut()
-      && g.pushback_limit.is_none_or(|limit| rt.pushback.len() <= limit)
+      && g
+        .pushback_limit
+        .is_none_or(|limit| rt.pushback.len() <= limit)
       && let Some(&token) = rt.pushback.last()
       && !matches!(token.get_catcode(), Catcode::COMMENT | Catcode::MARKER)
     {
@@ -1510,7 +1512,9 @@ impl Gullet {
     }
     let read = self.progress;
     let deadline = (read | DEADLINE_CHECK_MASK) + 1;
-    let limit = self.token_limit.map_or(usize::MAX, |limit| limit.saturating_add(1));
+    let limit = self
+      .token_limit
+      .map_or(usize::MAX, |limit| limit.saturating_add(1));
     let guard = match read.checked_sub(self.cycle_guard_activate) {
       None => self.cycle_guard_activate + 1,
       Some(past) => {

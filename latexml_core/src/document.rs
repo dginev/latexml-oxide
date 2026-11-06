@@ -5500,10 +5500,12 @@ impl Document {
         for node in chunk.iter() {
           self.index_and_purge_spilled(node, seg, index);
         }
-        let spill_error = |details: String| Error {
-          target:   ErrorTarget::Document,
-          category: ErrorCategory::Libxml,
-          message:  s!("segment staging: {}", details),
+        let spill_error = |details: String| {
+          Error::from(crate::common::error::ErrorData {
+            target:   ErrorTarget::Document,
+            category: ErrorCategory::Libxml,
+            message:  s!("segment staging: {}", details),
+          })
         };
         let mut placeholder = Node::new(SPILL_PLACEHOLDER, None, &self.document)
           .map_err(|()| spill_error(s!("cannot create the placeholder node")))?;

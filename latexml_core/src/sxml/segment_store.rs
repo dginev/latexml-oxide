@@ -221,11 +221,11 @@ impl Drop for SegmentStore {
 }
 
 fn store_error(details: String) -> Error {
-  Error {
+  Error::from(crate::common::error::ErrorData {
     target:   ErrorTarget::Internal,
     category: ErrorCategory::Unexpected,
     message:  format!("segment-store: {details}"),
-  }
+  })
 }
 
 #[cfg(test)]
