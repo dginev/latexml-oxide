@@ -83,9 +83,9 @@ fn a_weak_four_letter_surname_owns_only_an_unclaimed_address() {
   );
 }
 
-/// A list a mark leads is one per person where a sibling spells a non-carrier (2412.13509) or the line names one (2102.08716,
-/// each address on one author by elimination); siblings spelling carriers leave the free carrier; a lone address stays every
-/// carrier's (user ruling 2026-10-30). Distinct: `link_entry_addresses`' `marked` and `list_placements`' `mark_lists`.
+/// A list a mark leads is no carriers' where a sibling spells a non-carrier (2412.13509) or the line names one (2102.08716,
+/// spelled addresses out of the list's order, so the unspelled stay on the block as on base: rev108a3 B3); siblings spelling carriers leave the free carrier; a lone address stays every
+/// carrier's (user ruling 2026-10-30; batch93a, batch100b pin it, this file's fixture for it now reads by numbers). Distinct: `link_entry_addresses`' `marked` and `list_placements`' `mark_lists`.
 /// (Since 108a r2 `\textsuperscript{*1}` asks for 1 and shows its star, so the first and third shapes' entries are cut by
 /// their marks, each name its own, and `bmfu@`, under no entry of Bob Fu's, is the block's, as `\textsuperscript{1}` read on
 /// int139c: 2412.13509's `hmfu@`, open in SYNC 108a.)
@@ -103,7 +103,7 @@ fn a_list_a_mark_leads_is_no_carriers_where_it_spells_others() {
       repro!("email_list_mark_line_names_non_carriers_is_no_carriers"),
       0
     ),
-    r##"<title>T</title> <creator role="author"> <personname>David Macedo*</personname> <contact name="Emails: " role="email"><text font="typewriter" fontsize="90%" xml:id="id1">dlm@cin.ufpe.br</text></contact> </creator> <creator before=" " role="author"> <personname>Pedro Dreyer*</personname> <contact name="Emails: " role="email"><text font="typewriter" fontsize="90%" xml:id="id2">phdl@cin.ufpe.br</text></contact> </creator> <creator before=" " role="author"> <personname>Teresa Ludermir</personname> <contact name="Emails: " role="email"><text font="typewriter" fontsize="90%" xml:id="id3">tbl@cin.ufpe.br</text></contact> </creator> <creator before=" " role="author"> <personname>Cleber Zanchettin</personname> <contact name="Emails: " role="email"><text font="typewriter" fontsize="90%" xml:id="id4">cz@cin.ufpe.br</text></contact> </creator> <creator role="author"> <contact name="Affiliation: " role="affiliation">*equal contributions. David Macedo, Pedro Dreyer, Teresa Ludermir, and Cleber Zanchettin are with the Centro de Informatica, Universidade Federal, Recife, Brasil.</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>David Macedo*</personname> </creator> <creator before=" " role="author"> <personname>Pedro Dreyer*</personname> </creator> <creator before=" " role="author"> <personname>Teresa Ludermir</personname> </creator> <creator before=" " role="author"> <personname>Cleber Zanchettin</personname> <contact name="Emails: " role="email"><text font="typewriter" fontsize="90%" xml:id="id1">cz@cin.ufpe.br</text></contact> </creator> <creator role="author"> <contact name="Affiliation: " role="affiliation">*equal contributions. David Macedo, Pedro Dreyer, Teresa Ludermir, and Cleber Zanchettin are with the Centro de Informatica, Universidade Federal, Recife, Brasil.</contact> <contact name="Emails: " role="email"><text font="typewriter" fontsize="90%" xml:id="id2">dlm@cin.ufpe.br</text></contact> <contact name="Emails: " role="email"><text font="typewriter" fontsize="90%" xml:id="id3">phdl@cin.ufpe.br</text></contact> <contact name="Emails: " role="email"><text font="typewriter" fontsize="90%" xml:id="id4">tbl@cin.ufpe.br</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para>"##
   );
   assert_eq!(
     converted(

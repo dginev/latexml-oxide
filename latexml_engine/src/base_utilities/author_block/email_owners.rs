@@ -1003,12 +1003,19 @@ pub(in crate::base_utilities) fn owners_by_elimination(
   if open.is_empty() || spelled.is_empty() || !spelled.windows(2).all(|pair| pair[0] < pair[1]) {
     return owners;
   }
-  // (as many left as there are names left: in order, 2605.26032's `jzxchen@`, `billf@`, `soljacic@`)
+  // (as many left as there are names left: in order, FIDELITY_CHARTER §4's condition, so only when the order holds with
+  // the spelled addresses. It fails on 2606.04646, whose position read swapped `dishkw@` and `e0556732@`, and on 2605.26032,
+  // `congyued@` before `billf@` with Deng after Freeman, where it placed `jzxchen@` and `billf@` right by luck; those and
+  // 2102.08716's list stay on the block, rev108a3 B3)
   if open.len() == left.len() && !elsewhere_open {
-    for (at, name) in open.into_iter().zip(left) {
-      owners[at] = Some(name);
+    let mut placed = owners.clone();
+    for (at, name) in open.iter().zip(&left) {
+      placed[*at] = Some(*name);
     }
-    return owners;
+    let in_order: Vec<usize> = placed.iter().flatten().copied().collect();
+    if in_order.windows(2).all(|pair| pair[0] < pair[1]) {
+      return placed;
+    }
   }
   // (each run of open addresses, with the owners of the spelled addresses around it, and every name between them)
   let mut run: Vec<usize> = Vec::new();

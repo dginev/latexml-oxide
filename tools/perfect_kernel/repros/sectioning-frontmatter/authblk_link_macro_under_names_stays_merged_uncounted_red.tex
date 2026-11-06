@@ -1,0 +1,14 @@
+% RED: a macro printing a link on a line under names keeps the merge, and no Error counts it (OD #52(h) says counted).
+% witness: none beyond 2601.07891's `\githubrepo` in a scan of 3,190 authblk papers (rev108a3)
+% oracle:  pdflatex (TL 2025) clean
+% engines: int139c and 108a: one creator, E0
+% expect:  2 creators, or 1 with Error:frontmatter:merged_creators
+\documentclass{article}
+\usepackage[hidelinks]{hyperref}
+\usepackage{authblk}\newcommand\repo{\href{https://x.org}{x/repo}}
+\begin{document}
+\title{T}
+\author{Ann Able\quad Bob Baker\\ Univ X\\ \repo}
+\maketitle
+Text.
+\end{document}

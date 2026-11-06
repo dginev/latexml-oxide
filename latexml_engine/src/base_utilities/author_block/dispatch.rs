@@ -1721,7 +1721,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
             .count();
         }
         let alone = last == first && !kept_apart && !whole_block;
-        // (a role mailbox in a list under one name of several is no person's, the block's: `\{eve, staff\}@b.edu`, R10)
+        // (a role mailbox in a list under one name of several is no person's, the block's: `\{eve, info\}@b.edu`, R10)
         let list_of_several = owns_its_lines && addresses.len() > 1 && name_keys.len() > 1;
         owners
           .into_iter()

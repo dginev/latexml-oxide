@@ -278,6 +278,57 @@ fn an_empty_marked_piece_is_the_blocks() {
 
 /// A star glued in math shows the `∗` it prints, in text the `*`, each mid-list in its place, the marks answered or not;
 /// 2505.11121, 2609.14365. Distinct: `keepsup_in_math`, `GluedPart`, the comma of `show_unanswered_marks`.
+/// Beside a second symbol too: `$^{2,1*\dagger}$` prints `∗†` (2404.16821, 2505.17017, 2609.38428, 2610.31762; rev108a3 B1).
+#[test]
+fn a_glued_star_beside_a_second_symbol_prints_as_written() {
+  let (log, xml) = cli_conversion(repro!("author_glued_star_beside_a_second_symbol"), false);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able ∗†", "affiliation=Univ A", "affiliation=Univ B"],
+    vec!["Bob Baker", "affiliation=Univ A"],
+  ]);
+}
+
+/// A list's order places what it spells no owner for only when the spelled addresses agree with it (FIDELITY_CHARTER §4):
+/// `chang_liu@` second and Chang Liu third rule it out (2606.04646, 2605.26032, 2102.08716; rev108a3 B3).
+#[test]
+fn an_address_list_out_of_order_places_only_what_it_spells() {
+  let (log, xml) = cli_conversion(
+    repro!("email_list_spelled_out_of_place_has_no_order"),
+    false,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able", "affiliation=Univ X", "email=ann@x.edu"],
+    vec!["Bob Baker", "affiliation=Univ X"],
+    vec!["Cat Cole", "affiliation=Univ X", "email=cat@x.edu"],
+    vec!["Dan Doe", "affiliation=Univ X", "email=ddoe@x.edu"],
+    vec!["Eve Elm", "affiliation=Univ X"],
+    vec!["email=zz1@x.edu", "email=zz2@y.edu"],
+  ]);
+}
+
+/// The mark-line route too (rev107g finding 4): `{bzz,dd,aql,cqr}@` spells `dd` out of place, so the rest stay on the block.
+#[test]
+fn a_mark_line_list_out_of_order_places_only_what_it_spells() {
+  let (log, xml) = cli_conversion(
+    repro!("email_list_mark_line_spelled_out_of_place_no_order"),
+    false,
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  let people = creators(&xml);
+  assert!(
+    people
+      .iter()
+      .any(|person| person[0] == "Dan Dee" && person[1] == "email=dd@x.org"),
+    "{people:?}"
+  );
+  let block = people.last().expect("the block");
+  for address in ["email=bzz@x.org", "email=aql@x.org", "email=cqr@x.org"] {
+    assert!(block.iter().any(|item| item == address), "{people:?}");
+  }
+}
+
 #[test]
 fn a_glued_star_prints_as_written_in_its_place() {
   let names = |tex: &str| -> Vec<Vec<String>> {

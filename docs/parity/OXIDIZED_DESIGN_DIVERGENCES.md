@@ -1777,7 +1777,7 @@ stays there.**
   on one line under three names with one spelled resolves whole (`\texttt{a@x} \quad \texttt{b@y} \quad \texttt{snhong@x}`);
   the same addresses over two lines leave the two unspelled to the block (`owners_by_elimination`: nothing bounds them). So
   `cpo@`/`ceo@` (2606.13556) resolve and 2609.16617 does not.
-- *An `\and` block of one name* (`owners_of`'s `owns_its_lines`) owns every address under it unless another name spells it;
+- *An `\and` block of one name* (`owners_of`'s `owns_its_lines`) owns every address under it unless another name spells it or it is a role mailbox;
   elimination stays inside it (2609.05531's `john3678@`). One after names with no lines of their own stays the row's
   (2409.18978's `\{rbohrer,aneth\}@`), and so does a piece space parts, an institution read as a name (2404.19007). A line under a row kept apart by its legend reads the whole row's names, a lone spelled
   address its name's (2609.03842's `snhong@`).
@@ -1787,9 +1787,13 @@ stays there.**
   name and the Error counted (`rows::holds_a_macro_printing_a_link`, 2601.07891's `\githubrepo`). A raw class's store is no
   `\affil` in the observer's reading of `\AB@thenote` (`thenote_affil`, `_store`): 2610.36456's Feng Xie no longer requests
   entry 1, under commas too.
-- *Settled, not changed.* A `\footnote` on a line under a sole author is a `pubnote` under authblk's kernel route as in plain
-  `article` and Perl's nesting (2605.13069, 2601.20363; 2610.07278's `\thanks` on three names): base's creator note came with
-  the merged name. `zhanfa@` (2606.04547) is spelled by no name: base's holder was the order among misread names, and with
+- *Open, a note's owner.* A `\footnote` on a line under a sole author is a `pubnote` under authblk now, as it is in plain
+  `article`: parted from the name it digests in the line's contact, where `\footnote` is `\lx@add@pubnote`. **Perl keeps it a
+  note on the creator under authblk (2601.20363, run; a `pubnote` only without authblk), and so did base, inside the merged
+  name.** The text is kept and the owner is lost, against charter §4's sole author; RED
+  `authblk_footnote_line_under_sole_author_red` (2601.20363, 2605.13069), for the Link step. 2610.07278's `pubnote`, an IEEE
+  copyright line, is right.
+- *Settled, not changed.* `zhanfa@` (2606.04547) is spelled by no name: base's holder was the order among misread names, and with
   `niwangze@` open (its author's row an affiliation in both) elimination holds. `\textsuperscript{*1}` asks for 1, so an entry
   is cut by its marks and an address under it follows the numeric route's carriers (2412.13509: seven affiliations right,
   `hmfu@` the block's, as `\textsuperscript{1}` on base; guard `batch107g`).
@@ -2092,8 +2096,9 @@ ruling 2026-10-19).** Three readings of an author block Perl gets wrong (it merg
   the pool is the names no address spells on any e-mail line of the block (2605.06223's `kyle.min@…` on the next line
   leaves `treejhk@…` Junhyuk Kwon's); exactly one address and one name left, the address is that name's (`lzhang@…`
   Li Zhang's, then `zhangw@…` Wei Zhang's); else the addresses the names spell must stand in name order (one at least),
-  and the addresses left go in order to the names left when there are as many (2605.26032's `jzxchen@`, `billf@`,
-  `soljacic@`), else those between two of them, or before the first or after the last, go in order to the names
+  and the addresses left go in order to the names left when there are as many and that order holds with the spelled ones
+  (it fails on 2606.04646, where the position read swapped `dishkw@` and `e0556732@`, and on 2605.26032's `congyued@` before
+  `billf@`, whose `jzxchen@`, `billf@` and `soljacic@` it once placed right by luck; 108a, rev108a3 B3), else those between two of them, or before the first or after the last, go in order to the names
   between their owners when there are as many, every author there counted, spelled on another line or not, and none
   of them spelled or given an address — never a run before the first or after the last, which only the list's end
   bounds (user ruling R10 2026-10-20, 77p r10: no position placement at a list's end; 77p r9 had waited on the other
@@ -31475,7 +31480,8 @@ of the name, a note's mark, a request in `_annotations`; keyed as printed, `prin
 key, every asterisk form one — user ruling 2026-11-02 — so `∗∗` is I. Chowdhury's and `∗` S. Biswas's in
 gr-qc0207058), or the block where none does, never the positional steps (an address list, that is, addresses its mark
 leads with siblings, one of them spelling an author who does not answer the mark or its entry naming one, is one per person,
-not every carrier's: spelling, then elimination as one line's list, else the block — `mark_lists`, 107g: 2102.08716's
+not every carrier's: spelling, then elimination as one line's list when the order holds, else the block — `mark_lists`, 107g,
+108a: 2102.08716's list spells `cz` out of the names' order, so the three unspelled stay on the block as on base:
 `*equal contributions. David Macêdo, …, and Cleber Zanchettin are with … \{dlm,phdl,cz,tbl\}@…` under two `*` names, 2412.13509's
 `hmfu@`; siblings spelling only carriers leave the free carriers, `entry_address_owners`' `free`; a lone address on a line a
 shared symbol labels stays every carrier's, user ruling 2026-10-30; a mark the entry's several carriers all

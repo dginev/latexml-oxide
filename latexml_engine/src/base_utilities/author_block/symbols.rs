@@ -570,13 +570,20 @@ pub fn glued_line_marks_as_marks(tokens: Tokens, first_line: bool) -> Tokens {
 
 /// [`keepsup`] for a symbol glued to a mark in math (`$^{1*}$`, `$^{1,2*}$`, 2505.11121): a math `*` prints `∗`, shown
 /// so (FIDELITY_CHARTER §4, "stays as written"; `\textsuperscript{1*}` keeps its text `*`), its key the `*` the entries
-/// answer. A lone `$^{*}$` shows `*` as it always has, in [`rewrite_symbol_superscripts`]' own branch.
+/// answer; beside a second symbol too (`$^{2,1*\dagger}$` prints `∗†`: 2404.16821, 2505.17017). A lone `$^{*}$` shows
+/// `*` as it always has, in [`rewrite_symbol_superscripts`]' own branch.
 fn keepsup_in_math(sym: Vec<Token>) -> Vec<Token> {
-  let mut v = if matches!(sym.as_slice(), [t] if *t == T_OTHER!("*")) {
-    visible_sup(vec![T_CS!("\\ast")])
-  } else {
-    visible_sup(sym.clone())
-  };
+  let shown = sym
+    .iter()
+    .map(|token| {
+      if *token == T_OTHER!("*") {
+        T_CS!("\\ast")
+      } else {
+        token.clone()
+      }
+    })
+    .collect();
+  let mut v = visible_sup(shown);
   v.extend([T_CS!("\\lx@frontmatter@symbolmark"), T_BEGIN!()]);
   v.extend(sym);
   v.push(T_END!());
