@@ -47,7 +47,9 @@ fn code_lines(path: &str) -> Vec<String> {
     .collect()
 }
 
-/// Compare the counts with their pins, a debt each: `why` when one rises, a request to lower the pin when one falls.
+/// Compare the counts with their pins, a debt each: `why` when one rises, a request to lower the pin when one falls. A
+/// pin raised shows only in this file's diff, so the rule is in the message: what raises one states its reason, in the
+/// commit and in the batch's report, and the reviewer reads it.
 fn assert_debts(name: &str, pins: &[(&str, usize)], counts: &BTreeMap<String, usize>, why: &str) {
   let table: String = counts.iter().fold(String::new(), |out, (key, n)| {
     format!("{out}  (\"{key}\", {n}),\n")
@@ -58,15 +60,20 @@ fn assert_debts(name: &str, pins: &[(&str, usize)], counts: &BTreeMap<String, us
     .filter(|(key, n)| **n > pinned.get(*key).copied().unwrap_or(0))
     .map(|(key, n)| format!("{key}: {} -> {n}", pinned.get(key).copied().unwrap_or(0)))
     .collect();
-  assert!(rose.is_empty(), "{name} rose: {rose:?}. {why}");
+  assert!(
+    rose.is_empty(),
+    "{name} rose: {rose:?}. {why} A raised pin is the exception: the commit and the batch's report state its reason, and \
+     the review reads it. The table now:\n{table}"
+  );
   assert_eq!(
     pinned, *counts,
     "{name} fell: a debt paid. Lower its pin so it stays paid; the table now:\n{table}"
   );
 }
 
-/// The old reader's emissions and `annotate=` literals, per file: `\lx@add@` occurrences, `annotate=` occurrences.
-/// Each is a decision the old engine takes, on the way to deleting it (42 + 4 at int140a; the study's 41 counted otherwise).
+/// What the old reader emits into the API, per file: `\lx@add@`, `\lx@annotate@frontmatter` and `queue_front_matter(`
+/// occurrences, and `annotate=` literals. Each is a decision the old engine takes, on the way to deleting it (the first and
+/// the last 42 + 4 at int140a; the study's 41 counted otherwise).
 /// Stopgaps inside these counts: 97f r2's `\lx@add@contact@placed` in `email_block_calls.rs` (`placed_email_line_calls`,
 /// `take_placed_line_emails`; rev126a N2), and its F1 and F3. 108a's six rules (`rows::own_marks_end`,
 /// `lines_under_names_read_as_names`, `line_breaks_as_name_separators`, `separators::has_author_block_separator`,
@@ -74,10 +81,12 @@ fn assert_debts(name: &str, pins: &[(&str, usize)], counts: &BTreeMap<String, us
 /// [`OLD_READER_CODE_LINES`] sees that kind of growth.
 const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
   ("affiliations.rs lx@add@", 2),
+  ("affiliations.rs lx@annotate@frontmatter", 2),
   ("collaborations.rs annotate=", 1),
   ("collaborations.rs lx@add@", 2),
   ("dispatch.rs annotate=", 2),
   ("dispatch.rs lx@add@", 10),
+  ("dispatch.rs queue_front_matter(", 1),
   ("email_block_calls.rs lx@add@", 6),
   ("email_lines.rs lx@add@", 7),
   ("line_kinds.rs annotate=", 1),
@@ -87,8 +96,19 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
 ];
 
 /// The old reader's non-blank code lines at int140a: a ceiling, for the growth its emissions don't show (108a's +703
-/// lines, no new emission). Only a ceiling: code lines fall with any edit, and no pin should fail a deletion.
+/// lines, no new emission). A ceiling, so no edit that shortens the reader fails on it; **a batch that deletes from the
+/// reader lowers it to the new count**, in the same commit, so what was deleted cannot grow back. A sibling directory is no
+/// escape from the rest of this fence's reach: its token reads count in `token_reads_only_fall_toward_the_floor`'s
+/// catch-all, and its API names and keys in `the_frontmatter_api_stays_perls`.
 const OLD_READER_CODE_LINES: usize = 15_420;
+
+/// What the fence counts in the old reader's code: its ways into the API's queue, and a convention's mode.
+const OLD_READER_NEEDLES: [&str; 4] = [
+  "lx@add@",
+  "lx@annotate@frontmatter",
+  "queue_front_matter(",
+  "annotate=",
+];
 
 /// The fence: the old reader takes no new ownership rule.
 #[test]
@@ -102,7 +122,7 @@ fn the_old_reader_takes_no_new_decision() {
     let short = file.rsplit('/').next().expect("a file name").to_string();
     for code in code_lines(&file) {
       lines += usize::from(!code.trim().is_empty());
-      for needle in ["lx@add@", "annotate="] {
+      for needle in OLD_READER_NEEDLES {
         let n = code.matches(needle).count();
         if n > 0 {
           *counts.entry(format!("{short} {needle}")).or_default() += n;
@@ -188,14 +208,132 @@ const API_EXTENSIONS: &[&str] = &[
   "lx@add@store@authorblock",
 ];
 
-/// Where the API's keys outside Perl's are set, or read (a grep, so both count): `_grouped=`, `_markpiece=`, `_share=`,
-/// `owner=`, by key and file. A debt like the names.
+/// The keys of `\\lx@add@…[…]` calls Perl has too, by its `DefKeyVal('Frontmatter', …)` (`Base_Utility.pool.ltxml:247-254`).
+const PERL_DECLARED_KEYS: &[&str] = &[
+  "annotate",
+  "annotations",
+  "class",
+  "graphic",
+  "label",
+  "labelref",
+  "labelseq",
+  "role",
+];
+
+/// The API's keys outside Perl's, per key and file: each `_word=` an API call sets (and `owner=`, the one without the `_`),
+/// each string constant naming such a key (`CUT_LIST`, which `s!("{CUT_LIST}={key}")` sets: `const _cutlist`), and each key
+/// declared in `Frontmatter` that Perl does not declare. A debt like the names. Not a constructor's XML attribute, which is
+/// quoted (`_noautoclose='true'`), nor a constant in `latex_constructs/` or `tex_box.rs` (the kernel's own attributes).
+/// `_scopebegin=` is pgfsys's own keyval: it shares the shape, and stays pinned so that the count stays whole.
 const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
+  ("_answers= base_utilities/defs/frontmatter_fields.rs", 1),
+  ("_group= base_utilities/defs/frontmatter_fields.rs", 1),
   ("_grouped= package/revtex4_support_sty.rs", 1),
+  ("_labelprints= cas_dc_cls.rs", 1),
+  ("_labelprints= package/authblk_sty.rs", 1),
+  ("_labelprints= package/jheppub_sty.rs", 1),
+  ("_mark= package/jheppub_sty.rs", 1),
   ("_markpiece= package/llncs_cls.rs", 1),
+  ("_marks= base_utilities/defs/frontmatter_fields.rs", 1),
+  ("_markshown= base_utilities/author_block/affiliations.rs", 1),
+  ("_net= frontmatter_stores.rs", 1),
+  ("_scopebegin= package/pgfsys_latexml_def.rs", 1),
+  ("_sequence= base_utilities/defs/frontmatter_fields.rs", 1),
   ("_share= cas_dc_cls.rs", 1),
   ("_share= package/aa_cls.rs", 1),
   ("_share= package/llncs_cls.rs", 2),
+  ("_store= frontmatter_stores.rs", 11),
+  ("_unmarked= base_utilities/defs/frontmatter_fields.rs", 1),
+  ("_unsplit= frontmatter_stores.rs", 1),
+  ("_unsplit= package/revtex4_support_sty.rs", 1),
+  ("_withsup= base_utilities/frontmatter/observer/ledger.rs", 2),
+  ("_zone= package/aa_support_sty.rs", 2),
+  ("_zone= package/elsarticle_cls.rs", 2),
+  ("_zone= package/revtex4_support_sty.rs", 2),
+  (
+    "const _command_form base_utilities/frontmatter/queue_digest.rs",
+    1,
+  ),
+  (
+    "const _cutlist base_utilities/author_block/affiliations.rs",
+    1,
+  ),
+  (
+    "const _deposit base_utilities/frontmatter/cover_order.rs",
+    1,
+  ),
+  (
+    "const _entry base_utilities/author_block/affiliations.rs",
+    1,
+  ),
+  (
+    "const _entrysymbol base_utilities/author_block/affiliations.rs",
+    1,
+  ),
+  (
+    "const _inserted base_utilities/frontmatter/cover_order.rs",
+    1,
+  ),
+  (
+    "const _kinded base_utilities/author_block/affiliations.rs",
+    1,
+  ),
+  (
+    "const _labelprints base_utilities/author_block/affiliations.rs",
+    1,
+  ),
+  ("const _late base_utilities/frontmatter/cover_order.rs", 1),
+  (
+    "const _late_mark base_utilities/frontmatter/cover_order.rs",
+    1,
+  ),
+  ("const _latecall base_utilities/frontmatter/insert.rs", 1),
+  ("const _linefirst base_utilities/frontmatter/insert.rs", 1),
+  ("const _linelist base_utilities/frontmatter/insert.rs", 1),
+  ("const _linemark base_utilities/frontmatter/insert.rs", 1),
+  (
+    "const _linemarkshown base_utilities/frontmatter/insert.rs",
+    1,
+  ),
+  ("const _linklabel base_utilities/frontmatter/insert.rs", 1),
+  (
+    "const _paragraph_break base_utilities/frontmatter/queue.rs",
+    1,
+  ),
+  ("const _preamble base_utilities/frontmatter/place.rs", 1),
+  ("const _queued base_utilities/frontmatter/relocate.rs", 1),
+  (
+    "const _released_store base_utilities/frontmatter/queue_digest.rs",
+    1,
+  ),
+  (
+    "const _seqlabel base_utilities/author_block/affiliations.rs",
+    1,
+  ),
+  ("const _source base_utilities/frontmatter/insert.rs", 1),
+  (
+    "const _titlepage base_utilities/frontmatter/cover_order.rs",
+    1,
+  ),
+  (
+    "declared _labelprints base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared _net base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "declared accumulate base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared command_form base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  ("declared content base_utilities/defs/frontmatter_api.rs", 1),
+  ("declared name base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "declared property base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
   ("owner= base_utilities/defs/author_macros.rs", 1),
   ("owner= base_utilities/defs/frontmatter_fields.rs", 4),
   ("owner= lmcs_cls.rs", 1),
@@ -221,7 +359,10 @@ fn the_frontmatter_api_stays_perls() {
                      `label=`, `annotations=`).";
   let name = Regex::new(r"\\+(lx@(?:add|annotate|clear)@[A-Za-z@]*)").expect("the regex");
   let key =
-    Regex::new(r"(?:^|[^A-Za-z0-9])(_grouped|_markpiece|_share|owner)=").expect("the regex");
+    Regex::new(r"(?:^|[^A-Za-z0-9_])(_[a-z][a-z0-9_]*|owner)=(?:[^'=]|$)").expect("the regex");
+  let constant =
+    Regex::new(r#"\bconst [A-Z][A-Z_0-9]*: &str = "(_[a-z][a-z0-9_]*)""#).expect("the regex");
+  let declared = Regex::new(r#"DefKeyVal!\(\s*"Frontmatter",\s*"([^"]+)""#).expect("the regex");
   let mut extensions: Vec<String> = Vec::new();
   let mut keys: BTreeMap<String, usize> = BTreeMap::new();
   for file in API_SPEAKERS
@@ -236,11 +377,25 @@ fn the_frontmatter_api_stays_perls() {
           extensions.push(found.to_string());
         }
       }
+      let short = file
+        .split_once("/src/")
+        .map_or(file.as_str(), |(_, inner)| inner);
       for found in key.captures_iter(&code) {
-        let short = file
-          .split_once("/src/")
-          .map_or(file.as_str(), |(_, inner)| inner);
         *keys.entry(format!("{}= {short}", &found[1])).or_default() += 1;
+      }
+      if !short.starts_with("latex_constructs/") && short != "tex_box.rs" {
+        for found in constant.captures_iter(&code) {
+          *keys
+            .entry(format!("const {} {short}", &found[1]))
+            .or_default() += 1;
+        }
+      }
+      for found in declared.captures_iter(&code) {
+        if !PERL_DECLARED_KEYS.contains(&&found[1]) {
+          *keys
+            .entry(format!("declared {} {short}", &found[1]))
+            .or_default() += 1;
+        }
       }
     }
   }
@@ -266,55 +421,72 @@ fn the_frontmatter_api_stays_perls() {
   );
 }
 
-/// Token-spelling reads per area, and in the listed bindings: `bin/tokreads.py`'s count of the removal study, **an
-/// over-approximation** (a line of code matching a read's shape, whatever it decides; a string holding `//` is cut there).
-/// Debts on the way to the floor: about 60 in the engine (the rehearsal's table, the ledger's stamping, the Perl API
-/// boundary), `resolver/` 0, decision code elsewhere 0. The engine's total is 1,976 at int140a: the study's 1,962 plus
-/// `title_page_check.rs`, which its list left out; `frontmatter (rest)` holds any new file under `frontmatter/`.
+/// Token-spelling reads per area, and in the listed bindings: `bin/tokreads.py`'s count of the removal study plus the shapes
+/// it missed, **an over-approximation** (a line of code matching a read's shape, whatever it decides; a string holding `//`
+/// is cut there). Debts on the way to the floor: about 60 in the engine (the rehearsal's table, the ledger's stamping, the
+/// Perl API boundary), `resolver/` 0, decision code elsewhere 0. The engine's total is 2,264 at Z01: the study's 1,962, plus
+/// `title_page_check.rs`, which its list left out (14), plus the helpers' shapes the study did not count (`with_str(`,
+/// `cs_in(`, `text_tokens(`, `to_string() ==`, a comparison or a match arm on a quoted `\\…`); and 85 in the rest of
+/// `base_utilities/`. `frontmatter (rest)` holds any new file under `frontmatter/`, and a `rest <file>` row each file under
+/// `base_utilities/` no area lists, a new one or a sibling directory's too, so a read moved there is no debt paid.
 /// Bindings are the study's list, so a binding outside it is not watched.
 const TOKEN_READS: &[(&str, usize)] = &[
   ("aa_cls.rs", 5),
-  ("acmart_cls.rs", 17),
+  ("aas_support_sty.rs", 17),
+  ("acmart_cls.rs", 18),
   ("address_lists", 0),
-  ("aistats_sty.rs", 37),
-  ("ams_support_sty.rs", 9),
+  ("aistats_sty.rs", 52),
+  ("ams_support_sty.rs", 16),
   ("apa7_cls.rs", 7),
-  ("aas_support_sty.rs", 15),
-  ("author_block", 1149),
-  ("authblk_sty.rs", 19),
+  ("authblk_sty.rs", 23),
+  ("author_block", 1259),
   ("defs/author_macros", 19),
   ("defs/frontmatter_api", 4),
-  ("defs/frontmatter_fields", 14),
-  ("defs/general", 6),
+  ("defs/frontmatter_fields", 20),
+  ("defs/general", 9),
   ("epl_cls.rs", 39),
-  ("eptcs_cls.rs", 25),
-  ("events", 17),
-  ("frontmatter (rest)", 14),
-  ("frontmatter_stores", 399),
+  ("eptcs_cls.rs", 26),
+  ("events", 51),
+  // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
+  ("field_notes", 4),
+  ("frontmatter (rest)", 22),
+  ("frontmatter_stores", 485),
   ("gretsi_cls.rs", 14),
-  ("ieeetran_cls.rs", 108),
-  ("insert", 4),
+  ("ieeetran_cls.rs", 114),
+  ("insert", 14),
   ("inst_support_sty.rs", 0),
-  ("interspeech_cls.rs", 23),
+  ("interspeech_cls.rs", 27),
   ("l_aa_cls.rs", 13),
-  ("ledger", 20),
-  ("llncs_cls.rs", 13),
-  ("osa_journal_sty.rs", 71),
+  ("ledger", 21),
+  ("llncs_cls.rs", 32),
+  ("osa_journal_sty.rs", 75),
   ("place", 5),
-  ("ptephy_cls.rs", 93),
+  ("ptephy_cls.rs", 95),
   ("queue", 0),
-  ("queue_digest", 10),
-  ("rehearsal", 1),
-  ("relocate", 127),
-  ("resolver", 1),
+  ("queue_digest", 12),
+  ("rehearsal", 3),
+  ("relocate", 131),
+  ("resolver", 12),
+  ("rest /author_split_tests.rs", 14),
+  ("rest /block_insertion.rs", 0),
+  ("rest /blocks.rs", 1),
+  ("rest /boxes_lists.rs", 0),
+  ("rest /defs/mod.rs", 0),
+  ("rest /defs/tags_refnums.rs", 0),
+  ("rest /fonts_defs.rs", 12),
+  ("rest /math_cleanup.rs", 0),
+  ("rest /misc.rs", 13),
+  ("rest /mod.rs", 0),
+  ("rest /tokens.rs", 26),
+  ("rest /util_text.rs", 19),
   ("revtex4_support_sty.rs", 12),
   ("shared_row", 13),
-  ("shared_row/emails", 56),
+  ("shared_row/emails", 60),
   ("sv_support_sty.rs", 36),
   ("webofc_cls.rs", 0),
   ("writer/apply", 1),
   ("writer/dom+mod", 0),
-  ("writer/plan", 116),
+  ("writer/plan", 119),
   ("writer/repart", 0),
 ];
 
@@ -334,6 +506,7 @@ const FRONTMATTER_AREAS: &[(&str, &str)] = &[
   ("writer/dom+mod", "observer/writer/"),
   ("resolver", "observer/resolver/"),
   ("events", "observer/events/"),
+  ("field_notes", "observer/field_notes.rs"),
   ("rehearsal", "observer/rehearsal.rs"),
   ("ledger", "observer/ledger.rs"),
 ];
@@ -423,7 +596,9 @@ fn token_reads_only_fall_toward_the_floor() {
     r"(?:(?:==|!=)\s*&?\*?\s*T_[A-Z]+!)|(?:T_[A-Z]+!\([^)]*\)\s*(?:==|!=))|(?:contains\(&?T_[A-Z]+!)",
     r"|(?:matches!\([^)]*T_[A-Z]+!)|(?:position_of\()|(?:get_catcode\(\))|(?:Catcode::[A-Z]+)|(?:\.get_cs\(\))",
     r"|(?:\.cs_name\(\))|(?:\.get_string\(\))|(?:tokens?\.to_string\(\))|(?:content\.to_string\(\))|(?:\bToString\b)",
-    r"|(?:\|\s*T_[A-Z]+!)|(?:Some\(&?T_[A-Z]+!)|(?:\bis_cs\()|(?:\.as_cs\()|(?:meaning\()"
+    r"|(?:\|\s*T_[A-Z]+!)|(?:Some\(&?T_[A-Z]+!)|(?:\bis_cs\()|(?:\.as_cs\()|(?:meaning\()",
+    r"|(?:\bwith_str\()|(?:\bcs_in\()|(?:\btext_tokens\()|(?:to_string\(\)\s*(?:==|!=))",
+    r#"|(?:(?:==|!=)\s*&?\*?\s*"\\\\)|(?:"\\\\[^"]*"\s*(?:==|!=|\||=>))"#
   ))
   .expect("the regex");
   let reads = |file: &str| {
@@ -433,9 +608,12 @@ fn token_reads_only_fall_toward_the_floor() {
       .count()
   };
   let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+  let mut listed: Vec<String> = Vec::new();
   for (area, path) in OTHER_AREAS {
-    let n: usize = rust_files(path).iter().map(|file| reads(file)).sum();
+    let files = rust_files(path);
+    let n: usize = files.iter().map(|file| reads(file)).sum();
     counts.insert(area.to_string(), n);
+    listed.extend(files);
   }
   let frontmatter = format!("{BASE}/frontmatter/");
   for file in rust_files(&format!("{BASE}/frontmatter")) {
@@ -445,13 +623,21 @@ fn token_reads_only_fall_toward_the_floor() {
       .find(|(_, path)| inner.starts_with(path))
       .map_or("frontmatter (rest)", |(area, _)| area);
     *counts.entry(area.to_string()).or_default() += reads(&file);
+    listed.push(file);
+  }
+  // (the catch-all: a read moved out of an area to a file none lists is still counted)
+  for file in rust_files(BASE) {
+    if !listed.contains(&file) {
+      let rest = file.strip_prefix(BASE).expect("under base_utilities/");
+      counts.insert(format!("rest {rest}"), reads(&file));
+    }
   }
   assert_debts("the token reads", TOKEN_READS, &counts, WHY);
 }
 
 /// What a pass after the writer may change, on the way to deleting the old layers: passes may change kind and text, never
-/// who holds an item (the plan's definition of done, item 3). `OwnerDebt` is what breaks that today: E6 / the plan's
-/// Z8, Z9 pay each one down.
+/// who holds an item (the plan's definition of done, item 5). `OwnerDebt` is what breaks that today: the plan's Z8, Z9 pay
+/// each one down.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PassMay {
   /// nothing: counts, flags or reads
@@ -479,7 +665,7 @@ const PASSES_AFTER_THE_WRITER: &[(&str, PassMay)] = &[
   ("show_line_marks", PassMay::ChangeText),
   ("kind_dedication_lines", PassMay::ChangeKind),
   ("kind_legend_contacts", PassMay::ChangeKind),
-  // (the URL part moves a link to the block: E6's; the grade part is a kind)
+  // (the URL part moves a link to the block: Z9's; the grade part is a kind)
   ("kind_link_and_grade_contacts", PassMay::OwnerDebt),
   ("drop_repeated_contacts", PassMay::Drop),
   ("flag_merged_creators", PassMay::ChangeNothing),
@@ -487,8 +673,9 @@ const PASSES_AFTER_THE_WRITER: &[(&str, PassMay)] = &[
   ("read_back_frontmatter", PassMay::ChangeNothing),
 ];
 
-/// The calls after the writer in `insert_frontmatter`'s body, in order: any lower-case call that is no method or path, so
-/// a pass taking other arguments is seen too.
+/// The calls after the writer in `insert_frontmatter`'s body, in order, by the path they are written with: any call of a
+/// lower-case name that is no method, so a pass taking other arguments, or in another module (`relocate::new_pass(document)?`),
+/// is seen too.
 fn calls_after_the_writer() -> Vec<String> {
   let lines = code_lines(&format!("{BASE}/frontmatter/insert.rs"));
   let start = lines
@@ -505,7 +692,8 @@ fn calls_after_the_writer() -> Vec<String> {
       .iter()
       .position(|l| l.contains("write_observed_frontmatter("))
       .expect("the writer");
-  let call = Regex::new(r"(?:^|[^.:\w])([a-z_][a-z_0-9]*)\(").expect("the regex");
+  let call =
+    Regex::new(r"(?:^|[^.:\w])((?:[A-Za-z_]\w*::)*[a-z_][a-z_0-9]*)\(").expect("the regex");
   lines[writer + 1..end]
     .iter()
     .flat_map(|line| call.captures_iter(line))
@@ -531,7 +719,7 @@ fn passes_after_the_writer_are_an_allow_list() {
   assert_eq!(
     once, listed,
     "a pass after `write_observed_frontmatter` is classed in `PASSES_AFTER_THE_WRITER` by what it may change: kind and \
-     text, never who holds an item (docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, definition of done item 3). An \
+     text, never who holds an item (docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, definition of done item 5). An \
      ownership rule lands in `observer/resolver/`."
   );
   assert_eq!(
@@ -691,8 +879,9 @@ fn a_declined_paper_says_why() {
 }
 
 /// A paper the writer held that a pass after it changed: `same` by the writer's own check, and the read-back names where
-/// the final document differs (the `changed_after` count: a kind or text a pass may change, an owner it may not, E6's debt); so too `written`. An API-only paper's reading is read
-/// back though no writer ran (`no-block`, what wave 5 opens).
+/// the final document differs (the `changed_after` count: a kind or text a pass may change, an owner it may not, the debt
+/// Z8 and Z9 pay); so too `written`. An API-only paper's reading is read back though no writer ran (`no-block`, what wave 5
+/// opens).
 #[test]
 fn a_pass_after_the_writer_shows_in_the_read_back() {
   let (errors, warnings, back) = read_back(repro!("email_list_split_order_only"));

@@ -9,18 +9,19 @@
 //! digested list is handed to a callback before it is discarded. Not LaTeX's `\begin{tabular}[t]{c}` around the
 //! line: no alignment machinery runs, and a stray `&` is digested as a whatsit that errs only when built into the
 //! document (tex_tables.rs `&`), never here: nothing is held for it, and the lexer reads it as a column separator.
-//! What its boxes do not say is noted beside them (`token::FieldNotes`): the definitions made, the errors held, by the
+//! What its boxes do not say is noted beside them (`field_notes::FieldNotes`): the definitions made, the errors held, by the
 //! field position of the invocation.
 
 use std::cell::Cell;
 
 use latexml_core::{
   definition::origin::{DefinitionOrigin, with_origin},
-  token::{FieldLedgerScope, field_notes_begin, field_notes_end},
+  token::FieldLedgerScope,
 };
 
 use super::{
   events::{EmailMeaning, Event, HeldError, declaration_events},
+  field_notes::{field_notes_begin, field_notes_end},
   ledger::{SkipReason, email_meaning},
   policy::TitleMarks,
   *,
@@ -405,7 +406,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
     assign_value(flag, true, Some(Scope::Global));
   }
   let hold = util::logger::DiagnosticsHold::begin();
-  let meaning_log = begin_meaning_log();
+  begin_meaning_log();
   let resource_fatal_before = resource_fatal_latched();
   let muted = SuppressLogOutputGuard::new(true);
   // (an `\input` in the field opens its file again: its `(Processing content …` note is not the conversion's)
@@ -456,7 +457,6 @@ pub(in crate::base_utilities) fn rehearse<R>(
   truncate_token_stack(tokens_depth);
   expire_current_token();
   let notes = field_notes_end();
-  end_meaning_log(meaning_log);
   let value = match &result {
     Ok(digested) => Some((
       inspect(digested),
@@ -470,7 +470,12 @@ pub(in crate::base_utilities) fn rehearse<R>(
   drop(muted);
   let errors = hold.errors_raised();
   let warnings = hold.warnings_raised();
-  let held = held_errors(&notes.errors, errors, hold.held_errors());
+  // (each held message is stripped of its colors to be read: only for a block that held an error)
+  let held = if errors > 0 {
+    held_errors(&notes.errors, errors, hold.held_errors())
+  } else {
+    Vec::new()
+  };
   let undone = journal.rollback();
   for (flag, value) in FLAGS.iter().zip(saved) {
     assign_value(flag, value, Some(Scope::Global));

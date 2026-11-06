@@ -25,149 +25,177 @@ pub(super) const OUTCOMES: [&str; 7] = [
   "declined",
 ];
 
-/// A closed decline reason: the head of the writer's own text (before its first `:`), what the plan's definition of done
-/// calls it, and what pays it down: `stays` (the definition's own closed list, the fallbacks the merge keeps), a batch of
-/// the plan's, or `open` (a refusal no batch has taken yet).
+/// What pays a decline down, by the plan's batches: a family's wave (Z4-Z16) replaces the writer's comparison of the reading
+/// with today's by the emitter, which writes the reading: with events the reading always answers, uncertain text whole (the
+/// definition of done, item 2), so no decline survives, and Z18-Z19 delete what refused. So each reason is on the way to
+/// zero; a reason's own errors of the reading are that family's flip gate.
+const AT_THE_FLIP: &str = "Z4-Z16";
+/// A refusal for want of the content a span covers: Z3's `content_of(span)`, then the family's flip ([`AT_THE_FLIP`]).
+const WITH_SPANS: &str = "Z3, Z4-Z16";
+
+/// A closed decline reason: the head of the writer's own text (before its first `:`), the class of refusal it belongs to,
+/// and the plan's batches that pay it down ([`AT_THE_FLIP`], [`WITH_SPANS`]).
 pub(super) const DECLINE_REASONS: &[(&str, &str, &str)] = &[
   (
     "a name of today's the reading makes none",
     "today's name dropped",
-    "stays",
+    AT_THE_FLIP,
   ),
   (
     "an item given more authors by no ruling",
     "more authors by no ruling",
-    "stays",
+    AT_THE_FLIP,
   ),
   (
     "an item read from its words alone",
     "read from words alone",
-    "stays",
+    AT_THE_FLIP,
   ),
   (
     "a creator of today's made an item on no structural evidence",
     "read from words alone",
-    "stays",
+    AT_THE_FLIP,
   ),
   (
     "a person made an item on no structural evidence",
     "read from words alone",
-    "stays",
+    AT_THE_FLIP,
   ),
   (
     "a creator of today's made a block item on no structural evidence",
     "read from words alone",
-    "stays",
+    AT_THE_FLIP,
   ),
-  ("a conceded creator's ink", "read from words alone", "stays"),
-  ("a creator with no name", "no name", "stays"),
-  ("no named creator", "no name", "stays"),
+  (
+    "a conceded creator's ink",
+    "read from words alone",
+    AT_THE_FLIP,
+  ),
+  ("a creator with no name", "no name", AT_THE_FLIP),
+  ("no named creator", "no name", AT_THE_FLIP),
   // (the re-part from tokens: `repart.rs`)
   (
     "a name today's names do not print",
     "re-part: from tokens",
-    "E3",
+    WITH_SPANS,
   ),
   (
     "an item with nothing to write it from",
     "re-part: from tokens",
-    "E3",
+    WITH_SPANS,
   ),
   (
     "a block item with nothing to write it from",
     "re-part: from tokens",
-    "E3",
+    WITH_SPANS,
   ),
-  // (per-item writes: an unexplained item stays as today's instead of declining the paper, `plan.rs`)
-  ("names differ", "plan: per item", "E4"),
-  ("an owner change no ruling decided", "plan: per item", "E4"),
-  ("a difference no operation explains", "plan: per item", "E4"),
-  ("no item to copy", "plan: per item", "E4"),
-  ("an owner added by no ruling", "plan: per item", "E4"),
-  ("an item to remove that cannot move", "plan: per item", "E4"),
+  // (one unexplained item declines the paper, `plan.rs`; per-item writing is dropped, and the R12-under-marks fix is a
+  // reading fix)
+  ("names differ", "plan: per item", AT_THE_FLIP),
+  (
+    "an owner change no ruling decided",
+    "plan: per item",
+    AT_THE_FLIP,
+  ),
+  (
+    "a difference no operation explains",
+    "plan: per item",
+    AT_THE_FLIP,
+  ),
+  ("no item to copy", "plan: per item", AT_THE_FLIP),
+  ("an owner added by no ruling", "plan: per item", AT_THE_FLIP),
+  (
+    "an item to remove that cannot move",
+    "plan: per item",
+    AT_THE_FLIP,
+  ),
   (
     "an address added beside the creator it spells",
     "plan: per item",
-    "E4",
+    AT_THE_FLIP,
   ),
   (
     "an item printing a later mark its creator requests",
     "plan: per item",
-    "E4",
+    AT_THE_FLIP,
   ),
   (
     "an affiliation spelling an author's name",
     "plan: per item",
-    "E4",
+    AT_THE_FLIP,
   ),
   (
     "an affiliation printing another author's name",
     "plan: per item",
-    "E4",
+    AT_THE_FLIP,
   ),
-  ("no API call", "plan: per item", "E4"),
-  ("a cut entry of another role", "plan: per item", "E4"),
-  ("the entry does not cut", "plan: per item", "E4"),
+  ("no API call", "plan: per item", AT_THE_FLIP),
+  ("a cut entry of another role", "plan: per item", AT_THE_FLIP),
+  ("the entry does not cut", "plan: per item", AT_THE_FLIP),
   (
     "today's item is not the pieces joined",
     "plan: per item",
-    "E4",
+    AT_THE_FLIP,
   ),
-  ("a piece the reading lacks", "plan: per item", "E4"),
-  ("a contact piece", "plan: per item", "E4"),
-  ("a legend of no API call", "plan: per item", "E4"),
-  ("a url's owners differ", "plan: per item", "E4"),
-  // (the re-part's other refusals, and what an unwritten family holds back: no batch has taken them yet)
+  ("a piece the reading lacks", "plan: per item", AT_THE_FLIP),
+  ("a contact piece", "plan: per item", AT_THE_FLIP),
+  ("a legend of no API call", "plan: per item", AT_THE_FLIP),
+  ("a url's owners differ", "plan: per item", AT_THE_FLIP),
+  // (the re-part's other refusals, `repart::plan` retiring with the flips, and what an unwritten family holds back)
   (
     "a name whose brackets do not close",
     "re-part: the reading's name",
-    "open",
+    AT_THE_FLIP,
   ),
   (
     "a name naming no person",
     "re-part: the reading's name",
-    "open",
+    AT_THE_FLIP,
   ),
   (
     "a name joined across an alignment's cells",
     "re-part: the reading's name",
-    "open",
+    AT_THE_FLIP,
   ),
   (
     "a one-word name parted at a comma",
     "re-part: the reading's name",
-    "open",
+    AT_THE_FLIP,
   ),
   (
     "a name cut from a row on no structure",
     "re-part: the reading's name",
-    "open",
+    AT_THE_FLIP,
   ),
-  ("a name with no run", "re-part: the reading's name", "open"),
+  (
+    "a name with no run",
+    "re-part: the reading's name",
+    AT_THE_FLIP,
+  ),
   (
     "an item whose brackets do not close",
     "re-part: the reading's item",
-    "open",
+    AT_THE_FLIP,
   ),
   (
     "a block e-mail no name spells",
     "re-part: the reading's item",
-    "open",
+    AT_THE_FLIP,
   ),
   (
     "the re-part did not read as the reading",
     "re-part: did not read back",
-    "open",
+    AT_THE_FLIP,
   ),
   (
     "an unwritten family's call beside a re-part",
     "an unwritten family",
-    "open",
+    AT_THE_FLIP,
   ),
   (
     "an unwritten family's items kept as today's",
     "an unwritten family",
-    "open",
+    AT_THE_FLIP,
   ),
 ];
 
@@ -251,7 +279,7 @@ struct Counts {
   whole_written: usize,
   /// `same` or `written`, and the comparator disagrees with the final XML
   part:          usize,
-  /// `same` or `written`, and the read-back found the final document differing from the reading: a pass after the writer changed a kind, a text or (E6's debt) an owner
+  /// `same` or `written`, and the read-back found the final document differing from the reading: a pass after the writer changed a kind, a text or (the debt Z8 and Z9 pay) an owner
   changed_after: usize,
   /// a paper with no dump, or none this table can read
   no_dump:       usize,
@@ -406,11 +434,8 @@ pub(super) fn write_outcomes(
     let _ = write!(cells, "\t{:.2}", pct(n));
   }
   let _ = writeln!(out, "{cells}\t\t\t");
-  // (each a count on the way to zero, but `stays`: the plan's closed list of fallbacks)
-  let _ = writeln!(
-    out,
-    "\ndecline_reason\tpapers\tclass\tpaid_by (a debt to zero, but stays)"
-  );
+  // (each a count on the way to zero)
+  let _ = writeln!(out, "\ndecline_reason\tpapers\tclass\tpaid_by");
   let mut listed: Vec<(&&str, &usize)> = declines.iter().collect();
   listed.sort_by(|a, b| b.1.cmp(a.1).then(a.0.cmp(b.0)));
   for (head, n) in listed {

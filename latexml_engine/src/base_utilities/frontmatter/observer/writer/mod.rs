@@ -109,10 +109,10 @@ fn decline(reason: &str, keep: bool) {
 }
 
 /// The read-back, the last step of `insert_frontmatter` and under the census only (E0; FRONTMATTER_SINGLE_ENGINE_PLAN.md,
-/// definition of done item 1): the final document's owners against the reading, by the writer's own comparator
+/// definition of done item 5): the final document's owners against the reading, by the writer's own comparator
 /// ([`plan::difference`]) — the reading the writer last compared with ([`Ledger::compared`]) where it got that far, else
 /// the resolver's. A paper the writer found the same or wrote that no longer reads so was changed by a pass after the
-/// writer: what E6 pays down. It reads; it changes nothing.
+/// writer: what Z8 and Z9 pay down. It reads; it changes nothing.
 ///
 /// [`Ledger::compared`]: super::ledger::Ledger::compared
 pub(in crate::base_utilities) fn read_back_frontmatter(document: &mut Document) {

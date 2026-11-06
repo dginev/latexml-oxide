@@ -32,6 +32,7 @@
 use super::*;
 
 pub(in crate::base_utilities) mod events;
+pub(in crate::base_utilities) mod field_notes;
 pub(in crate::base_utilities) mod ledger;
 pub(in crate::base_utilities) mod marks;
 pub(in crate::base_utilities) mod policy;

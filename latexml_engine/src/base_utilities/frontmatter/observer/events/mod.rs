@@ -28,10 +28,10 @@
 
 use latexml_core::{
   document::{FIELD_FORMULA_START_PROPERTY, FIELD_PROV_PROPERTY, FIELD_SERIAL_PROPERTY},
-  token::{FieldDeclaration, field_ledger_entry, field_prov_pos},
+  token::{field_ledger_entry, field_prov_pos},
 };
 
-use super::{marks::has_word, *};
+use super::{field_notes::FieldDeclaration, marks::has_word, *};
 
 mod fonts;
 mod lexer;
@@ -1875,7 +1875,7 @@ pub(in crate::base_utilities) fn lex_events(digested: &Digested) -> Vec<Event> {
   events
 }
 
-/// The Declaration events of a block's definitions (`token::FieldNotes`): a definition, printing nothing, is in no box, so
+/// The Declaration events of a block's definitions (`field_notes::FieldNotes`): a definition, printing nothing, is in no box, so
 /// it is read from the assignment and the position of the invocation that made it. Each is the call's span, the definees
 /// in `label` (space-parted, in order), `global` its role when it defines past the block's groups, its group depth
 /// `nest`. They stand beside the block's events, whose name runs a definition inside does not part (`Ann \def\x{y}Able`).
@@ -1885,34 +1885,51 @@ pub(in crate::base_utilities) fn declaration_events(
   digested: &Digested,
   declarations: &[FieldDeclaration],
 ) -> Vec<Event> {
-  fn whatsit_spans(d: &Digested, out: &mut Vec<(u16, u16)>) {
+  /// The whatsits of `d`'s lists, in print order.
+  fn whatsits(d: &Digested, out: &mut Vec<Digested>) {
     match d.data() {
       DigestedData::List(l) => {
         for child in l.borrow().boxes.iter() {
-          whatsit_spans(child, out);
+          whatsits(child, out);
         }
       },
-      DigestedData::Whatsit(_) => {
-        let start = match d.get_property(FIELD_FORMULA_START_PROPERTY).as_deref() {
-          Some(Stored::Int(start)) => u16::try_from(*start).ok().map(|s| (s, s + 1)),
-          _ => None,
-        };
-        out.extend(join_span(deep_span(d), start));
-      },
+      DigestedData::Whatsit(_) => out.push(d.clone()),
       _ => {},
     }
+  }
+  /// What a whatsit covers by `span`, with a formula's opening shift.
+  fn with_opening(d: &Digested, span: Option<(u16, u16)>) -> Option<(u16, u16)> {
+    let start = match d.get_property(FIELD_FORMULA_START_PROPERTY).as_deref() {
+      Some(Stored::Int(start)) => u16::try_from(*start).ok().map(|s| (s, s + 1)),
+      _ => None,
+    };
+    join_span(span, start)
   }
   if declarations.is_empty() {
     return Vec::new();
   }
   let mut boxes = Vec::new();
-  whatsit_spans(digested, &mut boxes);
+  whatsits(digested, &mut boxes);
+  let own: Vec<Option<(u16, u16)>> = boxes.iter().map(|d| with_opening(d, box_span(d))).collect();
+  let holds = |span: Option<(u16, u16)>, at: u16| span.is_some_and(|(s, e)| s <= at && at < e);
   declarations
     .iter()
     .filter(|declaration| {
-      !boxes
+      let at = declaration.start;
+      if own.iter().any(|span| holds(*span, at)) {
+        return false;
+      }
+      // (what a box holds can reach past its own stamp, `\mbox{\def\x{1}}`: the walk through it is a cost on a block of a
+      // thousand names, 1507.02068, so only the nearest stamped box before it is walked, and those of no stamp)
+      let nearest = own
         .iter()
-        .any(|(start, end)| *start <= declaration.start && declaration.start < *end)
+        .enumerate()
+        .filter(|(_, span)| span.is_some_and(|(s, _)| s <= at))
+        .max_by_key(|(_, span)| span.map(|(s, _)| s))
+        .map(|(i, _)| i);
+      !boxes.iter().zip(&own).enumerate().any(|(i, (d, span))| {
+        (span.is_none() || Some(i) == nearest) && holds(with_opening(d, deep_span(d)), at)
+      })
     })
     .map(|declaration| {
       let mut event = Event::new(EventKind::Declaration);

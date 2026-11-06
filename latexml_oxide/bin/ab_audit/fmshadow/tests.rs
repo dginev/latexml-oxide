@@ -1766,7 +1766,7 @@ fn the_outcomes_table_and_its_gate() {
   );
   assert_eq!(
     row(&text, "a name of today's the reading makes none"),
-    "a name of today's the reading makes none\t1\ttoday's name dropped\tstays"
+    "a name of today's the reading makes none\t1\ttoday's name dropped\tZ4-Z16"
   );
   assert_eq!(row(&text, "held diagnostics"), "held diagnostics\t1");
   assert_eq!(row(&text, "empty"), "empty\t5");

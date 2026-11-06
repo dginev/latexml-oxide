@@ -4158,6 +4158,49 @@ fn is_tab_mark_command(token: &Token) -> bool {
     }
 }
 
+/// A token of a frontmatter field's stored value (its out-of-band provenance, `Token::prov`) was invoked: what it digests to
+/// is that field's ink (`Document::absorb`'s field runs, OXIDIZED_DESIGN #715). What it consumed of the value is covered by
+/// them (its arguments; a font switch or `\relax` before it that made no box), recorded in digestion order
+/// (`token::field_ledger_push`, the box's `fieldSerial`), so a whole print is told from a fragment by every position of the
+/// value (`gullet::field_cover_of`). Only while the field ledger is live: nothing is marked once the frontmatter placement
+/// settled the field ink (`token::field_ledger_live`). Out of line: no token of a paper's body is a field's, so
+/// [`invoke_token`] pays one test for it.
+#[cold]
+#[inline(never)]
+fn note_field_token(token: &Token, result: &[Digested]) {
+  let cover = if matches!(
+    token.get_catcode(),
+    Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
+  ) {
+    let pos = crate::token::field_prov_pos(token.prov);
+    crate::token::FieldCover {
+      field: crate::token::field_prov_field(token.prov),
+      start: pos,
+      end:   pos + 1,
+    }
+  } else {
+    gullet::field_cover_of(token.prov)
+  };
+  // (a rehearsal's notes on what its boxes do not hold: `token::FieldNotesHook`)
+  if let Some(notes) = crate::token::field_notes_hook() {
+    notes(token, cover, result);
+  }
+  if result.is_empty() {
+    crate::token::field_cover_set_pending(cover);
+  } else {
+    let serial = crate::token::field_ledger_push(crate::token::field_cover_pending_merge(cover));
+    for digested in result {
+      if !digested.has_property(crate::document::FIELD_PROV_PROPERTY) {
+        digested.try_set_property(crate::document::FIELD_PROV_PROPERTY, i64::from(token.prov));
+        if let Some(serial) = serial {
+          digested.try_set_property(crate::document::FIELD_SERIAL_PROPERTY, i64::from(serial));
+        }
+        crate::token::field_stamp_noted(digested);
+      }
+    }
+  }
+}
+
 /// Invoke a token
 ///
 /// If it is a primitive or constructor, the definition will be invoked,
@@ -4342,45 +4385,8 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
         );
       },
     }
-    // A token of a frontmatter field's stored value (its out-of-band provenance, `Token::prov`): what it digests to
-    // is that field's ink (`Document::absorb`'s field runs, OXIDIZED_DESIGN #715).
-    // What it consumed of the value is covered by them (its arguments; a font switch or `\relax` before it that made
-    // no box), recorded in digestion order (`token::field_ledger_push`, the box's `fieldSerial`), so a whole print is
-    // told from a fragment by every position of the value (`gullet::field_cover_of`). Not once the frontmatter
-    // placement settled the field ink (`token::field_ledger_live`): nothing is marked after it.
     if token.prov != 0 && crate::token::field_ledger_live() {
-      let cover = if matches!(
-        token.get_catcode(),
-        Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
-      ) {
-        let pos = crate::token::field_prov_pos(token.prov);
-        crate::token::FieldCover {
-          field: crate::token::field_prov_field(token.prov),
-          start: pos,
-          end:   pos + 1,
-        }
-      } else {
-        gullet::field_cover_of(token.prov)
-      };
-      // (a rehearsal's notes on what its boxes do not hold: `FieldNotes`)
-      if crate::token::field_notes_open() {
-        crate::token::field_notes_after(&token, cover, &result);
-      }
-      if result.is_empty() {
-        crate::token::field_cover_set_pending(cover);
-      } else {
-        let serial =
-          crate::token::field_ledger_push(crate::token::field_cover_pending_merge(cover));
-        for digested in &result {
-          if !digested.has_property(crate::document::FIELD_PROV_PROPERTY) {
-            digested.try_set_property(crate::document::FIELD_PROV_PROPERTY, i64::from(token.prov));
-            if let Some(serial) = serial {
-              digested.try_set_property(crate::document::FIELD_SERIAL_PROPERTY, i64::from(serial));
-            }
-            crate::token::field_stamp_noted(digested);
-          }
-        }
-      }
+      note_field_token(&token, &result);
     }
     // _token_guard drops here, auto-expiring current token
     break;

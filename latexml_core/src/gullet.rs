@@ -1997,7 +1997,7 @@ pub fn field_cover_of(prov: u16) -> crate::token::FieldCover {
 }
 
 /// Whether the input's pushback is empty: no token of a field's stored value is left to read ([`field_cover_of`]).
-pub(crate) fn pushback_is_empty() -> bool {
+pub fn pushback_is_empty() -> bool {
   gullet!()
     .runtime
     .as_ref()

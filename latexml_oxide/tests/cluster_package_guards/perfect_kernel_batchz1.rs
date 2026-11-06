@@ -3,8 +3,9 @@
 //! fields but these guards; the reading and the writer's output stay as they were (the guards compare the whole events a
 //! dump holds; `ab_audit fmshadow --re-resolve`'s test reads them back). Each guard is a different code path:
 //! `marks_say_…` the walker on a stamped block, `a_call_marks_…` on an API call's content, which has no positions;
-//! `a_contact_…` the ledger's unprinted call; `a_definition_…` the stomach's note of a boxless assignment; the two
-//! `held` guards the document's own error and an error of the rehearsal alone.
+//! `a_contact_…` the ledger's unprinted call; `a_definition_…` the stomach's note of a boxless assignment,
+//! `a_declarations_span_…` where that note's span starts and what it may not hold; the two `held` guards the document's own
+//! error and an error of the rehearsal alone.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
@@ -188,7 +189,7 @@ fn a_definition_in_the_block_is_an_event_with_its_span() {
       {"kind": "Declaration", "span": [0, 12], "label": "\\univ"},
       {"kind": "Declaration", "span": [27, 32], "label": "\\b", "nest": 1},
       {"kind": "Declaration", "span": [45, 46], "label": "\\dept"},
-      {"kind": "Declaration", "span": [68, 73], "label": "\\q", "role": "global"},
+      {"kind": "Declaration", "span": [67, 73], "label": "\\q", "role": "global"},
     ])
   );
   assert!(of_kind(&block["events"], "Declaration").is_empty());
@@ -209,6 +210,32 @@ fn a_definition_in_the_block_is_an_event_with_its_span() {
     "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able \\and {Bob} Baker}\n\\maketitle\nBody.\n\\end{document}\n",
   );
   assert_eq!(blocks(&plain)[0].get("declarations"), None);
+}
+
+/// Gap 8's span: a Declaration starts at what leads to its definer in the pending cover, so that a read of the span's content
+/// is the definition: `\expandafter` (read by the gullet, whose `\csname` the span would run alone without it), `\long`
+/// and `\global` (prefixes, whose meaning the span would lose). No earlier: not over a font switch or an earlier
+/// declaration (each a call of its own), nor out into a conditional (the `\fi` is past the span: unbalanced). A box after a
+/// declaration does not take it (`\def\u{U}\textbf{Cat}`). A macro defining one name twice lists it once. A font switch
+/// is none, though `\itshape` reads as the document's (`\reinstall@nfss@defs`).
+#[test]
+fn a_declarations_span_holds_what_leads_to_it() {
+  let (_, dump) = dump(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/event_declaration_span_holds_its_lead.tex"
+  ));
+  assert_eq!(
+    blocks(&dump)[0]["declarations"],
+    json!([
+      {"kind": "Declaration", "span": [0, 9], "label": "\\ww"},
+      {"kind": "Declaration", "span": [18, 25], "label": "\\q", "role": "global"},
+      {"kind": "Declaration", "span": [36, 42], "label": "\\r", "role": "global"},
+      {"kind": "Declaration", "span": [53, 58], "label": "\\s"},
+      {"kind": "Declaration", "span": [58, 64], "label": "\\t", "role": "global"},
+      {"kind": "Declaration", "span": [77, 82], "label": "\\u"},
+      {"kind": "Declaration", "span": [97, 102], "label": "\\v"},
+      {"kind": "Declaration", "span": [113, 114], "label": "\\y"},
+    ])
+  );
 }
 
 /// Gap 9: a rehearsal goes on past an error it holds, so the block keeps all its events (the kinds that give none: a Fatal,

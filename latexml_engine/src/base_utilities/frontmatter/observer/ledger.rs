@@ -824,15 +824,15 @@ pub(in crate::base_utilities) fn record_api_call(
   attr: Option<&KeyVals>,
   command: &Tokens,
 ) {
-  // (and the title, whose marks request labelled entries too — aastex's `\title{…\altaffilmark{1}}` and
-  // `\altaffiltext{1}{Based on observations …}`, the title's note: 0801.1670; and a publication note, whose e-mails are
-  // the authors' — A&A's `\offprints{B. Baker, \email{…}}`, 0711.1152, 0802.0707)
   if tag == "ltx:rdf" {
     if records_now() {
       record_unprinted_call(attr, command);
     }
     return;
   }
+  // (and the title, whose marks request labelled entries too — aastex's `\title{…\altaffilmark{1}}` and
+  // `\altaffiltext{1}{Based on observations …}`, the title's note: 0801.1670; and a publication note, whose e-mails are
+  // the authors' — A&A's `\offprints{B. Baker, \email{…}}`, 0711.1152, 0802.0707)
   if !matches!(
     tag,
     "ltx:creator" | "ltx:contact" | "ltx:note" | "ltx:title" | "ltx:pubnote"
@@ -879,12 +879,7 @@ pub(in crate::base_utilities) fn record_api_call(
     attrs
   };
   let content = queued_affiliation_text(&content);
-  let parent = match command.unlist_ref().as_slice() {
-    [first, rest @ ..] if *first == T_CS!("\\lx@annotate@frontmatter@now") => {
-      first_group(rest).to_string().trim().to_string()
-    },
-    _ => String::new(),
-  };
+  let parent = annotated_parent(command);
   let queue_position = queue_length();
   let setter = open_frontmatter_setter();
   with_ledger(|ledger| {
@@ -936,16 +931,21 @@ pub(in crate::base_utilities) fn record_api_call(
   });
 }
 
-/// Record a contact that prints nothing ([`UnprintedCall`]): an `ltx:rdf` annotating a creator, not the document's own
-/// metadata (`\lx@add@frontmatter{ltx:rdf}[property=dcterms:identifier]`).
-fn record_unprinted_call(attr: Option<&KeyVals>, command: &Tokens) {
-  let parent = match command.unlist_ref().as_slice() {
+/// The tag a queued call annotates, its first argument (`\lx@annotate@frontmatter@now{ltx:creator}…`), empty for a call
+/// that annotates none: the API boundary's one read of a command.
+fn annotated_parent(command: &Tokens) -> String {
+  match command.unlist_ref().as_slice() {
     [first, rest @ ..] if *first == T_CS!("\\lx@annotate@frontmatter@now") => {
       first_group(rest).to_string().trim().to_string()
     },
     _ => String::new(),
-  };
-  if parent != "ltx:creator" {
+  }
+}
+
+/// Record a contact that prints nothing ([`UnprintedCall`]): an `ltx:rdf` annotating a creator, not the document's own
+/// metadata (`\lx@add@frontmatter{ltx:rdf}[property=dcterms:identifier]`).
+fn record_unprinted_call(attr: Option<&KeyVals>, command: &Tokens) {
+  if annotated_parent(command) != "ltx:creator" {
     return;
   }
   let value = |key: &str| attr.and_then(|kv| kv.get_value(key)).map(|v| v.to_string());

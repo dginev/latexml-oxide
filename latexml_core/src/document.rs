@@ -338,7 +338,7 @@ pub const FIELD_PROV_PROPERTY: &str = "fieldProv";
 /// ([`field_ledger_push`](crate::token::field_ledger_push): its own position, the arguments its invocation consumed, a
 /// boxless font switch before it).
 pub const FIELD_SERIAL_PROPERTY: &str = "fieldSerial";
-/// A formula's first position in a field, under a rehearsal's notes only (`token::FieldNotes`): the opening shift's, its
+/// A formula's first position in a field, under a rehearsal's notes only (the engine's `field_notes`): the opening shift's, its
 /// box stamped by the closing one, whose invocation built it.
 pub const FIELD_FORMULA_START_PROPERTY: &str = "fieldFormulaStart";
 
