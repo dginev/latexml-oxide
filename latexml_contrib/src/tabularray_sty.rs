@@ -263,6 +263,7 @@ struct TblrBodyScan {
   rows:   usize,
 }
 
+/// Read a tblr body ahead, up to `cap` tokens, and put it back for its digestion.
 ///
 /// The read and its `unread` run under [`SuppressedTabMarks`], as ltcmd reads tabularray's `+b` body
 /// (`\group_align_safe_begin:`, latex.ltx:2103-2110): at an enclosing `p` cell's `align_state` 0 an inner `&` would end

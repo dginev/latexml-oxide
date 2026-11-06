@@ -576,8 +576,9 @@ fn spot_color_model_keeps_the_earlier_color() {
 }
 
 /// A spot colour whose name has no earlier definition takes the driver's alternate, the CMYK of its `\AddSpotColor`
-/// (spotcolor.sty:31-41, the spotcolor binding), and a spot colour no `\AddSpotColor` gave black, at Info (the
-/// reviewer's probe spot_new; ieeeaccess.cls:126-131's `PANTONE3015C`). pdflatex: 0 errors.
+/// (spotcolor.sty:31-41, the spotcolor binding), and a spot colour no `\AddSpotColor` gave black, its colour lost, with
+/// the model's one Warning (KNOWN_PERL_ERRORS #958; the reviewer's probe spot_new; ieeeaccess.cls:126-131's
+/// `PANTONE3015C`). pdflatex: 0 errors.
 #[test]
 fn spot_color_defined_first_takes_the_alternate() {
   let (log, xml) = convert_files_with(
@@ -585,7 +586,7 @@ fn spot_color_defined_first_takes_the_alternate() {
     &[],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_element(
     &xml,
     "text",
@@ -603,7 +604,8 @@ fn spot_color_defined_first_takes_the_alternate() {
     "{log}"
   );
   assert!(
-    log.contains("Info:color:spotcolor Color myother of the driver's model 'spotcolor' is not rendered; defined black"),
+    log
+      .contains("Warning:color_model:spotcolor The color model 'spotcolor' is defined by raw code"),
     "{log}"
   );
 }

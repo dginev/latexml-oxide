@@ -15597,19 +15597,29 @@ Rust (72a r3, r4): color_sty.rs `driver_color_model` — a model none of LaTeXML
 xcolor) leaves the name's earlier definition in force (the driver's colour is not rendered), logged at Info; a name
 it defines first takes the alternate the model's binding gives (`driver_alternate_color`,
 `\lx@color@alternate@<model>`: the spotcolor binding keeps each `\AddSpotColor`'s CMYK, spotcolor.sty:31-41, scaled
-by the tint), else black, at Info. Witnesses: ieeeaccess.cls:126-131's spot `accessblue` (the `\else` branch; :123
+by the tint), else black, with the Warning below. Witnesses: ieeeaccess.cls:126-131's spot `accessblue` (the `\else` branch; :123
 is the `\ifjtehm` CMYK), after which the colour that stands is the ieeeaccess binding's CMYK (ieeeaccess_cls.rs:32,
 the spot colour's alternate): 2007.03025, 2009.04554, 2011.07807, 2209.03883, 2209.12464, 2609.20467. Repros
 stand-in-copies/spotcolor/; guards `perfect_kernel_batch72a::spot_color_model_keeps_the_earlier_color`,
 `::spot_color_defined_first_takes_the_alternate`.
 
 The same under xcolor, which tests `\XC@mod@<model>` (xcolor.sty:565): colorspace.sty's `\spc@mix@*` define it for a
-`\definecolorspace` model, and Perl's xcolor binding errs on each use. Trigger: `\usepackage{colorspace}
+`\definecolorspace` model, and :59 for `&spot`; Perl's xcolor binding errs on each use. Trigger: `\usepackage{colorspace}
 \definespotcolor{foo}{BarTone 555 GN}{.8,.2,.5,.3}\definecolorspace{fooshaded}{mixed}{foo,black}
-\definecolor{sfoo}{fooshaded}{1,0}` — pdflatex 0 errors, Perl 2. Rust (M2): xcolor_sty.rs reports only a model whose
-`\XC@mod@<model>` has no meaning (a name a test left `\relax` has none); the colour stays the recovery black. Witness
-colorspace/colorspace (8 → 0). Repros package-bindings/xcolor_model_raw_code_defines_is_known, its twin
-xcolor_model_nobody_defines_is_an_error; guard `perfect_kernel_batchm1::a_color_model_is_known_by_its_xcolor_definition`.
+\definecolor{sfoo}{fooshaded}{1,0}\begin{document}\color[fooshaded]{.5,.5}x\end{document}` — pdflatex 0 errors and paints
+`/&BarTone#20555#20GN&Black cs 1 0 scn`; Perl (no binding for colorspace, so `\definespotcolor` undefined too) one
+"Unrecognized color model" and one "Color is not in valid model" per use, with `--includestyles` 6 errors before any model.
+
+Rust (M2): the model is known and its colour lost, and the output says so: one counted `Warning:color_model:<model>` per
+model (color_sty.rs `report_unconverted_model`), the words kept, the recovery black, so a `\colorbox` in such a model prints a
+black background. So do a model only color's `\color@<model>` defines, with no alternate from a binding, in `\definecolor` and in
+`\color[…]` (`parse_color`), and a `&spot` read from colorspace.sty:78's raw storage (a `\definespotcolor` in a group). A
+model whose `\XC@mod@<model>` has no meaning (a name a test left `\relax` has none) stays the Error. colorspace/colorspace:
+8 errors, status 2 at sweep #150; 0 errors, status 1 here. Witnesses colorspace/colorspace. Repros
+package-bindings/xcolor_model_raw_code_defines_is_known, xcolor_raw_models_warn_once_each,
+color_driver_model_without_alternate_warns, the twin xcolor_model_nobody_defines_is_an_error; guards
+`perfect_kernel_batchm1::a_color_model_is_known_by_its_xcolor_definition`, `::a_raw_color_model_warns_once_per_model`,
+`::a_driver_color_model_without_an_alternate_warns`.
 
 ## 959. amsart's `\copyrightinfo` with an empty year adds a copyright ", "
 

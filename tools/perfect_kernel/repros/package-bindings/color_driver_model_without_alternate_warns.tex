@@ -1,0 +1,14 @@
+% color.sty:117-122 takes a model by its driver macro `\color@<model>` in `\definecolor`, and :129-133 in `\color[…]`,
+% `\textcolor[…]`, `\colorbox[…]`. With no alternate from a binding (`\lx@color@alternate@<model>`) the colour is lost, as
+% under xcolor (xcolor_model_raw_code_defines_is_known): one counted Warning for the model, the words kept.
+% witness: the same mechanism as spotcolor.sty:71, whose binding gives the alternate (stand-in-copies/spotcolor/).
+% oracle:  pdflatex (TL 2025) 0 errors: A one two three four. It paints .5 g.
+% engines: M2: \definecolor Info only, black; \color[mymodel] Error "Unrecognized color model" (Perl the same, Color.pm:59-61).
+% expect:  0 errors, 1 Warning:color_model:mymodel; every word kept.
+\documentclass{article}
+\usepackage{color}
+\makeatletter\def\color@mymodel#1#2{\c@lor@arg{#2}\edef#1{#2 g #2 G}}\makeatother
+\definecolor{x}{mymodel}{.5}
+\begin{document}
+A \textcolor{x}{one} {\color[mymodel]{.5} two} \textcolor[mymodel]{.5}{three} \colorbox[mymodel]{.5}{four}.
+\end{document}

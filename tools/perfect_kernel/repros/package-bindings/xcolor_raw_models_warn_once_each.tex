@@ -1,0 +1,22 @@
+% The Warning is per model, whatever the context repeats it: a title and an author (digested for the frontmatter), a
+% heading (and its toc copy), a note, a cell. colorspace.sty:78 stores a spot colour as `\xcolor@{}{/&<name> cs …}{&spot}{1}`,
+% and a `\definespotcolor` in a group leaves only that behind (`\definecolor` is local, that store global): the model
+% `&spot` (:59), read from the raw storage, is the second model. That route was black in silence.
+% witness: colorspace/colorspace (the model); the group is synthetic, the review's `&spot` sibling.
+% oracle:  pdflatex (TL 2025) 0 errors: every word below; paints /&Bar#20Name cs.
+% engines: M2: 0 errors, 0 warnings, the colours lost in silence.
+% expect:  0 errors, 2 warnings (Warning:color_model:fooshaded, Warning:color_model:&spot), every word kept.
+\documentclass{article}
+\usepackage{colorspace}
+\definespotcolor{foo}{BarTone 555 GN}{.8,.2,.5,.3}
+\definecolorspace{fooshaded}{mixed}{foo,black}
+\title{T \textcolor[fooshaded]{.2,.5}{title}}
+\author{A \textcolor[fooshaded]{.1,.5}{Author}}
+\begin{document}
+\maketitle
+\tableofcontents
+\section{S \textcolor[fooshaded]{.2,.5}{head}}
+Para\footnote{Note \textcolor[fooshaded]{.2,.5}{inner}.}
+\begin{tabular}{l}\textcolor[fooshaded]{.2,.5}{cell}\end{tabular}
+{\definespotcolor{bar}{Bar Name}{0,1,0,0}}\textcolor{bar}{spot} and \textcolor{bar}{again}.
+\end{document}

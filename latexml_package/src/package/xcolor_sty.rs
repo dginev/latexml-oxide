@@ -3,7 +3,9 @@ use latexml_core::common::color::{
 };
 
 use crate::{
-  package::color_sty::{lookup_color_obj, report_unrecognized_model, trim_color_spec},
+  package::color_sty::{
+    lookup_color_obj, report_unconverted_model, report_unrecognized_model, trim_color_spec,
+  },
   prelude::*,
 };
 
@@ -97,6 +99,15 @@ fn convert_ext_model(model: &str, spec: &str) -> Color {
         delta(comps.get(2).copied().unwrap_or(0.0), m),
       )
     },
+    // xcolor.sty.ltxml:131-142: `\rangetHsb`'s tuned hue to hsb's.
+    "tHsb" => {
+      let h_range = 360.0; // default \rangeHsb
+      Color::Hsb(
+        thsb_to_hsb(comps.first().copied().unwrap_or(0.0), h_range) / h_range,
+        comps.get(1).copied().unwrap_or(0.0),
+        comps.get(2).copied().unwrap_or(0.0),
+      )
+    },
     "Gray" => {
       let n = 15.0;
       Color::Gray(delta(comps.first().copied().unwrap_or(0.0), n))
@@ -126,12 +137,14 @@ fn convert_ext_model(model: &str, spec: &str) -> Color {
       Color::Hsb(h / 6.0, 1.0, bb).to_rgb()
     },
     _ => {
-      // A model neither core nor one of xcolor.sty.ltxml's `DefColorModel`s
-      // (:85-168: RGB HTML Hsb HSB tHsb Gray wave) is Perl's Color.pm:61 Error — unless raw code defined it, as
-      // xcolor.sty:565 tests a model (`\@ifundefined{XC@mod@<model>}`): colorspace.sty's `\spc@mix@*` set
-      // `\XC@mod@<name>` for its `\definecolorspace` models (the colorspace manual; Perl errs, KNOWN_PERL_ERRORS).
-      // The colour stays the recovery of an unconverted model.
-      if !matches!(model, "tHsb") && !is_defined_token(&T_CS!(s!("\\XC@mod@{model}"))) {
+      // A model neither core nor one of xcolor.sty.ltxml's `DefColorModel`s (:85-168: RGB HTML Hsb HSB tHsb Gray wave) is
+      // Perl's Color.pm:61 Error, unless raw code defined it, as xcolor.sty:565 tests a model
+      // (`\@ifundefined{XC@mod@<model>}`): colorspace.sty's `\spc@mix@*` set `\XC@mod@<name>` for its
+      // `\definecolorspace` models and :59 `\XC@mod@&spot` (the colorspace manual; Perl errs, KNOWN_PERL_ERRORS #958).
+      // That one is known, and its colour is lost: a counted Warning, the recovery black.
+      if is_defined_token(&T_CS!(s!("\\XC@mod@{model}"))) {
+        report_unconverted_model(model);
+      } else {
         report_unrecognized_model(model);
       }
       color_from_model_spec(model, spec)

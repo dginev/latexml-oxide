@@ -1,0 +1,11 @@
+% xcolor.sty.ltxml:131-142's `tHsb`, the tuned hue of `\rangetHsb`: the one `DefColorModel` the port's table lacked, black in
+% silence. Its hue map was there for `>twheel` (`thsb_to_hsb`).
+% oracle:  pdflatex (TL 2025) 0 errors: paints 0.5 1 0 rg, then 0.49998 0 0.5 rg.
+% engines: perl converts as pdflatex; M2: no colour, 0 diagnostics.
+% expect:  0 errors, 0 warnings; color #80FF00 on `one`, #800080 on `two`.
+\documentclass{article}
+\usepackage{xcolor}
+\definecolor{x}{tHsb}{150,1,1}
+\begin{document}
+A \textcolor{x}{one} B \textcolor[tHsb]{300,1,0.5}{two}.
+\end{document}

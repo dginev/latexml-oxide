@@ -5527,7 +5527,8 @@ fn redefinition_locked(cs: &str, definition: &Stored) -> bool {
 /// (`"{cs}:locked@arity"`), so that it is a command of its own and no copy of the binding's: sltables.sty:193's
 /// `\def\multicolumn##1{\omit…\stmultispan…}`, its table's one-argument command, against latex.ltx's three, which
 /// agupp.sty:599, eqnarray.sty:45 and srdp-tables.sty:1218 copy. One declaring none may read any number and stays
-/// refused. A `\let` carries no parameters to read and stays refused too (`let_i`).
+/// refused. This looks at a definition's parameters only; a `\let` never comes here, a plain `:locked` having never
+/// refused one (`let_i`, as Perl's `Let`): `\let\multicolumn\mymc` stands.
 fn another_interface(cs: &str, definition: &Stored) -> bool {
   let Some(key) = arena::get(s!("{cs}:locked@arity")) else {
     return false;

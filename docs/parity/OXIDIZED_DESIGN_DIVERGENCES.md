@@ -8670,11 +8670,15 @@ unlocked) wins. The rule: commands that ARE the alignment model's structure
 `\halign`-preamble machinery cannot run against a model that has no preamble. The lock protects the interface of three
 arguments (`\multicolumn:locked@arity`, state.rs `another_interface`): a definition declaring another number is a command
 of its own, as in Perl (sltables.sty:193's `\def\multicolumn##1{\omit…\stmultispan…}`, in its `{stable}`'s group), while
-one declaring three (agupp.sty:599, eqnarray.sty:45, srdp-tables.sty:1218), one declaring none and a `\let` stay refused.
+one declaring three (agupp.sty:599, eqnarray.sty:45, srdp-tables.sty:1218) and one declaring none stay refused. The lock
+looks at a definition's parameters; a `\let` was never refused by a plain `:locked` (`let_i`, as Perl's `Let`), so
+`\let\multicolumn\mymc` stands. Limit: a no-parameter redefinition of another interface is refused too
+(`\renewcommand{\multicolumn}{\mymc}`, `\DeclareRobustCommand\multicolumn[1]`; RED repro
+alignment-bindings/multicolumn_of_no_declared_parameters_is_refused_red).
 **Why**: the cell keeps its column and content (aguplus 2 → 0; sltables-doc-en 11 → 0).
 **Witnesses**: aguplus/aguplus, shipunov/sltables-doc-en.
 **Guards**: `perfect_kernel_batch56::raw_multicolumn_redefinition_is_dropped`,
-`perfect_kernel_batchm1::a_package_multicolumn_of_another_arity_is_its_own`.
+`perfect_kernel_batchm1::a_package_multicolumn_of_another_arity_is_its_own`, `::a_multicolumn_of_no_parameters_stays_refused`.
 
 ### 211. The alignment cell-head peek runs in internal vertical mode
 
@@ -23372,9 +23376,15 @@ fields the document's style declares in its `.bst`'s `ENTRY` list (`bst_declared
 recorded as `BIBSTYLE`, the `.bst` found on the search path) — what bibtex(1) copies for the style to print:
 ACM-Reference-Format.bst:38 `location` (printed after the event, :1318-1342; 2603.25517, 2601.12610), sn-mathphys.bst
 and mdpi.bst `urldate` (2607.28080, 2511.08819, 2608.12223). multibib's `\bibliographystyle<suffix>` only writes to its side aux
-(multibib.sty:234); its binding (multibib_sty.rs) records that style too, so quantum.bst's `urldate` prints as `accessed`
-(quantum-bibliographystyle-demo; `perfect_kernel_batchm1::a_multibib_style_reaches_the_bst_fields`). One `BIBSTYLE` holds per
-document: of mixed styles the fields are the last's. Elsewhere the fields are raw `bib-data`, as in Perl. OD #289's `annotation` and 56ie's biblatex names (the entry for the subtitle and host rows) are biblatex-only
+(multibib.sty:234); its binding (multibib_sty.rs) records that style per suffix: `\bibliography<suffix>` reads its own in a
+group around the list, so `\bibliographystyle{alpha}\bibliographystyleweb{plain}` gives `alpha` on the main list and `plain`
+on `web`, as pdflatex's `[Zet01]` and `[1]` (opticajnl.cls:288's and osajnl's full-reference list: 1908.11477, 2006.07118,
+2008.09542, 2205.11481, 2308.15957, 2607.03975), and quantum.bst's `urldate` prints as `accessed`
+(quantum-bibliographystyle-demo; `perfect_kernel_batchm1::a_multibib_style_reaches_the_bst_fields`,
+`::each_multibib_list_reads_its_own_style`). The `.bst` fields are read once per document: the main list's style, with none
+the last declared. Limits: a `\bibliographystyle` after a suffix list takes that list's attribute (the kernel's `\bibstyle` sets
+the first `ltx:bibliography`, sect11.rs; RED index-bib/multibib_main_style_after_a_list_stays_off_that_list_red), and a suffix
+style after its own list reaches `BIBSTYLE` only. Elsewhere the fields are raw `bib-data`, as in Perl. OD #289's `annotation` and 56ie's biblatex names (the entry for the subtitle and host rows) are biblatex-only
 accordingly. Repros index-bib/natbib_biblatex_only_fields_are_raw_data (red int47a) and its twin
 index-bib/biblatex_prints_its_own_fields, index-bib/bst_declared_biblatex_field_is_printed; guards
 `perfect_kernel_batch78i::{natbib_biblatex_only_fields_are_raw_data, biblatex_prints_its_own_fields,

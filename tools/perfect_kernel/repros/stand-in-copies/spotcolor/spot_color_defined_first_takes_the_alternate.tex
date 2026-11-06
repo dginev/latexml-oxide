@@ -2,7 +2,7 @@
 %          colour, here with no earlier definition of the name: the reviewer's probe spot_new)
 % oracle:  pdflatex 0 errors (the PANTONE 3015 C X; a viewer without the ink shows the CMYK 1 0.3 0 0.2 alternate)
 % engines: rust 72a r3 = 1 Error "Can't find color myblue" (no earlier definition to keep)
-% expect:  0 errors, 0 warnings; X in the CMYK alternate; Y (a spot colour no \AddSpotColor gave) black
+% expect:  0 errors, 1 Warning:color_model:spotcolor; X in the CMYK alternate; Y (a spot colour no \AddSpotColor gave) black
 % status:  RED (72a r3) -> GREEN (72a r4)
 % preload: ar5iv.sty
 \documentclass{article}

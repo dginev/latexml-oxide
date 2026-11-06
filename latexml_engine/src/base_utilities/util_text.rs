@@ -227,8 +227,9 @@ pub fn digested_to_text(d: &Digested) -> Result<String> {
 }
 
 /// Whether digested material typesets something a reader sees: a character that is not a space, an image (a whatsit
-/// carrying a `graphic` or image `candidates`), or a cross-reference or citation, whose text the post-processor
-/// fills in (`fills_generated_text`), anywhere in it — through lists, the whatsit arguments it shows
+/// carrying a `graphic` or image `candidates`), a cross-reference or citation, whose text the post-processor
+/// fills in (`fills_generated_text`), or a constructor whose template prints text of its own (`template_prints_text`,
+/// `\LaTeX`), anywhere in it — through lists, the whatsit arguments it shows
 /// (`shown_arguments`, as [`ink_text`] reads them) and bodies, and alignment cells. Paragraph and spacing commands,
 /// rules and empty boxes are not content, nor is an argument LaTeX only tests: the position letter of
 /// `\begin{tabular}[t]`, `\parbox[t]`, `{minipage}[t]`, `\makebox[w][l]` or `\shortstack[l]` (a `Position` parameter,

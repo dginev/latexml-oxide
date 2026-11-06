@@ -90,7 +90,8 @@ fn plain(xml: &str) -> String {
 
 /// C1: sltables.sty:193's one-argument `\multicolumn` is its table's own command, kept (Perl pool:3702 does not lock it);
 /// the kernel's is back after the table's group. sltables-doc-en, sweep #150's 11 errors. A three-argument copy stays
-/// refused: `perfect_kernel_batch56::raw_multicolumn_redefinition_is_dropped`.
+/// refused: `perfect_kernel_batch56::raw_multicolumn_redefinition_is_dropped`; one with no parameters too:
+/// [`a_multicolumn_of_no_parameters_stays_refused`].
 #[test]
 fn a_package_multicolumn_of_another_arity_is_its_own() {
   let (log, xml) = converted(manual_repro!(
@@ -106,6 +107,21 @@ fn a_package_multicolumn_of_another_arity_is_its_own() {
   );
   assert!(
     xml.contains(r#"<td align="center" colspan="2">Y</td>"#),
+    "{xml}"
+  );
+}
+
+/// C1: a `\multicolumn` declaring no parameters may read any number, so the arity lock refuses it (`another_interface`'s
+/// `count > 0`): here latex.ltx's command behind one more name, whose `\@mkpream` has no preamble to run against. Its shape
+/// that prints something else is the limit `multicolumn_of_no_declared_parameters_is_refused_red`.
+#[test]
+fn a_multicolumn_of_no_parameters_stays_refused() {
+  let (log, xml) = converted(manual_repro!(
+    "alignment-bindings/multicolumn_of_no_parameters_passes_to_the_binding.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    plain(&xml).contains(r#"<td align="center" colspan="2">Span</td>"#),
     "{xml}"
   );
 }
@@ -151,27 +167,98 @@ fn the_block_instances_of_the_file_are_declared() {
   );
 }
 
-/// C4: a model raw code defines (`\XC@mod@<model>`, xcolor.sty:565's test) is no error (the colorspace manual's 8; Perl
-/// errs, Color.pm:59-61); a model nothing defines stays the Error it is, also with its name left `\relax` by a test.
+/// C4: a model raw code defines (`\XC@mod@<model>`, xcolor.sty:565's test) is known (the colorspace manual's 8 errors;
+/// Perl errs, Color.pm:59-61), and its colour is lost: one counted Warning for the model, in `\definecolor`, `\color[…]`,
+/// `\textcolor[…]` and `\colorbox[…]` alike, the words kept; a spot colour by name keeps its alternate, no Warning. A
+/// model nothing defines stays the Error it is, also with its name left `\relax` by a test.
 #[test]
 fn a_color_model_is_known_by_its_xcolor_definition() {
   let (log, xml) = converted(manual_repro!(
     "package-bindings/xcolor_model_raw_code_defines_is_known.tex"
   ));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
-    plain(&xml).contains("<p>Before shaded and after. Third.</p>"),
+    log
+      .contains("Warning:color_model:fooshaded The color model 'fooshaded' is defined by raw code"),
+    "{log}"
+  );
+  assert!(
+    plain(&xml).contains(
+      r##"<p>Before shaded and after. Third. <text backgroundcolor="#000000">Boxed.</text><text color="#008033">Spot.</text></p>"##
+    ),
     "{xml}"
   );
   let (log, xml) = converted(manual_repro!(
     "package-bindings/xcolor_model_nobody_defines_is_an_error.tex"
   ));
-  assert_eq!(error_count(&log), 1, "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
   assert!(
     log.contains("Unrecognized color model 'nosuchmodel'"),
     "{log}"
   );
   assert!(plain(&xml).contains("<p>word</p>"), "{xml}");
+}
+
+/// C4: the Warning is per model, whatever repeats it (a title, an author, a heading and its toc copy, a note, a cell), and
+/// the `&spot` model of colorspace.sty:78's raw storage, read after a `\definespotcolor` in a group, is one too.
+#[test]
+fn a_raw_color_model_warns_once_per_model() {
+  let (log, xml) = converted(manual_repro!(
+    "package-bindings/xcolor_raw_models_warn_once_each.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  for model in ["fooshaded", "&spot"] {
+    assert_eq!(
+      log
+        .matches(&format!("Warning:color_model:{model} "))
+        .count(),
+      1,
+      "{log}"
+    );
+  }
+  let xml = plain(&xml);
+  for words in [
+    "T title",
+    "A Author",
+    "S head",
+    "Note inner.",
+    ">cell<",
+    "spot and again.",
+  ] {
+    assert!(xml.contains(words), "{words}: {xml}");
+  }
+}
+
+/// C4 under color alone: its model is the driver macro `\color@<model>` (color.sty:118), in `\definecolor` and in the
+/// optional arguments alike (these were Perl's Error), and with no alternate from a binding the colour is lost, as under
+/// xcolor. The alternate's route: `perfect_kernel_batch72a::spot_color_defined_first_takes_the_alternate`.
+#[test]
+fn a_driver_color_model_without_an_alternate_warns() {
+  let (log, xml) = converted(manual_repro!(
+    "package-bindings/color_driver_model_without_alternate_warns.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(log.contains("Warning:color_model:mymodel "), "{log}");
+  assert!(
+    plain(&xml)
+      .contains(r##"<p>A one two three <text backgroundcolor="#000000">four</text>.</p>"##),
+    "{xml}"
+  );
+}
+
+/// xcolor.sty.ltxml:131-142's `tHsb` converts (black in silence before; pdflatex paints 0.5 1 0, then 0.49998 0 0.5).
+#[test]
+fn the_thsb_color_model_converts() {
+  let (log, xml) = converted(manual_repro!(
+    "package-bindings/xcolor_thsb_model_converts.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    plain(&xml).contains(
+      r##"<p>A <text color="#80FF00">one</text> B <text color="#800080">two</text>.</p>"##
+    ),
+    "{xml}"
+  );
 }
 
 /// C6: the cover line between two late abstracts is a continued `<titlepage>`; as a `<para>` it made the abstract and
@@ -249,6 +336,25 @@ fn a_multibib_style_reaches_the_bst_fields() {
     html.contains(r#"ltx_bib_accessed">12.07.2019</span>"#),
     "{html}"
   );
+}
+
+/// C9: each list reads its own style, keyed by the suffix `\newcites` declares: `\bibliographystyle{alpha}
+/// \bibliographystyleweb{plain}` before both lists prints `[Zet01]` and `[1]`, as pdflatex and bibtex do (the shape of
+/// opticajnl.cls:288's full-reference list: 2607.03975, 2308.15957).
+#[test]
+fn each_multibib_list_reads_its_own_style() {
+  let html = html_of(
+    manual_repro!("index-bib/multibib_each_list_reads_its_own_style.tex"),
+    &[(
+      "multibib_each_list_reads_its_own_style.bib",
+      manual_repro!("index-bib/multibib_each_list_reads_its_own_style.bib"),
+    )],
+  );
+  let label = |kind: &str, text: &str| {
+    format!(r#"<span class="ltx_tag {kind} ltx_role_refnum ltx_tag_bibitem">{text}</span>"#)
+  };
+  assert!(html.contains(&label("ltx_bib_key", "[1]")), "{html}");
+  assert!(html.contains(&label("ltx_bib_abbrv", "[ZET01]")), "{html}");
 }
 
 /// C5: ijsra.cls's frontmatter is `\def` slots: under its binding (ijsra_cls.rs) the document's `\def\abstract{…}` stands, and
