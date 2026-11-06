@@ -3092,11 +3092,20 @@ LoadDefinitions!({
   });
 
   // Counters
-  NewCounter!("lstlisting", "document", idprefix => "LST");
+  // listings.sty:1604-1609 declares `lstlisting` `\AtBeginDocument`, in its hook's place (label `listings`, before a
+  // document's own hooks): until then `\@ifundefined{c@lstlisting}` is true, so a preamble's tocloft
+  // `\newlistentry{lstlisting}{lol}{0}` has no "previously defined" error to raise (tocloft.sty:820-833). Under a
+  // `\globaldefs\@ne`, that error's display `\protect` stayed for good and `\end`, `\normalfont`, `\ref` printed as text:
+  // 2405.15073. Perl's binding declares it at load (listings.sty.ltxml:133), KPE #1217.
+  // Guard: `perfect_kernel_batchm3::the_lstlisting_counter_waits_for_begin_document`.
+  DefPrimitive!("\\lx@lst@declare@counter", sub[_args] {
+    NewCounter!("lstlisting", "document", idprefix => "LST");
+    Ok(())
+  });
+  RawTeX!(r"\AtBeginDocument[listings]{\lx@lst@declare@counter\gdef\thelstlisting{\arabic{lstlisting}}}");
   DefMacro!("\\ext@lstlisting", "lol");
   NewCounter!("lstnumber");
   DefMacro!("\\thelstnumber", "\\arabic{lstnumber}");
-  DefMacro!("\\thelstlisting", "\\arabic{lstlisting}");
   // lstmisc.sty:1236-1239 (`labels` aspect): a listing line's hyperref anchor
   // name, set `\AtBeginDocument` — `\lst@neglisting` (listings.sty:1693, the
   // count of uncaptioned listings) or, for a captioned listing, `\theHlstlisting`,

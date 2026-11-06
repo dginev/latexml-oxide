@@ -35,7 +35,16 @@ LoadDefinitions!({
   DefMacro!(
     T_CS!("\\begin{blockarray}"),
     "[]{}",
-    "\\@array@bindings[#1]{#2}\\lx@blkarray@repeating\\@@array[#1]{#2}\\lx@begin@alignment"
+    "\\let\\begin\\lx@blkarray@begin\\@array@bindings[#1]{#2}\\lx@blkarray@repeating\\@@array[#1]{#2}\\lx@begin@alignment"
+  );
+  // blkarray.sty:1099-1102, :1123 `\\let\\begin\\BA@begin`: inside a `{blockarray}` a `\\begin` of a block is expandable,
+  // its `\\noalign` reached by the look-ahead at a cell's head, where the kernel's `\\protected` `\\begin` stops.
+  RawTeX!(
+    r"\let\lx@blkarray@@begin\begin
+\def\lx@blkarray@begin#1{\ifcsname lx@blkarray@begin@#1\endcsname\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi
+  {\csname begin{#1}\endcsname}{\lx@blkarray@@begin{#1}}}
+\let\lx@blkarray@begin@block\@empty
+\expandafter\let\csname lx@blkarray@begin@block*\endcsname\@empty"
   );
   // blkarray.sty:1206-1208 aligns with a repeating preamble, `\BA@upart##\BA@vpart&&\BA@upart##\BA@vpart\cr`, so
   // a row may run past its spec's columns; such a cell gets no format (`\BA@col@use`'s `\csname` of a column the spec
@@ -82,7 +91,7 @@ LoadDefinitions!({
   DefMacro!(
     T_CS!("\\end{blockarray}"),
     None,
-    "\\lx@end@alignment\\@end@array"
+    "\\lx@end@alignment\\@end@array\\let\\begin\\lx@blkarray@@begin"
   );
 
   // A `block`'s own preamble formats its rows (blkarray.sty:868-922 `\BA@beginblock`, `\begin{block}` inside a

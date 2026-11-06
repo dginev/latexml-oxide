@@ -380,7 +380,6 @@ LoadDefinitions!({
           use crate::engine::latex_constructs::before_float;
           // Perl L73-86: mirror full beforeDigest sequence.
           DigestIf!(T_CS!("\\@ResetCounterIfNeeded"))?;
-          DigestIf!(T_CS!("\\algocf@linesnumbered"))?;
           Let!("\\par", "\\lx@algo@par");
           Let!("\\parbox", "\\lx@algo@parbox");
           Let!("\\\\", "\\lx@algo@cr");
@@ -430,6 +429,8 @@ LoadDefinitions!({
           if placement.trim() != "H" {
             crate::engine::latex_constructs::reset_float_box()?;
           }
+          // (after the float's `\everypar{}`, as `\algocf@start` runs inside `\@float`, algorithm2e.sty:2487-2488)
+          DigestIf!(T_CS!("\\algocf@linesnumbered"))?;
         },
         after_digest => sub[whatsit] {
           use crate::engine::latex_constructs::after_float;

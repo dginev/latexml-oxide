@@ -314,10 +314,10 @@ Bold to <text font="italic">italic</text></p>
         <p>relax is not defprotected</p>
       </para>
       <para xml:id="S3.SS6.p16">
-        <p>begin is not defprotected</p>
+        <p>begin is  defprotected</p>
       </para>
       <para xml:id="S3.SS6.p17">
-        <p>prefix test begin: false</p>
+        <p>prefix test begin: true</p>
       </para>
       <para xml:id="S3.SS6.p18">
         <p>prefix test noise: false</p>

@@ -1,0 +1,46 @@
+% witness: tikzpingus/tikzpingus-doc (tikzpingus.sty:93-96, "\@pingu@wingdown@0.0@"); 2002.08586, 2509.25473
+% oracle:  pdflatex (TL 2025): each `\pgfmathresult` the guard lists, 0 "!" lines. Left, a one-line record each: `{1+2}*3` (grouping skipped, 7; real "Missing number", 0.0), `({1,2,3}[1])` (2; real out of bounds), `\pgfmathsetmacro\v{{1,2,3}}` then `array(\v,1)` (real `{3}{1}`), `{1cm,2cm}[0]+1pt` (fixed-point 29.45274, ours 29.45276).
+% engines: int141a: `{1,2,3}[1]` 1, `{"a","b"}[1]` 0.0, `dim({1,2})` 1, no Error. Perl is wrong with `Error:pgfparse`.
+% expect:  0 errors; every value but those the guard names
+% status:  GREEN
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\pgfmathparse{{1,2,3}[1]}\typeout{R0: \detokenize{{1,2,3}[1]} = \pgfmathresult}
+\pgfmathparse{{1,2,3}[0]}\typeout{R1: \detokenize{{1,2,3}[0]} = \pgfmathresult}
+\pgfmathparse{{1.5,2}[0]}\typeout{R2: \detokenize{{1.5,2}[0]} = \pgfmathresult}
+\pgfmathparse{{1+1,2}[0]}\typeout{R3: \detokenize{{1+1,2}[0]} = \pgfmathresult}
+\pgfmathparse{{"none","up","down"}[1]}\typeout{R4: \detokenize{{"none","up","down"}[1]} = \pgfmathresult}
+\pgfmathparse{{"a","b"}[1]}\typeout{R5: \detokenize{{"a","b"}[1]} = \pgfmathresult}
+\pgfmathparse{array({1,2,3},1)}\typeout{R6: \detokenize{array({1,2,3},1)} = \pgfmathresult}
+\pgfmathparse{array({"a","b"},1)}\typeout{R7: \detokenize{array({"a","b"},1)} = \pgfmathresult}
+\pgfmathparse{dim({"a","b"})}\typeout{R8: \detokenize{dim({"a","b"})} = \pgfmathresult}
+\pgfmathparse{dim({1,2})}\typeout{R9: \detokenize{dim({1,2})} = \pgfmathresult}
+\pgfmathparse{dim({{1,2,3},{4,5,6}})}\typeout{R10: \detokenize{dim({{1,2,3},{4,5,6}})} = \pgfmathresult}
+\pgfmathparse{dim({})}\typeout{R11: \detokenize{dim({})} = \pgfmathresult}
+\pgfmathparse{{{1,2},{3,4}}[1][0]}\typeout{R12: \detokenize{{{1,2},{3,4}}[1][0]} = \pgfmathresult}
+\pgfmathparse{{{1,2},{3,4}}[1]}\typeout{R13: \detokenize{{{1,2},{3,4}}[1]} = \pgfmathresult}
+\pgfmathparse{array({{1,2},{3,4}},1)}\typeout{R14: \detokenize{array({{1,2},{3,4}},1)} = \pgfmathresult}
+\pgfmathparse{2*{1,2,3}[1]+1}\typeout{R15: \detokenize{2*{1,2,3}[1]+1} = \pgfmathresult}
+\pgfmathparse{{1,2,3}[1]*{1,2,3}[2]}\typeout{R16: \detokenize{{1,2,3}[1]*{1,2,3}[2]} = \pgfmathresult}
+\pgfmathparse{{2}}\typeout{R17: \detokenize{{2}} = \pgfmathresult}
+\pgfmathparse{{1,2,3}}\typeout{R19: \detokenize{{1,2,3}} = \pgfmathresult}
+\pgfmathparse{{"a","b"}}\typeout{R20: \detokenize{{"a","b"}} = \pgfmathresult}
+\pgfmathparse{sin({30,60}[0])}\typeout{R21: \detokenize{sin({30,60}[0])} = \pgfmathresult}
+\pgfmathparse{{"a","b"}[1+0]}\typeout{R22: \detokenize{{"a","b"}[1+0]} = \pgfmathresult}
+\pgfmathparse{{"a b","c,d"}[1]}\typeout{R23: \detokenize{{"a b","c,d"}[1]} = \pgfmathresult}
+\pgfmathparse{1 ? {"a","b"}[0] : "c"}\typeout{R24: \detokenize{1 ? {"a","b"}[0] : "c"} = \pgfmathresult}
+\pgfmathparse{0 ? {"a","b"}[0] : {"c","d"}[1]}\typeout{R25: \detokenize{0 ? {"a","b"}[0] : {"c","d"}[1]} = \pgfmathresult}
+\pgfmathparse{{1pt,2pt}[1]}\typeout{R26: \detokenize{{1pt,2pt}[1]} = \pgfmathresult}
+\pgfmathparse{{1cm,2cm}[0]+1pt}\typeout{R27: \detokenize{{1cm,2cm}[0]+1pt} = \pgfmathresult}
+\pgfmathparse{max({1,2,3}[1],0)}\typeout{R28: \detokenize{max({1,2,3}[1],0)} = \pgfmathresult}
+\pgfmathparse{ifthenelse(1,{1,2}[0],0)}\typeout{R29: \detokenize{ifthenelse(1,{1,2}[0],0)} = \pgfmathresult}
+\pgfmathparse{{1,2,3}[1.7]}\typeout{R30: \detokenize{{1,2,3}[1.7]} = \pgfmathresult}
+\pgfmathparse{{1,2,3}[int(1.7)]}\typeout{R31: \detokenize{{1,2,3}[int(1.7)]} = \pgfmathresult}
+\pgfmathparse{{7,8,9}[dim({1,2})]}\typeout{R32: \detokenize{{7,8,9}[dim({1,2})]} = \pgfmathresult}
+\pgfmathparse{array({5,6},0)+1}\typeout{R33: \detokenize{array({5,6},0)+1} = \pgfmathresult}
+\pgfmathparse{"up"}\typeout{R34: \detokenize{"up"} = \pgfmathresult}
+\pgfmathsetmacro\s{{"none","up","down"}[1]}\typeout{S1 = \s}
+\edef\arr{{"none","up","down"}}\def\idx{2}\pgfmathsetmacro\s{\arr[\idx]}\typeout{S2 = \s}
+\pgfmathsetmacro\v{{1,2,3}}\typeout{S3 = \v}
+\end{document}

@@ -315,7 +315,9 @@ LoadDefinitions!({
   // 1610.00974).
   // The interline values a vertical box's lines are set with (latex.ltx:16284-16286, the part of
   // `\\@arrayparboxrestore` that `\\@array`'s zero `\\lineskip`/`\\baselineskip` concerns, `\\lx@begin@alignment`):
-  // a p cell (`\\@startpbox`, :16755), tabularx's X and tabulary's columns, `\\parbox` and minipage set them back.
+  // a p cell (`\\@startpbox`, :16755), tabularx's X and tabulary's columns, `\\parbox` and minipage set them back. So
+  // does `\\everypar{}` (:16279) here, `\\parbox`'s and minipage's: an enclosing paragraph's `\\everypar` stays out of
+  // the box (`perfect_kernel_batchm3::a_box_restore_clears_everypar`).
   // Repro kernel-alignment/colortbl_noalign_idiom.
   DefPrimitive!("\\lx@array@keeps@interline", {
     assign_value("lx@array@keeps@interline", Stored::Bool(true), None);
@@ -326,7 +328,7 @@ LoadDefinitions!({
   );
   DefMacro!(
     "\\lx@tabular@p{}{}",
-    "\\setlength\\hsize{#2}\\lx@restore@interline\\lx@tabular@p@{#1}{\\the\\hsize}"
+    "\\setlength\\hsize{#2}\\everypar{}\\lx@restore@interline\\lx@tabular@p@{#1}{\\the\\hsize}"
   );
   DefConstructor!("\\lx@tabular@p@ Position {Dimension} VBoxContents",
   sub[document, args, props] {

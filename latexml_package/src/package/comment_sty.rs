@@ -131,6 +131,52 @@ LoadDefinitions!({
     Some(PrimitiveBody::Closure(define_excluded))
   );
   DefPrimitive!("\\specialcomment{}{}{}", Some(define_included));
-  DefPrimitive!("\\processcomment{}{}{}{}", None);
   DefMacro!("\\csarg{}{}", r"\expandafter#1\csname#2\endcsname");
+  // comment.sty's own machinery (:170-233, :283-289), for what builds a comment type of its own on it (lwarp.sty:1349-1363
+  // `\CommentEndDef`, `\ProcessComment`, `\SetUpCutFile`: tikz-trackschematic and its snippets), and the two types the
+  // binding leaves to it, as the file has them (:266-272 `\generalcomment`, `\processcomment`; Perl's binding has none of
+  // this, "\CommentEndDef undefined"). `\excludecomment`, `\includecomment`, `\specialcomment` stay the binding's.
+  RawTeX!(
+    r"\def\makeinnocent#1{\catcode`#1=12 }
+\newwrite\CommentStream
+\def\DefaultCutFileName{\def\CommentCutFile{comment.cut}}
+\DefaultCutFileName
+\def\ProcessComment#1{\def\CurrentComment{#1}%
+  \begingroup
+  \let\do\makeinnocent \dospecials
+  \makeinnocent\^^L%
+  \endlinechar`\^^M\relax \catcode`\^^M=12\relax \xComment}
+{\catcode`\^^M=12 \endlinechar=-1 %
+ \gdef\xComment#1^^M{\ProcessCommentLine}
+ \gdef\ProcessCommentLine#1^^M{\def\test{#1}
+      \csarg\ifx{End\CurrentComment Test}\test
+          \edef\next{\endgroup\noexpand\EndOfComment{\CurrentComment}}%
+      \else \ThisComment{#1}\let\next\ProcessCommentLine
+      \fi \next}
+}
+\def\SetUpCutFile{\immediate\openout\CommentStream=\CommentCutFile
+  \PrepareCutFile}
+\def\PrepareCutFile{}
+\long\def\WriteCommentLine#1{\immediate\write\CommentStream{\unexpanded{#1}}}
+\let\ThisComment\WriteCommentLine
+\def\ProcessCutFile{\message{Straight input of \CommentCutFile.}%
+  \input{\CommentCutFile}\relax}
+\def\CloseAndInputCutFile{\FinalizeCutFile
+  \immediate\closeout\CommentStream
+  \ProcessCutFile}
+\def\FinalizeCutFile{}
+\long\def\generalcomment#1#2#3{\message{General comment '#1'}%
+  \csarg\def{#1}{\endgroup #2 \relax \SetUpCutFile \ProcessComment{#1}}%
+  \csarg\def{After#1Comment}{\CloseAndInputCutFile #3}%
+  \CommentEndDef{#1}}
+\long\def\processcomment#1#2#3#4{\message{Lines-Processing comment '#1'}%
+  \csarg\def{#1}{\endgroup \SetUpCutFile #2\relax
+    \ProcessComment{#1}}%
+  \csarg\def{After#1Comment}{#3\CloseAndInputCutFile #4}%
+  \CommentEndDef{#1}}
+\def\EndOfComment#1{\csname After#1Comment\endcsname
+  \begingroup\def\@currenvir{#1}\end{#1}}
+\def\CommentEndDef#1{{\escapechar=-1\relax
+  \csarg\xdef{End#1Test}{\string\\end\string\{#1\string\}}}}"
+  );
 });

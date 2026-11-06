@@ -2402,6 +2402,18 @@ fn classify_undelimited_argument(
     if nests_accents && body.first() == Some(&ams_mathaccent) {
       return Ok(UndelimitedArgument::NestedAccent);
     }
+    // The kernel's `\ensuremath ` (`\@ensuremath`, latex.ltx:15801-15806) has no parameter of its own, its branches
+    // read one: a call of one mandatory argument (`\hat\ensuremath{x}`).
+    if command == T_CS!(r"\@ensuremath") {
+      return Ok(UndelimitedArgument::Call {
+        command,
+        tex_errs: true,
+        reading: match parse_parameters("{}", &command, true)? {
+          Some(parameters) => CallReading::Arguments(parameters),
+          None => CallReading::Unknown,
+        },
+      });
+    }
     // An ltcmd command (`\NewDocumentCommand`, raw from latex.ltx) is a parameterless wrapper over its signature: the
     // optimized one's `\__cmd_start_optimized: \cs code` (an all-`m` command, `\cs code` taking the arguments,
     // latex.ltx `\__cmd_declare_cmd_optimized:Nnn`), the general and expandable ones' `\__cmd_start:nNNnnn {<signature>}…`

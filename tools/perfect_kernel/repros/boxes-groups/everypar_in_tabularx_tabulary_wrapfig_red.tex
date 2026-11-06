@@ -1,0 +1,16 @@
+% witness: review of M3's F4 (finding 7): `\lx@tabular@p`'s restore clears `\everypar` (latex.ltx:16279), these bindings' cells and bodies do not
+% oracle:  pdflatex (TL 2025) 0 errors: [E] only on the outer paragraphs P0, P1, P2 and the one after the wrapfigure, none in a cell or its body.
+% engines: M3r2, M3, int141a: tabularx's X, tabulary's columns and wrapfig's body run it too.
+% expect:  0 errors; no [E] inside
+% status:  RED
+\documentclass{article}
+\usepackage{tabularx,tabulary,wrapfig}
+\begin{document}
+\everypar{[E]}
+P0.\begin{tabularx}{5cm}{Xl}Xcell & l\end{tabularx}
+
+P1.\begin{tabulary}{5cm}{JL}Jcell & Lcell\end{tabulary}
+
+P2.\begin{wrapfigure}{r}{3cm}Wrap\caption{CapW}\end{wrapfigure}
+\everypar{}
+\end{document}

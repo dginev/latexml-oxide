@@ -178,6 +178,97 @@ pub(crate) fn supply_chapter_fallback() {
   }
 }
 
+/// What `\end{<env>}` expands to, typesetting (latex.ltx:15382-15393 `\end `).
+fn end_environment_tokens(env: Tokens) -> Result<Tokens> {
+  let name = Expand!(env).to_string();
+  // (the document does not end in a speculative digestion, by an `\enddocument` a class wrapped neither)
+  if name == "document" && in_speculative_digestion() {
+    return Ok(Tokens::new(Vec::new()));
+  }
+  let before = lookup_tokens(&s!("@environment@{name}@atend"));
+  let after = lookup_tokens(&s!("@environment@{name}@afterend"));
+  let use_hook = |point: &str| env_hook_tokens(&name, point);
+  let t = T_CS!(s!("\\end{{{name}}}"));
+  let mut out_tokens = Vec::new();
+  // The `\end{document}` half of the indirection (see `\begin`): a
+  // user-redefined `\enddocument` runs in place of the constructor (no
+  // `\endgroup`: see `\begin` — the document environment opens no group);
+  // the binding's own definition keeps the constructor.
+  // … \endgroup`); the binding's alias keeps the constructor.
+  // Symmetric with `\begin`: the user's `\enddocument` runs when the
+  // user's `\document` ran, or when `\document` was left alone and only
+  // `\enddocument` was redefined (tools-overview.tex:65). standalone.cls
+  // wraps both; its begin wrapper is self-referential and skipped, so its
+  // end wrapper (`\endstandalone`, closing a minipage the skipped begin
+  // never opened) is skipped too.
+  let indirected = name == "document" && lookup_bool("document:indirected");
+  let user_enddocument = name == "document"
+    && is_user_document_macro(&T_CS!("\\enddocument"), &T_CS!("\\lx@orig@enddocument"))
+    && (indirected || x_equals(&T_CS!("\\document"), &T_CS!("\\lx@orig@document")));
+  let orig_end = x_equals(&T_CS!("\\enddocument"), &T_CS!("\\lx@orig@enddocument"));
+  if indirected && !user_enddocument && !orig_end {
+    // The begin opened the group and `\enddocument` is a closure, not a
+    // user macro — exam-n's `\let\enddocument\endinput`, whose `\endinput`
+    // stops the included file after this line while `\end`'s tokens are
+    // already expanded, as in TeX. LaTeX's `\end{document}` =
+    // `\enddocument\endgroup`: run it, then close the begin's group.
+    // With the ORIGINAL `\enddocument` (a package wrapped `\document`
+    // around the original — dblfnote, etoolbox's `\AtEndPreamble` — and
+    // left the end alone) the finalizer runs as on the constructor path:
+    // in TeX the original never returns, so `\end`'s `\endgroup` is never
+    // reached, and here an explicit one met the document constructor's
+    // mode frame above the begin's group ("\endgroup Attempt to close a
+    // group that switched to mode internal_vertical" at `\end{document}`,
+    // seven manuals in sweep 83: yafoot-man, guitartabs, zanabazr, …).
+    let mut tks = before.map(Tokens::unlist).unwrap_or_default();
+    tks.extend(use_hook("end"));
+    tks.push(T_CS!("\\enddocument"));
+    tks.push(T_CS!("\\par"));
+    tks.push(T_CS!("\\endgroup"));
+    tks.extend(use_hook("after"));
+    if let Some(afterend_toks) = after {
+      tks.extend(afterend_toks.unlist())
+    }
+    return Ok(Tokens::new(tks));
+  }
+  if user_enddocument {
+    let mut tks = before.map(Tokens::unlist).unwrap_or_default();
+    tks.extend(use_hook("end"));
+    tks.push(T_CS!("\\enddocument"));
+    // `\par` first: an issue's last paragraph is still open, and this
+    // engine's group bookkeeping refuses to close a group that switched
+    // mode ("Attempt to close a group that switched to mode horizontal");
+    // TeX ends that paragraph at the next page/vertical material anyway.
+    tks.push(T_CS!("\\par"));
+    tks.push(T_CS!("\\endgroup"));
+    tks.extend(use_hook("after"));
+    if let Some(afterend_toks) = after {
+      tks.extend(afterend_toks.unlist())
+    }
+    return Ok(Tokens::new(tks));
+  }
+  if name != "document" && lookup_bool(&s!("lx@env@indirected@{name}")) {
+    // the begin took LaTeX's indirection (see `\begin`): `\endX`, then the begin's group closes
+    out_tokens = end_environment_by_macro(&name);
+  } else if is_defined_token(&t) {
+    // Magic CS! (its constructor fires `env/NAME/end` inside the group)
+    out_tokens.push(t);
+    out_tokens.extend(use_hook("after"));
+    if let Some(afterend_toks) = after {
+      out_tokens.extend(afterend_toks.unlist())
+    }
+  } else {
+    out_tokens = end_environment_by_macro(&name);
+  }
+  out_tokens.extend([
+    T_CS!("\\if@ignore"),
+    T_CS!("\\@ignorefalse"),
+    T_CS!("\\ignorespaces"),
+    T_CS!("\\fi"),
+  ]);
+  Ok(Tokens::new(out_tokens))
+}
+
 pub(crate) fn load() -> Result<()> {
   // ======================================================================
   // C.1 Commands and Environments
@@ -524,6 +615,10 @@ pub(crate) fn load() -> Result<()> {
   // is the same), pdflatex clean. DefEnvironment-managed environments fire
   // `begin`/`end` from their constructors (dialect.rs). Guard:
   // `perfect_kernel_batch56::kernel_env_hooks_fire_around_environments`.
+  // `protected`, as latex.ltx:15346 `\protected\def\begin`: an `\edef` keeps it (yquant-doc's `\protected@edef` of a box
+  // text `$\begin{pmatrix}…`, whose `\matrix@check` ran at edef time, "Old form"; Perl's is not, KPE #1211), and
+  // the look-ahead for `\omit` at a cell's head stops at it, as TeX's does. Guard
+  // `perfect_kernel_batchm3::begin_is_protected_in_an_edef`.
   DefMacro!("\\begin{}", sub[(env)] {
     let name = Expand!(env.clone()).to_string();
     let begin_name = format!("\\begin{{{name}}}");
@@ -638,7 +733,7 @@ pub(crate) fn load() -> Result<()> {
       }
       Ok(Tokens::new(begin_environment_by_macro(&name, env)?))
     }
-  });
+  }, protected => true);
 
   // latex.ltx:15384-15393 `\end` ends with the epilogue
   // `\if@ignore\@ignorefalse\ignorespaces\fi` AFTER the `env/#1/after` hook.
@@ -650,95 +745,22 @@ pub(crate) fn load() -> Result<()> {
   // `\DocInput` macrocode, 72 `misdefined:#` + Fatal; Perl fails the same
   // way). `\if@ignore` is false except after display math, so the group is
   // normally skipped whole.
+  // `\end ` is its body and `\end` latex.ltx:15365-15380's front: anywhere but typesetting, `\protect\end `, so that a
+  // `\protected@edef` keeps `\end{…}` as it keeps the `\protected` `\begin`, not their halves apart (yquant-doc;
+  // `perfect_kernel_batchm3::begin_is_protected_in_an_edef`), and a display `\string` prints it (KPE #1211). Typesetting,
+  // one expansion is the body's, as the front's `\romannumeral` makes it: siunitx's `f`-expanding collection of an `S` cell
+  // meets `\endtabular` (2505.21533, 2105.06936, where a `\end ` left behind read `{tabular}` as a group).
   DefMacro!("\\end {}", sub[(env)]{
-    let name = Expand!(env).to_string();
-    // (the document does not end in a speculative digestion, by an `\enddocument` a class wrapped neither)
-    if name == "document" && in_speculative_digestion() {
-      return Ok(Tokens::new(Vec::new()));
+    if x_equals(&T_CS!("\\protect"), &T_CS!("\\@typeset@protect")) {
+      return end_environment_tokens(env);
     }
-    let before = lookup_tokens(&s!("@environment@{name}@atend"));
-    let after = lookup_tokens(&s!("@environment@{name}@afterend"));
-    let use_hook = |point: &str| env_hook_tokens(&name, point);
-    let t = T_CS!(s!("\\end{{{name}}}"));
-    let mut out_tokens = Vec::new();
-    // The `\end{document}` half of the indirection (see `\begin`): a
-    // user-redefined `\enddocument` runs in place of the constructor (no
-    // `\endgroup`: see `\begin` — the document environment opens no group);
-    // the binding's own definition keeps the constructor.
-    // … \endgroup`); the binding's alias keeps the constructor.
-    // Symmetric with `\begin`: the user's `\enddocument` runs when the
-    // user's `\document` ran, or when `\document` was left alone and only
-    // `\enddocument` was redefined (tools-overview.tex:65). standalone.cls
-    // wraps both; its begin wrapper is self-referential and skipped, so its
-    // end wrapper (`\endstandalone`, closing a minipage the skipped begin
-    // never opened) is skipped too.
-    let indirected = name == "document" && lookup_bool("document:indirected");
-    let user_enddocument = name == "document"
-      && is_user_document_macro(&T_CS!("\\enddocument"), &T_CS!("\\lx@orig@enddocument"))
-      && (indirected || x_equals(&T_CS!("\\document"), &T_CS!("\\lx@orig@document")));
-    let orig_end = x_equals(&T_CS!("\\enddocument"), &T_CS!("\\lx@orig@enddocument"));
-    if indirected && !user_enddocument && !orig_end {
-      // The begin opened the group and `\enddocument` is a closure, not a
-      // user macro — exam-n's `\let\enddocument\endinput`, whose `\endinput`
-      // stops the included file after this line while `\end`'s tokens are
-      // already expanded, as in TeX. LaTeX's `\end{document}` =
-      // `\enddocument\endgroup`: run it, then close the begin's group.
-      // With the ORIGINAL `\enddocument` (a package wrapped `\document`
-      // around the original — dblfnote, etoolbox's `\AtEndPreamble` — and
-      // left the end alone) the finalizer runs as on the constructor path:
-      // in TeX the original never returns, so `\end`'s `\endgroup` is never
-      // reached, and here an explicit one met the document constructor's
-      // mode frame above the begin's group ("\endgroup Attempt to close a
-      // group that switched to mode internal_vertical" at `\end{document}`,
-      // seven manuals in sweep 83: yafoot-man, guitartabs, zanabazr, …).
-      let mut tks = before.map(Tokens::unlist).unwrap_or_default();
-      tks.extend(use_hook("end"));
-      tks.push(T_CS!("\\enddocument"));
-      tks.push(T_CS!("\\par"));
-      tks.push(T_CS!("\\endgroup"));
-      tks.extend(use_hook("after"));
-      if let Some(afterend_toks) = after {
-        tks.extend(afterend_toks.unlist())
-      }
-      return Ok(Tokens::new(tks));
-    }
-    if user_enddocument {
-      let mut tks = before.map(Tokens::unlist).unwrap_or_default();
-      tks.extend(use_hook("end"));
-      tks.push(T_CS!("\\enddocument"));
-      // `\par` first: an issue's last paragraph is still open, and this
-      // engine's group bookkeeping refuses to close a group that switched
-      // mode ("Attempt to close a group that switched to mode horizontal");
-      // TeX ends that paragraph at the next page/vertical material anyway.
-      tks.push(T_CS!("\\par"));
-      tks.push(T_CS!("\\endgroup"));
-      tks.extend(use_hook("after"));
-      if let Some(afterend_toks) = after {
-        tks.extend(afterend_toks.unlist())
-      }
-      return Ok(Tokens::new(tks));
-    }
-    if name != "document" && lookup_bool(&s!("lx@env@indirected@{name}")) {
-      // the begin took LaTeX's indirection (see `\begin`): `\endX`, then the begin's group closes
-      out_tokens = end_environment_by_macro(&name);
-    } else if is_defined_token(&t) {
-      // Magic CS! (its constructor fires `env/NAME/end` inside the group)
-      out_tokens.push(t);
-      out_tokens.extend(use_hook("after"));
-      if let Some(afterend_toks) = after {
-        out_tokens.extend(afterend_toks.unlist())
-      }
-    } else {
-      out_tokens = end_environment_by_macro(&name);
-    }
-    out_tokens.extend([
-      T_CS!("\\if@ignore"),
-      T_CS!("\\@ignorefalse"),
-      T_CS!("\\ignorespaces"),
-      T_CS!("\\fi"),
-    ]);
-    Ok(Tokens::new(out_tokens))
+    let mut kept = vec![T_CS!("\\protect"), T_CS!("\\end "), T_BEGIN!()];
+    kept.extend(env.unlist());
+    kept.push(T_END!());
+    Ok(Tokens::new(kept))
   });
+  DefMacro!("\\lx@end@body {}", sub[(env)]{ end_environment_tokens(env) });
+  Let!("\\end ", "\\lx@end@body");
 
   TeX!(
     r"

@@ -11,10 +11,14 @@
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
-  // autonum.sty:17-25.
+  // autonum.sty:17-25, with its :20-22: etextools is loaded and etoolbox's `\forlistloop` put back. Without that etextools'
+  // own `\forlistloop` broke translations.sty:1129's `\dolistloop` hook, an Extra `\fi` taking the next begin-document
+  // chunk (simpler-wick, tikz-feynman).
   RawTeX!(r"\PassOptionsToPackage{hypertexnames=false}{hyperref}");
   RequirePackage!("etoolbox");
+  Let!("\\autonum@etoolbox@forlistloop", "\\forlistloop");
   RequirePackage!("etextools");
+  Let!("\\forlistloop", "\\autonum@etoolbox@forlistloop");
   RequirePackage!("amsmath");
   RequirePackage!("textpos", options => vec![String::from("absolute")]);
   RequirePackage!("letltxmacro");

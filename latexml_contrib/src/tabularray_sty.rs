@@ -62,6 +62,58 @@ fn tblr_column_type(name: char) -> Option<TblrColumnType> {
   })
 }
 
+/// The text of a `\NewColumnType`'s body, which the colspec reads and tokenizes in its turn outside the syntax the body
+/// was written in: `\ndu_tblr_cell:nnn` (non-decimal-units.sty:778, under expl3's) would come back as `\ndu` and `_`. Such
+/// a command is written as a macro of its own, named in letters and `@` as the colspec's internal tokenizing reads one
+/// control sequence, expanding to it, so it may be defined later, and read by what takes a command, `cmd=`. Guard `perfect_kernel_batchm3::a_column_type_body_keeps_its_commands`.
+fn column_type_body_text(body: Vec<Token>) -> String {
+  let body: Vec<Token> = body
+    .into_iter()
+    .map(|token| {
+      let name = token.to_string();
+      let plain = token.get_catcode() != Catcode::CS
+        || name.len() <= 2
+        || name[1..]
+          .bytes()
+          .all(|b| b.is_ascii_alphabetic() || b == b'@');
+      if plain {
+        return token;
+      }
+      let key = s!("tblr_column_type_command:{name}");
+      match lookup_value(&key) {
+        Some(Stored::Token(stand_in)) => stand_in,
+        _ => {
+          let count = lookup_int("tblr_column_type_commands") + 1;
+          assign_value(
+            "tblr_column_type_commands",
+            Number!(count),
+            Some(Scope::Global),
+          );
+          // (letters only, a number would end the name)
+          let letters: String = count
+            .to_string()
+            .bytes()
+            .map(|digit| (b'a' + (digit - b'0')) as char)
+            .collect();
+          let stand_in = T_CS!(s!("\\lx@tblr@command@{letters}"));
+          let _ = def_macro(
+            stand_in,
+            None,
+            Tokens::new(vec![token]),
+            Some(ExpandableOptions {
+              scope: Some(Scope::Global),
+              ..ExpandableOptions::default()
+            }),
+          );
+          assign_value(&key, Stored::Token(stand_in), Some(Scope::Global));
+          stand_in
+        },
+      }
+    })
+    .collect();
+  Tokens::new(body).to_string()
+}
+
 /// Expand a use of `ty` at `*i` (after its name) into its body, advancing past
 /// its arguments; `None` when an argument is missing or unbalanced.
 fn expand_tblr_column_type(
@@ -1500,8 +1552,11 @@ fn tblr_braced(tokens: &Tokens) -> Vec<Token> {
 /// for `imath`, `\displaystyle` for `dmath`; `text` is a text cell even in a math table.
 #[derive(Clone, Default)]
 struct TblrCellStyle {
-  mode: Option<String>,
-  cmd:  Option<Vec<Token>>,
+  mode:  Option<String>,
+  cmd:   Option<Vec<Token>>,
+  /// `preto`, `appto` (:2639-2640, :2660-2686): put around the cell's text, inside its math and its `cmd`.
+  preto: Vec<Token>,
+  appto: Vec<Token>,
 }
 
 /// The cell styles of one table, by row and column (from 1), and whether the table is a math one.
@@ -1527,10 +1582,18 @@ impl TblrCellStyle {
       "$" => self.mode = Some(String::from("math")),
       "$$" => self.mode = Some(String::from("dmath")),
       "cmd" => self.cmd = value.filter(|v| !v.is_empty()),
+      "preto" => {
+        let mut text = value.unwrap_or_default();
+        text.append(&mut self.preto);
+        self.preto = text;
+      },
+      "appto" => self.appto.extend(value.unwrap_or_default()),
       _ => {},
     }
   }
-  fn is_set(&self) -> bool { self.mode.is_some() || self.cmd.is_some() }
+  fn is_set(&self) -> bool {
+    self.mode.is_some() || self.cmd.is_some() || !self.preto.is_empty() || !self.appto.is_empty()
+  }
 }
 
 /// The keys of a cell key list (`mode=math, cmd=\foo`), as `(name, value)`.
@@ -1543,6 +1606,23 @@ fn tblr_style_keys(keys: &Tokens) -> Vec<(String, Option<Vec<Token>>)> {
       (key.name, has_value.then_some(value))
     })
     .collect()
+}
+
+/// A `\\SetCell`-family command's `preto` and `appto`, whose text is lost here: one Warning for each, naming the key.
+fn tblr_lost_text_keys(command: &str, inner: &Tokens) {
+  for key in tblr_keys(inner) {
+    if matches!(key.name.as_str(), "preto" | "appto") {
+      Warn!(
+        "tabularray_key",
+        key.name.as_str(),
+        s!(
+          "The key {} of \\{command} is not applied: its text '{}' is lost",
+          key.name,
+          key.value
+        )
+      );
+    }
+  }
 }
 
 /// tabularray's child selectors (tabularray.sty:1290-1345): a comma list of indices `n`, `X`/`Y`/`Z` (the last but
@@ -2065,7 +2145,7 @@ LoadDefinitions!({
     }
     let inner_keys = tblr_keys(&Tokens::new(inner_keys));
     let styling = |list: Vec<(String, Option<Vec<Token>>)>| {
-      list.iter().any(|(n, _)| matches!(n.as_str(), "mode" | "$" | "$$" | "cmd"))
+      list.iter().any(|(n, _)| matches!(n.as_str(), "mode" | "$" | "$$" | "cmd" | "preto" | "appto"))
     };
     let styled = column_keys
       .iter()
@@ -2277,7 +2357,7 @@ LoadDefinitions!({
     };
     let Some(style) = styles.cells.get(&(row, column)) else { return Ok(Tokens!()) };
     let (open, close) = tblr_mode_wrap(style, styles.math);
-    if open.is_empty() && style.cmd.is_none() {
+    if open.is_empty() && style.cmd.is_none() && style.preto.is_empty() && style.appto.is_empty() {
       return Ok(Tokens!());
     }
     // the column's own template tokens, which follow this hook
@@ -2296,7 +2376,10 @@ LoadDefinitions!({
       cell.before = Some(Tokens::new(out.clone()));
       cell.after = Some(Tokens::new(new_after.clone()));
     }
-    let Some(cmd) = &style.cmd else { return Ok(Tokens::new(out)) };
+    // `preto`/`appto` join the text, which a `cmd` then takes (:2660-2686, :4593-4618)
+    if style.cmd.is_none() && style.preto.is_empty() && style.appto.is_empty() {
+      return Ok(Tokens::new(out));
+    }
     let is_cs = |t: &Token, name: &str| t.get_catcode() == Catcode::CS && t.with_str(|s| s == name);
     let mut text: Vec<Token> = Vec::new();
     let mut depth = 0usize;
@@ -2325,6 +2408,14 @@ LoadDefinitions!({
     if nested {
       // an environment in the cell: its text as written
       unread_vec(text);
+      out.extend(style.preto.iter().copied());
+      if !style.appto.is_empty()
+        && let Some(cell) = data.borrow_mut().current_column()
+      {
+        let mut with_appto = style.appto.clone();
+        with_appto.extend(new_after);
+        cell.after = Some(Tokens::new(with_appto));
+      }
       return Ok(Tokens::new(out));
     }
     let tail = if ended_by_after {
@@ -2334,10 +2425,23 @@ LoadDefinitions!({
     } else {
       Vec::new()
     };
-    out.extend(cmd.iter().copied());
-    out.push(T_BEGIN!());
-    out.extend(text);
-    out.push(T_END!());
+    // the cell's text as `\\__tblr_trim_par_space_tokens:N` leaves it (tabularray.sty:3749-3759): non-decimal-units'
+    // `\\tl_case:NnF` compares it with `HEADER`
+    let blank = |t: &Token| t.get_catcode() == Catcode::SPACE || is_cs(t, "\\par");
+    while text.last().is_some_and(blank) {
+      text.pop();
+    }
+    let leading = text.iter().take_while(|t| blank(t)).count();
+    if let Some(cmd) = &style.cmd {
+      out.extend(cmd.iter().copied());
+      out.push(T_BEGIN!());
+    }
+    out.extend(style.preto.iter().copied());
+    out.extend(text.drain(leading..));
+    out.extend(style.appto.iter().copied());
+    if style.cmd.is_some() {
+      out.push(T_END!());
+    }
     out.extend(tail);
     Ok(Tokens::new(out))
   });
@@ -2845,7 +2949,32 @@ LoadDefinitions!({
 \let\NewTableCommand\NewTblrTableCommand
 \NewTblrTableCommand\pagebreak[1][4]{}\NewTblrTableCommand\nopagebreak[1][4]{}"
   );
-  def_macro_noop("\\SetCell[]{}")?;
+  // The keys of `\SetCell` and its siblings are not applied here. Most only style a cell, but `preto` and `appto` hold
+  // text (:2639-2640), so each says it is lost, by name: the words are counted, not kept.
+  DefMacro!("\\SetCell[]{}", sub[(_outer, inner)] {
+    tblr_lost_text_keys("SetCell", &inner);
+    Ok(Tokens!())
+  });
+  DefMacro!("\\SetCells[]{}", sub[(_outer, inner)] {
+    tblr_lost_text_keys("SetCells", &inner);
+    Ok(Tokens!())
+  });
+  DefMacro!("\\SetRow[]{}", sub[(_outer, inner)] {
+    tblr_lost_text_keys("SetRow", &inner);
+    Ok(Tokens!())
+  });
+  DefMacro!("\\SetRows[]{}", sub[(_outer, inner)] {
+    tblr_lost_text_keys("SetRows", &inner);
+    Ok(Tokens!())
+  });
+  DefMacro!("\\SetColumn[]{}", sub[(_outer, inner)] {
+    tblr_lost_text_keys("SetColumn", &inner);
+    Ok(Tokens!())
+  });
+  DefMacro!("\\SetColumns[]{}", sub[(_outer, inner)] {
+    tblr_lost_text_keys("SetColumns", &inner);
+    Ok(Tokens!())
+  });
   // A row-spanning cell's `\SetCell` in a table (`tblr_span_cells`): the row span, as `\multirow`'s
   // (multirow_sty.rs `\lx@multirow@setup`).
   DefPrimitive!("\\lx@tblr@cell@span{Number}", sub[(rows)] {
@@ -2857,7 +2986,6 @@ LoadDefinitions!({
     }
     Ok(())
   });
-  def_macro_noop("\\SetCells[]{}")?;
   // The other `\NewTblrTableCommand`s (tabularray.sty:1613; :2990 `\SetRow`,
   // :2962 `\SetRows`, :2824 `\SetColumn`, :2796 `\SetColumns` = `O{} m`;
   // :2013 `\SetHline`, :1964 `\SetHlines`, :2256 `\SetVline`, :2208
@@ -2865,10 +2993,6 @@ LoadDefinitions!({
   // (:3770-3860) gobbles the command and its arguments out of the cell before
   // alignment; undefined here they leaked an `<ltx:ERROR>` plus their braced
   // arguments into the first cell (manual :580/:591/:908).
-  def_macro_noop("\\SetRow[]{}")?;
-  def_macro_noop("\\SetRows[]{}")?;
-  def_macro_noop("\\SetColumn[]{}")?;
-  def_macro_noop("\\SetColumns[]{}")?;
   def_macro_noop("\\SetHline[]{}{}")?;
   def_macro_noop("\\SetHlines[]{}{}")?;
   def_macro_noop("\\SetVline[]{}{}")?;
@@ -2918,7 +3042,7 @@ LoadDefinitions!({
         pin(nargs),
         pin(String::from(has_default)),
         pin(default),
-        pin(body.to_string()),
+        pin(column_type_body_text(body.unlist())),
       ];
       assign_value(
         &tblr_column_type_key(name.to_string().trim()),

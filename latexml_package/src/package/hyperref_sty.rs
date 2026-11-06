@@ -366,6 +366,8 @@ LoadDefinitions!({
   // class binding's own hyperref load; binding/content.rs `apply_new_options_on_reload`).
   AssignValue!("hyperref.sty_keyval_setter" => "\\hypersetup", Scope::Global);
   // `\lx@pdfstringdef\cs{<text>}`: hyperref's `\pdfstringdef` (hyperref.sty:386-560) in brief — `<text>` expanded in full
+  // (the digit commands stay the PDF escapes they spell, :388-396, `pdfauthor={Uwe L\374ck}`, fnlineno:44; a character is
+  // `\string`'d, this text being read while a latin `inputenc` may make ß active with the meaning `\ss`: bibleref-german)
   // with the document's markup made harmless: `\protect` empty, font and size commands their argument or nothing, `\\`
   // a space, `~` and the other spaces a space (`\HyPsd@LetUnexpandableSpace`), `\texorpdfstring` its PDF branch,
   // labels, index entries and error messages gobbled (:550-552), the text glyphs and symbols their characters (puenc.def's
@@ -377,6 +379,7 @@ LoadDefinitions!({
   // result.
   RawTeX!(
     r#"\long\def\lx@pdfstringdef#1#2{\begingroup
+\escapechar`\\\edef\0{\string\0}\edef\1{\string\1}\edef\2{\string\2}\edef\3{\string\3}\edef\8{\string\8}\edef\9{\string\9}%
 \let\protect\@empty\let\thanks\@gobble\let\footnote\@gobble\let\footnotemark\@empty\let\footnotetext\@gobble
 \let\label\@gobble\let\index\@gobble\let\glossary\@gobble\long\def\texorpdfstring##1##2{##2}%
 \def\\{ }\def\newline{ }\def~{ }\def\nobreakspace{ }\def\ { }\def\,{ }\def\quad{ }%
@@ -390,8 +393,8 @@ LoadDefinitions!({
 \let\normalsize\@empty\let\small\@empty\let\footnotesize\@empty\let\scriptsize\@empty\let\tiny\@empty
 \let\phantom\@gobble\let\hphantom\@gobble\let\vphantom\@gobble\let\leavevmode\@empty
 \let\GenericError\@gobblefour\let\GenericWarning\@gobbletwo\let\GenericInfo\@gobbletwo
-\def\ss{ß}\def\SS{SS}\def\i{ı}\def\j{ȷ}\def\o{ø}\def\O{Ø}\def\ae{æ}\def\AE{Æ}\def\oe{œ}\def\OE{Œ}\def\aa{å}\def\AA{Å}%
-\def\l{ł}\def\L{Ł}\def\dh{ð}\def\DH{Ð}\def\dj{đ}\def\DJ{Đ}\def\th{þ}\def\TH{Þ}\def\ng{ŋ}\def\NG{Ŋ}\def\ij{ĳ}\def\IJ{Ĳ}%
+\def\ss{\string ß}\def\SS{SS}\def\i{\string ı}\def\j{\string ȷ}\def\o{\string ø}\def\O{\string Ø}\def\ae{\string æ}\def\AE{\string Æ}\def\oe{\string œ}\def\OE{\string Œ}\def\aa{\string å}\def\AA{\string Å}%
+\def\l{\string ł}\def\L{\string Ł}\def\dh{\string ð}\def\DH{\string Ð}\def\dj{\string đ}\def\DJ{\string Đ}\def\th{\string þ}\def\TH{\string Þ}\def\ng{\string ŋ}\def\NG{\string Ŋ}\def\ij{\string ĳ}\def\IJ{\string Ĳ}%
 \def\textendash{\string–}\def\textemdash{\string—}\def\textsection{\string§}\let\S\textsection\def\textparagraph{\string¶}\let\P\textparagraph
 \def\textdagger{\string†}\let\dag\textdagger\def\textdaggerdbl{\string‡}\let\ddag\textdaggerdbl\def\textcopyright{\string©}%
 \let\copyright\textcopyright\def\textregistered{\string®}\def\texttrademark{\string™}\def\textsterling{\string£}\let\pounds\textsterling
@@ -2160,6 +2163,7 @@ fn pdf_string(tokens: Tokens) -> Result<String> {
       _ => {},
     }
   }
+  let text = decode_pdf_escapes(&text);
   // the ligatures hyperref substitutes in the expanded string (hyperref.sty:620-623 `\HyPsd@Subst{---}\textemdash`,
   // `{--}\textendash`, ``{!`}\textexclamdown``, ``{?`}\textquestiondown``)
   let text = text
@@ -2168,6 +2172,61 @@ fn pdf_string(tokens: Tokens) -> Result<String> {
     .replace("!`", "\u{00A1}")
     .replace("?`", "\u{00BF}");
   Ok(text.split_whitespace().collect::<Vec<_>>().join(" "))
+}
+
+/// PDFDocEncoding's codes 0x80-0xA0 (PDF 32000-1 Annex D.2); from 0xA1 it is Latin-1. 0x9F is unassigned.
+const PDF_DOC_0X80: [char; 33] = [
+  '\u{2022}', '\u{2020}', '\u{2021}', '\u{2026}', '\u{2014}', '\u{2013}', '\u{0192}', '\u{2044}',
+  '\u{2039}', '\u{203A}', '\u{2212}', '\u{2030}', '\u{201E}', '\u{201C}', '\u{201D}', '\u{2018}',
+  '\u{2019}', '\u{201A}', '\u{2122}', '\u{FB01}', '\u{FB02}', '\u{0141}', '\u{0152}', '\u{0160}',
+  '\u{0178}', '\u{017D}', '\u{0131}', '\u{0142}', '\u{0153}', '\u{0161}', '\u{017E}', '\u{FFFD}',
+  '\u{20AC}',
+];
+
+/// The PDF string escapes a document writes in its text: `\ddd` the PDFDocEncoding code (`\374` ü), and hyperref's
+/// UTF-16 forms, `\8d\ddd` and `\9ddd\ddd` (puenc.def `\81\122` Œ). Anything else stays as it is written.
+fn decode_pdf_escapes(text: &str) -> String {
+  if !text.contains('\\') {
+    return text.to_string();
+  }
+  let chars: Vec<char> = text.chars().collect();
+  let octal = |from: usize, count: usize| -> Option<u32> {
+    let digits = chars.get(from..from + count)?;
+    digits
+      .iter()
+      .try_fold(0, |value, digit| Some(value * 8 + digit.to_digit(8)?))
+  };
+  let low_byte =
+    |from: usize| -> Option<u32> { (chars.get(from) == Some(&'\\')).then(|| octal(from + 1, 3))? };
+  let mut out = String::with_capacity(text.len());
+  let mut i = 0;
+  while i < chars.len() {
+    if chars[i] == '\\' {
+      let decoded = match chars.get(i + 1) {
+        Some('8') => octal(i + 2, 1)
+          .zip(low_byte(i + 3))
+          .map(|(high, low)| (char::from_u32(high << 8 | low), 7)),
+        Some('9') => octal(i + 2, 3)
+          .zip(low_byte(i + 5))
+          .map(|(high, low)| (char::from_u32(high << 8 | low), 9)),
+        _ => octal(i + 1, 3).filter(|code| *code <= 0o377).map(|code| {
+          let glyph = match code {
+            0x80..=0xA0 => Some(PDF_DOC_0X80[code as usize - 0x80]),
+            _ => char::from_u32(code),
+          };
+          (glyph, 4)
+        }),
+      };
+      if let Some((Some(glyph), width)) = decoded {
+        out.push(glyph);
+        i += width;
+        continue;
+      }
+    }
+    out.push(chars[i]);
+    i += 1;
+  }
+  out
 }
 
 /// Emit a bare, self-closed `<ltx:anchor xml:id=id/>` destination at the current

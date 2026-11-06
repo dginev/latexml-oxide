@@ -1803,12 +1803,14 @@ LoadDefinitions!({
   // `\usepackage{xcolor}` followed by `\usepackage[table]{xcolor}` raises no
   // option clash — the repeat load processes the new `table` key and loads
   // colortbl (`table .code = {\AddToHook{package/xcolor/after}
-  // {\RequirePackage{colortbl}}}`). Classic `\ds@table` is cleared to \relax
-  // by ProcessOptions, so re-assert a durable handler: the loader's
-  // repeat-load recovery (input_definitions, OXIDIZED_DESIGN #43) digests
-  // surviving `\ds@<opt>` handlers for options the first load didn't have.
+  // {\RequirePackage{colortbl}}}`). The keys are xcolor's alone, so the handler keeps
+  // a name of its own, `\lx@repeat@xcolor@<opt>`, which the loader's repeat-load recovery
+  // (`apply_repeat_options`, OXIDIZED_DESIGN #43) digests for options the first load
+  // didn't have; a `\ds@table` would be any later package's option `table`, its
+  // `\DeclareOption*` never run (ndsu-thesis-2022's `\usepackage[figure,table]{totalcount}`,
+  // `\iftotaltables` undefined; guard `perfect_kernel_batchm3::a_repeat_option_of_xcolor_is_xcolors_alone`).
   // Witness 2605.00310 (\cellcolor via `[table]` on a second \usepackage).
-  DefMacro!("\\ds@table", "\\RequirePackage{colortbl}");
+  DefMacro!("\\lx@repeat@xcolor@table", "\\RequirePackage{colortbl}");
   // Likewise the colour-name sets (xcolor.sty:171-193 `\XC@declarenames`: each
   // is a key whose code inputs its `.def` after the load, first or repeated).
   // `\usepackage[dvipsnames]{xcolor}` after tcolorbox had loaded xcolor dropped
@@ -1826,7 +1828,7 @@ LoadDefinitions!({
     let mut body = vec![T_CS!("\\lx@xcolor@names"), T_BEGIN!()];
     body.extend(ExplodeText!(file));
     body.push(T_END!());
-    def_macro(T_CS!(s!("\\ds@{option}")), None, Tokens::new(body), None)?;
+    def_macro(T_CS!(s!("\\lx@repeat@xcolor@{option}")), None, Tokens::new(body), None)?;
   }
 });
 

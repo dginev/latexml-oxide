@@ -25,6 +25,7 @@ pub mod script_bindings;
 // now local `.rhai` next to tests/structure_rhai (Perl t/structure/*.ltxml).
 pub mod discard_env;
 pub mod keysetopt_sty;
+pub mod keytheorems_sty;
 pub mod meta_class;
 pub mod shipped_class;
 // mykeyval_sty / myxkeyval_sty: test-local keyval fixtures, now local `.rhai`
@@ -389,6 +390,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   // test-local fixtures; they now live as local `.rhai` next to
   // tests/structure_rhai (gated to `runtime-bindings`).
   ("keysetopt", "sty", keysetopt_sty::load_definitions),
+  ("keytheorems", "sty", keytheorems_sty::load_definitions),
   // Test-only fixture (defines `\hw`), registered under a deliberately
   // unique name `lxtesttemplate` (not `mytemplate`) so it does NOT intercept
   // real arXiv papers that bundle their OWN `mytemplate.sty`. Such papers

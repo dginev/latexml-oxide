@@ -739,7 +739,7 @@ pub(crate) fn load() -> Result<()> {
   );
   DefMacro!(
     "\\lx@parbox@restore{}",
-    r"\setlength\hsize{#1}\textwidth\hsize\columnwidth\hsize\linewidth\hsize\parindent\z@\parskip\z@skip\lx@restore@interline"
+    r"\setlength\hsize{#1}\textwidth\hsize\columnwidth\hsize\linewidth\hsize\parindent\z@\parskip\z@skip\everypar{}\lx@restore@interline"
   );
   DefConstructor!("\\lx@parbox OptionalPosition [TempboxaDimension] OptionalUndigested {SetlengthDimension} VBoxContents",
     sub[document, args, props] {
@@ -920,9 +920,11 @@ pub(crate) fn load() -> Result<()> {
         set_minipage_width(dim)?;
         whatsit.set_property("width", Stored::Dimension(dim));
       }
-      // `\\@parboxrestore`'s interline values (latex.ltx:16284-16286): lines set as the document's, though an
+      // `\\@parboxrestore`'s `\\everypar{}` (latex.ltx:16279): the box's paragraphs do not run the enclosing one's, whose
+      // `\\everypar` holding this box would otherwise recurse (plweb's pl.sty:121, a `\\parbox`; `\\lx@parbox@restore`
+      // has it too), and its interline values (:16284-16286): lines set as the document's, though an
       // enclosing `\\@array` zeroed `\\baselineskip` (`\\lx@begin@alignment`).
-      digest(Tokens!(T_CS!("\\lx@restore@interline")))?;
+      digest(TokenizeInternal!(r"\everypar{}\lx@restore@interline"))?;
       // latex.ltx:16323: the minipage's own footnotes, lettered from "a" (latex_constructs `footnote_tag`)
       digest(TokenizeInternal!(r"\def\@mpfn{mpfootnote}\def\thempfn{\thempfootnote}\c@mpfootnote\z@"))?;
       whatsit.set_property("vattach", Stored::from(vattach.to_string()));

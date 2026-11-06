@@ -688,7 +688,16 @@ fn input_definitions_impl(
       if opt.is_empty() || prev.contains(opt) {
         continue;
       }
-      let handler = T_CS!(s!("\\ds@{}", opt));
+      // A binding's handler of its own, for a package whose options are keys that outlive its load (xcolor,
+      // `\lx@repeat@xcolor@<opt>`), before the classic `\ds@<opt>`, which `\ProcessOptions` clears and which is any
+      // package's name.
+      let package = fkey.rsplit_once('.').map_or(fkey, |(stem, _)| stem);
+      let own_handler = T_CS!(s!("\\lx@repeat@{package}@{opt}"));
+      let handler = if lookup_definition(&own_handler)?.is_some() {
+        own_handler
+      } else {
+        T_CS!(s!("\\ds@{}", opt))
+      };
       if lookup_definition(&handler)?.is_some() {
         Info!(
           "unexpected",
