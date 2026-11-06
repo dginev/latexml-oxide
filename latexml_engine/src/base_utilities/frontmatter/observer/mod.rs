@@ -71,4 +71,4 @@ pub(in crate::base_utilities) use shadow::shadow_flush;
 pub use shadow::{
   fm_shadow_enabled, fm_shadow_json, reset_fm_shadow, set_fm_shadow_override, write_fm_shadow,
 };
-pub(in crate::base_utilities) use writer::write_observed_frontmatter;
+pub(in crate::base_utilities) use writer::{read_back_frontmatter, write_observed_frontmatter};

@@ -1072,7 +1072,7 @@ fn stale_conventions_have_their_own_column_count_in_the_gate_and_fail_the_run() 
   };
   let mut dump: Value = serde_json::from_str(AMS_DUMP).expect("json");
   write("1712.00001", &dump);
-  let code = run(&root.join("papers"), None, &prefix, 1, true).expect("run");
+  let code = run(&root.join("papers"), None, &prefix, 1, true, false).expect("run");
   let (header, row) = summary_row("ams_support.sty");
   assert_eq!(
     (code, header.as_str(), row.as_str()),
@@ -1089,7 +1089,7 @@ fn stale_conventions_have_their_own_column_count_in_the_gate_and_fail_the_run() 
     .expect("entry")
     .remove("policy");
   write("1712.00003", &dump);
-  let code = run(&root.join("papers"), None, &prefix, 1, true).expect("run");
+  let code = run(&root.join("papers"), None, &prefix, 1, true, false).expect("run");
   let (_, row) = summary_row("ams_support.sty");
   let (_, total) = summary_row("TOTAL");
   fs::remove_dir_all(&root).expect("cleanup");
@@ -1675,5 +1675,191 @@ fn an_api_legend_is_explained_by_its_own_tag() {
   assert_eq!(
     affiliation_rule_of(&with_rule("api:leading-mark"), &norm(text)),
     None
+  );
+}
+
+/// A dump of one paper for the outcomes table: its family, outcome, reason and read-back.
+fn outcome_dump(
+  family: &str,
+  outcome: &str,
+  reason: Option<&str>,
+  difference: Option<&str>,
+) -> Value {
+  serde_json::json!({
+    "version": 1,
+    "entries": [],
+    "resolved": { "creators": [], "block": [], "dropped": [], "continued": [], "policies": [[0, family]] },
+    "summary": { "blocks": 1, "with_events": 1, "held": 0, "overflow": 0, "skipped": { "empty": 1 } },
+    "writer": null,
+    "readback": { "outcome": outcome, "reason": reason, "reached": true, "difference": difference },
+  })
+}
+
+/// `<prefix>.outcomes.txt` per family and its gate: `--outcomes` exits by the gate alone; `written-different`, a reason
+/// outside the closed list and a dump with no read-back fail it, and so does a run that read nothing (E0).
+#[test]
+fn the_outcomes_table_and_its_gate() {
+  let root = std::env::temp_dir().join(format!("fmshadow_outcomes_{}", std::process::id()));
+  let prefix = root.join("report");
+  let papers = root.join("papers");
+  let write = |key: &str, dump: &Value| {
+    let dir = papers.join(key);
+    fs::create_dir_all(&dir).expect("dir");
+    fs::write(dir.join("out.xml"), format!("{HEAD}</document>")).expect("xml");
+    fs::write(dir.join("out.xml.fmshadow.json"), dump.to_string()).expect("json");
+  };
+  let table = || fs::read_to_string(root.join("report.outcomes.txt")).expect("the table");
+  let row = |text: &str, name: &str| {
+    text
+      .lines()
+      .find(|l| l.split('\t').next() == Some(name))
+      .unwrap_or_else(|| panic!("no row {name}: {text}"))
+      .to_string()
+  };
+  // (nothing read: never a clean 0)
+  fs::create_dir_all(&papers).expect("dir");
+  assert_eq!(run(&papers, None, &prefix, 1, false, true).expect("run"), 1);
+  write("1712.00001", &outcome_dump("revtex", "same", None, None));
+  write(
+    "1712.00002",
+    &outcome_dump(
+      "revtex",
+      "written",
+      None,
+      Some("Note x: reading [], written [Block]"),
+    ),
+  );
+  write(
+    "1712.00003",
+    &outcome_dump(
+      "kernel",
+      "declined",
+      Some("a name of today's the reading makes none: Ann Able"),
+      None,
+    ),
+  );
+  write(
+    "1712.00004",
+    &outcome_dump("kernel", "held-or-skipped", Some("held diagnostics"), None),
+  );
+  write(
+    "1712.00005",
+    &outcome_dump("no-block", "no-block", None, None),
+  );
+  assert_eq!(run(&papers, None, &prefix, 1, false, true).expect("run"), 0);
+  let text = table();
+  assert_eq!(
+    row(&text, "family"),
+    "family\tpapers\tno-reading\tno-block\theld-or-skipped\tsame\twritten\twritten-different\tdeclined\twhole_same\twhole_written\tpart\tchanged_after\tno_dump\tno_readback\tunknown"
+  );
+  assert_eq!(
+    row(&text, "revtex"),
+    "revtex\t2\t0\t0\t0\t1\t1\t0\t0\t0\t0\t0\t1\t0\t0\t0"
+  );
+  assert_eq!(
+    row(&text, "kernel"),
+    "kernel\t2\t0\t0\t1\t0\t0\t0\t1\t0\t0\t0\t0\t0\t0\t0"
+  );
+  assert_eq!(
+    row(&text, "TOTAL"),
+    "TOTAL\t5\t0\t1\t1\t1\t1\t0\t1\t0\t0\t0\t1\t0\t0\t0"
+  );
+  assert_eq!(
+    row(&text, "a name of today's the reading makes none"),
+    "a name of today's the reading makes none\t1\ttoday's name dropped\tstays"
+  );
+  assert_eq!(row(&text, "held diagnostics"), "held diagnostics\t1");
+  assert_eq!(row(&text, "empty"), "empty\t5");
+  // (each defect alone fails it, and the plain run too)
+  for (dump, line) in [
+    (
+      outcome_dump("revtex", "written-different", Some("Note x"), None),
+      "gate written_different=1 outside_the_list=0 no_readback=0 counted=6 fails=true",
+    ),
+    (
+      outcome_dump(
+        "revtex",
+        "declined",
+        Some("a reason nobody listed: x"),
+        None,
+      ),
+      "gate written_different=0 outside_the_list=1 no_readback=0 counted=6 fails=true",
+    ),
+    (
+      outcome_dump("revtex", "declined", None, None),
+      "gate written_different=0 outside_the_list=1 no_readback=0 counted=6 fails=true",
+    ),
+    (
+      outcome_dump("revtex", "held-or-skipped", Some("no such reason"), None),
+      "gate written_different=0 outside_the_list=1 no_readback=0 counted=6 fails=true",
+    ),
+    (
+      outcome_dump("revtex", "some-new-state", None, None),
+      "gate written_different=0 outside_the_list=1 no_readback=0 counted=5 fails=true",
+    ),
+  ] {
+    write("1712.00006", &dump);
+    assert_eq!(
+      run(&papers, None, &prefix, 1, false, true).expect("run"),
+      1,
+      "{dump}"
+    );
+    assert!(table().contains(line), "{line}: {}", table());
+    assert_eq!(
+      run(&papers, None, &prefix, 1, false, false).expect("run"),
+      1,
+      "{dump}"
+    );
+  }
+  // (a binary before E0: nothing to read, the gate fails; the plain run is not its business)
+  let mut old = outcome_dump("revtex", "same", None, None);
+  old.as_object_mut().expect("a dump").remove("readback");
+  write("1712.00006", &old);
+  assert_eq!(run(&papers, None, &prefix, 1, false, true).expect("run"), 1);
+  assert_eq!(
+    run(&papers, None, &prefix, 1, false, false).expect("run"),
+    0
+  );
+  fs::remove_dir_all(&root).expect("cleanup");
+}
+
+/// The closed list stays closed: every `declined(…)` in the writer is listed with what pays it down, and every listed
+/// reason still has its site (E0: a reason gone is a debt paid, a reason new is declared here first).
+#[test]
+fn every_decline_in_the_writer_is_in_the_closed_list() {
+  let writer = concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../latexml_engine/src/base_utilities/frontmatter/observer/writer/"
+  );
+  let mut found: Vec<String> = Vec::new();
+  for file in ["plan.rs", "repart.rs", "mod.rs"] {
+    let text = fs::read_to_string(format!("{writer}{file}")).expect("the source");
+    // (`declined("…")`, `declined(&s!("…"))`, the writer's `decline("…", …)`, `note_refusal("…")`, a const the writer's)
+    for call in [
+      "declined(",
+      "decline(",
+      "note_refusal(",
+      "KEPT_AS_TODAY: &str = ",
+    ] {
+      for (at, _) in text.match_indices(call) {
+        let after = &text[at + call.len()..];
+        let literal = after.trim_start().trim_start_matches("&s!(").trim_start();
+        if let Some(rest) = literal.strip_prefix('"') {
+          let end = rest.find('"').expect("a closing quote");
+          found.push(outcomes::reason_head(&rest[..end]).to_string());
+        }
+      }
+    }
+  }
+  found.sort();
+  found.dedup();
+  let mut listed: Vec<String> = outcomes::DECLINE_REASONS
+    .iter()
+    .map(|(head, ..)| head.to_string())
+    .collect();
+  listed.sort();
+  assert_eq!(
+    found, listed,
+    "a decline in `writer/` and `outcomes::DECLINE_REASONS`"
   );
 }

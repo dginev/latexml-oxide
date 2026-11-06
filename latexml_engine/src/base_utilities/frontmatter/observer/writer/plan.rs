@@ -1808,6 +1808,7 @@ struct PrintedIn {
 /// No plan, and why (the `frontmatter` debug feature).
 fn declined(reason: &str) -> Option<Plan> {
   DebugFeature!("frontmatter", "FRONT writer: declined, {reason}");
+  note_refusal(reason);
   None
 }
 

@@ -6,7 +6,8 @@
 //! * `ab_audit compare A_ROOT B_ROOT -o PREFIX` compares two existing output trees.
 //! * `ab_audit audit ROOT -o PREFIX` audits one tree (the seed of the end-of-queue fidelity audit).
 //! * `ab_audit fmshadow ROOT -o PREFIX` compares the frontmatter observer's shadow resolution
-//!   (`out.xml.fmshadow.json`, `LATEXML_FM_SHADOW=1`) with each paper's XML (`fmshadow/`).
+//!   (`out.xml.fmshadow.json`, `LATEXML_FM_SHADOW=1`) with each paper's XML (`fmshadow/`), and writes who decides each
+//!   paper, per family (`<prefix>.outcomes.txt`, `--outcomes` exits by its gate alone).
 //!
 //! Every report is `<prefix>.tsv` (one row per paper: tier, flags, then the columns), `<prefix>.summary.txt`
 //! (tallies, then the rows ranked regressions first) and `<prefix>.details/<key>.txt` per flagged paper.
@@ -66,6 +67,10 @@ enum Command {
     /// Resolve again from the dump's events with this binary's resolver, not the dump's own `resolved`.
     #[arg(long)]
     re_resolve: bool,
+    /// Exit by `<prefix>.outcomes.txt`'s gate alone: `written-different` above 0, a reason outside the closed list, a
+    /// dump with no read-back, or no paper read. Without it a run exits non-zero on an unclassified disagreement too.
+    #[arg(long)]
+    outcomes:   bool,
   },
   /// Audit one output tree.
   Audit {
@@ -198,7 +203,8 @@ fn main() {
       keys,
       jobs,
       re_resolve,
-    } => fmshadow::run(&root, keys.as_deref(), &out, jobs, re_resolve),
+      outcomes,
+    } => fmshadow::run(&root, keys.as_deref(), &out, jobs, re_resolve, outcomes),
     Command::Audit { root, out, keys, jobs } => report::run_audit(
       &root,
       keys.as_deref(),

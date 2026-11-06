@@ -759,9 +759,10 @@ impl Expandable {
   }
 }
 
-/// The commands that write a definition's name: the `\def` family, `\let`, `\g@addto@macro`, `\@namedef`, etoolbox's. The
-/// title-page check's (`stored_parameters`, latexml_engine `title_page_check::StoreReaders`).
-pub const WRITERS_OF_NAMES: &[&str] = &[
+/// The kernel's commands that write a definition's name: the `\def` family, `\let`, `\g@addto@macro`. The unclaimed-text
+/// net's stores read these alone (latexml_engine `frontmatter_stores::stores_raw_code_writes`), which change the output
+/// where the check's cannot; the check reads [`ETOOLBOX_WRITERS_OF_NAMES`] too.
+pub const KERNEL_WRITERS_OF_NAMES: &[&str] = &[
   "\\def",
   "\\gdef",
   "\\edef",
@@ -770,6 +771,11 @@ pub const WRITERS_OF_NAMES: &[&str] = &[
   "\\protected@edef",
   "\\protected@xdef",
   "\\g@addto@macro",
+];
+
+/// The other commands that write a definition's name, the title-page check's alone (`stored_parameters`, latexml_engine
+/// `title_page_check::StoreReaders`): etoolbox's, and the kernel's `\@namedef`.
+pub const ETOOLBOX_WRITERS_OF_NAMES: &[&str] = &[
   "\\@namedef",
   "\\appto",
   "\\gappto",
@@ -801,9 +807,22 @@ pub const WRITERS_OF_NAMES: &[&str] = &[
   "\\listcsxadd",
 ];
 
-/// The kernel's of [`WRITERS_OF_NAMES`], the first eight: the unclaimed-text net's stores (latexml_engine
-/// `frontmatter_stores::stores_raw_code_writes`), which change the output where the check's cannot.
-pub const NET_WRITERS_OF_NAMES: &[&str] = WRITERS_OF_NAMES.split_at(8).0;
+/// The commands that write a definition's name: [`KERNEL_WRITERS_OF_NAMES`] and [`ETOOLBOX_WRITERS_OF_NAMES`], one list
+/// to search (`stored_parameters` asks for every control sequence of every definition's body).
+pub const WRITERS_OF_NAMES: [&str;
+  KERNEL_WRITERS_OF_NAMES.len() + ETOOLBOX_WRITERS_OF_NAMES.len()] = {
+  let mut all = [""; KERNEL_WRITERS_OF_NAMES.len() + ETOOLBOX_WRITERS_OF_NAMES.len()];
+  let mut at = 0;
+  while at < all.len() {
+    all[at] = if at < KERNEL_WRITERS_OF_NAMES.len() {
+      KERNEL_WRITERS_OF_NAMES[at]
+    } else {
+      ETOOLBOX_WRITERS_OF_NAMES[at - KERNEL_WRITERS_OF_NAMES.len()]
+    };
+    at += 1;
+  }
+  all
+};
 
 /// A writer of [`WRITERS_OF_NAMES`] whose value joins what its store holds, past `\g@addto@macro`.
 const APPENDERS: &[&str] = &[
@@ -916,7 +935,7 @@ fn stored_parameters(body: &[Token]) -> StoredParameters {
     let register = at >= 2 && body[at - 2].with_str(|name| name == "\\the");
     let is_let = token.with_str(|name| name == "\\let");
     // (the store's name, and from where the search for its value starts)
-    let (store, value_search) = if is(WRITERS_OF_COMMANDS) || is(WRITERS_OF_NAMES) {
+    let (store, value_search) = if is(WRITERS_OF_COMMANDS) || is(&WRITERS_OF_NAMES) {
       match written_store_name(body, at) {
         Some(found) => found,
         None => continue,

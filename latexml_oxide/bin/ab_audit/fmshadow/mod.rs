@@ -15,7 +15,8 @@
 //! Output: `<prefix>.tsv` (a row per paper), `<prefix>.disagree.tsv` (a row per disagreement), and
 //! `<prefix>.summary.txt` (the per-family table ranked by reach, with the gate number: the share of the family's
 //! counted papers with an unclassified disagreement — or, under `--re-resolve`, with stale conventions, its own
-//! `stale_conventions` column, which also makes the run exit non-zero).
+//! `stale_conventions` column, which also makes the run exit non-zero), and `<prefix>.outcomes.txt` ([`outcomes`]: who
+//! decides each paper, per family, on the way to the old engine's removal).
 
 use std::{
   collections::BTreeMap,
@@ -415,6 +416,7 @@ mod compare;
 mod conventions;
 mod driver;
 mod dump;
+mod outcomes;
 #[cfg(test)]
 mod tests;
 
