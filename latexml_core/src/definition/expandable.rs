@@ -572,8 +572,13 @@ impl Expandable {
   /// the frame of the argument reading, which recurses through `read_x_token`.
   #[inline(never)]
   fn substitute_onto_input(&self, tokens: &Tokens, args: &[ArgWrap]) -> Result<()> {
-    // The arguments as token lists (borrowed: a macro's arguments are read as tokens); TeX's nine at most
-    // (§476), so on the stack.
+    // A macro's arguments are read as tokens, so they're there to read in place (tex.web §390).
+    if args.iter().all(|arg| matches!(arg, ArgWrap::Tokens(_))) {
+      let plan = self.plan.get_or_init(|| tokens.substitution_plan());
+      crate::gullet::unread_substituted_args(tokens.unlist_ref(), plan, args);
+      return Ok(());
+    }
+    // The arguments as token lists; TeX's nine at most (§476), so on the stack.
     let mut owned: [Option<Cow<'_, Tokens>>; 9] = Default::default();
     if args.len() > owned.len() {
       crate::gullet::unread_expansion(

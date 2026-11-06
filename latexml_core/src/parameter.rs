@@ -384,16 +384,25 @@ impl Parameter {
   /// output) but must NOT flip catcodes at READ time: its whole point is
   /// tokenizing the argument at the CALLER's catcodes so an expl3
   /// `\l_..._tl` file name stays one control sequence.
+  #[inline]
   fn semiverbatim_read_setup(&self) -> bool {
-    self.semiverbatim.is_some() && !arena::with(self.name, |n| n == "ExpandedSemiverbatim")
+    self.semiverbatim.is_some() && self.semiverbatim_set_up_at_read()
   }
 
+  /// [`Self::semiverbatim_read_setup`] of a semiverbatim parameter, apart: this runs twice per argument of every macro.
+  #[inline(never)]
+  fn semiverbatim_set_up_at_read(&self) -> bool {
+    !arena::with(self.name, |n| n == "ExpandedSemiverbatim")
+  }
+
+  #[inline]
   pub fn setup_catcodes(&self) {
     if self.semiverbatim_read_setup() {
       begin_semiverbatim(self.semiverbatim.as_deref());
     }
   }
 
+  #[inline]
   pub fn revert_catcodes(&self) -> Result<()> {
     if self.semiverbatim_read_setup() {
       end_semiverbatim()?;
@@ -445,7 +454,32 @@ impl Parameter {
     };
     self.revert_catcodes()?;
 
-    let (is_optional_match, is_until) = match self.name_kind.get() {
+    // Perl: experiment: skip spaces after a successful OptionalMatch read
+    // (not when the call is being abandoned: nothing more is read).
+    if self.optional && !value_arg.is_none() && self.name_kind_of().0 && !gullet::argument_runaway()
+    {
+      gullet::skip_spaces()?;
+    }
+
+    // A `\def` parameter text's leading delimiter (`\def\lp\x{…}`) is a
+    // value-less required `Match`: its miss IS an improper macro call (below).
+    if value_arg.is_none()
+      && !self.optional
+      && (!self.novalue || self.is_macro_delimiter())
+      && self.predigest.is_none()
+      // A call being abandoned (tex.web §392) has nothing more to report.
+      && !gullet::argument_runaway()
+    {
+      self.read_missing_value(value_arg, fordefn)
+    } else {
+      Ok(value_arg)
+    }
+  }
+
+  /// Whether this parameter's name is an `OptionalMatch` and an `Until` one, found once.
+  #[inline]
+  fn name_kind_of(&self) -> (bool, bool) {
+    match self.name_kind.get() {
       Some(kind) => kind,
       None => {
         let kind = arena::with(self.name, |name| {
@@ -454,22 +488,19 @@ impl Parameter {
         self.name_kind.set(Some(kind));
         kind
       },
-    };
-
-    // Perl: experiment: skip spaces after a successful OptionalMatch read
-    // (not when the call is being abandoned: nothing more is read).
-    if !value_arg.is_none() && self.optional && is_optional_match && !gullet::argument_runaway() {
-      gullet::skip_spaces()?;
     }
+  }
 
-    // A `\def` parameter text's leading delimiter (`\def\lp\x{…}`) is a
-    // value-less required `Match`: its miss IS an improper macro call (below).
-    let checked_value = if !self.optional
-      && (!self.novalue || self.is_macro_delimiter())
-      && (value_arg.is_none() && self.predigest.is_none())
-      // A call being abandoned (tex.web §392) has nothing more to report.
-      && !gullet::argument_runaway()
-    {
+  /// [`Self::read_with`] of a required parameter that read no value.
+  #[cold]
+  #[inline(never)]
+  fn read_missing_value(
+    &self,
+    value_arg: ArgWrap,
+    fordefn: Option<&dyn Definition>,
+  ) -> Result<ArgWrap> {
+    let is_until = self.name_kind_of().1;
+    Ok({
       // `Until:` readers return a DISTINGUISHABLE EOF (read_until → None
       // when the delimiter never appeared; a matched-but-empty arg is
       // Some(empty)). Real TeX's runaway-argument ERROR applies to REAL
@@ -518,10 +549,7 @@ impl Parameter {
       } else {
         value_arg
       }
-    } else {
-      value_arg
-    };
-    Ok(checked_value)
+    })
   }
 
   /// The leading delimiter of a `\def` parameter text (`\def\lp\x{…}`,
@@ -736,6 +764,27 @@ impl Object for Parameters {
   }
 }
 
+/// `LXML_TRACE_ARGS=\\cs`: whether `definition` is the one traced.
+#[cold]
+#[inline(never)]
+fn traced_definition(definition: &dyn Definition) -> bool {
+  TRACE_ARGS
+    .as_deref()
+    .is_some_and(|want| definition.get_cs().to_string() == want)
+}
+
+/// `LXML_TRACE_ARGS=\\cs`: print one argument.
+#[cold]
+#[inline(never)]
+fn trace_argument(definition: &dyn Definition, parameter: &Parameter, values: &ArgWrap) {
+  let shown = values.revert().map(|t| t.to_string()).unwrap_or_default();
+  eprintln!(
+    "ARGS {}: {} = {shown}",
+    definition.get_cs(),
+    parameter.stringify()
+  );
+}
+
 impl Parameters {
   pub fn new(params: Vec<Parameter>) -> Self { Parameters(params) }
   pub fn get_num_args(&self) -> usize { self.0.iter().filter(|&p| !p.novalue).count() }
@@ -840,17 +889,12 @@ impl Parameters {
     let mut args = Vec::with_capacity(self.0.len());
     // `LXML_TRACE_ARGS=\cs`: see `read_arguments_and_digest` (macros and
     // primitives read their parameters here).
-    let traced = fordefn.is_some_and(|d| {
-      TRACE_ARGS
-        .as_deref()
-        .is_some_and(|want| d.get_cs().to_string() == want)
-    });
+    let traced = TRACE_ARGS.is_some() && fordefn.is_some_and(traced_definition);
     let tails = self.may_defer_tails().then(ArgumentTails::open);
     for parameter in &self.0 {
       let values = parameter.read(fordefn)?;
       if traced && let Some(d) = fordefn {
-        let shown = values.revert().map(|t| t.to_string()).unwrap_or_default();
-        eprintln!("ARGS {}: {} = {shown}", d.get_cs(), parameter.stringify());
+        trace_argument(d, parameter, &values);
       }
       if parameter.predigest.is_some() {
         // TODO: Sometimes we legitimately want to use e.g. Number parameters without the predigest

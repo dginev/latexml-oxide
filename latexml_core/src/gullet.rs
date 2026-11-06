@@ -776,6 +776,30 @@ pub fn unread_expansion_saved(first: Token, rest: Vec<Token>) {
   }
 }
 
+/// [`unread_substituted`] of arguments all read as tokens, each found where it is.
+pub fn unread_substituted_args(
+  body: &[Token],
+  plan: &[crate::tokens::BodyPiece],
+  args: &[crate::definition::argument::ArgWrap],
+) {
+  use crate::{definition::argument::ArgWrap, tokens::BodyPiece};
+  if let Some(ref mut runtime) = gullet_mut!().runtime {
+    let pushback = &mut runtime.pushback;
+    for piece in plan.iter().rev() {
+      match *piece {
+        BodyPiece::Run(start, end) => {
+          pushback.extend(body[start as usize..end as usize].iter().rev().copied());
+        },
+        BodyPiece::Parameter(n) => {
+          if let Some(ArgWrap::Tokens(arg)) = n.checked_sub(1).and_then(|i| args.get(i)) {
+            pushback.extend(arg.unlist_ref().iter().rev().copied());
+          }
+        },
+      }
+    }
+  }
+}
+
 /// [`unread_expansion`] of a macro body with its parameters substituted (`Tokens::substitute_parameters`),
 /// without building the list first: tex.web `macro_call` (§390) puts the body on the input as stored and the
 /// arguments where its `out_param`s are. The pieces go onto the pushback stack last first, each reversed;
