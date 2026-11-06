@@ -12,7 +12,7 @@ use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use serde_json::{Value, json};
 
 /// Convert `tex` under the shadow switch: the log, the XML and the dump.
-fn run(tex: &str) -> (String, String, Value) {
+pub(super) fn run(tex: &str) -> (String, String, Value) {
   let (log, xml, json) = convert_files_with_setup_then(
     tex,
     &[],
@@ -24,14 +24,14 @@ fn run(tex: &str) -> (String, String, Value) {
 }
 
 /// [`run`], asserting a clean conversion.
-fn dump(tex: &str) -> (String, Value) {
+pub(super) fn dump(tex: &str) -> (String, Value) {
   let (log, xml, dump) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   (xml, dump)
 }
 
 /// The author blocks of a dump.
-fn blocks(dump: &Value) -> Vec<&Value> {
+pub(super) fn blocks(dump: &Value) -> Vec<&Value> {
   dump["entries"]
     .as_array()
     .expect("entries")
@@ -41,7 +41,7 @@ fn blocks(dump: &Value) -> Vec<&Value> {
 }
 
 /// A list's events of `kind`.
-fn of_kind(events: &Value, kind: &str) -> Vec<Value> {
+pub(super) fn of_kind(events: &Value, kind: &str) -> Vec<Value> {
   events
     .as_array()
     .expect("events")
@@ -217,7 +217,7 @@ fn a_definition_in_the_block_is_an_event_with_its_span() {
 /// and `\global` (prefixes, whose meaning the span would lose). No earlier: not over a font switch or an earlier
 /// declaration (each a call of its own), nor out into a conditional (the `\fi` is past the span: unbalanced). A box after a
 /// declaration does not take it (`\def\u{U}\textbf{Cat}`). A macro defining one name twice lists it once. A font switch
-/// is none, though `\itshape` reads as the document's (`\reinstall@nfss@defs`).
+/// is none, though `\itshape` reads as the document's (`\reinstall@nfss@defs`): `perfect_kernel_batchz2`.
 #[test]
 fn a_declarations_span_holds_what_leads_to_it() {
   let (_, dump) = dump(include_str!(

@@ -1,0 +1,15 @@
+% witness: FRONTMATTER_DIGESTED_REFACTOR gap 3, ACM `\alignauthor` (sig-alternate.cls:283's shape; old reader `separators.rs`)
+% oracle:  pdflatex 0 errors: two columns, "Ann Able/Univ A" and "Bob Baker/Univ B"
+% engines: Perl has no events; ours before this fix had no trace of the call past what the class makes it print
+% expect:  0 errors; the calls stand as Breaks of kind `column` beside the events, which stay what the class prints
+%          (perfect_kernel_batchz2::a_break_a_binding_declares_stands_beside_the_events)
+% status:  GREEN (Z2)
+\documentclass{article}
+\newcommand\alignauthor{\end{tabular}\hfill\begin{tabular}[t]{c}}
+\begin{document}
+\title{T}
+\author{\alignauthor Ann Able\\ Univ A
+\alignauthor Bob Baker\\ Univ B}
+\maketitle
+Body.
+\end{document}

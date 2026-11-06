@@ -54,12 +54,13 @@ pub(in crate::base_utilities) enum Outcome {
   /// ([`SkipReason::JournalUnavailable`]: that flush was itself inside a speculative run).
   Deferred(SkipReason),
   /// Rehearsed and lexed: its events, the errors and warnings the rehearsal held, and beside the events the block's
-  /// definitions and the errors by position (`rehearsal::Rehearsal::Done`).
+  /// definitions, the breaks its binding declares and the errors by position (`rehearsal::Rehearsal::Done`).
   Events {
     events:       Vec<Event>,
     errors:       usize,
     warnings:     usize,
     declarations: Vec<Event>,
+    breaks:       Vec<Event>,
     held:         Vec<HeldError>,
   },
   /// Not rehearsed, and why.

@@ -268,7 +268,7 @@ pub type Table = HashMap<SymStr, VecDeque<Stored>>;
 pub struct AssignmentJournal {
   /// The meanings assigned since the log was last read, in order, each with whether globally ([`begin_meaning_log`]);
   /// `None` while no one reads it.
-  meaning_log: Option<Vec<(SymStr, bool)>>,
+  meaning_log: Option<Vec<MeaningAssigned>>,
   /// the ids of the frames open when it began, from the bottom of the stack
   frames:      Vec<u64>,
   saved:       rustc_hash::FxHashMap<(TableName, SymStr), JournalEntry>,
@@ -1052,8 +1052,8 @@ impl State {
   }
 
   /// [`Self::journal_touch`], for an assignment whose scope is known: `global`, whether it is global, goes to the meaning
-  /// log ([`begin_meaning_log`]). The log lives on the journal, a rehearsal's, so an assignment outside one pays nothing
-  /// for it: the test sits past the guard's.
+  /// log ([`begin_meaning_log`]), when a field's token is being invoked. The log lives on the journal, a rehearsal's, so an
+  /// assignment outside one pays nothing for it: the test sits past the guard's.
   #[inline]
   fn journal_touch_assignment(&mut self, table_name: TableName, key: SymStr, global: bool) {
     if table_name == TableName::Meaning && !self.meaning_recorders.is_empty() {
@@ -1065,8 +1065,9 @@ impl State {
           .journal
           .as_mut()
           .and_then(|journal| journal.meaning_log.as_mut())
+        && let Some(by) = get_current_token().filter(|t| t.prov != 0)
       {
-        log.push((key, global));
+        log.push(MeaningAssigned { key, global, by });
       }
       self.journal_save(table_name, key);
     }
@@ -5957,9 +5958,22 @@ pub fn end_meaning_recorder() -> Vec<(SymStr, Option<Stored>)> {
     .unwrap_or_default()
 }
 
-/// Begin logging the meanings assigned on the open journal, in order, each with whether globally: what a rehearsal reads
-/// a definition in its field by (the engine's `field_notes`), since a definition leaves no box. One rehearsal at a time, journals
-/// not nesting ([`begin_assignment_journal`]); the log goes with the journal.
+/// A meaning assigned in the meaning log ([`begin_meaning_log`]).
+#[derive(Debug, Clone, Copy)]
+pub struct MeaningAssigned {
+  /// the meaning's key
+  pub key:    SymStr,
+  /// whether globally
+  pub global: bool,
+  /// the token being invoked
+  pub by:     Token,
+}
+
+/// Begin logging the meanings assigned on the open journal by a token with a field provenance (`Token::prov`), in order:
+/// what a rehearsal reads a definition in its field by (the engine's `field_notes`), since a
+/// definition leaves no box. What a token of no provenance assigns is no invocation of the field's, wherever it stands:
+/// `\begin{minipage}`'s hooks, the `\size@update` that `\selectfont` puts back. One rehearsal at a time, journals not nesting
+/// ([`begin_assignment_journal`]); the log goes with the journal.
 pub fn begin_meaning_log() {
   if let Some(journal) = state_mut!().journal.as_mut() {
     journal.meaning_log = Some(Vec::new());
@@ -5977,7 +5991,7 @@ pub fn meaning_log_is_empty() -> bool {
 
 /// Exchange what the meaning log ([`begin_meaning_log`]) holds since it was last read with `buffer`, an empty one: a field
 /// token's read of the log, so it allocates nothing.
-pub fn swap_meaning_log(buffer: &mut Vec<(SymStr, bool)>) {
+pub fn swap_meaning_log(buffer: &mut Vec<MeaningAssigned>) {
   if let Some(log) = state_mut!()
     .journal
     .as_mut()

@@ -208,24 +208,43 @@ const API_EXTENSIONS: &[&str] = &[
   "lx@add@store@authorblock",
 ];
 
-/// The keys of `\\lx@add@…[…]` calls Perl has too, by its `DefKeyVal('Frontmatter', …)` (`Base_Utility.pool.ltxml:247-254`).
+/// The keys of `\\lx@add@…[…]` calls Perl has too: its `DefKeyVal('Frontmatter', …)` (`Base_Utility.pool.ltxml:247-254`), and what
+/// its own calls pass besides (`name=`, `scheme=`, `keys=`: every literal of `LaTeXML/lib/LaTeXML`).
 const PERL_DECLARED_KEYS: &[&str] = &[
   "annotate",
   "annotations",
   "class",
   "graphic",
+  "keys",
   "label",
   "labelref",
   "labelseq",
+  "name",
   "role",
+  "scheme",
+];
+
+/// The keys Perl's own code sets on a queued entry's options behind the call (`Base_Utility.pool.ltxml`): what a Rust setter may
+/// insert without a row in [`API_KEYS_OUTSIDE_PERLS`].
+const PERL_INTERNAL_KEYS: &[&str] = &[
+  "_annotation",
+  "_annotations",
+  "_force_font",
+  "_label",
+  "_num",
 ];
 
 /// The API's keys outside Perl's, per key and file: each `_word=` an API call sets (and `owner=`, the one without the `_`),
 /// each string constant naming such a key (`CUT_LIST`, which `s!("{CUT_LIST}={key}")` sets: `const _cutlist`), and each key
-/// declared in `Frontmatter` that Perl does not declare. A debt like the names. Not a constructor's XML attribute, which is
-/// quoted (`_noautoclose='true'`), nor a constant in `latex_constructs/` or `tex_box.rs` (the kernel's own attributes).
+/// declared in `Frontmatter` that Perl does not declare; since Z2 also every other key of a call's literal options (`[mark]`),
+/// and each key a Rust setter inserts into an entry's options outside Perl's own (`insert`: pinned with their shape, so the
+/// few XML attributes that share it, `_noautoclose`, `_qname`, stay in the count whole). A debt like the names. Not a
+/// constructor's XML attribute in a template, which is quoted (`_noautoclose='true'`), unless a call's literal options hold it,
+/// nor a constant in `latex_constructs/` or `tex_box.rs` (the kernel's own attributes).
 /// `_scopebegin=` is pgfsys's own keyval: it shares the shape, and stays pinned so that the count stays whole.
 const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
+  ("[mark] lmcs_cls.rs", 1),
+  ("[mark] package/iopart_support_sty.rs", 1),
   ("_answers= base_utilities/defs/frontmatter_fields.rs", 1),
   ("_group= base_utilities/defs/frontmatter_fields.rs", 1),
   ("_grouped= package/revtex4_support_sty.rs", 1),
@@ -329,11 +348,32 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     1,
   ),
   ("declared content base_utilities/defs/frontmatter_api.rs", 1),
-  ("declared name base_utilities/defs/frontmatter_api.rs", 1),
   (
     "declared property base_utilities/defs/frontmatter_api.rs",
     1,
   ),
+  ("insert _bymark base_utilities/defs/author_macros.rs", 1),
+  ("insert _font base_utilities/frontmatter/insert.rs", 2),
+  ("insert _for base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "insert _mergednames base_utilities/defs/author_macros.rs",
+    1,
+  ),
+  ("insert _noautoclose algpseudocodex_sty.rs", 1),
+  ("insert _nowrap package/latexml_sty/declare.rs", 1),
+  (
+    "insert _printedbefore base_utilities/defs/author_macros.rs",
+    1,
+  ),
+  ("insert _qname package/axodraw_sty.rs", 1),
+  (
+    "insert _refmarkshown base_utilities/defs/author_macros.rs",
+    1,
+  ),
+  ("insert _scopebegin package/pgfsys_latexml_def.rs", 3),
+  ("insert _split_ref package/amsmath_sty.rs", 1),
+  ("insert _textmarks base_utilities/frontmatter/insert.rs", 1),
+  ("insert _xmkey package/amsmath_sty.rs", 1),
   ("owner= base_utilities/defs/author_macros.rs", 1),
   ("owner= base_utilities/defs/frontmatter_fields.rs", 4),
   ("owner= lmcs_cls.rs", 1),
@@ -349,6 +389,36 @@ const API_SPEAKERS: [&str; 3] = [
   "latexml_contrib/src",
 ];
 
+/// The keys of an API call's literal options, a brace's commas no separators.
+fn literal_keys(options: &str) -> Vec<String> {
+  let (mut keys, mut depth, mut piece) = (Vec::new(), 0usize, String::new());
+  for c in options.chars().chain(std::iter::once(',')) {
+    match c {
+      '{' => depth += 1,
+      '}' => depth = depth.saturating_sub(1),
+      ',' if depth == 0 => {
+        if let Some((key, _)) = piece.split_once('=') {
+          keys.push(key.trim().to_string());
+        }
+        piece.clear();
+        continue;
+      },
+      _ => {},
+    }
+    piece.push(c);
+  }
+  keys
+}
+
+/// Whether the `_word=` count sees this literal's key already: only a key it takes, which a quote or another `=` does not end.
+fn seen_as_word_key(key: &str, code: &str) -> bool {
+  (key.starts_with('_') || key == "owner")
+    && code
+      .split(&format!("{key}="))
+      .skip(1)
+      .all(|after| !matches!(after.chars().next(), Some('\'' | '=')))
+}
+
 /// The boundary is Perl's Frontmatter API: a name or a key outside Perl's is the exception, and the list only shrinks. A
 /// name built at run time (`\lx@add@{role}`) is not seen: this reads the literals.
 #[test]
@@ -358,8 +428,13 @@ fn the_frontmatter_api_stays_perls() {
                      Perl's Frontmatter API\". Answer with Perl's macros and keys (`\\lx@add@creator`, `\\lx@add@contact`, \
                      `label=`, `annotations=`).";
   let name = Regex::new(r"\\+(lx@(?:add|annotate|clear)@[A-Za-z@]*)").expect("the regex");
-  let key =
-    Regex::new(r"(?:^|[^A-Za-z0-9_])(_[a-z][a-z0-9_]*|owner)=(?:[^'=]|$)").expect("the regex");
+  // (each key's own: what follows the `=` is read apart, so `_a=,_b=1`'s second is seen)
+  let key = Regex::new(r"(?:^|[^A-Za-z0-9_])(_[a-z][a-z0-9_]*|owner)=").expect("the regex");
+  // (an API call's literal options: every key of it, whatever its shape, `_foo='1'`, `mark=`)
+  let literal =
+    Regex::new(r"\\+lx@(?:add|annotate|clear)@[A-Za-z@]*\[([^\]]*)\]").expect("the regex");
+  // (a Rust setter's: `attr.insert("_annotations".to_string(), …)`)
+  let setter = Regex::new(r#"\binsert\(\s*"(_[a-z][a-z0-9_]*)""#).expect("the regex");
   let constant =
     Regex::new(r#"\bconst [A-Z][A-Z_0-9]*: &str = "(_[a-z][a-z0-9_]*)""#).expect("the regex");
   let declared = Regex::new(r#"DefKeyVal!\(\s*"Frontmatter",\s*"([^"]+)""#).expect("the regex");
@@ -381,7 +456,24 @@ fn the_frontmatter_api_stays_perls() {
         .split_once("/src/")
         .map_or(file.as_str(), |(_, inner)| inner);
       for found in key.captures_iter(&code) {
-        *keys.entry(format!("{}= {short}", &found[1])).or_default() += 1;
+        let end = found.get(0).expect("the match").end();
+        if !matches!(code[end..].chars().next(), Some('\'' | '=')) {
+          *keys.entry(format!("{}= {short}", &found[1])).or_default() += 1;
+        }
+      }
+      for found in literal.captures_iter(&code) {
+        for option in literal_keys(&found[1]) {
+          if !PERL_DECLARED_KEYS.contains(&option.as_str()) && !seen_as_word_key(&option, &code) {
+            *keys.entry(format!("[{option}] {short}")).or_default() += 1;
+          }
+        }
+      }
+      for found in setter.captures_iter(&code) {
+        if !PERL_INTERNAL_KEYS.contains(&&found[1]) {
+          *keys
+            .entry(format!("insert {} {short}", &found[1]))
+            .or_default() += 1;
+        }
       }
       if !short.starts_with("latex_constructs/") && short != "tex_box.rs" {
         for found in constant.captures_iter(&code) {
@@ -424,7 +516,9 @@ fn the_frontmatter_api_stays_perls() {
 /// Token-spelling reads per area, and in the listed bindings: `bin/tokreads.py`'s count of the removal study plus the shapes
 /// it missed, **an over-approximation** (a line of code matching a read's shape, whatever it decides; a string holding `//`
 /// is cut there). Debts on the way to the floor: about 60 in the engine (the rehearsal's table, the ledger's stamping, the
-/// Perl API boundary), `resolver/` 0, decision code elsewhere 0. The engine's total is 2,264 at Z01: the study's 1,962, plus
+/// Perl API boundary), `resolver/` 0, decision code elsewhere 0. Raised at Z2, by the shapes revz01 found the pins blind to and
+/// no new read: a name's prefix or suffix, a `TOKEN_…` constant compared, a table of names or tokens (once each), a method on a
+/// `to_string()`. The engine's total was 2,264 at Z01: the study's 1,962, plus
 /// `title_page_check.rs`, which its list left out (14), plus the helpers' shapes the study did not count (`with_str(`,
 /// `cs_in(`, `text_tokens(`, `to_string() ==`, a comparison or a match arm on a quoted `\\…`); and 85 in the rest of
 /// `base_utilities/`. `frontmatter (rest)` holds any new file under `frontmatter/`, and a `rest <file>` row each file under
@@ -433,60 +527,60 @@ fn the_frontmatter_api_stays_perls() {
 const TOKEN_READS: &[(&str, usize)] = &[
   ("aa_cls.rs", 5),
   ("aas_support_sty.rs", 17),
-  ("acmart_cls.rs", 18),
+  ("acmart_cls.rs", 20),
   ("address_lists", 0),
-  ("aistats_sty.rs", 52),
+  ("aistats_sty.rs", 53),
   ("ams_support_sty.rs", 16),
   ("apa7_cls.rs", 7),
   ("authblk_sty.rs", 23),
-  ("author_block", 1259),
-  ("defs/author_macros", 19),
-  ("defs/frontmatter_api", 4),
-  ("defs/frontmatter_fields", 20),
-  ("defs/general", 9),
-  ("epl_cls.rs", 39),
-  ("eptcs_cls.rs", 26),
-  ("events", 51),
+  ("author_block", 1288),
+  ("defs/author_macros", 20),
+  ("defs/frontmatter_api", 7),
+  ("defs/frontmatter_fields", 21),
+  ("defs/general", 8),
+  ("epl_cls.rs", 43),
+  ("eptcs_cls.rs", 28),
+  ("events", 58),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   ("field_notes", 4),
-  ("frontmatter (rest)", 22),
-  ("frontmatter_stores", 485),
+  ("frontmatter (rest)", 24),
+  ("frontmatter_stores", 527),
   ("gretsi_cls.rs", 14),
-  ("ieeetran_cls.rs", 114),
+  ("ieeetran_cls.rs", 119),
   ("insert", 14),
   ("inst_support_sty.rs", 0),
-  ("interspeech_cls.rs", 27),
+  ("interspeech_cls.rs", 29),
   ("l_aa_cls.rs", 13),
-  ("ledger", 21),
+  ("ledger", 24),
   ("llncs_cls.rs", 32),
-  ("osa_journal_sty.rs", 75),
-  ("place", 5),
-  ("ptephy_cls.rs", 95),
-  ("queue", 0),
-  ("queue_digest", 12),
-  ("rehearsal", 3),
-  ("relocate", 131),
+  ("osa_journal_sty.rs", 77),
+  ("place", 6),
+  ("ptephy_cls.rs", 115),
+  ("queue", 1),
+  ("queue_digest", 16),
+  ("rehearsal", 5),
+  ("relocate", 134),
   ("resolver", 12),
-  ("rest /author_split_tests.rs", 14),
+  ("rest /author_split_tests.rs", 24),
   ("rest /block_insertion.rs", 0),
-  ("rest /blocks.rs", 1),
+  ("rest /blocks.rs", 2),
   ("rest /boxes_lists.rs", 0),
   ("rest /defs/mod.rs", 0),
   ("rest /defs/tags_refnums.rs", 0),
   ("rest /fonts_defs.rs", 12),
   ("rest /math_cleanup.rs", 0),
-  ("rest /misc.rs", 13),
+  ("rest /misc.rs", 14),
   ("rest /mod.rs", 0),
   ("rest /tokens.rs", 26),
-  ("rest /util_text.rs", 19),
+  ("rest /util_text.rs", 25),
   ("revtex4_support_sty.rs", 12),
   ("shared_row", 13),
-  ("shared_row/emails", 60),
-  ("sv_support_sty.rs", 36),
+  ("shared_row/emails", 65),
+  ("sv_support_sty.rs", 35),
   ("webofc_cls.rs", 0),
-  ("writer/apply", 1),
+  ("writer/apply", 7),
   ("writer/dom+mod", 0),
-  ("writer/plan", 119),
+  ("writer/plan", 118),
   ("writer/repart", 0),
 ];
 
@@ -598,14 +692,28 @@ fn token_reads_only_fall_toward_the_floor() {
     r"|(?:\.cs_name\(\))|(?:\.get_string\(\))|(?:tokens?\.to_string\(\))|(?:content\.to_string\(\))|(?:\bToString\b)",
     r"|(?:\|\s*T_[A-Z]+!)|(?:Some\(&?T_[A-Z]+!)|(?:\bis_cs\()|(?:\.as_cs\()|(?:meaning\()",
     r"|(?:\bwith_str\()|(?:\bcs_in\()|(?:\btext_tokens\()|(?:to_string\(\)\s*(?:==|!=))",
-    r#"|(?:(?:==|!=)\s*&?\*?\s*"\\\\)|(?:"\\\\[^"]*"\s*(?:==|!=|\||=>))"#
+    r#"|(?:(?:==|!=)\s*&?\*?\s*"\\\\)|(?:"\\\\[^"]*"\s*(?:==|!=|\||=>))"#,
+    // (a name's prefix or suffix; a `TOKEN_…` constant compared; a table of names or of tokens, `.contains` read off it; a
+    // method on a token list's text)
+    r#"|(?:\.(?:starts_with|ends_with|strip_prefix|strip_suffix)\(\s*"\\\\)"#,
+    r"|(?:(?:==|!=)\s*&?\*?\s*TOKEN_[A-Z_]+)|(?:TOKEN_[A-Z_]+\s*(?:==|!=))",
+    r#"|(?:\[\s*\(?"\\\\)|(?:=\s*&?\[\s*&?T_[A-Z]+!)|(?:\[\s*&?T_[A-Z]+![^\]]*\]\s*\.)"#,
+    r"|(?:to_string\(\)\s*\.\s*(?:as_str|contains|ends_with|eq|find|matches|split|starts_with|strip_prefix|strip_suffix|trim))",
   ))
   .expect("the regex");
+  // (a line, what rustfmt moves to lines of its own joined to it: a chained call, `.to_string()⏎.contains(…)`, and a table's
+  // first row, `&[⏎"\\a",`, so that a table counts once)
   let reads = |file: &str| {
-    code_lines(file)
-      .iter()
-      .filter(|line| read.is_match(line))
-      .count()
+    let mut logical: Vec<String> = Vec::new();
+    for line in code_lines(file) {
+      match logical.last_mut() {
+        Some(last) if line.trim_start().starts_with('.') || last.trim_end().ends_with('[') => {
+          last.push_str(line.trim_start())
+        },
+        _ => logical.push(line),
+      }
+    }
+    logical.iter().filter(|line| read.is_match(line)).count()
   };
   let mut counts: BTreeMap<String, usize> = BTreeMap::new();
   let mut listed: Vec<String> = Vec::new();

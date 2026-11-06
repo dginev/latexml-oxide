@@ -1028,7 +1028,16 @@ pub struct FieldLedgerScope {
 /// observer's `field_notes`, in the engine): `Token::prov`'s test in the stomach, then this. All the core knows of them, so
 /// no line of theirs sits among the code the core's hot path is inlined from (Z01: the same lines here cost a text document
 /// 0.17 % of `instructions:u` with no call made, a reshuffle of the crate's codegen units).
-pub type FieldNotesHook = fn(&Token, FieldCover, &[Digested]);
+pub type FieldNotesHook = fn(&Token, FieldCover, FieldInvocation<'_>);
+
+/// What a field token's invocation did ([`FieldNotesHook`]), now that it read what it reads.
+#[derive(Clone, Copy)]
+pub enum FieldInvocation<'a> {
+  /// the stomach digested it, to these boxes
+  Digested(&'a [Digested]),
+  /// the gullet expanded it, its tokens about to go on the input
+  Expanded,
+}
 #[thread_local]
 static FIELD_NOTES_HOOK: std::cell::Cell<Option<FieldNotesHook>> = std::cell::Cell::new(None);
 

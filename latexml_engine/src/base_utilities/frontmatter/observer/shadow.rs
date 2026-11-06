@@ -160,11 +160,18 @@ fn read_at_flush() -> Result<()> {
     } else if block.tokens.is_empty() {
       Outcome::Skipped(SkipReason::Empty)
     } else {
-      let title_marks = policy_for(&block.binding, block.hook).title_marks;
+      let policy = policy_for(&block.binding, block.hook);
+      let title_marks = policy.title_marks;
+      let block_breaks = policy.block_breaks;
       // (the block's tokens beside it: its in-block contacts' entries are read as the writer can cut them,
       // `events::labelled_entries`)
       let rehearsal = with_block_content(block.range.0, block.tokens.clone(), || {
-        rehearse(stamped_block_tokens(&block), title_marks, lex_events)
+        rehearse(
+          stamped_block_tokens(&block),
+          title_marks,
+          block_breaks,
+          lex_events,
+        )
       })?;
       match rehearsal {
         Rehearsal::Done {
@@ -172,6 +179,7 @@ fn read_at_flush() -> Result<()> {
           errors,
           warnings,
           declarations,
+          breaks,
           held,
         } => {
           mark_held(&mut value, &held);
@@ -180,6 +188,7 @@ fn read_at_flush() -> Result<()> {
             errors,
             warnings,
             declarations,
+            breaks,
             held,
           }
         },
@@ -215,7 +224,7 @@ fn read_at_flush() -> Result<()> {
     let read = if content.is_empty() {
       Some((Vec::new(), 0))
     } else {
-      match rehearse(content, TitleMarks::Fnsymbol, lex_events)? {
+      match rehearse(content, TitleMarks::Fnsymbol, &[], lex_events)? {
         Rehearsal::Done { value, errors, .. } => Some((value, errors)),
         // (a flush inside a speculative run: the next flush rehearses it)
         Rehearsal::Skipped(SkipReason::JournalUnavailable) => None,
@@ -344,6 +353,37 @@ fn json_event(out: &mut String, event: &Event) {
   if let Some(value) = &event.unprinted {
     out.push_str(",\"unprinted\":");
     json_str(out, value);
+  }
+  if let Some(kind) = event.break_kind {
+    out.push_str(",\"break\":");
+    json_str(out, kind.name());
+  }
+  if event.braces > 0 {
+    let _ = write!(out, ",\"braces\":{}", event.braces);
+  }
+  if event.ordinal {
+    out.push_str(",\"ordinal\":true");
+  }
+  if !event.printed_labels.is_empty() {
+    out.push_str(",\"printed_labels\":[");
+    for (i, label) in event.printed_labels.iter().enumerate() {
+      if i > 0 {
+        out.push(',');
+      }
+      out.push_str("{\"label\":");
+      json_str(out, &label.label);
+      let _ = write!(
+        out,
+        ",\"word\":{},\"line_first\":{},\"span\":",
+        label.word, label.line_first
+      );
+      json_span(
+        out,
+        label.span.map(|(s, e)| (usize::from(s), usize::from(e))),
+      );
+      out.push('}');
+    }
+    out.push(']');
   }
   if event.held {
     out.push_str(",\"held\":true");
@@ -555,6 +595,7 @@ pub fn fm_shadow_json() -> String {
               errors,
               warnings,
               declarations,
+              breaks,
               held: held_errors,
             } => {
               json_str(&mut out, "events");
@@ -566,6 +607,9 @@ pub fn fm_shadow_json() -> String {
               events.clone_from(lexed);
               if !declarations.is_empty() {
                 json_events(&mut out, "declarations", declarations);
+              }
+              if !breaks.is_empty() {
+                json_events(&mut out, "breaks", breaks);
               }
               if !held_errors.is_empty() {
                 json_held(&mut out, held_errors);
@@ -843,6 +887,7 @@ mod tests {
         errors:       0,
         warnings:     0,
         declarations: Vec::new(),
+        breaks:       Vec::new(),
         held:         Vec::new(),
       }),
       None

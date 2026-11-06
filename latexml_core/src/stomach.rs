@@ -2232,6 +2232,21 @@ pub fn salvage_pending_box_lists(drop_innermost: bool) -> Vec<Digested> {
 /// recovery arms beside [`salvage_pending_box_lists`], after the Fatal is logged (the message lists the stack).
 pub fn clear_token_stack() { stomach_mut!().token_stack.clear(); }
 
+/// Whether a token with a field provenance (`Token::prov`) is being invoked around the one on top of the stack, from
+/// `depth` up, a box made of what it digests (its argument, an environment's body); a group's opening is none, though `{`
+/// digests up to its `}` too.
+pub fn field_token_encloses(depth: usize) -> bool {
+  let stomach = stomach!();
+  let stack = &stomach.token_stack;
+  stack
+    .get(depth..stack.len().saturating_sub(1))
+    .is_some_and(|below| {
+      below
+        .iter()
+        .any(|t| t.prov != 0 && t.get_catcode() != Catcode::BEGIN && !t.defined_as(&T_BEGIN!()))
+    })
+}
+
 /// The depth of the stack of tokens being invoked, for [`truncate_token_stack`] to put back.
 pub fn token_stack_depth() -> usize { stomach!().token_stack.len() }
 
@@ -4183,7 +4198,11 @@ fn note_field_token(token: &Token, result: &[Digested]) {
   };
   // (a rehearsal's notes on what its boxes do not hold: `token::FieldNotesHook`)
   if let Some(notes) = crate::token::field_notes_hook() {
-    notes(token, cover, result);
+    notes(
+      token,
+      cover,
+      crate::token::FieldInvocation::Digested(result),
+    );
   }
   if result.is_empty() {
     crate::token::field_cover_set_pending(cover);

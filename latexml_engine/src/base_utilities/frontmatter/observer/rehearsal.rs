@@ -20,8 +20,8 @@ use latexml_core::{
 };
 
 use super::{
-  events::{EmailMeaning, Event, HeldError, declaration_events},
-  field_notes::{field_notes_begin, field_notes_end},
+  events::{BreakKind, EmailMeaning, Event, HeldError, break_events, declaration_events},
+  field_notes::{FieldNotesHookGuard, field_notes_begin, field_notes_end},
   ledger::{SkipReason, email_meaning},
   policy::TitleMarks,
   *,
@@ -49,6 +49,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefConstructor!("\\lx@fm@obs@And", "");
   DefConstructor!("\\lx@fm@obs@AND", "");
   DefConstructor!("\\lx@fm@obs@break OptionalMatch:* []", "");
+  DefConstructor!("\\lx@fm@obs@par OptionalMatch:* []", "");
   // `\thanks` and `\footnote` (inside `\maketitle`, `\footnote` is `\thanks`): latex.ltx `\thanks` = `\footnotemark`
   // + the text, a step of the footnote counter unless an optional number is given
   DefMacro!("\\lx@fm@obs@thanks []", sub[(number)] {
@@ -257,7 +258,7 @@ const ALWAYS_BOUND: &[(&str, &str)] = &[
   ("\\\\", "\\lx@fm@obs@break"),
   ("\\newline", "\\lx@fm@obs@break"),
   ("\\linebreak", "\\lx@fm@obs@break"),
-  ("\\par", "\\lx@fm@obs@break"),
+  ("\\par", "\\lx@fm@obs@par"),
   ("\\thanks", "\\lx@fm@obs@thanks"),
   ("\\footnote", "\\lx@fm@obs@thanks"),
   ("\\footnotetext", "\\lx@fm@obs@notetext"),
@@ -355,6 +356,8 @@ pub(in crate::base_utilities) enum Rehearsal<R> {
     warnings:     usize,
     /// the definitions made in the tokens' positions ([`declaration_events`]; none for tokens without positions)
     declarations: Vec<Event>,
+    /// the block breaks its binding declares, by the positions they were called at ([`break_events`]; `Policy::block_breaks`)
+    breaks:       Vec<Event>,
     /// the errors held, by the positions they were raised at, in order (none positioned for tokens without positions)
     held:         Vec<HeldError>,
   },
@@ -370,6 +373,7 @@ pub(in crate::base_utilities) enum Rehearsal<R> {
 pub(in crate::base_utilities) fn rehearse<R>(
   tokens: Tokens,
   title_marks: TitleMarks,
+  block_breaks: &[(&str, BreakKind)],
   inspect: impl FnOnce(&Digested) -> R,
 ) -> Result<Rehearsal<R>> {
   // (read before anything is changed: the counter the bare `\footnotemark`s print from)
@@ -430,12 +434,13 @@ pub(in crate::base_utilities) fn rehearse<R>(
   // shadow_switch_leaves_the_xml_unchanged` (XML and log the same with the switch on and off over the adversarial
   // shapes).
   local_current_token(T_CS!("\\relax"));
+  let _hook = FieldNotesHookGuard;
   let result = with_origin(DefinitionOrigin::File, || {
     reading_from_mouth(Mouth::default(), || -> Result<Digested> {
       bgroup();
       install_event_bindings(title_marks)?;
       begin_mode("text")?;
-      field_notes_begin(&tokens);
+      field_notes_begin(&tokens, block_breaks);
       let digested = digest(tokens)?;
       end_mode("text")?;
       egroup()?;
@@ -460,7 +465,8 @@ pub(in crate::base_utilities) fn rehearse<R>(
   let value = match &result {
     Ok(digested) => Some((
       inspect(digested),
-      declaration_events(digested, &notes.declarations),
+      declaration_events(&notes.declarations),
+      break_events(&notes.breaks),
     )),
     Err(_) => None,
   };
@@ -514,11 +520,12 @@ pub(in crate::base_utilities) fn rehearse<R>(
   }
   unwound?;
   Ok(match value {
-    Some((value, declarations)) if undone => Rehearsal::Done {
+    Some((value, declarations, breaks)) if undone => Rehearsal::Done {
       value,
       errors,
       warnings,
       declarations,
+      breaks,
       held,
     },
     _ => Rehearsal::Skipped(SkipReason::NotUndone),

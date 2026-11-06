@@ -1996,6 +1996,19 @@ pub fn field_cover_of(prov: u16) -> crate::token::FieldCover {
   crate::token::FieldCover { field, start: pos, end }
 }
 
+/// The expansion of a field token, its tokens about to go on the input: what it read is pending for the next box
+/// ([`field_cover_of`]), and a rehearsal's notes hear of it (`token::FieldNotesHook`). Out of line: no token of a paper's
+/// body is a field's.
+#[cold]
+#[inline(never)]
+fn note_field_expansion(token: &Token) {
+  let cover = field_cover_of(token.prov);
+  crate::token::field_cover_set_pending(cover);
+  if let Some(notes) = crate::token::field_notes_hook() {
+    notes(token, cover, crate::token::FieldInvocation::Expanded);
+  }
+}
+
 /// Whether the input's pushback is empty: no token of a field's stored value is left to read ([`field_cover_of`]).
 pub fn pushback_is_empty() -> bool {
   gullet!()
@@ -2003,6 +2016,10 @@ pub fn pushback_is_empty() -> bool {
     .as_ref()
     .is_none_or(|rt| rt.pushback.is_empty())
 }
+
+/// How many tokens the input's pushback holds: a macro's expansion is being read while it holds more than it did before
+/// the expansion (a rehearsal's notes, `token::FieldNotesHook`).
+pub fn pushback_len() -> usize { gullet!().runtime.as_ref().map_or(0, |rt| rt.pushback.len()) }
 
 /// Expand `token` (defined as `defn`) ONE level and push the expansion back
 /// onto the input, as `read_x_token` does for each expandable token it meets.
@@ -2028,7 +2045,7 @@ fn invoke_expansion(token: Token, defn: &std::rc::Rc<dyn Definition>) -> Result<
   if token.prov != 0 {
     // the macro's position and its arguments are covered by the boxes its expansion digests to (or by the next ones,
     // when it expands to nothing): a field's print is whole with them (OXIDIZED_DESIGN #715)
-    crate::token::field_cover_set_pending(field_cover_of(token.prov));
+    note_field_expansion(&token);
     crate::token::inherit_field_prov(token.prov, &mut invoked);
   }
   // token-locators: fill-only origin inheritance. A macro that
