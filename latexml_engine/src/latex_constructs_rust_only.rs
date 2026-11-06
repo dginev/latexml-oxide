@@ -510,14 +510,35 @@ LoadDefinitions!({
   // partway but the cascade has many tendrils — defer to a focused
   // IncludeInRelease refactor.
 
-  // List formatting macros from article.cls / report.cls / book.cls.
-  // No-ops because LaTeXML handles list formatting via CSS.
-  def_macro_noop("\\@listi")?;
-  def_macro_noop("\\@listii")?;
-  def_macro_noop("\\@listiii")?;
-  def_macro_noop("\\@listiv")?;
-  def_macro_noop("\\@listv")?;
-  def_macro_noop("\\@listvi")?;
+  // List parameters, from size10.clo:216-249: bodies as the real ones, though LaTeXML's lists never run them (CSS
+  // formats them). An empty one breaks a class's non-robust `\normalsize` (`\let\@listi\@listI`, size10.clo:53) expanded
+  // in a `\protected@xdef`: `\let` takes the next letter for its name, "Missing control sequence" and the letter lost
+  // (esapub2005.cls's `\affil{\normalsize Campus…}` through authblk, printed "ampus", 2310.07393). Perl leaves them
+  // undefined, which stay in the expansion.
+  DefMacro!(
+    "\\@listi",
+    "\\leftmargin\\leftmargini\\parsep 4\\p@ \\@plus2\\p@ \\@minus\\p@\\topsep 8\\p@ \\@plus2\\p@ \\@minus4\\p@\\itemsep4\\p@ \\@plus2\\p@ \\@minus\\p@"
+  );
+  DefMacro!(
+    "\\@listii",
+    "\\leftmargin\\leftmarginii\\labelwidth\\leftmarginii\\advance\\labelwidth-\\labelsep\\topsep 4\\p@ \\@plus2\\p@ \\@minus\\p@\\parsep 2\\p@ \\@plus\\p@ \\@minus\\p@\\itemsep\\parsep"
+  );
+  DefMacro!(
+    "\\@listiii",
+    "\\leftmargin\\leftmarginiii\\labelwidth\\leftmarginiii\\advance\\labelwidth-\\labelsep\\topsep 2\\p@ \\@plus\\p@ \\@minus\\p@\\parsep\\z@\\partopsep\\p@ \\@plus\\z@ \\@minus\\p@\\itemsep\\topsep"
+  );
+  DefMacro!(
+    "\\@listiv",
+    "\\leftmargin\\leftmarginiv\\labelwidth\\leftmarginiv\\advance\\labelwidth-\\labelsep"
+  );
+  DefMacro!(
+    "\\@listv",
+    "\\leftmargin\\leftmarginv\\labelwidth\\leftmarginv\\advance\\labelwidth-\\labelsep"
+  );
+  DefMacro!(
+    "\\@listvi",
+    "\\leftmargin\\leftmarginvi\\labelwidth\\leftmarginvi\\advance\\labelwidth-\\labelsep"
+  );
   // size1x.clo:220 `\let\@listI\@listi` — the pristine copy that a class's
   // size commands restore (`\let\@listi\@listI`, size10.clo:53,
   // tufte-common.def:374). Witness: tikz-network manual (tufte-book raw).

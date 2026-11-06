@@ -1,0 +1,27 @@
+% A setter a document's own file defines, read by `\input` rather than loaded as a package or class: `\input{defs}`,
+% `\input{sub/defs}`, `\input{x.sty}`, `\input{x.def}`. The third source reads a setter made while a raw class or a raw
+% definitions file of the document's own directory loads (`binding::content::is_own_raw_file`, through
+% `load_tex_definitions`); `\input` reads the file as content, so its setters are not marked, nor a call made from a macro
+% of `\AtBeginDocument` (`\myfront`). `\usepackage{sub/x}`, filecontents, a `.clo` through a class, a call from `\input{front}` count.
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Lunar Institute"
+% engines: rust 108b2 = 0 errors, 0 warnings, no record of "lunar institute"; perl = not run
+% expect:  0 errors, 1 warning (frontmatter:unclaimed_store) naming "lunar institute"
+% status:  RED (108b2): open, no guard; OXIDIZED_DESIGN_DIVERGENCES #953 "108b" says "loaded as a package or class"
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{inputowncls.cls}
+\LoadClass{article}
+\newcount\aucount
+\def\author#1{\advance\aucount by 1 \gdef\@author{#1}}
+\def\auaddr{}
+\renewcommand\maketitle{\par{\@title\par}\ifnum\aucount>0 {\@author\par}{\auaddr}\fi}
+\end{filecontents*}
+\begin{filecontents*}[force]{inputowndefs.tex}
+\def\address#1{\g@addto@macro\auaddr{#1\par}}
+\end{filecontents*}
+\documentclass{inputowncls}
+\makeatletter\input{inputowndefs}\makeatother
+\title{A Title}\author{Ann Able}
+\address{Lunar Institute}
+\begin{document}\maketitle
+Body text.
+\end{document}

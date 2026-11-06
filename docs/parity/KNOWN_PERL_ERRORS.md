@@ -11474,6 +11474,8 @@ by position (the `\thanks` inside Alambeigi's creator on `author_ieee_membership
 when no stop closes the block (awaiting a ruling). Guards `perfect_kernel_batch86d::{ieee_membership_kept_after_closing_stop,
 ieee_block_names_kept_after_closing_stop}`.
 
+Reached through the document's own macro too: `\newcommand{\SeMieee}{\IEEEmembership{, Senior Member,~IEEE}}` (2503.14354); counted since OD #953 "108b".
+
 ## 535. A `\label` after acmart's `\Description` labels the hidden description note
 
 `\caption{…}\Description{…}\label{fig:x}` in an acmart float puts `labels="LABEL:fig:x"` on the

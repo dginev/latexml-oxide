@@ -5161,9 +5161,41 @@ pub fn has_more_input() -> bool {
   }
 }
 
+thread_local! {
+  /// How many speculative digestions are running ([`speculative_digestion`]).
+  static SPECULATIVE_DIGESTIONS: Cell<usize> = const { Cell::new(0) };
+}
+
+/// A speculative digestion runs while this lives ([`speculative_digestion`]).
+pub struct SpeculativeDigestion;
+
+impl Drop for SpeculativeDigestion {
+  fn drop(&mut self) { SPECULATIVE_DIGESTIONS.with(|runs| runs.set(runs.get() - 1)); }
+}
+
+/// A run of digestion whose output and assignments are all discarded starts (latexml_engine sect05.rs `speculative_run`,
+/// the observer's rehearsal, `queue_digest::speculative_label_ink`), until the guard drops: the document does not end
+/// in it. A `\end{document}`, `\enddocument`, `\@@end` or `\bye` it reads does nothing ([`flush`], the kernel's document
+/// end), whatever text brought it there: a stored argument, `\closing{\end{document}}`, ended the real document with the
+/// run otherwise, and took the whole body with it.
+#[must_use]
+pub fn speculative_digestion() -> SpeculativeDigestion {
+  SPECULATIVE_DIGESTIONS.with(|runs| runs.set(runs.get() + 1));
+  SpeculativeDigestion
+}
+
+/// Is a speculative digestion running ([`speculative_digestion`])?
+pub fn in_speculative_digestion() -> bool { SPECULATIVE_DIGESTIONS.with(|runs| runs.get() != 0) }
+
 /// Obscure, but the only way I can think of to End!! (see \bye or \end{document})
 /// Flush all sources (close all pending mouth's)
+///
+/// In a speculative digestion ([`speculative_digestion`]) it does nothing: what a discarded run reads is not the end of
+/// the document's input.
 pub fn flush() {
+  if in_speculative_digestion() {
+    return;
+  }
   let mut g = gullet_mut!();
   if let Some(ref mut runtime) = g.runtime {
     runtime.mouth.finish();

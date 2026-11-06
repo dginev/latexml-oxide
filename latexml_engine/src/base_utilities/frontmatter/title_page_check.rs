@@ -24,6 +24,20 @@
 //! run, and a binding's command may drop what pdflatex prints (quantumarticle's `\ead`, 2209.07123;
 //! `\begin{abstract}[Summary]`, elsarticle 2104.14704). What a later call replaced is not wanted
 //! ([`note_frontmatter_clear`]).
+//!
+//! A third source (#953 "108b"): what the document's text gives a setter a raw class or a raw definitions file of its own
+//! directory made (one a binding makes is LaTeXML's, one a file `\input` makes no such setter), before the title page,
+//! each argument the setter writes into a store (`Expandable::stored_parameters`), digested once
+//! ([`digest_raw_setter_calls`]), goes through the same words and source gate. A class may never print such a store, so a
+//! word of this source alone is named apart, in a `Warning:frontmatter:unclaimed_store`. To an Info,
+//! `frontmatter:unread_store`, go: a store no raw code reads but page furniture ([`StoreReaders`]: a journal's `\jvol`,
+//! `\issn`, `\pagerange`), a `\csname` store, an optional or bracketed argument (a key far more often than text), and digits
+//! from an argument that yields no counted word (a postal code with its address counts: 1011.2770, 2305.00867,
+//! 2605.02209). A scratch name (`definition::expandable::is_scratch_name`) is no store. What the source's bounds left out
+//! is said in Infos, `frontmatter:store_calls_dropped`, `frontmatter:unread_argument`. Witnesses: CUP-JNL-DTM's
+//! `\auaddress`, printed only under a count the class's refused `\author` advances (2305.00867); aeb_emulateapj's
+//! `\altaffiltext`, read only by a raw `\@author@finish` (1011.2770); the replay gate's refusals (naverlabseurope
+//! 2408.05088, bosonai 2605.02209); nj_style's `\ead`, which only writes to the `.aux` file (1401.7920).
 
 use std::cell::RefCell;
 
@@ -45,7 +59,20 @@ pub fn note_title_page_printed(text: &str) {
   }
   assign_value(PRINTED, Stored::String(pin(text)), Some(Scope::Global));
   // (the words spilled so far, cut to those this print wants, which alone the later spills keep)
-  let wanted = wanted_words(&resolver::base_letters(text).to_lowercase());
+  let mut wanted = wanted_words(&resolver::base_letters(text).to_lowercase());
+  // (and those of the third source, digested before it: [`digest_raw_setter_calls`])
+  STORED.with_borrow(|stored| {
+    for argument in stored {
+      wanted
+        .words
+        .extend(wanted_words(&resolver::base_letters(argument).to_lowercase()).words)
+    }
+  });
+  UNREAD.with_borrow(|unread| {
+    wanted
+      .words
+      .extend(wanted_words(&resolver::base_letters(unread).to_lowercase()).words)
+  });
   SPILLED.with_borrow_mut(|spilled| {
     let words = std::mem::take(&mut spilled.words);
     for word in &words {
@@ -81,9 +108,13 @@ thread_local! {
 pub fn reset_title_page_check() {
   SPILLED.with_borrow_mut(|spilled| *spilled = SpilledWords::default());
   CALLED.with_borrow_mut(Vec::clear);
+  STORED.with_borrow_mut(Vec::clear);
+  UNREAD.with_borrow_mut(String::clear);
   NEXT_ID.set(0);
   reset_document_calls();
+  take_store_calls();
   definition::origin::watch_document_calls(true);
+  definition::origin::watch_store_calls(true);
   // (a conversion a caught panic ended inside an entry's digestion left the drop watch on: OD #953 "106t")
   definition::origin::watch_dropped_arguments(false);
 }
@@ -120,6 +151,277 @@ thread_local! {
   static CALLED: RefCell<Vec<CalledText>> = const { RefCell::new(Vec::new()) };
   /// The number the next record of `CALLED` takes.
   static NEXT_ID: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+  /// What each argument the document gave raw setters prints, this conversion's: the check's third source
+  /// ([`digest_raw_setter_calls`]).
+  static STORED: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+  /// The same of the setters whose stores only page furniture reads, or nothing ([`StoreReaders`]).
+  static UNREAD: RefCell<String> = const { RefCell::new(String::new()) };
+}
+
+/// The title page's furniture, which FIDELITY_CHARTER §2 does not keep: a page style, a running head or foot, a mark.
+fn is_page_furniture(name: &str) -> bool {
+  name.starts_with("\\ps@")
+    || matches!(
+      name,
+      "\\@oddhead"
+        | "\\@evenhead"
+        | "\\@oddfoot"
+        | "\\@evenfoot"
+        | "\\@mkboth"
+        | "\\markboth"
+        | "\\markright"
+    )
+}
+
+/// Who reads what in the macros a raw class, a raw file of the document's own directory or the document itself made, the
+/// refused ones' records (`\lx@dropped@maketitle`) among them: a control sequence's readers, by name. A name a writer
+/// writes is no read of it, and what a writer puts into page furniture is the furniture's
+/// (`\def\@oddhead{\@jvol}` in a `\maketitle` reads nothing).
+struct StoreReaders(HashMap<String, Vec<String>>);
+
+impl StoreReaders {
+  /// The readers as the title page finds them, before a `\maketitle` nulls its own code.
+  fn now() -> Self {
+    let mut readers: HashMap<String, Vec<String>> = HashMap::default();
+    let raw = current_meanings_where(|stored| {
+      matches!(stored, Stored::Expandable(d)
+        if d.made_in_own_file || d.get_origin() == definition::origin::DefinitionOrigin::Document)
+    });
+    for (name, stored) in raw {
+      let Stored::Expandable(macro_) = stored else {
+        continue;
+      };
+      let Some(ExpansionBody::Tokens(body)) = macro_.get_expansion() else {
+        continue;
+      };
+      let reader = with(name, ToString::to_string);
+      let body = body.unlist_ref();
+      let mut at = 0;
+      while at < body.len() {
+        let token = &body[at];
+        at += 1;
+        if token.get_catcode() != Catcode::CS {
+          continue;
+        }
+        let writer = token.with_str(|text| {
+          definition::expandable::WRITERS_OF_NAMES.contains(&text)
+            || matches!(text, "\\renewcommand" | "\\newcommand" | "\\providecommand")
+        });
+        if writer {
+          let Some((name, value)) = definition::expandable::written_store_name(body, at) else {
+            continue;
+          };
+          at = value;
+          if name.is_some_and(|name| name.with_str(is_page_furniture)) {
+            if token.with_str(|text| text == "\\let") {
+              // (`\let\@oddhead\@myhead`: the value, one token, the furniture's; an `=` before it aside)
+              while body
+                .get(at)
+                .is_some_and(|t| t.get_catcode() != Catcode::CS && t.get_catcode() != Catcode::END)
+              {
+                at += 1;
+              }
+              at += 1;
+            } else if let Some((_, to)) = definition::expandable::value_group(body, at, token) {
+              at = to;
+            }
+          }
+          continue;
+        }
+        if token.with_str(|text| matches!(text, "\\markboth" | "\\markright")) {
+          // (a mark's arguments are the head's)
+          while body
+            .get(at)
+            .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+          {
+            match definition::expandable::value_group(body, at, token) {
+              Some((_, to)) => at = to + 1,
+              None => break,
+            }
+          }
+          continue;
+        }
+        if token.with_str(|text| matches!(text, "\\includegraphics" | "\\epsfig" | "\\href")) {
+          // (its first required argument is a file's name or a link's target: no text on the page,
+          // `perfect_kernel_batch77i::store_in_an_image_path_or_link_target_is_not_printed`)
+          if let Some(open) = body[at..]
+            .iter()
+            .position(|t| t.get_catcode() == Catcode::BEGIN)
+            && let Some((_, to)) = definition::expandable::value_group(body, at + open, token)
+          {
+            at = to + 1;
+          }
+          continue;
+        }
+        let read = token.with_str(ToString::to_string);
+        let of = readers.entry(read).or_default();
+        if of.last() != Some(&reader) {
+          of.push(reader.clone());
+        }
+      }
+    }
+    Self(readers)
+  }
+
+  /// Does code other than the setter `setter` and page furniture read the store `store`: is it read, up the readers, by a
+  /// macro nothing reads that is no furniture? Such a macro is the class's title page, or any code of the class's the
+  /// conversion does not run; a store read by none, or by furniture alone, no title page prints.
+  fn reads(&self, store: &str, setter: &str) -> bool {
+    let root = self.root_reader(store, setter);
+    DebugFeature!(
+      "frontmatter",
+      "FRONT {store} of {setter} is read by the root {root:?}"
+    );
+    root.is_some()
+  }
+
+  /// The macro nothing reads that [`Self::reads`] found.
+  fn root_reader(&self, store: &str, setter: &str) -> Option<String> {
+    let mut seen: HashSet<&str> = HashSet::default();
+    let mut stack = vec![store];
+    while let Some(name) = stack.pop() {
+      for reader in self.0.get(name).into_iter().flatten() {
+        if reader == setter
+          || is_page_furniture(reader)
+          || definition::expandable::is_scratch_name(reader)
+          || !seen.insert(reader)
+        {
+          continue;
+        }
+        if self.0.get(reader.as_str()).is_none_or(Vec::is_empty) {
+          return Some(reader.clone());
+        }
+        stack.push(reader);
+      }
+    }
+    None
+  }
+}
+
+/// The title page is about to be made (`\lx@deposit@maketitle`, `\lx@note@title@page`, a binding's `\maketitle`'s
+/// `\lx@frontmatterhere`), first here: what the document gave the raw setters so far (`state::take_store_calls`) is
+/// digested once, speculatively, each stored argument read by [`ink_word_text`], and no later call is watched
+/// (`origin::watch_store_calls`: pdflatex's title page has read them, and the body's macro calls pay nothing). None when
+/// the authors are sealed, a supplement's title page after the body began. A document with no title page wants none: a
+/// store nothing typesets prints nothing.
+pub fn digest_raw_setter_calls() -> Result<()> {
+  if lookup_bool("lx_depositing_class_maketitle") || lookup_bool("lx_replaying_class_setter") {
+    return Ok(());
+  }
+  definition::origin::watch_store_calls(false);
+  let StoreCalls {
+    calls,
+    dropped,
+    dropped_setters,
+  } = take_store_calls();
+  if (calls.is_empty() && dropped == 0) || frontmatter_entry_sealed("ltx:creator", "author") {
+    return Ok(());
+  }
+  if dropped != 0 {
+    let setters: Vec<String> = dropped_setters.iter().map(ToString::to_string).collect();
+    Info!(
+      "frontmatter",
+      "store_calls_dropped",
+      s!(
+        "The title-page check read the first {STORE_CALLS_KEPT} calls of raw setters and left out {dropped} later one(s), of {}",
+        setters.join(" ")
+      )
+    );
+  }
+  let readers = StoreReaders::now();
+  let (mut read_arguments, mut unread) = (Vec::new(), String::new());
+  for StoreCall { cs, stored, args, keys } in calls {
+    let setter = cs.with_str(ToString::to_string);
+    let read = stored.written_out
+      || stored
+        .stores
+        .iter()
+        .any(|store| store.with_str(|store| readers.reads(store, &setter)));
+    DebugFeature!(
+      "frontmatter",
+      "FRONT {setter} stores into {:?}, whose readers: {:?}",
+      stored
+        .stores
+        .iter()
+        .map(ToString::to_string)
+        .collect::<Vec<_>>(),
+      stored
+        .stores
+        .iter()
+        .map(|store| store.with_str(|store| readers.0.get(store).cloned()))
+        .collect::<Vec<_>>()
+    );
+    for tokens in args {
+      DebugFeature!(
+        "frontmatter",
+        "FRONT the check digests what {cs} stores{}: {tokens}",
+        if read { "" } else { " (unread)" }
+      );
+      if let Some(printed) = argument_print(cs, tokens)? {
+        if read {
+          read_arguments.push(printed);
+        } else {
+          unread.push('\n');
+          unread.push_str(&printed);
+        }
+      }
+    }
+    // (a key's words have a record, no count)
+    for tokens in keys {
+      if let Some(printed) = argument_print(cs, tokens)? {
+        unread.push('\n');
+        unread.push_str(&printed);
+      }
+    }
+  }
+  let words = wanted_words(
+    &resolver::base_letters(&s!("{}\n{unread}", read_arguments.join("\n"))).to_lowercase(),
+  )
+  .words;
+  SPILLED.with_borrow_mut(|spilled| {
+    if let Some(wanted) = spilled.wanted.as_mut() {
+      wanted.words.extend(words);
+    }
+  });
+  STORED.with_borrow_mut(|stored| stored.extend(read_arguments));
+  UNREAD.with_borrow_mut(|stored| stored.push_str(&unread));
+  Ok(())
+}
+
+/// How many tokens of an argument no run could read [`argument_print`] names in its Info.
+const UNREAD_ARGUMENT_HEAD: usize = 40;
+
+/// What the argument `tokens` of `cs` prints, digested once, speculatively, as the title page's run is (sect05.rs
+/// `speculative_word_run`), a note's text set apart from the text around its mark as its footnote prints it (jmlr's
+/// `\titletag{\thanks{Published as an article in …}}`, 2211.07413): none when no run can be made or kept, said in an
+/// Info with the size of what was left out.
+fn argument_print(cs: Token, tokens: Tokens) -> Result<Option<String>> {
+  let size = tokens.unlist_ref().len();
+  let head = Tokens::new(
+    tokens
+      .unlist_ref()
+      .iter()
+      .take(UNREAD_ARGUMENT_HEAD)
+      .copied()
+      .collect(),
+  );
+  let mut run = vec![T_BEGIN!()];
+  run.extend(mouth::tokenize_internal(DROPPED_THANKS).unlist());
+  run.extend(tokens.unlist());
+  run.push(T_END!());
+  Ok(match speculative_word_run(Tokens::new(run))? {
+    SpeculativeRun::Printed(printed) => Some(printed),
+    _ => {
+      Info!(
+        "frontmatter",
+        "unread_argument",
+        s!(
+          "The title-page check could not read {cs}'s argument of {size} token(s), which it leaves out: {head}"
+        )
+      );
+      None
+    },
+  })
 }
 
 /// The frontmatter API removes the entries `tag` (of role `role`, when given) queued before (`queue.rs`
@@ -294,13 +596,7 @@ pub fn end_frontmatter_entry_digestion(
       "frontmatter",
       "FRONT the check digests {cs}'s #{number}, which no entry digests: {tokens}"
     );
-    // (a note's text set apart from the text around its mark, as its footnote prints it: jmlr's
-    // `\titletag{\thanks{Published as an article in …}}`, 2211.07413)
-    let mut run = vec![T_BEGIN!()];
-    run.extend(mouth::tokenize_internal(DROPPED_THANKS).unlist());
-    run.extend(tokens.unlist());
-    run.push(T_END!());
-    if let SpeculativeRun::Printed(printed) = speculative_word_run(Tokens::new(run))? {
+    if let Some(printed) = argument_print(cs, tokens)? {
       text.push('\n');
       text.push_str(&printed);
     }
@@ -326,7 +622,44 @@ fn record_mut(called: &mut [CalledText], id: usize) -> Option<&mut CalledText> {
   called.get_mut(at)
 }
 
-/// Does one of the arguments of the calls `written` hold the tokens `tokens` as written, its spaces at either end aside?
+/// How deep [`writes`] reads the bodies of the document's macros an argument names.
+const WRITES_DEPTH: usize = 3;
+/// How many tokens of such bodies [`writes`] reads for one argument.
+const WRITES_TOKENS: usize = 4096;
+
+/// Does `list` hold the tokens `tokens`, or, `depth` deep and within `budget` tokens, the body of a macro of the
+/// document's it names ([`writes`])?
+fn holds_written(list: &[Token], tokens: &[Token], depth: usize, budget: &mut usize) -> bool {
+  if list.windows(tokens.len()).any(|window| window == tokens) {
+    return true;
+  }
+  depth > 0
+    && list.iter().any(|name| {
+      if !name.get_catcode().is_active_or_cs() {
+        return false;
+      }
+      let Some(Stored::Expandable(macro_)) = lookup_meaning(name) else {
+        return false;
+      };
+      if macro_.get_origin() != definition::origin::DefinitionOrigin::Document {
+        return false;
+      }
+      let Some(ExpansionBody::Tokens(body)) = macro_.get_expansion() else {
+        return false;
+      };
+      let body = body.unlist_ref();
+      let Some(left) = budget.checked_sub(body.len()) else {
+        return false;
+      };
+      *budget = left;
+      holds_written(body, tokens, depth - 1, budget)
+    })
+}
+
+/// Does one of the arguments of the calls `written` hold the tokens `tokens` as written, its spaces at either end aside,
+/// directly or in the body of a macro of the document's it names, bounded ([`WRITES_DEPTH`], [`WRITES_TOKENS`]): the
+/// grade `\newcommand{\SeMieee}{\IEEEmembership{, Senior Member,~IEEE}}` writes, called in `\author` (2503.14354;
+/// the drop is Perl's too, IEEEtran.cls.ltxml:143).
 fn writes(written: &[CallArguments], tokens: &Tokens) -> bool {
   let tokens = tokens.unlist_ref();
   let space = |token: &Token| token.get_catcode() == Catcode::SPACE;
@@ -339,11 +672,13 @@ fn writes(written: &[CallArguments], tokens: &Tokens) -> bool {
     .map_or(start, |end| end + 1);
   let tokens = &tokens[start..end];
   written.iter().flat_map(|call| call.iter()).any(|argument| {
-    argument
-      .tokens
-      .unlist_ref()
-      .windows(tokens.len())
-      .any(|window| window == tokens)
+    let mut budget = WRITES_TOKENS;
+    holds_written(
+      argument.tokens.unlist_ref(),
+      tokens,
+      WRITES_DEPTH,
+      &mut budget,
+    )
   })
 }
 
@@ -1044,6 +1379,22 @@ pub fn check_title_page_words(document: &Document) -> Result<()> {
       printed.push_str(&call.text);
     }
   });
+  // (and after them what the raw setters were given, the third source: [`digest_raw_setter_calls`]; its words alone named
+  // apart)
+  let called_end = printed.len();
+  STORED.with_borrow(|stored| {
+    for argument in stored {
+      printed.push(INK_INSERT);
+      printed.push_str(argument);
+    }
+  });
+  let read_end = printed.len();
+  UNREAD.with_borrow(|stored| {
+    if !stored.is_empty() {
+      printed.push(INK_INSERT);
+      printed.push_str(stored);
+    }
+  });
   if printed
     .trim_matches(|c: char| c.is_whitespace() || c == INK_INSERT)
     .is_empty()
@@ -1112,9 +1463,69 @@ pub fn check_title_page_words(document: &Document) -> Result<()> {
     lookup_string(CONTENT_FILES).replace('\0', ", "),
     lookup_string("SOURCEDIRECTORY")
   );
+  let words_of = |text: &str| wanted_words(&resolver::base_letters(text).to_lowercase()).words;
+  let printed_or_called = words_of(&printed[..called_end]);
+  let printed_called_or_read = words_of(&printed[..read_end]);
+  let (unclaimed, stored): (Vec<String>, Vec<String>) = unclaimed
+    .into_iter()
+    .partition(|word| printed_or_called.contains(word));
   let (lost, class): (Vec<String>, Vec<String>) = unclaimed
     .into_iter()
     .partition(|word| source.contains(word));
+  // (a word the print or the frontmatter commands name is theirs; of those stored alone, only what the document wrote; a
+  // number alone is a volume's, a page's, an identifier's far more often than a line of the title page, but an argument
+  // that yields a counted word prints it with that line: a postal code, 1011.2770, 2305.00867, 2605.02209)
+  let stored: Vec<String> = stored
+    .into_iter()
+    .filter(|word| source.contains(word))
+    .collect();
+  let has_letter = |word: &String| word.chars().any(char::is_alphabetic);
+  let counted: HashSet<&String> = stored
+    .iter()
+    .filter(|word| printed_called_or_read.contains(*word))
+    .chain(lost.iter())
+    .filter(|word| has_letter(word))
+    .collect();
+  let arguments: Vec<HashSet<String>> =
+    STORED.with_borrow(|stored| stored.iter().map(|argument| words_of(argument)).collect());
+  let with_a_counted_word = |word: &String| {
+    arguments
+      .iter()
+      .any(|argument| argument.contains(word) && argument.iter().any(|w| counted.contains(w)))
+  };
+  let (stored_alone, unread): (Vec<&String>, Vec<&String>) = stored.iter().partition(|word| {
+    printed_called_or_read.contains(*word) && (has_letter(word) || with_a_counted_word(word))
+  });
+  if !unread.is_empty() {
+    Info!(
+      "frontmatter",
+      "unread_store",
+      s!(
+        "{} word(s) of the document's stored by a raw class's command that only page furniture reads, or nothing, are not in the output: {}",
+        unread.len(),
+        unread
+          .iter()
+          .map(|word| word.as_str())
+          .collect::<Vec<_>>()
+          .join(" ")
+      )
+    );
+  }
+  if !stored_alone.is_empty() {
+    Warn!(
+      "frontmatter",
+      "unclaimed_store",
+      s!(
+        "{} word(s) of the document's stored by a raw class's command, which pdflatex may not print, are not in the output: {}",
+        stored_alone.len(),
+        stored_alone
+          .iter()
+          .map(|word| word.as_str())
+          .collect::<Vec<_>>()
+          .join(" ")
+      )
+    );
+  }
   if !lost.is_empty() {
     // (the words the frontmatter commands were given alone, not the print's, are said so)
     let print_words = wanted_words(&resolver::base_letters(&print).to_lowercase()).words;

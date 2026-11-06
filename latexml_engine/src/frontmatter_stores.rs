@@ -5192,16 +5192,6 @@ fn prints_a_character(t: &Token) -> bool {
 /// `\uppercasenonmath`, 2206.03779), and a macro the document only defines (`\newcommand\SL{\mathrm{SL}}`, which
 /// 2609.05055's title prints) is a shorthand, no store a setter fills. The net's candidates ([`net_candidates`]).
 fn stores_raw_code_writes() -> FxHashSet<SymStr> {
-  const WRITERS_OF_NAMES: &[&str] = &[
-    "\\def",
-    "\\gdef",
-    "\\edef",
-    "\\xdef",
-    "\\let",
-    "\\protected@edef",
-    "\\protected@xdef",
-    "\\g@addto@macro",
-  ];
   let mut raw: FxHashSet<SymStr> = FxHashSet::default();
   let mut ours: FxHashSet<SymStr> = FxHashSet::default();
   for (_, stored) in current_meanings_where(|stored| matches!(stored, Stored::Expandable(_))) {
@@ -5224,7 +5214,7 @@ fn stores_raw_code_writes() -> FxHashSet<SymStr> {
       if t.get_catcode() != Catcode::CS {
         continue;
       }
-      if cs_in(t, WRITERS_OF_NAMES)
+      if cs_in(t, definition::expandable::NET_WRITERS_OF_NAMES)
         && let Some(name) = body.get(i + 1)
         && name.get_catcode() == Catcode::CS
       {
@@ -5236,11 +5226,6 @@ fn stores_raw_code_writes() -> FxHashSet<SymStr> {
   }
   raw.retain(|name| !ours.contains(name));
   raw
-}
-
-/// Is `cs` a token register?
-fn is_token_register(cs: &Token) -> bool {
-  matches!(lookup_meaning(cs), Some(Stored::Register(ref r)) if matches!(r.register_type, RegisterType::Tokens))
 }
 
 /// The value the net hands on of the store `cs`: a parameterless macro's body, a token register's contents.

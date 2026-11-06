@@ -209,6 +209,8 @@ const FRONTMATTER_WATCH: u8 = 2;
 const DOCUMENT_CALL_WATCH: u8 = 4;
 /// [`watch_dropped_arguments`]' watch: the title-page check's (`state::note_dropped_argument`).
 const DROPPED_ARGUMENT_WATCH: u8 = 8;
+/// [`watch_store_calls`]' watch: the title-page check's (`state::note_store_call`).
+const STORE_CALL_WATCH: u8 = 16;
 
 /// Are frontmatter setter calls observed ([`watch_setter_calls`], [`watch_frontmatter_setter_calls`])? Read at every
 /// macro call, so a flag.
@@ -234,6 +236,9 @@ pub fn dropped_argument_watch() -> bool {
   SETTER_WATCH.with(|c| c.get()) & DROPPED_ARGUMENT_WATCH != 0
 }
 
+/// Is [`watch_store_calls`]' watch on, the gullet reading the document's text?
+pub fn store_call_watch() -> bool { SETTER_WATCH.with(|c| c.get()) & STORE_CALL_WATCH != 0 }
+
 /// Observe (`true`) or stop observing the required arguments a binding's macro drops (`state::note_dropped_argument`):
 /// while a frontmatter entry the document gave is digested (latexml_engine `title_page_check`); the watch it replaces.
 pub fn watch_dropped_arguments(on: bool) -> bool {
@@ -253,17 +258,26 @@ thread_local! {
   /// ([`note_document_mouth`]): the watch flag is set only while both hold, so no macro a package, a class or a
   /// binding's own text calls takes the watched path.
   static DOCUMENT_CALLS_WATCHED: Cell<(bool, bool)> = const { Cell::new((false, false)) };
+  /// Whether [`watch_store_calls`] is on: the watch flag is set only while the gullet reads a mouth of the document's
+  /// text too, and it is off from the title page on, so a call in the body pays nothing.
+  static STORE_CALLS_WATCHED: Cell<bool> = const { Cell::new(false) };
+  /// Whether a raw class or a raw file of the document's own directory is being read ([`note_reading_own_file`]).
+  static READING_OWN_FILE: Cell<bool> = const { Cell::new(false) };
 }
 
 /// Set the watch flag of [`watch_document_calls`] from `DOCUMENT_CALLS_WATCHED`.
 fn sync_document_call_watch() {
   let (on, document_mouth) = DOCUMENT_CALLS_WATCHED.with(Cell::get);
+  let stores = STORE_CALLS_WATCHED.with(Cell::get);
   SETTER_WATCH.with(|c| {
-    c.set(if on && document_mouth {
-      c.get() | DOCUMENT_CALL_WATCH
-    } else {
-      c.get() & !DOCUMENT_CALL_WATCH
-    })
+    let mut flags = c.get() & !(DOCUMENT_CALL_WATCH | STORE_CALL_WATCH);
+    if on && document_mouth {
+      flags |= DOCUMENT_CALL_WATCH;
+    }
+    if stores && document_mouth {
+      flags |= STORE_CALL_WATCH;
+    }
+    c.set(flags);
   });
 }
 
@@ -276,6 +290,24 @@ pub fn watch_document_calls(on: bool) {
   DOCUMENT_CALLS_WATCHED.with(|c| c.set((on, c.get().1)));
   sync_document_call_watch();
 }
+
+/// Observe (`true`) or stop observing the calls of the setters a raw class or a raw file of the document's own directory
+/// made (`state::note_store_call`): the title-page check's third source (latexml_engine
+/// `base_utilities::frontmatter::title_page_check`). On from a conversion's start until the title page; observed only
+/// while the gullet reads the document's text ([`note_document_mouth`]).
+pub fn watch_store_calls(on: bool) {
+  STORE_CALLS_WATCHED.with(|c| c.set(on));
+  sync_document_call_watch();
+}
+
+/// A raw file starts being read as definitions: is it a class or a file of the document's own directory
+/// (`binding::content::load_tex_definitions`)? What it says before the load is read, for its end. What a `\def` makes
+/// meanwhile is such a file's ([`crate::definition::expandable::Expandable::made_in_own_file`]): definitions record no
+/// source file of their own (their `locator` is a stub, Expandable.pm's is unported).
+pub fn note_reading_own_file(own: bool) -> bool { READING_OWN_FILE.with(|c| c.replace(own)) }
+
+/// Is a raw class or a raw file of the document's own directory being read ([`note_reading_own_file`])?
+pub fn reading_own_file() -> bool { READING_OWN_FILE.with(Cell::get) }
 
 /// The gullet's current mouth changed: does it read the document's own text (`Mouth::is_document_text`)?
 pub fn note_document_mouth(document_text: bool) {
@@ -404,9 +436,13 @@ pub fn reset_copy_provides() {
   STAND_IN_LOADER_OWN_CODE.with(|c| c.set(false));
   STAND_IN_BASE_CLASS.with(|c| c.set(false));
   // (the frontmatter observer's watch and the title-page check's are their own, set at their resets:
-  // `watch_frontmatter_setter_calls`, `watch_document_calls`, `watch_dropped_arguments`)
-  SETTER_WATCH
-    .with(|c| c.set(c.get() & (FRONTMATTER_WATCH | DOCUMENT_CALL_WATCH | DROPPED_ARGUMENT_WATCH)));
+  // `watch_frontmatter_setter_calls`, `watch_document_calls`, `watch_dropped_arguments`, `watch_store_calls`)
+  SETTER_WATCH.with(|c| {
+    c.set(
+      c.get()
+        & (FRONTMATTER_WATCH | DOCUMENT_CALL_WATCH | DROPPED_ARGUMENT_WATCH | STORE_CALL_WATCH),
+    )
+  });
   COPY_PROVIDES.with(|c| c.set(0));
   COPY_PROVIDES_STACK.with(|s| s.borrow_mut().clear());
 }

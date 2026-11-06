@@ -422,12 +422,17 @@ fn apa_numbered_authors_supersede_the_one_author_forms() {
 /// "More affiliations than authors defined").
 #[test]
 fn apa6_one_author_line_with_numbered_affiliations_carries_the_first() {
-  let xml = assert_elements(
+  // (the class's code reads the second affiliation's store where numbered names ask for it: told as a word pdflatex may
+  // not print, OD #953 "108b")
+  let xml = assert_elements_with(
     "\\documentclass[jou]{apa6}\n\\title{The Title}\n\\shorttitle{Short}\n\\author{Ann Author, Bob Builder}\n\
      \\twoaffiliations{1. First University}{2. Second Institute}\n\\abstract{Abs.}\n\\begin{document}\n\\maketitle\n\
      Text.\n\\end{document}\n",
     RAW,
-    (0, 0),
+    (0, 1),
+    &[
+      "unclaimed_store 2 word(s) of the document's stored by a raw class's command, which pdflatex may not print, are not in the output: second institute",
+    ],
     &[],
   );
   assert_eq!(

@@ -1376,6 +1376,7 @@ pub(crate) fn load() -> Result<()> {
   // only — no deposit, no net, nothing typeset — and only when no `\maketitle` noted a print (a later one supersedes it,
   // as a second `\maketitle` does).
   DefPrimitive!("\\lx@note@title@page", {
+    digest_raw_setter_calls()?;
     if !title_page_noted() {
       note_title_page_print()?;
     }
@@ -1386,6 +1387,8 @@ pub(crate) fn load() -> Result<()> {
   // empty centred paragraphs and a page break — dropped; bfhthesis's
   // degree/advisor block beside its captured `\@institution` is kept.
   DefPrimitive!("\\lx@deposit@maketitle", {
+    // (what the document gave the raw setters before this title page: the check's third source, read in this state)
+    digest_raw_setter_calls()?;
     // What the class's title page prints, decided by TeX: the speculative sentinel runs (frontmatter_stores.rs
     // `before_title_page_runs`), made in the state the deposit and the replay below meet.
     crate::frontmatter_stores::before_title_page_runs()?;
@@ -5208,6 +5211,7 @@ fn speculative_run(
   let Some(journal) = begin_assignment_journal() else {
     return Ok(SpeculativeRun::Unavailable);
   };
+  let _speculative = speculative_digestion();
   const FLAGS: [&str; 3] = [
     "lx_replaying_class_setter",
     "lx_depositing_frontmatter_fields",
