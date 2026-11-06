@@ -1,0 +1,22 @@
+% mechanism: a raw class's `\institute` store under authblk is no `\affil`: no `\AB@thenote` prints, so no author requests one (`thenote_affil`)
+% witness: 2610.36456 (xiaomi.cls, Feng Xie)
+% oracle:  pdflatex: 0 errors; "Ann Able1, Bob Baker2", "1 Univ A", "2 Univ B"
+% engines: rust int139c, 108a r2: Bob Baker holds Univ A too
+% expect:  0 errors; Ann Univ A, Bob Univ B
+% status:  RED (108a r2) -> GREEN (108a r3)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{xstore.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{xstore}[2026/01/01 stand-in]
+\LoadClass{article}
+\RequirePackage{authblk}
+\newcommand{\institute}[1]{\def\@institute{#1}}\institute{}
+\renewcommand{\maketitle}{\bgroup{\Large\@title\par}{\@author\par}{\@institute\par}\egroup}
+\end{filecontents*}
+\documentclass{xstore}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$}
+\institute{$^{1}$ Univ A\\ $^{2}$ Univ B}
+\maketitle
+Text.
+\end{document}

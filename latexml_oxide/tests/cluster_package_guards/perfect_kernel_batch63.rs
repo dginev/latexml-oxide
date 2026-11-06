@@ -2642,7 +2642,8 @@ fn ieee_grade_comma_before_a_break_continues_names() {
 
 /// 63m: a second line of two or more names under the names is more names (2308.07107), and a line of bare addresses
 /// is their emails, each to the name it spells (2401.15897, 2402.02746), else the block's, on the shared creator (user
-/// ruling R10 2026-10-20; 63m-77p r9 gave `staff@` to the last name). Repro
+/// ruling R10 2026-10-20; 63m-77p r9 gave `staff@` to the last name), but under an `\and` block of one name that name's, its
+/// column's only author (charter §4; 108a r3 `owns_its_lines`, 2609.05531: this row pinned `staff@` on the block). Repro
 /// sectioning-frontmatter/author_names_line_and_address_line.
 #[test]
 fn author_names_line_and_address_line() {
@@ -2655,8 +2656,7 @@ fn author_names_line_and_address_line() {
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Doe</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">dan.doe@a.edu</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve Elm</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. B</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">eve@b.edu</text></contact></creator>",
-      "<creator role=\"author\"><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">staff@b.edu</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve Elm</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. B</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">eve@b.edu</text></contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">staff@b.edu</text></contact></creator>",
     ],
   );
 }

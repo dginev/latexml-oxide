@@ -325,7 +325,8 @@ fn a_marked_email_print_goes_to_its_spellers() {
       "cat@y.org",
     ),
   ] {
-    let mark = if tex.contains("1*") { "*" } else { "†" };
+    // (a math star glued to its number shows as it prints, 108a r3 `keepsup_in_math`)
+    let mark = if tex.contains("1*") { "∗" } else { "†" };
     assert_eq!(
       default_mode_creators(&tex),
       owned(&[

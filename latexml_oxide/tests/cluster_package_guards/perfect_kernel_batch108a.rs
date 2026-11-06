@@ -7,6 +7,9 @@
 //! Round 2 (review rev108a): an Error that goes away goes because the output became right, else it stays. A line under the
 //! names that reads as a name is read only where the `\affil` next says so; a printed mark is shown where it prints or
 //! counted; a piece with no name is no person.
+//!
+//! Round 3 (review rev108a2): a printed glyph and an order stay as written, and a line or address its author's block owns
+//! stays there; whatever fails to read stays a counted Error.
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch84b::creators,
@@ -188,7 +191,7 @@ fn a_glued_mark_shows_as_it_prints() {
   );
   assert_eq!(
     converted(repro!("authblk_number_first_glued_mark_in_order"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup><sup xml:id="id2">*</sup></personname> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">2</sup></personname> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup><sup xml:id="id2">∗</sup></personname> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">2</sup></personname> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -198,11 +201,11 @@ fn a_glued_mark_shows_as_it_prints() {
 fn a_glued_mark_in_a_list_or_leading_a_line() {
   assert_eq!(
     converted(repro!("author_glued_mark_in_a_list"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> <contact name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">∗</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> <contact name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ Y</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
   assert_eq!(
     converted(repro!("author_glued_mark_labels_its_line"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">∗</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">∗</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -230,7 +233,7 @@ fn a_mark_that_stays_lost_is_counted() {
 fn a_piece_of_addresses_is_no_person() {
   assert_eq!(
     converted(repro!("authblk_address_piece_no_person"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Email: " role="email">ann@x.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Email: " role="email">bob@y.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="id1">ann@x.org</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Email: " role="email"><text font="typewriter" xml:id="id2">bob@y.org</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
   assert_eq!(
     converted(repro!("authblk_address_beside_name_no_person"), 0),
@@ -270,5 +273,127 @@ fn an_empty_marked_piece_is_the_blocks() {
   assert_eq!(
     converted(repro!("authblk_marked_first_piece_stays_the_lists"), 0),
     r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup>Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2"><text font="italic" xml:id="id2.1">2</text></sup>Univ Y</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id3"><sup xml:id="id3.1"><text font="italic" xml:id="id3.1.1">∗</text></sup>Corresponding author</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+}
+
+/// A star glued in math shows the `∗` it prints, in text the `*`, each mid-list in its place, the marks answered or not;
+/// 2505.11121, 2609.14365. Distinct: `keepsup_in_math`, `GluedPart`, the comma of `show_unanswered_marks`.
+#[test]
+fn a_glued_star_prints_as_written_in_its_place() {
+  let names = |tex: &str| -> Vec<Vec<String>> {
+    let (log, xml) = cli_conversion(tex, false);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    creators(&xml)
+  };
+  assert_eq!(
+    names(repro!("author_glued_math_star_shows_as_printed"))[0],
+    ["Ann Able 1,2 ∗", "affiliation=Univ A"]
+  );
+  assert_eq!(
+    names(repro!("author_glued_text_star_stays_a_text_star"))[0],
+    ["Ann Able 1,2 *", "affiliation=Univ A"]
+  );
+  assert_eq!(names(repro!("author_mid_list_glued_star_order"))[0], [
+    "Ann Able 1 ∗ ,2",
+    "affiliation=Univ A"
+  ]);
+  assert_eq!(names(repro!("author_mid_list_glued_star_answered")), [
+    vec!["Ann Able ∗", "affiliation=Univ A", "affiliation=Univ B"],
+    vec!["Bob Baker", "affiliation=Univ B"],
+  ]);
+}
+
+/// A row of addresses reads each address clean: no separator in a contact, a comma before the space none either
+/// (2505.22665), ties around the space or a comma ending the row neither (2610.06195, 2505.05785). Distinct: the join's
+/// `\quad`, `without_row_spacing`.
+#[test]
+fn a_row_of_addresses_reads_each_clean() {
+  assert_eq!(
+    converted(repro!("author_address_row_ties_and_end_comma"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">ann@x.org</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Email: " role="email"><text font="typewriter" xml:id="id2">bob@y.org</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+  assert_eq!(
+    converted(repro!("author_address_row_comma_before_the_space"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="e-mail: " role="email">ann@x.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="e-mail: " role="email">bob@y.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+}
+
+/// An `\and` block of one name owns every address under it, each in its own font (2609.05531): elimination stays inside
+/// the block; a piece space parts owns none (2404.19007). Distinct: `owns_its_lines`, the pieces of `address_tokens`.
+#[test]
+fn a_block_of_one_name_owns_its_addresses() {
+  // (the institution read as a name, a defect of both sides, holds no list)
+  assert_eq!(
+    converted(repro!("author_spaced_piece_owns_no_address_list"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Univ of Y</personname> </creator> <creator role="author"> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">zz1@x.org</text></contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id2">yy2@x.org</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+  assert_eq!(
+    converted(repro!("author_one_name_block_owns_its_addresses"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">zz3678@x.edu</text></contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id2">yy12@y.com</text></contact> </creator> <creator before=" " role="author"> <personname>Linda Naimi</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id3">lnaimi@x.edu</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+}
+
+/// A place right under an institution of the whole row goes with it (2609.30627, 2609.03842). Distinct: the row's carriers
+/// through `row_line_calls`, `reads_as_place`'s connectives.
+#[test]
+fn a_place_under_a_row_institution_stays_with_it() {
+  assert_eq!(
+    converted(
+      repro!("author_place_under_a_row_institution_stays_with_it"),
+      0
+    ),
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Dept of Statistics, Univ X</contact> <contact name="Affiliation: " role="affiliation">Seoul, Republic of Korea</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">able@x.edu</text></contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1"><text font="italic" xml:id="id2.1.1">∗</text></sup>Corresponding author</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Dept of Statistics, Univ X</contact> <contact name="Affiliation: " role="affiliation">Seoul, Republic of Korea</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id3">bbaker@y.edu</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+}
+
+/// A one-address line under a row its legend keeps apart goes by the row's names (2609.03842's `snhong@`); the two the
+/// order does not confirm stay the block's (OD #52(h)). Distinct: `shared_first` in `owners_of`.
+#[test]
+fn a_spelled_address_under_a_kept_apart_row_is_its_names() {
+  assert_eq!(
+    converted(repro!("author_kept_apart_row_spelled_address"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Soohyun Choi</personname> <contact name="Affiliation: " role="affiliation">Dept of Electronic Engineering, Hanyang University</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id1"><sup xml:id="id1.1"><text font="italic" fontsize="90%" xml:id="id1.1.1">∗</text></sup><text fontsize="90%" xml:id="id1.2">Equal contribution.</text></note> </creator> <creator before=" " role="author"> <personname>Seonvin Cho</personname> <contact name="Affiliation: " role="affiliation">Dept of Electronic Engineering, Hanyang University</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1"><text font="italic" fontsize="90%" xml:id="id2.1.1">∗</text></sup><text fontsize="90%" xml:id="id2.2">Equal contribution.</text></note> </creator> <creator before=" " role="author"> <personname>Songnam Hong</personname> <contact name="Affiliation: " role="affiliation">Dept of Electronic Engineering, Hanyang University</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id3">snhong@h.kr</text></contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="†" role="thanks" xml:id="id4"><sup xml:id="id4.1"><text font="italic" xml:id="id4.1.1">†</text></sup>Corresponding author.</note> </creator> <creator role="author"> <contact name="Email: " role="email"><text font="typewriter" xml:id="id5">petersun0221@h.kr</text></contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id6">seonbin0319@h.kr</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+}
+
+/// A macro printing a link alone among the pieces is no person: one name and the counted merge (2601.07891's `\githubrepo`),
+/// the Error falling only when the output is right. Distinct: `holds_a_macro_printing_a_link`.
+#[test]
+fn a_macro_printing_a_link_keeps_the_error() {
+  let (log, xml) = cli_conversion(
+    repro!("authblk_macro_printing_a_link_keeps_the_error"),
+    false,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert_eq!(
+    log.matches("Error:frontmatter:merged_creators").count(),
+    1,
+    "{log}"
+  );
+  assert_eq!(creators(&xml), vec![vec![
+    "Ann Able * Bob Baker X/KV X/press".to_string()
+  ]]);
+}
+
+/// A raw class's store under authblk is no `\affil`: no `\AB@thenote` prints, so no author requests entry 1 too
+/// (2610.36456's Feng Xie). Distinct: `thenote_affil` in the observer's reading.
+#[test]
+fn a_class_store_makes_no_printed_note() {
+  let (log, xml) = cli_conversion(repro!("authblk_class_store_makes_no_printed_note"), false);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), vec![
+    vec!["Ann Able".to_string(), "affiliation=Univ A".to_string()],
+    vec!["Bob Baker".to_string(), "affiliation=Univ B".to_string()],
+  ]);
+}
+
+/// The lost mark's Warning reads the number and the ORCID iD apart (2205.05709's `10000-0001-…`). Distinct: the message.
+#[test]
+fn a_lost_marks_warning_parts_the_orcid() {
+  let (log, _) = cli_conversion(repro!("author_lost_mark_message_parts_the_orcid"), false);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains(r#"The mark "1" (with the ORCID iD 0000-0001-8812-0565) an author requests"#),
+    "{log}"
   );
 }

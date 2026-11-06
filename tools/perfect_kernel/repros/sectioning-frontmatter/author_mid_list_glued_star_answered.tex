@@ -1,0 +1,14 @@
+% mechanism: a mid-list star whose marks entries answer: the marks ask for each, the star stays
+% witness: 2609.14365
+% oracle:  pdflatex: 0 errors; "Ann Able1∗,2", "Bob Baker2", "1Univ A 2Univ B"
+% engines: rust 108a r2: `*`
+% expect:  0 errors; Ann both entries and `∗`; Bob entry 2
+% status:  GREEN (108a r3; the sibling on the answered route)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1*,2}$, Bob Baker$^{2}$\\ $^{1}$Univ A\\ $^{2}$Univ B}
+\maketitle
+Text.
+\end{document}

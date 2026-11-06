@@ -680,6 +680,53 @@ fn email_commands_alone(line: &Tokens) -> bool {
   seen
 }
 
+/// Whether `stuff` holds a piece, parted as the kernel's author read parts its names and lines, that is one macro whose
+/// expansion prints a link alone (`\newcommand{\githubrepo}{\href{https://github.com/NVIDIA/kvpress}{{\faGithub}
+/// NVIDIA/kvpress}\xspace}`, `… \\ \begin{center} \hflink{…}{NVIDIA/KVzap}\quad \githubrepo \end{center}`, 2601.07891): no
+/// person, which the read cannot tell, a macro there reading as a name (`\AuthorOne \quad \AuthorTwo`). For a binding that
+/// reads an `\author` as one name otherwise, and counts the merge: authblk's.
+pub fn holds_a_macro_printing_a_link(stuff: &Tokens) -> bool {
+  let separators = author_group_splits()
+    .into_iter()
+    .chain(author_affil_splits())
+    .collect();
+  // (without an environment's `\begin{…}`/`\end{…}`, which no part of a piece's text is and which `split_tokens` leaves whole)
+  let v = stuff.unlist_ref();
+  let mut bare = Vec::with_capacity(v.len());
+  let mut at = 0;
+  while at < v.len() {
+    if (v[at] == T_CS!("\\begin") || v[at] == T_CS!("\\end")) && v.get(at + 1) == Some(&T_BEGIN!())
+    {
+      at = skip_group(v, at + 1);
+    } else {
+      bare.push(v[at]);
+      at += 1;
+    }
+  }
+  split_tokens(normalize_hspace_separators(Tokens::new(bare)), separators)
+    .iter()
+    .any(|piece| {
+      let mut printed = piece.unlist_ref().iter().filter(|t| **t != T_SPACE!());
+      let (Some(only), None) = (printed.next(), printed.next()) else {
+        return false;
+      };
+      only.get_catcode() == Catcode::CS
+        && matches!(lookup_definition_stored(only), Ok(Some(Stored::Expandable(definition)))
+        if definition.get_expansion().is_some_and(|body| match body {
+          ExpansionBody::Tokens(body) => {
+            let body: Vec<Token> = body
+              .unlist_ref()
+              .iter()
+              .filter(|t| **t != T_CS!("\\xspace"))
+              .copied()
+              .collect();
+            is_link_line(&Tokens::new(body))
+          },
+          _ => false,
+        }))
+    })
+}
+
 /// Whether a line of an author block prints an icon or a graphic and no word (`\orcidlink{…}`,
 /// `\includegraphics{…}`): every command on it an ORCID icon's, one whose arguments print no name
 /// ([`NON_PRINTING_ARGUMENTS`]) or a font's, one such at least, no text left. A macro might print a name (`\AuthorOne

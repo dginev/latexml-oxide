@@ -1179,15 +1179,18 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
         match above {
           Some(affils) => {
             for (at, line) in addresses.into_iter().enumerate() {
-              // (a row's addresses a space parts are the one line they print on, a list as `a@x~~~~b@y` is)
+              // (a row's addresses a space parts are the one line they print on: joined as they print, at the `\quad` no
+              // address text reaches, each keeping its font, [`address_tokens`]; the comma or semicolon ending a piece no
+              // part of its address: `e-mail: a@x, \quad b@y`, 2505.22665, whose second address read `˜˜ b@y`)
               match affils.last_mut() {
                 Some(last) if at == 0 && spaced && address_only_line(last) => {
-                  let mut joined = std::mem::take(last).unlist();
-                  joined.extend([T_SPACE!(), T_ACTIVE!('~'), T_ACTIVE!('~'), T_SPACE!()]);
+                  let mut joined = without_row_spacing(std::mem::take(last).unlist());
+                  joined.push(T_CS!("\\quad"));
                   joined.extend(line.unlist());
                   *last = Tokens::new(joined);
                 },
-                _ => affils.push(line),
+                // (`Alessio Brini\footnote{…} \quad \emph{alessio.brini@duke.edu}, \and …`, 2404.04962)
+                _ => affils.push(Tokens::new(without_row_spacing(line.unlist()))),
               }
             }
             // (and what comes after them is under the row as well — `… \\ a@x \quad b@y \\ Univ X`; a line of notes, a
@@ -1648,6 +1651,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
     // before the name, [`Collaborations`])
     let group_firsts: Vec<usize> = spans.iter().map(|(first, ..)| *first).collect();
     let mut collaboration_events: Vec<(usize, Option<usize>, Tokens)> = Vec::new();
+    let groups_with_lines: Vec<bool> = spans.iter().map(|(.., lines)| !lines.is_empty()).collect();
     for (group, (first, last, affils)) in spans.into_iter().enumerate() {
       let kept_apart = apart.get(group).copied().unwrap_or(false);
       // (the names a line under a group kept apart from the names before it prints under: its whole row — an
@@ -1658,6 +1662,17 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
       // 1503.08895's `\{aszlam,jase,robfergus\}@fb.com`); an address under one name alone, printed in its column,
       // that name's; any other the block's, `None` (user ruling R10 2026-10-20: an address no name spells is never
       // the last name's).
+      // (a group of one name under lines of its own, right after other lines or none: an `\and` block, printed in its own
+      // column, whose addresses are its name's, unless another name spells them — elimination stays inside it; `Michael
+      // Ray Johnson\\ … \\ \texttt{john3678@…} \quad \texttt{johnson.michael@…} \and Linda Naimi …`, 2609.05531, where
+      // `john3678@` went to the block. Not one after names with no lines of their own, whose addresses its lines may be:
+      // `Ann Able \and Bob Baker\\ \{aable,bbaker\}@x.edu`, 2409.18978; nor a piece horizontal space parts, in the row of
+      // those above: `Cornell University \hspace{8pt} University of Pennsylvania \\ … \\ \{nac86,…\}@cornell.edu`, 2404.19007,
+      // 2505.23367, 2609.33182, an institution read as a name)
+      let owns_its_lines = last == first
+        && !kept_apart
+        && row_starts.get(group).copied().unwrap_or(true)
+        && (group == 0 || groups_with_lines.get(group - 1).copied().unwrap_or(false));
       let owners_of = |addresses: &[&Tokens],
                        taken: &mut Vec<bool>,
                        unplaced: &mut Vec<(usize, usize)>,
@@ -1667,22 +1682,30 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
           .iter()
           .map(|address| address_text(address))
           .collect();
-        let whole_block = addresses.len() > last - first + 1 && name_keys.len() > 1;
+        let whole_block =
+          addresses.len() > last - shared_first + 1 && name_keys.len() > 1 && !owns_its_lines;
         let elsewhere_open = unplaced
           .iter()
           .enumerate()
           .any(|(at, (of, count))| at != line_at && (whole_block || *of == group) && *count > 0);
         let owners: Vec<Option<usize>> = if whole_block {
           owners_by_elimination(&name_keys, &texts, taken, elsewhere_open)
-        } else if last > first {
+        } else if owns_its_lines && addresses.len() > 1 {
+          texts
+            .iter()
+            .map(|text| spelled_owner(&name_keys, text))
+            .collect()
+        } else if last > shared_first {
+          // (under a group kept apart its whole row's names, as its other lines are: `… Songnam Hong$^{\dagger}$\\ … \\
+          // \texttt{snhong@…}\\ {\small $^{*}$Equal contribution. …}`, 2609.03842, where `snhong@` went to the block)
           owners_by_elimination(
-            &name_keys[first..=last],
+            &name_keys[shared_first..=last],
             &texts,
-            &taken[first..=last],
+            &taken[shared_first..=last],
             elsewhere_open,
           )
           .into_iter()
-          .map(|owner| owner.map(|at| first + at))
+          .map(|owner| owner.map(|at| shared_first + at))
           .collect()
         } else {
           vec![None; texts.len()]
@@ -1698,9 +1721,14 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
             .count();
         }
         let alone = last == first && !kept_apart && !whole_block;
+        // (a role mailbox in a list under one name of several is no person's, the block's: `\{eve, staff\}@b.edu`, R10)
+        let list_of_several = owns_its_lines && addresses.len() > 1 && name_keys.len() > 1;
         owners
           .into_iter()
-          .map(|owner| owner.or(alone.then_some(last)))
+          .zip(&texts)
+          .map(|(owner, text)| {
+            owner.or((alone && !(list_of_several && is_role_mailbox(text))).then_some(last))
+          })
           .collect()
       };
       // (a group kept from the names before it whose lines' symbols label institutions: placed by them, a line at a
@@ -1893,13 +1921,14 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
           // (under a row whose only symbol line is a legend: an institution every name's of the row, a legend its
           // symbol's carriers', any other line the block's, as under a row whose symbols label its institutions —
           // [`row_line_calls`]; user ruling R12 2026-10-20, 2609.24299, 2603.06578, the r6 re-review's finding 7)
+          let above = std::mem::take(&mut continuing.carriers);
           after_bodies[last].extend(row_line_calls(
             &line,
             &row_symbols,
             row.clone(),
             &mut placed,
             &mut bodies,
-            &[],
+            &above,
             &mut continuing,
           )?);
           shared_before = true;

@@ -1,0 +1,14 @@
+% mechanism: a star glued mid-list prints between its marks (`glued_marks`): `1∗,2`
+% witness: 2609.14365 (`$^{1*,2,3}$`)
+% oracle:  pdflatex: 0 errors; "Ann Able1∗,2", "Bob Baker2", "Univ A"
+% engines: rust 108a r2: `1,2` then `*`; int139c matched
+% expect:  0 errors; `1`, `∗`, `,2`
+% status:  RED (108a r2) -> GREEN (108a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1*,2}$ \quad Bob Baker$^{2}$\\ Univ A}
+\maketitle
+Text.
+\end{document}

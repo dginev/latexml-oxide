@@ -189,9 +189,12 @@ fn author_call(label: Option<Tokens>, author: Tokens) -> Result<Tokens> {
 /// (`lines_under_names_read_as_names`: `Ann Able\\ Bob Baker`, `Ann Able\quad Bob Baker\\ Cat Cole`, `Ann Able\\ Google
 /// DeepMind`): the kernel's read would give the line to the names as their affiliation, silently, which is wrong as often
 /// as it is right, so the argument stays one name, the merge the document's Error counts (`flag_merged_creators`) —
-/// unless an `\affil` follows, [`lines_of_names_before_affil`].
+/// unless an `\affil` follows, [`lines_of_names_before_affil`]. So does a piece that is a macro printing a link alone
+/// (`holds_a_macro_printing_a_link`, 2601.07891): the read would make it a person, silently.
 fn has_separated_names(author: &Tokens) -> bool {
-  (has_author_block_separator(author) && !lines_under_names_read_as_names(author))
+  (has_author_block_separator(author)
+    && !lines_under_names_read_as_names(author)
+    && !holds_a_macro_printing_a_link(author))
     || whole_wrapper_content(author).is_some_and(|inner| has_separated_names(&inner))
 }
 

@@ -15,7 +15,8 @@ pub(in crate::base_utilities) fn line_is_email(line: &Tokens) -> bool {
   for t in line.unlist_ref() {
     if t.code == Catcode::LETTER || t.code == Catcode::OTHER {
       t.with_str(|s| visible.push_str(s));
-    } else if t.code == Catcode::SPACE {
+    } else if t.code == Catcode::SPACE || *t == T_CS!("\\quad") {
+      // (the `\quad` of a row of addresses, `dispatch`'s join, parts them as a space does)
       visible.push(' ');
     }
   }
@@ -62,11 +63,15 @@ pub(in crate::base_utilities) fn labelled_emails(
         .iter()
         .all(|item| line_is_email(item) || mailto_line(item).is_some())
     {
+      // (a tie after the comma parts them, no text of the address: `e-mail: a@x, ~~ b@y`)
       return Ok(Some((
         label,
         items
           .into_iter()
-          .map(|address| EmailAddress { address, call: None })
+          .map(|address| EmailAddress {
+            address: Tokens::new(without_row_spacing(address.unlist())),
+            call:    None,
+          })
           .collect(),
       )));
     }

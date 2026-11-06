@@ -272,6 +272,8 @@ fn reads_as_place(line: &Tokens) -> bool {
       let word = word.trim_matches(|c: char| !c.is_alphanumeric());
       word.is_empty()
         || NAME_PARTICLES.contains(&word)
+        // (`Seoul, Republic of Korea`, 2609.03842; `Bosnia and Herzegovina`)
+        || matches!(word, "of" | "the" | "and")
         || word
           .chars()
           .next()
@@ -313,8 +315,9 @@ pub(in crate::base_utilities) fn welded_layout(
 /// (`name_symbols`, by index, none for a name of another row), without it; a legend (`$^*$Corresponding author: …`) to
 /// the names carrying its symbol, whole, its mark naming them; an unmarked institution ([`reads_as_institution`]) to
 /// the carriers of the line above when that was one labelled institution alone ending in a comma (`above`), else to
-/// every name of the `row` (user ruling R12 2026-10-20); anything else — a note, a place, a symbol no name of the row
-/// carries — to the block (`label=addresses:block`, the shared creator of #159), never to one name for its place. Where
+/// every name of the `row` (user ruling R12 2026-10-20), a place right under such a line with it; anything else — a note,
+/// a place, a symbol no name of the row carries — to the block (`label=addresses:block`, the shared creator of #159), never
+/// to one name for its place. Where
 /// the group's labelled institutions run on over unmarked lines (`continuing.welded`, [`welded_layout`]), an unmarked
 /// institution or place ([`weldable_line`]) goes on with the carriers of the line above (2602.05059) — a note, an
 /// address or a link line not (2604.02904, 2602.03421) — and past the group's last labelled institution only where
@@ -408,10 +411,30 @@ pub(in crate::base_utilities) fn row_line_calls(
             || (!alone && institution_beside_labelled(&segment))) =>
       {
         if alone && !above.is_empty() {
+          // (a place on the line under one of the whole row goes on with it, below)
+          if above.iter().copied().eq(row.clone()) {
+            continuing.carriers = above.to_vec();
+          }
           (above.to_vec(), segment)
         } else {
+          if alone {
+            continuing.carriers = row.clone().collect();
+          }
           (row.clone().collect(), segment)
         }
+      },
+      // (a place right under an unmarked institution of the whole row is that institution's: `Dept of Statistics, Univ X
+      // \\ Nebraska, USA \\ \texttt{a@x} \qquad \texttt{b@y} \\ $^{*}$Corresponding author`, 2609.30627; `Seoul, Republic
+      // of Korea`, 2609.03842 — a place with nothing above it stays the block's)
+      None
+        if unmarked
+          && alone
+          && !above.is_empty()
+          && above.iter().copied().eq(row.clone())
+          && weldable_line(&segment) =>
+      {
+        continuing.carriers = above.to_vec();
+        (above.to_vec(), segment)
       },
       // (a marked piece no institution reads: the names carrying every mark of it, else the block's — never the row's)
       None if !unmarked => (

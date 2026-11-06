@@ -5,7 +5,9 @@
 % oracle:  pdflatex (TL 2025) unavailable: on this host every acmart document fails (a minimal `[sigconf,nonacm]` one reads
 %          back its log: 100 errors), the paper too; read against the witness's source
 % engines: int138a: the whole list in the affiliation's text; int139a: bmfu@ on Ann, Bob, Cat
-% expect:  0 errors; bmfu@ on Bob Fu alone; every other address on the author it spells
+% expect:  0 errors; each name its entry by its number; every other address on the author it spells; bmfu@ the block's, as
+%          `\textsuperscript{1}` reads the same list on int139c (108a r2 parts `*1`, so the entry is cut by its marks and Bob Fu
+%          is none of its carriers: 2412.13509's `hmfu@`, whose list elimination is open, SYNC 108a)
 \documentclass[sigconf,nonacm]{acmart}
 \begin{document}
 \title{T}

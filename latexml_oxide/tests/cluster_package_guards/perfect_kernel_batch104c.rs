@@ -58,8 +58,9 @@ fn a_control_return_parts_marked_entries() {
     )),
     [
       vec![
-        // (the glued star of `$^{1,2*}$` a superscript of its own since 108a r2, as `$^{1*}$`'s is: `glued_marks`)
-        "Ann Able 1,2 *",
+        // (the glued star of `$^{1,2*}$` a superscript of its own since 108a r2, its math glyph as printed: `glued_marks`,
+        // `keepsup_in_math`)
+        "Ann Able 1,2 ∗",
         "affiliation=1 Univ A , X",
         "affiliation=2 Univ B , X"
       ],

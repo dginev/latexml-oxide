@@ -361,7 +361,11 @@ impl Resolver {
     let note = tag == "ltx:note";
     let role = if role.is_empty() { "contact" } else { role };
     // (authblk: every `\affil` makes the next `\author` step the counter; a label shows the marks)
-    let thenote_affil = policy.thenote && role == "affiliation";
+    // (a raw class's store is no `\affil`, whatever class loaded authblk beside it: `\institute{$^{1}$ MiLM Plus …\\ $^{2}$
+    // Xi'an …}`, xiaomi.cls, sets `\AB@affillist` nothing, so no note prints; its labels made Feng Xie$^{2*}$, last of the
+    // `\author` call, request entry 1 too, 2610.36456)
+    let thenote_affil =
+      policy.thenote && role == "affiliation" && attr_value(attrs, "_store").is_none();
     if thenote_affil {
       self.thenote.newaffil = true;
       self.thenote.affil = true;

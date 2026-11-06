@@ -1,0 +1,14 @@
+% mechanism: a star glued to a mark in `\textsuperscript` shows the text `*` it prints
+% witness: 2505.11121 (the math sibling)
+% oracle:  pdflatex: 0 errors; "Ann Able1,2*" (text), "Bob Baker2"
+% engines: rust 108a r2: `*`
+% expect:  0 errors; `1,2` then `*`, as printed
+% status:  GREEN (108a r3; negative of author_glued_math_star_shows_as_printed)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{1,2*} \quad Bob Baker\textsuperscript{2}\\ Univ A}
+\maketitle
+Text.
+\end{document}

@@ -1761,6 +1761,39 @@ pinned the line inside the name and the merge.
   mark, is the block's (`unmarked_before_carried_marks`; ruling R12), the marked rest goes by its marks: UCLA is not on
   `Luo$^2$`. An author whose number no line answers keeps it shown.
 
+**Batch 108a round 3 (review rev108a2): a glyph and an order stay as written; a line or an address its author's block owns
+stays there.**
+- *The glyph (charter §4).* A star glued to a mark in math shows the `∗` it prints, its key `*` (`symbols::keepsup_in_math`):
+  `$^{1,2*}$`, `$^{1*}$` (2505.11121, 2202.12090, 2306.07841); `\textsuperscript{1,2*}` keeps its text `*`. A lone `$^{*}$`
+  keeps base's text `*`, a branch of its own.
+- *The order.* `glued_marks` keeps each part where it prints (`GluedPart`): `$^{1*,2,3}$` shows `1`, `∗`, `,2,3`, on the route
+  that keeps the math as on the route that shows unanswered marks (2609.14365). `$^{1*}$$^{2}$`, unanswered, reads `1∗,2`: a
+  comma it does not print, known and left (no real case read).
+- *A row of addresses.* The pieces a space parts join at a `\quad` (`dispatch`), the one separator no contact text reaches;
+  `email_lines::address_tokens` reads each piece as written, its own font and link (S1: 2609.05531; 27 papers flagged), and
+  the ties around it and the comma or semicolon it ends with are no text of an address (`without_row_spacing`: 2505.22665's
+  `˜˜`, 2610.06195, 2505.05785).
+- *The owner of a row.* By spelling, then by the list's order only where a spelled address on the same line confirms it: a row
+  on one line under three names with one spelled resolves whole (`\texttt{a@x} \quad \texttt{b@y} \quad \texttt{snhong@x}`);
+  the same addresses over two lines leave the two unspelled to the block (`owners_by_elimination`: nothing bounds them). So
+  `cpo@`/`ceo@` (2606.13556) resolve and 2609.16617 does not.
+- *An `\and` block of one name* (`owners_of`'s `owns_its_lines`) owns every address under it unless another name spells it;
+  elimination stays inside it (2609.05531's `john3678@`). One after names with no lines of their own stays the row's
+  (2409.18978's `\{rbohrer,aneth\}@`), and so does a piece space parts, an institution read as a name (2404.19007). A line under a row kept apart by its legend reads the whole row's names, a lone spelled
+  address its name's (2609.03842's `snhong@`).
+- *A place right under an unmarked institution of the row* goes with it (`row_line_calls`, `Continuing::carriers`; `Seoul,
+  Republic of Korea`, 2609.03842; `Nebraska, USA`, 2609.30627); a place with none above it stays the block's, R12.
+- *An Error falls only because the output is right.* A piece that is one macro printing a link alone keeps the argument one
+  name and the Error counted (`rows::holds_a_macro_printing_a_link`, 2601.07891's `\githubrepo`). A raw class's store is no
+  `\affil` in the observer's reading of `\AB@thenote` (`thenote_affil`, `_store`): 2610.36456's Feng Xie no longer requests
+  entry 1, under commas too.
+- *Settled, not changed.* A `\footnote` on a line under a sole author is a `pubnote` under authblk's kernel route as in plain
+  `article` and Perl's nesting (2605.13069, 2601.20363; 2610.07278's `\thanks` on three names): base's creator note came with
+  the merged name. `zhanfa@` (2606.04547) is spelled by no name: base's holder was the order among misread names, and with
+  `niwangze@` open (its author's row an affiliation in both) elimination holds. `\textsuperscript{*1}` asks for 1, so an entry
+  is cut by its marks and an address under it follows the numeric route's carriers (2412.13509: seven affiliations right,
+  `hmfu@` the block's, as `\textsuperscript{1}` on base; guard `batch107g`).
+
 Guards `perfect_kernel_batch108a` (10 more). Updated: `perfect_kernel_batch86d::ieee_membership_kept_after_closing_stop` and
 `perfect_kernel_batch104c::a_control_return_parts_marked_entries`, which pinned a printed star lost or welded to its list.
 
