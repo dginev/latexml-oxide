@@ -575,6 +575,9 @@ TL manuals) and the per-batch arXiv A/B; the cortex reruns of sandboxes 2605/260
 
 ## Secondary residuals & unranked active items
 
+### A `<p>` inside a transformed box's `<span>` (open; seen on 2610.06709, not root-caused)
+- `\resizebox`-style display math in an appendix prints `<div class="ltx_inline-block ltx_markedasmath ltx_transformed_outer"><span class="ltx_transformed_inner"><p>…`: 4 of the paper's 4 inner spans (`A6.Ex179.1`, `.Ex180.1`, `.Ex183.1`, `.Ex184.1`, on int139c). A `<p>` is not valid inside a `<span>`, and the outer box is already a `<div>`. Perl's output and the reach are unmeasured. Separate from the frontmatter nesting report (`HANDOFF.md`, batch 108a), whose authors block is well-formed.
+
 ### Open residuals of closed rows (R1, R2, R5; details in `archive/SYNC_SESSIONS_2026-09.md`)
 - **R1:** the 117-paper `TooManyErrors:MaxLimit(100)` cluster the seeds came from (2026-08-02 rerun) has not been
   re-measured; its seeds `2605.22927`, `2606.11121`, `2606.01136`, `2605.10685` are clean since 56ks3/56kt. The same
