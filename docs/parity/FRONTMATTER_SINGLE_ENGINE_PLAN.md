@@ -9,11 +9,13 @@ findings become their acceptance witnesses.
 
 ## The path, re-baselined and ruled (user 2026-11-06)
 
+**The goal (user 2026-11-06): "continue, and remove the old engine before the merge".** A single engine with the other's code deleted, for simplicity and compile time; the bar is not the only measure of this work. The batch table below reaches one decider and is being re-planned for full removal (`agent_reports/2026-11-06_engine_removal_report.md`); E3 and E4 are held until then, since they widen a writer whose DOM operations retire. **Where this section says something waits until after the merge, removal overrides it.**
+
 **This section supersedes the Stages table below where they differ.** Basis: `agent_reports/2026-11-06_engine_rebaseline_report.md`, all of dev3 converted with int139c with the observer on and off, scored with the frozen scorer (`fm_scorer/FROZEN.md`). Stages 0-7 never landed as stages; batches 99a-107g grew the old and post-writer layers about 7 times faster than the reading and the writer.
 
 **Measured:** the observer on 98.83 / 98.55 %, off 97.83 / 97.35 %, the reading alone 96.89 / 96.76 %. So the reading can't replace the old engine yet, and the decline gate can't simply open (blind opening +28 / -109 creators). Of dev3's 8,167 scored papers: both engines agree 78.5 %, written 6.6 %, part 1.8 %, declined with the old output standing 6.6 %, no block 4.8 %, no reading 1.2 %. One engine removes an estimated 15-28 % of the error mass; Coverage, Kind, Link and Cut, about a third of the tuned mass, remain for any engine.
 
-**The ruled path: measure, repair, open, invariant.** The reading is repaired, then the writer's re-part becomes the one decider. No emitter before the merge. The old pre-writer passes keep running, overwritten, so at merge there is one decider and not yet one executor; switching them off follows the merge.
+**The first half: measure, repair, open, invariant.** The reading is repaired before anything else, since no route can delete the old reader while the reading alone scores 2 points below the two together. The study's route stopped here at one decider, with the old pre-writer passes still running, overwritten; the removal ruling replaces that end point.
 
 | Batch | Mechanism | Files | Risk | Output | Witnesses |
 |---|---|---|---|---|---|
@@ -40,7 +42,7 @@ All gains above are counterfactual estimates until each batch's real write; per-
 
 **The truth set (user 2026-11-06):** the fresh holdout v4's measure comes with a truth set: every paper the frozen scorer flags plus about 500 it passes, each paper's authors, affiliations and e-mails recorded from the PDF and source alone by two independent agent reads, disagreements to the user. Labelling agents never see the converter's output or the scorer's verdict; the main session sees only counts. It measures false passes, which reading only flagged papers never finds.
 
-**Deferred past the merge:** Stage 1a's `Owner::Group` and `expand_conventions` (0.024 points), Stage 2's vocabulary, Stage 3's emitter, the old passes off with a byte-identical proof, Kind passes moved in, overflow positions, Stages 6-7, one signal read, R6, R10-R13, R15-R17.
+**The study's deferred list, under review for removal:** Stage 1a's `Owner::Group` and `expand_conventions` (0.024 points), Stage 2's vocabulary, Stage 3's emitter, the old passes off with a byte-identical proof, Kind passes moved in, overflow positions, Stages 6-7, one signal read, R6, R10-R13, R15-R17.
 
 ## The diagnosis
 
@@ -261,7 +263,7 @@ listed with its PDF evidence.
 | R2 | Pairing by position | Hand-printed numbers count everywhere (#918); bare position only under a declared `labelseq` | **RULED 2026-11-01: printed numbers only** |
 | R3 | Does a class convention ever outrank a mark? | No (a class's printed numbering is a label) | **RULED 2026-11-01: no** (with R1) |
 | R4 | Must every difference from today's output still carry a change tag, or does the ruled order license it, with the comparator kept as the census gate? | The ruled order licenses it (Stage 3 onward) | **RULED 2026-11-01: the ruled order licenses; 2026-11-06: E4 opens it shape by shape,** since opening it whole measures +8 / -38 creators |
-| R5 | The fallback when the reading is uncertain | The old reader until Stage 7, then the reading with the uncertain text whole | **RULED 2026-11-06: confirmed,** until after the merge |
+| R5 | The fallback when the reading is uncertain | The old reader until Stage 7, then the reading with the uncertain text whole | **RULED 2026-11-06: confirmed while the old reader exists; the removal ruling ends it before the merge** |
 | R6 | BESIII sub-labels: does `48A` request sub-entry (A) of entry 48? | Yes where entry 48 prints `(A)` sub-entries, else entry 48 whole | **TENTATIVE 2026-11-01** (main session, user away; revisit): as recommended, at Stage 4a (sub-items) |
 | R7 | revtex `\collaboration` / `\affiliation{(… Collaboration)}`: a contact (Perl's aastex) or a creator (Perl's revtex)? | A contact, as the 2026-11-01 collaboration ruling makes one for every collaboration; the same for an aa/llncs/svjour `\and` piece `X Collaboration:` (98a: a creator today, as base 97b) | **RULED 2026-11-06: a contact** (E3) |
 | R8 | Contact order within a creator | Print order (97d D1 chose it) | **RULED 2026-11-01: print order** |
