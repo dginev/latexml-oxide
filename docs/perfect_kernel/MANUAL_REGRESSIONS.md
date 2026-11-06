@@ -52,45 +52,45 @@ Status / errors at #149 → #150, in scope or canary. `in` manuals count against
 | annee-scolaire/annee-scolaire-eng | in | 1/E0 | 1/E0 | invalid | V |  | fixed, M2 C6 |
 | annee-scolaire/annee-scolaire-fra | in | 1/E0 | 1/E0 | invalid | V |  | fixed, M2 C6 |
 | beamerswitch/beamerswitch-example | in | 1/E0 | 2/E2 | status,errors,recall-lost | A | Error:undefined:\handoutlayout The token T_CS[\handoutlayout] is not defined. | fixed, M1 |
-| biblatex-arthistory-bonn/arthistory-bonn | canary | 3/E7 | 124/E6 | status | T | Error:missing_file:arthistory-bonn-preamble.tex Can't find TeX file arthistory-bonn-preamble.tex | |
-| biblatex-ms/biblatex-ms | canary | 2/E2 | 2/E3 | errors | ? | Error:undefined:{release} The environment {release} is not defined. | |
+| biblatex-arthistory-bonn/arthistory-bonn | canary | 3/E7 | 124/E6 | status | T | Error:missing_file:arthistory-bonn-preamble.tex Can't find TeX file arthistory-bonn-preamble.tex | External: its preamble file is not shipped |
+| biblatex-ms/biblatex-ms | canary | 2/E2 | 2/E3 | errors | ? | Error:undefined:{release} The environment {release} is not defined. | PARITY: a doubled `\begin{release}` |
 | bibleref-german/de-bibleref-german | canary | 2/E1 | 3/E0 | status,invalid | ? | Fatal:Timeout:Recursion  Infinite expansion loop: a window of 2 token(s) repeated 100+ times | fixed, M3 F5, 2/E1 |
 | bibleref-german/en-bibleref-german | canary | 2/E1 | 3/E0 | status,invalid | ? | Fatal:Timeout:Recursion  Infinite expansion loop: a window of 2 token(s) repeated 100+ times | fixed, M3 F5, 2/E1 |
 | bookcover/bookcover-example1 | canary | 0/E0 | 2/E5 | status,errors,recall-lost | A | Error:undefined:\newbookcovercomponenttype The token T_CS[\newbookcovercomponenttype] is not defined | fixed, M1 |
 | bookcover/bookcover-example2 | canary | 0/E0 | 2/E2 | status,errors,recall-lost | A | Error:undefined:{bookcover} The environment {bookcover} is not defined. | fixed, M1 |
 | bookest/bookestdoc-en | in | 0/E0 | 2/E5 | status,errors,recall-lost | A | Error:undefined:\setoddheadtext The token T_CS[\setoddheadtext] is not defined. | fixed, M1 |
 | bookest/bookestdoc-it | in | 1/E0 | 2/E4 | status,errors,recall-lost | A | Error:undefined:\setoddheadtext The token T_CS[\setoddheadtext] is not defined. | fixed, M1 |
-| bracketkey/Malva | canary | 0/E0 | 2/E61 | status,errors,recall-lost | ? | Error:unexpected:T_CS[\theindex] \theindex' invalid at this point | |
+| bracketkey/Malva | canary | 0/E0 | 2/E61 | status,errors,recall-lost | ? | Error:unexpected:T_CS[\theindex] \theindex' invalid at this point | PARITY: latex.ltx:10147-55 keeps the environment's `\theindex`; pdflatex Fatal |
 | cmpj/template | in | 1/E0 | 1/E0 | recall-drop 98.9→96.0 % | R |  | closed, i→і as serbian's j, no loss |
 | colorspace/colorspace | in | 0/E0 | 2/E8 | status,errors,recall-lost | ? | Error:unexpected:fooshaded Unrecognized color model 'fooshaded' | fixed, M2 C4 |
-| currency/currency_doc | canary | 2/E39 | 2/E41 | errors | ? | Error:undefined:\href The token T_CS[\href] is not defined. | |
+| currency/currency_doc | canary | 2/E39 | 2/E41 | errors | ? | Error:undefined:\href The token T_CS[\href] is not defined. | PARITY: pdflatex also has `\href`, `\pdfbookmark` undefined (216 `!`, hyperref.sty never loads); #149's log loaded hyperref beside an `mdframed` binding since gone |
 | datetime2-english/datetime2-english-sample | in | 0/E0 | 0/E0 | recall-drop 100.0→96.6 % | R |  | closed, the sweep's fixed date, no loss |
-| draftfigure/draftfigure | canary | 2/E24 | 2/E25 | errors | ? | Error:missing_file:draftfigure-preamble.tex Can't find TeX file draftfigure-preamble.tex | |
-| epslatex-fr/fepslatex | canary | 2/E10 | 2/E11 | errors | ? | Error:expected:{ Missing { inserted | |
+| draftfigure/draftfigure | canary | 2/E24 | 2/E25 | errors | ? | Error:missing_file:draftfigure-preamble.tex Can't find TeX file draftfigure-preamble.tex | External: `draftfigure-preamble.tex` is not shipped |
+| epslatex-fr/fepslatex | canary | 2/E10 | 2/E11 | errors | ? | Error:expected:{ Missing { inserted | External |
 | floatrow/floatrow-rus | canary | 3/E101 | 124/E52 | status | T | Error:latex:(caption) Package caption Error: The counter subtable' was already defined by | root-caused, M3: external, no deadline defect; 124/E52 |
 | gtrcrd/gtrcrd-doc | in | 0/E0 | 2/E6 | status,errors,recall-lost | A | Error:undefined:\setleftmark The token T_CS[\setleftmark] is not defined. | fixed, M1 |
 | ijsra/ijsra | in | 1/E0 | 2/E1 | status,errors,recall-lost | ? | Error:unexpected:\endlx@list Attempt to end mode internal_vertical | fixed, M2 C5 |
 | keytheorems/keytheorems-doc | in | 1/E0 | 2/E4 | status,errors,recall-lost | ? | Error:errmessage:\errmessage LaTeX template Error: The instance 'theoremblock-0' of type 'block' is | fixed, M2 C3 |
-| kotex-oblivoir/ob-mathleading-doc | canary | 2/E4 | 2/E5 | errors | ? | Error:undefined:\luatexkomainhangulfamily The token T_CS[\luatexkomainhangulfamily] is not defined. | |
+| kotex-oblivoir/ob-mathleading-doc | canary | 2/E4 | 2/E5 | errors | ? | Error:undefined:\luatexkomainhangulfamily The token T_CS[\luatexkomainhangulfamily] is not defined. | Parked with luatexko |
 | lineno/fnlineno | canary | 0/E0 | 2/E1 | status,errors,recall-lost | ? | Error:undefined:\3 The token T_CS[\3] is not defined. | fixed, M3 F5 |
-| ltxkeys/ltxkeys-guide | canary | 3/E27 | 3/E31 | errors | ? | Error:undefined:\ltscomment The token T_CS[\ltscomment] is not defined. | |
-| mathfont/mathfont-example-typey | canary | 2/E9 | 2/E10 | errors | ? | Error:latex:(mathfont) Package mathfont Error: | |
-| mdframed/mdframed-example-default | canary | 2/E44 | 2/E295 | errors | B | Error:undefined:\pdftex_if_engine:TF The token T_CS[\pdftex_if_engine:TF] is not defined. | |
-| mdframed/mdframed-example-pstricks | canary | 2/E44 | 2/E49 | errors | B | Error:undefined:\pdftex_if_engine:TF The token T_CS[\pdftex_if_engine:TF] is not defined. | |
-| mdframed/mdframed-example-texsx | canary | 2/E44 | 2/E292 | errors | B | Error:undefined:\pdftex_if_engine:TF The token T_CS[\pdftex_if_engine:TF] is not defined. | |
-| mdframed/mdframed-example-tikz | canary | 2/E44 | 2/E290 | errors | B | Error:undefined:\pdftex_if_engine:TF The token T_CS[\pdftex_if_engine:TF] is not defined. | |
+| ltxkeys/ltxkeys-guide | canary | 3/E27 | 3/E31 | errors | ? | Error:undefined:\ltscomment The token T_CS[\ltscomment] is not defined. | External: `amltxdoc.cls` is not shipped |
+| mathfont/mathfont-example-typey | canary | 2/E9 | 2/E10 | errors | ? | Error:latex:(mathfont) Package mathfont Error: | External |
+| mdframed/mdframed-example-default | canary | 2/E44 | 2/E295 | errors | B | Error:undefined:\pdftex_if_engine:TF The token T_CS[\pdftex_if_engine:TF] is not defined. | External: ltxmdf.cls:46 `\pdftex_if_engine:TF` is not in TL 2025; pdflatex 143 `!` by the same cascade |
+| mdframed/mdframed-example-pstricks | canary | 2/E44 | 2/E49 | errors | B | Error:undefined:\pdftex_if_engine:TF The token T_CS[\pdftex_if_engine:TF] is not defined. | External, as mdframed-example-default |
+| mdframed/mdframed-example-texsx | canary | 2/E44 | 2/E292 | errors | B | Error:undefined:\pdftex_if_engine:TF The token T_CS[\pdftex_if_engine:TF] is not defined. | External, as mdframed-example-default |
+| mdframed/mdframed-example-tikz | canary | 2/E44 | 2/E290 | errors | B | Error:undefined:\pdftex_if_engine:TF The token T_CS[\pdftex_if_engine:TF] is not defined. | External, as mdframed-example-default |
 | membranecomputing/membranecomputing | canary | 1/E0 | 2/E8 | status,errors,recall-lost | ? | Error:expected:{ Missing { inserted | fixed, M3 F1 |
-| memorygraphs/memorygraphs | canary | 2/E4 | 2/E5 | errors | ? | Error:latex:(latexgit) Package latexgit Error: invoke LaTeX with the -shell-escape flag         See  | |
+| memorygraphs/memorygraphs | canary | 2/E4 | 2/E5 | errors | ? | Error:latex:(latexgit) Package latexgit Error: invoke LaTeX with the -shell-escape flag         See  | External by its log: latexgit wants shell escape; pdflatex not run |
 | ndsu-thesis-2022/NDSU-Thesis-Extended | canary | 2/E1 | 2/E2 | errors | ? | Error:undefined:\iftotaltables The token T_CS[\iftotaltables] is not defined. | fixed, M3 F6, 2/E1 |
 | ndsu-thesis-2022/ndsu-example | canary | 1/E0 | 2/E1 | status,errors,recall-lost | ? | Error:undefined:\iftotaltables The token T_CS[\iftotaltables] is not defined. | fixed, M3 F6 |
 | non-decimal-units/non-decimal-units | canary | 2/E1 | 2/E22 | errors | ? | Error:latex:(csvsimple) Package csvsimple Error: File 'unicode-alphabets.MUFI    .csv' not existent, | M3 F9: content back, E14 external (tabularray-2021's int, pdflatex errs too) |
 | paresse/paresse-eng | in | 1/E0 | 1/E0 | invalid | V |  | fixed, M2 C6 |
 | paresse/paresse-fra | in | 1/E0 | 1/E0 | invalid | V |  | fixed, M2 C6 |
 | plweb/pl | canary | 2/E12 | 3/E0 | status | ? | Fatal:Stomach:Recursion  Excessive recursion(?): Tokens on stack: ["{", "\\lx@hidden@bgroup", "\\lx@ | fixed, M3 F4, 1/E0 (better than #149) |
-| pmhanguljamo/pmhanguljamo-kdoc | canary | 2/E5 | 2/E6 | errors | ? | Error:undefined:\luatexkomainhangulfamily The token T_CS[\luatexkomainhangulfamily] is not defined. | |
+| pmhanguljamo/pmhanguljamo-kdoc | canary | 2/E5 | 2/E6 | errors | ? | Error:undefined:\luatexkomainhangulfamily The token T_CS[\luatexkomainhangulfamily] is not defined. | Parked with luatexko |
 | prerex/chart | in | 0/E0 | 0/E0 | recall 100.0→51.0 % | R |  | fixed, M2 C7 |
 | profsio/ProfSio-doc-fr | in | 1/E0 | 2/E10 | status,errors,recall-lost | ? | Error:expected:{ Missing { inserted | fixed, M2 C2 |
-| pynotebook/pynotebook-examples-pitonpyluatex | canary | 2/E9 | 2/E10 | errors | ? | Error:latex:(PyLuaTeX) Package PyLuaTeX Error: Shell escape is required (add --shell-escape option)  | |
+| pynotebook/pynotebook-examples-pitonpyluatex | canary | 2/E9 | 2/E10 | errors | ? | Error:latex:(PyLuaTeX) Package PyLuaTeX Error: Shell escape is required (add --shell-escape option)  | External by its log: PyLuaTeX wants shell escape; pdflatex not run |
 | serbian-def-cyr/proba | in | 0/E0 | 0/E0 | recall 100.0→90.3 % | R |  | residual, recall 19 |
 | shipunov/sltables-doc-en | in | 1/E0 | 2/E11 | status,errors,recall-lost | ? | Error:unexpected:\omit \omit cannot be used here | fixed, M2 C1 |
 | simpler-wick/simpler-wick | canary | 1/E0 | 2/E1 | status,errors,recall-lost | ? | Error:unexpected:fi Didn't expect a "T_CS[\\fi]" since we seem not to be in a conditional | fixed, M3 F10 |
@@ -111,7 +111,7 @@ Status / errors at #149 → #150, in scope or canary. `in` manuals count against
 | tuzuk/oyd_tuzuk_2023 | canary | 0/E0 | 2/E2 | status,errors,recall-lost | ? | Error:unexpected:& Extra alignment tab '&' | |
 | typog/typog-example | canary | 124/E45 | 124/E46 | errors | T | Error:latex:(typog) Package typog Error: Patching plain LaTeX macro \itemize failed         See the  | |
 | tzplot/tzplot-doc | canary | 1/E0 | 124/E0 | status,recall-lost | T |  | |
-| urcls/URpagestyles-DEMO | canary | 3/E4 | 2/E25 | errors | ? | Error:misdefined:# The token "#" (catcode PARAM) should never reach Stomach! | |
+| urcls/URpagestyles-DEMO | canary | 3/E4 | 2/E25 | errors | ? | Error:misdefined:# The token "#" (catcode PARAM) should never reach Stomach! | Improvement: pdflatex hits the same `#` at l.649, 233 errors and a Fatal |
 | wheelchart/wheelchart | in | 1/E0 | 124/E0 | status,recall-lost | T |  | |
 | worldflags/worldflags | canary | 1/E0 | 124/E0 | status,recall-lost | T |  | |
 | yquant/yquant-doc | canary | 2/E203 | 2/E206 | errors | ? | Error:latex:(etoolbox) Package etoolbox Error: \bmod not a macro         See the etoolbox package do | fixed, M3 F3, 2/E202 |

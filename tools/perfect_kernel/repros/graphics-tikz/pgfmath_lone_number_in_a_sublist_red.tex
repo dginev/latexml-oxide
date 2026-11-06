@@ -1,0 +1,15 @@
+% mechanism: an array element that's a sublist of one number comes back as text (`pgfmath_code_tex.rs:1075` strips only `[Text]`).
+% witness: review revM3r2P1
+% oracle:  pdflatex 0 errors: 1, 1, 2, 3, 3.0
+% engines: rust int141a: 1, 1, 1, 1; M3, M3r2: `{{1}}`, `{{1}}`, `{{2}}`, `{{3}}`, 1.0 with a false Error
+% expect:  0 errors; the five values above
+% status:  RED
+\documentclass{article}
+\usepackage{pgfmath}
+\begin{document}
+\pgfmathparse{{{1},{2}}[0]}\pgfmathresult\par
+\pgfmathparse{{{1},2}[0]}\pgfmathresult\par
+\pgfmathparse{{1,{2}}[1]}\pgfmathresult\par
+\pgfmathparse{{{1,2},{3}}[1]}\pgfmathresult\par
+\pgfmathparse{{{1.5},{2}}[1]+1}\pgfmathresult\par
+\end{document}

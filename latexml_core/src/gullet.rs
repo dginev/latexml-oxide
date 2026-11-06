@@ -1350,6 +1350,8 @@ fn read_internal_token_full(mut sink: CommentSink) -> Result<CheckedRead> {
     if g.progress >= g.full_read_at {
       g.full_read_at = g.next_full_read();
     }
+    // (`next_due_read` stands in for these tests on the fast path, and `token_limit_tests::is_due` spells them: change
+    // all three together.)
     let rt = g.runtime.as_mut().unwrap();
     if let Some(limit) = g.token_limit
       && g.progress > limit

@@ -37,7 +37,7 @@ TARGET_CXXFLAGS = "-DHAVE_POSIX_MEMALIGN=1 -DZMQ_CACHELINE_SIZE=64"
 # normal flag instead of erroring as unknown.
 #
 # `-Zplt=yes`: a call to a function in this binary is a direct call. Without it, half of the binary's call sites
-# (515 K of 1.04 M) load their target from the GOT and call through memory. Same instructions, same output; cycles
+# (515 K of 1.04 M) load their target from the GOT and call through memory. Instructions within 0.2 %, same output; cycles
 # -1.5 to -2.2 % on TikZ, pgfplots and l3fp documents, median of 7 interleaved runs on a quiet core
 # (docs/performance/PERFORMANCE.md, 2026-11-06).
 [target.x86_64-unknown-linux-gnu]

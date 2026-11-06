@@ -1,0 +1,7 @@
+% mechanism: a spanned cell's `\SetCell` is taken by `tblr_span_cells` (tabularray_sty.rs:585) before the macro that counts its keys, so `preto` and `appto` there lose their text with no Warning (OD #976).
+% witness: review revM3r2P1
+% oracle:  pdflatex 0 errors: the cell prints W before a
+% engines: rust int141a, M3r2: W lost, no Warning
+% expect:  0 errors; W in the cell, or a counted Warning naming the key
+% status:  RED
+\documentclass{article}\usepackage{tabularray}\begin{document}\begin{tblr}{ll}\SetCell[c=2]{preto=W} a & \\ b & c\end{tblr} After.\end{document}

@@ -19175,7 +19175,7 @@ Rust 0 errors). **Open in Rust** (`gullet.rs` `read_until_brace`, left to the tr
 
 ## 1217. listings.sty.ltxml declares `lstlisting` at load, where the package waits for `\begin{document}`
 
-listings.sty:1604-1609 declares the counter and `\thelstlisting` `\AtBeginDocument`; listings.sty.ltxml:133 `NewCounter` runs at load. So a preamble's
+listings.sty:1604-1609 declares the counter and `\thelstlisting` `\AtBeginDocument`; listings.sty.ltxml:133 `NewCounter` runs at load. (Under Perl the trigger below needs `--includestyles`: by default it says "Can't find binding for tocloft", and `\newlistentry` is undefined.) So a preamble's
 test of the counter answers wrongly, and what the preamble does to it survives where LaTeX's hook overrides or refuses it. Minimal trigger:
 
 ```latex
