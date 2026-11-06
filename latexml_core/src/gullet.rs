@@ -1509,35 +1509,36 @@ fn read_internal_token_full(mut sink: CommentSink) -> Result<CheckedRead> {
 }
 
 impl Gullet {
-  /// The next value of `progress` at which a read has anything to do but pop a token ([`read_internal_token_full`]'s
-  /// tests, by the count alone): past the token limit, a multiple of the deadline's period, or in one of the cycle
-  /// guard's windows, phases 1..=`CYCLE_GUARD_DUTY_ON` of a period past its floor. 0 under `LATEXML_DEBUG_FATAL`,
-  /// whose ring records every token.
+  /// The next value of `progress` at which a read has anything to do but pop a token: [`next_due_read`], or 0 under
+  /// `LATEXML_DEBUG_FATAL`, whose ring records every token.
   fn next_full_read(&self) -> usize {
     if *DEBUG_FATAL {
       return 0;
     }
-    let read = self.progress;
-    let deadline = (read | DEADLINE_CHECK_MASK) + 1;
-    let limit = self
-      .token_limit
-      .map_or(usize::MAX, |limit| limit.saturating_add(1));
-    let guard = match read.checked_sub(self.cycle_guard_activate) {
-      None => self.cycle_guard_activate + 1,
-      Some(past) => {
-        let phase = past & (CYCLE_GUARD_DUTY_PERIOD - 1);
-        if phase < CYCLE_GUARD_DUTY_ON {
-          read + 1
-        } else {
-          read + (CYCLE_GUARD_DUTY_PERIOD - phase) + 1
-        }
-      },
-    };
-    deadline.min(limit).min(guard)
+    next_due_read(self.progress, self.token_limit, self.cycle_guard_activate)
   }
 }
 
-/// The gullet checks the conversion deadline once per this many token reads (a power of two, minus one).
+/// The first count past `read` at which [`read_internal_token_full`]'s tests have something to do, by the count alone:
+/// past the token `limit`, a multiple of the deadline's period, or in one of the cycle guard's windows, phases
+/// 1..=`CYCLE_GUARD_DUTY_ON` of a period past its `floor`.
+fn next_due_read(read: usize, limit: Option<usize>, floor: usize) -> usize {
+  let deadline = (read | DEADLINE_CHECK_MASK) + 1;
+  let limit = limit.map_or(usize::MAX, |limit| limit.saturating_add(1));
+  let guard = match read.checked_sub(floor) {
+    None => floor + 1,
+    Some(past) => {
+      let phase = past & (CYCLE_GUARD_DUTY_PERIOD - 1);
+      if phase < CYCLE_GUARD_DUTY_ON {
+        read + 1
+      } else {
+        read + (CYCLE_GUARD_DUTY_PERIOD - phase) + 1
+      }
+    },
+  };
+  deadline.min(limit).min(guard)
+}
+
 const DEADLINE_CHECK_MASK: usize = (1 << 16) - 1;
 
 /// TeX's limit on simultaneously open input files (`\input` files and `\scantokens` pseudo-files): `max_in_open`,
@@ -1770,6 +1771,7 @@ pub fn read_token_required(what: &str) -> Result<Option<Token>> {
   Ok(tok)
 }
 
+/// Gullet.pm `readToken` (L300-324); its loop is in `read_token_after`.
 pub fn read_token() -> Result<Option<Token>> {
   let first = read_internal_token_checked(CommentSink::Pending)?;
   // The usual token: no alignment is being read, so it ends no column, and it is no `\dont_expand`.
@@ -5394,6 +5396,77 @@ where FnR: FnOnce(Option<&mut Mouth>) -> R {
 #[cfg(test)]
 mod token_limit_tests {
   use super::*;
+
+  /// What [`read_internal_token_full`] tests per count, spelled as it spells them.
+  fn is_due(count: usize, limit: Option<usize>, floor: usize) -> bool {
+    limit.is_some_and(|limit| count > limit)
+      || count & DEADLINE_CHECK_MASK == 0
+      || (count > floor
+        && (1..=CYCLE_GUARD_DUTY_ON).contains(&((count - floor) & (CYCLE_GUARD_DUTY_PERIOD - 1))))
+  }
+
+  /// Runs `reads` counts from `start` as the read does, and fails if a due count takes the fast path. `change` is what
+  /// a writer of the limit or floor does at one count: sets them and resets `full_read_at`.
+  fn no_due_count_takes_the_fast_path(
+    start: usize,
+    reads: usize,
+    (mut limit, mut floor): (Option<usize>, usize),
+    change: Option<(usize, Option<usize>, usize)>,
+  ) {
+    let mut full_read_at = 0;
+    for count in start + 1..=start + reads {
+      if let Some((at, new_limit, new_floor)) = change
+        && count == at
+      {
+        (limit, floor, full_read_at) = (new_limit, new_floor, 0);
+      }
+      if count < full_read_at {
+        assert!(
+          !is_due(count, limit, floor),
+          "count {count} is due and took the fast path (start {start}, limit {limit:?}, floor {floor})"
+        );
+      } else {
+        full_read_at = next_due_read(count, limit, floor);
+      }
+    }
+  }
+
+  /// Around the limit, each multiple of the deadline's period and each window's edges.
+  #[test]
+  fn a_token_read_skips_only_what_is_not_due() {
+    let limits = [
+      None,
+      Some(0),
+      Some(5),
+      Some(65_535),
+      Some(65_536),
+      Some(65_537),
+      Some(70_000),
+    ];
+    let floors = [0, 1, 16_383, 16_384, 65_536, 100_000];
+    for start in [0, 16_380, 65_530, 65_535, 131_070] {
+      for limit in limits {
+        for floor in floors {
+          no_due_count_takes_the_fast_path(start, 140_000, (limit, floor), None);
+        }
+      }
+    }
+  }
+
+  /// A limit or floor changed mid-run: `set_token_limit`, `scale_token_limit_to_source`, `raise_cycle_guard_activate`.
+  #[test]
+  fn a_token_read_follows_a_limit_or_floor_changed_mid_run() {
+    for at in [1, 2_047, 2_048, 16_385, 65_536, 65_537] {
+      for (from, to) in [
+        ((Some(1_000_000), 100_000), (Some(70_000), 100_000)),
+        ((Some(70_000), 0), (None, 90_000)),
+        ((None, 200_000), (Some(at + 3), 200_000)),
+        ((None, 200_000), (None, at)),
+      ] {
+        no_due_count_takes_the_fast_path(0, 140_000, from, Some((at, to.0, to.1)));
+      }
+    }
+  }
 
   /// The runaway backstop grows with the bytes of EVERY opened source, not
   /// just the driver (source2e.tex: 15 KB over ~2 MB of `.dtx`).

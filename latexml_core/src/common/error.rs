@@ -1160,8 +1160,19 @@ macro_rules! NoteSTDERR {
 
 pub type Result<T> = result::Result<T, Error>;
 
-#[derive(Debug)]
 pub struct Error(Box<ErrorData>);
+
+/// As a plain struct would print, since this text reaches the log (`Warning:recovery:digest_internal`,
+/// `Error:document:convert`) and a panic message: the box is no part of what an error says.
+impl fmt::Debug for Error {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.debug_struct("Error")
+      .field("target", &self.target)
+      .field("category", &self.category)
+      .field("message", &self.message)
+      .finish()
+  }
+}
 
 /// What an [`struct@Error`] says. Boxed there so that a `Result` costs a pointer: the interpreter's hottest calls
 /// (`read_token`, `read_x_token`, an argument's read) return `Result`s, and at this struct's size each went through
@@ -1513,6 +1524,20 @@ pub fn note_end(_stage: &str) {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  /// The text the log carries (`Warning:recovery:digest_internal`, `Error:document:convert`) and a panic prints.
+  #[test]
+  fn an_error_debugs_as_a_plain_struct() {
+    let error = Error::from(ErrorData {
+      target:   ErrorTarget::Mouth,
+      category: ErrorCategory::Expected,
+      message:  "m".into(),
+    });
+    assert_eq!(
+      format!("{error:?}"),
+      r#"Error { target: Mouth, category: Expected, message: "m" }"#
+    );
+  }
 
   // These tests share a thread-local `REPORT`, so each test must
   // `initialize_report()` first. They must NOT run truly in parallel
