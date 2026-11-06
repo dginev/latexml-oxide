@@ -21,7 +21,7 @@ macro_rules! repro {
 
 /// An own call moves only to a strictly better full spelling, whichever part of it the holder's key is: a shared surname
 /// (0902.4311, 0907.3301, 1008.3764), the head of a longer spelling (rev107f2 finding 1, twice), a misread name's word
-/// (2107.06981); a tie keeps it (2511.18493); one printed under both stays on both (2502.15891). Distinct: `own_call_keeps`, read by both `respell_emails`.
+/// (2107.06981); a tie keeps it (2511.18493). Distinct: `own_call_keeps`, read by both `respell_emails`.
 #[test]
 fn an_own_call_moves_only_to_a_strictly_better_full_spelling() {
   assert_eq!(
@@ -48,10 +48,6 @@ fn an_own_call_moves_only_to_a_strictly_better_full_spelling() {
   assert_eq!(
     converted(repro!("email_own_call_misread_name_word_gives_way"), 0),
     r##"<title>T</title> <creator role="author"> <personname>Filippo Neri</personname> <contact name="Email: " role="email">filippo.neri.email@gmail.com</contact> </creator> <creator before=" " role="author"> <personname>DIETI</personname> </creator> <creator before=" " role="author"> <personname>University of Naples</personname> </creator> <creator before=" " role="author"> <personname>Italy. email</personname> </creator> <para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para>"##
-  );
-  assert_eq!(
-    converted(repro!("email_own_call_printed_under_both_stays_on_both"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Deborah Oliveira</personname> <contact name="Address: " role="address">IMPA, Rio</contact> <contact name="Email address: " role="email"><text font="typewriter" xml:id="id1">deborah.oliveira@impa.br</text></contact> </creator> <creator before=" and " role="author"> <personname>Roberto Oliveira</personname> <contact name="Address: " role="address">IMPA, Rio</contact> <contact name="Email address: " role="email"><text font="typewriter" xml:id="id2">deborah.oliveira@impa.br</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para>"##
   );
   assert_eq!(
     converted(repro!("email_own_call_tie_keeps_the_call"), 0),
@@ -169,5 +165,16 @@ fn an_address_starts_at_its_font() {
   assert_eq!(
     converted(repro!("addr_line_glued_word_before_a_font_of_its_own"), 0),
     r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Ann Able and Bob Baker are with Univ A, Town, China.</contact> <contact name="Email: " role="email"><text font="typewriter" fontsize="80%" xml:id="id1">aable@a.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Ann Able and Bob Baker are with Univ A, Town, China.</contact> <contact name="Email: " role="email"><text font="typewriter" fontsize="80%" xml:id="id2">bbaker@a.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Cy Coe</personname> <contact name="Affiliation: " role="affiliation">Cy Coe, corresponding author, is with Univ B, City, China.</contact> <contact name="Email: " role="email"><text font="typewriter" fontsize="80%" xml:id="id3">ccoe@b.edu</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+}
+
+/// A paper repeating its author block for a supplement copies no address onto the last creator (2307.07324, 1801.07635,
+/// 1810.03867, 2510.13035, 2001.07542, 2608.31160; the bundle int139b A/B): the second block's `\email` calls land there, and
+/// a copy the owner already holds is dropped. Distinct: the only guard of `respell_emails`' `held` branch.
+#[test]
+fn a_repeated_author_block_copies_no_address_onto_the_last_author() {
+  assert_eq!(
+    converted(repro!("email_repeated_author_block_for_a_supplement"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Email: " role="email">ann.able@x.org</contact> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Email: " role="email">bob.baker@y.org</contact> <contact name="Affiliation: " role="affiliation">Univ Y, City</contact> </creator> <abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">A.</p> </abstract> <para xml:id="p1"> <p xml:id="p1.1">Text. Supplement Ann Able Bob Baker More.</p> <pagination role="newpage"/> </para>"##
   );
 }

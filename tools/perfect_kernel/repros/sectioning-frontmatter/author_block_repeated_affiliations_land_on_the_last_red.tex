@@ -1,0 +1,32 @@
+% RED (found at bundle int139b; PRE-EXISTING, int138a gives the same): a paper repeating its author block for a supplement
+%   has the second block's `\affiliation` calls land on the last creator, as its `\email` calls do; the e-mails are moved back
+%   by spelling and deduplicated, the affiliations are not, so the last author holds every author's institute.
+% witness: 2307.07324, 2001.07542 (last author with 4 institutes); the shape of 1801.07635, 2510.13035
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: each \maketitle prints the block
+% engines: rust int138a, int139a: Bob Baker holds Univ Y, City and Univ X, Town
+% expect:  0 errors; Ann Able Univ X, Town; Bob Baker Univ Y, City only
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\email{ann.able@x.org}
+\affiliation{Univ X, Town}
+\author{Bob Baker}
+\email{bob.baker@y.org}
+\affiliation{Univ Y, City}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\clearpage
+\title{Supplement}
+\author{Ann Able}
+\email{ann.able@x.org}
+\affiliation{Univ X, Town}
+\author{Bob Baker}
+\email{bob.baker@y.org}
+\affiliation{Univ Y, City}
+\maketitle
+More.
+\end{document}

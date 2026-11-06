@@ -31890,9 +31890,11 @@ Liang's (1008.3764), `filippo.neri.email@` on the misread creator "Italy. email"
 call (`yhsheng@` on Husheng Yu's, no Xiangmin Shen's "shen", 2411.01273; `zhonggong.hc@` on Chao Huang's, no Wang Hong's
 "hong", 2609.11148), but for an address set after the last author, which no name's position claims, the holder's name not
 standing there even weakly (`tpengqy@` after Y. J. Shang is Q. Y. Peng's, 2004.06253; #420's count, 22 of 24 his;
-`kkwongar@` stays on Wong Kam-Kwai beside Hiu Tung Wong, 2608.26715). An address the better speller's own call printed too
-stays on both (§2 "duplicates the author printed stay": `deborah.oliveira@` under Deborah and under Roberto Oliveira,
-2502.15891); r2's rule had kept it by "oliveira opening a word".
+`kkwongar@` stays on Wong Kam-Kwai beside Hiu Tung Wong, 2608.26715). A copy the better speller already holds is dropped: `respell_emails` cannot tell a real duplicate printed under two own calls
+(`deborah.oliveira@` under Deborah and under Roberto Oliveira, 2502.15891; §2 "duplicates the author printed stay", RED
+`email_own_call_printed_under_both_stays_on_both_red`) from a repeated author block's calls landing on the last creator (2307.07324,
+1801.07635, 1810.03867; a "stays on both" rule left copies on about 18 papers in 28k, the bundle int139b A/B; guard
+`a_repeated_author_block_copies_no_address_onto_the_last_author`).; r2's rule had kept it by "oliveira opening a word".
 (3) A call made after `\maketitle` placed the frontmatter (`CONTACT_LATE`) restating a contact the creator holds from an
 earlier call is no contact of the upfront grid `distribute_upfront_contacts` reads: llncs's restated unlabelled second
 `\email` beside the first on the last author had read as a grid of one address per author, handing the first to Lv

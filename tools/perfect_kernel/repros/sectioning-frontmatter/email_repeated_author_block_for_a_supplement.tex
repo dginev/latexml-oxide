@@ -1,0 +1,29 @@
+% A paper repeating its author block for a supplement copies no address onto the last creator: the second block's `\email`
+%   calls land there, and a copy the owner already holds is dropped.
+% witness: 2307.07324, 1801.07635, 1810.03867, 2510.13035, 2001.07542, 2608.31160
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: each \maketitle prints the block with each author's own address
+% engines: rust int139a (107g's "stays on both" rule): Bob Baker holds ann.able@ too; int138a: right
+% expect:  0 errors; Ann Able ann.able@x.org; Bob Baker bob.baker@y.org; no copies
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\email{ann.able@x.org}
+\affiliation{Univ X, Town}
+\author{Bob Baker}
+\email{bob.baker@y.org}
+\affiliation{Univ Y, City}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\clearpage
+\title{Supplement}
+\author{Ann Able}
+\email{ann.able@x.org}
+\author{Bob Baker}
+\email{bob.baker@y.org}
+\maketitle
+More.
+\end{document}

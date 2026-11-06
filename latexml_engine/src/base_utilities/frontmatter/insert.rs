@@ -3746,13 +3746,15 @@ fn respell_emails(document: &mut Document) -> Result<()> {
       .findnodes("ltx:contact[@role='email']", Some(&authors[owner]))
       .iter()
       .any(|c| c.get_content().trim() == address.trim());
-    // (one the owner's own call printed too stays: duplicates the author printed stay, FIDELITY_CHARTER §2 — amsart's
-    // `\email{deborah.oliveira@…}` under Deborah and under Roberto Oliveira, 2502.15891)
+    // (a copy the owner already holds is dropped, not kept: a paper repeating its author block for a supplement lands the
+    // second block's `\email` calls on the last creator, 2307.07324, 1801.07635, 1810.03867, 2510.13035, 2001.07542,
+    // 2608.31160 — so "printed under both" cannot be told from that here, and 2502.15891's real duplicate reads as the base
+    // did: `email_own_call_printed_under_both_stays_on_both_red`, review of bundle int139b)
     if !held {
       let mut target = authors[owner].clone();
       document.append_clone(&mut target, vec![contact.clone()])?;
-      document.remove_node(contact);
     }
+    document.remove_node(contact);
   }
   Ok(())
 }

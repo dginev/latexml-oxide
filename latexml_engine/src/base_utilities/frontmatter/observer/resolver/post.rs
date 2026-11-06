@@ -594,15 +594,9 @@ impl Resolver {
     }
     let mut taken: Vec<(usize, Assoc)> = Vec::new();
     for &(c, i, owner) in moves.iter().rev() {
-      // (one the owner's own call printed too stays: duplicates the author printed stay, FIDELITY_CHARTER §2, 2502.15891)
-      let address = self.out.creators[c].contacts[i].text.trim().to_string();
-      let printed_there = self.out.creators[owner]
-        .contacts
-        .iter()
-        .any(|x| x.role == "email" && x.text.trim() == address);
-      if !printed_there {
-        taken.push((owner, self.out.creators[c].contacts.remove(i)));
-      }
+      // (a copy the owner already holds is dropped below, as `insert::respell_emails` drops it: a repeated author block's
+      // second `\email` calls land on the last creator, 2307.07324)
+      taken.push((owner, self.out.creators[c].contacts.remove(i)));
     }
     for (owner, mut assoc) in taken.into_iter().rev() {
       let held = self.out.creators[owner]
