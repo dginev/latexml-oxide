@@ -359,7 +359,7 @@ Basis: `perf stat -e instructions:u`, release, the TikZ audit's benchmarks (`~/d
 | P1i an argument's read apart from its rare cases; arguments read in place | -3.1 % | -1.3 % | -1.5 % | -0.6 % |
 | P1l `read_x_token`'s rare paths apart | -0.5 % | -0.1 % | -0.2 % | 0 |
 | P1m regex literals compiled once (`find_file_fallback`: three per lookup) | -0.2 % | -0.9 % | -0.9 % | -4.7 % |
-| **All** | **68.84 G, -22.6 %** | **11.96 G, -19.4 %** | **24.31 G, -23.6 %** | **3.91 G, -24.6 %** |
+| **All** | **69.31 G, -22.1 %** | **12.01 G, -19.1 %** | **24.54 G, -22.9 %** | **3.92 G, -24.5 %** |
 
 The article: 1.169 G → 1.080 G, -7.6 %. pgf-interference-en/-de: over 180 s on idle SMT siblings → 154 s with P1a and the since reverted P1b, on cores shared with bundle checks. The base's drift since 59q (`1be2a69de7`), the reason they had crossed the ceiling: fp1000 +6.2 %, fill1000 +12 %, addplot500 +12.8 %, by many small steps (`kit/perf_bisect.sh`, `kit/perf_bisect.py`); the largest single one, `ae89a0a8b0` +4.4 % with `ee3c2c6d9e` -2.5 % after it, is the frontmatter stamp on stored tokens.
 
