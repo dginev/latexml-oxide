@@ -27,12 +27,29 @@ LoadDefinitions!({
     // gets dynamic mid/post from current display style; bare form is always 'post'.
     // revert_as => 'context' so source-export emits the user-facing CS name
     // rather than the operatorname expansion. Both were previously dropped.
+    //
+    // Perl's presentation is `Invocation(T_CS('\operatorname'), $star, $text)`,
+    // which is also what the presentation branch reverts to, e.g., in the `tex`
+    // attribute of ltx:Math: `\operatorname{tr}`, `\operatorname*{arg\,min}`.
+    // The content branch (`content-tex`) reverts to the user's CS.
+    let content_toks = Tokens!(cs);
+    let presentation_toks = mouth::tokenize_internal(TeXString::assembled(format!(
+      "\\operatorname{}{{{text_str}}}",
+      if has_star { "*" } else { "" }
+    )));
     let opts = MathPrimitiveOptions {
       role: Some(if has_star { "OPERATOR" } else { "OPFUNCTION" }.to_string()),
       font: Some(fontmap!(family => "serif", series => "medium", shape => "upright").into()),
       scriptpos: if has_star { None } else { Some("post".to_string()) },
       dynamic_scriptpos: has_star,
       revert_as: Some(Cow::Borrowed("context")),
+      reversion: Some(Reversion::Closure(Rc::new(move |_whatsit, _args| {
+        Ok(if get_dual_branch().unwrap_or("content") == "content" {
+          content_toks.clone()
+        } else {
+          presentation_toks.clone()
+        })
+      }))),
       ..Default::default()};
     def_math(cs, None, text_str, opts)?;
   });

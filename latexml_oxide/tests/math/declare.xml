@@ -914,7 +914,7 @@
     </declare>
     <para xml:id="S6.p1">
       <equation xml:id="S6.Ex11">
-        <Math mode="display" tex="a\plus b;\baz,\foo{x},\foo{j}" text="list@(a + b, foo, foo@(x), foo@(j))" xml:id="S6.Ex11.m1">
+        <Math content-tex="a\plus b;\baz,\foo{x},\foo{j}" mode="display" tex="a+b;\baz,\foo{x},\foo{j}" text="list@(a + b, foo, foo@(x), foo@(j))" xml:id="S6.Ex11.m1">
           <XMath>
             <XMDual>
               <XMApp>
