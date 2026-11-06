@@ -14858,7 +14858,7 @@ no binding is interpreted raw, as TeX would. Every binding route still comes fir
 alternate (`class_binding_alternate`: Perl's prefix step, plus Rust's case-insensitive step; a shipped
 `IEEEtranTCOM.cls` keeps the IEEEtran binding), and ahead of them all the binding a path-prefixed class names by its
 basename, which Perl finds as the request's own file (`class_binding_for_path`, Package.pm:2125-2128; since 68d it is
-loaded silently, as in Perl: `misc/ieeetran.cls` keeps IEEEtran, 2105.02087) — and a class in TeX Live without a
+loaded silently, as in Perl: `misc/ieeetran.cls` keeps IEEEtran, 2105.02087; a name-prefix binding answers only an author's copy beside the document or a sibling shipped beside the binding's class, any other class of the distribution being read raw, `bookest` no `book`: sweep #150, `is_unrelated_distribution_class`) — and a class in TeX Live without a
 binding still fell to OmniBus (until 67v, below). Such a class is named by its basename, as LaTeX names it (latex.ltx:18740-18748
 `\@onefilewithoptions` splits the request into `\@currpath` and `\@currname`): `\documentclass{lib-acm/acmart}` gives
 `\@currname` = `acmart` and the loaded flag `acmart.cls_loaded`, so `\@ifclassloaded{acmart}` holds and

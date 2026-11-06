@@ -1,0 +1,10 @@
+% An author's copy beside the document under a name the binding's prefixes keeps the binding (OD #444, IEEEtranTCOM.cls).
+% witness: none here (2105.02087's shape); control for distribution_class_named_after_a_binding.tex
+% expect:  "Can't find binding for class bookofmine (using book)"
+\begin{filecontents*}[force]{bookofmine.cls}
+\ProvidesClass{bookofmine}
+\end{filecontents*}
+\documentclass{bookofmine}
+\begin{document}
+Body.
+\end{document}

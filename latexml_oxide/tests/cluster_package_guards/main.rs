@@ -423,6 +423,7 @@ mod perfect_kernel_batchfms2b;
 mod perfect_kernel_batchint19;
 mod perfect_kernel_batchint20;
 mod perfect_kernel_batchint23;
+mod perfect_kernel_batchm1;
 mod perfect_kernel_gemini;
 mod pgfkeys_native_accessors;
 mod raw_class_stores_reroute_to_frontmatter;

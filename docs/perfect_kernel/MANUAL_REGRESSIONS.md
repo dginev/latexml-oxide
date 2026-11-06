@@ -21,7 +21,7 @@ Vs #149: status worse on 53 manuals, better on 220; errors 11,246 → 11,278, up
 
 ## The clusters
 
-- **A, a binding's name prefix captures a different class. Root-caused.** `content.rs` `raw_excluded`: under raw classes, a class with a prefix-matching binding is not read raw (OD #444, for an author's renamed copy: `IEEEtranTCOM.cls`, `IEEEtran4PSCC.cls`). It also fires on a published class of its own: `bookest` → `book`, `bookcover` → `book`, `beamerswitch` → `beamer`, `bookshelf` → `book`; so their commands are undefined. Sweep #149's log read them raw. TeX Live classes the prefix catches (16): `aalok`, `aastex701`, `acmart-tagged`, `anima`, `apa6e`, `articleingud`, `beamer-rl`, `beamerswitch`, `bookcover`, `bookest`, `bookshelf`, `jmlrbook`, `postcards`, `reporting`, `revtex4-1`, `revtex4-2`.
+- **A, a binding's name prefix captures a different class. FIXED** (`content.rs` `is_unrelated_distribution_class`, OD #444; guards `perfect_kernel_batchm1`): a prefix marks an author's copy beside the document or a sibling shipped beside the binding's class (`jmlrbook`, `acmart-tagged`); any other class of the distribution is read raw. Measured: the 7 manuals back to #149's status at 0 errors. Was: `content.rs` `raw_excluded`: under raw classes, a class with a prefix-matching binding is not read raw (OD #444, for an author's renamed copy: `IEEEtranTCOM.cls`, `IEEEtran4PSCC.cls`). It also fires on a published class of its own: `bookest` → `book`, `bookcover` → `book`, `beamerswitch` → `beamer`, `bookshelf` → `book`; so their commands are undefined. Sweep #149's log read them raw. TeX Live classes the prefix catches (16): `aalok`, `aastex701`, `acmart-tagged`, `anima`, `apa6e`, `articleingud`, `beamer-rl`, `beamerswitch`, `bookcover`, `bookest`, `bookshelf`, `jmlrbook`, `postcards`, `reporting`, `revtex4-1`, `revtex4-2`.
 - **B, `\pdftex_if_engine:TF` undefined** (mdframed, 4 manuals, E about 290 each): not yet root-caused.
 - **T, timeouts:** re-run on quiet cores first; several may be load. `cpu_h` rose 0.92 → 1.20 in scope, partly load.
 - **V, newly schema-invalid** (annee-scolaire, paresse, simples-matrices, the same author's family, 2 jing lines each): not yet root-caused.
@@ -38,15 +38,15 @@ Status / errors at #149 → #150, in scope or canary. `in` manuals count against
 |---|---|---|---|---|---|---|---|
 | annee-scolaire/annee-scolaire-eng | in | 1/E0 | 1/E0 | invalid | V |  | |
 | annee-scolaire/annee-scolaire-fra | in | 1/E0 | 1/E0 | invalid | V |  | |
-| beamerswitch/beamerswitch-example | in | 1/E0 | 2/E2 | status,errors,recall-lost | A | Error:undefined:\handoutlayout The token T_CS[\handoutlayout] is not defined. | |
+| beamerswitch/beamerswitch-example | in | 1/E0 | 2/E2 | status,errors,recall-lost | A | Error:undefined:\handoutlayout The token T_CS[\handoutlayout] is not defined. | fixed, M1 |
 | biblatex-arthistory-bonn/arthistory-bonn | canary | 3/E7 | 124/E6 | status | T | Error:missing_file:arthistory-bonn-preamble.tex Can't find TeX file arthistory-bonn-preamble.tex | |
 | biblatex-ms/biblatex-ms | canary | 2/E2 | 2/E3 | errors | ? | Error:undefined:{release} The environment {release} is not defined. | |
 | bibleref-german/de-bibleref-german | canary | 2/E1 | 3/E0 | status,invalid | ? | Fatal:Timeout:Recursion  Infinite expansion loop: a window of 2 token(s) repeated 100+ times | |
 | bibleref-german/en-bibleref-german | canary | 2/E1 | 3/E0 | status,invalid | ? | Fatal:Timeout:Recursion  Infinite expansion loop: a window of 2 token(s) repeated 100+ times | |
-| bookcover/bookcover-example1 | canary | 0/E0 | 2/E5 | status,errors,recall-lost | A | Error:undefined:\newbookcovercomponenttype The token T_CS[\newbookcovercomponenttype] is not defined | |
-| bookcover/bookcover-example2 | canary | 0/E0 | 2/E2 | status,errors,recall-lost | A | Error:undefined:{bookcover} The environment {bookcover} is not defined. | |
-| bookest/bookestdoc-en | in | 0/E0 | 2/E5 | status,errors,recall-lost | A | Error:undefined:\setoddheadtext The token T_CS[\setoddheadtext] is not defined. | |
-| bookest/bookestdoc-it | in | 1/E0 | 2/E4 | status,errors,recall-lost | A | Error:undefined:\setoddheadtext The token T_CS[\setoddheadtext] is not defined. | |
+| bookcover/bookcover-example1 | canary | 0/E0 | 2/E5 | status,errors,recall-lost | A | Error:undefined:\newbookcovercomponenttype The token T_CS[\newbookcovercomponenttype] is not defined | fixed, M1 |
+| bookcover/bookcover-example2 | canary | 0/E0 | 2/E2 | status,errors,recall-lost | A | Error:undefined:{bookcover} The environment {bookcover} is not defined. | fixed, M1 |
+| bookest/bookestdoc-en | in | 0/E0 | 2/E5 | status,errors,recall-lost | A | Error:undefined:\setoddheadtext The token T_CS[\setoddheadtext] is not defined. | fixed, M1 |
+| bookest/bookestdoc-it | in | 1/E0 | 2/E4 | status,errors,recall-lost | A | Error:undefined:\setoddheadtext The token T_CS[\setoddheadtext] is not defined. | fixed, M1 |
 | bracketkey/Malva | canary | 0/E0 | 2/E61 | status,errors,recall-lost | ? | Error:unexpected:T_CS[\theindex] \theindex' invalid at this point | |
 | cmpj/template | in | 1/E0 | 1/E0 | recall-drop 98.9→96.0 % | R |  | |
 | colorspace/colorspace | in | 0/E0 | 2/E8 | status,errors,recall-lost | ? | Error:unexpected:fooshaded Unrecognized color model 'fooshaded' | |
@@ -55,7 +55,7 @@ Status / errors at #149 → #150, in scope or canary. `in` manuals count against
 | draftfigure/draftfigure | canary | 2/E24 | 2/E25 | errors | ? | Error:missing_file:draftfigure-preamble.tex Can't find TeX file draftfigure-preamble.tex | |
 | epslatex-fr/fepslatex | canary | 2/E10 | 2/E11 | errors | ? | Error:expected:{ Missing { inserted | |
 | floatrow/floatrow-rus | canary | 3/E101 | 124/E52 | status | T | Error:latex:(caption) Package caption Error: The counter subtable' was already defined by | |
-| gtrcrd/gtrcrd-doc | in | 0/E0 | 2/E6 | status,errors,recall-lost | A | Error:undefined:\setleftmark The token T_CS[\setleftmark] is not defined. | |
+| gtrcrd/gtrcrd-doc | in | 0/E0 | 2/E6 | status,errors,recall-lost | A | Error:undefined:\setleftmark The token T_CS[\setleftmark] is not defined. | fixed, M1 |
 | ijsra/ijsra | in | 1/E0 | 2/E1 | status,errors,recall-lost | ? | Error:unexpected:\endlx@list Attempt to end mode internal_vertical | |
 | keytheorems/keytheorems-doc | in | 1/E0 | 2/E4 | status,errors,recall-lost | ? | Error:errmessage:\errmessage LaTeX template Error: The instance 'theoremblock-0' of type 'block' is | |
 | kotex-oblivoir/ob-mathleading-doc | canary | 2/E4 | 2/E5 | errors | ? | Error:undefined:\luatexkomainhangulfamily The token T_CS[\luatexkomainhangulfamily] is not defined. | |
@@ -83,7 +83,7 @@ Status / errors at #149 → #150, in scope or canary. `in` manuals count against
 | simpler-wick/simpler-wick | canary | 1/E0 | 2/E1 | status,errors,recall-lost | ? | Error:unexpected:fi Didn't expect a "T_CS[\\fi]" since we seem not to be in a conditional | |
 | simples-matrices/simples-matrices-eng | in | 1/E0 | 1/E0 | invalid | V |  | |
 | simples-matrices/simples-matrices-fra | in | 1/E0 | 1/E0 | invalid | V |  | |
-| subsupscripts/SubSupScripts | in | 0/E0 | 2/E6 | status,errors,recall-lost | A | Error:undefined:\setbibname The token T_CS[\setbibname] is not defined. | |
+| subsupscripts/SubSupScripts | in | 0/E0 | 2/E6 | status,errors,recall-lost | A | Error:undefined:\setbibname The token T_CS[\setbibname] is not defined. | fixed, M1 |
 | tabularray/tabularray | in | 1/E0 | 1/E0 | recall 100.0→0.0 % | R |  | |
 | textpos/niepraschk-eso-pic | in | 0/E0 | 0/E0 | recall 100.0→66.7 % | R |  | |
 | tikz-feynman/tikz-feynman | canary | 2/E4 | 2/E5 | errors | ? | Error:unexpected:fi Didn't expect a "T_CS[\\fi]" since we seem not to be in a conditional | |
