@@ -374,7 +374,9 @@ The article: 1.169 G → 1.080 G, -7.6 %. pgf-interference-en/-de: over 180 s on
 - Splitting `read_balanced_with_close`, 11.6 KB with a 344-byte frame: -0.15 %, -0.17 %, -0.05 %. Its prologue is per group and its time per token, on the loop's lines. A hot/cold split doesn't reach a loop.
 - A bulk read of unexpanded arguments off the pushback: -0.16 %, +0.08 %, -0.65 %, and +0.46 % loading pgf. Runs between braces average 2.3-2.8 tokens and 30-53 % are empty, so the setup per run eats the savings.
 
-**Open:** 515 K of the binary's 1.04 M call sites are indirect through the GOT to functions in the same binary. `-Zplt=yes` makes them direct: instructions equal, XML equal, cycles about -1 to -2 % so far, with an 8-29 % spread on a loaded machine. To re-measure on idle cores (`kit/perf_ab_cycles.sh`) before it goes in `.cargo/config.toml`. The l3fp loop is a native evaluator's job, not the interpreter's.
+**`-Zplt=yes` (`.cargo/config.toml`).** 515 K of the binary's 1.04 M call sites loaded their target from the GOT and called through memory, though the target is in the same binary. The flag makes them direct calls. Median of 7 interleaved runs on one core with an idle SMT sibling (`kit/perf_ab_cycles.sh`), same tree, XML identical: cycles fp1000 22.27 G → 21.88 G (-1.75 %), fill1000 4.446 G → 4.379 G (-1.50 %), addplot500 8.423 G → 8.235 G (-2.24 %), a plain article -0.36 %, inside its 1.5-1.8 % spread. Instructions -0.07 to -0.22 %, so this is the indirect call's cost and not less work. It doesn't show in `instructions:u`, and a loaded machine hides it: the first attempt read 8-29 % spreads.
+
+**Next:** the l3fp loop is a native evaluator's job, not the interpreter's (`pk/P2`).
 
 ### 2026-10-31 — frontmatter overhead levers (batch 96p)
 

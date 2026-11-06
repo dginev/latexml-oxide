@@ -35,8 +35,13 @@ TARGET_CXXFLAGS = "-DHAVE_POSIX_MEMALIGN=1 -DZMQ_CACHELINE_SIZE=64"
 #
 # `-Zunstable-options` is the umbrella gate that enables `-Zthreads` as a
 # normal flag instead of erroring as unknown.
+#
+# `-Zplt=yes`: a call to a function in this binary is a direct call. Without it, half of the binary's call sites
+# (515 K of 1.04 M) load their target from the GOT and call through memory. Same instructions, same output; cycles
+# -1.5 to -2.2 % on TikZ, pgfplots and l3fp documents, median of 7 interleaved runs on a quiet core
+# (docs/performance/PERFORMANCE.md, 2026-11-06).
 [target.x86_64-unknown-linux-gnu]
-rustflags = ["-Clink-arg=-fuse-ld=mold", "-Zthreads=8", "-Zunstable-options"]
+rustflags = ["-Clink-arg=-fuse-ld=mold", "-Zthreads=8", "-Zunstable-options", "-Zplt=yes"]
 
 # Windows/MSVC mirror of the Linux tuning above: the parallel rustc
 # frontend is platform-neutral, so carry it over. No mold equivalent
