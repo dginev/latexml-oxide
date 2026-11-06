@@ -2307,82 +2307,25 @@ pub fn read_x_token(
       CheckedRead::Tok(t) => Some(t),
     };
     //ProgressStep() if ($$self{progress}++ % $TOKEN_PROGRESS_QUANTUM) == 0;
-    if next_token.is_none() {
-      {
-        let gullet = gullet!();
-        let current_is_autoclose = gullet
-          .runtime
-          .as_ref()
-          .map(|r| r.autoclose)
-          .unwrap_or(false);
-        // Drain a *transparent autoclose injection* (\scantokens, raw_tex) and
-        // resume the enclosing mouth even for a BOUNDED reader (toplevel==false,
-        // e.g. the InputDefinitions file loop) — these are part of the current
-        // logical stream. Faithful to tex.web `get_next` §362-365 (exhausting any
-        // input level resumes the enclosing one; \scantokens is a pseudo-file
-        // level). DIVERGES from Perl `Gullet.pm` readXToken, which gates on
-        // `autoclose = toplevel` and so returns at the first exhausted mouth —
-        // truncating a `.sty` whenever `\scantokens` runs mid-load (witness
-        // 1906.03240: real babel.sty `\selectlanguage` dropped every later def →
-        // undefined-CS cascade; Perl's hand-written babel.ltxml dodges it).
-        // A non-autoclose boundary is left to its owner (return None).
-        if !current_is_autoclose || gullet.mouthstack.is_empty() {
-          return Ok(None);
-        }
+    let Some(token) = next_token else {
+      if read_x_token_crosses_input_end()? {
+        continue;
       }
-      close_mouth(false)?; // Drain the autoclose injection; resume the parent.
-      continue;
-    }
-    // we got a token
-    let token = next_token.unwrap();
+      return Ok(None);
+    };
     if token.get_catcode() == Catcode::CS && token.text == pin!("\\dont_expand") {
-      let unexpanded = match read_token()? {
-        Some(t) => t,
-        None => return Ok(Some(T_CS!("\\special_relax"))), // \dont_expand at end-of-input
-      };
-      if for_conditional && unexpanded.code == Catcode::ACTIVE {
-        return Ok(Some(unexpanded));
-      } else {
-        // `\noexpand <tok>`: per-token `\special_relax` family encoding <tok>'s
-        // identity in the name — faithful to TeX's `no_expand_flag`, which keeps
-        // `cur_cs` while giving relax meaning for this one access. (Perl
-        // readXToken returns a bare `\special_relax`, dropping the identity;
-        // recovering it is a deliberate, SURPASS-PERL fidelity fix so a
-        // `\noexpand`'d delimiter — e.g. xint's `\XINTfstop`, witness
-        // 1804.01117 — reaches the surrounding parser as itself. The marker
-        // lasts for this one read: a scanner that puts the token back puts
-        // back its plain self (`unread_scanned`, KNOWN_PERL_ERRORS #255).)
-        return Ok(Some(crate::token::noexpand_family(&unexpanded)));
-      }
+      return read_x_token_dont_expand(for_conditional);
     }
     // Wow!!!!! See TeX the Program \S 309
     // SHOULD count nesting of { }!!! when SCANNED (not digested)
-    let check_alignment_data = {
-      if has_reading_alignment() && align_group_count() == 0 {
-        if let Some((_atoken, atype, ahidden)) = is_column_end(&token) {
-          if in_number_scan() {
-            // tex.web §440: a tab/row end is unexpandable inside a number
-            // scan — it ends the scan and is re-read (and then acted on) by
-            // the main loop. Batch 56bi.
-            return Ok(Some(token));
-          }
-          let reading_alignment = get_reading_alignment().unwrap();
-          Some((reading_alignment, atype, ahidden))
-        } else {
-          None
-        }
-      } else {
-        None
+    if has_reading_alignment() {
+      match read_x_token_column_end(token)? {
+        ColumnEndRead::Worked => continue,
+        ColumnEndRead::EndsNumberScan => return Ok(Some(token)),
+        ColumnEndRead::NotOne => {},
       }
-    };
-    if let Some((reading_alignment, atype, ahidden)) = check_alignment_data {
-      if let DigestedData::Alignment(data) = reading_alignment.data() {
-        handle_template(data.borrow_mut(), token, atype, ahidden)?;
-      } else {
-        panic!("malformed alignmed was stored?");
-      }
-      // And *then* continue the main loop checks
-    } else if token.get_catcode().is_active_or_cs() {
+    }
+    if token.get_catcode().is_active_or_cs() {
       // Read the meaning via closure so we can branch on the borrowed
       // Stored without cloning (Stored::clone was ~1% of total on
       // siunitx-heavy profiles; this site fires on every CS/ACTIVE
@@ -2411,31 +2354,9 @@ pub fn read_x_token(
         Outcome::LetTo(let_token) => {
           return Ok(Some(if for_conditional { let_token } else { token }));
         },
-        Outcome::Undefined => {
-          if token.get_catcode() == Catcode::CS {
-            // The LaTeX format may not be loaded yet (a document may use a
-            // kernel CS before `\documentclass` — real LaTeX has no "before
-            // the kernel"). If this is a kernel CS, pull the format in and
-            // re-resolve rather than stubbing it as `<ltx:ERROR/>`. Fires at
-            // most once per session; see `binding::kernel_autoload`.
-            if crate::binding::kernel_autoload::try_autoload(&token) {
-              unread_one(token); // Retry, now that the kernel is in state.
-              continue;
-            }
-            // a command a refused class environment defines for its body (`kernel_autoload`)
-            if crate::binding::kernel_autoload::try_refused_environment_definition(&token) {
-              unread_one(token);
-              continue;
-            }
-            // a stand-in named for the undefined name (`\chapter` in a class without chapters, OXIDIZED_DESIGN #734)
-            if let Some(stand_in) = crate::binding::kernel_autoload::undefined_fallback(&token) {
-              unread_one(stand_in);
-              continue;
-            }
-            return Ok(Some(generate_error_stub(&token)?));
-          } else {
-            return Ok(Some(token));
-          }
+        Outcome::Undefined => match read_x_token_undefined(token)? {
+          Some(result) => return Ok(Some(result)),
+          None => continue,
         },
         Outcome::NonExpandable => {
           return Ok(Some(token));
@@ -2454,6 +2375,123 @@ pub fn read_x_token(
       }
       return Ok(Some(token));
     }
+  }
+}
+
+/// [`read_x_token`] at the end of its input: whether a transparent injection closed and reading goes on.
+#[cold]
+#[inline(never)]
+fn read_x_token_crosses_input_end() -> Result<bool> {
+  {
+    let gullet = gullet!();
+    let current_is_autoclose = gullet
+      .runtime
+      .as_ref()
+      .map(|r| r.autoclose)
+      .unwrap_or(false);
+    // Drain a *transparent autoclose injection* (\scantokens, raw_tex) and
+    // resume the enclosing mouth even for a BOUNDED reader (toplevel==false,
+    // e.g. the InputDefinitions file loop) — these are part of the current
+    // logical stream. Faithful to tex.web `get_next` §362-365 (exhausting any
+    // input level resumes the enclosing one; \scantokens is a pseudo-file
+    // level). DIVERGES from Perl `Gullet.pm` readXToken, which gates on
+    // `autoclose = toplevel` and so returns at the first exhausted mouth —
+    // truncating a `.sty` whenever `\scantokens` runs mid-load (witness
+    // 1906.03240: real babel.sty `\selectlanguage` dropped every later def →
+    // undefined-CS cascade; Perl's hand-written babel.ltxml dodges it).
+    // A non-autoclose boundary is left to its owner (return None).
+    if !current_is_autoclose || gullet.mouthstack.is_empty() {
+      return Ok(false);
+    }
+  }
+  close_mouth(false)?; // Drain the autoclose injection; resume the parent.
+  Ok(true)
+}
+
+/// [`read_x_token`] of `\dont_expand`.
+#[cold]
+#[inline(never)]
+fn read_x_token_dont_expand(for_conditional: bool) -> Result<Option<Token>> {
+  let unexpanded = match read_token()? {
+    Some(t) => t,
+    None => return Ok(Some(T_CS!("\\special_relax"))), // \dont_expand at end-of-input
+  };
+  if for_conditional && unexpanded.code == Catcode::ACTIVE {
+    return Ok(Some(unexpanded));
+  } else {
+    // `\noexpand <tok>`: per-token `\special_relax` family encoding <tok>'s
+    // identity in the name — faithful to TeX's `no_expand_flag`, which keeps
+    // `cur_cs` while giving relax meaning for this one access. (Perl
+    // readXToken returns a bare `\special_relax`, dropping the identity;
+    // recovering it is a deliberate, SURPASS-PERL fidelity fix so a
+    // `\noexpand`'d delimiter — e.g. xint's `\XINTfstop`, witness
+    // 1804.01117 — reaches the surrounding parser as itself. The marker
+    // lasts for this one read: a scanner that puts the token back puts
+    // back its plain self (`unread_scanned`, KNOWN_PERL_ERRORS #255).)
+    return Ok(Some(crate::token::noexpand_family(&unexpanded)));
+  }
+}
+
+/// What [`read_x_token`] does with a token while an alignment is being read.
+enum ColumnEndRead {
+  Worked,
+  EndsNumberScan,
+  NotOne,
+}
+
+/// [`read_x_token`] while an alignment is being read: "Wow!!!!! See TeX the Program \S 309"
+/// SHOULD count nesting of { }!!! when SCANNED (not digested)
+#[inline(never)]
+fn read_x_token_column_end(token: Token) -> Result<ColumnEndRead> {
+  if align_group_count() != 0 {
+    return Ok(ColumnEndRead::NotOne);
+  }
+  let Some((_atoken, atype, ahidden)) = is_column_end(&token) else {
+    return Ok(ColumnEndRead::NotOne);
+  };
+  if in_number_scan() {
+    // tex.web §440: a tab/row end is unexpandable inside a number
+    // scan — it ends the scan and is re-read (and then acted on) by
+    // the main loop. Batch 56bi.
+    return Ok(ColumnEndRead::EndsNumberScan);
+  }
+  let reading_alignment = get_reading_alignment().unwrap();
+  if let DigestedData::Alignment(data) = reading_alignment.data() {
+    handle_template(data.borrow_mut(), token, atype, ahidden)?;
+  } else {
+    panic!("malformed alignmed was stored?");
+  }
+  // And *then* continue the main loop checks
+  Ok(ColumnEndRead::Worked)
+}
+
+/// [`read_x_token`] of a token with no meaning: what it returns, or `None` to read again.
+#[cold]
+#[inline(never)]
+fn read_x_token_undefined(token: Token) -> Result<Option<Token>> {
+  if token.get_catcode() == Catcode::CS {
+    // The LaTeX format may not be loaded yet (a document may use a
+    // kernel CS before `\documentclass` — real LaTeX has no "before
+    // the kernel"). If this is a kernel CS, pull the format in and
+    // re-resolve rather than stubbing it as `<ltx:ERROR/>`. Fires at
+    // most once per session; see `binding::kernel_autoload`.
+    if crate::binding::kernel_autoload::try_autoload(&token) {
+      unread_one(token); // Retry, now that the kernel is in state.
+      return Ok(None);
+    }
+    // a command a refused class environment defines for its body (`kernel_autoload`)
+    if crate::binding::kernel_autoload::try_refused_environment_definition(&token) {
+      unread_one(token);
+      return Ok(None);
+    }
+    // a stand-in named for the undefined name (`\chapter` in a class without chapters, OXIDIZED_DESIGN #734)
+    if let Some(stand_in) = crate::binding::kernel_autoload::undefined_fallback(&token) {
+      unread_one(stand_in);
+      return Ok(None);
+    }
+    Ok(Some(generate_error_stub(&token)?))
+  } else {
+    Ok(Some(token))
   }
 }
 
