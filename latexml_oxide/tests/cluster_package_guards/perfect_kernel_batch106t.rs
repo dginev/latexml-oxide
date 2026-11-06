@@ -27,7 +27,7 @@ macro_rules! repro {
 }
 
 /// The check's lines of `tex`'s log, eager and `--streaming` alike: its Warnings and its class-text Infos.
-fn check_lines(tex: &str) -> Vec<String> {
+pub(super) fn check_lines(tex: &str) -> Vec<String> {
   let mut runs = Vec::new();
   for streaming in [false, true] {
     let (log, _) = cli_conversion(tex, streaming);

@@ -63,7 +63,10 @@ fn a_class_store_the_net_misses_is_counted() {
     converted(&unflushed, 0),
     r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
-  assert_eq!(check_lines(&unflushed), Vec::<String>::new());
+  // (no Warning; what the setter stored is the third source's, a store by no name to find a reader by: an Info, #953 "108b")
+  assert_eq!(check_lines(&unflushed), [
+    "Info:frontmatter:unread_store 2 word(s) of the document's stored by a raw class's command that only page furniture reads, or nothing, are not in the output: lunar org",
+  ]);
 }
 
 /// A class's note set under its option and never flushed (drcls, review rev106s probe p3: `\thanks{Draft}` with no

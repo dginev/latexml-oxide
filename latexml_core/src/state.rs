@@ -2545,6 +2545,92 @@ pub fn claim_open_document_calls(
   })
 }
 
+/// A call of a setter a raw class or a raw file of the document's own directory made ([`note_store_call`]).
+#[derive(Debug, Clone)]
+pub struct StoreCall {
+  /// the setter
+  pub cs:     Token,
+  /// a later call of it replaces this one, the stores it writes
+  /// ([`crate::definition::expandable::StoredParameters`])
+  pub stored: expandable::StoredParameters,
+  /// the arguments it writes into a store
+  pub args:   Vec<Tokens>,
+  /// those of them optional or in brackets: a store's key or label far more often than its text
+  pub keys:   Vec<Tokens>,
+}
+
+/// What [`take_store_calls`] gives: the setter calls kept, and what the bound left out.
+#[derive(Debug, Default)]
+pub struct StoreCalls {
+  /// the calls, in order
+  pub calls:           Vec<StoreCall>,
+  /// how many calls [`STORE_CALLS_KEPT`] left out
+  pub dropped:         usize,
+  /// the setters of those, the first few, each once
+  pub dropped_setters: Vec<Token>,
+}
+
+/// The most setter calls kept ([`note_store_call`]): a document whose own style's setter is called thousands of times
+/// before its title page keeps the first ones; what the check digests stays bounded.
+pub const STORE_CALLS_KEPT: usize = 512;
+
+/// How many setters of the calls left out [`StoreCalls::dropped_setters`] names.
+const DROPPED_SETTERS_NAMED: usize = 8;
+
+thread_local! {
+  /// The setter calls the document's text made before its title page ([`note_store_call`]).
+  static STORE_CALLS: RefCell<StoreCalls> = RefCell::new(StoreCalls::default());
+}
+
+/// A setter a raw class or a raw file of the document's own directory made was called while the document's text is read
+/// (`Expandable::invoke`, while [`crate::definition::origin::store_call_watch`]): its stored arguments `args`, and those
+/// `keys` optional or in brackets, kept for the title-page check's third source (latexml_engine
+/// `title_page_check::digest_raw_setter_calls`); a replacing setter's earlier call is superseded by this one, as its store is.
+pub fn note_store_call(
+  cs: Token,
+  stored: &expandable::StoredParameters,
+  args: Vec<Tokens>,
+  keys: Vec<Tokens>,
+) {
+  STORE_CALLS.with(|calls| {
+    let mut calls = calls.borrow_mut();
+    if stored.replaces {
+      calls.calls.retain(|call| call.cs != cs);
+    }
+    if args.is_empty() && keys.is_empty() {
+      return;
+    }
+    if calls.calls.len() < STORE_CALLS_KEPT {
+      calls.calls.push(StoreCall {
+        cs,
+        stored: stored.clone(),
+        args,
+        keys,
+      });
+    } else {
+      calls.dropped += 1;
+      if calls.dropped_setters.len() < DROPPED_SETTERS_NAMED && !calls.dropped_setters.contains(&cs)
+      {
+        calls.dropped_setters.push(cs);
+      }
+    }
+  });
+}
+
+/// The setter calls kept ([`note_store_call`]), taken: none are left, a new conversion's or after a title page's.
+pub fn take_store_calls() -> StoreCalls {
+  STORE_CALLS.with(|calls| std::mem::take(&mut *calls.borrow_mut()))
+}
+
+/// Does the control sequence `cs` mean a token register (`\newtoks`, `\toks@`)?
+pub fn is_token_register(cs: &Token) -> bool {
+  use crate::definition::register::RegisterType;
+  with_meaning(cs, |meaning| match meaning {
+    Some(Stored::Register(register)) => matches!(register.register_type, RegisterType::Tokens),
+    _ => false,
+  })
+}
+
 thread_local! {
   /// The arguments binding macros dropped while the watch was on ([`note_dropped_argument`]).
   static DROPPED_ARGUMENTS: RefCell<Vec<DroppedArgument>> = const { RefCell::new(Vec::new()) };

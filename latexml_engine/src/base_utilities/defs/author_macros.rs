@@ -632,6 +632,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
   },
   after_digest => {
+    // (a binding's `\maketitle` has no deposit: what the document gave the raw setters before it is read here,
+    // `title_page_check::digest_raw_setter_calls`; aeb_emulateapj over the revtex binding, 1011.2770)
+    digest_raw_setter_calls()?;
     // A `\maketitle`'s flush: it may replace what the fallback flushed provisionally ([`frontmatter_sealed`]).
     let outer = lookup_bool("lx_frontmatter_explicit");
     assign_value("lx_frontmatter_explicit", true, Some(Scope::Global));

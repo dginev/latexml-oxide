@@ -652,6 +652,10 @@ pub(crate) fn load() -> Result<()> {
   // normally skipped whole.
   DefMacro!("\\end {}", sub[(env)]{
     let name = Expand!(env).to_string();
+    // (the document does not end in a speculative digestion, by an `\enddocument` a class wrapped neither)
+    if name == "document" && in_speculative_digestion() {
+      return Ok(Tokens::new(Vec::new()));
+    }
     let before = lookup_tokens(&s!("@environment@{name}@atend"));
     let after = lookup_tokens(&s!("@environment@{name}@afterend"));
     let use_hook = |point: &str| env_hook_tokens(&name, point);

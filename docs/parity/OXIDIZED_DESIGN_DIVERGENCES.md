@@ -30293,6 +30293,112 @@ no_title_page_printed_is_unchecked, package_and_bibtex_text_is_not_the_documents
 `check_no_title_page_printed_is_unchecked` (negative), `check_package_and_bibtex_text_is_not_the_documents` (RED int139a1 → GREEN). dev3's lost-words-counted line (the 21 lost-words papers' logs):
 5 all / 0 some / 16 silent → 7 / 1 / 13. A/B: `pop107d.tsv` (3,562: the 10 witnesses, the 2,982 dev3/dev20k papers with `\author`/`\title` and no `\maketitle`, 47 more with `\altaffiltext`, 23 with the net's "kept as a note", 500 random of `popint125a_s10k`; holdout excluded) vs int139a1-rel, both on the int138a dumps: 3,552 converted, the XML byte-identical in every one, E 1,346 = 1,346, F 8 = 8, words equal; Warnings +7, one each, every one a real loss read against the PDF (cup-journal 2207.13252, 2302.11911, 2410.19985, 2508.08363, 2603.00371, 2607.18758; elsarticle 2312.03765); 7 class-text Infos more (elsarticle + medima/jasr journal headers: 2006.08179, 2007.15546, 2201.10981, 2403.04024, 2407.18673, 2409.09188, 2507.07920); no check line of the base changed.
 
+**108b: the third source — what the document's text gives a raw class's setters** (brief 108b; FIDELITY_CHARTER §4; root
+cause `agent_reports/2026-11-06_lostwords139c_report.md`). The check's print reads less than pdflatex prints when a raw
+setter's store sits behind a gate the rehearsal cannot pass: CUP-JNL-DTM's `\auaddress` (printed under a count only the
+class's refused `\author` advances, 2305.00867), aeb_emulateapj's `\alt@affil@toks` (read only by a raw
+`\@author@finish` the revtex binding never runs, 1011.2770), a replay the gate refuses (naverlabseurope 2408.05088,
+bosonai 2605.02209, sect05.rs "not replayed"), nj_style's `\ead` (only `\immediate\write\@auxout`, 1401.7920). **The
+source:** `Expandable::watched_call`, while `origin::store_call_watch` (the current mouth the document's, from the
+conversion's start to the title page; off from then on, so a macro call in the body pays nothing, and a macro without
+parameters is never asked), keeps the arguments of a setter made in a raw class or a raw definitions file of the
+document's own directory, loaded as a package or class (a `filecontents` one too), that it writes into a store
+(`Expandable::stored_parameters`, once per definition: `#n` in the value of `WRITERS_OF_NAMES` — `\def` and kin, `\let`,
+`\g@addto@macro`, `\@namedef`, etoolbox's; the net's `stores_raw_code_writes` keeps its eight kernel ones,
+`NET_WRITERS_OF_NAMES`, so its output does not change — and `\renewcommand`, `\newcommand`, `\providecommand`, of a token
+register's assignment, or of a `\write` to a named stream). `\expandafter` is never a store's name. A scratch name
+(`SCRATCH_NAMES`, one list: `\@tempa`, `\reserved@a`-`f`, `\toks@`, `\@temptokena` and kin) is no store, as a reader
+neither, but what it holds hands on to what it is written into, as a name written earlier in the body does
+(`\toks@{#1}\xdef\x{\the\toks@}`, `\gdef\@t{#1}\expandafter\g@addto@macro\expandafter\x\expandafter{\@t}`: SCIS2026.cls's
+`\@authoremail`). A definition records no source file (its `locator` is a stub: Expandable.pm's is unported), so
+`load_tex_definitions` says whether the file it reads is such a file (`origin::note_reading_own_file`, read by
+`Expandable::new` as `made_in_own_file`); a binding's load says no, whichever file requires it (xkeyval_sty.rs under
+acmcopyright.sty: `\XKV@s@tkeys` was a setter, 2105.13838). **Not covered:** a setter a file `\input` defines
+(`\input{defs}`, `\input{sub/defs}`, `\input{x.sty}`, `\input{x.def}`) and a call from a macro `\AtBeginDocument` runs
+(RED catalog `check_raw_setter_input_own_file`); `\usepackage{sub/x}`, `filecontents`, a `.clo` through a class and a call
+from `\input{front}` are. The arguments may come back through `\@ifnextchar`, so `reading_document_text` is no test here;
+a class's own literal is stopped by the source gate. A later call supersedes the earlier when each write of the setter
+replaces a known store and none reads a store written before it (`state::note_store_call`, `StoredParameters::replaces`:
+`\def\x{#1}`; acm's `\global\conf={#1}\global\confinfo{#2}`, 1612.06202); an appending one's stay (`\g@addto@macro`,
+`\xdef\x{\x #1}`, a `\write`, a temporary then an append), and a `\csname` store's, as its next call's name may be
+another's. Not read: a shorthand maker's `\gdef#1{#2}`, a replay's or a deposit's calls. **What the bounds drop is said in
+an Info:** past the first 512 calls, `frontmatter:store_calls_dropped` (their number and first setters); an argument no run
+could read, `frontmatter:unread_argument` (its setter, size and first tokens; a 16,384-word one aborts).
+**A document end in an argument:** `\closing{\end{document}}`, digested by the source's run, ended the real document, the
+body lost with no diagnostic. A speculative digestion (`gullet::speculative_digestion`: `speculative_run`, the observer's
+rehearsal, `speculative_label_ink`) leaves `\end{document}`, `\enddocument`, `\@@end`, `\bye` inert: `gullet::flush` does
+nothing, and `\end` and the kernel's end half (`\lx@end@open@frontmatter`, `\lx@enddocument@hooks`,
+`\lx@finalize@document`) stop at once. 106t's dropped-argument run shares the path, and base lost the body there too
+(`\ead{\end{document}}` under quantumarticle, `\begin{abstract}[\end{document}]`: E=3, E=1, now E=0 with the body); a
+document end the real digestion reaches (`\title{\end{document}}`) still ends the document, as in pdflatex.
+**Digested** once, at the first of `\lx@deposit@maketitle`, `\lx@note@title@page`, a binding's `\maketitle`'s
+`\lx@frontmatterhere` (`title_page_check::digest_raw_setter_calls`, `speculative_word_run`); no title page, or the authors
+sealed: none. **What it counts:** the words then go through `unclaimed_words` and the source gate; a word only this
+source wants is named apart, `Warning:frontmatter:unclaimed_store` ("stored by a raw class's command, which pdflatex may
+not print"), and a word `unclaimed` or the net names is not counted again. **The false-alarm rule** (the brief's control
+measure): with no narrowing, 13 of 499 controls (26 per 1,000) and 26 of 498 raw-class papers (52 per 1,000) warned;
+read against pdflatex's text, 6 of the 13 named no word it prints, the rest mostly journal furniture. So a store counts
+only when code reads it: `StoreReaders` (taken at the title page, before a `\maketitle` nulls its own code; the macros
+of the raw class, own files and the document, the refused `\lx@dropped@…` records among them) walks up from the store to
+a macro nothing reads that is no page furniture (`\ps@…`, `\@oddhead` and kin, `\markboth`; a writer's name, what is
+written into furniture, and the first required argument of `\includegraphics`, `\epsfig`, `\href` are no reads). A store read by none or by furniture alone (`\jvol`, `\issn`, `\pagerange`,
+`\issuedate`, `\journal`: 2512.10209, 1202.2064, 1312.3323, 1001.4350), a `\csname` store (no name to find a reader by), an
+optional or bracketed argument (a key far more often than text: `\cortext[cor1]{…}`, 1005.1545, 1603.09660), and digits
+from an argument that yields no counted word (a volume, a page, 2305.00867's ORCID pieces; a postal code printed with its
+address counts: 1011.2770, 2305.00867, 2605.02209) go to an Info, `frontmatter:unread_store`. A store read only by page
+furniture that pdflatex does print stays there (a first page's foot, RED catalog
+`check_store_read_only_in_first_page_foot`: on 42 real Info papers the words checked were running furniture, one a date
+line, 1406.6413).
+A `\write` reads as read: its reader is the next run. Known undercount: a body `\newcommand` ignored under a kernel
+definition has no record, so its stores read as unread (`\@maketitle` of cjpsuppl.cls:199, hep-ph0402063: an Info, and
+SYNC row "108b `\newcommand`"). **B (`writes`):** a binding's dropped argument is the document's text also when a macro
+of the document's the arguments name holds it, read to 3 levels and 4,096 tokens: `\SeMieee` →
+`\IEEEmembership{, Senior Member,~IEEE}` (2503.14354; the drop is Perl's, IEEEtran.cls.ltxml:143, KNOWN_PERL_ERRORS
+#534). **C (`\@listi`):** `latex_constructs_rust_only.rs` defined `\@listi`-`\@listvi` empty; a class's non-robust
+`\normalsize` ending `\let\@listi\@listI` (size10.clo:53), expanded in a `\protected@xdef` (authblk's `\affil{\normalsize
+Campus…}`), then left `\let` to take the next letter as its name: "Missing control sequence", the letter lost
+(esapub2005 2310.07393: 2 Errors, "ampus", "pace"). They carry size10.clo:216-249's bodies now, the one XML change here;
+Perl leaves them undefined, which stay in the expansion. The reach is any empty kernel macro a class writes after
+`\let`/`\def` under an expansion: the other `def_macro_noop`s (`latex_constructs_rust_only.rs`) are no such name. Not in
+the dump. **Measured:** A/B `pop108b2.tsv` (2,530 converted of 2,536, 6 with no main file: 19 witnesses, 1,117 raw-class papers of
+dev3, 1,394 others; vs int139c): XML byte-identical but 2310.07393, E 1,612 → 1,610 (its 2), F 7 = 7, 31 changed, none
+worse. `unclaimed_store`: raw-class 16 of 1,117 (14.3 per 1,000), of which 10 name no word pdflatex prints in the whole PDF
+(9.0 per 1,000: 1809.03618, 2602.02974 `\papertype{please specify}` and 2609.38689 `\category` of vgtc's review cover page,
+2208.07491 `\CCScatlist`, 1801.08694 `\communicated`, 2311.07658 `\pubvolume{xx}`, 2405.13244 KOMA's
+`\RedeclareSectionCommands`, 2609.10714 `\Month`, 2609.39493 `\journal`, 1007.4268 `\conferenceinfo`); 6 print (CMS's
+`\cmsNoteHeader` ×4, 1607.06975, 1701.02022, 2008.04422, 2505.20483; rmaa's `\SetConfTitle`, 2312.07699, astro-ph0211252).
+Others 8 of 1,394 (5.7 per 1,000), 5 false (3.6 per 1,000: 1101.1174 `\journalcode`, 1401.8205 copernicus dates under a
+flag, 1612.06804 `\dates`, 1904.08978 a template's placeholders, hep-ph0402063 an own acronym style's expansions), 0706.1324
+and 1704.04814 printed, 0804.4883 unread (no PDF on TL 2025). Scratch names and the binding rule took out `\subject{secondary}`
+(1803.03153), `\newtheorem*` (1912.10847), `\setcopyright` (2105.13838), 2505.24263; of the 12 false of the review's 619
+raw-class papers, 9 stay: stores read under a switch, by design below. `\@namedef` and the etoolbox writers add no Warning
+(a `\csname` store goes to the Info; 1,381 dev3 papers use `\@namedef`, mostly theorem makers). **Cost** (`instructions:u`,
+int139c-rel vs 108b2): CMS +3.17 to +3.88 % (200-400 M): all in `check_title_page_words`' whole-document scan, which an
+unheld word starts; the third source's run itself pays nothing measurable (1607.06975: candidate 6,470 M, with the check
+off 6,266 M, with the digestion off 6,264 M, one build apart, base 6,205-6,278 M). A witness +0.83 %; others −0.05 to
++0.08 %. No one-line cap: the scan is what tells a lost word from a held one. **Still counted only, not
+kept:** Perl keeps the words on 2305.00867, 1011.2770, 2605.02209 and the repro of A (SYNC row "108b content"). Guards
+`perfect_kernel_batch108b::{a_store_the_print_gates_out_is_counted, a_store_of_a_refused_replay_is_counted,
+each_writer_of_a_store_counts_and_a_replaced_call_does_not, a_tex_live_packages_setter_or_no_title_page_wants_nothing,
+a_bindings_drop_inside_a_documents_macro_is_counted, list_parameter_macros_keep_the_letter_after_them,
+a_document_end_in_a_stored_argument_ends_nothing, a_replacing_guess_keeps_each_call_of_an_appender,
+a_csname_store_keeps_each_call_in_the_info, an_optional_argument_stored_reaches_the_info,
+digits_count_with_a_counted_word_of_their_argument, the_bounds_of_the_third_source_say_what_they_dropped}`; repros
+sectioning-frontmatter/`check_raw_setter_store_gated`, `check_raw_setter_replay_refused`,
+`check_store_replaced_and_siblings`, `check_binding_drops_document_macro_expansion`,
+`list_parameters_macro_in_an_expansion_keeps_the_next_letter` (RED int139c → GREEN 108b),
+`check_raw_setter_end_document_in_store`, `check_store_replacing_guess_drops_an_appender`,
+`check_store_csname_counter_keeps_each_call`, `check_store_optional_argument_printed`,
+`check_store_digits_with_an_address`, `check_store_caps_say_what_they_dropped` (RED 108b → GREEN 108b2),
+`check_raw_tex_live_package_setter_unwanted`, `check_raw_setter_no_title_page_unwanted` (negative). **Known false alarm,
+by design:** a store code reads under a switch that is off, or in a macro nothing calls, reads as read: the check does not
+run that code, and the tag says so. Guards updated for it, their XML asserts unchanged, each now naming the Warning:
+`perfect_kernel_batch77i::offtable_store_the_title_page_does_not_print_is_not_handed_on` (sigplanconf's boolean,
+aiaa-tc's `\newif`), `perfect_kernel_batch68u::apa6_one_author_line_with_numbered_affiliations_carries_the_first`
+(`\twoaffiliations`' second), `perfect_kernel_batch95d::raw_package_store_other_code_prints_stays_where_it_prints` (an
+uncalled `\printkeywords`); `perfect_kernel_batch106s::a_class_store_the_net_misses_is_counted`'s unflushed class names the
+Info (no Warning).
+
 ### 954. A contact holding two or more marked entries is cut at its marks in the frontmatter API, for every binding (Perl: one contact, the marks printed in it)
 
 **What** (batch 99a; FRONTMATTER_SINGLE_ENGINE_PLAN "The target model", placement step 0: "one item per printed

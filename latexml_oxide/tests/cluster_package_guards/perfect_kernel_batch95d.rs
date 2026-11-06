@@ -147,8 +147,16 @@ fn raw_package_store_other_code_prints_stays_where_it_prints() {
   // (the reader never called: no keywords anywhere)
   let uncalled = tex.replace("\\printkeywords\nText.", "Text.");
   assert_ne!(uncalled, tex);
+  // (an uncalled macro reads the store: the third source cannot tell it is uncalled, so the words are told as ones
+  // pdflatex may not print, OD #953 "108b")
+  let (log, xml) = cli_conversion(&uncalled, false);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("Warning:frontmatter:unclaimed_store 2 word(s) of the document's stored by a raw class's command, which pdflatex may not print, are not in the output: alpha beta"),
+    "{log}"
+  );
   assert_eq!(
-    front(&clean(&uncalled)),
+    front(&squash(&xml)),
     format!(r#"{head} <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#)
   );
   assert_eq!(

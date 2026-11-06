@@ -1001,6 +1001,9 @@ fn input_definitions_impl(
     // (a binding a stand-in's copy reaches by `\input` is a load of its own, not the copy's code: `input_definitions`)
     let _copy_suspended = (crate::definition::origin::copy_provides() != 0)
       .then(|| crate::definition::origin::CopyProvidesGuard::new(0));
+    // (a binding is LaTeXML's, whichever file requires it: xkeyval_sty.rs under acmcopyright.sty, whose `\XKV@s@tkeys` a
+    // `\setcopyright{acmlicensed}` calls, 2105.13838; a raw file it reads says for itself)
+    let _not_own_file = OwnFileGuard::new(false);
     match _load_binding(false, &filename, options.reloadable).and_then(|ext| match ext {
       Some(source) => Ok(Some(source)),
       None => _load_binding(true, &filename, options.reloadable),
@@ -2402,6 +2405,30 @@ pub fn raw_read_paths() -> Vec<String> {
   RAW_READ_PATHS.with(|paths| paths.borrow().iter().cloned().collect())
 }
 
+/// Is `pathname`, read raw as definitions, a class or a file of the document's own directory (a `filecontents` one too)?
+fn is_own_raw_file(pathname: &str) -> bool {
+  if pathname::is_literaldata(pathname) {
+    return false;
+  }
+  if pathname.ends_with(".cls") || super::virtual_files::vfs_exists(pathname) {
+    return true;
+  }
+  let directory = lookup_string("SOURCEDIRECTORY");
+  !directory.is_empty()
+    && std::fs::canonicalize(&directory).is_ok_and(|directory| {
+      std::fs::canonicalize(pathname).is_ok_and(|path| path.starts_with(directory))
+    })
+}
+
+/// [`crate::definition::origin::note_reading_own_file`] for a raw load, put back when it ends.
+struct OwnFileGuard(bool);
+impl OwnFileGuard {
+  fn new(own: bool) -> Self { Self(crate::definition::origin::note_reading_own_file(own)) }
+}
+impl Drop for OwnFileGuard {
+  fn drop(&mut self) { crate::definition::origin::note_reading_own_file(self.0); }
+}
+
 /// Forget the files read raw: a new conversion starts with none (`reset_thread_engine`).
 pub fn reset_raw_read_paths() { RAW_READ_PATHS.with(|paths| paths.borrow_mut().clear()); }
 
@@ -2968,6 +2995,9 @@ fn load_tex_definitions(
     let path = canonical_path(pathname);
     RAW_READ_PATHS.with(|paths| paths.borrow_mut().insert(path));
   }
+  // (what it defines is a raw class's or an own-directory file's: the title-page check's third source, whose setters
+  // these are, `Expandable::watched_call`; a raw TeX Live package is neither)
+  let _own_file = OwnFileGuard::new(is_own_raw_file(pathname));
 
   // Note that we are reading definitions (and recursive input is assumed also definitions)
   let was_interpreting = lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS"));

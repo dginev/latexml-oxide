@@ -206,27 +206,48 @@ fn offtable_store_the_class_title_hands_on_is_the_title() {
 /// 1704.03582, 1508.03599) is not handed on. With the `\newif` on, the kept deposit typesets the value, once.
 #[test]
 fn offtable_store_the_title_page_does_not_print_is_not_handed_on() {
-  for (repro, value) in [
+  // (a store its class's code reads under a switch: the third source cannot tell the switch is off, so its word is told
+  // as one pdflatex may not print, OD #953 "108b"; one only a running head reads is no such word)
+  for (repro, value, told) in [
     (
       include_str!(
         "../../../tools/perfect_kernel/repros/sectioning-frontmatter/offtable_store_under_a_class_boolean_that_is_off_is_not_handed_on.tex"
       ),
       "nnnnnnn.nnnnnnn",
+      Some(
+        "1 word(s) of the document's stored by a raw class's command, which pdflatex may not print, are not in the output: nnnnnnn",
+      ),
     ),
     (
       include_str!(
         "../../../tools/perfect_kernel/repros/sectioning-frontmatter/offtable_store_under_a_newif_that_is_off_is_not_handed_on.tex"
       ),
       "AIAA Conference 2004",
+      Some(
+        "3 word(s) of the document's stored by a raw class's command, which pdflatex may not print, are not in the output: aiaa conference 2004",
+      ),
     ),
     (
       include_str!(
         "../../../tools/perfect_kernel/repros/sectioning-frontmatter/offtable_store_printed_only_in_running_heads_is_not_handed_on.tex"
       ),
       "Short Widgets",
+      None,
     ),
   ] {
-    let (xml, flat) = convert_clean(repro);
+    let (log, xml) = convert_with(repro, Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, usize::from(told.is_some())),
+      "{log}"
+    );
+    if let Some(told) = told {
+      assert!(
+        log.contains(&format!("Warning:frontmatter:unclaimed_store {told}")),
+        "{log}"
+      );
+    }
+    let flat = xml.split_whitespace().collect::<Vec<_>>().join(" ");
     assert!(!flat.contains(value), "{xml}");
     assert!(!flat.contains("Vol. 12"), "{xml}");
     assert!(!flat.contains("note"), "{xml}");

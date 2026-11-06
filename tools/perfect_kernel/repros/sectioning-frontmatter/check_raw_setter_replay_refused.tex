@@ -1,0 +1,25 @@
+% A raw class's `\maketitle` names a store undefined here (naverlabseurope.cls:79-80,224-262: `\@teaserfig` in an untaken
+% branch), so the replay gate (sect05.rs "not replayed: it uses …, which is undefined here") refuses the body and the
+% check's print falls back to LaTeX's `\@title`/`\@author`, which never print `\@authors`, `\@affiliations`. Their setters'
+% arguments are the third source's: named apart, `Warning:frontmatter:unclaimed_store`. Letting the discarded print ignore
+% the gate is a separate row (61 of 10,000 dev3 logs carry "not replayed").
+% witness: 2408.05088 (naverlabseurope), 2605.02209 (bosonai_techreport.sty's `\renewcommand{\@affiliation}{#1}`)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "Lunar Institute", "Body text."
+% engines: rust int139c = 0 errors, 0 warnings, the words lost silently; perl = 0 errors, keeps the words (it appears
+%          not to read the raw class): a content loss against Perl, counted here, not fixed
+% expect:  0 errors, 1 warning (frontmatter:unclaimed_store "ann able lunar institute"); the XML unchanged
+% status:  RED (int139c) -> GREEN (108b)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{teasercls.cls}
+\LoadClass{article}
+\RequirePackage{ifthen}\newboolean{teaser}
+\def\authors#1{\def\@authors{#1}}
+\def\affiliations#1{\def\@affiliations{#1}}
+\renewcommand{\maketitle}{{\@title\par}{\@authors\par}{\@affiliations\par}\ifthenelse{\boolean{teaser}}{\@teaserfig}{}}
+\end{filecontents*}
+\documentclass{teasercls}
+\title{A Title}
+\authors{Ann Able}\affiliations{Lunar Institute}
+\begin{document}\maketitle
+Body text.
+\end{document}

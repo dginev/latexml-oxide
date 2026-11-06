@@ -491,7 +491,11 @@ pub(crate) fn load() -> Result<()> {
   // is read before the end-document code, which then runs at the document's level, so the abstract keeps its text as an
   // unclosed `{itemize}` keeps its list (65c; the open environment's Warning stays). Read inside the body, the finalizer
   // closed the document within the abstract's box, which nothing placed: an empty `<document/>` with 0 errors.
+  // (none of the document's end runs in a speculative digestion: `gullet::speculative_digestion`)
   DefPrimitive!("\\lx@end@open@frontmatter", {
+    if in_speculative_digestion() {
+      return Ok(Vec::new());
+    }
     if let Some(terminal) = lookup_token("lx@until@terminal")
       && (terminal == T_CS!("\\lx@end@abstract") || terminal == T_CS!("\\lx@end@keywords"))
     {
@@ -528,7 +532,7 @@ pub(crate) fn load() -> Result<()> {
     }
   });
   DefPrimitive!("\\lx@enddocument@hooks", sub[_args] {
-    if lookup_bool("lx@enddocument@hooks@fired") {
+    if in_speculative_digestion() || lookup_bool("lx@enddocument@hooks@fired") {
       return Ok(Vec::new());
     }
     AssignValue!("lx@enddocument@hooks@fired" => true, Some(Scope::Global));
@@ -582,6 +586,9 @@ pub(crate) fn load() -> Result<()> {
     },
     before_digest => {
       let mut boxes : Vec<Digested> = Vec::new();
+      if in_speculative_digestion() {
+        return Ok(boxes);
+      }
       // Should we try to indent the last paragraph? If so, it goes like this:
       boxes.push(digest(T_CS!("\\lx@normal@par"))?);
       // Pop unclosed groups and environments back to the document frame

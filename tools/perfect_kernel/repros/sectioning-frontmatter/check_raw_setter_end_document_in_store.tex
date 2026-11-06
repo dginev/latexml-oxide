@@ -1,0 +1,28 @@
+% A document end inside a raw setter's argument: `\end{document}`, `\enddocument`, `\@@end`. The class only stores them
+% (its title page never reads `\closing`), so pdflatex prints the whole body. The title-page check's speculative run of
+% the argument (title_page_check.rs `argument_print`) must not end the real document: a speculative run's document end
+% is inert (`gullet::speculative_digestion`).
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "One", "Body text one.", "Body text two."
+% engines: rust int139c = 0 errors, the body kept; rust 108b = 0 errors, 0 warnings, the body gone; perl = not run
+% expect:  0 errors, 0 warnings; the section and its two paragraphs in the XML
+% status:  RED (108b) -> GREEN (108b2)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{checkrawsetterenddcls.cls}
+\LoadClass{article}
+\newcount\aucount
+\def\author#1{\advance\aucount by 1 \gdef\@author{#1}}
+\def\closing#1{\g@addto@macro\@closing{#1}}\def\@closing{}
+\newcommand{\printclosing}{\@closing}
+\renewcommand\maketitle{\par{\@title\par}\ifnum\aucount>0 {\@author\par}\fi}
+\end{filecontents*}
+\documentclass{checkrawsetterenddcls}
+\title{A Title}\author{Ann Able}
+\closing{\end{document}}
+\closing{\enddocument}
+\makeatletter\closing{\@@end}\makeatother
+\begin{document}\maketitle
+\section{One}
+Body text one.
+
+Body text two.
+\end{document}

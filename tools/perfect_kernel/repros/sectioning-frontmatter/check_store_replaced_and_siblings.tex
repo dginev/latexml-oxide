@@ -1,0 +1,62 @@
+% The third source's shapes (title_page_check.rs `digest_raw_setter_calls`, `Expandable::stored_parameters`): the writers
+% `\gdef`, `\xdef`, a token register, `\write`, `\renewcommand`, a `\csname` store and a setter reached through
+% `\@ifnextchar`; a replacing setter's earlier call is no longer wanted (`\replaced{Obsolete}\replaced{Kept}`), as
+% pdflatex prints the latest; an appending one keeps each (`\appended`); what the setter's body only tests or reads is
+% no store (`\tested`), nor a shorthand maker's `\gdef#1{#2}` (`\maker`), nor a call after the title page (`\latecall`);
+% an own-directory style's setter is one (`\viasty`). A bracketed argument is a key (`\keyed[Keyword]{Keyedvalue}`). A store
+% no code reads but page furniture (`\unread`, `\head`: `\ps@stores`' `\@oddhead`, a journal's `\jvol`, `\pagerange`,
+% 2512.10209, 1202.2064, 1312.3323), a store with no name to find a reader by (`\viacsname`), or a number alone
+% (`\numbered`), is told in an Info, `frontmatter:unread_store`.
+% witness: 1401.7920 (nj_style `\ead` → `\@ifnextchar` → `\@ead`'s `\immediate\write\@auxout`), 1011.2770 (aeb_emulateapj
+%          `\altaffiltext`'s `\global\alt@affil@toks\expandafter{…}`), 2605.02209 (`\renewcommand{\@affiliation}{#1}`)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "Body text.", nothing of the stores
+% engines: rust int139c = 0 errors, 0 warnings; perl = 0 errors
+% expect:  0 errors, 1 warning (frontmatter:unclaimed_store naming, in call order, "gdefword xdefword tokword writeword
+%          renewword ifnextword styword kept firstapp secondapp keyedvalue"), no "obsolete", "testedword", "madeword",
+%          "lateword", "keyword"; the Info names "12345 csnameword unreadword headword"
+% status:  RED (int139c) -> GREEN (108b)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{storescls.cls}
+\LoadClass{article}
+\def\viagdef#1{\gdef\st@g{#1}}
+\def\viaxdef#1{\xdef\st@x{#1}}
+\newtoks\st@t
+\def\viatoks#1{\global\st@t\expandafter{\the\st@t\relax#1}}
+\def\viawrite#1{\immediate\write\@auxout{\string\relax #1}}
+\newcommand{\st@r}{}
+\newcommand{\viarenew}[1]{\renewcommand{\st@r}{#1}}
+\def\viacsname#1{\expandafter\gdef\csname st@c\endcsname{#1}}
+\def\viaifnext{\@ifnextchar[{\st@iA}{\st@iB}}
+\def\st@iA[#1]#2{\gdef\st@i{#2}}
+\def\st@iB#1{\gdef\st@i{#1}}
+\def\replaced#1{\gdef\st@rp{#1}}
+\newcommand{\st@a}{}
+\def\appended#1{\g@addto@macro\st@a{#1 }}
+\def\tested#1{\def\st@tmp{Fixed}\ifx\st@tmp\relax#1\fi}
+\def\maker#1#2{\gdef#1{#2}}
+\def\latecall#1{\gdef\st@l{#1}}
+\def\keyed[#1]#2{\gdef\st@k{#2}}
+\def\unread#1{\gdef\st@u{#1}}
+\def\head#1{\gdef\st@h{#1}}
+\def\ps@stores{\def\@oddhead{\st@h}}
+\def\numbered#1{\gdef\st@n{#1}}
+\newcommand{\st@print}{\st@g\st@x\the\st@t\st@r\st@c\st@i\st@rp\st@a\st@s\st@l\st@k\st@n}
+\end{filecontents*}
+\begin{filecontents*}[force]{storessty.sty}
+\def\viasty#1{\gdef\st@s{#1}}
+\end{filecontents*}
+\documentclass{storescls}
+\usepackage{storessty}
+\title{A Title}\author{Ann Able}
+\viagdef{Gdefword}\viaxdef{Xdefword}\viatoks{Tokword}\viawrite{Writeword}\viarenew{Renewword}\viacsname{Csnameword}
+\viaifnext{Ifnextword}\viasty{Styword}
+\replaced{Obsolete}\replaced{Kept}
+\appended{Firstapp}\appended{Secondapp}
+\keyed[Keyword]{Keyedvalue}
+\tested{Testedword}
+\maker{\mademacro}{Madeword}
+\unread{Unreadword}\head{Headword}\numbered{12345}
+\begin{document}\maketitle
+\latecall{Lateword}
+Body text.
+\end{document}

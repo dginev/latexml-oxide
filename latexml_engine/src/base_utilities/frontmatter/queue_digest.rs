@@ -464,6 +464,7 @@ fn speculative_label_ink(tokens: Tokens) -> Result<Option<PrintedLabel>> {
   let Some(journal) = begin_assignment_journal() else {
     return Ok(None);
   };
+  let _speculative = speculative_digestion();
   let hold = util::logger::DiagnosticsHold::begin();
   let resource_fatal_before = resource_fatal_latched();
   let muted = SuppressLogOutputGuard::new(true);
@@ -1197,6 +1198,7 @@ pub fn seal_digested_frontmatter() {
       // (the frontmatter's commands are behind: the title-page check stops watching the document's calls, which cost
       // every macro call of the body, `title_page_check::note_frontmatter_entry`)
       definition::origin::watch_document_calls(false);
+      definition::origin::watch_store_calls(false);
     }
   }
 }

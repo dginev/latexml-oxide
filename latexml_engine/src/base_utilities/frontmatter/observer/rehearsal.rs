@@ -383,6 +383,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
   let Some(journal) = begin_assignment_journal() else {
     return Ok(Rehearsal::Skipped(SkipReason::JournalUnavailable));
   };
+  let _speculative = speculative_digestion();
   FOOTNOTE_BASE_DEFINED.with(|defined| defined.set(footnotes));
   FOOTNOTE_BASE.with(|cell| cell.set(base));
   const FLAGS: [&str; 3] = [
