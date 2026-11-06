@@ -2057,3 +2057,27 @@ fn minted_frozencache_colors_from_pygments_cache_157() {
     "control minted block did not render via the listings fallback:\n{html2}"
   );
 }
+/// Text ligatures must run on text followed, in the same paragraph, by a
+/// `\footnote`, `\footnotemark` or `\footnotetext`. Perl `Document.pm:setNode`
+/// L75 closes any open text node ("so ligatures run"); `Document::set_node` did
+/// not, so the text node left behind when `^<ltx:note>` floated up was never
+/// closed through `close_text_internal`, and ``alpha'' stayed `‘‘alpha’’`.
+/// Witness: arXiv 1706.08158 (``ghostless''). Perl master: all four converted.
+#[test]
+fn ligatures_before_footnote() {
+  let xml = convert_to_xml("tests/cluster_regressions/ligatures_before_footnote.tex");
+  for word in ["alpha", "beta", "gamma", "delta"] {
+    assert!(
+      xml.contains(&format!("\u{201C}{word}\u{201D}")),
+      "``{word}'' must become “{word}”:\n{xml}"
+    );
+  }
+  assert!(
+    xml.contains("\u{2014}"),
+    "--- must become an em dash:\n{xml}"
+  );
+  assert!(
+    !xml.contains("\u{2018}\u{2018}"),
+    "unligatured `` left:\n{xml}"
+  );
+}
