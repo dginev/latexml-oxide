@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+  - **`revert_as => 'context'` reverts by dual branch, as in Perl.** `DefMathI`
+    decides at reversion time — `($LaTeXML::DUAL_BRANCH || 'content') eq 'content'
+    ? $cs : $presentation` (Package.pm L1849-1854) — but the port fixed the content
+    reversion at definition time (the left-over `TODO` in `def_math_constructor`).
+    So the `tex` attribute of `ltx:Math` (presentation branch) got the user's CS
+    and `content-tex` was never written: `\DeclareMathOperator{\trace}{tr}` gave
+    `tex="\trace A"` instead of Perl's `tex="\operatorname{tr}A"` +
+    `content-tex="\trace A"`, which breaks any consumer that renders `tex` (KaTeX,
+    Temml, MathJax) on user-declared operators. `\DeclareMathOperator` now also
+    reverts to Perl's presentation `Invocation(T_CS('\operatorname'), $star,
+    $text)`, i.e., `\operatorname{tr}` / `\operatorname*{arg\,min}`. Goldens
+    `parse/operators` and `math/declare` move to Perl's attributes (`\lxDefMath`
+    with a TeX or parameterized presentation goes through `def_math_dual` and is
+    unchanged).
+
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
   - **OmniBus fallback captures `\orcid` and no-ops the `\lefttitle`/`\righttitle`

@@ -282,7 +282,7 @@
         </Math>
       </equation>
       <equation xml:id="S1.Ex5">
-        <Math mode="display" tex="\int_{a}^{b}f(x)\diffd x" text="((integral _ a) ^ b)@(f@(x) * diffd@(x))" xml:id="S1.Ex5.m1">
+        <Math content-tex="\int_{a}^{b}f(x)\diffd x" mode="display" tex="\int_{a}^{b}f(x)\operatorname{\operatorname{d}\!}x" text="((integral _ a) ^ b)@(f@(x) * diffd@(x))" xml:id="S1.Ex5.m1">
           <XMath>
             <XMApp>
               <XMApp>
@@ -320,7 +320,7 @@
         </Math>
       </equation>
       <equation xml:id="S1.Ex6">
-        <Math mode="display" tex="\diffd u=\diffd x+\diffd y" text="diffd@(u) = diffd@(x) + diffd@(y)" xml:id="S1.Ex6.m1">
+        <Math content-tex="\diffd u=\diffd x+\diffd y" mode="display" tex="\operatorname{\operatorname{d}\!}u=\operatorname{\operatorname{d}\!}x+\operatorname{\operatorname{d}\!}y" text="diffd@(u) = diffd@(x) + diffd@(y)" xml:id="S1.Ex6.m1">
           <XMath>
             <XMApp>
               <XMTok meaning="equals" role="RELOP">=</XMTok>
