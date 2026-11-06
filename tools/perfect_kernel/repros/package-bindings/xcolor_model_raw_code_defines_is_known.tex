@@ -1,0 +1,15 @@
+% xcolor knows a model by `\XC@mod@<model>` (xcolor.sty:565 `\@ifundefined{XC@mod@…}`). colorspace.sty's `\spc@mix@*`
+% define it for `\definecolorspace`'s models, so naming one in `\definecolor`, `\color[…]` or `\textcolor[…]` is no error;
+% the colour stays the recovery of an unconverted model (cosmetic).
+% witness: colorspace/colorspace (8 errors at sweep #150, all this).
+% oracle:  pdflatex (TL 2025) 0 errors: Before shaded and after. Third.
+% engines: perl 2 errors "Unrecognized color model" (Color.pm:59-61; KNOWN_PERL_ERRORS). int140a the same, 3 here.
+% expect:  0 errors; every word kept.
+\documentclass{article}
+\usepackage{colorspace}
+\definespotcolor{foo}{BarTone 555 GN}{.8,.2,.5,.3}
+\definecolorspace{fooshaded}{mixed}{foo,black}
+\definecolor{sfoo}{fooshaded}{1,0}
+\begin{document}
+Before {\color{sfoo} shaded} and {\color[fooshaded]{0.5,0.5} after}. \textcolor[fooshaded]{0.2,0.5}{Third.}
+\end{document}

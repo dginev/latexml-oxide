@@ -368,7 +368,11 @@ pub(crate) fn load() -> Result<()> {
   // `\multicolumn` is unlocked at latex_constructs.pool.ltxml:3702 — SURPASS).
   // Binding-level redefinitions (colortbl) load unlocked and still win. Guard:
   // `perfect_kernel_batch56::raw_multicolumn_redefinition_is_dropped`.
+  // The lock protects that interface of three arguments (state.rs `another_interface`): a package's
+  // `\multicolumn` of another arity is a command of its own, not a copy (sltables.sty:193, the sltables-doc-en
+  // manual, as Perl keeps it). Guard: `perfect_kernel_batchm1::a_package_multicolumn_of_another_arity_is_its_own`.
   AssignValue!("\\multicolumn:locked" => true, Some(Scope::Global));
+  AssignValue!("\\multicolumn:locked@arity" => 3i64, Some(Scope::Global));
 
   // A weird bit that sometimes gets invoked by Cargo Cult programmers...
   // to \noalign in the defn of \hline! Bizarre! (see latex.ltx)

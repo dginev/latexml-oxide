@@ -188,6 +188,7 @@ pub mod hha_cls;
 pub mod hvfloat_sty;
 pub mod ieeetj_cls;
 pub mod ifoddpage_sty;
+pub mod ijsra_cls;
 pub mod imsart_cls;
 pub mod informs_cls;
 pub mod interact_cls;
@@ -240,6 +241,7 @@ pub mod moduli_cls;
 pub mod morefloats_sty;
 pub mod mrm_cls;
 pub mod mssymb_tex;
+pub mod multibib_sty;
 pub mod nag_sty;
 pub mod nature_pre_cls;
 pub mod needspace_sty;
@@ -636,6 +638,8 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ("schooldocs", "sty", schooldocs_sty::load_definitions),
   ("tagpdf", "sty", tagpdf_sty::load_definitions),
   ("textpos", "sty", textpos_sty::load_definitions),
+  ("ijsra", "cls", ijsra_cls::load_definitions),
+  ("multibib", "sty", multibib_sty::load_definitions),
   ("nomentbl", "sty", nomentbl_sty::load_definitions),
   ("titleps", "sty", titleps_sty::load_definitions),
   ("xkeymask", "sty", xkeymask_sty::load_definitions),

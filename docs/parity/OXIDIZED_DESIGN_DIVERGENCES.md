@@ -8667,10 +8667,14 @@ needs the raw scaffold's `\@classz`/`\@acol` (KNOWN_PERL_ERRORS #205).
 lock records it as `\multicolumn:redefined`), a binding's redefinition (loaded
 unlocked) wins. The rule: commands that ARE the alignment model's structure
 (`\tabular`, `\endtabular`, `\multicolumn`) are locked; raw copies of latex.ltx's
-`\halign`-preamble machinery cannot run against a model that has no preamble.
-**Why**: the cell keeps its column and content (aguplus 2 → 0).
-**Witnesses**: aguplus/aguplus.
-**Guards**: `perfect_kernel_batch56::raw_multicolumn_redefinition_is_dropped`.
+`\halign`-preamble machinery cannot run against a model that has no preamble. The lock protects the interface of three
+arguments (`\multicolumn:locked@arity`, state.rs `another_interface`): a definition declaring another number is a command
+of its own, as in Perl (sltables.sty:193's `\def\multicolumn##1{\omit…\stmultispan…}`, in its `{stable}`'s group), while
+one declaring three (agupp.sty:599, eqnarray.sty:45, srdp-tables.sty:1218), one declaring none and a `\let` stay refused.
+**Why**: the cell keeps its column and content (aguplus 2 → 0; sltables-doc-en 11 → 0).
+**Witnesses**: aguplus/aguplus, shipunov/sltables-doc-en.
+**Guards**: `perfect_kernel_batch56::raw_multicolumn_redefinition_is_dropped`,
+`perfect_kernel_batchm1::a_package_multicolumn_of_another_arity_is_its_own`.
 
 ### 211. The alignment cell-head peek runs in internal vertical mode
 
@@ -18400,6 +18404,9 @@ unlocked, as AMS-TeX loads no LaTeX.pool there). amsppt1.tex:105-135 then redefi
 state, or keeps an older version calling `\runaway@` (gone since amsppt 2.0) when `\add@missing` is undefined, as it was
 in both Perl and Rust (4 undefined-macro errors; KPE #642).
 
+(ijsra's binding clears the lock too, for that class's `\def\abstract{…}` slot: ijsra_cls.rs,
+`perfect_kernel_batchm1::the_ijsra_abstract_is_semantic`.)
+
 **Rust** (batch 66d, amsppt_sty.rs): the binding clears `\abstract:locked`, and defines amsppt.sty's environment-end
 tracker `\add@missing`/`\envir@end` (:107-111; `\envir@end` a sentinel for :126's `\enddocument␣`; the binding's environments close themselves, so none fires), the
 address count (:330-331), `\ifmonograph@` (:441) and `\thetranslator@` (:506), and its captions
@@ -22567,7 +22574,12 @@ cmbright_sty.rs runs cmbright.sty:26-28, acmart_cls.rs sigchi-a's `\@ACM@sigchia
 font table does not know falls back to serif only in `\normalfont` — opensans.sty's `[default]` (:160-161,
 `\opensansfamily`) stays serif. A formula's tokens are written against the text default, not the sans text (#780). Repros
 `fonts-nfss/family_default_sets_the_body`, `fonts-nfss/family_default_survives_a_preamble_switch`,
-`fonts-nfss/unknown_family_default_resets_to_serif`; guards `perfect_kernel_batch77u::{family_default_sets_the_body,
+`fonts-nfss/unknown_family_default_resets_to_serif`. `\selectfont` itself keeps the font in force for an unmapped family,
+but never `\nullfont`, which it leaves on serif (`nfss_selected_font`): in a pgf node (`\usepackage[default]{opensans}`) the
+text was dropped, silently (prerex/chart; DEMO-BFHSciPoster's case of `\rmdefault`, sect13.rs; repro
+`fonts-nfss/selectfont_of_an_unmapped_family_leaves_nullfont`, guard
+`perfect_kernel_batchm1::selectfont_of_an_unmapped_family_leaves_nullfont`). Guards
+`perfect_kernel_batch77u::{family_default_sets_the_body,
 family_default_survives_a_preamble_switch, unknown_family_default_resets_to_serif}`,
 `06_cluster_bibliography::bib_entries_take_the_defaults_where_the_bibliography_stands`; golden
 `tikz/ac-drive-components.xml` (its node text CMSS, "Control unit" CMSSBX10 as pdflatex).
@@ -23359,7 +23371,10 @@ both of biblatex's routes (a `.bbl`'s entries, a `.bib` rendered without biber),
 fields the document's style declares in its `.bst`'s `ENTRY` list (`bst_declared_fields`: the `\bibliographystyle`
 recorded as `BIBSTYLE`, the `.bst` found on the search path) — what bibtex(1) copies for the style to print:
 ACM-Reference-Format.bst:38 `location` (printed after the event, :1318-1342; 2603.25517, 2601.12610), sn-mathphys.bst
-and mdpi.bst `urldate` (2607.28080, 2511.08819, 2608.12223). Elsewhere the fields are raw `bib-data`, as in Perl. OD #289's `annotation` and 56ie's biblatex names (the entry for the subtitle and host rows) are biblatex-only
+and mdpi.bst `urldate` (2607.28080, 2511.08819, 2608.12223). multibib's `\bibliographystyle<suffix>` only writes to its side aux
+(multibib.sty:234); its binding (multibib_sty.rs) records that style too, so quantum.bst's `urldate` prints as `accessed`
+(quantum-bibliographystyle-demo; `perfect_kernel_batchm1::a_multibib_style_reaches_the_bst_fields`). One `BIBSTYLE` holds per
+document: of mixed styles the fields are the last's. Elsewhere the fields are raw `bib-data`, as in Perl. OD #289's `annotation` and 56ie's biblatex names (the entry for the subtitle and host rows) are biblatex-only
 accordingly. Repros index-bib/natbib_biblatex_only_fields_are_raw_data (red int47a) and its twin
 index-bib/biblatex_prints_its_own_fields, index-bib/bst_declared_biblatex_field_is_printed; guards
 `perfect_kernel_batch78i::{natbib_biblatex_only_fields_are_raw_data, biblatex_prints_its_own_fields,
@@ -26471,7 +26486,9 @@ added none — a repeat `frontmatter_drop_repeats` dropped, an empty `{abstract}
 by the first abstract added after its marker, kept or not, `take_late_mark`, so an abstract a binding adds later with
 `\lx@add@frontmatter{ltx:abstract}` and no marker of its own carries none, and no marker places it, DEFERRED_FAMILIES
 "Abstracts a class stores or queues") places its own abstract and its run behind the cover lines printed between the
-abstract before it and it (86i `place_later_abstract`: they stay paragraphs, not a second titlepage) — the second of two
+abstract before it and it (86i `place_later_abstract`), which become a continued `<titlepage>` of their own, a `<para>` being
+no frontmatter (the simples-matrices, annee-scolaire and paresse manuals' `\noindent\hrulefill` lines; guard
+`perfect_kernel_batchm1::a_cover_line_between_two_abstracts_is_a_titlepage`) — the second of two
 `{abstract}`s after `\maketitle`, both kept since 86i (OD #154; 1006.5288's centred French title between them). Late
 abstracts keep their source order: the run carries every later late abstract still waiting right after it, marked or
 markerless, with theirs, and each carried one then scans from its new place, right after the one before it — so three

@@ -9212,7 +9212,9 @@ Rust (59s): the contrib binding `textpos_sty.rs` loads the package raw and place
 (`\TP@textbox`, at its natural size) where the block ends, emptying the hold box (OXIDIZED_DESIGN_DIVERGENCES #416);
 a block that shows nothing is not placed (`typesets_content`): autonum.sty:159-173 captures each display
 environment's `\\` and `\label` in an absolute block at (0,0) holding an empty `equation` (2605.31413). A block of
-rules alone is placed decoration and is dropped as well, as eso-pic's rule-only overlay is.
+rules alone is placed decoration and is dropped as well, as eso-pic's rule-only overlay is. A constructor whose template
+prints the text, with no argument or body (`\LaTeX`, sect03.rs), shows something (niepraschk-eso-pic;
+`perfect_kernel_batchm1::a_template_of_its_own_text_is_content`).
 Repro p4; guard as #425. In the default relative mode a block written inside a paragraph is lost as well: textpos
 sets it with `\vadjust` (:383-385), whose material is dropped (RED boxes-groups/
 textpos_relative_block_in_a_paragraph_is_kept; the `\vadjust` kernel item).
@@ -15600,6 +15602,14 @@ is the `\ifjtehm` CMYK), after which the colour that stands is the ieeeaccess bi
 the spot colour's alternate): 2007.03025, 2009.04554, 2011.07807, 2209.03883, 2209.12464, 2609.20467. Repros
 stand-in-copies/spotcolor/; guards `perfect_kernel_batch72a::spot_color_model_keeps_the_earlier_color`,
 `::spot_color_defined_first_takes_the_alternate`.
+
+The same under xcolor, which tests `\XC@mod@<model>` (xcolor.sty:565): colorspace.sty's `\spc@mix@*` define it for a
+`\definecolorspace` model, and Perl's xcolor binding errs on each use. Trigger: `\usepackage{colorspace}
+\definespotcolor{foo}{BarTone 555 GN}{.8,.2,.5,.3}\definecolorspace{fooshaded}{mixed}{foo,black}
+\definecolor{sfoo}{fooshaded}{1,0}` — pdflatex 0 errors, Perl 2. Rust (M2): xcolor_sty.rs reports only a model whose
+`\XC@mod@<model>` has no meaning (a name a test left `\relax` has none); the colour stays the recovery black. Witness
+colorspace/colorspace (8 → 0). Repros package-bindings/xcolor_model_raw_code_defines_is_known, its twin
+xcolor_model_nobody_defines_is_an_error; guard `perfect_kernel_batchm1::a_color_model_is_known_by_its_xcolor_definition`.
 
 ## 959. amsart's `\copyrightinfo` with an empty year adds a copyright ", "
 

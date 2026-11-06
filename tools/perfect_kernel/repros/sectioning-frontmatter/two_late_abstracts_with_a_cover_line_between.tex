@@ -10,7 +10,7 @@
 % engines: perl (vendored HEAD) 0 errors: abstract, abstract, para, para (frontmatter at the head).
 %          rust int117a: titlepage (line one), "Second late abstract.", para (line two); the first lost.
 %          rust 86i (before cover_order's per-abstract placement): titlepage, abstract, abstract, para.
-% expect:  0 errors, 0 warnings; title, creator, titlepage[Cover line one], abstract, para (Cover line two), abstract,
+% expect:  0 errors, 0 warnings; title, creator, titlepage[Cover line one], abstract, titlepage[Cover line two], abstract,
 %          section.
 % status:  RED (int117a) -> GREEN (86i)
 \documentclass{article}

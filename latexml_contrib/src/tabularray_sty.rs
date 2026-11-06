@@ -1,4 +1,4 @@
-use latexml_core::keyval::split_keyval_source;
+use latexml_core::{common::local_assignments::SuppressedTabMarks, keyval::split_keyval_source};
 use latexml_package::prelude::*;
 
 /// Translate a tabularray `tblr` inner spec's `colspec={…}` into a classic
@@ -218,6 +218,7 @@ fn tblr_body_width() -> Result<usize> { Ok(tblr_body_shape()?.0) }
 
 /// The widest row and the row count of the table body that follows ([`tblr_body_width`]'s read).
 fn tblr_body_shape() -> Result<(usize, usize)> {
+  let _tabs = SuppressedTabMarks::for_argument_scan();
   let scan = tblr_scan_body(TBLR_BODY_READ_CAP)?;
   unread(Tokens::new(scan.tokens));
   Ok((scan.widest, scan.rows))
@@ -227,6 +228,7 @@ fn tblr_body_shape() -> Result<(usize, usize)> {
 fn tblr_shape_of(body: Vec<Token>) -> Result<(usize, usize)> {
   let mut input = body;
   input.extend(TokenizeInternal!("\\end{lx@tblr@body}").unlist());
+  let _tabs = SuppressedTabMarks::for_argument_scan();
   unread(Tokens::new(input));
   let scan = tblr_scan_body(usize::MAX)?;
   Ok((scan.widest, scan.rows))
@@ -237,6 +239,7 @@ fn tblr_shape_of(body: Vec<Token>) -> Result<(usize, usize)> {
 /// preprocessing — read whole, as tabularray reads it, without the width pre-read's cap. `None`
 /// (everything put back) when the input ends first.
 fn tblr_read_body() -> Result<Option<Vec<Token>>> {
+  let _tabs = SuppressedTabMarks::for_argument_scan();
   let mut scan = tblr_scan_body(usize::MAX)?;
   match scan.end_at {
     Some(end) => {
@@ -260,6 +263,11 @@ struct TblrBodyScan {
   rows:   usize,
 }
 
+///
+/// The read and its `unread` run under [`SuppressedTabMarks`], as ltcmd reads tabularray's `+b` body
+/// (`\group_align_safe_begin:`, latex.ltx:2103-2110): at an enclosing `p` cell's `align_state` 0 an inner `&` would end
+/// that cell, inserting its v-part with the `}` that closes the `p` box (tex.web §342; "Missing { inserted", the ProfSio
+/// manual's `{tipblock}`, awesomebox.sty).
 fn tblr_scan_body(cap: usize) -> Result<TblrBodyScan> {
   let is_cs = |t: &Token, name: &str| t.get_catcode() == Catcode::CS && t.with_str(|s| s == name);
   let mut body = Vec::new();

@@ -12,7 +12,7 @@ pub(super) fn convert_with_files(tex: &str, files: &[(&str, &str)]) -> (String, 
   super::perfect_kernel_batch46::convert_files(tex, files)
 }
 
-fn kpsewhich_has(name: &str) -> bool {
+pub(super) fn kpsewhich_has(name: &str) -> bool {
   std::process::Command::new("kpsewhich")
     .arg(name)
     .output()

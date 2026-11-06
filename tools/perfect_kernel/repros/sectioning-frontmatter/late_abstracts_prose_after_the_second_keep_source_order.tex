@@ -9,7 +9,7 @@
 %          words. / Plain running prose ... / Abstract Third late words. / 1 Intro".
 % engines: rust 86i r2: titlepage, First, Second, Third, para (Cover two), para (prose).
 %          rust 86i r3: titlepage, First, Third, para (Cover two), Second, para (prose).
-% expect:  0 errors, 0 warnings; title, creator, titlepage[Cover one], abstract (First), para (Cover two),
+% expect:  0 errors, 0 warnings; title, creator, titlepage[Cover one], abstract (First), titlepage[Cover two],
 %          abstract (Second), abstract (Third), para (prose), section; eager and streamed identical.
 % status:  RED (86i r3) -> GREEN (86i r4)
 \documentclass{article}

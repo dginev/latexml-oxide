@@ -22,10 +22,20 @@ Vs #149: status worse on 53 manuals, better on 220; errors 11,246 → 11,278, up
 ## The clusters
 
 - **A, a binding's name prefix captures a different class. FIXED** (`content.rs` `is_unrelated_distribution_class`, OD #444; guards `perfect_kernel_batchm1`): a prefix marks an author's copy beside the document or a sibling shipped beside the binding's class (`jmlrbook`, `acmart-tagged`); any other class of the distribution is read raw. Measured: the 7 manuals back to #149's status at 0 errors. Was: `content.rs` `raw_excluded`: under raw classes, a class with a prefix-matching binding is not read raw (OD #444, for an author's renamed copy: `IEEEtranTCOM.cls`, `IEEEtran4PSCC.cls`). It also fires on a published class of its own: `bookest` → `book`, `bookcover` → `book`, `beamerswitch` → `beamer`, `bookshelf` → `book`; so their commands are undefined. Sweep #149's log read them raw. TeX Live classes the prefix catches (16): `aalok`, `aastex701`, `acmart-tagged`, `anima`, `apa6e`, `articleingud`, `beamer-rl`, `beamerswitch`, `bookcover`, `bookest`, `bookshelf`, `jmlrbook`, `postcards`, `reporting`, `revtex4-1`, `revtex4-2`.
+- **C1, a package's own `\multicolumn` refused. FIXED** (`state.rs` `another_interface`, `\multicolumn:locked@arity`, OD #209; guard `perfect_kernel_batchm1::a_package_multicolumn_of_another_arity_is_its_own`): sltables.sty:193's one-argument command stands; a three-argument copy, one with no parameters and a `\let` stay refused. sltables-doc-en 11 errors → 0.
+- **C2, the tblr read-ahead takes an inner `&` as the outer cell's end. FIXED** (`tabularray_sty.rs`, `SuppressedTabMarks` across `tblr_scan_body`; `::a_tblr_in_a_p_cell_reads_its_tab_marks_safely`). ProfSio-doc-fr 10 → 0, tikz3d-fr-doc 20 → 0.
+- **C3, the latex-lab block binding omits instances. FIXED** (`latex_lab_testphase_block_sty.rs`, the `block` instances of the file's :1362-1411; `::the_block_instances_of_the_file_are_declared`). keytheorems-doc 4 → 0.
+- **C4, a model raw code defines reported unknown. FIXED** (`xcolor_sty.rs`, the test of `\XC@mod@<model>`, KPE #958; `::a_color_model_is_known_by_its_xcolor_definition`). colorspace 8 → 0; the colour stays the recovery black.
+- **C5, ijsra's `\def\abstract{text}` refused. FIXED by a class binding, the kernel's lock unchanged** (`ijsra_cls.rs`; `::the_ijsra_abstract_is_semantic`): this class frees `\abstract` (as amsppt's binding does), and `{IJSRAabstract}` is the kernel's `{abstract}` with an `ltx:keywords`, so the opening's and the manual's French abstract are both `<abstract>`. Under any other class the value stays refused, 1 Error, the text lost (repro `macro-state/abstract_value_under_another_class_is_refused`; this manual alone in the corpus writes such a value, and none of the census's 35,942 papers uses this class). The opening's author stays a `{center}` line, no `<creator>`: making one means re-implementing `\IJSRAopening`'s block of up to five authors, affiliations and notes. A document with no `\abstract` was clean before the binding too (`\undef` is a `\let`).
+- **C6, a cover line between two late abstracts stays a body `<para>`. FIXED** (`cover_order.rs` `place_later_abstract`, OD #903; `::a_cover_line_between_two_abstracts_is_a_titlepage`). The 6 `-eng`/`-fra` manuals 2 jing lines → 0.
+- **C7, `\selectfont` of an unmapped family stays in `\nullfont`. FIXED** (`sect13.rs` `nfss_selected_font`, OD #779; `::selectfont_of_an_unmapped_family_leaves_nullfont`). prerex/chart 51.0 % → 100 %.
+- **C8, a block whose only text is `\LaTeX` counts as empty. FIXED** (`util_text.rs` `template_prints_text`, KPE #428; `::a_template_of_its_own_text_is_content`). niepraschk-eso-pic 66.7 % → 100 %.
+- **C9, multibib's style never reaches `BIBSTYLE`. FIXED** (`multibib_sty.rs`, OD #823; `::a_multibib_style_reaches_the_bst_fields`). quantum-bibliographystyle-demo 93.2 % → 97.3 %. Limit: one `BIBSTYLE` per document, of mixed styles the `.bst` fields are the last's.
+- **Ruled out of the worklist:** serbian-def-cyr/proba `recall 19` and latex-refsheet/LaTeX_RefSheet `recall 75` in `accepted_residuals.tsv`, with their reasons (`j` in T2A; a word inside an included PDF).
 - **B, `\pdftex_if_engine:TF` undefined** (mdframed, 4 manuals, E about 290 each): not yet root-caused.
 - **T, timeouts:** re-run on quiet cores first; several may be load. `cpu_h` rose 0.92 → 1.20 in scope, partly load.
-- **V, newly schema-invalid** (annee-scolaire, paresse, simples-matrices, the same author's family, 2 jing lines each): not yet root-caused.
-- **R, recall** (LaTeX_RefSheet, prerex/chart, quantum-bibliographystyle-demo, serbian-def-cyr/proba, niepraschk-eso-pic; tabularray is its HTML pass, to re-check): not yet root-caused.
+- **V, newly schema-invalid** (annee-scolaire, paresse, simples-matrices): C6 above.
+- **R, recall** (LaTeX_RefSheet, prerex/chart, quantum-bibliographystyle-demo, serbian-def-cyr/proba, niepraschk-eso-pic): C7, C8, C9 and the two residuals above. tabularray and tkz-grapheur were their HTML pass, back at M2. cmpj/template (98.9 → 96.0 %) and datetime2-english-sample (100 → 96.6 %) stay above the bar, not yet root-caused.
 - **?, the rest:** each row's first error below is the lead.
 
 **Also watch:** 25 manuals went status 0 → 1, new Warnings only, listed at the end; read them after the Errors, since 108b's and 108a's counted Warnings are intended. Japanese `jsarticle` manuals moved to OmniBus by `declared_other_format`, intended and out of scope.
@@ -36,8 +46,8 @@ Status / errors at #149 → #150, in scope or canary. `in` manuals count against
 
 | Manual | Scope | #149 | #150 | What regressed | Cluster | First error at #150 | Done |
 |---|---|---|---|---|---|---|---|
-| annee-scolaire/annee-scolaire-eng | in | 1/E0 | 1/E0 | invalid | V |  | |
-| annee-scolaire/annee-scolaire-fra | in | 1/E0 | 1/E0 | invalid | V |  | |
+| annee-scolaire/annee-scolaire-eng | in | 1/E0 | 1/E0 | invalid | V |  | fixed, M2 C6 |
+| annee-scolaire/annee-scolaire-fra | in | 1/E0 | 1/E0 | invalid | V |  | fixed, M2 C6 |
 | beamerswitch/beamerswitch-example | in | 1/E0 | 2/E2 | status,errors,recall-lost | A | Error:undefined:\handoutlayout The token T_CS[\handoutlayout] is not defined. | fixed, M1 |
 | biblatex-arthistory-bonn/arthistory-bonn | canary | 3/E7 | 124/E6 | status | T | Error:missing_file:arthistory-bonn-preamble.tex Can't find TeX file arthistory-bonn-preamble.tex | |
 | biblatex-ms/biblatex-ms | canary | 2/E2 | 2/E3 | errors | ? | Error:undefined:{release} The environment {release} is not defined. | |
@@ -49,15 +59,15 @@ Status / errors at #149 → #150, in scope or canary. `in` manuals count against
 | bookest/bookestdoc-it | in | 1/E0 | 2/E4 | status,errors,recall-lost | A | Error:undefined:\setoddheadtext The token T_CS[\setoddheadtext] is not defined. | fixed, M1 |
 | bracketkey/Malva | canary | 0/E0 | 2/E61 | status,errors,recall-lost | ? | Error:unexpected:T_CS[\theindex] \theindex' invalid at this point | |
 | cmpj/template | in | 1/E0 | 1/E0 | recall-drop 98.9→96.0 % | R |  | |
-| colorspace/colorspace | in | 0/E0 | 2/E8 | status,errors,recall-lost | ? | Error:unexpected:fooshaded Unrecognized color model 'fooshaded' | |
+| colorspace/colorspace | in | 0/E0 | 2/E8 | status,errors,recall-lost | ? | Error:unexpected:fooshaded Unrecognized color model 'fooshaded' | fixed, M2 C4 |
 | currency/currency_doc | canary | 2/E39 | 2/E41 | errors | ? | Error:undefined:\href The token T_CS[\href] is not defined. | |
 | datetime2-english/datetime2-english-sample | in | 0/E0 | 0/E0 | recall-drop 100.0→96.6 % | R |  | |
 | draftfigure/draftfigure | canary | 2/E24 | 2/E25 | errors | ? | Error:missing_file:draftfigure-preamble.tex Can't find TeX file draftfigure-preamble.tex | |
 | epslatex-fr/fepslatex | canary | 2/E10 | 2/E11 | errors | ? | Error:expected:{ Missing { inserted | |
 | floatrow/floatrow-rus | canary | 3/E101 | 124/E52 | status | T | Error:latex:(caption) Package caption Error: The counter subtable' was already defined by | |
 | gtrcrd/gtrcrd-doc | in | 0/E0 | 2/E6 | status,errors,recall-lost | A | Error:undefined:\setleftmark The token T_CS[\setleftmark] is not defined. | fixed, M1 |
-| ijsra/ijsra | in | 1/E0 | 2/E1 | status,errors,recall-lost | ? | Error:unexpected:\endlx@list Attempt to end mode internal_vertical | |
-| keytheorems/keytheorems-doc | in | 1/E0 | 2/E4 | status,errors,recall-lost | ? | Error:errmessage:\errmessage LaTeX template Error: The instance 'theoremblock-0' of type 'block' is | |
+| ijsra/ijsra | in | 1/E0 | 2/E1 | status,errors,recall-lost | ? | Error:unexpected:\endlx@list Attempt to end mode internal_vertical | fixed, M2 C5 |
+| keytheorems/keytheorems-doc | in | 1/E0 | 2/E4 | status,errors,recall-lost | ? | Error:errmessage:\errmessage LaTeX template Error: The instance 'theoremblock-0' of type 'block' is | fixed, M2 C3 |
 | kotex-oblivoir/ob-mathleading-doc | canary | 2/E4 | 2/E5 | errors | ? | Error:undefined:\luatexkomainhangulfamily The token T_CS[\luatexkomainhangulfamily] is not defined. | |
 | lineno/fnlineno | canary | 0/E0 | 2/E1 | status,errors,recall-lost | ? | Error:undefined:\3 The token T_CS[\3] is not defined. | |
 | ltxkeys/ltxkeys-guide | canary | 3/E27 | 3/E31 | errors | ? | Error:undefined:\ltscomment The token T_CS[\ltscomment] is not defined. | |
@@ -71,28 +81,28 @@ Status / errors at #149 → #150, in scope or canary. `in` manuals count against
 | ndsu-thesis-2022/NDSU-Thesis-Extended | canary | 2/E1 | 2/E2 | errors | ? | Error:undefined:\iftotaltables The token T_CS[\iftotaltables] is not defined. | |
 | ndsu-thesis-2022/ndsu-example | canary | 1/E0 | 2/E1 | status,errors,recall-lost | ? | Error:undefined:\iftotaltables The token T_CS[\iftotaltables] is not defined. | |
 | non-decimal-units/non-decimal-units | canary | 2/E1 | 2/E22 | errors | ? | Error:latex:(csvsimple) Package csvsimple Error: File 'unicode-alphabets.MUFI    .csv' not existent, | |
-| paresse/paresse-eng | in | 1/E0 | 1/E0 | invalid | V |  | |
-| paresse/paresse-fra | in | 1/E0 | 1/E0 | invalid | V |  | |
+| paresse/paresse-eng | in | 1/E0 | 1/E0 | invalid | V |  | fixed, M2 C6 |
+| paresse/paresse-fra | in | 1/E0 | 1/E0 | invalid | V |  | fixed, M2 C6 |
 | plweb/pl | canary | 2/E12 | 3/E0 | status | ? | Fatal:Stomach:Recursion  Excessive recursion(?): Tokens on stack: ["{", "\\lx@hidden@bgroup", "\\lx@ | |
 | pmhanguljamo/pmhanguljamo-kdoc | canary | 2/E5 | 2/E6 | errors | ? | Error:undefined:\luatexkomainhangulfamily The token T_CS[\luatexkomainhangulfamily] is not defined. | |
-| prerex/chart | in | 0/E0 | 0/E0 | recall 100.0→51.0 % | R |  | |
-| profsio/ProfSio-doc-fr | in | 1/E0 | 2/E10 | status,errors,recall-lost | ? | Error:expected:{ Missing { inserted | |
+| prerex/chart | in | 0/E0 | 0/E0 | recall 100.0→51.0 % | R |  | fixed, M2 C7 |
+| profsio/ProfSio-doc-fr | in | 1/E0 | 2/E10 | status,errors,recall-lost | ? | Error:expected:{ Missing { inserted | fixed, M2 C2 |
 | pynotebook/pynotebook-examples-pitonpyluatex | canary | 2/E9 | 2/E10 | errors | ? | Error:latex:(PyLuaTeX) Package PyLuaTeX Error: Shell escape is required (add --shell-escape option)  | |
-| serbian-def-cyr/proba | in | 0/E0 | 0/E0 | recall 100.0→90.3 % | R |  | |
-| shipunov/sltables-doc-en | in | 1/E0 | 2/E11 | status,errors,recall-lost | ? | Error:unexpected:\omit \omit cannot be used here | |
+| serbian-def-cyr/proba | in | 0/E0 | 0/E0 | recall 100.0→90.3 % | R |  | residual, recall 19 |
+| shipunov/sltables-doc-en | in | 1/E0 | 2/E11 | status,errors,recall-lost | ? | Error:unexpected:\omit \omit cannot be used here | fixed, M2 C1 |
 | simpler-wick/simpler-wick | canary | 1/E0 | 2/E1 | status,errors,recall-lost | ? | Error:unexpected:fi Didn't expect a "T_CS[\\fi]" since we seem not to be in a conditional | |
-| simples-matrices/simples-matrices-eng | in | 1/E0 | 1/E0 | invalid | V |  | |
-| simples-matrices/simples-matrices-fra | in | 1/E0 | 1/E0 | invalid | V |  | |
+| simples-matrices/simples-matrices-eng | in | 1/E0 | 1/E0 | invalid | V |  | fixed, M2 C6 |
+| simples-matrices/simples-matrices-fra | in | 1/E0 | 1/E0 | invalid | V |  | fixed, M2 C6 |
 | subsupscripts/SubSupScripts | in | 0/E0 | 2/E6 | status,errors,recall-lost | A | Error:undefined:\setbibname The token T_CS[\setbibname] is not defined. | fixed, M1 |
-| tabularray/tabularray | in | 1/E0 | 1/E0 | recall 100.0→0.0 % | R |  | |
-| textpos/niepraschk-eso-pic | in | 0/E0 | 0/E0 | recall 100.0→66.7 % | R |  | |
+| tabularray/tabularray | in | 1/E0 | 1/E0 | recall 100.0→0.0 % | R |  | HTML pass, 100 % at M2 |
+| textpos/niepraschk-eso-pic | in | 0/E0 | 0/E0 | recall 100.0→66.7 % | R |  | fixed, M2 C8 |
 | tikz-feynman/tikz-feynman | canary | 2/E4 | 2/E5 | errors | ? | Error:unexpected:fi Didn't expect a "T_CS[\\fi]" since we seem not to be in a conditional | |
 | tikz-trackschematic/tikz-trackschematic | canary | 3/E3 | 3/E101 | errors | ? | Error:undefined:\CommentEndDef The token T_CS[\CommentEndDef] is not defined. | |
 | tikz-trackschematic/tikz-trackschematic-snippets | canary | 3/E3 | 3/E101 | errors | ? | Error:undefined:\CommentEndDef The token T_CS[\CommentEndDef] is not defined. | |
-| tikz3d-fr/tikz3d-fr-doc | canary | 1/E0 | 2/E20 | status,errors,recall-lost | ? | Error:expected:{ Missing { inserted | |
+| tikz3d-fr/tikz3d-fr-doc | canary | 1/E0 | 2/E20 | status,errors,recall-lost | ? | Error:expected:{ Missing { inserted | fixed, M2 C2 |
 | tikzpingus/tikzpingus-doc | canary | 3/E17 | 124/E48 | status,errors | T | Error:unexpected:\@pingu@wingdown@0.0@ The control sequence "\\@pingu@wingdown@0.0@" should not appe | |
-| tkz-grapheur/tkz-grapheur-doc-en | canary | 1/E0 | 1/E0 | recall 99.8→0.0 % | R |  | |
-| tkz-grapheur/tkz-grapheur-doc-fr | canary | 1/E0 | 1/E0 | recall 99.8→0.0 % | R |  | |
+| tkz-grapheur/tkz-grapheur-doc-en | canary | 1/E0 | 1/E0 | recall 99.8→0.0 % | R |  | HTML pass, 99.8 % at M2 |
+| tkz-grapheur/tkz-grapheur-doc-fr | canary | 1/E0 | 1/E0 | recall 99.8→0.0 % | R |  | HTML pass, 99.8 % at M2 |
 | tutodoc/tutodoc-en | canary | 2/E2 | 2/E3 | errors | ? | Error:unexpected:} Attempt to close a group that switched to mode horizontal | |
 | tutodoc/tutodoc-fr | canary | 2/E2 | 2/E3 | errors | ? | Error:unexpected:} Attempt to close a group that switched to mode horizontal | |
 | tuzuk/oyd_tuzuk_2023 | canary | 0/E0 | 2/E2 | status,errors,recall-lost | ? | Error:unexpected:& Extra alignment tab '&' | |

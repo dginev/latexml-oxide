@@ -284,8 +284,10 @@ fn place_linked_late_abstract(document: &mut Document, marker: &Node) -> Result<
 /// cover line), and no late abstract stands in the region a later scan crosses — one that did would refuse the move.
 /// Anything else there — a sectional unit, a float, a list, a TOC, body prose — and the move is refused: the run stays
 /// right after the abstract before it (r3 review probes q1–q4, q10), and a markerless one, which no marker places,
-/// right after the one before it (q9). The cover lines stay as they are; the first late abstract's cover is the
-/// `<titlepage>`. Returns whether it moved anything.
+/// right after the one before it (q9). The cover lines become a `<titlepage>` of their own, continued like the first
+/// late abstract's ([`CONTINUED_TITLEPAGE`]): a `<para>` is no frontmatter, and the abstract after it would be invalid
+/// (`\maketitle`, `\noindent\hrulefill`, `{abstract}`, `\noindent\hrulefill`, `{abstract}`: the simples-matrices,
+/// annee-scolaire and paresse manuals, 1006.5288's shape). Returns whether it moved anything.
 fn place_later_abstract(document: &mut Document, bound: Option<&Node>, own: &Node) -> Result<bool> {
   let Some(root) = document.get_document().get_root_element() else {
     return Ok(false);
@@ -319,27 +321,31 @@ fn place_later_abstract(document: &mut Document, bound: Option<&Node>, own: &Nod
   if kids[first..run_end].iter().any(from_the_title_page) {
     return Ok(false);
   }
-  let mut cover = false;
+  let mut cover: Vec<Node> = Vec::new();
+  let mut passed: Vec<Node> = Vec::new();
   for kid in &kids[run_end..end] {
     // (none stands there while late abstracts keep their source order: a move past one would put it ahead)
     if is_late_abstract(kid) {
       return Ok(false);
     }
-    if kid.get_name().ends_with("_Capture_")
-      || node_is_content_free(kid)
+    if kid.get_name().ends_with("_Capture_") {
+      continue;
+    }
+    if node_is_content_free(kid)
       || is_preamble_residue(kid)
       || document::get_node_qname(kid) == pin_static("ltx:note")
       || kid.has_attribute(DEPOSIT_INSERT)
     {
-      continue;
-    }
-    if is_titlepage_layout(kid) && (kid.has_attribute(DEPOSIT_PROVENANCE) || !is_body_prose(kid)) {
-      cover = true;
+      passed.push(kid.clone());
+    } else if is_titlepage_layout(kid)
+      && (kid.has_attribute(DEPOSIT_PROVENANCE) || !is_body_prose(kid))
+    {
+      cover.push(kid.clone());
     } else {
       return Ok(false);
     }
   }
-  if !cover {
+  if cover.is_empty() {
     return Ok(false);
   }
   // (the build goes on at the root, not inside a cover line the abstract now follows)
@@ -360,14 +366,15 @@ fn place_later_abstract(document: &mut Document, bound: Option<&Node>, own: &Nod
       return Ok(false);
     }
   }
-  let Some(mut tail) = region.last().cloned() else {
-    return Ok(false);
-  };
+  let mut titlepage = wrap_as_titlepage(document, &root, &cover)?;
+  document.add_class(&mut titlepage, CONTINUED_TITLEPAGE)?;
+  let mut tail = titlepage;
   for mut node in kids[first..run_end].iter().cloned() {
     node.unlink();
     tail.add_next_sibling(&mut node)?;
     tail = node;
   }
+  move_content_free_after(&passed, tail)?;
   Ok(true)
 }
 

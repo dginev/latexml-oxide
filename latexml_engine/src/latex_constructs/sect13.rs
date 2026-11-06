@@ -2589,6 +2589,13 @@ pub fn nfss_selected_font(base: &Font, report: bool) -> Result<Font> {
     let message = s!("Unrecognized font family {:?}.", family);
     Info!("unexpected", family, message);
   }
+  // A family named what the font table does not map keeps the font in force, but `\nullfont` holds no characters, so
+  // `\selectfont` leaves it, on the serif `\lx@normalfont@base` falls back to (`\usepackage[default]{opensans}`'s
+  // `\familydefault` = `opensans-LF`, whose `.fd` LaTeXML does not read, in a pgf node, pgf's `\nullfont` regime: prerex's
+  // `chart` manual lost every cell, silently). pgf's own next `\nullfont` keeps text at picture level dropped.
+  if font.get_family().is_some_and(|family| family == "nullfont") {
+    font = font.merge_ref(&fontmap!(family => "serif"));
+  }
   if let Some(sh) = font::lookup_font_series(&series) {
     font = font.merge_ref(sh);
   } else if report && !already_reported(&s!("reported_unrecognized_font_series_{series}")) {
