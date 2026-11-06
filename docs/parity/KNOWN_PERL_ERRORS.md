@@ -19078,10 +19078,12 @@ a `\protected@edef` of `\begin{x}` runs the environment's opening where TeX keep
 % Perl (/usr/local/bin/latexml, run): Error:undefined:{} "The environment {} is not defined", R=\ifdefprotected{\begingroup\lx@setcurrenvir{}}\{prot}{notprot}
 ```
 
-Fixed in Rust: `\begin` is `protected` and `\end` keeps itself as `\protect\end ` under `\@unexpandable@protect` and `\noexpand`
-(latex.ltx:15365-15380; not under a display `\string`, which a spurious error under a document's `\globaldefs\@ne` can leave for
-good: 2405.15073), sect01.rs; blkarray's `\BA@begin` is ported, its block's `\begin` expandable at a cell's head (blkarray.sty:1099-1102, :1123).
-Witness yquant-doc:3608 (`\matrix@check` at edef time, "Old form"). Guard `perfect_kernel_batchm3::begin_is_protected_in_an_edef`.
+Fixed in Rust: `\begin` is `protected`; `\end` is latex.ltx:15365-15380's front, `\protect\end ` under any `\protect` but
+`\@typeset@protect`, and `\end ` its body (sect01.rs); typesetting, one expansion is the body's, as the front's `\romannumeral` makes it; a siunitx `S` cell's
+read, in that regime, takes `\end` as its body so a last row's cell still ends (siunitx_sty.rs, 2505.21533, 2105.06936); the case changer's list holds both (expl3-code.tex:36005); blkarray's `\BA@begin` is
+ported, its block's `\begin` expandable at a cell's head (blkarray.sty:1099-1102, :1123). Witness yquant-doc:3608 (`\matrix@check` at edef
+time, "Old form"). Guards `perfect_kernel_batchm3::{begin_is_protected_in_an_edef, end_tests_the_typeset_protect,
+a_case_change_keeps_an_environment_name}`.
 
 ## 1212. `\ensuremath{}` reads its argument where the kernel's has no parameter
 
@@ -19170,3 +19172,25 @@ for the read, base_parameter_types.rs). Witness yquant-doc:2504-2521 (501 errors
 tex.web §474-476: a `}` in a parameter text is "Missing { inserted", read as `\def\a{}`. Gullet.pm:692 `readUntilBrace` takes it and
 reads on to the next `{`. Minimal trigger: repro macro-state/def_parameter_text_right_brace_red (pdflatex 1 error, `macro:->`; Perl, run, and
 Rust 0 errors). **Open in Rust** (`gullet.rs` `read_until_brace`, left to the track on that file): floatrow-rus's cascade reaches it.
+
+## 1217. listings.sty.ltxml declares `lstlisting` at load, where the package waits for `\begin{document}`
+
+listings.sty:1604-1609 declares the counter and `\thelstlisting` `\AtBeginDocument`; listings.sty.ltxml:133 `NewCounter` runs at load. So a preamble's
+test of the counter answers wrongly, and what the preamble does to it survives where LaTeX's hook overrides or refuses it. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{listings}
+\usepackage{tocloft}
+\newlistentry{lstlisting}{lol}{0}% pdflatex: clean; Perl (the shared binding): "lstlisting has been previously defined"
+\begin{document}
+\end{document}
+```
+
+Under a `\globaldefs\@ne` around it (2405.15073, template.tex:6180-6187) that spurious error's display `\protect` stays global, and `\normalfont`,
+`\bfseries`, `\ref` print as text: 214, 59, 31 times.
+
+Fixed in Rust on the package's own timing (listings_sty.rs, `\AtBeginDocument[listings]`, so before a document's own hooks, as lthooks orders them).
+2405.15073: E 92 → 77, those three 0, its 8 affiliation contacts back, recall of pdflatex's words 99.7 %. A preamble's `\setcounter{lstlisting}{5}`, `\numberwithin{lstlisting}{section}`
+and `\renewcommand\thelstlisting` no longer number the listings, as in pdflatex, which errs on each ("No counter", "undefined"); ours has no Error there (`\setcounter` a Warning), the numbers the same.
+Guard `perfect_kernel_batchm3::the_lstlisting_counter_waits_for_begin_document`.

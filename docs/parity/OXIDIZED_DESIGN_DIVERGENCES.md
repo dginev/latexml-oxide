@@ -32222,8 +32222,19 @@ group, and a list that is the rest of a formula, are now an array (`opens_array`
 integer form kept), text or arrays; a text or array value leaves the parse as `text_result`, in pgf's form (`{1}{2}{3}`, an indexed
 array `{{3}{4}}`, pgfmathparser.code.tex:943-954). pgf's errors stay Errors: "Array index out of bounds" (0) and text in arithmetic
 ("Missing number"). Witnesses tikzpingus-doc, 2002.08586, 2509.25473. Guards `perfect_kernel_batchm3::{pgfmath_arrays_are_read_as_pgf_reads_them,
-pgfmath_array_misuse_is_an_error}`. **Left:** `{1+2}*3` (grouping skipped, 7; pgf "Missing number", 0.0); `({1,2,3}[1])` (2; pgf out of bounds);
-a macro holding `{1}{2}{3}` is no array to index (pgf `{3}{1}`, out of bounds); a user function's array argument.
+pgfmath_array_misuse_is_an_error, pgfmath_array_text_is_read_as_pgf_reads_it}`.
+
+Text follows pgf's code, each form pinned against pdflatex: `ifthenelse` returns a branch as it is; arithmetic reads text as `\pgfmath@x=#1pt` does, so `"1"`
+is 1, `"1cm"` its points, `"1e2"` 1 and an Error; a whole formula's braces go first (pgfmathparser.code.tex:139, `{"a"}` is `a`); a list's
+`\pgfmath@bgroup@strip` (:963, :984-1009) drops the spaces before a string's first two tokens only, its `#1#2#3` being undelimited (`{"a b","c"}[0]` is `ab`,
+`{"a ? b","c"}[0]` is `a? b`, `"a b"` alone stays); a list of one indexes its value's tokens (`{"ab"}[1]` is `b`, `{1cm}[0]` is `2`, `array({"ab"},1)` is `b`), and such a list inside another its value (`{{"ab"}}[0]` is `ab`); the sizers take a braced string, `height{"Q"}` (pgfcircvoltage.tex:192, circuitikzmanual).
+
+**Left, wrong numbers with no Error** (repro graphics-tikz/pgfmath_string_and_units_in_arithmetic_red): a `"` operand inside a formula, `"1"+1` (pgf 2.0, ours 0.0), `("a")`,
+`dim("a")`, `"a"==1`, `"a"+"b"`, `max("a",1)`; a unit after an array primary, `{1,2}[0] pt`, `3*{1,2}[1]pt`, `{10,20}[1] mm`, where pgf errs; `({1,2,3})[1]`, `({1,2,3}[1])`
+(ours 1, 2; pgf out of bounds); `\nums[1]*\dimexpr 1pt\relax` (pgf 2.0, ours 0.0); `{1+2}*3`, `{2}*3` (grouping skipped; pgf "Missing number"); `{1,2}+1`; `{}` (pgf empty, ours 0.0); `-{1,2}[1]`
+(pgf `.`, ours -2.0); `int({"a"}[0])` (pgf `a`, ours 0 and an Error); a macro holding `{1}{2}{3}` is no array to index (pgf `{3}{1}`, out of bounds); an unindexed list as an argument, `ifthenelse(1,{1,2},3)` (pgf `{1}{2}`, ours 1.0);
+a user function's array or text argument, `f({"a","b"}[0])` (pgf `a`, ours 0.0 and an Error). **Left, a `\protected` command in a string** (repro graphics-tikz/pgfmath_string_keeps_protected_commands_red): `{"\textbf{A}","b"}[0]` prints A in pgf, whose `\edef` stops
+at it; the native parser expands it, text and Errors.
 
 ### 974. A PDF string's escapes are the characters they name (pdflatex: the bytes, broken by a UTF-16 string)
 
@@ -32239,3 +32250,10 @@ keytheorems.sty:994, :1075-1079 stores the head through `\deferred@thm@head` for
 binding's theorem never calls `\deferred@thm@head`: it makes the head an `ltx:title` before the box. latexml_contrib/src/keytheorems_sty.rs reads
 the file raw and leaves the macro empty, so the box's title slot is empty and the head is kept. Witnesses tutodoc-en, tutodoc-fr. Guard
 `perfect_kernel_batchm3::a_tcolorbox_keytheorem_keeps_its_head_and_body`.
+
+### 976. tabularray's `preto`, `appto` in `\SetCell`, `\SetRow`, `\SetColumn` are counted, not applied (pdflatex: applied)
+
+Those of a colspec's `Q[…]`, `column`, `row`, `cell`, `cells`, `rows`, `columns` join the cell's text, inside its math and its `cmd` (tabularray.sty:2639-2640, :2660-2686;
+latexml_contrib/src/tabularray_sty.rs, `\lx@tblr@cell@open`). The binding's `\Set…` commands take no key at all, so their text is lost: each gives `Warning:tabularray_key:<key>` with the
+text. Guard `perfect_kernel_batchm3::tblr_preto_and_appto_join_the_cell_text`. **Left:** an inline key's `\my_later:n` under `\ExplSyntaxOn` reads as `\my`, `_` (repro
+alignment-bindings/tblr_inline_expl_command_in_a_key_red).

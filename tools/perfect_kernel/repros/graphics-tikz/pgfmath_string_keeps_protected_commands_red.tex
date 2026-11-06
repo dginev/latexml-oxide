@@ -1,0 +1,13 @@
+% witness: review of M3's pgfmath arrays (finding 6): pgf's `\edef` stops at a `\protected` command, the native parser's expansion does not
+% oracle:  pdflatex (TL 2025) 0 errors: X A Y B., Q., P.
+% engines: M3r2, M3: `\edefm bx \selectfontA` as text and Errors. int141a: a silent 0.0 in the arrays; `"\textbf{P}"` fails the same way there.
+% expect:  0 errors; pdflatex's text
+% status:  RED
+\documentclass{article}
+\usepackage{tikz}
+\newcommand\nm[1]{\pgfmathparse{{"\textbf{A}","\textit{B}"}[#1]}\pgfmathresult}
+\begin{document}
+X \nm{0} Y \nm{1}.
+\pgfmathsetmacro\m{{"\textbf{Q}","R"}[0]}\m.
+\pgfmathparse{"\textbf{P}"}\pgfmathresult.
+\end{document}

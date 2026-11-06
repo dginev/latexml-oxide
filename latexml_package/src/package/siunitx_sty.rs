@@ -1793,7 +1793,9 @@ fn six_format_list(bracketed: bool, items: Vec<Tokens>) -> Tokens {
 /// `\__siunitx_table_collect_relax:N`, the token `\relax` itself): it is left to run, and the rest of the cell is set
 /// as it comes. siunitx collects without expanding; read with expansion, a `\relax` a macro yields ends it too. csvsimple ends each row's command with one (csvsimple-legacy.sty:289-293 `\csv@body\relax`); read
 /// on, the expansion unrolled its next-line loop without end, the `\read` never run (2108.13640, `PushbackLimit`).
-/// Perl reads to the column's end (`XUntil`, siunitx.sty.ltxml:1414; KPE #474).
+/// Perl reads to the column's end (`XUntil`, siunitx.sty.ltxml:1414; KPE #474). The read takes `\end` as `\end `, its body: under
+/// this regime `\end` is `\protect\end ` (KPE #1211), and a last row's cell with no `\\` read on past the table to the next one's
+/// column (2505.21533, 2105.06936: E 1 → 113, 0 → 2). siunitx.sty:5647 stops at the token; here its end brings the column's.
 ///
 /// A column with a `>{…}` prefix (`>{\centering\arraybackslash}S`) has it between the column's own tokens and the
 /// `\ignorespaces` array.sty's `\insert@column` puts before the cell; siunitx takes it as given, unexpanded
@@ -1810,7 +1812,9 @@ fn read_si_cell() -> Result<Tokens> {
     prefix = read_until_token(T_CS!("\\ignorespaces"))?.unlist();
   }
   let (cell, stop) = with_unexpandable_protect(|| {
-    read_x_until_any(&[T_CS!("\\lx@si@column@end"), T_CS!("\\relax")])
+    with_let(&T_CS!("\\end"), &T_CS!("\\end "), || {
+      read_x_until_any(&[T_CS!("\\lx@si@column@end"), T_CS!("\\relax")])
+    })
   })?;
   if stop == Some(T_CS!("\\relax")) {
     unread_one(T_CS!("\\relax"));

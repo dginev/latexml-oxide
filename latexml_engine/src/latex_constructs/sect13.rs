@@ -1563,7 +1563,9 @@ pub(crate) fn load() -> Result<()> {
 \AddToNoCaseChangeList{\cite}%
 \AddToNoCaseChangeList{\ensuremath}%
 \AddToNoCaseChangeList{\@ensuremath}%
-\AddToNoCaseChangeList{\thanks}%"
+\AddToNoCaseChangeList{\thanks}%
+\AddToNoCaseChangeList{\begin}%
+\AddToNoCaseChangeList{\end}%"
   );
 
   // Perl L5966-5993: \MakeUppercase, \MakeLowercase, \MakeTitlecase. They read the

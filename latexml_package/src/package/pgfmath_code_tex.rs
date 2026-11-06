@@ -904,7 +904,7 @@ mod pgfmath_grammar {
   }
 
   /// The index of a `{`-group's closing brace in `s`, which starts with it (a quoted string's braces count for nothing).
-  fn matching_brace(s: &str) -> Option<usize> {
+  pub(super) fn matching_brace(s: &str) -> Option<usize> {
     let mut depth = 0usize;
     let mut quoted = false;
     for (at, byte) in s.bytes().enumerate() {
@@ -938,15 +938,107 @@ mod pgfmath_grammar {
       })
   }
 
-  /// A number is wanted here, where the value so far may be text: TeX's "Missing number, treated as zero" (live pgf,
-  /// `{"a","b"}[0]+1` is 1.0 and that error).
+  /// A number is wanted here, where the value so far may be text. pgf's arithmetic reads an operand as TeX reads
+  /// `\pgfmath@x=#1pt` (pgfmathfunctions.basic.code.tex), so [`text_as_number`] gave the value and text a number can't
+  /// be read from is "Missing number, treated as zero" (live pgf, `{"a","b"}[0]+1` is 1.0 and that error).
   fn number_wanted(i: &mut In) {
-    if i.state.text_result.take().is_some() {
+    if i
+      .state
+      .text_result
+      .take()
+      .is_some_and(|text| !text_as_number(&text).1)
+    {
       super::report_pgfmath_error(
         "expected",
         "<number>",
         "Missing number, treated as zero: a pgfmath string in arithmetic",
       );
+    }
+  }
+
+  /// The number TeX reads from a text value followed by `pt`, and whether it reads all it should: `1` and `1.5`, a unit
+  /// of its own (`1pt` and `1cm`, whose `pt` left over prints in pgf's null font), but `1e2` is 1 and an illegal unit,
+  /// `a` is a missing number.
+  fn text_as_number(text: &str) -> (f64, bool) {
+    let sign = text
+      .bytes()
+      .take_while(|b| matches!(b, b'+' | b'-'))
+      .count();
+    let mut point = false;
+    let digits = text[sign..]
+      .bytes()
+      .take_while(|b| b.is_ascii_digit() || (*b == b'.' && !std::mem::replace(&mut point, true)))
+      .count();
+    let (number, unit) = text.split_at(sign + digits);
+    let negative = number.bytes().filter(|b| *b == b'-').count() % 2 == 1;
+    let Ok(value) = number[sign..].parse::<f64>() else {
+      return (0.0, false);
+    };
+    let value = if negative { -value } else { value };
+    if unit.is_empty() {
+      return (value, true);
+    }
+    match PGF_UNITS.iter().find(|known| unit.starts_with(**known)) {
+      Some(known) => (pgfmath_convert(value, known), true),
+      None => (value, false),
+    }
+  }
+
+  /// The bytes of the token `text` opens with: a character, or a control sequence.
+  fn token_width(text: &str) -> usize {
+    match text.strip_prefix('\\') {
+      Some(name) => {
+        let letters = name.bytes().take_while(u8::is_ascii_alphabetic).count();
+        1 + if letters > 0 {
+          letters
+        } else {
+          name.chars().next().map_or(0, char::len_utf8)
+        }
+      },
+      None => text.chars().next().map_or(0, char::len_utf8),
+    }
+  }
+
+  /// The tokens of a value, as elements: `\pgfmatharray@@`'s undelimited argument skips spaces, and takes a group whole.
+  fn text_tokens(text: &str) -> Vec<ArrayElement> {
+    let mut tokens = Vec::new();
+    let mut rest = text.trim_start();
+    while let Some(c) = rest.chars().next() {
+      let width = if c == '{' {
+        matching_brace(rest).map_or(1, |end| end + 1)
+      } else {
+        token_width(rest)
+      };
+      let (token, tail) = rest.split_at(width);
+      tokens.push(ArrayElement::Text(
+        token
+          .strip_prefix('{')
+          .and_then(|t| t.strip_suffix('}'))
+          .unwrap_or(token)
+          .to_string(),
+      ));
+      rest = tail.trim_start();
+    }
+    tokens
+  }
+
+  /// What `\pgfmath@collect@`'s `\pgfmath@bgroup@strip` leaves of a string in a list of two or more
+  /// (pgfmathparser.code.tex:963, :984-1009): its re-read `\pgfmath@bgroup@@@strip#1#2#3` takes two undelimited arguments,
+  /// which skip the spaces before them, so a space before the first token or the second goes and any later one stays
+  /// (`"a b"` is `ab`, `"a ? b"` is `a? b`, `"ab c"` stays). A string that opens with a group is kept whole.
+  fn collected_string(text: &str) -> String {
+    let rest = text.trim_start();
+    if rest.starts_with('{') {
+      return text.to_string();
+    }
+    let first = token_width(rest);
+    let (head, tail) = rest.split_at(first);
+    // (a control word keeps the space that ends it, which is no token)
+    let word = head.len() > 2 && head.starts_with('\\');
+    if word {
+      rest.to_string()
+    } else {
+      format!("{head}{}", tail.trim_start())
     }
   }
 
@@ -959,19 +1051,30 @@ mod pgfmath_grammar {
     let inner = &text[1..end];
     let mut elements = Vec::new();
     if !inner.trim().is_empty() {
-      for piece in super::split_top_commas(inner).unwrap_or_default() {
+      let pieces = super::split_top_commas(inner).unwrap_or_default();
+      let collected = pieces.len() > 1;
+      for piece in pieces {
         let piece = piece.trim();
         let quoted = piece
           .strip_prefix('"')
           .and_then(|rest| rest.strip_suffix('"'))
           .filter(|text| !text.contains('"'));
         if let Some(string) = quoted {
-          elements.push(ArrayElement::Text(string.to_string()));
+          elements.push(ArrayElement::Text(if collected {
+            collected_string(string)
+          } else {
+            string.to_string()
+          }));
         } else if piece.is_empty() {
           elements.push(ArrayElement::Text(String::new()));
         } else if piece.starts_with('{') && matching_brace(piece) == Some(piece.len() - 1) {
           i.input = piece;
-          elements.push(ArrayElement::Array(array_literal(i)?));
+          let mut inner = array_literal(i)?;
+          // (a list's strip takes a lone string's braces too: `{{"a b"},"d"}[0]` is `ab`)
+          elements.push(match inner.as_mut_slice() {
+            [ArrayElement::Text(text)] if collected => ArrayElement::Text(collected_string(text)),
+            _ => ArrayElement::Array(inner),
+          });
         } else {
           i.input = piece;
           let value = formula(i);
@@ -1004,6 +1107,20 @@ mod pgfmath_grammar {
     })
   }
 
+  /// `elements[index]` of a list as pgf holds it. A list of one is no group of groups: `\pgfmatharray@@` indexes the tokens
+  /// of its value, `{"ab"}[1]` is `b`, `{1cm}[0]` is `2` (pgfmathfunctions.misc.code.tex:243-262), and one such list inside
+  /// another is that value's group, `{{"ab"}}[0]` is `ab`.
+  fn list_element(mut elements: Vec<ArrayElement>, index: f64) -> ArrayElement {
+    let is_value = |element: &ArrayElement| !matches!(element, ArrayElement::Array(_));
+    match elements.as_mut_slice() {
+      [ArrayElement::Array(inner)] if inner.len() == 1 && is_value(&inner[0]) => {
+        array_element(std::mem::take(inner), index)
+      },
+      [one] if is_value(one) => array_element(text_tokens(&one.result_text()), index),
+      _ => array_element(elements, index),
+    }
+  }
+
   /// The value of a whole array element: a number as it is, text in the result, an array as its text.
   fn array_value(i: &mut In, value: ArrayElement) -> f64 {
     match value {
@@ -1012,9 +1129,11 @@ mod pgfmath_grammar {
         number
       },
       other => {
-        i.state.text_result = Some(other.result_text());
+        let text = other.result_text();
+        let number = text_as_number(&text).0;
+        i.state.text_result = Some(text);
         i.state.int_result = false;
-        0.0
+        number
       },
     }
   }
@@ -1035,11 +1154,18 @@ mod pgfmath_grammar {
       number_wanted(i);
       eat(i, b']');
       value = match value {
-        ArrayElement::Array(elements) => array_element(elements, index),
+        ArrayElement::Array(elements) => list_element(elements, index),
         // an index into what is no array: pgf reads its one token as the array
         other => array_element(vec![other], index),
       };
       indexed = true;
+    }
+    // (a whole formula's braces go before pgf reads it, pgfmathparser.code.tex:139: `{"a"}` is `"a"`)
+    if !indexed
+      && let ArrayElement::Array(elements) = &mut value
+      && matches!(elements.as_slice(), [ArrayElement::Text(_)])
+    {
+      value = elements.remove(0);
     }
     let array = indexed && matches!(value, ArrayElement::Array(_));
     let number = array_value(i, value);
@@ -1435,20 +1561,22 @@ mod pgfmath_grammar {
   }
 
   /// `("…")`, the quoted text argument of `width`/`height`/`depth` (pgf's SIZER, Perl
-  /// pgfmath.code.tex.ltxml:682, :724), consumed; nothing is consumed when it is absent.
+  /// pgfmath.code.tex.ltxml:682, :724), consumed; nothing is consumed when it is absent. pgf takes a `{"…"}` as well, its
+  /// operand one group: circuitikz's `height{"Q"}` (pgfcircvoltage.tex:192, circuitikzmanual's `raised voltages`), 0 and
+  /// no Error before arrays, "Missing number" with them.
   fn quoted_argument<'a>(i: &mut In<'a>) -> Option<&'a str> {
-    let cp = i.checkpoint();
-    if eat(i, b'(') && eat(i, b'"') {
-      let text = i.input;
-      if let Some(end) = text.find('"') {
-        bump(i, end + 1);
-        if eat(i, b')') {
-          return Some(&text[..end]);
-        }
-      }
-    }
-    i.reset(&cp);
-    None
+    let input: &'a str = i.input;
+    let rest = input.trim_start();
+    let close = match rest.as_bytes().first() {
+      Some(b'(') => ')',
+      Some(b'{') => '}',
+      _ => return None,
+    };
+    let inner = rest[1..].trim_start().strip_prefix('"')?;
+    let end = inner.find('"')?;
+    let after = inner[end + 1..].trim_start().strip_prefix(close)?;
+    bump(i, input.len() - after.len());
+    Some(&inner[..end])
   }
 
   /// After evaluating a USER-declared pgfmath function/constant (NOT a
@@ -1510,7 +1638,7 @@ mod pgfmath_grammar {
         number_wanted(i);
         sb(i);
         eat(i, b')');
-        let element = array_element(elements, index);
+        let element = list_element(elements, index);
         return Ok(array_value(i, element));
       }
       sb(i);
@@ -1550,14 +1678,19 @@ mod pgfmath_grammar {
       let mut args = vec![formula(i)?];
       number_wanted(i);
       // Each argument's integer form: `ifthenelse` returns its chosen argument as it is
-      // (pgfmathfunctions.comparison.code.tex:77-86).
+      // (pgfmathfunctions.comparison.code.tex:77-86), text too, so its branches want no number.
       let mut arg_ints = vec![i.state.int_result];
+      let mut branch_texts = Vec::new();
       loop {
         sb(i);
         if eat(i, b',') {
           match formula(i) {
             Ok(arg) => {
-              number_wanted(i);
+              if name == "ifthenelse" {
+                branch_texts.push(i.state.text_result.take());
+              } else {
+                number_wanted(i);
+              }
               args.push(arg);
               arg_ints.push(i.state.int_result);
             },
@@ -1578,11 +1711,9 @@ mod pgfmath_grammar {
         return Ok(value);
       }
       if name == "ifthenelse" && args.len() == 3 {
-        i.state.int_result = if args[0] != 0.0 {
-          arg_ints[1]
-        } else {
-          arg_ints[2]
-        };
+        let chosen = if args[0] != 0.0 { 1 } else { 2 };
+        i.state.int_result = arg_ints[chosen];
+        i.state.text_result = branch_texts.swap_remove(chosen - 1);
       } else {
         set_int_result_for_fn(i, name);
       }
@@ -1930,7 +2061,18 @@ fn expand_pgfmath_arg<T: Into<Tokens>>(tokens: T) -> Tokens {
 pub(crate) fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
   // Normalize whitespace
   let input: String = raw_input.split_whitespace().collect::<Vec<_>>().join(" ");
-  let input = input.trim();
+  let mut input = input.trim();
+  // `\pgfmath@bgroup@strip` takes a whole formula's braces (pgfmathparser.code.tex:139); the group under the last pair
+  // the grammar reads, an array or a grouping (`{{"a","b"}}` is `{a}{b}`)
+  while let Some(inner) = input
+    .strip_prefix('{')
+    .and_then(|rest| rest.strip_suffix('}'))
+    && pgfmath_grammar::matching_brace(input) == Some(input.len() - 1)
+    && inner.trim_start().starts_with('{')
+    && pgfmath_grammar::matching_brace(inner.trim()) == Some(inner.trim().len() - 1)
+  {
+    input = inner.trim();
+  }
 
   // 0. String-valued ternary / ifthenelse — Perl pgfmath uses untyped scalars so the `?:` operator
   //    and `ifthenelse(...)` can return string values like `"black"` or `"pgreen!50"` for color

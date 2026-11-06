@@ -6,9 +6,14 @@
 //! (simpler-wick, tikz-feynman; 1905.00606, 2211.09537, 1405.2249), a tcolorbox keytheorem's head (tutodoc), a
 //! `\protected` `\begin` (yquant-doc), pgfmath's arrays (tikzpingus-doc; 2002.08586, 2509.25473) and a `\NewColumnType`
 //! body's commands (non-decimal-units).
+//! The fix round's: `lstlisting` declared at `\begin{document}` (2405.15073), `\end`'s own test of `\protect`, the case
+//! changer's `\begin`, `\end`, pgfmath's array text, tabularray's `preto`, `appto`.
 use latexml::util::test::{assert_element, convert_with};
 
-use super::perfect_kernel_batch46::{error_count, warning_count};
+use super::{
+  perfect_kernel_batch46::{error_count, warning_count},
+  perfect_kernel_batch84b::text,
+};
 
 const RAW: &str = "[rawstyles,rawclasses]latexml.sty";
 
@@ -195,7 +200,12 @@ fn a_tcolorbox_keytheorem_keeps_its_head_and_body() {
     &[],
     r##"<title class="ltx_runin"><tag><text font="bold">Warning</text></tag><text font="bold">.</text></title>"##,
   );
-  assert!(xml.contains("Body words."), "{xml}");
+  assert_element(
+    &xml,
+    "p",
+    &[],
+    r##"<p><text color="#000000" font="italic">Body words.</text></p>"##,
+  );
   assert!(!xml.contains("<ERROR"), "{xml}");
 }
 
@@ -247,7 +257,13 @@ fn a_binding_macro_in_an_edef_leaves_afterassignment_pending() {
   // (yquant's Warning for the `compat` key's newest)
   assert_eq!(error_count(&log), 0, "{log}");
   assert!(log.contains("P=\\relax") && log.contains("AFTER"), "{log}");
-  assert!(xml.contains("Word."), "{xml}");
+  assert_element(
+    &xml,
+    "Math",
+    &[],
+    r##"<Math mode="inline" tex="\ket{x}" text="ket@(x)" xml:id="p1.pic1.m1"><XMath><XMDual><XMApp><XMTok meaning="ket" role="UNKNOWN"/><XMRef idref="p1.pic1.m1.1"/></XMApp><XMWrap><XMTok role="VERTBAR" stretchy="false">|</XMTok><XMTok font="italic" role="UNKNOWN" xml:id="p1.pic1.m1.1">x</XMTok><XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok></XMWrap></XMDual></XMath></Math>"##,
+  );
+  assert_element(&xml, "p", &[], r##"<p>Word.</p>"##);
 }
 
 /// The native parser reads pgf's arrays, each value pdflatex's: a `{…}[i]` primary, text elements, `array`, `dim`, nesting
@@ -306,12 +322,13 @@ fn pgfmath_arrays_are_read_as_pgf_reads_them() {
 #[test]
 fn pgfmath_array_misuse_is_an_error() {
   let (log, _) = convert_with(repro!("graphics-tikz/pgfmath_array_errors"), Some(RAW));
-  assert_eq!((error_count(&log), warning_count(&log)), (4, 0), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (5, 0), "{log}");
   assert_eq!(typed_out(&log), [
     "A9 = 0",
     "A10 = 0",
     "A11 = 0",
     "A12 = 1.0",
+    "A13 = 2.0",
   ]);
 }
 
@@ -330,4 +347,209 @@ fn a_column_type_body_keeps_its_commands() {
     &[],
     r##"<tabular vattach="middle"><tbody><tr><td align="left">(One)</td><td align="left">¡Two¿</td><td align="right">[a—b—Three]</td><td align="center">[x—d—Four]</td><td align="center">[y—d—Five]</td></tr></tbody></tabular>"##,
   );
+}
+
+/// listings.sty:1604-1609 declares `lstlisting` in its `\AtBeginDocument`, in the hook's place: a preamble's tocloft
+/// `\newlistentry{lstlisting}` finds it undefined, a document's own hook finds it defined, whichever side of the package it
+/// was added (2405.15073, whose `\globaldefs\@ne` kept that spurious error's display `\protect` for good; KPE #1217).
+#[test]
+fn the_lstlisting_counter_waits_for_begin_document() {
+  let (log, xml) = convert_with(
+    repro!("listings-algorithms/listings_counter_at_begin_document"),
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(typed_out(&log), [
+    "R1 = undefined",
+    "R2 = undefined",
+    "R0 = defined",
+    "R3 = defined",
+  ]);
+  assert_element(
+    &xml,
+    "float",
+    &[],
+    r##"<float class="ltx_lstlisting" inlist="lol" labels="LABEL:l1" xml:id="S1.LST1"><tags><tag>Listing 1.1</tag><tag role="refnum">1.1</tag><tag role="typerefnum">Listing 1.1</tag></tags><toccaption><tag close=" ">1.1</tag>Code</toccaption><caption><tag close=": ">Listing 1.1</tag>Code</caption><listing class="ltx_lstlisting" data="eA==" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx1"><text class="ltx_lst_identifier">x</text></listingline></listing></float>"##,
+  );
+  assert_element(
+    &xml,
+    "p",
+    &[r#"align="center""#],
+    r##"<p align="center">Centered <text font="bold">bold</text>.</p>"##,
+  );
+}
+
+/// `\end` is latex.ltx:15365-15380's front, `\end ` its body: any `\protect` but the typesetting one puts `\protect` before
+/// `\end ` (a `\typeout` prints it, a `\protected@edef` keeps it), and one that expands away reaches the body, no loop. A
+/// siunitx `S` cell's read, in that regime, still ends at a last row's `\end{tabular}` (2505.21533: E 1 → 113 otherwise;
+/// 2105.06936).
+#[test]
+fn end_tests_the_typeset_protect() {
+  let (log, xml) = convert_with(
+    repro!("expansion-primitives/end_tests_the_typeset_protect"),
+    Some(RAW),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(typed_out(&log), [
+    r"R1 = \end {myenv}",
+    r"R3 = macro:->\protect \end  {myenv}",
+    r"R4 = macro:->\end {myenv}",
+  ]);
+  assert_element(&xml, "p", &[], "<p>[open:A:close]</p>");
+  assert_element(
+    &xml,
+    "p",
+    &[r#"align="center""#],
+    r#"<p align="center">B</p>"#,
+  );
+  assert_element(
+    &xml,
+    "tabular",
+    &[],
+    r##"<tabular vattach="middle"><tbody><tr><td align="left">a</td><td align="left"><Math mode="inline" tex="1.5" text="1.5" xml:id="p3.m1"><XMath><XMTok meaning="1.5" role="NUMBER">1.5</XMTok></XMath></Math></td></tr><tr><td align="left">b</td><td align="left"><text font="bold">2.5</text></td></tr></tbody></tabular>"##,
+  );
+}
+
+/// The case changer takes the name after `\begin` and `\end` as it is (expl3-code.tex:36005), for all three changes.
+#[test]
+fn a_case_change_keeps_an_environment_name() {
+  let (log, xml) = convert_with(
+    repro!("expansion-primitives/case_change_keeps_an_environment_name"),
+    Some(RAW),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    text(&xml),
+    "[open:ABC:close] [open:abc:close] [open:Abc def:close] X IN Y 1 1 §1 1 [open:HEAD:close]"
+  );
+}
+
+/// A pgfmath value that is text, each pdflatex's: through `ifthenelse`'s branches, a numeric string in arithmetic, a whole
+/// formula's braces, a list's strip of a string's spaces (`{"a b","c"}[0]` is `ab`, `{"a ? b","c"}[0]` is `a? b`), and a
+/// list of one, whose index reads its value's tokens, and the sizers' braced `height{"Q"}` (circuitikz's `raised voltages`,
+/// circuitikzmanual: 11 false "Missing number" with M3's arrays). No Error here, where pdflatex has none.
+#[test]
+fn pgfmath_array_text_is_read_as_pgf_reads_it() {
+  let (log, _) = convert_with(
+    repro!("graphics-tikz/pgfmath_array_text_as_pgf_reads_it"),
+    Some(RAW),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(typed_out(&log), [
+    r#"R0: ifthenelse(0,{"a","b"}[0],{"c","d"}[1]) = d"#,
+    r#"R1: ifthenelse(1,{1,2}[1],{"c","d"}[1]) = 2"#,
+    r#"R2: ifthenelse(0,{1,2}[1],{"c","d"}[1]) = d"#,
+    r#"R3: ifthenelse(1,{"a b","c"}[0],2) = ab"#,
+    r#"R4: ifthenelse(1,ifthenelse(0,1,{"x","y"}[1]),2) = y"#,
+    r#"R5: ifthenelse({"1","0"}[1],"s","t") = t"#,
+    r#"R6: {"1","2"}[0]+1 = 2.0"#,
+    r#"R7: 1+{"1","2"}[1] = 3.0"#,
+    r#"R8: {"1","2"}[0]*{"3","4"}[0] = 3.0"#,
+    r#"R9: {"1.5","2"}[0]*2 = 3.0"#,
+    r#"R10: {"-1","2"}[0]+1 = 0.0"#,
+    r#"R11: {"1","0"}[0]?5:6 = 5"#,
+    r#"R12: {5,6}[{"1","0"}[0]] = 6"#,
+    r#"R13: sin({"30","0"}[0]) = 0.5"#,
+    r#"R14: {"1pt","2"}[0]+1 = 2.0"#,
+    r#"R15: {"1cm","2"}[0]+1 = 29.45276"#,
+    r#"R16: {".5","2"}[0]+1 = 1.5"#,
+    r#"R17: {"--1","2"}[0]+1 = 2.0"#,
+    r#"R18: {"a"} = a"#,
+    r#"R19: {"a b"} = a b"#,
+    r#"R20: { "a" } = a"#,
+    r#"R21: {" a"} = a"#,
+    r#"R22: {{"a"}} = a"#,
+    r#"R23: {{"a","b"}} = {a}{b}"#,
+    r#"R24: {{{1,2}}} = {1}{2}"#,
+    r#"R25: {"a b","c"}[0] = ab"#,
+    r#"R26: {"c","a b"}[1] = ab"#,
+    r#"R27: {" a","c"}[0] = a"#,
+    r#"R28: {"a b c","d"}[0] = ab c"#,
+    r#"R29: {"ab c","d"}[0] = ab c"#,
+    r#"R30: {"a ? b","c"}[0] = a? b"#,
+    r#"R31: {" a b c","d"}[0] = ab c"#,
+    r#"R32: {"\foo b","c"}[0] = FOOb"#,
+    r#"R33: {{"a b","c"},"d"}[0][0] = ab"#,
+    r#"R34: {{"a b"},"d"}[0] = ab"#,
+    r#"R35: {"a b","c d"} = {ab}{cd}"#,
+    r#"R36: array({"a b","c"},0) = ab"#,
+    r#"R37: \strs [1] = cd"#,
+    r#"R38: "a b" = a b"#,
+    r#"R39: " a b" = a b"#,
+    r#"R40: {"a b"}[0] = a"#,
+    r#"R41: {"a b"}[1] = b"#,
+    r#"R42: {"abc"}[1] = b"#,
+    r#"R43: {12}[1] = 2"#,
+    r#"R44: {1cm}[0] = 2"#,
+    r#"R45: {1.5}[0] = 1"#,
+    r#"R46: {12}[1]+1 = 3.0"#,
+    r#"R47: {"12"}[1]+1 = 3.0"#,
+    r#"R48: array({"ab"},1) = b"#,
+    r#"R49: array({"ab"},0) = a"#,
+    r#"R50: array({12},1) = 2"#,
+    r#"R51: {{1}}[0] = 1"#,
+    r#"R52: {{"ab"}}[0] = ab"#,
+    r#"R53: height{"Q"} = 6.83331"#,
+    r#"R54: width{"M"} = 9.16669"#,
+    r#"R55: depth{"Q"} = 1.94444"#,
+    r#"R56: height("Q") = 6.83331"#,
+    r#"R57: 1pt+2*height{"Q"} = 14.66663"#,
+  ]);
+}
+
+/// `preto` and `appto` of every key list join the cell's text as tabularray's do, inside its math and its `cmd`; those of
+/// `\SetCell`, `\SetRow`, `\SetColumn`, which the binding does not apply, are each counted by a Warning naming the key.
+#[test]
+fn tblr_preto_and_appto_join_the_cell_text() {
+  let (log, xml) = convert_with(
+    repro!("alignment-bindings/tblr_preto_appto_join_the_cell_text"),
+    Some(RAW),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 3), "{log}");
+  for (key, command, lost) in [
+    ("preto", "SetCell", "S"),
+    ("preto", "SetRow", "T"),
+    ("appto", "SetColumn", "U"),
+  ] {
+    let line = format!(
+      "Warning:tabularray_key:{key} The key {key} of \\{command} is not applied: its text '{lost}' is lost"
+    );
+    assert!(log.contains(&line), "{line}\n{log}");
+  }
+  let cells: Vec<String> = xml
+    .split("<td ")
+    .skip(1)
+    .map(|cell| {
+      text(&format!(
+        "<td {}",
+        &cell[..cell.find("</td>").unwrap_or(cell.len())]
+      ))
+    })
+    .collect();
+  assert_eq!(cells, [
+    "xf",
+    "gy",
+    "phq",
+    "i",
+    "j",
+    "ck",
+    "l",
+    "mr",
+    "anb",
+    "Ao",
+    "As",
+    "CtB",
+    "CuB",
+    "[dve]",
+    "\u{2062} α w β",
+    "21z34",
+    "E",
+    "kK",
+    "aa",
+    "bb",
+    "cc",
+    "dd",
+    "ee",
+    "ff",
+  ]);
 }
