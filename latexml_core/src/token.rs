@@ -1241,7 +1241,7 @@ impl Token {
   /// shadows one (i.e. not the bare `\special_relax`). The shadowed token is a
   /// CS (text begins `\`) or an active char.
   pub fn noexpand_shadowed(&self) -> Option<Token> {
-    if self.code != Catcode::CS {
+    if !self.is_noexpand_family() {
       return None;
     }
     // Compute the owned shadowed name + its catcode INSIDE the `with_str`

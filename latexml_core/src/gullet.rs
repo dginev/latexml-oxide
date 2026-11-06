@@ -293,6 +293,10 @@ pub struct Gullet {
   pub source_bytes_total:   usize,
   pub pushback_limit:       Option<usize>,
   pub progress:             usize,
+  /// The value of [`progress`](Self::progress) at which [`read_internal_token_checked`] next has more to do than
+  /// take a token off the pushback: the token limit, the deadline's period, the cycle guard's window. 0 asks for it
+  /// to be worked out on the next read ([`Gullet::next_full_read`]), and a write to any of those fields sets it so.
+  full_read_at:             usize,
   /// Token-progress floor above which [`cycle_guard`](Self::cycle_guard)
   /// engages. Defaults to `CYCLE_GUARD_ACTIVATE` (20M). Graphics packages
   /// whose healthy expansion legitimately runs to 100M+ tokens (pgf/tikz/xy)
@@ -493,6 +497,7 @@ pub fn set_token_limit(limit: Option<usize>) -> (Option<usize>, usize) {
   let prev = (g.token_limit, g.progress);
   g.token_limit = limit;
   g.progress = 0;
+  g.full_read_at = 0;
   prev
 }
 
@@ -510,6 +515,7 @@ pub fn restore_token_limit(saved: (Option<usize>, usize)) {
   let mut g = gullet_mut!();
   g.token_limit = saved.0;
   g.progress = saved.1;
+  g.full_read_at = 0;
 }
 
 macro_rules! runtime {
@@ -585,6 +591,7 @@ pub fn scale_token_limit_to_source(source_bytes: usize) {
   if let Some(limit) = gullet.token_limit.as_mut() {
     *limit = (*limit).max(scaled);
   }
+  gullet.full_read_at = 0;
 }
 
 /// Tell the setter watches whether the current mouth reads the document's own text
@@ -620,6 +627,7 @@ pub fn initialize_gullet() {
   // Restore the default activation floor: a prior tikz/xy conversion in this
   // reused thread-local engine must not leak its raised floor into the next doc.
   gullet.cycle_guard_activate = CYCLE_GUARD_ACTIVATE;
+  gullet.full_read_at = 0;
   gullet.ctx_serial = 0;
   gullet.ctx_next = 0;
   gullet.ctx_stack.clear();
@@ -1274,7 +1282,30 @@ const CYCLE_GUARD_DUTY_ON: usize = 2_048;
 /// not expansion output) also carries its source position. Activation is gated on
 /// `progress > cycle_guard_activate` AND the duty window above.
 #[inline]
-fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
+fn read_internal_token_checked(sink: CommentSink) -> Result<CheckedRead> {
+  {
+    let mut borrow = gullet_mut!();
+    let g: &mut Gullet = &mut borrow;
+    // The usual read: nothing is due at this count (`full_read_at`), and the token on top of the pushback is an
+    // ordinary one. It does exactly what the full read does in that case, without testing each thing that isn't due.
+    if g.progress + 1 < g.full_read_at
+      && (matches!(sink, CommentSink::Pending) || g.pending_comments.is_empty())
+      && let Some(rt) = g.runtime.as_mut()
+      && g.pushback_limit.is_none_or(|limit| rt.pushback.len() <= limit)
+      && let Some(&token) = rt.pushback.last()
+      && !matches!(token.get_catcode(), Catcode::COMMENT | Catcode::MARKER)
+    {
+      rt.pushback.pop();
+      g.progress += 1;
+      return Ok(CheckedRead::Tok(token));
+    }
+  }
+  read_internal_token_full(sink)
+}
+
+/// [`read_internal_token_checked`] in full, whatever is due: see that function's documentation above.
+#[inline(never)]
+fn read_internal_token_full(mut sink: CommentSink) -> Result<CheckedRead> {
   enum Breach {
     TokenLimit(usize),
     PushbackLimit(usize),
@@ -1290,6 +1321,9 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
       return Ok(CheckedRead::NoRuntime);
     }
     g.progress += 1;
+    if g.progress >= g.full_read_at {
+      g.full_read_at = g.next_full_read();
+    }
     let rt = g.runtime.as_mut().unwrap();
     if let Some(limit) = g.token_limit
       && g.progress > limit
@@ -1445,6 +1479,33 @@ fn read_internal_token_checked(mut sink: CommentSink) -> Result<CheckedRead> {
     Some(Breach::PushbackLimit(limit)) => pushback_limit_fatal(limit),
     Some(Breach::Cycle(period, token)) => cycle_trip_fatal(period, &token),
     Some(Breach::Deadline) => fatal!(Timeout, Convert, "Conversion timed out!"),
+  }
+}
+
+impl Gullet {
+  /// The next value of `progress` at which a read has anything to do but pop a token ([`read_internal_token_full`]'s
+  /// tests, by the count alone): past the token limit, a multiple of the deadline's period, or in one of the cycle
+  /// guard's windows, phases 1..=`CYCLE_GUARD_DUTY_ON` of a period past its floor. 0 under `LATEXML_DEBUG_FATAL`,
+  /// whose ring records every token.
+  fn next_full_read(&self) -> usize {
+    if *DEBUG_FATAL {
+      return 0;
+    }
+    let read = self.progress;
+    let deadline = (read | DEADLINE_CHECK_MASK) + 1;
+    let limit = self.token_limit.map_or(usize::MAX, |limit| limit.saturating_add(1));
+    let guard = match read.checked_sub(self.cycle_guard_activate) {
+      None => self.cycle_guard_activate + 1,
+      Some(past) => {
+        let phase = past & (CYCLE_GUARD_DUTY_PERIOD - 1);
+        if phase < CYCLE_GUARD_DUTY_ON {
+          read + 1
+        } else {
+          read + (CYCLE_GUARD_DUTY_PERIOD - phase) + 1
+        }
+      },
+    };
+    deadline.min(limit).min(guard)
   }
 }
 
@@ -1780,6 +1841,7 @@ pub fn raise_cycle_guard_activate(floor: usize) {
   let mut g = gullet_mut!();
   if floor > g.cycle_guard_activate {
     g.cycle_guard_activate = floor;
+    g.full_read_at = 0;
     // The duty-window phase is derived from `progress - cycle_guard_activate`
     // (see `read_internal_token_checked`); raising the floor while the guard
     // is already active shifts that phase, which could splice a previous
@@ -5002,7 +5064,10 @@ where FnR: FnOnce() -> Result<R> {
         }
       }
       // Reset progress counter so subsequent processing isn't immediately killed
-      gullet_mut!().progress = 0;
+      let mut g = gullet_mut!();
+      g.progress = 0;
+      g.full_read_at = 0;
+      drop(g);
       return Err(e);
     },
   };
