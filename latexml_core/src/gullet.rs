@@ -759,23 +759,6 @@ pub fn unread_expansion(tokens: Tokens) {
   }
 }
 
-/// [`unread_expansion`] of one token.
-#[inline]
-pub fn unread_expansion_one(token: Token) {
-  if let Some(ref mut runtime) = gullet_mut!().runtime {
-    runtime.pushback.push(token);
-  }
-}
-
-/// [`unread_expansion`] of the tokens `\expandafter` saved: `rest` goes back behind `first`, so `first` reads next.
-#[inline]
-pub fn unread_expansion_saved(first: Token, rest: Vec<Token>) {
-  if let Some(ref mut runtime) = gullet_mut!().runtime {
-    runtime.pushback.extend(rest.iter().rev().copied());
-    runtime.pushback.push(first);
-  }
-}
-
 /// [`unread_substituted`] of arguments all read as tokens, each found where it is.
 pub fn unread_substituted_args(
   body: &[Token],

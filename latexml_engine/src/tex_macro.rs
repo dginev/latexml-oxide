@@ -166,8 +166,7 @@ LoadDefinitions!({
   DefMacro!(T_CS!("\\expandafter"), None, {
     let tok = read_primitive_token()?.unwrap_or_else(|| T_CS!("\\relax"));
     let mut xtok = read_primitive_token()?.unwrap_or_else(|| T_CS!("\\relax"));
-    // Saved tokens after the first: an `\expandafter` chain's. No allocation for the usual single one.
-    let mut skipped: Vec<Token> = Vec::new();
+    let mut skipped: Vec<Token> = vec![tok];
     while xtok.defined_as(&TOKEN_EXPANDAFTER) {
       if let Some(ntok) = read_primitive_token()? {
         skipped.push(ntok);
@@ -188,7 +187,6 @@ LoadDefinitions!({
             "expandafter",
             "\\expandafter wrongly used without 2 arguments."
           );
-          skipped.insert(0, tok);
           retract_scanned_braces(&skipped);
           return Ok(Tokens::new(skipped));
         }
@@ -198,7 +196,6 @@ LoadDefinitions!({
           "expandafter",
           "\\expandafter wrongly used without 2 arguments."
         );
-        skipped.insert(0, tok);
         retract_scanned_braces(&skipped);
         return Ok(Tokens::new(skipped));
       }
@@ -223,34 +220,33 @@ LoadDefinitions!({
     // Guard: `ifnextchar_scans::expandafter_in_a_scan_stops_at_a_peek`.
     match lookup_expandable(&xtok, None)? {
       Some(defn) if !scan_stops_at_futurelet_peek(&defn) => {
-        // tex.web §368: `xtok` expands ONCE ONLY onto the input, then the saved tokens go back in front of it.
         local_current_token(xtok);
-        defn.invoke_onto_input(true)?;
+        let invoked = defn.invoke(true)?;
         expire_current_token();
+        retract_scanned_braces(&skipped);
+        if !invoked.is_empty() {
+          skipped.extend(invoked.unlist()); // Expand `xtok` ONCE ONLY!
+        }
       },
       _ => {
         if !has_meaning(&xtok) {
           retract_scanned_braces(&skipped);
-          retract_scanned_brace(&tok);
           // Undefined token is an error, as expansion is expected.
           // BUT The unknown token is NOT consumed, (see TeX B book, item 367)
           // since probably in a real TeX run it would have been defined.
           generate_error_stub(&xtok)?;
           retract_scanned_brace(&xtok);
-          unread_expansion_one(xtok);
-          unread_expansion_saved(tok, skipped);
-          return Ok(Tokens!());
+          skipped.push(xtok);
+        } else {
+          // Unexpandable `xtok` (e.g. `\expandafter A {`): it was read and
+          // counted, and re-enters via our expansion — retract like the prefix.
+          retract_scanned_braces(&skipped);
+          retract_scanned_brace(&xtok);
+          skipped.push(xtok);
         }
-        // Unexpandable `xtok` (e.g. `\expandafter A {`): it was read and
-        // counted, and re-enters via our expansion — retract like the prefix.
-        retract_scanned_brace(&xtok);
-        unread_expansion_one(xtok);
       },
     };
-    retract_scanned_braces(&skipped);
-    retract_scanned_brace(&tok);
-    unread_expansion_saved(tok, skipped);
-    Ok(Tokens!())
+    Ok(Tokens::new(skipped))
   });
   // If next token is expandable, prefix it with the internal marker \dont_expand
   // That token is never defined, explicitly handled in Gullet & should never escape the Gullet.
