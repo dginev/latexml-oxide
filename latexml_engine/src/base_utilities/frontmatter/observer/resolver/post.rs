@@ -579,10 +579,14 @@ impl Resolver {
           && !lists_local_parts(address)
           && let [owner] = spelled_owners(&printed, address).as_slice()
           && live[*owner] != c
-          && !live
-            .iter()
-            .position(|&at| at == c)
-            .is_some_and(|holder| own_call_keeps(&based[holder], address))
+          && !live.iter().position(|&at| at == c).is_some_and(|holder| {
+            own_call_keeps(
+              &based[holder],
+              &printed[*owner],
+              address,
+              holder + 1 == live.len(),
+            )
+          })
         {
           moves.push((c, i, live[*owner]));
         }
@@ -590,6 +594,8 @@ impl Resolver {
     }
     let mut taken: Vec<(usize, Assoc)> = Vec::new();
     for &(c, i, owner) in moves.iter().rev() {
+      // (a copy the owner already holds is dropped below, as `insert::respell_emails` drops it: a repeated author block's
+      // second `\email` calls land on the last creator, 2307.07324)
       taken.push((owner, self.out.creators[c].contacts.remove(i)));
     }
     for (owner, mut assoc) in taken.into_iter().rev() {

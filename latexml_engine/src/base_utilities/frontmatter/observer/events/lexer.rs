@@ -286,15 +286,26 @@ impl Lexer {
     }
   }
 
+  /// Whether the run so far is no whole name: one word at most, or words ending in an initial (`N. B.`, `V.G.`, `J.-P.`,
+  /// `Yu.`) — the name's surname is still to come.
+  fn run_awaits_its_name(&self) -> bool {
+    let text: String = self.run.iter().map(|(c, _)| *c).collect();
+    let words: Vec<&str> = text.split(' ').filter(|w| !w.is_empty()).collect();
+    words.len() < 2 || words.last().is_some_and(|word| word.ends_with('.'))
+  }
+
   /// Whether the word space or tie `word` and the one spacing character the pending gap holds are a space and a tie,
   /// read as one word space of a name, the tie (the gap's character then spent): `N.~B. ~Li$^{22}$` in the BESIII list
   /// of 340 (1202.2048) — read as a gap of two items, "N. B." was initials after `Lei~Li$^{1}$,` and both one name
   /// written surname first, which declined the writer's reading of the whole block, its sub-lettered marks with it (the
-  /// rev107b review's B2); a tie and a space, `V.G.~ Kagramanova` (0802.4349), alike.
+  /// rev107b review's B2); a tie and a space, `V.G.~ Kagramanova` (0802.4349), alike. Only inside one name
+  /// ([`Lexer::run_awaits_its_name`]): after a whole name they are a gap of two, the gap between two names
+  /// (`Gasnikov~\IEEEmembership{}⏎ Nikolay Malkovsky`, 1805.06045; `Ann Able ~Bob Baker`).
   fn ties_the_gap(&mut self, word: Option<char>) -> bool {
     let tie = self.gap_items == 1
       && !self.gap_fill
-      && word.is_some_and(|c| self.gap_char.is_some_and(|first| first != c));
+      && word.is_some_and(|c| self.gap_char.is_some_and(|first| first != c))
+      && self.run_awaits_its_name();
     if tie {
       self.gap_char = None;
     }

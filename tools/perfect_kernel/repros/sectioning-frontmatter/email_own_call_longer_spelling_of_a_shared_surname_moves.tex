@@ -1,0 +1,18 @@
+% GREEN (brief 107g, mechanism 1): an own call moves only if another name's full-strength score is strictly higher
+%   (`email_owners::own_call_keeps`). Two names share the surname: `dongsu.kim@` set after Jang Soo Kim is Dongsu Kim's
+%   (9 letters to 3), though "kim" is a whole word of it.
+% witness: 0902.4311 (`dongsu.kim@`), 0907.3301 (`giordano.pola@`), 1008.3764 (`zx.liang55@`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors
+% engines: int138a: dongsu.kim@ on Dongsu Kim; int139a: on Jang Soo Kim
+% expect:  0 errors; dongsu.kim@ on Dongsu Kim, jskim@ on Jang Soo Kim
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Dongsu Kim}
+\author{Jang Soo Kim}
+\address{Dept, KAIST}
+\email[Dongsu Kim]{dongsu.kim@x.kr}
+\email[Jang Soo Kim]{jskim@x.kr}
+\maketitle
+Body.
+\end{document}

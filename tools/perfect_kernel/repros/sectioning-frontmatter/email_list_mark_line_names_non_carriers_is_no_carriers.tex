@@ -1,0 +1,14 @@
+% GREEN (brief 107g, mechanism 3): a line naming authors who do not answer its mark, its list spelling one of them, is no
+%   carriers': `dlm@`, `phdl@`, `tbl@` by elimination to the three names left, in order, not all on the two `*` names.
+% witness: 2102.08716 (`\{dlm,phdl,cz,tbl\}@`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors
+% engines: int138a: cz@ on Zanchettin, the others on the block; int139a: the three on both `*` names
+% expect:  0 errors; each address on one author; the legend's words once on the block creator
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{David Macedo*, Pedro Dreyer*,\\Teresa Ludermir, and Cleber Zanchettin
+\thanks{$^{1}$*equal contributions. David Macedo, Pedro Dreyer, Teresa Ludermir, and Cleber Zanchettin are with the Centro de Informatica, Universidade Federal, Recife, Brasil. Emails: {\tt\small \{dlm,phdl,cz,tbl\}@cin.ufpe.br}.}}
+\maketitle
+Body.
+\end{document}

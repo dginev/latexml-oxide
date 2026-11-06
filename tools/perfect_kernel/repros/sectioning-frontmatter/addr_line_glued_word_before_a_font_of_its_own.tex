@@ -1,0 +1,19 @@
+% A word glued before an address in a font of its own stays with the entry's text: an address starts where its font does
+%   (`Hangzhou, China.{\tt\footnotesize xiangzy@zju.edu.cn}` is no address `China.xiangzy@`). Review rev107g finding 2.
+% witness: 2203.06585
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "…Univ A, Town, China.aable@a.edu, bbaker@a.edu" in the footnote
+% engines: rust int139a: the addresses `China.aable@a.edu`, `China.ccoe@b.edu`, the affiliations losing ", China."
+% expect:  0 errors; each affiliation keeps ", China."; aable@a.edu, bbaker@a.edu, ccoe@b.edu on their authors
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{
+ Ann Able\textsuperscript{\rm 1},
+ Bob Baker\textsuperscript{\rm 1},
+ Cy Coe\textsuperscript{\rm 2}
+\thanks{$^{1}$Ann Able and Bob Baker are with Univ A, Town, China.{\tt\footnotesize aable@a.edu, bbaker@a.edu}}%
+\thanks{$^{2}$Cy Coe, corresponding author, is with Univ B, City, China.{\tt\footnotesize ccoe@b.edu}}%
+}
+\maketitle
+Text.
+\end{document}

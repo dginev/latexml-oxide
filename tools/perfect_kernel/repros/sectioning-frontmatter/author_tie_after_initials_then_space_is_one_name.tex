@@ -1,0 +1,13 @@
+% control (brief 107g, mechanism 4; 107b r2's purpose): a tie and a space stay one word space inside one name: after initials,
+%   after a sole given name.
+% witness: 1202.2048 (`N.~B. ~Li`), 0802.4349 (`V.G.~ Kagramanova`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors
+% engines: int139a: as expected; int138a: "N. B." a separate piece
+% expect:  0 errors; 3 creators N. B. Li, V.G. Kagramanova, Lei Li
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{N.~B. ~Li, V.G.~ Kagramanova, Lei~ Li}
+\maketitle
+Body.
+\end{document}

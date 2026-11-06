@@ -1,0 +1,18 @@
+% GREEN (brief 107g, mechanism 3's sibling): a list whose siblings spell only carriers of its mark: the unspelled address is
+%   the carriers' no sibling spells (`entry_address_owners`' `free`, 1907.01388), not the spelled carriers' too.
+% witness: none (synthetic twin of 2412.13509, no address of the other institute)
+% oracle:  pdflatex (TL 2025) unavailable: every acmart document fails on this host (see
+%          email_list_mark_line_siblings_spell_others_is_no_carriers.tex)
+% engines: int139a: bmfu@ on Ann, Bob, Cat
+% expect:  0 errors; bmfu@ on Bob Fu alone; Dan Dorn holds no e-mail
+\documentclass[sigconf,nonacm]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{*1}, Dan Dorn\textsuperscript{*2}, Bob Fu\textsuperscript{1}, Cat Cole\textsuperscript{\dag 1}}
+\affiliation{%
+  \institution{\textsuperscript{1}Univ A, \textsuperscript{2}Univ B}
+  \country{\{aable, bmfu, ccole\}@a.edu}
+}
+\maketitle
+Body.
+\end{document}
