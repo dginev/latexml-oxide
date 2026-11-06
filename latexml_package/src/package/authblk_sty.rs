@@ -115,24 +115,34 @@ fn author_call(label: Option<Tokens>, author: Tokens) -> Result<Tokens> {
       "\\lx@add@authors@append[annotations={#1}]{#2}",
       vec![Some(label), Some(author)]
     ))
+  } else if let Some(rows) = lines_of_names_before_affil(&author) {
+    // (lines under the names that read as more names, the block's institution in the `\affil` after them: names)
+    Ok(Invocation!(T_CS!("\\lx@add@authors@list"), vec![Some(
+      rows
+    )]))
   } else if author
     .unlist_ref()
     .iter()
     .any(|t| t.defined_as(&T_CS!("\\and")) || t.defined_as(&T_CS!("\\And")) || *t == T_OTHER!(","))
     || has_top_level_and_word(&author)
+    || has_separated_names(&author)
     || author_marks_end_name(&author, &[T_CS!("\\affil")])
   {
     // `\and`/`\And` or a comma anywhere in the names (a comma inside a group too: `\textbf{Ann Able, Bob Baker}`, whose
     // split reads into the wrapper; one in a note or a mark, `\thanks{Dept. X, Univ Y}`, `$^{1,2}$`, leaves the name
     // whole), the word "and" between two names outside every group, as pdflatex prints them (`\author{Ajay
-    // Chandra$^{1}$\orcidlink{…} and Harprit Singh$^2$\orcidlink{…}}`, 2405.16615), or superscript marks ending the
-    // name, only notes, spacing or an `\affil` after them (`\author{Cat$^{1}$}`, `\author{Ann$^1$\affil{$^1$Univ X}}`
+    // Chandra$^{1}$\orcidlink{…} and Harprit Singh$^2$\orcidlink{…}}`, 2405.16615), a separator the kernel's author
+    // read parts the block at (`has_separated_names`: `Ann Able\thanks{…} \qquad Bob Baker\thanks{…}`, 2610.06709;
+    // `\hspace{2.5em}`, 2610.18435; `\quad\quad`, 2610.28573, one name holding them all with every note after it, each
+    // note's author lost; 2610.39888's `\quad` came here only by the commas in its notes; a line under a name, `Ann
+    // Able\thanks{…}\\ Dept. of Physics`, 2609.17614, 2303.15964, name and line one name), or superscript marks ending
+    // the name, only notes, spacing or an `\affil` after them (`\author{Cat$^{1}$}`, `\author{Ann$^1$\affil{$^1$Univ X}}`
     // under titling, 2605.03796; `author_marks_end_name`: its mark requests the affiliation labelled by it on every
     // path, as the list's names' marks do; on `\lx@add@creator` it requested nothing, and an affiliation a list author
-    // took from it was lost to it, 77n r2 review — a name whose marks a line or other text follows, `Ann Able$^{1}$ \\
-    // Univ X`, `Ann Able$^{a}$ (ann@x.org)`, stays on `\lx@add@creator`: the list path shows an unanswered mark after
-    // the name's last text and drops one before a `\\`, 77n r3 review probes m2, m7, m8, m9) → a multi-author list,
-    // split into separate creators by `split_author_line` (the same comma / " and " name split the DEFAULT `\author`
+    // took from it was lost to it, 77n r2 review — a name whose marks other text follows, `Ann Able$^{a}$ (ann@x.org)`,
+    // stays on `\lx@add@creator`: the list path shows an unanswered mark after the name's last text, 77n r3 review
+    // probes m2, m8, m9) → a multi-author list, split into separate creators by `split_author_line` (the same comma /
+    // " and " name split the DEFAULT `\author`
     // already applies) and added after the authors before it, as authblk adds every `\author` to its list
     // (authblk.sty:114-145): `\lx@add@authors@list`. authblk's own no-`\and` branch keeps the whole comma list as ONE
     // `<personname>A, B, C</personname>`; matching the default fixes that inconsistency (html_feedback#6255,
@@ -168,47 +178,101 @@ fn author_call(label: Option<Tokens>, author: Tokens) -> Result<Tokens> {
   }
 }
 
-/// Whether `author` holds the word "and" at its top level, between spaces or ties (not inside a note's argument or a
-/// group: `\thanks{Ann Able and Bob Baker are with X}`). A group or a font command around the whole of it is
-/// transparent: `{Nikolai N. Leonenko\textsuperscript{a}\thanks{…} ~and Andrey Pepelyshev\textsuperscript{a}}`
-/// (2506.23337), `\textbf{Ann Able and Bob Baker}` hold it at their top level.
-fn has_top_level_and_word(author: &Tokens) -> bool {
-  let all = author.unlist_ref();
-  let start = all
-    .iter()
-    .position(|t| *t != T_SPACE!())
-    .unwrap_or(all.len());
-  let end = all
-    .iter()
-    .rposition(|t| *t != T_SPACE!())
-    .map_or(start, |e| e + 1);
-  let v = &all[start..end];
+/// Whether `author` parts its names or lines with a separator the kernel's author read splits at
+/// (`has_author_block_separator`: `\quad`, `\qquad`, `\hspace`, `\hfill`, a run of spacing, `\AND`, `\\`), not one
+/// inside a note's argument or a mark, and not the space between one person's notes (`Ann Able\thanks{…}\hspace{0.4em}\thanks{…}`,
+/// the shape of 2610.04108). A group or a font command around the whole of it is transparent, as for
+/// [`has_top_level_and_word`]. Perl's authblk checks only `\and`/`\And` (authblk.sty.ltxml:52-55);
+/// OXIDIZED_DESIGN_DIVERGENCES #52(h).
+///
+/// Lines under the names that read as more names and that nothing tells from an institution are no such separator
+/// (`lines_under_names_read_as_names`: `Ann Able\\ Bob Baker`, `Ann Able\quad Bob Baker\\ Cat Cole`, `Ann Able\\ Google
+/// DeepMind`): the kernel's read would give the line to the names as their affiliation, silently, which is wrong as often
+/// as it is right, so the argument stays one name, the merge the document's Error counts (`flag_merged_creators`) —
+/// unless an `\affil` follows, [`lines_of_names_before_affil`]. So does a piece that is a macro printing a link alone
+/// (`holds_a_macro_printing_a_link`, 2601.07891): the read would make it a person, silently.
+fn has_separated_names(author: &Tokens) -> bool {
+  (has_author_block_separator(author)
+    && !lines_under_names_read_as_names(author)
+    && !holds_a_macro_printing_a_link(author))
+    || whole_wrapper_content(author).is_some_and(|inner| has_separated_names(&inner))
+}
+
+/// `author` as the row of names it prints when its lines under the names read as more names
+/// (`lines_under_names_read_as_names`) and an `\affil` comes next: the block's institution is printed there, so a line
+/// of the author font under the names that reads as a name is one (`Aditya Golatkar$^{*}$\hspace{1.6em}…\\[0.35em]
+/// Baishakhi Ray\hspace{1.6em}…\\[0.35em] Stefano Soatto}\affil{AWS Agentic AI}`, 2610.38214: a creator, 12 of 12). Not
+/// otherwise, nothing else saying which: eight real papers print `\\ Waymo LLC`, `\\ Physical Intelligence`, `\\ UC San
+/// Diego`, `\\ World Agents`, `\\ Welo Data` under rows of names with no `\affil` (2404.19531, 2505.23705, 2601.06328,
+/// 2610.37518, 2610.27304). Only an argument that reaches the kernel read by its separators alone, as
+/// [`has_separated_names`] reads it.
+fn lines_of_names_before_affil(author: &Tokens) -> Option<Tokens> {
+  let bare =
+    !author.unlist_ref().iter().any(|t| {
+      t.defined_as(&T_CS!("\\and")) || t.defined_as(&T_CS!("\\And")) || *t == T_OTHER!(",")
+    }) && !has_top_level_and_word(author);
+  (bare
+    && has_author_block_separator(author)
+    && lines_under_names_read_as_names(author)
+    && next_is_affil())
+  .then(|| line_breaks_as_name_separators(author))
+}
+
+/// Whether an `\affil` is what the input holds next, past spaces and paragraph breaks.
+fn next_is_affil() -> bool {
+  peek_upcoming_tokens(6, 2000, 64)
+    .find(|t| t.get_catcode() != Catcode::SPACE && *t != T_CS!("\\par"))
+    == Some(T_CS!("\\affil"))
+}
+
+/// What a group or a font command around the whole of `author` holds, spaces around it aside: `{…}`, `\textbf{…}`,
+/// `\emph{…}`; not `\textsuperscript{…}`, a mark.
+fn whole_wrapper_content(author: &Tokens) -> Option<Tokens> {
+  let v = trimmed_spaces(author.unlist_ref());
   // (the group a wrapper opens: `{…}`, `\cmd{…}`, when it closes on the last token)
   let open = match v.first().map(Token::get_catcode) {
-    Some(Catcode::BEGIN) => Some(0),
+    Some(Catcode::BEGIN) => 0,
     Some(Catcode::CS)
       if v[0].with_str(|cs| {
         (cs.starts_with("\\text") && cs != "\\textsuperscript") || cs == "\\emph"
       }) && v.get(1).is_some_and(|t| t.get_catcode() == Catcode::BEGIN) =>
     {
-      Some(1)
+      1
     },
-    _ => None,
+    _ => return None,
   };
-  if let Some(open) = open {
-    let mut depth = 0i32;
-    let close = (open..v.len()).find(|&k| {
-      match v[k].get_catcode() {
-        Catcode::BEGIN => depth += 1,
-        Catcode::END => depth -= 1,
-        _ => {},
-      }
-      depth == 0
-    });
-    if close == Some(v.len() - 1) && v.len() > open + 2 {
-      return has_top_level_and_word(&Tokens::new(v[open + 1..v.len() - 1].to_vec()));
+  let mut depth = 0i32;
+  let close = (open..v.len()).find(|&k| {
+    match v[k].get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth -= 1,
+      _ => {},
     }
+    depth == 0
+  });
+  (close == Some(v.len() - 1) && v.len() > open + 2)
+    .then(|| Tokens::new(v[open + 1..v.len() - 1].to_vec()))
+}
+
+/// `v` without the spaces at its ends.
+fn trimmed_spaces(v: &[Token]) -> &[Token] {
+  let start = v.iter().position(|t| *t != T_SPACE!()).unwrap_or(v.len());
+  let end = v
+    .iter()
+    .rposition(|t| *t != T_SPACE!())
+    .map_or(start, |e| e + 1);
+  &v[start..end]
+}
+
+/// Whether `author` holds the word "and" at its top level, between spaces or ties (not inside a note's argument or a
+/// group: `\thanks{Ann Able and Bob Baker are with X}`). A group or a font command around the whole of it is
+/// transparent: `{Nikolai N. Leonenko\textsuperscript{a}\thanks{…} ~and Andrey Pepelyshev\textsuperscript{a}}`
+/// (2506.23337), `\textbf{Ann Able and Bob Baker}` hold it at their top level.
+fn has_top_level_and_word(author: &Tokens) -> bool {
+  if let Some(inner) = whole_wrapper_content(author) {
+    return has_top_level_and_word(&inner);
   }
+  let v = trimmed_spaces(author.unlist_ref());
   let gap = |t: Option<&Token>| t.is_some_and(|t| *t == T_SPACE!() || *t == T_ACTIVE!('~'));
   let mut depth = 0i32;
   (0..v.len()).any(|i| {
@@ -276,6 +340,8 @@ pub fn define_author_and_affil() -> Result<()> {
       Some(label.clone()),
       Some(affil.clone())
     ]);
+    // (a mark glued to a footnote symbol labels the line by its number, as a name's asks for it apart)
+    let affil = glued_line_marks_as_marks(affil, true);
     let run = affil_run();
     // (the label printed as written before the line, `\AB@affilnote`, authblk.sty:142: the mark a legend's note shows,
     // `_labelprints`, OXIDIZED_DESIGN_DIVERGENCES #961)
@@ -286,6 +352,18 @@ pub fn define_author_and_affil() -> Result<()> {
       ])
     } else if opens_with_a_mark(&affil) && queued_authors_carry_entry_mark(&affil) {
       Invocation!(T_CS!("\\lx@add@affiliation@marked"), vec![None, Some(affil)])
+    } else if let Some((unmarked, marked)) = unmarked_before_carried_marks(&affil) {
+      let mut calls = Vec::new();
+      for piece in unmarked {
+        calls.extend(
+          Invocation!("\\lx@add@contact[role=affiliation,label=addresses:block]{#1}", vec![Some(piece)])
+            .unlist(),
+        );
+      }
+      calls.extend(
+        Invocation!(T_CS!("\\lx@add@affiliation@marked"), vec![None, Some(marked)]).unlist(),
+      );
+      Tokens::new(calls)
     } else if run > 0 {
       Invocation!("\\lx@add@contact[role=affiliation,annotate=run:#1]{#2}", vec![
         Some(Tokens::new(Explode!(run.to_string()))),
@@ -335,6 +413,48 @@ fn affil_run() -> usize {
     Some(Scope::Global),
   );
   run
+}
+
+/// An affiliation whose first pieces, parted by `\quad`, no mark opens and a later piece a mark a queued author carries
+/// opens: those pieces, and the rest. `\textsuperscript{}~Univ. of California \quad \textsuperscript{2}~Northwestern
+/// University \quad …` (2505.14999): an empty mark is no mark (`drop_empty_marks`, user 2026-10-20), so the first piece is
+/// no one's by a mark, and it is every author's by nothing: the block's, as an unmarked line among marked ones is (user
+/// ruling R12), not `Luo$^2$`'s, who shows the mark of his own.
+fn unmarked_before_carried_marks(affil: &Tokens) -> Option<(Vec<Tokens>, Tokens)> {
+  let pieces = split_tokens_delimited(affil.clone(), vec![
+    T_CS!("\\quad").into(),
+    T_CS!("\\qquad").into(),
+  ]);
+  let first = pieces
+    .iter()
+    .position(|(_, piece)| opens_with_a_mark(piece) && queued_authors_carry_entry_mark(piece))
+    .filter(|first| *first > 0)?;
+  // (no mark on them, an empty one aside: a legend or an entry a mark leads is the list's, `$^{*}$Corresponding author \\
+  // $^{1}$Univ X \quad $^{3}$Univ Z`, 2505.00989)
+  if pieces[..first]
+    .iter()
+    .any(|(_, piece)| author_mark_position(&drop_empty_marks(piece.clone())).is_some())
+  {
+    return None;
+  }
+  let mut marked: Vec<Token> = Vec::new();
+  for (at, (delimiter, piece)) in pieces.iter().enumerate().skip(first) {
+    if at > first {
+      marked.extend(delimiter.iter().copied());
+    }
+    marked.extend(piece.unlist_ref().iter().copied());
+  }
+  // (each alone, its empty mark no mark of a marked list, what leads it no text)
+  let unmarked = pieces[..first]
+    .iter()
+    .map(|(_, piece)| {
+      let piece = drop_empty_marks(piece.clone());
+      let v = piece.unlist_ref();
+      Tokens::new(v[leading_unprinted_end(v)..].to_vec())
+    })
+    .filter(|piece| !piece.is_empty() && !prints_nothing(piece))
+    .collect();
+  Some((unmarked, Tokens::new(marked)))
 }
 
 /// Whether an affiliation opens with a superscript mark, `$^{1}$` or `\textsuperscript{1}`, after what prints nothing

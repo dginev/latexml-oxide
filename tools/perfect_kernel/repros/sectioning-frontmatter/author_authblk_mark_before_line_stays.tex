@@ -3,8 +3,10 @@
 % engines: rust int32a = the marks in place; 77n r3 = Ann Able's "1" dropped before the `\\`, Bob Baker's "2" moved
 %          after "(bob@x.org)" and Cat Cole's "3" after the ORCID link (a marked name read as a list, whose split shows
 %          an unanswered mark at the name's end)
-% expect:  0 errors, 0 warnings; 3 creators, each mark where it is written, all with Univ X and Univ Y (authblk's run)
-% status:  RED (77n r3) -> GREEN (77n r4)
+%          108a: the `\\` reaches the kernel read, which keeps Ann Able's "1" and makes ann@x.org her e-mail
+% expect:  0 errors, 0 warnings; 3 creators, each mark where it is written, all with Univ X and Univ Y (authblk's run),
+%          Ann Able with her e-mail (int139a: in her name)
+% status:  RED (77n r3) -> GREEN (77n r4); the e-mail line RED (int139a) -> GREEN (108a)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{authblk}

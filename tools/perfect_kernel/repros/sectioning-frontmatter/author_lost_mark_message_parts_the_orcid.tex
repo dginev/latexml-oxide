@@ -1,0 +1,15 @@
+% mechanism: a lost mark's Warning reads the number and the ORCID iD apart (`lost_mark_as_written`)
+% witness: 2205.05709
+% oracle:  pdflatex: 0 errors; "Ann Able" + a superscript 1 and the icon
+% engines: rust 108a r2: the mark "10000-0001-8812-0565"
+% expect:  1 Warning naming "1" and the iD apart
+% status:  GREEN (108a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{orcidlink}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1\orcidlink{0000-0001-8812-0565}}$ \quad Bob Baker}
+\maketitle
+Text.
+\end{document}

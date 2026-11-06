@@ -414,6 +414,24 @@ pub(in crate::base_utilities) fn prints_a_url(line: &Tokens) -> bool {
         .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER)))
 }
 
+/// Whether a link line prints a bare web address (`\href{https://sherpa.ai/}{Sherpa.ai}`), no scheme or `www.` shown: the
+/// way an organization's name is printed where no one else names the block (2609.25082).
+pub(in crate::base_utilities) fn link_prints_a_bare_address(line: &Tokens) -> bool {
+  let Some((at, end)) = link_line_link(line) else {
+    return false;
+  };
+  let v = &line.unlist_ref()[..end];
+  if v[at] == T_CS!("\\url") {
+    return false;
+  }
+  let (_, printed) = link_texts(v, at);
+  reads_as_web_address(&printed)
+    && !printed.contains("://")
+    && !printed
+      .split_whitespace()
+      .any(|word| word.starts_with("www."))
+}
+
 /// `v` without what prints no word ([`without_non_printing_arguments`]): a colour's arguments, a graphic with its
 /// arguments (an ORCID icon, `\includegraphics[scale=0.06]{orcid.pdf}`), a skip's length (`\hspace{1mm}`, a space).
 pub(in crate::base_utilities) fn printed_words(v: &[Token]) -> Vec<Token> {

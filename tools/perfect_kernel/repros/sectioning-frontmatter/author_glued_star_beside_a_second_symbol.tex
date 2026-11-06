@@ -1,0 +1,14 @@
+% A math star glued beside a second symbol prints `∗†`, and shows so (FIDELITY_CHARTER §4, "stays as written"); the key stays `*`.
+% witness: 2404.16821, 2505.17017, 2609.38428, 2610.31762 (rev108a3 B1)
+% oracle:  pdflatex (TL 2025) clean
+% engines: int139c `∗,†`; 108a r3 `*†`
+% expect:  0 errors; Ann's sup shows `∗†`, both entries hers by their numbers
+\documentclass{article}
+\usepackage[hidelinks]{hyperref}
+
+\begin{document}
+\title{T}
+\author{Ann Able$^{2,1*\dagger}$ \quad Bob Baker$^{1}$\\ $^{1}$Univ A\\ $^{2}$Univ B}
+\maketitle
+Text.
+\end{document}

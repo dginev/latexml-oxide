@@ -1,0 +1,15 @@
+% mechanism: an address beside a name is its e-mail, in any wrapper or under a label (`address_only_line`); nothing else on the row
+% witness: 2609.02424
+% oracle:  pdflatex: 0 errors; the name, then the address on its line
+% engines: rust 108a r1: a creator for each address; int139a: one name holding the address, no Error
+% expect:  0 errors; four creators, each its address
+% status:  RED (108a r1) -> GREEN (108a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able\quad ann@x.org\quad Bob Baker\quad(bob@y.org)\quad Cat Cole\quad\href{mailto:cat@z.org}{cat@z.org}\quad Dan Dee\quad E-mail: dan@w.org}
+\maketitle
+Text.
+\end{document}

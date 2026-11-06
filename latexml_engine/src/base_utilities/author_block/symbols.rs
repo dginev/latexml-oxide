@@ -270,11 +270,13 @@ pub(in crate::base_utilities) fn is_legend_line(line: &Tokens) -> bool {
 ///   * the symbol renders as a real superscript instead of being consumed into an
 ///     `affiliation:*` label that matches no affiliation and is discarded.
 ///
-/// A number or letter glued to such a symbol (`$^{1*}$`, `\textsuperscript{a\dagger}`) is the affiliation mark it is
-/// and the symbol after it (`split_glued_symbol`): the mark requests affiliation 1, the symbol is shown, as for
-/// `$^{1,*}$` (else the one request `affiliation:1*` matched no affiliation, and affiliation 1 went to no one; authblk's
-/// `\author{Ann$^{1*}$}`, 77n r3; the neurips fixture's Wenqi Shao, 2507.06670). The symbol is shown as written, a text
-/// `*` as for a lone `$^{*}$`, where the unsplit `$^{1,*}$` keeps its math `∗` (2210.14772, 2508.09827).
+/// A number or letter glued to such a symbol (`$^{1*}$`, `\textsuperscript{a\dagger}`, the symbol first too:
+/// `\textsuperscript{*1}`, 2505.22662) is the affiliation mark it is and the symbol beside it (`split_glued_symbol`): the
+/// mark requests affiliation 1, the symbol is shown, as for `$^{1,*}$` (else the one request `affiliation:1*` matched no
+/// affiliation, and affiliation 1 went to no one; authblk's `\author{Ann$^{1*}$}`, 77n r3; the neurips fixture's Wenqi
+/// Shao, 2507.06670). Both are written in the order they print, for an unanswered mark to show there
+/// (`show_unanswered_marks`: 2610.07087's `$^{1*}$`). The symbol is shown as written: a math `*` as `∗`, as the unsplit
+/// `$^{1,*}$` keeps it (2210.14772, 2508.09827, 2505.11121; [`keepsup_in_math`]), a text one as `*`.
 ///
 /// NUMERIC/lettered affiliation marks (`$^{1}$`, `\textsuperscript{a}`) are left
 /// untouched, so affiliation linking is unaffected. Only the specific
@@ -331,12 +333,18 @@ pub(in crate::base_utilities) fn rewrite_symbol_superscripts(tokens: Tokens) -> 
     if t == T_CS!("\\textsuperscript")
       && src.get(i + 1) == Some(&T_BEGIN!())
       && let Some((operand, next)) = read_operand(i + 1)
-      && let Some((mark, sym)) = split_glued_symbol(&operand)
+      && let Some(glued) = glued_marks(&operand)
     {
-      out.extend([t, T_BEGIN!()]);
-      out.extend(mark);
-      out.push(T_END!());
-      out.extend(keepsup(sym));
+      for part in glued {
+        match part {
+          GluedPart::Symbol(symbol) => out.extend(keepsup(symbol)),
+          GluedPart::Marks(marks) => {
+            out.extend([t, T_BEGIN!()]);
+            out.extend(marks);
+            out.push(T_END!());
+          },
+        }
+      }
       i = next;
       continue;
     }
@@ -365,13 +373,19 @@ pub(in crate::base_utilities) fn rewrite_symbol_superscripts(tokens: Tokens) -> 
         && src[p] == T_SUPER!()
         && let Some((operand, next)) = read_operand(p + 1)
         && next == close
-        && let Some((mark, sym)) = split_glued_symbol(&operand)
+        && let Some(glued) = glued_marks(&operand)
       {
-        out.extend_from_slice(&src[i..=p]);
-        out.push(T_BEGIN!());
-        out.extend(mark);
-        out.extend([T_END!(), T_MATH!()]);
-        out.extend(keepsup(sym));
+        for part in glued {
+          match part {
+            GluedPart::Symbol(symbol) => out.extend(keepsup_in_math(symbol)),
+            GluedPart::Marks(marks) => {
+              out.extend_from_slice(&src[i..=p]);
+              out.push(T_BEGIN!());
+              out.extend(marks);
+              out.extend([T_END!(), T_MATH!()]);
+            },
+          }
+        }
         i = close + 1;
         continue;
       }
@@ -387,20 +401,25 @@ pub(in crate::base_utilities) fn rewrite_symbol_superscripts(tokens: Tokens) -> 
   Tokens::new(out)
 }
 
-/// A mark's operand of a number or letter glued to a footnote symbol after it (`1*`, `a\dagger`, `2\ast`; the symbol
-/// braced, `1{\dagger}`, 2605.01693): the mark and the symbol ([`rewrite_symbol_superscripts`]).
+/// A mark's operand of a number or letter glued to a footnote symbol, after it or before it (`1*`, `a\dagger`, `2\ast`;
+/// `*1`, `\dagger 2`, 2505.22662's `\textsuperscript{*1}`; the symbol braced, `1{\dagger}`, 2605.01693): the mark and
+/// the symbol ([`rewrite_symbol_superscripts`], which writes them in the order they print).
 pub(in crate::base_utilities) fn split_glued_symbol(
   operand: &[Token],
 ) -> Option<(Vec<Token>, Vec<Token>)> {
-  let lead = operand
-    .iter()
-    .take_while(|t| {
-      t.get_catcode() == Catcode::LETTER
-        || (t.get_catcode() == Catcode::OTHER
-          && t.with_str(|s| s.chars().all(|c| c.is_ascii_digit())))
-    })
-    .count();
-  let sym = &operand[lead..];
+  let is_mark = |t: &Token| {
+    t.get_catcode() == Catcode::LETTER
+      || (t.get_catcode() == Catcode::OTHER
+        && t.with_str(|s| s.chars().all(|c| c.is_ascii_digit())))
+  };
+  let lead = operand.iter().take_while(|t| is_mark(t)).count();
+  let (mark, sym) = if lead > 0 {
+    (&operand[..lead], &operand[lead..])
+  } else {
+    let tail = operand.iter().rev().take_while(|t| is_mark(t)).count();
+    let at = operand.len() - tail;
+    (&operand[at..], &operand[..at])
+  };
   // (a group holding the symbol alone is the symbol)
   let unbraced = match sym {
     [open, inner @ .., close]
@@ -412,8 +431,163 @@ pub(in crate::base_utilities) fn split_glued_symbol(
     },
     _ => sym,
   };
-  (lead > 0 && !unbraced.is_empty() && is_symbol_mark(unbraced))
-    .then(|| (operand[..lead].to_vec(), sym.to_vec()))
+  (!mark.is_empty() && !unbraced.is_empty() && is_symbol_mark(unbraced))
+    .then(|| (mark.to_vec(), sym.to_vec()))
+}
+
+/// A part of a mark's operand as it prints ([`glued_marks`]).
+enum GluedPart {
+  /// a run of the marks it requests, comma-parted as written; one after a symbol keeps the comma it prints (`,2,3` of
+  /// `$^{1*,2,3}$`, which requests 2 and 3)
+  Marks(Vec<Token>),
+  /// a footnote symbol
+  Symbol(Vec<Token>),
+}
+
+/// [`split_glued_symbol`] over an operand's comma list, a piece of which glues a symbol to its number or letter
+/// (`$^{1,2*}$`, `$^{*1,2}$`, whose printed star was lost, the label read by its number alone; `$^{1*,2,3}$`, 2609.14365);
+/// a symbol alone beside them is such a piece's too (`1*,\dagger`): the marks and the symbols, each in the place it prints.
+/// `None` when no piece glues one: `$^{1,*}$`, read as it is, keeps its math `∗`.
+fn glued_marks(operand: &[Token]) -> Option<Vec<GluedPart>> {
+  let mut parts: Vec<GluedPart> = Vec::new();
+  let (mut any_glued, mut any_mark) = (false, false);
+  for piece in operand.split(|t| *t == T_OTHER!(",")) {
+    let piece: Vec<Token> = piece
+      .iter()
+      .filter(|t| **t != T_SPACE!())
+      .copied()
+      .collect();
+    let (mark, symbol) = if let Some((mark, symbol)) = split_glued_symbol(&piece) {
+      any_glued = true;
+      (mark, Some(symbol))
+    } else if is_symbol_mark(&piece) {
+      (Vec::new(), Some(piece))
+    } else {
+      (piece, None)
+    };
+    // (a symbol is printed before its piece's mark only where it is written so and nothing stands before it, `*1`)
+    let symbol_first = parts.is_empty()
+      && !mark.is_empty()
+      && symbol
+        .as_ref()
+        .is_some_and(|symbol| operand.starts_with(symbol));
+    if symbol_first && let Some(symbol) = symbol.clone() {
+      parts.push(GluedPart::Symbol(symbol));
+    }
+    if !mark.is_empty() {
+      any_mark = true;
+      match parts.last_mut() {
+        Some(GluedPart::Marks(marks)) => {
+          marks.push(T_OTHER!(","));
+          marks.extend(mark);
+        },
+        // (after a symbol of an earlier piece the comma between them prints, `1∗,2`; `*1`'s own symbol has none)
+        Some(GluedPart::Symbol(_)) if !symbol_first => {
+          parts.push(GluedPart::Marks(
+            std::iter::once(T_OTHER!(",")).chain(mark).collect(),
+          ));
+        },
+        _ => parts.push(GluedPart::Marks(mark)),
+      }
+    }
+    if !symbol_first && let Some(symbol) = symbol {
+      parts.push(GluedPart::Symbol(symbol));
+    }
+  }
+  (any_glued && any_mark).then_some(parts)
+}
+
+/// `tokens` with a mark that leads a line of labelled entries written without the symbols glued to it (`$^{*1}$Kyoto
+/// University`, `$^{1*}$Univ X`, 2606.23258): the mark labels the line, the symbol with it, and a line prints no label in
+/// its text — it read "* Univ X", or matched no name once the names' `*1` asks for 1 and `*` apart (`glued_marks`).
+/// From the first line if `first_line` (an affiliation list), else from after the first line break (an author block,
+/// whose first line is names, its marks after them).
+pub fn glued_line_marks_as_marks(tokens: Tokens, first_line: bool) -> Tokens {
+  let v = tokens.unlist_ref();
+  if !v
+    .iter()
+    .any(|t| *t == T_SUPER!() || *t == T_CS!("\\textsuperscript"))
+  {
+    return tokens;
+  }
+  let mut out: Vec<Token> = Vec::with_capacity(v.len());
+  // (the group depth; whether a letter came since the last separator; whether the names line is over)
+  let (mut depth, mut lettered, mut broke) = (0usize, !first_line, first_line);
+  let mut i = 0;
+  while i < v.len() {
+    let t = v[i];
+    if depth == 0 && !lettered {
+      // (`\textsuperscript{…}`; `$^{…}$`, `${}^{…}$`)
+      let at = match t.get_catcode() {
+        Catcode::MATH => {
+          let p = i
+            + 1
+            + usize::from(v.get(i + 1) == Some(&T_BEGIN!()) && v.get(i + 2) == Some(&T_END!())) * 2;
+          (v.get(p) == Some(&T_SUPER!()) && v.get(p + 1) == Some(&T_BEGIN!())).then_some(p + 1)
+        },
+        _ if t == T_CS!("\\textsuperscript") && v.get(i + 1) == Some(&T_BEGIN!()) => Some(i + 1),
+        _ => None,
+      };
+      if let Some(open) = at {
+        let close = skip_group(v, open);
+        let math = t.get_catcode() == Catcode::MATH;
+        let end = if math { close + 1 } else { close };
+        if close <= v.len()
+          && (!math || v.get(close) == Some(&T_MATH!()))
+          && let Some(glued) = glued_marks(&v[open + 1..close - 1])
+        {
+          out.extend_from_slice(&v[i..=open]);
+          for marks in glued.into_iter().filter_map(|part| match part {
+            GluedPart::Marks(marks) => Some(marks),
+            GluedPart::Symbol(_) => None,
+          }) {
+            out.extend(marks);
+          }
+          out.push(T_END!());
+          if math {
+            out.push(T_MATH!());
+          }
+          i = end;
+          continue;
+        }
+      }
+    }
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      Catcode::LETTER => lettered = true,
+      _ if depth == 0 && is_line_separator(&t) => {
+        broke |= first_line || t == T_CS!("\\\\") || t == T_CS!("\\newline");
+        lettered &= !broke;
+      },
+      _ => {},
+    }
+    out.push(t);
+    i += 1;
+  }
+  Tokens::new(out)
+}
+
+/// [`keepsup`] for a symbol glued to a mark in math (`$^{1*}$`, `$^{1,2*}$`, 2505.11121): a math `*` prints `∗`, shown
+/// so (FIDELITY_CHARTER §4, "stays as written"; `\textsuperscript{1*}` keeps its text `*`), its key the `*` the entries
+/// answer; beside a second symbol too (`$^{2,1*\dagger}$` prints `∗†`: 2404.16821, 2505.17017). A lone `$^{*}$` shows
+/// `*` as it always has, in [`rewrite_symbol_superscripts`]' own branch.
+fn keepsup_in_math(sym: Vec<Token>) -> Vec<Token> {
+  let shown = sym
+    .iter()
+    .map(|token| {
+      if *token == T_OTHER!("*") {
+        T_CS!("\\ast")
+      } else {
+        token.clone()
+      }
+    })
+    .collect();
+  let mut v = visible_sup(shown);
+  v.extend([T_CS!("\\lx@frontmatter@symbolmark"), T_BEGIN!()]);
+  v.extend(sym);
+  v.push(T_END!());
+  v
 }
 
 /// `\lx@frontmatter@keepsup{<sym>}` as a token list: a superscript shown as it is, requesting nothing.

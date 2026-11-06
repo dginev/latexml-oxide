@@ -348,7 +348,8 @@ fn reads_as_labels(operand: &[Token]) -> bool {
 /// (`reads_as_labels`): `Ann Able$^{1}$\textsuperscript{equal contrib.}`, `\textsuperscript{(*)}`, `$^{\rm (a)}$` show
 /// text, which the list path would have cut to a label or dropped (77n r4 review probes d1, d3, d4, c4, d6). Public for
 /// authblk's `\author` (latexml_package), which reads a single marked name as a list only then: the list path shows a
-/// mark nothing answers after the name's last text, and drops one before a line break (m7).
+/// mark nothing answers after the name's last text. (A line break reaches that path by its own,
+/// `has_author_block_separator`, where a mark before it stays, 108a.)
 pub fn author_marks_end_name(stuff: &Tokens, contacts: &[Token]) -> bool {
   let tokens = outside_notes(stuff.unlist_ref());
   // (the index past a mark at `i`: `$^{1}$`, `^{1}`, `\textsuperscript{1}` and the mark commands)

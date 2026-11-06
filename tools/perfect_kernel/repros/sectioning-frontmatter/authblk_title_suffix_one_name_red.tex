@@ -1,0 +1,15 @@
+% mechanism: a title or suffix parted from a name by a wide space is no second person
+% witness: rev108a S1 (synthetic; 0 real cases in about 54k papers)
+% oracle:  pdflatex: 0 errors; Dr. Ann Able, one line
+% engines: rust 108a: creators "Dr" and "Ann Able"; int139a: one creator
+% expect:  0 errors; one creator
+% status:  RED (108a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Dr.\quad Ann Able}
+\maketitle
+Text.
+\end{document}

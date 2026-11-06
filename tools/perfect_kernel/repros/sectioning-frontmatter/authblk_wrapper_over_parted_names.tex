@@ -1,0 +1,15 @@
+% mechanism: authblk's `\author` reads a whole argument as one name unless it holds a separator; the kernel's author read parts names inside a font command around them all too, as the `and` word and the comma do
+% witness: 2609.20129 (`\bf …\quad…`), 2404.12241
+% oracle:  pdflatex: 0 errors; two bold names apart
+% engines: rust int139a: one creator holding both names; perl (authblk.sty.ltxml:52-55, read): one creator
+% expect:  0 errors; two creators
+% status:  RED (int139a) -> GREEN (108a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{\textbf{Ann Able \quad Bob Baker}}
+\maketitle
+Text.
+\end{document}

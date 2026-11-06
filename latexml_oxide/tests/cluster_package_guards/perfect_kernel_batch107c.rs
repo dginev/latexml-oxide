@@ -76,7 +76,7 @@ fn address_lines_a_font_wrapper_holds_leave_their_affiliation() {
 fn a_correspondence_label_is_its_owners_note() {
   assert_eq!(
     converted(repro!("addr_line_corresponding_to"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A,<break/>Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ A,<break/>Town</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id2"><sup xml:id="id2.1">*</sup>Corresponding to</note> <contact name="Email: " role="email">bbaker@a.edu</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A,<break/>Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id1">∗</sup></personname> <contact name="Affiliation: " role="affiliation">Univ A,<break/>Town</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id2"><sup xml:id="id2.1">*</sup>Corresponding to</note> <contact name="Email: " role="email">bbaker@a.edu</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 

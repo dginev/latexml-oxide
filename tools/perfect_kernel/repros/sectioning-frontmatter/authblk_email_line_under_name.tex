@@ -1,0 +1,15 @@
+% mechanism: authblk's `\author` reads a whole argument as one name unless it holds a separator; the kernel's author read parts a name from an e-mail line at `\\`, as `\small` opens it
+% witness: 2303.15964, 1509.08403, 2610.10873
+% oracle:  pdflatex: 0 errors; the lines under Bob Baker
+% engines: rust int139a: name, institution and address one name; perl (authblk.sty.ltxml:52-55, read): one creator, the lines in the name
+% expect:  0 errors; one creator with his affiliation and e-mail
+% status:  RED (int139a) -> GREEN (108a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Bob Baker\\ \small Univ X\\ \small \texttt{bob.baker@x.org}}
+\maketitle
+Text.
+\end{document}

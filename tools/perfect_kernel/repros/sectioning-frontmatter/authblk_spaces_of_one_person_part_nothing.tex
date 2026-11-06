@@ -1,0 +1,20 @@
+% mechanism: space between one person's notes, a space inside a note, a space after the last note, a space before the name, a space before a protected `\footnotemark`: no second creator (`space_before_own_mark`, empty pieces)
+% witness: the shape of 2610.04108 (`\thanks{…}\hspace{0.4em}\thanks{…}`), 2510.08541 (`\thanks{…}\,\,`), 2609.40220 (`\hspace{0.1em}\protect\footnotemark[1]`)
+% oracle:  pdflatex: 0 errors; five names, each with its footnotes, Univ X under them
+% engines: rust int139a: four creators; perl (authblk.sty.ltxml:52-55, read): one creator a call
+% expect:  0 errors; five creators, the notes on theirs, each with Univ X
+% status:  GREEN (int139a) = GREEN (108a): a row that must not change; the `\footnotemark` RED (108a r0, a creator of the mark alone) -> GREEN (108a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Note one.}\hspace{0.4em}\thanks{Note two.}}
+\author{Bob Baker\thanks{Dept.\quad X\hspace{1em}Y.}}
+\author{Cat Cole\thanks{Note three.} \quad}
+\author{\quad Dan Dee}
+\author{Eve Ede\hspace{0.1em}\protect\footnotemark[1]}
+\affil{Univ X}
+\maketitle
+Text.
+\end{document}

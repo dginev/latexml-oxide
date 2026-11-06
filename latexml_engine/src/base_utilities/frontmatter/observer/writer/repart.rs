@@ -318,11 +318,23 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
         && !mark_led
         && (rule_has(a, "api:annotate:new") || rule_has(a, "api:annotate:run")))
   };
+  // (and an API run over one `\author` call all of today's creators came from, the reading's more only by parting one of
+  // them, whose name held two: `Ann Able$^*$ \\ Bob Baker$^*$ \\ Cat Cole$^\dagger$`, an `\affil` under two queued authors
+  // and three names, 2609.33075)
+  let same_run = |assocs: &[(Owner, &Assoc)], held: usize| {
+    let mut sources = assocs.iter().map(|(owner, a)| match owner {
+      Owner::Creator(i) if rule_has(a, "api:annotate:run") => Some(resolved.creators[*i].source),
+      _ => None,
+    });
+    let first = sources.next().flatten();
+    !mark_led && held == front.creators.len() && first.is_some() && sources.all(|s| s == first)
+  };
   if let Some((key, _)) = owners.iter().find(|(key, assocs)| {
     let held = holders.get(*key).copied().unwrap_or(0);
     assocs.len() > held.max(1)
       && !assocs.iter().all(|(_, a)| writes(a))
       && !assocs.iter().all(|(_, a)| by_run(a, held))
+      && !same_run(assocs, held)
   }) {
     return declined(&s!("an item given more authors by no ruling: {key:?}"));
   }

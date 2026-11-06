@@ -304,6 +304,27 @@ pub(in crate::base_utilities) fn address_tokens(
   line: &Tokens,
   addrs: Vec<String>,
 ) -> Result<Vec<Tokens>> {
+  // (a row of addresses the `\quad`s of its join part, `dispatch`'s: each piece as it is written, its own font and link —
+  // 2609.05531's `\texttt{john3678@…} \quad \texttt{johnson.michael@…}`)
+  if let Some(pieces) = address_row_pieces(line) {
+    let mut tokens = Vec::with_capacity(addrs.len());
+    for piece in &pieces {
+      // (a piece whose one address is written in printed braces: `\{hwoo\}@skku.edu`, 2609.18328)
+      let written_out = email_addresses(piece).filter(|addresses| {
+        addresses.len() == 1
+          && piece.unlist_ref().iter().any(|t| {
+            *t == T_CS!("\\{") || *t == T_CS!("\\lbrace") || *t == T_CS!("\\textbraceleft")
+          })
+      });
+      match written_out {
+        Some(addresses) => tokens.extend(address_tokens(piece, addresses)?),
+        None => tokens.extend(bare_email_addresses(piece)?.unwrap_or_default()),
+      }
+    }
+    if tokens.len() == addrs.len() {
+      return Ok(tokens);
+    }
+  }
   let line_wrapper = whole_line_cs_wrapper(line).map(|(cmd, _)| cmd);
   let wrapper = line_wrapper.filter(|cmd| !is_email_wrapper(cmd));
   // (an email command's address set as the command sets it, [`email_command_address`])
@@ -349,6 +370,54 @@ pub(in crate::base_utilities) fn address_tokens(
       }
     })
     .collect()
+}
+
+/// The pieces of `line` a top-level `\quad` or `\qquad` parts ([`without_row_spacing`] each), `None` unless two or more: a row of
+/// addresses, `dispatch`'s join or a class's own (`\email{\quad a@x \quad\qquad b@y}`, 2601.03839, 2606.13152).
+fn address_row_pieces(line: &Tokens) -> Option<Vec<Tokens>> {
+  let v = line.unlist_ref();
+  let mut pieces = Vec::new();
+  let (mut depth, mut from) = (0usize, 0usize);
+  for (at, t) in v.iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      _ if depth == 0 && (*t == T_CS!("\\quad") || *t == T_CS!("\\qquad")) => {
+        pieces.push(Tokens::new(without_row_spacing(v[from..at].to_vec())));
+        from = at + 1;
+      },
+      _ => {},
+    }
+  }
+  pieces.push(Tokens::new(without_row_spacing(v[from..].to_vec())));
+  pieces.retain(|piece| !piece.is_empty());
+  (pieces.len() > 1).then_some(pieces)
+}
+
+/// A piece of a row of addresses without what parts it from the next, no text of an address: the spaces and ties around it
+/// (`\texttt{a@x} ~\quad~~ \texttt{b@y}`, 2610.06195, whose ties read `˜`) and the comma or semicolon it ends with, inside a
+/// group that ends it too (`a@x,`, `\texttt{a@x,}`; 2505.22665, 2505.05785's line ending `\texttt{simon.zl@…},`).
+pub(in crate::base_utilities) fn without_row_spacing(mut tokens: Vec<Token>) -> Vec<Token> {
+  let spacing = |t: &Token| *t == T_SPACE!() || *t == T_ACTIVE!('~');
+  // (and the skip it opens with, `\vspace{0.1cm} \texttt{liuqing25@…} \quad \texttt{wuou@…}`, 2606.01635)
+  let lead = leading_spacing_end(&tokens);
+  tokens.drain(..lead);
+  let lead = tokens.iter().take_while(|t| spacing(t)).count();
+  tokens.drain(..lead);
+  while tokens.last().is_some_and(spacing) {
+    tokens.pop();
+  }
+  let mut end = tokens.len();
+  while end > 0 && tokens[end - 1].get_catcode() == Catcode::END {
+    end -= 1;
+  }
+  if end > 0 && (tokens[end - 1] == T_OTHER!(",") || tokens[end - 1] == T_OTHER!(";")) {
+    tokens.remove(end - 1);
+  }
+  while tokens.last().is_some_and(spacing) {
+    tokens.pop();
+  }
+  tokens
 }
 
 /// The end of `tokens` before the line break and spacing they end with, which print nothing: spaces, `\\`, `\hfill`,
@@ -916,7 +985,7 @@ pub(in crate::base_utilities) fn addresses_in_order(
     .all(|(at, address)| spelled_owner(keys, address).is_none_or(|owner| owner == offset + at))
 }
 
-/// `tokens` without the marks that print nothing: a mark command's empty argument (`\textsuperscript{}`, [`mark_commands`])
+/// `tokens` without the marks that print nothing: a mark command's empty argument (`\textsuperscript{}`, `mark_commands`)
 /// and an empty math superscript (`$^{}$`), spaces and `\relax` aside, when the block holds no other mark. An empty mark is no mark
 /// (user ruling R11 2026-10-20): it makes no block a marked one (2604.19440's `\textsuperscript{}Univ. Grenoble Alpes,
 /// …` under four unmarked names, which pdflatex prints with no mark, an affiliation of all four). In a block other marks
@@ -924,10 +993,10 @@ pub(in crate::base_utilities) fn addresses_in_order(
 /// own (2604.22129's `Robert Maier\textsuperscript{}~~~Aljaz Bozic\textsuperscript{}` beside `David
 /// Recasens\textsuperscript{\rm 1}`, which a marked block's marker-less pieces would weld into one creator). A note's
 /// text is the note's, not the block's marks: what a `\thanks`, `\footnote` or `\footnotetext` (or a document's note
-/// command, [`is_note_macro`]) holds is kept as written, so the note is read on what the author wrote — by the XML's
+/// command, `is_note_macro`) holds is kept as written, so the note is read on what the author wrote — by the XML's
 /// no-ink test as by the frontmatter observer's rehearsal of the same block (`\thanks{\textsuperscript{}}`: taken out,
 /// the XML's note was empty and dropped where the observer's kept it; OXIDIZED_DESIGN_DIVERGENCES #916).
-pub(in crate::base_utilities) fn drop_empty_marks(tokens: Tokens) -> Tokens {
+pub fn drop_empty_marks(tokens: Tokens) -> Tokens {
   let original = tokens.clone();
   let v = tokens.unlist();
   // (a `\relax` in it prints nothing either: `Ann Able\textsuperscript{\relax}, Bob Baker`, the r7 re-review's n10)

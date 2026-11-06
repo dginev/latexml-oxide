@@ -1,0 +1,15 @@
+% mechanism: authblk `\and` reaches the kernel read (authblk.sty.ltxml:52-53)
+% witness: none (a row of the table)
+% oracle:  pdflatex: 0 errors
+% engines: rust int139a: two creators; perl (authblk.sty.ltxml:52-55, read): two creators
+% expect:  0 errors; two creators, each with its own note
+% status:  GREEN (int139a) = GREEN (108a): a row that must not change
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Note one.} \and Bob Baker\thanks{Note two.}}
+\maketitle
+Text.
+\end{document}

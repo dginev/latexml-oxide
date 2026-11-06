@@ -101,7 +101,15 @@ impl Resolver {
           if !run.is_empty() && self.ends_a_run(c, role) {
             break;
           }
-          if cap.is_some_and(|cap| run.len() >= cap) {
+          // (the cap, the authors queued when the contact was called, ends the run only between two `\author` calls: a
+          // line of names the reading parts where the kernel's read welded them is one queued author, every name of the
+          // call the run's — `Ann Able$^*$ \\ Bob Baker$^*$ \\ Cat Cole$^\dagger$`, two queued over three names, whose first
+          // lost the `\affil`, 2609.33075)
+          if cap.is_some_and(|cap| run.len() >= cap)
+            && run.last().is_none_or(|last: &usize| {
+              self.out.creators[*last].source != self.out.creators[c].source
+            })
+          {
             break;
           }
           if reached_unanswered && answered(c) {
@@ -353,7 +361,11 @@ impl Resolver {
     let note = tag == "ltx:note";
     let role = if role.is_empty() { "contact" } else { role };
     // (authblk: every `\affil` makes the next `\author` step the counter; a label shows the marks)
-    let thenote_affil = policy.thenote && role == "affiliation";
+    // (a raw class's store is no `\affil`, whatever class loaded authblk beside it: `\institute{$^{1}$ MiLM Plus …\\ $^{2}$
+    // Xi'an …}`, xiaomi.cls, sets `\AB@affillist` nothing, so no note prints; its labels made Feng Xie$^{2*}$, last of the
+    // `\author` call, request entry 1 too, 2610.36456)
+    let thenote_affil =
+      policy.thenote && role == "affiliation" && attr_value(attrs, "_store").is_none();
     if thenote_affil {
       self.thenote.newaffil = true;
       self.thenote.affil = true;

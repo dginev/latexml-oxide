@@ -91,12 +91,13 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   relocate_annotations(document)?;
   link_entry_addresses(document, None)?;
   respell_emails(document)?;
-  show_unanswered_marks(document, &answered)?;
+  let unshown_marks = show_unanswered_marks(document, &answered)?;
   drop_empty_contacts(document)?;
   drop_repeated_orcids(document);
   // (FM S2b: a written family's paper, where it differs from the observer's reading by the writer's operations alone,
   // written as the reading has it — under the shadow switch only; OXIDIZED_DESIGN_DIVERGENCES #837 "S2b")
   write_observed_frontmatter(document)?;
+  count_lost_marks(document, &unshown_marks);
   // (an entry's line of addresses, read once every route has placed the entry and the observer's writing is done: its
   // addresses the entry's e-mails, placed by the Link step; OD #966)
   join_split_address_contacts(document)?;
@@ -4223,7 +4224,13 @@ fn answered_labels(document: &mut Document) -> HashSet<String> {
 /// Bee$^1$` with no `$^1$` line; `Gus Gray\IEEEauthorrefmark{1}` whose legend is a `\thanks`, 2408.02464): read as
 /// a request, it was taken out of the name to link an affiliation that is not there. A mark the name already shows
 /// is not repeated. (Perl drops it too; repro sectioning-frontmatter/author_unmatched_numeric_mark.)
-fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) -> Result<()> {
+///
+/// Returns the marks it could not show ([`unanswered_mark_text`]: a composite label), for [`count_lost_marks`].
+fn show_unanswered_marks(
+  document: &mut Document,
+  answered: &HashSet<String>,
+) -> Result<Vec<String>> {
+  let mut unshown: Vec<String> = Vec::new();
   for creator in document.findnodes(".//ltx:creator[@_annotations]", None) {
     // (what the author's entries answer and what its name shows, read where a request no entry answers asks: most
     // authors have none)
@@ -4238,11 +4245,13 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
     let picture_marks = creator.get_attribute("_picturemarks").unwrap_or_default();
     let plain_marks = creator.get_attribute("_plainmarks").unwrap_or_default();
     let mut marks: Vec<String> = Vec::new();
-    for label in creator
-      .get_attribute("_annotations")
-      .unwrap_or_default()
-      .split(',')
-    {
+    // (a mark written before a symbol the name shows in a superscript of its own, the symbol's place among the labels and
+    // the symbol: it prints there, `$^{1*}$`, as its requests were made in the order written, 2610.07087 — after the
+    // name's last text, it read `∗1`)
+    let mut before_symbol: Vec<(String, usize, String)> = Vec::new();
+    let labels = creator.get_attribute("_annotations").unwrap_or_default();
+    let labels: Vec<&str> = labels.split(',').collect();
+    for (at, label) in labels.iter().copied().enumerate() {
       let Some(mark) = label.strip_prefix("affiliation:") else {
         continue;
       };
@@ -4269,6 +4278,7 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
             .map(|(_, shown)| shown.to_string())
         });
       let Some(mut text) = refmark.or_else(|| unanswered_mark_text(mark)) else {
+        unshown.push(mark.to_string());
         continue;
       };
       // (the glyph follows the mark's mode: a `*` requested in text is `*`, in math `∗`)
@@ -4313,9 +4323,35 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
       if symbol_shown || shown.contains(&text) || marks.contains(&text) {
         continue;
       }
-      marks.push(text);
+      let symbol = labels[at + 1..]
+        .iter()
+        .enumerate()
+        .find_map(|(after, later)| {
+          let later = later.strip_prefix("affiliation:")?;
+          let later = unanswered_mark_text(later).unwrap_or_else(|| later.to_string());
+          (!later.chars().all(char::is_alphanumeric)
+            && shown_sups.iter().any(|sup| unify(sup) == unify(&later)))
+          .then_some((at + 1 + after, later))
+        });
+      match (symbol, before_symbol.last_mut()) {
+        // (a list before one symbol prints as one, `$^{1,2*}$`)
+        (Some((place, _)), Some((list, of, _))) if *of == place => {
+          list.push(',');
+          list.push_str(&text);
+        },
+        // (and one after an earlier symbol with the comma it prints after it, `1∗,2∗`)
+        (Some((place, symbol)), before) => {
+          let text = if before.is_some() {
+            s!(",{text}")
+          } else {
+            text
+          };
+          before_symbol.push((text, place, symbol));
+        },
+        (None, _) => marks.push(text),
+      }
     }
-    if marks.is_empty() {
+    if marks.is_empty() && before_symbol.is_empty() {
       continue;
     }
     let Some(mut personname) = document
@@ -4325,17 +4361,114 @@ fn show_unanswered_marks(document: &mut Document, answered: &HashSet<String>) ->
     else {
       continue;
     };
-    let mut sup = Node::new("sup", None, document.get_document())?;
-    if let Some(namespace) = personname.get_namespace() {
-      let _ = sup.set_namespace(&namespace);
+    let name_sups = document.findnodes("ltx:personname//ltx:sup", Some(&creator));
+    let symbol_at = |place: usize, glyph: &str| {
+      // (the same symbol again is the next of its superscripts, `$^{1*,2*}$`)
+      labels[..place]
+        .iter()
+        .filter(|label| {
+          label.strip_prefix("affiliation:").is_some_and(|label| {
+            unanswered_mark_text(label)
+              .unwrap_or_else(|| label.to_string())
+              .replace('\u{2217}', "*")
+              == glyph
+          })
+        })
+        .count()
+    };
+    // (a run after a symbol prints the comma after it, `$^{1*,2,3}$` as `1∗,2,3`, 2609.14365)
+    let after_symbol = !before_symbol.is_empty();
+    for (text, place, symbol) in before_symbol {
+      let glyph = symbol.replace('\u{2217}', "*");
+      let mut sup = unanswered_sup(document, &personname, &text)?;
+      match name_sups
+        .iter()
+        .filter(|node| node.get_content().replace('\u{2217}', "*") == glyph)
+        .nth(symbol_at(place, &glyph))
+      {
+        Some(node) => {
+          let mut node = node.clone();
+          node.add_prev_sibling(&mut sup)?;
+        },
+        None => personname.add_child(&mut sup)?,
+      }
     }
-    sup.append_text(&marks.join(","))?;
-    // (marked as shown for no entry: the observer's writer takes from it the marks an item it writes answers — review
-    // rev94a r2 S3)
-    sup.set_attribute("_unanswered", "true")?;
-    personname.add_child(&mut sup)?;
+    if !marks.is_empty() {
+      let text = marks.join(",");
+      let text = if after_symbol { s!(",{text}") } else { text };
+      let mut sup = unanswered_sup(document, &personname, &text)?;
+      personname.add_child(&mut sup)?;
+    }
   }
-  Ok(())
+  Ok(unshown)
+}
+
+/// Count, once the observer's writer has written the names, each mark [`show_unanswered_marks`] could not show and nothing
+/// shows since: a printed mark lost is never silent (`$^{a-b}$`, `$^{0.8}$`). Only a number or letter with a character no
+/// mark is made of beside it: a run of symbols or a number glued to one (`$^{**}$`, `$^{*\dag}$`, `\inst{1*}`) is requested
+/// or parted piece by piece, and a label keyed by a macro's spelling, or what prints between `\ref`s (`--`), says nothing
+/// of what prints.
+fn count_lost_marks(document: &mut Document, unshown: &[String]) {
+  let composite = |mark: &&String| {
+    !mark.starts_with('\\')
+      && mark.chars().any(char::is_alphanumeric)
+      && mark
+        .chars()
+        .any(|c| !c.is_alphanumeric() && !matches!(c, '*' | '#') && !is_printed_symbol(c))
+  };
+  let unshown: Vec<&String> = unshown.iter().filter(composite).collect();
+  if unshown.is_empty() {
+    return;
+  }
+  let shown = document
+    .findnodes(".//ltx:creator/ltx:personname//ltx:sup", None)
+    .iter()
+    .map(|sup| sup.get_content())
+    .collect::<String>();
+  for mark in unshown {
+    if !shown.contains(mark.as_str()) {
+      Warn!(
+        "frontmatter",
+        "unanswered_mark_lost",
+        s!(
+          "The mark {} an author requests is answered by no entry and cannot be shown on the name",
+          lost_mark_as_written(mark)
+        )
+      );
+    }
+  }
+}
+
+/// A lost mark for the reader of the log: quoted, and an ORCID iD its label reads run on to the number before it apart
+/// from that number (`$^{1\orcidlink{0000-0001-8812-0565}}$`, 2205.05709: not the mark "10000-0001-…").
+fn lost_mark_as_written(mark: &str) -> String {
+  const ORCID_LENGTH: usize = "0000-0000-0000-0000".len();
+  let parted = mark.len().checked_sub(ORCID_LENGTH).and_then(|at| {
+    let orcid = mark.get(at..)?;
+    let shape = orcid.char_indices().all(|(place, c)| match place {
+      4 | 9 | 14 => c == '-',
+      18 => c.is_ascii_digit() || c == 'X',
+      _ => c.is_ascii_digit(),
+    });
+    shape.then(|| (&mark[..at], orcid))
+  });
+  match parted {
+    Some(("", orcid)) => s!("of the ORCID iD {orcid} alone"),
+    Some((number, orcid)) => s!("\"{number}\" (with the ORCID iD {orcid})"),
+    None => s!("\"{mark}\""),
+  }
+}
+
+/// The `ltx:sup` showing `text`, marks no entry answers ([`show_unanswered_marks`]), for `personname`; marked as shown
+/// for no entry: the observer's writer takes from it the marks an item it writes answers (review rev94a r2 S3).
+fn unanswered_sup(document: &Document, personname: &Node, text: &str) -> Result<Node> {
+  let mut sup = Node::new("sup", None, document.get_document())?;
+  if let Some(namespace) = personname.get_namespace() {
+    let _ = sup.set_namespace(&namespace);
+  }
+  sup.append_text(text)?;
+  sup.set_attribute("_unanswered", "true")?;
+  Ok(sup)
 }
 
 /// Add `label` (comma separated) to the requests of the frontmatter entry being digested (`_annotations`), and, for a
