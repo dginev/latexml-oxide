@@ -6,16 +6,15 @@
 
 ## The measure
 
-Sweep #150 on `d6e175bacb` (binary int140a), 180 s, 8 GB, cores shared with two writers. 13 timeouts are provisional until re-run on quiet cores.
+Sweep #150 on `d6e175bacb` (binary int140a), 180 s, 8 GB, its timeouts re-run on quiet cores (the worklist below keeps its first-pass statuses). Sweep 902 on M2 (`f145413b64`), the same protocol, before the review's fix rounds.
 
-| Measure | #149 (2026-10-11, `e57be39640`) | #150 (2026-11-06) |
-|---|---:|---:|
-| Goal set 1,552, passing G1-G4 | 1,549 (99.81 %) | 1,527 (98.39 %) |
-| G1 unclean / G2 invalid / G3 below 95 % / G4 over 180 s | 0 / 1 / 0 / 2 | 10 / 6 / 6 / 3 |
-| In scope 1,602, clean | 1,590 (99.25 %) | 1,579 (98.56 %) |
-| In scope, clean + schema-valid | 1,576 | 1,560 (97.38 %) |
-| In scope, clean + valid + raw recall ≥ 95 %, no classification | 1,363 (85.08 %) | 1,350 (84.27 %) |
-| Whole corpus 2,374: clean; no Fatal or timeout | | 1,940 (81.72 %); 2,306 (97.14 %) |
+| Measure | #149 (2026-10-11, `e57be39640`) | #150 (2026-11-06) | 902, M2 (2026-11-06) |
+|---|---:|---:|---:|
+| Goal set 1,552, passing G1-G4 | 1,549 (99.81 %) | 1,531 (98.65 %) | 1,550 (99.87 %) |
+| G1 unclean / G2 invalid / G3 below 95 % / G4 over 180 s | 0 / 1 / 0 / 2 | 10 / 6 / 5 / 0 | 0 / 0 / 0 / 2 |
+| In scope 1,602, clean | 1,590 (99.25 %) | 1,582 (98.75 %) | 1,590 (99.25 %) |
+| Whole corpus 2,374: clean; no Fatal or timeout | | 1,945 (81.93 %); 2,311 (97.35 %) | |
+| In scope, clean + valid + raw recall ≥ 95 %, no classification (first pass) | 1,363 (85.08 %) | 1,350 (84.27 %) | |
 
 Vs #149: status worse on 53 manuals, better on 220; errors 11,246 → 11,278, up on 44, down on 85. **None comes from Bundle int140a:** 21 of them run on int139c give the same status and error count.
 
@@ -34,7 +33,7 @@ Vs #149: status worse on 53 manuals, better on 220; errors 11,246 → 11,278, up
 - **The re-review's REDs, all synthetic and no arXiv reach found** (`tools/perfect_kernel/repros/package-bindings/`): `color_model_of_a_driver_over_an_earlier_color_red` (a driver's model keeps the earlier colour silently, pre-existing), `xcolor_redefined_hsb_ranges_red` (`\rangeHsb`, `\rangetHsb` ignored; `Hsb` pre-existing, `tHsb` new with its conversion), `colorbox_of_an_unconverted_model_black_on_black_red` (the recovery black behind black words, pre-existing; no background instead needs a ruling).
 - **Ruled out of the worklist:** serbian-def-cyr/proba `recall 19` and latex-refsheet/LaTeX_RefSheet `recall 75` in `accepted_residuals.tsv`, with their reasons (`j` in T2A; a word inside an included PDF).
 - **B, `\pdftex_if_engine:TF` undefined** (mdframed, 4 manuals, E about 290 each): not yet root-caused.
-- **T, timeouts:** re-run on quiet cores first; several may be load. `cpu_h` rose 0.92 → 1.20 in scope, partly load.
+- **T, timeouts:** re-run on quiet cores first; several may be load. `cpu_h` rose 0.92 → 1.20 in scope, partly load. **G4, pgf-interference-en/-de, is real, not load:** on M2's binary both time out at 180 s with their SMT siblings idle (mean sibling load 6 %), where they took 160 s on idle siblings on 2026-10-11 and 156.6 s at batch 59q. **A kernel drift, not this manual:** `kit/perf_bisect.sh`, `instructions:u` on the TikZ audit's benchmarks, 59q `1be2a69de7` → `d6e175bacb`: fp1000 83.77 → 88.94 G (+6.2 %), fill1000 13.26 → 14.85 G (+12 %), addplot500 28.22 → 31.82 G (+12.8 %); 59q's own 83.77 G reproduces exactly. Every pgf-heavy document pays it. Steps refined by `kit/perf_bisect.py`; the fix batch is next. One pattern is 143 G, 9.3 s (lualatex 9.1 s, pdflatex 3.0 s).
 - **V, newly schema-invalid** (annee-scolaire, paresse, simples-matrices): C6 above.
 - **R, recall** (LaTeX_RefSheet, prerex/chart, quantum-bibliographystyle-demo, serbian-def-cyr/proba, niepraschk-eso-pic): C7, C8, C9 and the two residuals above. tabularray and tkz-grapheur were their HTML pass, back at M2. Above the bar, no loss, closed: datetime2-english-sample (100 → 96.6 %) and SubSupScripts (99.3 → 98.5 %) miss `october` because `SOURCE_DATE_EPOCH` now prints 1 January 2026 and the goldens carry their own year (2019, 2009); #149's HTML matched only by printing "October 11, 2026"; more than 10 other manuals share it. SubSupScripts' `expression` was missed at #149 too, 19 in the XML. cmpj/template (98.9 → 96.0 %) misses Cyrillic words, i → і (0xB3 → U+0456), the mechanism of serbian's j (0xBC → U+0458).
 - **?, the rest:** each row's first error below is the lead.
