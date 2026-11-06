@@ -579,7 +579,7 @@ fn keepsup_in_math(sym: Vec<Token>) -> Vec<Token> {
       if *token == T_OTHER!("*") {
         T_CS!("\\ast")
       } else {
-        token.clone()
+        *token
       }
     })
     .collect();

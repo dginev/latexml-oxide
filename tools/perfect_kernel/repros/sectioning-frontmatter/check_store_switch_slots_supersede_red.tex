@@ -1,0 +1,10 @@
+% RED (rev108b2 finding 2, synthetic): the supersede rule drops words when a setter's writes to two stores sit in branches of a conditional.
+% witness: none lost (nst.cls `\add@author@list` has the shape, 2210.08941; its authors reach the output)
+% engines: 108b names only "gravel road"; pdflatex prints both
+% expect:  the Warning names "lunar institute" too: no replacing when writes to 2+ stores have `\else`/`\or` between them. 1612.06202 stays superseded.
+\documentclass{cswitch_ifnum}
+\title{A Title}\author{Ann Able}
+\address{Lunar Institute}\address{Gravel Road}
+\begin{document}\maketitle
+Body text.
+\end{document}

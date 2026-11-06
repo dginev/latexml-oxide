@@ -7,6 +7,41 @@ and API, unified placement order inside the API." This decides item 9 of
 from a read-only design study (2026-11-01). Its stages are the frontmatter batches after bundle int126a. Per-shape
 findings become their acceptance witnesses.
 
+## The path, re-baselined and ruled (user 2026-11-06)
+
+**This section supersedes the Stages table below where they differ.** Basis: `agent_reports/2026-11-06_engine_rebaseline_report.md`, all of dev3 converted with int139c with the observer on and off, scored with the frozen scorer (`fm_scorer/FROZEN.md`). Stages 0-7 never landed as stages; batches 99a-107g grew the old and post-writer layers about 7 times faster than the reading and the writer.
+
+**Measured:** the observer on 98.83 / 98.55 %, off 97.83 / 97.35 %, the reading alone 96.89 / 96.76 %. So the reading can't replace the old engine yet, and the decline gate can't simply open (blind opening +28 / -109 creators). Of dev3's 8,167 scored papers: both engines agree 78.5 %, written 6.6 %, part 1.8 %, declined with the old output standing 6.6 %, no block 4.8 %, no reading 1.2 %. One engine removes an estimated 15-28 % of the error mass; Coverage, Kind, Link and Cut, about a third of the tuned mass, remain for any engine.
+
+**The ruled path: measure, repair, open, invariant.** The reading is repaired, then the writer's re-part becomes the one decider. No emitter before the merge. The old pre-writer passes keep running, overwritten, so at merge there is one decider and not yet one executor; switching them off follows the merge.
+
+| Batch | Mechanism | Files | Risk | Output | Witnesses |
+|---|---|---|---|---|---|
+| **E0** measure and fence | Per-family writer outcomes in `fmshadow`; a read-back Info; fence and pass-list guards; the reading-alone tool in the kit | `fmshadow/driver.rs`, guards | EASY, none | byte-identical | 2012.14750, 2201.02056, 2606.18623, 1507.02068 |
+| **E1** regressions the writer wrote | "de Naurois" cut at a small font, an IEEE `1st` name sending e-mails to the block, A*STAR cut at its star | `lexer.rs`, `lines.rs` | EASY-MED, low | those and their reach | 1702.08280, 2606.16069, 2401.15006 |
+| **E2** e-mail lists in the reading | Brace lists under labels, address lines, list distribution, through `address_line_cut`, `list_owners`, `entry_address_owners` | `post.rs:1809,1856` | MED, medium | papers the reading then writes differently | 1106.2694, 2308.00146, 2009.14655, 2507.07920, gr-qc0207058, 1111.6932, 2502.01754 |
+| **E3** re-part from tokens | Open `repart.rs:536`, `:355`; keep `:327` and "today's name dropped" as closed declines | `repart.rs` | MED, medium | ~13 verdict-moving of 186 name declines | gain 2606.18623, quant-ph0003049, 2208.07950, 2510.15353, 2205.05623, 1508.05940, 2303.12302, nlin0410054, 1312.5468, 2107.01943; must not move hep-ph0311131, 1412.5940, 1509.01480, 2409.13798, 2507.22485, 2312.14886; watch cs0011034, 2609.22862, 1703.06483 |
+| **E4** per-item writes | An unexplained item stays as today's instead of declining the paper; the R4 licence opens shape by shape; R12 under marked names | `plan.rs:1898,2211`, `writer/mod.rs:669` | HARD, high; pinned guards change | up to 351 papers | gain 1610.05419, 1902.04939, cond-mat0404185, 2003.08933; must not move 2305.13191, 0910.1386, 1411.2744, 1509.04564, 1107.5730 |
+| **E5** API-only families | Remove the `blocks > 0` condition, the reading's `api:creator` defects first | `writer/mod.rs:71`, `shadow.rs:62-70` | MED, medium | 394 papers, 136 breaks to read first | 2012.01172, 2508.09752, 2602.12162, 2408.15810, 1807.05355 |
+| **E6** the owner invariant | The three owner-moving passes after the writer become no-ops or move out; the URL rule goes in | `insert.rs:920,1484`, `address_lists.rs:33` | EASY-MED, low | byte-identical if E2 is complete | 2511.18438, 2608.22772 |
+| **E7** PoS `appends` | R9: one `\@author` across calls, a declared block boundary | `jhep_cls.rs:183`, PoS.cls:666 | MED, medium | +0.17 / +0.05 on dev3 | 1509.01480, 1412.5940 |
+
+All gains above are counterfactual estimates until each batch's real write; per-batch counts are estimates.
+
+**Definition of done for the merge (each one mechanical):**
+1. Every paper with a reading ends with the resolver's owners, or a counted fallback from a closed list: `SkipReason`, held diagnostics, today's name dropped, more authors by no ruling, read from words alone, no name. Checked by a final read-back at the end of `insert_frontmatter`, summarized per family by `ab_audit fmshadow`, which fails on `written-different` above 0 or on an unknown reason.
+2. Fallback papers at most **3 %** (6.6 % today), each counted by reason; re-set after E3 if the closed reasons alone exceed it. No-block at 0.
+3. Passes after the writer may change kind and text, never who holds an item: an allow-list guard on `insert.rs`'s pass list, and a test-profile invariant on owner sets.
+4. The fence: `\lx@add@` emissions in `author_block/` and `annotate=` literals can't exceed today's count (41); a new ownership rule lands in `resolver/`.
+5. The reading-alone tool in the kit; declined and no-block breaks must not rise in any batch.
+6. Dev3 D3 not below base; a fresh holdout read once.
+
+**The 98 % bar at the merge:** decided after that read (user 2026-11-06). 98 / 98 stays the stated bar; nothing is lowered in advance. The study's estimate after this work: per creator 97.86-98.24 or better, per paper 97.68-98.05.
+
+**The truth set (user 2026-11-06):** the fresh holdout v4's measure comes with a truth set: every paper the frozen scorer flags plus about 500 it passes, each paper's authors, affiliations and e-mails recorded from the PDF and source alone by two independent agent reads, disagreements to the user. Labelling agents never see the converter's output or the scorer's verdict; the main session sees only counts. It measures false passes, which reading only flagged papers never finds.
+
+**Deferred past the merge:** Stage 1a's `Owner::Group` and `expand_conventions` (0.024 points), Stage 2's vocabulary, Stage 3's emitter, the old passes off with a byte-identical proof, Kind passes moved in, overflow positions, Stages 6-7, one signal read, R6, R10-R13, R15-R17.
+
 ## The diagnosis
 
 - **Two ownership engines decide the same things.**
@@ -199,7 +234,7 @@ Group residuals are few and mostly synthetic. Group costs complexity (14 sites) 
 is unified in Stages 1-3 rather than given a stage of its own. The four pathological ones are in DEFERRED_FAMILIES.md
 "Pathological authoring" (and "Names stacked under names").
 
-## Stages (each one payload-writer batch; each lands alone)
+## Stages (2026-11-01; superseded by "The path, re-baselined and ruled" above, kept for the mechanism detail)
 
 | # | Stage | Effort / risk | Output | Acceptance witnesses |
 |---|---|---|---|---|
@@ -225,17 +260,17 @@ listed with its PDF evidence.
 | R1 | May a convention give an unmarked item to a name whose marks request items of that role? | Never for items printed apart from the block; in-block lines under the names stay with the row | **RULED 2026-11-01: marks win** (FIDELITY_CHARTER §4) |
 | R2 | Pairing by position | Hand-printed numbers count everywhere (#918); bare position only under a declared `labelseq` | **RULED 2026-11-01: printed numbers only** |
 | R3 | Does a class convention ever outrank a mark? | No (a class's printed numbering is a label) | **RULED 2026-11-01: no** (with R1) |
-| R4 | Must every difference from today's output still carry a change tag, or does the ruled order license it, with the comparator kept as the census gate? | The ruled order licenses it (Stage 3 onward) | **RULED 2026-11-01: the ruled order licenses** |
-| R5 | The fallback when the reading is uncertain | The old reader until Stage 7, then the reading with the uncertain text whole | **TENTATIVE 2026-11-01** (main session, user away; revisit): as recommended |
+| R4 | Must every difference from today's output still carry a change tag, or does the ruled order license it, with the comparator kept as the census gate? | The ruled order licenses it (Stage 3 onward) | **RULED 2026-11-01: the ruled order licenses; 2026-11-06: E4 opens it shape by shape,** since opening it whole measures +8 / -38 creators |
+| R5 | The fallback when the reading is uncertain | The old reader until Stage 7, then the reading with the uncertain text whole | **RULED 2026-11-06: confirmed,** until after the merge |
 | R6 | BESIII sub-labels: does `48A` request sub-entry (A) of entry 48? | Yes where entry 48 prints `(A)` sub-entries, else entry 48 whole | **TENTATIVE 2026-11-01** (main session, user away; revisit): as recommended, at Stage 4a (sub-items) |
-| R7 | revtex `\collaboration` / `\affiliation{(… Collaboration)}`: a contact (Perl's aastex) or a creator (Perl's revtex)? | A contact, as the 2026-11-01 collaboration ruling makes one for every collaboration; the same for an aa/llncs/svjour `\and` piece `X Collaboration:` (98a: a creator today, as base 97b) | **TENTATIVE 2026-11-01** (main session, user away; revisit): contact (Stage 6 with the binding splits) |
+| R7 | revtex `\collaboration` / `\affiliation{(… Collaboration)}`: a contact (Perl's aastex) or a creator (Perl's revtex)? | A contact, as the 2026-11-01 collaboration ruling makes one for every collaboration; the same for an aa/llncs/svjour `\and` piece `X Collaboration:` (98a: a creator today, as base 97b) | **RULED 2026-11-06: a contact** (E3) |
 | R8 | Contact order within a creator | Print order (97d D1 chose it) | **RULED 2026-11-01: print order** |
-| R9 | PoS/JHEP one `\@author` across calls: lift the difficulty deferral for Stage 4b? | Yes, through the binding's `appends` declaration | **TENTATIVE 2026-11-01** (main session, user away; revisit): lift at Stage 4b |
+| R9 | PoS/JHEP one `\@author` across calls: lift the difficulty deferral for Stage 4b? | Yes, through the binding's `appends` declaration | **RULED 2026-11-06: lifted** (E7; 39 of dev3's 261 wrong creators) |
 | R10 | amsart's upfront N·m grid and numbered institutes equal to the authors: a declared sequence under R2, or bare position? | A declared sequence where the class's own code pairs them (Stage 1's "must not move" witnesses) | **TENTATIVE 2026-11-01** (main session, user away; revisit): as recommended |
 | R11 | Does the R1 requester skip apply inside a Group owner at expansion, including in-block lines under the row? | At expansion, for items printed apart from the names; in-block lines under the row stay the row's (R1's exemption) | **TENTATIVE 2026-11-01** (main session, user away; revisit): as recommended |
 | R12 | A Group in the XML: Perl's clones only, or also a group id in the provenance attribute? | Clones only, as Perl does; the id is a later beyond-Perl option | **TENTATIVE 2026-11-01** (main session, user away; revisit): as recommended |
 | R13 | Should the scorer read the ruled signals (symbol marks as labels, break kinds) so that its disagreements read as converter defects? | Yes, one signal reading shared by converter and scorer | **TENTATIVE 2026-11-01** (main session, user away; revisit): as recommended |
-| R14 | Emit: decline per item or per paper (W3)? | Per item: write what the reading explains, fall back for the rest | **TENTATIVE 2026-11-01** (main session, user away; revisit): as recommended |
+| R14 | Emit: decline per item or per paper (W3)? | Per item: write what the reading explains, fall back for the rest | **RULED 2026-11-06: per item** (E4) |
 | R15 | (N-B) A Group whose every member requests the role: does it stand (today, 77n t02), or go to the block once (strict R1)? | Stands; measure strict behind the `r1_at_expansion` switch, then ask | **TENTATIVE 2026-11-01** (main session, user away; revisit) |
 | R16 | (N-A) A labelled item nobody answers, with one name: the sole author (OD #159) or the block? | The sole author, as today | **TENTATIVE 2026-11-01** (main session, user away; revisit) |
 | R17 | (N-D) The run walk's call-time stop (`resolver/api.rs:89-118`) bakes R1 into membership (`A$^1$, B, C$^1$, D`: B gets nothing) | Keep in Stage 1, remove in Stage 2 | **TENTATIVE 2026-11-01** (main session, user away; revisit) |

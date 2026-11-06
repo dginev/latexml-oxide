@@ -1,0 +1,11 @@
+% RED (rev108b2 finding 1, synthetic): a looping argument a raw setter only stores runs without a budget in the title-page check's digestion.
+% witness: none (A/B F 7 = 7 on 2,530 papers)
+% engines: int139c full body, F=0, 0.15 s; 108b `Fatal:Timeout:Convert` at --timeout=60, 39-byte XML. `\def\x{\end{document}\x}\x` the same; `\loop\iftrue\end{document}\repeat` `Fatal:Timeout:IfLimit`.
+% expect:  body kept, F=0: the argument's run has a step budget ending as the `unread_argument` Info, and `IfLimit` unlatches there.
+\documentclass{ecls}
+\title{A Title}\author{Ann Able}
+\closing{\def\x{\begin{center}\end{center}\x}\x}
+\begin{document}\maketitle
+\section{One}
+Body text one.
+\end{document}
