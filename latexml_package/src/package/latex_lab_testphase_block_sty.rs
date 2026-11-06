@@ -246,6 +246,16 @@ LoadDefinitions!({
 \DeclareInstance{blockenv}{list}{display}{ name = list, block-instance = listblock, inner-instance = legacy }
 \DeclareInstance{block}{displayblock-0}{display}{}
 \DeclareInstance{block}{listblock-0}{display}{}
+\clist_map_inline:nn
+  {
+    displayblock-1, displayblock-2, displayblock-3, displayblock-4, displayblock-5, displayblock-6,
+    verbatimblock-0, verbatimblock-1, verbatimblock-2, verbatimblock-3, verbatimblock-4, verbatimblock-5, verbatimblock-6,
+    quoteblock-1, quoteblock-2, quoteblock-3, quoteblock-4, quoteblock-5, quoteblock-6,
+    quotationblock-1, quotationblock-2, quotationblock-3, quotationblock-4, quotationblock-5, quotationblock-6,
+    theoremblock-0, theoremblock-1, theoremblock-2,
+    listblock-1, listblock-2, listblock-3, listblock-4, listblock-5, listblock-6
+  }
+  { \DeclareInstance{block}{#1}{display}{} }
 \DeclareInstance{list}{itemize-1}{std}{ item-label = \labelitemi }
 \DeclareInstance{list}{itemize-2}{std}{ item-label = \labelitemii }
 \DeclareInstance{list}{itemize-3}{std}{ item-label = \labelitemiii }

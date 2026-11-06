@@ -9,7 +9,7 @@
 %          words. / Fig box Figure 1: A caption / Cover three / Abstract Third late words. / 1 Intro".
 % engines: rust 86i r2: titlepage, First, Second, Third, para (Cover two), figure, para (Cover three).
 %          rust 86i r3: titlepage, First, Third, para (Cover two), Second, figure, para (Cover three).
-% expect:  0 errors, 0 warnings; title, creator, titlepage[Cover one], abstract (First), para (Cover two),
+% expect:  0 errors, 0 warnings; title, creator, titlepage[Cover one], abstract (First), titlepage[Cover two],
 %          abstract (Second), abstract (Third), figure, para (Cover three), section; eager and streamed identical.
 % status:  RED (86i r3) -> GREEN (86i r4)
 \documentclass{article}

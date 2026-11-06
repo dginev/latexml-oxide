@@ -5509,7 +5509,7 @@ fn copies_lock_kept_aside(cs: &str) -> bool {
 fn redefinition_locked(cs: &str, definition: &Stored) -> bool {
   let probe = |key: String| arena::get(&key).is_some_and(lookup_bool_sym);
   if probe(s!("{cs}:locked")) {
-    return true;
+    return !another_interface(cs, definition);
   }
   if !probe(s!("{cs}:locked@files")) {
     return false;
@@ -5521,6 +5521,21 @@ fn redefinition_locked(cs: &str, definition: &Stored) -> bool {
     drop_copies_lock_aside(cs);
   }
   holds
+}
+
+/// Whether `definition` declares parameters other than the interface the lock on `cs` protects
+/// (`"{cs}:locked@arity"`), so that it is a command of its own and no copy of the binding's: sltables.sty:193's
+/// `\def\multicolumn##1{\omit…\stmultispan…}`, its table's one-argument command, against latex.ltx's three, which
+/// agupp.sty:599, eqnarray.sty:45 and srdp-tables.sty:1218 copy. One declaring none may read any number and stays
+/// refused. This looks at a definition's parameters only; a `\let` never comes here, a plain `:locked` having never
+/// refused one (`let_i`, as Perl's `Let`): `\let\multicolumn\mymc` stands.
+fn another_interface(cs: &str, definition: &Stored) -> bool {
+  let Some(key) = arena::get(s!("{cs}:locked@arity")) else {
+    return false;
+  };
+  let arity = lookup_int_sym(key);
+  let count = definition_parameters(definition).map_or(0, |params| params.get_num_args()) as i64;
+  arity > 0 && count > 0 && count != arity
 }
 
 /// A definition the copies lock on `cs` let through replaces the protected meaning for good: nothing kept aside is
@@ -5564,6 +5579,17 @@ pub fn takes_optional_first(definition: &Stored) -> bool {
   copy_default(definition).is_some_and(|default| !default.is_empty())
 }
 
+/// The parameters `definition` declares.
+fn definition_parameters(definition: &Stored) -> Option<&crate::parameter::Parameters> {
+  match definition {
+    Stored::Expandable(defn) => defn.get_parameters(),
+    Stored::Constructor(defn) => defn.get_parameters(),
+    Stored::Primitive(defn) => defn.get_parameters(),
+    Stored::MathPrimitive(defn) => defn.get_parameters(),
+    _ => None,
+  }
+}
+
 /// The default of the optional argument `definition` takes first, if it takes one first ([`takes_optional_first`];
 /// a robust definition's by its inner `\cs␣`).
 fn copy_default(definition: &Stored) -> Option<Tokens> {
@@ -5572,14 +5598,7 @@ fn copy_default(definition: &Stored) -> Option<Tokens> {
   {
     return lookup_meaning(&inner).and_then(|inner| copy_default(&inner));
   }
-  let params = match definition {
-    Stored::Expandable(defn) => defn.get_parameters(),
-    Stored::Constructor(defn) => defn.get_parameters(),
-    Stored::Primitive(defn) => defn.get_parameters(),
-    Stored::MathPrimitive(defn) => defn.get_parameters(),
-    _ => None,
-  };
-  params
+  definition_parameters(definition)
     .and_then(|params| params.get_parameters().into_iter().next())
     .filter(|param| param.optional)
     .and_then(|param| param.extra.first().cloned())

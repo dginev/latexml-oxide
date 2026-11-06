@@ -1,0 +1,23 @@
+% A package's `\multicolumn` taking another number of arguments than latex.ltx's three is a command of its own: sltables
+% `{stable}` (sltables.sty:193 `\def\multicolumn##1{\omit…\stmultispan…}`) spans its table's columns, as Perl and pdflatex
+% do; its group ended, the kernel's `\multicolumn` is back. A copy of the three-argument interface stays refused
+% (agupp.sty:599; perfect_kernel_batch56::raw_multicolumn_redefinition_is_dropped).
+% witness: shipunov/sltables-doc-en (sweep #150, 11 errors; `\multicolumn4\hfil\stpar{4.25in}…`).
+% oracle:  pdflatex (TL 2025) 0 errors.
+% engines: perl 0 errors, `colspan="3"` `<inline-block>`.
+%          int140a: `\multicolumn:locked` refused it; `{4}{\hfil}{\stpar}` read as the binding's: 11 errors, "\omit cannot
+%          be used here".
+% expect:  0 errors; the span's cell holds an `inline-block` with "At the end", the later tabular's `colspan="2"` cell "Y".
+\documentclass{article}
+\usepackage{sltables}
+\begin{document}
+\begin{stable}
+A|B\el
+\multicolumn2\hfil\stpar{1in}{At the end}\hfil
+\end{stable}
+
+\begin{tabular}{ll}
+a & b\\
+\multicolumn{2}{c}{Y}\\
+\end{tabular}
+\end{document}

@@ -9,8 +9,8 @@
 % engines: perl (vendored HEAD) 0 errors: four abstracts, then the four cover lines (frontmatter at the head).
 %          rust int117a: titlepage (Cover one), "Fourth late words.", three paras; the first three lost.
 %          rust 86i r2: titlepage, First, Second, Third, para, para, para, Fourth.
-% expect:  0 errors, 0 warnings; title, creator, date, titlepage[Cover one], abstract, para, abstract, para, abstract,
-%          para, abstract, section, in that print order.
+% expect:  0 errors, 0 warnings; title, creator, date, titlepage[Cover one], abstract, titlepage[Cover two], abstract,
+%          titlepage[Cover three], abstract, titlepage[Cover four], abstract, section, in that print order.
 % status:  RED (86i r2) -> GREEN (86i r3)
 \documentclass{article}
 \begin{document}

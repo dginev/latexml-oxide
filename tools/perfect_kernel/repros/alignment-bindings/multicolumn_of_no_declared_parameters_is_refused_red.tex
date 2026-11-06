@@ -1,0 +1,22 @@
+% `\renewcommand{\multicolumn}{\mymc}` and `\DeclareRobustCommand\multicolumn[1]` declare another command's interface, with
+% no parameters on `\multicolumn` itself (the robust one's `\multicolumn ` holds them): the lock refuses them, and the cell's
+% `{2}` is read by the kernel's three-argument command. A limit of `another_interface` since the lock, not a regression.
+% witness: the review of M2 (the arity lock).
+% oracle:  pdflatex (TL 2025) 0 errors: [2] c, then [2] d.
+% engines: int140a, M2: 1 Warning per table ("Unrecognized tabular template"), the cells lost. A `\let` to the same command stands: [2], as in Perl.
+% expect:  0 errors; [2] printed twice.
+% status:  RED
+\documentclass{article}
+\begin{document}
+\def\mymc#1{[#1]}
+\renewcommand{\multicolumn}{\mymc}
+\begin{tabular}{ll}
+\multicolumn{2} & c \\
+\end{tabular}
+\makeatletter
+\DeclareRobustCommand\multicolumn[1]{[#1]}
+\makeatother
+\begin{tabular}{ll}
+\multicolumn{2} & d \\
+\end{tabular}
+\end{document}

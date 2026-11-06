@@ -227,8 +227,9 @@ pub fn digested_to_text(d: &Digested) -> Result<String> {
 }
 
 /// Whether digested material typesets something a reader sees: a character that is not a space, an image (a whatsit
-/// carrying a `graphic` or image `candidates`), or a cross-reference or citation, whose text the post-processor
-/// fills in (`fills_generated_text`), anywhere in it — through lists, the whatsit arguments it shows
+/// carrying a `graphic` or image `candidates`), a cross-reference or citation, whose text the post-processor
+/// fills in (`fills_generated_text`), or a constructor whose template prints text of its own (`template_prints_text`,
+/// `\LaTeX`), anywhere in it — through lists, the whatsit arguments it shows
 /// (`shown_arguments`, as [`ink_text`] reads them) and bodies, and alignment cells. Paragraph and spacing commands,
 /// rules and empty boxes are not content, nor is an argument LaTeX only tests: the position letter of
 /// `\begin{tabular}[t]`, `\parbox[t]`, `{minipage}[t]`, `\makebox[w][l]` or `\shortstack[l]` (a `Position` parameter,
@@ -252,6 +253,9 @@ pub fn typesets_content(d: &Digested) -> bool {
       w.get_property("graphic").is_some()
         || w.get_property("candidates").is_some()
         || fills_generated_text(&w)
+        // A constructor whose template prints text of its own, without an argument or a body (`\LaTeX`, sect03.rs:
+        // the logo alone in a textpos block, the niepraschk-eso-pic manual).
+        || w.get_definition().replacement_template().is_some_and(template_prints_text)
         // A tabular or `\halign` keeps its rows in its `alignment` property (tex_tables.rs): a class's `\maketitle`
         // that is only a table typesets it (simplecv's header, brandeis-problemset's title table; dropped since 59p).
         || matches!(w.get_property("alignment").as_deref(), Some(Stored::Digested(a)) if typesets_content(a))
@@ -640,6 +644,20 @@ fn prints_only_arguments(template: &str) -> bool {
   parse_replacement(template).is_ok_and(|ops| transparent(&ops) && absorbs(&ops))
 }
 
+/// Whether a constructor's template holds text that is not blank, in any branch of a conditional ([`typesets_content`]).
+/// A template that does not parse is read as printing none: an image, a reference and an alignment have their own tests.
+fn template_prints_text(template: &str) -> bool {
+  use latexml_core::binding::def::replacement::{ReplacementOp, parse_replacement};
+  fn prints(ops: &[ReplacementOp]) -> bool {
+    ops.iter().any(|op| match op {
+      ReplacementOp::Text { text } => text.chars().any(|c| !c.is_whitespace()),
+      ReplacementOp::Conditional { then_ops, else_ops, .. } => prints(then_ops) || prints(else_ops),
+      _ => false,
+    })
+  }
+  parse_replacement(template).is_ok_and(|ops| prints(&ops))
+}
+
 /// The attributes a transparent wrapper's element may carry ([`prints_only_arguments`]): its font, and how it closes.
 const FONT_ONLY_ATTRIBUTES: &[&str] = &["font", "_font", "_force_font", "_noautoclose"];
 
@@ -959,7 +977,24 @@ fn argument_kinds(w: &Whatsit) -> Option<Vec<u8>> {
 
 #[cfg(test)]
 mod tests {
-  use super::prints_only_arguments;
+  use super::{prints_only_arguments, template_prints_text};
+
+  /// `\LaTeX`'s template holds its own text; a strut's, a rule's and a wrapper's do not ([`typesets_content`]).
+  #[test]
+  fn template_holds_its_own_text() {
+    for template in ["L<ltx:text>a</ltx:text>T", "?#1(x)()", "1"] {
+      assert!(template_prints_text(template), "{template}");
+    }
+    for template in [
+      "",
+      " ",
+      "#1",
+      "<ltx:rule width='#1'/>",
+      "<ltx:text font='bold'>#body</ltx:text>",
+    ] {
+      assert!(!template_prints_text(template), "{template}");
+    }
+  }
 
   /// A constructor's template prints only its arguments when it absorbs one and adds nothing but white space and
   /// font-only `ltx:text`/`ltx:emph` (OD #916): `\mbox`, `\emph`, a math alphabet; revsymb's `\openone` (`"1"`), an

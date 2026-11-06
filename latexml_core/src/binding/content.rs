@@ -4613,6 +4613,33 @@ pub fn require_resource(mut resource: Resource) {
   // }
 }
 
+/// Does the class `name` resolve to a file of the TeX distribution, neither beside the document (its own directory or
+/// below it, a `filecontents` one) nor beside `binding`'s own class?
+fn is_unrelated_distribution_class(name: &str, binding: &str) -> bool {
+  let Some(path) = find_file(
+    name,
+    Some(FindFileOptions {
+      ext_type: Some(Cow::Borrowed("cls")),
+      forbid_ltxml: true,
+      ..FindFileOptions::default()
+    }),
+  ) else {
+    return false;
+  };
+  if pathname::is_literaldata(&path) || super::virtual_files::vfs_exists(&path) {
+    return false;
+  }
+  let Ok(path) = std::fs::canonicalize(&path) else {
+    return false;
+  };
+  if path.with_file_name(format!("{binding}.cls")).exists() {
+    return false;
+  }
+  let directory = lookup_string("SOURCEDIRECTORY");
+  directory.is_empty()
+    || std::fs::canonicalize(&directory).is_ok_and(|directory| !path.starts_with(directory))
+}
+
 /// Perl: `LoadClass($name, withoptions => 1)` — load a class passing the
 /// caller's class options through to the child. Reads `class_options` from
 /// state (populated by the outer `\documentclass` invocation) and forwards
@@ -4846,7 +4873,14 @@ pub fn load_class(name: &str, options: Vec<String>, after: Tokens) -> Result<()>
   // `\hour`, `\minute` registers; a Fatal, 1203.0762) where OmniBus kept the paper's text. The declaration itself is
   // read, so the format's input profile is the document's (K12: `\NeedsTeXFormat{pLaTeX2e}` letters kanji in
   // control-word names, sect05.rs), and the class falls to OmniBus.
-  let alternate = class_binding_alternate(name);
+  // A name's prefix marks an author's renamed copy beside the document, or a sibling shipped with the binding's class
+  // (`jmlrbook` beside `jmlr.cls`, `acmart-tagged` beside `acmart.cls`), not any other published class of the TeX
+  // distribution, which is a class of its own, read raw as LaTeX reads it: `bookest` ("Extension for the book class"),
+  // `bookcover`, `beamerswitch`, `bookshelf`, `postcards`, `aalok`, `anima` took `book`, `beamer`, `pos`, `aa`, `an` and
+  // lost their commands (sweep #150; docs/perfect_kernel/MANUAL_REGRESSIONS.md cluster A). Perl reads the file first,
+  // too (Package.pm:2700-2716: the prefix scan is the no-file branch).
+  let alternate =
+    class_binding_alternate(name).filter(|binding| !is_unrelated_distribution_class(name, binding));
   let other_format = (!notex_default && alternate.is_none())
     .then(|| declared_other_format(name))
     .flatten();

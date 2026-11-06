@@ -1,0 +1,18 @@
+% An ijsra document that never defines `\abstract`: `\newcommand\abstract{}\undef\abstract{}` (ijsra.cls:372-373) leave it
+% undefined, and `\ifdef\abstract` (:475) prints nothing.
+% witness: ijsra/ijsra's class.
+% oracle:  lualatex (TL 2025) 0 errors: Main Title, Ann Author, Body text.
+% engines: int140a 0 errors too: `\undef` is a `\let`, which the lock does not refuse (OD #500), so MANUAL_REGRESSIONS's
+%          "still errs" did not hold; a control that the binding keeps it so.
+% expect:  0 errors; no `<abstract>`; Body text.
+\documentclass{ijsra}
+\def\IJSRAidentifier{\currfilebase}
+\def\authorone{Ann Author}
+\def\maintitle{Main Title}
+\def\shorttitle{\maintitle}
+\def\affilone{Some Place}
+\def\cmail{ann@example.org}
+\IJSRAopening
+Body text.
+\end{refsection}
+\end{document}

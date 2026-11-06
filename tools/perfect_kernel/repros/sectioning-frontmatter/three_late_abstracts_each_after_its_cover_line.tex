@@ -13,8 +13,8 @@
 % engines: perl (vendored HEAD) 0 errors: abstract, abstract, abstract, para, para, para (frontmatter at the head).
 %          rust int117a: titlepage (Cover one), "Third late words.", para, para; the first two lost.
 %          rust 86i r2: titlepage, First, Second, para (Cover two), para (Cover three), Third.
-% expect:  0 errors, 0 warnings; title, creator, date, titlepage[Cover one], abstract (First), para (Cover two),
-%          abstract (Second), para (Cover three), abstract (Third), section; eager and streamed identical.
+% expect:  0 errors, 0 warnings; title, creator, date, titlepage[Cover one], abstract (First), titlepage[Cover two],
+%          abstract (Second), titlepage[Cover three], abstract (Third), section; eager and streamed identical.
 % status:  RED (86i r2) -> GREEN (86i r3)
 \documentclass{article}
 \begin{document}

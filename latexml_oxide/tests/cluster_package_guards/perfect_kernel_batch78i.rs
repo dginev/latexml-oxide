@@ -19,7 +19,7 @@ macro_rules! repro {
 
 /// `tex` (and `files`) converted to HTML by the binary in a directory of their own, as a paper is (the bibliography
 /// and the `\ref` text are the post-processor's): its HTML, the conversion free of errors and warnings.
-fn html_of(tex: &str, files: &[(&str, &str)]) -> String {
+pub(super) fn html_of(tex: &str, files: &[(&str, &str)]) -> String {
   let workdir = tempfile::tempdir().expect("create tempdir");
   std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
   for (name, content) in files {
