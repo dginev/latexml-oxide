@@ -463,7 +463,8 @@ fn osa_email_line_forms() {
       "<creator before=\"  \" role=\"author\">\n    <personname>B. Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact>\n  </creator>",
     ]
   );
-  // an ordinal is no mark, the line no email line
+  // an ordinal is no mark, the line no email line; the address it spells goes to its author as on any line (Z2: the writer no
+  // longer declines the paper for the suffix)
   assert_eq!(
     creators(&convert_clean(&doc(
       "A. Able$^{1}$ and B. Baker$^{1}$",
@@ -471,8 +472,8 @@ fn osa_email_line_forms() {
       ""
     ))),
     vec![
-      "<creator role=\"author\">\n    <personname>A. Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X, room 5<sup xml:id=\"id1\">th</sup> floor, contact: baker@x.org</contact>\n  </creator>",
-      "<creator before=\"  \" role=\"author\">\n    <personname>B. Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X, room 5<sup xml:id=\"id2\">th</sup> floor, contact: baker@x.org</contact>\n  </creator>",
+      "<creator role=\"author\">\n    <personname>A. Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X, room 5<sup xml:id=\"id1\">th</sup> floor, contact</contact>\n  </creator>",
+      "<creator before=\"  \" role=\"author\">\n    <personname>B. Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ X, room 5<sup xml:id=\"id2\">th</sup> floor, contact</contact>\n    <contact name=\"Email: \" role=\"email\">baker@x.org</contact>\n  </creator>",
     ]
   );
   // a leading `\\#` is the address's own

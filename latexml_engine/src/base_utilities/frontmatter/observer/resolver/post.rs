@@ -1654,6 +1654,7 @@ impl Resolver {
     // (an entry's e-mails: those of one call with the same carriers, in print order — the run the chain reads)
     // (an entry's key, its call and carriers, with its e-mails and whether a symbol leads it)
     type EntryEmails = ((Option<usize>, Vec<usize>), Vec<(Assoc, bool)>);
+    // (with how many calls printed them: see `each_print`)
     let mut entries: Vec<EntryEmails> = Vec::new();
     for (owners, assoc, symbol) in inner_emails {
       let carriers: Vec<usize> = owners.into_iter().filter(|c| live.contains(c)).collect();
@@ -1666,26 +1667,27 @@ impl Resolver {
     // (entries printing the same addresses are one, their carriers together: two calls of an entry of addresses alone,
     // REVTeX's `\altaffiliation[Authors for Correspondence: ]{Email: nikhil@…, bala@…}` after each of two names —
     // today's groups them alike, `insert::link_entry_addresses`; 2208.10784)
-    let mut merged: Vec<EntryEmails> = Vec::new();
+    let mut merged: Vec<(EntryEmails, usize)> = Vec::new();
     for ((call, carriers), emails) in entries {
       let texts: Vec<&str> = emails.iter().map(|(a, _)| a.text.as_str()).collect();
-      match merged.iter_mut().find(|(_, other)| {
+      match merged.iter_mut().find(|((_, other), _)| {
         other
           .iter()
           .map(|(a, _)| a.text.as_str())
           .collect::<Vec<_>>()
           == texts
       }) {
-        Some(((_, held), _)) => {
+        Some((((_, held), _), calls)) => {
           held.extend(carriers);
           held.sort_unstable();
           held.dedup();
+          *calls += 1;
         },
-        None => merged.push(((call, carriers), emails)),
+        None => merged.push((((call, carriers), emails), 1)),
       }
     }
     let mut placed = Vec::new();
-    for ((_, carriers), emails) in merged {
+    for (((_, carriers), emails), calls) in merged {
       let spelled: Vec<Option<usize>> = emails
         .iter()
         .map(|(assoc, _)| {
@@ -1696,7 +1698,7 @@ impl Resolver {
         .collect();
       let symbol = emails.iter().any(|(_, symbol)| *symbol);
       let addressed = self.addressed(&carriers);
-      let owners = entry_address_owners(
+      let mut owners = entry_address_owners(
         &spelled,
         0..emails.len(),
         &carriers,
@@ -1704,6 +1706,21 @@ impl Resolver {
         &addressed,
         live.len() == 1,
       );
+      // (one address every carrier spells alone, printed under each by a call of its own: the same person printed twice, each
+      // print its own carrier's, not two people's no one could tell apart. 2606.16069's two `\author`, `1\textsuperscript{st}
+      // Lucas Krome` and `Lucas Krome`, each `\IEEEauthorblockA` printing `lucas.krome@`; two Lees sharing one entry's
+      // `lee@` stay the block's)
+      if calls > 1 && carriers.len() > 1 {
+        for ((assoc, _), owner) in emails.iter().zip(&mut owners) {
+          if owner.0.is_none()
+            && carriers
+              .iter()
+              .all(|&c| self.spelled(&assoc.text, &[c]).is_some())
+          {
+            *owner = (Some(carriers.clone()), "owner:spelled");
+          }
+        }
+      }
       DebugFeature!(
         "frontmatter",
         "FRONT reading entry e-mails {:?}: carriers {carriers:?}, owners {owners:?}",

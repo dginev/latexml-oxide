@@ -49,7 +49,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefConstructor!("\\lx@fm@obs@And", "");
   DefConstructor!("\\lx@fm@obs@AND", "");
   DefConstructor!("\\lx@fm@obs@break OptionalMatch:* []", "");
-  DefConstructor!("\\lx@fm@obs@par OptionalMatch:* []", "");
+  // (its own, for the Break to say so; printing as the break it is: a contact's raw argument holding it, 2106.11154's `\\orcid`)
+  DefConstructor!("\\lx@fm@obs@par OptionalMatch:* []", "", alias => "\\lx@fm@obs@break");
   // `\thanks` and `\footnote` (inside `\maketitle`, `\footnote` is `\thanks`): latex.ltx `\thanks` = `\footnotemark`
   // + the text, a step of the footnote counter unless an optional number is given
   DefMacro!("\\lx@fm@obs@thanks []", sub[(number)] {

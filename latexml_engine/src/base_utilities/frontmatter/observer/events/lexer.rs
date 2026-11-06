@@ -431,24 +431,42 @@ fn bracket_depth(open: u8, c: char) -> u8 {
 /// reads it (`rewrite_in_word_superscripts`, 77n r4: no mark list, no "and" after it): `$^1$NLP$^2$CT Lab, Univ X` is
 /// the lab "NLP²CT Lab" (2603.20851, 2605.30274; `I$^2$R`, `DM$^3$L`, 2603.04869, 2604.00800), not entries "NLP" and
 /// "CT Lab, Univ X" — which the writer, cutting a block entry by its whole span (OD #945), would have written — when
-/// it stands glued in the source too ([`glued_in_source`]).
+/// it stands glued in the source too ([`glued_in_source`]). So is a symbol no other mark prints ([`symbol_in_a_word`]).
 fn glue_in_word_marks(events: Vec<Event>) -> Vec<Event> {
+  // (how many marks print each symbol, for `symbol_in_a_word`: few symbols, a block of a thousand names' marks being numbers)
+  let mut shown: Vec<(String, usize)> = Vec::new();
+  for label in events
+    .iter()
+    .filter(|e| e.kind == EventKind::Mark)
+    .filter_map(|e| e.label.as_deref())
+    .filter(|label| is_symbol_run(label))
+  {
+    match shown.iter_mut().find(|(symbol, _)| symbol == label) {
+      Some((_, count)) => *count += 1,
+      None => shown.push((label.to_string(), 1)),
+    }
+  }
   let mut out: Vec<Event> = Vec::with_capacity(events.len());
   let mut events = events.into_iter().peekable();
   while let Some(event) = events.next() {
     let letters = event.label.as_deref().unwrap_or("");
-    let in_word = event.kind == EventKind::Mark
-      && !event.symbol
-      && !event.space_before
-      && !event.space_after
+    let next = events.peek();
+    let once = shown
+      .iter()
+      .any(|(symbol, count)| symbol == letters && *count == 1);
+    let number_or_letter = !event.symbol
       && ((1..=2).contains(&letters.chars().count()) && letters.chars().all(char::is_lowercase)
         || (1..=3).contains(&letters.chars().count())
           && letters.chars().all(|c| c.is_ascii_digit())
-          && glued_in_source(out.last(), &event, events.peek()))
+          && glued_in_source(out.last(), &event, next));
+    let in_word = event.kind == EventKind::Mark
+      && !event.space_before
+      && !event.space_after
+      && (number_or_letter || (once && symbol_in_a_word(out.last(), &event, next)))
       && out.last().is_some_and(|e| {
         e.kind == EventKind::Name && e.text.chars().next_back().is_some_and(char::is_alphabetic)
       })
-      && events.peek().is_some_and(|e| {
+      && next.is_some_and(|e| {
         e.kind == EventKind::Name && e.text.chars().next().is_some_and(char::is_alphabetic)
       });
     if in_word {
@@ -462,6 +480,18 @@ fn glue_in_word_marks(events: Vec<Event>) -> Vec<Event> {
     out.push(event);
   }
   out
+}
+
+/// Whether a symbol mark no other mark of the block prints stands glued between two words, one word before it: `A$^*$STAR`
+/// (2401.15006's institute, cut at its star); `Cher$^*$Bob` too, as it prints, `Bob Baker$^*$Cat Cole` not, its symbol
+/// after a whole name. A legend of the symbol (`$^*$Corresponding author`) or a second name showing it keeps it a mark.
+fn symbol_in_a_word(before: Option<&Event>, mark: &Event, after: Option<&Event>) -> bool {
+  before.is_some_and(|e| !e.text.contains(' ')) && glued_in_source(before, mark, after)
+}
+
+/// Whether a mark's label prints footnote symbols or mark glyphs alone.
+fn is_symbol_run(label: &str) -> bool {
+  !label.is_empty() && label.chars().all(|c| is_fnsymbol(c) || is_mark_glyph(c))
 }
 
 /// Whether a digit mark stands in the source between the names around it with nothing but its own math shifts (or

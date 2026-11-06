@@ -69,18 +69,37 @@ pub(super) use crate::base_utilities::frontmatter::observer::events::{inked, mar
 
 /// The block's events with an IEEE template's ordinal before a name (`1\textsuperscript{st} Sertac Kilickaya`,
 /// 2412.10792, 2202.06596) one Name with it, as today's personname "1 Sertac Kilickaya": the ordinal's superscript is
-/// no request.
+/// no request. On a column's first line and on no line a mark leads: anywhere else the ordinal is its line's text
+/// (`Event::ordinal`, `events_text`), `5\textsuperscript{th} Floor` under a name.
 pub(super) fn join_ordinals(events: &[Event]) -> Vec<Event> {
   let mut out: Vec<Event> = Vec::with_capacity(events.len());
   let mut i = 0;
+  let mut names_line = true;
+  let mut line_inked = false;
   while i < events.len() {
     let event = &events[i];
-    if event.kind == EventKind::Name
+    match event.kind {
+      EventKind::Break => {
+        names_line = false;
+        line_inked = false;
+      },
+      EventKind::Sep(SepKind::And(_) | SepKind::Column(_)) => {
+        names_line = true;
+        line_inked = false;
+      },
+      EventKind::Mark if !line_inked => {
+        names_line = false;
+        line_inked = true;
+      },
+      _ if inked(event) => line_inked = true,
+      _ => {},
+    }
+    if names_line
+      && event.kind == EventKind::Name
       && !event.text.is_empty()
       && event.text.chars().all(|c| c.is_ascii_digit())
       && let Some(mark) = events.get(i + 1)
-      && mark.kind == EventKind::Mark
-      && matches!(mark.label.as_deref(), Some("st" | "nd" | "rd" | "th"))
+      && mark.ordinal
       && let Some(name) = events.get(i + 2).filter(|e| e.kind == EventKind::Name)
     {
       out.push(Event {
@@ -305,6 +324,13 @@ pub(super) fn entries_of<'a>(line: &[&'a Event]) -> Vec<Entry<'a>> {
   let mut last_ink: Option<&Event> = None;
   for event in line {
     match &event.kind {
+      // (a number's suffix is the entry's text, `Event::ordinal`)
+      EventKind::Mark if event.ordinal => {
+        if let Some(entry) = entries.last_mut() {
+          entry.events.push(event);
+        }
+        after_sep = false;
+      },
       EventKind::Mark => {
         // (a mark set off from the ink before it by a space — the source positions between them — opens an entry of
         // its own: `$^1$Arizona State University $^2$Rider University`, 2601.20069; one glued to it is shown on it)

@@ -8,7 +8,8 @@
 //!   character printed, whatever command printed it), and whether it is its line's first ink;
 //! - **Sep**: a column (`\and`, `\And`, `\AND`: which one; an alignment tab `&`), a comma, the word "and" (or a
 //!   printed `\&`), a gap (a spacing run of two or more items, of a space wider than an interword one, or holding
-//!   fill glue `\hfil`/`\hfill`: its item count, its natural width in em of the box's font, and whether it fills);
+//!   fill glue `\hfil`/`\hfill`: its item count, its natural width in em of the box's font, and whether it fills); a
+//!   control space or a tie is its font's word space at any width in em (`\tiny`, typewriter);
 //! - **Break**: a row (`\\`, `\newline`, `\linebreak`, `\par`; the kernel's `\lx@newline` a `\centering` or a box
 //!   rebinds `\\` to; an alignment's row end, role `row`; one inside a braced group or argument, role `group`), and what
 //!   made it ([`BreakKind`]);
@@ -188,9 +189,9 @@ pub enum BreakKind {
   /// restricted horizontal mode ignores it (tex.web §1094)
   Par,
   /// a section the binding declares (`Policy::block_breaks`: ijcai's `\affiliations`, `\emails`), which the title page
-  /// starts on a line of its own (ijcai19.sty:124-130); beside the events ([`break_events`])
+  /// starts on a line of its own (ijcai19.sty:124-130); beside the events
   Section,
-  /// a column the binding declares (`Policy::block_breaks`: ACM's `\alignauthor`); beside the events ([`break_events`])
+  /// a column the binding declares (`Policy::block_breaks`: ACM's `\alignauthor`); beside the events
   Column,
 }
 
@@ -466,6 +467,17 @@ fn em_pt(d: &Digested) -> f64 {
     .unwrap_or(10.0)
 }
 
+/// Whether a spacing box of one word-space character (a space, a tie) `width` em wide is its font's word space: what a
+/// control space prints, as the font's metrics size it (`Font::compute_string_size`). A skip of the same width is no
+/// different, and rare.
+fn is_word_space_of_its_font(d: &Digested, text: &str, width: f64) -> bool {
+  matches!(text, " " | "\n" | "\u{a0}")
+    && d.get_font().ok().flatten().is_some_and(|font| {
+      let (space, ..) = font.compute_string_size(" ", SymHashMap::default());
+      (space.pt_value(None) / em_pt(d) - width).abs() < 0.002
+    })
+}
+
 /// The natural width in em of a spacing box with a `width` property (`\hspace`'s, `\hskip`'s), in its font's em.
 fn width_property_em(d: &Digested, width: &Stored) -> Option<f64> {
   let pt = match width {
@@ -735,6 +747,8 @@ fn script_ink(d: &Digested, refs: bool) -> String {
 }
 
 /// A piece of the walk: ink, a spacing item, or a finished event.
+// (the lexer takes each at once, and a block's events are its cost: boxing one per name would add an allocation to save stack)
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 enum Atom {
   Ink {
@@ -822,6 +836,13 @@ impl Walker {
               text.chars().map(space_width).sum()
             }
           });
+          // (a word space is its font's, whatever that is in em: `M.\ de\ Naurois` at `\tiny` 0.347, aa's `~` the same,
+          // 1702.08280; typewriter 0.5: a name cut at each)
+          let width = if !fill && width > INTERWORD && is_word_space_of_its_font(d, &text, width) {
+            space_width(' ')
+          } else {
+            width
+          };
           let mut chars = text.chars();
           let word = match (chars.next(), chars.next()) {
             (Some(' ' | '\n'), None) if !fill && width <= INTERWORD => Some(' '),
@@ -1531,6 +1552,8 @@ pub(in crate::base_utilities) fn printed_text(events: &[Event]) -> String {
   for event in events {
     let (piece, glued) = match &event.kind {
       EventKind::Name | EventKind::Contact | EventKind::Note => (event.text.as_str(), false),
+      // (a number's suffix is the note's text, `Event::ordinal`)
+      EventKind::Mark if event.ordinal => (event.text.as_str(), false),
       // (a mark is no text of the note, as the XML's `ltx:sup` is none: CDF's `With visitors from $^a$Istituto …`,
       // 1203.3894, 1307.5202; its leading one the legend's label, `leading_mark`)
       EventKind::Mark => continue,
@@ -1554,12 +1577,14 @@ pub(in crate::base_utilities) fn printed_text(events: &[Event]) -> String {
   out.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// The text of events, as printed: names and contacts, a comma's `,`, a word's word, a gap's space; marks aside.
+/// The text of events, as printed: names and contacts, a comma's `,`, a word's word, a gap's space; marks aside but a
+/// number's suffix (`Event::ordinal`).
 pub(in crate::base_utilities) fn events_text(events: &[&Event]) -> String {
   let mut out = String::new();
   for event in events {
     let piece = match &event.kind {
       EventKind::Name | EventKind::Contact => event.text.as_str(),
+      EventKind::Mark if event.ordinal => event.text.as_str(),
       EventKind::Sep(SepKind::Comma) => ",",
       EventKind::Sep(SepKind::Word(word)) => word.as_str(),
       _ => continue,
@@ -1606,7 +1631,7 @@ pub(in crate::base_utilities) fn leading_marks(events: &[Event]) -> (usize, usiz
     .unwrap_or(events.len());
   let mut end = start;
   for (at, e) in events.iter().enumerate().skip(start) {
-    if matches!(e.kind, EventKind::Mark | EventKind::Layout) {
+    if matches!(e.kind, EventKind::Mark | EventKind::Layout) && !e.ordinal {
       end = at + 1;
     } else if !between_leading_marks(e) {
       break;
@@ -1687,6 +1712,8 @@ fn mark_led_pieces_keeping(events: &[Event], punctuation: bool) -> Vec<Vec<Event
   let mut ink = false;
   for (at, event) in events.iter().enumerate() {
     match &event.kind {
+      // (a number's suffix is the entry's text, `Event::ordinal`)
+      EventKind::Mark if event.ordinal => ink = true,
       EventKind::Mark
         if ink
           && !after_sep
@@ -1834,7 +1861,10 @@ fn labelled_entries(
     .iter()
     .map(|piece| {
       let (_, end) = leading_marks(piece);
-      if piece[end..].iter().any(|e| e.kind == EventKind::Mark) {
+      if piece[end..]
+        .iter()
+        .any(|e| e.kind == EventKind::Mark && !e.ordinal)
+      {
         return None;
       }
       labelled_entry(piece).filter(|e| e.span.is_some() && !norm(&e.text).is_empty())

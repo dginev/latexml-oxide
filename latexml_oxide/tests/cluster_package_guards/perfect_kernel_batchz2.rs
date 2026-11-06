@@ -6,7 +6,10 @@
 
 use serde_json::{Value, json};
 
-use super::perfect_kernel_batchz1::{blocks, dump, of_kind};
+use super::{
+  perfect_kernel_batch84b::creators,
+  perfect_kernel_batchz1::{blocks, dump, of_kind},
+};
 
 macro_rules! repro {
   ($name:literal) => {
@@ -126,7 +129,7 @@ fn a_break_a_binding_declares_stands_beside_the_events() {
   assert_eq!(of_kind(&section_block["events"], "Name"), vec![
     json!({"kind": "Name", "span": [0, 18], "text": "Ann AbleBob Baker"})
   ]);
-  let (_, plain) = self::dump(
+  let (_, plain) = dump(
     "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able \\and Bob Baker}\n\\maketitle\nBody.\n\\end{document}\n",
   );
   assert_eq!(blocks(&plain)[0].get("breaks"), None);
@@ -231,4 +234,189 @@ fn an_orcid_is_a_contact_in_the_events() {
     ("Ann Able", "0000-0001-2345-6789"),
     ("Bob Baker", "0000-0002-2345-6789"),
   ]);
+}
+
+/// The creators of `xml` (`perfect_kernel_batch84b::creators`) and the reading's: each its name with its printed contacts.
+fn output_and_reading(xml: &str, dump: &Value) -> (Vec<Vec<String>>, Vec<Vec<String>>) {
+  let reading = dump["resolved"]["creators"]
+    .as_array()
+    .expect("creators")
+    .iter()
+    .map(|c| {
+      std::iter::once(c["name"].as_str().expect("a name").to_string())
+        .chain(
+          ["affiliations", "contacts"]
+            .iter()
+            .flat_map(|list| c[*list].as_array().expect("a list"))
+            .map(|a| a["text"].as_str().expect("its text").to_string()),
+        )
+        .collect()
+    })
+    .collect();
+  (creators(xml), reading)
+}
+
+/// `rows` as what `creators` gives.
+fn rows(rows: &[&[&str]]) -> Vec<Vec<String>> {
+  rows
+    .iter()
+    .map(|row| row.iter().map(|s| (*s).to_string()).collect())
+    .collect()
+}
+
+/// Part 3, 1702.08280 (`\tiny{ … M.~de~Naurois`, aa's `~` a control space, the writer's "M. de" and "Naurois"). A control space is its
+/// font's word space, whatever that is in em (`\tiny` 0.347, typewriter 0.5), one name at any size; a tie alike. Its twin: a
+/// wider skip in those fonts parts two names.
+#[test]
+fn a_word_space_is_its_fonts_at_any_size() {
+  let (xml, dump) = dump(repro!("reading_word_space_of_a_small_font_parts_no_name"));
+  let (output, reading) = output_and_reading(&xml, &dump);
+  let names = rows(&[
+    &["M. de Naurois"],
+    &["X. de Ab"],
+    &["T. Le Du"],
+    &["K. da Silva"],
+    &["J. van Vu"],
+    &["Ann Lee"],
+    &["Bob Ray"],
+    &["Cat Roe"],
+    &["Dan Fox"],
+  ]);
+  assert_eq!(output, names, "{xml}");
+  assert_eq!(reading, names);
+}
+
+/// Part 3, 2401.15006 (`$^6$A$^*$STAR`, the writer's "A" and a nameless creator's "* STAR"). A symbol no other mark prints, glued
+/// between two words, one before it, is the word's: the entry is whole, in the reading and in the output. Its twin: a symbol its
+/// legend shows stays a mark, and the name before it stays a name of its own, for the reading.
+#[test]
+fn a_symbol_glued_inside_a_word_is_the_words() {
+  let (xml, dump_inside) = dump(repro!(
+    "reading_symbol_mark_glued_inside_a_word_is_the_words"
+  ));
+  let (output, reading) = output_and_reading(&xml, &dump_inside);
+  assert_eq!(
+    reading,
+    rows(&[&["Ann Able", "A∗STAR, Singapore"], &[
+      "Bob Baker",
+      "R†D Lab"
+    ]])
+  );
+  assert_eq!(
+    output,
+    rows(&[&["Ann Able", "affiliation=A * STAR, Singapore"], &[
+      "Bob Baker",
+      "affiliation=R † D Lab"
+    ]]),
+    "{xml}"
+  );
+  let (_, twin) = dump(repro!(
+    "reading_symbol_mark_glued_to_a_name_with_a_legend_stays_a_mark"
+  ));
+  let labels: Vec<Value> = of_kind(&blocks(&twin)[0]["events"], "Mark")
+    .iter()
+    .map(|mark| mark["label"].clone())
+    .collect();
+  assert_eq!(labels, vec![json!("∗"), json!("∗")]);
+  let names: Vec<&Value> = twin["resolved"]["creators"]
+    .as_array()
+    .expect("creators")
+    .iter()
+    .map(|c| &c["name"])
+    .collect();
+  assert_eq!(names, vec![&json!("Cher"), &json!("Bob Baker")]);
+}
+
+/// Part 3, 2606.16069 (two `\author`, the first with IEEE's ordinals; the writer sent every address to a nameless creator). An address
+/// every carrier spells alone, each by a call of its own, is each print's. Its twin: one call two people of one surname carry, the
+/// address spelling both, stays the block's, in the output.
+#[test]
+fn an_address_two_prints_of_a_name_spell_is_each_prints() {
+  let (xml, dump_prints) = dump(repro!(
+    "reading_same_address_under_each_of_two_prints_of_a_name"
+  ));
+  let (output, reading) = output_and_reading(&xml, &dump_prints);
+  assert_eq!(
+    reading,
+    rows(&[
+      &["1 Ann Able", "Univ A", "ann.able@a.org"],
+      &["2 Bob Baker", "Univ B", "bob.baker@b.org"],
+      &["Ann Able", "Univ A", "ann.able@a.org"],
+      &["Bob Baker", "Univ B", "bob.baker@b.org"],
+    ])
+  );
+  assert_eq!(
+    output,
+    rows(&[
+      &[
+        "1 st Ann Able",
+        "affiliation=Univ A",
+        "email=ann.able@a.org"
+      ],
+      &[
+        "2 nd Bob Baker",
+        "affiliation=Univ B",
+        "email=bob.baker@b.org"
+      ],
+      &["Ann Able", "email=ann.able@a.org", "affiliation=Univ A"],
+      &["Bob Baker", "email=bob.baker@b.org", "affiliation=Univ B"],
+    ]),
+    "{xml}"
+  );
+  let (xml, _) = dump(repro!(
+    "reading_shared_address_two_names_spell_stays_the_blocks"
+  ));
+  assert_eq!(
+    creators(&xml),
+    rows(&[
+      &["Ann Lee", "affiliation=Univ A"],
+      &["Bob Lee", "affiliation=Univ A"],
+      &["email=lee@a.org"]
+    ]),
+    "{xml}"
+  );
+}
+
+/// Part 3, gap 5's reader (2609.01831's cited shape). An ordinal is its entry's text, on a block's labelled line, glued, by a formula, at
+/// an entry's start, and in a call's content, whose reading today's view now reads alike, so no paper is declined for it; on a names line
+/// it stays the name's prefix, as `an_address_two_prints_of_a_name_spell_is_each_prints` reads.
+#[test]
+fn an_ordinal_is_its_entrys_text() {
+  let (xml, entry) = dump(repro!("reading_ordinal_in_an_entry_is_its_text"));
+  let (output, reading) = output_and_reading(&xml, &entry);
+  assert_eq!(
+    reading,
+    rows(&[
+      &["Ann Able", "Univ A, 5 th Floor"],
+      &["Bob Baker", "Univ B, 21 st Street"],
+      &["Cat Cole", "3 rd Lab, Town"],
+    ])
+  );
+  assert_eq!(
+    output,
+    rows(&[
+      &["Ann Able", "affiliation=Univ A, 5 th Floor"],
+      &["Bob Baker", "affiliation=Univ B, 21 st Street"],
+      &["Cat Cole", "affiliation=3 rd Lab, Town"],
+    ]),
+    "{xml}"
+  );
+  let (xml, call) = dump(repro!("reading_ordinal_in_a_call_reads_as_todays"));
+  let (output, reading) = output_and_reading(&xml, &call);
+  assert_eq!(
+    reading,
+    rows(&[&["Ann Able", "Univ A, 5 th floor"], &[
+      "Bob Baker",
+      "Univ B, 24 th Street, 4 th Ave"
+    ]])
+  );
+  assert_eq!(
+    output,
+    rows(&[&["Ann Able", "affiliation=Univ A, 5 th floor"], &[
+      "Bob Baker",
+      "affiliation=Univ B, 24 th Street, 4 th Ave"
+    ]]),
+    "{xml}"
+  );
+  assert_eq!(call["writer"], "same");
 }
