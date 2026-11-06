@@ -1666,8 +1666,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
   // a name stubbed as `<ltx:ERROR/>` and later `\def`ed is a defined cs
   // again, so `\csname…\endcsname` takes tex.web's §373 path for it, not the
   // §370 discard. Probe-only, like the `:locked` check below.
-  let stub_key = token.with_cs_name(|cs| s!("{cs}:error@stub"));
-  if let Some(stub_sym) = arena::get(&stub_key)
+  if let Some(stub_sym) = token.with_cs_name(|cs| arena::get_suffixed(cs, ":error@stub"))
     && lookup_bool_sym(stub_sym)
   {
     assign_value_sym(stub_sym, false, Some(Scope::Global));
@@ -5472,11 +5471,11 @@ pub fn lock_holds_against(cs: &str, copies_interface: impl FnOnce() -> bool) -> 
   // Probe-only: if "{cs}:locked" was never interned it cannot be bound, so
   // skip both the intern (which permanently grew the arena by one ":locked"
   // twin per defined cs) and the table lookup (2026-08-23 audit R6).
-  let locked = |key: String| arena::get(&key).is_some_and(lookup_bool_sym);
-  locked(s!("{cs}:locked"))
+  let locked = |suffix: &str| arena::get_suffixed(cs, suffix).is_some_and(lookup_bool_sym);
+  locked(":locked")
     || (crate::definition::origin::current_origin()
       != crate::definition::origin::DefinitionOrigin::Document
-      && locked(s!("{cs}:locked@files"))
+      && locked(":locked@files")
       && files_lock_holds(cs, copies_interface))
 }
 
@@ -5538,11 +5537,11 @@ fn copies_lock_kept_aside(cs: &str) -> bool {
 /// ([`drop_copies_lock_aside`]) — probed only where a lock against the files is set, as every copies lock is one (so
 /// a name without one costs the two probes the lock test always made).
 fn redefinition_locked(cs: &str, definition: &Stored) -> bool {
-  let probe = |key: String| arena::get(&key).is_some_and(lookup_bool_sym);
-  if probe(s!("{cs}:locked")) {
+  let probe = |suffix: &str| arena::get_suffixed(cs, suffix).is_some_and(lookup_bool_sym);
+  if probe(":locked") {
     return !another_interface(cs, definition);
   }
-  if !probe(s!("{cs}:locked@files")) {
+  if !probe(":locked@files") {
     return false;
   }
   let holds = crate::definition::origin::current_origin()

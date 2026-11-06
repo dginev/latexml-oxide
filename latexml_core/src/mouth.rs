@@ -843,7 +843,7 @@ impl Mouth {
   /// Matches Perl's per-line decode behavior. The flag says whether the line's
   /// characters are the Latin-1 image of its bytes (a byte encoding, or a line
   /// that is not UTF-8) rather than UTF-8-decoded characters.
-  fn decode_bytes(raw_line: &[u8], location: String) -> (String, bool) {
+  fn decode_bytes(raw_line: &[u8], location: impl FnOnce() -> String) -> (String, bool) {
     if let Some(ref encoding_sym) = get_input_encoding() {
       // Probe the encoding without allocating — this fires per input
       // line, so even a small heap alloc per call adds up on large
@@ -895,7 +895,7 @@ impl Mouth {
           s!("input isn't valid under encoding {}", &encoding_name),
           "",
           "",
-          location
+          location()
         );
         file_str.replace('\u{FFFD}', " ")
       } else {
@@ -932,7 +932,7 @@ impl Mouth {
               s!("input isn't valid under encoding {}", &encoding_name),
               "",
               "",
-              location
+              location()
             );
           }
           (raw_line.iter().map(|&b| b as char).collect(), true)
@@ -955,7 +955,7 @@ impl Mouth {
       // that is active at the time the line is read, allowing inputenc to
       // change encoding mid-file.
       if let Some(raw_line) = self.raw_buffer.pop_front() {
-        let (decoded, is_bytes) = Mouth::decode_bytes(&raw_line, self.get_location());
+        let (decoded, is_bytes) = Mouth::decode_bytes(&raw_line, || self.get_location());
         self.buffered_line_is_bytes = is_bytes;
         self.buffer.push_back(decoded);
       }
@@ -980,7 +980,7 @@ impl Mouth {
       self.raw_buffer = Mouth::split_raw_lines(&file_bytes);
       // Decode the first line now
       if let Some(raw_line) = self.raw_buffer.pop_front() {
-        let (decoded, is_bytes) = Mouth::decode_bytes(&raw_line, self.get_location());
+        let (decoded, is_bytes) = Mouth::decode_bytes(&raw_line, || self.get_location());
         self.buffered_line_is_bytes = is_bytes;
         self.buffer.push_back(decoded);
       }

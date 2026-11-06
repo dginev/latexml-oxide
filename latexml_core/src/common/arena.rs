@@ -167,6 +167,18 @@ pub fn pin<S: AsRef<str>>(text: S) -> SymStr { with_arena_mut(|arena| arena.get_
 /// with one probe-key twin per defined control sequence (2026-08-23 audit R6).
 pub fn get<S: AsRef<str>>(text: S) -> Option<SymStr> { with_arena_mut(|arena| arena.get(text)) }
 
+/// [`get`] of `name` with `suffix` appended, without formatting a string: every definition asks this of its side keys
+/// (`"{cs}:locked"`, `"{cs}:error@stub"`), and almost none of them exists.
+pub fn get_suffixed(name: &str, suffix: &str) -> Option<SymStr> {
+  #[thread_local]
+  static KEY: RefCell<String> = RefCell::new(String::new());
+  let mut key = KEY.borrow_mut();
+  key.clear();
+  key.push_str(name);
+  key.push_str(suffix);
+  get(key.as_str())
+}
+
 /// ASCII char-pin cache: every unique ASCII byte resolves to a single
 /// SymStr for the lifetime of the thread's arena (append-only between
 /// [`reset`]s, which clears the cache with it). Cache entries use `u32::MAX` as the "not yet pinned"
