@@ -1,0 +1,14 @@
+% witness: tutodoc/tutodoc-en, tutodoc-fr (:1570; keytheorems.sty:994, :1075-1079)
+% oracle:  pdflatex (TL 2025) 0 errors: "Warning." then "Body words." in the box.
+% engines: int141a: 1 error, `\__keythms_thm_tcbtemphead:` undefined: nothing stores the head (`\deferred@thm@head`, which the amsthm binding's theorem never calls).
+% expect:  0 errors; the head in the theorem's title, the body in its box
+% status:  GREEN
+\documentclass{article}
+\usepackage{tcolorbox}
+\usepackage{keytheorems}
+\newkeytheorem{warn}[tcolorbox={colback=white},numbered=false,name=Warning]
+\begin{document}
+\begin{warn}
+Body words.
+\end{warn}
+\end{document}

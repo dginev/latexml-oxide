@@ -19063,3 +19063,110 @@ Rust reads `$\{$`, `$\lbrace$` as the `\{` they print and `$\}$`, `$\rbrace$` as
 `\lx@split@addresses` (`email_owners::math_braces_as_printed`, OXIDIZED_DESIGN_DIVERGENCES #972), so the list is an
 address each. Witnesses 1106.2694, 2308.00146, 1602.04934; guard `perfect_kernel_batch107f::a_math_brace_list_is_the_list_it_prints`.
 
+## 1211. `\begin` is not `\protected`: an `\edef` runs it
+
+latex.ltx:15346 is `\protected\def\begin`; latex_constructs.pool.ltxml:193 is a plain `DefMacro`. So an `\edef`, a `\typeout` or
+a `\protected@edef` of `\begin{x}` runs the environment's opening where TeX keeps the token. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{etoolbox}
+\begin{document}
+\typeout{R=\ifdefprotected{\begin}{prot}{notprot}}
+\end{document}
+% pdflatex: R=prot
+% Perl (/usr/local/bin/latexml, run): Error:undefined:{} "The environment {} is not defined", R=\ifdefprotected{\begingroup\lx@setcurrenvir{}}\{prot}{notprot}
+```
+
+Fixed in Rust: `\begin` is `protected` and `\end` keeps itself as `\protect\end ` under `\@unexpandable@protect` and `\noexpand`
+(latex.ltx:15365-15380; not under a display `\string`, which a spurious error under a document's `\globaldefs\@ne` can leave for
+good: 2405.15073), sect01.rs; blkarray's `\BA@begin` is ported, its block's `\begin` expandable at a cell's head (blkarray.sty:1099-1102, :1123).
+Witness yquant-doc:3608 (`\matrix@check` at edef time, "Old form"). Guard `perfect_kernel_batchm3::begin_is_protected_in_an_edef`.
+
+## 1212. `\ensuremath{}` reads its argument where the kernel's has no parameter
+
+latex.ltx:15801-15806 `\ensuremath ` takes no parameter: each branch reads its own. latex_constructs.pool.ltxml:2076 reads `{}`,
+so a one-step expansion alone before a `}` takes the `}`. Minimal trigger, under raw styles (Perl's default has no xstring):
+`\def\D{\ensuremath}`-shaped, xstring's `\StrExpand[2]`: repro expansion-primitives/ensuremath_one_step_alone_in_a_macro
+(pdflatex 0; int141a 3 "Missing { inserted").
+
+Fixed in Rust (`\@ensuremath` is the kernel's body, kept `protected` for the case changer; `\hat\ensuremath{x}` still reads as a
+call, amsmath_sty.rs). Witness membranecomputing:509. Guard `perfect_kernel_batchm3::ensuremath_expanded_one_step_alone_in_a_macro`.
+
+## 1213. comment.sty's binding has none of the file's internals
+
+comment.sty.ltxml defines `\includecomment`, `\excludecomment`, `\specialcomment` and `\csarg` only: `\CommentEndDef`,
+`\ProcessComment`, `\SetUpCutFile`, `\generalcomment`, `\processcomment` are undefined. Minimal trigger, a comment type of a
+package's own (lwarp.sty:1349-1363):
+
+```latex
+\documentclass{article}
+\usepackage{comment}
+\makeatletter
+\def\myexclude#1{\csarg\def{#1}{\endgroup\begingroup\def\CommentCutFile{c.cut}\def\ProcessCutFile{}%
+  \def\ThisComment####1{}\ProcessComment{#1}}%
+ \csarg\def{After#1Comment}{\CloseAndInputCutFile\endgroup}\CommentEndDef{#1}}
+\myexclude{noprint}
+\makeatother
+\begin{document}
+Before.
+\begin{noprint}
+Hidden.
+\end{noprint}
+After.
+\end{document}
+% pdflatex: 0 errors, "Before. After."
+% Perl (run): Error:undefined:\CommentEndDef, \ProcessComment; "Hidden." shown
+```
+
+Fixed in Rust (comment_sty.rs, comment.sty:170-233, :266-272, :283-289 as RawTeX). Witnesses tikz-trackschematic,
+tikz-trackschematic-snippets. Guard `perfect_kernel_batchm3::comment_internals_make_a_type_of_its_own`.
+
+## 1214. A box does not clear `\everypar`
+
+`\@arrayparboxrestore`'s `\everypar{}` (latex.ltx:16279) is lost: `\parbox`, `{minipage}`, a `p` cell and a float run the enclosing
+paragraph's `\everypar` (`\@parboxrestore` empty, latex_constructs.pool.ltxml:4767). Minimal trigger:
+
+```latex
+\documentclass{article}
+\newlength\PrologIndent \PrologIndent=2em
+\begin{document}
+\begingroup
+\everypar{\parbox{\PrologIndent}{\hfill}\setbox0=\hbox\bgroup}
+\def\par{\leavevmode\egroup\box0\endgraf}
+First line.\par
+\endgroup
+\end{document}
+% pdflatex: 0 errors, "First line."
+% Perl (run): 2 × Error:unexpected:\egroup "Attempt to close boxing group"; Rust before this fix: a Fatal recursion
+```
+
+Fixed in Rust (`\lx@parbox@restore`, the minipage constructor, `\lx@tabular@p`, `reset_float_box`; algorithm2e's `\everypar` follows
+its float's reset). Witness plweb/pl (pl.sty:121). Guard `perfect_kernel_batchm3::a_box_restore_clears_everypar`. **Left:** `\@item`'s
+and `\@afterheading`'s own `\everypar` (`\everypar{[E]}` then an `\item`: pdflatex no [E], ours [E]), no reach found.
+
+## 1215. A binding's macro that assigns as it expands, in an `\edef`, takes a pending `\afterassignment`
+
+Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{braket}
+\begin{document}
+\afterassignment\typeout\edef\y{\ket{z}}{AFTER}
+\typeout{Y=\meaning\y}
+\end{document}
+% pdflatex: AFTER, Y=macro:->$…
+% Perl (run): no AFTER, Y=macro:->\lx@dual {\ket@content {\lx@xmref {XM1}}}{|\lx@xmarg {XM1}{z}\rangle }\typeout
+```
+
+`\ket`'s dual steps its id counter, which fires the pending token into the body being read. In a `\protected@edef` that token is
+`\restore@protect`: `\protect` stays `\@unexpandable@protect` for the rest of the document. Fixed in Rust (`DefExpanded` holds it
+for the read, base_parameter_types.rs). Witness yquant-doc:2504-2521 (501 errors and a Fatal once `\end` read `\protect`). Guard
+`perfect_kernel_batchm3::a_binding_macro_in_an_edef_leaves_afterassignment_pending`.
+
+## 1216. `\def\a}` reads a `}` as parameter text
+
+tex.web §474-476: a `}` in a parameter text is "Missing { inserted", read as `\def\a{}`. Gullet.pm:692 `readUntilBrace` takes it and
+reads on to the next `{`. Minimal trigger: repro macro-state/def_parameter_text_right_brace_red (pdflatex 1 error, `macro:->`; Perl, run, and
+Rust 0 errors). **Open in Rust** (`gullet.rs` `read_until_brace`, left to the track on that file): floatrow-rus's cascade reaches it.

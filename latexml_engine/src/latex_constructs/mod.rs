@@ -3970,6 +3970,8 @@ pub fn reset_float_box() -> Result<()> {
     assign_value("lx@float@keepsize", false, Some(Scope::Global));
     return Ok(());
   }
+  // (`\\@xfloat`'s `\\@parboxrestore` before it, latex.ltx:17482: a float's paragraphs do not run the enclosing `\\everypar`)
+  digest(TokenizeInternal!(r"\everypar{}"))?;
   if !x_equals(&T_CS!("\\normalsize"), &T_CS!("\\lx@kernel@normalsize")) {
     digest(Tokens!(T_CS!("\\lx@floatbox@reset")))?;
   }

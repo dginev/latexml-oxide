@@ -524,6 +524,10 @@ pub(crate) fn load() -> Result<()> {
   // is the same), pdflatex clean. DefEnvironment-managed environments fire
   // `begin`/`end` from their constructors (dialect.rs). Guard:
   // `perfect_kernel_batch56::kernel_env_hooks_fire_around_environments`.
+  // `protected`, as latex.ltx:15346 `\protected\def\begin`: an `\edef` keeps it (yquant-doc's `\protected@edef` of a box
+  // text `$\begin{pmatrix}…`, whose `\matrix@check` ran at edef time, "Old form"; Perl's is not, KPE #1211), and
+  // the look-ahead for `\omit` at a cell's head stops at it, as TeX's does. Guard
+  // `perfect_kernel_batchm3::begin_is_protected_in_an_edef`.
   DefMacro!("\\begin{}", sub[(env)] {
     let name = Expand!(env.clone()).to_string();
     let begin_name = format!("\\begin{{{name}}}");
@@ -638,7 +642,7 @@ pub(crate) fn load() -> Result<()> {
       }
       Ok(Tokens::new(begin_environment_by_macro(&name, env)?))
     }
-  });
+  }, protected => true);
 
   // latex.ltx:15384-15393 `\end` ends with the epilogue
   // `\if@ignore\@ignorefalse\ignorespaces\fi` AFTER the `env/#1/after` hook.
@@ -650,7 +654,21 @@ pub(crate) fn load() -> Result<()> {
   // `\DocInput` macrocode, 72 `misdefined:#` + Fatal; Perl fails the same
   // way). `\if@ignore` is false except after display math, so the group is
   // normally skipped whole.
+  // In an expansion-only regime it stays, as `\protect\end ` (latex.ltx:15365-15380): a `\protected@edef` keeps `\end{…}`
+  // as it keeps the `\protected` `\begin`, not their halves apart (yquant-doc;
+  // `perfect_kernel_batchm3::begin_is_protected_in_an_edef`). LaTeX tests `\protect` against `\@typeset@protect`; here only
+  // `\@unexpandable@protect` and `\noexpand` keep it: a display `\string` left global runs the environment's end, where a
+  // spurious `\PackageError` under a document's `\globaldefs\@ne` has set it for good (2405.15073's tocloft `\newlistentry`,
+  // 47 % of the paper's words lost otherwise).
   DefMacro!("\\end {}", sub[(env)]{
+    if x_equals(&T_CS!("\\protect"), &T_CS!("\\@unexpandable@protect"))
+      || x_equals(&T_CS!("\\protect"), &T_CS!("\\noexpand"))
+    {
+      let mut kept = vec![T_CS!("\\protect"), T_CS!("\\end "), T_BEGIN!()];
+      kept.extend(env.unlist());
+      kept.push(T_END!());
+      return Ok(Tokens::new(kept));
+    }
     let name = Expand!(env).to_string();
     // (the document does not end in a speculative digestion, by an `\enddocument` a class wrapped neither)
     if name == "document" && in_speculative_digestion() {
@@ -739,6 +757,8 @@ pub(crate) fn load() -> Result<()> {
     ]);
     Ok(Tokens::new(out_tokens))
   });
+  // (the kernel's name, reached by a `\protect\end ` kept above; latex.ltx:15384 defines it as the whole of `\end`)
+  Let!("\\end ", "\\end");
 
   TeX!(
     r"

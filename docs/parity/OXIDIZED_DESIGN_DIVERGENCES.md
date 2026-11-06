@@ -1236,10 +1236,11 @@ the pdflatex value); the prior 327.75pt golden had the stale full-page
 **Decision:** When an already-loaded package is `\usepackage`d/`\RequirePackage`d
 again with options the first load did not have, `input_definitions` digests
 any surviving `\ds@<option>` handler for each new option before skipping the
-load (plus the pre-existing Info diagnostic). Bindings opt IN to durable
-repeat-options by re-asserting the handler after `ProcessOptions!` (classic
-handlers are cleared to `\relax`); the first adopter is xcolor's `table`
-(`\ds@table` -> `\RequirePackage{colortbl}`).
+load (plus the pre-existing Info diagnostic). A binding whose options outlive its
+load (keys) names its handlers `\lx@repeat@<package>@<option>`, read first (`\ds@<option>`
+being any later package's option: totalcount's `[figure,table]` ran xcolor's, `\iftotaltables`
+undefined, ndsu-thesis-2022; guard `perfect_kernel_batchm3::a_repeat_option_of_xcolor_is_xcolors_alone`);
+the first adopter is xcolor's `table` (`\lx@repeat@xcolor@table` -> `\RequirePackage{colortbl}`).
 
 **Why:** Real xcolor v3.02+ (TL2024) processes options as PERSISTENT l3
 key-values: `\usepackage{xcolor}` ... `\usepackage[table]{xcolor}` raises NO
@@ -32212,3 +32213,29 @@ and unit `author_split_tests::a_name_spells_a_run_of_the_local_parts_words` (the
 **Left** (one line each): a note (`ltx:note`) holding a list for its carriers is not parted (only contacts); initials tags
 `a@x (X.X.); b@y (M.Y.)` match no printed name (2002.08904); an unbraced list beside a printed name not in brackets
 (`Ann Able: a@x`) is not read as a name; a list in reverse author order stays unplaced (2508.07950).
+
+### 973. pgfmath reads arrays: a `{…}[i]` primary, text elements, `array`, `dim` (Perl: `Error:pgfparse`, its parser numeric)
+
+`pgfmath_code_tex.rs`, the winnow grammar skips `{`, `}` as blanks and has only numbers, so `{1,2,3}[1]` was 1 (pgf 2),
+`{"a","b"}[1]` 0.0 (pgf b), `dim({1,2})` 1, each with no Error; tikzpingus.sty:93-96 built `\@pingu@wingdown@0.0@`. An indexed brace
+group, and a list that is the rest of a formula, are now an array (`opens_array`, `array_primary`): elements are numbers (their
+integer form kept), text or arrays; a text or array value leaves the parse as `text_result`, in pgf's form (`{1}{2}{3}`, an indexed
+array `{{3}{4}}`, pgfmathparser.code.tex:943-954). pgf's errors stay Errors: "Array index out of bounds" (0) and text in arithmetic
+("Missing number"). Witnesses tikzpingus-doc, 2002.08586, 2509.25473. Guards `perfect_kernel_batchm3::{pgfmath_arrays_are_read_as_pgf_reads_them,
+pgfmath_array_misuse_is_an_error}`. **Left:** `{1+2}*3` (grouping skipped, 7; pgf "Missing number", 0.0); `({1,2,3}[1])` (2; pgf out of bounds);
+a macro holding `{1}{2}{3}` is no array to index (pgf `{3}{1}`, out of bounds); a user function's array argument.
+
+### 974. A PDF string's escapes are the characters they name (pdflatex: the bytes, broken by a UTF-16 string)
+
+hyperref.sty:388-396 keeps `\0`-`\3`, `\8`, `\9` as the PDF escapes they spell; `\lx@pdfstringdef` now does (`\3` was undefined:
+fnlineno:44). `pdf_string` reads them for the `ltx:rdf`: `\ddd` the PDFDocEncoding code, `\8d\ddd` and `\9ddd\ddd` puenc.def's UTF-16.
+pdfinfo on TL 2025 shows `pdfauthor={Uwe L\374ck}` as mojibake, hyperref's Unicode default mixing it into UTF-16; the source names ü.
+Its letters are `\string`'d: under a latin `inputenc` the binding's own `ß` is active with the meaning `\ss`, a loop (bibleref-german, 78i's
+lines). Guard `perfect_kernel_batchm3::a_pdf_string_under_a_latin_inputenc_and_with_escapes`.
+
+### 975. A tcolorbox keytheorem's head is its theorem's `ltx:title` (pdflatex: the box's title)
+
+keytheorems.sty:994, :1075-1079 stores the head through `\deferred@thm@head` for `title=\__keythms_thm_tcbtemphead:`. The amsthm
+binding's theorem never calls `\deferred@thm@head`: it makes the head an `ltx:title` before the box. latexml_contrib/src/keytheorems_sty.rs reads
+the file raw and leaves the macro empty, so the box's title slot is empty and the head is kept. Witnesses tutodoc-en, tutodoc-fr. Guard
+`perfect_kernel_batchm3::a_tcolorbox_keytheorem_keeps_its_head_and_body`.

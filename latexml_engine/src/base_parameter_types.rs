@@ -864,8 +864,18 @@ LoadDefinitions!({
   // a braced tokens list, expanding as it goes,
   // but expanding \the-like commands only once,
   // and also packing # parameters
+  // No assignment ends while an `\edef` reads its body, and in TeX none can begin: a binding's macro that assigns as it
+  // expands (a math dual's id counter, `\ket{x}`) would take a pending `\afterassignment`, the `\restore@protect` of
+  // `\protected@edef` written into the body and `\protect` stuck for the rest of the document (yquant-doc's
+  // `\protected@csxappto` of a node `$\ket\psi$`; Perl's the same). Guard
+  // `perfect_kernel_batchm3::a_binding_macro_in_an_edef_leaves_afterassignment_pending`.
   DefParameterType!(DefExpanded, sub[_inner, _extra] {
-      read_definition_body(ExpansionLevel::Partial)
+      let held = remove_value("afterAssignment");
+      let body = read_definition_body(ExpansionLevel::Partial);
+      if let Some(after) = held {
+        assign_value("afterAssignment", after, Some(Scope::Global));
+      }
+      body
     },
     reversion => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens!(arg).revert(), T_END!())) }

@@ -62,6 +62,58 @@ fn tblr_column_type(name: char) -> Option<TblrColumnType> {
   })
 }
 
+/// The text of a `\NewColumnType`'s body, which the colspec reads and tokenizes in its turn outside the syntax the body
+/// was written in: `\ndu_tblr_cell:nnn` (non-decimal-units.sty:778, under expl3's) would come back as `\ndu` and `_`. Such
+/// a command is written as a letters-only macro of its own expanding to it, so it may be defined later, and read by what
+/// takes a command, `cmd=`. Guard `perfect_kernel_batchm3::a_column_type_body_keeps_its_commands`.
+fn column_type_body_text(body: Vec<Token>) -> String {
+  let body: Vec<Token> = body
+    .into_iter()
+    .map(|token| {
+      let name = token.to_string();
+      let plain = token.get_catcode() != Catcode::CS
+        || name.len() <= 2
+        || name[1..]
+          .bytes()
+          .all(|b| b.is_ascii_alphabetic() || b == b'@');
+      if plain {
+        return token;
+      }
+      let key = s!("tblr_column_type_command:{name}");
+      match lookup_value(&key) {
+        Some(Stored::Token(stand_in)) => stand_in,
+        _ => {
+          let count = lookup_int("tblr_column_type_commands") + 1;
+          assign_value(
+            "tblr_column_type_commands",
+            Number!(count),
+            Some(Scope::Global),
+          );
+          // (letters only, a number would end the name)
+          let letters: String = count
+            .to_string()
+            .bytes()
+            .map(|digit| (b'a' + (digit - b'0')) as char)
+            .collect();
+          let stand_in = T_CS!(s!("\\lx@tblr@command@{letters}"));
+          let _ = def_macro(
+            stand_in,
+            None,
+            Tokens::new(vec![token]),
+            Some(ExpandableOptions {
+              scope: Some(Scope::Global),
+              ..ExpandableOptions::default()
+            }),
+          );
+          assign_value(&key, Stored::Token(stand_in), Some(Scope::Global));
+          stand_in
+        },
+      }
+    })
+    .collect();
+  Tokens::new(body).to_string()
+}
+
 /// Expand a use of `ty` at `*i` (after its name) into its body, advancing past
 /// its arguments; `None` when an argument is missing or unbalanced.
 fn expand_tblr_column_type(
@@ -2334,9 +2386,16 @@ LoadDefinitions!({
     } else {
       Vec::new()
     };
+    // the cell's text as `\\__tblr_trim_par_space_tokens:N` leaves it (tabularray.sty:3749-3759): non-decimal-units'
+    // `\\tl_case:NnF` compares it with `HEADER`
+    let blank = |t: &Token| t.get_catcode() == Catcode::SPACE || is_cs(t, "\\par");
+    while text.last().is_some_and(blank) {
+      text.pop();
+    }
+    let leading = text.iter().take_while(|t| blank(t)).count();
     out.extend(cmd.iter().copied());
     out.push(T_BEGIN!());
-    out.extend(text);
+    out.extend(text.drain(leading..));
     out.push(T_END!());
     out.extend(tail);
     Ok(Tokens::new(out))
@@ -2918,7 +2977,7 @@ LoadDefinitions!({
         pin(nargs),
         pin(String::from(has_default)),
         pin(default),
-        pin(body.to_string()),
+        pin(column_type_body_text(body.unlist())),
       ];
       assign_value(
         &tblr_column_type_key(name.to_string().trim()),

@@ -822,24 +822,21 @@ LoadDefinitions!({
   // protected => true prevents read_x_token(fully_expand=false) from
   // expanding this (needed for lx_change_case_tokens to preserve
   // \ensuremath{} content unchanged).
-  DefMacro!("\\@ensuremath{}", sub[(stuff)] {
-    if lookup_bool_sym(pin!("IN_MATH")) {
-      stuff.unlist()
-    } else {
-      // latex.ltx:15807 `\long\def\@ensuredmath#1{$\relax#1$}`: the `\relax`
-      // keeps an EMPTY argument from producing adjacent `$$`, which the mouth
-      // reads as a display-math shift (polynom.sty:1656-1687 Horner scheme:
-      // an empty p-column cell fed to `\ensuremath{##}` inside `\@startpbox`
-      // opened a display frame in a text box — 26 "Missing $ inserted",
-      // polydemo). Perl's latex_constructs.pool.ltxml:2076-2080 omits it too
-      // (SHARED, worse there); pdflatex clean.
-      // Guard: `perfect_kernel_batch56::ensuremath_empty_argument_in_text_box`.
-      let mut result = vec![T_MATH!(), T_CS!("\\relax")];
-      result.extend(stuff.unlist());
-      result.push(T_MATH!());
-      result
-    }
-  }, protected => true);
+  //
+  // Its body is the kernel's `\ensuremath ` (latex.ltx:15801-15806): no parameter, each branch reading its own
+  // argument. A one-step expansion is then TeX's, where a parameter would take the group's `}`: xstring's `\StrExpand[2]`
+  // of a lone `\ensuremath` (membranecomputing:509). `\@ensuredmath`'s `\relax` (latex.ltx:15807) keeps an EMPTY
+  // argument from producing adjacent `$$`, which the mouth reads as a display-math shift (polynom.sty:1656-1687 Horner
+  // scheme: an empty p-column cell fed to `\ensuremath{##}` inside `\@startpbox` opened a display frame in a text box —
+  // 26 "Missing $ inserted", polydemo). Perl's latex_constructs.pool.ltxml:2076-2080 reads `{}` and omits the `\relax`
+  // (SHARED, worse there; KPE #1212); pdflatex clean.
+  // Guards: `perfect_kernel_batch56::ensuremath_empty_argument_in_text_box`,
+  // `perfect_kernel_batchm3::ensuremath_expanded_one_step_alone_in_a_macro`.
+  DefMacro!(
+    "\\@ensuremath",
+    r"\ifmmode\expandafter\@firstofone\else\expandafter\@ensuredmath\fi",
+    protected => true
+  );
 
   //======================================================================
   // 8. {filecontents}/{filecontents*} environments — Rust impl

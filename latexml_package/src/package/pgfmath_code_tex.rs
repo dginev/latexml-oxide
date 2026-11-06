@@ -436,6 +436,7 @@ fn is_builtin_function(name: &str) -> bool {
     "abs"
       | "acos"
       | "array"
+      | "dim"
       | "asin"
       | "atan2"
       | "atan"
@@ -875,6 +876,177 @@ mod pgfmath_grammar {
     pub int_result:     bool,
     /// A user function was called: the parse's `\begingroup` is open (see `evaluate`).
     pub group_open:     bool,
+    /// The value is not a number: an array's text element, or an array, as pgf's `\pgfmathresult` holds it.
+    pub text_result:    Option<String>,
+  }
+
+  /// An element of a pgfmath array, `{"a",1+1,{2,3}}` (pgfmathparser.code.tex:951-954, `"` :392, :931): pgf keeps each
+  /// as its result, in a parser that has only numbers these are kept apart.
+  enum ArrayElement {
+    Number(f64, bool),
+    Text(String),
+    Array(Vec<ArrayElement>),
+  }
+
+  impl ArrayElement {
+    /// As `\pgfmathresult` holds it: `2`, `2.0`, `up`, an array as its elements' groups, `{1}{2}`.
+    fn result_text(&self) -> String {
+      match self {
+        ArrayElement::Number(value, true) => format!("{}", *value as i64),
+        ArrayElement::Number(value, false) => super::format_parse_result(*value, ""),
+        ArrayElement::Text(text) => text.clone(),
+        ArrayElement::Array(elements) => elements
+          .iter()
+          .map(|element| format!("{{{}}}", element.result_text()))
+          .collect(),
+      }
+    }
+  }
+
+  /// The index of a `{`-group's closing brace in `s`, which starts with it (a quoted string's braces count for nothing).
+  fn matching_brace(s: &str) -> Option<usize> {
+    let mut depth = 0usize;
+    let mut quoted = false;
+    for (at, byte) in s.bytes().enumerate() {
+      match byte {
+        b'"' => quoted = !quoted,
+        b'{' if !quoted => depth += 1,
+        b'}' if !quoted => {
+          depth -= 1;
+          if depth == 0 {
+            return Some(at);
+          }
+        },
+        _ => {},
+      }
+    }
+    None
+  }
+
+  /// Whether the `{`-group `s` starts with is an array, not the grouping the grammar skips: one indexed, `{…}[i]`, or a
+  /// list that is the rest of the formula, `{1,2,3}`.
+  fn opens_array(s: &str) -> bool {
+    let Some(end) = matching_brace(s) else {
+      return false;
+    };
+    let after = s[end + 1..].trim_start();
+    after.starts_with('[')
+      || (after.is_empty() && {
+        let inner = &s[1..end];
+        inner.trim_start().starts_with('"')
+          || super::split_top_commas(inner).is_some_and(|l| l.len() > 1)
+      })
+  }
+
+  /// A number is wanted here, where the value so far may be text: TeX's "Missing number, treated as zero" (live pgf,
+  /// `{"a","b"}[0]+1` is 1.0 and that error).
+  fn number_wanted(i: &mut In) {
+    if i.state.text_result.take().is_some() {
+      super::report_pgfmath_error(
+        "expected",
+        "<number>",
+        "Missing number, treated as zero: a pgfmath string in arithmetic",
+      );
+    }
+  }
+
+  /// The elements of the array `{…}` the input starts at (each a string, a nested array, or a formula), consumed.
+  fn array_literal(i: &mut In) -> ModalResult<Vec<ArrayElement>> {
+    let text = i.input;
+    let Some(end) = matching_brace(text) else {
+      return fail();
+    };
+    let inner = &text[1..end];
+    let mut elements = Vec::new();
+    if !inner.trim().is_empty() {
+      for piece in super::split_top_commas(inner).unwrap_or_default() {
+        let piece = piece.trim();
+        let quoted = piece
+          .strip_prefix('"')
+          .and_then(|rest| rest.strip_suffix('"'))
+          .filter(|text| !text.contains('"'));
+        if let Some(string) = quoted {
+          elements.push(ArrayElement::Text(string.to_string()));
+        } else if piece.is_empty() {
+          elements.push(ArrayElement::Text(String::new()));
+        } else if piece.starts_with('{') && matching_brace(piece) == Some(piece.len() - 1) {
+          i.input = piece;
+          elements.push(ArrayElement::Array(array_literal(i)?));
+        } else {
+          i.input = piece;
+          let value = formula(i);
+          let number = value.unwrap_or(0.0);
+          elements.push(match i.state.text_result.take() {
+            Some(string) => ArrayElement::Text(string),
+            None => ArrayElement::Number(number, i.state.int_result),
+          });
+        }
+      }
+    }
+    i.input = &text[end + 1..];
+    Ok(elements)
+  }
+
+  /// `elements[index]`, `index` truncated as `\pgfmath@count=#2` does; out of bounds is pgf's error and result 0.
+  fn array_element(elements: Vec<ArrayElement>, index: f64) -> ArrayElement {
+    let chosen = if index.trunc() >= 0.0 {
+      elements.into_iter().nth(index.trunc() as usize)
+    } else {
+      None
+    };
+    chosen.unwrap_or_else(|| {
+      super::report_pgfmath_error(
+        "unexpected",
+        "array",
+        "PGF Math Error: Array index out of bounds.",
+      );
+      ArrayElement::Number(0.0, true)
+    })
+  }
+
+  /// The value of a whole array element: a number as it is, text in the result, an array as its text.
+  fn array_value(i: &mut In, value: ArrayElement) -> f64 {
+    match value {
+      ArrayElement::Number(number, int) => {
+        i.state.int_result = int;
+        number
+      },
+      other => {
+        i.state.text_result = Some(other.result_text());
+        i.state.int_result = false;
+        0.0
+      },
+    }
+  }
+
+  /// `{…}` and its accesses `[i][j]…` (pgfmathparser.code.tex:943-949 `\pgfmath@startindex@`, which gives an array
+  /// element back in a group of its own: `{{1,2},{3,4}}[1]` is `{{3}{4}}`). Live pgf for each form, repro
+  /// graphics-tikz/pgfmath_array_primary_and_strings.
+  fn array_primary(i: &mut In) -> ModalResult<f64> {
+    let mut value = ArrayElement::Array(array_literal(i)?);
+    let mut indexed = false;
+    loop {
+      let spaces = i.input.bytes().take_while(u8::is_ascii_whitespace).count();
+      if i.input.as_bytes().get(spaces) != Some(&b'[') {
+        break;
+      }
+      bump(i, spaces + 1);
+      let index = formula(i)?;
+      number_wanted(i);
+      eat(i, b']');
+      value = match value {
+        ArrayElement::Array(elements) => array_element(elements, index),
+        // an index into what is no array: pgf reads its one token as the array
+        other => array_element(vec![other], index),
+      };
+      indexed = true;
+    }
+    let array = indexed && matches!(value, ArrayElement::Array(_));
+    let number = array_value(i, value);
+    if array {
+      i.state.text_result = i.state.text_result.take().map(|text| format!("{{{text}}}"));
+    }
+    Ok(number)
   }
 
   fn fail<T>() -> ModalResult<T> { Err(ErrMode::Backtrack(ContextError::new())) }
@@ -909,13 +1081,17 @@ mod pgfmath_grammar {
     (result, stream.state)
   }
 
-  /// The grammar-wide skip: `[\s\{\}]*`.
+  /// The grammar-wide skip: `[\s\{\}]*`, but for the brace of an array.
   fn sb(i: &mut In) {
-    let n = i
-      .input
-      .bytes()
-      .take_while(|b| matches!(b, b' ' | b'\t' | b'\n' | b'\r' | b'{' | b'}'))
-      .count();
+    let bytes = i.input.as_bytes();
+    let mut n = 0;
+    while let Some(byte) = bytes.get(n) {
+      match byte {
+        b' ' | b'\t' | b'\n' | b'\r' | b'}' => n += 1,
+        b'{' if !opens_array(&i.input[n..]) => n += 1,
+        _ => break,
+      }
+    }
     i.input = &i.input[n..];
   }
   fn first(i: &In) -> Option<u8> { i.input.as_bytes().first().copied() }
@@ -945,13 +1121,21 @@ mod pgfmath_grammar {
       if !eat(i, b'?') {
         return Ok(condition);
       }
+      number_wanted(i);
       let then_val = logic(i)?;
       let then_int = i.state.int_result;
+      let then_text = i.state.text_result.take();
       sb(i);
       let (else_val, else_int) = if eat(i, b':') {
         (logic(i)?, i.state.int_result)
       } else {
         (0.0, false)
+      };
+      let else_text = i.state.text_result.take();
+      i.state.text_result = if condition != 0.0 {
+        then_text
+      } else {
+        else_text
       };
       let (value, int) = if condition != 0.0 {
         (then_val, then_int)
@@ -975,8 +1159,10 @@ mod pgfmath_grammar {
       };
       let cp = i.checkpoint();
       bump(i, 2);
+      number_wanted(i);
       match relation(i) {
         Ok(right) => {
+          number_wanted(i);
           left = pgfmath_cmp_op(op, left, right);
           i.state.int_result = true;
         },
@@ -997,8 +1183,10 @@ mod pgfmath_grammar {
       let Some(op) = cmp_op(i) else {
         break;
       };
+      number_wanted(i);
       match expr(i) {
         Ok(right) => {
+          number_wanted(i);
           left = pgfmath_cmp_op(&op, left, right);
           i.state.int_result = true;
         },
@@ -1039,7 +1227,9 @@ mod pgfmath_grammar {
       match first(i) {
         Some(b'+') => {
           bump(i, 1);
+          number_wanted(i);
           result += term(i)?;
+          number_wanted(i);
           // Arithmetic yields a real: `2+(1<2)` → "3.0", NOT the integer a bare
           // comparison produces (pgfmath ground truth). A comparison anywhere in
           // an operand set int_result; combining it arithmetically clears that.
@@ -1047,7 +1237,9 @@ mod pgfmath_grammar {
         },
         Some(b'-') => {
           bump(i, 1);
+          number_wanted(i);
           result -= term(i)?;
+          number_wanted(i);
           i.state.int_result = false;
         },
         _ => break,
@@ -1064,15 +1256,19 @@ mod pgfmath_grammar {
       match first(i) {
         Some(b'*') => {
           bump(i, 1);
+          number_wanted(i);
           result *= factor(i)?;
+          number_wanted(i);
           // See expr(): arithmetic demotes a comparison's integer to a real
           // (`2*(1<2)` → "2.0", not "2").
           i.state.int_result = false;
         },
         Some(b'/') => {
           bump(i, 1);
+          number_wanted(i);
           // Infix `/` is pgf's `divide`: a zero divisor leaves the dividend.
           result = pgfmath_divide(result, factor(i)?);
+          number_wanted(i);
           i.state.int_result = false;
         },
         _ => break,
@@ -1086,7 +1282,9 @@ mod pgfmath_grammar {
     let base = simplefactor(i)?;
     sb(i);
     if eat(i, b'^') {
+      number_wanted(i);
       let exp = simplefactor(i)?;
+      number_wanted(i);
       i.state.int_result = false; // exponentiation yields a real
       return Ok(base.powf(exp));
     }
@@ -1119,6 +1317,7 @@ mod pgfmath_grammar {
     i.state.int_result = false;
     match first(i) {
       None => return fail(),
+      Some(b'{') => return array_primary(i),
       Some(b'(') => {
         bump(i, 1);
         let val = formula(i)?;
@@ -1129,6 +1328,7 @@ mod pgfmath_grammar {
       Some(b'-') => {
         bump(i, 1);
         let value = -simplefactor(i)?;
+        number_wanted(i);
         i.state.int_result = false;
         return Ok(value);
       },
@@ -1269,6 +1469,13 @@ mod pgfmath_grammar {
     }
   }
 
+  /// Whether a `{` follows blanks (which are consumed): the first argument of `array` and `dim`.
+  fn brace_follows(i: &mut In) -> bool {
+    let spaces = i.input.bytes().take_while(u8::is_ascii_whitespace).count();
+    bump(i, spaces);
+    first(i) == Some(b'{')
+  }
+
   /// FUNCTION '(' formula (',' formula)* ')' | FUNCTION simplefactor
   fn function_call(i: &mut In, name: &str) -> ModalResult<f64> {
     sb(i);
@@ -1278,55 +1485,52 @@ mod pgfmath_grammar {
     // then select by the (0-based) index; out-of-bounds yields 0 like an
     // empty result. Witness colorblind.sty L433-449
     // `round(255*array({\colorspec},0))`.
+    // `dim({…})`, the number of its elements (pgfmathfunctions.misc.code.tex:269-290): an array's, or 1 for any other
+    // value (tikzpingus.sty's lists; `dim(5)`).
+    if name == "dim" && first(i) == Some(b'(') {
+      bump(i, 1);
+      let count = if brace_follows(i) {
+        array_literal(i)?.len()
+      } else {
+        formula(i)?;
+        i.state.text_result = None;
+        1
+      };
+      sb(i);
+      eat(i, b')');
+      i.state.int_result = true;
+      return Ok(count as f64);
+    }
     if name == "array" && first(i) == Some(b'(') {
       bump(i, 1);
+      if brace_follows(i) {
+        let elements = array_literal(i)?;
+        sb(i);
+        let index = if eat(i, b',') { formula(i)? } else { 0.0 };
+        number_wanted(i);
+        sb(i);
+        eat(i, b')');
+        let element = array_element(elements, index);
+        return Ok(array_value(i, element));
+      }
       sb(i);
+      // Brace-less form: pgfmath's own macro layers can strip the list
+      // braces before the expression reaches this evaluator, leaving
+      // `array(3,7,5,1)` — the LAST value is the index, the rest the
+      // elements.
       let mut elems: Vec<f64> = Vec::new();
       // Each element's integer form: `array` returns the chosen element as it is.
       let mut elem_ints: Vec<bool> = Vec::new();
-      if eat(i, b'{') {
-        loop {
-          match formula(i) {
-            Ok(v) => {
-              elems.push(v);
-              elem_ints.push(i.state.int_result);
-            },
-            _ => break,
-          }
-          sb(i);
-          if !eat(i, b',') {
-            break;
-          }
-        }
+      while let Ok(v) = formula(i) {
+        elems.push(v);
+        elem_ints.push(i.state.int_result);
         sb(i);
-        eat(i, b'}');
-      }
-      sb(i);
-      let idx = if eat(i, b',') {
-        formula(i)?
-      } else if elems.is_empty() {
-        // Brace-less form: pgfmath's own macro layers can strip the list
-        // braces before the expression reaches this evaluator, leaving
-        // `array(3,7,5,1)` — the LAST value is the index, the rest the
-        // elements.
-        loop {
-          match formula(i) {
-            Ok(v) => {
-              elems.push(v);
-              elem_ints.push(i.state.int_result);
-            },
-            _ => break,
-          }
-          sb(i);
-          if !eat(i, b',') {
-            break;
-          }
+        if !eat(i, b',') {
+          break;
         }
-        elem_ints.pop();
-        elems.pop().unwrap_or(0.0)
-      } else {
-        0.0
-      };
+      }
+      elem_ints.pop();
+      let idx = elems.pop().unwrap_or(0.0);
       sb(i);
       eat(i, b')');
       let idx = idx.round();
@@ -1344,6 +1548,7 @@ mod pgfmath_grammar {
     if first(i) == Some(b'(') {
       bump(i, 1);
       let mut args = vec![formula(i)?];
+      number_wanted(i);
       // Each argument's integer form: `ifthenelse` returns its chosen argument as it is
       // (pgfmathfunctions.comparison.code.tex:77-86).
       let mut arg_ints = vec![i.state.int_result];
@@ -1352,6 +1557,7 @@ mod pgfmath_grammar {
         if eat(i, b',') {
           match formula(i) {
             Ok(arg) => {
+              number_wanted(i);
               args.push(arg);
               arg_ints.push(i.state.int_result);
             },
@@ -1383,6 +1589,7 @@ mod pgfmath_grammar {
       return Ok(pgfmath_apply_fn(name, &args));
     }
     let arg = simplefactor(i)?;
+    number_wanted(i);
     if !is_builtin_function(name) {
       open_parse_group(i);
       let (value, int) = super::pgfmath_apply_user_reported(name, &[arg], &[i.state.int_result]);
@@ -1627,6 +1834,14 @@ fn pgfmath_sizer(dimension: &str, text: &str) -> f64 {
   with_own_adjust_queue(measure).unwrap_or(0.0)
 }
 
+/// An Error of the native parser (`pgfmath_grammar`).
+fn report_pgfmath_error(category: &str, object: &str, message: &str) {
+  let _ = (|| -> Result<()> {
+    Error!(category, object, message);
+    Ok(())
+  })();
+}
+
 /// Format the result of pgfmathparse for output
 /// Perl: L383-393 of pgfmath.code.tex.ltxml
 fn format_parse_result(result: f64, input: &str) -> String {
@@ -1751,6 +1966,11 @@ pub(crate) fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
   // 3. Parse with the winnow grammar (replaces both Perl eval and RecDescent; partial parses still
   //    return what was read, as before).
   let (parsed, state) = pgfmath_grammar::evaluate(input);
+  if parsed.is_ok()
+    && let Some(text) = state.text_result
+  {
+    return (text, false);
+  }
   if let Ok(result) = parsed {
     // arXiv-fork c52d3cf6: a top-level comparison returns an integer string.
     if state.int_result && result == (result as i64) as f64 {
@@ -1802,8 +2022,11 @@ fn try_string_ternary(input: &str) -> Option<String> {
   } else {
     else_part
   };
-  // Strip outer quotes if present; otherwise return as-is
+  // Strip outer quotes if present; a branch reading an array (`{"a","b"}[0]`) is a formula; otherwise return as-is
   let trimmed = chosen.trim();
+  if trimmed.starts_with('{') {
+    return Some(pgfmathparse_eval_with_units(trimmed).0);
+  }
   let unq = if trimmed.starts_with('"') && trimmed.ends_with('"') && trimmed.len() >= 2 {
     &trimmed[1..trimmed.len() - 1]
   } else {
