@@ -1706,10 +1706,10 @@ impl Resolver {
         &addressed,
         live.len() == 1,
       );
-      // (one address every carrier spells alone, printed under each by a call of its own: the same person printed twice, each
-      // print its own carrier's, not two people's no one could tell apart. 2606.16069's two `\author`, `1\textsuperscript{st}
-      // Lucas Krome` and `Lucas Krome`, each `\IEEEauthorblockA` printing `lucas.krome@`; two Lees sharing one entry's
-      // `lee@` stay the block's)
+      // (one address every carrier spells alone, under each by an entry of its own: printed under each, it is each's, as the PDF
+      // shows it. 2606.16069's shape, its names `1\textsuperscript{st} Lucas Krome`, whose two `\author` are one by now, the last
+      // winning; `\IEEEauthorblockN{Ann Lee}\IEEEauthorblockA{lee@a.org}\and…Bob Lee…`. Two Lees sharing one entry's `lee@` stay
+      // the block's)
       if calls > 1 && carriers.len() > 1 {
         for ((assoc, _), owner) in emails.iter().zip(&mut owners) {
           if owner.0.is_none()

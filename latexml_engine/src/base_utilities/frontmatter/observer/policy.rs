@@ -95,10 +95,11 @@ pub struct Policy {
   /// OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r5 at landing"); what differs between its output and the observer's
   /// reading is written where the writer's operations explain it (`writer::plan`), each other item left as today's
   pub written:          bool,
-  /// the commands that part a block's lines or columns whatever they print here, as the class's title page does: ACM's
-  /// `\alignauthor` a column (sig-alternate.cls, sigchi.cls; a no-op under OmniBus, omnibus_cls.rs), ijcai's `\affiliations`
-  /// and `\emails` a section (ijcai19.sty:124-130). A rehearsal notes their calls beside the block's events (`Outcome::Events`
-  /// `breaks`), which they do not part; no reading reads them yet
+  /// the commands that part a block's lines or columns whatever they print here, as the class's title page does, each declared by
+  /// the binding owning the `\author` they stand in: OmniBus's no-op `\alignauthor` a column (inst_support_sty.rs; what sig-alternate.cls,
+  /// sigchi.cls print, whose `\alignauthor` read raw is the tabular it makes), ijcai's `\affiliations` and `\emails` a section
+  /// (ijcai19.sty:124-130). A rehearsal notes their calls beside the block's events (`Outcome::Events` `breaks`), which they do
+  /// not part; no reading reads them yet
   pub block_breaks:     &'static [(&'static str, BreakKind)],
   /// what the declaration reproduces
   pub cite:             &'static str,
@@ -125,7 +126,7 @@ pub const KERNEL: Policy = Policy {
   email_in_place:   false,
   keyed_labels:     false,
   written:          true,
-  block_breaks:     &[("\\alignauthor", BreakKind::Column)],
+  block_breaks:     &[],
   cite:             "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4; OD #925",
 };
 

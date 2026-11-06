@@ -191,7 +191,7 @@ pub enum BreakKind {
   /// a section the binding declares (`Policy::block_breaks`: ijcai's `\affiliations`, `\emails`), which the title page
   /// starts on a line of its own (ijcai19.sty:124-130); beside the events
   Section,
-  /// a column the binding declares (`Policy::block_breaks`: ACM's `\alignauthor`); beside the events
+  /// a column the binding declares (`Policy::block_breaks`: OmniBus's `\alignauthor`); beside the events
   Column,
 }
 
@@ -465,17 +465,6 @@ fn em_pt(d: &Digested) -> f64 {
     .map(|font| font.get_em_width() as f64 / 65536.0)
     .filter(|em| *em > 0.0)
     .unwrap_or(10.0)
-}
-
-/// Whether a spacing box of one word-space character (a space, a tie) `width` em wide is its font's word space: what a
-/// control space prints, as the font's metrics size it (`Font::compute_string_size`). A skip of the same width is no
-/// different, and rare.
-fn is_word_space_of_its_font(d: &Digested, text: &str, width: f64) -> bool {
-  matches!(text, " " | "\n" | "\u{a0}")
-    && d.get_font().ok().flatten().is_some_and(|font| {
-      let (space, ..) = font.compute_string_size(" ", SymHashMap::default());
-      (space.pt_value(None) / em_pt(d) - width).abs() < 0.002
-    })
 }
 
 /// The natural width in em of a spacing box with a `width` property (`\hspace`'s, `\hskip`'s), in its font's em.
@@ -800,15 +789,39 @@ fn font_key(d: &Digested) -> Option<FontKey> { d.get_font().ok().flatten().map(F
 /// Walk `d` in print order, collecting atoms.
 #[derive(Default)]
 struct Walker {
-  atoms: Vec<Atom>,
+  atoms:      Vec<Atom>,
   /// how many lists enclose the box being walked (the block's own is one; a braced group or argument inside it more)
-  lists: usize,
+  lists:      usize,
   /// each in-block contact cut into its marked entries (`labelled_entries`): the entries' spans, and the one entry its
   /// leading marks label, read when a cut entry's marks are no name's ([`lex_events`])
-  cuts:  Vec<(Vec<(u16, u16)>, Event)>,
+  cuts:       Vec<(Vec<(u16, u16)>, Event)>,
+  /// the word space in em of the font last asked ([`Walker::is_word_space_of_its_font`]): sized once, for a block's thousand ties
+  word_space: Option<(Rc<Font>, f64)>,
 }
 
 impl Walker {
+  /// Whether a spacing box of one word-space character (a space, a tie) `width` em wide is its font's word space: what a
+  /// control space prints, as the font's metrics size it (`Font::compute_string_size`). A skip of the same width is no
+  /// different, and rare.
+  fn is_word_space_of_its_font(&mut self, d: &Digested, text: &str, width: f64) -> bool {
+    if !matches!(text, " " | "\n" | "\u{a0}") {
+      return false;
+    }
+    let Some(font) = d.get_font().ok().flatten() else {
+      return false;
+    };
+    let space = match &self.word_space {
+      Some((last, space)) if Rc::ptr_eq(last, &font) => *space,
+      _ => {
+        let (space, ..) = font.compute_string_size(" ", SymHashMap::default());
+        let space = space.pt_value(None) / em_pt(d);
+        self.word_space = Some((font, space));
+        space
+      },
+    };
+    (space - width).abs() < 0.002
+  }
+
   fn walk(&mut self, d: &Digested, nest: u8) {
     match d.data() {
       DigestedData::TBox(b) => {
@@ -838,11 +851,12 @@ impl Walker {
           });
           // (a word space is its font's, whatever that is in em: `M.\ de\ Naurois` at `\tiny` 0.347, aa's `~` the same,
           // 1702.08280; typewriter 0.5: a name cut at each)
-          let width = if !fill && width > INTERWORD && is_word_space_of_its_font(d, &text, width) {
-            space_width(' ')
-          } else {
-            width
-          };
+          let width =
+            if !fill && width > INTERWORD && self.is_word_space_of_its_font(d, &text, width) {
+              space_width(' ')
+            } else {
+              width
+            };
           let mut chars = text.chars();
           let word = match (chars.next(), chars.next()) {
             (Some(' ' | '\n'), None) if !fill && width <= INTERWORD => Some(' '),

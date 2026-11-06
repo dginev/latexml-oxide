@@ -88,33 +88,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
   // LaTeX-faithful `\author` REPLACES (the last call wins); a raw class that
   // redefined `\author` to call it once per author appends instead (56fl).
   if replace {
-    dequeue_front_matter("ltx:creator", &[("role", "author")]);
-    // LaTeX's `\def\@author{#2}` replaces the authors a `\maketitle` that left
-    // `\author` live already typeset (KOMA ≥ 3.12, scrbook.cls:3263-3290; a class's
-    // title page from `\AfterEndPreamble`, udesoftec.cls:1230-1241) for the NEXT
-    // `\maketitle`: they are superseded there (`\lx@maketitle@supersede`), not here —
-    // without one, the authors a fallback placed stay (Perl the same).
-    assign_value(
-      "lx_authors_superseded",
-      Stored::Bool(true),
-      Some(Scope::Global),
-    );
-    // A store handed on since that flush went to the authors replaced here: the next
-    // harvest hands it again (`harvest_stores`, `lx_stores_late`).
-    assign_value(
-      "lx_stores_late",
-      Stored::String(pin("")),
-      Some(Scope::Global),
-    );
-    // The replaced authors take their handed tail with them (a binding's own
-    // `\lx@add@authors` never runs `\lx@author@flush`), and the creators this
-    // `\author` makes are counted from here (`\lx@author@handed`).
-    assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global));
-    assign_value(
-      "lx_author_creators_before",
-      Stored::Int(queued_creator_count() as i64),
-      Some(Scope::Global),
-    );
+    replace_queued_authors();
   }
   // Consume any `\\[len]` / `\\*[len]` row-break optionals up front so the line
   // splits below see a bare `\\` (KNOWN_PERL_ERRORS #75, witness 2605.23553). This

@@ -1,13 +1,14 @@
 % witness: 2401.15006 (article, `$^6$A$^*$STAR`, the writer's regression of E1: an affiliation "A" and a nameless creator's "* STAR")
-% oracle:  pdflatex 0 errors: "Ann Able 1 Bob Baker 2 *"; "1 A*STAR, Singapore"; "2 Univ B*"; "* Corresponding author"
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker2 Cat Cole3,*"; "1A*STAR, Singapore"; "2R†D Lab"; "3IHPC A*STAR"; "*Corresponding author"
 % engines: rust before this fix: the `*` a mark, the entry cut at it; old engine: one entry
-% expect:  0 errors; a footnote symbol glued between two words, no other mark of it, is the word's: one Name; twins: `Bob Baker$^{2,*}$`'s
-%          and a legend's `$^*$` stay marks (perfect_kernel_batchz2::a_symbol_glued_inside_a_word_is_the_words)
-% status:  GREEN (Z2)
+% expect:  0 errors; a footnote symbol glued between two words on a line a mark leads is the word's: one Name, whatever else shows that
+%          symbol, however many words before it; twins: `Cat Cole$^{3,*}$`'s and a legend's `$^*$` stay marks
+%          (perfect_kernel_batchz2::a_symbol_glued_inside_a_word_is_the_words)
+% status:  GREEN (Z2r2)
 \documentclass{article}
 \begin{document}
 \title{T}
-\author{Ann Able$^1$ \and Bob Baker$^{2}$\\ $^1$A$^*$STAR, Singapore\\ $^2$R$^\dagger$D Lab}
+\author{Ann Able$^1$ \and Bob Baker$^{2}$ \and Cat Cole$^{3,*}$\\ $^1$A$^*$STAR, Singapore\\ $^2$R$^\dagger$D Lab\\ $^3$IHPC A$^*$STAR\\ $^*$Corresponding author}
 \maketitle
 Body.
 \end{document}

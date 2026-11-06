@@ -3,6 +3,8 @@
 //! writer's regressions needed. Each guard is a different code path: `a_font_switch_…` whose assignment is a declaration,
 //! `a_definition_is_…` what holds it, `a_declarations_lead_…` where its span starts; `a_break_says…` a Break's kind, `a_break_a_binding…`
 //! the notes' list beside the events; `a_break_and_a_comma_…`, `an_ordinal_…`, `a_name_says_…`, `an_orcid_…` one event field each.
+//! `a_kernel_macro_a_papers_macro_…` (Z2r2) what a paper's macro declares inside a kernel's; `a_declarations_end_…` where its span ends;
+//! `the_last_author_call_wins_…` a binding's author body replaced, `an_address_two_entries_…` the same address under two entries.
 
 use serde_json::{Value, json};
 
@@ -88,6 +90,39 @@ fn a_declarations_lead_is_invocations_not_positions() {
   );
 }
 
+/// S1 of revZ2. Within a kernel's macro a paper's macro reached, what the paper's macro's body or arguments name is the paper's (`\mcount`,
+/// `\mboxes`, `\mform{\qd}`, the conditionals' branches, one level down `\mouter`), and the kernel's own assignments are not (`\mstar`'s
+/// `\@let@token`, `\mfont`'s font state). `\@namedef`'s run has ended when its `\def` comes (`\mbuilt`, `\qk`), so that built name reads.
+#[test]
+fn a_kernel_macro_a_papers_macro_reaches_declares_what_it_names() {
+  let (_, dump) = dump(repro!("event_declaration_through_a_kernel_macro"));
+  let labels: Vec<&str> = blocks(&dump)[0]["declarations"]
+    .as_array()
+    .expect("declarations")
+    .iter()
+    .map(|declaration| declaration["label"].as_str().expect("a label"))
+    .collect();
+  assert_eq!(labels, [
+    "\\qa", "\\qb", "\\qc", "\\qd", "\\qe", "\\qf", "\\qh", "\\qi", "\\qj", "\\qk"
+  ]);
+}
+
+/// S2 of revZ2. A definer whose next token is no later one of the field (a macro's own `\relax`, the end of an argument) read as far as
+/// the call around it: its span holds the whole definition, for a paper's macro, a `\textbf`, the last definition of an `\AtBeginDocument`.
+#[test]
+fn a_declarations_end_holds_what_it_read_inside_a_call() {
+  let (_, dump) = dump(repro!("event_declaration_end_in_a_call"));
+  assert_eq!(
+    blocks(&dump)[0]["declarations"],
+    json!([
+      {"kind": "Declaration", "span": [2, 8], "label": "\\xa"},
+      {"kind": "Declaration", "span": [10, 16], "label": "\\xb", "nest": 1},
+      {"kind": "Declaration", "span": [18, 23], "label": "\\xc"},
+      {"kind": "Declaration", "span": [23, 29], "label": "\\xd"},
+    ])
+  );
+}
+
 /// Gap 3 on the events. A Break says `par` when `\par` made it, which a `c` column does not print (tex.web §1094), whatever its role;
 /// a line break says nothing. The block's names, as ever, part at either. The article's line reads every word; `\par` in its `\author`
 /// comes through a macro, as the kernel's `\author` is not `\long`.
@@ -105,10 +140,9 @@ fn a_break_says_what_made_it() {
 }
 
 /// Gap 3 beside the events: the commands a binding declares a block break (`Policy::block_breaks`) are noted where they are called,
-/// whatever the class makes them print, and do not part the events: the kernel's `\alignauthor`, made a tabular's end by the
-/// document as sig-alternate.cls does, and ijcai's `\emails`, a no-op in its binding, whose name run goes on across it. A
-/// control twin: `\affiliations` ends the names at the binding's own split, so it is called in no block; a block of no such call has
-/// no list.
+/// whatever the class makes them print, and do not part the events: OmniBus's no-op `\alignauthor`, and ijcai's `\emails`, a no-op in
+/// its binding, whose name run goes on across it. A control twin: `\affiliations` ends the names at the binding's own split, so it is
+/// called in no block; a block of no such call has no list, and the kernel declares none, so a document's own `\alignauthor` has none.
 #[test]
 fn a_break_a_binding_declares_stands_beside_the_events() {
   let (_, column) = dump(repro!("event_break_a_binding_declares_column"));
@@ -117,7 +151,7 @@ fn a_break_a_binding_declares_stands_beside_the_events() {
     column_block["breaks"],
     json!([
       {"kind": "Break", "span": [0, 1], "label": "\\alignauthor", "break": "column"},
-      {"kind": "Break", "span": [18, 19], "label": "\\alignauthor", "break": "column"},
+      {"kind": "Break", "span": [10, 11], "label": "\\alignauthor", "break": "column"},
     ])
   );
   let (_, section) = dump(repro!("event_break_a_binding_declares_section"));
@@ -133,6 +167,10 @@ fn a_break_a_binding_declares_stands_beside_the_events() {
     "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able \\and Bob Baker}\n\\maketitle\nBody.\n\\end{document}\n",
   );
   assert_eq!(blocks(&plain)[0].get("breaks"), None);
+  let (_, own) = dump(
+    "\\documentclass{article}\n\\newcommand\\alignauthor{\\end{tabular}\\hfill\\begin{tabular}[t]{c}}\n\\begin{document}\n\\title{T}\n\\author{Ann Able \\alignauthor Bob Baker}\n\\maketitle\nBody.\n\\end{document}\n",
+  );
+  assert_eq!(blocks(&own)[0].get("breaks"), None);
 }
 
 /// Gap 4. A comma or a Break says how many braces are printed and open before it, whatever printed them (`\{`, a formula's `\lbrace`,
@@ -286,9 +324,9 @@ fn a_word_space_is_its_fonts_at_any_size() {
   assert_eq!(reading, names);
 }
 
-/// Part 3, 2401.15006 (`$^6$A$^*$STAR`, the writer's "A" and a nameless creator's "* STAR"). A symbol no other mark prints, glued
-/// between two words, one before it, is the word's: the entry is whole, in the reading and in the output. Its twin: a symbol its
-/// legend shows stays a mark, and the name before it stays a name of its own, for the reading.
+/// Part 3, 2401.15006 (`$^6$A$^*$STAR`, the writer's "A" and a nameless creator's "* STAR"). A symbol glued between two words on a line a
+/// mark leads is the word's, whatever else shows that symbol and however many words stand before it: the entry is whole, in the reading
+/// and in the output. Its twin: on a line no mark leads it stays a mark, and the name before it a name of its own, for the reading.
 #[test]
 fn a_symbol_glued_inside_a_word_is_the_words() {
   let (xml, dump_inside) = dump(repro!(
@@ -297,17 +335,19 @@ fn a_symbol_glued_inside_a_word_is_the_words() {
   let (output, reading) = output_and_reading(&xml, &dump_inside);
   assert_eq!(
     reading,
-    rows(&[&["Ann Able", "A∗STAR, Singapore"], &[
-      "Bob Baker",
-      "R†D Lab"
-    ]])
+    rows(&[
+      &["Ann Able", "A∗STAR, Singapore"],
+      &["Bob Baker", "R†D Lab"],
+      &["Cat Cole", "IHPC A∗STAR"],
+    ])
   );
   assert_eq!(
     output,
-    rows(&[&["Ann Able", "affiliation=A * STAR, Singapore"], &[
-      "Bob Baker",
-      "affiliation=R † D Lab"
-    ]]),
+    rows(&[
+      &["Ann Able", "affiliation=A * STAR, Singapore"],
+      &["Bob Baker", "affiliation=R † D Lab"],
+      &["Cat Cole", "affiliation=IHPC A ∗ STAR"],
+    ]),
     "{xml}"
   );
   let (_, twin) = dump(repro!(
@@ -327,39 +367,26 @@ fn a_symbol_glued_inside_a_word_is_the_words() {
   assert_eq!(names, vec![&json!("Cher"), &json!("Bob Baker")]);
 }
 
-/// Part 3, 2606.16069 (two `\author`, the first with IEEE's ordinals; the writer sent every address to a nameless creator). An address
-/// every carrier spells alone, each by a call of its own, is each print's. Its twin: one call two people of one surname carry, the
-/// address spelling both, stays the block's, in the output.
+/// Part 3, 2606.16069's first call's shape. An address every carrier spells alone, under each by an entry of its own, is each entry's;
+/// the ordinal on a names line stays the name's prefix. Its twin: one entry two people of one surname carry, the address spelling
+/// both, stays the block's, in the output.
 #[test]
-fn an_address_two_prints_of_a_name_spell_is_each_prints() {
-  let (xml, dump_prints) = dump(repro!(
-    "reading_same_address_under_each_of_two_prints_of_a_name"
-  ));
+fn an_address_two_entries_print_is_each_entrys() {
+  let (xml, dump_prints) = dump(repro!("reading_same_address_under_each_of_two_entries"));
   let (output, reading) = output_and_reading(&xml, &dump_prints);
   assert_eq!(
     reading,
-    rows(&[
-      &["1 Ann Able", "Univ A", "ann.able@a.org"],
-      &["2 Bob Baker", "Univ B", "bob.baker@b.org"],
-      &["Ann Able", "Univ A", "ann.able@a.org"],
-      &["Bob Baker", "Univ B", "bob.baker@b.org"],
-    ])
+    rows(&[&["1 Ann Lee", "Univ A", "lee@a.org"], &[
+      "2 Bob Lee",
+      "Univ B",
+      "lee@a.org"
+    ],])
   );
   assert_eq!(
     output,
     rows(&[
-      &[
-        "1 st Ann Able",
-        "affiliation=Univ A",
-        "email=ann.able@a.org"
-      ],
-      &[
-        "2 nd Bob Baker",
-        "affiliation=Univ B",
-        "email=bob.baker@b.org"
-      ],
-      &["Ann Able", "email=ann.able@a.org", "affiliation=Univ A"],
-      &["Bob Baker", "email=bob.baker@b.org", "affiliation=Univ B"],
+      &["1 st Ann Lee", "affiliation=Univ A", "email=lee@a.org"],
+      &["2 nd Bob Lee", "affiliation=Univ B", "email=lee@a.org"],
     ]),
     "{xml}"
   );
@@ -377,9 +404,46 @@ fn an_address_two_prints_of_a_name_spell_is_each_prints() {
   );
 }
 
+/// 2606.16069 (pdflatex and Perl 4 creators, ours 8). The last `\author` wins in the blocks path too, whatever the earlier call queued:
+/// its creators, their notes, their contacts; what stands beside the calls stays. Its twins: a plain `\author` after blocks, and a
+/// call after a `\maketitle` that printed the one before it (both shown).
+#[test]
+fn the_last_author_call_wins_in_the_blocks_path() {
+  let (xml, last) = dump(repro!("ieee_last_author_call_wins"));
+  let (output, reading) = output_and_reading(&xml, &last);
+  assert_eq!(reading, rows(&[&["Bob Baker", "Univ B", "bob@b.org"]]));
+  assert_eq!(
+    output,
+    rows(&[&["Bob Baker", "affiliation=Univ B", "email=bob@b.org"]]),
+    "{xml}"
+  );
+  assert!(xml.contains("Funded."), "{xml}");
+  assert!(!xml.contains("First call"), "{xml}");
+  let doc = |body: &str| {
+    format!(
+      "\\documentclass{{IEEEtran}}\n\\begin{{document}}\n\\title{{T}}\n{body}\n\\maketitle\nBody.\n\\end{{document}}\n"
+    )
+  };
+  let (xml, _) = dump(&doc(
+    r"\author{\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B}}\author{Ann Able}",
+  ));
+  assert_eq!(creators(&xml), rows(&[&["Ann Able"]]), "{xml}");
+  let (xml, _) = dump(&doc(
+    r"\author{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ A}}\maketitle\author{\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B}}",
+  ));
+  assert_eq!(
+    creators(&xml),
+    rows(&[&["Ann Able", "affiliation=Univ A"], &[
+      "Bob Baker",
+      "affiliation=Univ B"
+    ]]),
+    "{xml}"
+  );
+}
+
 /// Part 3, gap 5's reader (2609.01831's cited shape). An ordinal is its entry's text, on a block's labelled line, glued, by a formula, at
 /// an entry's start, and in a call's content, whose reading today's view now reads alike, so no paper is declined for it; on a names line
-/// it stays the name's prefix, as `an_address_two_prints_of_a_name_spell_is_each_prints` reads.
+/// it stays the name's prefix, as `an_address_two_entries_print_is_each_entrys` reads.
 #[test]
 fn an_ordinal_is_its_entrys_text() {
   let (xml, entry) = dump(repro!("reading_ordinal_in_an_entry_is_its_text"));

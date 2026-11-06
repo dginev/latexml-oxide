@@ -270,6 +270,8 @@ pub(in crate::base_utilities) struct Ledger {
   pub compared:     Option<Resolved>,
   /// the census's (E0): the read-back at the end of `insert_frontmatter`, none where it never got there
   pub read_back:    Option<ReadBack>,
+  /// the entries the last binding's `\author` body made, a later `\author` clears them ([`record_author_body_clear`])
+  author_body:      (usize, usize),
 }
 
 /// The final document read against the reading (`writer::read_back_frontmatter`).
@@ -1033,6 +1035,33 @@ pub(in crate::base_utilities) fn record_clear(tag: &str, attr: &[(&str, &str)]) 
       }
     }
   });
+}
+
+/// Clear the calls the last author body made (`queue::begin_author_body`, which removes them from the queue), its own
+/// flush's, and open the next body's: the ledger's entries from here.
+pub(in crate::base_utilities) fn record_author_body_clear() {
+  if !records_now() {
+    return;
+  }
+  with_ledger(|ledger| {
+    let flushes = ledger.flushes;
+    let (start, end) = std::mem::take(&mut ledger.author_body);
+    for entry in ledger.entries.iter_mut().take(end).skip(start) {
+      if let Entry::Api(call) = entry
+        && call.epoch == flushes
+      {
+        call.cleared = true;
+      }
+    }
+    ledger.author_body = (ledger.entries.len(), ledger.entries.len());
+  });
+}
+
+/// The body [`record_author_body_clear`] opened ends: its calls are the ledger's entries so far.
+pub(in crate::base_utilities) fn record_author_body_end() {
+  if records_now() {
+    with_ledger(|ledger| ledger.author_body.1 = ledger.entries.len());
+  }
 }
 
 /// Record that the frontmatter API's Cut took an uncut copy of a printed list it cut out of the queue (`content`, a

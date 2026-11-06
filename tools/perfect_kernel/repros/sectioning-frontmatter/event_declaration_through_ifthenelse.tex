@@ -1,0 +1,13 @@
+% witness: revZ2's pre-existing list (gap 8; ifthen.sty read raw)
+% oracle:  pdflatex 0 errors: "Ann Lee"; `\x` defined, printing nothing
+% engines: Perl has no events; ours reads `\x` (since Z2r2) beside false Declarations of `\@tempa…`, ifthen's own: a raw package's macro is a paper's
+% expect:  0 errors; one Declaration, of `\x`
+% status:  RED (Z2r2; catalogued, no guard)
+\documentclass{article}
+\usepackage{ifthen}
+\begin{document}
+\title{T}
+\author{\ifthenelse{\equal{a}{a}}{\def\x{1}}{}Ann Lee}
+\maketitle
+Body.
+\end{document}

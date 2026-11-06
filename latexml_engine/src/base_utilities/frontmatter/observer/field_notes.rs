@@ -1,12 +1,12 @@
 //! A rehearsal's notes on what its boxes do not hold ([`FieldNotes`]): the definitions and the errors of a frontmatter
 //! field's tokens, by position, taken on each field token's invocation (core `token::FieldNotesHook`).
 
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
 use latexml_core::{
   T_CS,
   common::{arena::SymStr, error::REPORT, object::Object, store::Stored},
-  definition::expandable::Expandable,
+  definition::{ExpansionBody, expandable::Expandable, origin::DefinitionOrigin},
   digested::{Digested, DigestedData},
   document::FIELD_FORMULA_START_PROPERTY,
   gullet::{pushback_is_empty, pushback_len},
@@ -86,9 +86,12 @@ pub struct FieldNotes {
   lead:             Option<u16>,
   /// the same, as the invocation being noted reads it
   lead_read:        Option<u16>,
-  /// the field tokens expanded since the last invocation, and those before the invocation being noted
-  expansions:       Vec<(u16, Token)>,
-  read_expansions:  Vec<(u16, Token)>,
+  /// the last run of one field token expanded since the last invocation, where it starts (an `\expandafter` chain's), and that of
+  /// the invocation being noted: the expansions of a block of a thousand names, no list of them
+  expanded:         Option<(u16, Token)>,
+  read_expanded:    Option<(u16, Token)>,
+  /// whether a declaration's call may still be being read ([`FieldDeclaration`] `open`)
+  any_open:         bool,
 }
 
 thread_local! {
@@ -152,14 +155,71 @@ fn names_nothing(token: &Token) -> bool {
     })
 }
 
+/// `token`'s meaning when a macro.
+fn macro_of(token: &Token) -> Option<Rc<Expandable>> {
+  match state::lookup_meaning(token) {
+    Some(Stored::Expandable(meaning)) => Some(meaning),
+    _ => None,
+  }
+}
+
+/// What the field hands a call at `pos` reading up to `reach`: its arguments' tokens.
+fn handed_to_a_call(field: &[Option<Token>], pos: u16, reach: u16) -> &[Option<Token>] {
+  field
+    .get(usize::from(pos) + 1..usize::from(reach).min(field.len()))
+    .unwrap_or(&[])
+}
+
+/// The names a macro the document defined holds in its body, and those a macro of the same kind in its body holds: what a kernel's or
+/// a binding's macro it calls may be defining for it (`\newcommand\m{\newcount\qq}`, `\newcommand\m{\@ifundefined{qq}{\def\qq{1}}{}}`).
+/// A name built at run time is in no body (`\@namedef{qq}{1}`). None for a macro of a file it read: a raw package's body names its own
+/// state, which a run of the kernel's assigns for it (`\makecell`'s `\tabg@pe`, `\t@bset`, 2203.03195, 2502.11387).
+#[cold]
+#[inline(never)]
+fn names_in_a_papers_macro(call: &Rc<Expandable>) -> Vec<SymStr> {
+  let mut names: Vec<SymStr> = Vec::new();
+  if call.get_origin() != DefinitionOrigin::Document {
+    return names;
+  }
+  let mut bodies = vec![Rc::clone(call)];
+  let mut read = 0usize;
+  while let Some(macro_) = bodies.pop() {
+    let Some(ExpansionBody::Tokens(body)) = macro_.expansion.as_ref() else {
+      continue;
+    };
+    for token in body.unlist_ref() {
+      let key = state::meaning_key(token);
+      if names.contains(&key) {
+        continue;
+      }
+      names.push(key);
+      if let Some(meaning) = macro_of(token)
+        && meaning.get_origin() == DefinitionOrigin::Document
+        && read < MACROS_READ_FOR_NAMES
+      {
+        read += 1;
+        bodies.push(meaning);
+      }
+    }
+  }
+  names
+}
+
+/// How many macros [`names_in_a_papers_macro`] reads, past which a name is too far from the call to be its.
+const MACROS_READ_FOR_NAMES: usize = 64;
+
 /// Keep of what `token`, invoked at the field position `pos` and reading up to `reach`, assigned what the paper declares. The
 /// field's own token there, a definer invoked directly (`\def`, `\let`, `\newcommand`), declares what it assigns. So does the
-/// expansion of a call there of a macro the paper or a file it read defined, unless it is the expansion of a kernel's or a
-/// binding's macro that call reached (`inside`, [`close_runs`]: `\newcommand\lxaff{\small\itshape}`, 2608.17767's
-/// `\small\itshape`, `\itshape` being made by `\reinstall@nfss@defs` at `\begin{document}`), or names nothing. A kernel's or a
-/// binding's macro called there assigns on its own account (a font switch's `\f@series`, `\centering`'s `\\`, an environment's
-/// `\@currenvir`), so only the names the field handed it are the paper's (`\newcount\nn`, `\newsavebox\bb`, whose arguments the
+/// expansion of a call there of a macro the paper or a file it read defined, unless it names nothing. Within the run of a kernel's or
+/// a binding's macro that call reached (`inside`, [`close_runs`]) the kernel assigns on its own account (`\size@update`,
+/// `\@let@token`), so only what the call's body or its arguments name is the paper's: 2608.17767's `\newcommand\lxaff{\small\itshape}`
+/// declares nothing, `\itshape` being made by `\reinstall@nfss@defs` at `\begin{document}`; `\newcommand\m{\newcount\qq}`
+/// and `\newcommand\m{\@ifundefined{qq}{\def\qq{1}}{}}` declare `\qq` ([`names_in_a_papers_macro`]). A kernel's or a binding's
+/// macro called there assigns on its own account likewise (a font switch's `\f@series`, `\centering`'s `\\`, an environment's
+/// `\@currenvir`): only the names the field handed it are the paper's (`\newcount\nn`, `\newsavebox\bb`, whose arguments the
 /// expansion reads).
+#[cold]
+#[inline(never)]
 fn keep_declared(
   token: &Token,
   pos: u16,
@@ -176,9 +236,7 @@ fn keep_declared(
   match state::lookup_meaning(call) {
     Some(Stored::Expandable(_)) if direct => assigned.clear(),
     Some(Stored::Expandable(definition)) if definition.get_origin().is_latexml_owned() => {
-      let handed = field
-        .get(usize::from(pos) + 1..usize::from(reach).min(field.len()))
-        .unwrap_or(&[]);
+      let handed = handed_to_a_call(field, pos, reach);
       assigned.retain(|assignment| {
         handed
           .iter()
@@ -186,8 +244,18 @@ fn keep_declared(
           .any(|t| state::meaning_key(t) == assignment.key)
       });
     },
-    Some(Stored::Expandable(_)) => {
-      if inside || names_nothing(token) {
+    Some(Stored::Expandable(definition)) => {
+      if inside {
+        let named = names_in_a_papers_macro(&definition);
+        let handed = handed_to_a_call(field, pos, reach);
+        assigned.retain(|assignment| {
+          named.contains(&assignment.key)
+            || handed
+              .iter()
+              .flatten()
+              .any(|t| state::meaning_key(t) == assignment.key)
+        });
+      } else if names_nothing(token) {
         assigned.clear();
       }
     },
@@ -212,10 +280,7 @@ fn close_runs(notes: &mut FieldNotes, held: usize) {
 
 /// What `test` says of `token`'s meaning when a macro; false else.
 fn with_expandable(token: &Token, test: impl Fn(&Expandable) -> bool) -> bool {
-  match state::lookup_meaning(token) {
-    Some(Stored::Expandable(meaning)) => test(&meaning),
-    _ => false,
-  }
+  macro_of(token).is_some_and(|meaning| test(&meaning))
 }
 
 /// Note the expansion of the field token `token`, its tokens about to go on the input: a kernel's or a binding's macro a paper's
@@ -241,10 +306,11 @@ fn field_expansion(token: &Token) {
         notes.kernel_runs.push((pos, held));
       }
     }
-    if let Some((_, kind)) = notes
-      .block_breaks
-      .iter()
-      .find(|(command, _)| command == token)
+    if !notes.block_breaks.is_empty()
+      && let Some((_, kind)) = notes
+        .block_breaks
+        .iter()
+        .find(|(command, _)| command == token)
     {
       notes.breaks.push(FieldBreak {
         at:      pos,
@@ -252,21 +318,22 @@ fn field_expansion(token: &Token) {
         kind:    *kind,
       });
     }
-    notes.expansions.push((pos, *token));
+    notes.expanded = match notes.expanded {
+      Some((start, last)) if last == *token => Some((start.min(pos), last)),
+      _ => Some((pos, *token)),
+    };
   });
 }
 
 /// Where what leads to an invocation starts ([`FieldNotes::lead`]): the prefixes waiting for it, and the `\expandafter`s last expanded
 /// before it, the inner ones first (`\expandafter\def\expandafter\y…`); any other expansion ends those, a prefix waiting past it.
-fn read_lead(waiting: Option<u16>, expansions: &[(u16, Token)]) -> Option<u16> {
-  let mut lead = waiting;
-  for (pos, token) in expansions.iter().rev() {
-    if !with_expandable(token, |meaning| meaning.cs == *TOKEN_EXPANDAFTER) {
-      break;
-    }
-    lead = Some(lead.map_or(*pos, |lead| lead.min(*pos)));
+fn read_lead(waiting: Option<u16>, expanded: Option<(u16, Token)>) -> Option<u16> {
+  match expanded {
+    Some((pos, token)) if with_expandable(&token, |meaning| meaning.cs == *TOKEN_EXPANDAFTER) => {
+      Some(waiting.map_or(pos, |lead| lead.min(pos)))
+    },
+    _ => waiting,
   }
-  lead
 }
 
 /// What the hook hears ([`token::FieldNotesHook`]).
@@ -290,10 +357,24 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
       digested.try_set_property(FIELD_FORMULA_START_PROPERTY, i64::from(pos));
     }
   }
-  // (what it is read inside of and led by, as the last left them; nearly every invocation: no error, nothing assigned, no
-  // declaration its reach could close)
-  let waiting = result.is_empty() && state::has_tex_prefixes();
+  // (a letter of a name, nearly every invocation: it makes a box, in no run, led by nothing, no error, no declaration its reach
+  // could close, nothing assigned)
   let errors = REPORT.borrow().error;
+  if !result.is_empty()
+    && state::meaning_log_is_empty()
+    && FIELD_NOTES.with(|notes| {
+      let notes = notes.borrow();
+      notes.kernel_runs.is_empty()
+        && notes.expanded.is_none()
+        && notes.lead.is_none()
+        && !notes.any_open
+        && errors == notes.errors_seen
+    })
+  {
+    return;
+  }
+  // (what it is read inside of and led by, as the last left them)
+  let waiting = result.is_empty() && state::has_tex_prefixes();
   let (inside, quiet) = FIELD_NOTES.with(|notes| {
     let notes = &mut *notes.borrow_mut();
     if !notes.kernel_runs.is_empty() {
@@ -301,18 +382,12 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
     }
     let inside = notes.kernel_runs.last().is_some_and(|(at, _)| *at == pos);
     // (the expansions before it, read at a declaration or by a prefix; the prefixes waiting for it, then for the next)
-    std::mem::swap(&mut notes.expansions, &mut notes.read_expansions);
-    notes.expansions.clear();
+    notes.read_expanded = notes.expanded.take();
     notes.lead_read = notes.lead.take();
     if waiting {
-      notes.lead = read_lead(notes.lead_read, &notes.read_expansions).or(Some(pos));
+      notes.lead = read_lead(notes.lead_read, notes.read_expanded).or(Some(pos));
     }
-    let quiet = errors == notes.errors_seen
-      && !notes
-        .declarations
-        .iter()
-        .any(|declaration| declaration.open);
-    (inside, quiet)
+    (inside, errors == notes.errors_seen && !notes.any_open)
   });
   if quiet && state::meaning_log_is_empty() {
     return;
@@ -332,8 +407,12 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
       .as_ref()
       == Some(token)
   });
-  let pending_here =
-    !own && pending.field == cover.field && pending.start <= pos && pos <= pending.end;
+  // (a field's own token whose next token is no later one of the field read what the call around it read, which shows no more:
+  // `\newcommand\pass[1]{#1\relax}\pass{\def\x{1}}`, `\textbf{\def\x{1}}`, the last of `\AtBeginDocument{\def\x{1}\def\y{2}}`)
+  let pending_here = (!own || cover.end <= pos + 1)
+    && pending.field == cover.field
+    && pending.start <= pos
+    && pos <= pending.end;
   let reach = if pending_here {
     pending.end.max(cover.end)
   } else {
@@ -355,17 +434,24 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
         .push((pos, reach.max(pos + 1), errors - notes.errors_seen));
     }
     notes.errors_seen = errors;
-    notes.declarations.retain_mut(|declaration| {
-      if declaration.open {
-        if pos >= declaration.end || (pending.field == cover.field && pending.end > declaration.end)
-        {
-          declaration.open = false;
-        } else if !result.is_empty() && declaration.start <= pos {
-          return false;
+    if notes.any_open {
+      notes.declarations.retain_mut(|declaration| {
+        if declaration.open {
+          if pos >= declaration.end
+            || (pending.field == cover.field && pending.end > declaration.end)
+          {
+            declaration.open = false;
+          } else if !result.is_empty() && declaration.start <= pos {
+            return false;
+          }
         }
-      }
-      true
-    });
+        true
+      });
+      notes.any_open = notes
+        .declarations
+        .iter()
+        .any(|declaration| declaration.open);
+    }
     if !result.is_empty() || assigned.is_empty() || field_token_encloses(notes.stack) {
       return;
     }
@@ -396,7 +482,7 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
           }
         }
         notes.declarations.push(FieldDeclaration {
-          start: read_lead(notes.lead_read, &notes.read_expansions).unwrap_or(pos),
+          start: read_lead(notes.lead_read, notes.read_expanded).unwrap_or(pos),
           end: reach.max(pos + 1),
           definees: once,
           global,
@@ -404,6 +490,7 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
           open: true,
           call: pos,
         });
+        notes.any_open = true;
       },
     }
   });

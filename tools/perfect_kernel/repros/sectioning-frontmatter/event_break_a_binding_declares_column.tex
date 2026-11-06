@@ -1,15 +1,13 @@
-% witness: FRONTMATTER_DIGESTED_REFACTOR gap 3, ACM `\alignauthor` (sig-alternate.cls:283's shape; old reader `separators.rs`)
-% oracle:  pdflatex 0 errors: two columns, "Ann Able/Univ A" and "Bob Baker/Univ B"
-% engines: Perl has no events; ours before this fix had no trace of the call past what the class makes it print
-% expect:  0 errors; the calls stand as Breaks of kind `column` beside the events, which stay what the class prints
+% witness: FRONTMATTER_DIGESTED_REFACTOR gap 3, ACM `\alignauthor` under OmniBus, the fallback for a class with no copy (OmniBus.cls.ltxml:76, a no-op); sig-alternate.cls:283 prints two columns
+% oracle:  no OmniBus.cls in TeX: a binding of LaTeXML's; sig-alternate.cls read raw prints "Ann Able", "Bob Baker" in two columns, as a tabular's cells, which its events read
+% engines: Perl has no events; ours before Z2: no trace of the call past the no-op
+% expect:  0 errors; the calls stand as Breaks of kind `column` beside the events; the kernel declares no such command: the twin, a document's own, has no list
 %          (perfect_kernel_batchz2::a_break_a_binding_declares_stands_beside_the_events)
-% status:  GREEN (Z2)
-\documentclass{article}
-\newcommand\alignauthor{\end{tabular}\hfill\begin{tabular}[t]{c}}
+% status:  GREEN (Z2r2)
+\documentclass{OmniBus}
 \begin{document}
 \title{T}
-\author{\alignauthor Ann Able\\ Univ A
-\alignauthor Bob Baker\\ Univ B}
+\author{\alignauthor Ann Able \alignauthor Bob Baker}
 \maketitle
 Body.
 \end{document}

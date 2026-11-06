@@ -1,0 +1,18 @@
+% witness: 2606.16069 (IEEEtran, two `\author` calls: pdflatex and Perl 4 creators, ours 8 before this fix)
+% oracle:  pdflatex 0 errors: only the last `\author` prints: "Bob Baker", "Univ B", bob@b.org; and the `\thanks` beside the calls
+% engines: Perl the same (its `\author` queues one deferred creator, `\lx@add@authors` dequeues the one before);
+%          rust before this fix: each `\IEEEauthorblockN` queued a creator and each `\IEEEauthorblockA` a contact at its `\author`,
+%          so Ann Able and Cat Cole stayed, and a dequeue of the creators alone left their contacts to the last author
+% expect:  0 errors; the last call's alone (perfect_kernel_batchz2::the_last_author_call_wins_in_the_blocks_path);
+%          the twin: a plain `\author` after blocks, and a call after a `\maketitle`, which printed the one before
+% status:  GREEN (Z2r2)
+\documentclass{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{1\textsuperscript{st} Ann Able\thanks{First call's note.}}\IEEEauthorblockA{Univ A\\ ann@a.org}
+\and \IEEEauthorblockN{2\textsuperscript{nd} Cat Cole}\IEEEauthorblockA{Univ C\\ cat@c.org}}
+\thanks{Funded.}
+\author{\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B\\ bob@b.org}}
+\maketitle
+Body.
+\end{document}
