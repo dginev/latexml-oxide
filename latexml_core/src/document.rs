@@ -338,6 +338,9 @@ pub const FIELD_PROV_PROPERTY: &str = "fieldProv";
 /// ([`field_ledger_push`](crate::token::field_ledger_push): its own position, the arguments its invocation consumed, a
 /// boxless font switch before it).
 pub const FIELD_SERIAL_PROPERTY: &str = "fieldSerial";
+/// A formula's first position in a field, under a rehearsal's notes only (the engine's `field_notes`): the opening shift's, its
+/// box stamped by the closing one, whose invocation built it.
+pub const FIELD_FORMULA_START_PROPERTY: &str = "fieldFormulaStart";
 
 /// The whatsit property of a TeX box's constructor (OXIDIZED_DESIGN #715), set where it is digested while field ink
 /// is recorded ([`field_box_whatsit`]): a constructor whose declared mode is `restricted_horizontal` outside math

@@ -29,6 +29,8 @@ pub(super) struct Lexer {
   symbol_span:       Option<(u16, u16)>,
   /// a printed space before the symbol mark being read
   symbol_space:      bool,
+  /// what encloses the symbol mark being read: its first character's base, its last's end
+  symbol_formula:    Option<MarkFormula>,
   /// the brackets `(`, `[` printed and not yet closed since the line's start, and how many were open where the name run
   /// being read began: inside one a comma or the word "and" is the bracket's text, no separator (`Laurent Schoeffel (on
   /// behalf of the H1 and ZEUS collaborations)`, 0811.3142; review rev94a B2)
@@ -94,6 +96,7 @@ impl Lexer {
     mark.role = Some("text".to_string());
     mark.span = self.symbol_span.take();
     mark.space_before = std::mem::take(&mut self.symbol_space);
+    mark.formula = self.symbol_formula.take();
     mark.line_first = !self.line_inked;
     self.line_inked = true;
     self.events.push(mark);
@@ -207,8 +210,9 @@ impl Lexer {
     span: Option<(u16, u16)>,
     font: Option<FontKey>,
     nest: u8,
+    formula: Option<MarkFormula>,
   ) {
-    for c in text.chars() {
+    for (at, c) in text.char_indices() {
       // (a zero-width character prints no ink: the zero-width space `{\,\!}` leaves in `${\,\!}^2$`, 2112.13115 —
       // it was read into the name before the mark and into the entry after it)
       if is_zero_width(c) {
@@ -227,6 +231,17 @@ impl Lexer {
           self.symbol_space = self.gap_items > 0;
         }
         self.flush_gap();
+        // (a letter or digit later in this box prints after it too)
+        let here = formula.map(|f| MarkFormula {
+          ends: f.ends && !has_word(&text[at + c.len_utf8()..]),
+          ..f
+        });
+        self.symbol_formula = match (self.symbol_formula, here) {
+          (Some(first), Some(here)) if !self.symbol.is_empty() => {
+            Some(MarkFormula { ends: here.ends, ..first })
+          },
+          (_, here) => here,
+        };
         self.symbol.push(c);
         self.symbol_span = join_span(self.symbol_span, span);
         continue;
@@ -420,7 +435,7 @@ fn glued_in_source(before: Option<&Event>, mark: &Event, after: Option<&Event>) 
 }
 
 /// A character printing nothing: the zero-width space, non-joiner and joiner, the word joiner and the byte-order mark.
-fn is_zero_width(c: char) -> bool {
+pub(super) fn is_zero_width(c: char) -> bool {
   matches!(
     c,
     '\u{200B}' | '\u{200C}' | '\u{200D}' | '\u{2060}' | '\u{FEFF}'

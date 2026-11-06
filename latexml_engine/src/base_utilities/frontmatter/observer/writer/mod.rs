@@ -23,11 +23,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
   events::Event,
-  ledger::{Entry, Outcome, SkipReason, with_ledger},
+  ledger::{Entry, Ledger, Outcome, ReadBack, SkipReason, with_ledger},
   policy::{family_written, policy_for},
   resolver::{
     Assoc, RCreator, Resolved, in_source_order, is_change_rule, ledger_inputs, mark_labels, resolve,
   },
+  shadow::{FmShadow, fm_shadow_mode},
   *,
 };
 
@@ -40,34 +41,93 @@ use plan::{Op, Owner};
 // (the writer's cut of a block's entry, which the reading checks an in-block contact's entries by: `events::labelled_entries`)
 pub(super) use plan::{entry_forms, labelled_start, span_tokens};
 
-/// The resolution of the document's author blocks when the writer may write them: every block flushed so far
+/// Why the writer stays out of the paper the ledger holds, `None` where it may write: every block flushed so far
 /// rehearsed without an error held, the API calls after them rehearsed, and every block's family `written`.
+pub(super) fn writer_stays_out(ledger: &Ledger) -> Option<&'static str> {
+  let mut blocks = 0usize;
+  for entry in &ledger.entries {
+    match entry {
+      Entry::Author(block) => {
+        blocks += 1;
+        match &block.outcome {
+          // (an empty call holds nothing to read: llncs's `\and\\` between two names, an empty piece of its split —
+          // 2409.09478)
+          Outcome::Events { errors: 0, .. } | Outcome::Skipped(SkipReason::Empty) => {},
+          Outcome::Events { .. } => return Some(HELD_DIAGNOSTICS),
+          Outcome::Skipped(reason) | Outcome::Deferred(reason) => return Some(reason.name()),
+          Outcome::Pending => return Some(SkipReason::NoFlush.name()),
+        }
+        if !policy_for(&block.binding, block.hook).written {
+          return Some(FAMILY_NOT_WRITTEN);
+        }
+      },
+      // (the title is recorded for its marks alone: it never holds the writing back)
+      Entry::Api(call) if !call.inside && !call.rehearsed && call.tag != "ltx:title" => {
+        return Some(CALL_NOT_REHEARSED);
+      },
+      _ => {},
+    }
+  }
+  (blocks == 0).then_some(NO_BLOCK)
+}
+
+/// The writer's reasons of its own to stay out ([`writer_stays_out`]), beside the blocks' `SkipReason`s.
+const HELD_DIAGNOSTICS: &str = "held diagnostics";
+const FAMILY_NOT_WRITTEN: &str = "a family not written";
+const CALL_NOT_REHEARSED: &str = "an API call not rehearsed";
+const NO_BLOCK: &str = "no author block";
+
+/// The resolution of the document's author blocks when the writer may write them ([`writer_stays_out`]).
 fn written_resolution() -> Option<Resolved> {
   with_ledger(|ledger| {
-    let mut blocks = 0usize;
-    for entry in &ledger.entries {
-      match entry {
-        Entry::Author(block) => {
-          blocks += 1;
-          match &block.outcome {
-            // (an empty call holds nothing to read: llncs's `\and\\` between two names, an empty piece of its split —
-            // 2409.09478)
-            Outcome::Events { errors: 0, .. } | Outcome::Skipped(SkipReason::Empty) => {},
-            _ => return None,
-          }
-          if !policy_for(&block.binding, block.hook).written {
-            return None;
-          }
-        },
-        // (the title is recorded for its marks alone: it never holds the writing back)
-        Entry::Api(call) if !call.inside && !call.rehearsed && call.tag != "ltx:title" => {
-          return None;
-        },
-        _ => {},
+    writer_stays_out(ledger)
+      .is_none()
+      .then(|| resolve(&ledger_inputs(ledger)))
+  })
+}
+
+/// Under the census (`ab_audit fmshadow`'s closed list of decline reasons), why the plan or the re-part refused: the
+/// first refusal of the paper, what its `declined: …` counts under. Nothing runs by default.
+pub(super) fn note_refusal(reason: &str) {
+  if fm_shadow_mode() == FmShadow::On {
+    with_ledger(|ledger| {
+      ledger.refusal.get_or_insert_with(|| reason.to_string());
+    });
+  }
+}
+
+/// The writer's own decline: its outcome, unless an earlier pass wrote one (`keep`), and under the census its reason.
+fn decline(reason: &str, keep: bool) {
+  with_ledger(|ledger| {
+    if !keep || ledger.writer.is_none() {
+      ledger.writer = Some(s!("declined: {reason}"));
+      if fm_shadow_mode() == FmShadow::On {
+        ledger.refusal = Some(reason.to_string());
       }
     }
-    (blocks > 0).then(|| resolve(&ledger_inputs(ledger)))
-  })
+  });
+}
+
+/// The read-back, the last step of `insert_frontmatter` and under the census only (E0; FRONTMATTER_SINGLE_ENGINE_PLAN.md,
+/// definition of done item 5): the final document's owners against the reading, by the writer's own comparator
+/// ([`plan::difference`]) — the reading the writer last compared with ([`Ledger::compared`]) where it got that far, else
+/// the resolver's. A paper the writer found the same or wrote that no longer reads so was changed by a pass after the
+/// writer: what Z8 and Z9 pay down. It reads; it changes nothing.
+///
+/// [`Ledger::compared`]: super::ledger::Ledger::compared
+pub(in crate::base_utilities) fn read_back_frontmatter(document: &mut Document) {
+  if fm_shadow_mode() != FmShadow::On || rehearsal::rehearsing() {
+    return;
+  }
+  let reading = with_ledger(|ledger| {
+    ledger
+      .compared
+      .clone()
+      .unwrap_or_else(|| resolve(&ledger_inputs(ledger)))
+  });
+  let front = dom::read(document);
+  let difference = plan::difference(&reading, &front);
+  with_ledger(|ledger| ledger.read_back = Some(ReadBack { difference }));
 }
 
 /// The API calls the writer leaves as today's output holds them: each made by a frontmatter setter whose binding's
@@ -259,11 +319,7 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
     resolved
   } else {
     let Some(kept) = keep_as_today(&resolved, &front, &unwritten)? else {
-      with_ledger(|ledger| {
-        if ledger.writer.is_none() {
-          ledger.writer = Some("declined: an unwritten family's call beside a re-part".to_string());
-        }
-      });
+      decline("an unwritten family's call beside a re-part", true);
       return Ok(());
     };
     unwritten_kept = kept.1;
@@ -282,11 +338,7 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
   let taken_out = resolved.clone();
   let resolved = give_back_addresses(&resolved, &dom::Front::default(), true)?;
   let Some(resolved) = repart::concede(&resolved, &front) else {
-    with_ledger(|ledger| {
-      if ledger.writer.is_none() {
-        ledger.writer = Some("declined: a conceded creator's ink".to_string());
-      }
-    });
+    decline("a conceded creator's ink", true);
     return Ok(());
   };
   // (today's names parted otherwise than the reading's: the creators written again from the reading, when what is
@@ -297,12 +349,14 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
   {
     return decline_nameless(&resolved);
   }
-  if let Some(repart) = repart
-    && repart::apply(document, &resolved, &front, &repart)?
-  {
-    DebugFeature!("frontmatter", "FRONT writer: the names re-parted");
-    with_ledger(|ledger| ledger.writer = Some("written".to_string()));
-    front = dom::read(document);
+  if let Some(repart) = repart {
+    if repart::apply(document, &resolved, &front, &repart)? {
+      DebugFeature!("frontmatter", "FRONT writer: the names re-parted");
+      with_ledger(|ledger| ledger.writer = Some("written".to_string()));
+      front = dom::read(document);
+    } else {
+      note_refusal("the re-part did not read as the reading");
+    }
   }
   // (an entry the reading took addresses out of that today's holds no item of — cut by the same reader — is given back
   // as it was: the reading's take-out written only where today's prints it so, brief 95c's fail-safe; read against
@@ -338,6 +392,9 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
   } else {
     resolved
   };
+  if fm_shadow_mode() == FmShadow::On {
+    with_ledger(|ledger| ledger.compared = Some(resolved.clone()));
+  }
   let Some(plan) = planned else {
     // (a later pass that finds the document reading as the reading keeps the earlier pass's outcome: `--streaming`
     // places the frontmatter again at the document's end, after this writer wrote it)
@@ -349,7 +406,10 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
         ledger.writer = Some(match &kept_whole {
           Some(d) => s!("declined: {d}"),
           None if unwritten_kept => {
-            "declined: an unwritten family's items kept as today's".to_string()
+            if fm_shadow_mode() == FmShadow::On {
+              ledger.refusal = Some(KEPT_AS_TODAY.to_string());
+            }
+            s!("declined: {KEPT_AS_TODAY}")
           },
           None => "same".to_string(),
         })
@@ -576,6 +636,9 @@ fn writes_a_nameless_creator(owners: impl IntoIterator<Item = Owner>, front: &do
   front.nameless.is_empty() && owners.into_iter().any(|owner| owner == Owner::Block)
 }
 
+/// The writer's decline where an unwritten family's items kept as today's are all it could write ([`keep_as_today`]).
+const KEPT_AS_TODAY: &str = "an unwritten family's items kept as today's";
+
 /// Decline the paper's writing for [`writes_a_nameless_creator`]: a Warning naming the block the reading's own items
 /// come from, today's frontmatter kept.
 fn decline_nameless(resolved: &Resolved) -> Result<()> {
@@ -591,7 +654,7 @@ fn decline_nameless(resolved: &Resolved) -> Result<()> {
       "The frontmatter observer's reading would write a creator with no name for the author block's own items (ledger entry {block}); the frontmatter is kept as the API wrote it"
     )
   );
-  with_ledger(|ledger| ledger.writer = Some("declined: a creator with no name".to_string()));
+  decline("a creator with no name", false);
   Ok(())
 }
 

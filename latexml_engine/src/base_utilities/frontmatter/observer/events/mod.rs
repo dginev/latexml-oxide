@@ -15,18 +15,23 @@
 //! - **Note**: `\thanks`/`\footnote`/`\footnotetext`, with its label (a `\label` inside it), its inner contacts and its
 //!   Marks (the one it opens with `line_first`);
 //! - **Layout**: a box or a styling container (its command), an alignment cell, a change of font between runs (a
-//!   run's first font against the previous run's: a switch inside a run shows at the next run, not where it was).
+//!   run's first font against the previous run's: a switch inside a run shows at the next run, not where it was);
+//! - **Declaration**: a definition made in the block that prints nothing ([`declaration_events`], beside the block's
+//!   other events: `shadow.rs`).
+//!
+//! A Mark inside a formula or a group says so ([`MarkFormula`]: what encloses it, its base, the letter or digit after
+//! it); a contact that prints nothing ([`Event::unprinted`]) and an event an error was held at ([`Event::held`]) too.
 //!
 //! Each event carries its span of the author field's positions (`fieldProv`/`fieldSerial` of the boxes it is made of,
 //! core `gullet::field_cover_of`), its ink text and its layout nesting. ApiCall events (setters called outside the
 //! field) are the ledger's, added to the block by the shadow dump.
 
 use latexml_core::{
-  document::{FIELD_PROV_PROPERTY, FIELD_SERIAL_PROPERTY},
+  document::{FIELD_FORMULA_START_PROPERTY, FIELD_PROV_PROPERTY, FIELD_SERIAL_PROPERTY},
   token::{field_ledger_entry, field_prov_pos},
 };
 
-use super::*;
+use super::{field_notes::FieldDeclaration, marks::has_word, *};
 
 mod fonts;
 mod lexer;
@@ -34,7 +39,7 @@ pub(in crate::base_utilities) use fonts::{
   FontScope, InkFonts, Wrap, changes_font, entry_font, font_declaration, switch_free,
   text_font_command,
 };
-use lexer::Lexer;
+use lexer::{Lexer, is_mark_glyph};
 pub(in crate::base_utilities) use lexer::{is_fnsymbol, is_separator_word};
 
 /// The kind of a separator event.
@@ -68,6 +73,7 @@ pub enum EventKind {
   Note,
   Layout,
   ApiCall,
+  Declaration,
 }
 
 impl EventKind {
@@ -81,6 +87,7 @@ impl EventKind {
       EventKind::Note => "Note",
       EventKind::Layout => "Layout",
       EventKind::ApiCall => "ApiCall",
+      EventKind::Declaration => "Declaration",
     }
   }
 }
@@ -119,6 +126,52 @@ impl EmailMeaning {
       _ => EmailMeaning::Binding,
     }
   }
+}
+
+/// What a mark's script is set on in its formula, by what prints before it there, as `marks::read_formula` reads the
+/// XMath (OXIDIZED_DESIGN_DIVERGENCES #911): spacing, a blank box, a font switch and an empty group are no base, and past
+/// a formula's first script neither is punctuation or a symbol (`$^{1},^{2}$`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MarkBase {
+  /// nothing printed before it (`$^{1}$`, `${}^{3}$`, `$\,^{a}$`, `$\rm ^{a}$`, `$\mbox{ }^{1}$`)
+  Floating,
+  /// on ink (`$x^{1}$`, `$\text{Ann}^{1}$`, `$^{1}x^{2}$`'s second)
+  Posted,
+}
+
+impl MarkBase {
+  /// Its name in the shadow dump (`"base"`).
+  pub fn name(self) -> &'static str {
+    match self {
+      MarkBase::Floating => "floating",
+      MarkBase::Posted => "posted",
+    }
+  }
+
+  /// The base a dump's name gives (`ab_audit fmshadow`).
+  pub fn from_name(name: &str) -> Option<Self> {
+    match name {
+      "floating" => Some(MarkBase::Floating),
+      "posted" => Some(MarkBase::Posted),
+      _ => None,
+    }
+  }
+}
+
+/// What encloses a mark, from the digested boxes around it: the input of the fail-safe for a prescript and a mark, which
+/// print the same (`${}^{3}$He`: floating, ending its formula, as a mark `${}^{3}$` is; the principle's point 2,
+/// `FRONTMATTER_DIGESTED_REFACTOR.md`), never a decision itself.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MarkFormula {
+  /// the whole formula's span, or the group's or box's it is in, `None` where the content has no positions (an API
+  /// call's). A brace closing a group is covered by no box, so a group's span stops at the last box in it; a formula's
+  /// holds its closing shift
+  pub span: Option<(u16, u16)>,
+  /// in a formula, what it is set on ([`MarkBase`]); `None` in a group
+  pub base: Option<MarkBase>,
+  /// no letter or digit prints after it in the formula or group: spacing, punctuation, symbols, another script and a
+  /// subscript do not count (`$^{a})$`, `$^{1,2}\dagger$`; `marks::read_formula`'s test of a base after a script)
+  pub ends: bool,
 }
 
 /// One event of an author block.
@@ -164,6 +217,15 @@ pub struct Event {
   /// a cut in-block contact entry's: the containers holding it and another entry, which the writer wraps it in again
   /// (`fonts::Wrap`, `writer::container_wrap`)
   pub wrap:         Option<Rc<Wrap>>,
+  /// a mark's formula or group ([`MarkFormula`]), `None` for one at the block's top level
+  pub formula:      Option<MarkFormula>,
+  /// a contact's that prints nothing, what it records (`ltx:rdf`'s `content`: AASTeX 7's `\email` without `[show]`,
+  /// 2506.18556, 2507.12222; OXIDIZED_DESIGN #479): its `text` holds no ink, as the XML holds none. Such a call stands
+  /// outside the reading's events (`ledger::UnprintedCall`)
+  pub unprinted:    Option<String>,
+  /// an error of the block's rehearsal was held at a position it covers (`mark_held`): what it reads may be the
+  /// error's recovery, not the ink it stands for
+  pub held:         bool,
 }
 
 impl Event {
@@ -187,6 +249,9 @@ impl Event {
       annotate: None,
       font: None,
       wrap: None,
+      formula: None,
+      unprinted: None,
+      held: false,
     }
   }
 }
@@ -602,10 +667,14 @@ fn script_ink(d: &Digested, refs: bool) -> String {
 #[derive(Debug)]
 enum Atom {
   Ink {
-    text: String,
-    span: Option<(u16, u16)>,
-    font: Option<FontKey>,
-    nest: u8,
+    text:    String,
+    span:    Option<(u16, u16)>,
+    font:    Option<FontKey>,
+    nest:    u8,
+    /// a formula's subscript, which a formula's reading sets aside as it does a superscript
+    script:  bool,
+    /// what encloses it when it holds a mark glyph ([`Walker::enclose`])
+    formula: Option<MarkFormula>,
   },
   Space {
     width: f64,
@@ -695,15 +764,18 @@ impl Walker {
             span,
             font: font_key(d),
             nest,
+            script: false,
+            formula: None,
           });
         }
       },
       DigestedData::List(l) => {
-        self.lists += 1;
-        for child in l.borrow().boxes.iter() {
-          self.walk(child, nest);
+        let at = self.atoms.len();
+        self.walk_list(&l.borrow(), nest);
+        // (a braced group; the block's own list is none)
+        if self.lists > 0 {
+          self.enclose(at, d, false);
         }
-        self.lists -= 1;
       },
       DigestedData::Whatsit(w) => self.walk_whatsit(d, &w.borrow(), nest),
       DigestedData::Alignment(a) => {
@@ -729,6 +801,82 @@ impl Walker {
         }
       },
       _ => {},
+    }
+  }
+
+  /// A list's boxes, walked in it.
+  fn walk_list(&mut self, list: &List, nest: u8) {
+    self.lists += 1;
+    for child in list.boxes.iter() {
+      self.walk(child, nest);
+    }
+    self.lists -= 1;
+  }
+
+  /// Say what encloses the marks among the atoms from `at` that nothing inside encloses: `d`, a formula or a group
+  /// ([`MarkFormula`]). Only where it holds one: a formula of no mark costs nothing.
+  fn enclose(&mut self, at: usize, d: &Digested, formula: bool) {
+    fn holds_glyph(text: &str) -> bool { text.chars().any(|c| is_fnsymbol(c) || is_mark_glyph(c)) }
+    let open = |atom: &Atom| match atom {
+      Atom::Event(e) => e.kind == EventKind::Mark && e.formula.is_none(),
+      Atom::Ink { text, formula, .. } => formula.is_none() && holds_glyph(text),
+      Atom::Space { .. } => false,
+    };
+    let atoms = &mut self.atoms[at..];
+    if !atoms.iter().any(open) {
+      return;
+    }
+    let span = deep_span(d);
+    // (a formula's opening shift, which no box of it covers: `document::FIELD_FORMULA_START_PROPERTY`)
+    let span = match d.get_property(FIELD_FORMULA_START_PROPERTY).as_deref() {
+      Some(Stored::Int(start)) if formula => join_span(
+        span,
+        u16::try_from(*start).ok().map(|start| (start, start + 1)),
+      ),
+      _ => span,
+    };
+    // (print order: a first script's base is whatever prints before it, a later one's a letter or digit)
+    let mut bases = Vec::with_capacity(atoms.len());
+    let (mut has_base, mut scripted) = (false, false);
+    for atom in atoms.iter() {
+      bases.push(has_base);
+      match atom {
+        Atom::Ink { text, script: false, .. } if scripted => has_base |= has_word(text),
+        Atom::Ink { text, script: false, .. } => {
+          has_base |= text
+            .chars()
+            .any(|c| !c.is_whitespace() && !lexer::is_zero_width(c));
+        },
+        Atom::Ink { script: true, .. } => scripted = true,
+        Atom::Event(e) if e.kind == EventKind::Mark => scripted = true,
+        _ => {},
+      }
+    }
+    let mut word_after = false;
+    for (atom, has_base) in atoms.iter_mut().zip(bases).rev() {
+      let enclosed = open(atom).then_some(MarkFormula {
+        span,
+        base: formula.then_some(if has_base {
+          MarkBase::Posted
+        } else {
+          MarkBase::Floating
+        }),
+        ends: !word_after,
+      });
+      match atom {
+        Atom::Event(event) => {
+          if enclosed.is_some() {
+            event.formula = enclosed;
+          }
+        },
+        Atom::Ink { text, script, formula, .. } => {
+          if enclosed.is_some() {
+            *formula = enclosed;
+          }
+          word_after |= !*script && has_word(text);
+        },
+        Atom::Space { .. } => {},
+      }
     }
   }
 
@@ -1105,7 +1253,9 @@ impl Walker {
       self.walk_container(d, w, &whatsit_cs(w), nest);
       return;
     };
+    let at = self.atoms.len();
     self.walk_math_list(&body, nest);
+    self.enclose(at, d, true);
   }
 
   fn walk_math_list(&mut self, d: &Digested, nest: u8) {
@@ -1136,6 +1286,8 @@ impl Walker {
             span: deep_span(d),
             font: None,
             nest,
+            script: true,
+            formula: None,
           });
         } else {
           self.walk_whatsit(d, &w, nest);
@@ -1208,6 +1360,8 @@ impl Walker {
           span: deep_span(d),
           font: None,
           nest,
+          script: false,
+          formula: None,
         });
       } else if let Some(width) = whatsit_width_em(d, w) {
         self.atoms.push(Atom::Space {
@@ -1219,12 +1373,18 @@ impl Walker {
       }
       return;
     }
+    let at = self.atoms.len();
     let mut layout = Event::new(EventKind::Layout);
     layout.role = Some(cs.to_string());
     self.event(layout, d, nest);
     for content in contents {
-      self.walk(&content, nest.saturating_add(1));
+      // (the group of what it shows is the whatsit, its own command's span with it, not the argument's list)
+      match content.data() {
+        DigestedData::List(l) => self.walk_list(&l.borrow(), nest.saturating_add(1)),
+        _ => self.walk(&content, nest.saturating_add(1)),
+      }
     }
+    self.enclose(at, d, false);
   }
 }
 
@@ -1669,7 +1829,14 @@ pub(in crate::base_utilities) fn lex_events(digested: &Digested) -> Vec<Event> {
   let mut lexer = Lexer::default();
   for atom in walker.atoms {
     match atom {
-      Atom::Ink { text, span, font, nest } => lexer.ink(&text, span, font, nest),
+      Atom::Ink {
+        text,
+        span,
+        font,
+        nest,
+        formula,
+        ..
+      } => lexer.ink(&text, span, font, nest, formula),
       Atom::Space { width, fill, span, word } => lexer.space(width, fill, span, word),
       Atom::Event(event) => lexer.push_event(event),
     }
@@ -1706,4 +1873,99 @@ pub(in crate::base_utilities) fn lex_events(digested: &Digested) -> Vec<Event> {
     events[at[0]] = whole;
   }
   events
+}
+
+/// The Declaration events of a block's definitions (`field_notes::FieldNotes`): a definition, printing nothing, is in no box, so
+/// it is read from the assignment and the position of the invocation that made it. Each is the call's span, the definees
+/// in `label` (space-parted, in order), `global` its role when it defines past the block's groups, its group depth
+/// `nest`. They stand beside the block's events, whose name runs a definition inside does not part (`Ann \def\x{y}Able`).
+/// One inside a box the block prints (`$\def\x{1}\x$`, `\thanks{\def\x{y}\x}`, `\textbf{…}`) is that box's, which holds it
+/// by its span: none of the block's list. A plain group's stays: a group is no box.
+pub(in crate::base_utilities) fn declaration_events(
+  digested: &Digested,
+  declarations: &[FieldDeclaration],
+) -> Vec<Event> {
+  /// The whatsits of `d`'s lists, in print order.
+  fn whatsits(d: &Digested, out: &mut Vec<Digested>) {
+    match d.data() {
+      DigestedData::List(l) => {
+        for child in l.borrow().boxes.iter() {
+          whatsits(child, out);
+        }
+      },
+      DigestedData::Whatsit(_) => out.push(d.clone()),
+      _ => {},
+    }
+  }
+  /// What a whatsit covers by `span`, with a formula's opening shift.
+  fn with_opening(d: &Digested, span: Option<(u16, u16)>) -> Option<(u16, u16)> {
+    let start = match d.get_property(FIELD_FORMULA_START_PROPERTY).as_deref() {
+      Some(Stored::Int(start)) => u16::try_from(*start).ok().map(|s| (s, s + 1)),
+      _ => None,
+    };
+    join_span(span, start)
+  }
+  if declarations.is_empty() {
+    return Vec::new();
+  }
+  let mut boxes = Vec::new();
+  whatsits(digested, &mut boxes);
+  let own: Vec<Option<(u16, u16)>> = boxes.iter().map(|d| with_opening(d, box_span(d))).collect();
+  let holds = |span: Option<(u16, u16)>, at: u16| span.is_some_and(|(s, e)| s <= at && at < e);
+  declarations
+    .iter()
+    .filter(|declaration| {
+      let at = declaration.start;
+      if own.iter().any(|span| holds(*span, at)) {
+        return false;
+      }
+      // (what a box holds can reach past its own stamp, `\mbox{\def\x{1}}`: the walk through it is a cost on a block of a
+      // thousand names, 1507.02068, so only the nearest stamped box before it is walked, and those of no stamp)
+      let nearest = own
+        .iter()
+        .enumerate()
+        .filter(|(_, span)| span.is_some_and(|(s, _)| s <= at))
+        .max_by_key(|(_, span)| span.map(|(s, _)| s))
+        .map(|(i, _)| i);
+      !boxes.iter().zip(&own).enumerate().any(|(i, (d, span))| {
+        (span.is_none() || Some(i) == nearest) && holds(with_opening(d, deep_span(d)), at)
+      })
+    })
+    .map(|declaration| {
+      let mut event = Event::new(EventKind::Declaration);
+      event.span = Some((declaration.start, declaration.end));
+      event.label = Some(
+        declaration
+          .definees
+          .iter()
+          .map(|key| to_string(*key))
+          .collect::<Vec<_>>()
+          .join(" "),
+      );
+      event.role = declaration.global.then(|| "global".to_string());
+      event.nest = u8::try_from(declaration.depth).unwrap_or(u8::MAX);
+      event
+    })
+    .collect()
+}
+
+/// An error a rehearsal held: where (`None`, past the block's last token: its groups' end), and its log line.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct HeldError {
+  pub span:    Option<(u16, u16)>,
+  pub message: String,
+}
+
+/// Mark the events an error held covers ([`Event::held`]), a note's inner events too. A rehearsal goes on past a held
+/// error, so the events are all there, the block's whole: what the marker adds is which of them the error touched.
+pub(in crate::base_utilities) fn mark_held(events: &mut [Event], held: &[HeldError]) {
+  for event in events {
+    event.held = event.span.is_some_and(|(start, end)| {
+      held
+        .iter()
+        .filter_map(|error| error.span)
+        .any(|(from, to)| from < end && start < to)
+    });
+    mark_held(&mut event.inner, held);
+  }
 }

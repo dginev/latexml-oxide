@@ -1024,6 +1024,24 @@ pub struct FieldLedgerScope {
   outer:   Option<Vec<Digested>>,
 }
 
+/// What runs on each field token's invocation while a rehearsal takes notes on what its boxes do not hold (the frontmatter
+/// observer's `field_notes`, in the engine): `Token::prov`'s test in the stomach, then this. All the core knows of them, so
+/// no line of theirs sits among the code the core's hot path is inlined from (Z01: the same lines here cost a text document
+/// 0.17 % of `instructions:u` with no call made, a reshuffle of the crate's codegen units).
+pub type FieldNotesHook = fn(&Token, FieldCover, &[Digested]);
+#[thread_local]
+static FIELD_NOTES_HOOK: std::cell::Cell<Option<FieldNotesHook>> = std::cell::Cell::new(None);
+
+/// Set (or, with `None`, clear) the hook [`FieldNotesHook`] names.
+pub fn set_field_notes_hook(hook: Option<FieldNotesHook>) { FIELD_NOTES_HOOK.set(hook); }
+
+/// The hook [`FieldNotesHook`] names, while one is set.
+#[inline]
+pub fn field_notes_hook() -> Option<FieldNotesHook> { FIELD_NOTES_HOOK.get() }
+
+/// The pending cover of a boxless invocation ([`field_cover_pending_merge`]).
+pub fn field_cover_pending() -> FieldCover { FIELD_COVER_PENDING.get() }
+
 thread_local! {
   /// The boxes stamped with a field provenance while a [`FieldLedgerScope`] is open (none outside one).
   static FIELD_STAMPED_BOXES: std::cell::RefCell<Option<Vec<Digested>>> =

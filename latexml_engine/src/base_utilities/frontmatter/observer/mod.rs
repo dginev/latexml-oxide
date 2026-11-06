@@ -32,6 +32,7 @@
 use super::*;
 
 pub(in crate::base_utilities) mod events;
+pub(in crate::base_utilities) mod field_notes;
 pub(in crate::base_utilities) mod ledger;
 pub(in crate::base_utilities) mod marks;
 pub(in crate::base_utilities) mod policy;
@@ -42,7 +43,8 @@ pub(in crate::base_utilities) mod writer;
 
 // (for `ab_audit fmshadow`, which re-resolves a dump's events offline; prefixed, as the prelude re-exports these)
 pub use events::{
-  EmailMeaning as FmEmailMeaning, Event as FmEvent, EventKind as FmEventKind, SepKind as FmSepKind,
+  EmailMeaning as FmEmailMeaning, Event as FmEvent, EventKind as FmEventKind,
+  MarkBase as FmMarkBase, MarkFormula as FmMarkFormula, SepKind as FmSepKind,
 };
 pub(in crate::base_utilities) use ledger::{
   field_stamped, note_field_stamp, record_api_call, record_author_call, record_clear,
@@ -70,4 +72,4 @@ pub(in crate::base_utilities) use shadow::shadow_flush;
 pub use shadow::{
   fm_shadow_enabled, fm_shadow_json, reset_fm_shadow, set_fm_shadow_override, write_fm_shadow,
 };
-pub(in crate::base_utilities) use writer::write_observed_frontmatter;
+pub(in crate::base_utilities) use writer::{read_back_frontmatter, write_observed_frontmatter};

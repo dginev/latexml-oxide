@@ -30332,7 +30332,7 @@ parameters is never asked), keeps the arguments of a setter made in a raw class 
 document's own directory, loaded as a package or class (a `filecontents` one too), that it writes into a store
 (`Expandable::stored_parameters`, once per definition: `#n` in the value of `WRITERS_OF_NAMES` — `\def` and kin, `\let`,
 `\g@addto@macro`, `\@namedef`, etoolbox's; the net's `stores_raw_code_writes` keeps its eight kernel ones,
-`NET_WRITERS_OF_NAMES`, so its output does not change — and `\renewcommand`, `\newcommand`, `\providecommand`, of a token
+`KERNEL_WRITERS_OF_NAMES`, so its output does not change — and `\renewcommand`, `\newcommand`, `\providecommand`, of a token
 register's assignment, or of a `\write` to a named stream). `\expandafter` is never a store's name. A scratch name
 (`SCRATCH_NAMES`, one list: `\@tempa`, `\reserved@a`-`f`, `\toks@`, `\@temptokena` and kin) is no store, as a reader
 neither, but what it holds hands on to what it is written into, as a name written earlier in the body does

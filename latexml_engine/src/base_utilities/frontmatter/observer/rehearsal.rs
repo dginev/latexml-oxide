@@ -9,6 +9,8 @@
 //! digested list is handed to a callback before it is discarded. Not LaTeX's `\begin{tabular}[t]{c}` around the
 //! line: no alignment machinery runs, and a stray `&` is digested as a whatsit that errs only when built into the
 //! document (tex_tables.rs `&`), never here: nothing is held for it, and the lexer reads it as a column separator.
+//! What its boxes do not say is noted beside them (`field_notes::FieldNotes`): the definitions made, the errors held, by the
+//! field position of the invocation.
 
 use std::cell::Cell;
 
@@ -18,7 +20,8 @@ use latexml_core::{
 };
 
 use super::{
-  events::EmailMeaning,
+  events::{EmailMeaning, Event, HeldError, declaration_events},
+  field_notes::{field_notes_begin, field_notes_end},
   ledger::{SkipReason, email_meaning},
   policy::TitleMarks,
   *,
@@ -32,7 +35,10 @@ thread_local! {
 pub(in crate::base_utilities) fn rehearsing() -> bool { REHEARSING.with(Cell::get) }
 
 /// No rehearsal is digesting (a conversion's start: one a panic left marked on a reused thread is over).
-pub(in crate::base_utilities) fn reset_rehearsing() { REHEARSING.with(|r| r.set(false)); }
+pub(in crate::base_utilities) fn reset_rehearsing() {
+  REHEARSING.with(|r| r.set(false));
+  field_notes_end();
+}
 
 /// The event constructors of the Layer-B bindings ([`install_event_bindings`]): whatsits the lexer reads
 /// (`events::lex_events`), never absorbed (a rehearsal's list is discarded), so they construct nothing. The `\and`
@@ -341,12 +347,16 @@ fn install_event_bindings(title_marks: TitleMarks) -> Result<()> {
 /// What a rehearsal gave.
 #[derive(Debug)]
 pub(in crate::base_utilities) enum Rehearsal<R> {
-  /// The callback's value on the digested list, and the errors and warnings the rehearsal raised (held, then
-  /// discarded with it).
+  /// The callback's value on the digested list, the errors and warnings the rehearsal raised (held, then discarded with
+  /// it), and what its boxes do not say.
   Done {
-    value:    R,
-    errors:   usize,
-    warnings: usize,
+    value:        R,
+    errors:       usize,
+    warnings:     usize,
+    /// the definitions made in the tokens' positions ([`declaration_events`]; none for tokens without positions)
+    declarations: Vec<Event>,
+    /// the errors held, by the positions they were raised at, in order (none positioned for tokens without positions)
+    held:         Vec<HeldError>,
   },
   /// No rehearsal was made or kept, and why: no journal could open (one is already open), its assignments could not be
   /// undone, or it ended in a Fatal error of its own (discarded with it).
@@ -396,6 +406,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
     assign_value(flag, true, Some(Scope::Global));
   }
   let hold = util::logger::DiagnosticsHold::begin();
+  begin_meaning_log();
   let resource_fatal_before = resource_fatal_latched();
   let muted = SuppressLogOutputGuard::new(true);
   // (an `\input` in the field opens its file again: its `(Processing content …` note is not the conversion's)
@@ -424,6 +435,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
       bgroup();
       install_event_bindings(title_marks)?;
       begin_mode("text")?;
+      field_notes_begin(&tokens);
       let digested = digest(tokens)?;
       end_mode("text")?;
       egroup()?;
@@ -444,8 +456,12 @@ pub(in crate::base_utilities) fn rehearse<R>(
   });
   truncate_token_stack(tokens_depth);
   expire_current_token();
+  let notes = field_notes_end();
   let value = match &result {
-    Ok(digested) => Some(inspect(digested)),
+    Ok(digested) => Some((
+      inspect(digested),
+      declaration_events(digested, &notes.declarations),
+    )),
     Err(_) => None,
   };
   REHEARSING.with(|r| r.set(false));
@@ -454,6 +470,12 @@ pub(in crate::base_utilities) fn rehearse<R>(
   drop(muted);
   let errors = hold.errors_raised();
   let warnings = hold.warnings_raised();
+  // (each held message is stripped of its colors to be read: only for a block that held an error)
+  let held = if errors > 0 {
+    held_errors(&notes.errors, errors, hold.held_errors())
+  } else {
+    Vec::new()
+  };
   let undone = journal.rollback();
   for (flag, value) in FLAGS.iter().zip(saved) {
     assign_value(flag, value, Some(Scope::Global));
@@ -492,7 +514,30 @@ pub(in crate::base_utilities) fn rehearse<R>(
   }
   unwound?;
   Ok(match value {
-    Some(value) if undone => Rehearsal::Done { value, errors, warnings },
+    Some((value, declarations)) if undone => Rehearsal::Done {
+      value,
+      errors,
+      warnings,
+      declarations,
+      held,
+    },
     _ => Rehearsal::Skipped(SkipReason::NotUndone),
   })
+}
+
+/// The errors a rehearsal held: each of its `errors` raised, in order, at the position noted (`noted`: the invocations
+/// that raised them, each with how many), the rest past the last field token, each with its log line.
+fn held_errors(noted: &[(u16, u16, usize)], errors: usize, lines: Vec<String>) -> Vec<HeldError> {
+  let spans = noted
+    .iter()
+    .flat_map(|&(start, end, n)| std::iter::repeat_n(Some((start, end)), n))
+    .chain(std::iter::repeat(None));
+  let mut lines = lines.into_iter();
+  spans
+    .take(errors)
+    .map(|span| HeldError {
+      span,
+      message: lines.next().unwrap_or_default(),
+    })
+    .collect()
 }

@@ -266,14 +266,17 @@ pub type Table = HashMap<SymStr, VecDeque<Stored>>;
 /// assignment is the first time anything touches it, so the frames opened since hold none of it.
 #[derive(Debug, Default)]
 pub struct AssignmentJournal {
+  /// The meanings assigned since the log was last read, in order, each with whether globally ([`begin_meaning_log`]);
+  /// `None` while no one reads it.
+  meaning_log: Option<Vec<(SymStr, bool)>>,
   /// the ids of the frames open when it began, from the bottom of the stack
-  frames:   Vec<u64>,
-  saved:    rustc_hash::FxHashMap<(TableName, SymStr), JournalEntry>,
+  frames:      Vec<u64>,
+  saved:       rustc_hash::FxHashMap<(TableName, SymStr), JournalEntry>,
   /// each meaning's standing as a fallback guess, a kernel stub or a borrowed package's then (`fallback_meanings`),
   /// which an assignment changes beside the meaning and no group end puts back: the meaning a rehearsal `\let`s and
   /// rolls back keeps it (an OmniBus `\AND`, which algorithmic's `\newcommand{\AND}` may replace — siamart220329,
   /// 2409.10200; FM S2a.2 r9)
-  fallback: rustc_hash::FxHashMap<SymStr, Option<crate::definition::origin::DefinitionOrigin>>,
+  fallback:    rustc_hash::FxHashMap<SymStr, Option<crate::definition::origin::DefinitionOrigin>>,
 }
 /// A key's values in its table (`None`: unbound) and its assignment counts by frame id.
 type JournalEntry = (Option<VecDeque<Stored>>, Vec<(u64, usize)>);
@@ -1043,9 +1046,37 @@ impl State {
       self.record_meaning(key);
     }
     // (a journal whose guard is gone is stale: nothing records into it until the next begin discards it)
-    if !JOURNAL_GUARD_LIVE.get() {
-      return;
+    if JOURNAL_GUARD_LIVE.get() {
+      self.journal_save(table_name, key);
     }
+  }
+
+  /// [`Self::journal_touch`], for an assignment whose scope is known: `global`, whether it is global, goes to the meaning
+  /// log ([`begin_meaning_log`]). The log lives on the journal, a rehearsal's, so an assignment outside one pays nothing
+  /// for it: the test sits past the guard's.
+  #[inline]
+  fn journal_touch_assignment(&mut self, table_name: TableName, key: SymStr, global: bool) {
+    if table_name == TableName::Meaning && !self.meaning_recorders.is_empty() {
+      self.record_meaning(key);
+    }
+    if JOURNAL_GUARD_LIVE.get() {
+      if table_name == TableName::Meaning
+        && let Some(log) = self
+          .journal
+          .as_mut()
+          .and_then(|journal| journal.meaning_log.as_mut())
+      {
+        log.push((key, global));
+      }
+      self.journal_save(table_name, key);
+    }
+  }
+
+  /// Save `key`'s bindings in the live journal, unless they are already: out of line, a journal being open only for a
+  /// rehearsal or a replay.
+  #[cold]
+  #[inline(never)]
+  fn journal_save(&mut self, table_name: TableName, key: SymStr) {
     let Some(journal) = self.journal.as_ref() else {
       return;
     };
@@ -1259,7 +1290,7 @@ impl State {
     if matches!(scope, Scope::Local) && BUILD_FLOOR.get() == Some(self.undo.len()) {
       scope = Scope::Global;
     }
-    self.journal_touch(table_name, key);
+    self.journal_touch_assignment(table_name, key, matches!(scope, Scope::Global));
     match scope {
       Scope::Global => {
         let mut undo_count = 0;
@@ -5914,6 +5945,7 @@ pub fn begin_assignment_journal() -> Option<AssignmentJournalGuard> {
   }
   let frames = state.undo.iter().rev().map(|frame| frame.id).collect();
   state.journal = Some(AssignmentJournal {
+    meaning_log: None,
     frames,
     saved: rustc_hash::FxHashMap::default(),
     fallback: rustc_hash::FxHashMap::default(),
@@ -5942,6 +5974,36 @@ pub fn end_meaning_recorder() -> Vec<(SymStr, Option<Stored>)> {
     .pop()
     .map(|recorded| recorded.into_iter().collect())
     .unwrap_or_default()
+}
+
+/// Begin logging the meanings assigned on the open journal, in order, each with whether globally: what a rehearsal reads
+/// a definition in its field by (the engine's `field_notes`), since a definition leaves no box. One rehearsal at a time, journals
+/// not nesting ([`begin_assignment_journal`]); the log goes with the journal.
+pub fn begin_meaning_log() {
+  if let Some(journal) = state_mut!().journal.as_mut() {
+    journal.meaning_log = Some(Vec::new());
+  }
+}
+
+/// Whether the meaning log ([`begin_meaning_log`]) holds nothing since it was last read.
+pub fn meaning_log_is_empty() -> bool {
+  state!()
+    .journal
+    .as_ref()
+    .and_then(|journal| journal.meaning_log.as_ref())
+    .is_none_or(Vec::is_empty)
+}
+
+/// Exchange what the meaning log ([`begin_meaning_log`]) holds since it was last read with `buffer`, an empty one: a field
+/// token's read of the log, so it allocates nothing.
+pub fn swap_meaning_log(buffer: &mut Vec<(SymStr, bool)>) {
+  if let Some(log) = state_mut!()
+    .journal
+    .as_mut()
+    .and_then(|journal| journal.meaning_log.as_mut())
+  {
+    std::mem::swap(log, buffer);
+  }
 }
 
 #[thread_local]

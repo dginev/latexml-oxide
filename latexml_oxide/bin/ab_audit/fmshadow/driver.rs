@@ -1,7 +1,7 @@
 //! The driver: per paper the comparison (re-resolved from the dump's events under `--re-resolve`), the per-paper and
 //! per-disagreement tables and the per-family summary.
 
-use super::*;
+use super::{outcomes::PaperOutcome, *};
 
 /// The reasons a block went unrehearsed that leave its names unseen (`shadow.rs` `SkipReason::name`): out of positions,
 /// a Fatal of its own, its assignments not undone, no journal at any flush — not an empty argument, nor a call no flush
@@ -29,6 +29,8 @@ pub struct PaperRow {
   /// why the rehearsal could not see a block of the paper ([`UNOBSERVED`]), one per such block: the paper is
   /// `unobserved`, its observed blocks compared all the same (their disagreements kept, outside the gate)
   pub unobserved:    Vec<String>,
+  /// who decides the paper (`<prefix>.outcomes.txt`); its `outcome` empty where the paper has no dump to read
+  pub outcome:       PaperOutcome,
 }
 
 impl PaperRow {
@@ -59,6 +61,7 @@ pub fn compare_paper(root: &Path, key: &str, re_resolve: bool) -> PaperRow {
     .flatten()
     .filter(|e| e["kind"] == "author" && e["status"] == "events")
     .collect();
+  row.outcome = PaperOutcome::of(&dump);
   row.blocks = blocks.len();
   row.family = blocks
     .first()
@@ -151,6 +154,7 @@ pub fn run(
   prefix: &Path,
   jobs: usize,
   re_resolve: bool,
+  outcomes_only: bool,
 ) -> std::io::Result<i32> {
   let keys: Vec<String> = match keys {
     Some(path) => fs::read_to_string(path)?
@@ -179,7 +183,7 @@ pub fn run(
   let mut tsv = fs::File::create(path(".tsv"))?;
   writeln!(
     tsv,
-    "key\tfamily\tstatus\tblocks\tunclassified\tclassified\tkinds\trules"
+    "key\tfamily\tstatus\tblocks\tunclassified\tclassified\tkinds\trules\toutcome\treason\treads_back"
   )?;
   let mut dis = fs::File::create(path(".disagree.tsv"))?;
   let mut shadow_out = fs::File::create(path(".shadow.jsonl"))?;
@@ -221,13 +225,19 @@ pub fn run(
     r.dedup();
     writeln!(
       tsv,
-      "{}\t{}\t{}\t{}\t{un}\t{cl}\t{}\t{}",
+      "{}\t{}\t{}\t{}\t{un}\t{cl}\t{}\t{}\t{}\t{}\t{}",
       row.key,
       row.family,
       row.status,
       row.blocks,
       k.join(","),
-      r.join(";")
+      r.join(";"),
+      row.outcome.outcome,
+      row.outcome.reason.replace(['\t', '\n'], " "),
+      row
+        .outcome
+        .reads_back
+        .map_or("", |reads| if reads { "yes" } else { "no" }),
     )?;
     let mut seen: Vec<(String, String, bool)> = Vec::new();
     for d in &row.disagreements {
@@ -385,5 +395,12 @@ pub fn run(
   for ((kind, rule, classified), (papers, n)) in kinds {
     writeln!(summary, "{kind}\t{rule}\t{classified}\t{papers}\t{n}")?;
   }
-  Ok(i32::from(total.unclassified > 0 || total.stale > 0))
+  let gate = outcomes::write_outcomes(&rows, root, &path(".outcomes.txt"))?;
+  // (`--outcomes`: the outcome gate alone, since any real run holds unclassified disagreements; without it, a defect of
+  // the outcomes fails the run too)
+  Ok(i32::from(if outcomes_only {
+    gate.fails()
+  } else {
+    total.unclassified > 0 || total.stale > 0 || gate.defect()
+  }))
 }
