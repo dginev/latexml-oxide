@@ -1163,7 +1163,7 @@ pub type Result<T> = result::Result<T, Error>;
 #[derive(Debug)]
 pub struct Error(Box<ErrorData>);
 
-/// What an [`Error`] says. Boxed there so that a `Result` costs a pointer: the interpreter's hottest calls
+/// What an [`struct@Error`] says. Boxed there so that a `Result` costs a pointer: the interpreter's hottest calls
 /// (`read_token`, `read_x_token`, an argument's read) return `Result`s, and at this struct's size each went through
 /// stack memory instead of registers (`clippy::result_large_err`).
 #[derive(Debug)]

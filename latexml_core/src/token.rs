@@ -370,8 +370,9 @@ const NOEXPAND_MEMO_SPAN: usize = 1 << 26;
 /// Clear the [`Token::is_noexpand_family`] per-symbol memo. Companion to
 /// `arena::reset()` — symbol indices are reused after a reset, so stale
 /// entries would alias unrelated strings (same bug class as the REPORT-map
-/// fix, `7b64a48ad1`).
-pub fn reset_noexpand_family_memo() { NOEXPAND_FAMILY_MEMO.borrow_mut().clear(); }
+/// fix, `7b64a48ad1`). The storage is freed, not only emptied: a `#[thread_local]` has no destructor, so what a
+/// reset keeps would outlive a thread that exits (the memo runs to megabytes, one byte per arena byte).
+pub fn reset_noexpand_family_memo() { *NOEXPAND_FAMILY_MEMO.borrow_mut() = Vec::new(); }
 
 /// Name of the bare no-op control sequence `\noexpand` collapses to, and the
 /// prefix of every member of the no-expand family. See [`Token::is_noexpand_family`].
