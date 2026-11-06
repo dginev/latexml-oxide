@@ -866,7 +866,7 @@ fn streaming_pass2(
   shared_labels: Option<Rc<rustc_hash::FxHashMap<String, String>>>,
   root_id: Option<String>,
 ) -> Result<()> {
-  use latexml_core::common::error::{ErrorCategory, ErrorTarget};
+  use latexml_core::common::error::{ErrorCategory, ErrorData, ErrorTarget};
   // A non-consuming snapshot of the rules: `finish_document` will consume the
   // live entry for the spine afterwards.
   let rules_opt = match state::lookup_value("DOCUMENT_REWRITE_RULES") {
@@ -902,7 +902,7 @@ fn streaming_pass2(
     let frag_xml = libxml::parser::Parser::default()
       .parse_string(&store.wrapped_segment(seg)?)
       .map_err(|e| {
-        Error::from(latexml_core::common::error::ErrorData {
+        Error::from(ErrorData {
           target:   ErrorTarget::Internal,
           category: ErrorCategory::Libxml,
           message:  s!("cannot re-parse staged segment {seg}: {e}"),
@@ -1362,7 +1362,7 @@ impl DigestionAPI for Core {
     // Fatal that NAMES the shortfall and the requirement, so the user can
     // free space (or point --dest at a roomier volume) with numbers in hand.
     {
-      use latexml_core::common::error::{ErrorCategory, ErrorTarget};
+      use latexml_core::common::error::{ErrorCategory, ErrorData, ErrorTarget};
       const SPILL_BYTES_PER_SOURCE_BYTE: u64 = 16; // ~12x measured + slack
       let src_bytes = match state::lookup_value("SOURCEFILE") {
         Some(Stored::String(f)) => {
@@ -1375,7 +1375,7 @@ impl DigestionAPI for Core {
         && avail < need
       {
         stomach::set_fragment_yield_budget(None);
-        return Err(Error::from(latexml_core::common::error::ErrorData {
+        return Err(Error::from(ErrorData {
           target:   ErrorTarget::Timeout,
           category: ErrorCategory::MemoryBudget,
           message:  s!(

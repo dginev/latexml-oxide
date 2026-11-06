@@ -2417,7 +2417,7 @@ fn read_x_token_dont_expand(for_conditional: bool) -> Result<Option<Token>> {
     None => return Ok(Some(T_CS!("\\special_relax"))), // \dont_expand at end-of-input
   };
   if for_conditional && unexpanded.code == Catcode::ACTIVE {
-    return Ok(Some(unexpanded));
+    Ok(Some(unexpanded))
   } else {
     // `\noexpand <tok>`: per-token `\special_relax` family encoding <tok>'s
     // identity in the name — faithful to TeX's `no_expand_flag`, which keeps
@@ -2428,7 +2428,7 @@ fn read_x_token_dont_expand(for_conditional: bool) -> Result<Option<Token>> {
     // 1804.01117 — reaches the surrounding parser as itself. The marker
     // lasts for this one read: a scanner that puts the token back puts
     // back its plain self (`unread_scanned`, KNOWN_PERL_ERRORS #255).)
-    return Ok(Some(crate::token::noexpand_family(&unexpanded)));
+    Ok(Some(crate::token::noexpand_family(&unexpanded)))
   }
 }
 

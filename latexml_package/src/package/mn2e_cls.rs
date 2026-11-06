@@ -150,14 +150,21 @@ const MN2E_JOURNAL_ABBREVIATIONS: &str = r"\let\jnl@style=\rmfamily
 /// one is left out), and a line is taken whole (a second definition on it comes along); a `%`-commented line is not a
 /// definition.
 fn shipped_journal_abbreviations(text: &str) -> String {
-  let name_rx = Regex::new(r"\\(?:newcommand|def|let)\\([A-Za-z@]+)").unwrap();
+  static NAME_RX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"\\(?:newcommand|def|let)\\([A-Za-z@]+)").unwrap());
+  let name_rx = &*NAME_RX;
   let wanted: Vec<String> = name_rx
     .captures_iter(MN2E_JOURNAL_ABBREVIATIONS)
     .filter_map(|c| c.get(1).map(|m| m.as_str().to_string()))
     .filter(|name| !name.contains('@'))
     .collect();
-  let line_rx = Regex::new(r"^\\(?:newcommand\*?|def|let)\s*\\([A-Za-z@]+)").unwrap();
-  let internal_rx = Regex::new(r"\\([A-Za-z]*@[A-Za-z@]*)").unwrap();
+  static LINE_RX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+    Regex::new(r"^\\(?:newcommand\*?|def|let)\s*\\([A-Za-z@]+)").unwrap()
+  });
+  let line_rx = &*LINE_RX;
+  static INTERNAL_RX: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"\\([A-Za-z]*@[A-Za-z@]*)").unwrap());
+  let internal_rx = &*INTERNAL_RX;
   // Each one-line definition in the copy, by the name it defines.
   let mut in_iffalse = false;
   let definitions: Vec<(String, &str)> = text

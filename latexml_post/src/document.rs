@@ -16,7 +16,6 @@ use libxml::{
   tree::{Document, Namespace, Node, NodeType},
   xpath::{Context as XPathContext, Expression, XPathError},
 };
-use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet};
 use unicode_normalization::UnicodeNormalization;
 
@@ -611,7 +610,10 @@ impl PostDocument {
     }
 
     // Extract search paths from PIs
-    let sp_re = Regex::new(r#"^\s*searchpaths\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap();
+    static SP_RE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+      regex::Regex::new(r#"^\s*searchpaths\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap()
+    });
+    let sp_re = &*SP_RE;
     let mut paths = self.searchpaths.clone();
     for pi_text in &self.processing_instructions {
       if let Some(cap) = sp_re.captures(pi_text) {
@@ -2152,7 +2154,10 @@ impl PostDocument {
   ///
   /// Port of `Post::Document::validate`.
   pub fn validate(&self) -> Result<(), String> {
-    let rng_re = Regex::new(r#"^\s*RelaxNGSchema\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap();
+    static RNG_RE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+      regex::Regex::new(r#"^\s*RelaxNGSchema\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap()
+    });
+    let rng_re = &*RNG_RE;
     for pi_text in &self.processing_instructions {
       if let Some(cap) = rng_re.captures(pi_text) {
         let schema = &cap[1];

@@ -1847,7 +1847,9 @@ fn fixup_xmref_idrefs(_document: &mut Document, root: &Node) {
   // `.mf`, collapsing every `.mf` id under one key (last-write-wins).
   // Driver paper: arXiv:1811.12184 — 60+ "No node found" warnings on
   // S3.E22 align/equation cluster (cloned to MathFork main branch).
-  let trailing_num_re = Regex::new(r"\.(\d+)(?:\.[A-Za-z]\w*)?$").unwrap();
+  static TRAILING_NUM_RE: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"\.(\d+)(?:\.[A-Za-z]\w*)?$").unwrap());
+  let trailing_num_re = &*TRAILING_NUM_RE;
   let mut id_by_suffix: HashMap<String, String> = HashMap::default();
   for id in &all_ids {
     if let Some(caps) = trailing_num_re.captures(id) {

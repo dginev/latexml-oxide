@@ -5092,6 +5092,18 @@ pub fn binding_counts_as_file(file: &str) -> bool {
     .is_some()
 }
 
+/// Suffixes with separator (Perl @find_fallback_suffixes).
+static FALLBACK_SUFFIX: std::sync::LazyLock<Regex> = std::sync::LazyLock::new(|| {
+  Regex::new(r"(?i)[._-](arx|arxiv|conference|workshop|tmp|alternate|preprint|fixed|[vV]?[-_.\d]+|old|new|final|clean|mine|priv|rev|mod|modified|edited|custom|altered|rtx)$").unwrap()
+});
+/// Glued suffixes without separator.
+static FALLBACK_GLUED: std::sync::LazyLock<Regex> =
+  std::sync::LazyLock::new(|| Regex::new(r"(?i)([vV]?[-_.\d]+|arxiv)$").unwrap());
+/// Prefixes. Perl Package.pm L2182: `^((?:rw|my|preprint)[-_.]?)` — separator is OPTIONAL, so `mysvjour3` strips to
+/// `svjour3` (not just `mysvjour`). Caught on arxiv 1206.0536 (\documentclass{mysvjour3}).
+static FALLBACK_PREFIX: std::sync::LazyLock<Regex> =
+  std::sync::LazyLock::new(|| Regex::new(r"(?i)^((?:rw|my|preprint)[-_.]?)").unwrap());
+
 /// Perl Package.pm L2141-2210: FindFile_fallback
 /// Pure-check variant of [`find_file_fallback`]: strips the same
 /// suffix/prefix patterns and reports whether the fallback name has a
@@ -5105,24 +5117,9 @@ pub fn binding_counts_as_file(file: &str) -> bool {
 /// option-pass-through machinery had a chance to enqueue `epsfig` into
 /// `opt@article.cls`).
 pub fn find_file_fallback_exists(name: &str, ext_type: &str) -> bool {
-  use regex::Regex;
-
   use crate::state::binding_exists;
   // Mirror find_file_fallback's regex set exactly.
-  let suffix_rx = match Regex::new(
-    r"(?i)[._-](arx|arxiv|conference|workshop|tmp|alternate|preprint|fixed|[vV]?[-_.\d]+|old|new|final|clean|mine|priv|rev|mod|modified|edited|custom|altered|rtx)$",
-  ) {
-    Ok(rx) => rx,
-    Err(_) => return false,
-  };
-  let glued_rx = match Regex::new(r"(?i)([vV]?[-_.\d]+|arxiv)$") {
-    Ok(rx) => rx,
-    Err(_) => return false,
-  };
-  let prefix_rx = match Regex::new(r"(?i)^((?:rw|my|preprint)[-_.]?)") {
-    Ok(rx) => rx,
-    Err(_) => return false,
-  };
+  let (suffix_rx, glued_rx, prefix_rx) = (&*FALLBACK_SUFFIX, &*FALLBACK_GLUED, &*FALLBACK_PREFIX);
   let basename = pathname::file_name(name);
   let mut base = if basename.is_empty() {
     name.to_string()
@@ -5186,17 +5183,7 @@ pub enum FallbackKind {
 /// Strip version/arxiv suffixes from package names to find existing bindings.
 /// Returns the fallback filename (with extension) and which kind of fallback fired.
 pub fn find_file_fallback(name: &str, ext_type: &str) -> Option<(String, FallbackKind)> {
-  use regex::Regex;
-  // Suffixes with separator (Perl @find_fallback_suffixes)
-  let suffix_rx = Regex::new(
-    r"(?i)[._-](arx|arxiv|conference|workshop|tmp|alternate|preprint|fixed|[vV]?[-_.\d]+|old|new|final|clean|mine|priv|rev|mod|modified|edited|custom|altered|rtx)$"
-  ).ok()?;
-  // Glued suffixes without separator
-  let glued_rx = Regex::new(r"(?i)([vV]?[-_.\d]+|arxiv)$").ok()?;
-  // Prefixes. Perl Package.pm L2182: `^((?:rw|my|preprint)[-_.]?)` —
-  // separator is OPTIONAL, so `mysvjour3` strips to `svjour3` (not just
-  // `mysvjour`). Caught on arxiv 1206.0536 (\documentclass{mysvjour3}).
-  let prefix_rx = Regex::new(r"(?i)^((?:rw|my|preprint)[-_.]?)").ok()?;
+  let (suffix_rx, glued_rx, prefix_rx) = (&*FALLBACK_SUFFIX, &*FALLBACK_GLUED, &*FALLBACK_PREFIX);
 
   // Strip a leading directory path (Perl Package.pm L2167-2170: FindFile_fallback
   // calls `pathname_name($name)` first, so e.g. `\documentclass{./sty/IEEEtran}`

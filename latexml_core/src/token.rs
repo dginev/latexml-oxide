@@ -1609,7 +1609,7 @@ mod tests {
       assert!(early.is_noexpand_family());
       assert!(late_family.is_noexpand_family());
       assert!(!late_other.is_noexpand_family());
-      let len = NOEXPAND_FAMILY_MEMO.with(|m| m.borrow().len());
+      let len = NOEXPAND_FAMILY_MEMO.borrow().len();
       assert!(len <= NOEXPAND_MEMO_SPAN, "memo grew to {len} bytes");
       reset_noexpand_family_memo();
       arena::reset();

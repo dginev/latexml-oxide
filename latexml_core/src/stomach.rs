@@ -366,7 +366,7 @@ pub fn check_timeout() -> Result<()> {
     .and_then(|mut s| s.pending_cycle_fatal.take());
   if let Some((category, msg)) = pending {
     use crate::common::error::{Error as LatexmlError, ErrorTarget};
-    return Err(LatexmlError::from(crate::common::error::ErrorData {
+    return Err(LatexmlError::from(ErrorData {
       target: ErrorTarget::Stomach,
       category,
       message: msg,
@@ -434,7 +434,7 @@ pub fn check_timeout() -> Result<()> {
             STREAMING_RESTART_WATERMARK.set(None);
             note_streaming_restart_signal(RestartSignal::Watermark);
             use crate::common::error::{Error as LatexmlError, ErrorCategory, ErrorTarget};
-            return Err(LatexmlError::from(crate::common::error::ErrorData {
+            return Err(LatexmlError::from(ErrorData {
               target:   ErrorTarget::Timeout,
               category: ErrorCategory::StreamingRestart,
               message:  format!(

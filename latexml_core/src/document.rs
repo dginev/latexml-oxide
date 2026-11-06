@@ -5501,7 +5501,7 @@ impl Document {
           self.index_and_purge_spilled(node, seg, index);
         }
         let spill_error = |details: String| {
-          Error::from(crate::common::error::ErrorData {
+          Error::from(ErrorData {
             target:   ErrorTarget::Document,
             category: ErrorCategory::Libxml,
             message:  s!("segment staging: {}", details),
