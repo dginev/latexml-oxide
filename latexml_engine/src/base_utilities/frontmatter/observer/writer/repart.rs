@@ -111,6 +111,7 @@ impl Repart {
 /// No re-part, and why (the `frontmatter` debug feature).
 fn declined(reason: &str) -> Option<Repart> {
   DebugFeature!("frontmatter", "FRONT writer: no re-part, {reason}");
+  note_refusal(reason);
   None
 }
 

@@ -5214,7 +5214,7 @@ fn stores_raw_code_writes() -> FxHashSet<SymStr> {
       if t.get_catcode() != Catcode::CS {
         continue;
       }
-      if cs_in(t, definition::expandable::NET_WRITERS_OF_NAMES)
+      if cs_in(t, definition::expandable::KERNEL_WRITERS_OF_NAMES)
         && let Some(name) = body.get(i + 1)
         && name.get_catcode() == Catcode::CS
       {
