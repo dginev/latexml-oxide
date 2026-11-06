@@ -339,8 +339,9 @@ fn a_multibib_style_reaches_the_bst_fields() {
 }
 
 /// C9: each list reads its own style, keyed by the suffix `\newcites` declares: `\bibliographystyle{alpha}
-/// \bibliographystyleweb{plain}` before both lists prints `[Zet01]` and `[1]`, as pdflatex and bibtex do (the shape of
-/// opticajnl.cls:288's full-reference list: 2607.03975, 2308.15957).
+/// \bibliographystyleweb{plain}` before both lists, as pdflatex's `[1]` and `[Zet01]` (the alpha label prints `[ZET01]` here;
+/// that casing is apart). The shape of opticajnl.cls:288's full-reference list: 2607.03975, 2308.15957. The web list comes first
+/// in this document, so swapped styles go red.
 #[test]
 fn each_multibib_list_reads_its_own_style() {
   let html = html_of(
@@ -353,8 +354,48 @@ fn each_multibib_list_reads_its_own_style() {
   let label = |kind: &str, text: &str| {
     format!(r#"<span class="ltx_tag {kind} ltx_role_refnum ltx_tag_bibitem">{text}</span>"#)
   };
-  assert!(html.contains(&label("ltx_bib_key", "[1]")), "{html}");
-  assert!(html.contains(&label("ltx_bib_abbrv", "[ZET01]")), "{html}");
+  let numbered = html.find(&label("ltx_bib_key", "[1]")).expect(&html);
+  let alpha = html.find(&label("ltx_bib_abbrv", "[ZET01]")).expect(&html);
+  assert!(numbered < alpha, "{html}");
+}
+
+/// C9: a suffix's style never takes `BIBSTYLE` from the main list, even when the main list's has the same name as an earlier
+/// suffix's. The main list prints first here, numbered, then `web`'s, then `alt`'s under alpha.
+#[test]
+fn the_main_list_keeps_its_style_beside_a_same_named_suffix() {
+  let html = html_of(
+    manual_repro!("index-bib/multibib_main_style_beside_a_same_named_suffix.tex"),
+    &[(
+      "multibib_each_list_reads_its_own_style.bib",
+      manual_repro!("index-bib/multibib_each_list_reads_its_own_style.bib"),
+    )],
+  );
+  let numbered = html.find("ltx_bib_key").expect(&html);
+  let alpha = html.find("ltx_bib_abbrv").expect(&html);
+  assert!(numbered < alpha, "{html}");
+}
+
+/// C4: raw storage naming any model is read safely: `named` doesn't come back to the same lookup (the stack overflow on M2 r2),
+/// a model no code defined has no Error, and a stored `HTML` keeps its colour where `\XC@mod@HTML` exists.
+#[test]
+fn raw_color_storage_of_any_model_is_read_safely() {
+  let (log, xml) = converted(manual_repro!(
+    "package-bindings/xcolor_raw_storage_of_any_model_is_read_safely.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  for word in ["word", "zed", "ex"] {
+    assert!(xml.contains(word), "{word}: {xml}");
+  }
+}
+
+/// C4: xcolor.sty's own `natural` is no model of raw code: pdflatex errs on it, and so do we, with no Warning for it.
+#[test]
+fn an_internal_xcolor_model_stays_an_error() {
+  let (log, xml) = converted(manual_repro!(
+    "package-bindings/xcolor_internal_model_stays_an_error.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert!(xml.contains("word"), "{xml}");
 }
 
 /// C5: ijsra.cls's frontmatter is `\def` slots: under its binding (ijsra_cls.rs) the document's `\def\abstract{…}` stands, and

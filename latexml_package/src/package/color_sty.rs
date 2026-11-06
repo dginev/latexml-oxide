@@ -319,13 +319,15 @@ pub fn lookup_color_obj(name: &str) -> Color {
             // silently — matching real xcolor's behavior for this storage.
             return color::BLACK;
           }
-          // A model that is no core one is read as any other: colorspace.sty:78's spot colours are stored
+          // A model raw code defined is read as any other: colorspace.sty:78's spot colours are stored
           // `\xcolor@{}{/&<name> cs …}{&spot}{1}` (a `\definespotcolor` in a group leaves only that behind), and
-          // their colour is lost with a Warning, not silently (`report_unconverted_model`).
-          return if model.is_empty() || is_core_model(model) {
-            color_from_model_spec(model, spec)
-          } else {
+          // their colour is lost with a Warning, not silently (`report_unconverted_model`). Any other model keeps this
+          // read: a payload saying `named` would come back here through `lookup_color_obj`, and one no code defined
+          // (`{foo}{1}`) has its PDF literal for pdflatex and no Error (the review of M2 r2's `rawstore`).
+          return if model != "named" && is_defined_token(&T_CS!(s!("\\XC@mod@{model}"))) {
             xcolor_sty::parse_xcolor(Some(model), spec, None)
+          } else {
+            color_from_model_spec(model, spec)
           };
         }
       }

@@ -12,22 +12,20 @@
 //! `\bibliographystylefullrefs{opticajnl}` beside the document's `opticajnlnt` (1908.11477, 2006.07118, 2008.09542,
 //! 2205.11481, 2308.15957, 2607.03975). Where `\bibstyle` is still the
 //! kernel's the list takes the style's citation style too; a package that took `\bibstyle` owns that (natbib's
-//! `\@gobble`, natbib_sty.rs). `BIBSTYLE` after the lists stays the main list's, or with none the last declared.
+//! `\@gobble`, natbib_sty.rs). `BIBSTYLE` after the lists stays the main list's, or with none the first declared.
 //! Limit: a style declared after its own list reaches `BIBSTYLE` only, not that list's attribute.
 use latexml_engine::latex_constructs::set_bibstyle;
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
   InputDefinitions!("multibib", noltxml => true, extension => Some(Cow::Borrowed("sty")));
-  // `\bibliographystyle<suffix>`: the suffix's record; `BIBSTYLE` too, unless a `\bibliographystyle` holds it.
+  // `\bibliographystyle<suffix>`: the suffix's record; `BIBSTYLE` too while nothing holds it (a `\bibliographystyle` always may).
   DefPrimitive!("\\lx@mb@declare{}{}", sub[(suffix, style)] {
     let suffix = Expand!(suffix).to_string();
     let style = pin(Expand!(style).to_string());
     assign_value(&s!("lx@mb@style@{suffix}"), style, Some(Scope::Global));
-    let standing = lookup_string("BIBSTYLE");
-    if standing.is_empty() || standing == lookup_string("lx@mb@declared") {
+    if lookup_string("BIBSTYLE").is_empty() {
       assign_value("BIBSTYLE", style, Some(Scope::Global));
-      assign_value("lx@mb@declared", style, Some(Scope::Global));
     }
   });
   // `\bibliography<suffix>`, in the list's group: its style while the list opens.

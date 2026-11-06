@@ -23382,7 +23382,7 @@ on `web`, as pdflatex's `[Zet01]` and `[1]` (opticajnl.cls:288's and osajnl's fu
 2008.09542, 2205.11481, 2308.15957, 2607.03975), and quantum.bst's `urldate` prints as `accessed`
 (quantum-bibliographystyle-demo; `perfect_kernel_batchm1::a_multibib_style_reaches_the_bst_fields`,
 `::each_multibib_list_reads_its_own_style`). The `.bst` fields are read once per document: the main list's style, with none
-the last declared. Limits: a `\bibliographystyle` after a suffix list takes that list's attribute (the kernel's `\bibstyle` sets
+the first declared. Limits: a `\bibliographystyle` after a suffix list takes that list's attribute (the kernel's `\bibstyle` sets
 the first `ltx:bibliography`, sect11.rs; RED index-bib/multibib_main_style_after_a_list_stays_off_that_list_red), and a suffix
 style after its own list reaches `BIBSTYLE` only. Elsewhere the fields are raw `bib-data`, as in Perl. OD #289's `annotation` and 56ie's biblatex names (the entry for the subtitle and host rows) are biblatex-only
 accordingly. Repros index-bib/natbib_biblatex_only_fields_are_raw_data (red int47a) and its twin
