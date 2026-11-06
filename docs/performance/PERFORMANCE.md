@@ -344,6 +344,38 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-11-06 — interpreter hot paths, the pk/P1 levers
+
+Basis: `perf stat -e instructions:u`, release, the TikZ audit's benchmarks (`~/data/pk_agents/main/tikz_perf/audit/`) under `[rawstyles,rawclasses,luatex]latexml.sty`, XML byte-identical to the base on every row (`kit/perf_lever.sh`, ledger `~/data/pk_agents/main/perf_ledger.tsv`). `b0_empty` loads `pgf-interference` and `pgfplots` and typesets nothing; "article" is a plain article with amsmath under `ar5iv.sty`.
+
+| Lever | fp1000 | fill1000 | addplot500 | b0_empty |
+|---|---:|---:|---:|---:|
+| Base `d6e175bacb` | 88.94 G | 14.85 G | 31.82 G | 5.19 G |
+| P1a a token read tests only what is due at this count (`Gullet::full_read_at`) | -15.8 % | -11.4 % | -14.4 % | -6.7 % |
+| P1b `\expandafter` expands onto the input (tex.web §368) | -0.3 % | -0.3 % | -0.7 % | -0.2 % |
+| P1d `Error` boxed, so a `Result` costs a pointer | -0.7 % | -0.15 % | -0.4 % | 0 |
+| P1e a line works out its location only if it warns; `\def` formats no side keys | 0 | -3.8 % | -4.5 % | -13.4 % |
+| P1g the `\noexpand` test inlined, its slow paths cold | -2.4 % | -2.1 % | -2.2 % | -0.9 % |
+| P1h `read_token`'s usual token apart from its rare cases | -1.3 % | -0.8 % | -0.9 % | -0.5 % |
+| P1i an argument's read apart from its rare cases; arguments read in place | -3.1 % | -1.3 % | -1.5 % | -0.6 % |
+| P1l `read_x_token`'s rare paths apart | -0.5 % | -0.1 % | -0.2 % | 0 |
+| P1m regex literals compiled once (`find_file_fallback`: three per lookup) | -0.2 % | -0.9 % | -0.9 % | -4.7 % |
+| **All** | **68.84 G, -22.6 %** | **11.96 G, -19.4 %** | **24.31 G, -23.6 %** | **3.91 G, -24.6 %** |
+
+The article: 1.169 G → 1.080 G, -7.6 %. pgf-interference-en/-de: over 180 s on idle SMT siblings → 154 s with P1a+P1b alone, on cores shared with bundle checks. The base's drift since 59q (`1be2a69de7`), the reason they had crossed the ceiling: fp1000 +6.2 %, fill1000 +12 %, addplot500 +12.8 %, by many small steps (`kit/perf_bisect.sh`, `kit/perf_bisect.py`); the largest single one, `ae89a0a8b0` +4.4 % with `ee3c2c6d9e` -2.5 % after it, is the frontmatter stamp on stored tokens.
+
+**What pays, and why (machine code read with `kit/perf_frames.py`):**
+- Work that can't be due. A read tested the token limit, the deadline's period, the cycle guard's window and the debug ring for every token, about 72 instructions; each depends only on the count, so one comparison against a precomputed count stands in for them all.
+- Eager work for a rare branch: a formatted location with a regex per input line for an Info that almost never fires, three `format!`s per `\def`, three regex compilations per file lookup.
+- **Hot/cold splitting, for functions called per token or per expansion.** The prologue is paid per call. `noexpand_shadowed` rejected a letter behind six pushes; the test is inline at the call sites now. A slow path inline also decides what LLVM will inline: `#[thread_local]` in place of `thread_local!` removed a state check from `is_noexpand_family` and still lost 1.4 %, because the memo's resize code, no longer behind a closure, grew it from 304 to 506 bytes and `noexpand_shadowed`'s inlined test became a call and a second prologue. Keep the slow path out of line and the fast one gains (P1g).
+
+**Dead ends, measured, with why:**
+- A pool of macro-argument token buffers: +0.06 %, +0.2 %, +0.5 %. Under mimalloc a pop and push cost what an allocation does; allocation isn't where a macro call's time goes.
+- Splitting `read_balanced_with_close`, 11.6 KB with a 344-byte frame: -0.15 %, -0.17 %, -0.05 %. Its prologue is per group and its time per token, on the loop's lines. A hot/cold split doesn't reach a loop.
+- A bulk read of unexpanded arguments off the pushback: -0.16 %, +0.08 %, -0.65 %, and +0.46 % loading pgf. Runs between braces average 2.3-2.8 tokens and 30-53 % are empty, so the setup per run eats the savings.
+
+**Open:** 515 K of the binary's 1.04 M call sites are indirect through the GOT to functions in the same binary. `-Zplt=yes` makes them direct: instructions equal, XML equal, cycles about -1 to -2 % so far, with an 8-29 % spread on a loaded machine. To re-measure on idle cores (`kit/perf_ab_cycles.sh`) before it goes in `.cargo/config.toml`. The l3fp loop is a native evaluator's job, not the interpreter's.
+
 ### 2026-10-31 — frontmatter overhead levers (batch 96p)
 
 Basis: the read-only perf audit perf453 (2026-10-31: frontmatter 0.68–1.05 % of a median conversion, 3.5–15.6 % on
