@@ -1996,6 +1996,14 @@ pub fn field_cover_of(prov: u16) -> crate::token::FieldCover {
   crate::token::FieldCover { field, start: pos, end }
 }
 
+/// Whether the input's pushback is empty: no token of a field's stored value is left to read ([`field_cover_of`]).
+pub(crate) fn pushback_is_empty() -> bool {
+  gullet!()
+    .runtime
+    .as_ref()
+    .is_none_or(|rt| rt.pushback.is_empty())
+}
+
 /// Expand `token` (defined as `defn`) ONE level and push the expansion back
 /// onto the input, as `read_x_token` does for each expandable token it meets.
 #[inline]

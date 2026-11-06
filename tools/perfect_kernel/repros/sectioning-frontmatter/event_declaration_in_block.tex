@@ -1,0 +1,19 @@
+% witness: brief Z1 gap 8 (no corpus witness named: the emitter of Z4 must keep what the block defines)
+% oracle:  pdflatex 0 errors: "Ann Able", "Univ A" as its footnote; "Bob BakerB"; "Cat Cole Dept"; "Dan Dow Z"; "Eve Ely Q"
+% engines: Perl has no events; ours before Z1 holds no trace of a definition: it makes no box
+% expect:  0 errors; a Declaration with its span and definees for each definition, beside the events, none for the macro
+%          printing ink (perfect_kernel_batchz1::a_definition_in_the_block_is_an_event_with_its_span)
+% status:  GREEN (Z1)
+\documentclass{article}
+\newcommand\setup{\def\dept{Dept}}
+\newcommand\printer{\def\inner{Z}\inner}
+\begin{document}
+\title{T}
+\author{\newcommand{\univ}{Univ A}Ann Able\thanks{\univ}
+\and {\def\b{B}Bob Baker\b}
+\and \setup Cat Cole \dept
+\and Dan Dow \printer
+\and \global\def\q{Q}Eve Ely \q}
+\maketitle
+Body.
+\end{document}

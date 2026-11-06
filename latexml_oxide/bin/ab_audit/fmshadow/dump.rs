@@ -4,6 +4,15 @@ use super::*;
 
 pub(super) fn s(v: &Value) -> String { v.as_str().unwrap_or("").to_string() }
 
+/// A dump's span.
+fn span(v: &Value) -> Option<(u16, u16)> {
+  let a = v.as_array()?;
+  Some((
+    u16::try_from(a.first()?.as_u64()?).ok()?,
+    u16::try_from(a.get(1)?.as_u64()?).ok()?,
+  ))
+}
+
 /// A dump event as the lexer's event.
 pub fn json_event(v: &Value) -> FmEvent {
   let kind = match v["kind"].as_str().unwrap_or("") {
@@ -31,12 +40,7 @@ pub fn json_event(v: &Value) -> FmEvent {
     _ => FmEventKind::Layout,
   };
   let mut event = FmEvent::new(kind);
-  event.span = v["span"].as_array().and_then(|a| {
-    Some((
-      u16::try_from(a.first()?.as_u64()?).ok()?,
-      u16::try_from(a.get(1)?.as_u64()?).ok()?,
-    ))
-  });
+  event.span = span(&v["span"]);
   event.text = s(&v["text"]);
   event.label = v["label"].as_str().map(str::to_string);
   event.symbol = v["symbol"].as_bool().unwrap_or(false);
@@ -46,6 +50,16 @@ pub fn json_event(v: &Value) -> FmEvent {
   event.nest = v["nest"].as_u64().unwrap_or(0) as u8;
   event.meaning = FmEmailMeaning::from_name(v["meaning"].as_str().unwrap_or(""));
   event.inkless = v["inkless"].as_bool().unwrap_or(false);
+  // (a mark's formula, a contact that prints nothing, an event an error was held at: none in a dump made before Z1)
+  if let Some(ends) = v["ends_formula"].as_bool() {
+    event.formula = Some(FmMarkFormula {
+      span: span(&v["formula_span"]),
+      base: v["base"].as_str().and_then(FmMarkBase::from_name),
+      ends,
+    });
+  }
+  event.unprinted = v["unprinted"].as_str().map(str::to_string);
+  event.held = v["held"].as_bool().unwrap_or(false);
   event.inner = v["inner"]
     .as_array()
     .map(|a| a.iter().map(json_event).collect())

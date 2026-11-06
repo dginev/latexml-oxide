@@ -1944,6 +1944,7 @@ mod tests {
         events:         Vec::new(),
         rehearsed:      true,
         cleared:        false,
+        errors:         0,
       })
     };
     with_ledger(|ledger| {

@@ -564,6 +564,11 @@ const FP_BUDGET: u32 = 48;
 pub(crate) const EB_BUDGET: u32 = 256;
 
 impl Digested {
+  /// Whether this is a formula's whatsit.
+  pub fn is_math_whatsit(&self) -> bool {
+    matches!(self.data(), DigestedData::Whatsit(w) if w.borrow().is_math())
+  }
+
   /// Set a property unless the box is borrowed — being absorbed (`Document::absorb` holds it while its constructor
   /// runs); false then. Perl's store always lands (Box.pm:168-171).
   pub(crate) fn try_set_property<T: Into<Stored>>(&self, key: &str, value: T) -> bool {

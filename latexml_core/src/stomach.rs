@@ -4362,6 +4362,10 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
       } else {
         gullet::field_cover_of(token.prov)
       };
+      // (a rehearsal's notes on what its boxes do not hold: `FieldNotes`)
+      if crate::token::field_notes_open() {
+        crate::token::field_notes_after(&token, cover, &result);
+      }
       if result.is_empty() {
         crate::token::field_cover_set_pending(cover);
       } else {

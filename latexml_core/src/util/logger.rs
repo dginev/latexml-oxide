@@ -644,6 +644,18 @@ impl DiagnosticsHold {
     now.warning.saturating_sub(self.snapshot.report.warning)
   }
 
+  /// The errors held since [`begin`](Self::begin), in order: each record's first line, without its colors.
+  pub fn held_errors(&self) -> Vec<String> {
+    HELD.borrow().as_ref().map_or_else(Vec::new, |records| {
+      records
+        .iter()
+        .map(|(_, message)| strip_ansi(message))
+        .filter(|message| message.starts_with("Error:"))
+        .map(|message| message.lines().next().unwrap_or("").to_string())
+        .collect()
+    })
+  }
+
   fn take_held(&mut self) -> Vec<(Level, String)> {
     self.resolved = true;
     let mut held = HELD.borrow_mut();

@@ -26,8 +26,9 @@ this doc is its living plan. The inventory it rests on is `~/data/pk_agents/main
   assignments rolled back, the API frozen. Its binding table (`rehearsal.rs:233-264`: `\and` → column, `\\` → break,
   `\inst` → mark) works by `\let`, as Perl's `@authorsplits` does, and stays.
 - **Event lexer** (`frontmatter/observer/events/`): the digested list read into print-order events with field
-  provenance — Name, Mark (any raised box; footnote symbols by the printed character), Sep (column, comma, "and",
-  gap with width), Break (with role), Contact, Note (inner marks and contacts), Layout (box, cell, font change).
+  provenance — Name, Mark (any raised box; footnote symbols by the printed character; its formula or group, base and
+  end, Z1), Sep (column, comma, "and", gap with width), Break (with role), Contact, Note (inner marks and contacts),
+  Layout (box, cell, font change); beside them Declaration and the held errors (Z1).
 - **Already compliant:** the lexer's tests on printed Unicode (`lexer.rs:66,112-116,307,319,363`), the resolver
   (`resolver/`), `fmshadow/classes.rs`, `insert.rs` `respell_emails`, `cover_order.rs`, `field_ink.rs`,
   `titlepage_layout.rs`. Font switches never become ink (`font_key`, `events/mod.rs:426`).
@@ -51,13 +52,21 @@ they stay for stages 3–5.
 
 ## Gaps in the event model (to add, shadow-only first)
 
-1. A Mark's **base**: floating vs posted on ink, and **ink after it** in the same formula (`ends_formula`); today
-   `events/mod.rs:800` lumps every superscript.
-2. `formula_span`: the enclosing formula's or group's span (a Mark spans only its script, `deep_span` :807).
+Gaps 1, 2, 6, 8 and 9 are in the dump since Z1, read from the digested list, its spans and the rehearsal's notes; no reading or
+writer reads them yet (`--re-resolve` on dev3: no difference). Guards `perfect_kernel_batchz1`, the dump's reader
+`fmshadow::tests::a_dump_reads_the_marks_formula_and_an_old_one_reads_none`; repros `sectioning-frontmatter/event_*`.
+
+1. A Mark's **base** — **done (Z1):** `Event::formula` (`events::MarkFormula`), dump `base`, `ends_formula`. In a formula `base` is `floating` or `posted`, by what prints before the mark there, the rule `marks::read_formula` reads the XMath by (spacing, a blank box, a font switch and an empty group are no base; past the first script, punctuation and symbols neither). `ends_formula`: no letter or digit prints after it there. A prescript and a mark print the same, so `${}^{3}$He` reads floating and ending its formula, `${}^{3}\mathrm{He}$` not ending it: the fail-safe's input, no decision (2105.07958, 0804.4669). A mark outside a formula has no base.
+2. `formula_span` — **done (Z1):** the whole formula's span, its opening shift with it (the box is stamped by the closing shift, whose invocation builds it, so `document::FIELD_FORMULA_START_PROPERTY` records the opening's under the notes alone); else the innermost group's or box's; none at the block's top level. A group's span stops at its last box: its closing brace is covered by no box. An API call's content has no positions: `formula_span` null, base and `ends_formula` read.
 3. **Break kind**: `\par` vs line break (`\par` in a `c` column prints nothing, tex.web §1094); a binding-declared
    section break (ijcai `\emails`/`\affiliations`); ACM `\alignauthor` columns.
 4. **Printed-brace depth** of a Break or Comma (ijcai, grouped local parts).
 5. **Ordinal glue**: a digit with a glued lowercase superscript (`5\textsuperscript{th}`, 2609.01831).
+6. **Unprinted contacts** — **done (Z1), one residual:** `ledger::UnprintedCall`, dump top-level `unprinted`: each `ltx:rdf` call annotating a creator a Contact with `Event::unprinted` holding what it records, `role` the property, `text` empty; beside `Ledger::entries`, so no index moves and the reading does not see them (2506.18556, 2507.12222; OD #479). Residual: a block's `\email` under AASTeX 7 (`\author{Jane Doe, \email{x}}`) is still a printing Contact in the block's events: the rehearsal binds `\email` before the class decides, by `[show]` and its state. Its real call is in `unprinted` beside it. Minimal input: repro `aastex7_email_inside_author`; none in the 373 AASTeX 7 papers of OD #479.
+7. **Mid-line hand-printed labels** (100a's RED): open (Z2).
+8. **Declarations** — **done (Z1):** `Outcome::Events::declarations`, dump `declarations` on the block, beside its events: `EventKind::Declaration`, its span the call's, `label` the definees, `role` `global`, `nest` its groups. A definition makes no box, so this one field is not read from a box: it is read from the meaning assignment itself (`state::begin_meaning_log`) and the position of the invocation that made it (`token::FieldNotes`, the stomach's note on a field token), never from the tokens' spelling. A definer invoked directly and a call of the paper's own macro declare (the meaning of the call, its origin `Document` or `File`); a kernel's or a binding's macro does not (`\bfseries`'s `\f@series`, `\centering`'s `\\`, an environment's `\@currenvir`). A macro printing ink has none, nor has a definition inside a box the block prints (a formula, `\thanks`, `\textbf`): that box's span holds it. A plain group's stays. A name's span can hold a declaration before it (`\def\x{y}Ann`: the box's pending cover). Limits: a kernel macro defining for the paper is not read unless it is a primitive (`\newtheorem`), nor what is no meaning (`\setcounter`); a paper's macro that defines and then makes a box is that box's, even a switch's (`\def\a{M}\small`); a raw class's font switch called in the block reads as a declaration of its font internals (55 of dev3's 66), harmless to keep. `definitions_at_author` (`email_lines.rs:609`) is a different thing: the class's title code, read from its tokens at `\lx@author@markup@begin`, not in the block's digested list; a store-side class-code read for Z23.
+9. **Held errors** — **done (Z1):** the block keeps all its events, as it always did: a rehearsal goes on past an error it holds (`Rehearsal::Done`), so the events are whole, not partial. What was missing is added: `Event::held` on the events an error's position touches, `Outcome::Events::held` the errors by position and log line, `ApiCall::errors` the count for a call's content, which has no positions. Kinds: **Done with held Errors or Warnings: all events, marked.** Fatal (`Skipped(Fatal)`, digestion returned an error, so no digested list), NotUndone (the state cannot be trusted) and JournalUnavailable (no digestion): none, unchanged. Overflow and Empty: none, no positions or no tokens. **Root cause of the study's held papers (2603.28168, 1405.3507, 2201.04449):** the error is the observer's own, not the document's: its constructors digest the API's `_cutlist=…` options and a `\corref` label, `_` in text mode. Census in `SYNC_STATUS.md`'s Z1 row.
+10. **llncs `\orcidID` as a contact** (2408.15810): open (Z13).
 
 ## Stages (smallest risk first; each its own batch, red/green, census A/B)
 

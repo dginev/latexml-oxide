@@ -443,6 +443,9 @@ pub struct State {
   /// The open meaning recorders, innermost last ([`begin_meaning_recorder`]): each the meanings assigned since it
   /// began, with the value each had then.
   meaning_recorders:           Vec<rustc_hash::FxHashMap<SymStr, Option<Stored>>>,
+  /// The meanings assigned since the log was last read, in order, each with whether globally ([`begin_meaning_log`]);
+  /// `None` while no one reads it.
+  meaning_log:                 Option<Vec<(SymStr, bool)>>,
 }
 
 /// One class loaded ([`ClassLoadFrame`]): its file name (`article.cls`), the names its load frame assigned a macro (the
@@ -576,6 +579,7 @@ impl Default for State {
       copy_class_loads:        Vec::new(),
       journal:                 None,
       meaning_recorders:       Vec::new(),
+      meaning_log:             None,
     }
   }
 }
@@ -1036,6 +1040,15 @@ impl State {
     }
   }
 
+  /// Log `key`'s assignment ([`begin_meaning_log`]): outside the hot path, a rehearsal's alone.
+  #[cold]
+  #[inline(never)]
+  fn log_meaning(&mut self, key: SymStr, global: bool) {
+    if let Some(log) = self.meaning_log.as_mut() {
+      log.push((key, global));
+    }
+  }
+
   /// Record `key`'s bindings in the open assignment journal before its first assignment since the journal began.
   #[inline]
   fn journal_touch(&mut self, table_name: TableName, key: SymStr) {
@@ -1260,6 +1273,9 @@ impl State {
       scope = Scope::Global;
     }
     self.journal_touch(table_name, key);
+    if self.meaning_log.is_some() && table_name == TableName::Meaning {
+      self.log_meaning(key, matches!(scope, Scope::Global));
+    }
     match scope {
       Scope::Global => {
         let mut undo_count = 0;
@@ -5922,6 +5938,25 @@ pub fn end_meaning_recorder() -> Vec<(SymStr, Option<Stored>)> {
     .meaning_recorders
     .pop()
     .map(|recorded| recorded.into_iter().collect())
+    .unwrap_or_default()
+}
+
+/// Begin logging the meanings assigned, in order, each with whether globally: what a rehearsal reads a definition in its
+/// field by (`token::FieldNotes`), since a definition leaves no box. Returns the log it replaces, for
+/// [`end_meaning_log`] to put back (a rehearsal may run inside another's flush).
+pub fn begin_meaning_log() -> Option<Vec<(SymStr, bool)>> {
+  state_mut!().meaning_log.replace(Vec::new())
+}
+
+/// Close the meaning log ([`begin_meaning_log`]), putting back the one it replaced.
+pub fn end_meaning_log(outer: Option<Vec<(SymStr, bool)>>) { state_mut!().meaning_log = outer; }
+
+/// What the meaning log ([`begin_meaning_log`]) holds since it was last read, emptied.
+pub fn take_meaning_log() -> Vec<(SymStr, bool)> {
+  state_mut!()
+    .meaning_log
+    .as_mut()
+    .map(std::mem::take)
     .unwrap_or_default()
 }
 

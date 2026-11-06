@@ -11,7 +11,9 @@ use std::{cell::Cell, fmt::Write as _, sync::OnceLock};
 use latexml_core::definition::origin::watch_frontmatter_setter_calls;
 
 use super::{
-  events::{EmailMeaning, Event, EventKind, SepKind, lex_events, with_block_content},
+  events::{
+    EmailMeaning, Event, EventKind, HeldError, SepKind, lex_events, mark_held, with_block_content,
+  },
   ledger::{Entry, Outcome, SkipReason, Stamp, reset_ledger, stamped_block_tokens, with_ledger},
   policy::{TitleMarks, policy_for},
   rehearsal::{Rehearsal, rehearse},
@@ -163,10 +165,21 @@ fn read_at_flush() -> Result<()> {
         rehearse(stamped_block_tokens(&block), title_marks, lex_events)
       })?;
       match rehearsal {
-        Rehearsal::Done { value, errors, warnings } => Outcome::Events {
-          events: value,
+        Rehearsal::Done {
+          mut value,
           errors,
           warnings,
+          declarations,
+          held,
+        } => {
+          mark_held(&mut value, &held);
+          Outcome::Events {
+            events: value,
+            errors,
+            warnings,
+            declarations,
+            held,
+          }
         },
         // (waits for the next flush; if none comes, the dump says why it was never rehearsed)
         Rehearsal::Skipped(SkipReason::JournalUnavailable) => {
@@ -197,21 +210,22 @@ fn read_at_flush() -> Result<()> {
   });
   let calls_mark = StomachMark::take();
   for (i, content) in calls {
-    let events = if content.is_empty() {
-      Some(Vec::new())
+    let read = if content.is_empty() {
+      Some((Vec::new(), 0))
     } else {
       match rehearse(content, TitleMarks::Fnsymbol, lex_events)? {
-        Rehearsal::Done { value, .. } => Some(value),
+        Rehearsal::Done { value, errors, .. } => Some((value, errors)),
         // (a flush inside a speculative run: the next flush rehearses it)
         Rehearsal::Skipped(SkipReason::JournalUnavailable) => None,
-        Rehearsal::Skipped(_) => Some(Vec::new()),
+        Rehearsal::Skipped(_) => Some((Vec::new(), 0)),
       }
     };
-    if let Some(events) = events {
+    if let Some((events, errors)) = read {
       with_ledger(|ledger| {
         if let Some(Entry::Api(call)) = ledger.entries.get_mut(i) {
           call.events = events;
           call.rehearsed = true;
+          call.errors = errors;
         }
       });
     }
@@ -313,6 +327,25 @@ fn json_event(out: &mut String, event: &Event) {
   if event.nest > 0 {
     let _ = write!(out, ",\"nest\":{}", event.nest);
   }
+  if let Some(formula) = &event.formula {
+    out.push_str(",\"formula_span\":");
+    json_span(
+      out,
+      formula.span.map(|(s, e)| (usize::from(s), usize::from(e))),
+    );
+    if let Some(base) = formula.base {
+      out.push_str(",\"base\":");
+      json_str(out, base.name());
+    }
+    let _ = write!(out, ",\"ends_formula\":{}", formula.ends);
+  }
+  if let Some(value) = &event.unprinted {
+    out.push_str(",\"unprinted\":");
+    json_str(out, value);
+  }
+  if event.held {
+    out.push_str(",\"held\":true");
+  }
   if event.meaning != EmailMeaning::Binding {
     out.push_str(",\"meaning\":");
     json_str(out, event.meaning.name());
@@ -331,6 +364,37 @@ fn json_event(out: &mut String, event: &Event) {
     out.push(']');
   }
   out.push('}');
+}
+
+/// A list of events, under `key`.
+fn json_events(out: &mut String, key: &str, events: &[Event]) {
+  let _ = write!(out, ",\"{key}\":[");
+  for (i, event) in events.iter().enumerate() {
+    if i > 0 {
+      out.push(',');
+    }
+    json_event(out, event);
+  }
+  out.push(']');
+}
+
+/// The errors a block's rehearsal held, by position.
+fn json_held(out: &mut String, held: &[HeldError]) {
+  out.push_str(",\"held\":[");
+  for (i, error) in held.iter().enumerate() {
+    if i > 0 {
+      out.push(',');
+    }
+    out.push_str("{\"span\":");
+    json_span(
+      out,
+      error.span.map(|(s, e)| (usize::from(s), usize::from(e))),
+    );
+    out.push_str(",\"message\":");
+    json_str(out, &error.message);
+    out.push('}');
+  }
+  out.push(']');
 }
 
 /// The ledger as JSON (`<dest>.fmshadow.json`): its entries in call order — author blocks with their events, title
@@ -406,6 +470,9 @@ pub fn fm_shadow_json() -> String {
           }
           out.push_str(",\"attrs\":");
           json_str(&mut out, &call.attrs);
+          if call.errors > 0 {
+            let _ = write!(out, ",\"errors\":{}", call.errors);
+          }
           if !call.parent.is_empty() {
             out.push_str(",\"parent\":");
             json_str(&mut out, &call.parent);
@@ -485,6 +552,8 @@ pub fn fm_shadow_json() -> String {
               events: lexed,
               errors,
               warnings,
+              declarations,
+              held: held_errors,
             } => {
               json_str(&mut out, "events");
               let _ = write!(out, ",\"errors\":{errors},\"warnings\":{warnings}");
@@ -493,6 +562,12 @@ pub fn fm_shadow_json() -> String {
                 held += 1;
               }
               events.clone_from(lexed);
+              if !declarations.is_empty() {
+                json_events(&mut out, "declarations", declarations);
+              }
+              if !held_errors.is_empty() {
+                json_held(&mut out, held_errors);
+              }
             },
           }
           // the setters called outside the field after the block, up to the next block
@@ -500,26 +575,10 @@ pub fn fm_shadow_json() -> String {
             match later {
               Entry::Author(_) => break,
               Entry::Api(call) if !call.inside && call.after_block == Some(block.index) => {
-                events.push(Event {
-                  kind:         EventKind::ApiCall,
-                  span:         None,
-                  text:         String::new(),
-                  label:        Some(s!("queue:{}:{}", call.epoch, call.queue_position)),
-                  symbol:       false,
-                  line_first:   false,
-                  role:         Some(s!("{} {}", call.tag, call.role)),
-                  target:       None,
-                  inner:        Vec::new(),
-                  nest:         0,
-                  glued:        false,
-                  space_before: false,
-                  space_after:  false,
-                  meaning:      EmailMeaning::Binding,
-                  inkless:      false,
-                  annotate:     None,
-                  font:         None,
-                  wrap:         None,
-                });
+                let mut event = Event::new(EventKind::ApiCall);
+                event.label = Some(s!("queue:{}:{}", call.epoch, call.queue_position));
+                event.role = Some(s!("{} {}", call.tag, call.role));
+                events.push(event);
               },
               _ => {},
             }
@@ -538,7 +597,30 @@ pub fn fm_shadow_json() -> String {
         },
       }
     }
-    out.push_str("],\"resolved\":");
+    out.push(']');
+    if !ledger.unprinted.is_empty() {
+      out.push_str(",\"unprinted\":[");
+      for (i, call) in ledger.unprinted.iter().enumerate() {
+        if i > 0 {
+          out.push(',');
+        }
+        let _ = write!(
+          out,
+          "{{\"at\":{},\"after_block\":{},\"inside\":{},\"attrs\":",
+          call.at,
+          call
+            .after_block
+            .map_or("null".to_string(), |b| b.to_string()),
+          call.inside
+        );
+        json_str(&mut out, &call.attrs);
+        out.push_str(",\"event\":");
+        json_event(&mut out, &call.event);
+        out.push('}');
+      }
+      out.push(']');
+    }
+    out.push_str(",\"resolved\":");
     json_resolved(&mut out, &resolve(&ledger_inputs(ledger)));
     let _ = write!(
       out,
@@ -713,9 +795,11 @@ mod tests {
     );
     assert_eq!(
       skip_reason(&Outcome::Events {
-        events:   Vec::new(),
-        errors:   0,
-        warnings: 0,
+        events:       Vec::new(),
+        errors:       0,
+        warnings:     0,
+        declarations: Vec::new(),
+        held:         Vec::new(),
       }),
       None
     );

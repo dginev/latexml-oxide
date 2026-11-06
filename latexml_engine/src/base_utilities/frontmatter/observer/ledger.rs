@@ -16,7 +16,7 @@ use latexml_core::{
 };
 
 use super::{
-  events::{EmailMeaning, Event, lex_events},
+  events::{EmailMeaning, Event, EventKind, HeldError, lex_events},
   shadow::{FmShadow, fm_shadow_mode},
   *,
 };
@@ -52,11 +52,14 @@ pub(in crate::base_utilities) enum Outcome {
   /// Not yet rehearsed, waiting for a later flush: at the latest no rehearsal could run, and why
   /// ([`SkipReason::JournalUnavailable`]: that flush was itself inside a speculative run).
   Deferred(SkipReason),
-  /// Rehearsed and lexed: its events, and the errors and warnings the rehearsal held.
+  /// Rehearsed and lexed: its events, the errors and warnings the rehearsal held, and beside the events the block's
+  /// definitions and the errors by position (`rehearsal::Rehearsal::Done`).
   Events {
-    events:   Vec<Event>,
-    errors:   usize,
-    warnings: usize,
+    events:       Vec<Event>,
+    errors:       usize,
+    warnings:     usize,
+    declarations: Vec<Event>,
+    held:         Vec<HeldError>,
   },
   /// Not rehearsed, and why.
   Skipped(SkipReason),
@@ -188,6 +191,27 @@ pub(in crate::base_utilities) struct ApiCall {
   pub rehearsed:      bool,
   /// whether a later clear removed it from the queue before any flush digested it ([`record_clear`])
   pub cleared:        bool,
+  /// the errors its content's rehearsal held (no positions: an API call's content has none)
+  pub errors:         usize,
+}
+
+/// A contact the document records and the PDF does not print (`ltx:rdf`, `\lx@add@creator@rdf`: AASTeX 7's `\email`
+/// without `[show]`, OXIDIZED_DESIGN #479), which no reading holds: nothing else in the ledger reads it, and it takes no
+/// place among the [`Ledger::entries`]. The call the real digestion makes, wherever it stands: a rehearsal records none,
+/// and binds `\email` before the class decides, so a block's `\email` has this record beside its printing Contact event
+/// (`\author{Jane Doe, \email{x}}`, none in 373 AASTeX 7 papers: OD #479's open case).
+#[derive(Debug, Clone, PartialEq)]
+pub(in crate::base_utilities) struct UnprintedCall {
+  /// the ledger's length at the call: the entries before it
+  pub at:          usize,
+  /// the latest author block before the call
+  pub after_block: Option<usize>,
+  /// made by that block's own expansion
+  pub inside:      bool,
+  /// the entry's attributes as the call gave them
+  pub attrs:       String,
+  /// the Contact: its role the `property`, what it records its `unprinted`
+  pub event:       Event,
 }
 
 /// One `\footnotetext` the document made (the kernel's `\lx@notetext`, a footnote's text): its printed mark, the footnote
@@ -234,6 +258,8 @@ pub(in crate::base_utilities) struct Ledger {
   /// e-mail calls whole leaves today's as it was: the write-out the reading wanted, declined; and where an unwritten
   /// family's items kept as today's leave it so, `writer::keep_as_today`); none where the writer did not run
   pub writer:       Option<String>,
+  /// the contacts recorded that print nothing, in call order ([`UnprintedCall`])
+  pub unprinted:    Vec<UnprintedCall>,
 }
 
 thread_local! {
@@ -785,6 +811,12 @@ pub(in crate::base_utilities) fn record_api_call(
   // (and the title, whose marks request labelled entries too — aastex's `\title{…\altaffilmark{1}}` and
   // `\altaffiltext{1}{Based on observations …}`, the title's note: 0801.1670; and a publication note, whose e-mails are
   // the authors' — A&A's `\offprints{B. Baker, \email{…}}`, 0711.1152, 0802.0707)
+  if tag == "ltx:rdf" {
+    if records_now() {
+      record_unprinted_call(attr, command);
+    }
+    return;
+  }
   if !matches!(
     tag,
     "ltx:creator" | "ltx:contact" | "ltx:note" | "ltx:title" | "ltx:pubnote"
@@ -883,7 +915,53 @@ pub(in crate::base_utilities) fn record_api_call(
       events: Vec::new(),
       rehearsed: false,
       cleared: false,
+      errors: 0,
     }));
+  });
+}
+
+/// Record a contact that prints nothing ([`UnprintedCall`]): an `ltx:rdf` annotating a creator, not the document's own
+/// metadata (`\lx@add@frontmatter{ltx:rdf}[property=dcterms:identifier]`).
+fn record_unprinted_call(attr: Option<&KeyVals>, command: &Tokens) {
+  let parent = match command.unlist_ref().as_slice() {
+    [first, rest @ ..] if *first == T_CS!("\\lx@annotate@frontmatter@now") => {
+      first_group(rest).to_string().trim().to_string()
+    },
+    _ => String::new(),
+  };
+  if parent != "ltx:creator" {
+    return;
+  }
+  let value = |key: &str| attr.and_then(|kv| kv.get_value(key)).map(|v| v.to_string());
+  let mut event = Event::new(EventKind::Contact);
+  event.role = value("property");
+  event.unprinted = Some(value("content").unwrap_or_default());
+  let attrs = attr
+    .map(|kv| {
+      kv.get_pairs()
+        .map(|(key, value)| s!("{key}={value}"))
+        .collect::<Vec<_>>()
+        .join(",")
+    })
+    .unwrap_or_default();
+  with_ledger(|ledger| {
+    let at = ledger.entries.len();
+    let mut after_block = None;
+    let mut inside = false;
+    if let Some(block) = ledger.entries.iter().rev().find_map(|entry| match entry {
+      Entry::Author(block) => Some(block),
+      _ => None,
+    }) {
+      after_block = Some(block.index);
+      inside = block.window_open && input_unread_since(&block.mark);
+    }
+    ledger.unprinted.push(UnprintedCall {
+      at,
+      after_block,
+      inside,
+      attrs,
+      event,
+    });
   });
 }
 

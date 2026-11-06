@@ -42,7 +42,8 @@ pub(in crate::base_utilities) mod writer;
 
 // (for `ab_audit fmshadow`, which re-resolves a dump's events offline; prefixed, as the prelude re-exports these)
 pub use events::{
-  EmailMeaning as FmEmailMeaning, Event as FmEvent, EventKind as FmEventKind, SepKind as FmSepKind,
+  EmailMeaning as FmEmailMeaning, Event as FmEvent, EventKind as FmEventKind,
+  MarkBase as FmMarkBase, MarkFormula as FmMarkFormula, SepKind as FmSepKind,
 };
 pub(in crate::base_utilities) use ledger::{
   field_stamped, note_field_stamp, record_api_call, record_author_call, record_clear,

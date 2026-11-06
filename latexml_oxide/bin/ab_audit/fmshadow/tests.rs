@@ -67,6 +67,41 @@ fn a_dump_with_clears_publication_notes_and_ref_lists_re_resolves_to_itself() {
   }
 }
 
+/// Z1: a dump's event fields read back as the lexer made them, and a dump made before them (no such key) as none — what
+/// `--re-resolve` reads an old census with.
+#[test]
+fn a_dump_reads_the_marks_formula_and_an_old_one_reads_none() {
+  let event = json_event(&serde_json::json!({
+    "kind": "Mark", "span": [9, 13], "text": "1", "label": "1", "role": "math", "formula_span": [8, 14],
+    "base": "posted", "ends_formula": false, "held": true,
+  }));
+  assert_eq!(
+    event.formula,
+    Some(FmMarkFormula {
+      span: Some((8, 14)),
+      base: Some(FmMarkBase::Posted),
+      ends: false,
+    })
+  );
+  assert!(event.held);
+  let no_positions = json_event(&serde_json::json!({
+    "kind": "Mark", "span": null, "formula_span": null, "base": "floating", "ends_formula": true,
+  }));
+  assert_eq!(
+    no_positions.formula,
+    Some(FmMarkFormula {
+      span: None,
+      base: Some(FmMarkBase::Floating),
+      ends: true,
+    })
+  );
+  let contact = json_event(&serde_json::json!({"kind": "Contact", "unprinted": "bob@b.org"}));
+  assert_eq!(contact.unprinted.as_deref(), Some("bob@b.org"));
+  let old =
+    json_event(&serde_json::json!({"kind": "Mark", "span": [9, 13], "text": "1", "label": "1"}));
+  assert_eq!((old.formula, old.unprinted, old.held), (None, None, false));
+}
+
 /// The comparator on two conversions: a marked block the shadow resolves as the XML has it agrees; the design's
 /// `dag` probe, written (93a), agrees, and against the old reader's XML disagrees, one classified row per moved symbol
 /// line (ruling 2: the old reader has both lines on Cat Cole, the shadow each on its carriers) — and resolving the dump's events again gives the dump's own resolution.

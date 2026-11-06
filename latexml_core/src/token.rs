@@ -1024,6 +1024,186 @@ pub struct FieldLedgerScope {
   outer:   Option<Vec<Digested>>,
 }
 
+/// A definition made while a rehearsal digests a field's tokens ([`FieldNotes`]): what no box says, a definition printing
+/// nothing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct FieldDeclaration {
+  /// the position of the field's token that made it: a definer, or the call of a macro whose expansion is the definer
+  pub start:    u16,
+  /// one past the last position that invocation read
+  pub end:      u16,
+  /// the meanings it assigned, in order
+  pub definees: Vec<SymStr>,
+  /// whether every one of them was assigned globally
+  pub global:   bool,
+  /// the groups open around it, in the field
+  pub depth:    usize,
+  /// its call may still be being read ([`field_notes_after`])
+  open:         bool,
+}
+
+/// A rehearsal's notes on what its boxes do not hold, by the field position of the invocation (the stomach's, right after
+/// it read what it reads: `field_notes_after`), open from [`field_notes_begin`] to [`field_notes_end`].
+#[derive(Debug, Default)]
+pub struct FieldNotes {
+  /// the definitions made by invocations that made no box ([`FieldDeclaration`])
+  pub declarations: Vec<FieldDeclaration>,
+  /// the positions `start..end` of the invocations during which errors were raised, each with how many
+  pub errors:       Vec<(u16, u16, usize)>,
+  /// the positions the field's tokens end at (the reach of the field's last invocation)
+  end:              u16,
+  /// the errors counted so far, and the groups open when the notes began
+  errors_seen:      usize,
+  depth:            usize,
+  /// the field's tokens, whose position tells what was called there ([`field_declares`])
+  field:            Vec<Token>,
+}
+
+#[thread_local]
+static FIELD_NOTES_OPEN: std::cell::Cell<bool> = std::cell::Cell::new(false);
+
+thread_local! {
+  /// The notes being taken ([`field_notes_begin`]).
+  static FIELD_NOTES: std::cell::RefCell<FieldNotes> = std::cell::RefCell::default();
+}
+
+/// Whether a rehearsal is taking notes (the stomach's test on a field token's invocation).
+#[inline]
+pub fn field_notes_open() -> bool { FIELD_NOTES_OPEN.get() }
+
+/// Begin the notes of the tokens about to be digested, `tokens` the field's (a rehearsal's; rehearsals are not nested,
+/// their journals not being). Their positions' end bounds what the last of them read.
+pub fn field_notes_begin(tokens: &Tokens) {
+  let end = tokens
+    .unlist_ref()
+    .iter()
+    .filter(|t| t.prov != 0)
+    .map(|t| field_prov_pos(t.prov).saturating_add(1))
+    .max()
+    .unwrap_or(0);
+  FIELD_NOTES.with(|notes| {
+    *notes.borrow_mut() = FieldNotes {
+      end,
+      field: tokens.unlist_ref().clone(),
+      errors_seen: REPORT.borrow().error,
+      depth: state::get_frame_depth(),
+      ..FieldNotes::default()
+    };
+  });
+  // (what the rehearsal bound before its tokens is none of theirs)
+  state::take_meaning_log();
+  FIELD_NOTES_OPEN.set(true);
+}
+
+/// End the notes ([`field_notes_begin`]).
+pub fn field_notes_end() -> FieldNotes {
+  FIELD_NOTES_OPEN.set(false);
+  FIELD_NOTES.with(std::cell::RefCell::take)
+}
+
+/// Whether `token`, invoked at the field position `pos`, stands for what the paper declares: the field's own token there, a
+/// definer invoked directly (`\\def`, `\\let`, `\\newcommand`), or the call there of a macro the paper or a file it read
+/// defined, whose expansion `token` is. A kernel's or a binding's macro assigning meanings on its own account (a font
+/// switch's `\\f@series`, `\\centering`'s `\\\\`, an environment's `\\@currenvir`) declares nothing of the paper's.
+fn field_declares(token: &Token, pos: u16, field: &[Token]) -> bool {
+  use crate::definition::origin::DefinitionOrigin;
+  let Some(call) = field
+    .iter()
+    .find(|t| t.prov != 0 && field_prov_pos(t.prov) == pos)
+  else {
+    return false;
+  };
+  if call == token {
+    return !matches!(state::lookup_meaning(call), Some(Stored::Expandable(_)));
+  }
+  match state::lookup_meaning(call) {
+    Some(Stored::Expandable(definition)) => matches!(
+      crate::common::object::Object::get_origin(&*definition),
+      DefinitionOrigin::Document | DefinitionOrigin::File
+    ),
+    _ => false,
+  }
+}
+
+/// Note the invocation of the field token `token` that read as far as `cover` and made `result`: the errors raised since
+/// the last one, and, making no box, the meanings it declared ([`field_declares`]), as far as its call read — a macro's
+/// arguments, the pending cover (its expansion's tokens inherit its position). A box made inside the reach of a declaration
+/// still open (a macro printing ink, its internal `\\let`s) takes it back: that box's span holds the call, and a
+/// declaration of it would print it twice. The first token read past its reach closes it.
+#[cold]
+#[inline(never)]
+pub(crate) fn field_notes_after(token: &Token, cover: FieldCover, result: &[Digested]) {
+  let assigned = state::take_meaning_log();
+  let errors = REPORT.borrow().error;
+  let pos = field_prov_pos(token.prov);
+  let pending = FIELD_COVER_PENDING.get();
+  let pending_here = pending.field == cover.field && pending.start <= pos && pos <= pending.end;
+  let reach = if pending_here {
+    pending.end.max(cover.end)
+  } else {
+    cover.end
+  };
+  // (only where the depth is read: this runs for every field token)
+  let drained = crate::gullet::pushback_is_empty();
+  let depth = (drained || !assigned.is_empty()).then(state::get_frame_depth);
+  // (the opening shift's invocation holds the box its closing shift made: the formula starts here)
+  for digested in result {
+    if digested.is_math_whatsit() {
+      digested.try_set_property(
+        crate::document::FIELD_FORMULA_START_PROPERTY,
+        i64::from(pos),
+      );
+    }
+  }
+  FIELD_NOTES.with(|notes| {
+    let notes = &mut *notes.borrow_mut();
+    // (the field's last token, outside any group: nothing left in the input shows how far it read, which is to the end)
+    let reach = if drained && depth == Some(notes.depth) {
+      reach.max(notes.end)
+    } else {
+      reach
+    };
+    if errors > notes.errors_seen {
+      notes
+        .errors
+        .push((pos, reach.max(pos + 1), errors - notes.errors_seen));
+    }
+    notes.errors_seen = errors;
+    notes.declarations.retain_mut(|declaration| {
+      if declaration.open {
+        if pos >= declaration.end || (pending.field == cover.field && pending.end > declaration.end)
+        {
+          declaration.open = false;
+        } else if !result.is_empty() && declaration.start <= pos {
+          return false;
+        }
+      }
+      true
+    });
+    if !result.is_empty() || assigned.is_empty() || !field_declares(token, pos, &notes.field) {
+      return;
+    }
+    let global = assigned.iter().all(|(_, global)| *global);
+    let definees = assigned.into_iter().map(|(key, _)| key);
+    match notes.declarations.last_mut() {
+      // (a macro's expansion defining several, one after another: one call's)
+      Some(last) if last.open && last.start == pos => {
+        last.end = last.end.max(reach);
+        last.global &= global;
+        last.definees.extend(definees);
+      },
+      _ => notes.declarations.push(FieldDeclaration {
+        start: pos,
+        end: reach.max(pos + 1),
+        definees: definees.collect(),
+        global,
+        depth: depth.unwrap_or(0).saturating_sub(notes.depth),
+        open: true,
+      }),
+    }
+  });
+}
+
 thread_local! {
   /// The boxes stamped with a field provenance while a [`FieldLedgerScope`] is open (none outside one).
   static FIELD_STAMPED_BOXES: std::cell::RefCell<Option<Vec<Digested>>> =
