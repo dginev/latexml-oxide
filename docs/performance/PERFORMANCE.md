@@ -376,7 +376,9 @@ The article: 1.169 G → 1.080 G, -7.6 %. pgf-interference-en/-de: over 180 s on
 
 **`-Zplt=yes` (`.cargo/config.toml`).** 515 K of the binary's 1.04 M call sites loaded their target from the GOT and called through memory, though the target is in the same binary. The flag makes them direct calls. Median of 7 interleaved runs on one core with an idle SMT sibling (`kit/perf_ab_cycles.sh`), same tree, XML identical: cycles fp1000 22.27 G → 21.88 G (-1.75 %), fill1000 4.446 G → 4.379 G (-1.50 %), addplot500 8.423 G → 8.235 G (-2.24 %), a plain article -0.36 %, inside its 1.5-1.8 % spread. Instructions -0.07 to -0.22 %, so this is the indirect call's cost and not less work. It doesn't show in `instructions:u`, and a loaded machine hides it: the first attempt read 8-29 % spreads.
 
-**Next:** the l3fp loop is a native evaluator's job, not the interpreter's (`pk/P2`).
+**Against pdflatex, where this leaves us** (task-clock, median of 3 on one quiet core, `ar5iv.sty`, P1 without `-Zplt`; pdflatex writes its PDF too): loading pgf and pgfplots 269 → 295 ms, 1.10×; fill1000 518 → 852 ms, 1.64×; addplot500 638 → 1,665 ms, 2.61×; fp1000 1,515 → 4,358 ms, 2.88×. With the load subtracted: 2.2×, 3.7×, 3.3×. So the goal "pgf/TikZ as fast as pdflatex" isn't met on token-heavy loops. After P1 the interpreter's profile is flat: on fp1000 `read_x_token`, the largest self entry at 12.85 %, has no instruction above 3.3 %; on fill1000 and addplot500 every string-formatting site is under 0.5 %, and every lookup entry under 2 %. The next large gains are native layers for what a document actually loops in.
+
+**Next:** the l3fp loop is a native evaluator's job, not the interpreter's (`pk/P2`). Then pgfplots' arithmetic: addplot500 is the furthest from pdflatex of what stays interpreted.
 
 ### 2026-10-31 — frontmatter overhead levers (batch 96p)
 
