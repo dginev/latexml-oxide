@@ -1954,6 +1954,12 @@ impl Document {
   /// children is an error (reported, not fatal — see the body comment on why
   /// this returns `()`).
   pub fn set_node(&mut self, node: &Node) {
+    // Perl Document.pm:setNode L75: `closeText_internal($self); # Close any open
+    // text node, so ligatures run.` Without it, a text node left behind by a
+    // float-up (`floatToElement`, e.g. a `^<ltx:note>` footnote) never had its
+    // TEXT_LIGATURES applied: ``a'' b\footnote{x} kept ‘‘a’’ instead of “a”.
+    // close_text_internal moves self.node itself, without recursing into here.
+    let _ = self.close_text_internal();
     // Perl Document.pm:setNode L74-87: if the candidate is a
     // DOCUMENT_FRAG_NODE, validate that it has exactly one child and
     // descend to that child. The original Rust port had this check

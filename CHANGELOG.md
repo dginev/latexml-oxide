@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+  - **Text ligatures run before a footnote.** ``` ``a'' b\footnote{x} ``` kept
+    `‘‘a’’` (and `---` stayed three hyphens): `Document::set_node` didn't close the
+    open text node, as Perl `Document.pm:setNode` L75 does "so ligatures run", so
+    the text left behind by the `^<ltx:note>` float-up was never ligatured. Witness
+    arXiv 1706.08158; guard `ligatures_before_footnote`.
+
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
   - **OmniBus fallback captures `\orcid` and no-ops the `\lefttitle`/`\righttitle`
