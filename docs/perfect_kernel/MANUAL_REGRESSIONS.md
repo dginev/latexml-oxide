@@ -18,7 +18,7 @@ Sweep #150 on `d6e175bacb` (binary int140a), 180 s, 8 GB, its timeouts re-run on
 
 Vs #149: status worse on 53 manuals, better on 220; errors 11,246 → 11,278, up on 44, down on 85. **None comes from Bundle int140a:** 21 of them run on int139c give the same status and error count.
 
-#152 (`pk/int142a`: `pk/P1`, `pk/M3`) meets the goal bar: G1-G4 are 0 on the 1,552, and no manual has a Fatal or timeout it didn't have at #149 (G5 58 rows against #149's, 10 gone, 0 new). `pgf-interference-en`, `-de` pass on P1's levers alone, at the ceiling's margin: the native l3fp evaluator (`pk/P2`) takes them to about 30 s. A/B 28,354: 18 changed, E 46,417 → 46,081, F 173 → 172, worse only by 2405.15073's literal `\normalfont` text going.
+#154 (bundle int143b) holds it, manuals over 120 s 2 → 0. #152 (`pk/int142a`: `pk/P1`, `pk/M3`) meets the goal bar: G1-G4 are 0 on the 1,552, and no manual has a Fatal or timeout it didn't have at #149 (G5 58 rows against #149's, 10 gone, 0 new). `pgf-interference-en`, `-de` pass on P1's levers alone, at the ceiling's margin: the native l3fp evaluator (`pk/P2`) takes them to about 30 s. A/B 28,354: 18 changed, E 46,417 → 46,081, F 173 → 172, worse only by 2405.15073's literal `\normalfont` text going.
 
 ## The clusters
 

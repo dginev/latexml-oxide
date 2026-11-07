@@ -841,7 +841,8 @@ fn no_word(atoms: &[Atom]) -> bool {
   })
 }
 
-/// A formula of a field's tokens, as the digested list says it.
+/// A formula of a field's tokens, as the digested list says it, or the ink of a group printing symbols alone
+/// ([`Walker::note_a_symbols_group`]), which a piece's run treats alike.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(in crate::base_utilities) struct Formula {
   /// its opening shift, and past its closing shift ([`formula_extent`])
@@ -941,6 +942,7 @@ impl Walker {
         // (a braced group; the block's own list is none)
         if self.lists > 0 {
           self.note_a_formulas_group(at);
+          self.note_a_symbols_group(at);
           self.enclose(at, d, false, None);
         }
       },
@@ -1020,6 +1022,41 @@ impl Walker {
           formula.alone_in = formula.alone_in.saturating_add(1);
         }
       }
+    }
+  }
+
+  /// A group of no formula printing symbols alone is a mark's own group as a formula's is, when a mark starts there: `{*\,} Univ X, {**\,} Univ Y`
+  /// (1605.02212). Its ink stands in the formulas, whole, so that a piece that starts at it starts at the brace (`writer::Field::starts_at_its_brace`).
+  /// A word or a digit after the symbol is no such group (`no_word`).
+  fn note_a_symbols_group(&mut self, at: usize) {
+    if self.formula_atoms.last().is_some_and(|run| run.0 >= at) {
+      return;
+    }
+    let Some(atoms) = self.atoms.get(at..).filter(|atoms| no_word(atoms)) else {
+      return;
+    };
+    let mut ink = None;
+    for atom in atoms {
+      if let Atom::Ink { span, .. } = atom {
+        let Some((start, end)) = *span else {
+          return;
+        };
+        ink = Some(ink.map_or((start, end), |(first, _)| (first, end)));
+      }
+    }
+    let Some((start, end)) = ink else {
+      return;
+    };
+    match self.formulas.last_mut() {
+      Some(formula) if formula.start == start => {
+        formula.alone_in = formula.alone_in.saturating_add(1)
+      },
+      _ => self.formulas.push(Formula {
+        start,
+        end,
+        alone_in: 1,
+        opens_line_in: 0,
+      }),
     }
   }
 

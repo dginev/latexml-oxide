@@ -1,0 +1,15 @@
+% mechanism: a group of no formula printing symbols alone is a mark's own group, as a formula's is (`Walker::note_a_symbols_group`): a piece that starts at its symbol starts at
+%   the brace. Without it the Cut's run closes a group it can't place, the piece is no run, and the whole list goes to the last name.
+% witness: 1605.02212 (`\address{{*\,} Department of Mathematics, …\acr {**\,} Boral High School, …}`, article with its own `\author[..]{..}`; bundle int143a's A/B)
+% oracle:  pdflatex 0 errors, "Ann Able* and Bob Baker**", then "* Univ X" and "** Univ Y"
+% engines: Perl has no cut. int142a: cut, by walking back; each author their address. Z3: Bob with "* Univ X ** Univ Y", Ann none, E 0, W 0
+% expect:  0 errors, 0 warnings; Ann "* Univ X", Bob "** Univ Y" (perfect_kernel_batchz3::a_symbols_group_is_a_marks_own)
+% status:  GREEN
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able* and Bob Baker**}
+\address{{*\,} Univ X\\ {**\,} Univ Y}
+\maketitle
+Body.
+\end{document}
