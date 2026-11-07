@@ -1,0 +1,17 @@
+% witness: 2403.12766 (`\affil{\small{$^{1}$Westlake University; … $^{6}$NYU Shanghai\\ {\{wangcunxiang, zhangyue\}@westlake.edu.cn};  ruoxining@outlook.com; 20200142@hznu.edu.cn}}`, the last Qian Wang's by the paper's `\thanks`)
+% oracle:  pdflatex 0 errors: the names with their marks, the marked institutes, then a line listing several authors' addresses
+% engines: Perl: one affiliation for the block; int143b: each author their institute, the line of addresses left in the last; ours at Z14r3's first build: the reading gives the unspelled address the last entry's only carrier, and the writer, keeping the take-out for an address today's prints, asserted it as that author's e-mail
+% expect:  0 errors; as int143b: the line of addresses stays in the last institute's text, no e-mail asserted for its carrier (perfect_kernel_batchz14::an_only_carriers_address_beside_others_is_not_written)
+% status:  GREEN (Z14r3)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{\textbf{Ann Able}\textsuperscript{$1$}, \textbf{Bob Baker}\textsuperscript{$2$}, \textbf{Cat Cole}\textsuperscript{$3$}, \textbf{Dan Dean}\textsuperscript{$2$}}
+\affil{\small{$^{1}$Univ A; $^{2}$Univ B;\\ $^{3}$Univ C\\
+  {\{ann.able, bob.baker\}@a.org}; 20200142@c.org
+  }}
+\date{}
+\begin{document}
+\maketitle
+Body.
+\end{document}

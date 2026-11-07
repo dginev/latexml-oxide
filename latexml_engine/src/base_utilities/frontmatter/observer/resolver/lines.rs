@@ -471,10 +471,19 @@ pub(super) fn names_without_addresses(events: &[&Event]) -> (Vec<Event>, Vec<Str
   let mut addresses = Vec::new();
   for event in events {
     if event.kind == EventKind::Name && !addresses_in(&event.text).is_empty() {
-      let before = address_runs(&event.text, &|_| false)
+      // (where its first run starts, the label word with it; else, or where a word before that run prints an address
+      // the run reader does not part from its neighbours, at that word: `Kristiaan Pelckmans |kp@it.uu.se|`, OT1's
+      // `|` an em dash glued to the address, 1006.4832 — the name had taken the address)
+      let word = event
+        .text
+        .split_whitespace()
+        .find(|w| !plain_addresses(w).is_empty())
+        .and_then(|w| event.text.find(w))
+        .unwrap_or(event.text.len());
+      let run = address_runs(&event.text, &|_| false)
         .first()
-        .map_or(event.text.as_str(), |run| &event.text[..run.start])
-        .trim();
+        .map_or(event.text.len(), |run| run.start);
+      let before = event.text[..word.min(run)].trim();
       addresses.extend(addresses_in(&event.text));
       if !before.is_empty() {
         out.push(Event {

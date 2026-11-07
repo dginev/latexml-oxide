@@ -2166,6 +2166,35 @@ fn email_address_word(text: &str) -> Option<String> {
     })
 }
 
+/// The addresses [`kind_address_lines`] takes out of today's entry `entry` as its holders' e-mails, line by line, read
+/// as that pass reads them (`spells`: whether a local part spells an author): what the writer would lose making the
+/// entry's lines one author's each (`plan::cut_block_lines`, 2310.19837; a template it leaves as printed,
+/// 2203.17007's `firstname.secondname@ericsson.com`).
+pub(in crate::base_utilities) fn entry_line_addresses(
+  entry: &Node,
+  spells: &dyn Fn(&str) -> bool,
+) -> Vec<String> {
+  let lines = entry_lines(entry);
+  let printed_lines = lines
+    .iter()
+    .filter(|(nodes, _)| nodes.iter().any(|n| !n.get_content().trim().is_empty()))
+    .count();
+  let mut out = Vec::new();
+  for (nodes, _) in &lines {
+    let mut line = LineText::default();
+    if nodes.iter().all(|node| line.read(node))
+      && let Some(cut) = address_line_cut(
+        &line.text,
+        spells,
+        printed_lines == 1 && line.opens_with_mark(),
+      )
+    {
+      out.extend(cut.addresses);
+    }
+  }
+  out
+}
+
 /// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #966): the Kind step for a line of addresses inside an affiliation-kind entry
 /// (an affiliation, alternate affiliation or address, [`CUT_ROLES`]), read at the flush, where every route that makes
 /// the entry meets — a class's block (IEEEtran's `\IEEEauthorblockA{… \\ E-mail: a@x, \{b, c\}@y, and d@z}`,

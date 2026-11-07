@@ -20,6 +20,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
   super::{
+    super::insert::entry_line_addresses,
     events::{
       Event, EventKind, FontScope, InkFonts, Wrap, changes_font, entry_font, font_declaration,
       lex_with_formulas, switch_free, text_font_command,
@@ -1452,15 +1453,26 @@ fn cut_block_lines(
     if (run.len() == 1 && run[0].2.0 != Kind::Note) || run.iter().all(|line| line.3) {
       continue;
     }
-    // (an affiliation line that prints an address the reading left in it is not made: today's item prints it among
-    // others, where a pass after the writer takes it out as its carriers' e-mail, which no pass reads out of a line made
-    // one author's — a legend keeps its address in its text, OD #925 —
+    // (an affiliation line that prints an address the reading left in it is not made where today's item prints it among
+    // others and a pass after the writer takes it out as its carriers' e-mail (`insert::entry_line_addresses`), which no
+    // pass reads out of a line made one author's — a legend keeps its address in its text, OD #925 —
     // `$^\ddagger$Univ B\\ Email: x@a.org, y@b.org`, its addresses spelling no one, under `Ann Able$^\dagger$, Bob
-    // Baker$^\ddagger$`, read with 2310.19837)
+    // Baker$^\ddagger$`, read with 2310.19837; one that pass leaves as printed is made so, 2203.17007's
+    // `$^{\star \star}$Ericsson Research, Sweden, E-mail: \texttt{firstname.secondname@ericsson.com}`)
+    let names: Vec<&str> = resolved.creators.iter().map(|c| c.name.as_str()).collect();
+    let spells = spells_one_of(&names);
+    let carried: BTreeSet<String> = holds
+      .iter()
+      .flat_map(|(_, node, _)| entry_line_addresses(node, &spells))
+      .map(|a| norm(&a))
+      .collect();
     if run.iter().any(|(_, _, key, _)| {
       key.0 == Kind::Affiliation
         && want[key].iter().any(|(_, a)| {
-          !addresses_in(&a.text).is_empty() && !a.rule.ends_with(" ruling3:address-out")
+          !a.rule.ends_with(" ruling3:address-out")
+            && addresses_in(&a.text)
+              .iter()
+              .any(|address| carried.contains(&norm(address)))
         })
     }) {
       continue;
@@ -1663,31 +1675,33 @@ fn cut_entry_addresses(
   Ok(printed_in)
 }
 
-/// Whether `key` is the text of a run of the reading's affiliation entries one after another, joined: today's one item of
-/// a block's lines, cut of its addresses, which [`cut_block_lines`] then parts (`† Univ A ‡ Univ B Email: ann@a.org,
-/// bob@b.org` the entries `Univ A` and `Univ B`, its addresses their e-mails: 2310.19837).
+/// Whether `key` is the text of several of the reading's affiliation entries, joined, each once: today's one item of a
+/// block's lines or of an API call's pieces, cut of its addresses, which [`cut_block_lines`] or the pieces' cut then
+/// parts (`† Univ A ‡ Univ B Email: ann@a.org, bob@b.org` the entries `Univ A` and `Univ B`, its addresses their
+/// e-mails: 2310.19837). In any order: an API call's pieces share its source, no span to order them by (an order by
+/// their text read 1712.07118's `\affil` lines, hep-ph0108215's lettered `\address` lines as no join, and declined).
 fn joins_entries(want: &BTreeMap<Key, Vec<(Owner, &Assoc)>>, key: &str) -> bool {
-  /// An item's source, its ledger index and span ([`Assoc::source`]).
-  type ItemSource = (usize, Option<(u16, u16)>);
-  let mut entries: Vec<(Option<ItemSource>, &str)> = want
-    .iter()
-    .filter(|(k, _)| k.0 == Kind::Affiliation && !k.1.is_empty())
-    .filter_map(|(k, wants)| Some((wants.first()?.1.source, k.1.as_str())))
-    .collect();
-  entries.sort_unstable();
-  (0..entries.len()).any(|from| {
-    let mut joined = String::new();
-    for (_, text) in &entries[from..] {
-      joined.push_str(text);
-      if joined == key {
-        return true;
-      }
-      if !key.starts_with(&joined) {
-        return false;
+  fn joins(rest: &str, entries: &[&str], used: &mut Vec<bool>, count: usize) -> bool {
+    if rest.is_empty() {
+      return count >= 1;
+    }
+    for (at, entry) in entries.iter().enumerate() {
+      if !used[at] && rest.starts_with(entry) {
+        used[at] = true;
+        if joins(&rest[entry.len()..], entries, used, count + 1) {
+          return true;
+        }
+        used[at] = false;
       }
     }
     false
-  })
+  }
+  let entries: Vec<&str> = want
+    .keys()
+    .filter(|k| k.0 == Kind::Affiliation && !k.1.is_empty())
+    .map(|k| k.1.as_str())
+    .collect();
+  joins(key, &entries, &mut vec![false; entries.len()], 0)
 }
 
 /// The label today's affiliation item `node` prints before its text, which a take-out that empties it keeps on the

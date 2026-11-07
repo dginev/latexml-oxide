@@ -372,14 +372,38 @@ pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Docum
     listed: Vec::new(),
     ..resolved
   };
-  let resolved = take_out_again(&resolved, &taken_out, &front)?;
-  let mut before = plan::difference(&resolved, &front);
-  let mut planned = plan::plan(&resolved, &front)?;
+  let mut kept = take_out_again(&resolved, &taken_out, &front, true)?;
+  let mut before = plan::difference(&kept, &front);
+  let mut planned = plan::plan(&kept, &front)?;
+  // (the fail-safe of an entry kept taken out because today's prints its addresses in an item the address reader cuts:
+  // where the plan cannot make it cut, it is given back whole, as today's prints it, and the plan writes the rest —
+  // astro-ph0007423's own `\address{ e--mail: bulgac@… and magiersk@… }`, whose `e–mail:` the cut reads as no label, had
+  // been declined whole, every numbered address on both authors; an address today's holds as an author's contact stays
+  // taken out, the paper declined, as 2310.19837's; where that leaves today's as it was, the ledger says the take-out was
+  // declined, not `same`, as the write-out's fail-safe below: 0705.3751, 1510.04162, 2506.05001)
+  let mut kept_whole = None;
+  if planned.is_none() && before.is_some() {
+    let whole = take_out_again(&resolved, &taken_out, &front, false)?;
+    if whole != kept {
+      let whole_before = plan::difference(&whole, &front);
+      let whole_plan = plan::plan(&whole, &front)?;
+      if whole_plan.is_some() || whole_before.is_none() {
+        DebugFeature!(
+          "frontmatter",
+          "FRONT writer: the entries today's prints the addresses of given back: {before:?}"
+        );
+        if whole_before.is_none() {
+          kept_whole = before.as_ref().map(|d| d.to_string());
+        }
+        (kept, before, planned) = (whole, whole_before, whole_plan);
+      }
+    }
+  }
+  let resolved = kept;
   // (the fail-safe of the write-out: where the plan cannot write a call's e-mails out address by address, each call
   // stays one contact on its authors, as today's holds it — the reading the re-part wrote — and the plan writes the
   // rest; an e-mail split never declines a paper, brief 95e — and where that leaves today's as it was, the ledger still
   // says the write-out was declined, not `same`: the improvement the reading wanted is not hidden, rev95e S2, 1412.1769)
-  let mut kept_whole = None;
   let resolved = if planned.is_none() && before.is_some() && !resolved.listed.is_empty() {
     let whole = give_back_listed(&resolved);
     let whole_before = plan::difference(&whole, &front);
@@ -490,7 +514,18 @@ fn give_back_grades(resolved: &Resolved, front: &dom::Front) -> Resolved {
 /// With `all`, every e-mail call the reading wrote out address by address is given back too ([`give_back_listed`]);
 /// else they stay written out, the plan's to write (its fail-safe in [`write_observed_frontmatter`]).
 fn give_back_addresses(resolved: &Resolved, front: &dom::Front, all: bool) -> Result<Resolved> {
-  let out = give_back_entries(resolved, front, all)?;
+  give_back_addresses_but(resolved, front, all, true)
+}
+
+/// [`give_back_addresses`], an entry whose addresses today's prints in an item the address reader cuts kept taken out
+/// only with `printed` ([`give_back_entries`]).
+fn give_back_addresses_but(
+  resolved: &Resolved,
+  front: &dom::Front,
+  all: bool,
+  printed: bool,
+) -> Result<Resolved> {
+  let out = give_back_entries(resolved, front, all, printed)?;
   Ok(if all { give_back_listed(&out) } else { out })
 }
 
@@ -502,8 +537,14 @@ fn give_back_addresses(resolved: &Resolved, front: &dom::Front, all: bool) -> Re
 /// An address today's holds as a contact is not given back: giving it back took the contact from its author and left
 /// the address in the affiliation's text (`\IEEEauthorblockA{$^\dagger$Univ A\\ $^\ddagger$Univ B\\ Email: ann@a.org,
 /// bob@b.org}`, 2310.19837): the entry is made whole and cut where the plan makes it (`Op::Make`'s `cut`), or the paper
-/// declined, today's contacts kept.
-fn give_back_entries(resolved: &Resolved, front: &dom::Front, all: bool) -> Result<Resolved> {
+/// declined, today's contacts kept. One whose addresses today's prints in an item the address reader cuts is kept so only
+/// with `printed`: without, it is given back (the fail-safe in [`write_observed_frontmatter`], astro-ph0007423).
+fn give_back_entries(
+  resolved: &Resolved,
+  front: &dom::Front,
+  all: bool,
+  printed: bool,
+) -> Result<Resolved> {
   if resolved.taken.is_empty() {
     return Ok(resolved.clone());
   }
@@ -537,18 +578,41 @@ fn give_back_entries(resolved: &Resolved, front: &dom::Front, all: bool) -> Resu
     .map(|a| dom::norm(&a))
     .collect();
   let mut out = resolved.clone();
+  // (an entry given back is taken no more: the plan reads `taken` as the entries it makes cut, `plan::cut_block_lines`
+  // and an API call's pieces — a given-back piece read there as its cut text joined no item of today's, and the fail-safe
+  // below declined 1712.07118, hep-ph0108215 still)
+  out.taken.clear();
   for taken in &resolved.taken {
     let (original, stripped) = (dom::norm(&taken.original), dom::norm(&taken.stripped));
     let cut_to =
       |item: &dom::Item| dom::address_cut(&item.node, &spells, &mailed).map(|cut| cut.key);
-    // (its e-mails, each a contact of today's or printed in an affiliation of today's the address reader cuts)
-    let entry_mails: Vec<String> = resolved
+    // (its e-mails, each a contact of today's or printed in an affiliation of today's the address reader cuts — this one
+    // not where the reading gave it the entry's only carrier while the entry prints an address another author's own:
+    // the entry's text then lists the block's addresses, no evidence the carrier's is among them, 2403.12766's
+    // `20200142@hznu.edu.cn`, Qian Wang's, read as Zheng Zhang's under `$^6$NYU Shanghai`, whose line lists
+    // `{wangcunxiang, zhangyue}@westlake.edu.cn; ruoxining@outlook.com` too)
+    let carriers: Vec<usize> = taken.holders.iter().filter_map(|(c, ..)| *c).collect();
+    let printed_here: BTreeSet<String> = addresses_in(&taken.original)
+      .iter()
+      .map(|a| dom::norm(a))
+      .collect();
+    let lists_others = resolved
+      .creators
+      .iter()
+      .enumerate()
+      .filter(|(i, _)| !carriers.contains(i))
+      .flat_map(|(_, c)| &c.contacts)
+      .any(|a| a.rule.contains("owner:spelled") && printed_here.contains(&dom::norm(&a.text)));
+    let entry_mails: Vec<(String, bool)> = resolved
       .creators
       .iter()
       .flat_map(|c| &c.contacts)
       .chain(&resolved.block)
       .filter(|a| a.source == taken.source && a.rule.contains("owner:entry-address"))
-      .map(|a| dom::norm(&a.text))
+      .map(|a| {
+        let weak = lists_others && a.rule.contains("owner:only-carrier");
+        (dom::norm(&a.text), weak)
+      })
       .collect();
     let printed_cut = |mail: &String| {
       items.iter().any(|item| {
@@ -564,7 +628,7 @@ fn give_back_entries(resolved: &Resolved, front: &dom::Front, all: bool) -> Resu
     let held_as_contact = !entry_mails.is_empty()
       && entry_mails
         .iter()
-        .all(|mail| contacted.contains(mail) || printed_cut(mail));
+        .all(|(mail, weak)| contacted.contains(mail) || (printed && !*weak && printed_cut(mail)));
     let holds = if stripped.is_empty() {
       !items.iter().any(|item| item.key == original)
         || items
@@ -594,6 +658,7 @@ fn give_back_entries(resolved: &Resolved, front: &dom::Front, all: bool) -> Resu
       Ok(false)
     };
     if (holds || held_as_contact) && !all && !label_lost()? {
+      out.taken.push(taken.clone());
       continue;
     }
     for creator in &mut out.creators {
@@ -655,6 +720,7 @@ fn take_out_again(
   resolved: &Resolved,
   taken_out: &Resolved,
   front: &dom::Front,
+  printed: bool,
 ) -> Result<Resolved> {
   let whole = Resolved {
     taken: Vec::new(),
@@ -664,7 +730,7 @@ fn take_out_again(
   if (taken_out.taken.is_empty() && taken_out.listed.is_empty()) || *resolved != whole {
     return Ok(resolved.clone());
   }
-  give_back_addresses(taken_out, front, false)
+  give_back_addresses_but(taken_out, front, false, printed)
 }
 
 /// The writer's invariant: it never makes a creator without a name (review rev94b r3 B2). An item made from the
