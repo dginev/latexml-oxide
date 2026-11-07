@@ -574,7 +574,7 @@ impl Resolver {
     let entry_affiliation = events
       .iter()
       .filter(|e| matches!(e.kind, EventKind::Name | EventKind::Contact))
-      .any(|e| reads_as_affiliation(&text_tokens(&e.text)));
+      .any(|e| is_institution(&e.text));
     let legend = label_rule.starts_with("api:leading-mark")
       && matches!(role, "affiliation" | "address" | "altaffiliation")
       && !labels.is_empty()

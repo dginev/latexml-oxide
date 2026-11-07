@@ -581,6 +581,14 @@ fn raw_arg(w: &Whatsit, n: usize) -> String {
   w.get_arg(n).map(|a| a.to_string()).unwrap_or_default()
 }
 
+/// The value of `key` in an API call's options, as written (`role=affiliation,annotate=new`).
+fn option_value(options: &str, key: &str) -> Option<String> {
+  options.split(',').find_map(|kv| {
+    let (k, value) = kv.split_once('=')?;
+    (k.trim() == key).then(|| value.trim().to_string())
+  })
+}
+
 /// An e-mail call's argument as it prints (`raw_arg`), each line break it holds — the rehearsal's `\lx@fm@obs@break`,
 /// `\\` inside the verbatim argument of llncs's `\email{a@x.org \\ b@y.org}`, `{\tt#1}` printing one address a line —
 /// a space between its lines: their addresses are several, each written out (2608.29307's three addresses under one
@@ -1254,12 +1262,13 @@ impl Walker {
       | "\\lx@fm@obs@email@own"
       | "\\lx@fm@obs@orcid"
       | "\\lx@fm@obs@affil"
-      | "\\lx@fm@obs@affil@run" => {
+      | "\\lx@fm@obs@affil@run"
+      | "\\lx@fm@obs@affil@marked" => {
         let mut contact = Event::new(EventKind::Contact);
         contact.role = Some(
           match cs.as_str() {
             "\\lx@fm@obs@orcid" => "orcid",
-            "\\lx@fm@obs@affil" | "\\lx@fm@obs@affil@run" => "affiliation",
+            _ if cs.starts_with("\\lx@fm@obs@affil") => "affiliation",
             _ => "email",
           }
           .to_string(),
@@ -1269,12 +1278,17 @@ impl Walker {
         if cs == "\\lx@fm@obs@affil@run" {
           contact.annotate = Some("run".to_string());
         }
+        // (a binding's marked list: its options the API's, no label)
+        let marked = cs == "\\lx@fm@obs@affil@marked";
+        if marked {
+          contact.annotate = option_value(&raw(1), "annotate");
+        }
         contact.meaning = match cs.as_str() {
           "\\lx@fm@obs@email@inplace" => EmailMeaning::InPlace,
           "\\lx@fm@obs@email@own" => EmailMeaning::Own,
           _ => EmailMeaning::Binding,
         };
-        let label = arg(1);
+        let label = if marked { String::new() } else { arg(1) };
         contact.label = (!label.is_empty()).then_some(label);
         contact.text = if cs.starts_with("\\lx@fm@obs@affil") {
           arg(2)
@@ -1356,8 +1370,16 @@ impl Walker {
         let mut contact = Event::new(EventKind::Contact);
         contact.role = Some("url".to_string());
         contact.target = Some(href_target(w));
-        contact.text = arg(2);
+        // (a note in the link is no text of it, an event of its own after it: `\href{https://orcid.org/…}{\usebox{\orcid}
+        // Nils~Bochow\thanks{\texttt{contact@…}}}`, 2507.22485 — "Nils Bochowcontact@…" read as no name)
+        let notes = w.get_arg(2).map(notes_in).unwrap_or_default();
+        contact.text = if notes.is_empty() {
+          arg(2)
+        } else {
+          w.get_arg(2).map(ink_of_without_notes).unwrap_or_default()
+        };
         self.event(contact, d, nest);
+        self.walk_notes(&notes, nest);
       },
       // (the kernel's ORCID link, frontmatter_fields.rs `\lx@orcidlink{id}{content}` — orcidlink.sty's `\orcidlink`
       // family, `\lx@add@orcid` —: a link to the iD's record, its first argument no ink; `\orcidlinki{José-María
@@ -1376,26 +1398,20 @@ impl Walker {
       "\\lx@fm@obs@annotate" => {
         let tag = raw(2);
         let options = raw(3);
-        let role = options
-          .split(',')
-          .find_map(|kv| {
-            kv.trim()
-              .strip_prefix("role=")
-              .map(|r| r.trim().to_string())
-          })
-          .unwrap_or_default();
+        let role = option_value(&options, "role").unwrap_or_default();
         let mut event = Event::new(if tag.trim() == "ltx:note" {
           EventKind::Note
         } else {
           EventKind::Contact
         });
         event.role = Some(role);
-        event.annotate = options.split(',').find_map(|kv| {
-          kv.trim()
-            .strip_prefix("annotate=")
-            .map(|a| a.trim().to_string())
-        });
+        event.annotate = option_value(&options, "annotate");
         event.text = arg(4);
+        // (a contact a link in it prints, no ink of the constructor's: `\IEEEauthorblockA{Dept\\ Univ\\ Email: \url{ann@x.no}}`,
+        // its address read as `\url`'s argument, 2603.01171 — the e-mail was lost)
+        if event.text.trim().is_empty() {
+          event.text = raw_lines(w, 4).trim().to_string();
+        }
         self.event(event, d, nest);
       },
       // Invisible ink (`\phantom`, `\hphantom`, `\vphantom`, math_common.rs; plain.tex/latex.ltx `\finph@nt`): pdflatex
@@ -1927,6 +1943,11 @@ pub(in crate::base_utilities) fn with_block_content<R>(
   let out = f();
   BLOCK_CONTENT.with(|b| *b.borrow_mut() = saved);
   out
+}
+
+/// Whether an author block is being rehearsed ([`with_block_content`]), not an API call's content.
+pub(in crate::base_utilities) fn in_block_content() -> bool {
+  BLOCK_CONTENT.with(|b| b.borrow().is_some())
 }
 
 /// The entry `events` lead with marks for ([`leading_marks`]): its labels, its text (the rest, `events_text`) and its

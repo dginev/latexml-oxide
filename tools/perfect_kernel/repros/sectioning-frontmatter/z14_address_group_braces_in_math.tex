@@ -1,0 +1,13 @@
+% witness: 1106.2694 (llncs, `\email{$\{$fargyriou,mikebekos,symvonis$\}$@math.ntua.gr}`)
+% oracle:  pdflatex (llncs.cls) 0 errors: "{ann.able,bob.baker}@a.org" under Univ A
+% engines: Perl: one e-mail text; ours before Z14: today's splits it, the reading held one address of the block, its `$` unread
+% expect:  0 errors; each address on the author it spells (perfect_kernel_batchz14::an_address_groups_braces_may_be_set_in_math)
+% status:  GREEN (Z14)
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1} \and Cat Cole\inst{2}}
+\institute{Univ A, Town A\\ \email{$\{$ann.able,bob.baker$\}$@a.org} \and Univ B, Town B\\ \email{cole@b.org}}
+\maketitle
+Body.
+\end{document}

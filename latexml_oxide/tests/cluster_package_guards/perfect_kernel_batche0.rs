@@ -840,10 +840,12 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("defs/general", 8),
   ("epl_cls.rs", 43),
   ("eptcs_cls.rs", 28),
-  ("events", 58),
+  // (raised by one at Z14: the lexer's own constructor, `\lx@fm@obs@affil@marked`, as the row's others; nothing a document spells)
+  ("events", 59),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   ("field_notes", 4),
-  ("frontmatter (rest)", 23),
+  // (26, not 23: `queue_reading.rs`'s three, of d98bee36f9, which raised no pin; no read of Z14's)
+  ("frontmatter (rest)", 26),
   ("frontmatter_stores", 527),
   ("gretsi_cls.rs", 14),
   ("ieeetran_cls.rs", 119),
@@ -859,11 +861,13 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("ptephy_cls.rs", 115),
   ("queue", 1),
   ("queue_digest", 16),
-  ("rehearsal", 5),
+  // (raised by one at Z14: the rehearsal's `BOUND_IN_A_BLOCK` table, `\lx@add@affiliation@marked`, `\lx@add@creator` read as digested instead of cut by spelling at
+  // the frozen API: the kind of table `FRONTMATTER_DIGESTED_REFACTOR.md` keeps, as Perl's `@authorsplits`)
+  ("rehearsal", 6),
   ("relocate", 134),
   // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens`, printed text read
-  // as tokens by `reads_as_affiliation` and `NameKeys` (11 with its definition), a `'\\'` read of a label (2), a call's hook (1))
-  ("resolver", 15),
+  // as tokens by `is_institution` and `NameKeys` (5 with their definitions), a `'\\'` read of a label (2), a call's hook (1))
+  ("resolver", 9),
   ("rest /author_split_tests.rs", 24),
   ("rest /block_insertion.rs", 0),
   ("rest /blocks.rs", 2),
@@ -1061,13 +1065,14 @@ fn a_spelling_rule_in_the_resolver_counts_however_it_is_written() {
 /// Debts of what names the kernel's tokens today (the rehearsal's table, the writer's and the events' readers, the ledger's stamping);
 /// the zeros stay zero: `policy`, `field_notes`, `marks` and `mod` decide, and a decision spells no token.
 const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
-  ("events", 83),
+  // (Z14: 84 and 109, the lexer's own constructor and the rehearsal's table rows for `\lx@add@affiliation@marked`, `\lx@add@creator` and `\alignauthor`, as in `TOKEN_READS`)
+  ("events", 84),
   ("field_notes", 0),
   ("ledger", 29),
   ("marks", 0),
   ("mod", 0),
   ("policy", 0),
-  ("rehearsal", 101),
+  ("rehearsal", 109),
   // (also among `resolver`'s 15 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook)
   ("resolver", 3),
   ("shadow", 7),

@@ -1,0 +1,16 @@
+% witness: 1209.0869 (`$^2$CNRS, LAB, UMR 5804 … \\ email \tt{…} \\ To appear in …`), 2606.23976 (`email: … \\ Key words: …`), 0910.1386, 1411.2744 (`E-mail: {…}@tul.cz,\\ fax:…, tel:…`)
+% oracle:  pdflatex 0 errors: both names, each marked line, the address, the last line
+% engines: Perl: one contact of the lines; ours before Z14: the reading's line of addresses ended the entry, the last line every name's affiliation
+% expect:  0 errors; the last line continues the entry above the addresses, as today's one `\\`-joined contact; the address its owner's (perfect_kernel_batchz14::a_line_of_addresses_leaves_the_entry_open)
+% status:  GREEN (Z14)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$\\
+$^1$Univ A\\
+$^2$Univ B\\
+email \texttt{bob.baker@b.org}\\
+To appear in Some Journal}
+\maketitle
+Body.
+\end{document}

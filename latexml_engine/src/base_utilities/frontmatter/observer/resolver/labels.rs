@@ -391,9 +391,15 @@ pub(super) fn later_line_is_names(
     pair[0].kind == EventKind::Name
       && (pair[1].kind == EventKind::Mark && !pair[1].line_first || pair[1].kind == EventKind::Note)
   });
+  // (an address the run prints is the line's e-mail, no piece of its names: `\name Marvin Pförtner$^1$ \email marvin@…`,
+  // jmlr2e's `\email` a font switch, 2312.14886, `names_without_addresses`)
   let names: Vec<&&Event> = events
     .iter()
-    .filter(|e| e.kind == EventKind::Name && e.text.chars().any(char::is_alphanumeric))
+    .filter(|e| {
+      e.kind == EventKind::Name
+        && e.text.chars().any(char::is_alphanumeric)
+        && addresses_in(&e.text).is_empty()
+    })
     .collect();
   let pieces = names.iter().filter(|e| !is_name_qualifier(&e.text)).count();
   // (the line's first run in a font of its own, against the affiliation line above it: the print sets the name apart —
@@ -418,16 +424,74 @@ pub(super) fn later_line_is_names(
     .iter()
     .filter(|e| !is_name_qualifier(&e.text))
     .any(|e| e.text.chars().any(char::is_lowercase) && e.text.split_whitespace().any(acronym));
+  // (a line a role opens is a row of names whatever else it holds: `Editor: P. Aurenche`, hep-ph0311131)
+  let headed = names
+    .first()
+    .is_some_and(|e| after_role_heading(&e.text).is_some());
+  // (a line under the names opening with "and" goes on with them, its piece reading as a name: `Anthony Berthelier \\ and
+  // Yongzhe Yan`, 2007.10022, `author_block::names_list_continues`; "and Max--Planck Institut für Mathematik, Bonn" reads
+  // as no name, math0208081)
+  let and_opens = !under_affiliation
+    && events
+      .iter()
+      .find(|e| e.kind != EventKind::Layout)
+      .is_some_and(|e| match &e.kind {
+        EventKind::Sep(SepKind::Word(word)) => word.eq_ignore_ascii_case("and") || word == "&",
+        _ => false,
+      });
   let evidence = line.after_blank
     || continued
+    || and_opens
     || (under_affiliation && (own_font || after_labelled))
     || marked
+    || headed
     || (pieces >= 2 && !institutions);
-  evidence
-    && !names.is_empty()
-    && names
-      .iter()
-      .all(|e| reads_as_names(&e.text) || is_name_qualifier(&e.text))
+  let reads = |text: &str| {
+    reads_as_names(after_role_heading(text).unwrap_or(text)) || is_name_qualifier(text)
+  };
+  // (a row of two or more pieces each carrying its mark, most of them names and none an institution, is a row of names, its
+  // odd piece one too: `Huseyin Inan$^{1}$, Aaron (Ari) Bornstein$^{1}$ and Robert Sim$^{1}$`, 2409.07809 — the name's brackets
+  // gave the whole row to the row above as "affiliations", each of its marks trailing one)
+  let carried = names.len() >= 2 && {
+    let read = names.iter().filter(|e| reads(&e.text)).count();
+    let carries = |name: &Event| {
+      events
+        .iter()
+        .position(|e| std::ptr::eq(*e, name))
+        .and_then(|at| {
+          events[at + 1..]
+            .iter()
+            .find(|e| e.kind != EventKind::Layout)
+        })
+        .is_some_and(|next| next.kind == EventKind::Mark && !next.line_first)
+    };
+    2 * read > names.len()
+      && names.iter().all(|e| carries(e))
+      && !names.iter().any(|e| is_institution(&e.text))
+  };
+  evidence && !names.is_empty() && (carried || names.iter().all(|e| reads(&e.text)))
+}
+
+/// The names a role heading is printed over, written before them with a colon: `{\bf Authors:} F.~Arleo$^a$, …`,
+/// `{\bf Editor}: P.~Aurenche` (cernrep.cls, hep-ph0311131), 2205.07715's `Contributors: Henning Bahl`. The heading stays
+/// the name's text, as a heading in a class's first line does (uncertain stays as written): the colon alone kept the
+/// row out of the names, its people an affiliation.
+pub(super) fn after_role_heading(text: &str) -> Option<&str> {
+  const ROLES: [&str; 8] = [
+    "Author",
+    "Authors",
+    "Editor",
+    "Editors",
+    "Convener",
+    "Conveners",
+    "Contributor",
+    "Contributors",
+  ];
+  let (role, rest) = text.split_once(':')?;
+  ROLES
+    .contains(&role.trim())
+    .then_some(rest.trim())
+    .filter(|rest| !rest.is_empty())
 }
 
 /// Whether a labelled entry's text is a legend (a note on its authors) rather than their affiliation: what
@@ -445,8 +509,8 @@ pub(super) fn is_legend_text(text: &str) -> bool {
     // (a dedication's words, which only a symbol's line reads as a legend — `$^\dagger$In memory of Bob Baker, …` under
     // Bob Baker$^{1,\dagger}$, its carriers' note; review rev107c S1)
     "note" => opens_a_dedication(text),
-    "funding" => !reads_as_affiliation(&text_tokens(text)),
-    "deceased" => opens_with_deceased(text) || !reads_as_affiliation(&text_tokens(text)),
+    "funding" => !is_institution(text),
+    "deceased" => opens_with_deceased(text) || !is_institution(text),
     _ => true,
   }
 }
@@ -478,9 +542,20 @@ pub(super) fn is_symbol_label(label: &str) -> bool {
 /// `text` as tokens for the classify helpers (letters and others: `ExplodeText!`).
 pub(super) fn text_tokens(text: &str) -> Tokens { Tokens::new(ExplodeText!(text)) }
 
+/// Whether a printed text reads as an institution, the classify helpers' `reads_as_affiliation` on it.
+pub(super) fn is_institution(text: &str) -> bool { reads_as_affiliation(&text_tokens(text)) }
+
 /// The e-mail addresses printed in `text`, one per print (ruling 3); a braced group of local parts before a shared
 /// domain written out, one each (`{takuma,ichise}@nii.ac.jp`, 1711.05435; the `\lx@split@addresses` reading, OD #805).
 pub fn addresses_in(text: &str) -> Vec<String> {
+  // (the braces of a group set in math, as verbatim holds them: `\email{$\{$fargyriou,mikebekos$\}$@math.ntua.gr}`, 1106.2694)
+  let unshifted;
+  let text = if text.contains('$') {
+    unshifted = text.replace('$', "");
+    unshifted.as_str()
+  } else {
+    text
+  };
   let mut out = Vec::new();
   let mut rest = text;
   while let Some(open) = rest.find('{') {

@@ -411,6 +411,27 @@ impl Resolver {
           }
           if only_contacts {
             for contact in line.events.iter().filter(|e| e.kind == EventKind::Contact) {
+              // (an in-block contact printing addresses alone is a line of addresses, whatever command made it: e-mails by
+              // the owner chain among the block's names — `\IEEEauthorblockA{hanxinchi@sjtu.edu.cn, …}` under 17 names of
+              // 17 `\and`-columns, 2603.28168, no affiliation of the last column's)
+              if contact.label.is_none()
+                && contact.role.as_deref() == Some("affiliation")
+                && !addresses_in(&contact.text).is_empty()
+                && only_addresses(&contact.text)
+              {
+                let candidates: Vec<usize> =
+                  (block_creators_start..self.out.creators.len()).collect();
+                let source = (index, contact.span);
+                self.place_line_contacts(
+                  &contact.text,
+                  "email",
+                  &candidates,
+                  source,
+                  None,
+                  Chain::Line,
+                );
+                continue;
+              }
               self.contact_event(index, contact, &above, "line:contact R12:row-above");
             }
             continue;
@@ -520,16 +541,22 @@ impl Resolver {
             },
             _ => {},
           }
-          if let Some(carried) =
-            carried.filter(|_| addresses_in(&text).is_empty() || !only_addresses(&text))
-          {
-            self.continue_entry(&carried, &text);
-            for note in notes {
-              self.note(index, note, above.last().copied(), "note:line-owner");
+          // (a line of addresses alone, placed below, leaves the entry open: the unmarked line after it is the entry's, as
+          // today's one `\\`-joined contact, no affiliation of every name — `$^2$CNRS, LAB \\ email \tt{…} \\ To appear in …`,
+          // 1209.0869; 2606.23976, 0910.1386, 1411.2744)
+          let carried = if addresses_in(&text).is_empty() || !only_addresses(&text) {
+            if let Some(carried) = carried {
+              self.continue_entry(&carried, &text);
+              for note in notes {
+                self.note(index, note, above.last().copied(), "note:line-owner");
+              }
+              continues = Some(carried);
+              continue;
             }
-            continues = Some(carried);
-            continue;
-          }
+            None
+          } else {
+            carried
+          };
           // (an institution line with its address beside it is an unmarked line, the address in its text, as a continued
           // line's is — `1. Chester F. Carlson Center …, NY 14623; JHK's email: jhk@cis.rit.edu` under marked names,
           // astro-ph0202139, whose institutions the address branch lost; its hand-written `1.` stays unread, OPEN_ROWS
@@ -539,8 +566,7 @@ impl Resolver {
             .filter(|w| !w.contains('@'))
             .collect::<Vec<_>>()
             .join(" ");
-          if !addresses_in(&text).is_empty()
-            && (only_addresses(&text) || !reads_as_affiliation(&text_tokens(&beside)))
+          if !addresses_in(&text).is_empty() && (only_addresses(&text) || !is_institution(&beside))
           {
             // (a list of addresses running on over the next lines — the line ending in a comma, each next line addresses
             // alone — is one print: `E-mails: 202010106047@mail.scut.edu.cn, \\ scbingli@scut.edu.cn`, whose second
@@ -564,6 +590,7 @@ impl Resolver {
               last += 1;
             }
             skip_to = last;
+            continues = carried;
             let candidates: Vec<usize> = (block_creators_start..self.out.creators.len()).collect();
             self.place_line_contacts(&text, "email", &candidates, source, None, Chain::Line);
             // (the notes of the list's lines are the block's: a line of addresses is no one name's, so no place makes

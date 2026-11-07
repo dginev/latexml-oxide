@@ -20,7 +20,9 @@ use latexml_core::{
 };
 
 use super::{
-  events::{BreakKind, EmailMeaning, Event, HeldError, break_events, declaration_events},
+  events::{
+    BreakKind, EmailMeaning, Event, HeldError, break_events, declaration_events, in_block_content,
+  },
   field_notes::{FieldNotesHookGuard, field_notes_begin, field_notes_end},
   ledger::{SkipReason, email_meaning},
   policy::TitleMarks,
@@ -232,7 +234,17 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (the affiliation of a raw file's in-place setter the API took, `annotate=run`: `frontmatter_stores`'
   // `reroute_in_place_contact_setters`, whose rerouted setter keeps the file's own as `\lx@class@contact@<name>`)
   DefConstructor!("\\lx@fm@obs@affil@run []{}", "", bounded => true);
-  DefConstructor!("\\lx@fm@obs@annotate {}{}[]{}", "");
+  // (its options undigested, as `\lx@annotate@frontmatter` reads keyvals: a private key's `_` digested as text is a Script
+  // error held on the block, the paper's writer kept out)
+  DefConstructor!("\\lx@fm@obs@annotate {}{} OptionalUndigested {}", "");
+  // (a binding's marked list, `\lx@add@affiliation@marked`, is an in-block affiliation: the marks and lines of its
+  // content read as digested, not cut by spelling and handed to the frozen API — `\IEEEauthorblockA{\IEEEauthorrefmark{6}
+  // Univ X\\ \IEEEauthorrefmark{2} Univ Y}` in a plain `\author`, 2603.28168, 1405.3507)
+  DefConstructor!("\\lx@fm@obs@affil@marked OptionalUndigested {}", "", bounded => true);
+  // (a binding's own creator inside a block prints its name there: PoS's `\speaker{R. Cassano}$^1$`, PoS.cls:681, 1412.5940,
+  // 1509.01480, 1211.4334 — the frozen API printed nothing, and the name's mark led the line. Not the `\lx@add@author` of an
+  // `\author` nested in a block, a call the class stores and prints no name of there: 2012.14750)
+  DefMacro!("\\lx@fm@obs@creator [] {}", "#2");
   Ok(())
 }
 
@@ -329,6 +341,13 @@ const ALWAYS_BOUND: &[(&str, &str)] = &[
   ("\\lx@request@frontmatter@annotation", "\\lx@fm@obs@request"),
 ];
 
+/// What a block's own API calls are in its rehearsal, read as digested: an API call's content, rehearsed alone, has no names
+/// of its own (a `\lx@add@creator` a class's address holds prints nothing there, 2203.02446, 1709.02726, 2411.10888).
+const BOUND_IN_A_BLOCK: &[(&str, &str)] = &[
+  ("\\lx@add@affiliation@marked", "\\lx@fm@obs@affil@marked"),
+  ("\\lx@add@creator", "\\lx@fm@obs@creator"),
+];
+
 /// The contact and mark commands the rehearsal binds when the document has them (an undefined one stays undefined: an
 /// error, held, as pdflatex's), and whether the command's own definition must take an argument for it: a contact
 /// command taking none is a switch, not that contact (jmlr2e's `\email`, `\name Ann \email ann@x.org`, a font change
@@ -347,6 +366,10 @@ const BOUND_WHEN_DEFINED: &[(&str, &str, bool)] = &[
   ("\\address", "\\lx@fm@obs@affil", true),
   ("\\institute", "\\lx@fm@obs@affil", true),
   ("\\IEEEauthorrefmark", "\\lx@fm@obs@mark", true),
+  // (the ACM SIG classes' column, a raw class's tabular juggle: sig-alternate.cls:283 `\def\alignauthor{\end{tabular}\hfil
+  // \begin{tabular}[t]{c}}`, four errors held on the block outside its tabular and every column read as one, 1503.06772,
+  // 1502.04662, 1305.7403; a binding that declares it keeps what it prints, `Policy::block_breaks`, OmniBus)
+  ("\\alignauthor", "\\lx@fm@obs@and", false),
 ];
 /// The hook a binding declares its title's footnote marks with — the kernel's own, `\lx@title@thefootnote`
 /// (`latex_constructs::TITLE_THEFOOTNOTE`), which also marks the notes the title block prints: defined, the
@@ -363,9 +386,17 @@ const TITLE_FOOTNOTE_HOOK: &str = crate::latex_constructs::TITLE_THEFOOTNOTE;
 /// declared [`TITLE_FOOTNOTE_HOOK`] when there is one; else, as the block's conventions say (`title_marks`), the
 /// class's own `\thefootnote` (report's and book's title page: arabic) or the kernel `\maketitle`'s `\@fnsymbol` of the
 /// counter (when the format has it).
-fn install_event_bindings(title_marks: TitleMarks) -> Result<()> {
+fn install_event_bindings(
+  title_marks: TitleMarks,
+  block_breaks: &[(&str, BreakKind)],
+) -> Result<()> {
   for (cs, target) in ALWAYS_BOUND {
     let_i(&T_CS!(*cs), &T_CS!(*target), None);
+  }
+  if in_block_content() {
+    for (cs, target) in BOUND_IN_A_BLOCK {
+      let_i(&T_CS!(*cs), &T_CS!(*target), None);
+    }
   }
   if lookup_definition(&T_CS!(TITLE_FOOTNOTE_HOOK))?.is_some() {
     let_i(&T_CS!("\\thefootnote"), &T_CS!(TITLE_FOOTNOTE_HOOK), None);
@@ -379,8 +410,9 @@ fn install_event_bindings(title_marks: TitleMarks) -> Result<()> {
     );
   }
   for (cs, target, needs_argument) in BOUND_WHEN_DEFINED {
-    if lookup_definition(&T_CS!(*cs))?
-      .is_some_and(|defn| !needs_argument || defn.get_num_args() > 0)
+    if !block_breaks.iter().any(|(declared, _)| declared == cs)
+      && lookup_definition(&T_CS!(*cs))?
+        .is_some_and(|defn| !needs_argument || defn.get_num_args() > 0)
     {
       // (an e-mail call is read with whose meaning it has here, when the note is rehearsed — at the flush,
       // `\maketitle`, not at the call (review rev92a_r4 B1, OD #913): `\lx@fm@obs@email` a binding's, the `@inplace`
@@ -504,7 +536,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
   let result = with_origin(DefinitionOrigin::File, || {
     reading_from_mouth(Mouth::default(), || -> Result<Digested> {
       bgroup();
-      install_event_bindings(title_marks)?;
+      install_event_bindings(title_marks, block_breaks)?;
       begin_mode("text")?;
       field_notes_begin(&tokens, block_breaks);
       let digested = digest(tokens)?;

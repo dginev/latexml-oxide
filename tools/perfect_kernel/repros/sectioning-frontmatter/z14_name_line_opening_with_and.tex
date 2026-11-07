@@ -1,0 +1,12 @@
+% witness: 2007.10022 (IEEEtran, three `\author` pieces `Anthony Berthelier \\ and Yongzhe Yan`, each printed as a column)
+% oracle:  pdflatex 0 errors: "Ann Able" / "and Bob Baker" / Univ A
+% engines: Perl: one name; ours before Z14: the reading gave "and Bob Baker" to Ann as an affiliation
+% expect:  0 errors; both names creators, the institution theirs; "and Max Planck Institut" under names stays an affiliation (perfect_kernel_batchz14::a_line_opening_with_and_goes_on_with_the_names)
+% status:  GREEN (Z14)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\\ and Bob Baker\\ University of Town}
+\maketitle
+Body.
+\end{document}

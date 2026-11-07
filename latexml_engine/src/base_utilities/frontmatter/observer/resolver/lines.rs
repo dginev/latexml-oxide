@@ -406,7 +406,7 @@ pub(super) fn entries_of<'a>(line: &[&'a Event]) -> Vec<Entry<'a>> {
 
 /// Whether a text reads as names (the classify helpers: name-shaped parts, no institution word, no address).
 pub(in crate::base_utilities::frontmatter::observer) fn reads_as_names(text: &str) -> bool {
-  !text.contains('@') && name_count(text) > 0 && !reads_as_affiliation(&text_tokens(text))
+  !text.contains('@') && name_count(text) > 0 && !is_institution(text)
 }
 
 /// The lines of a numbered entry (`labelseq=`: one `\institute` with no `\and`) when every line's first ink is a Mark
@@ -507,9 +507,7 @@ pub(super) fn joined_single_name(events: Vec<Event>) -> Vec<Event> {
         EventKind::Name | EventKind::Sep(SepKind::Comma | SepKind::Word(_))
       )
     })
-    || names
-      .iter()
-      .any(|&i| reads_as_affiliation(&text_tokens(&events[i].text)))
+    || names.iter().any(|&i| is_institution(&events[i].text))
   {
     return events;
   }
@@ -959,8 +957,14 @@ impl Resolver {
         // (a collaboration among the names, or a remark on a name naming one, is a contact on the names of the line
         // since its last collaboration, no name and no part of one — `… and the GAPS Team`, `J.~Zapatero$^{5}$ (The
         // MAGIC Collaboration)`, as today's reader reads it: `collaboration_split`, OXIDIZED_DESIGN_DIVERGENCES #946)
+        // (a call or a column of its own speaking for one, under the names before it, too: `\author{on behalf of the KM3NeT
+        // consortium}`, 1201.5726; `\author{for the IceCube collaboration}`, 1301.6619 — elsarticle, printed under them; the
+        // names since the last collaboration, no name. revtex's `\collaboration{The HERMES Collaboration}`, its `\author{#1}`,
+        // speaks for no one, and stays today's creator: 0704.3133, gr-qc0505029)
         EventKind::Name
-          if !made.is_empty() && reads_as_listed_collaboration(&event.text, listed(last_sep)) =>
+          if (!made.is_empty()
+            || (speaks_for(&event.text) && !self.uncovered_creators().is_empty()))
+            && reads_as_listed_collaboration(&event.text, listed(last_sep)) =>
         {
           let text = event
             .text
@@ -971,7 +975,11 @@ impl Resolver {
           if collaboration_heads(&event.text) {
             heading = Some((text, made.len()));
           } else {
-            let covered = made[uncovered.min(made.len())..].to_vec();
+            let covered = if made.is_empty() && last_covered.is_empty() {
+              self.uncovered_creators()
+            } else {
+              made[uncovered.min(made.len())..].to_vec()
+            };
             let covered = if covered.is_empty() {
               last_covered.clone()
             } else {
@@ -1045,7 +1053,7 @@ impl Resolver {
         // for the ATLAS Collaboration`, Bob Baker an author as today's — review rev94a r2 B-1)
         EventKind::Name
           if !made.is_empty()
-            && reads_as_affiliation(&text_tokens(&event.text))
+            && is_institution(&event.text)
             && !is_collaboration(&event.text)
             && name_before_remark(&event.text).is_none() =>
         {
@@ -1316,9 +1324,18 @@ impl Resolver {
     NamesLine { creators: made }
   }
 
+  /// The live creators of the document no collaboration covers yet: what a call of its own naming one covers (a replaced
+  /// call's creators print nothing: the class's `\author{Ann}\author{for the X Collaboration}` prints only the second).
+  fn uncovered_creators(&self) -> Vec<usize> {
+    (self.collaboration_from..self.out.creators.len())
+      .filter(|c| !self.replaced.contains(c))
+      .collect()
+  }
+
   /// A collaboration a names line reads (`reads_as_collaboration`): a `collaboration` contact on each creator it
   /// covers, as today's reader gives it (`Collaborations`, OXIDIZED_DESIGN_DIVERGENCES #946).
   fn collaboration(&mut self, index: usize, event: &Event, covered: &[usize], text: &str) {
+    self.collaboration_from = self.out.creators.len();
     for &c in covered {
       self.attach(
         Some(c),

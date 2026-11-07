@@ -500,6 +500,11 @@ fn name_shaped(text: &str) -> bool {
     if non_name_word(word) {
       return false;
     }
+    // (a particle elided onto the surname is the surname's: `D.~d'Enterria`, hep-ph0311131)
+    let word = ["d'", "d’", "l'", "l’", "dell'", "dell’"]
+      .iter()
+      .find_map(|elided| word.strip_prefix(elided))
+      .unwrap_or(word);
     particle(word)
       || (word.chars().next().is_some_and(char::is_uppercase)
         && word

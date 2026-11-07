@@ -302,120 +302,123 @@ struct NamesLine {
 
 /// The state of a document's resolution.
 struct Resolver {
-  out:              Resolved,
+  out:                Resolved,
   /// per creator: its block (input index) and the roles its contacts hold
-  roles:            Vec<Vec<String>>,
+  roles:              Vec<Vec<String>>,
   /// the labels of `labelseq=<role>` entries so far, per role
-  sequence:         Vec<(String, usize)>,
+  sequence:           Vec<(String, usize)>,
   /// labelled entries of the blocks not yet answered (label, entry), resolved at the end against every request
-  pending:          Vec<(Vec<String>, bool, Assoc)>,
+  pending:            Vec<(Vec<String>, bool, Assoc)>,
   /// per creator: its group (the block's input index, or the policy's call group)
-  group:            Vec<usize>,
+  group:              Vec<usize>,
   /// per creator: the block (input index) and `\and` column of the names line it was read from, if a block's
-  column:           Vec<Option<(usize, usize)>>,
+  column:             Vec<Option<(usize, usize)>>,
   /// the block line being read (input index, column): the column a creator made now is read from
-  line_column:      Option<(usize, usize)>,
+  line_column:        Option<(usize, usize)>,
   /// the column (input index, column) of each block line's events, keyed by (input index, an event's span start):
   /// where a labelled entry stands (`answer_pending`'s per-column labels)
-  entry_column:     HashMap<(usize, u16), usize>,
+  entry_column:       HashMap<(usize, u16), usize>,
   /// the addresses every line of the block being read prints (`place_line_contacts`' author-order list: one address
   /// per author, every spelled address of the block agreeing)
-  block_addresses:  Vec<String>,
+  block_addresses:    Vec<String>,
   /// the addresses of a class's list printed apart from the names (`EmailOwner::SpelledElseOrder`), each with its
   /// group's creators
   /// (each with its call's place in the list: `_sequence=<n>`, else the calls' count)
-  sequenced:        Vec<(String, Assoc, Vec<usize>, usize)>,
+  sequenced:          Vec<(String, Assoc, Vec<usize>, usize)>,
   /// the calls of the list so far
-  sequence_calls:   usize,
+  sequence_calls:     usize,
   /// the last `annotate=run` contact's role, the creators then, the run it reached, and the run's extent (the run and
   /// the authors its walk passed over as answered, which a legend continuing it reaches: `record_run`)
-  last_run:         Option<(String, usize, Vec<usize>, Vec<usize>)>,
+  last_run:           Option<(String, usize, Vec<usize>, Vec<usize>)>,
   /// per role, the creators made when the last contact of it that bounds a run was read — a block's, labelled or not;
   /// a call's a printed mark labels: the names before it are no run's of a later unlabelled one (`record_run`,
   /// `new_run`)
-  run_from:         HashMap<String, usize>,
+  run_from:           HashMap<String, usize>,
   /// per creator: its contacts in the order they were attached (an affiliation, by its place among the
   /// affiliations; else a contact's), for [`Resolver::distribute_upfront`]
-  order:            Vec<Vec<(bool, usize)>>,
+  order:              Vec<Vec<(bool, usize)>>,
   /// authblk's notes (`Policy::thenote`): the state its `\author` and `\affil` keep
-  thenote:          TheNote,
+  thenote:            TheNote,
   /// the requests authblk's printed `\AB@thenote` made (creator, label): what ruling 1 reads off the PDF's marks
-  thenote_requests: Vec<(usize, String)>,
+  thenote_requests:   Vec<(usize, String)>,
   /// the labels the title's marks request (aastex's `\title{…\altaffilmark{1}}`): an entry they alone ask for is the
   /// title's note
-  title_requests:   Vec<String>,
+  title_requests:     Vec<String>,
   /// the footnote marks the title shows (`\title{…\footnotemark[1]}`): a footnote text only they show is the title's
   /// note (`answer_note_texts`)
-  title_fn_marks:   Vec<String>,
+  title_fn_marks:     Vec<String>,
   /// per creator of a block: that block's queue (its `epoch`); the creators a later block replaced
-  epoch_of:         Vec<Option<usize>>,
-  replaced:         Vec<usize>,
+  epoch_of:           Vec<Option<usize>>,
+  replaced:           Vec<usize>,
   /// a note's links, and the notes they may empty, placed once every name is read (`answer_note_links`)
-  note_links:       Vec<NoteLink>,
+  note_links:         Vec<NoteLink>,
   /// the e-mail calls a document's own note makes (`ltx:pubnote`: A&A's `\offprints{B. Baker, \email{…}}`), placed
   /// once every name is read (`answer_document_notes`)
-  document_emails:  Vec<DocumentEmail>,
+  document_emails:    Vec<DocumentEmail>,
   /// the e-mail calls printing several addresses alone (brief 95c G3): each call's addresses, its contact, its own
   /// authors and its rule — placed once every name is read (`answer_listed_emails`)
-  listed_emails:    Vec<(Vec<String>, Assoc, Vec<usize>, String)>,
+  listed_emails:      Vec<(Vec<String>, Assoc, Vec<usize>, String)>,
   /// the e-mails inside an unlabelled affiliation-kind entry an API call made, with the entry's carriers — placed with
   /// the labelled entries' (`answer_inner_emails`), the entries printing the same addresses together (OD #956)
-  entry_emails:     Vec<(Vec<usize>, Assoc, bool)>,
+  entry_emails:       Vec<(Vec<usize>, Assoc, bool)>,
   /// the marks a name's notes show on it (creator, label: `Ann\footnote[1]{…}` shows `∗`), what an entry led by the
   /// same `\footnotemark` answers (`answer_pending`; 1607.07280)
-  note_marks:       Vec<(usize, String)>,
+  note_marks:         Vec<(usize, String)>,
   /// whether the block being read prints its notes' marks (`Policy::unmarked_notes`)
-  notes_marked:     bool,
+  notes_marked:       bool,
   /// the requests a glued mark was parted into (creator, request), `part_glued_labels`
-  parted:           Vec<(usize, String)>,
+  parted:             Vec<(usize, String)>,
   /// the pending entries (their place in `pending`) whose label was a compound of distinct footnote symbols parted
   /// (`$^{\dagger\ddagger}$ Project lead`): the names carrying all of them (`part_glued_labels`, `answer_pending`)
-  compound:         Vec<usize>,
+  compound:           Vec<usize>,
   /// while an API call's marked entries are resolved one by one (`mark_led_pieces`)
-  splitting:        bool,
+  splitting:          bool,
   /// the last API call when it was a store's line a mark leads (its ledger index, its `_store=`, role and labels): the
   /// store's next line, unmarked, continues it (`Resolver::api`, `line:continued`)
-  led_line:         Option<(usize, String, String, Vec<String>)>,
+  led_line:           Option<(usize, String, String, Vec<String>)>,
   /// the pending entries ruling 1 labels by a leading mark that today's attaches where its `annotate=` puts it, with
   /// those authors (`distribute_upfront` reads today's pile with them)
-  piled:            Vec<(usize, Vec<usize>)>,
+  piled:              Vec<(usize, Vec<usize>)>,
   /// the empty entries today's attaches (their ledger index, role and authors), in its pile for `distribute_upfront`
-  empty_piled:      Vec<(usize, String, Vec<usize>)>,
+  empty_piled:        Vec<(usize, String, Vec<usize>)>,
   /// the pending entries labelled by a leading mark (their place in `pending`) with the authors their `annotate=`
   /// reaches, where today's attaches them when no name shows a mark of their kind (`answer_pending`)
-  annotated:        Vec<(usize, Vec<usize>)>,
+  annotated:          Vec<(usize, Vec<usize>)>,
   /// the pending entries whose marked line the binding attached by its group rule (`_grouped=true` at the call)
-  grouped:          Vec<usize>,
+  grouped:            Vec<usize>,
   /// the requests a `\footnotemark` made (creator, label): a footnote's mark, answered by a note, never by a labelled
   /// affiliation (`Kui Wu\inst{3\footnotemark[1]}` under `\institute{A \and B …}`, 2404.09857)
-  fn_requests:      Vec<(usize, String)>,
+  fn_requests:        Vec<(usize, String)>,
   /// the requests the class's own request command made (creator, label): a Mark of llncs's and aa's `\inst` (role
   /// `inst`), a binding's `\lx@request@frontmatter@annotation` (`request`), an `annotations=` list — not a mark printed
   /// by hand (`$^{1}$`, `\textsuperscript{1}`, a paper's mark macro), which [`Resolver::by_hand`] reads off the rest
   /// (`answer_pending`: a `_share=authors` entry only the class's `\inst{n}` picks)
-  class_requests:   Vec<(usize, String)>,
+  class_requests:     Vec<(usize, String)>,
   /// the pending entries (their place in `pending`) a `_share=authors` call made (llncs's one `\institute`, no `\and`
   /// in it: every author's unless the class's `\inst{n}` picks it), whether the entry holds a mark of its own, and
   /// whether it is a piece its institute's marks split it into (`_markpiece=true`: the numbers shown by hand label the
   /// other pieces, not it — [`Resolver::share_unpicked`])
-  shared:           Vec<(usize, bool, bool)>,
+  shared:             Vec<(usize, bool, bool)>,
   /// the pending entries (their place in `pending`) a call labelled by a key its class never prints
   /// (`Policy::keyed_labels`, elsarticle's `\address[*]{…}`): no footnote's mark answers them (`answer_pending`)
-  keyed:            Vec<usize>,
+  keyed:              Vec<usize>,
   /// the pending entries of a numbered call (`labelseq=`) whose content holds marks of its own, which no split read
   /// (`answer_pending`: its number is no reading of those marks, so an owner found by a hand mark is not ruling 1's)
-  marked_entries:   Vec<usize>,
+  marked_entries:     Vec<usize>,
   /// the footnote texts the document made (ledger index, flushes before it, printed mark, text), each read where a
   /// name shows its mark (`answer_note_texts`)
-  note_texts:       Vec<(usize, usize, String, String)>,
+  note_texts:         Vec<(usize, usize, String, String)>,
   /// the entries unmarked lines continued (their source) with their lines (`continue_entry`, `Resolved::continued`)
-  continued:        Vec<(Source, Vec<String>)>,
+  continued:          Vec<(Source, Vec<String>)>,
   /// the affiliation texts of API calls that print line breaks (their ledger index, the text, the text with its lines:
   /// [`events_lined_text`]), where `take_out_entry_addresses` reads a line's end (brief 95c r2 B2)
-  lined:            Vec<(usize, String, String)>,
+  lined:              Vec<(usize, String, String)>,
   /// the collaborations an unframed line names that an address line under it may still make an institution's (the
   /// creator, its contact: [`Resolver::attach`], `collaboration_line_before`)
-  unframed:         Vec<(usize, usize)>,
+  unframed:           Vec<(usize, usize)>,
+  /// the first creator no collaboration covers yet, of the document (a call of its own naming one covers from here:
+  /// [`Resolver::names_line_events`])
+  collaboration_from: usize,
 }
 
 /// A note's link placed once every name of the document is read (`Resolver::answer_note_links`; main-session decisions
@@ -460,52 +463,53 @@ struct TheNote {
 impl Resolver {
   fn new() -> Self {
     Resolver {
-      out:              Resolved::default(),
-      roles:            Vec::new(),
-      sequence:         Vec::new(),
-      pending:          Vec::new(),
-      group:            Vec::new(),
-      column:           Vec::new(),
-      line_column:      None,
-      entry_column:     HashMap::default(),
-      block_addresses:  Vec::new(),
-      sequenced:        Vec::new(),
-      sequence_calls:   0,
-      last_run:         None,
-      run_from:         HashMap::default(),
-      order:            Vec::new(),
-      thenote:          TheNote {
+      out:                Resolved::default(),
+      roles:              Vec::new(),
+      sequence:           Vec::new(),
+      pending:            Vec::new(),
+      group:              Vec::new(),
+      column:             Vec::new(),
+      line_column:        None,
+      entry_column:       HashMap::default(),
+      block_addresses:    Vec::new(),
+      sequenced:          Vec::new(),
+      sequence_calls:     0,
+      last_run:           None,
+      run_from:           HashMap::default(),
+      order:              Vec::new(),
+      thenote:            TheNote {
         newaffil: true,
         ..TheNote::default()
       },
-      thenote_requests: Vec::new(),
-      title_requests:   Vec::new(),
-      title_fn_marks:   Vec::new(),
-      epoch_of:         Vec::new(),
-      replaced:         Vec::new(),
-      note_links:       Vec::new(),
-      document_emails:  Vec::new(),
-      listed_emails:    Vec::new(),
-      entry_emails:     Vec::new(),
-      note_marks:       Vec::new(),
-      notes_marked:     true,
-      parted:           Vec::new(),
-      compound:         Vec::new(),
-      splitting:        false,
-      led_line:         None,
-      piled:            Vec::new(),
-      empty_piled:      Vec::new(),
-      annotated:        Vec::new(),
-      grouped:          Vec::new(),
-      fn_requests:      Vec::new(),
-      class_requests:   Vec::new(),
-      shared:           Vec::new(),
-      keyed:            Vec::new(),
-      marked_entries:   Vec::new(),
-      note_texts:       Vec::new(),
-      continued:        Vec::new(),
-      lined:            Vec::new(),
-      unframed:         Vec::new(),
+      thenote_requests:   Vec::new(),
+      title_requests:     Vec::new(),
+      title_fn_marks:     Vec::new(),
+      epoch_of:           Vec::new(),
+      replaced:           Vec::new(),
+      note_links:         Vec::new(),
+      document_emails:    Vec::new(),
+      listed_emails:      Vec::new(),
+      entry_emails:       Vec::new(),
+      note_marks:         Vec::new(),
+      notes_marked:       true,
+      parted:             Vec::new(),
+      compound:           Vec::new(),
+      splitting:          false,
+      led_line:           None,
+      piled:              Vec::new(),
+      empty_piled:        Vec::new(),
+      annotated:          Vec::new(),
+      grouped:            Vec::new(),
+      fn_requests:        Vec::new(),
+      class_requests:     Vec::new(),
+      shared:             Vec::new(),
+      keyed:              Vec::new(),
+      marked_entries:     Vec::new(),
+      note_texts:         Vec::new(),
+      continued:          Vec::new(),
+      lined:              Vec::new(),
+      unframed:           Vec::new(),
+      collaboration_from: 0,
     }
   }
 

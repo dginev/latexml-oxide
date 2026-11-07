@@ -431,6 +431,7 @@ mod perfect_kernel_batchp1;
 mod perfect_kernel_batchp2;
 mod perfect_kernel_batchr1;
 mod perfect_kernel_batchz1;
+mod perfect_kernel_batchz14;
 mod perfect_kernel_batchz2;
 mod perfect_kernel_batchz3;
 mod perfect_kernel_gemini;

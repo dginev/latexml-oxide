@@ -1,0 +1,15 @@
+% witness: 2409.07809 (`\textbf{Huseyin Inan$^{1}$, Aaron (Ari) Bornstein$^{1}$ and Robert Sim$^{1}$} \\` under a first row of names)
+% oracle:  pdflatex 0 errors: both rows of marked names, then each marked line
+% engines: Perl: one name per row piece; ours before Z14: the brackets no name's shape, the whole row trailing entries, every piece an "affiliation" of the first row's names
+% expect:  0 errors; each piece a creator; a row of marked institutions stays entries (perfect_kernel_batchz14::an_odd_piece_stays_in_its_marked_row)
+% status:  GREEN (Z14)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$, \\
+\textbf{Cat Cole$^{1}$, Dan (Danny) Dow$^{2}$ and Eve Ely$^{1}$} \\
+$^1$Univ A, Town A\\
+$^2$Univ B, Town B}
+\maketitle
+Body.
+\end{document}
