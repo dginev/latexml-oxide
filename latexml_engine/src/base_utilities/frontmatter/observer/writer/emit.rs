@@ -31,7 +31,7 @@ use crate::base_utilities::{
       policy::TitleMarks,
       rehearsal::{Rehearsal, rehearse},
       resolver::{
-        LostInk, Written, check_blocks, creator_call, printed_email_label, read_events,
+        LostInk, RCreator, Written, check_blocks, creator_call, printed_email_label, read_events,
         split_pieces,
       },
     },
@@ -101,9 +101,14 @@ fn cs_group(cs: &str, args: &[&[Token]]) -> Vec<Token> {
 }
 
 /// `[keys]{content}` after `head`.
-fn with_keys(mut head: Vec<Token>, keys: &str, content: &[Token]) -> Tokens {
+fn with_keys(head: Vec<Token>, keys: &str, content: &[Token]) -> Tokens {
+  with_key_tokens(head, internal(keys), content)
+}
+
+/// `[keys]{content}` after `head`, the keys tokens.
+fn with_key_tokens(mut head: Vec<Token>, keys: Vec<Token>, content: &[Token]) -> Tokens {
   head.push(T_OTHER!("["));
-  head.extend(internal(keys));
+  head.extend(keys);
   head.push(T_OTHER!("]"));
   head.push(T_BEGIN!());
   head.extend_from_slice(content);
@@ -437,6 +442,9 @@ fn event_run(
     return None;
   }
   let (mut run_start, mut run_end) = match (own_at(first), own_at(last)) {
+    // (a name a creator call in the block printed is the call's name, its argument, the call left out: `\speaker{Ann Able}`
+    // written again would add its creator twice, one with no name — the call's role is the creator's, `creator_role`)
+    (Some((own, _)), Some((_, last))) if first.creator_call.is_some() => (own, last),
     (Some((own, _)), Some((_, last))) if wider => (own, past_what_it_set(field, events, last)),
     (_, Some((_, last))) => (start, past_what_it_set(field, events, end.max(last))),
     _ => (start, past_what_it_set(field, events, end)),
@@ -1112,9 +1120,55 @@ fn item_call(
 /// A call's content as a stamped rehearsal reads it ([`rehearsed`]).
 type CallRead = (Vec<Event>, Vec<Formula>, Vec<EnvironmentStep>);
 
-/// A call's content's events, formulas and environments, from a stamped rehearsal of it, as `plan::cut` reads a piece.
+/// A creator's role, Perl's `role=` key: its creator call's in the block that printed it (PoS's `\speaker`, 0910.5686,
+/// 1007.2355, 1111.2428, 1111.6944), an API call's own, else `author`.
+fn creator_role(c: &RCreator) -> String {
+  c.role
+    .clone()
+    .or_else(|| {
+      api_call(c.source)
+        .filter(|call| !call.role.is_empty())
+        .map(|call| call.role)
+    })
+    .unwrap_or_else(|| "author".to_string())
+}
+
+/// A creator's keys on Perl's call, `\lx@add@creator[#1]`'s `[role=author,#1]` (Base_Utility.pool.ltxml:586), with the
+/// reading's `labels`: the keyvals of the creator call in its block that printed it as that call gave them, tokens (PoS's
+/// `\speaker`'s `role=speaker`, ams `\contrib`'s `name=`), the labels joining the call's own annotations; else its role.
+fn creator_keys(c: &RCreator, labels: &[String]) -> Vec<Token> {
+  let labels = labels.join(",");
+  let call = c.call.and_then(|k| {
+    with_ledger(|ledger| match ledger.entries.get(c.source) {
+      Some(Entry::Author(block)) => match &block.outcome {
+        Outcome::Events { creators, .. } => creators.get(usize::from(k)).cloned(),
+        _ => None,
+      },
+      _ => None,
+    })
+  });
+  let Some(call) = call else {
+    return internal(&s!("role={},annotations={{{labels}}}", creator_role(c)));
+  };
+  let mut keys = internal("role=author,");
+  keys.extend(call.keys.unlist());
+  keys.extend(internal(",annotations="));
+  keys.push(T_BEGIN!());
+  if let Some(own) = call.annotations {
+    keys.extend(own.unlist());
+    if !labels.is_empty() {
+      keys.push(T_OTHER!(","));
+    }
+  }
+  keys.extend(internal(&labels));
+  keys.push(T_END!());
+  keys
+}
+
+/// A call's content's events, formulas and environments, from a stamped rehearsal of it, as `plan::cut` reads a piece (its
+/// positions the call's own, from 0: the author field's 15 bits).
 fn rehearsed(content: &[Token]) -> Result<Option<CallRead>> {
-  if content.len() > usize::from(FIELD_PROV_POS_MASK) {
+  if content.len() > usize::from(AUTHOR_PROV_POS_MASK) {
     return Ok(None);
   }
   let stamped = field_stamped(2, 0, content);
@@ -1691,10 +1745,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     owners.push(match lookup_mapping(EMITTED_CREATORS, &id) {
       Some(owner) => owner.to_string(),
       None => {
-        let role = api_call(c.source)
-          .filter(|call| !call.role.is_empty())
-          .map(|call| call.role);
-        let role = role.unwrap_or_else(|| "author".to_string());
+        let role = creator_role(c);
         let n = role_counts
           .entry(role.clone())
           .or_insert_with(|| lookup_mapping_int("num_ltx:creator", &role));
@@ -1865,7 +1916,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       ])]);
       let mut head = vec![add_now()];
       head.extend(cs_group_args(&["ltx:creator"]));
-      with_keys(head, &s!("role=author,{keys}"), &content)
+      with_key_tokens(head, creator_keys(c, &annotations[i]), &content)
     });
     out.push(entry("ltx:creator", tokens.unlist()));
   }

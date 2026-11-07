@@ -679,44 +679,49 @@ pub(in crate::base_utilities) fn is_membership_part(text: &str) -> bool {
 /// the contact, as they print after the grade. `None` when the name ends in no such grade (`John Smith, Jr.`, `Jane
 /// Doe, MD, PhD` qualify the name).
 pub(in crate::base_utilities) fn written_membership_out(name: &[Token]) -> Option<Vec<Token>> {
-  let (mut depth, mut in_math) = (0i32, false);
-  for (c, t) in name.iter().enumerate() {
-    match t.get_catcode() {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END => depth -= 1,
-      Catcode::MATH => in_math = !in_math,
-      _ => {},
-    }
-    if depth != 0 || in_math || *t != T_OTHER!(",") {
-      continue;
-    }
-    let head = &name[..c];
-    if !visible_name_text(head).chars().any(char::is_alphabetic) {
-      continue;
-    }
+  let (mut depth, mut in_math, mut found) = (0, false, None);
+  let commas: Vec<usize> = (name.iter().enumerate())
+    .filter_map(|(c, t)| {
+      depth += t.group_step();
+      in_math ^= t.get_catcode() == Catcode::MATH;
+      (depth == 0 && !in_math && *t == T_OTHER!(",")).then_some(c)
+    })
+    .collect();
+  // (a grade is a suffix of grade words, so its comma is read from the last leftward, the first tail holding a word no grade
+  // has ending the reading: every tail before it holds that word too. The first comma after an alphabetic head opening a
+  // grade is the one read from the first comma on, each tail read once — not the rest of the name per comma, quadratic on
+  // Perl's whole-block creator of a block of 418 names, 1507.02068)
+  for c in commas.into_iter().rev() {
     let (grade, annotations) = grade_and_annotations(&name[c + 1..]);
-    if grade.is_empty() || !is_membership_grade(&visible_name_text(&grade)) {
-      continue;
+    let text = visible_name_text(&grade);
+    if is_membership_grade(&text)
+      && visible_name_text(&name[..c])
+        .chars()
+        .any(char::is_alphabetic)
+    {
+      found = Some((c, grade, annotations));
+    } else if text.chars().any(char::is_alphanumeric)
+      && !grade_words(strip_glued_marks(&text), false)
+    {
+      break;
     }
-    // (one grade, the line's last: a names line printing a grade before it holds a name after a grade, `Ann Able,
-    // \textit{Member, IEEE}; Bob Baker, \textit{Fellow, IEEE}`, whose grades all stay — taking out the last alone would
-    // leave the names before it one creator: 1510.03162, 2507.19818)
-    if holds_grade(head) {
-      return None;
-    }
-    let mut out = head[..head
-      .iter()
-      .rposition(|t| !is_spacing(t))
-      .map_or(0, |k| k + 1)]
-      .to_vec();
-    out.extend(TokenizeInternal!(r"\lx@add@contact[role=membership]").unlist());
-    out.push(T_BEGIN!());
-    out.extend(grade);
-    out.push(T_END!());
-    out.extend(annotations);
-    return Some(out);
   }
-  None
+  // (one grade, the line's last: a names line printing a grade before it holds a name after a grade, `Ann Able,
+  // \textit{Member, IEEE}; Bob Baker, \textit{Fellow, IEEE}`, whose grades all stay — taking out the last alone would
+  // leave the names before it one creator: 1510.03162, 2507.19818)
+  let (c, grade, annotations) = found.filter(|(c, ..)| !holds_grade(&name[..*c]))?;
+  let head = &name[..c];
+  let end = head
+    .iter()
+    .rposition(|t| !is_spacing(t))
+    .map_or(0, |k| k + 1);
+  let mut out = head[..end].to_vec();
+  out.extend(TokenizeInternal!(r"\lx@add@contact[role=membership]").unlist());
+  out.push(T_BEGIN!());
+  out.extend(grade);
+  out.push(T_END!());
+  out.extend(annotations);
+  Some(out)
 }
 
 /// Whether a names line prints a membership grade or a part of one ([`is_membership_part`]) between its names'
@@ -784,8 +789,7 @@ pub(in crate::base_utilities) fn membership_read_out(content: Tokens) -> Tokens 
 /// `and Warren J. Gross, \emph{Senior Member, IEEE}\\ Department …`).
 fn grade_and_annotations(tail: &[Token]) -> (Vec<Token>, Vec<Token>) {
   let kernel_call = |t: &Token| t.with_str(|s| s.starts_with("\\lx@add@"));
-  let (mut text, mut annotations) = (Vec::new(), Vec::new());
-  let mut i = 0;
+  let (mut text, mut annotations, mut i) = (Vec::new(), Vec::new(), 0);
   while i < tail.len() {
     let t = tail[i];
     let start = i;

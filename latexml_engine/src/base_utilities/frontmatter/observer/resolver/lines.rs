@@ -119,31 +119,70 @@ pub(super) fn join_ordinals(events: &[Event]) -> Vec<Event> {
   out
 }
 
-/// The block's events with each link to an ORCID record that prints a name read as that name and its ORCID, the link
-/// after it (`contact_parts`): `\href{https://orcid.org/0000-0002-9970-3034}{E. L. Gagnon}$^{*,1,2}$, …`, 2312.16289;
-/// orcidlink's `\orcidlinki{José-María Martín-Olalla}{0000-0002-3750-9113}`, 2602.03244; 2301.02927.
-pub(super) fn orcid_link_names(events: &[Event]) -> Vec<Event> {
+/// The block's events with each link printing a name read as that name. A link to an ORCID record that prints a name is that
+/// name and its ORCID, the link after it (`contact_parts`): `\href{https://orcid.org/0000-0002-9970-3034}{E. L. Gagnon}$^{*,1,2}$,
+/// …`, 2312.16289; orcidlink's `\orcidlinki{José-María Martín-Olalla}{0000-0002-3750-9113}`, 2602.03244; 2301.02927. Any other link
+/// that carries a mark and prints other text than its own target is that text, a Name carrying the link, its span the link's call
+/// (written whole, with it): `\href{http://inspirehep.net/record/1021757}{A.~Cerri}$^{1}$`, 304 of them in 1812.07638 (longtail3k),
+/// whose url contacts were one creator's affiliation under the emitter's switch. A link printing its own target is an address
+/// (`\url{…}`, `\href{mailto:ann@x.org}{ann@x.org}`), one carrying no mark a contact (`\href{…}{project page}`).
+pub(super) fn link_names(events: &[Event]) -> Vec<Event> {
+  let carries_a_mark = |at: usize| {
+    events[at + 1..]
+      .iter()
+      .find(|e| e.kind != EventKind::Layout)
+      .is_some_and(|next| next.kind == EventKind::Mark && !next.line_first)
+  };
   let mut out = Vec::with_capacity(events.len());
-  for event in events {
-    if event.kind == EventKind::Contact
-      && contact_parts(event).0 == "orcid"
-      && !event.text.trim().is_empty()
-      && reads_as_names(&event.text)
-    {
-      let mut name = Event::new(EventKind::Name);
-      name.text = event.text.trim().to_string();
-      name.span = event.span;
-      name.nest = event.nest;
-      out.push(name);
+  for (at, event) in events.iter().enumerate() {
+    let link = event.kind == EventKind::Contact && !event.text.trim().is_empty();
+    let orcid = link && contact_parts(event).0 == "orcid";
+    let named = (orcid && reads_as_names(&event.text))
+      || (link
+        && !orcid
+        && event.role.as_deref() == Some("url")
+        && carries_a_mark(at)
+        && !event
+          .target
+          .as_deref()
+          .is_some_and(|target| prints_its_target(&event.text, target)));
+    if !named {
+      out.push(event.clone());
+      continue;
+    }
+    let mut name = Event::new(EventKind::Name);
+    name.text = event.text.trim().to_string();
+    name.span = event.span;
+    name.nest = event.nest;
+    out.push(name);
+    if orcid {
       out.push(Event {
         text: String::new(),
         ..event.clone()
       });
-    } else {
-      out.push(event.clone());
     }
   }
   out
+}
+
+/// Whether a link's printed text is its own target, its address: the target, its scheme and a closing slash aside, in any
+/// case (`\href{https://x.ai/}{X.ai}`, 2609.25082; `\href{mailto:ann@x.org}{ann@x.org}`).
+fn prints_its_target(text: &str, target: &str) -> bool {
+  let (text, target) = (
+    text.trim().trim_end_matches('/'),
+    target.trim().trim_end_matches('/'),
+  );
+  let past_scheme = target
+    .split_once(':')
+    .filter(|(scheme, _)| {
+      !scheme.is_empty()
+        && scheme
+          .chars()
+          .all(|c| c.is_ascii_alphanumeric() || "+.-".contains(c))
+    })
+    .map(|(_, rest)| rest.trim_start_matches('/'));
+  text.eq_ignore_ascii_case(target)
+    || past_scheme.is_some_and(|rest| text.eq_ignore_ascii_case(rest))
 }
 
 /// The block's events with a mark printed as text where a line opens: a Name whose first word is a symbol some name
@@ -1169,6 +1208,8 @@ impl Resolver {
             .as_ref()
             .map_or_else(|| event.text.clone(), |(name, _)| name.clone());
           let c = self.new_creator(name, split_rule(last_sep), index, requests, group);
+          self.out.creators[c].role.clone_from(&event.role);
+          self.out.creators[c].call = event.creator_call;
           made.push(c);
           if let Some((_, rest)) = &remark {
             let covered = made[uncovered.min(made.len())..].to_vec();

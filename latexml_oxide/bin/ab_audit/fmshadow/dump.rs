@@ -177,6 +177,8 @@ pub fn json_resolved(v: &Value) -> FmResolved {
           .collect(),
         rule:         s(&c["rule"]),
         source:       c["source"].as_u64().unwrap_or(0) as usize,
+        role:         c["role"].as_str().map(str::to_string),
+        call:         None,
         affiliations: assocs(&c["affiliations"]),
         contacts:     assocs(&c["contacts"]),
         notes:        assocs(&c["notes"]),

@@ -374,10 +374,11 @@ pub(super) fn api_call(index: usize) -> Option<ApiCall> {
   })
 }
 
-/// One call's content cut into the reading's entries: each piece's text (normalised), its tokens.
+/// One call's content cut into the reading's entries: each piece's text (normalised), its tokens. Its positions the call's
+/// own, from 0: the author field's 15 bits, as `emit::rehearsed`'s.
 fn cut(call: &ApiCall) -> Result<Option<Vec<(String, Tokens)>>> {
   let content = call.content.unlist_ref();
-  if content.len() > usize::from(FIELD_PROV_POS_MASK) {
+  if content.len() > usize::from(AUTHOR_PROV_POS_MASK) {
     DebugFeature!("frontmatter", "FRONT writer: the entry is out of positions");
     return Ok(None);
   }

@@ -837,7 +837,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("ams_support_sty.rs", 16),
   ("apa7_cls.rs", 7),
   ("authblk_sty.rs", 23),
-  ("author_block", 1288),
+  // (F1r2, 1288 -> 1285: the membership readout finds its commas by `Token::group_step`, no catcode match)
+  ("author_block", 1285),
   ("defs/author_macros", 20),
   // (Z4a, 7 -> 8: `\lx@frontmatter@itemnone` reads its tag argument, an element's name: an `ltx:rdf` passes through, the rest goes)
   ("defs/frontmatter_api", 8),

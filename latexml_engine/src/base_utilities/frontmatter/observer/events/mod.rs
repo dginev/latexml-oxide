@@ -36,7 +36,7 @@ use latexml_core::{
 };
 
 use super::{
-  field_notes::{FieldBreak, FieldDeclaration},
+  field_notes::{FieldBreak, FieldCreator, FieldDeclaration},
   marks::has_word,
   *,
 };
@@ -245,7 +245,8 @@ pub struct Event {
   pub symbol:         bool,
   /// a mark that is its line's first ink
   pub line_first:     bool,
-  /// a contact's role, a mark's or a layout's source (`sup`, `math`, `inst`, `text`; the container's command)
+  /// a contact's role, a mark's or a layout's source (`sup`, `math`, `inst`, `text`; the container's command); a Name's,
+  /// the role of the creator call that printed it (PoS's `\speaker`, `role=speaker`: `creator_roles`)
   pub role:           Option<String>,
   /// a link's target
   pub target:         Option<String>,
@@ -305,6 +306,9 @@ pub struct Event {
   /// a Note's: a `\footnote`, whose meaning in an author's content is no `\thanks`'s (`digest_frontmatter_item`). Not in
   /// a dump: only the emitter reads it
   pub footnote:       bool,
+  /// a Name's: the block's creator call that printed it, its place among the rehearsal's (`creator_roles`;
+  /// `ledger::Outcome::Events::creators`). Not in a dump: only the emitter reads it
+  pub creator_call:   Option<u16>,
 }
 
 impl Event {
@@ -338,6 +342,7 @@ impl Event {
       own_at: None,
       marks: None,
       footnote: false,
+      creator_call: None,
     }
   }
 }
@@ -1983,6 +1988,22 @@ thread_local! {
   /// The author block being rehearsed, while it is: what the writer cuts an in-block contact's entries from, which
   /// [`labelled_entries`] checks them by.
   static BLOCK_CONTENT: std::cell::RefCell<BlockContent> = const { std::cell::RefCell::new(None) };
+}
+
+/// Each Name a block's own creator call printed (`\lx@add@creator[keys]{name}`, PoS's and JHEP's `\speaker{…}`,
+/// `[role=speaker]`; the rehearsal's notes, `field_notes::FieldCreator`) is that call's (`Event::creator_call`), its role
+/// the call's, Perl's API argument (`Event::role`): its span inside the positions of the call's name.
+pub(in crate::base_utilities) fn creator_roles(events: &mut [Event], calls: &[FieldCreator]) {
+  for (call, FieldCreator { role, start, end, .. }) in calls.iter().enumerate() {
+    let (start, end) = (*start, *end);
+    // (a Name's span is the cover of the call around it, `\speaker{Ann Able}`'s whole: one meeting the name's positions)
+    for event in events.iter_mut().filter(|e| e.kind == EventKind::Name) {
+      if event.span.is_some_and(|(s, e)| s < end && start < e) {
+        event.creator_call = u16::try_from(call).ok();
+        event.role.clone_from(role);
+      }
+    }
+  }
 }
 
 /// Run `f` (the rehearsal of an author block, `shadow.rs`) with the block's `tokens`, its first at position `base`,

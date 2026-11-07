@@ -1,0 +1,27 @@
+% mechanism: positions per call: the rehearsal stamps each author call's tokens from where the field's own stamps end, in the
+%   author field's 15 bits (`ledger::record_author_call`, `token::AUTHOR_PROV_POS_MASK`), so a kernel `\author` past the 16,383
+%   positions the stamps take (its `\lx@field@mark` unstamped) is read with `LATEXML_FM_EMIT` on; with the switch off it stays
+%   unread, as before (`ledger::out_of_positions`, the dump's stamp `overflow`)
+% witness: 2204.09614 (BESIII, 18,395 tokens, 559 names), 2404.06718 (20,918), 2103.16779, 2107.03604, 2201.02056,
+%   2212.07214, 2311.02347, 2410.11607 (21,304, dev20k's largest), 1605.03233, 1812.07638
+% oracle:  pdflatex 0 errors; 650 names "Annabelle Abernathy-<letters>", `\and` between them (16,899 tokens)
+% engines: rust int145a, `=2`: no reading ("unstamped: out of positions"), the block one whole creator
+% expect:  0 errors, 0 warnings; `=2`: 650 creators, every name
+% status:  RED (int145a) -> GREEN (perfect_kernel_batchf1::a_block_past_the_stamps_positions_is_read)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcount\n
+\def\digit#1{\ifcase#1 a\or b\or c\or d\or e\or f\or g\or h\or i\or j\fi}
+\def\letters#1{\ifx\relax#1\else\digit#1\expandafter\letters\fi}
+\edef\names{Annabelle Abernathy-a}
+\n=1
+\loop
+  \edef\names{\unexpanded\expandafter{\names}\space\noexpand\and\space Annabelle Abernathy-\expandafter\letters\number\n\relax}
+  \advance\n by 1
+\ifnum\n<650 \repeat
+\begin{document}
+\title{T}
+\expandafter\author\expandafter{\names}
+\maketitle
+Body.
+\end{document}
