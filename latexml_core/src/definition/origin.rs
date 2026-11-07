@@ -216,6 +216,17 @@ const STORE_CALL_WATCH: u8 = 16;
 /// macro call, so a flag.
 pub fn setter_watch() -> bool { SETTER_WATCH.with(|c| c.get()) != 0 }
 
+/// What a macro's call must be for one of the watches on to see it, read at every macro call: `None` when no watch is on,
+/// `Some(true)` when only [`watch_document_calls`]' and [`watch_store_calls`]' are, which see only a macro with parameters
+/// that LaTeXML or a raw class's own file made. Those two stay on from a conversion's start until its title page, or to
+/// its end in a document with none, so a package's macro calls in the document's text would otherwise all pay for the
+/// watch's cold path.
+#[inline(always)]
+pub fn call_watch() -> Option<bool> {
+  let watches = SETTER_WATCH.with(|c| c.get());
+  (watches != 0).then_some(watches & !(DOCUMENT_CALL_WATCH | STORE_CALL_WATCH) == 0)
+}
+
 /// Is [`watch_frontmatter_setter_calls`]' watch on?
 pub fn frontmatter_watch() -> bool { SETTER_WATCH.with(|c| c.get()) & FRONTMATTER_WATCH != 0 }
 

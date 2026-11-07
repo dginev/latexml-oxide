@@ -4423,6 +4423,9 @@ pub fn if_limit() -> i64 { state!().if_limit }
 pub fn set_if_limit(limit: i64) { state_mut!().if_limit = limit; }
 /// The conditionals counted so far ([`State::if_count`]).
 pub fn if_count() -> i64 { state!().if_count }
+/// Put [`if_count`] back: a discarded run the read budget ended counts against no limit (latexml_engine sect05.rs
+/// `speculative_run`).
+pub fn set_if_count(count: i64) { state_mut!().if_count = count; }
 /// Perl `Object.pm:163-168`: bump the global absorb counter and return it
 /// (see [`State::absorb_count`]).
 pub fn next_absorb_id() -> i64 {

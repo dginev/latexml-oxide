@@ -1,0 +1,50 @@
+% A run of the title-page check the read budget abandons (sect05.rs `speculative_run`, `gullet::read_budget`) may stop at
+% any read: inside a group, a tabular cell, math, a list, a minipage, a figure, an `\edef`, a `\csname`, a number, a
+% skipped conditional, a `\def`'s body. Whichever read it is, the run is rolled back and the document goes on as if no
+% run had been made. `\closing`'s argument only reaches the check's own digestion (`argument_print`, a mouth of its own);
+% `\extra`'s is printed by the title page (`note_title_page_print`, the document's). The body uses what the arguments used.
+% witness: uantwerpenexam-example2 (a stored argument of 2,501 tokens, 164 million reads a run, whose language switches do it)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Extra one.", "Stored", "One", "Body text.",
+%          "a b", "c d", "Item", "x^2", "In a box", "Figure 1: Cap", "Scanned", "UPPER", "xii", "Input line", "Centered"
+% engines: rust P1 = 0 errors, 0 warnings, no budget; perl = not run
+% expect:  0 errors at every budget (LATEXML_CHECK_READ_BUDGET, from 1 read up), the XML the one no budget writes, and 1
+%          warning (frontmatter:check_budget) when one is over. kit/check_budget_sweep.sh, every budget up to the runs' reads.
+% status:  GREEN (R1)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{checkbudgettracecls.cls}
+\LoadClass{article}
+\def\extra#1{\gdef\@extra{#1}}\def\@extra{}
+\def\closing#1{\g@addto@macro\@closing{#1}}\def\@closing{}
+\newcommand{\printclosing}{\@closing}
+\renewcommand\maketitle{\par{\@title\par}{\@extra\par}}
+\end{filecontents*}
+\documentclass{checkbudgettracecls}
+\newcount\mycount
+\begin{filecontents*}[force]{checkbudgettraceinput.tex}
+Input line, \begin{center}in a file\end{center}.
+\end{filecontents*}
+\newcommand{\tempinput}{\input{checkbudgettraceinput}}
+\newcommand{\usesall}{%
+  Stored {\bfseries in a group \begingroup deeper\endgroup}
+  \begin{tabular}{ll}a & b\\ c & d\end{tabular}
+  \begin{itemize}\item Item\end{itemize}
+  $x^2+\frac{1}{2}$ \begin{minipage}{3cm}In a box\end{minipage}
+  \begin{figure}\caption{Cap}\label{fig:a}\end{figure}
+  \edef\tempa{\ifnum1<2 yes\else no\fi}\expandafter\gdef\csname tempb\endcsname{\tempa}
+  \mycount=12345 \advance\mycount by 1
+  \iffalse skipped \ifnum1<2 inner\fi\else taken\fi
+  \def\tempc##1{##1}\tempc{given}\footnote{A note.}\section{Stored section}\refstepcounter{figure}%
+  \setbox0\vbox{\halign{##\cr h\cr\noalign{\kern1pt}i\cr}}\copy0
+  \begingroup\catcode`\Q=13 \scantokens{Scanned}\endgroup \uppercase{upper} \romannumeral 12
+  \the\numexpr 1+2\relax\ \the\dimexpr 1pt+2pt\relax\ \detokenize{raw}
+  \aftergroup\relax\afterassignment\relax\count255=3 \futurelet\tempd\relax\tempinput
+  \begin{tabular}{c}\multicolumn{1}{c}{m}\\\end{tabular}
+  \begin{equation}y=1\label{eq:a}\end{equation}\begin{center}Centered\end{center}\par}
+\title{A Title}
+\extra{Extra one. \usesall}
+\closing{\usesall}
+\begin{document}\maketitle
+\section{One}
+Body text. \usesall
+\begin{tabular}{ll}a & b\\ c & d\end{tabular} $x^2$ \the\mycount \thefigure
+\end{document}
