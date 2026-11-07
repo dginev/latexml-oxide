@@ -211,10 +211,23 @@ const DOCUMENT_CALL_WATCH: u8 = 4;
 const DROPPED_ARGUMENT_WATCH: u8 = 8;
 /// [`watch_store_calls`]' watch: the title-page check's (`state::note_store_call`).
 const STORE_CALL_WATCH: u8 = 16;
+/// [`watch_store_reads`]' watch: the title-page check's (`state::note_store_read`).
+const STORE_READ_WATCH: u8 = 32;
 
 /// Are frontmatter setter calls observed ([`watch_setter_calls`], [`watch_frontmatter_setter_calls`])? Read at every
 /// macro call, so a flag.
 pub fn setter_watch() -> bool { SETTER_WATCH.with(|c| c.get()) != 0 }
+
+/// What a macro's call must be for one of the watches on to see it, read at every macro call: `None` when no watch is on,
+/// `Some(true)` when only [`watch_document_calls`]' and [`watch_store_calls`]' are, which see only a macro with parameters
+/// that LaTeXML or a raw class's own file made. Those two stay on from a conversion's start until its title page, or to
+/// its end in a document with none, so a package's macro calls in the document's text would otherwise all pay for the
+/// watch's cold path.
+#[inline(always)]
+pub fn call_watch() -> Option<bool> {
+  let watches = SETTER_WATCH.with(|c| c.get());
+  (watches != 0).then_some(watches & !(DOCUMENT_CALL_WATCH | STORE_CALL_WATCH) == 0)
+}
 
 /// Is [`watch_frontmatter_setter_calls`]' watch on?
 pub fn frontmatter_watch() -> bool { SETTER_WATCH.with(|c| c.get()) & FRONTMATTER_WATCH != 0 }
@@ -238,6 +251,21 @@ pub fn dropped_argument_watch() -> bool {
 
 /// Is [`watch_store_calls`]' watch on, the gullet reading the document's text?
 pub fn store_call_watch() -> bool { SETTER_WATCH.with(|c| c.get()) & STORE_CALL_WATCH != 0 }
+
+/// Is [`watch_store_reads`]' watch on?
+pub fn store_read_watch() -> bool { SETTER_WATCH.with(|c| c.get()) & STORE_READ_WATCH != 0 }
+
+/// Observe (`true`) or stop observing which stores a macro call expands (`state::note_store_read`): while the title-page
+/// check's print runs (latexml_engine `title_page_check::StoreReadWatch`), so only that run pays.
+pub fn watch_store_reads(on: bool) {
+  SETTER_WATCH.with(|c| {
+    c.set(if on {
+      c.get() | STORE_READ_WATCH
+    } else {
+      c.get() & !STORE_READ_WATCH
+    })
+  });
+}
 
 /// Observe (`true`) or stop observing the required arguments a binding's macro drops (`state::note_dropped_argument`):
 /// while a frontmatter entry the document gave is digested (latexml_engine `title_page_check`); the watch it replaces.

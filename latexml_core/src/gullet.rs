@@ -297,6 +297,10 @@ pub struct Gullet {
   /// take a token off the pushback: the token limit, the deadline's period, the cycle guard's window. 0 asks for it
   /// to be worked out on the next read ([`Gullet::next_full_read`]), and a write to any of those fields sets it so.
   full_read_at:             usize,
+  /// The value of [`progress`](Self::progress) past which a read fails, a budgeted run's ([`read_budget`]).
+  read_budget_at:           Option<usize>,
+  /// A read failed for [`read_budget_at`](Self::read_budget_at).
+  read_budget_spent:        bool,
   /// Token-progress floor above which [`cycle_guard`](Self::cycle_guard)
   /// engages. Defaults to `CYCLE_GUARD_ACTIVATE` (20M). Graphics packages
   /// whose healthy expansion legitimately runs to 100M+ tokens (pgf/tikz/xy)
@@ -510,6 +514,64 @@ pub fn set_pushback_limit(limit: Option<usize>) { gullet_mut!().pushback_limit =
 /// (`stomach.rs` `cycle_guard_record`).
 pub fn token_progress() -> usize { gullet!().progress }
 
+/// A run of digestion's limit on the tokens it reads, until [`ReadBudget::end`]: the read past it fails, and so does
+/// each one after, with an [`ErrorCategory::ReadBudget`](crate::common::error::ErrorCategory) error that is logged
+/// nowhere and latches nothing, so whoever made the run ends it and the document goes on. The title-page check's runs
+/// (latexml_engine sect05.rs `speculative_run`): a run's cost is bounded whatever the document's text does. The count is
+/// the one [`progress`](Gullet::progress) keeps; the token limit, the deadline and the cycle guard read theirs as before.
+#[must_use]
+pub fn read_budget(reads: usize) -> ReadBudget {
+  let mut g = gullet_mut!();
+  let start = g.progress;
+  g.read_budget_at = Some(start.saturating_add(reads));
+  g.read_budget_spent = false;
+  g.full_read_at = 0;
+  ReadBudget { start, reads }
+}
+
+/// What [`read_budget`] began; the budget is off once this is ended or dropped.
+pub struct ReadBudget {
+  start: usize,
+  reads: usize,
+}
+
+impl ReadBudget {
+  /// The run is over: how many tokens it read, and whether it read all it may. A run the budget ended counts as read
+  /// what it read, as a run that finished does: the failed reads, and an inner [`reading_from_mouth`]'s reset of the
+  /// count on the way out, leave no mark on [`progress`](Gullet::progress). A run that ended otherwise keeps the count
+  /// as it found it. (A failed run's reset is that path's own.)
+  pub fn end(self) -> ReadBudgetEnd {
+    let mut g = gullet_mut!();
+    let at = g.read_budget_at.unwrap_or(usize::MAX);
+    let left = at.saturating_sub(g.progress);
+    let reads = self.reads.saturating_sub(left);
+    let over = g.read_budget_spent;
+    if over {
+      g.progress = self.start.saturating_add(reads);
+    }
+    drop(g);
+    ReadBudgetEnd { reads, over }
+  }
+}
+
+impl Drop for ReadBudget {
+  fn drop(&mut self) {
+    let mut g = gullet_mut!();
+    g.read_budget_at = None;
+    g.read_budget_spent = false;
+    g.full_read_at = 0;
+  }
+}
+
+/// What [`ReadBudget::end`] tells.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ReadBudgetEnd {
+  /// the tokens the run read
+  pub reads: usize,
+  /// it read all it may, and a read failed
+  pub over:  bool,
+}
+
 /// Restore the token limit and progress from a previous set_token_limit call.
 pub fn restore_token_limit(saved: (Option<usize>, usize)) {
   let mut g = gullet_mut!();
@@ -628,6 +690,8 @@ pub fn initialize_gullet() {
   // reused thread-local engine must not leak its raised floor into the next doc.
   gullet.cycle_guard_activate = CYCLE_GUARD_ACTIVATE;
   gullet.full_read_at = 0;
+  gullet.read_budget_at = None;
+  gullet.read_budget_spent = false;
   gullet.ctx_serial = 0;
   gullet.ctx_next = 0;
   gullet.ctx_stack.clear();
@@ -1337,6 +1401,7 @@ fn read_internal_token_full(mut sink: CommentSink) -> Result<CheckedRead> {
     PushbackLimit(usize),
     Cycle(usize, Token),
     Deadline,
+    ReadBudget,
   }
   let mut breach: Option<Breach> = None;
   let mut outcome = CheckedRead::Exhausted;
@@ -1365,6 +1430,9 @@ fn read_internal_token_full(mut sink: CommentSink) -> Result<CheckedRead> {
       // returns to a digestion loop never met it, and only a process watchdog, where one is armed, ended the run
       // (OD #538).
       breach = Some(Breach::Deadline);
+    } else if g.read_budget_at.is_some_and(|at| g.progress > at) {
+      g.read_budget_spent = true;
+      breach = Some(Breach::ReadBudget);
     } else {
       // Duty-cycled guard activation, computed BEFORE the read: the phase —
       // and the ON-window-start ring reset — depends only on `progress`,
@@ -1505,7 +1573,19 @@ fn read_internal_token_full(mut sink: CommentSink) -> Result<CheckedRead> {
     Some(Breach::PushbackLimit(limit)) => pushback_limit_fatal(limit),
     Some(Breach::Cycle(period, token)) => cycle_trip_fatal(period, &token),
     Some(Breach::Deadline) => fatal!(Timeout, Convert, "Conversion timed out!"),
+    Some(Breach::ReadBudget) => read_budget_error(),
   }
+}
+
+/// The read [`read_budget`] refuses: an error for the run to end on, no Fatal (nothing logged, nothing latched).
+#[cold]
+#[inline(never)]
+fn read_budget_error() -> Result<CheckedRead> {
+  Err(Error::from(ErrorData {
+    target:   ErrorTarget::Timeout,
+    category: ErrorCategory::ReadBudget,
+    message:  "A budgeted run read all it may".to_string(),
+  }))
 }
 
 impl Gullet {
@@ -1515,7 +1595,11 @@ impl Gullet {
     if *DEBUG_FATAL {
       return 0;
     }
-    next_due_read(self.progress, self.token_limit, self.cycle_guard_activate)
+    let due = next_due_read(self.progress, self.token_limit, self.cycle_guard_activate);
+    // (and the read past a budget, and each one after it: [`read_budget`])
+    self.read_budget_at.map_or(due, |at| {
+      due.min(at.saturating_add(1).max(self.progress.saturating_add(1)))
+    })
   }
 }
 
@@ -5110,6 +5194,7 @@ fn handle_marker(marker_token: Token) {
 pub fn reading_from_mouth<R, FnR>(mouth: Mouth, reader: FnR) -> Result<R>
 where FnR: FnOnce() -> Result<R> {
   let context_mouth_source = arena::pin(mouth.get_source());
+  let outer_mouths = gullet!().mouthstack.len();
   // A cycle is only a cycle WITHIN one expansion context. Rather than
   // resetting the guard history here (an earlier fix that also BLINDED the
   // guard to outer loops whose body calls `do_expand` each iteration), give
@@ -5140,23 +5225,17 @@ where FnR: FnOnce() -> Result<R> {
   let results: R = match reader_result {
     Ok(v) => v,
     Err(e) => {
-      // Force-close our mouth and any autoclosable mouths above it
-      loop {
-        let current = gullet!()
-          .runtime
-          .as_ref()
-          .map(|r| arena::pin(r.mouth.get_source()));
-        if current == Some(context_mouth_source) {
-          close_mouth(true).ok();
-          break;
-        } else if gullet!().mouthstack.is_empty() {
-          break; // Our mouth was already consumed
-        } else {
-          close_mouth(true).ok(); // Close stale mouth above ours
-        }
+      // Force-close our mouth and any mouth above it, by depth: another of the same name above ours (an "Anonymous
+      // String", a `\scantokens`'s in a discarded run) is not ours, and stopping at it left ours open and took the
+      // document's text next (`perfect_kernel_batchr1::a_run_over_budget_leaves_no_trace`).
+      while gullet!().mouthstack.len() > outer_mouths {
+        close_mouth(true).ok();
       }
       // Reset progress counter so subsequent processing isn't immediately killed
       let mut g = gullet_mut!();
+      // (what a budgeted run has left stays what it has left: [`read_budget`])
+      let progress = g.progress;
+      g.read_budget_at = g.read_budget_at.map(|at| at.saturating_sub(progress));
       g.progress = 0;
       g.full_read_at = 0;
       drop(g);
@@ -5396,6 +5475,77 @@ where FnR: FnOnce(Option<&mut Mouth>) -> R {
 #[cfg(test)]
 mod token_limit_tests {
   use super::*;
+
+  /// A budget refuses the read past it and each one after, leaves the count as the reads made it, and leaves no due count
+  /// on the fast path once it is off; a failed inner reading context keeps what is left of it.
+  #[test]
+  fn a_read_budget_ends_at_its_read_and_counts_what_was_read() {
+    let tokens = || Tokens::new(vec![T_LETTER!("a"); 10]);
+    reading_from_mouth(Mouth::default(), || {
+      unread(tokens());
+      let start = token_progress();
+      let budget = read_budget(3);
+      for _ in 0..3 {
+        assert!(read_token()?.is_some());
+      }
+      for _ in 0..2 {
+        let failed = read_token().unwrap_err();
+        assert!(matches!(failed.category, ErrorCategory::ReadBudget));
+      }
+      assert_eq!(budget.end(), ReadBudgetEnd { reads: 3, over: true });
+      assert_eq!(token_progress(), start + 3);
+      assert!(read_token()?.is_some());
+      assert_eq!(token_progress(), start + 4);
+
+      // An inner context's failure resets the count, and takes nothing off what the budget has left.
+      let start = token_progress();
+      let budget = read_budget(4);
+      assert!(read_token()?.is_some());
+      let inner: Result<()> = reading_from_mouth(Mouth::default(), || {
+        unread(tokens());
+        assert!(read_token()?.is_some());
+        fatal_free_failure()
+      });
+      assert!(inner.is_err());
+      assert_eq!(token_progress(), 0);
+      assert!(read_token()?.is_some());
+      assert!(read_token()?.is_some());
+      assert!(read_token().is_err());
+      assert_eq!(budget.end(), ReadBudgetEnd { reads: 4, over: true });
+      assert_eq!(token_progress(), start + 4);
+
+      // A run the budget did not end leaves the count alone, whatever is left.
+      let start = token_progress();
+      let budget = read_budget(100);
+      assert!(read_token()?.is_some());
+      assert_eq!(budget.end(), ReadBudgetEnd { reads: 1, over: false });
+      assert_eq!(token_progress(), start + 1);
+      Ok(())
+    })
+    .unwrap();
+  }
+
+  /// An error that is no Fatal, for an inner context to fail with.
+  fn fatal_free_failure() -> Result<()> { read_budget_error().map(|_| ()) }
+
+  /// A failed reading context closes its own mouth and those above it, by depth: another of the same name above it (two
+  /// `Mouth::default()`, a `\scantokens`'s in a discarded run) is not its own, and the mouth under it stays open. A run
+  /// that stopped inside one left its own mouth open, and the next close took the document's.
+  #[test]
+  fn a_failed_context_closes_its_own_mouths_by_depth() {
+    reading_from_mouth(Mouth::default(), || {
+      unread(Tokens::new(vec![T_LETTER!("o")]));
+      let failed: Result<()> = reading_from_mouth(Mouth::default(), || {
+        open_mouth(Mouth::default(), false);
+        open_mouth(Mouth::default(), false);
+        fatal_free_failure()
+      });
+      assert!(failed.is_err());
+      assert_eq!(read_token()?, Some(T_LETTER!("o")));
+      Ok(())
+    })
+    .unwrap();
+  }
 
   /// What [`read_internal_token_full`] tests per count, spelled as it spells them.
   fn is_due(count: usize, limit: Option<usize>, floor: usize) -> bool {

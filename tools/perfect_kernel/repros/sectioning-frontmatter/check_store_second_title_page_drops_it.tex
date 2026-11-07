@@ -1,0 +1,25 @@
+% A second `\maketitle` supersedes the first's print (DIVERGENCES #406). What the first print held of a raw setter's
+% argument (title_page_check.rs `digest_raw_setter_calls`) stays held back for it: a later print that no longer reads the
+% store has the argument digested then, so its words stay wanted, as they are by the third source however many title pages
+% follow. The class's second title page prints the store no more (`\c@tp` advanced between).
+% witness: none (schooldocs re-runs `\maketitle` per exam variant, schooldocs-examples, without this store shape)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Storedword", "Between.", "A Title", "Text."
+% engines: rust P1 = 0 errors, 0 warnings; perl = not run
+% expect:  0 errors, 0 warnings; the debug log holds the argument once, then digests it
+% status:  GREEN (R1)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{checkstoresecondcls.cls}
+\LoadClass{article}
+\newcounter{tp}
+\def\extrainfo#1{\gdef\@extrainfo{#1}}\def\@extrainfo{}
+\renewcommand\maketitle{\par{\Large\@title\par}\ifnum\c@tp=0 {\@extrainfo\par}\fi}
+\end{filecontents*}
+\documentclass{checkstoresecondcls}
+\title{A Title}
+\extrainfo{Storedword}
+\begin{document}\maketitle
+Between.
+\setcounter{tp}{1}
+\maketitle
+Text.
+\end{document}

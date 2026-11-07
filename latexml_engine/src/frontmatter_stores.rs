@@ -4440,7 +4440,9 @@ fn sentinel_runs_with(
       SpeculativeRun::Aborted if aborted_printed_nothing => {
         return Ok(Some((String::new(), String::new())));
       },
-      SpeculativeRun::Aborted | SpeculativeRun::Unavailable => return Ok(None),
+      SpeculativeRun::Aborted | SpeculativeRun::Unavailable | SpeculativeRun::OverBudget(_) => {
+        return Ok(None);
+      },
     };
   let lowered = letters.to_lowercase();
   if !lowered.contains("lxsentinel") {
@@ -4452,7 +4454,9 @@ fn sentinel_runs_with(
       SpeculativeRun::Aborted if aborted_printed_nothing => {
         return Ok(Some((String::new(), letters)));
       },
-      SpeculativeRun::Aborted | SpeculativeRun::Unavailable => return Ok(None),
+      SpeculativeRun::Aborted | SpeculativeRun::Unavailable | SpeculativeRun::OverBudget(_) => {
+        return Ok(None);
+      },
     };
   Ok(Some((
     sentinels_printed(stores, &lowered, &digits),
@@ -4683,7 +4687,7 @@ fn verify_title_page_labels() -> Result<()> {
   )))?;
   let text = match run {
     SpeculativeRun::Printed(text) => Some(text.to_lowercase()),
-    SpeculativeRun::Aborted | SpeculativeRun::Unavailable => None,
+    SpeculativeRun::Aborted | SpeculativeRun::Unavailable | SpeculativeRun::OverBudget(_) => None,
   };
   for (rerouted, name, store, label, in_argument) in labelled {
     let kept = match &text {
@@ -5623,7 +5627,7 @@ fn decide_unset_nulls(rerouted: &[String]) -> Result<()> {
     }
     Ok(match speculative_title_page_run(Tokens::new(tokens))? {
       SpeculativeRun::Printed(text) => Some(text.chars().filter(|c| !c.is_whitespace()).count()),
-      SpeculativeRun::Aborted | SpeculativeRun::Unavailable => None,
+      SpeculativeRun::Aborted | SpeculativeRun::Unavailable | SpeculativeRun::OverBudget(_) => None,
     })
   };
   let Some(base) = ink()? else {

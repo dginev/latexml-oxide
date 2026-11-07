@@ -1,0 +1,24 @@
+% The title page's print expands a store and prints none of it: an `\edef` test (`\tested`), so that run read it without
+% printing it; and a stored `\thanks` (`\noted`) whose text only `\@thanks` prints, which this class never runs, though the
+% print holds the argument's other words. Neither is held by the print (title_page_check.rs `print_holds`): the argument's
+% own digestion stays, and its words count in a
+% `Warning:frontmatter:unclaimed_store`, pdflatex printing none of them.
+% witness: none (the class's `\ifthenelse{\equal{\@x}{}}` shape is common in raw classes; drcls, review rev106s p3)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Noteword one two three four five six1", "Text.", no "Testedword", no "Thanksword"
+% engines: rust P1 = 0 errors, 1 warning as expected; perl = not run
+% expect:  0 errors, 1 warning (frontmatter:unclaimed_store "testedword thanksword"), and both arguments digested in the debug log
+% status:  GREEN (R1; a run-only rule that took a store's expansion as its print would lose both)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{checkstoretestedcls.cls}
+\LoadClass{article}
+\def\tested#1{\gdef\@tested{#1}}\def\@tested{}
+\def\noted#1{\gdef\@noted{#1}}\def\@noted{}
+\renewcommand\maketitle{\par{\@title\par}\edef\@tempa{\@tested}\ifx\@tempa\@empty\fi{\@noted\par}}
+\end{filecontents*}
+\documentclass{checkstoretestedcls}
+\title{A Title}
+\tested{Testedword}
+\noted{Noteword one two three four five six\thanks{Thanksword}}
+\begin{document}\maketitle
+Text.
+\end{document}

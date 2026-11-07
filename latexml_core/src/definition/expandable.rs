@@ -196,7 +196,7 @@ impl Definition for Expandable {
 
   /// Expand the expandable control sequence. This should be carried out by the Gullet.
   fn invoke(&self, once_only: bool) -> Result<Tokens> {
-    if crate::definition::origin::setter_watch()
+    if self.may_be_watched()
       && let Some(watched) = self.watched_call()
     {
       return self.expand_watched(once_only, watched);
@@ -209,7 +209,7 @@ impl Definition for Expandable {
   /// ([`crate::gullet::unread_substituted`]). Closures, argument-only definitions and a frontmatter setter (whose
   /// expansion is noted, as [`Self::invoke`] notes it) take the general path.
   fn invoke_onto_input(&self, once_only: bool) -> Result<()> {
-    if crate::definition::origin::setter_watch()
+    if self.may_be_watched()
       && let Some(watched) = self.watched_call()
     {
       crate::gullet::unread_expansion(self.expand_watched(once_only, watched)?);
@@ -275,6 +275,16 @@ struct WatchedCall {
 }
 
 impl Expandable {
+  /// Can a watch that is on see this call at all ([`crate::definition::origin::call_watch`])? [`Self::watched_call`] says
+  /// what it observes, on a cold path.
+  #[inline(always)]
+  fn may_be_watched(&self) -> bool {
+    crate::definition::origin::call_watch().is_some_and(|only_owned_with_parameters| {
+      !only_owned_with_parameters
+        || (self.paramlist.is_some() && (self.made_in_own_file || self.origin.is_latexml_owned()))
+    })
+  }
+
   /// What a setter watch (`definition::origin::setter_watch`) observes of this call, if anything: a frontmatter setter's
   /// ([`note_setter_call`], whose expansion is noted), a call of LaTeXML's own macro that reads its arguments from the
   /// document's text (`origin::document_call_watch`, [`crate::gullet::reading_document_text`]: its arguments kept,
@@ -285,10 +295,14 @@ impl Expandable {
   /// on: the arguments it writes into a store kept, [`note_store_call`]) — its arguments may come back through
   /// `\@ifnextchar` (nj_style's `\ead`, CUP-JNL-DTM's `\address`), so no [`crate::gullet::reading_document_text`]: a class's
   /// own literal is no word the document's source writes. Not while a raw class's setter replays or a speculative
-  /// run digests.
+  /// run digests. And which store a macro call expands, while the title-page check's print runs
+  /// (`origin::store_read_watch`, [`note_store_read`]): no call to watch for it.
   #[cold]
   #[inline(never)]
   fn watched_call(&self) -> Option<WatchedCall> {
+    if crate::definition::origin::store_read_watch() {
+      note_store_read(self.cs);
+    }
     let noted = crate::definition::origin::setter_name_watch() && note_setter_call(&self.cs);
     let recorded = crate::definition::origin::document_call_watch()
       && self.paramlist.is_some()

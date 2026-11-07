@@ -1376,10 +1376,11 @@ pub(crate) fn load() -> Result<()> {
   // only — no deposit, no net, nothing typeset — and only when no `\maketitle` noted a print (a later one supersedes it,
   // as a second `\maketitle` does).
   DefPrimitive!("\\lx@note@title@page", {
-    digest_raw_setter_calls()?;
+    read_raw_setter_calls();
     if !title_page_noted() {
       note_title_page_print()?;
     }
+    digest_raw_setter_calls()?;
   });
   // A primitive, not a macro: the deposit is digested first and kept only
   // when it produced content. A class whose `\@maketitle` typesets nothing
@@ -1387,13 +1388,16 @@ pub(crate) fn load() -> Result<()> {
   // empty centred paragraphs and a page break — dropped; bfhthesis's
   // degree/advisor block beside its captured `\@institution` is kept.
   DefPrimitive!("\\lx@deposit@maketitle", {
-    // (what the document gave the raw setters before this title page: the check's third source, read in this state)
-    digest_raw_setter_calls()?;
+    // (what the document gave the raw setters before this title page: the check's third source, read in this state,
+    // digested after the print where that run has not printed it)
+    read_raw_setter_calls();
     // What the class's title page prints, decided by TeX: the speculative sentinel runs (frontmatter_stores.rs
     // `before_title_page_runs`), made in the state the deposit and the replay below meet.
     crate::frontmatter_stores::before_title_page_runs()?;
     // (and what the whole title page prints, in that state: its words, checked against the output's)
     note_title_page_print()?;
+    digest_raw_setter_calls()?;
+    AssignValue!("lx_title_page_print_follows" => false, Some(Scope::Global));
     // Both deposits null the title fields, so a `{titlepage}` either lays out
     // builds no `ltx:titlepage` (the `{titlepage}` constructor's `fields`).
     AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
@@ -5106,6 +5110,9 @@ pub(crate) enum SpeculativeRun {
   Aborted,
   /// No run was made or kept: no journal could open (one is already open), or its assignments could not be undone.
   Unavailable,
+  /// A check's run (`speculative_word_run`, [`note_title_page_print`]) read all it may
+  /// (`title_page_check::check_run_budget`), or had no reads left, and was abandoned: the tokens it read.
+  OverBudget(usize),
 }
 
 /// Digest title-page code speculatively (`tokens`: [`title_page_print_tokens`], [`title_page_deposit_tokens`],
@@ -5124,7 +5131,7 @@ pub(crate) enum SpeculativeRun {
 /// other Fatal is the run's alone — the document never makes it, and a sentinel value may cause it —, discarded with
 /// its diagnostics (an Info says so): [`SpeculativeRun::Aborted`].
 pub(crate) fn speculative_title_page_run(tokens: Tokens) -> Result<SpeculativeRun> {
-  speculative_run(tokens, false, ink_text, None)
+  speculative_run(tokens, false, ink_text, None, None)
 }
 
 /// [`speculative_title_page_run`] reading from a mouth of its own: code that reads ahead past `tokens` — an
@@ -5132,7 +5139,7 @@ pub(crate) fn speculative_title_page_run(tokens: Tokens) -> Result<SpeculativeRu
 /// meets the end of its input, never the document's text. The unclaimed-text net's run of the refused begin codes
 /// (frontmatter_stores.rs `net_begin_code_tokens`).
 pub(crate) fn speculative_isolated_run(tokens: Tokens) -> Result<SpeculativeRun> {
-  speculative_run(tokens, true, ink_text, None)
+  speculative_run(tokens, true, ink_text, None, None)
 }
 
 /// [`speculative_isolated_run`], its text read with where its words end ([`ink_word_text`], each `\insert`'s material
@@ -5140,9 +5147,32 @@ pub(crate) fn speculative_isolated_run(tokens: Tokens) -> Result<SpeculativeRun>
 /// binding's frontmatter command never digests prints (`base_utilities::frontmatter::title_page_check`
 /// `end_frontmatter_entry_digestion`, OXIDIZED_DESIGN_DIVERGENCES #953 "106t").
 pub(crate) fn speculative_word_run(tokens: Tokens) -> Result<SpeculativeRun> {
+  checks_word_run(tokens, true)
+}
+
+/// A run of the title-page check's, read by [`ink_word_text`], under the check's read budget
+/// (`title_page_check::check_run_budget`; none left, no run), the field ledger put back and the boxes the run stamped
+/// unstamped, as the observer's rehearsal does: a register's box `\usebox` hands back to the fields, stamped, became an
+/// `ltx:text` of its own in the document.
+fn checks_word_run(tokens: Tokens, isolated: bool) -> Result<SpeculativeRun> {
+  let Some(budget) = check_run_budget() else {
+    return Ok(SpeculativeRun::OverBudget(0));
+  };
+  let left = check_reads_left();
   let ledger = FieldLedgerScope::begin();
-  let run = speculative_run(tokens, true, ink_word_text, Some(INK_INSERT));
+  let run = speculative_run(
+    tokens,
+    isolated,
+    ink_word_text,
+    Some(INK_INSERT),
+    Some(budget),
+  );
   drop(ledger);
+  DebugFeature!(
+    "frontmatter",
+    "FRONT the check's run read {} tokens",
+    left - check_reads_left()
+  );
   run
 }
 
@@ -5183,30 +5213,40 @@ pub(crate) fn note_title_page_print() -> Result<()> {
   tokens.extend(title_page_print_tokens(&inject).unlist());
   hold.discard();
   tokens.push(T_END!());
-  // (the field ledger put back and the boxes the run stamped unstamped, as the observer's rehearsal does: a register's
-  // box `\usebox` hands back to the fields, stamped, became an `ltx:text` of its own in the document)
-  let ledger = FieldLedgerScope::begin();
-  let run = speculative_run(Tokens::new(tokens), false, ink_word_text, Some(INK_INSERT));
-  drop(ledger);
-  if let SpeculativeRun::Printed(text) = run? {
-    DebugFeature!(
-      "frontmatter",
-      "FRONT the title page prints: {}",
-      text.replace(INK_SEAM, "|")
-    );
-    note_title_page_printed(&text);
+  // (which stores of what the document gave the raw setters the run reads: the check's third source, read after it)
+  let watch = watch_store_reads_in_print();
+  let run = checks_word_run(Tokens::new(tokens), false);
+  let reads = watch.end();
+  match run? {
+    SpeculativeRun::Printed(text) => {
+      DebugFeature!(
+        "frontmatter",
+        "FRONT the title page prints: {}",
+        text.replace(INK_SEAM, "|")
+      );
+      note_title_page_printed(&text, reads);
+    },
+    SpeculativeRun::OverBudget(read) => {
+      note_check_left_out(s!("the class's title page, after {read} tokens read"), 0)
+    },
+    SpeculativeRun::Aborted | SpeculativeRun::Unavailable => {},
   }
   Ok(())
 }
 
 /// [`speculative_title_page_run`], in a mouth of its own when `isolated` ([`speculative_isolated_run`]), its text read
 /// by `read` ([`ink_text`], or [`ink_word_text`] where its words are counted: [`note_title_page_print`]), each
-/// `\insert`'s material after `insert_mark` when one is given.
+/// `\insert`'s material after `insert_mark` when one is given. With a `budget`, a check's run, it reads that many tokens
+/// at most (`gullet::read_budget`): past them it is abandoned and rolled back as a failed run is, its diagnostics
+/// discarded, and gives [`SpeculativeRun::OverBudget`] — never a Fatal, even when its assignments could not be undone —,
+/// counted as having read what it read, its conditionals by no limit. Which of the check's runs is said by the caller's
+/// Warning (`title_page_check::note_check_left_out`).
 fn speculative_run(
   tokens: Tokens,
   isolated: bool,
   read: fn(&Digested, &mut String),
   insert_mark: Option<char>,
+  budget: Option<usize>,
 ) -> Result<SpeculativeRun> {
   let Some(journal) = begin_assignment_journal() else {
     return Ok(SpeculativeRun::Unavailable);
@@ -5239,6 +5279,8 @@ fn speculative_run(
     Stored::VecDigested(Vec::new()),
     Some(Scope::Global),
   );
+  let conditionals = if_count();
+  let budget = budget.map(read_budget);
   let result = if isolated {
     reading_from_mouth(Mouth::default(), || {
       with_origin(DefinitionOrigin::File, || digest(tokens))
@@ -5246,6 +5288,15 @@ fn speculative_run(
   } else {
     with_origin(DefinitionOrigin::File, || digest(tokens))
   };
+  // (off before anything else reads: closing what the run left open is no part of it)
+  let over_budget = budget.and_then(|budget| {
+    let end = budget.end();
+    note_check_run_reads(end.reads);
+    end.over.then_some(end.reads)
+  });
+  if over_budget.is_some() {
+    set_if_count(conditionals);
+  }
   let inserts = take_deposit_inserts();
   let unwound = reading_from_mouth(Mouth::default(), || {
     new_local_box_list();
@@ -5280,6 +5331,21 @@ fn speculative_run(
   }
   for (flag, value) in FLAGS.iter().zip(saved) {
     assign_value(flag, value, Some(Scope::Global));
+  }
+  if let Some(reads) = over_budget {
+    if undone {
+      hold.discard();
+    } else {
+      hold.commit();
+      Info!(
+        "frontmatter",
+        "\\maketitle",
+        "A speculative run the title-page check abandoned could not be undone (its groups changed): its diagnostics and its global assignments stay"
+      );
+    }
+    unwound?;
+    unwind_box_lists_to(boxes);
+    return Ok(SpeculativeRun::OverBudget(reads));
   }
   if let Err(err) = result {
     // A resource Fatal (the conversion's deadline, its memory budget, a runaway limit) is the document's, and so is

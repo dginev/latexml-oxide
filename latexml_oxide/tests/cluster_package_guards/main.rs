@@ -426,6 +426,7 @@ mod perfect_kernel_batchint20;
 mod perfect_kernel_batchint23;
 mod perfect_kernel_batchm1;
 mod perfect_kernel_batchp1;
+mod perfect_kernel_batchr1;
 mod perfect_kernel_batchz1;
 mod perfect_kernel_gemini;
 mod pgfkeys_native_accessors;
