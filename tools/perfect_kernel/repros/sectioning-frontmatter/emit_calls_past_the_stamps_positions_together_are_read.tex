@@ -1,0 +1,29 @@
+% mechanism: positions per call: each `\author` call of a per-author class is stamped on its own (`ledger::record_author_call`),
+%   never after the calls before it, so 500 calls of 16,500 tokens together are each read with `LATEXML_FM_EMIT` on; with the
+%   switch off the calls past the 16,383 positions together stay unread, as before (`ledger::out_of_positions`, the dump's stamp `overflow`)
+% witness: 2607.15927 (1,365 calls, 15,954 tokens together), 2512.08803 (355 calls, 16,287), 2105.04111 (552 calls)
+% oracle:  pdflatex 0 errors; 500 authors "Annabelle Abernathy-Brandenburg <letters>", each its own `\author`, one
+%   `\affiliation{Univ A, Town}` under them all
+% engines: rust int145a, `=2`: the calls past the positions unread ("unstamped: out of positions"), each a whole creator
+% expect:  0 errors, 0 warnings; `=2`: 500 creators, every name, each with the affiliation
+% status:  RED (int145a) -> GREEN (perfect_kernel_batchf1::a_block_past_the_stamps_positions_is_read)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\newcount\n
+\def\digit#1{\ifcase#1 a\or b\or c\or d\or e\or f\or g\or h\or i\or j\fi}
+\def\letters#1{\ifx\relax#1\else\digit#1\expandafter\letters\fi}
+\begin{document}
+\title{T}
+\n=0
+\loop
+  \edef\name{Annabelle Abernathy-Brandenburg B\expandafter\letters\number\n\relax}
+  \expandafter\author\expandafter{\name}
+  \advance\n by 1
+\ifnum\n<500 \repeat
+\affiliation{Univ A, Town}
+\begin{abstract}
+Abs.
+\end{abstract}
+\maketitle
+Body.
+\end{document}

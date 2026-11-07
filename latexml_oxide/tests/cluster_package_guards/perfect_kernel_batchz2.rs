@@ -259,7 +259,8 @@ fn an_orcid_is_a_contact_in_the_events() {
     .collect();
   assert_eq!(events, vec![
     contact([12, 33], "0000-0001-2345-6789"),
-    contact([47, 68], "0000-0002-2345-6789"),
+    // (the second block's own positions, per call: F1)
+    contact([13, 34], "0000-0002-2345-6789"),
   ]);
   let names: Vec<(&str, &str)> = dump["resolved"]["creators"]
     .as_array()

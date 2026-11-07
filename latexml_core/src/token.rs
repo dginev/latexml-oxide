@@ -837,18 +837,39 @@ impl Default for Token {
 /// Accessors.
 /// The bits of a [`Token::prov`] below the field: the token's position in the field's stored value (saturating).
 pub const FIELD_PROV_POS_BITS: u16 = 14;
-/// The largest position a [`Token::prov`] holds.
+/// The largest position a field's stamps take, cumulative per document (`\lx@field@mark`, `\lx@field@stamp`).
 pub const FIELD_PROV_POS_MASK: u16 = (1 << FIELD_PROV_POS_BITS) - 1;
-/// The field provenance of the token at `pos` of field `field`'s stored value (`field` 1..=3; `0` is no field).
+/// The author field (`2`) is the top bit alone, the id `3` being none: its positions take 15 bits, so a call's own
+/// positions (the frontmatter observer's rehearsal of one author block, positions per call) reach 32,767 — a block of
+/// 559 names past the 16,383 the stamps take (2204.09614, 2404.06718). The stamps' tokens below 16,384 read as before.
+pub const AUTHOR_PROV_POS_MASK: u16 = (1 << (FIELD_PROV_POS_BITS + 1)) - 1;
+const AUTHOR_PROV: u16 = 1 << (FIELD_PROV_POS_BITS + 1);
+/// The field provenance of the token at `pos` of field `field`'s stored value (`field` 1 or 2; `0` is no field).
 pub fn field_prov(field: u16, pos: usize) -> u16 {
-  (field << FIELD_PROV_POS_BITS) | (pos.min(FIELD_PROV_POS_MASK as usize) as u16)
+  if field == 2 {
+    AUTHOR_PROV | (pos.min(AUTHOR_PROV_POS_MASK as usize) as u16)
+  } else {
+    (field << FIELD_PROV_POS_BITS) | (pos.min(FIELD_PROV_POS_MASK as usize) as u16)
+  }
 }
 /// The field of a [`Token::prov`] (`0` = none).
 #[inline]
-pub fn field_prov_field(prov: u16) -> u16 { prov >> FIELD_PROV_POS_BITS }
+pub fn field_prov_field(prov: u16) -> u16 {
+  if prov & AUTHOR_PROV != 0 {
+    2
+  } else {
+    prov >> FIELD_PROV_POS_BITS
+  }
+}
 /// The position in its field's stored value of a [`Token::prov`].
 #[inline]
-pub fn field_prov_pos(prov: u16) -> u16 { prov & FIELD_PROV_POS_MASK }
+pub fn field_prov_pos(prov: u16) -> u16 {
+  if prov & AUTHOR_PROV != 0 {
+    prov & AUTHOR_PROV_POS_MASK
+  } else {
+    prov & FIELD_PROV_POS_MASK
+  }
+}
 
 /// The expansion of a token with a field provenance (`prov`, [`Token::prov`]) is that field's too: each of its tokens
 /// without a provenance of its own takes `prov` (an `\and` in `\@author` expands to ink of the author field). A no-op

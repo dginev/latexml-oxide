@@ -277,8 +277,9 @@ fn a_held_error_of_the_rehearsal_alone_marks_its_mark() {
     "held": true,
   })]);
   assert_eq!((&clean["errors"], clean.get("held")), (&json!(0), None));
+  // (the twin block's own positions, per call: F1)
   assert_eq!(of_kind(&clean["events"], "Mark"), vec![json!({
-    "kind": "Mark", "span": [27, 35], "label": "cor:cortwo", "role": "request", "symbol": false, "line_first": false,
+    "kind": "Mark", "span": [9, 17], "label": "cor:cortwo", "role": "request", "symbol": false, "line_first": false,
   })]);
   assert_eq!(dump["writer"], Value::Null);
 }

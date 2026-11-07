@@ -23,7 +23,10 @@ use super::{
   events::{
     BreakKind, EmailMeaning, Event, HeldError, break_events, declaration_events, in_block_content,
   },
-  field_notes::{EnvironmentStep, FieldNotesHookGuard, field_notes_begin, field_notes_end},
+  field_notes::{
+    EnvironmentStep, FieldCreator, FieldNotesHookGuard, field_notes_begin, field_notes_end,
+    note_creator_call,
+  },
   ledger::{SkipReason, email_meaning},
   policy::TitleMarks,
   *,
@@ -217,7 +220,14 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (a binding's own creator inside a block prints its name there: PoS's `\speaker{R. Cassano}$^1$`, PoS.cls:681, 1412.5940,
   // 1509.01480, 1211.4334 — the frozen API printed nothing, and the name's mark led the line. Not the `\lx@add@author` of an
   // `\author` nested in a block, a call the class stores and prints no name of there: 2012.14750)
-  DefMacro!("\\lx@fm@obs@creator [] {}", "#2");
+  // (its keyvals, read as the API reads them, for the Name it prints, which says them nowhere: `\speaker`'s `role=speaker`,
+  // 0910.5686, 1007.2355, 1111.2428, 1111.6944 — written `role=author`; ams `\contrib`'s `name=`)
+  DefMacro!("\\lx@fm@obs@creator OptionalKeyVals:Frontmatter {}", sub[(keys, name)] {
+    if let Some(keys) = &keys {
+      note_creator_call(keys, &name)?;
+    }
+    Ok(name)
+  });
   Ok(())
 }
 
@@ -462,6 +472,8 @@ pub(in crate::base_utilities) enum Rehearsal<R> {
     held:         Vec<HeldError>,
     /// the environments its tokens open and close ([`EnvironmentStep`])
     environments: Vec<EnvironmentStep>,
+    /// the creator calls its own expansion made, which no box says the keyvals of ([`FieldCreator`])
+    creators:     Vec<FieldCreator>,
   },
   /// No rehearsal was made or kept, and why: no journal could open (one is already open), its assignments could not be
   /// undone, or it ended in a Fatal error of its own (discarded with it).
@@ -664,6 +676,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
       breaks,
       held,
       environments: notes.environments,
+      creators: notes.creators,
     },
     _ => Rehearsal::Skipped(SkipReason::NotUndone),
   })

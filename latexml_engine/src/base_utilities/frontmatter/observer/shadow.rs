@@ -13,8 +13,8 @@ use latexml_core::definition::origin::watch_frontmatter_setter_calls;
 
 use super::{
   events::{
-    EmailMeaning, Event, EventKind, HeldError, SepKind, lex_events, lex_with_formulas, mark_held,
-    with_block_content,
+    EmailMeaning, Event, EventKind, HeldError, SepKind, creator_roles, lex_events,
+    lex_with_formulas, mark_held, with_block_content,
   },
   ledger::{Entry, Outcome, SkipReason, Stamp, reset_ledger, stamped_block_tokens, with_ledger},
   policy::{TitleMarks, policy_for},
@@ -183,8 +183,10 @@ fn read_at_flush() -> Result<()> {
           breaks,
           held,
           environments,
+          creators,
         } => {
           mark_held(&mut value, &held);
+          creator_roles(&mut value, &creators);
           Outcome::Events {
             events: value,
             formulas,
@@ -194,6 +196,7 @@ fn read_at_flush() -> Result<()> {
             breaks,
             held,
             environments,
+            creators,
           }
         },
         // (waits for the next flush; if none comes, the dump says why it was never rehearsed)
@@ -799,6 +802,11 @@ fn json_resolved(out: &mut String, resolved: &Resolved) {
     out.push_str("],\"rule\":");
     json_str(out, &creator.rule);
     let _ = write!(out, ",\"source\":{}", creator.source);
+    // (its creator call's role, where a call in its block printed it: `RCreator::role`)
+    if let Some(role) = &creator.role {
+      out.push_str(",\"role\":");
+      json_str(out, role);
+    }
     json_assocs(out, "affiliations", &creator.affiliations);
     json_assocs(out, "contacts", &creator.contacts);
     json_assocs(out, "notes", &creator.notes);
@@ -905,6 +913,7 @@ mod tests {
         breaks:       Vec::new(),
         held:         Vec::new(),
         environments: Vec::new(),
+        creators:     Vec::new(),
       }),
       None
     );

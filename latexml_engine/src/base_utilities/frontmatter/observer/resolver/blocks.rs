@@ -977,7 +977,7 @@ impl Resolver {
       // (whether its links all become contacts, and it is dropped, once every name is read)
       self.note_links.push(NoteLink::Note {
         index,
-        note: note.clone(),
+        note: Box::new(note.clone()),
         owner,
         rule: rule.to_string(),
         links,

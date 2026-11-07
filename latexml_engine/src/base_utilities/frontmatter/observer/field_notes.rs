@@ -5,16 +5,22 @@ use std::{cell::RefCell, rc::Rc};
 
 use latexml_core::{
   T_CS,
-  common::{arena::SymStr, error::REPORT, object::Object, store::Stored},
+  common::{
+    arena::SymStr,
+    error::{REPORT, Result},
+    object::Object,
+    store::Stored,
+  },
   definition::{ExpansionBody, expandable::Expandable, origin::DefinitionOrigin},
   digested::{Digested, DigestedData},
   document::FIELD_FORMULA_START_PROPERTY,
   gullet::{pushback_is_empty, pushback_len},
+  keyvals::KeyVals,
   state::{self, MeaningAssigned, lookup_definition},
   stomach::{field_token_encloses, token_stack_depth},
   token::{
     Catcode, FieldCover, FieldInvocation, TOKEN_EXPANDAFTER, Token, field_cover_pending,
-    field_prov_pos, set_field_notes_hook,
+    field_prov_field, field_prov_pos, set_field_notes_hook,
   },
   tokens::Tokens,
 };
@@ -54,6 +60,23 @@ pub struct EnvironmentStep {
   pub opens: bool,
 }
 
+/// A creator call of the frontmatter API a block's own expansion makes (`\lx@add@creator[keys]{name}`, bound to the
+/// rehearsal's `\lx@fm@obs@creator`, which prints the name: PoS's and JHEP's `\speaker{…}`, `[role=speaker]`; ams's
+/// `\contrib[…]{…}`, `[role=contributor, name={…}]`): its keyvals, Perl's API argument, which no box holds, and the
+/// positions its name's tokens take (`events::creator_roles`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct FieldCreator {
+  /// the keyvals as tokens, as the call gave them ([`KeyVals::revert`]): what the emitter writes on Perl's call
+  pub keys:        Tokens,
+  /// the role they give (the KeyVals' last `role`, as `\lx@add@frontmatter@now` reads it)
+  pub role:        Option<String>,
+  /// the labels they give (the last `annotations`), which the emitter's labels join
+  pub annotations: Option<Tokens>,
+  pub start:       u16,
+  /// one past the last position
+  pub end:         u16,
+}
+
 /// A call of a block break its binding declares (`Policy::block_breaks`), a command printing whatever the class makes it.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct FieldBreak {
@@ -77,6 +100,8 @@ pub struct FieldNotes {
   end:              u16,
   /// the calls of a block break its binding declares ([`FieldBreak`])
   pub breaks:       Vec<FieldBreak>,
+  /// the creator calls the block's own expansion made ([`FieldCreator`])
+  pub creators:     Vec<FieldCreator>,
   /// which commands those are
   block_breaks:     Vec<(Token, BreakKind)>,
   /// the errors counted so far, and the groups open and the tokens being invoked when the notes began
@@ -195,6 +220,33 @@ fn note_environment(token: &Token, pos: u16, reach: u16, expanded: bool) {
     }
     notes.token_heard = Some((pos, reach.max(pos + 1), expanded, by_meaning.is_some()));
   });
+}
+
+/// Note a creator call the notes' tokens make ([`FieldCreator`]): its keyvals and the positions of its name's tokens of the
+/// field. A name none of whose tokens is the field's is no name the block's events can say.
+pub fn note_creator_call(keys: &KeyVals, name: &Tokens) -> Result<()> {
+  let positions = name
+    .unlist_ref()
+    .iter()
+    .filter(|t| field_prov_field(t.prov) == 2)
+    .map(|t| field_prov_pos(t.prov));
+  let (Some(start), Some(end)) = (positions.clone().min(), positions.max()) else {
+    return Ok(());
+  };
+  let creator = FieldCreator {
+    keys: keys.revert()?,
+    role: keys
+      .get_value("role")
+      .map(|role| role.to_string())
+      .filter(|role| !role.is_empty()),
+    annotations: keys
+      .get_value("annotations")
+      .and_then(|labels| labels.clone().owned_tokens()),
+    start,
+    end: end.saturating_add(1),
+  };
+  FIELD_NOTES.with(|notes| notes.borrow_mut().creators.push(creator));
+  Ok(())
 }
 
 /// The environment steps noted so far ([`FieldNotes::environments`]), for what reads a span while the notes are open.

@@ -20017,7 +20017,8 @@ of TeX's token: `PartialEq` ignores it (so `\ifx`, `\meaning`, xstring, `\pdfstr
 written or dumped, and whatever builds a token from characters (`\string`, `\detokenize`, `\scantokens`, `\write`,
 `\csname`) builds one without it. The kernel `\title` and `\author` (sect05.rs) stamp their store once the frontmatter
 has its copy: `\lx@field@mark\gdef\@title{title}` / `\lx@field@mark\def\@author{author}` (base_utilities/defs/frontmatter_fields.rs) redefine the
-store with the same tokens, each carrying "token *i* of field *F*" (`field_prov`: 2 bits field, 14 bits position), and
+store with the same tokens, each carrying "token *i* of field *F*" (`field_prov`: 2 bits field, 14 bits position; the author
+field is the top bit alone, 15 bits, which only the observer's per-call positions reach past 16,383, #837), and
 record the field's extent (`lx_field_extent_<F>`): the position of every token of the value that makes ink — a letter,
 an other character, a control sequence, an active character; not a space, brace, `$`, `^`, `_`, `&`, `#`, whose effect
 the tokens around them cover. Each `\title` (`\author`) call's positions follow the previous call's
@@ -23544,9 +23545,12 @@ adversarial shapes: an `\aftergroup`, a `\thanks` holding a `\label` with a `\re
   `replace`/`sectioned`/`cautious` options, keyvals, the frontmatter queue's length and queued authors at the call (and
   the `epoch`, the flushes before it: each flush empties the queue, so a position is one queue's), and its positions in
   the author field: the kernel block's are `\lx@field@mark`'s own (S1, #715; the mark confirms the block it is the
-  stored copy of), a binding call's are projected past every earlier stamp, as the new argument stamper
-  `\lx@field@stamp{<field>}{<tokens>}` (frontmatter_fields.rs; no call site yet, S2b stamps the calls) would give them;
-  past the 14-bit position budget (cumulative per document) the block is unstamped. Per `\title` call the S1 stamp. Per
+  stored copy of), a binding call's (and a kernel block's past the stamps' 16,383) are projected from where the field's
+  stamps end, as the new argument stamper `\lx@field@stamp{<field>}{<tokens>}` (frontmatter_fields.rs; no call site yet,
+  S2b stamps the calls) would give them: positions per call (F1), never after the blocks before, which no token of the
+  document carries, in the author field's 15 bits (`token::AUTHOR_PROV_POS_MASK`, 32,767); one call past them is unstamped.
+  With the emitter's switch off a block past the 14 bits the calls took together is out of positions as before
+  (`Stamp::Overflow`, decided where stamping is, `ledger::out_of_positions`), so that path's output doesn't move. Per `\title` call the S1 stamp. Per
   queued creator, contact or note (`queue_front_matter`, gated on the switch before anything is built) an API call,
   `inside` when the latest block's own expansion made it: nothing the input held at the block's call has been read since
   (core `gullet::input_unread_since`, a mark of the pushback and the mouth position). Nothing is recorded while the
@@ -23855,7 +23859,7 @@ against int58a with the switch unset and set, SYNC "FM S2a.2").
   before any author are `relocate_annotations`' orphans — nothing when an author holds the same, else a sole author's,
   else the block's (2103.04797: 17 of its 188 pre-declared `\affiliation`s; 2401.15779) — where r3 dropped them.
 - **Names**: a prefix-marked name keeps its notes and contacts (0710.4115, gr-qc0606119: the notes were lost); a link
-  to an ORCID record printing a name is that name and its ORCID (`lines::orcid_link_names`: 2312.16289's
+  to an ORCID record printing a name is that name and its ORCID (`lines::link_names`: 2312.16289's
   `\href{https://orcid.org/…}{E. L. Gagnon}`, 2301.02927, 2602.03244); spacing before a mark (`${\,\!}^2$`) neither
   joins nor ends the marked entries of one call (2112.13115).
 - **Lexer**: a `\thanks` inside a superscript is a note after the mark, not its label (1106.3485; 2512.05464, where
@@ -32477,5 +32481,31 @@ a_line_keeping_an_address_the_pass_leaves_is_made, an_only_carriers_address_besi
 **The safety net, graded to the smallest unit that fails (Z4b, Z4br2).** A block whose *names* fail (a name's ink on a line of its names lost, `LostInk::among_names`, or a name's word written more often than it prints) is written whole, the creator Perl's `\lx@add@author` makes of it, decided once a block over the flushes (`written_whole`). Other ink a block prints that the reading holds no place for keeps the reading, the ink's tokens a note of the author block (`role=note`, `label=addresses:block`, the shape the unclaimed-text net keeps a line no field holds in, `insert::keep_unclaimed_net_notes`; not the net itself, whose 3-word floor would drop it and whose Warning would count it twice): 2605.16481 (3 creators, Z4b's whole block 1), 2607.28418 (7, Z4b 1). An entry's excess is counted, not answered: whether a note's digestion keeps an address its contact writes too is digestion's (an.cls's raw `\email` in a `\thanks` keeps it, a duplicate, 0807.0895; siamart's fixture `siamart_class_commands` routes it out, so its Warning under `=2` is a false flag; dropping the entry lost the address there). Each in one counted Warning a block. **One whole-block writer** (`author_block::whole_block_author`): `\lx@add@author[keys]{…}` of the block, its lines prepared (`lines_prepared`) and their breaks' options gone, for `\lx@add@authors`' tabular fallback (Perl Base_Utility.pool.ltxml:693), `=2`'s queued entry and the emitter's whole block alike. Not line for line with Perl: Rust's `\lx@add@author` (frontmatter_fields.rs `creator_call`) adds `\lx@author@withinst` (an `\inst` an author's request) and its membership and collaboration readouts to Perl's `[role=author,#1]{\lx@personname{#2}}` (:588-589), the lines are normalized as the cut's are (OD #52), and the emitter's and `=2`'s whole block is the call's argument as given, not through `add_authors_calls`' opening rewrites (marks unaliased, notes out of marks, empty and blank-line marks, a notes line joined), which only the cut reads. A creator written whole carries `_merged_checked` (`author_macros::KEPT_WHOLE`), its merge counted by its Warning, not flagged again (`flag_merged_creators`; a tabular block is kept whole on purpose alike). With `=2` a block no rehearsal reads keeps its queued whole entry, in one Warning (past the positions, 2204.09614, 2404.06718; the read budget, 1810.03464), the key set there, where the Warning counts it, not at the queue: a block queued after the frontmatter was digested is digested whole and uncounted, so its `merged_creators` Errors stand (astro-ph9808358). Guards `perfect_kernel_batchz4b::{a_block_losing_other_ink_keeps_its_reading, an_email_label_is_written_as_printed, an_unread_block_is_written_whole}`; RED `annotate_made_reaches_every_name_red` (`annotate={made}` reads `lx_author_made`, one entry under `=2`, review revZ4b).
 
 **`=2`, the whole block queued, reaches `=1` (Z4b).** With each call queuing one entry the call-time readers of the queue (`queued_author_marks`, `queued_author_name_keys`, `queued_creator_count`, `placed_contact_owner`, `AUTHOR_KEYS`' ranges) count entries, not names, and their booleans hold (a whole block carries its names' marks). Their positions are answered at the flush, by the reading: an `author:N` label names the N-th queued author entry (`Resolver::author_entries`, one a call under `=2`, a block's whole entry its names; one a creator under `=1`, as the old reader queued them), and an address it places among several names is the one it spells, else the block's (`Resolver::entry_owners`); an address the call placed on the block because the names it held whole spelled it for no one (initials: `gkt@`, 2405.01963) is the one live creator's it spells. dev3 creator XML identical between `=1` and `=2` on 1,023 of 1,028 papers, devh10k 286 of 289; the differences named in the batch's report (0911.3853 and 2608.19750 better, 2205.05623 an e-mail's order, astro-ph9808358's blocks arriving after the frontmatter was digested, 2202.12897's lone address spelling no one the block's where `=1` gave it an author, the unread blocks 2204.09614, 2404.06718, 1810.03464). Guard `perfect_kernel_batchz4b::the_whole_block_queue_reaches_one` (IEEEtran's e-mail line under one `\IEEEauthorblockN`, 2010.07442, 2003.03692, 2510.03288, 2607.02294).
+
+**The flip's prerequisites (F1).** *Positions per call* (#837): a block of 559 names (2204.09614, 18,395 tokens; 2404.06718,
+20,918; dev20k's largest 2410.11607, 21,304; longtail3k's 1812.07638, 18,854) is read under the switch, where it was "unstamped:
+out of positions" and written whole. *A creator call's keyvals on the Name it prints:* a block's own `\lx@add@creator[role=…]{…}`
+(PoS's and JHEP's `\speaker`), bound in the rehearsal to `\lx@fm@obs@creator`, notes its keyvals and its name's positions
+(`field_notes::FieldCreator`, the rehearsal's notes on what no box holds); the Name its name prints takes the role
+(`events::creator_roles`), the creator (`RCreator::role`, `RCreator::call`) is written with it, Perl's `role=` and `speaker:N`
+label (`creator_role`), from the call's name argument, the call left out (`event_run`: written again it queued a second,
+nameless creator): 0910.5686, 1007.2355, 1111.2428, 1111.6944. The keyvals are tokens: `\lx@fm@obs@creator` reads them as the
+API does (`OptionalKeyVals:Frontmatter`; `FieldCreator::keys`, the role and annotations the KeyVals' last), the block's
+outcome keeps them (`Outcome::Events::creators`), and the emitter writes them on Perl's call, `[role=author,#1]`
+(Base_Utility.pool.ltxml:586; `creator_keys`), the reading's labels joining the call's own annotations: `name=`, `role=`,
+`annotations=` (`a_creator_calls_keyvals_are_written`; dev3 and devh10k hold no in-block call with other keys than `\speaker`'s).
+*A link printing a name* (F1r2): a url contact that carries a mark and prints other text than its own target (its scheme and a
+closing slash aside, in any case: `prints_its_target`) is read as that text, a Name carrying the link, written whole with it
+(`resolver::lines::link_names`, the ORCID links' pass): 1812.07638's 304 `\href{http://inspirehep.net/record/…}{A.~Cerri}$^{1}$`,
+304 creators and 3,063 links under `=2` (F1: 2 creators, 2,760 links); a link carrying no mark stays a contact (`\href{…}{project
+page}`), so the switch-off reading moves only where a link carries a mark. *The read-back's cost:* `\lx@add@author`'s membership
+readout (`name_text::written_membership_out`) read the rest of the content past each comma, quadratic on `=2`'s queued whole
+entry of 418 names (1507.02068, +7.3 % instructions on against off). A grade is a suffix of grade words, so its commas are read
+from the last leftward and the first tail holding a word no grade has ends the reading (every tail before it holds that word):
+each tail read once, no cap, the output byte-identical to int145a's (F1's 256-token cap read `{\itshape Fellow,
+IEEE\thanks{<300 characters>}}` into the name, `a_grade_with_a_long_note_is_the_grade`); the one writer kept
+(`whole_block_author`): 1507.02068 on −2.3 % against off, `instructions:u` (F1r2; F1's cap −1.18 %). Not settled by the same scan: a
+tabular block ending `…, Fellow, IEEE\end{tabular}` reads `\end{tabular}` into the grade with the switch off (E=2, int145a's
+too). Guards `perfect_kernel_batchf1`.
 
 Guards `perfect_kernel_batchz4`.

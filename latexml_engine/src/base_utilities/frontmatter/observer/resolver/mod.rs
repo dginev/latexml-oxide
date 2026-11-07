@@ -75,6 +75,11 @@ pub struct RCreator {
   pub rule:         String,
   /// the ledger index of its block (or API call)
   pub source:       usize,
+  /// the role of the creator call in its block that printed it, its Name's (`Event::role`: PoS's `\speaker`, `speaker`);
+  /// none for a name the block itself printed (an author's)
+  pub role:         Option<String>,
+  /// that call, its place among its block's (`Event::creator_call`): the keyvals the emitter writes on it
+  pub call:         Option<u16>,
   pub affiliations: Vec<Assoc>,
   pub contacts:     Vec<Assoc>,
   pub notes:        Vec<Assoc>,
@@ -281,7 +286,7 @@ pub(in crate::base_utilities::frontmatter::observer) use words::{
 pub(in crate::base_utilities::frontmatter::observer) fn read_events(
   events: &[Event],
 ) -> Vec<Event> {
-  glue_shown_runs(&split_text_marks(&join_ordinals(&orcid_link_names(events))))
+  glue_shown_runs(&split_text_marks(&join_ordinals(&link_names(events))))
 }
 
 /// The labels a Mark event requests of the name it is set on, as a names line reads them (`names_line_events`): its
@@ -445,7 +450,7 @@ enum NoteLink {
   },
   Note {
     index:    usize,
-    note:     Event,
+    note:     Box<Event>,
     owner:    Option<usize>,
     rule:     String,
     links:    Vec<Assoc>,

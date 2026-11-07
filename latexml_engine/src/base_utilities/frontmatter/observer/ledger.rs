@@ -12,27 +12,31 @@ use latexml_core::{
   },
   gullet::{InputMark, input_mark, input_unread_since},
   state::{fallback_meaning_origin, frontmatter_setter_calls, open_frontmatter_setter},
-  token::{FIELD_PROV_POS_MASK, field_prov},
+  token::{AUTHOR_PROV_POS_MASK, FIELD_PROV_POS_MASK, field_prov},
 };
 
 use super::{
   events::{EmailMeaning, Event, EventKind, HeldError, lex_events},
-  field_notes::EnvironmentStep,
+  field_notes::{EnvironmentStep, FieldCreator},
   resolver::Resolved,
   shadow::{FmShadow, fm_shadow_mode},
   *,
 };
 
-/// How a block's tokens got their positions in the author field.
+/// How a block's tokens got their positions in the author field. Positions are per call: a block's start where the
+/// field's own stamps end (`lx_field_base_2`, which the document's tokens carry: a block printing `\@author` reads them
+/// apart from its own), never after the blocks before it, which no token of the document carries — so a document of
+/// many calls never runs out, and one call has the author field's 15 bits (`token::AUTHOR_PROV_POS_MASK`; a block of
+/// 559 names, 2204.09614, 2404.06718).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(in crate::base_utilities) enum Stamp {
   /// The kernel `\author`'s `\lx@field@mark` stamped the stored value these tokens are a copy of, at these positions
   /// (S1, OXIDIZED_DESIGN #715).
   Kernel,
-  /// No mark stamps them (a binding's own `\lx@add@authors*` call): the positions an argument stamper
-  /// (`\lx@field@stamp`) would give them, continuing the field's positions after every block before.
+  /// No mark stamps them (a binding's own `\lx@add@authors*` call, a kernel value past the stamps' positions): the
+  /// positions an argument stamper (`\lx@field@stamp`) would give them, from where the field's stamps end.
   Projected,
-  /// Out of positions (14 bits per field, cumulative per document): the value went unstamped.
+  /// Out of positions ([`out_of_positions`]): the value went unstamped.
   Overflow,
 }
 
@@ -68,6 +72,9 @@ pub(in crate::base_utilities) enum Outcome {
     held:         Vec<HeldError>,
     /// the environments its tokens open and close, what a span's content reads (`writer::Field`). Not in a dump
     environments: Vec<EnvironmentStep>,
+    /// the creator calls its own expansion made (`field_notes::FieldCreator`), the keyvals the emitter writes on the
+    /// creators their Names make (`Event::creator_call`). Not in a dump
+    creators:     Vec<FieldCreator>,
   },
   /// Not rehearsed, and why.
   Skipped(SkipReason),
@@ -76,7 +83,7 @@ pub(in crate::base_utilities) enum Outcome {
 /// Why a block was not rehearsed (or its rehearsal not kept).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(in crate::base_utilities) enum SkipReason {
-  /// its value went unstamped: out of positions (14 bits per field, cumulative per document)
+  /// its value went unstamped: out of positions ([`Stamp::Overflow`])
   Overflow,
   /// its argument is empty
   Empty,
@@ -260,7 +267,8 @@ pub(in crate::base_utilities) enum Entry {
 #[derive(Debug, Default)]
 pub(in crate::base_utilities) struct Ledger {
   pub entries:      Vec<Entry>,
-  /// the positions the projected blocks took beyond the field's own stamps
+  /// the positions the projected blocks took beyond the field's own stamps, together: what [`out_of_positions`] counts
+  /// with the emitter's switch off
   pub shadow_extra: usize,
   /// the frontmatter flushes so far (`shadow::shadow_flush`)
   pub flushes:      usize,
@@ -688,6 +696,15 @@ fn queue_length() -> usize {
   })
 }
 
+/// Whether a block of `len` tokens whose positions start where the field's stamps end (`real_base`) is out of positions
+/// ([`Stamp::Overflow`]): the call alone past the author field's 15 bits (`token::AUTHOR_PROV_POS_MASK`), or, with the
+/// emitter's switch off, the field's calls together (`extra`, [`Ledger::shadow_extra`]) past the 14 bits of the stamps, as
+/// before positions were per call — that path's blocks read as they were, its output unmoved.
+fn out_of_positions(real_base: usize, extra: usize, len: usize) -> bool {
+  real_base + len > usize::from(AUTHOR_PROV_POS_MASK)
+    || (fm_emit_mode() == 0 && real_base + extra + len > usize::from(FIELD_PROV_POS_MASK))
+}
+
 /// Record an `\author`-family call (`hook`, with `stuff` its argument), under the shadow switch only.
 pub(in crate::base_utilities) fn record_author_call(
   hook: &'static str,
@@ -729,7 +746,7 @@ pub(in crate::base_utilities) fn record_author_call(
     queue_position: queue_length(),
     authors_queued: (fm_shadow_mode() == FmShadow::On).then(queued_author_count),
     stamp: Stamp::Projected,
-    range: (0, 0),
+    range: (real_base, real_base + len),
     tokens: stuff.clone(),
     source: stuff.to_string(),
     mark: input_mark(),
@@ -737,14 +754,13 @@ pub(in crate::base_utilities) fn record_author_call(
     outcome: Outcome::Pending,
   };
   with_ledger(|ledger| {
-    let base = real_base + ledger.shadow_extra;
     let mut block = block;
     block.index = ledger.entries.len();
     block.epoch = ledger.flushes;
-    if base + len > usize::from(FIELD_PROV_POS_MASK) {
+    if out_of_positions(real_base, ledger.shadow_extra, len) {
       block.stamp = Stamp::Overflow;
+      block.range = (0, 0);
     } else {
-      block.range = (base, base + len);
       ledger.shadow_extra += len;
     }
     for entry in &mut ledger.entries {
@@ -809,10 +825,14 @@ pub(in crate::base_utilities) fn note_field_stamp(field_id: u16, base: Option<us
         block.stamp = Stamp::Kernel;
         block.range = (base, base + len);
       },
-      None => {
+      // (past the stamps' positions, which with the emitter's switch off are the field's together, as before positions were
+      // per call: [`out_of_positions`])
+      None if fm_emit_mode() == 0 => {
         block.stamp = Stamp::Overflow;
         block.range = (0, 0);
       },
+      // (else the call's own, projected, as a binding's)
+      None => {},
     }
     // (the kernel block's own calls are all digested once the mark is reached)
     block.window_open = false;
