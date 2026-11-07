@@ -246,4 +246,7 @@ LoadDefinitions!({
   if lookup_meaning(&T_CS!("\\__kernel_sys_everyjob:")).is_some() {
     let _ = raw_tex(r"\csname __kernel_sys_everyjob:\endcsname");
   }
+
+  // The native answer of l3fp's doors, the format complete (the dump does not carry it): OXIDIZED_DESIGN_DIVERGENCES #977.
+  crate::l3fp_native::install()?;
 });

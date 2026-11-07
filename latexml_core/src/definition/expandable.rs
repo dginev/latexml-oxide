@@ -1,6 +1,5 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, fmt};
 
-// use std::fmt;
 use libxml::tree::Node;
 
 use crate::{
@@ -88,7 +87,44 @@ pub struct ExpandableOptions {
   pub drops:              &'static [u8],
 }
 
-#[derive(Debug, Clone)]
+/// A native answer to a macro's call, tried before its arguments are read ([`SpecialCall::Native`]).
+pub type NativeCall = fn() -> Result<Option<Tokens>>;
+
+thread_local! {
+  /// The one native call there is ([`SpecialCall::Native`], held here so that every macro does not pay for its pointer:
+  /// the size of an [`Expandable`], of which a format makes 24,000, is 0.16 % of an empty article's instructions).
+  static NATIVE_CALL: std::cell::Cell<Option<NativeCall>> = const { std::cell::Cell::new(None) };
+}
+
+/// The native call [`SpecialCall::Native`] runs.
+pub fn set_native_call(native: NativeCall) { NATIVE_CALL.with(|call| call.set(Some(native))); }
+
+#[cold]
+fn native_call() -> Result<Option<Tokens>> {
+  match NATIVE_CALL.with(std::cell::Cell::get) {
+    Some(native) => native(),
+    None => Ok(None),
+  }
+}
+
+/// A macro whose call is not simply its definition's run: one test per macro call for both kinds.
+#[derive(Clone, Copy, Default)]
+pub enum SpecialCall {
+  #[default]
+  None,
+  /// A document's parameterless override (a value) of a locked binding that owns its calls (`state::install_definition`):
+  /// a call — the next raw token an explicit `{`, or a `[`/`*` the binding's signature opens with — runs the binding,
+  /// kept as `\lx@locked@<cs>`; any other use expands this definition.
+  YieldsCalls,
+  /// A faster way to what this macro's own expansion comes to, tried when the gullet expands a call in full
+  /// ([`Definition::native_expansion`]) before any argument is read: `Some` is what the call leaves, the input it read
+  /// consumed; `None` leaves the input untouched and the macro runs as defined. The definition stays the macro's own:
+  /// `\meaning`, a one-step `\expandafter` and the prefixes see its body. `\__fp_parse_operand:Nw` (latexml_engine
+  /// `l3fp_native`).
+  Native,
+}
+
+#[derive(Clone)]
 pub struct Expandable {
   pub is_protected:       bool,
   /// See [`Definition::peeks_by_futurelet`]: set by the kernel's peeking
@@ -110,10 +146,8 @@ pub struct Expandable {
   pub paramlist:          Option<Parameters>,
   pub expansion:          Option<ExpansionBody>,
   pub origin:             crate::definition::origin::DefinitionOrigin,
-  /// A document's parameterless override (a value) of a locked binding that owns its calls (`state::install_definition`): a call — the
-  /// next raw token an explicit `{`, or a `[`/`*` the binding's signature opens with — runs the binding, kept as
-  /// `\lx@locked@<cs>`; any other use expands this definition. Not part of the meaning (`PartialEq`).
-  pub yields_calls:       bool,
+  /// See [`SpecialCall`]. Not part of the meaning (`PartialEq`).
+  pub special_call:       SpecialCall,
   /// The token-list body's [`Tokens::substitution_plan`], built at the first call that substitutes.
   pub plan:               std::cell::OnceCell<Box<[BodyPiece]>>,
   /// The arguments the binding declares this macro drops by design ([`ExpandableOptions::drops`]), bit `n` for `#n`.
@@ -126,6 +160,32 @@ pub struct Expandable {
   /// The body's [`StoredParameters`], read at the first call the store watch sees.
   pub stored:             std::cell::OnceCell<Box<StoredParameters>>,
 }
+
+// By hand, for what `special_call` says without its address: a macro's text in a log is not to change with one.
+impl fmt::Debug for Expandable {
+  fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    f.debug_struct("Expandable")
+      .field("is_protected", &self.is_protected)
+      .field("peeks_by_futurelet", &self.peeks_by_futurelet)
+      .field("is_long", &self.is_long)
+      .field("checks_par", &self.checks_par)
+      .field("is_outer", &self.is_outer)
+      .field("has_cc_arg", &self.has_cc_arg)
+      .field("alias", &self.alias)
+      .field("locator", &self.locator)
+      .field("cs", &self.cs)
+      .field("paramlist", &self.paramlist)
+      .field("expansion", &self.expansion)
+      .field("origin", &self.origin)
+      .field("yields_calls", &self.yields_calls())
+      .field("plan", &self.plan)
+      .field("dropped_by_design", &self.dropped_by_design)
+      .field("made_in_own_file", &self.made_in_own_file)
+      .field("stored", &self.stored)
+      .finish()
+  }
+}
+
 impl Default for Expandable {
   fn default() -> Self {
     Expandable {
@@ -141,7 +201,7 @@ impl Default for Expandable {
       paramlist:          None,
       expansion:          None,
       origin:             crate::definition::origin::current_origin(),
-      yields_calls:       false,
+      special_call:       SpecialCall::None,
       plan:               std::cell::OnceCell::new(),
       made_in_own_file:   false,
       stored:             std::cell::OnceCell::new(),
@@ -215,11 +275,20 @@ impl Definition for Expandable {
       crate::gullet::unread_expansion(self.expand_watched(once_only, watched)?);
       return Ok(());
     }
-    if self.yields_calls
-      && let Some(owner) = self.call_owner()?
-    {
-      crate::gullet::unread_expansion(Tokens!(owner));
-      return Ok(());
+    match self.special_call {
+      SpecialCall::None => {},
+      SpecialCall::YieldsCalls => {
+        if let Some(owner) = self.call_owner()? {
+          crate::gullet::unread_expansion(Tokens!(owner));
+          return Ok(());
+        }
+      },
+      SpecialCall::Native => {
+        if let Some(expansion) = native_call()? {
+          crate::gullet::unread_expansion(expansion);
+          return Ok(());
+        }
+      },
     }
     let Some(ExpansionBody::Tokens(tokens)) = &self.expansion else {
       crate::gullet::unread_expansion(self.invoke(once_only)?);
@@ -244,6 +313,13 @@ impl Definition for Expandable {
       return Ok(());
     }
     self.substitute_onto_input(tokens, &args)
+  }
+
+  fn native_expansion(&self) -> Result<Option<Tokens>> {
+    match self.special_call {
+      SpecialCall::Native => native_call(),
+      _ => Ok(None),
+    }
   }
 
   // Not implemented for expandable
@@ -284,6 +360,10 @@ impl Expandable {
         || (self.paramlist.is_some() && (self.made_in_own_file || self.origin.is_latexml_owned()))
     })
   }
+
+  /// [`SpecialCall::YieldsCalls`]?
+  #[inline]
+  pub fn yields_calls(&self) -> bool { matches!(self.special_call, SpecialCall::YieldsCalls) }
 
   /// What a setter watch (`definition::origin::setter_watch`) observes of this call, if anything: a frontmatter setter's
   /// ([`note_setter_call`], whose expansion is noted), a call of LaTeXML's own macro that reads its arguments from the
@@ -431,7 +511,7 @@ impl Expandable {
     // on every macro expansion (\~350k calls in si.tex alone per
     // callgrind). Removed — re-introduce only alongside the actual
     // tracing/profiling features if/when they land.
-    if self.yields_calls
+    if self.yields_calls()
       && let Some(owner) = self.call_owner()?
     {
       return Ok(Tokens!(owner));
@@ -509,7 +589,7 @@ impl Expandable {
     }
   }
 
-  /// For a [`Self::yields_calls`] override: `\lx@locked@<cs>`, the locked binding, when the next raw token opens a
+  /// For a [`SpecialCall::YieldsCalls`] override: `\lx@locked@<cs>`, the locked binding, when the next raw token opens a
   /// call of it — an explicit catcode-1 `{`, or a `[`/`*` its signature opens with
   /// ([`crate::state::call_openers`]) — and `None` for any other use, which expands the override. The peek reads
   /// without expanding and puts the token back. Like TeX's argument scan it may read past the end of the macro body

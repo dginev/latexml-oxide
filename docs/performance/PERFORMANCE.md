@@ -344,6 +344,23 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-11-06 — a native answer for l3fp's doors (pk/P2)
+
+Basis: `perf stat -e instructions:u`, release, `[rawstyles,rawclasses,luatex]latexml.sty` for the `b*` rows (`kit/probe.sh`, `PERF=1`), `run_doc.sh` for the manuals (`kit/perf_docs.sh`), XML byte-identical to base P1 on every row.
+`\__fp_parse_operand:Nw` at the shape only `\__fp_parse:n` and `\__fp_parse_o:n` (expl3-code.tex:17313-17339) give it answers with exactly what its run leaves, or runs as defined (OXIDIZED_DESIGN_DIVERGENCES #977). The doors themselves stay macros: that costs 16.7 K instructions a call against a hook on the door (first form, ledger row `P2`), for `\meaning`, `\exp_args:No` and a user's redefinition to stay the format's.
+
+| Document | P1 instructions | a hook on the door | this form | wall, P1 → this (mostly idle cores) |
+|---|---:|---:|---:|---:|
+| `b1_fp1000` | 69.24 G | 1.64 G | **1.71 G, -97.5 %** | |
+| `pgf-interference-en` | 2,155 G | 425 G | **428.6 G, -80.1 %** | 150.2 → 33.6 s |
+| `pgf-interference-de` | 2,158 G | 427 G | **429.4 G, -80.1 %** | 151.0 → 33.5 s |
+
+The install and the watch, under `ar5iv.sty`, P1 → this: an empty article 895.93 → 896.14 M (+0.02 %), an article with amsmath 1,081.43 → 1,081.56 M (+0.01 %), `b0_empty` 3,471.7 → 3,469.7 M; `b5_fill1000` no change.
+
+The watch runs per assignment on every paper, and only the same binary on against off shows it (`LATEXML_L3FP_NATIVE=1` against `=0`, as the environment's size moves the count): `b5_fill1000`, 439 K assignments looked at, +16.1 M (+0.14 %) under `ar5iv.sty` and +14.3 M (+0.12 %) under the docs' preload; `hello` +0.02 %. Against P1 the same document reads +0.02 % and -0.09 %, so a build's layout masks it. Of the 16 M, about 12 M is the test (28 instructions an assignment, 1,000,000 `\def`s: 51.8 → 38.9 on against off, with the guard-free read of a name's second and third bytes in `arena::first_bytes`; before it, +21.7 M and +20.9 M) and the rest is one allocation moving the heap: the install's single assignment alone is +13 M, a leaked block of its size alone +7 M. Dead ends, each measured on the empty article: a set of the watched names made at the install, 1.8 M for its scan of the meaning table; a name test on every meaning assignment, 1.1 M, nearly all of it the preload's bindings, so only a document's, a raw file's or a format file's assignment is looked at; a test of its own for the native call on every macro call, 0.27 % of `b0_empty`, so it shares `yields_calls`' (`SpecialCall`); its function pointer in `Expandable`, 0.33 M over 24,000 records, so it is held once.
+
+What is left of `pgf-interference` is its `\fill` and `\colorlet` per pixel. Census (a call is one door): the TeX Live manuals, 971,116 calls in 346 documents, 94.3 % native; a seeded 2,000 arXiv papers using `siunitx`, `xfp`, `l3draw` or `\fp`, 28,171 calls in 52 papers (`ar5iv.sty`'s siunitx binding does not reach l3fp), 97.6 % native in the first form. Top fallbacks on the manuals, each only speed left on the table: `\exp_after:wN` by way of `\exp_args:*` and `\seq_item:Nn` (22.6k), `\arabic` (5.3k), `\box_wd:N` in a `\dim_ratio:nn` (4k), `\pgfkeysvalueof` (5.7k), conditionals `\if_int_compare:w`, `\if:w` (4.4k), `\the` of `\numexpr` (2k), `rand` (1.4k), `em` and `ex` (1.1k). No manual changes an l3fp name. `kit/l3fp_census.py` over logs of `LATEXML_L3FP_TRACE=1` names them with a sample argument.
+
 ### 2026-11-06 — interpreter hot paths, the pk/P1 levers
 
 Basis: `perf stat -e instructions:u`, release, the TikZ audit's benchmarks (`~/data/pk_agents/main/tikz_perf/audit/`) under `[rawstyles,rawclasses,luatex]latexml.sty`, XML byte-identical to the base on every row (`kit/perf_lever.sh`, ledger `~/data/pk_agents/main/perf_ledger.tsv`). `b0_empty` loads `pgf-interference` and `pgfplots` and typesets nothing; "article" is a plain article with amsmath under `ar5iv.sty`.

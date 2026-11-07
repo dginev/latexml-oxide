@@ -240,6 +240,16 @@ where FnR: FnOnce(&str) -> R {
   })
 }
 
+/// The first `N` bytes of `sym`'s text, if it has as many: a read only, so without the borrow and guard of [`with`], for
+/// a test by name on a hot path.
+#[inline]
+pub fn first_bytes<const N: usize>(sym: SymStr) -> Option<[u8; N]> {
+  // SAFETY: as [`with`]'s on the text. The pointer is this thread's interner, whose borrower, if any, is further up this
+  // stack (as [`with_arena_mut`]'s re-entrant call), and nothing here writes.
+  let text = unsafe { (*ARENA.as_ptr()).resolve_unchecked(sym) };
+  text.as_bytes().first_chunk().copied()
+}
+
 pub fn with2<R, FnR>(sym1: SymStr, sym2: SymStr, caller: FnR) -> R
 where FnR: FnOnce(&str, &str) -> R {
   with_arena_mut(|arena| {

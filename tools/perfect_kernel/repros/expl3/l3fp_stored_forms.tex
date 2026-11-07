@@ -1,0 +1,23 @@
+% mechanism: the native l3fp reads a floating point number's stored form only when it is canonical: an exponent as `\int_value:w` writes it, four
+%   blocks of exactly four digits. l3fp hands any other on as it stands, or does its block arithmetic on what is there
+% witness: review of batch P2, no arXiv paper
+% oracle:  pdflatex: this text
+% engines: rust: native and raw byte-identical (Perl has no native path)
+% expect:  0 Errors, 0 Warnings; the rows below
+% status:  GREEN
+\documentclass{article}
+\ExplSyntaxOn
+\cs_new_protected:Npn \F #1 { \fp_set:Nn \l_tmpa_fp {#1} \tl_to_str:N \l_tmpa_fp ;~ }
+\ExplSyntaxOff
+\begin{document}
+\ttfamily
+\ExplSyntaxOn
+Short:~\F{\s__fp \__fp_chk:w 10{1}{1000}{0}{0}{0} \__fp_sep: + 1}\F{\s__fp \__fp_chk:w 10{1}{1000}{0}{0}{0} \__fp_sep:}
+
+Long:~\F{\s__fp \__fp_chk:w 10{1}{01000}{0000}{0000}{0000} \__fp_sep: + 1}
+
+Exponent:~\F{\s__fp \__fp_chk:w 10{01}{1000}{0000}{0000}{0000} \__fp_sep:}\F{\s__fp \__fp_chk:w 10{-0}{1000}{0000}{0000}{0000} \__fp_sep:}
+
+Canonical:~\F{\s__fp \__fp_chk:w 10{1}{1000}{0000}{0000}{0000} \__fp_sep: + 1}
+\ExplSyntaxOff
+\end{document}

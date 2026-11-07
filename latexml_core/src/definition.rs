@@ -288,6 +288,9 @@ pub trait Definition: Object {
     crate::gullet::unread_expansion(self.invoke(once_only)?);
     Ok(())
   }
+  /// [`expandable::SpecialCall::Native`], for a call the gullet expands in full: only there, so a one-step
+  /// `\expandafter` and every other reader of the expansion get the macro's own body.
+  fn native_expansion(&self) -> Result<Option<Tokens>> { Ok(None) }
   fn invoke_primitive(&self) -> Result<Vec<Digested>>;
 
   /// We can almost always return the CS by reference, except in a Register's RefCell, where we are

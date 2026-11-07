@@ -1,0 +1,19 @@
+% mechanism: the native l3fp reports nothing before an answer. A dimension in a `\dim_to_fp:n` or a `\dim_ratio:nn` whose read would say
+%   `Dimension too large` is the raw macro's to read, so the message comes once; below `\maxdimen` by a margin per unit the native path
+%   answers (the review of batch P2: its cap was one figure for every unit, 2000in passed it, was read and declined, and the raw run reported again)
+% witness: review of batch P2, no arXiv paper
+% oracle:  pdflatex: `! Dimension too large` once for each of the last three rows, the same values
+% engines: rust: 3 Warnings native and raw (Perl has no native path)
+% expect:  3 Warnings; the values below; eight of the first row's nine answered natively (16000pt, at its unit's cap, is the macro's)
+% status:  GREEN
+\documentclass{article}
+\ExplSyntaxOn
+\NewDocumentCommand \T { m } { \fp_to_tl:n {#1} ;~ }
+\ExplSyntaxOff
+\begin{document}
+\ExplSyntaxOn
+Below:~\T{\dim_to_fp:n{16000pt}-16000}\T{\dim_to_fp:n{219in}}\T{\dim_to_fp:n{1299pc}}\T{\dim_to_fp:n{569cm}}\T{\dim_to_fp:n{5699mm}}\T{\dim_to_fp:n{15999bp}}\T{\dim_to_fp:n{14999dd}}\T{\dim_to_fp:n{1249cc}}\T{\dim_to_fp:n{1073741823sp}}
+
+Over:~\T{\dim_to_fp:n{2000in}+nan}\T{\dim_ratio:nn{1000in}{1pt}+1/0}\T{\dim_to_fp:n{2000cm}*(1,2)}
+\ExplSyntaxOff
+\end{document}
