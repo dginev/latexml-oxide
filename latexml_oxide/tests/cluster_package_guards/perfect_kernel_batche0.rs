@@ -889,8 +889,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (a new file, what is left of `writer/plan`'s walk-backs: brace balance and a formula's shifts; the two rows together fell by 25, Z3)
   ("writer/content", 7),
   // (Z4a, a new file: the emitter builds Perl's calls from the reading, its reads a call's own keys and pieces, `text_tokens` and the
-  // catcodes of a cut: where a slice's edge falls past an option, a group or an accent's letter, OD #979)
-  ("writer/emit", 30),
+  // catcodes of a cut: where a slice's edge falls past an option, a group or an accent's letter, OD #979; Z4ar2, 30 -> 28: an address
+  // list's `@` no longer read, its inks are)
+  ("writer/emit", 28),
   ("writer/dom+mod", 0),
   ("writer/plan", 85),
   ("writer/repart", 0),
@@ -1067,13 +1068,13 @@ fn a_spelling_rule_in_the_resolver_counts_however_it_is_written() {
 /// Backslash literals under `observer/`, per file or directory: the part of it that may spell a token's name, whatever the code around
 /// them does (the regexes of [`token_reads_only_fall_toward_the_floor`] see a comparison, not `fn spelled(x) { x.contains("\\foo") }`).
 /// Debts of what names the kernel's tokens today (the rehearsal's table, the writer's and the events' readers, the ledger's stamping);
-/// the zeros stay zero: `policy`, `marks` and `mod` decide, and a decision spells no token; `field_notes` names the two definitions an
-/// environment step's meaning is (Z4a).
+/// the zeros stay zero: `policy`, `marks` and `mod` decide, and a decision spells no token; `field_notes` names two kernel definitions
+/// (`\begin`, `\end`), not a token's spelling (Z4a, ruled at Z4ar2).
 const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // (Z4a, 83 -> 85: a note's kind, `\lx@fm@obs@fnnote`, the rehearsal's own name for a footnote it heard)
   ("events", 85),
-  // (Z4a, 0 -> 2: an environment by its meaning, the definition's name `\begin` or `\end`, not the token's spelling: a `\let` copy
-  // too, what no frame says for a raw environment)
+  // (Z4a, 0 -> 2, ruled at Z4ar2: names two kernel definitions (`\begin`, `\end`), not a token's spelling: an environment step by its
+  // meaning, a `\let` copy too, what no frame says for a raw environment)
   ("field_notes", 2),
   ("ledger", 29),
   ("marks", 0),

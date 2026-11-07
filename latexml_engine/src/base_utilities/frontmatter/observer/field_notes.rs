@@ -109,12 +109,13 @@ pub struct FieldNotes {
   last_call:        Option<(u16, u16)>,
   /// the environments opened and closed ([`EnvironmentStep`]), and what reading them takes: the frames and environments open at
   /// the last field token heard, and that token, whether it was expanded (what it opens is open by the next token heard); and the
-  /// position of the last `\begin` or `\end` heard, which says what changed there
+  /// position of the last `\begin` or `\end` heard and as far as what ran at its position read (its arguments, the
+  /// environment's own: `{tabular}{c}`), which says what changed there
   pub environments: Vec<EnvironmentStep>,
   frames_heard:     usize,
   open_heard:       usize,
   token_heard:      Option<(u16, u16, bool, bool)>,
-  meaning_heard:    Option<u16>,
+  meaning_heard:    Option<(u16, u16)>,
 }
 
 /// How many environments are open: the frames binding `current_environment` (an environment a binding defines).
@@ -123,9 +124,10 @@ fn environments_open() -> usize {
 }
 
 /// Note the field token at `pos` heard ([`FieldNotes::environments`]). One whose meaning is `\begin` or `\end` says it, a `\let` copy
-/// too, a raw environment's (`\newenvironment`, `{CJK*}`, 2609.05616) that no frame says; else the frames: one what a macro's expansion
-/// opened (a pair of macros), or an alignment's cell read, says by the next token heard. A frame count unchanged since the last says
-/// no environment changed either, the read a letter of a name takes.
+/// too, a raw environment's (`\newenvironment`, `{CJK*}`, 2609.05616) that no frame says, its extent as far as what runs at its
+/// position reads (the environment's arguments: `\begin{tabular}{c}`); else the frames: one what a macro's expansion opened (a pair
+/// of macros), or an alignment's cell read, says by the next token heard. A frame count unchanged since the last says no environment
+/// changed either, the read a letter of a name takes.
 fn note_environment(token: &Token, pos: u16, reach: u16, expanded: bool) {
   let frames = state::get_frame_depth();
   let by_meaning = if token.get_catcode() == Catcode::CS {
@@ -155,8 +157,11 @@ fn note_environment(token: &Token, pos: u16, reach: u16, expanded: bool) {
         };
         let opens = open > notes.open_heard;
         // (a position whose `\begin` or `\end` was heard said it: a macro's `\begin{tikzpicture}…\end{tikzpicture}`, its tokens
-        // all at its call's position, closes once, 2210.03748)
-        if start != end && notes.meaning_heard != Some(pos) && notes.meaning_heard != Some(start) {
+        // all at its call's position, closes once, 2210.03748; and what its reading read, an `{array}`'s arguments in a formula)
+        let said = notes
+          .meaning_heard
+          .is_some_and(|(at, read)| at == pos || (at <= start && start < read));
+        if start != end && !said {
           for _ in 0..open.abs_diff(notes.open_heard) {
             notes
               .environments
@@ -166,8 +171,22 @@ fn note_environment(token: &Token, pos: u16, reach: u16, expanded: bool) {
         notes.open_heard = open;
       }
     }
+    // (what runs at a `\begin`'s position reads its environment's arguments: its extent)
+    if let Some((at, read)) = &mut notes.meaning_heard
+      && *at == pos
+    {
+      *read = (*read).max(reach);
+      for step in notes
+        .environments
+        .iter_mut()
+        .rev()
+        .take_while(|step| step.start == pos)
+      {
+        step.end = step.end.max(reach);
+      }
+    }
     if let Some(opens) = by_meaning {
-      notes.meaning_heard = Some(pos);
+      notes.meaning_heard = Some((pos, reach.max(pos + 1)));
       notes.environments.push(EnvironmentStep {
         start: pos,
         end: reach.max(pos + 1),

@@ -157,7 +157,7 @@ impl Field<'_> {
   /// `start..end` grown to a balanced run, its shifts in pairs: back to the opening brace of a group it closes that starts there
   /// ([`Self::starts_at_its_brace`]; any other group it closes is no run), on over the closing braces right after a group it
   /// opens.
-  fn balanced(&self, start: usize, end: usize, floor: usize) -> Option<(usize, usize)> {
+  pub(super) fn balanced(&self, start: usize, end: usize, floor: usize) -> Option<(usize, usize)> {
     let content = self.tokens;
     let (mut start, mut end) = (start, end);
     let mut before = open_groups(content, floor, start);
@@ -187,7 +187,8 @@ impl Field<'_> {
     let at = |p: u16| usize::from(p).checked_sub(self.base);
     let mut environments = 0i32;
     for step in self.environments {
-      let Some(from) = at(step.start) else {
+      // (one a formula holds is the formula's, taken whole: `$\begin{array}{c}a\end{array}$`, review revZ4a)
+      let Some(from) = at(step.start).filter(|&from| self.formula_at(from).is_none()) else {
         continue;
       };
       if from < start {

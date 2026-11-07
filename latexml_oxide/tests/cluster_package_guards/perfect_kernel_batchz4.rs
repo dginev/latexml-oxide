@@ -93,6 +93,10 @@ fn the_emit_is_the_old_markup() {
     "<personname>Ann Živković</personname>",
   ]);
   same_markup(repro!("emit_order_each_call_its_place_on_its_author"), &[]);
+  same_markup(repro!("emit_ordinal_stays_on_its_name"), &[
+    "<personname>1<sup>st</sup> Ann Able</personname>",
+    "<personname>2<sup>nd</sup> Bob Baker</personname>",
+  ]);
   same_markup(repro!("emit_entry_address_a_line_of_its_call"), &[
     r#"role="affiliation">Univ A<break/>Town</contact>"#,
     "<contact name=\"Email:\u{a0}\" role=\"email\">ann@a.edu</contact>",
@@ -240,29 +244,48 @@ fn the_whole_block_queue_still_reads() {
   assert_eq!(names, ["Ann Able", "Bob Baker ∗", "Cat Cole 3"]);
 }
 
+/// The shape of `affiliation_cut_environments_by_spelling_red` each row of [`ENVIRONMENT_ROWS`] replaces.
+const ENVIRONMENT_SHAPE: &str = "\\bx a&b\\\\ c&d\\ex";
+
+/// The environments of a cut's piece, each row a spelling and the entry it is in: a macro pair, `\\let` copies, a `\\begin` under `\\detokenize` or `\\ifx` (review
+/// revZ3r2); an `{array}` a formula holds, a `{tabular}`, a `\\newenvironment` around one or around a `{center}` (review revZ4a).
+const ENVIRONMENT_ROWS: &[(&str, &str)] = &[
+  (ENVIRONMENT_SHAPE, "1 Univ X a b c d"),
+  (
+    "\\bb{tabular}{cc}a&b\\\\ c&d\\ee{tabular}",
+    "1 Univ X a b c d",
+  ),
+  ("\\detokenize{\\begin} X", "1 Univ \u{201c}begin X"),
+  ("\\detokenize{\\end} X", "1 Univ \u{201c}end X"),
+  ("\\ifx\\zz\\end Q\\else X\\fi", "1 Univ X"),
+  ("$\\begin{array}{c}a\\end{array}$ c", "1 Univ X a c"),
+  (
+    "\\begin{tabular}{c}a\\\\ b\\end{tabular} c",
+    "1 Univ X a b c",
+  ),
+  ("\\begin{ff}a\\\\ b\\end{ff} c", "1 Univ X a b c"),
+  ("\\begin{ec}a b\\end{ec} c", "1 Univ X a b c"),
+];
+
+/// The template with `row` in place of its shape, the template's `X` kept where the entry `text` prints it before the row.
+fn environment_row(row: &str, text: &str) -> String {
+  let template = repro!("affiliation_cut_environments_by_spelling_red");
+  assert!(template.contains(ENVIRONMENT_SHAPE));
+  let template = if text.starts_with("1 Univ X ") {
+    template.to_string()
+  } else {
+    template.replace("Univ X ", "Univ ")
+  };
+  template.replace(ENVIRONMENT_SHAPE, row)
+}
+
 /// A cut holds its environments as their meanings and the digestion's frames say them, whatever spells them: a macro pair and `\\let` copies open and close one, a `\\begin`
-/// under `\\detokenize` or `\\ifx` opens none (the writer's cut, on the base's own path: `writer::Field::environments`; review revZ3r2).
+/// under `\\detokenize` or `\\ifx` opens none, one a formula holds is the formula's, counted once (the writer's cut, on the base's own path: `writer::Field::environments`;
+/// reviews revZ3r2, revZ4a: an `{array}` in a formula made the two entries one).
 #[test]
 fn an_environment_by_its_frames() {
-  let template = repro!("affiliation_cut_environments_by_spelling_red");
-  let shape = "\\bx a&b\\\\ c&d\\ex";
-  assert!(template.contains(shape));
-  for (row, text) in [
-    (shape, "1 Univ X a b c d"),
-    (
-      "\\bb{tabular}{cc}a&b\\\\ c&d\\ee{tabular}",
-      "1 Univ X a b c d",
-    ),
-    ("\\detokenize{\\begin} X", "1 Univ \u{201c}begin X"),
-    ("\\detokenize{\\end} X", "1 Univ \u{201c}end X"),
-    ("\\ifx\\zz\\end Q\\else X\\fi", "1 Univ X"),
-  ] {
-    let template = if row.contains("&") {
-      template.to_string()
-    } else {
-      template.replace("Univ X ", "Univ ")
-    };
-    let (log, xml) = run(&template.replace(shape, row), 0);
+  for &(row, text) in ENVIRONMENT_ROWS {
+    let (log, xml) = run(&environment_row(row, text), 0);
     assert_eq!(error_count(&log), 0, "{row}: {log}");
     let expected = vec![vec![
       "Ann Able".to_string(),
@@ -281,6 +304,92 @@ fn a_raw_environment_on_a_name_is_whole() {
   let expected = vec![vec![
     "Ann Able (xyz)".to_string(),
     "affiliation=Univ A".to_string(),
+  ]];
+  assert_eq!(creators(&xml), expected, "{xml}");
+}
+
+/// With the switch on, a call's piece holds its environments whole, as the old engine's cut: no cut at a container or inside one or a formula, the
+/// reading's piece count (review revZ4a: a tabular's and a center's cells lost, `ff`'s piece replaced by "2 Univ Y", an array's cell twice). Distinct from
+/// `an_environment_by_its_frames`: the emitter's `call_pieces`, its cuts by events.
+#[test]
+fn a_piece_holds_its_environments_whole() {
+  // (not the `\\ifx` row: a conditional the cut ends inside leaves its `\\fi` behind, on Z4a as here, W 1 — an expansion's structure, no
+  // environment's; RED in the batch's report, no corpus witness)
+  for &(row, text) in ENVIRONMENT_ROWS
+    .iter()
+    .filter(|(row, _)| !row.contains("\\ifx"))
+  {
+    let tex = environment_row(row, text);
+    let (off_log, off) = run(&tex, 0);
+    let (log, on) = run(&tex, 1);
+    assert_eq!(error_count(&off_log), 0, "{row}: {off_log}");
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{row}: {log}"
+    );
+    assert_eq!(creators_xml(&on), creators_xml(&off), "{row}");
+  }
+}
+
+/// An environment opening a name's run takes its arguments with it, the step's extent as far as what runs at its `\\begin`'s position reads: no `c` of a
+/// `{tabular}{c}`, no `0.4\\textwidth` of a minipage, on the name (review revZ4a; Perl's `{tabular}` fallback is the switch off's one creator).
+#[test]
+fn a_faux_environment_name_starts_past_its_arguments() {
+  let (log, xml) = run(repro!("emit_faux_environment_names_past_its_arguments"), 1);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let expected: Vec<Vec<String>> = [
+    &["Ann Able", "affiliation=Univ A", "email=ann@a.edu"][..],
+    &["Bob Baker", "affiliation=Univ B"][..],
+  ]
+  .iter()
+  .map(|row| row.iter().map(ToString::to_string).collect())
+  .collect();
+  assert_eq!(creators(&xml), expected, "{xml}");
+  let emitted = creators_xml(&xml);
+  assert!(
+    emitted[0].contains("<personname>Ann Able</personname>"),
+    "{emitted:#?}"
+  );
+  assert!(
+    emitted[1].contains("<personname>Bob Baker</personname>"),
+    "{emitted:#?}"
+  );
+}
+
+/// One address of a list is the ink printing it, in its colour, each its owner's: no `@` read for where the list is (review revZ4a).
+#[test]
+fn an_address_of_a_list_is_its_ink() {
+  let (log, xml) = run(repro!("emit_address_of_a_list_by_its_inks"), 1);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let emitted = creators_xml(&xml);
+  assert_eq!(emitted.len(), 2, "{emitted:#?}");
+  for (creator, address) in emitted.iter().zip(["ann@x.edu", "bob@y.edu"]) {
+    let contact = format!(
+      "<contact name=\"Email:\u{a0}\" role=\"email\"><text color=\"#0000FF\">{address}</text></contact>"
+    );
+    assert!(creator.contains(&contact), "{emitted:#?}");
+    assert_eq!(creator.matches("role=\"email\"").count(), 1, "{emitted:#?}");
+  }
+}
+
+/// A call's piece no balanced run holds is the reading's text, each in a counted Warning; the other piece keeps its own place (review revZ4a's `ff`, 1202.5401).
+#[test]
+fn a_piece_no_run_holds_is_counted() {
+  let (log, xml) = run(repro!("emit_a_piece_no_run_holds_is_counted_text"), 1);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  for text in ["Univ X Lab A", "Univ Y"] {
+    assert!(
+      log.contains(&format!(
+        "writes \"{text}\" as its plain text, its markup lost: call: no run holds it"
+      )),
+      "{log}"
+    );
+  }
+  let expected = vec![vec![
+    "Ann Able".to_string(),
+    "affiliation=Univ X Lab A".to_string(),
+    "affiliation=Univ Y".to_string(),
   ]];
   assert_eq!(creators(&xml), expected, "{xml}");
 }

@@ -509,6 +509,19 @@ fn block_names(
           grown.0 = grown.0.min(at(e.span?.0)?);
         }
       }
+      // (an IEEE ordinal the reading joined to the name, `join_ordinals`, stays with it, as today's personname:
+      // `1\\textsuperscript{st} Sertac`, 2412.10792, 2202.06596, 1907.06250, 2605.00900)
+      let name_span = found[from].1.span;
+      if events.iter().any(|e| {
+        e.kind == EventKind::Mark
+          && e.ordinal
+          && e
+            .span
+            .zip(name_span)
+            .is_some_and(|(mark, name)| name.0 <= mark.0 && mark.1 <= name.1)
+      }) {
+        grown.0 = grown.0.min(at(name_span?.0)?);
+      }
       // (past marks that stay out of it, each its own run)
       let mut apart: Vec<Token> = Vec::new();
       for e in read[after_name..]
@@ -580,15 +593,17 @@ fn stays_out() -> Option<&'static str> {
   })
 }
 
-/// An item written from the reading's text: named in the `frontmatter` debug feature, each with its reason.
-fn by_text(why: &str, assoc: &Assoc) -> Vec<Token> {
-  DebugFeature!(
-    "frontmatter",
-    "FRONT emit text: {why} [{}] {}",
-    assoc.rule,
-    assoc.text
-  );
-  text_tokens(&assoc.text)
+/// An item or a name written from the reading's text, its markup lost (fonts, links, math): a Warning naming it and `why`, the
+/// charter's count of what the emitter could not take from the tokens. `None` for an item that is its text (an ORCID's id).
+fn by_text(why: Option<&str>, text: &str) -> Vec<Token> {
+  if let Some(why) = why {
+    Warn!(
+      "unexpected",
+      "frontmatter",
+      s!("The frontmatter emitter writes \"{text}\" as its plain text, its markup lost: {why}")
+    );
+  }
+  text_tokens(text)
 }
 
 /// A note's call under `label`, as `\lx@add@thanks` and `\lx@add@note` make it (their `Let`s in an author's content,
@@ -644,43 +659,63 @@ fn span_tokens_of(index: usize, span: (u16, u16)) -> Option<Tokens> {
   })
 }
 
-/// `call`, its content's printed list written down to the one `address` of it (the reading's `ruling3:written-out`): the
-/// list is the innermost, last group holding an `@`, or the content (`\\lx@address@urlfont{a@x, b@y}`,
-/// `\\textcolor{blue}{a@x, b@y}`, 2211.14973), what's around it stands.
-fn one_address(call: &Tokens, address: &str) -> Tokens {
+/// `call`, its content's printed list written down to the one `address` of it (the reading's `ruling3:written-out`): its last
+/// argument rehearsed, the run from its first ink to its last is the list, and the address the tokens of the ink printing it
+/// (`\\textcolor{blue}{a@x}, \\textcolor{blue}{b@y}`, review revZ4a; `\\lx@address@urlfont{a@x, b@y}`, `\\textcolor{blue}{a@x,
+/// b@y}`, 2211.14973), what's around the list stands; its text in the list's font where no ink prints it alone.
+fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
   let mut tokens = call.unlist_ref().to_vec();
-  tokens.pop();
-  let mut depth = 0;
-  let Some(open) = tokens.iter().rposition(|t| {
-    depth += t.group_step();
-    depth == 1
-  }) else {
-    return call.clone();
+  let Some(close) = tokens.iter().rposition(|t| t.get_catcode() == Catcode::END) else {
+    return Ok(call.clone());
   };
+  let mut depth = 0;
+  let Some(open) = (0..=close).rev().find(|&i| {
+    depth += tokens[i].group_step();
+    depth == 0
+  }) else {
+    return Ok(call.clone());
+  };
+  let after = tokens.split_off(close);
   let content = tokens.split_off(open + 1);
-  let (mut list, mut stack) = ((0, content.len()), Vec::new());
-  let mut at_sign = false;
-  for (i, t) in content.iter().enumerate() {
-    match t.group_step() {
-      1 => {
-        stack.push(i + 1);
-        at_sign = false;
-      },
-      -1 => {
-        let from = stack.pop().unwrap_or(0);
-        if at_sign {
-          list = (from, i);
-          at_sign = false;
-        }
-      },
-      _ => at_sign |= t.with_str(|s| s == "@"),
-    }
-  }
-  tokens.extend_from_slice(&content[..list.0]);
-  tokens.extend(text_tokens(address));
-  tokens.extend_from_slice(&content[list.1..]);
-  tokens.push(T_END!());
-  Tokens::new(tokens)
+  let read = rehearsed(&content)?;
+  let (events, formulas, environments) = read
+    .as_ref()
+    .map_or((&[][..], &[][..], &[][..]), |(e, f, n)| {
+      (e.as_slice(), f.as_slice(), n.as_slice())
+    });
+  let field = Field {
+    tokens: &content,
+    base: 0,
+    formulas,
+    environments,
+  };
+  let inks: Vec<&Event> = events
+    .iter()
+    .filter(|e| matches!(e.kind, EventKind::Name | EventKind::Contact) && e.span.is_some())
+    .collect();
+  let list = inks
+    .iter()
+    .filter_map(|e| e.span)
+    .fold(None, |list: Option<(u16, u16)>, (s, t)| {
+      Some(list.map_or((s, t), |(from, to)| (from.min(s), to.max(t))))
+    });
+  // (the whole argument, where no run of inks reads as the list)
+  let (from, to) = list
+    .and_then(|(s, t)| field.balanced(usize::from(s), usize::from(t), 0))
+    .unwrap_or((0, content.len()));
+  // (the ink that is the address, as printed: a brace list's `gilba\}@x` is no ink of `gilba@x`, 2411.10891)
+  let spaced = |text: &str| text.split_whitespace().collect::<Vec<_>>().join(" ");
+  let printed = inks
+    .iter()
+    .find(|e| spaced(&e.text) == spaced(address))
+    .and_then(|e| event_run(&field, events, (e, e), None));
+  tokens.extend_from_slice(&content[..from]);
+  // (or its text in the font the list prints in, where no ink is it alone: `a@x; b@y`, 1305.0477, 1510.05412)
+  let font = inks.first().and_then(|e| e.font.clone());
+  tokens.extend(printed.unwrap_or_else(|| in_its_font(font, by_text(None, address)).unlist()));
+  tokens.extend_from_slice(&content[to..]);
+  tokens.extend(after);
+  Ok(Tokens::new(tokens))
 }
 
 /// The labels of the marks of `role` the block at ledger index `source` prints.
@@ -802,7 +837,7 @@ fn item_call(
   assoc: &Assoc,
   label: &str,
   separate: &BTreeSet<usize>,
-  pieces: &mut BTreeMap<usize, Vec<(String, Vec<Token>)>>,
+  pieces: &mut BTreeMap<usize, Vec<Piece>>,
 ) -> Result<Tokens> {
   let role = assoc.role.as_str();
   let keys = s!("role={role},label={{{label}}}");
@@ -846,8 +881,9 @@ fn item_call(
       }))
   {
     if written_out {
-      if let Some(tokens) = rekeyed(command, &s!("label={{{label}}}"), true, false, true) {
-        return Ok(one_address(&tokens, &assoc.text));
+      let command = one_address(command, &assoc.text)?;
+      if let Some(tokens) = rekeyed(&command, &s!("label={{{label}}}"), true, false, true) {
+        return Ok(tokens);
       }
     } else if let Some(tokens) =
       // (an entry the block prints moves back to its place by its zone, what a label places alone: `at_queue_position`)
@@ -893,13 +929,13 @@ fn item_call(
           footnote,
           None,
           label,
-          content.unwrap_or_else(|| by_text("note no argument", assoc)),
+          content.unwrap_or_else(|| by_text(Some("note no argument"), &assoc.text)),
         ));
       }
       // (a contact's command: as written, its meaning the class's, a call inside the contact taking its label as Perl's
       // `\lx@annotate@frontmatter@now` has it, an empty contact around it dropped)
       // (one a mark's formula holds is its text, the formula its run would grow to printing the mark: an ORCID icon,
-      // `$^{1\,\orcidicon{…}}$`, 2210.03748, 2206.03602)
+      // `$^{1\,\orcidicon{…}}$`, 2210.03748, 2206.03602; the id is the item, no markup of it lost, no Warning)
       let in_a_mark = with_block(index, false, |_, events| {
         events.iter().any(|e| {
           let formula = e.formula.and_then(|f| f.span);
@@ -907,7 +943,7 @@ fn item_call(
         })
       });
       if contact_role && in_a_mark {
-        return Ok(wrap(&by_text("contact in a mark's formula", assoc)));
+        return Ok(wrap(&by_text(None, &assoc.text)));
       }
       if contact_role
         && event_at(
@@ -977,7 +1013,7 @@ fn item_call(
         events.iter().filter(printed_there).count()
       }) > 1
       {
-        return Ok(wrap(&by_text("a macro's span", assoc)));
+        return Ok(wrap(&by_text(Some("a macro's span"), &assoc.text)));
       }
       let found = entry_span(index, span, &key.1);
       if found.is_none()
@@ -988,7 +1024,7 @@ fn item_call(
           |e| norm(&e.text) == key.1,
         ) != Some(true)
       {
-        return Ok(wrap(&by_text("span letters differ", assoc)));
+        return Ok(wrap(&by_text(Some("span letters differ"), &assoc.text)));
       }
       let span = found.unwrap_or(span);
       // (its tokens, from its mark for a note's legend; in the font it prints in, the group or the switch before its mark too)
@@ -1022,7 +1058,7 @@ fn item_call(
         Some((tokens, first.font.clone(), mark.map(|e| e.text.clone())))
       });
       let Some((tokens, font, mark)) = run else {
-        return Ok(wrap(&by_text("span no balanced run", assoc)));
+        return Ok(wrap(&by_text(Some("span no balanced run"), &assoc.text)));
       };
       if note {
         let legend = mark.as_deref().filter(|_| role == "legend");
@@ -1039,37 +1075,33 @@ fn item_call(
     // (an API call's: its piece where the reading cut it)
     Some((index, None)) => {
       let Some(call) = api_call(index) else {
-        return Ok(wrap(&by_text("note text", assoc)));
+        return Ok(wrap(&by_text(Some("note text"), &assoc.text)));
       };
       // (a contact inside it: its command as written, as a block's)
-      if contact_role && let Some(tokens) = call_contact(&call, &key.1, written_out)? {
-        let call = annotate_now("ltx:contact", &keys, tokens.unlist_ref());
-        return Ok(if written_out {
-          one_address(&call, &assoc.text)
-        } else {
-          call
-        });
+      if contact_role && let Some(tokens) = call_contact(&call, assoc, written_out)? {
+        return Ok(annotate_now("ltx:contact", &keys, tokens.unlist_ref()));
       }
       let found = match pieces.entry(index) {
         Entry2::Occupied(held) => held.into_mut(),
         Entry2::Vacant(place) => place.insert(call_pieces(&call)?),
       };
+      // (the one piece by the reading's count, not the runs cut: one no run holds gives no other its place, review revZ4a)
       let piece = found.iter().find(|(text, _)| *text == key.1);
-      if let Some((_, tokens)) = piece.or(found.first().filter(|_| found.len() == 1)) {
-        return Ok(wrap(tokens));
+      match piece.or(found.first().filter(|_| found.len() == 1)) {
+        Some((_, Some(tokens))) => Ok(wrap(tokens)),
+        Some(_) => Ok(wrap(&by_text(Some("call: no run holds it"), &assoc.text))),
+        None => Ok(wrap(&by_text(Some("call: no piece holds it"), &assoc.text))),
       }
-      Ok(wrap(&by_text("call: no piece holds it", assoc)))
     },
-    None => Ok(wrap(&by_text("no source", assoc))),
+    None => Ok(wrap(&by_text(Some("no source"), &assoc.text))),
   }
 }
 
 /// A call's content as a stamped rehearsal reads it ([`rehearsed`]).
 type CallRead = (Vec<Event>, Vec<Formula>, Vec<EnvironmentStep>);
 
-/// `call`'s content's events, formulas and environments, from a stamped rehearsal of it, as `plan::cut` reads a piece.
-fn rehearsed(call: &ApiCall) -> Result<Option<CallRead>> {
-  let content = call.content.unlist_ref();
+/// A call's content's events, formulas and environments, from a stamped rehearsal of it, as `plan::cut` reads a piece.
+fn rehearsed(content: &[Token]) -> Result<Option<CallRead>> {
   if content.len() > usize::from(FIELD_PROV_POS_MASK) {
     return Ok(None);
   }
@@ -1086,9 +1118,11 @@ fn rehearsed(call: &ApiCall) -> Result<Option<CallRead>> {
   )
 }
 
-/// The tokens of the contact printing `key` in `call`'s content, or with `within` of its first (one printing a list).
-fn call_contact(call: &ApiCall, key: &str, within: bool) -> Result<Option<Tokens>> {
-  let Some((events, formulas, environments)) = rehearsed(call)? else {
+/// The tokens of the contact printing `assoc` in `call`'s content, or with `within` its first's (one printing a list), written down to
+/// its address ([`one_address`]).
+fn call_contact(call: &ApiCall, assoc: &Assoc, within: bool) -> Result<Option<Tokens>> {
+  let key = plan::contact_key(assoc).1;
+  let Some((events, formulas, environments)) = rehearsed(call.content.unlist_ref())? else {
     return Ok(None);
   };
   let field = Field {
@@ -1097,21 +1131,30 @@ fn call_contact(call: &ApiCall, key: &str, within: bool) -> Result<Option<Tokens
     formulas:     &formulas,
     environments: &environments,
   };
-  Ok(events.iter().find_map(|e| {
+  let contact = events.iter().find_map(|e| {
     let (start, end) = e.span?;
     let (start, end) = (usize::from(start), usize::from(end));
     (e.kind == EventKind::Contact && (within || norm(&e.text) == key))
       .then(|| field.content_of((start, end), 0, start))
       .flatten()
       .map(|(tokens, _)| tokens)
-  }))
+  });
+  match contact {
+    Some(tokens) if within => one_address(&tokens, &assoc.text).map(Some),
+    contact => Ok(contact),
+  }
 }
 
-/// `call`'s content cut into the reading's entries (`split_pieces`), each its text and what it prints but its marks and its
+/// A call's piece ([`call_pieces`]): its text, and its tokens, `None` where no balanced run holds it.
+type Piece = (String, Option<Vec<Token>>);
+
+/// `call`'s content cut into the reading's entries (`split_pieces`), one each, its text and what it prints but its marks and its
 /// contacts, cut at their spans, in the font it prints in: an entry whose contact prints through no API call (0911.3853's `\\email`
-/// in an `\\institute`, 1001.0337).
-fn call_pieces(call: &ApiCall) -> Result<Vec<(String, Vec<Token>)>> {
-  let Some((events, formulas, environments)) = rehearsed(call)? else {
+/// in an `\\institute`, 1001.0337). A container (a Layout event) and what it or a formula holds are the piece's, whole: no cut at
+/// one, nor inside one (`nest`, `Field::formulas`): `$^{1}$Univ X \\begin{tabular}{c}a\\\\ b\\end{tabular}`, `\\begin{ee}a b\\end{ee}`,
+/// `$\\begin{array}{c}a\\end{array}$` (review revZ4a).
+fn call_pieces(call: &ApiCall) -> Result<Vec<Piece>> {
+  let Some((events, formulas, environments)) = rehearsed(call.content.unlist_ref())? else {
     return Ok(Vec::new());
   };
   let field = Field {
@@ -1129,21 +1172,27 @@ fn call_pieces(call: &ApiCall) -> Result<Vec<(String, Vec<Token>)>> {
       .iter()
       .filter(|e| e.kind == EventKind::Name || (shown && e.kind == EventKind::Mark))
       .collect();
-    let (Some(first), Some(last)) = (inks.first(), inks.last()) else {
-      DebugFeature!("frontmatter", "FRONT emit: a piece prints no name: {text}");
-      continue;
-    };
-    let start = first.formula.and_then(|f| f.span).or(first.span);
-    let (Some((start, _)), Some((_, end))) = (start, last.span) else {
+    let start = inks
+      .first()
+      .and_then(|first| first.formula.and_then(|f| f.span).or(first.span));
+    let (Some((start, _)), Some((_, end))) = (start, inks.last().and_then(|last| last.span)) else {
+      out.push((norm(&text), None));
       continue;
     };
     let cuts = piece
       .iter()
       .filter(|e| {
-        !(matches!(e.kind, EventKind::Name | EventKind::Sep(_))
-          || (shown && e.kind == EventKind::Mark))
+        !(matches!(
+          e.kind,
+          EventKind::Name | EventKind::Sep(_) | EventKind::Layout
+        ) || (shown && e.kind == EventKind::Mark)
+          || e.nest > 0)
       })
       .filter_map(|e| e.span)
+      .filter(|&(s, t)| {
+        let (s, t) = (usize::from(s), usize::from(t));
+        field.formula_start(s) == s && field.formula_end(t) == t
+      })
       .filter(|&(s, t)| s >= start && t <= end)
       .chain(std::iter::once((end, end)));
     let (mut tokens, mut from) = (Some(Vec::new()), usize::from(start));
@@ -1160,16 +1209,11 @@ fn call_pieces(call: &ApiCall) -> Result<Vec<(String, Vec<Token>)>> {
       }
       from = usize::from(t).max(from);
     }
-    match tokens {
-      Some(tokens) => out.push((
-        norm(&text),
-        in_its_font(first.font.clone(), tokens).unlist(),
-      )),
-      None => DebugFeature!(
-        "frontmatter",
-        "FRONT emit: a piece holds no balanced run: {text}"
-      ),
-    }
+    let font = inks.first().and_then(|first| first.font.clone());
+    out.push((
+      norm(&text),
+      tokens.map(|tokens| in_its_font(font, tokens).unlist()),
+    ));
   }
   Ok(out)
 }
@@ -1359,6 +1403,95 @@ fn in_perl_order(items: &mut [Item]) {
   }
 }
 
+/// The words of what the blocks and the creators' calls print (a Name, a Contact, a Note) that no text of the reading holds
+/// (its names, its items), in one Warning naming them, each once over the flushes: the charter's count of a lost word, whatever lost it
+/// (review revZ4a: 1509.01480's creator and her note, 2607.28418's address). The words the emitter writes are the reading's.
+fn warn_lost_words(resolved: &Resolved) {
+  let creators = resolved.creators.iter();
+  let items = creators
+    .clone()
+    .flat_map(|c| c.affiliations.iter().chain(&c.contacts).chain(&c.notes))
+    .chain(&resolved.block)
+    .chain(&resolved.dropped);
+  let held: BTreeSet<String> = creators
+    .map(|c| c.name.as_str())
+    .chain(items.clone().map(|a| a.text.as_str()))
+    .map(norm)
+    .filter(|text| !text.is_empty())
+    .collect();
+  // (what a longer text holds: a name the reading reads with its mark, an entry with what follows it)
+  let all_held = held
+    .iter()
+    .map(String::as_str)
+    .collect::<Vec<_>>()
+    .join("\u{0}");
+  let spans: BTreeSet<(usize, (u16, u16))> = items
+    .filter_map(|a| Some((a.source?.0, a.source?.1?)))
+    .collect();
+  let mut lost: Vec<String> = Vec::new();
+  with_ledger(|ledger| {
+    for (index, entry) in ledger.entries.iter().enumerate() {
+      let events = match entry {
+        Entry::Author(block) => match &block.outcome {
+          Outcome::Events { events, .. } => events.as_slice(),
+          _ => continue,
+        },
+        Entry::Api(call) if creator_call(&call.tag, &call.parent) => call.events.as_slice(),
+        _ => continue,
+      };
+      // (a container's ink an item's span holds, which its tokens write whole: a picture's in an entry; and a mark's own, a label
+      // or its logo: an ORCID icon, 2210.03748)
+      let marks: Vec<(u16, u16)> = events
+        .iter()
+        .filter(|m| m.kind == EventKind::Mark)
+        .filter_map(|m| m.formula.and_then(|f| f.span))
+        .collect();
+      let inks = events.iter().chain(events.iter().flat_map(|e| &e.inner));
+      for e in inks.filter(|e| {
+        matches!(
+          e.kind,
+          EventKind::Name | EventKind::Contact | EventKind::Note
+        )
+      }) {
+        let printed = norm(&e.text);
+        if printed.is_empty() || held.contains(&printed) {
+          continue;
+        }
+        let within = |&(from, to): &(u16, u16)| {
+          e.span
+            .is_some_and(|(s, t)| from <= s && t <= to && (s, t) != (from, to))
+        };
+        let covered = (e.nest > 0 && spans.iter().any(|(at, span)| *at == index && within(span)))
+          || marks.iter().any(within);
+        if !covered && !all_held.contains(&printed) {
+          lost.extend(
+            e.text
+              .split(|c: char| !(c.is_alphanumeric() || c == '_'))
+              .filter(|w| !w.is_empty())
+              .map(String::from),
+          );
+        }
+      }
+    }
+  });
+  lost.retain(|word| {
+    let once = s!("word|{word}");
+    let new = lookup_mapping(EMITTED_ITEMS, &once).is_none();
+    assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
+    new
+  });
+  if !lost.is_empty() {
+    Warn!(
+      "unexpected",
+      "frontmatter",
+      s!(
+        "The frontmatter emitter's reading holds no place for words its author block or calls print: {}",
+        lost.join(" ")
+      )
+    );
+  }
+}
+
 /// The flush's added step: `commands`' creators and their annotations replaced by calls built from the reading. Whether
 /// it did.
 pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter>) -> Result<bool> {
@@ -1381,6 +1514,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     DebugFeature!("frontmatter", "FRONT emit stays out: no reading");
     return Ok(false);
   }
+  warn_lost_words(&resolved);
   // (a call printing no word of its own stays as it is, the note it holds the document's: `\\IEEEauthorblockA{\\thanks{…}}`,
   // 1502.03038, 2005.06428, 2110.05178)
   let words_of = |call: &ApiCall| {
@@ -1564,13 +1698,10 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .and_then(|command| rekeyed(&command, &s!("{keys},"), false, true, true));
     let tokens = call.unwrap_or_else(|| {
       let name = names.remove(&i).flatten().unwrap_or_else(|| {
-        DebugFeature!(
-          "frontmatter",
-          "FRONT emit text name: {} [{}]",
-          c.name,
-          c.rule
-        );
-        text_tokens(&c.name)
+        by_text(
+          Some(&s!("a name its events don't spell [{}]", c.rule)),
+          &c.name,
+        )
       });
       let content = cs_group("\\lx@frontmatter@item", &[&name]);
       let content = cs_group("\\lx@personname", &[&cs_group("\\lx@author@withinst", &[
