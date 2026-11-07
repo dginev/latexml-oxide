@@ -5,7 +5,10 @@
 //! 100,000 operations per family; a slice of it here).
 use latexml_engine::l3fp_native::{native_counts, set_check_override, set_native_override};
 
-use super::perfect_kernel_batch46::{error_count, warning_count};
+use super::{
+  perfect_kernel_batch46::{error_count, warning_count},
+  perfect_kernel_batch84b::text,
+};
 
 macro_rules! repro {
   ($name:literal) => {
@@ -21,6 +24,12 @@ const PRELOAD: &str = "[rawstyles,rawclasses]latexml.sty";
 
 /// A conversion: its log, its XML, and how many doors the native path answered (`None` when it was not installed).
 fn convert(tex: &str, native: bool, check: bool) -> (String, String, Option<u64>) {
+  let (log, xml, counts) = convert_counted(tex, native, check);
+  (log, xml, counts.map(|counts| counts.0))
+}
+
+/// A conversion: its log, its XML, and how many doors the native path answered and how many it left to the macro.
+fn convert_counted(tex: &str, native: bool, check: bool) -> (String, String, Option<(u64, u64)>) {
   latexml::util::test::convert_with_setup_then(
     tex,
     Some(PRELOAD),
@@ -28,7 +37,7 @@ fn convert(tex: &str, native: bool, check: bool) -> (String, String, Option<u64>
       set_native_override(Some(native));
       set_check_override(Some(check));
     },
-    |_| native_counts().map(|counts| counts.0),
+    |_| native_counts(),
   )
 }
 
@@ -49,8 +58,14 @@ fn squeezed(xml: &str) -> String { xml.split_whitespace().collect::<Vec<_>>().jo
 /// Native on and off give the same document and the same report, which is returned with the XML and how many doors the
 /// native path answered; off, it is not installed.
 fn both_ways(tex: &str) -> (String, String, Option<u64>) {
-  let (log_on, on, answered) = convert(tex, true, false);
-  let (log_off, off, answered_off) = convert(tex, false, false);
+  let (log, xml, counts) = both_ways_counted(tex);
+  (log, xml, counts.map(|counts| counts.0))
+}
+
+/// [`both_ways`], with how many doors the native path left to the macro as well.
+fn both_ways_counted(tex: &str) -> (String, String, Option<(u64, u64)>) {
+  let (log_on, on, answered) = convert_counted(tex, true, false);
+  let (log_off, off, answered_off) = convert_counted(tex, false, false);
   assert_eq!(answered_off, None, "the switch");
   assert_eq!(
     error_count(&log_on),
@@ -416,4 +431,108 @@ fn a_deep_expression_is_the_macros() {
       "{shape}…: {printed}\n{xml}"
     );
   }
+}
+
+/// A tab mark the macro's run would read at `align_state` 0 ends the cell (tex.web §342), with what follows: the Errors and the
+/// value are the macro's, so the native path leaves it the door, by the gullet's own count, the operand, the infix, an
+/// argument and a `\csname` alike. Where the count is not 0 nothing is left: the control has a `{…}`-wrapped cell, an
+/// `\edef`'s body, an argument's braces, no alignment at all. `\group_align_safe_begin:` is in the count: on the door of
+/// 2026-01-19 the rows are native, and only native = raw is asserted there.
+#[test]
+fn a_tab_mark_that_ends_a_cell_is_the_macros() {
+  let date = r"\documentclass{article}
+\begin{document}
+[\ExplLoaderFileDate]
+\end{document}
+";
+  let (_, xml, _) = convert(date, true, false);
+  let unguarded_door = xml.contains("[2025-11-06]");
+  const MARKED: &str = r"x\FT{&1} \\";
+  let siblings = repro!("l3fp_tab_mark_siblings");
+  assert!(siblings.contains(MARKED));
+  let row = |row: &str| siblings.replace(MARKED, row);
+  for (what, tex, errors, warnings, native, left, printed) in [
+    (
+      "a conditional",
+      repro!("l3fp_tab_mark_conditional").to_string(),
+      3,
+      0,
+      5,
+      2,
+      "yes yes b xyes b",
+    ),
+    (
+      "the value",
+      repro!("l3fp_tab_mark_value").to_string(),
+      6,
+      0,
+      8,
+      3,
+      "a [0] c d [3] [0] y b c [0] x",
+    ),
+    (
+      "a macro's, and an argument's",
+      repro!("l3fp_tab_mark_from_a_macro").to_string(),
+      8,
+      0,
+      9,
+      3,
+      "x[0] x[0] x[2] x[0]",
+    ),
+    ("an operand", row(MARKED), 3, 0, 3, 1, "x[0]"),
+    (
+      "another character's",
+      row(r"\char_set_catcode_alignment:N \| x\FT{1||0} \\"),
+      3,
+      0,
+      3,
+      1,
+      "x[0]",
+    ),
+    (
+      "in a csname",
+      row(r"x\FT{\csname known&\endcsname + 1} \\"),
+      0,
+      0,
+      0,
+      1,
+      "x[3]",
+    ),
+    (
+      "in a dimexpr",
+      row(r"\char_set_catcode_alignment:N \( x\FT{\dim_to_fp:n {(1pt)}} \\"),
+      0,
+      1,
+      0,
+      1,
+      "x[0]",
+    ),
+    (
+      "in an argument's braces, at a stray close",
+      row(r"x\iffalse}\fi\FT{\one{&} + 1}\iffalse{\fi \\"),
+      0,
+      0,
+      0,
+      1,
+      "x[2]",
+    ),
+  ] {
+    let (log, xml, counts) = both_ways_counted(&tex);
+    if unguarded_door {
+      assert_eq!(counts, Some((native, left)), "{what}: {log}");
+      assert_eq!(error_count(&log), errors, "{what}: {log}");
+      assert_eq!(warning_count(&log), warnings, "{what}: {log}");
+      assert!(text(&xml).contains(printed), "{what}: {printed}\n{xml}");
+    }
+  }
+  let (log, xml, counts) = both_ways_counted(repro!("l3fp_tab_mark_stays_native"));
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
+  if let Some(counts) = counts {
+    assert_eq!(counts, (9, 0), "the control: {log}");
+  }
+  assert!(
+    text(&xml).contains("[1][1][1][2] [1] xy x1 [2] [1] x"),
+    "{xml}"
+  );
 }

@@ -1168,7 +1168,7 @@ impl State {
   /// (`hoist_top_frame_delta`, under the lazy LaTeX.pool load); nor is a first definition: the name undefined, or, for a
   /// name [`WatchedName::RelaxIsUnset`], the `\relax` a `\csname` made it (`\exp_args:NNc`).
   #[inline]
-  fn watch_meaning(&mut self, watched: MeaningWatch, key: SymStr, value: &Stored) {
+  fn watch_meaning(&mut self, watched: fn(&str) -> WatchedName, key: SymStr, value: &Stored) {
     let kind = arena::with(key, watched);
     if kind != WatchedName::No
       && let Some(standing) = self.meaning.get(&key).and_then(|stack| stack.front())
@@ -1197,8 +1197,7 @@ impl State {
     if table_name == TableName::Meaning {
       self.journal_touch(table_name, key);
       let origin = crate::definition::origin::current_origin();
-      // (not LaTeXML's own code, which every conversion's preload runs and which assigns no such name: the name test is
-      // the cost, 1 M instructions of an empty article)
+      // (not LaTeXML's own code, which every conversion's preload runs and which assigns no such name)
       if let Some(watched) = self.meaning_watch
         && matches!(
           origin,
@@ -1206,8 +1205,9 @@ impl State {
             | crate::definition::origin::DefinitionOrigin::Document
             | crate::definition::origin::DefinitionOrigin::Format
         )
+        && arena::first_bytes(key).is_some_and(|[_, second, third]| watched.may_take(second, third))
       {
-        self.watch_meaning(watched, key, &value);
+        self.watch_meaning(watched.select, key, &value);
       }
       if matches!(
         origin,
@@ -2456,13 +2456,26 @@ pub enum WatchedName {
   RelaxIsUnset,
 }
 
-/// A selection of names for [`watch_meanings`].
-pub type MeaningWatch = fn(&str) -> WatchedName;
+/// A selection of names for [`watch_meanings`]. Asked of every assignment a document or a raw file makes, so the bytes after a
+/// name's backslash that `select` can take are the only cost of any other name: 1 of 3 at the second, one at the third.
+#[derive(Clone, Copy)]
+pub struct MeaningWatch {
+  pub second_byte: [u8; 3],
+  pub third_byte:  u8,
+  pub select:      fn(&str) -> WatchedName,
+}
+
+impl MeaningWatch {
+  #[inline]
+  fn may_take(&self, second: u8, third: u8) -> bool {
+    third == self.third_byte && self.second_byte.contains(&second)
+  }
+}
 
 /// Watch the meanings of the control sequences whose names `select` takes, from now on: any later assignment by a document,
 /// a raw file or a format file that changes the standing meaning of one, however local, is seen by
 /// [`watched_meaning_changed`] for the rest of the conversion; a new name has none to change. A native path that stands for a family of macros answers only while they are what it ports, at
-/// the cost of `select` per meaning assignment and none per use (latexml_engine `l3fp_native`).
+/// the cost of a test by two bytes per such assignment and none per use (latexml_engine `l3fp_native`).
 pub fn watch_meanings(select: MeaningWatch) {
   let mut state = state_mut!();
   state.meaning_watch = Some(select);

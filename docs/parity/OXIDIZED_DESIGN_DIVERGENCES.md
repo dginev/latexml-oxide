@@ -32245,7 +32245,10 @@ canonical (an exponent as `\int_value:w` writes it, four blocks of four digits),
 arithmetic on it. An `\outer` token in a macro's argument, a macro a frontmatter watch observes (`state::setter_call_is_observed`), and an
 expression past `parse::MAX_DEPTH` (400 levels of `operand` and `one` and a function's commas, about 200 of `(`, whose stack use is 172 KB in a
 release build and is `maybe_grow`n) decline as well. The macro's own run then reports or is Fatal as it would: `1^1^…` at 2,000 terms, 1,000,000 of
-`(`, rc=1. So does a conversion within 6,000 levels of the expansion limit. A long flat expression (`1+1+…`) is a loop and stays native.
+`(`, rc=1. So does a conversion within 6,000 levels of the expansion limit. A long flat expression (`1+1+…`) is a loop and stays native. So does a tab mark
+the macro's run would read at `align_state` 0, which ends the cell (tex.web §342), with the Errors and the value that follow: wherever the parser reads one (the
+infix, an operand, a `\csname`, `\one &`, and `\one{&}` by its brace level), by the gullet's own count (`parse::tab_mark_ends_cell`). A `{…}`-wrapped cell, an
+`\edef`'s body and anything outside an alignment end nothing and stay native: over the census's 346 manuals a catcode-4 `&` or `|` is read 5,448 times, in 6 of them, and none goes raw.
 
 **While it may answer.** Only while l3fp is what this module ports. `state::watch_meanings` watches `\__fp_…`, `\c__fp_…`, `\s__fp…` and `\c_…_fp`: an
 assignment that changes one, however local (a group's end does not undo the verdict), ends the native path for the rest of the conversion. Words
@@ -32254,10 +32257,13 @@ all one rule; so a name the parser knows means what it did at the install. No ch
 `hoist_top_frame_delta`), a first definition (over the `\relax` a `\csname` made, for all but the `\s__fp…` marks, which are `\relax` by meaning),
 what l3fp assigns as it runs (`\__fp_tmp:w`, `\__fp_function_arg_o:w`) and what only a flag's path reaches, which the parser declines
 (`\fp_trap:nn`'s targets). Only assignments by a document, a raw file or a format file are looked at: a binding's or a pool's code assigns no such name, and
-every conversion's preload is thousands of them. Its cost is one name test per such assignment and none per use: an empty article 0.02 % over base P1.
+every conversion's preload is thousands of them. Its cost is a test of a name's second and third bytes per such assignment (`MeaningWatch`, without the interner's guard), the name's own test
+only for `\__`, `\c_` and `\s_`, and none per use: figures in docs/performance/PERFORMANCE.md.
 
 **What can still tell.** A document's redefinition of the kernel's or TeX's own control sequences l3fp's macros use (`\exp_after:wN`, `\use_i:nn`,
-`\number`), which the macros would obey and the native path does not read (the door itself would break on most); a hand-written call of
+`\int_value:w`), which the macros would obey and the native path does not read (the door itself would break on most); `\number`, `\the`, `\csname`, `\numexpr`, `\dimexpr`, `\relax`
+redefined or let are equal both ways, since the macros use the `\tex_…:D` names. A watched constant's value, which is no meaning: `\int_gset:Nn \c__fp_big_middle_shift_int {0}` before `1/3` is 0 Errors native, 1 Error
+and 1 Fatal raw, 25 `!` in pdflatex; no file of TeX Live does this. A hand-written call of
 `\__fp_parse_operand:Nw \c__fp_prec_end_int \__fp_parse_expand:w …` is answered like the door's. The token and time budgets see fewer reads.
 
 **The arithmetic is a port, not a reimplementation.** `+ - * /`, `sqrt` and the number reader round correctly to 16 digits in the
@@ -32271,7 +32277,7 @@ division, the Taylor loops, the argument reductions and both intarrays are trans
 **Years.** Installed at the end of `LoadFormat('latex')`, after the dump's apply: the dumps do not change, and a later raw
 `expl3-code.tex` trips the watch. Only over l3fp sources it was held against, by `\ExplLoaderFileDate` and the bodies of the door, the operand
 macro and `\__fp_parse_infix_end:N`: 2025-11-06 (TL 2025) and 2026-01-19 (the host's Debian tree), which differ in the door's
-`\group_align_safe_begin:` alone. Any other year keeps its macros, because before 2025 the separator was `;` and the numerics are unverified here.
+`\group_align_safe_begin:` alone. That guard is in the count the tab-mark rule reads, so TL 2025's `1&&1` at brace level 0 of a cell is the macro's, Errors and all, and the same cell on 2026-01-19 is native, as each year's macro has it. Any other year keeps its macros, because before 2025 the separator was `;` and the numerics are unverified here.
 
 `LATEXML_L3FP_NATIVE=0` installs nothing; `LATEXML_L3FP_CHECK=1` runs the macro's own run on every answer and reports an Error naming the
 argument where the tokens differ, which cannot see what a run reports; `LATEXML_L3FP_TRACE=1` prints the answers and the fallbacks by reason at the
@@ -32282,6 +32288,6 @@ thread's end.
 Guards `perfect_kernel_batchp2::{the_hard_values_are_pdflatexs, a_seeded_slice_matches_pdflatex, what_it_declines_is_the_raw_macros,
 it_expands_when_the_raw_parser_does, an_expression_in_a_printed_title_stays_a_field, a_dimension_too_large_is_reported_once,
 a_changed_name_of_l3fp_is_left_to_the_macros, the_doors_stay_the_formats_macros, a_stored_form_not_canonical_is_the_macros,
-a_deep_expression_is_the_macros}` (repros `expl3/l3fp_*`), each both ways byte-identical and with the native answers counted (`native_counts`), since
+a_deep_expression_is_the_macros, a_tab_mark_that_ends_a_cell_is_the_macros}` (repros `expl3/l3fp_*`), each both ways byte-identical and with the native answers counted (`native_counts`), since
 the raw macro would pass them alone. **Left, each a fallback (speed only):** `\numexpr` and `\dimexpr` of more than one number; `\pgfkeysvalueof`,
 `\arabic` and other native-bodied macros; conditionals; macros with delimited parameters; `\seq_item:Nn`, `\clist_item:nn`.

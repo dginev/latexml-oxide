@@ -10,7 +10,7 @@
 //! leaves for `\__fp_parse_after:ww`, `\exp_end_continue_f:w <fp>@ \__fp_parse_infix_end:N` (`\s__fp_expr_stop` still on the
 //! input), through the ordinary path of a macro's expansion (`invoke_expansion`, whose `inherit_field_prov` a printed
 //! `\@title` needs). On any other call, and on anything the native path does not handle with certainty (`Decline`: an
-//! unknown token, a tuple, `nan`, `rand`, a flag or a message of any kind), nothing has happened and the macro runs as
+//! unknown token, a tuple, `nan`, `rand`, a flag or a message of any kind, a tab mark that ends a cell), nothing has happened and the macro runs as
 //! defined over the input as it stands. So `\meaning`, the prefixes and a one-step `\exp_after:wN` of either door and of
 //! this macro are the format's, and a tuple, a flag or a message is the macro's own.
 //!
@@ -74,21 +74,13 @@ const NOT_WATCHED: &[&str] = &[
 
 /// Is `name` one of l3fp's own control sequences whose meaning the answers depend on? The marks `\s__fp…` are `\relax` by
 /// meaning (`\scan_new:N`); any other is defined otherwise, so a `\relax` on it comes from a `\csname` over a word still to
-/// define. (Asked of every meaning assignment: the first test is by one byte.)
+/// define. (Asked only of a name that begins `\__`, `\c_` or `\s_`: [`install`]'s [`MeaningWatch`].)
 fn watched_name(name: &str) -> WatchedName {
-  let family = match name.as_bytes().get(1) {
-    Some(b'_') => name.starts_with("\\__fp_"),
-    Some(b's') => {
-      if name.starts_with("\\s__fp") {
-        return WatchedName::Yes;
-      }
-      false
-    },
-    Some(b'c') => {
-      name.starts_with("\\c_") && (name.starts_with("\\c__fp_") || name.ends_with("_fp"))
-    },
-    _ => false,
-  };
+  if name.starts_with("\\s__fp") {
+    return WatchedName::Yes;
+  }
+  let family = name.starts_with("\\__fp_")
+    || (name.starts_with("\\c_") && (name.starts_with("\\c__fp_") || name.ends_with("_fp")));
   if family && !NOT_WATCHED.contains(&name) {
     WatchedName::RelaxIsUnset
   } else {
@@ -538,7 +530,11 @@ pub(crate) fn install() -> Result<()> {
       Stored::Expandable(Rc::new(hooked)),
       Some(Scope::Global),
     );
-    watch_meanings(watched_name);
+    watch_meanings(MeaningWatch {
+      second_byte: *b"_cs",
+      third_byte:  b'_',
+      select:      watched_name,
+    });
     INSTALLED.with(|c| c.set(true));
   }
   Ok(())

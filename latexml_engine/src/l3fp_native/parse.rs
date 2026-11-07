@@ -12,7 +12,10 @@
 //! an active character) is a [`Decline`]. The result is the same token sequence the raw parser reads, so the answer is the same.
 
 use latexml_core::{
-  common::store::Stored,
+  common::{
+    local_assignments::{align_group_count, has_reading_alignment},
+    store::Stored,
+  },
   definition::{
     expandable::{Expandable, SpecialCall},
     register::Register,
@@ -154,11 +157,23 @@ pub(super) struct Parser {
   pub(super) via: Option<Token>,
 }
 
+const TAB_MARK: &str = "a tab mark that ends a cell";
+
+/// Would the macro's read of a tab mark, `level` braces into what it is reading, end the alignment's cell (tex.web §342: the
+/// v-part goes in at `align_state` 0)? The count is the gullet's own and the door's `\group_align_safe_begin:` is in it, so on the
+/// l3fp of 2026-01-19 this is only ever a cell with a stray `}`; on that of 2025-11-06, which has no such guard, it is
+/// `1&&1` in a cell at brace level 0, and what the macro's run reports is the answer. A `{…}`-wrapped cell, an `\edef`'s
+/// body and anything outside an alignment stay native.
+fn tab_mark_ends_cell(level: i32) -> bool {
+  has_reading_alignment() && align_group_count() + level == 0
+}
+
 /// The ASCII character of a character token the parser reads by its text, as `\token_to_str:N` does: a letter, an
 /// other, or the usual `^` and `&`, whatever the code. Anything else declines.
 #[inline]
 fn char_of(t: Token) -> R<u8> {
   match t.code {
+    Catcode::ALIGN if tab_mark_ends_cell(0) => Err(Decline(TAB_MARK)),
     Catcode::LETTER | Catcode::OTHER | Catcode::SUPER | Catcode::ALIGN => t.with_str(|s| {
       let b = s.as_bytes();
       if b.len() == 1 {
@@ -383,6 +398,9 @@ impl Parser {
       if matches!(t.code, Catcode::BEGIN | Catcode::END | Catcode::ACTIVE) {
         return self.decline_at(csname, "a csname of an unusual name");
       }
+      if t.code == Catcode::ALIGN && tab_mark_ends_cell(0) {
+        return self.decline_at(t, TAB_MARK);
+      }
       t.with_str(|s| name.push_str(s));
     }
     let cs = T_CS!(&name);
@@ -556,6 +574,9 @@ impl Parser {
           return self.decline_at(t, "a control sequence in a dimexpr");
         }
       }
+      if t.code == Catcode::ALIGN {
+        return self.decline_at(t, "a tab mark in a dimexpr");
+      }
       out.push(t);
     }
   }
@@ -634,24 +655,26 @@ impl Parser {
                 return Ok(out);
               }
             },
-            _ => self.refuse_in_argument(x)?,
+            _ => self.refuse_in_argument(x, depth)?,
           }
           out.push(x);
         }
       },
       Catcode::END => Err(Decline("an unbalanced group")),
       _ => {
-        self.refuse_in_argument(t)?;
+        self.refuse_in_argument(t, 0)?;
         Ok(vec![t])
       },
     }
   }
 
-  /// What the macro's read of an argument does more than take: an `\\outer` token's report (tex.web §336), and what the
-  /// gullet's read does with a comment or a marker.
+  /// What the macro's read of an argument does more than take, `level` braces in: an `\\outer` token's report (tex.web §336),
+  /// a tab mark that ends the cell (§342; `\one &`, and `\one{&}` is at 1), and what the gullet's read does with a comment
+  /// or a marker.
   #[inline]
-  fn refuse_in_argument(&mut self, t: Token) -> R<()> {
+  fn refuse_in_argument(&mut self, t: Token, level: i32) -> R<()> {
     let refused = match t.code {
+      Catcode::ALIGN if tab_mark_ends_cell(level) => Some(TAB_MARK),
       Catcode::COMMENT | Catcode::MARKER => Some("a comment or a marker in a macro's argument"),
       Catcode::CS | Catcode::ACTIVE => match lookup_meaning(&t) {
         Some(Stored::Expandable(e)) if e.is_outer => Some("an outer token in a macro's argument"),

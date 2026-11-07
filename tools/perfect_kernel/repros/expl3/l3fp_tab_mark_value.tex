@@ -1,0 +1,22 @@
+% mechanism: tex.web §342 inserts the column's v-part when a tab mark is read at `align_state` 0, and the door of TL 2025's l3fp has no
+%   `\group_align_safe_begin:` (that of 2026-01-19 has). So a `&` read at brace level 0 of a cell is the macro's, Errors included; the native
+%   path declines it (`l3fp_native::parse::tab_mark_ends_cell`) by the gullet's own count, so on the 2026 door it stays native. The value changes too: `[0]`, not `[1]`.
+% witness: review of batch P2r2, no arXiv paper
+% oracle:  pdflatex: 137 `!`, the first `You can't use \unskip after \the`
+% engines: rust: native and raw byte-identical (Perl has no native path)
+% expect:  TL 2025: 6 Errors, 0 Warnings, `[0]` (P2r2 native: 0 Errors, `[1]`)
+% status:  GREEN
+\documentclass{article}
+\ExplSyntaxOn
+\cs_new:Npn \FT #1 { [\fp_to_tl:n {#1}] }
+\ExplSyntaxOff
+\begin{document}
+\ExplSyntaxOn
+\begin{tabular}{ccc}
+a & \FT{1&&0} & c \\
+d & \FT{2+1} & \FT{1&&1} \\
+\fp_compare:nTF {1&&1} {y} {n} & b & c \\
+\end{tabular}
+\halign{#&#\cr \FT{1&&0} & x \cr}
+\ExplSyntaxOff
+\end{document}

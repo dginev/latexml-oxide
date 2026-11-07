@@ -1,0 +1,24 @@
+% mechanism: tex.web §342 inserts the column's v-part when a tab mark is read at `align_state` 0, and the door of TL 2025's l3fp has no
+%   `\group_align_safe_begin:` (that of 2026-01-19 has). So a `&` read at brace level 0 of a cell is the macro's, Errors included; the native
+%   path declines it (`l3fp_native::parse::tab_mark_ends_cell`) by the gullet's own count, so on the 2026 door it stays native. The control: outside an alignment, in a `{…}`-wrapped cell, in an `\edef`'s body and in an argument's braces a `&` ends nothing.
+% witness: review of batch P2r2, no arXiv paper
+% oracle:  pdflatex: 0 `!`, [1][1][1][2] [1] xy x1 [2] [1] x
+% engines: rust: native and raw byte-identical, all answered natively
+% expect:  0 Errors, 0 Warnings
+% status:  GREEN
+\documentclass{article}
+\ExplSyntaxOn
+\cs_new:Npn \FT #1 { [\fp_to_tl:n {#1}] }
+\cs_new:Npn \ampamp { && }
+\cs_new:Npn \one #1 {1}
+\ExplSyntaxOff
+\begin{document}
+\ExplSyntaxOn
+\FT{1&&1}\FT{1||0}\FT{1\ampamp 1}\FT{\one & + 1}
+\begin{tabular}{cc}
+{\FT{1&&1}} & {x\fp_compare:nTF {1&&1} {y} {n}} \\
+\fp_set:Nn \l_tmpa_fp {1&&1} x\fp_use:N \l_tmpa_fp & \FT{\one{&} + 1} \\
+\end{tabular}
+\halign{#&#\cr {\FT{1&&1}} & x \cr}
+\ExplSyntaxOff
+\end{document}
