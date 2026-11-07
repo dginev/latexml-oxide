@@ -8,15 +8,17 @@
 
 Sweep #150 on `d6e175bacb` (binary int140a), 180 s, 8 GB, its timeouts re-run on quiet cores (the worklist below keeps its first-pass statuses). Sweep 902 on M2 (`f145413b64`), the same protocol, before the review's fix rounds.
 
-| Measure | #149 (2026-10-11, `e57be39640`) | #150 (2026-11-06) | 902, M2 (2026-11-06) |
-|---|---:|---:|---:|
-| Goal set 1,552, passing G1-G4 | 1,549 (99.81 %) | 1,531 (98.65 %) | 1,550 (99.87 %) |
-| G1 unclean / G2 invalid / G3 below 95 % / G4 over 180 s | 0 / 1 / 0 / 2 | 10 / 6 / 5 / 0 | 0 / 0 / 0 / 2 |
-| In scope 1,602, clean | 1,590 (99.25 %) | 1,582 (98.75 %) | 1,590 (99.25 %) |
-| Whole corpus 2,374: clean; no Fatal or timeout | | 1,945 (81.93 %); 2,311 (97.35 %) | |
-| In scope, clean + valid + raw recall ≥ 95 %, no classification (first pass) | 1,363 (85.08 %) | 1,350 (84.27 %) | |
+| Measure | #149 (2026-10-11, `e57be39640`) | #150 (2026-11-06) | 902, M2 (2026-11-06) | #152, int142a (2026-11-06) |
+|---|---:|---:|---:|---:|
+| Goal set 1,552, passing G1-G4 | 1,549 (99.81 %) | 1,531 (98.65 %) | 1,550 (99.87 %) | **1,552 (100 %)** |
+| G1 unclean / G2 invalid / G3 below 95 % / G4 over 180 s | 0 / 1 / 0 / 2 | 10 / 6 / 5 / 0 | 0 / 0 / 0 / 2 | 0 / 0 / 0 / 0 |
+| In scope 1,602, clean | 1,590 (99.25 %) | 1,582 (98.75 %) | 1,590 (99.25 %) | 1,592 (99.38 %) |
+| Whole corpus 2,374: clean; no Fatal or timeout | | 1,945 (81.93 %); 2,311 (97.35 %) | | 1,964 (82.73 %); 2,316 (97.56 %) |
+| In scope, clean + valid + raw recall ≥ 95 %, no classification (first pass) | 1,363 (85.08 %) | 1,350 (84.27 %) | | |
 
 Vs #149: status worse on 53 manuals, better on 220; errors 11,246 → 11,278, up on 44, down on 85. **None comes from Bundle int140a:** 21 of them run on int139c give the same status and error count.
+
+#152 (`pk/int142a`: `pk/P1`, `pk/M3`) meets the goal bar: G1-G4 are 0 on the 1,552, and no manual has a Fatal or timeout it didn't have at #149 (G5 58 rows against #149's, 10 gone, 0 new). `pgf-interference-en`, `-de` pass on P1's levers alone, at the ceiling's margin: the native l3fp evaluator (`pk/P2`) takes them to about 30 s. A/B 28,354: 18 changed, E 46,417 → 46,081, F 173 → 172, worse only by 2405.15073's literal `\normalfont` text going.
 
 ## The clusters
 
