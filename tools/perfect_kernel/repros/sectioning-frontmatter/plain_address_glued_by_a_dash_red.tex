@@ -1,0 +1,14 @@
+% mechanism: `labels.rs` `plain_addresses` (around :1125) doesn't split an address from a word glued to it by a dash: name `Ann`, e-mail
+%   `Able—ann@a.org`; the guard `an_address_glued_to_a_dash_leaves_the_name` pins the e-mail text with its dashes, as int143b writes it.
+% witness: none on a real paper (review revZ14r3); sibling of 1006.4832
+% oracle:  pdflatex 0 errors: "Ann Able—ann@a.org"
+% engines: Perl has no reading. int143b, Z14r2, Z14r3: name "Ann", e-mail "Able—ann@a.org"
+% expect:  0 errors; one creator "Ann Able" with e-mail ann@a.org
+% status:  RED
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able---ann@a.org}
+\maketitle
+Body.
+\end{document}

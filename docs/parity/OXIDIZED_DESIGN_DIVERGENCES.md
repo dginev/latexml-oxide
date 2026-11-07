@@ -32428,7 +32428,7 @@ lines, hep-ph0108215's and 1605.02212's lettered and starred `\address` lines we
 or an API call's piece, is made from its tokens and cut of the same addresses (`Op::Make`'s `cut`). An entry given back leaves
 `Resolved::taken`, which the plan reads as the entries it makes cut. An address today's prints is no reason to keep the take-out
 where the reading gave it the entry's only carrier while the entry prints another author's own address too: the line lists the
-block's addresses (2403.12766's `20200142@hznu.edu.cn`, Qian Wang's, which the order fix above had written as `$^6$NYU Shanghai`'s
+block's addresses (2403.12766's `20200142@hznu.edu.cn`, Qian Wang's, which the any-order join alone would write as `$^6$NYU Shanghai`'s
 Zheng Zhang's e-mail). **Its fail-safe** (`write_observed_frontmatter`): where the
 plan cannot make such an entry cut, an entry kept for an address today's prints is given back whole and the plan writes the rest,
 as before Z14r2 (astro-ph0007423's own `\address{e--mail: … and …}`, whose `e–mail:` the cut reads as no label, had been declined

@@ -1,0 +1,14 @@
+% mechanism: an address glued to a name by a comma with no space reads as a second name: `\author{Ann Able,ann@a.org}` makes a second creator
+%   `ann@a.org`.
+% witness: none on a real paper (review revZ14r3)
+% oracle:  pdflatex 0 errors: "Ann Able,ann@a.org"
+% engines: Perl has no reading. int143b, Z14r2, Z14r3: two creators, "Ann Able" and "ann@a.org"
+% expect:  0 errors; one creator "Ann Able" with e-mail ann@a.org
+% status:  RED
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able,ann@a.org}
+\maketitle
+Body.
+\end{document}

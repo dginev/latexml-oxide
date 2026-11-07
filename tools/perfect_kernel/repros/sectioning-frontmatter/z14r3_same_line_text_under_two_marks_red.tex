@@ -1,0 +1,21 @@
+% mechanism: the reading keys an affiliation's entries by text, so two lines with the same text under different marks become one entry; the
+%   any-order join (`plan::joins_entries`) can't use it twice, the take-out declines and the output is today's: Ann's spelled address stays in
+%   Cat Cole's affiliation. With it, the guard `an_only_carriers_address_beside_others_is_not_written` pins int143b's fallback; the right
+%   expectation sits beside the OPEN `entry_address_owners` row.
+% witness: none on a real paper (review revZ14r3); related 2403.12766 (the reading's only-carrier owner)
+% oracle:  pdflatex 0 errors: two affiliations, 1 "Zeta Univ, Town A; ann.able@a.org", 2 "Zeta Univ, Town A"
+% engines: Perl has no reading. int143b, Z14r3: ann.able@a.org inside the affiliation of marks 1 (Ann and Cat)
+% expect:  0 errors; Ann's e-mail ann.able@a.org on Ann only; Ann and Cat "Zeta Univ, Town A" (1), Bob the same text (2)
+% status:  RED
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able\altaffilmark{1}, Bob Baker\altaffilmark{2}, and Cat Cole\altaffilmark{1}}
+\affil{\altaffilmark{1}\,Zeta Univ, Town A; ann.able@a.org\\
+\altaffilmark{2}\,Zeta Univ, Town A}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Body.
+\end{document}
