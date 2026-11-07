@@ -982,10 +982,29 @@ mod md5_tests {
 }
 
 thread_local! {
-  /// pdfTeX random-number state (xorshift64*), reset per conversion by the
-  /// engine's thread-state reset through [`pdftex_random_seed`].
+  /// pdfTeX random-number state (xorshift64*), reset per conversion ([`reset_pdftex_random`]).
   static PDFTEX_RANDOM: std::cell::Cell<u64> =
     const { std::cell::Cell::new(0x9E37_79B9_7F4A_7C15) };
+  /// The generator of a speculative digestion (`gullet::speculative_digestion`), whose draws and seeds the document's never see:
+  /// it draws what it may loop on, and the document's next draw is the one it would have been with no run before it.
+  static PDFTEX_RANDOM_SPECULATIVE: std::cell::Cell<u64> =
+    const { std::cell::Cell::new(0x9E37_79B9_7F4A_7C15) };
+}
+
+/// A conversion's start: both generators at the default fixed seed, so a document converts as it does alone on a thread that
+/// converted another. A rehearsal's draw decides what a block reads (`\ifnum\pdfuniformdeviate 2=0 Ann\else Bob\fi`).
+pub fn reset_pdftex_random() {
+  PDFTEX_RANDOM.with(|c| c.set(0x9E37_79B9_7F4A_7C15));
+  PDFTEX_RANDOM_SPECULATIVE.with(|c| c.set(0x9E37_79B9_7F4A_7C15));
+}
+
+/// The generator in use ([`PDFTEX_RANDOM_SPECULATIVE`]).
+fn with_pdftex_random<R>(use_it: impl FnOnce(&std::cell::Cell<u64>) -> R) -> R {
+  if in_speculative_digestion() {
+    PDFTEX_RANDOM_SPECULATIVE.with(use_it)
+  } else {
+    PDFTEX_RANDOM.with(use_it)
+  }
 }
 
 /// Re-seed the pdfTeX generator (`\pdfsetrandomseed`; 0 selects the default
@@ -996,12 +1015,12 @@ pub fn pdftex_random_seed(seed: i64) {
   } else {
     (seed as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1
   };
-  PDFTEX_RANDOM.with(|c| c.set(s));
+  with_pdftex_random(|c| c.set(s));
 }
 
 /// Next 63-bit pseudo-random value (xorshift64*).
 fn pdftex_random_next() -> u64 {
-  PDFTEX_RANDOM.with(|c| {
+  with_pdftex_random(|c| {
     let mut x = c.get();
     x ^= x >> 12;
     x ^= x << 25;

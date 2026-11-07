@@ -17,18 +17,22 @@
 //! converted with an empty picture. Here the path is accumulated per subpath
 //! and stroked/filled as `ltx:line` polylines (curves and arcs sampled), which
 //! renders what Perl drops. Witness 2503.14673 (pict2e error blocking 1 paper).
-use std::cell::RefCell;
-
 use crate::prelude::*;
 
-thread_local! {
-  /// The current pict2e path: one point list per subpath (`\moveto` opens one),
-  /// in `\unitlength` multiples. `\strokepath`/`\fillpath` consume it.
-  static PICT2E_PATH: RefCell<Vec<Vec<(f64, f64)>>> = const { RefCell::new(Vec::new()) };
+/// The graph being built: what `\pIIe@GRAPH` holds. A global token register (pict2e.sty:186 `\global\pIIe@GRAPH`, :203
+/// emptied by a stroke or a fill alone), so a path left unstroked is stroked with the next one, in another picture too, as
+/// pdflatex prints it (`0 0 m 1 1 l 2 2 m 3 3 l S`), and it is state a rollback puts back: a rehearsal's path, stroked once
+/// more at the body's `\strokepath`, gave one more line on and off alike.
+#[derive(Clone, Default)]
+struct Graph {
+  /// One point list per subpath (`\moveto` opens one), in `\unitlength` multiples. `\strokepath`/`\fillpath` consume it.
+  path:     Vec<Vec<(f64, f64)>>,
   /// The points `\pIIe@add@nums`/`\pIIe@add@CP` put on the graph ahead of the operator `\pIIe@addtoGraph` adds
   /// (pict2e.sty:206-217), in `\unitlength` multiples.
-  static PICT2E_OPERANDS: RefCell<Vec<(f64, f64)>> = const { RefCell::new(Vec::new()) };
+  operands: Vec<(f64, f64)>,
 }
+
+static GRAPH: DocumentState<Graph> = DocumentState::new("pict2e_graph");
 
 /// `\unitlength` in sp, exact, as `{picture}`'s coordinates are scaled by it.
 fn unitlength_sp() -> Result<i64> { latexml_engine::base_utilities::unitlength_sp() }
@@ -51,8 +55,8 @@ fn pic_dim(d: Dimension) -> Result<f64> {
 }
 
 fn path_push(point: (f64, f64), new_subpath: bool) {
-  PICT2E_PATH.with(|p| {
-    let mut p = p.borrow_mut();
+  GRAPH.update(|graph| {
+    let p = &mut graph.path;
     if new_subpath || p.is_empty() {
       p.push(Vec::new());
     }
@@ -61,7 +65,7 @@ fn path_push(point: (f64, f64), new_subpath: bool) {
 }
 
 fn path_current() -> Option<(f64, f64)> {
-  PICT2E_PATH.with(|p| p.borrow().last().and_then(|s| s.last().copied()))
+  GRAPH.read(|graph| graph.path.last().and_then(|s| s.last().copied()))
 }
 
 /// Cubic Bezier from the current point, sampled into the current subpath.
@@ -94,9 +98,8 @@ fn path_arc(mode: i64, (cx, cy, r): (f64, f64, f64), start: f64, end: f64) {
 }
 
 fn path_close() {
-  PICT2E_PATH.with(|p| {
-    let mut p = p.borrow_mut();
-    if let Some(sub) = p.last_mut()
+  GRAPH.update(|graph| {
+    if let Some(sub) = graph.path.last_mut()
       && let Some(first) = sub.first().copied()
     {
       sub.push(first);
@@ -107,7 +110,7 @@ fn path_close() {
 /// Emit one `\lx@pic@polyline{}{closed}(x,y)…` per subpath and clear the path. A closed polyline returns to its
 /// start itself, so a subpath already closed by `\pIIe@closepath` (`\arc*`'s sector) drops its closing point.
 fn path_flush(closed: &str) -> Result<Tokens> {
-  let mut subpaths = PICT2E_PATH.with(|p| std::mem::take(&mut *p.borrow_mut()));
+  let mut subpaths = GRAPH.update(|graph| std::mem::take(&mut graph.path));
   let mut out = Vec::new();
   if closed != "0" {
     for sub in &mut subpaths {
@@ -204,11 +207,11 @@ LoadDefinitions!({
   );
   DefPrimitive!("\\lx@pIIe@operand {Dimension}{Dimension}", sub[(x, y)] {
     let point = (pic_dim(x)?, pic_dim(y)?);
-    PICT2E_OPERANDS.with(|o| o.borrow_mut().push(point));
+    GRAPH.update(|graph| graph.operands.push(point));
     Ok(Vec::new())
   });
   DefPrimitive!("\\pIIe@addtoGraph {}", sub[(op)] {
-    let operands = PICT2E_OPERANDS.with(|o| std::mem::take(&mut *o.borrow_mut()));
+    let operands = GRAPH.update(|graph| std::mem::take(&mut graph.operands));
     match (Expand!(op).to_string().trim(), operands.as_slice()) {
       ("m" | "moveto", [.., point]) => path_push(*point, true),
       ("l" | "lineto", [.., point]) => path_push(*point, false),

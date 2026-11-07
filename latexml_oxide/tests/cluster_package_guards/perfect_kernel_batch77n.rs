@@ -1435,7 +1435,8 @@ fn authblk_glued_symbol_mark_answered_by_its_affil() {
 /// A whole author block in one authblk `\author`, its marks glued to symbols (`$^{1\ast}$`, `$^{1\dagger}$`) and its
 /// legends inside it (2605.10201's shape): its `\\` reaches the kernel read since 108a, which reads the block: three
 /// creators, each mark's affiliation and each symbol's legend on the creators showing it (int139a: one creator, the
-/// block as printed, one `merged_creators` Error).
+/// block as printed, one `merged_creators` Error). A legend's text keeps its mark's ink, `${^\dagger}$`'s too, as the `$^{\ast}$`
+/// beside it does and the PDF prints it (before Z3 the walk from its script stopped at the brace, and the `†` was dropped).
 #[test]
 fn authblk_glued_symbols_in_one_author_block() {
   let (log, xml) = convert_with(
@@ -1449,7 +1450,7 @@ fn authblk_glued_symbols_in_one_author_block() {
   assert_eq!(creators(&xml), [
     r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id1"><sup xml:id="id1.1"><text font="italic" xml:id="id1.1.1">∗</text></sup> Equal contribution</note> </creator>"#,
     r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ Y</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1"><text font="italic" xml:id="id2.1.1">∗</text></sup> Equal contribution</note> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="†" role="thanks" xml:id="id3">Corresponding author</note> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="†" role="thanks" xml:id="id3"><sup xml:id="id3.1">†</sup> Corresponding author</note> </creator>"#,
   ]);
 }
 

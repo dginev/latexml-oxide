@@ -40,6 +40,9 @@ pub struct FieldDeclaration {
   open:         bool,
   /// the position of the invocation that made it, which a macro's expansion shares
   call:         u16,
+  /// the field's call it ran at, its token being one of the body of a macro the field defined ([`in_a_definition`]): that
+  /// token's position says where it was written, the call where it runs ([`FieldNotes::last_call`])
+  run_at:       Option<(u16, u16)>,
 }
 
 /// A call of a block break its binding declares (`Policy::block_breaks`), a command printing whatever the class makes it.
@@ -92,6 +95,9 @@ pub struct FieldNotes {
   read_expanded:    Option<(u16, Token)>,
   /// whether a declaration's call may still be being read ([`FieldDeclaration`] `open`)
   any_open:         bool,
+  /// the last call of a macro at a position no definition of the field holds, and as far as it read: what a token of a body the
+  /// field defined runs at ([`FieldDeclaration::run_at`]), `\def\m{\def\n{1}} Ann\m`'s `\n` at `\m` past " Ann"
+  last_call:        Option<(u16, u16)>,
 }
 
 thread_local! {
@@ -128,10 +134,107 @@ pub fn field_notes_begin(tokens: &Tokens, block_breaks: &[(&str, BreakKind)]) {
   set_field_notes_hook(Some(field_notes_after));
 }
 
-/// End the notes ([`field_notes_begin`]).
+/// End the notes ([`field_notes_begin`]), each declaration's span a run of the field a replay can read
+/// ([`settle_declarations`]).
 pub fn field_notes_end() -> FieldNotes {
   set_field_notes_hook(None);
-  FIELD_NOTES.with(RefCell::take)
+  let mut notes = FIELD_NOTES.with(RefCell::take);
+  if !notes.declarations.is_empty() {
+    settle_declarations(&mut notes);
+  }
+  notes
+}
+
+/// The spans of a block's declarations as runs the emitter can replay, in order, none reading what another reads. Where the
+/// invocation's reach is true of the reading but not of the content:
+/// - **A body's definition.** One in the body of a macro defined in the field runs at the macro's call, its tokens still at their
+///   own positions, inside the braces of what defined them: `\def\m{\newcount\qq}\m`'s `\qq` read [3,7] over `\m`'s [0,6]. Its span is
+///   that call, wherever the call is ([`FieldDeclaration::run_at`]): `\def\s{\def\t{1}} Ann Bob\s`'s `\t` holds `\s`, not " Ann Bob";
+///   `\def\m{\def\n{\def\o{1}}}\m\n`'s `\n` holds `\m` and its `\o` holds `\n`; what one call defines is one declaration
+///   (`\def\x{\def\y{1}\def\z{2}}\x`). With no call known (`\aftergroup`), it starts past that definition; with nothing left of its own
+///   its names go with the next, or the last.
+/// - **A peek.** A macro testing the next token read as far as it (`\mstar\mfile`, whose `\@ifstar` peeked at `\mfile`, itself a
+///   declaration's call): outside the braces of the earlier, the later one holds its own call, and the earlier ends there.
+/// - **Brace balance.** A definer whose next token is no later one of the field read as far as the call around it read: the end of an
+///   argument, `\textbf{\def\x{1}}`, `\AtBeginDocument{\def\x{1}\def\y{2}}`'s last, holds a closing brace of what opened before it. The
+///   span ends before it.
+#[cold]
+#[inline(never)]
+fn settle_declarations(notes: &mut FieldNotes) {
+  let field = std::mem::take(&mut notes.field);
+  let step = |pos: u16| {
+    field
+      .get(usize::from(pos))
+      .copied()
+      .flatten()
+      .map_or(0, |t| t.group_step())
+  };
+  let mut settled: Vec<FieldDeclaration> = Vec::with_capacity(notes.declarations.len());
+  // (the spans as noted: a definition holds its body's tokens wherever those run)
+  let mut written: Vec<(u16, u16)> = Vec::with_capacity(notes.declarations.len());
+  let mut waiting: Vec<SymStr> = Vec::new();
+  let add = |to: &mut Vec<SymStr>, names: Vec<SymStr>| {
+    for name in names {
+      if !to.contains(&name) {
+        to.push(name);
+      }
+    }
+  };
+  for mut declaration in notes.declarations.drain(..) {
+    let at = declaration.start;
+    let in_a_body = written
+      .iter()
+      .any(|&(s, e)| s <= at && at < e && (s..at).map(step).sum::<i32>() > 0);
+    written.push((declaration.start, declaration.end));
+    if in_a_body && let Some((call, reach)) = declaration.run_at {
+      declaration.start = call;
+      declaration.end = declaration.end.max(reach);
+      if let Some(last) = settled.last_mut()
+        && last.start == call
+      {
+        last.end = last.end.max(declaration.end);
+        add(&mut last.definees, declaration.definees);
+        continue;
+      }
+    }
+    if let Some(last) = settled.last_mut()
+      && declaration.start < last.end
+    {
+      let inside = (last.start..declaration.start).map(step).sum::<i32>() > 0;
+      if inside {
+        declaration.start = last.end;
+      } else if declaration.start > last.start {
+        last.end = declaration.start;
+      } else {
+        add(&mut last.definees, declaration.definees);
+        continue;
+      }
+    }
+    if declaration.end <= declaration.start {
+      waiting.append(&mut declaration.definees);
+      continue;
+    }
+    if !waiting.is_empty() {
+      let mine = std::mem::replace(&mut declaration.definees, std::mem::take(&mut waiting));
+      add(&mut declaration.definees, mine);
+    }
+    settled.push(declaration);
+  }
+  for declaration in &mut settled {
+    let mut depth = 0i32;
+    for pos in declaration.start..declaration.end {
+      depth += step(pos);
+      if depth < 0 {
+        declaration.end = pos;
+        break;
+      }
+    }
+  }
+  if let Some(last) = settled.last_mut() {
+    add(&mut last.definees, waiting);
+  }
+  notes.declarations = settled;
+  notes.field = field;
 }
 
 /// Clears the hook however the rehearsal ends, a panic under a worker's `catch_unwind` too: it is set only while
@@ -287,7 +390,7 @@ fn with_expandable(token: &Token, test: impl Fn(&Expandable) -> bool) -> bool {
 /// macro reached opens a run ([`keep_declared`]), its arguments of the field's own positions none of it (`\mbox{\def\x{1}}`,
 /// `\parbox`); a block break its binding declares is noted; it is kept for what leads to the next invocation ([`read_lead`]).
 /// One for every tie of a block of a thousand names (1507.02068): a meaning is looked up only for a token no field holds there.
-fn field_expansion(token: &Token) {
+fn field_expansion(token: &Token, cover: FieldCover) {
   let pos = field_prov_pos(token.prov);
   FIELD_NOTES.with(|notes| {
     let notes = &mut *notes.borrow_mut();
@@ -298,6 +401,15 @@ fn field_expansion(token: &Token) {
       .flatten()
       .as_ref()
       == Some(token);
+    if own && !in_a_definition(&notes.declarations, pos) {
+      let call = (pos, cover.end.max(pos + 1));
+      notes.last_call = Some(call);
+      if notes.any_open {
+        for declaration in &mut notes.declarations {
+          declaration.open &= declaration.run_at.is_none_or(|run_at| run_at == call);
+        }
+      }
+    }
     let owned = !own && with_expandable(token, |meaning| meaning.get_origin().is_latexml_owned());
     if !notes.kernel_runs.is_empty() || owned {
       let held = pushback_len();
@@ -325,6 +437,13 @@ fn field_expansion(token: &Token) {
   });
 }
 
+/// Whether `pos` is inside a definition the field made: its token is one of a macro's body when it runs.
+fn in_a_definition(declarations: &[FieldDeclaration], pos: u16) -> bool {
+  declarations
+    .iter()
+    .any(|declaration| declaration.start < pos && pos < declaration.end)
+}
+
 /// Where what leads to an invocation starts ([`FieldNotes::lead`]): the prefixes waiting for it, and the `\expandafter`s last expanded
 /// before it, the inner ones first (`\expandafter\def\expandafter\y…`); any other expansion ends those, a prefix waiting past it.
 fn read_lead(waiting: Option<u16>, expanded: Option<(u16, Token)>) -> Option<u16> {
@@ -340,7 +459,7 @@ fn read_lead(waiting: Option<u16>, expanded: Option<(u16, Token)>) -> Option<u16
 fn field_notes_after(token: &Token, cover: FieldCover, invocation: FieldInvocation<'_>) {
   match invocation {
     FieldInvocation::Digested(result) => field_invocation(token, cover, result),
-    FieldInvocation::Expanded => field_expansion(token),
+    FieldInvocation::Expanded => field_expansion(token, cover),
   }
 }
 
@@ -435,8 +554,19 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
     }
     notes.errors_seen = errors;
     if notes.any_open {
+      let in_a_body = in_a_definition(&notes.declarations, pos);
       notes.declarations.retain_mut(|declaration| {
-        if declaration.open {
+        if declaration.open
+          && let Some((call, reach)) = declaration.run_at
+        {
+          // (a box of its call or of the body it runs prints at that call, which a declaration of it would print twice; one of what
+          // encloses the call, `\textbf{\m}`, does not)
+          if pos >= reach {
+            declaration.open = false;
+          } else if !result.is_empty() && (pos >= call || in_a_body) {
+            return false;
+          }
+        } else if declaration.open {
           if pos >= declaration.end
             || (pending.field == cover.field && pending.end > declaration.end)
           {
@@ -489,6 +619,9 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
           depth: depth.unwrap_or(0).saturating_sub(notes.depth),
           open: true,
           call: pos,
+          run_at: notes
+            .last_call
+            .filter(|_| in_a_definition(&notes.declarations, pos)),
         });
         notes.any_open = true;
       },

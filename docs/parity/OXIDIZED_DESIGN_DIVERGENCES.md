@@ -17296,8 +17296,8 @@ setter assigned before the error and we do not — a divergence by design, the f
 replayed_setter_error_rolls_back`: pdflatex Count 1, ours 0; the 65e review's docset3 probe, a document setter that
 `\global\advance`s then errs: pdflatex "Authors: 1.", ours "Authors: 0."). The journal covers every assignment however
 scoped, `\global` included, and the in-place edits of the tables (`push_value`, `assign_mapping`, `lookup_value_mut`,
-`checkout_value`/`checkin_value`, named-scope activation, `rebind_let_copies`, the graphics path list); not a font's
-parameter array (`Stored::FontDimens`, edited in place), the fallback/provide-only name sets, `tag_properties`,
+`checkout_value`/`checkin_value`, named-scope activation, `rebind_let_copies`, the graphics path list), and since #978 a font's
+parameter array (`Stored::FontDimens`, edited in place), an input stream and a box register's dimensions; not the provide-only name sets, `tag_properties`,
 `pending_resources`, the prefixes or the conditional stack (state fields outside the tables). A rollback needs the
 very frames it began with (each one opened since closed, none of them closed); when it cannot apply, the replay's
 assignments and its diagnostics both stay, with an Info saying so. A journal whose guard dropped while the state was
@@ -24262,8 +24262,8 @@ family by the per-family gate.
 papers written, 0 distinct frontmatter words lost or gained (148 lose only duplicated words), schema errors equal in all
 315 byte-changed papers (jing, 67 = 67), at creator level 165 better and the 32 the counter flagged all corrections (a
 "These authors contributed equally" line made the notes of the names showing its mark; a block of every name's
-affiliations given by mark). Three defects, fixed: (1) a mark set in `\( … \)` was cut without its `\(` (`piece_tokens`
-counts LaTeX's `\(`/`\)` as the shifts they spell, with the spaces inside them, and a `\protect` before), so each piece
+affiliations given by mark). Three defects, fixed: (1) a mark set in `\( … \)` was cut without its `\(` (the cut takes the
+formula whole, #978), so each piece
 re-digested `^{1} \)Univ A \\ \(` — 2 errors in each of hep-ph0110378 and 2307.12984, now 0 and both cut as the PDF
 prints; (2) an item today's places under several names is numbered once per copy (`footnotex3`, `modify_id`'s
 `footnotex3a`), and taking the copy that held the plain id left the suffixed one standing alone — the copy that stays
@@ -27850,7 +27850,7 @@ ModelBest.Inc \xspace$^5$ Renmin University of China \xspace$^6$ BUPT \xspace$^7
 entries each requested by its mark (2404.02078, 2509.24142) — or one legend line the reading takes for a note
 (`\textsuperscript{*}Equal contribution` under starred names, ruling 2: 2407.07614), each entry is made from its line's
 tokens (`block_line_tokens`: from the mark it opens with, the Mark event printed just before it with only spaces
-between — or the shift closing the mark's formula, `$^{1}$Univ X`, whose Mark spans its script: 94a —, to its end, balanced as `piece_tokens` balances a cut piece, past the spaces
+between — or the shift closing the mark's formula, `$^{1}$Univ X`, whose Mark spans its script: 94a —, to its end, balanced as `writer::Field::content_of` balances a cut piece, past the spaces
 before a group it closes) for the authors the reading gives it, an
 affiliation through `\lx@affiliation@withinst`, a legend as the kernel's author note, and today's item taken. A made
 affiliation carries no entry mark, as today's copies hold none (94a r2's rule for every made item, OD #928:
@@ -32377,3 +32377,21 @@ a_changed_name_of_l3fp_is_left_to_the_macros, the_doors_stay_the_formats_macros,
 a_deep_expression_is_the_macros, a_tab_mark_that_ends_a_cell_is_the_macros}` (repros `expl3/l3fp_*`), each both ways byte-identical and with the native answers counted (`native_counts`), since
 the raw macro would pass them alone. **Left, each a fallback (speed only):** `\numexpr` and `\dimexpr` of more than one number; `\pgfkeysvalueof`,
 `\arabic` and other native-bodied macros; conditionals; macros with delimited parameters; `\seq_item:Nn`, `\clist_item:nn`.
+
+### 978. A span's content is read from the digested list, and what a speculative run edits in place is undone
+
+**Content.** The writer makes an entry from the tokens its span covers. A box covers what it prints, so a span stops short of the `$` and `{}` around a script. The walk back from a span over those tokens stopped at any switch: `$\rm ^{3}$He Lab` was no balanced run and the paper was not written (2105.07958's class; `revtex_affiliation_requested_switched_mark_cuts`, 88c's RED). `writer::Field` reads the formula's extent from the digested list (`events::lex_with_formulas`) and a mark's own print from its event, whatever opens or fills the formula (`\( ^{1} \)`, `\protect\(`, hep-ph0110378, 2307.12984; `${^1}$`, 1410.8534, astro-ph9807043; `\textbf{$^2$…}`, 2605.25195). Brace balance stays a read of the content, forward, and takes a mark's own font group from its opening brace (`{\bf $\rm ^{1}$} Univ X`); a group going on after its mark stays no cut (`\textit{$^{2}$H} Lab`, `cut_run_wrapped_isotope_is_entry_text`). A legend's `${^\dagger}$` keeps its printed mark (2605.10201's shape). `formula_span` is the formula's alone. Guards `perfect_kernel_batchz3::{a_cut_takes_each_formula_whole, a_cut_takes_a_group_it_closes, a_mark_in_its_wrapper_is_read_by_its_own_print}`. A Declaration's span is a run a replay can read (`field_notes::settle_declarations`, `a_declarations_span_is_a_balanced_run`). Dump: `formula_span`, a Declaration's `span` and `label`; no reader yet.
+
+**Isolation.** Perl has no speculative run. Ours undoes what the assignment journal sees; what is edited in place it did not see, in the rehearsal and in the title-page checks alike: `\fontdimen`, a box register's `\wd`, `\ht`, `\dp`, an `\openin` stream (a rehearsal took the document's next line), the pdfTeX generator; and keyvals' "seen" set kept the document's own Warning unsaid. Each is undone or kept apart now. With the observer on and off the XML outside the creators, E, F and W agree on every input of the hostile suite, but for the writer's second digestion of a cut field (below); the census of what a rollback leaves is `FRONTMATTER_DIGESTED_REFACTOR.md` "What a rollback leaves". Guards `perfect_kernel_batchz3::the_rehearsal_leaves_no_trace_*`; repro `observer_rehearsal_leaves_no_trace`.
+
+**A binding's document-wide state** was a thread-local no rollback reaches. It is now one value of the Value table (`state::DocumentState`), bound globally as the package's own macros are, in place outside a journal, a copy at the first change under one: pict2e's graph (pict2e.sty:186 `\global\pIIe@GRAPH`; pdflatex strokes a path left unstroked with the next, `0 0 m 1 1 l 2 2 m 3 3 l S`, and ours stroked it once more per speculative run, on and off), chemnum's counter and first uses (a real first use became a `ltx:ref` with no target), animate's open stack, biblatex's state, a stub's one report. A speculative run's raw read is no read `read_stand_in_copy` skips a copy for; it evaluates no Lua, whose globals no rollback reaches; a load in one is not noted. What a chunk prints is so not in a rehearsal's reading. Each thread-local's row is in the census. Guards `a_bindings_state_stands_for_one_run`, `a_rehearsals_read_is_no_read_of_a_copy`, `a_speculative_run_evaluates_no_lua`.
+
+**A mark's own group** is the digested list's fact, no reading of token catcodes: it prints its formulas alone (`Walker::note_a_formulas_group`), spacing, a switch, a color and a list's comma aside (`{$^1$\,} Univ X`, 1709.01760's shape, which token catcodes regressed); a command printing before them (`{\S $^1$}`) or a word after them is no such group. A run holds its environments in pairs (`\begin{tabular}…`: the last cell, lost in an Error, was the run's end). Guards `a_marks_own_group_is_read_from_its_ink`, `a_cut_holds_its_environments`. A mark's formula that opens a group where a line starts, at the field's start or right after a line break, by what digestion made, starts that group at its brace whatever goes on in it (`Formula::opens_line_in`, `\\ \normalsize{$^{1}$ Shemyakin…,} \normalsize{Moscow, Russia}`, 2005.08290, which fell to a nameless creator with no Error); after a comma it stays no cut, an isotope (`Univ A, {$^{2}$H} Lab, Rome $^{2}$Univ B`, where the base gave Bob "2 H Lab"). An isotope right after a line break is cut as on the base. Guard `a_group_a_mark_opens_at_a_lines_start_starts_at_its_brace`.
+
+**A named change: a replaced `\author`.** 2402.06922 loses four e-mails and the nameless `CISPA` creator the base took from a first `\author`: a second `\author` replaces it, and the PDF prints neither. `fm_checks` flags them LOST; that is right to do and this is not a loss.
+
+**A definer in a body the field defined** runs at the macro's call, its tokens at the positions they were written at. Its Declaration's span is that call (`FieldNotes::last_call`, the stamped invoker), never what lies between, which holds printed text Z4 would print twice; a box of the body takes it back. Guard `a_declaration_in_a_body_holds_its_call`.
+
+**The rehearsal's read budget** (R1's `gullet::read_budget`): 8,000,000 reads a run, 24,000,000 a conversion, a skip counted in `Warning:frontmatter:rehearsal_budget`; the data in the census. A block looping where nothing prints it no longer costs a conversion its limits. Guard `a_looping_block_ends_in_the_rehearsal_budget`.
+
+**Open:** the writer's second real digestion of a cut entry says the content's Error twice and moves auto-numbered `xml:id`s: RED `writer_second_digestion_says_an_error_twice_red`. Environments are paired by their spelling: RED `affiliation_cut_environments_by_spelling_red`. A group no formula's alone, or going on after a mark away from a line's start, is uncut where the base cut it, nothing lost: RED `affiliation_cut_group_siblings_stay_uncut_red`. No Lua in a rehearsal can lose a cut: RED `rehearsal_no_lua_loses_a_cut_red`.

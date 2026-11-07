@@ -1,0 +1,16 @@
+% mechanism: a rehearsal reads what its budget allows (`rehearsal_budget`, `gullet::read_budget`): past it, it is abandoned and rolled back (`SkipReason::OverBudget`), the conversion
+%   told so in one `Warning:frontmatter:rehearsal_budget`. A block nothing prints may loop: a first `\author` a second replaces
+% witness: brief Z3r2 (no corpus witness; the budget's figures, FRONTMATTER_DIGESTED_REFACTOR.md "What a rollback leaves")
+% oracle:  pdflatex 0 errors: "Ann Able" "Bob Baker" "Body stays."
+% engines: Perl has no rehearsal; Z3: 76.7 G instructions, a limit far past any block's
+% expect:  0 errors, 1 warning: rehearsal_budget; Ann and Bob, the body (perfect_kernel_batchz3::a_looping_block_ends_in_the_rehearsal_budget)
+% status:  GREEN (Z3r2)
+\documentclass{article}
+\newcommand\qloop{x\qloop}
+\begin{document}
+\title{T}
+\author{First \qloop}
+\author{Ann Able \and Bob Baker}
+\maketitle
+Body stays.
+\end{document}

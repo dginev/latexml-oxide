@@ -13,7 +13,8 @@ use latexml_core::definition::origin::watch_frontmatter_setter_calls;
 
 use super::{
   events::{
-    EmailMeaning, Event, EventKind, HeldError, SepKind, lex_events, mark_held, with_block_content,
+    EmailMeaning, Event, EventKind, HeldError, SepKind, lex_events, lex_with_formulas, mark_held,
+    with_block_content,
   },
   ledger::{Entry, Outcome, SkipReason, Stamp, reset_ledger, stamped_block_tokens, with_ledger},
   policy::{TitleMarks, policy_for},
@@ -170,12 +171,12 @@ fn read_at_flush() -> Result<()> {
           stamped_block_tokens(&block),
           title_marks,
           block_breaks,
-          lex_events,
+          lex_with_formulas,
         )
       })?;
       match rehearsal {
         Rehearsal::Done {
-          mut value,
+          value: (mut value, formulas),
           errors,
           warnings,
           declarations,
@@ -185,6 +186,7 @@ fn read_at_flush() -> Result<()> {
           mark_held(&mut value, &held);
           Outcome::Events {
             events: value,
+            formulas,
             errors,
             warnings,
             declarations,
@@ -597,6 +599,7 @@ pub fn fm_shadow_json() -> String {
               declarations,
               breaks,
               held: held_errors,
+              ..
             } => {
               json_str(&mut out, "events");
               let _ = write!(out, ",\"errors\":{errors},\"warnings\":{warnings}");
@@ -883,6 +886,7 @@ mod tests {
     );
     assert_eq!(
       skip_reason(&Outcome::Events {
+        formulas:     Vec::new(),
         events:       Vec::new(),
         errors:       0,
         warnings:     0,

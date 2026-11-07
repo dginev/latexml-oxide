@@ -57,6 +57,9 @@ pub(in crate::base_utilities) enum Outcome {
   /// definitions, the breaks its binding declares and the errors by position (`rehearsal::Rehearsal::Done`).
   Events {
     events:       Vec<Event>,
+    /// the extents of its formulas, outermost, in order (`events::lex_with_formulas`): what a span's content reads
+    /// (`writer::Field`). Not in a dump: nothing offline reads the content
+    formulas:     Vec<events::Formula>,
     errors:       usize,
     warnings:     usize,
     declarations: Vec<Event>,
@@ -82,6 +85,8 @@ pub(in crate::base_utilities) enum SkipReason {
   Fatal,
   /// its assignments could not be undone
   NotUndone,
+  /// it read all it may, or the conversion's rehearsals had ([`rehearsal::rehearsal_budget`])
+  OverBudget,
 }
 
 impl SkipReason {
@@ -93,6 +98,7 @@ impl SkipReason {
       SkipReason::JournalUnavailable => "journal unavailable",
       SkipReason::Fatal => "rehearsal ended in a Fatal error",
       SkipReason::NotUndone => "rehearsal could not be undone",
+      SkipReason::OverBudget => "rehearsal read all it may",
     }
   }
 }
@@ -388,7 +394,8 @@ fn same_meaning(a: Option<&Rc<dyn Definition>>, b: Option<&Rc<dyn Definition>>) 
 /// aa.cls's loads aa_support.sty, whose `\email` it is, and defines its own `\author` after inst_support.sty's): the binding half of the policy key (`author_binding`), and an e-mail call's binding
 /// (`email_meaning`). Under the shadow switch only; otherwise just the load.
 pub fn note_binding_load<R>(name: &str, extension: &str, load: impl FnOnce() -> R) -> R {
-  if !fm_shadow_enabled() {
+  // (a speculative run's load is undone with it: the document's own, if any, is the one noted)
+  if !fm_shadow_enabled() || in_speculative_digestion() {
     return load();
   }
   let before: [Option<Rc<dyn Definition>>; OWNED] = std::array::from_fn(tracked_meaning);

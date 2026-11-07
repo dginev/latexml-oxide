@@ -22,7 +22,7 @@ use super::{
   super::{
     events::{
       Event, EventKind, FontScope, InkFonts, Wrap, changes_font, entry_font, font_declaration,
-      lex_events, switch_free, text_font_command,
+      lex_with_formulas, switch_free, text_font_command,
     },
     ledger::{ApiCall, Outcome, field_stamped},
     policy::TitleMarks,
@@ -32,6 +32,7 @@ use super::{
     },
   },
   apply::text_leaf,
+  content::{Field, is_cs},
   dom::{Front, Kind, norm, orcid_id},
   *,
 };
@@ -369,121 +370,6 @@ pub(super) fn api_call(index: usize) -> Option<ApiCall> {
   })
 }
 
-/// The tokens of `content` a piece's span `start..end` covers, past `floor` (where the piece before ended) — with the
-/// switches that open the group it sits in, when it sits inside one (`{\bf $^1$Univ A, $^2$Univ B}`: each piece keeps
-/// the `\bf`, unless `first` is 0: a piece carrying the font it starts in, `events::entry_font`) —, or `None` when no
-/// balanced run of tokens holds it. A mark's formula covers its script, not the `$`
-/// and braces around it (`${}^*$Blackett …` opens at the `^`): the math shifts, braces and script characters just
-/// before the span are the piece's, and the closing braces and shifts just after it that balance them — LaTeX's `\(`
-/// and `\)` as the shifts they spell, with the spaces inside them (`\( ^{1} \)Univ A`: hep-ph0110378, 2307.12984).
-fn piece_tokens(
-  content: &[Token],
-  (start, end): (usize, usize),
-  floor: usize,
-  first: usize,
-) -> Option<(Tokens, usize)> {
-  if start > end || end > content.len() || start < floor {
-    return None;
-  }
-  let (mut start, mut end) = (start, end);
-  loop {
-    if start > floor
-      && matches!(
-        content[start - 1].get_catcode(),
-        Catcode::MATH | Catcode::BEGIN | Catcode::SUPER | Catcode::SUB
-      )
-    {
-      start -= 1;
-    } else if start > floor + 1
-      && content[start - 1].get_catcode() == Catcode::END
-      && content[start - 2].get_catcode() == Catcode::BEGIN
-    {
-      // (an empty group a floating script hangs on, `{}^*`)
-      start -= 2;
-    } else if let Some(open) = (floor..start)
-      .rev()
-      .find(|&i| content[i].get_catcode() != Catcode::SPACE)
-      && is_cs(&content[open], "\\(")
-    {
-      start = open;
-      if start > floor && is_cs(&content[start - 1], "\\protect") {
-        start -= 1;
-      }
-    } else {
-      break;
-    }
-  }
-  let balance = |s: usize, e: usize| -> Option<(i32, usize, i32)> {
-    let (mut depth, mut parens) = (0i32, 0i32);
-    for t in &content[s..e] {
-      match t.get_catcode() {
-        Catcode::BEGIN => depth += 1,
-        Catcode::END => {
-          depth -= 1;
-          if depth < 0 {
-            return None;
-          }
-        },
-        _ if is_cs(t, "\\(") => parens += 1,
-        _ if is_cs(t, "\\)") => {
-          parens -= 1;
-          if parens < 0 {
-            return None;
-          }
-        },
-        _ => {},
-      }
-    }
-    let shifts = content[s..e]
-      .iter()
-      .filter(|t| t.get_catcode() == Catcode::MATH)
-      .count();
-    Some((depth, shifts, parens))
-  };
-  loop {
-    let (depth, shifts, parens) = balance(start, end)?;
-    if depth == 0 && shifts % 2 == 0 && parens == 0 {
-      break;
-    }
-    match content.get(end) {
-      Some(t) if t.get_catcode() == Catcode::END && depth > 0 => end += 1,
-      Some(t) if t.get_catcode() == Catcode::MATH && shifts % 2 == 1 => end += 1,
-      Some(t) if parens > 0 && (t.get_catcode() == Catcode::SPACE || is_cs(t, "\\)")) => end += 1,
-      _ => return None,
-    }
-  }
-  // (the group the pieces sit in: its opening brace, and the switches before the first piece in it)
-  let mut open: Vec<usize> = Vec::new();
-  for (i, t) in content[..start].iter().enumerate() {
-    match t.get_catcode() {
-      Catcode::BEGIN => open.push(i),
-      Catcode::END => {
-        open.pop();
-      },
-      _ => {},
-    }
-  }
-  let mut tokens = Vec::new();
-  if let Some(&group) = open.last()
-    && group < first
-  {
-    let switches = &content[group + 1..first.min(start)];
-    if switches
-      .iter()
-      .all(|t| matches!(t.get_catcode(), Catcode::CS | Catcode::SPACE))
-    {
-      tokens.extend_from_slice(switches);
-    }
-  }
-  tokens.extend_from_slice(&content[start..end]);
-  Some((Tokens::new(tokens), end))
-}
-
-/// Whether `t` is the control sequence `name`.
-fn is_cs(t: &Token, name: &str) -> bool {
-  t.get_catcode() == Catcode::CS && t.with_cs_name(|n| n == name)
-}
-
 /// One call's content cut into the reading's entries: each piece's text (normalised), its tokens.
 fn cut(call: &ApiCall) -> Result<Option<Vec<(String, Tokens)>>> {
   let content = call.content.unlist_ref();
@@ -493,19 +379,29 @@ fn cut(call: &ApiCall) -> Result<Option<Vec<(String, Tokens)>>> {
   }
   // (the call's font, which its content's fonts are read against: `events::entry_font`)
   let root = lookup_font();
-  let (events, ink) = match rehearse(
+  let ((events, formulas), ink) = match rehearse(
     field_stamped(2, 0, content),
     TitleMarks::Fnsymbol,
     &[],
-    |d| (lex_events(d), InkFonts::of(d)),
+    |d| (lex_with_formulas(d), InkFonts::of(d)),
   )? {
     Rehearsal::Done { value, .. } => value,
     Rehearsal::Skipped(_) => return Ok(None),
   };
   let scope = root.map(|root| FontScope { ink, root, start: 0 });
+  let field = Field {
+    tokens:   content,
+    base:     0,
+    formulas: &formulas,
+  };
   let pieces = split_pieces(&events, &call.role);
   let spans: Vec<Option<(usize, usize)>> = pieces.iter().map(|(_, p)| piece_span(p)).collect();
-  let Some(first) = spans.iter().flatten().map(|(s, _)| *s).min() else {
+  let Some(first) = spans
+    .iter()
+    .flatten()
+    .map(|&(s, _)| field.formula_start(s))
+    .min()
+  else {
     return Ok(None);
   };
   // (each piece's form, `entry_forms`: the font in effect where it starts — `{\itshape $^1$Univ A\\ $^2$Univ B}`'s
@@ -533,8 +429,7 @@ fn cut(call: &ApiCall) -> Result<Option<Vec<(String, Tokens)>>> {
     let Some(span) = *span else {
       return Ok(None);
     };
-    let Some((tokens, end)) =
-      piece_tokens(content, span, floor, if font.is_some() { 0 } else { first })
+    let Some((tokens, end)) = field.content_of(span, floor, if font.is_some() { 0 } else { first })
     else {
       DebugFeature!(
         "frontmatter",
@@ -553,7 +448,7 @@ fn cut(call: &ApiCall) -> Result<Option<Vec<(String, Tokens)>>> {
 
 /// The tokens of an author block's own line, the reading's entry at `span` of the block at ledger index `index`: from
 /// the mark it opens with (the event printed just before it, a Mark with only spaces between: `$^4$ ModelBest.Inc`,
-/// `\textsuperscript{*}Equal contribution`) to its end, as [`piece_tokens`] balances a piece — `None` when the index is
+/// `\textsuperscript{*}Equal contribution`) to its end, as [`Field::content_of`] balances a piece — `None` when the index is
 /// no rehearsed block, no balanced run holds it, or the span's own letters and digits are not the entry's text `key`
 /// (an entry printing through a command, an accent, a line read on to: what the writer would make is not the entry).
 fn block_line_tokens(index: usize, span: (u16, u16), key: &str, mark: bool) -> Option<Tokens> {
@@ -577,8 +472,13 @@ pub(super) fn block_span_tokens(
     let Some(Entry::Author(block)) = ledger.entries.get(index) else {
       return None;
     };
-    let Outcome::Events { events, .. } = &block.outcome else {
+    let Outcome::Events { events, formulas, .. } = &block.outcome else {
       return None;
+    };
+    let field = Field {
+      tokens: block.tokens.unlist_ref(),
+      base: block.range.0,
+      formulas,
     };
     // (the event printed last before the line, a layout change aside)
     let mut mark = events
@@ -591,7 +491,7 @@ pub(super) fn block_span_tokens(
     // wrapper opened again round the entry made — [`wrapped_entry_mark`])
     let wrapper = mark
       .is_none()
-      .then(|| wrapped_entry_mark(events, block.tokens.unlist_ref(), block.range.0, span))
+      .then(|| wrapped_entry_mark(events, &field, span))
       .flatten();
     if let Some((own, _)) = &wrapper {
       mark = Some(*own);
@@ -604,12 +504,11 @@ pub(super) fn block_span_tokens(
     let font = labelled.and_then(|e| e.font.as_ref());
     let wrap = labelled.and_then(|e| e.wrap.as_deref());
     let tokens = span_tokens(
-      block.tokens.unlist_ref(),
-      block.range.0,
+      &field,
       span,
       key,
       mark,
-      labelled.is_some(),
+      labelled.map(|e| e.marks),
       with_mark,
       font.is_some(),
     )?;
@@ -634,23 +533,23 @@ pub(super) fn block_span_tokens(
 /// A mark heading the entry at `span` from inside the entry's own wrapper — a text font command's argument
 /// (`\textbf{$^2$Tencent Hunyuan}`, 2605.25195's `\textbf{$^1$Fudan University}  \textbf{$^2$Tencent Hunyuan}\\ $^*$
 /// Equal Contribution, …`) or a group opened by font declarations (`{\it $^2$Univ B}`) that closes where the entry ends —
-/// in `content`, a block's tokens from position `base`: the Mark event is the wrapper's box, so its span covers the whole
-/// wrapper, the entry inside it. The span of the mark's own formula just before the entry's ink
-/// ([`mark_formula_start`]), and the wrapper's opening tokens, to open it again round the entry made (the cut keeps its
-/// font) — `None` when the event before the entry is no Mark covering it, or the wrapper holds more than the mark and the
+/// in the block `field`: the Mark event's span is the wrapper's, the cover of the call around its first box, the entry
+/// inside it. The mark's own print ([`Field::own_print`]: its formula, its `\textsuperscript{…}`), right before the
+/// entry's ink, and the wrapper's opening tokens, to open it again round the entry made (the cut keeps its font) —
+/// `None` when the event before the entry is no Mark covering it, or the wrapper holds more than the mark and the
 /// entry (the kernel's cut reads such a mark as one, `notes::wrapped_mark_at`).
 fn wrapped_entry_mark(
   events: &[Event],
-  content: &[Token],
-  base: usize,
+  field: &Field,
   span: (u16, u16),
 ) -> Option<((u16, u16), Vec<Token>)> {
-  let (start, end) = events
+  let (content, base) = (field.tokens, field.base);
+  let mark = events
     .iter()
     .rev()
     .find(|e| e.kind != EventKind::Layout && e.span.is_some_and(|(s, _)| s < span.0))
-    .filter(|e| e.kind == EventKind::Mark)?
-    .span?;
+    .filter(|e| e.kind == EventKind::Mark)?;
+  let (start, end) = mark.span?;
   if end < span.1 {
     return None;
   }
@@ -666,13 +565,14 @@ fn wrapped_entry_mark(
   {
     return None;
   }
-  // (the mark's own formula, just before the entry's ink and the spaces before it)
-  let mut ink = from;
-  while ink > open && content[ink - 1].get_catcode() == Catcode::SPACE {
-    ink -= 1;
-  }
-  let formula = mark_formula_start(content, ink);
-  if formula >= ink || formula <= open {
+  // (the mark's own print, right before the entry's ink and the spaces before it)
+  let (formula, ink) = field.own_print(mark)?;
+  if formula <= open
+    || content
+      .get(ink..from)?
+      .iter()
+      .any(|t| t.get_catcode() != Catcode::SPACE)
+  {
     return None;
   }
   // (the wrapper's opening: a text font command and its brace, or a brace and the declarations after it)
@@ -1127,22 +1027,21 @@ fn text_symbol(t: &Token) -> Option<String> {
     })
 }
 
-/// [`block_span_tokens`] on a block's `content`, its first token at position `base`: `mark` the span of the Mark
-/// event printed last before the entry, `labelled` whether the entry is an in-block contact's entry read from its
-/// leading marks (`events::labelled_entries`, which checks with it at the reading that the writer can cut each entry),
-/// `own_font` whether it carries the font its cut starts in (`events::entry_font`: no switch of a group it sits in
-/// is then its, the font holds them).
-#[allow(clippy::too_many_arguments)]
+/// [`block_span_tokens`] on a block's `field`: `mark` the span of the Mark event printed last before the entry,
+/// `labelled` for an in-block contact's entry read from its leading marks, where those marks print
+/// (`events::labelled_entries`, which checks with it at the reading that the writer can cut each entry), `own_font`
+/// whether it carries the font its cut starts in (`events::entry_font`: no switch of a group it sits in is then its, the
+/// font holds them).
 pub(in crate::base_utilities::frontmatter::observer) fn span_tokens(
-  content: &[Token],
-  base: usize,
+  field: &Field,
   (start, end): (u16, u16),
   key: Option<&str>,
   mark: Option<(u16, u16)>,
-  labelled: bool,
+  labelled: Option<Option<(u16, u16)>>,
   with_mark: bool,
   own_font: bool,
 ) -> Option<Tokens> {
+  let (content, base) = (field.tokens, field.base);
   let at = |p: u16| usize::from(p).checked_sub(base);
   let (mut from, to) = (at(start)?, at(end)?);
   // (the span's printed letters against the key's, accents folded on both sides: an accent command prints its
@@ -1163,17 +1062,18 @@ pub(in crate::base_utilities::frontmatter::observer) fn span_tokens(
   let mut floor = 0;
   // (where the group switches the entry keeps are read up to: its own start, or its mark's formula)
   let mut first = from;
-  // (where the entry starts after its mark: past the math shift closing the mark's formula and the spaces after it —
-  // `$^{1}$Univ X`, whose Mark spans its script —, every command between them the entry's, with the groups it takes,
+  // (where the entry starts after its mark: past the mark's whole formula and the spaces after it — `$^{1}$Univ X`,
+  // whose Mark spans its script —, every command between them the entry's, with the groups it takes,
   // but a line break or an alignment token: its switches (`$^1$\it Univ X`, `$^1$\small`, `$^1$\color{red}`,
   // `$^1$\textit{…}`: the font Layout event between them has no span; the made item began at its first Name and lost
   // the switch, review rev94a r5 u03), a strut, a skip, a box; `None` when a letter outside a group, a break or an
   // alignment token stands between — review rev94a r6 N3)
   let lead = |mark_end: usize| -> Option<usize> {
+    let mark_end = field.formula_end(mark_end);
     let between = content.get(mark_end..from)?;
     let skip = between
       .iter()
-      .take_while(|t| matches!(t.get_catcode(), Catcode::SPACE | Catcode::MATH))
+      .take_while(|t| t.get_catcode() == Catcode::SPACE)
       .count();
     let mut depth = 0i32;
     between[skip..]
@@ -1214,20 +1114,20 @@ pub(in crate::base_utilities::frontmatter::observer) fn span_tokens(
       }
       floor = from;
     }
-  } else if labelled {
+  } else if let Some(marks) = labelled {
     // (an in-block contact's entry read from its leading marks spans its own ink past them (`events::
     // labelled_entries`): its marks' closing shift before it is theirs — `\affil{$^1$Univ A\\ $^2$Univ B}`, review
     // rev94b B1 —, and the group and the switches it opens between them and its ink the entry's: `$^2${\itshape Univ
     // B}, City`, `$^2$\textbf{Univ B}` — review rev94b r2 B1: cut at its ink, the group was no balanced run and the
     // block's one contact stayed a nameless creator's)
-    from = labelled_lead(content, from);
+    from = labelled_lead(content, from, marks.and_then(|(_, end)| at(end)));
     floor = from;
     // (and a group opened before its marks, with its switches: `{\itshape $^2$Univ B, City}` keeps the `\itshape` —
     // unless the entry carries its font, which holds them)
     first = if own_font {
       0
     } else {
-      mark_formula_start(content, from)
+      marks.and_then(|(start, _)| at(start)).unwrap_or(from)
     };
   }
   // (a group closing past the spaces after the entry: `{\it Department …, Japan }`, 2307.03384)
@@ -1239,10 +1139,11 @@ pub(in crate::base_utilities::frontmatter::observer) fn span_tokens(
     past += 1;
   }
   let piece = |from: usize, floor: usize, first: usize| {
-    piece_tokens(content, (from, to), floor, first)
+    field
+      .content_of((from, to), floor, first)
       .or_else(|| {
         (past > to)
-          .then(|| piece_tokens(content, (from, past), floor, first))
+          .then(|| field.content_of((from, past), floor, first))
           .flatten()
       })
       .and_then(|(tokens, _)| cell_tokens(content, from, &tokens))
@@ -1254,98 +1155,44 @@ pub(in crate::base_utilities::frontmatter::observer) fn span_tokens(
 }
 
 /// Where an in-block contact's entry read from its leading marks starts in `content` ([`span_tokens`]): its ink at
-/// `from`, or the group and switches it opens between its marks' closing shift and its ink (`$^2${\itshape Univ B}`).
-fn labelled_lead(content: &[Token], from: usize) -> usize {
-  let mut lead = from;
-  while lead > 0
-    && matches!(
-      content[lead - 1].get_catcode(),
-      Catcode::CS | Catcode::BEGIN | Catcode::SPACE
-    )
-    && !["\\\\", "\\newline", "\\par", "\\linebreak", "\\cr"]
-      .iter()
-      .any(|name| is_cs(&content[lead - 1], name))
-  {
-    lead -= 1;
-  }
-  if lead < from
-    && lead > 0
-    && matches!(
-      content[lead - 1].get_catcode(),
-      Catcode::MATH | Catcode::END
-    )
-  {
-    while lead < from && content[lead].get_catcode() == Catcode::SPACE {
-      lead += 1;
-    }
-    lead
-  } else {
-    from
-  }
-}
-
-/// The index in `content` (its first token at position `base`) an in-block contact's entry at `span` is cut from
-/// ([`labelled_lead`]), the reading's [`events::entry_font`] reads the font at.
-pub(in crate::base_utilities::frontmatter::observer) fn labelled_start(
-  content: &[Token],
-  base: usize,
-  span: (u16, u16),
-) -> Option<usize> {
-  let from = usize::from(span.0).checked_sub(base)?;
-  (from <= content.len()).then(|| labelled_lead(content, from))
-}
-
-/// Where the mark formula that ends just before `at` begins — a math formula's opening shift (`$^{1,2}$`, the shift
-/// before `at` one that closes: an even count of them up to it), a `\textsuperscript{…}` (`\@textsuperscript`) —, else
-/// `at`.
-fn mark_formula_start(content: &[Token], at: usize) -> usize {
-  let closes = |k: usize| {
-    content[..=k]
-      .iter()
-      .filter(|t| t.get_catcode() == Catcode::MATH)
-      .count()
-      % 2
-      == 0
+/// `from`, or the group and switches it opens between its marks' end (`marks_end`) and its ink (`$^2${\itshape Univ B}`).
+fn labelled_lead(content: &[Token], from: usize, marks_end: Option<usize>) -> usize {
+  let Some(between) = marks_end.and_then(|end| content.get(end..from)) else {
+    return from;
   };
-  match at.checked_sub(1).map(|k| (k, content[k].get_catcode())) {
-    Some((close, Catcode::MATH)) if closes(close) => (0..close)
-      .rev()
-      .find(|&k| content[k].get_catcode() == Catcode::MATH)
-      .filter(|&open| {
-        content[open..close]
-          .iter()
-          .any(|t| t.get_catcode() == Catcode::SUPER)
-      })
-      .unwrap_or(at),
-    Some((close, Catcode::END)) => {
-      let mut depth = 0i32;
-      let mut k = close + 1;
-      while k > 0 {
-        k -= 1;
-        match content[k].get_catcode() {
-          Catcode::END => depth += 1,
-          Catcode::BEGIN => {
-            depth -= 1;
-            if depth == 0 {
-              break;
-            }
-          },
-          _ => {},
-        }
-      }
-      if depth == 0
-        && k > 0
-        && ["\\textsuperscript", "\\@textsuperscript"]
-          .iter()
-          .any(|name| is_cs(&content[k - 1], name))
-      {
-        k - 1
-      } else {
-        at
-      }
-    },
-    _ => at,
+  let opens_the_entry = |t: &Token| {
+    matches!(
+      t.get_catcode(),
+      Catcode::CS | Catcode::BEGIN | Catcode::SPACE
+    ) && !["\\\\", "\\newline", "\\par", "\\linebreak", "\\cr"]
+      .iter()
+      .any(|name| is_cs(t, name))
+  };
+  if !between.iter().all(opens_the_entry) {
+    return from;
   }
+  from - between.len()
+    + between
+      .iter()
+      .take_while(|t| t.get_catcode() == Catcode::SPACE)
+      .count()
+}
+
+/// The index in the block `field` an in-block contact's entry at `span` is cut from ([`labelled_lead`]), `marks` where
+/// its leading marks print: the reading's [`events::entry_font`] reads the font at it.
+pub(in crate::base_utilities::frontmatter::observer) fn labelled_start(
+  field: &Field,
+  span: (u16, u16),
+  marks: Option<(u16, u16)>,
+) -> Option<usize> {
+  let from = usize::from(span.0).checked_sub(field.base)?;
+  (from <= field.tokens.len()).then(|| {
+    labelled_lead(
+      field.tokens,
+      from,
+      marks.and_then(|(_, end)| usize::from(end).checked_sub(field.base)),
+    )
+  })
 }
 
 /// The environments whose `\\` ends a row of an alignment.

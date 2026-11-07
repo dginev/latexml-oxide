@@ -1,0 +1,17 @@
+% mechanism: a mark heading a block's line from inside the line's own wrapper is read by its own print, its formula's extent or its
+%   `\textsuperscript` call (`writer::Field::own_print`): the first box in the wrapper takes the cover of the call around it, so
+%   the Mark's span is the wrapper's, and `formula_span` the formula's
+% witness: 2605.25195 (`\textbf{$^1$Fudan University}  \textbf{$^2$Tencent Hunyuan}`), its `\textsuperscript` sibling
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker2 Cat Cole3" over "1Univ X" bold, "2Univ Y" bold, "3Univ Z" italic on one line, then "* Equal Contribution"
+% engines: int142a and Z3 alike, writer `3 operations`: each entry its name's, its wrapper's bold kept, its mark no text; the plain group's `\it` lost in both
+%   (the mark is the group's first box, no wrapper's cover; open, SYNC's Z3 row)
+% expect:  0 errors, 0 warnings; each name its own entry; a Mark's `formula_span` the formula alone
+%          (perfect_kernel_batchz3::a_mark_in_its_wrapper_is_read_by_its_own_print)
+% status:  GREEN (Z3)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$, Cat Cole$^{3}$\\ \textbf{$^1$Univ X}  \textbf{\textsuperscript{2}Univ Y}  {\it $^3$Univ Z}\\ $^*$ Equal Contribution}
+\maketitle
+Text.
+\end{document}

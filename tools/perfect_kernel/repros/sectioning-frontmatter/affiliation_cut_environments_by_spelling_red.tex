@@ -1,0 +1,17 @@
+% mechanism: a run of a cut holds its environments in pairs by the spelling of `\begin` and `\end` (`writer::content::environment_step`); the extents should come from the digested list, as
+%   `events::formula_extent`'s do, when the emitter takes this over
+% witness: review revZ3r2 (no corpus witness). The guard's table: `\bx…\ex` (a macro pair, this file), `\bb…\ee` (`\let` copies), `\detokenize{\begin}`, `\detokenize{\end}`, `\ifx\zz\end`
+% oracle:  pdflatex 0 errors, each shape: the table or the words printed, then ", 2 Univ Y"
+% engines: Perl has no cut. A macro pair, `\let` copies: E 1, W 1, the last cell "d" lost, on int142a and Z3r3 alike (false negatives). `\detokenize`, `\ifx`: the two entries one, nothing lost, E 0 (false positives, against int142a)
+% expect:  0 errors, 0 warnings; affiliation "1 Univ X a b c d" and "2 Univ Y"; the other shapes two entries too
+% status:  RED (perfect_kernel_batchz3::affiliation_cut_environments_by_spelling_red)
+\documentclass{revtex4-1}
+\def\bx{\begin{tabular}{cc}}\def\ex{\end{tabular}}
+\let\bb\begin\let\ee\end
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{note}}
+\affiliation{$^{1}$Univ X \bx a&b\\ c&d\ex, $^{2}$Univ Y}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,15 @@
+% mechanism: a run of a cut call holds its environments whole (`writer::Field::balanced`, by their spelling, as the `\(` count): what `\end{ee}` prints, or closes, holds a position no box stops at
+%   (`E`, written in `\newenvironment{ee}{B}{E}`; an alignment's last cell), so a span ended before the `\end`, and the writer's own digestion lost the rest, in an Error and the Warning "written differs"
+% witness: review revZ3 S4 (no corpus witness: its hostile suite's rows `long_tab`, `nice`, `newenv` in revtex's `\affiliation`)
+% oracle:  pdflatex 0 errors: "1 Univ X" with the table, ", 2 Univ Y"
+% engines: Perl has no cut; Z3: "1 Univ X a b c" and "2 Univ Y", E 1 on, 0 off, the table's last cell gone
+% expect:  0 errors, 0 warnings; each entry whole (perfect_kernel_batchz3::a_cut_holds_its_environments)
+% status:  GREEN (Z3r2)
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{note}}
+\affiliation{$^{1}$Univ X \begin{tabular}{cc}a&b\\ c&d\end{tabular}, $^{2}$Univ Y}
+\maketitle
+Body.
+\end{document}

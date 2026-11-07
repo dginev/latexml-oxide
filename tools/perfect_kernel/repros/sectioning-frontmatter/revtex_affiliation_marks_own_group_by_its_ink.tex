@@ -1,0 +1,17 @@
+% mechanism: a mark's own group is what prints its formula alone, a fact of the digested list (`Walker::note_a_formulas_group`, `events::Formula::alone_in`), not of its tokens' catcodes:
+%   spacing, a switch, a color, a list's comma beside it (`writer::Field::balanced` cuts at the group's opening brace), a command printing before it no such group, nor a word after it
+% witness: review revZ3 S2; a scan of 20,000 dev papers finds the shape in 1709.01760, 1203.3579, 2205.00632, 2203.13635, 2106.13206, 1605.09371, astro-ph9912427
+% oracle:  pdflatex 0 errors, in every shape of the guard's table: the two lines as written
+% engines: Perl has no cut; int142a cut each by walking; Z3: `{$^1$\,}`, `~`, `\ `, `\quad`, `\hspace`, `\small`, `\relax`, `,`, `\bf` after it, `{{..}\,}`: Ann "Univ X, 2 Univ Y" and Bob nothing
+% expect:  0 errors, 0 warnings; each author their own affiliation, whatever the group prints beside the mark; the isotope's shape `{$^1$x}` stays one entry
+%          (perfect_kernel_batchz3::a_marks_own_group_is_read_from_its_ink)
+% status:  GREEN (Z3r2)
+\documentclass{revtex4-1}
+\usepackage{xcolor}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{{$^1$\,} Univ X, {$^2$\,} Univ Y}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,15 @@
+% mechanism: `writer::Field::starts_at_its_brace` knows a formula's group alone. A `\textsuperscript` mark's group is none, nor is a mark's group going on in a digit, and a mark's group going on in words is one only where a line starts
+% witness: review revZ3r2 (no corpus witness). The guard's table: `{\textsuperscript{1}} Univ X, {\textsuperscript{2}} Univ Y` and `{\textsuperscript{1}x} …` and `{$^1$2} Univ X, {$^2$3} Univ Y` under an unmarked author;
+%   this file's shape; `~\\ {\textsuperscript{1}Univ X,} Moscow\\ {\textsuperscript{2}Univ Y,} Rome`, the line's shape of a mark no formula, whose entries go to a nameless creator; `{$^1$Univ X,} Moscow\endgraf {$^2$Univ Y,} Rome`, no line break the Walker sees (its `\par` binding is the spelled one)
+% oracle:  pdflatex 0 errors, each shape: the entries as written
+% engines: Perl has no cut. int142a: cut, by walking back. Z3r3: one entry, the marks in its text, nothing lost, E 0, W 0. An isotope at a line's start keeps base's reading: `~\\ {$^2$H} Lab` is a cut too
+% expect:  0 errors, 0 warnings; "1 Univ X, Moscow", "2 Univ Y, Moscow", "3 Univ Z, Moscow" on their authors, as int142a
+% status:  RED (perfect_kernel_batchz3::affiliation_cut_group_siblings_stay_uncut_red)
+\documentclass[twocolumn,pre]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{1,2}$, Cat Cole$^{3}$}
+\affiliation{{$^{1}$ Univ X,} Moscow, {$^{2}$Univ Y,} Moscow, {$^{3}$Univ Z,} Moscow}
+\maketitle
+Body.
+\end{document}

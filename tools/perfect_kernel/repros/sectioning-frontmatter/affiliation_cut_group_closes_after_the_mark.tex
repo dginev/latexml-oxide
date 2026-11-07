@@ -1,0 +1,17 @@
+% mechanism: a piece closing a mark's own font group takes the group from its opening brace (`writer::Field::balanced`), read forward from
+%   the content's brace balance, not back from the span. A group going on after its mark stays no run, the isotope's fail-safe
+%   (`cut_run_wrapped_isotope_is_entry_text`, batch107e)
+% witness: review 94a r6 (a cut never undone for its markup); no corpus witness read here
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "Ann Able1 and Bob Baker2 and Cat Cole3" over one line of three entries
+% engines: Z2: "piece is no balanced run": writer `declined`, one affiliation on each name
+% expect:  0 errors, 0 warnings; writer `written`; each name its own entry, the group's font with it
+%          (perfect_kernel_batchz3::a_cut_takes_a_group_it_closes)
+% status:  GREEN (Z3)
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$ and Cat Cole$^{3}$}
+\affiliation{{\bf $\rm ^{1}$} Univ X, $\rm ^{2}${\it Univ} Y, {$\rm ^{3}$}Univ Z}
+\maketitle
+Text.
+\end{document}

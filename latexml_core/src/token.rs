@@ -1321,6 +1321,16 @@ impl Token {
     }
   }
 
+  /// How far this token moves a brace count: 1 for a begin-group, -1 for an end-group, else 0. Brace balance is a property of
+  /// a run of tokens, no reading of what they spell.
+  pub fn group_step(&self) -> i32 {
+    match self.get_catcode() {
+      Catcode::BEGIN => 1,
+      Catcode::END => -1,
+      _ => 0,
+    }
+  }
+
   /// Return the catcode of the token.
   pub fn get_catcode(&self) -> Catcode { self.code }
   /// is the current one

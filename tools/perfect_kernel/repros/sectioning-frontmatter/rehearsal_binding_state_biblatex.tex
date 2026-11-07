@@ -1,0 +1,31 @@
+% mechanism: biblatex's document-wide state lives in the Value table (`state::DocumentState`): a rehearsal of a block nothing prints files no key in a category
+% witness: revZ3 B1's class (no corpus witness)
+% oracle:  pdflatex 0 errors, "Empty bibliography": the second `\author` replaces the first, so `\addtocategory` never runs (it prints the hand-made `.bbl`'s fields as text, a harness limit)
+% engines: Perl has no rehearsal; Z3: the entry `a` printed under `category=mine`, with the observer on
+% expect:  0 errors, biblatex's Warning for the empty list; on and off byte-identical (perfect_kernel_batchz3::a_bindings_state_stands_for_one_run)
+% status:  GREEN (Z3r2)
+\documentclass{article}
+\usepackage{biblatex}
+\DeclareBibliographyCategory{mine}
+\begin{filecontents*}[overwrite]{rehearsal_binding_state_biblatex.bbl}
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.3 $
+\refsection{0}
+  \datalist[entry]{nty/global//global/global}
+    \entry{a}{article}{}
+      \field{title}{Aaa}
+    \endentry
+    \entry{b}{article}{}
+      \field{title}{Bbb}
+    \endentry
+  \enddatalist
+\endrefsection
+\end{filecontents*}
+\begin{document}
+\title{T}
+\author{First\addtocategory{mine}{a}}
+\author{Ann Able \and Bob Baker}
+\maketitle
+Body.
+\printbibliography[category=mine]
+\end{document}

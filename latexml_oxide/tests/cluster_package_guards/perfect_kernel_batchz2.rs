@@ -111,17 +111,18 @@ fn a_kernel_macro_a_papers_macro_reaches_declares_what_it_names() {
 }
 
 /// S2 of revZ2. A definer whose next token is no later one of the field (a macro's own `\relax`, the end of an argument) read as far as
-/// the call around it: its span holds the whole definition, for a paper's macro, a `\textbf`, the last definition of an `\AtBeginDocument`.
+/// the call around it: its span holds the whole definition, for a paper's macro, a `\textbf`, the last definition of an `\AtBeginDocument`,
+/// and stops before the closing brace of what opened before it (Z3's `field_notes::settle_declarations`, what the emitter can replay).
 #[test]
 fn a_declarations_end_holds_what_it_read_inside_a_call() {
   let (_, dump) = dump(repro!("event_declaration_end_in_a_call"));
   assert_eq!(
     blocks(&dump)[0]["declarations"],
     json!([
-      {"kind": "Declaration", "span": [2, 8], "label": "\\xa"},
-      {"kind": "Declaration", "span": [10, 16], "label": "\\xb", "nest": 1},
+      {"kind": "Declaration", "span": [2, 7], "label": "\\xa"},
+      {"kind": "Declaration", "span": [10, 15], "label": "\\xb", "nest": 1},
       {"kind": "Declaration", "span": [18, 23], "label": "\\xc"},
-      {"kind": "Declaration", "span": [23, 29], "label": "\\xd"},
+      {"kind": "Declaration", "span": [23, 28], "label": "\\xd"},
     ])
   );
 }

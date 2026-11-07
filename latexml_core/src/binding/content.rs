@@ -3000,9 +3000,12 @@ fn load_tex_definitions(
     }
     assign_value(&s!("{request}_raw_loaded"), true, Some(Scope::Global));
     // (the file itself, by its path: a stand-in binding that reads the paper's copy raw has read it,
-    // `read_stand_in_copy`)
-    let path = canonical_path(pathname);
-    RAW_READ_PATHS.with(|paths| paths.borrow_mut().insert(path));
+    // `read_stand_in_copy`. A speculative run's read is undone with it, `<request>_raw_loaded` too: the document's own read of
+    // that copy is still to come, `\author{First\input{aas_macros.sty}}\author{Ann}\maketitle \input{aas_macros.sty}\kms`)
+    if !gullet::in_speculative_digestion() {
+      let path = canonical_path(pathname);
+      RAW_READ_PATHS.with(|paths| paths.borrow_mut().insert(path));
+    }
   }
   // (what it defines is a raw class's or an own-directory file's: the title-page check's third source, whose setters
   // these are, `Expandable::watched_call`; a raw TeX Live package is neither)

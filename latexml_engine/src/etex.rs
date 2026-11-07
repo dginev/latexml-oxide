@@ -479,12 +479,7 @@ LoadDefinitions!({
   // was set, with a trailing `^^M` (KNOWN_PERL_ERRORS #286). Guard:
   // `sweep125_roots::readline_is_an_assignment`.
   DefPrimitive!("\\readline Number SkipKeyword:to RedefinableToken", sub[(port, token)] {
-    let file_key = format!("input_file:{port}");
-    let mouth_opt = with_value(&file_key, |v| match v {
-      Some(Stored::Mouth(mouth)) => Some(Rc::clone(mouth)),
-      _ => None,
-    });
-    if let Some(mouth) = mouth_opt {
+    if let Some(mouth) = input_stream_to_change(&format!("input_file:{port}")) {
       let mut raw_line = mouth.borrow_mut().read_raw_line(false).unwrap_or_default();
       match lookup_definition(&T_CS!("\\endlinechar"))? { Some(eol) => {
         let eolv   = eol.value_of(Vec::new()).unwrap_or_default().value_of();
