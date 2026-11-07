@@ -1719,7 +1719,10 @@ fn the_outcomes_table_and_its_gate() {
   // (nothing read: never a clean 0)
   fs::create_dir_all(&papers).expect("dir");
   assert_eq!(run(&papers, None, &prefix, 1, false, true).expect("run"), 1);
-  write("1712.00001", &outcome_dump("revtex", "same", None, None));
+  let mut given_back = outcome_dump("revtex", "same", None, None);
+  given_back["readback"]["given_back"] =
+    Value::from("Affiliation univb: reading [Creator(1)], written []");
+  write("1712.00001", &given_back);
   write(
     "1712.00002",
     &outcome_dump(
@@ -1750,19 +1753,19 @@ fn the_outcomes_table_and_its_gate() {
   let text = table();
   assert_eq!(
     row(&text, "family"),
-    "family\tpapers\tno-reading\tno-block\theld-or-skipped\tsame\twritten\twritten-different\tdeclined\twhole_same\twhole_written\tpart\tchanged_after\tno_dump\tno_readback\tunknown"
+    "family\tpapers\tno-reading\tno-block\theld-or-skipped\tsame\twritten\twritten-different\tdeclined\twhole_same\twhole_written\tpart\tchanged_after\tgiven_back\tno_dump\tno_readback\tunknown"
   );
   assert_eq!(
     row(&text, "revtex"),
-    "revtex\t2\t0\t0\t0\t1\t1\t0\t0\t0\t0\t0\t1\t0\t0\t0"
+    "revtex\t2\t0\t0\t0\t1\t1\t0\t0\t0\t0\t0\t1\t1\t0\t0\t0"
   );
   assert_eq!(
     row(&text, "kernel"),
-    "kernel\t2\t0\t0\t1\t0\t0\t0\t1\t0\t0\t0\t0\t0\t0\t0"
+    "kernel\t2\t0\t0\t1\t0\t0\t0\t1\t0\t0\t0\t0\t0\t0\t0\t0"
   );
   assert_eq!(
     row(&text, "TOTAL"),
-    "TOTAL\t5\t0\t1\t1\t1\t1\t0\t1\t0\t0\t0\t1\t0\t0\t0"
+    "TOTAL\t5\t0\t1\t1\t1\t1\t0\t1\t0\t0\t0\t1\t1\t0\t0\t0"
   );
   assert_eq!(
     row(&text, "a name of today's the reading makes none"),

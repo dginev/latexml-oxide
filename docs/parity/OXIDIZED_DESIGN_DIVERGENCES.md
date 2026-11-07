@@ -32395,3 +32395,40 @@ the raw macro would pass them alone. **Left, each a fallback (speed only):** `\n
 **The rehearsal's read budget** (R1's `gullet::read_budget`): 8,000,000 reads a run, 24,000,000 a conversion, a skip counted in `Warning:frontmatter:rehearsal_budget`; the data in the census. A block looping where nothing prints it no longer costs a conversion its limits. Guard `a_looping_block_ends_in_the_rehearsal_budget`.
 
 **Open:** the writer's second real digestion of a cut entry says the content's Error twice and moves auto-numbered `xml:id`s: RED `writer_second_digestion_says_an_error_twice_red`. Environments are paired by their spelling: RED `affiliation_cut_environments_by_spelling_red`. A group no formula's alone, or going on after a mark away from a line's start, is uncut where the base cut it, nothing lost: RED `affiliation_cut_group_siblings_stay_uncut_red`. No Lua in a rehearsal can lose a cut: RED `rehearsal_no_lua_loses_a_cut_red`.
+
+### 979. The reading's rules that move today's output, and a line the writer makes is cut of the addresses it took out (Perl: one creator per `@authorsplits` piece, no reading)
+
+**What moves the output with the switch off.** Only the writer's own gain: a reading's rule changes what the writer writes,
+never today's reader. Z14's rules that do: the rehearsal's `BOUND_IN_A_BLOCK` (`rehearsal.rs`: a binding's
+`\lx@add@affiliation@marked` read as digested in a block, so its entries part; 2603.28168, 1405.3507, 2303.18104), `\alignauthor`
+a column (sig-alternate.cls:283; 1503.06772), a call speaking for a collaboration a contact on the names before it (1201.5726,
+1301.6619), a later row read as names (after an "and", past an address piece, a marked row with one odd piece; 2007.10022,
+2312.14886, 2409.07809), a line of addresses leaving its entry open (1411.2744). One helper is shared with today's
+reader, `name_shaped` (`author_block/name_text.rs`): it reads a particle elided onto a capital as the surname's only right after an
+initial (`D.~d'Enterria`, hep-ph0311131); anywhere else a place or an institution elides too (`C. Vignat, Universit\'e d'Orsay`,
+1009.2396, which Z14 made two creators; `Villeneuve d'Ascq`, `Saint Martin d'Heres`).
+
+**A departure kept: the role heading's word table.** `labels.rs` `after_role_heading`'s `ROLES` (Author(s), Editor(s), Convener(s),
+Contributor(s)) is a word table for one paper family, cernrep's hep-ph0311131, with no other reach in the review's census. A later
+line it opens is a row of names only where each piece shows a person, a name's cue (`has_person_cue`: an initial, a particle) or
+the mark it carries: `Editors: Springer Nature`, `Author: Corresponding Author` stay the block's lines.
+
+**A names row's group of addresses** (`lines.rs` `address_groups_whole`): a group whose printed braces hold the row's commas (the
+lexer's `Event::braces`) is one Name again before the names are parted, and its label word goes with its addresses
+(`address_runs`), so `E-mails: \{ann, bob\}@a.org, cat@b.org` in an `\IEEEauthorblockN` is no person (2003.02512, which had four
+fake creators, its merged-creators Error gone).
+
+**The writer's take-out of an entry's addresses.** The reading takes the addresses an entry prints out as its authors' e-mails
+(`owner:entry-address`). The writer gave the entry back whole where today's held no item it could cut to the entry: today's
+contacts were removed and the addresses left in the affiliation's text, read back as `written` (2310.19837's shape). Now an entry
+whose e-mails today's holds as an author's contact, or prints in an item the address reader cuts, is not given back: today's item
+is cut (`cut_entry_addresses`, a cut whose text joins the reading's entries one after another, `joins_entries`), and the line,
+a block's or an API call's piece, is made from its tokens and cut of the same addresses (`Op::Make`'s `cut`). A line printing an
+address the reading left in it (one that spells no author: the chain's fail-safe) is not made: today's item prints it, which a pass
+after the writer gives its carriers. The read-back compares the final document with the reading as resolved too (`given_back`,
+`ab_audit fmshadow`'s column of that name), so a give-back is never silent.
+
+Guards `perfect_kernel_batchz14::{an_entrys_addresses_are_cut_where_its_line_is_made, an_address_group_in_a_names_row_is_read_whole,
+an_elided_particle_is_a_surnames_only_after_an_initial, a_role_heading_over_words_opens_no_names}`; RED
+`a_mark_past_a_marked_lists_leading_run_is_an_event_red` (`Town, USA\\ *ann@x.org` reads `USA1ann@x.org`: 2411.03172, 2510.06608,
+2602.11758).

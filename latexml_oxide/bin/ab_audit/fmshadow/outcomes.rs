@@ -229,6 +229,9 @@ pub struct PaperOutcome {
   pub family:      String,
   /// the read-back ran and found the final document reading as the reading; `None` where it never ran
   pub reads_back:  Option<bool>,
+  /// the read-back found the final document reading as the writer's reading but not as the resolver's: an item the
+  /// writer gave back (`readback.given_back`)
+  pub given_back:  bool,
   /// the blocks' skip reasons (`summary.skipped`) and its blocks whose rehearsal held diagnostics (`summary.held`)
   pub skipped:     Vec<(String, u64)>,
   pub held_blocks: u64,
@@ -257,6 +260,7 @@ impl PaperOutcome {
         .as_bool()
         .filter(|reached| *reached)
         .map(|_| read_back["difference"].is_null()),
+      given_back:  read_back["given_back"].is_string(),
       skipped:     dump["summary"]["skipped"]
         .as_object()
         .into_iter()
@@ -281,6 +285,8 @@ struct Counts {
   part:          usize,
   /// `same` or `written`, and the read-back found the final document differing from the reading: a pass after the writer changed a kind, a text or (the debt Z8 and Z9 pay) an owner
   changed_after: usize,
+  /// `same` or `written`, and the final document reads as the reading only with the writer's give-backs applied
+  given_back:    usize,
   /// a paper with no dump, or none this table can read
   no_dump:       usize,
   no_readback:   usize,
@@ -310,6 +316,9 @@ impl Counts {
       if o.reads_back == Some(false) {
         self.changed_after += 1;
       }
+      if o.given_back {
+        self.given_back += 1;
+      }
     }
   }
 
@@ -320,11 +329,12 @@ impl Counts {
     }
     let _ = write!(
       cells,
-      "\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
+      "\t{}\t{}\t{}\t{}\t{}\t{}\t{}\t{}",
       self.whole_same,
       self.whole_written,
       self.part,
       self.changed_after,
+      self.given_back,
       self.no_dump,
       self.no_readback,
       self.unknown
@@ -410,7 +420,7 @@ pub(super) fn write_outcomes(
   );
   let _ = writeln!(
     out,
-    "family\tpapers\t{}\twhole_same\twhole_written\tpart\tchanged_after\tno_dump\tno_readback\tunknown",
+    "family\tpapers\t{}\twhole_same\twhole_written\tpart\tchanged_after\tgiven_back\tno_dump\tno_readback\tunknown",
     OUTCOMES.join("\t")
   );
   let mut ranked: Vec<(&&str, &Counts)> = families.iter().collect();
@@ -430,6 +440,7 @@ pub(super) fn write_outcomes(
     total.whole_written,
     total.part,
     total.changed_after,
+    total.given_back,
   ] {
     let _ = write!(cells, "\t{:.2}", pct(n));
   }

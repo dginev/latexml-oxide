@@ -1,0 +1,15 @@
+% witness: 2003.02512 (`\IEEEauthorblockN{Emmanouil Fountoulakis\IEEEauthorrefmark{\dagger}, … \IEEEauthorblockA{…} \IEEEauthorblockA{…} E-mails: \{emmanouil.fountoulakis, nikolaos.pappas, ionel.marian.codreanu\}@liu.se, etony@umd.edu}`)
+% oracle:  pdflatex 0 errors: the names, the two marked institutes, then the addresses after the label
+% engines: Perl: one creator; ours before Z14r2: the group's commas parted it into names, `E-mails: {ann` and `bob}@a.org` read as people and the paper written, its honest merged-creators Error gone (review revZ14 blocker 3)
+% expect:  1 error (today's merged creators, the writer declining: what it would write drops the label word); the reading: each person, their institute and the address spelling them, the unspelled one the last author's by elimination (perfect_kernel_batchz14::an_address_group_in_a_names_row_is_read_whole)
+% status:  GREEN (Z14r2)
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{1}, Cat Cole\IEEEauthorrefmark{2}
+\IEEEauthorblockA{\IEEEauthorrefmark{1} Univ A}
+\IEEEauthorblockA{\IEEEauthorrefmark{2} Univ B}
+E-mails: \{ann, bob\}@a.org, dan@b.org}}
+\maketitle
+Body.
+\end{document}

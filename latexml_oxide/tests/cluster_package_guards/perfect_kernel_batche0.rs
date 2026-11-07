@@ -866,8 +866,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("rehearsal", 6),
   ("relocate", 134),
   // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens`, printed text read
-  // as tokens by `is_institution` and `NameKeys` (5 with their definitions), a `'\\'` read of a label (2), a call's hook (1))
-  ("resolver", 9),
+  // as tokens by `is_institution` and `NameKeys` (5 with their definitions), a `'\\'` read of a label (2), a call's hook (1).
+  // Z14r2: 18, not 9 — the count now sees `is_institution(`, review revZ14: Z14's fall from 15 was the seven `text_tokens` sites
+  // it moved behind that name; counted again, with the name's definition and Z14's one new call (`carried`); none of Z14r2's)
+  ("resolver", 18),
   ("rest /author_split_tests.rs", 24),
   ("rest /block_insertion.rs", 0),
   ("rest /blocks.rs", 2),
@@ -1002,6 +1004,8 @@ fn resolver_reads(source: &RustSource) -> usize {
     r"|\.content\b|to_string\(\)\s*(?:==|!=)",
     r"|\.get_cs\(\)|\.cs_name\(\)|\.with_cs_name\(|\.get_string\(\)|\.get_catcode\(\)|\bCatcode::|\bToString\b",
     r"|\bposition_of\(|\bis_cs\(|\.as_cs\(|\bmeaning\(|\bwith_str\(|\bcs_in\(|\btext_tokens\(",
+    // (Z14r2: `is_institution`, `text_tokens` behind a name, review revZ14 — Z14's six sites moved behind it read as fewer)
+    r"|\bis_institution\(",
   ))
   .expect("the regex");
   backslash_literals(source) + shapes.find_iter(&source.code).count()
@@ -1073,7 +1077,7 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   ("mod", 0),
   ("policy", 0),
   ("rehearsal", 109),
-  // (also among `resolver`'s 15 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook)
+  // (also among `resolver`'s 18 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook)
   ("resolver", 3),
   ("shadow", 7),
   ("writer", 81),
@@ -1414,7 +1418,8 @@ fn a_declined_paper_says_why() {
       "the re-part did not read as the reading",
     ),
     (
-      repro!("email_own_call_misread_name_word_gives_way"),
+      // (Z14r2: `email_own_call_misread_name_word_gives_way` no longer reaches it — its `Italy. email:` piece reads `Italy.`)
+      repro!("concede_ink_in_doubt_mark_before_the_piece"),
       (0, 0),
       "a conceded creator's ink",
     ),

@@ -982,6 +982,7 @@ pub(super) fn apply(document: &mut Document, front: &Front, plan: &Plan) -> Resu
       template,
       before,
       label,
+      cut,
       ..
     } = op
       && let Some(owner) = owner_node(document, *who)?
@@ -997,6 +998,16 @@ pub(super) fn apply(document: &mut Document, front: &Front, plan: &Plan) -> Resu
         label.as_deref(),
       )?;
       touch(*who, &owner);
+      if let Some(mailed) = cut
+        && let Some(new) = before
+          .as_ref()
+          .map_or_else(|| elements(&owner).pop(), Node::get_prev_sibling)
+      {
+        let names: Vec<&str> = plan.names.iter().map(String::as_str).collect();
+        dom::cut_addresses(&new, &plan::spells_one_of(&names), &|a: &str| {
+          mailed.contains(&dom::norm(a))
+        });
+      }
       // (an affiliation replacing none of today's items where the reading prints it, as a copy: 2311.16503's Jing Liu
       // had his institutes after the address the block prints below them; a legend stays last — the row's e-mail lines
       // are queued after the entry they print inside, so the calls' order does not place a legend line among them,

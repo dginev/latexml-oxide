@@ -424,10 +424,16 @@ pub(super) fn later_line_is_names(
     .iter()
     .filter(|e| !is_name_qualifier(&e.text))
     .any(|e| e.text.chars().any(char::is_lowercase) && e.text.split_whitespace().any(acronym));
-  // (a line a role opens is a row of names whatever else it holds: `Editor: P. Aurenche`, hep-ph0311131)
+  // (a line a role opens is a row of names where each of its pieces shows a person, a name's cue or the mark it carries:
+  // `Editor: P. Aurenche`, hep-ph0311131; `Editor: Physical Review`, `Author: Corresponding Author` are words)
+  let shows_a_person = |name: &Event| {
+    carries_a_mark(name, events)
+      || has_person_cue(after_role_heading(&name.text).unwrap_or(&name.text))
+  };
   let headed = names
     .first()
-    .is_some_and(|e| after_role_heading(&e.text).is_some());
+    .is_some_and(|e| after_role_heading(&e.text).is_some())
+    && names.iter().all(|e| shows_a_person(e));
   // (a line under the names opening with "and" goes on with them, its piece reading as a name: `Anthony Berthelier \\ and
   // Yongzhe Yan`, 2007.10022, `author_block::names_list_continues`; "and Max--Planck Institut für Mathematik, Bonn" reads
   // as no name, math0208081)
@@ -447,35 +453,40 @@ pub(super) fn later_line_is_names(
     || headed
     || (pieces >= 2 && !institutions);
   let reads = |text: &str| {
-    reads_as_names(after_role_heading(text).unwrap_or(text)) || is_name_qualifier(text)
+    let name = after_role_heading(text).filter(|_| headed).unwrap_or(text);
+    reads_as_names(name) || is_name_qualifier(text)
   };
   // (a row of two or more pieces each carrying its mark, most of them names and none an institution, is a row of names, its
   // odd piece one too: `Huseyin Inan$^{1}$, Aaron (Ari) Bornstein$^{1}$ and Robert Sim$^{1}$`, 2409.07809 — the name's brackets
   // gave the whole row to the row above as "affiliations", each of its marks trailing one)
   let carried = names.len() >= 2 && {
     let read = names.iter().filter(|e| reads(&e.text)).count();
-    let carries = |name: &Event| {
-      events
-        .iter()
-        .position(|e| std::ptr::eq(*e, name))
-        .and_then(|at| {
-          events[at + 1..]
-            .iter()
-            .find(|e| e.kind != EventKind::Layout)
-        })
-        .is_some_and(|next| next.kind == EventKind::Mark && !next.line_first)
-    };
     2 * read > names.len()
-      && names.iter().all(|e| carries(e))
+      && names.iter().all(|e| carries_a_mark(e, events))
       && !names.iter().any(|e| is_institution(&e.text))
   };
   evidence && !names.is_empty() && (carried || names.iter().all(|e| reads(&e.text)))
 }
 
+/// Whether the Name event `name` of `events` carries a mark: the next event past layout is one, not opening a line.
+fn carries_a_mark(name: &Event, events: &[&Event]) -> bool {
+  events
+    .iter()
+    .position(|e| std::ptr::eq(*e, name))
+    .and_then(|at| {
+      events[at + 1..]
+        .iter()
+        .find(|e| e.kind != EventKind::Layout)
+    })
+    .is_some_and(|next| next.kind == EventKind::Mark && !next.line_first)
+}
+
 /// The names a role heading is printed over, written before them with a colon: `{\bf Authors:} F.~Arleo$^a$, …`,
-/// `{\bf Editor}: P.~Aurenche` (cernrep.cls, hep-ph0311131), 2205.07715's `Contributors: Henning Bahl`. The heading stays
-/// the name's text, as a heading in a class's first line does (uncertain stays as written): the colon alone kept the
-/// row out of the names, its people an affiliation.
+/// `{\bf Editor}: P.~Aurenche` (cernrep.cls, hep-ph0311131). The heading stays the name's text, as a heading in a class's
+/// first line does (uncertain stays as written): the colon alone kept the row out of the names, its people an
+/// affiliation. `ROLES` is a word table for one paper family and its reach unproven: hep-ph0311131 alone in the review's
+/// census (OXIDIZED_DESIGN_DIVERGENCES #979). 2205.07715's `Contributors: Henning Bahl` prints as a first line, which
+/// this later line's test never reads.
 pub(super) fn after_role_heading(text: &str) -> Option<&str> {
   const ROLES: [&str; 8] = [
     "Author",

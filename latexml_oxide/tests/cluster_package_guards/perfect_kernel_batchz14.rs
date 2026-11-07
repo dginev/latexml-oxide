@@ -2,8 +2,11 @@
 //! shadow's tuples, names and items with their roles) and the output, the writer's where it writes. Each guard is a different code path: `a_role_heading_…` a later line's
 //! test and a name's shape, `a_marked_list_…` the rehearsal's binding of `\lx@add@affiliation@marked` and an in-block line of addresses, `a_speakers_name_…` its binding of
 //! `\lx@add@creator`, `a_collaboration_in_a_call_…` a names line with no name before it in its block, `a_line_opening_with_and_…` and `an_address_is_no_piece_…` the later line's
-//! other two tests, `an_address_groups_braces_…` the address reader, `a_note_inside_a_link_…` the lexer of a link.
+//! other two tests, `an_address_groups_braces_…` the address reader, `a_note_inside_a_link_…` the lexer of a link. Z14r2's (review revZ14): `an_entrys_addresses_are_cut_…` the
+//! writer's give-back and its made line's cut, with the read-back's `given_back`; `an_address_group_in_a_names_row_…` the names line's address reader; `an_elided_particle_…` the
+//! shared name shape; `a_role_heading_over_words_…` the later line's heading.
 
+use latexml::util::test::warning_count;
 use serde_json::Value;
 
 use super::{
@@ -370,4 +373,198 @@ fn a_url_in_a_contact_call_is_its_text() {
     "affiliation=Dept X Univ X",
     "email=ann.able@x.no",
   ]]);
+}
+
+/// A tex document of `class` printing `author` as its `\author`, for a table's rows.
+fn document(class: &str, author: &str) -> String {
+  format!(
+    "\\documentclass{{{class}}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{{author}}}\n\\maketitle\nBody.\n\\end{{document}}\n"
+  )
+}
+
+/// An entry's addresses the reading took out as e-mails, today's one item of the block's lines printing them (2310.19837): its line made from its tokens and cut,
+/// its addresses their authors' contacts — the give-back had dropped the contacts and left the addresses in the last affiliation, read back `written`, no difference. One
+/// address on its entry's own line is the same path; an address that spells no one stays in its entry in the reading, and the writer makes no line printing it (today's
+/// kept: a later pass gives it to its carriers). A give-back the writer applies is read back against the reading as resolved (`given_back`).
+#[test]
+fn an_entrys_addresses_are_cut_where_its_line_is_made() {
+  let (xml, shadow) = dump(repro!("z14r2_entry_addresses_cut_under_a_names_row"));
+  assert_eq!(reading(&shadow), [
+    "C Ann Able [†]",
+    "  a Univ A",
+    "  c email ann@a.org",
+    "C Bob Baker [‡]",
+    "  a Univ B",
+    "  c email bob@b.org",
+  ]);
+  assert_eq!(shadow["writer"], "written", "{shadow}");
+  assert_eq!(shadow["readback"]["difference"], Value::Null, "{shadow}");
+  assert_eq!(shadow["readback"]["given_back"], Value::Null, "{shadow}");
+  creators_are(&xml, &[
+    &["Ann Able †", "affiliation=Univ A", "email=ann@a.org"],
+    &["Bob Baker ‡", "affiliation=Univ B", "email=bob@b.org"],
+  ]);
+  for (author, writer, expected) in [
+    (
+      r"\IEEEauthorblockN{Ann Able$^\dagger$, Bob Baker$^\ddagger$ \IEEEauthorblockA{$^\dagger$Univ A\\ $^\ddagger$Univ B, bob@b.org}}",
+      "written",
+      &[&["Ann Able †", "affiliation=Univ A"][..], &[
+        "Bob Baker ‡",
+        "affiliation=Univ B",
+        "email=bob@b.org",
+      ]][..],
+    ),
+    (
+      r"\IEEEauthorblockN{Ann Able$^\dagger$, Bob Baker$^\ddagger$ \IEEEauthorblockA{$^\dagger$Univ A\\ $^\ddagger$Univ B\\ Email: x@a.org, y@b.org}}",
+      "declined",
+      &[
+        &[
+          "Ann Able †",
+          "affiliation=† Univ A ‡ Univ B",
+          "email=x@a.org",
+          "email=y@b.org",
+        ][..],
+        &[
+          "Bob Baker ‡",
+          "affiliation=† Univ A ‡ Univ B",
+          "email=x@a.org",
+          "email=y@b.org",
+        ],
+      ][..],
+    ),
+  ] {
+    let (xml, shadow) = dump(&document("IEEEtran", author));
+    assert!(
+      shadow["writer"].as_str().unwrap_or("").starts_with(writer),
+      "{author}: {shadow}"
+    );
+    creators_are(&xml, expected);
+  }
+  // (a creator the writer conceded to today's, the reading's names not written: read back against the reading as resolved)
+  let (_, shadow) = dump(&document("article", r"Inst. d'Astrophysique, Univ A"));
+  assert_eq!(shadow["readback"]["difference"], Value::Null, "{shadow}");
+  assert_eq!(
+    shadow["readback"]["given_back"], "the creators' names",
+    "{shadow}"
+  );
+}
+
+/// A group of addresses in a names row whose printed braces hold commas is read whole, as an address reader reads it (2003.02512): no `E-mails: {ann` and `bob}@a.org`
+/// among the people, the one no one spells the last author's by elimination. The writer declines (what it would write drops the label word), today's merged creator and its honest Error kept; set in a font it is written.
+#[test]
+fn an_address_group_in_a_names_row_is_read_whole() {
+  let (log, xml, shadow) = run(repro!("z14r2_address_group_in_a_names_row"));
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert!(log.contains("Error:frontmatter:merged_creators"), "{log}");
+  assert_eq!(reading(&shadow), [
+    "C Ann Able [1]",
+    "  a Univ A",
+    "  c email ann@a.org",
+    "C Bob Baker [1]",
+    "  a Univ A",
+    "  c email bob@a.org",
+    "C Cat Cole [2]",
+    "  a Univ B",
+    "  c email dan@b.org",
+  ]);
+  assert!(
+    shadow["writer"]
+      .as_str()
+      .unwrap_or("")
+      .starts_with("declined"),
+    "{shadow}"
+  );
+  assert_eq!(creators(&xml).len(), 1, "{xml}");
+  let (xml, shadow) = dump(&document(
+    "IEEEtran",
+    r"\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2} \IEEEauthorblockA{\IEEEauthorrefmark{1} Univ A} \IEEEauthorblockA{\IEEEauthorrefmark{2} Univ B} \texttt{\{ann, bob\}@a.org}}",
+  ));
+  assert_eq!(reading(&shadow), [
+    "C Ann Able [1]",
+    "  a Univ A",
+    "  c email ann@a.org",
+    "C Bob Baker [2]",
+    "  a Univ B",
+    "  c email bob@a.org",
+  ]);
+  creators_are(&xml, &[
+    &["Ann Able", "email=ann@a.org", "affiliation=Univ A"],
+    &["Bob Baker", "email=bob@a.org", "affiliation=Univ B"],
+  ]);
+}
+
+/// A particle elided onto a capital is a surname's only right after an initial (hep-ph0311131's `D.~d'Enterria`): the shared shape decides today's reader too, and an
+/// institution or a place elides as well — `C. Vignat, Universit\'e d'Orsay` one creator as written (1009.2396), a `Villeneuve d'Ascq` row no person in the reading.
+#[test]
+fn an_elided_particle_is_a_surnames_only_after_an_initial() {
+  let (xml, _) = dump(repro!("z14r2_elided_particle_only_after_an_initial"));
+  creators_are(&xml, &[&["C. Vignat, Université d’Orsay"]]);
+  let (_, shadow) = dump(&document(
+    "article",
+    r"Ann Able\\ Univ A\\ \\ Villeneuve d'Ascq",
+  ));
+  assert_eq!(reading(&shadow), [
+    "C Ann Able []",
+    "  a Univ A",
+    "  a Villeneuve d’Ascq",
+  ]);
+  let (xml, _) = dump(&document("article", r"D. d'Enterria, A. Able"));
+  creators_are(&xml, &[&["D. d’Enterria"], &["A. Able"]]);
+}
+
+/// A role heading opens a row of names only where each piece shows a person — a name's cue or its mark (hep-ph0311131): a heading over words is a line of the
+/// block, as before Z14 (review revZ14's REDs: `Editors: Springer Nature` was a person).
+#[test]
+fn a_role_heading_over_words_opens_no_names() {
+  let (xml, shadow) = dump(repro!("z14r2_role_heading_over_words"));
+  assert_eq!(reading(&shadow), [
+    "C Ann Able [1]",
+    "  a Editors: Springer Nature",
+    "  a Univ A",
+  ]);
+  creators_are(&xml, &[&[
+    "Ann Able",
+    "affiliation=Editors: Springer Nature",
+    "affiliation=Univ A",
+  ]]);
+  for (author, expected) in [
+    (
+      r"Ann Able\\ Author: Corresponding Author\\ Univ A",
+      &[
+        "C Ann Able []",
+        "  a Author: Corresponding Author",
+        "  a Univ A",
+      ][..],
+    ),
+    (r"Ann Able\\ Editor: Physical Review", &[
+      "C Ann Able []",
+      "  a Editor: Physical Review",
+    ]),
+    (
+      r"Ann Able\\ Contributors: Equal Contribution, Data Curation",
+      &[
+        "C Ann Able []",
+        "  a Contributors: Equal Contribution, Data Curation",
+      ],
+    ),
+  ] {
+    let (_, shadow) = dump(&document("article", author));
+    assert_eq!(reading(&shadow), expected, "{author}");
+  }
+}
+
+/// RED (review revZ14): a mark past a marked list's leading run is flattened into its text, `Town, USA\\ *ann@x.org` reading `USA1ann@x.org` (2411.03172, 2510.06608,
+/// 2602.11758): each mark should be an event, the institute both authors', each address its author's.
+#[test]
+#[ignore = "RED: a marked list's mark past its leading run is flattened into the text (events/mod.rs)"]
+fn a_mark_past_a_marked_lists_leading_run_is_an_event_red() {
+  let (_, shadow) = dump(repro!("z14r2_marked_list_mark_past_the_leading_run_red"));
+  assert_eq!(reading(&shadow), [
+    "C Ann Able [1]",
+    "  a Univ X, Town, USA",
+    "  c email ann@x.org",
+    "C Bob Baker [2]",
+    "  a Univ X, Town, USA",
+    "  c email bob@x.org",
+  ]);
 }

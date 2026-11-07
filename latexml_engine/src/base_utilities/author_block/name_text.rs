@@ -496,13 +496,17 @@ fn name_shaped(text: &str) -> bool {
   if particle(words[0]) || particle(words[words.len() - 1]) {
     return false;
   }
-  words.iter().all(|word| {
+  words.iter().enumerate().all(|(at, word)| {
     if non_name_word(word) {
       return false;
     }
-    // (a particle elided onto the surname is the surname's: `D.~d'Enterria`, hep-ph0311131)
+    // (a particle elided onto the surname is the surname's right after an initial: `D.~d'Enterria`, hep-ph0311131 —
+    // and only there, this helper deciding today's reader too: a place or an institution elides as well, `C. Vignat,
+    // Université d'Orsay`, 1009.2396; `Villeneuve d'Ascq`, `Saint Martin d'Heres`)
+    let after_initial = at > 0 && is_initial(words[at - 1]);
     let word = ["d'", "d’", "l'", "l’", "dell'", "dell’"]
       .iter()
+      .filter(|_| after_initial)
       .find_map(|elided| word.strip_prefix(elided))
       .unwrap_or(word);
     particle(word)
@@ -1236,7 +1240,7 @@ fn is_initial(word: &str) -> bool {
 /// M. Robins`) or a particle inside it ([`NAME_PARTICLES`]: `Ludwig van Beethoven`). Two capitalized words alone are as
 /// often a place, an institution's head or a role (`Johns Hopkins`, `Max Planck`, `Santa Barbara`, `Associate Dean`)
 /// as a name.
-fn has_person_cue(text: &str) -> bool {
+pub(in crate::base_utilities) fn has_person_cue(text: &str) -> bool {
   let words: Vec<&str> = text.split_whitespace().collect();
   words.iter().any(|word| is_initial(word))
     || (words.len() > 2

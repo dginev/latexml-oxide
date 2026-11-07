@@ -285,6 +285,9 @@ pub(in crate::base_utilities) struct Ledger {
 pub(in crate::base_utilities) struct ReadBack {
   /// where they first differ (`plan::difference`), none where the document reads as the reading
   pub difference: Option<String>,
+  /// where the document, reading as the reading with its give-backs applied, first differs from the reading as resolved:
+  /// an item the writer did not write as read
+  pub given_back: Option<String>,
 }
 
 thread_local! {

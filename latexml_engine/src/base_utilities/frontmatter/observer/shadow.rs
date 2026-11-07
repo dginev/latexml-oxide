@@ -695,7 +695,8 @@ pub fn fm_shadow_json() -> String {
 /// writer's own check (its reason the difference), `declined` with its reason (`Ledger::refusal`); where the writer did
 /// not run, `no-reading` (the resolver read nothing), `no-block` (no author block, `writer_stays_out`) or
 /// `held-or-skipped` with its reason. And the read-back at the end of `insert_frontmatter`, none where it never got
-/// there: `difference`, the first place the final document differs from the reading.
+/// there: `difference`, the first place the final document differs from the reading; `given_back`, from the reading as
+/// resolved where the writer gave an item back.
 fn json_read_back(out: &mut String, ledger: &ledger::Ledger, blocks: usize) {
   let read_nothing = || {
     let resolved = resolve(&ledger_inputs(ledger));
@@ -728,6 +729,14 @@ fn json_read_back(out: &mut String, ledger: &ledger::Ledger, blocks: usize) {
       .read_back
       .as_ref()
       .and_then(|read_back| read_back.difference.as_deref()),
+  );
+  out.push_str(",\"given_back\":");
+  json_opt_str(
+    out,
+    ledger
+      .read_back
+      .as_ref()
+      .and_then(|read_back| read_back.given_back.as_deref()),
   );
   out.push('}');
 }

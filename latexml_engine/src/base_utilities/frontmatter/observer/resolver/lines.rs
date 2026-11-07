@@ -463,29 +463,68 @@ pub(super) fn line_led_pieces(events: &[Event]) -> Vec<Vec<Event>> {
 }
 
 /// A names line's events with the e-mail addresses its Name runs print taken out (the run's words before its first
-/// address stay the name; a run of addresses alone goes), and those addresses.
+/// address stay the name, its label word no name's; a run of addresses alone goes), and those addresses. A group of
+/// local parts is read first, whole ([`address_groups_whole`]).
 pub(super) fn names_without_addresses(events: &[&Event]) -> (Vec<Event>, Vec<String>) {
+  let events = address_groups_whole(events);
   let mut out = Vec::with_capacity(events.len());
   let mut addresses = Vec::new();
   for event in events {
     if event.kind == EventKind::Name && !addresses_in(&event.text).is_empty() {
-      let words: Vec<&str> = event.text.split_whitespace().collect();
-      let first = words
-        .iter()
-        .position(|w| !plain_addresses(w).is_empty())
-        .unwrap_or(words.len());
+      let before = address_runs(&event.text, &|_| false)
+        .first()
+        .map_or(event.text.as_str(), |run| &event.text[..run.start])
+        .trim();
       addresses.extend(addresses_in(&event.text));
-      if first > 0 {
+      if !before.is_empty() {
         out.push(Event {
-          text: words[..first].join(" "),
-          ..(*event).clone()
+          text: before.to_string(),
+          ..event
         });
       }
       continue;
     }
-    out.push((*event).clone());
+    out.push(event);
   }
   (out, addresses)
+}
+
+/// A names line's events with each group of addresses whose printed braces hold the line's commas one Name run again,
+/// as an address reader reads it: `\IEEEauthorblockN{Ann Able, … E-mails: \{ann, bob\}@a.org, cat@b.org}` parts at those
+/// commas into `E-mails: {ann` and `bob}@a.org`, no names (2003.02512). Commas in braces that print no address part names
+/// as they did.
+fn address_groups_whole(events: &[&Event]) -> Vec<Event> {
+  let mut out: Vec<Event> = Vec::with_capacity(events.len());
+  let mut at = 0;
+  while at < events.len() {
+    let event = events[at];
+    let mut joined = event.text.clone();
+    let mut end = at;
+    let in_braces = |e: &Event| e.kind == EventKind::Sep(SepKind::Comma) && e.braces > 0;
+    while event.kind == EventKind::Name
+      && let [comma, name, ..] = &events[end + 1..]
+      && in_braces(comma)
+      && name.kind == EventKind::Name
+    {
+      joined = s!("{joined}, {}", name.text);
+      end += 2;
+    }
+    if end > at && !addresses_in(&joined).is_empty() {
+      out.push(Event {
+        text: joined,
+        span: event
+          .span
+          .zip(events[end].span)
+          .map(|((start, _), (_, stop))| (start, stop)),
+        ..event.clone()
+      });
+      at = end + 1;
+    } else {
+      out.push(event.clone());
+      at += 1;
+    }
+  }
+  out
 }
 
 /// A per-author class's names line as one Name when its pieces, parted only by commas and words, do not read as two

@@ -26,7 +26,8 @@ use super::{
   ledger::{Entry, Ledger, Outcome, ReadBack, SkipReason, with_ledger},
   policy::{family_written, policy_for},
   resolver::{
-    Assoc, RCreator, Resolved, in_source_order, is_change_rule, ledger_inputs, mark_labels, resolve,
+    Assoc, RCreator, Resolved, addresses_in, in_source_order, is_change_rule, ledger_inputs,
+    mark_labels, resolve,
   },
   shadow::{FmShadow, fm_shadow_mode},
   *,
@@ -116,20 +117,23 @@ fn decline(reason: &str, keep: bool) {
 /// the resolver's. A paper the writer found the same or wrote that no longer reads so was changed by a pass after the
 /// writer: what Z8 and Z9 pay down. It reads; it changes nothing.
 ///
+/// That reading has its give-backs applied, so the final document is read against the resolver's too: an item whose text
+/// the writer gave back or conceded reads the same under the first, and shows here (`given_back`): the e-mails of
+/// 2310.19837, read as contacts, written as an affiliation's text, under `written` and a null difference.
+///
 /// [`Ledger::compared`]: super::ledger::Ledger::compared
 pub(in crate::base_utilities) fn read_back_frontmatter(document: &mut Document) {
   if fm_shadow_mode() != FmShadow::On || rehearsal::rehearsing() {
     return;
   }
-  let reading = with_ledger(|ledger| {
-    ledger
-      .compared
-      .clone()
-      .unwrap_or_else(|| resolve(&ledger_inputs(ledger)))
+  let (reading, resolved) = with_ledger(|ledger| {
+    let resolved = resolve(&ledger_inputs(ledger));
+    (ledger.compared.clone(), resolved)
   });
   let front = dom::read(document);
-  let difference = plan::difference(&reading, &front);
-  with_ledger(|ledger| ledger.read_back = Some(ReadBack { difference }));
+  let difference = plan::difference(reading.as_ref().unwrap_or(&resolved), &front);
+  let given_back = plan::difference(&resolved, &front).filter(|_| difference.is_none());
+  with_ledger(|ledger| ledger.read_back = Some(ReadBack { difference, given_back }));
 }
 
 /// The API calls the writer leaves as today's output holds them: each made by a frontmatter setter whose binding's
@@ -495,6 +499,10 @@ fn give_back_addresses(resolved: &Resolved, front: &dom::Front, all: bool) -> Re
 /// aa's `\mail{x}` holder "Correspondence to " (aa.cls v7.0 `\footnotetext[0]{\mailname\ \@mail}`) beside the same
 /// address in an `\institute` (astro-ph0107243's `email: faraggiana@ts.astro.it`, 1005.3784's `\email`) prints that
 /// label nowhere else (brief 97b: a take-out removes what it read, and nothing else the class prints).
+/// An address today's holds as a contact is not given back: giving it back took the contact from its author and left
+/// the address in the affiliation's text (`\IEEEauthorblockA{$^\dagger$Univ A\\ $^\ddagger$Univ B\\ Email: ann@a.org,
+/// bob@b.org}`, 2310.19837): the entry is made whole and cut where the plan makes it (`Op::Make`'s `cut`), or the paper
+/// declined, today's contacts kept.
 fn give_back_entries(resolved: &Resolved, front: &dom::Front, all: bool) -> Result<Resolved> {
   if resolved.taken.is_empty() {
     return Ok(resolved.clone());
@@ -518,11 +526,45 @@ fn give_back_entries(resolved: &Resolved, front: &dom::Front, all: bool) -> Resu
     .map(|a| dom::norm(&a.text))
     .collect();
   let mailed = |a: &str| mailed.contains(&dom::norm(a));
+  // (the addresses today's authors' contacts print — a nameless creator's are no author's: the block's, which a pass
+  // after the writer may move, 2303.18104)
+  let contacted: BTreeSet<String> = front
+    .creators
+    .iter()
+    .flat_map(|c| &c.items)
+    .filter(|item| item.kind == dom::Kind::Contact("email".into()))
+    .flat_map(|item| addresses_in(&item.node.get_content()))
+    .map(|a| dom::norm(&a))
+    .collect();
   let mut out = resolved.clone();
   for taken in &resolved.taken {
     let (original, stripped) = (dom::norm(&taken.original), dom::norm(&taken.stripped));
     let cut_to =
       |item: &dom::Item| dom::address_cut(&item.node, &spells, &mailed).map(|cut| cut.key);
+    // (its e-mails, each a contact of today's or printed in an affiliation of today's the address reader cuts)
+    let entry_mails: Vec<String> = resolved
+      .creators
+      .iter()
+      .flat_map(|c| &c.contacts)
+      .chain(&resolved.block)
+      .filter(|a| a.source == taken.source && a.rule.contains("owner:entry-address"))
+      .map(|a| dom::norm(&a.text))
+      .collect();
+    let printed_cut = |mail: &String| {
+      items.iter().any(|item| {
+        dom::address_cut(&item.node, &spells, &mailed).is_some_and(|cut| {
+          cut
+            .runs
+            .iter()
+            .flat_map(|run| &run.addresses)
+            .any(|(a, _)| dom::norm(a) == *mail)
+        })
+      })
+    };
+    let held_as_contact = !entry_mails.is_empty()
+      && entry_mails
+        .iter()
+        .all(|mail| contacted.contains(mail) || printed_cut(mail));
     let holds = if stripped.is_empty() {
       !items.iter().any(|item| item.key == original)
         || items
@@ -551,7 +593,7 @@ fn give_back_entries(resolved: &Resolved, front: &dom::Front, all: bool) -> Resu
       }
       Ok(false)
     };
-    if holds && !all && !label_lost()? {
+    if (holds || held_as_contact) && !all && !label_lost()? {
       continue;
     }
     for creator in &mut out.creators {
@@ -778,6 +820,7 @@ mod tests {
       before: None,
       label: None,
       unanswered,
+      cut: None,
     };
     assert_eq!(make(Owner::Block, false).made_for(), Some(Owner::Block));
     assert_eq!(

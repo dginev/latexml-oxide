@@ -66,6 +66,8 @@ pub(super) enum Op {
   /// an item made from the queued `tokens` for `owner` — before `before`, the item of today's it replaces there; a
   /// legend's `label` the mark its note shows; `unanswered`, a piece of a cut labelled line no name answers, the
   /// block's by the placement order (a labelled item nobody answers goes to the block), not by doubt
+  /// `cut`: the reading's e-mails its tokens print, taken out once it is made, as [`Op::CutAddresses`] takes them out of
+  /// an item of today's (an entry of a line that prints its addresses, today's contacts holding them: 2310.19837)
   Make {
     owner:      Owner,
     made:       Made,
@@ -74,6 +76,7 @@ pub(super) enum Op {
     before:     Option<Node>,
     label:      Option<String>,
     unanswered: bool,
+    cut:        Option<Vec<String>>,
   },
   /// today's contact given the reading's role
   Role { node: Node, role: String },
@@ -1376,6 +1379,7 @@ fn cell_tokens(content: &[Token], from: usize, tokens: &Tokens) -> Option<Tokens
 /// BESIII list, 143 holders of mark 1 each the list, 347 authors none; `$^{1}$ Univ A\\$^{b}$ Also at …` in one `{\it
 /// …}` group). A run of such lines alone keeps today's placement (`writer::writes`).
 fn cut_block_lines(
+  resolved: &Resolved,
   want: &BTreeMap<Key, Vec<(Owner, &Assoc)>>,
   have: &BTreeMap<Key, Vec<(Owner, Node, bool)>>,
   wanted_only: &mut Vec<Key>,
@@ -1448,20 +1452,51 @@ fn cut_block_lines(
     if (run.len() == 1 && run[0].2.0 != Kind::Note) || run.iter().all(|line| line.3) {
       continue;
     }
+    // (an affiliation line that prints an address the reading left in it is not made: today's item prints it among
+    // others, where a pass after the writer takes it out as its carriers' e-mail, which no pass reads out of a line made
+    // one author's — a legend keeps its address in its text, OD #925 —
+    // `$^\ddagger$Univ B\\ Email: x@a.org, y@b.org`, its addresses spelling no one, under `Ann Able$^\dagger$, Bob
+    // Baker$^\ddagger$`, read with 2310.19837)
+    if run.iter().any(|(_, _, key, _)| {
+      key.0 == Kind::Affiliation
+        && want[key].iter().any(|(_, a)| {
+          !addresses_in(&a.text).is_empty() && !a.rule.ends_with(" ruling3:address-out")
+        })
+    }) {
+      continue;
+    }
+    // (a line the reading took addresses out of prints them still: its tokens are read as it was, and made cut)
+    let printed_whole = |index: usize, span: (u16, u16), key: &Key| {
+      resolved
+        .taken
+        .iter()
+        .find(|t| t.source == Some((index, Some(span))) && norm(&t.stripped) == key.1)
+        .map(|t| norm(&t.original))
+    };
     let Some(pieces) = run
       .iter()
       // (with its mark where the mark is the line's only key left: a legend's, whose text keeps its mark's ink, and a
       // line no name answers, whose printed label is markup never dropped — FIDELITY_CHARTER: label text is markup;
       // the `b` of `$^{b}$ Also at …` kept on the block, review rev98e S1)
       .map(|(index, span, key, blocks)| {
-        block_line_tokens(*index, *span, &key.1, key.0 == Kind::Note || *blocks)
+        let printed = printed_whole(*index, *span, key);
+        let text = printed.as_ref().unwrap_or(&key.1);
+        block_line_tokens(*index, *span, text, key.0 == Kind::Note || *blocks)
       })
       .collect::<Option<Vec<Tokens>>>()
     else {
       DebugFeature!("frontmatter", "FRONT writer: a block line does not cut");
       continue;
     };
-    for ((_, _, key, blocks), tokens) in run.iter().zip(pieces) {
+    let mailed = || -> Vec<String> {
+      want
+        .keys()
+        .filter(|key| key.0 == Kind::Contact("email".into()))
+        .map(|key| key.1.clone())
+        .collect()
+    };
+    for ((index, span, key, blocks), tokens) in run.iter().zip(pieces) {
+      let cut = printed_whole(*index, *span, key).map(|_| mailed());
       let made = if key.0 == Kind::Note {
         Made::Legend
       } else {
@@ -1479,6 +1514,7 @@ fn cut_block_lines(
             .map(|(_, n, _)| n.clone()),
           label: assoc.label.clone(),
           unanswered: *blocks,
+          cut: cut.clone(),
         });
       }
     }
@@ -1575,8 +1611,10 @@ fn cut_entry_addresses(
       .iter()
       .map(|(_, node, movable)| {
         let cut = dom::address_cut(node, &spells, &mailed).filter(|_| *movable)?;
-        (cut.key.is_empty() || want.contains_key(&(Kind::Affiliation, cut.key.clone())))
-          .then_some(cut)
+        (cut.key.is_empty()
+          || want.contains_key(&(Kind::Affiliation, cut.key.clone()))
+          || joins_entries(want, &cut.key))
+        .then_some(cut)
       })
       .collect::<Option<Vec<dom::AddressCut>>>()
     else {
@@ -1623,6 +1661,33 @@ fn cut_entry_addresses(
     }
   }
   Ok(printed_in)
+}
+
+/// Whether `key` is the text of a run of the reading's affiliation entries one after another, joined: today's one item of
+/// a block's lines, cut of its addresses, which [`cut_block_lines`] then parts (`† Univ A ‡ Univ B Email: ann@a.org,
+/// bob@b.org` the entries `Univ A` and `Univ B`, its addresses their e-mails: 2310.19837).
+fn joins_entries(want: &BTreeMap<Key, Vec<(Owner, &Assoc)>>, key: &str) -> bool {
+  /// An item's source, its ledger index and span ([`Assoc::source`]).
+  type ItemSource = (usize, Option<(u16, u16)>);
+  let mut entries: Vec<(Option<ItemSource>, &str)> = want
+    .iter()
+    .filter(|(k, _)| k.0 == Kind::Affiliation && !k.1.is_empty())
+    .filter_map(|(k, wants)| Some((wants.first()?.1.source, k.1.as_str())))
+    .collect();
+  entries.sort_unstable();
+  (0..entries.len()).any(|from| {
+    let mut joined = String::new();
+    for (_, text) in &entries[from..] {
+      joined.push_str(text);
+      if joined == key {
+        return true;
+      }
+      if !key.starts_with(&joined) {
+        return false;
+      }
+    }
+    false
+  })
 }
 
 /// The label today's affiliation item `node` prints before its text, which a take-out that empties it keeps on the
@@ -1836,17 +1901,50 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
     let Some(pieces) = cut(&call)? else {
       return Ok(declined("the entry does not cut"));
     };
-    // (every piece is one of the reading's entries, and today's item is them all, joined)
-    let joined: String = pieces.iter().map(|(text, _)| text.as_str()).collect();
+    // (a piece the reading took addresses out of is that entry, made cut, as a block's line is: `cut_block_lines`;
+    // 2303.18104's `$^\dagger$Department …, Sweden. e-mail: marian.codreanu@liu.se. This research …`)
+    let taken_from = |text: &str| {
+      resolved
+        .taken
+        .iter()
+        .find(|t| t.source.map(|(i, _)| i) == Some(index) && norm(&t.original) == text)
+        .map(|t| norm(&t.stripped))
+    };
+    let pieces: Vec<(String, Tokens, bool)> = pieces
+      .into_iter()
+      .map(|(text, tokens)| match taken_from(&text) {
+        Some(stripped) => (stripped, tokens, true),
+        None => (text, tokens, false),
+      })
+      .collect();
+    // (every piece is one of the reading's entries, and today's item is them all, joined — as printed, or as the
+    // address cut left it, `cut_entry_addresses`)
+    let joined: String = pieces.iter().map(|(text, ..)| text.as_str()).collect();
     let whole = (Kind::Affiliation, joined);
-    if !held_only.contains(&whole) || pieces.len() != keys.len() {
+    // (an address a piece's take-out wrote out is the call's key too, made by the cut of today's item below)
+    let entries = keys
+      .iter()
+      .filter(|key| {
+        !(matches!(key.0, Kind::Contact(_))
+          && printed_in.contains_key(*key)
+          && want[*key]
+            .iter()
+            .all(|(_, a)| rule_has(a, "owner:entry-address")))
+      })
+      .count();
+    if !held_only.contains(&whole) || pieces.len() != entries {
       return Ok(declined("today's item is not the pieces joined"));
     }
     let holds = &have[&whole];
     if holds.iter().any(|(_, _, movable)| !movable) {
       return Ok(declined("an item to remove that cannot move"));
     }
-    for (text, tokens) in &pieces {
+    let mailed: Vec<String> = want
+      .keys()
+      .filter(|key| key.0 == Kind::Contact("email".into()))
+      .map(|key| key.1.clone())
+      .collect();
+    for (text, tokens, taken) in &pieces {
       let Some(key) = keys.iter().find(|(_, k)| k == text) else {
         return Ok(declined("a piece the reading lacks"));
       };
@@ -1867,6 +1965,7 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
             .map(|(_, n, _)| n.clone()),
           label: assoc.label.clone(),
           unanswered: false,
+          cut: taken.then(|| mailed.clone()),
         });
       }
       wanted_only.retain(|k| k != key);
@@ -1879,7 +1978,14 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
   cuts_mark.restore();
   // the reading's entries of an author block's own lines, today's one item joining them (or a legend line, today's an
   // affiliation)
-  cut_block_lines(&want, &have, &mut wanted_only, &mut held_only, &mut ops);
+  cut_block_lines(
+    resolved,
+    &want,
+    &have,
+    &mut wanted_only,
+    &mut held_only,
+    &mut ops,
+  );
   // a legend the reading takes for a note, today's an affiliation of the same text
   for key in wanted_only.clone() {
     let wants = &want[&key];
@@ -1914,6 +2020,7 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Result<Option<Plan>> {
         before:     None,
         label:      assoc.label.clone(),
         unanswered: false,
+        cut:        None,
       });
     }
     for (_, node, _) in holds {

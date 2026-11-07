@@ -1,0 +1,14 @@
+% witness: 2411.03172 (keeps `*`, `†` in the affiliation's text), 2510.06608, 2602.11758 (the same in int143b)
+% oracle:  pdflatex 0 errors: the institute's lines, then each address after its author's mark
+% engines: Perl: the block one affiliation; ours: the marked list's text is flattened past its leading run, `Town, USA\\ *ann@x.org` reads `USA1ann@x.org` (`events/mod.rs`, the lexer of `\lx@add@affiliation@marked`'s list), the writer declines
+% expect:  0 errors; the institute both authors', each address its author's, the marks no part of any text (perfect_kernel_batchz14::a_mark_past_a_marked_lists_leading_run_is_an_event_red)
+% status:  RED (Z14r2; review revZ14)
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2}
+\IEEEauthorblockA{Univ X, Town, USA\\
+\IEEEauthorrefmark{1}ann@x.org, \IEEEauthorrefmark{2}bob@x.org}}}
+\maketitle
+Body.
+\end{document}
