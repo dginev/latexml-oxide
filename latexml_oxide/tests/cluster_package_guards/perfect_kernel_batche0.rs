@@ -835,15 +835,19 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("authblk_sty.rs", 23),
   ("author_block", 1288),
   ("defs/author_macros", 20),
-  ("defs/frontmatter_api", 7),
+  // (Z4a, 7 -> 8: `\lx@frontmatter@itemnone` reads its tag argument, an element's name: an `ltx:rdf` passes through, the rest goes)
+  ("defs/frontmatter_api", 8),
   ("defs/frontmatter_fields", 21),
   ("defs/general", 8),
   ("epl_cls.rs", 43),
   ("eptcs_cls.rs", 28),
   ("events", 58),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
-  ("field_notes", 4),
-  ("frontmatter (rest)", 23),
+  // (Z4a, 4 -> 8: an environment step by its meaning, a CS whose definition is `\begin` or `\end`, a `\let` copy too, what no frame
+  // says for a raw environment; the definition's name, not the token's spelling)
+  ("field_notes", 8),
+  // (26: C1's `queue_reading.rs` keeps a cache of what `author_block`'s readers read off the queue's tokens, and goes with them)
+  ("frontmatter (rest)", 26),
   ("frontmatter_stores", 527),
   ("gretsi_cls.rs", 14),
   ("ieeetran_cls.rs", 119),
@@ -884,6 +888,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("writer/apply", 7),
   // (a new file, what is left of `writer/plan`'s walk-backs: brace balance and a formula's shifts; the two rows together fell by 25, Z3)
   ("writer/content", 7),
+  // (Z4a, a new file: the emitter builds Perl's calls from the reading, its reads a call's own keys and pieces, `text_tokens` and the
+  // catcodes of a cut: where a slice's edge falls past an option, a group or an accent's letter, OD #979)
+  ("writer/emit", 30),
   ("writer/dom+mod", 0),
   ("writer/plan", 85),
   ("writer/repart", 0),
@@ -902,6 +909,7 @@ const FRONTMATTER_AREAS: &[(&str, &str)] = &[
   ("writer/plan", "observer/writer/plan.rs"),
   ("writer/apply", "observer/writer/apply.rs"),
   ("writer/content", "observer/writer/content.rs"),
+  ("writer/emit", "observer/writer/emit.rs"),
   ("writer/repart", "observer/writer/repart.rs"),
   ("writer/dom+mod", "observer/writer/"),
   ("resolver", "observer/resolver/"),
@@ -1059,19 +1067,26 @@ fn a_spelling_rule_in_the_resolver_counts_however_it_is_written() {
 /// Backslash literals under `observer/`, per file or directory: the part of it that may spell a token's name, whatever the code around
 /// them does (the regexes of [`token_reads_only_fall_toward_the_floor`] see a comparison, not `fn spelled(x) { x.contains("\\foo") }`).
 /// Debts of what names the kernel's tokens today (the rehearsal's table, the writer's and the events' readers, the ledger's stamping);
-/// the zeros stay zero: `policy`, `field_notes`, `marks` and `mod` decide, and a decision spells no token.
+/// the zeros stay zero: `policy`, `marks` and `mod` decide, and a decision spells no token; `field_notes` names the two definitions an
+/// environment step's meaning is (Z4a).
 const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
-  ("events", 83),
-  ("field_notes", 0),
+  // (Z4a, 83 -> 85: a note's kind, `\lx@fm@obs@fnnote`, the rehearsal's own name for a footnote it heard)
+  ("events", 85),
+  // (Z4a, 0 -> 2: an environment by its meaning, the definition's name `\begin` or `\end`, not the token's spelling: a `\let` copy
+  // too, what no frame says for a raw environment)
+  ("field_notes", 2),
   ("ledger", 29),
   ("marks", 0),
   ("mod", 0),
   ("policy", 0),
-  ("rehearsal", 101),
+  // (Z4a, 101 -> 104: the rehearsal's `\lx@fm@obs@footnote`, the footnote a note step hears, defined and named)
+  ("rehearsal", 104),
   // (also among `resolver`'s 15 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook)
   ("resolver", 3),
   ("shadow", 7),
-  ("writer", 81),
+  // (Z4a, 81 -> 107: `writer/emit.rs`, the calls it builds: Perl's `\lx@add@authors`, `\lx@annotate@frontmatter@now`, the
+  // queue's own `\lx@frontmatter@item*`; it writes them, no decision reads them)
+  ("writer", 107),
 ];
 
 /// revZ2r2: the token-read count's regexes are blind outside `resolver/` to a spelling not written as a comparison. This counts what such

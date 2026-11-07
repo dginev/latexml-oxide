@@ -182,6 +182,7 @@ fn read_at_flush() -> Result<()> {
           declarations,
           breaks,
           held,
+          environments,
         } => {
           mark_held(&mut value, &held);
           Outcome::Events {
@@ -192,6 +193,7 @@ fn read_at_flush() -> Result<()> {
             declarations,
             breaks,
             held,
+            environments,
           }
         },
         // (waits for the next flush; if none comes, the dump says why it was never rehearsed)
@@ -893,6 +895,7 @@ mod tests {
         declarations: Vec::new(),
         breaks:       Vec::new(),
         held:         Vec::new(),
+        environments: Vec::new(),
       }),
       None
     );

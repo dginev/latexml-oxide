@@ -379,20 +379,21 @@ fn cut(call: &ApiCall) -> Result<Option<Vec<(String, Tokens)>>> {
   }
   // (the call's font, which its content's fonts are read against: `events::entry_font`)
   let root = lookup_font();
-  let ((events, formulas), ink) = match rehearse(
+  let (((events, formulas), ink), environments) = match rehearse(
     field_stamped(2, 0, content),
     TitleMarks::Fnsymbol,
     &[],
     |d| (lex_with_formulas(d), InkFonts::of(d)),
   )? {
-    Rehearsal::Done { value, .. } => value,
+    Rehearsal::Done { value, environments, .. } => (value, environments),
     Rehearsal::Skipped(_) => return Ok(None),
   };
   let scope = root.map(|root| FontScope { ink, root, start: 0 });
   let field = Field {
-    tokens:   content,
-    base:     0,
-    formulas: &formulas,
+    tokens:       content,
+    base:         0,
+    formulas:     &formulas,
+    environments: &environments,
   };
   let pieces = split_pieces(&events, &call.role);
   let spans: Vec<Option<(usize, usize)>> = pieces.iter().map(|(_, p)| piece_span(p)).collect();
@@ -472,13 +473,17 @@ pub(super) fn block_span_tokens(
     let Some(Entry::Author(block)) = ledger.entries.get(index) else {
       return None;
     };
-    let Outcome::Events { events, formulas, .. } = &block.outcome else {
+    let Outcome::Events {
+      events, formulas, environments, ..
+    } = &block.outcome
+    else {
       return None;
     };
     let field = Field {
       tokens: block.tokens.unlist_ref(),
       base: block.range.0,
       formulas,
+      environments,
     };
     // (the event printed last before the line, a layout change aside)
     let mut mark = events

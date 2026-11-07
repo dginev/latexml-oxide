@@ -515,6 +515,62 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     Ok(Vec::new())
   });
 
+  // Rust-only, the emitter's (OD #979), in the shape of Perl's `\\lx@author@withsup`: an emitted item's content, whose marks
+  // label nothing, its labels the reading's, for the item's digestion (no group of its own: `\\begin{CJK*}` in a name, 2609.05616); `@itemonly`, where an API call in it means nothing more either, its contact an
+  // item of its own. Only what records and prints nothing goes on.
+  DefMacro!("\\lx@frontmatter@item{}", "\\lx@frontmatter@item@start #1");
+  DefMacro!(
+    "\\lx@frontmatter@itemonly{}",
+    "\\bgroup\\lx@frontmatter@item@start\\lx@frontmatter@itemonly@start #1\\egroup"
+  );
+  DefPrimitive!("\\lx@frontmatter@item@start", sub[()] {
+    assign_value(EMITTING, Stored::Bool(true), Some(Scope::Local));
+    Ok(Vec::new())
+  });
+  DefPrimitive!("\\lx@frontmatter@itemonly@start", sub[()] {
+    let_i(&T_CS!("\\lx@annotate@frontmatter"), &T_CS!("\\lx@frontmatter@itemnone"), None);
+    Ok(Vec::new())
+  });
+  // (the next annotation's place in the queue, which an emitted one takes from its source's: `relocate::at_queue_position`)
+  DefPrimitive!("\\lx@frontmatter@queued{}", sub[(place)] {
+    let place: i64 = place.to_string().parse().unwrap_or(1);
+    assign_value(QUEUE_ORDINAL_COUNTER, Stored::Int(place - 1), Some(Scope::Global));
+    Ok(Vec::new())
+  });
+  // (an entry as `\\lx@annotate@frontmatter` queues it, its lines of addresses read, on `@now`)
+  DefMacro!("\\lx@frontmatter@itemkinded {}{} OptionalKeyVals:Frontmatter {}", sub[(parent, tag, kv, content)] {
+    let content = kind_entry_addresses(&tag, kv.as_ref(), &content)?.unwrap_or(content);
+    let mut call = vec![T_CS!("\\lx@annotate@frontmatter@now"), T_BEGIN!()];
+    call.extend(parent.unlist());
+    call.extend([T_END!(), T_BEGIN!()]);
+    call.extend(tag.unlist());
+    call.push(T_END!());
+    if let Some(kv) = &kv {
+      call.push(T_OTHER!("["));
+      call.extend(kv.revert()?.unlist());
+      call.push(T_OTHER!("]"));
+    }
+    call.extend([T_BEGIN!(), T_CS!("\\lx@frontmatter@item"), T_BEGIN!()]);
+    call.extend(content.unlist());
+    call.extend([T_END!(), T_END!()]);
+    Ok(Tokens::new(call))
+  });
+  DefMacro!("\\lx@frontmatter@itemnone {}{}[]{}", sub[(parent, tag, keys, content)] {
+    if tag.to_string() != "ltx:rdf" {
+      return Ok(Tokens::new(Vec::new()));
+    }
+    let mut call = vec![T_CS!("\\lx@annotate@frontmatter@now"), T_BEGIN!()];
+    call.extend(parent.unlist());
+    call.extend([T_END!(), T_BEGIN!()]);
+    call.extend(tag.unlist());
+    call.extend([T_END!(), T_OTHER!("[")]);
+    call.extend(keys.map(Tokens::unlist).unwrap_or_default());
+    call.extend([T_OTHER!("]"), T_BEGIN!()]);
+    call.extend(content.unlist());
+    call.push(T_END!());
+    Ok(Tokens::new(call))
+  });
+
   DefPrimitive!("\\lx@annotate@frontmatter@now {}{} OptionalKeyVals:Frontmatter {}",
     sub[(parenttag_tks, tag_tks, kv, content)] {
     let parenttag = parenttag_tks.to_string();

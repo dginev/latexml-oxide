@@ -433,6 +433,7 @@ mod perfect_kernel_batchr1;
 mod perfect_kernel_batchz1;
 mod perfect_kernel_batchz2;
 mod perfect_kernel_batchz3;
+mod perfect_kernel_batchz4;
 mod perfect_kernel_gemini;
 mod pgfkeys_native_accessors;
 mod raw_class_stores_reroute_to_frontmatter;

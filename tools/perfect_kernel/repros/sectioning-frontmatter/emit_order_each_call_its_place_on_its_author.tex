@@ -1,0 +1,23 @@
+% mechanism: each source call is its own emitted item, in Perl's two phases: what no label places attaches as it digests, in queue order (`writer::emit`, `\\lx@frontmatter@queued`)
+% witness: 0704.3133, 1202.0103, 0909.4443
+% oracle:  pdflatex 0 errors; each author's lines in source order
+% engines: rust S0: one item per text gave a shared affiliation its first holder's place; perl: no such step
+% expect:  0 errors, 0 warnings; Ann: B then A; Bob: e-mail, A; Cat: e-mail, C, D
+% status:  GREEN (perfect_kernel_batchz4)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ B}
+\affiliation{Univ A}
+\author{Bob Baker}
+\email{bob@b.edu}
+\affiliation{Univ A}
+\author{Cat Cole}
+\email{cat@c.edu}
+\affiliation{Univ C}
+\altaffiliation{Univ D}
+\maketitle
+Body.
+\end{document}

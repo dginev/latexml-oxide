@@ -11,6 +11,10 @@ pub(super) struct Lexer {
   pub(super) events: Vec<Event>,
   /// the name run being read: its characters with their spans, its font, its nest
   run:               Vec<(char, Option<(u16, u16)>)>,
+  /// each of its characters' own token position, beside `run`: a box's cover is wider than what it prints (`Event::marks`)
+  run_own:           Vec<Option<u16>>,
+  /// the font of the `@` it prints
+  address_font:      Option<Rc<Font>>,
   run_font:          Option<FontKey>,
   run_nest:          u8,
   /// the spacing run since the last ink: items, width, fill, span
@@ -111,19 +115,28 @@ impl Lexer {
   /// elsarticle per-author line, read as one name with the en dash (hep-ex9811040, FM S2a.2 r7's census).
   fn flush_run(&mut self) {
     let run = std::mem::take(&mut self.run);
+    let run_own = std::mem::take(&mut self.run_own);
     let font = self.run_font.take();
     // the run's words, each with the span of its characters
     let mut words: Vec<(String, Option<(u16, u16)>)> = Vec::new();
+    let mut owns: Vec<Option<(u16, u16)>> = Vec::new();
     let mut word = String::new();
     let mut word_span = None;
-    for (c, span) in run.into_iter().chain(std::iter::once((' ', None))) {
+    let mut word_own = None;
+    for ((c, span), own) in run
+      .into_iter()
+      .zip(run_own)
+      .chain(std::iter::once(((' ', None), None)))
+    {
       if c == ' ' {
         if !word.is_empty() {
           words.push((std::mem::take(&mut word), word_span.take()));
+          owns.push(word_own.take());
         }
       } else {
         word.push(c);
         word_span = join_span(word_span, span);
+        word_own = join_span(word_own, own.map(|own| (own, own + 1)));
       }
     }
     if words.is_empty() {
@@ -135,6 +148,10 @@ impl Lexer {
       layout.nest = self.run_nest;
       self.events.push(layout);
     }
+    // (the font of its first character, or of the address it prints behind a label word at most, `E-mail: \\texttt{a@x}`: the
+    // emitter's, 0802.3384)
+    let address_font = self.address_font.take().filter(|_| words.len() <= 3);
+    let ink_font = address_font.or(font.as_ref().map(|font| Rc::clone(&font.0)));
     if font.is_some() {
       self.last_font = font;
     }
@@ -166,6 +183,7 @@ impl Lexer {
       let name = name.get_or_insert_with(|| {
         let mut name = Event::new(EventKind::Name);
         name.nest = self.run_nest;
+        name.font.clone_from(&ink_font);
         name
       });
       if opens[at] == 0
@@ -183,6 +201,7 @@ impl Lexer {
       }
       name.text.push_str(&word);
       name.span = join_span(name.span, span);
+      name.marks = join_span(name.marks, owns[at]);
     }
     self.events.extend(name);
     self.line_inked = true;
@@ -225,6 +244,7 @@ impl Lexer {
     font: Option<FontKey>,
     nest: u8,
     formula: Option<MarkFormula>,
+    own: Option<u16>,
   ) {
     for (at, c) in text.char_indices() {
       // (a zero-width character prints no ink: the zero-width space `{\,\!}` leaves in `${\,\!}^2$`, 2112.13115 —
@@ -300,6 +320,7 @@ impl Lexer {
           self.flush_gap();
         } else {
           self.run.push((' ', None));
+          self.run_own.push(None);
           self.clear_gap();
         }
       }
@@ -317,7 +338,13 @@ impl Lexer {
         '}' => self.braces = self.braces.saturating_sub(1),
         _ => {},
       }
+      if c == '@'
+        && let Some(font) = &font
+      {
+        self.address_font = Some(Rc::clone(&font.0));
+      }
       self.run.push((c, span));
+      self.run_own.push(own);
     }
   }
 

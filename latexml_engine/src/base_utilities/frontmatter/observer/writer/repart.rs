@@ -119,7 +119,7 @@ fn declined(reason: &str) -> Option<Repart> {
 /// `$^1$Department of Physics, Univ X, Japan`, is sourced at its first Name: 2307.03384): through the events printed
 /// after it, until their ink joined is the entry's text — over the lines an unmarked line continued — `None` when it
 /// never is (a note, a mark, or other ink first).
-fn entry_span(index: usize, span: (u16, u16), key: &str) -> Option<(u16, u16)> {
+pub(super) fn entry_span(index: usize, span: (u16, u16), key: &str) -> Option<(u16, u16)> {
   with_ledger(|ledger| {
     let Some(Entry::Author(block)) = ledger.entries.get(index) else {
       return None;
@@ -1946,6 +1946,7 @@ mod tests {
         rehearsed:      true,
         cleared:        false,
         errors:         0,
+        command:        None,
       })
     };
     with_ledger(|ledger| {

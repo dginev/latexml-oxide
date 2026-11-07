@@ -44,7 +44,7 @@ use super::{
 mod fonts;
 mod lexer;
 pub(in crate::base_utilities) use fonts::{
-  FontScope, InkFonts, Wrap, changes_font, entry_font, font_declaration, switch_free,
+  FontScope, InkFonts, Wrap, changes_font, entry_font, font_changes, font_declaration, switch_free,
   text_font_command,
 };
 use lexer::{Lexer, is_mark_glyph};
@@ -269,7 +269,8 @@ pub struct Event {
   /// `new`, a number, `all`; Perl Base_Utility.pool.ltxml:520-536)
   pub annotate:       Option<String>,
   /// a cut in-block contact entry's: the font changes in effect where the writer's cut of it starts, against its call's
-  /// (`fonts::entry_font`; `Font::default()` for none), which the writer digests it under — `None` when not read
+  /// (`fonts::entry_font`; `Font::default()` for none), which the writer digests it under — `None` when not read. A Name's: the
+  /// font of its first character as digested, for the emitter
   pub font:           Option<Rc<Font>>,
   /// a cut in-block contact entry's: the containers holding it and another entry, which the writer wraps it in again
   /// (`fonts::Wrap`, `writer::container_wrap`)
@@ -297,9 +298,13 @@ pub struct Event {
   /// a `\textsuperscript` Mark's: the call's own position, its `span` being the wrapper's when it is the first box in
   /// one (`\textbf{\textsuperscript{2}Univ B}`, `writer::Field::own_print`). Not in a dump: only the content reads it
   pub own_at:         Option<u16>,
-  /// a cut in-block contact entry's: where its leading marks print, first to last, whole (`writer::span_tokens`). Not in
-  /// a dump: only the content reads it
+  /// a cut in-block contact entry's: where its leading marks print, first to last, whole (`writer::span_tokens`). A Name's: its
+  /// boxes' own tokens' positions, first to last, where `span` is their covers': the first box in a wrapper takes the cover of the
+  /// call around it, `\\textbf{Ann, Bob}`'s Ann the whole group (the emitter's). Not in a dump: only the content reads it
   pub marks:          Option<(u16, u16)>,
+  /// a Note's: a `\footnote`, whose meaning in an author's content is no `\thanks`'s (`digest_frontmatter_item`). Not in
+  /// a dump: only the emitter reads it
+  pub footnote:       bool,
 }
 
 impl Event {
@@ -332,6 +337,7 @@ impl Event {
       printed_labels: Vec::new(),
       own_at: None,
       marks: None,
+      footnote: false,
     }
   }
 }
@@ -566,6 +572,7 @@ fn ink_of(d: &Digested) -> String {
 fn is_note_whatsit(w: &Whatsit) -> bool {
   match whatsit_cs(w).as_str() {
     "\\lx@fm@obs@note"
+    | "\\lx@fm@obs@fnnote"
     | "\\lx@fm@obs@notetext"
     | "\\lx@fm@obs@fnmark"
     | "\\lx@fm@obs@orcid"
@@ -763,6 +770,8 @@ enum Atom {
   Ink {
     text:    String,
     span:    Option<(u16, u16)>,
+    /// its box's own token's position
+    own:     Option<u16>,
     font:    Option<FontKey>,
     nest:    u8,
     /// a formula's subscript, which a formula's reading sets aside as it does a superscript
@@ -915,6 +924,10 @@ impl Walker {
           self.atoms.push(Atom::Ink {
             text,
             span,
+            own: match d.get_property(FIELD_PROV_PROPERTY).as_deref() {
+              Some(Stored::Int(prov)) => u16::try_from(*prov).ok().map(field_prov_pos),
+              _ => None,
+            },
             font: font_key(d),
             nest,
             script: false,
@@ -1106,8 +1119,9 @@ impl Walker {
       _ if w.get_definition().get_cs().get_catcode() == Catcode::ALIGN => {
         self.event(Event::new(EventKind::Sep(SepKind::Column("&"))), d, nest)
       },
-      "\\lx@fm@obs@note" | "\\lx@fm@obs@notetext" => {
+      "\\lx@fm@obs@note" | "\\lx@fm@obs@fnnote" | "\\lx@fm@obs@notetext" => {
         let mut note = Event::new(EventKind::Note);
+        note.footnote = cs.ends_with("fnnote");
         if let Some(body) = w.get_arg(2) {
           note.inkless = leaves_no_ink(body);
           let (events, formulas) = lex_with_formulas(body);
@@ -1499,6 +1513,7 @@ impl Walker {
         } else if cs.contains("subscript") {
           // a subscript is the formula's ink, not a mark
           self.atoms.push(Atom::Ink {
+            own: None,
             text: ink_of(d),
             span: deep_span(d),
             font: None,
@@ -1573,6 +1588,7 @@ impl Walker {
       if !text.trim().is_empty() {
         // (a whatsit printing text of its own: an ERROR box holding an undefined command's name)
         self.atoms.push(Atom::Ink {
+          own: None,
           text,
           span: deep_span(d),
           font: None,
@@ -2032,10 +2048,12 @@ fn labelled_entries(
       let block = block.borrow();
       let (base, tokens) = block.as_ref()?;
       let content = tokens.unlist_ref();
+      let environments = field_notes::field_environments();
       let field = writer::Field {
         tokens: content,
         base: *base,
         formulas,
+        environments: &environments,
       };
       // (where each entry's cut starts: no such start is no cut the writer could make, `writer::span_tokens`)
       let starts: Vec<(usize, (u16, u16))> = entries
@@ -2090,11 +2108,12 @@ pub(in crate::base_utilities) fn lex_with_formulas(
       Atom::Ink {
         text,
         span,
+        own,
         font,
         nest,
         formula,
         ..
-      } => lexer.ink(&text, span, font, nest, formula),
+      } => lexer.ink(&text, span, font, nest, formula, own),
       Atom::Space { width, fill, span, word } => lexer.space(width, fill, span, word),
       Atom::Event(event) => lexer.push_event(event),
     }

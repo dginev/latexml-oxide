@@ -10,11 +10,11 @@ use latexml_core::{
   digested::{Digested, DigestedData},
   document::FIELD_FORMULA_START_PROPERTY,
   gullet::{pushback_is_empty, pushback_len},
-  state::{self, MeaningAssigned},
+  state::{self, MeaningAssigned, lookup_definition},
   stomach::{field_token_encloses, token_stack_depth},
   token::{
-    FieldCover, FieldInvocation, TOKEN_EXPANDAFTER, Token, field_cover_pending, field_prov_pos,
-    set_field_notes_hook,
+    Catcode, FieldCover, FieldInvocation, TOKEN_EXPANDAFTER, Token, field_cover_pending,
+    field_prov_pos, set_field_notes_hook,
   },
   tokens::Tokens,
 };
@@ -43,6 +43,15 @@ pub struct FieldDeclaration {
   /// the field's call it ran at, its token being one of the body of a macro the field defined ([`in_a_definition`]): that
   /// token's position says where it was written, the call where it runs ([`FieldNotes::last_call`])
   run_at:       Option<(u16, u16)>,
+}
+
+/// An environment a field's tokens open or close, as the digestion's frames say it, whatever spells it (`\\begin`, a `\\let` copy,
+/// a macro pair; no `\\begin` under `\\detokenize`): the positions of what did it, `start..end`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct EnvironmentStep {
+  pub start: u16,
+  pub end:   u16,
+  pub opens: bool,
 }
 
 /// A call of a block break its binding declares (`Policy::block_breaks`), a command printing whatever the class makes it.
@@ -98,6 +107,80 @@ pub struct FieldNotes {
   /// the last call of a macro at a position no definition of the field holds, and as far as it read: what a token of a body the
   /// field defined runs at ([`FieldDeclaration::run_at`]), `\def\m{\def\n{1}} Ann\m`'s `\n` at `\m` past " Ann"
   last_call:        Option<(u16, u16)>,
+  /// the environments opened and closed ([`EnvironmentStep`]), and what reading them takes: the frames and environments open at
+  /// the last field token heard, and that token, whether it was expanded (what it opens is open by the next token heard); and the
+  /// position of the last `\begin` or `\end` heard, which says what changed there
+  pub environments: Vec<EnvironmentStep>,
+  frames_heard:     usize,
+  open_heard:       usize,
+  token_heard:      Option<(u16, u16, bool, bool)>,
+  meaning_heard:    Option<u16>,
+}
+
+/// How many environments are open: the frames binding `current_environment` (an environment a binding defines).
+fn environments_open() -> usize {
+  state::with_stacked_values("current_environment", |open| open.len())
+}
+
+/// Note the field token at `pos` heard ([`FieldNotes::environments`]). One whose meaning is `\begin` or `\end` says it, a `\let` copy
+/// too, a raw environment's (`\newenvironment`, `{CJK*}`, 2609.05616) that no frame says; else the frames: one what a macro's expansion
+/// opened (a pair of macros), or an alignment's cell read, says by the next token heard. A frame count unchanged since the last says
+/// no environment changed either, the read a letter of a name takes.
+fn note_environment(token: &Token, pos: u16, reach: u16, expanded: bool) {
+  let frames = state::get_frame_depth();
+  let by_meaning = if token.get_catcode() == Catcode::CS {
+    lookup_definition(token).ok().flatten().and_then(|meaning| {
+      meaning.get_cs().with_cs_name(|name| match name {
+        "\\begin" => Some(true),
+        "\\end" => Some(false),
+        _ => None,
+      })
+    })
+  } else {
+    None
+  };
+  FIELD_NOTES.with(|notes| {
+    let notes = &mut *notes.borrow_mut();
+    if frames != notes.frames_heard {
+      notes.frames_heard = frames;
+      let open = environments_open();
+      if open != notes.open_heard {
+        // (a macro's expansion did it, by this token; or what an alignment's cell read before it, past the last token heard; else
+        // this token's own invocation. What a `\begin` or `\end` heard did, it said)
+        let (start, end) = match notes.token_heard {
+          Some((_, _, true, true)) => (pos, pos),
+          Some((heard, _, true, false)) => (heard, pos),
+          Some((_, read_to, false, _)) if read_to < pos => (read_to, pos),
+          _ => (pos, reach.max(pos + 1)),
+        };
+        let opens = open > notes.open_heard;
+        // (a position whose `\begin` or `\end` was heard said it: a macro's `\begin{tikzpicture}…\end{tikzpicture}`, its tokens
+        // all at its call's position, closes once, 2210.03748)
+        if start != end && notes.meaning_heard != Some(pos) && notes.meaning_heard != Some(start) {
+          for _ in 0..open.abs_diff(notes.open_heard) {
+            notes
+              .environments
+              .push(EnvironmentStep { start, end, opens });
+          }
+        }
+        notes.open_heard = open;
+      }
+    }
+    if let Some(opens) = by_meaning {
+      notes.meaning_heard = Some(pos);
+      notes.environments.push(EnvironmentStep {
+        start: pos,
+        end: reach.max(pos + 1),
+        opens,
+      });
+    }
+    notes.token_heard = Some((pos, reach.max(pos + 1), expanded, by_meaning.is_some()));
+  });
+}
+
+/// The environment steps noted so far ([`FieldNotes::environments`]), for what reads a span while the notes are open.
+pub fn field_environments() -> Vec<EnvironmentStep> {
+  FIELD_NOTES.with(|notes| notes.borrow().environments.clone())
 }
 
 thread_local! {
@@ -123,6 +206,8 @@ pub fn field_notes_begin(tokens: &Tokens, block_breaks: &[(&str, BreakKind)]) {
       field,
       errors_seen: REPORT.borrow().error,
       depth: state::get_frame_depth(),
+      frames_heard: state::get_frame_depth(),
+      open_heard: environments_open(),
       stack: token_stack_depth(),
       block_breaks: block_breaks
         .iter()
@@ -392,6 +477,7 @@ fn with_expandable(token: &Token, test: impl Fn(&Expandable) -> bool) -> bool {
 /// One for every tie of a block of a thousand names (1507.02068): a meaning is looked up only for a token no field holds there.
 fn field_expansion(token: &Token, cover: FieldCover) {
   let pos = field_prov_pos(token.prov);
+  note_environment(token, pos, cover.end, true);
   FIELD_NOTES.with(|notes| {
     let notes = &mut *notes.borrow_mut();
     let own = notes
@@ -470,6 +556,7 @@ fn field_notes_after(token: &Token, cover: FieldCover, invocation: FieldInvocati
 /// declaration of it would print it twice. The first token read past its reach closes it.
 fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
   let pos = field_prov_pos(token.prov);
+  note_environment(token, pos, cover.end, false);
   // (the opening shift's invocation holds the box its closing shift made: the formula starts here)
   for digested in result {
     if matches!(digested.data(), DigestedData::Whatsit(w) if w.borrow().is_math()) {

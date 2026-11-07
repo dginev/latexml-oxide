@@ -21,7 +21,7 @@ use latexml_core::{
 
 use super::{
   events::{BreakKind, EmailMeaning, Event, HeldError, break_events, declaration_events},
-  field_notes::{FieldNotesHookGuard, field_notes_begin, field_notes_end},
+  field_notes::{EnvironmentStep, FieldNotesHookGuard, field_notes_begin, field_notes_end},
   ledger::{SkipReason, email_meaning},
   policy::TitleMarks,
   *,
@@ -111,42 +111,15 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefConstructor!("\\lx@fm@obs@par OptionalMatch:* []", "", alias => "\\lx@fm@obs@break");
   // `\thanks` and `\footnote` (inside `\maketitle`, `\footnote` is `\thanks`): latex.ltx `\thanks` = `\footnotemark`
   // + the text, a step of the footnote counter unless an optional number is given
-  DefMacro!("\\lx@fm@obs@thanks []", sub[(number)] {
-    if number.is_none() {
-      FOOTNOTE_STEPS.with(|steps| steps.set(steps.get().saturating_add(1)));
-    }
-    let mut out = vec![T_CS!("\\lx@fm@obs@note")];
-    if let Some(number) = number {
-      out.push(T_OTHER!("["));
-      out.push(T_BEGIN!());
-      out.extend(number.unlist());
-      out.push(T_END!());
-      out.push(T_OTHER!("]"));
-    }
-    Ok(Tokens::new(out))
-  });
+  DefMacro!("\\lx@fm@obs@thanks []", sub[(number)] { note_step(T_CS!("\\lx@fm@obs@note"), number) });
+  // (the two tell apart what they make in an author's content, `digest_frontmatter_item`'s `Let`: `Event::footnote`)
+  DefMacro!("\\lx@fm@obs@footnote []", sub[(number)] { note_step(T_CS!("\\lx@fm@obs@fnnote"), number) });
   // (its `printed` property the mark it shows on the name, `\thefootnote` at its number — the given one, or the counter's
   // value the `\lx@fm@obs@thanks` step reached —, as `\lx@fm@obs@fnmark` prints its: a name's note mark is the request
   // an entry led by the same `\footnotemark` answers, `Shun'ya Mizoguchi\footnote[1]{…}` under
   // `\affiliation{\footnotemark[1]Theory Center, …}`, 1607.07280 — FM S2a.2 r7)
-  DefConstructor!("\\lx@fm@obs@note []{}", "", properties => sub[args] {
-    let given = args.first().and_then(|a| a.as_ref()).map(|number| {
-      let mut text = String::new();
-      ink_text(number, &mut text);
-      text.trim().to_string()
-    });
-    let value = match given {
-      Some(text) => match text.parse::<i64>() {
-        Ok(value) => value,
-        Err(_) => return Ok(stored_map!("printed" => Stored::String(pin(&text)))),
-      },
-      None => FOOTNOTE_BASE
-        .with(Cell::get)
-        .saturating_add(FOOTNOTE_STEPS.with(Cell::get)),
-    };
-    let printed = note_mark_quietly(value)?;
-    Ok(stored_map!("printed" => Stored::String(pin(&printed))))
-  });
+  DefConstructor!("\\lx@fm@obs@note []{}", "", properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
+  DefConstructor!("\\lx@fm@obs@fnnote []{}", "", properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
   // `\footnotetext`: the text of a mark printed elsewhere, no step
   DefConstructor!("\\lx@fm@obs@notetext []{}", "");
   // `\footnotemark[<n>]` prints `\thefootnote` at <n> (latex.ltx `\@xfootnotemark`), a bare `\footnotemark` at the
@@ -236,6 +209,42 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   Ok(())
 }
 
+/// A `\thanks` or `\footnote`'s step of the footnote counter (unless it gives a number), then its constructor `note`.
+fn note_step(note: Token, number: Option<Tokens>) -> Result<Tokens> {
+  if number.is_none() {
+    FOOTNOTE_STEPS.with(|steps| steps.set(steps.get().saturating_add(1)));
+  }
+  let mut out = vec![note];
+  if let Some(number) = number {
+    out.push(T_OTHER!("["));
+    out.push(T_BEGIN!());
+    out.extend(number.unlist());
+    out.push(T_END!());
+    out.push(T_OTHER!("]"));
+  }
+  Ok(Tokens::new(out))
+}
+
+/// The properties of a note's constructor: the mark it shows on the name.
+fn note_properties(number: Option<&Digested>) -> Result<SymHashMap<Stored>> {
+  let given = number.map(|number| {
+    let mut text = String::new();
+    ink_text(number, &mut text);
+    text.trim().to_string()
+  });
+  let value = match given {
+    Some(text) => match text.parse::<i64>() {
+      Ok(value) => value,
+      Err(_) => return Ok(stored_map!("printed" => Stored::String(pin(&text)))),
+    },
+    None => FOOTNOTE_BASE
+      .with(Cell::get)
+      .saturating_add(FOOTNOTE_STEPS.with(Cell::get)),
+  };
+  let printed = note_mark_quietly(value)?;
+  Ok(stored_map!("printed" => Stored::String(pin(&printed))))
+}
+
 /// The footnote mark `\thefootnote` prints with the counter at `value`, in a group of its own (the rehearsal steps
 /// nothing); the number as it is where the format has no LaTeX footnote counter.
 fn printed_footnote_mark(value: i64) -> Result<String> {
@@ -319,7 +328,7 @@ const ALWAYS_BOUND: &[(&str, &str)] = &[
   ("\\linebreak", "\\lx@fm@obs@break"),
   ("\\par", "\\lx@fm@obs@par"),
   ("\\thanks", "\\lx@fm@obs@thanks"),
-  ("\\footnote", "\\lx@fm@obs@thanks"),
+  ("\\footnote", "\\lx@fm@obs@footnote"),
   ("\\footnotetext", "\\lx@fm@obs@notetext"),
   ("\\footnotemark", "\\lx@fm@obs@footnotemark"),
   ("\\label", "\\lx@fm@obs@label"),
@@ -419,6 +428,8 @@ pub(in crate::base_utilities) enum Rehearsal<R> {
     breaks:       Vec<Event>,
     /// the errors held, by the positions they were raised at, in order (none positioned for tokens without positions)
     held:         Vec<HeldError>,
+    /// the environments its tokens open and close ([`EnvironmentStep`])
+    environments: Vec<EnvironmentStep>,
   },
   /// No rehearsal was made or kept, and why: no journal could open (one is already open), its assignments could not be
   /// undone, or it ended in a Fatal error of its own (discarded with it).
@@ -620,6 +631,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
       declarations,
       breaks,
       held,
+      environments: notes.environments,
     },
     _ => Rehearsal::Skipped(SkipReason::NotUndone),
   })

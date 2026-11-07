@@ -1509,6 +1509,10 @@ pub(in crate::base_utilities) fn frontmatter_set_first_content(
 /// llncs's `\thanks{\protect\label{fn1}Funded.}` warns "Orphaned frontmatter annotation" and drops the text
 /// (KNOWN_PERL_ERRORS #1204, review rev94a r8 pl/p02).
 pub(in crate::base_utilities) fn with_pending_entry_attr(f: impl FnOnce(&mut TagAttrs)) {
+  // (an emitted entry's labels are the emitter's: OD #979)
+  if lookup_bool(EMITTING) {
+    return;
+  }
   with_value_mut("frontmatter", |val_opt| {
     if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
       let mut tags: Vec<String> = frnt.keys().cloned().collect();
