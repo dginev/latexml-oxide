@@ -381,8 +381,12 @@ pub(in crate::base_utilities) fn replace_queued_authors() {
 /// Begin a binding's `\author` body, whose calls queue its authors and their contacts one by one where Perl's `\author` queues
 /// them all inside one deferred creator (IEEEtran's `\IEEEauthorblockN`, `\IEEEauthorblockA`): the last call wins as in LaTeX
 /// (`\def\@author{#1}`, Perl's `dequeueFrontMatter`), so this removes the authors before it and whatever the last such body
-/// queued. 2606.16069: two `\author` calls, the PDF and Perl four creators; every call kept, eight.
+/// queued. 2606.16069: two `\author` calls, the PDF and Perl four creators; every call kept, eight. A replay of a raw class's setter
+/// that reaches it changes nothing (`frontmatter_frozen_for_replay`): it queues nothing, and the last body stays the last.
 pub fn begin_author_body() {
+  if frontmatter_frozen_for_replay() {
+    return;
+  }
   replace_queued_authors();
   let queue = frontmatter_queue_name();
   let earlier = with_value(AUTHOR_BODY_ENTRIES, |value| match value {
@@ -412,6 +416,9 @@ pub fn begin_author_body() {
 
 /// End a binding's `\author` body ([`begin_author_body`]): what it queued is what a later `\author` takes back.
 pub fn end_author_body() {
+  if frontmatter_frozen_for_replay() {
+    return;
+  }
   let start = usize::try_from(lookup_int(AUTHOR_BODY_START)).unwrap_or(0);
   let entries = with_value(frontmatter_queue_name(), |value| match value {
     Some(Stored::FrontmatterRaw(queued)) => queued.get(start..).unwrap_or(&[]).to_vec(),

@@ -344,13 +344,14 @@ LoadDefinitions!({
   // Run an explicit author-block body: `\and` merely separates blocks here (each
   // block already emits its own creator), so neutralise it.
   // (the last `\\author` wins, as in IEEEtran.cls's `\\def\\@author` and Perl's `\\lx@add@authors`: this body adds its authors one by
-  // one, so what an earlier call added goes first. 2606.16069's PDF prints its second call's four names)
+  // one, so what an earlier call added goes first. 2606.16069's PDF prints its second call's four names. A plain call is such a body
+  // too: `\\lx@add@authors` takes back a creator, not the contacts a marked call queued flat)
   DefPrimitive!(T_CS!("\\lx@IEEE@author@begin"), None, { begin_author_body(); });
   DefPrimitive!(T_CS!("\\lx@IEEE@author@end"), None, { end_author_body(); });
   DefMacro!("\\lx@IEEE@author@blocks{}",
     "\\lx@IEEE@author@begin\\def\\@author{#1}\\begingroup\\def\\and{}#1\\endgroup\\lx@IEEE@author@end");
   DefMacro!("\\lx@IEEE@author@plain{}",
-    "\\lx@IEEE@author@begin\\lx@IEEE@author@end\\def\\@shortauthor{}\\gdef\\shortauthor{}\\def\\@author{#1}\\lx@add@authors{#1}");
+    "\\lx@IEEE@author@begin\\def\\@shortauthor{}\\gdef\\shortauthor{}\\def\\@author{#1}\\lx@add@authors{#1}\\lx@IEEE@author@end");
   // Override `\author`: dispatch to explicit-block handling when the body uses
   // `\IEEEauthorblockN`, else to the standard name-splitter. `\author` is locked
   // in the kernel; re-lock so a user `\renewcommand` can't shadow this.

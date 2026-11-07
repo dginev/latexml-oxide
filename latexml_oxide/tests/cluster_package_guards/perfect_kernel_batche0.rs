@@ -364,20 +364,25 @@ const API_EXTENSIONS: &[&str] = &[
   "lx@add@store@authorblock",
 ];
 
-/// The keys of `\\lx@add@…[…]` calls Perl has too: its `DefKeyVal('Frontmatter', …)` (`Base_Utility.pool.ltxml:247-254`), and what
-/// its own calls pass besides (`name=`, `scheme=`, `keys=`: every literal of `LaTeXML/lib/LaTeXML`).
+/// The keys of `\\lx@add@…[…]` calls Perl has too: its `DefKeyVal('Frontmatter', …)` (`Base_Utility.pool.ltxml:247-254`), what its own
+/// calls pass besides (`name=`, `scheme=`, `keys=`: every literal of `LaTeXML/lib/LaTeXML`), and the attributes of the element, as every
+/// option reaches `openElement` (`Base_Utility.pool.ltxml:851-852`): `property=` and `content=` on `ltx:rdf` (`lxRDFa.sty.ltxml:190`),
+/// `xml:lang=`.
 const PERL_DECLARED_KEYS: &[&str] = &[
   "annotate",
   "annotations",
   "class",
+  "content",
   "graphic",
   "keys",
   "label",
   "labelref",
   "labelseq",
   "name",
+  "property",
   "role",
   "scheme",
+  "xml:lang",
 ];
 
 /// The keys Perl's own code sets on a queued entry's options behind the call (`Base_Utility.pool.ltxml`): what a Rust setter may
@@ -399,18 +404,15 @@ const PERL_INTERNAL_KEYS: &[&str] = &[
 /// the rows the old pattern missed): 74 rows, 95 uses became 82, 105, no code changed. A debt like the names. Not a constructor's
 /// XML attribute in a template, which is quoted (`_noautoclose='true'`), unless a call's literal options hold it, nor a constant
 /// in `latex_constructs/` or `tex_box.rs` (the kernel's own attributes). `_scopebegin=` is pgfsys's own keyval: it shares the
-/// shape, and stays pinned so that the count stays whole.
+/// shape, and stays pinned so that the count stays whole; so do `_font`, `_xmkey`, `_split_ref` and `_nowrap`, attributes a setter
+/// inserts, and the constants naming a DOM mark (`_deposit`, `_inserted`, `_titlepage`, `_preamble`, `_paragraph_break`): this reads
+/// the shape, and telling them apart would be a list of exceptions in the reader, not a shorter one here.
 const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ("[accumulate] package/acmart_cls.rs", 2),
   ("[accumulate] package/ieeetran_cls.rs", 1),
   ("[accumulate] package/ims_support_sty.rs", 1),
   ("[mark] lmcs_cls.rs", 1),
   ("[mark] package/iopart_support_sty.rs", 1),
-  ("[property] epl_cls.rs", 1),
-  ("[property] package/quantumarticle_cls.rs", 2),
-  ("[property] package/revtex4_support_sty.rs", 1),
-  ("[xml:lang] cjs_rcs_article_cls.rs", 1),
-  ("[xml:lang] smfart_cls.rs", 1),
   ("_answers= base_utilities/defs/frontmatter_fields.rs", 1),
   ("_group= base_utilities/defs/frontmatter_fields.rs", 1),
   ("_grouped= package/revtex4_support_sty.rs", 1),
@@ -511,11 +513,6 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ),
   (
     "declared command_form base_utilities/defs/frontmatter_api.rs",
-    1,
-  ),
-  ("declared content base_utilities/defs/frontmatter_api.rs", 1),
-  (
-    "declared property base_utilities/defs/frontmatter_api.rs",
     1,
   ),
   ("insert _bymark base_utilities/defs/author_macros.rs", 1),
@@ -989,21 +986,27 @@ const OTHER_AREAS: &[(&str, &str)] = &[
 /// How `resolver/`'s code may read a token's spelling, counted whatever its shape, so that a new spelling rule there goes red: every
 /// literal holding a backslash (`name == r"\foo"`, `.contains("\\foo")`, `.eq`, `matches!`, a `const`, an array, a `'\\'`), every
 /// token made or named (`T_CS!`, any `T_…!`, `TOKEN_…`, the types, a block's `.tokens`), every method on a `to_string()` (`.chars()`,
-/// `.to_lowercase()`: its text is a token list's or a value's, and which is the reader's to say), and the engine's own patterns on
-/// the code. Not the study's lines but what it holds, each once: the floor is 0, so a shape is no reason to raise it.
+/// `.to_lowercase()`: its text is a token list's or a value's, and which is the reader's to say) and every comparison on one, a call's
+/// `.content` (`ApiCall::content`, its tokens, reachable from here whatever is done with them), and the engine's own patterns on the
+/// code. Not the study's lines but what it holds, each once: the floor is 0, so a shape is no reason to raise it.
 fn resolver_reads(source: &RustSource) -> usize {
-  let held = Regex::new(r#""([0-9]+)""#).expect("the regex");
-  let literals = held
-    .captures_iter(&source.code)
-    .filter(|found| source.literals[found[1].parse::<usize>().expect("an index")].contains('\\'))
-    .count();
   let shapes = Regex::new(concat!(
     r"\bT_[A-Z]+!|\bTOKEN_[A-Z_]+|\bTokens?\b|\.tokens\b|\.to_string\(\)\s*\.\s*[a-z_]",
+    r"|\.content\b|to_string\(\)\s*(?:==|!=)",
     r"|\.get_cs\(\)|\.cs_name\(\)|\.with_cs_name\(|\.get_string\(\)|\.get_catcode\(\)|\bCatcode::|\bToString\b",
     r"|\bposition_of\(|\bis_cs\(|\.as_cs\(|\bmeaning\(|\bwith_str\(|\bcs_in\(|\btext_tokens\(",
   ))
   .expect("the regex");
-  literals + shapes.find_iter(&source.code).count()
+  backslash_literals(source) + shapes.find_iter(&source.code).count()
+}
+
+/// The literals of a source holding a backslash, whatever their shape (a call's argument, a `const`, a table, a `'\\'`, raw or escaped).
+fn backslash_literals(source: &RustSource) -> usize {
+  let held = Regex::new(r#""([0-9]+)""#).expect("the regex");
+  held
+    .captures_iter(&source.code)
+    .filter(|found| source.literals[found[1].parse::<usize>().expect("an index")].contains('\\'))
+    .count()
 }
 
 /// Every shape revZ2 found the study's count blind to goes red in `resolver/`, whatever its spelling, and what reads events does not.
@@ -1029,6 +1032,12 @@ fn a_spelling_rule_in_the_resolver_counts_however_it_is_written() {
     r#"t.with_cs_name(|n| n == "foo");"#,
     r"if t == *TOKEN_RELAX {}",
     r"if t.get_catcode() == Catcode::Other {}",
+    r#"if call.content.to_string() == "foo" {}"#,
+    r#"if call.content.iter().any(|t| t.to_string() == "foo") {}"#,
+    r#"let s = call.content.to_string(); if s.contains("foo") {}"#,
+    r"for t in call.content.unlist() {}",
+    r#"if x.to_string() == "foo" {}"#,
+    r#"if x.to_string() != "foo" {}"#,
   ] {
     assert!(resolver_reads(&lex_rust(rule)) > 0, "unseen: {rule}");
   }
@@ -1042,6 +1051,64 @@ fn a_spelling_rule_in_the_resolver_counts_however_it_is_written() {
   ] {
     assert_eq!(resolver_reads(&lex_rust(clean)), 0, "{clean}");
   }
+}
+
+/// Backslash literals under `observer/`, per file or directory: the part of it that may spell a token's name, whatever the code around
+/// them does (the regexes of [`token_reads_only_fall_toward_the_floor`] see a comparison, not `fn spelled(x) { x.contains("\\foo") }`).
+/// Debts of what names the kernel's tokens today (the rehearsal's table, the writer's and the events' readers, the ledger's stamping);
+/// the zeros stay zero: `policy`, `field_notes`, `marks` and `mod` decide, and a decision spells no token.
+const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
+  ("events", 83),
+  ("field_notes", 0),
+  ("ledger", 29),
+  ("marks", 0),
+  ("mod", 0),
+  ("policy", 0),
+  ("rehearsal", 101),
+  // (also among `resolver`'s 15 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook)
+  ("resolver", 3),
+  ("shadow", 7),
+  ("writer", 84),
+];
+
+/// revZ2r2: the token-read count's regexes are blind outside `resolver/` to a spelling not written as a comparison. This counts what such
+/// a rule cannot do without: a literal holding a backslash, in any file under `observer/`, a new file a row of its own.
+#[test]
+fn the_observers_spellings_are_counted_however_they_read() {
+  for rule in [
+    r#"fn spelled(x: &str) -> bool { x.contains("\\foo") }"#,
+    r#"const FOO: &str = "\\foo";"#,
+    r#"if x.eq("\\foo") {}"#,
+    r##"if x == r#"\foo"# {}"##,
+    r"if x == '\\' {}",
+  ] {
+    assert_eq!(backslash_literals(&lex_rust(rule)), 1, "unseen: {rule}");
+  }
+  for clean in [
+    r#"if x.contains("foo") {}"#,
+    r#"let line = format!("a\nb");"#,
+    "// x.contains(\"\\\\foo\")",
+    "#[cfg(test)]\nmod tests { const A: &str = \"\\\\foo\"; }",
+  ] {
+    assert_eq!(backslash_literals(&lex_rust(clean)), 0, "{clean}");
+  }
+  let observer = format!("{BASE}/frontmatter/observer");
+  let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+  for file in rust_files(&observer) {
+    let inner = file
+      .strip_prefix(&format!("{observer}/"))
+      .expect("under observer/");
+    let area = inner.split('/').next().expect("a path");
+    *counts
+      .entry(area.trim_end_matches(".rs").to_string())
+      .or_default() += backslash_literals(&read_rust(&file));
+  }
+  assert_debts(
+    "the backslash literals under observer/",
+    OBSERVER_BACKSLASH_LITERALS,
+    &counts,
+    "A decision reads events or digested XML, never a token's spelling: docs/parity/FRONTMATTER_DIGESTED_REFACTOR.md.",
+  );
 }
 
 /// The token-read check: a decision reads events or digested XML, never a token's spelling.

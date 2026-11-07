@@ -172,7 +172,7 @@ fn handed_to_a_call(field: &[Option<Token>], pos: u16, reach: u16) -> &[Option<T
 
 /// The names a macro the document defined holds in its body, and those a macro of the same kind in its body holds: what a kernel's or
 /// a binding's macro it calls may be defining for it (`\newcommand\m{\newcount\qq}`, `\newcommand\m{\@ifundefined{qq}{\def\qq{1}}{}}`).
-/// A name built at run time is in no body (`\@namedef{qq}{1}`). None for a macro of a file it read: a raw package's body names its own
+/// A name built at run time is in no body (`\@namedef{qq}{1}`). None for a macro of a `.sty` or `.cls` it loaded: a raw package's body names its own
 /// state, which a run of the kernel's assigns for it (`\makecell`'s `\tabg@pe`, `\t@bset`, 2203.03195, 2502.11387).
 #[cold]
 #[inline(never)]

@@ -4,7 +4,7 @@
 %          rust before this fix: each `\IEEEauthorblockN` queued a creator and each `\IEEEauthorblockA` a contact at its `\author`,
 %          so Ann Able and Cat Cole stayed, and a dequeue of the creators alone left their contacts to the last author
 % expect:  0 errors; the last call's alone (perfect_kernel_batchz2::the_last_author_call_wins_in_the_blocks_path);
-%          the twin: a plain `\author` after blocks, and a call after a `\maketitle`, which printed the one before
+%          the twin: a plain `\author` after blocks. A call after a `\maketitle` prints nothing: RED ieee_author_after_maketitle_prints_nothing
 % status:  GREEN (Z2r2)
 \documentclass{IEEEtran}
 \begin{document}

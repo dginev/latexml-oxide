@@ -5,10 +5,13 @@
 //! the notes' list beside the events; `a_break_and_a_comma_…`, `an_ordinal_…`, `a_name_says_…`, `an_orcid_…` one event field each.
 //! `a_kernel_macro_a_papers_macro_…` (Z2r2) what a paper's macro declares inside a kernel's; `a_declarations_end_…` where its span ends;
 //! `the_last_author_call_wins_…` a binding's author body replaced, `an_address_two_entries_…` the same address under two entries.
+//! `a_plain_author_call_is_a_body_…` (Z2r3) the plain path's queue, `a_class_setters_replay_leaves_…` the replay's freeze on it.
 
 use serde_json::{Value, json};
 
 use super::{
+  perfect_kernel_batch46::{error_count, warning_count},
+  perfect_kernel_batch77r::convert_with_side_file,
   perfect_kernel_batch84b::creators,
   perfect_kernel_batchz1::{blocks, dump, of_kind},
 };
@@ -405,8 +408,8 @@ fn an_address_two_entries_print_is_each_entrys() {
 }
 
 /// 2606.16069 (pdflatex and Perl 4 creators, ours 8). The last `\author` wins in the blocks path too, whatever the earlier call queued:
-/// its creators, their notes, their contacts; what stands beside the calls stays. Its twins: a plain `\author` after blocks, and a
-/// call after a `\maketitle` that printed the one before it (both shown).
+/// its creators, their notes, their contacts; what stands beside the calls stays. Its twin: a plain `\author` after blocks. A call
+/// after a `\maketitle` prints nothing, which ours does not read yet: RED `ieee_author_after_maketitle_prints_nothing`.
 #[test]
 fn the_last_author_call_wins_in_the_blocks_path() {
   let (xml, last) = dump(repro!("ieee_last_author_call_wins"));
@@ -428,15 +431,82 @@ fn the_last_author_call_wins_in_the_blocks_path() {
     r"\author{\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B}}\author{Ann Able}",
   ));
   assert_eq!(creators(&xml), rows(&[&["Ann Able"]]), "{xml}");
+}
+
+/// revZ2r2. A plain `\author` is a body like the blocks' (`\lx@IEEE@author@begin…\lx@add@authors{#1}\lx@IEEE@author@end`): `\lx@add@authors`
+/// takes back a creator, not the contacts a marked call queued flat, so they went to the next call's names, or to a creator of no name,
+/// and its `\thanks` stayed. Marked calls before blocks, the repro and one name; plain after plain after blocks, what stands beside
+/// them and the last call's note kept; an unmarked call before blocks, which queued its contacts inside the creator. The output alone in
+/// the repro's: a removed block's legend still answers a later call's mark in the reading, which the writer declines (RED, the SYNC row).
+#[test]
+fn a_plain_author_call_is_a_body_like_the_blocks() {
+  let (xml, _) = dump(repro!("ieee_plain_call_before_blocks_is_gone"));
+  assert_eq!(
+    creators(&xml),
+    rows(&[&["Bob Baker *", "affiliation=Univ B"]]),
+    "{xml}"
+  );
+  assert!(!xml.contains("First note"), "{xml}");
+  let doc = |body: &str| {
+    format!(
+      "\\documentclass{{IEEEtran}}\n\\begin{{document}}\n\\title{{T}}\n{body}\n\\maketitle\nBody.\n\\end{{document}}\n"
+    )
+  };
+  let (xml, one) = dump(&doc(
+    r"\author{Ann Able$^1$ \\ $^1$Univ A\thanks{First note.}}\author{\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B}}",
+  ));
+  let (output, reading) = output_and_reading(&xml, &one);
+  assert_eq!(reading, rows(&[&["Bob Baker", "Univ B"]]));
+  assert_eq!(
+    output,
+    rows(&[&["Bob Baker", "affiliation=Univ B"]]),
+    "{xml}"
+  );
+  assert!(!xml.contains("First note"), "{xml}");
   let (xml, _) = dump(&doc(
-    r"\author{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ A}}\maketitle\author{\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B}}",
+    r"\author{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ A}}\author{Cat Cole$^1$ \\ $^1$Univ C\thanks{First note.}}\thanks{Funded.}\author{Bob Baker$^1$ \\ $^1$Univ B\thanks{Kept.}}",
   ));
   assert_eq!(
     creators(&xml),
-    rows(&[&["Ann Able", "affiliation=Univ A"], &[
-      "Bob Baker",
-      "affiliation=Univ B"
-    ]]),
+    rows(&[&["Bob Baker", "affiliation=Univ B"]]),
+    "{xml}"
+  );
+  assert!(!xml.contains("First note"), "{xml}");
+  assert!(xml.contains("Funded.") && xml.contains("Kept."), "{xml}");
+  let (xml, _) = dump(&doc(
+    r"\author{Ann Able \\ Univ A \\ ann@a.org \and Cat Cole \\ Univ C}\author{\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B}}",
+  ));
+  assert_eq!(
+    creators(&xml),
+    rows(&[&["Bob Baker", "affiliation=Univ B"]]),
+    "{xml}"
+  );
+}
+
+/// revZ2r2's nit. A class's refused setter, replayed for its side effects, may run the binding's `\author` (here `\title`'s, which restores
+/// `\@author`, so the PDF prints Ann): the frontmatter is frozen for the replay (`queue::frontmatter_frozen_for_replay`), so it neither
+/// takes back the last body, nor makes what it queued the body a later call takes back: that call still replaces Ann.
+#[test]
+fn a_class_setters_replay_leaves_the_author_body() {
+  let tex = repro!("ieee_class_setter_replay_keeps_the_authors");
+  let (log, xml) = convert_with_side_file(tex, "ar5iv.sty");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    creators(&xml),
+    rows(&[&["Ann Able", "affiliation=Univ A"]]),
+    "{xml}"
+  );
+  let (log, xml) = convert_with_side_file(
+    &tex.replace(
+      "\\title{T}\n",
+      "\\title{T}\n\\author{\\IEEEauthorblockN{Bob Baker}\\IEEEauthorblockA{Univ B}}\n",
+    ),
+    "ar5iv.sty",
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    creators(&xml),
+    rows(&[&["Bob Baker", "affiliation=Univ B"]]),
     "{xml}"
   );
 }

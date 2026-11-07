@@ -24,7 +24,7 @@ fn split_filecontents(tex: &str) -> (String, String, String) {
 }
 
 /// Convert a repro with a `filecontents*` side file under `preload`.
-fn convert_with_side_file(tex: &str, preload: &str) -> (String, String) {
+pub(super) fn convert_with_side_file(tex: &str, preload: &str) -> (String, String) {
   let (document, name, content) = split_filecontents(tex);
   convert_files_with(&document, &[(&name, &content)], Some(preload))
 }
