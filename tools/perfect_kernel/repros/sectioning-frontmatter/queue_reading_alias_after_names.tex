@@ -1,0 +1,20 @@
+% mechanism: the queue's reading of its names (frontmatter/queue_reading.rs) holds what their commands meant: `\up` is no
+%   mark when the first `\address` reads Ann's name and one after `\let\up\textsuperscript`, so the later `\address`, its
+%   marks requested by Ann and Bob, reads her name again and the Cut cuts it (a reading kept across the `\let` saw one
+%   request and left the cut to the flush's readers, which print the same).
+% witness: 2209.14855's `\let\up\textsuperscript` (macros/custom.tex:23, batch 77p), here after the first name
+% oracle:  pdflatex 0 errors: "ANN ABLE1 AND BOB BAKER2 / 1 Univ Z / 1 Univ A, 2 Univ B"
+% engines: rust int142a and C1: Ann Able "1 Univ Z" and "1 Univ A", Bob Baker "2 Univ B"; perl: not compared, the Cut is Rust-only
+% expect:  0 errors, 0 warnings; the same creators as int142a's, and one "FRONT cut address at its marks" in the debug log
+% status:  GREEN (the base's output, kept)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able\up{1}}
+\address{$^{1}$Univ Z}
+\let\up\textsuperscript
+\author{Bob Baker\up{2}}
+\address{\up{1}Univ A\\ \up{2}Univ B}
+\maketitle
+Body.
+\end{document}

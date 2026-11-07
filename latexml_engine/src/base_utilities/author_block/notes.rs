@@ -561,8 +561,7 @@ fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Vec<Tokens> {
   // (the marks the queued names request, when they carry any: a number or letter mark none of them requests, after a
   // word and a plain space, is the entry's own text — `$^1$Laboratory for $^3$He Studies`, the isotope — not the next
   // entry's label; after a separator or wider spacing it still parts the entries)
-  let authors = queued_author_marks();
-  let names_marked = authors.iter().any(|marks| !marks.is_empty());
+  let names_marked = queued_author_marks().iter().any(|marks| !marks.is_empty());
   // (each mark outside every group: where it starts, the label it sets, whether it is glued to the word before it —
   // a plain space between, no separator: no spacing command, line break, comma or semicolon — and where it ends)
   let marks = top_level_marks(&toks);
@@ -577,7 +576,7 @@ fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Vec<Tokens> {
     let requested = mark
       .operand
       .as_ref()
-      .is_some_and(|operand| !requesting_authors(&authors, operand).is_empty());
+      .is_some_and(|operand| !queued_requesters(operand).is_empty());
     // (a mark no name requests that heads nothing — only spacing or a separator follows it before the next mark or the
     // end: `$^1$Univ A $^\dagger$ \quad $^2$Univ B` — is its entry's text, a symbol too; review rev99a S5)
     let next = marks.get(k + 1).map_or(toks.len(), |m| m.at);

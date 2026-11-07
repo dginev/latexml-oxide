@@ -654,7 +654,8 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
     // the marks of the authors queued so far and of this call's, for the authors a note's mark names (a note in a later
     // `\author` call than its author, 1305.7027)
     let author_marks: Vec<Vec<Vec<Token>>> = queued_author_marks()
-      .into_iter()
+      .iter()
+      .cloned()
       .chain(
         entries
           .iter()

@@ -6,6 +6,8 @@ mod queue;
 pub use queue::*;
 mod queue_digest;
 pub use queue_digest::*;
+mod queue_reading;
+pub use queue_reading::*;
 mod place;
 pub use place::*;
 mod label_refs;

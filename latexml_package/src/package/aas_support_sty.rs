@@ -205,7 +205,8 @@ LoadDefinitions!({
       .into_iter()
       .filter(|line| line.iter().any(|t| *t != T_SPACE!()))
       .collect();
-    let (altaffil, sup) = queued_name_marks();
+    let name_marks = queued_name_marks();
+    let (altaffil, sup) = &*name_marks;
     let mut entries: Vec<(String, Vec<Token>)> = Vec::new();
     for line in &lines {
       let line = Tokens::new(line.to_vec());
