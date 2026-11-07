@@ -431,6 +431,10 @@ pub struct State {
   pub binding_lets:            rustc_hash::FxHashSet<SymStr>,
   /// The frontmatter setters whose calls are observed ([`crate::definition::origin::watch_setter_calls`]).
   pub watched_setters:         rustc_hash::FxHashSet<SymStr>,
+  /// Which names [`watch_meanings`] watches; `None` once one has changed, or with no watch.
+  meaning_watch:               Option<MeaningWatch>,
+  /// The first of [`Self::meaning_watch`]'s names to change.
+  watched_meaning_changed:     Option<SymStr>,
   /// Each class loaded, with the names its load frame assigned and the classes loaded inside it: what that class
   /// defines, as its real file does ([`ClassLoadFrame`], `copy_base_class_defines`, `class_layer_definition`).
   pub class_loads:             Vec<ClassLoadRecord>,
@@ -574,6 +578,8 @@ impl Default for State {
       stand_in_last_files:     Vec::new(),
       binding_lets:            rustc_hash::FxHashSet::default(),
       watched_setters:         rustc_hash::FxHashSet::default(),
+      meaning_watch:           None,
+      watched_meaning_changed: None,
       class_loads:             Vec::new(),
       class_load_frames:       Vec::new(),
       copy_class_loads:        Vec::new(),
@@ -1158,6 +1164,27 @@ impl State {
     defs.push_front(value);
   }
 
+  /// [`watch_meanings`]' look at an assignment of `key`'s meaning. A scope move or a copy onto itself is no change
+  /// (`hoist_top_frame_delta`, under the lazy LaTeX.pool load); nor is a first definition: the name undefined, or, for a
+  /// name [`WatchedName::RelaxIsUnset`], the `\relax` a `\csname` made it (`\exp_args:NNc`).
+  #[inline]
+  fn watch_meaning(&mut self, watched: MeaningWatch, key: SymStr, value: &Stored) {
+    let kind = arena::with(key, watched);
+    if kind != WatchedName::No
+      && let Some(standing) = self.meaning.get(&key).and_then(|stack| stack.front())
+      && !same_meaning(standing, value)
+      && !(kind == WatchedName::RelaxIsUnset
+        && self
+          .meaning
+          .get(&pin!("\\relax"))
+          .and_then(|stack| stack.front())
+          .is_some_and(|relax| same_meaning(standing, relax)))
+    {
+      self.meaning_watch = None;
+      self.watched_meaning_changed = Some(key);
+    }
+  }
+
   pub(crate) fn assign_internal(
     &mut self,
     table_name: TableName,
@@ -1170,6 +1197,18 @@ impl State {
     if table_name == TableName::Meaning {
       self.journal_touch(table_name, key);
       let origin = crate::definition::origin::current_origin();
+      // (not LaTeXML's own code, which every conversion's preload runs and which assigns no such name: the name test is
+      // the cost, 1 M instructions of an empty article)
+      if let Some(watched) = self.meaning_watch
+        && matches!(
+          origin,
+          crate::definition::origin::DefinitionOrigin::File
+            | crate::definition::origin::DefinitionOrigin::Document
+            | crate::definition::origin::DefinitionOrigin::Format
+        )
+      {
+        self.watch_meaning(watched, key, &value);
+      }
       if matches!(
         origin,
         crate::definition::origin::DefinitionOrigin::Fallback
@@ -1700,7 +1739,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     // without parameters — of a binding that takes a braced argument ([`owns_calls`]; a robust binding by its inner
     // `\cs␣`, the kernel `\cite`: eplain's btxmac scratch, SYNC_STATUS 67n) becomes the meaning: what
     // `\ifx`, `\meaning` and every use without an argument see, as in pdflatex; the binding stays the handler of
-    // its calls, as `\lx@locked@<cs>` ([`crate::definition::expandable::Expandable::yields_calls`]). A definition
+    // its calls, as `\lx@locked@<cs>` ([`crate::definition::expandable::SpecialCall::YieldsCalls`]). A definition
     // with parameters defines a command, not a value, so every use of it stays the binding's (`\renewcommand\mathbf
     // [1]{\boldsymbol{#1}}` with `\mathbf a`; 2006.08408's `\renewcommand{\sqrt}[2][\mkern8mu]{…}` with
     // `\sqrt k`). Raw class and package code stays refused, as in Perl (State.pm:502-517), and so does a binding
@@ -1814,7 +1853,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     }
     if let Some((defn, binding)) = call_owner {
       // The binding, kept on the first override (a later one, a loop's next iteration, overrides an override).
-      if !matches!(binding, Stored::Expandable(ref b) if b.yields_calls) {
+      if !matches!(binding, Stored::Expandable(ref b) if b.yields_calls()) {
         let owner = locked_binding_token(&token);
         state_mut!().assign_internal(
           TableName::Meaning,
@@ -1824,7 +1863,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
         );
       }
       let mut overriding = (*defn).clone();
-      overriding.yields_calls = true;
+      overriding.special_call = expandable::SpecialCall::YieldsCalls;
       state_mut!().assign_internal(
         TableName::Meaning,
         cs_sym,
@@ -2406,6 +2445,44 @@ pub fn note_copy_provides_title_page(token: &Token, body: &Tokens) {
   if let Some(copy) = state_mut!().copy_provides_copies.get_mut(id as usize - 1) {
     copy.title_page.push(body.clone());
   }
+}
+
+/// What [`watch_meanings`]' selection says of a name.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum WatchedName {
+  No,
+  Yes,
+  /// Watched, its `\relax` being what a `\csname` leaves on a name not yet defined rather than a meaning of its own.
+  RelaxIsUnset,
+}
+
+/// A selection of names for [`watch_meanings`].
+pub type MeaningWatch = fn(&str) -> WatchedName;
+
+/// Watch the meanings of the control sequences whose names `select` takes, from now on: any later assignment by a document,
+/// a raw file or a format file that changes the standing meaning of one, however local, is seen by
+/// [`watched_meaning_changed`] for the rest of the conversion; a new name has none to change. A native path that stands for a family of macros answers only while they are what it ports, at
+/// the cost of `select` per meaning assignment and none per use (latexml_engine `l3fp_native`).
+pub fn watch_meanings(select: MeaningWatch) {
+  let mut state = state_mut!();
+  state.meaning_watch = Some(select);
+  state.watched_meaning_changed = None;
+}
+
+/// Has a meaning [`watch_meanings`] watches changed? The first that did.
+pub fn watched_meaning_changed() -> Option<SymStr> { state!().watched_meaning_changed }
+
+/// Would [`note_setter_call`] observe a call of `cs`? Without the observation, for a native reader that declines such a
+/// call to whoever then makes it.
+pub fn setter_call_is_observed(cs: &Token) -> bool {
+  if !crate::definition::origin::setter_name_watch()
+    || crate::definition::origin::copy_provides() != 0
+  {
+    return false;
+  }
+  let key = meaning_key(cs);
+  (crate::definition::origin::copy_default_watch() && state!().watched_setters.contains(&key))
+    || FRONTMATTER_SETTERS.with(|f| f.borrow().names.contains(&key))
 }
 
 /// Observe the calls of the setters `names` ([`State::watched_setters`]).
@@ -5653,13 +5730,13 @@ pub fn owns_calls(cs: &Token, binding: &Stored) -> bool {
   // kernel `\cite` (sect11.rs) reads `[] Semiverbatim` there. Witnesses math0308041, math0612670, 0705.2148,
   // 0802.3843, 1207.1752, 1401.4197 (eplain.tex:346 `\edef\cite{\the\catcode`@}`; SYNC_STATUS 67n).
   if let Stored::Expandable(defn) = binding
-    && !defn.yields_calls
+    && !defn.yields_calls()
     && let Some(inner) = robust_wrapper_body(defn, cs)
   {
     return lookup_meaning(&inner).is_some_and(|inner_binding| owns_calls(&inner, &inner_binding));
   }
   let params = match binding {
-    Stored::Expandable(defn) if defn.yields_calls => return true,
+    Stored::Expandable(defn) if defn.yields_calls() => return true,
     Stored::Expandable(defn) => defn.get_parameters(),
     Stored::Constructor(defn) => defn.get_parameters(),
     Stored::Primitive(defn) => defn.get_parameters(),

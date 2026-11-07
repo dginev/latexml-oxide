@@ -2112,6 +2112,31 @@ pub fn field_cover_of(prov: u16) -> crate::token::FieldCover {
   crate::token::FieldCover { field, start: pos, end }
 }
 
+/// A look at the input's pushback as it stands, the next token to read last; nothing is read, so nothing is tokenized
+/// or counted. For a native reader of what a macro's own expansion put there ([`crate::definition::expandable::NativeCall`]).
+pub fn with_pushback<R>(look: impl FnOnce(&[Token]) -> R) -> Option<R> {
+  gullet!().runtime.as_ref().map(|rt| look(&rt.pushback))
+}
+
+/// How long the pushback is ([`with_pushback`]).
+pub fn pushback_len() -> usize { gullet!().runtime.as_ref().map_or(0, |rt| rt.pushback.len()) }
+
+/// Consume the pushback down to its first `len` tokens, as a native reader's answer does ([`with_pushback`]); braces
+/// among them must balance, since the brace ledger counts none of them, read or not.
+pub fn consume_pushback_to(len: usize) {
+  if let Some(ref mut runtime) = gullet_mut!().runtime {
+    runtime.pushback.truncate(len);
+  }
+}
+
+/// How many more levels of expansion recursion the guard of `read_x_token` allows, `usize::MAX` if it is off.
+pub fn expand_depth_left() -> usize {
+  match EXPAND_DEPTH_LIMIT.get() {
+    0 => usize::MAX,
+    limit => limit.saturating_sub(EXPAND_DEPTH.get()),
+  }
+}
+
 /// Whether the input's pushback is empty: no token of a field's stored value is left to read ([`field_cover_of`]).
 pub fn pushback_is_empty() -> bool {
   gullet!()
@@ -2140,7 +2165,10 @@ fn invoke_expansion(token: Token, defn: &std::rc::Rc<dyn Definition>) -> Result<
     expire_current_token();
     return Ok(());
   }
-  let mut invoked = crate::stack_guard::maybe_grow(|| defn.invoke(false))?;
+  let mut invoked = crate::stack_guard::maybe_grow(|| match defn.native_expansion()? {
+    Some(expansion) => Ok(expansion),
+    None => defn.invoke(false),
+  })?;
   if token.prov != 0 {
     // the macro's position and its arguments are covered by the boxes its expansion digests to (or by the next ones,
     // when it expands to nothing): a field's print is whole with them (OXIDIZED_DESIGN #715)

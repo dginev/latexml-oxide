@@ -4,16 +4,19 @@
 //!
 //! **What may expand.** The raw parser f-expands its input as it goes (`\__fp_parse_expand:w`: an argument read, which
 //! skips spaces, then `` `^^@ ``'s `get_x_token`, which expands until an unexpandable token and swallows one space). The
-//! native path must have no side effect until it has its answer, because on any doubt the raw macro runs over the
-//! untouched argument. So [`Parser::a`] substitutes, onto its own stack and never onto the input, only what certainly
-//! changes no state: a macro with a token-list body; `\number`, `\the`, `\dim_to_fp:n`, `\fp_to_decimal:n` and `\fp_use:N` of
+//! native path must have no side effect until it has its answer, nothing reported above all, because on any doubt the raw
+//! macro runs over the untouched input. So [`Parser::a`] substitutes, onto its own stack and never onto the input, only
+//! what certainly changes no state: a macro with a token-list body; `\number`, `\the`, `\dim_to_fp:n`, `\fp_to_decimal:n` and `\fp_use:N` of
 //! a plain register, one dimension or another fp expression; and `\csname` of a name that already means something. Anything
 //! else TeX would expand (`\csname` of a new name, which defines `\relax`; a conditional; `\input`; a binding's closure;
 //! an active character) is a [`Decline`]. The result is the same token sequence the raw parser reads, so the answer is the same.
 
 use latexml_core::{
   common::store::Stored,
-  definition::{expandable::Expandable, register::Register},
+  definition::{
+    expandable::{Expandable, SpecialCall},
+    register::Register,
+  },
   gullet::do_expand,
 };
 
@@ -27,8 +30,14 @@ use crate::prelude::*;
 const EXPANSION_BUDGET: u32 = 4000;
 /// How many digits an exponent may have before `\int_value:w` would object.
 const MAX_EXPONENT_DIGITS: u32 = 9;
-/// Nested `\__fp_parse:n` calls.
+/// Nested doors and `\fp_to_decimal:n` calls.
 const MAX_NESTING: u8 = 16;
+/// Recursion of [`Parser::operand`] and [`Parser::one`] together, and a function's commas, past which the expression is the
+/// macro's: about 200 of `(`, 400 of `^`. Well below what the macro's own run takes without reaching the recursion limit,
+/// whose Fatal then stays its own (`1^1^…` at 2,000 terms, `max(1,1,…)` at 2,000 arguments); an input of any length ends here
+/// or in a loop, so no input can overflow the stack: at this limit 172 KB in a release build, 1.15 MB in a debug one, and
+/// each level is [`stack_guard::maybe_grow`]n.
+const MAX_DEPTH: u32 = 400;
 
 /// `\c__fp_prec_..._int`
 mod prec {
@@ -111,8 +120,8 @@ impl Val {
 enum Class {
   /// a macro the native path can substitute
   Macro(Rc<Expandable>),
-  /// `\__fp_parse:n` itself
-  Nested,
+  /// the format's `\__fp_parse:n` (`\fp_add:Nn`, `\fp_abs:n`, `\fp_sign:n` put it inside an expression)
+  Door,
   /// `\s__fp`
   FpStart,
   /// a number or dimension register without arguments
@@ -137,6 +146,8 @@ pub(super) struct Parser {
   budget:         u32,
   pending:        Option<Infix>,
   nesting:        u8,
+  /// [`MAX_DEPTH`]'s count, across nested parsers
+  depth:          u32,
   /// the token a decline stopped at, for the census
   pub(super) at:  Option<Token>,
   /// the macro last substituted, for the census
@@ -166,21 +177,37 @@ fn char_of(t: Token) -> R<u8> {
 fn is_letter(c: u8) -> bool { c.is_ascii_alphabetic() }
 
 impl Parser {
-  /// A parser over an argument's tokens.
-  pub(super) fn new(arg: &[Token], nesting: u8) -> Parser {
-    let mut stack = Vec::with_capacity(arg.len() + 32);
-    stack.extend(arg.iter().rev().copied());
+  /// A parser over the door's expression as the input's pushback holds it, its first token last.
+  pub(super) fn over_input(input: &[Token]) -> Parser {
+    let mut stack = Vec::with_capacity(input.len() + 32);
+    stack.extend_from_slice(input);
     Parser {
       stack,
       budget: EXPANSION_BUDGET,
       pending: None,
-      nesting,
+      nesting: 0,
+      depth: 0,
       at: None,
       via: None,
     }
   }
 
-  /// `\__fp_parse:n`: the whole expression.
+  /// A parser over an argument this one read, under this one's limits.
+  fn nested(&self, arg: &[Token]) -> Parser {
+    let mut stack = Vec::with_capacity(arg.len() + 32);
+    stack.extend(arg.iter().rev().copied());
+    Parser {
+      stack,
+      budget: self.budget,
+      pending: None,
+      nesting: self.nesting + 1,
+      depth: self.depth,
+      at: None,
+      via: None,
+    }
+  }
+
+  /// The whole expression.
   pub(super) fn parse(&mut self) -> R<Fp> {
     let v = self.operand(prec::END)?;
     match self.pending {
@@ -194,13 +221,11 @@ impl Parser {
     Err(Decline(why))
   }
 
-  /// What control sequence `t` is, if the native path can read it at all.
+  /// What control sequence `t` is, if the native path can read it at all. `\s__fp` by its name: the name's meaning is
+  /// what it was at the install, or nothing is answered (`state::watched_meaning_changed`).
   fn classify(&mut self, t: Token) -> R<Class> {
     if t == T_CS!("\\s__fp") {
       return Ok(Class::FpStart);
-    }
-    if t == T_CS!("\\__fp_parse:n") {
-      return Ok(Class::Nested);
     }
     match lookup_meaning(&t) {
       Some(Stored::Expandable(e)) => {
@@ -216,6 +241,9 @@ impl Parser {
             return Ok(Class::Csname);
           }
         } else if e.origin.is_latexml_owned() {
+          if e.cs == T_CS!("\\__fp_parse:n") {
+            return Ok(Class::Door);
+          }
           if e.cs == T_CS!("\\dim_to_fp:n") {
             return Ok(Class::DimToFp);
           }
@@ -229,7 +257,11 @@ impl Parser {
         if matches!(e.expansion, Some(ExpansionBody::Closure(_))) {
           return self.decline_at(t, "an expandable with a native body");
         }
-        if e.is_protected || e.is_outer || e.yields_calls || e.peeks_by_futurelet {
+        if e.is_protected
+          || e.is_outer
+          || !matches!(e.special_call, SpecialCall::None)
+          || e.peeks_by_futurelet
+        {
           return self.decline_at(t, "a macro with special expansion");
         }
         Ok(Class::Macro(e))
@@ -260,17 +292,11 @@ impl Parser {
         self.substitute(t, &e)?;
         Ok(true)
       },
-      Class::Nested => {
+      Class::Door => {
         self.stack.pop();
-        let arg = self.read_argument()?;
-        if self.nesting >= MAX_NESTING {
-          return Err(Decline("deep nesting"));
-        }
-        let mut inner = Parser::new(&arg, self.nesting + 1);
-        inner.budget = self.budget;
-        let x = inner.parse().inspect_err(|_| self.at = inner.at)?;
-        self.budget = inner.budget;
-        let form = super::fp_tokens(x);
+        let x = self.read_door()?;
+        let mut form = Vec::new();
+        super::fp_tokens(x, &mut form);
         self.stack.extend(form.iter().rev().copied());
         Ok(true)
       },
@@ -369,7 +395,7 @@ impl Parser {
   /// `\number`'s operand where nothing can go wrong: a `\dimexpr` or `\numexpr` of one number (`\__dim_ratio:n`:
   /// `\int_value:w \__dim_eval:w (#1) \__dim_eval_end:`), a number register, or digits. The value of a dimension comes
   /// from the engine's own reader over a text checked to be `<decimal><unit>`, since that reader's arithmetic is what the
-  /// raw macro gets; it cannot report anything on such a text.
+  /// raw macro gets; [`check_dimension_text`] keeps it below `\maxdimen`, the one thing it would report.
   fn read_number(&mut self) -> R<i64> {
     self.expand_macros()?;
     self.skip_spaces();
@@ -447,22 +473,29 @@ impl Parser {
     } else {
       self.dimension_text_value(text, T_CS!("\\glueexpr"))?
     };
-    Ok(super::fp_tokens(dimension_to_fp(sp, 0)?))
+    let mut form = Vec::new();
+    super::fp_tokens(dimension_to_fp(sp, 0)?, &mut form);
+    Ok(form)
   }
 
-  /// `\fp_to_decimal:n`, `\fp_eval:n`: its argument's value in decimal digits, what the operand reader then reads.
-  fn read_to_decimal(&mut self) -> R<Vec<Token>> {
+  /// A door's argument, read and answered as the macro's own run answers it where it stands.
+  fn read_door(&mut self) -> R<Fp> {
     let arg = self.read_argument()?;
     if self.nesting >= MAX_NESTING {
       return Err(Decline("deep nesting"));
     }
-    let mut inner = Parser::new(&arg, self.nesting + 1);
-    inner.budget = self.budget;
+    let mut inner = self.nested(&arg);
     let x = inner.parse().inspect_err(|_| {
       self.at = inner.at;
       self.via = inner.via;
     })?;
     self.budget = inner.budget;
+    Ok(x)
+  }
+
+  /// `\fp_to_decimal:n`, `\fp_eval:n`: its argument's value in decimal digits, what the operand reader then reads.
+  fn read_to_decimal(&mut self) -> R<Vec<Token>> {
+    let x = self.read_door()?;
     Ok(Explode!(super::to_decimal(x)?))
   }
 
@@ -477,8 +510,7 @@ impl Parser {
     if !holds_fp {
       return self.decline_at(*var, "a fp_use of something else");
     }
-    let mut inner = Parser::new(&arg, self.nesting + 1);
-    let x = inner.parse()?;
+    let x = self.nested(&arg).parse()?;
     Ok(Explode!(super::to_decimal(x)?))
   }
 
@@ -535,6 +567,14 @@ impl Parser {
       .checked_sub(1)
       .ok_or(Decline("too many expansions"))?;
     self.via = Some(t);
+    // What the watches of `Expandable::watched_call` see of a call. The document-call watch sees none here: it reads an
+    // empty pushback, and the door's marks are on it.
+    if definition::origin::setter_watch()
+      && (setter_call_is_observed(&t)
+        || (e.paramlist.is_some() && (e.origin.is_binding_made() || e.made_in_own_file)))
+    {
+      return self.decline_at(t, "a macro under the frontmatter's watch");
+    }
     let body = match &e.expansion {
       Some(ExpansionBody::Tokens(body)) => body.unlist_ref().as_slice(),
       // an empty body
@@ -544,9 +584,6 @@ impl Parser {
       self.stack.extend(body.iter().rev().copied());
       return Ok(());
     };
-    if definition::origin::setter_watch() && (e.origin.is_binding_made() || e.made_in_own_file) {
-      return self.decline_at(t, "a macro under the frontmatter's watch");
-    }
     let parameters = params.get_parameters();
     if parameters.iter().any(|p| p.name != pin!("Plain")) {
       return self.decline_at(t, "a macro with delimited parameters");
@@ -597,14 +634,47 @@ impl Parser {
                 return Ok(out);
               }
             },
-            _ => {},
+            _ => self.refuse_in_argument(x)?,
           }
           out.push(x);
         }
       },
       Catcode::END => Err(Decline("an unbalanced group")),
-      _ => Ok(vec![t]),
+      _ => {
+        self.refuse_in_argument(t)?;
+        Ok(vec![t])
+      },
     }
+  }
+
+  /// What the macro's read of an argument does more than take: an `\\outer` token's report (tex.web §336), and what the
+  /// gullet's read does with a comment or a marker.
+  #[inline]
+  fn refuse_in_argument(&mut self, t: Token) -> R<()> {
+    let refused = match t.code {
+      Catcode::COMMENT | Catcode::MARKER => Some("a comment or a marker in a macro's argument"),
+      Catcode::CS | Catcode::ACTIVE => match lookup_meaning(&t) {
+        Some(Stored::Expandable(e)) if e.is_outer => Some("an outer token in a macro's argument"),
+        _ => None,
+      },
+      _ => None,
+    };
+    match refused {
+      Some(why) => self.decline_at(t, why),
+      None => Ok(()),
+    }
+  }
+
+  /// One level of [`Self::operand`] or [`Self::one`]: [`MAX_DEPTH`] levels at most, on a stack known to hold them.
+  #[inline]
+  fn deeper<T>(&mut self, level: impl FnOnce(&mut Self) -> R<T>) -> R<T> {
+    if self.depth >= MAX_DEPTH {
+      return Err(Decline("an expression too deep"));
+    }
+    self.depth += 1;
+    let result = stack_guard::maybe_grow(|| level(self));
+    self.depth -= 1;
+    result
   }
 
   #[inline]
@@ -635,7 +705,9 @@ impl Parser {
 
   /// `\__fp_parse_operand:Nw`: an operand and the operators binding tighter than `prec`; [`Self::pending`] is left with
   /// the infix that stopped it.
-  fn operand(&mut self, prec: i32) -> R<Val> {
+  fn operand(&mut self, prec: i32) -> R<Val> { self.deeper(|p| p.operand_at(prec)) }
+
+  fn operand_at(&mut self, prec: i32) -> R<Val> {
     self.a()?;
     let (mut val, after_paren) = self.one(prec)?;
     if self.pending.is_none() {
@@ -776,7 +848,9 @@ impl Parser {
   }
 
   /// `\__fp_parse_one:Nw`: the operand, and whether a `)` closed it (`\__fp_parse_infix_after_paren:NN` reads on).
-  fn one(&mut self, prec: i32) -> R<(Val, bool)> {
+  fn one(&mut self, prec: i32) -> R<(Val, bool)> { self.deeper(|p| p.one_at(prec)) }
+
+  fn one_at(&mut self, prec: i32) -> R<(Val, bool)> {
     self.skip_spaces();
     let Some(t) = self.stack.pop() else {
       return Err(Decline("an empty operand"));
@@ -831,10 +905,17 @@ impl Parser {
         // \__fp_parse_prefix_(:Nw
         if prec == prec::FUNC {
           let mut args = vec![self.operand(prec::COMMA)?.one()?];
+          let depth = self.depth;
           while matches!(self.pending, Some(Infix::Comma)) {
             self.pending = None;
+            // (each comma stays open in the macro's own run, `\__fp_parse_apply_comma:NwNwN`: a level of its recursion)
+            if self.depth >= MAX_DEPTH {
+              return Err(Decline("an expression too deep"));
+            }
+            self.depth += 1;
             args.push(self.operand(prec::COMMA)?.one()?);
           }
+          self.depth = depth;
           if !matches!(self.pending, Some(Infix::RParen)) {
             return Err(Decline("a ( without its )"));
           }
@@ -1107,7 +1188,9 @@ impl Parser {
     }
   }
 
-  /// A floating point number's stored form, `\s__fp` read: `\__fp_exp_after_f:nw` hands it on unchanged.
+  /// A floating point number's stored form, `\s__fp` read: `\__fp_exp_after_f:nw` hands it on unchanged, and the parser's
+  /// operations read its blocks as they stand, so only the canonical form is a value here: an exponent as `\int_value:w`
+  /// writes it, four blocks of exactly four digits.
   fn read_fp(&mut self) -> R<Fp> {
     if self.stack.pop() != Some(T_CS!("\\__fp_chk:w")) {
       return Err(Decline("a misformed floating point number"));
@@ -1121,14 +1204,10 @@ impl Parser {
     };
     match kind {
       1 => {
-        let exp = self.read_group_int()?;
+        let exp = self.read_exponent_group()?;
         let mut mant: u64 = 0;
         for _ in 0..4 {
-          let b = self.read_group_int()?;
-          if !(0..10000).contains(&b) {
-            return Err(Decline("a misformed floating point number"));
-          }
-          mant = mant * 10000 + b as u64;
+          mant = mant * 10000 + self.read_block_group()?;
         }
         if !(POW10[15]..POW10[16]).contains(&mant) || exp.abs() > num::MAX_EXPONENT {
           return Err(Decline("a misformed floating point number"));
@@ -1174,7 +1253,8 @@ impl Parser {
     }
   }
 
-  fn read_group_int(&mut self) -> R<i64> {
+  /// `{<exponent>}`: no leading zero, no `-0`.
+  fn read_exponent_group(&mut self) -> R<i64> {
     let bad = Decline("a misformed floating point number");
     if self.stack.pop().map(|t| t.code) != Some(Catcode::BEGIN) {
       return Err(bad);
@@ -1195,7 +1275,7 @@ impl Parser {
           negative = true;
           Ok(())
         },
-        [d @ b'0'..=b'9'] if digits < 9 => {
+        [d @ b'0'..=b'9'] if digits < 9 && (digits == 0 || value != 0) => {
           value = value * 10 + i64::from(*d - b'0');
           digits += 1;
           Ok(())
@@ -1203,10 +1283,26 @@ impl Parser {
         _ => Err(bad),
       })?;
     }
-    if digits == 0 {
+    if digits == 0 || (negative && value == 0) {
       return Err(bad);
     }
     Ok(if negative { -value } else { value })
+  }
+
+  /// `{<block>}`: exactly four digits.
+  fn read_block_group(&mut self) -> R<u64> {
+    let bad = Decline("a misformed floating point number");
+    if self.stack.pop().map(|t| t.code) != Some(Catcode::BEGIN) {
+      return Err(bad);
+    }
+    let mut value: u64 = 0;
+    for _ in 0..4 {
+      value = value * 10 + u64::from(self.read_digit()?);
+    }
+    if self.stack.pop().map(|t| t.code) != Some(Catcode::END) {
+      return Err(bad);
+    }
+    Ok(value)
   }
 
   /// `\__fp_parse_letters:N`, `\__fp_parse_word:Nw`: the letters, an expansion before each next one.
@@ -1267,8 +1363,9 @@ fn is_plain_dimension_register(t: &Token) -> bool {
 
 fn text_is(t: Token, s: &str) -> bool { t.code != Catcode::CS && t.with_str(|x| x == s) }
 
-/// `[+-]* <decimal> <unit>` with spaces between, a magnitude no unit can take past `\maxdimen`: what `\dimexpr` reads
-/// without a word.
+/// `[+-]* <decimal> <unit>` with spaces between, a magnitude below `\maxdimen` in its unit (a margin below it, whatever the
+/// fraction): what `\dimexpr` reads without a word, and reports nothing on. Past that `Dimension too large` is the raw
+/// macro's to report, once.
 fn check_dimension_text(text: &[Token]) -> R<()> {
   let bad = Decline("a dimexpr beyond one dimension");
   let mut chars = Vec::with_capacity(text.len());
@@ -1307,15 +1404,22 @@ fn check_dimension_text(text: &[Token]) -> R<()> {
     }
     i += 1;
   }
-  if count == 0 || whole > 2000 {
+  if count == 0 {
     return Err(bad);
   }
   skip(&mut i);
-  let unit = chars.get(i..i + 2).ok_or(bad)?;
-  if !matches!(
-    unit,
-    b"pt" | b"in" | b"pc" | b"cm" | b"mm" | b"bp" | b"dd" | b"cc" | b"sp"
-  ) {
+  let cap: u64 = match chars.get(i..i + 2).ok_or(bad)? {
+    b"pt" | b"bp" => 16000,
+    b"in" => 220,
+    b"pc" => 1300,
+    b"cm" => 570,
+    b"mm" => 5700,
+    b"dd" => 15000,
+    b"cc" => 1250,
+    b"sp" => 1 << 30,
+    _ => return Err(bad),
+  };
+  if whole >= cap {
     return Err(bad);
   }
   i += 2;

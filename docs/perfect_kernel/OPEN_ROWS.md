@@ -209,7 +209,7 @@ here is open unless its status says otherwise; when a row closes, delete it here
   - *pgfmath/TikZ* (59a-59c): RED `graphics-tikz/{tikzmath_function_draws, pgfmath_width_of_formatted_text}` (both SHARED);
     `random(m,n)` integer, `.5`/`1.` pass through (DIVERGENCES #404); a missing `:` in a chained ternary is silent;
     `\pgfmathsetlength`'s leftover tokens run outside pgf's group; perf levers L1 and L6 landed (59q) and G4 is
-    met since s136 (pgf-interference-en ~170 s alone, 30 s since the native l3fp, `pk/P2`); further levers are optional margin
+    met since s136 (pgf-interference-en ~170 s alone, 34 s since the native l3fp, `pk/P2`); further levers are optional margin
     (`~/data/pk_agents/main/agent_reports/2026-10-03_g4_pgf_interference_levers.md`).
   - Out of scope (recorded): luatexja `\fontencoding{T1}` prints "T1" (`\luadef` predicate no-ops); biblatex-ext's last
     error, a bibliography inside a tcolorbox (user 2026-10-02); cms-notes-intro (lualatex-unclean).
