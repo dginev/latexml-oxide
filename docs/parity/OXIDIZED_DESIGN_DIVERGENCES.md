@@ -30427,6 +30427,47 @@ aiaa-tc's `\newif`), `perfect_kernel_batch68u::apa6_one_author_line_with_numbere
 uncalled `\printkeywords`); `perfect_kernel_batch106s::a_class_store_the_net_misses_is_counted`'s unflushed class names the
 Info (no Warning).
 
+**R1: what the check costs** (briefs R1, R1r2; `docs/performance/PERFORMANCE.md` "the pk/P1 levers"). The third source digests
+each stored argument even when the title page's print digests it too: uantwerpenexam-example2's `\extrainfo`, stored by a raw setter
+and printed by the class's `\maketitle`, was digested three times, 47 % of the conversion. Why the third source exists stands: a
+store the print's run does not reach (a gate only the class's refused `\author` opens, 2305.00867; a raw `\@author@finish` the
+binding never runs, 1011.2770; a replay the gate refuses, 2408.05088, 2605.02209), or a store only written out (1401.7920). It runs
+before the print, as it did. **Settled, one line:** skipping an argument the print seems to hold loses a word uncounted, so nothing
+is skipped. R1's `print_holds` (the run expanded the store, the print holds three quarters of the words the argument spells, no
+`\thanks` spelled) is removed: `\noted{Noteword one\grant}` with `\newcommand\grant{\thanks{Thanksword}}`, in a class that flushes
+`\@thanks` at the end of the document, prints Thanksword in pdflatex and in neither XML, and every word the argument spells is
+printed, because a spelling can't tell what a macro prints. It fired on 19 small arguments in 10 of 278 raw-class papers and gave
+-0.03 to -0.26 % on 2111.15203 and five third-source witnesses, -0.9 % on 1306.4853, with the watch's gain in both.
+**A budget:** no run of the check's reads more than 8,000,000 tokens, and a conversion's at most three times that
+(`check_run_budget`, `LATEXML_CHECK_READ_BUDGET`, 0 for none). Reads cost about 450 instructions each, so a run costs a second at
+most, and the worst a document can ask of the check about 11 G. Over budget (`gullet::read_budget`, an error nothing logs or latches)
+the run is abandoned and rolled back like a failed one, and the document close says what was left out once, in a counted
+`Warning:frontmatter:check_budget` naming the setter's argument and its size, or the title page. The arguments run first, so ones
+that spend all the conversion's reads leave the print no run, and that is named too ("after 0 tokens read"). The run counts as having
+read what it read; its failed reads, its conditionals (`set_if_count`) and an inner context's reset of the count leave no mark, so the
+token limit, the conditional limit, the cycle guard and `full_read_at` read as they did; the sentinel runs have no budget.
+**Data:** on 299 converted papers with a raw class of their own (seed 7), a print reads 1,185 tokens at the median, 285,224 at the
+99th percentile and 487,915 at most (2402.13052); an argument 3,348 at most; all a conversion's runs 1,826,755 at most (1306.4853,
+587 runs). The budget stops none of them, and none of the 1,873 of `popZ01`; of the 50 TeX Live manuals of the performance
+study it leaves circuitikzmanual's title page, a drawing of 4,480,660 reads, unstopped. **It stops** uantwerpenexam-example2 (164 M
+reads a run: each `\selectlanguage` reads the class's language data file again, `uantwerpenexam.cls:84,:99-104`): its print and its
+`\extrainfo` both stop at the budget, so a title page's words go unchecked there and the Warning names both. That is all of the
+regression's fix.
+**A trace it found:** a run stopped inside a `\scantokens` left its own mouth open, as `reading_from_mouth`'s error path closed
+mouths until one of its own source's *name*, and both were "Anonymous String", and the next close took the document's text, all of
+the body, silently. It closes by depth now, counting the mouth in reading with the stack (`mouth_depth`: `open_mouth` pushes nothing
+when none is in reading). A sweep of every fifth budget from 1 to 90,000, past the runs' whole length of 83,504 reads, over the hostile repro (18,000 conversions, `kit/check_budget_sweep.sh`) gives the XML of no budget, no Error. Guards `perfect_kernel_batchr1::{a_thanks_behind_a_macro_in_a_stored_argument_is_counted,
+what_a_run_left_out_over_budget_is_named, a_spent_budget_names_the_print_it_never_ran,
+a_run_over_budget_counts_no_conditional_against_the_limit, a_looping_stored_argument_is_budgeted, a_run_over_budget_leaves_no_trace}`,
+units `gullet::token_limit_tests::{a_read_budget_ends_at_its_read_and_counts_what_was_read,
+a_failed_context_closes_its_own_mouths_by_depth, a_failed_context_leaves_as_many_mouths_as_it_found}`; repros
+sectioning-frontmatter/`check_store_thanks_by_alias_is_counted`, `check_store_over_budget_is_named`,
+`check_budget_run_leaves_no_trace`, `check_store_argument_loop_is_budgeted` (RED 108b → GREEN R1). **The watch:**
+`Expandable::may_be_watched` asks inline whether the document-call and store-call watches can see a call (a macro with parameters
+LaTeXML or a raw class's own file made), so a package's macro no longer takes the cold path; what they record is unchanged. What they
+still cost, against no watch: 0.2 % (Scrabble-doc-fr) to 1.0 % (jwjournal-demo-en) on documents with no `\maketitle` to end them, the
+calls they record.
+
 ### 954. A contact holding two or more marked entries is cut at its marks in the frontmatter API, for every binding (Perl: one contact, the marks printed in it)
 
 **What** (batch 99a; FRONTMATTER_SINGLE_ENGINE_PLAN "The target model", placement step 0: "one item per printed

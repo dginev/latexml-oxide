@@ -1231,6 +1231,9 @@ pub enum ErrorCategory {
   PushbackLimit,
   IfLimit,
   MemoryBudget,
+  /// A budgeted run of digestion read all it may ([`crate::gullet::read_budget`]): the run ends, nothing else does. No
+  /// Fatal: never logged, never latched.
+  ReadBudget,
   /// Not a failure: an eager digestion stopped at the streaming-restart
   /// watermark so the CLI can rerun the document under `--streaming` before
   /// the memory fuse (batch 56dz). Reported as an Info, never a Fatal.
@@ -1288,6 +1291,7 @@ impl fmt::Display for ErrorCategory {
       PushbackLimit => write!(f, "pushback_limit"),
       IfLimit => write!(f, "if_limit"),
       MemoryBudget => write!(f, "memory_budget"),
+      ReadBudget => write!(f, "read_budget"),
       StreamingRestart => write!(f, "streaming-restart"),
     }
   }

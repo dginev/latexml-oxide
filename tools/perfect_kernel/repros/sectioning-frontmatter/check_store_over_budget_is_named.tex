@@ -1,0 +1,32 @@
+% A raw setter's stored argument and the class's title page, both over the check's read budget (LATEXML_CHECK_READ_BUDGET=100):
+% each run is abandoned and rolled back, and both are named in one `Warning:frontmatter:check_budget`, in the order they ran, the
+% argument (title_page_check.rs `digest_raw_setter_calls`, the third source) before the print. What fits the budget is still
+% read (`\gated`, a store the title page never reaches, under a count the class's refused `\author` advances), and the XML stays.
+% witness: uantwerpenexam-example2 (`\extrainfo`, 2,501 tokens, 164 M reads a run, digested three times: 322 G instructions:u on P1)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able1", "Important information:",
+%          "• Bring a calculator.", "Text.", the foot's "1 Corresponding author: ann.able@lunar.org"
+% engines: rust P1 = 0 errors, 1 warning at any budget (it has none); perl = not run
+% expect:  0 errors; 1 warning (frontmatter:unclaimed_store "smallword"); at the budget of 100 also check_budget, naming both,
+%          "smallword" as before
+% status:  RED (P1) -> GREEN (R1)
+% preload: ar5iv.sty
+\begin{filecontents*}[force]{checkstoreoncecls.cls}
+\LoadClass{article}
+\newcount\aucount
+\def\author#1{\advance\aucount by 1 \gdef\@author{#1}}
+\def\extrainfo#1{\gdef\@extrainfo{#1}}\def\@extrainfo{}
+\def\corr#1{\gdef\@corr{#1}}\def\@corr{}
+\def\gated#1{\gdef\@gated{#1}}\def\@gated{}
+\renewcommand\maketitle{\par\begingroup\centering{\Large\@title\par}%
+  {\@author\thanks{Corresponding author: \@corr}\par}\ifnum\aucount>1 \@gated\fi\@thanks\endgroup{\@extrainfo\par}}
+\end{filecontents*}
+\documentclass{checkstoreoncecls}
+\title{A Title}
+\author{Ann Able}
+\extrainfo{Important information:
+  \begin{itemize}\item Bring a calculator.\end{itemize}}
+\corr{ann.able@lunar.org}
+\gated{Smallword}
+\begin{document}\maketitle
+Text.
+\end{document}

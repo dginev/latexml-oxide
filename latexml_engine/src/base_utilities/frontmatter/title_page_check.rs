@@ -38,6 +38,10 @@
 //! `\auaddress`, printed only under a count the class's refused `\author` advances (2305.00867); aeb_emulateapj's
 //! `\altaffiltext`, read only by a raw `\@author@finish` (1011.2770); the replay gate's refusals (naverlabseurope
 //! 2408.05088, bosonai 2605.02209); nj_style's `\ead`, which only writes to the `.aux` file (1401.7920).
+//!
+//! What the check digests costs: no run of its reads more than a budget, and all of a conversion's a few times that
+//! ([`check_run_budget`], #953 "R1"); what is left out so is said in a `Warning:frontmatter:check_budget`. Witness:
+//! uantwerpenexam-example2's `\extrainfo`.
 
 use std::cell::RefCell;
 
@@ -110,6 +114,7 @@ pub fn reset_title_page_check() {
   CALLED.with_borrow_mut(Vec::clear);
   STORED.with_borrow_mut(Vec::clear);
   UNREAD.with_borrow_mut(String::clear);
+  reset_check_budget();
   NEXT_ID.set(0);
   reset_document_calls();
   take_store_calls();
@@ -156,6 +161,107 @@ thread_local! {
   static STORED: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
   /// The same of the setters whose stores only page furniture reads, or nothing ([`StoreReaders`]).
   static UNREAD: RefCell<String> = const { RefCell::new(String::new()) };
+  /// The reads the check's runs may still make, this conversion's ([`check_run_budget`]).
+  static CHECK_READS_LEFT: std::cell::Cell<usize> =
+    const { std::cell::Cell::new(CHECK_RUN_READS_DEFAULT * CHECK_RUNS_PER_CONVERSION) };
+  /// The reads one of the check's runs may make, this conversion's ([`check_run_budget`]).
+  static CHECK_RUN_READS: std::cell::Cell<usize> =
+    const { std::cell::Cell::new(CHECK_RUN_READS_DEFAULT) };
+  /// What the check's runs left out over budget ([`note_check_left_out`]).
+  static LEFT_OUT: RefCell<LeftOut> = RefCell::new(LeftOut::default());
+}
+
+/// The most tokens one of the check's speculative runs reads. By what they cost: a read runs at about 450
+/// `instructions:u`, so a run costs about a second at most. By the data: 299 converted papers with a raw class of their own
+/// (seed 7) read 1,185 at the median in the title page's print, 285,224 at the 99th percentile and 487,915 at most
+/// (2402.13052), and 3,348 at most in an argument, none of them near it; of the TeX Live manuals, circuitikzmanual's title
+/// page, a drawing, reads 4,480,660 and stays under it, uantwerpenexam-example2's 165 million does not.
+const CHECK_RUN_READS_DEFAULT: usize = 8_000_000;
+
+/// The most tokens all the check's runs of a conversion read, in [`CHECK_RUN_READS_DEFAULT`]s: an argument over budget, the
+/// title page that prints it over budget too, and the many small arguments of the rest (1306.4853's 587 runs read 1,826,755,
+/// the most of the 299 papers).
+const CHECK_RUNS_PER_CONVERSION: usize = 3;
+
+/// How many of the things left out over budget [`check_budget_warning`] names.
+const LEFT_OUT_NAMED: usize = 8;
+
+/// What the check's runs left out over budget ([`note_check_left_out`]).
+#[derive(Default)]
+struct LeftOut {
+  /// the first [`LEFT_OUT_NAMED`], named
+  named:  Vec<String>,
+  /// how many more
+  more:   usize,
+  /// the tokens of those more
+  tokens: usize,
+}
+
+/// A new conversion's budget: [`CHECK_RUN_READS_DEFAULT`], or `LATEXML_CHECK_READ_BUDGET` (0: none).
+fn reset_check_budget() {
+  let reads = std::env::var("LATEXML_CHECK_READ_BUDGET")
+    .ok()
+    .and_then(|reads| reads.trim().parse::<usize>().ok())
+    .unwrap_or(CHECK_RUN_READS_DEFAULT);
+  let reads = if reads == 0 { usize::MAX >> 2 } else { reads };
+  CHECK_RUN_READS.set(reads);
+  CHECK_READS_LEFT.set(reads.saturating_mul(CHECK_RUNS_PER_CONVERSION));
+  LEFT_OUT.with_borrow_mut(|left_out| *left_out = LeftOut::default());
+}
+
+/// How many tokens the check's next speculative run may read (`sect05.rs` `speculative_run`): a check reads what a title
+/// page prints, and may not cost more than a small part of a conversion whatever the document's title page does — a
+/// looping stored argument, or a hundred lines of it the class's language switches make dear (uantwerpenexam's
+/// `\extrainfo`, 164 million reads a run). None once a conversion's reads are spent ([`CHECK_RUNS_PER_CONVERSION`]). What is
+/// left out so is said once ([`check_budget_warning`]).
+pub(crate) fn check_run_budget() -> Option<usize> {
+  let left = CHECK_READS_LEFT.get();
+  (left != 0).then(|| left.min(CHECK_RUN_READS.get()))
+}
+
+/// The reads the check's runs may still make ([`check_run_budget`]).
+pub(crate) fn check_reads_left() -> usize { CHECK_READS_LEFT.get() }
+
+/// A run of the check's read `reads` tokens ([`check_run_budget`]).
+pub(crate) fn note_check_run_reads(reads: usize) {
+  CHECK_READS_LEFT.set(CHECK_READS_LEFT.get().saturating_sub(reads));
+}
+
+/// A run of the check's was abandoned or never made over budget ([`check_run_budget`]): `what`, of `tokens` tokens when
+/// it is an argument.
+pub(crate) fn note_check_left_out(what: String, tokens: usize) {
+  LEFT_OUT.with_borrow_mut(|left_out| {
+    if left_out.named.len() < LEFT_OUT_NAMED {
+      left_out.named.push(what);
+    } else {
+      left_out.more += 1;
+      left_out.tokens += tokens;
+    }
+  });
+}
+
+/// The Warning that says what the check left out over budget, when the document closes: a lost word is counted or its
+/// absence is said (FIDELITY_CHARTER §4), so a check that cannot read a title page or an argument says which, and how
+/// big.
+fn check_budget_warning() {
+  let LeftOut { named, more, tokens } = LEFT_OUT.with_borrow_mut(std::mem::take);
+  if named.is_empty() {
+    return;
+  }
+  let more = if more == 0 {
+    String::new()
+  } else {
+    s!(", and {more} more argument(s) of {tokens} token(s)")
+  };
+  Warn!(
+    "frontmatter",
+    "check_budget",
+    s!(
+      "The title-page check gave up on what takes more than {} reads to digest, so a word only it prints is not counted: {}{more}",
+      CHECK_RUN_READS.get(),
+      named.join(", ")
+    )
+  );
 }
 
 /// The title page's furniture, which FIDELITY_CHARTER §2 does not keep: a page style, a running head or foot, a mark.
@@ -411,7 +517,11 @@ fn argument_print(cs: Token, tokens: Tokens) -> Result<Option<String>> {
   run.push(T_END!());
   Ok(match speculative_word_run(Tokens::new(run))? {
     SpeculativeRun::Printed(printed) => Some(printed),
-    _ => {
+    SpeculativeRun::OverBudget(_) => {
+      note_check_left_out(s!("{cs}'s argument of {size} token(s)"), size);
+      None
+    },
+    SpeculativeRun::Aborted | SpeculativeRun::Unavailable => {
       Info!(
         "frontmatter",
         "unread_argument",
@@ -1370,6 +1480,7 @@ fn document_source_words() -> HashSet<String> {
 /// others are the class's own text (a label, a placeholder at its class default, a running head's words), tallied in
 /// an Info (`frontmatter:class_text`, the placeholder ruling pending). Writes nothing.
 pub fn check_title_page_words(document: &Document) -> Result<()> {
+  check_budget_warning();
   // (and after it what the document gave its frontmatter commands, the second source: [`note_frontmatter_entry`])
   let print = lookup_string(PRINTED);
   let mut printed = print.clone();
