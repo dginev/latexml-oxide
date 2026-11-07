@@ -2,7 +2,7 @@
 %   `events::Formula::opens_line_in`): the group starts at its brace, whatever follows the mark in it (`writer::Field::starts_at_its_brace`). After a comma it stays the fail-safe: an isotope
 % witness: 2005.08290 (`\affiliation{~\\ \normalsize{$^{1}$ Shemyakin… Chemistry,} \normalsize{Moscow, Russia}\\ …}`, review revZ3r2)
 % oracle:  pdflatex 0 errors, the three numbered lines as written
-% engines: Perl has no cut; int142a cut by walking back; Z3r2: every entry on a nameless creator, E 0, W 0, each name with no contact
+% engines: Perl has no cut; int142a cut this shape by walking back, and `{\small $^1$…,}`, `{\it …}`, `{\noindent …}`, `{\footnotesize\it …}` lines go to a nameless creator there, a gain of Z3r3 (the guard's rows); Z3r2: every entry on a nameless creator, E 0, W 0, each name with no contact
 % expect:  0 errors, 0 warnings; each author their numbered affiliations (perfect_kernel_batchz3::a_group_a_mark_opens_at_a_lines_start_starts_at_its_brace)
 % status:  GREEN (Z3r3)
 \documentclass[twocolumn,pre]{revtex4-1}

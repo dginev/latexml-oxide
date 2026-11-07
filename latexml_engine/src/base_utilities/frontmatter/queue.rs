@@ -389,6 +389,7 @@ pub fn begin_author_body() {
     return;
   }
   replace_queued_authors();
+  forget_queue_reading();
   let queue = frontmatter_queue_name();
   let earlier = with_value(AUTHOR_BODY_ENTRIES, |value| match value {
     Some(Stored::FrontmatterRaw(entries)) => entries.clone(),

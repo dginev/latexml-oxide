@@ -754,6 +754,28 @@ fn affiliation_cut_group_siblings_stay_uncut_red() {
       "{$^1$Univ X,} Moscow\\endgraf {$^2$Univ Y,} Rome",
       marked("1 Univ X, Moscow", "2 Univ Y, Rome", ""),
     ),
+    // (review revZ3r3: separators the Walker reads no line break from, each cut on int142a)
+    (
+      "{$^1$Univ X,} Moscow\\break {$^2$Univ Y,} Rome",
+      marked("1 Univ X, Moscow", "2 Univ Y, Rome", ""),
+    ),
+    (
+      "{$^1$Univ X,} Moscow\\hfill\\break {$^2$Univ Y,} Rome",
+      marked("1 Univ X, Moscow", "2 Univ Y, Rome", ""),
+    ),
+    (
+      "{$^1$Univ X,} Moscow\n{$^2$Univ Y,} Rome",
+      marked("1 Univ X, Moscow", "2 Univ Y, Rome", ""),
+    ),
+    (
+      "{$^1$Univ X,} Moscow; {$^2$Univ Y,} Rome",
+      marked("1 Univ X, Moscow", "2 Univ Y, Rome", ""),
+    ),
+    // (review revZ3r3: a Break in a box already closed is no line start, so this stays the isotope's fail-safe)
+    (
+      "$^1$Univ X \\parbox{3cm}{A\\\\} {$^{2}$H} Lab, Rome $^{2}$Univ B",
+      marked("1 Univ X A 2 H Lab, Rome", "2 Univ B", ""),
+    ),
   ] {
     let (xml, _) = dump(&template.replace(field, row));
     if creators(&xml) != expected {
