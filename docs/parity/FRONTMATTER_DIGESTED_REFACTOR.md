@@ -19,6 +19,7 @@ this doc is its living plan. The inventory it rests on is `~/data/pk_agents/main
 3. The binding API (`\lx@add@*`, its labels) stays the parity boundary with Perl. Perl itself splits by spelling
    (`Base_Utility.pool.ltxml:679-726`, `ToString(...) =~ /\{tabular\}/`; labels as source text, `cleanFrontmatterLabels`
    :365), so the migration is a documented divergence under OD #837, entry by entry.
+4. **Tokens are natural at the API; segmentation is what moves (user 2026-11-06).** "My main goal was to do segmentation on complex TeX, such as the various macros for marks, on the digested layer - to avoid dealing with TeX's full diversity via heuristics. But when it comes to argument passing into the Frontmatter API, the token data is natural." As in Perl, whose `\lx@annotate@frontmatter` queues its arguments without looking inside (`Base_Utility.pool.ltxml:470-474`). So a binding reading its own class's arguments and passing them to the API is not a defect, nor are tokens as an item's content. The defect is reading marks, lines, kinds and owners out of those tokens by spelling: `author_block/` holds 781 control-sequence tests, 277 distinct, and the Cut and Kind steps Rust added at the API's entry (OD #954, #956).
 
 ## What already exists
 
