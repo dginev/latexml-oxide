@@ -18,6 +18,21 @@ findings become their acceptance witnesses.
 - *Performance.* From the 2026-10-31 audit: frontmatter is 0.5-0.9 % of fleet CPU, about 1 % of a median paper, 3.5-15.6 % of many-author papers and 41 % at 975 authors, so the tail is what's hot, and a rehearsal costs 0.4-0.7 of the real digestion of the same content. **Every flip batch reports `instructions:u` on the audit's 18 documents against base; at Z19 each must be at or below today's.** The old reader and passes leaving pay for part of it; what the rehearsal adds to median papers is unmeasured so far.
 - *Digest once.* The audit's lever 4: the lexer reads the real digestion's boxes instead of a rehearsal's. It would remove both concerns for what it covers, since content digested once has its side effects once and needs no rollback. It is measured and decided before Z4: for API content it looks direct, gated on readings being identical; for an author block, which must be read before it can be parted, it may not be possible.
 
+**The API keys that aren't Perl's, and what each becomes (review revZ2r2, by Perl grep and the keys' comments, `Base_Utility.pool.ltxml`; rows 4, 6, 8, 9 not read call by call).** The guard pins them (`perfect_kernel_batche0`), and the deletion batches work from this table: none of them looks permanent.
+
+| Keys | Perl's? | How it's said, and fate |
+|---|---|---|
+| `property`, `content`, `xml:lang` | Yes: every option reaches `openElement` (L851-852) | On the Perl list since Z2 |
+| `accumulate` | No, but it means Perl's default: `@now` always pushes (L404), replacing is an explicit clear (L576) | A bare call; dies once OD #154's rule (`frontmatter_api.rs:240`) moves to the clear |
+| `owner` | No | `sequence` = `labelseq=author` (L489, L409); `first` = `label=author:1`; the flush's "unless proved" dies with the old engine |
+| `mark`, `_mark`, `_marks`, `_unmarked`, `_bymark`, `_answers`, `_entry`, `_linemark`, `_linelist`, `_linefirst`, `_linklabel`, `_seqlabel`, `_sequence` | No | `label=`, `annotations=`, `labelseq=` |
+| `_share`, `_group`, `_grouped` | No | `annotate=all`, `annotate=N` (L516-520) |
+| `_labelprints`, `_markshown`, `_linemarkshown`, `_refmarkshown`, `_textmarks`, `_entrysymbol`, `_withsup`, `_markpiece`, `_kinded` | No key | The mark stays in the content; the keys die |
+| `_command_form` | No | Perl's `\lx@add@abstract` (L612) vs `\lx@begin@abstract` (L621) |
+| `_store`, `_released_store`, `_net`, `_unsplit`, `_cutlist`, `_queued`, `_late`, `_late_mark`, `_latecall`, `_zone`, `_printedbefore`, `_mergednames`, `_for`, `_source` | No | Die with the stores, the Cut and relocation |
+| `_deposit`, `_inserted`, `_titlepage`, `_preamble`, `_paragraph_break` | Not API | Flow state; out of the pin or die |
+| `_noautoclose`, `_nowrap`, `_scopebegin`, `_font`, `_xmkey`, `_qname`, `_split_ref` | Not frontmatter | XML attributes, the first five Perl's own (`acmart.cls.ltxml:103`); `_answers` also has a DOM half |
+
 **Where it stands.** The observer on 98.83 / 98.55 %, off 97.83 / 97.35 %. The reading alone, its serialization artifact removed, 97.57 / 97.12 %: **-1.26 / -1.42, -280 creators net**, by class: no-block 0 / -118, declined +28 / -108, post-writer passes not in the reading +1 / -61, held 0 / -18, residual 0 / -4. On devh10k's disagreeing papers, declined is **+90 / -63**, the reading ahead; without no-block and the post-passes devh nets about -19. So most of the gap is two narrow classes. Token-spelling reads (`tokreads`, over-approximate): engine 1,962 (`author_block` 1,149, stores 399, relocate 127, `plan.rs` 116), bindings 556; on the guard's wider shapes at Z01, engine 2,264, `resolver/` 12, bindings 621, and Z2 widens them again and re-pins. Stages 2, 3 and 5 of the digested refactor have not landed.
 
 **Order: measure, event gaps, content from spans, emitter on the safest families, repairs tied to each family's flip, delete.** Every gain or loss in the tables is a counterfactual score until that batch's real emit.
@@ -26,7 +41,7 @@ findings become their acceptance witnesses.
 |---|---|---|---|---|
 | **Z0** (done) | Writer outcomes in `fmshadow`, read-back, fence and pass-list guards, the reading-alone tool with the rdf copy, the family gate table, the token-read check | EASY | byte-identical | 2012.14750, 2201.02056, 2606.18623, 1507.02068 |
 | **Z1** (done; `is_font_state` and the span rule's holes, revz01, are Z2's part 1) | Event gaps 1, 2, 6, 8, 9, additive, checked with `--re-resolve` | MED, low | byte-identical | 2105.07958, 0804.4669 |
-| **Z2** | Revz01's findings, gaps 3, 4, 5, 7, 10, then the writer's regressions on events ("de Naurois", an IEEE `1st` name, A*STAR) | MED, low | witnesses and reach | 2606.16069, 1702.08280, 2401.15006, 2609.01831 |
+| **Z2** (done) | Revz01's findings, gaps 3, 4, 5, 7, 10, then the writer's regressions on events ("de Naurois", an IEEE `1st` name, A*STAR) | MED, low | witnesses and reach | 2606.16069, 1702.08280, 2401.15006, 2609.01831 |
 | **Z3** | The digested refactor's Stage 3: `content_of(span)` replaces the walk-backs (`piece_tokens` `plan.rs:379`, `mark_formula_start` `:1298`) | MED | 88c's REDs | 1410.8534, astro-ph9807043 |
 | **Z4** | **The emitter at `place.rs:409`, wave 1.** Flipped papers skip `author_macros.rs:44,88,100,108,117`; output outside `ltx:creator` byte-identical on them | HARD, high | 132 papers | a wave 1 sample |
 | **Z5** | Wave 2 | MED | 478 papers | 2206.00684, 2608.25509 |
