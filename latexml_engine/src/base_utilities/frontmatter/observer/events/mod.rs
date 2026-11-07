@@ -809,16 +809,38 @@ fn font_key(d: &Digested) -> Option<FontKey> { d.get_font().ok().flatten().map(F
 /// Walk `d` in print order, collecting atoms.
 #[derive(Default)]
 struct Walker {
-  atoms:      Vec<Atom>,
+  atoms:         Vec<Atom>,
   /// how many lists enclose the box being walked (the block's own is one; a braced group or argument inside it more)
-  lists:      usize,
+  lists:         usize,
   /// each in-block contact cut into its marked entries (`labelled_entries`): the entries' spans, and the one entry its
   /// leading marks label, read when a cut entry's marks are no name's ([`lex_events`])
-  cuts:       Vec<(Vec<(u16, u16)>, Event)>,
+  cuts:          Vec<(Vec<(u16, u16)>, Event)>,
   /// the word space in em of the font last asked ([`Walker::is_word_space_of_its_font`]): sized once, for a block's thousand ties
-  word_space: Option<(Rc<Font>, f64)>,
-  /// each formula's extent, in the order they end ([`lex_with_formulas`]), a note's and an in-block contact's too
-  formulas:   Vec<(u16, u16)>,
+  word_space:    Option<(Rc<Font>, f64)>,
+  /// each formula, in the order they end ([`lex_with_formulas`]), a note's and an in-block contact's too
+  formulas:      Vec<Formula>,
+  /// the formulas walked here, in the order they end: the atoms each made, and the formula
+  formula_atoms: Vec<(usize, usize, usize)>,
+}
+
+/// Whether `atoms` hold no word and no event: what may stand beside a mark's formula in its group.
+fn no_word(atoms: &[Atom]) -> bool {
+  atoms.iter().all(|atom| match atom {
+    Atom::Space { .. } => true,
+    Atom::Ink { text, script: false, .. } => !has_word(text),
+    _ => false,
+  })
+}
+
+/// A formula of a field's tokens, as the digested list says it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(in crate::base_utilities) struct Formula {
+  /// its opening shift, and past its closing shift ([`formula_extent`])
+  pub start:    u16,
+  pub end:      u16,
+  /// how many of the groups around it, from the innermost, print nothing else ([`Walker::note_a_formulas_group`]): a mark's own
+  /// group, whatever its tokens are
+  pub alone_in: u8,
 }
 
 impl Walker {
@@ -902,6 +924,7 @@ impl Walker {
         self.walk_list(&l.borrow(), nest);
         // (a braced group; the block's own list is none)
         if self.lists > 0 {
+          self.note_a_formulas_group(at);
           self.enclose(at, d, false, None);
         }
       },
@@ -939,6 +962,37 @@ impl Walker {
       self.walk(child, nest);
     }
     self.lists -= 1;
+  }
+
+  /// Whether the ink of the group of the atoms from `at` is its formulas' alone: spacing, a font or a color around them print nothing
+  /// (`{$^1$\,}`, `{$^1$\bf}`, `{\color{red}$^1$}`, `{\fontsize{9}{9}\selectfont $^1$}`), a command printing before them does (`{\S $^1$}`,
+  /// `{\LaTeX $^1$}`) and so does a word after them (`\textit{$^2$H}`); a separator or a symbol after them is no word (`{$^1$,}`, `{$^1$\dag}`).
+  fn note_a_formulas_group(&mut self, at: usize) {
+    let first = self
+      .formula_atoms
+      .iter()
+      .rposition(|run| run.0 < at)
+      .map_or(0, |last_before| last_before + 1);
+    let Some(&(lead_end, ..)) = self.formula_atoms.get(first) else {
+      return;
+    };
+    let mut alone = self
+      .atoms
+      .get(at..lead_end)
+      .is_some_and(|lead| lead.iter().all(|atom| matches!(atom, Atom::Space { .. })));
+    let mut from = lead_end;
+    for &(start, end, _) in &self.formula_atoms[first..] {
+      alone &= self.atoms.get(from.max(at)..start).is_none_or(no_word);
+      from = from.max(end);
+    }
+    alone &= self.atoms.get(from..).is_some_and(no_word);
+    if alone {
+      for run in first..self.formula_atoms.len() {
+        if let Some(formula) = self.formulas.get_mut(self.formula_atoms[run].2) {
+          formula.alone_in = formula.alone_in.saturating_add(1);
+        }
+      }
+    }
   }
 
   /// Say what encloses the marks among the atoms from `at` that nothing inside encloses: `d`, a formula (`extent`, or
@@ -1392,7 +1446,12 @@ impl Walker {
     let at = self.atoms.len();
     self.walk_math_list(&body, nest);
     let extent = formula_extent(d);
-    self.formulas.extend(extent);
+    if let Some((start, end)) = extent {
+      self
+        .formula_atoms
+        .push((at, self.atoms.len(), self.formulas.len()));
+      self.formulas.push(Formula { start, end, alone_in: 0 });
+    }
     self.enclose(at, d, true, extent);
   }
 
@@ -1908,7 +1967,7 @@ fn labelled_entry(events: &[Event]) -> Option<LabelledEntry> {
 /// content leads with no labelled mark.
 fn labelled_entries(
   events: &[Event],
-  formulas: &[(u16, u16)],
+  formulas: &[Formula],
   scope: Option<&FontScope>,
 ) -> Option<(Vec<LabelledEntry>, LabelledEntry)> {
   let whole = labelled_entry(events)?;
@@ -2002,7 +2061,7 @@ pub(in crate::base_utilities) fn lex_events(digested: &Digested) -> Vec<Event> {
 /// [`lex_events`], and each outermost formula's extent in order (`writer::Field`): what a span's content is read by.
 pub(in crate::base_utilities) fn lex_with_formulas(
   digested: &Digested,
-) -> (Vec<Event>, Vec<(u16, u16)>) {
+) -> (Vec<Event>, Vec<Formula>) {
   let mut walker = Walker::default();
   walker.walk(digested, 0);
   let mut lexer = Lexer::default();
@@ -2052,10 +2111,13 @@ pub(in crate::base_utilities) fn lex_with_formulas(
     events[at[0]] = whole;
   }
   let mut formulas = walker.formulas;
-  formulas.sort_unstable_by_key(|&(start, end)| (start, std::cmp::Reverse(end)));
-  let mut outermost: Vec<(u16, u16)> = Vec::with_capacity(formulas.len());
+  formulas.sort_unstable_by_key(|formula| (formula.start, std::cmp::Reverse(formula.end)));
+  let mut outermost: Vec<Formula> = Vec::with_capacity(formulas.len());
   for formula in formulas {
-    if outermost.last().is_none_or(|last| last.1 <= formula.0) {
+    if outermost
+      .last()
+      .is_none_or(|last| last.end <= formula.start)
+    {
       outermost.push(formula);
     }
   }

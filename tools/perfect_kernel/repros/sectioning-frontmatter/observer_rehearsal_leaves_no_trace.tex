@@ -7,7 +7,7 @@
 % oracle:  pdflatex 0 errors: the two state lines, each a run of the same state after one run of `\HOSTILE`
 % engines: Z2: `\fontdimen` and `\wd` set from their own value, `\read`, `\pdfuniformdeviate` ran twice with the observer on; the missing key's
 %   Warning lost; Z3: the same with the observer on and off
-% expect:  0 errors; output outside the creators byte-identical with the observer on and off
+% expect:  0 errors; output outside the creators byte-identical with the observer on and off; `\qd`, a global a row sets before what it repeats, printed in the state line
 %          (perfect_kernel_batchz3::the_rehearsal_leaves_no_trace_*)
 % status:  GREEN (Z3)
 \begin{filecontents*}[overwrite]{iso_read.txt}
@@ -28,7 +28,7 @@ readline five
 \newread\rs\immediate\openin\rs=iso_read.txt
 \def\qaccum{}
 \newcommand\lxafter{\global\advance\ca by 1 AFTERRAN}
-\newcommand\lxstate{[\the\ca|\the\ta|\qaccum|\pdfuniformdeviate 1000000|\read\rs to\qrd \qrd|\the\fontdimen2\font|\the\fontdimen3\fa|\the\wd\pb|\the\ht\pb|\thesection|\thefigure|\thefootnote|\the\catcode`\Q|\ifdefined\qg D\else U\fi]}
+\newcommand\lxstate{[\the\ca|\the\ta|\qaccum|\pdfuniformdeviate 1000000|\read\rs to\qrd \qrd|\the\fontdimen2\font|\the\fontdimen3\fa|\the\wd\pb|\the\ht\pb|\thesection|\thefigure|\thefootnote|\the\catcode`\Q|\ifdefined\qg D\else U\fi|\ifdefined\qd\qd\fi]}
 \newcommand\HOSTILE{\global\advance\ca by 1 \global\ta=\expandafter{\the\ta x}\xdef\qaccum{\qaccum x}\fontdimen2\font=\dimexpr\fontdimen2\font+1pt\relax \wd\pb=\dimexpr\wd\pb+1cm\relax \read\rs to\qline \pdfuniformdeviate 1000 \immediate\write\ow{hostile line}}
 \begin{document}
 \title{T}

@@ -16,11 +16,9 @@
 //!
 //! Witness arXiv:2103.03138 — loads `chemfig + chemnum`.
 
-use std::cell::RefCell;
-
 use latexml_package::prelude::*;
 
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 struct CompoundEntry {
   number:         usize,
   target_emitted: bool,
@@ -34,19 +32,18 @@ struct SubCompoundEntry {
   target_emitted: bool,
 }
 
-#[derive(Default, Debug)]
+#[derive(Clone, Default, Debug)]
 struct ChemnumState {
   counter:   usize,
   compounds: HashMap<String, CompoundEntry>,
 }
 
-thread_local! {
-  static CHEMNUM_STATE: RefCell<ChemnumState> = RefCell::new(ChemnumState::default());
-}
+/// A rehearsal or a title-page check puts it back: a compound numbered there, or its first printed use spent (a real use
+/// then a `ltx:ref` with no target), stood when it was a thread-local.
+static CHEMNUM_STATE: DocumentState<ChemnumState> = DocumentState::new("chemnum_state");
 
 fn reset_chemnum_state(start_val: usize) {
-  CHEMNUM_STATE.with(|st| {
-    let mut state = st.borrow_mut();
+  CHEMNUM_STATE.update(|state| {
     state.counter = start_val;
     state.compounds.clear();
   });
@@ -127,8 +124,7 @@ fn expand_compound_spec(item: &str) -> Vec<(String, Option<String>)> {
 }
 
 fn register_compound(main_label: &str, sub_label: Option<&str>) {
-  CHEMNUM_STATE.with(|st| {
-    let mut state = st.borrow_mut();
+  CHEMNUM_STATE.update(|state| {
     if !state.compounds.contains_key(main_label) {
       state.counter += 1;
       let counter = state.counter;
@@ -174,8 +170,7 @@ fn lookup_or_register(
   is_ref: bool,
   sub_only: bool,
 ) -> CompoundUse {
-  CHEMNUM_STATE.with(|st| {
-    let mut state = st.borrow_mut();
+  CHEMNUM_STATE.update(|state| {
     if !state.compounds.contains_key(main_label) {
       if is_ref {
         let sub_part = sub_label.map(|s| format!(".{s}")).unwrap_or_default();

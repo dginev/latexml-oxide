@@ -1481,6 +1481,7 @@ fn document_source_words() -> HashSet<String> {
 /// an Info (`frontmatter:class_text`, the placeholder ruling pending). Writes nothing.
 pub fn check_title_page_words(document: &Document) -> Result<()> {
   check_budget_warning();
+  rehearsal::rehearsal_budget_warning();
   // (and after it what the document gave its frontmatter commands, the second source: [`note_frontmatter_entry`])
   let print = lookup_string(PRINTED);
   let mut printed = print.clone();

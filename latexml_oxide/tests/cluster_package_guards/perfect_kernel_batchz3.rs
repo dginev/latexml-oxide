@@ -2,7 +2,9 @@
 //! from the digested list (`writer::Field`), and the rehearsal's isolation. Each guard is a different code path: `a_cut_takes_each_formula_whole`
 //! a piece's start and end in a formula, `a_cut_takes_a_group_it_closes` the brace balance, `a_mark_in_its_wrapper_…` a mark's own print and a
 //! block's line, `a_declarations_span_…` the settled declarations; the `the_rehearsal_leaves_no_trace_*` table the journal and what
-//! lives outside it, by theme, and its `_written` row the written family's path, where the writer runs too.
+//! lives outside it, by theme, and its `_written` row the written family's path, where the writer runs too. Z3r2: `a_bindings_state_…` the package thread-locals
+//! moved to the Value table, `a_rehearsals_read_…` the raw-read list, `a_speculative_run_evaluates_no_lua` the one state no rollback reaches, `a_declaration_in_a_body_…` where a body's definer runs,
+//! `a_marks_own_group_…` the Walker's group fact, `a_cut_holds_its_environments` the run's environments, `a_looping_block_…` the budget.
 
 use serde_json::json;
 
@@ -278,13 +280,40 @@ fn the_rehearsal_leaves_no_trace_outside_its_journal() {
     ),
     ("read", r"\read\rs to\qline ", (0, 0)),
     ("readline", r"\readline\rs to\qline ", (0, 0)),
-    // (the body's `\read` of the closed stream defines nothing, in the real digestion alone)
-    ("closein", r"\closein\rs ", (1, 0)),
-    ("openin", r"\openin\rs=iso_side.tex ", (0, 0)),
+    // (each of the next shows what it found before what it repeats: the real run redoes a close, an open or a seed the same, so what a rollback left is
+    // only in what it reads first. The body's `\read` of the closed stream defines nothing, in the real digestion alone)
+    (
+      "closein",
+      r"\read\rs to\qz \global\let\qd\qz \closein\rs ",
+      (1, 0),
+    ),
+    (
+      "openin",
+      r"\read\rs to\qz \global\let\qd\qz \openin\rs=iso_side.tex ",
+      (0, 0),
+    ),
     ("random", r"\pdfuniformdeviate 1000 ", (0, 0)),
-    ("random seed", r"\pdfsetrandomseed 5 ", (0, 0)),
+    (
+      "random seed",
+      r"\xdef\qd{\pdfuniformdeviate 1000}\pdfsetrandomseed 5 ",
+      (0, 0),
+    ),
     ("missing key", r"\setkeys{zz}{a=b}", (0, 1)),
   ]);
+  // (a close before Z3 ended the mouth with the observer off too, the title-page check's run being as speculative: on and off agreed on an empty line, where pdflatex reads the first)
+  let (template, name, content) = split_filecontents(repro!("observer_rehearsal_leaves_no_trace"));
+  let tex = template.replace(
+    "Ann Able \\HOSTILE",
+    r"Ann Able \read\rs to\qz \global\let\qd\qz \closein\rs ",
+  );
+  let (_, xml, ()) = latexml::util::test::convert_files_with_setup_then(
+    &tex,
+    &[(name.as_str(), content.as_str())],
+    Some("ar5iv.sty"),
+    || latexml_engine::base_utilities::set_fm_shadow_override(Some(true)),
+    |_| (),
+  );
+  assert!(xml.contains("—readline one"), "{xml}");
 }
 
 /// What reaches a file: `\input` missing and real (read twice, what it does undone once), a `\write18` no one runs, `\openout` and `\write` to a
@@ -323,4 +352,294 @@ fn the_rehearsal_leaves_no_trace_written() {
       (0, 0),
     ),
   ]);
+}
+
+/// A binding's document-wide state (`state::DocumentState`): pict2e's graph, chemnum's numbers and first uses, biblatex's categories, a stub's report, what a thread-local kept of a run
+/// no one prints (revZ3 B1, "What a rollback leaves"). Each is one conversion on and off, and what pdflatex prints: the graph's body picture holds the block's unstroked path, once.
+#[test]
+fn a_bindings_state_stands_for_one_run() {
+  let on_off = |tex: &str| {
+    let run = |on: bool| {
+      let (log, xml, ()) = latexml::util::test::convert_files_with_setup_then(
+        tex,
+        &[],
+        Some("ar5iv.sty"),
+        move || latexml_engine::base_utilities::set_fm_shadow_override(Some(on)),
+        |_| (),
+      );
+      (error_count(&log), warning_count(&log), xml)
+    };
+    let (on, off) = (run(true), run(false));
+    assert_eq!(on, off);
+    on
+  };
+  let lines = |xml: &str| -> Vec<String> {
+    xml
+      .split("<line points=\"")
+      .skip(1)
+      .map(|line| line.split('"').next().unwrap_or_default().to_string())
+      .collect()
+  };
+  let graph = repro!("rehearsal_binding_state_pict2e");
+  let block = "\\title{T}\n\\author{Ann Able \\begin{picture}(1,1)\\moveto(0,0)\\lineto(1,1)\\end{picture} \\and Bob Baker}\n";
+  assert!(graph.contains(block));
+  let in_the_preamble = graph.replace(block, "").replace(
+    "\\begin{document}\n",
+    &format!("{block}\\begin{{document}}\n"),
+  );
+  for tex in [graph.to_string(), in_the_preamble.clone()] {
+    let (errors, warnings, xml) = on_off(&tex);
+    assert_eq!((errors, warnings), (0, 0), "{xml}");
+    assert_eq!(
+      lines(&xml),
+      ["0,0 1.38,1.38", "2.77,2.77 4.15,4.15"],
+      "{xml}"
+    );
+  }
+  // (nothing prints the block: pdflatex's `2 2 m 3 3 l S` alone)
+  let (errors, warnings, xml) = on_off(&in_the_preamble.replace("\\maketitle\n", ""));
+  assert_eq!((errors, warnings), (0, 0), "{xml}");
+  assert_eq!(lines(&xml), ["2.77,2.77 4.15,4.15"], "{xml}");
+
+  let (errors, warnings, xml) = on_off(repro!("rehearsal_binding_state_chemnum"));
+  assert_eq!((errors, warnings), (0, 0), "{xml}");
+  assert!(
+    xml.contains(
+      r#"<personname>Ann Able <text class="ltx_cmpd" xml:id="cmpd.b">1</text></personname>"#
+    ),
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"Body <text class="ltx_cmpd" xml:id="cmpd.a">2</text>, <ref class="ltx_cmpd" idref="cmpd.b">1</ref>."#),
+    "{xml}"
+  );
+
+  let (errors, warnings, xml) = on_off(repro!("rehearsal_binding_state_discard"));
+  assert_eq!((errors, warnings), (0, 1), "{xml}");
+
+  let (tex, _, content) = split_filecontents(repro!("rehearsal_binding_state_biblatex"));
+  let run = |on: &'static str| {
+    in_a_directory(&tex, &[("t.bbl", content.as_str())], &[(
+      "LATEXML_FM_SHADOW",
+      on,
+    )])
+  };
+  let (log, xml) = run("1");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(log.contains("Empty bibliography"), "{log}");
+  assert_eq!(xml, run("0").1);
+}
+
+/// A raw read in a speculative run is undone with it, so it is no read for `read_stand_in_copy` to skip the paper's copy for: a block nothing prints reads aas_macros.sty, the document's
+/// own `\\input` then reads it too (review revZ3's "not checked"; the shape of 1309.5950's extras).
+#[test]
+fn a_rehearsals_read_is_no_read_of_a_copy() {
+  let (tex, name, content) =
+    split_filecontents(repro!("rehearsal_stand_in_copy_stays_the_documents"));
+  let run = |on: bool| {
+    let (log, xml, ()) = latexml::util::test::convert_files_with_setup_then(
+      &tex,
+      &[(name.as_str(), content.as_str())],
+      Some("ar5iv.sty"),
+      move || latexml_engine::base_utilities::set_fm_shadow_override(Some(on)),
+      |_| (),
+    );
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    xml
+  };
+  let xml = run(true);
+  assert!(xml.contains("Body KMSX."), "{xml}");
+  assert_eq!(xml, run(false));
+}
+
+/// A speculative run evaluates no Lua: the interpreter's globals are the one state no rollback reaches. A block nothing prints counts nothing, as lualatex prints it. Self-skips without a
+/// host texlua, as `luacode_bridge` does.
+#[test]
+fn a_speculative_run_evaluates_no_lua() {
+  if !std::process::Command::new("texlua")
+    .arg("-v")
+    .output()
+    .is_ok_and(|output| output.status.success())
+  {
+    return;
+  }
+  let run = |on: bool| {
+    let (log, xml, ()) = latexml::util::test::convert_files_with_setup_then(
+      repro!("rehearsal_lua_state_stays_out"),
+      &[],
+      Some("ar5iv.sty"),
+      move || latexml_engine::base_utilities::set_fm_shadow_override(Some(on)),
+      |_| (),
+    );
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    xml
+  };
+  let xml = run(true);
+  assert!(xml.contains("Body 0."), "{xml}");
+  assert_eq!(xml, run(false));
+}
+
+/// A definer in the body of a macro the field defined: its span is the call it runs at (the stamp on the invocation), wherever that is, past what prints between; what one call defines is
+/// one declaration; a box of the body takes it back; and what encloses the call is no box of its (review revZ3 S1: Z4 would print those words twice).
+#[test]
+fn a_declaration_in_a_body_holds_its_call() {
+  let (_, dump) = dump(repro!("event_declaration_in_a_body_holds_its_call"));
+  assert_eq!(
+    blocks(&dump)[0]["declarations"],
+    json!([
+      // (`\\s`'s call, past " Ann Bob")
+      {"kind": "Declaration", "span": [0, 9], "label": "\\s"},
+      {"kind": "Declaration", "span": [17, 18], "label": "\\t"},
+      // (`\\m`'s, past " Cat"; `\\n`'s, past "\\ Dan")
+      {"kind": "Declaration", "span": [19, 32], "label": "\\m"},
+      {"kind": "Declaration", "span": [36, 37], "label": "\\n"},
+      {"kind": "Declaration", "span": [41, 42], "label": "\\o"},
+      // (each on the call that defines it, not the first's)
+      {"kind": "Declaration", "span": [48, 61], "label": "\\ma"},
+      {"kind": "Declaration", "span": [61, 62], "label": "\\na"},
+      {"kind": "Declaration", "span": [62, 63], "label": "\\oa"},
+      // (a body's definer reading on past the call: `\\q{1}` whole)
+      {"kind": "Declaration", "span": [68, 74], "label": "\\q"},
+      {"kind": "Declaration", "span": [78, 82], "label": "\\r"},
+      // (`\\u`'s body prints X: no declaration holds its call)
+      {"kind": "Declaration", "span": [88, 98], "label": "\\u"},
+      // (one call, one declaration)
+      {"kind": "Declaration", "span": [107, 121], "label": "\\w"},
+      {"kind": "Declaration", "span": [125, 126], "label": "\\xa \\xb"},
+      // (the `\\textbf` round the call is no box of the call's)
+      {"kind": "Declaration", "span": [137, 146], "label": "\\y", "nest": 1},
+      {"kind": "Declaration", "span": [146, 147], "label": "\\z", "nest": 1},
+    ])
+  );
+}
+
+/// A mark's own group is what prints its formula alone, by the digested list: `{$^1$\\,} Univ X`'s spacing, a switch or a color around it, a comma after it; a command printing before it no
+/// such group, nor a word after it, the isotope's shape (`perfect_kernel_batch107e::a_wrapped_isotope_is_entry_text`). A paper's shape: 1709.01760, 1203.3579, 2205.00632.
+#[test]
+fn a_marks_own_group_is_read_from_its_ink() {
+  let template = repro!("revtex_affiliation_marks_own_group_by_its_ink");
+  let shape = "{$^1$\\,} Univ X, {$^2$\\,} Univ Y";
+  assert!(template.contains(shape));
+  let each = |first: &str, second: &str| {
+    (
+      vec!["Ann Able 1".to_string(), format!("affiliation={first}")],
+      vec!["Bob Baker 2".to_string(), format!("affiliation={second}")],
+    )
+  };
+  let mut wrong = Vec::new();
+  for (group, lines) in [
+    // (what prints nothing beside the mark)
+    (r"{$^N$\,}", ("1 Univ X", "2 Univ Y")),
+    (r"{$^N$~}", ("1 Univ X", "2 Univ Y")),
+    (r"{$^N$\ }", ("1 Univ X", "2 Univ Y")),
+    (r"{$^N$\quad}", ("1 Univ X", "2 Univ Y")),
+    (r"{$^N$\hspace{1pt}}", ("1 Univ X", "2 Univ Y")),
+    (r"{$^N$\small}", ("1 Univ X", "2 Univ Y")),
+    (r"{$^N$\relax}", ("1 Univ X", "2 Univ Y")),
+    (r"{$^N$\bf}", ("1 Univ X", "2 Univ Y")),
+    (r"{{$^N$}\,}", ("1 Univ X", "2 Univ Y")),
+    (r"{\color{red}$^N$}", ("1 Univ X", "2 Univ Y")),
+    (
+      r"{\fontsize{9}{10}\selectfont $^N$}",
+      ("1 Univ X", "2 Univ Y"),
+    ),
+    // (a list's comma beside it; a command printing before it, whose ink stays the entry's text)
+    (r"{$^N$,}", ("1 , Univ X", "2 , Univ Y")),
+    (r"{\S $^N$}", ("§ 1 Univ X", "§ 2 Univ Y")),
+    (
+      r"{\LaTeX $^N$}",
+      ("L a T e X 1 Univ X", "L a T e X 2 Univ Y"),
+    ),
+  ] {
+    let tex = template.replace(
+      shape,
+      &format!(
+        "{} Univ X, {} Univ Y",
+        group.replace('N', "1"),
+        group.replace('N', "2")
+      ),
+    );
+    let (xml, _) = dump(&tex);
+    let (ann, bob) = each(lines.0, lines.1);
+    if creators(&xml) != vec![ann.clone(), bob.clone()] {
+      wrong.push(format!("{group}: {:?}", creators(&xml)));
+    }
+  }
+  assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+  // (a word after it: the isotope's shape, one entry, its marks text)
+  let (xml, _) = dump(&template.replace(shape, "{$^1$x} Univ X, {$^2$x} Univ Y"));
+  creators_are(&xml, &[
+    &["Ann Able 1", "affiliation=x Univ X, 2 x Univ Y"],
+    &["Bob Baker 2"],
+  ]);
+}
+
+/// A run of a cut call holds its environments: what `\\end` closes or prints holds a position no box stops at (review revZ3 S4; the hostile suite's `long_tab`, `nice`, `newenv` in revtex's
+/// `\\affiliation`).
+#[test]
+fn a_cut_holds_its_environments() {
+  let template = repro!("affiliation_cut_holds_its_environments");
+  let table = "\\begin{tabular}{cc}a&b\\\\ c&d\\end{tabular}";
+  assert!(template.contains(table));
+  let (xml, _) = dump(template);
+  creators_are(&xml, &[&[
+    "Ann Able",
+    "affiliation=1 Univ X a b c d",
+    "affiliation=2 Univ Y",
+  ]]);
+  let (xml, _) = dump(&template.replace(table, "\\newenvironment{ee}{B}{E}\\begin{ee}x\\end{ee}"));
+  creators_are(&xml, &[&[
+    "Ann Able",
+    "affiliation=1 Univ X BxE",
+    "affiliation=2 Univ Y",
+  ]]);
+}
+
+/// A block nothing prints may loop: the rehearsal stops at its budget (`LATEXML_REHEARSAL_READ_BUDGET`, a guard's small one) and says so in one Warning, with the document kept: the names of
+/// the call that counts and the body.
+#[test]
+fn a_looping_block_ends_in_the_rehearsal_budget() {
+  let (log, xml) = in_a_directory(repro!("rehearsal_budget_ends_a_looping_block"), &[], &[(
+    "LATEXML_REHEARSAL_READ_BUDGET",
+    "20000",
+  )]);
+  assert_eq!(
+    (error_count(&log), log.matches("\nFatal:").count()),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(
+    log.matches("Warning:frontmatter:rehearsal_budget").count(),
+    1,
+    "{log}"
+  );
+  assert_eq!(warning_count(&log), 1, "{log}");
+  creators_are(&xml, &[&["Ann Able"], &["Bob Baker"]]);
+  assert!(xml.contains("Body stays."), "{xml}");
+}
+
+/// Converts `tex` in a directory of its own as `t.tex` beside `files`, with `env`: its log and its XML. For what a run reads by the document's name (a `.bbl`) or a variable.
+fn in_a_directory(tex: &str, files: &[(&str, &str)], env: &[(&str, &str)]) -> (String, String) {
+  let workdir = tempfile::tempdir().expect("create tempdir");
+  std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
+  for (name, content) in files {
+    std::fs::write(workdir.path().join(name), content).expect("write a file");
+  }
+  let output = std::process::Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+    .args([
+      "t.tex",
+      "--dest",
+      "t.xml",
+      "--nocomments",
+      "--timeout=110",
+      "--preload=ar5iv.sty",
+    ])
+    .envs(env.iter().copied())
+    .current_dir(workdir.path())
+    .output()
+    .expect("spawn latexml_oxide");
+  let log = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
+  let xml = std::fs::read_to_string(workdir.path().join("t.xml"))
+    .unwrap_or_else(|_| panic!("no t.xml: {log}"));
+  (log, xml)
 }

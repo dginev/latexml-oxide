@@ -4293,7 +4293,10 @@ pub fn set_font_parameter(key: &str, p: usize, value: i64) -> bool {
   });
   match existing {
     Some(params) => {
-      state_mut!().journal_touch(TableName::Value, arena::pin(key));
+      // (a font's parameter is written in loops: the key's pinned only for a journal to save it)
+      if JOURNAL_GUARD_LIVE.get() {
+        state_mut!().journal_touch(TableName::Value, arena::pin(key));
+      }
       set(&mut params.borrow_mut())
     },
     None => {
@@ -4303,6 +4306,70 @@ pub fn set_font_parameter(key: &str, p: usize, value: i64) -> bool {
     },
   }
   true
+}
+
+/// A binding's document-wide state, one value of the Value table: bound globally, as the `\global` macros and registers
+/// of the package it stands for are, so a rollback (`begin_assignment_journal`: a rehearsal, a title-page check) puts it
+/// back, where a thread-local would keep what the discarded run did (`FRONTMATTER_DIGESTED_REFACTOR.md` "What a rollback
+/// leaves"). It changes in place, unless an open journal holds it: the first change under a journal works on a copy, so a
+/// list a binding grows costs no more than a thread-local's outside one.
+pub struct DocumentState<T> {
+  key:   &'static str,
+  state: std::marker::PhantomData<fn() -> T>,
+}
+
+impl<T: Clone + Default + 'static> DocumentState<T> {
+  pub const fn new(key: &'static str) -> Self {
+    Self {
+      key,
+      state: std::marker::PhantomData,
+    }
+  }
+
+  /// Read the state; the default where nothing was changed yet.
+  pub fn read<R>(&self, read: impl FnOnce(&T) -> R) -> R {
+    let held = with_value(self.key, |stored| match stored {
+      Some(Stored::Opaque(held)) => Some(Rc::clone(held)),
+      _ => None,
+    });
+    match held.as_ref().and_then(|held| held.downcast_ref::<T>()) {
+      Some(state) => read(state),
+      None => read(&T::default()),
+    }
+  }
+
+  /// Change the state; `change` must not reach this same state again.
+  pub fn update<R>(&self, change: impl FnOnce(&mut T) -> R) -> R {
+    let key = arena::pin(self.key);
+    let held = {
+      let state = &mut *state_mut!();
+      state.journal_touch(TableName::Value, key);
+      state
+        .value
+        .get_mut(&key)
+        .and_then(VecDeque::front_mut)
+        .map(std::mem::take)
+    };
+    let bound = held.is_some();
+    let mut own: Rc<dyn std::any::Any> = match held {
+      Some(Stored::Opaque(held)) if held.is::<T>() => held,
+      _ => Rc::new(T::default()),
+    };
+    if Rc::get_mut(&mut own).is_none() {
+      let copy = own.downcast_ref::<T>().cloned().unwrap_or_default();
+      own = Rc::new(copy);
+    }
+    let result = Rc::get_mut(&mut own)
+      .and_then(|state| state.downcast_mut::<T>())
+      .map(change)
+      .expect("a state held once, of its type");
+    if bound {
+      assign_value_inplace_sym(key, Stored::Opaque(own));
+    } else {
+      assign_value_sym(key, Stored::Opaque(own), Some(Scope::Global));
+    }
+    result
+  }
 }
 
 /// Note for an open assignment journal that the box in the register `key` is about to have its dimension `property` set

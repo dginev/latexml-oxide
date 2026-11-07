@@ -5,21 +5,26 @@
 //! opens it: `$\rm ^{3}$`, `${}^{*}$`, `\( ^{1} \)`, `\protect\(`, 2105.07958, hep-ph0110378, 2307.12984), and a mark's own
 //! print inside a wrapper whose cover its first box took ([`Field::own_print`], `\textbf{$^2$Univ B}`, 2605.25195). What
 //! is left of the tokens is brace balance, a property of the content itself, as the declarations' spans clamp at it
-//! (`field_notes::balance_declarations`).
+//! (`field_notes::settle_declarations`).
 
 use super::*;
 
-/// A field's tokens as a rehearsal read them: `tokens[0]` at position `base`, and the extents of its formulas
-/// (`events::lex_with_formulas`: outermost, in order).
+/// A field's tokens as a rehearsal read them: `tokens[0]` at position `base`, and its formulas (`events::lex_with_formulas`:
+/// outermost, in order).
 pub(in crate::base_utilities::frontmatter::observer) struct Field<'a> {
   pub tokens:   &'a [Token],
   pub base:     usize,
-  pub formulas: &'a [(u16, u16)],
+  pub formulas: &'a [Formula],
 }
 
 /// Whether `t` is the control sequence `name`.
 pub(super) fn is_cs(t: &Token, name: &str) -> bool {
   t.get_catcode() == Catcode::CS && t.with_cs_name(|n| n == name)
+}
+
+/// What `t` does to the environments open: `\begin` opens one, `\end` closes one.
+fn environment_step(t: &Token) -> i32 {
+  i32::from(is_cs(t, "\\begin")) - i32::from(is_cs(t, "\\end"))
 }
 
 /// The opening braces in `content[from..to]` of the groups still open at `to`.
@@ -41,11 +46,11 @@ impl Field<'_> {
   /// The formula holding `tokens[index]`: its indices, opening shift to past its closing shift.
   fn formula_at(&self, index: usize) -> Option<(usize, usize)> {
     let pos = u16::try_from(self.base + index).ok()?;
-    let at = self.formulas.partition_point(|&(_, end)| end <= pos);
-    let &(start, end) = self.formulas.get(at)?;
-    (start <= pos).then_some((
-      usize::from(start).checked_sub(self.base)?,
-      usize::from(end).checked_sub(self.base)?,
+    let at = self.formulas.partition_point(|formula| formula.end <= pos);
+    let formula = self.formulas.get(at)?;
+    (formula.start <= pos).then_some((
+      usize::from(formula.start).checked_sub(self.base)?,
+      usize::from(formula.end).checked_sub(self.base)?,
     ))
   }
 
@@ -136,22 +141,19 @@ impl Field<'_> {
     Some((Tokens::new(tokens), end))
   }
 
-  /// Whether the group from `open` to `close` holds only switches and the formula starting at `from`: `{\bf $^{1}$} Univ X`, a
-  /// mark's own font group. A group going on after the mark is no such thing, and no cut: `\textit{$^{2}$H} Lab`, an isotope
-  /// (`perfect_kernel_batch107e::a_wrapped_isotope_is_entry_text`).
-  fn holds_only_a_formula(&self, open: usize, from: usize, close: usize) -> bool {
-    let content = self.tokens;
-    let Some((start, end)) = self.formula_at(from) else {
+  /// Whether the `nth` group around the formula starting at `from`, from the innermost, closing at `close`, prints that formula
+  /// alone (`events::Formula::alone_in`): `{\bf $^{1}$} Univ X`, `{$^{1}$\,} Univ X`, a mark's own group. A group going on after the
+  /// mark is no such thing, and no cut: `\textit{$^{2}$H} Lab`, an isotope (`perfect_kernel_batch107e::a_wrapped_isotope_is_entry_text`).
+  fn holds_only_a_formula(&self, nth: u8, from: usize, close: usize) -> bool {
+    let Ok(pos) = u16::try_from(self.base + from) else {
       return false;
     };
-    start == from
-      && end <= close
-      && content[open + 1..from]
-        .iter()
-        .all(|t| matches!(t.get_catcode(), Catcode::CS | Catcode::SPACE))
-      && content[end..close]
-        .iter()
-        .all(|t| t.get_catcode() == Catcode::SPACE)
+    let at = self.formulas.partition_point(|formula| formula.end <= pos);
+    self.formulas.get(at).is_some_and(|formula| {
+      formula.start == pos
+        && usize::from(formula.end) <= self.base + close
+        && formula.alone_in >= nth
+    })
   }
 
   /// `start..end` grown to a balanced run, its shifts in pairs: back to the opening brace of a mark's own font group it closes
@@ -163,11 +165,15 @@ impl Field<'_> {
     let mut before = open_groups(content, floor, start);
     let from = start;
     let mut depth = 0;
+    let mut closed = 0u8;
     for (close, t) in content.iter().enumerate().take(end).skip(from) {
       depth += t.group_step();
       if depth < 0 {
         let open = before.pop()?;
-        self.holds_only_a_formula(open, from, close).then_some(())?;
+        closed = closed.saturating_add(1);
+        self
+          .holds_only_a_formula(closed, from, close)
+          .then_some(())?;
         start = open;
         depth = 0;
       }
@@ -176,6 +182,26 @@ impl Field<'_> {
       (content.get(end)?.group_step() == -1).then_some(())?;
       end += 1;
       depth -= 1;
+    }
+    // (its environments in pairs, read from their spelling: what `\end{ee}` prints or closes holds a position no box stops at, its body's
+    // `E` written in `\newenvironment{ee}{B}{E}`, an alignment's last cell, and a run with no `\end` lost them, in an Error)
+    let mut environments: i32 = content[start..end].iter().map(environment_step).sum();
+    (environments >= 0).then_some(())?;
+    while environments > 0 {
+      let t = content.get(end)?;
+      environments += environment_step(t);
+      end += 1;
+      // (the last `\end`'s name)
+      if environments == 0 {
+        let mut name = 0;
+        for t in &content[end..] {
+          name += t.group_step();
+          end += 1;
+          if name == 0 {
+            break;
+          }
+        }
+      }
     }
     // (a formula the digested list did not say, its shifts in pairs all the same)
     let run = &content[start..end];

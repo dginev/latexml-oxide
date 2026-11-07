@@ -22,7 +22,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
-  events::Event,
+  events::{Event, Formula},
   ledger::{Entry, Ledger, Outcome, ReadBack, SkipReason, with_ledger},
   policy::{family_written, policy_for},
   resolver::{

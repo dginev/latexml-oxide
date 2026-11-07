@@ -38,6 +38,64 @@ pub(in crate::base_utilities) fn rehearsing() -> bool { REHEARSING.with(Cell::ge
 pub(in crate::base_utilities) fn reset_rehearsing() {
   REHEARSING.with(|r| r.set(false));
   field_notes_end();
+  reset_rehearsal_budget();
+}
+
+/// The most tokens one rehearsal reads, as many as a run of the title-page check's (`title_page_check::CHECK_RUN_READS_DEFAULT`). By the
+/// data: popZ01 (1,873 papers) reads 166 at the median in its dearest rehearsal, 9,267 at the 99th percentile and 3,314,577 at most
+/// (2011.00785); by what it costs, a looping block reads this in about two seconds.
+const REHEARSAL_READS_DEFAULT: usize = 8_000_000;
+
+/// The most tokens all the rehearsals of a conversion read, in [`REHEARSAL_READS_DEFAULT`]s: a paper rehearses per call. popZ01 reads 725 in a
+/// conversion at the median, 20,444 at the 99th percentile, and the most 3,314,871 (2011.00785). The many-author witnesses are far under it:
+/// 1901.01540's 2,637 rehearsals read 118,996 (1,202 authors), 2103.04797's 2,136 read 92,093 (975), 2005.08745's 668 read 13,009 (592).
+const REHEARSALS_PER_CONVERSION: usize = 3;
+
+thread_local! {
+  /// The reads one rehearsal may make, this conversion's ([`rehearsal_budget`]).
+  static RUN_READS: Cell<usize> = const { Cell::new(REHEARSAL_READS_DEFAULT) };
+  /// The reads the conversion's rehearsals may still make.
+  static READS_LEFT: Cell<usize> =
+    const { Cell::new(REHEARSAL_READS_DEFAULT * REHEARSALS_PER_CONVERSION) };
+  /// How many rehearsals were abandoned or never made over budget.
+  static LEFT_OUT: Cell<usize> = const { Cell::new(0) };
+}
+
+/// A new conversion's budget: [`REHEARSAL_READS_DEFAULT`], or `LATEXML_REHEARSAL_READ_BUDGET` (0: none).
+fn reset_rehearsal_budget() {
+  let reads = std::env::var("LATEXML_REHEARSAL_READ_BUDGET")
+    .ok()
+    .and_then(|reads| reads.trim().parse::<usize>().ok())
+    .unwrap_or(REHEARSAL_READS_DEFAULT);
+  let reads = if reads == 0 { usize::MAX >> 2 } else { reads };
+  RUN_READS.set(reads);
+  READS_LEFT.set(reads.saturating_mul(REHEARSALS_PER_CONVERSION));
+  LEFT_OUT.set(0);
+}
+
+/// How many tokens the next rehearsal may read: a block's text may loop where nothing prints it (a first `\author` a second
+/// replaces, a class that drops it, `\author{First\loop}`), and a resource limit met here ends a conversion pdflatex finishes.
+/// None once the conversion's reads are spent. What is left out so is said once ([`rehearsal_budget_warning`]).
+pub(in crate::base_utilities) fn rehearsal_budget() -> Option<usize> {
+  let left = READS_LEFT.get();
+  (left != 0).then(|| left.min(RUN_READS.get()))
+}
+
+/// The Warning that says what no rehearsal read, when the document closes: its creators are read as they print, not from a
+/// reading of the block (`SkipReason::OverBudget`).
+pub(in crate::base_utilities) fn rehearsal_budget_warning() {
+  let left_out = LEFT_OUT.replace(0);
+  if left_out > 0 {
+    Warn!(
+      "frontmatter",
+      "rehearsal_budget",
+      s!(
+        "The rehearsal gave up on {left_out} frontmatter call(s) that take more than {} reads to digest, or past the conversion's {}: they are read as they print",
+        RUN_READS.get(),
+        RUN_READS.get().saturating_mul(REHEARSALS_PER_CONVERSION)
+      )
+    );
+  }
 }
 
 /// The event constructors of the Layer-B bindings ([`install_event_bindings`]): whatsits the lexer reads
@@ -398,6 +456,11 @@ pub(in crate::base_utilities) fn rehearse<R>(
   let Some(journal) = begin_assignment_journal() else {
     return Ok(Rehearsal::Skipped(SkipReason::JournalUnavailable));
   };
+  let Some(budget) = rehearsal_budget() else {
+    journal.rollback();
+    LEFT_OUT.set(LEFT_OUT.get() + 1);
+    return Ok(Rehearsal::Skipped(SkipReason::OverBudget));
+  };
   let _speculative = speculative_digestion();
   FOOTNOTE_BASE_DEFINED.with(|defined| defined.set(footnotes));
   FOOTNOTE_BASE.with(|cell| cell.set(base));
@@ -436,6 +499,8 @@ pub(in crate::base_utilities) fn rehearse<R>(
   // shapes).
   local_current_token(T_CS!("\\relax"));
   let _hook = FieldNotesHookGuard;
+  let if_count_before = if_count();
+  let budget = read_budget(budget);
   let result = with_origin(DefinitionOrigin::File, || {
     reading_from_mouth(Mouth::default(), || -> Result<Digested> {
       bgroup();
@@ -448,6 +513,12 @@ pub(in crate::base_utilities) fn rehearse<R>(
       Ok(digested)
     })
   });
+  // (off before anything else reads: closing what the run left open is no part of it)
+  let budget = budget.end();
+  READS_LEFT.set(READS_LEFT.get().saturating_sub(budget.reads));
+  if budget.over {
+    set_if_count(if_count_before);
+  }
   let unwound = reading_from_mouth(Mouth::default(), || {
     new_local_box_list();
     while get_frame_depth() > depth {
@@ -487,6 +558,8 @@ pub(in crate::base_utilities) fn rehearse<R>(
   for (flag, value) in FLAGS.iter().zip(saved) {
     assign_value(flag, value, Some(Scope::Global));
   }
+  // (past the hold's end: `hold` keeps it otherwise)
+  let reads = budget.reads;
   if footnotes {
     let steps = carried + FOOTNOTE_STEPS.with(Cell::get);
     assign_value(
@@ -500,12 +573,30 @@ pub(in crate::base_utilities) fn rehearse<R>(
       Some(Scope::Global),
     );
   }
+  // (a block's own, never a Fatal, even when its assignments could not be undone: its diagnostics and those stay, as a failed
+  // run's: `sect05.rs` `speculative_run`)
+  if budget.over {
+    if undone {
+      hold.discard();
+    } else {
+      hold.commit();
+    }
+    DebugFeature!("frontmatter", "FRONT a rehearsal read {reads} tokens");
+    LEFT_OUT.set(LEFT_OUT.get() + 1);
+    unwound?;
+    unwind_box_lists_to(boxes);
+    while if_stack_depth() > conditionals {
+      pop_if_frame();
+    }
+    return Ok(Rehearsal::Skipped(SkipReason::OverBudget));
+  }
   if let Err(err) = result {
     if !undone || (resource_fatal_latched() && !resource_fatal_before && !unlatch_runaway_fatal()) {
       hold.commit();
       return Err(err);
     }
     hold.discard();
+    DebugFeature!("frontmatter", "FRONT a rehearsal read {reads} tokens");
     unwound?;
     unwind_box_lists_to(boxes);
     while if_stack_depth() > conditionals {
@@ -519,6 +610,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
     // (its diagnostics and its global assignments stay, as a speculative run's that could not be undone)
     hold.commit();
   }
+  DebugFeature!("frontmatter", "FRONT a rehearsal read {reads} tokens");
   unwound?;
   Ok(match value {
     Some((value, declarations, breaks)) if undone => Rehearsal::Done {

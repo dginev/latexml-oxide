@@ -57,13 +57,13 @@ fn env_tokens(cs: &str, env: &str) -> Vec<Token> {
 /// construction.
 type AnimCtx = Rc<RefCell<AnimateContext>>;
 
-thread_local! {
-  static ANIM_STACK: RefCell<Vec<AnimCtx>> = const { RefCell::new(Vec::new()) };
-}
+/// The open animations, innermost last. A rollback puts it back: a block's `\begin{animateinline}` with no end stood open
+/// when it was a thread-local, a later `\multiframe` counted into it.
+static ANIM_STACK: DocumentState<Vec<AnimCtx>> = DocumentState::new("animate_stack");
 
 /// Run `f` on the innermost open context, if any.
 fn with_top<R>(f: impl FnOnce(&mut AnimateContext) -> R) -> Option<R> {
-  let top: Option<AnimCtx> = ANIM_STACK.with(|s| s.borrow().last().cloned());
+  let top: Option<AnimCtx> = ANIM_STACK.read(|s| s.last().cloned());
   top.map(|ctx| f(&mut ctx.borrow_mut()))
 }
 
@@ -101,7 +101,7 @@ LoadDefinitions!({
   key_options_processed()?;
   // Per-conversion reset: a mid-body fatal leaves an unbalanced push behind
   // on a long-running worker thread (chemnum resets the same way).
-  ANIM_STACK.with(|s| s.borrow_mut().clear());
+  ANIM_STACK.update(Vec::clear);
   RequirePackage!("graphicx");
   // animate.sty:23: a document can rely on its calc (OXIDIZED_DESIGN #317).
   RequirePackage!("calc");
@@ -143,9 +143,8 @@ LoadDefinitions!({
     };
     let begin = key_tokens("begin");
     let end = key_tokens("end");
-    ANIM_STACK.with(|s| {
-      s.borrow_mut()
-        .push(Rc::new(RefCell::new(AnimateContext { frame_count: 1, end, ended: false })))
+    ANIM_STACK.update(|s| {
+      s.push(Rc::new(RefCell::new(AnimateContext { frame_count: 1, end, ended: false })))
     });
     let mut toks = env_tokens("\\begin", "lx@animateinline");
     toks.extend(begin);
@@ -195,13 +194,13 @@ LoadDefinitions!({
     mode => "internal_vertical",
     properties => {
       let mut props = stored_map!();
-      if let Some(ctx) = ANIM_STACK.with(|s| s.borrow().last().cloned()) {
+      if let Some(ctx) = ANIM_STACK.read(|s| s.last().cloned()) {
         props.insert("anim_ctx", Stored::Opaque(Rc::new(ctx)));
       }
       Ok(props)
     },
     after_digest => sub[_whatsit] {
-      ANIM_STACK.with(|s| s.borrow_mut().pop());
+      ANIM_STACK.update(|s| s.pop());
     }
   );
 
@@ -213,7 +212,7 @@ LoadDefinitions!({
 
   DefMacro!("\\multiframe {Number} {} {}", sub[(count, vars, body)] {
     let count_num = count.value_of().max(1) as usize;
-    let is_inside_animate = ANIM_STACK.with(|s| !s.borrow().is_empty());
+    let is_inside_animate = ANIM_STACK.read(|s| !s.is_empty());
     if is_inside_animate {
       // `\multiframe{n}` inside a frame sequence stands for n frames.
       with_top(|ctx| ctx.frame_count += count_num - 1);

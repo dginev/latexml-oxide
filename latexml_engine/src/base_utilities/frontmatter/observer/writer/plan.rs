@@ -534,7 +534,7 @@ pub(super) fn block_span_tokens(
 /// (`\textbf{$^2$Tencent Hunyuan}`, 2605.25195's `\textbf{$^1$Fudan University}  \textbf{$^2$Tencent Hunyuan}\\ $^*$
 /// Equal Contribution, …`) or a group opened by font declarations (`{\it $^2$Univ B}`) that closes where the entry ends —
 /// in the block `field`: the Mark event's span is the wrapper's, the cover of the call around its first box, the entry
-/// inside it. The mark's own print (`events::own_print`: its formula, its `\textsuperscript{…}`), right before the
+/// inside it. The mark's own print ([`Field::own_print`]: its formula, its `\textsuperscript{…}`), right before the
 /// entry's ink, and the wrapper's opening tokens, to open it again round the entry made (the cut keeps its font) —
 /// `None` when the event before the entry is no Mark covering it, or the wrapper holds more than the mark and the
 /// entry (the kernel's cut reads such a mark as one, `notes::wrapped_mark_at`).
