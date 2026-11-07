@@ -20,16 +20,23 @@ use super::{
   repart::entry_span,
   *,
 };
-use crate::base_utilities::frontmatter::{
-  observer::{
-    events::{EventKind, Formula, lex_with_formulas},
-    field_notes::EnvironmentStep,
-    ledger::{ApiCall, AuthorBlock, annotated_parent, field_stamped},
-    policy::TitleMarks,
-    rehearsal::{Rehearsal, rehearse},
-    resolver::{creator_call, read_events, split_pieces},
+use crate::base_utilities::{
+  author_block::whole_block_author,
+  defs::author_macros::KEPT_WHOLE,
+  frontmatter::{
+    observer::{
+      events::{EventKind, Formula, lex_with_formulas},
+      field_notes::EnvironmentStep,
+      ledger::{ApiCall, AuthorBlock, annotated_parent, field_stamped},
+      policy::TitleMarks,
+      rehearsal::{Rehearsal, rehearse},
+      resolver::{
+        LostInk, Written, check_blocks, creator_call, printed_email_label, read_events,
+        split_pieces,
+      },
+    },
+    relocate::{BLOCK_ZONE, FOOTER_ZONE},
   },
-  relocate::{BLOCK_ZONE, FOOTER_ZONE},
 };
 
 thread_local! {
@@ -62,6 +69,9 @@ pub(in crate::base_utilities) const EMITTING: &str = "lx_fm_emitting";
 /// a creator's `source#letters#place` to its `role:N`, and an item's `owner|kind|text`.
 const EMITTED_CREATORS: &str = "lx_fm_emitted_creators";
 const EMITTED_ITEMS: &str = "lx_fm_emitted_items";
+
+/// `\lx@add@frontmatter@now`, the flush's own creator call.
+fn add_now() -> Token { T_CS!("\\lx@add@frontmatter@now") }
 
 /// Tokens of an internal string.
 fn internal(text: &str) -> Vec<Token> {
@@ -710,9 +720,15 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
     .find(|e| spaced(&e.text) == spaced(address))
     .and_then(|e| event_run(&field, events, (e, e), None));
   tokens.extend_from_slice(&content[..from]);
-  // (or its text in the font the list prints in, where no ink is it alone: `a@x; b@y`, 1305.0477, 1510.05412)
+  // (or its text in the font the list prints in, where no ink is it alone, `a@x; b@y`, 1305.0477, 1510.05412, or no rehearsal
+  // reads the argument, past the positions: counted, its link lost)
   let font = inks.first().and_then(|e| e.font.clone());
-  tokens.extend(printed.unwrap_or_else(|| in_its_font(font, by_text(None, address)).unlist()));
+  let why = if read.is_none() {
+    "one address of a list past the positions"
+  } else {
+    "one address of a list no ink prints alone"
+  };
+  tokens.extend(printed.unwrap_or_else(|| in_its_font(font, by_text(Some(why), address)).unlist()));
   tokens.extend_from_slice(&content[to..]);
   tokens.extend(after);
   Ok(Tokens::new(tokens))
@@ -838,9 +854,20 @@ fn item_call(
   label: &str,
   separate: &BTreeSet<usize>,
   pieces: &mut BTreeMap<usize, Vec<Piece>>,
+  whole: &mut BTreeSet<usize>,
 ) -> Result<Tokens> {
   let role = assoc.role.as_str();
-  let keys = s!("role={role},label={{{label}}}");
+  let mut keys = s!("role={role},label={{{label}}}");
+  // (an address the block prints after its label word is named by it, as printed, as the Kind steps name it: `E-mail:
+  // \\email{…}`, 1412.5940; `E-mail: \\texttt{a@x}`, 0802.3384; `Emails:` on each of a list's, 2511.22090; `email`, 1209.0869)
+  if role == "email"
+    && let Some((index, Some(span))) = assoc.source
+    && let Some(word) = with_block(index, None, |_, events| {
+      printed_email_label(events, span, &assoc.text)
+    })
+  {
+    keys = s!("{keys},name={{{word} }}");
+  }
   let contact_role = matches!(key.0, Kind::Contact(_));
   let note = key.0 == Kind::Note;
   let written_out = assoc.rule.contains("ruling3:written-out");
@@ -857,6 +884,7 @@ fn item_call(
       // (or the label its binding prints: `\\affil[*]{Corresponding author.}`, 2107.01943, 1812.03816)
       .or(assoc.label.as_deref())
   {
+    whole.insert(index);
     return Ok(note_call(
       false,
       Some(mark),
@@ -895,6 +923,7 @@ fn item_call(
         by_label(assoc) || !matches!(role, "affiliation" | "address"),
       )
     {
+      whole.insert(index);
       return Ok(tokens);
     }
   }
@@ -987,23 +1016,6 @@ fn item_call(
           events.iter().find(holds).and_then(|e| e.font.clone())
         });
         let content = in_its_font(font, text_tokens(&assoc.text));
-        // (named by the label word printed before it, as the Kind steps name it: `E-mail: \\texttt{a@x}`, 0802.3384)
-        let printed = with_block(index, String::new(), |_, events| {
-          let name = events.iter().find(|e| {
-            e.kind == EventKind::Name && e.span.is_some_and(|s| s.0 <= span.0 && span.1 <= s.1)
-          });
-          name.map_or_else(String::new, |e| e.text.clone())
-        });
-        let label_word = printed
-          .split(&assoc.text)
-          .next()
-          .filter(|before| before.len() < printed.len())
-          .map(str::trim)
-          .filter(|before| before.ends_with(':') && before.split_whitespace().count() <= 2);
-        let keys = match label_word {
-          Some(word) => s!("{keys},name={{{word}~}}"),
-          None => keys,
-        };
         return Ok(annotate_now("ltx:contact", &keys, content.unlist_ref()));
       }
       // (several events of one span: a macro printed them, 2604.09547)
@@ -1403,93 +1415,121 @@ fn in_perl_order(items: &mut [Item]) {
   }
 }
 
-/// The words of what the blocks and the creators' calls print (a Name, a Contact, a Note) that no text of the reading holds
-/// (its names, its items), in one Warning naming them, each once over the flushes: the charter's count of a lost word, whatever lost it
-/// (review revZ4a: 1509.01480's creator and her note, 2607.28418's address). The words the emitter writes are the reading's.
-fn warn_lost_words(resolved: &Resolved) {
-  let creators = resolved.creators.iter();
-  let items = creators
-    .clone()
-    .flat_map(|c| c.affiliations.iter().chain(&c.contacts).chain(&c.notes))
-    .chain(&resolved.block)
-    .chain(&resolved.dropped);
-  let held: BTreeSet<String> = creators
-    .map(|c| c.name.as_str())
-    .chain(items.clone().map(|a| a.text.as_str()))
-    .map(norm)
-    .filter(|text| !text.is_empty())
-    .collect();
-  // (what a longer text holds: a name the reading reads with its mark, an entry with what follows it)
-  let all_held = held
-    .iter()
-    .map(String::as_str)
-    .collect::<Vec<_>>()
-    .join("\u{0}");
-  let spans: BTreeSet<(usize, (u16, u16))> = items
-    .filter_map(|a| Some((a.source?.0, a.source?.1?)))
-    .collect();
-  let mut lost: Vec<String> = Vec::new();
+/// The call half of the reading's word check (`resolver::words`, whose block half runs before the emit decides what it writes
+/// whole): per creator's call (its ledger index), the words it prints that no word the reading writes holds, after the emit,
+/// a call `kept` or written whole writing its own (a note an entry's call holds, hep-ex0609057).
+fn unwritten_call_words(
+  resolved: &Resolved,
+  kept: &BTreeSet<usize>,
+) -> BTreeMap<usize, Vec<String>> {
   with_ledger(|ledger| {
-    for (index, entry) in ledger.entries.iter().enumerate() {
-      let events = match entry {
-        Entry::Author(block) => match &block.outcome {
-          Outcome::Events { events, .. } => events.as_slice(),
-          _ => continue,
+    let written = Written::new(ledger, resolved);
+    let calls = ledger
+      .entries
+      .iter()
+      .enumerate()
+      .filter_map(|(index, entry)| match entry {
+        Entry::Api(call)
+          if creator_call(&call.tag, &call.parent) && !call.cleared && !kept.contains(&index) =>
+        {
+          let words: Vec<String> = written
+            .lost_inks(index, &call.events, false)
+            .into_iter()
+            .flat_map(|ink| ink.words)
+            .collect();
+          (!words.is_empty()).then_some((index, words))
         },
-        Entry::Api(call) if creator_call(&call.tag, &call.parent) => call.events.as_slice(),
-        _ => continue,
-      };
-      // (a container's ink an item's span holds, which its tokens write whole: a picture's in an entry; and a mark's own, a label
-      // or its logo: an ORCID icon, 2210.03748)
-      let marks: Vec<(u16, u16)> = events
-        .iter()
-        .filter(|m| m.kind == EventKind::Mark)
-        .filter_map(|m| m.formula.and_then(|f| f.span))
-        .collect();
-      let inks = events.iter().chain(events.iter().flat_map(|e| &e.inner));
-      for e in inks.filter(|e| {
-        matches!(
-          e.kind,
-          EventKind::Name | EventKind::Contact | EventKind::Note
-        )
-      }) {
-        let printed = norm(&e.text);
-        if printed.is_empty() || held.contains(&printed) {
-          continue;
-        }
-        let within = |&(from, to): &(u16, u16)| {
-          e.span
-            .is_some_and(|(s, t)| from <= s && t <= to && (s, t) != (from, to))
-        };
-        let covered = (e.nest > 0 && spans.iter().any(|(at, span)| *at == index && within(span)))
-          || marks.iter().any(within);
-        if !covered && !all_held.contains(&printed) {
-          lost.extend(
-            e.text
-              .split(|c: char| !(c.is_alphanumeric() || c == '_'))
-              .filter(|w| !w.is_empty())
-              .map(String::from),
-          );
-        }
-      }
-    }
-  });
-  lost.retain(|word| {
-    let once = s!("word|{word}");
-    let new = lookup_mapping(EMITTED_ITEMS, &once).is_none();
-    assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
-    new
-  });
-  if !lost.is_empty() {
-    Warn!(
-      "unexpected",
-      "frontmatter",
-      s!(
-        "The frontmatter emitter's reading holds no place for words its author block or calls print: {}",
-        lost.join(" ")
-      )
-    );
+        _ => None,
+      });
+    calls.collect()
+  })
+}
+
+/// Whether the author block at ledger index `index` is written whole, as Perl's `\\lx@add@author` writes a block its
+/// `\\lx@add@authors` can't cut (Base_Utility.pool.ltxml:692-694, its `{tabular}` fallback): where its reading would lose a
+/// name's words (`lost`: an ink among the names, `LostInk::among_names`). Decided once, at the flush that first reads it, which a
+/// later one keeps (its creators are emitted).
+fn written_whole(index: usize, lost: bool) -> bool {
+  let once = s!("whole|{index}");
+  match lookup_mapping(EMITTED_ITEMS, &once) {
+    Some(Stored::Bool(whole)) => whole,
+    _ => {
+      assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(lost)));
+      lost
+    },
   }
+}
+
+/// The creator Perl's `\\lx@add@author` makes of the author block at ledger index `index`, with its keys and `keys`
+/// (`author_block::whole_block_author`, the one writer of a block kept whole).
+fn whole_block(index: usize, keys: &str) -> Option<Result<Tokens>> {
+  let (keyvals, written) = with_ledger(|ledger| match ledger.entries.get(index) {
+    Some(Entry::Author(block)) => Some((block.keyvals.clone(), block.tokens.clone())),
+    _ => None,
+  })?;
+  let keys: Vec<&str> = keyvals.iter().map(String::as_str).chain([keys]).collect();
+  let keys = keys.into_iter().filter(|keys| !keys.trim().is_empty());
+  let keys = internal(&keys.collect::<Vec<_>>().join(","));
+  Some(whole_block_author(Some(Tokens::new(keys)), written))
+}
+
+/// What the emit does with the words a block or a call prints that it doesn't write ([`warn_unwritten`]).
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Unwritten {
+  /// the block is written whole, Perl's fallback
+  Whole,
+  /// the reading kept, each ink a note of the author block
+  Kept,
+  Lost,
+}
+
+/// The counted Warning of the words a block or a call prints that the emit doesn't write, once per source over the flushes,
+/// saying what it does instead. Whether it's the first.
+fn warn_unwritten(index: usize, words: &[String], then: Unwritten) -> bool {
+  let once = s!("lost|{index}");
+  if lookup_mapping(EMITTED_ITEMS, &once).is_some() {
+    return false;
+  }
+  assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
+  let then = match then {
+    Unwritten::Whole => "the block is written whole, as Perl's whole-block creator",
+    Unwritten::Kept => "they are kept as a note of the author block",
+    Unwritten::Lost => "they are lost",
+  };
+  Warn!(
+    "unexpected",
+    "frontmatter",
+    s!(
+      "The frontmatter emitter's reading holds no place for words its author block or call prints ({}); {then}",
+      words.join(" ")
+    )
+  );
+  true
+}
+
+/// The counted Warning of the words the reading writes of a block more times than it prints them ([`Written::excess`]), once
+/// per block over the flushes. An entry's excess is counted, not answered: whether a note's digestion keeps an address its
+/// contact writes too is digestion's (an.cls's raw `\\email` in a `\\thanks` keeps it, 0807.0895; siamart's routes it out).
+fn warn_excess(index: usize, words: &[(String, bool)], whole: bool) {
+  let once = s!("excess|{index}");
+  if lookup_mapping(EMITTED_ITEMS, &once).is_some() {
+    return;
+  }
+  assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
+  let then = if whole {
+    "the block is written whole, as Perl's whole-block creator"
+  } else {
+    "they are counted"
+  };
+  let words: Vec<&str> = words.iter().map(|(word, _)| word.as_str()).collect();
+  Warn!(
+    "unexpected",
+    "frontmatter",
+    s!(
+      "The frontmatter emitter's reading writes words of its author block more often than it prints them ({}); {then}",
+      words.join(" ")
+    )
+  );
 }
 
 /// The flush's added step: `commands`' creators and their annotations replaced by calls built from the reading. Whether
@@ -1500,6 +1540,40 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   }
   if let Some(why) = stays_out() {
     DebugFeature!("frontmatter", "FRONT emit stays out: {why}");
+    // (with no reader cutting at the call, a block no rehearsal read is Perl's whole-block creator, its queued entry: 2204.09614,
+    // a block past the positions)
+    if fm_emit_mode() == 2 && why != NO_BLOCK {
+      if lookup_mapping(EMITTED_ITEMS, "unread").is_none() {
+        assign_mapping(EMITTED_ITEMS, "unread", Some(Stored::Bool(true)));
+        Warn!(
+          "unexpected",
+          "frontmatter",
+          s!(
+            "The frontmatter emitter can't read an author block ({why}): it is written whole, as Perl's whole-block creator"
+          )
+        );
+      }
+      // (each block's whole entry kept whole on purpose, its merge counted by that Warning, `KEPT_WHOLE`: the ledger's copy of
+      // the queued call names its block, `whole_block` writes it so)
+      let whole_entries: Vec<(Tokens, usize)> = with_ledger(|ledger| {
+        let calls = ledger.entries.iter().filter_map(|entry| match entry {
+          Entry::Api(call) if call.inside && call.tag == "ltx:creator" => {
+            Some((call.command.clone()?, call.after_block?))
+          },
+          _ => None,
+        });
+        calls.collect()
+      });
+      for entry in commands.iter_mut() {
+        if let Some(&(_, block)) = whole_entries
+          .iter()
+          .find(|(command, _)| *command == entry.2)
+          && let Some(tokens) = whole_block(block, KEPT_WHOLE)
+        {
+          entry.2 = tokens?;
+        }
+      }
+    }
     return Ok(false);
   }
   let reading = with_ledger(|ledger| resolve(&ledger_inputs(ledger)));
@@ -1514,10 +1588,9 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     DebugFeature!("frontmatter", "FRONT emit stays out: no reading");
     return Ok(false);
   }
-  warn_lost_words(&resolved);
   // (a call printing no word of its own stays as it is, the note it holds the document's: `\\IEEEauthorblockA{\\thanks{…}}`,
   // 1502.03038, 2005.06428, 2110.05178)
-  let words_of = |call: &ApiCall| {
+  let own_words = |call: &ApiCall| {
     let words: Vec<&Event> = call
       .events
       .iter()
@@ -1525,17 +1598,59 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .collect();
     norm(&events::events_text(&words))
   };
-  let wordless_calls: Vec<Tokens> = with_ledger(|ledger| {
+  let (wordless, wordless_calls): (BTreeSet<usize>, Vec<Tokens>) = with_ledger(|ledger| {
     let calls = ledger.entries.iter().filter_map(|entry| match entry {
       Entry::Api(call)
-        if call.events.iter().any(|e| e.kind == EventKind::Note) && words_of(call).is_empty() =>
+        if call.events.iter().any(|e| e.kind == EventKind::Note) && own_words(call).is_empty() =>
       {
-        call.command.clone()
+        Some((call.index, call.command.clone()?))
       },
       _ => None,
     });
-    calls.collect()
+    calls.unzip()
   });
+  // (the reading's word check, its block half: a block whose reading loses a name's words is written whole, Perl's fallback; one
+  // losing other ink keeps its reading, the ink kept as a note of the author block, as the unclaimed-text net keeps a line no
+  // field holds (`insert::keep_unclaimed_net_notes`): 2605.16481, 2607.28418; each counted)
+  let checks = with_ledger(|ledger| check_blocks(ledger, &resolved));
+  let read_blocks: BTreeSet<usize> = resolved
+    .creators
+    .iter()
+    .map(|c| c.source)
+    .filter(|&source| {
+      with_ledger(|ledger| matches!(ledger.entries.get(source), Some(Entry::Author(_))))
+    })
+    .collect();
+  // (the names themselves fail: an ink among them lost, or a word of a name written more often than it prints)
+  let names_fail = |source: usize| {
+    checks.get(&source).is_some_and(|check| {
+      check.lost.iter().any(|ink| ink.among_names) || check.excess.iter().any(|(_, name)| *name)
+    })
+  };
+  let whole: BTreeSet<usize> = read_blocks
+    .into_iter()
+    .filter(|&source| written_whole(source, names_fail(source)))
+    .collect();
+  let mut kept_inks: Vec<(usize, &LostInk)> = Vec::new();
+  for (&index, check) in &checks {
+    let whole = whole.contains(&index);
+    let words: Vec<String> = check
+      .lost
+      .iter()
+      .flat_map(|ink| ink.words.clone())
+      .collect();
+    let then = if whole {
+      Unwritten::Whole
+    } else {
+      Unwritten::Kept
+    };
+    if !words.is_empty() && warn_unwritten(index, &words, then) && !whole {
+      kept_inks.extend(check.lost.iter().map(|ink| (index, ink)));
+    }
+    if !check.excess.is_empty() {
+      warn_excess(index, &check.excess, whole);
+    }
+  }
   // (the queue: what the emitter takes, and what it leaves, in place)
   let (mut before, mut after, mut unprinted): (Vec<_>, Vec<_>, Vec<RawFrontmatter>) =
     Default::default();
@@ -1552,12 +1667,27 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       before.push(entry);
     }
   }
-  // (the creators: each its Perl label, `author:N`, new or emitted at an earlier flush: as `num_<tag>` carries a flush's counts)
+  // (the creators: each its Perl label, `author:N`, new or emitted at an earlier flush: as `num_<tag>` carries a flush's counts.
+  // A block written whole is one creator, its first name's, which its other names' items go to)
   let mut owners: Vec<String> = Vec::with_capacity(resolved.creators.len());
   let mut fresh: Vec<usize> = Vec::new();
   let mut role_counts: BTreeMap<String, i64> = BTreeMap::new();
+  let mut first_of: BTreeMap<usize, usize> = BTreeMap::new();
+  let mut rep: Vec<usize> = (0..resolved.creators.len()).collect();
   for (i, c) in resolved.creators.iter().enumerate() {
-    let id = s!("{}#{}#{i}", c.source, norm(&c.name));
+    if whole.contains(&c.source) {
+      if let Some(&first) = first_of.get(&c.source) {
+        rep[i] = first;
+        owners.push(owners[first].clone());
+        continue;
+      }
+      first_of.insert(c.source, i);
+    }
+    let id = if whole.contains(&c.source) {
+      s!("{}#whole", c.source)
+    } else {
+      s!("{}#{}#{i}", c.source, norm(&c.name))
+    };
     owners.push(match lookup_mapping(EMITTED_CREATORS, &id) {
       Some(owner) => owner.to_string(),
       None => {
@@ -1585,7 +1715,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .push(i);
   }
   by_block.retain(|source, _| {
-    with_ledger(|ledger| matches!(ledger.entries.get(*source), Some(Entry::Author(_))))
+    !whole.contains(source)
+      && with_ledger(|ledger| matches!(ledger.entries.get(*source), Some(Entry::Author(_))))
   });
   let keeps_marks: BTreeMap<usize, bool> = by_block
     .keys()
@@ -1604,6 +1735,20 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   }
   let mut kept: Vec<RawFrontmatter> = Vec::new();
   let (mut items, separate) = items_to_emit(&resolved, &owners, &on_names, &mut kept);
+  // (a block written whole prints its own items; its names' others are its creator's)
+  items.retain(|item| !item.assoc.source.is_some_and(|(at, _)| whole.contains(&at)));
+  for item in &mut items {
+    let mut seen_owners = BTreeSet::new();
+    item.owners = item
+      .owners
+      .iter()
+      .map(|owner| match owner {
+        Owner::Creator(i) => Owner::Creator(rep[*i]),
+        Owner::Block => Owner::Block,
+      })
+      .filter(|owner| seen_owners.insert(*owner))
+      .collect();
+  }
   in_perl_order(&mut items);
   // (the labels: an item's own on every new owner; an owner made at an earlier flush holds its own copy under its Perl
   // `author:N`, its annotations long digested)
@@ -1658,7 +1803,10 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     .filter(|(_, keep)| **keep)
     .map(|(&source, _)| (source, marks_of(source, "inst")))
     .collect();
-  for &i in &fresh {
+  for &i in fresh
+    .iter()
+    .filter(|&&i| !whole.contains(&resolved.creators[i].source))
+  {
     let c = &resolved.creators[i];
     let keeps = keeps(c.source);
     let inst_marks = inst_marks.get(&c.source).map_or(&[][..], Vec::as_slice);
@@ -1690,6 +1838,14 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   for &i in &fresh {
     let c = &resolved.creators[i];
     let keys = s!("annotations={{{}}}", annotations[i].join(","));
+    // (kept whole on purpose, as a tabular block is: no merge to flag beside its Warning, `flag_merged_creators`)
+    if whole.contains(&c.source)
+      && let Some(tokens) = whole_block(c.source, &s!("{KEPT_WHOLE},{keys}"))
+    {
+      let tokens = tokens?;
+      out.push(entry("ltx:creator", tokens.unlist()));
+      continue;
+    }
     // (the call, where it is this creator alone)
     let sole = per_source.get(&c.source) == Some(&1);
     let call = (!by_block.contains_key(&c.source) && sole)
@@ -1707,7 +1863,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       let content = cs_group("\\lx@personname", &[&cs_group("\\lx@author@withinst", &[
         &content,
       ])]);
-      let mut head = vec![T_CS!("\\lx@add@frontmatter@now")];
+      let mut head = vec![add_now()];
       head.extend(cs_group_args(&["ltx:creator"]));
       with_keys(head, &s!("role=author,{keys}"), &content)
     });
@@ -1731,6 +1887,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     (rdf.0, rdf.1, keyed.unwrap_or(rdf.2))
   };
   let mut pieces = BTreeMap::new();
+  // (the calls written whole, and the ones kept as they are)
+  let mut written = wordless.clone();
   let base = lookup_int(QUEUE_ORDINAL_COUNTER);
   for (label, item) in calls {
     while let Some((at, rdf)) =
@@ -1738,7 +1896,14 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     {
       out.push(rdf_entry(at, rdf));
     }
-    let tokens = item_call(&item.key, item.assoc, &label, &separate, &mut pieces)?;
+    let tokens = item_call(
+      &item.key,
+      item.assoc,
+      &label,
+      &separate,
+      &mut pieces,
+      &mut written,
+    )?;
     let tag = if item.key.0 == Kind::Note {
       "ltx:note"
     } else {
@@ -1751,6 +1916,22 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     out.push(entry(tag, placed));
   }
   out.extend(unprinted.map(|(at, rdf)| rdf_entry(at, rdf)));
+  // (an ink the reading holds no place for, its tokens as a note of the author block)
+  for (index, ink) in kept_inks {
+    let content = ink
+      .span
+      .and_then(|span| span_tokens_of(index, span))
+      .map_or_else(|| by_text(None, &ink.text), Tokens::unlist);
+    let note = annotate_now(
+      "ltx:note",
+      "role=note,label={addresses:block}",
+      &item_only(&content),
+    );
+    out.push(entry("ltx:note", note.unlist()));
+  }
+  for (index, words) in unwritten_call_words(&resolved, &written) {
+    warn_unwritten(index, &words, Unwritten::Lost);
+  }
   out.extend(kept);
   out.extend(after);
   // (a document's note's own `\\email` is the reading's item already: `api:note-spelled`, 0910.1640)

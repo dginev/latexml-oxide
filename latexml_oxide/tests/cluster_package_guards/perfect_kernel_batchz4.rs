@@ -20,7 +20,7 @@ macro_rules! repro {
 }
 
 /// Convert `tex` under `emit`: the log and the XML.
-fn run(tex: &str, emit: u8) -> (String, String) {
+pub(super) fn run(tex: &str, emit: u8) -> (String, String) {
   let (log, xml, ()) = convert_files_with_setup_then(
     tex,
     &[],
@@ -35,7 +35,7 @@ fn run(tex: &str, emit: u8) -> (String, String) {
 }
 
 /// The creators of `xml`, whole, ids and whitespace between elements masked.
-fn creators_xml(xml: &str) -> Vec<String> {
+pub(super) fn creators_xml(xml: &str) -> Vec<String> {
   let creator = Regex::new(r"(?s)<creator\b.*?</creator>").expect("regex");
   let ids = Regex::new(r#"\s(xml:id|about|labels|idref|fragid|xoref|xref|resource)="[^"]*""#)
     .expect("regex");
@@ -46,7 +46,7 @@ fn creators_xml(xml: &str) -> Vec<String> {
 }
 
 /// `tex` emitted, clean, with its creators' XML what the old engine's is, and `holds` in the emitted XML.
-fn same_markup(tex: &str, holds: &[&str]) -> Vec<String> {
+pub(super) fn same_markup(tex: &str, holds: &[&str]) -> Vec<String> {
   let (off_log, off) = run(tex, 0);
   let (log, on) = run(tex, 1);
   assert_eq!(

@@ -253,6 +253,7 @@ mod blocks;
 mod labels;
 mod lines;
 mod post;
+mod words;
 
 pub(in crate::base_utilities::frontmatter::observer) use api::split_pieces;
 use blocks::Chain;
@@ -269,6 +270,10 @@ use labels::{text_tokens, *};
 use lines::*;
 pub(in crate::base_utilities::frontmatter::observer) use lines::{
   NoPerson, may_name_a_person, name_before_remark, names_no_person, reads_as_names,
+};
+// (the reading's word check, its block half and what the emitter's call half reads: OD #980)
+pub(in crate::base_utilities::frontmatter::observer) use words::{
+  LostInk, Written, check_blocks, printed_email_label,
 };
 
 /// A block's events as the resolver reads them (`Resolver::block`): an ORCID link's name, an IEEE ordinal, a mark
@@ -350,6 +355,10 @@ struct Resolver {
   /// per creator of a block: that block's queue (its `epoch`); the creators a later block replaced
   epoch_of:           Vec<Option<usize>>,
   replaced:           Vec<usize>,
+  /// the creators each queued author entry made (`start..end`), in queue order: a block's or a creator call's, under
+  /// `LATEXML_FM_EMIT=2` (`whole_entries`), where each call queues one entry, a block whole (`author_entries`)
+  entries:            Vec<(usize, usize)>,
+  whole_entries:      bool,
   /// a note's links, and the notes they may empty, placed once every name is read (`answer_note_links`)
   note_links:         Vec<NoteLink>,
   /// the e-mail calls a document's own note makes (`ltx:pubnote`: A&A's `\offprints{B. Baker, \email{…}}`), placed
@@ -486,6 +495,8 @@ impl Resolver {
       title_fn_marks:     Vec::new(),
       epoch_of:           Vec::new(),
       replaced:           Vec::new(),
+      entries:            Vec::new(),
+      whole_entries:      fm_emit_mode() == 2,
       note_links:         Vec::new(),
       document_emails:    Vec::new(),
       listed_emails:      Vec::new(),
@@ -620,6 +631,48 @@ impl Resolver {
     (0..self.out.creators.len())
       .filter(|c| !self.replaced.contains(c))
       .collect()
+  }
+
+  /// The queue's author entries, each the live creators it made, in queue order, as an `author:N` label names the N-th
+  /// (`queued_author_marks`' positions at the call, the N-th digested author's label): under `LATEXML_FM_EMIT=2` one a call, a
+  /// block's whole entry its names (`whole_block_call`), an entry a later call dequeued none; else one a creator, as the old
+  /// reader queued them (the live ones, `label_owners`).
+  fn author_entries(&self) -> Vec<Vec<usize>> {
+    if !self.whole_entries {
+      return self.live().into_iter().map(|c| vec![c]).collect();
+    }
+    self
+      .entries
+      .iter()
+      .filter(|&&(start, end)| start == end || (start..end).any(|c| !self.replaced.contains(&c)))
+      .map(|&(start, end)| {
+        (start..end)
+          .filter(|c| !self.replaced.contains(c))
+          .collect()
+      })
+      .collect()
+  }
+
+  /// The creators an `author:N` label names (`author_entries`): the N-th entry's; an address among several, the one of them it
+  /// spells, else none (the block's), as the call's own reading of the queue placed it by the names it spelled
+  /// (`email_block_calls`, `placed_contact_owner`: IEEEtran's e-mail line under one `\IEEEauthorblockN` of four names,
+  /// 2010.07442, 2003.03692, 2510.03288, 2607.02294).
+  fn entry_owners(&self, n: &str, assoc: &Assoc) -> Vec<usize> {
+    let Some(entry) = n
+      .trim()
+      .parse::<usize>()
+      .ok()
+      .and_then(|n| n.checked_sub(1))
+      .and_then(|at| self.author_entries().into_iter().nth(at))
+    else {
+      return Vec::new();
+    };
+    match entry.as_slice() {
+      [_, _, ..] if assoc.role == "email" => {
+        self.spelled(&assoc.text, &entry).into_iter().collect()
+      },
+      _ => entry,
+    }
   }
 
   /// The one candidate an address spells (`spelled_owners`), if one — none for a list of local parts the address
@@ -782,6 +835,7 @@ pub fn resolve_with(
         // `\lx@add@authors@append` hook, `split_author_line_cautious`)
         let cautious = hook == "\\lx@add@authors@append";
         resolver.block(*index, policy, cautious, keyvals.as_deref(), events);
+        resolver.entries.push((start, resolver.out.creators.len()));
         // (a block whose authors a later clear removed, as a replacing call's: `ledger::record_clear`)
         if *cleared {
           resolver.replaced.extend(start..resolver.out.creators.len());
@@ -807,7 +861,13 @@ pub fn resolve_with(
         role,
         attrs,
         events,
-      } => resolver.api(*index, tag, role, attrs, events, policy),
+      } => {
+        let start = resolver.out.creators.len();
+        resolver.api(*index, tag, role, attrs, events, policy);
+        if tag == "ltx:creator" && role == "author" {
+          resolver.entries.push((start, resolver.out.creators.len()));
+        }
+      },
       Input::NoteText { index, epoch, mark, events } => {
         resolver
           .note_texts

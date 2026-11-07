@@ -423,6 +423,10 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ("_markpiece= package/llncs_cls.rs", 1),
   ("_marks= base_utilities/defs/frontmatter_fields.rs", 1),
   ("_markshown= base_utilities/author_block/affiliations.rs", 1),
+  // (Z4b: `flag_merged_creators`' own mark of a creator it checked, on a block written whole, Perl's fallback, whose merge its Warning
+  // counts: a tabular block is kept whole on purpose alike, OD #980; Z4br2: `author_macros::KEPT_WHOLE`, the `=2` queued entry's and the
+  // emitter's)
+  ("_merged_checked= base_utilities/defs/author_macros.rs", 1),
   ("_net= frontmatter_stores.rs", 1),
   ("_scopebegin= package/pgfsys_latexml_def.rs", 1),
   ("_sequence= base_utilities/defs/frontmatter_fields.rs", 1),

@@ -1,0 +1,17 @@
+% mechanism: a block no rehearsal reads (past the positions, `Stamp::Overflow`) is Perl's whole-block creator with `LATEXML_FM_EMIT=2`,
+%   its queued entry, in one counted Warning (`writer::emit::emit_commands`, `stays_out`)
+% witness: 2204.09614 (BESIII, 18,527 tokens, 523 creators), 2404.06718 (21,040 tokens); 1810.03464 (the read budget)
+% oracle:  pdflatex 0 errors; Ann Able, Bob Baker; "Lab" 5,632 times (a block of 22,5k tokens, `\x` doubled)
+% engines: rust int144a, `=2`: the block whole, no Warning, `Error:frontmatter:merged_creators`
+% expect:  0 errors, 1 warning, `=2`: one creator, the block whole
+% status:  RED (int144a) -> GREEN (perfect_kernel_batchz4b::an_unread_block_is_written_whole)
+% preload: ar5iv.sty
+\documentclass{article}
+\def\x{Lab }\edef\x{\x\x\x\x\x\x\x\x}\edef\x{\x\x\x\x\x\x\x\x}\edef\x{\x\x\x\x\x\x\x\x}\edef\x{\x\x\x\x\x\x\x\x\x\x\x}
+\edef\blk{Ann Able \noexpand\and\space Bob Baker\noexpand\\ \x}
+\begin{document}
+\title{T}
+\expandafter\author\expandafter{\blk}
+\maketitle
+Body.
+\end{document}

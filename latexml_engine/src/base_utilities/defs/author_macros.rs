@@ -3,21 +3,19 @@
 
 use super::*;
 
+/// The key of a creator written whole, Perl's fallback, whose merge a Warning counts: `flag_merged_creators`' own mark of a
+/// creator it checked (a tabular block is kept whole on purpose alike). The emitter sets it where its Warning counts the block
+/// (OD #980): not on `LATEXML_FM_EMIT=2`'s queued entry, which a block arriving after the frontmatter was digested keeps unread
+/// and uncounted (astro-ph9808358's `merged_creators` Errors stand).
+pub(in crate::base_utilities) const KEPT_WHOLE: &str = "_merged_checked=1";
+
 /// `LATEXML_FM_EMIT=2` (OD #980): one whole block queued for the call, as the reader won't be cutting it, which the emitter
-/// takes at the flush (`observer::writer::emit`).
+/// takes at the flush (`observer::writer::emit`): Perl's whole-block creator (`author_block::whole_block_author`).
 fn whole_block_call(stuff: Tokens, replace: bool, keyvals: Option<Tokens>) -> Result<Tokens> {
   if replace {
     replace_queued_authors();
   }
-  let mut out = TokenizeInternal!(r"\lx@add@frontmatter{ltx:creator}[role=author").unlist();
-  if let Some(keyvals) = keyvals {
-    out.push(T_OTHER!(","));
-    out.extend(keyvals.unlist());
-  }
-  out.extend(TokenizeInternal!(r"]{\lx@personname{").unlist());
-  out.extend(stuff.unlist());
-  out.extend([T_END!(), T_END!()]);
-  Ok(Tokens::new(out))
+  whole_block_author(keyvals, stuff)
 }
 
 pub(in crate::base_utilities) fn load() -> Result<()> {
