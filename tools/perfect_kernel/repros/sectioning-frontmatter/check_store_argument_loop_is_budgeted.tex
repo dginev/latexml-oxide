@@ -3,7 +3,8 @@
 % conversion's timeout on 108b, the document lost. The check's run has a read budget (`gullet::read_budget`,
 % title_page_check.rs `check_run_budget`): over it the run is abandoned and rolled back, and one Warning says what was left
 % out. The same shapes: `\def\x{\end{document}\x}\x`, and `\loop\iftrue\end{document}\repeat`, whose conditionals the budget
-% puts back (it ended in `Fatal:Timeout:IfLimit`).
+% puts back (it ended in `Fatal:Timeout:IfLimit`; `perfect_kernel_batchr1::a_run_over_budget_counts_no_conditional_against_the_limit`
+% under an `iflimit` the run and the body reach only together).
 % witness: none (A/B F 7 = 7 on 2,530 papers)
 % oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "One", "Body text one."
 % engines: rust int139c = full body, F=0, 0.15 s; 108b `Fatal:Timeout:Convert` at --timeout=60, 39-byte XML; perl = not run

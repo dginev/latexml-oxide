@@ -295,14 +295,10 @@ impl Expandable {
   /// on: the arguments it writes into a store kept, [`note_store_call`]) — its arguments may come back through
   /// `\@ifnextchar` (nj_style's `\ead`, CUP-JNL-DTM's `\address`), so no [`crate::gullet::reading_document_text`]: a class's
   /// own literal is no word the document's source writes. Not while a raw class's setter replays or a speculative
-  /// run digests. And which store a macro call expands, while the title-page check's print runs
-  /// (`origin::store_read_watch`, [`note_store_read`]): no call to watch for it.
+  /// run digests.
   #[cold]
   #[inline(never)]
   fn watched_call(&self) -> Option<WatchedCall> {
-    if crate::definition::origin::store_read_watch() {
-      note_store_read(self.cs);
-    }
     let noted = crate::definition::origin::setter_name_watch() && note_setter_call(&self.cs);
     let recorded = crate::definition::origin::document_call_watch()
       && self.paramlist.is_some()

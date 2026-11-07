@@ -1,9 +1,8 @@
 //! Guards for batch R1: the title-page check's cost (OXIDIZED_DESIGN_DIVERGENCES #953 "R1";
-//! `docs/performance/PERFORMANCE.md`, "the pk/P1 levers"). What a title page prints is digested once by the check, and no
-//! run of the check's reads more than its budget, whatever the document: uantwerpenexam-example2's `\extrainfo` was digested
-//! three times, the output's and two of the check's, 47 % of the whole conversion. A check only: every guard's XML is the
-//! one no budget writes, and what is left out over budget is said in one counted Warning. Each repro is under
-//! `tools/perfect_kernel/repros/sectioning-frontmatter/`.
+//! `docs/performance/PERFORMANCE.md`, "the pk/P1 levers"). No run of the check's reads more than its budget, whatever the
+//! document: uantwerpenexam-example2's `\extrainfo` was digested three times, the output's and two of the check's, 47 % of the
+//! whole conversion. A check only: every guard's XML is the one no budget writes, and what is left out over budget is said
+//! in one counted Warning. Each repro is under `tools/perfect_kernel/repros/sectioning-frontmatter/`.
 use std::process::Command;
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -18,27 +17,15 @@ macro_rules! repro {
   };
 }
 
-/// Converts `tex` with the binary, `--debug=frontmatter`, under the read budget `budget` of a run of the check's
-/// (`LATEXML_CHECK_READ_BUDGET`; 0: none; a guard's small one, as a default budget's millions of reads are dear at
-/// `opt-level = 0`): its log (ANSI escapes dropped) and XML.
-fn converted(tex: &str, budget: usize, streaming: bool) -> (String, String) {
+/// Converts `tex` with the binary under the read budget `budget` of a run of the check's (`LATEXML_CHECK_READ_BUDGET`; 0:
+/// none; a guard's small one, as a default budget's millions of reads are dear at `opt-level = 0`), with `profile` for
+/// options: its log (ANSI escapes dropped) and XML.
+fn converted_with(tex: &str, budget: usize, profile: &[&str]) -> (String, String) {
   let workdir = tempfile::tempdir().expect("create tempdir");
   std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
   let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
-    .args([
-      "t.tex",
-      "--dest",
-      "t.xml",
-      "--nocomments",
-      "--timeout=110",
-      "--preload=ar5iv.sty",
-      "--debug=frontmatter",
-      if streaming {
-        "--streaming=true"
-      } else {
-        "--streaming=false"
-      },
-    ])
+    .args(["t.tex", "--dest", "t.xml", "--nocomments", "--timeout=110"])
+    .args(profile)
     .env("LATEXML_CHECK_READ_BUDGET", budget.to_string())
     .current_dir(workdir.path())
     .output()
@@ -49,15 +36,22 @@ fn converted(tex: &str, budget: usize, streaming: bool) -> (String, String) {
   (log, xml)
 }
 
-/// The log's lines of the check that tell what it did with the raw setters' arguments, its Warnings and any Fatal.
-fn check_lines(log: &str) -> Vec<&str> {
+/// [`converted_with`] under the ar5iv profile, `--streaming` as asked.
+fn converted(tex: &str, budget: usize, streaming: bool) -> (String, String) {
+  let streaming = if streaming {
+    "--streaming=true"
+  } else {
+    "--streaming=false"
+  };
+  converted_with(tex, budget, &["--preload=ar5iv.sty", streaming])
+}
+
+/// The log's Warnings, Errors and Fatals.
+fn signals(log: &str) -> Vec<&str> {
   log
     .lines()
     .filter(|line| {
-      line.starts_with("Warning:")
-        || line.starts_with("Fatal:")
-        || line.starts_with("Debug:frontmatter FRONT the print holds")
-        || line.starts_with("Debug:frontmatter FRONT the check digests")
+      line.starts_with("Warning:") || line.starts_with("Error:") || line.starts_with("Fatal:")
     })
     .collect()
 }
@@ -73,19 +67,42 @@ fn front_and_body(xml: &str) -> String {
     .join(" ")
 }
 
-/// A store the print's run read and printed is digested by that run alone; one the class's title page never reaches keeps
-/// its own digestion and its count. Over budget the print and the heavy argument are named, what fits is still read, and
-/// the XML is the same. Distinct path: `print_holds`, and the print's run abandoned with the argument's own digestion as
-/// its fallback. Witness: uantwerpenexam-example2.
+/// A `\thanks` behind a macro in a stored argument: pdflatex prints it, in a foot at the end of the document, and neither
+/// output holds it, so the third source's own digestion is what counts the word. Both shapes are invisible to a reading of
+/// the argument's spelling: the macro prints a word the argument doesn't write, or the print holds 6 of its 7 words. Distinct
+/// path: the third source digests whatever the print holds (`digest_raw_setter_calls`; R1's `print_holds` lost it).
 #[test]
-fn a_store_the_print_prints_is_digested_once() {
-  let tex = repro!("check_store_printed_is_digested_once");
+fn a_thanks_behind_a_macro_in_a_stored_argument_is_counted() {
+  let tex = repro!("check_store_thanks_by_alias_is_counted");
+  let class_macro = tex
+    .replace("\\newcommand\\grant{\\thanks{Thanksword}}\n", "")
+    .replace(
+      "\\def\\noted#1",
+      "\\newcommand\\fnt[1]{\\thanks{#1}}\n\\def\\noted#1",
+    )
+    .replace(
+      "Noteword one\\grant",
+      "Noteword one two three four five six\\fnt{Thanksword}",
+    );
+  for shape in [tex, class_macro.as_str()] {
+    let (log, _) = converted(shape, 0, false);
+    assert_eq!(
+      signals(&log),
+      [
+        "Warning:frontmatter:unclaimed_store 1 word(s) of the document's stored by a raw class's command, which pdflatex may not print, are not in the output: thanksword",
+      ],
+      "{log}"
+    );
+  }
+}
+
+/// Over budget the heavy argument and the print are named, what fits is still read, and the XML is the same. Distinct path: a
+/// run abandoned and the conversion's other runs going on. Witness: uantwerpenexam-example2.
+#[test]
+fn what_a_run_left_out_over_budget_is_named() {
+  let tex = repro!("check_store_over_budget_is_named");
   let (log, xml) = converted(tex, 0, false);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-  assert_eq!(check_lines(&log), [
-    "Debug:frontmatter FRONT the print holds what \\extrainfo stores: Important information:",
-    "Debug:frontmatter FRONT the print holds what \\corr stores: ann.able@lunar.org",
-    "Debug:frontmatter FRONT the check digests what \\gated stores: Smallword",
+  assert_eq!(signals(&log), [
     "Warning:frontmatter:unclaimed_store 1 word(s) of the document's stored by a raw class's command, which pdflatex may not print, are not in the output: smallword",
   ]);
   let front = front_and_body(&xml);
@@ -95,49 +112,65 @@ fn a_store_the_print_prints_is_digested_once() {
   );
   for streaming in [false, true] {
     let (over, over_xml) = converted(tex, 100, streaming);
-    assert_eq!((error_count(&over), warning_count(&over)), (0, 2), "{over}");
-    assert_eq!(
-      over
-        .lines()
-        .filter(|line| line.starts_with("Warning:"))
-        .collect::<Vec<_>>(),
-      [
-        "Warning:frontmatter:check_budget The title-page check gave up on what takes more than 100 reads to digest, so a word only it prints is not counted: the class's title page, after 100 tokens read, \\extrainfo's argument of 63 token(s)",
-        "Warning:frontmatter:unclaimed_store 1 word(s) of the document's stored by a raw class's command, which pdflatex may not print, are not in the output: smallword",
-      ]
-    );
+    assert_eq!(signals(&over), [
+      "Warning:frontmatter:check_budget The title-page check gave up on what takes more than 100 reads to digest, so a word only it prints is not counted: \\extrainfo's argument of 63 token(s), the class's title page, after 100 tokens read",
+      "Warning:frontmatter:unclaimed_store 1 word(s) of the document's stored by a raw class's command, which pdflatex may not print, are not in the output: smallword",
+    ]);
     assert_eq!(front_and_body(&over_xml), front);
   }
 }
 
-/// A store the print's run expanded and did not print: tested by an `\edef`, or a `\thanks` no `\@thanks` flushes. The
-/// argument's own digestion stays. Distinct path: `print_holds`' refusals, on what the run printed.
+/// The arguments spend all a conversion's reads before the title page's print: it never runs, and the Warning says so.
+/// Distinct path: `check_run_budget`'s none, no run made.
 #[test]
-fn a_store_the_print_only_reads_keeps_its_digestion() {
-  let (log, _) = converted(repro!("check_store_only_tested_is_digested"), 0, false);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-  assert_eq!(check_lines(&log), [
-    "Debug:frontmatter FRONT the check digests what \\tested stores: Testedword",
-    "Debug:frontmatter FRONT the check digests what \\noted stores: Noteword one two three four five six\\thanks{Thanksword}",
-    "Warning:frontmatter:unclaimed_store 2 word(s) of the document's stored by a raw class's command, which pdflatex may not print, are not in the output: testedword thanksword",
-  ]);
+fn a_spent_budget_names_the_print_it_never_ran() {
+  let tex = repro!("check_store_argument_loop_is_budgeted").replace(
+    r"\closing{\def\x{\begin{center}\end{center}\x}\x}",
+    r"\closing{\def\x{\relax\x}\x}\closing{\def\y{\relax\y}\y}\closing{\def\z{\relax\z}\z}",
+  );
+  let (log, _) = converted(&tex, 500, false);
+  assert_eq!(
+    signals(&log),
+    [
+      "Warning:frontmatter:check_budget The title-page check gave up on what takes more than 500 reads to digest, so a word only it prints is not counted: \\closing's argument of 7 token(s), \\closing's argument of 7 token(s), \\closing's argument of 7 token(s), the class's title page, after 0 tokens read",
+    ],
+    "{log}"
+  );
 }
 
-/// A second `\maketitle` supersedes the first's print: what that held is digested once this one does not. Distinct path:
-/// `PENDING` across title pages.
+/// A run the budget ended counts no conditional against the limit: the budget ends the `\loop` after about 30,000 of them,
+/// the body's own loop makes 30,000 more, and the limit lies between either alone and the two together. Distinct path:
+/// `speculative_run`'s `set_if_count`, which the default limit (48 M under the ar5iv profile, none without) never reaches.
 #[test]
-fn a_later_title_page_that_drops_the_store_has_it_digested() {
-  let (log, _) = converted(repro!("check_store_second_title_page_drops_it"), 0, false);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(check_lines(&log), [
-    "Debug:frontmatter FRONT the print holds what \\extrainfo stores: Storedword",
-    "Debug:frontmatter FRONT the check digests what \\extrainfo stores: Storedword",
-  ]);
+fn a_run_over_budget_counts_no_conditional_against_the_limit() {
+  let tex = repro!("check_store_argument_loop_is_budgeted")
+    .replace(
+      r"\def\x{\begin{center}\end{center}\x}\x",
+      r"\loop\iftrue\end{document}\repeat",
+    )
+    .replace(
+      r"\documentclass{checkstoreloopcls}",
+      "\\documentclass{checkstoreloopcls}\n\\usepackage[iflimit=52000]{latexml}",
+    )
+    .replace(
+      "Body text one.",
+      "\\newcount\\n\\loop\\ifnum\\n<30000 \\advance\\n by 1 \\repeat Body text one.",
+    );
+  let (log, xml) = converted_with(&tex, 1_000_000, &["--includestyles"]);
+  assert_eq!(
+    signals(&log),
+    [
+      "Warning:frontmatter:check_budget The title-page check gave up on what takes more than 1000000 reads to digest, so a word only it prints is not counted: \\closing's argument of 14 token(s)",
+    ],
+    "{log}"
+  );
+  assert!(xml.contains("Body text one."), "{xml}");
 }
 
 /// A looping argument a raw class only stores: the body is kept, and the Warning names what was left out. The sibling loops
-/// end the same, a `\loop`'s conditionals put back, a `\scantokens`'s mouth closed. Distinct path: `gullet::read_budget`, a
-/// run that never ends.
+/// end the same, a `\scantokens`'s mouth closed (a `\loop`'s conditionals:
+/// [`a_run_over_budget_counts_no_conditional_against_the_limit`]). Distinct path: `gullet::read_budget`, a run that never
+/// ends.
 #[test]
 fn a_looping_stored_argument_is_budgeted() {
   let tex = repro!("check_store_argument_loop_is_budgeted");

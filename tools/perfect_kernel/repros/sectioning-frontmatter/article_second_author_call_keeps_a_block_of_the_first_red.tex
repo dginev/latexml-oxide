@@ -1,0 +1,17 @@
+% A second `\author` replaces the first in article's `\@author`: the PDF has Bob Baker alone. Ours keeps the first call's
+% `\\ $^1$Univ A` as an affiliation of Bob Baker's, and the note `\thanks{First note.}` with it. The base does the same
+% (int140a, Z2's reviewer). No fix here: a later author call's replacement drops the earlier call's names but not its contact.
+% witness: none (synthetic, Z2's review `scratch_revR1/b/q21`)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "T", "Bob Baker", "Body."; no "Univ A", no "First note"
+% engines: rust P1 = rust R1r2 = 0 errors, 0 warnings, Bob Baker with Univ A; perl = not run
+% expect:  0 errors; one creator, Bob Baker, with no affiliation and no note
+% status:  RED
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ \\ $^1$Univ A\thanks{First note.}}
+\author{Bob Baker}
+\maketitle
+Body.
+\end{document}

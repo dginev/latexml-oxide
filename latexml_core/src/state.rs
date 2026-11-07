@@ -2652,42 +2652,6 @@ pub fn take_store_calls() -> StoreCalls {
   STORE_CALLS.with(|calls| std::mem::take(&mut *calls.borrow_mut()))
 }
 
-thread_local! {
-  /// The stores the title-page check's print run is asked about, by name, each with whether a macro call expanded it
-  /// ([`note_store_read`]).
-  static STORE_READS: RefCell<HashMap<SymStr, (Token, bool)>> = RefCell::new(HashMap::default());
-}
-
-/// Watch for the expansions of the macros `stores` ([`note_store_read`]), forgetting any earlier watch's.
-pub fn watch_store_read_names(stores: impl IntoIterator<Item = Token>) {
-  STORE_READS.with(|reads| {
-    let mut reads = reads.borrow_mut();
-    reads.clear();
-    reads.extend(stores.into_iter().map(|store| (store.text, (store, false))));
-  });
-}
-
-/// A macro call expands `cs` (`Expandable::watched_call`, while
-/// [`crate::definition::origin::store_read_watch`]): when it is a store asked about, the run read it.
-pub fn note_store_read(cs: Token) {
-  STORE_READS.with(|reads| {
-    if let Some((_, read)) = reads.borrow_mut().get_mut(&cs.text) {
-      *read = true;
-    }
-  });
-}
-
-/// The stores a macro call expanded ([`note_store_read`]), taken: the watch knows none after this.
-pub fn take_store_reads() -> Vec<Token> {
-  STORE_READS.with(|reads| {
-    reads
-      .borrow_mut()
-      .drain()
-      .filter_map(|(_, (store, read))| read.then_some(store))
-      .collect()
-  })
-}
-
 /// Does the control sequence `cs` mean a token register (`\newtoks`, `\toks@`)?
 pub fn is_token_register(cs: &Token) -> bool {
   use crate::definition::register::RegisterType;

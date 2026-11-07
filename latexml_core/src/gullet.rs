@@ -5187,6 +5187,13 @@ fn handle_marker(marker_token: Token) {
   });
 }
 
+/// The mouths open: the one in reading ([`Gullet::runtime`]) and those under it. [`open_mouth`] pushes nothing on the stack
+/// when none is in reading, so the stack alone doesn't count them.
+fn mouth_depth() -> usize {
+  let g = gullet!();
+  g.mouthstack.len() + usize::from(g.runtime.is_some())
+}
+
 /// Do something, while reading tokens from a specific Mouth.
 ///
 /// This reads ONLY from that mouth (or any mouth openned by code in that source),
@@ -5194,7 +5201,7 @@ fn handle_marker(marker_token: Token) {
 pub fn reading_from_mouth<R, FnR>(mouth: Mouth, reader: FnR) -> Result<R>
 where FnR: FnOnce() -> Result<R> {
   let context_mouth_source = arena::pin(mouth.get_source());
-  let outer_mouths = gullet!().mouthstack.len();
+  let outer_mouths = mouth_depth();
   // A cycle is only a cycle WITHIN one expansion context. Rather than
   // resetting the guard history here (an earlier fix that also BLINDED the
   // guard to outer loops whose body calls `do_expand` each iteration), give
@@ -5228,7 +5235,7 @@ where FnR: FnOnce() -> Result<R> {
       // Force-close our mouth and any mouth above it, by depth: another of the same name above ours (an "Anonymous
       // String", a `\scantokens`'s in a discarded run) is not ours, and stopping at it left ours open and took the
       // document's text next (`perfect_kernel_batchr1::a_run_over_budget_leaves_no_trace`).
-      while gullet!().mouthstack.len() > outer_mouths {
+      while mouth_depth() > outer_mouths {
         close_mouth(true).ok();
       }
       // Reset progress counter so subsequent processing isn't immediately killed
@@ -5545,6 +5552,41 @@ mod token_limit_tests {
       Ok(())
     })
     .unwrap();
+  }
+
+  /// The count of open mouths holds the one in reading: with none open on entry, [`open_mouth`] pushes nothing on the stack
+  /// and a count of the stack alone left the reader's own mouth open (and everything opened above it down to it). A failed
+  /// context leaves as many open as it found: none, or one, or one and a stack.
+  #[test]
+  fn a_failed_context_leaves_as_many_mouths_as_it_found() {
+    let close_all = || {
+      while mouth_depth() > 0 {
+        close_mouth(true).unwrap();
+      }
+    };
+    close_all();
+    for found in 0..3 {
+      for opened_above in 0..3 {
+        for _ in 0..found {
+          open_mouth(Mouth::default(), false);
+        }
+        assert_eq!(mouth_depth(), found);
+        let failed: Result<()> = reading_from_mouth(Mouth::default(), || {
+          for _ in 0..opened_above {
+            open_mouth(Mouth::default(), false);
+          }
+          fatal_free_failure()
+        });
+        assert!(failed.is_err());
+        assert_eq!(
+          mouth_depth(),
+          found,
+          "found {found}, opened {opened_above} above"
+        );
+        assert_eq!(gullet!().runtime.is_none(), found == 0);
+        close_all();
+      }
+    }
   }
 
   /// What [`read_internal_token_full`] tests per count, spelled as it spells them.

@@ -598,8 +598,6 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // `\lx@maketitle@body`: the class's stores (`\@address`, `\@email`, which `\@maketitle`
   // reads again) are handed to the new authors by the `\lx@store@defaults` after it.
   DefPrimitive!("\\lx@maketitle@supersede", sub[_args] {
-    // (the kernel's `\maketitle`: `\lx@deposit@maketitle` follows, which runs the title page's print)
-    assign_value("lx_title_page_print_follows", Stored::Bool(true), Some(Scope::Global));
     // Not after the document body began over authors digested before it: those are the paper's, the queued ones a
     // supplement's, which the seal drops ([`seal_digested_frontmatter`]).
     if lookup_bool("lx_authors_superseded")
@@ -634,14 +632,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
   },
   after_digest => {
-    // (what the document gave the raw setters before it is read here, and digested once the title page's print has run,
-    // in the kernel's deposit; a binding's `\maketitle` has no deposit and no print, so here:
+    // (a binding's `\maketitle` has no deposit: what the document gave the raw setters before it is read here,
     // `title_page_check::digest_raw_setter_calls`; aeb_emulateapj over the revtex binding, 1011.2770)
-    if lookup_bool("lx_title_page_print_follows") {
-      read_raw_setter_calls();
-    } else {
-      digest_raw_setter_calls()?;
-    }
+    digest_raw_setter_calls()?;
     // A `\maketitle`'s flush: it may replace what the fallback flushed provisionally ([`frontmatter_sealed`]).
     let outer = lookup_bool("lx_frontmatter_explicit");
     assign_value("lx_frontmatter_explicit", true, Some(Scope::Global));

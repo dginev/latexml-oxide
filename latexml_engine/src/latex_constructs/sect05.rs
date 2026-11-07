@@ -1376,11 +1376,10 @@ pub(crate) fn load() -> Result<()> {
   // only — no deposit, no net, nothing typeset — and only when no `\maketitle` noted a print (a later one supersedes it,
   // as a second `\maketitle` does).
   DefPrimitive!("\\lx@note@title@page", {
-    read_raw_setter_calls();
+    digest_raw_setter_calls()?;
     if !title_page_noted() {
       note_title_page_print()?;
     }
-    digest_raw_setter_calls()?;
   });
   // A primitive, not a macro: the deposit is digested first and kept only
   // when it produced content. A class whose `\@maketitle` typesets nothing
@@ -1388,16 +1387,13 @@ pub(crate) fn load() -> Result<()> {
   // empty centred paragraphs and a page break — dropped; bfhthesis's
   // degree/advisor block beside its captured `\@institution` is kept.
   DefPrimitive!("\\lx@deposit@maketitle", {
-    // (what the document gave the raw setters before this title page: the check's third source, read in this state,
-    // digested after the print where that run has not printed it)
-    read_raw_setter_calls();
+    // (what the document gave the raw setters before this title page: the check's third source, read in this state)
+    digest_raw_setter_calls()?;
     // What the class's title page prints, decided by TeX: the speculative sentinel runs (frontmatter_stores.rs
     // `before_title_page_runs`), made in the state the deposit and the replay below meet.
     crate::frontmatter_stores::before_title_page_runs()?;
     // (and what the whole title page prints, in that state: its words, checked against the output's)
     note_title_page_print()?;
-    digest_raw_setter_calls()?;
-    AssignValue!("lx_title_page_print_follows" => false, Some(Scope::Global));
     // Both deposits null the title fields, so a `{titlepage}` either lays out
     // builds no `ltx:titlepage` (the `{titlepage}` constructor's `fields`).
     AssignValue!("lx_depositing_frontmatter_fields" => true, Some(Scope::Global));
@@ -5213,18 +5209,14 @@ pub(crate) fn note_title_page_print() -> Result<()> {
   tokens.extend(title_page_print_tokens(&inject).unlist());
   hold.discard();
   tokens.push(T_END!());
-  // (which stores of what the document gave the raw setters the run reads: the check's third source, read after it)
-  let watch = watch_store_reads_in_print();
-  let run = checks_word_run(Tokens::new(tokens), false);
-  let reads = watch.end();
-  match run? {
+  match checks_word_run(Tokens::new(tokens), false)? {
     SpeculativeRun::Printed(text) => {
       DebugFeature!(
         "frontmatter",
         "FRONT the title page prints: {}",
         text.replace(INK_SEAM, "|")
       );
-      note_title_page_printed(&text, reads);
+      note_title_page_printed(&text);
     },
     SpeculativeRun::OverBudget(read) => {
       note_check_left_out(s!("the class's title page, after {read} tokens read"), 0)

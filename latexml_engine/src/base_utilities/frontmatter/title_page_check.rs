@@ -28,8 +28,7 @@
 //! A third source (#953 "108b"): what the document's text gives a setter a raw class or a raw definitions file of its own
 //! directory made (one a binding makes is LaTeXML's, one a file `\input` makes no such setter), before the title page,
 //! each argument the setter writes into a store (`Expandable::stored_parameters`), digested once
-//! ([`digest_raw_setter_calls`]) unless the title page's print has printed it ([`print_holds`]), goes through the same words
-//! and source gate. A class may never print such a store, so a
+//! ([`digest_raw_setter_calls`]), goes through the same words and source gate. A class may never print such a store, so a
 //! word of this source alone is named apart, in a `Warning:frontmatter:unclaimed_store`. To an Info,
 //! `frontmatter:unread_store`, go: a store no raw code reads but page furniture ([`StoreReaders`]: a journal's `\jvol`,
 //! `\issn`, `\pagerange`), a `\csname` store, an optional or bracketed argument (a key far more often than text), and digits
@@ -58,12 +57,11 @@ const NET_COUNTED: &str = "lx_net_counted_words";
 /// in place of an earlier `\maketitle`'s, which it supersedes (DIVERGENCES #406: a later author list replaces the one
 /// flushed); none once the authors are sealed, a supplement's title page after the body began, whose entries the seal
 /// drops (`seal_digested_frontmatter`).
-pub fn note_title_page_printed(text: &str, stores_read: Vec<Token>) {
+pub fn note_title_page_printed(text: &str) {
   if frontmatter_entry_sealed("ltx:creator", "author") {
     return;
   }
   assign_value(PRINTED, Stored::String(pin(text)), Some(Scope::Global));
-  PRINT_READ.with_borrow_mut(|read| *read = stores_read);
   // (the words spilled so far, cut to those this print wants, which alone the later spills keep)
   let mut wanted = wanted_words(&resolver::base_letters(text).to_lowercase());
   // (and those of the third source, digested before it: [`digest_raw_setter_calls`])
@@ -116,8 +114,6 @@ pub fn reset_title_page_check() {
   CALLED.with_borrow_mut(Vec::clear);
   STORED.with_borrow_mut(Vec::clear);
   UNREAD.with_borrow_mut(String::clear);
-  PENDING.with_borrow_mut(Vec::clear);
-  PRINT_READ.with_borrow_mut(Vec::clear);
   reset_check_budget();
   NEXT_ID.set(0);
   reset_document_calls();
@@ -165,12 +161,6 @@ thread_local! {
   static STORED: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
   /// The same of the setters whose stores only page furniture reads, or nothing ([`StoreReaders`]).
   static UNREAD: RefCell<String> = const { RefCell::new(String::new()) };
-  /// What the document gave the raw setters that no digestion has read: read at the title page
-  /// ([`read_raw_setter_calls`]), and after it what the title page's print holds ([`print_holds`]), which a later print
-  /// may not.
-  static PENDING: RefCell<Vec<StoredArgument>> = const { RefCell::new(Vec::new()) };
-  /// Which of their stores the run of the print noted expanded ([`watch_store_reads_in_print`]).
-  static PRINT_READ: RefCell<Vec<Token>> = const { RefCell::new(Vec::new()) };
   /// The reads the check's runs may still make, this conversion's ([`check_run_budget`]).
   static CHECK_READS_LEFT: std::cell::Cell<usize> =
     const { std::cell::Cell::new(CHECK_RUN_READS_DEFAULT * CHECK_RUNS_PER_CONVERSION) };
@@ -183,14 +173,14 @@ thread_local! {
 
 /// The most tokens one of the check's speculative runs reads. By what they cost: a read runs at about 450
 /// `instructions:u`, so a run costs about a second at most. By the data: 299 converted papers with a raw class of their own
-/// (seed 7) read 1,187 at the median in the title page's print, 285,224 at the 99th percentile and 487,915 at most
+/// (seed 7) read 1,185 at the median in the title page's print, 285,224 at the 99th percentile and 487,915 at most
 /// (2402.13052), and 3,348 at most in an argument, none of them near it; of the TeX Live manuals, circuitikzmanual's title
 /// page, a drawing, reads 4,480,660 and stays under it, uantwerpenexam-example2's 165 million does not.
 const CHECK_RUN_READS_DEFAULT: usize = 8_000_000;
 
-/// The most tokens all the check's runs of a conversion read, in [`CHECK_RUN_READS_DEFAULT`]s: a title page over budget,
-/// the argument that made it so over budget too, and the many small arguments of the rest (1306.4853's 586 read
-/// 1,823,275, the most of the 299 papers).
+/// The most tokens all the check's runs of a conversion read, in [`CHECK_RUN_READS_DEFAULT`]s: an argument over budget, the
+/// title page that prints it over budget too, and the many small arguments of the rest (1306.4853's 587 runs read 1,826,755,
+/// the most of the 299 papers).
 const CHECK_RUNS_PER_CONVERSION: usize = 3;
 
 /// How many of the things left out over budget [`check_budget_warning`] names.
@@ -272,85 +262,6 @@ fn check_budget_warning() {
       named.join(", ")
     )
   );
-}
-
-/// An argument the document gave a raw setter ([`read_raw_setter_calls`]).
-struct StoredArgument {
-  /// the setter
-  cs:     Token,
-  /// the stores it writes
-  stores: Rc<[Token]>,
-  /// a store of its is read, and this is no key: its words count ([`StoreReaders`])
-  read:   bool,
-  /// the argument
-  tokens: Tokens,
-}
-
-/// The share of an argument's own words, as its written text reads ([`source_words`]), the print must hold, in quarters,
-/// for the argument to be taken as printed ([`print_holds`]): what is left is what macros took as arguments of their own (a
-/// length, a file's name).
-const WRITTEN_WORDS_PRINTED: usize = 3;
-
-/// Has the title page's print run printed `argument`, so that digesting it adds nothing? Decided on what the run read:
-/// it expanded a store the setter wrote into ([`watch_store_reads_in_print`]: a store nothing reads, or which the class's
-/// `\maketitle` never reaches, is no read) and the print holds most of the words the argument writes (a store it only tested,
-/// `\ifthenelse{\equal{\@x}{}}`, holds none). Not one that names `\thanks`: the print runs latex.ltx's, whose text it
-/// prints only where `\@thanks` runs, and the argument's own digestion prints it.
-fn print_holds(argument: &StoredArgument, print_words: &HashSet<String>, read: &[Token]) -> bool {
-  if !argument.stores.iter().any(|store| read.contains(store)) {
-    return false;
-  }
-  let written = s!("{}", argument.tokens);
-  if written.contains("\\thanks") {
-    return false;
-  }
-  let mut words = HashSet::default();
-  source_words(&written, false, &mut words);
-  let held = words
-    .iter()
-    .filter(|word| print_words.contains(*word))
-    .count();
-  !words.is_empty() && held * 4 >= words.len() * WRITTEN_WORDS_PRINTED
-}
-
-/// The watch over which stores the title page's print run reads ([`watch_store_reads_in_print`]), off when it ends or
-/// drops.
-pub(crate) struct StoreReadWatch(bool);
-
-impl StoreReadWatch {
-  /// The stores the run expanded.
-  pub(crate) fn end(self) -> Vec<Token> {
-    if self.0 {
-      take_store_reads()
-    } else {
-      Vec::new()
-    }
-  }
-}
-
-impl Drop for StoreReadWatch {
-  fn drop(&mut self) {
-    if self.0 {
-      definition::origin::watch_store_reads(false);
-    }
-  }
-}
-
-/// The title page's print run starts: which of the stores of what no digestion has read it expands is watched
-/// (`state::note_store_read`), a macro call's flag read only while a store waits for it.
-pub(crate) fn watch_store_reads_in_print() -> StoreReadWatch {
-  let stores: Vec<Token> = PENDING.with_borrow(|pending| {
-    pending
-      .iter()
-      .flat_map(|argument| argument.stores.iter().copied())
-      .collect()
-  });
-  if stores.is_empty() {
-    return StoreReadWatch(false);
-  }
-  watch_store_read_names(stores);
-  definition::origin::watch_store_reads(true);
-  StoreReadWatch(true)
 }
 
 /// The title page's furniture, which FIDELITY_CHARTER §2 does not keep: a page style, a running head or foot, a mark.
@@ -494,14 +405,14 @@ impl StoreReaders {
 }
 
 /// The title page is about to be made (`\lx@deposit@maketitle`, `\lx@note@title@page`, a binding's `\maketitle`'s
-/// `\lx@frontmatterhere`), first here: what the document gave the raw setters so far (`state::take_store_calls`) is kept
-/// for [`digest_raw_setter_calls`], each stored argument with whether its words count, as the readers are in this state,
-/// and no later call is watched (`origin::watch_store_calls`: pdflatex's title page has read them, and the body's macro
-/// calls pay nothing). None when the authors are sealed, a supplement's title page after the body began. A document with
-/// no title page wants none: a store nothing typesets prints nothing.
-pub fn read_raw_setter_calls() {
+/// `\lx@frontmatterhere`), first here: what the document gave the raw setters so far (`state::take_store_calls`) is
+/// digested once, speculatively, each stored argument read by [`ink_word_text`], and no later call is watched
+/// (`origin::watch_store_calls`: pdflatex's title page has read them, and the body's macro calls pay nothing). None when
+/// the authors are sealed, a supplement's title page after the body began. A document with no title page wants none: a
+/// store nothing typesets prints nothing.
+pub fn digest_raw_setter_calls() -> Result<()> {
   if lookup_bool("lx_depositing_class_maketitle") || lookup_bool("lx_replaying_class_setter") {
-    return;
+    return Ok(());
   }
   definition::origin::watch_store_calls(false);
   let StoreCalls {
@@ -510,7 +421,7 @@ pub fn read_raw_setter_calls() {
     dropped_setters,
   } = take_store_calls();
   if (calls.is_empty() && dropped == 0) || frontmatter_entry_sealed("ltx:creator", "author") {
-    return;
+    return Ok(());
   }
   if dropped != 0 {
     let setters: Vec<String> = dropped_setters.iter().map(ToString::to_string).collect();
@@ -524,7 +435,7 @@ pub fn read_raw_setter_calls() {
     );
   }
   let readers = StoreReaders::now();
-  let mut arguments = Vec::new();
+  let (mut read_arguments, mut unread) = (Vec::new(), String::new());
   for StoreCall { cs, stored, args, keys } in calls {
     let setter = cs.with_str(ToString::to_string);
     let read = stored.written_out
@@ -546,67 +457,29 @@ pub fn read_raw_setter_calls() {
         .map(|store| store.with_str(|store| readers.0.get(store).cloned()))
         .collect::<Vec<_>>()
     );
-    let stores: Rc<[Token]> = stored.stores.iter().copied().collect();
-    let argument = |tokens, read| StoredArgument {
-      cs,
-      stores: Rc::clone(&stores),
-      read,
-      tokens,
-    };
-    arguments.extend(args.into_iter().map(|tokens| argument(tokens, read)));
-    // (a key's words have a record, no count)
-    arguments.extend(keys.into_iter().map(|tokens| argument(tokens, false)));
-  }
-  PENDING.with_borrow_mut(|pending| pending.extend(arguments));
-}
-
-/// After the print's run, where there is one (`\lx@deposit@maketitle`, `\lx@note@title@page`; [`read_raw_setter_calls`]
-/// first where there is none, a binding's `\maketitle`): each stored argument the print has not printed (`print_holds`)
-/// is digested once, speculatively, read by [`ink_word_text`]. An argument it holds stays held back for a later print,
-/// which supersedes this one and may not hold it. So what a title page prints is digested once, by that run; the check's
-/// own digestion is for a store the class's title page never reaches, which pdflatex may print all the same (2305.00867),
-/// and for no print at all.
-pub fn digest_raw_setter_calls() -> Result<()> {
-  if lookup_bool("lx_depositing_class_maketitle") || lookup_bool("lx_replaying_class_setter") {
-    return Ok(());
-  }
-  read_raw_setter_calls();
-  let pending = PENDING.with_borrow_mut(std::mem::take);
-  if pending.is_empty() {
-    return Ok(());
-  }
-  let print_words =
-    wanted_words(&resolver::base_letters(&lookup_string(PRINTED)).to_lowercase()).words;
-  let stores_read = PRINT_READ.with_borrow(Clone::clone);
-  let (mut read_arguments, mut unread, mut held) = (Vec::new(), String::new(), Vec::new());
-  for argument in pending {
-    if print_holds(&argument, &print_words, &stores_read) {
+    for tokens in args {
       DebugFeature!(
         "frontmatter",
-        "FRONT the print holds what {} stores: {}",
-        argument.cs,
-        argument.tokens
+        "FRONT the check digests what {cs} stores{}: {tokens}",
+        if read { "" } else { " (unread)" }
       );
-      held.push(argument);
-      continue;
+      if let Some(printed) = argument_print(cs, tokens)? {
+        if read {
+          read_arguments.push(printed);
+        } else {
+          unread.push('\n');
+          unread.push_str(&printed);
+        }
+      }
     }
-    let tokens = argument.tokens;
-    DebugFeature!(
-      "frontmatter",
-      "FRONT the check digests what {} stores{}: {tokens}",
-      argument.cs,
-      if argument.read { "" } else { " (unread)" }
-    );
-    if let Some(printed) = argument_print(argument.cs, tokens)? {
-      if argument.read {
-        read_arguments.push(printed);
-      } else {
+    // (a key's words have a record, no count)
+    for tokens in keys {
+      if let Some(printed) = argument_print(cs, tokens)? {
         unread.push('\n');
         unread.push_str(&printed);
       }
     }
   }
-  PENDING.with_borrow_mut(|pending| *pending = held);
   let words = wanted_words(
     &resolver::base_letters(&s!("{}\n{unread}", read_arguments.join("\n"))).to_lowercase(),
   )
