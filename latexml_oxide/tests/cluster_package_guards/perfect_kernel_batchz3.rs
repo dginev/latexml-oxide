@@ -4,7 +4,8 @@
 //! block's line, `a_declarations_span_…` the settled declarations; the `the_rehearsal_leaves_no_trace_*` table the journal and what
 //! lives outside it, by theme, and its `_written` row the written family's path, where the writer runs too. Z3r2: `a_bindings_state_…` the package thread-locals
 //! moved to the Value table, `a_rehearsals_read_…` the raw-read list, `a_speculative_run_evaluates_no_lua` the one state no rollback reaches, `a_declaration_in_a_body_…` where a body's definer runs,
-//! `a_marks_own_group_…` the Walker's group fact, `a_cut_holds_its_environments` the run's environments, `a_looping_block_…` the budget.
+//! `a_marks_own_group_…` the Walker's group fact, `a_cut_holds_its_environments` the run's environments, `a_looping_block_…` the budget. Z3r3: `a_group_a_mark_opens_…` the Walker's
+//! line-start fact. The `#[ignore]`d `…_red` rows assert the right output of what the review filed and this batch leaves: `cargo nextest run --run-ignored only -E 'test(_red)'`.
 
 use serde_json::json;
 
@@ -572,6 +573,208 @@ fn a_marks_own_group_is_read_from_its_ink() {
     &["Ann Able 1", "affiliation=x Univ X, 2 x Univ Y"],
     &["Bob Baker 2"],
   ]);
+}
+
+/// A group a mark's formula opens where a line starts, at the field's start or right after a line break by what digestion made, starts at its brace whatever goes on in it
+/// (`Formula::opens_line_in`, 2005.08290: `~\\ \normalsize{$^{1}$ Shemyakin…,} \normalsize{Moscow, Russia}\\ …`, every entry on a nameless creator and no Error, review revZ3r2). After a
+/// comma it stays the fail-safe: `{$^{2}$H} Lab` is an isotope (the row above, and `a_wrapped_isotope_is_entry_text`).
+#[test]
+fn a_group_a_mark_opens_at_a_lines_start_starts_at_its_brace() {
+  let template = repro!("revtex_affiliation_line_opening_group_starts_at_its_brace");
+  let (log, xml) = in_a_directory(template, &[], &[]);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  creators_are(&xml, &[
+    &["Ann Able 1", "affiliation=1 Univ X, Moscow, Russia"],
+    &[
+      "Bob Baker 1,2",
+      "affiliation=1 Univ X, Moscow, Russia",
+      "affiliation=2 Univ Y, Moscow, Russia",
+    ],
+    &["Cat Cole 3", "affiliation=3 Lab, ENS, Paris, France"],
+  ]);
+  // (the field's whole, and the same two entries however the line starts: `\\[1mm]`, a switch, a group around it, LaTeX's `\(`; an isotope right after a line break is cut as on
+  // the base, the digested list no telling it from an entry)
+  let field = template
+    .split_once("\n\\affiliation{")
+    .and_then(|(_, rest)| rest.split_once("\n}\n"))
+    .expect("the repro's field")
+    .0;
+  let (ann, bob) = (
+    &["Ann Able 1", "affiliation=1 Univ X, Moscow"][..],
+    &[
+      "Bob Baker 1,2",
+      "affiliation=1 Univ X, Moscow",
+      "affiliation=2 Univ Y, Rome",
+    ][..],
+  );
+  for row in [
+    "~\\\\[1mm] {$^1$Univ X,} Moscow\\\\ {$^2$Univ Y,} Rome",
+    "~\\\\ {\\small $^1$Univ X,} Moscow\\\\ {\\small $^2$Univ Y,} Rome",
+    "~\\\\ {{$^1$Univ X,} Moscow}\\\\ {{$^2$Univ Y,} Rome}",
+    "~\\\\ {\\( ^1 \\) Univ X,} Moscow\\\\ {\\( ^2 \\) Univ Y,} Rome",
+  ] {
+    let (log, xml) = in_a_directory(&template.replace(field, row), &[], &[]);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{row}: {log}"
+    );
+    creators_are(&xml, &[ann, bob, &["Cat Cole 3"]]);
+  }
+  let (xml, _) = dump(&template.replace(field, "~\\\\ {$^1$Univ X,} Moscow\\\\ {$^2$H} Lab, Rome"));
+  creators_are(&xml, &[
+    ann,
+    &[
+      "Bob Baker 1,2",
+      "affiliation=1 Univ X, Moscow",
+      "affiliation=2 H Lab, Rome",
+    ],
+    &["Cat Cole 3"],
+  ]);
+  // (after a comma: the isotope, which the base gave Bob)
+  let (xml, _) = dump(&template.replace(field, "$^1$Univ A, {$^{2}$H} Lab, Rome $^{2}$Univ B"));
+  creators_are(&xml, &[
+    &["Ann Able 1", "affiliation=Univ A, 2 H Lab, Rome"],
+    &[
+      "Bob Baker 1,2",
+      "affiliation=Univ A, 2 H Lab, Rome",
+      "affiliation=Univ B",
+    ],
+    &["Cat Cole 3"],
+  ]);
+}
+
+/// RED: `writer::content::environment_step` pairs a run's environments by their spelling. What a macro or a `\let` copy opens is not counted (the last cell lost in an Error, on the base too); a
+/// `\begin` or `\end` that opens nothing is, and the cut goes (nothing lost, against the base). Review revZ3r2.
+#[test]
+#[ignore = "RED: the extents should come from the digested list, when the emitter takes this over"]
+fn affiliation_cut_environments_by_spelling_red() {
+  let template = repro!("affiliation_cut_environments_by_spelling_red");
+  let shape = "\\bx a&b\\\\ c&d\\ex";
+  assert!(template.contains(shape));
+  let mut wrong = Vec::new();
+  for (row, text) in [
+    (shape, "1 Univ X a b c d"),
+    (
+      "\\bb{tabular}{cc}a&b\\\\ c&d\\ee{tabular}",
+      "1 Univ X a b c d",
+    ),
+    ("\\detokenize{\\begin} X", "1 Univ \u{201c}begin X"),
+    ("\\detokenize{\\end} X", "1 Univ \u{201c}end X"),
+    ("\\ifx\\zz\\end Q\\else X\\fi", "1 Univ X"),
+  ] {
+    let template = if row == "\\ifx\\zz\\end Q\\else X\\fi" || row.starts_with("\\detokenize") {
+      template.replace("Univ X ", "Univ ")
+    } else {
+      template.to_string()
+    };
+    let (log, xml) = in_a_directory(&template.replace(shape, row), &[], &[]);
+    let expected = vec![vec![
+      "Ann Able".to_string(),
+      format!("affiliation={text}"),
+      "affiliation=2 Univ Y".to_string(),
+    ]];
+    if creators(&xml) != expected || error_count(&log) != 0 {
+      wrong.push(format!(
+        "{row}: {:?}, E {}",
+        creators(&xml),
+        error_count(&log)
+      ));
+    }
+  }
+  assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}
+
+/// RED: a mark's group that is no formula's alone and stands at no line's start, cut on the base by walking back, uncut now: nothing lost, the marks in the text. A `\textsuperscript` mark at a
+/// line's start goes to a nameless creator. Review revZ3r2.
+#[test]
+#[ignore = "RED: `starts_at_its_brace` asks formulas, and of a group going on after one, only at a line's start"]
+fn affiliation_cut_group_siblings_stay_uncut_red() {
+  let template = repro!("affiliation_cut_group_siblings_stay_uncut_red");
+  let (author, field) = (
+    "Ann Able$^{1}$, Bob Baker$^{1,2}$, Cat Cole$^{3}$",
+    "{$^{1}$ Univ X,} Moscow, {$^{2}$Univ Y,} Moscow, {$^{3}$Univ Z,} Moscow",
+  );
+  let unmarked = |lines: (&str, &str)| {
+    vec![vec![
+      "Ann Able".to_string(),
+      format!("affiliation={}", lines.0),
+      format!("affiliation={}", lines.1),
+    ]]
+  };
+  let mut wrong = Vec::new();
+  for (row, expected) in [
+    (
+      "{\\textsuperscript{1}} Univ X, {\\textsuperscript{2}} Univ Y",
+      unmarked(("1 Univ X", "2 Univ Y")),
+    ),
+    (
+      "{\\textsuperscript{1}x} Univ X, {\\textsuperscript{2}x} Univ Y",
+      unmarked(("1 x Univ X", "2 x Univ Y")),
+    ),
+    (
+      "{$^1$2} Univ X, {$^2$3} Univ Y",
+      unmarked(("1 2 Univ X", "2 3 Univ Y")),
+    ),
+  ] {
+    let (xml, _) = dump(
+      &template
+        .replace(author, "Ann Able\\thanks{note}")
+        .replace(field, row),
+    );
+    if creators(&xml) != expected {
+      wrong.push(format!("{row}: {:?}", creators(&xml)));
+    }
+  }
+  let marked = |ann: &str, bob: &str, cat: &str| {
+    let mut creators = vec![
+      vec!["Ann Able 1".to_string(), format!("affiliation={ann}")],
+      vec![
+        "Bob Baker 1,2".to_string(),
+        format!("affiliation={ann}"),
+        format!("affiliation={bob}"),
+      ],
+      vec!["Cat Cole 3".to_string()],
+    ];
+    if !cat.is_empty() {
+      creators[2].push(format!("affiliation={cat}"));
+    }
+    creators
+  };
+  for (row, expected) in [
+    (
+      field,
+      marked("1 Univ X, Moscow", "2 Univ Y, Moscow", "3 Univ Z, Moscow"),
+    ),
+    (
+      "~\\\\ {\\textsuperscript{1}Univ X,} Moscow\\\\ {\\textsuperscript{2}Univ Y,} Rome",
+      marked("1 Univ X, Moscow", "2 Univ Y, Rome", ""),
+    ),
+    (
+      "{$^1$Univ X,} Moscow\\endgraf {$^2$Univ Y,} Rome",
+      marked("1 Univ X, Moscow", "2 Univ Y, Rome", ""),
+    ),
+  ] {
+    let (xml, _) = dump(&template.replace(field, row));
+    if creators(&xml) != expected {
+      wrong.push(format!("{row}: {:?}", creators(&xml)));
+    }
+  }
+  assert!(wrong.is_empty(), "{}", wrong.join("\n"));
+}
+
+/// RED: a speculative run evaluates no Lua (`a_speculative_run_evaluates_no_lua`), so a cut that needs what a chunk prints does not come: two entries on the base, one now, nothing lost. Review
+/// revZ3r2.
+#[test]
+#[ignore = "RED: what a chunk prints is not in the rehearsal's reading (`lua_bridge::lua_exec`)"]
+fn rehearsal_no_lua_loses_a_cut_red() {
+  let (xml, _) = dump(repro!("rehearsal_no_lua_loses_a_cut_red"));
+  creators_are(&xml, &[&[
+    "Ann Able",
+    "affiliation=1 Univ X",
+    "affiliation=2 Univ Y",
+    "email=ann@x.org",
+  ]]);
 }
 
 /// A run of a cut call holds its environments: what `\\end` closes or prints holds a position no box stops at (review revZ3 S4; the hostile suite's `long_tab`, `nice`, `newenv` in revtex's

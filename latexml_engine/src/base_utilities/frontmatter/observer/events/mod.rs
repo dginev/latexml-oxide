@@ -836,11 +836,14 @@ fn no_word(atoms: &[Atom]) -> bool {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(in crate::base_utilities) struct Formula {
   /// its opening shift, and past its closing shift ([`formula_extent`])
-  pub start:    u16,
-  pub end:      u16,
+  pub start:         u16,
+  pub end:           u16,
   /// how many of the groups around it, from the innermost, print nothing else ([`Walker::note_a_formulas_group`]): a mark's own
   /// group, whatever its tokens are
-  pub alone_in: u8,
+  pub alone_in:      u8,
+  /// how many of the groups around it, from the innermost, it opens where a line starts ([`Walker::note_a_formulas_group`]): an entry's
+  /// group, whatever follows the mark in it (`\\ \normalsize{$^{1}$ Univ X,} Moscow`, 2005.08290)
+  pub opens_line_in: u8,
 }
 
 impl Walker {
@@ -967,19 +970,31 @@ impl Walker {
   /// Whether the ink of the group of the atoms from `at` is its formulas' alone: spacing, a font or a color around them print nothing
   /// (`{$^1$\,}`, `{$^1$\bf}`, `{\color{red}$^1$}`, `{\fontsize{9}{9}\selectfont $^1$}`), a command printing before them does (`{\S $^1$}`,
   /// `{\LaTeX $^1$}`) and so does a word after them (`\textit{$^2$H}`); a separator or a symbol after them is no word (`{$^1$,}`, `{$^1$\dag}`).
+  /// And whether its first formula opens it where a line starts, what digestion made: only spacing before the group since the field's start or a
+  /// line break (`~\\ \normalsize{$^{1}$ Univ X,} Moscow`, 2005.08290), so that whatever follows the mark in it, it holds the entry's first words.
+  /// After anything else it is no such fact: `Univ A, {$^{2}$H} Lab` may be an isotope (`perfect_kernel_batch107e::a_wrapped_isotope_is_entry_text`).
   fn note_a_formulas_group(&mut self, at: usize) {
     let first = self
       .formula_atoms
       .iter()
       .rposition(|run| run.0 < at)
       .map_or(0, |last_before| last_before + 1);
-    let Some(&(lead_end, ..)) = self.formula_atoms.get(first) else {
+    let Some(&(lead_end, _, leader)) = self.formula_atoms.get(first) else {
       return;
     };
     let mut alone = self
       .atoms
       .get(at..lead_end)
       .is_some_and(|lead| lead.iter().all(|atom| matches!(atom, Atom::Space { .. })));
+    if alone
+      && self.atoms[..at]
+        .iter()
+        .rfind(|atom| !matches!(atom, Atom::Space { .. }))
+        .is_none_or(|atom| matches!(atom, Atom::Event(e) if e.kind == EventKind::Break))
+      && let Some(formula) = self.formulas.get_mut(leader)
+    {
+      formula.opens_line_in = formula.opens_line_in.saturating_add(1);
+    }
     let mut from = lead_end;
     for &(start, end, _) in &self.formula_atoms[first..] {
       alone &= self.atoms.get(from.max(at)..start).is_none_or(no_word);
@@ -1450,7 +1465,12 @@ impl Walker {
       self
         .formula_atoms
         .push((at, self.atoms.len(), self.formulas.len()));
-      self.formulas.push(Formula { start, end, alone_in: 0 });
+      self.formulas.push(Formula {
+        start,
+        end,
+        alone_in: 0,
+        opens_line_in: 0,
+      });
     }
     self.enclose(at, d, true, extent);
   }

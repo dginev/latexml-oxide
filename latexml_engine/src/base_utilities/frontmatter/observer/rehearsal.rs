@@ -42,12 +42,12 @@ pub(in crate::base_utilities) fn reset_rehearsing() {
 }
 
 /// The most tokens one rehearsal reads, as many as a run of the title-page check's (`title_page_check::CHECK_RUN_READS_DEFAULT`). By the
-/// data: popZ01 (1,873 papers) reads 166 at the median in its dearest rehearsal, 9,267 at the 99th percentile and 3,314,577 at most
-/// (2011.00785); by what it costs, a looping block reads this in about two seconds.
+/// data (the census, `FRONTMATTER_DIGESTED_REFACTOR.md`): popZ01's 1,707 papers rehearsing read 166 at the median in their dearest rehearsal, 8,417 at the 99th percentile and
+/// 3,359,702 at most (2608.18287; 2011.00785 3,314,577); by what it costs, a looping block reads this in about two seconds.
 const REHEARSAL_READS_DEFAULT: usize = 8_000_000;
 
-/// The most tokens all the rehearsals of a conversion read, in [`REHEARSAL_READS_DEFAULT`]s: a paper rehearses per call. popZ01 reads 725 in a
-/// conversion at the median, 20,444 at the 99th percentile, and the most 3,314,871 (2011.00785). The many-author witnesses are far under it:
+/// The most tokens all the rehearsals of a conversion read, in [`REHEARSAL_READS_DEFAULT`]s: a paper rehearses per call. popZ01 reads 731 in a
+/// conversion at the median, 20,444 at the 99th percentile, and the most 3,360,403 (2608.18287; 2011.00785 3,314,871). The many-author witnesses are far under it:
 /// 1901.01540's 2,637 rehearsals read 118,996 (1,202 authors), 2103.04797's 2,136 read 92,093 (975), 2005.08745's 668 read 13,009 (592).
 const REHEARSALS_PER_CONVERSION: usize = 3;
 

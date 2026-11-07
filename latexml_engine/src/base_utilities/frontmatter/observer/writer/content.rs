@@ -22,7 +22,9 @@ pub(super) fn is_cs(t: &Token, name: &str) -> bool {
   t.get_catcode() == Catcode::CS && t.with_cs_name(|n| n == name)
 }
 
-/// What `t` does to the environments open: `\begin` opens one, `\end` closes one.
+/// What `t` does to the environments open: `\begin` opens one, `\end` closes one. By its spelling, and only that: an environment a macro or a `\let` copy opens
+/// is not counted, a `\begin` under `\detokenize` or `\ifx` is (RED `affiliation_cut_environments_by_spelling_red`). The extents should come from the digested list,
+/// as `events::formula_extent`'s do, when the emitter takes this over.
 fn environment_step(t: &Token) -> i32 {
   i32::from(is_cs(t, "\\begin")) - i32::from(is_cs(t, "\\end"))
 }
@@ -141,10 +143,11 @@ impl Field<'_> {
     Some((Tokens::new(tokens), end))
   }
 
-  /// Whether the `nth` group around the formula starting at `from`, from the innermost, closing at `close`, prints that formula
-  /// alone (`events::Formula::alone_in`): `{\bf $^{1}$} Univ X`, `{$^{1}$\,} Univ X`, a mark's own group. A group going on after the
-  /// mark is no such thing, and no cut: `\textit{$^{2}$H} Lab`, an isotope (`perfect_kernel_batch107e::a_wrapped_isotope_is_entry_text`).
-  fn holds_only_a_formula(&self, nth: u8, from: usize, close: usize) -> bool {
+  /// Whether the `nth` group around the formula starting at `from`, from the innermost, closing at `close`, starts at its brace with that formula: it prints
+  /// the formula alone (`events::Formula::alone_in`: `{\bf $^{1}$} Univ X`, `{$^{1}$\,} Univ X`, a mark's own group), or the formula opens it where a line
+  /// starts (`Formula::opens_line_in`: `\\ \normalsize{$^{1}$ Univ X,} Moscow`, 2005.08290, the entry's own group). A group going on after a mark elsewhere is
+  /// no such thing, and no cut: `Univ A, \textit{$^{2}$H} Lab`, an isotope (`perfect_kernel_batch107e::a_wrapped_isotope_is_entry_text`).
+  fn starts_at_its_brace(&self, nth: u8, from: usize, close: usize) -> bool {
     let Ok(pos) = u16::try_from(self.base + from) else {
       return false;
     };
@@ -152,12 +155,12 @@ impl Field<'_> {
     self.formulas.get(at).is_some_and(|formula| {
       formula.start == pos
         && usize::from(formula.end) <= self.base + close
-        && formula.alone_in >= nth
+        && (formula.alone_in >= nth || formula.opens_line_in >= nth)
     })
   }
 
-  /// `start..end` grown to a balanced run, its shifts in pairs: back to the opening brace of a mark's own font group it closes
-  /// ([`Self::holds_only_a_formula`]; any other group it closes is no run), on over the closing braces right after a group it
+  /// `start..end` grown to a balanced run, its shifts in pairs: back to the opening brace of a group it closes that starts there
+  /// ([`Self::starts_at_its_brace`]; any other group it closes is no run), on over the closing braces right after a group it
   /// opens.
   fn balanced(&self, start: usize, end: usize, floor: usize) -> Option<(usize, usize)> {
     let content = self.tokens;
@@ -172,7 +175,7 @@ impl Field<'_> {
         let open = before.pop()?;
         closed = closed.saturating_add(1);
         self
-          .holds_only_a_formula(closed, from, close)
+          .starts_at_its_brace(closed, from, close)
           .then_some(())?;
         start = open;
         depth = 0;
