@@ -17296,8 +17296,8 @@ setter assigned before the error and we do not — a divergence by design, the f
 replayed_setter_error_rolls_back`: pdflatex Count 1, ours 0; the 65e review's docset3 probe, a document setter that
 `\global\advance`s then errs: pdflatex "Authors: 1.", ours "Authors: 0."). The journal covers every assignment however
 scoped, `\global` included, and the in-place edits of the tables (`push_value`, `assign_mapping`, `lookup_value_mut`,
-`checkout_value`/`checkin_value`, named-scope activation, `rebind_let_copies`, the graphics path list); not a font's
-parameter array (`Stored::FontDimens`, edited in place), the fallback/provide-only name sets, `tag_properties`,
+`checkout_value`/`checkin_value`, named-scope activation, `rebind_let_copies`, the graphics path list), and since #977 a font's
+parameter array (`Stored::FontDimens`, edited in place), an input stream and a box register's dimensions; not the provide-only name sets, `tag_properties`,
 `pending_resources`, the prefixes or the conditional stack (state fields outside the tables). A rollback needs the
 very frames it began with (each one opened since closed, none of them closed); when it cannot apply, the replay's
 assignments and its diagnostics both stay, with an Info saying so. A journal whose guard dropped while the state was
@@ -24262,8 +24262,8 @@ family by the per-family gate.
 papers written, 0 distinct frontmatter words lost or gained (148 lose only duplicated words), schema errors equal in all
 315 byte-changed papers (jing, 67 = 67), at creator level 165 better and the 32 the counter flagged all corrections (a
 "These authors contributed equally" line made the notes of the names showing its mark; a block of every name's
-affiliations given by mark). Three defects, fixed: (1) a mark set in `\( … \)` was cut without its `\(` (`piece_tokens`
-counts LaTeX's `\(`/`\)` as the shifts they spell, with the spaces inside them, and a `\protect` before), so each piece
+affiliations given by mark). Three defects, fixed: (1) a mark set in `\( … \)` was cut without its `\(` (the cut takes the
+formula whole, #977), so each piece
 re-digested `^{1} \)Univ A \\ \(` — 2 errors in each of hep-ph0110378 and 2307.12984, now 0 and both cut as the PDF
 prints; (2) an item today's places under several names is numbered once per copy (`footnotex3`, `modify_id`'s
 `footnotex3a`), and taking the copy that held the plain id left the suffixed one standing alone — the copy that stays
@@ -27850,7 +27850,7 @@ ModelBest.Inc \xspace$^5$ Renmin University of China \xspace$^6$ BUPT \xspace$^7
 entries each requested by its mark (2404.02078, 2509.24142) — or one legend line the reading takes for a note
 (`\textsuperscript{*}Equal contribution` under starred names, ruling 2: 2407.07614), each entry is made from its line's
 tokens (`block_line_tokens`: from the mark it opens with, the Mark event printed just before it with only spaces
-between — or the shift closing the mark's formula, `$^{1}$Univ X`, whose Mark spans its script: 94a —, to its end, balanced as `piece_tokens` balances a cut piece, past the spaces
+between — or the shift closing the mark's formula, `$^{1}$Univ X`, whose Mark spans its script: 94a —, to its end, balanced as `writer::Field::content_of` balances a cut piece, past the spaces
 before a group it closes) for the authors the reading gives it, an
 affiliation through `\lx@affiliation@withinst`, a legend as the kernel's author note, and today's item taken. A made
 affiliation carries no entry mark, as today's copies hold none (94a r2's rule for every made item, OD #928:
@@ -32257,3 +32257,9 @@ Those of a colspec's `Q[…]`, `column`, `row`, `cell`, `cells`, `rows`, `column
 latexml_contrib/src/tabularray_sty.rs, `\lx@tblr@cell@open`). The binding's `\Set…` commands take no key at all, so their text is lost: each gives `Warning:tabularray_key:<key>` with the
 text, except in a spanned cell (below). Guard `perfect_kernel_batchm3::tblr_preto_and_appto_join_the_cell_text`. **Left:** an inline key's `\my_later:n` under `\ExplSyntaxOn` reads as `\my`, `_` (repro
 alignment-bindings/tblr_inline_expl_command_in_a_key_red). A spanned cell's keys, `\SetCell[c=2]{preto=W}`, `\SetCell[r=2]{appto=V}`, `cell{1}{1}={r=2}{preto=s}`, `cell{1}{1}={c=2}{appto=t}`, lose their text with no Warning, as on the base: `tblr_span_cells` (`tabularray_sty.rs:585`) takes the `\SetCell` before the counting macro (repro alignment-bindings/tblr_preto_in_a_spanned_cell_red). `\SetCell{preto={},appto={}}` warns of a lost text ''. `\SetTblrInner{cells={preto=n}}` with `Q[preto=p]` prints `npaq`, pdflatex `pnaq`.
+
+### 977. A span's content is read from the digested list, and what a speculative run edits in place is undone
+
+**Content.** The writer makes an entry from the tokens its span covers. A box covers what it prints, so a span stops short of the `$` and `{}` around a script. The walk back from a span over those tokens stopped at any switch: `$\rm ^{3}$He Lab` was no balanced run and the paper was not written (2105.07958's class; `revtex_affiliation_requested_switched_mark_cuts`, 88c's RED). `writer::Field` reads the formula's extent from the digested list (`events::lex_with_formulas`) and a mark's own print from its event, whatever opens or fills the formula (`\( ^{1} \)`, `\protect\(`, hep-ph0110378, 2307.12984; `${^1}$`, 1410.8534, astro-ph9807043; `\textbf{$^2$…}`, 2605.25195). Brace balance stays a read of the content, forward, and takes a mark's own font group from its opening brace (`{\bf $\rm ^{1}$} Univ X`); a group going on after its mark stays no cut (`\textit{$^{2}$H} Lab`, `cut_run_wrapped_isotope_is_entry_text`). A legend's `${^\dagger}$` keeps its printed mark (2605.10201's shape). `formula_span` is the formula's alone. Guards `perfect_kernel_batchz3::{a_cut_takes_each_formula_whole, a_cut_takes_a_group_it_closes, a_mark_in_its_wrapper_is_read_by_its_own_print}`. A Declaration's span is a run a replay can read (`field_notes::settle_declarations`, `a_declarations_span_is_a_balanced_run`). Dump: `formula_span`, a Declaration's `span` and `label`; no reader yet.
+
+**Isolation.** Perl has no speculative run. Ours undoes what the assignment journal sees; what is edited in place it did not see, in the rehearsal and in the title-page checks alike: `\fontdimen`, a box register's `\wd`, `\ht`, `\dp`, an `\openin` stream (a rehearsal took the document's next line), the pdfTeX generator; and keyvals' "seen" set kept the document's own Warning unsaid. Each is undone or kept apart now. With the observer on and off the XML outside the creators, E, F and W agree on every input of the hostile suite; the census of what a rollback leaves is `FRONTMATTER_DIGESTED_REFACTOR.md` "What a rollback leaves". Guards `perfect_kernel_batchz3::the_rehearsal_leaves_no_trace_*`; repro `observer_rehearsal_leaves_no_trace`.

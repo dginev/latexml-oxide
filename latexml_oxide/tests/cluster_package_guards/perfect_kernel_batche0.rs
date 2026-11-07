@@ -882,8 +882,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("sv_support_sty.rs", 35),
   ("webofc_cls.rs", 0),
   ("writer/apply", 7),
+  // (a new file, what is left of `writer/plan`'s walk-backs: brace balance and a formula's shifts; the two rows together fell by 25, Z3)
+  ("writer/content", 8),
   ("writer/dom+mod", 0),
-  ("writer/plan", 118),
+  ("writer/plan", 85),
   ("writer/repart", 0),
 ];
 
@@ -899,6 +901,7 @@ const FRONTMATTER_AREAS: &[(&str, &str)] = &[
   ("address_lists", "address_lists.rs"),
   ("writer/plan", "observer/writer/plan.rs"),
   ("writer/apply", "observer/writer/apply.rs"),
+  ("writer/content", "observer/writer/content.rs"),
   ("writer/repart", "observer/writer/repart.rs"),
   ("writer/dom+mod", "observer/writer/"),
   ("resolver", "observer/resolver/"),
@@ -1068,7 +1071,7 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // (also among `resolver`'s 15 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook)
   ("resolver", 3),
   ("shadow", 7),
-  ("writer", 84),
+  ("writer", 79),
 ];
 
 /// revZ2r2: the token-read count's regexes are blind outside `resolver/` to a spelling not written as a comparison. This counts what such

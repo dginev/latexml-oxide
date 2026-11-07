@@ -1,7 +1,7 @@
 % witness: revZ2's S2 (no paper yet: FRONTMATTER_DIGESTED_REFACTOR gap 8, the span Z4's emitter replays)
 % oracle:  pdflatex 0 errors: "Ann Lee"; none of the definitions prints
-% engines: Perl has no events; ours before this fix ended a definer at its own position when what follows it is no later token of the field
-% expect:  0 errors; each span holds the whole definition, up to what the call around it read
+% engines: Perl has no events; ours before Z2r2 ended a definer at its own position when what follows it is no later token of the field; Z2r3 held the closing brace of the call around it
+% expect:  0 errors; each span holds the whole definition, up to what the call around it read, and no closing brace it did not open
 %          (perfect_kernel_batchz2::a_declarations_end_holds_what_it_read_inside_a_call)
 % status:  GREEN (Z2r2)
 \documentclass{article}

@@ -1,0 +1,17 @@
+% mechanism: a piece of a cut call takes each formula it starts or ends in whole, read from the digested list
+%   (`writer::Field::content_of`), not by walking tokens back from its span: a switch before the script, an empty base, LaTeX's `\(`
+%   with spaces in it, `\protect`ed, a formula of no mark leading a piece's words
+% witness: 2105.07958 (`$\rm ^a$`), hep-ph0110378, 2307.12984 (`\( ^{1} \)`); astro-ph9807043 (`${^1}$`), 1410.8534 (`${^1}$`)
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "Ann Able1, Bob Baker2, Cat Cole3, Dan Dow4, Eve Ely5, Fay Fox6" over one line of six entries
+% engines: Z2: the `$\rm ^{2}$` piece no balanced run: writer `declined`, Ann holding the whole text
+% expect:  0 errors, 0 warnings; writer `written`; each name its own entry, and "α Lab" the words of line 6
+%          (perfect_kernel_batchz3::a_cut_takes_each_formula_whole)
+% status:  GREEN (Z3)
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$, Cat Cole$^{3}$, Dan Dow$^{4}$, Eve Ely$^{5}$, Fay Fox$^{6}$}
+\affiliation{$^{1}$Univ X, $\rm ^{2}$Univ Y, ${}^{3}$Univ Z, \( ^{4} \)Univ W, \protect\( ^{5} \protect\)Univ V, ${^6}$ Univ U, $\alpha$ Lab}
+\maketitle
+Text.
+\end{document}

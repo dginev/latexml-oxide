@@ -4,9 +4,9 @@
 % oracle:  pdflatex (TL 2025 amsart) 0 errors: "ANN ABLE, BOB BAKER" / "Text." / "1 Univ X, 2 Univ Y"
 % engines: rust int118a, 90a: writer `written`, two block addresses; 88c r3 (not merged): writer `declined`, Bob
 %   alone "1Univ X2Univ Y" and Ann none
-% expect:  0 errors, 0 warnings; writer `written`; Able, Baker without contacts; a nameless creator's addresses
-%   "1 Univ X", "2 Univ Y"
-% status:  GREEN (int118a, 90a; catalog, no guard)
+% expect:  0 errors, 0 warnings; Able none; Baker `1 Univ X 2 Univ Y`, today's placement, the writer declining: since OD #925 a run of lines
+%   whose marks no name carries keeps it (`writer::writes`), 88c's block addresses a nameless creator's, which 90a held
+% status:  GREEN as OD #925 rules it (Z3; catalog, no guard); 1305.3804 unchanged by Z3
 % preload: ar5iv.sty
 \documentclass{amsart}
 \begin{document}

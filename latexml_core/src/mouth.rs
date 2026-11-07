@@ -148,6 +148,51 @@ impl PartialEq for Mouth {
   fn eq(&self, other: &Mouth) -> bool { self.source == other.source }
 }
 
+impl Mouth {
+  /// A copy of this mouth, to read on while this one stays where it is (`state::input_stream_to_change`): a file it reads from
+  /// disk is opened again at the same offset; one that cannot be ends where the lines it holds end, enough for a run about to
+  /// be undone.
+  pub fn copy_for_a_rollback(&mut self) -> Mouth {
+    use std::io::{Seek, SeekFrom};
+    let source = self.source.clone();
+    let reader = self.reader.as_mut().and_then(|reader| {
+      let at = reader.stream_position().ok()?;
+      let mut file = File::open(&source).ok()?;
+      file.seek(SeekFrom::Start(at)).ok()?;
+      Some(BufReader::new(file))
+    });
+    Mouth {
+      fordefinitions: self.fordefinitions,
+      at_letter: self.at_letter,
+      notes: self.notes,
+      at_eof: self.at_eof,
+      nchars: self.nchars,
+      colno: self.colno,
+      lineno: self.lineno,
+      last_token_start: self.last_token_start,
+      foodtype: self.foodtype,
+      bib_data_literals: self.bib_data_literals,
+      lazy_decode: self.lazy_decode,
+      file_level: self.file_level,
+      saved_at_cc: self.saved_at_cc,
+      saved_include_comments: self.saved_include_comments,
+      note_message: self.note_message.clone(),
+      source,
+      source_sym: self.source_sym,
+      shortsource: self.shortsource.clone(),
+      skipping_spaces: self.skipping_spaces,
+      chars: self.chars.clone(),
+      buffer: self.buffer.clone(),
+      raw_buffer: self.raw_buffer.clone(),
+      reader,
+      reads_input_bytes: self.reads_input_bytes,
+      buffered_line_is_bytes: self.buffered_line_is_bytes,
+      line_is_bytes: self.line_is_bytes,
+      caret_bytes: self.caret_bytes.clone(),
+    }
+  }
+}
+
 impl Default for Mouth {
   fn default() -> Self {
     // Historically the source was `"Anonymous String {gid}"` with a

@@ -128,10 +128,87 @@ pub fn field_notes_begin(tokens: &Tokens, block_breaks: &[(&str, BreakKind)]) {
   set_field_notes_hook(Some(field_notes_after));
 }
 
-/// End the notes ([`field_notes_begin`]).
+/// End the notes ([`field_notes_begin`]), each declaration's span a run of the field a replay can read
+/// ([`settle_declarations`]).
 pub fn field_notes_end() -> FieldNotes {
   set_field_notes_hook(None);
-  FIELD_NOTES.with(RefCell::take)
+  let mut notes = FIELD_NOTES.with(RefCell::take);
+  if !notes.declarations.is_empty() {
+    settle_declarations(&mut notes);
+  }
+  notes
+}
+
+/// The spans of a block's declarations as runs the emitter can replay, in order, none reading what another reads. Where the
+/// invocation's reach is true of the reading but not of the content:
+/// - **A body's definition.** One in the body of a macro defined in the field runs at the macro's call, its tokens still at their
+///   own positions, inside the braces of what defined them: `\def\m{\newcount\qq}\m`'s `\qq` read [3,7] over `\m`'s [0,6]. It starts
+///   past that definition, at the call; with nothing left of its own (`\def\x{\def\y{1}\def\z{2}}\x`'s `\y`) its names go with the next,
+///   which holds the call, or the last.
+/// - **A peek.** A macro testing the next token read as far as it (`\mstar\mfile`, whose `\@ifstar` peeked at `\mfile`, itself a
+///   declaration's call): outside the braces of the earlier, the later one holds its own call, and the earlier ends there.
+/// - **Brace balance.** A definer whose next token is no later one of the field read as far as the call around it read: the end of an
+///   argument, `\textbf{\def\x{1}}`, `\AtBeginDocument{\def\x{1}\def\y{2}}`'s last, holds a closing brace of what opened before it. The
+///   span ends before it.
+#[cold]
+#[inline(never)]
+fn settle_declarations(notes: &mut FieldNotes) {
+  let field = std::mem::take(&mut notes.field);
+  let step = |pos: u16| {
+    field
+      .get(usize::from(pos))
+      .copied()
+      .flatten()
+      .map_or(0, |t| t.group_step())
+  };
+  let mut settled: Vec<FieldDeclaration> = Vec::with_capacity(notes.declarations.len());
+  let mut waiting: Vec<SymStr> = Vec::new();
+  let add = |to: &mut Vec<SymStr>, names: Vec<SymStr>| {
+    for name in names {
+      if !to.contains(&name) {
+        to.push(name);
+      }
+    }
+  };
+  for mut declaration in notes.declarations.drain(..) {
+    if let Some(last) = settled.last_mut()
+      && declaration.start < last.end
+    {
+      let inside = (last.start..declaration.start).map(step).sum::<i32>() > 0;
+      if inside {
+        declaration.start = last.end;
+      } else if declaration.start > last.start {
+        last.end = declaration.start;
+      } else {
+        add(&mut last.definees, declaration.definees);
+        continue;
+      }
+    }
+    if declaration.end <= declaration.start {
+      waiting.append(&mut declaration.definees);
+      continue;
+    }
+    if !waiting.is_empty() {
+      let mine = std::mem::replace(&mut declaration.definees, std::mem::take(&mut waiting));
+      add(&mut declaration.definees, mine);
+    }
+    settled.push(declaration);
+  }
+  for declaration in &mut settled {
+    let mut depth = 0i32;
+    for pos in declaration.start..declaration.end {
+      depth += step(pos);
+      if depth < 0 {
+        declaration.end = pos;
+        break;
+      }
+    }
+  }
+  if let Some(last) = settled.last_mut() {
+    add(&mut last.definees, waiting);
+  }
+  notes.declarations = settled;
+  notes.field = field;
 }
 
 /// Clears the hook however the rehearsal ends, a panic under a worker's `catch_unwind` too: it is set only while

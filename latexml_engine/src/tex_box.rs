@@ -1658,6 +1658,7 @@ LoadDefinitions!({
   setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
+    journal_box_dimension(&boxkey, "height");
     with_value_mut(&boxkey, |val_opt|
     if let Some(Stored::Digested(thebox)) = val_opt {
       thebox.set_height(value);
@@ -1689,6 +1690,7 @@ LoadDefinitions!({
   setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
+    journal_box_dimension(&boxkey, "width");
     with_value_mut(&boxkey, |val_opt|
     if let Some(Stored::Digested(thebox)) = val_opt {
       thebox.set_width(value);
@@ -1713,6 +1715,7 @@ LoadDefinitions!({
   setter => sub[value,_scope,args] {
     let n = args.remove(0).expect_number();
     let boxkey = format!("box{}", n.value_of());
+    journal_box_dimension(&boxkey, "depth");
     with_value_mut(&boxkey, |val_opt|
     if let Some(Stored::Digested(thebox)) = val_opt {
       thebox.set_depth(value);

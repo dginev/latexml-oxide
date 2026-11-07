@@ -89,13 +89,8 @@ LoadDefinitions!({
   });
 
   DefPrimitive!("\\read Number SkipKeyword:to RedefinableToken", sub[(port, token)] {
-    // Same with_value pattern as etex.rs \readline: Rc::clone the mouth
-    // ref instead of cloning the Stored envelope around it.
-    let mouth_opt = with_value(&format!("input_file:{port}"), |v| match v {
-      Some(Stored::Mouth(mouth)) => Some(Rc::clone(mouth)),
-      _ => None,
-    });
-    if let Some(mouth_obj) = mouth_opt {
+    // (the Rc of the mouth, not a clone of the Stored envelope around it, and a copy under a speculative run's journal)
+    if let Some(mouth_obj) = input_stream_to_change(&format!("input_file:{port}")) {
       bgroup();
       // Special EOL/EOF treatment for \read — bookkeeping for THIS read, undone by
       // the `egroup` below. Explicitly local: a `\global` prefix is still live here
@@ -447,14 +442,8 @@ LoadDefinitions!({
 /// Close input stream `port` (`\closein`): finish its mouth, if one is open, and clear it.
 fn close_input_stream(port: &str) {
   let file_key = s!("input_file:{}", port);
-  let mut finished = false;
-  with_value(&file_key, |mouth_opt| {
-    if let Some(Stored::Mouth(mouth)) = mouth_opt {
-      mouth.borrow_mut().finish();
-      finished = true;
-    }
-  });
-  if finished {
+  if let Some(mouth) = input_stream_to_change(&file_key) {
+    mouth.borrow_mut().finish();
     AssignValue!(&file_key, false, Some(Scope::Global));
   }
 }

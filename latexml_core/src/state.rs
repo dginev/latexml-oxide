@@ -268,15 +268,18 @@ pub type Table = HashMap<SymStr, VecDeque<Stored>>;
 pub struct AssignmentJournal {
   /// The meanings assigned since the log was last read, in order, each with whether globally ([`begin_meaning_log`]);
   /// `None` while no one reads it.
-  meaning_log: Option<Vec<MeaningAssigned>>,
+  meaning_log:    Option<Vec<MeaningAssigned>>,
   /// the ids of the frames open when it began, from the bottom of the stack
-  frames:      Vec<u64>,
-  saved:       rustc_hash::FxHashMap<(TableName, SymStr), JournalEntry>,
+  frames:         Vec<u64>,
+  saved:          rustc_hash::FxHashMap<(TableName, SymStr), JournalEntry>,
   /// each meaning's standing as a fallback guess, a kernel stub or a borrowed package's then (`fallback_meanings`),
   /// which an assignment changes beside the meaning and no group end puts back: the meaning a rehearsal `\let`s and
   /// rolls back keeps it (an OmniBus `\AND`, which algorithmic's `\newcommand{\AND}` may replace — siamart220329,
   /// 2409.10200; FM S2a.2 r9)
-  fallback:    rustc_hash::FxHashMap<SymStr, Option<crate::definition::origin::DefinitionOrigin>>,
+  fallback: rustc_hash::FxHashMap<SymStr, Option<crate::definition::origin::DefinitionOrigin>>,
+  /// each box whose `\\wd`, `\\ht` or `\\dp` was set, the property's value then, oldest first: a property of the box itself, which
+  /// a register's binding shares ([`journal_box_dimension`])
+  box_dimensions: Vec<(Digested, &'static str, Option<Stored>)>,
 }
 /// A key's values in its table (`None`: unbound) and its assignment counts by frame id.
 type JournalEntry = (Option<VecDeque<Stored>>, Vec<(u64, usize)>);
@@ -1084,7 +1087,16 @@ impl State {
     if journal.saved.contains_key(&(table_name, key)) {
       return;
     }
-    let values = self.table(table_name).get(&key).cloned();
+    let mut values = self.table(table_name).get(&key).cloned();
+    // (a font's parameter array is written in place, `set_font_parameter`: saved as a copy of its own)
+    if let Some(values) = values.as_mut().filter(|_| table_name == TableName::Value) {
+      for value in values {
+        if let Stored::FontDimens(params) = value {
+          let copy = params.borrow().clone();
+          *value = Stored::FontDimens(Rc::new(RefCell::new(copy)));
+        }
+      }
+    }
     let counts: Vec<(u64, usize)> = self
       .undo
       .iter()
@@ -4280,7 +4292,10 @@ pub fn set_font_parameter(key: &str, p: usize, value: i64) -> bool {
     _ => None,
   });
   match existing {
-    Some(params) => set(&mut params.borrow_mut()),
+    Some(params) => {
+      state_mut!().journal_touch(TableName::Value, arena::pin(key));
+      set(&mut params.borrow_mut())
+    },
     None => {
       let mut params = Vec::new();
       set(&mut params);
@@ -4288,6 +4303,51 @@ pub fn set_font_parameter(key: &str, p: usize, value: i64) -> bool {
     },
   }
   true
+}
+
+/// Note for an open assignment journal that the box in the register `key` is about to have its dimension `property` set
+/// (`\\wd`, `\\ht`, `\\dp`): a property of the box itself, which no binding's value holds.
+pub fn journal_box_dimension(key: &str, property: &'static str) {
+  if !JOURNAL_GUARD_LIVE.get() {
+    return;
+  }
+  let a_box = with_value(key, |stored| match stored {
+    Some(Stored::Digested(a_box)) => Some(a_box.clone()),
+    _ => None,
+  });
+  if let Some(a_box) = a_box
+    && let Some(journal) = state_mut!().journal.as_mut()
+  {
+    let value = crate::BoxOps::get_property(&a_box, property)
+      .as_deref()
+      .cloned();
+    journal.box_dimensions.push((a_box, property, value));
+  }
+}
+
+/// The input stream stored under `key` (`\\openin`'s), to read it or close it: a mouth changes in place, so under an open
+/// assignment journal the first one to change it works on a copy of its own, in the stream's place, and a rollback gives the
+/// document's back where it stood. A `\\read` in a rehearsal (a frontmatter field, a title page) took the document's next line.
+pub fn input_stream_to_change(key: &str) -> Option<Rc<RefCell<mouth::Mouth>>> {
+  let mouth = with_value(key, |stored| match stored {
+    Some(Stored::Mouth(mouth)) => Some(Rc::clone(mouth)),
+    _ => None,
+  })?;
+  let key_sym = arena::pin(key);
+  let copying = {
+    let state = state!();
+    JOURNAL_GUARD_LIVE.get()
+      && state
+        .journal
+        .as_ref()
+        .is_some_and(|journal| !journal.saved.contains_key(&(TableName::Value, key_sym)))
+  };
+  if !copying {
+    return Some(mouth);
+  }
+  let copy = Rc::new(RefCell::new(mouth.borrow_mut().copy_for_a_rollback()));
+  assign_value_inplace_sym(key_sym, Stored::Mouth(Rc::clone(&copy)));
+  Some(copy)
 }
 
 /// Undo-stack depth (open TeX groups) — pass-1 streaming telemetry.
@@ -5930,10 +5990,11 @@ pub fn remove_meaning_global(token: &Token) {
 /// ([`AssignmentJournalGuard::keep`]; also on drop, so a panic leaves no journal open): a transaction over the binding
 /// tables, of every assignment however scoped and of the in-place edits of the tables (`push_value`,
 /// `assign_mapping`, `lookup_value_mut`, `checkout_value`/`checkin_value`, named-scope activation,
-/// `rebind_let_copies`, the graphics path list) and of a name's standing in the fallback-guess set
-/// (`AssignmentJournal::fallback`, FM S2a.2 r9: siamart's `\AND`, 2409.10200). Not of what lives outside the tables: a
-/// font's parameter array (`Stored::FontDimens`, edited in place) and the provide-only and stand-in name sets, which
-/// change only while a package or class loads. Made for the replay of a refused
+/// `rebind_let_copies`, the graphics path list), of a font's parameter array (`set_font_parameter`, saved as a copy), an input
+/// stream's mouth (`input_stream_to_change`) and a box register's dimensions (`journal_box_dimension`), each edited in place,
+/// and of a name's standing in the fallback-guess set
+/// (`AssignmentJournal::fallback`, FM S2a.2 r9: siamart's `\AND`, 2409.10200). Not of what lives outside the tables: the
+/// provide-only and stand-in name sets, which change only while a package or class loads. Made for the replay of a refused
 /// frontmatter setter (sect05.rs `replay_class_setter`), which a setter that errs half-way must not leave half-done
 /// (jsty3-author.sty:542's expl3 author list, which its printer then looped over: 2607.24171). `None`, recording
 /// nothing, while one is already open (journals do not nest); a journal its guard could not close (the state was
@@ -5949,6 +6010,7 @@ pub fn begin_assignment_journal() -> Option<AssignmentJournalGuard> {
     frames,
     saved: rustc_hash::FxHashMap::default(),
     fallback: rustc_hash::FxHashMap::default(),
+    box_dimensions: Vec::new(),
   });
   JOURNAL_GUARD_LIVE.set(true);
   Some(AssignmentJournalGuard { open: true })
@@ -6097,6 +6159,16 @@ impl AssignmentJournalGuard {
         },
         None => {
           state.fallback_meanings.remove(&key);
+        },
+      }
+    }
+    for (a_box, property, value) in journal.box_dimensions.into_iter().rev() {
+      match value {
+        Some(value) => {
+          a_box.try_set_property(property, value);
+        },
+        None => {
+          a_box.try_remove_property(property);
         },
       }
     }

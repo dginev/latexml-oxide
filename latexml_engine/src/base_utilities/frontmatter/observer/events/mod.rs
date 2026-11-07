@@ -294,6 +294,12 @@ pub struct Event {
   pub ordinal:        bool,
   /// a Name's: the labels its words print by hand ([`PrintedLabel`])
   pub printed_labels: Vec<PrintedLabel>,
+  /// a `\textsuperscript` Mark's: the call's own position, its `span` being the wrapper's when it is the first box in
+  /// one (`\textbf{\textsuperscript{2}Univ B}`, `writer::Field::own_print`). Not in a dump: only the content reads it
+  pub own_at:         Option<u16>,
+  /// a cut in-block contact entry's: where its leading marks print, first to last, whole (`writer::span_tokens`). Not in
+  /// a dump: only the content reads it
+  pub marks:          Option<(u16, u16)>,
 }
 
 impl Event {
@@ -324,6 +330,8 @@ impl Event {
       braces: 0,
       ordinal: false,
       printed_labels: Vec::new(),
+      own_at: None,
+      marks: None,
     }
   }
 }
@@ -495,6 +503,18 @@ fn box_span(d: &Digested) -> Option<(u16, u16)> {
   }
   let pos = field_prov_pos(prov);
   Some((pos, pos + 1))
+}
+
+/// The whole of a formula: its opening shift (`document::FIELD_FORMULA_START_PROPERTY`), and past its closing shift, whose
+/// box it is. Not [`deep_span`], which the first box's cover widens to the call around it (`\textbf{$^2$Univ B}`), and
+/// which reads every box in it. `None` under no rehearsal's notes.
+fn formula_extent(d: &Digested) -> Option<(u16, u16)> {
+  let start = match d.get_property(FIELD_FORMULA_START_PROPERTY).as_deref() {
+    Some(Stored::Int(start)) => u16::try_from(*start).ok()?,
+    _ => return None,
+  };
+  let (_, end) = box_span(d)?;
+  Some((start, end.max(start + 1)))
 }
 
 /// The union of two spans.
@@ -797,6 +817,8 @@ struct Walker {
   cuts:       Vec<(Vec<(u16, u16)>, Event)>,
   /// the word space in em of the font last asked ([`Walker::is_word_space_of_its_font`]): sized once, for a block's thousand ties
   word_space: Option<(Rc<Font>, f64)>,
+  /// each formula's extent, in the order they end ([`lex_with_formulas`]), a note's and an in-block contact's too
+  formulas:   Vec<(u16, u16)>,
 }
 
 impl Walker {
@@ -880,7 +902,7 @@ impl Walker {
         self.walk_list(&l.borrow(), nest);
         // (a braced group; the block's own list is none)
         if self.lists > 0 {
-          self.enclose(at, d, false);
+          self.enclose(at, d, false, None);
         }
       },
       DigestedData::Whatsit(w) => self.walk_whatsit(d, &w.borrow(), nest),
@@ -919,9 +941,9 @@ impl Walker {
     self.lists -= 1;
   }
 
-  /// Say what encloses the marks among the atoms from `at` that nothing inside encloses: `d`, a formula or a group
-  /// ([`MarkFormula`]). Only where it holds one: a formula of no mark costs nothing.
-  fn enclose(&mut self, at: usize, d: &Digested, formula: bool) {
+  /// Say what encloses the marks among the atoms from `at` that nothing inside encloses: `d`, a formula (`extent`, or
+  /// `formula` where it has none) or a group ([`MarkFormula`]). Only where it holds one: a formula of no mark costs nothing.
+  fn enclose(&mut self, at: usize, d: &Digested, formula: bool, extent: Option<(u16, u16)>) {
     fn holds_glyph(text: &str) -> bool { text.chars().any(|c| is_fnsymbol(c) || is_mark_glyph(c)) }
     let open = |atom: &Atom| match atom {
       Atom::Event(e) => e.kind == EventKind::Mark && e.formula.is_none(),
@@ -932,15 +954,7 @@ impl Walker {
     if !atoms.iter().any(open) {
       return;
     }
-    let span = deep_span(d);
-    // (a formula's opening shift, which no box of it covers: `document::FIELD_FORMULA_START_PROPERTY`)
-    let span = match d.get_property(FIELD_FORMULA_START_PROPERTY).as_deref() {
-      Some(Stored::Int(start)) if formula => join_span(
-        span,
-        u16::try_from(*start).ok().map(|start| (start, start + 1)),
-      ),
-      _ => span,
-    };
+    let span = extent.or_else(|| deep_span(d));
     // (print order: a first script's base is whatever prints before it, a later one's a letter or digit)
     let mut bases = Vec::with_capacity(atoms.len());
     let (mut has_base, mut scripted) = (false, false);
@@ -1027,7 +1041,8 @@ impl Walker {
         let mut note = Event::new(EventKind::Note);
         if let Some(body) = w.get_arg(2) {
           note.inkless = leaves_no_ink(body);
-          let events = lex_events(body);
+          let (events, formulas) = lex_with_formulas(body);
+          self.formulas.extend(formulas);
           // (its text as printed, its contacts' too: the rehearsal's contact constructors print nothing, so the ink
           // of "available at \url{…}" lacks the address — 2105.10596)
           note.text = printed_text(&events);
@@ -1156,7 +1171,11 @@ impl Walker {
       },
       "\\textsuperscript" | "\\@textsuperscript" => {
         let notes = w.get_arg(1).map(notes_in).unwrap_or_default();
-        if let Some(mark) = script_mark(w.get_arg(1), "sup", &notes) {
+        if let Some(mut mark) = script_mark(w.get_arg(1), "sup", &notes) {
+          mark.own_at = match d.get_property(FIELD_PROV_PROPERTY).as_deref() {
+            Some(Stored::Int(prov)) => u16::try_from(*prov).ok().map(field_prov_pos),
+            _ => None,
+          };
           self.event(mark, d, nest);
         }
         self.walk_notes(&notes, nest);
@@ -1207,7 +1226,7 @@ impl Walker {
           && contact.label.is_none()
           && let Some(body) = w.get_arg(2)
         {
-          let events = lex_events(body);
+          let (events, formulas) = lex_with_formulas(body);
           // (the font each entry's cut starts in, read from the call's digested ink: its first token's after the call's
           // own — the content's start —, against the call's font; review rev94b r3 B1)
           let scope = d
@@ -1220,12 +1239,22 @@ impl Walker {
               root,
               start: usize::from(at) + 1,
             });
-          if let Some((entries, whole)) = labelled_entries(&events, scope.as_ref()) {
+          let cut = labelled_entries(&events, &formulas, scope.as_ref());
+          self.formulas.extend(formulas);
+          if let Some((entries, whole)) = cut {
             let entry_event = |e: LabelledEntry| {
-              let LabelledEntry { label, text, span, font, wrap } = e;
+              let LabelledEntry {
+                label,
+                text,
+                span,
+                marks,
+                font,
+                wrap,
+              } = e;
               let mut entry = contact.clone();
               entry.label = Some(label);
               entry.text = text;
+              entry.marks = marks;
               entry.font = font;
               entry.wrap = wrap;
               // (its span its own ink, which the writer makes the entry from (`plan::block_span_tokens`): not the
@@ -1362,7 +1391,9 @@ impl Walker {
     };
     let at = self.atoms.len();
     self.walk_math_list(&body, nest);
-    self.enclose(at, d, true);
+    let extent = formula_extent(d);
+    self.formulas.extend(extent);
+    self.enclose(at, d, true, extent);
   }
 
   fn walk_math_list(&mut self, d: &Digested, nest: u8) {
@@ -1491,7 +1522,7 @@ impl Walker {
         _ => self.walk(&content, nest.saturating_add(1)),
       }
     }
-    self.enclose(at, d, false);
+    self.enclose(at, d, false, None);
   }
 }
 
@@ -1791,6 +1822,8 @@ struct LabelledEntry {
   label: String,
   text:  String,
   span:  Option<(u16, u16)>,
+  /// where its leading marks print, first to last, whole
+  marks: Option<(u16, u16)>,
   font:  Option<Rc<Font>>,
   wrap:  Option<Rc<Wrap>>,
 }
@@ -1840,10 +1873,25 @@ fn labelled_entry(events: &[Event]) -> Option<LabelledEntry> {
     .iter()
     .filter_map(|e| e.span)
     .reduce(|(a, b), (s, e)| (a.min(s), b.max(e)));
+  // (each mark as it prints: its formula whole, whose script is its span)
+  let print = |e: &Event| match e.formula {
+    Some(MarkFormula {
+      span: Some(formula),
+      base: Some(_),
+      ..
+    }) => Some(formula),
+    _ => e.span,
+  };
+  let printed = events[start..end]
+    .iter()
+    .filter(|e| e.kind == EventKind::Mark)
+    .filter_map(print)
+    .reduce(|(a, b), (s, e)| (a.min(s), b.max(e)));
   Some(LabelledEntry {
     label: labels.join(","),
     text: events_text(&rest),
     span,
+    marks: printed,
     font: None,
     wrap: None,
   })
@@ -1860,6 +1908,7 @@ fn labelled_entry(events: &[Event]) -> Option<LabelledEntry> {
 /// content leads with no labelled mark.
 fn labelled_entries(
   events: &[Event],
+  formulas: &[(u16, u16)],
   scope: Option<&FontScope>,
 ) -> Option<(Vec<LabelledEntry>, LabelledEntry)> {
   let whole = labelled_entry(events)?;
@@ -1904,10 +1953,18 @@ fn labelled_entries(
       let block = block.borrow();
       let (base, tokens) = block.as_ref()?;
       let content = tokens.unlist_ref();
+      let field = writer::Field {
+        tokens: content,
+        base: *base,
+        formulas,
+      };
       // (where each entry's cut starts: no such start is no cut the writer could make, `writer::span_tokens`)
-      let starts: Vec<(usize, (u16, u16))> = spans
+      let starts: Vec<(usize, (u16, u16))> = entries
         .iter()
-        .map(|&span| Some((writer::labelled_start(content, *base, span)?, span)))
+        .map(|entry| {
+          let span = entry.span?;
+          Some((writer::labelled_start(&field, span, entry.marks)?, span))
+        })
         .collect::<Option<_>>()?;
       let forms = match scope {
         Some(scope) => writer::entry_forms(content, *base, &starts, scope, events),
@@ -1918,12 +1975,11 @@ fn labelled_entries(
         .zip(forms)
         .map(|(entry, (font, wrap))| {
           writer::span_tokens(
-            content,
-            *base,
+            &field,
             entry.span?,
             Some(&norm(&entry.text)),
             None,
-            true,
+            Some(entry.marks),
             false,
             font.is_some(),
           )?;
@@ -1940,6 +1996,13 @@ fn labelled_entries(
 
 /// The events of a digested author block (a rehearsal's list), in print order.
 pub(in crate::base_utilities) fn lex_events(digested: &Digested) -> Vec<Event> {
+  lex_with_formulas(digested).0
+}
+
+/// [`lex_events`], and each outermost formula's extent in order (`writer::Field`): what a span's content is read by.
+pub(in crate::base_utilities) fn lex_with_formulas(
+  digested: &Digested,
+) -> (Vec<Event>, Vec<(u16, u16)>) {
   let mut walker = Walker::default();
   walker.walk(digested, 0);
   let mut lexer = Lexer::default();
@@ -1988,7 +2051,15 @@ pub(in crate::base_utilities) fn lex_events(digested: &Digested) -> Vec<Event> {
     }
     events[at[0]] = whole;
   }
-  events
+  let mut formulas = walker.formulas;
+  formulas.sort_unstable_by_key(|&(start, end)| (start, std::cmp::Reverse(end)));
+  let mut outermost: Vec<(u16, u16)> = Vec::with_capacity(formulas.len());
+  for formula in formulas {
+    if outermost.last().is_none_or(|last| last.1 <= formula.0) {
+      outermost.push(formula);
+    }
+  }
+  (events, outermost)
 }
 
 /// The Declaration events of a block's definitions (`field_notes::FieldNotes`): a definition, printing nothing, is in no box, so

@@ -10,7 +10,7 @@ use super::{
 
 /// A repro whose side file is a leading `filecontents*` block: the document without the block and the file, so the
 /// conversion writes nothing (the file is staged beside the document).
-fn split_filecontents(tex: &str) -> (String, String, String) {
+pub(super) fn split_filecontents(tex: &str) -> (String, String, String) {
   let begin = tex
     .find("\\begin{filecontents*}[overwrite]{")
     .expect("a filecontents* block");

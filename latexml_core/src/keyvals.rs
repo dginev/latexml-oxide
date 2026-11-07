@@ -277,10 +277,14 @@ impl KeyVals {
             std::cell::RefCell::new(SeenSet::default());
         }
         let all_joined = allkeysets.join(",");
+        // (a speculative digestion's diagnostics go with it: what it sees is not seen, or the document's own Warning goes unsaid)
         let is_new = SEEN_MISSING.with(|cell| {
-          cell
-            .borrow_mut()
-            .insert((prefix.clone(), key.to_string(), all_joined.clone()))
+          let seen = (prefix.clone(), key.to_string(), all_joined.clone());
+          if gullet::in_speculative_digestion() {
+            !cell.borrow().contains(&seen)
+          } else {
+            cell.borrow_mut().insert(seen)
+          }
         });
         if is_new && !(prefix == "KV" && unknown_keyval_keys_ignored()) {
           // Intentional divergence from Perl (KeyVals.pm L97 uses Info).

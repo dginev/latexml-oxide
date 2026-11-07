@@ -33,12 +33,14 @@ use super::{
 };
 
 mod apply;
+mod content;
 mod dom;
 mod plan;
 mod repart;
 
-use plan::{Op, Owner};
 // (the writer's cut of a block's entry, which the reading checks an in-block contact's entries by: `events::labelled_entries`)
+pub(super) use content::Field;
+use plan::{Op, Owner};
 pub(super) use plan::{entry_forms, labelled_start, span_tokens};
 
 /// Why the writer stays out of the paper the ledger holds, `None` where it may write: every block flushed so far

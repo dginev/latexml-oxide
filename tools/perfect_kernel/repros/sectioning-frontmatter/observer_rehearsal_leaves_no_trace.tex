@@ -1,0 +1,44 @@
+% mechanism: what a rehearsal runs is undone, what an assignment journal does not see too (`state::journal_box_dimension`,
+%   `state::input_stream_to_change`, `set_font_parameter`, the pdfTeX generator's own state under a speculative digestion, a missing
+%   key's Warning, keyvals' seen set): each of `\HOSTILE`'s runs twice with the observer on, once in the rehearsal and once in the real digestion, so
+%   what a rollback left behind shows in the body's state line as run twice
+% witness: brief Z3 Part 2, the plan's "The rehearsal must leave no trace" (no corpus witness: the hostile shapes are synthetic;
+%   perfect_kernel_batchz3 runs this template with each hostile input in `\HOSTILE`'s place)
+% oracle:  pdflatex 0 errors: the two state lines, each a run of the same state after one run of `\HOSTILE`
+% engines: Z2: `\fontdimen` and `\wd` set from their own value, `\read`, `\pdfuniformdeviate` ran twice with the observer on; the missing key's
+%   Warning lost; Z3: the same with the observer on and off
+% expect:  0 errors; output outside the creators byte-identical with the observer on and off
+%          (perfect_kernel_batchz3::the_rehearsal_leaves_no_trace_*)
+% status:  GREEN (Z3)
+\begin{filecontents*}[overwrite]{iso_read.txt}
+readline one
+readline two
+readline three
+readline four
+readline five
+\end{filecontents*}
+\documentclass{article}
+\usepackage{keyval}
+\font\fa=cmr7 
+\newcount\ca
+\newtoks\ta
+\newbox\pb\setbox\pb\hbox{PBOX}
+\newwrite\ow\immediate\openout\ow=iso_stream.txt
+\immediate\write\ow{first line}
+\newread\rs\immediate\openin\rs=iso_read.txt
+\def\qaccum{}
+\newcommand\lxafter{\global\advance\ca by 1 AFTERRAN}
+\newcommand\lxstate{[\the\ca|\the\ta|\qaccum|\pdfuniformdeviate 1000000|\read\rs to\qrd \qrd|\the\fontdimen2\font|\the\fontdimen3\fa|\the\wd\pb|\the\ht\pb|\thesection|\thefigure|\thefootnote|\the\catcode`\Q|\ifdefined\qg D\else U\fi]}
+\newcommand\HOSTILE{\global\advance\ca by 1 \global\ta=\expandafter{\the\ta x}\xdef\qaccum{\qaccum x}\fontdimen2\font=\dimexpr\fontdimen2\font+1pt\relax \wd\pb=\dimexpr\wd\pb+1cm\relax \read\rs to\qline \pdfuniformdeviate 1000 \immediate\write\ow{hostile line}}
+\begin{document}
+\title{T}
+\author{Ann Able \HOSTILE \and Bob Baker}
+Before \kern2pt\penalty5\hskip1pt\hbox{LB}
+\maketitle
+\lxstate
+\section{One}\label{sec:one} Body \ref{sec:one}.\footnote{N}
+\begin{figure}\caption{F}\label{fig:b}\end{figure}
+\lxstate
+\immediate\closeout\ow
+\input{iso_stream.txt}
+\end{document}

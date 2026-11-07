@@ -57,6 +57,9 @@ pub(in crate::base_utilities) enum Outcome {
   /// definitions, the breaks its binding declares and the errors by position (`rehearsal::Rehearsal::Done`).
   Events {
     events:       Vec<Event>,
+    /// the extents of its formulas, outermost, in order (`events::lex_with_formulas`): what a span's content reads
+    /// (`writer::Field`). Not in a dump: nothing offline reads the content
+    formulas:     Vec<(u16, u16)>,
     errors:       usize,
     warnings:     usize,
     declarations: Vec<Event>,
