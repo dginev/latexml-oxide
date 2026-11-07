@@ -16,7 +16,7 @@ findings become their acceptance witnesses.
 | Perl LaTeXML (`Base_Utility.pool.ltxml`) | The end state |
 |---|---|
 | A binding's macros call `\lx@add@*` with tokens and keys | The same |
-| `\lx@add@authors` (:688) decides a block's parts with `SplitTokens` and emits `\lx@add@author`-style calls | **The one added step:** the block is rehearsed, its marks and lines are read from what digestion made, and the same calls are emitted |
+| `\lx@add@authors` (:687) decides a block's parts with `SplitTokens`, at the call, and emits `\lx@add@author`-style calls | **The one added step, at the flush (`place.rs:409`), as digested material doesn't exist at the call:** the macro queues the block, which is rehearsed, its marks and lines are read from what digestion made, and the same calls are emitted |
 | `queueFrontMatter` (:272), `frontmatter_raw` | The same: `queue_front_matter` |
 | `digestFrontMatter` (:799), `frontmatter`, `num_<tag>` | The same: `digest_front_matter` |
 | `insertFrontMatter` (:824) | The same: `insert_frontmatter` |
