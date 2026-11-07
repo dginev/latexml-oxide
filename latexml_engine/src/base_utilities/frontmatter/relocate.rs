@@ -1125,46 +1125,39 @@ pub fn leading_line_label(content: &Tokens) -> Option<(String, bool, Tokens)> {
   }
 }
 
-/// The marks the queued authors' names show, as label keys (`mark_key`): the items of AASTeX 5's `\altaffilmark{…}`
-/// (which request `altaffil:` labels), and those of their superscripts (`affiliation:` labels).
-pub fn queued_name_marks() -> (Vec<String>, Vec<String>) {
-  with_value("frontmatter_raw", |v| match v {
-    Some(Stored::FrontmatterRaw(queue)) => {
-      let (mut altaffil, mut sup) = (Vec::new(), Vec::new());
-      for entry in queue.iter().filter(|entry| entry.0 == "ltx:creator") {
-        let tokens = entry.2.unlist_ref();
-        for (i, t) in tokens.iter().enumerate() {
-          if *t == T_CS!("\\altaffilmark")
-            && let Some((operand, _)) = sup_operand_at(tokens, i + 1)
-          {
-            altaffil.extend(
-              Tokens::new(operand)
-                .untex_string()
-                .as_ref()
-                .split(',')
-                .map(mark_key)
-                .filter(|key| !key.is_empty()),
-            );
-          }
-        }
-        sup.extend(
-          superscript_scripts(&entry.2.to_string())
-            .concat()
-            .iter()
-            .map(|m| mark_key(m)),
-        );
-      }
-      (altaffil, sup)
-    },
-    _ => (Vec::new(), Vec::new()),
-  })
+/// The marks a queued creator's call shows, as label keys (`mark_key`): the items of AASTeX 5's `\altaffilmark{…}` (which
+/// request `altaffil:` labels), and those of its superscripts (`affiliation:` labels).
+pub(super) fn name_marks_of(command: &Tokens) -> (Vec<String>, Vec<String>) {
+  let tokens = command.unlist_ref();
+  let mut altaffil = Vec::new();
+  for (i, t) in tokens.iter().enumerate() {
+    if *t == T_CS!("\\altaffilmark")
+      && let Some((operand, _)) = sup_operand_at(tokens, i + 1)
+    {
+      altaffil.extend(
+        Tokens::new(operand)
+          .untex_string()
+          .as_ref()
+          .split(',')
+          .map(mark_key)
+          .filter(|key| !key.is_empty()),
+      );
+    }
+  }
+  let sup = superscript_scripts(&command.to_string())
+    .concat()
+    .iter()
+    .map(|m| mark_key(m))
+    .collect();
+  (altaffil, sup)
 }
 
 /// How many of the marks the queued authors' names show as superscripts (`queued_name_marks`) `content` prints, each
 /// once: the labelled lines an affiliation block holds for the names (`\address{\parbox{\linewidth}{$^{1}$Univ A\\
 /// $^{2}$Univ B}}`: 2).
 pub fn requested_marks_held(content: &Tokens) -> usize {
-  let (_, requested) = queued_name_marks();
+  let marks = queued_name_marks();
+  let requested = &marks.1;
   let mut held: Vec<String> = Vec::new();
   for mark in content_marks(content) {
     let key = mark_key(&mark);
@@ -1180,12 +1173,12 @@ pub fn requested_marks_held(content: &Tokens) -> usize {
 /// marked lines do not print (REVTeX's `\affiliation{Univ A \\ $^2$Univ B \\ $^3$Inst C}` under `Ann$^{1,2}$`,
 /// `Bob$^{2,3}$`: 1 — 2109.01501, 1903.07834).
 pub fn requested_marks_unprinted(content: &Tokens) -> Vec<String> {
-  let (_, requested) = queued_name_marks();
+  let marks = queued_name_marks();
   let printed: Vec<String> = content_marks(content).iter().map(|m| mark_key(m)).collect();
   let mut out: Vec<String> = Vec::new();
-  for key in requested {
-    if !key.is_empty() && !printed.contains(&key) && !out.contains(&key) {
-      out.push(key);
+  for key in &marks.1 {
+    if !key.is_empty() && !printed.contains(key) && !out.contains(key) {
+      out.push(key.clone());
     }
   }
   out
@@ -1721,7 +1714,8 @@ pub(in crate::base_utilities) fn spaced_marks_written(
   {
     return None;
   }
-  let (_, requested) = queued_name_marks();
+  let marks = queued_name_marks();
+  let requested = &marks.1;
   let requests = |operand: &[Token]| {
     let mut mark = vec![T_MATH!(), T_SUPER!(), T_BEGIN!()];
     mark.extend_from_slice(operand);
@@ -1856,7 +1850,8 @@ fn at_line_start(tokens: &[Token], i: usize) -> bool {
 /// 0), which is one entry its group shares (review rev98e S2).
 pub fn requested_mark_lines(content: &Tokens) -> usize {
   let tokens = content.unlist_ref();
-  let (_, requested) = queued_name_marks();
+  let marks = queued_name_marks();
+  let requested = &marks.1;
   let switch = |t: &Token| MARK_SWITCHES.iter().any(|cs| *t == T_CS!(*cs));
   let skippable = |t: &Token| {
     *t == T_SPACE!()

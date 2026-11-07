@@ -565,7 +565,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
         keyvals.extend(text_tokens(&group.join(";")));
       }
       if weak_mark {
-        let requesting: Vec<String> = requesting_authors(&queued_author_marks(), mark.unlist_ref())
+        let requesting: Vec<String> = queued_requesters(mark.unlist_ref())
           .iter()
           .map(ToString::to_string)
           .collect();

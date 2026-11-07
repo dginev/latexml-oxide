@@ -940,22 +940,6 @@ pub(in crate::base_utilities) fn queued_row_start() -> usize {
   }
 }
 
-/// The mark operands of each queued author, in queue order: the n-th digests with the label `author:n`
-/// (`num_ltx:creator{author}`), by which an address goes to it — as the count starts from no author, which holds
-/// unless authors an earlier flush digested are still kept (an appending `\author` after `\maketitle`).
-pub(in crate::base_utilities) fn queued_author_marks() -> Vec<Vec<Vec<Token>>> {
-  with_value("frontmatter_raw", |v| match v {
-    Some(Stored::FrontmatterRaw(queue)) => queue
-      .iter()
-      .filter(|entry| {
-        entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
-      })
-      .map(|entry| author_mark_operands(entry.2.unlist_ref()))
-      .collect(),
-    _ => Vec::new(),
-  })
-}
-
 /// Whether the addresses of `lines` may be the queued authors' in order from the one at `offset`
 /// ([`addresses_in_order`]).
 pub(in crate::base_utilities) fn run_in_author_order(

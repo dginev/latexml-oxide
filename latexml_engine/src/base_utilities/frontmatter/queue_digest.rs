@@ -894,9 +894,7 @@ pub fn author_creator_total() -> usize {
 /// The queued author creators (their queue positions) whose names' marks request the label a mark's `operand` sets
 /// (`requesting_authors`): what a rerouted setter's optional argument is read against (`frontmatter_stores.rs`
 /// `optional_contact`: `\address[a]{…}` under `Ann$^a$` labels the address).
-pub fn queued_authors_requesting(operand: &[Token]) -> Vec<usize> {
-  requesting_authors(&queued_author_marks(), operand)
-}
+pub fn queued_authors_requesting(operand: &[Token]) -> Vec<usize> { queued_requesters(operand) }
 
 /// Whether an author creator of the flush being digested printed a mark requesting the affiliation label `key`: the
 /// labels the marks of the authors the flush took from the queue request (`lx_frontmatter_requested_marks`, `place.rs`
@@ -1003,8 +1001,8 @@ pub fn names_request_label(label: &str) -> Result<bool> {
   let Some(key) = label.strip_prefix("affiliation:") else {
     return Ok(false);
   };
-  for operand in queued_author_marks().into_iter().flatten() {
-    if frontmatter_label_keys(&Tokens::new(operand), "affiliation")?
+  for operand in queued_author_marks().iter().flatten() {
+    if frontmatter_label_keys(&Tokens::new(operand.clone()), "affiliation")?
       .iter()
       .any(|requested| requested == label)
     {

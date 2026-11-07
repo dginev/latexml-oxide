@@ -269,7 +269,7 @@ pub fn queued_authors_carry_entry_mark(affiliation: &Tokens) -> bool {
   entry_mark(affiliation.unlist_ref()).is_some_and(|mark| {
     !is_symbol_mark(&mark)
       && clean_frontmatter_labels(&Tokens::new(mark.clone()).to_string(), "affiliation").len() == 1
-      && !requesting_authors(&queued_author_marks(), &mark).is_empty()
+      && !queued_requesters(&mark).is_empty()
   })
 }
 
@@ -329,6 +329,7 @@ pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
       .find(|(key, _)| *key == "role")
       .map_or("", |(_, role)| role),
   );
+  forget_queue_reading();
   with_value_mut(frontmatter_queue_name(), |val_opt| {
     if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = val_opt {
       queue.retain(|entry| {

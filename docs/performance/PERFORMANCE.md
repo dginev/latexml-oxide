@@ -1488,3 +1488,16 @@ scratch (both a public `Tokens` API change), lowering `read_balanced`'s cap 16
 and a full `perf report` call graph on the 610 MB bench binary (> 5 min symbol
 load; use `-g none` flat self). Beyond these, closing the 6× needs fewer tokens
 per picture (pgf binding emitting less) — the harder program.
+
+## Many-author blocks: the names read once (C1, 2026-11-06)
+
+Each contact of an author block read every queued name again (`queued_author_marks`, `queued_name_marks`,
+`requesting_authors`), so the block's cost was names × contacts. `frontmatter/queue_reading.rs` reads each entry once and
+keeps the reading in the state beside the queue (it is read again when a name's command changes meaning, forgotten when the
+queue loses entries). `instructions:u`, `int142a-rel` → `C1-rel`, XML byte-identical: 2103.04797 (975 authors) 11.30 G → 8.14 G
+(−28.0 %); 1901.01540 (1,202) 32.16 G → 14.23 G (−55.7 %); 2005.08745 (592, labelled: the Cut left them at once) 12.69 G →
+12.70 G (+0.05 %); `hello.tex` 1.0810 G → 1.0812 G (+0.02 %); `b5_fill1000.tex` 11.563 G → 11.562 G. Generated blocks, 600
+names: 300 marked `\affiliation`s 21.6 G → 4.4 G, the 20-entry list repeated after every name 175.3 G → 8.0 G. Left, both
+synthetic-only so far: `relocate::for_run_names` per `\affiliation` after a long run (9.9 % of the 300 marked calls under
+aastex631), `affiliations::place_uncut_copies`'s queue walk per repeated list (15 % of the repeated list, its copies'
+`printed_marks_as_marks` reading the queue's marks). Guard `perfect_kernel_batchc1`.

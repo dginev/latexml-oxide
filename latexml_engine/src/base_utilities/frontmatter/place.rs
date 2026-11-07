@@ -423,6 +423,7 @@ pub fn digest_front_matter() -> Result<()> {
   // else — deferred timing, digestion order, late re-let/\def fidelity —
   // is exactly the PR's. Newly-queued entries during this digest are
   // processed by the next invocation (or the end-of-document fallback).
+  forget_queue_reading();
   let mut commands: Vec<RawFrontmatter> = match remove_value("frontmatter_raw") {
     Some(Stored::FrontmatterRaw(commands)) => commands,
     _ => Vec::new(),

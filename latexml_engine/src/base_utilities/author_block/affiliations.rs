@@ -1325,10 +1325,6 @@ fn requested_marked_entries_in(list: &Tokens) -> bool { requested_entry_marks(li
 /// The marks, of distinct labels, leading the entries of `list` (its marks written as the plain marks they print) that
 /// queued names request — none when its first printed line is not led by a mark ([`requested_marked_entries_in`]).
 fn requested_entry_marks(list: &Tokens) -> Vec<Vec<Token>> {
-  let authors = queued_author_marks();
-  if authors.is_empty() {
-    return Vec::new();
-  }
   let lines: Vec<Tokens> = split_tokens_delimited(list.clone(), affil_splits())
     .into_iter()
     .map(|(_, line)| line)
@@ -1342,7 +1338,7 @@ fn requested_entry_marks(list: &Tokens) -> Vec<Vec<Token>> {
   for line in lines.into_iter().filter(marker_leads) {
     for piece in split_wrapped_affiliation_marks(line) {
       if let Some(mark) = entry_mark(piece.unlist_ref())
-        && !requesting_authors(&authors, &mark).is_empty()
+        && !queued_requesters(&mark).is_empty()
         && let Some(label) = mark_label(&mark)
         && !labels.contains(&label)
       {
@@ -1404,8 +1400,8 @@ pub fn class_numbered_institutes(stuff: &Tokens, store: Option<&str>) -> Option<
 /// empty piece (edpsci's `\inst{1,2}$^{,}$`, 2501.08874) —, never a letter label (`\inst{a}`), which no number answers?
 pub fn numbered_marks_requested() -> bool {
   let mut numbers = false;
-  for operand in queued_author_marks().into_iter().flatten() {
-    for piece in Tokens::new(operand).to_string().split(',') {
+  for operand in queued_author_marks().iter().flatten() {
+    for piece in Tokens::new(operand.clone()).to_string().split(',') {
       let piece = piece.trim();
       if piece.is_empty() || piece.starts_with('\\') || !piece.chars().any(|c| c.is_alphanumeric())
       {
@@ -1559,8 +1555,8 @@ fn place_address_runs(
       // `email_owners::entry_address_owners`, OXIDIZED_DESIGN_DIVERGENCES #956; it no longer stays in the entry's text,
       // 2609.19448's one address under one author's affiliation still that author's)
       Some((entry, at)) if under_affiliations => {
-        let requesting = entry_mark(&entries[entry])
-          .map_or_else(Vec::new, |mark| requesting_authors(&authors, &mark));
+        let requesting =
+          entry_mark(&entries[entry]).map_or_else(Vec::new, |mark| queued_requesters(&mark));
         // (one address under an affiliation one author requests is that author's, its line made the contact here: an
         // e-mail command a raw class's store holds, `\email{hyf@…}` under `\inst{1}`'s institute, prints nowhere if
         // left in the entry — astro-ph0701846)
@@ -1788,7 +1784,7 @@ pub(in crate::base_utilities) fn placed_contact_owner(
   let requesting = if mark.is_empty() || (weak && !spelled.is_empty()) {
     Vec::new()
   } else {
-    requesting_authors(&authors, mark.unlist_ref())
+    queued_requesters(mark.unlist_ref())
   };
   if let [author] = requesting.as_slice() {
     // (a footnote-symbol mark stays shown on the name and pairs by no label of its own: the author's position)
