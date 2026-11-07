@@ -430,8 +430,12 @@ pub fn digest_front_matter() -> Result<()> {
   };
   // (the labels the queue defers, read for the readers of its keyvals here: `\lx@label@ref`, cas's `\author[a]`)
   resolve_queued_label_refs(&mut commands);
+  // (the one added step, under its switch: the queue's creators and annotations written from the reading, OD #980)
+  let emitted = emit_commands(&mut commands)?;
   // (a contact the class prints under the whole row of names, every author's: OXIDIZED_DESIGN_DIVERGENCES #901)
-  share_row_contacts(&mut commands)?;
+  if !emitted {
+    share_row_contacts(&mut commands)?;
+  }
   // The entries a seal drops in this flush, whose annotations go with them ([`seal_digested_frontmatter`]) — this
   // flush's own, the outer flush's restored after it (a queued entry may flush again, `\maketitle` in an abstract).
   let outer_sealed_off = lookup_string("lx_frontmatter_sealed_off");

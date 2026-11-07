@@ -1,0 +1,14 @@
+% mechanism: marks a block's lines answer leave the name, as `\\lx@author@withsup` reads them; one no line answers shows (`show_unanswered_marks`)
+% witness: 1105.0929, 1602.07956
+% oracle:  pdflatex 0 errors; "Ann Able1 , Bob Baker2,* , Cat Cole3"
+% engines: rust the old reader alike; perl: no such step
+% expect:  0 errors, 0 warnings; no sup on Ann; Bob's `*` and Cat's 3 shown
+% status:  GREEN (perfect_kernel_batchz4)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{Ann Able$^{1}$, Bob Baker$^{2,*}$, Cat Cole$^{3}$\\ $^{1}$Univ A, Town\\ $^{2}$Univ B, City}
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}

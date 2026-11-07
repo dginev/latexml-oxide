@@ -1,0 +1,23 @@
+% mechanism: one address of a list the reading writes out (`ruling3:written-out`) is the tokens of the ink printing it in the
+%   call's rehearsed argument (`writer::emit::one_address`), the list the run from its first ink to its last: no `@` read
+% witness: review revZ4a (no corpus witness); the list shapes of 2211.14973
+% oracle:  pdflatex with 2601.19870's aastex631.cls: 0 errors; "Ann Able and Bob Baker", "ann@x.edu, bob@y.edu"
+% engines: rust Z4a, the switch on: Ann "ann, ann", Bob "ann, bob" (the last group holding an `@` read as the list); off
+%   and int143b: Bob holds the list whole
+% expect:  0 errors, 0 warnings, the switch on: Ann's address ann@x.edu, Bob's bob@y.edu, each in its colour
+% status:  RED (Z4a) -> GREEN (perfect_kernel_batchz4::an_address_of_a_list_is_its_ink)
+% preload: ar5iv.sty
+\documentclass{aastex631}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ A}
+\author{Bob Baker}
+\affiliation{Univ B}
+\email{\textcolor{blue}{ann@x.edu}, \textcolor{blue}{bob@y.edu}}
+\begin{abstract}
+Abs.
+\end{abstract}
+\section{S}
+Body.
+\end{document}

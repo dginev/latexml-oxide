@@ -17,6 +17,7 @@ use latexml_core::{
 
 use super::{
   events::{EmailMeaning, Event, EventKind, HeldError, lex_events},
+  field_notes::EnvironmentStep,
   resolver::Resolved,
   shadow::{FmShadow, fm_shadow_mode},
   *,
@@ -65,6 +66,8 @@ pub(in crate::base_utilities) enum Outcome {
     declarations: Vec<Event>,
     breaks:       Vec<Event>,
     held:         Vec<HeldError>,
+    /// the environments its tokens open and close, what a span's content reads (`writer::Field`). Not in a dump
+    environments: Vec<EnvironmentStep>,
   },
   /// Not rehearsed, and why.
   Skipped(SkipReason),
@@ -201,6 +204,8 @@ pub(in crate::base_utilities) struct ApiCall {
   pub cleared:        bool,
   /// the errors its content's rehearsal held (no positions: an API call's content has none)
   pub errors:         usize,
+  /// the queued call itself, where the emitter may reuse it (`writer::emit`, under its switch)
+  pub command:        Option<Tokens>,
 }
 
 /// A contact the document records and the PDF does not print (`ltx:rdf`, `\lx@add@creator@rdf`: AASTeX 7's `\email`
@@ -940,13 +945,14 @@ pub(in crate::base_utilities) fn record_api_call(
       rehearsed: false,
       cleared: false,
       errors: 0,
+      command: (fm_emit_mode() != 0).then(|| command.clone()),
     }));
   });
 }
 
 /// The tag a queued call annotates, its first argument (`\lx@annotate@frontmatter@now{ltx:creator}…`), empty for a call
 /// that annotates none: the API boundary's one read of a command.
-fn annotated_parent(command: &Tokens) -> String {
+pub(super) fn annotated_parent(command: &Tokens) -> String {
   match command.unlist_ref().as_slice() {
     [first, rest @ ..] if *first == T_CS!("\\lx@annotate@frontmatter@now") => {
       first_group(rest).to_string().trim().to_string()

@@ -284,7 +284,7 @@ pub(in crate::base_utilities) fn text_font_command(t: &Token) -> bool {
 }
 
 /// The changes making `from` into `to`: each of the family, series, shape, size and colours that differ.
-fn font_changes(from: &Font, to: &Font) -> Font {
+pub(in crate::base_utilities) fn font_changes(from: &Font, to: &Font) -> Font {
   Font {
     family: (to.family != from.family)
       .then(|| to.family.clone())

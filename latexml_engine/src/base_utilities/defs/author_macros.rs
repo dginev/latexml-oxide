@@ -3,6 +3,23 @@
 
 use super::*;
 
+/// `LATEXML_FM_EMIT=2` (OD #980): one whole block queued for the call, as the reader won't be cutting it, which the emitter
+/// takes at the flush (`observer::writer::emit`).
+fn whole_block_call(stuff: Tokens, replace: bool, keyvals: Option<Tokens>) -> Result<Tokens> {
+  if replace {
+    replace_queued_authors();
+  }
+  let mut out = TokenizeInternal!(r"\lx@add@frontmatter{ltx:creator}[role=author").unlist();
+  if let Some(keyvals) = keyvals {
+    out.push(T_OTHER!(","));
+    out.extend(keyvals.unlist());
+  }
+  out.extend(TokenizeInternal!(r"]{\lx@personname{").unlist());
+  out.extend(stuff.unlist());
+  out.extend([T_END!(), T_END!()]);
+  Ok(Tokens::new(out))
+}
+
 pub(in crate::base_utilities) fn load() -> Result<()> {
   // This corresponds to standard LaTeX,
   // The command replaces any previous authors/creators;
@@ -42,6 +59,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefMacro!("\\lx@add@authors@adaptive{}", sub[(stuff)] {
     let replace = !lookup_bool("\\author:redefined");
     record_author_call("\\lx@add@authors@adaptive", &stuff, replace, true, None, false);
+    if fm_emit_mode() == 2 { return whole_block_call(stuff, replace, None); }
     add_authors_calls(stuff, replace)
   });
   DefMacro!("\\lx@author@trailing", sub[()] {
@@ -86,6 +104,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
 
   DefMacro!("\\lx@add@authors{}", sub[(stuff)] {
     record_author_call("\\lx@add@authors", &stuff, true, true, None, false);
+    if fm_emit_mode() == 2 { return whole_block_call(stuff, true, None); }
     add_authors_calls(stuff, true)
   });
   // A class's own author command, called once per author or author group and each adding to the ones before
@@ -98,6 +117,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (revtex's `annotations=`).
   DefMacro!("\\lx@add@authors@append[]{}", sub[(keyvals, stuff)] {
     record_author_call("\\lx@add@authors@append", &stuff, false, false, keyvals.as_ref(), true);
+    if fm_emit_mode() == 2 { return whole_block_call(stuff, false, keyvals); }
     add_authors_calls_sectioned(stuff, false, false, keyvals, true)
   });
   // A class's own author-list command (informs4.cls:1198 `\AUTHOR{Ann Able$^{a}$, Bob Baker$^{b}$}`, documented as a
@@ -106,6 +126,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefMacro!("\\lx@add@authors@list{}", sub[(stuff)] {
     assign_value("lx_authors_list_start", queued_author_count() as i64, Some(Scope::Global));
     record_author_call("\\lx@add@authors@list", &stuff, false, true, None, false);
+    if fm_emit_mode() == 2 { return whole_block_call(stuff, false, None); }
     add_authors_calls_sectioned(stuff, false, true, None, false)
   });
   // A name list where a binding has no lines or affiliations to read: each name `split_author_line` finds (comma,
@@ -115,6 +136,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (`split_author_calls`, batch 103b: webofc's `… on behalf of the KLOE-2 Collaboration` after the notes, 1502.05517).
   DefMacro!("\\lx@add@author@split[]{}", sub[(keyvals, names)] {
     record_author_call("\\lx@add@author@split", &names, false, false, keyvals.as_ref(), false);
+    if fm_emit_mode() == 2 { return whole_block_call(names, false, keyvals); }
     Ok(Tokens::new(split_author_calls(keyvals, names)?))
   });
   // That class's affiliation command, under its authors (informs4.cls:1199 `\AFF{$^a$Univ A}`): when the queued authors
@@ -144,6 +166,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   });
   DefMacro!("\\lx@ijcai@names{}", sub[(stuff)] {
     record_author_call("\\lx@ijcai@names", &stuff, true, false, None, false);
+    if fm_emit_mode() == 2 { return whole_block_call(stuff, true, None); }
     add_authors_calls_sectioned(stuff, true, false, None, false)
   });
 

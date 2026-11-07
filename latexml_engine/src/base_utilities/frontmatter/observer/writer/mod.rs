@@ -36,11 +36,14 @@ use super::{
 mod apply;
 mod content;
 mod dom;
+mod emit;
 mod plan;
 mod repart;
 
 // (the writer's cut of a block's entry, which the reading checks an in-block contact's entries by: `events::labelled_entries`)
 pub(super) use content::Field;
+pub use emit::set_fm_emit_override;
+pub(in crate::base_utilities) use emit::{EMITTED, EMITTING, emit_commands, fm_emit_mode};
 use plan::{Op, Owner};
 pub(super) use plan::{entry_forms, labelled_start, span_tokens};
 
@@ -310,7 +313,7 @@ fn insert_in_source_order(items: &mut Vec<Assoc>, assoc: Assoc) {
 /// At the end of `insert_frontmatter`: write the observer's reading of a written family's paper where it differs from
 /// today's by the writer's operations alone; else leave the document as it is.
 pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Document) -> Result<()> {
-  if !fm_shadow_enabled() || rehearsal::rehearsing() {
+  if !fm_shadow_enabled() || rehearsal::rehearsing() || lookup_bool(EMITTED) {
     return Ok(());
   }
   let Some(resolved) = written_resolution() else {
@@ -596,27 +599,32 @@ fn give_back_entries(resolved: &Resolved, front: &dom::Front, all: bool) -> Resu
     if (holds || held_as_contact) && !all && !label_lost()? {
       continue;
     }
-    for creator in &mut out.creators {
-      creator
-        .contacts
-        .retain(|a| !(a.source == taken.source && a.rule.contains("owner:entry-address")));
-    }
-    for (holder, at, assoc) in &taken.holders {
-      let slots = match holder {
-        Some(c) => &mut out.creators[*c].affiliations,
-        None => &mut out.block,
-      };
-      match slots.iter().position(|a| {
-        a.source == taken.source
-          && a.text == taken.stripped
-          && a.rule.ends_with(" ruling3:address-out")
-      }) {
-        Some(i) => slots[i] = assoc.clone(),
-        None => slots.insert((*at).min(slots.len()), assoc.clone()),
-      }
-    }
+    give_back_entry(&mut out, taken);
   }
   Ok(out)
+}
+
+/// The entry `taken` given back in the reading `out`: its addresses, taken out, no contacts of its holders.
+fn give_back_entry(out: &mut Resolved, taken: &resolver::Taken) {
+  for creator in &mut out.creators {
+    creator
+      .contacts
+      .retain(|a| !(a.source == taken.source && a.rule.contains("owner:entry-address")));
+  }
+  for (holder, at, assoc) in &taken.holders {
+    let slots = match holder {
+      Some(c) => &mut out.creators[*c].affiliations,
+      None => &mut out.block,
+    };
+    match slots.iter().position(|a| {
+      a.source == taken.source
+        && a.text == taken.stripped
+        && a.rule.ends_with(" ruling3:address-out")
+    }) {
+      Some(i) => slots[i] = assoc.clone(),
+      None => slots.insert((*at).min(slots.len()), assoc.clone()),
+    }
+  }
 }
 
 /// The reading `resolved` with each e-mail call printing several addresses alone that it wrote out address by address

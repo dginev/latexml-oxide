@@ -1,0 +1,16 @@
+% mechanism: a call's piece no balanced run holds is its reading's text, in a counted Warning (`writer::emit::call_pieces`): the
+%   one-piece fallback reads the reading's count of pieces, not the runs cut
+% witness: review revZ4a (`\begin{ff}` in an `\affiliation`, the piece "2 Univ Y" handed to entry 1); 1202.5401's `\ead`
+% oracle:  pdflatex 0 errors; "1 Univ X Lab A, 2 Univ Y"
+% engines: rust Z4a, the switch on: a piece the run can't cut dropped and the other given its place, W 0; off: one entry
+% expect:  0 errors, 2 warnings, the switch on: affiliations "Univ X Lab A" and "Univ Y", each named in its Warning
+% status:  RED (Z4a) -> GREEN (perfect_kernel_batchz4::a_piece_no_run_holds_is_counted)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{$^{1}$Univ X {\it Lab A, $^{2}$Univ} Y}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,22 @@
+% mechanism: an IEEE ordinal the reading joins to the name (`resolver::lines::join_ordinals`) stays in its tokens
+%   (`writer::emit::block_names`), as today's personname
+% witness: 1907.06250, 2605.00900 (the ruling's 2412.10792, 2202.06596)
+% oracle:  pdflatex 0 errors; "1st Ann Able", "2nd Bob Baker"
+% engines: rust Z4a, the switch on: "Ann Able", "Bob Baker", the ordinals lost (no Warning); off: "1 st Ann Able"
+% expect:  0 errors, 0 warnings; the switch on the creators' XML the old engine's: <personname>1<sup>st</sup> Ann Able</personname>
+% status:  RED (Z4a) -> GREEN (perfect_kernel_batchz4::the_emit_is_the_old_markup)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{1\textsuperscript{st} Ann Able}
+\IEEEauthorblockA{\textit{Univ A} \\
+Town, Land \\
+ann@a.edu}
+\and
+\IEEEauthorblockN{2\textsuperscript{nd} Bob Baker}
+\IEEEauthorblockA{\textit{Univ B} \\
+City, Land}}
+\maketitle
+Body.
+\end{document}

@@ -644,47 +644,6 @@ fn a_group_a_mark_opens_at_a_lines_start_starts_at_its_brace() {
   ]);
 }
 
-/// RED: `writer::content::environment_step` pairs a run's environments by their spelling. What a macro or a `\let` copy opens is not counted (the last cell lost in an Error, on the base too); a
-/// `\begin` or `\end` that opens nothing is, and the cut goes (nothing lost, against the base). Review revZ3r2.
-#[test]
-#[ignore = "RED: the extents should come from the digested list, when the emitter takes this over"]
-fn affiliation_cut_environments_by_spelling_red() {
-  let template = repro!("affiliation_cut_environments_by_spelling_red");
-  let shape = "\\bx a&b\\\\ c&d\\ex";
-  assert!(template.contains(shape));
-  let mut wrong = Vec::new();
-  for (row, text) in [
-    (shape, "1 Univ X a b c d"),
-    (
-      "\\bb{tabular}{cc}a&b\\\\ c&d\\ee{tabular}",
-      "1 Univ X a b c d",
-    ),
-    ("\\detokenize{\\begin} X", "1 Univ \u{201c}begin X"),
-    ("\\detokenize{\\end} X", "1 Univ \u{201c}end X"),
-    ("\\ifx\\zz\\end Q\\else X\\fi", "1 Univ X"),
-  ] {
-    let template = if row == "\\ifx\\zz\\end Q\\else X\\fi" || row.starts_with("\\detokenize") {
-      template.replace("Univ X ", "Univ ")
-    } else {
-      template.to_string()
-    };
-    let (log, xml) = in_a_directory(&template.replace(shape, row), &[], &[]);
-    let expected = vec![vec![
-      "Ann Able".to_string(),
-      format!("affiliation={text}"),
-      "affiliation=2 Univ Y".to_string(),
-    ]];
-    if creators(&xml) != expected || error_count(&log) != 0 {
-      wrong.push(format!(
-        "{row}: {:?}, E {}",
-        creators(&xml),
-        error_count(&log)
-      ));
-    }
-  }
-  assert!(wrong.is_empty(), "{}", wrong.join("\n"));
-}
-
 /// RED: a mark's group that is no formula's alone and stands at no line's start, cut on the base by walking back, uncut now: nothing lost, the marks in the text. A `\textsuperscript` mark at a
 /// line's start goes to a nameless creator. Review revZ3r2.
 #[test]

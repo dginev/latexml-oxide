@@ -1,0 +1,17 @@
+% mechanism: an environment opening a name's run takes its arguments with it: its step's extent is as far as what runs at its
+%   `\begin`'s position reads (`field_notes::note_environment`), so `past_open_environment` starts the name past `{c}` and
+%   `{0.4\textwidth}`
+% witness: review revZ4a (no corpus witness; brief Z4ar2 2.1 asks a dev20k census of `\author{\begin{tabular}`)
+% oracle:  pdflatex 0 errors; "Ann Able", "Univ A", "ann@a.edu", "Bob Baker", "Univ B"
+% engines: rust Z4a, the switch on: "cAnn Able", "cBob Baker"; off (Perl's `{tabular}` fallback,
+%   Base_Utility.pool.ltxml:693): one creator of the whole field
+% expect:  0 errors, 0 warnings, the switch on: Ann Able (Univ A, ann@a.edu) and Bob Baker (Univ B)
+% status:  RED (Z4a) -> GREEN (perfect_kernel_batchz4::a_faux_environment_name_starts_past_its_arguments)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\begin{tabular}{c}Ann Able\\ Univ A\\ \texttt{ann@a.edu}\end{tabular} \and \begin{minipage}{0.4\textwidth}\centering Bob Baker\\ Univ B\end{minipage}}
+\maketitle
+Body.
+\end{document}

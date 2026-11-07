@@ -7,26 +7,21 @@
 //! is left of the tokens is brace balance, a property of the content itself, as the declarations' spans clamp at it
 //! (`field_notes::settle_declarations`).
 
-use super::*;
+use super::{super::field_notes::EnvironmentStep, *};
 
 /// A field's tokens as a rehearsal read them: `tokens[0]` at position `base`, and its formulas (`events::lex_with_formulas`:
 /// outermost, in order).
 pub(in crate::base_utilities::frontmatter::observer) struct Field<'a> {
-  pub tokens:   &'a [Token],
-  pub base:     usize,
-  pub formulas: &'a [Formula],
+  pub tokens:       &'a [Token],
+  pub base:         usize,
+  pub formulas:     &'a [Formula],
+  /// the environments they open and close, as the digestion's frames say it (`field_notes::EnvironmentStep`)
+  pub environments: &'a [EnvironmentStep],
 }
 
 /// Whether `t` is the control sequence `name`.
 pub(super) fn is_cs(t: &Token, name: &str) -> bool {
   t.get_catcode() == Catcode::CS && t.with_cs_name(|n| n == name)
-}
-
-/// What `t` does to the environments open: `\begin` opens one, `\end` closes one. By its spelling, and only that: an environment a macro or a `\let` copy opens
-/// is not counted, a `\begin` under `\detokenize` or `\ifx` is (RED `affiliation_cut_environments_by_spelling_red`). The extents should come from the digested list,
-/// as `events::formula_extent`'s do, when the emitter takes this over.
-fn environment_step(t: &Token) -> i32 {
-  i32::from(is_cs(t, "\\begin")) - i32::from(is_cs(t, "\\end"))
 }
 
 /// The opening braces in `content[from..to]` of the groups still open at `to`.
@@ -162,7 +157,7 @@ impl Field<'_> {
   /// `start..end` grown to a balanced run, its shifts in pairs: back to the opening brace of a group it closes that starts there
   /// ([`Self::starts_at_its_brace`]; any other group it closes is no run), on over the closing braces right after a group it
   /// opens.
-  fn balanced(&self, start: usize, end: usize, floor: usize) -> Option<(usize, usize)> {
+  pub(super) fn balanced(&self, start: usize, end: usize, floor: usize) -> Option<(usize, usize)> {
     let content = self.tokens;
     let (mut start, mut end) = (start, end);
     let mut before = open_groups(content, floor, start);
@@ -186,26 +181,45 @@ impl Field<'_> {
       end += 1;
       depth -= 1;
     }
-    // (its environments in pairs, read from their spelling: what `\end{ee}` prints or closes holds a position no box stops at, its body's
-    // `E` written in `\newenvironment{ee}{B}{E}`, an alignment's last cell, and a run with no `\end` lost them, in an Error)
-    let mut environments: i32 = content[start..end].iter().map(environment_step).sum();
-    (environments >= 0).then_some(())?;
-    while environments > 0 {
-      let t = content.get(end)?;
-      environments += environment_step(t);
-      end += 1;
-      // (the last `\end`'s name)
-      if environments == 0 {
-        let mut name = 0;
-        for t in &content[end..] {
-          name += t.group_step();
-          end += 1;
-          if name == 0 {
-            break;
+    // (its environments in pairs, as the digestion's frames say them: what `\end{ee}` prints or closes holds a position no box stops at, its
+    // body's `E` written in `\newenvironment{ee}{B}{E}`, an alignment's last cell, and a run with no `\end` lost them, in an Error; a `\let` copy
+    // and a macro pair count, a `\begin` under `\detokenize` doesn't)
+    let at = |p: u16| usize::from(p).checked_sub(self.base);
+    let mut environments = 0i32;
+    for step in self.environments {
+      // (one a formula holds is the formula's, taken whole: `$\begin{array}{c}a\end{array}$`, review revZ4a)
+      let Some(from) = at(step.start).filter(|&from| self.formula_at(from).is_none()) else {
+        continue;
+      };
+      if from < start {
+        continue;
+      }
+      if from >= end && environments == 0 {
+        break;
+      }
+      environments += if step.opens { 1 } else { -1 };
+      (environments >= 0).then_some(())?;
+      if from >= end || environments == 0 {
+        end = end.max(at(step.end)?.min(content.len()));
+        // (an alignment's cell read its `\\end` and heard the name's brace next: the name is the `\\end`'s)
+        if !step.opens
+          && at(step.end)? == from + 1
+          && content
+            .get(end)
+            .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+        {
+          let mut depth = 0;
+          while let Some(t) = content.get(end) {
+            depth += t.group_step();
+            end += 1;
+            if depth == 0 {
+              break;
+            }
           }
         }
       }
     }
+    (environments == 0).then_some(())?;
     // (a formula the digested list did not say, its shifts in pairs all the same)
     let run = &content[start..end];
     let spelled = |name| run.iter().filter(|t| is_cs(t, name)).count();

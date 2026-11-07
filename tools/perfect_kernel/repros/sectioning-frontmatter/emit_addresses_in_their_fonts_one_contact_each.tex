@@ -1,0 +1,14 @@
+% mechanism: one address of what prints several, in the fonts it prints in (`plan::block_address_tokens`)
+% witness: 1711.05466, 2210.05039
+% oracle:  pdflatex 0 errors; "ann@a.edu, bob@a.edu" in typewriter
+% engines: rust S0: plain text; perl: no such step
+% expect:  0 errors, 0 warnings; two e-mail contacts, typewriter, 90%
+% status:  GREEN (perfect_kernel_batchz4)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{Ann Able$^{1}$, Bob Baker$^{1}$\\ $^{1}$Univ A\\ \texttt{\small ann@a.edu, bob@a.edu}}
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}
