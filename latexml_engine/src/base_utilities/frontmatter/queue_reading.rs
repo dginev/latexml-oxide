@@ -5,7 +5,8 @@
 //! `affiliations::cut_marked_contact`) and 56 % of 1901.01540's (1,202, AASTeX's `\affiliation` and the Cut); 2005.08745's
 //! 592 are labelled, so the Cut leaves them at once. The reading is a value of the state beside the queue, so an
 //! assignment journal rolls both back together (a rehearsal) and it goes with the state; an entry is read once, when a
-//! reader first finds it queued.
+//! reader first finds it queued. Perl has no counterpart, as it reads no names at a contact: this is only a cache of what
+//! the Cut's and the marks' readers would read from the queue, so it never changes an answer.
 
 use std::rc::Rc;
 

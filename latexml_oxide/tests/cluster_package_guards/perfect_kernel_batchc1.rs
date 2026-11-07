@@ -1,8 +1,8 @@
 //! Guards for batch C1: what the frontmatter queue's names ask of their marks is read once per entry and kept with the
 //! queue (`frontmatter/queue_reading.rs`), where each of a block's contacts read every name again: the Cut
-//! (`affiliations::cut_marked_contact`, 2103.04797's 975 authors, 2005.08745's 592) and AASTeX's `\affiliation`
-//! (`relocate::queued_name_marks`, 1901.01540's 1,202). The output is the base's, byte for byte (int142a); the count is
-//! the mechanism.
+//! (`affiliations::cut_marked_contact`, 2103.04797's 975 authors; 2005.08745's 592 are labelled, so it leaves them at
+//! once) and AASTeX's `\affiliation` (`relocate::queued_name_marks`, 1901.01540's 1,202). The output is the base's, byte
+//! for byte (int142a); the count is the mechanism.
 use std::process::Command;
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -74,15 +74,9 @@ fn letters(n: usize) -> String {
   format!("{}{}", digit(n), digit(n / 26))
 }
 
-/// A block of 300 names, each its own mark, 150 of the entries in `\affiliation`s of their own and 150 in one list. Each
-/// name holds its entry, whole; and the flush's reading read each queued entry once (`entries read` equals `queued`),
-/// though every contact asked (`--debug=frontmatter`; a reading given up between two askers counts its entries again).
-#[test]
-fn marked_block_reads_each_entry_once() {
-  let (tex, expected) = marked_block(300);
-  let (log, creators) = converted(&tex);
-  assert_eq!(creators, expected);
-  let counts: Vec<(usize, usize)> = log
+/// The `--debug=frontmatter` log's counts: entries read and entries queued, each time the reading is forgotten.
+fn reading_counts(log: &str) -> Vec<(usize, usize)> {
+  log
     .lines()
     .filter_map(|line| {
       let rest = line.split("the queue's reading: ").nth(1)?;
@@ -92,7 +86,18 @@ fn marked_block_reads_each_entry_once() {
         queued.split_whitespace().next()?.parse().ok()?,
       ))
     })
-    .collect();
+    .collect()
+}
+
+/// A block of 300 names, each its own mark, 150 of the entries in `\affiliation`s of their own and 150 in one list. Each
+/// name holds its entry, whole; and the flush's reading read each queued entry once (`entries read` equals `queued`),
+/// though every contact asked (`--debug=frontmatter`; a reading given up between two askers counts its entries again).
+#[test]
+fn marked_block_reads_each_entry_once() {
+  let (tex, expected) = marked_block(300);
+  let (log, creators) = converted(&tex);
+  assert_eq!(creators, expected);
+  let counts = reading_counts(&log);
   let (read, queued) = *counts.last().expect("the flush's count");
   assert!(
     queued >= 450,
@@ -116,4 +121,34 @@ fn a_changed_meaning_reads_the_names_again() {
     r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> <contact name="Address: " role="address"><sup xml:id="id2"><text font="italic" xml:id="id2.1">1</text></sup>Univ Z</contact> <contact name="Address: " role="address"><sup xml:id="id3">1</sup>Univ A</contact> </creator> <creator before=" and " role="author"> <personname>Bob Baker<sup xml:id="id4">2</sup></personname> <contact name="Address: " role="address"><sup xml:id="id5">2</sup>Univ B</contact> </creator>"#
   );
   assert_eq!(log.matches("FRONT cut address at its marks").count(), 1);
+}
+
+/// The reading trusts the queue's length, so a removal forgets it: `\date{}` and `\keywords{}` dequeue two entries and
+/// `\author{Bob}` and `\affiliation` queue two, back to 4. A reading kept across that hides Bob, no name requests mark 2,
+/// and the Cut leaves the list whole. Repro sectioning-frontmatter/queue_reading_dequeue_same_length.
+#[test]
+fn a_removal_forgets_the_reading() {
+  let (log, creators) = converted(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/queue_reading_dequeue_same_length.tex"
+  ));
+  assert_eq!(
+    creators,
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2"><text font="italic" xml:id="id2.1">1</text></sup>Univ Z</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3"><text font="italic" xml:id="id3.1">1</text></sup>Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5"><text font="italic" xml:id="id5.1">2</text></sup>Univ B</contact> </creator>"#
+  );
+  assert_eq!(log.matches("FRONT cut affiliation at its marks").count(), 1);
+}
+
+/// The reading holds what the commands in the authors' mark operands meant: `\sym` is `\dagger` at the first `\address`
+/// and `7` at the second, so the second reads all five queued entries again. The creators are the same with a reading
+/// kept across it, hence the count. Repro sectioning-frontmatter/queue_reading_symbol_after_names.
+#[test]
+fn a_changed_symbol_reads_the_names_again() {
+  let (log, creators) = converted(include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/queue_reading_symbol_after_names.tex"
+  ));
+  assert_eq!(
+    creators,
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup><sup xml:id="id2">7</sup></personname> <contact name="Address: " role="address"><sup xml:id="id3"><text font="italic" xml:id="id3.1">1</text></sup>Univ Z</contact> <contact name="Address: " role="address"><sup xml:id="id4"><text font="italic" xml:id="id4.1">1</text></sup>Univ A</contact> </creator> <creator before=" and " role="author"> <personname>Bob Baker<sup xml:id="id5"><text font="italic" xml:id="id5.1">2</text></sup></personname> <contact name="Address: " role="address"><sup xml:id="id6"><text font="italic" xml:id="id6.1">2</text></sup>Univ Y</contact> <contact name="Address: " role="address"><sup xml:id="id7"><text font="italic" xml:id="id7.1">2</text></sup>Univ B</contact> </creator>"#
+  );
+  assert_eq!(reading_counts(&log).last(), Some(&(8, 5)));
 }
