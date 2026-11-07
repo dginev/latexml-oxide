@@ -1,0 +1,19 @@
+% mechanism: with the whole block queued (`LATEXML_FM_EMIT=2`), a queue position names a call's entry: an address the call placed
+%   by the names it held whole is the one of the entry's names it spells, at the flush (`resolver::Resolver::entry_owners`), and
+%   one it could place by none is the one live creator's it spells (a whole entry spells no initials: `gkt@` is George K. Tan's)
+% witness: 2010.07442, 2003.03692, 2510.03288, 2607.02294 (IEEEtran's e-mail line under one `\IEEEauthorblockN`); 2405.01963 (`gkt@`)
+% oracle:  pdflatex 0 errors; Ann Able, Bob Baker, George K. Tan; Univ A, Univ B; the three addresses on one line, `;` between
+% engines: rust int144a, `=2`: bob.baker@ on Ann Able (`label=author:1`), gkt@ the block's; `=1` each on its own
+% expect:  0 errors, 0 warnings; `=2` creators as `=1`'s: each address on the name it spells
+% status:  RED (int144a) -> GREEN (perfect_kernel_batchz4b::the_whole_block_queue_reaches_one)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^{1}$, Bob Baker$^{2}$, George K. Tan$^{2}$}
+\IEEEauthorblockA{\textit{$^{1}$Univ A, Town}\\
+\textit{$^{2}$Univ B, City}\\
+ann.able@a.edu; bob.baker@b.edu; gkt@b.edu}}
+\maketitle
+Body.
+\end{document}

@@ -1115,7 +1115,16 @@ impl Resolver {
       }
       let mut owners: Vec<usize> = Vec::new();
       for label in &labels {
-        for owner in label_owners(&self.out.creators, &live, label) {
+        // (under `LATEXML_FM_EMIT=2` the queue held each call whole: a position names a call's entry, and an address the call
+        // could place by no name it held apart, the block's, is the one live creator's it spells, as the names read here say)
+        let named = match label.strip_prefix("author:") {
+          Some(n) if self.whole_entries => self.entry_owners(n, &assoc),
+          _ if self.whole_entries && label == "addresses:block" && assoc.role == "email" => {
+            self.spelled(&assoc.text, &live).into_iter().collect()
+          },
+          _ => label_owners(&self.out.creators, &live, label),
+        };
+        for owner in named {
           // (a label several columns answer: this entry's column's names only)
           if scoped[at].contains(label) && self.column[owner] != columns[at] {
             continue;

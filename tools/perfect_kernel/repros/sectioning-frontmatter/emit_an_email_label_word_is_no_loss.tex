@@ -1,0 +1,15 @@
+% mechanism: an e-mail's label word printed before its address is the contact's name, which the emit writes as the kernel's: no
+%   lost word, no fallback (`writer::emit::without_email_label`)
+% witness: 1009.1965 (`Email: wangfy@bnu.edu.cn` in a line), 1807.01821, 1509.01480, 2205.04084 (`E-mail: \email{…}`)
+% oracle:  pdflatex 0 errors; Ann Able, Univ A, ann@a.edu; Bob Baker, Univ B, bob@b.edu
+% engines: rust Z4b first cut: the block written whole for "e mail"
+% expect:  0 errors, 0 warnings; the switch on: two creators, their affiliations and e-mails, as off
+% status:  GREEN (perfect_kernel_batchz4b::an_email_label_word_is_no_loss)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\\ Univ A\\ E-mail: \texttt{ann@a.edu} \and Bob Baker\\ Univ B\\ Email: bob@b.edu}
+\maketitle
+Body.
+\end{document}
