@@ -843,7 +843,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("events", 58),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   ("field_notes", 4),
-  ("frontmatter (rest)", 23),
+  // (26: C1's `queue_reading.rs` keeps a cache of what `author_block`'s readers read off the queue's tokens, and goes with them)
+  ("frontmatter (rest)", 26),
   ("frontmatter_stores", 527),
   ("gretsi_cls.rs", 14),
   ("ieeetran_cls.rs", 119),

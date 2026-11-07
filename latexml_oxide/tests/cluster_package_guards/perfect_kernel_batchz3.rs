@@ -785,6 +785,18 @@ fn affiliation_cut_group_siblings_stay_uncut_red() {
   assert!(wrong.is_empty(), "{}", wrong.join("\n"));
 }
 
+/// A group of no formula printing symbols alone is a mark's own group: a piece starting at its symbol starts at the brace. Witness 1605.02212. Repro
+/// sectioning-frontmatter/address_symbol_mark_in_its_own_group.
+#[test]
+fn a_symbols_group_is_a_marks_own() {
+  let tex = repro!("address_symbol_mark_in_its_own_group");
+  let (xml, _) = dump(tex);
+  creators_are(&xml, &[&["Ann Able*", "address=* Univ X"], &[
+    "Bob Baker**",
+    "address=** Univ Y",
+  ]]);
+}
+
 /// RED: a speculative run evaluates no Lua (`a_speculative_run_evaluates_no_lua`), so a cut that needs what a chunk prints does not come: two entries on the base, one now, nothing lost. Review
 /// revZ3r2.
 #[test]
