@@ -1,0 +1,15 @@
+% witness: revZ2r2 (shape of 2606.16069's two `\author` calls, the first plain; synthetic, none in the dev3 IEEE scan)
+% oracle:  pdflatex 0 errors: "Bob Baker∗∗ / Univ B" only: the second `\author` replaced the first, its `\thanks` with it
+% engines: Perl: Bob with Univ B and Univ A (`\lx@add@authors` dequeues the creator, not a flat contact);
+%          Z2r2: Bob with Univ A and Univ B and a nameless creator holding Univ C: a plain call's flat contacts were not its body's
+% expect:  0 errors; Bob Baker, Univ B; no note (perfect_kernel_batchz2::a_plain_author_call_is_a_body_like_the_blocks);
+%          the reading alone still gives Bob Univ A too, the removed block's legend answering his mark, and the writer declines
+% status:  RED (Z2r2) -> GREEN (Z2r3)
+\documentclass{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Cat Cole$^{2}$ \\ $^{1}$Univ A, $^{2}$Univ C\thanks{First note.}}
+\author{\IEEEauthorblockN{Bob Baker\IEEEauthorrefmark{1}}\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ B}}
+\maketitle
+Body.
+\end{document}

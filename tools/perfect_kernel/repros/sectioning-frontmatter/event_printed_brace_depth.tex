@@ -1,0 +1,15 @@
+% witness: FRONTMATTER_DIGESTED_REFACTOR gap 4 (ijcai's grouped local parts; `ijcai_email_lines` reads them by token, `\{`, `\lbrace`, `\textbraceleft`)
+% oracle:  pdflatex 0 errors: "{ann, bob," then "cat}@x.org, Eve Ely" then "Fay, Gil"; "{Hal, Ian}@y.org" (printed by `\lbrace`, in math); "Jan, Kim"
+% engines: Perl has no events; ours before this fix had no depth on a Break or a comma
+% expect:  0 errors; a comma or a Break inside printed braces says how deep, whatever printed them; outside none; a TeX group is
+%          none (perfect_kernel_batchz2::a_break_and_a_comma_say_their_printed_braces)
+% status:  GREEN (Z2)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\{ann, bob,\\ cat\}@x.org, Eve Ely {Fay, Gil}
+\and $\lbrace$Hal, Ian$\rbrace$@y.org
+\and \textbraceleft Jan, Kim\textbraceright}
+\maketitle
+Body.
+\end{document}

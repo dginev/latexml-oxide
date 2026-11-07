@@ -1,0 +1,28 @@
+% witness: revZ2's S1 (no paper yet: FRONTMATTER_DIGESTED_REFACTOR gap 8, what Z4's emitter replays); 2608.17767's `\small\itshape` the control
+% oracle:  pdflatex 0 errors: "Ann Lee", with the counts, boxes and macros allocated; none of it prints
+% engines: Perl has no events; ours before this fix dropped every assignment made within a kernel macro a paper's macro reached
+% expect:  0 errors; what the paper's macro's body or arguments name is declared, one level down too; a font switch through a paper's macro
+%          and a conditional's own `\@let@token` are not; `\@namedef`'s run has ended when its `\def` comes, so `\qk` reads
+%          (perfect_kernel_batchz2::a_kernel_macro_a_papers_macro_reaches_declares_what_it_names)
+% status:  GREEN (Z2r2)
+\documentclass{article}
+\makeatletter
+\newcommand\mcount{\newcount\qa}
+\newcommand\mouter{\minner}
+\newcommand\minner{\newtoks\qb}
+\newcommand\mboxes{\newsavebox\qc}
+\newcommand\mform[1]{\newdimen#1}
+\newcommand\mcond{\@ifundefined{qe}{\def\qe{1}}{}}
+\newcommand\mfirst{\@firstofone{\def\qf{1}}}
+\newcommand\mstar{\@ifstar{\def\qg{1}}{\def\qh{1}}}
+\newcommand\mfile{\IfFileExists{nonexistent.xx}{}{\def\qi{1}}}
+\newcommand\mlater{\AtBeginDocument{\def\qj{1}}}
+\newcommand\mfont{\small\itshape}
+\newcommand\mbuilt{\@namedef{qk}{1}}
+\makeatother
+\begin{document}
+\title{T}
+\author{\mcount \mouter \mboxes \mform{\qd} \mcond \mfirst \mstar \mfile \mlater \mfont \mbuilt Ann Lee}
+\maketitle
+Body.
+\end{document}

@@ -36,6 +36,8 @@ pub(super) struct Lexer {
   /// behalf of the H1 and ZEUS collaborations)`, 0811.3142; review rev94a B2)
   open:              u8,
   run_open:          u8,
+  /// the braces printed and not yet closed since the column's start ([`Event::braces`])
+  braces:            u8,
 }
 
 impl Lexer {
@@ -166,6 +168,16 @@ impl Lexer {
         name.nest = self.run_nest;
         name
       });
+      if opens[at] == 0
+        && let Some(label) = printed_label(&word)
+      {
+        name.printed_labels.push(PrintedLabel {
+          label: label.to_string(),
+          word: name.text.split(' ').filter(|w| !w.is_empty()).count(),
+          line_first: at == 0 && !self.line_inked,
+          span,
+        });
+      }
       if !name.text.is_empty() {
         name.text.push(' ');
       }
@@ -184,6 +196,7 @@ impl Lexer {
         self.clear_gap();
         self.line_inked = false;
         self.open = 0;
+        event.braces = self.braces;
       },
       EventKind::Mark => {
         event.space_before = self.gap_items > 0;
@@ -198,6 +211,7 @@ impl Lexer {
       EventKind::Sep(SepKind::And(_) | SepKind::Column(_)) => {
         self.clear_gap();
         self.open = 0;
+        self.braces = 0;
       },
       _ => self.flush_gap(),
     }
@@ -253,6 +267,7 @@ impl Lexer {
         let mut comma = Event::new(EventKind::Sep(SepKind::Comma));
         comma.span = span;
         comma.nest = nest;
+        comma.braces = self.braces;
         self.events.push(comma);
         continue;
       }
@@ -297,6 +312,11 @@ impl Lexer {
         self.run_open = self.open;
       }
       self.open = bracket_depth(self.open, c);
+      match c {
+        '{' => self.braces = self.braces.saturating_add(1),
+        '}' => self.braces = self.braces.saturating_sub(1),
+        _ => {},
+      }
       self.run.push((c, span));
     }
   }
@@ -352,7 +372,9 @@ impl Lexer {
     self.clear_gap();
     // a `\label` outside a note labels the note before it
     let mut events: Vec<Event> = Vec::with_capacity(self.events.len());
-    for event in glue_in_word_marks(self.events) {
+    let glued = glue_in_word_marks(self.events);
+    let glued = mark_ordinals(glued);
+    for event in glued {
       if event.kind == EventKind::Layout && event.role.as_deref() == Some("label") {
         if let Some(note) = events.iter_mut().rev().find(|e| e.kind == EventKind::Note)
           && note.label.is_none()
@@ -367,6 +389,31 @@ impl Lexer {
     }
     events
   }
+}
+
+/// The label a word of a name run prints by hand ([`PrintedLabel`]): `a)`, `12)`, one or two letters or digits and its `)`.
+fn printed_label(word: &str) -> Option<&str> {
+  let label = word.strip_suffix(')')?;
+  (matches!(label.chars().count(), 1 | 2) && label.chars().all(char::is_alphanumeric))
+    .then_some(label)
+}
+
+/// Mark each ordinal's suffix ([`Event::ordinal`]): a Mark printing `st`, `nd`, `rd` or `th` right after a Name ending in
+/// a digit.
+fn mark_ordinals(mut events: Vec<Event>) -> Vec<Event> {
+  for at in 1..events.len() {
+    let number = events[at - 1].kind == EventKind::Name
+      && events[at - 1]
+        .text
+        .chars()
+        .next_back()
+        .is_some_and(|c| c.is_ascii_digit());
+    let event = &mut events[at];
+    event.ordinal = number
+      && event.kind == EventKind::Mark
+      && matches!(event.label.as_deref(), Some("st" | "nd" | "rd" | "th"));
+  }
+  events
 }
 
 /// The brackets open after `c`, `open` open before it: a `(` or `[` opens one, a `)` or `]` closes one.
@@ -384,24 +431,38 @@ fn bracket_depth(open: u8, c: char) -> u8 {
 /// reads it (`rewrite_in_word_superscripts`, 77n r4: no mark list, no "and" after it): `$^1$NLP$^2$CT Lab, Univ X` is
 /// the lab "NLP²CT Lab" (2603.20851, 2605.30274; `I$^2$R`, `DM$^3$L`, 2603.04869, 2604.00800), not entries "NLP" and
 /// "CT Lab, Univ X" — which the writer, cutting a block entry by its whole span (OD #945), would have written — when
-/// it stands glued in the source too ([`glued_in_source`]).
+/// it stands glued in the source too ([`glued_in_source`]). So is a symbol on a line a mark leads, an entry, which names no
+/// one: `$^1$A$^*$STAR`, `$^1$IHPC A$^*$STAR` (2401.15006's institute, cut at its star), whatever `Bob Baker$^{*}$` shows elsewhere.
+/// On a line no mark leads it stays a mark: `Cher$^*$Bob Baker`.
 fn glue_in_word_marks(events: Vec<Event>) -> Vec<Event> {
   let mut out: Vec<Event> = Vec::with_capacity(events.len());
   let mut events = events.into_iter().peekable();
+  // (whether the line this event stands on is led by a mark; none printed yet)
+  let mut mark_led: Option<bool> = None;
   while let Some(event) = events.next() {
+    match event.kind {
+      EventKind::Break | EventKind::Sep(SepKind::And(_) | SepKind::Column(_)) => mark_led = None,
+      EventKind::Layout => {},
+      _ => mark_led = mark_led.or(Some(event.kind == EventKind::Mark)),
+    }
     let letters = event.label.as_deref().unwrap_or("");
-    let in_word = event.kind == EventKind::Mark
-      && !event.symbol
-      && !event.space_before
-      && !event.space_after
+    let next = events.peek();
+    let number_or_letter = !event.symbol
       && ((1..=2).contains(&letters.chars().count()) && letters.chars().all(char::is_lowercase)
         || (1..=3).contains(&letters.chars().count())
           && letters.chars().all(|c| c.is_ascii_digit())
-          && glued_in_source(out.last(), &event, events.peek()))
+          && glued_in_source(out.last(), &event, next));
+    let in_word = event.kind == EventKind::Mark
+      && !event.space_before
+      && !event.space_after
+      && (number_or_letter
+        || (mark_led == Some(true)
+          && is_symbol_run(letters)
+          && glued_in_source(out.last(), &event, next)))
       && out.last().is_some_and(|e| {
         e.kind == EventKind::Name && e.text.chars().next_back().is_some_and(char::is_alphabetic)
       })
-      && events.peek().is_some_and(|e| {
+      && next.is_some_and(|e| {
         e.kind == EventKind::Name && e.text.chars().next().is_some_and(char::is_alphabetic)
       });
     if in_word {
@@ -415,6 +476,11 @@ fn glue_in_word_marks(events: Vec<Event>) -> Vec<Event> {
     out.push(event);
   }
   out
+}
+
+/// Whether a mark's label prints footnote symbols or mark glyphs alone.
+fn is_symbol_run(label: &str) -> bool {
+  !label.is_empty() && label.chars().all(|c| is_fnsymbol(c) || is_mark_glyph(c))
 }
 
 /// Whether a digit mark stands in the source between the names around it with nothing but its own math shifts (or

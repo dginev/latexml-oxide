@@ -493,9 +493,12 @@ fn cut(call: &ApiCall) -> Result<Option<Vec<(String, Tokens)>>> {
   }
   // (the call's font, which its content's fonts are read against: `events::entry_font`)
   let root = lookup_font();
-  let (events, ink) = match rehearse(field_stamped(2, 0, content), TitleMarks::Fnsymbol, |d| {
-    (lex_events(d), InkFonts::of(d))
-  })? {
+  let (events, ink) = match rehearse(
+    field_stamped(2, 0, content),
+    TitleMarks::Fnsymbol,
+    &[],
+    |d| (lex_events(d), InkFonts::of(d)),
+  )? {
     Rehearsal::Done { value, .. } => value,
     Rehearsal::Skipped(_) => return Ok(None),
   };

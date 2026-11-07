@@ -1,0 +1,15 @@
+% witness: FRONTMATTER_DIGESTED_REFACTOR gap 5 (2412.10792's `1\textsuperscript{st} Sertac`, 2606.16069; iopart's `5 \textsuperscript{th} floor`, repro affiliation_line_superscript_ordinal_is_not_a_mark)
+% oracle:  pdflatex 0 errors: "1 st Ann Able" (st raised), "Univ 5 th Floor", "21 st Street", "4 th Ave" (`$4^{th}$`), and the marks "10 a", "Bob 1", "Cat st"
+% engines: Perl has no events; ours before this fix read the suffix as a mark, with only the resolver's `join_ordinals` at a name's start
+% expect:  0 errors; each suffix after a number says `ordinal`, spaced or not, in text or in a formula; a letter that is no suffix,
+%          a number and a suffix on letters do not (perfect_kernel_batchz2::an_ordinal_says_so)
+% status:  GREEN (Z2)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{1\textsuperscript{st} Ann Able
+\and Univ 5 \textsuperscript{th} Floor, 21$^{st}$ Street, $4^{th}$ Ave
+\and 10$^{a}$, Bob$^{1}$, Cat\textsuperscript{st}}
+\maketitle
+Body.
+\end{document}

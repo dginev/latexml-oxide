@@ -1,0 +1,13 @@
+% witness: 2609.01831's cited shape (the paper's source has none today: iopart's `\address{$^1$Univ A, 5 \textsuperscript{th} floor}`, repro affiliation_line_superscript_ordinal_is_not_a_mark); `join_ordinals` of 2412.10792, 2202.06596
+% oracle:  pdflatex 0 errors: "1 Univ A, 5th Floor"; "2 Univ B, 21st Street"; "3 3rd Lab, Town"
+% engines: rust before this fix: the reading lost the suffix on a block's line ("Univ A, 5 Floor"), an API's call read as a difference from today's and the writer declined the paper; old engine: "Univ A, 5 th Floor"
+% expect:  0 errors; an ordinal is its entry's text, no mark, on any line but a names line, whose `1st` stays the name's prefix
+%          (perfect_kernel_batchz2::an_ordinal_is_its_entrys_text)
+% status:  GREEN (Z2)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ \and Bob Baker$^2$ \and Cat Cole$^3$\\ $^1$Univ A, 5\textsuperscript{th} Floor\\ $^2$Univ B, $21^{st}$ Street\\ $^3$3\textsuperscript{rd} Lab, Town}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,18 @@
+% witness: revZ2's pre-existing list (gap 3, `Event::break_kind`)
+% oracle:  pdflatex 0 errors: "Ann AbleBob BakerCat ColeDan Dale" on one line: each of these is `\par`, which a `c` column does not print (tex.web §1094)
+% engines: Perl has no events; ours gives `par` for `\par` alone: `\endgraf`, a `\let` of `\par`, `\@@par` make no Break
+% expect:  0 errors; each a Break saying `par`
+% status:  RED (Z2r2; catalogued, no guard)
+\documentclass{article}
+\makeatletter
+\let\pp\par
+\newcommand\parts{\endgraf}
+\newcommand\partsa{\pp}
+\newcommand\partsb{\@@par}
+\makeatother
+\begin{document}
+\title{T}
+\author{Ann Able\parts Bob Baker\partsa Cat Cole\partsb Dan Dale}
+\maketitle
+Body.
+\end{document}

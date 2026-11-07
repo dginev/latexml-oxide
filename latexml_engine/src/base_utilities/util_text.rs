@@ -678,6 +678,7 @@ const INKLESS_COMMANDS: &[&str] = &[
   "\\lx@normal@par",
   // (the frontmatter observer's rehearsal's `\\`, `\newline`, `\linebreak`, `\par` and `\label`, observer/rehearsal.rs)
   "\\lx@fm@obs@break",
+  "\\lx@fm@obs@par",
   "\\lx@fm@obs@label",
 ];
 

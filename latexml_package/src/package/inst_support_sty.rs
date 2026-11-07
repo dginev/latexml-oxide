@@ -2,13 +2,16 @@ use crate::prelude::*;
 
 /// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
 /// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
-/// inst_support: an `\inst` after a comma is the name's before it
+/// inst_support: an `\inst` after a comma is the name's before it. It owns the `\author` of OmniBus, which makes `\alignauthor` a no-op
+/// (OmniBus.cls.ltxml:76) that parts the columns of what the class stands in for (sig-alternate.cls:283, sigchi.cls), as nothing
+/// printed tells: its column break.
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "inst_support",
   binding: "inst_support.sty",
   inst_after_comma: true,
   cite: "Perl inst_support.sty.ltxml:33-35; OD #807 (2401.16957)",
   written: true,
+  block_breaks: &[("\\alignauthor", FmBreakKind::Column)],
   ..FM_KERNEL_CONVENTIONS
 };
 

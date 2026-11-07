@@ -101,6 +101,37 @@ fn inside_a_word(mark: &Node, letters: &str) -> bool {
   )
 }
 
+/// The printed text of a number's suffix.
+fn is_ordinal_suffix_text(letters: &str) -> bool {
+  matches!(letters.trim(), "st" | "nd" | "rd" | "th")
+}
+
+/// A superscript printing a number's suffix after the number, outside a name (`events::lexer`'s `Event::ordinal`):
+/// `5\textsuperscript{th}`, `201 E. 24$^{th}$ Street` (2202.05365), `his 60$^{th}$ birthday` (math9812087).
+fn ordinal_suffix(mark: &Node, letters: &str) -> bool {
+  is_ordinal_suffix_text(letters)
+    && sibling_text(mark, false).is_some_and(|before| {
+      before
+        .trim_end()
+        .chars()
+        .next_back()
+        .is_some_and(|c| c.is_ascii_digit())
+    })
+    && !in_a_personname(mark)
+}
+
+/// Whether `node` is inside an `ltx:personname`.
+fn in_a_personname(node: &Node) -> bool {
+  let mut up = node.get_parent();
+  while let Some(parent) = up {
+    if is(&parent, "ltx:personname") {
+      return true;
+    }
+    up = parent.get_parent();
+  }
+  false
+}
+
 /// The text of `node` without its `ltx:sup` marks, its notes and their tags; a formula as [`marks::read_formula`]
 /// reads it: a mark prints none (`{}^{a,\;b}`, `^{1}`, `\rm ^a`: revtex names `Dadhich${}^{a,\;b}$`, 1307.6166;
 /// 2105.07958's `$\rm ^a$Email: …`), scripts on a base the base (`\text{Leon Bello}^{1,3}`, 2011.08099; an
@@ -193,11 +224,20 @@ fn segments_of(node: &Node, parted: bool, icons: bool) -> Vec<Seg> {
             match marks::read_formula(&child) {
               // (one lowercase script glued inside a word is its letters, as the `ltx:sup` the rewrite makes of it)
               marks::FormulaMarks::Marks(scripts) => match scripts.as_slice() {
-                [letters] if inside_a_word(&child, letters) => {
+                [letters] if inside_a_word(&child, letters) || ordinal_suffix(&child, letters) => {
                   let letters = letters.clone();
                   out.push(Seg::Atom(child, letters));
                 },
                 _ => out.push(Seg::Hidden(child)),
+              },
+              // (`$4^{th}$`, the suffix of its base, as a script on a number is the reading's)
+              marks::FormulaMarks::OnBase { base, scripts }
+                if base.ends_with(|c: char| c.is_ascii_digit())
+                  && matches!(scripts.as_slice(), [script] if is_ordinal_suffix_text(script))
+                  && !in_a_personname(&child) =>
+              {
+                let text = s!("{base}{}", scripts[0]);
+                out.push(Seg::Atom(child, text));
               },
               marks::FormulaMarks::OnBase { base, .. } => out.push(Seg::Atom(child, base)),
               marks::FormulaMarks::Other => {
@@ -206,9 +246,10 @@ fn segments_of(node: &Node, parted: bool, icons: bool) -> Vec<Seg> {
               },
             }
           } else if is(&child, "ltx:sup") {
-            // (a lowercase superscript inside a word is the word's letters, no mark: `M\textsuperscript{c}Kernan`)
+            // (a lowercase superscript inside a word is the word's letters, no mark: `M\textsuperscript{c}Kernan`; a
+            // number's suffix is the text it is in, as the reading's `Event::ordinal` is, but a name's prefix `1st`)
             let content = child.get_content();
-            if inside_a_word(&child, &content) {
+            if inside_a_word(&child, &content) || ordinal_suffix(&child, &content) {
               out.push(Seg::Atom(child, content));
             } else {
               out.push(Seg::Hidden(child));

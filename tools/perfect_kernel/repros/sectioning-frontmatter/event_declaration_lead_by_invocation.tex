@@ -1,0 +1,21 @@
+% witness: revz01 finding 4 (no corpus witness: what the emitter of Z4 would read back from a Declaration's span)
+% oracle:  pdflatex 0 errors: "Ann 1"; "Bob 2"; "Cat 3"; "Dan 4"; "Eve 5"; "Fay 6"; "Gil 7"
+% engines: Perl has no events; ours before this fix walked back through the field's positions, so a `\global` a `\let` or a test
+%          read led the next definition, two spans overlapping or one starting inside a conditional's test
+% expect:  0 errors; a Declaration starts at the prefixes and `\expandafter`s invoked right before it, never in what an earlier
+%          invocation read (perfect_kernel_batchz2::a_declarations_lead_is_invocations_not_positions)
+% status:  GREEN (Z2)
+\documentclass{article}
+\newcommand\setup{\def\sa{6}}
+\begin{document}
+\title{T}
+\author{\let\xa\global\def\ya{1}Ann \ya
+\and \ifx\global\global\def\yb{2}\fi Bob \yb
+\and \global\relax\def\yc{3}Cat \yc
+\and \expandafter\def\expandafter\yd\expandafter{\expandafter 4\expandafter}\relax Dan \yd
+\and \global\expandafter\def\csname ye\endcsname{5}Eve \ye
+\and \global\setup Fay \sa
+\and \def\yf{7}\global\def\yg{7}Gil \yf}
+\maketitle
+Body.
+\end{document}

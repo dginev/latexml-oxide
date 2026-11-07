@@ -345,6 +345,99 @@ pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
   });
 }
 
+/// What LaTeX's `\author` does to the authors before it (`\def\@author{#2}`; Perl's `dequeueFrontMatter('ltx:creator', role =>
+/// 'author')`, Base_Utility.pool.ltxml:691): the last call wins. Also a binding's own `\author`, whose body adds its authors one
+/// at a time ([`begin_author_body`]: IEEEtran's blocks; 2606.16069's two `\author` calls).
+pub(in crate::base_utilities) fn replace_queued_authors() {
+  dequeue_front_matter("ltx:creator", &[("role", "author")]);
+  // LaTeX's `\def\@author{#2}` replaces the authors a `\maketitle` that left
+  // `\author` live already typeset (KOMA ≥ 3.12, scrbook.cls:3263-3290; a class's
+  // title page from `\AfterEndPreamble`, udesoftec.cls:1230-1241) for the NEXT
+  // `\maketitle`: they are superseded there (`\lx@maketitle@supersede`), not here —
+  // without one, the authors a fallback placed stay (Perl the same).
+  assign_value(
+    "lx_authors_superseded",
+    Stored::Bool(true),
+    Some(Scope::Global),
+  );
+  // A store handed on since that flush went to the authors replaced here: the next
+  // harvest hands it again (`harvest_stores`, `lx_stores_late`).
+  assign_value(
+    "lx_stores_late",
+    Stored::String(pin("")),
+    Some(Scope::Global),
+  );
+  // The replaced authors take their handed tail with them (a binding's own
+  // `\lx@add@authors` never runs `\lx@author@flush`), and the creators this
+  // `\author` makes are counted from here (`\lx@author@handed`).
+  assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global));
+  assign_value(
+    "lx_author_creators_before",
+    Stored::Int(queued_creator_count() as i64),
+    Some(Scope::Global),
+  );
+}
+
+/// Begin a binding's `\author` body, whose calls queue its authors and their contacts one by one where Perl's `\author` queues
+/// them all inside one deferred creator (IEEEtran's `\IEEEauthorblockN`, `\IEEEauthorblockA`): the last call wins as in LaTeX
+/// (`\def\@author{#1}`, Perl's `dequeueFrontMatter`), so this removes the authors before it and whatever the last such body
+/// queued. 2606.16069: two `\author` calls, the PDF and Perl four creators; every call kept, eight. A replay of a raw class's setter
+/// that reaches it changes nothing (`frontmatter_frozen_for_replay`): it queues nothing, and the last body stays the last.
+pub fn begin_author_body() {
+  if frontmatter_frozen_for_replay() {
+    return;
+  }
+  replace_queued_authors();
+  let queue = frontmatter_queue_name();
+  let earlier = with_value(AUTHOR_BODY_ENTRIES, |value| match value {
+    Some(Stored::FrontmatterRaw(entries)) => entries.clone(),
+    _ => Vec::new(),
+  });
+  let start = with_value_mut(queue, |value| match value {
+    Some(&mut Stored::FrontmatterRaw(ref mut queued)) => {
+      for entry in &earlier {
+        if let Some(at) = queued.iter().position(|queued| queued == entry) {
+          queued.remove(at);
+        }
+      }
+      queued.len()
+    },
+    _ => 0,
+  });
+  assign_value(
+    AUTHOR_BODY_START,
+    Stored::Int(start as i64),
+    Some(Scope::Global),
+  );
+  if fm_shadow_enabled() {
+    record_author_body_clear();
+  }
+}
+
+/// End a binding's `\author` body ([`begin_author_body`]): what it queued is what a later `\author` takes back.
+pub fn end_author_body() {
+  if frontmatter_frozen_for_replay() {
+    return;
+  }
+  let start = usize::try_from(lookup_int(AUTHOR_BODY_START)).unwrap_or(0);
+  let entries = with_value(frontmatter_queue_name(), |value| match value {
+    Some(Stored::FrontmatterRaw(queued)) => queued.get(start..).unwrap_or(&[]).to_vec(),
+    _ => Vec::new(),
+  });
+  assign_value(
+    AUTHOR_BODY_ENTRIES,
+    Stored::FrontmatterRaw(entries),
+    Some(Scope::Global),
+  );
+  if fm_shadow_enabled() {
+    record_author_body_end();
+  }
+}
+
+/// What the last author body queued, and where the queue stood when it began ([`begin_author_body`]).
+const AUTHOR_BODY_ENTRIES: &str = "lx_author_body_entries";
+const AUTHOR_BODY_START: &str = "lx_author_body_start";
+
 /// A `\par` digested in the frontmatter item `item` (its whatsit's `frontmatter_item`), constructed where the schema is
 /// known: when the item's element holds only inline content (`ltx:acknowledgements`, `ltx:keywords`, `ltx:date`, …: no
 /// `ltx:p`, but `ltx:break`) and is reached from the insertion point without passing an element that holds paragraphs

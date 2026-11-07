@@ -1,0 +1,29 @@
+% witness: revz01 findings 2, 3 (no corpus witness: dev3's source regex finds none of the shapes; the emitter of Z4 keeps what a Declaration's span holds)
+% oracle:  pdflatex 0 errors: every name below prints whole in its box or line
+% engines: Perl has no events; ours before this fix read a definition inside an environment as the block's, and lost one right
+%          before a box, whose cover holds the boxless invocation before it
+% expect:  0 errors; a definition right before a box, a line break or a column is the block's; one inside any box the block
+%          prints is that box's, none; a plain group's stays, at its depth
+%          (perfect_kernel_batchz2::a_definition_is_the_blocks_unless_a_box_holds_it)
+% status:  GREEN (Z2)
+\documentclass{article}
+\newsavebox\svb
+\begin{document}
+\title{T}
+\author{Ann\def\xa{1}\\ Bob
+\and Cat \def\xb{1}\and Dan
+\and Eve\def\xc{1}\quad Fay
+\and \def\xd{1}\rule{1pt}{1pt}Gil
+\and \mbox{}\def\xe{1}\mbox{}Hal
+\and \def\xf{1}\textbf{Ian}
+\and {\def\xg{1}Jan\xg}
+\and \begin{minipage}{3cm}Kim\def\ya{1}Lee\end{minipage}
+\and \begin{minipage}{3cm}\def\yb{1}Mae\end{minipage}
+\and \parbox{3cm}{\begin{center}\begin{center}Ned\def\yc{1}Ona\end{center}\end{center}}
+\and \mbox{Pat\def\yd{1}Quo}
+\and \parbox{3cm}{Rae\def\ye{1}Sal}
+\and $\def\yf{1}\yf$
+\and \sbox{\svb}{\def\yg{1}}Tom}
+\maketitle
+Body.
+\end{document}

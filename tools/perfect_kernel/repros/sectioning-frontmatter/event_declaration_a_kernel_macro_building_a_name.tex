@@ -1,0 +1,14 @@
+% witness: revZ2's pre-existing list (gap 8, Limits: a name built at run time)
+% oracle:  pdflatex 0 errors: "Ann Lee"; `\qq` defined, printing nothing
+% engines: Perl has no events; ours reads no Declaration: the field hands `\@namedef` the letters of the name, not the name
+% expect:  0 errors; a Declaration of `\qq`
+% status:  RED (Z2r2; catalogued, no guard)
+\documentclass{article}
+\begin{document}
+\title{T}
+\makeatletter
+\author{\@namedef{qq}{1}Ann Lee}
+\makeatother
+\maketitle
+Body.
+\end{document}

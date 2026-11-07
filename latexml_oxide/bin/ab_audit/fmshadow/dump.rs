@@ -60,6 +60,25 @@ pub fn json_event(v: &Value) -> FmEvent {
   }
   event.unprinted = v["unprinted"].as_str().map(str::to_string);
   event.held = v["held"].as_bool().unwrap_or(false);
+  // (what made a Break, the printed braces around it or a comma, an ordinal's suffix, a Name's printed labels: none in a
+  // dump made before Z2)
+  event.break_kind = v["break"].as_str().and_then(FmBreakKind::from_name);
+  event.braces = v["braces"].as_u64().unwrap_or(0) as u8;
+  event.ordinal = v["ordinal"].as_bool().unwrap_or(false);
+  event.printed_labels = v["printed_labels"]
+    .as_array()
+    .map(|labels| {
+      labels
+        .iter()
+        .map(|label| FmPrintedLabel {
+          label:      s(&label["label"]),
+          word:       label["word"].as_u64().unwrap_or(0) as usize,
+          line_first: label["line_first"].as_bool().unwrap_or(false),
+          span:       span(&label["span"]),
+        })
+        .collect()
+    })
+    .unwrap_or_default();
   event.inner = v["inner"]
     .as_array()
     .map(|a| a.iter().map(json_event).collect())

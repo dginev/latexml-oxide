@@ -8,9 +8,11 @@
 //!   character printed, whatever command printed it), and whether it is its line's first ink;
 //! - **Sep**: a column (`\and`, `\And`, `\AND`: which one; an alignment tab `&`), a comma, the word "and" (or a
 //!   printed `\&`), a gap (a spacing run of two or more items, of a space wider than an interword one, or holding
-//!   fill glue `\hfil`/`\hfill`: its item count, its natural width in em of the box's font, and whether it fills);
+//!   fill glue `\hfil`/`\hfill`: its item count, its natural width in em of the box's font, and whether it fills); a
+//!   control space or a tie is its font's word space at any width in em (`\tiny`, typewriter);
 //! - **Break**: a row (`\\`, `\newline`, `\linebreak`, `\par`; the kernel's `\lx@newline` a `\centering` or a box
-//!   rebinds `\\` to; an alignment's row end, role `row`; one inside a braced group or argument, role `group`);
+//!   rebinds `\\` to; an alignment's row end, role `row`; one inside a braced group or argument, role `group`), and what
+//!   made it ([`BreakKind`]);
 //! - **Contact**: `\email`, `\url`, `\href`, `\orcidlink`, an in-block `\affil`/`\address`, the frontmatter API;
 //! - **Note**: `\thanks`/`\footnote`/`\footnotetext`, with its label (a `\label` inside it), its inner contacts and its
 //!   Marks (the one it opens with `line_first`);
@@ -20,7 +22,9 @@
 //!   other events: `shadow.rs`).
 //!
 //! A Mark inside a formula or a group says so ([`MarkFormula`]: what encloses it, its base, the letter or digit after
-//! it); a contact that prints nothing ([`Event::unprinted`]) and an event an error was held at ([`Event::held`]) too.
+//! it); a contact that prints nothing ([`Event::unprinted`]) and an event an error was held at ([`Event::held`]) too. So
+//! do a Break or comma inside printed braces ([`Event::braces`]), an ordinal's suffix ([`Event::ordinal`]) and a Name
+//! holding labels printed by hand ([`Event::printed_labels`]).
 //!
 //! Each event carries its span of the author field's positions (`fieldProv`/`fieldSerial` of the boxes it is made of,
 //! core `gullet::field_cover_of`), its ink text and its layout nesting. ApiCall events (setters called outside the
@@ -31,7 +35,11 @@ use latexml_core::{
   token::{field_ledger_entry, field_prov_pos},
 };
 
-use super::{field_notes::FieldDeclaration, marks::has_word, *};
+use super::{
+  field_notes::{FieldBreak, FieldDeclaration},
+  marks::has_word,
+  *,
+};
 
 mod fonts;
 mod lexer;
@@ -174,58 +182,118 @@ pub struct MarkFormula {
   pub ends: bool,
 }
 
+/// What made a Break other than a line break (`\\`, `\newline`, `\linebreak`, an alignment's row end, none).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BreakKind {
+  /// `\par`, a blank line: a line of its own in the class's own title page, nothing at all in a `c` column, whose
+  /// restricted horizontal mode ignores it (tex.web §1094)
+  Par,
+  /// a section the binding declares (`Policy::block_breaks`: ijcai's `\affiliations`, `\emails`), which the title page
+  /// starts on a line of its own (ijcai19.sty:124-130); beside the events
+  Section,
+  /// a column the binding declares (`Policy::block_breaks`: OmniBus's `\alignauthor`); beside the events
+  Column,
+}
+
+impl BreakKind {
+  /// Its name in the shadow dump (`"break"`).
+  pub fn name(self) -> &'static str {
+    match self {
+      BreakKind::Par => "par",
+      BreakKind::Section => "section",
+      BreakKind::Column => "column",
+    }
+  }
+
+  /// The kind a dump's name gives (`ab_audit fmshadow`).
+  pub fn from_name(name: &str) -> Option<Self> {
+    match name {
+      "par" => Some(BreakKind::Par),
+      "section" => Some(BreakKind::Section),
+      "column" => Some(BreakKind::Column),
+      _ => None,
+    }
+  }
+}
+
+/// A label printed by hand in a Name's words: `a)`, `12)`, its own word with no bracket open before it (hep-ex0106079's
+/// `a) also at UCEH b) on leave…`, the notes `$^{6,a}$` requests, which only `a)` leads a line of; a `(a)` or a word
+/// of a bracket is none).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PrintedLabel {
+  /// its label: `a` of `a)`
+  pub label:      String,
+  /// which word of the Name it is (from 0)
+  pub word:       usize,
+  /// it is its line's first ink
+  pub line_first: bool,
+  /// its positions
+  pub span:       Option<(u16, u16)>,
+}
+
 /// One event of an author block.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Event {
-  pub kind:         EventKind,
+  pub kind:           EventKind,
   /// the positions of the author field it covers, `start..end`
-  pub span:         Option<(u16, u16)>,
+  pub span:           Option<(u16, u16)>,
   /// its ink: a name's text, a mark's printed text, a contact's or a note's shown text
-  pub text:         String,
+  pub text:           String,
   /// a mark's label, a note's `\label`, a contact's optional label
-  pub label:        Option<String>,
+  pub label:          Option<String>,
   /// a mark printed as a footnote symbol
-  pub symbol:       bool,
+  pub symbol:         bool,
   /// a mark that is its line's first ink
-  pub line_first:   bool,
+  pub line_first:     bool,
   /// a contact's role, a mark's or a layout's source (`sup`, `math`, `inst`, `text`; the container's command)
-  pub role:         Option<String>,
+  pub role:           Option<String>,
   /// a link's target
-  pub target:       Option<String>,
+  pub target:         Option<String>,
   /// a note's inner contacts and Marks (the one its text opens with `line_first`, the others not)
-  pub inner:        Vec<Event>,
+  pub inner:          Vec<Event>,
   /// how many layout containers enclose it
-  pub nest:         u8,
+  pub nest:           u8,
   /// a mark's run of footnote symbols that a line of its block leads with and a name shows, written together (`§†`):
   /// one label, as `††` is (the resolver's `glue_shown_runs`; main-session decision 2 on FM S2a.2 r7, 0907.1243)
-  pub glued:        bool,
+  pub glued:          bool,
   /// a mark set off by a printed space from the ink or separator before it, and from the name after it: which of the
   /// two TeX's output sets it next to (the resolver's `nearer_next`; `Han,${}^1$ Thibault` prints "Han,¹ Thibault")
-  pub space_before: bool,
-  pub space_after:  bool,
+  pub space_before:   bool,
+  pub space_after:    bool,
   /// an e-mail contact's: whose meaning made the call ([`EmailMeaning`])
-  pub meaning:      EmailMeaning,
+  pub meaning:        EmailMeaning,
   /// a note's: nothing in it prints ([`leaves_no_ink`] on its digested body, the test the XML's note is dropped by:
   /// `\thanks{}`, `\thanks{~}`, OXIDIZED_DESIGN_DIVERGENCES #916)
-  pub inkless:      bool,
+  pub inkless:        bool,
   /// an in-block annotation's (`\lx@annotate@frontmatter`) `annotate=` option: the authors today's API gives it (`run`,
   /// `new`, a number, `all`; Perl Base_Utility.pool.ltxml:520-536)
-  pub annotate:     Option<String>,
+  pub annotate:       Option<String>,
   /// a cut in-block contact entry's: the font changes in effect where the writer's cut of it starts, against its call's
   /// (`fonts::entry_font`; `Font::default()` for none), which the writer digests it under — `None` when not read
-  pub font:         Option<Rc<Font>>,
+  pub font:           Option<Rc<Font>>,
   /// a cut in-block contact entry's: the containers holding it and another entry, which the writer wraps it in again
   /// (`fonts::Wrap`, `writer::container_wrap`)
-  pub wrap:         Option<Rc<Wrap>>,
+  pub wrap:           Option<Rc<Wrap>>,
   /// a mark's formula or group ([`MarkFormula`]), `None` for one at the block's top level
-  pub formula:      Option<MarkFormula>,
+  pub formula:        Option<MarkFormula>,
   /// a contact's that prints nothing, what it records (`ltx:rdf`'s `content`: AASTeX 7's `\email` without `[show]`,
   /// 2506.18556, 2507.12222; OXIDIZED_DESIGN #479): its `text` holds no ink, as the XML holds none. Such a call stands
   /// outside the reading's events (`ledger::UnprintedCall`)
-  pub unprinted:    Option<String>,
+  pub unprinted:      Option<String>,
   /// an error of the block's rehearsal was held at a position it covers (`mark_held`): what it reads may be the
   /// error's recovery, not the ink it stands for
-  pub held:         bool,
+  pub held:           bool,
+  /// a Break's: what made it, `None` for a line break ([`BreakKind`])
+  pub break_kind:     Option<BreakKind>,
+  /// a Break's or a comma's: the braces printed and not yet closed before it in its column (`\{aable, bbaker,\\ ccole\}@x.edu`:
+  /// both inside one group of local parts; ijcai's `\emails` list), which a TeX group is none of
+  pub braces:         u8,
+  /// a Mark's: the suffix of the number the Name before it ends in, `5\textsuperscript{th}`, `$21^{st}$`: printed
+  /// `st`, `nd`, `rd`, `th`, a space between them or not (2412.10792's `1\textsuperscript{st} Sertac`; iopart's
+  /// `\address{$^1$Univ A, 5 \textsuperscript{th} floor}`; `10$^{a}$` is a mark)
+  pub ordinal:        bool,
+  /// a Name's: the labels its words print by hand ([`PrintedLabel`])
+  pub printed_labels: Vec<PrintedLabel>,
 }
 
 impl Event {
@@ -252,6 +320,10 @@ impl Event {
       formula: None,
       unprinted: None,
       held: false,
+      break_kind: None,
+      braces: 0,
+      ordinal: false,
+      printed_labels: Vec::new(),
     }
   }
 }
@@ -508,7 +580,7 @@ fn raw_lines(w: &Whatsit, n: usize) -> String {
       DigestedData::Whatsit(w) => {
         let w = w.borrow();
         match whatsit_cs(&w).as_str() {
-          "\\lx@fm@obs@break" => out.push(' '),
+          "\\lx@fm@obs@break" | "\\lx@fm@obs@par" => out.push(' '),
           "\\lx@fm@obs@href" => {
             if let Some(text) = w.get_arg(2) {
               walk(text, out);
@@ -664,6 +736,8 @@ fn script_ink(d: &Digested, refs: bool) -> String {
 }
 
 /// A piece of the walk: ink, a spacing item, or a finished event.
+// (the lexer takes each at once, and a block's events are its cost: boxing one per name would add an allocation to save stack)
+#[allow(clippy::large_enum_variant)]
 #[derive(Debug)]
 enum Atom {
   Ink {
@@ -715,15 +789,39 @@ fn font_key(d: &Digested) -> Option<FontKey> { d.get_font().ok().flatten().map(F
 /// Walk `d` in print order, collecting atoms.
 #[derive(Default)]
 struct Walker {
-  atoms: Vec<Atom>,
+  atoms:      Vec<Atom>,
   /// how many lists enclose the box being walked (the block's own is one; a braced group or argument inside it more)
-  lists: usize,
+  lists:      usize,
   /// each in-block contact cut into its marked entries (`labelled_entries`): the entries' spans, and the one entry its
   /// leading marks label, read when a cut entry's marks are no name's ([`lex_events`])
-  cuts:  Vec<(Vec<(u16, u16)>, Event)>,
+  cuts:       Vec<(Vec<(u16, u16)>, Event)>,
+  /// the word space in em of the font last asked ([`Walker::is_word_space_of_its_font`]): sized once, for a block's thousand ties
+  word_space: Option<(Rc<Font>, f64)>,
 }
 
 impl Walker {
+  /// Whether a spacing box of one word-space character (a space, a tie) `width` em wide is its font's word space: what a
+  /// control space prints, as the font's metrics size it (`Font::compute_string_size`). A skip of the same width is no
+  /// different, and rare.
+  fn is_word_space_of_its_font(&mut self, d: &Digested, text: &str, width: f64) -> bool {
+    if !matches!(text, " " | "\n" | "\u{a0}") {
+      return false;
+    }
+    let Some(font) = d.get_font().ok().flatten() else {
+      return false;
+    };
+    let space = match &self.word_space {
+      Some((last, space)) if Rc::ptr_eq(last, &font) => *space,
+      _ => {
+        let (space, ..) = font.compute_string_size(" ", SymHashMap::default());
+        let space = space.pt_value(None) / em_pt(d);
+        self.word_space = Some((font, space));
+        space
+      },
+    };
+    (space - width).abs() < 0.002
+  }
+
   fn walk(&mut self, d: &Digested, nest: u8) {
     match d.data() {
       DigestedData::TBox(b) => {
@@ -751,6 +849,14 @@ impl Walker {
               text.chars().map(space_width).sum()
             }
           });
+          // (a word space is its font's, whatever that is in em: `M.\ de\ Naurois` at `\tiny` 0.347, aa's `~` the same,
+          // 1702.08280; typewriter 0.5: a name cut at each)
+          let width =
+            if !fill && width > INTERWORD && self.is_word_space_of_its_font(d, &text, width) {
+              space_width(' ')
+            } else {
+              width
+            };
           let mut chars = text.chars();
           let word = match (chars.next(), chars.next()) {
             (Some(' ' | '\n'), None) if !fill && width <= INTERWORD => Some(' '),
@@ -897,9 +1003,10 @@ impl Walker {
       // (a break inside a braced group or argument — `\\ {\em College …,\\ City}`, `\textsl{Pure Mathematics\\University
       // of Waterloo\\…}` — is role `group`: the lines it parts are one print unit, as today's reads them, 1710.07902,
       // math0610612)
-      "\\lx@fm@obs@break" => {
+      "\\lx@fm@obs@break" | "\\lx@fm@obs@par" => {
         let mut row = Event::new(EventKind::Break);
         row.role = (self.lists > 1).then(|| "group".to_string());
+        row.break_kind = (cs == "\\lx@fm@obs@par").then_some(BreakKind::Par);
         self.event(row, d, nest)
       },
       // The kernel's own line breaks, where the block rebinds `\\` past the rehearsal's binding: `\centering`,
@@ -1459,6 +1566,8 @@ pub(in crate::base_utilities) fn printed_text(events: &[Event]) -> String {
   for event in events {
     let (piece, glued) = match &event.kind {
       EventKind::Name | EventKind::Contact | EventKind::Note => (event.text.as_str(), false),
+      // (a number's suffix is the note's text, `Event::ordinal`)
+      EventKind::Mark if event.ordinal => (event.text.as_str(), false),
       // (a mark is no text of the note, as the XML's `ltx:sup` is none: CDF's `With visitors from $^a$Istituto …`,
       // 1203.3894, 1307.5202; its leading one the legend's label, `leading_mark`)
       EventKind::Mark => continue,
@@ -1482,12 +1591,14 @@ pub(in crate::base_utilities) fn printed_text(events: &[Event]) -> String {
   out.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// The text of events, as printed: names and contacts, a comma's `,`, a word's word, a gap's space; marks aside.
+/// The text of events, as printed: names and contacts, a comma's `,`, a word's word, a gap's space; marks aside but a
+/// number's suffix (`Event::ordinal`).
 pub(in crate::base_utilities) fn events_text(events: &[&Event]) -> String {
   let mut out = String::new();
   for event in events {
     let piece = match &event.kind {
       EventKind::Name | EventKind::Contact => event.text.as_str(),
+      EventKind::Mark if event.ordinal => event.text.as_str(),
       EventKind::Sep(SepKind::Comma) => ",",
       EventKind::Sep(SepKind::Word(word)) => word.as_str(),
       _ => continue,
@@ -1534,7 +1645,7 @@ pub(in crate::base_utilities) fn leading_marks(events: &[Event]) -> (usize, usiz
     .unwrap_or(events.len());
   let mut end = start;
   for (at, e) in events.iter().enumerate().skip(start) {
-    if matches!(e.kind, EventKind::Mark | EventKind::Layout) {
+    if matches!(e.kind, EventKind::Mark | EventKind::Layout) && !e.ordinal {
       end = at + 1;
     } else if !between_leading_marks(e) {
       break;
@@ -1615,6 +1726,8 @@ fn mark_led_pieces_keeping(events: &[Event], punctuation: bool) -> Vec<Vec<Event
   let mut ink = false;
   for (at, event) in events.iter().enumerate() {
     match &event.kind {
+      // (a number's suffix is the entry's text, `Event::ordinal`)
+      EventKind::Mark if event.ordinal => ink = true,
       EventKind::Mark
         if ink
           && !after_sep
@@ -1762,7 +1875,10 @@ fn labelled_entries(
     .iter()
     .map(|piece| {
       let (_, end) = leading_marks(piece);
-      if piece[end..].iter().any(|e| e.kind == EventKind::Mark) {
+      if piece[end..]
+        .iter()
+        .any(|e| e.kind == EventKind::Mark && !e.ordinal)
+      {
         return None;
       }
       labelled_entry(piece).filter(|e| e.span.is_some() && !norm(&e.text).is_empty())
@@ -1879,58 +1995,13 @@ pub(in crate::base_utilities) fn lex_events(digested: &Digested) -> Vec<Event> {
 /// it is read from the assignment and the position of the invocation that made it. Each is the call's span, the definees
 /// in `label` (space-parted, in order), `global` its role when it defines past the block's groups, its group depth
 /// `nest`. They stand beside the block's events, whose name runs a definition inside does not part (`Ann \def\x{y}Able`).
-/// One inside a box the block prints (`$\def\x{1}\x$`, `\thanks{\def\x{y}\x}`, `\textbf{…}`) is that box's, which holds it
-/// by its span: none of the block's list. A plain group's stays: a group is no box.
+/// One inside a box the block prints (`$\def\x{1}\x$`, `\thanks{\def\x{y}\x}`, `\textbf{…}`, a `minipage`, a `center`) is
+/// that box's and none of these (`field_notes::field_invocation`). A plain group's stays: a group is no box.
 pub(in crate::base_utilities) fn declaration_events(
-  digested: &Digested,
   declarations: &[FieldDeclaration],
 ) -> Vec<Event> {
-  /// The whatsits of `d`'s lists, in print order.
-  fn whatsits(d: &Digested, out: &mut Vec<Digested>) {
-    match d.data() {
-      DigestedData::List(l) => {
-        for child in l.borrow().boxes.iter() {
-          whatsits(child, out);
-        }
-      },
-      DigestedData::Whatsit(_) => out.push(d.clone()),
-      _ => {},
-    }
-  }
-  /// What a whatsit covers by `span`, with a formula's opening shift.
-  fn with_opening(d: &Digested, span: Option<(u16, u16)>) -> Option<(u16, u16)> {
-    let start = match d.get_property(FIELD_FORMULA_START_PROPERTY).as_deref() {
-      Some(Stored::Int(start)) => u16::try_from(*start).ok().map(|s| (s, s + 1)),
-      _ => None,
-    };
-    join_span(span, start)
-  }
-  if declarations.is_empty() {
-    return Vec::new();
-  }
-  let mut boxes = Vec::new();
-  whatsits(digested, &mut boxes);
-  let own: Vec<Option<(u16, u16)>> = boxes.iter().map(|d| with_opening(d, box_span(d))).collect();
-  let holds = |span: Option<(u16, u16)>, at: u16| span.is_some_and(|(s, e)| s <= at && at < e);
   declarations
     .iter()
-    .filter(|declaration| {
-      let at = declaration.start;
-      if own.iter().any(|span| holds(*span, at)) {
-        return false;
-      }
-      // (what a box holds can reach past its own stamp, `\mbox{\def\x{1}}`: the walk through it is a cost on a block of a
-      // thousand names, 1507.02068, so only the nearest stamped box before it is walked, and those of no stamp)
-      let nearest = own
-        .iter()
-        .enumerate()
-        .filter(|(_, span)| span.is_some_and(|(s, _)| s <= at))
-        .max_by_key(|(_, span)| span.map(|(s, _)| s))
-        .map(|(i, _)| i);
-      !boxes.iter().zip(&own).enumerate().any(|(i, (d, span))| {
-        (span.is_none() || Some(i) == nearest) && holds(with_opening(d, deep_span(d)), at)
-      })
-    })
     .map(|declaration| {
       let mut event = Event::new(EventKind::Declaration);
       event.span = Some((declaration.start, declaration.end));
@@ -1944,6 +2015,22 @@ pub(in crate::base_utilities) fn declaration_events(
       );
       event.role = declaration.global.then(|| "global".to_string());
       event.nest = u8::try_from(declaration.depth).unwrap_or(u8::MAX);
+      event
+    })
+    .collect()
+}
+
+/// The Break events of the block breaks its binding declares (`field_notes::FieldBreak`), each its call's position, its
+/// [`BreakKind`], `label` the command. They stand beside the block's events, which they do not part: what the command
+/// prints stays whatever the class makes it, a no-op under OmniBus, a tabular's end under a raw class.
+pub(in crate::base_utilities) fn break_events(breaks: &[FieldBreak]) -> Vec<Event> {
+  breaks
+    .iter()
+    .map(|field_break| {
+      let mut event = Event::new(EventKind::Break);
+      event.span = Some((field_break.at, field_break.at + 1));
+      event.label = Some(field_break.command.to_string());
+      event.break_kind = Some(field_break.kind);
       event
     })
     .collect()
