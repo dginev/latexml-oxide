@@ -32333,7 +32333,7 @@ expression past `parse::MAX_DEPTH` (400 levels of `operand` and `one` and a func
 release build and is `maybe_grow`n) decline as well. The macro's own run then reports or is Fatal as it would: `1^1^…` at 2,000 terms, 1,000,000 of
 `(`, rc=1. So does a conversion within 6,000 levels of the expansion limit. A long flat expression (`1+1+…`) is a loop and stays native. So does a tab mark
 the macro's run would read at `align_state` 0, which ends the cell (tex.web §342), with the Errors and the value that follow: wherever the parser reads one (the
-infix, an operand, a `\csname`, `\one &`, and `\one{&}` by its brace level), by the gullet's own count (`parse::tab_mark_ends_cell`). A `{…}`-wrapped cell, an
+infix, an operand, a `\csname`, `\one &` and any column end in a macro's argument, a `\let` copy of `&`, `\cr`, `\crcr` and `\span` included, and `\one{&}` by its brace level), by the gullet's own count (`parse::tab_mark_ends_cell`). A `{…}`-wrapped cell, an
 `\edef`'s body and anything outside an alignment end nothing and stay native: over the census's 346 manuals a catcode-4 `&` or `|` is read 5,448 times, in 6 of them, and none goes raw.
 
 **While it may answer.** Only while l3fp is what this module ports. `state::watch_meanings` watches `\__fp_…`, `\c__fp_…`, `\s__fp…` and `\c_…_fp`: an

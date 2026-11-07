@@ -2217,9 +2217,6 @@ pub fn with_pushback<R>(look: impl FnOnce(&[Token]) -> R) -> Option<R> {
   gullet!().runtime.as_ref().map(|rt| look(&rt.pushback))
 }
 
-/// How long the pushback is ([`with_pushback`]).
-pub fn pushback_len() -> usize { gullet!().runtime.as_ref().map_or(0, |rt| rt.pushback.len()) }
-
 /// Consume the pushback down to its first `len` tokens, as a native reader's answer does ([`with_pushback`]); braces
 /// among them must balance, since the brace ledger counts none of them, read or not.
 pub fn consume_pushback_to(len: usize) {
@@ -2244,8 +2241,8 @@ pub fn pushback_is_empty() -> bool {
     .is_none_or(|rt| rt.pushback.is_empty())
 }
 
-/// How many tokens the input's pushback holds: a macro's expansion is being read while it holds more than it did before
-/// the expansion (a rehearsal's notes, `token::FieldNotesHook`).
+/// How many tokens the input's pushback holds ([`with_pushback`]): a macro's expansion is being read while it holds more
+/// than it did before the expansion (a rehearsal's notes, `token::FieldNotesHook`).
 pub fn pushback_len() -> usize { gullet!().runtime.as_ref().map_or(0, |rt| rt.pushback.len()) }
 
 /// Expand `token` (defined as `defn`) ONE level and push the expansion back

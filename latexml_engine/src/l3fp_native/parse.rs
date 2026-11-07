@@ -20,7 +20,7 @@ use latexml_core::{
     expandable::{Expandable, SpecialCall},
     register::Register,
   },
-  gullet::do_expand,
+  gullet::{do_expand, is_column_end},
 };
 
 use super::{
@@ -669,8 +669,8 @@ impl Parser {
   }
 
   /// What the macro's read of an argument does more than take, `level` braces in: an `\\outer` token's report (tex.web §336),
-  /// a tab mark that ends the cell (§342; `\one &`, and `\one{&}` is at 1), and what the gullet's read does with a comment
-  /// or a marker.
+  /// a tab mark that ends the cell (§342; `\one &`, a `\let` copy of `&`, `\cr`, `\crcr`, `\span`, and `\one{&}` is at 1), and
+  /// what the gullet's read does with a comment or a marker.
   #[inline]
   fn refuse_in_argument(&mut self, t: Token, level: i32) -> R<()> {
     let refused = match t.code {
@@ -678,6 +678,7 @@ impl Parser {
       Catcode::COMMENT | Catcode::MARKER => Some("a comment or a marker in a macro's argument"),
       Catcode::CS | Catcode::ACTIVE => match lookup_meaning(&t) {
         Some(Stored::Expandable(e)) if e.is_outer => Some("an outer token in a macro's argument"),
+        _ if tab_mark_ends_cell(level) && is_column_end(&t).is_some() => Some(TAB_MARK),
         _ => None,
       },
       _ => None,
