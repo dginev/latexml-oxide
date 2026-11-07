@@ -472,9 +472,10 @@ impl Resolver {
     // jheppub's `\emailAdd`, iopart's `\ead`; OD #805), placed once the whole list is read
     if role == "email" && attr_value(attrs, "_sequence").is_some() {
       let n = self.out.creators.len();
-      let group: Vec<usize> = match n.checked_sub(1).map(|last| self.group[last]) {
-        Some(last) if policy.call_is_group => (0..n).filter(|&c| self.group[c] == last).collect(),
-        _ => (0..n).collect(),
+      let group: Vec<usize> = if policy.call_is_group && n > 0 {
+        self.last_group()
+      } else {
+        (0..n).collect()
       };
       let assoc = Assoc {
         role:   "email".into(),
@@ -810,8 +811,7 @@ impl Resolver {
     } else if role == "email" && policy.email_owner == EmailOwner::SpelledElseOrder {
       // (the class's list printed apart from the names: placed once the whole list is read, `answer_sequence`)
       let group: Vec<usize> = if policy.call_is_group {
-        let last = self.group[n - 1];
-        (0..n).filter(|&c| self.group[c] == last).collect()
+        self.last_group()
       } else {
         (0..n).collect()
       };

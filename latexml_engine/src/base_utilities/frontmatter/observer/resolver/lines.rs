@@ -925,9 +925,7 @@ impl Resolver {
           let c = *made.last().expect("a name");
           let creator = &mut self.out.creators[c];
           creator.name = s!("{} {}", creator.name, event.text);
-          if !creator.rule.contains("name:macro-joined") {
-            creator.rule.push_str(" name:macro-joined");
-          }
+          creator.join(NameJoin::Macro);
           last_sep = None;
         },
         // (a lone placement letter beside a box is no name: `shown_arguments` reads every argument as shown when a
@@ -957,25 +955,20 @@ impl Resolver {
         {
           let c = *made.last().expect("a name");
           let creator = &mut self.out.creators[c];
-          let tag = if initials_only(&creator.name) {
-            "name:initials-joined"
+          let join = if initials_only(&creator.name) {
+            NameJoin::Initials
           } else {
-            "name:gap-joined"
+            NameJoin::Gap
           };
           creator.name = s!("{} {}", creator.name, event.text);
-          if !creator.rule.contains(tag) {
-            creator.rule.push(' ');
-            creator.rule.push_str(tag);
-          }
+          creator.join(join);
           last_sep = None;
         },
         EventKind::Name if joins_previous(events, i) && !made.is_empty() => {
           let c = *made.last().expect("a name");
           let creator = &mut self.out.creators[c];
           creator.name = s!("{} {}", creator.name, event.text);
-          if !creator.rule.contains("name:layout-joined") {
-            creator.rule.push_str(" name:layout-joined");
-          }
+          creator.join(NameJoin::Layout);
         },
         // (initials after a comma and a surname are that name's, written surname first: `Santucho, V., Luparello, H.
         // E., Lares, M.`, mn2e, 2005.00053; `Blanchet, J., Glynn, P. and Thorisson, H.`, 1503.08374; `Della Valle, M.`,
@@ -997,9 +990,7 @@ impl Resolver {
           let c = *made.last().expect("a name");
           let creator = &mut self.out.creators[c];
           creator.name = s!("{}, {}", creator.name, event.text);
-          if !creator.rule.contains("name:reversed") {
-            creator.rule.push_str(" name:reversed");
-          }
+          creator.join(NameJoin::Reversed);
           last_sep = None;
         },
         // (a collaboration among the names, or a remark on a name naming one, is a contact on the names of the line
@@ -1090,9 +1081,7 @@ impl Resolver {
             " "
           };
           creator.name = s!("{}{glue}{}", creator.name, event.text);
-          if !creator.rule.contains("name:qualifier") {
-            creator.rule.push_str(" name:qualifier");
-          }
+          creator.join(NameJoin::Qualifier);
           last_sep = None;
         },
         // (an institution in a row of names is the affiliation of the name before it: `Chen Jia, SI-TECH Information

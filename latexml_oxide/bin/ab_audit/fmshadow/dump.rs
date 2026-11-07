@@ -176,6 +176,7 @@ pub fn json_resolved(v: &Value) -> FmResolved {
           .map(s)
           .collect(),
         rule:         s(&c["rule"]),
+        joins:        latexml_engine::base_utilities::FmNameJoin::of_rule(&s(&c["rule"])),
         source:       c["source"].as_u64().unwrap_or(0) as usize,
         affiliations: assocs(&c["affiliations"]),
         contacts:     assocs(&c["contacts"]),

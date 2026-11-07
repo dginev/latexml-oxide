@@ -73,11 +73,81 @@ pub struct RCreator {
   pub requests:     Vec<String>,
   /// how the name was split out
   pub rule:         String,
+  /// the reading's joins of runs a separator parts into this one name, as `rule` tags them ([`NameJoin`]; the separator
+  /// check reads them, `net::merged_names`)
+  pub joins:        Vec<NameJoin>,
   /// the ledger index of its block (or API call)
   pub source:       usize,
   pub affiliations: Vec<Assoc>,
   pub contacts:     Vec<Assoc>,
   pub notes:        Vec<Assoc>,
+}
+
+/// A rule of the reading joining runs a separator parts into one name (`lines.rs`, `blocks.rs`), each its tag in the
+/// creator's `rule`: a command's own gap (`\EES`), initials or a given name at a gap (`V.G.~ Kagramanova`), runs only a
+/// layout parts (`\firstname{…} \surname{…}`), a name written surname first (`Eckart, A.`, 1501.02171), a qualifier
+/// (`Robert W. Heath, Jr.`, 1004.2377), a remark under it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum NameJoin {
+  Macro,
+  Initials,
+  Gap,
+  Layout,
+  Reversed,
+  Qualifier,
+  Remark,
+}
+
+impl NameJoin {
+  const ALL: [NameJoin; 7] = [
+    NameJoin::Macro,
+    NameJoin::Initials,
+    NameJoin::Gap,
+    NameJoin::Layout,
+    NameJoin::Reversed,
+    NameJoin::Qualifier,
+    NameJoin::Remark,
+  ];
+
+  /// The joins a creator's `rule` records, in order: a reading read back from its dump (`ab_audit fmshadow`), which writes
+  /// them as the rule's tags.
+  pub fn of_rule(rule: &str) -> Vec<NameJoin> {
+    let mut joins = Vec::new();
+    for tag in rule.split_whitespace() {
+      if let Some(join) = Self::ALL.into_iter().find(|join| join.tag() == tag)
+        && !joins.contains(&join)
+      {
+        joins.push(join);
+      }
+    }
+    joins
+  }
+
+  /// Its tag in a creator's `rule`.
+  pub fn tag(self) -> &'static str {
+    match self {
+      NameJoin::Macro => "name:macro-joined",
+      NameJoin::Initials => "name:initials-joined",
+      NameJoin::Gap => "name:gap-joined",
+      NameJoin::Layout => "name:layout-joined",
+      NameJoin::Reversed => "name:reversed",
+      NameJoin::Qualifier => "name:qualifier",
+      NameJoin::Remark => "name:remark",
+    }
+  }
+}
+
+impl RCreator {
+  /// Record the reading's `join` of this name: its rule tag, once, and the join.
+  pub(super) fn join(&mut self, join: NameJoin) {
+    if !self.rule.contains(join.tag()) {
+      self.rule.push(' ');
+      self.rule.push_str(join.tag());
+    }
+    if !self.joins.contains(&join) {
+      self.joins.push(join);
+    }
+  }
 }
 
 /// A document's resolution.
@@ -252,6 +322,7 @@ mod api;
 mod blocks;
 mod labels;
 mod lines;
+mod net;
 mod post;
 mod words;
 
@@ -272,8 +343,9 @@ pub(in crate::base_utilities::frontmatter::observer) use lines::{
   NoPerson, may_name_a_person, name_before_remark, names_no_person, reads_as_names,
 };
 // (the reading's word check, its block half and what the emitter's call half reads: OD #980)
+pub(in crate::base_utilities::frontmatter::observer) use net::{merged_names, uncoordinated_marks};
 pub(in crate::base_utilities::frontmatter::observer) use words::{
-  LostInk, Written, check_blocks, printed_email_label,
+  BlockCheck, LostInk, Written, check_blocks, printed_email_label, printed_words,
 };
 
 /// A block's events as the resolver reads them (`Resolver::block`): an ORCID link's name, an IEEE ordinal, a mark
@@ -316,6 +388,8 @@ struct Resolver {
   pending:            Vec<(Vec<String>, bool, Assoc)>,
   /// per creator: its group (the block's input index, or the policy's call group)
   group:              Vec<usize>,
+  /// per group, its creators, in order: what a call's group reads ([`Resolver::last_group`])
+  group_members:      HashMap<usize, Vec<usize>>,
   /// per creator: the block (input index) and `\and` column of the names line it was read from, if a block's
   column:             Vec<Option<(usize, usize)>>,
   /// the block line being read (input index, column): the column a creator made now is read from
@@ -477,6 +551,7 @@ impl Resolver {
       sequence:           Vec::new(),
       pending:            Vec::new(),
       group:              Vec::new(),
+      group_members:      HashMap::default(),
       column:             Vec::new(),
       line_column:        None,
       entry_column:       HashMap::default(),
@@ -547,6 +622,11 @@ impl Resolver {
     self.roles.push(Vec::new());
     self.order.push(Vec::new());
     self.group.push(group);
+    self
+      .group_members
+      .entry(group)
+      .or_default()
+      .push(self.out.creators.len() - 1);
     self.column.push(self.line_column);
     self.out.creators.len() - 1
   }
@@ -627,6 +707,16 @@ impl Resolver {
 
   /// The creators today's output holds: those of no replaced `\author` call (`resolve` deletes them at the end; the
   /// post-passes that count the authors, or pick one, read these — review revfms2a2_5 finding 1; 2510.26354, 1611.08655).
+  /// The creators of the last creator's group, in order (none before the first creator).
+  fn last_group(&self) -> Vec<usize> {
+    self
+      .group
+      .last()
+      .and_then(|last| self.group_members.get(last))
+      .cloned()
+      .unwrap_or_default()
+  }
+
   fn live(&self) -> Vec<usize> {
     (0..self.out.creators.len())
       .filter(|c| !self.replaced.contains(c))
