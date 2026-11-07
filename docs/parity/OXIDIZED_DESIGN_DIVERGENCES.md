@@ -32426,7 +32426,7 @@ is cut (`cut_entry_addresses`, a cut whose text joins the reading's entries one 
 a block's or an API call's piece, is made from its tokens and cut of the same addresses (`Op::Make`'s `cut`). A line printing an
 address the reading left in it (one that spells no author: the chain's fail-safe) is not made: today's item prints it, which a pass
 after the writer gives its carriers. The read-back compares the final document with the reading as resolved too (`given_back`,
-`ab_audit fmshadow`'s column of that name), so a give-back is never silent.
+`ab_audit fmshadow`'s column of that name), so a give-back shows there; it is set only where the read-back finds no difference, so a pass after the writer can hide it, and it runs only under `LATEXML_FM_SHADOW=1`: it adds no Warning to a conversion (revZ14r2).
 
 Guards `perfect_kernel_batchz14::{an_entrys_addresses_are_cut_where_its_line_is_made, an_address_group_in_a_names_row_is_read_whole,
 an_elided_particle_is_a_surnames_only_after_an_initial, a_role_heading_over_words_opens_no_names}`; RED

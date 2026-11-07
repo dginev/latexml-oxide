@@ -1,0 +1,15 @@
+% mechanism: a later row of a block that opens with a role heading reads as names only where each piece shows a person (`labels.rs`
+%   `later_line_is_names`, `has_person_cue` or a mark, revZ14's narrowing), so a row of plain two-word names after `Authors:` is an
+%   affiliation; one cueless name sinks a mixed row too (`Editor: A. Able, Bob Baker`).
+% witness: review revZ14r2 (no corpus witness; hep-ph0311131's heading row has its marks and reads)
+% oracle:  pdflatex 0 errors: "Cat Cole1 / Authors: Ann Able and Bob Baker / 1 Univ A"
+% engines: Perl has no reading. int143b and Z14r2: one creator Cat Cole, the row an affiliation. Z14: three creators
+% expect:  0 errors, 0 warnings; Cat Cole with "1 Univ A"; Ann Able and Bob Baker as creators
+% status:  RED
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Cat Cole$^1$\\ Authors: Ann Able and Bob Baker\\ $^1$Univ A}
+\maketitle
+Body.
+\end{document}

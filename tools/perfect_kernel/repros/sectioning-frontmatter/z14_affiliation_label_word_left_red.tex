@@ -1,0 +1,17 @@
+% mechanism: when an affiliation line's addresses are taken out of it (`ruling3:address-out`), the label word printed before them stays, glued across
+%   the line break: the reading's affiliation `Univ AEmail`, so the writer declines (the output stays today's). `address_runs` takes a names row's
+%   label with its addresses; the affiliation line's take-out should too.
+% witness: 2002.06945 (`…Imperial College London, UK\\ Email: …`; review revZ14r2)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker / Univ A / Email: ann@a.org, bob@b.org"
+% engines: Perl has no reading. int143b: one affiliation "Univ A Email: ann@a.org, bob@b.org" on each, no e-mail contacts. Z14: each author
+%   "Univ A" and their e-mail. Z14r2: declined, int143b's output
+% expect:  0 errors, 0 warnings; each author "Univ A" and their own e-mail, as Z14
+% status:  RED
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able, Bob Baker}
+\IEEEauthorblockA{Univ A\\ Email: ann@a.org, bob@b.org}}
+\maketitle
+Body.
+\end{document}
