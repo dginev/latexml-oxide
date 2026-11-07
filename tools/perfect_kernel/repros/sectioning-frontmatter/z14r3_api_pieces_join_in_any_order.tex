@@ -1,0 +1,22 @@
+% witness: 1712.07118 (emulateapj: `\affil{\altaffilmark{1}\,Harvard-Smithsonian …, USA; \emailc{ashkbiz.danehkar@cfa.harvard.edu}\\ \altaffilmark{2}\,Massachusetts …}`), hep-ph0108215 (elsart's lettered `\address` lines, each ending `e-mail: …`), 1605.02212 (amsart's `\address{{*\,} … Email: …\acr {**\,} … Email: mepsilon@gmail.com}`)
+% oracle:  pdflatex 0 errors: the names with their marks, then each marked line, its address in it
+% engines: Perl: one affiliation for the block; int143b: each line its authors', the address left in its text; ours at Z14r2: today's item, its spelled address cut, was not read as the entries joined when their texts' order is not print order (the pieces of one call share its source), so the paper declined: every affiliation on a nameless creator (1712.07118), the lines merged on both authors (hep-ph0108215)
+% expect:  0 errors; each line its authors', the spelled address cut from it and its author's e-mail (perfect_kernel_batchz14::an_api_calls_pieces_join_in_any_order)
+% status:  GREEN (Z14r3)
+\documentclass{emulateapj}
+\usepackage{color}
+\newcommand{\bc}{\color{blue}}
+\newcommand{\altaffilmarkc}[1]{\altaffilmark{\bc #1}}
+\newcommand{\emailc}[1]{{\bc #1}}
+\begin{document}
+\title{T}
+\author{Ann Able\altaffilmarkc{1}, Bob Baker\altaffilmarkc{2}, and Cat Cole\altaffilmarkc{1}}
+\affil{\altaffilmark{1}\,Zeta Univ, Town A;
+  \emailc{ann.able@a.org}\\
+\altaffilmark{2}\,Alpha Univ, Town B}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Body.
+\end{document}

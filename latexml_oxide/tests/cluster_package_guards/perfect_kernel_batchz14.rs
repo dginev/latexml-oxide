@@ -5,6 +5,9 @@
 //! other two tests, `an_address_groups_braces_…` the address reader, `a_note_inside_a_link_…` the lexer of a link. Z14r2's (review revZ14): `an_entrys_addresses_are_cut_…` the
 //! writer's give-back and its made line's cut, with the read-back's `given_back`; `an_address_group_in_a_names_row_…` the names line's address reader; `an_elided_particle_…` the
 //! shared name shape; `a_role_heading_over_words_…` the later line's heading.
+//! Z14r3's (the bundle's full A/B): `an_address_glued_to_a_dash_…` the names row's address cut; `an_api_calls_pieces_join_…` the take-out's join (`plan::joins_entries`);
+//! `an_entry_whose_cut_fails_…` the writer's fail-safe; `a_line_keeping_an_address_…` the block lines' cut (`insert::entry_line_addresses`); `an_only_carriers_address_…`
+//! the give-back's weak owner.
 
 use latexml::util::test::warning_count;
 use serde_json::Value;
@@ -566,5 +569,138 @@ fn a_mark_past_a_marked_lists_leading_run_is_an_event_red() {
     "C Bob Baker [2]",
     "  a Univ X, Town, USA",
     "  c email bob@x.org",
+  ]);
+}
+
+/// Z14r3 (the bundle's full A/B): a names row's address glued to the punctuation before it — OT1's `|` an em dash, `Ann Able |ann@a.org|` (1006.4832) — is cut from
+/// the name where the word printing it starts: the run reader parts no address from a dash, and the name had kept it, the e-mail lost as a contact.
+#[test]
+fn an_address_glued_to_a_dash_leaves_the_name() {
+  let (log, xml, shadow) = run(repro!("z14r3_address_glued_to_a_dash_in_a_names_row"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(reading(&shadow), [
+    "C Ann Able []",
+    "  a Dept X, Univ A",
+    "  a Town A, Country",
+    "  c email —ann@a.org—",
+  ]);
+  creators_are(&xml, &[&[
+    "Ann Able",
+    "email=—ann@a.org—",
+    "affiliation=Dept X, Univ A",
+    "affiliation=Town A, Country",
+  ]]);
+}
+
+/// Z14r3: today's one item of an API call's pieces, its spelled address cut, is the reading's entries joined whatever order their texts sort in — the pieces share the
+/// call's source, no span to order them by (1712.07118's `\affil` lines, hep-ph0108215's lettered `\address` lines, 1605.02212's `{**\,}` line): read in the texts'
+/// order it was no join, and the paper declined, every affiliation on a nameless creator or merged on each author. Each line its authors', the spelled address its
+/// author's e-mail.
+#[test]
+fn an_api_calls_pieces_join_in_any_order() {
+  let (log, xml, shadow) = run(repro!("z14r3_api_pieces_join_in_any_order"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(shadow["writer"], "written", "{shadow}");
+  creators_are(&xml, &[
+    &[
+      "Ann Able",
+      "affiliation=Zeta Univ, Town A",
+      "email=ann.able@a.org",
+    ],
+    &["Bob Baker", "affiliation=Alpha Univ, Town B"],
+    &["Cat Cole", "affiliation=Zeta Univ, Town A"],
+  ]);
+  let (xml, shadow) = dump(&format!(
+    "\\documentclass{{elsarticle}}\n\\begin{{document}}\n\\begin{{frontmatter}}\n\\title{{T}}\n\\author{{{}}}\n\\address{{{}}}\n\\end{{frontmatter}}\nBody.\n\\end{{document}}\n",
+    r"Ann Able$^{a}$, Bob Baker$^{b}$",
+    r"$^{a}$Zeta Univ\\Town A; e-mail: ann@a.org\\ $^{b}$Alpha Univ\\Town B; e-mail: bob@b.org"
+  ));
+  assert_eq!(shadow["writer"], "written", "{shadow}");
+  creators_are(&xml, &[
+    &[
+      "Ann Able a",
+      "address=a Zeta Univ Town A",
+      "email=ann@a.org",
+    ],
+    &[
+      "Bob Baker b",
+      "address=b Alpha Univ Town B",
+      "email=bob@b.org",
+    ],
+  ]);
+}
+
+/// Z14r3: an entry kept taken out because today's prints its addresses in an item the address reader cuts is given back whole where the plan cannot make it cut —
+/// `e--mail:` no label the cut reads (astro-ph0007423's own `\address` of addresses) —, and the plan writes the rest: the paper had been declined, every numbered line
+/// on both authors. An address today's holds as an author's contact stays taken out (2310.19837, `an_entrys_addresses_are_cut_where_its_line_is_made`).
+#[test]
+fn an_entry_whose_cut_fails_is_given_back() {
+  let (log, xml, shadow) = run(repro!("z14r3_entry_given_back_where_its_cut_fails"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(shadow["writer"], "written", "{shadow}");
+  creators_are(&xml, &[
+    &[
+      "Ann Able 1,2",
+      "address=1 Univ A, Town A",
+      "address=2 Univ B, Town B",
+      "address=e–mail: ann@a.org and bob@b.org",
+    ],
+    &[
+      "Bob Baker 1,3",
+      "address=1 Univ A, Town A",
+      "address=3 Univ C, Town C",
+      "address=e–mail: ann@a.org and bob@b.org",
+    ],
+  ]);
+}
+
+/// Z14r3: a block's line keeping an address the reading left in it is made where the pass after the writer would leave that address in today's item as printed
+/// (2203.17007's `$^{\star \star}$Ericsson Research, Sweden, E-mail: firstname.secondname@…`, `insert::entry_line_addresses`): no line was made, and the paper
+/// declined, the lines merged on the first author. Where that pass would give it to its carriers as their e-mail, the line is not made (2310.19837, the third row of
+/// `an_entrys_addresses_are_cut_where_its_line_is_made`).
+#[test]
+fn a_line_keeping_an_address_the_pass_leaves_is_made() {
+  let (log, xml, shadow) = run(repro!("z14r3_line_keeping_a_left_address_is_made"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(shadow["writer"], "written", "{shadow}");
+  creators_are(&xml, &[
+    &[
+      "Ann Able",
+      "affiliation=Univ A, Finland",
+      "email=ann.able@a.org",
+    ],
+    &[
+      "Bob Baker ⋆",
+      "affiliation=Univ B, Finland",
+      "email=bob.baker@b.org",
+    ],
+    &[
+      "Cat Cole ⋆",
+      "affiliation=Univ C, Sweden, E-mail: first.second@c.org",
+      "affiliation=Univ D, Sweden.",
+      "email=cat@d.se",
+    ],
+    &[
+      "Dan Dean ⋆⋆",
+      "affiliation=Univ C, Sweden, E-mail: first.second@c.org",
+    ],
+  ]);
+}
+
+/// Z14r3: an address the reading gives an entry's only carrier is no e-mail the writer asserts against today's print where the entry prints another author's
+/// address too — the line lists the block's addresses (2403.12766's `20200142@hznu.edu.cn`, Qian Wang's, read as `$^6$NYU Shanghai`'s Zheng Zhang's): the
+/// entry is given back, the line of addresses left in the last institute's text, as int143b.
+#[test]
+fn an_only_carriers_address_beside_others_is_not_written() {
+  let (log, xml, _) = run(repro!("z14r3_only_carrier_beside_other_authors_addresses"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  creators_are(&xml, &[
+    &["Ann Able", "affiliation=1 Univ A"],
+    &["Bob Baker", "affiliation=2 Univ B"],
+    &[
+      "Cat Cole",
+      "affiliation=3 Univ C {ann.able, bob.baker}@a.org; 20200142@c.org",
+    ],
+    &["Dan Dean", "affiliation=2 Univ B"],
   ]);
 }

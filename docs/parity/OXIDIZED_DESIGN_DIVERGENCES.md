@@ -32422,14 +32422,33 @@ fake creators, its merged-creators Error gone).
 (`owner:entry-address`). The writer gave the entry back whole where today's held no item it could cut to the entry: today's
 contacts were removed and the addresses left in the affiliation's text, read back as `written` (2310.19837's shape). Now an entry
 whose e-mails today's holds as an author's contact, or prints in an item the address reader cuts, is not given back: today's item
-is cut (`cut_entry_addresses`, a cut whose text joins the reading's entries one after another, `joins_entries`), and the line,
-a block's or an API call's piece, is made from its tokens and cut of the same addresses (`Op::Make`'s `cut`). A line printing an
-address the reading left in it (one that spells no author: the chain's fail-safe) is not made: today's item prints it, which a pass
-after the writer gives its carriers. The read-back compares the final document with the reading as resolved too (`given_back`,
-`ab_audit fmshadow`'s column of that name), so a give-back shows there; it is set only where the read-back finds no difference, so a pass after the writer can hide it, and it runs only under `LATEXML_FM_SHADOW=1`: it adds no Warning to a conversion (revZ14r2).
+is cut (`cut_entry_addresses`, a cut whose text is several of the reading's entries joined, each once, in any order: an API
+call's pieces share its source, no span to order them by — `joins_entries`; read in their texts' order, 1712.07118's `\affil`
+lines, hep-ph0108215's and 1605.02212's lettered and starred `\address` lines were no join, and declined), and the line, a block's
+or an API call's piece, is made from its tokens and cut of the same addresses (`Op::Make`'s `cut`). An entry given back leaves
+`Resolved::taken`, which the plan reads as the entries it makes cut. An address today's prints is no reason to keep the take-out
+where the reading gave it the entry's only carrier while the entry prints another author's own address too: the line lists the
+block's addresses (2403.12766's `20200142@hznu.edu.cn`, Qian Wang's, which the order fix above had written as `$^6$NYU Shanghai`'s
+Zheng Zhang's e-mail). **Its fail-safe** (`write_observed_frontmatter`): where the
+plan cannot make such an entry cut, an entry kept for an address today's prints is given back whole and the plan writes the rest,
+as before Z14r2 (astro-ph0007423's own `\address{e--mail: … and …}`, whose `e–mail:` the cut reads as no label, had been declined
+whole); one kept for an author's contact of today's stays taken out, the paper declined, today's contacts kept (2310.19837). A
+block line keeping an address the reading left in it (one that spells no author: the chain's fail-safe) is not made where the pass
+after the writer would give that address in today's item to its carriers (`insert::entry_line_addresses`, the Kind step's own
+line reader, `kind_address_lines`); one it leaves as printed is made so (2203.17007's `firstname.secondname@ericsson.com` in its
+`$^{\star \star}$` line, whose paper had been declined, the lines merged on its first author). The read-back compares the final
+document with the reading as resolved too (`given_back`, `ab_audit fmshadow`'s column of that name), so a give-back shows there; it is
+set only where the read-back finds no difference, so a pass after the writer can hide it, and it runs only under
+`LATEXML_FM_SHADOW=1`: it adds no Warning to a conversion (revZ14r2).
+
+**A names row's address glued to punctuation** (`lines.rs` `names_without_addresses`): the name ends where the address's run
+starts, its label word with it, or earlier where a word prints an address the run reader parts from nothing before it — OT1's
+`|` an em dash, `Kristiaan Pelckmans |kp@it.uu.se|` (1006.4832), whose name had taken the address.
 
 Guards `perfect_kernel_batchz14::{an_entrys_addresses_are_cut_where_its_line_is_made, an_address_group_in_a_names_row_is_read_whole,
-an_elided_particle_is_a_surnames_only_after_an_initial, a_role_heading_over_words_opens_no_names}`; RED
+an_elided_particle_is_a_surnames_only_after_an_initial, a_role_heading_over_words_opens_no_names}`, Z14r3's
+`{an_address_glued_to_a_dash_leaves_the_name, an_api_calls_pieces_join_in_any_order, an_entry_whose_cut_fails_is_given_back,
+a_line_keeping_an_address_the_pass_leaves_is_made, an_only_carriers_address_beside_others_is_not_written}`; RED
 `a_mark_past_a_marked_lists_leading_run_is_an_event_red` (`Town, USA\\ *ann@x.org` reads `USA1ann@x.org`: 2411.03172, 2510.06608,
 2602.11758).
 
