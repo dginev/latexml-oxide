@@ -243,6 +243,9 @@ fn api_cut(index: usize, (taken, spells): (&Taken, &dyn Fn(&str) -> bool)) -> Re
   Ok(Some((cuts, Some(Tokens::new(tokens)), mails, stripped)))
 }
 
+/// A cut's runs, its e-mails and the entry's text as it leaves it ([`labelled_cut`]).
+type LabelledCut = (Vec<(usize, usize)>, Vec<Mail>, String);
+
 /// [`cut_at`] of `taken` with the label before its runs taken with them ([`labelled`]), else of the reading's own take-out
 /// where that one can't be cut (`\\ \textit{*Corresponding author: a@x, b@x}}`, whose line no balanced run holds with its
 /// break: 2405.13751): the cut, its e-mails and the entry's text as it leaves it.
@@ -253,7 +256,7 @@ fn labelled_cut(
   inks: &InkTable,
   (taken, spells): (&Taken, &dyn Fn(&str) -> bool),
   marked: bool,
-) -> Option<(Vec<(usize, usize)>, Vec<Mail>, String)> {
+) -> Option<LabelledCut> {
   let with_label = labelled(taken, spells, marked);
   if with_label != *taken
     && let Some((cuts, mails)) = cut_at(field, texts, around, inks, (&with_label, spells))
