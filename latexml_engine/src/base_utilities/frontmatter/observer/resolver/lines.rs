@@ -74,7 +74,7 @@ pub(super) use crate::base_utilities::frontmatter::observer::events::{inked, mar
 /// "Bogdan Rai", "t", "ă" at a comma. The cover is the events the invocation printed, each span opening at the command's
 /// one token (its letters' the widest), a row break or a cell of its own alignment no span at all; one Name with the
 /// letters before and after it, their texts joined as the source joins them.
-pub(super) fn words_through_one_command(events: &[Event]) -> std::borrow::Cow<'_, [Event]> {
+pub(super) fn words_through_one_command(events: &[Event]) -> Cow<'_, [Event]> {
   // (most blocks hold no such cover: read as they are, uncopied — the old writer reads a block's events per creator)
   let parted_cover = events.iter().enumerate().any(|(i, e)| {
     e.kind == EventKind::Layout
@@ -87,7 +87,7 @@ pub(super) fn words_through_one_command(events: &[Event]) -> std::borrow::Cow<'_
       })
   });
   if !parted_cover {
-    return std::borrow::Cow::Borrowed(events);
+    return Cow::Borrowed(events);
   }
   let mut out: Vec<Event> = Vec::with_capacity(events.len());
   let mut i = 0;
@@ -176,7 +176,7 @@ pub(super) fn words_through_one_command(events: &[Event]) -> std::borrow::Cow<'_
     word.marks = word.marks.map(|(a, _)| (a, to));
     out.push(word);
   }
-  std::borrow::Cow::Owned(out)
+  Cow::Owned(out)
 }
 
 /// The block's events with an IEEE template's ordinal before a name (`1\textsuperscript{st} Sertac Kilickaya`,
