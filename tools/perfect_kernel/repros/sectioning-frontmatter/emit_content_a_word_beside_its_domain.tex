@@ -5,9 +5,10 @@
 %   XML, the reading's word check naming only `6928 Manno Switzerland`, review revN1r3)
 % oracle:  pdflatex 0 errors; "Ann Able", "Bob Baker", "IDSIA, 6928 Manno, Switzerland {ann, bob}@idsia.ch"
 % engines: rust int146a, the switch on: `IDSIA` lost with no Warning naming it
-% expect:  the switch on: 0 errors, 2 warnings (the reading's, `6928 Manno Switzerland` kept as notes; the content check's,
-%   `IDSIA` lost); "Ann Able" email ann@idsia.ch, "Bob Baker" email bob@idsia.ch; the switch at 1: no content check
-% status:  RED (int146a) -> GREEN (perfect_kernel_batchn2::a_word_beside_its_domain_is_counted_lost)
+% expect:  the switch on: 0 errors, 0 warnings; "Ann Able" and "Bob Baker" each affiliation "IDSIA, 6928 Manno,
+%   Switzerland" and their own e-mail (LO1); the content check counts nothing (N2 alone: `IDSIA` placed nowhere, counted
+%   lost); the switch at 1: no content check
+% status:  RED (int146a) -> GREEN (perfect_kernel_batchn2::a_word_beside_its_domain_is_kept)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

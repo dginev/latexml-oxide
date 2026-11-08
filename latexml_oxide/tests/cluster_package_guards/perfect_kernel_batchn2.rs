@@ -1,6 +1,6 @@
 //! Guards for N2 (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`, "The safety net", bar (2); OXIDIZED_DESIGN_DIVERGENCES #980):
 //! the content invariant checked on the placed output (`resolver::placed`), under the switch's `=2` only, counting and never
-//! answering. A word an address's domain spells is lost where no item holds it (`a_word_beside_its_domain_is_counted_lost`,
+//! answering. A word an address's domain spells is never written by the address (`a_word_beside_its_domain_is_kept`,
 //! 1605.03019); an address placed more often than printed, twice on one creator or in a note and a contact
 //! (`an_address_placed_more_often_than_printed_is_counted`, 2607.00684, 0807.0895); a block whose every word is placed once,
 //! a shared entry and an ORCID logo among them, counts nothing (`a_clean_block_counts_nothing`).
@@ -38,22 +38,28 @@ fn content_checks(log: &str) -> (Vec<String>, Vec<String>) {
   )
 }
 
-/// A word printed beside an address its domain spells (`IDSIA` beside `@idsia.ch`) is no address's: placed nowhere, it is
-/// counted lost, the line's list of local parts read whole (its inks parted at the list's commas); with the switch at 1 the
-/// check doesn't run (1605.03019, review revN1r3).
+/// A word printed beside an address its domain spells (`IDSIA` beside `@idsia.ch`) is no address's word: the line is both
+/// authors' affiliation (LO1: a line printing no address under a single names row belongs to every author of the row), each
+/// address its own author's, and the check counts nothing; it never counts a domain as writing `IDSIA`. N2 alone (before
+/// LO1) placed `IDSIA` nowhere and counted it lost; with the switch at 1 the check doesn't run (1605.03019, review
+/// revN1r3).
 #[test]
-fn a_word_beside_its_domain_is_counted_lost() {
+fn a_word_beside_its_domain_is_kept() {
   let tex = repro!("emit_content_a_word_beside_its_domain");
   let (log, xml) = run(tex, 2);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
-  assert_eq!(
-    content_checks(&log),
-    (vec!["IDSIA".to_string()], vec![]),
-    "{log}"
-  );
-  assert_eq!(creators(&xml)[..2], [
-    vec!["Ann Able".to_string(), "email=ann@idsia.ch".to_string()],
-    vec!["Bob Baker".to_string(), "email=bob@idsia.ch".to_string()],
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(content_checks(&log), (vec![], vec![]), "{log}");
+  assert_eq!(creators(&xml), [
+    vec![
+      "Ann Able".to_string(),
+      "affiliation=IDSIA, 6928 Manno, Switzerland".to_string(),
+      "email=ann@idsia.ch".to_string()
+    ],
+    vec![
+      "Bob Baker".to_string(),
+      "affiliation=IDSIA, 6928 Manno, Switzerland".to_string(),
+      "email=bob@idsia.ch".to_string()
+    ],
   ]);
   let (log, _) = run(tex, 1);
   assert_eq!(content_checks(&log), (vec![], vec![]), "{log}");
