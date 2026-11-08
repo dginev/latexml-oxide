@@ -323,6 +323,7 @@ mod blocks;
 mod labels;
 mod lines;
 mod net;
+mod placed;
 mod post;
 mod words;
 
@@ -344,6 +345,10 @@ pub(in crate::base_utilities::frontmatter::observer) use lines::{
 };
 // (the reading's word check, its block half and what the emitter's call half reads: OD #980)
 pub(in crate::base_utilities::frontmatter::observer) use net::{merged_names, uncoordinated_marks};
+// (the content invariant on the placed output, under the emitter's `=2`: OD #980)
+pub(in crate::base_utilities::frontmatter::observer) use placed::{
+  Placed, PlacedItem, PlacedKind, content_check,
+};
 pub(in crate::base_utilities::frontmatter::observer) use words::{
   BlockCheck, LostInk, Written, check_blocks, printed_email_label, printed_words,
   reads_as_email_label,

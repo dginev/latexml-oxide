@@ -43,6 +43,9 @@ impl Kind {
 pub(super) struct Item {
   pub kind:    Kind,
   pub key:     String,
+  /// its text, every layout part parting the words on its sides ([`words_without_marks`]; its [`norm`] is `key`): what the
+  /// content check counts the words of (`check_placed_content`)
+  pub text:    String,
   pub node:    Node,
   pub movable: bool,
 }
@@ -143,6 +146,15 @@ pub(super) fn text_without_marks(node: &Node) -> String { printed_text(node, fal
 /// one cell of a tabular and the institution in the next, which the comparison reads glued: what words a re-part keeps,
 /// `repart`).
 pub(super) fn words_without_marks(node: &Node) -> String { printed_text(node, true) }
+
+/// Whether `node` holds an element of a layout parting the words on its sides ([`LAYOUT_PARTS`]): where its
+/// [`words_without_marks`] differs from its [`text_without_marks`] by more than spaces.
+pub(super) fn holds_a_layout_part(node: &Node) -> bool {
+  node.get_child_nodes().iter().any(|child| {
+    child.get_type() == Some(NodeType::ElementNode)
+      && (LAYOUT_PARTS.iter().any(|q| is(child, q)) || holds_a_layout_part(child))
+  })
+}
 
 /// The elements of a layout that part the words on their sides.
 pub(super) const LAYOUT_PARTS: &[&str] = &[
@@ -722,7 +734,7 @@ pub(super) fn orcid_id(text: &str) -> &str {
     .unwrap_or(text)
 }
 
-fn descendants(node: &Node, qname: &str, out: &mut Vec<Node>) {
+pub(super) fn descendants(node: &Node, qname: &str, out: &mut Vec<Node>) {
   for child in node.get_child_nodes() {
     if child.get_type() == Some(NodeType::ElementNode) {
       if is(&child, qname) {
@@ -772,10 +784,12 @@ pub(super) fn read_creator(node: &Node) -> Creator {
           inside
         };
         if !nested {
+          let text = words_without_marks(&note);
           items.push(Item {
-            kind:    Kind::Note,
-            key:     norm(&text_without_marks(&note)),
-            node:    note,
+            kind: Kind::Note,
+            key: norm(&text),
+            text,
+            node: note,
             movable: false,
           });
         }
@@ -784,6 +798,7 @@ pub(super) fn read_creator(node: &Node) -> Creator {
         items.push(Item {
           kind:    Kind::Contact("orcid".into()),
           key:     norm(&id),
+          text:    id,
           node:    link,
           movable: false,
         });
@@ -796,13 +811,14 @@ pub(super) fn read_creator(node: &Node) -> Creator {
           items.push(Item {
             kind:    Kind::Contact("orcid".into()),
             key:     norm(&id),
+            text:    id,
             node:    link,
             movable: false,
           });
         }
       }
       let kind = Kind::of_contact(&role);
-      let mut text = text_without_marks(&child);
+      let mut text = words_without_marks(&child);
       // (an ORCID contact prints a logo, its identifier the link's)
       if text.is_empty()
         && let Some(href) = {
@@ -816,14 +832,17 @@ pub(super) fn read_creator(node: &Node) -> Creator {
       items.push(Item {
         kind,
         key: norm(&text),
+        text,
         node: child.clone(),
         movable: true,
       });
     } else if is(&child, "ltx:note") {
+      let text = words_without_marks(&child);
       items.push(Item {
-        kind:    Kind::Note,
-        key:     norm(&text_without_marks(&child)),
-        node:    child.clone(),
+        kind: Kind::Note,
+        key: norm(&text),
+        text,
+        node: child.clone(),
         movable: true,
       });
     }

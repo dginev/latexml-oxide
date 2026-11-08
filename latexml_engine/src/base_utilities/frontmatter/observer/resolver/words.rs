@@ -7,7 +7,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
-  super::ledger::{Entry, Ledger, Outcome},
+  super::ledger::{AuthorBlock, Entry, Ledger, Outcome},
   *,
 };
 
@@ -21,8 +21,78 @@ pub(in crate::base_utilities::frontmatter::observer) fn printed_words(
 }
 
 /// The words a multiset of them counts: [`printed_words`], lowercased.
-fn words_of(text: &str) -> impl Iterator<Item = String> + '_ {
+pub(in crate::base_utilities::frontmatter::observer) fn words_of(
+  text: &str,
+) -> impl Iterator<Item = String> + '_ {
   printed_words(text).map(str::to_lowercase)
+}
+
+/// Where the addresses of `run`, an address run of `text`, begin: after its label word (a label is the contact's name,
+/// written or not, `email:` before `Duncan.Lorimer@mail.wvu.edu`, 0811.0762), else at the run.
+fn address_start(text: &str, run: &AddressRun) -> usize {
+  run
+    .label
+    .as_deref()
+    .and_then(|label| {
+      text[run.start..run.end]
+        .find(label)
+        .map(|at| run.start + at + label.len())
+    })
+    .unwrap_or(run.start)
+}
+
+/// What `text` prints, as the content check counts it (`placed`): its words ([`printed_words`]) outside its address runs
+/// ([`address_runs`]), and the addresses those runs print, lowercased, a list's each (`{ann,bob}@x.org` two). An address's
+/// local-part and domain words are the address's, never a word of the text: a domain `idsia` writes no `IDSIA`
+/// (1605.03019, review revN1r3).
+pub(in crate::base_utilities::frontmatter::observer) fn ink_words(
+  text: &str,
+) -> (Vec<String>, Vec<String>) {
+  if !text.contains('@') {
+    return (
+      printed_words(text).map(str::to_string).collect(),
+      Vec::new(),
+    );
+  }
+  // (the braces of a group set in math, as [`addresses_in`] reads them: `$\{$fargyriou,mikebekos$\}$@math.ntua.gr`, 1106.2694)
+  let unshifted;
+  let text = if text.contains('$') {
+    unshifted = text.replace('$', "");
+    unshifted.as_str()
+  } else {
+    text
+  };
+  let runs = address_runs(text, &|_| false);
+  let mut cut: Vec<(usize, usize)> = runs
+    .iter()
+    .map(|run| (address_start(text, run), run.end))
+    .collect();
+  let mut addresses: Vec<String> = runs
+    .into_iter()
+    .flat_map(|run| run.addresses)
+    .map(|a| a.to_lowercase())
+    .collect();
+  // (and an address no run reads, glued to what prints before or after it: `——meizeh@cs.technion.ac.il`, 1503.06438; `†caprini@…`,
+  // 1202.5401), from its first letter or digit to its last
+  for token in text.split_whitespace() {
+    let from = token.as_ptr() as usize - text.as_ptr() as usize;
+    let to = from + token.len();
+    let address = token.trim_matches(|c: char| !c.is_alphanumeric());
+    let read = cut.iter().any(|&(s, t)| s < to && from < t);
+    if !read
+      && address
+        .split_once('@')
+        .is_some_and(|(local, domain)| !local.is_empty() && domain.contains('.'))
+    {
+      cut.push((from, to));
+      addresses.push(address.to_lowercase());
+    }
+  }
+  let words = words_at(text)
+    .filter(|((from, to), _)| !cut.iter().any(|&(s, t)| s <= *from && *to <= t))
+    .map(|(_, word)| word.to_string())
+    .collect();
+  (words, addresses)
 }
 
 /// The e-mail label the paper prints before `address` at `span` of a block's `events`, as the reading reads an address run's
@@ -468,15 +538,7 @@ impl Written {
             }
             // (its addresses, from after its label word: a label is the contact's name, written or not, `email:` before
             // `Duncan.Lorimer@mail.wvu.edu`, 0811.0762)
-            let start = run
-              .label
-              .as_deref()
-              .and_then(|label| {
-                e.text[run.start..run.end]
-                  .find(label)
-                  .map(|at| run.start + at + label.len())
-              })
-              .unwrap_or(run.start);
+            let start = address_start(&e.text, &run);
             for ((from, to), word) in words_at(&e.text[start..run.end]) {
               if !take(&mut counts, &word.to_lowercase()) {
                 read.lost.push(((start + from, start + to), word));
@@ -705,14 +767,12 @@ pub(in crate::base_utilities::frontmatter::observer) struct BlockCheck {
   pub excess: Vec<(String, bool)>,
 }
 
-/// The block half of the word check, both ways: per author block (its ledger index) that fails it, its [`BlockCheck`],
-/// against `written`, the reading's ([`Written::new`]). What a later call replaced or cleared, as the kernel's
-/// `\lx@clear@frontmatter` does, prints in no output: a template's `\author{First Author}` before the paper's own,
-/// 2412.15554.
-pub(in crate::base_utilities::frontmatter::observer) fn check_blocks(
+/// The author blocks of the ledger whose authors an output holds, with their ledger index: what a later call replaced or
+/// cleared, as the kernel's `\lx@clear@frontmatter` does, prints in no output (a template's `\author{First Author}` before
+/// the paper's own, 2412.15554).
+pub(in crate::base_utilities::frontmatter::observer) fn live_blocks(
   ledger: &Ledger,
-  written: &Written,
-) -> BTreeMap<usize, BlockCheck> {
+) -> Vec<(usize, &AuthorBlock)> {
   // (per entry, whether a later block of its epoch replaces the authors: the epochs a replacing block opens, from the end)
   let mut replacing: BTreeSet<usize> = BTreeSet::new();
   let mut replaced = vec![false; ledger.entries().len()];
@@ -724,13 +784,23 @@ pub(in crate::base_utilities::frontmatter::observer) fn check_blocks(
       }
     }
   }
+  let blocks = ledger.entries().iter().enumerate();
+  let live = blocks.filter_map(|(index, entry)| match entry {
+    Entry::Author(block) if !block.cleared && !replaced[index] => Some((index, &**block)),
+    _ => None,
+  });
+  live.collect()
+}
+
+/// The block half of the word check, both ways: per author block (its ledger index) that fails it, its [`BlockCheck`],
+/// against `written`, the reading's ([`Written::new`]), over the [`live_blocks`] (2412.15554's template block none).
+pub(in crate::base_utilities::frontmatter::observer) fn check_blocks(
+  ledger: &Ledger,
+  written: &Written,
+) -> BTreeMap<usize, BlockCheck> {
   let mut checks = BTreeMap::new();
-  for (index, entry) in ledger.entries().iter().enumerate() {
-    if let Entry::Author(block) = entry
-      && !block.cleared
-      && !replaced[index]
-      && let Outcome::Events { events, .. } = &block.outcome
-    {
+  for (index, block) in live_blocks(ledger) {
+    if let Outcome::Events { events, .. } = &block.outcome {
       let check = BlockCheck {
         lost:   written.lost_inks(index, events, true),
         excess: written.excess(index, events),

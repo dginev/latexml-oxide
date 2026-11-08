@@ -132,15 +132,28 @@ fn a_block_losing_other_ink_keeps_its_reading() {
     }
   }
   // (a link's anchor printing two addresses, 2607.28418, its addresses spelling two authors: the block's note; its unprinted target, which the
-  // reading writes as an address, counted as written more often than printed, the link-target RED below)
+  // reading writes as an address, counted as written more often than printed, the link-target RED below — and at `=2` again by the content
+  // check on the placed output, its words placed where no ink prints them: N2)
   let link = "Ann Able$^{1}$ \\quad Bob Baker$^{1}$ \\\\ $^{1}$Univ A \\\\ \\small{\\href{mailto:email@domain}{ann@a.edu; bob@b.edu}}";
   let tex = template.replace(LOST_INK_ROWS[0].0, link);
   for emit in [1, 2] {
     let (log, xml) = run(&tex, emit);
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+    let placed = usize::from(emit == 2);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 2 + placed),
+      "{log}"
+    );
     assert!(
       log.contains("they are kept as a note of the author block")
         && log.contains("more often than it prints them (email); they are counted"),
+      "{log}"
+    );
+    assert_eq!(
+      log
+        .matches("the placed frontmatter holds more often than they print (domain email)")
+        .count(),
+      placed,
       "{log}"
     );
     let own = creators_xml(&xml).pop().unwrap_or_default();

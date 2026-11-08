@@ -1,0 +1,19 @@
+% mechanism: the content check on the placed output (`resolver::placed`, under `LATEXML_FM_EMIT=2`): an address placed more
+%   often than the page prints it, each e-mail contact one copy (an address is one person's): twice on one creator, counted
+% witness: 2607.00684 (llncs `\email{seokhee.jin@kt.com, \{changhwan.sung, mtablo, hoyoung.kim, jungseul.ok\}@postech.ac.kr}`:
+%   a nameless creator holding `mtablo@postech.ac.kr` twice, no Warning, review revN1 item 3)
+% oracle:  pdflatex 0 errors; "Ann Able1 , Bob Baker2 , and Cat Cole2"; "ann@a.org, {bob.baker, xtra, cat.cole}@b.org"
+% engines: rust int146a, the switch on: the nameless creator holds xtra@b.org twice, the emitter's three plain-text Warnings only
+% expect:  the switch on: 0 errors, 4 warnings (three plain-text addresses; the content check's excess, `xtra@b.org`); the
+%   creators Ann Able, Bob Baker, Cat Cole each an affiliation and an e-mail, a nameless one `xtra@b.org` twice
+% status:  RED (int146a) -> GREEN (perfect_kernel_batchn2::an_address_placed_more_often_than_printed_is_counted)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2} \and Cat Cole\inst{2}}
+\institute{Univ A, Town \and Univ B, City\\
+\email{ann@a.org, \{bob.baker, xtra, cat.cole\}@b.org}}
+\maketitle
+Body.
+\end{document}

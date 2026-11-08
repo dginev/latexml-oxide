@@ -1578,6 +1578,14 @@ fn written_whole(index: usize, lost: bool) -> bool {
   }
 }
 
+/// Whether the author block at ledger index `index` was written whole ([`written_whole`]), as a flush decided.
+pub(super) fn kept_whole(index: usize) -> bool {
+  matches!(
+    lookup_mapping(EMITTED_ITEMS, &s!("whole|{index}")),
+    Some(Stored::Bool(true))
+  )
+}
+
 /// The creator Perl's `\\lx@add@author` makes of the author block at ledger index `index`, with its keys and `keys`
 /// (`author_block::whole_block_author`, the one writer of a block kept whole).
 fn whole_block(index: usize, keys: &str) -> Option<Result<Tokens>> {

@@ -75,5 +75,6 @@ pub use shadow::{
 };
 pub use writer::set_fm_emit_override;
 pub(in crate::base_utilities) use writer::{
-  EMITTING, emit_commands, fm_emit_mode, read_back_frontmatter, write_observed_frontmatter,
+  EMITTING, check_placed_content, emit_commands, fm_emit_mode, read_back_frontmatter,
+  write_observed_frontmatter,
 };

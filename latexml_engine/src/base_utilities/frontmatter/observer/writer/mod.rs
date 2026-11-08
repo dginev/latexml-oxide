@@ -26,8 +26,8 @@ use super::{
   ledger::{Entry, Ledger, Outcome, ReadBack, SkipReason, with_ledger},
   policy::{family_written, policy_for},
   resolver::{
-    Assoc, NameJoin, RCreator, Resolved, addresses_in, in_source_order, is_change_rule,
-    ledger_inputs, mark_labels, resolve,
+    Assoc, NameJoin, Placed, PlacedItem, PlacedKind, RCreator, Resolved, addresses_in,
+    content_check, in_source_order, is_change_rule, ledger_inputs, mark_labels, resolve,
   },
   shadow::{FmShadow, fm_shadow_mode},
   *,
@@ -139,6 +139,92 @@ pub(in crate::base_utilities) fn read_back_frontmatter(document: &mut Document) 
   let difference = plan::difference(reading.as_ref().unwrap_or(&resolved), &front);
   let given_back = plan::difference(&resolved, &front).filter(|_| difference.is_none());
   with_ledger(|ledger| ledger.read_back = Some(ReadBack { difference, given_back }));
+}
+
+/// The content invariant's check on the placed output (`resolver::placed`; the safety net's bar (2)), the last step of
+/// `insert_frontmatter` under `LATEXML_FM_EMIT=2` only: the words the ledger's author blocks and creator calls printed
+/// against the placed creators' (their names, contacts and notes, as [`dom::read`] reads them; a publication note's, a title's
+/// note's and a contact's label holding a word too), each finding counted in one Warning per paper naming its words — a printed word or
+/// address the output lacks (1605.03019's `IDSIA`), one placed more often than printed (2607.00684's `mtablo@postech.ac.kr`
+/// twice, 2506.02663's footnote junk). It counts; it changes nothing.
+pub(in crate::base_utilities) fn check_placed_content(document: &mut Document) {
+  if fm_emit_mode() != 2 || rehearsal::rehearsing() {
+    return;
+  }
+  let front = dom::read(document);
+  let mut placed = Placed::default();
+  for (holder, creator) in front.creators.iter().chain(&front.nameless).enumerate() {
+    // (a link's target, which an ink may print: an ORCID's id behind its logo, 2607.00684)
+    let mut links = Vec::new();
+    dom::descendants(&creator.node, "ltx:ref", &mut links);
+    placed
+      .beside
+      .extend(links.iter().filter_map(|link| link.get_attribute("href")));
+    if !creator.name.trim().is_empty() {
+      // (its words parted at every layout part, as the block's lines print them: a block written whole, 1908.02923; read again
+      // only where a layout part holds them)
+      let names = creator.node.get_child_nodes().into_iter();
+      let names: Vec<Node> = names
+        .filter(|child| dom::is(child, "ltx:personname"))
+        .collect();
+      let text = if names.iter().any(dom::holds_a_layout_part) {
+        let words: Vec<String> = names.iter().map(dom::words_without_marks).collect();
+        words.join(" ")
+      } else {
+        creator.name.clone()
+      };
+      placed.items.push(PlacedItem {
+        holder,
+        kind: PlacedKind::Name,
+        text,
+      });
+    }
+    // (what a personname holds besides its notes, an ORCID link, its name's text holds)
+    for item in creator
+      .items
+      .iter()
+      .filter(|item| item.movable || item.kind == dom::Kind::Note)
+    {
+      if let Some(label) = item.node.get_attribute("name") {
+        placed.beside.push(label);
+      }
+      let kind = match &item.kind {
+        dom::Kind::Contact(role) if role == "email" => PlacedKind::Email(item.key.clone()),
+        _ => PlacedKind::Item(item.key.clone()),
+      };
+      placed.items.push(PlacedItem {
+        holder,
+        kind,
+        text: item.text.clone(),
+      });
+    }
+  }
+  // (a creator call's note relocated to the title, elsarticle's `\tnotetext[t1]{…}` labelled `tnote:t1`, 1611.08809)
+  for note in document.findnodes("//ltx:pubnote | //ltx:title//ltx:note", None) {
+    placed.beside.push(dom::text_without_marks(&note));
+  }
+  let check = with_ledger(|ledger| content_check(ledger, &placed, &emit::kept_whole));
+  for (words, what) in [
+    (
+      &check.lost,
+      "print that the placed frontmatter holds nowhere",
+    ),
+    (
+      &check.excess,
+      "the placed frontmatter holds more often than they print",
+    ),
+  ] {
+    if !words.is_empty() {
+      Warn!(
+        "unexpected",
+        "frontmatter",
+        s!(
+          "The frontmatter's content check: words its author blocks and calls {what} ({}); they are counted",
+          words.join(" ")
+        )
+      );
+    }
+  }
 }
 
 /// The API calls the writer leaves as today's output holds them: each made by a frontmatter setter whose binding's
