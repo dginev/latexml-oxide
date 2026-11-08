@@ -32644,14 +32644,15 @@ rewrites of OD #52 helped none and hurt three, digestion doing each one's job in
 digestion had fed the reading a symbol mark (2608.19750's "*Corresponding author" glued into an affiliation, now Ayong Ye's
 note), and the gap of `\\[0.5cm]` (hep-ph0207056) and `\hspace{.1cm}` (hep-th0111116, 1511.05911) print as written. Four of
 those rules, ported: (1) a parameterless macro whose expansion closes the title page's tabular and opens another
-(`fallback::is_tabular_juggle`: sig-alternate's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`) is bound in
-the rehearsal to its row break (`\lx@fm@obs@break`, as the old driver wrote `\\`); a macro that only closes one keeps its
+(`fallback::tabular_juggle_between`: sig-alternate's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`) is bound
+in the rehearsal to the column it prints (`\lx@fm@obs@and`), or to its row break (`\lx@fm@obs@break`) when one is printed
+between (1301.5612's `\end{tabular}\newline\begin{tabular}{c}`; the old driver wrote every juggle `\\`, which TeX does not
+set: FB2b5, review revG3 Q3); a macro that only closes one keeps its
 meaning, in an author block and an API call's content alike (an `\author`'s `\etab` closing the block's own tabular,
 review revFB2a finding 1; an `\affiliation`'s `\def\ex{\end{tabular}}` closing the tabular its `\bx` opened,
 `perfect_kernel_batchz4::an_environment_by_its_frames`) — the old driver keeps its looser test, closing alone
 (`fallback::closes_a_tabular`), until the flip: digested as defined it left a tabular open, its lines in no box, so the shared affiliation was
-lost with no Warning — the content check counts only what the events hold (0712.1016, 1704.03168, 1301.5612; the raw
-juggle of 1401.6981 stays as it was in both engines); (2) an alignment environment opening after the names at the top
+lost with no Warning — the content check counts only what the events hold (0712.1016, 1704.03168, 1301.5612); (2) an alignment environment opening after the names at the top
 level and ending the block is lines under them, a row Break before it and its container dropped as the old rule drops the
 environment (`resolver::trailing_alignment_as_lines` in `read_events`, the old `trailing_alignment_environment_as_lines`:
 2609.17357, the "and" of its centred department no separator; a wrapper opening the block was read already, 2609.01563);
@@ -32665,7 +32666,18 @@ one `\and` column of several it stays the column's; a link printing an instituti
 `classify::href_prints_an_institution`, the old rule's `link_prints_an_institution` on the link as printed) is every name's affiliation,
 its link kept, as the old rule's exception gives it (review revFB2a finding 3); under one name the URL is that name's, the
 group's only author (FIDELITY_CHARTER §4; the old rule's block for a lone replacing author, `line_kinds.rs:61`, is not
-ported: off writes that author's too). (1), (2) and (4) with the switch on alone, (3) a fact of the
-rehearsal (popZ01, 1,873 papers off: 0 changed); off: byte-identical. Guards `perfect_kernel_batchfb2a`.
+ported: off writes that author's too). Two `=2` rules of the reading, no port (FB2b4, FB2b5; review revG3 finding 4: the old
+rule never rewrote the inline form, `closes_a_tabular` admitting only a macro taking no argument, and off keeps 1401.6981's one
+creator and E=4): (5) the juggle written inline, an `\end{tabular}` closing a tabular the block never opened and reopened
+after nothing but spaces and commands with their `[…]`/`{…}` arguments (`rehearsal::inline_juggles_as_columns`, in every
+rehearsal), is the column sig-alternate's `\alignauthor` is (sig-alternate.cls:274), or the row break a command between
+prints (`\\`, `\\[2mm]`, `\newline`: the break stands, the lines after it the author above's, as the macro's), a skip
+(`\vspace{2mm}`) no break — 1401.6981's three columns, three creators, where `=2` had lost authors 2 and 3, and `\\[2mm]`'s
+"Univ B" lost with no Warning (review revG3 finding 2); (6) a column holding no name of its own after the last name
+(`Resolver::block`'s `shared_column`: no line in it or a later column reads as names, its first line an institution) is
+the shared affiliation of every name above it, whichever spelling opens it — 0712.1016, 1704.03168 (the PDF centres it
+under every name; the last author's alone before, off too), `A One \and Bob Two \end{tabular}\begin{tabular}{c} Univ Shared`
+("Univ Shared" a third creator before, review revG3 finding 1). (1), (2), (4), (5) and (6) with the switch on alone, (3) a
+fact of the rehearsal (popZ01, 1,873 papers off: 0 changed); off: byte-identical. Guards `perfect_kernel_batchfb2a`.
 
 Guards `perfect_kernel_batchz4`.

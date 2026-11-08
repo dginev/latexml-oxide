@@ -420,15 +420,16 @@ const TITLE_FOOTNOTE_HOOK: &str = crate::latex_constructs::TITLE_THEFOOTNOTE;
 /// class's own `\thefootnote` (report's and book's title page: arabic) or the kernel `\maketitle`'s `\@fnsymbol` of the
 /// counter (when the format has it).
 ///
-/// First, a tabular juggle (`fallback::is_tabular_juggle`: `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`
-/// in sig-alternate's `\author`, 0712.1016, 1704.03168) is the row break it prints between the names and the lines under
-/// them, as the old driver wrote it `\\` (`fallback::tabular_juggles_as_line_breaks`): digested as defined, it closed a
-/// tabular the line never opened and left one open, whose lines no box held — lost with no Warning, the content check
-/// reading only what the events hold. A juggle reopens the tabular it closes, so a macro that only closes one (an
+/// First, a tabular juggle (`fallback::tabular_juggle_between`: `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`
+/// in sig-alternate's `\author`, 0712.1016, 1704.03168) is the column it prints, as the juggle written inline is
+/// ([`inline_juggles_as_columns`]), or the row break it prints between (1301.5612's `\end{tabular}\newline
+/// \begin{tabular}{c}`; the old driver wrote every juggle `\\`, `fallback::tabular_juggles_as_line_breaks`): digested as
+/// defined, it closed a tabular the line never opened and left one open, whose lines no box held — lost with no Warning,
+/// the content check reading only what the events hold. A column after the names holding none is their shared
+/// affiliation (the reading's, `resolver::blocks`). A juggle reopens the tabular it closes, so a macro that only closes one (an
 /// `\\affiliation`'s `\\def\\ex{\\end{tabular}}` closing the tabular its `\\bx` opened, `perfect_kernel_batchz4`; an
 /// `\\author`'s `\\etab` closing the block's own) keeps its meaning, in any rehearsal; with the emitter's switch on (the
 /// switch-off output stays as it was until the flip); a command the binding declares a block break keeps its meaning.
-/// The juggle written inline is a column or the break it prints ([`inline_juggles_as_columns`]).
 fn install_event_bindings(
   tokens: &Tokens,
   title_marks: TitleMarks,
@@ -437,8 +438,15 @@ fn install_event_bindings(
   if fm_emit_mode() == 2 {
     for t in tokens.unlist_ref() {
       let declared = || t.with_cs_name(|name| block_breaks.iter().any(|(cs, _)| *cs == name));
-      if is_tabular_juggle(t) && !declared() {
-        let_i(t, &T_CS!(ROW_BREAK), None);
+      if let Some(between) = tabular_juggle_between(t)
+        && !declared()
+      {
+        let target = if prints_a_row_break(&between) {
+          ROW_BREAK
+        } else {
+          AUTHOR_AND
+        };
+        let_i(t, &T_CS!(target), None);
       }
     }
   }
@@ -488,13 +496,24 @@ fn install_event_bindings(
   Ok(())
 }
 
+/// Whether `between`, what a tabular juggle prints between its close and its reopen, holds a row break the rehearsal
+/// binds (`\\`, `\\[2mm]`, `\newline`, `\linebreak`): the juggle is that break, else a column.
+fn prints_a_row_break(between: &[Token]) -> bool {
+  between.iter().any(|t| {
+    ALWAYS_BOUND
+      .iter()
+      .any(|(cs, target)| *target == ROW_BREAK && *t == T_CS!(*cs))
+  })
+}
+
 /// The juggle written inline: an `\end{tabular}` closing a tabular the block never opened, reopened after nothing but
-/// spaces and commands (what a class prints between, `\hfil`, `\newline`), the reopening `\begin{tabular}[…]{…}` its
-/// part. With no line break printed between it is the column `\alignauthor` is (sig-alternate.cls:274 `\end{tabular}%
+/// spaces and commands with their `[…]` and `{…}` arguments (what a class prints between, `\hfil`, `\newline`,
+/// `\\[2mm]`, `\vspace{2mm}`), the reopening `\begin{tabular}[…]{…}` its part. With no line break printed between it is the column `\alignauthor` is (sig-alternate.cls:274 `\end{tabular}%
 /// \begin{tabular}[t]{p{\auwidth}}\centering`, bound to an author separator, [`install_event_bindings`]): 1401.6981
 /// writes its second author's column so, `\end{tabular}\begin{tabular}[t]{p{1.3\auwidth}}\centering Gianmarco De
 /// Francisci Morales…`, three columns in the PDF. With one printed between (`\end{tabular}\newline\begin{tabular}{c}`,
-/// 1301.5612's macro written out) that break stands. Digested as written it closed the title page's tabular and left
+/// 1301.5612's macro written out; `\\[2mm]`, review revG3 finding 2, "Univ B" lost with no Warning before) that break
+/// stands; a skip is no break (`\vspace{2mm}`, two columns in the PDF). Digested as written it closed the title page's tabular and left
 /// one open, whose lines no box held — at `=2` authors 2 and 3 of 1401.6981 lost with no Warning. A close of a tabular
 /// the block opened (`\begin{tabular}…\end{tabular}`) or one no reopen follows keeps its meaning; with the emitter's
 /// switch on.
@@ -504,19 +523,26 @@ fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
   if !toks.contains(&end) {
     return tokens;
   }
-  // The span past the reopen's `\begin{tabular}[…]{…}`, if one follows `at` after only spaces and commands.
+  let is = |cat: Catcode| move |t: &Token| t.get_catcode() == cat;
+  let optional = |k: usize| past_group(toks, k, |t| *t == T_OTHER!("["), |t| *t == T_OTHER!("]"));
+  let braced = |k: usize| past_group(toks, k, is(Catcode::BEGIN), is(Catcode::END));
+  // The span past the reopen's `\begin{tabular}[…]{…}`, if one follows `at` after only spaces and commands, each with
+  // the `[…]` and `{…}` arguments after it.
   let reopen = |at: usize| -> Option<(usize, usize)> {
-    let start = (at..toks.len()).find(|&k| {
-      let c = toks[k].get_catcode();
-      c != Catcode::SPACE && (c != Catcode::CS || toks[k] == begin)
-    })?;
+    let mut start = at;
+    loop {
+      let c = toks.get(start)?.get_catcode();
+      if c != Catcode::SPACE && (c != Catcode::CS || toks[start] == begin) {
+        break;
+      }
+      start += 1;
+      while let Some(k) = optional(start).or_else(|| braced(start)) {
+        start = k;
+      }
+    }
     let k = start + environment_call_len(&toks[start..], begin, "tabular")?;
-    let is = |cat: Catcode| move |t: &Token| t.get_catcode() == cat;
-    let k = past_group(toks, k, |t| *t == T_OTHER!("["), |t| *t == T_OTHER!("]")).unwrap_or(k);
-    Some((
-      start,
-      past_group(toks, k, is(Catcode::BEGIN), is(Catcode::END))?,
-    ))
+    let k = optional(k).unwrap_or(k);
+    Some((start, braced(k)?))
   };
   let mut out = Vec::with_capacity(toks.len());
   let mut opened = 0usize;
@@ -530,13 +556,7 @@ fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
       match (opened, reopen(i + len)) {
         (0, Some((start, past))) => {
           let between = &toks[i + len..start];
-          // (a row break the rehearsal binds, `\\`, `\\newline`, `\\linebreak`)
-          let prints_a_break = |t: &Token| {
-            ALWAYS_BOUND
-              .iter()
-              .any(|(cs, target)| *target == ROW_BREAK && *t == T_CS!(*cs))
-          };
-          if !between.iter().any(prints_a_break) {
+          if !prints_a_row_break(between) {
             out.push(Token {
               prov: toks[i].prov,
               ..T_CS!(AUTHOR_AND)
