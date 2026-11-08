@@ -1,8 +1,8 @@
-//! The old reader's owner logic, moved unchanged from `author_block/` into the one engine's library (MV1, user
-//! ruling 2026-11-08 "knowledge in, driver out"): the spelling keys of a name ([`NameKeys`], C9: `as_printed` with them), the
+//! The old reader's owner logic, moved unchanged from `author_block/` into the one engine's library (the plan's row
+//! "Knowledge in, driver out, one pass", user ruling 2026-11-08): the spelling keys of a name ([`NameKeys`], `as_printed` with them), the
 //! owners an address's local part spells or elimination leaves, the notes a name holds, the marks a name requests. It
 //! reads the names the old reader exports, as it did there (`crate::base_utilities`), not the resolver's own of the same
-//! name (its `text_tokens`, `printed_words`, …); `text_prints_name` stays with `name_words` (C4).
+//! name (its `text_tokens`, `printed_words`, …); `text_prints_name` stays with `name_words`, which it calls.
 
 use crate::base_utilities::*;
 

@@ -1,6 +1,6 @@
 //! The old reader's text rules on printed ink and its token primitives, moved unchanged from `author_block/` into the
-//! one engine's own library (MV1, user ruling 2026-11-08 "knowledge in, driver out, one pass";
-//! docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md). One submodule per source file, so that two same-named private
+//! one engine's own library (user ruling 2026-11-08 "knowledge in, driver out, one pass";
+//! docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, the row of that name). One submodule per source file, so that two same-named private
 //! rules stay apart (`links::printed_words`, `notes::printed_words`); each re-exported as `author_block/mod.rs` did.
 
 use super::*;

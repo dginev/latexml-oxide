@@ -1,5 +1,5 @@
 //! Perl's whole-block fallback (`Base_Utility.pool.ltxml:693`, `\lx@add@author` of the raw block) with its own preparation,
-//! moved unchanged from `author_block/` (MV1, user ruling 2026-11-08 "knowledge in, driver out"; C1: the preparation
+//! moved unchanged from `author_block/` (the plan's row "Knowledge in, driver out, one pass", user ruling 2026-11-08; the preparation
 //! moves with it as the fallback's own, the keep-improvements ruling). [`whole_block_author`] runs
 //! [`strip_linebreak_options`] and `lines_prepared`, the raw-token rewrites of OXIDIZED_DESIGN_DIVERGENCES #52 that go
 //! beyond Perl: note environments as commands, math-active scripts, tabular juggles and ACM columns as line breaks,
