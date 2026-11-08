@@ -32,6 +32,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
   super::ledger::{ApiCall, Entry, Ledger, Outcome, SkipReason},
+  api::note_owned_contacts,
   words::{ink_words, live_blocks, words_of},
   *,
 };
@@ -389,9 +390,23 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
           None
         }
       },
+      // (a document note's text is its own, beside; the contacts the reading takes as the creators' are placed or counted —
+      // a late author's `\address` in amsart's `\thanks`, 0807.4720 — `api::note_owned_contacts`)
       Entry::Api(call) if !call.cleared && call.tag == "ltx:pubnote" => {
-        aside(&call.events, &mut beside, &mut marks);
-        None
+        let owned = note_owned_contacts(&call.events);
+        let rest: Vec<Event> = call
+          .events
+          .iter()
+          .filter(|e| !owned.iter().any(|o| std::ptr::eq(*o, *e)))
+          .cloned()
+          .collect();
+        aside(&rest, &mut beside, &mut marks);
+        let texts: Vec<String> = owned
+          .iter()
+          .map(|e| e.text.clone())
+          .filter(|text| !text.trim().is_empty())
+          .collect();
+        (!texts.is_empty()).then(|| (None, (texts.clone(), texts)))
       },
       Entry::NoteText(text) => {
         aside(&text.events, &mut beside, &mut marks);

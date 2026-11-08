@@ -1011,8 +1011,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("epl_cls.rs", 43),
   ("eptcs_cls.rs", 28),
   // (raised by one at Z14: the lexer's own constructor, `\lx@fm@obs@affil@marked`, as the row's others; nothing a document spells;
-  // by one at N2r2: `raw_lines`' break arm holding the `\and` family too, two lines, the whatsits' definitions, 2106.06418)
-  ("events", 60),
+  // by one at N2r2: `raw_lines`' break arm holding the `\and` family too, two lines, the whatsits' definitions, 2106.06418;
+  // by one at IO3b: the lexer's arm for the rehearsal's own constructor `\lx@fm@obs@creatorcall`, as the row's others — a
+  // binding's own definition, no name a document spells, 0807.4720)
+  ("events", 61),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with Perl's whole-block fallback and its preparation, kept as its own, 826 = 629 + 197; none added)
   ("fallback", 196),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
@@ -1051,8 +1053,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // the frozen API: the kind of table `FRONTMATTER_SINGLE_ENGINE_PLAN.md` "What already exists" keeps, as Perl's `@authorsplits`;
   // FB2b4 6 -> 13: `inline_juggles_as_columns`, the tabular juggle written inline, `\end{tabular}\begin{tabular}[t]{…}` — written
   // text, no macro whose meaning could be read, its spaces, groups and `[…]` read by catcode, as the macro form's body is in
-  // `fallback::tabular_juggle_between`: 1401.6981; FB2b5 none added: the reopen's scan over a command's `[…]`/`{…}` arguments)
-  ("rehearsal", 13),
+  // `fallback::tabular_juggle_between`: 1401.6981; FB2b5 none added: the reopen's scan over a command's `[…]`/`{…}` arguments;
+  // IO3b 13 -> 14: `\lx@fm@obs@add` reads its tag argument, an element's name (`ltx:creator`), as `\lx@frontmatter@itemnone`
+  // does — the rehearsal binding's own definition, no name spelled, 0807.4720)
+  ("rehearsal", 14),
   ("relocate", 134),
   // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens`, printed text read
   // as tokens by `is_institution` and `NameKeys` (5 with their definitions), a `'\\'` read of a label (2), a call's hook (1).
@@ -1286,8 +1290,9 @@ const MOVED_UNDER_OBSERVER: [&str; 2] = ["resolver/owners.rs", "writer/calls.rs"
 const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // (Z14: 84 and 109, the lexer's own constructor and the rehearsal's table rows for `\lx@add@affiliation@marked`, `\lx@add@creator` and `\alignauthor`, as in `TOKEN_READS`;
   // Z4a +2: a note's kind, `\lx@fm@obs@fnnote`, the rehearsal's own name for a footnote it heard; N2r2 +3: `raw_lines` reads the
-  // `\and` family's whatsits as it reads a break's, by their definition, 2106.06418)
-  ("events", 89),
+  // `\and` family's whatsits as it reads a break's, by their definition, 2106.06418; IO3b +1: the arm for the rehearsal's
+  // own `\lx@fm@obs@creatorcall`, a binding's definition, no name spelled, 0807.4720)
+  ("events", 90),
   // (Z4a, 0 -> 2, ruled at Z4ar2: names two kernel definitions (`\begin`, `\end`), not a token's spelling: an environment step by its
   // meaning, a `\let` copy too, what no frame says for a raw environment)
   ("field_notes", 2),
@@ -1299,8 +1304,11 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // N2r2 +7: the bound constructors' `alias`es, the commands they revert as — what a text made of an argument prints, never
   // the rehearsal's name: 2106.06418, 1401.5951, 2106.11154; FB2a 119 -> 117: the row break's constructor named once, `ROW_BREAK`,
   // for `\\`, `\newline`, `\linebreak` and a tabular juggle; FB2b4 +1: `\end` and `\begin` of the juggle written inline,
-  // `inline_juggles_as_columns`, its separator named once, `AUTHOR_AND`)
-  ("rehearsal", 118),
+  // `inline_juggles_as_columns`, its separator named once, `AUTHOR_AND`; IO3b +6: the binding `\lx@fm@obs@add` a call
+  // outside a block is rehearsed with, its definition and its constructor `\lx@fm@obs@creatorcall`, the sink and the name
+  // its meaning is kept under, each named once (`SINK`, `SINK_MEANING`, `CREATOR_CALL`) — the binding's own definition, no
+  // name a document spells, 0807.4720)
+  ("rehearsal", 124),
   // (also among `resolver`'s 18 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook)
   ("resolver", 3),
   // (the "Knowledge in, driver out, one pass" move: the old reader's owner logic, moved unchanged from `author_block/`, its literals with it; none added)

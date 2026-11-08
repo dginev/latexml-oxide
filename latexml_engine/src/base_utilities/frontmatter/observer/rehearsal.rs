@@ -269,6 +269,28 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
     Ok(name)
   });
+  // (a creator call an API call's content makes, outside a block — amsart's `\thanks{… \author{Bob}\address{Univ B}
+  // \email{bob@b.org}}`, 0807.4720: Perl's digestion makes the creator there, and every `\address`/`\email` after it is
+  // that creator's, `\lx@annotate@frontmatter`, Base_Utility.pool.ltxml:520-531): the queueing sink, whichever meaning
+  // it has, called as it is, after the event it leaves, `EventKind::ApiCall` "ltx:creator" (`Resolver::api`'s
+  // `ltx:pubnote`)
+  DefConstructor!("\\lx@fm@obs@creatorcall", "");
+  DefMacro!("\\lx@fm@obs@add OptionalUndigested {}", sub[(keys, tag)] {
+    let mut out = Vec::new();
+    if tag.to_string().trim() == "ltx:creator" {
+      out.push(T_CS!(CREATOR_CALL));
+    }
+    out.push(T_CS!(SINK_MEANING));
+    if let Some(keys) = keys {
+      out.push(T_OTHER!("["));
+      out.extend(keys.unlist());
+      out.push(T_OTHER!("]"));
+    }
+    out.push(T_BEGIN!());
+    out.extend(tag.unlist());
+    out.push(T_END!());
+    Ok(Tokens::new(out))
+  });
   Ok(())
 }
 
@@ -385,6 +407,13 @@ const ROW_BREAK: &str = "\\lx@fm@obs@break";
 /// The event constructor of an author separator (`\\and`; a raw class's column, `\\alignauthor`).
 const AUTHOR_AND: &str = "\\lx@fm@obs@and";
 
+/// The frontmatter API's queueing sink, and the name the rehearsal of a call outside a block keeps its meaning under while
+/// `\lx@fm@obs@add` stands for it (`install_event_bindings`: a creator call an API call's content makes, 0807.4720).
+const SINK: &str = "\\lx@add@frontmatter";
+const SINK_MEANING: &str = "\\lx@fm@obs@add@meaning";
+/// The event constructor `\lx@fm@obs@add` leaves before a creator call (`events`' `EventKind::ApiCall` "ltx:creator").
+const CREATOR_CALL: &str = "\\lx@fm@obs@creatorcall";
+
 /// The commands the rehearsal binds to the event constructors, always (the article `\author` line's own vocabulary,
 /// and the frontmatter API's queueing sink, frozen otherwise).
 const ALWAYS_BOUND: &[(&str, &str)] = &[
@@ -489,6 +518,9 @@ fn install_event_bindings(
     for (cs, target) in BOUND_IN_A_BLOCK {
       let_i(&T_CS!(*cs), &T_CS!(*target), None);
     }
+  } else {
+    let_i(&T_CS!(SINK_MEANING), &T_CS!(SINK), None);
+    let_i(&T_CS!(SINK), &T_CS!("\\lx@fm@obs@add"), None);
   }
   if lookup_definition(&T_CS!(TITLE_FOOTNOTE_HOOK))?.is_some() {
     let_i(&T_CS!("\\thefootnote"), &T_CS!(TITLE_FOOTNOTE_HOOK), None);

@@ -32815,3 +32815,15 @@ under every name; the last author's alone before, off too), `A One \and Bob Two 
 fact of the rehearsal (popZ01, 1,873 papers off: 0 changed); off: byte-identical. Guards `perfect_kernel_batchfb2a`.
 
 Guards `perfect_kernel_batchz4`.
+
+IO3b (`=2` only): a creator call a document note makes (amsart's `\thanks{Supported by X. \author{Bob Baker}\address{Univ B}
+\email{bob@b.org}}`, 0807.4720) is a fact of the note's rehearsal — outside a block the rehearsal binds the queueing sink
+`\lx@add@frontmatter` to `\lx@fm@obs@add` (`rehearsal.rs`), which leaves the constructor `\lx@fm@obs@creatorcall` before
+calling the sink's own meaning, read by the lexer as `EventKind::ApiCall` "ltx:creator" (`events/mod.rs`). Such a note is
+digested as Perl digests it: no flush's reading answers its contacts (`Resolver::api`'s `ltx:pubnote`), its pubnote item is
+not wrapped in `\lx@frontmatter@itemonly` (`writer::emit::emit_commands`), so each contact goes to the creator newest when
+it is digested (`\lx@annotate@frontmatter`, Base_Utility.pool.ltxml:520-531) — 0807.4720's Juriaans has his address and
+e-mail, Ferrero neither (before: Juriaans none, Ferrero his e-mail); the content check requires the contacts after the
+creator call and the note's binding e-mails placed, the note's other text beside (`resolver::api::note_owned_contacts`).
+Off: unchanged (0711.1152, 0802.0707's A&A `\offprints` notes, which make no creator, stay the reading's, byte-identical at
+`=2` too). Guard `perfect_kernel_batchio3b::a_note_making_a_creator_is_digested_as_perls`.

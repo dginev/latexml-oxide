@@ -2,8 +2,9 @@
 % oracle:  pdflatex 0 errors: ANN ABLE AND BOB BAKER; Univ A, Email address: ann@a.org; Univ B, Email address: bob@b.org; Supported by X.
 % engines: Perl and off: Ann (Univ A, ann@a.org), Bob (Univ B, bob@b.org); ours =2 before TA1: Bob twice, his address lost, his e-mail on Ann, 0 errors
 % expect:  0 errors; at =2 Ann with Univ A and ann@a.org only, Bob once with Univ B and bob@b.org
-% status:  RED (TA1: Bob once now; the first flush's reading of Ann's block still takes the `\email` inside the `\thanks`, and Bob's `\address`, digested in the emitted pubnote item `\lx@frontmatter@itemonly`, is read by no flush; W=1 content check counts it). IO1: no creator call holds Bob's `\address` — it is a Contact of the pubnote
-%          (`\thanks`), whose reading (`Resolver::api`, `ltx:pubnote`) takes only its e-mail calls; still RED)
+% status:  GREEN (IO3b: the rehearsal leaves an event for the note's creator call, `\lx@fm@obs@add` → `EventKind::ApiCall`
+%          "ltx:creator"; no reading answers such a note's contacts and its pubnote item is digested as Perl's, each contact
+%          the newest creator's. Guard `perfect_kernel_batchio3b::a_note_making_a_creator_is_digested_as_perls`)
 \documentclass{amsart}
 \begin{document}
 \title{A Title}
