@@ -32613,7 +32613,10 @@ the names request is an affiliation entry only where `\lx@add@thanks` makes it o
 `$^` or `\textsuperscript` whose first character is an ASCII digit; here the leading Mark of role `sup`/`math` whose printed
 text opens with a digit, P2r2), never a `\footnote` (`\lx@add@note`); an affiliation whose whole text is a legend is then a
 note (the Kind step for a legend); any other is its mark's carriers' legend note, its kind the switch-off procedure's in its
-order, never the text's institution words (strict porting, P2r2) (`Resolver::keep_note`, `writer::emit::item_call`'s `an_entry`) — `\thanks{\IEEEauthorrefmark{2} Also with …}`
+order (strict porting, P2r2), save one departure: a note printing e-mail addresses that is no legend stays the entry the
+reading made it, each address its spelled carrier's (FIDELITY_CHARTER §4's symbol-line rule; the switch-off note keeps every
+address in its text on its owner): IEEEtran journal's `\thanks{\IEEEauthorrefmark{1}The authors are with …, E-mails: a@, b@,
+c@}`, 1610.05419, 2405.06709 (review revP2: as a note each carrier held every address) (`Resolver::keep_note`, `writer::emit::item_call`'s `an_entry`) — `\thanks{\IEEEauthorrefmark{2} Also with …}`
 (1107.5730), `\thanks{$\diamond$ Work conducted during an internship …}` (2205.02029), elsarticle's
 `\footnote{\textsuperscript{1}These authors contributed equally …}` (2110.12892); with two carriers of the mark the note is both
 (the charter's symbol-line rule; off gives it to the note's owner alone). An entry the Kind step for a legend reads
@@ -32624,9 +32627,7 @@ prints (authblk's `\affil[*]{Corresponding author …}`, 2605.31330, 2606.17567,
 emitter's routing label replaced (`writer::emit::rekeyed`), or the first mark an emitted entry's content printed
 (`\lx@sup@setlabel@affiliation`'s record on the digested stub, `frontmatter_api.rs`), read by `insert::legend_mark`; a legend
 whose address the reading left in its text (2605.31330's `(Email: t.han@tees.ac.uk), Le Hong Trang`, 2411.08381's
-`Correspondence to: a and b`) waits for the address cut (E1), and so does IEEEtran journal's `\thanks{\IEEEauthorrefmark{1}The
-authors are with …, E-mails: a@, b@, c@}` (1610.05419: each carrier holds the note with every address, as the switch-off
-output keeps them in the note; the page's symbol-line rule gives each address to the carrier it spells). (B) A name whose font wrapper holds its mark or note
+`Correspondence to: a and b`) waits for the address cut (E1). (B) A name whose font wrapper holds its mark or note
 (`\textbf{Yan Yan$^{1}$\thanks{…}}`) is written from its own tokens in the wrapper's font (`writer::emit::event_run`): the whole
 cover kept the answered mark on the name and wrote the note twice (2309.13682, 2212.02936, 2305.16982, 1310.2822, 2503.17340);
 the note is now the reading's, once, not bold (the PDF's footnote font). The same cause where the name's tokens cannot be cut

@@ -2,7 +2,8 @@
 //! OXIDIZED_DESIGN_DIVERGENCES #980): cas's one unlabelled `\affiliation` is every author's
 //! (`a_cas_shared_affiliation_is_every_authors`); a role note is the note the switch-off output writes — a labelled
 //! legend (`a_printed_label_legend_is_its_carriers_note`), a `\thanks` no number leads
-//! (`a_thanks_no_number_leads_is_a_note`), a numbered `\thanks` legend (`a_numbered_thanks_legend_is_a_note`) and a
+//! (`a_thanks_no_number_leads_is_a_note`; one printing addresses keeps its entry, P2r2:
+//! `a_thanks_note_printing_addresses_keeps_its_entry`), a numbered `\thanks` legend (`a_numbered_thanks_legend_is_a_note`) and a
 //! `\footnote` (`a_numbered_footnote_legend_is_a_note`); a name's own tokens are cut out of a font wrapper holding its
 //! mark and note, and a note its name's tokens print is written once (`a_name_and_its_note_are_written_once`).
 //! Each is distinct: a separate code path (the resolver's shared run, the emitter's printed label, the resolver's note
@@ -56,7 +57,7 @@ fn a_cas_shared_affiliation_is_every_authors() {
 
 /// authblk's `\affil[*]{Corresponding author. E-mail: …}` and `\affil[$\dagger$]{These authors contributed equally …}`
 /// are their carriers' notes by the Kind step for a legend, which reads the label the binding prints: at `=2` the emitter
-/// writes it as `_labelprints`'s value. Witnesses 2605.31330, 2606.17567, 2201.11910, 2602.03863, 2605.11756.
+/// writes it in its own key, `_printedlabel` (P2r2). Witnesses 2605.31330, 2606.17567, 2201.11910, 2602.03863, 2605.11756.
 #[test]
 fn a_printed_label_legend_is_its_carriers_note() {
   let (off, two) = both(repro!("emit_authblk_label_legend_is_its_carriers_note"));
@@ -99,8 +100,51 @@ fn a_thanks_no_number_leads_is_a_note() {
   );
 }
 
+/// IEEEtran journal's `\thanks{\IEEEauthorrefmark{1}The authors are with …, E-mails: a@, b@}`: no legend and printing
+/// addresses, it stays the entry the reading made it at `=2`, each address its spelled carrier's (FIDELITY_CHARTER §4's
+/// symbol-line rule), where the switch-off note keeps every address in its text on Cat Cole; P2 made it a note on each
+/// carrier holding both addresses (review revP2 finding 1). Distinct: the one departure from the switch-off kind
+/// (`Resolver::keep_note`'s address test). Witnesses 1610.05419, 2405.06709.
+#[test]
+fn a_thanks_note_printing_addresses_keeps_its_entry() {
+  let (off, two) = both(repro!("emit_thanks_note_with_addresses_keeps_its_entry"));
+  let expected = [
+    (
+      "Ann Able",
+      "The authors are with the Department of Physics, Univ A, Xland",
+      "E-mails: ",
+      "ann@a.org",
+    ),
+    (
+      "Bob Baker",
+      "The authors are with the Department of Physics, Univ A, Xland",
+      "E-mails: ",
+      "bob@a.org",
+    ),
+    (
+      "Cat Cole",
+      "The author is with Lab C, Univ C",
+      "E-mail: ",
+      "cat@c.org",
+    ),
+  ];
+  assert_eq!(two.len(), 3, "{two:#?}");
+  for (creator, (name, affiliation, label, email)) in two.iter().zip(expected) {
+    let creator = creator.split_whitespace().collect::<Vec<_>>().join(" ");
+    assert!(
+      creator.contains(&format!(
+        "<personname>{name}</personname> <contact name=\"Affiliation: \" role=\"affiliation\">{affiliation}</contact> \
+         <contact name=\"{label}\" role=\"email\">{email}</contact> </creator>"
+      )),
+      "{creator}"
+    );
+    assert!(!creator.contains("<note"), "{creator}");
+  }
+  assert!(off[2].contains("ann@a.org, bob@a.org.</note>"), "{off:#?}");
+}
+
 /// A `\thanks{\textsuperscript{1}These authors contributed equally …}` is re-routed as an entry and is then its
-/// carriers' note by the Kind step, its mark the one the entry printed (recorded at `=2` as `_labelprints`'s value);
+/// carriers' note by the Kind step, its mark the one the entry printed (recorded at `=2` as `_printedlabel`);
 /// Cat Cole's mixed `\thanks{$^{2}$Lab C, Univ C. All correspondence …}` stays her affiliation (2102.08072's shape).
 #[test]
 fn a_numbered_thanks_legend_is_a_note() {
