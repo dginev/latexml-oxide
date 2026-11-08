@@ -34,6 +34,7 @@ use latexml::util::test::{convert_files_with, convert_with};
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch77d::{assert_no_merged_names, creator, creators, squash},
+  perfect_kernel_batcht1::expect,
 };
 
 /// A `sectioning-frontmatter` repro's squashed XML, its conversion free of errors and warnings.
@@ -387,6 +388,8 @@ fn spacing_run_off_the_names_line_parts_nothing() {
 /// its addresses (`\texttt{a@x}~~~~\texttt{b@y}`: 2603.04592, 2603.12193, 2605.06264); a name in a group of its own
 /// after a run that is already a separator still parts (2605.30545): three authors, each with its affiliation and its
 /// e-mail (was "Bob Baker Cat Cole" one creator, "Univ A 2Univ B" one affiliation and the row one contact).
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; each address keeps the font it prints in, as the
+/// affiliations keep theirs.
 #[test]
 fn spacing_run_marked_rows() {
   let xml = convert_repro!("author_spacing_run_marked_rows.tex");
@@ -398,27 +401,67 @@ fn spacing_run_marked_rows() {
       r#"<text fontsize="{size}" xml:id="{id}">{text}</text>"#
     ))
   };
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!(
-        r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note A.</note> {} {}"#,
-        sized("80%", "id2", "Univ A"),
-        email("able@a.edu")
-      )
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &format!("{} {}", sized("90%", "id3", "Univ B"), email("baker@b.edu"))
-    ),
-    creator(
-      false,
-      "Cat Cole",
-      &format!("{} {}", sized("80%", "id4", "Univ A"), email("cole@a.edu"))
-    ),
-  ]);
+  // (at `LATEXML_FM_EMIT=2` an address in the `\texttt` and the `\small` it prints in)
+  let small_tt = |id: &str, address: &str| {
+    format!(
+      r#"<contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="{id}">{address}</text></contact>"#
+    )
+  };
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(
+          true,
+          "Ann Able",
+          &format!(
+            r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note A.</note> {} {}"#,
+            sized("80%", "id2", "Univ A"),
+            email("able@a.edu")
+          )
+        ),
+        creator(
+          false,
+          "Bob Baker",
+          &format!("{} {}", sized("90%", "id3", "Univ B"), email("baker@b.edu"))
+        ),
+        creator(
+          false,
+          "Cat Cole",
+          &format!("{} {}", sized("80%", "id4", "Univ A"), email("cole@a.edu"))
+        ),
+      ],
+      vec![
+        creator(
+          true,
+          "Ann Able",
+          &format!(
+            r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note A.</note> {} {}"#,
+            sized("80%", "id2", "Univ A"),
+            small_tt("id3", "able@a.edu")
+          )
+        ),
+        creator(
+          false,
+          "Bob Baker",
+          &format!(
+            "{} {}",
+            sized("90%", "id4", "Univ B"),
+            small_tt("id5", "baker@b.edu")
+          )
+        ),
+        creator(
+          false,
+          "Cat Cole",
+          &format!(
+            "{} {}",
+            sized("80%", "id6", "Univ A"),
+            small_tt("id7", "cole@a.edu")
+          )
+        ),
+      ]
+    )
+  );
 }
 
 /// A byline's "By" is no name, and the runs beside it and beside "and" part nothing themselves (2603.25922,
@@ -516,64 +559,119 @@ fn email_owner_by_elimination() {
 /// A marked block's e-mail line goes to the names its addresses spell, a given name too (2603.24730: yuqihu@, ahna@,
 /// vasha@), and the rest by elimination (j8675309@ to Jen E. Corbett): was in order — ahna@ on Vasha DuTell — and
 /// j8675309@ on a nameless creator.
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the spacing parting the institutions trimmed.
 #[test]
 fn email_owner_by_given_name() {
   let xml = convert_repro!("author_email_owner_by_given_name.tex");
   let email =
     |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
   let (univ_b, mit) = (affiliation("Univ B"), affiliation("MIT "));
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Yuqi Hu",
-      &format!("{univ_b} {}", email("yuqihu@berkeley.edu"))
-    ),
-    creator(
-      false,
-      "Vasha DuTell",
-      &format!(
-        "{univ_b} {mit} {} {}",
-        email("vasha@berkeley.edu"),
-        email("vasha@mit.edu")
-      )
-    ),
-    creator(
-      false,
-      "Ahna R. Girshick",
-      &format!("{univ_b} {}", email("ahna@berkeley.edu"))
-    ),
-    creator(
-      false,
-      "Jen E. Corbett",
-      &format!("{mit} {}", email("j8675309@mit.edu"))
-    ),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(
+          true,
+          "Yuqi Hu",
+          &format!("{univ_b} {}", email("yuqihu@berkeley.edu"))
+        ),
+        creator(
+          false,
+          "Vasha DuTell",
+          &format!(
+            "{univ_b} {mit} {} {}",
+            email("vasha@berkeley.edu"),
+            email("vasha@mit.edu")
+          )
+        ),
+        creator(
+          false,
+          "Ahna R. Girshick",
+          &format!("{univ_b} {}", email("ahna@berkeley.edu"))
+        ),
+        creator(
+          false,
+          "Jen E. Corbett",
+          &format!("{mit} {}", email("j8675309@mit.edu"))
+        ),
+      ],
+      vec![
+        creator(
+          true,
+          "Yuqi Hu",
+          &format!("{univ_b} {}", email("yuqihu@berkeley.edu"))
+        ),
+        creator(
+          false,
+          "Vasha DuTell",
+          &format!(
+            "{univ_b} {} {} {}",
+            affiliation("MIT"),
+            email("vasha@berkeley.edu"),
+            email("vasha@mit.edu")
+          )
+        ),
+        creator(
+          false,
+          "Ahna R. Girshick",
+          &format!("{univ_b} {}", email("ahna@berkeley.edu"))
+        ),
+        creator(
+          false,
+          "Jen E. Corbett",
+          &format!("{} {}", affiliation("MIT"), email("j8675309@mit.edu"))
+        ),
+      ]
+    )
+  );
 }
 
 /// Rows of names parted by runs, one address under them all (2603.09835): a run that parts two names on a line after a
 /// row of names makes that line a row of names too, the break before it going on with the list — seven authors, each
 /// with Microsoft (was "Dan B. Dorn" and "Fay Fox" read as address lines of Cat Cole and Eve Eads, Microsoft on Gil Gray
 /// only).
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same; the math `*` written ∗ as LaTeXML writes a math asterisk
+/// (FIDELITY_CHARTER §4: all asterisks one label key, the glyph as printed).
 #[test]
 fn spacing_run_names_rows() {
   let xml = convert_repro!("author_spacing_run_names_rows.tex");
   assert_no_merged_names(&xml);
   let microsoft = affiliation("Microsoft");
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!(
-        r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="id1">Equal contribution.</note> {microsoft}"#
-      )
-    ),
-    creator(false, r#"Bob Baker<sup xml:id="id2">*</sup>"#, &microsoft),
-    creator(false, "Cat Cole", &microsoft),
-    creator(false, "Dan B. Dorn", &microsoft),
-    creator(false, "Eve Eads", &microsoft),
-    creator(false, "Fay Fox", &microsoft),
-    creator(false, "Gil Gray", &microsoft),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(
+          true,
+          "Ann Able",
+          &format!(
+            r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="id1">Equal contribution.</note> {microsoft}"#
+          )
+        ),
+        creator(false, r#"Bob Baker<sup xml:id="id2">*</sup>"#, &microsoft),
+        creator(false, "Cat Cole", &microsoft),
+        creator(false, "Dan B. Dorn", &microsoft),
+        creator(false, "Eve Eads", &microsoft),
+        creator(false, "Fay Fox", &microsoft),
+        creator(false, "Gil Gray", &microsoft),
+      ],
+      vec![
+        creator(
+          true,
+          "Ann Able",
+          &format!(
+            r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="id1">Equal contribution.</note> {microsoft}"#
+          )
+        ),
+        creator(false, r#"Bob Baker<sup xml:id="id2">∗</sup>"#, &microsoft),
+        creator(false, "Cat Cole", &microsoft),
+        creator(false, "Dan B. Dorn", &microsoft),
+        creator(false, "Eve Eads", &microsoft),
+        creator(false, "Fay Fox", &microsoft),
+        creator(false, "Gil Gray", &microsoft),
+      ]
+    )
+  );
 }
 
 /// The word "and" between two names, in any case and in one wrapper, is their separator, never a name or an affiliation
@@ -973,6 +1071,8 @@ fn institution_row_over_an_email_line_is_no_names() {
 /// name; main-session decision 2026-10-20, 77p r5; 2609.15028's
 /// `zihanxue@…`, `d09944015@…`, `serhii@…`, probe z2; 2609.05913, 2609.37829, 2609.38070). Was the whole line one
 /// contact of Dan Dorn.
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; each address keeps the font it prints in, as the
+/// affiliations keep theirs.
 #[test]
 fn settled_addresses_keep_their_owners() {
   let xml = convert_repro!("author_email_settled_addresses_keep_owners.tex");
@@ -980,17 +1080,45 @@ fn settled_addresses_keep_their_owners() {
   let email =
     |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
   let (a, b) = (affiliation("Univ A"), affiliation("Univ B"));
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &format!("{a} {}", email("aable@x.edu"))),
-    creator(
-      false,
-      "Bob Baker",
-      &format!("{b} {}", email("bbaker@x.edu"))
-    ),
-    creator(false, "Cat Cole", &format!("{a} {}", email("ccole@x.edu"))),
-    creator(false, "Dan Dorn", &format!("{b} {}", email("ddorn@x.edu"))),
-    shared(&email("qq@x.edu")),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(true, "Ann Able", &format!("{a} {}", email("aable@x.edu"))),
+        creator(
+          false,
+          "Bob Baker",
+          &format!("{b} {}", email("bbaker@x.edu"))
+        ),
+        creator(false, "Cat Cole", &format!("{a} {}", email("ccole@x.edu"))),
+        creator(false, "Dan Dorn", &format!("{b} {}", email("ddorn@x.edu"))),
+        shared(&email("qq@x.edu")),
+      ],
+      vec![
+        creator(
+          true,
+          "Ann Able",
+          &format!("{a} {}", typewriter_email("aable@x.edu", "id1"))
+        ),
+        creator(
+          false,
+          "Bob Baker",
+          &format!("{b} {}", typewriter_email("bbaker@x.edu", "id2"))
+        ),
+        creator(
+          false,
+          "Cat Cole",
+          &format!("{a} {}", typewriter_email("ccole@x.edu", "id3"))
+        ),
+        creator(
+          false,
+          "Dan Dorn",
+          &format!("{b} {}", typewriter_email("ddorn@x.edu", "id4"))
+        ),
+        shared(&typewriter_email("qq@x.edu", "id5")),
+      ]
+    )
+  );
 }
 
 /// The order path of a marked e-mail line gives no address to an author another address of the block spells (2609.34459:
@@ -998,6 +1126,7 @@ fn settled_addresses_keep_their_owners() {
 /// (user ruling R10 2026-10-20: `2796624556qw@…` first in its line, and so `mayhhu@…`, which elimination reached only
 /// through it, are the block's, on the shared creator; 77p r9 put them on Yijie Sun and Yaohua Hu); probe y1's
 /// `\{xx,yy\}@x.edu` over `ann.able@…`, spelling no one, the block's too (77p r9: Ann Able's and Bob Baker's by order).
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; each address in the `\texttt` it prints in.
 #[test]
 fn email_order_path_respects_spelled_owners() {
   let xml = convert_repro!("author_email_sequence_spelled_elsewhere.tex");
@@ -1009,35 +1138,70 @@ fn email_order_path_respects_spelled_owners() {
     affiliation(" Hong Kong Polytechnic University"),
     affiliation(" Shenzhen University"),
   );
-  assert_eq!(creators(&xml), [
-    creator(true, "Yijie Sun", &nanjing),
-    creator(
-      false,
-      "Sanquan Sun",
-      &format!("{hk} {}", email("sanquan.sun@connect.polyu.hk"))
-    ),
-    creator(
-      false,
-      "Yanda Zhu",
-      &format!("{nanjing} {}", email("yandazhu@smail.nju.edu.cn"))
-    ),
-    creator(
-      false,
-      "Yuanyang Zhu",
-      &format!("{nanjing} {}", email("yuanyangzhu@nju.edu.cn"))
-    ),
-    creator(false, "Yaohua Hu", &shenzhen),
-    creator(
-      false,
-      "Chunlin Chen",
-      &format!("{nanjing} {}", email("clchen@nju.edu.cn"))
-    ),
-    shared(&format!(
-      "{} {}",
-      email("2796624556qw@gmail.com"),
-      email("mayhhu@szu.edu.cn")
-    )),
-  ]);
+  let tt = |address: &str, id: &str| typewriter_email(address, id);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(true, "Yijie Sun", &nanjing),
+        creator(
+          false,
+          "Sanquan Sun",
+          &format!("{hk} {}", email("sanquan.sun@connect.polyu.hk"))
+        ),
+        creator(
+          false,
+          "Yanda Zhu",
+          &format!("{nanjing} {}", email("yandazhu@smail.nju.edu.cn"))
+        ),
+        creator(
+          false,
+          "Yuanyang Zhu",
+          &format!("{nanjing} {}", email("yuanyangzhu@nju.edu.cn"))
+        ),
+        creator(false, "Yaohua Hu", &shenzhen),
+        creator(
+          false,
+          "Chunlin Chen",
+          &format!("{nanjing} {}", email("clchen@nju.edu.cn"))
+        ),
+        shared(&format!(
+          "{} {}",
+          email("2796624556qw@gmail.com"),
+          email("mayhhu@szu.edu.cn")
+        )),
+      ],
+      vec![
+        creator(true, "Yijie Sun", &nanjing),
+        creator(
+          false,
+          "Sanquan Sun",
+          &format!("{hk} {}", tt("sanquan.sun@connect.polyu.hk", "id1"))
+        ),
+        creator(
+          false,
+          "Yanda Zhu",
+          &format!("{nanjing} {}", tt("yandazhu@smail.nju.edu.cn", "id2"))
+        ),
+        creator(
+          false,
+          "Yuanyang Zhu",
+          &format!("{nanjing} {}", tt("yuanyangzhu@nju.edu.cn", "id3"))
+        ),
+        creator(false, "Yaohua Hu", &shenzhen),
+        creator(
+          false,
+          "Chunlin Chen",
+          &format!("{nanjing} {}", tt("clchen@nju.edu.cn", "id4"))
+        ),
+        shared(&format!(
+          "{} {}",
+          tt("2796624556qw@gmail.com", "id5"),
+          tt("mayhhu@szu.edu.cn", "id6")
+        )),
+      ]
+    )
+  );
   let xml = convert_repro!("author_email_sequence_more_addresses.tex");
   assert_eq!(creators(&xml), [
     creator(
@@ -1111,6 +1275,8 @@ fn email_elimination_waits_on_the_other_lines() {
 /// `nnwang@` is the same case: Nannan Wang's joined "nwang" ends the word without opening it, a weak spelling that
 /// never breaks the tie "wang" makes with Zilong Wang (brief 107f r2, the one boundary predicate; review rev107f B1),
 /// so it and `dongsli@` are the block's (107f r1 had given them to Nannan Wang and Dongsheng Li).
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners, both shapes; each address in the `\tt \small` it
+/// prints in, and the spacing after "NEL" trimmed as after the other entries.
 #[test]
 fn email_gap_counts_every_author() {
   let xml = convert_repro!("author_email_gap_counts_every_author.tex");
@@ -1123,74 +1289,156 @@ fn email_gap_counts_every_author() {
     affiliation("Xidian University"),
     affiliation("Microsoft Research Asia"),
   );
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Zhipeng Xu",
-      &format!("{xidian} {}", email("xu_zhipeng@stu.xidian.edu.cn"))
-    ),
-    creator(
-      false,
-      "Zilong Wang",
-      &format!("{msra} {}", email("wangzilong@microsoft.com"))
-    ),
-    creator(
-      false,
-      "Xinyang Jiang",
-      &format!("{msra} {}", email("xinyangjiang@microsoft.com"))
-    ),
-    creator(false, "Dongsheng Li", &msra),
-    creator(
-      false,
-      "De Cheng",
-      &format!(
-        "{xidian} {} {}",
-        affiliation("NEL "),
-        email("dcheng@xidian.edu.cn")
-      )
-    ),
-    creator(false, "Nannan Wang", &xidian),
-    shared(&format!(
-      "{} {}",
-      email("nnwang@xidian.edu.cn"),
-      email("dongsli@microsoft.com")
-    )),
-  ]);
+  // (at `LATEXML_FM_EMIT=2` each address in the `\tt \small` it prints in)
+  let small_tt = |id: usize, address: &str| {
+    format!(
+      r#"<contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="id{id}">{address}</text></contact>"#
+    )
+  };
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(
+          true,
+          "Zhipeng Xu",
+          &format!("{xidian} {}", email("xu_zhipeng@stu.xidian.edu.cn"))
+        ),
+        creator(
+          false,
+          "Zilong Wang",
+          &format!("{msra} {}", email("wangzilong@microsoft.com"))
+        ),
+        creator(
+          false,
+          "Xinyang Jiang",
+          &format!("{msra} {}", email("xinyangjiang@microsoft.com"))
+        ),
+        creator(false, "Dongsheng Li", &msra),
+        creator(
+          false,
+          "De Cheng",
+          &format!(
+            "{xidian} {} {}",
+            affiliation("NEL "),
+            email("dcheng@xidian.edu.cn")
+          )
+        ),
+        creator(false, "Nannan Wang", &xidian),
+        shared(&format!(
+          "{} {}",
+          email("nnwang@xidian.edu.cn"),
+          email("dongsli@microsoft.com")
+        )),
+      ],
+      vec![
+        creator(
+          true,
+          "Zhipeng Xu",
+          &format!("{xidian} {}", small_tt(1, "xu_zhipeng@stu.xidian.edu.cn"))
+        ),
+        creator(
+          false,
+          "Zilong Wang",
+          &format!("{msra} {}", small_tt(2, "wangzilong@microsoft.com"))
+        ),
+        creator(
+          false,
+          "Xinyang Jiang",
+          &format!("{msra} {}", small_tt(3, "xinyangjiang@microsoft.com"))
+        ),
+        creator(false, "Dongsheng Li", &msra),
+        creator(
+          false,
+          "De Cheng",
+          &format!(
+            "{xidian} {} {}",
+            affiliation("NEL"),
+            small_tt(4, "dcheng@xidian.edu.cn")
+          )
+        ),
+        creator(false, "Nannan Wang", &xidian),
+        shared(&format!(
+          "{} {}",
+          small_tt(5, "nnwang@xidian.edu.cn"),
+          small_tt(6, "dongsli@microsoft.com")
+        )),
+      ]
+    )
+  );
   let xml = convert_repro!("author_email_gap_counts_every_author_unspelled.tex");
   assert_no_merged_names(&xml);
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Zhipeng Xu",
-      &format!("{xidian} {}", email("xu_zhipeng@stu.xidian.edu.cn"))
-    ),
-    creator(
-      false,
-      "Zilong Wang",
-      &format!("{msra} {}", email("wangzilong@microsoft.com"))
-    ),
-    creator(
-      false,
-      "Xinyang Jiang",
-      &format!("{msra} {}", email("xinyangjiang@microsoft.com"))
-    ),
-    creator(false, "Dongsheng Li", &msra),
-    creator(
-      false,
-      "De Cheng",
-      &format!(
-        "{xidian} {} {}",
-        affiliation("NEL "),
-        email("dcheng@xidian.edu.cn")
-      )
-    ),
-    creator(false, "Nannan Wang", &xidian),
-    shared(&format!(
-      "{} {}",
-      email("zq9@xidian.edu.cn"),
-      email("dongsli@microsoft.com")
-    )),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(
+          true,
+          "Zhipeng Xu",
+          &format!("{xidian} {}", email("xu_zhipeng@stu.xidian.edu.cn"))
+        ),
+        creator(
+          false,
+          "Zilong Wang",
+          &format!("{msra} {}", email("wangzilong@microsoft.com"))
+        ),
+        creator(
+          false,
+          "Xinyang Jiang",
+          &format!("{msra} {}", email("xinyangjiang@microsoft.com"))
+        ),
+        creator(false, "Dongsheng Li", &msra),
+        creator(
+          false,
+          "De Cheng",
+          &format!(
+            "{xidian} {} {}",
+            affiliation("NEL "),
+            email("dcheng@xidian.edu.cn")
+          )
+        ),
+        creator(false, "Nannan Wang", &xidian),
+        shared(&format!(
+          "{} {}",
+          email("zq9@xidian.edu.cn"),
+          email("dongsli@microsoft.com")
+        )),
+      ],
+      vec![
+        creator(
+          true,
+          "Zhipeng Xu",
+          &format!("{xidian} {}", small_tt(1, "xu_zhipeng@stu.xidian.edu.cn"))
+        ),
+        creator(
+          false,
+          "Zilong Wang",
+          &format!("{msra} {}", small_tt(2, "wangzilong@microsoft.com"))
+        ),
+        creator(
+          false,
+          "Xinyang Jiang",
+          &format!("{msra} {}", small_tt(3, "xinyangjiang@microsoft.com"))
+        ),
+        creator(false, "Dongsheng Li", &msra),
+        creator(
+          false,
+          "De Cheng",
+          &format!(
+            "{xidian} {} {}",
+            affiliation("NEL"),
+            small_tt(4, "dcheng@xidian.edu.cn")
+          )
+        ),
+        creator(false, "Nannan Wang", &xidian),
+        shared(&format!(
+          "{} {}",
+          small_tt(5, "zq9@xidian.edu.cn"),
+          small_tt(6, "dongsli@microsoft.com")
+        )),
+      ]
+    )
+  );
 }
 
 /// A name scores the better of its words spelled apart and a joined spelling, never their sum (2602.07835, the r5
@@ -1307,60 +1555,118 @@ fn link_line_of_an_and_column_is_its_names_url() {
 
 /// In a marked block's `\and` columns of one author each, a link line is the URL contact of its column's author, who
 /// the PDF prints it under, not of the whole block (user ruling 2026-10-20, 77p r7). Was an affiliation of Ann Able.
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same; the math `*` written ∗ as LaTeXML writes a math asterisk
+/// (FIDELITY_CHARTER §4: all asterisks one label key, the glyph as printed), the space after the break kept in the institution.
 #[test]
 fn link_line_of_a_marked_column_is_its_authors_url() {
   let xml = convert_repro!("author_link_line_url_contact_marked_column.tex");
   assert_no_merged_names(&xml);
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann Able<sup xml:id="id1">*</sup>"#,
-      &format!(
-        "{} {}",
-        affiliation("Univ A"),
-        url(&link("", "https://ann.example.org"))
-      )
-    ),
-    creator(false, "Bob Baker", &affiliation("Univ B")),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(
+          true,
+          r#"Ann Able<sup xml:id="id1">*</sup>"#,
+          &format!(
+            "{} {}",
+            affiliation("Univ A"),
+            url(&link("", "https://ann.example.org"))
+          )
+        ),
+        creator(false, "Bob Baker", &affiliation("Univ B")),
+      ],
+      vec![
+        creator(
+          true,
+          r#"Ann Able<sup xml:id="id1">∗</sup>"#,
+          &format!(
+            "{} {}",
+            affiliation(" Univ A"),
+            url(&link("", "https://ann.example.org"))
+          )
+        ),
+        creator(false, "Bob Baker", &affiliation("Univ B")),
+      ]
+    )
+  );
 }
 
 /// A command LaTeX's `\@fnsymbol` prints is a footnote symbol as `\S` is (2601.02680's `$^\mathsection$`; the r5
 /// re-review's probes r3, r5): shown on its name, and the run after it parts the names. Was "Cat Cole" and "Dan Dorn
 /// Eve Eads†Univ A", the § dropped.
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same; the space after the line break kept in the institution.
 #[test]
 fn fnsymbol_command_is_a_symbol_mark() {
   let xml = convert_repro!("author_symbol_command_marks.tex");
   assert_no_merged_names(&xml);
   let univ_a = affiliation("Univ A");
-  assert_eq!(creators(&xml), [
-    creator(true, r#"Cat Cole<sup xml:id="id1">§</sup>"#, &univ_a),
-    creator(false, r#"Dan Dorn<sup xml:id="id2">§</sup>"#, &univ_a),
-    creator(false, r#"Eve Eads<sup xml:id="id3">†</sup>"#, &univ_a),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(true, r#"Cat Cole<sup xml:id="id1">§</sup>"#, &univ_a),
+        creator(false, r#"Dan Dorn<sup xml:id="id2">§</sup>"#, &univ_a),
+        creator(false, r#"Eve Eads<sup xml:id="id3">†</sup>"#, &univ_a),
+      ],
+      vec![
+        creator(
+          true,
+          r#"Cat Cole<sup xml:id="id1">§</sup>"#,
+          &affiliation(" Univ A")
+        ),
+        creator(
+          false,
+          r#"Dan Dorn<sup xml:id="id2">§</sup>"#,
+          &affiliation(" Univ A")
+        ),
+        creator(
+          false,
+          r#"Eve Eads<sup xml:id="id3">†</sup>"#,
+          &affiliation(" Univ A")
+        ),
+      ]
+    )
+  );
 }
 
 /// A footnote symbol leading an affiliation line under another affiliation, the symbol an author carries, is its own
 /// entry labelled by its symbol (2601.05633's ⋄ line under its ♡ line, the r5 re-review's probe d1): Univ C on Cat Cole,
 /// who carries ⋄ though not last. Was "Univ B⋄ Univ C" on Ann Able.
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
+/// (FIDELITY_CHARTER §4, a name's label is the name alone).
 #[test]
 fn symbol_led_affiliation_is_labelled_by_its_symbol() {
   let xml = convert_repro!("author_symbol_led_affiliation_labelled.tex");
   assert_no_merged_names(&xml);
   let univ_a = affiliation(" Univ A");
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!("{univ_a} {}", affiliation(" Univ B"))
-    ),
-    creator(
-      false,
-      r#"Cat Cole<sup xml:id="id1">⋄</sup>"#,
-      &affiliation(" Univ C")
-    ),
-    creator(false, "Bob Baker", &univ_a),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(
+          true,
+          "Ann Able",
+          &format!("{univ_a} {}", affiliation(" Univ B"))
+        ),
+        creator(
+          false,
+          r#"Cat Cole<sup xml:id="id1">⋄</sup>"#,
+          &affiliation(" Univ C")
+        ),
+        creator(false, "Bob Baker", &univ_a),
+      ],
+      vec![
+        creator(
+          true,
+          "Ann Able",
+          &format!("{univ_a} {}", affiliation(" Univ B"))
+        ),
+        creator(false, "Cat Cole", &affiliation(" Univ C")),
+        creator(false, "Bob Baker", &univ_a),
+      ]
+    )
+  );
 }
 
 /// An e-mail contact named by its line's label (`Correspondence: `), the address kept the link `\href` makes of it.
@@ -1795,31 +2101,61 @@ fn href(target: &str, text: &str) -> String {
 /// (2607.16926; the r6 re-review's finding 1): each address of the `;`-separated brace list the e-mail of the name it
 /// spells, Univ A on every † name, Lab B on the ∗ names. Was the whole address line an affiliation of the ∗ names, the
 /// carriers of the institution above it.
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
+/// (FIDELITY_CHARTER §4, a name's label is the name alone), each address in the `\tt\small` the line prints it in.
 #[test]
 fn symbol_row_brace_list_goes_by_spelling() {
   let xml = convert_repro!("author_symbol_row_brace_list_under_the_row.tex");
   assert_no_merged_names(&xml);
   let (univ_a, lab_b) = (affiliation(" Univ A"), affiliation(" Lab B"));
-  // (the address as the list spells it; the group's `\tt\small` around the line is no wrapper an address keeps)
+  // (the address as the list spells it; the group's `\tt\small` around the line is no wrapper an address keeps — at
+  // `LATEXML_FM_EMIT=2` it is, the address printed in it)
   let email =
     |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann Able<sup xml:id="id1">†</sup><sup xml:id="id2">∗</sup>"#,
-      &format!("{univ_a} {lab_b} {}", email("aable@x.edu"))
-    ),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id3">†</sup>"#,
-      &format!("{univ_a} {}", email("bbaker@x.edu"))
-    ),
-    creator(
-      false,
-      r#"Cat Cole<sup xml:id="id4">†</sup><sup xml:id="id5">∗</sup>"#,
-      &format!("{univ_a} {lab_b} {}", email("ccole@x.edu"))
-    ),
-  ]);
+  let small_tt = |id: &str, address: &str| {
+    format!(
+      r#"<contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="{id}">{address}</text></contact>"#
+    )
+  };
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(
+          true,
+          r#"Ann Able<sup xml:id="id1">†</sup><sup xml:id="id2">∗</sup>"#,
+          &format!("{univ_a} {lab_b} {}", email("aable@x.edu"))
+        ),
+        creator(
+          false,
+          r#"Bob Baker<sup xml:id="id3">†</sup>"#,
+          &format!("{univ_a} {}", email("bbaker@x.edu"))
+        ),
+        creator(
+          false,
+          r#"Cat Cole<sup xml:id="id4">†</sup><sup xml:id="id5">∗</sup>"#,
+          &format!("{univ_a} {lab_b} {}", email("ccole@x.edu"))
+        ),
+      ],
+      vec![
+        creator(
+          true,
+          "Ann Able",
+          &format!("{univ_a} {lab_b} {}", small_tt("id1", "aable@x.edu"))
+        ),
+        creator(
+          false,
+          "Bob Baker",
+          &format!("{univ_a} {}", small_tt("id2", "bbaker@x.edu"))
+        ),
+        creator(
+          false,
+          "Cat Cole",
+          &format!("{univ_a} {lab_b} {}", small_tt("id3", "ccole@x.edu"))
+        ),
+      ]
+    )
+  );
 }
 
 /// A note under a row of symbol-marked names is the block's, not the carriers' of the institution above it (the r6
@@ -1923,56 +2259,87 @@ fn link_column_is_no_creator() {
 
 /// The names carrying a symbol that labels a line under a row are the row's own, not those of another `\and` column
 /// (the r6 re-review's finding 3, probes x6, w28). Was Univ A on Cat Cole too.
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks shown neither on the names
+/// nor in Univ C (FIDELITY_CHARTER §4, a name's label is the name alone), the space after a line's mark kept in its institution.
 #[test]
 fn symbol_carriers_stay_in_their_row() {
   let xml = convert_repro!("author_symbol_carriers_stay_in_their_row.tex");
   assert_no_merged_names(&xml);
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann Able<sup xml:id="id1">†</sup>"#,
-      &affiliation("Univ A")
-    ),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
-      &affiliation("Univ B")
-    ),
-    creator(
-      false,
-      r#"Cat Cole<sup xml:id="id3">†</sup>"#,
-      &affiliation(r#"<sup xml:id="id4">†</sup> Univ C"#)
-    ),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(
+          true,
+          r#"Ann Able<sup xml:id="id1">†</sup>"#,
+          &affiliation("Univ A")
+        ),
+        creator(
+          false,
+          r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
+          &affiliation("Univ B")
+        ),
+        creator(
+          false,
+          r#"Cat Cole<sup xml:id="id3">†</sup>"#,
+          &affiliation(r#"<sup xml:id="id4">†</sup> Univ C"#)
+        ),
+      ],
+      vec![
+        creator(true, "Ann Able", &affiliation(" Univ A")),
+        creator(false, "Bob Baker", &affiliation(" Univ B")),
+        creator(false, "Cat Cole", &affiliation(" Univ C")),
+      ]
+    )
+  );
 }
 
 /// A compound symbol mark (`$^{\dagger*}$`) is one label per symbol: Ann Able carries † and so has Univ A (the r6
 /// re-review's finding 4, probes x1, w10, w11). Was Ann Able with no institution.
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
+/// (FIDELITY_CHARTER §4, a name's label is the name alone), Ann Able's unanswered `*` shown, written ∗ as LaTeXML writes a
+/// math asterisk (§4: all asterisks one label key); the space after a line's mark kept in its institution.
 #[test]
 fn compound_symbol_mark_is_a_label_per_symbol() {
   let xml = convert_repro!("author_compound_symbol_mark.tex");
   assert_no_merged_names(&xml);
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann Able<sup xml:id="id1">†*</sup>"#,
-      &affiliation("Univ A")
-    ),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
-      &affiliation("Univ B")
-    ),
-    creator(
-      false,
-      r#"Cat Cole<sup xml:id="id3">†</sup>"#,
-      &affiliation("Univ A")
-    ),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(
+          true,
+          r#"Ann Able<sup xml:id="id1">†*</sup>"#,
+          &affiliation("Univ A")
+        ),
+        creator(
+          false,
+          r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
+          &affiliation("Univ B")
+        ),
+        creator(
+          false,
+          r#"Cat Cole<sup xml:id="id3">†</sup>"#,
+          &affiliation("Univ A")
+        ),
+      ],
+      vec![
+        creator(
+          true,
+          r#"Ann Able<sup xml:id="id1">∗</sup>"#,
+          &affiliation(" Univ A")
+        ),
+        creator(false, "Bob Baker", &affiliation(" Univ B")),
+        creator(false, "Cat Cole", &affiliation(" Univ A")),
+      ]
+    )
+  );
 }
 
 /// A scale factor is no letter of an address (`\scalebox{0.9}{…}`; the r6 re-review's finding 5, probe w14). Was
 /// "0.9aable@x.edu".
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; each address keeps the font it prints in, as the
+/// affiliations keep theirs.
 #[test]
 fn scalebox_factor_is_no_address_letter() {
   let xml = convert_repro!("author_email_scalebox_argument.tex");
@@ -1980,18 +2347,35 @@ fn scalebox_factor_is_no_address_letter() {
   let univ_a = affiliation("Univ A");
   let plain =
     |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!("{univ_a} {}", plain("aable@x.edu"))
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &format!("{univ_a} {}", plain("bbaker@x.edu"))
-    ),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(
+          true,
+          "Ann Able",
+          &format!("{univ_a} {}", plain("aable@x.edu"))
+        ),
+        creator(
+          false,
+          "Bob Baker",
+          &format!("{univ_a} {}", plain("bbaker@x.edu"))
+        ),
+      ],
+      vec![
+        creator(
+          true,
+          "Ann Able",
+          &format!("{univ_a} {}", typewriter_email("aable@x.edu", "id1"))
+        ),
+        creator(
+          false,
+          "Bob Baker",
+          &format!("{univ_a} {}", typewriter_email("bbaker@x.edu", "id2"))
+        ),
+      ]
+    )
+  );
 }
 
 /// A font family name is no letter of an address (`\fontfamily{pcr}\selectfont`; 2609.25669, 2609.35216; the r6
@@ -2063,6 +2447,8 @@ fn url_brace_list_is_addresses_by_spelling() {
 /// 2603.06578; user ruling R12 2026-10-20; the r6 re-review's finding 7); the legend goes to the name carrying its
 /// symbol, Bob Baker, as his note since 93a (OD #925; its "Corresponding author:" label no e-mail label: the address
 /// stays in its text). Was every line on Bob Baker alone.
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the legend keeps the `\small` it prints in, as the
+/// institutions do, and the comma ending a line, its separator from the next, is trimmed with it.
 #[test]
 fn legend_row_shares_the_institution() {
   let xml = convert_repro!("author_legend_row_shares_the_institution.tex");
@@ -2072,20 +2458,39 @@ fn legend_row_shares_the_institution() {
       r#"<contact name="Affiliation: " role="affiliation"><text fontsize="90%" xml:id="{a}">Department of X,</text></contact> <contact name="Affiliation: " role="affiliation"><text fontsize="90%" xml:id="{b}">Univ A, City</text></contact>"#
     )
   };
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &lines("id1", "id2")),
-    creator(
-      false,
-      "Bob Baker",
-      // (the legend a note of Bob Baker's, its `*` kept: written since 93a, OD #925 — the old reader's affiliation; the
-      // note's `mark` the star, which the name then shows no more, 94a r6)
-      &format!(
-        r#"{} {}"#,
-        lines("id3", "id4"),
-        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id5"><sup xml:id="id5.1">*</sup>Corresponding author: bbaker@x.edu</note>"#
-      )
-    ),
-  ]);
+  // (at `LATEXML_FM_EMIT=2` the line's closing comma trimmed)
+  let trimmed = |a: &str, b: &str| lines(a, b).replacen("Department of X,", "Department of X", 1);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(true, "Ann Able", &lines("id1", "id2")),
+        creator(
+          false,
+          "Bob Baker",
+          // (the legend a note of Bob Baker's, its `*` kept: written since 93a, OD #925 — the old reader's affiliation; the
+          // note's `mark` the star, which the name then shows no more, 94a r6)
+          &format!(
+            r#"{} {}"#,
+            lines("id3", "id4"),
+            r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id5"><sup xml:id="id5.1">*</sup>Corresponding author: bbaker@x.edu</note>"#
+          )
+        ),
+      ],
+      vec![
+        creator(true, "Ann Able", &trimmed("id1", "id2")),
+        creator(
+          false,
+          "Bob Baker",
+          &format!(
+            r#"{} {}"#,
+            trimmed("id3", "id4"),
+            r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id5"><sup xml:id="id5.1"><text fontsize="90%" xml:id="id5.1.1">*</text></sup><text fontsize="90%" xml:id="id5.2">Corresponding author: bbaker@x.edu</text></note>"#
+          )
+        ),
+      ]
+    )
+  );
 }
 
 /// An unmarked linked institution under a marked block is every author's (user ruling R12 2026-10-20; the r5
@@ -2163,21 +2568,40 @@ fn empty_mark_is_no_mark() {
 /// the legend is Bob Baker's note, a project role being a contribution (`classify_thanks`'s `project_role`; SYNC row
 /// 97c (d)), no longer his affiliation; its `mark` is the run's first symbol, as the observer's writer reads a compound
 /// label (`show_legend_mark`; the printed `†‡` stays in its text).
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered `†` no longer shown on the names
+/// (FIDELITY_CHARTER §4, a name's label is the name alone; Bob Baker's `‡` still, a residual), the note's `mark` the whole
+/// compound it prints, the space after a line's mark kept in the institution.
 #[test]
 fn compound_legend_mark_names_its_carrier() {
   let xml = convert_repro!("author_compound_legend_mark_names_its_carrier.tex");
   assert_no_merged_names(&xml);
   let univ_a = affiliation("Univ A");
-  assert_eq!(creators(&xml), [
-    creator(true, r#"Ann Able<sup xml:id="id1">†</sup>"#, &univ_a),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id2">†‡</sup>"#,
-      &format!(
-        r#"{univ_a} <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id3"><sup xml:id="id3.1"><text font="italic" xml:id="id3.1.1">†‡</text></sup> Project lead</note>"#
-      )
-    ),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(true, r#"Ann Able<sup xml:id="id1">†</sup>"#, &univ_a),
+        creator(
+          false,
+          r#"Bob Baker<sup xml:id="id2">†‡</sup>"#,
+          &format!(
+            r#"{univ_a} <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id3"><sup xml:id="id3.1"><text font="italic" xml:id="id3.1.1">†‡</text></sup> Project lead</note>"#
+          )
+        ),
+      ],
+      vec![
+        creator(true, "Ann Able", &affiliation(" Univ A")),
+        creator(
+          false,
+          r#"Bob Baker<sup xml:id="id1">‡</sup>"#,
+          &format!(
+            r#"{} <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†‡" role="thanks" xml:id="id2"><sup xml:id="id2.1"><text font="italic" xml:id="id2.1.1">†‡</text></sup> Project lead</note>"#,
+            affiliation(" Univ A")
+          )
+        ),
+      ]
+    )
+  );
 }
 
 /// An address spells a name by its given name and surname whole (`diwu@` Di Wu's) or by the initials before the surname
@@ -2258,6 +2682,9 @@ fn empty_mark_in_a_marked_block_stays() {
 /// 2606.28166; the r7 re-review's finding 1, probe g1) is read through the group: each institution goes to the names
 /// carrying its symbol, and the starred contact line under it, a legend, to the names carrying ∗. Was the whole line one
 /// affiliation of every name of the row and the contact line the block's (77p r10; r9 both the last name's).
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners and addresses; the answered marks no longer shown
+/// (FIDELITY_CHARTER §4, a name's label is the name alone), the institutions keep the `\small` they print in, and the line's
+/// word "Contact:" names its e-mail contacts as an e-mail line's label does (63k) — the old reader's "∗ Contact" affiliation gone.
 #[test]
 fn symbol_row_group_wrapped_line_goes_by_its_marks() {
   let xml = convert_repro!("author_symbol_row_group_wrapped_line.tex");
@@ -2276,43 +2703,102 @@ fn symbol_row_group_wrapped_line_goes_by_its_marks() {
       r#"<contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="id{id}">{address}</text></contact>"#
     )
   };
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann Able <sup xml:id="id1">†*</sup>"#,
-      &format!("{univ_a} {} {}", contact(2), email(4, "aable@x.edu"))
-    ),
-    creator(false, r#"Bob Baker <sup xml:id="id5">‡</sup>"#, &univ_b),
-    creator(
-      false,
-      r#"Cat Cole <sup xml:id="id6">†*</sup>"#,
-      &format!("{univ_a} {} {}", contact(7), email(9, "ccole@x.edu"))
-    ),
-  ]);
+  // (at `LATEXML_FM_EMIT=2`: an institution in its `\small`, an address under the line's label "Contact:")
+  let small = |id: usize, text: &str| {
+    affiliation(&format!(
+      r#"<text fontsize="90%" xml:id="id{id}">{text}</text>"#
+    ))
+  };
+  let contact_email = |id: usize, address: &str| {
+    email(id, address).replacen(r#"name="Email: ""#, r#"name="Contact: ""#, 1)
+  };
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(
+          true,
+          r#"Ann Able <sup xml:id="id1">†*</sup>"#,
+          &format!("{univ_a} {} {}", contact(2), email(4, "aable@x.edu"))
+        ),
+        creator(false, r#"Bob Baker <sup xml:id="id5">‡</sup>"#, &univ_b),
+        creator(
+          false,
+          r#"Cat Cole <sup xml:id="id6">†*</sup>"#,
+          &format!("{univ_a} {} {}", contact(7), email(9, "ccole@x.edu"))
+        ),
+      ],
+      vec![
+        creator(
+          true,
+          "Ann Able",
+          &format!(
+            "{} {}",
+            small(1, " Univ A"),
+            contact_email(2, "aable@x.edu")
+          )
+        ),
+        creator(false, "Bob Baker", &small(3, " Univ B")),
+        creator(
+          false,
+          "Cat Cole",
+          &format!(
+            "{} {}",
+            small(4, " Univ A"),
+            contact_email(5, "ccole@x.edu")
+          )
+        ),
+      ]
+    )
+  );
 }
 
 /// Symbol-labelled lines each set in a group (`{\it \normalsize $^\sharp$Department of Biostatistics, …}`, 2602.16540;
 /// the r7 re-review's finding 1, probe g3) go to the names carrying their symbols. Was each line an affiliation of every
 /// name of the row (77p r10).
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
+/// (FIDELITY_CHARTER §4, a name's label is the name alone), each institution in the `\it` it prints in.
 #[test]
 fn symbol_row_group_wrapped_lines_go_by_their_marks() {
   let xml = convert_repro!("author_symbol_row_group_wrapped_lines.tex");
   assert_no_merged_names(&xml);
   let univ_a = affiliation("Univ A, Dublin");
-  assert_eq!(creators(&xml), [
-    creator(true, r#"Ann Able<sup xml:id="id1">†</sup>"#, &univ_a),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
-      &affiliation("Department of Biostatistics, Univ B")
-    ),
-    creator(false, r#"Cat Cole<sup xml:id="id3">†</sup>"#, &univ_a),
-  ]);
+  // (at `LATEXML_FM_EMIT=2` an institution in the `\it` it prints in)
+  let italic = |id: &str, text: &str| {
+    affiliation(&format!(
+      r#"<text font="italic" xml:id="{id}">{text}</text>"#
+    ))
+  };
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(true, r#"Ann Able<sup xml:id="id1">†</sup>"#, &univ_a),
+        creator(
+          false,
+          r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
+          &affiliation("Department of Biostatistics, Univ B")
+        ),
+        creator(false, r#"Cat Cole<sup xml:id="id3">†</sup>"#, &univ_a),
+      ],
+      vec![
+        creator(true, "Ann Able", &italic("id1", "Univ A, Dublin")),
+        creator(
+          false,
+          "Bob Baker",
+          &italic("id2", "Department of Biostatistics, Univ B")
+        ),
+        creator(false, "Cat Cole", &italic("id3", "Univ A, Dublin")),
+      ]
+    )
+  );
 }
 
 /// 2602.16540's block (the r7 re-review's finding 1): names marked ⋆ and ♯, a `\hspace` before the line break, each
 /// institution on a line of its own in a group, led by its mark — two authors, each with the institution its mark
 /// labels. Was a creator named "⋆School of Mathematics …" (int34a, 77p r9) and the ♯ line on all three (77p r10).
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
+/// (FIDELITY_CHARTER §4, a name's label is the name alone), each institution keeps the `\it` it prints in.
 #[test]
 fn symbol_lines_after_a_spaced_break_go_by_their_marks() {
   let xml = convert_repro!("author_symbol_lines_after_spaced_break.tex");
@@ -2324,51 +2810,96 @@ fn symbol_lines_after_a_spaced_break_go_by_their_marks() {
       r##"<contact name="Note: " role="note">E-mail: <text color="#008080" font="typewriter" xml:id="{id}">{address}</text></contact>"##
     )
   };
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann Able<sup xml:id="id1">⋆</sup>"#,
-      &format!(
-        "{} {}",
-        note("aable@x.ie", "id2"),
-        affiliation("School of Mathematics and Statistics, Univ A, Dublin 4, Republic of Ireland")
-      )
-    ),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id3">♯</sup>"#,
-      &format!(
-        "{} {}",
-        note("bbaker@y.hk", "id4"),
-        affiliation("Department of Biostatistics, Univ B, Hong Kong")
-      )
-    ),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(
+          true,
+          r#"Ann Able<sup xml:id="id1">⋆</sup>"#,
+          &format!(
+            "{} {}",
+            note("aable@x.ie", "id2"),
+            affiliation(
+              "School of Mathematics and Statistics, Univ A, Dublin 4, Republic of Ireland"
+            )
+          )
+        ),
+        creator(
+          false,
+          r#"Bob Baker<sup xml:id="id3">♯</sup>"#,
+          &format!(
+            "{} {}",
+            note("bbaker@y.hk", "id4"),
+            affiliation("Department of Biostatistics, Univ B, Hong Kong")
+          )
+        ),
+      ],
+      vec![
+        creator(
+          true,
+          "Ann Able",
+          &format!(
+            r#"{} {}"#,
+            note("aable@x.ie", "id1"),
+            affiliation(
+              r#"<text font="italic" xml:id="id2">School of Mathematics and Statistics, Univ A, Dublin 4, Republic of Ireland</text>"#
+            )
+          )
+        ),
+        creator(
+          false,
+          "Bob Baker",
+          &format!(
+            r#"{} {}"#,
+            note("bbaker@y.hk", "id3"),
+            affiliation(
+              r#"<text font="italic" xml:id="id4">Department of Biostatistics, Univ B, Hong Kong</text>"#
+            )
+          )
+        ),
+      ]
+    )
+  );
 }
 
 /// A mark after its institution labels it (`Carnegie Mellon University, …$^{\dagger}$`, 2109.13296; the r7 re-review's
 /// finding 1, probes p7, p8): Univ A on the † names, Univ B on the ‡ one, each without its mark. Was each line an
 /// affiliation of every name of the row (77p r10).
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
+/// (FIDELITY_CHARTER §4, a name's label is the name alone), the space after a line's mark kept in its institution.
 #[test]
 fn trailing_symbol_mark_labels_its_line() {
   let xml = convert_repro!("author_symbol_row_trailing_marks.tex");
   assert_no_merged_names(&xml);
   let univ_a = affiliation("Univ A");
-  assert_eq!(creators(&xml), [
-    creator(true, r#"Ann Able<sup xml:id="id1">†</sup>"#, &univ_a),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
-      &affiliation("Univ B")
-    ),
-    creator(false, r#"Cat Cole<sup xml:id="id3">†</sup>"#, &univ_a),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(true, r#"Ann Able<sup xml:id="id1">†</sup>"#, &univ_a),
+        creator(
+          false,
+          r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
+          &affiliation("Univ B")
+        ),
+        creator(false, r#"Cat Cole<sup xml:id="id3">†</sup>"#, &univ_a),
+      ],
+      vec![
+        creator(true, "Ann Able", &affiliation(" Univ A")),
+        creator(false, "Bob Baker", &affiliation(" Univ B")),
+        creator(false, "Cat Cole", &affiliation(" Univ A")),
+      ]
+    )
+  );
 }
 
 /// 2109.13296's block (the r7 re-review's findings 1 and 9): the unmarked institution and its brace list under three
 /// `\hspace`-parted names, then an institution and an address each marked † after the text — The Univ A on every name
 /// (R12), each listed address on the name it spells, Univ B and `bakerbob@` on Bob Baker, the † name, alone. Was Univ B
 /// on all three and `bakerbob@gmail.com†` on the shared creator (77p r10).
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; Bob Baker's answered mark no longer shown
+/// (FIDELITY_CHARTER §4, a name's label is the name alone), each listed address in the `\texttt` it prints in.
 #[test]
 fn trailing_marks_under_spaced_names_label_their_lines() {
   let xml = convert_repro!("author_trailing_mark_under_spaced_names.tex");
@@ -2377,27 +2908,53 @@ fn trailing_marks_under_spaced_names_label_their_lines() {
   let email =
     |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
   let tt = |address: &str, id: &str| typewriter_email(address, id);
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!("{univ_a} {}", email("aable@a.edu"))
-    ),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id1">†</sup>"#,
-      &format!(
-        "{univ_a} {} {}",
-        affiliation("Univ B, Pittsburgh, PA, USA"),
-        tt("bakerbob@gmail.com", "id2")
-      )
-    ),
-    creator(
-      false,
-      "Cat Cole",
-      &format!("{univ_a} {}", email("ccole@a.edu"))
-    ),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(
+          true,
+          "Ann Able",
+          &format!("{univ_a} {}", email("aable@a.edu"))
+        ),
+        creator(
+          false,
+          r#"Bob Baker<sup xml:id="id1">†</sup>"#,
+          &format!(
+            "{univ_a} {} {}",
+            affiliation("Univ B, Pittsburgh, PA, USA"),
+            tt("bakerbob@gmail.com", "id2")
+          )
+        ),
+        creator(
+          false,
+          "Cat Cole",
+          &format!("{univ_a} {}", email("ccole@a.edu"))
+        ),
+      ],
+      vec![
+        creator(
+          true,
+          "Ann Able",
+          &format!("{univ_a} {}", tt("aable@a.edu", "id1"))
+        ),
+        creator(
+          false,
+          "Bob Baker",
+          &format!(
+            "{univ_a} {} {}",
+            affiliation("Univ B, Pittsburgh, PA, USA"),
+            tt("bakerbob@gmail.com", "id2")
+          )
+        ),
+        creator(
+          false,
+          "Cat Cole",
+          &format!("{univ_a} {}", tt("ccole@a.edu", "id3"))
+        ),
+      ]
+    )
+  );
 }
 
 /// A linked name with compact dotted initials is a name, not a web address (`\href{}{…Edward A.G. Schuur}`, 2601.06085;
@@ -2449,27 +3006,39 @@ fn dotted_initials_link_is_an_authblk_name() {
 /// A doubled mark (`$^{**}$`, `$^{\dagger\dagger}$`) labels its institution as a single one does (the r7 re-review's
 /// finding 3, probes n1, n2): Univ B on Bob Baker, Univ C on Cat Cole. Was each an affiliation of the shared creator, its
 /// mark kept (77p r10).
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
+/// (FIDELITY_CHARTER §4, a name's label is the name alone), the space after a line's mark kept in its institution.
 #[test]
 fn doubled_symbol_marks_label_their_institutions() {
   let xml = convert_repro!("author_doubled_symbol_marks.tex");
   assert_no_merged_names(&xml);
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann Able<sup xml:id="id1">*</sup>"#,
-      &affiliation("Univ A")
-    ),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id2">**</sup>"#,
-      &affiliation("Univ B")
-    ),
-    creator(
-      false,
-      r#"Cat Cole<sup xml:id="id3">††</sup>"#,
-      &affiliation("Univ C")
-    ),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(
+          true,
+          r#"Ann Able<sup xml:id="id1">*</sup>"#,
+          &affiliation("Univ A")
+        ),
+        creator(
+          false,
+          r#"Bob Baker<sup xml:id="id2">**</sup>"#,
+          &affiliation("Univ B")
+        ),
+        creator(
+          false,
+          r#"Cat Cole<sup xml:id="id3">††</sup>"#,
+          &affiliation("Univ C")
+        ),
+      ],
+      vec![
+        creator(true, "Ann Able", &affiliation(" Univ A")),
+        creator(false, "Bob Baker", &affiliation(" Univ B")),
+        creator(false, "Cat Cole", &affiliation(" Univ C")),
+      ]
+    )
+  );
 }
 
 /// A linked name holding a link word ("Lucy Page", "Mark Link") is a name, not a link line (the r7 re-review's finding
@@ -2671,6 +3240,8 @@ fn line_break_optional_after_spaces_prints_nothing() {
 /// A truncated family-first address (`zhuzhenh22@`, `chenyuxi22@`; 2602.03328, 2609.11716; the r7 re-review's finding
 /// 9) spells the name whose joined family-first spelling it opens with the first six letters of, as a surname's six
 /// letters do. Was each on the shared creator, two names tied by the surname (77p r10).
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; each address keeps the font it prints in, as the
+/// affiliations keep theirs.
 #[test]
 fn truncated_family_first_address_spells_its_name() {
   let xml = convert_repro!("author_email_truncated_family_first.tex");
@@ -2678,20 +3249,39 @@ fn truncated_family_first_address_spells_its_name() {
   let univ_a = affiliation("Univ A");
   let email =
     |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Zhenhao Zhu",
-      &format!("{univ_a} {}", email("zhuzhenh22@x.edu"))
-    ),
-    creator(
-      false,
-      "Yuxiang Chen",
-      &format!("{univ_a} {}", email("chenyuxi22@x.edu"))
-    ),
-    creator(false, "Xinzhong Zhu", &univ_a),
-    creator(false, "Jianfei Chen", &univ_a),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(
+          true,
+          "Zhenhao Zhu",
+          &format!("{univ_a} {}", email("zhuzhenh22@x.edu"))
+        ),
+        creator(
+          false,
+          "Yuxiang Chen",
+          &format!("{univ_a} {}", email("chenyuxi22@x.edu"))
+        ),
+        creator(false, "Xinzhong Zhu", &univ_a),
+        creator(false, "Jianfei Chen", &univ_a),
+      ],
+      vec![
+        creator(
+          true,
+          "Zhenhao Zhu",
+          &format!("{univ_a} {}", typewriter_email("zhuzhenh22@x.edu", "id1"))
+        ),
+        creator(
+          false,
+          "Yuxiang Chen",
+          &format!("{univ_a} {}", typewriter_email("chenyuxi22@x.edu", "id2"))
+        ),
+        creator(false, "Xinzhong Zhu", &univ_a),
+        creator(false, "Jianfei Chen", &univ_a),
+      ]
+    )
+  );
 }
 
 /// A link to a bare domain printing a word that names no institution ("here") is a URL contact of the block (the r7
@@ -2743,20 +3333,32 @@ fn rules_phantoms_and_skips_print_no_letter() {
 /// Symbol-labelled institutions on one line parted by `\qquad` under a row of marked names (the r7 re-review's g2, x13;
 /// int34a the same): the block `\qquad` parts off after the line is the next institution of that line, no names —
 /// Univ A on the † names, Univ B on the ‡ one. Was a creator named "‡Univ B" and "†Univ A" on Cat Cole alone.
+/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
+/// (FIDELITY_CHARTER §4, a name's label is the name alone).
 #[test]
 fn symbol_institution_row_parted_by_space() {
   let xml = convert_repro!("author_symbol_institution_row_spaced.tex");
   assert_no_merged_names(&xml);
   let univ_a = affiliation("Univ A");
-  assert_eq!(creators(&xml), [
-    creator(true, r#"Ann Able<sup xml:id="id1">†</sup>"#, &univ_a),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
-      &affiliation("Univ B")
-    ),
-    creator(false, r#"Cat Cole<sup xml:id="id3">†</sup>"#, &univ_a),
-  ]);
+  assert_eq!(
+    creators(&xml),
+    expect(
+      vec![
+        creator(true, r#"Ann Able<sup xml:id="id1">†</sup>"#, &univ_a),
+        creator(
+          false,
+          r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
+          &affiliation("Univ B")
+        ),
+        creator(false, r#"Cat Cole<sup xml:id="id3">†</sup>"#, &univ_a),
+      ],
+      vec![
+        creator(true, "Ann Able", &univ_a),
+        creator(false, "Bob Baker", &affiliation("Univ B")),
+        creator(false, "Cat Cole", &univ_a),
+      ]
+    )
+  );
 }
 
 /// The negative of [`symbol_institution_row_parted_by_space`]: a name its mark leads (`$^\ddagger$Cat Cole`) after a
