@@ -39,8 +39,9 @@ use crate::base_utilities::{
       policy::TitleMarks,
       rehearsal::{Rehearsal, rehearse},
       resolver::{
-        BlockCheck, LostInk, RCreator, Written, check_blocks, creator_call, is_creator_call,
-        merged_names, printed_email_label, read_events, split_pieces, uncoordinated_marks,
+        BlockCheck, LostInk, RCreator, RuleDrop, Written, check_blocks, creator_call,
+        is_creator_call, merged_names, printed_email_label, read_events, split_pieces,
+        uncoordinated_marks,
       },
     },
     relocate::{BLOCK_ZONE, FOOTER_ZONE},
@@ -1952,12 +1953,12 @@ fn analysis() -> Rc<Analysis> {
 
 /// The words the reading drops by its own rule ([`Resolved::drops`]), as the ledger's last [`Analysis`] read them:
 /// what the content check counts as separators' words (`placed::content_check`).
-pub(super) fn reading_drops() -> BTreeSet<(usize, (u16, u16))> {
+pub(super) fn reading_drops() -> BTreeSet<RuleDrop> {
   with_ledger(|ledger| {
     ledger
       .analysis
       .as_ref()
-      .map(|made| made.reading.drops.iter().copied().collect())
+      .map(|made| made.reading.drops.iter().cloned().collect())
       .unwrap_or_default()
   })
 }

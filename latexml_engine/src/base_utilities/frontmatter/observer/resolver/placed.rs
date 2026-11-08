@@ -59,12 +59,12 @@ pub(in crate::base_utilities::frontmatter::observer) enum PlacedKind {
 
 /// The placed frontmatter as the check reads it: the creators' items, and the texts that hold a printed word apart from
 /// them (a publication note, a link's target, each target once); and the words the reading drops by its own rule
-/// (`Resolved::drops`, a block's Name event by its ledger index and span), each a separator's.
+/// (`Resolved::drops`, a block's Name event by its ledger index, span and word), each a separator's.
 #[derive(Default)]
 pub(in crate::base_utilities::frontmatter::observer) struct Placed {
   pub items:   Vec<PlacedItem>,
   pub beside:  Vec<String>,
-  pub dropped: BTreeSet<(usize, (u16, u16))>,
+  pub dropped: BTreeSet<RuleDrop>,
   /// the document's publication notes' texts, each as written (in `beside` too): a note written more often than it
   /// printed is in excess ([`note_excess`])
   pub notes:   Vec<String>,
@@ -249,12 +249,15 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
         // (a Name the reading drops by its own rule is the separator it reads it as, its word beside the names: a byline's
         // "by", `By~~{\scshape Bryna Kra}`, 2603.27258; 2603.25922, 2604.07186, 2604.12864)
         let separated: Vec<Event>;
-        let events = if placed.dropped.iter().any(|&(at, _)| at == index) {
+        let events = if placed.dropped.iter().any(|(at, ..)| *at == index) {
           separated = events
             .iter()
             .map(|e| match e.span {
               Some(span)
-                if e.kind == EventKind::Name && placed.dropped.contains(&(index, span)) =>
+                if e.kind == EventKind::Name
+                  && placed
+                    .dropped
+                    .contains(&(index, span, e.text.trim().to_lowercase())) =>
               {
                 let mut sep = Event::new(EventKind::Sep(SepKind::Word(e.text.trim().to_string())));
                 sep.span = e.span;

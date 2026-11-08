@@ -1074,27 +1074,35 @@ pub(in crate::base_utilities) fn record_api_call(
 /// What a call no rehearsal read printed, as far as its tokens tell (`ApiCall::unread`, `Ledger::unrecorded`), read at
 /// the API boundary that records its content, so the content check reads text alone, parted into words as an ink's is
 /// (`resolver::words::printed_words`): its characters; a control symbol or a one-letter control word inside a word (an
-/// accent, `Universit\"at`, a dotless i: a letter or digit before it, a letter, a digit or a group after it, past any
-/// group's end and one-letter control word, `F\'{\i}sica`, `Bras\'\i lia`; not past a control symbol, `Smith\,\\Univ`
-/// two words) and a group there (`M{\"u}nchen`) part nothing, the word counted whole, its accents and dotless letters
-/// unread (the check takes a word one side reads without them for the one the other prints with them, `Fsica` for
-/// `física`, `resolver::placed`); another control sequence, its argument's group (`\IEEEauthorrefmark{1}Univ Alpha` →
-/// ` 1 Univ Alpha`) or a math shift parts words. Nothing is spelled but a control sequence's length and its letter's
-/// catcode: a letter command (`Gro{\ss}e`, a control word) parts its word.
+/// accent, `Universit\"at`, a dotless i: a letter or digit, or a place read past, before it; a letter, a digit or a
+/// group after it, past any group's end and one-letter control word, `F\'{\i}sica`, `Bras\'\i lia`; not past a control
+/// symbol, `Smith\,\\Univ` two words), an accent's control symbol before a word's first letter (`\'Ecole`, review revH3
+/// 2; [`accent_symbol`]) and a group there (`M{\"u}nchen`) part nothing, the word counted whole, its accents and
+/// dotless letters unread (the check takes a word one side reads without them for the one the other prints with them,
+/// `Fsica` for `física`, `resolver::placed`); a spacing control symbol (`Dept\\Muller`, `Dept,\\Muller`, review revCK1
+/// 2-3; [`spacing_symbol`]), another control sequence, its argument's group (`\IEEEauthorrefmark{1}Univ Alpha` →
+/// ` 1 Univ Alpha`) or a math shift parts words. Nothing is spelled but a control sequence's length, its letter's
+/// catcode and a control symbol's character: a letter command (`Gro{\ss}e`, a control word) parts its word.
 pub(super) fn content_text(content: &Tokens) -> ContentText {
   let mut text = String::new();
-  // (where it read past a control symbol or a one-letter control word inside a word: its byte in `text`, and whether a
-  // one-letter control word, which may print a letter)
+  // (where it read past a control symbol or a one-letter control word inside a word, or an accent's control symbol
+  // before its first letter, `\'Ecole Normale` (review revH3 2): its byte in `text`, and whether a one-letter control
+  // word, which may print a letter)
   let mut past: Vec<(usize, bool)> = Vec::new();
   // (for each open group, whether it is a parting command's argument, which parts what is around it)
   let mut groups: Vec<bool> = Vec::new();
   let mut parted_by_command = false;
   let tokens = content.unlist_ref();
   for (at, token) in tokens.iter().enumerate() {
-    // (inside a word: a letter or digit before it, and a letter, a digit or a group after it, past any group's end and
-    // one-letter control word: `F\'{\i}sica`, `Bras\'\i lia`; a control symbol there parts, `Smith\,\\Univ` two words)
+    // (inside a word, a letter or digit or a place read past before it, or before its first letter, an accent's
+    // control symbol there (`\'Ecole`, never `\\`, `\ `, `\,`, `\;`, `\:`, `\>`, the [`spacing_symbol`]s: review revCK1 2); and a letter, a digit or
+    // a group after it, past any group's end and one-letter control word: `F\'{\i}sica`, `Bras\'\i lia`; a control
+    // symbol before another parts, `Smith\,\\Univ` two words; a spacing one parts, `Dept\\Muller`, review revCK1 3)
     let in_word = || {
-      text.chars().next_back().is_some_and(char::is_alphanumeric)
+      !spacing_symbol(token)
+        && (text.chars().next_back().is_some_and(char::is_alphanumeric)
+          || past.last().is_some_and(|&(place, _)| place == text.len())
+          || accent_symbol(token))
         && tokens[at + 1..]
           .iter()
           .find(|next| next.get_catcode() != Catcode::END && !letter_cs(next))
@@ -1114,7 +1122,8 @@ pub(super) fn content_text(content: &Tokens) -> ContentText {
           past.push((text.len(), letter_cs(token)));
         } else {
           text.push(' ');
-          parting_command = true;
+          // (a spacing symbol takes no group: `\\{\'E}cole` one word)
+          parting_command = !spacing_symbol(token);
         }
       },
       _ => text.push(' '),
@@ -1131,7 +1140,7 @@ pub(super) fn content_text(content: &Tokens) -> ContentText {
       && at <= start + word.len()
     {
       slots.next();
-      if at > start {
+      if at >= start {
         places.push((text[start..at].chars().count(), letter));
       }
     }
@@ -1172,6 +1181,27 @@ fn short_cs(token: &Token) -> bool {
 fn letter_cs(token: &Token) -> bool {
   short_cs(token)
     && token.with_str(|name| name.ends_with(|c| lookup_catcode(c) == Some(Catcode::LETTER)))
+}
+
+/// An accent's control symbol (`\'`, `` \` ``, `\^`, `\"`, `\~`, `\=`, `\.`: plain.tex's and latex.ltx's text accents
+/// spelled as control symbols), the one control sequence read past before a word's first letter (`\'Ecole`).
+fn accent_symbol(token: &Token) -> bool {
+  matches!(
+    symbol(token),
+    Some('\'' | '`' | '^' | '"' | '~' | '=' | '.')
+  )
+}
+
+/// A control symbol that prints a space or ends a line (`\\`, `\ `, `\,`, `\;`, `\:`, `\>`): it parts a word as the
+/// space or the line's end it prints does (`Dept\\Muller` two words, as pdflatex prints them on two lines).
+fn spacing_symbol(token: &Token) -> bool {
+  matches!(symbol(token), Some('\\' | ' ' | ',' | ';' | ':' | '>'))
+}
+
+/// A control symbol's character (`\'` → `'`), the one spelling the content text reads (review revCK1 2-3): none for a
+/// control word or a one-letter control word ([`letter_cs`]).
+fn symbol(token: &Token) -> Option<char> {
+  (short_cs(token) && !letter_cs(token)).then(|| token.with_str(|name| name.chars().next_back()))?
 }
 
 /// A token that opens or continues a word after a control sequence inside it: a group, a letter or a digit.
