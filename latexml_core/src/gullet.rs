@@ -290,13 +290,29 @@ pub struct MouthRuntime {
 /// than the length. Kept as runs: the marks from a run's serial up to the next run's share its shortest length, the
 /// serials increasing and the lengths never decreasing towards the top, so a mark costs at most one run and a
 /// shortening of the pushback one comparison, with the top run's length ([`floor`](Self::floor)); no token is copied.
+/// A run whose every mark is read — the pushback more than [`MARK_HELD`] shorter than its shortest mark — is dropped:
+/// its marks answer from the run below, no longer, or from none (read), and the reads below it are fast again.
 #[derive(PartialEq, Debug, Default)]
 struct PushbackWatch {
-  /// (the serial of a run's first mark, the shortest the pushback has been since it)
-  runs:  Vec<(u64, usize)>,
+  runs:  Vec<WatchRun>,
   /// the top run's length, 0 when there is none: only a pushback shorter than it changes a run, so the fast read
   /// (`read_internal_token_checked`) pops only above it and every other shortening tells [`note_len`](Self::note_len)
   floor: usize,
+}
+
+/// A run of input marks on a [`PushbackWatch`].
+#[derive(PartialEq, Debug, Clone, Copy)]
+struct WatchRun {
+  /// the serial of its first mark
+  serial: u64,
+  /// the shortest the pushback has been since that mark
+  low:    usize,
+  /// the shortest of its marks' lengths: the run is live while the pushback has been at most [`MARK_HELD`] shorter
+  least:  usize,
+}
+
+impl WatchRun {
+  fn live(&self) -> bool { self.low + MARK_HELD >= self.least }
 }
 
 impl PushbackWatch {
@@ -309,32 +325,42 @@ impl PushbackWatch {
   }
 
   /// [`note_len`](Self::note_len) below the floor: the runs longer than `len` become one at `len` (joined to the run
-  /// below when that is at `len` already).
+  /// below when that is at `len` already), dropped when every mark of it is read.
   #[cold]
   #[inline(never)]
   fn lower(&mut self, len: usize) {
-    let keep = self.runs.partition_point(|&(_, low)| low <= len);
-    let serial = self.runs.get(keep).map_or(0, |&(serial, _)| serial);
-    self.runs.truncate(keep);
-    if self.runs.last().is_none_or(|&(_, low)| low < len) {
-      self.runs.push((serial, len));
+    let keep = self.runs.partition_point(|run| run.low <= len);
+    let mut lowered = self.runs.drain(keep..).reduce(|first, run| WatchRun {
+      least: first.least.min(run.least),
+      ..first
+    });
+    if let Some(run) = lowered.as_mut() {
+      run.low = len;
     }
-    self.floor = len;
+    if let Some(run) = lowered.filter(WatchRun::live) {
+      match self.runs.last_mut() {
+        Some(below) if below.low == len => below.least = below.least.min(run.least),
+        _ => self.runs.push(run),
+      }
+    }
+    self.floor = self.runs.last().map_or(0, |run| run.low);
   }
 
   /// A mark `serial` taken with the pushback `len` tokens long: it joins the top run when that run is at `len` (the
   /// top run is never longer than the pushback).
   fn mark(&mut self, serial: u64, len: usize) {
-    if self.runs.last().is_none_or(|&(_, low)| low < len) {
-      self.runs.push((serial, len));
+    match self.runs.last_mut() {
+      Some(top) if top.low == len => top.least = len,
+      _ => self.runs.push(WatchRun { serial, low: len, least: len }),
     }
     self.floor = len;
   }
 
-  /// The shortest the pushback has been since the mark `serial`, if it was taken on this mouth.
+  /// No longer than the shortest the pushback has been since the mark `serial` — that, while the mark's run is live —,
+  /// if a run of this mouth's holds a mark at or before it.
   fn shortest_since(&self, serial: u64) -> Option<usize> {
-    let after = self.runs.partition_point(|&(first, _)| first <= serial);
-    after.checked_sub(1).map(|run| self.runs[run].1)
+    let after = self.runs.partition_point(|run| run.serial <= serial);
+    after.checked_sub(1).map(|run| self.runs[run].low)
   }
 }
 
@@ -1436,9 +1462,9 @@ fn read_internal_token_checked(sink: CommentSink) -> Result<CheckedRead> {
     let mut borrow = gullet_mut!();
     let g: &mut Gullet = &mut borrow;
     // The usual read: nothing is due at this count (`full_read_at`), and the token on top of the pushback is an
-    // ordinary one above the input marks' floor (`PushbackWatch`: a read below it is the full read's, which tells the
-    // watch; the floor is 0 with no mark, so the test is the pushback's emptiness). It does exactly what the full read
-    // does in that case, without testing each thing that isn't due.
+    // ordinary one. It does exactly what the full read does in that case, without testing each thing that isn't due.
+    // (The input marks' floor, `PushbackWatch`, is its emptiness test: 0 with no live mark; a read at or below it is
+    // the full read's, which tells the watch.)
     if g.progress + 1 < g.full_read_at
       && (matches!(sink, CommentSink::Pending) || g.pending_comments.is_empty())
       && let Some(rt) = g.runtime.as_mut()
@@ -5768,9 +5794,11 @@ mod token_limit_tests {
         }
       }
       assert!(marks.iter().all(|mark| !input_unread_since(mark)));
-      assert_eq!(
-        gullet!().runtime.as_ref().map(|rt| rt.watch.runs.len()),
-        Some(1)
+      assert!(
+        gullet!()
+          .runtime
+          .as_ref()
+          .is_some_and(|rt| rt.watch.runs.len() <= 1)
       );
       fn copy<T: Copy>() {}
       copy::<InputMark>();
