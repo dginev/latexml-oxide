@@ -19,22 +19,34 @@ macro_rules! repro {
   };
 }
 
-/// The content check's Warnings of `log`: its lost words and its excess, each as its list.
-fn content_checks(log: &str) -> (Vec<String>, Vec<String>) {
+/// The content check's Warnings of `log`: its lost words and its excess, each as its list (the Warning's count checked
+/// against it).
+pub(super) fn content_checks(log: &str) -> (Vec<String>, Vec<String>) {
   let listed = |what: &str| -> Vec<String> {
     log
       .lines()
-      .filter(|line| line.contains("The frontmatter's content check") && line.contains(what))
       .filter_map(|line| {
-        let open = line.rfind(" (")?;
-        let close = line.rfind("); they are counted")?;
-        Some(line[open + 2..close].to_string())
+        line
+          .split_once("Frontmatter content check: ")?
+          .1
+          .strip_suffix('.')
+      })
+      .filter(|rest| rest.contains(what))
+      .filter_map(|rest| {
+        let (count, rest) = rest.split_once(' ')?;
+        let (_, list) = rest.split_once(": ")?;
+        assert_eq!(
+          count.parse::<usize>().ok(),
+          Some(list.split(' ').count()),
+          "{rest}"
+        );
+        Some(list.to_string())
       })
       .collect()
   };
   (
-    listed("holds nowhere"),
-    listed("holds more often than they print"),
+    listed("are missing from the placed frontmatter"),
+    listed("more often than the author blocks print them"),
   )
 }
 

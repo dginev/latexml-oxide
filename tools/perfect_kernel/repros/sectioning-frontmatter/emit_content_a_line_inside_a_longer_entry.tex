@@ -1,0 +1,24 @@
+% mechanism: the content check on the placed output (`resolver::placed`, under `LATEXML_FM_EMIT=2`): a shared item counts
+%   the prints its text is, one line or a run of its call's lines (with their separators' words), each print taken once,
+%   the longest entries first: a line printed inside a longer entry is no second print of a shorter entry
+% witness: cond-mat0305063 (revtex `\address{Department of Physics, …, Kyoto University, Kyoto 606-8502, Japan\\ CREST,
+%   Japan Science and Technology Corporation, …}` and another author's `\address{Department of Physics, …, Japan}`: an
+%   excess of 11 words while the shorter entry took the longer one's first line)
+% oracle:  pdflatex 0 errors; "Ann Able and Cat Cole", "Univ A, Town", "Science and Technology Lab, City", "Bob Baker",
+%   "Univ A, Town"
+% engines: rust N2r2, the switch on: 0 warnings (each shared item its most copies)
+% expect:  the switch on: 0 errors, 0 warnings; Ann and Cat the two-line address, Bob the one-line one
+% status:  GREEN (perfect_kernel_batchn2r3::a_line_printed_per_author_is_no_loss)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\address{Univ A, Town\\ Science and Technology Lab, City}
+\author{Bob Baker}
+\address{Univ A, Town}
+\author{Cat Cole}
+\address{Univ A, Town\\ Science and Technology Lab, City}
+\maketitle
+Body.
+\end{document}

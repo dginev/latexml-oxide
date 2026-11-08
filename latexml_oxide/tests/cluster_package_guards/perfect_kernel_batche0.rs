@@ -849,8 +849,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("defs/general", 8),
   ("epl_cls.rs", 43),
   ("eptcs_cls.rs", 28),
-  // (raised by one at Z14: the lexer's own constructor, `\lx@fm@obs@affil@marked`, as the row's others; nothing a document spells)
-  ("events", 59),
+  // (raised by one at Z14: the lexer's own constructor, `\lx@fm@obs@affil@marked`, as the row's others; nothing a document spells;
+  // by one at N2r2: `raw_lines`' break arm holding the `\and` family too, two lines, the whatsits' definitions, 2106.06418)
+  ("events", 60),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   // (Z4a, 4 -> 8: an environment step by its meaning, a CS whose definition is `\begin` or `\end`, a `\let` copy too, what no frame
   // says for a raw environment; the definition's name, not the token's spelling)
@@ -1092,8 +1093,9 @@ fn a_spelling_rule_in_the_resolver_counts_however_it_is_written() {
 /// (`\begin`, `\end`), not a token's spelling (Z4a, ruled at Z4ar2).
 const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // (Z14: 84 and 109, the lexer's own constructor and the rehearsal's table rows for `\lx@add@affiliation@marked`, `\lx@add@creator` and `\alignauthor`, as in `TOKEN_READS`;
-  // Z4a +2: a note's kind, `\lx@fm@obs@fnnote`, the rehearsal's own name for a footnote it heard)
-  ("events", 86),
+  // Z4a +2: a note's kind, `\lx@fm@obs@fnnote`, the rehearsal's own name for a footnote it heard; N2r2 +3: `raw_lines` reads the
+  // `\and` family's whatsits as it reads a break's, by their definition, 2106.06418)
+  ("events", 89),
   // (Z4a, 0 -> 2, ruled at Z4ar2: names two kernel definitions (`\begin`, `\end`), not a token's spelling: an environment step by its
   // meaning, a `\let` copy too, what no frame says for a raw environment)
   ("field_notes", 2),
@@ -1101,8 +1103,10 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   ("marks", 0),
   ("mod", 0),
   ("policy", 0),
-  // (Z14 101 -> 109, the table rows above; Z4a +3: the rehearsal's `\lx@fm@obs@footnote`, the footnote a note step hears, defined and named)
-  ("rehearsal", 112),
+  // (Z14 101 -> 109, the table rows above; Z4a +3: the rehearsal's `\lx@fm@obs@footnote`, the footnote a note step hears, defined and named;
+  // N2r2 +7: the bound constructors' `alias`es, the commands they revert as — what a text made of an argument prints, never
+  // the rehearsal's name: 2106.06418, 1401.5951, 2106.11154)
+  ("rehearsal", 119),
   // (also among `resolver`'s 18 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook)
   ("resolver", 3),
   ("shadow", 7),

@@ -1,0 +1,27 @@
+% mechanism: the content check on the placed output (`resolver::placed`, under `LATEXML_FM_EMIT=2`): a shared item counts
+%   the prints its text is by their words, an address a line prints beside them the e-mail's the reading takes out of the
+%   entry: IEEEtran's `\IEEEauthorblockA{\textit{Univ A}\\ Town, Country\\ ann@a.org}` under each author, kept as one
+%   shared affiliation, is no loss
+% witness: 2311.03657, 2003.10159 (IEEEtran blocks printing one affiliation per author, the address beside the last line:
+%   the content check's lost `School of Inforamtion Technology Deakin University …`, every copy in the XML)
+% oracle:  pdflatex 0 errors; "Ann Able", "Bob Baker", "Univ A", "Town, Country", "ann@a.org", "Univ A", "Town, Country",
+%   "bob@a.org"
+% engines: rust N2r2, the switch on: 1 warning, the content check's lost `A Country Town Univ`
+% expect:  the switch on: 0 errors, 0 warnings; each author `Univ A Town, Country` and its e-mail
+% status:  RED (N2r2) -> GREEN (perfect_kernel_batchn2r3::a_line_printed_per_author_is_no_loss)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}
+\IEEEauthorblockA{\textit{Univ A} \\
+Town, Country \\
+ann@a.org}
+\and
+\IEEEauthorblockN{Bob Baker}
+\IEEEauthorblockA{\textit{Univ A} \\
+Town, Country \\
+bob@a.org}}
+\maketitle
+Body.
+\end{document}

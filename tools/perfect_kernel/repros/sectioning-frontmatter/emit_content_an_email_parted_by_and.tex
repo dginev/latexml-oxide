@@ -1,0 +1,19 @@
+% mechanism: the rehearsal's bound commands revert as the commands they are bound for (`rehearsal::load`, `alias`), and a
+%   verbatim argument's separator parts its addresses as a break does (`events::raw_lines`): svjour3's
+%   `\email{ann@a.org \and bob@b.org}` in an `\institute` is two addresses, never `\lx@fm@obs@andbob@b.org`
+% witness: 2106.06418 (svjour3 `\email{yjansson@kth.se \and tony@kth.se}`: a nameless creator's contact
+%   `\lx@fm@obs@andtony@kth.se` under `=2`, review revN2 finding 3); the note text 1401.5951; the link target 2106.11154
+% oracle:  pdflatex 0 errors with the witness's svjour3.cls (not in TL 2025); "Ann Able · Bob Baker", "Univ A, Town",
+%   "E-mail: ann@a.org · bob@b.org"
+% engines: rust int146b, the switch on: a nameless creator's `\lx@fm@obs@andbob@b.org`, the content check's excess `bob@b.org`
+% expect:  0 errors, 0 warnings with either switch; Ann Able `ann@a.org`, Bob Baker `bob@b.org`, the institute the block's
+% status:  RED (int146b) -> GREEN (perfect_kernel_batchn2r2::an_email_parted_by_and_keeps_its_addresses)
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Univ A, Town\\ \email{ann@a.org \and bob@b.org}}
+\maketitle
+Body.
+\end{document}

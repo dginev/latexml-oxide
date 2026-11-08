@@ -1,0 +1,18 @@
+% mechanism: the content check on the placed output (`resolver::placed`, under `LATEXML_FM_EMIT=2`): a shared item counts
+%   as often as the inks print its text, at least the most copies one creator holds and at most its copies in all: a line
+%   printed under each author and kept as one shared item is no loss
+% witness: N2r2's measure (dev3 547 papers flagged lost, 479 naming only words the creators still hold: a line printed
+%   once per author kept as one shared item); `Email: rezakord@ipm.ir` printed in two notes, 0712.1873; the main session's
+%   ruling on N2r2's question (a)
+% oracle:  pdflatex 0 errors; "Ann Able", "IDSIA Lab, Lugano", "Bob Baker", "IDSIA Lab, Lugano"
+% engines: rust N2r2, the switch on: 1 warning, the content check's lost `IDSIA Lab Lugano` (every copy in the XML)
+% expect:  the switch on: 0 errors, 0 warnings; both authors `IDSIA Lab, Lugano`
+% status:  RED (N2r2) -> GREEN (perfect_kernel_batchn2r3::a_line_printed_per_author_is_no_loss)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\\ IDSIA Lab, Lugano \and Bob Baker\\ IDSIA Lab, Lugano}
+\maketitle
+Body.
+\end{document}
