@@ -1,0 +1,19 @@
+% mechanism: an author block that closes the title page's tabular and opens another as written, no macro
+%            (`\end{tabular}\begin{tabular}{c}`): the rehearsal's digestion leaves that tabular open, the lines after it in no
+%            box and no event, so the content check — which counts only what the events hold — and the title-page check
+%            see no loss (the tabular-juggle binding, `fallback::is_tabular_juggle`, reads macros only, as the old rule did)
+% witness: 1401.6981 (sig-alternate, `\end{tabular}\begin{tabular}[t]{p{1.3\auwidth}}\centering` between two authors;
+%          `=2` drops authors 2 and 3); the sibling of author_shared_affiliation_line
+% oracle:  pdflatex: 0 errors; "A One", "Dept"
+% engines: rust FB2a off: E=4 ("Attempt to end mode restricted_horizontal"), "Dept" lost; `=2`: E=0, W=0, "Dept" lost
+%          silently
+% expect:  "Dept" kept (A One's affiliation), or at the least a counted Warning for the lost words at `=2`
+% status:  RED (FB2a); no guard (the content check's blind spot for content no box holds, beside RC1's)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{A One \end{tabular}\begin{tabular}{c} Dept}
+\maketitle
+Text.
+\end{document}
