@@ -1070,11 +1070,13 @@ pub(super) fn content_text(content: &Tokens) -> String {
   let tokens = content.unlist_ref();
   for (at, token) in tokens.iter().enumerate() {
     // (inside a word: a letter or digit before it, and a letter, a digit or a group after it)
-    let in_word = text.chars().next_back().is_some_and(char::is_alphanumeric)
-      && tokens.get(at + 1).is_some_and(|next| {
-        next.get_catcode() == Catcode::BEGIN
-          || next.with_str(|s| s.chars().next().is_some_and(char::is_alphanumeric))
-      });
+    let in_word = || {
+      text.chars().next_back().is_some_and(char::is_alphanumeric)
+        && tokens.get(at + 1).is_some_and(|next| {
+          next.get_catcode() == Catcode::BEGIN
+            || next.with_str(|s| s.chars().next().is_some_and(char::is_alphanumeric))
+        })
+    };
     let mut parting_command = false;
     match token.get_catcode() {
       Catcode::LETTER | Catcode::OTHER | Catcode::ACTIVE => text.push_str(&token.to_string()),
@@ -1084,7 +1086,7 @@ pub(super) fn content_text(content: &Tokens) -> String {
           text.push(' ');
         }
       },
-      Catcode::CS if in_word && token.with_str(|name| name.chars().count() == 2) => {},
+      Catcode::CS if token.with_str(|name| name.chars().count() == 2) && in_word() => {},
       Catcode::CS => {
         text.push(' ');
         parting_command = true;
