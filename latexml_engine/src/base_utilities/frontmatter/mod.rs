@@ -2,6 +2,9 @@
 
 use super::*;
 
+// (the old reader's text rules and token primitives, moved: MV1)
+mod classify;
+pub use classify::*;
 mod queue;
 pub use queue::*;
 mod queue_digest;

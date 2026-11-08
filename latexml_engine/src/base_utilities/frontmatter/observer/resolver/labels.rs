@@ -3,7 +3,7 @@
 //! and contact roles.
 
 use super::*;
-use crate::base_utilities::author_block::{
+use crate::base_utilities::frontmatter::classify::{
   ADDRESS_GROUP_SEPARATORS, UNBRACED_LIST_SEPARATORS, ends_a_listed_run, is_listed_local_part,
   is_local_char, names_a_contact, write_out_unspaced_lists,
 };
