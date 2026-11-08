@@ -846,8 +846,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("defs/general", 8),
   ("epl_cls.rs", 43),
   ("eptcs_cls.rs", 28),
-  // (raised by one at Z14: the lexer's own constructor, `\lx@fm@obs@affil@marked`, as the row's others; nothing a document spells)
-  ("events", 59),
+  // (raised by one at Z14: the lexer's own constructor, `\lx@fm@obs@affil@marked`, as the row's others; nothing a document spells;
+  // by one at N2r2: `raw_lines`' break arm holding the `\and` family too, two lines, the whatsits' definitions, 2106.06418)
+  ("events", 60),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   // (Z4a, 4 -> 8: an environment step by its meaning, a CS whose definition is `\begin` or `\end`, a `\let` copy too, what no frame
   // says for a raw environment; the definition's name, not the token's spelling)
