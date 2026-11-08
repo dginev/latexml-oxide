@@ -619,10 +619,12 @@ fn block_names(
         // split reads it so, `split_author_line`'s step 1 (`names_in_wrapper`, `author_block/names_split.rs`: a wrapper
         // holding names with only marks after it split into them, the marks the last name's; `math_active_scripts` only
         // makes breqn's `^` a superscript); grown over the group's close, the run was no balanced one and the name lost
-        // its markup, FB1's P4)
+        // its markup, FB1's P4; the depth is counted from the name's first token, so only a close of a group opened before
+        // the name counts — a group the name's run opens and closes itself is none: revtex's `D. ${\rm Dorn}^{*}$`, whose
+        // `}` closes `{\rm Dorn}` and whose mark the run already holds, written once)
         let past_group = || {
-          let (name_from, name_to) = (at(found[from].1.span?.0)?, at(found[to].1.span?.1)?);
-          let closes = field.tokens.get(name_to..s)?.iter().scan(0, |depth, t| {
+          let name_from = at(found[from].1.span?.0)?;
+          let closes = field.tokens.get(name_from..s)?.iter().scan(0, |depth, t| {
             *depth += t.group_step();
             Some(*depth)
           });
