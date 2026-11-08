@@ -767,18 +767,11 @@ pub(super) fn cut_entry_call(
 
 /// The cuts of the entries the reading took addresses out of (`Resolved::taken`), each in `resolved`; one that can't be cut given
 /// back whole there, the Kind steps' to cut in place after the flush, as for a paper with no block (`insert_frontmatter`) — entry
-/// by entry, not the switch off's whole paper (RT1 row 57a) —, and every one in `whole`, which the checks read: a word the take-out
-/// drops by the reading's own rule, the label before an address (`E-mails:`), is no ink the reading holds no place for
-/// (1610.05419).
-pub(super) fn entry_cuts(
-  reading: &Resolved,
-  resolved: &mut Resolved,
-  whole: &mut Resolved,
-) -> Vec<EntryCut> {
+/// by entry, not the switch off's whole paper (RT1 row 57a).
+pub(super) fn entry_cuts(reading: &Resolved, resolved: &mut Resolved) -> Vec<EntryCut> {
   let names: Vec<&str> = reading.creators.iter().map(|c| c.name.as_str()).collect();
   let mut cuts = Vec::new();
   for taken in &reading.taken {
-    give_back_entry(whole, taken);
     match entry_cut(taken, &names).ok().flatten() {
       Some(cut) => cuts.push(cut),
       None => {

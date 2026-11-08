@@ -830,7 +830,7 @@ fn byline_dropped(index: usize, mut events: Vec<Event>) -> (Vec<Event>, Vec<Rule
       sep.nest = by.nest;
       dropped.extend(
         by.span
-          .map(|span| (index, span, by.text.trim().to_lowercase())),
+          .map(|span| (index, Some(span), by.text.trim().to_lowercase())),
       );
       events[at] = sep;
     }

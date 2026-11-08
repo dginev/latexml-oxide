@@ -1929,19 +1929,17 @@ fn analysis() -> Rc<Analysis> {
   // (an entry's addresses, taken out, are written cut from its tokens, each address its owner's e-mail, as the switch-off writer
   // cuts today's entry (`address_cut`: 2011.02560, astro-ph0610446, 2406.02913); an entry its tokens can't be cut so is given
   // back whole, the Kind steps' to cut in place after the flush, as for a paper with no block, `insert_frontmatter` — entry by
-  // entry, not the switch off's whole paper. The checks read every entry whole, as before: a word the take-out drops by the
-  // reading's own rule, the label before an address (`E-mails:`), is no ink the reading holds no place for, 1610.05419)
+  // entry, not the switch off's whole paper; the checks read the reading and its drops, `Resolved::drops`, 1610.05419)
   let mut resolved = reading.clone();
-  let mut whole = reading.clone();
-  let cuts = entry_cuts(&reading, &mut resolved, &mut whole);
+  let cuts = entry_cuts(&reading, &mut resolved);
   with_ledger(|ledger| {
-    let written = Written::new(ledger, &whole);
+    let written = Written::new(ledger, &reading);
     let made = Rc::new(Analysis {
       generation,
       checks: check_blocks(ledger, &written),
       calls: call_checks(ledger, &written),
-      marks: uncoordinated_marks(ledger, &whole),
-      merged: merged_names(ledger, &whole),
+      marks: uncoordinated_marks(ledger, &reading),
+      merged: merged_names(ledger, &reading),
       cuts,
       reading,
       resolved,
