@@ -32673,7 +32673,10 @@ alike). (N5, the main session's decision K) An unmarked line under a line of one
 whatever its words read as, as the old reader appends it (`$^1$The Graduate Center, CUNY\\ Computer Science\\ New York, USA`,
 2501.04046; hep-ph0511130's `Ionosphere and\\ Radio Wave Propagation`); under two or more entries the line after them is
 evidence of a names row (SYNC row 46's `Cat Cole`), so cs0011034's `… and $^2$Centre for Computational Linguistics\\
-K.U.Leuven` keeps a junk creator, a residual (`Resolver::block`, `labels::later_line_is_names`' `after_labelled`). The
+K.U.Leuven` keeps a junk creator, a residual (`Resolver::block`, `labels::later_line_is_names`' `after_labelled`). With
+it, an address several names spell is the corresponding author's only where they are one of them, else the block's, as
+the old reader holds it (`Resolver::spellers`; `perfect_kernel_batch64::marked_block_email_line_owner`'s `wang@x.org` under
+two Wangs, which the old writer, no longer declining the reading's names, wrote on the corresponding Z. Li). The
 concession's give-back of a conceded creator's trailing marks (`repart::give_back_ink`) has no live shape after N1-N3: a
 marked piece is a name, and today's keeps a per-author class's line one creator; its in-doubt branch, a prefix mark's, stays
 guarded (`perfect_kernel_batch94a::a_conceded_creator_keeps_its_marks`).
