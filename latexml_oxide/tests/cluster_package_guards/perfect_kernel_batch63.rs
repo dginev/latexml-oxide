@@ -710,22 +710,16 @@ fn author_comma_before_styled_affiliation() {
 
 /// 63e (negative): a name beside its institution is not two people — no `merged_creators` error for acmart's
 /// `\author{Jane Doe, Bell Labs}`. Repro sectioning-frontmatter/author_name_with_affiliation_is_not_merged.
-/// T1 (`LATEXML_FM_EMIT=2`): one author, the personname the name alone, "Bell Labs" an affiliation
-/// before the class's — no merged-creator error, every printed word kept.
+/// At `LATEXML_FM_EMIT=2` this guard fails, the `=2` output wrong (T1 (w); revT1 F2: a name and an institution split by word reading (rev94a B1)).
 #[test]
 fn author_name_with_affiliation_is_not_merged() {
   assert_creators(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_name_with_affiliation_is_not_merged.tex"
     ),
-    expect::<&[&str]>(
-      &[
-        "<creator role=\"author\"><personname>Jane Doe, Bell Labs</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id1\">Univ A</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id2\">Country</text></contact></creator>",
-      ],
-      &[
-        "<creator role=\"author\"><personname>Jane Doe</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Bell Labs</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id1\">Univ A</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id2\">Country</text></contact></creator>",
-      ],
-    ),
+    &[
+      "<creator role=\"author\"><personname>Jane Doe, Bell Labs</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id1\">Univ A</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id2\">Country</text></contact></creator>",
+    ],
   );
 }
 
@@ -826,22 +820,16 @@ fn author_serial_comma_list_shares_one_affiliation() {
 
 /// 63e (negative): a name list part naming an institution rejoins the name before it (`\author{John Smith,
 /// University of Toronto}`). Repro sectioning-frontmatter/author_name_then_institution_stays_one_author.
-/// T1 (`LATEXML_FM_EMIT=2`): one author, the personname the name alone, the institution after its comma
-/// her affiliation — no author invented, every printed word kept.
+/// At `LATEXML_FM_EMIT=2` this guard fails, the `=2` output wrong (T1 (w); revT1 F2: a name and an institution split by word reading (rev94a B1)).
 #[test]
 fn author_name_then_institution_stays_one_author() {
   assert_creators(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_name_then_institution_stays_one_author.tex"
     ),
-    expect::<&[&str]>(
-      &[
-        "<creator role=\"author\"><personname>John Smith, University of Toronto</personname></creator>",
-      ],
-      &[
-        "<creator role=\"author\"><personname>John Smith</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of Toronto</contact></creator>",
-      ],
-    ),
+    &[
+      "<creator role=\"author\"><personname>John Smith, University of Toronto</personname></creator>",
+    ],
   );
 }
 
@@ -981,22 +969,16 @@ fn author_names_set_in_math_stay_apart() {
 
 /// 63e (negative): a per-author class splits only a line of names — `\author{John Smith, Max Planck Institute for
 /// Mathematics}` stays one author as written. Repro sectioning-frontmatter/author_person_named_institution_stays_with_the_name.
-/// T1 (`LATEXML_FM_EMIT=2`): one author, the personname the name alone, the institution after its comma
-/// his affiliation — no author invented, every printed word kept.
+/// At `LATEXML_FM_EMIT=2` this guard fails, the `=2` output wrong (T1 (w); revT1 F2: a name and an institution split by word reading (rev94a B1)).
 #[test]
 fn author_person_named_institution_stays_with_the_name() {
   assert_creators(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_person_named_institution_stays_with_the_name.tex"
     ),
-    expect::<&[&str]>(
-      &[
-        "<creator role=\"author\"><personname>John Smith, Max Planck Institute for Mathematics</personname></creator>",
-      ],
-      &[
-        "<creator role=\"author\"><personname>John Smith</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Max Planck Institute for Mathematics</contact></creator>",
-      ],
-    ),
+    &[
+      "<creator role=\"author\"><personname>John Smith, Max Planck Institute for Mathematics</personname></creator>",
+    ],
   );
 }
 
@@ -1138,7 +1120,8 @@ fn author_emulateapj_marked_name_lines_continue() {
 /// sectioning-frontmatter/author_ieee_blockn_prefix_marks_across_quad.
 /// 64a: the block's marked affiliation lines answer the marks, each author linked to its own (KPE #553).
 /// T1 (`LATEXML_FM_EMIT=2`): each author linked as before; Bob Baker's answered mark no longer shown on his name
-/// (FIDELITY_CHARTER §4, a name's label is the name alone), Ann Able's still (a residual both switches share, one fewer at 2).
+/// (FIDELITY_CHARTER §4, a name's label is the name alone), Ann Able's still (a residual both switches share, one fewer at 2;
+/// T1's mechanism B, answered marks left on names, as `…_affiliations_after_break`).
 #[test]
 fn author_ieee_blockn_prefix_marks_across_quad() {
   assert_creators(
@@ -1160,20 +1143,14 @@ fn author_ieee_blockn_prefix_marks_across_quad() {
 
 /// 63e (negative): a two-word place after a name (`\author{John Smith, New York}`) invents no author (review r7). Repro
 /// sectioning-frontmatter/author_amsart_name_and_place_stays_one_author.
-/// T1 (`LATEXML_FM_EMIT=2`): one author, the personname the name alone, the place after its comma her
-/// affiliation — no author invented, every printed word kept.
+/// At `LATEXML_FM_EMIT=2` this guard fails, the `=2` output wrong (T1 (w); revT1 F2: a name and an institution split by word reading (rev94a B1)).
 #[test]
 fn author_amsart_name_and_place_stays_one_author() {
   assert_creators(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_amsart_name_and_place_stays_one_author.tex"
     ),
-    expect::<&[&str]>(
-      &["<creator role=\"author\"><personname>John Smith, New York</personname></creator>"],
-      &[
-        "<creator role=\"author\"><personname>John Smith</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">New York</contact></creator>",
-      ],
-    ),
+    &["<creator role=\"author\"><personname>John Smith, New York</personname></creator>"],
   );
 }
 
@@ -2555,30 +2532,20 @@ fn toc_copy_keeps_its_language() {
 
 /// 63l: an "and" tied to the name before it (`Ohta\ddag~and Kenji`, nlin0101056) or set in a group (`Price {\ and}
 /// Ken`, 1508.01140) separates two authors. Repro sectioning-frontmatter/author_and_tied_or_grouped_splits.
-/// T1 (`LATEXML_FM_EMIT=2`): the same five, each `\dag`/`\ddag` a mark (FIDELITY_CHARTER §4: a footnote-list
-/// symbol, `\dag` included, is a mark), unanswered and so shown, as a `<sup>`.
+/// At `LATEXML_FM_EMIT=2` this guard fails, the `=2` output wrong (T1 (w); revT1 F1: a bare `\dag` written as a `<sup>` mark, pdflatex prints it on the baseline).
 #[test]
 fn author_and_tied_or_grouped_splits() {
   assert_creators(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_and_tied_or_grouped_splits.tex"
     ),
-    expect::<&[&str]>(
-      &[
-        "<creator role=\"author\"><personname>Tetsu Masuda†</personname></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yasuhiro Ohta‡</personname></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Kenji Kajiwara†</personname></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Huw Price</personname></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ken Wharton</personname></creator>",
-      ],
-      &[
-        "<creator role=\"author\"><personname>Tetsu Masuda<sup xml:id=\"id1\">†</sup></personname></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yasuhiro Ohta<sup xml:id=\"id2\">‡</sup></personname></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Kenji Kajiwara<sup xml:id=\"id3\">†</sup></personname></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Huw Price</personname></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ken Wharton</personname></creator>",
-      ],
-    ),
+    &[
+      "<creator role=\"author\"><personname>Tetsu Masuda†</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yasuhiro Ohta‡</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Kenji Kajiwara†</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Huw Price</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ken Wharton</personname></creator>",
+    ],
   );
 }
 
@@ -4402,24 +4369,15 @@ fn acmart_comma_author_list() {
 /// 63x (HF2): "Name, TU Berlin" in an acmart `\author` is one person beside the institution (TU an institution's
 /// acronym, not a given name), kept as written with no merged-creator error. Witness 2410.17928. Repro
 /// sectioning-frontmatter/acmart_author_name_tu_institution.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the personname the name alone, "TU Berlin" its
-/// affiliation — every printed word kept, no merged-creator error.
+/// At `LATEXML_FM_EMIT=2` this guard fails, the `=2` output wrong (T1 (w); revT1 F2: a name and an institution split by word reading (rev94a B1)).
 #[test]
 fn acmart_author_name_tu_institution() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_author_name_tu_institution.tex"
   );
-  assert_eq!(
-    creators_63x(tex),
-    expect(
-      vec![
-        "<creator role=\"author\">\n    <personname>Stephan Bauroth, TU Berlin</personname>\n    <contact name=\"email: \" role=\"email\">s.bauroth@tu-berlin.de</contact>\n  </creator>",
-      ],
-      vec![
-        "<creator role=\"author\">\n    <personname>Stephan Bauroth</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">TU Berlin</contact>\n    <contact name=\"email: \" role=\"email\">s.bauroth@tu-berlin.de</contact>\n  </creator>",
-      ],
-    )
-  );
+  assert_eq!(creators_63x(tex), vec![
+    "<creator role=\"author\">\n    <personname>Stephan Bauroth, TU Berlin</personname>\n    <contact name=\"email: \" role=\"email\">s.bauroth@tu-berlin.de</contact>\n  </creator>",
+  ]);
 }
 
 /// 63x (HF2): a mark manyfoot declares beside `\footnotemark` (`\footnotemarkAAffil[1]`, manyfoot.sty:253-257) after

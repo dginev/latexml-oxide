@@ -2568,40 +2568,22 @@ fn empty_mark_is_no_mark() {
 /// the legend is Bob Baker's note, a project role being a contribution (`classify_thanks`'s `project_role`; SYNC row
 /// 97c (d)), no longer his affiliation; its `mark` is the run's first symbol, as the observer's writer reads a compound
 /// label (`show_legend_mark`; the printed `†‡` stays in its text).
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered `†` no longer shown on the names
-/// (FIDELITY_CHARTER §4, a name's label is the name alone; Bob Baker's `‡` still, a residual), the note's `mark` the whole
-/// compound it prints, the space after a line's mark kept in the institution.
+/// At `LATEXML_FM_EMIT=2` this guard fails, the `=2` output wrong (T1 (w); revT1 F3: `Bob Baker‡`, a leftover of the mark `†‡` no entry is labelled with (mechanism B)).
 #[test]
 fn compound_legend_mark_names_its_carrier() {
   let xml = convert_repro!("author_compound_legend_mark_names_its_carrier.tex");
   assert_no_merged_names(&xml);
   let univ_a = affiliation("Univ A");
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(true, r#"Ann Able<sup xml:id="id1">†</sup>"#, &univ_a),
-        creator(
-          false,
-          r#"Bob Baker<sup xml:id="id2">†‡</sup>"#,
-          &format!(
-            r#"{univ_a} <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id3"><sup xml:id="id3.1"><text font="italic" xml:id="id3.1.1">†‡</text></sup> Project lead</note>"#
-          )
-        ),
-      ],
-      vec![
-        creator(true, "Ann Able", &affiliation(" Univ A")),
-        creator(
-          false,
-          r#"Bob Baker<sup xml:id="id1">‡</sup>"#,
-          &format!(
-            r#"{} <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†‡" role="thanks" xml:id="id2"><sup xml:id="id2.1"><text font="italic" xml:id="id2.1.1">†‡</text></sup> Project lead</note>"#,
-            affiliation(" Univ A")
-          )
-        ),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), [
+    creator(true, r#"Ann Able<sup xml:id="id1">†</sup>"#, &univ_a),
+    creator(
+      false,
+      r#"Bob Baker<sup xml:id="id2">†‡</sup>"#,
+      &format!(
+        r#"{univ_a} <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id3"><sup xml:id="id3.1"><text font="italic" xml:id="id3.1.1">†‡</text></sup> Project lead</note>"#
+      )
+    ),
+  ]);
 }
 
 /// An address spells a name by its given name and surname whole (`diwu@` Di Wu's) or by the initials before the surname
