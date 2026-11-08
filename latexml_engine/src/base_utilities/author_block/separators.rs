@@ -1,7 +1,7 @@
 //! Author-line separators: line parts, words, `and` splits, alignment and ACM column unwrapping.
 
 use super::*;
-use crate::frontmatter_stores::LAYOUT;
+use crate::frontmatter_stores::{LAYOUT, cs_in};
 
 /// If `tokens` (spaces around it aside) is one brace group, its opening declarations ([`opening_declarations`]:
 /// `\bf`, `\small`) and the rest of its content.
@@ -861,7 +861,7 @@ fn line_wrapper(line: &[Token]) -> Option<(Vec<LineWrap>, Vec<Token>)> {
       let style: Vec<Token> = declarations
         .iter()
         .copied()
-        .filter(|u| !PARAGRAPH_LAYOUT.iter().any(|cs| *u == T_CS!(*cs)))
+        .filter(|u| !cs_in(u, &PARAGRAPH_LAYOUT))
         .collect();
       (
         vec![LineWrap::Declarations(style)],

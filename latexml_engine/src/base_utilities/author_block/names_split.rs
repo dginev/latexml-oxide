@@ -1,6 +1,7 @@
 //! Splitting an author line into names: separators expanded, wrappers, leading spacing.
 
 use super::*;
+use crate::frontmatter_stores::cs_in;
 
 /// Second-level split of the author heuristic: divide ONE line that has already
 /// been classified as an *author* line (its superscript marker sits far enough
@@ -733,7 +734,7 @@ fn names_in_wrapper(delimiter: &[Token], piece: &Tokens) -> Vec<(Vec<Token>, Tok
   // and B}`, mn2e 1205.5573) is no styling of theirs: each name stands without it, its paragraph layout (`\centering`)
   // left out with it, as a parbox per name a text width wide would lay them out anew. Its other opening declarations
   // style every name (`\mbox{\large A, B}`, `\parbox{…}{\centering\bfseries A, B}`): each name in a group of them.
-  let layout_box = open != start && LAYOUT_BOXES.iter().any(|cs| v[start] == T_CS!(*cs));
+  let layout_box = open != start && cs_in(&v[start], &LAYOUT_BOXES);
   let declarations = if open == start || layout_box {
     opening_declarations(&Tokens::new(inner.to_vec()))
   } else {
@@ -745,7 +746,7 @@ fn names_in_wrapper(delimiter: &[Token], piece: &Tokens) -> Vec<(Vec<Token>, Tok
     let style: Vec<Token> = declarations
       .iter()
       .copied()
-      .filter(|t| !PARAGRAPH_LAYOUT.iter().any(|cs| *t == T_CS!(*cs)))
+      .filter(|t| !cs_in(t, &PARAGRAPH_LAYOUT))
       .collect();
     if style.iter().all(|t| *t == T_SPACE!()) {
       Vec::new()
@@ -859,12 +860,7 @@ fn notes_to_the_name_before(pieces: Vec<(Vec<Token>, Tokens)>) -> Vec<(Vec<Token
       }
       start = past;
     }
-    while end > start
-      && (is_spacing(&v[end - 1])
-        || SEPARATOR_LINE_BREAKS
-          .iter()
-          .any(|cs| v[end - 1] == T_CS!(*cs)))
-    {
+    while end > start && (is_spacing(&v[end - 1]) || cs_in(&v[end - 1], &SEPARATOR_LINE_BREAKS)) {
       end -= 1;
     }
     let trimmed = &v[start..end];
