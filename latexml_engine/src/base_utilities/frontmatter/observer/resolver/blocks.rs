@@ -307,12 +307,23 @@ impl Resolver {
                     .any(|c| c.requests.iter().any(|r| label_matches(r, label)))
               })
         });
-      let first_kind = if unrequested_glyph {
-        Some(&EventKind::Name)
-      } else {
-        first_ink.map(|e| &e.kind)
-      };
-      match first_kind {
+      if unrequested_glyph && let Some(carried) = carried {
+        let notes = line
+          .events
+          .iter()
+          .copied()
+          .filter(|e| e.kind == EventKind::Note);
+        self.continue_line(
+          index,
+          &carried,
+          &events_text(&line.events),
+          notes,
+          above.last().copied(),
+        );
+        continues = Some(carried);
+        continue;
+      }
+      match first_ink.map(|e| &e.kind) {
         Some(EventKind::Mark) => {
           let entries = entries_of(&line.events);
           // (or the block is that one line, its affiliations the calls after it: revtex's `\author{$^{1}$Masashi Kimura
@@ -603,17 +614,7 @@ impl Resolver {
           // 1209.0869; 2606.23976, 0910.1386, 1411.2744)
           let carried = if addresses_in(&text).is_empty() || !only_addresses(&text) {
             if let Some(carried) = carried {
-              self.continue_entry(&carried, &text);
-              // (a labelled entry's line, its notes the block's, as a line of notes alone under it: `$^{2}$Univ B\\ Funded
-              // by X.\thanks{Grant 5.}`, review revLO2 base; `emitting`)
-              let (owner, rule) = if self.emitting && matches!(carried, Continued::Pending(_)) {
-                (None, "note:line-owner note:entry")
-              } else {
-                (above.last().copied(), "note:line-owner")
-              };
-              for note in notes {
-                self.note(index, note, owner, rule);
-              }
+              self.continue_line(index, &carried, &text, notes, above.last().copied());
               continues = Some(carried);
               continue;
             }
@@ -1014,6 +1015,28 @@ impl Resolver {
       }
     }
     continues
+  }
+
+  /// A line continuing the entry above it, an unmarked one or one a glyph no name requests leads: its text the entry's
+  /// ([`Self::continue_entry`]); its notes, under a labelled entry, the block's, as a line of notes alone under it
+  /// (`$^{2}$Univ B\\ Funded by X.\thanks{Grant 5.}`, review revLO2 base; `emitting`), else the name's above it.
+  fn continue_line<'e>(
+    &mut self,
+    index: usize,
+    carried: &Continued,
+    text: &str,
+    notes: impl IntoIterator<Item = &'e Event>,
+    above: Option<usize>,
+  ) {
+    self.continue_entry(carried, text);
+    let (owner, rule) = if self.emitting && matches!(carried, Continued::Pending(_)) {
+      (None, "note:line-owner note:entry")
+    } else {
+      (above, "note:line-owner")
+    };
+    for note in notes {
+      self.note(index, note, owner, rule);
+    }
   }
 
   /// An unmarked line continuing the entry before it: its text appended, and the entry's lines kept
