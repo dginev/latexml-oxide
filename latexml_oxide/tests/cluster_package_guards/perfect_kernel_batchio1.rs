@@ -8,8 +8,7 @@ use latexml::util::test::{error_count, warning_count};
 use super::perfect_kernel_batchz4::{creators_xml, run};
 
 /// A `\thanks` inside an authblk `\author` call (a creator call read apart from the blocks): its note under the creator
-/// on both switches, `=2` writing the creators off writes. Its one Warning at `=2` is the writer's honest residual: the
-/// note is written as its plain text, no piece of the call holding its tokens (`emit.rs` "call: no piece holds it").
+/// on both switches, `=2` writing the creators off writes (its argument as written, `emit.rs` `call_note`, IO2).
 #[test]
 fn a_creator_calls_nested_thanks_is_its_creators() {
   let tex = include_str!(
@@ -22,7 +21,7 @@ fn a_creator_calls_nested_thanks_is_its_creators() {
     "{off_log}"
   );
   let (log, emitted) = run(tex, 2);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let creators = creators_xml(&emitted);
   assert_eq!(creators, creators_xml(&off), "{emitted}");
   assert_eq!(creators.len(), 2, "{emitted}");
@@ -30,6 +29,61 @@ fn a_creator_calls_nested_thanks_is_its_creators() {
     creators[0].contains("Rae</personname>")
       && creators[0].contains("role=\"thanks\"")
       && creators[0].contains(">Electronic address: craig@x.org</note>"),
+    "{}",
+    creators[0]
+  );
+}
+
+/// IO2 (review revG5 3): the call's `\thanks` is written from its argument as written, not its text — the italic, the
+/// formula and the link kept at `=2` as off keeps them (`emit.rs` `call_note`; distinct from the plain-text note above:
+/// the markup only the tokens hold).
+#[test]
+fn a_creator_calls_thanks_keeps_its_markup() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_authblk_call_thanks_markup.tex"
+  );
+  for mode in [0, 2] {
+    let (log, out) = run(tex, mode);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{mode}: {log}"
+    );
+    let creators = creators_xml(&out);
+    assert_eq!(creators.len(), 2, "{mode}: {out}");
+    let craig = &creators[0];
+    assert!(
+      craig.contains("Rae</personname>")
+        && craig.contains("role=\"thanks\"")
+        && craig.contains("Note <text font=\"italic\"")
+        && craig.contains("tex=\"x+y\"")
+        && craig.contains("<ref class=\"ltx_href\" href=\"http://x.org\">the site</ref>.</note>"),
+      "{mode}: {craig}"
+    );
+  }
+}
+
+/// IO2 (review revG5 2): an `\email` the document defines inside an authblk `\author` call is the name's text, as Perl's
+/// `\lx@add@author` digests the whole call into the personname — never also a contact (the address written twice).
+#[test]
+fn a_creator_calls_email_stays_in_its_name() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_authblk_call_email_in_name.tex"
+  );
+  let (off_log, off) = run(tex, 0);
+  assert_eq!(
+    (error_count(&off_log), warning_count(&off_log)),
+    (0, 0),
+    "{off_log}"
+  );
+  let (log, emitted) = run(tex, 2);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let creators = creators_xml(&emitted);
+  assert_eq!(creators, creators_xml(&off), "{emitted}");
+  assert_eq!(creators.len(), 2, "{emitted}");
+  assert!(
+    creators[0].contains("craig@x.org</text></personname>")
+      && creators[0].matches("craig@x.org").count() == 1,
     "{}",
     creators[0]
   );

@@ -1346,6 +1346,11 @@ fn item_call(
       if contact_role && let Some(tokens) = call_contact(&call, assoc, written_out)? {
         return Ok(annotate_now("ltx:contact", &keys, tokens.unlist_ref()));
       }
+      // (a note inside it: its command's argument as written, under the note's own kind, as a block's note — its fonts,
+      // links and formulas kept: `\author{Craig Rae\thanks{Note \textit{italic} and $x^2$.}}`, review revG5 3)
+      if note && let Some((footnote, argument)) = call_note(&call, assoc)? {
+        return Ok(note_call(footnote, None, label, argument));
+      }
       let found = match pieces.entry(index) {
         Entry2::Occupied(held) => held.into_mut(),
         Entry2::Vacant(place) => place.insert(call_pieces(&call)?),
@@ -1459,6 +1464,42 @@ fn call_contact(call: &ApiCall, assoc: &Assoc, within: bool) -> Result<Option<To
     Some(tokens) if within => one_address(&tokens, &assoc.text).map(Some),
     contact => Ok(contact),
   }
+}
+
+/// The argument of the note command printing `assoc` in `call`'s content (the one by its text, else its only note), and
+/// whether it is a `\\footnote`'s, as [`note_argument`] reads a block's note.
+fn call_note(call: &ApiCall, assoc: &Assoc) -> Result<Option<(bool, Vec<Token>)>> {
+  let Some((events, formulas, environments, _)) = rehearsed(call.content.unlist_ref())? else {
+    return Ok(None);
+  };
+  let field = Field {
+    tokens:       call.content.unlist_ref(),
+    base:         0,
+    formulas:     &formulas,
+    environments: &environments,
+  };
+  let notes: Vec<&Event> = events
+    .iter()
+    .filter(|e| e.kind == EventKind::Note)
+    .collect();
+  let key = norm(&assoc.text);
+  let Some(note) = notes
+    .iter()
+    .find(|e| norm(&e.text) == key)
+    .or(notes.first().filter(|_| notes.len() == 1))
+  else {
+    return Ok(None);
+  };
+  let Some((start, end)) = note.span else {
+    return Ok(None);
+  };
+  let (start, end) = (usize::from(start), usize::from(end));
+  Ok(
+    field
+      .content_of((start, end), 0, start)
+      .and_then(|(tokens, _)| note_argument(&tokens))
+      .map(|argument| (note.footnote, argument)),
+  )
 }
 
 /// A call's piece ([`call_pieces`]): its text, and its tokens, `None` where no balanced run holds it.
