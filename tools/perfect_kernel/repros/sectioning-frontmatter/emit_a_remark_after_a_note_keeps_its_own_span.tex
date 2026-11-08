@@ -1,0 +1,20 @@
+% mechanism: a name's collaboration remark after the name's note opens a run of its own (the reading's
+%   `lines::remark_pieces_joined`, from the piece a remark opens in, `remark_start`): the name keeps its event and the
+%   remark a span of its own, so the emitter writes the remark's contact in its markup, after the note (rows C2-C3; the
+%   old reader's `name_and_remark`; review revNL1 S1)
+% witness: review revNL1 probes c2e (`\textsc`), c2f (`{\it ATLAS}`), c2g (revtex, `\footnote` + `\textit`); 0711.1544,
+%   1201.5130 (`Darren~D.~Price\thanks{\email{…}} (on behalf of the D\O\ and CDF collaborations)`)
+% oracle:  pdflatex 0 errors: "Ann Able∗(for the Atlas Collaboration)" (Atlas in small capitals)
+% engines: rust NL1, the switch on: the name, its note and the remark joined, the collaboration written as plain text
+%   before the note, a "span letters differ" Warning; MV1 both ways and off: the contact in its small capitals
+% expect:  0 errors, 0 warnings; Ann Able, her thanks note, then `(for the <text font="smallcaps">Atlas</text>
+%   Collaboration)` both ways
+% status:  RED (NL1, the switch on) -> GREEN (perfect_kernel_batchnl1::a_remark_after_a_note_keeps_its_own_span)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{a@b.c} (for the \textsc{Atlas} Collaboration)}
+\maketitle
+x
+\end{document}

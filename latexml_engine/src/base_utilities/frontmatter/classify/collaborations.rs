@@ -162,6 +162,10 @@ pub fn reads_as_listed_collaboration(text: &str, listed: bool) -> bool {
 /// for the TOTEM Collaboration:\\ G.~Antchev …`, 1204.5689; `JLQCD Collaboration: S.~Aoki$^1$, …`, hep-lat0212039).
 pub fn collaboration_heads(text: &str) -> bool { text.trim_end().ends_with(':') }
 
+/// The words a remark on a name opens with when it names whom the author speaks for (`for the ATLAS Collaboration`, `on
+/// behalf of the CMS Team`), lowercased with the space after them: `name_and_remark`'s and the reading's one list.
+pub(in crate::base_utilities) const SPEAKS_FOR: [&str; 2] = ["for ", "on behalf of "];
+
 /// Whether the text after a name's notes is a remark naming the group the author speaks for: "for" or "on behalf of",
 /// then a few words that name a group (`Eleni Petrakou\inst{1}\fnsep\thanks{…} for CAPP/IBS`, webofc, 1702.03664) —
 /// the name ended at its notes, so the remark is no part of it, a collaboration contact as a collaboration's remark is
@@ -172,7 +176,7 @@ pub fn collaboration_heads(text: &str) -> bool { text.trim_end().ends_with(':') 
 /// phrase going on in lowercase (`for discussions`), more than six words or an address (review rev106c).
 pub(in crate::base_utilities) fn speaks_for_after_notes(text: &str) -> bool {
   let lower = text.trim().to_lowercase();
-  let Some(rest) = ["for ", "on behalf of "]
+  let Some(rest) = SPEAKS_FOR
     .iter()
     .find_map(|p| lower.starts_with(p).then(|| text.trim()[p.len()..].trim()))
   else {

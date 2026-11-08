@@ -69,12 +69,24 @@ pub(super) use crate::base_utilities::frontmatter::observer::events::{inked, mar
 
 /// The block's events with the ink one command draws inside a word read as the word's letters (row A2): a box a command
 /// draws right against the letters before or after it (no space between them in the source), whose cover holds a comma
-/// or a row break it draws as ink, parts no names — combelow's `\cb{t}` stacks a `t` over a comma in an alignment
-/// (combelow.sty:16), so `Bogdan Rai\cb{t}\u{a}` is one name, "Bogdan Raiță" as pdflatex prints it (2507.13598), not
-/// "Bogdan Rai", "t", "ă" at a comma. The cover is the events the invocation printed, each span opening at the command's
-/// one token (its letters' the widest), a row break or a cell of its own alignment no span at all; one Name with the
-/// letters before and after it, their texts joined as the source joins them.
+/// or a row break it draws as ink inside its box, parts no names — combelow's `\cb{t}` stacks a `t` over a comma in an
+/// alignment (combelow.sty:16), so `Bogdan Rai\cb{t}\u{a}` is one name, "Bogdan Raiță" as pdflatex prints it
+/// (2507.13598), not "Bogdan Rai", "t", "ă" at a comma. The cover is the events the invocation printed, each span
+/// opening at the command's one token (its letters' the widest), a row break or a cell of its own alignment no span at
+/// all; one Name with the letters before and after it, their texts joined as the source joins them ([`printed_join`]).
+/// A row break or a comma the command prints at its own level, after its box, parts what it ends as any does
+/// (`\newcommand\nlx{\mbox{Jr.}\\}`, `Ann Able~\nlx Bob Baker`: "Ann Able Jr." and "Bob Baker", review revNL1 S2).
 pub(super) fn words_through_one_command(events: &[Event]) -> Cow<'_, [Event]> {
+  // (a comma drawn inside the command's box, or a row of an alignment it opens there: deeper than the command's own
+  // event — not one it prints after its box)
+  let drawn_inside = |command: &Event, e: &Event| {
+    e.nest > command.nest
+      && match e.kind {
+        EventKind::Break => e.role.as_deref() == Some("row"),
+        EventKind::Sep(SepKind::Comma) => true,
+        _ => false,
+      }
+  };
   // (most blocks hold no such cover: read as they are, uncopied — the old writer reads a block's events per creator)
   let parted_cover = events.iter().enumerate().any(|(i, e)| {
     e.kind == EventKind::Layout
@@ -83,7 +95,7 @@ pub(super) fn words_through_one_command(events: &[Event]) -> Cow<'_, [Event]> {
           && events[i + 1..]
             .iter()
             .take_while(|e| e.span.is_none_or(|(a, _)| a == s))
-            .any(|e| matches!(e.kind, EventKind::Break | EventKind::Sep(SepKind::Comma)))
+            .any(|inner| drawn_inside(e, inner))
       })
   });
   if !parted_cover {
@@ -131,21 +143,15 @@ pub(super) fn words_through_one_command(events: &[Event]) -> Cow<'_, [Event]> {
       j += 1;
     }
     let cover = &events[i..=last];
-    let parts = cover
-      .iter()
-      .any(|e| matches!(e.kind, EventKind::Break | EventKind::Sep(SepKind::Comma)));
-    let letters: String = cover
-      .iter()
-      .filter(|e| e.kind == EventKind::Name)
-      .map(|e| e.text.trim())
-      .collect();
+    let parts = cover.iter().any(|e| drawn_inside(&events[i], e));
+    let named = |e: &Event| e.kind == EventKind::Name;
     let before = out
       .last()
       .filter(|e| e.kind == EventKind::Name && e.span.is_some_and(|(_, b)| b == s));
     let after = events
       .get(last + 1)
       .filter(|e| e.kind == EventKind::Name && e.span.is_some_and(|(a, _)| a == end));
-    if !parts || letters.is_empty() || (before.is_none() && after.is_none()) {
+    if !parts || !cover.iter().any(named) || (before.is_none() && after.is_none()) {
       out.push(events[i].clone());
       i += 1;
       continue;
@@ -155,28 +161,60 @@ pub(super) fn words_through_one_command(events: &[Event]) -> Cow<'_, [Event]> {
       None => Event {
         text: String::new(),
         span: Some((s, end)),
-        ..cover
-          .iter()
-          .find(|e| e.kind == EventKind::Name)
-          .expect("a letter")
-          .clone()
+        ..cover.iter().find(|e| named(e)).expect("a letter").clone()
       },
     };
-    word.text.push_str(&letters);
-    let mut to = end;
-    if let Some(after) = after {
-      word.text.push_str(after.text.trim_start());
-      to = after.span.map_or(to, |(_, b)| b);
-      i = last + 2;
-    } else {
-      i = last + 1;
-    }
+    let (through, to) = match after {
+      Some(after) => (last + 1, after.span.map_or(end, |(_, b)| b)),
+      None => (last, end),
+    };
+    // (the letters before end at the command's token, so nothing parts them from its own)
+    word
+      .text
+      .push_str(&printed_join(&events[i..=through], named));
+    i = through + 1;
     // (its own tokens too, to the last letter: the emitter's run of the name, `writer::emit::event_run_at`)
     word.span = word.span.map(|(a, _)| (a, to));
     word.marks = word.marks.map(|(a, _)| (a, to));
     out.push(word);
   }
   Cow::Owned(out)
+}
+
+/// The text of a run of events' pieces (`piece`) joined as the source joins them: a space between two pieces only where
+/// the source has one, a token none of the run's events covers between them — `(for the` and `\babar\ collaboration)`
+/// parted by the space before `\babar` (0711.1544); the letters before a command's box, its own and those after it, no
+/// space (`Rai\cb{t}\u{a}`, 2507.13598; [`words_through_one_command`]); a note reference between two pieces covering
+/// the tokens it prints, the space after it the source's (`BNL-Bielefeld\fnref{col1} Collaboration)`, 1212.4278). An
+/// event of no span (a cell of a command's alignment) parts nothing. Each piece's text trimmed; the reading's one join
+/// of a name's pieces ([`remark_pieces_joined`]) and of a word's ink.
+pub(super) fn printed_join(run: &[Event], piece: impl Fn(&Event) -> bool) -> String {
+  let mut text = String::new();
+  // (where the source covered so far ends, and whether a token no event covers lies since the last piece)
+  let mut covered: Option<u16> = None;
+  let mut spaced = false;
+  for e in run {
+    let is_piece = piece(e);
+    if let Some((a, b)) = e.span {
+      if covered.is_some_and(|c| a > c) {
+        spaced = true;
+      }
+      covered = Some(covered.map_or(b, |c| c.max(b)));
+    }
+    if !is_piece {
+      continue;
+    }
+    let t = e.text.trim();
+    if t.is_empty() {
+      continue;
+    }
+    if spaced && !text.is_empty() {
+      text.push(' ');
+    }
+    text.push_str(t);
+    spaced = false;
+  }
+  text
 }
 
 /// The block's events with an IEEE template's ordinal before a name (`1\textsuperscript{st} Sertac Kilickaya`,
@@ -793,24 +831,40 @@ pub(super) fn joined_single_name(events: Vec<Event>) -> Vec<Event> {
   out
 }
 
+/// Whether a Mark is a reference to a note (`name_takes_annotations`' annotations a remark holds, moved onto the name):
+/// a `\footnotemark`, or a request of a note's label — elsarticle's `\fnref`, `\thanksref`, `\corref`, `\corauthref`,
+/// `\tnoteref` (elsart_support_core_sty.rs, `fn:`, `thanks:`, `cor:`, `corauth:`, `tnote:`). A request of an
+/// affiliation's label (`\altaffilmark`, `\inst`) is a mark of the name's, no note's: it ends the remark's run (review
+/// revNL1 S1).
+fn note_reference(e: &Event) -> bool {
+  e.kind == EventKind::Mark
+    && match e.role.as_deref() {
+      Some(role) if role.starts_with("footnotemark") => true,
+      Some("request") => e.label.as_deref().is_some_and(|labels| {
+        labels.split(',').all(|label| {
+          label.split_once(':').is_some_and(|(prefix, _)| {
+            ["fn", "thanks", "cor", "corauth", "tnote"].contains(&prefix)
+          })
+        })
+      }),
+      _ => false,
+    }
+}
+
 /// A names line's pieces with a name's collaboration remark that notes, layout or a command's own gap part read whole
 /// (rows C2-C4 of the old reader's names split, `author_block/collaborations.rs` `name_and_remark` and
-/// `name_takes_annotations`): the Name events of one piece, parted only by notes, note references, layout and gaps inside
-/// one command ([`gap_inside_one_command`]), are one Name where their text is a name and its remark naming a
-/// collaboration — or, after a name, such a remark — and the first alone is neither; the notes go after it, the name's
-/// (`Christian Schmidt (for the BNL-Bielefeld\fnref{col1} Collaboration)`, elsarticle, 1212.4278; `Kalanand
-/// Mishra\footnote{…} (for the \babar\ collaboration)`, the remark in a box, 0711.1544). A remark reads as a collaboration
-/// as `reads_as_collaboration` reads it, or after the name's notes or marks as `speaks_for_after_notes` does (`for
+/// `name_takes_annotations`): from a piece a remark opens in ([`remark_start`]), the Name events of one run, parted
+/// only by notes, note references ([`note_reference`]), layout and gaps inside one command ([`gap_inside_one_command`]),
+/// are one Name where their text is a name and its remark naming a collaboration — or, after a name, such a remark —
+/// and the first alone is neither; their text joined as the source joins them ([`printed_join`]), the notes after it
+/// the name's. A remark after the name's own event opens a run of its own, so the name keeps its event and the remark
+/// a span of its own, which the emitter writes in its markup (`Kalanand Mishra\footnote{…} (for the \babar\
+/// collaboration)`, the remark in a box, 0711.1544; `Ann Able\thanks{…} (for the \textsc{Atlas} Collaboration)`,
+/// review revNL1 S1); a name whose own event opens the remark joins with it (`Christian Schmidt (for the
+/// BNL-Bielefeld\fnref{col1} Collaboration)`, elsarticle, 1212.4278). A remark reads as a collaboration as
+/// `reads_as_collaboration` reads it, or after the name's notes or marks as `speaks_for_after_notes` does (`for
 /// CAPP/IBS`, 1702.03664).
 pub(super) fn remark_pieces_joined(events: Vec<Event>) -> Vec<Event> {
-  // (a note's reference, `\fnref`, `\footnotemark`: the annotations `name_takes_annotations` moves onto the name)
-  let note_reference = |e: &Event| {
-    e.kind == EventKind::Mark
-      && e
-        .role
-        .as_deref()
-        .is_some_and(|r| r == "request" || r.starts_with("footnotemark"))
-  };
   let refs: Vec<&Event> = events.iter().collect();
   let named = |e: &Event| e.kind == EventKind::Name && e.text.chars().any(char::is_alphanumeric);
   // (the remark a text holds after the name it reads as, or is after a name; `annotated` its name's notes or marks)
@@ -825,7 +879,8 @@ pub(super) fn remark_pieces_joined(events: Vec<Event>) -> Vec<Event> {
   let mut out: Vec<Event> = Vec::with_capacity(events.len());
   let mut i = 0;
   while i < events.len() {
-    if !named(&events[i]) {
+    // (a run starts where a remark opens: a piece no remark opens in is read as it is)
+    if !named(&events[i]) || remark_start(&events[i].text).is_none() {
       out.push(events[i].clone());
       i += 1;
       continue;
@@ -858,32 +913,15 @@ pub(super) fn remark_pieces_joined(events: Vec<Event>) -> Vec<Event> {
         _ => break,
       }
     }
-    let pieces: Vec<&Event> = refs[i..=last]
-      .iter()
-      .copied()
-      .filter(|e| named(e))
-      .collect();
-    // (a remark opens with a bracket, "for" or "on behalf of": a run whose pieces hold none joins nowhere inside it)
-    let opens = |e: &&Event| {
-      let lower = e.text.to_lowercase();
-      e.text.contains(['(', '[']) || lower.contains("for ") || lower.contains("behalf of")
-    };
-    if !pieces.iter().any(opens) {
-      out.extend_from_slice(&events[i..=last]);
-      i = last + 1;
-      continue;
-    }
+    let run = &events[i..=last];
+    let pieces = run.iter().filter(|e| named(e)).count();
     let alone = remark(&events[i].text, after_name, annotated);
-    let text = pieces
-      .iter()
-      .map(|e| e.text.trim())
-      .collect::<Vec<_>>()
-      .join(" ");
+    let text = printed_join(run, named);
     // (the notes inside it count as the name's when they part the name from its remark)
-    let inside = refs[i..=last]
+    let inside = run
       .iter()
       .any(|e| e.kind == EventKind::Note || note_reference(e));
-    if pieces.len() < 2 || alone || !remark(&text, after_name, annotated || inside) {
+    if pieces < 2 || alone || !remark(&text, after_name, annotated || inside) {
       out.push(events[i].clone());
       i += 1;
       continue;
@@ -897,7 +935,7 @@ pub(super) fn remark_pieces_joined(events: Vec<Event>) -> Vec<Event> {
       ..events[i].clone()
     });
     out.extend(
-      events[i..=last]
+      run
         .iter()
         .filter(|e| e.kind == EventKind::Note || note_reference(e))
         .cloned(),
@@ -949,20 +987,45 @@ pub(super) fn is_collaboration(text: &str) -> bool {
     .any(|w| t.ends_with(w))
 }
 
-/// Whether a names line's piece is a remark on the name before it, no name of its own: a bracket (`(on behalf of the H1
-/// and ZEUS collaborations)`, 0811.3142), or the collaboration the name speaks for (`for the Hall A DVCS
-/// collaboration`, 1502.03246; `on behalf of the ATLAS Collaboration`) — review rev94a B2, S6.
-pub(super) fn is_name_remark(text: &str) -> bool {
-  let t = text.trim();
-  t.starts_with('(') || t.starts_with('[') || speaks_for(t)
+/// Where a remark on a name opens in a piece's text: at a bracket (`(on behalf of the H1 and ZEUS collaborations)`,
+/// 0811.3142), or at the words of whom the name speaks for ([`SPEAKS_FOR`]) opening it or a word of it (`for the Hall A
+/// DVCS collaboration`, 1502.03246; `Christian Schmidt (for the`, 1212.4278) — the byte of its first; `None` where no
+/// remark opens. Where [`is_name_remark`] and [`remark_pieces_joined`]'s runs start.
+pub(super) fn remark_start(text: &str) -> Option<usize> {
+  let t = text.trim_start();
+  let skipped = text.len() - t.len();
+  // (ASCII lowercase keeps every byte where it was)
+  let lower = t.to_ascii_lowercase();
+  let bracket = t.find(['(', '[']);
+  let said = SPEAKS_FOR
+    .iter()
+    .filter_map(|w| match lower.strip_prefix(w) {
+      Some(_) => Some(0),
+      None => lower.find(&s!(" {w}")).map(|at| at + 1),
+    })
+    .min();
+  [bracket, said]
+    .into_iter()
+    .flatten()
+    .min()
+    .map(|at| at + skipped)
 }
 
-/// Whether a text is the collaboration a name speaks for: "for" or "on behalf of" before a collaboration
-/// ([`is_collaboration`]: `for the Hall A DVCS collaboration`, 1502.03246; the article left out, `on behalf of ATLAS
-/// Collaboration`).
+/// Whether a names line's piece is a remark on the name before it, no name of its own: a bracket (`(on behalf of the H1
+/// and ZEUS collaborations)`, 0811.3142), or the collaboration the name speaks for (`for the Hall A DVCS
+/// collaboration`, 1502.03246; `on behalf of the ATLAS Collaboration`) — review rev94a B2, S6: a remark opening it
+/// ([`remark_start`] at its first byte) that names one.
+pub(super) fn is_name_remark(text: &str) -> bool {
+  let t = text.trim();
+  t.starts_with(['(', '[']) || speaks_for(t)
+}
+
+/// Whether a text is the collaboration a name speaks for: "for" or "on behalf of" ([`SPEAKS_FOR`]) before a
+/// collaboration ([`is_collaboration`]: `for the Hall A DVCS collaboration`, 1502.03246; the article left out, `on
+/// behalf of ATLAS Collaboration`).
 pub(super) fn speaks_for(text: &str) -> bool {
   let lower = text.trim().to_lowercase();
-  ["for ", "on behalf of "]
+  SPEAKS_FOR
     .iter()
     .find_map(|p| lower.strip_prefix(p))
     .is_some_and(|rest| is_collaboration(rest) || is_collaboration(&s!("the {rest}")))
@@ -1173,7 +1236,8 @@ fn mark_goes_next(events: &[&Event], i: usize, last_sep: Option<&Event>, policy:
 /// `author_block/names_split.rs` `marked_names` and `split_author_line`): it carries its own mark — the next event past
 /// layout and notes, or past the comma after it a mark that stays with it ([`mark_goes_next`]: `Teng Wu,$^{1,*}$`,
 /// revtex) —, and on a per-author class's line (`cautious`, the old reader's cautious split) its institution word is a
-/// surname after an initial ([`surname_after_initial`]: `Gary P. Centers,$^{1}$`, 1901.10843) and it is no address. The
+/// surname after an initial ([`surname_after_initial`]: `Gary P. Centers,$^{1}$`, 1901.10843, which no address is —
+/// `marked_names`' `!only_addresses` test holds in it: it refuses a text holding an `@`). The
 /// generic split of any other names line never reads an institution word (`R. New$^2$`, 0904.4122; `S. Michelle
 /// Consiglio,$^{1}$`, 2103.02641; `Alexander New$^2$`, 2311.16860). An unmarked piece keeps the reading's institution
 /// (`John Smith, University of Toronto`).
@@ -1189,8 +1253,7 @@ pub(super) fn marked_name(events: &[&Event], i: usize, cautious: bool, policy: &
     }),
     _ => false,
   };
-  let text = &events[i].text;
-  carried && (!cautious || (surname_after_initial(text) && !only_addresses(text)))
+  carried && (!cautious || surname_after_initial(&events[i].text))
 }
 
 impl Resolver {
@@ -1416,7 +1479,7 @@ impl Resolver {
             } else {
               covered
             };
-            self.collaboration(index, event, &covered, &text);
+            self.collaboration(index, event.span, &covered, &text);
             last_covered = covered;
           }
           uncovered = made.len();
@@ -1436,7 +1499,7 @@ impl Resolver {
               .any(|e| matches!(e.kind, EventKind::Note | EventKind::Mark)) =>
         {
           let covered = made[uncovered.min(made.len())..].to_vec();
-          self.collaboration(index, event, &covered, event.text.trim());
+          self.collaboration(index, event.span, &covered, event.text.trim());
           last_covered = covered;
           uncovered = made.len();
           after_collaboration = true;
@@ -1584,7 +1647,7 @@ impl Resolver {
           made.push(c);
           if let Some((_, rest)) = &remark {
             let covered = made[uncovered.min(made.len())..].to_vec();
-            self.collaboration(index, event, &covered, rest);
+            self.collaboration(index, event.span, &covered, rest);
             last_covered = covered;
             uncovered = made.len();
           }
@@ -1735,7 +1798,7 @@ impl Resolver {
       && let Some(first) = events.first()
     {
       let covered = made[from.min(made.len())..].to_vec();
-      self.collaboration(index, first, &covered, &text);
+      self.collaboration(index, first.span, &covered, &text);
     }
     if !waiting.is_empty()
       && let Some(&c) = made.last()
@@ -1763,11 +1826,12 @@ impl Resolver {
   }
 
   /// A collaboration a names line reads (`reads_as_collaboration`): a `collaboration` contact on each creator it
-  /// covers, as today's reader gives it (`Collaborations`, OXIDIZED_DESIGN_DIVERGENCES #946).
+  /// covers, as today's reader gives it (`Collaborations`, OXIDIZED_DESIGN_DIVERGENCES #946), sourced at `span`, the
+  /// ink printing it.
   pub(super) fn collaboration(
     &mut self,
     index: usize,
-    event: &Event,
+    span: Option<(u16, u16)>,
     covered: &[usize],
     text: &str,
   ) {
@@ -1780,7 +1844,7 @@ impl Resolver {
           text:   text.to_string(),
           label:  None,
           rule:   "line:names collaboration".into(),
-          source: Some((index, event.span)),
+          source: Some((index, span)),
           target: None,
         },
         false,

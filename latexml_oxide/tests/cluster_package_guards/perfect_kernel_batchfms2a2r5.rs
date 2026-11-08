@@ -306,11 +306,13 @@ fn an_acronym_row_is_no_names_row() {
 }
 
 /// Item 1: a gap one command printed inside a word (a Vietnamese accent drawn with `\raise\hbox{…}`, the ink on both
-/// its sides running on past it) is no space between two names (`TI\EES N-S\OW N PH\d{A}M`, 1706.00234).
+/// its sides running on past it) is no space between two names (`TI\EES N-S\OW N PH\d{A}M`, 1706.00234). `\OW`'s
+/// kerns back up (`\kern-.460em`, `\kern-0.16em`), which print no space, so its box joins the name by layout alone, its
+/// dot glued to the `N` after it (a negative kern is no space, `events::whatsit_width_em`, review revNL1 B1).
 #[test]
 fn a_gap_inside_an_accent_macro_is_the_names() {
   assert_eq!(tuples(ACCENT), [
-    "C TIÊ ´N-SO . N PHẠM [] | line:names name:layout-joined name:macro-joined",
+    "C TIÊ ´N-SO .N PHẠM [] | line:names name:layout-joined",
     "  a Univ A, City | api:annotate:last",
   ]);
 }
