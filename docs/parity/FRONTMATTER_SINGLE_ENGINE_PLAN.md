@@ -159,7 +159,22 @@ basis `pk_wt/int149a` @ 3189c464d9 (RT1 at 913eef6966), binary `P2r2-rel`. Their
   and the rehearsal's to surface (INSIDE, a silent loss, first). Keep: 2206.07648. **Decided (main session 2026-11-08, reopenable):** UNREQ ports off's K12, then K13: an unrequested
   mark is no label (charter "a mark matters only where it is used"), so the item falls to the class convention, and
   cond-mat0309053 follows K12; 1202.3425 (revtex's own printed marks) a RED; CONT 0802.2149: K13 only, nothing beyond
-  off. Unfinished: the guards in `tests/`, the fence mapping, 2305.13191's trigger.
+  off. Unfinished: the guards in `tests/`, the fence mapping, 2305.13191's trigger. **KEY1 (`=2` only, guards
+  `perfect_kernel_batchkey1`):** UNREQ K12 as a give-back, lazily, once every name is read: an entry a leading mark
+  labels in a call no `\lx@affiliation@withsup` wraps (`piled`) that no name requests keeps its call's `annotate=`
+  placement (`resolver/post.rs`, `label:unrequested owner:annotate`; 0906.0396, 2111.15565 — the eager gate on
+  `_withsup` would drop ruling 1's reading of requested marks on stores and `_unsplit` blocks; OD #980 KEY1), and a block line a glyph
+  leads (Mark role `text`) that no name requests continues the entry above (`resolver/blocks.rs`; cond-mat0309053, its
+  glyphs written as text, counted); K4 a
+  `\thanks` opening with a raised number is one affiliation per raised mark, its lexed text cut before each top-level
+  mark (`mark_led_pieces`; KEY1b, an entry's own comma kept: review revKEY1) (2509.19480, 2206.07648), and a later glyph is its text (2505.06451); K14 the per-column label rule only where the
+  entry's column holds names (2404.00915). Left: 1202.3425 (RED); CONT 0802.2149 (RED repro
+  `unmarked_affiliation_after_a_marked_one_continues_it`): continuing an unmarked API call onto the marked entry
+  before it went beyond off and broke `batch77n::opex3_unmarked_address_after_marked_reaches_all` at `=2`, so it was
+  dropped; the off-faithful port is `Resolver::record_run`'s `answered` as off reads it (a `\lx@add@authors@append`
+  name's printed mark is no request there, `\lx@author@withinst`), ECNU then every author's as off; LEAD — 1509.04564 (K1 needs the catcode of the ink
+  before the mark, a rehearsal fact: `Ê` is no LETTER token) and 2602.11758 (an in-block `\authorblockA` contact read as
+  one Contact labelled 1, its `\quad` entries uncut: the in-block cut, `events::labelled_entries`); NEST, LEX, INSIDE.
 - **RT3, the names line (`_namesline`).** No missing fact but two: **ACC** (1306.2567, 1709.03335), a cover gap in
   digestion's provenance (the cover of a `\'` expansion ends at `pos+1` when no field token follows the consumed `\i`,
   gullet.rs:2182; a `latexml_core` fix), and **TA** (4), a block arriving after the flush has no reading (HARD; **decided (main session 2026-11-08, reopenable):** TA and ACC have reach, so both are ported

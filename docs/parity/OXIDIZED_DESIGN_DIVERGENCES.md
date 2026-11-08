@@ -32694,4 +32694,22 @@ but the fixes named above. Open (RED, no guard): an icon or a rule inside the li
 the switch off cuts the text alone, which needs the link's characters' own positions (the lexer reads `\href`'s text as its
 argument's ink). Off: byte-identical. Guards `perfect_kernel_batchp1e`, `perfect_kernel_batchp1c`.
 
+**KEY1 (the mark-keyed entries, RT2's K4, K12-K14; `=2` only).** A printed mark no name requests is no label, as the switch
+off reads it (FIDELITY_CHARTER: a mark matters only where it is used). K12 is ported as a give-back, read once every name
+is: an API entry a leading mark labels that no name requests keeps its call's `annotate=` placement (`resolver/post.rs`,
+`label:unrequested owner:annotate`; 0906.0396, 2111.15565). **Departure:** off gates its mark reading on the call's
+`\lx@affiliation@withsup` wrapper (`_withsup=true`); the port drops that gate and gives back lazily, since the eager gate
+would drop ruling 1's reading of requested marks on stores and `_unsplit` blocks (review revKEY1: no store or `_unsplit`
+shape shown losing a requested mark under the gate — the reason is unwitnessed, the result = off on every witness). K13: a
+block line a glyph leads (a Mark of role `text`, `(\S) Inst X`) that no name requests continues the entry above it, as
+Perl's block reader splits at superscripts alone (`resolver/blocks.rs`, `Resolver::continue_line`; cond-mat0309053, its
+glyphs written as text, counted). K4: a `\thanks` opening with a raised number holding several marked entries is one
+affiliation per entry, its lexed text (`Event::body`) cut before each top-level raised mark (`events::mark_led_pieces`, the
+API reader's cut), so an entry's own comma stays its text (`$^{1}$Dept A, Univ A, $^{2}$Univ B`, review revKEY1); a
+separator word the cut drops between entries is recorded dropped, counted as written; a later glyph is its text
+(2509.19480, 2206.07648, 2505.06451). K14: the per-column label rule only where the entry's column holds names
+(2404.00915). Off: byte-identical. Left: a name's mark printing a macro's letter beside a number (`$^{\a 1}$`, `\def\a{{a}}`)
+read as the one label "a1" (hep-ph0011101; RED repro `macro_letter_in_a_name_mark_is_its_own_label`). Guards
+`perfect_kernel_batchkey1`.
+
 Guards `perfect_kernel_batchz4`.

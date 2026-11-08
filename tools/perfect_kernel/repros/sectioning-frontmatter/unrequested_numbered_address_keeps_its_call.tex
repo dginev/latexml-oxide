@@ -1,0 +1,24 @@
+% mechanism: an amsart `\address` (no `annotate=`: the default, the last author) led by a number no name requests is the
+%   address of the author before it, as the switch-off reading places it: the mark is text there (Perl's
+%   `\lx@set@frontmatter@label` only inside `\lx@affiliation@withsup`, Base_Utility.pool.ltxml:735-739; FIDELITY_CHARTER
+%   §4) — with `LATEXML_FM_EMIT=2` the reading labelled both by their marks, no give-back took them (`self.annotated` is
+%   filled only for a declared `annotate=`) and both went to a nameless creator
+% witness: 2111.15565 (`\author{Ricardo J. {\sc Alonso}}\address{$^1$Texas A\&M University at Qatar, …}\address{$^2$
+%   Departamento de Matemática, PUC-Rio, …}`)
+% oracle:  pdflatex 0 errors: the end-of-paper addresses "1Univ A, City A", "2Univ B, City B" under ANN ABLE, "Univ C,
+%   City C" under BOB BAKER
+% engines: off = Univ A, Univ B Ann's; `=2` (int149a) = both a nameless creator's
+% expect:  0 errors 0 warnings; `=2` Ann Able's Univ A and Univ B, and her e-mail, as off
+% status:  RED (int149a `=2`) -> GREEN (KEY UNREQ)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\address{$^1$Univ A, City A}
+\address{$^2$Univ B, City B}
+\email{ann@a.edu}
+\author{Bob Baker}
+\address{Univ C, City C}
+\maketitle
+Text.
+\end{document}

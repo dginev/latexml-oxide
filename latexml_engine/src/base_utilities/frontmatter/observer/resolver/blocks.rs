@@ -281,6 +281,48 @@ impl Resolver {
         .map(|(_, r)| r.clone())
         .unwrap_or_default();
       let carried = continues.take();
+      // (a line a glyph leads — no superscript, `(\S) Inst…` — whose mark no name requests is no labelled line: Perl's
+      // block reader splits at superscripts alone (`positionOf($line, @authorsup_markers)`, Base_Utility.pool.ltxml:
+      // 699-707), so such a line continues the entry above it, as an unmarked line does (`line:continued`), and a printed
+      // mark no name requests is no label (FIDELITY_CHARTER §4) — cond-mat0309053's translators' `(\S)`, `(\dag)`,
+      // `(\ddag)` institutes, no author's marks, stay in the authors' affiliation as before, not a nameless creator's)
+      // (only where an entry is open above it, which the line continues — Perl's `if (@entries)`; else, an e-mail
+      // entry above or none, it stays the symbol line it was: `*Corresponding Author: Ayodeji Olalekan Salau (…)` under
+      // the `\textsuperscript{7}\texttt{…}` addresses is no names row, 2510.01302. With the emitter's switch on alone,
+      // `emitting`)
+      let unrequested_glyph = self.emitting
+        && carried.is_some()
+        && first_ink.is_some_and(|e| {
+          e.kind == EventKind::Mark
+            && e.role.as_deref() == Some("text")
+            && !entries_of(&line.events)
+              .iter()
+              .flat_map(|entry| &entry.labels)
+              .any(|label| {
+                block_requests.iter().any(|r| label_matches(r, label))
+                  || self
+                    .out
+                    .creators
+                    .iter()
+                    .any(|c| c.requests.iter().any(|r| label_matches(r, label)))
+              })
+        });
+      if unrequested_glyph && let Some(carried) = carried {
+        let notes = line
+          .events
+          .iter()
+          .copied()
+          .filter(|e| e.kind == EventKind::Note);
+        self.continue_line(
+          index,
+          &carried,
+          &events_text(&line.events),
+          notes,
+          above.last().copied(),
+        );
+        continues = Some(carried);
+        continue;
+      }
       match first_ink.map(|e| &e.kind) {
         Some(EventKind::Mark) => {
           let entries = entries_of(&line.events);
@@ -572,17 +614,7 @@ impl Resolver {
           // 1209.0869; 2606.23976, 0910.1386, 1411.2744)
           let carried = if addresses_in(&text).is_empty() || !only_addresses(&text) {
             if let Some(carried) = carried {
-              self.continue_entry(&carried, &text);
-              // (a labelled entry's line, its notes the block's, as a line of notes alone under it: `$^{2}$Univ B\\ Funded
-              // by X.\thanks{Grant 5.}`, review revLO2 base; `emitting`)
-              let (owner, rule) = if self.emitting && matches!(carried, Continued::Pending(_)) {
-                (None, "note:line-owner note:entry")
-              } else {
-                (above.last().copied(), "note:line-owner")
-              };
-              for note in notes {
-                self.note(index, note, owner, rule);
-              }
+              self.continue_line(index, &carried, &text, notes, above.last().copied());
               continues = Some(carried);
               continue;
             }
@@ -985,6 +1017,28 @@ impl Resolver {
     continues
   }
 
+  /// A line continuing the entry above it, an unmarked one or one a glyph no name requests leads: its text the entry's
+  /// ([`Self::continue_entry`]); its notes, under a labelled entry, the block's, as a line of notes alone under it
+  /// (`$^{2}$Univ B\\ Funded by X.\thanks{Grant 5.}`, review revLO2 base; `emitting`), else the name's above it.
+  fn continue_line<'e>(
+    &mut self,
+    index: usize,
+    carried: &Continued,
+    text: &str,
+    notes: impl IntoIterator<Item = &'e Event>,
+    above: Option<usize>,
+  ) {
+    self.continue_entry(carried, text);
+    let (owner, rule) = if self.emitting && matches!(carried, Continued::Pending(_)) {
+      (None, "note:line-owner note:entry")
+    } else {
+      (above, "note:line-owner")
+    };
+    for note in notes {
+      self.note(index, note, owner, rule);
+    }
+  }
+
   /// An unmarked line continuing the entry before it: its text appended, and the entry's lines kept
   /// ([`Resolved::continued`]).
   pub(super) fn continue_entry(&mut self, carried: &Continued, text: &str) {
@@ -1209,6 +1263,75 @@ impl Resolver {
       return;
     }
     let live = self.live();
+    let numbered = self.emitting && !note.footnote && numbered_thanks(note);
+    // (one such `\thanks` holding several marked entries, `\thanks{$^{1}$UC Berkeley, $^{2}$Toyota Motor North America,
+    // $^{3}$Princeton university}`: each its own entry by its mark, as the switch off cuts it — 2509.19480, 2206.07648,
+    // where the whole stayed one note of the last name. Its lexed text cut before each top-level mark (`mark_led_pieces`, the API
+    // reader's cut), so an entry's own comma stays its text, `$^{1}$Dept A, Univ A, $^{2}$Univ B`; each piece led by
+    // raised marks with labels, else it stays one note, as before)
+    if numbered {
+      let pieces = mark_led_pieces(&note.body);
+      let entries: Option<Vec<(Vec<String>, String)>> = pieces
+        .iter()
+        .map(|piece| {
+          let (start, end) = events::leading_marks(piece);
+          let marks: Vec<&Event> = piece[start..end]
+            .iter()
+            .filter(|e| e.kind == EventKind::Mark)
+            .collect();
+          let labels: Vec<String> = marks
+            .iter()
+            .flat_map(|mark| mark_labels(mark.label.as_deref().unwrap_or("")))
+            .collect();
+          (!marks.is_empty() && marks.iter().all(|e| raised_mark(e)) && !labels.is_empty()).then(
+            || {
+              let text = events_text(&piece[end..].iter().collect::<Vec<_>>());
+              (labels, text.trim().to_string())
+            },
+          )
+        })
+        .collect();
+      if let Some(entries) = entries.filter(|entries| entries.len() > 1) {
+        // (the separator words the cut drops between two entries are the cut's, no entry's text, as an API call's
+        // (`$^{1}$Univ A, $^{2}$Univ B and $^{3}$Univ C`): recorded dropped, so no word of the note reads as unwritten)
+        let word = |e: &Event| match &e.kind {
+          EventKind::Sep(SepKind::Word(word)) => Some(word.clone()),
+          _ => None,
+        };
+        let mut cut: Vec<String> = note.body.iter().filter_map(word).collect();
+        for kept in pieces.iter().flatten().filter_map(word) {
+          if let Some(at) = cut.iter().position(|w| *w == kept) {
+            cut.remove(at);
+          }
+        }
+        if !cut.is_empty() {
+          self.out.dropped.push(Assoc {
+            role:   "separator".into(),
+            text:   cut.join(" "),
+            label:  None,
+            rule:   s!("{rule} note:split-by-marks"),
+            source: Some((index, note.span)),
+            target: None,
+          });
+        }
+        for (labels, text) in entries {
+          let role = if is_legend_text(&text) {
+            "legend"
+          } else {
+            "affiliation"
+          };
+          self.pending.push((labels.clone(), false, Assoc {
+            role: role.into(),
+            text,
+            label: labels.first().cloned(),
+            rule: s!("{rule} note:legend ruling1:request note:split-by-marks"),
+            source: Some((index, note.span)),
+            target: None,
+          }));
+        }
+        return;
+      }
+    }
     // (a note opening with a Mark some name requests is that label's legend: `\thanks{$^{1}$ Canizaro … Center}`
     // under `Newaz$^{1,2,*}$`, 2311.16145 — the mark it prints, its leading Mark event; its owners by ruling 1)
     // (one whose text holds a later mark of other requested labels, none of the first's, is the legends of several
@@ -1223,7 +1346,9 @@ impl Resolver {
       && !note
         .inner
         .iter()
-        .filter(|e| e.kind == EventKind::Mark && !e.line_first)
+        // (in a re-routed `\thanks`, its raised marks alone: a glyph is its text, `*Corresponding authors` closing
+        // `$^{4}$ Department of Mechanical Engineering, …`, 2505.06451)
+        .filter(|e| e.kind == EventKind::Mark && !e.line_first && (!numbered || raised_mark(e)))
         .map(|e| mark_labels(e.label.as_deref().unwrap_or("")))
         .any(|later| {
           !later.is_empty()
@@ -1247,24 +1372,7 @@ impl Resolver {
       // carrier it spells (FIDELITY_CHARTER §4's symbol-line rule; the switch-off note keeps them in its text, every
       // address on the note's owner): IEEEtran journal's `\thanks{\IEEEauthorrefmark{1}The authors are with …, E-mails:
       // a@, b@, c@}`, 1610.05419, 2405.06709 — review revP2 finding 1)
-      let numbered = || {
-        !note.footnote
-          && note
-            .inner
-            .iter()
-            .find(|e| e.kind == EventKind::Mark && e.line_first)
-            .is_some_and(|mark| {
-              mark
-                .role
-                .as_deref()
-                .is_some_and(|r| r.starts_with("sup") || r.starts_with("math"))
-                && mark
-                  .text
-                  .trim_start()
-                  .starts_with(|c: char| c.is_ascii_digit())
-            })
-      };
-      let role = if (self.emitting && !numbered() && addresses_in(&legend).is_empty())
+      let role = if (self.emitting && !numbered && addresses_in(&legend).is_empty())
         || is_legend_text(&legend)
         || symbol
       {
@@ -1304,4 +1412,31 @@ impl Resolver {
       true,
     );
   }
+}
+
+/// A raised mark: a superscript or `\textsuperscript`, what Perl's readers split at (`@authorsup_markers`).
+fn raised_mark(e: &Event) -> bool {
+  e.kind == EventKind::Mark
+    && e
+      .role
+      .as_deref()
+      .is_some_and(|r| r.starts_with("sup") || r.starts_with("math"))
+}
+
+/// A `\thanks` whose text opens with a raised number: what `\lx@add@thanks` re-routes as affiliations, each segment
+/// its raised marks part it into an `\lx@affiliation@withsup` entry labelled by its mark (frontmatter_fields.rs
+/// `\lx@add@thanks`, `starts_with_affiliation_mark`, OXIDIZED_DESIGN #52; `split_wrapped_affiliation_marks`). Read with
+/// the emitter's switch on alone (`emitting`).
+fn numbered_thanks(note: &Event) -> bool {
+  note
+    .inner
+    .iter()
+    .find(|e| e.kind == EventKind::Mark && e.line_first)
+    .is_some_and(|mark| {
+      raised_mark(mark)
+        && mark
+          .text
+          .trim_start()
+          .starts_with(|c: char| c.is_ascii_digit())
+    })
 }

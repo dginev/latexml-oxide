@@ -1,0 +1,20 @@
+% mechanism: a revtex `\affiliation` led by a printed mark no name requests (`$\dag$`, no superscript) is placed by its
+%   call's `annotate=` as the switch-off reading places it: the mark is text there (Perl's `\lx@set@frontmatter@label` only
+%   inside `\lx@affiliation@withsup`, Base_Utility.pool.ltxml:735-739; FIDELITY_CHARTER §4 "a mark matters only where it
+%   is used") — with `LATEXML_FM_EMIT=2` the reading labelled it by the mark (`api:leading-mark`), found no carrier of †
+%   and gave it to a nameless creator (`label:unrequested owner:block`)
+% witness: 0906.0396 (`\author{José-Rubén Luévano}\affiliation{$\dag$Departamento de Ciencias Básicas, UAM-A, …}` under
+%   names showing `$^*$`)
+% oracle:  pdflatex 0 errors: "Ann Able", "Univ A, City A"; "Bob Baker", "†Univ B, City B"; "Cat Cole∗", "Univ C, City C"
+% engines: off = Univ B Bob's; `=2` (int149a) = Univ B a nameless creator's
+% expect:  0 errors 0 warnings; `=2` Bob Baker's Univ B, as off
+% status:  RED (int149a `=2`) -> GREEN (KEY UNREQ)
+\documentclass[aps,prl]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able}\affiliation{Univ A, City A}
+\author{Bob Baker}\affiliation{$\dag$Univ B, City B}
+\author{Cat Cole$^*$}\affiliation{Univ C, City C}
+\maketitle
+Text.
+\end{document}

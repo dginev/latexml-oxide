@@ -1,0 +1,18 @@
+% mechanism: an author `\thanks` whose text opens with a raised number and holds several marked entries
+%   (`\thanks{$^{1}$Univ A, $^{2}$Univ B, $^{3}$Univ C}`) is affiliations, each segment its raised marks part it into
+%   an entry labelled by its mark, as the switch-off `\lx@add@thanks` re-routes it (frontmatter_fields.rs,
+%   `starts_with_affiliation_mark`, OD #52) — with `LATEXML_FM_EMIT=2` the reading kept it one note of the last name,
+%   every name's marks unanswered
+% witness: 2509.19480 (`\thanks{$^{1}$UC Berkeley, $^{2}$Toyota Motor North America, $^{3}$Princeton university}`),
+%   2206.07648 (`\thanks{$^{1}$University College Dublin,$^{2}$National University of Singapore.}`)
+% oracle:  pdflatex 0 errors: "Ann Able1,2, Bob Baker1 and Cat Cole3∗", the footnote "∗1Univ A, 2Univ B, 3Univ C"
+% engines: off = Ann: Univ A, Univ B; Bob: Univ A; Cat: Univ C; `=2` (int149a) = one note on Cat
+% expect:  0 errors 0 warnings; `=2` as off
+% status:  RED (int149a `=2`) -> GREEN (KEY THANKS)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$, Bob Baker$^{1}$ and Cat Cole$^{3}$\thanks{$^{1}$Univ A, $^{2}$Univ B, $^{3}$Univ C}}
+\maketitle
+Text.
+\end{document}

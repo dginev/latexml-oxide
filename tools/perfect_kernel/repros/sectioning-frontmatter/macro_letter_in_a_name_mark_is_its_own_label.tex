@@ -1,0 +1,21 @@
+% mechanism: a name's mark printing a macro's letter beside a number (`$^{\a 1}$`, `\def\a{{a}}`) requests two labels,
+%   `a` and `1`, as it prints "a1" over the name and `$^a$` leads the address it means — the reading's mark labels
+%   (`mark_labels`) read it as the one label "a1", so address a is requested by no name
+% witness: hep-ph0011101 (`\author{Maarten Golterman$^{\a 1}$ and Santi Peris$^\b$}` over `\address{{}$^a$Department
+%   of Physics, Washington University … {}$^b$IFAE …}`); review revKEY1 finding 2
+% oracle:  pdflatex 0 errors: "Ann Able a1 and Bob Baker b", "aUniv A, City A", "bUniv B, City B"
+% engines: off and `=2` (KEY1b) = "Ann Able a1" (the mark left in the name), Bob: Univ B, City B, a nameless creator:
+%   Univ A, City A (in the witness, a call's annotate default gives address a to Peris)
+% expect:  0 errors 0 warnings; Ann: Univ A, City A; Bob: Univ B, City B
+% status:  RED (KEY1b, off and `=2`): the mark's reading, not KEY's
+\documentclass{article}
+\begin{document}
+\def\a{{a}}
+\def\b{{b}}
+\title{T}
+\author{Ann Able$^{\a 1}$ and Bob Baker$^\b$\\
+{}$^a$Univ A, City A\\
+{}$^b$Univ B, City B}
+\maketitle
+Text.
+\end{document}

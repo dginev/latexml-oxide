@@ -1,0 +1,26 @@
+% mechanism: a revtex `\affiliation` no mark leads right after one a mark leads (cut into a `\lx@affiliation@withsup`
+%   line), no author between, is that entry's next line — Perl's block reader appends an unmarked line to the entry
+%   before it (Base_Utility.pool.ltxml:699-707), and the page prints it so, under the entry's mark — not the run of
+%   authors the walk stops at the first answered one in (`Resolver::record_run`); with `LATEXML_FM_EMIT=2` Lab A's
+%   second line went to Bob and Cat alone
+% witness: 0802.2149 (`\affiliation{$^{1}$State Key Laboratory of Precision Spectroscopy,} \affiliation{Department of
+%   Physics, East China Normal University, …,} \affiliation{$^{2}$Department of Physics and Astronomy, Rowan …}`)
+% oracle:  pdflatex 0 errors: "Ann Able,1 Bob Baker,2,† and Cat Cole1,∗", then "1Lab A, Univ A,", "Dept B, Univ B,",
+%   "2Dept C, Univ C" (Dept B the second line of entry 1)
+% engines: off = Dept B on all three; `=2` (int149a) = Dept B on Bob and Cat
+% expect:  0 errors 0 warnings; `=2` Dept B on all three, as off (the page prints it under entry 1's holders alone)
+% status:  RED (int149a `=2`, KEY1 `=2`): the API-call continuation tried in KEY1 went beyond off and broke
+%   `perfect_kernel_batch77n::opex3_unmarked_address_after_marked_reaches_all` at `=2` (opex3's `\address{Univ Z}` after
+%   the marked ones is every author's, as off); the off-faithful port is the run walk's `answered` read as off reads
+%   it (a `\lx@add@authors@append` name's printed mark is no request there: `\lx@author@withinst`), which gives Dept B
+%   to all three, as off — not done, no guard
+\documentclass[aps]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able,$^{1}$ Bob Baker,$^{2,\dag}$ and Cat Cole$^{1,\ast}$}
+\affiliation{$^{1}$Lab A, Univ A,}
+\affiliation{Dept B, Univ B,}
+\affiliation{$^{2}$Dept C, Univ C}
+\maketitle
+Text.
+\end{document}
