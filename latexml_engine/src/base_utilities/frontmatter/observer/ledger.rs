@@ -313,6 +313,38 @@ impl Ledger {
     &mut self.entries
   }
 
+  /// Its entries in `range` that `picks` picks, each changed by `change`, a change counted ([`Self::entries_mut`]) only
+  /// where one is picked with the emitter's switch on, whose reading is kept while the entries read the same
+  /// ([`Self::analysis`]); with the switch off, which keeps no reading, changed in one pass, unread first (review revLO2 5:
+  /// the new code does no work with the switch off).
+  pub(in crate::base_utilities) fn change_each(
+    &mut self,
+    range: std::ops::Range<usize>,
+    picks: impl Fn(&Entry) -> bool,
+    mut change: impl FnMut(&mut Entry),
+  ) {
+    if fm_emit_mode() == 2
+      && !self
+        .entries
+        .iter()
+        .take(range.end)
+        .skip(range.start)
+        .any(&picks)
+    {
+      return;
+    }
+    for entry in self
+      .entries_mut()
+      .iter_mut()
+      .take(range.end)
+      .skip(range.start)
+    {
+      if picks(entry) {
+        change(entry);
+      }
+    }
+  }
+
   /// A new entry, last.
   pub(in crate::base_utilities) fn push(&mut self, entry: Entry) { self.entries_mut().push(entry); }
 
@@ -605,16 +637,11 @@ fn watch_unwritten_setters() {
         && call.binding.is_none()
         && !matches!(call.tag.as_str(), "ltx:title" | "ltx:creator"))
     };
-    if !ledger.entries().iter().any(unobserved) {
-      return;
-    }
-    for entry in ledger.entries_mut() {
-      if unobserved(entry)
-        && let Entry::Api(call) = entry
-      {
+    ledger.change_each(0..usize::MAX, unobserved, |entry| {
+      if let Entry::Api(call) = entry {
         call.binding = Some(UNOBSERVED.to_string());
       }
-    }
+    });
   });
 }
 
@@ -1099,20 +1126,11 @@ pub(in crate::base_utilities) fn record_clear(tag: &str, attr: &[(&str, &str)]) 
       },
       _ => false,
     };
-    let cleared: Vec<usize> = (0..ledger.entries().len())
-      .filter(|&i| clears(&ledger.entries()[i]))
-      .collect();
-    if cleared.is_empty() {
-      return;
-    }
-    let entries = ledger.entries_mut();
-    for i in cleared {
-      match &mut entries[i] {
-        Entry::Api(call) => call.cleared = true,
-        Entry::Author(block) => block.cleared = true,
-        _ => {},
-      }
-    }
+    ledger.change_each(0..usize::MAX, clears, |entry| match entry {
+      Entry::Api(call) => call.cleared = true,
+      Entry::Author(block) => block.cleared = true,
+      _ => {},
+    });
   });
 }
 
@@ -1127,15 +1145,11 @@ pub(in crate::base_utilities) fn record_author_body_clear() {
     let (start, end) = std::mem::take(&mut ledger.author_body);
     let clears =
       |entry: &Entry| matches!(entry, Entry::Api(call) if call.epoch == flushes && !call.cleared);
-    if ledger.entries().iter().take(end).skip(start).any(clears) {
-      for entry in ledger.entries_mut().iter_mut().take(end).skip(start) {
-        if clears(entry)
-          && let Entry::Api(call) = entry
-        {
-          call.cleared = true;
-        }
+    ledger.change_each(start..end, clears, |entry| {
+      if let Entry::Api(call) = entry {
+        call.cleared = true;
       }
-    }
+    });
     ledger.author_body = (ledger.entries().len(), ledger.entries().len());
   });
 }

@@ -1288,7 +1288,7 @@ pub fn document_notes(line: &[Token]) -> Option<Vec<Token>> {
   let mut rest = Vec::new();
   let mut i = 0;
   while i < line.len() {
-    match note_end(line, i) {
+    match note_call_end(line, i) {
       Some(end) => {
         let note = &line[i..end];
         match document_note_call(note) {
@@ -1338,7 +1338,7 @@ pub(in crate::base_utilities) fn line_notes(line: &[Token]) -> Option<Vec<(usize
     if spacing(&line[i]) {
       i += 1;
     } else {
-      let end = note_end(line, i)?;
+      let end = note_call_end(line, i)?;
       notes.push((i, end));
       i = end;
     }
@@ -1348,7 +1348,7 @@ pub(in crate::base_utilities) fn line_notes(line: &[Token]) -> Option<Vec<(usize
 
 /// The end of the note opening at `line[i]`: a `\thanks`, `\footnote` or `\IEEEcompsocitemizethanks`, its `[…]` and
 /// its braced text; `None` for another token or a note not so written.
-fn note_end(line: &[Token], i: usize) -> Option<usize> {
+pub(in crate::base_utilities) fn note_call_end(line: &[Token], i: usize) -> Option<usize> {
   let past_spaces = |mut at: usize| {
     while line.get(at) == Some(&T_SPACE!()) {
       at += 1;

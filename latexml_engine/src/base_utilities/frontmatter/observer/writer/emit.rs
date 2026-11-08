@@ -22,7 +22,7 @@ use super::{
   *,
 };
 use crate::base_utilities::{
-  author_block::whole_block_author,
+  author_block::{document_note_call, note_call_end, whole_block_author},
   defs::author_macros::KEPT_WHOLE,
   frontmatter::{
     observer::{
@@ -778,6 +778,27 @@ fn event_at<R>(
       .find(|e| e.span == Some(span) && kind(e))
       .map(f)
   })
+}
+
+/// A note the reading gives the author block alone, as Perl prints it: digested inside the entry's contact, where `\\thanks`
+/// is `\\lx@add@pubnote@thanks` and `\\footnote` `\\lx@add@pubnote` (Base_Utility.pool.ltxml:331-332), one `<pubnote>` of
+/// the document — its own tokens so made (`document_note_call`, the token reader's one conversion of a note to the document's).
+/// 2504.09745's `$^{\\ddagger}$Ericsson Canada\\thanks{…}` once, where the switch off prints it per relocated copy and the
+/// block's creator held it (review revLO2 1). `None` for an item of another kind or owners, or a note of another command
+/// (`\\thanks[…]{…}`, `\\thanksref`), which the block's creator holds as before.
+fn block_pubnote(item: &Item) -> Option<Vec<Token>> {
+  if item.key.0 != Kind::Note || item.owners != [Owner::Block] {
+    return None;
+  }
+  let (index, Some(span)) = item.assoc.source? else {
+    return None;
+  };
+  event_at(index, span, |e| e.kind == EventKind::Note, |_| ())?;
+  // (the note's command through its closing brace, out of a group switching its font: `{\\small\\thanks{…}}`)
+  let tokens = span_tokens_of(index, span)?;
+  let note = tokens.unlist_ref();
+  let (start, end) = (0..note.len()).find_map(|i| note_call_end(note, i).map(|end| (i, end)))?;
+  document_note_call(&note[start..end])
 }
 
 /// `tokens`, with the space written just before `span` of the block at `index` first: the entry's, as Perl's `SplitTokens`
@@ -1939,6 +1960,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   let is_fresh: BTreeSet<usize> = fresh.iter().copied().collect();
   let mut annotations: Vec<Vec<String>> = vec![Vec::new(); resolved.creators.len()];
   let mut calls: Vec<(String, &Item)> = Vec::new();
+  let mut block_pubnotes: Vec<Vec<Token>> = Vec::new();
   for (n, item) in items.iter().enumerate() {
     let new: Vec<usize> = item
       .owners
@@ -1948,6 +1970,10 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
         _ => None,
       })
       .collect();
+    if let Some(note) = block_pubnote(item) {
+      block_pubnotes.push(note);
+      continue;
+    }
     if item.owners.contains(&Owner::Block) {
       calls.push(("addresses:block".to_string(), item));
     }
@@ -2104,6 +2130,12 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     out.push(entry(tag, placed));
   }
   out.extend(unprinted.map(|(at, rdf)| rdf_entry(at, rdf)));
+  // (the block's notes Perl prints as the document's: `block_pubnote`)
+  out.extend(
+    block_pubnotes
+      .into_iter()
+      .map(|note| entry("ltx:pubnote", note)),
+  );
   // (an ink the reading holds no place for, as a note: of the author whose line it is, by the reading's own rule
   // (`LostInk::owner`: 2605.16481's Aiden Yiliu Li, 2110.03506's Kerianne L. Hobbs), else of the author block. Its tokens where
   // every word of it is lost; else its lost words' own text, its written addresses cut out (`LostInk::note_text`), in its

@@ -909,7 +909,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("writer/emit", 28),
   ("writer/dom+mod", 0),
   ("writer/plan", 85),
-  ("writer/repart", 0),
+  // (LO2r2, 0 -> 3: a row line's cut ends at its address's own first token, which the letters check finds; the tokens between the
+  // last letter it keeps and that one print no letter, so their kinds say which it keeps — the spacing, separators, commands and
+  // bracket opening the address out, a bracket the cut leaves open closed by its own token: `prefix_tokens`, review revLO2 2)
+  ("writer/repart", 3),
 ];
 
 /// The areas under `frontmatter/`, by path; the first that holds a file takes it.

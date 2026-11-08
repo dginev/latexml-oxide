@@ -154,16 +154,21 @@ pub(super) fn entry_span(index: usize, span: (u16, u16), key: &str) -> Option<(u
 }
 
 /// The tokens from `span`'s start of the block at ledger index `index` that print `key`, where `key` ends inside an ink
-/// ([`entry_span`] reads whole inks): an item the reading writes without the address its line prints last
+/// ([`entry_span`] reads whole inks): an item the reading writes without the addresses its line prints last
 /// (`Resolver::block`'s row address: `Dresden, Saxony 01062, Germany (martin.waltz@tu-dresden.de)` the affiliation `Dresden,
-/// Saxony 01062, Germany`, 2203.10777), the shortest balanced run inside the ink whose letters are `key` by the writer's own
-/// check of a span's letters ([`block_span_tokens`]) — `None` where the inks before it don't open `key`, or no run does.
+/// Saxony 01062, Germany`, 2203.10777). The cut ends at the first address's own first token — past every token printing
+/// `key`'s letters, the writer's own check of a span's letters ([`block_span_tokens`]) — less the spaces and separators
+/// before it, the commands opening it and the bracket it opens, as the reading's cut leaves them (`address_cuts`); a bracket it leaves open closed by
+/// its own closing token after the address: `Dresden [Germany] (bob.baker@a.org)` keeps `Dresden [Germany]`, `(Tel. 351
+/// 463, bob.baker@a.org)` `(Tel. 351 463)` (review revLO2 2: the shortest letter match dropped the ink after the last letter).
+/// A mark among the inks before it is its ink (`Dresden$^{\dagger}$, Germany`, review revLO2 base). `None` where the inks
+/// before it don't open `key`, or no run prints it.
 pub(super) fn prefix_tokens(
   index: usize,
   span: (u16, u16),
   key: &str,
 ) -> Option<((u16, u16), Tokens)> {
-  let ends_in = with_ledger(|ledger| {
+  let (ends_in, tokens, base) = with_ledger(|ledger| {
     let Some(Entry::Author(block)) = ledger.entries().get(index) else {
       return None;
     };
@@ -178,12 +183,12 @@ pub(super) fn prefix_tokens(
       let text = match &event.kind {
         EventKind::Name | EventKind::Contact => norm(&event.text),
         EventKind::Sep(SepKind::Word(word)) => norm(word),
-        EventKind::Sep(_) | EventKind::Break | EventKind::Layout => continue,
+        EventKind::Sep(_) | EventKind::Break | EventKind::Layout | EventKind::Mark => continue,
         _ => return None,
       };
       joined.push_str(&text);
       if joined.len() > key.len() && joined.starts_with(key) {
-        return event.span;
+        return Some((event.span?, block.tokens.clone(), block.range.0));
       }
       if !key.starts_with(&joined) {
         return None;
@@ -191,10 +196,69 @@ pub(super) fn prefix_tokens(
     }
     None
   })?;
-  (ends_in.0 + 1..ends_in.1).find_map(|end| {
-    let cut = (span.0, end);
-    block_span_tokens(index, cut, Some(key), false).map(|tokens| (cut, tokens))
-  })
+  let prints_key = |end: u16| block_span_tokens(index, (span.0, end), Some(key), false);
+  // (the first address's own first token: the last end still printing `key` alone)
+  let mut address = (ends_in.0 + 1..ends_in.1).find(|&end| prints_key(end).is_some())?;
+  while address + 1 < ends_in.1 && prints_key(address + 1).is_some() {
+    address += 1;
+  }
+  let content = tokens.unlist_ref();
+  let at = |p: u16| {
+    usize::from(p)
+      .checked_sub(base)
+      .and_then(|i| content.get(i))
+  };
+  let char_of = |p: u16| {
+    at(p)
+      .filter(|t| t.get_catcode() == Catcode::OTHER)
+      .and_then(|t| t.with_str(|s| s.chars().next()))
+  };
+  let space = |p: u16| at(p).is_some_and(|t| t.get_catcode() == Catcode::SPACE);
+  // (and the commands and groups opening the address: `(\texttt{bob@a.org})`)
+  let opening = |p: u16| {
+    at(p).is_some_and(|t| {
+      matches!(
+        t.get_catcode(),
+        Catcode::SPACE | Catcode::CS | Catcode::BEGIN
+      )
+    })
+  };
+  const SEPARATORS: &[char] = &[',', ';', ':', '-', '\u{2013}', '\u{2014}', '/'];
+  let mut end = address;
+  while end > span.0 && opening(end - 1) {
+    end -= 1;
+  }
+  if end > span.0 && char_of(end - 1).is_some_and(|c| "([<".contains(c)) {
+    end -= 1;
+  }
+  while end > span.0
+    && (space(end - 1) || char_of(end - 1).is_some_and(|c| SEPARATORS.contains(&c)))
+  {
+    end -= 1;
+  }
+  let cut = (span.0, end);
+  let mut kept = prints_key(end)?.unlist();
+  // (a bracket the cut leaves open, closed by its own token after the address)
+  let mut open: Vec<char> = Vec::new();
+  for c in (span.0..end).filter_map(char_of) {
+    match c {
+      '(' | '[' => open.push(c),
+      ')' | ']' => {
+        open.pop();
+      },
+      _ => {},
+    }
+  }
+  let mut from = address;
+  for opener in open.into_iter().rev() {
+    let closer = if opener == '(' { ')' } else { ']' };
+    let Some(p) = (from..ends_in.1).find(|&p| char_of(p) == Some(closer)) else {
+      break;
+    };
+    kept.extend(at(p).copied());
+    from = p + 1;
+  }
+  Some((cut, Tokens::new(kept)))
 }
 
 /// The words a block printed as separators between names (`SepKind::Word`, the word "and"), each once per print.

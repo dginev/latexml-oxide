@@ -32546,13 +32546,24 @@ print last on it is that author's e-mail, the line's other text the row's (`Reso
 `Dresden, Saxony 01062, Germany (martin.waltz@tu-dresden.de)` each author's city and own e-mail (LO1: the line whole with its
 address on each, as the switch off; int146a: the e-mail and three nameless notes; review revLO1 1); `\author{Ann Able and Bob
 Baker\\ Univ A\\ Present address: Dept X, Univ Y (ann.able@y.org)}` Ann's e-mail and both authors' text without it, as the
-switch off (review revLO1 2). The emitter writes the rest from its own tokens, cut inside the ink the address ends: the shortest
-balanced run whose letters are the item's, by the writer's own check of a span's letters (`writer::repart::prefix_tokens` over
-`plan::block_span_tokens`); an address spelling no one, or printed mid-line, stays in the text. *A note after a labelled entry
-goes with it:* a note after the entry's last other ink is pending on the entry's labels, its holders' note, and the entry's span
-ends before it (`Resolver::labelled_entries`, the switch on only): 2504.09745's `$^{\ddagger}$Ericsson Canada\thanks{…}` each `‡`
-author's thanks, once (int146a and LO1: a nameless creator's note in two Warnings, and a pubnote the entry's own tokens digested;
-the switch off: a pubnote per `‡` entry, two). A note inside an entry, ink after it, is as before. *The tail a raw macro appends to
+switch off (review revLO1 2). Every address on the line must print at its end, no other ink between or after them (LO2r2, review
+revLO2 3: `Dresden, Germany (bob.baker@a.org); Leipzig (bob@b.org)` keeps its reading). The emitter writes the rest from its own
+tokens, cut inside the ink the address ends at the first address's own first token — past every token the item's letters need, by
+the writer's own check of a span's letters (`writer::repart::prefix_tokens` over `plan::block_span_tokens`) — less the spaces,
+separators, commands and bracket opening the address, a bracket the cut leaves open closed by its own token after the address, and a
+mark before it kept as its ink (LO2r2, review revLO2 2 and base: the shortest letter match wrote `Dresden [Germany`, `(Tel. 351
+463`, and `Dresden$^{\dagger}$, Germany` by its text, the `†` lost; now `Dresden [Germany]`, `(Tel. 351 463)`, `Dresden † ,
+Germany`, as the switch off); an address spelling no one, or printed mid-line, stays in the text. *A note after a block's labelled
+entries is the block's* (LO2r2, ruling: Perl): a note after an entry's last other ink, or on a line under a labelled entry (a line of
+notes alone, `{\small\thanks{…}}`, or after the line's text), is no name's — the entry's span ends before it
+(`Resolver::labelled_entries`, the block's unmarked line under a `Continued::Pending` entry; the switch on only) — and the emitter
+writes it as Perl prints it, digested inside the entry's contact where `\thanks` is `\lx@add@pubnote@thanks` (Base_Utility.pool.ltxml:
+331-332): one `<pubnote>` of the document from its own tokens (`writer::emit::block_pubnote` over `document_note_call`; any note the
+reading gives the block alone that a plain `\thanks{…}` or `\footnote{…}` prints, the rest the block's creator's as before).
+2504.09745's `$^{\ddagger}$Ericsson Canada\thanks{…}` one pubnote, held by no author, as Perl (LO2: each `‡` author's thanks, Ali
+Afana's and Yahia Ahmed's a general funding note; int146a and LO1: a nameless creator's note in two Warnings, and a pubnote the
+entry's own tokens digested; the switch off: a pubnote per relocated `‡` entry, two); `$^{2}$Univ B, City\\ \thanks{…}` one
+pubnote (int146a and LO2: the last name's, Cy Cole's). A note inside an entry, ink after it, is as before. *The tail a raw macro appends to
 `\@author`* (`frontmatter_stores` `author_tail_calls`, `annotate={made}`): with `=2` the call queues one entry, a count reaching
 its last name alone, so where the call made every queued creator the tail is `annotate=all`, Perl's every parent
 (`relocateAnnotations`, Base_Utility.pool.ltxml:520), each name's row as with the switch off (review revZ4b 4; pdflatex prints such
@@ -32561,9 +32572,12 @@ first mark read is a key on its pending entry (`_markread`, `with_digesting_entr
 :502-508), not a State flag; `Resolver::emitting` is `LATEXML_FM_EMIT=2`, as `whole_entries` (`=1` keeps the switch-off reading);
 `FieldCreator::labels` cleans as the API cleans a label (`clean_frontmatter_labels`, Perl's `cleanFrontmatterLabels`, :360-372:
 `annotations={\ref{ed}}` answers `label={\ref{ed}}`, a nameless creator's before); the ledger's count of changes has one write
-path, `Ledger::entries_mut`, taken only where an entry changes, and the conversion's reset drops the reading and the count. Off:
-byte-identical. Left: a hostile `annotations={\rm Ed Office}` prints its last word as a mark on the name (int146a: a nameless
-creator). Guards `perfect_kernel_batchlo2`, `perfect_kernel_batchlo1::an_address_decides_only_its_own_ink` (whole creators with
+path, `Ledger::entries_mut`, taken only where an entry changes (with the switch on: off, which keeps no reading, a change is made
+in one pass, unread first, `Ledger::change_each`, LO2r2), and the conversion's reset drops the reading and the count. A label is
+cleaned on both sides (LO2r2, review revLO2 4): a call's `label=` is read as Perl's `cleanFrontmatterLabels` cleans it where that
+is what the names request, as a creator call's `annotations=` (`Resolver::api`, the switch on only) — `label={\rm Ed Office}`
+answers `annotations={\rm Ed Office}`, both `Ed_Office`, Bob Baker's office (LO2: read as marks, its words `E,d,Office` a mark on his
+name; int146a: a nameless creator's). Off: byte-identical. Guards `perfect_kernel_batchlo2`, `perfect_kernel_batchlo1::an_address_decides_only_its_own_ink` (whole creators with
 either switch), `perfect_kernel_batchz4b::annotate_made_reaches_every_name`, `writer::emit::tests::the_reset_drops_the_reading_and_its_count`.
 
 Guards `perfect_kernel_batchz4`.
