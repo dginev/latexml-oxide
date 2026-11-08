@@ -318,6 +318,52 @@ pub struct Event {
   pub note_mark:      Option<String>,
 }
 
+/// Where one character of an ink prints ([`InkTable`]): its box's cover (`span`, a wrapper's call for the first box in
+/// one) and the position of the token that printed it (`own`, `None` where the box has none of its own).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct InkAt {
+  pub cover: (u16, u16),
+  pub own:   Option<u16>,
+}
+
+/// Where the inks of a lexed list printing an e-mail address's `@` print, beside its events (the block's ledger entry,
+/// `ledger::Outcome::Events::inks`; a call's rehearsal): each such ink's characters (a Name on a line printing an `@`, a
+/// Note's text), one [`InkAt`] per character of its text, `None` for a space the lexer wrote — keyed by the event's span
+/// and text —, and the font each `@` prints in, at its token's position (its own, else its box's cover's start): where the
+/// reading's address runs print and in what, which the emitter cuts the entry's tokens at and writes each address in
+/// (`writer::address_cut`, OXIDIZED_DESIGN_DIVERGENCES #980 P1b). Beside the events, not on each: an `Event` is moved
+/// and cloned throughout the reading, its size paid at each (1901.01540's thousand-author line: +0.35 % instructions for
+/// 24 bytes more). Not in a dump.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct InkTable {
+  pub at:    Vec<InkOf>,
+  pub fonts: Vec<(u16, Rc<Font>)>,
+}
+
+/// One ink's characters in an [`InkTable`]: the event's span and text, where each character prints.
+pub type InkOf = ((u16, u16), String, Vec<Option<InkAt>>);
+
+impl InkTable {
+  /// Where each character of `event`'s text prints, if recorded.
+  pub fn of(&self, event: &Event) -> Option<&[Option<InkAt>]> {
+    let span = event.span?;
+    self
+      .at
+      .iter()
+      .find(|(s, text, _)| *s == span && *text == event.text)
+      .map(|(_, _, at)| at.as_slice())
+  }
+
+  /// The font the `@` whose token is at `position` prints in.
+  pub fn font_at(&self, position: u16) -> Option<&Rc<Font>> {
+    self
+      .fonts
+      .iter()
+      .find(|(at, _)| *at == position)
+      .map(|(_, font)| font)
+  }
+}
+
 impl Event {
   pub fn new(kind: EventKind) -> Self {
     Event {
@@ -853,6 +899,8 @@ struct Walker {
   formulas:      Vec<Formula>,
   /// the formulas walked here, in the order they end: the atoms each made, and the formula
   formula_atoms: Vec<(usize, usize, usize)>,
+  /// where a note's text printing an `@` prints, and the fonts of its `@`s ([`lex_with_inks`])
+  inks:          InkTable,
 }
 
 /// Whether `atoms` hold no word and no event: what may stand beside a mark's formula in its group.
@@ -1184,11 +1232,20 @@ impl Walker {
         note.footnote = cs.ends_with("fnnote");
         if let Some(body) = w.get_arg(2) {
           note.inkless = leaves_no_ink(body);
-          let (events, formulas) = lex_with_formulas(body);
+          let (events, formulas, inks) = lex_with_inks(body);
           self.formulas.extend(formulas);
           // (its text as printed, its contacts' too: the rehearsal's contact constructors print nothing, so the ink
           // of "available at \url{…}" lacks the address — 2105.10596)
           note.text = printed_text(&events);
+          // (and where each of its characters prints, where it prints an address, and the fonts of its `@`s: `InkTable`)
+          if note.text.contains('@') {
+            let at;
+            (note.text, at) = printed_text_at(&events, &inks);
+            if let Some(span) = deep_span(d) {
+              self.inks.at.push((span, note.text.clone(), at));
+            }
+            self.inks.fonts.extend(inks.fonts);
+          }
           let mut inked = false;
           for inner in events {
             let first = !inked;
@@ -1765,6 +1822,62 @@ fn whatsit_width_em(d: &Digested, w: &Whatsit) -> Option<f64> {
 /// The text events print, in order: names, contacts and inner notes as their text, a comma `,`, a separating word its
 /// word, the rest a space, the marks aside (a note's text, `\lx@fm@obs@note`).
 pub(in crate::base_utilities) fn printed_text(events: &[Event]) -> String {
+  printed_text_into(events, None)
+}
+
+/// [`printed_text`], and where each of its characters prints ([`InkTable`]).
+pub(in crate::base_utilities) fn printed_text_at(
+  events: &[Event],
+  inks: &InkTable,
+) -> (String, Vec<Option<InkAt>>) {
+  let mut at = Vec::new();
+  let text = printed_text_into(events, Some((&mut at, inks)));
+  (text, at)
+}
+
+/// Where each character of an event's `piece` prints: its ink's own record where it has one for the whole text, else the
+/// event's span for each.
+fn piece_at(event: &Event, piece: &str, (at, inks): (&mut Vec<Option<InkAt>>, &InkTable)) {
+  if let Some(own) = inks
+    .of(event)
+    .filter(|own| piece == event.text && own.len() == piece.chars().count())
+  {
+    at.extend_from_slice(own);
+  } else {
+    let whole = event.span.map(|cover| InkAt { cover, own: None });
+    at.extend(piece.chars().map(|_| whole));
+  }
+}
+
+/// `text` with its whitespace runs one space, trimmed, and `at` (one per character, when given) with it.
+fn spaced_at(text: &str, at: Option<&mut Vec<Option<InkAt>>>) -> String {
+  let Some(at) = at else {
+    return text.split_whitespace().collect::<Vec<_>>().join(" ");
+  };
+  let mut out = String::new();
+  let mut kept = Vec::new();
+  let mut space = false;
+  for (c, ink) in text.chars().zip(at.iter()) {
+    if c.is_whitespace() {
+      space = !out.is_empty();
+      continue;
+    }
+    if space {
+      out.push(' ');
+      kept.push(None);
+      space = false;
+    }
+    out.push(c);
+    kept.push(*ink);
+  }
+  *at = kept;
+  out
+}
+
+fn printed_text_into(
+  events: &[Event],
+  mut at: Option<(&mut Vec<Option<InkAt>>, &InkTable)>,
+) -> String {
   let mut out = String::new();
   for event in events {
     let (piece, glued) = match &event.kind {
@@ -1779,6 +1892,9 @@ pub(in crate::base_utilities) fn printed_text(events: &[Event]) -> String {
       _ => {
         if !out.ends_with(' ') && !out.is_empty() {
           out.push(' ');
+          if let Some((at, _)) = at.as_mut() {
+            at.push(None);
+          }
         }
         continue;
       },
@@ -1788,15 +1904,28 @@ pub(in crate::base_utilities) fn printed_text(events: &[Event]) -> String {
     }
     if !glued && !out.is_empty() && !out.ends_with(' ') {
       out.push(' ');
+      if let Some((at, _)) = at.as_mut() {
+        at.push(None);
+      }
     }
     out.push_str(piece);
+    if let Some((at, inks)) = at.as_mut() {
+      piece_at(event, piece, (at, inks));
+    }
   }
-  out.split_whitespace().collect::<Vec<_>>().join(" ")
+  spaced_at(&out, at.map(|(at, _)| at))
 }
 
 /// The text of events, as printed: names and contacts, a comma's `,`, a word's word, a gap's space; marks aside but a
 /// number's suffix (`Event::ordinal`).
 pub(in crate::base_utilities) fn events_text(events: &[&Event]) -> String {
+  events_text_into(events, None)
+}
+
+fn events_text_into(
+  events: &[&Event],
+  mut at: Option<(&mut Vec<Option<InkAt>>, &InkTable)>,
+) -> String {
   let mut out = String::new();
   for event in events {
     let piece = match &event.kind {
@@ -1811,11 +1940,27 @@ pub(in crate::base_utilities) fn events_text(events: &[&Event]) -> String {
     } else {
       if !out.is_empty() {
         out.push(' ');
+        if let Some((at, _)) = at.as_mut() {
+          at.push(None);
+        }
       }
       out.push_str(piece);
     }
+    if let Some((at, inks)) = at.as_mut() {
+      piece_at(event, piece, (at, inks));
+    }
   }
-  out.trim().to_string()
+  match at {
+    // (trimmed, its characters with it)
+    Some((at, _)) => {
+      let lead = out.len() - out.trim_start().len();
+      let lead_chars = out[..lead].chars().count();
+      let kept = out.trim().chars().count();
+      *at = at.iter().skip(lead_chars).take(kept).copied().collect();
+      out.trim().to_string()
+    },
+    None => out.trim().to_string(),
+  }
 }
 
 /// [`events_text`] with its lines kept: the text of each run of events between two `Break`s, a `\n` between them —
@@ -1828,6 +1973,34 @@ pub(in crate::base_utilities) fn events_lined_text(events: &[&Event]) -> String 
     .filter(|line| !line.is_empty())
     .collect::<Vec<_>>()
     .join("\n")
+}
+
+/// [`events_text`] and [`events_lined_text`] of `events`, each with where each of its characters prints
+/// ([`InkTable`]; a space or a line's end the text writes `None`): what the emitter reads an entry's address runs at
+/// (`writer::address_cut`).
+pub(in crate::base_utilities) type TextAt = (String, Vec<Option<InkAt>>);
+
+pub(in crate::base_utilities) fn events_texts_at(
+  events: &[&Event],
+  inks: &InkTable,
+) -> [TextAt; 2] {
+  let mut at = Vec::new();
+  let text = events_text_into(events, Some((&mut at, inks)));
+  let (mut lined, mut lined_at) = (String::new(), Vec::new());
+  for line in events.split(|e| e.kind == EventKind::Break) {
+    let mut line_at = Vec::new();
+    let line = events_text_into(line, Some((&mut line_at, inks)));
+    if line.is_empty() {
+      continue;
+    }
+    if !lined.is_empty() {
+      lined.push('\n');
+      lined_at.push(None);
+    }
+    lined.push_str(&line);
+    lined_at.extend(line_at);
+  }
+  [(text, at), (lined, lined_at)]
 }
 
 /// The run of marks an entry's events lead with — `\affil{$^1$Univ X}`, `\address{$\dagger,\;\ast$\;Univ A}` (one run,
@@ -2198,9 +2371,35 @@ pub(in crate::base_utilities) fn lex_events(digested: &Digested) -> Vec<Event> {
 pub(in crate::base_utilities) fn lex_with_formulas(
   digested: &Digested,
 ) -> (Vec<Event>, Vec<Formula>) {
+  let (events, formulas, _) = lex_with_inks(digested);
+  (events, formulas)
+}
+
+/// [`lex_with_formulas`], and where its inks printing an `@` print ([`InkTable`]): what the emitter cuts an entry's addresses
+/// at (`writer::address_cut`).
+pub(in crate::base_utilities) fn lex_with_inks(
+  digested: &Digested,
+) -> (Vec<Event>, Vec<Formula>, InkTable) {
   let mut walker = Walker::default();
   walker.walk(digested, 0);
   let mut lexer = Lexer::default();
+  // (the lines printing an `@`, whose names' characters' positions the lexer records: `InkTable`)
+  let mut line = 0;
+  for atom in &walker.atoms {
+    let (text, breaks) = match atom {
+      Atom::Ink { text, .. } => (text.as_str(), false),
+      Atom::Event(e) => (e.text.as_str(), e.kind == EventKind::Break),
+      Atom::Space { .. } => ("", false),
+    };
+    if breaks {
+      line += 1;
+    } else if text.contains('@') {
+      lexer
+        .at_lines
+        .resize(lexer.at_lines.len().max(line + 1), false);
+      lexer.at_lines[line] = true;
+    }
+  }
   for atom in walker.atoms {
     match atom {
       Atom::Ink {
@@ -2216,7 +2415,9 @@ pub(in crate::base_utilities) fn lex_with_formulas(
       Atom::Event(event) => lexer.push_event(event),
     }
   }
-  let mut events = lexer.finish();
+  let (mut events, mut inks) = lexer.finish();
+  inks.at.append(&mut walker.inks.at);
+  inks.fonts.append(&mut walker.inks.fonts);
   // (an in-block contact cut into entries one of which no name's mark requests is the one entry its leading marks
   // label: the writer makes no entry of the block's own, and today's contact stays whole on the names its first marks
   // request — not on a nameless creator, review rev94b r2 B1: `\affil{$^1$Univ A\\ $^2$Univ B\\ $^3$Lab C}` under names
@@ -2258,7 +2459,7 @@ pub(in crate::base_utilities) fn lex_with_formulas(
       outermost.push(formula);
     }
   }
-  (events, outermost)
+  (events, outermost, inks)
 }
 
 /// The Declaration events of a block's definitions (`field_notes::FieldNotes`): a definition, printing nothing, is in no box, so

@@ -2027,6 +2027,16 @@ impl Resolver {
         original: text.clone(),
         stripped: stripped.clone(),
         holders: holders.iter().map(|&h| (h.0, h.1, assoc_of(h))).collect(),
+        cuts: address_cuts(&lined, &kept_runs),
+        runs: kept_runs
+          .iter()
+          .map(|run| TakenRun {
+            bytes:     (run.start, run.end),
+            addresses: run.addresses.clone(),
+            label:     run.label.clone(),
+          })
+          .collect(),
+        lined: lined.clone(),
       });
       for &(c, i) in &holders {
         let slot = match c {

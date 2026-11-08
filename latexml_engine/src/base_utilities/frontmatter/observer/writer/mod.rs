@@ -33,6 +33,7 @@ use super::{
   *,
 };
 
+mod address_cut;
 mod apply;
 // (the emitter's vocabulary, moved unchanged from the old reader by the plan's row "Knowledge in, driver out, one pass"; re-exported by `observer/mod.rs`)
 pub(in crate::base_utilities) mod calls;
@@ -760,7 +761,7 @@ fn give_back_entries(
 }
 
 /// The entry `taken` given back in the reading `out`: its addresses, taken out, no contacts of its holders.
-fn give_back_entry(out: &mut Resolved, taken: &resolver::Taken) {
+pub(super) fn give_back_entry(out: &mut Resolved, taken: &resolver::Taken) {
   for creator in &mut out.creators {
     creator
       .contacts

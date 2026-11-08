@@ -13,8 +13,8 @@ use latexml_core::definition::origin::watch_frontmatter_setter_calls;
 
 use super::{
   events::{
-    EmailMeaning, Event, EventKind, HeldError, SepKind, creator_roles, lex_events,
-    lex_with_formulas, mark_held, with_block_content,
+    EmailMeaning, Event, EventKind, HeldError, SepKind, creator_roles, lex_events, lex_with_inks,
+    mark_held, with_block_content,
   },
   ledger::{Entry, Outcome, SkipReason, Stamp, reset_ledger, stamped_block_tokens, with_ledger},
   policy::{TitleMarks, policy_for},
@@ -186,12 +186,12 @@ fn read_at_flush() -> Result<()> {
           stamped_block_tokens(&block),
           title_marks,
           block_breaks,
-          lex_with_formulas,
+          lex_with_inks,
         )
       })?;
       match rehearsal {
         Rehearsal::Done {
-          value: (mut value, formulas),
+          value: (mut value, formulas, inks),
           errors,
           warnings,
           declarations,
@@ -205,6 +205,7 @@ fn read_at_flush() -> Result<()> {
           Outcome::Events {
             events: value,
             formulas,
+            inks: Box::new(inks),
             errors,
             warnings,
             declarations,
@@ -929,6 +930,7 @@ mod tests {
     assert_eq!(
       skip_reason(&Outcome::Events {
         formulas:     Vec::new(),
+        inks:         Box::default(),
         events:       Vec::new(),
         errors:       0,
         warnings:     0,

@@ -1,0 +1,24 @@
+% mechanism: an address cut out of an entry's text at `LATEXML_FM_EMIT=2` is its owner's e-mail as printed (RT1 row 56, the
+%   switch-off writer's wrapper, `dom::address_cut`): the call wrapping it alone whole (`\href{mailto:…}{…}`), else its own
+%   tokens in the font it prints in, of a wrapper holding more (`\textit{…}`) (`writer::address_cut`; OD #980 P1br2); a
+%   note's in `emit_a_cut_address_in_a_note_keeps_its_font`; `=2` only
+% witness: 2608.15371 (`\href{mailto:…}{…}` lost), 2405.06709 (`\thanks{… \texttt{E-Mail: …}}`), 2008.08137 (`{\it …}`),
+%   2608.14026, 1312.5468; revP1b's probes q5b, q5c
+% oracle:  pdflatex 0 errors; "1 Univ X, ann.able@x.org, Dept Y"; "2 Univ Z, bob.baker@z.org, Dept W" (italic)
+% engines: rust P1b `=2`: each e-mail plain text, the link and the font lost; off: Ann's link, Bob's italic
+% expect:  0 errors, 0 warnings; Ann's e-mail the link, Bob's italic; their entries without them
+% status:  RED (P1b) -> GREEN (perfect_kernel_batchp1e::a_cut_address_keeps_its_link_and_font)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\usepackage{hyperref}
+\begin{document}
+\title{An address's link and font}
+\author[1]{Ann Able}
+\author[2]{Bob Baker}
+\affil[1]{Univ X, \href{mailto:ann.able@x.org}{ann.able@x.org}, Dept Y}
+\affil[2]{\textit{Univ Z, bob.baker@z.org, Dept W}}
+\date{}
+\maketitle
+Text.
+\end{document}

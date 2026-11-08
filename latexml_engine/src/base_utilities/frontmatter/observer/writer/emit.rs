@@ -16,6 +16,7 @@ use std::{
 use latexml_core::document::tag::RawFrontmatter;
 
 use super::{
+  address_cut::{EntryCut, cut_entry_call, cut_mail_call, entry_cuts, span_tokens_cut},
   calls::{document_note_call, note_call_end},
   dom::{Kind, norm},
   plan::{self, Key, Owner, api_call},
@@ -30,7 +31,7 @@ use crate::base_utilities::{
   frontmatter::{
     fallback::whole_block_author,
     observer::{
-      events::{EventKind, Formula, lex_with_formulas},
+      events::{EventKind, Formula, InkTable, lex_with_inks},
       field_notes::{EnvironmentStep, FieldCreator},
       ledger::{ApiCall, AuthorBlock, annotated_parent, field_stamped},
       policy::TitleMarks,
@@ -127,7 +128,7 @@ fn with_key_tokens(mut head: Vec<Token>, keys: Vec<Token>, content: &[Token]) ->
 }
 
 /// `\lx@annotate@frontmatter@now{ltx:creator}{ltx:contact}[keys]{content}`.
-fn annotate_now(tag: &str, keys: &str, content: &[Token]) -> Tokens {
+pub(super) fn annotate_now(tag: &str, keys: &str, content: &[Token]) -> Tokens {
   let mut head = vec![T_CS!("\\lx@annotate@frontmatter@now")];
   head.extend(cs_group_args(&["ltx:creator", tag]));
   with_keys(head, keys, content)
@@ -144,7 +145,7 @@ fn cs_group_args(args: &[&str]) -> Vec<Token> {
 }
 
 /// The reading's text as tokens that print it: its specials as their commands (an OTHER `_` in OT1 prints `˙`: 2605.20715).
-fn text_tokens(text: &str) -> Vec<Token> {
+pub(super) fn text_tokens(text: &str) -> Vec<Token> {
   let mut out = Vec::new();
   for c in text.chars() {
     match c {
@@ -253,7 +254,7 @@ fn rekeyed(
 }
 
 /// `\\lx@frontmatter@itemonly{content}`: past the spaces a content opens with, which an item's digestion skips.
-fn item_only(content: &[Token]) -> Vec<Token> {
+pub(super) fn item_only(content: &[Token]) -> Vec<Token> {
   let spaces = content
     .iter()
     .take_while(|t| t.get_catcode() == Catcode::SPACE)
@@ -428,8 +429,9 @@ fn event_run(
   events: &[Event],
   ends: (&Event, &Event),
   grown: Option<(usize, usize)>,
+  cuts: &[(usize, usize)],
 ) -> Option<Vec<Token>> {
-  event_run_at(field, events, ends, grown).map(|(tokens, _)| tokens)
+  event_run_at(field, events, ends, grown, cuts).map(|(tokens, _)| tokens)
 }
 
 /// [`event_run`], and the run of the block's tokens it was taken from (from, to).
@@ -438,6 +440,7 @@ fn event_run_at(
   events: &[Event],
   (first, last): (&Event, &Event),
   grown: Option<(usize, usize)>,
+  cuts: &[(usize, usize)],
 ) -> Option<(Vec<Token>, (usize, usize))> {
   let at = |p: u16| usize::from(p).checked_sub(field.base);
   let (start, end) = (at(first.span?.0)?, at(last.span?.1)?);
@@ -499,7 +502,7 @@ fn event_run_at(
     run_end = run_end.max(t);
   }
   let from = in_a_group(field.tokens, run_start, run_end);
-  let (tokens, _) = field.content_of((from, run_end), 0, run_start)?;
+  let (tokens, _) = field.content_cut((from, run_end), 0, run_start, cuts)?;
   let tokens = if wider || first_own <= start {
     in_its_font(first.font.clone(), tokens.unlist()).unlist()
   } else {
@@ -606,8 +609,13 @@ fn block_names(
           on_names.insert((index, span));
         }
       }
-      let (tokens, (run_from, run_to)) =
-        event_run_at(&field, events, (found[from].1, found[to].1), Some(grown))?;
+      let (tokens, (run_from, run_to)) = event_run_at(
+        &field,
+        events,
+        (found[from].1, found[to].1),
+        Some(grown),
+        &[],
+      )?;
       // (a note the name's tokens print is written with it, not again as an item: `\\newcommand{\\ann}{Ann
       // Able\\thanks{…}}`, whose name is the one token `\\ann` — revLO4; a wrapper's note is cut out of the run,
       // `event_run`: P2 B)
@@ -716,23 +724,23 @@ fn kinded_affiliation(keys: &str, content: &[Token]) -> Tokens {
 
 /// The tokens of the event's `span` of the block at `index`, balanced.
 fn span_tokens_of(index: usize, span: (u16, u16)) -> Option<Tokens> {
-  with_ledger(|ledger| {
-    let Some(Entry::Author(block)) = ledger.entries().get(index) else {
-      return None;
-    };
-    let Outcome::Events { formulas, environments, .. } = &block.outcome else {
-      return None;
-    };
-    let field = Field {
-      tokens: block.tokens.unlist_ref(),
-      base: block.range.0,
-      formulas,
-      environments,
-    };
-    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
-    let start = at(span.0)?;
-    Some(field.content_of((start, at(span.1)?), 0, start)?.0)
-  })
+  span_tokens_cut(index, span, &[])
+}
+
+/// A call's tokens around its last argument, and that argument's: through its opening brace, inside, from its closing one.
+pub(super) fn last_argument(call: &Tokens) -> Option<(Vec<Token>, Vec<Token>, Vec<Token>)> {
+  let mut tokens = call.unlist_ref().to_vec();
+  let close = tokens
+    .iter()
+    .rposition(|t| t.get_catcode() == Catcode::END)?;
+  let mut depth = 0;
+  let open = (0..=close).rev().find(|&i| {
+    depth += tokens[i].group_step();
+    depth == 0
+  })?;
+  let after = tokens.split_off(close);
+  let content = tokens.split_off(open + 1);
+  Some((tokens, content, after))
 }
 
 /// `call`, its content's printed list written down to the one `address` of it (the reading's `ruling3:written-out`): its last
@@ -740,23 +748,13 @@ fn span_tokens_of(index: usize, span: (u16, u16)) -> Option<Tokens> {
 /// (`\\textcolor{blue}{a@x}, \\textcolor{blue}{b@y}`, review revZ4a; `\\lx@address@urlfont{a@x, b@y}`, `\\textcolor{blue}{a@x,
 /// b@y}`, 2211.14973), what's around the list stands; its text in the list's font where no ink prints it alone.
 fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
-  let mut tokens = call.unlist_ref().to_vec();
-  let Some(close) = tokens.iter().rposition(|t| t.get_catcode() == Catcode::END) else {
+  let Some((mut tokens, content, after)) = last_argument(call) else {
     return Ok(call.clone());
   };
-  let mut depth = 0;
-  let Some(open) = (0..=close).rev().find(|&i| {
-    depth += tokens[i].group_step();
-    depth == 0
-  }) else {
-    return Ok(call.clone());
-  };
-  let after = tokens.split_off(close);
-  let content = tokens.split_off(open + 1);
   let read = rehearsed(&content)?;
   let (events, formulas, environments) = read
     .as_ref()
-    .map_or((&[][..], &[][..], &[][..]), |(e, f, n)| {
+    .map_or((&[][..], &[][..], &[][..]), |(e, f, n, _)| {
       (e.as_slice(), f.as_slice(), n.as_slice())
     });
   let field = Field {
@@ -784,7 +782,7 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
   let printed = inks
     .iter()
     .find(|e| spaced(&e.text) == spaced(address))
-    .and_then(|e| event_run(&field, events, (e, e), None));
+    .and_then(|e| event_run(&field, events, (e, e), None, &[]));
   tokens.extend_from_slice(&content[..from]);
   // (or its text in the font the list prints in, where no ink is it alone, `a@x; b@y`, 1305.0477, 1510.05412, or no rehearsal
   // reads the argument, past the positions: counted, its link lost)
@@ -895,8 +893,15 @@ fn spaced(index: usize, span: (u16, u16), tokens: Vec<Token>) -> Vec<Token> {
 }
 
 /// The tokens of an entry whose lines no balanced run holds (`{\\small $^1$Univ A}\\\\ {\\small Town}`, 2203.00365,
-/// cond-mat0404185): each line's, at the Break events of `span`, with its break.
-fn lines_run(field: &Field, events: &[Event], span: (u16, u16)) -> Option<Vec<Token>> {
+/// cond-mat0404185): each line's, at the Break events of `span`, with its break — without the runs `cuts` (an entry's address
+/// runs, `address_cut`), each inside one line's (`\\begin{small} …\\end{small} \\\\ \\begin{small} … a@x \\end{small}`,
+/// 1312.5468), else `None`.
+fn lines_run(
+  field: &Field,
+  events: &[Event],
+  span: (u16, u16),
+  cuts: &[(usize, usize)],
+) -> Option<Vec<Token>> {
   let mut lines: Vec<Vec<&Event>> = vec![Vec::new()];
   for e in events
     .iter()
@@ -912,19 +917,25 @@ fn lines_run(field: &Field, events: &[Event], span: (u16, u16)) -> Option<Vec<To
     return None;
   }
   let mut out = Vec::new();
+  let mut runs = Vec::new();
   for (n, line) in lines.iter().enumerate() {
     if n > 0 {
       out.push(T_CS!("\\\\"));
     }
     if let (Some(first), Some(last)) = (line.first(), line.last()) {
-      out.extend(event_run(field, events, (first, last), None)?);
+      let (tokens, run) = event_run_at(field, events, (first, last), None, cuts)?;
+      out.extend(tokens);
+      runs.push(run);
     }
   }
-  Some(out)
+  cuts
+    .iter()
+    .all(|&(s, t)| runs.iter().any(|&(from, to)| from <= s && t <= to))
+    .then_some(out)
 }
 
 /// `tokens` digested in the font their first ink printed in, against the flush's: what a group or a switch before them set.
-fn in_its_font(font: Option<Rc<Font>>, tokens: Vec<Token>) -> Tokens {
+pub(super) fn in_its_font(font: Option<Rc<Font>>, tokens: Vec<Token>) -> Tokens {
   let changes = font
     .zip(lookup_font())
     .map(|(font, root)| Rc::new(events::font_changes(&root, &font)));
@@ -942,9 +953,42 @@ fn item_call(
   separate: &BTreeSet<usize>,
   pieces: &mut BTreeMap<usize, Vec<Piece>>,
   whole: &mut BTreeSet<usize>,
+  cuts: &[EntryCut],
 ) -> Result<Tokens> {
   let role = assoc.role.as_str();
   let mut keys = s!("role={role},label={{{label}}}");
+  // (an entry the reading took addresses out of: written as it printed, its tokens cut at the runs, `address_cut` — written by its
+  // text, counted, where the path its whole takes doesn't cut; each address its owner's e-mail as printed, named by its label)
+  if let Some(call) = cut_mail_call(cuts, assoc, &keys) {
+    return Ok(call);
+  }
+  if key.0 == Kind::Affiliation
+    && let Some(call) = cut_entry_call(
+      cuts,
+      assoc,
+      |entry, cut| {
+        let key = (Kind::Affiliation, norm(&entry.text));
+        item_call(
+          &key,
+          entry,
+          label,
+          separate,
+          pieces,
+          whole,
+          std::slice::from_ref(cut),
+        )
+      },
+      || {
+        kinded_affiliation(
+          &keys,
+          &by_text(Some("an entry's addresses cut"), &assoc.text),
+        )
+      },
+    )
+  {
+    return call;
+  }
+  let cut = cuts.iter().find(|cut| cut.is_entry(assoc));
   // (an address the block prints after its label word is named by it, as printed, as the Kind steps name it: `E-mail:
   // \\email{…}`, 1412.5940; `E-mail: \\texttt{a@x}`, 0802.3384; `Emails:` on each of a list's, 2511.22090; `email`, 1209.0869)
   if role == "email"
@@ -1003,7 +1047,7 @@ fn item_call(
     } else if let Some(tokens) =
       // (an entry the block prints moves back to its place by its zone, what a label places alone: `at_queue_position`)
       rekeyed(
-        command,
+        cut.and_then(|cut| cut.command.as_ref()).unwrap_or(command),
         &s!("label={{{label}}}"),
         true,
         separate.contains(&index),
@@ -1011,6 +1055,9 @@ fn item_call(
       )
     {
       whole.insert(index);
+      cut
+        .filter(|cut| cut.command.is_some())
+        .inspect(|cut| cut.applied.set(true));
       return Ok(tokens);
     }
   }
@@ -1027,8 +1074,9 @@ fn item_call(
     // (a block's: the tokens its span covers)
     Some((index, Some(span))) => {
       // (a note's: its argument, under the note's own kind, but an entry a mark leads, as `\\lx@add@thanks` reads it: 2102.08072)
+      let cut_runs = cut.map_or(&[][..], |cut| &cut.cuts[..]);
       let argument = event_at(index, span, |e| e.kind == EventKind::Note, |_| ())
-        .and_then(|()| span_tokens_of(index, span))
+        .and_then(|()| span_tokens_cut(index, span, cut_runs))
         .as_ref()
         .and_then(note_argument);
       // (never a `\\footnote`'s, which `\\lx@add@note` keeps a note: `\\footnote{\\textsuperscript{1}These authors
@@ -1113,6 +1161,7 @@ fn item_call(
           })
           .or(segments.first());
         if let Some(segment) = segment {
+          cut.inspect(|cut| cut.applied.set(true));
           return Ok(kinded_affiliation(
             &s!("role=affiliation,label={{{label}}}"),
             &cs_group("\\lx@affiliation@withsup", &[segment.unlist_ref()]),
@@ -1197,8 +1246,17 @@ fn item_call(
           .rfind(|e| e.kind != EventKind::Layout && e.span.is_some_and(|s| s.1 <= span.0))
           .filter(|e| e.kind == EventKind::Mark && note);
         let grown = mark.and_then(|e| Some((usize::from(e.span?.0).checked_sub(field.base)?, 0)));
-        let tokens = event_run(&field, events, (first, last), grown)
-          .or_else(|| lines_run(&field, events, span))?;
+        let tokens = match event_run(&field, events, (first, last), grown, cut_runs) {
+          Some(tokens) => {
+            cut.inspect(|cut| cut.applied.set(true));
+            tokens
+          },
+          None => {
+            let tokens = lines_run(&field, events, span, cut_runs)?;
+            cut.inspect(|cut| cut.applied.set(true));
+            tokens
+          },
+        };
         Some((tokens, first.font.clone(), mark.map(|e| e.text.clone())))
       });
       let Some((tokens, font, mark)) = run else {
@@ -1241,8 +1299,9 @@ fn item_call(
   }
 }
 
-/// A call's content as a stamped rehearsal reads it ([`rehearsed`]).
-type CallRead = (Vec<Event>, Vec<Formula>, Vec<EnvironmentStep>);
+/// A call's content as a stamped rehearsal reads it ([`rehearsed`]): its events, formulas, environments and where its inks
+/// printing an `@` print.
+type CallRead = (Vec<Event>, Vec<Formula>, Vec<EnvironmentStep>, InkTable);
 
 /// A creator's role, Perl's `role=` key: its creator call's in the block that printed it (PoS's `\speaker`, 0910.5686,
 /// 1007.2355, 1111.2428, 1111.6944), an API call's own, else `author`.
@@ -1295,18 +1354,18 @@ fn creator_call_of(c: &RCreator) -> Option<FieldCreator> {
 
 /// A call's content's events, formulas and environments, from a stamped rehearsal of it, as `plan::cut` reads a piece (its
 /// positions the call's own, from 0: the author field's 15 bits).
-fn rehearsed(content: &[Token]) -> Result<Option<CallRead>> {
+pub(super) fn rehearsed(content: &[Token]) -> Result<Option<CallRead>> {
   if content.len() > usize::from(AUTHOR_PROV_POS_MASK) {
     return Ok(None);
   }
   let stamped = field_stamped(2, 0, content);
   Ok(
-    match rehearse(stamped, TitleMarks::Fnsymbol, &[], lex_with_formulas)? {
+    match rehearse(stamped, TitleMarks::Fnsymbol, &[], lex_with_inks)? {
       Rehearsal::Done {
-        value: (events, formulas),
+        value: (events, formulas, inks),
         environments,
         ..
-      } => Some((events, formulas, environments)),
+      } => Some((events, formulas, environments, inks)),
       Rehearsal::Skipped(_) => None,
     },
   )
@@ -1316,7 +1375,7 @@ fn rehearsed(content: &[Token]) -> Result<Option<CallRead>> {
 /// its address ([`one_address`]).
 fn call_contact(call: &ApiCall, assoc: &Assoc, within: bool) -> Result<Option<Tokens>> {
   let key = plan::contact_key(assoc).1;
-  let Some((events, formulas, environments)) = rehearsed(call.content.unlist_ref())? else {
+  let Some((events, formulas, environments, _)) = rehearsed(call.content.unlist_ref())? else {
     return Ok(None);
   };
   let field = Field {
@@ -1348,7 +1407,7 @@ type Piece = (String, Option<Vec<Token>>);
 /// one, nor inside one (`nest`, `Field::formulas`): `$^{1}$Univ X \\begin{tabular}{c}a\\\\ b\\end{tabular}`, `\\begin{ee}a b\\end{ee}`,
 /// `$\\begin{array}{c}a\\end{array}$` (review revZ4a).
 fn call_pieces(call: &ApiCall) -> Result<Vec<Piece>> {
-  let Some((events, formulas, environments)) = rehearsed(call.content.unlist_ref())? else {
+  let Some((events, formulas, environments, _)) = rehearsed(call.content.unlist_ref())? else {
     return Ok(Vec::new());
   };
   let field = Field {
@@ -1640,6 +1699,8 @@ pub(in crate::base_utilities) struct Analysis {
   calls:      BTreeMap<usize, CallCheck>,
   marks:      BTreeMap<usize, Vec<String>>,
   merged:     BTreeMap<usize, Vec<String>>,
+  /// the entries the reading took addresses out of that are written cut ([`entry_cuts`]); the others given back whole
+  cuts:       Vec<EntryCut>,
 }
 
 /// The ledger's [`Analysis`], made once while its entries read the same: a later flush with nothing new to read reads it as
@@ -1658,21 +1719,23 @@ fn analysis() -> Rc<Analysis> {
   }
   let (generation, inputs) = with_ledger(|ledger| (ledger.generation(), ledger_inputs(ledger)));
   let reading = resolve(&inputs);
-  // (an entry's addresses, taken out, are the Kind steps' to cut, in place, from the entry whole: they run after the flush as
-  // they do for a paper with no block, `insert_frontmatter`)
+  // (an entry's addresses, taken out, are written cut from its tokens, each address its owner's e-mail, as the switch-off writer
+  // cuts today's entry (`address_cut`: 2011.02560, astro-ph0610446, 2406.02913); an entry its tokens can't be cut so is given
+  // back whole, the Kind steps' to cut in place after the flush, as for a paper with no block, `insert_frontmatter` — entry by
+  // entry, not the switch off's whole paper. The checks read every entry whole, as before: a word the take-out drops by the
+  // reading's own rule, the label before an address (`E-mails:`), is no ink the reading holds no place for, 1610.05419)
   let mut resolved = reading.clone();
-  reading
-    .taken
-    .iter()
-    .for_each(|taken| give_back_entry(&mut resolved, taken));
+  let mut whole = reading.clone();
+  let cuts = entry_cuts(&reading, &mut resolved, &mut whole);
   with_ledger(|ledger| {
-    let written = Written::new(ledger, &resolved);
+    let written = Written::new(ledger, &whole);
     let made = Rc::new(Analysis {
       generation,
       checks: check_blocks(ledger, &written),
       calls: call_checks(ledger, &written),
-      marks: uncoordinated_marks(ledger, &resolved),
-      merged: merged_names(ledger, &resolved),
+      marks: uncoordinated_marks(ledger, &whole),
+      merged: merged_names(ledger, &whole),
+      cuts,
       reading,
       resolved,
     });
@@ -2207,6 +2270,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       &separate,
       &mut pieces,
       &mut written,
+      &analysis.cuts,
     )?;
     let tag = if item.key.0 == Kind::Note {
       "ltx:note"
@@ -2333,6 +2397,7 @@ mod tests {
         calls:      BTreeMap::new(),
         marks:      BTreeMap::new(),
         merged:     BTreeMap::new(),
+        cuts:       Vec::new(),
       }));
     });
     reset_fm_shadow();

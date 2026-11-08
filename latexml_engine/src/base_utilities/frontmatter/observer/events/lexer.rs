@@ -8,40 +8,49 @@ use super::*;
 /// The lexer's second pass: the atoms into events.
 #[derive(Default)]
 pub(super) struct Lexer {
-  pub(super) events: Vec<Event>,
+  pub(super) events:   Vec<Event>,
   /// the name run being read: its characters with their spans, its font, its nest
-  run:               Vec<(char, Option<(u16, u16)>)>,
+  run:                 Vec<(char, Option<(u16, u16)>)>,
   /// each of its characters' own token position, beside `run`: a box's cover is wider than what it prints (`Event::marks`)
-  run_own:           Vec<Option<u16>>,
+  run_own:             Vec<Option<u16>>,
   /// the font of the `@` it prints
-  address_font:      Option<Rc<Font>>,
-  run_font:          Option<FontKey>,
-  run_nest:          u8,
+  address_font:        Option<Rc<Font>>,
+  run_font:            Option<FontKey>,
+  run_nest:            u8,
   /// the spacing run since the last ink: items, width, fill, span
-  gap_items:         usize,
-  gap_width:         f64,
-  gap_fill:          bool,
-  gap_span:          Option<(u16, u16)>,
+  gap_items:           usize,
+  gap_width:           f64,
+  gap_fill:            bool,
+  gap_span:            Option<(u16, u16)>,
   /// the spacing character the run opened with, when it is one printed character so far (a space or a tie)
-  gap_char:          Option<char>,
+  gap_char:            Option<char>,
   /// the line has shown ink (a name, a mark, a contact) since its last break
-  line_inked:        bool,
+  line_inked:          bool,
   /// the font of the last name run
-  last_font:         Option<FontKey>,
+  last_font:           Option<FontKey>,
   /// the symbol mark being read (consecutive footnote-symbol characters and mark glyphs)
-  symbol:            String,
-  symbol_span:       Option<(u16, u16)>,
+  symbol:              String,
+  symbol_span:         Option<(u16, u16)>,
   /// a printed space before the symbol mark being read
-  symbol_space:      bool,
+  symbol_space:        bool,
   /// what encloses the symbol mark being read: its first character's base, its last's end
-  symbol_formula:    Option<MarkFormula>,
+  symbol_formula:      Option<MarkFormula>,
   /// the brackets `(`, `[` printed and not yet closed since the line's start, and how many were open where the name run
   /// being read began: inside one a comma or the word "and" is the bracket's text, no separator (`Laurent Schoeffel (on
   /// behalf of the H1 and ZEUS collaborations)`, 0811.3142; review rev94a B2)
-  open:              u8,
-  run_open:          u8,
+  open:                u8,
+  run_open:            u8,
   /// the braces printed and not yet closed since the column's start ([`Event::braces`])
-  braces:            u8,
+  braces:              u8,
+  /// which lines (between Break events) print an `@`: their names' characters' positions are recorded (`inks`; a list
+  /// part before the address, `jhansen, msandeep,dudek@cim.mcgill.ca`, 1811.10103) — no other's, a thousand-author names line
+  /// none (1901.01540)
+  pub(super) at_lines: Vec<bool>,
+  line:                usize,
+  /// where the names on those lines print, and the font of each `@` they print ([`InkTable`]): the name run's `@`s, each at
+  /// its token's position, kept when the run is flushed on such a line
+  pub(super) inks:     InkTable,
+  run_at_fonts:        Vec<(u16, Rc<Font>)>,
 }
 
 impl Lexer {
@@ -117,12 +126,19 @@ impl Lexer {
     let run = std::mem::take(&mut self.run);
     let run_own = std::mem::take(&mut self.run_own);
     let font = self.run_font.take();
-    // the run's words, each with the span of its characters
+    // the run's words, each with the span of its characters, and where each prints on a line printing an `@` (`InkTable`)
+    let record = self.at_lines.get(self.line).copied().unwrap_or(false);
+    let at_fonts = std::mem::take(&mut self.run_at_fonts);
+    if record {
+      self.inks.fonts.extend(at_fonts);
+    }
     let mut words: Vec<(String, Option<(u16, u16)>)> = Vec::new();
     let mut owns: Vec<Option<(u16, u16)>> = Vec::new();
+    let mut inks: Vec<Vec<Option<InkAt>>> = Vec::new();
     let mut word = String::new();
     let mut word_span = None;
     let mut word_own = None;
+    let mut word_ink = Vec::new();
     for ((c, span), own) in run
       .into_iter()
       .zip(run_own)
@@ -132,11 +148,17 @@ impl Lexer {
         if !word.is_empty() {
           words.push((std::mem::take(&mut word), word_span.take()));
           owns.push(word_own.take());
+          if record {
+            inks.push(std::mem::take(&mut word_ink));
+          }
         }
       } else {
         word.push(c);
         word_span = join_span(word_span, span);
         word_own = join_span(word_own, own.map(|own| (own, own + 1)));
+        if record {
+          word_ink.push(span.map(|cover| InkAt { cover, own }));
+        }
       }
     }
     if words.is_empty() {
@@ -163,6 +185,8 @@ impl Lexer {
       open = word.chars().fold(open, bracket_depth);
     }
     let mut name: Option<Event> = None;
+    // (where its characters print, on a line printing an `@`)
+    let mut name_ink: Vec<Option<InkAt>> = Vec::new();
     // (a byline's "by", in any case, opening a line before names is no name — today's `without_leading_by`:
     // `\author{by David Harari and Tam\'as Szamuely}`, 0808.2556)
     let byline = !self.line_inked && words.len() > 1 && words[0].0.eq_ignore_ascii_case("by");
@@ -173,7 +197,7 @@ impl Lexer {
           || is_separator_word(&word)
           || (at == 0 && byline))
       {
-        self.events.extend(name.take());
+        self.push_name(name.take(), std::mem::take(&mut name_ink));
         let mut sep = Event::new(EventKind::Sep(SepKind::Word(word)));
         sep.span = span;
         sep.nest = self.run_nest;
@@ -198,13 +222,32 @@ impl Lexer {
       }
       if !name.text.is_empty() {
         name.text.push(' ');
+        if record {
+          name_ink.push(None);
+        }
       }
       name.text.push_str(&word);
+      if let Some(ink) = inks.get_mut(at) {
+        name_ink.append(ink);
+      }
       name.span = join_span(name.span, span);
       name.marks = join_span(name.marks, owns[at]);
     }
-    self.events.extend(name);
+    self.push_name(name, name_ink);
     self.line_inked = true;
+  }
+
+  /// A name read, and where its characters print ([`InkTable`]: recorded on a line printing an `@` only).
+  fn push_name(&mut self, name: Option<Event>, ink: Vec<Option<InkAt>>) {
+    let Some(name) = name else {
+      return;
+    };
+    if !ink.is_empty()
+      && let Some(span) = name.span
+    {
+      self.inks.at.push((span, name.text.clone(), ink));
+    }
+    self.events.push(name);
   }
 
   pub(super) fn push_event(&mut self, mut event: Event) {
@@ -213,6 +256,7 @@ impl Lexer {
     match event.kind {
       EventKind::Break => {
         self.clear_gap();
+        self.line += 1;
         self.line_inked = false;
         self.open = 0;
         event.braces = self.braces;
@@ -342,6 +386,9 @@ impl Lexer {
         && let Some(font) = &font
       {
         self.address_font = Some(Rc::clone(&font.0));
+        if let Some(at) = own.or(span.map(|s| s.0)) {
+          self.run_at_fonts.push((at, Rc::clone(&font.0)));
+        }
       }
       self.run.push((c, span));
       self.run_own.push(own);
@@ -393,10 +440,11 @@ impl Lexer {
     self.gap_span = join_span(self.gap_span, span);
   }
 
-  pub(super) fn finish(mut self) -> Vec<Event> {
+  pub(super) fn finish(mut self) -> (Vec<Event>, InkTable) {
     self.flush_symbol();
     self.flush_run();
     self.clear_gap();
+    let inks = std::mem::take(&mut self.inks);
     // a `\label` outside a note labels the note before it
     let mut events: Vec<Event> = Vec::with_capacity(self.events.len());
     let glued = glue_in_word_marks(self.events);
@@ -414,7 +462,7 @@ impl Lexer {
       }
       events.push(event);
     }
-    events
+    (events, inks)
   }
 }
 
