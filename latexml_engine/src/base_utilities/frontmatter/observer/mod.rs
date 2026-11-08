@@ -63,6 +63,8 @@ pub use policy::{
   TitleMarks as FmTitleMarks, conventions_among as fm_conventions_among,
   declare_frontmatter_conventions,
 };
+// (the old reader's owner logic, moved unchanged, for its callers in `author_block/` and `frontmatter/`: MV1)
+pub(in crate::base_utilities) use resolver::owners::*;
 pub use resolver::{
   Assoc as FmAssoc, CHANGE_TAGS as FM_CHANGE_TAGS, Input as FmInput, NameJoin as FmNameJoin,
   RCreator as FmCreator, Resolved as FmResolved, address_take_out as fm_address_take_out,

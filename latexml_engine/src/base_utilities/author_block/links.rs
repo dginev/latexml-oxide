@@ -536,18 +536,3 @@ pub(in crate::base_utilities) fn names_spelled(
   }
   spelled
 }
-
-/// The one name (index into `name_keys`) the local part of `address` spells ([`spelled_owners`]), or `None` when no name or
-/// several do.
-pub(in crate::base_utilities) fn spelled_owner(
-  name_keys: &[NameKeys],
-  address: &str,
-) -> Option<usize> {
-  if lists_local_parts(address) {
-    return None;
-  }
-  match spelled_owners(name_keys, address).as_slice() {
-    [owner] => Some(*owner),
-    _ => None,
-  }
-}

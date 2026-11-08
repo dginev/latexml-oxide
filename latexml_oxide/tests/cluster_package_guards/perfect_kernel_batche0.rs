@@ -312,28 +312,10 @@ fn the_old_reader_takes_no_new_decision() {
 /// `frontmatter/classify.rs`, Perl's API-call writers into the emitter, Perl's whole-block fallback to its own module, the
 /// decisions translated onto the reading).
 const ONE_ENGINE_REACH: &[(&str, usize)] = &[
-  ("address_lists.rs list_owners", 1),
-  ("address_lists.rs NameKeys", 3),
-  ("address_lists.rs spelled_owner", 1),
   // (MV1, a false pair, until step 6 teaches the fence a file's own definitions: `project_role`'s local closure `author`, moved
   // with it, which the count reads as the driver's method `Collaborations::author`; no use of the old reader)
   ("classify/notes.rs author", 4),
-  ("insert.rs as_printed", 1),
-  ("insert.rs entry_address_owners", 1),
-  ("insert.rs list_owners", 1),
-  ("insert.rs NameKeys", 11),
-  ("insert.rs own_call_keeps", 1),
-  ("insert.rs spelled_owner", 9),
-  ("insert.rs spelled_unspaced_list", 1),
   ("insert.rs symbol_mark_key", 1),
-  ("insert.rs text_prints_name", 1),
-  ("observer/resolver/mod.rs NameKeys", 2),
-  ("observer/resolver/mod.rs spelled_owners", 1),
-  ("observer/resolver/post.rs as_printed", 1),
-  ("observer/resolver/post.rs entry_address_owners", 2),
-  ("observer/resolver/post.rs NameKeys", 3),
-  ("observer/resolver/post.rs own_call_keeps", 1),
-  ("observer/resolver/post.rs spelled_owners", 1),
   ("observer/writer/emit.rs document_note_call", 2),
   ("observer/writer/emit.rs entry_mark", 1),
   ("observer/writer/emit.rs mark_label", 1),
@@ -342,26 +324,15 @@ const ONE_ENGINE_REACH: &[(&str, usize)] = &[
   ("observer/writer/emit.rs rewrite_symbol_superscripts", 1),
   ("observer/writer/emit.rs split_wrapped_affiliation_marks", 1),
   ("observer/writer/emit.rs whole_block_author", 2),
-  ("place.rs address_owners", 1),
-  ("place.rs author_mark_operands", 2),
-  ("place.rs AuthorNote", 1),
-  ("place.rs author_notes", 1),
   ("place.rs entry_mark", 2),
   ("place.rs mark_label", 2),
-  ("place.rs NameKeys", 2),
   ("place.rs queued_name", 2),
-  ("queue_reading.rs author_mark_operands", 1),
-  ("queue_reading.rs label_pieces", 1),
   ("queue_reading.rs mark_label", 1),
   ("queue.rs entry_mark", 1),
-  ("relocate.rs author_mark_operands", 1),
   ("relocate.rs queued_name", 1),
   ("shared_row/emails.rs address_tokens", 1),
   ("shared_row/emails.rs email_command_address", 3),
   ("shared_row/emails.rs is_email_command", 2),
-  ("shared_row/emails.rs row_address_owners", 1),
-  ("shared_row/emails.rs row_address_spelled_owners", 2),
-  ("shared_row.rs author_mark_operands", 1),
   ("shared_row.rs queued_name", 1),
 ];
 
@@ -1013,7 +984,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("apa7_cls.rs", 7),
   ("authblk_sty.rs", 23),
   // (F1r2, 1288 -> 1285: the membership readout finds its commas by `Token::group_step`, no catcode match)
-  ("author_block", 938),
+  ("author_block", 924),
   // (MV1: moved from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
   ("classify", 347),
   ("defs/author_macros", 20),
@@ -1045,6 +1016,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("ledger", 24),
   ("llncs_cls.rs", 32),
   ("osa_journal_sty.rs", 77),
+  // (MV1: moved from `author_block` with the owner logic, 938 = 924 + 14; none added)
+  ("owners", 14),
   ("place", 6),
   ("ptephy_cls.rs", 115),
   ("queue", 1),
@@ -1094,6 +1067,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
 const FRONTMATTER_AREAS: &[(&str, &str)] = &[
   // (MV1: the old reader's text rules and token primitives, moved unchanged from `author_block/`, their reads with them)
   ("classify", "classify/"),
+  ("owners", "observer/resolver/owners.rs"),
   ("shared_row/emails", "shared_row/emails.rs"),
   ("shared_row", "shared_row.rs"),
   ("relocate", "relocate.rs"),
@@ -1262,6 +1236,10 @@ fn a_spelling_rule_in_the_resolver_counts_however_it_is_written() {
   }
 }
 
+/// The old reader's knowledge moved under `observer/` unchanged (MV1): its owner logic and the emitter's vocabulary, each
+/// counted as its own area by the fences, so that the resolver's and the writer's own counts stay what they were.
+const MOVED_UNDER_OBSERVER: [&str; 2] = ["resolver/owners.rs", "writer/calls.rs"];
+
 /// Backslash literals under `observer/`, per file or directory: the part of it that may spell a token's name, whatever the code around
 /// them does (the regexes of [`token_reads_only_fall_toward_the_floor`] see a comparison, not `fn spelled(x) { x.contains("\\foo") }`).
 /// Debts of what names the kernel's tokens today (the rehearsal's table, the writer's and the events' readers, the ledger's stamping);
@@ -1285,6 +1263,8 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   ("rehearsal", 119),
   // (also among `resolver`'s 18 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook)
   ("resolver", 3),
+  // (MV1: the old reader's owner logic, moved unchanged from `author_block/`, its literals with it; none added)
+  ("resolver/owners", 4),
   ("shadow", 7),
   // (Z4a, 81 -> 107: `writer/emit.rs`, the calls it builds: Perl's `\lx@add@authors`, `\lx@annotate@frontmatter@now`, the
   // queue's own `\lx@frontmatter@item*`; it writes them, no decision reads them)
@@ -1318,7 +1298,12 @@ fn the_observers_spellings_are_counted_however_they_read() {
     let inner = file
       .strip_prefix(&format!("{observer}/"))
       .expect("under observer/");
-    let area = inner.split('/').next().expect("a path");
+    // (MV1: the old reader's files moved under `observer/`, an area each, apart from the resolver's and the writer's own)
+    let area = if MOVED_UNDER_OBSERVER.contains(&inner) {
+      inner
+    } else {
+      inner.split('/').next().expect("a path")
+    };
     *counts
       .entry(area.trim_end_matches(".rs").to_string())
       .or_default() += backslash_literals(&read_rust(&file));

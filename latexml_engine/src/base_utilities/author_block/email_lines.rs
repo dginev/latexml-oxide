@@ -694,12 +694,6 @@ fn closes_only_its_own_groups(tokens: &[Token]) -> bool {
   true
 }
 
-/// The marks an author's tokens request: those outside its notes, a `\thanks{...}` or `\footnote{...}` whose own
-/// superscripts are its text or label it (`note_body`) — `Ann Able\thanks{$^{a}$ Supported by ...}` requests nothing.
-pub(in crate::base_utilities) fn author_mark_operands(tokens: &[Token]) -> Vec<Vec<Token>> {
-  mark_operands(&outside_notes(tokens))
-}
-
 /// The notes and requests an affiliation line under a name carries in a per-author class's `\author` (`Steward
 /// Observatory\altaffilmark{2}`, `Univ A\thanks{Grant}`), taken off the line with their arguments to annotate the
 /// author, as Perl, adding that `\author` whole, gives them to it: digested inside the affiliation, an `\altaffilmark`
