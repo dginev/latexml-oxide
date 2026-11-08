@@ -1,0 +1,18 @@
+% witness: 0807.4720 (amsart: `\thanks{… \author{…}\address{…}\email{…}}`, the second author born while the flush digests the pubnote)
+% oracle:  pdflatex 0 errors: ANN ABLE AND BOB BAKER; Univ A, Email address: ann@a.org; Univ B, Email address: bob@b.org; Supported by X.
+% engines: Perl and off: Ann (Univ A, ann@a.org), Bob (Univ B, bob@b.org); ours =2 before TA1: Bob twice, his address lost, his e-mail on Ann, 0 errors
+% expect:  0 errors; at =2 Ann with Univ A and ann@a.org only, Bob once with Univ B and bob@b.org
+% status:  RED (TA1: Bob once now; the first flush's reading of Ann's block still takes the `\email` inside the `\thanks`, and Bob's `\address`, digested in the emitted pubnote item `\lx@frontmatter@itemonly`, is read by no flush; W=1 content check counts it)
+\documentclass{amsart}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\address{Univ A}
+\email{ann@a.org}
+\thanks{Supported by X.
+\author{Bob Baker}
+\address{Univ B}
+\email{bob@b.org}}
+\maketitle
+x
+\end{document}
