@@ -294,7 +294,8 @@ pub struct MouthRuntime {
 struct PushbackWatch {
   /// (the serial of a run's first mark, the shortest the pushback has been since it)
   runs:  Vec<(u64, usize)>,
-  /// the top run's length, 0 when there is none: only a pushback shorter than it changes a run
+  /// the top run's length, 0 when there is none: only a pushback shorter than it changes a run, so the fast read
+  /// (`read_internal_token_checked`) pops only above it and every other shortening tells [`note_len`](Self::note_len)
   floor: usize,
 }
 
@@ -1435,18 +1436,20 @@ fn read_internal_token_checked(sink: CommentSink) -> Result<CheckedRead> {
     let mut borrow = gullet_mut!();
     let g: &mut Gullet = &mut borrow;
     // The usual read: nothing is due at this count (`full_read_at`), and the token on top of the pushback is an
-    // ordinary one. It does exactly what the full read does in that case, without testing each thing that isn't due.
+    // ordinary one above the input marks' floor (`PushbackWatch`: a read below it is the full read's, which tells the
+    // watch; the floor is 0 with no mark, so the test is the pushback's emptiness). It does exactly what the full read
+    // does in that case, without testing each thing that isn't due.
     if g.progress + 1 < g.full_read_at
       && (matches!(sink, CommentSink::Pending) || g.pending_comments.is_empty())
       && let Some(rt) = g.runtime.as_mut()
       && g
         .pushback_limit
         .is_none_or(|limit| rt.pushback.len() <= limit)
+      && rt.pushback.len() > rt.watch.floor
       && let Some(&token) = rt.pushback.last()
       && !matches!(token.get_catcode(), Catcode::COMMENT | Catcode::MARKER)
     {
       rt.pushback.pop();
-      rt.watch.note_len(rt.pushback.len());
       g.progress += 1;
       return Ok(CheckedRead::Tok(token));
     }
