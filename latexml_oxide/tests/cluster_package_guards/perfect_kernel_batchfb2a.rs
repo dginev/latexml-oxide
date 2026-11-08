@@ -111,3 +111,18 @@ fn a_trailing_alignment_environment_is_lines_under_the_names() {
   assert_eq!(two.len(), 2, "{two:#?}");
   assert_eq!(two, off);
 }
+
+/// A `\thanks` set in a formula (`Bob Baker$^{1}\thanks{…}$`) is read in text mode, as its content is digested in the
+/// document, and written from its own call: at `=2` its words lost their spaces ("Thefirsttwoauthorscontributedequally",
+/// Warning "note no argument"; 2407.15815, 2603.20851).
+#[test]
+fn a_note_in_a_formula_keeps_its_words() {
+  let (off, two) = both(repro!("author_thanks_in_a_formula_keeps_its_spaces"));
+  assert_eq!(two.len(), 2, "{two:#?}");
+  assert!(
+    two[1].contains("role=\"thanks\">The first two authors contributed equally</note>"),
+    "{}",
+    two[1]
+  );
+  assert_eq!(two, off);
+}

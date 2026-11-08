@@ -740,6 +740,21 @@ fn span_tokens_of(index: usize, span: (u16, u16)) -> Option<Tokens> {
   })
 }
 
+/// The tokens of the block at ledger index `index` that the span `span` covers, as written: a call's own, whatever formula
+/// holds it ([`span_tokens_of`] takes that formula whole).
+fn span_call_tokens(index: usize, span: (u16, u16)) -> Option<Tokens> {
+  with_ledger(|ledger| {
+    let Some(Entry::Author(block)) = ledger.entries().get(index) else {
+      return None;
+    };
+    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+    let tokens = block.tokens.unlist_ref();
+    tokens
+      .get(at(span.0)?..at(span.1)?)
+      .map(|call| Tokens::new(call.to_vec()))
+  })
+}
+
 /// `call`, its content's printed list written down to the one `address` of it (the reading's `ruling3:written-out`): its last
 /// argument rehearsed, the run from its first ink to its last is the list, and the address the tokens of the ink printing it
 /// (`\\textcolor{blue}{a@x}, \\textcolor{blue}{b@y}`, review revZ4a; `\\lx@address@urlfont{a@x, b@y}`, `\\textcolor{blue}{a@x,
@@ -1032,10 +1047,15 @@ fn item_call(
     // (a block's: the tokens its span covers)
     Some((index, Some(span))) => {
       // (a note's: its argument, under the note's own kind, but an entry a mark leads, as `\\lx@add@thanks` reads it: 2102.08072)
-      let argument = event_at(index, span, |e| e.kind == EventKind::Note, |_| ())
-        .and_then(|()| span_tokens_of(index, span))
-        .as_ref()
-        .and_then(note_argument);
+      // (a note in a formula is its own call's, the formula around it the name's mark: `Derek F. Wong$^1\thanks{Corresponding
+      // Author}$`, 2603.20851, 2407.15815 — its span's content is the whole formula, `content_of`)
+      let argument = event_at(index, span, |e| e.kind == EventKind::Note, |_| ()).and_then(|()| {
+        (span_tokens_of(index, span).as_ref().and_then(note_argument)).or_else(|| {
+          span_call_tokens(index, span)
+            .as_ref()
+            .and_then(note_argument)
+        })
+      });
       // (never a `\\footnote`'s, which `\\lx@add@note` keeps a note: `\\footnote{\\textsuperscript{1}These authors
       // contributed equally …}`, 2110.12892 — P2 NT)
       let footnote = event_at(index, span, |e| e.kind == EventKind::Note, |e| e.footnote);

@@ -126,11 +126,15 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (its `printed` property the mark it shows on the name, `\thefootnote` at its number — the given one, or the counter's
   // value the `\lx@fm@obs@thanks` step reached —, as `\lx@fm@obs@fnmark` prints its: a name's note mark is the request
   // an entry led by the same `\footnotemark` answers, `Shun'ya Mizoguchi\footnote[1]{…}` under
-  // `\affiliation{\footnotemark[1]Theory Center, …}`, 1607.07280 — FM S2a.2 r7)
-  DefConstructor!("\\lx@fm@obs@note []{}", "", properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
-  DefConstructor!("\\lx@fm@obs@fnnote []{}", "", properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
+  // `\affiliation{\footnotemark[1]Theory Center, …}`, 1607.07280 — FM S2a.2 r7). Its text is text, read in text mode as
+  // the note's content is in the document (Perl's `\lx@annotate@frontmatter` digests it at the frontmatter, `DigestText`;
+  // LaTeX sets a footnote's text in a paragraph of its own): a note set in a formula, `Tianming Wei$^{2,3}\thanks{The
+  // first two authors contributed equally}$` (2407.15815; 2603.20851's `$^1\thanks{Corresponding Author}$`), kept its
+  // words' spaces, which math mode skipped ("Thefirsttwoauthorscontributedequally").
+  DefConstructor!("\\lx@fm@obs@note []{}", "", bounded => true, mode => "text", properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
+  DefConstructor!("\\lx@fm@obs@fnnote []{}", "", bounded => true, mode => "text", properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
   // `\footnotetext`: the text of a mark printed elsewhere, no step
-  DefConstructor!("\\lx@fm@obs@notetext []{}", "");
+  DefConstructor!("\\lx@fm@obs@notetext []{}", "", bounded => true, mode => "text");
   // `\footnotemark[<n>]` prints `\thefootnote` at <n> (latex.ltx `\@xfootnotemark`), a bare `\footnotemark` at the
   // counter's next value (`\stepcounter\@mpfn`): its `printed` property is that print, made with the counter set in a
   // group of its own, to <n> or to its value at the rehearsal's start plus the steps the block made up to it, so the
