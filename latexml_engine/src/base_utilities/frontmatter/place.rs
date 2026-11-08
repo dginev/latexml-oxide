@@ -436,6 +436,8 @@ pub fn digest_front_matter() -> Result<()> {
   if !emitted {
     share_row_contacts(&mut commands)?;
   }
+  // (what this flush digests is off the queue: no later flush's emitter writes it again, astro-ph9808358)
+  take_digested(&commands);
   // The entries a seal drops in this flush, whose annotations go with them ([`seal_digested_frontmatter`]) — this
   // flush's own, the outer flush's restored after it (a queued entry may flush again, `\maketitle` in an abstract).
   let outer_sealed_off = lookup_string("lx_frontmatter_sealed_off");

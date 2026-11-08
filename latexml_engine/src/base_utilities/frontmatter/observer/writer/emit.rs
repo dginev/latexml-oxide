@@ -77,7 +77,8 @@ pub(in crate::base_utilities) fn emitted() -> bool { lookup_value(EMITTED).is_so
 /// labels stand (`with_pending_entry_attr`).
 pub(in crate::base_utilities) const EMITTING: &str = "lx_fm_emitting";
 /// The State mappings of what earlier flushes emitted, as `num_<tag>` counts (Perl's way of carrying a flush's counts):
-/// a creator's `source#letters#place` to its `role:N`, and an item's `owner|kind|text`.
+/// a creator's `source#letters#place` to its `role:N`, and an item's `owner|kind|text` (and a ledger call a flush digested
+/// as queued, `taken|<index>`: [`take_digested`]).
 const EMITTED_CREATORS: &str = "lx_fm_emitted_creators";
 const EMITTED_ITEMS: &str = "lx_fm_emitted_items";
 
@@ -1602,7 +1603,10 @@ fn items_to_emit<'a>(
       Owner::Block => "block",
     };
     let id = s!("{id}|{:?}|{}", key.0, key.1);
-    if lookup_mapping(EMITTED_ITEMS, &id).is_some() {
+    // (a call a flush took from the queue and digests as it stands is off the queue: [`take_digested`])
+    let taken = source
+      .is_some_and(|(index, _)| lookup_mapping(EMITTED_ITEMS, &s!("taken|{index}")).is_some());
+    if taken || lookup_mapping(EMITTED_ITEMS, &id).is_some() {
       continue;
     }
     assign_mapping(EMITTED_ITEMS, &id, Some(Stored::Bool(true)));
@@ -2352,6 +2356,37 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   Ok(true)
 }
 
+/// The queue entries a flush digests as they stand (the emitter's rewrite done), each taken: the ledger call it is marked
+/// `taken|<index>` before its digestion, so a later flush's emitter — the nested one of a block the entry's own digestion
+/// calls late (`\\lx@frontmatter@late`) — writes none of its items again. memsait's `\\@opening` note, which the safety net
+/// queues for a flush with no author block yet and whose digestion runs `\\title` and `\\author` (astro-ph9808358).
+pub(in crate::base_utilities) fn take_digested(commands: &[RawFrontmatter]) {
+  if fm_emit_mode() != 2 || rehearsal::rehearsing() {
+    return;
+  }
+  let taken: Vec<usize> = with_ledger(|ledger| {
+    let calls = ledger.entries().iter().filter_map(|entry| match entry {
+      Entry::Api(call)
+        if call
+          .command
+          .as_ref()
+          .is_some_and(|c| commands.iter().any(|e| e.2 == *c)) =>
+      {
+        Some(call.index)
+      },
+      _ => None,
+    });
+    calls.collect()
+  });
+  for index in taken {
+    assign_mapping(
+      EMITTED_ITEMS,
+      &s!("taken|{index}"),
+      Some(Stored::Bool(true)),
+    );
+  }
+}
+
 /// Whether the block at ledger index `source` keeps its marks printed on its names, as Perl's `\\lx@add@author` leaves them (a
 /// name's marks are its content where no `\\lx@author@withsup` reads them): a name list a binding split, or a per-author class's
 /// call whose lines answer none of them (`\\author[*]{… \\\\ $^1$DeepSeek-AI …}`, 2401.14196, is one that does).
@@ -2405,5 +2440,73 @@ mod tests {
       assert!(ledger.analysis.is_none());
       assert_eq!(ledger.generation(), 0);
     });
+  }
+
+  /// A queued call a flush digests as it stands is taken ([`take_digested`]): a later flush's emitter — the nested flush of a
+  /// late block its digestion makes — writes none of its items again, and still writes a call no flush took. memsait's
+  /// `\\@opening` note the safety net queues, digested at a flush with no author block, its `\\author` late (astro-ph9808358:
+  /// 12 creators → 6). A unit guard: the paper's shape needs memsait's own readers of `\\@opening`, which no pdflatex-clean
+  /// synthetic input reproduces.
+  #[test]
+  fn a_digested_queue_entry_is_never_written_again() {
+    reset_fm_shadow();
+    set_fm_emit_override(Some(2));
+    let call = |index: usize, text: &'static str| {
+      let command = TokenizeInternal!(text);
+      Entry::Api(ApiCall {
+        index,
+        tag: "ltx:note".to_string(),
+        role: "note".to_string(),
+        epoch: 1,
+        queue_position: index,
+        after_block: None,
+        inside: false,
+        binding: None,
+        attrs: "role=note".to_string(),
+        parent: "ltx:creator".to_string(),
+        content: Tokens::new(Vec::new()),
+        events: Vec::new(),
+        rehearsed: true,
+        cleared: false,
+        errors: 0,
+        command: Some(command),
+      })
+    };
+    let (taken, kept) = (
+      call(
+        0,
+        r"\lx@annotate@frontmatter@now{ltx:creator}{ltx:note}{Taken note}",
+      ),
+      call(
+        1,
+        r"\lx@annotate@frontmatter@now{ltx:creator}{ltx:note}{Kept note}",
+      ),
+    );
+    let digested = match &taken {
+      Entry::Api(call) => call.command.clone().unwrap(),
+      _ => unreachable!(),
+    };
+    with_ledger(|ledger| {
+      ledger.push(taken);
+      ledger.push(kept);
+    });
+    take_digested(&[("ltx:note".to_string(), TagAttrs::default(), digested)]);
+    let note = |index: usize, text: &str| Assoc {
+      role:   "note".to_string(),
+      text:   text.to_string(),
+      label:  None,
+      rule:   "test".to_string(),
+      source: Some((index, None)),
+      target: None,
+    };
+    let resolved = Resolved {
+      block: vec![note(0, "Taken note"), note(1, "Kept note")],
+      ..Resolved::default()
+    };
+    let (items, _) = items_to_emit(&resolved, &[], &BTreeSet::new(), &mut Vec::new());
+    let texts: Vec<&str> = items.iter().map(|item| item.assoc.text.as_str()).collect();
+    set_fm_emit_override(None);
+    reset_fm_shadow();
+    assert_eq!(texts, ["Kept note"]);
   }
 }
