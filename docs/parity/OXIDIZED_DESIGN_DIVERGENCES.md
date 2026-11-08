@@ -32838,9 +32838,13 @@ so those words are lost, counted by the content check), is the column sig-altern
 prints (`\\`, `\\[2mm]`, `\newline`: the break stands, the lines after it the author above's, as the macro's), a skip
 (`\vspace{2mm}`) no break — 1401.6981's three columns, three creators, where `=2` had lost authors 2 and 3, and `\\[2mm]`'s
 "Univ B" lost with no Warning (review revG3 finding 2); the scan reads what a command reads past spaces as TeX does,
-`\\`'s `*` and `[…]` (`\@ifstar`, `\@ifnextchar`: latex.ltx `\@normalcr`/`\@xnewline`, `\@tabularcr`/`\@xtabularcr`;
+`\\`'s `[…]` (`\@ifnextchar`: latex.ltx `\@normalcr`/`\@xnewline`, `\@tabularcr`/`\@xtabularcr`;
 `\\ [2mm]`'s "Univ B" lost with no Warning before, review revH4 finding 1) and a glue or dimen spec written out after
-`\hskip`/`\vskip`/`\kern` (tex.web §448-461; `\hskip 1em`, h3e, a column); a `{…}` only right after its command; (6) a column holding no name of its own after the last name
+`\hskip`/`\vskip`/`\kern` (tex.web §448-461; `\hskip 1em`, h3e, a column); its `*` only right after it, as the
+binding `\lx@fm@obs@break OptionalMatch:*` and Perl's `readMatch` (Gullet.pm:604) read it (`\\ *[2mm]` read past
+the space ended a mode it never opened, 1 Error, review revI1 finding 2; now the juggle as written, counted); a
+`\vskip` between ends the paragraph, the row break the PDF prints (review revI1 finding 3), where `\vspace` in the
+line is latex.ltx `\@vspace`'s `\vadjust`, a column; a `{…}` only right after its command; (6) a column holding no name of its own after the last name
 (`Resolver::block`'s `shared_column`: no line in it or a later column reads as names, its first line an institution) is
 the shared affiliation of every name above it, whichever spelling opens it — 0712.1016, 1704.03168 (the PDF centres it
 under every name; the last author's alone before, off too), `A One \and Bob Two \end{tabular}\begin{tabular}{c} Univ Shared`

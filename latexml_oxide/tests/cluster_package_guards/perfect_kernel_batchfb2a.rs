@@ -296,9 +296,12 @@ fn a_nameless_column_after_the_names_is_every_names() {
 /// `\mbox{Extra Words}`, goes with the column before, as the switch-off output orders it: both persons kept with their
 /// own affiliations, the words the writer loses (it writes the column's source, `\end{tabular}` in it) counted by the
 /// content check — before, "Extra Words" was a creator and Bob Two lost, with 2 Errors (review revH1 finding 2, h3c).
-/// The scan reads what a command reads past spaces as TeX does: `\\ [2mm]`'s and `\\* [2mm]`'s star and optional
+/// The scan reads what a command reads past spaces as TeX does: `\\ [2mm]`'s and `\\* [2mm]`'s optional
 /// argument (`\@ifstar`, `\@ifnextchar`; review revH4 finding 1, h3g: "Univ B" lost with no Warning before) and a glue
 /// spec written out, `\hskip 1em plus 1fil` (h3e: Bob Two A One's affiliation and "Univ B" lost, counted before).
+/// A `\vskip 2mm` ends the paragraph, the row break the PDF prints (review revI1 finding 3, g09: two columns before).
+/// `\\ *[2mm]`'s star is read only right after `\\`, as the binding (`OptionalMatch:*`) and Perl's `readMatch` read it:
+/// read past the space, its juggle ended a mode it never opened, 1 Error (review revI1 finding 2, g14).
 #[test]
 fn a_juggle_judges_the_command_between_by_what_it_prints() {
   let tex = repro!("author_raw_tabular_juggle_is_a_column");
@@ -320,14 +323,20 @@ fn a_juggle_judges_the_command_between_by_what_it_prints() {
   ]];
   assert_eq!(between("\\\\[2mm]"), ((0, 0), row.clone()));
   assert_eq!(between("\\\\ [2mm]"), ((0, 0), row.clone()));
-  assert_eq!(between("\\\\* [2mm]"), ((0, 0), row));
+  assert_eq!(between("\\\\* [2mm]"), ((0, 0), row.clone()));
+  assert_eq!(between("\\vskip 2mm"), ((0, 0), row));
   let columns = vec![
     vec!["A One".to_string(), "affiliation=Univ A".to_string()],
     vec!["Bob Two".to_string(), "affiliation=Univ B".to_string()],
   ];
   assert_eq!(between("\\vspace{2mm}"), ((0, 0), columns.clone()));
   assert_eq!(between("\\hskip 1em plus 1fil"), ((0, 0), columns.clone()));
-  assert_eq!(between("\\mbox{Extra Words}"), ((0, 2), columns));
+  assert_eq!(between("\\mbox{Extra Words}"), ((0, 2), columns.clone()));
+  // (the star read only right after `\\`, as the binding reads it: the juggle as written, its loss counted, no Error)
+  let starred = vec![columns[0].clone(), vec![
+    "affiliation=[2mm] Bob Two".to_string(),
+  ]];
+  assert_eq!(between("\\\\ *[2mm]"), ((0, 2), starred));
 }
 
 /// A column after the names that reads as a collaboration or a team — whole, or as the remark on a name speaking for

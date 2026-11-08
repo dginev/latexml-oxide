@@ -1073,8 +1073,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // IO3b 13 -> 14: `\lx@fm@obs@add` reads its tag argument, an element's name (`ltx:creator`), as `\lx@frontmatter@itemnone`
   // does — the rehearsal binding's own definition, no name spelled, 0807.4720; FB2b8 14 -> 15: the reopen's scan reads a
   // glue spec written out after `\hskip` as TeX's `scan_glue` does, its signs and digits by catcode, `past_dimen`: the
-  // juggle's column after `\hskip 1em`, h3e)
-  ("rehearsal", 15),
+  // juggle's column after `\hskip 1em`, h3e; FB2b9 15 -> 16: a `\vskip` between a juggle's close and reopen is the
+  // row break it prints, the paragraph's end, `prints_a_row_break` — TeX's vertical command, no name a document spells:
+  // review revI1 finding 3, g09)
+  ("rehearsal", 16),
   ("relocate", 134),
   // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens`, printed text read
   // as tokens by `is_institution` and `NameKeys` (5 with their definitions), a `'\\'` read of a label (2), a call's hook (1).

@@ -561,8 +561,19 @@ fn install_event_bindings(
 }
 
 /// Whether `between`, what a tabular juggle prints between its close and its reopen, holds a row break the rehearsal
-/// binds (`\\`, `\\[2mm]`, `\newline`, `\linebreak`): the juggle is that break, else a column.
+/// binds (`\\`, `\\[2mm]`, `\newline`, `\linebreak`) or a vertical skip (`\vskip 2mm`: the paragraph's end, the
+/// tabulars stacked in the PDF, review revI1 finding 3): the juggle is that break, else a column. `\vspace{2mm}` in a
+/// paragraph is no break (latex.ltx `\@vspace`: a `\vadjust` after the line, two columns in the PDF).
 fn prints_a_row_break(between: &[Token]) -> bool {
+  between.iter().any(|t| *t == T_CS!(VERTICAL_SKIP)) || prints_a_bound_break(between)
+}
+
+/// TeX's vertical skip, which ends a paragraph (tex.web §1094 `head_for_vmode`) and reads a glue spec (§461).
+const VERTICAL_SKIP: &str = "\\vskip";
+
+/// Whether `between` holds a row break the rehearsal binds (`\\`, `\newline`, `\linebreak`), the break event it
+/// digests to.
+fn prints_a_bound_break(between: &[Token]) -> bool {
   between.iter().any(|t| {
     ALWAYS_BOUND
       .iter()
@@ -576,8 +587,9 @@ fn prints_a_row_break(between: &[Token]) -> bool {
 /// \begin{tabular}[t]{p{\auwidth}}\centering`, bound to an author separator, [`install_event_bindings`]): 1401.6981
 /// writes its second author's column so, `\end{tabular}\begin{tabular}[t]{p{1.3\auwidth}}\centering Gianmarco De
 /// Francisci Morales…`, three columns in the PDF. With one printed between (`\end{tabular}\newline\begin{tabular}{c}`,
-/// 1301.5612's macro written out; `\\[2mm]`, review revG3 finding 2, "Univ B" lost with no Warning before) that break
-/// stands; a skip is no break (`\vspace{2mm}`, two columns in the PDF). Digested as written it closed the title page's tabular and left
+/// 1301.5612's macro written out; `\\[2mm]`, review revG3 finding 2, "Univ B" lost with no Warning before; a `\vskip`,
+/// [`prints_a_row_break`]) that break stands; a skip in the line is no break (`\hskip 1em`, `\vspace{2mm}`, two columns
+/// in the PDF). Digested as written it closed the title page's tabular and left
 /// one open, whose lines no box held — at `=2` authors 2 and 3 of 1401.6981 lost with no Warning. A close of a tabular
 /// the block opened (`\begin{tabular}…\end{tabular}`) or one no reopen follows keeps its meaning; with the emitter's
 /// switch on.
@@ -601,7 +613,7 @@ fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
   };
   let (space, command) = (Catcode::SPACE, Catcode::CS);
   let (crlf, star) = (T_CS!("\\\\"), T_OTHER!("*"));
-  let (glue, dimen) = ([T_CS!("\\hskip"), T_CS!("\\vskip")], T_CS!("\\kern"));
+  let (glue, dimen) = ([T_CS!("\\hskip"), T_CS!(VERTICAL_SKIP)], T_CS!("\\kern"));
   let reopen = |at: usize| -> Option<(usize, usize)> {
     let mut start = at;
     loop {
@@ -612,13 +624,16 @@ fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
       let cs = toks[start];
       start += 1;
       if c == command {
-        // What the command reads past spaces, as TeX reads it: `\\`'s `*` and `[…]`, by `\@ifstar` and
+        // What the command reads past spaces, as TeX reads it: `\\`'s `[…]` (its `*` right after it), by `\@ifstar` and
         // `\@ifnextchar` (latex.ltx `\@normalcr`/`\@xnewline`, `\@tabularcr`/`\@xtabularcr`; `\\ [2mm]`, review
         // revH4 finding 1, "Univ B" lost with no Warning before), and a glue or dimen spec written out
         // (`\hskip 1em`, h3e). A `{…}` comes right after its command (`argument`).
         if cs == crlf {
-          if let Some(k) = non_space(toks, start).filter(|&k| toks[k] == star) {
-            start = k + 1;
+          // (the `*` right after it only, as the binding reads it, `\lx@fm@obs@break OptionalMatch:*` and Perl's
+          // `readMatch`, Gullet.pm:604: `\\ *[2mm]` read past its space ended a mode it never opened, 1 Error at `=2`,
+          // review revI1 finding 2)
+          if toks.get(start) == Some(&star) {
+            start += 1;
           }
           start = optional(start).map_or(start, |(_, end)| end);
         } else if glue.contains(&cs) {
@@ -652,10 +667,17 @@ fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
           // between are lost, counted by the content check: OD #980 (5))
           let between = &toks[i + len..start];
           out.extend_from_slice(between);
-          if !prints_a_row_break(between) {
+          // (a bound break between is the break event itself; a vertical skip, which digests to none, is followed
+          // by one: `\vskip 2mm`, review revI1 finding 3, read as a column before)
+          if !prints_a_bound_break(between) {
+            let target = if prints_a_row_break(between) {
+              ROW_BREAK
+            } else {
+              AUTHOR_AND
+            };
             out.push(Token {
               prov: toks[i].prov,
-              ..T_CS!(AUTHOR_AND)
+              ..T_CS!(target)
             });
           }
           i = past;
