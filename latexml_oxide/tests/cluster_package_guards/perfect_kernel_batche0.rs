@@ -1071,8 +1071,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // text, no macro whose meaning could be read, its spaces, groups and `[…]` read by catcode, as the macro form's body is in
   // `fallback::tabular_juggle_between`: 1401.6981; FB2b5 none added: the reopen's scan over a command's `[…]`/`{…}` arguments;
   // IO3b 13 -> 14: `\lx@fm@obs@add` reads its tag argument, an element's name (`ltx:creator`), as `\lx@frontmatter@itemnone`
-  // does — the rehearsal binding's own definition, no name spelled, 0807.4720)
-  ("rehearsal", 14),
+  // does — the rehearsal binding's own definition, no name spelled, 0807.4720; FB2b8 14 -> 15: the reopen's scan reads a
+  // glue spec written out after `\hskip` as TeX's `scan_glue` does, its signs and digits by catcode, `past_dimen`: the
+  // juggle's column after `\hskip 1em`, h3e)
+  ("rehearsal", 15),
   ("relocate", 134),
   // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens`, printed text read
   // as tokens by `is_institution` and `NameKeys` (5 with their definitions), a `'\\'` read of a label (2), a call's hook (1).
@@ -1324,8 +1326,10 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // `inline_juggles_as_columns`, its separator named once, `AUTHOR_AND`; IO3b +6: the binding `\lx@fm@obs@add` a call
   // outside a block is rehearsed with, its definition and its constructor `\lx@fm@obs@creatorcall`, the sink and the name
   // its meaning is kept under, each named once (`SINK`, `SINK_MEANING`, `CREATOR_CALL`) — the binding's own definition, no
-  // name a document spells, 0807.4720)
-  ("rehearsal", 124),
+  // name a document spells, 0807.4720; FB2b8 +4: the commands whose arguments the reopen's scan reads past spaces as TeX
+  // reads them, `\\`'s `*` and `[…]` and the glue or dimen spec of `\hskip`, `\vskip`, `\kern` — what the
+  // command reads in TeX, no decision on a name: h3g `\\ [2mm]`, h3e `\hskip 1em`, review revH4 finding 1)
+  ("rehearsal", 128),
   // (also among `resolver`'s 18 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook)
   ("resolver", 3),
   // (the "Knowledge in, driver out, one pass" move: the old reader's owner logic, moved unchanged from `author_block/`, its literals with it; none added)

@@ -600,6 +600,8 @@ fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
       .map(|(_, end)| end)
   };
   let (space, command) = (Catcode::SPACE, Catcode::CS);
+  let (crlf, star) = (T_CS!("\\\\"), T_OTHER!("*"));
+  let (glue, dimen) = ([T_CS!("\\hskip"), T_CS!("\\vskip")], T_CS!("\\kern"));
   let reopen = |at: usize| -> Option<(usize, usize)> {
     let mut start = at;
     loop {
@@ -607,8 +609,23 @@ fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
       if c != space && (c != command || toks[start] == begin) {
         break;
       }
+      let cs = toks[start];
       start += 1;
       if c == command {
+        // What the command reads past spaces, as TeX reads it: `\\`'s `*` and `[…]`, by `\@ifstar` and
+        // `\@ifnextchar` (latex.ltx `\@normalcr`/`\@xnewline`, `\@tabularcr`/`\@xtabularcr`; `\\ [2mm]`, review
+        // revH4 finding 1, "Univ B" lost with no Warning before), and a glue or dimen spec written out
+        // (`\hskip 1em`, h3e). A `{…}` comes right after its command (`argument`).
+        if cs == crlf {
+          if let Some(k) = non_space(toks, start).filter(|&k| toks[k] == star) {
+            start = k + 1;
+          }
+          start = optional(start).map_or(start, |(_, end)| end);
+        } else if glue.contains(&cs) {
+          start = past_glue(toks, start).unwrap_or(start);
+        } else if cs == dimen {
+          start = past_dimen(toks, start, false).unwrap_or(start);
+        }
         while let Some(k) = argument(start) {
           start = k;
         }
@@ -657,6 +674,71 @@ fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
   Tokens::new(out)
 }
 
+/// The position past a glue spec written out from `at` (TeX's `scan_glue`, tex.web §461: a dimen, then `plus` and
+/// `minus` ones that may be infinite), if one is; a register or anything else is not read.
+fn past_glue(toks: &[Token], at: usize) -> Option<usize> {
+  let mut k = past_dimen(toks, at, false)?;
+  for word in ["plus", "minus"] {
+    if let Some(after) = past_keyword(toks, k, word) {
+      k = past_dimen(toks, after, true)?;
+    }
+  }
+  Some(k)
+}
+
+/// The position past a dimen written out from `at`: optional signs, digits with a `.` or `,`, and a unit (tex.web
+/// §448-458: `true`, a physical or font unit, `fil`…`filll` where `infinite`); the optional space after it is the
+/// caller's, which skips spaces.
+fn past_dimen(toks: &[Token], at: usize, infinite: bool) -> Option<usize> {
+  let other = |k: usize| {
+    let t = toks.get(k).filter(|t| t.get_catcode() == Catcode::OTHER);
+    t.and_then(|t| char::from_u32(t.get_charcode()))
+  };
+  let mut k = non_space(toks, at)?;
+  while matches!(other(k), Some('+' | '-')) {
+    k = non_space(toks, k + 1)?;
+  }
+  let digits = k;
+  while matches!(other(k), Some('0'..='9' | '.' | ',')) {
+    k += 1;
+  }
+  if k == digits {
+    return None;
+  }
+  if infinite && let Some(mut k) = past_keyword(toks, k, "fil") {
+    for _ in 0..2 {
+      k = past_keyword(toks, k, "l").unwrap_or(k);
+    }
+    return Some(k);
+  }
+  let k = past_keyword(toks, k, "true").unwrap_or(k);
+  [
+    "em", "ex", "pt", "pc", "in", "bp", "cm", "mm", "dd", "cc", "sp", "px",
+  ]
+  .iter()
+  .find_map(|unit| past_keyword(toks, k, unit))
+}
+
+/// The position past the keyword `word` read from `at` after spaces, its letters in either case, if it is there
+/// (tex.web §407 `scan_keyword`; a command's code is no letter's).
+fn past_keyword(toks: &[Token], at: usize, word: &str) -> Option<usize> {
+  let first = non_space(toks, at)?;
+  let mut k = first;
+  for c in word.chars() {
+    let t = char::from_u32(toks.get(k)?.get_charcode());
+    if t.is_none_or(|t| t.to_ascii_lowercase() != c) {
+      return None;
+    }
+    k += 1;
+  }
+  Some(k)
+}
+
+/// The first position from `at` that holds no space, if one does.
+fn non_space(toks: &[Token], at: usize) -> Option<usize> {
+  (at..toks.len()).find(|&k| toks[k].get_catcode() != Catcode::SPACE)
+}
+
 /// Where the balanced `open`…`close` group that starts at `at` after spaces starts, and the position past it, if one
 /// does.
 fn past_group(
@@ -665,7 +747,7 @@ fn past_group(
   open: impl Fn(&Token) -> bool,
   close: impl Fn(&Token) -> bool,
 ) -> Option<(usize, usize)> {
-  let first = (at..toks.len()).find(|&k| toks[k].get_catcode() != Catcode::SPACE)?;
+  let first = non_space(toks, at)?;
   if !open(&toks[first]) {
     return None;
   }

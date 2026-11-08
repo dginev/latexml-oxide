@@ -14,10 +14,11 @@ use super::{
 /// (`rehearsal::inline_juggles_as_columns` steps over spaces and commands with their arguments only), its reopened
 /// tabular left open, the lines after it in no box and no event (the shape of 1401.6981's sig-alternate juggle). The check
 /// counts the content's words the events lack, the environment names among them, a row per thing between that stops the
-/// scan: a tie (`\end{tabular}~\begin{tabular}{c} Dept`: "Dept" lost, `c Dept tabular`), a bare group (`{Extra Words}`,
-/// review revH1 h3f) and a skip whose amount is no braced argument (`\hskip 1em`, h3e) — Bob Two A One's affiliation and
-/// "Univ B" lost, silent on FB2b6's branch, which lacked this count (FB2b6 report item 2); here `B c tabular Univ`, with
-/// the plain-text Warning of the affiliation the writer wrote whole. Off is unchanged (its own 4 Errors, no check). The plain
+/// scan: a tie (`\end{tabular}~\begin{tabular}{c} Dept`: "Dept" lost, `c Dept tabular`) and a bare group (`{Extra Words}`,
+/// review revH1 h3f) — Bob Two A One's affiliation and "Univ B" lost, silent on FB2b6's branch, which lacked this count
+/// (FB2b6 report item 2); here `B c tabular Univ`, with the plain-text Warning of the affiliation the writer wrote whole.
+/// A skip whose amount is written out (`\hskip 1em`, h3e) no longer stops the scan (FB2b8): a column,
+/// `perfect_kernel_batchfb2a::a_juggle_judges_the_command_between_by_what_it_prints`. Off is unchanged (its own 4 Errors, no check). The plain
 /// juggle (`\end{tabular}\begin{tabular}{c}`) is a column since FB2b4-FB2b6, its words kept (`perfect_kernel_batchfb2a`).
 /// Distinct from RC1's unread-call guard: a block that was rehearsed, its events incomplete.
 #[test]
@@ -47,16 +48,6 @@ fn an_open_group_rehearsals_words_are_counted() {
       vec![vec![
         "A One".to_string(),
         "affiliation=Univ A Extra Words Bob Two".to_string(),
-      ]],
-    ),
-    (
-      "a skip between",
-      repro!("author_raw_tabular_juggle_skip_between_counted"),
-      2,
-      "1em B c tabular Univ",
-      vec![vec![
-        "A One".to_string(),
-        "affiliation=Univ A Bob Two".to_string(),
       ]],
     ),
   ];
