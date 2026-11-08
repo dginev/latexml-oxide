@@ -290,7 +290,10 @@ fn a_nameless_column_after_the_names_is_every_names() {
 /// The reopen of a juggle written inline is found past a command's `[…]` and `{…}` arguments, and the juggle judged by
 /// what the command prints: `\\[2mm]` a row break, which stands (the lines after it the author's, as `\newline`'s); a
 /// skip, `\vspace{2mm}`, no break, the column the PDF prints. At `=2` both missed the reopen: "Univ B" lost, silently
-/// after `\\[2mm]` (review revG3 finding 2, probes q1a, q1g).
+/// after `\\[2mm]` (review revG3 finding 2, probes q1a, q1g). A command that prints words between,
+/// `\mbox{Extra Words}`, goes with the column before, as the switch-off output orders it: both persons kept with their
+/// own affiliations, the words the writer loses (it writes the column's source, `\end{tabular}` in it) counted by the
+/// content check — before, "Extra Words" was a creator and Bob Two lost, with 2 Errors (review revH1 finding 2, h3c).
 #[test]
 fn a_juggle_judges_the_command_between_by_what_it_prints() {
   let tex = repro!("author_raw_tabular_juggle_is_a_column");
@@ -302,8 +305,7 @@ fn a_juggle_judges_the_command_between_by_what_it_prints() {
     );
     assert_ne!(shape, tex);
     let (log, xml) = run(&shape, 2);
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-    creators(&xml)
+    ((error_count(&log), warning_count(&log)), creators(&xml))
   };
   let row = vec![vec![
     "A One".to_string(),
@@ -311,10 +313,11 @@ fn a_juggle_judges_the_command_between_by_what_it_prints() {
     "affiliation=Bob Two".to_string(),
     "affiliation=Univ B".to_string(),
   ]];
-  assert_eq!(between("\\\\[2mm]"), row);
+  assert_eq!(between("\\\\[2mm]"), ((0, 0), row));
   let columns = vec![
     vec!["A One".to_string(), "affiliation=Univ A".to_string()],
     vec!["Bob Two".to_string(), "affiliation=Univ B".to_string()],
   ];
-  assert_eq!(between("\\vspace{2mm}"), columns);
+  assert_eq!(between("\\vspace{2mm}"), ((0, 0), columns.clone()));
+  assert_eq!(between("\\mbox{Extra Words}"), ((0, 2), columns));
 }
