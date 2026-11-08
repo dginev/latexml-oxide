@@ -155,7 +155,7 @@ basis `pk_wt/int149a` @ 3189c464d9 (RT1 at 913eef6966), binary `P2r2-rel`. Their
   (`resolver/api.rs:242-250` `lead`), on calls with no `withsup` too. To port: UNREQ (4) the K12 gate, a leading Mark a
   label only on a `_withsup=true` call or a block line (watch 1303.7097, 1506.04004, 0812.1531, 2409.11440, 1610.06222);
   THANKS (3) K4, a Note whose inner Marks lead pieces split into `withsup` entries before `note()` (blocks.rs:1093, as
-  notes.rs:451); LEAD (2) K1-K3; CONT (1) K13; COLUMN (1) K14. **Missing facts:** NEST, LEX, INSIDE (K6-K8), the lexer's
+  `frontmatter/observer/writer/calls.rs:297` `split_before_affiliation_marks`); LEAD (2) K1-K3; CONT (1) K13; COLUMN (1) K14. **Missing facts:** NEST, LEX, INSIDE (K6-K8), the lexer's
   and the rehearsal's to surface (INSIDE, a silent loss, first). Keep: 2206.07648. **Decided (main session 2026-11-08, reopenable):** UNREQ ports off's K12, then K13: an unrequested
   mark is no label (charter "a mark matters only where it is used"), so the item falls to the class convention, and
   cond-mat0309053 follows K12; 1202.3425 (revtex's own printed marks) a RED; CONT 0802.2149: K13 only, nothing beyond
@@ -184,7 +184,7 @@ basis `pk_wt/int149a` @ 3189c464d9 (RT1 at 913eef6966), binary `P2r2-rel`. Their
   J is RT1's E1. SN1 (1912.10193): number by every call of the role, as Perl (`frontmatter_api.rs:620-628`, Perl :486-489),
   then a `labelseq` label nobody requests yields to the line's leading mark (charter); EASY-MED. R (2311.04121): a label
   word plus marked addresses is no continuation; EASY. MK (2506.08710, astro-ph0208497): the first names line stays names
-  (`dispatch.rs:469-471`, `:564`, the `marked_name` closure :552); MED. Item 6 (1810.03464, 1511.05911): the rehearsal over
+  (`dispatch.rs:469-471`, `:519`, the `marked_name` closure :507); MED. Item 6 (1810.03464, 1511.05911): the rehearsal over
   budget (vldb's `\normalsize` in `\email`) — the loop is a missing fact; HARD; **decided (main session 2026-11-08, reopenable):** item 6 and MK
   are ported before the flip with the rest. SN2 hep-ex0201047, **decided (main session 2026-11-08, reopenable):** a legend line whose
   mark the names carry is the carriers' **note** (charter §4 "No other nameless creator…"). Keep: hep-ex0201047,
@@ -482,7 +482,7 @@ It is emitted as Perl's label fan-out: each member requests `fm:g<k>`, the item 
 - the `fm:block` shared creator.
 
 These become Group scopes: `_group`/`_marks` (`place.rs:129-137`), `frontmatter_group_first`
-(`author_block/affiliations.rs:492`) and `Policy::call_is_group`.
+(`author_block/affiliations.rs:1778`) and `Policy::call_is_group`.
 
 **What does not fit:**
 - **Positional pairing** (`insert.rs:290`, `relocate.rs:272-283`, the observer's `distribute_upfront`) is 1:1, not a
