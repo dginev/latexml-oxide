@@ -1,0 +1,18 @@
+% mechanism: the content check on the placed output (`resolver::placed`, under `LATEXML_FM_EMIT=2`): an address a note keeps
+%   in its text and the emit writes as a contact too is placed twice where the page prints it once (a note's item and a
+%   contact each holding it), counted; the note's words the note's
+% witness: 0807.0895 (an.cls's raw `\email` a `\thanks` keeps, written in the note and its contact, N1's uncounted case);
+%   2208.10209 (MNRAS `\thanks{Contact e-mail: mn@ras.ac.uk}` and its contact), 2111.01328, 2605.22728
+% oracle:  pdflatex 0 errors; "Ann Able*", "Bob Baker†"; "* Univ A, Town (ann@a.org, bob@b.org)", "† Corresponding author."
+% engines: rust int146a, the switch on: Ann's note keeps both addresses, each also a contact (Ann's, Bob's), no Warning
+% expect:  the switch on: 0 errors, 1 warning (the content check's excess, `ann@a.org bob@b.org`); the switch at 1: none
+% status:  RED (int146a) -> GREEN (perfect_kernel_batchn2::an_address_placed_more_often_than_printed_is_counted)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand{\email}[1]{\texttt{#1}}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Univ A, Town (\email{ann@a.org}, \email{bob@b.org})} \and Bob Baker\thanks{Corresponding author. Univ B, City.}}
+\maketitle
+Body.
+\end{document}

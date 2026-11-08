@@ -126,6 +126,8 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   flag_merged_creators(document)?;
   // (the unclaimed-text net's notes: their lines no frontmatter field and no text already set holds)
   keep_unclaimed_net_notes(document)?;
+  // (the content invariant on the placed output, under the emitter's `=2`: every printed word placed once or counted, OD #980)
+  check_placed_content(document);
   // (the census's read-back of the final document against the reading: the plan's definition of done, item 5. Every pass
   // after the writer is classed by what it may change in `perfect_kernel_batche0`'s allow-list, a debt: read that before
   // adding one)

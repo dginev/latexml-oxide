@@ -1246,6 +1246,8 @@ const PASSES_AFTER_THE_WRITER: &[(&str, PassMay)] = &[
   ("drop_repeated_contacts", PassMay::Drop),
   ("flag_merged_creators", PassMay::ChangeNothing),
   ("keep_unclaimed_net_notes", PassMay::Drop),
+  // (the content invariant on the placed output, under `=2`: it counts, N2)
+  ("check_placed_content", PassMay::ChangeNothing),
   ("read_back_frontmatter", PassMay::ChangeNothing),
 ];
 
