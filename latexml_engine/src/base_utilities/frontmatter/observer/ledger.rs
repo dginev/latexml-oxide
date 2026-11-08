@@ -20,7 +20,7 @@ use latexml_core::{
 use super::{
   events::{EmailMeaning, Event, EventKind, HeldError, lex_events},
   field_notes::{EnvironmentStep, FieldCreator},
-  resolver::Resolved,
+  resolver::{Resolved, printed_words},
   shadow::{FmShadow, fm_shadow_mode},
   writer::Analysis,
   *,
@@ -85,7 +85,7 @@ pub(in crate::base_utilities) enum Outcome {
     /// where the rehearsal left a group open (`rehearsal::Rehearsal::Done::left_open`), what it read past it no event
     /// says: the block's content's text ([`content_text`]), whose words the events lack the content check counts
     /// (`resolver::placed::content_check`), as a call's no rehearsal read (`ApiCall::unread`). In a dump only when set
-    unread:       Option<Box<str>>,
+    unread:       Option<Box<ContentText>>,
   },
   /// Not rehearsed, and why.
   Skipped(SkipReason),
@@ -223,7 +223,7 @@ pub(in crate::base_utilities) struct ApiCall {
   pub rehearsed:      bool,
   /// the rehearsal gave up on it (`SkipReason::OverBudget`, a Fatal, `NotUndone`): no events, what it printed its
   /// content's text alone ([`content_text`]), which the content check counts (`resolver::placed::content_check`)
-  pub unread:         Option<Box<str>>,
+  pub unread:         Option<Box<ContentText>>,
   /// a call its block's own expansion made (`inside`) that annotates a creator: its content's events, rehearsed for the
   /// content check alone (`resolver::placed::content_check`), which counts its words unless its block's events print
   /// them — no reader takes it apart from its block
@@ -312,7 +312,7 @@ pub(in crate::base_utilities) struct Ledger {
   /// the contents' texts ([`content_text`]) of the queued creator calls the emitter took out of the queue that no
   /// recorded call is (a stand-in binding's copy's, [`records_now`]), in queue order: what the content check counts them
   /// by (`writer::emit::emit_commands`, `resolver::placed::content_check`)
-  pub unrecorded:   Vec<String>,
+  pub unrecorded:   Vec<ContentText>,
   /// the census's (E0): why the writer's plan or re-part refused, its first refusal or the writer's own decline — what
   /// `writer: declined …` counts under in `ab_audit fmshadow`'s closed list (`writer::note_refusal`)
   pub refusal:      Option<String>,
@@ -1081,8 +1081,11 @@ pub(in crate::base_utilities) fn record_api_call(
 /// `física`, `resolver::placed`); another control sequence, its argument's group (`\IEEEauthorrefmark{1}Univ Alpha` →
 /// ` 1 Univ Alpha`) or a math shift parts words. Nothing is spelled but a control sequence's length and its letter's
 /// catcode: a letter command (`Gro{\ss}e`, a control word) parts its word.
-pub(super) fn content_text(content: &Tokens) -> String {
+pub(super) fn content_text(content: &Tokens) -> ContentText {
   let mut text = String::new();
+  // (where it read past a control symbol or a one-letter control word inside a word: its byte in `text`, and whether a
+  // one-letter control word, which may print a letter)
+  let mut past: Vec<(usize, bool)> = Vec::new();
   // (for each open group, whether it is a parting command's argument, which parts what is around it)
   let mut groups: Vec<bool> = Vec::new();
   let mut parted_by_command = false;
@@ -1107,7 +1110,9 @@ pub(super) fn content_text(content: &Tokens) -> String {
         }
       },
       Catcode::CS => {
-        if !(short_cs(token) && in_word()) {
+        if short_cs(token) && in_word() {
+          past.push((text.len(), letter_cs(token)));
+        } else {
           text.push(' ');
           parting_command = true;
         }
@@ -1116,7 +1121,44 @@ pub(super) fn content_text(content: &Tokens) -> String {
     }
     parted_by_command = parting_command;
   }
-  text
+  // (each word it read past one in, with the places in it, in characters)
+  let mut read_past = Vec::new();
+  let mut slots = past.into_iter().peekable();
+  for word in printed_words(&text) {
+    let start = word.as_ptr() as usize - text.as_ptr() as usize;
+    let mut places = Vec::new();
+    while let Some(&(at, letter)) = slots.peek()
+      && at <= start + word.len()
+    {
+      slots.next();
+      if at > start {
+        places.push((text[start..at].chars().count(), letter));
+      }
+    }
+    if !places.is_empty() {
+      read_past.push((word.to_lowercase(), places));
+    }
+  }
+  ContentText { text: text.into(), read_past }
+}
+
+/// A content's text as the content check reads it ([`content_text`]), and the words it read past a control symbol or a
+/// one-letter control word in: an accent (`Universit\"at` read `universitat`), a dotless `\i`/`\j` (`F\'{\i}sica` read
+/// `fsica`), a cedilla's `\c` (`Fran\c{c}ois`). Only such a word may read as a word an ink prints with what they printed
+/// (`resolver::placed`'s `reads_as`); every other word is matched as spelled.
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct ContentText {
+  pub text:      Box<str>,
+  /// each word read past one (lowercased), with the places in it (in characters, before the character there) and
+  /// whether a one-letter control word was there, which may have printed a letter (a dotless `\i`) — an accent prints
+  /// none
+  pub read_past: Vec<(String, Vec<(usize, bool)>)>,
+}
+
+impl std::ops::Deref for ContentText {
+  type Target = str;
+
+  fn deref(&self) -> &str { &self.text }
 }
 
 /// A control sequence 2 characters long, the backslash and one more: a control symbol (an accent, `\'`) or a
