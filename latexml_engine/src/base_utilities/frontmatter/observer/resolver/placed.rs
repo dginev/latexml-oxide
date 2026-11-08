@@ -34,7 +34,7 @@ use super::{
   words::{ink_words, live_blocks, words_of},
   *,
 };
-use crate::base_utilities::author_block::CUT_LIST;
+use crate::base_utilities::defs::frontmatter_api::CUT_LIST;
 
 /// One item of the placed frontmatter (`writer::dom`'s reading of a creator): its creator, what it is, its printed text.
 pub(in crate::base_utilities::frontmatter::observer) struct PlacedItem {

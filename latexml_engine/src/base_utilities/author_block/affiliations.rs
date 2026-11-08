@@ -275,11 +275,6 @@ pub(in crate::base_utilities) fn blank_line_marks_dropped(stuff: Tokens) -> Toke
   if dropped { Tokens::new(out) } else { stuff }
 }
 
-/// The contact roles the frontmatter API's Cut reads ([`cut_marked_contact`]): the ones a printed list of entries is
-/// labelled by marks in (an affiliation, an alternate one, an address).
-pub(in crate::base_utilities) const CUT_ROLES: [&str; 3] =
-  ["affiliation", "altaffiliation", "address"];
-
 /// The keys a Cut entry does not keep from the call that held its list: the marks are its labels, so a declared
 /// sequence (`labelseq`) or sharing (`_share=authors`) no longer places it (FRONTMATTER_SINGLE_ENGINE_PLAN step 1
 /// before step 3: no convention outranks a mark, rulings R1, R3).
@@ -647,27 +642,6 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
   Ok(Some(entry))
 }
 
-/// The attribute naming the affiliation-kind entry an e-mail was digested inside, and the entry itself (its key, a count
-/// of such entries: `\lx@annotate@frontmatter@now`), by which the Link step reads the entry's addresses and carriers
-/// (`insert::link_entry_addresses`; OXIDIZED_DESIGN_DIVERGENCES #956).
-pub(in crate::base_utilities) const ENTRY_KEY: &str = "_entry";
-
-/// The attribute saying a footnote symbol leads the entry [`ENTRY_KEY`] names (`$^\dagger$…`), whose addresses no
-/// carrier spells are every carrier's (FIDELITY_CHARTER §4, "every symbol carrier").
-pub(in crate::base_utilities) const ENTRY_SYMBOL: &str = "_entrysymbol";
-
-/// The attribute of a contact labelled by its place among its role's entries (`labelseq`: svjour's and llncs's
-/// `\institute{… \and …}`, aa's): the label `\lx@annotate@frontmatter@now` gave it, a number no mark printed — the
-/// Kind step for a legend reads it as a mark only where a carrier's name shows or requests it
-/// (`insert::kind_legend_contacts`, OXIDIZED_DESIGN_DIVERGENCES #961; 1507.04774's svjour_blank prints none). Any other
-/// `affiliation:K` label was read off a printed mark (the marks path, the Cut, the observer's writer).
-pub(in crate::base_utilities) const SEQUENCE_LABEL: &str = "_seqlabel";
-
-/// The attribute of an e-mail the Kind step made of an entry's line or note ([`kind_entry_addresses`]), as against an
-/// e-mail command the author wrote inside the entry, which its own call places where it holds one address
-/// (FIDELITY_CHARTER §4 #420; `insert::link_entry_addresses`).
-pub(in crate::base_utilities) const ENTRY_KINDED: &str = "_kinded";
-
 /// The state key naming the affiliation-kind entry whose content is being digested (`<key>:symbol` or `<key>:`), whose
 /// e-mails take its [`ENTRY_KEY`] (and its [`ENTRY_SYMBOL`]); empty outside one.
 pub(in crate::base_utilities) const ENTRY_DIGESTING: &str = "lx_frontmatter_entry_digesting";
@@ -909,11 +883,6 @@ fn within_inst(content: &Tokens) -> (bool, Tokens) {
     (false, content.clone())
   }
 }
-
-/// The attribute of an entry of the Cut ([`cut_marked_contact`]) naming the printed list it came from
-/// ([`cut_list_key`]): a copy of the list queued again adds no entries ([`cut_list_queued`]), and an entry relocated to
-/// an author keeps the place the author's own uncut copy had (`relocate::at_queue_position`, [`CUT_COPY_PLACE`]).
-pub(in crate::base_utilities) const CUT_LIST: &str = "_cutlist";
 
 /// The state key prefix of the place (queue ordinal) an author's uncut copy of a cut list held, `{CUT_COPY_PLACE}{key}:
 /// author:{n}` ([`place_uncut_copies`], `\lx@cut@copy@place`).

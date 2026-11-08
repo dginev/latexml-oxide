@@ -317,12 +317,8 @@ const ONE_ENGINE_REACH: &[(&str, usize)] = &[
   ("address_lists.rs spelled_owner", 1),
   ("insert.rs as_printed", 1),
   ("insert.rs classify_thanks", 1),
-  ("insert.rs CUT_ROLES", 5),
   ("insert.rs entry_address_owners", 1),
-  ("insert.rs ENTRY_KEY", 7),
-  ("insert.rs ENTRY_KINDED", 2),
   ("insert.rs entry_legend_kind", 1),
-  ("insert.rs ENTRY_SYMBOL", 2),
   ("insert.rs flag_merged_creators", 1),
   ("insert.rs is_email_label", 4),
   ("insert.rs is_entry_word_mailbox", 1),
@@ -338,7 +334,6 @@ const ONE_ENGINE_REACH: &[(&str, usize)] = &[
   ("insert.rs opens_a_dedication", 3),
   ("insert.rs own_call_keeps", 1),
   ("insert.rs reads_as_affiliation", 1),
-  ("insert.rs SEQUENCE_LABEL", 1),
   ("insert.rs spelled_owner", 9),
   ("insert.rs spelled_unspaced_list", 1),
   ("insert.rs symbol_mark_key", 1),
@@ -377,7 +372,6 @@ const ONE_ENGINE_REACH: &[(&str, usize)] = &[
   ("observer/resolver/mod.rs names_correspondence", 5),
   ("observer/resolver/mod.rs spelled_owners", 1),
   ("observer/resolver/net.rs is_name_qualifier", 1),
-  ("observer/resolver/placed.rs CUT_LIST", 2),
   ("observer/resolver/post.rs as_printed", 1),
   ("observer/resolver/post.rs entry_address_owners", 2),
   ("observer/resolver/post.rs is_entry_word_mailbox", 1),
@@ -425,7 +419,6 @@ const ONE_ENGINE_REACH: &[(&str, usize)] = &[
   ("queue.rs is_symbol_mark", 1),
   ("relocate.rs author_mark_operands", 1),
   ("relocate.rs classify_thanks", 1),
-  ("relocate.rs CUT_LIST", 1),
   ("relocate.rs is_mark_command", 3),
   ("relocate.rs is_ordinal_suffix", 3),
   ("relocate.rs is_spacing", 3),
@@ -705,30 +698,23 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "const _command_form base_utilities/frontmatter/queue_digest.rs",
     1,
   ),
-  (
-    "const _cutlist base_utilities/author_block/affiliations.rs",
-    1,
-  ),
+  // (MV1: `_cutlist`, `_entry`, `_entrysymbol`, `_kinded`, `_seqlabel` moved unchanged from `author_block/affiliations.rs` to the
+  // API that reads them, `CUT_LIST`, `ENTRY_KEY`, `ENTRY_SYMBOL`, `ENTRY_KINDED`, `SEQUENCE_LABEL`: no key added)
+  ("const _cutlist base_utilities/defs/frontmatter_api.rs", 1),
   (
     "const _deposit base_utilities/frontmatter/cover_order.rs",
     1,
   ),
+  ("const _entry base_utilities/defs/frontmatter_api.rs", 1),
   (
-    "const _entry base_utilities/author_block/affiliations.rs",
-    1,
-  ),
-  (
-    "const _entrysymbol base_utilities/author_block/affiliations.rs",
+    "const _entrysymbol base_utilities/defs/frontmatter_api.rs",
     1,
   ),
   (
     "const _inserted base_utilities/frontmatter/cover_order.rs",
     1,
   ),
-  (
-    "const _kinded base_utilities/author_block/affiliations.rs",
-    1,
-  ),
+  ("const _kinded base_utilities/defs/frontmatter_api.rs", 1),
   // (OD #961's key, with the API that declares it since P2r2, which `author_block/`, `frontmatter/` and the emitter import)
   (
     "const _labelprints base_utilities/defs/frontmatter_api.rs",
@@ -761,16 +747,13 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "const _released_store base_utilities/frontmatter/queue_digest.rs",
     1,
   ),
-  (
-    "const _seqlabel base_utilities/author_block/affiliations.rs",
-    1,
-  ),
   // (P2r2: the label that prints, of an entry the emitter wrote — `_labelprints` held it beside its flag `true`, a flag and
   // data in one key; an entry's fact in its own key, as Perl keeps `_label` and `_annotations`; OD #980)
   (
     "const _printedlabel base_utilities/defs/frontmatter_api.rs",
     1,
   ),
+  ("const _seqlabel base_utilities/defs/frontmatter_api.rs", 1),
   ("const _source base_utilities/frontmatter/insert.rs", 1),
   (
     "const _titlepage base_utilities/frontmatter/cover_order.rs",
