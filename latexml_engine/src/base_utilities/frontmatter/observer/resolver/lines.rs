@@ -988,7 +988,7 @@ pub(super) fn is_collaboration(text: &str) -> bool {
 /// Where a remark on a name opens in a piece's text: at a bracket (`(on behalf of the H1 and ZEUS collaborations)`,
 /// 0811.3142), or at the words of whom the name speaks for ([`SPEAKS_FOR`]) opening it or a word of it (`for the Hall A
 /// DVCS collaboration`, 1502.03246; `Christian Schmidt (for the`, 1212.4278) — the byte of its first; `None` where no
-/// remark opens. Where [`is_name_remark`] and [`remark_pieces_joined`]'s runs start.
+/// remark opens. Where [`remark_pieces_joined`]'s runs start.
 pub(super) fn remark_start(text: &str) -> Option<usize> {
   let t = text.trim_start();
   let skipped = text.len() - t.len();
@@ -1011,8 +1011,8 @@ pub(super) fn remark_start(text: &str) -> Option<usize> {
 
 /// Whether a names line's piece is a remark on the name before it, no name of its own: a bracket (`(on behalf of the H1
 /// and ZEUS collaborations)`, 0811.3142), or the collaboration the name speaks for (`for the Hall A DVCS
-/// collaboration`, 1502.03246; `on behalf of the ATLAS Collaboration`) — review rev94a B2, S6: a remark opening it
-/// ([`remark_start`] at its first byte) that names one.
+/// collaboration`, 1502.03246; `on behalf of the ATLAS Collaboration`) — review rev94a B2, S6: a bracket at its first
+/// byte, or "for" or "on behalf of" there before a collaboration ([`speaks_for`]).
 pub(super) fn is_name_remark(text: &str) -> bool {
   let t = text.trim();
   t.starts_with(['(', '[']) || speaks_for(t)

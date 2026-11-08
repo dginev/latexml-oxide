@@ -801,11 +801,10 @@ impl Resolver {
   /// 2001.09649's `stefan.ciobaca@`), and by its transliteration (`Schäffler` "schaeffler", html_feedback #7233), as the
   /// old reader's source reading reads the accent commands.
   fn spelled(&self, address: &str, candidates: &[usize]) -> Option<usize> {
-    let names: Vec<&str> = candidates
-      .iter()
-      .map(|&c| self.out.creators[c].name.as_str())
-      .collect();
-    spelled_name(&names, address).map(|one| candidates[one])
+    match self.spellers(address, candidates).as_slice() {
+      [one] => Some(*one),
+      _ => None,
+    }
   }
 
   /// Every candidate an address spells ([`spelled_owners`]): two or more where it spells several names alike (`wang@`
