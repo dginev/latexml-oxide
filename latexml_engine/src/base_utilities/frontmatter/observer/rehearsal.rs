@@ -86,16 +86,29 @@ pub(in crate::base_utilities) fn rehearsal_budget() -> Option<usize> {
   (left != 0).then(|| left.min(RUN_READS.get()))
 }
 
-/// The Warning that says what no rehearsal read, when the document closes: its creators are read as they print, not from a
-/// reading of the block (`SkipReason::OverBudget`).
+/// The Warning that says what no rehearsal read, when the document closes (`SkipReason::OverBudget`): with the emitter off
+/// its creators are read as they print, not from a reading of the block; under `LATEXML_FM_EMIT` an author block among
+/// them is written whole (Perl's whole-block creator, `writer::writer_stays_out`) and any other call's words are not
+/// written — under `=2` the content check counts them (`resolver::placed::content_check`, `ApiCall::unread`).
 pub(in crate::base_utilities) fn rehearsal_budget_warning() {
   let left_out = LEFT_OUT.replace(0);
   if left_out > 0 {
+    let read = match fm_emit_mode() {
+      0 => "they are read as they print",
+      1 => {
+        "an author block among them is written whole, as Perl's whole-block creator, and any other call's words are not \
+         written"
+      },
+      _ => {
+        "an author block among them is written whole, as Perl's whole-block creator, and any other call's words are not \
+         written, the frontmatter content check counting them"
+      },
+    };
     Warn!(
       "frontmatter",
       "rehearsal_budget",
       s!(
-        "The rehearsal gave up on {left_out} frontmatter call(s) that take more than {} reads to digest, or past the conversion's {}: they are read as they print",
+        "The rehearsal gave up on {left_out} frontmatter call(s) that take more than {} reads to digest, or past the conversion's {}: {read}",
         RUN_READS.get(),
         RUN_READS.get().saturating_mul(REHEARSALS_PER_CONVERSION)
       )

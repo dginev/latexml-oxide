@@ -2109,14 +2109,31 @@ fn expands_now(defn: &std::rc::Rc<dyn Definition>, fully_expand: bool) -> bool {
 }
 
 /// A place in the input ([`input_mark`]): what the input held still to be read when it was taken — the current
-/// mouth's pushback (its length and its last token below anything pushed since), the mouth's read position, and how
-/// many mouths enclose it.
+/// mouth's pushback (a copy of every token it held, the next to read last), the mouth's read position, and how many
+/// mouths enclose it.
 #[derive(Debug, Clone, PartialEq)]
 pub struct InputMark {
-  depth:    usize,
-  pushback: usize,
-  below:    Option<Token>,
-  mouth:    (usize, usize, usize, usize),
+  depth: usize,
+  below: Option<std::rc::Rc<[Token]>>,
+  mouth: (usize, usize, usize, usize),
+}
+
+/// Whether the tokens `now` are those `then` held, each the very same token (its text, its catcode and its provenance,
+/// bit for bit: a peek puts back the token it read), the next to read compared first: a whole-list test at the speed of
+/// a `memcmp`, as a mark's pushback may hold a whole author list (1507.02068's 418 names, 12,817 tokens, tested at each
+/// of its 481 calls: a token-by-token test cost it 1.3 % of its instructions).
+fn same_input(now: &[Token], then: &[Token]) -> bool {
+  /// The bytes of `tokens`.
+  fn bytes(tokens: &[Token]) -> &[u8] {
+    // SAFETY: `Token` is `#[repr(C)]`, `Copy`, and gap-free — its fields are plain integers filling every byte
+    // (`token::tests::{token_size_invariant, token_layout_code_at_byte_4}`) — so every byte of the slice is initialized,
+    // and a `u8` has no alignment to keep; the view lives as long as `tokens`.
+    unsafe { std::slice::from_raw_parts(tokens.as_ptr().cast::<u8>(), size_of_val(tokens)) }
+  }
+  now.len() == then.len()
+    && now.last().map(|t| bytes(std::slice::from_ref(t)))
+      == then.last().map(|t| bytes(std::slice::from_ref(t)))
+    && bytes(now) == bytes(then)
 }
 
 /// Is the next token read straight from the document's own text — nothing pushed back, the mouth a content file's
@@ -2137,13 +2154,11 @@ pub fn input_mark() -> InputMark {
   match gullet.runtime.as_ref() {
     Some(rt) => InputMark {
       depth,
-      pushback: rt.pushback.len(),
-      below: rt.pushback.last().copied(),
+      below: (!rt.pushback.is_empty()).then(|| rt.pushback.as_slice().into()),
       mouth: rt.mouth.read_position(),
     },
     None => InputMark {
       depth,
-      pushback: 0,
       below: None,
       mouth: (0, 0, 0, 0),
     },
@@ -2153,8 +2168,14 @@ pub fn input_mark() -> InputMark {
 /// Whether none of the input `mark` held has been read since it was taken ([`input_mark`]): its mouth is still open,
 /// has read no further, and its pushback still holds every token it held then (only what was pushed after the mark
 /// was read, or what a mouth opened since holds). Read-only, for an observer telling apart what a call's expansion
-/// did from what the input after the call did (the frontmatter observer's ledger). A token read and another of the
-/// same text pushed back in its place is not told apart.
+/// did from what the input after the call did (the frontmatter observer's ledger, the title-page check's document
+/// calls). The pushback's tokens below the mark are compared whole ([`same_input`]): a token read and put back (a
+/// peek) leaves the input unread, while tokens read below the mark and others pushed in their place read as read,
+/// though the token now at the mark's last slot equals the one it held — IEEEtran's
+/// `\IEEEauthorblockN{…}⏎\IEEEauthorblockA{…}`, whose line-end space was read with `\IEEEauthorblockA` and its
+/// argument and whose expansion, longer, put another space there: its affiliation calls read as the author block's
+/// own and were lost under `LATEXML_FM_EMIT=2` (2401.11731, 1801.03314). Its cost is a copy of the pushback at the mark
+/// and a comparison of it at each test.
 pub fn input_unread_since(mark: &InputMark) -> bool {
   let gullet = gullet!();
   let depth = gullet.mouthstack.len();
@@ -2167,11 +2188,14 @@ pub fn input_unread_since(mark: &InputMark) -> bool {
     gullet.mouthstack.get(depth - mark.depth - 1)
   };
   let Some(rt) = runtime else {
-    return mark.pushback == 0 && mark.mouth == (0, 0, 0, 0);
+    return mark.below.is_none() && mark.mouth == (0, 0, 0, 0);
   };
+  let below = mark.below.as_deref().unwrap_or(&[]);
   rt.mouth.read_position() == mark.mouth
-    && rt.pushback.len() >= mark.pushback
-    && (mark.pushback == 0 || rt.pushback.get(mark.pushback - 1).copied() == mark.below)
+    && rt
+      .pushback
+      .get(..below.len())
+      .is_some_and(|now| same_input(now, below))
 }
 
 /// What the invocation of a token with field provenance `prov` ([`Token::prov`]) consumed of its field's stored
@@ -5571,6 +5595,38 @@ mod token_limit_tests {
       assert!(read_token()?.is_some());
       assert_eq!(budget.end(), ReadBudgetEnd { reads: 1, over: false });
       assert_eq!(token_progress(), start + 1);
+      Ok(())
+    })
+    .unwrap();
+  }
+
+  /// An input mark reads "unread" until a token it held is read, though the tokens pushed in their place put an equal
+  /// token at its last slot (a space, IEEEtran's `\IEEEauthorblockN{…}⏎\IEEEauthorblockA{…}`: 2401.11731, 1801.03314);
+  /// a peek, a token read and put back, and tokens pushed on top leave it unread.
+  #[test]
+  fn an_input_mark_tells_a_refilled_slot_from_a_peek() {
+    reading_from_mouth(Mouth::default(), || {
+      unread(Tokens::new(vec![T_SPACE!(), T_CS!("\\next")]));
+      let mark = input_mark();
+      assert!(input_unread_since(&mark));
+      // (a peek, and an expansion pushed on top)
+      let peeked = read_token()?.unwrap();
+      unread_one(peeked);
+      assert!(input_unread_since(&mark));
+      unread(Tokens::new(vec![T_LETTER!("a"), T_SPACE!()]));
+      assert!(input_unread_since(&mark));
+      assert_eq!(read_token()?, Some(T_LETTER!("a")));
+      assert_eq!(read_token()?, Some(T_SPACE!()));
+      assert!(input_unread_since(&mark));
+      // (both tokens read, a longer list pushed whose token at the mark's last slot is a space again)
+      assert_eq!(read_token()?, Some(T_SPACE!()));
+      assert_eq!(read_token()?, Some(T_CS!("\\next")));
+      unread(Tokens::new(vec![
+        T_LETTER!("a"),
+        T_SPACE!(),
+        T_LETTER!("b"),
+      ]));
+      assert!(!input_unread_since(&mark));
       Ok(())
     })
     .unwrap();

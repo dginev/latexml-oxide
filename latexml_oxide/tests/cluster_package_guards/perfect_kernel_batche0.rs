@@ -1139,7 +1139,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("inst_support_sty.rs", 1),
   ("interspeech_cls.rs", 29),
   ("l_aa_cls.rs", 13),
-  ("ledger", 24),
+  // (RC1, 24 -> 26: `ledger::content_text`, the text of a call the rehearsal gave up on or no call recorded, read at the API
+  // boundary that records its content so the content check counts what TeX printed of it, a count and no decision; the
+  // check itself reads text alone, `resolver/` unchanged)
+  ("ledger", 26),
   ("llncs_cls.rs", 32),
   ("osa_journal_sty.rs", 77),
   ("place", 6),

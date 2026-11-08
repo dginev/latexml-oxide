@@ -16,7 +16,10 @@ use super::{
     EmailMeaning, Event, EventKind, HeldError, SepKind, creator_roles, lex_events,
     lex_with_formulas, mark_held, with_block_content,
   },
-  ledger::{Entry, Outcome, SkipReason, Stamp, reset_ledger, stamped_block_tokens, with_ledger},
+  ledger::{
+    Entry, Outcome, SkipReason, Stamp, content_text, reset_ledger, stamped_block_tokens,
+    with_ledger,
+  },
   policy::{TitleMarks, policy_for},
   rehearsal::{Rehearsal, rehearse},
   resolver::{Assoc, Resolved, ledger_inputs, resolve},
@@ -229,14 +232,22 @@ fn read_at_flush() -> Result<()> {
   }
   blocks_mark.restore();
   // the API calls made outside the blocks' expansions: their contents rehearsed and lexed as a block's are (the
-  // resolver reads an affiliation's leading marks and text, an e-mail's address, a creator's name from them)
+  // resolver reads an affiliation's leading marks and text, an e-mail's address, a creator's name from them); and a
+  // call a block's own expansion made that annotates a creator, for the content check alone (`ApiCall::inside_events`:
+  // its words count unless its block's events print them; under `=2`, the check's only mode), the block's own creator
+  // entry being the block
+  let check = fm_emit_mode() == 2;
   let calls: Vec<(usize, Tokens)> = with_ledger(|ledger| {
     ledger
       .entries()
       .iter()
       .enumerate()
       .filter_map(|(i, entry)| match entry {
-        Entry::Api(call) if !call.inside && !call.rehearsed => Some((i, call.content.clone())),
+        Entry::Api(call)
+          if !call.rehearsed && (!call.inside || (check && call.parent == "ltx:creator")) =>
+        {
+          Some((i, call.content.clone()))
+        },
         _ => None,
       })
       .collect()
@@ -244,21 +255,27 @@ fn read_at_flush() -> Result<()> {
   let calls_mark = StomachMark::take();
   for (i, content) in calls {
     let read = if content.is_empty() {
-      Some((Vec::new(), 0))
+      Some((Vec::new(), 0, None))
     } else {
-      match rehearse(content, TitleMarks::Fnsymbol, &[], lex_events)? {
-        Rehearsal::Done { value, errors, .. } => Some((value, errors)),
+      match rehearse(content.clone(), TitleMarks::Fnsymbol, &[], lex_events)? {
+        Rehearsal::Done { value, errors, .. } => Some((value, errors, None)),
         // (a flush inside a speculative run: the next flush rehearses it)
         Rehearsal::Skipped(SkipReason::JournalUnavailable) => None,
-        Rehearsal::Skipped(_) => Some((Vec::new(), 0)),
+        // (given up on: what it printed is its content's text, `ApiCall::unread`)
+        Rehearsal::Skipped(_) => Some((Vec::new(), 0, Some(content_text(&content).into()))),
       }
     };
-    if let Some((events, errors)) = read {
+    if let Some((events, errors, unread)) = read {
       with_ledger(|ledger| {
         if let Some(Entry::Api(call)) = ledger.entries_mut().get_mut(i) {
-          call.events = events;
+          if call.inside {
+            call.inside_events = events.into();
+          } else {
+            call.events = events;
+            call.errors = errors;
+          }
           call.rehearsed = true;
-          call.errors = errors;
+          call.unread = unread;
         }
       });
     }
@@ -544,9 +561,19 @@ pub fn fm_shadow_json() -> String {
           if call.cleared {
             out.push_str(",\"cleared\":true");
           }
+          if let Some(text) = &call.unread {
+            out.push_str(",\"unread\":");
+            json_str(&mut out, text);
+          }
           if call.rehearsed {
+            // (an inside call's, rehearsed for the content check alone: `ApiCall::inside_events`)
+            let events: &[Event] = if call.inside {
+              &call.inside_events
+            } else {
+              &call.events
+            };
             out.push_str(",\"events\":[");
-            for (i, event) in call.events.iter().enumerate() {
+            for (i, event) in events.iter().enumerate() {
               if i > 0 {
                 out.push(',');
               }

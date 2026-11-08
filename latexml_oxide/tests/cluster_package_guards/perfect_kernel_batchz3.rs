@@ -815,7 +815,11 @@ fn a_looping_block_ends_in_the_rehearsal_budget() {
 }
 
 /// Converts `tex` in a directory of its own as `t.tex` beside `files`, with `env`: its log and its XML. For what a run reads by the document's name (a `.bbl`) or a variable.
-fn in_a_directory(tex: &str, files: &[(&str, &str)], env: &[(&str, &str)]) -> (String, String) {
+pub(super) fn in_a_directory(
+  tex: &str,
+  files: &[(&str, &str)],
+  env: &[(&str, &str)],
+) -> (String, String) {
   let workdir = tempfile::tempdir().expect("create tempdir");
   std::fs::write(workdir.path().join("t.tex"), tex).expect("write t.tex");
   for (name, content) in files {

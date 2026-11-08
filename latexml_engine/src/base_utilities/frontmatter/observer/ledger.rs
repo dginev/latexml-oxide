@@ -208,6 +208,13 @@ pub(in crate::base_utilities) struct ApiCall {
   pub events:         Vec<Event>,
   /// whether a flush rehearsed its content
   pub rehearsed:      bool,
+  /// the rehearsal gave up on it (`SkipReason::OverBudget`, a Fatal, `NotUndone`): no events, what it printed its
+  /// content's text alone ([`content_text`]), which the content check counts (`resolver::placed::content_check`)
+  pub unread:         Option<Box<str>>,
+  /// a call its block's own expansion made (`inside`) that annotates a creator: its content's events, rehearsed for the
+  /// content check alone (`resolver::placed::content_check`), which counts its words unless its block's events print
+  /// them — no reader takes it apart from its block
+  pub inside_events:  Box<[Event]>,
   /// whether a later clear removed it from the queue before any flush digested it ([`record_clear`])
   pub cleared:        bool,
   /// the errors its content's rehearsal held (no positions: an API call's content has none)
@@ -289,6 +296,10 @@ pub(in crate::base_utilities) struct Ledger {
   pub writer:       Option<String>,
   /// the contacts recorded that print nothing, in call order ([`UnprintedCall`])
   pub unprinted:    Vec<UnprintedCall>,
+  /// the contents' texts ([`content_text`]) of the queued creator calls the emitter took out of the queue that no
+  /// recorded call is (a stand-in binding's copy's, [`records_now`]), in queue order: what the content check counts them
+  /// by (`writer::emit::emit_commands`, `resolver::placed::content_check`)
+  pub unrecorded:   Vec<String>,
   /// the census's (E0): why the writer's plan or re-part refused, its first refusal or the writer's own decline — what
   /// `writer: declined …` counts under in `ab_audit fmshadow`'s closed list (`writer::note_refusal`)
   pub refusal:      Option<String>,
@@ -1034,11 +1045,27 @@ pub(in crate::base_utilities) fn record_api_call(
       content,
       events: Vec::new(),
       rehearsed: false,
+      unread: None,
+      inside_events: Box::default(),
       cleared: false,
       errors: 0,
       command: (fm_emit_mode() != 0).then(|| command.clone()),
     }));
   });
+}
+
+/// What a call no rehearsal read printed, as far as its tokens tell (`ApiCall::unread`, `Ledger::unrecorded`), read at
+/// the API boundary that records its content, so the content check reads text alone: its characters, a control
+/// sequence, a brace or a math shift parting them (`\IEEEauthorrefmark{1}Univ Alpha` → ` 1 Univ Alpha`).
+pub(super) fn content_text(content: &Tokens) -> String {
+  let mut text = String::new();
+  for token in content.unlist_ref() {
+    match token.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER | Catcode::ACTIVE => text.push_str(&token.to_string()),
+      _ => text.push(' '),
+    }
+  }
+  text
 }
 
 /// The tag a queued call annotates, its first argument (`\lx@annotate@frontmatter@now{ltx:creator}…`), empty for a call
