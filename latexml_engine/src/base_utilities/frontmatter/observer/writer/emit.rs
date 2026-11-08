@@ -37,8 +37,8 @@ use crate::base_utilities::{
       policy::TitleMarks,
       rehearsal::{Rehearsal, rehearse},
       resolver::{
-        BlockCheck, LostInk, RCreator, Written, check_blocks, creator_call, merged_names,
-        printed_email_label, read_events, split_pieces, uncoordinated_marks,
+        BlockCheck, LostInk, RCreator, Written, check_blocks, creator_call, is_creator_call,
+        merged_names, printed_email_label, read_events, split_pieces, uncoordinated_marks,
       },
     },
     relocate::{BLOCK_ZONE, FOOTER_ZONE},
@@ -2574,8 +2574,21 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   if let Some(creator) = block_creator(of_the_block) {
     out.insert(block_at, entry("ltx:creator", creator.unlist()));
   }
-  // (a document's note's own `\\email` is the reading's item already: `api:note-spelled`, 0910.1640)
-  for entry in out.iter_mut().filter(|entry| entry.0 == "ltx:pubnote") {
+  // (a document's note's own `\\email` is the reading's item already: `api:note-spelled`, 0910.1640 — but in a note making a
+  // creator, which no reading answers, each contact is the newest creator's as the note is digested, as Perl's:
+  // 0807.4720's `\\thanks{… \\author{…}\\address{…}\\email{…}}`, `resolver::is_creator_call`)
+  let makes_a_creator = |entry: &RawFrontmatter| {
+    with_ledger(|ledger| {
+      ledger.entries().iter().any(|e| {
+        matches!(e, Entry::Api(call) if call.command.as_ref() == Some(&entry.2)
+          && call.events.iter().any(is_creator_call))
+      })
+    })
+  };
+  for entry in out
+    .iter_mut()
+    .filter(|entry| entry.0 == "ltx:pubnote" && !makes_a_creator(entry))
+  {
     entry.2 = Tokens::new(cs_group("\\lx@frontmatter@itemonly", &[entry
       .2
       .unlist_ref()]));
@@ -2731,6 +2744,8 @@ mod tests {
         parent: "ltx:creator".to_string(),
         content: Tokens::new(Vec::new()),
         events: Vec::new(),
+        inside_events: Box::default(),
+        unread: None,
         rehearsed: true,
         cleared: false,
         errors: 0,

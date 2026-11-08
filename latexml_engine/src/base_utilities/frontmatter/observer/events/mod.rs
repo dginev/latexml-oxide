@@ -317,7 +317,7 @@ pub struct Event {
   /// corresponding-author step reads it (`Resolver::corresponding`)
   pub note_mark:      Option<String>,
   /// a Note's lexed text, whole — its names, separators and marks, where `inner` keeps its contacts and marks alone: what
-  /// a `\thanks` of several marked entries is cut by, before each top-level mark ([`mark_led_pieces`]). Not in a dump:
+  /// a `\thanks` of several marked entries is cut by, before each top-level mark (`mark_led_pieces`). Not in a dump:
   /// only the reading's note step reads it (`Resolver::keep_note`)
   pub body:           Vec<Event>,
 }
@@ -1216,6 +1216,12 @@ impl Walker {
     let arg = |n: usize| w.get_arg(n).map(ink_of).unwrap_or_default();
     let raw = |n: usize| raw_arg(w, n);
     match cs.as_str() {
+      // (a creator call an API call's content made: `rehearsal`'s `\lx@fm@obs@add`, 0807.4720)
+      "\\lx@fm@obs@creatorcall" => {
+        let mut event = Event::new(EventKind::ApiCall);
+        event.role = Some("ltx:creator".to_string());
+        self.event(event, d, nest);
+      },
       "\\lx@fm@obs@and" => self.event(Event::new(EventKind::Sep(SepKind::And("\\and"))), d, nest),
       "\\lx@fm@obs@And" => self.event(Event::new(EventKind::Sep(SepKind::And("\\And"))), d, nest),
       "\\lx@fm@obs@AND" => self.event(Event::new(EventKind::Sep(SepKind::And("\\AND"))), d, nest),

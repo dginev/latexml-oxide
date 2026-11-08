@@ -194,7 +194,14 @@ impl Resolver {
     // binding's: one the document's own `\email` makes (`\renewcommand{\email}[1]{\texttt{#1}}`, a class read raw)
     // prints wherever its definition prints, so it is the note's text too (`EmailMeaning::Own`, the meaning when
     // the note is rehearsed, at the flush, `\maketitle`; review rev92a_r3 B1: 1412.0748, 1809.01965; rev92a_r4 B1))
+    // (a note making a creator — amsart's `\thanks{… \author{Bob}\address{Univ B}\email{bob@b.org}}`, 0807.4720, its
+    // `EventKind::ApiCall` "ltx:creator" — is digested as Perl's: each contact in it goes to the creator newest when it is
+    // digested, `\lx@annotate@frontmatter` (Base_Utility.pool.ltxml:520-531), and no reading of a flush answers one —
+    // the first flush's, before that creator exists, gave Ann Bob's e-mail; `writer::emit`'s pubnote wrapper keeps them)
     if tag == "ltx:pubnote" {
+      if events.iter().any(is_creator_call) {
+        return;
+      }
       let current = self.out.creators.len().checked_sub(1);
       let mut before: Vec<&Event> = Vec::new();
       for e in events {
@@ -1065,4 +1072,25 @@ fn row_address_lines(events: &[Event]) -> Vec<Event> {
     line_start = end + 1;
   }
   out.into_iter().flatten().collect()
+}
+
+/// Whether an event of a document note is a creator call the note made ([`EventKind::ApiCall`] "ltx:creator", the
+/// rehearsal's `\lx@fm@obs@add`: 0807.4720).
+pub(in crate::base_utilities::frontmatter::observer) fn is_creator_call(e: &Event) -> bool {
+  e.kind == EventKind::ApiCall && e.role.as_deref() == Some("ltx:creator")
+}
+
+/// The contacts of a document note that are the creators' ([`Resolver::api`]'s `ltx:pubnote`): its binding's e-mail
+/// calls, which the reading answers, and every contact after a creator call the note made, which its digestion gives
+/// that creator — what the content check requires placed, the rest of the note its own text (`placed::content_check`).
+pub(super) fn note_owned_contacts(events: &[Event]) -> Vec<&Event> {
+  let mut born = false;
+  events
+    .iter()
+    .filter(|e| {
+      born |= is_creator_call(e);
+      e.kind == EventKind::Contact
+        && (born || (e.role.as_deref() == Some("email") && e.meaning != EmailMeaning::Own))
+    })
+    .collect()
 }

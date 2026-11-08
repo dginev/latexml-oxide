@@ -338,6 +338,7 @@ pub enum Input {
 }
 
 mod api;
+pub(in crate::base_utilities::frontmatter::observer) use api::is_creator_call;
 mod blocks;
 mod labels;
 mod lines;

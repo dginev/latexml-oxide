@@ -1,7 +1,7 @@
 //! Guards for TA1: an author block digested while a flush digests its queue (an `\author` in the `\title`, 1502.01001,
 //! 1510.00875, hep-ph0207056, hep-th0111116) has its own flush at `LATEXML_FM_EMIT=2` (`\lx@frontmatter@late`), which
 //! reads it as an early block is read: its split creators, each with its own contacts, no merged creator beside them.
-//! The amsart `\thanks` shape (0807.4720) stays a RED repro (`late_author_in_amsart_thanks_once`).
+//! The amsart `\thanks` shape (0807.4720, `late_author_in_amsart_thanks_once`) is IO3b's: `perfect_kernel_batchio3b`.
 
 use latexml::util::test::{error_count, warning_count};
 
