@@ -147,6 +147,15 @@ pub(super) fn text_without_marks(node: &Node) -> String { printed_text(node, fal
 /// `repart`).
 pub(super) fn words_without_marks(node: &Node) -> String { printed_text(node, true) }
 
+/// Whether `node` holds an element of a layout parting the words on its sides ([`LAYOUT_PARTS`]): where its
+/// [`words_without_marks`] differs from its [`text_without_marks`] by more than spaces.
+pub(super) fn holds_a_layout_part(node: &Node) -> bool {
+  node.get_child_nodes().iter().any(|child| {
+    child.get_type() == Some(NodeType::ElementNode)
+      && (LAYOUT_PARTS.iter().any(|q| is(child, q)) || holds_a_layout_part(child))
+  })
+}
+
 /// The elements of a layout that part the words on their sides.
 pub(super) const LAYOUT_PARTS: &[&str] = &[
   "ltx:td",

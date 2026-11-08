@@ -161,14 +161,22 @@ pub(in crate::base_utilities) fn check_placed_content(document: &mut Document) {
       .beside
       .extend(links.iter().filter_map(|link| link.get_attribute("href")));
     if !creator.name.trim().is_empty() {
-      // (its words parted at every layout part, as the block's lines print them: a block written whole, 1908.02923)
+      // (its words parted at every layout part, as the block's lines print them: a block written whole, 1908.02923; read again
+      // only where a layout part holds them)
       let names = creator.node.get_child_nodes().into_iter();
-      let names = names.filter(|child| dom::is(child, "ltx:personname"));
-      let text: Vec<String> = names.map(|name| dom::words_without_marks(&name)).collect();
+      let names: Vec<Node> = names
+        .filter(|child| dom::is(child, "ltx:personname"))
+        .collect();
+      let text = if names.iter().any(dom::holds_a_layout_part) {
+        let words: Vec<String> = names.iter().map(dom::words_without_marks).collect();
+        words.join(" ")
+      } else {
+        creator.name.clone()
+      };
       placed.items.push(PlacedItem {
         holder,
         kind: PlacedKind::Name,
-        text: text.join(" "),
+        text,
       });
     }
     // (what a personname holds besides its notes, an ORCID link, its name's text holds)
