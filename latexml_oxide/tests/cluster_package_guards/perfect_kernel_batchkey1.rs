@@ -125,6 +125,28 @@ fn a_marked_thanks_is_its_marks_affiliations() {
     Some("affiliation=Univ C, Japan. cat@c.edu *Corresponding authors")
   );
   assert_eq!(on, off);
+  // (each piece the reading cut written from its own span, not re-cut by the writer: review revG5 finding 1, where the
+  // third piece, "Corresponding author" and its address, was lost at `=2`, counted by 2 Warnings)
+  let (off, on) = both(repro!("marked_thanks_piece_is_written_as_read"));
+  let want = [vec!["Ann Able ∗", "affiliation=Univ A"], vec![
+    "Bob Baker",
+    "affiliation=Univ B. * Corresponding author.",
+  ]];
+  assert_eq!(off, want);
+  assert_eq!(on, want);
+  let tex = repro!("marked_thanks_piece_with_address_is_written_as_read");
+  let (off, on) = both(tex);
+  let want = [
+    vec!["Ann Able ∗", "affiliation=Univ A", "email=a@x.org"],
+    vec!["Bob Baker", "affiliation=Univ B."],
+  ];
+  assert_eq!(off, want);
+  assert_eq!(on, want);
+  let (_, xml) = run(tex, 2);
+  assert!(
+    xml.contains(r#"mark="*" role="thanks""#) && xml.contains("Corresponding author</note>"),
+    "{xml}"
+  );
 }
 
 /// K14: `\and` columns of entries and no names label the whole block, as the switch off reads them (2404.00915: both

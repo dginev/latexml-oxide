@@ -32721,6 +32721,8 @@ but the fixes named above. Open (RED, no guard): an icon or a rule inside the li
 the switch off cuts the text alone, which needs the link's characters' own positions (the lexer reads `\href`'s text as its
 argument's ink). Off: byte-identical. Guards `perfect_kernel_batchp1e`, `perfect_kernel_batchp1c`.
 
+Guards `perfect_kernel_batchz4`.
+
 **KEY1 (the mark-keyed entries, RT2's K4, K12-K14; `=2` only).** A printed mark no name requests is no label, as the switch
 off reads it (FIDELITY_CHARTER: a mark matters only where it is used). K12 is ported as a give-back, read once every name
 is: an API entry a leading mark labels that no name requests keeps its call's `annotate=` placement (`resolver/post.rs`,
@@ -32734,7 +32736,10 @@ glyphs written as text, counted). K4: a `\thanks` opening with a raised number h
 affiliation per entry, its lexed text (`Event::body`) cut before each top-level raised mark (`events::mark_led_pieces`, the
 API reader's cut), so an entry's own comma stays its text (`$^{1}$Dept A, Univ A, $^{2}$Univ B`, review revKEY1); a
 separator word the cut drops between entries is recorded dropped, counted as written; a later glyph is its text
-(2509.19480, 2206.07648, 2505.06451). K14: the per-column label rule only where the entry's column holds names
+(2509.19480, 2206.07648, 2505.06451). Each piece is sourced at its own span (its first event's start to its last's end, a
+mark's formula whole: `Event::extent`), and the writer writes that span's tokens uncut (`writer::emit` `note_piece`) — one
+cut, the reading's; sourced at the whole note's span, the writer re-cut it by off's `split_wrapped_affiliation_marks` and lost
+a piece where the cuts disagreed (`$^{1}$Univ A; $^{2}$Univ B. $^{*}$Corresponding author.`, review revG5 1). K14: the per-column label rule only where the entry's column holds names
 (2404.00915). Off: byte-identical. Left: a name's mark printing a macro's letter beside a number (`$^{\a 1}$`, `\def\a{{a}}`)
 read as the one label "a1" (hep-ph0011101; RED repro `macro_letter_in_a_name_mark_is_its_own_label`). Guards
 `perfect_kernel_batchkey1`.
@@ -32828,5 +32833,3 @@ the shared affiliation of every name above it, whichever spelling opens it — 0
 under every name; the last author's alone before, off too), `A One \and Bob Two \end{tabular}\begin{tabular}{c} Univ Shared`
 ("Univ Shared" a third creator before, review revG3 finding 1). (1), (2), (4), (5) and (6) with the switch on alone, (3) a
 fact of the rehearsal (popZ01, 1,873 papers off: 0 changed); off: byte-identical. Guards `perfect_kernel_batchfb2a`.
-
-Guards `perfect_kernel_batchz4`.
