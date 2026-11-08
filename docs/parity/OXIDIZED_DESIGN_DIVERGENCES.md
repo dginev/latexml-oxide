@@ -27965,7 +27965,8 @@ made (`repart::by_words`: the classify helpers' `classify:institution` is never 
 today's it took is given back, `repart::concede`); a name or made item whose brackets do not close is declined. The reading itself parts no name inside an
 open `(`/`[` (the lexer's `open`: a comma or "and" there is the bracket's — 0811.3142's `(on behalf of the H1 and ZEUS
 collaborations)`), reads a bracket or a collaboration a name speaks for after it as that name's remark
-(`is_name_remark`, `speaks_for`: `for the Hall A DVCS collaboration`, 1502.03246, the name's as today's), and continues
+(`is_name_remark`, `speaks_for`: `for the Hall A DVCS collaboration`, 1502.03246 — a collaboration remark the name's
+`collaboration` contact since NL1, #980), and continues
 an institution over the word "and" unless what follows reads as names (`Department of Physics and Astronomy`).
 Fail-safe on the digested text: the new creators are built beside today's and kept only when they read as the reading
 (`plan::difference` finds nothing), hold every word today's creators held, none duplicated — names and distinct items
@@ -32633,5 +32634,29 @@ cover kept the answered mark on the name and wrote the note twice (2309.13682, 2
 the note is now the reading's, once, not bold (the PDF's footnote font). The same cause where the name's tokens cannot be cut
 (`\newcommand{\ann}{Ann Able\thanks{…}}`, one token for both events, review revLO4): the note its tokens print is digested
 with the name and not written again (`block_names`' `on_names`). Off: byte-identical. Guard `perfect_kernel_batchfmp2`.
+
+**The names line, strictly ported (NL1; rule table RT3, `agent_reports/2026-11-08_ruletable_namesline.md`).** Five rules of
+the reading that decided on words where the old reader decided on structure, each translated from the old procedure (off
+declines every word-only reading, `writer::repart::by_words`, so these bit at `=2` only). (N1-N3) A names line's piece
+carrying its own mark — the next event past layout and notes, or past its comma a mark that stays with it — is a name
+whatever its words: the generic split never reads an institution word (`R. New$^2$`, 0904.4122; `S. Michelle
+Consiglio,$^{1}$`, 2103.02641; `Alexander New$^2$`, 2311.16860), a per-author class's line a surname after an initial
+(`Gary P. Centers,$^{1}$`, 1901.10843; `surname_after_initial` moved into `classify/names_split.rs`); an unmarked piece keeps
+the reading's institution (`John Smith, University of Toronto`, the main session's decision). Not ported: N2's whole-list
+condition, which chose between splitting a cautious line and keeping it whole (N4), a choice `=2` does not make
+(`resolver/lines.rs` `marked_name`). (S1, the reading's own rule) Initials after a comma join a bare surname only, the
+word read through its glued initials (`P.A.Vshivtseva$^{a,b}$, E.T.\, Einiev`, 2409.13569; `unglued_initials`). (C2-C5) A
+name's collaboration remark is its `collaboration` contact, never part of the name (FIDELITY_CHARTER §4, #946): the pieces of
+one remark that a note, a note reference, a box or a command's own gap parts are read whole, the notes the name's
+(`Kalanand Mishra\footnote{…} (for the \babar\ collaboration)`, 0711.1544; elsarticle's `Christian Schmidt (for the
+BNL-Bielefeld\fnref{col1} Collaboration)`, 1212.4278; `lines::remark_pieces_joined`, after `name_and_remark` and
+`name_takes_annotations`); a remark after the name's notes or marks naming whom the author speaks for is one too (webofc's `for
+CAPP/IBS`, 1702.03664; `speaks_for_after_notes` moved into `classify/collaborations.rs`); and a line under one name speaking
+for a collaboration is that name's contact, where rev94a S6 joined it to the name (`Carolyn Brown$^1$\\ on behalf of the
+Bcool project team`, 1310.6507; 1502.03246). A remark parted by a note reference is written from its text, a Warning each for
+it and its name (the name's events don't spell it). (A2) The ink one command draws inside a word is the word's letters:
+combelow's `\cb{t}` stacks a `t` over a comma in an alignment, so its comma and row break part no names and `Bogdan
+Rai\cb{t}\u{a}` is one name (2507.13598; `lines::words_through_one_command`, in `read_events` and the content check alike).
+Off: byte-identical. Guards `perfect_kernel_batchnl1`.
 
 Guards `perfect_kernel_batchz4`.

@@ -356,12 +356,15 @@ pub(in crate::base_utilities::frontmatter::observer) use words::{
   reads_as_email_label,
 };
 
-/// A block's events as the resolver reads them (`Resolver::block`): an ORCID link's name, an IEEE ordinal, a mark
-/// printed as text after a name and a glued run of shown symbols each read as the names line reads it.
+/// A block's events as the resolver reads them (`Resolver::block`): a command's ink inside a word, an ORCID link's name,
+/// an IEEE ordinal, a mark printed as text after a name and a glued run of shown symbols each read as the names line
+/// reads it.
 pub(in crate::base_utilities::frontmatter::observer) fn read_events(
   events: &[Event],
 ) -> Vec<Event> {
-  glue_shown_runs(&split_text_marks(&join_ordinals(&link_names(events))))
+  glue_shown_runs(&split_text_marks(&join_ordinals(&link_names(
+    &words_through_one_command(events),
+  ))))
 }
 
 /// The labels a Mark event requests of the name it is set on, as a names line reads them (`names_line_events`): its

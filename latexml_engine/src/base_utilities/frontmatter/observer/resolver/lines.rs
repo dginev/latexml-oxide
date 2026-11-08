@@ -67,6 +67,104 @@ pub(super) fn lines_of<'a>(events: &'a [Event], and_inline: bool) -> Vec<Line<'a
 // (the observer's, shared with the in-block contact reading: `events::mark_led_pieces`)
 pub(super) use crate::base_utilities::frontmatter::observer::events::{inked, mark_led_pieces};
 
+/// The block's events with the ink one command draws inside a word read as the word's letters (row A2): a box a command
+/// draws right against the letters before or after it (no space between them in the source), whose cover holds a comma
+/// or a row break it draws as ink, parts no names — combelow's `\cb{t}` stacks a `t` over a comma in an alignment
+/// (combelow.sty:16), so `Bogdan Rai\cb{t}\u{a}` is one name, "Bogdan Raiță" as pdflatex prints it (2507.13598), not
+/// "Bogdan Rai", "t", "ă" at a comma. The cover is the events the invocation printed, each span opening at the command's
+/// one token (its letters' the widest), a row break or a cell of its own alignment no span at all; one Name with the
+/// letters before and after it, their texts joined as the source joins them.
+pub(super) fn words_through_one_command(events: &[Event]) -> Vec<Event> {
+  let mut out: Vec<Event> = Vec::with_capacity(events.len());
+  let mut i = 0;
+  while i < events.len() {
+    // (the command's own token, one: its box's span)
+    let (Some((s, one)), EventKind::Layout) = (events[i].span, &events[i].kind) else {
+      out.push(events[i].clone());
+      i += 1;
+      continue;
+    };
+    if one != s + 1 {
+      out.push(events[i].clone());
+      i += 1;
+      continue;
+    }
+    let mut end = one;
+    let mut last = i;
+    let mut j = i + 1;
+    while j < events.len() {
+      let e = &events[j];
+      // (an event its invocation printed: its span opens at the command)
+      let inside = match e.span {
+        Some((a, b)) if a == s => {
+          end = end.max(b);
+          true
+        },
+        Some(_) => false,
+        None => true,
+      };
+      if !inside
+        || !matches!(
+          e.kind,
+          EventKind::Layout | EventKind::Name | EventKind::Break | EventKind::Sep(SepKind::Comma)
+        )
+      {
+        break;
+      }
+      if e.span.is_some() {
+        last = j;
+      }
+      j += 1;
+    }
+    let cover = &events[i..=last];
+    let parts = cover
+      .iter()
+      .any(|e| matches!(e.kind, EventKind::Break | EventKind::Sep(SepKind::Comma)));
+    let letters: String = cover
+      .iter()
+      .filter(|e| e.kind == EventKind::Name)
+      .map(|e| e.text.trim())
+      .collect();
+    let before = out
+      .last()
+      .filter(|e| e.kind == EventKind::Name && e.span.is_some_and(|(_, b)| b == s));
+    let after = events
+      .get(last + 1)
+      .filter(|e| e.kind == EventKind::Name && e.span.is_some_and(|(a, _)| a == end));
+    if !parts || letters.is_empty() || (before.is_none() && after.is_none()) {
+      out.push(events[i].clone());
+      i += 1;
+      continue;
+    }
+    let mut word = match before {
+      Some(_) => out.pop().expect("the letters before"),
+      None => Event {
+        text: String::new(),
+        span: Some((s, end)),
+        ..cover
+          .iter()
+          .find(|e| e.kind == EventKind::Name)
+          .expect("a letter")
+          .clone()
+      },
+    };
+    word.text.push_str(&letters);
+    let mut to = end;
+    if let Some(after) = after {
+      word.text.push_str(after.text.trim_start());
+      to = after.span.map_or(to, |(_, b)| b);
+      i = last + 2;
+    } else {
+      i = last + 1;
+    }
+    // (its own tokens too, to the last letter: the emitter's run of the name, `writer::emit::event_run_at`)
+    word.span = word.span.map(|(a, _)| (a, to));
+    word.marks = word.marks.map(|(a, _)| (a, to));
+    out.push(word);
+  }
+  out
+}
+
 /// The block's events with an IEEE template's ordinal before a name (`1\textsuperscript{st} Sertac Kilickaya`,
 /// 2412.10792, 2202.06596) one Name with it, as today's personname "1 Sertac Kilickaya": the ordinal's superscript is
 /// no request. On a column's first line and on no line a mark leads: anywhere else the ordinal is its line's text

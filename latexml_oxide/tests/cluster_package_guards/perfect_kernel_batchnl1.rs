@@ -210,3 +210,23 @@ fn a_collaboration_remark_is_the_names_contact() {
   assert_eq!(off, want);
   assert_eq!(two, want);
 }
+
+/// Row A2: the ink one command draws inside a word is the word's letters — combelow's `\cb{t}` stacks a `t` over a
+/// comma in an alignment (combelow.sty:16), so its comma and row break part no names: `Bogdan Rai\cb{t}\u{a}`
+/// (2507.13598) is one name, written from its tokens as off writes it. Red (MV1 `=2`): the line every author's
+/// affiliation, two creators lost.
+#[test]
+fn a_comma_a_command_draws_inside_a_name_parts_no_names() {
+  let (off, two) = both(
+    repro!("emit_a_comma_a_command_draws_inside_a_name_parts_no_names"),
+    (0, 0),
+  );
+  let want = [
+    vec!["Ann Able", "affiliation=Univ A"],
+    vec!["Bob Baker", "affiliation=Univ A"],
+    vec!["Bogdan Rai t , ă", "affiliation=Univ B"],
+    vec!["Sarah Adel Bargal", "affiliation=Univ A"],
+  ];
+  assert_eq!(off, want);
+  assert_eq!(two, want);
+}
