@@ -135,7 +135,7 @@ fn emitted(tex: &str, want: &[&str]) {
 }
 
 /// A label printed before an entry's address goes with its run (RT1 rows 64-67, 72: the Kind step for an address line's
-/// labelled-line rule, `insert::address_line_cut`, read in the cut — `writer::address_cut::labelled`): authblk's unmarked
+/// labelled-line rule, `insert::address_line_cut`, read in the reading's take-out — `resolver::labels::take_labels`, P1c): authblk's unmarked
 /// `\affil[ ]{Corresponding author: \textit{a@x}}` whole — the e-mail named `Corresponding author: `, the role-note step's
 /// correspondence note of its owner (2305.02090, 2404.05566, whose words went to another author; 2107.10505, 1510.03749) —,
 /// a second line `Univ Z\\ Correspondence: c@z` with its break (1807.09187, 2008.08137's `Contact e-mail:`); a marked

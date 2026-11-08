@@ -3,9 +3,15 @@
 //! and contact roles.
 
 use super::*;
-use crate::base_utilities::frontmatter::classify::{
-  ADDRESS_GROUP_SEPARATORS, UNBRACED_LIST_SEPARATORS, ends_a_listed_run, is_listed_local_part,
-  is_local_char, names_a_contact, write_out_unspaced_lists,
+use crate::base_utilities::{
+  defs::frontmatter_api::LABEL_PRINTS,
+  frontmatter::{
+    address_line_cut,
+    classify::{
+      ADDRESS_GROUP_SEPARATORS, UNBRACED_LIST_SEPARATORS, ends_a_listed_run, is_listed_local_part,
+      is_local_char, names_a_contact, write_out_unspaced_lists,
+    },
+  },
 };
 
 /// `key=value` of an attribute string (`role=affiliation,label=a`), braces stripped: a repeated key's last value, as
@@ -1043,15 +1049,110 @@ pub(in crate::base_utilities::frontmatter::observer) fn strip_address_runs(
   text: &str,
   runs: &[AddressRun],
 ) -> String {
+  strip_cuts(text, &address_cuts(text, runs))
+}
+
+/// `text` without the byte ranges `cuts` (in order, apart), each a space, its spaces collapsed.
+pub(super) fn strip_cuts(text: &str, cuts: &[(usize, usize)]) -> String {
   let mut out = String::new();
   let mut at = 0;
-  for (start, end) in address_cuts(text, runs) {
+  for &(start, end) in cuts {
     out.push_str(&text[at..start]);
     out.push(' ');
     at = end;
   }
   out.push_str(&text[at..]);
   out.split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// Whether an API call's attributes (`ApiCall::attrs`) give a label its binding prints before the entry, not blank: authblk's
+/// `\affil[*]` (`_labelprints`, `defs::frontmatter_api::LABEL_PRINTS`), which `\affil[ ]` is not — the mark the Kind step for
+/// a legend reads (`insert::legend_mark`).
+pub(super) fn label_prints(attrs: &str) -> bool {
+  attr_value(attrs, LABEL_PRINTS).is_some()
+    && attr_value(attrs, "label").is_some_and(|label| !label.is_empty())
+}
+
+/// The labels the Kind step for an address line reads before a run the take-out takes (RT1 rows 64-67, 72:
+/// `insert::kind_address_lines`, `address_line_cut`), taken with it, in `cuts` (`lined`'s bytes) and its run's label
+/// (`runs`): on each line of the entry holding one run, which the Kind step reads as its line's last, where the cut keeps
+/// words of that label (the words naming a contact before an e-mail word or a colon, "Corresponding author:",
+/// "Correspondence:", "Contact e-mail:", `names_a_contact`'s) and nothing from its addresses on, the label goes with the
+/// run — the whole line and its break where nothing but marks and separators stand before it, else from the words' end —
+/// and names its e-mails (`Corresponding author: `, which the role-note step makes its owner's correspondence note,
+/// `insert::write_role_notes`; `Correspondence to `). Not a legend's (`legend`: its binding prints its label, authblk's
+/// `\affil[*]`, or a mark opens it), whose words stay for the Kind step for a legend (`insert::kind_legend_contacts`, RT1
+/// row 84) unless an e-mail word is among them, as the Kind step reads it (row 66). Whether any label went (witnesses
+/// 2305.02090, 2404.05566 — `\affil[ ]`, whose words went to another author —, 2107.10505, 1510.03749, 1807.09187,
+/// 2008.08137, 1812.03816, 2004.06340, 2012.13817).
+pub(super) fn take_labels(
+  lined: &str,
+  runs: &mut [TakenRun],
+  cuts: &mut Vec<(usize, usize)>,
+  spells: &dyn Fn(&str) -> bool,
+  legend: bool,
+) -> bool {
+  let mut lines: Vec<(usize, usize)> = Vec::new();
+  let mut from = 0;
+  for line in lined.split('\n') {
+    lines.push((from, from + line.len()));
+    from += line.len() + 1;
+  }
+  let printed = lines
+    .iter()
+    .filter(|&&(s, t)| !lined[s..t].trim().is_empty())
+    .count();
+  let mut grown = false;
+  for (k, &(start, end)) in lines.iter().enumerate() {
+    let held: Vec<usize> = (0..runs.len())
+      .filter(|&r| start <= runs[r].bytes.0 && runs[r].bytes.1 <= end)
+      .collect();
+    let [run] = held[..] else {
+      continue;
+    };
+    let line = &lined[start..end];
+    let Some(cut) = address_line_cut(line, spells, legend && printed == 1) else {
+      continue;
+    };
+    let Some(label) = cut.label.filter(|_| cut.addresses == runs[run].addresses) else {
+      continue;
+    };
+    let kept = |from: usize, to: usize| {
+      line[from..to].char_indices().any(|(i, c)| {
+        let at = start + from + i;
+        c.is_alphanumeric() && !cuts.iter().any(|&(s, t)| s <= at && at < t)
+      })
+    };
+    if !kept(cut.start, cut.address_start) || kept(cut.address_start, line.len()) {
+      continue;
+    }
+    // (the whole line, with the break before it — the one after it, the entry's first line —, as the Kind step takes it)
+    let range = match cut.start {
+      0 if k > 0 => (start - 1, end),
+      0 if k + 1 < lines.len() => (start, end + 1),
+      0 => (start, end),
+      at => (start + at, start + cut.address_start),
+    };
+    cuts.push(range);
+    runs[run].label = Some(if label.to_lowercase().ends_with(" to") {
+      label
+    } else {
+      s!("{label}:")
+    });
+    grown = true;
+  }
+  if grown {
+    cuts.sort_unstable();
+    let mut merged: Vec<(usize, usize)> = Vec::new();
+    for (s, t) in cuts.drain(..) {
+      match merged.last_mut() {
+        Some(last) if s <= last.1 => last.1 = last.1.max(t),
+        _ => merged.push((s, t)),
+      }
+    }
+    *cuts = merged;
+  }
+  grown
 }
 
 /// A braced group of addresses each ending in what the text prints right after the group's brace, written out: each

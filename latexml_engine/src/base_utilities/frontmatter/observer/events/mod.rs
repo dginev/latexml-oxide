@@ -2035,6 +2035,20 @@ pub(in crate::base_utilities) fn unprinted_piece(e: &Event) -> bool {
   e.kind == EventKind::Name && !e.text.chars().any(char::is_alphanumeric)
 }
 
+/// Whether a mark opens what `events` print (the first that prints: the Kind step's `LineText::opens_with_mark`, read on the
+/// events — what parts a line's marks, a space, a break, a layout, prints nothing).
+pub(in crate::base_utilities) fn opens_with_mark(events: &[&Event]) -> bool {
+  events
+    .iter()
+    .find(|e| {
+      !(matches!(
+        e.kind,
+        EventKind::Sep(SepKind::Gap { .. }) | EventKind::Break | EventKind::Layout
+      ) || unprinted_piece(e))
+    })
+    .is_some_and(|e| e.kind == EventKind::Mark)
+}
+
 /// What parts two marks of an entry's leading run and is no text of it ([`leading_marks`]).
 pub(in crate::base_utilities) fn between_leading_marks(e: &Event) -> bool {
   unprinted_piece(e) || matches!(e.kind, EventKind::Sep(SepKind::Comma | SepKind::Gap { .. }))
