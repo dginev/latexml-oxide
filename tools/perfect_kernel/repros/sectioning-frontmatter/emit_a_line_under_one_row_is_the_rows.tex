@@ -1,0 +1,17 @@
+% mechanism: an address decides only its own ink: a line printing addresses and other text under one names row and no column
+%   is every author's of the row (`Resolver::block`'s address branch, `row_line`); `=2` only
+% witness: 1605.03019 (`Adam Kurpisz \quad …\\ \small{IDSIA, 6928 Manno, Switzerland}{\{adam, samuli, monaldo\}@idsia.ch}`)
+% oracle:  pdflatex 0 errors; "Ann Able Bob Baker Cy Cole"; IDSIA, 6928 Manno, Switzerland {ann, bob, cy}@idsia.ch
+% engines: rust int146a `=2`: each author an e-mail, `6928 Manno` and `Switzerland` nameless notes, IDSIA nowhere
+% expect:  0 errors, 0 warnings; `=2` creators as with the switch off: each the institute and its own address
+% status:  RED (int146a) -> GREEN (perfect_kernel_batchlo1::an_address_decides_only_its_own_ink)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A line under one names row}
+\author{Ann Able \quad Bob Baker \quad Cy Cole\\
+\small{IDSIA, 6928 Manno, Switzerland}
+{\{ann, bob, cy\}@idsia.ch}}
+\maketitle
+Body.
+\end{document}

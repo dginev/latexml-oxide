@@ -296,6 +296,9 @@ pub enum Input {
     cleared: bool,
     epoch:   usize,
     events:  Vec<Event>,
+    /// per creator call of its own expansion (`Event::creator_call`), the labels its `annotations=` give the creator its
+    /// Name makes, as Perl's `\lx@add@creator[annotations={ed}]` gives them (`field_notes::FieldCreator`). Not in a dump
+    calls:   Vec<Vec<String>>,
   },
   Api {
     index:  usize,
@@ -343,6 +346,7 @@ pub(in crate::base_utilities::frontmatter::observer) use lines::{
 pub(in crate::base_utilities::frontmatter::observer) use net::{merged_names, uncoordinated_marks};
 pub(in crate::base_utilities::frontmatter::observer) use words::{
   BlockCheck, LostInk, Written, check_blocks, printed_email_label, printed_words,
+  reads_as_email_label,
 };
 
 /// A block's events as the resolver reads them (`Resolver::block`): an ORCID link's name, an IEEE ordinal, a mark
@@ -430,6 +434,11 @@ struct Resolver {
   /// `LATEXML_FM_EMIT=2` (`whole_entries`), where each call queues one entry, a block whole (`author_entries`)
   entries:            Vec<(usize, usize)>,
   whole_entries:      bool,
+  /// the block being read's creator calls' labels (`Input::Block::calls`)
+  call_labels:        Vec<Vec<String>>,
+  /// the emitter's switch is on (`LATEXML_FM_EMIT`): the reading's rules only its output may move yet, the switch-off output
+  /// as it was until the flip (brief LO1: a line's other text by its row, a line's addresses by the address reader)
+  emitting:           bool,
   /// a note's links, and the notes they may empty, placed once every name is read (`answer_note_links`)
   note_links:         Vec<NoteLink>,
   /// the e-mail calls a document's own note makes (`ltx:pubnote`: A&A's `\offprints{B. Baker, \email{…}}`), placed
@@ -569,6 +578,8 @@ impl Resolver {
       replaced:           Vec::new(),
       entries:            Vec::new(),
       whole_entries:      fm_emit_mode() == 2,
+      call_labels:        Vec::new(),
+      emitting:           fm_emit_mode() != 0,
       note_links:         Vec::new(),
       document_emails:    Vec::new(),
       listed_emails:      Vec::new(),
@@ -904,8 +915,10 @@ pub fn resolve_with(
         cleared,
         epoch,
         events,
+        calls,
       } => {
         policy = conventions(binding, hook);
+        resolver.call_labels.clone_from(calls);
         resolver.line_column = None;
         resolver.block_addresses.clear();
         // (a call replacing the authors before it in its queue: `\author{A, B}` then `\author{A\thanks{…}, B}`,
@@ -1073,7 +1086,7 @@ pub(in crate::base_utilities) fn ledger_inputs(ledger: &ledger::Ledger) -> Vec<I
   for entry in ledger.entries() {
     match entry {
       ledger::Entry::Author(block) => {
-        if let ledger::Outcome::Events { events, .. } = &block.outcome {
+        if let ledger::Outcome::Events { events, creators, .. } = &block.outcome {
           inputs.push(Input::Block {
             index:   block.index,
             binding: block.binding.clone(),
@@ -1084,6 +1097,10 @@ pub(in crate::base_utilities) fn ledger_inputs(ledger: &ledger::Ledger) -> Vec<I
             cleared: block.cleared,
             epoch:   block.epoch,
             events:  events.clone(),
+            calls:   creators
+              .iter()
+              .map(field_notes::FieldCreator::labels)
+              .collect(),
           });
         }
       },

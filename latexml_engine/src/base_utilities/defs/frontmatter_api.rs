@@ -525,6 +525,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   );
   DefPrimitive!("\\lx@frontmatter@item@start", sub[()] {
     assign_value(EMITTING, Stored::Bool(true), Some(Scope::Local));
+    // (no mark of the item read yet: its first is its label, a later one its text, `\lx@sup@setlabel@affiliation`)
+    assign_value(
+      author_macros::EMITTED_LINE_MARK,
+      Stored::Bool(false),
+      Some(Scope::Global),
+    );
     Ok(Vec::new())
   });
   DefPrimitive!("\\lx@frontmatter@itemonly@start", sub[()] {

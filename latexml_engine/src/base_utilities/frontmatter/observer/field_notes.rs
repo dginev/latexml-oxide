@@ -11,7 +11,9 @@ use latexml_core::{
     object::Object,
     store::Stored,
   },
-  definition::{ExpansionBody, expandable::Expandable, origin::DefinitionOrigin},
+  definition::{
+    ExpansionBody, argument::ArgWrap, expandable::Expandable, origin::DefinitionOrigin,
+  },
   digested::{Digested, DigestedData},
   document::FIELD_FORMULA_START_PROPERTY,
   gullet::{pushback_is_empty, pushback_len},
@@ -66,7 +68,8 @@ pub struct EnvironmentStep {
 /// positions its name's tokens take (`events::creator_roles`).
 #[derive(Debug, Clone, PartialEq)]
 pub struct FieldCreator {
-  /// the keyvals as tokens, as the call gave them ([`KeyVals::revert`]): what the emitter writes on Perl's call
+  /// the keyvals as tokens, as the call gave them ([`KeyVals::revert`]), but its `annotations`: what the emitter writes on
+  /// Perl's call, with `annotations` once
   pub keys:        Tokens,
   /// the role they give (the KeyVals' last `role`, as `\lx@add@frontmatter@now` reads it)
   pub role:        Option<String>,
@@ -75,6 +78,25 @@ pub struct FieldCreator {
   pub start:       u16,
   /// one past the last position
   pub end:         u16,
+}
+
+impl FieldCreator {
+  /// The labels its `annotations` give the creator its name makes, Perl's `\lx@add@creator[annotations={ed}]` (the reading's
+  /// requests of that creator, `resolver::Input::Block::calls`; the emitter's keys, `writer::emit::creator_keys`).
+  pub fn labels(&self) -> Vec<String> {
+    self
+      .annotations
+      .as_ref()
+      .map(|labels| {
+        labels
+          .to_string()
+          .split(',')
+          .map(|l| l.trim().to_string())
+          .filter(|l| !l.is_empty())
+          .collect()
+      })
+      .unwrap_or_default()
+  }
 }
 
 /// A call of a block break its binding declares (`Policy::block_breaks`), a command printing whatever the class makes it.
@@ -233,8 +255,12 @@ pub fn note_creator_call(keys: &KeyVals, name: &Tokens) -> Result<()> {
   let (Some(start), Some(end)) = (positions.clone().min(), positions.max()) else {
     return Ok(());
   };
+  // (its keys but its annotations, which the emitter writes once, joined with the reading's labels: a key given twice is a
+  // list to Perl's KeyVals, KeyVals.pm:294-300, not the last value)
+  let mut others = keys.clone();
+  others.set_value("annotations", ArgWrap::None, false)?;
   let creator = FieldCreator {
-    keys: keys.revert()?,
+    keys: others.revert()?,
     role: keys
       .get_value("role")
       .map(|role| role.to_string())

@@ -851,7 +851,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   // (Z4a, 4 -> 8: an environment step by its meaning, a CS whose definition is `\begin` or `\end`, a `\let` copy too, what no frame
   // says for a raw environment; the definition's name, not the token's spelling)
-  ("field_notes", 8),
+  // (LO1: a creator call's `annotations` read as its labels, `FieldCreator::labels` — a keyval's value, argument passing)
+  ("field_notes", 9),
   // (26: C1's `queue_reading.rs` keeps a cache of what `author_block`'s readers read off the queue's tokens, and goes with them)
   ("frontmatter (rest)", 26),
   ("frontmatter_stores", 527),

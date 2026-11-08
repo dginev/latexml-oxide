@@ -27,7 +27,7 @@ use crate::base_utilities::{
   frontmatter::{
     observer::{
       events::{EventKind, Formula, lex_with_formulas},
-      field_notes::EnvironmentStep,
+      field_notes::{EnvironmentStep, FieldCreator},
       ledger::{ApiCall, AuthorBlock, annotated_parent, field_stamped},
       policy::TitleMarks,
       rehearsal::{Rehearsal, rehearse},
@@ -1144,16 +1144,7 @@ fn creator_role(c: &RCreator) -> String {
 /// `\speaker`'s `role=speaker`, ams `\contrib`'s `name=`), the labels joining the call's own annotations; else its role.
 fn creator_keys(c: &RCreator, labels: &[String]) -> Vec<Token> {
   let labels = labels.join(",");
-  let call = c.call.and_then(|k| {
-    with_ledger(|ledger| match ledger.entries().get(c.source) {
-      Some(Entry::Author(block)) => match &block.outcome {
-        Outcome::Events { creators, .. } => creators.get(usize::from(k)).cloned(),
-        _ => None,
-      },
-      _ => None,
-    })
-  });
-  let Some(call) = call else {
+  let Some(call) = creator_call_of(c) else {
     return internal(&s!("role={},annotations={{{labels}}}", creator_role(c)));
   };
   let mut keys = internal("role=author,");
@@ -1169,6 +1160,19 @@ fn creator_keys(c: &RCreator, labels: &[String]) -> Vec<Token> {
   keys.extend(internal(&labels));
   keys.push(T_END!());
   keys
+}
+
+/// The creator call in its block that printed `c`'s name, its keyvals (`RCreator::call`, `field_notes::FieldCreator`).
+fn creator_call_of(c: &RCreator) -> Option<FieldCreator> {
+  c.call.and_then(|k| {
+    with_ledger(|ledger| match ledger.entries().get(c.source) {
+      Some(Entry::Author(block)) => match &block.outcome {
+        Outcome::Events { creators, .. } => creators.get(usize::from(k)).cloned(),
+        _ => None,
+      },
+      _ => None,
+    })
+  })
 }
 
 /// A call's content's events, formulas and environments, from a stamped rehearsal of it, as `plan::cut` reads a piece (its
@@ -1975,10 +1979,14 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     let c = &resolved.creators[i];
     let keeps = keeps(c.source);
     let inst_marks = inst_marks.get(&c.source).map_or(&[][..], Vec::as_slice);
+    // (a creator call's own labels, which its keys write, print nothing: `creator_keys`)
+    let own = creator_call_of(c)
+      .map(|call| call.labels())
+      .unwrap_or_default();
     for request in c
       .requests
       .iter()
-      .filter(|request| !keeps || inst_marks.contains(request))
+      .filter(|request| (!keeps || inst_marks.contains(request)) && !own.contains(request))
     {
       // (a key's value is tokenized: a request spelled with a command, `\\author[a,b\\thanks{…}]`'s, 2207.11842, is no label)
       if !answered.contains(request)

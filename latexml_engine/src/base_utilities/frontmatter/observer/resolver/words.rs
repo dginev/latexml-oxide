@@ -62,13 +62,18 @@ pub(in crate::base_utilities::frontmatter::observer) fn printed_email_label(
   // (or, in any language, what its line prints before the run, one word or two before a colon: `Correo electrónico:`,
   // `Courriel :`, review revZ4br2)
   let before = text[..run.start].trim();
-  let labelled = before.ends_with(':')
-    && before.split_whitespace().count() <= 2
-    && before.chars().any(char::is_alphabetic);
   run
     .label
     .clone()
-    .or_else(|| labelled.then(|| before.to_string()))
+    .or_else(|| reads_as_email_label(before).then(|| before.to_string()))
+}
+
+/// Whether `before`, what a line prints before an address's run, is the address's label by its place, in any language: one
+/// word or two before a colon (`Correo electrónico:`, `Courriel :`, review revZ4br2).
+pub(in crate::base_utilities::frontmatter::observer) fn reads_as_email_label(before: &str) -> bool {
+  before.ends_with(':')
+    && before.split_whitespace().count() <= 2
+    && before.chars().any(char::is_alphabetic)
 }
 
 /// An ink of a block or a call whose words the reading writes nowhere ([`Written::lost_inks`]): its span, its text, the

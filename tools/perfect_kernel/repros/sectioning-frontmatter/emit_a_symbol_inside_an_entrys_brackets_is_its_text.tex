@@ -1,0 +1,19 @@
+% mechanism: a superscript after an affiliation line's first, its label, is its text (`\lx@sup@setlabel@affiliation`): an entry
+%   the frontmatter emitter writes has its label from the emitter, so no `_bymark` records the first; the entry's mark read since
+%   its emitted item or its line started does (`\lx@frontmatter@item@start`, `\lx@frontmatter@savesups`; `lx_fm_emitted_line_mark`:
+%   0807.0752's `\inst{2}`, 1812.05961's nested `\IEEEauthorblockA`)
+% witness: 1812.07638 (longtail3k, cernrep's `\institute{… $^{146}$European Centre … (ECT$^*$) ) and Fondazione …}`, entry 146)
+% oracle:  pdflatex 0 errors; "European Centre (ECT∗ ) and Fondazione, Trento, 2 Univ B (LAB† ), City"
+% engines: rust int146a `=2`: "(ECT)", "(LAB)", the symbols lost, no Warning
+% expect:  0 errors, 0 warnings; `=2` creators as with the switch off, `ECT<sup>*</sup>`, `LAB<sup>†</sup>`
+% status:  RED (int146a) -> GREEN (perfect_kernel_batchlo1::a_symbol_inside_an_entrys_brackets_is_its_text)
+% preload: ar5iv.sty
+% fixture: emit_institute_store.cls (a raw class's `\institute`, as 1812.07638's cernall.sty:452)
+\documentclass{emit_institute_store}
+\begin{document}
+\title{A symbol inside an entry}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$}
+\institute{$^{1}$European Centre (ECT$^*$) and Fondazione, Trento, $^{2}$Univ B (LAB$^{\dagger}$), City}
+\maketitle
+Text.
+\end{document}

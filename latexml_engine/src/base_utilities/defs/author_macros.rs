@@ -3,6 +3,10 @@
 
 use super::*;
 
+/// Whether the entry the frontmatter emitter is writing has read its first mark, its label (`\lx@sup@setlabel@affiliation`;
+/// reset as each emitted item starts, `\lx@frontmatter@item@start`, and as each entry's line starts, `\lx@frontmatter@savesups`).
+pub(in crate::base_utilities) const EMITTED_LINE_MARK: &str = "lx_fm_emitted_line_mark";
+
 /// The key of a creator written whole, Perl's fallback, whose merge a Warning counts: `flag_merged_creators`' own mark of a
 /// creator it checked (a tabular block is kept whole on purpose alike). The emitter sets it where its Warning counts the block
 /// (OD #980): not on `LATEXML_FM_EMIT=2`'s queued entry, which a block arriving after the frontmatter was digested keeps unread
@@ -337,6 +341,14 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // $^{3}$He`: the isotope's, 63i review; repro affiliation_line_inner_superscript_is_its_text).
     let mut labelled = false;
     with_pending_entry_attr(|attr| labelled = attr.contains_key("_bymark"));
+    // (an entry the frontmatter emitter writes has its label from the emitter, so no `_bymark` records its first mark: the
+    // entry's mark read since its item or its line started (global: the mark's own formula is a group) says a later
+    // superscript is its text — `$^{146}$European
+    // Centre … (ECT$^*$) )`, 1812.07638's institute, whose `*` the emitted entry lost: OD #980)
+    if lookup_bool(EMITTING) {
+      labelled = lookup_bool(EMITTED_LINE_MARK);
+      assign_value(EMITTED_LINE_MARK, Stored::Bool(true), Some(Scope::Global));
+    }
     // (in an entry of the frontmatter API's Cut, which shows its marks as printed, a later superscript is the one it
     // writes, in its own mode: `$^{1}$Lab $\frac{a}{b^{1}}$ Lab`'s fraction keeps its script, review 90a r3 probe AFg10)
     let plain_sup = || {
@@ -423,6 +435,11 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (KNOWN_PERL_ERRORS #515, where Perl's Semiverbatim `\thanks` hid them; repro
   // sectioning-frontmatter/author_thanks_and_footnote_keep_their_math).
   DefPrimitive!(T_CS!("\\lx@frontmatter@savesups"), None, {
+    // (an entry the frontmatter emitter writes, a call nested in another's too, has read no mark yet:
+    // `\lx@sup@setlabel@affiliation`; 1812.05961's `\IEEEauthorblockA{… \IEEEauthorblockA{\IEEEauthorrefmark{2}…}}`)
+    if lookup_bool(EMITTING) {
+      assign_value(EMITTED_LINE_MARK, Stored::Bool(false), Some(Scope::Global));
+    }
     // Saved once per group chain, keyed on the superscript (`\textsuperscript` is undefined under plain TeX).
     if lookup_meaning(&T_CS!("\\lx@frontmatter@plainsup")).is_none() {
       // The definition a superscript digests by (a `\let` from `^` copies only the character).

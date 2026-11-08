@@ -1,0 +1,25 @@
+% mechanism: a creator call's `annotations=` are its creator's labels (Perl's `\lx@add@creator[annotations={ed}]`), which a
+%   separate call's `label=` answers (`Input::Block::calls`, the reading's requests); the emitter writes them once with its own
+%   (`field_notes::FieldCreator::keys` without `annotations`; KeyVals.pm:294-300 makes a key given twice a list)
+% witness: synthetic (review revF1r2 3, `scratch_revF1r2/p/k_annot2.tex`); dev3 / devh10k hold no in-block creator call with labels
+% oracle:  pdflatex 0 errors; "Ann Able1 , Bob Baker2"; 1 Univ A, Town; 2 Univ B, City (the stand-ins print the name alone)
+% engines: rust int146a `=2`: Editorial Office a nameless creator's; the switch off reads the call's keys as text (no binding
+%   reads a document's own `\lx@add@creator`; not this guard's)
+% expect:  `=2`: 0 errors, 0 warnings; Bob Baker, role editor, Univ B and Editorial Office
+% status:  RED (int146a) -> GREEN (perfect_kernel_batchlo1::a_creator_calls_annotations_answer_a_label)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\providecommand\lx@add@creator[2][]{#2}
+\providecommand\lx@add@affiliation[2][]{}
+\makeatother
+\begin{document}
+\title{A creator call's annotations}
+\makeatletter
+\author{Ann Able$^{1}$, \lx@add@creator[role=editor,annotations={ed}]{Bob Baker}$^{2}$\\
+$^{1}$Univ A, Town\\ $^{2}$Univ B, City}
+\lx@add@affiliation[label=ed]{Editorial Office}
+\makeatother
+\maketitle
+Text.
+\end{document}

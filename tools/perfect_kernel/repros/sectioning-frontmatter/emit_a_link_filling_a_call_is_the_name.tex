@@ -1,0 +1,20 @@
+% mechanism: a link filling a whole author call is the call's name (`resolver::lines::name_slots`): authblk's per-author call,
+%   its link followed by a `\thanks`, no mark
+% witness: 2602.22747 (devh10k: Kaizheng Wang a nameless creator placed last, his name a url contact)
+% oracle:  pdflatex 0 errors; "Ann Able*1,2 and Bob Baker2"; 1 Univ A, Town; 2 Univ B, City
+% engines: rust int146a `=2`: Bob Baker holding Ann Able's link and thanks, a nameless creator holding Univ A
+% expect:  0 errors, 0 warnings; `=2` creators as with the switch off
+% status:  RED (int146a) -> GREEN (perfect_kernel_batchlo1::a_link_filling_a_name_slot_is_the_name)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\usepackage{hyperref}
+\title{A link filling an author call}
+\author[1,2]{\href{ann.able@a.org}{Ann Able}\thanks{This work was done at Univ A.}}
+\author[2]{Bob Baker}
+\affil[1]{Univ A, Town}
+\affil[2]{Univ B, City}
+\begin{document}
+\maketitle
+Text.
+\end{document}
