@@ -1267,11 +1267,14 @@ impl Resolver {
     // (one such `\thanks` holding several marked entries, `\thanks{$^{1}$UC Berkeley, $^{2}$Toyota Motor North America,
     // $^{3}$Princeton university}`: each its own entry by its mark, as the switch off cuts it — 2509.19480, 2206.07648,
     // where the whole stayed one note of the last name. Its lexed text cut before each top-level mark (`mark_led_pieces`, the API
-    // reader's cut), so an entry's own comma stays its text, `$^{1}$Dept A, Univ A, $^{2}$Univ B`; each piece led by
-    // raised marks with labels, else it stays one note, as before)
+    // reader's cut, not the switch off's `split_marked_pieces`), so an entry's own comma stays its text, `$^{1}$Dept A, Univ A,
+    // $^{2}$Univ B`; each piece led by raised marks with labels, else it stays one note, as before. Each piece is sourced at
+    // its own span, its first event's start to its last's end (a mark's formula whole), so the writer writes the reading's cut, not a cut of its own:
+    // `$^{1}$Univ A; $^{2}$Univ B. $^{*}$Corresponding author.`, whose third piece the writer's re-cut of the whole note lost,
+    // review revG5 1)
     if numbered {
       let pieces = mark_led_pieces(&note.body);
-      let entries: Option<Vec<(Vec<String>, String)>> = pieces
+      let entries: Option<Vec<MarkedEntry>> = pieces
         .iter()
         .map(|piece| {
           let (start, end) = events::leading_marks(piece);
@@ -1286,7 +1289,10 @@ impl Resolver {
           (!marks.is_empty() && marks.iter().all(|e| raised_mark(e)) && !labels.is_empty()).then(
             || {
               let text = events_text(&piece[end..].iter().collect::<Vec<_>>());
-              (labels, text.trim().to_string())
+              let first = piece.iter().find_map(Event::extent);
+              let last = piece.iter().rev().find_map(Event::extent);
+              let span = first.zip(last).map(|(first, last)| (first.0, last.1));
+              (labels, text.trim().to_string(), span.or(note.span))
             },
           )
         })
@@ -1314,7 +1320,7 @@ impl Resolver {
             target: None,
           });
         }
-        for (labels, text) in entries {
+        for (labels, text, span) in entries {
           let role = if is_legend_text(&text) {
             "legend"
           } else {
@@ -1325,7 +1331,7 @@ impl Resolver {
             text,
             label: labels.first().cloned(),
             rule: s!("{rule} note:legend ruling1:request note:split-by-marks"),
-            source: Some((index, note.span)),
+            source: Some((index, span)),
             target: None,
           }));
         }
@@ -1440,3 +1446,6 @@ fn numbered_thanks(note: &Event) -> bool {
           .starts_with(|c: char| c.is_ascii_digit())
     })
 }
+
+/// One entry of a marked `\thanks` the reading cuts ([`Resolver::keep_note`]): its mark's labels, its text, its own span.
+type MarkedEntry = (Vec<String>, String, Option<(u16, u16)>);

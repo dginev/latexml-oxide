@@ -369,6 +369,11 @@ impl InkTable {
 }
 
 impl Event {
+  /// The positions it prints over: its own span, and a mark's whole formula or group (`$^{1}$`, its shifts too).
+  pub fn extent(&self) -> Option<(u16, u16)> {
+    join_span(self.span, self.formula.and_then(|f| f.span))
+  }
+
   pub fn new(kind: EventKind) -> Self {
     Event {
       kind,
@@ -1251,30 +1256,30 @@ impl Walker {
             }
             self.inks.fonts.extend(inks.fonts);
           }
-          note.body = events.clone();
           let mut inked = false;
-          for inner in events {
+          for inner in &events {
             let first = !inked;
             inked |= matches!(
               inner.kind,
               EventKind::Name | EventKind::Mark | EventKind::Contact | EventKind::Note
             );
             match inner.kind {
-              EventKind::Contact => note.inner.push(inner),
+              EventKind::Contact => note.inner.push(inner.clone()),
               // (the Mark its text opens with, the legend's label: `\thanks{$^{1}$Unit…}`, S2a.2 r2; its later Marks
               // too, never leading — a note of several marked entries is no one label's legend, IEEEtran's
               // `\IEEEcompsocthanksitem \Mark{1}College … \IEEEcompsocthanksitem \Mark{2}College …`, 1802.03043)
               EventKind::Mark => {
-                let mut mark = inner;
+                let mut mark = inner.clone();
                 mark.line_first = first;
                 note.inner.push(mark);
               },
               EventKind::Layout if inner.role.as_deref() == Some("label") => {
-                note.label = inner.label
+                note.label = inner.label.clone()
               },
               _ => {},
             }
           }
+          note.body = events;
         }
         let mark = arg(1);
         let source = if cs.ends_with("notetext") {

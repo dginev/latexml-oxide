@@ -830,6 +830,28 @@ fn event_at<R>(
   })
 }
 
+/// Whether `span` of the block at ledger index `index` is one piece of a note, strictly inside it: from one of its body's
+/// events' start to one's end (the reading's cut of a marked `\thanks`, `Resolver::keep_note`).
+fn note_piece(index: usize, span: (u16, u16)) -> bool {
+  with_block(index, false, |_, events| {
+    let inner = events.iter().flat_map(|e| &e.inner);
+    events.iter().chain(inner).any(|e| {
+      e.kind == EventKind::Note
+        && e
+          .span
+          .is_some_and(|s| s != span && s.0 <= span.0 && span.1 <= s.1)
+        && e
+          .body
+          .iter()
+          .any(|b| b.extent().is_some_and(|b| b.0 == span.0))
+        && e
+          .body
+          .iter()
+          .any(|b| b.extent().is_some_and(|b| b.1 == span.1))
+    })
+  })
+}
+
 /// A note the reading gives the author block alone, as Perl prints it: digested inside the entry's contact, where `\\thanks`
 /// is `\\lx@add@pubnote@thanks` and `\\footnote` `\\lx@add@pubnote` (Base_Utility.pool.ltxml:331-332), one `<pubnote>` of
 /// the document — its own tokens so made (`document_note_call`, the token reader's one conversion of a note to the document's).
@@ -1079,15 +1101,25 @@ fn item_call(
         .and_then(|()| span_tokens_cut(index, span, cut_runs))
         .as_ref()
         .and_then(note_argument);
+      // (or one piece of a note the reading cut at its marks, sourced at its own span: those tokens, the reading's cut, never
+      // cut again — `\\thanks{$^{1}$Univ A; $^{2}$Univ B. $^{*}$Corresponding author.}`, whose piece the writer's own cut of
+      // the whole note lost, review revG5 1; 2509.19480, 2206.07648)
+      let piece = argument.is_none() && note_piece(index, span);
+      let argument = argument.or_else(|| {
+        piece
+          .then(|| span_tokens_cut(index, span, cut_runs))
+          .flatten()
+          .map(Tokens::unlist)
+      });
       // (never a `\\footnote`'s, which `\\lx@add@note` keeps a note: `\\footnote{\\textsuperscript{1}These authors
       // contributed equally …}`, 2110.12892 — P2 NT)
       let footnote = event_at(index, span, |e| e.kind == EventKind::Note, |e| e.footnote);
       let an_entry = key.0 == Kind::Affiliation
         || (role == "legend"
           && footnote != Some(true)
-          && argument
-            .as_ref()
-            .is_some_and(|argument| starts_with_affiliation_mark(&Tokens::new(argument.clone()))));
+          && argument.as_ref().is_some_and(|argument| {
+            piece || starts_with_affiliation_mark(&Tokens::new(argument.clone()))
+          }));
       if note
         && !an_entry
         && let Some(footnote) = footnote
@@ -1147,7 +1179,11 @@ fn item_call(
       // (an entry a note holds, a mark leading it: its argument under the mark's reader, as `\\lx@add@thanks` makes it,
       // each mark's segment apart: 2102.09361, 2503.08005)
       if an_entry && let Some(argument) = argument {
-        let segments = split_wrapped_affiliation_marks(Tokens::new(argument));
+        let segments = if piece {
+          vec![Tokens::new(argument)]
+        } else {
+          split_wrapped_affiliation_marks(Tokens::new(argument))
+        };
         let its_mark = assoc
           .label
           .as_deref()
