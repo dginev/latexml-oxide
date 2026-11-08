@@ -76,6 +76,10 @@ pub(in crate::base_utilities) enum Outcome {
     /// the creator calls its own expansion made (`field_notes::FieldCreator`), the keyvals the emitter writes on the
     /// creators their Names make (`Event::creator_call`). Not in a dump
     creators:     Vec<FieldCreator>,
+    /// where the rehearsal left a group open (`rehearsal::Rehearsal::Done::left_open`), what it read past it no event
+    /// says: the block's content's text ([`content_text`]), whose words the events lack the content check counts
+    /// (`resolver::placed::content_check`), as a call's no rehearsal read (`ApiCall::unread`). In a dump only when set
+    unread:       Option<Box<str>>,
   },
   /// Not rehearsed, and why.
   Skipped(SkipReason),

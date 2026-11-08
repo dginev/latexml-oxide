@@ -511,6 +511,10 @@ pub(in crate::base_utilities) enum Rehearsal<R> {
     environments: Vec<EnvironmentStep>,
     /// the creator calls its own expansion made, which no box says the keyvals of ([`FieldCreator`])
     creators:     Vec<FieldCreator>,
+    /// whether the run left a group open — its frames not back where they started, the mode it switched to not ended (an
+    /// `\end{tabular}\begin{tabular}{c}` juggle in the line, 1401.6981): what it digested past that point is in no box of
+    /// the list, so no event says it, and the content check reads the block's content too (`resolver::placed::content_check`)
+    left_open:    bool,
   },
   /// No rehearsal was made or kept, and why: no journal could open (one is already open), its assignments could not be
   /// undone, or it ended in a Fatal error of its own (discarded with it).
@@ -607,6 +611,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
   });
   // (off before anything else reads: closing what the run left open is no part of it)
   let budget = budget.end();
+  let left_open = get_frame_depth() > depth;
   READS_LEFT.set(READS_LEFT.get().saturating_sub(budget.reads));
   if budget.over {
     set_if_count(if_count_before);
@@ -714,6 +719,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
       held,
       environments: notes.environments,
       creators: notes.creators,
+      left_open,
     },
     _ => Rehearsal::Skipped(SkipReason::NotUndone),
   })

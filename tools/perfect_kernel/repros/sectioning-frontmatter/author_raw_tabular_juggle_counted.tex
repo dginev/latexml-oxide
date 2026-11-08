@@ -1,0 +1,22 @@
+% mechanism: an author block that closes the title page's tabular and opens another as written, no macro
+%            (`\end{tabular}\begin{tabular}{c}`): the rehearsal's digestion leaves that tabular open, the lines after it in no
+%            box and no event. The rehearsal says so (`rehearsal::Rehearsal::Done::left_open`, its frames not back where they
+%            started), and the content check does not trust the events for that block: the words of its content's text
+%            (`ledger::content_text`) the events lack count, a possible loss (`resolver::placed::content_check`)
+% witness: 1401.6981 (sig-alternate, `\end{tabular}\begin{tabular}[t]{p{1.3\auwidth}}\centering` between two authors;
+%          `=2` drops authors 2 and 3); the sibling of author_shared_affiliation_line
+% oracle:  pdflatex: 0 errors; "A One", "Dept"
+% engines: rust FB2a off: E=4 ("Attempt to end mode restricted_horizontal"), "Dept" lost; `=2`: E=0, W=0, "Dept" lost
+%          silently
+% expect:  "Dept" kept (A One's affiliation), or at the least a counted Warning for the lost words at `=2`: one content-check
+%          Warning, `c Dept tabular` (the environment names are content text too: a possible loss, not a certain one)
+% status:  RED (FB2a) -> GREEN for the count (perfect_kernel_batchfs1::an_open_group_rehearsals_words_are_counted); "Dept"
+%          still lost (off and `=2`)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{A One \end{tabular}\begin{tabular}{c} Dept}
+\maketitle
+Text.
+\end{document}

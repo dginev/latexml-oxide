@@ -202,6 +202,7 @@ fn read_at_flush() -> Result<()> {
           held,
           environments,
           creators,
+          left_open,
         } => {
           mark_held(&mut value, &held);
           creator_roles(&mut value, &creators);
@@ -215,6 +216,7 @@ fn read_at_flush() -> Result<()> {
             held,
             environments,
             creators,
+            unread: left_open.then(|| content_text(&block.tokens).into()),
           }
         },
         // (waits for the next flush; if none comes, the dump says why it was never rehearsed)
@@ -653,10 +655,15 @@ pub fn fm_shadow_json() -> String {
               declarations,
               breaks,
               held: held_errors,
+              unread,
               ..
             } => {
               json_str(&mut out, "events");
               let _ = write!(out, ",\"errors\":{errors},\"warnings\":{warnings}");
+              if let Some(text) = unread {
+                out.push_str(",\"unread\":");
+                json_str(&mut out, text);
+              }
               with_events += 1;
               if errors + warnings > 0 {
                 held += 1;
@@ -971,6 +978,7 @@ mod tests {
         held:         Vec::new(),
         environments: Vec::new(),
         creators:     Vec::new(),
+        unread:       None,
       }),
       None
     );

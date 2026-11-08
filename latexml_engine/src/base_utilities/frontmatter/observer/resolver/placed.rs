@@ -237,11 +237,35 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
   for (index, block) in live {
     let print = block_print.entry(index).or_default();
     match &block.outcome {
-      Outcome::Events { events, .. } => {
+      Outcome::Events { events, unread, .. } => {
         let (texts, units) = ink_texts(events, &mut beside, &mut marks);
         for text in texts {
           printed.add(&text, 1);
           print.add(&text, 1);
+        }
+        // (a rehearsal that left a group open — an `\end{tabular}\begin{tabular}{c}` juggle in the line, 1401.6981 — read
+        // what follows into no box, so no event says it: the events are not trusted for the block, its content's text
+        // (`Outcome::Events::unread`, `ledger::content_text`, as for a call no rehearsal read) counting the words they
+        // lack, a possible loss)
+        if let Some(text) = unread {
+          let mut content = Tally::default();
+          content.add(text, 1);
+          for (word, (n, spelled)) in content.words {
+            let more = n.saturating_sub(print.word(&word));
+            for tally in [&mut printed, &mut *print] {
+              tally
+                .words
+                .entry(word.clone())
+                .or_insert((0, spelled.clone()))
+                .0 += more;
+            }
+          }
+          for (address, n) in content.addresses {
+            let more = n.saturating_sub(print.address(&address));
+            for tally in [&mut printed, &mut *print] {
+              *tally.addresses.entry(address.clone()).or_default() += more;
+            }
+          }
         }
         units.iter().for_each(|text| prints.add(index, text));
         if kept_whole(index) {
