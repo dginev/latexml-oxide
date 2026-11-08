@@ -6,8 +6,9 @@
 //! tabular juggle (`a_tabular_juggle_is_a_row_break`), the reading's pre-pass of a trailing alignment environment
 //! (`a_trailing_alignment_environment_is_lines_under_the_names`), the rehearsal's text-mode note and the emitter's note
 //! call in a formula (`a_note_in_a_formula_keeps_its_words`), and the reading's block-shared URL decided at the block's
-//! end (`a_url_line_under_every_name_is_the_blocks`). Batch FB2b1 (review revFB2a finding 1): the juggle predicate
-//! itself, a macro only closing a tabular (`a_macro_closing_a_tabular_is_no_juggle`).
+//! end (`a_url_line_under_every_name_is_the_blocks`). Batch FB2b1 (review revFB2a findings 1, 3): the juggle predicate
+//! itself, a macro only closing a tabular (`a_macro_closing_a_tabular_is_no_juggle`), and the block links' institution
+//! exception (`a_link_printing_an_institution_is_every_names`).
 
 use latexml::util::test::{error_count, warning_count};
 
@@ -182,3 +183,26 @@ fn a_macro_closing_a_tabular_is_no_juggle() {
   assert_eq!(creators(&xml), expected, "{xml}");
 }
 
+/// A link line under every name that prints an institution (`\href{https://www.google.com}{Google}`, a bare domain) is
+/// every name's affiliation, its link kept, as the old rule's exception to the block's URL gives it every author
+/// (`author_block::link_prints_an_institution`, user ruling R12 2026-10-20): at `=2` it was a nameless block creator's
+/// "url: Google" (review revFB2a finding 3). Distinct from `a_url_line_under_every_name_is_the_blocks`: the exception.
+#[test]
+fn a_link_printing_an_institution_is_every_names() {
+  let (off, two) = both(repro!("author_link_printing_an_institution_is_every_names"));
+  assert_eq!(two.len(), 2, "{two:#?}");
+  let google = affiliation("<ref class=\"ltx_href\" href=\"https://www.google.com\">Google</ref>");
+  for (creator, name) in two.iter().zip(["Ann Able", "Bob Baker"]) {
+    assert!(
+      creator.contains(&format!("<personname>{name}</personname>")),
+      "{creator}"
+    );
+    let at: Vec<usize> = [affiliation("Univ A"), google.clone()]
+      .iter()
+      .map(|a| creator.find(a.as_str()).expect(a))
+      .collect();
+    assert!(at[0] < at[1], "{creator}");
+    assert!(!creator.contains("role=\"url\""), "{creator}");
+  }
+  assert_eq!(two, off);
+}

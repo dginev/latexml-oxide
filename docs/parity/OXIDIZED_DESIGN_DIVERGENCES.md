@@ -32661,7 +32661,11 @@ authors contributed equally}$` had lost its spaces (2407.15815, 2603.20851); (4)
 block's author list is the block's shared creator (OD #159, `addresses:block`; the old `LinkOwner::Block`, user ruling
 2026-10-20, FIDELITY_CHARTER §4 amended 2026-11-05), decided at the block's end, as the old rule's "the names it prints
 under are the document's whole author list" (`Resolver::block`'s `block_links`; 2604.20841, 2601.17879, 2604.12896); under
-one `\and` column of several it stays the column's. (1), (2) and (4) with the switch on alone, (3) a fact of the
+one `\and` column of several it stays the column's; a link printing an institution (`\href{https://www.google.com}{Google}`,
+`classify::href_prints_an_institution`, the old rule's `link_prints_an_institution` on the link as printed) is every name's affiliation,
+its link kept, as the old rule's exception gives it (review revFB2a finding 3); under one name the URL is that name's, the
+group's only author (FIDELITY_CHARTER §4; the old rule's block for a lone replacing author, `line_kinds.rs:61`, is not
+ported: off writes that author's too). (1), (2) and (4) with the switch on alone, (3) a fact of the
 rehearsal (popZ01, 1,873 papers off: 0 changed); off: byte-identical. Guards `perfect_kernel_batchfb2a`.
 
 Guards `perfect_kernel_batchz4`.

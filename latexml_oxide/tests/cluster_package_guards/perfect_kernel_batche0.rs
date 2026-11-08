@@ -1000,9 +1000,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("apa7_cls.rs", 7),
   ("authblk_sty.rs", 23),
   // (F1r2, 1288 -> 1285: the membership readout finds its commas by `Token::group_step`, no catcode match)
-  ("author_block", 629),
+  ("author_block", 628),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
-  ("classify", 347),
+  ("classify", 348),
   ("defs/author_macros", 20),
   // (Z4a, 7 -> 8: `\lx@frontmatter@itemnone` reads its tag argument, an element's name: an `ltx:rdf` passes through, the rest goes)
   ("defs/frontmatter_api", 8),
