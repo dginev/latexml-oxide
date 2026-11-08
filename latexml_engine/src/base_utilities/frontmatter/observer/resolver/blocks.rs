@@ -144,7 +144,18 @@ impl Resolver {
               [one] if candidates.len() > 1 => (Some(*one), "owner:corresponding api:note-name"),
               _ => (None, "owner:block"),
             },
-            _ => self.corresponding(candidates),
+            // (an address two or more names spell is the corresponding author's only where they are one of them, else
+            // the block's, as the old reader holds it: `wang@x.org` under X. Wang, Y. Wang and a corresponding Z. Li —
+            // `perfect_kernel_batch64::marked_block_email_line_owner`, 77p r4)
+            _ => {
+              let spellers = self.spellers(&address, candidates);
+              match self.corresponding(candidates) {
+                (Some(c), _) if spellers.len() >= 2 && !spellers.contains(&c) => {
+                  (None, "owner:block")
+                },
+                found => found,
+              }
+            },
           },
         },
       };

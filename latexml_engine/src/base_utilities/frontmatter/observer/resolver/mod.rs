@@ -808,6 +808,19 @@ impl Resolver {
     spelled_name(&names, address).map(|one| candidates[one])
   }
 
+  /// Every candidate an address spells ([`spelled_owners`]): two or more where it spells several names alike (`wang@`
+  /// beside X. Wang and Y. Wang).
+  fn spellers(&self, address: &str, candidates: &[usize]) -> Vec<usize> {
+    let names: Vec<&str> = candidates
+      .iter()
+      .map(|&c| self.out.creators[c].name.as_str())
+      .collect();
+    spelled_names(&names, address)
+      .into_iter()
+      .map(|one| candidates[one])
+      .collect()
+  }
+
   /// The one candidate of a class's address list printed apart from the names (`address`, the one left over) marked as the
   /// corresponding author, else the block: the switch-off step's reading (`place::marked_corresponding_author`, OD #809,
   /// user ruling 2026-10-21) on the reading's facts. A candidate is marked by a note of theirs naming them so — a
@@ -949,17 +962,22 @@ pub(in crate::base_utilities::frontmatter::observer) fn spelled_name(
   names: &[&str],
   address: &str,
 ) -> Option<usize> {
+  match spelled_names(names, address).as_slice() {
+    [one] => Some(*one),
+    _ => None,
+  }
+}
+
+/// Every one of `names` an address spells ([`spelled_owners`]), none for a list of local parts.
+fn spelled_names(names: &[&str], address: &str) -> Vec<usize> {
   if lists_local_parts(address) {
-    return None;
+    return Vec::new();
   }
   let keys: Vec<NameKeys> = names
     .iter()
     .map(|name| NameKeys::of(&text_tokens(name)))
     .collect();
-  match spelled_owners(&keys, address).as_slice() {
-    [one] => Some(*one),
-    _ => None,
-  }
+  spelled_owners(&keys, address)
 }
 
 /// `text` with its letters' accents dropped (canonical decomposition, the combining marks aside), and the letters
