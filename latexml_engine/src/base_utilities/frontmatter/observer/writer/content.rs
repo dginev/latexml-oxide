@@ -1,4 +1,4 @@
-//! What a span of a field holds (the digested refactor's Stage 3, `FRONTMATTER_DIGESTED_REFACTOR.md`): the tokens a
+//! What a span of a field holds (the digested refactor's Stage 3, `docs/archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md`): the tokens a
 //! piece, a line or an entry the reading cut is made from, read from the digested list and its spans. A box covers what
 //! it prints and no more, so a span stops short of what prints nothing around it, and that is said by the digested list
 //! too, not by walking tokens back from the span: the formula it starts or ends in, whole (`Field::formulas`, whatever

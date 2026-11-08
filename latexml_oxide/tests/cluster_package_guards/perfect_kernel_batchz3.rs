@@ -1,4 +1,4 @@
-//! Guards for Z3 (`docs/parity/FRONTMATTER_DIGESTED_REFACTOR.md`, Stage 3; "What a rollback leaves"): what a span of a field holds, read
+//! Guards for Z3 (`docs/archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md`, Stage 3; `FRONTMATTER_SINGLE_ENGINE_PLAN.md` "What a rollback leaves"): what a span of a field holds, read
 //! from the digested list (`writer::Field`), and the rehearsal's isolation. Each guard is a different code path: `a_cut_takes_each_formula_whole`
 //! a piece's start and end in a formula, `a_cut_takes_a_group_it_closes` the brace balance, `a_mark_in_its_wrapper_…` a mark's own print and a
 //! block's line, `a_declarations_span_…` the settled declarations; the `the_rehearsal_leaves_no_trace_*` table the journal and what
@@ -258,7 +258,7 @@ fn the_rehearsal_leaves_no_trace_of_its_assignments() {
   ]);
 }
 
-/// What lives outside the journal's tables, edited in place (`FRONTMATTER_DIGESTED_REFACTOR.md` "What a rollback leaves"), each ran twice before Z3:
+/// What lives outside the journal's tables, edited in place (`FRONTMATTER_SINGLE_ENGINE_PLAN.md` "What a rollback leaves"), each ran twice before Z3:
 /// a font's parameter, a box register's dimension, a stream's next line, a stream closed, the pdfTeX generator; and a key's "seen" set, whose
 /// Warning went unsaid.
 #[test]

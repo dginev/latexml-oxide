@@ -1,4 +1,4 @@
-% witness: FRONTMATTER_DIGESTED_REFACTOR gap 4 (ijcai's grouped local parts; `ijcai_email_lines` reads them by token, `\{`, `\lbrace`, `\textbraceleft`)
+% witness: FRONTMATTER_SINGLE_ENGINE_PLAN gap 4 (ijcai's grouped local parts; `ijcai_email_lines` reads them by token, `\{`, `\lbrace`, `\textbraceleft`)
 % oracle:  pdflatex 0 errors: "{ann, bob," then "cat}@x.org, Eve Ely" then "Fay, Gil"; "{Hal, Ian}@y.org" (printed by `\lbrace`, in math); "Jan, Kim"
 % engines: Perl has no events; ours before this fix had no depth on a Break or a comma
 % expect:  0 errors; a comma or a Break inside printed braces says how deep, whatever printed them; outside none; a TeX group is

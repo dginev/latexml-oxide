@@ -1,5 +1,5 @@
 //! Guards for batch 93a (frontmatter refactor stage 7: the kernel's own `\author` — `article` and every class whose
-//! bindings declare no conventions — written by the observer; `docs/parity/FRONTMATTER_DIGESTED_REFACTOR.md`,
+//! bindings declare no conventions — written by the observer; `docs/archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md`,
 //! OXIDIZED_DESIGN_DIVERGENCES #837, #925-). Each guard converts its repro under the shadow switch in process and with
 //! the binary, eager and `--streaming` (`perfect_kernel_batch92a::assert_reading`), asserts the shadow reading's tuples
 //! and the XML's creators whole, and no Error or Warning; and the default mode (no shadow switch: the fleet's) writes

@@ -1147,7 +1147,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("queue", 1),
   ("queue_digest", 16),
   // (raised by one at Z14: the rehearsal's `BOUND_IN_A_BLOCK` table, `\lx@add@affiliation@marked`, `\lx@add@creator` read as digested instead of cut by spelling at
-  // the frozen API: the kind of table `FRONTMATTER_DIGESTED_REFACTOR.md` keeps, as Perl's `@authorsplits`)
+  // the frozen API: the kind of table `FRONTMATTER_SINGLE_ENGINE_PLAN.md` "What already exists" keeps, as Perl's `@authorsplits`)
   ("rehearsal", 6),
   ("relocate", 134),
   // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens`, printed text read

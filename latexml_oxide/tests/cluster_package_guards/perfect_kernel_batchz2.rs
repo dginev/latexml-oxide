@@ -1,4 +1,4 @@
-//! Guards for Z2 (`docs/parity/FRONTMATTER_DIGESTED_REFACTOR.md`, "Gaps in the event model", 3, 4, 5, 7, 10; revz01's findings on
+//! Guards for Z2 (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`, "Gaps in the event model", 3, 4, 5, 7, 10; revz01's findings on
 //! gap 8): what the observer's events gain, read from the digested list and from the rehearsal's notes, and the readings the
 //! writer's regressions needed. Each guard is a different code path: `a_font_switch_…` whose assignment is a declaration,
 //! `a_definition_is_…` what holds it, `a_declarations_lead_…` where its span starts; `a_break_says…` a Break's kind, `a_break_a_binding…`

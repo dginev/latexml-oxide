@@ -704,7 +704,7 @@ fn braced_group(text: &str) -> (&str, &str) {
 /// mark. Both the marks an affiliation is labelled by (from its spelling, here) and the marks an author shows (from the
 /// printed text, [`printed_marks`]) are split so (63i review). The spelling's readers are the token-only callers (the
 /// `\lx@frontmatter@sup` label keys, revtex's group rule): the frontmatter refactor's later stages
-/// (`docs/parity/FRONTMATTER_DIGESTED_REFACTOR.md`).
+/// (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md` "The path").
 pub(in crate::base_utilities) fn script_marks(script: &str) -> Vec<String> {
   split_marks(script, past_mark_switches)
 }

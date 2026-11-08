@@ -47,7 +47,7 @@ pub(in crate::base_utilities) fn reset_rehearsing() {
 }
 
 /// The most tokens one rehearsal reads, as many as a run of the title-page check's (`title_page_check::CHECK_RUN_READS_DEFAULT`). By the
-/// data (the census, `FRONTMATTER_DIGESTED_REFACTOR.md`): popZ01's 1,707 papers rehearsing read 166 at the median in their dearest rehearsal, 8,417 at the 99th percentile and
+/// data (the census, `FRONTMATTER_SINGLE_ENGINE_PLAN.md` "What a rollback leaves"): popZ01's 1,707 papers rehearsing read 166 at the median in their dearest rehearsal, 8,417 at the 99th percentile and
 /// 3,359,702 at most (2608.18287; 2011.00785 3,314,577); by what it costs, a looping block reads this in about two seconds.
 const REHEARSAL_READS_DEFAULT: usize = 8_000_000;
 

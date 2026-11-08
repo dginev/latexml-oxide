@@ -1,5 +1,5 @@
 //! Guards for batch 94a (frontmatter refactor stage 7, "name parting last": the writer's re-part,
-//! OXIDIZED_DESIGN_DIVERGENCES #928; `docs/parity/FRONTMATTER_DIGESTED_REFACTOR.md`). Where the observer's reading parts
+//! OXIDIZED_DESIGN_DIVERGENCES #928; `docs/archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md`). Where the observer's reading parts
 //! the names and today's old reader parted them otherwise, the writer writes the creators again from the reading — each
 //! name from its span's ink, its items copied from today's or made from their spans — and keeps them only when they read
 //! as the reading and hold every word today's creators held. Each guard converts its repro under the shadow switch in
