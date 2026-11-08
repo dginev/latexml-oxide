@@ -329,7 +329,6 @@ const ONE_ENGINE_REACH: &[(&str, usize)] = &[
   ("insert.rs is_listed_local_part", 1),
   ("insert.rs is_pattern_address", 2),
   ("insert.rs is_role_mailbox", 1),
-  ("insert.rs LABEL_PRINTS", 1),
   ("insert.rs list_owners", 1),
   ("insert.rs lists_local_parts", 2),
   ("insert.rs name_count", 1),
