@@ -2310,6 +2310,23 @@ pub(in crate::base_utilities) fn lex_with_formulas(
   let mut walker = Walker::default();
   walker.walk(digested, 0);
   let mut lexer = Lexer::default();
+  // (the lines printing an `@`, whose names' characters' positions the lexer records: `Event::ink_at`)
+  let mut line = 0;
+  for atom in &walker.atoms {
+    let (text, breaks) = match atom {
+      Atom::Ink { text, .. } => (text.as_str(), false),
+      Atom::Event(e) => (e.text.as_str(), e.kind == EventKind::Break),
+      Atom::Space { .. } => ("", false),
+    };
+    if breaks {
+      line += 1;
+    } else if text.contains('@') {
+      lexer
+        .at_lines
+        .resize(lexer.at_lines.len().max(line + 1), false);
+      lexer.at_lines[line] = true;
+    }
+  }
   for atom in walker.atoms {
     match atom {
       Atom::Ink {

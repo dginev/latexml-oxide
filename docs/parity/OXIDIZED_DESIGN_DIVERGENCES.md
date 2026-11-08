@@ -32609,7 +32609,7 @@ current author (Perl's `\lx@add@email`), so it is the note owner's e-mail, not a
 `\affil`, a `\thanks` entry, a block line read on) is cut out into its owner's e-mail as the switch-off writer cuts today's XML
 (`plan::cut_entry_addresses`, `dom::address_cut`, `Op::Address`, `Op::CutAddresses`), translated onto the entry's tokens, no DOM
 pass. *The fact:* the lexer records where each character of a name prints (`Event::ink_at`: its box's cover and its own token,
-kept in a block printing an `@`; a note's text from its body's), and the reading's take-out keeps its bytes (`Taken::lined`,
+on a line printing an `@`; a note's text from its body's), and the reading's take-out keeps its bytes (`Taken::lined`,
 `cuts`, `runs` with their label words). *The cut* (`writer/address_cut.rs`): the reading's text located in its events' text (a
 note's, the span's, or the lines from it on, line by line where the reading trimmed a line's separator: 1203.0253,
 2405.03617), each cut byte a position; row 54, all holders cut or none, per entry; row 55, a separator the cut takes at an end
