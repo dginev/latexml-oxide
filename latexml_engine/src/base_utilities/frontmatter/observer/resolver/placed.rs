@@ -309,8 +309,23 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
               *held.entry(word.clone()).or_default() += take;
             }
           }
+          // (then a word the block prints glued that is two content words joined — `ledger::content_text` parts a word at
+          // every multi-letter control sequence, `Able\begingroup\bfseries Bob` read `able bob`, printed `ablebob` —: both
+          // parts held, the document-level rule ([`glued`]) applied before a word is counted lost, as `CanadaPerimeter`'s)
+          let mut have = Tally::default();
+          held.iter().for_each(|(word, n)| have.add_word(word, *n));
+          for (other, (m, _)) in &print.words {
+            let gap = m.saturating_sub(taken.get(other).copied().unwrap_or(0));
+            if let Some((n, parts)) = glued(other, gap, &content, &have, &marks) {
+              *taken.entry(other.clone()).or_default() += n;
+              for part in parts {
+                have.add_word(&part, n);
+                *held.entry(part).or_default() += n;
+              }
+            }
+          }
           for (word, (n, spelled)) in content.words {
-            let more = n - held.get(&word).copied().unwrap_or(0);
+            let more = n.saturating_sub(held.get(&word).copied().unwrap_or(0));
             for tally in [&mut printed, &mut *print] {
               tally
                 .words
