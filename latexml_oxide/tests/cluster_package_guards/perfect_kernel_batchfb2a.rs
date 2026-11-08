@@ -3,13 +3,15 @@
 //! its raw-token rewrites carried are ported onto the digested reading (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`,
 //! the rows "Strict porting" and "The fallback"; OXIDIZED_DESIGN_DIVERGENCES #52, #980). Each guard is a distinct code
 //! path: the queued raw call (`a_raw_queued_call_feeds_no_symbol_mark_to_the_reading`), the rehearsal's binding of a
-//! tabular juggle (`a_tabular_juggle_is_a_row_break`), the reading's pre-pass of a trailing alignment environment
+//! tabular juggle (`a_tabular_juggle_is_a_column_or_its_break`), the reading's pre-pass of a trailing alignment environment
 //! (`a_trailing_alignment_environment_is_lines_under_the_names`), the rehearsal's text-mode note and the emitter's note
 //! call in a formula (`a_note_in_a_formula_keeps_its_words`), and the reading's block-shared URL decided at the block's
 //! end (`a_url_line_under_every_name_is_the_blocks`). Batch FB2b1 (review revFB2a findings 1, 3): the juggle predicate
 //! itself, a macro only closing a tabular (`a_macro_closing_a_tabular_is_no_juggle`), and the block links' institution
 //! exception (`a_link_printing_an_institution_is_every_names`). Batch FB2b4: the juggle written inline
-//! (`an_inline_tabular_juggle_is_a_column`).
+//! (`an_inline_tabular_juggle_is_a_column`). Batch FB2b5 (review revG3 finding 1, 2, Q3): the reading's shared column,
+//! both spellings (`a_nameless_column_after_the_names_is_every_names`), and the reopen's scan over a command's arguments
+//! (`a_juggle_judges_the_command_between_by_what_it_prints`).
 
 use latexml::util::test::{error_count, warning_count};
 
@@ -74,10 +76,11 @@ fn a_raw_queued_call_feeds_no_symbol_mark_to_the_reading() {
 }
 
 /// A parameterless macro closing the title page's tabular and opening another (sig-alternate's
-/// `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`) is the row break it prints: at `=2` the rehearsal left the
+/// `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`) is the column it prints, "Dept" a column of no name after
+/// the names, their affiliation; one printing a break between, the break (1301.5612): at `=2` the rehearsal left the
 /// juggle's tabular open and "Dept" in no box, lost with no Warning (0712.1016, 1704.03168, 1301.5612, 1401.6981).
 #[test]
-fn a_tabular_juggle_is_a_row_break() {
+fn a_tabular_juggle_is_a_column_or_its_break() {
   let (off, two) = both(repro!("author_shared_affiliation_line"));
   assert_eq!(two.len(), 1, "{two:#?}");
   assert!(
@@ -244,4 +247,74 @@ fn an_inline_tabular_juggle_is_a_column() {
     "affiliation=Dept".to_string(),
   ]];
   assert_eq!(creators(&xml), expected, "{xml}");
+}
+
+/// A column holding no name of its own after the last name is the shared affiliation of every name above it, whichever
+/// spelling opens it — the juggle written inline or sig-alternate's `\sharedaffiliation` macro, the same column in the
+/// PDF: at `=2` the inline form made "Univ Shared" a third creator and the macro gave it to Bob Two alone (0712.1016,
+/// 1704.03168: the PDF centres it under every name; review revG3 finding 1, Q3).
+#[test]
+fn a_nameless_column_after_the_names_is_every_names() {
+  let tex = repro!("author_juggle_shared_column_is_every_names");
+  let shared = |name: &str| {
+    vec![
+      name.to_string(),
+      "affiliation=Univ Shared".to_string(),
+      "affiliation=Main Street 1, City".to_string(),
+    ]
+  };
+  let expected = vec![shared("A One"), shared("Bob Two")];
+  let (log, xml) = run(tex, 2);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), expected, "{xml}");
+  let macro_form = tex
+    .replacen(
+      "\\begin{document}",
+      "\\def\\sharedaffiliation{\\end{tabular}\\begin{tabular}{c}}\n\\begin{document}",
+      1,
+    )
+    .replacen(
+      "\\end{tabular}\\begin{tabular}{c} Univ",
+      "\\sharedaffiliation Univ",
+      1,
+    );
+  assert!(
+    macro_form.contains("Bob Two \\sharedaffiliation Univ"),
+    "{macro_form}"
+  );
+  let (log, xml) = run(&macro_form, 2);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), expected, "{xml}");
+}
+
+/// The reopen of a juggle written inline is found past a command's `[…]` and `{…}` arguments, and the juggle judged by
+/// what the command prints: `\\[2mm]` a row break, which stands (the lines after it the author's, as `\newline`'s); a
+/// skip, `\vspace{2mm}`, no break, the column the PDF prints. At `=2` both missed the reopen: "Univ B" lost, silently
+/// after `\\[2mm]` (review revG3 finding 2, probes q1a, q1g).
+#[test]
+fn a_juggle_judges_the_command_between_by_what_it_prints() {
+  let tex = repro!("author_raw_tabular_juggle_is_a_column");
+  let between = |what: &str| {
+    let shape = tex.replacen(
+      "Univ A \\end{tabular}\\begin{tabular}",
+      &format!("Univ A \\end{{tabular}}{what}\\begin{{tabular}}"),
+      1,
+    );
+    assert_ne!(shape, tex);
+    let (log, xml) = run(&shape, 2);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    creators(&xml)
+  };
+  let row = vec![vec![
+    "A One".to_string(),
+    "affiliation=Univ A".to_string(),
+    "affiliation=Bob Two".to_string(),
+    "affiliation=Univ B".to_string(),
+  ]];
+  assert_eq!(between("\\\\[2mm]"), row);
+  let columns = vec![
+    vec!["A One".to_string(), "affiliation=Univ A".to_string()],
+    vec!["Bob Two".to_string(), "affiliation=Univ B".to_string()],
+  ];
+  assert_eq!(between("\\vspace{2mm}"), columns);
 }

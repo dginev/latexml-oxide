@@ -1051,14 +1051,17 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // the frozen API: the kind of table `FRONTMATTER_SINGLE_ENGINE_PLAN.md` "What already exists" keeps, as Perl's `@authorsplits`;
   // FB2b4 6 -> 13: `inline_juggles_as_columns`, the tabular juggle written inline, `\end{tabular}\begin{tabular}[t]{…}` — written
   // text, no macro whose meaning could be read, its spaces, groups and `[…]` read by catcode, as the macro form's body is in
-  // `fallback::is_tabular_juggle`: 1401.6981)
+  // `fallback::tabular_juggle_between`: 1401.6981; FB2b5 none added: the reopen's scan over a command's `[…]`/`{…}` arguments)
   ("rehearsal", 13),
   ("relocate", 134),
   // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens`, printed text read
   // as tokens by `is_institution` and `NameKeys` (5 with their definitions), a `'\\'` read of a label (2), a call's hook (1).
   // Z14r2: 18, not 9 — the count now sees `is_institution(`, review revZ14: Z14's fall from 15 was the seven `text_tokens` sites
-  // it moved behind that name; counted again, with the name's definition and Z14's one new call (`carried`); none of Z14r2's)
-  ("resolver", 18),
+  // it moved behind that name; counted again, with the name's definition and Z14's one new call (`carried`); none of Z14r2's.
+  // FB2b5 18 -> 19: `blocks.rs`'s shared column, a column after the last name opening with an institution, every name's
+  // affiliation — `is_institution` on the line's printed text (the events' text, no token), so a person whose name does
+  // not read as one (`reads_as_names` alone) never becomes an institution: 0712.1016, 1704.03168, review revG3 Q3)
+  ("resolver", 19),
   ("rest /author_split_tests.rs", 24),
   ("rest /block_insertion.rs", 0),
   ("rest /blocks.rs", 2),

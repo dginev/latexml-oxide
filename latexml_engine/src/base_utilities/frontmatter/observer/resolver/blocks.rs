@@ -249,6 +249,13 @@ impl Resolver {
     let mut skip_to = 0usize;
     // the URL lines under every name so far, each with those names: the block's if no name comes after them
     let mut block_links: Vec<(&Event, Vec<usize>)> = Vec::new();
+    // the last column holding a line that reads as names: a column after it opening with an institution holds no name
+    // of its own, and is the shared affiliation of every name above it
+    let last_named = lines
+      .iter()
+      .filter(|line| reads_as_names(&events_text(&line.events)))
+      .map(|line| line.column)
+      .max();
     for (n, line) in lines.iter().enumerate() {
       if n > 0 && n <= skip_to {
         continue;
@@ -289,6 +296,23 @@ impl Resolver {
       let column_first = !first_in_column.contains(&line.column);
       if column_first {
         first_in_column.push(line.column);
+      }
+      // (a column holding no name of its own after the last name is the shared affiliation of every name above it, under
+      // every name as a link printing an institution is: sig-alternate's `\sharedaffiliation` (`\end{tabular}
+      // \begin{tabular}{c}`, a column, `observer::rehearsal`) under its `\alignauthor` columns, the PDF centring it under
+      // all of them — 0712.1016, 1704.03168, the last author's alone before; written inline, `A One \and Bob Two
+      // \end{tabular}\begin{tabular}{c} Univ Shared`, "Univ Shared" a third creator, review revG3 findings 1 and Q3)
+      let shared_column = column_first
+        && line.column > 0
+        && last_named.is_some_and(|named| line.column > named)
+        && self.out.creators.len() > block_creators_start
+        && is_institution(&events_text(&line.events));
+      if shared_column {
+        let every: Vec<usize> = (block_creators_start..self.out.creators.len()).collect();
+        run_above.push((line.column, every.clone()));
+        row_above.push((line.column, every));
+        // (the names row it answers: the lines under it go on with the affiliation)
+        answered_rows.push(line.column);
       }
       let above = row_above
         .iter()
@@ -438,7 +462,7 @@ impl Resolver {
           let address_line = !addresses_in(&text).is_empty() && only_addresses(&text);
           let names_line = !only_contacts
             && !address_line
-            && (column_first
+            && ((column_first && !shared_column)
               || later_line_is_names(line, continued, under_affiliation, after_labelled_list));
           if names_line {
             answered_rows.retain(|c| *c != line.column);
