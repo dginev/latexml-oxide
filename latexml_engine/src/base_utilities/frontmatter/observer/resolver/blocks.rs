@@ -139,23 +139,27 @@ impl Resolver {
           // another author's — `{hong3924.cs10, evan20010126.cs12, …}@nycu.edu.tw` under a corresponding Ching-Chun
           // Huang, 2512.08223; `{congjing, ryanflin}@uw.edu chris20030909@gmail.com`, 2602.04785; 2604.14972)
           _ if address_count > 1 => (None, "owner:block"),
-          _ => match chain {
-            Chain::DocumentNote { named: Some(named) } => match named {
-              [one] if candidates.len() > 1 => (Some(*one), "owner:corresponding api:note-name"),
-              _ => (None, "owner:block"),
-            },
-            // (an address two or more names spell is the corresponding author's only where they are one of them, else
-            // the block's, as the old reader holds it: `wang@x.org` under X. Wang, Y. Wang and a corresponding Z. Li —
-            // `perfect_kernel_batch64::marked_block_email_line_owner`, 77p r4)
-            _ => {
-              let spellers = self.spellers(&address, candidates);
-              match self.corresponding(candidates) {
-                (Some(c), _) if spellers.len() >= 2 && !spellers.contains(&c) => {
-                  (None, "owner:block")
-                },
-                found => found,
-              }
-            },
+          // (an address two or more names spell is the corresponding author's, or the author a document's note names,
+          // only where they are one of them, else the block's, as the old reader holds it for both
+          // (`author_block/email_block_calls.rs` `spelled`, `owners.marked`): `wang@x.org` under X. Wang, Y. Wang and a
+          // corresponding Z. Li — `perfect_kernel_batch64::marked_block_email_line_owner`, 77p r4; A&A's
+          // `\offprints{Z. Li, \email{wang@x.org}}` —
+          // `perfect_kernel_batchnl1::an_address_others_spell_is_not_the_named_authors`)
+          _ => {
+            let found = match chain {
+              Chain::DocumentNote { named: Some(named) } => match named {
+                [one] if candidates.len() > 1 => (Some(*one), "owner:corresponding api:note-name"),
+                _ => (None, "owner:block"),
+              },
+              _ => self.corresponding(candidates),
+            };
+            let spellers = self.spellers(&address, candidates);
+            match found {
+              (Some(c), _) if spellers.len() >= 2 && !spellers.contains(&c) => {
+                (None, "owner:block")
+              },
+              found => found,
+            }
           },
         },
       };

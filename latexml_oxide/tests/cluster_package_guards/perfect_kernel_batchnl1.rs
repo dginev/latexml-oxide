@@ -341,3 +341,28 @@ fn a_mark_inside_a_remark_goes_onto_the_name() {
   assert_eq!(off, want);
   assert_eq!(two, want);
 }
+
+/// The several-spellers owner rule on a document note's arm (review revNL1r2 finding 1; the old reader's
+/// `author_block/email_block_calls.rs` `spelled`, `owners.marked`: a lone address spelling several names is the marked
+/// author's only if among them): A&A's `\offprints{Z. Li, \email{wang@x.org}}` names Z. Li, but the address spells X.
+/// Wang and Y. Wang — the block's, as the line chain holds it (`perfect_kernel_batch64::marked_block_email_line_owner`).
+/// Red (NL1r2): Z. Li's, `owner:corresponding api:note-name`. Distinct from the line chain's guard: the note's named
+/// author, not the corresponding one, is the owner the test overrules.
+#[test]
+fn an_address_others_spell_is_not_the_named_authors() {
+  super::perfect_kernel_batch92a::assert_reading(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/aa_offprints_name_beside_an_address_others_spell_is_the_blocks.tex"
+    ),
+    None,
+    &[
+      "C X. Wang [1] | line:names",
+      "  a Univ X | api:labelseq",
+      "C Y. Wang [1] | line:names",
+      "  a Univ X | api:labelseq",
+      "C Z. Li [2] | line:names",
+      "  a Univ Y | api:labelseq",
+      "B email wang@x.org | api:document-note owner:block ruling3:one-per-print",
+    ],
+  );
+}
