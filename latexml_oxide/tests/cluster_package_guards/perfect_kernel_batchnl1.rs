@@ -68,6 +68,23 @@ fn both_with(
   (creators(&off), creators(&xml))
 }
 
+/// The `collaboration` contacts of `xml`, each element whole, its `xml:id`s dropped: their text and markup as written.
+fn collaborations(xml: &str) -> Vec<String> {
+  let mut out = Vec::new();
+  let mut rest = xml;
+  while let Some(at) = rest.find("<contact role=\"collaboration\"") {
+    let end = rest[at..].find("</contact>").expect("a closed contact") + at + "</contact>".len();
+    let mut element = rest[at..end].to_string();
+    while let Some(id) = element.find(" xml:id=\"") {
+      let close = element[id + 9..].find('"').expect("a closed id") + id + 10;
+      element.replace_range(id..close, "");
+    }
+    out.push(element);
+    rest = &rest[end..];
+  }
+  out
+}
+
 /// Rows N1-N3: a names line's piece carrying its own mark is a name whatever its words — the generic split never reads
 /// an institution word (`R. New$^2$`, 0904.4122; `S. Michelle Consiglio,$^{1}$`, 2103.02641; `Alexander New$^2$`,
 /// 2311.16860), and a per-author class's line a surname after an initial (`Gary P. Centers,$^{1}$`, revtex,
@@ -138,28 +155,29 @@ fn glued_initials_are_no_surname_before_initials() {
 /// command's own spacing parts it into pieces (C3, C4: `Kalanand Mishra\footnote{…} (for the \babar\ collaboration)`,
 /// 0711.1544; elsarticle's `Ann Able (for the XYZ\fnref{c1} Collaboration)`, 1212.4278, 1408.0414), after the name's
 /// notes when it names whom the author speaks for (C2: webofc's `for CAPP/IBS`, 1702.03664), and as a line of its own
-/// under one name (C5: `Carolyn Brown$^1$\\ on behalf of the Bcool project team`, 1310.6507). Red (MV1 `=2`): each
-/// in the personname, or "Collaboration)" the contact. The remark parted by a note reference and the name before it are
-/// written from their text at `=2`, a Warning each (the name's events don't spell it; the remark's span holds the
-/// reference); `\babar`'s letters likewise (its span prints a macro).
+/// under one name (C5: `Carolyn Brown$^1$\\ on behalf of the Bcool project team`, 1310.6507, sourced at the line's
+/// ink: its `\footnotesize`, 1502.03246). Red (MV1 `=2`): each in the personname, or "Collaboration)" the contact; red
+/// (NL1 `=2`, review revNL1 B1, S3): `\babar`'s remark "(for the B A B A R collaboration)" in plain text, the C5 line's
+/// size lost. The remark after the name's note is a run of its own, the text its pieces print joined as the source joins
+/// them (`lines::printed_join`; `\babar`'s kerns back up, no space), so it is written from its tokens in its markup, as
+/// off writes it. A name whose own event opens the remark (`Ann Able (for the XYZ`) joins with it: the contact is
+/// written from its text at `=2`, a Warning each for it and the name (the joined event's span holds both).
 #[test]
 fn a_collaboration_remark_is_the_names_contact() {
-  let (off, two) = both(
-    repro!("emit_a_collaboration_remark_parted_by_a_note_and_a_box_is_a_contact"),
-    (0, 1),
-  );
-  assert_eq!(off, [vec![
+  let tex = repro!("emit_a_collaboration_remark_parted_by_a_note_and_a_box_is_a_contact");
+  let (off, two) = both(tex, (0, 0));
+  let want = [vec![
     "Kalanand Mishra",
     "note=Email: k@x.edu",
     "collaboration=(for the B A B AR collaboration)",
-    "affiliation=Univ A"
-  ]]);
-  assert_eq!(two, [vec![
-    "Kalanand Mishra",
-    "collaboration=(for the B A B A R collaboration)",
-    "note=Email: k@x.edu",
-    "affiliation=Univ A"
-  ]]);
+    "affiliation=Univ A",
+  ]];
+  assert_eq!(off, want);
+  assert_eq!(two, want);
+  let babar = "<contact role=\"collaboration\">(for the <text font=\"slanted\">B<text fontsize=\"90%\">A</text>B<text \
+               fontsize=\"90%\">AR</text></text> collaboration)</contact>";
+  assert_eq!(collaborations(&run(tex, 0).1), [babar]);
+  assert_eq!(collaborations(&run(tex, 2).1), [babar]);
   let (off, two) = both(
     repro!("elsarticle_collaboration_remark_note_reference_is_the_names"),
     (0, 2),
@@ -209,6 +227,58 @@ fn a_collaboration_remark_is_the_names_contact() {
   ];
   assert_eq!(off, want);
   assert_eq!(two, want);
+  let bcool = "<contact role=\"collaboration\"><text fontsize=\"80%\">on behalf of the Bcool project \
+               team</text></contact>";
+  let tex = repro!("emit_a_line_speaking_for_a_collaboration_is_a_contact");
+  assert_eq!(collaborations(&run(tex, 0).1), [bcool]);
+  assert_eq!(collaborations(&run(tex, 2).1), [bcool]);
+}
+
+/// Rows C2-C3 (review revNL1 S1): a remark after the name's note opens a run of its own (`lines::remark_start`), so the
+/// name keeps its own event and the remark a span of its own: `Ann Able\thanks{…} (for the \textsc{Atlas}
+/// Collaboration)` is written as off writes it, the note before the collaboration, its small capitals kept. Red (NL1
+/// `=2`): the name, the note and the remark joined, the contact's text plain before the note, a Warning (probes c2e-c2g;
+/// 1201.5130's `(on behalf of the D\O\ and CDF collaborations)` a false Warning).
+#[test]
+fn a_remark_after_a_note_keeps_its_own_span() {
+  let tex = repro!("emit_a_remark_after_a_note_keeps_its_own_span");
+  let (off, two) = both(tex, (0, 0));
+  let want = [vec![
+    "Ann Able",
+    "collaboration=(for the Atlas Collaboration)",
+  ]];
+  assert_eq!(off, want);
+  assert_eq!(two, want);
+  let atlas = "<contact role=\"collaboration\">(for the <text font=\"smallcaps\">Atlas</text> Collaboration)</contact>";
+  for emit in [0, 2] {
+    let xml = run(tex, emit).1;
+    assert_eq!(collaborations(&xml), [atlas]);
+    // (her thanks note before the collaboration, as the source prints them)
+    let note = xml.find("<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\"");
+    assert!(
+      note.is_some_and(|note| xml
+        .find("<contact role=\"collaboration\"")
+        .is_some_and(|c| note < c)),
+      "{xml}"
+    );
+  }
+}
+
+/// Row N5 of the old reader (`add_authors_calls_sectioned`: an unmarked line under a labelled entry is appended to it),
+/// behind the line above holding one labelled entry (the main session's decision K, 2026-11-08): `$^1$The Graduate
+/// Center, CUNY\\ Computer Science\\ New York, USA` is one affiliation (2501.04046; hep-ph0511130). Red (MV1, NL1
+/// `=2`): "Computer Science" a creator. Under two entries a line of names stays a names row (SYNC row 46,
+/// `perfect_kernel_batchfms2a2::sync_row_shapes_46_53_66`'s `Cat Cole`; cs0011034 a residual).
+#[test]
+fn a_line_under_one_labelled_entry_continues_it() {
+  let (off, two) = both(
+    repro!("emit_a_line_under_one_labelled_entry_continues_it"),
+    (0, 0),
+  );
+  let cuny = "affiliation=The Graduate Center, CUNY Computer Science New York, USA";
+  let want = [vec!["Ann Able", cuny], vec!["Bob Baker", cuny]];
+  assert_eq!(off, want);
+  assert_eq!(two, want);
 }
 
 /// Row A2: the ink one command draws inside a word is the word's letters — combelow's `\cb{t}` stacks a `t` over a
@@ -229,4 +299,26 @@ fn a_comma_a_command_draws_inside_a_name_parts_no_names() {
   ];
   assert_eq!(off, want);
   assert_eq!(two, want);
+  // (a comma or a row break the command prints after its box, at its own level, parts names as any does — review
+  // revNL1 S2: `\newcommand\nlx{\mbox{Jr.},}`; red (NL1): "Ann Able" and "Jr.,Bob Baker", off a `merged_creators`
+  // Error)
+  let (off, two) = both(
+    repro!("emit_a_comma_a_command_prints_after_its_box_parts_names"),
+    (0, 0),
+  );
+  let want = [vec!["Ann Able Jr."], vec!["Bob Baker"]];
+  assert_eq!(off, want);
+  assert_eq!(two, want);
+  // (its row break, `\mbox{Jr.}\\`: "Jr." stays Ann Able's, the line after it the reading's to read — red (NL1): the
+  // names "Ann Able" and "Jr. Bob Baker"; off holds both lines in one name, a `merged_creators` Error)
+  let (log, xml) = run(
+    "\\documentclass{article}\n\\newcommand\\nlx{\\mbox{Jr.}\\\\}\n\\begin{document}\n\\title{T}\n\\author{Ann \
+     Able~\\nlx Bob Baker}\n\\maketitle\nx\n\\end{document}\n",
+    2,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [vec![
+    "Ann Able Jr.",
+    "affiliation=Bob Baker"
+  ]]);
 }

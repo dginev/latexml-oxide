@@ -646,7 +646,10 @@ fn a_creator_read_by_its_words_is_given_back() {
 /// 1909.05311's shape: four names written, the observatory given back with its entry). Distinct paths: the plan's
 /// `same`, the plan's write, the re-part's write. Since NL1 the reading itself reads each marked observatory as a
 /// name, as the old reader's generic split does (rule table RT3 rows N1-N3, `lines::marked_name`): today's creators are
-/// the reading's, and a give-back with marks arises only from a per-author class's line, no fixture here.
+/// the reading's. A per-author class's line (revtex, IEEEtran) still takes it for an institution, but today's keeps
+/// that line one creator and the writer declines ("names differ"), so the give-back of trailing marks has no live
+/// shape left; the concession's live branch with a mark is a prefix mark's, its ink in doubt — the writer writes
+/// nothing, today's stays (`piece_ink`; review revNL1 S4, the twin below).
 #[test]
 fn a_conceded_creator_keeps_its_marks() {
   let tex = repro!("author_names_conceded_creator_keeps_its_marks.tex");
@@ -705,6 +708,20 @@ fn a_conceded_creator_keeps_its_marks() {
     "  a Univ Y | ruling1:request",
   ]);
   assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(default_mode_creators(tex), owned(xml));
+  // (the prefix mark's twin: the reading's institution, its ink in doubt, today's creators kept)
+  let tex = repro!("author_names_conceded_creator_prefix_mark_in_doubt.tex");
+  let xml: &[&[&str]] = &[&["Ann Able", "affiliation=Univ X"], &[
+    "Kitt Peak Observatory",
+    "affiliation=Univ Y",
+  ]];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able [1,2] | line:names",
+    "  a Kitt Peak Observatory | line:names classify:institution",
+    "  a Univ X | ruling1:request",
+    "  a Univ Y | ruling1:request",
+  ]);
+  assert_eq!(reading.3, Value::from("declined: a conceded creator's ink"));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
@@ -961,24 +978,40 @@ fn a_cells_font_reset_is_no_author() {
 }
 
 /// The writer cuts no author from a row of today's name on no structure (review rev94a r5 t06's mirror of the person
-/// no item is made of; `repart::opens_a_row_under_no_names`): a row the reading reads as names after a labelled line
-/// (`$^1$Univ X,\\ \bf City Z`) is an author only under a names row that ends with the name before it, or with a mark
-/// or a note of its own — a line ending with an institution is none: today's one creator stays (94a r5 wrote "City Z"
-/// an author). The supported side: `Ann Able, Bob Baker,\\ Cid Cole` is three authors (2407.03321's `\quad`-parted
-/// rows).
+/// no item is made of; `repart::opens_a_row_under_no_names`): a row the reading reads as names after a line of two
+/// labelled entries (`$^1$Univ X, $^2$Univ Y,\\ \bf City Z`) is an author only under a names row that ends with the
+/// name before it, or with a mark or a note of its own — a line ending with an institution is none: today's one creator
+/// stays (94a r5 wrote "City Z" an author). Under one entry (`$^1$Univ X,\\ \bf City Z`) the reading continues the
+/// entry, the old reader's N5 (decision K; 2501.04046, hep-ph0511130), and the writer declines the person it made an
+/// item of. The supported side: `Ann Able, Bob Baker,\\ Cid Cole` is three authors (2407.03321's `\quad`-parted rows).
 #[test]
 fn a_name_cut_from_a_row_needs_a_names_row() {
   let tex = repro!("author_names_tabular_row_after_an_institution_is_no_author.tex");
   let reading = assert_reading(tex, None, &[
     "C Ann Able [1] | line:names",
-    "  a Univ X | ruling1:request",
-    "C City Z [] | line:names",
+    "  a Univ X City Z | ruling1:request line:continued",
   ]);
   assert_eq!(reading.0.len(), 1, "today's one creator: {:?}", reading.0);
   assert_eq!(reading.0[0].len(), 1, "no item: {:?}", reading.0);
   assert_eq!(tabular_cells(&default_mode_xml(tex)), [
     "Ann Able 1",
     "1 Univ X,",
+    "City Z"
+  ]);
+  assert_eq!(default_mode_creators(tex), reading.0);
+  let tex = repro!("author_names_tabular_row_after_two_entries_is_no_author.tex");
+  let reading = assert_reading(tex, None, &[
+    "C Ann Able [1] | line:names",
+    "  a Univ X | ruling1:request",
+    "C Bob Baker [2] | line:names",
+    "  a Univ Y | ruling1:request",
+    "C City Z [] | line:names",
+  ]);
+  assert_eq!(reading.0.len(), 1, "today's one creator: {:?}", reading.0);
+  assert_eq!(reading.0[0].len(), 1, "no item: {:?}", reading.0);
+  assert_eq!(tabular_cells(&default_mode_xml(tex)), [
+    "Ann Able 1 Bob Baker 2",
+    "1 Univ X, 2 Univ Y,",
     "City Z"
   ]);
   assert_eq!(default_mode_creators(tex), reading.0);
