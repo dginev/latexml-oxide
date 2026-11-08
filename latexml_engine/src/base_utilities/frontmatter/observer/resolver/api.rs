@@ -312,6 +312,16 @@ impl Resolver {
       })
       .collect();
     if tag == "ltx:creator" {
+      // (the e-mails and ORCIDs its commands declare, `\email`, `\orcid`, are contacts of its creator, not its name, as
+      // `\lx@add@email` makes them; a link is the name's text as today's, `\href{https://orcid.org/…}{\usebox{\orcid}
+      // Nils~Bochow}`, 2507.22485)
+      let own_contact = |e: &Event| {
+        e.kind == EventKind::Contact
+          && matches!(e.role.as_deref(), Some("email" | "orcid"))
+          && !contact_parts(e).1.is_empty()
+      };
+      let named: Vec<&Event> = refs.iter().copied().filter(|e| !own_contact(e)).collect();
+      let text = events_text(&named);
       // (its `annotations=`, and the marks its name shows — ruling 1: `\author{Ann Able$^{1}$}` under acmart requests
       // 1, as a block's names line reads it; 2202.06129's shape)
       let requests: Vec<String> = attr_value(attrs, "annotations")
@@ -349,7 +359,21 @@ impl Resolver {
         self
           .class_requests
           .extend(class.into_iter().map(|l| (start, l)));
-        self.new_creator(text, "api:creator", index, requests, index);
+        let made = self.new_creator(text, "api:creator", index, requests, index);
+        // (the call's nested notes and contacts are its creator's: Perl's `\lx@add@author[]{}` digests the whole call
+        // into its `ltx:creator`, `{\lx@personname{#2}}` — "the name can contain much more than just the name"
+        // (Base_Utility.pool.ltxml:585-589) —, so a `\thanks` there is a note of that creator; the reading attaches
+        // it, and the emitter writes it with the creator (2505.09041's `\author{Craig M$^{\mathrm{c}}$Rae\thanks{…}}`,
+        // lost at `LATEXML_FM_EMIT=2`))
+        for event in events {
+          match event.kind {
+            EventKind::Note => self.note(index, event, Some(made), "note:adjacent"),
+            EventKind::Contact if own_contact(event) => {
+              self.contact_event(index, event, &[made], "api:creator owner:own-call")
+            },
+            _ => {},
+          }
+        }
         if policy.thenote {
           self.thenote_author(
             start,
