@@ -32604,5 +32604,27 @@ current author (Perl's `\lx@add@email`), so it is the note owner's e-mail, not a
 2026-10-20 #4), which the written note printed nowhere; a guess the fallback class locks is the binding's meaning (OmniBus's
 `\email`, `\email:locked`, OD #408, `ledger::email_meaning`): 2511.14713's siamart `\thanks{…, \email{wning@vt.edu},
 \email{amiedlar@vt.edu}.}`, both addresses Ning Wan's as off and Perl. Off: byte-identical. Guard `perfect_kernel_batchlo4`.
+*Switch-off mechanisms ported* (P2), each with the switch on alone, the switch-off code the spec: (C) cas's one unlabelled
+`\affiliation` (`_share=authors,annotate=run`, `cas_labelled_entry`) is every author's, before it and after it, as
+`shared_row::share_row_contacts` shares it when it is the queue's only one (`Resolver::sole_shared_run`, answered in
+`answer_pending`): the reading gave it to its run, the first author (2506.17280, 2106.02306, 2201.00009, 2207.13923,
+2411.19633, 2606.24054). (NT) A role note is the note the switch-off output writes: a `\thanks` whose text opens with a mark
+the names request is an affiliation entry only where `\lx@add@thanks` makes it one (a number in a superscript, OD #52: the
+leading Mark of role `sup`/`math` printing digits), never a `\footnote` (`\lx@add@note`); any other is its mark's carriers'
+legend note (`Resolver::keep_note`, `writer::emit::item_call`'s `an_entry`) — `\thanks{\IEEEauthorrefmark{2} Also with …}`
+(1107.5730), `\thanks{$\diamond$ Work conducted during an internship …}` (2205.02029), elsarticle's
+`\footnote{\textsuperscript{1}These authors contributed equally …}` (2110.12892); with two carriers of the mark the note is both
+(the charter's symbol-line rule; off gives it to the note's owner alone). An entry the Kind step for a legend reads
+(`insert::kind_legend_contacts`, OD #961) carries the label that prints as `_labelprints`'s value: the call's `label=` its binding
+prints (authblk's `\affil[*]{Corresponding author …}`, 2605.31330, 2606.17567, 2201.11910, 2602.03863, 2605.11756), which the
+emitter's routing label replaced (`writer::emit::rekeyed`), or the first mark an emitted entry's content printed
+(`\lx@sup@setlabel@affiliation`'s record on the digested stub, `frontmatter_api.rs`), read by `insert::legend_mark`; a legend
+whose address the reading left in its text (2605.31330's `(Email: t.han@tees.ac.uk), Le Hong Trang`, 2411.08381's
+`Correspondence to: a and b`) waits for the address cut (E1). (B) A name whose font wrapper holds its mark or note
+(`\textbf{Yan Yan$^{1}$\thanks{…}}`) is written from its own tokens in the wrapper's font (`writer::emit::event_run`): the whole
+cover kept the answered mark on the name and wrote the note twice (2309.13682, 2212.02936, 2305.16982, 1310.2822, 2503.17340);
+the note is now the reading's, once, not bold (the PDF's footnote font). The same cause where the name's tokens cannot be cut
+(`\newcommand{\ann}{Ann Able\thanks{…}}`, one token for both events, review revLO4): the note its tokens print is digested
+with the name and not written again (`block_names`' `on_names`). Off: byte-identical. Guard `perfect_kernel_batchfmp2`.
 
 Guards `perfect_kernel_batchz4`.

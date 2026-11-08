@@ -777,17 +777,22 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       return Ok(Vec::new());
     }
     // Reset if changed (eg. by \lx@set@frontmatter@label during digestion)!
-    let stub_label = with_value("frontmatter", |v| {
-      if let Some(Stored::HashTagData(frnt)) = v {
-        frnt.get(&parenttag)
-          .and_then(|l| l.get(stub_idx))
-          .and_then(|e| e.attr.get("_annotations"))
-          .cloned()
+    // (and the mark an entry the frontmatter emitter writes printed: `\lx@sup@setlabel@affiliation`'s record on the stub,
+    // which the Kind step for a legend reads — OD #980, P2 NT; none off)
+    let (stub_label, printed) = with_value("frontmatter", |v| {
+      if let Some(Stored::HashTagData(frnt)) = v
+        && let Some(e) = frnt.get(&parenttag).and_then(|l| l.get(stub_idx))
+      {
+        (e.attr.get("_annotations").cloned(), e.attr.get(LABEL_PRINTS).cloned())
       } else {
-        None
+        (None, None)
       }
-    }).unwrap_or_default();
+    });
+    let stub_label = stub_label.unwrap_or_default();
     options.insert("_label".to_string(), stub_label.clone());
+    if let Some(printed) = printed {
+      options.entry(LABEL_PRINTS.to_string()).or_insert(printed);
+    }
     let datum = if preformatted {
       TagContent::Box(xcontent)
     } else {

@@ -1234,7 +1234,27 @@ impl Resolver {
         })
     {
       let symbol = labels.iter().all(|l| is_symbol_label(l));
-      let role = if is_legend_text(&legend) || symbol {
+      // (with the emitter's switch on: an affiliation only where the switch-off API makes the note one — a `\thanks`
+      // opening with a number in a superscript, `\lx@add@thanks`'s `starts_with_affiliation_mark` (OXIDIZED_DESIGN #52),
+      // here the note's leading Mark of a superscript printing digits; never a `\footnote`, which `\lx@add@note` keeps
+      // a note. Any other is a note of its mark's carriers: `\thanks{\IEEEauthorrefmark{2} Also with …}`, 1107.5730;
+      // `\thanks{$\diamond$ Work conducted during an internship …}`, 2205.02029 — P2 NT)
+      let numbered = || {
+        !note.footnote
+          && note
+            .inner
+            .iter()
+            .find(|e| e.kind == EventKind::Mark && e.line_first)
+            .is_some_and(|mark| {
+              mark
+                .role
+                .as_deref()
+                .is_some_and(|r| r.starts_with("sup") || r.starts_with("math"))
+                && !mark.text.is_empty()
+                && mark.text.chars().all(|c| c.is_ascii_digit() || c == ',')
+            })
+      };
+      let role = if is_legend_text(&legend) || symbol || (self.emitting && !numbered()) {
         "legend"
       } else {
         "affiliation"

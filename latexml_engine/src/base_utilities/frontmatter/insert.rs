@@ -652,7 +652,7 @@ fn legend_mark(document: &mut Document, contact: &Node, named_creators: &[Node])
     .or_else(|| {
       // (each key, and whether a printed mark gave it: an `affiliation:K` label not of the entry's place)
       let place = contact.get_attribute(SEQUENCE_LABEL).unwrap_or_default();
-      let keys: Vec<(String, bool)> =
+      let mut keys: Vec<(String, bool)> =
         clean_frontmatter_labels(&contact.get_attribute("_label")?, "")
           .into_iter()
           .filter_map(|label| match label.split_once(':') {
@@ -663,7 +663,21 @@ fn legend_mark(document: &mut Document, contact: &Node, named_creators: &[Node])
           .filter(|(key, _)| !key.is_empty())
           .collect();
       let creator = contact.get_parent()?;
-      let prints = contact.get_attribute(LABEL_PRINTS).is_some();
+      let printed_label = contact.get_attribute(LABEL_PRINTS);
+      let prints = printed_label.is_some();
+      // (an entry the frontmatter emitter wrote is placed by the reading's label, so the label that prints is the key's
+      // value: the call's `label=` its binding prints (authblk's `\affil[*]`, 2605.31330), or the first mark the entry's
+      // content printed (`\thanks{\textsuperscript{1}These authors contributed equally …}`); OD #980, P2 NT)
+      if let Some(printed) = printed_label.filter(|v| v != "true") {
+        keys.splice(
+          0..0,
+          clean_frontmatter_labels(&printed, "")
+            .into_iter()
+            .map(|label| label_key(label.split_once(':').map_or(label.as_str(), |(_, key)| key)))
+            .filter(|key| !key.is_empty())
+            .map(|key| (key, true)),
+        );
+      }
       let named = element_nodes(&creator)
         .iter()
         .any(|child| child.get_name() == "personname");

@@ -473,6 +473,12 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "const _labelprints base_utilities/author_block/affiliations.rs",
     1,
   ),
+  // (P2: the same key, OD #961's, named where the emitter carries its value — the label that prints — past the reading's
+  // label, a constant of its own rather than the old reader's symbol, which the one-engine fence keeps out of frontmatter/)
+  (
+    "const _labelprints base_utilities/frontmatter/observer/writer/emit.rs",
+    1,
+  ),
   ("const _late base_utilities/frontmatter/cover_order.rs", 1),
   (
     "const _late_mark base_utilities/frontmatter/cover_order.rs",
