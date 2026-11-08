@@ -6,11 +6,15 @@
 //! tabular juggle (`a_tabular_juggle_is_a_row_break`), the reading's pre-pass of a trailing alignment environment
 //! (`a_trailing_alignment_environment_is_lines_under_the_names`), the rehearsal's text-mode note and the emitter's note
 //! call in a formula (`a_note_in_a_formula_keeps_its_words`), and the reading's block-shared URL decided at the block's
-//! end (`a_url_line_under_every_name_is_the_blocks`).
+//! end (`a_url_line_under_every_name_is_the_blocks`). Batch FB2b1 (review revFB2a finding 1): the juggle predicate
+//! itself, a macro only closing a tabular (`a_macro_closing_a_tabular_is_no_juggle`).
 
 use latexml::util::test::{error_count, warning_count};
 
-use super::perfect_kernel_batchz4::{creators_xml, run};
+use super::{
+  perfect_kernel_batch84b::creators,
+  perfect_kernel_batchz4::{ENVIRONMENT_SHAPE, creators_xml, environment_row, run},
+};
 
 macro_rules! repro {
   ($name:literal) => {
@@ -151,3 +155,30 @@ fn a_url_line_under_every_name_is_the_blocks() {
   assert_eq!(urls, [true, true, false], "{two:#?}");
   assert_eq!(two, off);
 }
+
+/// A juggle reopens the tabular it closes: a macro that only closes one (`\newcommand{\etab}{\end{tabular}}`, closing the
+/// block's own `\begin{tabular}`) keeps its meaning at `=2` — bound to a row break, it left the block's tabulars open and
+/// Bob Baker with both affiliations lost (review revFB2a finding 1). In any rehearsal, an API call's too: revtex's
+/// `\affiliation{… \bx a&b\\ c&d\ex …}`, whose `\ex` closes the tabular `\bx` opened (z4's row, here at `=2`). Distinct
+/// from `a_tabular_juggle_is_a_row_break`: the predicate's other side. (Off, the old driver's looser test, errs on the
+/// first shape, E 4: kept until the flip.)
+#[test]
+fn a_macro_closing_a_tabular_is_no_juggle() {
+  let (log, xml) = run(repro!("author_tabular_close_macro_is_no_juggle"), 2);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let expected = vec![
+    vec!["Ann Able".to_string(), "affiliation=Univ A".to_string()],
+    vec!["Bob Baker".to_string(), "affiliation=Univ B".to_string()],
+  ];
+  assert_eq!(creators(&xml), expected, "{xml}");
+  let text = "1 Univ X a b c d";
+  let (log, xml) = run(&environment_row(ENVIRONMENT_SHAPE, text), 2);
+  assert_eq!(error_count(&log), 0, "{log}");
+  let expected = vec![vec![
+    "Ann Able".to_string(),
+    format!("affiliation={text}"),
+    "affiliation=2 Univ Y".to_string(),
+  ]];
+  assert_eq!(creators(&xml), expected, "{xml}");
+}
+

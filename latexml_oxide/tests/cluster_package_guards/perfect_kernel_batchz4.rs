@@ -245,7 +245,7 @@ fn the_whole_block_queue_still_reads() {
 }
 
 /// The shape of `affiliation_cut_environments_by_spelling_red` each row of [`ENVIRONMENT_ROWS`] replaces.
-const ENVIRONMENT_SHAPE: &str = "\\bx a&b\\\\ c&d\\ex";
+pub(super) const ENVIRONMENT_SHAPE: &str = "\\bx a&b\\\\ c&d\\ex";
 
 /// The environments of a cut's piece, each row a spelling and the entry it is in: a macro pair, `\\let` copies, a `\\begin` under `\\detokenize` or `\\ifx` (review
 /// revZ3r2); an `{array}` a formula holds, a `{tabular}`, a `\\newenvironment` around one or around a `{center}` (review revZ4a).
@@ -268,7 +268,7 @@ const ENVIRONMENT_ROWS: &[(&str, &str)] = &[
 ];
 
 /// The template with `row` in place of its shape, the template's `X` kept where the entry `text` prints it before the row.
-fn environment_row(row: &str, text: &str) -> String {
+pub(super) fn environment_row(row: &str, text: &str) -> String {
   let template = repro!("affiliation_cut_environments_by_spelling_red");
   assert!(template.contains(ENVIRONMENT_SHAPE));
   let template = if text.starts_with("1 Univ X ") {

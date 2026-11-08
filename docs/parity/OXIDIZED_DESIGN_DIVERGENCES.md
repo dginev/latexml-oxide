@@ -32643,11 +32643,13 @@ with the name and not written again (`block_names`' `on_names`). Off: byte-ident
 rewrites of OD #52 helped none and hurt three, digestion doing each one's job in a block nothing splits; the queued call's
 digestion had fed the reading a symbol mark (2608.19750's "*Corresponding author" glued into an affiliation, now Ayong Ye's
 note), and the gap of `\\[0.5cm]` (hep-ph0207056) and `\hspace{.1cm}` (hep-th0111116, 1511.05911) print as written. Four of
-those rules, ported: (1) a parameterless macro of an author block whose expansion closes the title page's tabular and
-opens another (`fallback::is_tabular_juggle`, the old `tabular_juggles_as_line_breaks`' own test: sig-alternate's
-`\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`) is bound in the rehearsal to its row break (`\lx@fm@obs@break`,
-as the old driver wrote `\\`; not in an API call's content, which the old rule never read: an `\affiliation`'s
-`\def\ex{\end{tabular}}` closes the tabular its `\bx` opened, `perfect_kernel_batchz4::an_environment_by_its_frames`): digested as defined it left a tabular open, its lines in no box, so the shared affiliation was
+those rules, ported: (1) a parameterless macro whose expansion closes the title page's tabular and opens another
+(`fallback::is_tabular_juggle`: sig-alternate's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`) is bound in
+the rehearsal to its row break (`\lx@fm@obs@break`, as the old driver wrote `\\`); a macro that only closes one keeps its
+meaning, in an author block and an API call's content alike (an `\author`'s `\etab` closing the block's own tabular,
+review revFB2a finding 1; an `\affiliation`'s `\def\ex{\end{tabular}}` closing the tabular its `\bx` opened,
+`perfect_kernel_batchz4::an_environment_by_its_frames`) — the old driver keeps its looser test, closing alone
+(`fallback::closes_a_tabular`), until the flip: digested as defined it left a tabular open, its lines in no box, so the shared affiliation was
 lost with no Warning — the content check counts only what the events hold (0712.1016, 1704.03168, 1301.5612; the raw
 juggle of 1401.6981 stays as it was in both engines); (2) an alignment environment opening after the names at the top
 level and ending the block is lines under them, a row Break before it and its container dropped as the old rule drops the

@@ -1014,7 +1014,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // by one at N2r2: `raw_lines`' break arm holding the `\and` family too, two lines, the whatsits' definitions, 2106.06418)
   ("events", 60),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with Perl's whole-block fallback and its preparation, kept as its own, 826 = 629 + 197; none added)
-  ("fallback", 197),
+  ("fallback", 196),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   // (Z4a, 4 -> 8: an environment step by its meaning, a CS whose definition is `\begin` or `\end`, a `\let` copy too, what no frame
   // says for a raw environment; the definition's name, not the token's spelling)

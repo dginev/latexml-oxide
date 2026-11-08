@@ -1401,25 +1401,45 @@ pub(in crate::base_utilities) fn trailing_alignment_environment_as_lines(tokens:
 /// A parameterless macro whose expansion closes the title page's tabular and opens another, not an author separator
 /// ([`author_and_splits`]): the ACM SIG template's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}` in `\author`
 /// (sig-alternate.cls:283's `\alignauthor` juggles the same way) prints a line break between the names above and the
-/// affiliation below (1704.03168, 1301.5612, 1401.6981, 0712.1016). Read by its meaning, whatever its name: the old
-/// driver writes it `\\` ([`tabular_juggles_as_line_breaks`]), the rehearsal binds it to the row break it is
-/// (`observer::rehearsal`).
+/// affiliation below (1704.03168, 1301.5612, 1401.6981, 0712.1016). Read by its meaning, whatever its name: the
+/// rehearsal binds it to the row break it is (`observer::rehearsal`). A macro that only closes one
+/// (`\newcommand{\etab}{\end{tabular}}`, closing a tabular the block opened itself) is no juggle.
 pub(in crate::base_utilities) fn is_tabular_juggle(t: &Token) -> bool {
+  tabular_close_rest(t)
+    .is_some_and(|rest| past_environment(&rest, T_CS!("\\begin"), "tabular").is_some())
+}
+
+/// The old driver's looser test, kept as it was until the switch flips (the switch-off output stays as it was): a
+/// macro whose expansion starts by closing a tabular, written `\\` ([`tabular_juggles_as_line_breaks`]).
+fn closes_a_tabular(t: &Token) -> bool { tabular_close_rest(t).is_some() }
+
+/// The rest of `body` past the environment command `cs` and the `{name}` group after it (`\end{tabular}`), if it
+/// starts with them.
+fn past_environment(body: &[Token], cs: Token, name: &str) -> Option<Vec<Token>> {
+  let (first, group) = body.split_first()?;
+  let (open, group) = group.split_first()?;
+  let close = group.iter().position(|t| t.get_catcode() == Catcode::END)?;
+  let spelled: String = group[..close].iter().map(|t| t.to_string()).collect();
+  (*first == cs && open.get_catcode() == Catcode::BEGIN && spelled == name)
+    .then(|| group[close + 1..].to_vec())
+}
+
+/// For a parameterless macro, not an author separator ([`author_and_splits`]), whose expansion starts with
+/// `\end{tabular}`: the rest of its expansion (spaces out).
+fn tabular_close_rest(t: &Token) -> Option<Vec<Token>> {
   if t.get_catcode() != Catcode::CS {
-    return false;
+    return None;
   }
-  let Ok(Some(defn)) = lookup_definition(t) else {
-    return false;
-  };
+  let defn = lookup_definition(t).ok()??;
   if !defn.is_expandable()
     || defn
       .get_parameters()
       .is_some_and(|p| !p.get_parameters().is_empty())
   {
-    return false;
+    return None;
   }
   let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
-    return false;
+    return None;
   };
   let body: Vec<Token> = body
     .unlist_ref()
@@ -1427,19 +1447,11 @@ pub(in crate::base_utilities) fn is_tabular_juggle(t: &Token) -> bool {
     .filter(|t| t.get_catcode() != Catcode::SPACE)
     .copied()
     .collect();
-  body.first() == Some(&T_CS!("\\end"))
-    && body
-      .get(1)
-      .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
-    && body[2..]
-      .iter()
-      .take_while(|t| t.get_catcode() != Catcode::END)
-      .map(|t| t.to_string())
-      .collect::<String>()
-      == "tabular"
-    && !author_and_splits()
+  past_environment(&body, T_CS!("\\end"), "tabular").filter(|_| {
+    !author_and_splits()
       .iter()
       .any(|s| matches!(s, SplitDelim::Token(d) if d == t))
+  })
 }
 
 /// An author block's parameterless macro whose expansion closes the title page's tabular and opens another — the ACM
@@ -1447,17 +1459,18 @@ pub(in crate::base_utilities) fn is_tabular_juggle(t: &Token) -> bool {
 /// (sig-alternate.cls:283's `\alignauthor` juggles the same way) — is the line break it prints between the names
 /// above and the affiliation below: digested, it closed a tabular no author block opens and left one open, whose
 /// lines (the shared affiliation) were lost (1704.03168, 1301.5612, 1401.6981, 0712.1016). The author separators
-/// (`\alignauthor`) stay for the splitter ([`is_tabular_juggle`], which the rehearsal binds to its row break).
+/// (`\alignauthor`) stay for the splitter. The old driver's test ([`closes_a_tabular`]) reads a macro closing a tabular
+/// alone as one too; the rehearsal binds a juggle only ([`is_tabular_juggle`]) to its row break.
 pub(in crate::base_utilities) fn tabular_juggles_as_line_breaks(tokens: Tokens) -> Tokens {
   let toks = tokens.unlist();
-  if !toks.iter().any(is_tabular_juggle) {
+  if !toks.iter().any(closes_a_tabular) {
     return Tokens::new(toks);
   }
   Tokens::new(
     toks
       .into_iter()
       .map(|t| {
-        if is_tabular_juggle(&t) {
+        if closes_a_tabular(&t) {
           T_CS!("\\\\")
         } else {
           t

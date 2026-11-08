@@ -418,20 +418,20 @@ const TITLE_FOOTNOTE_HOOK: &str = crate::latex_constructs::TITLE_THEFOOTNOTE;
 /// class's own `\thefootnote` (report's and book's title page: arabic) or the kernel `\maketitle`'s `\@fnsymbol` of the
 /// counter (when the format has it).
 ///
-/// First, a block's tabular juggle (`fallback::is_tabular_juggle`: `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`
+/// First, a tabular juggle (`fallback::is_tabular_juggle`: `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`
 /// in sig-alternate's `\author`, 0712.1016, 1704.03168) is the row break it prints between the names and the lines under
 /// them, as the old driver wrote it `\\` (`fallback::tabular_juggles_as_line_breaks`): digested as defined, it closed a
 /// tabular the line never opened and left one open, whose lines no box held — lost with no Warning, the content check
-/// reading only what the events hold. In an author block alone, as the old rule ran on author blocks only (an
-/// `\\affiliation`'s `\\def\\ex{\\end{tabular}}` closes the tabular its `\\bx` opened, `perfect_kernel_batchz4`), with the
-/// emitter's switch on (the switch-off output stays as it was until the flip); a command the binding declares a block break
-/// keeps its meaning.
+/// reading only what the events hold. A juggle reopens the tabular it closes, so a macro that only closes one (an
+/// `\\affiliation`'s `\\def\\ex{\\end{tabular}}` closing the tabular its `\\bx` opened, `perfect_kernel_batchz4`; an
+/// `\\author`'s `\\etab` closing the block's own) keeps its meaning, in any rehearsal; with the emitter's switch on (the
+/// switch-off output stays as it was until the flip); a command the binding declares a block break keeps its meaning.
 fn install_event_bindings(
   tokens: &Tokens,
   title_marks: TitleMarks,
   block_breaks: &[(&str, BreakKind)],
 ) -> Result<()> {
-  if in_block_content() && fm_emit_mode() == 2 {
+  if fm_emit_mode() == 2 {
     for t in tokens.unlist_ref() {
       let declared = || t.with_cs_name(|name| block_breaks.iter().any(|(cs, _)| *cs == name));
       if is_tabular_juggle(t) && !declared() {
