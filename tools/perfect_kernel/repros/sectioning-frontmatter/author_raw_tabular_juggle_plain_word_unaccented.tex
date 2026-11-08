@@ -2,6 +2,10 @@
 %            (`Muller`, spelled so, no accent read past: `ledger::content_text`) is no word of an accented print (the
 %            macro's `M\"uller`); base letters (`resolver::placed::reads_as`) are a word's that read past an accent
 % witness: 1401.6981 (the sig-alternate juggle's shape); synthetic, review revH1 finding 1 (probe h4h)
+% shape:   the juggle with a tie between (`\end{tabular}~\begin{tabular}{c}`), which the reading takes as written, not as
+%          a column (`rehearsal::inline_juggles_as_columns` steps over spaces and commands only; `~` is an active
+%          character), so the rehearsal still leaves the tabular open at `=2` (FS2: the plain juggle is a column since
+%          FB2b4-FB2b6, its words kept, `author_raw_tabular_juggle_is_a_column`)
 % oracle:  pdflatex: 0 errors; "A Müller", "Univ A", "Dept Muller"
 % engines: rust RC1e `=2`: E=0, one content-check Warning `c Dept tabular` (the lost "Muller" hidden)
 % expect:  "A Müller" kept; at `=2` one content-check Warning, `c Dept Muller tabular`
@@ -12,7 +16,7 @@
 \newcommand\auth{A M\"uller}
 \begin{document}
 \title{T}
-\author{\auth \\ Univ A \end{tabular}\begin{tabular}{c} Dept Muller}
+\author{\auth \\ Univ A \end{tabular}~\begin{tabular}{c} Dept Muller}
 \maketitle
 Text.
 \end{document}

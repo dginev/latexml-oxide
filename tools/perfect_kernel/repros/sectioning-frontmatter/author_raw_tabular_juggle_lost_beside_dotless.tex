@@ -2,6 +2,10 @@
 %            `fsica`, a dotless letter after its `f`) is the events' `física`, and the plain `Fisica` after it matches
 %            as spelled only, so it is lost and named (`resolver::placed::reads_as`, exact matches first)
 % witness: 1401.6981 (the sig-alternate juggle's shape); synthetic, review revH1 finding 4 (probe h4f)
+% shape:   the juggle with a tie between (`\end{tabular}~\begin{tabular}{c}`), which the reading takes as written, not as
+%          a column (`rehearsal::inline_juggles_as_columns` steps over spaces and commands only; `~` is an active
+%          character), so the rehearsal still leaves the tabular open at `=2` (FS2: the plain juggle is a column since
+%          FB2b4-FB2b6, its words kept, `author_raw_tabular_juggle_is_a_column`)
 % oracle:  pdflatex: 0 errors; "A One", "Física", "Dept Fisica"
 % engines: rust RC1e `=2`: E=0, one content-check Warning `c Dept Fsica tabular` (the wrong word named)
 % expect:  "A One Física" kept; at `=2` one content-check Warning, `c Dept Fisica tabular`
@@ -11,7 +15,7 @@
 \usepackage[utf8]{inputenc}
 \begin{document}
 \title{T}
-\author{A One \\ F\'{\i}sica \end{tabular}\begin{tabular}{c} Dept Fisica}
+\author{A One \\ F\'{\i}sica \end{tabular}~\begin{tabular}{c} Dept Fisica}
 \maketitle
 Text.
 \end{document}

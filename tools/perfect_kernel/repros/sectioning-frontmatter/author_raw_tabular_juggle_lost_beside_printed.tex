@@ -1,6 +1,10 @@
 % mechanism: the content check's word matching where a block's rehearsal left a group open: content words match the
 %            block's print as spelled first, so the Warning names the lost word, not a printed one a letter apart
 % witness: 1401.6981 (the sig-alternate juggle's shape); synthetic, review revH1 finding 4 (probe h4d)
+% shape:   the juggle with a tie between (`\end{tabular}~\begin{tabular}{c}`), which the reading takes as written, not as
+%          a column (`rehearsal::inline_juggles_as_columns` steps over spaces and commands only; `~` is an active
+%          character), so the rehearsal still leaves the tabular open at `=2` (FS2: the plain juggle is a column since
+%          FB2b4-FB2b6, its words kept, `author_raw_tabular_juggle_is_a_column`)
 % oracle:  pdflatex: 0 errors; "Lian Wu", "Univ A", "Dept Lan"
 % engines: rust RC1e `=2`: E=0, one content-check Warning `c Dept Lian tabular` (the printed word named)
 % expect:  "Lian Wu" kept; at `=2` one content-check Warning, `c Dept Lan tabular`
@@ -10,7 +14,7 @@
 \usepackage[utf8]{inputenc}
 \begin{document}
 \title{T}
-\author{Lian Wu \\ Univ A \end{tabular}\begin{tabular}{c} Dept Lan}
+\author{Lian Wu \\ Univ A \end{tabular}~\begin{tabular}{c} Dept Lan}
 \maketitle
 Text.
 \end{document}

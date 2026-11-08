@@ -1,0 +1,20 @@
+% mechanism: a juggle with a skip between whose amount is no braced argument (`\end{tabular}\hskip 1em\begin{tabular}{c}`)
+%            is no column: the reading's scan steps over spaces and commands with their `[…]`/`{…}` arguments only
+%            (`rehearsal::inline_juggles_as_columns`), so `1em` stops it, the juggle is read as written and the rehearsal
+%            leaves the reopened tabular open (`rehearsal::Rehearsal::Done::left_open`); the content check counts the words
+%            of the block's content text its events lack (`resolver::placed::content_check`, FS1): "Univ B", with the
+%            environment names and the skip's `1em`
+% witness: 1401.6981 (the sig-alternate juggle's shape); synthetic, review revH1 h3e
+% oracle:  pdflatex: 0 errors; "A One", "Univ A" then the column "Bob Two", "Univ B"
+% engines: rust FB2b6 `=2` (no FS1 count on that branch): E=0, Bob Two A One's affiliation, "Univ B" lost, no
+%          content-check Warning; int150a (FS1 beside FB2b6) `=2`: the same reading, the loss counted
+% expect:  at `=2` one content-check Warning, `1em B c tabular Univ`; the reading stays RED
+% status:  GREEN for the count (perfect_kernel_batchfs1::an_open_group_rehearsals_words_are_counted); RED for the reading
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{A One \\ Univ A \end{tabular}\hskip 1em\begin{tabular}{c} Bob Two \\ Univ B}
+\maketitle
+Text.
+\end{document}
