@@ -253,11 +253,11 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
           separated = events
             .iter()
             .map(|e| match e.span {
-              Some(span)
+              Some(_)
                 if e.kind == EventKind::Name
                   && placed
                     .dropped
-                    .contains(&(index, span, e.text.trim().to_lowercase())) =>
+                    .contains(&(index, e.span, e.text.trim().to_lowercase())) =>
               {
                 let mut sep = Event::new(EventKind::Sep(SepKind::Word(e.text.trim().to_string())));
                 sep.span = e.span;

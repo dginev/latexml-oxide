@@ -1,0 +1,14 @@
+% witness: 1610.05419 (compsoc IEEEtran, `\IEEEauthorrefmark`, a `\thanks` ending `E-mails: ann@… and bob@….`): the take-out's cut words that are no address's — the label, the "and" between the two addresses — are the reading's rule-drops, written for the checks
+% oracle:  pdflatex 0 errors: three names, two notes, the second's address after "E-mail:"
+% engines: Perl: not run; ours before CK2 three creators, 0 Warnings; at CK2: a fourth, nameless creator repeating the entry, 3 Warnings (the stranded "and" counted unwritten: review revI1 1)
+% expect:  0 errors, 0 warnings off and at =2; three creators, each its affiliation and e-mail (perfect_kernel_batchck2b::a_take_out_writes_every_word_it_cuts)
+% status:  GREEN (CK2b)
+\documentclass[10pt,journal,compsoc]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~Able\IEEEauthorrefmark{1}, Bob~Baker\IEEEauthorrefmark{1} and~Cy~Dee\IEEEauthorrefmark{2}
+\thanks{\IEEEauthorrefmark{1}The authors are with the Dept of Physics, Univ of X, Town, USA, E-mails: ann.able@x.org and bob.baker@x.org.}
+\thanks{\IEEEauthorrefmark{2}The author is with Univ of Y, E-mail: cy.dee@y.org.}}
+\maketitle
+Text.
+\end{document}

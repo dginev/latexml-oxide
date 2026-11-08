@@ -256,6 +256,9 @@ impl Written {
       write(c.source, &c.name);
       names.entry(c.source).or_default().push((i, c.name.clone()));
     }
+    for (at, _, word) in &resolved.drops {
+      write(*at, word);
+    }
     // (an item as often as one holder holds it: a copy each owner holds counts once, two in one holder twice, 2607.00684's
     // `mtablo@postech.ac.kr` written twice for the block)
     let mut items: BTreeMap<(Source, &str, &str), usize> = BTreeMap::new();
