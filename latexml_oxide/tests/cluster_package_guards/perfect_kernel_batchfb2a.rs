@@ -8,7 +8,8 @@
 //! call in a formula (`a_note_in_a_formula_keeps_its_words`), and the reading's block-shared URL decided at the block's
 //! end (`a_url_line_under_every_name_is_the_blocks`). Batch FB2b1 (review revFB2a findings 1, 3): the juggle predicate
 //! itself, a macro only closing a tabular (`a_macro_closing_a_tabular_is_no_juggle`), and the block links' institution
-//! exception (`a_link_printing_an_institution_is_every_names`).
+//! exception (`a_link_printing_an_institution_is_every_names`). Batch FB2b4: the juggle written inline
+//! (`an_inline_tabular_juggle_is_a_column`).
 
 use latexml::util::test::{error_count, warning_count};
 
@@ -211,4 +212,36 @@ fn a_link_printing_an_institution_is_every_names() {
     assert!(!creator.contains("role=\"url\""), "{creator}");
   }
   assert_eq!(two, off);
+}
+
+/// Batch FB2b4: the juggle written inline in `\author`, `\end{tabular}\begin{tabular}[t]{c}` between two authors, is the
+/// column sig-alternate's `\alignauthor` is: at `=2` the rehearsal left the reopened tabular open and Bob Two with Univ
+/// B in no box, lost with no Warning (1401.6981, authors 2 and 3). With a line break printed between
+/// (`\end{tabular}\newline\begin{tabular}{c}`) that break stands, the line under it the author's. Distinct from
+/// `a_tabular_juggle_is_a_row_break`: the written form, read off the tokens (`rehearsal::inline_juggles_as_columns`),
+/// not a macro's meaning. (Off, the old driver's, errs E 4: kept until the flip.)
+#[test]
+fn an_inline_tabular_juggle_is_a_column() {
+  let tex = repro!("author_raw_tabular_juggle_is_a_column");
+  let (log, xml) = run(tex, 2);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let expected = vec![
+    vec!["A One".to_string(), "affiliation=Univ A".to_string()],
+    vec!["Bob Two".to_string(), "affiliation=Univ B".to_string()],
+  ];
+  assert_eq!(creators(&xml), expected, "{xml}");
+  let newline = tex.replacen(
+    "\\end{tabular}\\begin{tabular}[t]{c} Bob Two\\\\ Univ B",
+    "\\end{tabular}\\newline\\begin{tabular}{c} Dept",
+    1,
+  );
+  assert_ne!(newline, tex);
+  let (log, xml) = run(&newline, 2);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let expected = vec![vec![
+    "A One".to_string(),
+    "affiliation=Univ A".to_string(),
+    "affiliation=Dept".to_string(),
+  ]];
+  assert_eq!(creators(&xml), expected, "{xml}");
 }

@@ -1418,12 +1418,21 @@ fn closes_a_tabular(t: &Token) -> bool { tabular_close_rest(t).is_some() }
 /// The rest of `body` past the environment command `cs` and the `{name}` group after it (`\end{tabular}`), if it
 /// starts with them.
 fn past_environment(body: &[Token], cs: Token, name: &str) -> Option<Vec<Token>> {
+  environment_call_len(body, cs, name).map(|len| body[len..].to_vec())
+}
+
+/// How many tokens the environment command `cs` and the `{name}` group after it (`\end{tabular}`) take, if `body`
+/// starts with them.
+pub(in crate::base_utilities) fn environment_call_len(
+  body: &[Token],
+  cs: Token,
+  name: &str,
+) -> Option<usize> {
   let (first, group) = body.split_first()?;
   let (open, group) = group.split_first()?;
   let close = group.iter().position(|t| t.get_catcode() == Catcode::END)?;
   let spelled: String = group[..close].iter().map(|t| t.to_string()).collect();
-  (*first == cs && open.get_catcode() == Catcode::BEGIN && spelled == name)
-    .then(|| group[close + 1..].to_vec())
+  (*first == cs && open.get_catcode() == Catcode::BEGIN && spelled == name).then_some(close + 3)
 }
 
 /// For a parameterless macro, not an author separator ([`author_and_splits`]), whose expansion starts with
