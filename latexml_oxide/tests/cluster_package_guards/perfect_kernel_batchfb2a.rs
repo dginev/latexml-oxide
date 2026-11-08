@@ -11,7 +11,8 @@
 //! exception (`a_link_printing_an_institution_is_every_names`). Batch FB2b4: the juggle written inline
 //! (`an_inline_tabular_juggle_is_a_column`). Batch FB2b5 (review revG3 finding 1, 2, Q3): the reading's shared column,
 //! both spellings (`a_nameless_column_after_the_names_is_every_names`), and the reopen's scan over a command's arguments
-//! (`a_juggle_judges_the_command_between_by_what_it_prints`).
+//! (`a_juggle_judges_the_command_between_by_what_it_prints`). Batch FB2b7: a team's column
+//! is no shared affiliation (`a_team_column_is_no_shared_affiliation`).
 
 use latexml::util::test::{error_count, warning_count};
 
@@ -320,4 +321,50 @@ fn a_juggle_judges_the_command_between_by_what_it_prints() {
   ];
   assert_eq!(between("\\vspace{2mm}"), ((0, 0), columns.clone()));
   assert_eq!(between("\\mbox{Extra Words}"), ((0, 2), columns));
+}
+
+/// A column after the names that reads as a collaboration or a team — whole, or as the remark on a name speaking for
+/// it — is no shared affiliation (`resolver::blocks` `names_collaboration`, the old reader's `reads_as_collaboration`):
+/// at `=2` on int150a, iau's `\and \\the Solar Orbiter EPD and Parker Solar Probe ISIS teams` (2408.02330) and raa's
+/// `\and Shuang-Nan Zhang\inst{23} on behalf of the \textit{SVOM} collaboration\inst{24}.` (2607.01090) were every
+/// author's affiliation (bundle int150a's `=2` stage). The team keeps the reading's own (int149a's) collaboration; the
+/// remark its name's creator with the collaboration contact, as off. Distinct from
+/// `a_nameless_column_after_the_names_is_every_names`: the exclusion from the shared column, both its tests.
+#[test]
+fn a_team_column_is_no_shared_affiliation() {
+  let tex = repro!("author_team_column_is_no_shared_affiliation");
+  let names = vec![vec!["Ann Able 1".to_string()], vec![
+    "Bob Baker 2".to_string(),
+  ]];
+  let (log, xml) = run(tex, 2);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let read = creators(&xml);
+  assert_eq!(read[..2], names[..], "{xml}");
+  let rest: Vec<&String> = read[2..].iter().flatten().collect();
+  assert!(
+    rest.iter().all(|item| !item.starts_with("affiliation=")),
+    "{xml}"
+  );
+  let words: Vec<&str> = rest
+    .iter()
+    .flat_map(|item| item.rsplit('=').next().unwrap_or("").split_whitespace())
+    .collect();
+  // (the team's words kept; how the reading parts them at its "and" is the names line's, no part of this guard)
+  for word in ["ATLAS", "CMS", "teams"] {
+    assert!(words.contains(&word), "{xml}");
+  }
+  let remark = tex.replacen(
+    "\\and \\\\the ATLAS and CMS teams",
+    "\\and Cat Cole$^3$ on behalf of the \\textit{XYZ} collaboration$^4$.",
+    1,
+  );
+  assert_ne!(remark, tex);
+  let (log, xml) = run(&remark, 2);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let mut expected = names;
+  expected.push(vec![
+    "Cat Cole 3".to_string(),
+    "collaboration=on behalf of the XYZ collaboration".to_string(),
+  ]);
+  assert_eq!(creators(&xml), expected, "{xml}");
 }

@@ -302,11 +302,16 @@ impl Resolver {
       // \begin{tabular}{c}`, a column, `observer::rehearsal`) under its `\alignauthor` columns, the PDF centring it under
       // all of them — 0712.1016, 1704.03168, the last author's alone before; written inline, `A One \and Bob Two
       // \end{tabular}\begin{tabular}{c} Univ Shared`, "Univ Shared" a third creator, review revG3 findings 1 and Q3)
+      // (a column naming a collaboration or a team, whole or as the remark on a name speaking for it, is none — the
+      // old reader's collaboration reading, `reads_as_collaboration`, keeps it as the line reads: `\and \\the Solar
+      // Orbiter EPD and Parker Solar Probe ISIS teams`, 2408.02330; `\and Shuang-Nan Zhang\inst{23} on behalf of the
+      // \textit{SVOM} collaboration\inst{24}.`, 2607.01090 — each every author's affiliation before)
       let shared_column = column_first
         && line.column > 0
         && last_named.is_some_and(|named| line.column > named)
         && self.out.creators.len() > block_creators_start
-        && is_institution(&events_text(&line.events));
+        && is_institution(&events_text(&line.events))
+        && !names_collaboration(&events_text(&line.events));
       if shared_column {
         let every: Vec<usize> = (block_creators_start..self.out.creators.len()).collect();
         run_above.push((line.column, every.clone()));
@@ -1552,3 +1557,13 @@ fn numbered_thanks(note: &Event) -> bool {
 
 /// One entry of a marked `\thanks` the reading cuts ([`Resolver::keep_note`]): its mark's labels, its text, its own span.
 type MarkedEntry = (Vec<String>, String, Option<(u16, u16)>);
+
+/// Whether a line's text names a collaboration or a team, as the old reader's collaboration reading reads one
+/// ([`reads_as_collaboration`]): whole (`the Solar Orbiter EPD and Parker Solar Probe ISIS teams`, 2408.02330) or as
+/// the remark a name speaks for ([`remark_start`]: `Shuang-Nan Zhang on behalf of the SVOM collaboration .`, the mark
+/// after it taken out, 2607.01090) — the punctuation closing the line no part of the name.
+fn names_collaboration(text: &str) -> bool {
+  let t = text.trim_end_matches(|c: char| c.is_whitespace() || ".,;".contains(c));
+  reads_as_collaboration(t, false)
+    || remark_start(t).is_some_and(|at| reads_as_collaboration(&t[at..], false))
+}
