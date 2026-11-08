@@ -1,0 +1,22 @@
+% mechanism: a `\thanks` whose text opens with a mark the names request is an affiliation entry only where the
+%   switch-off API makes it one — `\lx@add@thanks` re-routes a note opening with a number in a superscript
+%   (`starts_with_affiliation_mark`, OD #52) —; any other is a note: with `LATEXML_FM_EMIT=2` the reading's legend, the
+%   note of its mark's carriers (`Resolver::keep_note`); LO4 `=2` wrote "Also with …" as an affiliation
+% witness: 1107.5730 (`\thanks{\IEEEauthorrefmark{2} Also with …}`), 2205.02029 (`\thanks{$\diamond$ Work conducted
+%   during an internship …}`) (P2 NT)
+% oracle:  pdflatex 0 errors: "Ann Able†, Bob Baker† and Cat Cole", "Univ A", the footnote "† Also with the School of
+%   Physics, Univ B." (`\IEEEoverridecommandlockouts`, as the witness 1107.5730's line 3: without it IEEEtran's
+%   conference mode prints no `\thanks`; review revP2 finding 2)
+% engines: off = Bob Baker's note alone (the note's owner); LO4 `=2` = an affiliation of Ann and Bob
+% expect:  0 errors 0 warnings; `=2` the note on both carriers of † (the charter's symbol-line rule, §4), its kind
+%   `ltx_thanks_note`, as the PDF marks both names
+% status:  RED (LO4 `=2`) -> GREEN (P2)
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{2}, Bob Baker\IEEEauthorrefmark{2}\thanks{\IEEEauthorrefmark{2} Also with the School of Physics, Univ B.} and Cat Cole}
+\IEEEauthorblockA{Univ A}}
+\maketitle
+Body.
+\end{document}

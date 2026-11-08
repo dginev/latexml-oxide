@@ -24,7 +24,10 @@ use super::{
 };
 use crate::base_utilities::{
   author_block::{document_note_call, note_call_end, whole_block_author},
-  defs::author_macros::KEPT_WHOLE,
+  defs::{
+    author_macros::KEPT_WHOLE,
+    frontmatter_api::{LABEL_PRINTS, PRINTED_LABEL},
+  },
   frontmatter::{
     observer::{
       events::{EventKind, Formula, lex_with_formulas},
@@ -191,6 +194,10 @@ fn rekeyed(
   if let (Some(open), Some(close)) = (open, close) {
     out.extend_from_slice(&v[..=open]);
     out.extend(internal(add));
+    // (a label its binding prints with the line, `_labelprints`: the call's label goes with it, in a key of its own,
+    // `_printedlabel`, which says it prints, the reading's label replacing the call's — the Kind step for a legend reads it,
+    // `insert::legend_mark`: authblk's `\\affil[*]{Corresponding author …}`, 2605.31330, 2201.11910; P2 NT, P2r2)
+    let (mut label, mut prints) = (None, false);
     let (mut depth, mut from) = (0, open + 1);
     for i in open + 1..=close {
       let t = &v[i];
@@ -198,9 +205,11 @@ fn rekeyed(
       if i == close || (depth == 0 && t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == ","))
       {
         let pair = &v[from..i];
+        let mut eq = 0;
         let key: String = pair
           .iter()
           .take_while(|t| !t.with_str(|s| s == "="))
+          .inspect(|_| eq += 1)
           .map(|t| t.with_str(ToString::to_string))
           .collect::<String>()
           .trim()
@@ -214,8 +223,16 @@ fn rekeyed(
           out.push(T_OTHER!(","));
           out.extend_from_slice(pair);
         }
+        if key == "label" {
+          label = pair.get(eq..);
+        }
+        prints |= key == LABEL_PRINTS;
         from = i + 1;
       }
+    }
+    if prints && let Some(label) = label {
+      out.extend(internal(&s!(",{PRINTED_LABEL}")));
+      out.extend_from_slice(label);
     }
     out.extend_from_slice(&v[close..]);
     return Some(call_tokens(out, only));
@@ -402,16 +419,28 @@ fn in_a_group(tokens: &[Token], start: usize, end: usize) -> usize {
 }
 
 /// The tokens from the event `first` through `last` of a block: their boxes' covers' run, or their own tokens in the font they
-/// print in where a cover is a wrapper's holding what else prints (`\\textbf{Ann, Bob}`, 2305.12182) or past an environment's
-/// opening, grown to what `grown` adds. `None` for a run in a formula holding more (`$\\text{Ann}^{a},\\text{Bob}^{b}$`,
-/// 2602.01228), or no balanced one.
+/// print in where a cover is a wrapper's holding what else prints (`\\textbf{Ann, Bob}`, 2305.12182; a mark or a note after
+/// the name, `\\textbf{Yan Yan$^{1}$\\thanks{…}}`, 2309.13682, 2212.02936, which the reading writes apart: P2 B) or past
+/// an environment's opening, grown to what `grown` adds. `None` for a run in a formula holding more
+/// (`$\\text{Ann}^{a},\\text{Bob}^{b}$`, 2602.01228), or no balanced one.
 fn event_run(
+  field: &Field,
+  events: &[Event],
+  ends: (&Event, &Event),
+  grown: Option<(usize, usize)>,
+  cuts: &[(usize, usize)],
+) -> Option<Vec<Token>> {
+  event_run_at(field, events, ends, grown, cuts).map(|(tokens, _)| tokens)
+}
+
+/// [`event_run`], and the run of the block's tokens it was taken from (from, to).
+fn event_run_at(
   field: &Field,
   events: &[Event],
   (first, last): (&Event, &Event),
   grown: Option<(usize, usize)>,
   cuts: &[(usize, usize)],
-) -> Option<Vec<Token>> {
+) -> Option<(Vec<Token>, (usize, usize))> {
   let at = |p: u16| usize::from(p).checked_sub(field.base);
   let (start, end) = (at(first.span?.0)?, at(last.span?.1)?);
   let start = past_open_environment(field.environments, field.base, start, end);
@@ -422,6 +451,7 @@ fn event_run(
   };
   let inside = |e: &Event| first.span <= e.span && e.span <= last.span;
   let first_own = own_at(first).map_or(start, |(own, _)| own);
+  let last_own = own_at(last).map(|(_, own)| own);
   // (the cover its own tokens fill holds nothing else: most names)
   let filled = first_own <= start && own_at(last).is_some_and(|(_, own)| own >= end);
   let wider = !filled
@@ -433,6 +463,15 @@ fn event_run(
       // (a mark its cover holds before it, `\\textbf{$^2$Tencent Hunyuan}`, 2605.25195)
       || (e.kind == EventKind::Mark
         && mark_at.and_then(at).is_some_and(|mark| start <= mark && mark < first_own))
+      // (or a mark or a note after it, which the reading answers or writes apart: `\\textbf{Yan Yan$^{1}$\\thanks{…}}`
+      // kept its answered mark on the name and wrote the note twice, 2309.13682, 2212.02936 — P2 B)
+      || (matches!(e.kind, EventKind::Mark | EventKind::Note)
+        && last_own.is_some_and(|own| {
+          mark_at
+            .or(e.span.map(|s| s.0))
+            .and_then(at)
+            .is_some_and(|mark| own <= mark && mark < end)
+        }))
     });
   // (the names a formula holds have no run of their own)
   let formula = (field.formula_start(start), field.formula_end(end));
@@ -463,11 +502,12 @@ fn event_run(
   }
   let from = in_a_group(field.tokens, run_start, run_end);
   let (tokens, _) = field.content_cut((from, run_end), 0, run_start, cuts)?;
-  Some(if wider || first_own <= start {
+  let tokens = if wider || first_own <= start {
     in_its_font(first.font.clone(), tokens.unlist()).unlist()
   } else {
     tokens.unlist()
-  })
+  };
+  Some((tokens, (from, run_end)))
 }
 
 /// A block's names' tokens: their marks with them where `marks` (a per-author class's block, whose names keep them printed as
@@ -568,13 +608,24 @@ fn block_names(
           on_names.insert((index, span));
         }
       }
-      let tokens = event_run(
+      let (tokens, (run_from, run_to)) = event_run_at(
         &field,
         events,
         (found[from].1, found[to].1),
         Some(grown),
         &[],
       )?;
+      // (a note the name's tokens print is written with it, not again as an item: `\\newcommand{\\ann}{Ann
+      // Able\\thanks{…}}`, whose name is the one token `\\ann` — revLO4; a wrapper's note is cut out of the run,
+      // `event_run`: P2 B)
+      for e in events.iter().filter(|e| e.kind == EventKind::Note) {
+        if let Some(span) = e.span
+          && at(span.0).is_some_and(|s| run_from <= s)
+          && at(span.1).is_some_and(|t| t <= run_to)
+        {
+          on_names.insert((index, span));
+        }
+      }
       // (a footnote symbol in a kept mark is shown apart from its numbers, `rewrite_symbol_superscripts`'s: 1610.06117)
       let mut out = if marks {
         rewrite_symbol_superscripts(Tokens::new(tokens)).unlist()
@@ -1014,14 +1065,18 @@ fn item_call(
         .and_then(|()| span_tokens_cut(index, span, cut_runs))
         .as_ref()
         .and_then(note_argument);
+      // (never a `\\footnote`'s, which `\\lx@add@note` keeps a note: `\\footnote{\\textsuperscript{1}These authors
+      // contributed equally …}`, 2110.12892 — P2 NT)
+      let footnote = event_at(index, span, |e| e.kind == EventKind::Note, |e| e.footnote);
       let an_entry = key.0 == Kind::Affiliation
         || (role == "legend"
+          && footnote != Some(true)
           && argument
             .as_ref()
             .is_some_and(|argument| starts_with_affiliation_mark(&Tokens::new(argument.clone()))));
       if note
         && !an_entry
-        && let Some(footnote) = event_at(index, span, |e| e.kind == EventKind::Note, |e| e.footnote)
+        && let Some(footnote) = footnote
       {
         let content = argument;
         return Ok(note_call(

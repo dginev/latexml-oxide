@@ -758,6 +758,26 @@ impl Resolver {
       );
       return;
     }
+    // (the flush's one shared run: every author's, before it and after it, once every name is read — `answer_pending`, as
+    // `shared_row::share_row_contacts` places it: cas prints the entry list under the whole row of names, 2506.17280,
+    // 2106.02306, 2201.00009, 2207.13923, 2411.19633, 2606.24054; P2 C)
+    if self.sole_shared_run && !note && shares_a_run(attrs) {
+      let at = self.pending.len();
+      self.pending.push((Vec::new(), false, Assoc {
+        rule: "api:share:run".into(),
+        ..assoc.clone()
+      }));
+      self.shared.push((at, false, false));
+      for contact in inner {
+        let at = self.pending.len();
+        self.pending.push((Vec::new(), false, Assoc {
+          rule: "api:share:run api:inner-contact".into(),
+          ..contact
+        }));
+        self.shared.push((at, false, false));
+      }
+      return;
+    }
     let (owners, rule): (Vec<usize>, &str) = if n == 0 && !annotate.is_empty() {
       // (an annotation of the new authors, or of a number of them, before any creator reaches none, as today's
       // `\lx@annotate@frontmatter@now` counts its parents — revtex collaboration lists declaring every `\affiliation`

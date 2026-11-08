@@ -1,0 +1,20 @@
+% mechanism: an author's `\footnote` is a note (`\lx@add@note` never re-routes it), even where it opens with a number
+%   in a superscript; with `LATEXML_FM_EMIT=2` the emitter wrote such a legend as an affiliation entry, as
+%   `\lx@add@thanks` reads a `\thanks` (`writer::emit::item_call`'s `an_entry`). Now the footnote's note, its carriers'
+% witness: 2110.12892 (elsarticle, P2 NT)
+% oracle:  pdflatex 0 errors: "Ann Able1,1, Bob Baker1, Cat Cole", "Univ A", footnote "1 1These authors contributed
+%   equally to this work."
+% engines: off = the note on Ann and Bob; LO4 `=2` = an affiliation of both
+% expect:  0 errors 0 warnings; `=2` the note on Ann and Bob, as off (its place after the address, the footer's)
+% status:  RED (LO4 `=2`) -> GREEN (P2)
+\documentclass[review]{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able\textsuperscript{1}\footnote{\textsuperscript{1}These authors contributed equally to this work.}}
+\author{Bob Baker\textsuperscript{1}}
+\author{Cat Cole}
+\address{Univ A}
+\end{frontmatter}
+Body.
+\end{document}

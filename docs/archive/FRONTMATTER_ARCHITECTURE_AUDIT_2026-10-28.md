@@ -1,5 +1,7 @@
 # Frontmatter architecture audit (2026-10-28)
 
+> **Archived 2026-11-08.** Its item 9 (converge the ownership engines) became the one frontmatter engine: [`../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`](../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md).
+
 > A dated diagnostic snapshot (perfect_kernel `501e8ba4f1`), not a live worklist: the live rows are in
 > `docs/SYNC_STATUS.md` ("Frontmatter architecture: the audit's plan"). Read it before changing how frontmatter is
 > queued, segmented, owned, placed or written.

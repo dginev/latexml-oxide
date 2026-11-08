@@ -459,6 +459,10 @@ struct Resolver {
   /// the switch-off output as it was until the flip (brief LO1: a line's other text by its row, a line's addresses by the
   /// address reader; brief LO2: a row line's address its holder's, an entry's trailing note its holders')
   emitting:           bool,
+  /// the flush's one contact declaring a run and sharing (`_share=authors,annotate=run`: cas's unlabelled
+  /// `\affiliation`), every author's as `shared_row::share_row_contacts` shares it — with two or more, each its run's
+  /// (2201.00009, 2506.17280, 2106.02306; 2202.06096). Under `emitting` only
+  sole_shared_run:    bool,
   /// a note's links, and the notes they may empty, placed once every name is read (`answer_note_links`)
   note_links:         Vec<NoteLink>,
   /// the e-mail calls a document's own note makes (`ltx:pubnote`: A&A's `\offprints{B. Baker, \email{…}}`), placed
@@ -604,6 +608,7 @@ impl Resolver {
       whole_entries:      fm_emit_mode() == 2,
       call_labels:        Vec::new(),
       emitting:           fm_emit_mode() == 2,
+      sole_shared_run:    false,
       note_links:         Vec::new(),
       document_emails:    Vec::new(),
       listed_emails:      Vec::new(),
@@ -1039,6 +1044,15 @@ pub fn resolve_with(
 ) -> Resolved {
   let mut resolver = Resolver::new();
   let mut policy: &'static Policy = &policy::KERNEL;
+  // (counted across the whole queue, as `share_row_contacts` counts them)
+  resolver.sole_shared_run = resolver.emitting
+    && inputs
+      .iter()
+      .filter(|input| {
+        matches!(input, Input::Api { tag, attrs, .. } if tag == "ltx:contact" && shares_a_run(attrs))
+      })
+      .count()
+      == 1;
   for input in inputs {
     match input {
       Input::Block {
@@ -1202,6 +1216,12 @@ pub fn resolve_with(
   }
   in_source_order(&mut out.block);
   out
+}
+
+/// Whether a contact call declares a run and every author's share (`_share=authors,annotate=run`: cas's unlabelled
+/// `\affiliation`, `cas_dc_cls.rs` `cas_labelled_entry`).
+pub(super) fn shares_a_run(attrs: &str) -> bool {
+  attr_value(attrs, "_share") == Some("authors") && attr_value(attrs, "annotate") == Some("run")
 }
 
 /// `items` in source order: those with a source sorted by it (its block or API call's ledger index, then its span's

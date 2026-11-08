@@ -1,0 +1,20 @@
+% mechanism: cas's one unlabelled `\affiliation` (`_share=authors,annotate=run`, cas_dc_cls.rs `cas_labelled_entry`) is
+%   every author's, before it and after it, as `shared_row::share_row_contacts` shares it with the switch off; at
+%   `LATEXML_FM_EMIT=2` the reading gave it to the authors of its run only (the first). `Resolver::sole_shared_run`,
+%   answered in `answer_pending`; `=2` only
+% witness: 2506.17280, 2106.02306, 2201.00009, 2207.13923, 2411.19633, 2606.24054 (P2 C; T1's
+%   `cas_affiliation_before_authors_shared` is the same entry above the authors)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker and Cat Cole" over "Univ A, Xland"
+% engines: off = each author holds "Univ A, Xland"; LO4 `=2` = Ann Able alone
+% expect:  0 errors 0 warnings; each author holds the affiliation, `=2` creators = off
+% status:  RED (LO4 `=2`) -> GREEN (P2)
+\documentclass[a4paper,fleqn]{cas-sc}
+\begin{document}
+\title [mode = title]{T}
+\author{Ann Able}
+\affiliation{organization={Univ A}, country={Xland}}
+\author{Bob Baker}
+\author{Cat Cole}
+\maketitle
+Body.
+\end{document}

@@ -35,6 +35,7 @@ citations are why the file is kept.
   live residuals in `../SYNC_STATUS.md`). Cited by `bibtex.rs`.
 - `frontmatter_api_refactor.md` — design/decisions log for the upstream PR #2767
   frontmatter-API port (landed). Cited by `../parity/OXIDIZED_DESIGN_DIVERGENCES.md`.
+- **The frontmatter series, archived 2026-11-08** (superseded by the one engine, `../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`): `AUTHOR_MARKUP_PIPELINE_2026-11-03.md` (the old two-branch `\lx@add@authors` unification worklist, 2026-08-16 →), `AUTHOR_BLOCK_LABELING_DESIGN_2026-10-28.md` (a data-driven labelling proposal, never built; cited by `../parity/DEFERRED_FAMILIES.md`), `FRONTMATTER_ARCHITECTURE_AUDIT_2026-10-28.md` (the architecture audit whose item 9 became the one engine), `FRONTMATTER_PERF_AUDIT_2026-10-31.md` (the pipeline perf study; levers in `../performance/PERFORMANCE.md` P9-P11).
 - `UPSTREAM_SYNC_2767_to_2833_2026-06-26.md` — per-PR catalog for the "translate
   upstream PRs since #2767" mission (U1–U11, all landed via PR #271).
 - `MATHML_POST_LINE_AUDIT_2026-07-05.md` — exhaustive MathML-post line audit

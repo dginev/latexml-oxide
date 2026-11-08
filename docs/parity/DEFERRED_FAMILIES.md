@@ -17,7 +17,7 @@ recovery cases are recorded here with their witnesses. Each OPEN_ROWS row named 
   1803.08128, 1109.1681.
 - **Names stacked under names with no line between** (85a residual, OD #900): `Ann Able \\ Bob Baker \\ Univ X`
   stays lines of the first author, as Perl reads it. Nothing in the text tells a stacked run of names from a name over
-  a name-shaped institution, so it needs the labelling study (`AUTHOR_BLOCK_LABELING_DESIGN.md`, not built). Witness
+  a name-shaped institution, so it needs the labelling study (`../archive/AUTHOR_BLOCK_LABELING_DESIGN_2026-10-28.md`, not built). Witness
   1702.07694 (Peter I. Frazier, Shane G. Henderson); RED `author_block_stacked_names_each_a_creator`.
 - **adassconf's typesetting `\author`** called once per author keeps only the last call (astro-ph0101447); the class
   prints each name at its call, so recovery needs the calls collected in order rather than the kernel store.

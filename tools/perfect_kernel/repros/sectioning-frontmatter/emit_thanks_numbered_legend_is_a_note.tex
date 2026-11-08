@@ -1,0 +1,18 @@
+% mechanism: a `\thanks{\textsuperscript{1}…}` is re-routed as an affiliation entry (`\lx@add@thanks`, OD #52) and
+%   then its carriers' note where its text is a legend (the Kind step, `insert::kind_legend_contacts`), its mark the
+%   superscript's label; with `LATEXML_FM_EMIT=2` the emitted entry is placed by the reading's label, so the mark it
+%   printed is recorded as `_labelprints`'s value (`\lx@sup@setlabel@affiliation`, `frontmatter_api.rs`), read by
+%   `insert::legend_mark`. A mixed text (an institution and "correspondence", 2102.08072's shape) stays an affiliation
+% witness: P2 NT (the numbered `\thanks` sibling of 2110.12892's `\footnote`); 2102.08072
+% oracle:  pdflatex 0 errors: "Ann Able1∗ Bob Baker1 Cat Cole2†", footnotes "∗1 These authors contributed equally to
+%   this work.", "†2 Lab C, Univ C. All correspondence should be sent to Cat Cole."
+% engines: off = the legend Ann's and Bob's note, Cat's line her affiliation; LO4 `=2` = both affiliations
+% expect:  0 errors 0 warnings; `=2` creators = off
+% status:  RED (LO4 `=2`) -> GREEN (P2)
+\documentclass[11pt]{article}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{1}\thanks{\textsuperscript{1}These authors contributed equally to this work.} \and Bob Baker\textsuperscript{1} \and Cat Cole$^{2}$\thanks{$^{2}$Lab C, Univ C. All correspondence should be sent to Cat Cole.}}
+\maketitle
+Body.
+\end{document}

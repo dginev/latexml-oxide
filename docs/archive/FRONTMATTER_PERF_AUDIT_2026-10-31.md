@@ -1,6 +1,8 @@
 # Frontmatter pipeline performance audit — 2026-10-31
 
-This is a frozen study. Its open levers live in [`PERFORMANCE.md`](PERFORMANCE.md) as **P9** (the frontmatter pipeline), **P10** (the XPath compiled-expression cache) and **P11** (the `_font` attribute traffic).
+> **Archived 2026-11-08** (a frozen study; its levers live in [`../performance/PERFORMANCE.md`](../performance/PERFORMANCE.md) P9-P11).
+
+This is a frozen study. Its open levers live in [`PERFORMANCE.md`](../performance/PERFORMANCE.md) as **P9** (the frontmatter pipeline), **P10** (the XPath compiled-expression cache) and **P11** (the `_font` attribute traffic).
 
 **User directive, 2026-10-31.**
 - "performance is critical for us. Both the work on reorganizing and segmenting the frontmatter needs to be performance-optimal, as well as any detection algorithms that will raise warnings. Be precise."

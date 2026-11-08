@@ -1,0 +1,21 @@
+% mechanism: a name whose font wrapper holds its mark and its `\thanks` (`\textbf{Cat Cole$^{1}$\thanks{…}}`) is
+%   written from its own tokens in the wrapper's font, the mark and the note left to the reading (`writer::emit::
+%   event_run`'s wider cover): with `LATEXML_FM_EMIT=2` the whole cover was written, the answered mark kept on the name
+%   and the note written twice (once inside the name, once as the reading's note)
+% witness: 2309.13682, 2212.02936, 2305.16982, 1310.2822, 2503.17340 (P2 B; T1 `author_separator_in_wrapper`)
+% oracle:  pdflatex 0 errors: "Ann Able1,2, Bob Baker2, Cat Cole1∗", "1Univ A, 2Univ B", footnote "∗Corresponding author"
+%   (the footnote in the footnote font, not bold)
+% engines: off = Cat Cole, her note in bold; LO4 `=2` = "Cat Cole1", the note twice
+% expect:  0 errors 0 warnings; `=2` "Cat Cole", the note once (not bold, as the PDF's footnote)
+% status:  RED (LO4 `=2`) -> GREEN (P2)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{
+  \textbf{Ann Able$^{1,2}$, Bob Baker$^{2}$,}
+  \textbf{Cat Cole$^{1}$\thanks{Corresponding author}}\\
+  $^{1}$Univ A, $^{2}$Univ B
+}
+\maketitle
+Body.
+\end{document}

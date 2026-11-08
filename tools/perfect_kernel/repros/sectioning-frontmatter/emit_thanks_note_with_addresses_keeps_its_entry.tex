@@ -1,0 +1,23 @@
+% mechanism: a `\thanks` led by a mark the names carry is its carriers', its kind the switch-off procedure's
+%   (`\lx@add@thanks`: an affiliation only for `$^`/`\textsuperscript` opening with a digit, `starts_with_affiliation_mark`,
+%   OD #52; `\IEEEauthorrefmark` is none, so a note) — save one departure, `=2`'s own reading kept: a note printing e-mail
+%   addresses that is no legend stays the entry the reading made it, each address its spelled carrier's (FIDELITY_CHARTER
+%   §4's symbol-line rule; `Resolver::keep_note`, P2r2); the switch-off note keeps every address in its text
+% witness: 1610.05419, 2405.06709 (`\thanks{\IEEEauthorrefmark{1}The authors are with the Department …, E-mails: a@, b@,
+%   c@}`; review revP2 finding 1, probe nt_ieee_journal)
+% oracle:  pdflatex 0 errors: "Ann Able∗, Bob Baker∗, and Cat Cole†", the footnotes "∗The authors are with the Department of
+%   Physics, Univ A, Xland, E-mails: ann@a.org, bob@a.org." and "†The author is with Lab C, Univ C, E-mail: cat@c.org."
+% engines: off = both notes on Cat Cole; LO4 `=2` = each author the affiliation and the e-mail it spells; P2 `=2` = each
+%   carrier the note holding both addresses
+% expect:  0 errors 0 warnings; `=2` Ann "The authors are with the Department of Physics, Univ A, Xland" + ann@a.org, Bob
+%   the same + bob@a.org, Cat "The author is with Lab C, Univ C" + cat@c.org
+% status:  RED (P2 `=2`) -> GREEN (P2r2)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~Able\IEEEauthorrefmark{1}, Bob~Baker\IEEEauthorrefmark{1}, and~Cat~Cole\IEEEauthorrefmark{2}%
+\thanks{\IEEEauthorrefmark{1}The authors are with the Department of Physics, Univ A, Xland, E-mails: ann@a.org, bob@a.org.}%
+\thanks{\IEEEauthorrefmark{2}The author is with Lab C, Univ C, E-mail: cat@c.org.}}
+\maketitle
+Body.
+\end{document}
