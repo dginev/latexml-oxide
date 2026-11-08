@@ -212,6 +212,8 @@ dead text on the deployed site, so the warning is the only signal there is.
 
 Formatting is configured in `rustfmt.toml` — run `cargo +nightly fmt --all`.
 
+**No `unsafe` in our main code** (user 2026-11-08): a performance need is met by a better algorithm or data design, never by `unsafe`. Existing `unsafe` sits only at FFI/OS boundaries (libxml/XSLT, signals, sockets, the arena) and is not grown.
+
 ```bash
 rustup component add rust-analyzer rustfmt clippy --toolchain nightly
 ```
