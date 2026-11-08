@@ -23,7 +23,10 @@ use super::{
 };
 use crate::base_utilities::{
   author_block::{document_note_call, note_call_end, whole_block_author},
-  defs::author_macros::KEPT_WHOLE,
+  defs::{
+    author_macros::KEPT_WHOLE,
+    frontmatter_api::{LABEL_PRINTS, PRINTED_LABEL},
+  },
   frontmatter::{
     observer::{
       events::{EventKind, Formula, lex_with_formulas},
@@ -75,11 +78,6 @@ pub(in crate::base_utilities) const EMITTING: &str = "lx_fm_emitting";
 /// a creator's `source#letters#place` to its `role:N`, and an item's `owner|kind|text`.
 const EMITTED_CREATORS: &str = "lx_fm_emitted_creators";
 const EMITTED_ITEMS: &str = "lx_fm_emitted_items";
-
-/// The contact key saying its binding prints its label with the line (authblk's `\\affil[*]`, the Frontmatter keyval
-/// `_labelprints`, `affiliations::LABEL_PRINTS`), whose value an emitted entry's printed label is (`rekeyed`): the key's
-/// name, as the call spells it, not the old reader's symbol (the one-engine fence, `perfect_kernel_batche0`).
-const LABEL_PRINTS: &str = "_labelprints";
 
 /// `\lx@add@frontmatter@now`, the flush's own creator call.
 fn add_now() -> Token { T_CS!("\\lx@add@frontmatter@now") }
@@ -195,9 +193,9 @@ fn rekeyed(
   if let (Some(open), Some(close)) = (open, close) {
     out.extend_from_slice(&v[..=open]);
     out.extend(internal(add));
-    // (a label its binding prints with the line, `_labelprints`: the call's label goes with it, as its value, the reading's
-    // label replacing the call's — the Kind step for a legend reads it, `insert::legend_mark`: authblk's
-    // `\\affil[*]{Corresponding author …}`, 2605.31330, 2201.11910; P2 NT)
+    // (a label its binding prints with the line, `_labelprints`: the call's label goes with it, in a key of its own,
+    // `_printedlabel`, the reading's label replacing the call's — the Kind step for a legend reads it,
+    // `insert::legend_mark`: authblk's `\\affil[*]{Corresponding author …}`, 2605.31330, 2201.11910; P2 NT, P2r2)
     let (mut label, mut prints) = (None, false);
     let (mut depth, mut from) = (0, open + 1);
     for i in open + 1..=close {
@@ -232,7 +230,7 @@ fn rekeyed(
       }
     }
     if prints && let Some(label) = label {
-      out.extend(internal(&s!(",{LABEL_PRINTS}")));
+      out.extend(internal(&s!(",{LABEL_PRINTS}=true,{PRINTED_LABEL}")));
       out.extend_from_slice(label);
     }
     out.extend_from_slice(&v[close..]);

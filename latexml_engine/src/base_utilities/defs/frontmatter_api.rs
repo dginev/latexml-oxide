@@ -3,6 +3,21 @@
 
 use super::*;
 
+/// The attribute (and `\lx@add@contact` option, a declared `Frontmatter` key) of a contact whose label its binding
+/// prints before its line, as written: authblk's `\affil[x]` (`\AB@affilnote`, authblk.sty:142), jheppub's
+/// `\affiliation[x]` (`\item[$^{#1}$]`), cas's letter (`cas_labelled_entry`); its value `true`. The Kind step for a
+/// legend gives a note only a mark that prints (`insert::kind_legend_contacts`, OXIDIZED_DESIGN_DIVERGENCES #961): a
+/// binding's key (icml's `\icmlaffiliation{intern}{…}`) is none.
+pub(in crate::base_utilities) const LABEL_PRINTS: &str = "_labelprints";
+
+/// The attribute (and option, a declared `Frontmatter` key) holding the label that prints, of an entry the frontmatter
+/// emitter wrote, which the reading placed by its own label: the call's `label=` its binding prints ([`LABEL_PRINTS`],
+/// the writer's `rekeyed`: authblk's `\affil[*]`, 2605.31330), or the first mark the entry's content printed
+/// (`\lx@sup@setlabel@affiliation`'s record). Read by the Kind step for a legend as a printed mark
+/// (`insert::legend_mark`; OD #980, P2 NT). A fact of the entry in a key of its own, as Perl keeps an entry's
+/// (`_label`, `_annotations`). None with the emitter's switch off.
+pub(in crate::base_utilities) const PRINTED_LABEL: &str = "_printedlabel";
+
 pub(in crate::base_utilities) fn load() -> Result<()> {
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // General support for Front Matter. (PR #2767 rework)
@@ -117,11 +132,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // where the note is placed (insert.rs `keep_unclaimed_net_notes`; OXIDIZED_DESIGN_DIVERGENCES #953).
   DefKeyVal!("Frontmatter", "_net", "Semiverbatim");
   // Rust-only: a contact whose label its binding prints with the line (authblk's `\affil[x]`, jheppub's
-  // `\affiliation[x]`, cas's letter: `affiliations::LABEL_PRINTS`), read by the Kind step for a legend
-  // (insert.rs `kind_legend_contacts`; OXIDIZED_DESIGN_DIVERGENCES #961). Declared: an unknown key is reported
-  // (`Info:undefined`), and that report changed what osajnl's speculative title-page run read (its `\vphantom{M}`
-  // was lost: 2203.08703, 2206.12157, 2311.18459, 2411.07865).
+  // `\affiliation[x]`, cas's letter: [`LABEL_PRINTS`]), read by the Kind step for a legend (insert.rs
+  // `kind_legend_contacts`; OXIDIZED_DESIGN_DIVERGENCES #961). Declared: an unknown key is reported (`Info:undefined`),
+  // and that report changed what osajnl's speculative title-page run read (its `\vphantom{M}` was lost: 2203.08703,
+  // 2206.12157, 2311.18459, 2411.07865).
   DefKeyVal!("Frontmatter", "_labelprints", "");
+  // Rust-only: the label that prints, of an entry the frontmatter emitter wrote ([`PRINTED_LABEL`]; OD #980, P2 NT).
+  DefKeyVal!("Frontmatter", "_printedlabel", "");
 
   // Rust-only: `\lx@label@ref{<key>}`, the label a binding recorded for `key` once later input was read
   // ([`set_label_ref`]: cas's `\stmRef`, which LaTeX reads from the `.aux` of the run before), nothing for one never
@@ -778,20 +795,23 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
     // Reset if changed (eg. by \lx@set@frontmatter@label during digestion)!
     // (and the mark an entry the frontmatter emitter writes printed: `\lx@sup@setlabel@affiliation`'s record on the stub,
-    // which the Kind step for a legend reads — OD #980, P2 NT; none off)
+    // [`PRINTED_LABEL`], which the Kind step for a legend reads — OD #980, P2 NT; none off. A call whose binding prints
+    // its label, [`LABEL_PRINTS`], has its own: the call's `label=`)
     let (stub_label, printed) = with_value("frontmatter", |v| {
       if let Some(Stored::HashTagData(frnt)) = v
         && let Some(e) = frnt.get(&parenttag).and_then(|l| l.get(stub_idx))
       {
-        (e.attr.get("_annotations").cloned(), e.attr.get(LABEL_PRINTS).cloned())
+        (e.attr.get("_annotations").cloned(), e.attr.get(PRINTED_LABEL).cloned())
       } else {
         (None, None)
       }
     });
     let stub_label = stub_label.unwrap_or_default();
     options.insert("_label".to_string(), stub_label.clone());
-    if let Some(printed) = printed {
-      options.entry(LABEL_PRINTS.to_string()).or_insert(printed);
+    if let Some(printed) = printed
+      && !options.contains_key(LABEL_PRINTS)
+    {
+      options.entry(PRINTED_LABEL.to_string()).or_insert(printed);
     }
     let datum = if preformatted {
       TagContent::Box(xcontent)

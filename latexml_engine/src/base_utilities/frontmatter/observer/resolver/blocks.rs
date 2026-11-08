@@ -1234,11 +1234,16 @@ impl Resolver {
         })
     {
       let symbol = labels.iter().all(|l| is_symbol_label(l));
-      // (with the emitter's switch on: an affiliation only where the switch-off API makes the note one — a `\thanks`
-      // opening with a number in a superscript, `\lx@add@thanks`'s `starts_with_affiliation_mark` (OXIDIZED_DESIGN #52),
-      // here the note's leading Mark of a superscript printing digits; never a `\footnote`, which `\lx@add@note` keeps
-      // a note. Any other is a note of its mark's carriers: `\thanks{\IEEEauthorrefmark{2} Also with …}`, 1107.5730;
-      // `\thanks{$\diamond$ Work conducted during an internship …}`, 2205.02029 — P2 NT)
+      // (with the emitter's switch on, the switch-off procedure's kind, in its order (P2 NT; ported strictly, P2r2): a
+      // `\footnote` is a note (`\lx@add@note`, frontmatter_fields.rs); a `\thanks` is an affiliation only where
+      // `\lx@add@thanks` re-routes it, its content opening with `$^` or `\textsuperscript` whose first character is an
+      // ASCII digit (`starts_with_affiliation_mark`, OXIDIZED_DESIGN #52) — here the note's leading Mark, a superscript
+      // whose printed text opens with a digit —, else a note; an affiliation whose whole text is a legend is then a note
+      // (the Kind step for a legend, `insert::kind_legend_contacts`; here `is_legend_text`). The note goes to its mark's
+      // carriers, not the name before it (FIDELITY_CHARTER §4: a symbol-led line goes to the authors carrying the
+      // symbol, affiliation or legend alike): `\thanks{\IEEEauthorrefmark{2} Also with …}`, 1107.5730; `\thanks{$\diamond$
+      // Work conducted during an internship …}`, 2205.02029; `\thanks{\IEEEauthorrefmark{1}The authors are with …,
+      // E-mails: a@, b@, c@}`, 1610.05419, whose addresses stay in the note's text, as the switch-off output keeps them)
       let numbered = || {
         !note.footnote
           && note
@@ -1250,11 +1255,13 @@ impl Resolver {
                 .role
                 .as_deref()
                 .is_some_and(|r| r.starts_with("sup") || r.starts_with("math"))
-                && !mark.text.is_empty()
-                && mark.text.chars().all(|c| c.is_ascii_digit() || c == ',')
+                && mark
+                  .text
+                  .trim_start()
+                  .starts_with(|c: char| c.is_ascii_digit())
             })
       };
-      let role = if is_legend_text(&legend) || symbol || (self.emitting && !numbered()) {
+      let role = if (self.emitting && !numbered()) || is_legend_text(&legend) || symbol {
         "legend"
       } else {
         "affiliation"

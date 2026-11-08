@@ -1,6 +1,7 @@
 //! Inserting the front matter into the document: creators, contacts, late frontmatter, unanswered marks.
 
 use super::*;
+use crate::base_utilities::defs::frontmatter_api::{LABEL_PRINTS, PRINTED_LABEL};
 
 pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   if lookup_bool("frontmatter_done") {
@@ -663,12 +664,13 @@ fn legend_mark(document: &mut Document, contact: &Node, named_creators: &[Node])
           .filter(|(key, _)| !key.is_empty())
           .collect();
       let creator = contact.get_parent()?;
-      let printed_label = contact.get_attribute(LABEL_PRINTS);
-      let prints = printed_label.is_some();
-      // (an entry the frontmatter emitter wrote is placed by the reading's label, so the label that prints is the key's
-      // value: the call's `label=` its binding prints (authblk's `\affil[*]`, 2605.31330), or the first mark the entry's
-      // content printed (`\thanks{\textsuperscript{1}These authors contributed equally …}`); OD #980, P2 NT)
-      if let Some(printed) = printed_label.filter(|v| v != "true") {
+      let printed_label = contact.get_attribute(PRINTED_LABEL);
+      let prints = printed_label.is_some() || contact.get_attribute(LABEL_PRINTS).is_some();
+      // (an entry the frontmatter emitter wrote is placed by the reading's label, so the label that prints is its own
+      // key, `PRINTED_LABEL`: the call's `label=` its binding prints (authblk's `\affil[*]`, 2605.31330), or the first
+      // mark the entry's content printed (`\thanks{\textsuperscript{1}These authors contributed equally …}`); OD #980,
+      // P2 NT)
+      if let Some(printed) = printed_label {
         keys.splice(
           0..0,
           clean_frontmatter_labels(&printed, "")

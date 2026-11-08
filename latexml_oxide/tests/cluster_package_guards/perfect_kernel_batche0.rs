@@ -529,14 +529,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "const _kinded base_utilities/author_block/affiliations.rs",
     1,
   ),
+  // (OD #961's key, with the API that declares it since P2r2, which `author_block/`, `frontmatter/` and the emitter import)
   (
-    "const _labelprints base_utilities/author_block/affiliations.rs",
-    1,
-  ),
-  // (P2: the same key, OD #961's, named where the emitter carries its value — the label that prints — past the reading's
-  // label, a constant of its own rather than the old reader's symbol, which the one-engine fence keeps out of frontmatter/)
-  (
-    "const _labelprints base_utilities/frontmatter/observer/writer/emit.rs",
+    "const _labelprints base_utilities/defs/frontmatter_api.rs",
     1,
   ),
   ("const _late base_utilities/frontmatter/cover_order.rs", 1),
@@ -570,6 +565,12 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "const _seqlabel base_utilities/author_block/affiliations.rs",
     1,
   ),
+  // (P2r2: the label that prints, of an entry the emitter wrote — `_labelprints` held it beside its flag `true`, a flag and
+  // data in one key; an entry's fact in its own key, as Perl keeps `_label` and `_annotations`; OD #980)
+  (
+    "const _printedlabel base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
   ("const _source base_utilities/frontmatter/insert.rs", 1),
   (
     "const _titlepage base_utilities/frontmatter/cover_order.rs",
@@ -580,6 +581,10 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     1,
   ),
   ("declared _net base_utilities/defs/frontmatter_api.rs", 1),
+  (
+    "declared _printedlabel base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
   (
     "declared accumulate base_utilities/defs/frontmatter_api.rs",
     1,

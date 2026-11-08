@@ -1,7 +1,7 @@
 //! `LoadDefinitions!` part 4: the author macros (`\lx@add@authors*`, affiliations, superscript marks), the default text
 //! names, and `\maketitle` supersede/fallback.
 
-use super::*;
+use super::{frontmatter_api::PRINTED_LABEL, *};
 
 /// The key on the entry the frontmatter emitter is writing (its pending entry, `with_digesting_entry_attr`) saying it has read
 /// its first mark, its label (`\lx@sup@setlabel@affiliation`; taken off as each emitted item starts,
@@ -403,13 +403,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       None => script_marks(operand.clone().untex_string().as_ref()).join(","),
     };
     // (an entry the frontmatter emitter writes is labelled by the reading: the mark it prints is recorded as the label that
-    // prints, which the Kind step for a legend reads, `insert::legend_mark` — OD #980, P2 NT)
+    // prints, `PRINTED_LABEL`, which the Kind step for a legend reads, `insert::legend_mark` — OD #980, P2 NT)
     if lookup_bool(EMITTING)
       && let Some(label) = &label
     {
       with_digesting_entry_attr(|attr| {
         attr
-          .entry(LABEL_PRINTS.to_string())
+          .entry(PRINTED_LABEL.to_string())
           .or_insert_with(|| label.clone());
       });
     }

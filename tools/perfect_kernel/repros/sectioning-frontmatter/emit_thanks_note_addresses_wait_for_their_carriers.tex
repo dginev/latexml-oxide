@@ -1,0 +1,24 @@
+% mechanism: a `\thanks` led by a mark the names carry is its carriers' note, its kind the switch-off procedure's
+%   (`\lx@add@thanks`: an affiliation only for `$^`/`\textsuperscript` opening with a digit, `starts_with_affiliation_mark`,
+%   OD #52; `\IEEEauthorrefmark` is none) — so with `LATEXML_FM_EMIT=2` a note on Ann and Bob, and one on Cat
+%   (`Resolver::keep_note`, P2 NT, ported strictly P2r2); the addresses it prints stay in its text, each carrier holding
+%   both, where the page's symbol-line rule gives each address to the carrier it spells (FIDELITY_CHARTER §4): the address
+%   cut inside an entry's text, E1
+% witness: 1610.05419 (`\thanks{\IEEEauthorrefmark{1}The authors are with the Department …, E-mails: a@, b@, c@}`;
+%   review revP2 finding 1)
+% oracle:  pdflatex 0 errors: "Ann Able∗, Bob Baker∗, and Cat Cole†", the footnotes "∗The authors are with the Department of
+%   Physics, Univ A, Xland, E-mails: ann@a.org, bob@a.org." and "†The author is with Lab C, Univ C, E-mail: cat@c.org."
+% engines: off = both notes on Cat Cole; LO4 `=2` = each an affiliation and the e-mail it spells (the kind not off's);
+%   P2/P2r2 `=2` = each carrier the note, both addresses in Ann's and Bob's
+% expect:  0 errors 0 warnings; `=2` each carrier the note, without the addresses, and the e-mail it spells (Ann ann@a.org,
+%   Bob bob@a.org, Cat cat@c.org)
+% status:  RED (P2r2 `=2`: the addresses in the note), no guard: waits for E1
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~Able\IEEEauthorrefmark{1}, Bob~Baker\IEEEauthorrefmark{1}, and~Cat~Cole\IEEEauthorrefmark{2}%
+\thanks{\IEEEauthorrefmark{1}The authors are with the Department of Physics, Univ A, Xland, E-mails: ann@a.org, bob@a.org.}%
+\thanks{\IEEEauthorrefmark{2}The author is with Lab C, Univ C, E-mail: cat@c.org.}}
+\maketitle
+Body.
+\end{document}
