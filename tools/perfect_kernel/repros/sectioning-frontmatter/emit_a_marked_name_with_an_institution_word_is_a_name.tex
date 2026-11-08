@@ -1,0 +1,20 @@
+% mechanism: a names line's piece carrying its own mark is a name whatever its words (rows N1-N3 of the old reader's
+%   names split, `split_author_line` and `marked_names`; the reading's `lines::marked_name`): the generic split of a
+%   names line never reads an institution word; the reading's institution arm (`line:names classify:institution`) made
+%   each such name the affiliation of the name before at `LATEXML_FM_EMIT=2`. A mark right after the name and one after
+%   its comma (`Consiglio,$^{1}$`, revtex's way) alike.
+% witness: 0904.4122 (`R. New$^2$`), 2103.02641 (`S. Michelle Consiglio,$^{1}$`), 2311.16860 (`Alexander New$^2$`)
+% oracle:  pdflatex 0 errors: "A. M. Broomhall1, S. Michelle Consiglio,1 R. New2", "1Univ A", "2Univ B"
+% engines: rust MV1, the switch on: two creators, "S. Michelle Consiglio" and "R. New" Broomhall's affiliations; off:
+%   three creators
+% expect:  0 errors, 0 warnings; three creators both ways, each with the affiliation its mark names
+% status:  RED (MV1, the switch on) -> GREEN (perfect_kernel_batchnl1::a_marked_name_with_an_institution_word_is_a_name)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{A.~M. Broomhall$^1$, S. Michelle Consiglio,$^{1}$ R. New$^2$\\
+$^1$Univ A\\$^2$Univ B}
+\maketitle
+x
+\end{document}

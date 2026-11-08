@@ -910,6 +910,63 @@ pub(super) fn names_of(events: &[&Event]) -> Vec<String> {
     .collect()
 }
 
+/// Whether the Mark at `i`, after a separator (`last_sep`) and a name before it, goes to the next name: it stands
+/// between the separator and the next name nearer to that name.
+fn mark_goes_next(events: &[&Event], i: usize, last_sep: Option<&Event>, policy: &Policy) -> bool {
+  let event = events[i];
+  let next_is_name = events[i + 1..]
+    .iter()
+    .find(|e| !matches!(e.kind, EventKind::Layout | EventKind::Mark))
+    .is_some_and(|e| e.kind == EventKind::Name);
+  // (a mark between a separator and the next name stands with the one it is nearer to in the source: `Ann,$^{1}$
+  // Bob` the name before, as revtex writes it, 0705.3409; `Ann$^1$, $^{2}$Bob` the next, a prefix — the spans'
+  // distances, the math shift counted)
+  let next_start = events[i + 1..]
+    .iter()
+    .find(|e| e.kind == EventKind::Name)
+    .and_then(|e| e.span)
+    .map(|s| s.0);
+  // (TeX's output decides first, where it sets the mark apart on one side only: `Han,${}^1$ Thibault` prints
+  // "Han,¹ Thibault", the mark the name before's — measured in the source from the script, the empty base `{}`
+  // put it nearer the next name, 1603.00635; else the source distances)
+  let nearer_next = match (event.space_before, event.space_after) {
+    (false, true) => false,
+    (true, false) => true,
+    _ => match (last_sep.and_then(|s| s.span), event.span, next_start) {
+      (Some((_, sep_end)), Some((start, end)), Some(next)) => {
+        next.saturating_sub(end) < start.saturating_sub(sep_end)
+      },
+      _ => false,
+    },
+  };
+  let inst = event.role.as_deref().is_some_and(|r| r.starts_with("inst"));
+  last_sep.is_some() && next_is_name && nearer_next && !(inst && policy.inst_after_comma)
+}
+
+/// Whether the Name at `i` of a names line is a marked name (rows N1-N3 of the old reader's names split,
+/// `author_block/names_split.rs` `marked_names` and `split_author_line`): it carries its own mark — the next event past
+/// layout and notes, or past the comma after it a mark that stays with it ([`mark_goes_next`]: `Teng Wu,$^{1,*}$`,
+/// revtex) —, and on a per-author class's line (`cautious`, the old reader's cautious split) its institution word is a
+/// surname after an initial ([`surname_after_initial`]: `Gary P. Centers,$^{1}$`, 1901.10843) and it is no address. The
+/// generic split of any other names line never reads an institution word (`R. New$^2$`, 0904.4122; `S. Michelle
+/// Consiglio,$^{1}$`, 2103.02641; `Alexander New$^2$`, 2311.16860). An unmarked piece keeps the reading's institution
+/// (`John Smith, University of Toronto`).
+pub(super) fn marked_name(events: &[&Event], i: usize, cautious: bool, policy: &Policy) -> bool {
+  let mut after = (i + 1..events.len())
+    .filter(|&j| !matches!(events[j].kind, EventKind::Layout | EventKind::Note));
+  let carried = match after.next().map(|j| (j, &events[j].kind)) {
+    Some((j, EventKind::Mark)) => !events[j].line_first,
+    Some((comma, EventKind::Sep(SepKind::Comma))) => after.next().is_some_and(|j| {
+      events[j].kind == EventKind::Mark
+        && !events[j].line_first
+        && !mark_goes_next(events, j, Some(events[comma]), policy)
+    }),
+    _ => false,
+  };
+  let text = &events[i].text;
+  carried && (!cautious || (surname_after_initial(text) && !only_addresses(text)))
+}
+
 impl Resolver {
   /// A names line: names split at its separators, marks attached by adjacency, notes and contacts to the name before.
   pub(super) fn names_line(
@@ -938,7 +995,7 @@ impl Resolver {
       after_blank: line.after_blank,
       group_break: line.group_break,
     };
-    let made = self.names_line_events(index, policy, line, block_requests, group);
+    let made = self.names_line_events(index, policy, cautious, line, block_requests, group);
     if !addresses.is_empty() {
       let source = (index, line.events.first().and_then(|e| e.span));
       self.place_line_contacts(
@@ -958,6 +1015,7 @@ impl Resolver {
     &mut self,
     index: usize,
     policy: &'static Policy,
+    cautious: bool,
     line: &Line<'_>,
     block_requests: &[String],
     group: usize,
@@ -1191,11 +1249,13 @@ impl Resolver {
         // Technology`, 2406.02959; the classify helpers, `reads_as_affiliation`)
         // (a name with a remark after it is no institution, whatever word the remark holds: `Ann Able and Bob Baker
         // for the ATLAS Collaboration`, Bob Baker an author as today's — review rev94a r2 B-1)
+        // (a marked name is a name whatever its words, rows N1-N3: [`marked_name`])
         EventKind::Name
           if !made.is_empty()
             && is_institution(&event.text)
             && !is_collaboration(&event.text)
-            && name_before_remark(&event.text).is_none() =>
+            && name_before_remark(&event.text).is_none()
+            && !marked_name(events, i, cautious, policy) =>
         {
           let c = *made.last().expect("a name");
           institution = Some((c, self.out.creators[c].affiliations.len()));
@@ -1300,32 +1360,7 @@ impl Resolver {
         EventKind::Sep(_) => last_sep = Some(event),
         EventKind::Mark => {
           let labels = mark_requests(event);
-          let next_is_name = events[i + 1..]
-            .iter()
-            .find(|e| !matches!(e.kind, EventKind::Layout | EventKind::Mark))
-            .is_some_and(|e| e.kind == EventKind::Name);
           let after_comma = last_sep.is_some_and(|s| s.kind == EventKind::Sep(SepKind::Comma));
-          // (a mark between a separator and the next name stands with the one it is nearer to in the source: `Ann,$^{1}$
-          // Bob` the name before, as revtex writes it, 0705.3409; `Ann$^1$, $^{2}$Bob` the next, a prefix — the spans'
-          // distances, the math shift counted)
-          let next_start = events[i + 1..]
-            .iter()
-            .find(|e| e.kind == EventKind::Name)
-            .and_then(|e| e.span)
-            .map(|s| s.0);
-          // (TeX's output decides first, where it sets the mark apart on one side only: `Han,${}^1$ Thibault` prints
-          // "Han,¹ Thibault", the mark the name before's — measured in the source from the script, the empty base `{}`
-          // put it nearer the next name, 1603.00635; else the source distances)
-          let nearer_next = match (event.space_before, event.space_after) {
-            (false, true) => false,
-            (true, false) => true,
-            _ => match (last_sep.and_then(|s| s.span), event.span, next_start) {
-              (Some((_, sep_end)), Some((start, end)), Some(next)) => {
-                next.saturating_sub(end) < start.saturating_sub(sep_end)
-              },
-              _ => false,
-            },
-          };
           let inst = event.role.as_deref().is_some_and(|r| r.starts_with("inst"));
           // (a mark glued to the mark before it goes where that one went: `Oh,$^{1}$$^{,2}$ Nordlander`, mn2e,
           // 2306.15492 — the second no nearer the next name than the first; a math mark's span is inside its shifts,
@@ -1336,13 +1371,8 @@ impl Resolver {
             },
             _ => None,
           };
-          let to_next = glued.unwrap_or_else(|| {
-            made.is_empty()
-              || (last_sep.is_some()
-                && next_is_name
-                && nearer_next
-                && !(inst && policy.inst_after_comma))
-          });
+          let to_next =
+            glued.unwrap_or_else(|| made.is_empty() || mark_goes_next(events, i, last_sep, policy));
           last_mark = event.span.map(|(_, end)| (end, to_next));
           let footnote = event
             .role

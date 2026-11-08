@@ -162,42 +162,6 @@ fn marked_names(pieces: &[Tokens]) -> usize {
     .count()
 }
 
-/// Whether `text` reads as a person's name whose last word, an institution's ([`non_name_word`]: `Centers`,
-/// `College`, `Fellows`), follows the initial of a given name: two to five capitalised words, the one before the last
-/// an initial (`Gary P. Centers`; not `W. M. Keck Observatory`, whose institution word follows a name), no other
-/// institution word, no digit or address. In a list by its marks ([`marked_names`]) such a piece is a marked name.
-fn surname_after_initial(text: &str) -> bool {
-  let text = text
-    .trim()
-    .trim_end_matches(|c: char| ",;*".contains(c))
-    .trim_end();
-  if text
-    .chars()
-    .any(|c| c.is_ascii_digit() || "@:/()".contains(c))
-  {
-    return false;
-  }
-  let words: Vec<&str> = text.split_whitespace().collect();
-  // (a place's abbreviation is no initial: `St.`, `Mt.`, `Ft.`)
-  let initial = |w: &str| {
-    let mut chars = w.chars();
-    if ["St.", "Mt.", "Ft."].contains(&w) {
-      return false;
-    }
-    chars.next().is_some_and(char::is_uppercase)
-      && chars
-        .as_str()
-        .strip_suffix('.')
-        .is_some_and(|rest| rest.chars().all(char::is_lowercase) && rest.len() <= 1)
-  };
-  let capitalised = |w: &&str| w.chars().next().is_some_and(char::is_uppercase);
-  (3..=5).contains(&words.len())
-    && words.iter().all(capitalised)
-    && initial(words[words.len() - 2])
-    && non_name_word(words[words.len() - 1])
-    && !words[..words.len() - 1].iter().any(|w| non_name_word(w))
-}
-
 /// Whether `text` holds an address and no word beside it but addresses (letters only of a word holding an `@`).
 fn only_addresses(text: &str) -> bool {
   text.contains('@')

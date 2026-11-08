@@ -643,7 +643,9 @@ fn a_creator_read_by_its_words_is_given_back() {
 /// observatory's, as 93a's), a shared one copied (`$^{1}$`) and a symbol legend the observatory's note alone
 /// (`$^{1,\dagger}$`, ruling 2: written) — and the same beside the re-part (today's merged `Cid Cole, Dee Dunn`,
 /// 1909.05311's shape: four names written, the observatory given back with its entry). Distinct paths: the plan's
-/// `same`, the plan's write, the re-part's write.
+/// `same`, the plan's write, the re-part's write. Since NL1 the reading itself reads each marked observatory as a
+/// name, as the old reader's generic split does (rule table RT3 rows N1-N3, `lines::marked_name`): today's creators are
+/// the reading's, and a give-back with marks arises only from a per-author class's line, no fixture here.
 #[test]
 fn a_conceded_creator_keeps_its_marks() {
   let tex = repro!("author_names_conceded_creator_keeps_its_marks.tex");
@@ -652,9 +654,9 @@ fn a_conceded_creator_keeps_its_marks() {
     "affiliation=Univ Y",
   ]];
   let reading = assert_reading(tex, Some(xml), &[
-    "C Ann Able [1,2] | line:names",
-    "  a Kitt Peak Observatory | line:names classify:institution",
+    "C Ann Able [1] | line:names",
     "  a Univ X | ruling1:request",
+    "C Kitt Peak Observatory [2] | line:names sep:comma",
     "  a Univ Y | ruling1:request",
   ]);
   assert_eq!(reading.3, Value::from("same"));
@@ -665,8 +667,9 @@ fn a_conceded_creator_keeps_its_marks() {
     "affiliation=Univ X",
   ]];
   let reading = assert_reading(tex, Some(xml), &[
-    "C Ann Able [1,1,†] | line:names",
-    "  a Kitt Peak Observatory | line:names classify:institution",
+    "C Ann Able [1] | line:names",
+    "  a Univ X | ruling1:request",
+    "C Kitt Peak Observatory [1,†] | line:names sep:comma",
     "  a Univ X | ruling1:request",
     "  n Corresponding | ruling2:symbol-line",
   ]);
@@ -691,9 +694,9 @@ fn a_conceded_creator_keeps_its_marks() {
     &["Dee Dunn", "affiliation=Univ Y"],
   ];
   let reading = assert_reading(tex, Some(xml), &[
-    "C Ann Able [1,2] | line:names",
-    "  a Kitt Peak Observatory | line:names classify:institution",
+    "C Ann Able [1] | line:names",
     "  a Univ X | ruling1:request",
+    "C Kitt Peak Observatory [2] | line:names sep:comma",
     "  a Univ Y | ruling1:request",
     "C Cid Cole [1] | line:names",
     "  a Univ X | ruling1:request",
@@ -855,8 +858,9 @@ fn a_legend_of_several_marks_is_each_carriers() {
     "affiliation=Univ Y",
   ]];
   let reading = assert_reading(tex, Some(xml), &[
-    "C Ann Able [1,2] | line:names",
-    "  a Kitt Peak Observatory | line:names classify:institution",
+    "C Ann Able [1] | line:names",
+    "  a Univ X | ruling1:request",
+    "C Kitt Peak Observatory [2] | line:names sep:comma",
     "  a Univ X | ruling1:request",
     "  a Univ Y | ruling1:request",
   ]);
@@ -889,8 +893,8 @@ fn a_legend_note_shows_its_mark() {
   assert_eq!(notes_with_marks(&xml), ["mark=∗ ∗ Equal contribution"]);
   let tex = repro!("author_names_conceded_creator_legend_note_mark.tex");
   let reading = assert_reading(tex, None, &[
-    "C Ann Able [*] | line:names",
-    "  a Kitt Peak Observatory | line:names classify:institution",
+    "C Ann Able [] | line:names",
+    "C Kitt Peak Observatory [*] | line:names sep:comma",
     "  n Equal contribution | ruling2:symbol-line",
   ]);
   assert_eq!(reading.3, Value::from("written"));
