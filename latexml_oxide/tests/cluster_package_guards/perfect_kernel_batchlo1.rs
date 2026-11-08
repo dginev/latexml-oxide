@@ -125,10 +125,11 @@ fn a_symbol_inside_an_entrys_brackets_is_its_text() {
 
 /// An address decides only its own ink: a line printing an address and other text, under an unmarked line of its column ending in
 /// a comma, continues that item and is its holders' (`Ann Able and Bob Baker\\ Institute of Things, Univ.\ A,\\ Dresden, Saxony
-/// 01062, Germany (bob.baker@a.org)`: 2203.10777's shape, its city three notes of Bob Baker's on int146a `=2`); under one names
-/// row and no column, every author's of the row (1605.03019's `\small{IDSIA, …}{\{adam, samuli, monaldo\}@idsia.ch}`: its
-/// institute nameless notes on int146a `=2`, IDSIA nowhere). `=2` only, the switch-off reading as it was: each author both lines as
-/// with the switch off, the address in the line's text (the Kind steps keep it there, as today's).
+/// 01062, Germany (bob.baker@a.org)`: 2203.10777's shape, its city three notes of Bob Baker's on int146a `=2`), the address the
+/// e-mail of the one author it spells (LO2, review revLO1 1: on LO1 `=2` the line whole with its address on each, as with the
+/// switch off, where the base `=2` had the e-mail); under one names row and no column, every author's of the row (1605.03019's
+/// `\small{IDSIA, …}{\{adam, samuli, monaldo\}@idsia.ch}`: its institute nameless notes on int146a `=2`, IDSIA nowhere). `=2`
+/// only, the switch-off reading as it was: each author both lines, the address in the line's text.
 #[test]
 fn an_address_decides_only_its_own_ink() {
   let shared = repro!("emit_a_shared_line_goes_to_its_row");
@@ -144,11 +145,23 @@ fn an_address_decides_only_its_own_ink() {
     vec![
       name,
       "affiliation=Institute of Things, Univ. A",
+      "affiliation=Dresden, Saxony 01062, Germany",
+    ]
+  };
+  let mut bob = both("Bob Baker");
+  bob.push("email=bob.baker@a.org");
+  assert_eq!(creators(&xml), [both("Ann Able"), bob]);
+  let off_both = |name: &'static str| -> Vec<&'static str> {
+    vec![
+      name,
+      "affiliation=Institute of Things, Univ. A,",
       "affiliation=Dresden, Saxony 01062, Germany (bob.baker@a.org)",
     ]
   };
-  assert_eq!(creators(&xml), [both("Ann Able"), both("Bob Baker")]);
-  assert_eq!(creators(&off).len(), 2);
+  assert_eq!(creators(&off), [
+    off_both("Ann Able"),
+    off_both("Bob Baker")
+  ]);
   let row = repro!("emit_a_line_under_one_row_is_the_rows");
   let (off_log, off) = run(row, 0);
   assert_eq!(

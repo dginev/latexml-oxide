@@ -73,8 +73,8 @@ pub(in crate::base_utilities) use shadow::shadow_flush;
 pub use shadow::{
   fm_shadow_enabled, fm_shadow_json, reset_fm_shadow, set_fm_shadow_override, write_fm_shadow,
 };
+pub(crate) use writer::fm_emit_mode;
 pub use writer::set_fm_emit_override;
 pub(in crate::base_utilities) use writer::{
-  EMITTING, check_placed_content, emit_commands, fm_emit_mode, read_back_frontmatter,
-  write_observed_frontmatter,
+  EMITTING, check_placed_content, emit_commands, read_back_frontmatter, write_observed_frontmatter,
 };

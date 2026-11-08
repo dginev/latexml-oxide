@@ -269,7 +269,8 @@ pub(in crate::base_utilities) enum Entry {
 pub(in crate::base_utilities) struct Ledger {
   /// its entries, in call order: read by [`Self::entries`], changed only by [`Self::entries_mut`], which counts the change
   entries:          Vec<Entry>,
-  /// the changes to `entries` so far: what the emitter's reading of them is made at ([`Self::analysis`])
+  /// the changes to `entries` so far: what the emitter's reading of them is made at ([`Self::analysis`]), counted by
+  /// [`Self::entries_mut`] alone, which a caller takes only to change them
   generation:       u64,
   /// the emitter's reading of `entries` and its checks, made at a generation (`writer::emit::analysis`): kept while they
   /// read the same, dropped with the ledger (a conversion's start: no reading outlives its conversion, review revN1r2)
@@ -305,10 +306,43 @@ impl Ledger {
   pub(in crate::base_utilities) fn entries(&self) -> &[Entry] { &self.entries }
 
   /// Its entries, to change: a change of what the emitter reads, which a reading made before it no longer is
-  /// ([`Self::generation`]).
+  /// ([`Self::generation`]) — the one write path of the count, so taken only where an entry changes (a lookup reads
+  /// [`Self::entries`]: review revN1r3 4).
   pub(in crate::base_utilities) fn entries_mut(&mut self) -> &mut Vec<Entry> {
     self.generation += 1;
     &mut self.entries
+  }
+
+  /// Its entries in `range` that `picks` picks, each changed by `change`, a change counted ([`Self::entries_mut`]) only
+  /// where one is picked with the emitter's switch on, whose reading is kept while the entries read the same
+  /// ([`Self::analysis`]); with the switch off, which keeps no reading, changed in one pass, unread first (review revLO2 5:
+  /// the new code does no work with the switch off).
+  pub(in crate::base_utilities) fn change_each(
+    &mut self,
+    range: std::ops::Range<usize>,
+    picks: impl Fn(&Entry) -> bool,
+    mut change: impl FnMut(&mut Entry),
+  ) {
+    if fm_emit_mode() == 2
+      && !self
+        .entries
+        .iter()
+        .take(range.end)
+        .skip(range.start)
+        .any(&picks)
+    {
+      return;
+    }
+    for entry in self
+      .entries_mut()
+      .iter_mut()
+      .take(range.end)
+      .skip(range.start)
+    {
+      if picks(entry) {
+        change(entry);
+      }
+    }
   }
 
   /// A new entry, last.
@@ -598,15 +632,16 @@ fn watch_unwritten_setters() {
   }
   watch_frontmatter_setter_calls(Some(&FRONTMATTER_SETTERS[..]));
   with_ledger(|ledger| {
-    for entry in ledger.entries_mut() {
-      if let Entry::Api(call) = entry
-        && !call.inside
+    let unobserved = |entry: &Entry| {
+      matches!(entry, Entry::Api(call) if !call.inside
         && call.binding.is_none()
-        && !matches!(call.tag.as_str(), "ltx:title" | "ltx:creator")
-      {
+        && !matches!(call.tag.as_str(), "ltx:title" | "ltx:creator"))
+    };
+    ledger.change_each(0..usize::MAX, unobserved, |entry| {
+      if let Entry::Api(call) = entry {
         call.binding = Some(UNOBSERVED.to_string());
       }
-    }
+    });
   });
 }
 
@@ -788,12 +823,13 @@ pub(in crate::base_utilities) fn record_author_call(
     } else {
       ledger.shadow_extra += len;
     }
-    for entry in ledger.entries_mut() {
+    let entries = ledger.entries_mut();
+    for entry in entries.iter_mut() {
       if let Entry::Author(earlier) = entry {
         earlier.window_open = false;
       }
     }
-    ledger.push(Entry::Author(Box::new(block)));
+    entries.push(Entry::Author(Box::new(block)));
   });
 }
 
@@ -818,17 +854,15 @@ pub(in crate::base_utilities) fn note_field_stamp(field_id: u16, base: Option<us
     if field_id != 2 {
       return;
     }
-    // (its entries and its positions changed at once: the entries' change counted, as `entries_mut` counts one)
-    ledger.generation += 1;
-    let Some(block) = ledger
-      .entries
-      .iter_mut()
-      .rev()
-      .find_map(|entry| match entry {
-        Entry::Author(block) => Some(block),
-        _ => None,
-      })
+    let Some(at) = ledger
+      .entries()
+      .iter()
+      .rposition(|entry| matches!(entry, Entry::Author(_)))
     else {
+      return;
+    };
+    // (its entries and its positions change at once: the entries' change counted, `entries_mut`)
+    let Some(Entry::Author(block)) = ledger.entries().get(at) else {
       return;
     };
     // (S2b's check, inactive in S2a: a binding call stamped for real takes the positions it was projected at)
@@ -844,9 +878,13 @@ pub(in crate::base_utilities) fn note_field_stamp(field_id: u16, base: Option<us
     {
       return;
     }
-    if block.stamp == Stamp::Projected {
+    let projected = block.stamp == Stamp::Projected;
+    if projected {
       ledger.shadow_extra -= len;
     }
+    let Some(Entry::Author(block)) = ledger.entries_mut().get_mut(at) else {
+      return;
+    };
     match base {
       Some(base) => {
         block.stamp = Stamp::Kernel;
@@ -952,21 +990,19 @@ pub(in crate::base_utilities) fn record_api_call(
     let mut after_block = None;
     let mut inside = false;
     let mut setters_before = 0;
-    if let Some(block) = ledger
-      .entries_mut()
-      .iter_mut()
-      .rev()
-      .find_map(|entry| match entry {
-        Entry::Author(block) => Some(block),
-        _ => None,
-      })
+    let last_block = ledger
+      .entries()
+      .iter()
+      .rposition(|entry| matches!(entry, Entry::Author(_)));
+    if let Some(at) = last_block
+      && let Some(Entry::Author(block)) = ledger.entries().get(at)
     {
       after_block = Some(block.index);
       setters_before = block.setters_before;
       if block.window_open {
         if input_unread_since(&block.mark) {
           inside = true;
-        } else {
+        } else if let Some(Entry::Author(block)) = ledger.entries_mut().get_mut(at) {
           block.window_open = false;
         }
       }
@@ -1067,36 +1103,34 @@ pub(in crate::base_utilities) fn record_clear(tag: &str, attr: &[(&str, &str)]) 
       Entry::Author(block) => Some(block.index),
       _ => None,
     });
-    for entry in ledger.entries_mut() {
-      match entry {
-        Entry::Api(call) if call.epoch == flushes && call.tag == tag => {
-          let matches = attr.iter().all(|(key, value)| {
+    let clears = |entry: &Entry| match entry {
+      Entry::Api(call) if call.epoch == flushes && call.tag == tag => {
+        !call.cleared
+          && attr.iter().all(|(key, value)| {
             if *key == "role" {
               call.role == *value
             } else {
               last_attr(&call.attrs, key) == *value
             }
-          });
-          if matches {
-            call.cleared = true;
-          }
-        },
-        Entry::Author(block)
-          if block.epoch == flushes
-            && tag == "ltx:creator"
-            && role.is_none_or(|role| role == "author")
-            && attr.iter().all(|(key, _)| *key == "role") =>
-        {
-          let own = Some(block.index) == latest_block
-            && block.window_open
-            && input_unread_since(&block.mark);
-          if !own {
-            block.cleared = true;
-          }
-        },
-        _ => {},
-      }
-    }
+          })
+      },
+      Entry::Author(block)
+        if block.epoch == flushes
+          && tag == "ltx:creator"
+          && role.is_none_or(|role| role == "author")
+          && attr.iter().all(|(key, _)| *key == "role") =>
+      {
+        let own =
+          Some(block.index) == latest_block && block.window_open && input_unread_since(&block.mark);
+        !block.cleared && !own
+      },
+      _ => false,
+    };
+    ledger.change_each(0..usize::MAX, clears, |entry| match entry {
+      Entry::Api(call) => call.cleared = true,
+      Entry::Author(block) => block.cleared = true,
+      _ => {},
+    });
   });
 }
 
@@ -1109,13 +1143,13 @@ pub(in crate::base_utilities) fn record_author_body_clear() {
   with_ledger(|ledger| {
     let flushes = ledger.flushes;
     let (start, end) = std::mem::take(&mut ledger.author_body);
-    for entry in ledger.entries_mut().iter_mut().take(end).skip(start) {
-      if let Entry::Api(call) = entry
-        && call.epoch == flushes
-      {
+    let clears =
+      |entry: &Entry| matches!(entry, Entry::Api(call) if call.epoch == flushes && !call.cleared);
+    ledger.change_each(start..end, clears, |entry| {
+      if let Entry::Api(call) = entry {
         call.cleared = true;
       }
-    }
+    });
     ledger.author_body = (ledger.entries().len(), ledger.entries().len());
   });
 }
@@ -1137,21 +1171,15 @@ pub(in crate::base_utilities) fn record_cut_copy(role: &str, content: &Tokens) {
   let content = queued_affiliation_text(content);
   with_ledger(|ledger| {
     let flushes = ledger.flushes;
-    if let Some(call) = ledger
-      .entries_mut()
-      .iter_mut()
-      .find_map(|entry| match entry {
-        Entry::Api(call)
-          if call.epoch == flushes
-            && call.tag == "ltx:contact"
-            && call.role == role
-            && !call.cleared
-            && call.content == content =>
-        {
-          Some(call)
-        },
-        _ => None,
-      })
+    let copy = ledger.entries().iter().position(|entry| {
+      matches!(entry, Entry::Api(call) if call.epoch == flushes
+        && call.tag == "ltx:contact"
+        && call.role == role
+        && !call.cleared
+        && call.content == content)
+    });
+    if let Some(at) = copy
+      && let Some(Entry::Api(call)) = ledger.entries_mut().get_mut(at)
     {
       call.cleared = true;
     }

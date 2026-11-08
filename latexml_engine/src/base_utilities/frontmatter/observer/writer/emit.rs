@@ -18,11 +18,11 @@ use latexml_core::document::tag::RawFrontmatter;
 use super::{
   dom::{Kind, norm},
   plan::{self, Key, Owner, api_call},
-  repart::entry_span,
+  repart::{entry_span, prefix_tokens},
   *,
 };
 use crate::base_utilities::{
-  author_block::whole_block_author,
+  author_block::{document_note_call, note_call_end, whole_block_author},
   defs::author_macros::KEPT_WHOLE,
   frontmatter::{
     observer::{
@@ -780,6 +780,27 @@ fn event_at<R>(
   })
 }
 
+/// A note the reading gives the author block alone, as Perl prints it: digested inside the entry's contact, where `\\thanks`
+/// is `\\lx@add@pubnote@thanks` and `\\footnote` `\\lx@add@pubnote` (Base_Utility.pool.ltxml:331-332), one `<pubnote>` of
+/// the document — its own tokens so made (`document_note_call`, the token reader's one conversion of a note to the document's).
+/// 2504.09745's `$^{\\ddagger}$Ericsson Canada\\thanks{…}` once, where the switch off prints it per relocated copy and the
+/// block's creator held it (review revLO2 1). `None` for an item of another kind or owners, or a note of another command
+/// (`\\thanks[…]{…}`, `\\thanksref`), which the block's creator holds as before.
+fn block_pubnote(item: &Item) -> Option<Vec<Token>> {
+  if item.key.0 != Kind::Note || item.owners != [Owner::Block] {
+    return None;
+  }
+  let (index, Some(span)) = item.assoc.source? else {
+    return None;
+  };
+  event_at(index, span, |e| e.kind == EventKind::Note, |_| ())?;
+  // (the note's command through its closing brace, out of a group switching its font: `{\\small\\thanks{…}}`)
+  let tokens = span_tokens_of(index, span)?;
+  let note = tokens.unlist_ref();
+  let (start, end) = (0..note.len()).find_map(|i| note_call_end(note, i).map(|end| (i, end)))?;
+  document_note_call(&note[start..end])
+}
+
 /// `tokens`, with the space written just before `span` of the block at `index` first: the entry's, as Perl's `SplitTokens`
 /// leaves it after a line break or a mark.
 fn spaced(index: usize, span: (u16, u16), tokens: Vec<Token>) -> Vec<Token> {
@@ -1050,6 +1071,21 @@ fn item_call(
           |e| norm(&e.text) == key.1,
         ) != Some(true)
       {
+        // (an affiliation the reading wrote without the address its line prints last: the tokens printing it, cut inside the
+        // ink the address ends — 2203.10777, `prefix_tokens`)
+        if key.0 == Kind::Affiliation
+          && let Some((cut, tokens)) = prefix_tokens(index, span, &key.1)
+        {
+          let font = event_at(
+            index,
+            span,
+            |e| e.kind != EventKind::Layout,
+            |e| e.font.clone(),
+          );
+          return Ok(wrap(
+            in_its_font(font.flatten(), spaced(index, cut, tokens.unlist())).unlist_ref(),
+          ));
+        }
         return Ok(wrap(&by_text(Some("span letters differ"), &assoc.text)));
       }
       let span = found.unwrap_or(span);
@@ -1932,6 +1968,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   let is_fresh: BTreeSet<usize> = fresh.iter().copied().collect();
   let mut annotations: Vec<Vec<String>> = vec![Vec::new(); resolved.creators.len()];
   let mut calls: Vec<(String, &Item)> = Vec::new();
+  let mut block_pubnotes: Vec<Vec<Token>> = Vec::new();
   for (n, item) in items.iter().enumerate() {
     let new: Vec<usize> = item
       .owners
@@ -1941,6 +1978,10 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
         _ => None,
       })
       .collect();
+    if let Some(note) = block_pubnote(item) {
+      block_pubnotes.push(note);
+      continue;
+    }
     if item.owners.contains(&Owner::Block) {
       calls.push(("addresses:block".to_string(), item));
     }
@@ -2097,6 +2138,12 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     out.push(entry(tag, placed));
   }
   out.extend(unprinted.map(|(at, rdf)| rdf_entry(at, rdf)));
+  // (the block's notes Perl prints as the document's: `block_pubnote`)
+  out.extend(
+    block_pubnotes
+      .into_iter()
+      .map(|note| entry("ltx:pubnote", note)),
+  );
   // (an ink the reading holds no place for, as a note: of the author whose line it is, by the reading's own rule
   // (`LostInk::owner`: 2605.16481's Aiden Yiliu Li, 2110.03506's Kerianne L. Hobbs), else of the author block. Its tokens where
   // every word of it is lost; else its lost words' own text, its written addresses cut out (`LostInk::note_text`), in its
@@ -2176,4 +2223,40 @@ fn per_author_marks(source: usize) -> bool {
     });
     block.hook == "\\lx@add@author@split" || (block.cautious && !answers)
   })
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::base_utilities::frontmatter::observer::{ledger::TitleStamp, reset_fm_shadow};
+
+  /// No reading outlives its conversion: the conversion's reset drops the ledger's reading and starts its count again, so a
+  /// later conversion's first entries, counted from 0 as these were, read afresh (review revN1r3 5; the cortex worker resets the
+  /// frontmatter per paper, never the engine). The count changes with the entries alone (`Ledger::entries_mut`).
+  #[test]
+  fn the_reset_drops_the_reading_and_its_count() {
+    reset_fm_shadow();
+    with_ledger(|ledger| {
+      ledger.push(Entry::Title(TitleStamp {
+        index:  0,
+        length: 1,
+        range:  None,
+      }));
+      assert_eq!(ledger.generation(), 1);
+      ledger.analysis = Some(Rc::new(Analysis {
+        generation: ledger.generation(),
+        reading:    Resolved::default(),
+        resolved:   Resolved::default(),
+        checks:     BTreeMap::new(),
+        calls:      BTreeMap::new(),
+        marks:      BTreeMap::new(),
+        merged:     BTreeMap::new(),
+      }));
+    });
+    reset_fm_shadow();
+    with_ledger(|ledger| {
+      assert!(ledger.analysis.is_none());
+      assert_eq!(ledger.generation(), 0);
+    });
+  }
 }

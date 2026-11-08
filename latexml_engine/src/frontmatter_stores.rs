@@ -7494,8 +7494,17 @@ fn author_tail_calls(at_maketitle: bool) -> Result<Vec<Token>> {
   if made <= 0 || is_blank(&tail) {
     return Ok(Vec::new());
   }
+  // (with `LATEXML_FM_EMIT=2` the call queued its block whole, one entry whose creators the emitter makes at the flush, so a
+  // count of the call's queued entries reaches its last name alone: where the call made every queued creator, the tail is
+  // every creator's, Perl's `annotate=all` — `relocateAnnotations`' every parent, Base_Utility.pool.ltxml:520 —, as the count
+  // gives it them with the switch off; review revZ4b finding 4)
+  let annotate = if fm_emit_mode() == 2 && made as usize == queued_creator_count() {
+    s!("all")
+  } else {
+    made.to_string()
+  };
   let attr = mouth::tokenize_internal(TeXString::assembled(s!(
-    "_store=author,annotate={made},role=authorblock"
+    "_store=author,annotate={annotate},role=authorblock"
   )));
   let marked = mouth::tokenize_internal(TeXString::assembled(
     "_store=author,role=authorblock".to_string(),

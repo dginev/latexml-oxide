@@ -385,8 +385,10 @@ fn a_lost_name_spells_its_own_address() {
 /// A list's local parts printed apart, sharing one domain and opening their line in a font group, are one run of addresses the address
 /// reader reads (`address_runs`, in `Resolver::place_line_contacts` with the emitter's switch on), each part an author's by spelling
 /// (`{\it pzou94, ozel, suresh@gwu.edu}` under three names, 2003.14069; 2102.08981, 1901.01753, 1708.00818, 2307.03645), each
-/// named creator's element as it is, with either switch. (Until LO1 the reading lost the parts the base writes as addresses,
-/// `aable@a.org`, kept as the block's note in a Warning; repro `emit_a_font_group_of_local_parts_is_a_list`.)
+/// named creator's element as it is. (Until LO1 the reading lost the parts the base writes as addresses, `aable@a.org`, kept as the
+/// block's note in a Warning; repro `emit_a_font_group_of_local_parts_is_a_list`.) `=2` alone since LO2: the reading's
+/// switch-on rules run with `LATEXML_FM_EMIT=2`, as its whole entries (`Resolver::emitting`, review revLO1 4); `=1` keeps the
+/// switch-off reading, the parts its Warning.
 #[test]
 fn a_list_part_goes_to_no_line_author() {
   let template = repro!("emit_net_a_note_cuts_its_written_address");
@@ -394,18 +396,33 @@ fn a_list_part_goes_to_no_line_author() {
     NOTE_ROWS[0].0,
     "Ann Able \\qquad Bob Baker \\qquad Cat Cole \\\\ Univ A \\\\ {\\it aable, bbaker, cat@a.org}",
   );
-  for emit in [1, 2] {
-    let (log, xml) = run(&tex, emit);
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-    assert_eq!(creators(&xml), [
-      vec!["Ann Able", "affiliation=Univ A", "email=aable@a.org"],
-      vec!["Bob Baker", "affiliation=Univ A", "email=bbaker@a.org"],
-      vec!["Cat Cole", "affiliation=Univ A", "email=cat@a.org"],
-    ]);
-    assert_eq!(
-      notes(&xml),
-      [Vec::<String>::new(), Vec::new(), Vec::new()],
-      "{xml}"
-    );
-  }
+  let (log, xml) = run(&tex, 2);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able", "affiliation=Univ A", "email=aable@a.org"],
+    vec!["Bob Baker", "affiliation=Univ A", "email=bbaker@a.org"],
+    vec!["Cat Cole", "affiliation=Univ A", "email=cat@a.org"],
+  ]);
+  assert_eq!(
+    notes(&xml),
+    [Vec::<String>::new(), Vec::new(), Vec::new()],
+    "{xml}"
+  );
+  // (`=1` keeps the switch-off reading: the parts the block's note, kept in its Warning — review revLO2 6)
+  let (log, xml) = run(&tex, 1);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able", "affiliation=Univ A"],
+    vec!["Bob Baker", "affiliation=Univ A"],
+    vec!["Cat Cole", "affiliation=Univ A", "email=cat@a.org"],
+    vec![],
+  ]);
+  assert_eq!(
+    notes(&xml),
+    [vec![], vec![], vec![], vec![
+      "aable".to_string(),
+      "bbaker".to_string()
+    ]],
+    "{xml}"
+  );
 }

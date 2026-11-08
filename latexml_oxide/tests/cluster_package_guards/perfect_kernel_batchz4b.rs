@@ -3,7 +3,8 @@
 //! the names it held whole is placed at the flush), and the emitter's safety net, the reading's word check: a block whose reading loses other ink
 //! keeps it, the ink a note of the author block (`a_block_losing_other_ink_keeps_its_reading`; Perl's whole-block `\lx@add@author` only where the
 //! names fail), an e-mail's label written as printed (`an_email_label_is_written_as_printed`), a block no rehearsal reads written whole
-//! (`an_unread_block_is_written_whole`). Z4br2's RED: `annotate_made_reaches_every_name_red`.
+//! (`an_unread_block_is_written_whole`), and a tail a raw macro appends to `\@author` handed to every name the call made
+//! (`annotate_made_reaches_every_name`, Z4br2's RED, green since LO2).
 
 use latexml::util::test::{error_count, warning_count};
 use regex::Regex;
@@ -250,12 +251,13 @@ fn an_unread_block_is_written_whole() {
   assert_eq!(creators(&off).len(), 2, "{off}");
 }
 
-/// RED (review revZ4b finding 4): a tail a raw macro appends to `\@author` is handed to the creators the call made (`annotate={made}`,
-/// frontmatter_stores.rs:7497); under `=2` the call made one whole entry, so only the last name holds the row. Off and `=1` give every name the row.
+/// A tail a raw macro appends to `\@author` is handed to the creators the call made (`annotate={made}`, frontmatter_stores.rs
+/// `author_tail_calls`); under `=2` the call queued one whole entry, so the count reached the last name alone (review revZ4b finding
+/// 4, RED until LO2). Where the call made every queued creator, the tail is every creator's, Perl's `annotate=all`
+/// (`relocateAnnotations`' every parent, Base_Utility.pool.ltxml:520), as off and `=1` give it them.
 #[test]
-#[ignore = "RED: `lx_author_made` counts the call's queued entries, one under =2 (frontmatter_stores.rs `annotate={made}`)"]
-fn annotate_made_reaches_every_name_red() {
-  let template = repro!("emit_whole_queue_annotate_made_red");
+fn annotate_made_reaches_every_name() {
+  let template = repro!("emit_whole_queue_annotate_made");
   for names in [
     "Ann Able \\and Bob Baker",
     "Ann Able, Bob Baker and Cat Cole",

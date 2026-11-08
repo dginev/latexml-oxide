@@ -504,9 +504,16 @@ impl Resolver {
             };
             let asked: Vec<bool> = notes.iter().map(|note| requested(note)).collect();
             let mixed = asked.contains(&true);
+            // (a line of notes under a labelled entry is that entry's line, as today's one `\\`-joined contact: its notes
+            // the block's, as Perl digests them in the contact (`\lx@add@pubnote@thanks`), one `<pubnote>` each — `$^{2}$Univ
+            // B, City\\ \thanks{Equal contribution.}` gave the last name the thanks, review revLO2 base; with the emitter's
+            // switch on alone, `emitting`)
+            let entry_line = self.emitting && matches!(carried, Some(Continued::Pending(_)));
             for (note, asked) in notes.into_iter().zip(asked) {
               if mixed && !asked {
                 self.note(index, note, None, "note:line-owner note:unrequested");
+              } else if entry_line {
+                self.note(index, note, None, "note:line-owner note:entry");
               } else {
                 self.note(index, note, above.last().copied(), "note:line-owner");
               }
@@ -566,8 +573,15 @@ impl Resolver {
           let carried = if addresses_in(&text).is_empty() || !only_addresses(&text) {
             if let Some(carried) = carried {
               self.continue_entry(&carried, &text);
+              // (a labelled entry's line, its notes the block's, as a line of notes alone under it: `$^{2}$Univ B\\ Funded
+              // by X.\thanks{Grant 5.}`, review revLO2 base; `emitting`)
+              let (owner, rule) = if self.emitting && matches!(carried, Continued::Pending(_)) {
+                (None, "note:line-owner note:entry")
+              } else {
+                (above.last().copied(), "note:line-owner")
+              };
               for note in notes {
-                self.note(index, note, above.last().copied(), "note:line-owner");
+                self.note(index, note, owner, rule);
               }
               continues = Some(carried);
               continue;
@@ -691,6 +705,61 @@ impl Resolver {
               .iter()
               .any(|r| !is_symbol_label(r))
           });
+          // (an address decides only its own ink, its holder too: a line the row holds whose addresses spell one of the
+          // row is that one's e-mail, the line's other text the row's, as the switch off places it — 2203.10777's
+          // `Dresden, Saxony 01062, Germany (martin.waltz@tu-dresden.de)` under Martin Waltz, written whole with the
+          // address on int146a's LO1 (review revLO1 1); `Ann Able and Bob Baker\\ Univ A\\ Present address: Dept X, Univ Y
+          // (ann.able@y.org)`, Ann's e-mail and both authors' text without it (revLO1 2). Only an address printed last on
+          // its line, so the emitter cuts the rest from its tokens; with the emitter's switch on alone, `emitting`)
+          // (every address printed last: no other ink between or after them — `Dresden, Germany (bob.baker@a.org); Leipzig
+          // (bob@b.org)` keeps its reading, review revLO2 3; the emitter's cut ends at the first one, `prefix_tokens`)
+          let own_ink = || {
+            let cuts = address_cuts(&text, &runs);
+            let mut read: Vec<&String> = runs.iter().flat_map(|r| &r.addresses).collect();
+            read.sort_unstable();
+            read.dedup();
+            let inkless =
+              |from: usize, to: usize| !text[from..to].chars().any(char::is_alphanumeric);
+            cuts
+              .last()
+              .filter(|&&(_, end)| inkless(end, text.len()))
+              .filter(|_| cuts.windows(2).all(|pair| inkless(pair[0].1, pair[1].0)))
+              .filter(|_| {
+                read.len() == addresses.len() && addresses.iter().all(|a| read.contains(&a))
+              })
+              .map(|_| strip_address_runs(&text, &runs))
+              .filter(|rest| rest.chars().any(char::is_alphanumeric))
+          };
+          let held = (self.emitting && one_owner && other_ink && !own_name)
+            .then(own_ink)
+            .flatten();
+          let text = match (owners.iter().next(), held) {
+            (Some(&Some(owner)), Some(rest)) => {
+              for address in &addresses {
+                // (where the address prints as a contact of its own, its span: the emitter writes its tokens)
+                let span = line
+                  .events
+                  .iter()
+                  .find(|e| e.kind == EventKind::Contact && e.text.contains(address.as_str()))
+                  .and_then(|e| e.span)
+                  .or(source.1);
+                self.attach(
+                  Some(owner),
+                  Assoc {
+                    role:   "email".into(),
+                    text:   address.clone(),
+                    label:  None,
+                    rule:   "line:row-address owner:spelled".into(),
+                    source: Some((index, span)),
+                    target: None,
+                  },
+                  false,
+                );
+              }
+              rest
+            },
+            _ => text,
+          };
           let mut places = Vec::new();
           for owner in &run {
             places.push((*owner, self.out.creators[*owner].affiliations.len()));
@@ -779,13 +848,45 @@ impl Resolver {
       // events, its words split at an inner `and` or comma, was its first piece's span alone, so the cut failed ("a block
       // line does not cut") and the whole line went to the first mark's name: `$^{1}$Univ of Science and
       // Technology~~~~$^{3}$Univ C`, dev20k 2111.07950, 1503.06795, 2504.05692, 2008.02300, 2404.01856)
+      // (a note after the entry's last other ink is the block's, no name's: Perl digests it inside the entry's contact,
+      // where `\thanks` is `\lx@add@pubnote@thanks` (Base_Utility.pool.ltxml:332), and prints it once, a `<pubnote>` held by
+      // no author — 2504.09745's `$^{\ddagger}$Ericsson Canada\thanks{This work was supported …}`; the switch off prints it
+      // once per author its contact is relocated to (two pubnotes there), the emitter's switch on before this a nameless
+      // creator's note and the entry written with the note in it (review revLO2 1). The entry's span ends before it; read
+      // with the emitter's switch on alone, `emitting`)
+      let trailing = if self.emitting {
+        entry
+          .events
+          .iter()
+          .rev()
+          .take_while(|e| !inked(e) || e.kind == EventKind::Note)
+          .filter(|e| e.kind == EventKind::Note)
+          .count()
+      } else {
+        0
+      };
+      // (an entry of notes alone keeps them, as before)
+      let trailing = if trailing < entry.events.iter().filter(|e| inked(e)).count() {
+        trailing
+      } else {
+        0
+      };
+      let notes: Vec<&Event> = entry
+        .events
+        .iter()
+        .rev()
+        .filter(|e| e.kind == EventKind::Note)
+        .take(trailing)
+        .copied()
+        .collect();
       let span = match (
         entry.events.first().and_then(|e| e.span),
         entry
           .events
           .iter()
           .rev()
-          .find(|e| inked(e))
+          .filter(|e| inked(e))
+          .nth(trailing)
           .and_then(|e| e.span),
       ) {
         (Some((start, _)), Some((_, end))) if end >= start => Some((start, end)),
@@ -876,6 +977,9 @@ impl Resolver {
           self.compound.push(self.pending.len() - 1);
         }
         continues = Some(Continued::Pending(self.pending.len() - 1));
+      }
+      for note in notes.into_iter().rev() {
+        self.note(index, note, None, "note:entry");
       }
     }
     continues

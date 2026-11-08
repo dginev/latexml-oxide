@@ -1513,6 +1513,12 @@ pub(in crate::base_utilities) fn with_pending_entry_attr(f: impl FnOnce(&mut Tag
   if lookup_bool(EMITTING) {
     return;
   }
+  with_digesting_entry_attr(f);
+}
+
+/// [`with_pending_entry_attr`]'s entry, emitted or not: what a fact about the entry being digested is kept on, as Perl keeps
+/// its labels on it (Base_Utility.pool.ltxml:502-508) — the emitted entry's first mark read (`\lx@sup@setlabel@affiliation`).
+pub(in crate::base_utilities) fn with_digesting_entry_attr(f: impl FnOnce(&mut TagAttrs)) {
   with_value_mut("frontmatter", |val_opt| {
     if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
       let mut tags: Vec<String> = frnt.keys().cloned().collect();

@@ -1,0 +1,25 @@
+% mechanism: a label spelled with a font switch and spaces is cleaned on both sides, as Perl's `cleanFrontmatterLabels`
+%   (Base_Utility.pool.ltxml:360-372): a creator call's `annotations={\rm Ed Office}` (`field_notes::FieldCreator::labels`)
+%   and a separate call's `label={\rm Ed Office}` (`Resolver::api`'s `label=` reading) both `Ed_Office`; `=2` only
+% witness: review revLO2 4 (`scratch_revLO2/p/a_rm.tex`); the LO1 shape `emit_a_creator_calls_annotations_answer_a_label`
+% oracle:  pdflatex 0 errors; "Ann Able1 , Bob Baker2"; 1 Univ A, Town; 2 Univ B, City (the stand-ins print the name alone)
+% engines: LO1 `=2`: Editorial Office a nameless creator's; LO2 `=2`: Bob Baker's, his name showing `E,d,Office` (the label
+%   read raw, its words parted as marks)
+% expect:  0 errors, 0 warnings; `=2`: Bob Baker, role editor, Univ B and Editorial Office, his name alone
+% status:  RED (LO2) -> GREEN (perfect_kernel_batchlo2::a_creator_calls_ref_label_answers_its_ref)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\providecommand\lx@add@creator[2][]{#2}
+\providecommand\lx@add@affiliation[2][]{}
+\makeatother
+\begin{document}
+\title{A spelled label}
+\makeatletter
+\author{Ann Able$^{1}$, \lx@add@creator[role=editor,annotations={\rm Ed Office}]{Bob Baker}$^{2}$\\
+$^{1}$Univ A, Town\\ $^{2}$Univ B, City}
+\lx@add@affiliation[label={\rm Ed Office}]{Editorial Office}
+\makeatother
+\maketitle
+Text.
+\end{document}

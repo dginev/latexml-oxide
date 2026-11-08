@@ -1,0 +1,18 @@
+% mechanism: a line under a labelled entry continues it (today's one `\\`-joined contact), its notes the author block's, as
+%   Perl digests them in the contact (`\lx@add@pubnote@thanks`, Base_Utility.pool.ltxml:332): one `<pubnote>` each — a line
+%   of notes alone, in a font group (`{\small\thanks{…}}`), or after the line's text (`Funded by X.\thanks{…}`)
+%   (`Resolver::block`'s unmarked line under a labelled entry, `Continued::Pending`); `=2` only
+% witness: review revLO2 base (`scratch_revLO2/p/n_br.tex`, `n_brsm.tex`, `n_ink.tex`)
+% oracle:  pdflatex 0 errors; "Ann Able1, Bob Baker2, Cy Cole1"; 1Univ A, Town; 2Univ B, City; the footnote "Equal
+%   contribution."
+% engines: perl and rust off: one `<pubnote role="thanks">`; int146a and LO2 `=2`: the thanks Cy Cole's, the last name's
+% expect:  0 errors, 0 warnings; `=2`: one pubnote, no creator holds the note
+% status:  RED (int146a, LO2) -> GREEN (perfect_kernel_batchlo2::a_note_line_under_an_entry_is_the_blocks)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$, Cy Cole$^{1}$\\ $^{1}$Univ A, Town\\ $^{2}$Univ B, City\\ \thanks{Equal contribution.}}
+\maketitle
+Text.
+\end{document}

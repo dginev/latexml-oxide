@@ -441,8 +441,9 @@ struct Resolver {
   whole_entries:      bool,
   /// the block being read's creator calls' labels (`Input::Block::calls`)
   call_labels:        Vec<Vec<String>>,
-  /// the emitter's switch is on (`LATEXML_FM_EMIT`): the reading's rules only its output may move yet, the switch-off output
-  /// as it was until the flip (brief LO1: a line's other text by its row, a line's addresses by the address reader)
+  /// the emitter's switch is on (`LATEXML_FM_EMIT=2`, as `whole_entries`): the reading's rules only its output may move yet,
+  /// the switch-off output as it was until the flip (brief LO1: a line's other text by its row, a line's addresses by the
+  /// address reader; brief LO2: a row line's address its holder's, an entry's trailing note its holders')
   emitting:           bool,
   /// a note's links, and the notes they may empty, placed once every name is read (`answer_note_links`)
   note_links:         Vec<NoteLink>,
@@ -584,7 +585,7 @@ impl Resolver {
       entries:            Vec::new(),
       whole_entries:      fm_emit_mode() == 2,
       call_labels:        Vec::new(),
-      emitting:           fm_emit_mode() != 0,
+      emitting:           fm_emit_mode() == 2,
       note_links:         Vec::new(),
       document_emails:    Vec::new(),
       listed_emails:      Vec::new(),

@@ -3,6 +3,7 @@
 //! `annotate=` run.
 
 use super::*;
+use crate::base_utilities::clean_frontmatter_labels;
 
 /// An API call's marked entries as [`Resolver::api`] cuts them ([`mark_led_pieces`]), each with the text it resolves
 /// to under `role` (the e-mails and ORCIDs an affiliation's commands declare taken out, as `api` takes them): the
@@ -499,7 +500,22 @@ impl Resolver {
     let mut labels: Vec<String> = Vec::new();
     let mut label_rule = "";
     if let Some(label) = attr_value(attrs, "label").filter(|l| !l.is_empty()) {
+      // (a label cleaned as a creator call's `annotations=` are, where that is what the names request: Perl's
+      // `cleanFrontmatterLabels` on both sides (Base_Utility.pool.ltxml:360-372, `field_notes::FieldCreator::labels`) —
+      // `label={\rm Ed Office}` against `annotations={\rm Ed Office}`, both `Ed_Office`; read as marks, its words were
+      // marks the name showed, review revLO2 4. With the emitter's switch on alone, `emitting`)
       labels = mark_labels(label);
+      if self.emitting {
+        let cleaned = clean_frontmatter_labels(label, "");
+        if !cleaned.is_empty()
+          && cleaned != labels
+          && cleaned
+            .iter()
+            .all(|l| self.out.creators.iter().any(|c| c.requests.contains(l)))
+        {
+          labels = cleaned;
+        }
+      }
       label_rule = "api:label";
     } else if let Some(seq) =
       attr_value(attrs, "labelseq").filter(|s| !s.is_empty() && policy.label_sequence)

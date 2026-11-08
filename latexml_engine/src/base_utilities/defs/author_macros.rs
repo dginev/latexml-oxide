@@ -3,9 +3,11 @@
 
 use super::*;
 
-/// Whether the entry the frontmatter emitter is writing has read its first mark, its label (`\lx@sup@setlabel@affiliation`;
-/// reset as each emitted item starts, `\lx@frontmatter@item@start`, and as each entry's line starts, `\lx@frontmatter@savesups`).
-pub(in crate::base_utilities) const EMITTED_LINE_MARK: &str = "lx_fm_emitted_line_mark";
+/// The key on the entry the frontmatter emitter is writing (its pending entry, `with_digesting_entry_attr`) saying it has read
+/// its first mark, its label (`\lx@sup@setlabel@affiliation`; taken off as each emitted item starts,
+/// `\lx@frontmatter@item@start`, and as each entry's line starts, `\lx@frontmatter@savesups`): a fact of the entry, kept on
+/// it as Perl keeps its labels (Base_Utility.pool.ltxml:502-508).
+pub(in crate::base_utilities) const EMITTED_LINE_MARK: &str = "_markread";
 
 /// The key of a creator written whole, Perl's fallback, whose merge a Warning counts: `flag_merged_creators`' own mark of a
 /// creator it checked (a tabular block is kept whole on purpose alike). The emitter sets it where its Warning counts the block
@@ -342,12 +344,15 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     let mut labelled = false;
     with_pending_entry_attr(|attr| labelled = attr.contains_key("_bymark"));
     // (an entry the frontmatter emitter writes has its label from the emitter, so no `_bymark` records its first mark: the
-    // entry's mark read since its item or its line started (global: the mark's own formula is a group) says a later
+    // entry's mark read since its item or its line started (a key on the entry: the mark's own formula is a group) says a later
     // superscript is its text — `$^{146}$European
     // Centre … (ECT$^*$) )`, 1812.07638's institute, whose `*` the emitted entry lost: OD #980)
     if lookup_bool(EMITTING) {
-      labelled = lookup_bool(EMITTED_LINE_MARK);
-      assign_value(EMITTED_LINE_MARK, Stored::Bool(true), Some(Scope::Global));
+      with_digesting_entry_attr(|attr| {
+        labelled = attr
+          .insert(EMITTED_LINE_MARK.to_string(), "true".to_string())
+          .is_some();
+      });
     }
     // (in an entry of the frontmatter API's Cut, which shows its marks as printed, a later superscript is the one it
     // writes, in its own mode: `$^{1}$Lab $\frac{a}{b^{1}}$ Lab`'s fraction keeps its script, review 90a r3 probe AFg10)
@@ -438,7 +443,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // (an entry the frontmatter emitter writes, a call nested in another's too, has read no mark yet:
     // `\lx@sup@setlabel@affiliation`; 1812.05961's `\IEEEauthorblockA{… \IEEEauthorblockA{\IEEEauthorrefmark{2}…}}`)
     if lookup_bool(EMITTING) {
-      assign_value(EMITTED_LINE_MARK, Stored::Bool(false), Some(Scope::Global));
+      with_digesting_entry_attr(|attr| {
+        attr.remove(EMITTED_LINE_MARK);
+      });
     }
     // Saved once per group chain, keyed on the superscript (`\textsuperscript` is undefined under plain TeX).
     if lookup_meaning(&T_CS!("\\lx@frontmatter@plainsup")).is_none() {

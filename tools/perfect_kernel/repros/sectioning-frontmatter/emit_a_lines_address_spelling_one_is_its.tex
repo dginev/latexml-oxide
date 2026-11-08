@@ -1,0 +1,18 @@
+% mechanism: an address decides only its own ink, its holder too: a line the names row holds whose address spells one of the
+%   row is that one's e-mail, the line's other text the row's (`Resolver::block`'s unmarked line under the row); the emitter
+%   cuts the rest from the tokens inside the ink the address ends (`writer::repart::prefix_tokens`); `=2` only
+% witness: review revLO1 2 (`scratch_revLO1/p/r_pres_spelled.tex`); the row-line shape: `emit_a_shared_line_goes_to_its_row`
+%   (2203.10777)
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker"; Univ A; Present address: Dept X, Univ Y (ann.able@y.org)
+% engines: rust int146a `=2`: both authors "Present address: Dept X, Univ Y (ann.able@y.org)", no e-mail; off: Ann the
+%   e-mail, both the text without it
+% expect:  0 errors, 0 warnings; `=2` creators as with the switch off
+% status:  RED (int146a) -> GREEN (perfect_kernel_batchlo2::a_lines_address_spelling_one_is_its)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A line's address spelling one}
+\author{Ann Able and Bob Baker\\ Univ A\\ Present address: Dept X, Univ Y (ann.able@y.org)}
+\maketitle
+Text.
+\end{document}
