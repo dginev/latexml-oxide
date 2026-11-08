@@ -41,7 +41,11 @@ fn an_open_group_rehearsals_words_are_counted() {
 /// `Müller`) and one read without a dotless `\i` (`Fsica` for `Física`) are the block's own print, matched by
 /// `resolver::placed::reads_as` before the gap counts; a control symbol inside a word parts it (`Smith\,\\Univ`,
 /// `ledger::content_text`), so the placed "Smith" holds and the lost "Univ" counts alone. Only the really lost words are
-/// counted. Distinct from [`an_open_group_rehearsals_words_are_counted`]: there no word the check reads is the block's.
+/// counted. Only a word the content text read past an accent or a dotless letter in reads as a print by its base letters,
+/// a dotless allowance an `i`/`j` where its `\i`/`\j` was (RC1f; review revH1 findings 1 and 4): a plain `Lu` is no
+/// macro's `Liu`, a plain `Muller` no macro's `Müller`, both lost; exact matches come first, so the Warning names the lost
+/// `Lan` beside a printed `Lian` and the lost `Fisica` beside `F\'{\i}sica`. Distinct from
+/// [`an_open_group_rehearsals_words_are_counted`]: there no word the check reads is the block's.
 #[test]
 fn an_open_group_rehearsals_word_matching() {
   macro_rules! repro {
@@ -74,6 +78,43 @@ fn an_open_group_rehearsals_word_matching() {
       2,
       "c tabular Univ",
       vec![vec!["A One Brasília Naïve Pîle Smith".to_string()]],
+    ),
+    (
+      "plain word, no dotless allowance",
+      repro!("author_raw_tabular_juggle_plain_word_exact"),
+      1,
+      "c Dept Lu tabular",
+      vec![vec![
+        "Wei Liu".to_string(),
+        "affiliation=Univ A".to_string(),
+      ]],
+    ),
+    (
+      "plain word, no base letters",
+      repro!("author_raw_tabular_juggle_plain_word_unaccented"),
+      1,
+      "c Dept Muller tabular",
+      vec![vec![
+        "A Müller".to_string(),
+        "affiliation=Univ A".to_string(),
+      ]],
+    ),
+    (
+      "the lost word named, not the printed one",
+      repro!("author_raw_tabular_juggle_lost_beside_printed"),
+      1,
+      "c Dept Lan tabular",
+      vec![vec![
+        "Lian Wu".to_string(),
+        "affiliation=Univ A".to_string(),
+      ]],
+    ),
+    (
+      "the plain word lost beside the dotless one",
+      repro!("author_raw_tabular_juggle_lost_beside_dotless"),
+      1,
+      "c Dept Fisica tabular",
+      vec![vec!["A One".to_string(), "affiliation=Física".to_string()]],
     ),
   ];
   for (case, tex, warnings, lost, names) in rows {

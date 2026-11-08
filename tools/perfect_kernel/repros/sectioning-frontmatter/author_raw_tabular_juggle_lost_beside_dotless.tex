@@ -1,0 +1,17 @@
+% mechanism: the content check's word matching where a block's rehearsal left a group open: `F\'{\i}sica` (read
+%            `fsica`, a dotless letter after its `f`) is the events' `física`, and the plain `Fisica` after it matches
+%            as spelled only, so it is lost and named (`resolver::placed::reads_as`, exact matches first)
+% witness: 1401.6981 (the sig-alternate juggle's shape); synthetic, review revH1 finding 4 (probe h4f)
+% oracle:  pdflatex: 0 errors; "A One", "Física", "Dept Fisica"
+% engines: rust RC1e `=2`: E=0, one content-check Warning `c Dept Fsica tabular` (the wrong word named)
+% expect:  "A One Física" kept; at `=2` one content-check Warning, `c Dept Fisica tabular`
+% status:  RED (RC1e) -> GREEN (perfect_kernel_batchfs1::an_open_group_rehearsals_word_matching, RC1f)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\begin{document}
+\title{T}
+\author{A One \\ F\'{\i}sica \end{tabular}\begin{tabular}{c} Dept Fisica}
+\maketitle
+Text.
+\end{document}

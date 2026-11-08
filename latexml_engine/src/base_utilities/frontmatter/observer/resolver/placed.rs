@@ -31,7 +31,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
-  super::ledger::{ApiCall, Entry, Ledger, Outcome, SkipReason},
+  super::ledger::{ApiCall, ContentText, Entry, Ledger, Outcome, SkipReason},
   words::{ink_words, live_blocks, words_of},
   *,
 };
@@ -224,6 +224,8 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
   let (mut printed, mut beside) = (Tally::default(), Tally::default());
   let mut marks: BTreeMap<String, usize> = BTreeMap::new();
   let mut all_read = true;
+  // (the words a content's text read past an accent or a dotless letter in, with the places: `ContentText::read_past`)
+  let mut past: BTreeMap<String, Vec<(usize, bool)>> = BTreeMap::new();
   // (the Name words of each block written whole: TeX's own digestion of it, printing what its separators print — a class's
   // `\and` printing "and", which the rehearsal binds to an event printing nothing: JAIR's, 1908.02923 —, words no event
   // holds; the creator it became is found by them below)
@@ -248,28 +250,40 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
         // (`Outcome::Events::unread`, `ledger::content_text`, as for a call no rehearsal read) counting the words they
         // lack, a possible loss)
         if let Some(text) = unread {
+          read_past(&mut past, text);
           let mut content = Tally::default();
           content.add(text, 1);
-          // (a content word the block prints, as its own or as the word it reads without accents or a dotless letter —
-          // `muller` for `müller`, `fsica` for `física` ([`reads_as`]) —, each print taken once)
+          // (a content word the block prints as spelled; then a word it read past an accent or a dotless letter in, as the
+          // word the block prints with them — `muller` for `müller`, `fsica` for `física` ([`reads_as`]) —, each print taken
+          // once: a word lost beside a printed one it differs from by a letter is lost, and named, `Lan` beside `Lian`)
           let mut taken: BTreeMap<String, usize> = BTreeMap::new();
-          for (word, (n, spelled)) in content.words {
-            let mut same: Vec<(&String, usize)> = print
-              .words
-              .iter()
-              .filter(|(other, _)| reads_as(&word, other))
-              .map(|(other, (m, _))| (other, *m))
-              .collect();
-            same.sort_by_key(|(other, _)| **other != word);
-            let mut held = 0;
-            for (other, m) in same {
+          let mut held: BTreeMap<String, usize> = BTreeMap::new();
+          for (word, (n, _)) in &content.words {
+            let take = (*n).min(print.word(word));
+            taken.insert(word.clone(), take);
+            held.insert(word.clone(), take);
+          }
+          for (word, (n, _)) in &content.words {
+            let Some(places) = past.get(word) else {
+              continue;
+            };
+            for (other, (m, _)) in &print.words {
+              let have = held.get(word).copied().unwrap_or(0);
+              if have == *n {
+                break;
+              }
+              if other == word || !reads_as(word, places, other) {
+                continue;
+              }
               let take = m
                 .saturating_sub(taken.get(other).copied().unwrap_or(0))
-                .min(n - held);
+                .min(n - have);
               *taken.entry(other.clone()).or_default() += take;
-              held += take;
+              *held.entry(word.clone()).or_default() += take;
             }
-            let more = n - held;
+          }
+          for (word, (n, spelled)) in content.words {
+            let more = n - held.get(&word).copied().unwrap_or(0);
             for tally in [&mut printed, &mut *print] {
               tally
                 .words
@@ -372,6 +386,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
           aside(events, &mut beside, &mut marks);
           None
         } else if let Some(text) = &call.unread {
+          read_past(&mut past, text);
           calls
             .insert(words_of(text).collect())
             .then(|| (None, (vec![text.to_string()], vec![text.to_string()])))
@@ -417,6 +432,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
   // (the queued creator calls the emitter took that no call recorded: their contents' texts)
   for (n, text) in ledger.unrecorded.iter().enumerate() {
     if calls.insert(words_of(text).collect()) {
+      read_past(&mut past, text);
       prints.add(ledger.entries().len() + n, text);
       printed.add(text, 1);
     }
@@ -576,13 +592,14 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
     .words
     .iter()
     .map(|(word, (n, _))| (word.clone(), n.saturating_sub(held.word(word))))
-    .filter(|(word, gap)| *gap > 0 && base_letters(word) == *word)
+    .filter(|(word, gap)| *gap > 0 && past.contains_key(word))
     .collect();
   for (word, mut gap) in gaps {
+    let places = &past[&word];
     let accented: Vec<String> = shared
       .words
       .keys()
-      .filter(|other| **other != word && reads_as(&word, other))
+      .filter(|other| **other != word && reads_as(&word, places, other))
       .cloned()
       .collect();
     for other in accented {
@@ -626,20 +643,40 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
   check
 }
 
-/// Whether `word`, a content text's (`ledger::content_text`: its accents and dotless letters unread, `F\'{\i}sica` read
-/// `fsica`), reads the word `other` an ink prints (`física`): `other`'s base letters ([`base_letters`]), an `i` or a `j`
-/// dropped from them where a dotless `\i`/`\j` printed one. The one test both content-text reconciles share.
-fn reads_as(word: &str, other: &str) -> bool {
-  let word = base_letters(word);
-  let mut word = word.chars().peekable();
-  for c in base_letters(other).chars() {
-    if word.peek() == Some(&c) {
-      word.next();
-    } else if !matches!(c, 'i' | 'j' | 'ȷ') {
+/// The words `text` read past an accent or a dotless letter in, into `past` ([`ContentText::read_past`]).
+fn read_past(past: &mut BTreeMap<String, Vec<(usize, bool)>>, text: &ContentText) {
+  for (word, places) in &text.read_past {
+    past.entry(word.clone()).or_insert_with(|| places.clone());
+  }
+}
+
+/// Whether `word`, a content text's read past an accent or a one-letter control word at `places`
+/// ([`ContentText::read_past`]: `F\'{\i}sica` read `fsica`, a dotless letter after its `f`), reads the word `other` an
+/// ink prints (`física`): `other`'s base letters ([`base_letters`]) are `word`'s, with at most one `i` or `j` where a
+/// one-letter control word was, the letter a dotless `\i`/`\j` printed — no other letter, and none elsewhere (`lu` is
+/// no `liu`). The one test both content-text reconciles share.
+fn reads_as(word: &str, places: &[(usize, bool)], other: &str) -> bool {
+  fn fits(word: &[char], other: &[char], places: &[usize]) -> bool {
+    let Some((&at, rest)) = places.split_first() else {
+      return word == other;
+    };
+    if word.len() < at || other.len() < at || word[..at] != other[..at] {
       return false;
     }
+    let (word, other) = (&word[at..], &other[at..]);
+    let rest: Vec<usize> = rest.iter().map(|p| p - at).collect();
+    fits(word, other, &rest)
+      || other.first().is_some_and(|c| matches!(c, 'i' | 'j' | 'ȷ'))
+        && fits(word, &other[1..], &rest)
   }
-  word.next().is_none()
+  let word: Vec<char> = base_letters(word).chars().collect();
+  let other: Vec<char> = base_letters(other).chars().collect();
+  let dotless: Vec<usize> = places
+    .iter()
+    .filter(|(_, letter)| *letter)
+    .map(|(at, _)| *at)
+    .collect();
+  fits(&word, &other, &dotless)
 }
 
 /// The texts the inks print, each block's and call's (by its ledger index) in order, by their words ([`ink_words`], lowercased,

@@ -1,0 +1,16 @@
+% mechanism: the content check's word matching where a block's rehearsal left a group open: content words match the
+%            block's print as spelled first, so the Warning names the lost word, not a printed one a letter apart
+% witness: 1401.6981 (the sig-alternate juggle's shape); synthetic, review revH1 finding 4 (probe h4d)
+% oracle:  pdflatex: 0 errors; "Lian Wu", "Univ A", "Dept Lan"
+% engines: rust RC1e `=2`: E=0, one content-check Warning `c Dept Lian tabular` (the printed word named)
+% expect:  "Lian Wu" kept; at `=2` one content-check Warning, `c Dept Lan tabular`
+% status:  RED (RC1e) -> GREEN (perfect_kernel_batchfs1::an_open_group_rehearsals_word_matching, RC1f)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\begin{document}
+\title{T}
+\author{Lian Wu \\ Univ A \end{tabular}\begin{tabular}{c} Dept Lan}
+\maketitle
+Text.
+\end{document}

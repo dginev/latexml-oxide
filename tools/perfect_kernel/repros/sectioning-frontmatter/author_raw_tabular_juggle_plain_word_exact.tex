@@ -1,0 +1,18 @@
+% mechanism: the content check's word matching where a block's rehearsal left a group open: a plain content word (one
+%            `ledger::content_text` read past no accent or dotless letter in) matches the block's print as spelled only;
+%            the dotless allowance (`resolver::placed::reads_as`) is a word's that read past a `\i`, at that place
+% witness: 1401.6981 (the sig-alternate juggle's shape); synthetic, review revH1 finding 1 (probe h4g)
+% oracle:  pdflatex: 0 errors; "Wei Liu", "Univ A", "Dept Lu"
+% engines: rust RC1e `=2`: E=0, one content-check Warning `c Dept tabular` (the lost "Lu" hidden by the macro's "Liu")
+% expect:  "Wei Liu" kept; at `=2` one content-check Warning, `c Dept Lu tabular`
+% status:  RED (RC1e) -> GREEN (perfect_kernel_batchfs1::an_open_group_rehearsals_word_matching, RC1f)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\newcommand\auth{Wei Liu}
+\begin{document}
+\title{T}
+\author{\auth \\ Univ A \end{tabular}\begin{tabular}{c} Dept Lu}
+\maketitle
+Text.
+\end{document}
