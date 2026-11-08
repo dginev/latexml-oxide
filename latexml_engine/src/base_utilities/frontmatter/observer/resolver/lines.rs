@@ -789,6 +789,52 @@ fn address_groups_whole(events: &[&Event]) -> Vec<Event> {
   out
 }
 
+/// A names line's events with a byline's "by" (in any case) that a line opens with, a Name of its own the lexer keeps as
+/// printed, read as the separator it is when the line's next Name reads as a name: the old reader's `without_leading_by`
+/// (`author_block/name_text.rs:669`, which `split_author_line` applies to every names line and only there: "`line`
+/// without the byline word "by" (in any case) that opens it, when names follow it", `name_count(…) >= 1`). A line opens
+/// after an `\and` or an alignment tab too, each author's lines as the old reader splits them (`\and BY~~Max Moss~~and~~Ned
+/// Nash`). In the line or a run of its own, the spacing or the font after it parting it from the names: `\author{by David
+/// Harari and Tam\'as Szamuely}`, 0808.2556; `By~~{\scshape Vitaly~Bergelson}~~and~~…`, 2603.25922, 2604.07186,
+/// 2604.12864; `By~~{\scshape Bryna Kra}`, 2603.27258. A line the reading reads as no names keeps it: `Ann Able \\
+/// By\quad Lee Hall, \textit{Univ X}`'s affiliation, review revG1 1. With the spans of the words it read so, which the
+/// reading records ([`Resolved::drops`](super::Resolved::drops)): the content check counts them as the separators'
+/// words they are, no word lost.
+fn byline_dropped(mut events: Vec<Event>) -> (Vec<Event>, Vec<(u16, u16)>) {
+  let mut dropped = Vec::new();
+  let ends_line =
+    |e: &Event| matches!(e.kind, EventKind::Sep(SepKind::And(_) | SepKind::Column(_)));
+  let mut line_inked = false;
+  for at in 0..events.len() {
+    let event = &events[at];
+    if ends_line(event) {
+      line_inked = false;
+      continue;
+    }
+    if !inked(event) {
+      continue;
+    }
+    let opens = !std::mem::replace(&mut line_inked, true);
+    if !opens || event.kind != EventKind::Name || !event.text.trim().eq_ignore_ascii_case("by") {
+      continue;
+    }
+    let named = events[at + 1..]
+      .iter()
+      .take_while(|e| !ends_line(e))
+      .find(|e| e.kind == EventKind::Name && e.text.chars().any(char::is_alphanumeric))
+      .is_some_and(|e| name_count(&e.text) >= 1);
+    if named {
+      let by = &events[at];
+      let mut sep = Event::new(EventKind::Sep(SepKind::Word(by.text.trim().to_string())));
+      sep.span = by.span;
+      sep.nest = by.nest;
+      dropped.extend(by.span);
+      events[at] = sep;
+    }
+  }
+  (events, dropped)
+}
+
 /// A per-author class's names line as one Name when its pieces, parted only by commas and words, do not read as two
 /// or more names (`name_count` on the line's text: `Sanhueza, Patricio` one name, `Ann Able, Bob Baker` two) and none
 /// reads as an institution (that one is the name's affiliation, `classify:institution`).
@@ -849,6 +895,13 @@ fn name_annotation(e: &Event) -> bool {
       })
 }
 
+/// Whether a comma is the separator between two marks a mark command printed, `\fnmsep`'s, `\fnsep`'s or `\unskip$^,$`
+/// (`events::mark_event`, its role the printing one's), which the old reader's `name_takes_annotations` moves onto the
+/// name with the marks: `Ann Able (for the\inst{1}\fnmsep\thanks{x} ATLAS Collaboration)`, llncs, review revG1 2.
+fn mark_separator(e: &Event) -> bool {
+  matches!(e.kind, EventKind::Sep(SepKind::Comma)) && e.role.is_some()
+}
+
 /// A names line's pieces with a name's collaboration remark that notes, layout or a command's own gap part read whole
 /// (rows C2-C4 of the old reader's names split, `author_block/collaborations.rs` `name_and_remark` and
 /// `name_takes_annotations`): from a piece a remark opens in ([`remark_start`]), the Name events of one run, parted
@@ -899,6 +952,11 @@ pub(super) fn remark_pieces_joined(events: Vec<Event>) -> Vec<Event> {
       match &events[j].kind {
         EventKind::Layout | EventKind::Note => j += 1,
         EventKind::Mark if name_annotation(&events[j]) => j += 1,
+        // (a mark separator, `\fnmsep`'s and `\fnsep`'s comma, moves with the marks it parts; a mark no annotation, a
+        // number's `$^{1}$`, stays in the remark, which goes on past it: the old reader's `name_takes_annotations`, review
+        // revG1 2)
+        EventKind::Sep(SepKind::Comma) if mark_separator(&events[j]) => j += 1,
+        EventKind::Mark => j += 1,
         EventKind::Sep(SepKind::Gap { .. })
           if j + 1 < events.len() && gap_inside_one_command(&refs, j + 1, refs[j]) =>
         {
@@ -935,7 +993,7 @@ pub(super) fn remark_pieces_joined(events: Vec<Event>) -> Vec<Event> {
     out.extend(
       run
         .iter()
-        .filter(|e| e.kind == EventKind::Note || name_annotation(e))
+        .filter(|e| e.kind == EventKind::Note || name_annotation(e) || mark_separator(e))
         .cloned(),
     );
     i = last + 1;
@@ -1269,6 +1327,11 @@ impl Resolver {
     // jmlr2e's `\email` a font switch, 2507.03885 — each an e-mail of the line's names by the owner chain, placed once
     // the line's names are read; the words before an address in its run stay the name)
     let (owned, addresses) = names_without_addresses(&line.events);
+    let (owned, dropped) = byline_dropped(owned);
+    self
+      .out
+      .drops
+      .extend(dropped.into_iter().map(|span| (index, span)));
     // (a per-author class's names line that does not read as two or more names is one name as written: aastex's
     // `\author{Sanhueza, Patricio}`, 2604.19097 — `split_author_line_cautious`, `name_count` on the line's text)
     let owned = if cautious {

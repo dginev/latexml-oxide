@@ -171,6 +171,11 @@ pub struct Resolved {
   /// (`Resolver::answer_listed_emails`, brief 95c G3), each as today's holds it — for the writer's name re-part, which
   /// reads them whole (`writer::give_back_addresses`, brief 95e); not in the dump
   pub listed:    Vec<Listed>,
+  /// the words a block prints that the reading drops by its own rule, each a Name event's ledger index and span: a byline's
+  /// "by" a names line opens with, which it reads as a separator (`lines::byline_dropped`, the old reader's
+  /// `without_leading_by`: `By~~{\scshape Bryna Kra}`, 2603.27258) — for the content check, which counts each as the
+  /// separator's word it is, none lost (`placed::content_check`); not in the dump
+  pub drops:     Vec<(usize, (u16, u16))>,
 }
 
 /// One affiliation entry the reading took printed addresses out of ([`Resolved::taken`]): its source, its text before

@@ -163,15 +163,24 @@ impl Lexer {
       open = word.chars().fold(open, bracket_depth);
     }
     let mut name: Option<Event> = None;
-    // (a byline's "by", in any case, opening a line before names is no name — today's `without_leading_by`:
-    // `\author{by David Harari and Tam\'as Szamuely}`, 0808.2556)
+    // (a byline's "by", in any case, opening a line before more words is a Name of its own, its ink as printed: whether it
+    // is the byline the old reader's `without_leading_by` drops is the reading's to say, on a line it reads as names
+    // (`Resolver::names_line`): `\author{by David Harari and Tam\'as Szamuely}`, 0808.2556; an affiliation line's `By
+    // Lee Hall, \textit{Univ X}` keeps it, review revG1 1)
     let byline = !self.line_inked && words.len() > 1 && words[0].0.eq_ignore_ascii_case("by");
     for (at, (word, span)) in words.into_iter().enumerate() {
+      if at == 0 && byline {
+        let mut by = Event::new(EventKind::Name);
+        by.nest = self.run_nest;
+        by.font.clone_from(&ink_font);
+        by.text = word;
+        by.span = span;
+        by.marks = owns[at];
+        self.events.push(by);
+        continue;
+      }
       if opens[at] == 0
-        && (word.eq_ignore_ascii_case("and")
-          || word == "&"
-          || is_separator_word(&word)
-          || (at == 0 && byline))
+        && (word.eq_ignore_ascii_case("and") || word == "&" || is_separator_word(&word))
       {
         self.events.extend(name.take());
         let mut sep = Event::new(EventKind::Sep(SepKind::Word(word)));
@@ -400,7 +409,7 @@ impl Lexer {
     // a `\label` outside a note labels the note before it
     let mut events: Vec<Event> = Vec::with_capacity(self.events.len());
     let glued = glue_in_word_marks(self.events);
-    let glued = mark_ordinals(byline_runs(glued));
+    let glued = mark_ordinals(glued);
     for event in glued {
       if event.kind == EventKind::Layout && event.role.as_deref() == Some("label") {
         if let Some(note) = events.iter_mut().rev().find(|e| e.kind == EventKind::Note)
@@ -416,51 +425,6 @@ impl Lexer {
     }
     events
   }
-}
-
-/// The events with a byline's "by" that a line opens with as a run of its own — the spacing or the font after it parts it
-/// from the names (`By~~{\scshape Vitaly~Bergelson}~~and~~…`, 2603.25922, 2604.07186, 2604.12864; `By~~{\scshape Bryna
-/// Kra}`, 2603.27258; `BY~~Max Moss`) — the separator [`Lexer::flush_run`] makes of one that opens a run of names, when
-/// the line's next Name reads as a name: the old reader's `without_leading_by` (`author_block/name_text.rs:669`, applied
-/// to every names line by `split_author_line`: "`line` without the byline word "by" (in any case) that opens it, when
-/// names follow it", `name_count(…) >= 1`). Alone, the gap rule joined it to the name after it ("By Bryna Kra").
-fn byline_runs(mut events: Vec<Event>) -> Vec<Event> {
-  // (a line opens after a break, and after an `\and` or an alignment tab, each author's lines as the old reader splits
-  // them: `\and BY~~Max Moss~~and~~Ned Nash`)
-  let ends_line = |e: &Event| {
-    matches!(
-      e.kind,
-      EventKind::Break | EventKind::Sep(SepKind::And(_) | SepKind::Column(_))
-    )
-  };
-  let mut line_inked = false;
-  for at in 0..events.len() {
-    let event = &events[at];
-    if ends_line(event) {
-      line_inked = false;
-      continue;
-    }
-    if !inked(event) {
-      continue;
-    }
-    let opens = !std::mem::replace(&mut line_inked, true);
-    if !opens || event.kind != EventKind::Name || !event.text.trim().eq_ignore_ascii_case("by") {
-      continue;
-    }
-    let named = events[at + 1..]
-      .iter()
-      .take_while(|e| !ends_line(e))
-      .find(|e| e.kind == EventKind::Name && e.text.chars().any(char::is_alphanumeric))
-      .is_some_and(|e| name_count(&e.text) >= 1);
-    if named {
-      let by = &events[at];
-      let mut sep = Event::new(EventKind::Sep(SepKind::Word(by.text.trim().to_string())));
-      sep.span = by.span;
-      sep.nest = by.nest;
-      events[at] = sep;
-    }
-  }
-  events
 }
 
 /// The label a word of a name run prints by hand ([`PrintedLabel`]): `a)`, `12)`, one or two letters or digits and its `)`.

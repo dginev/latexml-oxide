@@ -510,22 +510,25 @@ fn event_run_at(
 
 /// A block's names' tokens: their marks with them where `marks` (a per-author class's block, whose names keep them printed as
 /// Perl does), a `\\footnotemark` (what `relocate_footnote` moves its text to, 2203.12964) and an ORCID written on it, its logo in
-/// the name as today's (2208.05251), in `on_names`. `None` for a name its events don't spell.
+/// the name as today's (2208.05251), in `on_names`; a `\\cite` with it always, a mark of no text of its own that the old reader
+/// keeps in the personname (`name_takes_annotations`). `None` for a name its events don't spell, with the cites the
+/// reading moved onto it from the remark its event opens (`Ann Able (for the\\cite{k} ATLAS Collaboration)`, review revG1
+/// 3), which the writer writes after its text.
 fn block_names(
   index: usize,
   names: &[String],
   marks: bool,
   on_names: &mut BTreeSet<(usize, (u16, u16))>,
-) -> Vec<Option<Vec<Token>>> {
+) -> Vec<(Option<Vec<Token>>, Vec<Token>)> {
   with_ledger(|ledger| {
     let Some(Entry::Author(block)) = ledger.entries().get(index) else {
-      return vec![None; names.len()];
+      return vec![(None, Vec::new()); names.len()];
     };
     let Outcome::Events {
       events, formulas, environments, ..
     } = &block.outcome
     else {
-      return vec![None; names.len()];
+      return vec![(None, Vec::new()); names.len()];
     };
     let read = read_events(events);
     let found: Vec<(usize, &Event)> = read
@@ -557,7 +560,8 @@ fn block_names(
       }
       let is_orcid = |e: &Event| e.kind == EventKind::Contact && e.role.as_deref() == Some("orcid");
       let mark_kept = |e: &Event| {
-        e.kind == EventKind::Mark && (marks || e.role.as_deref() == Some("footnotemark"))
+        e.kind == EventKind::Mark
+          && (marks || matches!(e.role.as_deref(), Some("footnotemark" | "cite")))
       };
       let beside =
         |e: &&Event| matches!(e.kind, EventKind::Mark | EventKind::Layout) || is_orcid(e);
@@ -598,9 +602,11 @@ fn block_names(
         // (a `\\footnotemark`'s number, past its span: 2209.15209)
         let t = past_option(field.tokens, s + 1).max(t);
         // (a mark past the close of a group of names the name's run opens no part of is the last name's, its own run
-        // after the name: `{Ann Able$^{\star}$, …, David López-Pérez}$^{\sharp}$`, 2504.02633 — the old reader's
-        // `math_active_scripts` read it so, `frontmatter/fallback.rs:160`, a mark after the names group; grown over the
-        // group's close, the run was no balanced one and the name lost its markup, FB1's P4)
+        // after the name: `{Ann Able$^{\star}$, …, David López-Pérez}$^{\sharp}$`, 2504.02633 — the old reader's names
+        // split reads it so, `split_author_line`'s step 1 (`names_in_wrapper`, `author_block/names_split.rs`: a wrapper
+        // holding names with only marks after it split into them, the marks the last name's; `math_active_scripts` only
+        // makes breqn's `^` a superscript); grown over the group's close, the run was no balanced one and the name lost
+        // its markup, FB1's P4)
         let past_group = || {
           let (name_from, name_to) = (at(found[from].1.span?.0)?, at(found[to].1.span?.1)?);
           let closes = field.tokens.get(name_to..s)?.iter().scan(0, |depth, t| {
@@ -658,13 +664,43 @@ fn block_names(
         })
         .filter(|_| joined == key)
     };
+    // (the cites after a Name a name's text opens, up to the line's next separator: the remark's, which the reading moved
+    // onto the name)
+    let cites_of = |from: usize, key: &str| -> Vec<Token> {
+      let Some(&(at_name, _)) = found[from..].iter().find(|(_, e)| {
+        let text = norm(&e.text);
+        text.len() > key.len() && text.starts_with(key)
+      }) else {
+        return Vec::new();
+      };
+      let within = |e: &&Event| {
+        matches!(
+          e.kind,
+          EventKind::Name | EventKind::Mark | EventKind::Note | EventKind::Layout
+        )
+      };
+      let mut cites = Vec::new();
+      for e in read[at_name + 1..].iter().take_while(within) {
+        if e.kind == EventKind::Mark
+          && e.role.as_deref() == Some("cite")
+          && let Some((s, t)) = e.span.and_then(|(s, t)| Some((at(s)?, at(t)?)))
+          && let Some((tokens, _)) = field.content_of((s, t), 0, s)
+        {
+          cites.extend(tokens.unlist());
+        }
+      }
+      cites
+    };
     let mut cursor = 0;
     let mut tokens_of = |name: &String| {
       let key = norm(name);
-      let (from, to) =
-        (cursor..found.len()).find_map(|from| Some((from, from + spelled_from(from, &key)?)))?;
+      let Some((from, to)) =
+        (cursor..found.len()).find_map(|from| Some((from, from + spelled_from(from, &key)?)))
+      else {
+        return (None, cites_of(cursor, &key));
+      };
       cursor = to + 1;
-      name_tokens(from, to)
+      (name_tokens(from, to), Vec::new())
     };
     names.iter().map(&mut tokens_of).collect()
   })
@@ -1700,6 +1736,18 @@ fn analysis() -> Rc<Analysis> {
   })
 }
 
+/// The words the reading drops by its own rule ([`Resolved::drops`]), as the ledger's last [`Analysis`] read them:
+/// what the content check counts as separators' words (`placed::content_check`).
+pub(super) fn reading_drops() -> BTreeSet<(usize, (u16, u16))> {
+  with_ledger(|ledger| {
+    ledger
+      .analysis
+      .as_ref()
+      .map(|made| made.reading.drops.iter().copied().collect())
+      .unwrap_or_default()
+  })
+}
+
 /// Whether the author block at ledger index `index` is written whole, as Perl's `\\lx@add@author` writes a block its
 /// `\\lx@add@authors` can't cut (Base_Utility.pool.ltxml:692-694, its `{tabular}` fallback): where its reading would lose a
 /// name's words (`lost`: an ink failing the names, `LostInk::names_fail`). Decided once, at the flush that first reads it, which a
@@ -2037,7 +2085,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     .map(|&source| (source, per_author_marks(source)))
     .collect();
   let keeps = |source: usize| keeps_marks.get(&source).copied().unwrap_or(false);
-  let mut names: BTreeMap<usize, Option<Vec<Token>>> = BTreeMap::new();
+  let mut names: BTreeMap<usize, (Option<Vec<Token>>, Vec<Token>)> = BTreeMap::new();
   let mut on_names: BTreeSet<(usize, (u16, u16))> = BTreeSet::new();
   for (&source, members) in &by_block {
     let spelled: Vec<String> = members
@@ -2176,11 +2224,14 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .flatten()
       .and_then(|command| rekeyed(&command, &s!("{keys},"), false, true, true));
     let tokens = call.unwrap_or_else(|| {
-      let name = names.remove(&i).flatten().unwrap_or_else(|| {
-        by_text(
+      let (name, cites) = names.remove(&i).unwrap_or_default();
+      let name = name.unwrap_or_else(|| {
+        let mut name = by_text(
           Some(&s!("a name its events don't spell [{}]", c.rule)),
           &c.name,
-        )
+        );
+        name.extend(cites);
+        name
       });
       let content = cs_group("\\lx@frontmatter@item", &[&name]);
       let content = cs_group("\\lx@personname", &[&cs_group("\\lx@author@withinst", &[
