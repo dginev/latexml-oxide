@@ -1,0 +1,21 @@
+% mechanism: an author block that closes the title page's tabular and opens another as written, no macro
+%            (`\end{tabular}\begin{tabular}[t]{c}`): the column sig-alternate's `\alignauthor` is (sig-alternate.cls:274),
+%            so the names after it are the next author; with a line break printed between
+%            (`\end{tabular}\newline\begin{tabular}{c}`) that break stands, the lines after it the author's. The
+%            rehearsal's digestion left the reopened tabular open, the lines after it in no box and no event, lost with
+%            no Warning at `=2` (`observer::rehearsal` `inline_juggles_as_columns`)
+% witness: 1401.6981 (sig-alternate, `\end{tabular}\begin{tabular}[t]{p{1.3\auwidth}}\centering` before its second
+%          author; `=2` dropped authors 2 and 3); the sibling of author_shared_affiliation_line (the macro form)
+% oracle:  pdflatex: 0 errors; "A One", "Univ A", "Bob Two", "Univ B" in two columns
+% engines: rust FB2a off: E=4 ("Attempt to end mode restricted_horizontal"), one creator; `=2`: E=0, W=0, Bob Two and
+%          Univ B lost silently
+% expect:  0 errors, 0 warnings at `=2`; creators A One (Univ A) and Bob Two (Univ B)
+% status:  RED (FB2a) -> GREEN at `=2` (FB2b4); off unchanged until the flip
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{A One\\ Univ A \end{tabular}\begin{tabular}[t]{c} Bob Two\\ Univ B}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,18 @@
+% mechanism: a URL line under the block's names is the block's only when they are all of the document's author list
+%            (the old reader's `LinkOwner::Block`); under one `\and` column of several it is that column's
+% witness: the user ruling of 2026-10-20 (batch 77p r7) and its witnesses 2605.06223, 2602.08439, 2604.12896; the
+%          column case of the r5 re-review's u6m
+% oracle:  pdflatex: 0 errors; the link under Ann Able and Bob Baker, Cat Cole's column beside them
+% engines: rust MV1 `=2` and off: as expected; a reading deciding at the link's line, before Cat Cole's column is read,
+%          gives it to the block
+% expect:  0 errors, 0 warnings; the link a URL contact of Ann Able and of Bob Baker, not the block's or Cat Cole's
+% status:  GREEN (FB2a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{url}
+\title{T}
+\author{Ann Able, Bob Baker \\ Univ A \\ \url{https://project.example.org} \and Cat Cole \\ Univ C}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1000,9 +1000,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("apa7_cls.rs", 7),
   ("authblk_sty.rs", 23),
   // (F1r2, 1288 -> 1285: the membership readout finds its commas by `Token::group_step`, no catcode match)
-  ("author_block", 629),
+  ("author_block", 628),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
-  ("classify", 347),
+  ("classify", 348),
   ("defs/author_macros", 20),
   // (Z4a, 7 -> 8: `\lx@frontmatter@itemnone` reads its tag argument, an element's name: an `ltx:rdf` passes through, the rest goes)
   ("defs/frontmatter_api", 8),
@@ -1014,7 +1014,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // by one at N2r2: `raw_lines`' break arm holding the `\and` family too, two lines, the whatsits' definitions, 2106.06418)
   ("events", 60),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with Perl's whole-block fallback and its preparation, kept as its own, 826 = 629 + 197; none added)
-  ("fallback", 197),
+  ("fallback", 196),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   // (Z4a, 4 -> 8: an environment step by its meaning, a CS whose definition is `\begin` or `\end`, a `\let` copy too, what no frame
   // says for a raw environment; the definition's name, not the token's spelling)
@@ -1046,8 +1046,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("queue", 1),
   ("queue_digest", 16),
   // (raised by one at Z14: the rehearsal's `BOUND_IN_A_BLOCK` table, `\lx@add@affiliation@marked`, `\lx@add@creator` read as digested instead of cut by spelling at
-  // the frozen API: the kind of table `FRONTMATTER_SINGLE_ENGINE_PLAN.md` "What already exists" keeps, as Perl's `@authorsplits`)
-  ("rehearsal", 6),
+  // the frozen API: the kind of table `FRONTMATTER_SINGLE_ENGINE_PLAN.md` "What already exists" keeps, as Perl's `@authorsplits`;
+  // FB2b4 6 -> 13: `inline_juggles_as_columns`, the tabular juggle written inline, `\end{tabular}\begin{tabular}[t]{…}` — written
+  // text, no macro whose meaning could be read, its spaces, groups and `[…]` read by catcode, as the macro form's body is in
+  // `fallback::is_tabular_juggle`: 1401.6981)
+  ("rehearsal", 13),
   ("relocate", 134),
   // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens`, printed text read
   // as tokens by `is_institution` and `NameKeys` (5 with their definitions), a `'\\'` read of a label (2), a call's hook (1).
@@ -1289,8 +1292,10 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   ("policy", 0),
   // (Z14 101 -> 109, the table rows above; Z4a +3: the rehearsal's `\lx@fm@obs@footnote`, the footnote a note step hears, defined and named;
   // N2r2 +7: the bound constructors' `alias`es, the commands they revert as — what a text made of an argument prints, never
-  // the rehearsal's name: 2106.06418, 1401.5951, 2106.11154)
-  ("rehearsal", 119),
+  // the rehearsal's name: 2106.06418, 1401.5951, 2106.11154; FB2a 119 -> 117: the row break's constructor named once, `ROW_BREAK`,
+  // for `\\`, `\newline`, `\linebreak` and a tabular juggle; FB2b4 +1: `\end` and `\begin` of the juggle written inline,
+  // `inline_juggles_as_columns`, its separator named once, `AUTHOR_AND`)
+  ("rehearsal", 118),
   // (also among `resolver`'s 18 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook)
   ("resolver", 3),
   // (the "Knowledge in, driver out, one pass" move: the old reader's owner logic, moved unchanged from `author_block/`, its literals with it; none added)

@@ -2540,6 +2540,9 @@ dag_names_rows_each_over_their_institution, numbered_names_rows_each_over_their_
 second_names_row_under_a_shared_institution, role_and_note_lines_are_no_unmarked_institution,
 unmarked_institution_line_under_a_column_is_its_names, symbol_led_line_under_marked_names_is_not_every_names}`,
 `perfect_kernel_batch64::{author_unmarked_affiliation_after_marked_names, author_styled_place_after_marked_names}`.
+At `LATEXML_FM_EMIT=2` none of this preparation runs: the whole-block fallback is Perl's raw `\lx@add@author{…}`
+(`frontmatter/fallback.rs` `whole_block_author`), and the rules it carried for the old reader live on the reading (OD #980,
+"The fallback raw, and its rules on the reading"); `lines_prepared` runs only in the switch-off driver.
 
 ### 53. `inst`-style `\author[marks]{name}` accepts the optional marks and accumulates
 
@@ -32767,5 +32770,36 @@ concession's give-back of a conceded creator's trailing marks (`repart::give_bac
 marked piece is a name, and today's keeps a per-author class's line one creator; its in-doubt branch, a prefix mark's, stays
 guarded (`perfect_kernel_batch94a::a_conceded_creator_keeps_its_marks`).
 Off: byte-identical. Guards `perfect_kernel_batchnl1`.
+
+*The fallback raw, and its rules on the reading* (FB2a). With the switch on, Perl's whole-block creator is its raw call
+(`fallback::whole_block_author`: `\lx@add@author[keyvals]{written}`, Base_Utility.pool.ltxml:693), at the queued entry
+(`defs/author_macros.rs`) and the emitter's (`writer::emit::whole_block`): measured on 1,538 papers, the 13 raw-token
+rewrites of OD #52 helped none and hurt three, digestion doing each one's job in a block nothing splits; the queued call's
+digestion had fed the reading a symbol mark (2608.19750's "*Corresponding author" glued into an affiliation, now Ayong Ye's
+note), and the gap of `\\[0.5cm]` (hep-ph0207056) and `\hspace{.1cm}` (hep-th0111116, 1511.05911) print as written. Four of
+those rules, ported: (1) a parameterless macro whose expansion closes the title page's tabular and opens another
+(`fallback::is_tabular_juggle`: sig-alternate's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`) is bound in
+the rehearsal to its row break (`\lx@fm@obs@break`, as the old driver wrote `\\`); a macro that only closes one keeps its
+meaning, in an author block and an API call's content alike (an `\author`'s `\etab` closing the block's own tabular,
+review revFB2a finding 1; an `\affiliation`'s `\def\ex{\end{tabular}}` closing the tabular its `\bx` opened,
+`perfect_kernel_batchz4::an_environment_by_its_frames`) — the old driver keeps its looser test, closing alone
+(`fallback::closes_a_tabular`), until the flip: digested as defined it left a tabular open, its lines in no box, so the shared affiliation was
+lost with no Warning — the content check counts only what the events hold (0712.1016, 1704.03168, 1301.5612; the raw
+juggle of 1401.6981 stays as it was in both engines); (2) an alignment environment opening after the names at the top
+level and ending the block is lines under them, a row Break before it and its container dropped as the old rule drops the
+environment (`resolver::trailing_alignment_as_lines` in `read_events`, the old `trailing_alignment_environment_as_lines`:
+2609.17357, the "and" of its centred department no separator; a wrapper opening the block was read already, 2609.01563);
+(3) a note's text is read in text mode in the rehearsal, as the document digests it (`\lx@fm@obs@note` `mode => text`),
+and a note in a formula is written from its own call (`writer::emit::span_call_tokens`): `$^{2,3}\thanks{The first two
+authors contributed equally}$` had lost its spaces (2407.15815, 2603.20851); (4) a URL line under every name of a replacing
+block's author list is the block's shared creator (OD #159, `addresses:block`; the old `LinkOwner::Block`, user ruling
+2026-10-20, FIDELITY_CHARTER §4 amended 2026-11-05), decided at the block's end, as the old rule's "the names it prints
+under are the document's whole author list" (`Resolver::block`'s `block_links`; 2604.20841, 2601.17879, 2604.12896); under
+one `\and` column of several it stays the column's; a link printing an institution (`\href{https://www.google.com}{Google}`,
+`classify::href_prints_an_institution`, the old rule's `link_prints_an_institution` on the link as printed) is every name's affiliation,
+its link kept, as the old rule's exception gives it (review revFB2a finding 3); under one name the URL is that name's, the
+group's only author (FIDELITY_CHARTER §4; the old rule's block for a lone replacing author, `line_kinds.rs:61`, is not
+ported: off writes that author's too). (1), (2) and (4) with the switch on alone, (3) a fact of the
+rehearsal (popZ01, 1,873 papers off: 0 changed); off: byte-identical. Guards `perfect_kernel_batchfb2a`.
 
 Guards `perfect_kernel_batchz4`.

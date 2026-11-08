@@ -127,7 +127,7 @@ pub(in crate::base_utilities) fn add_authors_calls_sectioned(
     wrapper_over_lines_as_lines(stuff)
   };
   if kept_whole {
-    calls.extend(whole_block_author(keyvals.clone(), written)?.unlist());
+    calls.extend(whole_block_author(keyvals.clone(), prepared_block(written))?.unlist());
   } else if has_author_marks(&stuff) && (!cautious || answers_its_marks(&stuff)) {
     // (a per-author class binding keeps its marks visible on the names, as Perl does, and takes the unmarked path
     // below — its affiliation commands answer no mark (an IEEE block's `\IEEEauthorblockA`, amsart's `\address`) —

@@ -158,11 +158,15 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (its `printed` property the mark it shows on the name, `\thefootnote` at its number — the given one, or the counter's
   // value the `\lx@fm@obs@thanks` step reached —, as `\lx@fm@obs@fnmark` prints its: a name's note mark is the request
   // an entry led by the same `\footnotemark` answers, `Shun'ya Mizoguchi\footnote[1]{…}` under
-  // `\affiliation{\footnotemark[1]Theory Center, …}`, 1607.07280 — FM S2a.2 r7)
-  DefConstructor!("\\lx@fm@obs@note []{}", "", properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
-  DefConstructor!("\\lx@fm@obs@fnnote []{}", "", properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
+  // `\affiliation{\footnotemark[1]Theory Center, …}`, 1607.07280 — FM S2a.2 r7). Its text is text, read in text mode as
+  // the note's content is in the document (Perl's `\lx@annotate@frontmatter` digests it at the frontmatter, `DigestText`;
+  // LaTeX sets a footnote's text in a paragraph of its own): a note set in a formula, `Tianming Wei$^{2,3}\thanks{The
+  // first two authors contributed equally}$` (2407.15815; 2603.20851's `$^1\thanks{Corresponding Author}$`), kept its
+  // words' spaces, which math mode skipped ("Thefirsttwoauthorscontributedequally").
+  DefConstructor!("\\lx@fm@obs@note []{}", "", bounded => true, mode => "text", properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
+  DefConstructor!("\\lx@fm@obs@fnnote []{}", "", bounded => true, mode => "text", properties => sub[args] { note_properties(args.first().and_then(|a| a.as_ref())) });
   // `\footnotetext`: the text of a mark printed elsewhere, no step
-  DefConstructor!("\\lx@fm@obs@notetext []{}", "");
+  DefConstructor!("\\lx@fm@obs@notetext []{}", "", bounded => true, mode => "text");
   // `\footnotemark[<n>]` prints `\thefootnote` at <n> (latex.ltx `\@xfootnotemark`), a bare `\footnotemark` at the
   // counter's next value (`\stepcounter\@mpfn`): its `printed` property is that print, made with the counter set in a
   // group of its own, to <n> or to its value at the rehearsal's start plus the steps the block made up to it, so the
@@ -376,15 +380,20 @@ thread_local! {
   static FOOTNOTE_BASE_DEFINED: Cell<bool> = const { Cell::new(false) };
 }
 
+/// The event constructor of a row break (`\\`, `\\newline`, `\\linebreak`; a tabular juggle, `install_event_bindings`).
+const ROW_BREAK: &str = "\\lx@fm@obs@break";
+/// The event constructor of an author separator (`\\and`; a raw class's column, `\\alignauthor`).
+const AUTHOR_AND: &str = "\\lx@fm@obs@and";
+
 /// The commands the rehearsal binds to the event constructors, always (the article `\author` line's own vocabulary,
 /// and the frontmatter API's queueing sink, frozen otherwise).
 const ALWAYS_BOUND: &[(&str, &str)] = &[
-  ("\\and", "\\lx@fm@obs@and"),
+  ("\\and", AUTHOR_AND),
   ("\\And", "\\lx@fm@obs@And"),
   ("\\AND", "\\lx@fm@obs@AND"),
-  ("\\\\", "\\lx@fm@obs@break"),
-  ("\\newline", "\\lx@fm@obs@break"),
-  ("\\linebreak", "\\lx@fm@obs@break"),
+  ("\\\\", ROW_BREAK),
+  ("\\newline", ROW_BREAK),
+  ("\\linebreak", ROW_BREAK),
   ("\\par", "\\lx@fm@obs@par"),
   ("\\thanks", "\\lx@fm@obs@thanks"),
   ("\\footnote", "\\lx@fm@obs@footnote"),
@@ -425,7 +434,7 @@ const BOUND_WHEN_DEFINED: &[(&str, &str, bool)] = &[
   // (the ACM SIG classes' column, a raw class's tabular juggle: sig-alternate.cls:283 `\def\alignauthor{\end{tabular}\hfil
   // \begin{tabular}[t]{c}}`, four errors held on the block outside its tabular and every column read as one, 1503.06772,
   // 1502.04662, 1305.7403; a binding that declares it keeps what it prints, `Policy::block_breaks`, OmniBus)
-  ("\\alignauthor", "\\lx@fm@obs@and", false),
+  ("\\alignauthor", AUTHOR_AND, false),
 ];
 /// The hook a binding declares its title's footnote marks with — the kernel's own, `\lx@title@thefootnote`
 /// (`latex_constructs::TITLE_THEFOOTNOTE`), which also marks the notes the title block prints: defined, the
@@ -442,10 +451,29 @@ const TITLE_FOOTNOTE_HOOK: &str = crate::latex_constructs::TITLE_THEFOOTNOTE;
 /// declared [`TITLE_FOOTNOTE_HOOK`] when there is one; else, as the block's conventions say (`title_marks`), the
 /// class's own `\thefootnote` (report's and book's title page: arabic) or the kernel `\maketitle`'s `\@fnsymbol` of the
 /// counter (when the format has it).
+///
+/// First, a tabular juggle (`fallback::is_tabular_juggle`: `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`
+/// in sig-alternate's `\author`, 0712.1016, 1704.03168) is the row break it prints between the names and the lines under
+/// them, as the old driver wrote it `\\` (`fallback::tabular_juggles_as_line_breaks`): digested as defined, it closed a
+/// tabular the line never opened and left one open, whose lines no box held — lost with no Warning, the content check
+/// reading only what the events hold. A juggle reopens the tabular it closes, so a macro that only closes one (an
+/// `\\affiliation`'s `\\def\\ex{\\end{tabular}}` closing the tabular its `\\bx` opened, `perfect_kernel_batchz4`; an
+/// `\\author`'s `\\etab` closing the block's own) keeps its meaning, in any rehearsal; with the emitter's switch on (the
+/// switch-off output stays as it was until the flip); a command the binding declares a block break keeps its meaning.
+/// The juggle written inline is a column or the break it prints ([`inline_juggles_as_columns`]).
 fn install_event_bindings(
+  tokens: &Tokens,
   title_marks: TitleMarks,
   block_breaks: &[(&str, BreakKind)],
 ) -> Result<()> {
+  if fm_emit_mode() == 2 {
+    for t in tokens.unlist_ref() {
+      let declared = || t.with_cs_name(|name| block_breaks.iter().any(|(cs, _)| *cs == name));
+      if is_tabular_juggle(t) && !declared() {
+        let_i(t, &T_CS!(ROW_BREAK), None);
+      }
+    }
+  }
   for (cs, target) in ALWAYS_BOUND {
     let_i(&T_CS!(*cs), &T_CS!(*target), None);
   }
@@ -490,6 +518,102 @@ fn install_event_bindings(
     }
   }
   Ok(())
+}
+
+/// The juggle written inline: an `\end{tabular}` closing a tabular the block never opened, reopened after nothing but
+/// spaces and commands (what a class prints between, `\hfil`, `\newline`), the reopening `\begin{tabular}[…]{…}` its
+/// part. With no line break printed between it is the column `\alignauthor` is (sig-alternate.cls:274 `\end{tabular}%
+/// \begin{tabular}[t]{p{\auwidth}}\centering`, bound to an author separator, [`install_event_bindings`]): 1401.6981
+/// writes its second author's column so, `\end{tabular}\begin{tabular}[t]{p{1.3\auwidth}}\centering Gianmarco De
+/// Francisci Morales…`, three columns in the PDF. With one printed between (`\end{tabular}\newline\begin{tabular}{c}`,
+/// 1301.5612's macro written out) that break stands. Digested as written it closed the title page's tabular and left
+/// one open, whose lines no box held — at `=2` authors 2 and 3 of 1401.6981 lost with no Warning. A close of a tabular
+/// the block opened (`\begin{tabular}…\end{tabular}`) or one no reopen follows keeps its meaning; with the emitter's
+/// switch on.
+fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
+  let (end, begin) = (T_CS!("\\end"), T_CS!("\\begin"));
+  let toks = tokens.unlist_ref();
+  if !toks.contains(&end) {
+    return tokens;
+  }
+  // The span past the reopen's `\begin{tabular}[…]{…}`, if one follows `at` after only spaces and commands.
+  let reopen = |at: usize| -> Option<(usize, usize)> {
+    let start = (at..toks.len()).find(|&k| {
+      let c = toks[k].get_catcode();
+      c != Catcode::SPACE && (c != Catcode::CS || toks[k] == begin)
+    })?;
+    let k = start + environment_call_len(&toks[start..], begin, "tabular")?;
+    let is = |cat: Catcode| move |t: &Token| t.get_catcode() == cat;
+    let k = past_group(toks, k, |t| *t == T_OTHER!("["), |t| *t == T_OTHER!("]")).unwrap_or(k);
+    Some((
+      start,
+      past_group(toks, k, is(Catcode::BEGIN), is(Catcode::END))?,
+    ))
+  };
+  let mut out = Vec::with_capacity(toks.len());
+  let mut opened = 0usize;
+  let mut i = 0;
+  while i < toks.len() {
+    if let Some(len) = environment_call_len(&toks[i..], begin, "tabular") {
+      opened += 1;
+      out.extend_from_slice(&toks[i..i + len]);
+      i += len;
+    } else if let Some(len) = environment_call_len(&toks[i..], end, "tabular") {
+      match (opened, reopen(i + len)) {
+        (0, Some((start, past))) => {
+          let between = &toks[i + len..start];
+          // (a row break the rehearsal binds, `\\`, `\\newline`, `\\linebreak`)
+          let prints_a_break = |t: &Token| {
+            ALWAYS_BOUND
+              .iter()
+              .any(|(cs, target)| *target == ROW_BREAK && *t == T_CS!(*cs))
+          };
+          if !between.iter().any(prints_a_break) {
+            out.push(Token {
+              prov: toks[i].prov,
+              ..T_CS!(AUTHOR_AND)
+            });
+          }
+          out.extend_from_slice(between);
+          i = past;
+        },
+        _ => {
+          opened = opened.saturating_sub(1);
+          out.extend_from_slice(&toks[i..i + len]);
+          i += len;
+        },
+      }
+    } else {
+      out.push(toks[i]);
+      i += 1;
+    }
+  }
+  Tokens::new(out)
+}
+
+/// The position past the balanced `open`…`close` group that starts at `at` after spaces, if one does.
+fn past_group(
+  toks: &[Token],
+  at: usize,
+  open: impl Fn(&Token) -> bool,
+  close: impl Fn(&Token) -> bool,
+) -> Option<usize> {
+  let first = (at..toks.len()).find(|&k| toks[k].get_catcode() != Catcode::SPACE)?;
+  if !open(&toks[first]) {
+    return None;
+  }
+  let mut level = 0usize;
+  for (k, t) in toks.iter().enumerate().skip(first) {
+    if open(t) {
+      level += 1;
+    } else if close(t) {
+      level -= 1;
+      if level == 0 {
+        return Some(k + 1);
+      }
+    }
+  }
+  None
 }
 
 /// What a rehearsal gave.
@@ -597,10 +721,15 @@ pub(in crate::base_utilities) fn rehearse<R>(
   let _hook = FieldNotesHookGuard;
   let if_count_before = if_count();
   let budget = read_budget(budget);
+  let tokens = if fm_emit_mode() == 2 {
+    inline_juggles_as_columns(tokens)
+  } else {
+    tokens
+  };
   let result = with_origin(DefinitionOrigin::File, || {
     reading_from_mouth(Mouth::default(), || -> Result<Digested> {
       bgroup();
-      install_event_bindings(title_marks, block_breaks)?;
+      install_event_bindings(&tokens, title_marks, block_breaks)?;
       begin_mode("text")?;
       field_notes_begin(&tokens, block_breaks);
       let digested = digest(tokens)?;

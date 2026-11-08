@@ -1,14 +1,20 @@
 //! Perl's whole-block fallback (`Base_Utility.pool.ltxml:693`, `\lx@add@author` of the raw block) with its own preparation,
 //! moved unchanged from `author_block/` (the plan's row "Knowledge in, driver out, one pass", user ruling 2026-11-08; the preparation
-//! moves with it as the fallback's own, the keep-improvements ruling). [`whole_block_author`] runs
-//! [`strip_linebreak_options`] and `lines_prepared`, the raw-token rewrites of OXIDIZED_DESIGN_DIVERGENCES #52 that go
-//! beyond Perl: note environments as commands, math-active scripts, tabular juggles and ACM columns as line breaks,
+//! moves with it as the fallback's own, the keep-improvements ruling). [`whole_block_author`] is Perl's raw call; the old
+//! driver (`author_block::dispatch`, off) gives it the block through [`strip_linebreak_options`] and `lines_prepared`,
+//! the raw-token rewrites of OXIDIZED_DESIGN_DIVERGENCES #52 that go beyond Perl: note environments as commands, math-active scripts, tabular juggles and ACM columns as line breaks,
 //! alignment environments unwrapped, `\hspace` runs between names as separators (`normalize_hspace_separators` and its
-//! row helpers), icons joined to their links, glued marks as marks, the ordinal and in-word superscripts. Reached from
-//! the emitter (a block whose reading loses a name's words) and from `defs/author_macros.rs` (`=2`'s queued entry); three
+//! row helpers), icons joined to their links, glued marks as marks, the ordinal and in-word superscripts. At
+//! `LATEXML_FM_EMIT=2` the emitter and `defs/author_macros.rs` (the queued entry) call it raw, with none of them; three
 //! items are a binding's too (`strip_linebreak_options`, `has_author_marks`, `glued_line_marks_as_marks`).
 
 use super::*;
+
+/// A block kept whole as the old driver gives it to [`whole_block_author`] (`author_block::dispatch`, off): its lines prepared
+/// ([`lines_prepared`]) and its breaks' options gone ([`strip_linebreak_options`]).
+pub(in crate::base_utilities) fn prepared_block(written: Tokens) -> Tokens {
+  lines_prepared(strip_linebreak_options(written))
+}
 
 /// The lines of an author block as `\lx@add@authors` reads them, its marks, separators and alignments normalized
 /// ([`add_authors_calls_sectioned`]; the tabular fallback's, [`whole_block_author`]).
@@ -40,18 +46,23 @@ pub(in crate::base_utilities) fn lines_prepared(stuff: Tokens) -> Tokens {
 }
 
 /// Perl's whole-block creator (Base_Utility.pool.ltxml:693, `\lx@add@authors`' `{tabular}` fallback, and :588-589):
-/// `\lx@add@author[keyvals]{…}` of the block `written`, its lines prepared ([`lines_prepared`]) and their breaks' options
-/// gone, its line breaks as written. The one writer of a block kept whole: the tabular fallback here, `LATEXML_FM_EMIT=2`'s
-/// queued entry (`defs::author_macros`), and the emitter's for a block whose reading loses a name's words
-/// (`observer::writer::emit`; OD #980).
+/// `\lx@add@author[keyvals]{…}` of the block `written`, as given. The one writer of a block kept whole: the old driver's
+/// tabular fallback (`author_block::dispatch`, which gives it the block [`prepared_block`]), and at `LATEXML_FM_EMIT=2`
+/// Perl's raw call — the queued entry
+/// (`defs::author_macros`) and the emitter's for a block it can't read or whose reading loses a name's words
+/// (`observer::writer::emit`; OD #980). At `=2` no raw-token preparation runs: digestion does each rewrite's job in a
+/// block nothing splits — `\\[len]` is `\lx@newline`'s own optional, a `\begin{footnote}` runs `\footnote`, a
+/// mathcode-"8000 `^` reads as `\sp`, braces and superscripts digest to the same markup — and three of them hurt there
+/// (the gap of `\\[0.5cm]`, hep-ph0207056; `\hspace` turned `\quad`, hep-th0111116, 1511.05911; a symbol superscript's
+/// `\lx@frontmatter@symbolmark`, whose digestion glued 2608.19750's "*Corresponding author" into an affiliation):
+/// measured on 1,538 papers, none helped (OD #52).
 pub(in crate::base_utilities) fn whole_block_author(
   keyvals: Option<Tokens>,
   written: Tokens,
 ) -> Result<Tokens> {
-  let stuff = lines_prepared(strip_linebreak_options(written));
   Ok(Invocation!(T_CS!("\\lx@add@author"), vec![
     keyvals,
-    Some(stuff)
+    Some(written)
   ]))
 }
 
@@ -1387,60 +1398,95 @@ pub(in crate::base_utilities) fn trailing_alignment_environment_as_lines(tokens:
   Tokens::new(toks)
 }
 
+/// A parameterless macro whose expansion closes the title page's tabular and opens another, not an author separator
+/// ([`author_and_splits`]): the ACM SIG template's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}` in `\author`
+/// (sig-alternate.cls:283's `\alignauthor` juggles the same way) prints a line break between the names above and the
+/// affiliation below (1704.03168, 1301.5612, 1401.6981, 0712.1016). Read by its meaning, whatever its name: the
+/// rehearsal binds it to the row break it is (`observer::rehearsal`). It reopens one after what it prints between
+/// (1301.5612's `\def\sharedaffiliation{\end{tabular}\newline\begin{tabular}{c}}`); a macro that only closes one
+/// (`\newcommand{\etab}{\end{tabular}}`, closing a tabular the block opened itself) is no juggle.
+pub(in crate::base_utilities) fn is_tabular_juggle(t: &Token) -> bool {
+  tabular_close_rest(t).is_some_and(|rest| {
+    (0..rest.len()).any(|at| past_environment(&rest[at..], T_CS!("\\begin"), "tabular").is_some())
+  })
+}
+
+/// The old driver's looser test, kept as it was until the switch flips (the switch-off output stays as it was): a
+/// macro whose expansion starts by closing a tabular, written `\\` ([`tabular_juggles_as_line_breaks`]).
+fn closes_a_tabular(t: &Token) -> bool { tabular_close_rest(t).is_some() }
+
+/// The rest of `body` past the environment command `cs` and the `{name}` group after it (`\end{tabular}`), if it
+/// starts with them.
+fn past_environment(body: &[Token], cs: Token, name: &str) -> Option<Vec<Token>> {
+  environment_call_len(body, cs, name).map(|len| body[len..].to_vec())
+}
+
+/// How many tokens the environment command `cs` and the `{name}` group after it (`\end{tabular}`) take, if `body`
+/// starts with them.
+pub(in crate::base_utilities) fn environment_call_len(
+  body: &[Token],
+  cs: Token,
+  name: &str,
+) -> Option<usize> {
+  let (first, group) = body.split_first()?;
+  let (open, group) = group.split_first()?;
+  let close = group.iter().position(|t| t.get_catcode() == Catcode::END)?;
+  let spelled: String = group[..close].iter().map(|t| t.to_string()).collect();
+  (*first == cs && open.get_catcode() == Catcode::BEGIN && spelled == name).then_some(close + 3)
+}
+
+/// For a parameterless macro, not an author separator ([`author_and_splits`]), whose expansion starts with
+/// `\end{tabular}`: the rest of its expansion (spaces out).
+fn tabular_close_rest(t: &Token) -> Option<Vec<Token>> {
+  if t.get_catcode() != Catcode::CS {
+    return None;
+  }
+  let defn = lookup_definition(t).ok()??;
+  if !defn.is_expandable()
+    || defn
+      .get_parameters()
+      .is_some_and(|p| !p.get_parameters().is_empty())
+  {
+    return None;
+  }
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return None;
+  };
+  let body: Vec<Token> = body
+    .unlist_ref()
+    .iter()
+    .filter(|t| t.get_catcode() != Catcode::SPACE)
+    .copied()
+    .collect();
+  past_environment(&body, T_CS!("\\end"), "tabular").filter(|_| {
+    !author_and_splits()
+      .iter()
+      .any(|s| matches!(s, SplitDelim::Token(d) if d == t))
+  })
+}
+
 /// An author block's parameterless macro whose expansion closes the title page's tabular and opens another — the ACM
 /// SIG template's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`, set inside the class's own author tabular
 /// (sig-alternate.cls:283's `\alignauthor` juggles the same way) — is the line break it prints between the names
 /// above and the affiliation below: digested, it closed a tabular no author block opens and left one open, whose
 /// lines (the shared affiliation) were lost (1704.03168, 1301.5612, 1401.6981, 0712.1016). The author separators
-/// (`\alignauthor`) stay for the splitter.
+/// (`\alignauthor`) stay for the splitter. The old driver's test ([`closes_a_tabular`]) reads a macro closing a tabular
+/// alone as one too; the rehearsal binds a juggle only ([`is_tabular_juggle`]) to its row break.
 pub(in crate::base_utilities) fn tabular_juggles_as_line_breaks(tokens: Tokens) -> Tokens {
-  let separators = author_and_splits();
-  let juggles = |t: &Token| {
-    if t.get_catcode() != Catcode::CS
-      || separators
-        .iter()
-        .any(|s| matches!(s, SplitDelim::Token(d) if d == t))
-    {
-      return false;
-    }
-    let Ok(Some(defn)) = lookup_definition(t) else {
-      return false;
-    };
-    if !defn.is_expandable()
-      || defn
-        .get_parameters()
-        .is_some_and(|p| !p.get_parameters().is_empty())
-    {
-      return false;
-    }
-    let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
-      return false;
-    };
-    let body: Vec<Token> = body
-      .unlist_ref()
-      .iter()
-      .filter(|t| t.get_catcode() != Catcode::SPACE)
-      .copied()
-      .collect();
-    body.first() == Some(&T_CS!("\\end"))
-      && body
-        .get(1)
-        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
-      && body[2..]
-        .iter()
-        .take_while(|t| t.get_catcode() != Catcode::END)
-        .map(|t| t.to_string())
-        .collect::<String>()
-        == "tabular"
-  };
   let toks = tokens.unlist();
-  if !toks.iter().any(juggles) {
+  if !toks.iter().any(closes_a_tabular) {
     return Tokens::new(toks);
   }
   Tokens::new(
     toks
       .into_iter()
-      .map(|t| if juggles(&t) { T_CS!("\\\\") } else { t })
+      .map(|t| {
+        if closes_a_tabular(&t) {
+          T_CS!("\\\\")
+        } else {
+          t
+        }
+      })
       .collect(),
   )
 }

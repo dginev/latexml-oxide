@@ -254,13 +254,19 @@ fn rekeyed(
   Some(call_tokens(out, only))
 }
 
-/// `\\lx@frontmatter@itemonly{content}`: past the spaces a content opens with, which an item's digestion skips.
-pub(super) fn item_only(content: &[Token]) -> Vec<Token> {
-  let spaces = content
+/// How many spaces `content` opens with, which print nothing there: an item's digestion skips them.
+fn leading_spaces(content: &[Token]) -> usize {
+  content
     .iter()
     .take_while(|t| t.get_catcode() == Catcode::SPACE)
-    .count();
-  cs_group("\\lx@frontmatter@itemonly", &[&content[spaces..]])
+    .count()
+}
+
+/// `\\lx@frontmatter@itemonly{content}`: past the spaces a content opens with ([`leading_spaces`]).
+pub(super) fn item_only(content: &[Token]) -> Vec<Token> {
+  cs_group("\\lx@frontmatter@itemonly", &[
+    &content[leading_spaces(content)..]
+  ])
 }
 
 /// A call's tokens with its content, its last group, an emitted item's: its marks label nothing, and with `only` the API
@@ -312,14 +318,12 @@ fn note_argument(tokens: &Tokens) -> Option<Vec<Token>> {
 }
 
 /// `start`, or past the environment a span opens and doesn't close: its first box takes the cover of what opened it
-/// (1507.02068's `\\begin{center}M. Ablikim`), a column spec with it. As the digestion's frames say it.
-fn past_open_environment(
-  environments: &[EnvironmentStep],
-  base: usize,
-  start: usize,
-  end: usize,
-) -> usize {
-  let at = |p: u16| usize::from(p).saturating_sub(base);
+/// (1507.02068's `\\begin{center}M. Ablikim`), a column spec with it. As the digestion's frames say it. And past the
+/// spaces after each such opening, which print nothing (the line's end after `\\begin{small}` and `\\begin{center}`,
+/// 1507.02068, 2609.17357).
+fn past_open_environment(field: &Field, start: usize, end: usize) -> usize {
+  let at = |p: u16| usize::from(p).saturating_sub(field.base);
+  let environments = field.environments;
   let mut from = start;
   for (n, step) in environments.iter().enumerate() {
     if step.opens && at(step.start) == from && at(step.end) < end {
@@ -328,6 +332,7 @@ fn past_open_environment(
         .any(|later| !later.opens && at(later.start) < end);
       if !closed {
         from = at(step.end);
+        from += field.tokens.get(from..end).map_or(0, leading_spaces);
       }
     }
   }
@@ -445,7 +450,7 @@ fn event_run_at(
 ) -> Option<(Vec<Token>, (usize, usize))> {
   let at = |p: u16| usize::from(p).checked_sub(field.base);
   let (start, end) = (at(first.span?.0)?, at(last.span?.1)?);
-  let start = past_open_environment(field.environments, field.base, start, end);
+  let start = past_open_environment(field, start, end);
   let own_at = |e: &Event| {
     e.marks
       .filter(|_| e.kind == EventKind::Name)
@@ -761,6 +766,21 @@ pub(super) fn last_argument(call: &Tokens) -> Option<(Vec<Token>, Vec<Token>, Ve
   let after = tokens.split_off(close);
   let content = tokens.split_off(open + 1);
   Some((tokens, content, after))
+}
+
+/// The tokens of the block at ledger index `index` that the span `span` covers, as written: a call's own, whatever formula
+/// holds it ([`span_tokens_of`] takes that formula whole).
+fn span_call_tokens(index: usize, span: (u16, u16)) -> Option<Tokens> {
+  with_ledger(|ledger| {
+    let Some(Entry::Author(block)) = ledger.entries().get(index) else {
+      return None;
+    };
+    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+    let tokens = block.tokens.unlist_ref();
+    tokens
+      .get(at(span.0)?..at(span.1)?)
+      .map(|call| Tokens::new(call.to_vec()))
+  })
 }
 
 /// `call`, its content's printed list written down to the one `address` of it (the reading's `ruling3:written-out`): its last
@@ -1109,11 +1129,19 @@ fn item_call(
     // (a block's: the tokens its span covers)
     Some((index, Some(span))) => {
       // (a note's: its argument, under the note's own kind, but an entry a mark leads, as `\\lx@add@thanks` reads it: 2102.08072)
+      // (a note in a formula is its own call's, the formula around it the name's mark: `Derek F. Wong$^1\thanks{Corresponding
+      // Author}$`, 2603.20851, 2407.15815 — its span's content is the whole formula, `content_of`)
       let cut_runs = cut.map_or(&[][..], |cut| &cut.cuts[..]);
-      let argument = event_at(index, span, |e| e.kind == EventKind::Note, |_| ())
-        .and_then(|()| span_tokens_cut(index, span, cut_runs))
-        .as_ref()
-        .and_then(note_argument);
+      let argument = event_at(index, span, |e| e.kind == EventKind::Note, |_| ()).and_then(|()| {
+        (span_tokens_cut(index, span, cut_runs)
+          .as_ref()
+          .and_then(note_argument))
+        .or_else(|| {
+          span_call_tokens(index, span)
+            .as_ref()
+            .and_then(note_argument)
+        })
+      });
       // (never a `\\footnote`'s, which `\\lx@add@note` keeps a note: `\\footnote{\\textsuperscript{1}These authors
       // contributed equally …}`, 2110.12892 — P2 NT)
       let footnote = event_at(index, span, |e| e.kind == EventKind::Note, |e| e.footnote);

@@ -247,6 +247,8 @@ impl Resolver {
     let mut unmarked_before: Option<Vec<(usize, usize)>> = None;
     // the last line an address list read on to (`place_line_contacts` over the lines of one list)
     let mut skip_to = 0usize;
+    // the URL lines under every name so far, each with those names: the block's if no name comes after them
+    let mut block_links: Vec<(&Event, Vec<usize>)> = Vec::new();
     for (n, line) in lines.iter().enumerate() {
       if n > 0 && n <= skip_to {
         continue;
@@ -516,6 +518,39 @@ impl Resolver {
                   None,
                   Chain::Line,
                 );
+                continue;
+              }
+              // (a URL line under every name of the document's author list is the block's, its shared creator (OD #159,
+              // `addresses:block`): a project's page, `Ann Able, Bob Baker \\ Univ A \\ \url{…}` — the old reader's
+              // `LinkOwner::Block`, `author_block::dispatch` and `link_line_owner`, user ruling 2026-10-20, batch 77p r7:
+              // 2605.06223, 2602.08439, 2604.12896, 2604.20841, 2601.17879; FIDELITY_CHARTER §4 amended 2026-11-05.
+              // Whether no names come after it is known at the block's end: decided there. A link printing an
+              // institution is the names' affiliation, as the old rule's exception gives it every author:
+              // `\href{https://www.google.com}{Google}`, `dispatch.rs`'s `link_prints_an_institution` (`href_prints_an_institution`), user ruling R12
+              // 2026-10-20, the r5 re-review's u38, review revFB2a finding 3. A lone name's URL is its own, the group's
+              // only author's — FIDELITY_CHARTER §4)
+              if self.emitting
+                && self.block_replaces
+                && above.len() > 1
+                && contact_parts(contact).0 == "url"
+                && above
+                  .iter()
+                  .copied()
+                  .eq(block_creators_start..self.out.creators.len())
+              {
+                if contact
+                  .target
+                  .as_deref()
+                  .is_some_and(|target| href_prints_an_institution(target, &contact.text))
+                {
+                  let affiliation = Event {
+                    role: Some("affiliation".into()),
+                    ..(*contact).clone()
+                  };
+                  self.contact_event(index, &affiliation, &above, "line:contact R12:row-above");
+                } else {
+                  block_links.push((contact, above.clone()));
+                }
                 continue;
               }
               self.contact_event(index, contact, &above, "line:contact R12:row-above");
@@ -891,6 +926,15 @@ impl Resolver {
         },
         None => {},
       }
+    }
+    for (contact, above) in block_links {
+      let names = block_creators_start..self.out.creators.len();
+      let owners = if above.iter().copied().eq(names) {
+        &[][..]
+      } else {
+        &above[..]
+      };
+      self.contact_event(index, contact, owners, "line:contact R12:row-above");
     }
     self.line_column = None;
     self.block_addresses.clear();

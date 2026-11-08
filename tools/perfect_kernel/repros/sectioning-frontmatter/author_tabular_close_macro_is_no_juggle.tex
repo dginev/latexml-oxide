@@ -1,0 +1,19 @@
+% mechanism: a tabular juggle (`fallback::is_tabular_juggle`) closes a tabular AND opens another; a macro that only closes one
+%   (`\etab`, closing the tabular the block opened itself) keeps its meaning in the rehearsal, at `LATEXML_FM_EMIT=2`
+% witness: review revFB2a finding 1, probe pJ (no corpus witness; the shape of sig-alternate's `\sharedaffiliation`, 0712.1016,
+%   1704.03168, read too broadly)
+% oracle:  pdflatex 0 errors: two columns, "Ann Able / Univ A" and "Bob Baker / Univ B"
+% engines: FB2a `=2`: "Ann Able" alone, Bob Baker and both affiliations lost (W 1, `frontmatter:unclaimed`); MV1 `=2`: both
+%   creators with their affiliations. Off (the old driver's looser test, kept until the flip): E 4, one creator "Ann Able Univ A"
+% expect:  at `=2` 0 errors, 0 warnings; Ann Able with Univ A, Bob Baker with Univ B
+% status:  RED (FB2a, `=2`) -> GREEN (perfect_kernel_batchfb2a::a_macro_closing_a_tabular_is_no_juggle); off stays RED
+\documentclass{article}
+\usepackage{hyperref}
+\newcommand{\etab}{\end{tabular}}
+\title{T}
+\author{\begin{tabular}{c}Ann Able\\ Univ A\etab \and \begin{tabular}{c}Bob Baker\\ Univ B\etab}
+\begin{document}
+\maketitle
+
+Body.
+\end{document}
