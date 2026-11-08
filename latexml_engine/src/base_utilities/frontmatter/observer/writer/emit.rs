@@ -1009,7 +1009,10 @@ fn item_call(
       if contact_role && in_a_mark {
         return Ok(wrap(&by_text(None, &assoc.text)));
       }
-      if contact_role
+      // (a note a contact command of the block makes is that command too, a contact as its binding makes it: jheppub's
+      // `\note{…}` = `\lx@add@contact[role=note]{…}` inside an `\author`, Perl's jheppub.sty.ltxml:39 — 1403.1099,
+      // 2001.06318, 2308.04217, which lost it inside a `ltx:note` around the call)
+      if (contact_role || note)
         && event_at(
           index,
           span,

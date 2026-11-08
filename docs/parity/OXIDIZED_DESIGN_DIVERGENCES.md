@@ -32581,5 +32581,12 @@ is what the names request, as a creator call's `annotations=` (`Resolver::api`, 
 answers `annotations={\rm Ed Office}`, both `Ed_Office`, Bob Baker's office (LO2: read as marks, its words `E,d,Office` a mark on his
 name; int146a: a nameless creator's). Off: byte-identical. Guards `perfect_kernel_batchlo2`, `perfect_kernel_batchlo1::an_address_decides_only_its_own_ink` (whole creators with
 either switch), `perfect_kernel_batchz4b::annotate_made_reaches_every_name`, `writer::emit::tests::the_reset_drops_the_reading_and_its_count`.
+*A note a contact command makes* (LO3): a block's Contact event whose kind is a note — jheppub's, jcappub's and jinstpub's
+`\note{…}` inside an `\author`, `\lx@add@contact[role=note]{…}` (Perl's jheppub.sty.ltxml:39) — is written as the contact command
+it is, the call inside taking the item's label, as every contact command of a block is (`writer::emit::item_call`); written as
+an `ltx:note` around the call, where an API call means nothing (`\lx@frontmatter@itemonly`), every such note was lost with the
+switch on (1403.1099, 2001.06318 "Corresponding author.", 2308.04217's three "Speaker at …" notes; the content check counted
+them); REVTeX's `\frontmatter@footnote{…}` (`\lx@add@contact[role=thanks]`) the same. Each author's `<contact role="note">`
+as off and Perl. Guard `perfect_kernel_batchlo3`.
 
 Guards `perfect_kernel_batchz4`.
