@@ -125,11 +125,7 @@ fn entry_cut(taken: &Taken, names: &[&str]) -> Result<Option<EntryCut>> {
               .iter()
               .filter(|e| e.kind == EventKind::Mark)
               .collect(),
-            contacts: note
-              .inner
-              .iter()
-              .filter(|e| e.kind == EventKind::Contact)
-              .collect(),
+            contacts: note.inner.iter().filter(|e| contact_command(e)).collect(),
           };
           labelled_cut(&field, &texts, &around, inks, (taken, spells), marked)
         },
@@ -154,10 +150,7 @@ fn entry_cut(taken: &Taken, names: &[&str]) -> Result<Option<EntryCut>> {
               .iter()
               .filter(|e| e.kind == EventKind::Mark)
               .collect(),
-            contacts: events
-              .iter()
-              .filter(|e| e.kind == EventKind::Contact)
-              .collect(),
+            contacts: events.iter().filter(|e| contact_command(e)).collect(),
           };
           labelled_cut(
             &field,
@@ -229,10 +222,7 @@ fn api_cut(index: usize, (taken, spells): (&Taken, &dyn Fn(&str) -> bool)) -> Re
       .iter()
       .filter(|e| e.kind == EventKind::Mark)
       .collect(),
-    contacts: events
-      .iter()
-      .filter(|e| e.kind == EventKind::Contact)
-      .collect(),
+    contacts: events.iter().filter(|e| contact_command(e)).collect(),
   };
   let Some((cuts, mails, stripped)) = labelled_cut(
     &field,
@@ -272,6 +262,12 @@ fn labelled_cut(
   }
   cut_at(field, texts, around, inks, (taken, spells))
     .map(|(cuts, mails)| (cuts, mails, taken.stripped.clone()))
+}
+
+/// Whether `e` is a contact a command prints whose call an e-mail's item would mute (an `\\email`, an ORCID), no link: a
+/// `\\href{mailto:a@x}{a@x}` (a `url` contact) prints inline, the e-mail's own wrapper (2608.15371).
+fn contact_command(e: &Event) -> bool {
+  e.kind == EventKind::Contact && e.role.as_deref() != Some("url")
 }
 
 /// Whether a cut may not take `e`: a note (the DOM cut's `Seg::Note`), a line's break.
