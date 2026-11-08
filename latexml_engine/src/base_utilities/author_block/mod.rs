@@ -25,7 +25,6 @@ pub use rows::*;
 mod row_emails;
 pub use row_emails::*;
 mod symbols;
-pub use symbols::glued_line_marks_as_marks;
 pub(super) use symbols::*;
 mod notes;
 pub use notes::*;

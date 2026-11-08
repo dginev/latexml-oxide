@@ -23,12 +23,12 @@ use super::{
   *,
 };
 use crate::base_utilities::{
-  author_block::whole_block_author,
   defs::{
     author_macros::KEPT_WHOLE,
     frontmatter_api::{LABEL_PRINTS, PRINTED_LABEL},
   },
   frontmatter::{
+    fallback::whole_block_author,
     observer::{
       events::{EventKind, Formula, lex_with_formulas},
       field_notes::{EnvironmentStep, FieldCreator},

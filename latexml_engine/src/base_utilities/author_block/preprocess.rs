@@ -2,41 +2,6 @@
 
 use super::*;
 
-/// An author block's math-active `^` and `_` (catcode 12, mathcode "8000: mathstyle.sty, which breqn loads through
-/// flexisym.sty:418, sets them so — :233-236 its default `mathactivechars` option, `\AtBeginDocument{\catcode`\^=12
-/// …}`, and :251-258 `\mathcode`\^="8000` with the active `^` `\let` to `\sp`; latexml_contrib's breqn_sty.rs:138-163) written as the
-/// superscript and subscript they are in math, where TeX reads the active character's meaning, `\sp`/`\sb` (tex.web
-/// §1151): the marks of `{Mohamed Benzaghta$^{\star}$, …, David
-/// López-Pérez}$^{\sharp}$` (2504.02633) are marks, as they are with `^` of catcode 7.
-pub(in crate::base_utilities) fn math_active_scripts(stuff: Tokens) -> Tokens {
-  let v = stuff.unlist_ref();
-  let active = |c: &str| lookup_mathcode(c) == Some(0x8000);
-  let (sup, sub) = (
-    v.contains(&T_OTHER!("^")) && active("^"),
-    v.contains(&T_OTHER!("_")) && active("_"),
-  );
-  if !(sup || sub) {
-    return stuff;
-  }
-  let mut in_math = false;
-  Tokens::new(
-    v.iter()
-      .map(|t| {
-        if t.get_catcode() == Catcode::MATH {
-          in_math = !in_math;
-        }
-        if in_math && sup && *t == T_OTHER!("^") {
-          T_SUPER!()
-        } else if in_math && sub && *t == T_OTHER!("_") {
-          T_SUB!()
-        } else {
-          *t
-        }
-      })
-      .collect(),
-  )
-}
-
 /// Whether a mark's operand, its notes taken out, prints nothing: braces, spaces, `\relax` and font switches only
 /// (`^{\thanks{…}}`, `^{\mathbf{}}`).
 pub(in crate::base_utilities) fn mark_prints_nothing(mark: &[Token]) -> bool {
@@ -310,62 +275,4 @@ fn mark_keys(operand: &[Token]) -> Vec<String> {
     }
   }
   keys
-}
-
-/// An author block's `\begin{footnote}{text}…\end{footnote}` as LaTeX reads it: `\begin{footnote}` runs `\footnote`,
-/// which takes the braced text after it as its argument, so what follows up to `\end{footnote}` is the author line's
-/// (`Velibor \v{Z}eli\begin{footnote}{Linn\'{e} FLOW Centre, …},\end{footnote} Du\v{s}an Zorica\begin{footnote}…`,
-/// 1703.02032: the comma printed after the first note's mark parts the names). Written `\footnote{text}` and the rest,
-/// the note is the name's and its comma a separator; read as one unit, the environment hid it. Only a `{footnote}` whose
-/// braced text and `\end{footnote}` follow. The environment's group (`\begin` is `\begingroup`, `\end` its
-/// `\endgroup`, latex.ltx) is not kept: it would open in one name and close in the next. So a declaration between the
-/// note and `\end{footnote}` is no longer confined to it; in an author block that span is the separator after the mark.
-pub(in crate::base_utilities) fn note_environments_as_commands(stuff: Tokens) -> Tokens {
-  let v = stuff.unlist_ref();
-  let name_is = |at: usize, name: &str| -> Option<usize> {
-    if v.get(at)?.get_catcode() != Catcode::BEGIN {
-      return None;
-    }
-    let close = (at + 1..v.len()).find(|&k| v[k].get_catcode() == Catcode::END)?;
-    let read: String = v[at + 1..close].iter().map(ToString::to_string).collect();
-    (read == name).then_some(close + 1)
-  };
-  if !v.iter().any(|t| *t == T_CS!("\\begin")) {
-    return stuff;
-  }
-  let mut out: Vec<Token> = Vec::with_capacity(v.len());
-  let mut changed = false;
-  let mut i = 0;
-  while i < v.len() {
-    if v[i] == T_CS!("\\begin")
-      && let Some(mut j) = name_is(i + 1, "footnote")
-    {
-      while v.get(j) == Some(&T_SPACE!()) {
-        j += 1;
-      }
-      let text_end =
-        (v.get(j).is_some_and(|t| t.get_catcode() == Catcode::BEGIN)).then(|| skip_group(v, j));
-      let end = text_end.and_then(|from| {
-        (from..v.len()).find_map(|k| {
-          (v[k] == T_CS!("\\end"))
-            .then(|| name_is(k + 1, "footnote").map(|e| (k, e)))
-            .flatten()
-        })
-      });
-      if let (Some(text_end), Some((end_at, past_end))) = (text_end, end)
-        && text_end <= v.len()
-        && !v[text_end..end_at].iter().any(|t| *t == T_CS!("\\begin"))
-      {
-        out.push(T_CS!("\\footnote"));
-        out.extend_from_slice(&v[j..text_end]);
-        out.extend_from_slice(&v[text_end..end_at]);
-        i = past_end;
-        changed = true;
-        continue;
-      }
-    }
-    out.push(v[i]);
-    i += 1;
-  }
-  if changed { Tokens::new(out) } else { stuff }
 }

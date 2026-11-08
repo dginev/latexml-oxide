@@ -242,7 +242,8 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
   ("collaborations.rs annotate=", 1),
   ("collaborations.rs lx@add@", 2),
   ("dispatch.rs annotate=", 2),
-  ("dispatch.rs lx@add@", 10),
+  // (MV1, 10 -> 9: `whole_block_author`, Perl's whole-block `\lx@add@author`, moved to `frontmatter/fallback.rs`)
+  ("dispatch.rs lx@add@", 9),
   // (MV1, 6 -> 5, and `notes.rs`' 2 -> 0: `is_email_command` and `document_note_call`, `note_call_end` moved to the emitter,
   // `writer/calls.rs`, which writes Perl's calls; no emission added)
   ("email_block_calls.rs lx@add@", 5),
@@ -316,7 +317,6 @@ const ONE_ENGINE_REACH: &[(&str, usize)] = &[
   // (MV1, a false pair, until step 6 teaches the fence a file's own definitions: `project_role`'s local closure `author`, moved
   // with it, which the count reads as the driver's method `Collaborations::author`; no use of the old reader)
   ("classify/notes.rs author", 4),
-  ("observer/writer/emit.rs whole_block_author", 2),
 ];
 
 /// The names the old reader exports into `base_utilities`: the `pub`, `pub(crate)` and `pub(in …)` items of `mod.rs` and of
@@ -967,7 +967,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("apa7_cls.rs", 7),
   ("authblk_sty.rs", 23),
   // (F1r2, 1288 -> 1285: the membership readout finds its commas by `Token::group_step`, no catcode match)
-  ("author_block", 826),
+  ("author_block", 629),
   // (MV1: moved from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
   ("classify", 347),
   ("defs/author_macros", 20),
@@ -980,6 +980,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (raised by one at Z14: the lexer's own constructor, `\lx@fm@obs@affil@marked`, as the row's others; nothing a document spells;
   // by one at N2r2: `raw_lines`' break arm holding the `\and` family too, two lines, the whatsits' definitions, 2106.06418)
   ("events", 60),
+  // (MV1: moved from `author_block` with Perl's whole-block fallback and its preparation, C1, 826 = 629 + 197; none added)
+  ("fallback", 197),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   // (Z4a, 4 -> 8: an environment step by its meaning, a CS whose definition is `\begin` or `\end`, a `\let` copy too, what no frame
   // says for a raw environment; the definition's name, not the token's spelling)
@@ -1052,6 +1054,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
 const FRONTMATTER_AREAS: &[(&str, &str)] = &[
   // (MV1: the old reader's text rules and token primitives, moved unchanged from `author_block/`, their reads with them)
   ("classify", "classify/"),
+  // (MV1: Perl's whole-block fallback and its own preparation, C1, moved unchanged from `author_block/`)
+  ("fallback", "fallback.rs"),
   ("owners", "observer/resolver/owners.rs"),
   ("shared_row/emails", "shared_row/emails.rs"),
   ("shared_row", "shared_row.rs"),

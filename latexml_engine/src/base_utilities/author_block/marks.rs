@@ -182,49 +182,6 @@ pub fn distinct_author_marks(stuff: &Tokens) -> usize {
   seen.len()
 }
 
-/// Does an author block mark its names (`$^{a}$`, `\textsuperscript{1}`)? A superscript inside a `\footnote` or
-/// `\thanks` is the note's own text, not a mark: 0911.0568's `LPT Orsay (CNRS)~\footnote{$^a$Laboratoire …}` line
-/// made its PoS author block a marked list, its affiliation and email line read as a person (63k).
-pub fn has_author_marks(stuff: &Tokens) -> bool {
-  let tokens = stuff.unlist_ref();
-  let mut i = 0;
-  while i < tokens.len() {
-    let t = &tokens[i];
-    if *t == T_CS!("\\footnote") || *t == T_CS!("\\thanks") {
-      i += 1;
-      while i < tokens.len() && tokens[i] == T_SPACE!() {
-        i += 1;
-      }
-      if i < tokens.len() && tokens[i] == T_OTHER!("[") {
-        while i < tokens.len() && tokens[i] != T_OTHER!("]") {
-          i += 1;
-        }
-        i += 1;
-      }
-      if i < tokens.len() && tokens[i].code == Catcode::BEGIN {
-        let mut depth = 0usize;
-        while i < tokens.len() {
-          match tokens[i].code {
-            Catcode::BEGIN => depth += 1,
-            Catcode::END => {
-              depth -= 1;
-              if depth == 0 {
-                break;
-              }
-            },
-            _ => {},
-          }
-          i += 1;
-        }
-      }
-    } else if is_author_mark(t) {
-      return true;
-    }
-    i += 1;
-  }
-  false
-}
-
 /// Does a superscript's operand read as mark labels (`1`, `1,2`, `1, 3`, `a`, `\dagger`, `\mathrm{c}`, `*`), not as
 /// text shown raised (`\textsuperscript{equal contrib.}`, `\textsuperscript{(*)}`, `$^{\rm (a)}$`,
 /// `\textsuperscript{ (equal)}`)? Labels hold no word of three or more letters, and [`clean_frontmatter_labels`] gives

@@ -2,59 +2,6 @@
 
 use super::*;
 
-/// `tokens` with each `\quad`/`\qquad` that parts an icon from the link after it a space: a piece of an author block
-/// that is only an icon — what prints no word, an icon macro or a graphic ([`without_non_printing_arguments`]) — before
-/// a link line ([`is_link_line`]) is that link's, one link line with it, a URL contact ([`is_url_line`]), not an
-/// affiliation holding the logo alone (`\github \quad \url{…}`, 2601.17879's
-/// `\def\github{\raisebox{-1.5pt}{\includegraphics…}}`; the r8 re-review's finding 9).
-pub(in crate::base_utilities) fn join_icons_to_links(tokens: Tokens) -> Tokens {
-  let mut v = tokens.unlist();
-  let separator = |t: &Token| {
-    [
-      T_CS!("\\\\"),
-      T_CS!("\\newline"),
-      T_CS!("\\and"),
-      T_CS!("\\And"),
-      T_CS!("\\AND"),
-      T_CS!("\\quad"),
-      T_CS!("\\qquad"),
-    ]
-    .contains(t)
-  };
-  let mut delimiters = Vec::new();
-  let mut depth = 0usize;
-  for (at, t) in v.iter().enumerate() {
-    match t.get_catcode() {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END => depth = depth.saturating_sub(1),
-      _ if depth == 0 && separator(t) => delimiters.push(at),
-      _ => {},
-    }
-  }
-  let icon_only = |piece: &[Token]| {
-    let piece = Tokens::new(piece.to_vec());
-    !prints_nothing(&piece)
-      && prints_nothing(&Tokens::new(without_non_printing_arguments(
-        piece.unlist_ref(),
-      )))
-  };
-  for (index, at) in delimiters.iter().enumerate() {
-    let before = if index == 0 {
-      0
-    } else {
-      delimiters[index - 1] + 1
-    };
-    let after = delimiters.get(index + 1).copied().unwrap_or(v.len());
-    if (v[*at] == T_CS!("\\quad") || v[*at] == T_CS!("\\qquad"))
-      && icon_only(&v[before..*at])
-      && is_link_line(&Tokens::new(v[at + 1..after].to_vec()))
-    {
-      v[*at] = T_SPACE!();
-    }
-  }
-  Tokens::new(v)
-}
-
 /// The links of a line of several, each a link line of its own ([`is_url_line`]) with the icon or label before it, the
 /// spacing and the separators (`|`, `·`, `,`) between them dropped (`\faGithub~\href{…}{Code} | \yticon~\href{…}{Demo
 /// Video}`, 2601.06979; the r7 re-review's finding 5): a URL contact each. The line whole when it holds one link, or a
