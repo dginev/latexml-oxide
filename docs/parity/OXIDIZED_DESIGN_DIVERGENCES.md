@@ -32646,17 +32646,37 @@ the reading's institution (`John Smith, University of Toronto`, the main session
 condition, which chose between splitting a cautious line and keeping it whole (N4), a choice `=2` does not make
 (`resolver/lines.rs` `marked_name`). (S1, the reading's own rule) Initials after a comma join a bare surname only, the
 word read through its glued initials (`P.A.Vshivtseva$^{a,b}$, E.T.\, Einiev`, 2409.13569; `unglued_initials`). (C2-C5) A
-name's collaboration remark is its `collaboration` contact, never part of the name (FIDELITY_CHARTER §4, #946): the pieces of
-one remark that a note, a note reference, a box or a command's own gap parts are read whole, the notes the name's
-(`Kalanand Mishra\footnote{…} (for the \babar\ collaboration)`, 0711.1544; elsarticle's `Christian Schmidt (for the
-BNL-Bielefeld\fnref{col1} Collaboration)`, 1212.4278; `lines::remark_pieces_joined`, after `name_and_remark` and
-`name_takes_annotations`); a remark after the name's notes or marks naming whom the author speaks for is one too (webofc's `for
-CAPP/IBS`, 1702.03664; `speaks_for_after_notes` moved into `classify/collaborations.rs`); and a line under one name speaking
-for a collaboration is that name's contact, where rev94a S6 joined it to the name (`Carolyn Brown$^1$\\ on behalf of the
-Bcool project team`, 1310.6507; 1502.03246). A remark parted by a note reference is written from its text, a Warning each for
-it and its name (the name's events don't spell it). (A2) The ink one command draws inside a word is the word's letters:
-combelow's `\cb{t}` stacks a `t` over a comma in an alignment, so its comma and row break part no names and `Bogdan
-Rai\cb{t}\u{a}` is one name (2507.13598; `lines::words_through_one_command`, in `read_events` and the content check alike).
+name's collaboration remark is its `collaboration` contact, never part of the name (FIDELITY_CHARTER §4, #946): from the
+piece a remark opens in (`lines::remark_start`: a bracket, "for" or "on behalf of"), the pieces of one remark that a note, a
+note reference (`\footnotemark`, or a request of a note's label: elsarticle's `\fnref`, `\thanksref`, `\corref`,
+`\corauthref`, `\tnoteref`; an affiliation's request, `\altaffilmark`, `\inst`, ends the run — a departure from the old
+reader's `NAME_ANNOTATIONS`, the main session's decision), a box or a command's own gap parts are read whole, their text
+joined as the source joins them (`lines::printed_join`: a space only where a token no event covers lies between two
+pieces), the notes the name's (`lines::remark_pieces_joined`, after `name_and_remark` and `name_takes_annotations`). A
+remark after the name's own event is a run of its own, so the name keeps its event and the remark a span of its own, written
+from its tokens in its markup as off writes it (`Kalanand Mishra\footnote{…} (for the \babar\ collaboration)`, 0711.1544,
+0804.0020; `Ann Able\thanks{…} (for the \textsc{Atlas} Collaboration)`; 1201.5130). A name whose own event opens the remark
+joins with it and the in-name split parts them (elsarticle's `Christian Schmidt (for the BNL-Bielefeld\fnref{col1}
+Collaboration)`, 1212.4278, 1408.0414): that contact and the name are written from their text, a Warning each (the joined
+event's span holds both; off writes no markup there either). A remark after the name's notes or marks naming whom the author
+speaks for is one too (webofc's `for CAPP/IBS`, 1702.03664; `speaks_for_after_notes` moved into `classify/collaborations.rs`,
+its words `SPEAKS_FOR` shared with the reading's `speaks_for`); and a line under one name speaking for a collaboration is that
+name's contact, sourced at the line's ink, so written in its size (`Carolyn Brown$^1$\\ on behalf of the Bcool project team`,
+1310.6507; `{\footnotesize for the Hall A DVCS collaboration}`, 1502.03246), where rev94a S6 joined it to the name. A kern
+backing up prints no space (`events::whatsit_width_em`): `\babar`'s `B\kern-0.1em{\small A}` is one word "BABAR", read
+"B A B A R" before, its words missing from what the emitter wrote; 1706.00234's `\OW` joins its name by layout alone. (A2)
+The ink one command draws inside its box, inside a word, is the word's letters: combelow's `\cb{t}` stacks a `t` over a comma
+in an alignment, so its comma and row break part no names and `Bogdan Rai\cb{t}\u{a}` is one name (2507.13598; `Andrei
+Negu\cb t`, 2301.00703, kept its ț); a comma or a row break a command prints at its own level, after its box, parts what it
+ends as any does (`\newcommand\nlx{\mbox{Jr.}\\}`; `lines::words_through_one_command`, in `read_events` and the content check
+alike). (N5, the main session's decision K) An unmarked line under a line of one labelled entry goes on with that entry,
+whatever its words read as, as the old reader appends it (`$^1$The Graduate Center, CUNY\\ Computer Science\\ New York, USA`,
+2501.04046; hep-ph0511130's `Ionosphere and\\ Radio Wave Propagation`); under two or more entries the line after them is
+evidence of a names row (SYNC row 46's `Cat Cole`), so cs0011034's `… and $^2$Centre for Computational Linguistics\\
+K.U.Leuven` keeps a junk creator, a residual (`Resolver::block`, `labels::later_line_is_names`' `after_labelled`). The
+concession's give-back of a conceded creator's trailing marks (`repart::give_back_ink`) has no live shape after N1-N3: a
+marked piece is a name, and today's keeps a per-author class's line one creator; its in-doubt branch, a prefix mark's, stays
+guarded (`perfect_kernel_batch94a::a_conceded_creator_keeps_its_marks`).
 Off: byte-identical. Guards `perfect_kernel_batchnl1`.
 
 Guards `perfect_kernel_batchz4`.
