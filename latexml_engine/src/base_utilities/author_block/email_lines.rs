@@ -1,6 +1,7 @@
 //! Author-block e-mail lines and the `\@author` replay definitions; mark operands, row starts and empty marks.
 
 use super::*;
+use crate::frontmatter_stores::cs_in;
 
 /// The `\lx@add@email` calls for a line of addresses in an author block (`a@x, b@y`, `{a,b}@dom`), placed as
 /// `placement` says: one call per address, a whole-line wrapper repeated on each, or the line itself when it holds one
@@ -700,7 +701,7 @@ pub fn drop_empty_marks(tokens: Tokens) -> Tokens {
   let mut out = Vec::with_capacity(v.len());
   let mut i = 0;
   while i < v.len() {
-    if NOTE_TEXT_COMMANDS.iter().any(|cs| v[i] == T_CS!(*cs)) || is_note_macro(&v[i]) {
+    if cs_in(&v[i], NOTE_TEXT_COMMANDS) || is_note_macro(&v[i]) {
       // (the command, an optional `[…]`, and its braced text, as written)
       let mut end = i + 1 + v[i + 1..].iter().take_while(|t| **t == T_SPACE!()).count();
       if v.get(end) == Some(&T_OTHER!("[")) {

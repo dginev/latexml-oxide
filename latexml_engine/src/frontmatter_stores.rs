@@ -6608,7 +6608,9 @@ const STYLED: &[&str] = &[
   "\\textbf", "\\textit", "\\textsc", "\\textsf", "\\emph", "\\textrm",
 ];
 
-fn cs_in(t: &Token, set: &[&str]) -> bool {
+/// `t` is a control sequence named in `set`: `set.iter().any(|cs| *t == T_CS!(*cs))` (the same predicate as `Token`
+/// equality), read in place, with no symbol interned per entry.
+pub(crate) fn cs_in(t: &Token, set: &[&str]) -> bool {
   t.get_catcode() == Catcode::CS && t.with_str(|s| set.contains(&s))
 }
 

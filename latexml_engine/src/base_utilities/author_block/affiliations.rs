@@ -1,6 +1,7 @@
 //! Author-block affiliations: the `\lx@add@affiliation` calls, address runs and their placement, contact owners.
 
 use super::*;
+use crate::frontmatter_stores::cs_in;
 
 /// The `\lx@add@affiliation` calls for an affiliation list: one per line or `\and`-separated
 /// entry, each with its superscript marker as its label when the list has markers (Perl
@@ -1155,9 +1156,7 @@ fn shared_closing_parts(list: Tokens) -> (Tokens, Vec<Token>, Vec<Tokens>) {
   let v = list.unlist_ref();
   let start = v.iter().position(|t| *t != T_SPACE!()).unwrap_or(v.len());
   let wrapper = v.get(start).is_some_and(|t| {
-    t.get_catcode() == Catcode::CS
-      && !is_mark_command(t)
-      && !LINE_BOXES.iter().any(|cs| *t == T_CS!(*cs))
+    t.get_catcode() == Catcode::CS && !is_mark_command(t) && !cs_in(t, &LINE_BOXES)
   }) && v
     .get(start + 1)
     .is_some_and(|t| t.get_catcode() == Catcode::BEGIN);
@@ -1212,12 +1211,9 @@ fn shared_closing_parts(list: Tokens) -> (Tokens, Vec<Token>, Vec<Tokens>) {
     return (list, Vec::new(), Vec::new());
   }
   let links = |part: &[Token]| {
-    part.iter().any(|t| {
-      *t == T_OTHER!("@")
-        || ["\\href", "\\url", "\\email", "\\mailto"]
-          .iter()
-          .any(|cs| *t == T_CS!(*cs))
-    })
+    part
+      .iter()
+      .any(|t| *t == T_OTHER!("@") || cs_in(t, &["\\href", "\\url", "\\email", "\\mailto"]))
   };
   // (a part whose argument is spacing alone, `\country{~}` written to satisfy the class, is no entry's: repeated, or
   // left on the last entry, it printed ", ," there — 2605.18872; any other command in it may print, a macro's text
