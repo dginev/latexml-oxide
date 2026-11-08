@@ -299,6 +299,66 @@ fn the_old_reader_takes_no_new_decision() {
   );
 }
 
+/// The one engine's reach into the old reader, per file and symbol (user 2026-11-08: "stay focused on having only one
+/// engine for frontmatter"). `frontmatter/` may use `author_block/` only through what survives its deletion
+/// (docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row "`author_block/`'s survivors"): the address syntax on printed ink
+/// (separators, local parts, contact words; to `frontmatter/classify.rs` at Z18), the two writers of Perl's API calls
+/// (`document_note_call`, `note_call_end`; into the emitter) and Perl's whole-block fallback (`whole_block_author`,
+/// `Base_Utility.pool.ltxml:693`; its own module). Each a debt: it may only fall. A new symbol here is a decision the old
+/// engine takes for the new one; it lands in `observer/resolver/`, on the digested events, instead.
+const ONE_ENGINE_REACH: &[(&str, usize)] = &[
+  ("observer/resolver/labels.rs ADDRESS_GROUP_SEPARATORS", 1),
+  ("observer/resolver/labels.rs UNBRACED_LIST_SEPARATORS", 1),
+  ("observer/resolver/labels.rs ends_a_listed_run", 1),
+  ("observer/resolver/labels.rs is_listed_local_part", 1),
+  ("observer/resolver/labels.rs is_local_char", 1),
+  ("observer/resolver/labels.rs names_a_contact", 1),
+  ("observer/resolver/labels.rs write_out_unspaced_lists", 1),
+  ("observer/resolver/placed.rs CUT_LIST", 1),
+  ("observer/writer/emit.rs document_note_call", 1),
+  ("observer/writer/emit.rs note_call_end", 1),
+  ("observer/writer/emit.rs whole_block_author", 1),
+];
+
+/// The reverse fence: the one engine reaches into the old reader only through its survivors.
+#[test]
+fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
+  const WHY: &str = "The one engine decides on the digested events (`observer/resolver/`); `author_block/` is deleted after \
+                     the flip, and only its survivors (the address syntax, the API-call writers, Perl's fallback) move: \
+                     docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row \"`author_block/`'s survivors\".";
+  let dir = format!("{BASE}/frontmatter");
+  let path = Regex::new(r"author_block::(\{[^}]*\}|[A-Za-z_][A-Za-z_0-9]*)").expect("a regex");
+  let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+  for file in rust_files(&dir) {
+    let short = file
+      .strip_prefix(&format!("{dir}/"))
+      .unwrap_or(&file)
+      .to_string();
+    let source = read_rust(&file);
+    for found in path.captures_iter(&source.code) {
+      let what = &found[1];
+      let names: Vec<&str> = match what.strip_prefix('{') {
+        Some(group) => group
+          .trim_end_matches('}')
+          .split(',')
+          .map(str::trim)
+          .filter(|name| !name.is_empty())
+          .collect(),
+        None => vec![what],
+      };
+      for name in names {
+        *counts.entry(format!("{short} {name}")).or_default() += 1;
+      }
+    }
+  }
+  assert_debts(
+    "the one engine's reach into the old reader",
+    ONE_ENGINE_REACH,
+    &counts,
+    WHY,
+  );
+}
+
 /// Perl LaTeXML's Frontmatter API names, generated once from `LaTeXML/lib/LaTeXML` (absent in worktrees and CI, so hard-coded
 /// here): `\lx@add@…`, `\lx@annotate@…`, `\lx@clear@…`. Not `\lx@address@…`, `\lx@addtocounter` or `\lx@addframing`,
 /// which only share the prefix, nor the bare prefix `\lx@add@`, which Perl builds names from.
