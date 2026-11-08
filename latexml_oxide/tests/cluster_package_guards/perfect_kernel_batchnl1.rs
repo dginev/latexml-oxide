@@ -322,3 +322,22 @@ fn a_comma_a_command_draws_inside_a_name_parts_no_names() {
     "affiliation=Bob Baker"
   ]]);
 }
+
+/// Rows C2-C4 with the old reader's whole `NAME_ANNOTATIONS` (`name_takes_annotations`; brief NL1d, the main session's
+/// decision): a mark inside a name's remark, `Ann Able (for the ATLAS\textsuperscript{a} Collaboration)`, parts no run
+/// and goes onto the name (`lines::name_annotation`), as off reads it. Red (NL1r2 `=2`, whose list held a note's
+/// references only): the name "Ann Able (for the ATLAS" with the mark, the contact "Collaboration)". Distinct from
+/// [`a_collaboration_remark_is_the_names_contact`]'s note reference: a mark of the name's own, no note's.
+#[test]
+fn a_mark_inside_a_remark_goes_onto_the_name() {
+  let (off, two) = both(
+    repro!("emit_a_mark_inside_a_remark_goes_onto_the_name"),
+    (0, 2),
+  );
+  let want = [
+    vec!["Ann Able a", "collaboration=(for the ATLAS Collaboration)"],
+    vec!["Bob Baker"],
+  ];
+  assert_eq!(off, want);
+  assert_eq!(two, want);
+}

@@ -32648,9 +32648,10 @@ condition, which chose between splitting a cautious line and keeping it whole (N
 word read through its glued initials (`P.A.Vshivtseva$^{a,b}$, E.T.\, Einiev`, 2409.13569; `unglued_initials`). (C2-C5) A
 name's collaboration remark is its `collaboration` contact, never part of the name (FIDELITY_CHARTER §4, #946): from the
 piece a remark opens in (`lines::remark_start`: a bracket, "for" or "on behalf of"), the pieces of one remark that a note, a
-note reference (`\footnotemark`, or a request of a note's label: elsarticle's `\fnref`, `\thanksref`, `\corref`,
-`\corauthref`, `\tnoteref`; an affiliation's request, `\altaffilmark`, `\inst`, ends the run — a departure from the old
-reader's `NAME_ANNOTATIONS`, the main session's decision), a box or a command's own gap parts are read whole, their text
+name annotation (`lines::name_annotation`, the old reader's `NAME_ANNOTATIONS`, `classify/notes.rs`, and `\footnotemark`
+as `name_takes_annotations` moves them: a request — `\altaffilmark`, `\thanksref`, `\corref`, `\fnref`, `\tnoteref` —,
+`\inst`, `\IEEEauthorrefmark`, `\textsuperscript`, `\cite`, a footnote symbol's `$^{*}$`; not a number's `$^{1}$`, which it
+keeps in the remark), a box or a command's own gap parts are read whole, their text
 joined as the source joins them (`lines::printed_join`: a space only where a token no event covers lies between two
 pieces), the notes the name's (`lines::remark_pieces_joined`, after `name_and_remark` and `name_takes_annotations`). A
 remark after the name's own event is a run of its own, so the name keeps its event and the remark a span of its own, written

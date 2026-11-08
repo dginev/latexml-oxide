@@ -831,30 +831,28 @@ pub(super) fn joined_single_name(events: Vec<Event>) -> Vec<Event> {
   out
 }
 
-/// Whether a Mark is a reference to a note (`name_takes_annotations`' annotations a remark holds, moved onto the name):
-/// a `\footnotemark`, or a request of a note's label — elsarticle's `\fnref`, `\thanksref`, `\corref`, `\corauthref`,
-/// `\tnoteref` (elsart_support_core_sty.rs, `fn:`, `thanks:`, `cor:`, `corauth:`, `tnote:`). A request of an
-/// affiliation's label (`\altaffilmark`, `\inst`) is a mark of the name's, no note's: it ends the remark's run (review
-/// revNL1 S1).
-fn note_reference(e: &Event) -> bool {
+/// Whether a Mark is a name annotation a remark holds, moved onto the name as the old reader's `name_takes_annotations`
+/// moves every one of `NAME_ANNOTATIONS` (`classify/notes.rs`) and a `\footnotemark` (`author_block/collaborations.rs`):
+/// a request (`\altaffilmark`, `\thanksref`, `\corref`, `\fnref`, `\tnoteref`), an `\inst` or `\IEEEauthorrefmark`
+/// (`inst`), a `\textsuperscript` (`sup`), a `\cite`, a footnote mark, and a footnote symbol's superscript (`$^{*}$`,
+/// `math`, the old reader's `\lx@frontmatter@keepsup`); not a number's formula superscript (`$^{1}$`) nor a glyph
+/// printed as text, which the old reader keeps in the remark.
+fn name_annotation(e: &Event) -> bool {
   e.kind == EventKind::Mark
-    && match e.role.as_deref() {
-      Some(role) if role.starts_with("footnotemark") => true,
-      Some("request") => e.label.as_deref().is_some_and(|labels| {
-        labels.split(',').all(|label| {
-          label.split_once(':').is_some_and(|(prefix, _)| {
-            ["fn", "thanks", "cor", "corauth", "tnote"].contains(&prefix)
-          })
-        })
-      }),
-      _ => false,
-    }
+    && e
+      .role
+      .as_deref()
+      .is_some_and(|role| match role.split(' ').next().unwrap_or(role) {
+        "request" | "inst" | "sup" | "cite" | "footnotemark" => true,
+        "math" => e.symbol,
+        _ => false,
+      })
 }
 
 /// A names line's pieces with a name's collaboration remark that notes, layout or a command's own gap part read whole
 /// (rows C2-C4 of the old reader's names split, `author_block/collaborations.rs` `name_and_remark` and
 /// `name_takes_annotations`): from a piece a remark opens in ([`remark_start`]), the Name events of one run, parted
-/// only by notes, note references ([`note_reference`]), layout and gaps inside one command ([`gap_inside_one_command`]),
+/// only by notes, name annotations ([`name_annotation`]), layout and gaps inside one command ([`gap_inside_one_command`]),
 /// are one Name where their text is a name and its remark naming a collaboration — or, after a name, such a remark —
 /// and the first alone is neither; their text joined as the source joins them ([`printed_join`]), the notes after it
 /// the name's. A remark after the name's own event opens a run of its own, so the name keeps its event and the remark
@@ -900,7 +898,7 @@ pub(super) fn remark_pieces_joined(events: Vec<Event>) -> Vec<Event> {
     while j < events.len() {
       match &events[j].kind {
         EventKind::Layout | EventKind::Note => j += 1,
-        EventKind::Mark if note_reference(&events[j]) => j += 1,
+        EventKind::Mark if name_annotation(&events[j]) => j += 1,
         EventKind::Sep(SepKind::Gap { .. })
           if j + 1 < events.len() && gap_inside_one_command(&refs, j + 1, refs[j]) =>
         {
@@ -920,7 +918,7 @@ pub(super) fn remark_pieces_joined(events: Vec<Event>) -> Vec<Event> {
     // (the notes inside it count as the name's when they part the name from its remark)
     let inside = run
       .iter()
-      .any(|e| e.kind == EventKind::Note || note_reference(e));
+      .any(|e| e.kind == EventKind::Note || name_annotation(e));
     if pieces < 2 || alone || !remark(&text, after_name, annotated || inside) {
       out.push(events[i].clone());
       i += 1;
@@ -937,7 +935,7 @@ pub(super) fn remark_pieces_joined(events: Vec<Event>) -> Vec<Event> {
     out.extend(
       run
         .iter()
-        .filter(|e| e.kind == EventKind::Note || note_reference(e))
+        .filter(|e| e.kind == EventKind::Note || name_annotation(e))
         .cloned(),
     );
     i = last + 1;
