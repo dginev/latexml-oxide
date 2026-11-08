@@ -1035,8 +1035,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // boundary that records its content so the content check counts what TeX printed of it, a count and no decision; the
   // check itself reads text alone, `resolver/` unchanged; RC1r2, 26 -> 32: its words parted as an ink's, by catcodes and a
   // control sequence's length — a control symbol or a group inside a word parts nothing, `Universit\"at` one word, not
-  // `Universit at` (review revRC1 finding 3) — no name spelled, a count and no decision)
-  ("ledger", 32),
+  // `Universit at` (review revRC1 finding 3) — no name spelled, a count and no decision; RC1e, 32 -> 33: a word reads on
+  // past a one-letter control word only, by its letter's catcode (`ledger::letter_cs`), so a control symbol parts it,
+  // `Smith\,\\Univ` two words (review revG2 finding 3) — no name spelled, a count and no decision)
+  ("ledger", 33),
   ("llncs_cls.rs", 32),
   ("osa_journal_sty.rs", 77),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the owner logic, 938 = 924 + 14; none added)

@@ -11,7 +11,9 @@ use latexml_core::{
     origin::{DefinitionOrigin, frontmatter_watch, watch_frontmatter_setter_calls},
   },
   gullet::{InputMark, input_mark, input_unread_since},
-  state::{fallback_meaning_origin, frontmatter_setter_calls, open_frontmatter_setter},
+  state::{
+    fallback_meaning_origin, frontmatter_setter_calls, lookup_catcode, open_frontmatter_setter,
+  },
   token::{AUTHOR_PROV_POS_MASK, FIELD_PROV_POS_MASK, field_prov},
 };
 
@@ -1073,11 +1075,12 @@ pub(in crate::base_utilities) fn record_api_call(
 /// the API boundary that records its content, so the content check reads text alone, parted into words as an ink's is
 /// (`resolver::words::printed_words`): its characters; a control symbol or a one-letter control word inside a word (an
 /// accent, `Universit\"at`, a dotless i: a letter or digit before it, a letter, a digit or a group after it, past any
-/// group's end and other such sequence, `F\'{\i}sica`, `Bras\'\i lia`) and a group there (`M{\"u}nchen`) part nothing,
-/// the word counted whole, its accents unread (the check takes a word one side reads without them for the one the other
-/// prints with them, `resolver::placed`); another control sequence, its argument's group
-/// (`\IEEEauthorrefmark{1}Univ Alpha` → ` 1 Univ Alpha`) or a math shift parts words. Nothing is spelled but a control
-/// sequence's length: a letter command (`Gro{\ss}e`, a control word) parts its word.
+/// group's end and one-letter control word, `F\'{\i}sica`, `Bras\'\i lia`; not past a control symbol, `Smith\,\\Univ`
+/// two words) and a group there (`M{\"u}nchen`) part nothing, the word counted whole, its accents and dotless letters
+/// unread (the check takes a word one side reads without them for the one the other prints with them, `Fsica` for
+/// `física`, `resolver::placed`); another control sequence, its argument's group (`\IEEEauthorrefmark{1}Univ Alpha` →
+/// ` 1 Univ Alpha`) or a math shift parts words. Nothing is spelled but a control sequence's length and its letter's
+/// catcode: a letter command (`Gro{\ss}e`, a control word) parts its word.
 pub(super) fn content_text(content: &Tokens) -> String {
   let mut text = String::new();
   // (for each open group, whether it is a parting command's argument, which parts what is around it)
@@ -1086,12 +1089,12 @@ pub(super) fn content_text(content: &Tokens) -> String {
   let tokens = content.unlist_ref();
   for (at, token) in tokens.iter().enumerate() {
     // (inside a word: a letter or digit before it, and a letter, a digit or a group after it, past any group's end and
-    // 2-character control sequence: `F\'{\i}sica`, `Bras\'\i lia`)
+    // one-letter control word: `F\'{\i}sica`, `Bras\'\i lia`; a control symbol there parts, `Smith\,\\Univ` two words)
     let in_word = || {
       text.chars().next_back().is_some_and(char::is_alphanumeric)
         && tokens[at + 1..]
           .iter()
-          .find(|next| next.get_catcode() != Catcode::END && !short_cs(next))
+          .find(|next| next.get_catcode() != Catcode::END && !letter_cs(next))
           .is_some_and(starts_word)
     };
     let mut parting_command = false;
@@ -1120,6 +1123,13 @@ pub(super) fn content_text(content: &Tokens) -> String {
 /// one-letter control word (`\i`), which `content_text` reads inside a word.
 fn short_cs(token: &Token) -> bool {
   token.get_catcode() == Catcode::CS && token.with_str(|name| name.chars().count() == 2)
+}
+
+/// A one-letter control word (`\i`, `\j`): a short control sequence ([`short_cs`]) whose character has a letter's
+/// catcode, no name spelled. A word reads on past it; a control symbol (`\\`, `\,`) it does not.
+fn letter_cs(token: &Token) -> bool {
+  short_cs(token)
+    && token.with_str(|name| name.ends_with(|c| lookup_catcode(c) == Some(Catcode::LETTER)))
 }
 
 /// A token that opens or continues a word after a control sequence inside it: a group, a letter or a digit.
