@@ -131,14 +131,15 @@ basis `pk_wt/int149a` @ 3189c464d9 (RT1 at 913eef6966), binary `P2r2-rel`. Their
   `dom::address_cut`, `Op::CutAddresses` and `Op::Address`; 2503.07161 and 1811.10103 by the DOM Kind step. At `=2` the
   reading computes the same take-out, the emitter gives it back whole (emit.rs:1579-1585 `give_back_entry`) and the S2b
   writer never runs (writer/mod.rs:406 `|| emitted()`). **E1 is that one missing stage (rows 40-58), not a missing
-  rule.** To port, in order: row 40 (lift the `emitted()` gate for this one operation, or its equivalent in the
-  emitter), 54, 55 (a mark formula laid out as a space; the Atom/Note decline), 56 (the wrapper), 57 (the label's name,
+  rule.** To port, in order: row 40 (its equivalent in the emitter, as decided below), 54, 55 (a mark formula laid out as a space; the Atom/Note decline), 56 (the wrapper), 57 (the label's name,
   print order, the `owner:spelled`/`writes` condition), 58 (`Op::Address` before the cut); not row 57a's whole-paper
   decline, which becomes per entry (as row 54 is). Rows 33-38 and 41-53 are the reading's already. Of RP1: `Taken`'s new
   fields and `EntryCut::mail` (row 56) are reusable; `writer/entry_cut.rs::cut_tokens` (430 lines) has no old row and
-  caused its four `=2` regressions (2311.02475, 2506.02272, 2604.05440, 1903.10019). The table's recommendation, a
-  post-writer DOM pass applying `Taken` per entry with the existing `dom::address_cut`/`dom::cut_addresses`, needs the
-  main session's decision against `batche0`'s pass allow-list. Re-check at the port: 1409.0847, 2306.04726, 1307.5879,
+  caused its four `=2` regressions (2311.02475, 2506.02272, 2604.05440, 1903.10019). **Decided (user 2026-11-08, "Record the missing
+  fact first"),** over the table's post-writer DOM pass: the rehearsal records each address run's token positions inside
+  an ink (the boxes' position stamps, not letter alignment), the emitter cuts the entry's tokens there; no DOM rewrite,
+  no new named rewrite. In progress: `pk/P1b`, its fix round after revP1b's B1 (the label before the address) and B2
+  (row 56). Re-check at the port: 1409.0847, 2306.04726, 1307.5879,
   1103.3532, 2607.09474, 2608.15371 (keep-better papers with an address in an affiliation at `=2`). Not settled: S1 rows
   1-6 and 19 against the reading's line readers, rows 23-25, 1903.10019's partial run.
 - **RT2, KEY (`_key`; 16 witnesses, 8 sub-mechanisms).** Off decides by digestion: Perl's `\lx@affiliation@withsup` lets
@@ -149,26 +150,38 @@ basis `pk_wt/int149a` @ 3189c464d9 (RT1 at 913eef6966), binary `P2r2-rel`. Their
   label only on a `_withsup=true` call or a block line (watch 1303.7097, 1506.04004, 0812.1531, 2409.11440, 1610.06222);
   THANKS (3) K4, a Note whose inner Marks lead pieces split into `withsup` entries before `note()` (blocks.rs:1093, as
   notes.rs:451); LEAD (2) K1-K3; CONT (1) K13; COLUMN (1) K14. **Missing facts:** NEST, LEX, INSIDE (K6-K8), the lexer's
-  and the rehearsal's to surface (INSIDE, a silent loss, first). Keep: 2206.07648. Questions for a ruling: cond-mat0309053,
-  1202.3425, 0802.2149. Unfinished: the guards in `tests/`, the fence mapping, 2305.13191's trigger.
+  and the rehearsal's to surface (INSIDE, a silent loss, first). Keep: 2206.07648. **Decided (main session 2026-11-08, reopenable):** UNREQ ports off's K12, then K13: an unrequested
+  mark is no label (charter "a mark matters only where it is used"), so the item falls to the class convention, and
+  cond-mat0309053 follows K12; 1202.3425 (revtex's own printed marks) a RED; CONT 0802.2149: K13 only, nothing beyond
+  off. Unfinished: the guards in `tests/`, the fence mapping, 2305.13191's trigger.
 - **RT3, the names line (`_namesline`).** No missing fact but two: **ACC** (1306.2567, 1709.03335), a cover gap in
   digestion's provenance (the cover of a `\'` expansion ends at `pos+1` when no field token follows the consumed `\i`,
-  gullet.rs:2182; a `latexml_core` fix), and **TA** (4), a block arriving after the flush has no reading (proposed: rehearse
-  it on the spot; HARD, a deferral proposed). The other five are reading rules deciding on word evidence where off decided
+  gullet.rs:2182; a `latexml_core` fix), and **TA** (4), a block arriving after the flush has no reading (HARD; **decided (main session 2026-11-08, reopenable):** TA and ACC have reach, so both are ported
+  before the flip, last — TA by RC2's design, a late block's own nested flush through a `\lx@frontmatter@late`
+  primitive as Perl's `digestFrontMatter` binds `@now`, `agent_reports/2026-11-08_RC2_report.md`, 6 papers incl.
+  0807.4720, astro-ph9808358; ACC in the core's `field_cover_of`). The other five are reading rules deciding on word evidence where off decided
   on token structure, which off's writer declined (`writer/repart.rs:1232`, `classify:` is not `structural`). To port:
-  F2 (1901.10843, 0904.4122, 2103.02641, 2311.16860), N1-N3 into `names_line_events`' classify arm (lines.rs:1194): a piece
+  F2 (1901.10843, 0904.4122, 2103.02641, 2311.16860; decided: the port reads marked pieces only, keeping `=2`'s "John
+  Smith, University of Toronto"), N1-N3 into `names_line_events`' classify arm (lines.rs:1194): a piece
   carrying its own mark is a name, the unmarked rows keeping `=2`'s reading (batch63's guards); COL (3) C2-C5 in order
-  (a question against rev94a S6/B2 and OD #946); CB (2507.13598) rule A2; NS (1) S1, a `=2`-only fix. Questions: K (3)
-  N5 (`fms2a2.rs:277`'s `Cat Cole \\ Physics` is `=2`'s improvement), ORD (astro-ph9802333). A port moves
+  (decided: a `role=collaboration` contact on its names, charter §4 2026-11-01 over rev94a S6/B2 and OD #946's "part of
+  the name"; the ruling R7); CB (2507.13598) rule A2; NS (1) S1, a `=2`-only fix. Decided (main session 2026-11-08, reopenable):
+  K (3), translate off's N5 condition and keep the `Cat Cole \\ Physics` guard (`fms2a2.rs:277`, `=2`'s improvement)
+  green, else stop and report; ORD, "Mª" (astro-ph9802333) is name text (U+00AA a letter), a RED. In progress:
+  `pk/NL1` (F2, COL, K, NS, CB). A port moves
   `surname_after_initial` and the `name_and_remark` + `name_takes_annotations` logic onto events, no new `author_block::`
   import. Re-score the 152 keep-better papers after each port.
-- **RT4, the small mechanisms (`_small`).** LN (OR 3 + 2308.10913): LN2's orcid copy carries `role: "orcid"`, LN3/LN4 then
-  write it, LN5 reads an orcid Contact as no ink of a slot; EASY, no missing fact (question: an orcid contact at all?).
+- **RT4, the small mechanisms (`_small`).** LN (OR 3 + 2308.10913), **decided (main session 2026-11-08, reopenable):** a link printing a
+  name stays in the personname with **no** orcid contact (off = Perl, OD #960: the iD is not lost, `=2`'s contact only
+  duplicates it), so the table's LN2-LN5 (an orcid copy with `role: "orcid"`, written, read as no ink) are not ported;
+  EASY, no missing fact.
   J is RT1's E1. SN1 (1912.10193): number by every call of the role, as Perl (`frontmatter_api.rs:620-628`, Perl :486-489),
   then a `labelseq` label nobody requests yields to the line's leading mark (charter); EASY-MED. R (2311.04121): a label
   word plus marked addresses is no continuation; EASY. MK (2506.08710, astro-ph0208497): the first names line stays names
   (`dispatch.rs:469-471`, `:564`, the `marked_name` closure :552); MED. Item 6 (1810.03464, 1511.05911): the rehearsal over
-  budget (vldb's `\normalsize` in `\email`) — the loop is a missing fact; HARD, a deferral proposed. Keep: hep-ex0201047,
+  budget (vldb's `\normalsize` in `\email`) — the loop is a missing fact; HARD; **decided (main session 2026-11-08, reopenable):** item 6 and MK
+  are ported before the flip with the rest. SN2 hep-ex0201047, **decided (main session 2026-11-08, reopenable):** a legend line whose
+  mark the names carry is the carriers' **note** (charter §4 "No other nameless creator…"). Keep: hep-ex0201047,
   1912.10193's `fxp@`, 2510.01097 / 2403.13468's reading. Silent at `=2`: 0807.4720; 2506.08710 and astro-ph0208497's
   creators.
 - **RT5, the insert-time passes (`_insertpasses`; dev3's 1,028 papers at `=2`).** Only the S2b writer is gated at `=2`;
@@ -176,10 +189,19 @@ basis `pk_wt/int149a` @ 3189c464d9 (RT1 at 913eef6966), binary `P2r2-rel`. Their
   (59), the DOM Kind step for address lines (41), relocate's Rust-only orphan sharing (49), which the emitter depends on
   (`addresses:block`, emit.rs:2067, :2247). Link double-applies the reading's ownership: duplicate e-mails (1012.4847,
   2406.04316). The fold: the S2b writer → RT1's E1; Link + Kind address lines (passes 7, 13, 14, 17) → E1 and the S5 rows,
-  HARD; the orphan sharing → the emitter writes the block's own nameless creator itself (OD #159), EASY; passes 15, 16,
+  HARD; the orphan sharing → the emitter writes the block's own nameless creator itself (OD #159), EASY, and relocate's
+  Rust-only orphan-sharing branch goes off at `=2` once it does; passes 15, 16,
   19, 20, 21 → one fact and one Kind each into the reading, EASY each; 3, 4, 9, 10 and relocate's R4 → delete candidates,
-  each first given a trace line; the net notes (23) → **a ruling: which net owns `=2`**. 2206.10577: out of memory at `=2`,
+  each first given a trace line; the net notes (23) → the emitter's net owns `=2`, `keep_unclaimed_net_notes` becoming off-only after a
+  measured equal-coverage comparison. **Decided (main session 2026-11-08, reopenable):** those two, and the double ownership (the
+  emitter writes an entry's inner `\email{a,b}` whole, then Link re-applies) ends with E1's token cut: then Link/Kind
+  firing is re-measured and their missing rows (RT1 28-31, 39a, 62-73) are ported into the reading, the passes gated
+  off at `=2`. 2206.10577: out of memory at `=2`,
   not followed up.
+- **RC1, the content check's blind spot** (`agent_reports/2026-11-08_RC1_report.md`): calls recorded `inside` with no
+  events are a silent loss at `=2` — the gullet's input mark keeps one token (`gullet.rs` `input_mark`,
+  `input_unread_since` compares that token's value at a fixed slot), so an IEEE block's `\IEEEauthorblockA` calls read
+  as unread and are never rehearsed (2401.11731). Fix in progress: `pk/RC1`.
 
 **What the original order still holds** (archived with it; its Z numbers stay names): Z6, Cut and Kind on events
 (`affiliations.rs:306`, `:459`, `relocate.rs:1195-1642`; 1810.01941, 2502.01754, hep-ex0106079), now the readiness ports'
@@ -190,7 +212,7 @@ deciders on events (2607.20672, nlin0310001).
 
 **Definition of done (each one mechanical):**
 1. **At the merge** (Route D, with the 2026-11-07 option C that made "later, stoppable" "before the merge"): the old reader decides nothing, all token segmentation is on the digested reading, and all it leaves unused is gone: `author_block/` (Z18, its survivors moved as the row "`author_block/`'s survivors" says), the old passes and the writer's general DOM operations (Z19), leaving only named hard-case rewrites, each with its witness and what would let the API absorb it. What remains: `frontmatter/classify/` (text rules on printed ink), `observer/resolver/` with the owner logic, the emitter, `frontmatter/fallback.rs` (Perl's `\lx@add@authors` for papers with no events).
-2. The final fallback: with events the reading always answers, uncertain text whole; without events (Fatal, NotUndone, JournalUnavailable) Perl's reader, about 60 lines. The cautious split goes. Held papers are repaired, not sent to the fallback (3 such papers, 25 creators: old right 23, Perl 5, reading 5).
+2. The final fallback: with events the reading always answers, uncertain text whole; without events (Fatal, NotUndone, JournalUnavailable) Perl's whole-block reader with its raw-token preparation kept (`frontmatter/fallback.rs`, ~1.7k lines, landed by the move batch: `whole_block_author`, `strip_linebreak_options`, `lines_prepared`; OD #52) — MV0's C1, decided (main session 2026-11-08, reopenable) under the keep-improvements ruling; re-deriving that preparation from events is after the flip. The cautious split goes. Held papers are repaired, not sent to the fallback (3 such papers, 25 creators: old right 23, Perl 5, reading 5).
 3. The token-read check at its floor: about 60 in the engine (rehearsal's table, ledger stamping, the Perl API boundary), `resolver/` 0, decision code elsewhere 0. **It counts segmentation by spelling; argument passing into the API is exempt (user 2026-11-06, the digested refactor's principle 4).** The floor's figure is re-set accordingly when the later batches reach it.
 4. The fence holds until then: `\lx@add@` emissions and token reads in `author_block/` can't rise; a new ownership rule lands in `resolver/`.
 5. Passes after the emitter may change kind and text, never who holds an item (guard and test-profile invariant).
