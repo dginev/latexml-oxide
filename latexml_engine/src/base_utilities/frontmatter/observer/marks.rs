@@ -1,5 +1,5 @@
 //! The one reading of a formula's mark-ness from its digested XMath (frontmatter refactor stage 1,
-//! `docs/parity/FRONTMATTER_DIGESTED_REFACTOR.md`; OXIDIZED_DESIGN_DIVERGENCES #837, #911): whether a formula in a name
+//! `docs/archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md`; OXIDIZED_DESIGN_DIVERGENCES #837, #911): whether a formula in a name
 //! or an affiliation is a mark, what its scripts print, and the base a script sits on. It reads structure and printed
 //! text, never TeX spelling: a font switch is a token's font, spacing an `XMHint`, `\{` and `\lbrace` one "{".
 //!

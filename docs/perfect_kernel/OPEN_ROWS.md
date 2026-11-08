@@ -225,7 +225,7 @@ here is open unless its status says otherwise; when a row closes, delete it here
   separators, a multi-key `\citeonline[note]`, authorless entries, `abnt-full-initials=yes`, num "(1)" brackets
   (`\citebrackets`, :213, :232-233), repeated authors (:995-999, :1037-1043), `alf` list labels, note field order, the math
   `tex=` brace group) — repros `~/data/pk_agents/rc131/abntex2/repro/r1–r8`, `review57cm/`; **jacow-collaboration**
-  (92.7 %): author continuation lines glued at `\\` (`add_authors_calls`, base_utilities/author_block/dispatch.rs:259-264 = Perl
+  (92.7 %): author continuation lines glued at `\\` (`add_authors_calls`, base_utilities/author_block/dispatch.rs:214-219 = Perl
   Base_Utility.pool.ltxml:702-703, PERL-ORIGIN; keep the delimiter as `<break/>`; `~/data/pk_agents/rc131/repro/author_glue.tex`).
   Ruled out: suanpan-l3's last jing line (a second `\title`/`\maketitle` replaces the first — double `\maketitle` keeps
   the latest title, user 2026-10-01).
@@ -406,10 +406,6 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
   `sectioning-frontmatter/hyperref_pdfinfo_expands_macros`, `…/hyperref_pdfinfo_drops_notes_and_markup`. Still open:
   an AASTeX 7 address recorded as `schema:email` metadata (`\email{\url{…}}` → `content="\url{…}"`; RED
   `sectioning-frontmatter/aastex7_email_markup_recorded_as_text`, OXIDIZED_DESIGN_DIVERGENCES #479).
-- **FIXED int26 (OXIDIZED_DESIGN_DIVERGENCES #754, KNOWN_PERL_ERRORS #980) — a `{abstract}` left open at `\end{document}` empties the document** (SHARED; 65c review side finding): the deferred
-  abstract body (`\lx@add@frontmatter@until … \lx@end@abstract`) runs to the end, holding the finalize whatsit and the
-  rest of the document, and is never placed — `<document/>` with or without a following `\section` (Perl: resources
-  only, 1 error); pdflatex prints every word with 1 error. RED `sectioning-frontmatter/unclosed_abstract_at_end_document_keeps_the_document`.
 - **`\boldsymbol{… $ and $ …}` leaves the math open** (RUST-ONLY; 2110.01778): amsbsy.sty:28-34 typesets the argument
   in `\hbox{$…$}`, so the inner `$…$` is text; ours closes the outer math at the inner `$` and the math runs to
   `\end{document}`. RED `boxes-groups/boldsymbol_text_dollars_inside_math`.
@@ -512,27 +508,18 @@ PERFECT_KERNEL.md → Scope; a witness whose oracle is unclean is a crash canary
 The second audit of "successful" run-336 conversions (80 papers, seed 337, on 63h5; notes
 `~/data/pk_agents/main/scratch_356a0c47/fidelity2/notes.txt`, audit.tsv): authors right in 65/69 (round 1: 52/73).
 Each class is a silent content or markup loss unless marked otherwise; each landed fix has a repro under
-`tools/perfect_kernel/repros/` and a guard in `perfect_kernel_batch63`. Open rows are the worklist (row **A2**).
+`tools/perfect_kernel/repros/` and a guard in `perfect_kernel_batch63`. Open rows are the worklist (row **A2**). Its landed frontmatter rows (1, 2, 2b, 5-7, 9, 10, 13-16) are in `../archive/SYNC_SESSIONS_2026-11.md`
+(moved 2026-11-08); row 15 keeps its residual here.
 
 | # | finding | witnesses | state | next step |
 |---|---|---|---|---|
-| 1 | `\IEEEmembership` dropped from the author line | 2201.01230, 2306.15457, 2408.09035 | **DONE 63l** (KPE #534) — name-line grades are membership contacts | residual: grades after names misread past a `\\` stay dropped (row 13); a line holding only the last name's grade is that name's, and authblk's `\author` reads the grades too (98b, OD #950) |
-| 2 | merged creators: `{\ and}`, `\ddag~and` | 1508.01140, nlin0101056 | **DONE 63l** (KPE #532) | — |
-| 2b | merged creators: acmart comma list in one `\author` (`Error:frontmatter:merged_creators`) | 2212.06542 | **FIXED 63x** (KPE #549; HF2) | acmart `\author` binding: split a comma-separated name list (PDF prints them as one block) |
 | 3 | eqnarray/align row holding only `\label` dropped with its number | 1011.4399, 1305.3072, hep-th9412215, hep-ph0208046 | **DONE 63j** (KPE #526) | nit: a kept eqnarray row takes a following unnumbered `&=&` row as its continuation |
 | 4 | `\ref` (and `\eqref`/`\autoref`/`\cref`/`\nameref`) in a section title empty in the TOC and `title=` tooltips (RUST-ONLY) | 1011.3492, 1111.3672 | **DONE 63k** (fillInTitle port) | residual: a `\cite` in a title reads empty in tooltips (row 12) |
-| 5 | IEEE `and~Name` keeps "and" in the last name | 2011.10474, 2408.09035 | **DONE 63j** (KPE #528) | — |
-| 6 | `\fnmsep` leaves a stray comma in the name | astro-ph0001054, astro-ph0611016 | **DONE 63l** (KPE #533) | — |
-| 7 | PoS/JHEP `\author` calls accumulate, only the last kept | astro-ph0611258 | **DONE 63k** (KPE #529) | — |
 | 8 | algorithmic `\REQUIRE`/`\ENSURE` labels replaced by "0:" | 2201.01230 | **DONE 63j** (KPE #527; algpseudocode too) | residuals: `\ref` to a labelled line prints the label (algpseudocodex's label FIXED 77s) |
-| 9 | raw class `\abstract{…}` (an.cls) a plain paragraph, no `ltx:abstract` | astro-ph0611016 | **FIXED 77b** (silent-loss #23) | an.cls binding or a raw-class `\abstract{}` command form → the abstract frontmatter |
-| 10 | entics.cls (raw) `\thanksref{ALL}` prints its key in the name | 2212.08177 | **FIXED 77t** (OD #790) | an entics/entcs binding reads the shipped class raw with elsart's frontmatter interface (esl.dtx's: `\author[keys]`, `\address[label]`, `\thanks[key]`, `\thanksref`); 2212.08177 and 1812.00040 (entcs) each author holding address and notes; guard `perfect_kernel_batch77t::entics_thanksref_names_its_note` |
 | 11 | sectsty `\subsectionfont{…\textit}` applies the font to the first letter only (presentation) | 1508.01140 | **FIXED** (verified on int40c in 78a: `\subsectionfont{\normalfont\textit}` sets the whole numbered title italic; the starred half 78a, OD #785) | sectsty font hooks take the whole title |
 | 12 | a `\cite` in a section title reads empty in tooltips (63k residual) | — | **OPEN**, low | tooltip text of a nested bibref without double-counting missing-citation warnings |
-| 13 | names continued past a `\\` in an author line read as an affiliation line | 2408.01902, 2408.02464, 2308.07107 | **DONE 63m** | IEEE grades read past a continued `\\` (`names_continue`), compsoc `\IEEEcompsocitemizethanks` a note of the names line, a line of two or more names continues the names; guards `ieee_compsoc_names_continue_past_a_break`, `ieee_grade_comma_before_a_break_continues_names`, `author_names_line_and_address_line` |
-| 14 | an affiliation line under a group of names goes to the group's last name only | 0911.0568 (LPT Orsay group), JHEP/PoS group blocks | **DONE 63m** | `\lx@add@affiliation[annotate=N]` for the group's N names (OD #459); a bare address line gives each address to the name it spells; guards `author_group_affiliation_goes_to_each_name`, `author_names_line_and_address_line` |
-| 15 | `$(a)$Department …` marked affiliation lines not linked (0 affiliations) | 1011.0516 | **FIXED 77t** (OD #52(p)) | a parenthesized math lead whose mark an author requests labels its line (`parenthesized_mark_line`); 1011.0516's eight authors hold their institutes; residual: the speaker's `\speaker{Etsuko Itou}$^a$` mark after the command requests for no creator (Osaka not on her), its e-mail on the shared creator; guard `perfect_kernel_batch77t::parenthesized_math_marks_label_affiliations` |
-| 16 | llncs `\author{A\\Univ\\\email{x}}` reads "Univ" as a person | review probe (rv63k/llncs1) | **FIXED 77t** (OD #792) | llncs.cls:1019-1036 prints `\@author` as one centred paragraph, `\\` a line break, and its `\and` inline (llncs.cls:1013-1018): a line reading as an affiliation is the names' since the last line under names (an affiliation or an e-mail line), across the whole `\author` (in a list without `\inst` marks; 77t r2: 2604.11038's Simon Fraser University on its three authors, the rev77t review's L1, L2, L4); residual: an unmarked `\institute` with no `\inst` requests stays on the block's shared creator (as before); guards `perfect_kernel_batch77t::{llncs_author_line_break_affiliation, llncs_author_line_break_affiliation_rows, llncs_author_line_break_affiliation_per_name, llncs_author_and_is_inline, llncs_author_e_mail_line_ends_a_row}` |
+| 15 | `$(a)$Department …` marked affiliation lines — the residual (FIXED 77t, OD #52(p); the row verbatim in `../archive/SYNC_SESSIONS_2026-11.md`) | 1011.0516 | **OPEN** (residual) | the speaker's `\speaker{Etsuko Itou}$^a$` mark after the command requests for no creator (Osaka not on her), its e-mail on the shared creator |
+| 16 | llncs `\author{A\\Univ\\\email{x}}` reads "Univ" as a person — the residual (FIXED 77t, OD #792; the row verbatim in `../archive/SYNC_SESSIONS_2026-11.md`) | review probe (rv63k/llncs1) | **OPEN** (residual) | an unmarked `\institute` with no `\inst` requests stays on the block's shared creator (as before 77t) |
 | 17 | newer vmsta copies (`style/vmsta.cls`, `\fnms` name parts) print `\thanksref{cor1}` keys in the names | 1805.02511, 1810.09681, 1912.07948, 2001.02487 | **OPEN** (77t residual; unchanged from the base; 78e made these copies' e-mails and addresses the authors' contacts, OD #802, the key stays) | the class defect rank 92 fixed for entics: `\thanksref` naming its `\thanks[key]` note in these copies (elsart_support_core's frontmatter interface, as entics_cls.rs) |
 | 18 | llncs `\author{Ann Able\\ University of X\\ Stanford, CA 94305}`: the address line with no institution word reads as names, creators "Stanford" and "CA 94305" | review probe rev77t/L5 | **OPEN** (77t residual; as on the base) | an address line under an affiliation line goes on with it, not as names |
 | 19 | a class numbering its `\institute` entries (llncs's `\institutename`, preprint.cls) with `\institute` before `\author`: the entries annotate every author (`annotate=all`), the numbers unread | the rev77t review | **OPEN** (77t residual) | `class_numbered_institutes` reads the queued authors' marks, none queued yet: number the entries for the authors still to come |

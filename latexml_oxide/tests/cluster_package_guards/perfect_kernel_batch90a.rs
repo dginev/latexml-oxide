@@ -1,4 +1,4 @@
-//! Guards for batch 90a (frontmatter refactor stage 1, `docs/parity/FRONTMATTER_DIGESTED_REFACTOR.md`;
+//! Guards for batch 90a (frontmatter refactor stage 1, `docs/archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md`;
 //! OXIDIZED_DESIGN_DIVERGENCES #837, #911): whether a formula in a name or an affiliation is a mark is read from its
 //! digested XMath (`observer::marks::read_formula`), the one reading the observer's writer, `ab_audit fmshadow`,
 //! `relocate::shown_marks` and `name_text::is_name_mark` share — never from its `tex`. A formula printing nothing but

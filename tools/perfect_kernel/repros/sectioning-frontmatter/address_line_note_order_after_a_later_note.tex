@@ -1,5 +1,5 @@
 % RED (review rev101b finding 1, synthetic; introduced by 101b, no corpus witness in its 1,520-paper A/B): an address
-% line's notes are made the document's pubnotes after the block's calls (`dispatch.rs:1889`, `affiliations.rs:200`
+% line's notes are made the document's pubnotes after the block's calls (`dispatch.rs:1844`, `affiliations.rs:200`
 % `calls.extend(address_notes)`), while a note on a LATER affiliation line is added in place, so it comes first.
 % fix:     add the address line's notes where the line is placed (the group's `after_bodies`; next to the run in
 %          `entry_calls`), so the block's notes keep print order.

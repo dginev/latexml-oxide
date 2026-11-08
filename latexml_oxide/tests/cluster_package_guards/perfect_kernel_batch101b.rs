@@ -1,6 +1,6 @@
 //! Red/green guards for batch 101b: an author block's address line carrying a `\thanks` or `\footnote` is still an
 //! address line, its notes the document's (`author_block/email_lines.rs` `address_line_notes`, the one conversion
-//! `author_block/notes.rs` `document_note_call`; OXIDIZED_DESIGN_DIVERGENCES #52(j)). Read whole, the note's text is
+//! `frontmatter/observer/writer/calls.rs` `document_note_call`; OXIDIZED_DESIGN_DIVERGENCES #52(j)). Read whole, the note's text is
 //! no address, so the line was an affiliation: the last name's in a marked block, every name's in an unmarked one.
 //! Witness 2605.23553 (html_feedback #6987); 2304.05485, 1803.07937, 2603.09888, 2608.24641.
 //!

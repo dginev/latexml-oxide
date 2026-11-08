@@ -1,6 +1,6 @@
 % mechanism: a binding's document-wide state lives in the Value table (`state::DocumentState`), so a rollback puts it back: chemnum's counter and each
 %   compound's first printed use, in a thread-local before Z3r2. `\cmpd{b}` in the block spent the first use in the rehearsal, and the real one became a `ltx:ref` with no target
-% witness: revZ3 B1's class (no corpus witness: the census of package thread-locals, `FRONTMATTER_DIGESTED_REFACTOR.md` "What a rollback leaves")
+% witness: revZ3 B1's class (no corpus witness: the census of package thread-locals, `FRONTMATTER_SINGLE_ENGINE_PLAN.md` "What a rollback leaves")
 % oracle:  pdflatex 0 errors: "Ann Able 1" "Body 2, 1."
 % engines: Perl has no rehearsal; Z3: with the observer on `<ref idref="cmpd.b">` on the name and no `xml:id="cmpd.b"` anywhere
 % expect:  0 errors, 0 warnings; on and off byte-identical, `xml:id="cmpd.b"` on the name (perfect_kernel_batchz3::a_bindings_state_stands_for_one_run)

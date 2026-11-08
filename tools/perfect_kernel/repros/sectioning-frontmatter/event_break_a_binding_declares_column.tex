@@ -1,4 +1,4 @@
-% witness: FRONTMATTER_DIGESTED_REFACTOR gap 3, ACM `\alignauthor` under OmniBus, the fallback for a class with no copy (OmniBus.cls.ltxml:76, a no-op); sig-alternate.cls:283 prints two columns
+% witness: FRONTMATTER_SINGLE_ENGINE_PLAN gap 3, ACM `\alignauthor` under OmniBus, the fallback for a class with no copy (OmniBus.cls.ltxml:76, a no-op); sig-alternate.cls:283 prints two columns
 % oracle:  no OmniBus.cls in TeX: a binding of LaTeXML's; sig-alternate.cls read raw prints "Ann Able", "Bob Baker" in two columns, as a tabular's cells, which its events read
 % engines: Perl has no events; ours before Z2: no trace of the call past the no-op
 % expect:  0 errors; the calls stand as Breaks of kind `column` beside the events; the kernel declares no such command: the twin, a document's own, has no list

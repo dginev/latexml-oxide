@@ -1,5 +1,5 @@
 //! Guards for batch 92a (frontmatter refactor stage 7 groundwork, retiring the old reader for llncs and aa,
-//! `docs/parity/FRONTMATTER_DIGESTED_REFACTOR.md`; OXIDIZED_DESIGN_DIVERGENCES #837, #913): three observer readings the
+//! `docs/archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md`; OXIDIZED_DESIGN_DIVERGENCES #837, #913): three observer readings the
 //! move of llncs and aa onto the observer needs, each read from what TeX digested. A mark whose script holds `\ref`s
 //! printing nothing at digestion is one Mark carrying every key, each reference an item of its own whatever prints
 //! between them (`\inst{\ref{a},\ref{b}}`, `\inst{\ref{a}\ref{b}}`, `observer::events::script_mark`; the ref list

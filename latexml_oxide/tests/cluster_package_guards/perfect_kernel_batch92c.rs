@@ -1,5 +1,5 @@
-//! Guards for batch 92c (frontmatter refactor stage 7: aa and llncs written by the observer; `docs/parity/
-//! FRONTMATTER_DIGESTED_REFACTOR.md`, OXIDIZED_DESIGN_DIVERGENCES #837, #920, #922-). Each guard converts its repros
+//! Guards for batch 92c (frontmatter refactor stage 7: aa and llncs written by the observer; `docs/archive/
+//! FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md`, OXIDIZED_DESIGN_DIVERGENCES #837, #920, #922-). Each guard converts its repros
 //! under the shadow switch in process and with the binary, eager and `--streaming` (`perfect_kernel_batch92a::
 //! assert_reading`), and asserts the shadow reading's tuples and the XML's creators whole, and no Error or Warning.
 //! Every repro compiles clean with pdflatex (TL 2025; the aa repros with 1707.06238's aa.cls, which TeX Live lacks).

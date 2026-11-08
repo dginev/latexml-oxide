@@ -323,7 +323,7 @@ mod blocks;
 mod labels;
 mod lines;
 mod net;
-// (the old reader's owner logic, moved unchanged: MV1; re-exported by `observer/mod.rs`)
+// (the old reader's owner logic, moved unchanged by the plan's row "Knowledge in, driver out, one pass"; re-exported by `observer/mod.rs`)
 pub(in crate::base_utilities) mod owners;
 mod placed;
 mod post;

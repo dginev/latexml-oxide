@@ -242,15 +242,15 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
   ("collaborations.rs annotate=", 1),
   ("collaborations.rs lx@add@", 2),
   ("dispatch.rs annotate=", 2),
-  // (MV1, 10 -> 9: `whole_block_author`, Perl's whole-block `\lx@add@author`, moved to `frontmatter/fallback.rs`)
+  // (the "Knowledge in, driver out, one pass" move, 10 -> 9: `whole_block_author`, Perl's whole-block `\lx@add@author`, moved to `frontmatter/fallback.rs`)
   ("dispatch.rs lx@add@", 9),
-  // (MV1, 6 -> 5, and `notes.rs`' 2 -> 0: `is_email_command` and `document_note_call`, `note_call_end` moved to the emitter,
+  // (the "Knowledge in, driver out, one pass" move, 6 -> 5, and `notes.rs`' 2 -> 0: `is_email_command` and `document_note_call`, `note_call_end` moved to the emitter,
   // `writer/calls.rs`, which writes Perl's calls; no emission added)
   ("email_block_calls.rs lx@add@", 5),
   ("email_lines.rs lx@add@", 7),
   ("line_kinds.rs annotate=", 1),
   ("line_kinds.rs lx@add@", 4),
-  // (MV1, 3 -> 2 and 8 -> 2: the token primitives that recognize the API's commands in a note (`NAME_ANNOTATIONS`, `name_text`)
+  // (the "Knowledge in, driver out, one pass" move, 3 -> 2 and 8 -> 2: the token primitives that recognize the API's commands in a note (`NAME_ANNOTATIONS`, `name_text`)
   // moved to `classify/`; they read, emit nothing)
   ("name_text.rs lx@add@", 2),
 ];
@@ -260,7 +260,7 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
 /// reader lowers it to the new count**, in the same commit, so what was deleted cannot grow back. A sibling directory is no
 /// escape from the rest of this fence's reach: its token reads count in `token_reads_only_fall_toward_the_floor`'s
 /// catch-all, and its API names and keys in `the_frontmatter_api_stays_perls`.
-/// MV1 (2026-11-08) lowered it from 15,404 to 9,275: the knowledge the one engine reached moved into its own library,
+/// The "Knowledge in, driver out, one pass" move (2026-11-08) lowered it from 15,404 to 9,275: the knowledge the one engine reached moved into its own library,
 /// what is left is the token driver.
 const OLD_READER_CODE_LINES: usize = 9_275;
 
@@ -313,7 +313,7 @@ fn the_old_reader_takes_no_new_decision() {
 /// occurrence of a constant or type name (upper case first); a name is the one engine's own where `frontmatter/` exports it
 /// (a visible item at a file's top level) or the file itself defines it (a nested function, a method, a closure). Each
 /// pair is a debt: it may only fall. A new one is a decision the old engine takes for the new one; it lands in
-/// `observer/resolver/`, on the digested events, instead. MV1 (2026-11-08) moved every name the one engine reached, 138
+/// `observer/resolver/`, on the digested events, instead. The "Knowledge in, driver out, one pass" move (2026-11-08) moved every name the one engine reached, 138
 /// pairs at int149a, into its own library (docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row "Knowledge in, driver out, one
 /// pass"): text rules and token primitives to `frontmatter/classify/`, owner logic to `observer/resolver/owners.rs`, Perl's
 /// API-call writers to `observer/writer/calls.rs`, Perl's whole-block fallback with its preparation to `frontmatter/fallback.rs`,
@@ -322,7 +322,7 @@ const ONE_ENGINE_REACH: &[(&str, usize)] = &[];
 
 /// The names the old reader exports into `base_utilities`: the `pub`, `pub(crate)` and `pub(in …)` items of `mod.rs` and of
 /// each submodule `mod.rs` re-exports with `pub use <submodule>::*`, at a file's top level: a method is no name the glob
-/// exports, its type is (MV1 step 6: the driver's `Collaborations::author` read every `author` argument as a use).
+/// exports, its type is (a gap closed 2026-11-08: the driver's `Collaborations::author` read every `author` argument as a use).
 fn old_reader_exports() -> std::collections::BTreeSet<String> {
   let dir = format!("{BASE}/author_block");
   let glob = Regex::new(r"pub(?:\([^)]*\))?\s+use\s+([a-z_][a-z0-9_]*)::\*").expect("a regex");
@@ -378,7 +378,7 @@ fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
   const WHY: &str = "The one engine decides on the digested events (`observer/resolver/`); `author_block/` is deleted after \
                      the flip, and each name `frontmatter/` still uses moves or is translated: \
                      docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row \"`author_block/`'s survivors\".";
-  // (MV1 step 6: the two shapes the count missed — a function passed as a value, `relocate.rs`'s
+  // (closed 2026-11-08: the two shapes the count missed — a function passed as a value, `relocate.rs`'s
   // `t.with_str(is_name_note_command)`, and a name hidden everywhere by a method or a nested function of one file, `skip_group`
   // by `title_page_check.rs`'s method and `resolver/labels.rs`'s nested function)
   assert_eq!(
@@ -603,7 +603,7 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "const _command_form base_utilities/frontmatter/queue_digest.rs",
     1,
   ),
-  // (MV1: `_cutlist`, `_entry`, `_entrysymbol`, `_kinded`, `_seqlabel` moved unchanged from `author_block/affiliations.rs` to the
+  // (the "Knowledge in, driver out, one pass" move: `_cutlist`, `_entry`, `_entrysymbol`, `_kinded`, `_seqlabel` moved unchanged from `author_block/affiliations.rs` to the
   // API that reads them, `CUT_LIST`, `ENTRY_KEY`, `ENTRY_SYMBOL`, `ENTRY_KINDED`, `SEQUENCE_LABEL`: no key added)
   ("const _cutlist base_utilities/defs/frontmatter_api.rs", 1),
   (
@@ -1001,7 +1001,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("authblk_sty.rs", 23),
   // (F1r2, 1288 -> 1285: the membership readout finds its commas by `Token::group_step`, no catcode match)
   ("author_block", 629),
-  // (MV1: moved from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
+  // (the "Knowledge in, driver out, one pass" move: from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
   ("classify", 347),
   ("defs/author_macros", 20),
   // (Z4a, 7 -> 8: `\lx@frontmatter@itemnone` reads its tag argument, an element's name: an `ltx:rdf` passes through, the rest goes)
@@ -1013,7 +1013,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (raised by one at Z14: the lexer's own constructor, `\lx@fm@obs@affil@marked`, as the row's others; nothing a document spells;
   // by one at N2r2: `raw_lines`' break arm holding the `\and` family too, two lines, the whatsits' definitions, 2106.06418)
   ("events", 60),
-  // (MV1: moved from `author_block` with Perl's whole-block fallback and its preparation, C1, 826 = 629 + 197; none added)
+  // (the "Knowledge in, driver out, one pass" move: from `author_block` with Perl's whole-block fallback and its preparation, kept as its own, 826 = 629 + 197; none added)
   ("fallback", 197),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   // (Z4a, 4 -> 8: an environment step by its meaning, a CS whose definition is `\begin` or `\end`, a `\let` copy too, what no frame
@@ -1034,14 +1034,14 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("ledger", 24),
   ("llncs_cls.rs", 32),
   ("osa_journal_sty.rs", 77),
-  // (MV1: moved from `author_block` with the owner logic, 938 = 924 + 14; none added)
+  // (the "Knowledge in, driver out, one pass" move: from `author_block` with the owner logic, 938 = 924 + 14; none added)
   ("owners", 14),
   ("place", 6),
   ("ptephy_cls.rs", 115),
   ("queue", 1),
   ("queue_digest", 16),
   // (raised by one at Z14: the rehearsal's `BOUND_IN_A_BLOCK` table, `\lx@add@affiliation@marked`, `\lx@add@creator` read as digested instead of cut by spelling at
-  // the frozen API: the kind of table `FRONTMATTER_DIGESTED_REFACTOR.md` keeps, as Perl's `@authorsplits`)
+  // the frozen API: the kind of table `FRONTMATTER_SINGLE_ENGINE_PLAN.md` "What already exists" keeps, as Perl's `@authorsplits`)
   ("rehearsal", 6),
   ("relocate", 134),
   // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens`, printed text read
@@ -1067,7 +1067,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("sv_support_sty.rs", 35),
   ("webofc_cls.rs", 0),
   ("writer/apply", 7),
-  // (MV1: moved from `author_block` with the emitter's vocabulary, 924 = 826 + 98; none added)
+  // (the "Knowledge in, driver out, one pass" move: from `author_block` with the emitter's vocabulary, 924 = 826 + 98; none added)
   ("writer/calls", 98),
   // (a new file, what is left of `writer/plan`'s walk-backs: brace balance and a formula's shifts; the two rows together fell by 25, Z3)
   ("writer/content", 7),
@@ -1085,9 +1085,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
 
 /// The areas under `frontmatter/`, by path; the first that holds a file takes it.
 const FRONTMATTER_AREAS: &[(&str, &str)] = &[
-  // (MV1: the old reader's text rules and token primitives, moved unchanged from `author_block/`, their reads with them)
+  // (the "Knowledge in, driver out, one pass" move: the old reader's text rules and token primitives, moved unchanged from `author_block/`, their reads with them)
   ("classify", "classify/"),
-  // (MV1: Perl's whole-block fallback and its own preparation, C1, moved unchanged from `author_block/`)
+  // (the "Knowledge in, driver out, one pass" move: Perl's whole-block fallback and its own preparation, moved unchanged from `author_block/`)
   ("fallback", "fallback.rs"),
   ("owners", "observer/resolver/owners.rs"),
   ("shared_row/emails", "shared_row/emails.rs"),
@@ -1259,7 +1259,7 @@ fn a_spelling_rule_in_the_resolver_counts_however_it_is_written() {
   }
 }
 
-/// The old reader's knowledge moved under `observer/` unchanged (MV1): its owner logic and the emitter's vocabulary, each
+/// The old reader's knowledge moved under `observer/` unchanged (the "Knowledge in, driver out, one pass" move): its owner logic and the emitter's vocabulary, each
 /// counted as its own area by the fences, so that the resolver's and the writer's own counts stay what they were.
 const MOVED_UNDER_OBSERVER: [&str; 2] = ["resolver/owners.rs", "writer/calls.rs"];
 
@@ -1286,13 +1286,13 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   ("rehearsal", 119),
   // (also among `resolver`'s 18 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook)
   ("resolver", 3),
-  // (MV1: the old reader's owner logic, moved unchanged from `author_block/`, its literals with it; none added)
+  // (the "Knowledge in, driver out, one pass" move: the old reader's owner logic, moved unchanged from `author_block/`, its literals with it; none added)
   ("resolver/owners", 4),
   ("shadow", 7),
   // (Z4a, 81 -> 107: `writer/emit.rs`, the calls it builds: Perl's `\lx@add@authors`, `\lx@annotate@frontmatter@now`, the
   // queue's own `\lx@frontmatter@item*`; it writes them, no decision reads them)
   ("writer", 107),
-  // (MV1: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
+  // (the "Knowledge in, driver out, one pass" move: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
   // mark and note commands it reads; none added)
   ("writer/calls", 44),
 ];
@@ -1324,7 +1324,7 @@ fn the_observers_spellings_are_counted_however_they_read() {
     let inner = file
       .strip_prefix(&format!("{observer}/"))
       .expect("under observer/");
-    // (MV1: the old reader's files moved under `observer/`, an area each, apart from the resolver's and the writer's own)
+    // (the "Knowledge in, driver out, one pass" move: the old reader's files moved under `observer/`, an area each, apart from the resolver's and the writer's own)
     let area = if MOVED_UNDER_OBSERVER.contains(&inner) {
       inner
     } else {
@@ -1338,7 +1338,7 @@ fn the_observers_spellings_are_counted_however_they_read() {
     "the backslash literals under observer/",
     OBSERVER_BACKSLASH_LITERALS,
     &counts,
-    "A decision reads events or digested XML, never a token's spelling: docs/parity/FRONTMATTER_DIGESTED_REFACTOR.md.",
+    "A decision reads events or digested XML, never a token's spelling: docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md \"The principle\".",
   );
 }
 
@@ -1346,7 +1346,7 @@ fn the_observers_spellings_are_counted_however_they_read() {
 #[test]
 fn token_reads_only_fall_toward_the_floor() {
   const WHY: &str = "Frontmatter decisions read events or digested XML, never token or source spelling: \
-                     docs/parity/FRONTMATTER_DIGESTED_REFACTOR.md. The count is over-approximate, as the study's script \
+                     docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md \"The principle\". The count is over-approximate, as the study's script \
                      is: a line that only looks like a read counts until it is reworded or the code is gone.";
   let read = Regex::new(concat!(
     r"(?:(?:==|!=)\s*&?\*?\s*T_[A-Z]+!)|(?:T_[A-Z]+!\([^)]*\)\s*(?:==|!=))|(?:contains\(&?T_[A-Z]+!)",

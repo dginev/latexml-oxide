@@ -1,8 +1,8 @@
-//! The emitter's vocabulary, moved unchanged from `author_block/` (MV1, user ruling 2026-11-08 "knowledge in,
-//! driver out"): Perl's API calls and the tokens of a mark or a note as the old reader wrote them — a queued name's
+//! The emitter's vocabulary, moved unchanged from `author_block/` (the plan's row "Knowledge in,
+//! driver out, one pass", user ruling 2026-11-08): Perl's API calls and the tokens of a mark or a note as the old reader wrote them — a queued name's
 //! call, an entry's mark and label, a note's body and its `\lx@add@note` call, an e-mail command's address, the
 //! superscript rewrites a block keeps. It reads the names the old reader exported, as it did there
-//! (`crate::base_utilities`), not the writer's own. **C2, for the one-pass step:** `split_wrapped_affiliation_marks`
+//! (`crate::base_utilities`), not the writer's own. **Still the driver's, for the one-pass step:** `split_wrapped_affiliation_marks`
 //! and its helpers (`split_before_affiliation_marks` … `successor`) still cut a note's raw argument at the marks it
 //! prints, the driver's segmentation by spelling; the reading is to hand the emitter the entry's segments instead
 //! (docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row "Knowledge in, driver out, one pass", step 3).

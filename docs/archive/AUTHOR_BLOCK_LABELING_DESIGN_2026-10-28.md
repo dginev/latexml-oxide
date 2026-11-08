@@ -9,7 +9,7 @@ holds names, affiliations and addresses as lines (`\\`), with no marks or `\and`
 
 Bound classes are out of scope (`\inst`/`\institute`, `\affiliation`, `\address`, `\affil`): their binding reads the
 class's own structure. The pipeline itself is described in [`AUTHOR_MARKUP_PIPELINE_2026-11-03.md`](AUTHOR_MARKUP_PIPELINE_2026-11-03.md),
-and ownership rules are in [`FIDELITY_CHARTER.md`](FIDELITY_CHARTER.md) §4.
+and ownership rules are in [`FIDELITY_CHARTER.md`](../parity/FIDELITY_CHARTER.md) §4.
 
 ## The problem
 

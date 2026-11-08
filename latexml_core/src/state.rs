@@ -4400,7 +4400,7 @@ pub fn set_font_parameter(key: &str, p: usize, value: i64) -> bool {
 
 /// A binding's document-wide state, one value of the Value table: bound globally, as the `\global` macros and registers
 /// of the package it stands for are, so a rollback (`begin_assignment_journal`: a rehearsal, a title-page check) puts it
-/// back, where a thread-local would keep what the discarded run did (`FRONTMATTER_DIGESTED_REFACTOR.md` "What a rollback
+/// back, where a thread-local would keep what the discarded run did (`FRONTMATTER_SINGLE_ENGINE_PLAN.md` "What a rollback
 /// leaves"). It changes in place, unless an open journal holds it: the first change under a journal works on a copy, so a
 /// list a binding grows costs no more than a thread-local's outside one.
 pub struct DocumentState<T> {

@@ -14967,7 +14967,7 @@ The ACM SIG classes (sig-alternate and its dated variants, sigchi, shipped with 
 the title-page tabular. Perl's author splitting (`@authorsplits`, Base_Utility.pool.ltxml:679) has no `\alignauthor`;
 its OmniBus makes it empty (OmniBus.cls.ltxml:76), merging the names into one creator ("Yilin Yang Chen Wang Y…").
 
-**Rust** (batch 62m, base_utilities/author_block/separators.rs `author_and_splits`): `\alignauthor` is of the `\and` family, split before
+**Rust** (batch 62m, base_utilities/frontmatter/classify/separators.rs `author_and_splits`): `\alignauthor` is of the `\and` family, split before
 digestion, so its raw definition never runs inside a name and each column's `\\` lines are the name, its affiliation
 and its e-mail. Before the split (`unbrace_acm_author_columns`), the brace group that follows `\alignauthor` when it is
 the whole column (only spaces and `\\` before the next author) — sigchi writes each column as one, `\alignauthor{Name\\
@@ -22984,7 +22984,7 @@ jinstpub's alone, `\lx@add@contact@placed`; with Perl jheppub's n-th rule 16 of 
 an `\emailAdd{a, b}` list is an address each (2211.05026, 2409.03065, 2112.00370). For the spelling, the kernel's name
 reading takes a macro whose arguments all go into a frontmatter annotation (`\lx@add@contact`, `\lx@add@note`,
 `\lx@add@thanks`, `\lx@add@email`, `\lx@add@affiliation`) as a name annotation, as it takes a note macro
-(`is_note_macro`, base_utilities/author_block/notes.rs): the corresponding author's `\note{Corresponding author.}` — the template's required
+(`is_note_macro`, base_utilities/frontmatter/classify/notes.rs): the corresponding author's `\note{Corresponding author.}` — the template's required
 shape — is no part of the name the address spells, where its last word had made "author" the surname (2406.08712's
 zhouyi@ for Y. Zhou, 2603.01867's yuanzy@ for Zhiyang Yuan).
 The "Prepared for submission to JINST" header line (:22, printed first, :180) is page furniture, not kept; a paper's own
@@ -25194,7 +25194,7 @@ the_later_label_wins}`.
 
 ### 880. `classify_thanks` reads its funding words as words
 
-`classify_thanks` (author_block/notes.rs, #156) names an author note's kind for its `ltx_thanks_<kind>` class, and the
+`classify_thanks` (frontmatter/classify/notes.rs, #156) names an author note's kind for its `ltx_thanks_<kind>` class, and the
 author block's line readers (line_kinds.rs `weldable_line`, `reads_as_place`, `institution_beside_labelled`,
 `reads_as_institution`, `labelled_institution`) and the frontmatter observer's resolver ask it whether a line is a note
 rather than an institution. Its funding test matched substrings, so "erc" in "Perception", "Recherche", "Commerce",
@@ -25890,7 +25890,7 @@ tabular: the juggle closed a tabular nothing opened ("Attempt to close a group t
 restricted_horizontal") and left one open, whose lines — the affiliation — were lost, and the item's unclosed group
 kept its `\label` binding for the rest of the document (every reference dangling; the group itself now closes with
 the item, queue_digest.rs `digest_in_own_group`, a Rust-only fix as Perl's `egroup` runs after the item's errors).
-Ours (author_block separators.rs `tabular_juggles_as_line_breaks`): a parameterless macro of the author block whose
+Ours (frontmatter/fallback.rs `tabular_juggles_as_line_breaks`): a parameterless macro of the author block whose
 expansion begins `\end{tabular}` is read as the `\\` it prints, so the names and the affiliation split as lines; the
 author separators (`\alignauthor`) stay for the splitter. Witnesses 1704.03168, 1301.5612, 1401.6981, 0712.1016
 (sig-alternate; 21 census papers write `\sharedaffiliation`). Repros sectioning-frontmatter/author_shared_affiliation_line,
@@ -26931,7 +26931,7 @@ kernel_name_at_another_slot_stays_undecoded}` (the first two also on the binary,
 `perfect_kernel_batch68v::batch68v_u_symbol_font_without_a_map_stays_undecoded`.
 ### 911. Whether a formula in a name or an affiliation is a mark is read from its digested XMath, one reader for the observer's writer, the comparator, the marks a name shows and the merged-name check (Perl: no such reading; its frontmatter labels are the operand's ToString)
 
-Frontmatter refactor stage 1 (`FRONTMATTER_DIGESTED_REFACTOR.md`; user directive 2026-10-29: decisions on the digested
+Frontmatter refactor stage 1 (`archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md` "Stages"; user directive 2026-10-29: decisions on the digested
 representation, never TeX spelling). Four readers decided a formula's mark-ness by re-parsing its `tex` attribute: the
 observer writer's view of today's frontmatter (`writer/dom.rs` `math_mark_text`, `spacing_group`, `math_base`), its
 diverged copy in `ab_audit fmshadow` (`fmshadow/mod.rs`), the marks a name shows (`relocate.rs` `shown_marks`:
@@ -26970,7 +26970,7 @@ superscript's printed text before the first letter or digit) when it opens with 
 (floating, or after a box that prints nothing: `$\mbox{ }^1$`, cond-mat0206265, digested `POSTSUPERSCRIPT`), at least
 one a superscript, and the first item printed after them is no letter or digit (our criterion, not the parser's:
 the parser attaches a prescript, `scriptpos="pre"`, to whatever follows, a `)` as readily as a word): font switches are a token's font, spacing an `XMHint`
-(`$^{1}\hspace{1mm}$`, review 88c r4 h2; a name's `{}^{1}\quad`, `author_block/rows.rs:685`), punctuation and symbols
+(`$^{1}\hspace{1mm}$`, review 88c r4 h2; a name's `{}^{1}\quad`, `frontmatter/classify/rows.rs:37`), punctuation and symbols
 no base (`$^{a})$`, cond-mat9808038; `$^{1}{}^{,}$`; `$^{1,2}\dagger$`, 2501.04244; `$^1,2$`, 1912.02075's
 `A.P.~Orlov$^1,2$`, its marks the 1). Only the item right after the scripts counts: a reading that took any letter or
 digit anywhere after the script as ink (88c's) made `^1,2` no mark, Orlov showed no mark and lost both affiliations. Scripts after printed ink are **on a base** (`OnBase`: `$97403^{1}$`, 2203.01892; `Ul. Ainy $299^A$`,
@@ -27501,7 +27501,7 @@ Frontmatter refactor stage 7, the llncs and aa move (task #429; `agent_reports/2
 ### 919. Frontmatter label keys are compared by their printed text (Perl: the operand's source string, `cleanFrontmatterLabels`)
 
 Frontmatter refactor stage 4 (FIDELITY_CHARTER §4 "Frontmatter label keys are compared by their printed text", user
-ruling 2026-10-29; `FRONTMATTER_DIGESTED_REFACTOR.md`; inventory row 2.8). Today's output, every family.
+ruling 2026-10-29; `archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md` "Stages"; inventory row 2.8). Today's output, every family.
 
 - **Perl.** The marks that link authors to affiliations are keyed by the operand's ToString, cleaned by
   `cleanFrontmatterLabels` (Base_Utility.pool.ltxml:365: `\rm` stripped, split at commas, prefixed): aa's
@@ -29932,7 +29932,7 @@ kept. An environment written whole there is left out (`without_environments`: 20
 
 **A list opened there** (2305.05902, 2306.07927, 2312.14898, 2605.09054: `\institute{\begin{itemize}\item[✉] Name \\
 \email{…} \at \item[1] … \end{itemize}}`) is structure, no word of the line: an environment's `\begin{…}`/`\end{…}` prints
-no word in `visible_name_text` (author_block/name_text.rs), the text every name-shape test reads, as an item's
+no word in `visible_name_text` (frontmatter/classify/name_text.rs), the text every name-shape test reads, as an item's
 `\item[…]` label already printed none ("itemize" had kept a line printing only a queued name); and the list's commands
 (`list_structure`, sv_support_sty.rs) are left out of the `fuzzy:` owner label (whose `\begin` opened the list in the label's digestion,
 an Error). The affiliation keeps the structure explicitly: the list's `\begin` when the address closes it, with the
@@ -31102,7 +31102,7 @@ reader of a grade-and-notes line (`ieeetran_cls.rs` `grade_only_line`) is now "o
 `notes_only_line`".
 
 **Why.** pdflatex prints only the notes' marks on such a line, the notes as footnotes: the line holds no text of its
-own. Read as a line, it led with the mark inside its first note — `author_mark_position` (author_block/marks.rs) counts a
+own. Read as a line, it led with the mark inside its first note — `author_mark_position` (frontmatter/classify/marks.rs) counts a
 `^` inside a `\thanks`, `has_author_marks` skips it; the disagreement stays, cited at the preprocess — so it took the
 leading-mark branch as one affiliation labelled `1` whose content digested to nothing, answering mark 1, while its notes
 went to the document as `<pubnote>`s; the observer read the block right and its writer, holding creators only, declined.
@@ -32386,7 +32386,7 @@ the raw macro would pass them alone. **Left, each a fallback (speed only):** `\n
 
 **Content.** The writer makes an entry from the tokens its span covers. A box covers what it prints, so a span stops short of the `$` and `{}` around a script. The walk back from a span over those tokens stopped at any switch: `$\rm ^{3}$He Lab` was no balanced run and the paper was not written (2105.07958's class; `revtex_affiliation_requested_switched_mark_cuts`, 88c's RED). `writer::Field` reads the formula's extent from the digested list (`events::lex_with_formulas`) and a mark's own print from its event, whatever opens or fills the formula (`\( ^{1} \)`, `\protect\(`, hep-ph0110378, 2307.12984; `${^1}$`, 1410.8534, astro-ph9807043; `\textbf{$^2$…}`, 2605.25195). Brace balance stays a read of the content, forward, and takes a mark's own font group from its opening brace (`{\bf $\rm ^{1}$} Univ X`); a group going on after its mark stays no cut (`\textit{$^{2}$H} Lab`, `cut_run_wrapped_isotope_is_entry_text`). A legend's `${^\dagger}$` keeps its printed mark (2605.10201's shape). `formula_span` is the formula's alone. Guards `perfect_kernel_batchz3::{a_cut_takes_each_formula_whole, a_cut_takes_a_group_it_closes, a_mark_in_its_wrapper_is_read_by_its_own_print}`. A Declaration's span is a run a replay can read (`field_notes::settle_declarations`, `a_declarations_span_is_a_balanced_run`). Dump: `formula_span`, a Declaration's `span` and `label`; no reader yet.
 
-**Isolation.** Perl has no speculative run. Ours undoes what the assignment journal sees; what is edited in place it did not see, in the rehearsal and in the title-page checks alike: `\fontdimen`, a box register's `\wd`, `\ht`, `\dp`, an `\openin` stream (a rehearsal took the document's next line), the pdfTeX generator; and keyvals' "seen" set kept the document's own Warning unsaid. Each is undone or kept apart now. With the observer on and off the XML outside the creators, E, F and W agree on every input of the hostile suite, but for the writer's second digestion of a cut field (below); the census of what a rollback leaves is `FRONTMATTER_DIGESTED_REFACTOR.md` "What a rollback leaves". Guards `perfect_kernel_batchz3::the_rehearsal_leaves_no_trace_*`; repro `observer_rehearsal_leaves_no_trace`.
+**Isolation.** Perl has no speculative run. Ours undoes what the assignment journal sees; what is edited in place it did not see, in the rehearsal and in the title-page checks alike: `\fontdimen`, a box register's `\wd`, `\ht`, `\dp`, an `\openin` stream (a rehearsal took the document's next line), the pdfTeX generator; and keyvals' "seen" set kept the document's own Warning unsaid. Each is undone or kept apart now. With the observer on and off the XML outside the creators, E, F and W agree on every input of the hostile suite, but for the writer's second digestion of a cut field (below); the census of what a rollback leaves is `FRONTMATTER_SINGLE_ENGINE_PLAN.md` "What a rollback leaves". Guards `perfect_kernel_batchz3::the_rehearsal_leaves_no_trace_*`; repro `observer_rehearsal_leaves_no_trace`.
 
 **A binding's document-wide state** was a thread-local no rollback reaches. It is now one value of the Value table (`state::DocumentState`), bound globally as the package's own macros are, in place outside a journal, a copy at the first change under one: pict2e's graph (pict2e.sty:186 `\global\pIIe@GRAPH`; pdflatex strokes a path left unstroked with the next, `0 0 m 1 1 l 2 2 m 3 3 l S`, and ours stroked it once more per speculative run, on and off), chemnum's counter and first uses (a real first use became a `ltx:ref` with no target), animate's open stack, biblatex's state, a stub's one report. A speculative run's raw read is no read `read_stand_in_copy` skips a copy for; it evaluates no Lua, whose globals no rollback reaches; a load in one is not noted. What a chunk prints is so not in a rehearsal's reading. Each thread-local's row is in the census. Guards `a_bindings_state_stands_for_one_run`, `a_rehearsals_read_is_no_read_of_a_copy`, `a_speculative_run_evaluates_no_lua`.
 
@@ -32408,7 +32408,7 @@ never today's reader. Z14's rules that do: the rehearsal's `BOUND_IN_A_BLOCK` (`
 a column (sig-alternate.cls:283; 1503.06772), a call speaking for a collaboration a contact on the names before it (1201.5726,
 1301.6619), a later row read as names (after an "and", past an address piece, a marked row with one odd piece; 2007.10022,
 2312.14886, 2409.07809), a line of addresses leaving its entry open (1411.2744). One helper is shared with today's
-reader, `name_shaped` (`author_block/name_text.rs`): it reads a particle elided onto a capital as the surname's only right after an
+reader, `name_shaped` (`frontmatter/classify/name_text.rs`): it reads a particle elided onto a capital as the surname's only right after an
 initial (`D.~d'Enterria`, hep-ph0311131); anywhere else a place or an institution elides too (`C. Vignat, Universit\'e d'Orsay`,
 1009.2396, which Z14 made two creators; `Villeneuve d'Ascq`, `Saint Martin d'Heres`).
 

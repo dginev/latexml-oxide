@@ -1,5 +1,5 @@
-//! The text rules on printed ink and the token primitives of `author_block/names_split.rs`, moved unchanged (MV1,
-//! user ruling 2026-11-08 "knowledge in, driver out").
+//! The text rules on printed ink and the token primitives of `author_block/names_split.rs`, moved unchanged (the plan's row
+//! "Knowledge in, driver out, one pass", user ruling 2026-11-08).
 
 use super::*;
 

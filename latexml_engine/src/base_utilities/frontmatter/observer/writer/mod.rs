@@ -34,7 +34,7 @@ use super::{
 };
 
 mod apply;
-// (the emitter's vocabulary, moved unchanged from the old reader: MV1; re-exported by `observer/mod.rs`)
+// (the emitter's vocabulary, moved unchanged from the old reader by the plan's row "Knowledge in, driver out, one pass"; re-exported by `observer/mod.rs`)
 pub(in crate::base_utilities) mod calls;
 mod content;
 mod dom;

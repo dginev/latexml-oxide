@@ -1,4 +1,4 @@
-% witness: FRONTMATTER_DIGESTED_REFACTOR gap 3, ijcai `\emails` (ijcai19.sty:124-130: `\def\emails{\egroup\par\bgroup\rm}`)
+% witness: FRONTMATTER_SINGLE_ENGINE_PLAN gap 3, ijcai `\emails` (ijcai19.sty:124-130: `\def\emails{\egroup\par\bgroup\rm}`)
 % oracle:  pdflatex (ijcai21.sty of 2105.02711) 0 errors: "Ann Able" line; "Bob Baker" line; "Univ A"; "ann@a.org"
 % engines: Perl has no events; ours before this fix: `\emails` is the binding's no-op, and no event says where it was called
 % expect:  0 errors; its call stands as a Break of kind `section` beside the events, which it does not part; `\affiliations`

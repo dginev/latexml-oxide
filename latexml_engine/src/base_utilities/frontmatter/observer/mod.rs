@@ -63,7 +63,7 @@ pub use policy::{
   TitleMarks as FmTitleMarks, conventions_among as fm_conventions_among,
   declare_frontmatter_conventions,
 };
-// (the old reader's owner logic, moved unchanged, for its callers in `author_block/` and `frontmatter/`: MV1)
+// (the old reader's owner logic, moved unchanged, for its callers in `author_block/` and `frontmatter/`: the plan's row "Knowledge in, driver out, one pass")
 pub(in crate::base_utilities) use resolver::owners::*;
 pub use resolver::{
   Assoc as FmAssoc, CHANGE_TAGS as FM_CHANGE_TAGS, Input as FmInput, NameJoin as FmNameJoin,
@@ -75,7 +75,7 @@ pub(in crate::base_utilities) use shadow::shadow_flush;
 pub use shadow::{
   fm_shadow_enabled, fm_shadow_json, reset_fm_shadow, set_fm_shadow_override, write_fm_shadow,
 };
-// (the emitter's vocabulary, moved unchanged, for its callers in `author_block/`, `frontmatter/` and `defs/`: MV1)
+// (the emitter's vocabulary, moved unchanged, for its callers in `author_block/`, `frontmatter/` and `defs/`: the plan's row "Knowledge in, driver out, one pass")
 pub(in crate::base_utilities) use writer::calls::*;
 pub(crate) use writer::fm_emit_mode;
 pub use writer::set_fm_emit_override;
