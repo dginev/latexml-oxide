@@ -8,8 +8,14 @@ use super::{observer::emitted, *};
 pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -> Result<()> {
   // Find dummy frontmatter elements containing not-yet-attached annotations
   let pending_nodes = document.findnodes(".//*[@role='pending']", None);
+  // The author block's own creator, which the frontmatter emitter writes (`observer::writer::emit::block_creator`): the
+  // trailing nameless creator the orphan procedure below shares into, written by the emitter where it would promote a
+  // stub — no target by label (the block's items go through the orphan rules: a sole author's line, a copy an author
+  // holds, a named owner's), placed below the last named author, and gone where nothing was shared into it. Witnesses
+  // 1012.4847, 1106.3045, 2009.10916.
+  let block_creator = document.findnode("//ltx:creator[@_blockcreator]", None);
   if pending_nodes.is_empty() {
-    return Ok(());
+    return settle_block_creator(document, block_creator);
   }
   // Collect the frontmatter that have attachment labels
   let mut labeltable: HashMap<String, Vec<Node>> = HashMap::default();
@@ -17,7 +23,7 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
   let mut unlabeltable: HashMap<String, Vec<Node>> = HashMap::default();
   for target in document.findnodes(".//*[@_annotations]", None) {
     let target_role = target.get_attribute("role").unwrap_or_default();
-    if target_role == "pending" {
+    if target_role == "pending" || block_creator.as_ref() == Some(&target) {
       continue;
     }
     // Dedup labels PER TARGET: a creator that cites the same annotation label
@@ -290,7 +296,7 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
       }
     }
   }
-  let mut shared_creator: Option<Node> = None;
+  let mut shared_creator: Option<Node> = block_creator.clone();
   // An orphan's owners among the authors (below), by its label and role.
   // (several owners for an institute, or for a person's note whose fuzzy label names them each — a correspondent
   // naming two; not an institute's `\email`/`\url` that inherited its label, which stays shared, 1205.6171)
@@ -391,10 +397,9 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
         // (none for an orphan whose fuzzy label names its owners: a correspondent naming two authors, placed below; a
         // sole author's orphan still warns, 63h)
         let named_by_label = label.starts_with("fuzzy:") && owned_by(&label, &note).is_some();
-        // (the frontmatter emitter writes the block's own creator itself, which the block's items find by their label:
-        // an orphan of an emitted paper is Perl's, warned and dropped — no shared creator is made below the authors.
-        // `observer::writer::emit::block_creator`; 1012.4847, 1106.3045)
-        let shares = !emitted();
+        // (an emitted paper's shared orphans are the author block's, which the emitter's creator holds: any other
+        // orphan there is Perl's, warned and dropped — `block_creator` above; 1012.4847, 1106.3045, 2009.10916)
+        let shares = !emitted() || label == "addresses:block";
         if (!unlabelled && !shared_orphan(&note) && !named_by_label)
           || (!shares && owned_by(&label, &note).is_none())
         {
@@ -469,6 +474,24 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
     } else {
       document.remove_node(pending);
     }
+  }
+  settle_block_creator(document, block_creator)
+}
+
+/// The emitter's block creator after [`relocate_annotations`] shared into it: below the last named author, as the
+/// promoted stub is (a later flush's names stay above it); removed where nothing was shared into it, as no stub is
+/// promoted then.
+fn settle_block_creator(document: &mut Document, block_creator: Option<Node>) -> Result<()> {
+  let Some(block) = block_creator else {
+    return Ok(());
+  };
+  if element_nodes(&block).is_empty() {
+    document.remove_node(block);
+  } else if let Some(last) = document
+    .findnodes("//ltx:creator[@role='author'][ltx:personname]", None)
+    .pop()
+  {
+    move_content_free_after(std::slice::from_ref(&block), last)?;
   }
   Ok(())
 }

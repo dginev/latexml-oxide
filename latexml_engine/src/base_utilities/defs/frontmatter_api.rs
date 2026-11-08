@@ -733,8 +733,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     let (parent_indices, stub_idx) = with_value_mut("frontmatter", |val_opt| {
       if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
         let list = frnt.entry(parenttag.clone()).or_insert_with(Vec::new);
+        // (nor the author block's own creator, which the emitter writes below the flush's names: no annotation's parent by
+        // place, as no creator was before relocation made it — only a block item reaches it, by the orphan rules,
+        // `relocate_annotations`; [`BLOCK_CREATOR`], 2009.10916)
         let parent_indices: Vec<usize> = list.iter().enumerate()
-          .filter(|(_, e)| e.attr.get("role").map(String::as_str).unwrap_or("") != "pending")
+          .filter(|(_, e)| e.attr.get("role").map(String::as_str).unwrap_or("") != "pending"
+            && !e.attr.contains_key(BLOCK_CREATOR))
           .map(|(i, _)| i)
           .collect();
         // IF this item encountered WITHIN another frontmatter

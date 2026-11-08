@@ -195,12 +195,15 @@ basis `pk_wt/int149a` @ 3189c464d9 (RT1 at 913eef6966), binary `P2r2-rel`. Their
   (59), the DOM Kind step for address lines (41), relocate's Rust-only orphan sharing (49), which the emitter depends on
   (`addresses:block`, emit.rs:2067, :2247). Link double-applies the reading's ownership: duplicate e-mails (1012.4847,
   2406.04316). The fold: the S2b writer → RT1's E1; Link + Kind address lines (passes 7, 13, 14, 17) → E1 and the S5 rows,
-  HARD; the orphan sharing → the emitter writes the block's own nameless creator itself (OD #159), and relocate's
-  Rust-only orphan-sharing branch is off for an emitted paper — **done (BC1):** `emit::block_creator`, one
+  HARD; the orphan sharing → the emitter writes the block's own nameless creator itself (OD #159) — **done (BC1,
+  BC1r2):** `emit::block_creator`, one
   `\lx@add@frontmatter@now{ltx:creator}[role=author,annotations={addresses:block},_blockcreator=true]{}` below the
-  flush's names, which the block's items reach by their label as Perl's relocateAnnotations places any; `_blockcreator`
-  keeps it out of the role's count (no `_num`, the last name's separator unchanged) and out of
-  `coalesce_empty_creators`/`distribute_upfront_contacts`; an orphan of an emitted paper is Perl's (warned, dropped).
+  flush's names; relocate's orphan procedure stays the spec (a sole author's line, a named owner's, a copy an author
+  holds under another label: no orphan) and shares into it where it would promote a stub, then places it below the last
+  named author or removes it where nothing reached it; `_blockcreator` keeps it out of the role's count (no `_num`, the
+  last name's separator unchanged), out of the parents an annotation attaches to by place (2009.10916's unlabelled
+  restated `\email` stays Bo Li's) and out of `coalesce_empty_creators`/`distribute_upfront_contacts`; a non-block
+  orphan of an emitted paper is Perl's (warned, dropped; no input found, OD #159).
   The 21 papers that depended on the branch (20 of better_at_2, 1106.3045) byte-identical on int149a `=2`, 1012.4847's
   doubled `julo@`/`kpa@` kept (Link's X0, not relocate). Guard
   `perfect_kernel_batchbc1::the_blocks_creator_is_the_emitters`. Passes 15, 16,

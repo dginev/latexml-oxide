@@ -7477,6 +7477,21 @@ revtex_mathrm_marked_affiliations_link_by_mark, revtex_textsuperscript_interleav
 revtex_interleaved_typo_mark_keeps_the_group_rule`. Open: a name-only piece sharing the next institute (RED
 `svjour3_name_only_piece_shares_the_next_institute`), the isotope split above.
 
+**At `LATEXML_FM_EMIT=2` (BC1).** The frontmatter emitter writes the trailing creator itself, once per conversion,
+where a flush has an item of the author block (`addresses:block`): `\lx@add@frontmatter@now{ltx:creator}[role=author,
+annotations={addresses:block},_blockcreator=true]{}` (`observer::writer::emit::block_creator`; none for a flush whose
+authors are sealed off as a supplement's). The Rust-only key `_blockcreator` (`frontmatter_api::BLOCK_CREATOR`) keeps
+it out of the role's count (no `_num`, the last name's separator unchanged), out of the parents an annotation attaches
+to by place (no creator stood there before relocation), and out of `coalesce_empty_creators` /
+`distribute_upfront_contacts`; it never reaches the output. The orphan procedure above stays the spec:
+`relocate_annotations` indexes no label to it, so a block item still goes through the sole-author, named-owner and
+"a copy an author holds" rules, and only where the procedure would promote a stub is the item appended to the
+emitter's creator, which then moves below the last named author, or is removed where nothing reached it. Witnesses
+1012.4847, 1106.3045, 2009.10916. Guard `perfect_kernel_batchbc1::the_blocks_creator_is_the_emitters`. Open, no
+input found: a non-block orphan of an emitted paper (`relocate.rs` `shares`) is warned and dropped, as Perl does
+(Base_Utility.pool.ltxml:901-908), where the switch off shares it; an elsarticle `\address`, an authblk `\affil` and an
+aastex `\correspondingauthor` queued before two authors all reach the block creator at `=2` instead.
+
 ### 160. OmniBus captures `\orcid` and no-ops the running-head registers `\lefttitle`/`\righttitle`
 
 **Background.** Unbound bundled journal `.cls` files fall through to the generic OmniBus fallback

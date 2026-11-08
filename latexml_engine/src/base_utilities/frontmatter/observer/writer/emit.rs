@@ -2363,12 +2363,18 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
 
 /// The author block's own creator, the first time a flush writes an item of the block (`label=addresses:block`: `of_the_block`):
 /// Perl's one nameless creator below the names, holding only the block's contacts (OXIDIZED_DESIGN #159,
-/// FIDELITY_CHARTER §4), which `relocate_annotations` gives every such item to as Perl's API places an annotation, by its
-/// label (`\lx@add@frontmatter@now{ltx:creator}[role=author,annotations={addresses:block},_blockcreator=true]{}`;
-/// uncounted among the names, [`BLOCK_CREATOR`]). One for the conversion: a later flush's block items find it. Witnesses
-/// 1012.4847, 1106.3045, 2402.19043, 2609.15094.
+/// FIDELITY_CHARTER §4), into which `relocate_annotations`'s orphan procedure shares where it would promote a stub — a
+/// block item still a sole author's, a named owner's, or no orphan where an author holds a copy under another label —
+/// placing it below the last named author, or removing it where nothing reached it
+/// (`\lx@add@frontmatter@now{ltx:creator}[role=author,annotations={addresses:block},_blockcreator=true]{}`; uncounted
+/// among the names and no annotation's parent by place, [`BLOCK_CREATOR`]). One for the conversion: a later flush's block items find it — not one
+/// `\lx@add@frontmatter@now` turns away as a supplement's ([`frontmatter_entry_sealed`]), which a later flush's block
+/// items would not find. Witnesses 1012.4847, 1106.3045, 2402.19043, 2609.15094, 2009.10916.
 fn block_creator(of_the_block: bool) -> Option<Tokens> {
-  if !of_the_block || lookup_value(BLOCK_CREATOR_WRITTEN).is_some() {
+  if !of_the_block
+    || lookup_value(BLOCK_CREATOR_WRITTEN).is_some()
+    || frontmatter_entry_sealed("ltx:creator", "author")
+  {
     return None;
   }
   assign_value(
