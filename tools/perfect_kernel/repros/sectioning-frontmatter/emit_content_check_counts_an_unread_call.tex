@@ -1,0 +1,22 @@
+% mechanism: the content check on the placed output (`resolver::placed::content_check`, under `LATEXML_FM_EMIT=2`) counts
+%   what TeX printed of every creator call: a call's words are required unless its block's events print them, its words
+%   its rehearsal's or, where no rehearsal read it (`ApiCall::unread`: the rehearsal gave up, `SkipReason::OverBudget`),
+%   its content's text. The emitter writes no item for such a call, so its words are lost and counted
+% witness: RC1's root cause §5 (agent_reports/2026-11-08_RC1_report.md: a skipped rehearsal marked rehearsed with no events,
+%   lost with only the budget Warning, which said "they are read as they print"); the IEEEtran shape of 2401.11731
+% oracle:  pdflatex 0 errors; "Ann Able∗ , Bob Baker†", "∗ Univ Alpha", "† Univ Beta"
+% engines: rust =2 under `LATEXML_REHEARSAL_READ_BUDGET=20000` (int149a): 1 warning (the budget's), Ann Able has no
+%   affiliation, the loss uncounted
+% expect:  =2 under that budget: 0 errors, 2 warnings — the budget's, and the content check's lost `Alpha Univ`
+% status:  RED (int149a) -> GREEN (perfect_kernel_batchrc1::an_unread_calls_words_are_counted)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\newcommand\slow{\count255=0 \loop\ifnum\count255<3000 \advance\count255 by 1 \repeat}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2}}%
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ Alpha\slow\\
+\IEEEauthorrefmark{2}Univ Beta}}
+\maketitle
+Text.
+\end{document}

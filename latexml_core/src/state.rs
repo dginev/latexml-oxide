@@ -2641,7 +2641,6 @@ thread_local! {
 /// [`crate::definition::origin::document_call_watch`]): kept while its expansion is read, the calls whose expansions
 /// ended dropped. An argument-less call is not kept.
 pub fn note_document_call(cs: Token, args: Vec<DocumentArgument>) {
-  let mark = gullet::input_mark();
   DOCUMENT_CALLS.with(|calls| {
     let mut calls = calls.borrow_mut();
     calls.retain(|call| gullet::input_unread_since(&call.mark));
@@ -2649,7 +2648,7 @@ pub fn note_document_call(cs: Token, args: Vec<DocumentArgument>) {
       calls.push(DocumentCall {
         cs,
         args: args.into(),
-        mark,
+        mark: gullet::input_mark(),
         claimed: None,
       });
     }

@@ -79,6 +79,10 @@ pub(in crate::base_utilities) enum Outcome {
     /// the creator calls its own expansion made (`field_notes::FieldCreator`), the keyvals the emitter writes on the
     /// creators their Names make (`Event::creator_call`). Not in a dump
     creators:     Vec<FieldCreator>,
+    /// where the rehearsal left a group open (`rehearsal::Rehearsal::Done::left_open`), what it read past it no event
+    /// says: the block's content's text ([`content_text`]), whose words the events lack the content check counts
+    /// (`resolver::placed::content_check`), as a call's no rehearsal read (`ApiCall::unread`). In a dump only when set
+    unread:       Option<Box<str>>,
   },
   /// Not rehearsed, and why.
   Skipped(SkipReason),
@@ -214,6 +218,13 @@ pub(in crate::base_utilities) struct ApiCall {
   pub events:         Vec<Event>,
   /// whether a flush rehearsed its content
   pub rehearsed:      bool,
+  /// the rehearsal gave up on it (`SkipReason::OverBudget`, a Fatal, `NotUndone`): no events, what it printed its
+  /// content's text alone ([`content_text`]), which the content check counts (`resolver::placed::content_check`)
+  pub unread:         Option<Box<str>>,
+  /// a call its block's own expansion made (`inside`) that annotates a creator: its content's events, rehearsed for the
+  /// content check alone (`resolver::placed::content_check`), which counts its words unless its block's events print
+  /// them — no reader takes it apart from its block
+  pub inside_events:  Box<[Event]>,
   /// whether a later clear removed it from the queue before any flush digested it ([`record_clear`])
   pub cleared:        bool,
   /// the errors its content's rehearsal held (no positions: an API call's content has none)
@@ -295,6 +306,10 @@ pub(in crate::base_utilities) struct Ledger {
   pub writer:       Option<String>,
   /// the contacts recorded that print nothing, in call order ([`UnprintedCall`])
   pub unprinted:    Vec<UnprintedCall>,
+  /// the contents' texts ([`content_text`]) of the queued creator calls the emitter took out of the queue that no
+  /// recorded call is (a stand-in binding's copy's, [`records_now`]), in queue order: what the content check counts them
+  /// by (`writer::emit::emit_commands`, `resolver::placed::content_check`)
+  pub unrecorded:   Vec<String>,
   /// the census's (E0): why the writer's plan or re-part refused, its first refusal or the writer's own decline — what
   /// `writer: declined …` counts under in `ab_audit fmshadow`'s closed list (`writer::note_refusal`)
   pub refusal:      Option<String>,
@@ -1044,11 +1059,71 @@ pub(in crate::base_utilities) fn record_api_call(
       content,
       events: Vec::new(),
       rehearsed: false,
+      unread: None,
+      inside_events: Box::default(),
       cleared: false,
       errors: 0,
       command: (fm_emit_mode() != 0).then(|| command.clone()),
     }));
   });
+}
+
+/// What a call no rehearsal read printed, as far as its tokens tell (`ApiCall::unread`, `Ledger::unrecorded`), read at
+/// the API boundary that records its content, so the content check reads text alone, parted into words as an ink's is
+/// (`resolver::words::printed_words`): its characters; a control symbol or a one-letter control word inside a word (an
+/// accent, `Universit\"at`, a dotless i: a letter or digit before it, a letter, a digit or a group after it, past any
+/// group's end and other such sequence, `F\'{\i}sica`, `Bras\'\i lia`) and a group there (`M{\"u}nchen`) part nothing,
+/// the word counted whole, its accents unread (the check takes a word one side reads without them for the one the other
+/// prints with them, `resolver::placed`); another control sequence, its argument's group
+/// (`\IEEEauthorrefmark{1}Univ Alpha` → ` 1 Univ Alpha`) or a math shift parts words. Nothing is spelled but a control
+/// sequence's length: a letter command (`Gro{\ss}e`, a control word) parts its word.
+pub(super) fn content_text(content: &Tokens) -> String {
+  let mut text = String::new();
+  // (for each open group, whether it is a parting command's argument, which parts what is around it)
+  let mut groups: Vec<bool> = Vec::new();
+  let mut parted_by_command = false;
+  let tokens = content.unlist_ref();
+  for (at, token) in tokens.iter().enumerate() {
+    // (inside a word: a letter or digit before it, and a letter, a digit or a group after it, past any group's end and
+    // 2-character control sequence: `F\'{\i}sica`, `Bras\'\i lia`)
+    let in_word = || {
+      text.chars().next_back().is_some_and(char::is_alphanumeric)
+        && tokens[at + 1..]
+          .iter()
+          .find(|next| next.get_catcode() != Catcode::END && !short_cs(next))
+          .is_some_and(starts_word)
+    };
+    let mut parting_command = false;
+    match token.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER | Catcode::ACTIVE => text.push_str(&token.to_string()),
+      Catcode::BEGIN => groups.push(parted_by_command),
+      Catcode::END => {
+        if groups.pop().unwrap_or(true) {
+          text.push(' ');
+        }
+      },
+      Catcode::CS => {
+        if !(short_cs(token) && in_word()) {
+          text.push(' ');
+          parting_command = true;
+        }
+      },
+      _ => text.push(' '),
+    }
+    parted_by_command = parting_command;
+  }
+  text
+}
+
+/// A control sequence 2 characters long, the backslash and one more: a control symbol (an accent, `\'`) or a
+/// one-letter control word (`\i`), which `content_text` reads inside a word.
+fn short_cs(token: &Token) -> bool {
+  token.get_catcode() == Catcode::CS && token.with_str(|name| name.chars().count() == 2)
+}
+
+/// A token that opens or continues a word after a control sequence inside it: a group, a letter or a digit.
+fn starts_word(t: &Token) -> bool {
+  t.get_catcode() == Catcode::BEGIN || t.with_str(|s| s.starts_with(char::is_alphanumeric))
 }
 
 /// The tag a queued call annotates, its first argument (`\lx@annotate@frontmatter@now{ltx:creator}…`), empty for a call

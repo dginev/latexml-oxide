@@ -23,14 +23,15 @@
 //! item counted the same way; an e-mail contact every time, an address being one person's (one address on two creators,
 //! or twice on one). What may print beside the authors without being theirs only answers an excess: a separator's word
 //! (`and`), a mark's text, a link's target (an ORCID's id behind a logo), a footnote's text (`\footnotetext`), a publication
-//! note's, a call a block's own expansion made, and the words of the creator a block written whole became (TeX's own
-//! digestion of it, its addresses still counted). An excess needs every live block and creator call read: a block no
-//! rehearsal read prints words no event holds.
+//! note's, a call a block's own expansion made whose words its block's events print (a call's words, else, are required:
+//! its rehearsal's, or its content's text where none read it — [`content_check`]), and the words of the creator a block
+//! written whole became (TeX's own digestion of it, its addresses still counted). An excess needs every live block and
+//! creator call read: a block no rehearsal read prints words no event holds.
 
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
-  super::ledger::{Entry, Ledger, Outcome, SkipReason},
+  super::ledger::{ApiCall, Entry, Ledger, Outcome, SkipReason},
   words::{ink_words, live_blocks, words_of},
   *,
 };
@@ -229,12 +230,42 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
   let mut whole: Vec<BTreeMap<String, usize>> = Vec::new();
   // (the texts the inks print, each block's and call's in order, which a shared item's copies count by: `Prints`)
   let mut prints = Prints::default();
-  for (index, block) in live_blocks(ledger) {
+  // (each live block's printed words, which its own expansion's calls take theirs from: `own_print`)
+  let mut block_print: BTreeMap<usize, Tally> = BTreeMap::new();
+  let live = live_blocks(ledger);
+  let live_index: BTreeSet<usize> = live.iter().map(|(index, _)| *index).collect();
+  for (index, block) in live {
+    let print = block_print.entry(index).or_default();
     match &block.outcome {
-      Outcome::Events { events, .. } => {
+      Outcome::Events { events, unread, .. } => {
         let (texts, units) = ink_texts(events, &mut beside, &mut marks);
         for text in texts {
           printed.add(&text, 1);
+          print.add(&text, 1);
+        }
+        // (a rehearsal that left a group open — an `\end{tabular}\begin{tabular}{c}` juggle in the line, 1401.6981 — read
+        // what follows into no box, so no event says it: the events are not trusted for the block, its content's text
+        // (`Outcome::Events::unread`, `ledger::content_text`, as for a call no rehearsal read) counting the words they
+        // lack, a possible loss)
+        if let Some(text) = unread {
+          let mut content = Tally::default();
+          content.add(text, 1);
+          for (word, (n, spelled)) in content.words {
+            let more = n.saturating_sub(print.word(&word));
+            for tally in [&mut printed, &mut *print] {
+              tally
+                .words
+                .entry(word.clone())
+                .or_insert((0, spelled.clone()))
+                .0 += more;
+            }
+          }
+          for (address, n) in content.addresses {
+            let more = n.saturating_sub(print.address(&address));
+            for tally in [&mut printed, &mut *print] {
+              *tally.addresses.entry(address.clone()).or_default() += more;
+            }
+          }
         }
         units.iter().for_each(|text| prints.add(index, text));
         if kept_whole(index) {
@@ -258,25 +289,84 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
       beside.add(&text, 1);
     }
   };
+  // (what TeX printed of a creator call, one rule for them all: its words count unless its block's events print them — a call
+  // outside its block's expansion none of them. Its words are its rehearsal's, or its content's text where the rehearsal gave
+  // up on it (`ApiCall::unread`; a queued call no call recorded, `Ledger::unrecorded`: texts the ledger reads, the check
+  // reads no token); an inside call's, rehearsed for this check alone (`ApiCall::inside_events`), are its block's where
+  // that block's events print every one of them, a block no longer live printing none that TeX printed. The block's own
+  // creator entry is the block, and so is an inside call no flush could rehearse (a journal unavailable to the end). An inside call the ledger
+  // misread — an input mark refilled to an equal token, IEEEtran's affiliations read as the author block's own, 2401.11731,
+  // 1801.03314 — is no longer exempt on trust)
+  let own_print = |call: &ApiCall, block_print: &mut BTreeMap<usize, Tally>| -> bool {
+    let Some(block) = call.after_block.filter(|_| call.inside) else {
+      return false;
+    };
+    if !live_index.contains(&block) {
+      return true;
+    }
+    let mut words = Tally::default();
+    if let Some(text) = &call.unread {
+      words.add(text, 1);
+    } else {
+      let (mut beside, mut marks) = (Tally::default(), BTreeMap::new());
+      for text in ink_texts(&call.inside_events, &mut beside, &mut marks).0 {
+        words.add(&text, 1);
+      }
+    }
+    let print = block_print.entry(block).or_default();
+    let held = words
+      .words
+      .iter()
+      .all(|(word, (n, _))| print.word(word) >= *n)
+      && words
+        .addresses
+        .iter()
+        .all(|(address, n)| print.address(address) >= *n);
+    if held {
+      for (word, (n, _)) in &words.words {
+        if let Some(entry) = print.words.get_mut(word) {
+          entry.0 -= n;
+        }
+      }
+      for (address, n) in &words.addresses {
+        if let Some(entry) = print.addresses.get_mut(address) {
+          *entry -= n;
+        }
+      }
+    }
+    held
+  };
   for (index, entry) in ledger.entries().iter().enumerate() {
     let piece = match entry {
       Entry::Api(call) if !call.cleared && creator_call(&call.tag, &call.parent) => {
         if let Some(label) = call_label(&call.attrs) {
           beside.add(label, 1);
         }
-        if call.inside {
-          // (a block's own expansion's call: its block's events print it)
-          aside(&call.events, &mut beside, &mut marks);
+        let events: &[Event] = if call.inside {
+          &call.inside_events
+        } else {
+          &call.events
+        };
+        if call.inside && call.parent.is_empty() {
+          // (the block's own creator entry: the block's events are its print)
           None
+        } else if own_print(call, &mut block_print) {
+          aside(events, &mut beside, &mut marks);
+          None
+        } else if let Some(text) = &call.unread {
+          calls
+            .insert(words_of(text).collect())
+            .then(|| (None, (vec![text.to_string()], vec![text.to_string()])))
         } else if !call.rehearsed {
+          // (the writer stays out for it, `writer::writer_stays_out`: the queue is digested as Perl's)
           all_read = false;
           None
-        } else if calls.insert(words_of(&events::printed_text(&call.events)).collect()) {
+        } else if calls.insert(words_of(&events::printed_text(events)).collect()) {
           let cut = call
             .attrs
             .split(',')
             .find_map(|key| key.strip_prefix(CUT_LIST)?.strip_prefix('='));
-          Some((cut, ink_texts(&call.events, &mut beside, &mut marks)))
+          Some((cut, ink_texts(events, &mut beside, &mut marks)))
         } else {
           None
         }
@@ -306,6 +396,13 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
     }
   }
   printed.add(&list.1.join(", "), 1);
+  // (the queued creator calls the emitter took that no call recorded: their contents' texts)
+  for (n, text) in ledger.unrecorded.iter().enumerate() {
+    if calls.insert(words_of(text).collect()) {
+      prints.add(ledger.entries().len() + n, text);
+      printed.add(text, 1);
+    }
+  }
   // (what the placed frontmatter holds, both ways alike: a name every copy, and an e-mail's addresses; a shared item once,
   // as often as one creator holds it — its label with it)
   let (mut names, mut emails): (BTreeMap<&str, usize>, BTreeMap<&str, usize>) = Default::default();
@@ -452,6 +549,33 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
     if let Some((n, parts)) = glued(&word, gap, &printed, &held, &marks) {
       printed.add_word(&word, n);
       parts.iter().for_each(|part| held.add_word(part, n));
+    }
+  }
+  // (a word one side reads without the accents the other prints — the text of a call no rehearsal read, which reads none
+  // (`ledger::content_text`), against its placed copy, `universitat` and `universität` —: the same ink, as a glued word)
+  let gaps: Vec<(String, usize)> = printed
+    .words
+    .iter()
+    .map(|(word, (n, _))| (word.clone(), n.saturating_sub(held.word(word))))
+    .filter(|(word, gap)| *gap > 0 && base_letters(word) == *word)
+    .collect();
+  for (word, mut gap) in gaps {
+    let accented: Vec<String> = shared
+      .words
+      .keys()
+      .filter(|other| **other != word && base_letters(other) == word)
+      .cloned()
+      .collect();
+    for other in accented {
+      let spare = shared
+        .word(&other)
+        .saturating_sub(printed.word(&other) + beside.word(&other));
+      let n = spare.min(gap);
+      if n > 0 {
+        held.add_word(&word, n);
+        printed.add_word(&other, n);
+        gap -= n;
+      }
     }
   }
   // (a word a Mark event prints is that mark's, as often as the events print it, wherever a text holds it: an entry's

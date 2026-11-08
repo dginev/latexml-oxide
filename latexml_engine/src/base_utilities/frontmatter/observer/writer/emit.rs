@@ -33,7 +33,7 @@ use crate::base_utilities::{
     observer::{
       events::{EventKind, Formula, InkTable, lex_with_inks},
       field_notes::{EnvironmentStep, FieldCreator},
-      ledger::{ApiCall, AuthorBlock, annotated_parent, field_stamped},
+      ledger::{ApiCall, AuthorBlock, annotated_parent, content_text, field_stamped},
       policy::TitleMarks,
       rehearsal::{Rehearsal, rehearse},
       resolver::{
@@ -2031,21 +2031,57 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       ),
     );
   }
-  // (the queue: what the emitter takes, and what it leaves, in place)
+  // (the queue: what the emitter takes, and what it leaves, in place; a taken call no recorded call is — a stand-in
+  // binding's copy's, `ledger::records_now` — kept for the content check, `Ledger::unrecorded`)
   let (mut before, mut after, mut unprinted): (Vec<_>, Vec<_>, Vec<RawFrontmatter>) =
     Default::default();
   let mut seen = false;
+  // (the recorded calls' commands by a fingerprint as their equality reads them, a space by its catcode)
+  let fingerprint = |command: &Tokens| {
+    command.unlist_ref().iter().fold(0u64, |h, token| {
+      (h.rotate_left(5) ^ token.cycle_fingerprint()).wrapping_mul(0x9E37_79B9_7F4A_7C15)
+    })
+  };
+  let mut recorded: Option<BTreeMap<u64, Vec<Tokens>>> = None;
+  let mut unrecorded = Vec::new();
   for entry in std::mem::take(commands) {
     let parent = annotated_parent(&entry.2);
     if entry.0 == "ltx:rdf" && parent == "ltx:creator" {
       unprinted.push(entry);
     } else if creator_call(&entry.0, &parent) && !wordless_calls.contains(&entry.2) {
       seen = true;
+      let recorded = recorded.get_or_insert_with(|| {
+        with_ledger(|ledger| {
+          let mut recorded: BTreeMap<u64, Vec<Tokens>> = BTreeMap::new();
+          for entry in ledger.entries() {
+            if let Entry::Api(call) = entry
+              && let Some(command) = &call.command
+            {
+              recorded
+                .entry(fingerprint(command))
+                .or_default()
+                .push(command.clone());
+            }
+          }
+          recorded
+        })
+      });
+      if !recorded
+        .get(&fingerprint(&entry.2))
+        .is_some_and(|commands| commands.contains(&entry.2))
+      {
+        unrecorded.push(content_text(&queued_affiliation_text(&last_group(
+          &entry.2,
+        ))));
+      }
     } else if seen {
       after.push(entry);
     } else {
       before.push(entry);
     }
+  }
+  if !unrecorded.is_empty() {
+    with_ledger(|ledger| ledger.unrecorded.extend(unrecorded));
   }
   // (the creators: each its Perl label, `author:N`, new or emitted at an earlier flush: as `num_<tag>` carries a flush's counts.
   // A block written whole is one creator, its first name's, which its other names' items go to)

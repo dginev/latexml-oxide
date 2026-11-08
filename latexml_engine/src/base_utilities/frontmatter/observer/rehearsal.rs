@@ -64,6 +64,9 @@ thread_local! {
     const { Cell::new(REHEARSAL_READS_DEFAULT * REHEARSALS_PER_CONVERSION) };
   /// How many rehearsals were abandoned or never made over budget.
   static LEFT_OUT: Cell<usize> = const { Cell::new(0) };
+  /// The reads the content check's own rehearsals may still make ([`for_the_check`]): one rehearsal's, apart from the
+  /// conversion's.
+  static CHECK_READS_LEFT: Cell<usize> = const { Cell::new(REHEARSAL_READS_DEFAULT) };
 }
 
 /// A new conversion's budget: [`REHEARSAL_READS_DEFAULT`], or `LATEXML_REHEARSAL_READ_BUDGET` (0: none).
@@ -75,7 +78,23 @@ fn reset_rehearsal_budget() {
   let reads = if reads == 0 { usize::MAX >> 2 } else { reads };
   RUN_READS.set(reads);
   READS_LEFT.set(reads.saturating_mul(REHEARSALS_PER_CONVERSION));
+  CHECK_READS_LEFT.set(reads);
   LEFT_OUT.set(0);
+}
+
+/// Run `rehearsals` that read for the frontmatter content check alone (`shadow::read_at_flush`'s calls a block's own
+/// expansion made, `ApiCall::inside_events`) from the check's own allowance, one rehearsal's reads ([`RUN_READS`]) for
+/// the conversion, never from the reads the output's rehearsals may make: a check never moves what is written (a later
+/// call's or a later flush's block over budget for it: revtex's `\collaboration{…}` after an `\author`, its block's own
+/// call, read before the next author's `\affiliation`, which lost its rehearsal). One it gives up on is in no budget
+/// Warning: nothing written depends on it, and the check counts that call by its content's text (`ApiCall::unread`).
+pub(in crate::base_utilities) fn for_the_check<R>(rehearsals: impl FnOnce() -> R) -> R {
+  let left_out = LEFT_OUT.get();
+  READS_LEFT.set(CHECK_READS_LEFT.replace(READS_LEFT.get()));
+  let read = rehearsals();
+  CHECK_READS_LEFT.set(READS_LEFT.replace(CHECK_READS_LEFT.get()));
+  LEFT_OUT.set(left_out);
+  read
 }
 
 /// How many tokens the next rehearsal may read: a block's text may loop where nothing prints it (a first `\author` a second
@@ -86,16 +105,29 @@ pub(in crate::base_utilities) fn rehearsal_budget() -> Option<usize> {
   (left != 0).then(|| left.min(RUN_READS.get()))
 }
 
-/// The Warning that says what no rehearsal read, when the document closes: its creators are read as they print, not from a
-/// reading of the block (`SkipReason::OverBudget`).
+/// The Warning that says what no rehearsal read, when the document closes (`SkipReason::OverBudget`): with the emitter off
+/// its creators are read as they print, not from a reading of the block; under `LATEXML_FM_EMIT` an author block among
+/// them is written whole (Perl's whole-block creator, `writer::writer_stays_out`) and any other call's words are not
+/// written — under `=2` the content check counts them (`resolver::placed::content_check`, `ApiCall::unread`).
 pub(in crate::base_utilities) fn rehearsal_budget_warning() {
   let left_out = LEFT_OUT.replace(0);
   if left_out > 0 {
+    let read = match fm_emit_mode() {
+      0 => "they are read as they print",
+      1 => {
+        "an author block among them is written whole, as Perl's whole-block creator, and any other call's words are not \
+         written"
+      },
+      _ => {
+        "an author block among them is written whole, as Perl's whole-block creator, and any other call's words are not \
+         written, the frontmatter content check counting them"
+      },
+    };
     Warn!(
       "frontmatter",
       "rehearsal_budget",
       s!(
-        "The rehearsal gave up on {left_out} frontmatter call(s) that take more than {} reads to digest, or past the conversion's {}: they are read as they print",
+        "The rehearsal gave up on {left_out} frontmatter call(s) that take more than {} reads to digest, or past the conversion's {}: {read}",
         RUN_READS.get(),
         RUN_READS.get().saturating_mul(REHEARSALS_PER_CONVERSION)
       )
@@ -479,6 +511,10 @@ pub(in crate::base_utilities) enum Rehearsal<R> {
     environments: Vec<EnvironmentStep>,
     /// the creator calls its own expansion made, which no box says the keyvals of ([`FieldCreator`])
     creators:     Vec<FieldCreator>,
+    /// whether the run left a group open — its frames not back where they started, the mode it switched to not ended (an
+    /// `\end{tabular}\begin{tabular}{c}` juggle in the line, 1401.6981): what it digested past that point is in no box of
+    /// the list, so no event says it, and the content check reads the block's content too (`resolver::placed::content_check`)
+    left_open:    bool,
   },
   /// No rehearsal was made or kept, and why: no journal could open (one is already open), its assignments could not be
   /// undone, or it ended in a Fatal error of its own (discarded with it).
@@ -575,6 +611,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
   });
   // (off before anything else reads: closing what the run left open is no part of it)
   let budget = budget.end();
+  let left_open = get_frame_depth() > depth;
   READS_LEFT.set(READS_LEFT.get().saturating_sub(budget.reads));
   if budget.over {
     set_if_count(if_count_before);
@@ -682,6 +719,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
       held,
       environments: notes.environments,
       creators: notes.creators,
+      left_open,
     },
     _ => Rehearsal::Skipped(SkipReason::NotUndone),
   })

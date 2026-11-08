@@ -2052,6 +2052,8 @@ mod tests {
         content:        Tokens::new(Vec::new()),
         events:         Vec::new(),
         rehearsed:      true,
+        unread:         None,
+        inside_events:  Box::default(),
         cleared:        false,
         errors:         0,
         command:        None,

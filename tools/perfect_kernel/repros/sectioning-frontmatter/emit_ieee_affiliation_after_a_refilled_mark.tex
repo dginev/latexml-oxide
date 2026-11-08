@@ -1,0 +1,24 @@
+% mechanism: the gullet's input mark (`gullet::input_mark`, `input_unread_since`): an API call is the author block's own
+%   (`inside`) only while none of the input the block's mark held was read; IEEEtran's `\IEEEauthorblockN{…}⏎` line-end
+%   space was read with `\IEEEauthorblockA` and its argument, and the affiliation lines' expansion, longer, put another
+%   space at the mark's last slot, which a one-token test read as unread: the affiliation calls were recorded inside the
+%   block, never read, and dropped by the emitter under `LATEXML_FM_EMIT=2` with no Warning
+% witness: 2401.11731 ("University of Nebraska Lincoln, United States", "Nokia Bell Labs, Stuttgart, Germany"),
+%   1801.03314 ("School of Computer Science and Engineering, Beihang University, Beijing, China" on 4 of 5 authors);
+%   RC1's root cause (agent_reports/2026-11-08_RC1_report.md); the line-2 text's spaces put a space at the slot
+% oracle:  pdflatex 0 errors; "Ann Able∗ , Bob Baker†", "∗ Univ Alpha", "†a b c … z", "‡ Univ Line3"
+% engines: perl: 0 errors, the affiliations one blob (IEEEtran.cls.ltxml:145); rust off: Ann Able has "Univ Alpha";
+%   rust =2 (int149a): 0 errors, 0 warnings, Ann Able has no affiliation
+% expect:  =2 as off: Ann Able's creator holds the affiliation "Univ Alpha", 0 errors, 0 warnings
+% status:  RED (int149a) -> GREEN (perfect_kernel_batchrc1::an_affiliation_after_a_refilled_mark_is_read)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ Alpha\\
+\IEEEauthorrefmark{2}a b c d e f g h i j k l m n o p q r s t u v w x y z\\
+\IEEEauthorrefmark{3}Univ Line3}}
+\maketitle
+Text.
+\end{document}

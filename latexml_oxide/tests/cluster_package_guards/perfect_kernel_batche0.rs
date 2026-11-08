@@ -1031,7 +1031,12 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("inst_support_sty.rs", 1),
   ("interspeech_cls.rs", 29),
   ("l_aa_cls.rs", 13),
-  ("ledger", 24),
+  // (RC1, 24 -> 26: `ledger::content_text`, the text of a call the rehearsal gave up on or no call recorded, read at the API
+  // boundary that records its content so the content check counts what TeX printed of it, a count and no decision; the
+  // check itself reads text alone, `resolver/` unchanged; RC1r2, 26 -> 32: its words parted as an ink's, by catcodes and a
+  // control sequence's length — a control symbol or a group inside a word parts nothing, `Universit\"at` one word, not
+  // `Universit at` (review revRC1 finding 3) — no name spelled, a count and no decision)
+  ("ledger", 32),
   ("llncs_cls.rs", 32),
   ("osa_journal_sty.rs", 77),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the owner logic, 938 = 924 + 14; none added)
