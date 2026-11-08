@@ -1,0 +1,17 @@
+% mechanism: the content check's word matching where a block's rehearsal left a group open: a content-text word read
+%            without the accent its block's events print (`muller` for `müller`) is the same ink, matched by its base
+%            letters before the gap is counted (`resolver::placed::reads_as`); the sibling of
+%            author_raw_tabular_juggle_counted
+% witness: 1401.6981 (the sig-alternate juggle's shape); synthetic, review revG2 finding 1 (probe j1)
+% oracle:  pdflatex: 0 errors; "A Müller Dept"
+% engines: rust FS1 `=2`: E=0, one content-check Warning `c Dept Muller tabular` ("Muller" a false count)
+% expect:  "A Müller" kept; at `=2` one content-check Warning, `c Dept tabular`
+% status:  RED (FS1) -> GREEN (perfect_kernel_batchfs1::an_open_group_rehearsals_word_matching, RC1e)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{A M\"uller \end{tabular}\begin{tabular}{c} Dept}
+\maketitle
+Text.
+\end{document}

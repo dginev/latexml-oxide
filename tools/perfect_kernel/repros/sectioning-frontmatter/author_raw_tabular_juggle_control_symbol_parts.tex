@@ -1,0 +1,18 @@
+% mechanism: the content text's word rule (`ledger::content_text`): a control sequence inside a word reads on past a
+%            group's end or a one-letter control word (`Bras{\'\i}lia`, its letter's catcode, no name spelled), never past
+%            a control symbol: `Smith\,\\Univ` is two words, as pdflatex prints them on two lines
+% witness: 1401.6981 (the sig-alternate juggle's shape); synthetic, review revG2 finding 3 (probe j9)
+% oracle:  pdflatex: 0 errors; "A One", "Brasília Naïve Pîle Smith", "Univ"
+% engines: rust FS1 `=2`: E=0, one content-check Warning `Braslia c Nave Ple SmithUniv tabular` ("SmithUniv" one
+%          word for two; "Braslia", "Nave", "Ple" false counts)
+% expect:  the name "A One Brasília Naïve Pîle Smith" kept; at `=2` one content-check Warning, `c tabular Univ` ("Smith"
+%          is placed, "Univ" lost)
+% status:  RED (FS1) -> GREEN (perfect_kernel_batchfs1::an_open_group_rehearsals_word_matching, RC1e)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{A One \end{tabular}\begin{tabular}{c} Bras{\'\i}lia Na\"{\i}ve P\^{\i}le Smith\,\\Univ}
+\maketitle
+Text.
+\end{document}

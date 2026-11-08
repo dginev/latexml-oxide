@@ -250,8 +250,26 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
         if let Some(text) = unread {
           let mut content = Tally::default();
           content.add(text, 1);
+          // (a content word the block prints, as its own or as the word it reads without accents or a dotless letter —
+          // `muller` for `müller`, `fsica` for `física` ([`reads_as`]) —, each print taken once)
+          let mut taken: BTreeMap<String, usize> = BTreeMap::new();
           for (word, (n, spelled)) in content.words {
-            let more = n.saturating_sub(print.word(&word));
+            let mut same: Vec<(&String, usize)> = print
+              .words
+              .iter()
+              .filter(|(other, _)| reads_as(&word, other))
+              .map(|(other, (m, _))| (other, *m))
+              .collect();
+            same.sort_by_key(|(other, _)| **other != word);
+            let mut held = 0;
+            for (other, m) in same {
+              let take = m
+                .saturating_sub(taken.get(other).copied().unwrap_or(0))
+                .min(n - held);
+              *taken.entry(other.clone()).or_default() += take;
+              held += take;
+            }
+            let more = n - held;
             for tally in [&mut printed, &mut *print] {
               tally
                 .words
@@ -551,8 +569,9 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
       parts.iter().for_each(|part| held.add_word(part, n));
     }
   }
-  // (a word one side reads without the accents the other prints — the text of a call no rehearsal read, which reads none
-  // (`ledger::content_text`), against its placed copy, `universitat` and `universität` —: the same ink, as a glued word)
+  // (a word one side reads without the accents or the dotless letters the other prints — the text of a call no rehearsal
+  // read, which reads none (`ledger::content_text`), against its placed copy, `universitat` and `universität`, `fsica` and
+  // `física` ([`reads_as`]) —: the same ink, as a glued word)
   let gaps: Vec<(String, usize)> = printed
     .words
     .iter()
@@ -563,7 +582,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
     let accented: Vec<String> = shared
       .words
       .keys()
-      .filter(|other| **other != word && base_letters(other) == word)
+      .filter(|other| **other != word && reads_as(&word, other))
       .cloned()
       .collect();
     for other in accented {
@@ -605,6 +624,22 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
     }
   }
   check
+}
+
+/// Whether `word`, a content text's (`ledger::content_text`: its accents and dotless letters unread, `F\'{\i}sica` read
+/// `fsica`), reads the word `other` an ink prints (`física`): `other`'s base letters ([`base_letters`]), an `i` or a `j`
+/// dropped from them where a dotless `\i`/`\j` printed one. The one test both content-text reconciles share.
+fn reads_as(word: &str, other: &str) -> bool {
+  let word = base_letters(word);
+  let mut word = word.chars().peekable();
+  for c in base_letters(other).chars() {
+    if word.peek() == Some(&c) {
+      word.next();
+    } else if !matches!(c, 'i' | 'j' | 'ȷ') {
+      return false;
+    }
+  }
+  word.next().is_none()
 }
 
 /// The texts the inks print, each block's and call's (by its ledger index) in order, by their words ([`ink_words`], lowercased,
