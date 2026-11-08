@@ -153,13 +153,13 @@ pub(in crate::base_utilities) fn check_placed_content(document: &mut Document) {
   }
   let front = dom::read(document);
   let mut placed = Placed::default();
+  // (a link's target, which an ink may print: an ORCID's id behind its logo, 2607.00684; each target once, a shared
+  // entry's link under every holder one print)
+  let mut targets = BTreeSet::new();
   for (holder, creator) in front.creators.iter().chain(&front.nameless).enumerate() {
-    // (a link's target, which an ink may print: an ORCID's id behind its logo, 2607.00684)
     let mut links = Vec::new();
     dom::descendants(&creator.node, "ltx:ref", &mut links);
-    placed
-      .beside
-      .extend(links.iter().filter_map(|link| link.get_attribute("href")));
+    targets.extend(links.iter().filter_map(|link| link.get_attribute("href")));
     if !creator.name.trim().is_empty() {
       // (its words parted at every layout part, as the block's lines print them: a block written whole, 1908.02923; read again
       // only where a layout part holds them)
@@ -177,6 +177,7 @@ pub(in crate::base_utilities) fn check_placed_content(document: &mut Document) {
         holder,
         kind: PlacedKind::Name,
         text,
+        label: None,
       });
     }
     // (what a personname holds besides its notes, an ORCID link, its name's text holds)
@@ -185,20 +186,21 @@ pub(in crate::base_utilities) fn check_placed_content(document: &mut Document) {
       .iter()
       .filter(|item| item.movable || item.kind == dom::Kind::Note)
     {
-      if let Some(label) = item.node.get_attribute("name") {
-        placed.beside.push(label);
-      }
+      // (one shared item is one kind's under its text: a note on one creator and an affiliation on another printing the same
+      // words are two, each printed)
       let kind = match &item.kind {
         dom::Kind::Contact(role) if role == "email" => PlacedKind::Email(item.key.clone()),
-        _ => PlacedKind::Item(item.key.clone()),
+        kind => PlacedKind::Item(s!("{kind:?}|{}", item.key)),
       };
       placed.items.push(PlacedItem {
         holder,
         kind,
         text: item.text.clone(),
+        label: item.node.get_attribute("name"),
       });
     }
   }
+  placed.beside.extend(targets);
   // (a creator call's note relocated to the title, elsarticle's `\tnotetext[t1]{…}` labelled `tnote:t1`, 1611.08809)
   for note in document.findnodes("//ltx:pubnote | //ltx:title//ltx:note", None) {
     placed.beside.push(dom::text_without_marks(&note));
@@ -207,11 +209,11 @@ pub(in crate::base_utilities) fn check_placed_content(document: &mut Document) {
   for (words, what) in [
     (
       &check.lost,
-      "print that the placed frontmatter holds nowhere",
+      "words the author blocks print are missing from the placed frontmatter",
     ),
     (
       &check.excess,
-      "the placed frontmatter holds more often than they print",
+      "words or addresses appear in the placed frontmatter more often than the author blocks print them",
     ),
   ] {
     if !words.is_empty() {
@@ -219,7 +221,8 @@ pub(in crate::base_utilities) fn check_placed_content(document: &mut Document) {
         "unexpected",
         "frontmatter",
         s!(
-          "The frontmatter's content check: words its author blocks and calls {what} ({}); they are counted",
+          "Frontmatter content check: {} {what}: {}.",
+          words.len(),
           words.join(" ")
         )
       );

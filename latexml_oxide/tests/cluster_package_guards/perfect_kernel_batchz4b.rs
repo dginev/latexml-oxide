@@ -151,7 +151,10 @@ fn a_block_losing_other_ink_keeps_its_reading() {
     );
     assert_eq!(
       log
-        .matches("the placed frontmatter holds more often than they print (domain email)")
+        .matches(
+          "Frontmatter content check: 2 words or addresses appear in the placed frontmatter more often than the author \
+           blocks print them: domain email."
+        )
         .count(),
       placed,
       "{log}"

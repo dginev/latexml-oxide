@@ -608,7 +608,8 @@ fn option_value(options: &str, key: &str) -> Option<String> {
 /// it is what it prints: an `\href`'s text, never its target (`\email{\href{mailto:ann@a.org}{ann@a.org}}` printed one
 /// address, read twice from the target and the text — two contacts written for one print: aa 2210.16066, 1907.11241,
 /// 2007.06573, 2103.15844, llncs 2405.04152, 2603.13900; `\href{mailto:ann@a.org}{Ann}` prints no address), a `\url`'s
-/// argument (review rev92c B1).
+/// argument (review rev92c B1). A separator it holds parts its addresses as a break does (svjour3's `\email{yjansson@kth.se
+/// \and tony@kth.se}`, 2106.06418: no `\andtony@kth.se`, review revN2).
 fn raw_lines(w: &Whatsit, n: usize) -> String {
   fn walk(d: &Digested, out: &mut String) {
     match d.data() {
@@ -620,7 +621,8 @@ fn raw_lines(w: &Whatsit, n: usize) -> String {
       DigestedData::Whatsit(w) => {
         let w = w.borrow();
         match whatsit_cs(&w).as_str() {
-          "\\lx@fm@obs@break" | "\\lx@fm@obs@par" => out.push(' '),
+          "\\lx@fm@obs@break" | "\\lx@fm@obs@par" | "\\lx@fm@obs@and" | "\\lx@fm@obs@And"
+          | "\\lx@fm@obs@AND" => out.push(' '),
           "\\lx@fm@obs@href" => {
             if let Some(text) = w.get_arg(2) {
               walk(text, out);

@@ -108,12 +108,16 @@ pub(in crate::base_utilities) fn rehearsal_budget_warning() {
 /// family keeps which command it was (`\AND` a new row in NeurIPS's and ICLR's `\author`); `\thanks`, `\footnote` and
 /// `\footnotemark` count the footnote steps they make in LaTeX (`FOOTNOTE_STEPS`), never stepping `\c@footnote`.
 pub(in crate::base_utilities) fn load() -> Result<()> {
-  DefConstructor!("\\lx@fm@obs@and", "");
-  DefConstructor!("\\lx@fm@obs@And", "");
-  DefConstructor!("\\lx@fm@obs@AND", "");
-  DefConstructor!("\\lx@fm@obs@break OptionalMatch:* []", "");
-  // (its own, for the Break to say so; printing as the break it is: a contact's raw argument holding it, 2106.11154's `\\orcid`)
-  DefConstructor!("\\lx@fm@obs@par OptionalMatch:* []", "", alias => "\\lx@fm@obs@break");
+  // (each reverting as the command it is bound for, `alias`: a text made of an argument holding one — an argument read
+  // verbatim, svjour3's `\email{yjansson@kth.se \and tony@kth.se}`, 2106.06418; a link's target, lni's `\orcid`,
+  // 2106.11154, 1401.5951 — keeps its `\and`, `\\` or `\par`, never the rehearsal's name: review revN2)
+  DefConstructor!("\\lx@fm@obs@and", "", alias => "\\and");
+  DefConstructor!("\\lx@fm@obs@And", "", alias => "\\And");
+  DefConstructor!("\\lx@fm@obs@AND", "", alias => "\\AND");
+  DefConstructor!("\\lx@fm@obs@break OptionalMatch:* []", "", alias => "\\\\");
+  // (its own, for the Break to say so; a contact's raw argument holding it reads it as the break it is, `events::raw_lines`:
+  // 2106.11154's `\orcid`)
+  DefConstructor!("\\lx@fm@obs@par OptionalMatch:* []", "", alias => "\\par");
   // `\thanks` and `\footnote` (inside `\maketitle`, `\footnote` is `\thanks`): latex.ltx `\thanks` = `\footnotemark`
   // + the text, a step of the footnote counter unless an optional number is given
   DefMacro!("\\lx@fm@obs@thanks []", sub[(number)] { note_step(T_CS!("\\lx@fm@obs@note"), number) });
@@ -196,10 +200,11 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // `<prefix>:<label>` (S2a.2)
   DefConstructor!("\\lx@fm@obs@request []{}", "");
   DefConstructor!("\\lx@fm@obs@label Semiverbatim", "");
-  DefConstructor!("\\lx@fm@obs@email [] Semiverbatim", "");
+  // (reverting as `\email`, as the `\and` family does: a note's text holding one, `\thanks{\email{…}}`, 1401.5951)
+  DefConstructor!("\\lx@fm@obs@email [] Semiverbatim", "", alias => "\\email");
   // (an e-mail call by the class's binding printing in place, and by no binding's meaning: `ledger::email_meaning`)
-  DefConstructor!("\\lx@fm@obs@email@inplace [] Semiverbatim", "");
-  DefConstructor!("\\lx@fm@obs@email@own [] Semiverbatim", "");
+  DefConstructor!("\\lx@fm@obs@email@inplace [] Semiverbatim", "", alias => "\\email");
+  DefConstructor!("\\lx@fm@obs@email@own [] Semiverbatim", "", alias => "\\email");
   DefConstructor!("\\lx@fm@obs@url Semiverbatim", "");
   DefConstructor!("\\lx@fm@obs@href Semiverbatim {}", "");
   DefConstructor!("\\lx@fm@obs@orcid [] Semiverbatim", "");

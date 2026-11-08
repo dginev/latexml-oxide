@@ -1,0 +1,18 @@
+% mechanism: the content check on the placed output (`resolver::placed`, under `LATEXML_FM_EMIT=2`): every word counts, a
+%   mark excluded by its event, not by its length: a lost one-letter word (an initial, `B`) is counted
+% witness: review revN2 finding 5 (`counted()` by length: a lost initial, a one-letter word, a two-digit number never
+%   counted); the domain shape 1605.03019
+% oracle:  pdflatex 0 errors; "Ann Able", "Bob Baker", "IDSIA Lab, Lugano", "B, 6928 Manno, Switzerland {ann, bob}@b.ch"
+% engines: rust int146b, the switch on: `B` placed nowhere, 1 warning (the emitter's note), no count
+% expect:  the switch on: 0 errors, 2 warnings (the note of `6928 Manno Switzerland`; the content check's lost `B`)
+% status:  RED (int146b) -> GREEN (perfect_kernel_batchn2r2::a_lost_letter_is_counted)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker\\
+IDSIA Lab, Lugano\\
+\small{B, 6928 Manno, Switzerland {\{ann, bob\}@b.ch}}}
+\maketitle
+Body.
+\end{document}
