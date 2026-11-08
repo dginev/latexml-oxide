@@ -1884,7 +1884,11 @@ impl Resolver {
   /// notes the author block kinds go to the block once, ruling E; an address inside a line of other words is read here
   /// alone, SYNC 100b's residual). Each e-mail is one per print and carrier (`owner:entry-address`, a change tag: the
   /// writer cuts today's entry, `writer::plan`).
-  pub(super) fn take_out_entry_addresses(&mut self) {
+  ///
+  /// Under the emitter (`=2`), the label the Kind step for an address line reads before a run goes with it, the take-out's
+  /// own ([`take_labels`]): the entry's text it leaves and its e-mails' names are the reading's, which the emitter writes
+  /// (`writer::address_cut`, OXIDIZED_DESIGN_DIVERGENCES #980 P1c).
+  pub(super) fn take_out_entry_addresses(&mut self, inputs: &[Input]) {
     let live = self.live();
     let names: Vec<String> = self.out.creators.iter().map(|c| c.name.clone()).collect();
     let spells = |local: &str| {
@@ -2020,22 +2024,39 @@ impl Resolver {
       if kept_runs.is_empty() {
         continue;
       }
-      let stripped = strip_address_runs(&lined, &kept_runs);
+      let mut cuts = address_cuts(&lined, &kept_runs);
+      let mut taken_runs: Vec<TakenRun> = kept_runs
+        .iter()
+        .map(|run| TakenRun {
+          bytes:     (run.start, run.end),
+          addresses: run.addresses.clone(),
+          label:     run.label.clone(),
+        })
+        .collect();
+      if self.emitting
+        && let Some(source) = source
+        && take_labels(
+          &lined,
+          &mut taken_runs,
+          &mut cuts,
+          &spells,
+          entry_legend(inputs, source),
+        )
+      {
+        DebugFeature!(
+          "frontmatter",
+          "FRONT reading: an entry's address label goes with its run: {lined:?}"
+        );
+      }
+      let stripped = strip_cuts(&lined, &cuts);
       let keeps_words = stripped.chars().any(char::is_alphanumeric);
       taken_all.push(Taken {
         source,
         original: text.clone(),
         stripped: stripped.clone(),
         holders: holders.iter().map(|&h| (h.0, h.1, assoc_of(h))).collect(),
-        cuts: address_cuts(&lined, &kept_runs),
-        runs: kept_runs
-          .iter()
-          .map(|run| TakenRun {
-            bytes:     (run.start, run.end),
-            addresses: run.addresses.clone(),
-            label:     run.label.clone(),
-          })
-          .collect(),
+        cuts,
+        runs: taken_runs,
         lined: lined.clone(),
       });
       for &(c, i) in &holders {
@@ -2087,6 +2108,41 @@ impl Resolver {
     }
     self.out.taken = taken_all;
   }
+}
+
+/// Whether the entry at `source` is a legend ([`take_labels`]): the label its binding prints before it (authblk's `\affil[*]`,
+/// [`label_prints`]) or a mark opening it ([`events::opens_with_mark`]) — a note's body, a block entry's events, an API
+/// call's but the contacts its text reads apart (an `\email`, an ORCID: `Resolver::api`).
+fn entry_legend(inputs: &[Input], (index, span): Source) -> bool {
+  inputs.iter().any(|input| match input {
+    Input::Block { index: at, events, .. } if *at == index && span.is_some() => {
+      match events
+        .iter()
+        .find(|e| e.kind == EventKind::Note && e.span == span)
+      {
+        Some(note) => events::opens_with_mark(&note.inner.iter().collect::<Vec<_>>()),
+        None => {
+          let within: Vec<&Event> = events
+            .iter()
+            .filter(|e| {
+              e.span
+                .zip(span)
+                .is_some_and(|(e, s)| e.0 >= s.0 && e.1 <= s.1)
+            })
+            .collect();
+          events::opens_with_mark(&within)
+        },
+      }
+    },
+    Input::Api { index: at, attrs, events, .. } if *at == index && span.is_none() => {
+      let apart = |e: &Event| {
+        e.kind == EventKind::Contact && matches!(e.role.as_deref(), Some("email" | "orcid"))
+      };
+      label_prints(attrs)
+        || events::opens_with_mark(&events.iter().filter(|e| !apart(e)).collect::<Vec<_>>())
+    },
+    _ => false,
+  })
 }
 
 /// An e-mail address the post-pass placed ([`Resolver::place_emails_left`]): its contact (the rule its chain wrote

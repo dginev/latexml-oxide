@@ -32659,19 +32659,23 @@ e-mail: a@x}`, 2008.08137; each of `\texttt{a@x, b@y, c@z,}`, 2608.14026; a `\th
 2405.06709; `\begin{small}…a@x\end{small}`, 1312.5468), a list's written-out address its text in that font (RP1's
 `EntryCut::mail`; one a contact command prints, whose call the item would mute: 1109.3369); row 57, the e-mail named by the
 run's label (`E-mail: `, 2311.02475), and the label the Kind step for an address line reads before the run
-(`insert::address_line_cut`, RT1 rows 64-67, 72, `address_cut::labelled`) goes with it where the reading keeps its words and
+(`insert::address_line_cut`, RT1 rows 64-67, 72) goes with it — decided in the reading's take-out under `=2`
+(`Resolver::take_out_entry_addresses` → `resolver::labels::take_labels`, P1c: the entry's text the reading keeps and the
+e-mails' names are the take-out's, the emitter only writes them) — where the reading keeps its words and
 nothing of the addresses: the whole line and its break where only marks and separators stand before the label, else from the
 words' end, the e-mail named by it (`Corresponding author: `, the role-note step's correspondence note of the address's owner;
 `Correspondence: `, `Contact e-mail: `) — the label's words no longer an affiliation, of another author for authblk's unmarked
 `\affil[ ]{Corresponding author: \textit{a@x}}` (2305.02090, 2404.05566; elsarticle's `\address[*]`, whose label its
 binding does not print, 2107.10505; 1510.03749, 1807.09187, 2008.08137); a legend's (its binding prints its label, authblk's `\affil[*]`, or a mark opens its
 text) stays for the Kind step for a legend unless an e-mail word is among them (row 66: 1812.03816 its carriers' note marked
-`*`; 2004.06340, 2012.13817's `corresponding author, email …` the e-mail's label); a label no balanced run takes with its line
-leaves the reading's own cut (`\\ \textit{*Corresponding author: a@x, b@x}}`, 2405.13751); row 58, the e-mails the reading's,
+`*`; 2004.06340, 2012.13817's `corresponding author, email …` the e-mail's label); a separator a cut takes at an end gives
+back as many of the tokens printing nothing there as a balanced run needs (the brace closing the kept ink's group before a
+whole line's break, `\textit{… China}\\ \textit{*Corresponding author: a@x, b@x}}`, 2405.13751); row 58, the e-mails the reading's,
 written as `\lx@add@contact` items before the cut entry. Row 57a's whole-paper decline is per entry: a cut that can't be made is
 given back whole to the Kind steps, as before. The entry is its whole as it printed, written by its own path (`item_call`) with
 the runs taken out of its tokens (`Field::content_cut`: the block path's `event_run`, a note's argument, an API call's command
-argument; an entry whose lines no balanced run holds line by line, each cut inside one line's run, `lines_run`: 1312.5468);
+argument; an entry whose lines no balanced run holds line by line, each cut inside one line's run, `lines_run`: 1312.5468 —
+or a whole line's, which goes with one break beside it, the other breaks kept: 2604.06805, 2509.07459, P1c);
 a path that doesn't cut writes its text, counted (`an entry's addresses cut`). The checks read every entry whole
 (RP1's: 1610.05419). Witnesses fixed (`=2` creators = off): 2011.02560, 2104.05078, 2204.02371, 2406.02913, 2410.06013,
 2508.09777, astro-ph0610446, 1912.07315, 2106.07466, 2503.07161, astro-ph0412523, cond-mat0610708, 1106.3045, 1203.0253,
@@ -32681,7 +32685,13 @@ cut). The label before an address (P1br2, review revP1b B1): P1b's cut ran befor
 LO4 `=2` read the entry given back whole and took `Corresponding author: a@x` whole into the e-mail's name; P1b left the
 label an affiliation. The `rekeyed`/`_labelprints` cause first named explains only the marked `\affil[*]` shape, which RP2's
 `_printedlabel` (P2) already gives its carriers' note; the unmarked `\affil[ ]` (2305.02090, 2404.05566) never reaches the Kind
-step for a legend (it prints no mark: ruling 2026-11-04) and was the Kind step for an address line's. Off: byte-identical.
-Guard `perfect_kernel_batchp1e`.
+step for a legend (it prints no mark: ruling 2026-11-04) and was the Kind step for an address line's. P1c (review revP1br2
+S2): P1br2 decided that label in the emitter and rewrote the reading's items by text equality and a rule-name suffix; the
+take-out now decides it (one pass), its legend read off the entry's own input (`entry_legend`: a note's body or the block
+entry's events opened by a mark, an API call's printed label `_labelprints` or its events) — output equal on every witness
+but the fixes named above. Open (RED, no guard): an icon or a rule inside the link or wrapper of a cut address
+(`\href{mailto:a@x}{\rule{1ex}{1ex}\,a@x}`, review revP1br2 S3, repro `emit_a_cut_never_takes_an_icon`) goes with the e-mail;
+the switch off cuts the text alone, which needs the link's characters' own positions (the lexer reads `\href`'s text as its
+argument's ink). Off: byte-identical. Guards `perfect_kernel_batchp1e`, `perfect_kernel_batchp1c`.
 
 Guards `perfect_kernel_batchz4`.

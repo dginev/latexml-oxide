@@ -1147,7 +1147,7 @@ pub fn resolve_with(
   resolver.respell_emails();
   resolver.held_before_creators();
   resolver.sole_author_takes_the_block();
-  resolver.take_out_entry_addresses();
+  resolver.take_out_entry_addresses(inputs);
   let mut out = resolver.out;
   out.continued = Some(
     resolver
@@ -1899,5 +1899,49 @@ mod tests {
     );
     assert_eq!(listed_addresses("Emails: {a,b}@x.org", &none), None);
     assert_eq!(listed_addresses("ann@x.org", &none), None);
+  }
+
+  /// P1c (review revP1br2 S2): the label the Kind step for an address line reads before a run the take-out takes goes with
+  /// it in the reading (`take_labels`, RT1 rows 64-67, 72), the entry's text the reading keeps and the e-mails' name its own
+  /// — a label line whole with the break before it (2008.08137, 1807.09187), none after words on its line, a legend's
+  /// words with no e-mail word left for the Kind step for a legend (row 84: 1812.03816), an unmarked one's taken
+  /// (2305.02090, 2404.05566).
+  #[test]
+  fn take_labels_takes_the_label_before_a_run() {
+    let none = |_: &str| false;
+    let take = |lined: &str, legend: bool| -> (String, Vec<Option<String>>) {
+      let runs = address_runs(lined, &none);
+      let mut cuts = address_cuts(lined, &runs);
+      let mut taken: Vec<TakenRun> = runs
+        .iter()
+        .map(|run| TakenRun {
+          bytes:     (run.start, run.end),
+          addresses: run.addresses.clone(),
+          label:     run.label.clone(),
+        })
+        .collect();
+      take_labels(lined, &mut taken, &mut cuts, &none, legend);
+      (
+        strip_cuts(lined, &cuts),
+        taken.into_iter().map(|run| run.label).collect(),
+      )
+    };
+    assert_eq!(
+      take("Univ Z\nCorrespondence: cy@z.org", false),
+      ("Univ Z".into(), vec![Some("Correspondence:".into())])
+    );
+    // (words before the label on its line: the Kind step declines the line, as the switch off — "Contact" stays)
+    assert_eq!(
+      take("Univ Z, Contact e-mail: cy@z.org", false),
+      ("Univ Z, Contact".into(), vec![Some("e-mail:".into())])
+    );
+    assert_eq!(
+      take("Corresponding author: ann@x.org", true),
+      ("Corresponding author".into(), vec![None])
+    );
+    assert_eq!(
+      take("Corresponding author: ann@x.org", false),
+      ("".into(), vec![Some("Corresponding author:".into())])
+    );
   }
 }
