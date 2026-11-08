@@ -2364,19 +2364,16 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   in_perl_order(&mut items);
   // (the labels: an item's own on every new owner; an owner made at an earlier flush holds its own copy under its Perl
   // `author:N`, its annotations long digested)
-  let is_fresh: BTreeSet<usize> = fresh.iter().copied().collect();
+  // (by creator index, read once per owner of every item: no set lookup, no list per item)
+  let mut is_fresh = vec![false; resolved.creators.len()];
+  for &i in &fresh {
+    is_fresh[i] = true;
+  }
+  let fresh_owner = |owner: &Owner| matches!(owner, Owner::Creator(i) if is_fresh[*i]);
   let mut annotations: Vec<Vec<String>> = vec![Vec::new(); resolved.creators.len()];
   let mut calls: Vec<(String, &Item)> = Vec::new();
   let mut block_pubnotes: Vec<Vec<Token>> = Vec::new();
   for (n, item) in items.iter().enumerate() {
-    let new: Vec<usize> = item
-      .owners
-      .iter()
-      .filter_map(|owner| match owner {
-        Owner::Creator(i) if is_fresh.contains(i) => Some(*i),
-        _ => None,
-      })
-      .collect();
     if let Some(note) = block_pubnote(item) {
       block_pubnotes.push(note);
       continue;
@@ -2386,15 +2383,17 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     }
     for owner in &item.owners {
       if let Owner::Creator(i) = owner
-        && !is_fresh.contains(i)
+        && !is_fresh[*i]
       {
         calls.push((owners[*i].clone(), item));
       }
     }
-    if !new.is_empty() {
+    if item.owners.iter().any(fresh_owner) {
       let label = s!("item:{}:{n}", lookup_int(FRONTMATTER_FLUSHES));
-      for &i in &new {
-        annotations[i].push(label.clone());
+      for owner in item.owners.iter().filter(|owner| fresh_owner(owner)) {
+        if let Owner::Creator(i) = owner {
+          annotations[*i].push(label.clone());
+        }
       }
       calls.push((label, item));
     }
