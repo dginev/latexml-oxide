@@ -1402,11 +1402,13 @@ pub(in crate::base_utilities) fn trailing_alignment_environment_as_lines(tokens:
 /// ([`author_and_splits`]): the ACM SIG template's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}` in `\author`
 /// (sig-alternate.cls:283's `\alignauthor` juggles the same way) prints a line break between the names above and the
 /// affiliation below (1704.03168, 1301.5612, 1401.6981, 0712.1016). Read by its meaning, whatever its name: the
-/// rehearsal binds it to the row break it is (`observer::rehearsal`). A macro that only closes one
+/// rehearsal binds it to the row break it is (`observer::rehearsal`). It reopens one after what it prints between
+/// (1301.5612's `\def\sharedaffiliation{\end{tabular}\newline\begin{tabular}{c}}`); a macro that only closes one
 /// (`\newcommand{\etab}{\end{tabular}}`, closing a tabular the block opened itself) is no juggle.
 pub(in crate::base_utilities) fn is_tabular_juggle(t: &Token) -> bool {
-  tabular_close_rest(t)
-    .is_some_and(|rest| past_environment(&rest, T_CS!("\\begin"), "tabular").is_some())
+  tabular_close_rest(t).is_some_and(|rest| {
+    (0..rest.len()).any(|at| past_environment(&rest[at..], T_CS!("\\begin"), "tabular").is_some())
+  })
 }
 
 /// The old driver's looser test, kept as it was until the switch flips (the switch-off output stays as it was): a

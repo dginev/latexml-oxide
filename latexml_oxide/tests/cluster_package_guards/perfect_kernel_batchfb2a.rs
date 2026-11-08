@@ -86,6 +86,12 @@ fn a_tabular_juggle_is_a_row_break() {
   );
   assert!(two[0].contains(&affiliation("Dept")), "{}", two[0]);
   assert_eq!(two, off);
+  // (a juggle printing a break between its close and its reopen, 1301.5612's `\end{tabular}\newline\begin{tabular}{c}`)
+  let tex = repro!("author_shared_affiliation_line");
+  let newline = tex.replacen("\\end{tabular}\n", "\\end{tabular}\\newline\n", 1);
+  assert_ne!(newline, tex);
+  let (_, two_newline) = both(&newline);
+  assert_eq!(two_newline, two);
 }
 
 /// An alignment environment opening after the names and ending the block is lines under them, each its own and every
