@@ -39,7 +39,27 @@ impl Resolver {
       Chain::Line => rule,
       Chain::DocumentNote { .. } => s!("api:document-note {rule}"),
     };
+    // (with the emitter's switch on (`emitting`; the switch-off output stays as it was, brief LO1) by the address reader,
+    // which reads a list of local parts sharing one domain where it opens the line or a part spells an author: `{\it
+    // pzou94, ozel, suresh@gwu.edu}` under three names, 2003.14069 — two of them nameless notes; spelling assigns them,
+    // position where it fails, below)
     let addresses = addresses_in(text);
+    let addresses = if self.emitting {
+      let spells = |local: &str| self.spelled(&s!("{local}@x.org"), candidates).is_some();
+      let read: Vec<String> = address_runs(text, &spells)
+        .into_iter()
+        .flat_map(|run| run.addresses)
+        .collect();
+      // (where it reads every address the plain reading does and more; a tagged address it leaves where it prints,
+      // `ann@a.org (Ann)`, is one all the same)
+      if read.len() > addresses.len() && addresses.iter().all(|a| read.contains(a)) {
+        read
+      } else {
+        addresses
+      }
+    } else {
+      addresses
+    };
     if addresses.is_empty() {
       let (owner, rule) = match candidates {
         [only] => (Some(*only), "owner:only-author"),
@@ -221,6 +241,7 @@ impl Resolver {
         self.entry_column.insert((index, span.0), line.column);
       }
       let unmarked_above = unmarked_before.take();
+      let unmarked_line_above = unmarked_above.is_some();
       let continued = open_rows.contains(&line.column);
       open_rows.retain(|c| *c != line.column);
       // (the line before in the column was labelled entries: an unmarked name under them is a new row's — SYNC row 46,
@@ -564,7 +585,61 @@ impl Resolver {
             .filter(|w| !w.contains('@'))
             .collect::<Vec<_>>()
             .join(" ");
-          if !addresses_in(&text).is_empty() && (only_addresses(&text) || !is_institution(&beside))
+          // (an address decides only its own ink: the line's other text, its label word aside, is the item it continues —
+          // the unmarked line above, of its column, ending in a comma — or, under one names row and no column, every
+          // author's of the row, an unmarked line as any, the address taken out of its text by the chain
+          // (`take_out_entry_addresses`), as today's gives the line to them all: `Ann Able and Bob Baker\\ Institute of
+          // Things, Univ.\ A,\\ Dresden, Saxony 01062, Germany (bob.baker@a.org)`, whose city went to Bob alone; 1605.03019's
+          // `\quad`-parted names over `\small{IDSIA, 6928 Manno, Switzerland}{\{adam, samuli, monaldo\}@idsia.ch}`,
+          // whose institute went to no one; 2203.10777)
+          let runs = address_runs(&text, &|_| false);
+          let labels: Vec<String> = runs
+            .iter()
+            .filter_map(|run| run.label.as_deref())
+            .flat_map(printed_words)
+            .map(str::to_lowercase)
+            .collect();
+          // (the address reader's runs out, and any address it leaves where it prints — a tagged one, `ann@a.org (Ann)`)
+          let rest = strip_address_runs(&text, &runs)
+            .split_whitespace()
+            .filter(|w| !w.contains('@'))
+            .collect::<Vec<_>>()
+            .join(" ");
+          let addresses = addresses_in(&text);
+          let other_ink = !reads_as_email_label(&rest)
+            && printed_words(&rest).any(|word| !labels.contains(&word.to_lowercase()));
+          let continues_above = unmarked_line_above
+            && n > 0
+            && lines[n - 1].column == line.column
+            && lines[n - 1]
+              .events
+              .iter()
+              .rev()
+              .find(|e| !matches!(e.kind, EventKind::Layout))
+              .is_some_and(|e| matches!(e.kind, EventKind::Sep(SepKind::Comma)));
+          // (its addresses spelling one author, the line is that author's, its other inks with it: `POC: A. Able
+          // (ann.able@a.org)`, 2110.03506; `ann.able@a.org (corresponding)`, `Written::lost_inks`)
+          let owners: std::collections::BTreeSet<Option<usize>> = addresses
+            .iter()
+            .map(|address| self.spelled(address, &run))
+            .collect();
+          let one_owner = matches!(owners.iter().collect::<Vec<_>>()[..], [Some(_)]);
+          // (nor is a name its own address spells, a name the reading lost, any row's: `Ann Able ann@a.org\\ Bob Baker
+          // bob@b.org`, the block written whole for it, `LostInk::names_fail`)
+          let own_name = addresses
+            .iter()
+            .any(|address| spelled_name(&[rest.as_str()], address).is_some());
+          let one_row =
+            !run.is_empty() && lines.iter().all(|l| l.column == 0) && !after_labelled && !one_owner;
+          // (with the emitter's switch on alone, `emitting`: the switch-off output stays as it was, brief LO1)
+          let row_line = self.emitting
+            && other_ink
+            && !own_name
+            && !only_addresses(&text)
+            && (continues_above || one_row);
+          if !addresses_in(&text).is_empty()
+            && !row_line
+            && (only_addresses(&text) || !is_institution(&beside))
           {
             // (a list of addresses running on over the next lines — the line ending in a comma, each next line addresses
             // alone — is one print: `E-mails: 202010106047@mail.scut.edu.cn, \\ scbingli@scut.edu.cn`, whose second

@@ -122,17 +122,15 @@ pub(super) fn join_ordinals(events: &[Event]) -> Vec<Event> {
 /// The block's events with each link printing a name read as that name. A link to an ORCID record that prints a name is that
 /// name and its ORCID, the link after it (`contact_parts`): `\href{https://orcid.org/0000-0002-9970-3034}{E. L. Gagnon}$^{*,1,2}$,
 /// …`, 2312.16289; orcidlink's `\orcidlinki{José-María Martín-Olalla}{0000-0002-3750-9113}`, 2602.03244; 2301.02927. Any other link
-/// that carries a mark and prints other text than its own target is that text, a Name carrying the link, its span the link's call
-/// (written whole, with it): `\href{http://inspirehep.net/record/1021757}{A.~Cerri}$^{1}$`, 304 of them in 1812.07638 (longtail3k),
-/// whose url contacts were one creator's affiliation under the emitter's switch. A link printing its own target is an address
-/// (`\url{…}`, `\href{mailto:ann@x.org}{ann@x.org}`), one carrying no mark a contact (`\href{…}{project page}`).
+/// that prints other text than its own target and fills a name slot ([`name_slots`]) is that text, a Name carrying the link,
+/// its span the link's call (written whole, with it): `\href{http://inspirehep.net/record/1021757}{A.~Cerri}$^{1}$`, 304 of them in
+/// 1812.07638 (longtail3k), whose url contacts were one creator's affiliation under the emitter's switch; authblk's
+/// `\author[1,2]{\href{kaizheng.wang@ntu.edu.sg}{Kaizheng Wang}\thanks{…}}`, 2602.22747, and an unmarked `\href{…}{Bob Baker}` between
+/// two names' commas, each a nameless creator's url contact before. A link printing its own target is an address (`\url{…}`,
+/// `\href{mailto:ann@x.org}{ann@x.org}`), one sharing its slot with other ink or on a later line carrying nothing a contact
+/// (`Ann Able \\ \href{…}{Project Page}`).
 pub(super) fn link_names(events: &[Event]) -> Vec<Event> {
-  let carries_a_mark = |at: usize| {
-    events[at + 1..]
-      .iter()
-      .find(|e| e.kind != EventKind::Layout)
-      .is_some_and(|next| next.kind == EventKind::Mark && !next.line_first)
-  };
+  let slots = name_slots(events);
   let mut out = Vec::with_capacity(events.len());
   for (at, event) in events.iter().enumerate() {
     let link = event.kind == EventKind::Contact && !event.text.trim().is_empty();
@@ -141,7 +139,7 @@ pub(super) fn link_names(events: &[Event]) -> Vec<Event> {
       || (link
         && !orcid
         && event.role.as_deref() == Some("url")
-        && carries_a_mark(at)
+        && slots[at]
         && !event
           .target
           .as_deref()
@@ -161,6 +159,72 @@ pub(super) fn link_names(events: &[Event]) -> Vec<Event> {
         ..event.clone()
       });
     }
+  }
+  out
+}
+
+/// Per event, whether it is a link filling a name slot: the only ink of the piece between its line's separators (a comma, a
+/// word, a gap, `\and`, an alignment tab, a break, the block's ends) but for the marks and notes a name carries, an inkless
+/// link (a logo) and punctuation, on a line no mark leads (an entry, `$^{1}$\href{…}{Univ A}`, is no name), which is its
+/// column's first line or a names line by its marks: the slot carries a mark or a note after the link, as a later line's
+/// names do (`later_line_is_names`; 1812.07638's `Editors: \\ \href{…}{A.~Cerri}$^{1}$, …`).
+fn name_slots(events: &[Event]) -> Vec<bool> {
+  let mut out = vec![false; events.len()];
+  let line_end = |e: &Event| {
+    matches!(
+      e.kind,
+      EventKind::Break | EventKind::Sep(SepKind::And(_) | SepKind::Column(_))
+    )
+  };
+  let link = |e: &Event| e.kind == EventKind::Contact && !e.text.trim().is_empty();
+  let mut column_first = true;
+  let mut start = 0;
+  while start <= events.len() {
+    let end = events[start..]
+      .iter()
+      .position(line_end)
+      .map_or(events.len(), |p| start + p);
+    let line = &events[start..end];
+    let mark_led = line
+      .iter()
+      .find(|e| {
+        inked(e) && !(e.kind == EventKind::Name && !e.text.chars().any(char::is_alphanumeric))
+      })
+      .is_some_and(|e| e.kind == EventKind::Mark);
+    if !mark_led {
+      let mut from = 0;
+      while from <= line.len() {
+        let to = line[from..]
+          .iter()
+          .position(|e| matches!(e.kind, EventKind::Sep(_)))
+          .map_or(line.len(), |p| from + p);
+        let slot = &line[from..to];
+        let other_ink = |e: &&Event| match e.kind {
+          EventKind::Name => e.text.chars().any(char::is_alphanumeric),
+          EventKind::Contact => link(e),
+          _ => false,
+        };
+        if let [at] = slot
+          .iter()
+          .enumerate()
+          .filter(|(_, e)| other_ink(e))
+          .map(|(i, _)| i)
+          .collect::<Vec<_>>()
+          .as_slice()
+          && link(&slot[*at])
+        {
+          let carries = slot[at + 1..]
+            .iter()
+            .any(|e| (e.kind == EventKind::Mark && !e.line_first) || e.kind == EventKind::Note);
+          out[start + from + at] = column_first || carries;
+        }
+        from = to + 1;
+      }
+    }
+    if let Some(sep) = events.get(end) {
+      column_first = sep.kind != EventKind::Break;
+    }
+    start = end + 1;
   }
   out
 }
@@ -1184,7 +1248,15 @@ impl Resolver {
         EventKind::Name => {
           institution = None;
           after_collaboration = false;
-          let requests = [std::mem::take(&mut waiting), block_requests.to_vec()].concat();
+          // (and a creator call's own `annotations=`, Perl's labels of the creator it makes, which a separate call's
+          // `label=` answers: `\lx@add@creator[role=editor,annotations={ed}]{Bob Baker}` and
+          // `\lx@add@affiliation[label=ed]{Editorial Office}`, given to Ann Able, the block's, before)
+          let own = event
+            .creator_call
+            .and_then(|k| self.call_labels.get(usize::from(k)))
+            .cloned()
+            .unwrap_or_default();
+          let requests = [std::mem::take(&mut waiting), block_requests.to_vec(), own].concat();
           // (a name and the collaboration it speaks for: `Bob Baker for the ATLAS Collaboration`, the name's alone — not a
           // heading before a colon, `JLQCD Collaboration: S.~Aoki$^1$` (hep-lat0212039), which the reading cannot tell
           // from one inside a box today's keeps whole, `\parbox{\textwidth}{\Large{ MAGIC Collaboration: K.~Abe$^{1}$, …}}`

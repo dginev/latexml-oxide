@@ -150,29 +150,8 @@ const NOTE_ROWS: &[NoteRow] = &[
     ],
     &[&["POC: A. Able"], &[], &[]],
   ),
-  // (2203.10777: a line the reading loses under the affiliation it repeats: the ink printing her address a note of hers, cut out; its
-  // other inks go with the line to her, never to a nameless creator: review revN1r2)
-  (
-    "Ann Able\\\\ Institute of Things, Universit\\\"at Dresden,\\\\ Dresden, Saxony 01062, Germany (ann.able@tu-dresden.de)\\\\ and \\\\ Bob \
-     Baker\\\\ Institute of Things, Universit\\\"at Dresden,\\\\ Dresden, Saxony 01062, Germany (bob.baker@tu-dresden.de)",
-    &[
-      &[
-        "Ann Able",
-        "affiliation=Institute of Things, Universität Dresden",
-        "email=ann.able@tu-dresden.de",
-      ],
-      &[
-        "Bob Baker",
-        "affiliation=Institute of Things, Universität Dresden",
-        "email=bob.baker@tu-dresden.de",
-      ],
-    ],
-    &[&["Dresden", "Saxony 01062", "Germany"], &[
-      "Dresden",
-      "Saxony 01062",
-      "Germany",
-    ]],
-  ),
+  // (2203.10777's line under the affiliation it continues, `Institute of Things, Universität Dresden,\\ Dresden, Saxony 01062,
+  // Germany (ann.able@…)`, is that affiliation's holders' since LO1, no note: `perfect_kernel_batchlo1::an_address_decides_only_its_own_ink`)
   // (an ink after the address on its line, `ext. 5`: the line's author's, review revN1r2's `rep/both.tex`)
   (
     "Ann L. Able, Bob Baker, and Cat Cole \\\\ POC: A.\\ Able (ann.able@a.org), ext.\\ 5\\\\ Approved for public release.",
@@ -403,10 +382,11 @@ fn a_lost_name_spells_its_own_address() {
   }
 }
 
-/// A list's local parts printed apart are one run of addresses spelling its authors: a lost part goes to no author the line's other
-/// address spells (`{\it pzou94, ozel, suresh@gwu.edu}` under three names, 2003.14069; 2102.08981, 1901.01753, 1708.00818,
-/// 2307.03645), each named creator's element as it is, with either switch. (The reading loses the parts the base writes as
-/// addresses, `aable@a.org`; they stay the block's note: OXIDIZED_DESIGN_DIVERGENCES #980, open.)
+/// A list's local parts printed apart, sharing one domain and opening their line in a font group, are one run of addresses the address
+/// reader reads (`address_runs`, in `Resolver::place_line_contacts` with the emitter's switch on), each part an author's by spelling
+/// (`{\it pzou94, ozel, suresh@gwu.edu}` under three names, 2003.14069; 2102.08981, 1901.01753, 1708.00818, 2307.03645), each
+/// named creator's element as it is, with either switch. (Until LO1 the reading lost the parts the base writes as addresses,
+/// `aable@a.org`, kept as the block's note in a Warning; repro `emit_a_font_group_of_local_parts_is_a_list`.)
 #[test]
 fn a_list_part_goes_to_no_line_author() {
   let template = repro!("emit_net_a_note_cuts_its_written_address");
@@ -416,18 +396,14 @@ fn a_list_part_goes_to_no_line_author() {
   );
   for emit in [1, 2] {
     let (log, xml) = run(&tex, emit);
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-    assert!(
-      log.contains("prints (aable bbaker); they are kept as a note of the author block"),
-      "{log}"
-    );
-    assert_eq!(creators(&xml)[..3], [
-      vec!["Ann Able", "affiliation=Univ A"],
-      vec!["Bob Baker", "affiliation=Univ A"],
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(creators(&xml), [
+      vec!["Ann Able", "affiliation=Univ A", "email=aable@a.org"],
+      vec!["Bob Baker", "affiliation=Univ A", "email=bbaker@a.org"],
       vec!["Cat Cole", "affiliation=Univ A", "email=cat@a.org"],
     ]);
     assert_eq!(
-      notes(&xml)[..3],
+      notes(&xml),
       [Vec::<String>::new(), Vec::new(), Vec::new()],
       "{xml}"
     );

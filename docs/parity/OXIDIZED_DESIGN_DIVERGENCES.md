@@ -32499,8 +32499,8 @@ outcome keeps them (`Outcome::Events::creators`), and the emitter writes them on
 *A link printing a name* (F1r2): a url contact that carries a mark and prints other text than its own target (its scheme and a
 closing slash aside, in any case: `prints_its_target`) is read as that text, a Name carrying the link, written whole with it
 (`resolver::lines::link_names`, the ORCID links' pass): 1812.07638's 304 `\href{http://inspirehep.net/record/…}{A.~Cerri}$^{1}$`,
-304 creators and 3,063 links under `=2` (F1: 2 creators, 2,760 links); a link carrying no mark stays a contact (`\href{…}{project
-page}`), so the switch-off reading moves only where a link carries a mark. *The read-back's cost:* `\lx@add@author`'s membership
+304 creators and 3,063 links under `=2` (F1: 2 creators, 2,760 links); "carries a mark" was a proxy, replaced at LO1 by the name
+slot (below). *The read-back's cost:* `\lx@add@author`'s membership
 readout (`name_text::written_membership_out`) read the rest of the content past each comma, quadratic on `=2`'s queued whole
 entry of 418 names (1507.02068, +7.3 % instructions on against off). A grade is a suffix of grade words, so its commas are read
 from the last leftward and the first tail holding a word no grade has ends the reading (every tail before it holds that word):
@@ -32509,5 +32509,36 @@ IEEE\thanks{<300 characters>}}` into the name, `a_grade_with_a_long_note_is_the_
 (`whole_block_author`): 1507.02068 on −2.3 % against off, `instructions:u` (F1r2; F1's cap −1.18 %). Not settled by the same scan: a
 tabular block ending `…, Fellow, IEEE\end{tabular}` reads `\end{tabular}` into the grade with the switch off (E=2, int145a's
 too). Guards `perfect_kernel_batchf1`.
+
+**The switch-on leftovers in the reading (LO1).** *A link filling a name slot is the name:* a url link printing other text than
+its own target that is the only ink between its line's separators (a comma, a word, a gap, `\and`, a tab, a break, the block's
+ends) but for the marks and notes a name carries, an inkless link and punctuation, on a line no mark leads, which is its column's
+first or carries a mark or a note in the slot (`resolver::lines::name_slots`): 2602.22747's authblk `\author[1,2]{\href{…}{Kaizheng
+Wang}\thanks{…}}` and an unmarked `\href{…}{Bob Baker},` between two names, each a url contact of the next name or of a nameless
+creator before; 1812.07638 304 creators, 3,118 `<ref>` as before; `Ann Able \\ \href{…}{Project Page}` stays a contact.
+*A superscript after an emitted entry's label is its text:* `\lx@sup@setlabel@affiliation` read a line's first mark as its label by
+the `_bymark` the label sets, which an emitted entry (its label the emitter's) never has, so every superscript was a label and
+dropped: 1812.07638's `(ECT$^*$) )` came out `(ECT) )` with no Warning; the entry's first mark is now recorded from the
+emitted item's start and each entry line's (`\lx@frontmatter@item@start`, `\lx@frontmatter@savesups`; `lx_fm_emitted_line_mark`,
+global since the mark's own formula is a group), so a class's `\inst{2}` opening its second entry (0807.0752, 1002.3516) and a
+nested `\IEEEauthorblockA{\IEEEauthorrefmark{2}…}` (1812.05961) keep their labels. *An address decides only
+its own ink* (`Resolver::block`, `row_line`; the emitter's switch on only, `Resolver::emitting`): a line printing an address and
+other text, its label word aside (`reads_as_email_label`), under an unmarked line of its column ending in a comma continues that
+item and is its holders' (2203.10777, 1210.0352: the city line, notes of one author before, an affiliation of each as the switch
+off has it); under one names row and no column, where its addresses spell no one author and its text is no name its address
+spells (`LostInk::names_fail`'s), every author's of the row (1605.03019: `IDSIA, 6928 Manno, Switzerland` to all three,
+nameless notes and IDSIA nowhere before). The address stays in the affiliation's text, as the Kind steps leave it with the switch
+off. *A line's addresses by the address reader* (`place_line_contacts`, the switch on only): where `address_runs` reads every
+address `addresses_in` does and more, a list of local parts opening its line, `{\it pzou94, ozel, suresh@gwu.edu}` (2003.14069),
+is three addresses spelling assigns. *A creator call's `annotations=` are its creator's labels* (`Input::Block::calls`,
+`FieldCreator::labels`): `\lx@add@creator[role=editor,annotations={ed}]{Bob Baker}` with `\lx@add@affiliation[label=ed]{Editorial
+Office}` gives the office to Bob (a nameless creator's, or Ann Able's, before); the call's labels print nothing unanswered, and
+`creator_keys` writes `annotations=` once (the noted keys without it), where Perl's KeyVals makes a key given twice a list
+(KeyVals.pm:294-300). Off: the switch-off output byte-identical (the reading's rules that move only the emitter's output are gated
+on the switch). Left, each with its shape: 1812.07638's `Contributors:` heading line between two names rows, the six editors'
+affiliation (a role heading is the names row's label; the API has no kind for it yet); 2504.09745's `$^{\ddagger}$Ericsson
+Canada\thanks{…}` a nameless note (the switch off: each `‡` author's thanks); an in-block `(ECT$^*$)` on a marked line splits the
+entry at the symbol with either switch (the lexer's glue inside open brackets fixes it but moves the switch-off output). Guards
+`perfect_kernel_batchlo1`; `perfect_kernel_batchn1::a_list_part_goes_to_no_line_author` (the right output now).
 
 Guards `perfect_kernel_batchz4`.
