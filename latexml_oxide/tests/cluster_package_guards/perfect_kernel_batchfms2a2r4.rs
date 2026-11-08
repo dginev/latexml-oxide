@@ -179,7 +179,8 @@ fn a_withsup_line_takes_its_first_superscript() {
 
 /// Item 1: a `\thanks` inside a superscript is a note of its own after the mark, not the mark's text (1106.3485:
 /// `Liang-Jian Zou$^{1,\thanks{Correspondence author, …}}$` requested "Correspondence author, …"). Its text is
-/// rehearsed in the formula, so its spaces go (the comparator reads letters and digits).
+/// read in text mode, as the document digests a note's content, so its spaces stay (FB2a: in the formula's math mode
+/// they went, "Correspondingauthor").
 #[test]
 fn a_thanks_in_a_superscript_is_a_note() {
   assert_eq!(tuples(&revtex(SUP_THANKS)), [
@@ -187,7 +188,7 @@ fn a_thanks_in_a_superscript_is_a_note() {
     "  a Univ A, City | api:leading-mark owner:group",
     "C Bob Baker [1] | line:names sep:comma",
     "  a Univ A, City | api:leading-mark owner:group",
-    "  n Correspondingauthor, Electronicmail:bob@example.org | note:adjacent",
+    "  n Corresponding author, Electronic mail: bob@example.org | note:adjacent",
   ]);
 }
 
