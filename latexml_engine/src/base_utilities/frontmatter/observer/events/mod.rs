@@ -102,10 +102,12 @@ impl EventKind {
 
 /// Whose meaning an e-mail call has when its note is rehearsed (at the flush, `\maketitle`; `ledger::email_meaning`,
 /// the rehearsal's binding of `\email` and `\emailAdd`): what a document note's e-mail call is read by
-/// (`Resolver::api`, review rev92a_r3 B1; review rev92a_r4 B1 on the timing, OD #913).
+/// (`Resolver::api`, review rev92a_r3 B1; review rev92a_r4 B1 on the timing, OD #913), and an author's note's
+/// (`Resolver::note`: a routed address is its owner's, LO4).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum EmailMeaning {
-  /// a binding's, whose code routes the address to the current author (amsart's, REVTeX's, jheppub's `\emailAdd`)
+  /// a binding's, whose code routes the address to the current author (amsart's, REVTeX's, jheppub's `\emailAdd`;
+  /// OmniBus's, a guess its fallback class locks: 2511.14713)
   #[default]
   Binding,
   /// the document class's binding's, which prints the address where it is called (`Policy::email_in_place`: llncs,
@@ -309,6 +311,11 @@ pub struct Event {
   /// a Name's: the block's creator call that printed it, its place among the rehearsal's (`creator_roles`;
   /// `ledger::Outcome::Events::creators`). Not in a dump: only the emitter reads it
   pub creator_call:   Option<u16>,
+  /// a contact command's note that prints its text under a mark of its own (its call's `_mark` key, jheppub's
+  /// `\lx@add@contact[role=note,_mark={#1}]`): that mark, empty for the footnote counter's next number
+  /// (jheppub.sty:84-89 `\note[*]{…}`, `\note{…}`); `None` for any other. Not in a dump: only the reading's
+  /// corresponding-author step reads it (`Resolver::corresponding`)
+  pub note_mark:      Option<String>,
 }
 
 impl Event {
@@ -343,6 +350,7 @@ impl Event {
       marks: None,
       footnote: false,
       creator_call: None,
+      note_mark: None,
     }
   }
 }
@@ -1462,6 +1470,15 @@ impl Walker {
         } else {
           EventKind::Contact
         });
+        if role == "note" {
+          event.note_mark = option_value(&options, "_mark").map(|mark| {
+            mark
+              .trim_start_matches('{')
+              .trim_end_matches('}')
+              .trim()
+              .to_string()
+          });
+        }
         event.role = Some(role);
         event.annotate = option_value(&options, "annotate");
         event.text = arg(4);

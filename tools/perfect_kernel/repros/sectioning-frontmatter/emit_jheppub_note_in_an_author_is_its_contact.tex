@@ -1,0 +1,28 @@
+% mechanism: jheppub's `\note{…}` inside an `\author` is `\lx@add@contact[role=note]{…}` (Perl's jheppub.sty.ltxml:39), a
+%   Contact event of the block whose kind is a note: the emitter writes it as the contact command it is, the call inside
+%   taking the item's label, as for any contact command of the block (`writer::emit::item_call`); written as an `ltx:note`
+%   around the call, the call meant nothing inside the item and the note was lost; `=2` only
+% witness: 1403.1099, 2001.06318 (jcappub, `\author[a,b,1]{Luis B. Castro,\note{Corresponding author.}}`), 2308.04217
+%   (jinstpub, a "Speaker at …" note in each of three `\author`s)
+% oracle:  pdflatex (the shortened jheppub.sty beside this repro) 0 errors; "Ann Able,a,b,1 Bob Bakera and Cy Cole,b,∗", the
+%   footnotes "1 Corresponding author.", "Also at Univ C.", "3 Visiting α-Lab, Univ D.", "* Equal contribution."
+% engines: perl: each author's notes as `<contact role="note">` on that author (Cy Cole's `\note[*]` read as a note "[",
+%   KNOWN_PERL_ERRORS #1033); rust off: the same, `\note[*]` as written; int147a `=2`: no author holds a note (the content
+%   check's Warning)
+% expect:  0 errors, 0 warnings; `=2`: the creators as with the switch off
+% status:  RED (int147a `=2`) -> GREEN (perfect_kernel_batchlo3::a_note_command_in_an_author_is_its_contact)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author[a,b,1]{Ann Able,\note{Corresponding author.}}
+\author[a]{Bob Baker\note{Also at Univ C.}\note{Visiting $\alpha$-Lab, \emph{Univ D}.}}
+\author[b,*]{and Cy Cole,\note[*]{Equal contribution.}}
+\affiliation[a]{Univ A}
+\affiliation[b]{Univ B}
+\emailAdd{ann@a.org}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

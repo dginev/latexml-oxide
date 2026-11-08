@@ -702,7 +702,7 @@ fn meaning_owner(n: usize) -> String {
 /// code routes the address to the current author; else no binding's — the document's own
 /// (`\renewcommand{\email}[1]{\texttt{#1}}`), a file read raw, the fallback class's guess for a class with no binding
 /// (OmniBus: the real class's print is unknown) —, which prints wherever its definition prints (review rev92a_r3 B1:
-/// 1412.0748, 1809.01965).
+/// 1412.0748, 1809.01965). A guess the fallback class locks is its binding's (OmniBus's `\email`, OD #408: 2511.14713).
 pub(in crate::base_utilities) fn email_meaning(cs: &str) -> EmailMeaning {
   let Some(n) = OWNED_COMMANDS.iter().position(|c| *c == cs) else {
     return EmailMeaning::Own;
@@ -713,13 +713,21 @@ pub(in crate::base_utilities) fn email_meaning(cs: &str) -> EmailMeaning {
     fallback_meaning_origin(&T_CS!(cs)),
     Some(DefinitionOrigin::Fallback | DefinitionOrigin::Stub)
   );
-  let by_binding = !guessed
-    && tracked_meaning(n).is_some_and(|meaning| {
+  // (save the guess the fallback class locks against every later definition, which no document's print replaces: OmniBus's
+  // `\email` (`\email:locked`, OD #408), Perl's OmniBus.cls.ltxml:78 `\lx@add@email{#1}`, the binding's call routing the
+  // address to the current author — 2511.14713's siamart250211 `\thanks{…, \email{wning@vt.edu}, \email{amiedlar@vt.edu}.}`,
+  // read as the document's own, kept in the note's text, which the written note prints without them; main-session ruling
+  // 2026-11-08)
+  let by_binding = if guessed {
+    lookup_bool(&s!("{cs}:locked"))
+  } else {
+    tracked_meaning(n).is_some_and(|meaning| {
       matches!(
         meaning.get_origin(),
         DefinitionOrigin::Binding | DefinitionOrigin::Borrowed
       )
-    });
+    })
+  };
   if !by_binding {
     return EmailMeaning::Own;
   }

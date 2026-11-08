@@ -1009,7 +1009,27 @@ fn item_call(
       if contact_role && in_a_mark {
         return Ok(wrap(&by_text(None, &assoc.text)));
       }
-      if contact_role
+      // (a note a contact command of the block makes is that command too, a contact as its binding makes it: jheppub's
+      // `\note{…}` = `\lx@add@contact[role=note]{…}` inside an `\author`, Perl's jheppub.sty.ltxml:39 — 1403.1099,
+      // 2001.06318, 2308.04217, which lost it inside a `ltx:note` around the call. Only where the span prints this one
+      // event: one a macro holding a name and the command spans, `\newcommand{\ann}{Ann Able\note{…}}`, or two commands,
+      // `\note{…}\note{…}`, is the whole macro, written for each item — the name twice, a note moved to the next author
+      // (review revLO3 1); it is its text, as below)
+      let events_there = with_block(index, 0, |_, events| {
+        let inner = events.iter().flat_map(|e| &e.inner);
+        events
+          .iter()
+          .chain(inner)
+          .filter(|e| {
+            matches!(
+              e.kind,
+              EventKind::Name | EventKind::Contact | EventKind::Note
+            ) && e.span == Some(span)
+          })
+          .count()
+      });
+      if (contact_role || note)
+        && events_there == 1
         && event_at(
           index,
           span,
@@ -1060,7 +1080,13 @@ fn item_call(
         events.iter().filter(printed_there).count()
       }) > 1
       {
-        return Ok(wrap(&by_text(Some("a macro's span"), &assoc.text)));
+        let text = by_text(Some("a macro's span"), &assoc.text);
+        // (a note a contact command made there is that contact, by its text: `<contact role="note">`, as the switch off has
+        // it — jheppub's `\note{…}` in `\newcommand{\ann}{Ann Able\note{…}}`, review revLO3 1)
+        if note && event_at(index, span, |e| e.kind == EventKind::Contact, |_| ()).is_some() {
+          return Ok(annotate_now("ltx:contact", &keys, &item_only(&text)));
+        }
+        return Ok(wrap(&text));
       }
       let found = entry_span(index, span, &key.1);
       if found.is_none()
