@@ -1,0 +1,22 @@
+% mechanism: a kept note of ink the reading holds no place for is the ink's lost words' own text with its written address runs
+%   cut out by position (`resolver::words::LostInk::note_text`), not a first-to-last range of words out of a multiset; it is the
+%   note of the author whose line it is by the reading's rule of an address (`LostInk::owner`: the addresses the ink prints,
+%   else, where it prints none, the addresses its line prints, read from its text whole, spell that one author), else of the
+%   author block; the guard's rows: a line's other inks go with it to that author, never to the block's nameless creator (N1r3);
+%   a list's local parts printed apart, one run of addresses spelling its authors, own none (`a_list_part_goes_to_no_line_author`)
+% witness: 2110.03506 (`POC: K.\ Hobbs (kerianne.hobbs@us.af.mil)`: the note ran into the address, `POC: K. Hobbs
+%   (kerianne.hobbs`), 2203.10777 (`Dresden, Saxony 01062, Germany (martin.waltz@tu-dresden.de)`: `Germany
+%   (martin.waltz@tu-dresden`); the guard's rows: this file, a line of the address under the affiliation, a label after the address,
+%   an ink after the address on its line (`POC: A.\ Able (ann.able@a.org), ext.\ 5`, review revN1r2's `rep/both.tex`)
+% oracle:  pdflatex 0 errors; "Ann L. Able, Bob Baker, and Cat Cole"; "POC: A. Able (ann.able@a.org)"; "Approved for public release."
+% engines: rust N1, the switch on: the note "POC: A. Able (ann.able@a" on Ann L. Able, a half address doubled
+% expect:  0 errors, 1 warning (the lost words, kept); the switch on: Ann L. Able holds ann.able@a.org and the note "POC: A. Able"
+% status:  RED (N1) -> GREEN (perfect_kernel_batchn1::a_note_cuts_out_its_written_address)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann L. Able, Bob Baker, and Cat Cole \\ POC: A.\ Able (ann.able@a.org)\\ Approved for public release.}
+\maketitle
+Body.
+\end{document}

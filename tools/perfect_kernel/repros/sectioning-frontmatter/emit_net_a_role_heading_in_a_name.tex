@@ -1,0 +1,18 @@
+% mechanism: the safety net's separator check (`resolver::net::merged_names`): two Names a separator parts (`Sep`, `Break`) are
+%   no one creator's name, nor is a name a label before a colon and the words after it (a role's heading read into the name);
+%   counted in a Warning, the reading kept
+% witness: 2205.07715 (revtex `\author{Editor: Andrei V. Gritsan}`, `Contributors: Henning Bahl`), hep-ph0311131 (`{\bf Authors:}
+%   F.~Arleo$^a$, …`), 2502.03556 (`\author{T, Jennewein}`, a comma inside one call: TeX prints one author, the scorer two);
+%   the guard's rows: this file, revtex's per-author call
+% oracle:  pdflatex 0 errors; "Authors: Ann Able1 , Bob Baker2"; Univ A; Univ B
+% engines: rust int145a, the switch on: "Authors: Ann Able" a creator, no Warning of it
+% expect:  0 errors, 2 warnings (the plain-text name's, the check's); the switch on: "Authors: Ann Able", Bob Baker, each its entry
+% status:  RED (int145a) -> GREEN (perfect_kernel_batchn1::a_role_heading_in_a_name_is_counted)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{{\bf Authors:} Ann Able$^{1}$, Bob Baker$^{2}$ \\ $^{1}$Univ A \\ $^{2}$Univ B}
+\maketitle
+Body.
+\end{document}

@@ -10,6 +10,7 @@ use regex::Regex;
 
 use super::{
   perfect_kernel_batch84b::creators,
+  perfect_kernel_batchn1::notes,
   perfect_kernel_batchz4::{creators_xml, run, same_markup},
 };
 
@@ -68,26 +69,18 @@ fn the_whole_block_queue_reaches_one() {
 }
 
 /// The rows of [`a_block_losing_other_ink_keeps_its_reading`]: the block, and the creators the switch on writes (2605.16481's address no reader
-/// reads; 2607.28418's link anchor printing two addresses, its target the block's; a third name after the lost line), the last the nameless creator of
-/// the block's own, and the ink its note prints.
-const LOST_INK_ROWS: &[(&str, &[&[&str]], &str)] = &[
+/// reads; a third name after the lost line), the creator whose XML holds the ink's note (the one author its address spells, by the reading's own rule:
+/// 2605.16481's Aiden Yiliu Li, review revZ4br2), and the ink its note prints.
+const LOST_INK_ROWS: &[(&str, &[&[&str]], usize, &str)] = &[
   (
     "Ann Able$^{1}$ \\quad Bob Baker$^{1}$ \\\\\n$^{1}$Univ A \\\\\n\\texttt{ann.able@outlook}, \\texttt{bob@b.edu}",
-    &[
-      &["Ann Able", "affiliation=Univ A"],
-      &["Bob Baker", "affiliation=Univ A", "email=bob@b.edu"],
-      &[],
-    ],
+    &[&["Ann Able", "affiliation=Univ A"], &[
+      "Bob Baker",
+      "affiliation=Univ A",
+      "email=bob@b.edu",
+    ]],
+    0,
     "ann.able@outlook",
-  ),
-  (
-    "Ann Able$^{1}$ \\quad Bob Baker$^{1}$ \\\\ $^{1}$Univ A \\\\ \\small{\\href{mailto:email@domain}{ann@a.edu; bob@b.edu}}",
-    &[
-      &["Ann Able", "affiliation=Univ A"],
-      &["Bob Baker", "affiliation=Univ A"],
-      &["email=email@domain"],
-    ],
-    "ann@a.edu; bob@b.edu",
   ),
   (
     "Ann Able$^{1}$ \\quad Bob Baker$^{1}$ \\\\ $^{1}$Univ A \\\\ \\texttt{ann.able@outlook}, \\texttt{bob@b.edu} \\\\ Cat Cole$^{2}$ \\\\ $^{2}$Univ B",
@@ -95,18 +88,19 @@ const LOST_INK_ROWS: &[(&str, &[&[&str]], &str)] = &[
       &["Ann Able", "affiliation=Univ A"],
       &["Bob Baker", "affiliation=Univ A", "email=bob@b.edu"],
       &["Cat Cole", "affiliation=Univ B"],
-      &[],
     ],
+    0,
     "ann.able@outlook",
   ),
 ];
 
-/// A block whose reading holds every name it prints and no place for other ink keeps its reading, the ink its tokens as a note of the author block, in
-/// one counted Warning (2605.16481: 3 creators, not one whole; 2607.28418); with either switch, and off the writer's two.
+/// A block whose reading holds every name it prints and no place for other ink keeps its reading, the ink its tokens as a note, in one counted Warning
+/// (2605.16481: 3 creators, not one whole; 2607.28418): the note of the one author its address spells, else of the author block (the link's row below);
+/// with either switch, and off the writer's two.
 #[test]
 fn a_block_losing_other_ink_keeps_its_reading() {
   let template = repro!("emit_a_block_losing_other_ink_keeps_its_reading");
-  for &(block, expected, ink) in LOST_INK_ROWS {
+  for &(block, expected, holder, ink) in LOST_INK_ROWS {
     let tex = template.replace(LOST_INK_ROWS[0].0, block);
     assert!(tex.contains(block));
     let (off_log, off) = run(&tex, 0);
@@ -124,13 +118,51 @@ fn a_block_losing_other_ink_keeps_its_reading() {
         "{log}"
       );
       assert_eq!(creators(&xml), expected, "{block}");
-      let block_own = creators_xml(&xml).pop().unwrap_or_default();
-      assert!(
-        block_own.contains("role=\"note\"") && block_own.contains(ink),
-        "{block_own}"
-      );
+      // (the note's whole text, on its holder alone)
+      let held: Vec<Vec<String>> = (0..expected.len())
+        .map(|i| {
+          if i == holder {
+            vec![ink.to_string()]
+          } else {
+            Vec::new()
+          }
+        })
+        .collect();
+      assert_eq!(notes(&xml), held, "{block}");
     }
   }
+  // (a link's anchor printing two addresses, 2607.28418, its addresses spelling two authors: the block's note; its unprinted target, which the
+  // reading writes as an address, counted as written more often than printed, the link-target RED below)
+  let link = "Ann Able$^{1}$ \\quad Bob Baker$^{1}$ \\\\ $^{1}$Univ A \\\\ \\small{\\href{mailto:email@domain}{ann@a.edu; bob@b.edu}}";
+  let tex = template.replace(LOST_INK_ROWS[0].0, link);
+  for emit in [1, 2] {
+    let (log, xml) = run(&tex, emit);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+    assert!(
+      log.contains("they are kept as a note of the author block")
+        && log.contains("more often than it prints them (email); they are counted"),
+      "{log}"
+    );
+    let own = creators_xml(&xml).pop().unwrap_or_default();
+    assert!(!own.contains("<personname>"), "{own}");
+    assert_eq!(
+      notes(&xml).pop(),
+      Some(vec!["ann@a.edu; bob@b.edu".to_string()]),
+      "{xml}"
+    );
+  }
+}
+
+/// RED (review revZ4br2 finding 2): a `mailto:` link whose anchor prints other addresses, 2607.28418's `\href{mailto:email@domain}{Hhz029@hotmail.com;
+/// xyshen@eitech.edu.cn}`, is no e-mail `email@domain`: the reading writes its unprinted target as the contact's address (`link_target`), a reading
+/// change. The word check counts it (a target prints only as its ink's own text).
+#[test]
+#[ignore = "RED: the reading writes a mailto link's unprinted target as its address (resolver `link_target`)"]
+fn an_unprinted_link_target_is_no_address_red() {
+  let template = repro!("emit_a_block_losing_other_ink_keeps_its_reading");
+  let link = "Ann Able$^{1}$ \\quad Bob Baker$^{1}$ \\\\ $^{1}$Univ A \\\\ \\small{\\href{mailto:email@domain}{ann@a.edu; bob@b.edu}}";
+  let (_, xml) = run(&template.replace(LOST_INK_ROWS[0].0, link), 2);
+  assert!(!xml.contains("email@domain</contact>"), "{xml}");
 }
 
 /// The rows of [`an_email_label_is_written_as_printed`]: the block, and its e-mail contacts' `name`s.

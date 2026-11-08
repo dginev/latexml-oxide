@@ -524,9 +524,7 @@ impl Resolver {
           {
             let creator = &mut self.out.creators[c];
             creator.name = s!("{} {text}", creator.name);
-            if !creator.rule.contains("name:remark") {
-              creator.rule.push_str(" name:remark");
-            }
+            creator.join(NameJoin::Remark);
             for note in notes {
               self.note(index, note, Some(c), "note:line-owner");
             }

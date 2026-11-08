@@ -176,6 +176,13 @@ pub fn json_resolved(v: &Value) -> FmResolved {
           .map(s)
           .collect(),
         rule:         s(&c["rule"]),
+        // (a dump made before N1r3 writes no `joins`: none read)
+        joins:        c["joins"]
+          .as_array()
+          .into_iter()
+          .flatten()
+          .filter_map(|tag| latexml_engine::base_utilities::FmNameJoin::of_tag(&s(tag)))
+          .collect(),
         source:       c["source"].as_u64().unwrap_or(0) as usize,
         role:         c["role"].as_str().map(str::to_string),
         call:         None,
