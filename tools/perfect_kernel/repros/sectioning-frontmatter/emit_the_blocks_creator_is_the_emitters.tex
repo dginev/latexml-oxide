@@ -1,0 +1,20 @@
+% mechanism: the author block's own creator (Perl's one nameless creator below the names, holding only the block's
+%   contacts; OXIDIZED_DESIGN #159) is written by the frontmatter emitter (`writer::emit::block_creator`); relocate's
+%   orphan procedure shares the block's items into it where it would promote a stub (BC1r2); the creator is uncounted
+%   among the names (Bob Baker's conjunction stays)
+% witness: 1012.4847, 1106.3045, 2402.19043, 2609.15094 (RT5 R3), 2009.10916
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker"; Univ A; E-mail: lab@a.org
+% engines: rust int149a `=2`: the same output, the creator made by relocate's orphan-sharing branch
+% expect:  0 errors, 0 warnings; `=2` creators as with the switch off: Ann Able, Bob Baker (Univ A each), a nameless
+%   creator last holding lab@a.org
+% status:  GREEN (perfect_kernel_batchbc1::the_blocks_creator_is_the_emitters)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able and Bob Baker\\
+Univ A\\
+E-mail: lab@a.org}
+\maketitle
+Text.
+\end{document}

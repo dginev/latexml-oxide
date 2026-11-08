@@ -26,7 +26,7 @@ use super::{
 use crate::base_utilities::{
   defs::{
     author_macros::KEPT_WHOLE,
-    frontmatter_api::{LABEL_PRINTS, PRINTED_LABEL},
+    frontmatter_api::{BLOCK_CREATOR, LABEL_PRINTS, PRINTED_LABEL},
   },
   frontmatter::{
     fallback::whole_block_author,
@@ -81,6 +81,8 @@ pub(in crate::base_utilities) const EMITTING: &str = "lx_fm_emitting";
 /// as queued, `taken|<index>`: [`take_digested`]).
 const EMITTED_CREATORS: &str = "lx_fm_emitted_creators";
 const EMITTED_ITEMS: &str = "lx_fm_emitted_items";
+/// The State value saying a flush wrote the author block's own creator ([`block_creator`]).
+const BLOCK_CREATOR_WRITTEN: &str = "lx_fm_block_creator";
 
 /// `\lx@add@frontmatter@now`, the flush's own creator call.
 fn add_now() -> Token { T_CS!("\\lx@add@frontmatter@now") }
@@ -2379,6 +2381,10 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     });
     out.push(entry("ltx:creator", tokens.unlist()));
   }
+  // (the block's own creator goes below this flush's names, where an item or a kept ink is the block's: `block_creator`)
+  let block_at = out.len();
+  let of_the_block = calls.iter().any(|(label, _)| label == "addresses:block")
+    || kept_inks.iter().any(|(_, ink)| ink.owner.is_none());
   // (an unprinted contact, where its call stands among the items: its author's, the last creator before it. Its call's place
   // in the ledger: `UnprintedCall::at`, of this flush's last ones)
   let unprinted_at: Vec<usize> = with_ledger(|ledger| {
@@ -2478,6 +2484,9 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   }
   out.extend(kept);
   out.extend(after);
+  if let Some(creator) = block_creator(of_the_block) {
+    out.insert(block_at, entry("ltx:creator", creator.unlist()));
+  }
   // (a document's note's own `\\email` is the reading's item already: `api:note-spelled`, 0910.1640)
   for entry in out.iter_mut().filter(|entry| entry.0 == "ltx:pubnote") {
     entry.2 = Tokens::new(cs_group("\\lx@frontmatter@itemonly", &[entry
@@ -2524,6 +2533,36 @@ pub(in crate::base_utilities) fn take_digested(commands: &[RawFrontmatter]) {
       Some(Stored::Bool(true)),
     );
   }
+}
+
+/// The author block's own creator, the first time a flush writes an item of the block (`label=addresses:block`: `of_the_block`):
+/// Perl's one nameless creator below the names, holding only the block's contacts (OXIDIZED_DESIGN #159,
+/// FIDELITY_CHARTER §4), into which `relocate_annotations`'s orphan procedure shares where it would promote a stub — a
+/// block item still a sole author's, a named owner's, or no orphan where an author holds a copy under another label —
+/// placing it below the last named author, or removing it where nothing reached it
+/// (`\lx@add@frontmatter@now{ltx:creator}[role=author,annotations={addresses:block},_blockcreator=true]{}`; uncounted
+/// among the names and no annotation's parent by place, [`BLOCK_CREATOR`]). One for the conversion: a later flush's block items find it — not one
+/// `\lx@add@frontmatter@now` turns away as a supplement's ([`frontmatter_entry_sealed`]), which a later flush's block
+/// items would not find. Witnesses 1012.4847, 1106.3045, 2402.19043, 2609.15094, 2009.10916.
+fn block_creator(of_the_block: bool) -> Option<Tokens> {
+  if !of_the_block
+    || lookup_value(BLOCK_CREATOR_WRITTEN).is_some()
+    || frontmatter_entry_sealed("ltx:creator", "author")
+  {
+    return None;
+  }
+  assign_value(
+    BLOCK_CREATOR_WRITTEN,
+    Stored::Bool(true),
+    Some(Scope::Global),
+  );
+  let mut head = vec![add_now()];
+  head.extend(cs_group_args(&["ltx:creator"]));
+  Some(with_keys(
+    head,
+    &s!("role=author,annotations={{addresses:block}},{BLOCK_CREATOR}=true"),
+    &[],
+  ))
 }
 
 /// Whether the block at ledger index `source` keeps its marks printed on its names, as Perl's `\\lx@add@author` leaves them (a

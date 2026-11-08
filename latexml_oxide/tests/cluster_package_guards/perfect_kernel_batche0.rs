@@ -599,6 +599,13 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ("_zone= package/aa_support_sty.rs", 2),
   ("_zone= package/elsarticle_cls.rs", 2),
   ("_zone= package/revtex4_support_sty.rs", 2),
+  // (BC1, raised with its reason: the author block's own creator the emitter writes, `BLOCK_CREATOR`, takes no place in its
+  // role's count — Perl's `\lx@add@frontmatter@now` counts every creator with a role, and the nameless creator relocate's
+  // orphan-sharing branch made, which this one replaces, was counted by nothing: no key of Perl's says uncounted)
+  (
+    "const _blockcreator base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
   (
     "const _command_form base_utilities/frontmatter/queue_digest.rs",
     1,
@@ -666,6 +673,10 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ),
   (
     "declared _labelprints base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  (
+    "declared _blockcreator base_utilities/defs/frontmatter_api.rs",
     1,
   ),
   ("declared _net base_utilities/defs/frontmatter_api.rs", 1),

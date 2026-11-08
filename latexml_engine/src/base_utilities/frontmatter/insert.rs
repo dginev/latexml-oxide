@@ -3815,6 +3815,11 @@ fn respell_emails(document: &mut Document) -> Result<()> {
   Ok(())
 }
 
+/// The authors of the row, the block's own creator aside
+/// ([`BLOCK_CREATOR`](crate::base_utilities::defs::frontmatter_api::BLOCK_CREATOR)): the creators the passes before
+/// `relocate_annotations` pair names and contacts among.
+const NAMED_ROW_AUTHORS: &str = "//ltx:creator[@role='author'][not(@_blockcreator)]";
+
 /// Remove author creators whose `<ltx:personname>` is empty, moving any contacts they
 /// carry to the preceding real creator (else the first following one).
 ///
@@ -3841,7 +3846,7 @@ fn respell_emails(document: &mut Document) -> Result<()> {
 /// block owner, #949). Any other printing child of a removed creator is reported (`Warning:unexpected:frontmatter`), never
 /// silently lost.
 fn coalesce_empty_creators(document: &mut Document) -> Result<()> {
-  let creators = document.findnodes("//ltx:creator[@role='author']", None);
+  let creators = document.findnodes(NAMED_ROW_AUTHORS, None);
   let mut to_remove: Vec<Node> = Vec::new();
   let mut last_real: Option<Node> = None;
   // Annotations (contacts + notes) of leading empties (before any real author), held
@@ -3943,7 +3948,7 @@ fn creator_annotations(creator: &Node) -> Vec<Node> {
 /// is left EXACTLY as Perl attached it. Mirrors the "distribute-when-clean, else
 /// keep prior" rule of the shared-email splitter (OXIDIZED_DESIGN #52(j)).
 fn distribute_upfront_contacts(document: &mut Document) -> Result<()> {
-  let creators = document.findnodes("//ltx:creator[@role='author']", None);
+  let creators = document.findnodes(NAMED_ROW_AUTHORS, None);
   let n = creators.len();
   if n < 2 {
     return Ok(());
