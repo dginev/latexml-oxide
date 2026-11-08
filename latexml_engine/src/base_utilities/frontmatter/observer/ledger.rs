@@ -1056,9 +1056,10 @@ pub(in crate::base_utilities) fn record_api_call(
 
 /// What a call no rehearsal read printed, as far as its tokens tell (`ApiCall::unread`, `Ledger::unrecorded`), read at
 /// the API boundary that records its content, so the content check reads text alone, parted into words as an ink's is
-/// (`resolver::words::printed_words`): its characters; a control symbol inside a word (an accent, `Universit\"at`: a
-/// letter or digit before it, a letter, a digit or a group after it) and a group there (`M{\"u}nchen`) part nothing, the
-/// word counted whole, its accents unread (the check takes a word one side reads without them for the one the other
+/// (`resolver::words::printed_words`): its characters; a control symbol or a one-letter control word inside a word (an
+/// accent, `Universit\"at`, a dotless i: a letter or digit before it, a letter, a digit or a group after it, past any
+/// group's end and other such sequence, `F\'{\i}sica`, `Bras\'\i lia`) and a group there (`M{\"u}nchen`) part nothing,
+/// the word counted whole, its accents unread (the check takes a word one side reads without them for the one the other
 /// prints with them, `resolver::placed`); another control sequence, its argument's group
 /// (`\IEEEauthorrefmark{1}Univ Alpha` → ` 1 Univ Alpha`) or a math shift parts words. Nothing is spelled but a control
 /// sequence's length: a letter command (`Gro{\ss}e`, a control word) parts its word.
@@ -1069,13 +1070,14 @@ pub(super) fn content_text(content: &Tokens) -> String {
   let mut parted_by_command = false;
   let tokens = content.unlist_ref();
   for (at, token) in tokens.iter().enumerate() {
-    // (inside a word: a letter or digit before it, and a letter, a digit or a group after it)
+    // (inside a word: a letter or digit before it, and a letter, a digit or a group after it, past any group's end and
+    // 2-character control sequence: `F\'{\i}sica`, `Bras\'\i lia`)
     let in_word = || {
       text.chars().next_back().is_some_and(char::is_alphanumeric)
-        && tokens.get(at + 1).is_some_and(|next| {
-          next.get_catcode() == Catcode::BEGIN
-            || next.with_str(|s| s.chars().next().is_some_and(char::is_alphanumeric))
-        })
+        && tokens[at + 1..]
+          .iter()
+          .find(|next| next.get_catcode() != Catcode::END && !short_cs(next))
+          .is_some_and(starts_word)
     };
     let mut parting_command = false;
     match token.get_catcode() {
@@ -1086,16 +1088,28 @@ pub(super) fn content_text(content: &Tokens) -> String {
           text.push(' ');
         }
       },
-      Catcode::CS if token.with_str(|name| name.chars().count() == 2) && in_word() => {},
       Catcode::CS => {
-        text.push(' ');
-        parting_command = true;
+        if !(short_cs(token) && in_word()) {
+          text.push(' ');
+          parting_command = true;
+        }
       },
       _ => text.push(' '),
     }
     parted_by_command = parting_command;
   }
   text
+}
+
+/// A control sequence 2 characters long, the backslash and one more: a control symbol (an accent, `\'`) or a
+/// one-letter control word (`\i`), which `content_text` reads inside a word.
+fn short_cs(token: &Token) -> bool {
+  token.get_catcode() == Catcode::CS && token.with_str(|name| name.chars().count() == 2)
+}
+
+/// A token that opens or continues a word after a control sequence inside it: a group, a letter or a digit.
+fn starts_word(t: &Token) -> bool {
+  t.get_catcode() == Catcode::BEGIN || t.with_str(|s| s.starts_with(char::is_alphanumeric))
 }
 
 /// The tag a queued call annotates, its first argument (`\lx@annotate@frontmatter@now{ltx:creator}…`), empty for a call

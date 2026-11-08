@@ -147,8 +147,9 @@ fn a_macro_held_author_list_costs_no_copy_per_mark() {
 }
 
 /// What a call no rehearsal read printed is counted by words as its ink parts them (`ledger::content_text`): an accent
-/// (a control symbol) or a group inside a word parts nothing (`Universit\"at`, `M{\"u}nchen`, `Montr\'{e}al`) — 4 words,
-/// not 8 pieces (`at M unchen Universit`: review revRC1 finding 3); the accents unread, the words are spelled without
+/// (a control symbol) or a group inside a word parts nothing (`Universit\"at`, `M{\"u}nchen`, `Montr\'{e}al`), nor does a
+/// dotless i inside its accent's group or after it (`F\'{\i}sica`, `Bras\'\i lia`) — 6 words, not 12 pieces (`at M
+/// unchen Universit`: review revRC1 finding 3; `Bras F lia sica`: review revRC1r2 finding 1); the accents and `\i` unread, the words are spelled without
 /// them, and the check takes such a word for the accented one a placed copy prints (`resolver::placed`'s reconcile).
 /// Distinct from [`an_unread_calls_words_are_counted`]: the text's parting into words, which a stand-in copy's unrecorded
 /// call (`Ledger::unrecorded`) shares.
@@ -175,7 +176,10 @@ fn an_unread_calls_accented_words_count_whole() {
   assert_eq!(warning_count(&log), 2, "{log}");
   assert_eq!(
     content_checks(&log),
-    (vec!["1 Montreal Munchen Universitat".to_string()], vec![]),
+    (
+      vec!["1 Braslia Fsica Montreal Munchen Universitat".to_string()],
+      vec![]
+    ),
     "{log}"
   );
   assert_eq!(creators(&xml), [
