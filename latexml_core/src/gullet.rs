@@ -2201,8 +2201,8 @@ fn expands_now(defn: &std::rc::Rc<dyn Definition>, fully_expand: bool) -> bool {
 }
 
 /// A place in the input ([`input_mark`]): how many mouths enclose it, the current mouth's read position, its
-/// pushback's length then, the mark's serial on the mouth's watch ([`PushbackWatch`]), and the pushback's last
-/// [`MARK_HELD`] tokens, the next to read last. `Copy`: a mark holds nothing on the heap, so the marks a ledger keeps (an
+/// pushback's length then, the mark's serial on the mouth's watch (`PushbackWatch`), and the pushback's last
+/// `MARK_HELD` tokens, the next to read last. `Copy`: a mark holds nothing on the heap, so the marks a ledger keeps (an
 /// author block's each) cost what their number does, whatever the pushback holds (revRC1: a copy of the pushback per
 /// mark made 3,000 macro-held authors take 3.7 GB).
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -2268,9 +2268,9 @@ pub fn input_mark() -> InputMark {
 /// has read no further, and its pushback still holds every token it held then (only what was pushed after the mark
 /// was read, or what a mouth opened since holds). Read-only, for an observer telling apart what a call's expansion
 /// did from what the input after the call did (the frontmatter observer's ledger, the title-page check's document
-/// calls). The mouth's watch tells how short its pushback has been since the mark ([`PushbackWatch`]): no shorter
-/// than the mark's length, nothing it held was read; shorter by at most [`MARK_HELD`] tokens, those read were put
-/// back if the slots hold the very tokens they held ([`same_token`]: a peek leaves the input unread); shorter still,
+/// calls). The mouth's watch tells how short its pushback has been since the mark (`PushbackWatch`): no shorter
+/// than the mark's length, nothing it held was read; shorter by at most `MARK_HELD` tokens, those read were put
+/// back if the slots hold the very tokens they held (`same_token`: a peek leaves the input unread); shorter still,
 /// it was read. Tokens read below the mark and others pushed in their place read as read, though the token now at
 /// the mark's last slot equals the one it held — IEEEtran's `\IEEEauthorblockN{…}⏎\IEEEauthorblockA{…}`, whose
 /// line-end space was read with `\IEEEauthorblockA` and its argument and whose expansion, longer, put another space
