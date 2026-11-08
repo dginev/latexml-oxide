@@ -23577,7 +23577,9 @@ adversarial shapes: an `\aftergroup`, a `\thanks` holding a `\label` with a `\re
   the full read, `consume_pushback_to`, the raw-line readers and `flush_mouth` tell it); a slot read and refilled with an
   equal token reads as read, a peek or a `\futurelet` of at most 4 tokens put back as unread, a mark of a mouth since
   closed as read: IEEEtran's affiliation calls, made after the block's line-end space was read, were recorded as the
-  block's own, 2401.11731, 1801.03314 — and the mouth position; no `unsafe`; 3,000 macro-held revtex authors peak at
+  block's own, 2401.11731, 1801.03314 — and the mouth position; no `unsafe` (Perl's own marker token was weighed and set
+  aside: every Perl reader drops a marker it meets, but our raw-line readers, `Mouth::read_raw_line`, and the native l3fp
+  readers do not, a parity gap of their own, SYNC leftovers (24)); 3,000 macro-held revtex authors peak at
   270 MB against MV1base's 261 MB, where a copy per mark took 3.7 GB; instructions −0.10 % to +0.09 % of MV1base on
   hello, b5_fill1000, 1507.02068, 2103.04797 off, +0.16 % and +0.19 % on the last two at `=2`). Nothing is recorded while
   the frontmatter is frozen (a replayed class setter, a speculative run, the rehearsal) or a stand-in copy reads its
@@ -32722,6 +32724,8 @@ the switch off cuts the text alone, which needs the link's characters' own posit
 argument's ink). Off: byte-identical. Guards `perfect_kernel_batchp1e`, `perfect_kernel_batchp1c`.
 
 Guards `perfect_kernel_batchz4`.
+
+**TA (a late author block; `=2` only).** An author block arriving while a flush digests its queue, after that flush read it (an `\author` in the `\title`, 1502.01001, 1510.00875, hep-ph0207056, hep-th0111116; in an amsart `\thanks`, 0807.4720; in a re-digested `{opening}`, astro-ph9808358 — the ledger's `AuthorBlock::late`), is read by a flush of its own: its whole-block call is wrapped in `\lx@frontmatter@late` (`defs/author_macros.rs`), which digests it with `\lx@add@frontmatter` / `\lx@annotate@frontmatter` let to the queue's, then runs a nested, re-entrant flush (`digest_front_matter`; the outer flush's sealed-off and label sequences saved and restored, the queue cleared first, so it sees only what the late digestion queued and terminates) — Perl's `\lx@add@authors` runs `@now` there, split at the call (Base_Utility.pool.ltxml:799-806). A queue entry a flush digests is marked taken (`writer::emit::take_digested`: `taken|<index>` in `EMITTED_ITEMS`) before its digestion, so a later, nested flush's emitter writes none of its items again (TA3; memsait's `\@opening` note, astro-ph9808358). A creator call's own nested notes are its creator's (IO1, `resolver/api.rs` `api:creator`; Perl's `\lx@add@author` digests the whole call into the creator), its `\email`/`\orcid` staying in the name, and its `\thanks` written from its argument through `note_call` (IO2). A creator call made inside a note is a fact of the rehearsal (IO3; `\lx@fm@obs@add`, an `ApiCall` event): such a pubnote is answered by no flush and digested as Perl digests it, each contact after the call the newest creator's (0807.4720: Juriaans's address and e-mail his, Ferrero's none), its contacts required placed by the content check. Off: byte-identical. Guards `perfect_kernel_batchta1`, `perfect_kernel_batchio1`.
 
 **KEY1 (the mark-keyed entries, RT2's K4, K12-K14; `=2` only).** A printed mark no name requests is no label, as the switch
 off reads it (FIDELITY_CHARTER: a mark matters only where it is used). K12 is ported as a give-back, read once every name
