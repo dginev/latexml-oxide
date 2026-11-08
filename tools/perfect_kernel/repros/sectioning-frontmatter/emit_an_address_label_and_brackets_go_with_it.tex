@@ -1,0 +1,22 @@
+% mechanism: an address inside an entry's text is its owner's e-mail at `LATEXML_FM_EMIT=2` as off: the reading's take-out
+%   (`Resolver::take_out_entry_addresses`) is written cut from the entry's tokens at the positions its inks print at
+%   (`Event::ink_at`, `writer::address_cut`; OD #980 P1b), the label word and the brackets with the address, the e-mail
+%   named by the label; `=2` only
+% witness: ieeeconf `\thanks{$^1$Dept…, Austria (E-mail: \texttt{a@x})}` (2311.02475; RP1's draft left the `)` and named
+%   the e-mail `Email: `)
+% oracle:  pdflatex 0 errors; "Ann Able1 and Bob Baker2"; the notes "1 Department of X, Univ A, City, Country (E-mail:
+%   ann.able@a.org)", "2 Lab Y, Univ B, Town, Country, (E-mail: bob.baker@b.org)"
+% engines: rust LO4 `=2`: as off (the Kind step after the flush cuts the given-back entry); off: each entry without its
+%   bracketed label and address, each address its owner's e-mail named `E-mail: `, in typewriter
+% expect:  0 errors, 0 warnings; `=2` creators' XML as with the switch off
+% status:  GREEN (perfect_kernel_batchp1e::an_address_s_label_and_brackets_go_with_it)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{An address with its label in brackets}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$%
+\thanks{$^{1}$Department of X, Univ A, City, Country (E-mail: \texttt{ann.able@a.org})}%
+\thanks{$^{2}$Lab Y, Univ B, Town, Country, (E-mail: \texttt{bob.baker@b.org})}}
+\maketitle
+Text.
+\end{document}

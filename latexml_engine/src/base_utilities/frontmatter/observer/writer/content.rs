@@ -96,9 +96,21 @@ impl Field<'_> {
   /// (`{\bf $^1$} Univ A`) and the closing braces right after a group it opens.
   pub(super) fn content_of(
     &self,
+    range: (usize, usize),
+    floor: usize,
+    first: usize,
+  ) -> Option<(Tokens, usize)> {
+    self.content_cut(range, floor, first, &[])
+  }
+
+  /// [`Self::content_of`] without the runs `cuts` (indices, each balanced: an entry's address runs, `address_cut`), `None`
+  /// where one of them is partly inside the content and partly outside it.
+  pub(super) fn content_cut(
+    &self,
     (start, end): (usize, usize),
     floor: usize,
     first: usize,
+    cuts: &[(usize, usize)],
   ) -> Option<(Tokens, usize)> {
     let content = self.tokens;
     if start > end || end > content.len() || start < floor {
@@ -134,7 +146,18 @@ impl Field<'_> {
         tokens.extend_from_slice(switches);
       }
     }
-    tokens.extend_from_slice(&content[start..end]);
+    if cuts
+      .iter()
+      .any(|&(s, t)| s < end && t > start && (s < start || t > end))
+    {
+      return None;
+    }
+    if cuts.is_empty() {
+      tokens.extend_from_slice(&content[start..end]);
+    } else {
+      let cut = |i: &usize| cuts.iter().any(|&(s, t)| (s..t).contains(i));
+      tokens.extend((start..end).filter(|i| !cut(i)).map(|i| content[i]));
+    }
     Some((Tokens::new(tokens), end))
   }
 

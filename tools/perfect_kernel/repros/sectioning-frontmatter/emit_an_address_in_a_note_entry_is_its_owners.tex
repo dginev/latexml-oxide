@@ -1,0 +1,20 @@
+% mechanism: an address inside an entry's text is its owner's e-mail at `LATEXML_FM_EMIT=2` as off: the reading's take-out
+%   (`Resolver::take_out_entry_addresses`) is written cut from the entry's tokens at the positions its inks print at, each address the e-mail of the owner
+%   the reading gives it, in the font it prints in (`Event::ink_at`, `writer::address_cut`; OD #980 P1b); `=2` only
+% witness: ieeeconf `\thanks{$^{1}$X and Y are with … {\tt\small a@x; b@x}}` (2011.02560, 2104.05078, 2204.02371,
+%   2410.06013, 1912.07315); the bracketed list `({\tt\small \{a, b\}@x}).` (2211.06034)
+% oracle:  pdflatex 0 errors; "Ann Able1 and Bob Baker1 and Cy Cole2"; the notes "1 Ann Able and Bob Baker are with the
+%   Department of X, Univ A, City, Country ann.able@a.org; bob.baker@a.org", "2 Cy Cole is with Univ B, Town (cy.cole@b.org)."
+% engines: rust LO4 `=2`: each note's whole text an affiliation of its carriers, the addresses in it; off: the entry without them, each address its owner's e-mail
+% expect:  0 errors, 0 warnings; `=2` creators' XML as with the switch off
+% status:  RED (LO4) -> GREEN (perfect_kernel_batchp1e::an_address_in_a_note_entry_is_its_owners_email)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{Addresses in a note's entry}
+\author{Ann Able$^{1}$ and Bob Baker$^{1}$ and Cy Cole$^{2}$%
+\thanks{$^{1}$Ann Able and Bob Baker are with the Department of X, Univ A, City, Country {\tt\small ann.able@a.org; bob.baker@a.org}}%
+\thanks{$^{2}$Cy Cole is with Univ B, Town ({\tt\small cy.cole@b.org}).}}
+\maketitle
+Text.
+\end{document}

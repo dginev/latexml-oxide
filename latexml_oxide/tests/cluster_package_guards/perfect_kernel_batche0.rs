@@ -1169,7 +1169,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // catcodes of a cut: where a slice's edge falls past an option, a group or an accent's letter, OD #980; Z4ar2, 30 -> 28: an address
   // list's `@` no longer read, its inks are)
   ("writer/emit", 28),
-  ("writer/dom+mod", 0),
+  // (P1b, 0 -> 1: `writer/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
+  // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
+  ("writer/dom+mod", 1),
   ("writer/plan", 85),
   // (LO2r2, 0 -> 4: a row line's cut ends at its address's own first token, which the letters check finds; the tokens between the
   // last letter it keeps and that one print no letter, so their kinds say which it keeps — the spacing, separators, commands and

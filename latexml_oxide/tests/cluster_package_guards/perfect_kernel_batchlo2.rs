@@ -214,8 +214,9 @@ fn a_note_line_under_an_entry_is_the_blocks() {
 /// `(Tel. 351 463)`), a bracket holding the address alone dropped with it (`Dresden [Germany] (bob.baker@a.org)` keeps
 /// `Dresden [Germany]`), a mark before it its ink (`Dresden$^{\dagger}$, Germany`) — each as with the switch off (review revLO2 2
 /// and base: LO2 `=2` cut at the shortest letter match, `(Tel. 351 463`, `Dresden [Germany`, and wrote the marked line by its
-/// text). A line whose addresses don't all end it keeps its reading: the whole line each author's (revLO2 3: LO2 `=2` wrote the
-/// reading's string, `Dresden, Germany , Leipzig`).
+/// text). A line printing two addresses, `Dresden, Germany (bob.baker@a.org); Leipzig (bob@b.org)`, is cut as the switch off cuts
+/// it since P1: each address Bob's e-mail, `Dresden, Germany; Leipzig` the row's (revLO2 3: LO2 `=2` wrote the reading's string,
+/// `Dresden, Germany , Leipzig`; LO2r2 to LO4 the whole line each author's).
 #[test]
 fn a_row_address_cut_keeps_its_ink() {
   let tex = repro!("emit_a_row_address_cut_keeps_its_ink");
@@ -258,13 +259,26 @@ fn a_row_address_cut_keeps_its_ink() {
     );
     assert_eq!(creators(&xml), want, "{shape}");
   }
-  let two = "Dresden, Germany (bob.baker@a.org); Leipzig (bob@b.org)";
-  let (log, xml) = run(&tex.replace(line, two), 2);
+  // (two addresses on the line, each spelling Bob: his e-mails, the line's rest the row's, as with the switch off — the
+  // reading's take-out written cut from the line's tokens, P1, `writer::entry_cut`; LO2 to LO4 `=2` gave each author the
+  // whole line)
+  let two = tex.replace(
+    line,
+    "Dresden, Germany (bob.baker@a.org); Leipzig (bob@b.org)",
+  );
+  let (off_log, off) = run(&two, 0);
+  assert_eq!(
+    (error_count(&off_log), warning_count(&off_log)),
+    (0, 0),
+    "{off_log}"
+  );
+  let (log, xml) = run(&two, 2);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&xml), [
-    author("Ann Able", two, false),
-    author("Bob Baker", two, false)
-  ]);
+  let mut bob = author("Bob Baker", "Dresden, Germany; Leipzig", true);
+  bob.push("email=bob@b.org".to_string());
+  let want = [author("Ann Able", "Dresden, Germany; Leipzig", false), bob];
+  assert_eq!(creators(&off), want);
+  assert_eq!(creators(&xml), want);
 }
 
 /// A creator call's `annotations=` are cleaned as the API cleans a label (Perl's `cleanFrontmatterLabels`,

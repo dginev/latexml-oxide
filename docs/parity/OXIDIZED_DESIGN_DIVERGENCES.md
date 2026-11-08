@@ -32605,4 +32605,32 @@ current author (Perl's `\lx@add@email`), so it is the note owner's e-mail, not a
 `\email`, `\email:locked`, OD #408, `ledger::email_meaning`): 2511.14713's siamart `\thanks{…, \email{wning@vt.edu},
 \email{amiedlar@vt.edu}.}`, both addresses Ning Wan's as off and Perl. Off: byte-identical. Guard `perfect_kernel_batchlo4`.
 
+**P1b (E1, the strict port of RT1's rows 54-58; `=2` only).** An address printed inside an entry's text (an `\institute`, an
+`\affil`, a `\thanks` entry, a block line read on) is cut out into its owner's e-mail as the switch-off writer cuts today's XML
+(`plan::cut_entry_addresses`, `dom::address_cut`, `Op::Address`, `Op::CutAddresses`), translated onto the entry's tokens, no DOM
+pass. *The fact:* the lexer records where each character of a name prints (`Event::ink_at`: its box's cover and its own token,
+kept in a block printing an `@`; a note's text from its body's), and the reading's take-out keeps its bytes (`Taken::lined`,
+`cuts`, `runs` with their label words). *The cut* (`writer/address_cut.rs`): the reading's text located in its events' text (a
+note's, the span's, or the lines from it on, line by line where the reading trimmed a line's separator: 1203.0253,
+2405.03617), each cut byte a position; row 54, all holders cut or none, per entry; row 55, a separator the cut takes at an end
+takes what prints nothing up to the kept ink (the break and the mark of `\\$^*\,$a@x`), a cut taking a kept character's token
+or a note declines, one is parted around a contact read apart (`(\email{a@x}; b@x)`, 1106.3045), and each printed run the cut
+touches (the text's spaces as printed) must be the reading's whole, else the entry is given back (`kwb,flynn,walter.scheirer@nd.edu`,
+a run the reading reads as one address after prose; also one glued to a list's comma: 1903.10019); each part grown to a balanced
+run over tokens printing nothing (`{\tt(a@x)}`, astro-ph0610492); row 56, each address its own tokens with the switches of the
+group its run's first address opens in (`\texttt{a@x}`, `{\tt\small a@x; b@x}`'s second), or its text in the font of the ink
+printing the run's `@` (RP1's `EntryCut::mail`: a list's written-out address; one a contact command prints, whose call the item
+would mute: 1109.3369); row 57, the e-mail named by the run's label (`E-mail: `, 2311.02475); row 58, the e-mails the reading's,
+written as `\lx@add@contact` items before the cut entry. Row 57a's whole-paper decline is per entry: a cut that can't be made is
+given back whole to the Kind steps, as before. The entry is its whole as it printed, written by its own path (`item_call`) with
+the runs taken out of its tokens (`Field::content_cut`: the block path's `event_run`, a note's argument, an API call's command
+argument); a path that doesn't cut writes its text, counted (`an entry's addresses cut`). The checks read every entry whole
+(RP1's: 1610.05419). Witnesses fixed (`=2` creators = off): 2011.02560, 2104.05078, 2204.02371, 2406.02913, 2410.06013,
+2508.09777, astro-ph0610446, 1912.07315, 2106.07466, 2503.07161, astro-ph0412523, cond-mat0610708, 1106.3045, 1203.0253,
+1310.7021, 1604.05586, 1811.10103, 2004.11812, 2206.00099, 2211.06034, 2310.05733, 2405.03617, 2405.13751, 2503.07190,
+2603.08078, astro-ph0610492, physics0603032, 2606.17067, 1707.05998; 1705.06453's e-mails (a ` -` left, the reading's own
+cut). Open: authblk's `\affil[*]{Corresponding author: a@x}` (1812.03816, 2004.06340, 2012.13817) keeps `Corresponding author`
+an affiliation at `=2`, where off's legend step (`kind_legend_contacts`) makes it the note by the binding's printed label, which
+the emitted item lacks (`rekeyed` drops `_labelprints`). Off: byte-identical. Guard `perfect_kernel_batchp1e`.
+
 Guards `perfect_kernel_batchz4`.

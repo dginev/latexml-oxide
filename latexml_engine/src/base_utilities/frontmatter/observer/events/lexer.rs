@@ -117,12 +117,15 @@ impl Lexer {
     let run = std::mem::take(&mut self.run);
     let run_own = std::mem::take(&mut self.run_own);
     let font = self.run_font.take();
-    // the run's words, each with the span of its characters
+    // the run's words, each with the span of its characters, and where each prints (`Event::ink_at`, kept where the events
+    // print an `@`: `finish`)
     let mut words: Vec<(String, Option<(u16, u16)>)> = Vec::new();
     let mut owns: Vec<Option<(u16, u16)>> = Vec::new();
+    let mut inks: Vec<Vec<Option<InkAt>>> = Vec::new();
     let mut word = String::new();
     let mut word_span = None;
     let mut word_own = None;
+    let mut word_ink = Vec::new();
     for ((c, span), own) in run
       .into_iter()
       .zip(run_own)
@@ -132,11 +135,13 @@ impl Lexer {
         if !word.is_empty() {
           words.push((std::mem::take(&mut word), word_span.take()));
           owns.push(word_own.take());
+          inks.push(std::mem::take(&mut word_ink));
         }
       } else {
         word.push(c);
         word_span = join_span(word_span, span);
         word_own = join_span(word_own, own.map(|own| (own, own + 1)));
+        word_ink.push(span.map(|cover| InkAt { cover, own }));
       }
     }
     if words.is_empty() {
@@ -198,8 +203,10 @@ impl Lexer {
       }
       if !name.text.is_empty() {
         name.text.push(' ');
+        name.ink_at.push(None);
       }
       name.text.push_str(&word);
+      name.ink_at.append(&mut inks[at]);
       name.span = join_span(name.span, span);
       name.marks = join_span(name.marks, owns[at]);
     }
@@ -397,6 +404,13 @@ impl Lexer {
     self.flush_symbol();
     self.flush_run();
     self.clear_gap();
+    // (where each character of a name prints is read only in a block printing an address, any of whose names may be a list's
+    // part, `{\tt\small jhansen, msandeep,dudek@cim.mcgill.ca}`: 1811.10103)
+    if !self.events.iter().any(|e| e.text.contains('@')) {
+      for event in &mut self.events {
+        event.ink_at = Vec::new();
+      }
+    }
     // a `\label` outside a note labels the note before it
     let mut events: Vec<Event> = Vec::with_capacity(self.events.len());
     let glued = glue_in_word_marks(self.events);

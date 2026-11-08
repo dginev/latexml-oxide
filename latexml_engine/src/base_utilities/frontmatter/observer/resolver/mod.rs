@@ -182,6 +182,20 @@ pub struct Taken {
   pub original: String,
   pub stripped: String,
   pub holders:  Vec<(Option<usize>, usize, Assoc)>,
+  /// the text the runs were read in (`original` with its lines), the bytes of it the take-out cuts (`address_cuts`), and
+  /// each run taken out: its bytes, its addresses and the label word it took (`E-mail:`) — what the emitter cuts the
+  /// entry's tokens at (`writer::address_cut`, OXIDIZED_DESIGN_DIVERGENCES #980 P1b)
+  pub lined:    String,
+  pub cuts:     Vec<(usize, usize)>,
+  pub runs:     Vec<TakenRun>,
+}
+
+/// One address run a take-out took ([`Taken::runs`]): its bytes in [`Taken::lined`], its addresses, its label word.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TakenRun {
+  pub bytes:     (usize, usize),
+  pub addresses: Vec<String>,
+  pub label:     Option<String>,
 }
 
 /// One e-mail call printing several addresses alone that the reading wrote out ([`Resolved::listed`]): the contact as

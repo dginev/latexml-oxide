@@ -33,6 +33,7 @@ use super::{
   *,
 };
 
+mod address_cut;
 mod apply;
 mod content;
 mod dom;
@@ -758,7 +759,7 @@ fn give_back_entries(
 }
 
 /// The entry `taken` given back in the reading `out`: its addresses, taken out, no contacts of its holders.
-fn give_back_entry(out: &mut Resolved, taken: &resolver::Taken) {
+pub(super) fn give_back_entry(out: &mut Resolved, taken: &resolver::Taken) {
   for creator in &mut out.creators {
     creator
       .contacts
