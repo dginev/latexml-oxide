@@ -592,6 +592,9 @@ fn kind_legend_contacts(document: &mut Document) -> Result<()> {
       None => entry.extend(authors.iter().cloned()),
     }
   }
+  // (each printed text read once: every holder's copy of an entry has its text and its carriers — a collaboration's
+  // authblk `\affil[N]` under hundreds of names, 2005.08745; P2r2's cost gate)
+  let mut kinds: HashMap<&str, Option<&'static str>> = HashMap::default();
   for (contact, text) in &read {
     let mark = legend_mark(document, contact, &named_creators);
     // (a legend that prints no mark stays the affiliation it was: a note's text shows only behind its mark, and an empty
@@ -602,9 +605,10 @@ fn kind_legend_contacts(document: &mut Document) -> Result<()> {
     }
     // (or a dedication's words behind a name's mark, which the Kind step for a dedication leaves to it: the carriers'
     // note, as "Deceased" is — `$^\dagger$In memory of Bob Baker, …` under Bob Baker$^{1,\dagger}$, review rev107c S1)
-    let Some(kind) = entry_legend_kind(text, &carriers[text.as_str()])
-      .or_else(|| opens_a_dedication(text).then_some("note"))
-    else {
+    let Some(kind) = *kinds.entry(text.as_str()).or_insert_with(|| {
+      entry_legend_kind(text, &carriers[text.as_str()])
+        .or_else(|| opens_a_dedication(text).then_some("note"))
+    }) else {
       continue;
     };
     DebugFeature!(

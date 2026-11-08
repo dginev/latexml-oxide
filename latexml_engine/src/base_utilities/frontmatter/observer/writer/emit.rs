@@ -194,7 +194,7 @@ fn rekeyed(
     out.extend_from_slice(&v[..=open]);
     out.extend(internal(add));
     // (a label its binding prints with the line, `_labelprints`: the call's label goes with it, in a key of its own,
-    // `_printedlabel`, the reading's label replacing the call's — the Kind step for a legend reads it,
+    // `_printedlabel`, which says it prints, the reading's label replacing the call's — the Kind step for a legend reads it,
     // `insert::legend_mark`: authblk's `\\affil[*]{Corresponding author …}`, 2605.31330, 2201.11910; P2 NT, P2r2)
     let (mut label, mut prints) = (None, false);
     let (mut depth, mut from) = (0, open + 1);
@@ -230,7 +230,7 @@ fn rekeyed(
       }
     }
     if prints && let Some(label) = label {
-      out.extend(internal(&s!(",{LABEL_PRINTS}=true,{PRINTED_LABEL}")));
+      out.extend(internal(&s!(",{PRINTED_LABEL}")));
       out.extend_from_slice(label);
     }
     out.extend_from_slice(&v[close..]);
