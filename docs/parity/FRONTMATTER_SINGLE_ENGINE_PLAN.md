@@ -195,8 +195,15 @@ basis `pk_wt/int149a` @ 3189c464d9 (RT1 at 913eef6966), binary `P2r2-rel`. Their
   (59), the DOM Kind step for address lines (41), relocate's Rust-only orphan sharing (49), which the emitter depends on
   (`addresses:block`, emit.rs:2067, :2247). Link double-applies the reading's ownership: duplicate e-mails (1012.4847,
   2406.04316). The fold: the S2b writer → RT1's E1; Link + Kind address lines (passes 7, 13, 14, 17) → E1 and the S5 rows,
-  HARD; the orphan sharing → the emitter writes the block's own nameless creator itself (OD #159), EASY, and relocate's
-  Rust-only orphan-sharing branch goes off at `=2` once it does; passes 15, 16,
+  HARD; the orphan sharing → the emitter writes the block's own nameless creator itself (OD #159), and relocate's
+  Rust-only orphan-sharing branch is off for an emitted paper — **done (BC1):** `emit::block_creator`, one
+  `\lx@add@frontmatter@now{ltx:creator}[role=author,annotations={addresses:block},_blockcreator=true]{}` below the
+  flush's names, which the block's items reach by their label as Perl's relocateAnnotations places any; `_blockcreator`
+  keeps it out of the role's count (no `_num`, the last name's separator unchanged) and out of
+  `coalesce_empty_creators`/`distribute_upfront_contacts`; an orphan of an emitted paper is Perl's (warned, dropped).
+  The 21 papers that depended on the branch (20 of better_at_2, 1106.3045) byte-identical on int149a `=2`, 1012.4847's
+  doubled `julo@`/`kpa@` kept (Link's X0, not relocate). Guard
+  `perfect_kernel_batchbc1::the_blocks_creator_is_the_emitters`. Passes 15, 16,
   19, 20, 21 → one fact and one Kind each into the reading, EASY each; 3, 4, 9, 10 and relocate's R4 → delete candidates,
   each first given a trace line; the net notes (23) → the emitter's net owns `=2`, `keep_unclaimed_net_notes` becoming off-only after a
   measured equal-coverage comparison. **Decided (main session 2026-11-08, reopenable):** those two, and the double ownership (the

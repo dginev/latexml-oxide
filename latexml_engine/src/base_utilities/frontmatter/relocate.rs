@@ -1,6 +1,6 @@
 //! Relocating author annotations to their creators; shown marks and superscript scripts.
 
-use super::*;
+use super::{observer::emitted, *};
 
 /// Find all dummy frontmatter entries (role "pending") containing unattached annotations
 /// and attempt to attach to the appropriate frontmatter, based on the identifying labels.
@@ -391,7 +391,13 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
         // (none for an orphan whose fuzzy label names its owners: a correspondent naming two authors, placed below; a
         // sole author's orphan still warns, 63h)
         let named_by_label = label.starts_with("fuzzy:") && owned_by(&label, &note).is_some();
-        if !unlabelled && !shared_orphan(&note) && !named_by_label {
+        // (the frontmatter emitter writes the block's own creator itself, which the block's items find by their label:
+        // an orphan of an emitted paper is Perl's, warned and dropped — no shared creator is made below the authors.
+        // `observer::writer::emit::block_creator`; 1012.4847, 1106.3045)
+        let shares = !emitted();
+        if (!unlabelled && !shared_orphan(&note) && !named_by_label)
+          || (!shares && owned_by(&label, &note).is_none())
+        {
           let mut known: Vec<&String> = labeltable.keys().collect();
           known.sort();
           Warn!(
@@ -422,7 +428,7 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
             at_queue_position(&owner);
             held.touched(&owner);
           }
-        } else {
+        } else if shares {
           DebugFeature!(
             "frontmatter",
             "FRONT Sharing orphaned annotation {label} below authors"

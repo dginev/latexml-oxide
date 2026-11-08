@@ -49,6 +49,14 @@ pub(in crate::base_utilities) const ENTRY_KINDED: &str = "_kinded";
 /// an author keeps the place the author's own uncut copy had (`relocate::at_queue_position`, [`CUT_COPY_PLACE`]).
 pub(in crate::base_utilities) const CUT_LIST: &str = "_cutlist";
 
+/// The attribute (and a declared `Frontmatter` key) of the author block's own creator, which the frontmatter emitter
+/// writes below the names: Perl's one nameless creator holding only the block's contacts (`label=addresses:block`;
+/// OXIDIZED_DESIGN #159, FIDELITY_CHARTER §4). No name of the row, it takes no place in its role's count — no
+/// `_num`, no `author:N` label, no separator — and no pass that pairs names with contacts reads it as one
+/// (`insert::coalesce_empty_creators`, `distribute_upfront_contacts`; `relocate_annotations` reads authors by their
+/// `ltx:personname`).
+pub(in crate::base_utilities) const BLOCK_CREATOR: &str = "_blockcreator";
+
 pub(in crate::base_utilities) fn load() -> Result<()> {
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // General support for Front Matter. (PR #2767 rework)
@@ -170,6 +178,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefKeyVal!("Frontmatter", "_labelprints", "");
   // Rust-only: the label that prints, of an entry the frontmatter emitter wrote ([`PRINTED_LABEL`]; OD #980, P2 NT).
   DefKeyVal!("Frontmatter", "_printedlabel", "");
+  // Rust-only: the author block's own creator, which the frontmatter emitter writes ([`BLOCK_CREATOR`]).
+  DefKeyVal!("Frontmatter", "_blockcreator", "");
 
   // Rust-only: `\lx@label@ref{<key>}`, the label a binding recorded for `key` once later input was read
   // ([`set_label_ref`]: cas's `\stmRef`, which LaTeX reads from the `.aux` of the run before), nothing for one never
@@ -308,7 +318,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // extract (possibly multiple!) labels
     let mut labels = clean_frontmatter_labels(
       options.get("annotations").map(String::as_str).unwrap_or(""), "");
-    if !role.is_empty() {
+    if !role.is_empty() && options.contains_key(BLOCK_CREATOR) {
+      // (the block's own creator is no name of the row: uncounted, unnumbered — [`BLOCK_CREATOR`])
+      options.insert("role".to_string(), role.clone());
+    } else if !role.is_empty() {
       let n = lookup_mapping_int(&s!("num_{tag}"), &role) + 1;
       assign_mapping(&s!("num_{tag}"), &role, Some(Stored::Int(n)));
       options.insert("role".to_string(), role.clone());
