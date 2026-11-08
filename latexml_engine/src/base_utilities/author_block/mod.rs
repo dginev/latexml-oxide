@@ -25,15 +25,12 @@ pub use rows::*;
 mod row_emails;
 pub use row_emails::*;
 mod symbols;
-pub use symbols::glued_line_marks_as_marks;
 pub(super) use symbols::*;
 mod notes;
 pub use notes::*;
 mod name_text;
 pub use name_text::*;
 mod email_owners;
-// (the IEEEtran binding reads a bare run between its blocks by it: ieeetran_cls.rs `wrap_bare_author_block_text`)
-pub use email_owners::prints_nothing;
 pub(super) use email_owners::*;
 mod links;
 pub(super) use links::*;

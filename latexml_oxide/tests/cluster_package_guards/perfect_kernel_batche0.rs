@@ -242,13 +242,17 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
   ("collaborations.rs annotate=", 1),
   ("collaborations.rs lx@add@", 2),
   ("dispatch.rs annotate=", 2),
-  ("dispatch.rs lx@add@", 10),
-  ("email_block_calls.rs lx@add@", 6),
+  // (MV1, 10 -> 9: `whole_block_author`, Perl's whole-block `\lx@add@author`, moved to `frontmatter/fallback.rs`)
+  ("dispatch.rs lx@add@", 9),
+  // (MV1, 6 -> 5, and `notes.rs`' 2 -> 0: `is_email_command` and `document_note_call`, `note_call_end` moved to the emitter,
+  // `writer/calls.rs`, which writes Perl's calls; no emission added)
+  ("email_block_calls.rs lx@add@", 5),
   ("email_lines.rs lx@add@", 7),
   ("line_kinds.rs annotate=", 1),
   ("line_kinds.rs lx@add@", 4),
-  ("name_text.rs lx@add@", 3),
-  ("notes.rs lx@add@", 8),
+  // (MV1, 3 -> 2 and 8 -> 2: the token primitives that recognize the API's commands in a note (`NAME_ANNOTATIONS`, `name_text`)
+  // moved to `classify/`; they read, emit nothing)
+  ("name_text.rs lx@add@", 2),
 ];
 
 /// The old reader's non-blank code lines at int140a: a ceiling, for the growth its emissions don't show (108a's +703
@@ -256,7 +260,9 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
 /// reader lowers it to the new count**, in the same commit, so what was deleted cannot grow back. A sibling directory is no
 /// escape from the rest of this fence's reach: its token reads count in `token_reads_only_fall_toward_the_floor`'s
 /// catch-all, and its API names and keys in `the_frontmatter_api_stays_perls`.
-const OLD_READER_CODE_LINES: usize = 15_404;
+/// MV1 (2026-11-08) lowered it from 15,404 to 9,275: the knowledge the one engine reached moved into its own library,
+/// what is left is the token driver.
+const OLD_READER_CODE_LINES: usize = 9_275;
 
 /// What the fence counts in the old reader's code: its ways into the API's queue, and a convention's mode.
 const OLD_READER_NEEDLES: [&str; 4] = [
@@ -303,164 +309,25 @@ fn the_old_reader_takes_no_new_decision() {
 /// for frontmatter"). `author_block/mod.rs` re-exports each of its submodules (`pub use affiliations::*`, …) and
 /// `base_utilities/mod.rs` re-exports it all (`pub use author_block::*`), so a frontmatter file's `use super::*` reaches every
 /// name the old reader exports without spelling `author_block::`: the fence counts the names. A use is a call (`name(`), a
-/// path (`::name`, `name::`), a name in a `use` list, or any occurrence of a constant or type name (upper case first). Each
+/// path (`::name`, `name::`), a name in a `use` list, a function passed as a value (`.with_str(name)`, `.map(name)`), or any
+/// occurrence of a constant or type name (upper case first); a name is the one engine's own where `frontmatter/` exports it
+/// (a visible item at a file's top level) or the file itself defines it (a nested function, a method, a closure). Each
 /// pair is a debt: it may only fall. A new one is a decision the old engine takes for the new one; it lands in
-/// `observer/resolver/`, on the digested events, instead. Where each name goes when `author_block/` is deleted:
-/// docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row "`author_block/`'s survivors" (text rules on ink to
-/// `frontmatter/classify.rs`, Perl's API-call writers into the emitter, Perl's whole-block fallback to its own module, the
-/// decisions translated onto the reading).
-const ONE_ENGINE_REACH: &[(&str, usize)] = &[
-  ("address_lists.rs is_email_label", 1),
-  ("address_lists.rs is_local_char", 1),
-  ("address_lists.rs list_owners", 1),
-  ("address_lists.rs NameKeys", 3),
-  ("address_lists.rs spelled_owner", 1),
-  ("insert.rs as_printed", 1),
-  ("insert.rs classify_thanks", 1),
-  ("insert.rs CUT_ROLES", 5),
-  ("insert.rs entry_address_owners", 1),
-  ("insert.rs ENTRY_KEY", 7),
-  ("insert.rs ENTRY_KINDED", 2),
-  ("insert.rs entry_legend_kind", 1),
-  ("insert.rs ENTRY_SYMBOL", 2),
-  ("insert.rs flag_merged_creators", 1),
-  ("insert.rs is_email_label", 4),
-  ("insert.rs is_entry_word_mailbox", 1),
-  ("insert.rs is_listed_local_part", 1),
-  ("insert.rs is_pattern_address", 2),
-  ("insert.rs is_role_mailbox", 1),
-  ("insert.rs list_owners", 1),
-  ("insert.rs lists_local_parts", 2),
-  ("insert.rs name_count", 1),
-  ("insert.rs NAME_GRADE_SOCIETIES", 1),
-  ("insert.rs NameKeys", 11),
-  ("insert.rs names_a_contact", 2),
-  ("insert.rs opens_a_dedication", 3),
-  ("insert.rs own_call_keeps", 1),
-  ("insert.rs reads_as_affiliation", 1),
-  ("insert.rs SEQUENCE_LABEL", 1),
-  ("insert.rs spelled_owner", 9),
-  ("insert.rs spelled_unspaced_list", 1),
-  ("insert.rs symbol_mark_key", 1),
-  ("insert.rs text_prints_name", 1),
-  ("observer/resolver/api.rs classify_thanks", 1),
-  ("observer/resolver/api.rs is_entry_word_mailbox", 2),
-  ("observer/resolver/blocks.rs is_pattern_address", 1),
-  ("observer/resolver/labels.rs ADDRESS_GROUP_SEPARATORS", 3),
-  ("observer/resolver/labels.rs classify_thanks", 1),
-  ("observer/resolver/labels.rs ends_a_listed_run", 2),
-  ("observer/resolver/labels.rs has_person_cue", 1),
-  ("observer/resolver/labels.rs is_email_label", 4),
-  ("observer/resolver/labels.rs is_listed_local_part", 2),
-  ("observer/resolver/labels.rs is_local_char", 3),
-  ("observer/resolver/labels.rs is_name_qualifier", 3),
-  ("observer/resolver/labels.rs names_a_contact", 1),
-  ("observer/resolver/labels.rs opens_a_dedication", 1),
-  ("observer/resolver/labels.rs opens_with_deceased", 1),
-  ("observer/resolver/labels.rs reads_as_affiliation", 1),
-  ("observer/resolver/labels.rs UNBRACED_LIST_SEPARATORS", 4),
-  ("observer/resolver/labels.rs write_out_unspaced_lists", 2),
-  ("observer/resolver/lines.rs collaboration_heads", 1),
-  ("observer/resolver/lines.rs is_membership_part", 1),
-  ("observer/resolver/lines.rs is_name_qualifier", 2),
-  ("observer/resolver/lines.rs name_count", 3),
-  ("observer/resolver/lines.rs non_name_word", 1),
-  ("observer/resolver/lines.rs reads_as_collaboration", 1),
-  (
-    "observer/resolver/lines.rs reads_as_listed_collaboration",
-    1,
-  ),
-  ("observer/resolver/mod.rs collaboration_line_framing", 1),
-  ("observer/resolver/mod.rs Framing", 1),
-  ("observer/resolver/mod.rs lists_local_parts", 1),
-  ("observer/resolver/mod.rs NameKeys", 2),
-  ("observer/resolver/mod.rs names_correspondence", 5),
-  ("observer/resolver/mod.rs spelled_owners", 1),
-  ("observer/resolver/net.rs is_name_qualifier", 1),
-  ("observer/resolver/placed.rs CUT_LIST", 2),
-  ("observer/resolver/post.rs as_printed", 1),
-  ("observer/resolver/post.rs entry_address_owners", 2),
-  ("observer/resolver/post.rs is_entry_word_mailbox", 1),
-  ("observer/resolver/post.rs is_pattern_address", 3),
-  ("observer/resolver/post.rs lists_local_parts", 5),
-  ("observer/resolver/post.rs NameKeys", 3),
-  ("observer/resolver/post.rs own_call_keeps", 1),
-  ("observer/resolver/post.rs spelled_owners", 1),
-  ("observer/writer/apply.rs classify_thanks", 1),
-  ("observer/writer/emit.rs classify_thanks", 1),
-  ("observer/writer/emit.rs document_note_call", 2),
-  ("observer/writer/emit.rs entry_mark", 1),
-  ("observer/writer/emit.rs mark_label", 1),
-  ("observer/writer/emit.rs note_body", 1),
-  ("observer/writer/emit.rs note_call_end", 2),
-  ("observer/writer/emit.rs rewrite_symbol_superscripts", 1),
-  ("observer/writer/emit.rs split_wrapped_affiliation_marks", 1),
-  ("observer/writer/emit.rs starts_with_affiliation_mark", 1),
-  ("observer/writer/emit.rs whole_block_author", 2),
-  ("place.rs address_owners", 1),
-  ("place.rs author_mark_operands", 2),
-  ("place.rs AuthorNote", 1),
-  ("place.rs author_notes", 1),
-  ("place.rs entry_mark", 2),
-  ("place.rs marker_leads", 1),
-  ("place.rs mark_label", 2),
-  ("place.rs NameKeys", 2),
-  ("place.rs names_correspondence", 3),
-  ("place.rs queued_name", 2),
-  ("place.rs visible_name_text", 3),
-  ("queue_digest.rs classify_thanks", 1),
-  ("queue_digest.rs is_footnote_symbol_operand", 1),
-  ("queue_digest.rs is_symbol_mark", 2),
-  ("queue_digest.rs opens_with_deceased", 1),
-  ("queue_digest.rs reads_as_affiliation", 1),
-  ("queue_digest.rs split_mark_notes", 2),
-  ("queue_digest.rs visible_name_text", 1),
-  ("queue_reading.rs author_mark_operands", 1),
-  ("queue_reading.rs is_mark_command", 2),
-  ("queue_reading.rs is_symbol_mark", 2),
-  ("queue_reading.rs label_pieces", 1),
-  ("queue_reading.rs mark_label", 1),
-  ("queue.rs author_mark_position", 1),
-  ("queue.rs entry_mark", 1),
-  ("queue.rs is_symbol_mark", 1),
-  ("relocate.rs author_mark_operands", 1),
-  ("relocate.rs classify_thanks", 1),
-  ("relocate.rs CUT_LIST", 1),
-  ("relocate.rs is_mark_command", 3),
-  ("relocate.rs is_ordinal_suffix", 3),
-  ("relocate.rs is_spacing", 3),
-  ("relocate.rs is_symbol_mark", 1),
-  ("relocate.rs leading_spacing_end", 1),
-  ("relocate.rs leads_with_mark", 2),
-  ("relocate.rs marked_after_name", 1),
-  ("relocate.rs marker_leads", 2),
-  ("relocate.rs queued_name", 1),
-  ("relocate.rs sup_operand_at", 11),
-  ("shared_row/emails.rs address_tokens", 1),
-  ("shared_row/emails.rs email_addresses", 2),
-  ("shared_row/emails.rs email_command_address", 3),
-  ("shared_row/emails.rs is_email_command", 2),
-  ("shared_row/emails.rs is_email_label", 1),
-  ("shared_row/emails.rs lists_local_parts", 3),
-  ("shared_row/emails.rs names_a_contact", 1),
-  ("shared_row/emails.rs row_address_owners", 1),
-  ("shared_row/emails.rs row_address_spelled_owners", 2),
-  ("shared_row/emails.rs split_email_label", 2),
-  ("shared_row/emails.rs visible_name_text", 1),
-  ("shared_row.rs author_mark_operands", 1),
-  ("shared_row.rs is_author_mark", 3),
-  ("shared_row.rs outside_notes", 1),
-  ("shared_row.rs queued_name", 1),
-  ("shared_row.rs sup_operand_at", 2),
-];
+/// `observer/resolver/`, on the digested events, instead. MV1 (2026-11-08) moved every name the one engine reached, 138
+/// pairs at int149a, into its own library (docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row "Knowledge in, driver out, one
+/// pass"): text rules and token primitives to `frontmatter/classify/`, owner logic to `observer/resolver/owners.rs`, Perl's
+/// API-call writers to `observer/writer/calls.rs`, Perl's whole-block fallback with its preparation to `frontmatter/fallback.rs`,
+/// the API's attribute names to `defs/frontmatter_api.rs`. None is left: what `author_block/` still holds is the token driver.
+const ONE_ENGINE_REACH: &[(&str, usize)] = &[];
 
 /// The names the old reader exports into `base_utilities`: the `pub`, `pub(crate)` and `pub(in …)` items of `mod.rs` and of
-/// each submodule `mod.rs` re-exports with `pub use <submodule>::*`.
+/// each submodule `mod.rs` re-exports with `pub use <submodule>::*`, at a file's top level: a method is no name the glob
+/// exports, its type is (MV1 step 6: the driver's `Collaborations::author` read every `author` argument as a use).
 fn old_reader_exports() -> std::collections::BTreeSet<String> {
   let dir = format!("{BASE}/author_block");
   let glob = Regex::new(r"pub(?:\([^)]*\))?\s+use\s+([a-z_][a-z0-9_]*)::\*").expect("a regex");
   let item = Regex::new(
-    r"(?m)^\s*pub(?:\((?:crate|in [^)]*)\))?\s+(?:fn|const|static|struct|enum|type|trait)\s+([A-Za-z_][A-Za-z0-9_]*)",
+    r"(?m)^pub(?:\((?:crate|in [^)]*)\))?\s+(?:fn|const|static|struct|enum|type|trait)\s+([A-Za-z_][A-Za-z0-9_]*)",
   )
   .expect("a regex");
   let mut files = vec![format!("{dir}/mod.rs")];
@@ -498,6 +365,8 @@ fn uses_of(code: &str, imports: &[std::ops::Range<usize>], name: &str) -> usize 
         || before.ends_with("::")
         || after.starts_with("::")
         || after.starts_with('(')
+        // (a function passed as a value: `.with_str(name)`, `.map(name)`, `f(a, name)`)
+        || (before.ends_with(['(', ',']) && after.starts_with([')', ',']))
         || imports.iter().any(|range| range.contains(&found.start()))
     })
     .count()
@@ -509,10 +378,32 @@ fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
   const WHY: &str = "The one engine decides on the digested events (`observer/resolver/`); `author_block/` is deleted after \
                      the flip, and each name `frontmatter/` still uses moves or is translated: \
                      docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row \"`author_block/`'s survivors\".";
+  // (MV1 step 6: the two shapes the count missed — a function passed as a value, `relocate.rs`'s
+  // `t.with_str(is_name_note_command)`, and a name hidden everywhere by a method or a nested function of one file, `skip_group`
+  // by `title_page_check.rs`'s method and `resolver/labels.rs`'s nested function)
+  assert_eq!(
+    uses_of(
+      "t.with_str(is_name_note_command)",
+      &[],
+      "is_name_note_command"
+    ),
+    1
+  );
+  assert_eq!(uses_of("let x = is_note; f(a, is_note)", &[], "is_note"), 1);
+  let exported = Regex::new(
+    r"(?m)^pub(?:\([^)]*\))?\s+(?:fn|const|static|struct|enum|type|trait|mod)\s+([A-Za-z_][A-Za-z0-9_]*)",
+  )
+  .expect("a regex");
+  let local = Regex::new(concat!(
+    r"\b(?:fn|const|static|struct|enum|type|trait|mod)\s+([A-Za-z_][A-Za-z0-9_]*)",
+    r"|\blet\s+(?:mut\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:move\s*)?\|",
+  ))
+  .expect("a regex");
+  assert!(
+    !exported
+      .is_match("impl Page {\n  pub fn skip_group(&self) {}\n}\nfn f() {\n  fn skip_group() {}\n}")
+  );
   let dir = format!("{BASE}/frontmatter");
-  let definition =
-    Regex::new(r"\b(?:fn|const|static|struct|enum|type|trait|mod)\s+([A-Za-z_][A-Za-z0-9_]*)")
-      .expect("a regex");
   let files = rust_files(&dir);
   let sources: Vec<(String, RustSource)> = files
     .iter()
@@ -524,10 +415,12 @@ fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
       (short, read_rust(file))
     })
     .collect();
-  let defined_here: std::collections::BTreeSet<String> = sources
+  // (the one engine's own names: what a frontmatter file exports, a visible item at its top level; what a file defines for
+  // itself at any depth — a private item, a nested function, a method, a closure — is its own in that file only)
+  let ours: std::collections::BTreeSet<String> = sources
     .iter()
     .flat_map(|(_, source)| {
-      definition
+      exported
         .captures_iter(&source.code)
         .map(|found| found[1].to_string())
         .collect::<Vec<_>>()
@@ -535,16 +428,21 @@ fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
     .collect();
   let names: Vec<String> = old_reader_exports()
     .into_iter()
-    .filter(|name| !defined_here.contains(name))
+    .filter(|name| !ours.contains(name))
     .collect();
   let import = Regex::new(r"\b(?:pub(?:\([^)]*\))?\s+)?use\s+[^;]*;").expect("a regex");
   let mut counts: BTreeMap<String, usize> = BTreeMap::new();
   for (short, source) in &sources {
+    let own: std::collections::BTreeSet<&str> = local
+      .captures_iter(&source.code)
+      .filter_map(|found| found.get(1).or_else(|| found.get(2)))
+      .map(|name| name.as_str())
+      .collect();
     let imports: Vec<_> = import
       .find_iter(&source.code)
       .map(|found| found.range())
       .collect();
-    for name in &names {
+    for name in names.iter().filter(|name| !own.contains(name.as_str())) {
       let n = uses_of(&source.code, &imports, name);
       if n > 0 {
         counts.insert(format!("{short} {name}"), n);
@@ -705,30 +603,23 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "const _command_form base_utilities/frontmatter/queue_digest.rs",
     1,
   ),
-  (
-    "const _cutlist base_utilities/author_block/affiliations.rs",
-    1,
-  ),
+  // (MV1: `_cutlist`, `_entry`, `_entrysymbol`, `_kinded`, `_seqlabel` moved unchanged from `author_block/affiliations.rs` to the
+  // API that reads them, `CUT_LIST`, `ENTRY_KEY`, `ENTRY_SYMBOL`, `ENTRY_KINDED`, `SEQUENCE_LABEL`: no key added)
+  ("const _cutlist base_utilities/defs/frontmatter_api.rs", 1),
   (
     "const _deposit base_utilities/frontmatter/cover_order.rs",
     1,
   ),
+  ("const _entry base_utilities/defs/frontmatter_api.rs", 1),
   (
-    "const _entry base_utilities/author_block/affiliations.rs",
-    1,
-  ),
-  (
-    "const _entrysymbol base_utilities/author_block/affiliations.rs",
+    "const _entrysymbol base_utilities/defs/frontmatter_api.rs",
     1,
   ),
   (
     "const _inserted base_utilities/frontmatter/cover_order.rs",
     1,
   ),
-  (
-    "const _kinded base_utilities/author_block/affiliations.rs",
-    1,
-  ),
+  ("const _kinded base_utilities/defs/frontmatter_api.rs", 1),
   // (OD #961's key, with the API that declares it since P2r2, which `author_block/`, `frontmatter/` and the emitter import)
   (
     "const _labelprints base_utilities/defs/frontmatter_api.rs",
@@ -761,16 +652,13 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "const _released_store base_utilities/frontmatter/queue_digest.rs",
     1,
   ),
-  (
-    "const _seqlabel base_utilities/author_block/affiliations.rs",
-    1,
-  ),
   // (P2r2: the label that prints, of an entry the emitter wrote — `_labelprints` held it beside its flag `true`, a flag and
   // data in one key; an entry's fact in its own key, as Perl keeps `_label` and `_annotations`; OD #980)
   (
     "const _printedlabel base_utilities/defs/frontmatter_api.rs",
     1,
   ),
+  ("const _seqlabel base_utilities/defs/frontmatter_api.rs", 1),
   ("const _source base_utilities/frontmatter/insert.rs", 1),
   (
     "const _titlepage base_utilities/frontmatter/cover_order.rs",
@@ -1112,7 +1000,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("apa7_cls.rs", 7),
   ("authblk_sty.rs", 23),
   // (F1r2, 1288 -> 1285: the membership readout finds its commas by `Token::group_step`, no catcode match)
-  ("author_block", 1285),
+  ("author_block", 629),
+  // (MV1: moved from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
+  ("classify", 347),
   ("defs/author_macros", 20),
   // (Z4a, 7 -> 8: `\lx@frontmatter@itemnone` reads its tag argument, an element's name: an `ltx:rdf` passes through, the rest goes)
   ("defs/frontmatter_api", 8),
@@ -1123,6 +1013,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (raised by one at Z14: the lexer's own constructor, `\lx@fm@obs@affil@marked`, as the row's others; nothing a document spells;
   // by one at N2r2: `raw_lines`' break arm holding the `\and` family too, two lines, the whatsits' definitions, 2106.06418)
   ("events", 60),
+  // (MV1: moved from `author_block` with Perl's whole-block fallback and its preparation, C1, 826 = 629 + 197; none added)
+  ("fallback", 197),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   // (Z4a, 4 -> 8: an environment step by its meaning, a CS whose definition is `\begin` or `\end`, a `\let` copy too, what no frame
   // says for a raw environment; the definition's name, not the token's spelling)
@@ -1142,6 +1034,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("ledger", 24),
   ("llncs_cls.rs", 32),
   ("osa_journal_sty.rs", 77),
+  // (MV1: moved from `author_block` with the owner logic, 938 = 924 + 14; none added)
+  ("owners", 14),
   ("place", 6),
   ("ptephy_cls.rs", 115),
   ("queue", 1),
@@ -1173,6 +1067,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("sv_support_sty.rs", 35),
   ("webofc_cls.rs", 0),
   ("writer/apply", 7),
+  // (MV1: moved from `author_block` with the emitter's vocabulary, 924 = 826 + 98; none added)
+  ("writer/calls", 98),
   // (a new file, what is left of `writer/plan`'s walk-backs: brace balance and a formula's shifts; the two rows together fell by 25, Z3)
   ("writer/content", 7),
   // (Z4a, a new file: the emitter builds Perl's calls from the reading, its reads a call's own keys and pieces, `text_tokens` and the
@@ -1189,6 +1085,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
 
 /// The areas under `frontmatter/`, by path; the first that holds a file takes it.
 const FRONTMATTER_AREAS: &[(&str, &str)] = &[
+  // (MV1: the old reader's text rules and token primitives, moved unchanged from `author_block/`, their reads with them)
+  ("classify", "classify/"),
+  // (MV1: Perl's whole-block fallback and its own preparation, C1, moved unchanged from `author_block/`)
+  ("fallback", "fallback.rs"),
+  ("owners", "observer/resolver/owners.rs"),
   ("shared_row/emails", "shared_row/emails.rs"),
   ("shared_row", "shared_row.rs"),
   ("relocate", "relocate.rs"),
@@ -1200,6 +1101,7 @@ const FRONTMATTER_AREAS: &[(&str, &str)] = &[
   ("writer/plan", "observer/writer/plan.rs"),
   ("writer/apply", "observer/writer/apply.rs"),
   ("writer/content", "observer/writer/content.rs"),
+  ("writer/calls", "observer/writer/calls.rs"),
   ("writer/emit", "observer/writer/emit.rs"),
   ("writer/repart", "observer/writer/repart.rs"),
   ("writer/dom+mod", "observer/writer/"),
@@ -1357,6 +1259,10 @@ fn a_spelling_rule_in_the_resolver_counts_however_it_is_written() {
   }
 }
 
+/// The old reader's knowledge moved under `observer/` unchanged (MV1): its owner logic and the emitter's vocabulary, each
+/// counted as its own area by the fences, so that the resolver's and the writer's own counts stay what they were.
+const MOVED_UNDER_OBSERVER: [&str; 2] = ["resolver/owners.rs", "writer/calls.rs"];
+
 /// Backslash literals under `observer/`, per file or directory: the part of it that may spell a token's name, whatever the code around
 /// them does (the regexes of [`token_reads_only_fall_toward_the_floor`] see a comparison, not `fn spelled(x) { x.contains("\\foo") }`).
 /// Debts of what names the kernel's tokens today (the rehearsal's table, the writer's and the events' readers, the ledger's stamping);
@@ -1380,10 +1286,15 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   ("rehearsal", 119),
   // (also among `resolver`'s 18 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook)
   ("resolver", 3),
+  // (MV1: the old reader's owner logic, moved unchanged from `author_block/`, its literals with it; none added)
+  ("resolver/owners", 4),
   ("shadow", 7),
   // (Z4a, 81 -> 107: `writer/emit.rs`, the calls it builds: Perl's `\lx@add@authors`, `\lx@annotate@frontmatter@now`, the
   // queue's own `\lx@frontmatter@item*`; it writes them, no decision reads them)
   ("writer", 107),
+  // (MV1: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
+  // mark and note commands it reads; none added)
+  ("writer/calls", 44),
 ];
 
 /// revZ2r2: the token-read count's regexes are blind outside `resolver/` to a spelling not written as a comparison. This counts what such
@@ -1413,7 +1324,12 @@ fn the_observers_spellings_are_counted_however_they_read() {
     let inner = file
       .strip_prefix(&format!("{observer}/"))
       .expect("under observer/");
-    let area = inner.split('/').next().expect("a path");
+    // (MV1: the old reader's files moved under `observer/`, an area each, apart from the resolver's and the writer's own)
+    let area = if MOVED_UNDER_OBSERVER.contains(&inner) {
+      inner
+    } else {
+      inner.split('/').next().expect("a path")
+    };
     *counts
       .entry(area.trim_end_matches(".rs").to_string())
       .or_default() += backslash_literals(&read_rust(&file));

@@ -3,51 +3,6 @@
 
 use super::*;
 
-/// The lines of an author block as `\lx@add@authors` reads them, its marks, separators and alignments normalized
-/// ([`add_authors_calls_sectioned`]; the tabular fallback's, [`whole_block_author`]).
-fn lines_prepared(stuff: Tokens) -> Tokens {
-  let stuff = note_environments_as_commands(stuff);
-  let stuff = math_active_scripts(stuff);
-  let stuff = tabular_juggles_as_line_breaks(stuff);
-  let stuff = unbrace_acm_author_columns(stuff);
-  let stuff = unwrap_alignment_environment(stuff);
-  let stuff = trailing_alignment_environment_as_lines(stuff);
-  // Beyond-Perl (OXIDIZED_DESIGN #52), two composable normalizations applied
-  // BEFORE branch selection so both branches benefit, and so a symbol mark can
-  // no longer spuriously trigger the affiliation-marker branch:
-  //   1. horizontal-space separators (`\hspace{len}` / `\hfill`) → `\quad`, the
-  //      "regular" poor-man's author separator LaTeXML's `\and`/`\quad` splitter
-  //      otherwise misses (witness arXiv:2506.06941, six authors bunched);
-  //   2. footnote-SYMBOL superscripts (`$^{*}$`, `\textsuperscript{\dagger}` —
-  //      equal-contribution / corresponding notes, NEVER affiliation numbers) →
-  //      a visible `\lx@frontmatter@keepsup` sup, so they render instead of
-  //      being consumed into an unmatched `affiliation:*` label and dropped.
-  // For the witness, (2) removes its ONLY `^`, dropping the whole block into the
-  // clean no-marker branch where (1)'s `\quad`s split all six authors.
-  let stuff = normalize_hspace_separators(stuff);
-  let stuff = join_icons_to_links(stuff);
-  let stuff = glued_line_marks_as_marks(stuff, false);
-  let stuff = rewrite_symbol_superscripts(stuff);
-  let stuff = rewrite_ordinal_superscripts(stuff);
-  rewrite_in_word_superscripts(stuff)
-}
-
-/// Perl's whole-block creator (Base_Utility.pool.ltxml:693, `\lx@add@authors`' `{tabular}` fallback, and :588-589):
-/// `\lx@add@author[keyvals]{…}` of the block `written`, its lines prepared ([`lines_prepared`]) and their breaks' options
-/// gone, its line breaks as written. The one writer of a block kept whole: the tabular fallback here, `LATEXML_FM_EMIT=2`'s
-/// queued entry (`defs::author_macros`), and the emitter's for a block whose reading loses a name's words
-/// (`observer::writer::emit`; OD #980).
-pub(in crate::base_utilities) fn whole_block_author(
-  keyvals: Option<Tokens>,
-  written: Tokens,
-) -> Result<Tokens> {
-  let stuff = lines_prepared(strip_linebreak_options(written));
-  Ok(Invocation!(T_CS!("\\lx@add@author"), vec![
-    keyvals,
-    Some(stuff)
-  ]))
-}
-
 /// The `\lx@add@authors` machinery (author-line parsing: `\and`/`and`
 /// splitting, `$^{1,}$` affiliation marks, tabular/minipage lines, ijcai
 /// `\affiliations`) as a function, so both the replacing kernel `\author`

@@ -323,6 +323,8 @@ mod blocks;
 mod labels;
 mod lines;
 mod net;
+// (the old reader's owner logic, moved unchanged: MV1; re-exported by `observer/mod.rs`)
+pub(in crate::base_utilities) mod owners;
 mod placed;
 mod post;
 mod words;

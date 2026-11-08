@@ -21,7 +21,7 @@ struct ListedAddress {
 /// 2009.14655; `\cortext{… Abrar Faiyaz (abrar\_faiyaz@…) and Md Nasir Uddin (nasir\_uddin@…)}`, 2507.07920) — gives each
 /// address as an e-mail to its owner, by the placement order: the author whose name is printed beside it, the strongest
 /// evidence; else the author it spells; else, among the contact's carriers, the consistent order or the elimination
-/// (`email_owners::list_owners`); else the block's own creator (OD #159), once. The names printed beside the addresses
+/// (`owners::list_owners`); else the block's own creator (OD #159), once. The names printed beside the addresses
 /// are no e-mail's text. The contact's other nodes stay its carriers', as printed — only the address spans and the
 /// separators beside them are cut out of it, in place ([`cut_ranges`], [`cut_printed`]): its words (`Corresponding
 /// authors:`; an "and"/"or" outside the list), links, breaks and math (2311.15476's DOI link, review rev107f B2); a

@@ -547,7 +547,7 @@ pub(super) fn block_span_tokens(
 /// inside it. The mark's own print ([`Field::own_print`]: its formula, its `\textsuperscript{…}`), right before the
 /// entry's ink, and the wrapper's opening tokens, to open it again round the entry made (the cut keeps its font) —
 /// `None` when the event before the entry is no Mark covering it, or the wrapper holds more than the mark and the
-/// entry (the kernel's cut reads such a mark as one, `notes::wrapped_mark_at`).
+/// entry (the kernel's cut reads such a mark as one, `calls::wrapped_mark_at`).
 fn wrapped_entry_mark(
   events: &[Event],
   field: &Field,

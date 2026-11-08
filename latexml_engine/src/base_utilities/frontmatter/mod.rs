@@ -2,6 +2,12 @@
 
 use super::*;
 
+// (the old reader's text rules and token primitives, moved: MV1)
+mod classify;
+pub use classify::*;
+// (Perl's whole-block fallback with its own preparation, moved: MV1, C1)
+mod fallback;
+pub use fallback::*;
 mod queue;
 pub use queue::*;
 mod queue_digest;

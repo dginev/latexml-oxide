@@ -34,6 +34,8 @@ use super::{
 };
 
 mod apply;
+// (the emitter's vocabulary, moved unchanged from the old reader: MV1; re-exported by `observer/mod.rs`)
+pub(in crate::base_utilities) mod calls;
 mod content;
 mod dom;
 mod emit;
