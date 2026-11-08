@@ -74,7 +74,21 @@ pub(super) use crate::base_utilities::frontmatter::observer::events::{inked, mar
 /// "Bogdan Rai", "t", "ă" at a comma. The cover is the events the invocation printed, each span opening at the command's
 /// one token (its letters' the widest), a row break or a cell of its own alignment no span at all; one Name with the
 /// letters before and after it, their texts joined as the source joins them.
-pub(super) fn words_through_one_command(events: &[Event]) -> Vec<Event> {
+pub(super) fn words_through_one_command(events: &[Event]) -> std::borrow::Cow<'_, [Event]> {
+  // (most blocks hold no such cover: read as they are, uncopied — the old writer reads a block's events per creator)
+  let parted_cover = events.iter().enumerate().any(|(i, e)| {
+    e.kind == EventKind::Layout
+      && e.span.is_some_and(|(s, t)| {
+        t == s + 1
+          && events[i + 1..]
+            .iter()
+            .take_while(|e| e.span.is_none_or(|(a, _)| a == s))
+            .any(|e| matches!(e.kind, EventKind::Break | EventKind::Sep(SepKind::Comma)))
+      })
+  });
+  if !parted_cover {
+    return std::borrow::Cow::Borrowed(events);
+  }
   let mut out: Vec<Event> = Vec::with_capacity(events.len());
   let mut i = 0;
   while i < events.len() {
@@ -162,7 +176,7 @@ pub(super) fn words_through_one_command(events: &[Event]) -> Vec<Event> {
     word.marks = word.marks.map(|(a, _)| (a, to));
     out.push(word);
   }
-  out
+  std::borrow::Cow::Owned(out)
 }
 
 /// The block's events with an IEEE template's ordinal before a name (`1\textsuperscript{st} Sertac Kilickaya`,
@@ -844,12 +858,22 @@ pub(super) fn remark_pieces_joined(events: Vec<Event>) -> Vec<Event> {
         _ => break,
       }
     }
-    let alone = remark(&events[i].text, after_name, annotated);
     let pieces: Vec<&Event> = refs[i..=last]
       .iter()
       .copied()
       .filter(|e| named(e))
       .collect();
+    // (a remark opens with a bracket, "for" or "on behalf of": a run whose pieces hold none joins nowhere inside it)
+    let opens = |e: &&Event| {
+      let lower = e.text.to_lowercase();
+      e.text.contains(['(', '[']) || lower.contains("for ") || lower.contains("behalf of")
+    };
+    if !pieces.iter().any(opens) {
+      out.extend_from_slice(&events[i..=last]);
+      i = last + 1;
+      continue;
+    }
+    let alone = remark(&events[i].text, after_name, annotated);
     let text = pieces
       .iter()
       .map(|e| e.text.trim())
