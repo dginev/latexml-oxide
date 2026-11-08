@@ -299,55 +299,256 @@ fn the_old_reader_takes_no_new_decision() {
   );
 }
 
-/// The one engine's reach into the old reader, per file and symbol (user 2026-11-08: "stay focused on having only one
-/// engine for frontmatter"). `frontmatter/` may use `author_block/` only through what survives its deletion
-/// (docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row "`author_block/`'s survivors"): the address syntax on printed ink
-/// (separators, local parts, contact words; to `frontmatter/classify.rs` at Z18), the two writers of Perl's API calls
-/// (`document_note_call`, `note_call_end`; into the emitter) and Perl's whole-block fallback (`whole_block_author`,
-/// `Base_Utility.pool.ltxml:693`; its own module). Each a debt: it may only fall. A new symbol here is a decision the old
-/// engine takes for the new one; it lands in `observer/resolver/`, on the digested events, instead.
+/// The one engine's reach into the old reader, per file and name (user 2026-11-08: "stay focused on having only one engine
+/// for frontmatter"). `author_block/mod.rs` re-exports each of its submodules (`pub use affiliations::*`, …) and
+/// `base_utilities/mod.rs` re-exports it all (`pub use author_block::*`), so a frontmatter file's `use super::*` reaches every
+/// name the old reader exports without spelling `author_block::`: the fence counts the names. A use is a call (`name(`), a
+/// path (`::name`, `name::`), a name in a `use` list, or any occurrence of a constant or type name (upper case first). Each
+/// pair is a debt: it may only fall. A new one is a decision the old engine takes for the new one; it lands in
+/// `observer/resolver/`, on the digested events, instead. Where each name goes when `author_block/` is deleted:
+/// docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row "`author_block/`'s survivors" (text rules on ink to
+/// `frontmatter/classify.rs`, Perl's API-call writers into the emitter, Perl's whole-block fallback to its own module, the
+/// decisions translated onto the reading).
 const ONE_ENGINE_REACH: &[(&str, usize)] = &[
-  ("observer/resolver/labels.rs ADDRESS_GROUP_SEPARATORS", 1),
-  ("observer/resolver/labels.rs UNBRACED_LIST_SEPARATORS", 1),
-  ("observer/resolver/labels.rs ends_a_listed_run", 1),
-  ("observer/resolver/labels.rs is_listed_local_part", 1),
-  ("observer/resolver/labels.rs is_local_char", 1),
+  ("address_lists.rs is_email_label", 1),
+  ("address_lists.rs is_local_char", 1),
+  ("address_lists.rs list_owners", 1),
+  ("address_lists.rs NameKeys", 3),
+  ("address_lists.rs spelled_owner", 1),
+  ("insert.rs as_printed", 1),
+  ("insert.rs classify_thanks", 1),
+  ("insert.rs CUT_ROLES", 5),
+  ("insert.rs entry_address_owners", 1),
+  ("insert.rs ENTRY_KEY", 7),
+  ("insert.rs ENTRY_KINDED", 2),
+  ("insert.rs entry_legend_kind", 1),
+  ("insert.rs ENTRY_SYMBOL", 2),
+  ("insert.rs flag_merged_creators", 1),
+  ("insert.rs is_email_label", 4),
+  ("insert.rs is_entry_word_mailbox", 1),
+  ("insert.rs is_listed_local_part", 1),
+  ("insert.rs is_pattern_address", 2),
+  ("insert.rs is_role_mailbox", 1),
+  ("insert.rs LABEL_PRINTS", 1),
+  ("insert.rs list_owners", 1),
+  ("insert.rs lists_local_parts", 2),
+  ("insert.rs name_count", 1),
+  ("insert.rs NAME_GRADE_SOCIETIES", 1),
+  ("insert.rs NameKeys", 11),
+  ("insert.rs names_a_contact", 2),
+  ("insert.rs opens_a_dedication", 3),
+  ("insert.rs own_call_keeps", 1),
+  ("insert.rs reads_as_affiliation", 1),
+  ("insert.rs SEQUENCE_LABEL", 1),
+  ("insert.rs spelled_owner", 9),
+  ("insert.rs spelled_unspaced_list", 1),
+  ("insert.rs symbol_mark_key", 1),
+  ("insert.rs text_prints_name", 1),
+  ("observer/resolver/api.rs classify_thanks", 1),
+  ("observer/resolver/api.rs is_entry_word_mailbox", 2),
+  ("observer/resolver/blocks.rs is_pattern_address", 1),
+  ("observer/resolver/labels.rs ADDRESS_GROUP_SEPARATORS", 3),
+  ("observer/resolver/labels.rs classify_thanks", 1),
+  ("observer/resolver/labels.rs ends_a_listed_run", 2),
+  ("observer/resolver/labels.rs has_person_cue", 1),
+  ("observer/resolver/labels.rs is_email_label", 4),
+  ("observer/resolver/labels.rs is_listed_local_part", 2),
+  ("observer/resolver/labels.rs is_local_char", 3),
+  ("observer/resolver/labels.rs is_name_qualifier", 3),
   ("observer/resolver/labels.rs names_a_contact", 1),
-  ("observer/resolver/labels.rs write_out_unspaced_lists", 1),
-  ("observer/resolver/placed.rs CUT_LIST", 1),
-  ("observer/writer/emit.rs document_note_call", 1),
-  ("observer/writer/emit.rs note_call_end", 1),
-  ("observer/writer/emit.rs whole_block_author", 1),
+  ("observer/resolver/labels.rs opens_a_dedication", 1),
+  ("observer/resolver/labels.rs opens_with_deceased", 1),
+  ("observer/resolver/labels.rs reads_as_affiliation", 1),
+  ("observer/resolver/labels.rs UNBRACED_LIST_SEPARATORS", 4),
+  ("observer/resolver/labels.rs write_out_unspaced_lists", 2),
+  ("observer/resolver/lines.rs collaboration_heads", 1),
+  ("observer/resolver/lines.rs is_membership_part", 1),
+  ("observer/resolver/lines.rs is_name_qualifier", 2),
+  ("observer/resolver/lines.rs name_count", 3),
+  ("observer/resolver/lines.rs non_name_word", 1),
+  ("observer/resolver/lines.rs reads_as_collaboration", 1),
+  (
+    "observer/resolver/lines.rs reads_as_listed_collaboration",
+    1,
+  ),
+  ("observer/resolver/mod.rs collaboration_line_framing", 1),
+  ("observer/resolver/mod.rs Framing", 1),
+  ("observer/resolver/mod.rs lists_local_parts", 1),
+  ("observer/resolver/mod.rs NameKeys", 2),
+  ("observer/resolver/mod.rs names_correspondence", 5),
+  ("observer/resolver/mod.rs spelled_owners", 1),
+  ("observer/resolver/net.rs is_name_qualifier", 1),
+  ("observer/resolver/placed.rs CUT_LIST", 2),
+  ("observer/resolver/post.rs as_printed", 1),
+  ("observer/resolver/post.rs entry_address_owners", 2),
+  ("observer/resolver/post.rs is_entry_word_mailbox", 1),
+  ("observer/resolver/post.rs is_pattern_address", 3),
+  ("observer/resolver/post.rs lists_local_parts", 5),
+  ("observer/resolver/post.rs NameKeys", 3),
+  ("observer/resolver/post.rs own_call_keeps", 1),
+  ("observer/resolver/post.rs spelled_owners", 1),
+  ("observer/writer/apply.rs classify_thanks", 1),
+  ("observer/writer/emit.rs classify_thanks", 1),
+  ("observer/writer/emit.rs document_note_call", 2),
+  ("observer/writer/emit.rs entry_mark", 1),
+  ("observer/writer/emit.rs mark_label", 1),
+  ("observer/writer/emit.rs note_body", 1),
+  ("observer/writer/emit.rs note_call_end", 2),
+  ("observer/writer/emit.rs rewrite_symbol_superscripts", 1),
+  ("observer/writer/emit.rs split_wrapped_affiliation_marks", 1),
+  ("observer/writer/emit.rs starts_with_affiliation_mark", 1),
+  ("observer/writer/emit.rs whole_block_author", 2),
+  ("place.rs address_owners", 1),
+  ("place.rs author_mark_operands", 2),
+  ("place.rs AuthorNote", 1),
+  ("place.rs author_notes", 1),
+  ("place.rs entry_mark", 2),
+  ("place.rs marker_leads", 1),
+  ("place.rs mark_label", 2),
+  ("place.rs NameKeys", 2),
+  ("place.rs names_correspondence", 3),
+  ("place.rs queued_name", 2),
+  ("place.rs visible_name_text", 3),
+  ("queue_digest.rs classify_thanks", 1),
+  ("queue_digest.rs is_footnote_symbol_operand", 1),
+  ("queue_digest.rs is_symbol_mark", 2),
+  ("queue_digest.rs opens_with_deceased", 1),
+  ("queue_digest.rs reads_as_affiliation", 1),
+  ("queue_digest.rs split_mark_notes", 2),
+  ("queue_digest.rs visible_name_text", 1),
+  ("queue_reading.rs author_mark_operands", 1),
+  ("queue_reading.rs is_mark_command", 2),
+  ("queue_reading.rs is_symbol_mark", 2),
+  ("queue_reading.rs label_pieces", 1),
+  ("queue_reading.rs mark_label", 1),
+  ("queue.rs author_mark_position", 1),
+  ("queue.rs entry_mark", 1),
+  ("queue.rs is_symbol_mark", 1),
+  ("relocate.rs author_mark_operands", 1),
+  ("relocate.rs classify_thanks", 1),
+  ("relocate.rs CUT_LIST", 1),
+  ("relocate.rs is_mark_command", 3),
+  ("relocate.rs is_ordinal_suffix", 3),
+  ("relocate.rs is_spacing", 3),
+  ("relocate.rs is_symbol_mark", 1),
+  ("relocate.rs leading_spacing_end", 1),
+  ("relocate.rs leads_with_mark", 2),
+  ("relocate.rs marked_after_name", 1),
+  ("relocate.rs marker_leads", 2),
+  ("relocate.rs queued_name", 1),
+  ("relocate.rs sup_operand_at", 11),
+  ("shared_row/emails.rs address_tokens", 1),
+  ("shared_row/emails.rs email_addresses", 2),
+  ("shared_row/emails.rs email_command_address", 3),
+  ("shared_row/emails.rs is_email_command", 2),
+  ("shared_row/emails.rs is_email_label", 1),
+  ("shared_row/emails.rs lists_local_parts", 3),
+  ("shared_row/emails.rs names_a_contact", 1),
+  ("shared_row/emails.rs row_address_owners", 1),
+  ("shared_row/emails.rs row_address_spelled_owners", 2),
+  ("shared_row/emails.rs split_email_label", 2),
+  ("shared_row/emails.rs visible_name_text", 1),
+  ("shared_row.rs author_mark_operands", 1),
+  ("shared_row.rs is_author_mark", 3),
+  ("shared_row.rs outside_notes", 1),
+  ("shared_row.rs queued_name", 1),
+  ("shared_row.rs sup_operand_at", 2),
 ];
 
-/// The reverse fence: the one engine reaches into the old reader only through its survivors.
+/// The names the old reader exports into `base_utilities`: the `pub`, `pub(crate)` and `pub(in …)` items of `mod.rs` and of
+/// each submodule `mod.rs` re-exports with `pub use <submodule>::*`.
+fn old_reader_exports() -> std::collections::BTreeSet<String> {
+  let dir = format!("{BASE}/author_block");
+  let glob = Regex::new(r"pub(?:\([^)]*\))?\s+use\s+([a-z_][a-z0-9_]*)::\*").expect("a regex");
+  let item = Regex::new(
+    r"(?m)^\s*pub(?:\((?:crate|in [^)]*)\))?\s+(?:fn|const|static|struct|enum|type|trait)\s+([A-Za-z_][A-Za-z0-9_]*)",
+  )
+  .expect("a regex");
+  let mut files = vec![format!("{dir}/mod.rs")];
+  for found in glob.captures_iter(&read_rust(&format!("{dir}/mod.rs")).code) {
+    let sub = format!("{dir}/{}", &found[1]);
+    if repo_path(&format!("{sub}.rs")).is_file() {
+      files.push(format!("{sub}.rs"));
+    } else {
+      files.extend(rust_files(&sub));
+    }
+  }
+  let mut names = std::collections::BTreeSet::new();
+  for file in files {
+    for found in item.captures_iter(&read_rust(&file).code) {
+      names.insert(found[1].to_string());
+    }
+  }
+  names
+}
+
+/// How often `code` uses the old reader's `name` (see [`ONE_ENGINE_REACH`] for what counts as a use); `imports` are the byte
+/// ranges of `code`'s `use` statements.
+fn uses_of(code: &str, imports: &[std::ops::Range<usize>], name: &str) -> usize {
+  let word = Regex::new(&format!(r"\b{name}\b")).expect("a regex");
+  let constant_or_type = name.chars().next().is_some_and(|c| c.is_ascii_uppercase());
+  word
+    .find_iter(code)
+    .filter(|found| {
+      let before = code[..found.start()].trim_end();
+      let after = code[found.end()..].trim_start();
+      if before.ends_with('.') {
+        return false;
+      }
+      constant_or_type
+        || before.ends_with("::")
+        || after.starts_with("::")
+        || after.starts_with('(')
+        || imports.iter().any(|range| range.contains(&found.start()))
+    })
+    .count()
+}
+
+/// The reverse fence: the one engine reaches into the old reader only through the names it reaches today, each a debt.
 #[test]
 fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
   const WHY: &str = "The one engine decides on the digested events (`observer/resolver/`); `author_block/` is deleted after \
-                     the flip, and only its survivors (the address syntax, the API-call writers, Perl's fallback) move: \
+                     the flip, and each name `frontmatter/` still uses moves or is translated: \
                      docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row \"`author_block/`'s survivors\".";
   let dir = format!("{BASE}/frontmatter");
-  let path = Regex::new(r"author_block::(\{[^}]*\}|[A-Za-z_][A-Za-z_0-9]*)").expect("a regex");
+  let definition =
+    Regex::new(r"\b(?:fn|const|static|struct|enum|type|trait|mod)\s+([A-Za-z_][A-Za-z0-9_]*)")
+      .expect("a regex");
+  let files = rust_files(&dir);
+  let sources: Vec<(String, RustSource)> = files
+    .iter()
+    .map(|file| {
+      let short = file
+        .strip_prefix(&format!("{dir}/"))
+        .unwrap_or(file)
+        .to_string();
+      (short, read_rust(file))
+    })
+    .collect();
+  let defined_here: std::collections::BTreeSet<String> = sources
+    .iter()
+    .flat_map(|(_, source)| {
+      definition
+        .captures_iter(&source.code)
+        .map(|found| found[1].to_string())
+        .collect::<Vec<_>>()
+    })
+    .collect();
+  let names: Vec<String> = old_reader_exports()
+    .into_iter()
+    .filter(|name| !defined_here.contains(name))
+    .collect();
+  let import = Regex::new(r"\b(?:pub(?:\([^)]*\))?\s+)?use\s+[^;]*;").expect("a regex");
   let mut counts: BTreeMap<String, usize> = BTreeMap::new();
-  for file in rust_files(&dir) {
-    let short = file
-      .strip_prefix(&format!("{dir}/"))
-      .unwrap_or(&file)
-      .to_string();
-    let source = read_rust(&file);
-    for found in path.captures_iter(&source.code) {
-      let what = &found[1];
-      let names: Vec<&str> = match what.strip_prefix('{') {
-        Some(group) => group
-          .trim_end_matches('}')
-          .split(',')
-          .map(str::trim)
-          .filter(|name| !name.is_empty())
-          .collect(),
-        None => vec![what],
-      };
-      for name in names {
-        *counts.entry(format!("{short} {name}")).or_default() += 1;
+  for (short, source) in &sources {
+    let imports: Vec<_> = import
+      .find_iter(&source.code)
+      .map(|found| found.range())
+      .collect();
+    for name in &names {
+      let n = uses_of(&source.code, &imports, name);
+      if n > 0 {
+        counts.insert(format!("{short} {name}"), n);
       }
     }
   }
