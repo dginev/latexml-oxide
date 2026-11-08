@@ -1,6 +1,9 @@
 //! Relocating author annotations to their creators; shown marks and superscript scripts.
 
-use super::{observer::emitted, *};
+use super::{
+  observer::{block_creator_written, emitted},
+  *,
+};
 
 /// Find all dummy frontmatter entries (role "pending") containing unattached annotations
 /// and attempt to attach to the appropriate frontmatter, based on the identifying labels.
@@ -13,7 +16,10 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
   // stub — no target by label (the block's items go through the orphan rules: a sole author's line, a copy an author
   // holds, a named owner's), placed below the last named author, and gone where nothing was shared into it. Witnesses
   // 1012.4847, 1106.3045, 2009.10916.
-  let block_creator = document.findnode("//ltx:creator[@_blockcreator]", None);
+  // (searched for only where a flush wrote it: the whole-document search ran for every paper, `block_creator_written`)
+  let block_creator = block_creator_written()
+    .then(|| document.findnode("//ltx:creator[@_blockcreator]", None))
+    .flatten();
   if pending_nodes.is_empty() {
     return settle_block_creator(document, block_creator);
   }
