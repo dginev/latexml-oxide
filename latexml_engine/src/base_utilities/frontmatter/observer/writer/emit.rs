@@ -895,7 +895,8 @@ fn spaced(index: usize, span: (u16, u16), tokens: Vec<Token>) -> Vec<Token> {
 /// The tokens of an entry whose lines no balanced run holds (`{\\small $^1$Univ A}\\\\ {\\small Town}`, 2203.00365,
 /// cond-mat0404185): each line's, at the Break events of `span`, with its break — without the runs `cuts` (an entry's address
 /// runs, `address_cut`), each inside one line's (`\\begin{small} …\\end{small} \\\\ \\begin{small} … a@x \\end{small}`,
-/// 1312.5468), else `None`.
+/// 1312.5468) or a whole line's, which goes with one break beside it (a label line, `\\ \\small{\\textbf{Correspondence:}
+/// \\href{mailto:a@x}{a@x},}`: 2604.06805, review revP1br2 S1), else `None`.
 fn lines_run(
   field: &Field,
   events: &[Event],
@@ -916,12 +917,26 @@ fn lines_run(
   if lines.len() < 2 {
     return None;
   }
+  let at = |p: u16| usize::from(p).checked_sub(field.base);
   let mut out = Vec::new();
   let mut runs = Vec::new();
-  for (n, line) in lines.iter().enumerate() {
-    if n > 0 {
+  let mut kept = 0;
+  for line in &lines {
+    let ends = line
+      .first()
+      .zip(line.last())
+      .and_then(|(first, last)| Some((at(first.span?.0)?, at(last.span?.1)?)));
+    // (a line a cut takes whole, and the break before it — the one after it, the first line's)
+    if let Some((start, end)) = ends
+      && let Some(&whole) = cuts.iter().find(|&&(s, t)| s <= start && end <= t)
+    {
+      runs.push(whole);
+      continue;
+    }
+    if kept > 0 {
       out.push(T_CS!("\\\\"));
     }
+    kept += 1;
     if let (Some(first), Some(last)) = (line.first(), line.last()) {
       let (tokens, run) = event_run_at(field, events, (first, last), None, cuts)?;
       out.extend(tokens);
