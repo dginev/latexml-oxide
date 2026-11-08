@@ -62,7 +62,11 @@ use crate::prelude::*;
 
 mod author_block;
 mod defs;
+// (the frontmatter API's attribute names, which `author_block/` declared and the insert-time passes read: MV1)
 pub use author_block::*;
+use defs::frontmatter_api::{
+  CUT_LIST, CUT_ROLES, ENTRY_KEY, ENTRY_KINDED, ENTRY_SYMBOL, SEQUENCE_LABEL,
+};
 mod frontmatter;
 pub use frontmatter::*;
 mod util_text;
