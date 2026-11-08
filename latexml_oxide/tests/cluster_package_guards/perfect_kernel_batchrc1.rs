@@ -1,8 +1,11 @@
 //! Guards for RC1 (`agent_reports/2026-11-08_RC1_report.md`; OXIDIZED_DESIGN_DIVERGENCES #980): the charter's content
 //! invariant under `LATEXML_FM_EMIT=2` — every word TeX printed in an author block is in the output once, or counted in a
-//! Warning. Two mechanisms, a guard each: the gullet's input mark is exact (`gullet::input_unread_since` compares the
-//! pushback below the mark whole, so IEEEtran's affiliation calls are no longer read as the author block's own and lost:
-//! 2401.11731, 1801.03314; its unit test `gullet::token_limit_tests::an_input_mark_tells_a_refilled_slot_from_a_peek`),
+//! Warning. Two mechanisms, a guard each: the gullet's input mark is exact (`gullet::input_unread_since` reads how short
+//! the mouth's pushback has been since the mark, its watch's runs, so IEEEtran's affiliation calls are no longer read as
+//! the author block's own and lost: 2401.11731, 1801.03314; its unit tests
+//! `gullet::token_limit_tests::{an_input_mark_tells_a_refilled_slot_from_a_peek,
+//! input_marks_nest_and_keep_no_copy_of_the_pushback}`, and a mark keeps no copy of the pushback:
+//! [`a_macro_held_author_list_costs_no_copy_per_mark`]),
 //! and the content check counts what TeX printed of every creator call, its words required unless its block's events
 //! print them (`resolver::placed::content_check`: a call no rehearsal read counted by its content's text).
 
@@ -44,8 +47,8 @@ fn run_default(tex: &str, emit: u8) -> (String, String) {
 /// IEEEtran's `\IEEEauthorblockN{…}⏎\IEEEauthorblockA{…}`: the block's mark held the line-end space, read with
 /// `\IEEEauthorblockA` and its argument; the affiliation lines' expansion, longer, put another space at the mark's last
 /// slot, which a one-token test read as unread, so the affiliation calls were recorded as the block's own, never read, and
-/// dropped under `=2` with no Warning (2401.11731, 1801.03314). The mark compares the pushback below it whole: `=2` writes
-/// what off writes, `Univ Alpha` Ann Able's.
+/// dropped under `=2` with no Warning (2401.11731, 1801.03314). The mark knows the slot was read (the pushback was
+/// shorter than it since): `=2` writes what off writes, `Univ Alpha` Ann Able's.
 #[test]
 fn an_affiliation_after_a_refilled_mark_is_read() {
   let tex = repro!("emit_ieee_affiliation_after_a_refilled_mark");
@@ -99,4 +102,46 @@ fn an_unread_calls_words_are_counted() {
     row(&["Ann Able *"]),
     row(&["Bob Baker †", "affiliation=Univ Beta"]),
   ]);
+}
+
+/// The process's peak resident set and its resident set now, in kB (`/proc/self/status`'s `VmHWM`, `VmRSS`).
+fn resident_kb() -> (u64, u64) {
+  let status = std::fs::read_to_string("/proc/self/status").unwrap_or_default();
+  let field = |name: &str| {
+    status
+      .lines()
+      .find_map(|line| line.strip_prefix(name))
+      .and_then(|rest| rest.trim().trim_end_matches("kB").trim().parse().ok())
+      .unwrap_or(0)
+  };
+  (field("VmHWM:"), field("VmRSS:"))
+}
+
+/// The input marks keep no copy of the pushback: 3,000 `\author`/`\affiliation` pairs a macro holds (revtex4-2's
+/// `\authorlist`, revRC1's probe), each block's mark taken while the rest of the list waits on the pushback, cost what
+/// a few authors do. A copy per mark made the conversion's peak 3.7 GB against 261 MB (quadratic: 1.1 GB at 1,500);
+/// the peak's growth over the conversion stays under 1 GB, every author a creator. Distinct from the gullet's unit
+/// test (`gullet::token_limit_tests::input_marks_nest_and_keep_no_copy_of_the_pushback`): the ledger's and the
+/// document calls' marks, held for the whole conversion.
+#[test]
+fn a_macro_held_author_list_costs_no_copy_per_mark() {
+  let mut tex = String::from("\\documentclass[aps,prl]{revtex4-2}\n\\def\\authorlist{%\n");
+  for n in 0..3000 {
+    tex.push_str(&format!(
+      "\\author{{Author Name{n} Surname}}\\affiliation{{Department {n}, University Somewhere}}\n"
+    ));
+  }
+  tex.push_str("}\n\\begin{document}\n\\title{T}\n\\authorlist\n\\begin{abstract}A.\\end{abstract}\n\\maketitle\nText.\n\\end{document}\n");
+  // (the peak from here on: `/proc/self/clear_refs`' 5 resets it to the resident set now)
+  let _ = std::fs::write("/proc/self/clear_refs", "5");
+  let (_, before) = resident_kb();
+  let (log, xml) = run_default(&tex, 0);
+  let (peak, _) = resident_kb();
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(xml.matches("<creator").count(), 3000);
+  eprintln!("peak growth {} kB", peak.saturating_sub(before));
+  assert!(
+    peak.saturating_sub(before) < 1_000_000,
+    "peak {peak} kB, {before} kB before the conversion"
+  );
 }

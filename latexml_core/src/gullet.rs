@@ -280,6 +280,61 @@ pub struct MouthRuntime {
   /// (head-pointer + wrap arithmetic) showed up at ~3.3% of total Ir in
   /// callgrind on siunitx-heavy fixtures.
   pub pushback:        Vec<Token>,
+  /// How short the pushback has been since each input mark taken on this mouth ([`input_mark`]): every shortening of
+  /// it tells the watch ([`PushbackWatch::note_len`]).
+  watch:               PushbackWatch,
+}
+
+/// The input marks' watch on one mouth's pushback ([`input_mark`], [`input_unread_since`]): for each mark taken on the
+/// mouth, the shortest the pushback has been since — no token below a mark's length was read while that is no less
+/// than the length. Kept as runs: the marks from a run's serial up to the next run's share its shortest length, the
+/// serials increasing and the lengths never decreasing towards the top, so a mark costs at most one run and a
+/// shortening of the pushback one comparison, with the top run's length ([`floor`](Self::floor)); no token is copied.
+#[derive(PartialEq, Debug, Default)]
+struct PushbackWatch {
+  /// (the serial of a run's first mark, the shortest the pushback has been since it)
+  runs:  Vec<(u64, usize)>,
+  /// the top run's length, 0 when there is none: only a pushback shorter than it changes a run
+  floor: usize,
+}
+
+impl PushbackWatch {
+  /// The pushback is `len` tokens long now, shorter than it was.
+  #[inline(always)]
+  fn note_len(&mut self, len: usize) {
+    if len < self.floor {
+      self.lower(len);
+    }
+  }
+
+  /// [`note_len`](Self::note_len) below the floor: the runs longer than `len` become one at `len` (joined to the run
+  /// below when that is at `len` already).
+  #[cold]
+  #[inline(never)]
+  fn lower(&mut self, len: usize) {
+    let keep = self.runs.partition_point(|&(_, low)| low <= len);
+    let serial = self.runs.get(keep).map_or(0, |&(serial, _)| serial);
+    self.runs.truncate(keep);
+    if self.runs.last().is_none_or(|&(_, low)| low < len) {
+      self.runs.push((serial, len));
+    }
+    self.floor = len;
+  }
+
+  /// A mark `serial` taken with the pushback `len` tokens long: it joins the top run when that run is at `len` (the
+  /// top run is never longer than the pushback).
+  fn mark(&mut self, serial: u64, len: usize) {
+    if self.runs.last().is_none_or(|&(_, low)| low < len) {
+      self.runs.push((serial, len));
+    }
+    self.floor = len;
+  }
+
+  /// The shortest the pushback has been since the mark `serial`, if it was taken on this mouth.
+  fn shortest_since(&self, serial: u64) -> Option<usize> {
+    let after = self.runs.partition_point(|&(first, _)| first <= serial);
+    after.checked_sub(1).map(|run| self.runs[run].1)
+  }
 }
 
 #[derive(Debug, Default)]
@@ -329,6 +384,8 @@ pub struct Gullet {
   pub ctx_serial:           u64,
   ctx_next:                 u64,
   ctx_stack:                Vec<u64>,
+  /// The last input mark's serial ([`input_mark`]), never reset: a mark is told from those of another mouth.
+  mark_serial:              u64,
   /// tex.web `scanner_status` (see [`ScannerStatus`]).
   scanner_status:           ScannerStatus,
   /// tex.web `warning_index`: the command a runaway report names.
@@ -946,6 +1003,7 @@ pub fn open_mouth_with(mouth: Mouth, autoclose: bool, boundary: BalancedBoundary
     insert_everyeof: false,
     eof_seen: false,
     pushback: Vec::with_capacity(128),
+    watch: PushbackWatch::default(),
   });
   note_current_mouth(&gullet);
 }
@@ -1228,6 +1286,8 @@ pub fn flush_mouth() {
     }
     if !trailer.is_empty() {
       trailer.reverse();
+      // (every token the pushback held moves up a slot: as if read, for the input marks)
+      runtime.watch.note_len(0);
       runtime.pushback.splice(0..0, trailer);
     }
     // Stop reading (clear buffers, close file) but do NOT restore catcodes.
@@ -1386,6 +1446,7 @@ fn read_internal_token_checked(sink: CommentSink) -> Result<CheckedRead> {
       && !matches!(token.get_catcode(), Catcode::COMMENT | Catcode::MARKER)
     {
       rt.pushback.pop();
+      rt.watch.note_len(rt.pushback.len());
       g.progress += 1;
       return Ok(CheckedRead::Tok(token));
     }
@@ -1488,6 +1549,7 @@ fn read_internal_token_full(mut sink: CommentSink) -> Result<CheckedRead> {
           break;
         }
       }
+      rt.watch.note_len(rt.pushback.len());
       // Whether the token is expansion output (the pushback, `\everyeof`'s tokens included) rather than the current
       // Mouth's own input, for the cycle guard below.
       let mut expanded = next_token.is_some();
@@ -1519,6 +1581,7 @@ fn read_internal_token_full(mut sink: CommentSink) -> Result<CheckedRead> {
               break;
             }
           }
+          rt.watch.note_len(rt.pushback.len());
         }
       }
       if let Some(token) = next_token {
@@ -2108,32 +2171,32 @@ fn expands_now(defn: &std::rc::Rc<dyn Definition>, fully_expand: bool) -> bool {
     && !scan_stops_at_futurelet_peek(defn)
 }
 
-/// A place in the input ([`input_mark`]): what the input held still to be read when it was taken — the current
-/// mouth's pushback (a copy of every token it held, the next to read last), the mouth's read position, and how many
-/// mouths enclose it.
-#[derive(Debug, Clone, PartialEq)]
+/// A place in the input ([`input_mark`]): how many mouths enclose it, the current mouth's read position, its
+/// pushback's length then, the mark's serial on the mouth's watch ([`PushbackWatch`]), and the pushback's last
+/// [`MARK_HELD`] tokens, the next to read last. `Copy`: a mark holds nothing on the heap, so the marks a ledger keeps (an
+/// author block's each) cost what their number does, whatever the pushback holds (revRC1: a copy of the pushback per
+/// mark made 3,000 macro-held authors take 3.7 GB).
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct InputMark {
-  depth: usize,
-  below: Option<std::rc::Rc<[Token]>>,
-  mouth: (usize, usize, usize, usize),
+  depth:  usize,
+  mouth:  (usize, usize, usize, usize),
+  len:    usize,
+  serial: u64,
+  held:   [Option<Token>; MARK_HELD],
 }
 
-/// Whether the tokens `now` are those `then` held, each the very same token (its text, its catcode and its provenance,
-/// bit for bit: a peek puts back the token it read), the next to read compared first: a whole-list test at the speed of
-/// a `memcmp`, as a mark's pushback may hold a whole author list (1507.02068's 418 names, 12,817 tokens, tested at each
-/// of its 481 calls: a token-by-token test cost it 1.3 % of its instructions).
-fn same_input(now: &[Token], then: &[Token]) -> bool {
-  /// The bytes of `tokens`.
-  fn bytes(tokens: &[Token]) -> &[u8] {
-    // SAFETY: `Token` is `#[repr(C)]`, `Copy`, and gap-free — its fields are plain integers filling every byte
-    // (`token::tests::{token_size_invariant, token_layout_code_at_byte_4}`) — so every byte of the slice is initialized,
-    // and a `u8` has no alignment to keep; the view lives as long as `tokens`.
-    unsafe { std::slice::from_raw_parts(tokens.as_ptr().cast::<u8>(), size_of_val(tokens)) }
+/// How many of the pushback's tokens an [`InputMark`] keeps: read below its length and put back, as many as these
+/// leave the input unread (a peek, a `\futurelet`).
+const MARK_HELD: usize = 4;
+
+/// Whether `a` and `b` are the very same token: their text, catcode and provenance, field by field (`PartialEq` on
+/// `Token` compares a meaning, not a token: any two spaces are equal, the provenance is not compared).
+fn same_token(a: &Token, b: &Token) -> bool {
+  #[cfg(feature = "token-locators")]
+  if a.loc != b.loc {
+    return false;
   }
-  now.len() == then.len()
-    && now.last().map(|t| bytes(std::slice::from_ref(t)))
-      == then.last().map(|t| bytes(std::slice::from_ref(t)))
-    && bytes(now) == bytes(then)
+  a.text == b.text && a.code == b.code && a.prov == b.prov
 }
 
 /// Is the next token read straight from the document's own text — nothing pushed back, the mouth a content file's
@@ -2149,33 +2212,42 @@ pub fn reading_document_text() -> bool {
 /// Mark the input as it stands: everything still to be read now ([`input_unread_since`]). What is pushed back after
 /// the mark (a macro's expansion, unread on top of the pushback) is read before anything the mark holds.
 pub fn input_mark() -> InputMark {
-  let gullet = gullet!();
+  let mut gullet = gullet_mut!();
   let depth = gullet.mouthstack.len();
-  match gullet.runtime.as_ref() {
-    Some(rt) => InputMark {
-      depth,
-      below: (!rt.pushback.is_empty()).then(|| rt.pushback.as_slice().into()),
-      mouth: rt.mouth.read_position(),
-    },
-    None => InputMark {
-      depth,
-      below: None,
-      mouth: (0, 0, 0, 0),
-    },
+  gullet.mark_serial += 1;
+  let serial = gullet.mark_serial;
+  let mut mark = InputMark {
+    depth,
+    mouth: (0, 0, 0, 0),
+    len: 0,
+    serial,
+    held: [None; MARK_HELD],
+  };
+  if let Some(rt) = gullet.runtime.as_mut() {
+    mark.len = rt.pushback.len();
+    mark.mouth = rt.mouth.read_position();
+    rt.watch.mark(serial, mark.len);
+    let top = &rt.pushback[mark.len.saturating_sub(MARK_HELD)..];
+    for (slot, token) in mark.held.iter_mut().zip(top) {
+      *slot = Some(*token);
+    }
   }
+  mark
 }
 
 /// Whether none of the input `mark` held has been read since it was taken ([`input_mark`]): its mouth is still open,
 /// has read no further, and its pushback still holds every token it held then (only what was pushed after the mark
 /// was read, or what a mouth opened since holds). Read-only, for an observer telling apart what a call's expansion
 /// did from what the input after the call did (the frontmatter observer's ledger, the title-page check's document
-/// calls). The pushback's tokens below the mark are compared whole (`same_input`): a token read and put back (a
-/// peek) leaves the input unread, while tokens read below the mark and others pushed in their place read as read,
-/// though the token now at the mark's last slot equals the one it held — IEEEtran's
-/// `\IEEEauthorblockN{…}⏎\IEEEauthorblockA{…}`, whose line-end space was read with `\IEEEauthorblockA` and its
-/// argument and whose expansion, longer, put another space there: its affiliation calls read as the author block's
-/// own and were lost under `LATEXML_FM_EMIT=2` (2401.11731, 1801.03314). Its cost is a copy of the pushback at the mark
-/// and a comparison of it at each test.
+/// calls). The mouth's watch tells how short its pushback has been since the mark ([`PushbackWatch`]): no shorter
+/// than the mark's length, nothing it held was read; shorter by at most [`MARK_HELD`] tokens, those read were put
+/// back if the slots hold the very tokens they held ([`same_token`]: a peek leaves the input unread); shorter still,
+/// it was read. Tokens read below the mark and others pushed in their place read as read, though the token now at
+/// the mark's last slot equals the one it held — IEEEtran's `\IEEEauthorblockN{…}⏎\IEEEauthorblockA{…}`, whose
+/// line-end space was read with `\IEEEauthorblockA` and its argument and whose expansion, longer, put another space
+/// there: its affiliation calls read as the author block's own and were lost under `LATEXML_FM_EMIT=2` (2401.11731,
+/// 1801.03314). No token is copied but the held ones: a mark costs at most one run of the watch, a test a binary
+/// search of its runs.
 pub fn input_unread_since(mark: &InputMark) -> bool {
   let gullet = gullet!();
   let depth = gullet.mouthstack.len();
@@ -2188,14 +2260,21 @@ pub fn input_unread_since(mark: &InputMark) -> bool {
     gullet.mouthstack.get(depth - mark.depth - 1)
   };
   let Some(rt) = runtime else {
-    return mark.below.is_none() && mark.mouth == (0, 0, 0, 0);
+    return mark.len == 0 && mark.mouth == (0, 0, 0, 0);
   };
-  let below = mark.below.as_deref().unwrap_or(&[]);
-  rt.mouth.read_position() == mark.mouth
-    && rt
-      .pushback
-      .get(..below.len())
-      .is_some_and(|now| same_input(now, below))
+  if rt.mouth.read_position() != mark.mouth || rt.pushback.len() < mark.len {
+    return false;
+  }
+  let Some(shortest) = rt.watch.shortest_since(mark.serial) else {
+    return false;
+  };
+  let held_from = mark.len.saturating_sub(MARK_HELD);
+  shortest >= mark.len
+    || (shortest >= held_from
+      && rt.pushback[shortest..mark.len]
+        .iter()
+        .zip(&mark.held[shortest - held_from..])
+        .all(|(now, then)| then.is_some_and(|then| same_token(now, &then))))
 }
 
 /// What the invocation of a token with field provenance `prov` ([`Token::prov`]) consumed of its field's stored
@@ -2246,6 +2325,7 @@ pub fn with_pushback<R>(look: impl FnOnce(&[Token]) -> R) -> Option<R> {
 pub fn consume_pushback_to(len: usize) {
   if let Some(ref mut runtime) = gullet_mut!().runtime {
     runtime.pushback.truncate(len);
+    runtime.watch.note_len(runtime.pushback.len());
   }
 }
 
@@ -2674,6 +2754,7 @@ pub fn read_raw_current_line_from_start() -> Option<String> {
   match gullet.runtime {
     Some(ref mut runtime) => {
       runtime.pushback.clear();
+      runtime.watch.note_len(0);
       runtime.mouth.read_raw_line_from_start()
     },
     None => None,
@@ -2716,6 +2797,7 @@ pub fn read_raw_line() -> Option<String> {
     // "next to read" first — reverse the drained order to match the
     // old VecDeque drain(..) which was front-to-back (= next-to-read).
     let tokens: Vec<Token> = runtime.pushback.drain(..).rev().collect();
+    runtime.watch.note_len(0);
 
     // TODO
     // let markers : Vec<&Token> = tokens.iter().filter(|t:Token| t.get_catcode() ==
@@ -4077,6 +4159,7 @@ pub fn take_rest_of_mouth() -> Vec<Token> {
     };
     // The pushback is a stack whose LAST element is read next.
     let mut rest: Vec<Token> = runtime.pushback.drain(..).rev().collect();
+    runtime.watch.note_len(0);
     rest.extend(runtime.mouth.read_tokens().unlist());
     rest
   };
@@ -5531,6 +5614,7 @@ pub fn flush() {
     boundary:        BalancedBoundary::Transparent,
     insert_everyeof: false,
     eof_seen:        false,
+    watch:           PushbackWatch::default(),
   });
   g.mouthstack = VecDeque::new();
   note_current_mouth(&g);
@@ -5627,6 +5711,66 @@ mod token_limit_tests {
         T_LETTER!("b"),
       ]));
       assert!(!input_unread_since(&mark));
+      Ok(())
+    })
+    .unwrap();
+  }
+
+  /// Marks nest, each answering for its own length: a mark on top of another reads as read once what was pushed
+  /// between them is read, the one below it still unread; a `\futurelet`'s two tokens read and put back leave the input
+  /// unread, more than [`MARK_HELD`] read and put back read as read (the stricter answer), and a native reader's
+  /// consumption (`consume_pushback_to`) as any read. A mark of a mouth since closed reads as read. A list read down
+  /// while a mark is taken at each step (an author list a macro holds, `\authorlist` of 3,000 `\author`/`\affiliation`
+  /// pairs: revRC1's memory probe) keeps one run on the watch, no copy of the pushback (`InputMark` holds no heap).
+  #[test]
+  fn input_marks_nest_and_keep_no_copy_of_the_pushback() {
+    reading_from_mouth(Mouth::default(), || {
+      let letters = |n: usize| Tokens::new((0..n).map(|_| T_LETTER!("x")).collect());
+      unread(letters(8));
+      let outer = input_mark();
+      unread(letters(2));
+      let inner = input_mark();
+      unread(letters(1));
+      assert_eq!(read_token()?, Some(T_LETTER!("x")));
+      assert!(input_unread_since(&inner) && input_unread_since(&outer));
+      read_token()?;
+      assert!(!input_unread_since(&inner));
+      assert!(input_unread_since(&outer));
+      // (a `\futurelet` below the outer mark: two tokens read, put back)
+      read_token()?;
+      let (a, b) = (read_token()?.unwrap(), read_token()?.unwrap());
+      unread(Tokens::new(vec![a, b]));
+      assert!(input_unread_since(&outer));
+      // (five read and put back)
+      let five: Vec<Token> = (0..5).map(|_| read_token().unwrap().unwrap()).collect();
+      unread(Tokens::new(five));
+      assert!(!input_unread_since(&outer));
+      let mark = input_mark();
+      consume_pushback_to(pushback_len() - 1);
+      assert!(!input_unread_since(&mark));
+      // (a mark of a mouth since closed)
+      let closed = reading_from_mouth(Mouth::default(), || {
+        unread(letters(1));
+        Ok(input_mark())
+      })?;
+      assert!(!input_unread_since(&closed));
+      // (a list read down, a mark at each step)
+      while read_token()?.is_some() {}
+      unread(letters(12_000));
+      let mut marks = Vec::new();
+      for _ in 0..3_000 {
+        marks.push(input_mark());
+        for _ in 0..4 {
+          read_token()?;
+        }
+      }
+      assert!(marks.iter().all(|mark| !input_unread_since(mark)));
+      assert_eq!(
+        gullet!().runtime.as_ref().map(|rt| rt.watch.runs.len()),
+        Some(1)
+      );
+      fn copy<T: Copy>() {}
+      copy::<InputMark>();
       Ok(())
     })
     .unwrap();
