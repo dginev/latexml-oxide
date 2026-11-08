@@ -77,8 +77,9 @@ pub(in crate::base_utilities) enum Outcome {
     /// the environments its tokens open and close, what a span's content reads (`writer::Field`). Not in a dump
     environments: Vec<EnvironmentStep>,
     /// the creator calls its own expansion made (`field_notes::FieldCreator`), the keyvals the emitter writes on the
-    /// creators their Names make (`Event::creator_call`). Not in a dump
-    creators:     Vec<FieldCreator>,
+    /// creators their Names make (`Event::creator_call`), fixed once rehearsed (a slice: the variant stays under clippy's
+    /// `large_enum_variant` bound). Not in a dump
+    creators:     Box<[FieldCreator]>,
     /// where the rehearsal left a group open (`rehearsal::Rehearsal::Done::left_open`), what it read past it no event
     /// says: the block's content's text ([`content_text`]), whose words the events lack the content check counts
     /// (`resolver::placed::content_check`), as a call's no rehearsal read (`ApiCall::unread`). In a dump only when set

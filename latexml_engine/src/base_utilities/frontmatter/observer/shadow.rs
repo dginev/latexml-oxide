@@ -216,7 +216,7 @@ fn read_at_flush() -> Result<()> {
             breaks,
             held,
             environments,
-            creators,
+            creators: creators.into_boxed_slice(),
             unread: left_open.then(|| content_text(&block.tokens).into()),
           }
         },
@@ -979,7 +979,7 @@ mod tests {
         breaks:       Vec::new(),
         held:         Vec::new(),
         environments: Vec::new(),
-        creators:     Vec::new(),
+        creators:     Box::default(),
         unread:       None,
       }),
       None
