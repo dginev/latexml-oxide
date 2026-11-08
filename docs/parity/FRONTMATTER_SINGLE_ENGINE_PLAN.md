@@ -79,7 +79,7 @@ Stays on tokens (argument passing, or a text rule on ink): `email_addresses`, `r
 | `owner` | No | `sequence` = `labelseq=author` (L489, L409); `first` = `label=author:1`; the flush's "unless proved" dies with the old engine |
 | `mark`, `_mark`, `_marks`, `_unmarked`, `_bymark`, `_answers`, `_entry`, `_linemark`, `_linelist`, `_linefirst`, `_linklabel`, `_seqlabel`, `_sequence` | No | `label=`, `annotations=`, `labelseq=` |
 | `_share`, `_group`, `_grouped` | No | `annotate=all`, `annotate=N` (L516-520) |
-| `_labelprints`, `_markshown`, `_linemarkshown`, `_refmarkshown`, `_textmarks`, `_entrysymbol`, `_withsup`, `_markpiece`, `_kinded` | No key | The mark stays in the content; the keys die |
+| `_labelprints`, `_printedlabel`, `_markshown`, `_linemarkshown`, `_refmarkshown`, `_textmarks`, `_entrysymbol`, `_withsup`, `_markpiece`, `_kinded` | No key | The mark stays in the content; the keys die |
 | `_command_form` | No | Perl's `\lx@add@abstract` (L612) vs `\lx@begin@abstract` (L621) |
 | `_store`, `_released_store`, `_net`, `_unsplit`, `_cutlist`, `_queued`, `_late`, `_late_mark`, `_latecall`, `_zone`, `_printedbefore`, `_mergednames`, `_for`, `_source` | No | Die with the stores, the Cut and relocation |
 | `_deposit`, `_inserted`, `_titlepage`, `_preamble`, `_paragraph_break` | Not API | Flow state; out of the pin or die |
