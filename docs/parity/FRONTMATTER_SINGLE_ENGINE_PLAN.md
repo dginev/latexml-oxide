@@ -165,11 +165,14 @@ basis `pk_wt/int149a` @ 3189c464d9 (RT1 at 913eef6966), binary `P2r2-rel`. Their
   placement (`resolver/post.rs`, `label:unrequested owner:annotate`; 0906.0396, 2111.15565 — the eager gate on
   `_withsup` would drop ruling 1's reading of requested marks on stores and `_unsplit` blocks), and a block line a glyph
   leads (Mark role `text`) that no name requests continues the entry above (`resolver/blocks.rs`; cond-mat0309053, its
-  glyphs written as text, counted); K13 an unmarked `annotate=run` call right after a `_withsup` one of its role is that
-  entry's next line (`led_line`; 0802.2149, the page's reading: Ling no longer holds ECNU, off gives it him); K4 a
+  glyphs written as text, counted); K4 a
   `\thanks` opening with a raised number is one affiliation per raised mark when its comma pieces are as many
   (2509.19480, 2206.07648), and a later glyph is its text (2505.06451); K14 the per-column label rule only where the
-  entry's column holds names (2404.00915). Left: 1202.3425 (RED); LEAD — 1509.04564 (K1 needs the catcode of the ink
+  entry's column holds names (2404.00915). Left: 1202.3425 (RED); CONT 0802.2149 (RED repro
+  `unmarked_affiliation_after_a_marked_one_continues_it`): continuing an unmarked API call onto the marked entry
+  before it went beyond off and broke `batch77n::opex3_unmarked_address_after_marked_reaches_all` at `=2`, so it was
+  dropped; the off-faithful port is `Resolver::record_run`'s `answered` as off reads it (a `\lx@add@authors@append`
+  name's printed mark is no request there, `\lx@author@withinst`), ECNU then every author's as off; LEAD — 1509.04564 (K1 needs the catcode of the ink
   before the mark, a rehearsal fact: `Ê` is no LETTER token) and 2602.11758 (an in-block `\authorblockA` contact read as
   one Contact labelled 1, its `\quad` entries uncut: the in-block cut, `events::labelled_entries`); NEST, LEX, INSIDE.
 - **RT3, the names line (`_namesline`).** No missing fact but two: **ACC** (1306.2567, 1709.03335), a cover gap in

@@ -3,8 +3,7 @@
 //! it cuts by its marks, ported from that procedure (the rows of RT2's rule table). A printed mark no name requests is no
 //! label: an API call's entry keeps its call's placement (`an_unrequested_leading_mark_keeps_its_calls_placement`, K12),
 //! a block line a glyph leads continues the entry above it (`an_unrequested_glyph_line_continues_the_entry_above`,
-//! K12/K13); an unmarked call right after a marked one is that entry's next line
-//! (`an_unmarked_call_after_a_marked_one_continues_it`, K13); a `\thanks` opening with a raised number is its marks'
+//! K12/K13); a `\thanks` opening with a raised number is its marks'
 //! affiliations (`a_marked_thanks_is_its_marks_affiliations`, K4); entry columns holding no names label the whole block
 //! (`entry_columns_without_names_label_the_whole_block`, K14). Each fixture's creators are the switch-off ones.
 
@@ -89,29 +88,6 @@ fn an_unrequested_glyph_line_continues_the_entry_above() {
     off[0][1].contains("(§) Inst X, City X") && off[0][1].contains("(†) Inst Y"),
     "{off:?}"
   );
-}
-
-/// K13, API calls: revtex's `\affiliation{Dept B, Univ B,}` right after `\affiliation{$^{1}$Lab A, Univ A,}` is entry 1's
-/// second line, its holders', as the page prints it — not the run the walk closes at the first answered name (0802.2149).
-/// Beyond the switch off, which gives it every author too.
-#[test]
-fn an_unmarked_call_after_a_marked_one_continues_it() {
-  let tex = repro!("unmarked_affiliation_after_a_marked_one_continues_it");
-  let (log, on) = run(tex, 2);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&on), [
-    vec![
-      "Ann Able",
-      "affiliation=Lab A, Univ A,",
-      "affiliation=Dept B, Univ B,",
-    ],
-    vec!["Bob Baker", "affiliation=Dept C, Univ C"],
-    vec![
-      "Cat Cole 1,∗",
-      "affiliation=Lab A, Univ A,",
-      "affiliation=Dept B, Univ B,",
-    ],
-  ]);
 }
 
 /// K4: a `\thanks` opening with a raised number is affiliations, one per raised mark, each its mark's carriers'

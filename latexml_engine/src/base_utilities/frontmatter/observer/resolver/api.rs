@@ -562,23 +562,12 @@ impl Resolver {
       // "†Lab B, Univ B, City B": each mark's entry runs on until the next mark, as a block's unmarked line continues the
       // entry above it (`line:continued`) and one call's content is cut at its marks (`mark_led_pieces`) — review rev93a
       // S2: quant-ph0101015's rspublic.cls, whose "London SW7 2BZ" went to every author)
-      // (and a call no mark leads right after a `\lx@affiliation@withsup` one of its role, no author between: the
-      // entry's next line, as Perl's block reader appends an unmarked line to the entry before it (`$entries[-1][1] =
-      // Tokens($entries[-1][1], $line)`, Base_Utility.pool.ltxml:699-707) — revtex's `\affiliation{$^{1}$State Key
-      // Laboratory,}\affiliation{Department of Physics, East China Normal University}`, printed as entry 1's second line,
-      // its holders', 0802.2149, where it went to the run Ling and Zhang closed; a run's call alone, `annotate=run`)
       *at + 1 == index
         && tag == "ltx:contact"
         && led_role == role
+        && attr_value(attrs, "_store") == Some(store.as_str())
+        && attr_value(attrs, "annotate") == Some("all")
         && !withsup
-        && if store.is_empty() {
-          self.emitting
-            && attr_value(attrs, "_store").is_none()
-            && attr_value(attrs, "annotate") == Some("run")
-        } else {
-          attr_value(attrs, "_store") == Some(store.as_str())
-            && attr_value(attrs, "annotate") == Some("all")
-        }
     }) {
       labels = led.clone();
       label_rule = "api:leading-mark line:continued";
@@ -667,9 +656,7 @@ impl Resolver {
         && !split
         && !legend
         && tag == "ltx:contact"
-        && let Some(store) = attr_value(attrs, "_store")
-          .filter(|s| !s.is_empty())
-          .or((withsup || label_rule.ends_with("line:continued")).then_some(""))
+        && let Some(store) = attr_value(attrs, "_store").filter(|s| !s.is_empty())
       {
         self.led_line = Some((index, store.to_string(), role.to_string(), labels.clone()));
       }
