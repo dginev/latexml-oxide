@@ -183,3 +183,30 @@ fn an_unread_calls_accented_words_count_whole() {
     row(&["Bob Baker †", "affiliation=Univ Beta"]),
   ]);
 }
+
+/// The content check's own rehearsals (a call its block's own expansion made, here revtex's `\collaboration` after an
+/// `\author`, 2009.10691's shape) read from the check's allowance (`rehearsal::for_the_check`), not the conversion's
+/// budget: under a budget the two collaborations' check rehearsals would spend, Cat Cole's `\affiliation` keeps its
+/// rehearsal and `=2` writes what the base wrote, with no Warning (review revRC1 finding 4). Distinct: the budget's
+/// accounting, no reading or counting of words.
+#[test]
+fn the_checks_rehearsals_leave_the_budget() {
+  let (log, xml) = in_a_directory(repro!("emit_check_rehearsals_leave_the_budget"), &[], &[
+    ("LATEXML_REHEARSAL_READ_BUDGET", "6000"),
+    ("LATEXML_FM_EMIT", "2"),
+  ]);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&[
+      "Ann Able",
+      "affiliation=Univ Alpha",
+      "collaboration=On behalf of the Big Collaboration"
+    ]),
+    row(&[
+      "Bob Baker",
+      "affiliation=Univ Beta",
+      "collaboration=On behalf of the Bigger Collaboration"
+    ]),
+    row(&["Cat Cole", "affiliation=Univ Gamma"]),
+  ]);
+}

@@ -64,6 +64,9 @@ thread_local! {
     const { Cell::new(REHEARSAL_READS_DEFAULT * REHEARSALS_PER_CONVERSION) };
   /// How many rehearsals were abandoned or never made over budget.
   static LEFT_OUT: Cell<usize> = const { Cell::new(0) };
+  /// The reads the content check's own rehearsals may still make ([`for_the_check`]): one rehearsal's, apart from the
+  /// conversion's.
+  static CHECK_READS_LEFT: Cell<usize> = const { Cell::new(REHEARSAL_READS_DEFAULT) };
 }
 
 /// A new conversion's budget: [`REHEARSAL_READS_DEFAULT`], or `LATEXML_REHEARSAL_READ_BUDGET` (0: none).
@@ -75,7 +78,23 @@ fn reset_rehearsal_budget() {
   let reads = if reads == 0 { usize::MAX >> 2 } else { reads };
   RUN_READS.set(reads);
   READS_LEFT.set(reads.saturating_mul(REHEARSALS_PER_CONVERSION));
+  CHECK_READS_LEFT.set(reads);
   LEFT_OUT.set(0);
+}
+
+/// Run `rehearsals` that read for the frontmatter content check alone (`shadow::read_at_flush`'s calls a block's own
+/// expansion made, `ApiCall::inside_events`) from the check's own allowance, one rehearsal's reads ([`RUN_READS`]) for
+/// the conversion, never from the reads the output's rehearsals may make: a check never moves what is written (a later
+/// call's or a later flush's block over budget for it: revtex's `\collaboration{…}` after an `\author`, its block's own
+/// call, read before the next author's `\affiliation`, which lost its rehearsal). One it gives up on is in no budget
+/// Warning: nothing written depends on it, and the check counts that call by its content's text (`ApiCall::unread`).
+pub(in crate::base_utilities) fn for_the_check<R>(rehearsals: impl FnOnce() -> R) -> R {
+  let left_out = LEFT_OUT.get();
+  READS_LEFT.set(CHECK_READS_LEFT.replace(READS_LEFT.get()));
+  let read = rehearsals();
+  CHECK_READS_LEFT.set(READS_LEFT.replace(CHECK_READS_LEFT.get()));
+  LEFT_OUT.set(left_out);
+  read
 }
 
 /// How many tokens the next rehearsal may read: a block's text may loop where nothing prints it (a first `\author` a second

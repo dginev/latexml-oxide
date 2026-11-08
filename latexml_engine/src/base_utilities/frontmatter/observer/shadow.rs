@@ -21,7 +21,7 @@ use super::{
     with_ledger,
   },
   policy::{TitleMarks, policy_for},
-  rehearsal::{Rehearsal, rehearse},
+  rehearsal::{Rehearsal, for_the_check, rehearse},
   resolver::{Assoc, Resolved, ledger_inputs, resolve},
   writer::{fm_emit_mode, writer_stays_out},
   *,
@@ -237,7 +237,7 @@ fn read_at_flush() -> Result<()> {
   // its words count unless its block's events print them; under `=2`, the check's only mode), the block's own creator
   // entry being the block
   let check = fm_emit_mode() == 2;
-  let calls: Vec<(usize, Tokens)> = with_ledger(|ledger| {
+  let calls: Vec<(usize, Tokens, bool)> = with_ledger(|ledger| {
     ledger
       .entries()
       .iter()
@@ -246,18 +246,25 @@ fn read_at_flush() -> Result<()> {
         Entry::Api(call)
           if !call.rehearsed && (!call.inside || (check && call.parent == "ltx:creator")) =>
         {
-          Some((i, call.content.clone()))
+          Some((i, call.content.clone(), call.inside))
         },
         _ => None,
       })
       .collect()
   });
   let calls_mark = StomachMark::take();
-  for (i, content) in calls {
+  for (i, content, inside) in calls {
     let read = if content.is_empty() {
       Some((Vec::new(), 0, None))
     } else {
-      match rehearse(content.clone(), TitleMarks::Fnsymbol, &[], lex_events)? {
+      // (an inside call's, for the check alone, from the check's own allowance: `rehearsal::for_the_check`)
+      let rehearsal = || rehearse(content.clone(), TitleMarks::Fnsymbol, &[], lex_events);
+      let rehearsed = if inside {
+        for_the_check(rehearsal)
+      } else {
+        rehearsal()
+      };
+      match rehearsed? {
         Rehearsal::Done { value, errors, .. } => Some((value, errors, None)),
         // (a flush inside a speculative run: the next flush rehearses it)
         Rehearsal::Skipped(SkipReason::JournalUnavailable) => None,
