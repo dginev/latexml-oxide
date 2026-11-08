@@ -1051,7 +1051,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // `Universit at` (review revRC1 finding 3) — no name spelled, a count and no decision; RC1e, 32 -> 33: a word reads on
   // past a one-letter control word only, by its letter's catcode (`ledger::letter_cs`), so a control symbol parts it,
   // `Smith\,\\Univ` two words (review revG2 finding 3) — no name spelled, a count and no decision)
-  ("ledger", 33),
+  // (CK1b 33 -> 34: `ledger::symbol`, a control symbol's character, so the content text reads past an accent's before a
+  // word's first letter (`\'Ecole`) and parts at a spacing one (`Dept,\\Muller`), review revCK1 2-3: what the ink's
+  // words are, never a decision's)
+  ("ledger", 34),
   ("llncs_cls.rs", 32),
   ("osa_journal_sty.rs", 77),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the owner logic, 938 = 924 + 14; none added)
@@ -1307,7 +1310,8 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // (Z4a, 0 -> 2, ruled at Z4ar2: names two kernel definitions (`\begin`, `\end`), not a token's spelling: an environment step by its
   // meaning, a `\let` copy too, what no frame says for a raw environment)
   ("field_notes", 2),
-  ("ledger", 29),
+  // (CK1b 29 -> 30: `ledger::spacing_symbol`'s `'\\'`, a line break parting a word in the content text, review revCK1 3)
+  ("ledger", 30),
   ("marks", 0),
   ("mod", 0),
   ("policy", 0),

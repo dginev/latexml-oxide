@@ -1,0 +1,23 @@
+% mechanism: the content text's word rule (`ledger::content_text`): before a word's first letter only an accent's
+%            control symbol is read past (`\'Ecole`, `ledger::accent_symbol`); a line break there (`Dept,\\Muller`)
+%            parts and records no place, so the plain `Muller` it opens is matched as spelled, never by its base letters
+%            against the macro's printed `M\"uller` (`resolver::placed::reads_as`); a line break inside a word parts it
+%            too (`ledger::spacing_symbol`); the twin of author_raw_tabular_juggle_plain_word_unaccented
+% witness: 1401.6981 (the sig-alternate juggle's shape); synthetic, review revCK1 findings 2 and 3 (probes x1, x2)
+% shape:   the tie juggle (`\end{tabular}~\begin{tabular}{c}`), the lost line `Dept,\\Muller` beside a macro's printed
+%          `A M\"uller`
+% oracle:  pdflatex: 0 errors; "A Müller", "Univ A", "Dept,", "Muller"
+% engines: rust CK1 `=2`: E=0, one content-check Warning `c Dept tabular` (the lost "Muller" hidden by the printed
+%          "Müller": a false silence)
+% expect:  "A Müller" kept; at `=2` one content-check Warning, `c Dept Muller tabular`
+% status:  RED (CK1) -> GREEN (perfect_kernel_batchfs1::an_open_group_rehearsals_word_matching, CK1b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\newcommand\auth{A M\"uller}
+\begin{document}
+\title{T}
+\author{\auth \\ Univ A \end{tabular}~\begin{tabular}{c} Dept,\\Muller}
+\maketitle
+Text.
+\end{document}
