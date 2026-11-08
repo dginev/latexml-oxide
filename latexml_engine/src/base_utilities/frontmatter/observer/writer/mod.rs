@@ -209,6 +209,7 @@ pub(in crate::base_utilities) fn check_placed_content(document: &mut Document) {
   for note in document.findnodes("//ltx:pubnote | //ltx:title//ltx:note", None) {
     placed.beside.push(dom::text_without_marks(&note));
   }
+  placed.dropped = emit::reading_drops();
   let check = with_ledger(|ledger| content_check(ledger, &placed, &emit::kept_whole));
   for (words, what) in [
     (

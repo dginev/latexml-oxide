@@ -366,3 +366,73 @@ fn an_address_others_spell_is_not_the_named_authors() {
     ],
   );
 }
+
+/// Rows C2-C4 with the old reader's `name_takes_annotations` (review revG1 2): inside a name's remark, `\fnmsep`'s
+/// comma moves onto the name with the marks it parts (`lines::mark_separator`), and a mark no annotation, a number's
+/// `$^{1}$`, parts no run — the remark goes on past it. Red (FB2b3 `=2`): the name "Ann Able (for the", the contact
+/// "ATLAS Collaboration)". At `=2` the remark is written as plain text (2 Warnings each, OXIDIZED_DESIGN #980's class).
+/// Distinct from [`a_mark_inside_a_remark_goes_onto_the_name`]: a separator between marks, and a mark that stays.
+#[test]
+fn a_mark_separator_or_a_number_inside_a_remark_parts_no_run() {
+  let want = [
+    vec!["Ann Able", "collaboration=(for the ATLAS Collaboration)"],
+    vec!["Bob Baker"],
+  ];
+  // (pdflatex: "Ann Able (for the1 ATLAS Collaboration)")
+  let (off, two) = both(
+    "\\documentclass{article}\n\\begin{document}\n\\title{T}\\author{Ann Able (for the$^{1}$ ATLAS \
+     Collaboration) \\and Bob Baker}\n\\maketitle\nText.\n\\end{document}\n",
+    (0, 2),
+  );
+  assert_eq!(off, want);
+  assert_eq!(two, want);
+  // (pdflatex: "Ann Able (for the1,⋆ ATLAS Collaboration) and Bob Baker1", llncs)
+  let (off, two) = both(
+    "\\documentclass{llncs}\n\\begin{document}\n\\title{T}\\author{Ann Able (for \
+     the\\inst{1}\\fnmsep\\thanks{x} ATLAS Collaboration) \\and Bob \
+     Baker\\inst{1}}\\institute{U}\n\\maketitle\nText.\n\\end{document}\n",
+    (0, 2),
+  );
+  let want = [
+    vec![
+      "Ann Able",
+      "collaboration=(for the ATLAS Collaboration)",
+      "affiliation=U",
+    ],
+    vec!["Bob Baker", "affiliation=U"],
+  ];
+  assert_eq!(off, want);
+  assert_eq!(two, want);
+}
+
+/// A `\cite` on a name is written with it (review revG1 3): one inside the name's remark that the reading moves onto the
+/// name, `Ann Able (for the\cite{k} ATLAS Collaboration)` (the name its events don't spell, written with the moved
+/// cites, `emit::block_names`), and one right after the name, `Ann Able\cite{k}`. Red (FB2b3 `=2`): the cite dropped,
+/// silently in the second (no Warning); a cite's text its brackets around its `bibref` (`[ ]`). The remark's row carries 2 Warnings at `=2` (its plain text, OXIDIZED_DESIGN
+/// #980's class).
+#[test]
+fn a_cite_on_a_name_is_written_with_it() {
+  let cite = "<personname>Ann Able<cite class=\"ltx_citemacro_cite\">[<bibref bibrefs=\"k\"";
+  // (pdflatex: "Ann Able (for the[?] ATLAS Collaboration)"; "Ann Able[?]" and "Bob Baker")
+  for (author, warnings, remark) in [
+    ("Ann Able (for the\\cite{k} ATLAS Collaboration)", 2, true),
+    ("Ann Able\\cite{k}", 0, false),
+  ] {
+    let tex = format!(
+      "\\documentclass{{article}}\n\\begin{{document}}\n\\title{{T}}\\author{{{author} \\and Bob \
+       Baker}}\n\\maketitle\nText.\n\\end{{document}}\n"
+    );
+    let (off, two) = both(&tex, (0, warnings));
+    let mut first = vec!["Ann Able [ ]"];
+    if remark {
+      first.push("collaboration=(for the ATLAS Collaboration)");
+    }
+    let want = [first, vec!["Bob Baker"]];
+    assert_eq!(off, want, "{author}");
+    assert_eq!(two, want, "{author}");
+    for emit in [0, 2] {
+      let xml = run(&tex, emit).1;
+      assert!(xml.contains(cite), "{xml}");
+    }
+  }
+}

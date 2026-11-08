@@ -1,8 +1,9 @@
 //! Guards for FB2b2, two shapes of the old reader's names split ported onto the one engine's reading
 //! (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`; FB1's port P2), each fixture converted with the emitter's switch
 //! off and at `LATEXML_FM_EMIT=2`, the creators (name and every contact, in order) the same both ways: a byline's "By"
-//! that a spacing run parts from the names (the lexer's `byline_runs`, the old `without_leading_by`), and a line under
-//! the names opening with "and" after a space (`later_line_is_names`, the old `names_list_continues`).
+//! that a spacing run parts from the names (the reading's `byline_dropped` on a names line, the old `without_leading_by`,
+//! the content check counting the word it drops as a separator's), and a line under the names opening with "and" after
+//! a space (`later_line_is_names`, the old `names_list_continues`).
 
 use super::perfect_kernel_batchnl1::both;
 
@@ -18,8 +19,10 @@ macro_rules! repro {
 
 /// A byline's "By" in a run of its own, the spacing or the font after it parting it from the names, is no name text
 /// (`By~~{\scshape Vitaly~Bergelson}~~and~~…`, 2603.25922, 2604.07186, 2604.12864; `By~~{\scshape Bryna Kra}`,
-/// 2603.27258), at the block's first line and at an `\and` column's (`\and BY~~Max Moss~~and~~Ned Nash`). Red
-/// (NL1d `=2`): the creators "By Bryna Kra", "BY Max Moss", "By Ann Able".
+/// 2603.27258), at the block's first line and at an `\and` column's (`\and BY~~Max Moss~~and~~Ned Nash`): the lexer
+/// keeps it a Name, the reading drops it on a names line (`lines::byline_dropped`) and records it
+/// (`Resolved::drops`), which the content check counts as a separator's word. Red (NL1d `=2`): the creators "By
+/// Bryna Kra", "BY Max Moss", "By Ann Able"; (NL1e `=2`) a Warning "missing from the placed frontmatter: By".
 #[test]
 fn a_byline_word_alone_is_no_name() {
   let (off, two) = both(repro!("author_byline_by_before_spacing_runs"), (0, 0));
@@ -82,4 +85,29 @@ fn an_and_line_after_a_space_goes_on_with_the_names() {
   let want = [vec!["Ann Able"], vec!["Bob Baker"], vec!["Cat Cole"]];
   assert_eq!(off, want);
   assert_eq!(two, want);
+}
+
+/// A byline's "By" opening a line the reading reads as no names keeps its ink: `Ann Able \\ By\quad Lee Hall,
+/// \textit{Univ X}` is Ann Able's affiliation, its italic kept (review revG1 1: the lexer's split reached affiliation
+/// lines). Red (FB2b3 `=2`): "By" dropped, the italic lost, a Warning. Off reads b10's `\quad` line as names (the old
+/// reader's split: an affiliation "By", the creators "Lee Hall" and "Univ X"), so only `=2` is pinned there; b11, no
+/// spacing, reads the same both ways.
+#[test]
+fn a_byline_word_on_an_affiliation_line_keeps_its_ink() {
+  let want = [vec!["Ann Able", "affiliation=By Lee Hall, Univ X"]];
+  let italic = "Lee Hall, <text font=\"italic\"";
+  // (pdflatex: "Ann Able" over "By Lee Hall, Univ X", both)
+  for (spacing, off_too) in [("\\quad ", false), (" ", true)] {
+    let tex = format!(
+      "\\documentclass{{article}}\n\\begin{{document}}\n\\title{{T}}\\author{{Ann Able \\\\ By{spacing}Lee Hall, \
+       \\textit{{Univ X}}}}\n\\maketitle\nText.\n\\end{{document}}\n"
+    );
+    let (off, two) = both(&tex, (0, 0));
+    assert_eq!(two, want, "{spacing}");
+    let xml = super::perfect_kernel_batchz4::run(&tex, 2).1;
+    assert!(xml.contains(italic), "{xml}");
+    if off_too {
+      assert_eq!(off, want);
+    }
+  }
 }
