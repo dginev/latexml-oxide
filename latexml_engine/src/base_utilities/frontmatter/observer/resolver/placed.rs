@@ -65,6 +65,9 @@ pub(in crate::base_utilities::frontmatter::observer) struct Placed {
   pub items:   Vec<PlacedItem>,
   pub beside:  Vec<String>,
   pub dropped: BTreeSet<(usize, (u16, u16))>,
+  /// the document's publication notes' texts, each as written (in `beside` too): a note written more often than it
+  /// printed is in excess ([`note_excess`])
+  pub notes:   Vec<String>,
 }
 
 /// The check's findings: the words (as first printed) and addresses lost, and those placed in excess.
@@ -679,6 +682,79 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
     }
   }
   check
+    .excess
+    .extend(note_excess(&placed.notes, &note_prints(ledger)));
+  check
+}
+
+/// The texts the notes of the ledger's live blocks and creator calls print, and its document notes' (`\footnotetext`): a
+/// Note event each, as the reading reads it — the one definition of a note printed once.
+fn note_prints(ledger: &Ledger) -> Vec<String> {
+  fn notes<'a>(events: &'a [Event], into: &mut Vec<&'a Event>) {
+    for e in events {
+      if e.kind == EventKind::Note {
+        into.push(e);
+      }
+      notes(&e.inner, into);
+    }
+  }
+  let mut found = Vec::new();
+  for (_, block) in live_blocks(ledger) {
+    if let Outcome::Events { events, .. } = &block.outcome {
+      notes(events, &mut found);
+    }
+  }
+  let mut texts: Vec<String> = found.iter().map(|e| e.text.clone()).collect();
+  for entry in ledger.entries() {
+    match entry {
+      Entry::Api(call) if !call.cleared => {
+        let mut found = Vec::new();
+        notes(&call.events, &mut found);
+        texts.extend(found.iter().map(|e| e.text.clone()));
+        if call.tag == "ltx:pubnote" {
+          texts.push(events::printed_text(&call.events));
+        }
+      },
+      Entry::NoteText(text) => texts.push(events::printed_text(&text.events)),
+      _ => {},
+    }
+  }
+  texts
+}
+
+/// The publication notes `written` holds more often than the notes `printed` print them (each at least once: one whose
+/// print no event read is its own), each extra copy's text: a `\thanks` digested twice (review rck2). Compared by their
+/// letters' words, in any order (a mark's digits and symbols none of them: `$^{1}$Univ A` prints `1Univ A`, written
+/// `<sup>1</sup>Univ A`, the note's text without its marks); a note of no letter is counted by no one.
+fn note_excess(written: &[String], printed: &[String]) -> Vec<String> {
+  fn key(text: &str) -> Vec<String> {
+    let mut words: Vec<String> = words_of(text)
+      .map(|word| {
+        word
+          .chars()
+          .filter(|c| c.is_alphabetic())
+          .collect::<String>()
+      })
+      .filter(|word| !word.is_empty())
+      .collect();
+    words.sort();
+    words
+  }
+  let mut copies: BTreeMap<Vec<String>, (usize, &str)> = BTreeMap::new();
+  for text in written {
+    copies.entry(key(text)).or_insert((0, text)).0 += 1;
+  }
+  let mut excess = Vec::new();
+  for (key_of, (n, text)) in copies {
+    if key_of.is_empty() {
+      continue;
+    }
+    let prints = printed.iter().filter(|p| key(p) == key_of).count();
+    for _ in prints.max(1)..n {
+      excess.push(text.trim().to_string());
+    }
+  }
+  excess
 }
 
 /// The words `text` read past an accent or a dotless letter in, into `past` ([`ContentText::read_past`]).
@@ -831,4 +907,46 @@ fn glued(
     }
   }
   None
+}
+
+#[cfg(test)]
+mod note_tests {
+  use super::note_excess;
+
+  /// A note written twice that printed once is one copy in excess (`Bob Baker$^{2\thanks{$^{1}$Univ A; $^{2}$Univ B}}$`'s
+  /// note digested twice, review rck2), its marks none of its words; two notes printed twice are no excess, and a note no
+  /// event read is its own print, once.
+  #[test]
+  fn a_note_written_more_often_than_it_printed_is_in_excess() {
+    let written = |texts: &[&str]| texts.iter().map(|t| t.to_string()).collect::<Vec<_>>();
+    assert_eq!(
+      note_excess(
+        &written(&["1Univ A; 2Univ B", "1Univ A; 2Univ B"]),
+        &written(&["1Univ A; 2Univ B"])
+      ),
+      ["1Univ A; 2Univ B"]
+    );
+    assert_eq!(
+      note_excess(
+        &written(&["Equal contribution.", "*Equal contribution."]),
+        &written(&["Equal contribution.", "Equal contribution."])
+      ),
+      Vec::<String>::new()
+    );
+    assert_eq!(
+      note_excess(
+        &written(&["Funded by X.", "Funded by X.", "Funded by X."]),
+        &[]
+      ),
+      ["Funded by X.", "Funded by X."]
+    );
+    assert_eq!(
+      note_excess(&written(&["Funded by X."]), &[]),
+      Vec::<String>::new()
+    );
+    assert_eq!(
+      note_excess(&written(&["1", "1"]), &[]),
+      Vec::<String>::new()
+    );
+  }
 }

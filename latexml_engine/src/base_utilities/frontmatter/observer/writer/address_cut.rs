@@ -688,6 +688,20 @@ pub(super) fn span_tokens_cut(
   span: (u16, u16),
   cuts: &[(usize, usize)],
 ) -> Option<Tokens> {
+  span_tokens_within(index, span, None, cuts)
+}
+
+/// [`span_tokens_cut`] within the span `within` of the block (a note's, `\thanks{…}`): its tokens and the formulas inside it
+/// alone, `None` where no balanced run of them holds `span`. A `\thanks` argument is typeset in the footnote (latex.ltx
+/// `\thanks` → `\footnotetext`), never part of the formula around the command, so a piece of it read whole by that formula
+/// is the formula, the `\thanks` itself digested once more (`Ann Able$^{1}$ and Bob Baker$^{2\thanks{$^{1}$Univ A;
+/// $^{2}$Univ B}}$`, review rck2).
+pub(super) fn span_tokens_within(
+  index: usize,
+  span: (u16, u16),
+  within: Option<(u16, u16)>,
+  cuts: &[(usize, usize)],
+) -> Option<Tokens> {
   with_ledger(|ledger| {
     let Some(Entry::Author(block)) = ledger.entries().get(index) else {
       return None;
@@ -695,15 +709,37 @@ pub(super) fn span_tokens_cut(
     let Outcome::Events { formulas, environments, .. } = &block.outcome else {
       return None;
     };
+    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+    let all = block.tokens.unlist_ref();
+    let Some((s, e)) = within else {
+      let field = Field {
+        tokens: all,
+        base: block.range.0,
+        formulas,
+        environments,
+      };
+      let start = at(span.0)?;
+      return Some(field.content_cut((start, at(span.1)?), 0, start, cuts)?.0);
+    };
+    let (from, to) = (at(s)?, at(e)?.min(all.len()));
+    // (the formulas inside it: outermost and in order, a run of them)
+    let inside = |f: &Formula| s <= f.start && f.end <= e;
+    let first = formulas.iter().position(inside).unwrap_or(formulas.len());
+    let count = formulas[first..].iter().take_while(|f| inside(f)).count();
     let field = Field {
-      tokens: block.tokens.unlist_ref(),
-      base: block.range.0,
-      formulas,
+      tokens: all.get(from..to)?,
+      base: block.range.0 + from,
+      formulas: &formulas[first..first + count],
       environments,
     };
-    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
-    let start = at(span.0)?;
-    Some(field.content_cut((start, at(span.1)?), 0, start, cuts)?.0)
+    let cuts: Vec<(usize, usize)> = cuts
+      .iter()
+      .filter(|&&(s, t)| s < to && t > from)
+      .map(|&(s, t)| (s.max(from) - from, t.min(to) - from))
+      .collect();
+    let start = at(span.0)?.checked_sub(from)?;
+    let end = at(span.1)?.checked_sub(from)?;
+    Some(field.content_cut((start, end), 0, start, &cuts)?.0)
   })
 }
 
