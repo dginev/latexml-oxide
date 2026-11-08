@@ -1130,8 +1130,14 @@ impl Resolver {
           _ => label_owners(&self.out.creators, &live, label),
         };
         for owner in named {
-          // (a label several columns answer: this entry's column's names only)
-          if scoped[at].contains(label) && self.column[owner] != columns[at] {
+          // (a label several columns answer: this entry's column's names only — where that column holds names of its
+          // own: a column of entries alone is no author's column, its label the whole block's as the switch off reads
+          // the `\and` columns as lines (`affil_splits`), CVPR's `\author{Tianyu Huang$^{1}$ \and … \and $^{1}$The
+          // Chinese University of Hong Kong \and $^{2}$University of Pennsylvania \and $^{1}${\tt …}}`, 2404.00915, whose
+          // entries went to a nameless creator. With the emitter's switch on alone, `emitting`)
+          let own_names = !self.emitting
+            || columns[at].is_some_and(|column| self.column.iter().any(|c| *c == Some(column)));
+          if scoped[at].contains(label) && own_names && self.column[owner] != columns[at] {
             continue;
           }
           if !owners.contains(&owner) {
