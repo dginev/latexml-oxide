@@ -1240,6 +1240,67 @@ impl Resolver {
       return;
     }
     let live = self.live();
+    // (a raised mark: a superscript or `\textsuperscript`, what Perl's readers split at, `@authorsup_markers`)
+    let raised = |e: &Event| {
+      e.kind == EventKind::Mark
+        && e
+          .role
+          .as_deref()
+          .is_some_and(|r| r.starts_with("sup") || r.starts_with("math"))
+    };
+    // (a `\thanks` whose text opens with a raised number: what `\lx@add@thanks` re-routes as affiliations, each segment
+    // its raised marks part it into an `\lx@affiliation@withsup` entry labelled by its mark (frontmatter_fields.rs
+    // `\lx@add@thanks`, `starts_with_affiliation_mark`, OXIDIZED_DESIGN #52; `split_wrapped_affiliation_marks`). With the
+    // emitter's switch on alone, `emitting`)
+    let numbered = self.emitting
+      && !note.footnote
+      && note
+        .inner
+        .iter()
+        .find(|e| e.kind == EventKind::Mark && e.line_first)
+        .is_some_and(|mark| {
+          raised(mark)
+            && mark
+              .text
+              .trim_start()
+              .starts_with(|c: char| c.is_ascii_digit())
+        });
+    // (one such `\thanks` holding several marked entries, `\thanks{$^{1}$UC Berkeley, $^{2}$Toyota Motor North America,
+    // $^{3}$Princeton university}`: each its own entry by its mark, as the switch off cuts it — 2509.19480, 2206.07648,
+    // where the whole stayed one note of the last name. The entries read from the note's text, parted at its commas
+    // where they are as many as its raised marks; else it stays one note, as before)
+    let marks: Vec<&Event> = note.inner.iter().filter(|e| raised(e)).collect();
+    if numbered && marks.len() > 1 {
+      let pieces: Vec<&str> = note
+        .text
+        .split([',', ';'])
+        .map(str::trim)
+        .filter(|piece| !piece.is_empty())
+        .collect();
+      if pieces.len() == marks.len()
+        && marks
+          .iter()
+          .all(|mark| !mark_labels(mark.label.as_deref().unwrap_or("")).is_empty())
+      {
+        for (mark, piece) in marks.iter().zip(pieces) {
+          let labels = mark_labels(mark.label.as_deref().unwrap_or(""));
+          let role = if is_legend_text(piece) {
+            "legend"
+          } else {
+            "affiliation"
+          };
+          self.pending.push((labels.clone(), false, Assoc {
+            role:   role.into(),
+            text:   piece.to_string(),
+            label:  labels.first().cloned(),
+            rule:   s!("{rule} note:legend ruling1:request note:split-by-marks"),
+            source: Some((index, note.span)),
+            target: None,
+          }));
+        }
+        return;
+      }
+    }
     // (a note opening with a Mark some name requests is that label's legend: `\thanks{$^{1}$ Canizaro … Center}`
     // under `Newaz$^{1,2,*}$`, 2311.16145 — the mark it prints, its leading Mark event; its owners by ruling 1)
     // (one whose text holds a later mark of other requested labels, none of the first's, is the legends of several
@@ -1254,7 +1315,9 @@ impl Resolver {
       && !note
         .inner
         .iter()
-        .filter(|e| e.kind == EventKind::Mark && !e.line_first)
+        // (in a re-routed `\thanks`, its raised marks alone: a glyph is its text, `*Corresponding authors` closing
+        // `$^{4}$ Department of Mechanical Engineering, …`, 2505.06451)
+        .filter(|e| e.kind == EventKind::Mark && !e.line_first && (!numbered || raised(e)))
         .map(|e| mark_labels(e.label.as_deref().unwrap_or("")))
         .any(|later| {
           !later.is_empty()
@@ -1278,24 +1341,7 @@ impl Resolver {
       // carrier it spells (FIDELITY_CHARTER §4's symbol-line rule; the switch-off note keeps them in its text, every
       // address on the note's owner): IEEEtran journal's `\thanks{\IEEEauthorrefmark{1}The authors are with …, E-mails:
       // a@, b@, c@}`, 1610.05419, 2405.06709 — review revP2 finding 1)
-      let numbered = || {
-        !note.footnote
-          && note
-            .inner
-            .iter()
-            .find(|e| e.kind == EventKind::Mark && e.line_first)
-            .is_some_and(|mark| {
-              mark
-                .role
-                .as_deref()
-                .is_some_and(|r| r.starts_with("sup") || r.starts_with("math"))
-                && mark
-                  .text
-                  .trim_start()
-                  .starts_with(|c: char| c.is_ascii_digit())
-            })
-      };
-      let role = if (self.emitting && !numbered() && addresses_in(&legend).is_empty())
+      let role = if (self.emitting && !numbered && addresses_in(&legend).is_empty())
         || is_legend_text(&legend)
         || symbol
       {

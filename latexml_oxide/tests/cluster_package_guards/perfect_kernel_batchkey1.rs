@@ -113,3 +113,26 @@ fn an_unmarked_call_after_a_marked_one_continues_it() {
     ],
   ]);
 }
+
+/// K4: a `\thanks` opening with a raised number is affiliations, one per raised mark, each its mark's carriers'
+/// (2509.19480, 2206.07648: one note of the last name); a later glyph is its text, not another entry's mark
+/// (2505.06451's `*Corresponding authors` made the entry a thanks note).
+#[test]
+fn a_marked_thanks_is_its_marks_affiliations() {
+  let (off, on) = both(repro!(
+    "marked_thanks_entries_are_affiliations_by_their_marks"
+  ));
+  let want = [
+    vec!["Ann Able", "affiliation=Univ A", "affiliation=Univ B"],
+    vec!["Bob Baker", "affiliation=Univ A"],
+    vec!["Cat Cole", "affiliation=Univ C"],
+  ];
+  assert_eq!(off, want);
+  assert_eq!(on, want);
+  let (off, on) = both(repro!("marked_thanks_legend_glyph_is_its_text"));
+  assert_eq!(
+    off[2].last().map(String::as_str),
+    Some("affiliation=Univ C, Japan. cat@c.edu *Corresponding authors")
+  );
+  assert_eq!(on, off);
+}
