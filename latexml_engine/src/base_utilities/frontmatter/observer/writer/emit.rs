@@ -252,13 +252,19 @@ fn rekeyed(
   Some(call_tokens(out, only))
 }
 
-/// `\\lx@frontmatter@itemonly{content}`: past the spaces a content opens with, which an item's digestion skips.
-fn item_only(content: &[Token]) -> Vec<Token> {
-  let spaces = content
+/// How many spaces `content` opens with, which print nothing there: an item's digestion skips them.
+fn leading_spaces(content: &[Token]) -> usize {
+  content
     .iter()
     .take_while(|t| t.get_catcode() == Catcode::SPACE)
-    .count();
-  cs_group("\\lx@frontmatter@itemonly", &[&content[spaces..]])
+    .count()
+}
+
+/// `\\lx@frontmatter@itemonly{content}`: past the spaces a content opens with ([`leading_spaces`]).
+fn item_only(content: &[Token]) -> Vec<Token> {
+  cs_group("\\lx@frontmatter@itemonly", &[
+    &content[leading_spaces(content)..]
+  ])
 }
 
 /// A call's tokens with its content, its last group, an emitted item's: its marks label nothing, and with `only` the API
@@ -310,14 +316,12 @@ fn note_argument(tokens: &Tokens) -> Option<Vec<Token>> {
 }
 
 /// `start`, or past the environment a span opens and doesn't close: its first box takes the cover of what opened it
-/// (1507.02068's `\\begin{center}M. Ablikim`), a column spec with it. As the digestion's frames say it.
-fn past_open_environment(
-  environments: &[EnvironmentStep],
-  base: usize,
-  start: usize,
-  end: usize,
-) -> usize {
-  let at = |p: u16| usize::from(p).saturating_sub(base);
+/// (1507.02068's `\\begin{center}M. Ablikim`), a column spec with it. As the digestion's frames say it. And past the
+/// spaces after each such opening, which print nothing (the line's end after `\\begin{small}` and `\\begin{center}`,
+/// 1507.02068, 2609.17357).
+fn past_open_environment(field: &Field, start: usize, end: usize) -> usize {
+  let at = |p: u16| usize::from(p).saturating_sub(field.base);
+  let environments = field.environments;
   let mut from = start;
   for (n, step) in environments.iter().enumerate() {
     if step.opens && at(step.start) == from && at(step.end) < end {
@@ -326,6 +330,7 @@ fn past_open_environment(
         .any(|later| !later.opens && at(later.start) < end);
       if !closed {
         from = at(step.end);
+        from += field.tokens.get(from..end).map_or(0, leading_spaces);
       }
     }
   }
@@ -441,7 +446,7 @@ fn event_run_at(
 ) -> Option<(Vec<Token>, (usize, usize))> {
   let at = |p: u16| usize::from(p).checked_sub(field.base);
   let (start, end) = (at(first.span?.0)?, at(last.span?.1)?);
-  let start = past_open_environment(field.environments, field.base, start, end);
+  let start = past_open_environment(field, start, end);
   let own_at = |e: &Event| {
     e.marks
       .filter(|_| e.kind == EventKind::Name)

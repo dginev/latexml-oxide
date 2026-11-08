@@ -361,7 +361,65 @@ pub(in crate::base_utilities::frontmatter::observer) use words::{
 pub(in crate::base_utilities::frontmatter::observer) fn read_events(
   events: &[Event],
 ) -> Vec<Event> {
-  glue_shown_runs(&split_text_marks(&join_ordinals(&link_names(events))))
+  glue_shown_runs(&split_text_marks(&join_ordinals(&link_names(
+    &trailing_alignment_as_lines(events),
+  ))))
+}
+
+/// A block's events with an alignment environment (`center`, `flushleft`, `flushright`) that opens after the names and
+/// ends the block read as lines under them: a row Break before it and its content the lines it prints, at the top level
+/// — `\author{Ann Able and Bob Baker \begin{center}Department of Physics and Astronomy\end{center}}` prints the
+/// department centred under both names, every name's of the row, its "and" no separator (R12; 2609.17357, 2609.01563,
+/// 2609.33831). The old driver's rule (`fallback::trailing_alignment_environment_as_lines`, which writes `\\` and the
+/// environment's content) on the digested container: one at the top level (nest 0) with an event before it and no ink
+/// past its content; a Break already before it is the line's own. Its container goes with it, as the old rule drops the
+/// environment, so its lines are lines of their own, not one print unit (`Resolver`'s open group). One that opens the
+/// block is a wrapper the lines read through (their Breaks part them at any nest: 2609.01563). With the emitter's switch
+/// on alone (`Resolver::emitting`): the switch-off output stays as it was until the flip.
+fn trailing_alignment_as_lines(events: &[Event]) -> Vec<Event> {
+  if fm_emit_mode() != 2 {
+    return events.to_vec();
+  }
+  // (the environment a container is, by the command its role names: `\\begin{center}`)
+  let alignment = |e: &Event| {
+    let environment = e.role.as_deref().and_then(|role| role.split_once("begin{"));
+    e.kind == EventKind::Layout
+      && e.nest == 0
+      && matches!(
+        environment,
+        Some((_, "center}" | "flushleft}" | "flushright}"))
+      )
+  };
+  let content = |at: usize| {
+    events[at + 1..]
+      .iter()
+      .take_while(|inner| inner.nest > 0)
+      .count()
+  };
+  let Some(at) = (1..events.len())
+    .find(|&at| alignment(&events[at]) && !events[at + 1 + content(at)..].iter().any(inked))
+  else {
+    return events.to_vec();
+  };
+  let mut out = events[..at].to_vec();
+  if events[..at]
+    .iter()
+    .rev()
+    .find(|e| e.kind != EventKind::Layout)
+    .is_some_and(|e| e.kind != EventKind::Break)
+  {
+    let mut row = Event::new(EventKind::Break);
+    row.span = events[at].span.map(|(start, _)| (start, start));
+    out.push(row);
+  }
+  let lines = &events[at + 1..at + 1 + content(at)];
+  out.extend(
+    lines
+      .iter()
+      .map(|e| Event { nest: e.nest - 1, ..e.clone() }),
+  );
+  out.extend_from_slice(&events[at + 1 + content(at)..]);
+  out
 }
 
 /// The labels a Mark event requests of the name it is set on, as a names line reads them (`names_line_events`): its

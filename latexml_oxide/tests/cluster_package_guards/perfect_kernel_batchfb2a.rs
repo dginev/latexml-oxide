@@ -82,3 +82,32 @@ fn a_tabular_juggle_is_a_row_break() {
   assert!(two[0].contains(&affiliation("Dept")), "{}", two[0]);
   assert_eq!(two, off);
 }
+
+/// An alignment environment opening after the names and ending the block is lines under them, each its own and every
+/// name's of the row; its "and" is no separator (2609.17357, 2609.01563, 2609.33831). At `=2` the reading made a creator
+/// "Astronomy"; with the Break alone, the environment's lines were one print unit, one affiliation.
+#[test]
+fn a_trailing_alignment_environment_is_lines_under_the_names() {
+  let (off, two) = both(repro!("author_trailing_center_lines_are_lines"));
+  assert_eq!(two.len(), 2, "{two:#?}");
+  for (creator, name) in two.iter().zip(["Ann Able", "Bob Baker"]) {
+    assert!(
+      creator.contains(&format!("<personname>{name}</personname>")),
+      "{creator}"
+    );
+    let lines = [
+      "Department of Physics and Astronomy",
+      "University of X",
+      "City",
+    ];
+    let at: Vec<usize> = lines
+      .iter()
+      .map(|line| creator.find(&affiliation(line)).expect(line))
+      .collect();
+    assert!(at.windows(2).all(|w| w[0] < w[1]), "{creator}");
+  }
+  assert_eq!(two, off);
+  let (off, two) = both(repro!("author_block_environment_is_one_unit"));
+  assert_eq!(two.len(), 2, "{two:#?}");
+  assert_eq!(two, off);
+}
