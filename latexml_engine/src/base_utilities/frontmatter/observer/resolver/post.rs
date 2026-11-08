@@ -1413,6 +1413,32 @@ impl Resolver {
         self.attach(Some(*owner), Assoc { rule, ..assoc }, false);
         continue;
       }
+      // (any other entry a mark labels in a call no `\lx@affiliation@withsup` wraps (`piled`, api.rs) that no name
+      // requests: today's digestion keeps that mark as text — Perl's `\lx@set@frontmatter@label` is reached through the
+      // wrapper alone, Base_Utility.pool.ltxml:735-739 — and attaches the call where its `annotate=` puts it (:516-535,
+      // the default the last author), so a printed mark no name requests is no label (FIDELITY_CHARTER §4): revtex's
+      // `\affiliation{$\dag$Departamento de Ciencias Básicas, UAM-A}` under names showing `$^*$` is Luévano's, 0906.0396;
+      // amsart's undeclared `\address{$^1$Texas A\&M University at Qatar}` under unmarked names is Alonso's, 2111.15565 —
+      // both were a nameless creator's, the two give-backs above too narrow; 1202.3425's revtex marks stay a RED)
+      // (with the emitter's switch on alone, `emitting`)
+      if owners.is_empty()
+        && self.emitting
+        && assoc.role != "legend"
+        && let Some((_, placed)) = self.piled.iter().find(|(p, _)| *p == at)
+        && !placed.is_empty()
+      {
+        for owner in placed.clone() {
+          self.attach(
+            Some(owner),
+            Assoc {
+              rule: s!("{} label:unrequested owner:annotate", assoc.rule),
+              ..assoc.clone()
+            },
+            false,
+          );
+        }
+        continue;
+      }
       if owners.is_empty() {
         let rule = if symbol {
           "ruling2:uncarried owner:block"

@@ -281,7 +281,38 @@ impl Resolver {
         .map(|(_, r)| r.clone())
         .unwrap_or_default();
       let carried = continues.take();
-      match first_ink.map(|e| &e.kind) {
+      // (a line a glyph leads — no superscript, `(\S) Inst…` — whose mark no name requests is no labelled line: Perl's
+      // block reader splits at superscripts alone (`positionOf($line, @authorsup_markers)`, Base_Utility.pool.ltxml:
+      // 699-707), so such a line continues the entry above it, as an unmarked line does (`line:continued`), and a printed
+      // mark no name requests is no label (FIDELITY_CHARTER §4) — cond-mat0309053's translators' `(\S)`, `(\dag)`,
+      // `(\ddag)` institutes, no author's marks, stay in the authors' affiliation as before, not a nameless creator's)
+      // (only where an entry is open above it, which the line continues — Perl's `if (@entries)`; else, an e-mail
+      // entry above or none, it stays the symbol line it was: `*Corresponding Author: Ayodeji Olalekan Salau (…)` under
+      // the `\textsuperscript{7}\texttt{…}` addresses is no names row, 2510.01302. With the emitter's switch on alone,
+      // `emitting`)
+      let unrequested_glyph = self.emitting
+        && carried.is_some()
+        && first_ink.is_some_and(|e| {
+          e.kind == EventKind::Mark
+            && e.role.as_deref() == Some("text")
+            && !entries_of(&line.events)
+              .iter()
+              .flat_map(|entry| &entry.labels)
+              .any(|label| {
+                block_requests.iter().any(|r| label_matches(r, label))
+                  || self
+                    .out
+                    .creators
+                    .iter()
+                    .any(|c| c.requests.iter().any(|r| label_matches(r, label)))
+              })
+        });
+      let first_kind = if unrequested_glyph {
+        Some(&EventKind::Name)
+      } else {
+        first_ink.map(|e| &e.kind)
+      };
+      match first_kind {
         Some(EventKind::Mark) => {
           let entries = entries_of(&line.events);
           // (or the block is that one line, its affiliations the calls after it: revtex's `\author{$^{1}$Masashi Kimura

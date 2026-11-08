@@ -1,0 +1,29 @@
+% mechanism: in the kernel's author block, a line a glyph leads (`(\S) Inst X`, no superscript) whose mark no name
+%   requests is no labelled line: it continues the entry above it, as an unmarked line does — Perl's block reader splits
+%   at superscripts alone (`positionOf($line, @authorsup_markers)`, `$entries[-1][1] = Tokens($entries[-1][1], $line)`,
+%   Base_Utility.pool.ltxml:699-707), FIDELITY_CHARTER §4 "a mark matters only where it is used" — with
+%   `LATEXML_FM_EMIT=2` each was a symbol line (`ruling2:symbol-line`) no one carries, a nameless creator's, its `)` left
+%   stray and the next line's `(‡)` glued to it
+% witness: cond-mat0309053 (the translators' `(\S)`, `(\dag)`, `(\ddag)` institutes under "Translated from Spanish into
+%   English by: Pau Amengual (\S), …", no `\author`)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker1", "1 Univ A, City A", "Translated by:", "Cid Cole (§) and Dan
+%   Dorn (†)", "(§) Inst X, City X", "(†) Inst Y, City Y"
+% engines: off = one affiliation, every line, on Ann and Bob; `=2` (int149a) = the § and † lines a nameless creator's
+% expect:  0 errors; off 0 warnings; `=2` the one affiliation on both, every line kept, as off — its glyphs `§`, `†`
+%   written as text "( )", counted by 1 Warning (the writer's span of an entry stops at a mark, `writer::repart::entry_span`)
+% status:  RED (int149a `=2`) -> GREEN (KEY UNREQ)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{1}$\\
+$^1$ Univ A, City A\\
+\\
+Translated by:\\
+Cid Cole (\S) and Dan Dorn (\dag)\\
+\\
+(\S) Inst X, City X\\
+\\
+(\dag) Inst Y, City Y}
+\maketitle
+Text.
+\end{document}
