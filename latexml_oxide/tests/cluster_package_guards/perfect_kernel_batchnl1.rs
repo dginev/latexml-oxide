@@ -35,7 +35,7 @@ fn run_with(tex: &str, files: &[(&str, &str)], emit: u8) -> (String, String) {
 }
 
 /// `tex`'s creators off and at `=2`, each run clean (`warnings` each way).
-fn both(tex: &str, warnings: (usize, usize)) -> (Vec<Vec<String>>, Vec<Vec<String>>) {
+pub(super) fn both(tex: &str, warnings: (usize, usize)) -> (Vec<Vec<String>>, Vec<Vec<String>>) {
   both_with(tex, &[], warnings)
 }
 

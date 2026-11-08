@@ -437,11 +437,15 @@ pub(super) fn later_line_is_names(
     && names.iter().all(|e| shows_a_person(e));
   // (a line under the names opening with "and" goes on with them, its piece reading as a name: `Anthony Berthelier \\ and
   // Yongzhe Yan`, 2007.10022, `author_block::names_list_continues`; "and Max--Planck Institut für Mathematik, Bonn" reads
-  // as no name, math0208081)
+  // as no name, math0208081; the space before the word, which the old test trims off the line's text, `text.trim()
+  // .starts_with("and ")` (`author_block/name_text.rs:221-226`), opens nothing: `\\~~and~~{\scshape Donald Robertson}`,
+  // 2603.27258, read as "and Donald Robertson" an affiliation of every name above it)
   let and_opens = !under_affiliation
     && events
       .iter()
-      .find(|e| e.kind != EventKind::Layout)
+      .find(|e| {
+        e.kind != EventKind::Layout && !matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }))
+      })
       .is_some_and(|e| match &e.kind {
         EventKind::Sep(SepKind::Word(word)) => word.eq_ignore_ascii_case("and") || word == "&",
         _ => false,
