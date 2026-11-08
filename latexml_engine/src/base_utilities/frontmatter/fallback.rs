@@ -1,14 +1,20 @@
 //! Perl's whole-block fallback (`Base_Utility.pool.ltxml:693`, `\lx@add@author` of the raw block) with its own preparation,
 //! moved unchanged from `author_block/` (the plan's row "Knowledge in, driver out, one pass", user ruling 2026-11-08; the preparation
-//! moves with it as the fallback's own, the keep-improvements ruling). [`whole_block_author`] runs
-//! [`strip_linebreak_options`] and `lines_prepared`, the raw-token rewrites of OXIDIZED_DESIGN_DIVERGENCES #52 that go
-//! beyond Perl: note environments as commands, math-active scripts, tabular juggles and ACM columns as line breaks,
+//! moves with it as the fallback's own, the keep-improvements ruling). [`whole_block_author`] is Perl's raw call; the old
+//! driver (`author_block::dispatch`, off) gives it the block through [`strip_linebreak_options`] and `lines_prepared`,
+//! the raw-token rewrites of OXIDIZED_DESIGN_DIVERGENCES #52 that go beyond Perl: note environments as commands, math-active scripts, tabular juggles and ACM columns as line breaks,
 //! alignment environments unwrapped, `\hspace` runs between names as separators (`normalize_hspace_separators` and its
-//! row helpers), icons joined to their links, glued marks as marks, the ordinal and in-word superscripts. Reached from
-//! the emitter (a block whose reading loses a name's words) and from `defs/author_macros.rs` (`=2`'s queued entry); three
+//! row helpers), icons joined to their links, glued marks as marks, the ordinal and in-word superscripts. At
+//! `LATEXML_FM_EMIT=2` the emitter and `defs/author_macros.rs` (the queued entry) call it raw, with none of them; three
 //! items are a binding's too (`strip_linebreak_options`, `has_author_marks`, `glued_line_marks_as_marks`).
 
 use super::*;
+
+/// A block kept whole as the old driver gives it to [`whole_block_author`] (`author_block::dispatch`, off): its lines prepared
+/// ([`lines_prepared`]) and its breaks' options gone ([`strip_linebreak_options`]).
+pub(in crate::base_utilities) fn prepared_block(written: Tokens) -> Tokens {
+  lines_prepared(strip_linebreak_options(written))
+}
 
 /// The lines of an author block as `\lx@add@authors` reads them, its marks, separators and alignments normalized
 /// ([`add_authors_calls_sectioned`]; the tabular fallback's, [`whole_block_author`]).
@@ -40,18 +46,23 @@ pub(in crate::base_utilities) fn lines_prepared(stuff: Tokens) -> Tokens {
 }
 
 /// Perl's whole-block creator (Base_Utility.pool.ltxml:693, `\lx@add@authors`' `{tabular}` fallback, and :588-589):
-/// `\lx@add@author[keyvals]{…}` of the block `written`, its lines prepared ([`lines_prepared`]) and their breaks' options
-/// gone, its line breaks as written. The one writer of a block kept whole: the tabular fallback here, `LATEXML_FM_EMIT=2`'s
-/// queued entry (`defs::author_macros`), and the emitter's for a block whose reading loses a name's words
-/// (`observer::writer::emit`; OD #980).
+/// `\lx@add@author[keyvals]{…}` of the block `written`, as given. The one writer of a block kept whole: the old driver's
+/// tabular fallback (`author_block::dispatch`, which gives it the block [`prepared_block`]), and at `LATEXML_FM_EMIT=2`
+/// Perl's raw call — the queued entry
+/// (`defs::author_macros`) and the emitter's for a block it can't read or whose reading loses a name's words
+/// (`observer::writer::emit`; OD #980). At `=2` no raw-token preparation runs: digestion does each rewrite's job in a
+/// block nothing splits — `\\[len]` is `\lx@newline`'s own optional, a `\begin{footnote}` runs `\footnote`, a
+/// mathcode-"8000 `^` reads as `\sp`, braces and superscripts digest to the same markup — and three of them hurt there
+/// (the gap of `\\[0.5cm]`, hep-ph0207056; `\hspace` turned `\quad`, hep-th0111116, 1511.05911; a symbol superscript's
+/// `\lx@frontmatter@symbolmark`, whose digestion glued 2608.19750's "*Corresponding author" into an affiliation):
+/// measured on 1,538 papers, none helped (OD #52).
 pub(in crate::base_utilities) fn whole_block_author(
   keyvals: Option<Tokens>,
   written: Tokens,
 ) -> Result<Tokens> {
-  let stuff = lines_prepared(strip_linebreak_options(written));
   Ok(Invocation!(T_CS!("\\lx@add@author"), vec![
     keyvals,
-    Some(stuff)
+    Some(written)
   ]))
 }
 
