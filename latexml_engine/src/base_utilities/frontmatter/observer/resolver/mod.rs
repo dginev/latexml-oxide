@@ -461,6 +461,10 @@ struct Resolver {
   note_marks:         Vec<(usize, String)>,
   /// whether the block being read prints its notes' marks (`Policy::unmarked_notes`)
   notes_marked:       bool,
+  /// the legends of the contact commands' notes (`Event::note_mark`, a call's `_mark` key), in call order: each mark,
+  /// whether it is the footnote counter's number, and whether its text names the corresponding author — what the
+  /// authors writing that mark on their names carry (`Resolver::corresponding`; with the emitter's switch on alone)
+  note_legends:       Vec<(String, bool, bool)>,
   /// the requests a glued mark was parted into (creator, request), `part_glued_labels`
   parted:             Vec<(usize, String)>,
   /// the pending entries (their place in `pending`) whose label was a compound of distinct footnote symbols parted
@@ -530,12 +534,12 @@ enum NoteLink {
     fallback: bool,
   },
   Note {
-    index:    usize,
-    note:     Box<Event>,
-    owner:    Option<usize>,
-    rule:     String,
-    links:    Vec<Assoc>,
-    fallback: bool,
+    index: usize,
+    note:  Box<Event>,
+    owner: Option<usize>,
+    rule:  String,
+    /// (each with whether it is its owner's when it spells no one: the note's only link, an e-mail call routing it)
+    links: Vec<(Assoc, bool)>,
   },
 }
 
@@ -592,6 +596,7 @@ impl Resolver {
       entry_emails:       Vec::new(),
       note_marks:         Vec::new(),
       notes_marked:       true,
+      note_legends:       Vec::new(),
       parted:             Vec::new(),
       compound:           Vec::new(),
       splitting:          false,
@@ -793,6 +798,117 @@ impl Resolver {
     spelled_name(&names, address).map(|one| candidates[one])
   }
 
+  /// The one candidate of a class's address list printed apart from the names (`address`, the one left over) marked as the
+  /// corresponding author, else the block: the switch-off step's reading (`place::marked_corresponding_author`, OD #809,
+  /// user ruling 2026-10-21) on the reading's facts. A candidate is marked by a note of theirs naming them so — a
+  /// `\thanks`, or a contact command's note, jheppub's `\note{Corresponding author.}` in their `\author` (1901.08773's
+  /// A. Kopylov, 2510.11030's J.-H. Ha) — or by a mark they request whose legend says so: a labelled affiliation's
+  /// (`\affiliation[*]{Corresponding author}`, 1304.1216), a contact command's note's own mark (`\note[*]{…}`) or the
+  /// footnote counter's number it prints under, unless an affiliation is labelled with that number too, which the number
+  /// then requests (`note_legends`; 2005.05695). Exactly one marked, else the block (1802.03677's "Corresponding author."
+  /// note, whose number 1 two authors carry; 2606.26596's `\note[*]{Corresponding authors.}` under two `*`s); none marked,
+  /// the one candidate carrying a `*` no legend explains where the address says it is the corresponding author's
+  /// (2308.06532's `\emailAdd{zyxu@gzu.edu.cn(Corresponding author)}`).
+  fn listed_corresponding(
+    &self,
+    candidates: &[usize],
+    address: &str,
+  ) -> (Option<usize>, &'static str) {
+    let creators = &self.out.creators;
+    let says = |a: &Assoc| names_correspondence(&a.text);
+    let mut legends: Vec<(String, bool)> = Vec::new();
+    let affiliations = creators.iter().flat_map(|c| &c.affiliations).chain(
+      self
+        .out
+        .block
+        .iter()
+        .filter(|a| matches!(a.role.as_str(), "affiliation" | "address")),
+    );
+    for a in affiliations {
+      for label in a.label.as_deref().map(mark_labels).unwrap_or_default() {
+        legends.push((label, says(a)));
+      }
+    }
+    let affiliation_legends = legends.len();
+    for (mark, numbered, says) in &self.note_legends {
+      if *numbered
+        && legends[..affiliation_legends]
+          .iter()
+          .any(|(label, _)| label == mark)
+      {
+        continue;
+      }
+      legends.extend(mark_labels(mark).into_iter().map(|label| (label, *says)));
+    }
+    let marked: Vec<usize> = candidates
+      .iter()
+      .copied()
+      .filter(|&c| {
+        let mut own = creators[c]
+          .notes
+          .iter()
+          .chain(creators[c].contacts.iter().filter(|a| a.role == "note"));
+        own.any(says)
+          || creators[c].requests.iter().any(|request| {
+            legends
+              .iter()
+              .any(|(label, says)| *says && label == request)
+          })
+      })
+      .collect();
+    match marked.as_slice() {
+      [one] if candidates.len() > 1 => return (Some(*one), "owner:corresponding"),
+      [] if candidates.len() > 1 && names_correspondence(address) => {},
+      _ => return (None, "owner:block"),
+    }
+    let star = mark_labels("*");
+    let starred: Vec<usize> = candidates
+      .iter()
+      .copied()
+      .filter(|&c| {
+        creators[c].requests.iter().any(|request| {
+          star.contains(request) && !legends.iter().any(|(label, _)| label == request)
+        })
+      })
+      .collect();
+    match starred.as_slice() {
+      [one] => (Some(*one), "owner:corresponding"),
+      _ => (None, "owner:block"),
+    }
+  }
+
+  /// The legends of the contact commands' notes an input holds (`note_legends`): an author block's notes, each its own
+  /// mark or else the footnote counter's next number (jheppub.sty:84-89, the counter stepped by an unmarked `\note`
+  /// alone), and a note given apart from the names, its own mark only — as the switch-off step reads the names' notes
+  /// and the queue's (`email_block_calls::author_notes`, `place::marked_corresponding_author`).
+  fn read_note_legends(&mut self, events: &[Event], apart: Option<&str>) {
+    if let Some(mark) = apart {
+      if !mark.is_empty() {
+        let says = names_correspondence(&events_text(&events.iter().collect::<Vec<_>>()));
+        self.note_legends.push((mark.to_string(), false, says));
+      }
+      return;
+    }
+    let notes = events
+      .iter()
+      .filter(|e| e.kind == EventKind::Contact && e.role.as_deref() == Some("note"));
+    for e in notes {
+      let (mark, numbered) = match e.note_mark.as_deref() {
+        Some("") => {
+          let numbered = self
+            .note_legends
+            .iter()
+            .filter(|(_, numbered, _)| *numbered);
+          ((numbered.count() + 1).to_string(), true)
+        },
+        Some(mark) => (mark.to_string(), false),
+        None => continue,
+      };
+      let says = names_correspondence(&e.text);
+      self.note_legends.push((mark, numbered, says));
+    }
+  }
+
   /// The one candidate whose note names them the corresponding author, else the block.
   fn corresponding(&self, candidates: &[usize]) -> (Option<usize>, &'static str) {
     let corresponding: Vec<usize> = candidates
@@ -924,6 +1040,9 @@ pub fn resolve_with(
         calls,
       } => {
         policy = conventions(binding, hook);
+        if resolver.emitting {
+          resolver.read_note_legends(events, None);
+        }
         resolver.call_labels.clone_from(calls);
         resolver.line_column = None;
         resolver.block_addresses.clear();
@@ -969,6 +1088,9 @@ pub fn resolve_with(
         events,
       } => {
         let start = resolver.out.creators.len();
+        if resolver.emitting && tag == "ltx:contact" && role == "note" {
+          resolver.read_note_legends(events, Some(attr_value(attrs, "_mark").unwrap_or("")));
+        }
         resolver.api(*index, tag, role, attrs, events, policy);
         if tag == "ltx:creator" && role == "author" {
           resolver.entries.push((start, resolver.out.creators.len()));

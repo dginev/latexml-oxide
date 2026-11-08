@@ -312,9 +312,9 @@ impl Written {
         let counts = read.entry(at).or_default();
         tally(counts, own);
         // (a note's inner address the reading writes as its contact counts once, in the contact: llncs's `\thanks{…
-        // \email{…}}`, 2406.13066; a note's call's too, siamart's `\thanks{… \email{…}}`, 1804.09455, whose `\email` the
-        // rehearsal reads as the document's own, `EmailMeaning::Own`, and digestion routes out all the same. So an.cls's raw
-        // `\email` a `\thanks` keeps, 0807.0895, written in the note and its contact, goes uncounted)
+        // \email{…}}`, 2406.13066; a note's call's too, siamart's `\thanks{… \email{…}}`, 1804.09455, whose `\email`
+        // (OmniBus's, locked) the rehearsal reads as the binding's, `EmailMeaning::Binding` (2511.14713), and digestion routes
+        // out. So an.cls's raw `\email` a `\thanks` keeps, 0807.0895, written in the note and its contact, goes uncounted)
         let inner: &[Event] = match (span, ledger.entries().get(at)) {
           (Some(span), Some(Entry::Author(block))) => match &block.outcome {
             Outcome::Events { events, .. } => events

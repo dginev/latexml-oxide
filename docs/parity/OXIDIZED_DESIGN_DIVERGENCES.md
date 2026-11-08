@@ -32588,5 +32588,21 @@ an `ltx:note` around the call, where an API call means nothing (`\lx@frontmatter
 switch on (1403.1099, 2001.06318 "Corresponding author.", 2308.04217's three "Speaker at …" notes; the content check counted
 them); REVTeX's `\frontmatter@footnote{…}` (`\lx@add@contact[role=thanks]`) the same. Each author's `<contact role="note">`
 as off and Perl. Guard `perfect_kernel_batchlo3`.
+*Notes and addresses the reading dropped* (LO4), each with the switch on alone: (a) a block's contact command is written as
+the command it is only where its span prints that one Name, Contact or Note event; a macro holding a name and the command
+(`\newcommand{\ann}{Ann Able\note{…}}`), two commands (`\note{…}\note{…}`) or `Dan Dorn\emailAdd{…}` spans them all, and the
+whole macro was written for each item — the name a note of its own, a note moved to the next author (review revLO3 1). It is
+its text, a contact command's note a `<contact role="note">`, each counted as a macro's span; an address so written loses its
+font. (b) The one address of a class's list left over (OD #809) goes to the author marked as the corresponding author by the
+switch-off step's facts read on the reading (`Resolver::listed_corresponding`, `place::marked_corresponding_author`): a note of
+theirs naming them so — a contact command's note too, jheppub's `\note{Corresponding author.}` (1901.08773, 2510.11030, which
+gave it a nameless creator) —, or a mark they request whose legend says so: a labelled affiliation's, a contact command's note's
+own mark (`\note[*]`, its call's `_mark` key, `Event::note_mark`) or the footnote counter's number it prints under, save where
+an affiliation is labelled with that number; none marked, the one `*` no legend explains where the address says it is the
+corresponding author's (2308.06532). (c) An `\email` in an author's note whose meaning is a binding's routes its address to the
+current author (Perl's `\lx@add@email`), so it is the note owner's e-mail, not a link left in the note's text (ruling
+2026-10-20 #4), which the written note printed nowhere; a guess the fallback class locks is the binding's meaning (OmniBus's
+`\email`, `\email:locked`, OD #408, `ledger::email_meaning`): 2511.14713's siamart `\thanks{…, \email{wning@vt.edu},
+\email{amiedlar@vt.edu}.}`, both addresses Ning Wan's as off and Perl. Off: byte-identical. Guard `perfect_kernel_batchlo4`.
 
 Guards `perfect_kernel_batchz4`.

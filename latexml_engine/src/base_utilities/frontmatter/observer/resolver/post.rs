@@ -147,7 +147,13 @@ impl Resolver {
               .copied()
               .filter(|c| under.as_ref().is_none_or(|holders| holders.contains(c)))
               .collect();
-            self.corresponding(&candidates)
+            // (with the emitter's switch on, the switch-off step's whole reading, its legends too: `listed_corresponding`;
+            // what the call prints, `zq77@x.org (Corresponding author)`, 2308.06532)
+            if self.emitting {
+              self.listed_corresponding(&candidates, &assoc.text)
+            } else {
+              self.corresponding(&candidates)
+            }
           },
         },
       };
@@ -749,10 +755,9 @@ impl Resolver {
           owner,
           rule,
           links,
-          fallback,
         } => {
           let mut all_taken = true;
-          for assoc in links {
+          for (assoc, fallback) in links {
             all_taken &= self.place_note_link(owner, assoc, fallback);
           }
           if all_taken {

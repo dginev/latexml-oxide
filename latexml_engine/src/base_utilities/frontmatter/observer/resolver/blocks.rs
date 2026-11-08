@@ -1121,9 +1121,17 @@ impl Resolver {
     let fallback = contacts.len() == 1 && self.notes_marked && owner.is_some();
     // (each link with its target, `Assoc::target`: a url's page is what says whose it is, an e-mail link's address,
     // `place_note_link`)
-    let mut links: Vec<Assoc> = Vec::new();
+    let mut links: Vec<(Assoc, bool)> = Vec::new();
     let mut all_taken = true;
     for inner in &contacts {
+      // (an e-mail call of a binding's meaning is no guess: its code routes the address to the current author, the note's
+      // owner, as Perl's API does, `\lx@add@email`, and the note written prints it nowhere — siamart's `\thanks{…,
+      // \email{wning@vt.edu}, \email{amiedlar@vt.edu}.}`, 2511.14713; REVTeX's; main-session ruling 2026-11-08. With the
+      // emitter's switch on alone, `emitting`)
+      let routed = self.emitting
+        && owner.is_some()
+        && inner.role.as_deref() == Some("email")
+        && inner.meaning == EmailMeaning::Binding;
       let (role, text) = contact_parts(inner);
       let assoc = Assoc {
         role,
@@ -1138,7 +1146,7 @@ impl Resolver {
       // — read once every name is, `answer_note_links`: the names after the note in its block are not read yet)
       let link = matches!(assoc.role.as_str(), "email" | "url");
       if link {
-        links.push(assoc);
+        links.push((assoc, fallback || routed));
       } else if fallback {
         self.attach(owner, assoc, false);
       } else {
@@ -1158,11 +1166,10 @@ impl Resolver {
         owner,
         rule: rule.to_string(),
         links,
-        fallback,
       });
       return;
     }
-    for assoc in links {
+    for (assoc, fallback) in links {
       self
         .note_links
         .push(NoteLink::Link { owner, assoc, fallback });
