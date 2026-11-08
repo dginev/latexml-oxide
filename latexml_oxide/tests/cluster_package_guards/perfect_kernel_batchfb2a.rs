@@ -12,7 +12,8 @@
 //! (`an_inline_tabular_juggle_is_a_column`). Batch FB2b5 (review revG3 finding 1, 2, Q3): the reading's shared column,
 //! both spellings (`a_nameless_column_after_the_names_is_every_names`), and the reopen's scan over a command's arguments
 //! (`a_juggle_judges_the_command_between_by_what_it_prints`). Batch FB2b7: a team's column
-//! is no shared affiliation (`a_team_column_is_no_shared_affiliation`).
+//! is no shared affiliation (`a_team_column_is_no_shared_affiliation`); FX2: a team word after a bare "the" is an
+//! institution's (review revH5 finding 1).
 
 use latexml::util::test::{error_count, warning_count};
 
@@ -367,4 +368,27 @@ fn a_team_column_is_no_shared_affiliation() {
     "collaboration=on behalf of the XYZ collaboration".to_string(),
   ]);
   assert_eq!(creators(&xml), expected, "{xml}");
+  // (a team word after a bare "the" is an institution's, as the old reader's line under the names reads it,
+  // `collaboration_line_framing`: `The Theory Group` over an address every name's affiliation — FB2b7 made it a third
+  // creator, silently, review revH5 finding 1; pdflatex: the column under both names)
+  let group = repro!("author_juggle_shared_column_is_every_names").replacen(
+    "Univ Shared \\\\ Main Street 1, City",
+    "The Theory Group \\\\ CERN, Geneva",
+    1,
+  );
+  assert!(group.contains("The Theory Group"), "{group}");
+  let (log, xml) = run(&group, 2);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let shared = |name: &str| {
+    vec![
+      name.to_string(),
+      "affiliation=The Theory Group".to_string(),
+      "affiliation=CERN, Geneva".to_string(),
+    ]
+  };
+  assert_eq!(
+    creators(&xml),
+    vec![shared("A One"), shared("Bob Two")],
+    "{xml}"
+  );
 }

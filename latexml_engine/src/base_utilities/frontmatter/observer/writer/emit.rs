@@ -625,9 +625,16 @@ fn block_names(
         // makes breqn's `^` a superscript); grown over the group's close, the run was no balanced one and the name lost
         // its markup, FB1's P4; the depth is counted from the name's first token, so only a close of a group opened before
         // the name counts — a group the name's run opens and closes itself is none: revtex's `D. ${\rm Dorn}^{*}$`, whose
-        // `}` closes `{\rm Dorn}` and whose mark the run already holds, written once)
+        // `}` closes `{\rm Dorn}` and whose mark the run already holds, written once; nor a mark in the formula the
+        // name's first token is in, the formula opening before it, which the run takes whole: revtex's `${\rm
+        // Ann~Able}^{a}$`, whose `}` closes the `{\rm` the name opens inside, its mark written twice — review revH5
+        // finding 2)
         let past_group = || {
           let name_from = at(found[from].1.span?.0)?;
+          let formula = field.formula_start(name_from);
+          if formula < name_from && field.formula_start(s) == formula {
+            return Some(false);
+          }
           let closes = field.tokens.get(name_from..s)?.iter().scan(0, |depth, t| {
             *depth += t.group_step();
             Some(*depth)

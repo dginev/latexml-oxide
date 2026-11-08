@@ -1561,9 +1561,14 @@ type MarkedEntry = (Vec<String>, String, Option<(u16, u16)>);
 /// Whether a line's text names a collaboration or a team, as the old reader's collaboration reading reads one
 /// ([`reads_as_collaboration`]): whole (`the Solar Orbiter EPD and Parker Solar Probe ISIS teams`, 2408.02330) or as
 /// the remark a name speaks for ([`remark_start`]: `Shuang-Nan Zhang on behalf of the SVOM collaboration .`, the mark
-/// after it taken out, 2607.01090) — the punctuation closing the line no part of the name.
+/// after it taken out, 2607.01090) — the punctuation closing the line no part of the name. A line of its own, it is
+/// framed as the old reader's line under the names is ([`collaboration_framing`]'s `line`, as
+/// [`collaboration_line_framing`]): a collaboration word suffices, a team word only by more than a bare "the" or listed
+/// with "and" (the 2408.02330 line) — `The Theory Group`, `the Applied Mathematics Group` over an address are an
+/// institution's, every name's affiliation (review revH5 finding 1).
 fn names_collaboration(text: &str) -> bool {
   let t = text.trim_end_matches(|c: char| c.is_whitespace() || ".,;".contains(c));
-  reads_as_collaboration(t, false)
-    || remark_start(t).is_some_and(|at| reads_as_collaboration(&t[at..], false))
+  let listed = t.split_whitespace().any(|w| matches!(w, "and" | "&"));
+  let reads = |s: &str| collaboration_framing(s, listed, true).is_some();
+  reads(t) || remark_start(t).is_some_and(|at| reads(&t[at..]))
 }
