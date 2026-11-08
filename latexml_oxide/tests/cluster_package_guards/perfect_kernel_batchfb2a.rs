@@ -126,3 +126,28 @@ fn a_note_in_a_formula_keeps_its_words() {
   );
   assert_eq!(two, off);
 }
+
+/// A URL line under every name of the document's author list is the block's, its shared creator (OD #159; user ruling
+/// 2026-10-20, FIDELITY_CHARTER §4 amended 2026-11-05: 2604.20841, 2601.17879, 2604.12896); under one `\and` column of
+/// several, the column's names' — known only once the block's later columns are read.
+#[test]
+fn a_url_line_under_every_name_is_the_blocks() {
+  let (off, two) = both(repro!("author_link_line_url_contact_unmarked"));
+  assert_eq!(two.len(), 3, "{two:#?}");
+  assert!(!two[2].contains("<personname"), "{}", two[2]);
+  assert!(
+    two[2].contains("role=\"url\"><ref") && two[2].contains(">https://project.example.org</ref>"),
+    "{}",
+    two[2]
+  );
+  assert!(
+    two[..2].iter().all(|c| !c.contains("role=\"url\"")),
+    "{two:#?}"
+  );
+  assert_eq!(two, off);
+  let (off, two) = both(repro!("author_url_line_under_one_column_is_its_names"));
+  assert_eq!(two.len(), 3, "{two:#?}");
+  let urls: Vec<bool> = two.iter().map(|c| c.contains("role=\"url\"")).collect();
+  assert_eq!(urls, [true, true, false], "{two:#?}");
+  assert_eq!(two, off);
+}

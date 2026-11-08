@@ -505,6 +505,9 @@ struct Resolver {
   /// the switch-off output as it was until the flip (brief LO1: a line's other text by its row, a line's addresses by the
   /// address reader; brief LO2: a row line's address its holder's, an entry's trailing note its holders')
   emitting:           bool,
+  /// whether the block being read replaces the authors queued before it (the document's `\\author`, `Input::Block`'s
+  /// `replace`): a URL line under all its names is the block's (`Resolver::block`)
+  block_replaces:     bool,
   /// the flush's one contact declaring a run and sharing (`_share=authors,annotate=run`: cas's unlabelled
   /// `\affiliation`), every author's as `shared_row::share_row_contacts` shares it — with two or more, each its run's
   /// (2201.00009, 2506.17280, 2106.02306; 2202.06096). Under `emitting` only
@@ -654,6 +657,7 @@ impl Resolver {
       whole_entries:      fm_emit_mode() == 2,
       call_labels:        Vec::new(),
       emitting:           fm_emit_mode() == 2,
+      block_replaces:     false,
       sole_shared_run:    false,
       note_links:         Vec::new(),
       document_emails:    Vec::new(),
@@ -1120,6 +1124,7 @@ pub fn resolve_with(
         resolver.call_labels.clone_from(calls);
         resolver.line_column = None;
         resolver.block_addresses.clear();
+        resolver.block_replaces = *replace;
         // (a call replacing the authors before it in its queue: `\author{A, B}` then `\author{A\thanks{…}, B}`,
         // 2502.11323, 2509.11381 — the later one's are the document's)
         if *replace {

@@ -232,6 +232,8 @@ impl Resolver {
     let mut unmarked_before: Option<Vec<(usize, usize)>> = None;
     // the last line an address list read on to (`place_line_contacts` over the lines of one list)
     let mut skip_to = 0usize;
+    // the URL lines under every name so far, each with those names: the block's if no name comes after them
+    let mut block_links: Vec<(&Event, Vec<usize>)> = Vec::new();
     for (n, line) in lines.iter().enumerate() {
       if n > 0 && n <= skip_to {
         continue;
@@ -451,6 +453,23 @@ impl Resolver {
                   None,
                   Chain::Line,
                 );
+                continue;
+              }
+              // (a URL line under every name of the document's author list is the block's, its shared creator (OD #159,
+              // `addresses:block`): a project's page, `Ann Able, Bob Baker \\ Univ A \\ \url{…}` — the old reader's
+              // `LinkOwner::Block`, `author_block::dispatch` and `link_line_owner`, user ruling 2026-10-20, batch 77p r7:
+              // 2605.06223, 2602.08439, 2604.12896, 2604.20841, 2601.17879; FIDELITY_CHARTER §4 amended 2026-11-05.
+              // Whether no names come after it is known at the block's end: decided there)
+              if self.emitting
+                && self.block_replaces
+                && above.len() > 1
+                && contact_parts(contact).0 == "url"
+                && above
+                  .iter()
+                  .copied()
+                  .eq(block_creators_start..self.out.creators.len())
+              {
+                block_links.push((contact, above.clone()));
                 continue;
               }
               self.contact_event(index, contact, &above, "line:contact R12:row-above");
@@ -824,6 +843,15 @@ impl Resolver {
         },
         None => {},
       }
+    }
+    for (contact, above) in block_links {
+      let names = block_creators_start..self.out.creators.len();
+      let owners = if above.iter().copied().eq(names) {
+        &[][..]
+      } else {
+        &above[..]
+      };
+      self.contact_event(index, contact, owners, "line:contact R12:row-above");
     }
     self.line_column = None;
     self.block_addresses.clear();
