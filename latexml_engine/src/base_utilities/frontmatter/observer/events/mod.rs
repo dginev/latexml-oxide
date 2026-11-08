@@ -317,7 +317,7 @@ pub struct Event {
   /// corresponding-author step reads it (`Resolver::corresponding`)
   pub note_mark:      Option<String>,
   /// an ink printing an e-mail address's `@` (a Name; a Note's text): each character's position in the field, as its box
-  /// was stamped ([`InkAt`]), one per character of `text`, `None` for a space the lexer wrote — where the reading's address
+  /// was stamped (`InkAt`), one per character of `text`, `None` for a space the lexer wrote — where the reading's address
   /// runs print, which the emitter cuts the entry's tokens at (`writer::address_cut`, OXIDIZED_DESIGN_DIVERGENCES #980 P1b).
   /// Empty for any other event. Not in a dump
   pub ink_at:         Vec<Option<InkAt>>,
