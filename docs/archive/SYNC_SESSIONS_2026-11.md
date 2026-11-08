@@ -112,7 +112,7 @@ In the inventory's order. The two copies of the just.cls row (both "LANDED 91a; 
 
 ### From "Fidelity audit round 2 (2026-10-08) — findings and their state"
 
-The landed frontmatter findings (row 15's residual stays in OPEN_ROWS); the table's other rows are not frontmatter.
+The landed frontmatter findings (rows 15's and 16's residuals stay in OPEN_ROWS); the table's other rows are not frontmatter.
 
 | # | finding | witnesses | state | next step |
 |---|---|---|---|---|
