@@ -1240,60 +1240,68 @@ impl Resolver {
       return;
     }
     let live = self.live();
-    // (a raised mark: a superscript or `\textsuperscript`, what Perl's readers split at, `@authorsup_markers`)
-    let raised = |e: &Event| {
-      e.kind == EventKind::Mark
-        && e
-          .role
-          .as_deref()
-          .is_some_and(|r| r.starts_with("sup") || r.starts_with("math"))
-    };
-    // (a `\thanks` whose text opens with a raised number: what `\lx@add@thanks` re-routes as affiliations, each segment
-    // its raised marks part it into an `\lx@affiliation@withsup` entry labelled by its mark (frontmatter_fields.rs
-    // `\lx@add@thanks`, `starts_with_affiliation_mark`, OXIDIZED_DESIGN #52; `split_wrapped_affiliation_marks`). With the
-    // emitter's switch on alone, `emitting`)
-    let numbered = self.emitting
-      && !note.footnote
-      && note
-        .inner
-        .iter()
-        .find(|e| e.kind == EventKind::Mark && e.line_first)
-        .is_some_and(|mark| {
-          raised(mark)
-            && mark
-              .text
-              .trim_start()
-              .starts_with(|c: char| c.is_ascii_digit())
-        });
+    let numbered = self.emitting && !note.footnote && numbered_thanks(note);
     // (one such `\thanks` holding several marked entries, `\thanks{$^{1}$UC Berkeley, $^{2}$Toyota Motor North America,
     // $^{3}$Princeton university}`: each its own entry by its mark, as the switch off cuts it — 2509.19480, 2206.07648,
-    // where the whole stayed one note of the last name. The entries read from the note's text, parted at its commas
-    // where they are as many as its raised marks; else it stays one note, as before)
-    let marks: Vec<&Event> = note.inner.iter().filter(|e| raised(e)).collect();
-    if numbered && marks.len() > 1 {
-      let pieces: Vec<&str> = note
-        .text
-        .split([',', ';'])
-        .map(str::trim)
-        .filter(|piece| !piece.is_empty())
+    // where the whole stayed one note of the last name. Its lexed text cut before each top-level mark (`mark_led_pieces`, the API
+    // reader's cut), so an entry's own comma stays its text, `$^{1}$Dept A, Univ A, $^{2}$Univ B`; each piece led by
+    // raised marks with labels, else it stays one note, as before)
+    if numbered {
+      let pieces = mark_led_pieces(&note.body);
+      let entries: Option<Vec<(Vec<String>, String)>> = pieces
+        .iter()
+        .map(|piece| {
+          let (start, end) = events::leading_marks(piece);
+          let marks: Vec<&Event> = piece[start..end]
+            .iter()
+            .filter(|e| e.kind == EventKind::Mark)
+            .collect();
+          let labels: Vec<String> = marks
+            .iter()
+            .flat_map(|mark| mark_labels(mark.label.as_deref().unwrap_or("")))
+            .collect();
+          (!marks.is_empty() && marks.iter().all(|e| raised_mark(e)) && !labels.is_empty()).then(
+            || {
+              let text = events_text(&piece[end..].iter().collect::<Vec<_>>());
+              (labels, text.trim().to_string())
+            },
+          )
+        })
         .collect();
-      if pieces.len() == marks.len()
-        && marks
-          .iter()
-          .all(|mark| !mark_labels(mark.label.as_deref().unwrap_or("")).is_empty())
-      {
-        for (mark, piece) in marks.iter().zip(pieces) {
-          let labels = mark_labels(mark.label.as_deref().unwrap_or(""));
-          let role = if is_legend_text(piece) {
+      if let Some(entries) = entries.filter(|entries| entries.len() > 1) {
+        // (the separator words the cut drops between two entries are the cut's, no entry's text, as an API call's
+        // (`$^{1}$Univ A, $^{2}$Univ B and $^{3}$Univ C`): recorded dropped, so no word of the note reads as unwritten)
+        let word = |e: &Event| match &e.kind {
+          EventKind::Sep(SepKind::Word(word)) => Some(word.clone()),
+          _ => None,
+        };
+        let mut cut: Vec<String> = note.body.iter().filter_map(word).collect();
+        for kept in pieces.iter().flatten().filter_map(word) {
+          if let Some(at) = cut.iter().position(|w| *w == kept) {
+            cut.remove(at);
+          }
+        }
+        if !cut.is_empty() {
+          self.out.dropped.push(Assoc {
+            role:   "separator".into(),
+            text:   cut.join(" "),
+            label:  None,
+            rule:   s!("{rule} note:split-by-marks"),
+            source: Some((index, note.span)),
+            target: None,
+          });
+        }
+        for (labels, text) in entries {
+          let role = if is_legend_text(&text) {
             "legend"
           } else {
             "affiliation"
           };
           self.pending.push((labels.clone(), false, Assoc {
-            role:   role.into(),
-            text:   piece.to_string(),
-            label:  labels.first().cloned(),
-            rule:   s!("{rule} note:legend ruling1:request note:split-by-marks"),
+            role: role.into(),
+            text,
+            label: labels.first().cloned(),
+            rule: s!("{rule} note:legend ruling1:request note:split-by-marks"),
             source: Some((index, note.span)),
             target: None,
           }));
@@ -1317,7 +1325,7 @@ impl Resolver {
         .iter()
         // (in a re-routed `\thanks`, its raised marks alone: a glyph is its text, `*Corresponding authors` closing
         // `$^{4}$ Department of Mechanical Engineering, …`, 2505.06451)
-        .filter(|e| e.kind == EventKind::Mark && !e.line_first && (!numbered || raised(e)))
+        .filter(|e| e.kind == EventKind::Mark && !e.line_first && (!numbered || raised_mark(e)))
         .map(|e| mark_labels(e.label.as_deref().unwrap_or("")))
         .any(|later| {
           !later.is_empty()
@@ -1381,4 +1389,31 @@ impl Resolver {
       true,
     );
   }
+}
+
+/// A raised mark: a superscript or `\textsuperscript`, what Perl's readers split at (`@authorsup_markers`).
+fn raised_mark(e: &Event) -> bool {
+  e.kind == EventKind::Mark
+    && e
+      .role
+      .as_deref()
+      .is_some_and(|r| r.starts_with("sup") || r.starts_with("math"))
+}
+
+/// A `\thanks` whose text opens with a raised number: what `\lx@add@thanks` re-routes as affiliations, each segment
+/// its raised marks part it into an `\lx@affiliation@withsup` entry labelled by its mark (frontmatter_fields.rs
+/// `\lx@add@thanks`, `starts_with_affiliation_mark`, OXIDIZED_DESIGN #52; `split_wrapped_affiliation_marks`). Read with
+/// the emitter's switch on alone (`emitting`).
+fn numbered_thanks(note: &Event) -> bool {
+  note
+    .inner
+    .iter()
+    .find(|e| e.kind == EventKind::Mark && e.line_first)
+    .is_some_and(|mark| {
+      raised_mark(mark)
+        && mark
+          .text
+          .trim_start()
+          .starts_with(|c: char| c.is_ascii_digit())
+    })
 }

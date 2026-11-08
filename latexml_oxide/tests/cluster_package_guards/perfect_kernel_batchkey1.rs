@@ -91,7 +91,7 @@ fn an_unrequested_glyph_line_continues_the_entry_above() {
 }
 
 /// K4: a `\thanks` opening with a raised number is affiliations, one per raised mark, each its mark's carriers'
-/// (2509.19480, 2206.07648: one note of the last name); a later glyph is its text, not another entry's mark
+/// (2509.19480, 2206.07648: one note of the last name), cut before each top-level mark; a later glyph is its text, not another entry's mark
 /// (2505.06451's `*Corresponding authors` made the entry a thanks note).
 #[test]
 fn a_marked_thanks_is_its_marks_affiliations() {
@@ -101,6 +101,20 @@ fn a_marked_thanks_is_its_marks_affiliations() {
   let want = [
     vec!["Ann Able", "affiliation=Univ A", "affiliation=Univ B"],
     vec!["Bob Baker", "affiliation=Univ A"],
+    vec!["Cat Cole", "affiliation=Univ C"],
+  ];
+  assert_eq!(off, want);
+  assert_eq!(on, want);
+  // (cut before each top-level mark, so an entry's own comma stays its text: review revKEY1 finding 1, where the
+  // comma count kept the whole one note of the last name)
+  let (off, on) = both(repro!("marked_thanks_entry_keeps_its_own_comma"));
+  let want = [
+    vec![
+      "Ann Able",
+      "affiliation=Dept A, Univ A",
+      "affiliation=Univ B",
+    ],
+    vec!["Bob Baker", "affiliation=Dept A, Univ A"],
     vec!["Cat Cole", "affiliation=Univ C"],
   ];
   assert_eq!(off, want);

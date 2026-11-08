@@ -316,6 +316,10 @@ pub struct Event {
   /// (jheppub.sty:84-89 `\note[*]{…}`, `\note{…}`); `None` for any other. Not in a dump: only the reading's
   /// corresponding-author step reads it (`Resolver::corresponding`)
   pub note_mark:      Option<String>,
+  /// a Note's lexed text, whole — its names, separators and marks, where `inner` keeps its contacts and marks alone: what
+  /// a `\thanks` of several marked entries is cut by, before each top-level mark ([`mark_led_pieces`]). Not in a dump:
+  /// only the reading's note step reads it (`Resolver::keep_note`)
+  pub body:           Vec<Event>,
 }
 
 /// Where one character of an ink prints ([`InkTable`]): its box's cover (`span`, a wrapper's call for the first box in
@@ -397,6 +401,7 @@ impl Event {
       footnote: false,
       creator_call: None,
       note_mark: None,
+      body: Vec::new(),
     }
   }
 }
@@ -1246,6 +1251,7 @@ impl Walker {
             }
             self.inks.fonts.extend(inks.fonts);
           }
+          note.body = events.clone();
           let mut inked = false;
           for inner in events {
             let first = !inked;

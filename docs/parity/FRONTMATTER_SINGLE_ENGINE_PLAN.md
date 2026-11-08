@@ -163,11 +163,11 @@ basis `pk_wt/int149a` @ 3189c464d9 (RT1 at 913eef6966), binary `P2r2-rel`. Their
   `perfect_kernel_batchkey1`):** UNREQ K12 as a give-back, lazily, once every name is read: an entry a leading mark
   labels in a call no `\lx@affiliation@withsup` wraps (`piled`) that no name requests keeps its call's `annotate=`
   placement (`resolver/post.rs`, `label:unrequested owner:annotate`; 0906.0396, 2111.15565 — the eager gate on
-  `_withsup` would drop ruling 1's reading of requested marks on stores and `_unsplit` blocks), and a block line a glyph
+  `_withsup` would drop ruling 1's reading of requested marks on stores and `_unsplit` blocks; OD #980 KEY1), and a block line a glyph
   leads (Mark role `text`) that no name requests continues the entry above (`resolver/blocks.rs`; cond-mat0309053, its
   glyphs written as text, counted); K4 a
-  `\thanks` opening with a raised number is one affiliation per raised mark when its comma pieces are as many
-  (2509.19480, 2206.07648), and a later glyph is its text (2505.06451); K14 the per-column label rule only where the
+  `\thanks` opening with a raised number is one affiliation per raised mark, its lexed text cut before each top-level
+  mark (`mark_led_pieces`; KEY1b, an entry's own comma kept: review revKEY1) (2509.19480, 2206.07648), and a later glyph is its text (2505.06451); K14 the per-column label rule only where the
   entry's column holds names (2404.00915). Left: 1202.3425 (RED); CONT 0802.2149 (RED repro
   `unmarked_affiliation_after_a_marked_one_continues_it`): continuing an unmarked API call onto the marked entry
   before it went beyond off and broke `batch77n::opex3_unmarked_address_after_marked_reaches_all` at `=2`, so it was
