@@ -3,7 +3,7 @@
 **Why.** The user's direction (2026-11-01): "keep evolving our design of the Frontmatter API until it can accommodate
 all variations used in arXiv. Prioritize refactoring to a better model of a single ownership engine, unified machinery
 and API, unified placement order inside the API." This decides item 9 of
-[`FRONTMATTER_ARCHITECTURE_AUDIT_2026-10-28.md`](FRONTMATTER_ARCHITECTURE_AUDIT_2026-10-28.md). The plan below comes
+[`FRONTMATTER_ARCHITECTURE_AUDIT_2026-10-28.md`](../archive/FRONTMATTER_ARCHITECTURE_AUDIT_2026-10-28.md). The plan below comes
 from a read-only design study (2026-11-01). Its stages are the frontmatter batches after bundle int126a. Per-shape
 findings become their acceptance witnesses.
 

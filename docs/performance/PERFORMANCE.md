@@ -255,7 +255,7 @@ Every math-heavy witness is now `math_parse`-bound. The over-parse rate is the p
   - Sweeps alongside other tasks: `JOBS=4` maximum.
   - Memory ceiling: Keep `JOBS × --max-memory <= 24 GB` to preserve headroom for rust-analyzer (~4 GB) and OS buffers.
 
-### P9 — Frontmatter pipeline (audit [`FRONTMATTER_PERF_AUDIT_2026-10-31.md`](FRONTMATTER_PERF_AUDIT_2026-10-31.md))
+### P9 — Frontmatter pipeline (audit [`FRONTMATTER_PERF_AUDIT_2026-10-31.md`](../archive/FRONTMATTER_PERF_AUDIT_2026-10-31.md))
 
 The frontmatter costs 0.68–1.05 % of a median conversion and 0.5–0.9 % of fleet CPU, linear in creators. It is 40.9 % of a
 975-author conversion (2103.04797). Levers, each output-neutral and measured alone:

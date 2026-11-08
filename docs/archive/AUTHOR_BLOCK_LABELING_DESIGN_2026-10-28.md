@@ -1,12 +1,14 @@
 # Author-block labeling: a data-driven plan (design note, 2026-10-28)
 
+> **Archived 2026-11-08 — superseded, never built.** Author-block segmentation is now decided on the digested representation by the one frontmatter engine: [`../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`](../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md).
+
 **Status:** proposal, awaiting the user's decision. Nothing here is built.
 
 **Scope:** author blocks with no class structure. These are `article` and raw-loaded classes whose `\author{…}`
 holds names, affiliations and addresses as lines (`\\`), with no marks or `\and` saying which line is which.
 
 Bound classes are out of scope (`\inst`/`\institute`, `\affiliation`, `\address`, `\affil`): their binding reads the
-class's own structure. The pipeline itself is described in [`AUTHOR_MARKUP_PIPELINE.md`](AUTHOR_MARKUP_PIPELINE.md),
+class's own structure. The pipeline itself is described in [`AUTHOR_MARKUP_PIPELINE_2026-11-03.md`](AUTHOR_MARKUP_PIPELINE_2026-11-03.md),
 and ownership rules are in [`FIDELITY_CHARTER.md`](FIDELITY_CHARTER.md) §4.
 
 ## The problem

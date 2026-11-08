@@ -1,5 +1,7 @@
 # Author-markup pipeline — unification worklist
 
+> **Archived 2026-11-08 — superseded.** The two-branch `\lx@add@authors` reader this worklist meant to unify is the old engine being removed; the one frontmatter engine replaces it: [`../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`](../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md). Its confirmed defects are rules of the charter (`../parity/FIDELITY_CHARTER.md` §4: no nameless creator but the block's; a shared line goes to its row).
+
 > **Status: in progress (design + witness collection).** Living worklist for
 > replacing the two-branch `\lx@add@authors` author/affiliation parser with a
 > single line-first pipeline. Not a frozen diagnostic — take the top open row.
