@@ -1,0 +1,22 @@
+% mechanism: a cut that takes an address and the separator after it at `LATEXML_FM_EMIT=2` takes what prints nothing up to
+%   the kept text after it, never a mark that leads that text (`\affil[1]{Univ X, {\tt a@x}, $^1$Dept}`: the mark stays
+%   the entry's), as the Kind step leaves it; a mark leading the address side goes with the cut (`\\$^*\,$a@x`, 2506.02272)
+%   (`writer::address_cut` `cut_at`; OD #980 P1br2; review revP1b S1); `=2` only
+% witness: revP1b's probe q5a; 2506.02272 (the mark before the address, cut)
+% oracle:  pdflatex 0 errors; "1 Univ X, ann@x.org, 1 Dept of Physics"
+% engines: rust P1b `=2` and off: "Univ X, Dept of Physics" (the mark lost, uncounted); LO4 `=2`: the entry whole
+% expect:  0 errors, 0 warnings; Ann's entry "Univ X, ¹Dept of Physics" and her e-mail
+% status:  RED (P1b) -> GREEN (perfect_kernel_batchp1e::a_mark_after_a_cut_address_stays)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{A mark after an address}
+\author[1]{Ann Able}
+\author[2]{Bob Baker}
+\affil[1]{Univ X, {\tt ann.able@x.org}, $^1$Dept of Physics}
+\affil[2]{Univ Z}
+\date{}
+\maketitle
+Text.
+\end{document}

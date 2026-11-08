@@ -66,6 +66,9 @@ pub(in crate::base_utilities) enum Outcome {
     /// the extents of its formulas, outermost, in order (`events::lex_with_formulas`): what a span's content reads
     /// (`writer::Field`). Not in a dump: nothing offline reads the content
     formulas:     Vec<events::Formula>,
+    /// where its inks printing an `@` print, and in what font (`events::InkTable`): what the emitter cuts an entry's
+    /// addresses at (`writer::address_cut`). Not in a dump
+    inks:         Box<events::InkTable>,
     errors:       usize,
     warnings:     usize,
     declarations: Vec<Event>,

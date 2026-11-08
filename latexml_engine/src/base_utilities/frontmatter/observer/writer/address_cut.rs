@@ -2,7 +2,7 @@
 //! emitter writes it under `LATEXML_FM_EMIT=2` (OXIDIZED_DESIGN_DIVERGENCES #980 P1b): the switch-off writer's cut of
 //! today's XML (`plan::cut_entry_addresses`, `dom::address_cut`, `Op::CutAddresses`, `Op::Address`), translated onto the
 //! entry's tokens. The reading's runs and cut are bytes of its text; the lexer recorded where each character of an ink
-//! printing an `@` prints (`Event::ink_at`, from its box's stamp), so each byte the cut takes is a position of the field,
+//! printing an `@` prints (`events::InkTable`, from its box's stamp), so each byte the cut takes is a position of the field,
 //! and the entry is its own tokens without the runs those positions cover (`Field::content_cut`). As the DOM cut: what
 //! prints nothing between a separator the cut takes and the ink beside it — a line break, a mark (`$^*\,$a@x`, a whole line
 //! with its mark: 2506.02272) — goes with it; a cut that would divide a box or take a note declines; the cut is the entry's
@@ -21,10 +21,19 @@ use super::{
   plan::{api_call, spells_one_of},
   *,
 };
-use crate::base_utilities::frontmatter::observer::{
-  events::{EventKind, InkAt, TextAt, events_texts_at},
-  resolver::{Taken, address_runs},
+use crate::base_utilities::{
+  defs::frontmatter_api::LABEL_PRINTS,
+  frontmatter::{
+    address_line_cut,
+    observer::{
+      events::{EventKind, InkAt, InkTable, SepKind, TextAt, events_texts_at, unprinted_piece},
+      resolver::{Taken, address_runs},
+    },
+  },
 };
+
+/// One e-mail a cut made: its address, its tokens as printed, the label its run took.
+type Mail = (String, Vec<Token>, Option<String>);
 
 /// The cut of one taken entry ([`entry_cut`]).
 #[derive(Debug)]
@@ -37,7 +46,7 @@ pub(super) struct EntryCut {
   /// an API call's command, its content cut
   pub command:  Option<Tokens>,
   /// each address: its tokens as printed, and the label word its run took
-  mails:        Vec<(String, Vec<Token>, Option<String>)>,
+  mails:        Vec<Mail>,
   /// the entry was written cut (a path that writes it otherwise leaves it unset: written by its text, counted)
   pub applied:  Cell<bool>,
 }
@@ -77,7 +86,11 @@ fn entry_cut(taken: &Taken, names: &[&str]) -> Result<Option<EntryCut>> {
         return None;
       };
       let Outcome::Events {
-        events, formulas, environments, ..
+        events,
+        formulas,
+        environments,
+        inks,
+        ..
       } = &block.outcome
       else {
         return None;
@@ -95,17 +108,30 @@ fn entry_cut(taken: &Taken, names: &[&str]) -> Result<Option<EntryCut>> {
         .find(|e| e.kind == EventKind::Note && e.span == Some(span));
       match note {
         Some(note) => {
-          let texts = [(note.text.clone(), note.ink_at.clone())];
+          let texts = [(note.text.clone(), inks.of(note)?.to_vec())];
+          // (the inks its body prints, whose fonts its addresses print in: the note's own is the text's around it)
+          let inner: Vec<&Event> = note.inner.iter().collect();
+          let marked = opens_with_mark(&inner);
           let around = Around {
-            inks:  &[note],
-            stops: events
+            inks:     &inner,
+            stops:    events
               .iter()
               .chain(&note.inner)
               .filter(|e| stops(e) && e.span != Some(span))
               .collect(),
-            apart: Vec::new(),
+            apart:    Vec::new(),
+            marks:    note
+              .inner
+              .iter()
+              .filter(|e| e.kind == EventKind::Mark)
+              .collect(),
+            contacts: note
+              .inner
+              .iter()
+              .filter(|e| e.kind == EventKind::Contact)
+              .collect(),
           };
-          cut_at(&field, &texts, &around, (taken, spells))
+          labelled_cut(&field, &texts, &around, inks, (taken, spells), marked)
         },
         None => {
           let from: Vec<&Event> = events
@@ -117,32 +143,47 @@ fn entry_cut(taken: &Taken, names: &[&str]) -> Result<Option<EntryCut>> {
             .copied()
             .filter(|e| e.span.is_some_and(|s| s.1 <= span.1))
             .collect();
-          let [text, lined] = events_texts_at(&within);
-          let [_, read_on] = events_texts_at(&from);
+          let [text, lined] = events_texts_at(&within, inks);
+          let [_, read_on] = events_texts_at(&from, inks);
+          let marked = opens_with_mark(&within);
           let around = Around {
-            inks:  &from,
-            stops: events.iter().filter(|e| stops(e)).collect(),
-            apart: Vec::new(),
+            inks:     &from,
+            stops:    events.iter().filter(|e| stops(e)).collect(),
+            apart:    Vec::new(),
+            marks:    events
+              .iter()
+              .filter(|e| e.kind == EventKind::Mark)
+              .collect(),
+            contacts: events
+              .iter()
+              .filter(|e| e.kind == EventKind::Contact)
+              .collect(),
           };
-          cut_at(&field, &[text, lined, read_on], &around, (taken, spells))
+          labelled_cut(
+            &field,
+            &[text, lined, read_on],
+            &around,
+            inks,
+            (taken, spells),
+            marked,
+          )
         },
       }
     })
-    .map(|(cuts, mails)| (cuts, None, mails)),
+    .map(|(cuts, mails, stripped)| (cuts, None, mails, stripped)),
     None => api_cut(source.0, (taken, spells))?,
   };
-  if made.is_some() {
+  if let Some((.., stripped)) = &made {
     DebugFeature!(
       "frontmatter",
-      "FRONT emit: an entry cut: {:?} -> {:?}",
-      taken.lined,
-      taken.stripped
+      "FRONT emit: an entry cut: {:?} -> {stripped:?}",
+      taken.lined
     );
   }
-  Ok(made.map(|(cuts, command, mails)| EntryCut {
+  Ok(made.map(|(cuts, command, mails, stripped)| EntryCut {
     source: taken.source,
     original: taken.original.clone(),
-    stripped: taken.stripped.clone(),
+    stripped,
     cuts,
     command,
     mails,
@@ -150,23 +191,22 @@ fn entry_cut(taken: &Taken, names: &[&str]) -> Result<Option<EntryCut>> {
   }))
 }
 
-/// A cut's runs, its command (an API call's), its e-mails.
-type Made = (
-  Vec<(usize, usize)>,
-  Option<Tokens>,
-  Vec<(String, Vec<Token>, Option<String>)>,
-);
+/// A cut's runs, its command (an API call's), its e-mails, and the entry's text as the cut leaves it ([`labelled`]).
+type Made = (Vec<(usize, usize)>, Option<Tokens>, Vec<Mail>, String);
 
 /// An API call's entry: its command's last argument rehearsed with its positions (the call's own, from 0), its text without
 /// the contacts the reading reads apart (an `\email`, an ORCID: `Resolver::api`), cut, in the command.
 fn api_cut(index: usize, (taken, spells): (&Taken, &dyn Fn(&str) -> bool)) -> Result<Option<Made>> {
-  let Some(command) = api_call(index).and_then(|call| call.command) else {
+  let Some(call) = api_call(index) else {
+    return Ok(None);
+  };
+  let Some(command) = call.command.clone() else {
     return Ok(None);
   };
   let Some((before, content, after)) = last_argument(&command) else {
     return Ok(None);
   };
-  let Some((events, formulas, environments)) = rehearsed(&content)? else {
+  let Some((events, formulas, environments, inks)) = rehearsed(&content)? else {
     return Ok(None);
   };
   let field = Field {
@@ -179,13 +219,29 @@ fn api_cut(index: usize, (taken, spells): (&Taken, &dyn Fn(&str) -> bool)) -> Re
     e.kind == EventKind::Contact && matches!(e.role.as_deref(), Some("email" | "orcid"))
   };
   let refs: Vec<&Event> = events.iter().filter(|e| !apart(e)).collect();
+  // (a legend: the label its binding prints before the line, authblk's `\affil[*]`, or a mark opening its text)
+  let marked = label_prints(&call.attrs) || opens_with_mark(&refs);
   let around = Around {
-    inks:  &refs,
-    stops: events.iter().filter(|e| stops(e)).collect(),
-    apart: events.iter().filter(|e| apart(e)).collect(),
+    inks:     &refs,
+    stops:    events.iter().filter(|e| stops(e)).collect(),
+    apart:    events.iter().filter(|e| apart(e)).collect(),
+    marks:    events
+      .iter()
+      .filter(|e| e.kind == EventKind::Mark)
+      .collect(),
+    contacts: events
+      .iter()
+      .filter(|e| e.kind == EventKind::Contact)
+      .collect(),
   };
-  let Some((cuts, mails)) = cut_at(&field, &events_texts_at(&refs), &around, (taken, spells))
-  else {
+  let Some((cuts, mails, stripped)) = labelled_cut(
+    &field,
+    &events_texts_at(&refs, &inks),
+    &around,
+    &inks,
+    (taken, spells),
+    marked,
+  ) else {
     return Ok(None);
   };
   let Some((cut, _)) = field.content_cut((0, content.len()), 0, 0, &cuts) else {
@@ -194,7 +250,28 @@ fn api_cut(index: usize, (taken, spells): (&Taken, &dyn Fn(&str) -> bool)) -> Re
   let mut tokens = before;
   tokens.extend(cut.unlist());
   tokens.extend(after);
-  Ok(Some((cuts, Some(Tokens::new(tokens)), mails)))
+  Ok(Some((cuts, Some(Tokens::new(tokens)), mails, stripped)))
+}
+
+/// [`cut_at`] of `taken` with the label before its runs taken with them ([`labelled`]), else of the reading's own take-out
+/// where that one can't be cut (`\\ \textit{*Corresponding author: a@x, b@x}}`, whose line no balanced run holds with its
+/// break: 2405.13751): the cut, its e-mails and the entry's text as it leaves it.
+fn labelled_cut(
+  field: &Field,
+  texts: &[TextAt],
+  around: &Around,
+  inks: &InkTable,
+  (taken, spells): (&Taken, &dyn Fn(&str) -> bool),
+  marked: bool,
+) -> Option<(Vec<(usize, usize)>, Vec<Mail>, String)> {
+  let with_label = labelled(taken, spells, marked);
+  if with_label != *taken
+    && let Some((cuts, mails)) = cut_at(field, texts, around, inks, (&with_label, spells))
+  {
+    return Some((cuts, mails, with_label.stripped));
+  }
+  cut_at(field, texts, around, inks, (taken, spells))
+    .map(|(cuts, mails)| (cuts, mails, taken.stripped.clone()))
 }
 
 /// Whether a cut may not take `e`: a note (the DOM cut's `Seg::Note`), a line's break.
@@ -227,9 +304,159 @@ fn prints_in(ink: &InkAt, (s, t): (usize, usize)) -> bool {
 /// note; a line's break, but the one between the lines a cut takes whole), and the contacts the text leaves out, which a cut is
 /// parted around (`apart`).
 struct Around<'a> {
-  inks:  &'a [&'a Event],
-  stops: Vec<&'a Event>,
-  apart: Vec<&'a Event>,
+  inks:     &'a [&'a Event],
+  stops:    Vec<&'a Event>,
+  apart:    Vec<&'a Event>,
+  /// the marks the source prints, which no cut takes past the separator it takes ([`cut_at`])
+  marks:    Vec<&'a Event>,
+  /// the contacts it prints, whose command no e-mail is written as (its item would mute the call: 1109.3369's
+  /// `Email:~$^a$\email{…}`)
+  contacts: Vec<&'a Event>,
+}
+
+/// Whether a mark opens what `events` print (the first that prints: the Kind step's `LineText::opens_with_mark`, read on the
+/// events — what parts a line's marks, a space, a break, a layout, prints nothing).
+fn opens_with_mark(events: &[&Event]) -> bool {
+  events
+    .iter()
+    .find(|e| {
+      !(matches!(
+        e.kind,
+        EventKind::Sep(SepKind::Gap { .. }) | EventKind::Break | EventKind::Layout
+      ) || unprinted_piece(e))
+    })
+    .is_some_and(|e| e.kind == EventKind::Mark)
+}
+
+/// Whether an API call's attributes (`ApiCall::attrs`) give a label its binding prints before the entry, not blank: authblk's
+/// `\affil[*]` (`_labelprints`, `defs::frontmatter_api::LABEL_PRINTS`), which `\affil[ ]` is not — the mark the Kind step for
+/// a legend reads (`insert::legend_mark`).
+fn label_prints(attrs: &str) -> bool {
+  let mut pairs = Vec::new();
+  let (mut depth, mut from) = (0i32, 0);
+  for (i, c) in attrs.char_indices() {
+    match c {
+      '{' => depth += 1,
+      '}' => depth -= 1,
+      ',' if depth == 0 => {
+        pairs.push(&attrs[from..i]);
+        from = i + 1;
+      },
+      _ => {},
+    }
+  }
+  pairs.push(&attrs[from..]);
+  let value = |key: &str| {
+    pairs.iter().find_map(|pair| {
+      let (k, v) = pair.split_once('=').unwrap_or((pair, ""));
+      (k.trim() == key).then(|| v.trim())
+    })
+  };
+  value(LABEL_PRINTS).is_some()
+    && value("label").is_some_and(|label| {
+      label
+        .trim_start_matches('{')
+        .trim_end_matches('}')
+        .chars()
+        .any(|c| !c.is_whitespace())
+    })
+}
+
+/// `taken` with the label the Kind step for an address line reads before its run (RT1 rows 64-67, 72:
+/// `insert::kind_address_lines`, `address_line_cut`) taken with it: on each line of the entry holding one run the reading takes,
+/// which the Kind step reads as its line's last, where the reading keeps words of that label (the words naming a contact
+/// before an e-mail word or a colon, "Corresponding author:", "Correspondence:", "Contact e-mail:", `names_a_contact`'s) and
+/// nothing from its addresses on, the label goes with the run — the whole line and its break where nothing but marks and
+/// separators stand before it, else from the words' end — and names its e-mails (`Corresponding author: `, which the role-note
+/// step makes its owner's correspondence note, `insert::write_role_notes`; `Correspondence to `). Not a legend's
+/// (`marked`: its binding prints its label, authblk's `\affil[*]`, or a mark opens it), whose words stay for the Kind step for
+/// a legend (`insert::kind_legend_contacts`, RT1 row 84) unless an e-mail word is among them, as the Kind step reads it (row 66).
+/// The reading's cut, the label added: one decision, made where the cut is (witnesses 2305.02090, 2404.05566 — `\affil[ ]`,
+/// whose words went to another author —, 2107.10505, 1510.03749, 1807.09187, 2008.08137, 1812.03816, 2004.06340, 2012.13817).
+fn labelled(taken: &Taken, spells: &dyn Fn(&str) -> bool, marked: bool) -> Taken {
+  let lined = taken.lined.as_str();
+  let mut lines: Vec<(usize, usize)> = Vec::new();
+  let mut from = 0;
+  for line in lined.split('\n') {
+    lines.push((from, from + line.len()));
+    from += line.len() + 1;
+  }
+  let printed = lines
+    .iter()
+    .filter(|&&(s, t)| !lined[s..t].trim().is_empty())
+    .count();
+  let mut out = taken.clone();
+  let mut grown = false;
+  for (k, &(start, end)) in lines.iter().enumerate() {
+    let held: Vec<usize> = (0..out.runs.len())
+      .filter(|&r| start <= out.runs[r].bytes.0 && out.runs[r].bytes.1 <= end)
+      .collect();
+    let [run] = held[..] else {
+      continue;
+    };
+    let line = &lined[start..end];
+    let Some(cut) = address_line_cut(line, spells, marked && printed == 1) else {
+      continue;
+    };
+    let Some(label) = cut
+      .label
+      .filter(|_| cut.addresses == out.runs[run].addresses)
+    else {
+      continue;
+    };
+    let kept = |from: usize, to: usize| {
+      line[from..to].char_indices().any(|(i, c)| {
+        let at = start + from + i;
+        c.is_alphanumeric() && !out.cuts.iter().any(|&(s, t)| s <= at && at < t)
+      })
+    };
+    if !kept(cut.start, cut.address_start) || kept(cut.address_start, line.len()) {
+      continue;
+    }
+    // (the whole line, with the break before it — the one after it, the entry's first line —, as the Kind step takes it)
+    let range = match cut.start {
+      0 if k > 0 => (start - 1, end),
+      0 if k + 1 < lines.len() => (start, end + 1),
+      0 => (start, end),
+      at => (start + at, start + cut.address_start),
+    };
+    out.cuts.push(range);
+    out.runs[run].label = Some(if label.to_lowercase().ends_with(" to") {
+      label
+    } else {
+      s!("{label}:")
+    });
+    grown = true;
+  }
+  if !grown {
+    return out;
+  }
+  out.cuts.sort_unstable();
+  let mut merged: Vec<(usize, usize)> = Vec::new();
+  for (s, t) in out.cuts.drain(..) {
+    match merged.last_mut() {
+      Some(last) if s <= last.1 => last.1 = last.1.max(t),
+      _ => merged.push((s, t)),
+    }
+  }
+  out.cuts = merged;
+  // (its text as the reading strips it, `strip_address_runs`: each cut a space)
+  let mut stripped = String::new();
+  let mut at = 0;
+  for &(s, t) in &out.cuts {
+    stripped.push_str(&lined[at..s]);
+    stripped.push(' ');
+    at = t;
+  }
+  stripped.push_str(&lined[at..]);
+  out.stripped = stripped.split_whitespace().collect::<Vec<_>>().join(" ");
+  DebugFeature!(
+    "frontmatter",
+    "FRONT emit: an entry's address label goes with its run: {:?} -> {:?}",
+    taken.stripped,
+    out.stripped
+  );
+  out
 }
 
 /// The cut of `taken` in the field, where one of `texts` (each with where its characters print) holds its text once: each
@@ -241,6 +468,7 @@ fn cut_at(
   field: &Field,
   texts: &[TextAt],
   around: &Around,
+  inks: &InkTable,
   (taken, spells): (&Taken, &dyn Fn(&str) -> bool),
 ) -> Option<CutAt> {
   let lined = taken.lined.as_str();
@@ -325,7 +553,14 @@ fn cut_at(
     }
   }
   let span_of = |e: &Event| e.span.map(|(a, b)| (usize::from(a), usize::from(b)));
-  // (a position something kept prints at, or a stop: what no cut grows over)
+  // (where a mark prints: its formula, else its span)
+  let mark_of = |e: &Event| {
+    e.formula
+      .and_then(|f| f.span)
+      .or(e.span)
+      .map(|(a, b)| (usize::from(a), usize::from(b)))
+  };
+  // (a position something kept prints at, a stop or a mark: what no cut grows over)
   let prints = |p: usize| {
     kept.iter().any(|ink| prints_in(ink, (p, p + 1)))
       || around
@@ -333,6 +568,7 @@ fn cut_at(
         .iter()
         .chain(&around.apart)
         .filter_map(|e| span_of(e))
+        .chain(around.marks.iter().filter_map(|e| mark_of(e)))
         .any(|(a, b)| a <= p && p < b)
   };
   let mut cuts: Vec<(usize, usize)> = Vec::new();
@@ -361,11 +597,21 @@ fn cut_at(
     {
       from = from.min(reach(&before).1);
     }
+    // (but never past a mark: one before the kept ink after it leads that ink, `Univ X, {\tt a@x}, $^1$Dept`, as the Kind
+    // step leaves it — a mark leading the address side, `\\$^*\,$a@x`, goes with the cut: 2506.02272; review revP1b S1)
     if ink[last].is_none()
       && let Some(after) =
         (last + 1..chars.len()).find_map(|i| ink[i].filter(|_| !taken_at(chars[i].0)))
     {
-      to = to.max(reach(&after).0);
+      let ink_at = reach(&after).0;
+      let mark = around
+        .marks
+        .iter()
+        .filter_map(|e| mark_of(e))
+        .map(|(a, _)| a)
+        .filter(|&a| a >= to && a < ink_at)
+        .min();
+      to = to.max(mark.unwrap_or(ink_at));
     }
     // (parted around a contact the text leaves out, which stays where it prints: `(\email{a@x}; b@x)`, 1106.3045)
     let mut parts = vec![(from, to)];
@@ -408,10 +654,13 @@ fn cut_at(
       return declined("a cut takes a note");
     }
   }
-  // (each address as printed: the tokens of its characters, where they print nothing else, with the switches of the group the
-  // run opens in — `{\tt\small a@x; b@x}`'s second, `\texttt{a@x}` whole —; else its text in the font of the ink printing the
-  // run's `@` (RP1's `EntryCut::mail`: a list's written-out address, `\texttt{\{a,b\}@x}`; one a contact command prints, whose
-  // call the e-mail's item would mute, 1109.3369's `Email:~$^a$\email{…}`): the switch off's wrapper, `dom::address_cut`)
+  // (each address as printed — RT1 row 56, the switch off's wrapper (`dom::address_cut`): the call wrapping it alone, whole, its
+  // cover's tokens where nothing else prints there and the cut takes it — `\href{mailto:a@x}{a@x}` (2608.15371), `\textit{a@x}`
+  // —; else its characters' own tokens, with the switches of the group the run's first address opens (`{\tt\small a@x; b@x}`'s
+  // second), else in the font of the ink printing it — `{\it Contact e-mail: a@x}` (2008.08137), `\texttt{a@x, b@y}`'s each
+  // (2608.14026), a `\thanks` body's (its inner inks: 2405.06709); a list's written-out address, which prints no tokens of its
+  // own, its text in that font (RP1's `EntryCut::mail`: `\texttt{\{a,b\}@x}`; one a contact command prints, whose call the
+  // e-mail's item would mute, 1109.3369's `Email:~$^a$\email{…}`))
   let mut mails = Vec::new();
   let reach_of = |from: usize, to: usize| {
     let reaches: Vec<(usize, usize)> = (0..chars.len())
@@ -422,6 +671,18 @@ fn cut_at(
       reaches.iter().map(|r| r.0).min()?,
       reaches.iter().map(|r| r.1).max()?,
     ))
+  };
+  // (whether an event prints inside `range`: what a wrapper taken whole would take with the address — a contact command its
+  // item would mute among them)
+  let holds_event = |(s, t): (usize, usize)| {
+    around
+      .stops
+      .iter()
+      .chain(&around.apart)
+      .chain(&around.contacts)
+      .filter_map(|e| span_of(e))
+      .chain(around.marks.iter().filter_map(|e| mark_of(e)))
+      .any(|(a, b)| a < t && b > s)
   };
   for run in &taken.runs {
     let run_at = reach_of(run.bytes.0, run.bytes.1);
@@ -440,36 +701,75 @@ fn cut_at(
       .and_then(|(s, t)| reach_of(s, t));
     for address in &run.addresses {
       let bytes = bytes_of(address);
-      let own = bytes.zip(first_at.or(run_at)).and_then(|((s, t), run_at)| {
+      // (the font its `@` prints in (`InkTable::fonts`: a font switched inside the ink, `\thanks{… \texttt{E-Mail: a@x}}`,
+      // 2405.06709), else the ink's printing it)
+      let at_font = bytes
+        .and_then(|(s, t)| {
+          (0..chars.len()).find(|&i| s <= chars[i].0 && chars[i].0 < t && chars[i].1 == '@')
+        })
+        .or_else(|| {
+          (0..chars.len())
+            .find(|&i| run.bytes.0 <= chars[i].0 && chars[i].0 < run.bytes.1 && chars[i].1 == '@')
+        })
+        .and_then(|i| ink[i])
+        .and_then(|ink| inks.font_at(ink.own.unwrap_or(ink.cover.0)))
+        .cloned();
+      let font = || {
+        at_font.clone().or_else(|| {
+          around
+            .inks
+            .iter()
+            .filter(|e| e.font.is_some() && e.text.contains('@'))
+            .find(|e| e.text.contains(address.as_str()) || run_at.is_some_and(|r| overlaps(e, r)))
+            .and_then(|e| e.font.clone())
+        })
+      };
+      let printed = bytes.zip(first_at.or(run_at)).and_then(|((s, t), run_at)| {
         let mine: Vec<usize> = (0..chars.len())
           .filter(|&i| s <= chars[i].0 && chars[i].0 < t)
           .collect();
-        if mine
+        mine.iter().all(|&i| ink[i].is_some()).then_some(())?;
+        let owns: Option<Vec<usize>> = mine
           .iter()
-          .any(|&i| ink[i].is_none_or(|ink| ink.own.is_none()))
-        {
+          .map(|&i| ink[i].and_then(|ink| ink.own).map(usize::from))
+          .collect();
+        let own = owns.and_then(|owns| Some((*owns.iter().min()?, owns.iter().max()? + 1)));
+        let range = reach_of(s, t)?;
+        let others_print = |range: (usize, usize)| {
+          (0..chars.len())
+            .filter(|i| !mine.contains(i))
+            .filter_map(|i| ink[i])
+            .any(|ink| prints_in(&ink, range))
+        };
+        let (from, to, first) = (index(range.0)?, index(range.1)?, index(run_at.0)?);
+        let taken_whole = cuts.iter().any(|&(s, t)| s <= from && to <= t);
+        if Some(range) != own && taken_whole && !others_print(range) && !holds_event(range) {
+          let (tokens, _) = field.content_of((from, to), 0, from)?;
+          return Some((tokens.unlist(), "its wrapper"));
+        }
+        let own = own?;
+        if others_print(own) {
           return None;
         }
-        let range = reach_of(s, t)?;
-        let others_print = (0..chars.len())
-          .filter(|i| !mine.contains(i))
-          .filter_map(|i| ink[i])
-          .any(|ink| prints_in(&ink, range));
-        let (from, to, first) = (index(range.0)?, index(range.1)?, index(run_at.0)?);
-        (!others_print)
-          .then(|| field.content_of((from, to), 0, first.min(from)))
-          .flatten()
-          .map(|(tokens, _)| tokens.unlist())
+        let (own_from, own_to) = (index(own.0)?, index(own.1)?);
+        let (tokens, _) = field.content_of((own_from, own_to), 0, first.min(own_from))?;
+        let tokens = tokens.unlist();
+        Some(if tokens.len() > own_to - own_from {
+          (tokens, "its group's switches")
+        } else {
+          (in_its_font(font(), tokens).unlist(), "its ink's font")
+        })
       });
-      let font = || {
-        around
-          .inks
-          .iter()
-          .filter(|e| e.font.is_some() && e.text.contains('@'))
-          .find(|e| e.text.contains(address.as_str()) || run_at.is_some_and(|r| overlaps(e, r)))
-          .and_then(|e| e.font.clone())
-      };
-      let tokens = own.unwrap_or_else(|| in_its_font(font(), text_tokens(address)).unlist());
+      let (tokens, how) = printed.unwrap_or_else(|| {
+        (
+          in_its_font(font(), text_tokens(address)).unlist(),
+          "its text",
+        )
+      });
+      DebugFeature!(
+        "frontmatter",
+        "FRONT emit: a cut address {address:?}: {how}"
+      );
       mails.push((address.clone(), tokens, run.label.clone()));
     }
   }
@@ -527,10 +827,7 @@ fn locate(text: &str, lined: &str) -> Option<Vec<Option<usize>>> {
 }
 
 /// A cut's runs and its e-mails ([`cut_at`]).
-type CutAt = (
-  Vec<(usize, usize)>,
-  Vec<(String, Vec<Token>, Option<String>)>,
-);
+type CutAt = (Vec<(usize, usize)>, Vec<Mail>);
 
 /// The run `from..to` (indices) grown to a balanced one ([`Field::balanced`]), over a few tokens before or after it that print
 /// nothing (`prints`): the switches of the group it starts in (`{\tt(sluys@astro.uu.nl)}`, astro-ph0610492), the space before
@@ -614,7 +911,34 @@ pub(super) fn entry_cuts(
   for taken in &reading.taken {
     give_back_entry(whole, taken);
     match entry_cut(taken, &names).ok().flatten() {
-      Some(cut) => cuts.push(cut),
+      Some(cut) => {
+        // (a label the cut took with its run (`labelled`): the entry's text as it leaves it, nothing where it leaves no word —
+        // the reading's own for an entry of addresses alone, `Resolver::take_out_entry_addresses`)
+        if cut.stripped != taken.stripped {
+          let keeps_words = cut.stripped.chars().any(char::is_alphanumeric);
+          let mine = |a: &Assoc| {
+            a.source == taken.source
+              && a.text == taken.stripped
+              && a.rule.ends_with(" ruling3:address-out")
+          };
+          let slots = resolved
+            .creators
+            .iter_mut()
+            .map(|c| &mut c.affiliations)
+            .chain(std::iter::once(&mut resolved.block));
+          for slots in slots {
+            if keeps_words {
+              slots
+                .iter_mut()
+                .filter(|a| mine(a))
+                .for_each(|a| a.text.clone_from(&cut.stripped));
+            } else {
+              slots.retain(|a| !mine(a));
+            }
+          }
+        }
+        cuts.push(cut);
+      },
       None => {
         DebugFeature!(
           "frontmatter",

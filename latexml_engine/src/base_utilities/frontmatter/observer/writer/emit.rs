@@ -30,7 +30,7 @@ use crate::base_utilities::{
   },
   frontmatter::{
     observer::{
-      events::{EventKind, Formula, lex_with_formulas},
+      events::{EventKind, Formula, InkTable, lex_with_inks},
       field_notes::{EnvironmentStep, FieldCreator},
       ledger::{ApiCall, AuthorBlock, annotated_parent, field_stamped},
       policy::TitleMarks,
@@ -753,7 +753,7 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
   let read = rehearsed(&content)?;
   let (events, formulas, environments) = read
     .as_ref()
-    .map_or((&[][..], &[][..], &[][..]), |(e, f, n)| {
+    .map_or((&[][..], &[][..], &[][..]), |(e, f, n, _)| {
       (e.as_slice(), f.as_slice(), n.as_slice())
     });
   let field = Field {
@@ -892,8 +892,15 @@ fn spaced(index: usize, span: (u16, u16), tokens: Vec<Token>) -> Vec<Token> {
 }
 
 /// The tokens of an entry whose lines no balanced run holds (`{\\small $^1$Univ A}\\\\ {\\small Town}`, 2203.00365,
-/// cond-mat0404185): each line's, at the Break events of `span`, with its break.
-fn lines_run(field: &Field, events: &[Event], span: (u16, u16)) -> Option<Vec<Token>> {
+/// cond-mat0404185): each line's, at the Break events of `span`, with its break — without the runs `cuts` (an entry's address
+/// runs, `address_cut`), each inside one line's (`\\begin{small} …\\end{small} \\\\ \\begin{small} … a@x \\end{small}`,
+/// 1312.5468), else `None`.
+fn lines_run(
+  field: &Field,
+  events: &[Event],
+  span: (u16, u16),
+  cuts: &[(usize, usize)],
+) -> Option<Vec<Token>> {
   let mut lines: Vec<Vec<&Event>> = vec![Vec::new()];
   for e in events
     .iter()
@@ -909,15 +916,21 @@ fn lines_run(field: &Field, events: &[Event], span: (u16, u16)) -> Option<Vec<To
     return None;
   }
   let mut out = Vec::new();
+  let mut runs = Vec::new();
   for (n, line) in lines.iter().enumerate() {
     if n > 0 {
       out.push(T_CS!("\\\\"));
     }
     if let (Some(first), Some(last)) = (line.first(), line.last()) {
-      out.extend(event_run(field, events, (first, last), None, &[])?);
+      let (tokens, run) = event_run_at(field, events, (first, last), None, cuts)?;
+      out.extend(tokens);
+      runs.push(run);
     }
   }
-  Some(out)
+  cuts
+    .iter()
+    .all(|&(s, t)| runs.iter().any(|&(from, to)| from <= s && t <= to))
+    .then_some(out)
 }
 
 /// `tokens` digested in the font their first ink printed in, against the flush's: what a group or a switch before them set.
@@ -1237,7 +1250,11 @@ fn item_call(
             cut.inspect(|cut| cut.applied.set(true));
             tokens
           },
-          None => lines_run(&field, events, span)?,
+          None => {
+            let tokens = lines_run(&field, events, span, cut_runs)?;
+            cut.inspect(|cut| cut.applied.set(true));
+            tokens
+          },
         };
         Some((tokens, first.font.clone(), mark.map(|e| e.text.clone())))
       });
@@ -1281,8 +1298,9 @@ fn item_call(
   }
 }
 
-/// A call's content as a stamped rehearsal reads it ([`rehearsed`]).
-type CallRead = (Vec<Event>, Vec<Formula>, Vec<EnvironmentStep>);
+/// A call's content as a stamped rehearsal reads it ([`rehearsed`]): its events, formulas, environments and where its inks
+/// printing an `@` print.
+type CallRead = (Vec<Event>, Vec<Formula>, Vec<EnvironmentStep>, InkTable);
 
 /// A creator's role, Perl's `role=` key: its creator call's in the block that printed it (PoS's `\speaker`, 0910.5686,
 /// 1007.2355, 1111.2428, 1111.6944), an API call's own, else `author`.
@@ -1341,12 +1359,12 @@ pub(super) fn rehearsed(content: &[Token]) -> Result<Option<CallRead>> {
   }
   let stamped = field_stamped(2, 0, content);
   Ok(
-    match rehearse(stamped, TitleMarks::Fnsymbol, &[], lex_with_formulas)? {
+    match rehearse(stamped, TitleMarks::Fnsymbol, &[], lex_with_inks)? {
       Rehearsal::Done {
-        value: (events, formulas),
+        value: (events, formulas, inks),
         environments,
         ..
-      } => Some((events, formulas, environments)),
+      } => Some((events, formulas, environments, inks)),
       Rehearsal::Skipped(_) => None,
     },
   )
@@ -1356,7 +1374,7 @@ pub(super) fn rehearsed(content: &[Token]) -> Result<Option<CallRead>> {
 /// its address ([`one_address`]).
 fn call_contact(call: &ApiCall, assoc: &Assoc, within: bool) -> Result<Option<Tokens>> {
   let key = plan::contact_key(assoc).1;
-  let Some((events, formulas, environments)) = rehearsed(call.content.unlist_ref())? else {
+  let Some((events, formulas, environments, _)) = rehearsed(call.content.unlist_ref())? else {
     return Ok(None);
   };
   let field = Field {
@@ -1388,7 +1406,7 @@ type Piece = (String, Option<Vec<Token>>);
 /// one, nor inside one (`nest`, `Field::formulas`): `$^{1}$Univ X \\begin{tabular}{c}a\\\\ b\\end{tabular}`, `\\begin{ee}a b\\end{ee}`,
 /// `$\\begin{array}{c}a\\end{array}$` (review revZ4a).
 fn call_pieces(call: &ApiCall) -> Result<Vec<Piece>> {
-  let Some((events, formulas, environments)) = rehearsed(call.content.unlist_ref())? else {
+  let Some((events, formulas, environments, _)) = rehearsed(call.content.unlist_ref())? else {
     return Ok(Vec::new());
   };
   let field = Field {

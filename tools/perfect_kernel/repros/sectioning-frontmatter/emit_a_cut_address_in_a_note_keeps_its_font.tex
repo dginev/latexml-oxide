@@ -1,0 +1,21 @@
+% mechanism: an address cut out of a note entry's text at `LATEXML_FM_EMIT=2` is its owner's e-mail in the font its `@`
+%   prints in, where the note's ink switches font inside it (`\thanks{\IEEEauthorrefmark{1} … - \texttt{E-Mail: a@x}}`;
+%   `events::InkTable::fonts`), or the link wrapping it alone (`\href{mailto:…}{…}`) — RT1 row 56, the switch-off writer's
+%   wrapper (`writer::address_cut`; OD #980 P1br2); `=2` only
+% witness: 2405.06709 (each `\texttt{E-Mail: …}` e-mail plain), 2608.15371 (`Electronic mail: \href{mailto:…}{…}`)
+% oracle:  pdflatex 0 errors; "Ann Able1, Bob Baker2"; footnotes "1 Ann Able is with Univ A, City - E-Mail: ann.able@a.org"
+%   (typewriter from E-Mail), "2 Bob Baker is with Univ B, Town, bob.baker@b.org"
+% engines: rust P1b `=2`: Ann's e-mail plain text; off: both notes on Bob, the marks on the names
+% expect:  0 errors, 0 warnings; Ann's e-mail typewriter, Bob's the link; the entries without them
+% status:  RED (P1b) -> GREEN (perfect_kernel_batchp1e::a_cut_address_keeps_its_link_and_font)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\usepackage{hyperref}
+\begin{document}
+\title{An address's font in a note}
+\author{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2}
+\thanks{\IEEEauthorrefmark{1} Ann Able is with Univ A, City - \texttt{E-Mail: ann.able@a.org}}
+\thanks{\IEEEauthorrefmark{2} Bob Baker is with Univ B, Town, \href{mailto:bob.baker@b.org}{bob.baker@b.org}}}
+\maketitle
+Text.
+\end{document}

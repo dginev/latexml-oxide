@@ -42,11 +42,15 @@ pub(super) struct Lexer {
   run_open:            u8,
   /// the braces printed and not yet closed since the column's start ([`Event::braces`])
   braces:              u8,
-  /// which lines (between Break events) print an `@`: their names' characters' positions are recorded (`Event::ink_at`; a list
+  /// which lines (between Break events) print an `@`: their names' characters' positions are recorded (`inks`; a list
   /// part before the address, `jhansen, msandeep,dudek@cim.mcgill.ca`, 1811.10103) — no other's, a thousand-author names line
   /// none (1901.01540)
   pub(super) at_lines: Vec<bool>,
   line:                usize,
+  /// where the names on those lines print, and the font of each `@` they print ([`InkTable`]): the name run's `@`s, each at
+  /// its token's position, kept when the run is flushed on such a line
+  pub(super) inks:     InkTable,
+  run_at_fonts:        Vec<(u16, Rc<Font>)>,
 }
 
 impl Lexer {
@@ -122,8 +126,12 @@ impl Lexer {
     let run = std::mem::take(&mut self.run);
     let run_own = std::mem::take(&mut self.run_own);
     let font = self.run_font.take();
-    // the run's words, each with the span of its characters, and where each prints on a line printing an `@` (`Event::ink_at`)
+    // the run's words, each with the span of its characters, and where each prints on a line printing an `@` (`InkTable`)
     let record = self.at_lines.get(self.line).copied().unwrap_or(false);
+    let at_fonts = std::mem::take(&mut self.run_at_fonts);
+    if record {
+      self.inks.fonts.extend(at_fonts);
+    }
     let mut words: Vec<(String, Option<(u16, u16)>)> = Vec::new();
     let mut owns: Vec<Option<(u16, u16)>> = Vec::new();
     let mut inks: Vec<Vec<Option<InkAt>>> = Vec::new();
@@ -177,6 +185,8 @@ impl Lexer {
       open = word.chars().fold(open, bracket_depth);
     }
     let mut name: Option<Event> = None;
+    // (where its characters print, on a line printing an `@`)
+    let mut name_ink: Vec<Option<InkAt>> = Vec::new();
     // (a byline's "by", in any case, opening a line before names is no name — today's `without_leading_by`:
     // `\author{by David Harari and Tam\'as Szamuely}`, 0808.2556)
     let byline = !self.line_inked && words.len() > 1 && words[0].0.eq_ignore_ascii_case("by");
@@ -187,7 +197,7 @@ impl Lexer {
           || is_separator_word(&word)
           || (at == 0 && byline))
       {
-        self.events.extend(name.take());
+        self.push_name(name.take(), std::mem::take(&mut name_ink));
         let mut sep = Event::new(EventKind::Sep(SepKind::Word(word)));
         sep.span = span;
         sep.nest = self.run_nest;
@@ -213,18 +223,31 @@ impl Lexer {
       if !name.text.is_empty() {
         name.text.push(' ');
         if record {
-          name.ink_at.push(None);
+          name_ink.push(None);
         }
       }
       name.text.push_str(&word);
       if let Some(ink) = inks.get_mut(at) {
-        name.ink_at.append(ink);
+        name_ink.append(ink);
       }
       name.span = join_span(name.span, span);
       name.marks = join_span(name.marks, owns[at]);
     }
-    self.events.extend(name);
+    self.push_name(name, name_ink);
     self.line_inked = true;
+  }
+
+  /// A name read, and where its characters print ([`InkTable`]: recorded on a line printing an `@` only).
+  fn push_name(&mut self, name: Option<Event>, ink: Vec<Option<InkAt>>) {
+    let Some(name) = name else {
+      return;
+    };
+    if !ink.is_empty()
+      && let Some(span) = name.span
+    {
+      self.inks.at.push((span, name.text.clone(), ink));
+    }
+    self.events.push(name);
   }
 
   pub(super) fn push_event(&mut self, mut event: Event) {
@@ -363,6 +386,9 @@ impl Lexer {
         && let Some(font) = &font
       {
         self.address_font = Some(Rc::clone(&font.0));
+        if let Some(at) = own.or(span.map(|s| s.0)) {
+          self.run_at_fonts.push((at, Rc::clone(&font.0)));
+        }
       }
       self.run.push((c, span));
       self.run_own.push(own);
@@ -414,10 +440,11 @@ impl Lexer {
     self.gap_span = join_span(self.gap_span, span);
   }
 
-  pub(super) fn finish(mut self) -> Vec<Event> {
+  pub(super) fn finish(mut self) -> (Vec<Event>, InkTable) {
     self.flush_symbol();
     self.flush_run();
     self.clear_gap();
+    let inks = std::mem::take(&mut self.inks);
     // a `\label` outside a note labels the note before it
     let mut events: Vec<Event> = Vec::with_capacity(self.events.len());
     let glued = glue_in_word_marks(self.events);
@@ -435,7 +462,7 @@ impl Lexer {
       }
       events.push(event);
     }
-    events
+    (events, inks)
   }
 }
 
