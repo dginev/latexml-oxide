@@ -3291,7 +3291,7 @@ lands inside one affiliation contact. latexml-oxide originally reproduced this
 byte-for-byte (upstream parity, not a Rust divergence).
 
 **Rust now surpasses Perl here.** `\lx@add@authors` / `\lx@add@affiliations`
-(`base_utilities/author_block/rows.rs`) gained `strip_linebreak_options` (consume the `*`/`[len]`
+(`base_utilities/frontmatter/fallback.rs`) gained `strip_linebreak_options` (consume the `*`/`[len]`
 after a `\\` row-break token, and the spaces before the `[len]` that `\@ifnextchar`
 skips — `\\ [0.5em]`, 2604.20841, batch 77p r11 — before splitting — so no `[1em]` leak, and the
 following `\textsuperscript` stays at the line front, keeping the comma-bearing
@@ -3840,7 +3840,7 @@ regular arXiv idiom Perl does not structure. Upstream filing pending.
 **Rust status (FIXED, beneficial divergence — OXIDIZED_DESIGN #52(i)):** `\hspace`/`\hfill`
 normalize to the `\quad` separator, and footnote-SYMBOL superscripts rewrite to a visible
 `\lx@frontmatter@keepsup` sup before branch selection (`normalize_hspace_separators`,
-`rewrite_symbol_superscripts`, `base_utilities/author_block/symbols.rs`). Numeric affiliation marks are untouched.
+`rewrite_symbol_superscripts`, `base_utilities/frontmatter/observer/writer/calls.rs`). Numeric affiliation marks are untouched.
 Guards `06_cluster_frontmatter::{frontmatter_hspace_author_split,
 frontmatter_symbol_superscript_mark, frontmatter_thanks_literal_mark_mix}`.
 

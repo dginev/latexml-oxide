@@ -1338,7 +1338,7 @@ fn the_observers_spellings_are_counted_however_they_read() {
     "the backslash literals under observer/",
     OBSERVER_BACKSLASH_LITERALS,
     &counts,
-    "A decision reads events or digested XML, never a token's spelling: docs/parity/FRONTMATTER_DIGESTED_REFACTOR.md.",
+    "A decision reads events or digested XML, never a token's spelling: docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md \"The principle\".",
   );
 }
 
@@ -1346,7 +1346,7 @@ fn the_observers_spellings_are_counted_however_they_read() {
 #[test]
 fn token_reads_only_fall_toward_the_floor() {
   const WHY: &str = "Frontmatter decisions read events or digested XML, never token or source spelling: \
-                     docs/parity/FRONTMATTER_DIGESTED_REFACTOR.md. The count is over-approximate, as the study's script \
+                     docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md \"The principle\". The count is over-approximate, as the study's script \
                      is: a line that only looks like a read counts until it is reworded or the code is gone.";
   let read = Regex::new(concat!(
     r"(?:(?:==|!=)\s*&?\*?\s*T_[A-Z]+!)|(?:T_[A-Z]+!\([^)]*\)\s*(?:==|!=))|(?:contains\(&?T_[A-Z]+!)",

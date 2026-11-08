@@ -2,7 +2,7 @@
 
 **Superseded (2026-11-08, DOC1).** The living doc is [`../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`](../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md). Its sections "The principle" (with the 2026-10-29 directive, task #423), "What already exists", "Gaps in the event model" (gaps 1-10, numbers kept), "What a rollback leaves (census, Z3)" and "Test suite and measurement" moved there under the same titles. Kept here as history: the status line of 2026-11-06, the 2026-10-29 spelling inventory (groups 3A-3E), the Stages 1-8 (Stage 1 landed 90a, 2 Z1-Z2, 3 Z3, 4 92b; 5-8 replaced by the plan's "The path": Route D, the strict ports, the flip, Z18-Z19) and the withdrawn audit item.
 
-**Status (2026-11-06):** the old engine's removal before the merge is this refactor's Stages 7-8; the batches are Z0-Z23 in [`FRONTMATTER_SINGLE_ENGINE_PLAN.md`](FRONTMATTER_SINGLE_ENGINE_PLAN.md) "The path". Stages 1 and 4 landed; Stage 2's gaps 1, 2, 6, 8, 9 landed with Z1, its gaps 3, 4, 5, 7, 10 with Z2, Stage 3 with Z3; Stage 5 has not.
+**Status (2026-11-06):** the old engine's removal before the merge is this refactor's Stages 7-8; the batches are Z0-Z23 in [`FRONTMATTER_SINGLE_ENGINE_PLAN.md`](../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md) "The path". Stages 1 and 4 landed; Stage 2's gaps 1, 2, 6, 8, 9 landed with Z1, its gaps 3, 4, 5, 7, 10 with Z2, Stage 3 with Z3; Stage 5 has not.
 
 ## What reads spelling today (inventory groups)
 

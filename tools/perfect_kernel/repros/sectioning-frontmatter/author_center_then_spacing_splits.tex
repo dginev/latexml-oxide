@@ -1,5 +1,5 @@
 % mechanism: spacing after the `\end{center}` that closes a whole author block is no part of the block, so the
-%   environment still ends it and unwraps (`unwrap_alignment_environment`, author_block/separators.rs, `only_spacing`;
+%   environment still ends it and unwraps (`unwrap_alignment_environment`, frontmatter/fallback.rs, `only_spacing`, frontmatter/classify/separators.rs;
 %   OXIDIZED_DESIGN_DIVERGENCES #947). Siblings (the guard's, `trailing_alignment_environment_as_lines`): a `center`
 %   after the names followed by spacing (`\author{Ann Able and Bob Baker \begin{center}Department of
 %   Physics\end{center}\vspace{2mm}}`) is still the line under both names; an `\end{small}` there is no spacing — it

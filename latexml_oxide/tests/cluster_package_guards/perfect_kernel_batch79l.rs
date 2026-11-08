@@ -39,7 +39,7 @@ fn an_author_left_open_keeps_the_documents_labels() {
 }
 
 /// The ACM SIG template's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}` in `\author` is the line break it
-/// prints between the name and the shared affiliation (author_block separators.rs `tabular_juggles_as_line_breaks`):
+/// prints between the name and the shared affiliation (frontmatter/fallback.rs `tabular_juggles_as_line_breaks`):
 /// no error, the affiliation kept, the labels with it. Red (int83a): 6 errors and a warning, the affiliation lost and
 /// every later `\label` with it. Witnesses 1704.03168, 1301.5612, 1401.6981, 0712.1016. Repro
 /// sectioning-frontmatter/author_shared_affiliation_line.

@@ -225,7 +225,7 @@ here is open unless its status says otherwise; when a row closes, delete it here
   separators, a multi-key `\citeonline[note]`, authorless entries, `abnt-full-initials=yes`, num "(1)" brackets
   (`\citebrackets`, :213, :232-233), repeated authors (:995-999, :1037-1043), `alf` list labels, note field order, the math
   `tex=` brace group) — repros `~/data/pk_agents/rc131/abntex2/repro/r1–r8`, `review57cm/`; **jacow-collaboration**
-  (92.7 %): author continuation lines glued at `\\` (`add_authors_calls`, base_utilities/author_block/dispatch.rs:259-264 = Perl
+  (92.7 %): author continuation lines glued at `\\` (`add_authors_calls`, base_utilities/author_block/dispatch.rs:214-219 = Perl
   Base_Utility.pool.ltxml:702-703, PERL-ORIGIN; keep the delimiter as `<break/>`; `~/data/pk_agents/rc131/repro/author_glue.tex`).
   Ruled out: suanpan-l3's last jing line (a second `\title`/`\maketitle` replaces the first — double `\maketitle` keeps
   the latest title, user 2026-10-01).
