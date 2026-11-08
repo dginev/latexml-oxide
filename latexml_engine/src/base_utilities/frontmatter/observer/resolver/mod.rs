@@ -171,15 +171,17 @@ pub struct Resolved {
   /// (`Resolver::answer_listed_emails`, brief 95c G3), each as today's holds it — for the writer's name re-part, which
   /// reads them whole (`writer::give_back_addresses`, brief 95e); not in the dump
   pub listed:    Vec<Listed>,
-  /// the words a block prints that the reading drops by its own rule, each its ledger index, span and word (trimmed,
-  /// lowercased): a byline's "by" read as a separator (`lines::byline_dropped`, the old reader's `without_leading_by`:
-  /// `By~~{\scshape Bryna Kra}`, 2603.27258) and the label a take-out drops before its run (`E-mails:`, 1610.05419) — the
-  /// one record the checks read: the block checks' as written (`words::Written`), the content check's a Name as its
+  /// the words a block prints that the reading drops by its own rule, each its ledger index, its Name event's span and
+  /// word (trimmed, lowercased): a byline's "by" read as a separator (`lines::byline_dropped`, the old reader's
+  /// `without_leading_by`: `By~~{\scshape Bryna Kra}`, 2603.27258) and every word a take-out cuts that is no address's,
+  /// of no event span (its label, an "and" between two addresses: `E-mails: ann@x.org and bob@x.org.`, 1610.05419) —
+  /// the one record the checks read: the block checks' as written (`words::Written`), the content check's a Name as its
   /// separator's word, no other Name on its span (review revH3 3, `placed::content_check`); not in the dump
   pub drops:     Vec<RuleDrop>,
 }
 
-/// A word the reading drops by its own rule ([`Resolved::drops`]): its ledger index, span and word (trimmed, lowercased).
+/// A word the reading drops by its own rule ([`Resolved::drops`]): its ledger index, its Name event's span (`None` for a
+/// take-out's word) and the word (trimmed, lowercased).
 pub type RuleDrop = (usize, Option<(u16, u16)>, String);
 
 /// One affiliation entry the reading took printed addresses out of ([`Resolved::taken`]): its source, its text before
@@ -1299,12 +1301,27 @@ pub fn resolve_with(
     }
     out.listed.retain(|listed| !listed.owners.is_empty());
   }
+  // (every word a kept take-out cuts that is no address's — its label, an "and" stranded between two addresses,
+  // `E-mails: ann.able@x.org and bob.baker@x.org` (1610.05419), a parenthesis' words —, in print order, each of no event
+  // span of its own: review revI1 1)
   for t in &out.taken {
-    let Some((at, span)) = t.source else { continue };
-    let labels = t.runs.iter().filter_map(|run| run.label.as_ref());
-    out
-      .drops
-      .extend(labels.map(|l| (at, span, l.trim().to_lowercase())));
+    let Some((at, _)) = t.source else { continue };
+    let mut addressed: Vec<String> = t
+      .runs
+      .iter()
+      .flat_map(|r| &r.addresses)
+      .flat_map(|a| words::words_of(a))
+      .collect();
+    for &(from, to) in &t.cuts {
+      for word in words::words_of(&t.lined[from..to]) {
+        match addressed.iter().position(|w| *w == word) {
+          Some(p) => {
+            addressed.swap_remove(p);
+          },
+          None => out.drops.push((at, None, word)),
+        }
+      }
+    }
   }
   // (each creator's notes and contacts, and the block's own, in source order — the order the PDF prints them: a note
   // and a link placed once every name is read (`answer_note_links`) came after the ones the source gives later,
