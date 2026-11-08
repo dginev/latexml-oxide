@@ -16,7 +16,9 @@ use std::{
 use latexml_core::document::tag::RawFrontmatter;
 
 use super::{
-  address_cut::{EntryCut, cut_entry_call, cut_mail_call, entry_cuts, span_tokens_cut},
+  address_cut::{
+    EntryCut, cut_entry_call, cut_mail_call, entry_cuts, span_tokens_cut, span_tokens_within,
+  },
   calls::{document_note_call, note_call_end},
   dom::{Kind, norm},
   plan::{self, Key, Owner, api_call},
@@ -908,24 +910,26 @@ fn event_at<R>(
   })
 }
 
-/// Whether `span` of the block at ledger index `index` is one piece of a note, strictly inside it: from one of its body's
-/// events' start to one's end (the reading's cut of a marked `\thanks`, `Resolver::keep_note`).
-fn note_piece(index: usize, span: (u16, u16)) -> bool {
-  with_block(index, false, |_, events| {
+/// The note `span` of the block at ledger index `index` is one piece of, strictly inside it: from one of its body's
+/// events' start to one's end (the reading's cut of a marked `\thanks`, `Resolver::keep_note`), its span.
+fn note_piece(index: usize, span: (u16, u16)) -> Option<(u16, u16)> {
+  with_block(index, None, |_, events| {
     let inner = events.iter().flat_map(|e| &e.inner);
-    events.iter().chain(inner).any(|e| {
-      e.kind == EventKind::Note
-        && e
-          .span
-          .is_some_and(|s| s != span && s.0 <= span.0 && span.1 <= s.1)
-        && e
-          .body
-          .iter()
-          .any(|b| b.extent().is_some_and(|b| b.0 == span.0))
-        && e
-          .body
-          .iter()
-          .any(|b| b.extent().is_some_and(|b| b.1 == span.1))
+    events.iter().chain(inner).find_map(|e| {
+      e.span.filter(|&s| {
+        e.kind == EventKind::Note
+          && s != span
+          && s.0 <= span.0
+          && span.1 <= s.1
+          && e
+            .body
+            .iter()
+            .any(|b| b.extent().is_some_and(|b| b.0 == span.0))
+          && e
+            .body
+            .iter()
+            .any(|b| b.extent().is_some_and(|b| b.1 == span.1))
+      })
     })
   })
 }
@@ -1204,14 +1208,22 @@ fn item_call(
       });
       // (or one piece of a note the reading cut at its marks, sourced at its own span: those tokens, the reading's cut, never
       // cut again — `\\thanks{$^{1}$Univ A; $^{2}$Univ B. $^{*}$Corresponding author.}`, whose piece the writer's own cut of
-      // the whole note lost, review revG5 1; 2509.19480, 2206.07648)
-      let piece = argument.is_none() && note_piece(index, span);
+      // the whole note lost, review revG5 1; 2509.19480, 2206.07648 — read within the note, whose argument is the footnote's,
+      // never the formula's around it: `Bob Baker$^{2\thanks{$^{1}$Univ A; $^{2}$Univ B}}$`, whose pieces were that
+      // formula, the `\\thanks` digested twice, review rck2; else the span's exact slice)
+      let piece = argument
+        .is_none()
+        .then(|| note_piece(index, span))
+        .flatten();
       let argument = argument.or_else(|| {
         piece
-          .then(|| span_tokens_cut(index, span, cut_runs))
-          .flatten()
+          .and_then(|note| {
+            span_tokens_within(index, span, Some(note), cut_runs)
+              .or_else(|| span_call_tokens(index, span))
+          })
           .map(Tokens::unlist)
       });
+      let piece = piece.is_some();
       // (never a `\\footnote`'s, which `\\lx@add@note` keeps a note: `\\footnote{\\textsuperscript{1}These authors
       // contributed equally …}`, 2110.12892 — P2 NT)
       let footnote = event_at(index, span, |e| e.kind == EventKind::Note, |e| e.footnote);

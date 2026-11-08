@@ -147,6 +147,18 @@ fn a_marked_thanks_is_its_marks_affiliations() {
     xml.contains(r#"mark="*" role="thanks""#) && xml.contains("Corresponding author</note>"),
     "{xml}"
   );
+  // (the `\thanks` inside the name's mark formula: each piece read within the note, never widened to the formula holding
+  // it — review rck2, where both affiliations were lost and the note written as two identical pubnotes, 0 Warnings)
+  let tex = repro!("marked_thanks_in_a_formula_is_read_within_its_note");
+  let (off, on) = both(tex);
+  let want = [vec!["Ann Able", "affiliation=Univ A"], vec![
+    "Bob Baker",
+    "affiliation=Univ B",
+  ]];
+  assert_eq!(off, want);
+  assert_eq!(on, want);
+  let (_, xml) = run(tex, 2);
+  assert!(!xml.contains("pubnote"), "{xml}");
 }
 
 /// K14: `\and` columns of entries and no names label the whole block, as the switch off reads them (2404.00915: both

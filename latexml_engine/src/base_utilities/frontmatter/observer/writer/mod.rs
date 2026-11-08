@@ -209,6 +209,12 @@ pub(in crate::base_utilities) fn check_placed_content(document: &mut Document) {
   for note in document.findnodes("//ltx:pubnote | //ltx:title//ltx:note", None) {
     placed.beside.push(dom::text_without_marks(&note));
   }
+  // (each publication note as written: one written more often than it printed is counted, review rck2)
+  placed.notes = document
+    .findnodes("//ltx:pubnote", None)
+    .iter()
+    .map(dom::text_without_marks)
+    .collect();
   placed.dropped = emit::reading_drops();
   let check = with_ledger(|ledger| content_check(ledger, &placed, &emit::kept_whole));
   for (words, what) in [
