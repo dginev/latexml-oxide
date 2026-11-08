@@ -83,6 +83,10 @@ const EMITTED_CREATORS: &str = "lx_fm_emitted_creators";
 const EMITTED_ITEMS: &str = "lx_fm_emitted_items";
 /// The State value saying a flush wrote the author block's own creator ([`block_creator`]).
 const BLOCK_CREATOR_WRITTEN: &str = "lx_fm_block_creator";
+/// Whether a flush wrote the author block's own creator ([`block_creator`]), which `relocate_annotations` then settles.
+pub(in crate::base_utilities) fn block_creator_written() -> bool {
+  lookup_value(BLOCK_CREATOR_WRITTEN).is_some()
+}
 
 /// `\lx@add@frontmatter@now`, the flush's own creator call.
 fn add_now() -> Token { T_CS!("\\lx@add@frontmatter@now") }

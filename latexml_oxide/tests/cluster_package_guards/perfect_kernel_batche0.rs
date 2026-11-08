@@ -1027,7 +1027,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // binding's own definition, no name a document spells, 0807.4720)
   ("events", 61),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with Perl's whole-block fallback and its preparation, kept as its own, 826 = 629 + 197; none added)
-  ("fallback", 196),
+  // (raised by one at PF1: `tabular_close_rest` reads the `\end` its copy of the body read, before the copy — no read added)
+  ("fallback", 197),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   // (Z4a, 4 -> 8: an environment step by its meaning, a CS whose definition is `\begin` or `\end`, a `\let` copy too, what no frame
   // says for a raw environment; the definition's name, not the token's spelling)

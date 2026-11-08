@@ -1409,7 +1409,7 @@ pub(in crate::base_utilities) fn trailing_alignment_environment_as_lines(tokens:
 pub(in crate::base_utilities) fn tabular_juggle_between(t: &Token) -> Option<Vec<Token>> {
   let rest = tabular_close_rest(t)?;
   (0..rest.len())
-    .find(|&at| past_environment(&rest[at..], T_CS!("\\begin"), "tabular").is_some())
+    .find(|&at| environment_call_len(&rest[at..], T_CS!("\\begin"), "tabular").is_some())
     .map(|at| rest[..at].to_vec())
 }
 
@@ -1430,11 +1430,32 @@ pub(in crate::base_utilities) fn environment_call_len(
   cs: Token,
   name: &str,
 ) -> Option<usize> {
+  // (the command and the open brace first: this runs at every token position of a block, `inline_juggles_as_columns`)
   let (first, group) = body.split_first()?;
   let (open, group) = group.split_first()?;
+  if *first != cs || open.get_catcode() != Catcode::BEGIN {
+    return None;
+  }
   let close = group.iter().position(|t| t.get_catcode() == Catcode::END)?;
-  let spelled: String = group[..close].iter().map(|t| t.to_string()).collect();
-  (*first == cs && open.get_catcode() == Catcode::BEGIN && spelled == name).then_some(close + 3)
+  spells(&group[..close], name).then_some(close + 3)
+}
+
+/// Whether `group`'s tokens, written out as `to_string()` writes them, spell `name`: matched as they are written, no
+/// `String` built.
+fn spells(group: &[Token], name: &str) -> bool {
+  /// What is left of the name to match; `fmt::Error` at the first difference.
+  struct Rest<'a>(&'a str);
+  impl std::fmt::Write for Rest<'_> {
+    fn write_str(&mut self, text: &str) -> std::fmt::Result {
+      self.0 = self.0.strip_prefix(text).ok_or(std::fmt::Error)?;
+      Ok(())
+    }
+  }
+  let mut rest = Rest(name);
+  group
+    .iter()
+    .all(|t| std::fmt::Write::write_fmt(&mut rest, format_args!("{t}")).is_ok())
+    && rest.0.is_empty()
 }
 
 /// For a parameterless macro, not an author separator ([`author_and_splits`]), whose expansion starts with
@@ -1454,12 +1475,17 @@ fn tabular_close_rest(t: &Token) -> Option<Vec<Token>> {
   let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
     return None;
   };
-  let body: Vec<Token> = body
-    .unlist_ref()
-    .iter()
-    .filter(|t| t.get_catcode() != Catcode::SPACE)
-    .copied()
-    .collect();
+  let unspaced = || {
+    body
+      .unlist_ref()
+      .iter()
+      .filter(|t| t.get_catcode() != Catcode::SPACE)
+  };
+  // (its `\end` read before the body is copied: this runs for every macro of every `=2` rehearsal)
+  if unspaced().next() != Some(&T_CS!("\\end")) {
+    return None;
+  }
+  let body: Vec<Token> = unspaced().copied().collect();
   past_environment(&body, T_CS!("\\end"), "tabular").filter(|_| {
     !author_and_splits()
       .iter()
