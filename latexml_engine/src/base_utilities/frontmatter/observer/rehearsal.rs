@@ -527,22 +527,32 @@ fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
   let optional = |k: usize| past_group(toks, k, |t| *t == T_OTHER!("["), |t| *t == T_OTHER!("]"));
   let braced = |k: usize| past_group(toks, k, is(Catcode::BEGIN), is(Catcode::END));
   // The span past the reopen's `\begin{tabular}[…]{…}`, if one follows `at` after only spaces and commands, each with
-  // the `[…]` and `{…}` arguments after it.
+  // the `[…]` and `{…}` arguments right after it (a bare group, `\end{tabular} {Extra Words} \begin{tabular}`, is no
+  // command's: the juggle is read as written, review revH1 finding 2).
+  let argument = |k: usize| {
+    optional(k)
+      .or_else(|| braced(k))
+      .filter(|&(first, _)| first == k)
+      .map(|(_, end)| end)
+  };
+  let (space, command) = (Catcode::SPACE, Catcode::CS);
   let reopen = |at: usize| -> Option<(usize, usize)> {
     let mut start = at;
     loop {
       let c = toks.get(start)?.get_catcode();
-      if c != Catcode::SPACE && (c != Catcode::CS || toks[start] == begin) {
+      if c != space && (c != command || toks[start] == begin) {
         break;
       }
       start += 1;
-      while let Some(k) = optional(start).or_else(|| braced(start)) {
-        start = k;
+      if c == command {
+        while let Some(k) = argument(start) {
+          start = k;
+        }
       }
     }
     let k = start + environment_call_len(&toks[start..], begin, "tabular")?;
-    let k = optional(k).unwrap_or(k);
-    Some((start, braced(k)?))
+    let k = optional(k).map_or(k, |(_, end)| end);
+    Some((start, braced(k)?.1))
   };
   let mut out = Vec::with_capacity(toks.len());
   let mut opened = 0usize;
@@ -555,14 +565,18 @@ fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
     } else if let Some(len) = environment_call_len(&toks[i..], end, "tabular") {
       match (opened, reopen(i + len)) {
         (0, Some((start, past))) => {
+          // (what the commands between print goes with the column before, as the switch-off output orders it:
+          // `\mbox{Extra Words}` after Univ A, not the next column's first line, Bob Two lost with 2 Errors before —
+          // review revH1 finding 2; the writer still writes the column's source, `\end{tabular}` in it, so the words
+          // between are lost, counted by the content check: OD #980 (5))
           let between = &toks[i + len..start];
+          out.extend_from_slice(between);
           if !prints_a_row_break(between) {
             out.push(Token {
               prov: toks[i].prov,
               ..T_CS!(AUTHOR_AND)
             });
           }
-          out.extend_from_slice(between);
           i = past;
         },
         _ => {
@@ -579,13 +593,14 @@ fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
   Tokens::new(out)
 }
 
-/// The position past the balanced `open`…`close` group that starts at `at` after spaces, if one does.
+/// Where the balanced `open`…`close` group that starts at `at` after spaces starts, and the position past it, if one
+/// does.
 fn past_group(
   toks: &[Token],
   at: usize,
   open: impl Fn(&Token) -> bool,
   close: impl Fn(&Token) -> bool,
-) -> Option<usize> {
+) -> Option<(usize, usize)> {
   let first = (at..toks.len()).find(|&k| toks[k].get_catcode() != Catcode::SPACE)?;
   if !open(&toks[first]) {
     return None;
@@ -597,7 +612,7 @@ fn past_group(
     } else if close(t) {
       level -= 1;
       if level == 0 {
-        return Some(k + 1);
+        return Some((first, k + 1));
       }
     }
   }

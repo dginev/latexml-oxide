@@ -32669,15 +32669,25 @@ group's only author (FIDELITY_CHARTER §4; the old rule's block for a lone repla
 ported: off writes that author's too). Two `=2` rules of the reading, no port (FB2b4, FB2b5; review revG3 finding 4: the old
 rule never rewrote the inline form, `closes_a_tabular` admitting only a macro taking no argument, and off keeps 1401.6981's one
 creator and E=4): (5) the juggle written inline, an `\end{tabular}` closing a tabular the block never opened and reopened
-after nothing but spaces and commands with their `[…]`/`{…}` arguments (`rehearsal::inline_juggles_as_columns`, in every
-rehearsal), is the column sig-alternate's `\alignauthor` is (sig-alternate.cls:274), or the row break a command between
+after nothing but spaces and commands with the `[…]`/`{…}` arguments right after them (`rehearsal::inline_juggles_as_columns`, in every
+rehearsal; a bare group is no command's, `\end{tabular} {Extra Words} \begin{tabular}` read as written, review revH1
+finding 2; what a command between prints, `\mbox{Extra Words}`, goes with the column before, as off orders it — "Extra
+Words" a creator and Bob Two lost with 2 Errors before; the writer still writes the column's source, `\end{tabular}` in it,
+so those words are lost, counted by the content check), is the column sig-alternate's `\alignauthor` is (sig-alternate.cls:274), or the row break a command between
 prints (`\\`, `\\[2mm]`, `\newline`: the break stands, the lines after it the author above's, as the macro's), a skip
 (`\vspace{2mm}`) no break — 1401.6981's three columns, three creators, where `=2` had lost authors 2 and 3, and `\\[2mm]`'s
 "Univ B" lost with no Warning (review revG3 finding 2); (6) a column holding no name of its own after the last name
 (`Resolver::block`'s `shared_column`: no line in it or a later column reads as names, its first line an institution) is
 the shared affiliation of every name above it, whichever spelling opens it — 0712.1016, 1704.03168 (the PDF centres it
 under every name; the last author's alone before, off too), `A One \and Bob Two \end{tabular}\begin{tabular}{c} Univ Shared`
-("Univ Shared" a third creator before, review revG3 finding 1). (1), (2), (4), (5) and (6) with the switch on alone, (3) a
+("Univ Shared" a third creator before, review revG3 finding 1); a plain `\and` column too (`A One \and Bob Two \and
+Department of Physics, University of Y`, a third creator before; `A One \\ Univ A \and Bob Two \\ Univ B \and Institute
+for Advanced Study \\ Princeton`, the institute on each name after its own affiliation, where the PDF prints it as a third
+column under no name — review revH1 finding 3). A nameless column *between* named columns stays a creator (review revH1
+h2h). REDs, no guard (review revH1): a juggle read as written, after a bare group or `\hskip 1em` (no braces, not
+stepped over), keeps `=2`'s old reading, Bob Two an affiliation and "Univ B" lost with no content Warning (only the
+plain-text one; FB2b4 the same); a juggle macro printing words between (`\def\x{\end{tabular}\mbox{W}\begin{tabular}{c}}`)
+is bound to the column alone, its words unread. (1), (2), (4), (5) and (6) with the switch on alone, (3) a
 fact of the rehearsal (popZ01, 1,873 papers off: 0 changed); off: byte-identical. Guards `perfect_kernel_batchfb2a`.
 
 Guards `perfect_kernel_batchz4`.
