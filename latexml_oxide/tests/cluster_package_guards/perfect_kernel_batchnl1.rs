@@ -132,3 +132,81 @@ fn glued_initials_are_no_surname_before_initials() {
   assert_eq!(off, want);
   assert_eq!(two, want);
 }
+
+/// Rows C2-C5: a name's collaboration remark is the name's `collaboration` contact, no part of the name
+/// (FIDELITY_CHARTER §4, OXIDIZED_DESIGN_DIVERGENCES #946), read whole where a note, a note reference, a box or a
+/// command's own spacing parts it into pieces (C3, C4: `Kalanand Mishra\footnote{…} (for the \babar\ collaboration)`,
+/// 0711.1544; elsarticle's `Ann Able (for the XYZ\fnref{c1} Collaboration)`, 1212.4278, 1408.0414), after the name's
+/// notes when it names whom the author speaks for (C2: webofc's `for CAPP/IBS`, 1702.03664), and as a line of its own
+/// under one name (C5: `Carolyn Brown$^1$\\ on behalf of the Bcool project team`, 1310.6507). Red (MV1 `=2`): each
+/// in the personname, or "Collaboration)" the contact. The remark parted by a note reference and the name before it are
+/// written from their text at `=2`, a Warning each (the name's events don't spell it; the remark's span holds the
+/// reference); `\babar`'s letters likewise (its span prints a macro).
+#[test]
+fn a_collaboration_remark_is_the_names_contact() {
+  let (off, two) = both(
+    repro!("emit_a_collaboration_remark_parted_by_a_note_and_a_box_is_a_contact"),
+    (0, 1),
+  );
+  assert_eq!(off, [vec![
+    "Kalanand Mishra",
+    "note=Email: k@x.edu",
+    "collaboration=(for the B A B AR collaboration)",
+    "affiliation=Univ A"
+  ]]);
+  assert_eq!(two, [vec![
+    "Kalanand Mishra",
+    "collaboration=(for the B A B A R collaboration)",
+    "note=Email: k@x.edu",
+    "affiliation=Univ A"
+  ]]);
+  let (off, two) = both(
+    repro!("elsarticle_collaboration_remark_note_reference_is_the_names"),
+    (0, 2),
+  );
+  let want = [vec![
+    "Ann Able",
+    "collaboration=(for the XYZ Collaboration)",
+    "address=Univ X",
+    "note=A list of members is at the end.",
+  ]];
+  assert_eq!(off, want);
+  assert_eq!(two, want);
+  let (off, two) = both_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/class-bindings/webofc/webofc_remark_after_the_notes_is_a_contact.tex"
+    ),
+    &[(
+      "webofc.cls",
+      include_str!("../../../tools/perfect_kernel/repros/class-bindings/webofc/webofc.cls"),
+    )],
+    (0, 0),
+  );
+  assert_eq!(off, [vec![
+    "Ann Able",
+    "affiliation=Univ A, Korea",
+    "email=ann@a.edu",
+    "collaboration=for CAPP/IBS"
+  ]]);
+  assert_eq!(two, [vec![
+    "Ann Able",
+    "email=ann@a.edu",
+    "collaboration=for CAPP/IBS",
+    "affiliation=Univ A, Korea"
+  ]]);
+  let (off, two) = both(
+    repro!("emit_a_line_speaking_for_a_collaboration_is_a_contact"),
+    (0, 0),
+  );
+  let want = [
+    vec!["Ann Able", "affiliation=Univ A"],
+    vec!["Bob Baker", "affiliation=Univ A"],
+    vec![
+      "Carolyn Brown",
+      "collaboration=on behalf of the Bcool project team",
+      "affiliation=Univ A",
+    ],
+  ];
+  assert_eq!(off, want);
+  assert_eq!(two, want);
+}

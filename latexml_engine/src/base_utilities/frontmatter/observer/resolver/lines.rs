@@ -681,6 +681,110 @@ pub(super) fn joined_single_name(events: Vec<Event>) -> Vec<Event> {
   out
 }
 
+/// A names line's pieces with a name's collaboration remark that notes, layout or a command's own gap part read whole
+/// (rows C2-C4 of the old reader's names split, `author_block/collaborations.rs` `name_and_remark` and
+/// `name_takes_annotations`): the Name events of one piece, parted only by notes, note references, layout and gaps inside
+/// one command ([`gap_inside_one_command`]), are one Name where their text is a name and its remark naming a
+/// collaboration — or, after a name, such a remark — and the first alone is neither; the notes go after it, the name's
+/// (`Christian Schmidt (for the BNL-Bielefeld\fnref{col1} Collaboration)`, elsarticle, 1212.4278; `Kalanand
+/// Mishra\footnote{…} (for the \babar\ collaboration)`, the remark in a box, 0711.1544). A remark reads as a collaboration
+/// as `reads_as_collaboration` reads it, or after the name's notes or marks as `speaks_for_after_notes` does (`for
+/// CAPP/IBS`, 1702.03664).
+pub(super) fn remark_pieces_joined(events: Vec<Event>) -> Vec<Event> {
+  // (a note's reference, `\fnref`, `\footnotemark`: the annotations `name_takes_annotations` moves onto the name)
+  let note_reference = |e: &Event| {
+    e.kind == EventKind::Mark
+      && e
+        .role
+        .as_deref()
+        .is_some_and(|r| r == "request" || r.starts_with("footnotemark"))
+  };
+  let refs: Vec<&Event> = events.iter().collect();
+  let named = |e: &Event| e.kind == EventKind::Name && e.text.chars().any(char::is_alphanumeric);
+  // (the remark a text holds after the name it reads as, or is after a name; `annotated` its name's notes or marks)
+  let remark = |text: &str, after_name: bool, annotated: bool| {
+    let reads = |rest: &str| {
+      reads_as_collaboration(rest, false) || (annotated && speaks_for_after_notes(rest))
+    };
+    name_before_remark(text).is_some_and(|name| reads(text.trim()[name.len()..].trim()))
+      || (after_name && is_name_remark(text) && reads(text))
+      || (after_name && annotated && speaks_for_after_notes(text))
+  };
+  let mut out: Vec<Event> = Vec::with_capacity(events.len());
+  let mut i = 0;
+  while i < events.len() {
+    if !named(&events[i]) {
+      out.push(events[i].clone());
+      i += 1;
+      continue;
+    }
+    // (a name before it in the line, and its notes or marks between)
+    let before = refs[..i]
+      .iter()
+      .rposition(|e| named(e) || matches!(e.kind, EventKind::Sep(_) | EventKind::Break));
+    let after_name = before.is_some_and(|b| named(refs[b]));
+    let annotated = before.is_some_and(|b| {
+      refs[b + 1..i]
+        .iter()
+        .any(|e| matches!(e.kind, EventKind::Note | EventKind::Mark))
+    });
+    let mut last = i;
+    let mut j = i + 1;
+    while j < events.len() {
+      match &events[j].kind {
+        EventKind::Layout | EventKind::Note => j += 1,
+        EventKind::Mark if note_reference(&events[j]) => j += 1,
+        EventKind::Sep(SepKind::Gap { .. })
+          if j + 1 < events.len() && gap_inside_one_command(&refs, j + 1, refs[j]) =>
+        {
+          j += 1;
+        },
+        _ if named(&events[j]) => {
+          last = j;
+          j += 1;
+        },
+        _ => break,
+      }
+    }
+    let alone = remark(&events[i].text, after_name, annotated);
+    let pieces: Vec<&Event> = refs[i..=last]
+      .iter()
+      .copied()
+      .filter(|e| named(e))
+      .collect();
+    let text = pieces
+      .iter()
+      .map(|e| e.text.trim())
+      .collect::<Vec<_>>()
+      .join(" ");
+    // (the notes inside it count as the name's when they part the name from its remark)
+    let inside = refs[i..=last]
+      .iter()
+      .any(|e| e.kind == EventKind::Note || note_reference(e));
+    if pieces.len() < 2 || alone || !remark(&text, after_name, annotated || inside) {
+      out.push(events[i].clone());
+      i += 1;
+      continue;
+    }
+    out.push(Event {
+      text,
+      span: match (events[i].span, events[last].span) {
+        (Some((a, _)), Some((_, b))) => Some((a, b)),
+        (a, b) => a.or(b),
+      },
+      ..events[i].clone()
+    });
+    out.extend(
+      events[i..=last]
+        .iter()
+        .filter(|e| e.kind == EventKind::Note || note_reference(e))
+        .cloned(),
+    );
+    i = last + 1;
+  }
+  out
+}
+
 /// Whether the Name event at `i` follows a Name with only a gap (and layout) between them.
 pub(super) fn only_gap_between(events: &[&Event], i: usize) -> bool {
   let mut before = events[..i]
@@ -989,6 +1093,7 @@ impl Resolver {
     } else {
       owned
     };
+    let owned = remark_pieces_joined(owned);
     let line = &Line {
       column:      line.column,
       events:      owned.iter().collect(),
@@ -1192,6 +1297,25 @@ impl Resolver {
             self.collaboration(index, event, &covered, &text);
             last_covered = covered;
           }
+          uncovered = made.len();
+          after_collaboration = true;
+          last_sep = None;
+        },
+        // (a remark after a name's notes or marks naming whom the author speaks for is the names' collaboration, no name
+        // and no part of one, row C2 (`speaks_for_after_notes`): `Ann Able\inst{1}\fnsep\thanks{…} for CAPP/IBS`, webofc,
+        // 1702.03664)
+        EventKind::Name
+          if !made.is_empty()
+            && speaks_for_after_notes(&event.text)
+            && events[..i]
+              .iter()
+              .rev()
+              .take_while(|e| e.kind != EventKind::Name)
+              .any(|e| matches!(e.kind, EventKind::Note | EventKind::Mark)) =>
+        {
+          let covered = made[uncovered.min(made.len())..].to_vec();
+          self.collaboration(index, event, &covered, event.text.trim());
+          last_covered = covered;
           uncovered = made.len();
           after_collaboration = true;
           last_sep = None;
@@ -1518,7 +1642,13 @@ impl Resolver {
 
   /// A collaboration a names line reads (`reads_as_collaboration`): a `collaboration` contact on each creator it
   /// covers, as today's reader gives it (`Collaborations`, OXIDIZED_DESIGN_DIVERGENCES #946).
-  fn collaboration(&mut self, index: usize, event: &Event, covered: &[usize], text: &str) {
+  pub(super) fn collaboration(
+    &mut self,
+    index: usize,
+    event: &Event,
+    covered: &[usize],
+    text: &str,
+  ) {
     self.collaboration_from = self.out.creators.len();
     for &c in covered {
       self.attach(

@@ -154,9 +154,9 @@ fn an_entry_of_several_pieces_is_written_whole() {
 
 /// What today's name held besides the name moves to where the reading puts it — but a remark on the name stays the
 /// name's: the line under it, `{\footnotesize for the Example collaboration}`, is the collaboration the name speaks
-/// for (`is_name_remark`; review rev94a S6), one personname in the reading (1502.03246: 94a made it an affiliation) and
-/// the name's collaboration contact in today's since batch 97d (OXIDIZED_DESIGN_DIVERGENCES #946; the reading's line
-/// under the name, resolver/blocks.rs, not yet — so the writer holds today's back); and `\and` columns whose last is a line of marked entries over an e-mail line, each piece a creator
+/// for (`is_name_remark`; review rev94a S6; 1502.03246: 94a made it an affiliation), the name's collaboration contact
+/// in today's since batch 97d and in the reading since NL1 (OXIDIZED_DESIGN_DIVERGENCES #946, #980; rule table RT3 row
+/// C5, resolver/blocks.rs — the writer had held today's back); and `\and` columns whose last is a line of marked entries over an e-mail line, each piece a creator
 /// of today's (2308.10621): the legend is the starred names' note, the entry the line under it continues read on over
 /// the break (`line:continued`), each item in print order.
 #[test]
@@ -168,10 +168,11 @@ fn what_a_name_held_is_written_where_the_reading_puts_it() {
     "affiliation=Univ X, Sometown, Country",
   ]];
   let reading = assert_reading(tex, Some(xml), &[
-    "C Ann Able for the Example collaboration [1] | line:names name:remark",
+    "C Ann Able [1] | line:names",
     "  a Univ X, Sometown, Country | ruling1:request",
+    "  c collaboration for the Example collaboration | line:names collaboration",
   ]);
-  assert_eq!(reading.3, Value::from("declined: the creators' names"));
+  assert_eq!(reading.3, Value::from("same"));
   assert_eq!(default_mode_creators(tex), owned(xml));
   let tex = repro!("author_names_reparted_columns_with_a_continued_line.tex");
   // (the continued line's list sharing the domain each an e-mail of the name it spells, Lab Y keeping its words — 95c,
