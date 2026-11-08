@@ -243,14 +243,15 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
   ("collaborations.rs lx@add@", 2),
   ("dispatch.rs annotate=", 2),
   ("dispatch.rs lx@add@", 10),
-  ("email_block_calls.rs lx@add@", 6),
+  // (MV1, 6 -> 5, and `notes.rs`' 2 -> 0: `is_email_command` and `document_note_call`, `note_call_end` moved to the emitter,
+  // `writer/calls.rs`, which writes Perl's calls; no emission added)
+  ("email_block_calls.rs lx@add@", 5),
   ("email_lines.rs lx@add@", 7),
   ("line_kinds.rs annotate=", 1),
   ("line_kinds.rs lx@add@", 4),
   // (MV1, 3 -> 2 and 8 -> 2: the token primitives that recognize the API's commands in a note (`NAME_ANNOTATIONS`, `name_text`)
   // moved to `classify/`; they read, emit nothing)
   ("name_text.rs lx@add@", 2),
-  ("notes.rs lx@add@", 2),
 ];
 
 /// The old reader's non-blank code lines at int140a: a ceiling, for the growth its emissions don't show (108a's +703
@@ -315,25 +316,7 @@ const ONE_ENGINE_REACH: &[(&str, usize)] = &[
   // (MV1, a false pair, until step 6 teaches the fence a file's own definitions: `project_role`'s local closure `author`, moved
   // with it, which the count reads as the driver's method `Collaborations::author`; no use of the old reader)
   ("classify/notes.rs author", 4),
-  ("insert.rs symbol_mark_key", 1),
-  ("observer/writer/emit.rs document_note_call", 2),
-  ("observer/writer/emit.rs entry_mark", 1),
-  ("observer/writer/emit.rs mark_label", 1),
-  ("observer/writer/emit.rs note_body", 1),
-  ("observer/writer/emit.rs note_call_end", 2),
-  ("observer/writer/emit.rs rewrite_symbol_superscripts", 1),
-  ("observer/writer/emit.rs split_wrapped_affiliation_marks", 1),
   ("observer/writer/emit.rs whole_block_author", 2),
-  ("place.rs entry_mark", 2),
-  ("place.rs mark_label", 2),
-  ("place.rs queued_name", 2),
-  ("queue_reading.rs mark_label", 1),
-  ("queue.rs entry_mark", 1),
-  ("relocate.rs queued_name", 1),
-  ("shared_row/emails.rs address_tokens", 1),
-  ("shared_row/emails.rs email_command_address", 3),
-  ("shared_row/emails.rs is_email_command", 2),
-  ("shared_row.rs queued_name", 1),
 ];
 
 /// The names the old reader exports into `base_utilities`: the `pub`, `pub(crate)` and `pub(in …)` items of `mod.rs` and of
@@ -984,7 +967,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("apa7_cls.rs", 7),
   ("authblk_sty.rs", 23),
   // (F1r2, 1288 -> 1285: the membership readout finds its commas by `Token::group_step`, no catcode match)
-  ("author_block", 924),
+  ("author_block", 826),
   // (MV1: moved from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
   ("classify", 347),
   ("defs/author_macros", 20),
@@ -1049,6 +1032,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("sv_support_sty.rs", 35),
   ("webofc_cls.rs", 0),
   ("writer/apply", 7),
+  // (MV1: moved from `author_block` with the emitter's vocabulary, 924 = 826 + 98; none added)
+  ("writer/calls", 98),
   // (a new file, what is left of `writer/plan`'s walk-backs: brace balance and a formula's shifts; the two rows together fell by 25, Z3)
   ("writer/content", 7),
   // (Z4a, a new file: the emitter builds Perl's calls from the reading, its reads a call's own keys and pieces, `text_tokens` and the
@@ -1079,6 +1064,7 @@ const FRONTMATTER_AREAS: &[(&str, &str)] = &[
   ("writer/plan", "observer/writer/plan.rs"),
   ("writer/apply", "observer/writer/apply.rs"),
   ("writer/content", "observer/writer/content.rs"),
+  ("writer/calls", "observer/writer/calls.rs"),
   ("writer/emit", "observer/writer/emit.rs"),
   ("writer/repart", "observer/writer/repart.rs"),
   ("writer/dom+mod", "observer/writer/"),
@@ -1269,6 +1255,9 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // (Z4a, 81 -> 107: `writer/emit.rs`, the calls it builds: Perl's `\lx@add@authors`, `\lx@annotate@frontmatter@now`, the
   // queue's own `\lx@frontmatter@item*`; it writes them, no decision reads them)
   ("writer", 107),
+  // (MV1: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
+  // mark and note commands it reads; none added)
+  ("writer/calls", 44),
 ];
 
 /// revZ2r2: the token-read count's regexes are blind outside `resolver/` to a spelling not written as a comparison. This counts what such

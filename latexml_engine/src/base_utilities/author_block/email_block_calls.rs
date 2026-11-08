@@ -434,21 +434,6 @@ pub(in crate::base_utilities) fn adds_to_frontmatter(cs: &Token) -> Result<bool>
   })
 }
 
-/// A class's email command: a macro whose expansion begins with a frontmatter email call — `\lx@add@email`
-/// (JHEP.cls.ltxml's `\email`), or one that decides how to record the address (AASTeX 7's `\lx@add@aas@email`, the
-/// `\lx@add@email@metadata` of an address the PDF does not print).
-pub(in crate::base_utilities) fn is_email_command(cs: &Token) -> Result<bool> {
-  let Some(def) = lookup_definition(cs)? else {
-    return Ok(false);
-  };
-  Ok(
-    matches!(def.get_expansion(), Some(ExpansionBody::Tokens(body))
-    if body.unlist_ref().first().is_some_and(|first| first.with_str(|name| {
-      name.strip_prefix("\\lx@add@").is_some_and(|rest| rest.contains("email"))
-    }))),
-  )
-}
-
 /// A marker-less line that is *purely* a list of email addresses — a shared
 /// `\texttt{a@x, b@y,}` / `\email{...}` / `\{a,b\}@x` line covering all authors. Like
 /// `line_is_email` but tolerates a comma-separated list (and the trailing

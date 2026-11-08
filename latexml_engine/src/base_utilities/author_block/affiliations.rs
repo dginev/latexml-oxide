@@ -1598,35 +1598,6 @@ pub(in crate::base_utilities) fn requesting_authors(
     .collect()
 }
 
-/// The name a queued author entry holds: the content of its `\lx@personname` (inside `\lx@author@withinst`), not the
-/// `\lx@add@frontmatter@now{ltx:creator}[role=author]` around it, whose words read as surnames ("author" spelled in
-/// `Corresponding author: …`; guard `perfect_kernel_batch64u::osa_style_address_email_line`).
-pub(in crate::base_utilities) fn queued_name(entry: &Tokens) -> Tokens {
-  let tokens = entry.unlist_ref();
-  for cs in ["\\lx@author@withinst", "\\lx@personname"] {
-    if let Some(at) = tokens.iter().position(|t| *t == T_CS!(cs))
-      && tokens
-        .get(at + 1)
-        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
-    {
-      let mut depth = 0usize;
-      for (j, t) in tokens.iter().enumerate().skip(at + 1) {
-        match t.get_catcode() {
-          Catcode::BEGIN => depth += 1,
-          Catcode::END => {
-            depth -= 1;
-            if depth == 0 {
-              return Tokens::new(tokens[at + 2..j].to_vec());
-            }
-          },
-          _ => {},
-        }
-      }
-    }
-  }
-  entry.clone()
-}
-
 /// Whether the queued authors' names (`queued_name`) print every word `text` prints — each word one of a name's, or
 /// an initial of one, accents aside (`visible_name_text`), or the word "and" between names: `text` then prints no
 /// word the authors do not. True for a `text` printing no word; else false when no author is queued. svjour3's
@@ -1800,23 +1771,6 @@ pub(in crate::base_utilities) fn answered_symbol_key(mark: &[Token]) -> Option<S
   }
   let label = mark_label(mark)?;
   symbol_mark_key(label.strip_prefix("affiliation:").unwrap_or(&label))
-}
-
-/// A symbol mark's key, made of its glyph (`unanswered_mark_text`: `\dag` and `\dagger` alike, `\ast` and `*` alike)
-/// as hexadecimal code points (`sym-2020`): only letters, digits and `-`, so it passes through a keyval's tokenization
-/// as it is (a `#`, `\#`'s glyph, read back as a parameter token raised `Error:misdefined:#`).
-pub(in crate::base_utilities) fn symbol_mark_key(mark: &str) -> Option<String> {
-  let glyph = unanswered_mark_text(mark)?.replace('\u{2217}', "*");
-  (!glyph.chars().all(char::is_alphanumeric)).then(|| {
-    s!(
-      "sym-{}",
-      glyph
-        .chars()
-        .map(|c| format!("{:x}", c as u32))
-        .collect::<Vec<_>>()
-        .join("-")
-    )
-  })
 }
 
 /// The queue position of the current author group's first author (`\lx@frontmatter@group@start`; 1 when no class marks

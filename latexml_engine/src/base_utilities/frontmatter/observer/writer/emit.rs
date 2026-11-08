@@ -16,13 +16,14 @@ use std::{
 use latexml_core::document::tag::RawFrontmatter;
 
 use super::{
+  calls::{document_note_call, note_call_end},
   dom::{Kind, norm},
   plan::{self, Key, Owner, api_call},
   repart::{entry_span, prefix_tokens},
   *,
 };
 use crate::base_utilities::{
-  author_block::{document_note_call, note_call_end, whole_block_author},
+  author_block::whole_block_author,
   defs::{
     author_macros::KEPT_WHOLE,
     frontmatter_api::{LABEL_PRINTS, PRINTED_LABEL},

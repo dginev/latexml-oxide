@@ -263,158 +263,6 @@ const FONT_WRAPPERS: &[&str] = &[
   "\\emph",
 ];
 
-/// The address of a call of the email command `cmd` (`\email{x}`) as that command sets it: in the font the class's
-/// command gives its address, `\lx@address@urlfont` (llncs's `\email`, `{\tt#1}` at llncs.cls:897; amsart's, JHEP's)
-/// or `\lx@address@textfont` (svjour3's, REVTeX 4.1's), else as written — so a contact the author block makes of the
-/// call (`\institute{… \\ \email{a@x}}`, `E-mail: \email{x}`) is set as the command's own is. Only the command's own
-/// expansion body is read, one level: a command reaching the address macro through another macro is not seen.
-pub(in crate::base_utilities) fn email_command_address(
-  cmd: &Token,
-  address: Tokens,
-) -> Result<Tokens> {
-  let fonts = [
-    T_CS!("\\lx@address@urlfont"),
-    T_CS!("\\lx@address@textfont"),
-  ];
-  let font = match lookup_definition(cmd)?
-    .as_ref()
-    .and_then(|def| def.get_expansion())
-  {
-    Some(ExpansionBody::Tokens(body)) => body
-      .unlist_ref()
-      .iter()
-      .find(|t| fonts.contains(t))
-      .copied(),
-    _ => None,
-  };
-  Ok(match font {
-    Some(font) => Invocation!(font, vec![Some(address)]),
-    None => address,
-  })
-}
-
-/// The addresses `addrs` of an email `line` as tokens, the line's whole-line wrapper (`\texttt`, `\small`, `\url`)
-/// repeated on each — but not an email command's, the contact itself.
-pub(in crate::base_utilities) fn address_tokens(
-  line: &Tokens,
-  addrs: Vec<String>,
-) -> Result<Vec<Tokens>> {
-  // (a row of addresses the `\quad`s of its join part, `dispatch`'s: each piece as it is written, its own font and link —
-  // 2609.05531's `\texttt{john3678@…} \quad \texttt{johnson.michael@…}`)
-  if let Some(pieces) = address_row_pieces(line) {
-    let mut tokens = Vec::with_capacity(addrs.len());
-    for piece in &pieces {
-      // (a piece whose one address is written in printed braces: `\{hwoo\}@skku.edu`, 2609.18328)
-      let written_out = email_addresses(piece).filter(|addresses| {
-        addresses.len() == 1
-          && piece.unlist_ref().iter().any(|t| {
-            *t == T_CS!("\\{") || *t == T_CS!("\\lbrace") || *t == T_CS!("\\textbraceleft")
-          })
-      });
-      match written_out {
-        Some(addresses) => tokens.extend(address_tokens(piece, addresses)?),
-        None => tokens.extend(bare_email_addresses(piece)?.unwrap_or_default()),
-      }
-    }
-    if tokens.len() == addrs.len() {
-      return Ok(tokens);
-    }
-  }
-  let line_wrapper = whole_line_cs_wrapper(line).map(|(cmd, _)| cmd);
-  let wrapper = line_wrapper.filter(|cmd| !is_email_wrapper(cmd));
-  // (an email command's address set as the command sets it, [`email_command_address`])
-  let email_command = line_wrapper.filter(is_email_wrapper);
-  // (the line's links to a mailbox, by the address they reach: each address keeps its link, `\texttt{\{}\href{mailto:
-  // Xinhao.Zhang@…}{…xinhao.zhang,} \href{mailto:maxime.peyrard@…}{…}\texttt{\}@…}`, 2604.19440)
-  let v = line.unlist_ref();
-  let links: Vec<(String, Vec<Token>)> = (0..v.len())
-    .filter(|at| v[*at] == T_CS!("\\href"))
-    .filter_map(|at| {
-      let open = at + 1 + v[at + 1..].iter().take_while(|t| **t == T_SPACE!()).count();
-      let target = v[open..skip_group(v, open).clamp(open, v.len())].to_vec();
-      let (text, _) = link_texts(&v[at..], 0);
-      let address = text.strip_prefix("mailto:")?.trim().to_lowercase();
-      Some((address, target))
-    })
-    .collect();
-  addrs
-    .into_iter()
-    .map(|addr| {
-      let mut toks = mouth::tokenize(TeXString::assembled(addr.replace('_', "\\_"))).unlist();
-      if let Some(cmd) = wrapper {
-        let mut wrapped = vec![cmd, T_BEGIN!()];
-        wrapped.append(&mut toks);
-        wrapped.push(T_END!());
-        toks = wrapped;
-      }
-      if email_command.is_none()
-        && let Some((_, target)) = links
-          .iter()
-          .find(|(address, _)| *address == addr.to_lowercase())
-      {
-        let mut linked = vec![T_CS!("\\href")];
-        linked.extend(target.iter().copied());
-        linked.push(T_BEGIN!());
-        linked.append(&mut toks);
-        linked.push(T_END!());
-        toks = linked;
-      }
-      match email_command {
-        Some(cmd) => email_command_address(&cmd, Tokens::new(toks)),
-        None => Ok(Tokens::new(toks)),
-      }
-    })
-    .collect()
-}
-
-/// The pieces of `line` a top-level `\quad` or `\qquad` parts ([`without_row_spacing`] each), `None` unless two or more: a row of
-/// addresses, `dispatch`'s join or a class's own (`\email{\quad a@x \quad\qquad b@y}`, 2601.03839, 2606.13152).
-fn address_row_pieces(line: &Tokens) -> Option<Vec<Tokens>> {
-  let v = line.unlist_ref();
-  let mut pieces = Vec::new();
-  let (mut depth, mut from) = (0usize, 0usize);
-  for (at, t) in v.iter().enumerate() {
-    match t.get_catcode() {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END => depth = depth.saturating_sub(1),
-      _ if depth == 0 && (*t == T_CS!("\\quad") || *t == T_CS!("\\qquad")) => {
-        pieces.push(Tokens::new(without_row_spacing(v[from..at].to_vec())));
-        from = at + 1;
-      },
-      _ => {},
-    }
-  }
-  pieces.push(Tokens::new(without_row_spacing(v[from..].to_vec())));
-  pieces.retain(|piece| !piece.is_empty());
-  (pieces.len() > 1).then_some(pieces)
-}
-
-/// A piece of a row of addresses without what parts it from the next, no text of an address: the spaces and ties around it
-/// (`\texttt{a@x} ~\quad~~ \texttt{b@y}`, 2610.06195, whose ties read `˜`) and the comma or semicolon it ends with, inside a
-/// group that ends it too (`a@x,`, `\texttt{a@x,}`; 2505.22665, 2505.05785's line ending `\texttt{simon.zl@…},`).
-pub(in crate::base_utilities) fn without_row_spacing(mut tokens: Vec<Token>) -> Vec<Token> {
-  let spacing = |t: &Token| *t == T_SPACE!() || *t == T_ACTIVE!('~');
-  // (and the skip it opens with, `\vspace{0.1cm} \texttt{liuqing25@…} \quad \texttt{wuou@…}`, 2606.01635)
-  let lead = leading_spacing_end(&tokens);
-  tokens.drain(..lead);
-  let lead = tokens.iter().take_while(|t| spacing(t)).count();
-  tokens.drain(..lead);
-  while tokens.last().is_some_and(spacing) {
-    tokens.pop();
-  }
-  let mut end = tokens.len();
-  while end > 0 && tokens[end - 1].get_catcode() == Catcode::END {
-    end -= 1;
-  }
-  if end > 0 && (tokens[end - 1] == T_OTHER!(",") || tokens[end - 1] == T_OTHER!(";")) {
-    tokens.remove(end - 1);
-  }
-  while tokens.last().is_some_and(spacing) {
-    tokens.pop();
-  }
-  tokens
-}
-
 /// A name line and the address it ends with, as the JMLR family writes an author (`\name Ann Able \email ann@uni.edu`,
 /// jmlr2e.sty:271-273; 2405.13980, 2407.04153, 2411.04991, 2502.14381, 2511.15722): the name, and the line's last run
 /// without a space, the class's email markup with it (`\email ann@uni.edu`), when that run prints one plain address and a
@@ -503,21 +351,6 @@ pub(in crate::base_utilities) fn name_and_trailing_email(
     name.pop();
   }
   Ok((Tokens::new(name), Some(run)))
-}
-
-/// The addresses of an author-block line that is only email addresses (`\texttt{a@x, b@y}`, `{a,b}@dom`), each as
-/// tokens ([`address_tokens`]); a line of one address is itself (`\href{mailto:a@x}{a@x}` stays a link). `None` for
-/// any other line.
-pub(in crate::base_utilities) fn bare_email_addresses(
-  line: &Tokens,
-) -> Result<Option<Vec<Tokens>>> {
-  let Some(addrs) = email_addresses(line).filter(|addrs| !addrs.is_empty()) else {
-    return Ok(None);
-  };
-  if addrs.len() == 1 {
-    return Ok(line_is_email(line).then(|| vec![line.clone()]));
-  }
-  address_tokens(line, addrs).map(Some)
 }
 
 /// The definitions in force where a class's title code reads `\@author`: the statements of the groups still open there
@@ -776,19 +609,6 @@ pub(in crate::base_utilities) fn address_line_notes(
     notes.extend(call);
   }
   Ok(Some((rest, notes)))
-}
-
-/// The operand of an affiliation entry's first mark, which `\lx@sup@setlabel@affiliation` labels it by (a later
-/// superscript in the entry is its text, 63i).
-pub(in crate::base_utilities) fn entry_mark(entry: &[Token]) -> Option<Vec<Token>> {
-  mark_operands(entry).into_iter().next()
-}
-
-/// The label `\lx@sup@setlabel@affiliation` sets for a mark's operand: the first of its labels.
-pub(in crate::base_utilities) fn mark_label(operand: &[Token]) -> Option<String> {
-  clean_frontmatter_labels(&Tokens::new(operand.to_vec()).to_string(), "affiliation")
-    .into_iter()
-    .next()
 }
 
 /// The queue position of the first author of the row an address shared by a row of names belongs to

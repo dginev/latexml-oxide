@@ -148,149 +148,6 @@ pub(in crate::base_utilities) fn is_legend_line(line: &Tokens) -> bool {
     && has_name_letter(v)
 }
 
-/// Rewrite footnote-SYMBOL author superscripts — `$^{*}$`, `${}^{\dagger}$`,
-/// `\textsuperscript{\ddagger}`, a bare `^{*}` — onto the visible
-/// `\lx@frontmatter@keepsup` sentinel, BEFORE author-block branch selection.
-///
-/// Two effects, both wanted (OXIDIZED_DESIGN #52; witness arXiv:2506.06941, where
-/// Iman Mirzadeh's literal `$^{*}$` was silently dropped):
-///   * the mark no longer counts as an affiliation superscript, so a block whose
-///     ONLY superscript is such a note-mark takes the clean no-marker author
-///     branch instead of the affiliation-linking one;
-///   * the symbol renders as a real superscript instead of being consumed into an
-///     `affiliation:*` label that matches no affiliation and is discarded.
-///
-/// A number or letter glued to such a symbol (`$^{1*}$`, `\textsuperscript{a\dagger}`, the symbol first too:
-/// `\textsuperscript{*1}`, 2505.22662) is the affiliation mark it is and the symbol beside it (`split_glued_symbol`): the
-/// mark requests affiliation 1, the symbol is shown, as for `$^{1,*}$` (else the one request `affiliation:1*` matched no
-/// affiliation, and affiliation 1 went to no one; authblk's `\author{Ann$^{1*}$}`, 77n r3; the neurips fixture's Wenqi
-/// Shao, 2507.06670). Both are written in the order they print, for an unanswered mark to show there
-/// (`show_unanswered_marks`: 2610.07087's `$^{1*}$`). The symbol is shown as written: a math `*` as `∗`, as the unsplit
-/// `$^{1,*}$` keeps it (2210.14772, 2508.09827, 2505.11121; [`keepsup_in_math`]), a text one as `*`.
-///
-/// NUMERIC/lettered affiliation marks (`$^{1}$`, `\textsuperscript{a}`) are left
-/// untouched, so affiliation linking is unaffected. Only the specific
-/// superscript-mark token shapes are matched; a superscript inside real math
-/// (`$x^2$`) is not (its base is not empty), so math content is preserved.
-pub(in crate::base_utilities) fn rewrite_symbol_superscripts(tokens: Tokens) -> Tokens {
-  let src = tokens.unlist();
-  let n = src.len();
-  let mut out: Vec<Token> = Vec::with_capacity(n);
-  let mut i = 0;
-  // Read a superscript operand at `src[k]`: a braced `{...}` group, or a single
-  // token. Returns (operand tokens, index past the operand) or None.
-  let read_operand = |k: usize| -> Option<(Vec<Token>, usize)> {
-    if k >= n {
-      return None;
-    }
-    if src[k] == T_BEGIN!() {
-      let mut depth = 1usize;
-      let mut m = k + 1;
-      let mut inner = Vec::new();
-      while m < n && depth > 0 {
-        if src[m] == T_BEGIN!() {
-          depth += 1;
-        } else if src[m] == T_END!() {
-          depth -= 1;
-          if depth == 0 {
-            break;
-          }
-        }
-        inner.push(src[m]);
-        m += 1;
-      }
-      if depth == 0 {
-        Some((inner, m + 1))
-      } else {
-        None
-      }
-    } else {
-      Some((vec![src[k]], k + 1))
-    }
-  };
-  while i < n {
-    let t = src[i];
-    // `\textsuperscript{sym}` — always braced in practice.
-    if t == T_CS!("\\textsuperscript")
-      && src.get(i + 1) == Some(&T_BEGIN!())
-      && let Some((sym, next)) = read_operand(i + 1)
-      && is_footnote_symbol_operand(&sym)
-    {
-      out.extend(keepsup(sym));
-      i = next;
-      continue;
-    }
-    if t == T_CS!("\\textsuperscript")
-      && src.get(i + 1) == Some(&T_BEGIN!())
-      && let Some((operand, next)) = read_operand(i + 1)
-      && let Some(glued) = glued_marks(&operand)
-    {
-      for part in glued {
-        match part {
-          GluedPart::Symbol(symbol) => out.extend(keepsup(symbol)),
-          GluedPart::Marks(marks) => {
-            out.extend([t, T_BEGIN!()]);
-            out.extend(marks);
-            out.push(T_END!());
-          },
-        }
-      }
-      i = next;
-      continue;
-    }
-    // `$ [ {} ] ^ sym $` — a math span whose whole content is a superscript on an
-    // empty base. Rewrite the entire span (delimiters included) to a text sup.
-    if t == T_MATH!()
-      && let Some(close) = (i + 1..n).find(|&m| src[m] == T_MATH!())
-    {
-      // optional empty base `{}` before the superscript
-      let p = if i + 2 < close && src[i + 1] == T_BEGIN!() && src[i + 2] == T_END!() {
-        i + 3
-      } else {
-        i + 1
-      };
-      if p < close
-        && src[p] == T_SUPER!()
-        && let Some((sym, next)) = read_operand(p + 1)
-        && next == close
-        && is_footnote_symbol_operand(&sym)
-      {
-        out.extend(keepsup(sym));
-        i = close + 1;
-        continue;
-      }
-      if p < close
-        && src[p] == T_SUPER!()
-        && let Some((operand, next)) = read_operand(p + 1)
-        && next == close
-        && let Some(glued) = glued_marks(&operand)
-      {
-        for part in glued {
-          match part {
-            GluedPart::Symbol(symbol) => out.extend(keepsup_in_math(symbol)),
-            GluedPart::Marks(marks) => {
-              out.extend_from_slice(&src[i..=p]);
-              out.push(T_BEGIN!());
-              out.extend(marks);
-              out.extend([T_END!(), T_MATH!()]);
-            },
-          }
-        }
-        i = close + 1;
-        continue;
-      }
-    }
-    // Only the math-delimited (`$…$`) and `\textsuperscript{…}` spellings are
-    // rewritten — the correct ways to write a text superscript. A bare `^` is NOT
-    // matched here: outside math it is invalid LaTeX, and a `^` reached mid-scan is
-    // the superscript operator of real inline math on a non-empty base (`$a^{*}$`),
-    // which must be left intact.
-    out.push(t);
-    i += 1;
-  }
-  Tokens::new(out)
-}
-
 /// `tokens` with a mark that leads a line of labelled entries written without the symbols glued to it (`$^{*1}$Kyoto
 /// University`, `$^{1*}$Univ X`, 2606.23258): the mark labels the line, the symbol with it, and a line prints no label in
 /// its text — it read "* Univ X", or matched no name once the names' `*1` asks for 1 and `*` apart (`glued_marks`).
@@ -362,36 +219,6 @@ pub fn glued_line_marks_as_marks(tokens: Tokens, first_line: bool) -> Tokens {
   Tokens::new(out)
 }
 
-/// [`keepsup`] for a symbol glued to a mark in math (`$^{1*}$`, `$^{1,2*}$`, 2505.11121): a math `*` prints `∗`, shown
-/// so (FIDELITY_CHARTER §4, "stays as written"; `\textsuperscript{1*}` keeps its text `*`), its key the `*` the entries
-/// answer; beside a second symbol too (`$^{2,1*\dagger}$` prints `∗†`: 2404.16821, 2505.17017). A lone `$^{*}$` shows
-/// `*` as it always has, in [`rewrite_symbol_superscripts`]' own branch.
-fn keepsup_in_math(sym: Vec<Token>) -> Vec<Token> {
-  let shown = sym
-    .iter()
-    .map(|token| {
-      if *token == T_OTHER!("*") {
-        T_CS!("\\ast")
-      } else {
-        *token
-      }
-    })
-    .collect();
-  let mut v = visible_sup(shown);
-  v.extend([T_CS!("\\lx@frontmatter@symbolmark"), T_BEGIN!()]);
-  v.extend(sym);
-  v.push(T_END!());
-  v
-}
-
-/// `\lx@frontmatter@keepsup{<sym>}` as a token list: a superscript shown as it is, requesting nothing.
-fn visible_sup(sym: Vec<Token>) -> Vec<Token> {
-  let mut v = vec![T_CS!("\\lx@frontmatter@keepsup"), T_BEGIN!()];
-  v.extend(sym);
-  v.push(T_END!());
-  v
-}
-
 /// The footnote-symbol marks [`keepsup`] wrote into `tokens` (the `\lx@frontmatter@symbolmark` operands, as text), at
 /// any depth: `Ann Able$^{\dagger}$` and `$^{\dagger}$Univ A` both hold `\dagger`.
 pub(in crate::base_utilities) fn symbol_marks(tokens: &Tokens) -> Vec<String> {
@@ -422,16 +249,6 @@ pub(in crate::base_utilities) fn symbol_marks(tokens: &Tokens) -> Vec<String> {
     }
   }
   marks
-}
-
-/// A footnote-symbol author mark: shown (`visible_sup`), and requesting the affiliation of its symbol
-/// (`\lx@frontmatter@symbolmark`).
-pub(in crate::base_utilities) fn keepsup(sym: Vec<Token>) -> Vec<Token> {
-  let mut v = visible_sup(sym.clone());
-  v.extend([T_CS!("\\lx@frontmatter@symbolmark"), T_BEGIN!()]);
-  v.extend(sym);
-  v.push(T_END!());
-  v
 }
 
 /// Rewrite an ordinal suffix superscript after a numeral (`5\textsuperscript{th}`, `21$^{st}$`) onto a visible
