@@ -2,7 +2,7 @@
 //! the main session's rulings on N2r2): the content check on the placed output (`resolver::placed`, under the switch's `=2`
 //! only) counts a shared item as often as the inks print its text, at least the most copies one creator holds and at most
 //! its copies in all (`a_line_printed_per_author_is_no_loss`; the word lost beside a shared item printed once stays counted,
-//! `perfect_kernel_batchn2r2::a_shared_copy_never_hides_a_loss`); a contact's label (its `name`) is the label's words, never
+//! `perfect_kernel_batchn2r2::a_shared_copy_hides_no_differently_worded_loss`); a contact's label (its `name`) is the label's words, never
 //! its text's (`a_class_label_in_a_name_is_no_excess`, 2307.11138); and under `=2` the flush reads every paper as the census
 //! does, so the check reads the creator calls of a paper with no author block in production too
 //! (`the_calls_are_read_without_the_census`, 1401.5951). Each a mechanism of its own: the shared item's count, the label's

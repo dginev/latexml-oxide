@@ -15,8 +15,9 @@
 //! print more often than the placed frontmatter holds it — a shared item (one printed `\affiliation`, `annotate=all`)
 //! as often as the inks print its text, at least the most copies one creator holds and at most its copies in all, as
 //! the excess counts it (a line printed under each author and kept as one shared item is no loss), a name every copy,
-//! so a shared entry's copies never hide a word lost elsewhere (review revN2: `IDSIA` printed twice, one copy lost, the
-//! shared affiliation printed once and held twice) —, a publication note, a contact's label (its `name`, with its item,
+//! so a shared entry's copies hide no word lost on a line of other words (review revN2: `IDSIA` printed twice, one copy
+//! lost, the shared affiliation printed once and held twice; a lost line printing the shared item's own words is still
+//! covered, review revN2r3's `q1e`, SYNC leftovers 13f) —, a publication note, a contact's label (its `name`, with its item,
 //! never its text's where the text opens with it: a class's `Email: `, which the rehearsal's `\email` doesn't print,
 //! 2307.11138) and a link's target holding it too. *Excess*: a word placed more often than printed — a shared
 //! item counted the same way; an e-mail contact every time, an address being one person's (one address on two creators,

@@ -1,7 +1,7 @@
 //! Guards for N2r2 (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`, "The safety net", bar (2); OXIDIZED_DESIGN_DIVERGENCES #980;
 //! review revN2): the content check on the placed output (`resolver::placed`, under the switch's `=2` only) counts a shared
 //! item once per the most copies one creator holds on the lost side too, so its copies never hide a word lost elsewhere
-//! (`a_shared_copy_never_hides_a_loss`); a block written whole exempts only the creator it became from the excess count
+//! (`a_shared_copy_hides_no_differently_worded_loss`); a block written whole exempts only the creator it became from the excess count
 //! (`a_whole_block_exempts_only_its_own_creator`); every word counts, a mark excluded by its event, not by its length
 //! (`a_lost_letter_is_counted`); and the rehearsal's command names never reach the output: a verbatim e-mail argument's
 //! `\and` parts its addresses (`an_email_parted_by_and_keeps_its_addresses`, 2106.06418). Each a mechanism of its own: the
@@ -30,7 +30,7 @@ fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).co
 /// its row, counts once, so the `IDSIA` the second row's line loses is missing (review revN2 finding 1, its `m1.tex`: the
 /// shared affiliation's two copies made up for the lost one, no Warning).
 #[test]
-fn a_shared_copy_never_hides_a_loss() {
+fn a_shared_copy_hides_no_differently_worded_loss() {
   let tex = repro!("emit_content_a_shared_copy_hides_no_loss");
   let (log, xml) = run(tex, 2);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
