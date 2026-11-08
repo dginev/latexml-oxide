@@ -597,7 +597,22 @@ fn block_names(
         let (s, t) = (at(span.0)?, at(span.1)?);
         // (a `\\footnotemark`'s number, past its span: 2209.15209)
         let t = past_option(field.tokens, s + 1).max(t);
-        if marks {
+        // (a mark past the close of a group of names the name's run opens no part of is the last name's, its own run
+        // after the name: `{Ann Able$^{\star}$, …, David López-Pérez}$^{\sharp}$`, 2504.02633 — the old reader's
+        // `math_active_scripts` read it so, `frontmatter/fallback.rs:160`, a mark after the names group; grown over the
+        // group's close, the run was no balanced one and the name lost its markup, FB1's P4)
+        let past_group = || {
+          let (name_from, name_to) = (at(found[from].1.span?.0)?, at(found[to].1.span?.1)?);
+          let closes = field.tokens.get(name_to..s)?.iter().scan(0, |depth, t| {
+            *depth += t.group_step();
+            Some(*depth)
+          });
+          Some(
+            closes.min().is_some_and(|d| d < 0)
+              && in_a_group(field.tokens, name_from, s) == name_from,
+          )
+        };
+        if marks && past_group() != Some(true) {
           grown.1 = grown.1.max(t);
         } else if let Some((tokens, _)) = field.content_of((s, t), 0, s) {
           apart.extend(tokens.unlist());
@@ -625,7 +640,11 @@ fn block_names(
       } else {
         tokens
       };
-      out.extend(apart);
+      if marks && !apart.is_empty() {
+        out.extend(rewrite_symbol_superscripts(Tokens::new(apart)).unlist());
+      } else {
+        out.extend(apart);
+      }
       Some(out)
     };
     // (each name the Name events from the last one on spell, joined)
