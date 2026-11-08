@@ -171,12 +171,18 @@ pub struct Resolved {
   /// (`Resolver::answer_listed_emails`, brief 95c G3), each as today's holds it — for the writer's name re-part, which
   /// reads them whole (`writer::give_back_addresses`, brief 95e); not in the dump
   pub listed:    Vec<Listed>,
-  /// the words a block prints that the reading drops by its own rule, each a Name event's ledger index and span: a byline's
-  /// "by" a names line opens with, which it reads as a separator (`lines::byline_dropped`, the old reader's
-  /// `without_leading_by`: `By~~{\scshape Bryna Kra}`, 2603.27258) — for the content check, which counts each as the
-  /// separator's word it is, none lost (`placed::content_check`); not in the dump
-  pub drops:     Vec<(usize, (u16, u16))>,
+  /// the words a block prints that the reading drops by its own rule, each a Name event's ledger index, span and word
+  /// (trimmed, lowercased): a byline's "by" a names line opens with, which it reads as a separator
+  /// (`lines::byline_dropped`, the old reader's `without_leading_by`: `By~~{\scshape Bryna Kra}`, 2603.27258) — for the
+  /// content check, which counts that word as the separator's word it is, none lost, and no other Name on its span (a
+  /// macro printing `By Lee Hall and Ann Able`, review revH3 3: its names stay checked, `placed::content_check`); not in
+  /// the dump
+  pub drops:     Vec<RuleDrop>,
 }
+
+/// A word the reading drops by its own rule ([`Resolved::drops`]): its Name event's ledger index, span and word (trimmed,
+/// lowercased).
+pub type RuleDrop = (usize, (u16, u16), String);
 
 /// One affiliation entry the reading took printed addresses out of ([`Resolved::taken`]): its source, its text before
 /// and after, and where each holder held it (a creator's affiliation slot; `None` the block's), with the association as

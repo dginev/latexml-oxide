@@ -1073,32 +1073,33 @@ pub(in crate::base_utilities) fn record_api_call(
 
 /// What a call no rehearsal read printed, as far as its tokens tell (`ApiCall::unread`, `Ledger::unrecorded`), read at
 /// the API boundary that records its content, so the content check reads text alone, parted into words as an ink's is
-/// (`resolver::words::printed_words`): its characters; a control symbol or a one-letter control word inside a word (an
-/// accent, `Universit\"at`, a dotless i: a letter or digit before it, a letter, a digit or a group after it, past any
-/// group's end and one-letter control word, `F\'{\i}sica`, `Bras\'\i lia`; not past a control symbol, `Smith\,\\Univ`
-/// two words) and a group there (`M{\"u}nchen`) part nothing, the word counted whole, its accents and dotless letters
+/// (`resolver::words::printed_words`): its characters; a control symbol or a one-letter control word inside a word or
+/// before its first letter (an accent, `Universit\"at`, `\'Ecole`, a dotless i: a letter, a digit or a group after it,
+/// past any group's end and one-letter control word, `F\'{\i}sica`, `Bras\'\i lia`; not past a control symbol,
+/// `Smith\,\\Univ` two words) and a group there (`M{\"u}nchen`) part nothing, the word counted whole, its accents and dotless letters
 /// unread (the check takes a word one side reads without them for the one the other prints with them, `Fsica` for
 /// `física`, `resolver::placed`); another control sequence, its argument's group (`\IEEEauthorrefmark{1}Univ Alpha` →
 /// ` 1 Univ Alpha`) or a math shift parts words. Nothing is spelled but a control sequence's length and its letter's
 /// catcode: a letter command (`Gro{\ss}e`, a control word) parts its word.
 pub(super) fn content_text(content: &Tokens) -> ContentText {
   let mut text = String::new();
-  // (where it read past a control symbol or a one-letter control word inside a word: its byte in `text`, and whether a
-  // one-letter control word, which may print a letter)
+  // (where it read past a control symbol or a one-letter control word inside a word or before its first letter, an
+  // accent opening it, `\'Ecole Normale` (review revH3 2): its byte in `text`, and whether a one-letter control word,
+  // which may print a letter)
   let mut past: Vec<(usize, bool)> = Vec::new();
   // (for each open group, whether it is a parting command's argument, which parts what is around it)
   let mut groups: Vec<bool> = Vec::new();
   let mut parted_by_command = false;
   let tokens = content.unlist_ref();
   for (at, token) in tokens.iter().enumerate() {
-    // (inside a word: a letter or digit before it, and a letter, a digit or a group after it, past any group's end and
-    // one-letter control word: `F\'{\i}sica`, `Bras\'\i lia`; a control symbol there parts, `Smith\,\\Univ` two words)
+    // (inside a word or before its first letter: a letter, a digit or a group after it, past any group's end and
+    // one-letter control word: `F\'{\i}sica`, `Bras\'\i lia`, `\'Ecole`; a control symbol before another parts,
+    // `Smith\,\\Univ` two words)
     let in_word = || {
-      text.chars().next_back().is_some_and(char::is_alphanumeric)
-        && tokens[at + 1..]
-          .iter()
-          .find(|next| next.get_catcode() != Catcode::END && !letter_cs(next))
-          .is_some_and(starts_word)
+      tokens[at + 1..]
+        .iter()
+        .find(|next| next.get_catcode() != Catcode::END && !letter_cs(next))
+        .is_some_and(starts_word)
     };
     let mut parting_command = false;
     match token.get_catcode() {
@@ -1131,7 +1132,7 @@ pub(super) fn content_text(content: &Tokens) -> ContentText {
       && at <= start + word.len()
     {
       slots.next();
-      if at > start {
+      if at >= start {
         places.push((text[start..at].chars().count(), letter));
       }
     }

@@ -98,7 +98,8 @@ fn an_open_group_rehearsals_words_are_counted() {
 /// counted. Only a word the content text read past an accent or a dotless letter in reads as a print by its base letters,
 /// a dotless allowance an `i`/`j` where its `\i`/`\j` was (RC1f; review revH1 findings 1 and 4): a plain `Lu` is no
 /// macro's `Liu`, a plain `Muller` no macro's `Müller`, both lost; exact matches come first, so the Warning names the lost
-/// `Lan` beside a printed `Lian` and the lost `Fisica` beside `F\'{\i}sica`. Distinct from
+/// `Lan` beside a printed `Lian` and the lost `Fisica` beside `F\'{\i}sica`; an accent opening a word (`\'Ecole`, review
+/// revH3 finding 2) is read past as one inside it. Distinct from
 /// [`an_open_group_rehearsals_words_are_counted`]: there no word the check reads is the block's.
 #[test]
 fn an_open_group_rehearsals_word_matching() {
@@ -118,6 +119,16 @@ fn an_open_group_rehearsals_word_matching() {
       1,
       "c Dept tabular",
       vec![vec!["A Müller".to_string()]],
+    ),
+    (
+      "an accent opening a word",
+      repro!("author_raw_tabular_juggle_accent_opens_word"),
+      1,
+      "c Dept tabular",
+      vec![vec![
+        "A One".to_string(),
+        "affiliation=École Normale".to_string(),
+      ]],
     ),
     (
       "dotless i",

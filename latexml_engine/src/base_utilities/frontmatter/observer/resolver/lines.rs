@@ -798,9 +798,9 @@ fn address_groups_whole(events: &[&Event]) -> Vec<Event> {
 /// Harari and Tam\'as Szamuely}`, 0808.2556; `By~~{\scshape Vitaly~Bergelson}~~and~~…`, 2603.25922, 2604.07186,
 /// 2604.12864; `By~~{\scshape Bryna Kra}`, 2603.27258. A line the reading reads as no names keeps it: `Ann Able \\
 /// By\quad Lee Hall, \textit{Univ X}`'s affiliation, review revG1 1. With the spans of the words it read so, which the
-/// reading records ([`Resolved::drops`](super::Resolved::drops)): the content check counts them as the separators'
-/// words they are, no word lost.
-fn byline_dropped(mut events: Vec<Event>) -> (Vec<Event>, Vec<(u16, u16)>) {
+/// reading records with their words ([`Resolved::drops`](super::Resolved::drops)): the content check counts them as the
+/// separators' words they are, no word lost.
+fn byline_dropped(index: usize, mut events: Vec<Event>) -> (Vec<Event>, Vec<RuleDrop>) {
   let mut dropped = Vec::new();
   let ends_line =
     |e: &Event| matches!(e.kind, EventKind::Sep(SepKind::And(_) | SepKind::Column(_)));
@@ -828,7 +828,10 @@ fn byline_dropped(mut events: Vec<Event>) -> (Vec<Event>, Vec<(u16, u16)>) {
       let mut sep = Event::new(EventKind::Sep(SepKind::Word(by.text.trim().to_string())));
       sep.span = by.span;
       sep.nest = by.nest;
-      dropped.extend(by.span);
+      dropped.extend(
+        by.span
+          .map(|span| (index, span, by.text.trim().to_lowercase())),
+      );
       events[at] = sep;
     }
   }
@@ -1327,11 +1330,8 @@ impl Resolver {
     // jmlr2e's `\email` a font switch, 2507.03885 — each an e-mail of the line's names by the owner chain, placed once
     // the line's names are read; the words before an address in its run stay the name)
     let (owned, addresses) = names_without_addresses(&line.events);
-    let (owned, dropped) = byline_dropped(owned);
-    self
-      .out
-      .drops
-      .extend(dropped.into_iter().map(|span| (index, span)));
+    let (owned, dropped) = byline_dropped(index, owned);
+    self.out.drops.extend(dropped);
     // (a per-author class's names line that does not read as two or more names is one name as written: aastex's
     // `\author{Sanhueza, Patricio}`, 2604.19097 — `split_author_line_cautious`, `name_count` on the line's text)
     let owned = if cautious {
