@@ -9,7 +9,7 @@
 % oracle:  pdflatex: 0 errors; "A Müller", "Univ A", "Dept,", "Muller"
 % engines: rust CK1 `=2`: E=0, one content-check Warning `c Dept tabular` (the lost "Muller" hidden by the printed
 %          "Müller": a false silence)
-% expect:  "A Müller" kept; at `=2` one content-check Warning, `c Dept Muller tabular`
+% expect:  "A Müller" kept; at `=2` two Warnings: "span no balanced run" and the content check's `c Muller tabular`
 % status:  RED (CK1) -> GREEN (perfect_kernel_batchfs1::an_open_group_rehearsals_word_matching, CK1b)
 % preload: ar5iv.sty
 \documentclass{article}

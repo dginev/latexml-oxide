@@ -1095,7 +1095,7 @@ pub(super) fn content_text(content: &Tokens) -> ContentText {
   let tokens = content.unlist_ref();
   for (at, token) in tokens.iter().enumerate() {
     // (inside a word, a letter or digit or a place read past before it, or before its first letter, an accent's
-    // control symbol there (`\'Ecole`, never `\\`, `\,`, `\ `, `\;`, `\!`: review revCK1 2); and a letter, a digit or
+    // control symbol there (`\'Ecole`, never `\\`, `\ `, `\,`, `\;`, `\:`, `\>`, the [`spacing_symbol`]s: review revCK1 2); and a letter, a digit or
     // a group after it, past any group's end and one-letter control word: `F\'{\i}sica`, `Bras\'\i lia`; a control
     // symbol before another parts, `Smith\,\\Univ` two words; a spacing one parts, `Dept\\Muller`, review revCK1 3)
     let in_word = || {
