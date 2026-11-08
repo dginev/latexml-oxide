@@ -1,0 +1,19 @@
+% mechanism: the content check on the placed output (`resolver::placed`, under `LATEXML_FM_EMIT=2`): a contact's label
+%   (its `name`) is the label's words, held with its item and answering an excess, never its text's: an `\email` of the
+%   class's printing `Email: `, which the rehearsal's `\email` doesn't print, is no excess
+% witness: 2307.11138 (mpi2015-cscpreprint.cls `\newcommand{\email}[1]{{\normalfont Email:~\texttt{\href{mailto:#1}{#1}}}}`:
+%   the content check's excess `Email`), 1602.07570, 2405.08537
+% oracle:  pdflatex 0 errors; "Ann Able", "Univ A, Town", "Email: ann@a.org", "Bob Baker", "Univ B, City",
+%   "Email: bob@b.org"
+% engines: rust N2r2, the switch on: 1 warning, the content check's excess `Email`
+% expect:  the switch on: 0 errors, 0 warnings; each author its affiliation and its e-mail, labelled `Email: `
+% status:  RED (N2r2) -> GREEN (perfect_kernel_batchn2r3::a_class_label_in_a_name_is_no_excess)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand{\email}[1]{{\normalfont Email:~\texttt{#1}}}
+\begin{document}
+\title{T}
+\author{Ann Able\\ Univ A, Town\\ \email{ann@a.org} \and Bob Baker\\ Univ B, City\\ \email{bob@b.org}}
+\maketitle
+Body.
+\end{document}

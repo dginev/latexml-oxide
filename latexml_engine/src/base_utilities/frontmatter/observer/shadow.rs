@@ -20,7 +20,7 @@ use super::{
   policy::{TitleMarks, policy_for},
   rehearsal::{Rehearsal, rehearse},
   resolver::{Assoc, Resolved, ledger_inputs, resolve},
-  writer::writer_stays_out,
+  writer::{fm_emit_mode, writer_stays_out},
   *,
 };
 
@@ -59,11 +59,15 @@ pub fn fm_shadow_mode() -> FmShadow {
 pub fn fm_shadow_enabled() -> bool { fm_shadow_mode() != FmShadow::Off }
 
 /// Whether the flush rehearses and the writer reads: under the census every paper; by default a paper whose recorded
-/// author blocks are all a written family's (as `writer::written_resolution` requires); off, none.
+/// author blocks are all a written family's (as `writer::written_resolution` requires), and under the emitter's `=2` every
+/// paper as the census reads it — the content check on the placed output (`writer::check_placed_content`) reads the
+/// rehearsed creator calls of a paper with no author block too (llncs's `\author` and `\institute`, 1401.5951: blind
+/// without the census); off, none.
 fn reads_now() -> bool {
   match fm_shadow_mode() {
     FmShadow::On => true,
     FmShadow::Off => false,
+    FmShadow::Default if fm_emit_mode() == 2 => true,
     FmShadow::Default => with_ledger(|ledger| {
       let mut blocks = ledger.entries().iter().filter_map(|entry| match entry {
         Entry::Author(block) => Some(block),
