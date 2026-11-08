@@ -114,3 +114,21 @@ fn a_marked_name_with_an_institution_word_is_a_name() {
     "affiliation=Univ A"
   ]]);
 }
+
+/// Row S1 (a rule of the reading alone): initials after a comma join the name before only after a bare surname; a word
+/// of glued initials and a surname is read through its initials (`unglued_initials`, as `name_shaped` reads it):
+/// `P.A.Vshivtseva$^{a}$, E.T.\, Einiev` is two names (2409.13569). Red (MV1 `=2`): one creator, `merged_creators`.
+#[test]
+fn glued_initials_are_no_surname_before_initials() {
+  let (off, two) = both(
+    repro!("emit_glued_initials_are_no_surname_before_initials"),
+    (0, 0),
+  );
+  let want = [
+    vec!["M.O. Astashenkov", "affiliation=Univ A"],
+    vec!["P.A.Vshivtseva", "affiliation=Univ A"],
+    vec!["E.T. Einiev", "affiliation=Univ B"],
+  ];
+  assert_eq!(off, want);
+  assert_eq!(two, want);
+}

@@ -526,7 +526,7 @@ fn name_shaped(text: &str) -> bool {
 /// `Bogdanchikov`, `Yu.M.Shatunov` → `Yu.`, `M.`, `Shatunov` (hep-ex0105093's collaboration list; an initial is a
 /// capital and at most one small letter, not a place's abbreviation: `St.Petersburg`, `Mt.Stromlo`); a word without a
 /// surname after its initials (`U.S.A.`, `D.A.`, `Ph.D.`) or with none glued stays whole.
-fn unglued_initials(word: &str) -> Vec<&str> {
+pub(in crate::base_utilities) fn unglued_initials(word: &str) -> Vec<&str> {
   let mut parts = Vec::new();
   let mut rest = word;
   loop {

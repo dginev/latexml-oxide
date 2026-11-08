@@ -1142,10 +1142,14 @@ impl Resolver {
             && {
               // (a surname alone before it, a word or two and no initial: not `X.W. Shu, D. Elbaz`, 1512.00167; nor a
               // degree after a name, `Luluk Muthoharoh, S.Si., M.Si.`, 2605.07811, whose initials hold small letters)
+              // (each word read through its glued initials, as `name_shaped` reads it: `P.A.Vshivtseva$^{a,b}$,
+              // E.T.\, Einiev`, 2409.13569, is two names)
               let before = &self.out.creators[*made.last().expect("a name")].name;
-              !before.contains(',')
-                && before.split_whitespace().count() <= 2
-                && before.split_whitespace().all(|w| !initials_only(w))
+              let words: Vec<&str> = before
+                .split_whitespace()
+                .flat_map(unglued_initials)
+                .collect();
+              !before.contains(',') && words.len() <= 2 && words.iter().all(|w| !initials_only(w))
             } =>
         {
           let c = *made.last().expect("a name");
