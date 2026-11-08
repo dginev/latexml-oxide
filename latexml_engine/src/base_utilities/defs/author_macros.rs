@@ -11,17 +11,32 @@ pub(in crate::base_utilities) const EMITTED_LINE_MARK: &str = "_markread";
 
 /// The key of a creator written whole, Perl's fallback, whose merge a Warning counts: `flag_merged_creators`' own mark of a
 /// creator it checked (a tabular block is kept whole on purpose alike). The emitter sets it where its Warning counts the block
-/// (OD #980): not on `LATEXML_FM_EMIT=2`'s queued entry, which a block arriving after the frontmatter was digested keeps unread
-/// and uncounted (astro-ph9808358's `merged_creators` Errors stand).
+/// (OD #980): not on `LATEXML_FM_EMIT=2`'s queued entry. A block arriving while the frontmatter is digested (an `\author` in
+/// the `\title`, 1502.01001, 1510.00875, hep-ph0207056, hep-th0111116; in an amsart `\thanks`, 0807.4720; in a re-digested
+/// `{opening}`, astro-ph9808358) has its own flush, which reads it or writes it whole and counted (`\lx@frontmatter@late`).
 pub(in crate::base_utilities) const KEPT_WHOLE: &str = "_merged_checked=1";
 
 /// `LATEXML_FM_EMIT=2` (OD #980): one whole block queued for the call, as the reader won't be cutting it, which the emitter
-/// takes at the flush (`observer::writer::emit`): Perl's whole-block creator (`author_block::whole_block_author`).
-fn whole_block_call(stuff: Tokens, replace: bool, keyvals: Option<Tokens>) -> Result<Tokens> {
+/// takes at the flush (`observer::writer::emit`): Perl's whole-block creator (`author_block::whole_block_author`). A `late`
+/// call, made while a flush digests its queue after reading it (the ledger's `AuthorBlock::late`), queues it for a flush
+/// of its own (`\lx@frontmatter@late`): Perl's `\lx@add@authors` there runs `@now`, split at the call
+/// (Base_Utility.pool.ltxml:799-806).
+fn whole_block_call(
+  stuff: Tokens,
+  replace: bool,
+  keyvals: Option<Tokens>,
+  late: bool,
+) -> Result<Tokens> {
   if replace {
     replace_queued_authors();
   }
-  whole_block_author(keyvals, stuff)
+  let whole = whole_block_author(keyvals, stuff)?;
+  if late {
+    return Ok(Invocation!(T_CS!("\\lx@frontmatter@late"), vec![Some(
+      whole
+    )]));
+  }
+  Ok(whole)
 }
 
 pub(in crate::base_utilities) fn load() -> Result<()> {
@@ -62,9 +77,23 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // stops `\@ifnextchar`).
   DefMacro!("\\lx@add@authors@adaptive{}", sub[(stuff)] {
     let replace = !lookup_bool("\\author:redefined");
-    record_author_call("\\lx@add@authors@adaptive", &stuff, replace, true, None, false);
-    if fm_emit_mode() == 2 { return whole_block_call(stuff, replace, None); }
+    let late = record_author_call("\\lx@add@authors@adaptive", &stuff, replace, true, None, false);
+    if fm_emit_mode() == 2 { return whole_block_call(stuff, replace, None, late); }
     add_authors_calls(stuff, replace)
+  });
+  // The late block's flush (`whole_block_call`): its whole entry queued — the flush digesting it let the API to `@now`,
+  // locally — then read by a flush of its own (re-entrant, `digest_front_matter`), which emits its split creators or
+  // writes it whole with its Warning, digested here into the frontmatter (1502.01001, 0807.4720, astro-ph9808358).
+  DefPrimitive!("\\lx@frontmatter@late{}", sub[(whole)] {
+    bgroup();
+    let_i(&T_CS!("\\lx@add@frontmatter"), &T_CS!("\\lx@frontmatter@queue@add"), None);
+    let_i(&T_CS!("\\lx@annotate@frontmatter"), &T_CS!("\\lx@frontmatter@queue@annotate"), None);
+    let queued = digest(whole);
+    let closed = egroup();
+    let queued = queued?;
+    closed?;
+    digest_front_matter()?;
+    Ok(vec![queued])
   });
   DefMacro!("\\lx@author@trailing", sub[()] {
     if lookup_bool("\\author:redefined") {
@@ -107,8 +136,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   );
 
   DefMacro!("\\lx@add@authors{}", sub[(stuff)] {
-    record_author_call("\\lx@add@authors", &stuff, true, true, None, false);
-    if fm_emit_mode() == 2 { return whole_block_call(stuff, true, None); }
+    let late = record_author_call("\\lx@add@authors", &stuff, true, true, None, false);
+    if fm_emit_mode() == 2 { return whole_block_call(stuff, true, None, late); }
     add_authors_calls(stuff, true)
   });
   // A class's own author command, called once per author or author group and each adding to the ones before
@@ -120,8 +149,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (`\author{Masao Ishikawa\\ \small Faculty of Education, …}`, math0606082). The optional keyvals go to each author
   // (revtex's `annotations=`).
   DefMacro!("\\lx@add@authors@append[]{}", sub[(keyvals, stuff)] {
-    record_author_call("\\lx@add@authors@append", &stuff, false, false, keyvals.as_ref(), true);
-    if fm_emit_mode() == 2 { return whole_block_call(stuff, false, keyvals); }
+    let late = record_author_call("\\lx@add@authors@append", &stuff, false, false, keyvals.as_ref(), true);
+    if fm_emit_mode() == 2 { return whole_block_call(stuff, false, keyvals, late); }
     add_authors_calls_sectioned(stuff, false, false, keyvals, true)
   });
   // A class's own author-list command (informs4.cls:1198 `\AUTHOR{Ann Able$^{a}$, Bob Baker$^{b}$}`, documented as a
@@ -129,8 +158,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (where the list starts in the queue: the row an address shared by its authors falls back to, `queued_row_start`)
   DefMacro!("\\lx@add@authors@list{}", sub[(stuff)] {
     assign_value("lx_authors_list_start", queued_author_count() as i64, Some(Scope::Global));
-    record_author_call("\\lx@add@authors@list", &stuff, false, true, None, false);
-    if fm_emit_mode() == 2 { return whole_block_call(stuff, false, None); }
+    let late = record_author_call("\\lx@add@authors@list", &stuff, false, true, None, false);
+    if fm_emit_mode() == 2 { return whole_block_call(stuff, false, None, late); }
     add_authors_calls_sectioned(stuff, false, true, None, false)
   });
   // A name list where a binding has no lines or affiliations to read: each name `split_author_line` finds (comma,
@@ -139,8 +168,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // 2410.19527). A collaboration the list names beside its names is a contact on them, no part of a name
   // (`split_author_calls`, batch 103b: webofc's `… on behalf of the KLOE-2 Collaboration` after the notes, 1502.05517).
   DefMacro!("\\lx@add@author@split[]{}", sub[(keyvals, names)] {
-    record_author_call("\\lx@add@author@split", &names, false, false, keyvals.as_ref(), false);
-    if fm_emit_mode() == 2 { return whole_block_call(names, false, keyvals); }
+    let late = record_author_call("\\lx@add@author@split", &names, false, false, keyvals.as_ref(), false);
+    if fm_emit_mode() == 2 { return whole_block_call(names, false, keyvals, late); }
     Ok(Tokens::new(split_author_calls(keyvals, names)?))
   });
   // That class's affiliation command, under its authors (informs4.cls:1199 `\AFF{$^a$Univ A}`): when the queued authors
@@ -169,8 +198,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
   });
   DefMacro!("\\lx@ijcai@names{}", sub[(stuff)] {
-    record_author_call("\\lx@ijcai@names", &stuff, true, false, None, false);
-    if fm_emit_mode() == 2 { return whole_block_call(stuff, true, None); }
+    let late = record_author_call("\\lx@ijcai@names", &stuff, true, false, None, false);
+    if fm_emit_mode() == 2 { return whole_block_call(stuff, true, None, late); }
     add_authors_calls_sectioned(stuff, true, false, None, false)
   });
 

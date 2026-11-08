@@ -1,0 +1,12 @@
+% witness: 1502.01001, 1510.00875, hep-ph0207056 (`\title{… \author{…}}`, the block born inside the `\maketitle` flush)
+% oracle:  pdflatex 0 errors: the title, then Ann Able1, Bob Baker2, then 1 Univ A, 2 Univ B
+% engines: Perl and off: 2 creators, each its affiliation (Perl's `\lx@add@authors` runs `@now` at the call); ours =2 before TA1: one merged creator of the whole block plus the 2 split ones a later flush emitted
+% expect:  0 errors; at =2 exactly 2 creators, Ann/Univ A, Bob/Univ B (perfect_kernel_batchTA1::a_late_author_block_is_read_at_its_own_flush)
+% status:  GREEN (TA1)
+\documentclass{article}
+\begin{document}
+\title{A Title\\
+\author{Ann Able$^1$, Bob Baker$^2$\\ $^1$Univ A\\ $^2$Univ B}}
+\maketitle
+x
+\end{document}

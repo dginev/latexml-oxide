@@ -47,7 +47,9 @@ mod repart;
 pub(super) use content::Field;
 pub(crate) use emit::fm_emit_mode;
 pub use emit::set_fm_emit_override;
-pub(in crate::base_utilities) use emit::{Analysis, EMITTING, emit_commands, emitted};
+pub(in crate::base_utilities) use emit::{
+  Analysis, EMITTING, emit_commands, emitted, take_digested,
+};
 use plan::{Op, Owner};
 pub(super) use plan::{entry_forms, labelled_start, span_tokens};
 

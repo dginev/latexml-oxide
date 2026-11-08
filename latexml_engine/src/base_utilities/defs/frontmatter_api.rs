@@ -241,6 +241,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
     queue_add_frontmatter_now(keys_opt.as_ref(), &tag_tks, attrs_opt.as_ref(), Some(&tokens))?;
   });
+  // (its queueing meaning, which a block arriving while a flush digests the queue queues with: `\lx@frontmatter@late`)
+  Let!("\\lx@frontmatter@queue@add", "\\lx@add@frontmatter");
 
   // Beyond-Perl best-practice API (OXIDIZED_DESIGN #51): open an *empty*
   // frontmatter container element as a deliberate anchor for later annotations
@@ -549,6 +551,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     inv_tokens.push(T_END!());
     queue_front_matter(&tag.to_string(), kv.as_ref(), Tokens::new(inv_tokens));
   });
+  Let!(
+    "\\lx@frontmatter@queue@annotate",
+    "\\lx@annotate@frontmatter"
+  );
 
   // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #954): where an uncut copy of a printed list the Cut cut later stood in the
   // queue (`affiliations::place_uncut_copies`): its place, an annotation's ordinal, recorded for the authors it

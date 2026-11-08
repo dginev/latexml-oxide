@@ -145,6 +145,9 @@ pub(in crate::base_utilities) struct AuthorBlock {
   pub cleared:        bool,
   /// whether the IJCAI sectioned split applies
   pub sectioned:      bool,
+  /// made while a flush digests its queue (`lx_frontmatter_flushing`: an `\author` in the `\title`, in an amsart
+  /// `\thanks`), after that flush's reading: the block's own flush reads it (`\lx@frontmatter@late`)
+  pub late:           bool,
   /// a per-author binding's cautious name split
   pub cautious:       bool,
   /// the keyvals the call hands each author (revtex `annotations=`)
@@ -776,7 +779,8 @@ fn out_of_positions(real_base: usize, extra: usize, len: usize) -> bool {
     || (fm_emit_mode() == 0 && real_base + extra + len > usize::from(FIELD_PROV_POS_MASK))
 }
 
-/// Record an `\author`-family call (`hook`, with `stuff` its argument), under the shadow switch only.
+/// Record an `\author`-family call (`hook`, with `stuff` its argument), under the shadow switch only — whether it was
+/// recorded late ([`AuthorBlock::late`]).
 pub(in crate::base_utilities) fn record_author_call(
   hook: &'static str,
   stuff: &Tokens,
@@ -784,10 +788,11 @@ pub(in crate::base_utilities) fn record_author_call(
   sectioned: bool,
   keyvals: Option<&Tokens>,
   cautious: bool,
-) {
+) -> bool {
   if !records_now() {
-    return;
+    return false;
   }
+  let late = lookup_bool("lx_frontmatter_flushing");
   let len = stuff.unlist_ref().len();
   let real_base = usize::try_from(lookup_int("lx_field_base_2")).unwrap_or(0);
   let owner = author_binding();
@@ -811,6 +816,7 @@ pub(in crate::base_utilities) fn record_author_call(
     replace,
     cleared: false,
     sectioned,
+    late,
     cautious,
     keyvals: keyvals.map(|kv| kv.to_string()),
     epoch: 0,
@@ -842,6 +848,7 @@ pub(in crate::base_utilities) fn record_author_call(
     }
     entries.push(Entry::Author(Box::new(block)));
   });
+  late
 }
 
 /// `\lx@field@mark` stamped field `field_id`'s value (`len` tokens) from `base` — `None`: out of positions, unstamped.

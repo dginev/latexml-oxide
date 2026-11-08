@@ -579,8 +579,8 @@ pub fn fm_shadow_json() -> String {
           }
           let _ = write!(
             out,
-            ",\"replace\":{},\"sectioned\":{},\"cautious\":{},\"keyvals\":",
-            block.replace, block.sectioned, block.cautious
+            ",\"replace\":{},\"sectioned\":{},\"late\":{},\"cautious\":{},\"keyvals\":",
+            block.replace, block.sectioned, block.late, block.cautious
           );
           json_opt_str(&mut out, block.keyvals.as_deref());
           let _ = write!(
