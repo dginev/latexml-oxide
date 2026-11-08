@@ -26,8 +26,8 @@ use super::{
   ledger::{Entry, Ledger, Outcome, ReadBack, SkipReason, with_ledger},
   policy::{family_written, policy_for},
   resolver::{
-    Assoc, RCreator, Resolved, addresses_in, in_source_order, is_change_rule, ledger_inputs,
-    mark_labels, resolve,
+    Assoc, NameJoin, RCreator, Resolved, addresses_in, in_source_order, is_change_rule,
+    ledger_inputs, mark_labels, resolve,
   },
   shadow::{FmShadow, fm_shadow_mode},
   *,
@@ -43,7 +43,9 @@ mod repart;
 // (the writer's cut of a block's entry, which the reading checks an in-block contact's entries by: `events::labelled_entries`)
 pub(super) use content::Field;
 pub use emit::set_fm_emit_override;
-pub(in crate::base_utilities) use emit::{EMITTED, EMITTING, emit_commands, fm_emit_mode};
+pub(in crate::base_utilities) use emit::{
+  Analysis, EMITTING, emit_commands, emitted, fm_emit_mode,
+};
 use plan::{Op, Owner};
 pub(super) use plan::{entry_forms, labelled_start, span_tokens};
 
@@ -51,7 +53,7 @@ pub(super) use plan::{entry_forms, labelled_start, span_tokens};
 /// rehearsed without an error held, the API calls after them rehearsed, and every block's family `written`.
 pub(super) fn writer_stays_out(ledger: &Ledger) -> Option<&'static str> {
   let mut blocks = 0usize;
-  for entry in &ledger.entries {
+  for entry in ledger.entries() {
     match entry {
       Entry::Author(block) => {
         blocks += 1;
@@ -146,7 +148,7 @@ pub(in crate::base_utilities) fn read_back_frontmatter(document: &mut Document) 
 fn unwritten_calls() -> BTreeSet<usize> {
   with_ledger(|ledger| {
     ledger
-      .entries
+      .entries()
       .iter()
       .filter_map(|entry| match entry {
         Entry::Api(call) if call.binding.as_deref().is_some_and(|b| !family_written(b)) => {
@@ -313,7 +315,7 @@ fn insert_in_source_order(items: &mut Vec<Assoc>, assoc: Assoc) {
 /// At the end of `insert_frontmatter`: write the observer's reading of a written family's paper where it differs from
 /// today's by the writer's operations alone; else leave the document as it is.
 pub(in crate::base_utilities) fn write_observed_frontmatter(document: &mut Document) -> Result<()> {
-  if !fm_shadow_enabled() || rehearsal::rehearsing() || lookup_bool(EMITTED) {
+  if !fm_shadow_enabled() || rehearsal::rehearsing() || emitted() {
     return Ok(());
   }
   let Some(resolved) = written_resolution() else {
@@ -501,9 +503,7 @@ fn give_back_grades(resolved: &Resolved, front: &dom::Front) -> Resolved {
     c.contacts = kept;
     for grade in given {
       c.name = s!("{}, {}", c.name, grade.text);
-      if !c.rule.split_whitespace().any(|t| t == "name:qualifier") {
-        c.rule.push_str(" name:qualifier");
-      }
+      c.join(NameJoin::Qualifier);
     }
   }
   out

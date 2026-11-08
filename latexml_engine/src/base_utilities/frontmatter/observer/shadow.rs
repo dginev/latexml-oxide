@@ -65,7 +65,7 @@ fn reads_now() -> bool {
     FmShadow::On => true,
     FmShadow::Off => false,
     FmShadow::Default => with_ledger(|ledger| {
-      let mut blocks = ledger.entries.iter().filter_map(|entry| match entry {
+      let mut blocks = ledger.entries().iter().filter_map(|entry| match entry {
         Entry::Author(block) => Some(block),
         _ => None,
       });
@@ -117,22 +117,33 @@ fn read_at_flush() -> Result<()> {
   // (the labels the calls' keyvals defer, read as this flush's digestion expands them: `\lx@label@ref`, cas's
   // `\author[a]` under entries given after it — 2303.00352, 2603.22658, 2504.19452, 2509.10496)
   with_ledger(|ledger| {
-    for entry in &mut ledger.entries {
-      let text = match entry {
-        Entry::Author(block) => block.keyvals.as_mut(),
-        Entry::Api(call) => Some(&mut call.attrs),
-        _ => None,
-      };
-      if let Some(text) = text
-        && let Cow::Owned(resolved) = resolve_label_refs(text)
-      {
-        *text = resolved;
+    let resolved: Vec<(usize, String)> = ledger
+      .entries()
+      .iter()
+      .enumerate()
+      .filter_map(|(i, entry)| {
+        let text = match entry {
+          Entry::Author(block) => block.keyvals.as_deref()?,
+          Entry::Api(call) => call.attrs.as_str(),
+          _ => return None,
+        };
+        match resolve_label_refs(text) {
+          Cow::Owned(resolved) => Some((i, resolved)),
+          Cow::Borrowed(_) => None,
+        }
+      })
+      .collect();
+    for (i, text) in resolved {
+      match &mut ledger.entries_mut()[i] {
+        Entry::Author(block) => block.keyvals = Some(text),
+        Entry::Api(call) => call.attrs = text,
+        _ => {},
       }
     }
   });
   let pending: Vec<usize> = with_ledger(|ledger| {
     ledger
-      .entries
+      .entries()
       .iter()
       .enumerate()
       .filter_map(|(i, entry)| match entry {
@@ -150,7 +161,7 @@ fn read_at_flush() -> Result<()> {
   // `StomachMark`)
   let blocks_mark = StomachMark::take();
   for i in pending {
-    let Some(block) = with_ledger(|ledger| match ledger.entries.get(i) {
+    let Some(block) = with_ledger(|ledger| match ledger.entries().get(i) {
       Some(Entry::Author(block)) => Some(block.clone()),
       _ => None,
     }) else {
@@ -204,7 +215,7 @@ fn read_at_flush() -> Result<()> {
       }
     };
     with_ledger(|ledger| {
-      if let Some(Entry::Author(block)) = ledger.entries.get_mut(i) {
+      if let Some(Entry::Author(block)) = ledger.entries_mut().get_mut(i) {
         block.outcome = outcome;
       }
     });
@@ -214,7 +225,7 @@ fn read_at_flush() -> Result<()> {
   // resolver reads an affiliation's leading marks and text, an e-mail's address, a creator's name from them)
   let calls: Vec<(usize, Tokens)> = with_ledger(|ledger| {
     ledger
-      .entries
+      .entries()
       .iter()
       .enumerate()
       .filter_map(|(i, entry)| match entry {
@@ -237,7 +248,7 @@ fn read_at_flush() -> Result<()> {
     };
     if let Some((events, errors)) = read {
       with_ledger(|ledger| {
-        if let Some(Entry::Api(call)) = ledger.entries.get_mut(i) {
+        if let Some(Entry::Api(call)) = ledger.entries_mut().get_mut(i) {
           call.events = events;
           call.rehearsed = true;
           call.errors = errors;
@@ -454,7 +465,7 @@ pub fn fm_shadow_json() -> String {
     let mut skipped: Vec<(&str, usize)> = Vec::new();
     let mut blocks = 0usize;
     let mut overflow = 0usize;
-    for (n, entry) in ledger.entries.iter().enumerate() {
+    for (n, entry) in ledger.entries().iter().enumerate() {
       if n > 0 {
         out.push(',');
       }
@@ -622,7 +633,7 @@ pub fn fm_shadow_json() -> String {
             },
           }
           // the setters called outside the field after the block, up to the next block
-          for later in &ledger.entries[n + 1..] {
+          for later in &ledger.entries()[n + 1..] {
             match later {
               Entry::Author(_) => break,
               Entry::Api(call) if !call.inside && call.after_block == Some(block.index) => {
@@ -798,6 +809,14 @@ fn json_resolved(out: &mut String, resolved: &Resolved) {
     }
     out.push_str("],\"rule\":");
     json_str(out, &creator.rule);
+    out.push_str(",\"joins\":[");
+    for (j, join) in creator.joins.iter().enumerate() {
+      if j > 0 {
+        out.push(',');
+      }
+      json_str(out, join.tag());
+    }
+    out.push(']');
     let _ = write!(out, ",\"source\":{}", creator.source);
     json_assocs(out, "affiliations", &creator.affiliations);
     json_assocs(out, "contacts", &creator.contacts);

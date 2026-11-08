@@ -7,7 +7,7 @@
 //! argument; where it's cut comes from the events' spans.
 
 use std::{
-  cell::{Cell, RefCell},
+  cell::Cell,
   collections::{BTreeMap, BTreeSet, btree_map::Entry as Entry2},
   rc::Rc,
   sync::OnceLock,
@@ -28,7 +28,7 @@ use crate::base_utilities::{
     observer::{
       events::{EventKind, Formula, lex_with_formulas},
       field_notes::EnvironmentStep,
-      ledger::{ApiCall, AuthorBlock, NoteText, annotated_parent, field_stamped},
+      ledger::{ApiCall, AuthorBlock, annotated_parent, field_stamped},
       policy::TitleMarks,
       rehearsal::{Rehearsal, rehearse},
       resolver::{
@@ -42,7 +42,6 @@ use crate::base_utilities::{
 
 thread_local! {
   static FM_EMIT_OVERRIDE: Cell<Option<u8>> = const { Cell::new(None) };
-  static ANALYSIS: RefCell<Option<Rc<Analysis>>> = const { RefCell::new(None) };
 }
 
 /// `LATEXML_FM_EMIT` (read once per process), or this thread's test override: 0 off, 1 the reader still runs at the call,
@@ -62,8 +61,13 @@ pub fn fm_emit_mode() -> u8 {
 /// Set (`Some`) or clear (`None`) this thread's override of the switch (tests: the environment is read-only to them).
 pub fn set_fm_emit_override(mode: Option<u8>) { FM_EMIT_OVERRIDE.with(|o| o.set(mode)); }
 
-/// The State value saying a flush emitted: the writer has nothing left to do (`write_observed_frontmatter`).
-pub(in crate::base_utilities) const EMITTED: &str = "lx_fm_emitted";
+/// The State value saying a flush emitted (the writer has nothing left to do, `write_observed_frontmatter`): the ledger's
+/// generation whose reading the last emit wrote to its end ([`Ledger::generation`]), which a later flush with nothing queued
+/// and nothing new read writes again as nothing. A State value, as a speculative run's flush is undone with it.
+const EMITTED: &str = "lx_fm_emitted";
+
+/// Whether a flush of this conversion emitted.
+pub(in crate::base_utilities) fn emitted() -> bool { lookup_value(EMITTED).is_some() }
 /// The State value true inside `\\lx@frontmatter@itemonly`: what an item's content marks labels nothing, the reading's
 /// labels stand (`with_pending_entry_attr`).
 pub(in crate::base_utilities) const EMITTING: &str = "lx_fm_emitting";
@@ -82,7 +86,7 @@ fn internal(text: &str) -> Vec<Token> {
 
 /// `f` on the rehearsed block at ledger index `index`, else `default`.
 fn with_block<R>(index: usize, default: R, f: impl FnOnce(&AuthorBlock, &[Event]) -> R) -> R {
-  with_ledger(|ledger| match ledger.entries.get(index) {
+  with_ledger(|ledger| match ledger.entries().get(index) {
     Some(Entry::Author(block)) => match &block.outcome {
       Outcome::Events { events, .. } => f(block, events),
       _ => default,
@@ -466,7 +470,7 @@ fn block_names(
   on_names: &mut BTreeSet<(usize, (u16, u16))>,
 ) -> Vec<Option<Vec<Token>>> {
   with_ledger(|ledger| {
-    let Some(Entry::Author(block)) = ledger.entries.get(index) else {
+    let Some(Entry::Author(block)) = ledger.entries().get(index) else {
       return vec![None; names.len()];
     };
     let Outcome::Events {
@@ -591,7 +595,7 @@ fn block_names(
 fn stays_out() -> Option<&'static str> {
   with_ledger(|ledger| {
     let mut blocks = 0;
-    for entry in &ledger.entries {
+    for entry in ledger.entries() {
       if let Entry::Author(block) = entry {
         blocks += 1;
         match &block.outcome {
@@ -653,7 +657,7 @@ fn kinded_affiliation(keys: &str, content: &[Token]) -> Tokens {
 /// The tokens of the event's `span` of the block at `index`, balanced.
 fn span_tokens_of(index: usize, span: (u16, u16)) -> Option<Tokens> {
   with_ledger(|ledger| {
-    let Some(Entry::Author(block)) = ledger.entries.get(index) else {
+    let Some(Entry::Author(block)) = ledger.entries().get(index) else {
       return None;
     };
     let Outcome::Events { formulas, environments, .. } = &block.outcome else {
@@ -1043,7 +1047,7 @@ fn item_call(
       let span = found.unwrap_or(span);
       // (its tokens, from its mark for a note's legend; in the font it prints in, the group or the switch before its mark too)
       let run = with_ledger(|ledger| {
-        let Some(Entry::Author(block)) = ledger.entries.get(index) else {
+        let Some(Entry::Author(block)) = ledger.entries().get(index) else {
           return None;
         };
         let Outcome::Events {
@@ -1237,7 +1241,7 @@ fn declarations<'a>(sources: impl Iterator<Item = &'a usize>) -> Vec<Token> {
   with_ledger(|ledger| {
     let mut out = Vec::new();
     for &index in sources {
-      if let Some(Entry::Author(block)) = ledger.entries.get(index)
+      if let Some(Entry::Author(block)) = ledger.entries().get(index)
         && let Outcome::Events { declarations, .. } = &block.outcome
       {
         for (start, end) in declarations.iter().filter_map(|event| event.span) {
@@ -1282,7 +1286,7 @@ fn items_to_emit<'a>(
   kept: &mut Vec<RawFrontmatter>,
 ) -> (Vec<Item<'a>>, BTreeSet<usize>) {
   let pubnotes: BTreeSet<String> = with_ledger(|ledger| {
-    let notes = ledger.entries.iter().filter_map(|entry| match entry {
+    let notes = ledger.entries().iter().filter_map(|entry| match entry {
       Entry::Api(call) if call.tag == "ltx:pubnote" => {
         Some(norm(&events::printed_text(&call.events)))
       },
@@ -1332,7 +1336,7 @@ fn items_to_emit<'a>(
   for (owner, key, assoc) in held {
     let source = assoc.source;
     let of_footnote = source.is_some_and(|(index, _)| {
-      with_ledger(|ledger| matches!(ledger.entries.get(index), Some(Entry::NoteText(_))))
+      with_ledger(|ledger| matches!(ledger.entries().get(index), Some(Entry::NoteText(_))))
     });
     if of_footnote {
       continue;
@@ -1405,7 +1409,7 @@ fn in_perl_order(items: &mut [Item]) {
   for item in items {
     let footer = item.assoc.source.is_some_and(|(index, _)| {
       with_ledger(|ledger| {
-        matches!(ledger.entries.get(index), Some(Entry::Api(call)) if call.attrs.contains("=footer"))
+        matches!(ledger.entries().get(index), Some(Entry::Api(call)) if call.attrs.contains("=footer"))
       })
     });
     if !footer && !by_label(item.assoc) && item.owners.iter().any(|o| past_footer.contains(o)) {
@@ -1428,7 +1432,7 @@ type CallCheck = (Vec<String>, Vec<(String, bool)>);
 /// (2607.00684's llncs `\\institute{…\\email{…, \\{changhwan.sung, mtablo, …\\}@postech.ac.kr}}`, review revZ4br2).
 fn call_checks(ledger: &Ledger, written: &Written) -> BTreeMap<usize, CallCheck> {
   let calls = ledger
-    .entries
+    .entries()
     .iter()
     .enumerate()
     .filter_map(|(index, entry)| match entry {
@@ -1447,114 +1451,36 @@ fn call_checks(ledger: &Ledger, written: &Written) -> BTreeMap<usize, CallCheck>
   calls.collect()
 }
 
-/// What the reading and its checks read of an author block of the ledger (`ledger_inputs`, `check_blocks`).
-#[derive(PartialEq)]
-struct BlockKey {
-  index:   usize,
-  binding: String,
-  hook:    &'static str,
-  keyvals: Option<String>,
-  counter: Option<i64>,
-  replace: bool,
-  cleared: bool,
-  epoch:   usize,
-  outcome: Outcome,
-}
-
-impl BlockKey {
-  fn of(block: &AuthorBlock) -> Self {
-    BlockKey {
-      index:   block.index,
-      binding: block.binding.clone(),
-      hook:    block.hook,
-      keyvals: block.keyvals.clone(),
-      counter: block.counter,
-      replace: block.replace,
-      cleared: block.cleared,
-      epoch:   block.epoch,
-      outcome: block.outcome.clone(),
-    }
-  }
-
-  fn reads(&self, block: &AuthorBlock) -> bool {
-    self.index == block.index
-      && self.binding == block.binding
-      && self.hook == block.hook
-      && self.keyvals == block.keyvals
-      && self.counter == block.counter
-      && self.replace == block.replace
-      && self.cleared == block.cleared
-      && self.epoch == block.epoch
-      && self.outcome == block.outcome
-  }
-}
-
-/// What the reading and its checks read of the ledger: its author blocks ([`BlockKey`]), its API calls and its footnote
-/// texts, in order. The ledger reading as one, the reading and its checks are the same ([`analysis`]).
-struct AnalysisKey {
-  blocks: Vec<BlockKey>,
-  calls:  Vec<ApiCall>,
-  notes:  Vec<NoteText>,
-}
-
-impl AnalysisKey {
-  fn of(ledger: &Ledger) -> Self {
-    let mut key = AnalysisKey {
-      blocks: Vec::new(),
-      calls:  Vec::new(),
-      notes:  Vec::new(),
-    };
-    for entry in &ledger.entries {
-      match entry {
-        Entry::Author(block) => key.blocks.push(BlockKey::of(block)),
-        Entry::Api(call) => key.calls.push(call.clone()),
-        Entry::NoteText(text) => key.notes.push(text.clone()),
-        Entry::Title(_) => {},
-      }
-    }
-    key
-  }
-
-  /// Whether `ledger` reads as this key, compared in place.
-  fn reads(&self, ledger: &Ledger) -> bool {
-    let (mut blocks, mut calls, mut notes) =
-      (self.blocks.iter(), self.calls.iter(), self.notes.iter());
-    let same = ledger.entries.iter().all(|entry| match entry {
-      Entry::Author(block) => blocks.next().is_some_and(|key| key.reads(block)),
-      Entry::Api(call) => calls.next() == Some(call),
-      Entry::NoteText(text) => notes.next() == Some(text),
-      Entry::Title(_) => true,
-    });
-    same && blocks.next().is_none() && calls.next().is_none() && notes.next().is_none()
-  }
-}
-
 /// The reading of the ledger at a flush (`reading`, as resolved; `resolved`, an entry's addresses given back) and its
 /// checks: the word check's block half ([`BlockCheck`]) and call half ([`call_checks`]), from one [`Written`]; the marks
-/// and the separators (`resolver::net`). `done`: an emit of it ran to its end, which a later flush with an empty queue
-/// repeats as it was (every creator and item it writes emitted, every Warning given once).
-struct Analysis {
-  key:      AnalysisKey,
-  reading:  Resolved,
-  resolved: Resolved,
-  checks:   BTreeMap<usize, BlockCheck>,
-  calls:    BTreeMap<usize, CallCheck>,
-  marks:    BTreeMap<usize, Vec<String>>,
-  merged:   BTreeMap<usize, Vec<String>>,
-  done:     Cell<bool>,
+/// and the separators (`resolver::net`). Made at the ledger's `generation` ([`Ledger::generation`]), kept on the ledger while
+/// it reads the same ([`Ledger::analysis`]).
+#[derive(Debug)]
+pub(in crate::base_utilities) struct Analysis {
+  generation: u64,
+  reading:    Resolved,
+  resolved:   Resolved,
+  checks:     BTreeMap<usize, BlockCheck>,
+  calls:      BTreeMap<usize, CallCheck>,
+  marks:      BTreeMap<usize, Vec<String>>,
+  merged:     BTreeMap<usize, Vec<String>>,
 }
 
-/// The ledger's [`Analysis`], made once while the ledger reads the same (and whether it was): a later flush with nothing new
-/// to read reads it as the last did (1901.01540's 1,202 authors, no `\\maketitle`, flushed at each section: resolved at every
-/// flush, +33 % of the run's instructions).
-fn analysis() -> (Rc<Analysis>, bool) {
-  let cached = ANALYSIS.with(|cache| cache.borrow().clone());
-  if let Some(made) = cached
-    && with_ledger(|ledger| made.key.reads(ledger))
-  {
-    return (made, true);
+/// The ledger's [`Analysis`], made once while its entries read the same: a later flush with nothing new to read reads it as
+/// the last did (1901.01540's 1,202 authors, no `\maketitle`, flushed at each section: resolved at every flush, +33 % of the
+/// run's instructions).
+fn analysis() -> Rc<Analysis> {
+  let kept = with_ledger(|ledger| {
+    let generation = ledger.generation();
+    ledger
+      .analysis
+      .clone()
+      .filter(|made| made.generation == generation)
+  });
+  if let Some(made) = kept {
+    return made;
   }
-  let (key, inputs) = with_ledger(|ledger| (AnalysisKey::of(ledger), ledger_inputs(ledger)));
+  let (generation, inputs) = with_ledger(|ledger| (ledger.generation(), ledger_inputs(ledger)));
   let reading = resolve(&inputs);
   // (an entry's addresses, taken out, are the Kind steps' to cut, in place, from the entry whole: they run after the flush as
   // they do for a paper with no block, `insert_frontmatter`)
@@ -1563,27 +1489,20 @@ fn analysis() -> (Rc<Analysis>, bool) {
     .taken
     .iter()
     .for_each(|taken| give_back_entry(&mut resolved, taken));
-  let (checks, calls, marks, merged) = with_ledger(|ledger| {
+  with_ledger(|ledger| {
     let written = Written::new(ledger, &resolved);
-    (
-      check_blocks(ledger, &written),
-      call_checks(ledger, &written),
-      uncoordinated_marks(ledger, &resolved),
-      merged_names(ledger, &resolved),
-    )
-  });
-  let made = Rc::new(Analysis {
-    key,
-    reading,
-    resolved,
-    checks,
-    calls,
-    marks,
-    merged,
-    done: Cell::new(false),
-  });
-  ANALYSIS.with(|cache| *cache.borrow_mut() = Some(Rc::clone(&made)));
-  (made, false)
+    let made = Rc::new(Analysis {
+      generation,
+      checks: check_blocks(ledger, &written),
+      calls: call_checks(ledger, &written),
+      marks: uncoordinated_marks(ledger, &resolved),
+      merged: merged_names(ledger, &resolved),
+      reading,
+      resolved,
+    });
+    ledger.analysis = Some(Rc::clone(&made));
+    made
+  })
 }
 
 /// Whether the author block at ledger index `index` is written whole, as Perl's `\\lx@add@author` writes a block its
@@ -1604,7 +1523,7 @@ fn written_whole(index: usize, lost: bool) -> bool {
 /// The creator Perl's `\\lx@add@author` makes of the author block at ledger index `index`, with its keys and `keys`
 /// (`author_block::whole_block_author`, the one writer of a block kept whole).
 fn whole_block(index: usize, keys: &str) -> Option<Result<Tokens>> {
-  let (keyvals, written) = with_ledger(|ledger| match ledger.entries.get(index) {
+  let (keyvals, written) = with_ledger(|ledger| match ledger.entries().get(index) {
     Some(Entry::Author(block)) => Some((block.keyvals.clone(), block.tokens.clone())),
     _ => None,
   })?;
@@ -1624,8 +1543,8 @@ enum Unwritten {
   Lost,
 }
 
-/// The counted Warning of the words a block or a call prints that the emit doesn't write, once per source over the flushes,
-/// saying what it does instead. Whether it's the first.
+/// The counted Warning of the words a block or a call prints that the emit doesn't write, once per source over the flushes
+/// (its `lost|<index>`, which a call's writing sets too), saying what it does instead. Whether it's the first.
 fn warn_unwritten(index: usize, words: &[String], then: Unwritten) -> bool {
   let once = s!("lost|{index}");
   if lookup_mapping(EMITTED_ITEMS, &once).is_some() {
@@ -1663,7 +1582,7 @@ fn warn_excess(index: usize, words: &[(String, bool)], whole: bool) {
     "they are counted"
   };
   let words: Vec<&str> = words.iter().map(|(word, _)| word.as_str()).collect();
-  let what = with_ledger(|ledger| match ledger.entries.get(index) {
+  let what = with_ledger(|ledger| match ledger.entries().get(index) {
     Some(Entry::Api(_)) => "call",
     _ => "author block",
   });
@@ -1714,7 +1633,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       // (each block's whole entry kept whole on purpose, its merge counted by that Warning, `KEPT_WHOLE`: the ledger's copy of
       // the queued call names its block, `whole_block` writes it so)
       let whole_entries: Vec<(Tokens, usize)> = with_ledger(|ledger| {
-        let calls = ledger.entries.iter().filter_map(|entry| match entry {
+        let calls = ledger.entries().iter().filter_map(|entry| match entry {
           Entry::Api(call) if call.inside && call.tag == "ltx:creator" => {
             Some((call.command.clone()?, call.after_block?))
           },
@@ -1734,10 +1653,12 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     }
     return Ok(false);
   }
-  let (analysis, same) = analysis();
+  let analysis = analysis();
   // (a flush with nothing queued and nothing new read writes what this conversion's last emit wrote of the same reading:
   // nothing)
-  if same && commands.is_empty() && analysis.done.get() && lookup_bool(EMITTED) {
+  let generation = i64::try_from(analysis.generation).unwrap_or(i64::MAX);
+  if commands.is_empty() && matches!(lookup_value(EMITTED), Some(Stored::Int(g)) if g == generation)
+  {
     return Ok(true);
   }
   let resolved = &analysis.resolved;
@@ -1756,7 +1677,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     norm(&events::events_text(&words))
   };
   let (wordless, wordless_calls): (BTreeSet<usize>, Vec<Tokens>) = with_ledger(|ledger| {
-    let calls = ledger.entries.iter().filter_map(|entry| match entry {
+    let calls = ledger.entries().iter().filter_map(|entry| match entry {
       Entry::Api(call)
         if call.events.iter().any(|e| e.kind == EventKind::Note) && own_words(call).is_empty() =>
       {
@@ -1775,7 +1696,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     .iter()
     .map(|c| c.source)
     .filter(|&source| {
-      with_ledger(|ledger| matches!(ledger.entries.get(source), Some(Entry::Author(_))))
+      with_ledger(|ledger| matches!(ledger.entries().get(source), Some(Entry::Author(_))))
     })
     .collect();
   // (the names themselves fail: an ink among them lost, or a word of a name written more often than it prints)
@@ -1909,7 +1830,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   }
   by_block.retain(|source, _| {
     !whole.contains(source)
-      && with_ledger(|ledger| matches!(ledger.entries.get(*source), Some(Entry::Author(_))))
+      && with_ledger(|ledger| matches!(ledger.entries().get(*source), Some(Entry::Author(_))))
   });
   let keeps_marks: BTreeMap<usize, bool> = by_block
     .keys()
@@ -2136,8 +2057,16 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     );
     out.push(entry("ltx:note", note.unlist()));
   }
+  // (a call written, at this flush or an earlier one, is never counted lost at a later one: its fact over the flushes, its
+  // `lost|<index>` false, 2303.02975)
+  for index in written {
+    let once = s!("lost|{index}");
+    if lookup_mapping(EMITTED_ITEMS, &once).is_none() {
+      assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(false)));
+    }
+  }
   for (&index, (words, excess)) in &analysis.calls {
-    if !words.is_empty() && !written.contains(&index) {
+    if !words.is_empty() {
       warn_unwritten(index, words, Unwritten::Lost);
     }
     if !excess.is_empty() {
@@ -2153,14 +2082,13 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .unlist_ref()]));
   }
   *commands = out;
-  assign_value(EMITTED, Stored::Bool(true), Some(Scope::Global));
+  assign_value(EMITTED, Stored::Int(generation), Some(Scope::Global));
   with_ledger(|ledger| {
     ledger.writer = Some("written".to_string());
     if ledger.compared.as_ref() != Some(&analysis.reading) {
       ledger.compared = Some(analysis.reading.clone());
     }
   });
-  analysis.done.set(true);
   Ok(true)
 }
 

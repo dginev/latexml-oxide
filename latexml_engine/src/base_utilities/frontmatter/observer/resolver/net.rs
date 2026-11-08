@@ -21,7 +21,7 @@ use super::{
 
 /// A block's events, by ledger index, the blocks the reading reads (not cleared).
 fn block_events(ledger: &Ledger, index: usize) -> Option<&[Event]> {
-  match ledger.entries.get(index) {
+  match ledger.entries().get(index) {
     Some(Entry::Author(block)) if !block.cleared => match &block.outcome {
       Outcome::Events { events, .. } => Some(events),
       _ => None,

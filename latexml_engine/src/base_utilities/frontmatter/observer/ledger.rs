@@ -20,6 +20,7 @@ use super::{
   field_notes::EnvironmentStep,
   resolver::Resolved,
   shadow::{FmShadow, fm_shadow_mode},
+  writer::Analysis,
   *,
 };
 
@@ -259,7 +260,13 @@ pub(in crate::base_utilities) enum Entry {
 /// The ledger of one conversion.
 #[derive(Debug, Default)]
 pub(in crate::base_utilities) struct Ledger {
-  pub entries:      Vec<Entry>,
+  /// its entries, in call order: read by [`Self::entries`], changed only by [`Self::entries_mut`], which counts the change
+  entries:          Vec<Entry>,
+  /// the changes to `entries` so far: what the emitter's reading of them is made at ([`Self::analysis`])
+  generation:       u64,
+  /// the emitter's reading of `entries` and its checks, made at a generation (`writer::emit::analysis`): kept while they
+  /// read the same, dropped with the ledger (a conversion's start: no reading outlives its conversion, review revN1r2)
+  pub analysis:     Option<Rc<Analysis>>,
   /// the positions the projected blocks took beyond the field's own stamps
   pub shadow_extra: usize,
   /// the frontmatter flushes so far (`shadow::shadow_flush`)
@@ -283,6 +290,24 @@ pub(in crate::base_utilities) struct Ledger {
   pub read_back:    Option<ReadBack>,
   /// the entries the last binding's `\author` body made, a later `\author` clears them ([`record_author_body_clear`])
   author_body:      (usize, usize),
+}
+
+impl Ledger {
+  /// Its entries, in call order.
+  pub(in crate::base_utilities) fn entries(&self) -> &[Entry] { &self.entries }
+
+  /// Its entries, to change: a change of what the emitter reads, which a reading made before it no longer is
+  /// ([`Self::generation`]).
+  pub(in crate::base_utilities) fn entries_mut(&mut self) -> &mut Vec<Entry> {
+    self.generation += 1;
+    &mut self.entries
+  }
+
+  /// A new entry, last.
+  pub(in crate::base_utilities) fn push(&mut self, entry: Entry) { self.entries_mut().push(entry); }
+
+  /// The changes to its entries so far.
+  pub(in crate::base_utilities) fn generation(&self) -> u64 { self.generation }
 }
 
 /// The final document read against the reading (`writer::read_back_frontmatter`).
@@ -565,7 +590,7 @@ fn watch_unwritten_setters() {
   }
   watch_frontmatter_setter_calls(Some(&FRONTMATTER_SETTERS[..]));
   with_ledger(|ledger| {
-    for entry in &mut ledger.entries {
+    for entry in ledger.entries_mut() {
       if let Entry::Api(call) = entry
         && !call.inside
         && call.binding.is_none()
@@ -739,7 +764,7 @@ pub(in crate::base_utilities) fn record_author_call(
   with_ledger(|ledger| {
     let base = real_base + ledger.shadow_extra;
     let mut block = block;
-    block.index = ledger.entries.len();
+    block.index = ledger.entries().len();
     block.epoch = ledger.flushes;
     if base + len > usize::from(FIELD_PROV_POS_MASK) {
       block.stamp = Stamp::Overflow;
@@ -747,12 +772,12 @@ pub(in crate::base_utilities) fn record_author_call(
       block.range = (base, base + len);
       ledger.shadow_extra += len;
     }
-    for entry in &mut ledger.entries {
+    for entry in ledger.entries_mut() {
       if let Entry::Author(earlier) = entry {
         earlier.window_open = false;
       }
     }
-    ledger.entries.push(Entry::Author(Box::new(block)));
+    ledger.push(Entry::Author(Box::new(block)));
   });
 }
 
@@ -766,8 +791,8 @@ pub(in crate::base_utilities) fn note_field_stamp(field_id: u16, base: Option<us
   }
   with_ledger(|ledger| {
     if field_id == 1 {
-      let index = ledger.entries.len();
-      ledger.entries.push(Entry::Title(TitleStamp {
+      let index = ledger.entries().len();
+      ledger.push(Entry::Title(TitleStamp {
         index,
         length: len,
         range: base.map(|base| (base, base + len)),
@@ -777,6 +802,8 @@ pub(in crate::base_utilities) fn note_field_stamp(field_id: u16, base: Option<us
     if field_id != 2 {
       return;
     }
+    // (its entries and its positions changed at once: the entries' change counted, as `entries_mut` counts one)
+    ledger.generation += 1;
     let Some(block) = ledger
       .entries
       .iter_mut()
@@ -901,12 +928,12 @@ pub(in crate::base_utilities) fn record_api_call(
   let queue_position = queue_length();
   let setter = open_frontmatter_setter();
   with_ledger(|ledger| {
-    let index = ledger.entries.len();
+    let index = ledger.entries().len();
     let mut after_block = None;
     let mut inside = false;
     let mut setters_before = 0;
     if let Some(block) = ledger
-      .entries
+      .entries_mut()
       .iter_mut()
       .rev()
       .find_map(|entry| match entry {
@@ -929,7 +956,7 @@ pub(in crate::base_utilities) fn record_api_call(
     let binding = setter
       .filter(|(called, _)| !inside || *called > setters_before)
       .and_then(|(_, cs)| setter_binding(&cs));
-    ledger.entries.push(Entry::Api(ApiCall {
+    ledger.push(Entry::Api(ApiCall {
       index,
       tag: tag.to_string(),
       role,
@@ -980,10 +1007,10 @@ fn record_unprinted_call(attr: Option<&KeyVals>, command: &Tokens) {
     })
     .unwrap_or_default();
   with_ledger(|ledger| {
-    let at = ledger.entries.len();
+    let at = ledger.entries().len();
     let mut after_block = None;
     let mut inside = false;
-    if let Some(block) = ledger.entries.iter().rev().find_map(|entry| match entry {
+    if let Some(block) = ledger.entries().iter().rev().find_map(|entry| match entry {
       Entry::Author(block) => Some(block),
       _ => None,
     }) {
@@ -1016,11 +1043,11 @@ pub(in crate::base_utilities) fn record_clear(tag: &str, attr: &[(&str, &str)]) 
     .map(|(_, role)| *role);
   with_ledger(|ledger| {
     let flushes = ledger.flushes;
-    let latest_block = ledger.entries.iter().rev().find_map(|entry| match entry {
+    let latest_block = ledger.entries().iter().rev().find_map(|entry| match entry {
       Entry::Author(block) => Some(block.index),
       _ => None,
     });
-    for entry in &mut ledger.entries {
+    for entry in ledger.entries_mut() {
       match entry {
         Entry::Api(call) if call.epoch == flushes && call.tag == tag => {
           let matches = attr.iter().all(|(key, value)| {
@@ -1062,21 +1089,21 @@ pub(in crate::base_utilities) fn record_author_body_clear() {
   with_ledger(|ledger| {
     let flushes = ledger.flushes;
     let (start, end) = std::mem::take(&mut ledger.author_body);
-    for entry in ledger.entries.iter_mut().take(end).skip(start) {
+    for entry in ledger.entries_mut().iter_mut().take(end).skip(start) {
       if let Entry::Api(call) = entry
         && call.epoch == flushes
       {
         call.cleared = true;
       }
     }
-    ledger.author_body = (ledger.entries.len(), ledger.entries.len());
+    ledger.author_body = (ledger.entries().len(), ledger.entries().len());
   });
 }
 
 /// The body [`record_author_body_clear`] opened ends: its calls are the ledger's entries so far.
 pub(in crate::base_utilities) fn record_author_body_end() {
   if records_now() {
-    with_ledger(|ledger| ledger.author_body.1 = ledger.entries.len());
+    with_ledger(|ledger| ledger.author_body.1 = ledger.entries().len());
   }
 }
 
@@ -1090,18 +1117,22 @@ pub(in crate::base_utilities) fn record_cut_copy(role: &str, content: &Tokens) {
   let content = queued_affiliation_text(content);
   with_ledger(|ledger| {
     let flushes = ledger.flushes;
-    if let Some(call) = ledger.entries.iter_mut().find_map(|entry| match entry {
-      Entry::Api(call)
-        if call.epoch == flushes
-          && call.tag == "ltx:contact"
-          && call.role == role
-          && !call.cleared
-          && call.content == content =>
-      {
-        Some(call)
-      },
-      _ => None,
-    }) {
+    if let Some(call) = ledger
+      .entries_mut()
+      .iter_mut()
+      .find_map(|entry| match entry {
+        Entry::Api(call)
+          if call.epoch == flushes
+            && call.tag == "ltx:contact"
+            && call.role == role
+            && !call.cleared
+            && call.content == content =>
+        {
+          Some(call)
+        },
+        _ => None,
+      })
+    {
       call.cleared = true;
     }
   });
@@ -1130,7 +1161,7 @@ fn last_attr<'a>(attrs: &'a str, key: &str) -> &'a str {
 pub fn record_note_text(whatsit: &Whatsit) {
   if !records_now()
     || !with_ledger(|ledger| {
-      ledger.entries.iter().any(|e| match e {
+      ledger.entries().iter().any(|e| match e {
         Entry::Author(_) => true,
         Entry::Api(call) => call.tag == "ltx:title",
         _ => false,
@@ -1155,8 +1186,8 @@ pub fn record_note_text(whatsit: &Whatsit) {
   let value = printed("fnvalue");
   let events = whatsit.get_arg(4).map(lex_events).unwrap_or_default();
   with_ledger(|ledger| {
-    let index = ledger.entries.len();
-    ledger.entries.push(Entry::NoteText(NoteText {
+    let index = ledger.entries().len();
+    ledger.push(Entry::NoteText(NoteText {
       index,
       epoch: ledger.flushes,
       mark,

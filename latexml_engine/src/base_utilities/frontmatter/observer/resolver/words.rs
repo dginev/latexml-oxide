@@ -74,6 +74,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn printed_email_label(
 /// An ink of a block or a call whose words the reading writes nowhere ([`Written::lost_inks`]): its span, its text, the
 /// words lost, as printed, where they print in it, the address runs it prints that the reading writes as its e-mail
 /// items (cut out of a note of it), its owner, and whether it fails the block's names.
+#[derive(Debug)]
 pub(in crate::base_utilities::frontmatter::observer) struct LostInk {
   pub span:       Option<(u16, u16)>,
   pub text:       String,
@@ -239,7 +240,7 @@ impl Written {
         // \email{…}}`, 2406.13066; a note's call's too, siamart's `\thanks{… \email{…}}`, 1804.09455, whose `\email` the
         // rehearsal reads as the document's own, `EmailMeaning::Own`, and digestion routes out all the same. So an.cls's raw
         // `\email` a `\thanks` keeps, 0807.0895, written in the note and its contact, goes uncounted)
-        let inner: &[Event] = match (span, ledger.entries.get(at)) {
+        let inner: &[Event] = match (span, ledger.entries().get(at)) {
           (Some(span), Some(Entry::Author(block))) => match &block.outcome {
             Outcome::Events { events, .. } => events
               .iter()
@@ -263,14 +264,14 @@ impl Written {
         contacts.insert((at, span));
       }
       if role == "email"
-        && let Some(Entry::Author(block)) = ledger.entries.get(at)
+        && let Some(Entry::Author(block)) = ledger.entries().get(at)
         && let Outcome::Events { events, .. } = &block.outcome
         && let Some(label) = printed_email_label(events, span, text)
       {
         write(at, &label);
       }
     }
-    let notes = ledger.entries.iter().filter_map(|entry| match entry {
+    let notes = ledger.entries().iter().filter_map(|entry| match entry {
       Entry::Api(call) if call.tag == "ltx:pubnote" => Some(events::printed_text(&call.events)),
       _ => None,
     });
@@ -533,11 +534,20 @@ impl Written {
     }
     let names = self.names.get(&index).map_or(&[][..], Vec::as_slice);
     let spelled_by: Vec<&str> = names.iter().map(|(_, name)| name.as_str()).collect();
-    // (the one author addresses spell, every one of them spelling that one)
-    let owner_of = |addresses: &mut dyn Iterator<Item = &String>| {
-      let spelled: Option<BTreeSet<usize>> = addresses
-        .map(|address| spelled_name(&spelled_by, address).map(|k| names[k].0))
-        .collect();
+    // (whom an address spells by the reading's rule, among the written names and `own`, a lost name the address may be its
+    // own: `philips@` Andy Philips's beside Philip Laird, 1908.02923; review revN1r2)
+    let holder = |address: &str, own: Option<&str>| -> Option<Holder> {
+      let mut candidates = spelled_by.clone();
+      candidates.extend(own);
+      spelled_name(&candidates, address).map(|k| match names.get(k) {
+        Some(&(creator, _)) => Holder::Author(creator),
+        None => Holder::Own,
+      })
+    };
+    // (the one holder addresses spell, every one of them spelling that one)
+    let one_holder = |addresses: &mut dyn Iterator<Item = &String>, own: Option<&str>| {
+      let spelled: Option<BTreeSet<Holder>> =
+        addresses.map(|address| holder(address, own)).collect();
       match spelled.unwrap_or_default().into_iter().collect::<Vec<_>>()[..] {
         [one] => Some(one),
         _ => None,
@@ -547,7 +557,7 @@ impl Written {
     let mut printed: BTreeMap<usize, BTreeSet<String>> = BTreeMap::new();
     for (k, (e, unit)) in inks.iter().enumerate() {
       // (an address's ink prints no name: `ann.hobbs@a.org` beside `Contact: A. Hobbs,`)
-      if held[k] && e.kind == EventKind::Name && !e.text.contains('@') {
+      if held[k] && e.kind == EventKind::Name && reads[k].addresses.is_empty() {
         printed
           .entry(line_of[unit])
           .or_default()
@@ -587,28 +597,12 @@ impl Written {
         continue;
       }
       at.sort_unstable_by_key(|(range, _)| *range);
-      // (the addresses its ink prints, else its line's)
-      let addresses: Vec<&String> = if !a_block {
-        Vec::new()
-      } else if reads[k].addresses.is_empty() {
-        let line = by_unit.get(&unit).into_iter().flatten();
-        line.flat_map(|&j| reads[j].addresses.iter()).collect()
-      } else {
-        reads[k].addresses.iter().collect()
-      };
-      // (its owner by its own addresses alone: a line's address owns none of its other inks, a list's local parts printed
-      // apart, `{schangpi, piyushsharma, …}`, 2102.08981, 1901.01753)
-      let owner = if reads[k].addresses.is_empty() {
-        None
-      } else {
-        owner_of(&mut reads[k].addresses.iter())
-      };
-      // (its lost words of letters outside a word printing an address, one holding an `@`: what may be a name's —
-      // `\texttt{\{firstname\}.\{lastname\}@kit.edu}`'s are an address's, 2601.00680)
+      // (its lost words of letters outside a word printing an address, as the address reader reads one: what may be a name's
+      // — `\texttt{\{firstname\}.\{lastname\}@kit.edu}`'s are an address's, 2601.00680)
       let address_words: Vec<(usize, usize)> = e
         .text
         .split_whitespace()
-        .filter(|w| w.contains('@'))
+        .filter(|w| !addresses_in(w).is_empty() || reads[k].addresses.iter().any(|a| a == w))
         .map(|w| {
           let start = w.as_ptr() as usize - e.text.as_ptr() as usize;
           (start, start + w.len())
@@ -622,26 +616,59 @@ impl Written {
         })
         .map(|(_, w)| *w)
         .collect();
-      // (a name: on a line of its block's names, or one an address its line or its column prints spells, by the reading's
-      // rule of an address, that spells no written author: a column's name above its address, 1805.08288's minipages)
-      let names_fail = a_block
-        && e.kind == EventKind::Name
-        && !named.is_empty()
-        && owner.is_none()
-        && (names_line(unit) || {
-          let name = named.join(" ");
-          let column = by_column.get(&column_of[&unit]).into_iter().flatten();
-          let mut all = addresses
-            .iter()
-            .copied()
-            .chain(column.flat_map(|&j| reads[j].addresses.iter()));
-          // (an address of a written author's spells that author's line, whatever else it prints: `Contact: A. Hobbs,
-          // ann.hobbs@a.org` under Ann Hobbs)
-          all.any(|address| {
-            spelled_name(&[name.as_str()], address).is_some()
-              && spelled_name(&spelled_by, address).is_none()
+      // (a Name's: what its addresses may spell as its own)
+      let own =
+        (a_block && e.kind == EventKind::Name && !named.is_empty()).then(|| named.join(" "));
+      // (its owner by its own addresses, else by the addresses its line prints, read from the line's text whole: the line goes
+      // with its other inks to the author its own address gives, `ext. 5` after `POC: A. Able (ann.able@a.org)`, 2203.10777's
+      // `Dresden`, `Saxony 01062` before `Germany (martin.waltz@tu-dresden.de)`, review revN1r2; a list's local parts printed
+      // apart are one run of addresses spelling its authors, owning none, `{pzou94, ozel, suresh}@gwu.edu`, 2003.14069;
+      // 2102.08981, 1901.01753, 1708.00818, 2307.03645)
+      let spelled = if !a_block {
+        None
+      } else if reads[k].addresses.is_empty() {
+        let line: Vec<&Event> = events
+          .iter()
+          .zip(&units)
+          .filter(|&(_, &u)| u == unit)
+          .map(|(e, _)| e)
+          .collect();
+        let runs = address_runs(&events_text(&line), &|_| false);
+        one_holder(
+          &mut runs.iter().flat_map(|run| run.addresses.iter()),
+          own.as_deref(),
+        )
+      } else {
+        one_holder(&mut reads[k].addresses.iter(), own.as_deref())
+      };
+      let owner = match spelled {
+        Some(Holder::Author(creator)) => Some(creator),
+        _ => None,
+      };
+      // (the addresses its ink prints, else its line's)
+      let addresses: Vec<&String> = if !a_block {
+        Vec::new()
+      } else if reads[k].addresses.is_empty() {
+        let line = by_unit.get(&unit).into_iter().flatten();
+        line.flat_map(|&j| reads[j].addresses.iter()).collect()
+      } else {
+        reads[k].addresses.iter().collect()
+      };
+      // (a name: on a line of its block's names, or one an address its line or its column prints spells as its own, by the
+      // reading's rule of an address, ranked against the written names: a column's name above its address, 1805.08288's
+      // minipages; an address of a written author's spells that author's line, whatever else it prints: `Contact: A. Hobbs,
+      // ann.hobbs@a.org` under Ann Hobbs)
+      let names_fail = own.as_deref().is_some_and(|own| {
+        owner.is_none()
+          && (names_line(unit) || {
+            let column = by_column.get(&column_of[&unit]).into_iter().flatten();
+            let mut all = addresses
+              .iter()
+              .copied()
+              .chain(column.flat_map(|&j| reads[j].addresses.iter()));
+            all.any(|address| holder(address, Some(own)) == Some(Holder::Own))
           })
-        });
+      });
       lost.push(LostInk {
         span: e.span,
         text: e.text.clone(),
@@ -657,8 +684,17 @@ impl Written {
   }
 }
 
+/// Whom an address spells among a block's written names and a lost one ([`Written::lost_inks`]): a written author (its
+/// index in [`Resolved::creators`]), or the lost name, its own.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+enum Holder {
+  Author(usize),
+  Own,
+}
+
 /// One block's word check ([`check_blocks`]): its inks the reading writes nowhere, and the words it writes more times than
 /// they print.
+#[derive(Debug)]
 pub(in crate::base_utilities::frontmatter::observer) struct BlockCheck {
   pub lost:   Vec<LostInk>,
   pub excess: Vec<(String, bool)>,
@@ -674,8 +710,8 @@ pub(in crate::base_utilities::frontmatter::observer) fn check_blocks(
 ) -> BTreeMap<usize, BlockCheck> {
   // (per entry, whether a later block of its epoch replaces the authors: the epochs a replacing block opens, from the end)
   let mut replacing: BTreeSet<usize> = BTreeSet::new();
-  let mut replaced = vec![false; ledger.entries.len()];
-  for (index, entry) in ledger.entries.iter().enumerate().rev() {
+  let mut replaced = vec![false; ledger.entries().len()];
+  for (index, entry) in ledger.entries().iter().enumerate().rev() {
     if let Entry::Author(block) = entry {
       replaced[index] = replacing.contains(&block.epoch);
       if block.replace {
@@ -684,7 +720,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn check_blocks(
     }
   }
   let mut checks = BTreeMap::new();
-  for (index, entry) in ledger.entries.iter().enumerate() {
+  for (index, entry) in ledger.entries().iter().enumerate() {
     if let Entry::Author(block) = entry
       && !block.cleared
       && !replaced[index]

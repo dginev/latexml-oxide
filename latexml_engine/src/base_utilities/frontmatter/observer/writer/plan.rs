@@ -172,7 +172,7 @@ fn prints_in_note(index: usize, span: Option<(u16, u16)>) -> bool {
       })
     })
   };
-  with_ledger(|ledger| match ledger.entries.get(index) {
+  with_ledger(|ledger| match ledger.entries().get(index) {
     Some(Entry::Api(call)) => {
       matches!(call.tag.as_str(), "ltx:pubnote" | "ltx:note") || in_a_note(&call.events)
     },
@@ -368,7 +368,7 @@ pub(super) fn held_as_pubnote(front: &Front, key: &Key, wants: &[(Owner, &Assoc)
 
 /// The API call at ledger index `index`.
 pub(super) fn api_call(index: usize) -> Option<ApiCall> {
-  with_ledger(|ledger| match ledger.entries.get(index) {
+  with_ledger(|ledger| match ledger.entries().get(index) {
     Some(Entry::Api(call)) => Some(call.clone()),
     _ => None,
   })
@@ -474,7 +474,7 @@ pub(super) fn block_span_tokens(
   with_mark: bool,
 ) -> Option<Tokens> {
   with_ledger(|ledger| {
-    let Some(Entry::Author(block)) = ledger.entries.get(index) else {
+    let Some(Entry::Author(block)) = ledger.entries().get(index) else {
       return None;
     };
     let Outcome::Events {
@@ -654,7 +654,7 @@ pub(super) fn block_address_tokens(
     "longtable",
   ];
   with_ledger(|ledger| {
-    let Some(Entry::Author(block)) = ledger.entries.get(index) else {
+    let Some(Entry::Author(block)) = ledger.entries().get(index) else {
       return None;
     };
     let content = block.tokens.unlist_ref();

@@ -121,7 +121,7 @@ fn declined(reason: &str) -> Option<Repart> {
 /// never is (a note, a mark, or other ink first).
 pub(super) fn entry_span(index: usize, span: (u16, u16), key: &str) -> Option<(u16, u16)> {
   with_ledger(|ledger| {
-    let Some(Entry::Author(block)) = ledger.entries.get(index) else {
+    let Some(Entry::Author(block)) = ledger.entries().get(index) else {
       return None;
     };
     let Outcome::Events { events, .. } = &block.outcome else {
@@ -165,7 +165,7 @@ fn separator_words(index: usize) -> Vec<String> {
   }
   with_ledger(|ledger| {
     let mut out = Vec::new();
-    if let Some(Entry::Author(block)) = ledger.entries.get(index)
+    if let Some(Entry::Author(block)) = ledger.entries().get(index)
       && let Outcome::Events { events, .. } = &block.outcome
     {
       walk(events, &mut out);
@@ -664,7 +664,7 @@ pub(super) fn plan(resolved: &Resolved, front: &Front) -> Option<Repart> {
 fn opens_a_row_under_no_names(c: &RCreator, before: &RCreator) -> bool {
   let (name, before) = (words(&c.name), words(&before.name));
   with_ledger(|ledger| {
-    let Some(Entry::Author(block)) = ledger.entries.get(c.source) else {
+    let Some(Entry::Author(block)) = ledger.entries().get(c.source) else {
       return false;
     };
     let Outcome::Events { events, .. } = &block.outcome else {
@@ -709,7 +709,7 @@ fn joined_across_cells(c: &RCreator) -> bool {
   }
   let name = words(&c.name);
   with_ledger(|ledger| {
-    let Some(Entry::Author(block)) = ledger.entries.get(c.source) else {
+    let Some(Entry::Author(block)) = ledger.entries().get(c.source) else {
       return false;
     };
     let Outcome::Events { events, .. } = &block.outcome else {
@@ -762,7 +762,7 @@ fn joined_rows(assoc: &Assoc) -> Vec<(String, bool)> {
   };
   let text = words(&assoc.text);
   with_ledger(|ledger| {
-    let Some(Entry::Author(block)) = ledger.entries.get(index) else {
+    let Some(Entry::Author(block)) = ledger.entries().get(index) else {
       return Vec::new();
     };
     let Outcome::Events { events, .. } = &block.outcome else {
@@ -945,7 +945,7 @@ fn piece_ink(index: usize, span: (u16, u16), text: &str) -> Option<PieceInk> {
     )
   };
   with_ledger(|ledger| {
-    let Some(Entry::Author(block)) = ledger.entries.get(index) else {
+    let Some(Entry::Author(block)) = ledger.entries().get(index) else {
       return None;
     };
     let Outcome::Events { events, .. } = &block.outcome else {
@@ -1088,7 +1088,7 @@ fn item_labels(item: &Assoc) -> Vec<String> {
   let printed = item.source.and_then(|(index, span)| {
     let (start, _) = span?;
     with_ledger(|ledger| {
-      let Some(Entry::Author(block)) = ledger.entries.get(index) else {
+      let Some(Entry::Author(block)) = ledger.entries().get(index) else {
         return None;
       };
       let Outcome::Events { events, .. } = &block.outcome else {
@@ -1950,7 +1950,7 @@ mod tests {
       })
     };
     with_ledger(|ledger| {
-      ledger.entries = vec![
+      *ledger.entries_mut() = vec![
         call("ltx:contact", "ltx:creator"),
         call("ltx:creator", ""),
         call("ltx:personname", "ltx:creator"),
@@ -1968,7 +1968,7 @@ mod tests {
       0,
       "api:affiliation classify:institution"
     )));
-    with_ledger(|ledger| ledger.entries.clear());
+    with_ledger(|ledger| ledger.entries_mut().clear());
   }
 
   /// Only an item made from the queued tokens is one of the block's own a creator of no name would hold

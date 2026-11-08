@@ -109,18 +109,10 @@ impl NameJoin {
     NameJoin::Remark,
   ];
 
-  /// The joins a creator's `rule` records, in order: a reading read back from its dump (`ab_audit fmshadow`), which writes
-  /// them as the rule's tags.
-  pub fn of_rule(rule: &str) -> Vec<NameJoin> {
-    let mut joins = Vec::new();
-    for tag in rule.split_whitespace() {
-      if let Some(join) = Self::ALL.into_iter().find(|join| join.tag() == tag)
-        && !joins.contains(&join)
-      {
-        joins.push(join);
-      }
-    }
-    joins
+  /// The join a tag names ([`Self::tag`]): a reading read back from its dump (`ab_audit fmshadow`), which writes a creator's
+  /// joins as their tags.
+  pub fn of_tag(tag: &str) -> Option<NameJoin> {
+    Self::ALL.into_iter().find(|join| join.tag() == tag)
   }
 
   /// Its tag in a creator's `rule`.
@@ -1073,7 +1065,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn in_source_order(items: &
 /// block's expansion that is a creator or a creator's annotation ([`creator_call`]).
 pub(in crate::base_utilities) fn ledger_inputs(ledger: &ledger::Ledger) -> Vec<Input> {
   let mut inputs = Vec::new();
-  for entry in &ledger.entries {
+  for entry in ledger.entries() {
     match entry {
       ledger::Entry::Author(block) => {
         if let ledger::Outcome::Events { events, .. } = &block.outcome {

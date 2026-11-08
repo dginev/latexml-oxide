@@ -3,7 +3,10 @@
 //! (`an_email_label_in_any_language_is_written_as_printed`); the separator check (`a_role_heading_in_a_name_is_counted`) and the marks check
 //! (`a_mark_reaching_no_contact_is_counted`), each counted in its Warning. N1r2 (review revN1): a kept note cuts out its written address by
 //! position, the note of the author whose line it is (`a_note_cuts_out_its_written_address`); a lost name fails the names, the block written whole
-//! (`a_lost_name_writes_the_block_whole`).
+//! (`a_lost_name_writes_the_block_whole`). N1r3 (review revN1r2): no reading outlives its conversion
+//! (`no_reading_outlives_its_conversion`); a lost name ranked against the written names spells its own address
+//! (`a_lost_name_spells_its_own_address`); a line's other inks go with it to its address's author (`a_note_cuts_out_its_written_address`), a list's
+//! local parts to none (`a_list_part_goes_to_no_line_author`).
 
 use latexml::util::test::{error_count, warning_count};
 use regex::Regex;
@@ -148,7 +151,7 @@ const NOTE_ROWS: &[NoteRow] = &[
     &[&["POC: A. Able"], &[], &[]],
   ),
   // (2203.10777: a line the reading loses under the affiliation it repeats: the ink printing her address a note of hers, cut out; its
-  // other inks the block's, a line's address owning none)
+  // other inks go with the line to her, never to a nameless creator: review revN1r2)
   (
     "Ann Able\\\\ Institute of Things, Universit\\\"at Dresden,\\\\ Dresden, Saxony 01062, Germany (ann.able@tu-dresden.de)\\\\ and \\\\ Bob \
      Baker\\\\ Institute of Things, Universit\\\"at Dresden,\\\\ Dresden, Saxony 01062, Germany (bob.baker@tu-dresden.de)",
@@ -163,14 +166,26 @@ const NOTE_ROWS: &[NoteRow] = &[
         "affiliation=Institute of Things, Universität Dresden",
         "email=bob.baker@tu-dresden.de",
       ],
-      &[],
     ],
-    &[&["Germany"], &["Germany"], &[
+    &[&["Dresden", "Saxony 01062", "Germany"], &[
       "Dresden",
       "Saxony 01062",
-      "Dresden",
-      "Saxony 01062",
+      "Germany",
     ]],
+  ),
+  // (an ink after the address on its line, `ext. 5`: the line's author's, review revN1r2's `rep/both.tex`)
+  (
+    "Ann L. Able, Bob Baker, and Cat Cole \\\\ POC: A.\\ Able (ann.able@a.org), ext.\\ 5\\\\ Approved for public release.",
+    &[
+      &[
+        "Ann L. Able",
+        "email=ann.able@a.org",
+        "affiliation=Approved for public release.",
+      ],
+      &["Bob Baker", "affiliation=Approved for public release."],
+      &["Cat Cole", "affiliation=Approved for public release."],
+    ],
+    &[&["POC: A. Able", "ext. 5"], &[], &[]],
   ),
   // (a label after the address, which no address run takes: the address's author's)
   (
@@ -251,5 +266,170 @@ fn a_lost_name_writes_the_block_whole() {
       assert_eq!(creators(&xml), [vec![whole.to_string()]], "{block}");
       assert_eq!(notes(&xml), [Vec::<String>::new()], "{block}");
     }
+  }
+}
+
+/// `docs` converted in turn on one thread, as a persistent `cortex_worker` converts papers (no engine reset between them), with
+/// the switch on and the frontmatter trace on (`--debug=frontmatter`): each one's frontmatter trace (its `FRONT` lines) and XML.
+fn in_turn(docs: Vec<&'static str>) -> Vec<(Vec<String>, String)> {
+  use std::rc::Rc;
+
+  use latexml::converter::Converter;
+  use latexml_core::common::{Config, OutputFormat};
+  use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+  std::thread::Builder::new()
+    .stack_size(256 * 1024 * 1024)
+    .spawn(move || {
+      let _ = latexml_core::util::logger::init(log::LevelFilter::Debug);
+      latexml_core::common::error::enable_debug_feature("frontmatter");
+      let runs = docs
+        .into_iter()
+        .map(|tex| {
+          set_fm_shadow_override(Some(true));
+          set_fm_emit_override(Some(2));
+          let opts = Config {
+            format: OutputFormat::XML,
+            include_comments: Some(false),
+            preload: Some(vec!["ar5iv.sty".to_string()]),
+            bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
+            extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
+            ..Config::default()
+          };
+          let mut converter = Converter::from_config(opts.clone());
+          converter.prepare_session(&opts).expect("a session");
+          let response = converter.convert_content_with_provenance("t.tex", tex.to_string());
+          let trace: Vec<String> = response
+            .log
+            .lines()
+            .filter(|line| line.contains("FRONT"))
+            .map(str::to_string)
+            .collect();
+          (trace, response.result.unwrap_or_default())
+        })
+        .collect();
+      latexml_core::reset_thread_engine();
+      runs
+    })
+    .expect("a conversion thread")
+    .join()
+    .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
+}
+
+/// No reading of the emitter outlives its conversion: documents converted in turn on one thread, as a persistent
+/// `cortex_worker` converts papers (`a.tex` twice, then `b.tex`, then `a.tex`), each write the frontmatter, and trace it, as
+/// their solo conversions do. The reading is the ledger's (`Ledger::analysis`), dropped with it at a conversion's start
+/// (review revN1r2: a thread-local had kept the last paper's reading, its tokens and fonts, into the next). No conversion
+/// follows an engine reset on its thread (`latexml_core::reset_thread_engine`'s contract: its token constants are not
+/// re-pinned), so none is made here.
+#[test]
+fn no_reading_outlives_its_conversion() {
+  let a = repro!("emit_no_reading_outlives_its_conversion");
+  let b: &'static str = Box::leak(
+    a.replace("Paper A", "Paper B")
+      .replace("\\section{Two} Text.\n", "")
+      .into_boxed_str(),
+  );
+  assert_ne!(a, b);
+  let solo_a = in_turn(vec![a]).remove(0);
+  let solo_b = in_turn(vec![b]).remove(0);
+  assert!(
+    solo_a.0.iter().any(|line| line.contains("FRONT")) && solo_a.1.contains("Ann Able"),
+    "{solo_a:?}"
+  );
+  let runs = in_turn(vec![a, a, b, a]);
+  for ((trace, xml), solo) in runs.iter().zip([&solo_a, &solo_a, &solo_b, &solo_a]) {
+    assert_eq!(trace, &solo.0);
+    assert_eq!(xml, &solo.1);
+  }
+}
+
+/// Whether a lost name fails the names ranks it against the written names in one owner decision: an address the lost name
+/// spells best is its own (`philips@` Andy Philips's, though its prefix spells the written Philip Laird), so the block is
+/// written whole, Perl's whole-block creator, as it is where no written name spells the address (`Andy Smith`, `smith@`):
+/// JAIR's `\name Andy Philips \email philips@…`, 1908.02923 (review revN1r2), a raw style's rows (its `\@maketitle`
+/// fixture); in one counted Warning, with either switch, off clean.
+#[test]
+fn a_lost_name_spells_its_own_address() {
+  let template = repro!("emit_net_a_lost_name_spells_its_own_address");
+  let style =
+    include_str!("../../../tools/perfect_kernel/repros/sectioning-frontmatter/emit_jair_rows.sty");
+  let row = "\\name Andy Philips \\email philips@ptolemy.arc.nasa.gov";
+  for (name, address) in [
+    ("Andy Philips", "philips@ptolemy.arc.nasa.gov"),
+    ("Andy Smith", "smith@ptolemy.arc.nasa.gov"),
+  ] {
+    let tex = template.replace(row, &format!("\\name {name} \\email {address}"));
+    assert!(tex.contains(name));
+    let convert = |emit: u8| {
+      let (log, xml, ()) = latexml::util::test::convert_files_with_setup_then(
+        &tex,
+        &[("emit_jair_rows.sty", style)],
+        Some("ar5iv.sty"),
+        move || {
+          latexml_engine::base_utilities::set_fm_shadow_override(Some(true));
+          latexml_engine::base_utilities::set_fm_emit_override(Some(emit));
+        },
+        |_| (),
+      );
+      (log, xml)
+    };
+    let (off_log, _) = convert(0);
+    assert_eq!(
+      (error_count(&off_log), warning_count(&off_log)),
+      (0, 0),
+      "{off_log}"
+    );
+    for emit in [1, 2] {
+      let (log, xml) = convert(emit);
+      assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+      assert!(
+        log.contains(&format!(
+          "prints ({name}); the block is written whole, as Perl's whole-block creator"
+        )),
+        "{log}"
+      );
+      let creators = creators(&xml);
+      assert_eq!(creators.len(), 1, "{name}: {creators:?}");
+      let whole = &creators[0][0];
+      for printed in [
+        "Steven Minton minton@ptolemy.arc.nasa.gov",
+        &format!("{name} {address}"),
+        "Philip Laird laird@ptolemy.arc.nasa.gov",
+      ] {
+        assert!(whole.contains(printed), "{printed}: {whole}");
+      }
+      assert_eq!(notes(&xml), [Vec::<String>::new()], "{name}");
+    }
+  }
+}
+
+/// A list's local parts printed apart are one run of addresses spelling its authors: a lost part goes to no author the line's other
+/// address spells (`{\it pzou94, ozel, suresh@gwu.edu}` under three names, 2003.14069; 2102.08981, 1901.01753, 1708.00818,
+/// 2307.03645), each named creator's element as it is, with either switch. (The reading loses the parts the base writes as
+/// addresses, `aable@a.org`; they stay the block's note: OXIDIZED_DESIGN_DIVERGENCES #980, open.)
+#[test]
+fn a_list_part_goes_to_no_line_author() {
+  let template = repro!("emit_net_a_note_cuts_its_written_address");
+  let tex = template.replace(
+    NOTE_ROWS[0].0,
+    "Ann Able \\qquad Bob Baker \\qquad Cat Cole \\\\ Univ A \\\\ {\\it aable, bbaker, cat@a.org}",
+  );
+  for emit in [1, 2] {
+    let (log, xml) = run(&tex, emit);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+    assert!(
+      log.contains("prints (aable bbaker); they are kept as a note of the author block"),
+      "{log}"
+    );
+    assert_eq!(creators(&xml)[..3], [
+      vec!["Ann Able", "affiliation=Univ A"],
+      vec!["Bob Baker", "affiliation=Univ A"],
+      vec!["Cat Cole", "affiliation=Univ A", "email=cat@a.org"],
+    ]);
+    assert_eq!(
+      notes(&xml)[..3],
+      [Vec::<String>::new(), Vec::new(), Vec::new()],
+      "{xml}"
+    );
   }
 }
