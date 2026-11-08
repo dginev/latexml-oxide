@@ -527,6 +527,33 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
       parts.iter().for_each(|part| held.add_word(part, n));
     }
   }
+  // (a word one side reads without the accents the other prints — the text of a call no rehearsal read, which reads none
+  // (`ledger::content_text`), against its placed copy, `universitat` and `universität` —: the same ink, as a glued word)
+  let gaps: Vec<(String, usize)> = printed
+    .words
+    .iter()
+    .map(|(word, (n, _))| (word.clone(), n.saturating_sub(held.word(word))))
+    .filter(|(word, gap)| *gap > 0 && base_letters(word) == *word)
+    .collect();
+  for (word, mut gap) in gaps {
+    let accented: Vec<String> = shared
+      .words
+      .keys()
+      .filter(|other| **other != word && base_letters(other) == word)
+      .cloned()
+      .collect();
+    for other in accented {
+      let spare = shared
+        .word(&other)
+        .saturating_sub(printed.word(&other) + beside.word(&other));
+      let n = spare.min(gap);
+      if n > 0 {
+        held.add_word(&word, n);
+        printed.add_word(&other, n);
+        gap -= n;
+      }
+    }
+  }
   // (a word a Mark event prints is that mark's, as often as the events print it, wherever a text holds it: an entry's
   // label in its contact's text, IEEEtran's nested `\IEEEauthorblockA{\IEEEauthorrefmark{2}Univ B, City}`, 1812.05961)
   let mut check = ContentCheck::default();

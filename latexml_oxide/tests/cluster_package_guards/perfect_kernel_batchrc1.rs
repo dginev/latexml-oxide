@@ -145,3 +145,41 @@ fn a_macro_held_author_list_costs_no_copy_per_mark() {
     "peak {peak} kB, {before} kB before the conversion"
   );
 }
+
+/// What a call no rehearsal read printed is counted by words as its ink parts them (`ledger::content_text`): an accent
+/// (a control symbol) or a group inside a word parts nothing (`Universit\"at`, `M{\"u}nchen`, `Montr\'{e}al`) — 4 words,
+/// not 8 pieces (`at M unchen Universit`: review revRC1 finding 3); the accents unread, the words are spelled without
+/// them, and the check takes such a word for the accented one a placed copy prints (`resolver::placed`'s reconcile).
+/// Distinct from [`an_unread_calls_words_are_counted`]: the text's parting into words, which a stand-in copy's unrecorded
+/// call (`Ledger::unrecorded`) shares.
+#[test]
+fn an_unread_calls_accented_words_count_whole() {
+  let (log, xml) = in_a_directory(
+    repro!("emit_content_check_counts_accented_words_whole"),
+    &[],
+    &[
+      ("LATEXML_REHEARSAL_READ_BUDGET", "20000"),
+      ("LATEXML_FM_EMIT", "2"),
+    ],
+  );
+  assert_eq!(
+    (error_count(&log), log.matches("\nFatal:").count()),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(
+    log.matches("Warning:frontmatter:rehearsal_budget").count(),
+    1,
+    "{log}"
+  );
+  assert_eq!(warning_count(&log), 2, "{log}");
+  assert_eq!(
+    content_checks(&log),
+    (vec!["1 Montreal Munchen Universitat".to_string()], vec![]),
+    "{log}"
+  );
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able *"]),
+    row(&["Bob Baker †", "affiliation=Univ Beta"]),
+  ]);
+}
