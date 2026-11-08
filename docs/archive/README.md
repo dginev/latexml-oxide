@@ -95,7 +95,8 @@ citations are why the file is kept.
   batches 62d-62f; their open residuals stay in SYNC_STATUS "Run-329 and sandbox open residuals".
 - `SYNC_SESSIONS_2026-11.md` — the frontmatter series' landed rows, moved verbatim 2026-11-08 from SYNC_STATUS's
   "Silent-loss inventory" (batches 77d-108b, the S2b families, Z1-Z14, the bundle rows int117a-int145b) and from
-  `../perfect_kernel/OPEN_ROWS.md`; each live residual keeps a one-line row in SYNC_STATUS ("— the residual").
+  `../perfect_kernel/OPEN_ROWS.md`, and `../perfect_kernel/KERNEL_CAPABILITIES.md`'s K23 design record; each live
+  residual keeps a one-line row in SYNC_STATUS ("— the residual").
 - `GEMINI_IMPROVEMENT_IDEAS_2026-09-19.md` — the Gemini engineering review; P1/P5/P6/P7 landed, P3/P4 settled, the
   open ideas lifted into `../performance/BEYOND_PERL_LEVERS.md`.
 - `round19_iteration_log.md` — pre-Round-25 sprint narratives. Cited by `CHANGELOG.md`.
