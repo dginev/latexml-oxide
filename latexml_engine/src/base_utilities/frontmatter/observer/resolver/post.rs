@@ -1294,7 +1294,8 @@ impl Resolver {
         self.attach(owner, Assoc { rule, ..assoc }, false);
         continue;
       }
-      let note = assoc.role == "legend";
+      // (a legend, or a note an entry holds, `note:entry`: its holders' note)
+      let note = assoc.role == "legend" || assoc.rule.split_whitespace().any(|t| t == "note:entry");
       // (an entry only the title's marks request is the title's note, the document's, as today's keeps it in the title:
       // aastex's `\title{…\altaffilmark{1}}` with `\altaffiltext{1}{Based on observations …}`, 0801.1670, 1006.1591)
       if owners.is_empty()

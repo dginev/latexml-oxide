@@ -18,7 +18,7 @@ use latexml_core::document::tag::RawFrontmatter;
 use super::{
   dom::{Kind, norm},
   plan::{self, Key, Owner, api_call},
-  repart::entry_span,
+  repart::{entry_span, prefix_tokens},
   *,
 };
 use crate::base_utilities::{
@@ -1050,6 +1050,21 @@ fn item_call(
           |e| norm(&e.text) == key.1,
         ) != Some(true)
       {
+        // (an affiliation the reading wrote without the address its line prints last: the tokens printing it, cut inside the
+        // ink the address ends — 2203.10777, `prefix_tokens`)
+        if key.0 == Kind::Affiliation
+          && let Some((cut, tokens)) = prefix_tokens(index, span, &key.1)
+        {
+          let font = event_at(
+            index,
+            span,
+            |e| e.kind != EventKind::Layout,
+            |e| e.font.clone(),
+          );
+          return Ok(wrap(
+            in_its_font(font.flatten(), spaced(index, cut, tokens.unlist())).unlist_ref(),
+          ));
+        }
         return Ok(wrap(&by_text(Some("span letters differ"), &assoc.text)));
       }
       let span = found.unwrap_or(span);
@@ -2168,4 +2183,40 @@ fn per_author_marks(source: usize) -> bool {
     });
     block.hook == "\\lx@add@author@split" || (block.cautious && !answers)
   })
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::base_utilities::frontmatter::observer::{ledger::TitleStamp, reset_fm_shadow};
+
+  /// No reading outlives its conversion: the conversion's reset drops the ledger's reading and starts its count again, so a
+  /// later conversion's first entries, counted from 0 as these were, read afresh (review revN1r3 5; the cortex worker resets the
+  /// frontmatter per paper, never the engine). The count changes with the entries alone (`Ledger::entries_mut`).
+  #[test]
+  fn the_reset_drops_the_reading_and_its_count() {
+    reset_fm_shadow();
+    with_ledger(|ledger| {
+      ledger.push(Entry::Title(TitleStamp {
+        index:  0,
+        length: 1,
+        range:  None,
+      }));
+      assert_eq!(ledger.generation(), 1);
+      ledger.analysis = Some(Rc::new(Analysis {
+        generation: ledger.generation(),
+        reading:    Resolved::default(),
+        resolved:   Resolved::default(),
+        checks:     BTreeMap::new(),
+        calls:      BTreeMap::new(),
+        marks:      BTreeMap::new(),
+        merged:     BTreeMap::new(),
+      }));
+    });
+    reset_fm_shadow();
+    with_ledger(|ledger| {
+      assert!(ledger.analysis.is_none());
+      assert_eq!(ledger.generation(), 0);
+    });
+  }
 }

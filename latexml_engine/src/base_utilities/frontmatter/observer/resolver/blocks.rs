@@ -691,6 +691,56 @@ impl Resolver {
               .iter()
               .any(|r| !is_symbol_label(r))
           });
+          // (an address decides only its own ink, its holder too: a line the row holds whose addresses spell one of the
+          // row is that one's e-mail, the line's other text the row's, as the switch off places it — 2203.10777's
+          // `Dresden, Saxony 01062, Germany (martin.waltz@tu-dresden.de)` under Martin Waltz, written whole with the
+          // address on int146a's LO1 (review revLO1 1); `Ann Able and Bob Baker\\ Univ A\\ Present address: Dept X, Univ Y
+          // (ann.able@y.org)`, Ann's e-mail and both authors' text without it (revLO1 2). Only an address printed last on
+          // its line, so the emitter cuts the rest from its tokens; with the emitter's switch on alone, `emitting`)
+          let own_ink = || {
+            let cuts = address_cuts(&text, &runs);
+            let mut read: Vec<&String> = runs.iter().flat_map(|r| &r.addresses).collect();
+            read.sort_unstable();
+            read.dedup();
+            cuts
+              .last()
+              .filter(|&&(_, end)| !text[end..].chars().any(char::is_alphanumeric))
+              .filter(|_| {
+                read.len() == addresses.len() && addresses.iter().all(|a| read.contains(&a))
+              })
+              .map(|_| strip_address_runs(&text, &runs))
+              .filter(|rest| rest.chars().any(char::is_alphanumeric))
+          };
+          let held = (self.emitting && one_owner && other_ink && !own_name)
+            .then(own_ink)
+            .flatten();
+          let text = match (owners.iter().next(), held) {
+            (Some(&Some(owner)), Some(rest)) => {
+              for address in &addresses {
+                // (where the address prints as a contact of its own, its span: the emitter writes its tokens)
+                let span = line
+                  .events
+                  .iter()
+                  .find(|e| e.kind == EventKind::Contact && e.text.contains(address.as_str()))
+                  .and_then(|e| e.span)
+                  .or(source.1);
+                self.attach(
+                  Some(owner),
+                  Assoc {
+                    role:   "email".into(),
+                    text:   address.clone(),
+                    label:  None,
+                    rule:   "line:row-address owner:spelled".into(),
+                    source: Some((index, span)),
+                    target: None,
+                  },
+                  false,
+                );
+              }
+              rest
+            },
+            _ => text,
+          };
           let mut places = Vec::new();
           for owner in &run {
             places.push((*owner, self.out.creators[*owner].affiliations.len()));
@@ -779,13 +829,43 @@ impl Resolver {
       // events, its words split at an inner `and` or comma, was its first piece's span alone, so the cut failed ("a block
       // line does not cut") and the whole line went to the first mark's name: `$^{1}$Univ of Science and
       // Technology~~~~$^{3}$Univ C`, dev20k 2111.07950, 1503.06795, 2504.05692, 2008.02300, 2404.01856)
+      // (a note after the entry's last other ink goes with it, to the names its labels request, as the switch off gives it
+      // them: 2504.09745's `$^{\ddagger}$Ericsson Canada\thanks{This work was supported …}`, each `‡` author's thanks — with
+      // the emitter's switch on, a nameless creator's note before, and the entry written with the note in it; read with it
+      // on alone, `emitting`)
+      let trailing = if self.emitting {
+        entry
+          .events
+          .iter()
+          .rev()
+          .take_while(|e| !inked(e) || e.kind == EventKind::Note)
+          .filter(|e| e.kind == EventKind::Note)
+          .count()
+      } else {
+        0
+      };
+      // (an entry of notes alone keeps them, as before)
+      let trailing = if trailing < entry.events.iter().filter(|e| inked(e)).count() {
+        trailing
+      } else {
+        0
+      };
+      let notes: Vec<&Event> = entry
+        .events
+        .iter()
+        .rev()
+        .filter(|e| e.kind == EventKind::Note)
+        .take(trailing)
+        .copied()
+        .collect();
       let span = match (
         entry.events.first().and_then(|e| e.span),
         entry
           .events
           .iter()
           .rev()
-          .find(|e| inked(e))
+          .filter(|e| inked(e))
+          .nth(trailing)
           .and_then(|e| e.span),
       ) {
         (Some((start, _)), Some((_, end))) if end >= start => Some((start, end)),
@@ -876,6 +956,23 @@ impl Resolver {
           self.compound.push(self.pending.len() - 1);
         }
         continues = Some(Continued::Pending(self.pending.len() - 1));
+      }
+      for note in notes.into_iter().rev().filter(|e| !e.inkless) {
+        self
+          .pending
+          .push((entry.labels.clone(), entry.symbol, Assoc {
+            role:   note
+              .role
+              .as_deref()
+              .and_then(|r| r.split(' ').next())
+              .unwrap_or("thanks")
+              .to_string(),
+            text:   note.text.trim().to_string(),
+            label:  entry.labels.first().cloned(),
+            rule:   s!("{rule} note:entry"),
+            source: Some((index, note.span)),
+            target: None,
+          }));
       }
     }
     continues

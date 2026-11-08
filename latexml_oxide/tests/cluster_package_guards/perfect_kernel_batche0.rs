@@ -487,6 +487,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     1,
   ),
   ("const _linklabel base_utilities/frontmatter/insert.rs", 1),
+  // (LO2, 0 -> 1: an emitted entry's first mark read, a fact kept on its pending entry as Perl keeps its labels there
+  // (Base_Utility.pool.ltxml:502-508), where LO1 kept a State flag; internal, never written out)
+  ("const _markread base_utilities/defs/author_macros.rs", 1),
   (
     "const _paragraph_break base_utilities/frontmatter/queue.rs",
     1,
@@ -851,8 +854,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   // (Z4a, 4 -> 8: an environment step by its meaning, a CS whose definition is `\begin` or `\end`, a `\let` copy too, what no frame
   // says for a raw environment; the definition's name, not the token's spelling)
-  // (LO1: a creator call's `annotations` read as its labels, `FieldCreator::labels` — a keyval's value, argument passing)
-  ("field_notes", 9),
+  // (LO1: a creator call's `annotations` read as its labels, `FieldCreator::labels` — a keyval's value, argument passing; LO2,
+  // 9 -> 8: read by the API's own label cleaning, `clean_frontmatter_labels`, Perl's `cleanFrontmatterLabels`)
+  ("field_notes", 8),
   // (26: C1's `queue_reading.rs` keeps a cache of what `author_block`'s readers read off the queue's tokens, and goes with them)
   ("frontmatter (rest)", 26),
   ("frontmatter_stores", 527),

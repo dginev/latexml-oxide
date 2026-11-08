@@ -1,0 +1,19 @@
+% mechanism: a note after a labelled entry's last other ink goes with the entry, to the names its labels request
+%   (`Resolver::labelled_entries`: the entry's span ends before it, the note pending on the entry's labels); `=2` only
+% witness: 2504.09745 (IEEEtran, `$^{\ddagger}$Ericsson Canada\thanks{This work was supported in part by Ericsson, …}`)
+% oracle:  pdflatex 0 errors; "Ann Able⋆, Bob Baker‡, Cy Cole‡"; ⋆Univ A, Town; ‡Ericsson Canada; the footnote "This work was
+%   supported by Ericsson."
+% engines: rust int146a `=2`: the thanks a nameless creator's note (two Warnings) and a pubnote from the entry's tokens; off:
+%   two pubnotes, one per `‡` author's entry
+% expect:  0 errors, 0 warnings; `=2`: each `‡` author holds the thanks, no nameless creator, no pubnote
+% status:  RED (int146a) -> GREEN (perfect_kernel_batchlo2::a_note_after_an_entry_goes_with_it)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{\star}$, Bob Baker$^{\ddagger}$, Cy Cole$^{\ddagger}$\\
+$^{\star}$Univ A, Town\\
+$^{\ddagger}$Ericsson Canada\thanks{This work was supported by Ericsson.}}
+\maketitle
+Text.
+\end{document}

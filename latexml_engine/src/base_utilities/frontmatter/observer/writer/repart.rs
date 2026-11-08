@@ -153,6 +153,50 @@ pub(super) fn entry_span(index: usize, span: (u16, u16), key: &str) -> Option<(u
   })
 }
 
+/// The tokens from `span`'s start of the block at ledger index `index` that print `key`, where `key` ends inside an ink
+/// ([`entry_span`] reads whole inks): an item the reading writes without the address its line prints last
+/// (`Resolver::block`'s row address: `Dresden, Saxony 01062, Germany (martin.waltz@tu-dresden.de)` the affiliation `Dresden,
+/// Saxony 01062, Germany`, 2203.10777), the shortest balanced run inside the ink whose letters are `key` by the writer's own
+/// check of a span's letters ([`block_span_tokens`]) — `None` where the inks before it don't open `key`, or no run does.
+pub(super) fn prefix_tokens(
+  index: usize,
+  span: (u16, u16),
+  key: &str,
+) -> Option<((u16, u16), Tokens)> {
+  let ends_in = with_ledger(|ledger| {
+    let Some(Entry::Author(block)) = ledger.entries().get(index) else {
+      return None;
+    };
+    let Outcome::Events { events, .. } = &block.outcome else {
+      return None;
+    };
+    let first = events
+      .iter()
+      .position(|e| e.kind != EventKind::Layout && e.span.is_some_and(|s| s.0 == span.0))?;
+    let mut joined = String::new();
+    for event in &events[first..] {
+      let text = match &event.kind {
+        EventKind::Name | EventKind::Contact => norm(&event.text),
+        EventKind::Sep(SepKind::Word(word)) => norm(word),
+        EventKind::Sep(_) | EventKind::Break | EventKind::Layout => continue,
+        _ => return None,
+      };
+      joined.push_str(&text);
+      if joined.len() > key.len() && joined.starts_with(key) {
+        return event.span;
+      }
+      if !key.starts_with(&joined) {
+        return None;
+      }
+    }
+    None
+  })?;
+  (ends_in.0 + 1..ends_in.1).find_map(|end| {
+    let cut = (span.0, end);
+    block_span_tokens(index, cut, Some(key), false).map(|tokens| (cut, tokens))
+  })
+}
+
 /// The words a block printed as separators between names (`SepKind::Word`, the word "and"), each once per print.
 fn separator_words(index: usize) -> Vec<String> {
   fn walk(events: &[Event], out: &mut Vec<String>) {

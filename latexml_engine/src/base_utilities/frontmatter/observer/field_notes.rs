@@ -28,6 +28,7 @@ use latexml_core::{
 };
 
 use super::events::BreakKind;
+use crate::base_utilities::clean_frontmatter_labels;
 
 /// A definition made while a rehearsal digests a field's tokens ([`FieldNotes`]): what no box says, a definition printing
 /// nothing.
@@ -82,19 +83,14 @@ pub struct FieldCreator {
 
 impl FieldCreator {
   /// The labels its `annotations` give the creator its name makes, Perl's `\lx@add@creator[annotations={ed}]` (the reading's
-  /// requests of that creator, `resolver::Input::Block::calls`; the emitter's keys, `writer::emit::creator_keys`).
+  /// requests of that creator, `resolver::Input::Block::calls`; the emitter's keys, `writer::emit::creator_keys`), cleaned as
+  /// the API cleans them, Perl's `cleanFrontmatterLabels` (Base_Utility.pool.ltxml:360-372: `\rm` out, `\ref{x}` the label
+  /// `LABEL:x`, spaces `_`).
   pub fn labels(&self) -> Vec<String> {
     self
       .annotations
       .as_ref()
-      .map(|labels| {
-        labels
-          .to_string()
-          .split(',')
-          .map(|l| l.trim().to_string())
-          .filter(|l| !l.is_empty())
-          .collect()
-      })
+      .map(|labels| clean_frontmatter_labels(&labels.to_string(), ""))
       .unwrap_or_default()
   }
 }
