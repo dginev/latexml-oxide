@@ -1282,8 +1282,9 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   ("policy", 0),
   // (Z14 101 -> 109, the table rows above; Z4a +3: the rehearsal's `\lx@fm@obs@footnote`, the footnote a note step hears, defined and named;
   // N2r2 +7: the bound constructors' `alias`es, the commands they revert as — what a text made of an argument prints, never
-  // the rehearsal's name: 2106.06418, 1401.5951, 2106.11154)
-  ("rehearsal", 119),
+  // the rehearsal's name: 2106.06418, 1401.5951, 2106.11154; FB2a 119 -> 117: the row break's constructor named once, `ROW_BREAK`,
+  // for `\\`, `\newline`, `\linebreak` and a tabular juggle)
+  ("rehearsal", 117),
   // (also among `resolver`'s 18 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook)
   ("resolver", 3),
   // (the "Knowledge in, driver out, one pass" move: the old reader's owner logic, moved unchanged from `author_block/`, its literals with it; none added)

@@ -1398,60 +1398,71 @@ pub(in crate::base_utilities) fn trailing_alignment_environment_as_lines(tokens:
   Tokens::new(toks)
 }
 
+/// A parameterless macro whose expansion closes the title page's tabular and opens another, not an author separator
+/// ([`author_and_splits`]): the ACM SIG template's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}` in `\author`
+/// (sig-alternate.cls:283's `\alignauthor` juggles the same way) prints a line break between the names above and the
+/// affiliation below (1704.03168, 1301.5612, 1401.6981, 0712.1016). Read by its meaning, whatever its name: the old
+/// driver writes it `\\` ([`tabular_juggles_as_line_breaks`]), the rehearsal binds it to the row break it is
+/// (`observer::rehearsal`).
+pub(in crate::base_utilities) fn is_tabular_juggle(t: &Token) -> bool {
+  if t.get_catcode() != Catcode::CS {
+    return false;
+  }
+  let Ok(Some(defn)) = lookup_definition(t) else {
+    return false;
+  };
+  if !defn.is_expandable()
+    || defn
+      .get_parameters()
+      .is_some_and(|p| !p.get_parameters().is_empty())
+  {
+    return false;
+  }
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return false;
+  };
+  let body: Vec<Token> = body
+    .unlist_ref()
+    .iter()
+    .filter(|t| t.get_catcode() != Catcode::SPACE)
+    .copied()
+    .collect();
+  body.first() == Some(&T_CS!("\\end"))
+    && body
+      .get(1)
+      .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+    && body[2..]
+      .iter()
+      .take_while(|t| t.get_catcode() != Catcode::END)
+      .map(|t| t.to_string())
+      .collect::<String>()
+      == "tabular"
+    && !author_and_splits()
+      .iter()
+      .any(|s| matches!(s, SplitDelim::Token(d) if d == t))
+}
+
 /// An author block's parameterless macro whose expansion closes the title page's tabular and opens another — the ACM
 /// SIG template's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`, set inside the class's own author tabular
 /// (sig-alternate.cls:283's `\alignauthor` juggles the same way) — is the line break it prints between the names
 /// above and the affiliation below: digested, it closed a tabular no author block opens and left one open, whose
 /// lines (the shared affiliation) were lost (1704.03168, 1301.5612, 1401.6981, 0712.1016). The author separators
-/// (`\alignauthor`) stay for the splitter.
+/// (`\alignauthor`) stay for the splitter ([`is_tabular_juggle`], which the rehearsal binds to its row break).
 pub(in crate::base_utilities) fn tabular_juggles_as_line_breaks(tokens: Tokens) -> Tokens {
-  let separators = author_and_splits();
-  let juggles = |t: &Token| {
-    if t.get_catcode() != Catcode::CS
-      || separators
-        .iter()
-        .any(|s| matches!(s, SplitDelim::Token(d) if d == t))
-    {
-      return false;
-    }
-    let Ok(Some(defn)) = lookup_definition(t) else {
-      return false;
-    };
-    if !defn.is_expandable()
-      || defn
-        .get_parameters()
-        .is_some_and(|p| !p.get_parameters().is_empty())
-    {
-      return false;
-    }
-    let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
-      return false;
-    };
-    let body: Vec<Token> = body
-      .unlist_ref()
-      .iter()
-      .filter(|t| t.get_catcode() != Catcode::SPACE)
-      .copied()
-      .collect();
-    body.first() == Some(&T_CS!("\\end"))
-      && body
-        .get(1)
-        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
-      && body[2..]
-        .iter()
-        .take_while(|t| t.get_catcode() != Catcode::END)
-        .map(|t| t.to_string())
-        .collect::<String>()
-        == "tabular"
-  };
   let toks = tokens.unlist();
-  if !toks.iter().any(juggles) {
+  if !toks.iter().any(is_tabular_juggle) {
     return Tokens::new(toks);
   }
   Tokens::new(
     toks
       .into_iter()
-      .map(|t| if juggles(&t) { T_CS!("\\\\") } else { t })
+      .map(|t| {
+        if is_tabular_juggle(&t) {
+          T_CS!("\\\\")
+        } else {
+          t
+        }
+      })
       .collect(),
   )
 }

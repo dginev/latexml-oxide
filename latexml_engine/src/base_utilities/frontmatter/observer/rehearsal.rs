@@ -344,15 +344,18 @@ thread_local! {
   static FOOTNOTE_BASE_DEFINED: Cell<bool> = const { Cell::new(false) };
 }
 
+/// The event constructor of a row break (`\\`, `\\newline`, `\\linebreak`; a tabular juggle, `install_event_bindings`).
+const ROW_BREAK: &str = "\\lx@fm@obs@break";
+
 /// The commands the rehearsal binds to the event constructors, always (the article `\author` line's own vocabulary,
 /// and the frontmatter API's queueing sink, frozen otherwise).
 const ALWAYS_BOUND: &[(&str, &str)] = &[
   ("\\and", "\\lx@fm@obs@and"),
   ("\\And", "\\lx@fm@obs@And"),
   ("\\AND", "\\lx@fm@obs@AND"),
-  ("\\\\", "\\lx@fm@obs@break"),
-  ("\\newline", "\\lx@fm@obs@break"),
-  ("\\linebreak", "\\lx@fm@obs@break"),
+  ("\\\\", ROW_BREAK),
+  ("\\newline", ROW_BREAK),
+  ("\\linebreak", ROW_BREAK),
   ("\\par", "\\lx@fm@obs@par"),
   ("\\thanks", "\\lx@fm@obs@thanks"),
   ("\\footnote", "\\lx@fm@obs@footnote"),
@@ -410,10 +413,28 @@ const TITLE_FOOTNOTE_HOOK: &str = crate::latex_constructs::TITLE_THEFOOTNOTE;
 /// declared [`TITLE_FOOTNOTE_HOOK`] when there is one; else, as the block's conventions say (`title_marks`), the
 /// class's own `\thefootnote` (report's and book's title page: arabic) or the kernel `\maketitle`'s `\@fnsymbol` of the
 /// counter (when the format has it).
+///
+/// First, a block's tabular juggle (`fallback::is_tabular_juggle`: `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`
+/// in sig-alternate's `\author`, 0712.1016, 1704.03168) is the row break it prints between the names and the lines under
+/// them, as the old driver wrote it `\\` (`fallback::tabular_juggles_as_line_breaks`): digested as defined, it closed a
+/// tabular the line never opened and left one open, whose lines no box held — lost with no Warning, the content check
+/// reading only what the events hold. In an author block alone, as the old rule ran on author blocks only (an
+/// `\\affiliation`'s `\\def\\ex{\\end{tabular}}` closes the tabular its `\\bx` opened, `perfect_kernel_batchz4`), with the
+/// emitter's switch on (the switch-off output stays as it was until the flip); a command the binding declares a block break
+/// keeps its meaning.
 fn install_event_bindings(
+  tokens: &Tokens,
   title_marks: TitleMarks,
   block_breaks: &[(&str, BreakKind)],
 ) -> Result<()> {
+  if in_block_content() && fm_emit_mode() == 2 {
+    for t in tokens.unlist_ref() {
+      let declared = || t.with_cs_name(|name| block_breaks.iter().any(|(cs, _)| *cs == name));
+      if is_tabular_juggle(t) && !declared() {
+        let_i(t, &T_CS!(ROW_BREAK), None);
+      }
+    }
+  }
   for (cs, target) in ALWAYS_BOUND {
     let_i(&T_CS!(*cs), &T_CS!(*target), None);
   }
@@ -564,7 +585,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
   let result = with_origin(DefinitionOrigin::File, || {
     reading_from_mouth(Mouth::default(), || -> Result<Digested> {
       bgroup();
-      install_event_bindings(title_marks, block_breaks)?;
+      install_event_bindings(&tokens, title_marks, block_breaks)?;
       begin_mode("text")?;
       field_notes_begin(&tokens, block_breaks);
       let digested = digest(tokens)?;

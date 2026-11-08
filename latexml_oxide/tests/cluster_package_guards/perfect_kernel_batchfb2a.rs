@@ -66,3 +66,19 @@ fn a_raw_queued_call_feeds_no_symbol_mark_to_the_reading() {
   }
   assert!(!bob.contains("Univ B *"), "{bob}");
 }
+
+/// A parameterless macro closing the title page's tabular and opening another (sig-alternate's
+/// `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`) is the row break it prints: at `=2` the rehearsal left the
+/// juggle's tabular open and "Dept" in no box, lost with no Warning (0712.1016, 1704.03168, 1301.5612, 1401.6981).
+#[test]
+fn a_tabular_juggle_is_a_row_break() {
+  let (off, two) = both(repro!("author_shared_affiliation_line"));
+  assert_eq!(two.len(), 1, "{two:#?}");
+  assert!(
+    two[0].contains("<personname>A One</personname>"),
+    "{}",
+    two[0]
+  );
+  assert!(two[0].contains(&affiliation("Dept")), "{}", two[0]);
+  assert_eq!(two, off);
+}
