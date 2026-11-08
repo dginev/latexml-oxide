@@ -439,7 +439,7 @@ pub(in crate::base_utilities) fn cut_marked_contact(
 /// the rest of the entry's first line behind the mark that labels it (`{\tt $^1$\{aable, ccole\}@a.edu}`, the marked
 /// entry the author block cut it as) — is that entry's content without those lines, each address an e-mail call digested
 /// inside it ([`AddressPlacement::Inner`], `email_line_calls`): an e-mail of the entry's, whose owners the Link step
-/// gives (`email_owners::entry_address_owners`, by the `_entry` key `\lx@annotate@frontmatter@now` gives the entry and
+/// gives (`owners::entry_address_owners`, by the `_entry` key `\lx@annotate@frontmatter@now` gives the entry and
 /// its inner contacts). An entry of addresses alone stays as their carrier, empty, and is dropped once they are placed
 /// (`insert::drop_empty_contacts`). `None` for any other contact, or one holding no such line. The lines are read by the
 /// author block's reader of an address line ([`line_addresses`]): an address inside a line of other words (`Univ X,
@@ -1514,7 +1514,7 @@ fn place_address_runs(
       // (a run under an affiliation is that entry's: it goes back into it, whose Kind step takes its addresses out as
       // the entry's e-mails and whose Link step places them — the author each spells, the entry's only carrier, every
       // carrier of a symbol-led one, one per carrier in order, else the block once: `kind_entry_addresses`,
-      // `email_owners::entry_address_owners`, OXIDIZED_DESIGN_DIVERGENCES #956; it no longer stays in the entry's text,
+      // `owners::entry_address_owners`, OXIDIZED_DESIGN_DIVERGENCES #956; it no longer stays in the entry's text,
       // 2609.19448's one address under one author's affiliation still that author's)
       Some((entry, at)) if under_affiliations => {
         let requesting =
@@ -1802,6 +1802,6 @@ pub(in crate::base_utilities) enum AddressPlacement {
   Marked(Vec<usize>),
   /// Each address its own contact, with no placement of its own: an address line of an affiliation-kind entry, digested
   /// inside it, the entry's address — its owners the entry's Link step gives ([`kind_entry_addresses`],
-  /// `email_owners::entry_address_owners`).
+  /// `owners::entry_address_owners`).
   Inner,
 }

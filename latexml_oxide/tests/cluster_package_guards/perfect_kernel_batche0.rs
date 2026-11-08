@@ -260,7 +260,9 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
 /// reader lowers it to the new count**, in the same commit, so what was deleted cannot grow back. A sibling directory is no
 /// escape from the rest of this fence's reach: its token reads count in `token_reads_only_fall_toward_the_floor`'s
 /// catch-all, and its API names and keys in `the_frontmatter_api_stays_perls`.
-const OLD_READER_CODE_LINES: usize = 15_404;
+/// MV1 (2026-11-08) lowered it from 15,404 to 9,275: the knowledge the one engine reached moved into its own library,
+/// what is left is the token driver.
+const OLD_READER_CODE_LINES: usize = 9_275;
 
 /// What the fence counts in the old reader's code: its ways into the API's queue, and a convention's mode.
 const OLD_READER_NEEDLES: [&str; 4] = [
@@ -307,25 +309,25 @@ fn the_old_reader_takes_no_new_decision() {
 /// for frontmatter"). `author_block/mod.rs` re-exports each of its submodules (`pub use affiliations::*`, …) and
 /// `base_utilities/mod.rs` re-exports it all (`pub use author_block::*`), so a frontmatter file's `use super::*` reaches every
 /// name the old reader exports without spelling `author_block::`: the fence counts the names. A use is a call (`name(`), a
-/// path (`::name`, `name::`), a name in a `use` list, or any occurrence of a constant or type name (upper case first). Each
+/// path (`::name`, `name::`), a name in a `use` list, a function passed as a value (`.with_str(name)`, `.map(name)`), or any
+/// occurrence of a constant or type name (upper case first); a name is the one engine's own where `frontmatter/` exports it
+/// (a visible item at a file's top level) or the file itself defines it (a nested function, a method, a closure). Each
 /// pair is a debt: it may only fall. A new one is a decision the old engine takes for the new one; it lands in
-/// `observer/resolver/`, on the digested events, instead. Where each name goes when `author_block/` is deleted:
-/// docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row "`author_block/`'s survivors" (text rules on ink to
-/// `frontmatter/classify.rs`, Perl's API-call writers into the emitter, Perl's whole-block fallback to its own module, the
-/// decisions translated onto the reading).
-const ONE_ENGINE_REACH: &[(&str, usize)] = &[
-  // (MV1, a false pair, until step 6 teaches the fence a file's own definitions: `project_role`'s local closure `author`, moved
-  // with it, which the count reads as the driver's method `Collaborations::author`; no use of the old reader)
-  ("classify/notes.rs author", 4),
-];
+/// `observer/resolver/`, on the digested events, instead. MV1 (2026-11-08) moved every name the one engine reached, 138
+/// pairs at int149a, into its own library (docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row "Knowledge in, driver out, one
+/// pass"): text rules and token primitives to `frontmatter/classify/`, owner logic to `observer/resolver/owners.rs`, Perl's
+/// API-call writers to `observer/writer/calls.rs`, Perl's whole-block fallback with its preparation to `frontmatter/fallback.rs`,
+/// the API's attribute names to `defs/frontmatter_api.rs`. None is left: what `author_block/` still holds is the token driver.
+const ONE_ENGINE_REACH: &[(&str, usize)] = &[];
 
 /// The names the old reader exports into `base_utilities`: the `pub`, `pub(crate)` and `pub(in …)` items of `mod.rs` and of
-/// each submodule `mod.rs` re-exports with `pub use <submodule>::*`.
+/// each submodule `mod.rs` re-exports with `pub use <submodule>::*`, at a file's top level: a method is no name the glob
+/// exports, its type is (MV1 step 6: the driver's `Collaborations::author` read every `author` argument as a use).
 fn old_reader_exports() -> std::collections::BTreeSet<String> {
   let dir = format!("{BASE}/author_block");
   let glob = Regex::new(r"pub(?:\([^)]*\))?\s+use\s+([a-z_][a-z0-9_]*)::\*").expect("a regex");
   let item = Regex::new(
-    r"(?m)^\s*pub(?:\((?:crate|in [^)]*)\))?\s+(?:fn|const|static|struct|enum|type|trait)\s+([A-Za-z_][A-Za-z0-9_]*)",
+    r"(?m)^pub(?:\((?:crate|in [^)]*)\))?\s+(?:fn|const|static|struct|enum|type|trait)\s+([A-Za-z_][A-Za-z0-9_]*)",
   )
   .expect("a regex");
   let mut files = vec![format!("{dir}/mod.rs")];
@@ -363,6 +365,8 @@ fn uses_of(code: &str, imports: &[std::ops::Range<usize>], name: &str) -> usize 
         || before.ends_with("::")
         || after.starts_with("::")
         || after.starts_with('(')
+        // (a function passed as a value: `.with_str(name)`, `.map(name)`, `f(a, name)`)
+        || (before.ends_with(['(', ',']) && after.starts_with([')', ',']))
         || imports.iter().any(|range| range.contains(&found.start()))
     })
     .count()
@@ -374,10 +378,32 @@ fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
   const WHY: &str = "The one engine decides on the digested events (`observer/resolver/`); `author_block/` is deleted after \
                      the flip, and each name `frontmatter/` still uses moves or is translated: \
                      docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row \"`author_block/`'s survivors\".";
+  // (MV1 step 6: the two shapes the count missed — a function passed as a value, `relocate.rs`'s
+  // `t.with_str(is_name_note_command)`, and a name hidden everywhere by a method or a nested function of one file, `skip_group`
+  // by `title_page_check.rs`'s method and `resolver/labels.rs`'s nested function)
+  assert_eq!(
+    uses_of(
+      "t.with_str(is_name_note_command)",
+      &[],
+      "is_name_note_command"
+    ),
+    1
+  );
+  assert_eq!(uses_of("let x = is_note; f(a, is_note)", &[], "is_note"), 1);
+  let exported = Regex::new(
+    r"(?m)^pub(?:\([^)]*\))?\s+(?:fn|const|static|struct|enum|type|trait|mod)\s+([A-Za-z_][A-Za-z0-9_]*)",
+  )
+  .expect("a regex");
+  let local = Regex::new(concat!(
+    r"\b(?:fn|const|static|struct|enum|type|trait|mod)\s+([A-Za-z_][A-Za-z0-9_]*)",
+    r"|\blet\s+(?:mut\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:move\s*)?\|",
+  ))
+  .expect("a regex");
+  assert!(
+    !exported
+      .is_match("impl Page {\n  pub fn skip_group(&self) {}\n}\nfn f() {\n  fn skip_group() {}\n}")
+  );
   let dir = format!("{BASE}/frontmatter");
-  let definition =
-    Regex::new(r"\b(?:fn|const|static|struct|enum|type|trait|mod)\s+([A-Za-z_][A-Za-z0-9_]*)")
-      .expect("a regex");
   let files = rust_files(&dir);
   let sources: Vec<(String, RustSource)> = files
     .iter()
@@ -389,10 +415,12 @@ fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
       (short, read_rust(file))
     })
     .collect();
-  let defined_here: std::collections::BTreeSet<String> = sources
+  // (the one engine's own names: what a frontmatter file exports, a visible item at its top level; what a file defines for
+  // itself at any depth — a private item, a nested function, a method, a closure — is its own in that file only)
+  let ours: std::collections::BTreeSet<String> = sources
     .iter()
     .flat_map(|(_, source)| {
-      definition
+      exported
         .captures_iter(&source.code)
         .map(|found| found[1].to_string())
         .collect::<Vec<_>>()
@@ -400,16 +428,21 @@ fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
     .collect();
   let names: Vec<String> = old_reader_exports()
     .into_iter()
-    .filter(|name| !defined_here.contains(name))
+    .filter(|name| !ours.contains(name))
     .collect();
   let import = Regex::new(r"\b(?:pub(?:\([^)]*\))?\s+)?use\s+[^;]*;").expect("a regex");
   let mut counts: BTreeMap<String, usize> = BTreeMap::new();
   for (short, source) in &sources {
+    let own: std::collections::BTreeSet<&str> = local
+      .captures_iter(&source.code)
+      .filter_map(|found| found.get(1).or_else(|| found.get(2)))
+      .map(|name| name.as_str())
+      .collect();
     let imports: Vec<_> = import
       .find_iter(&source.code)
       .map(|found| found.range())
       .collect();
-    for name in &names {
+    for name in names.iter().filter(|name| !own.contains(name.as_str())) {
       let n = uses_of(&source.code, &imports, name);
       if n > 0 {
         counts.insert(format!("{short} {name}"), n);
