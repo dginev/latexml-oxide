@@ -383,7 +383,7 @@ The 2026-11-01 design study's picture, line counts as of then; "Where it stands"
   `N`. Only the `@marked` calls and `group_or_marked_affiliation` test marks before the convention; every other call
   applies its convention even where marks decide (the F1 class). Some `new` calls are classes that group:
   quantumarticle.cls:1164-1170 adds each `\affiliation` to every author of `\@authorgroup`, REVTeX's `run`. The
-  `annotate={N}` counts in `dispatch.rs:706,1614`, `collaborations.rs:399`, `line_kinds.rs:751` and
+  `annotate={N}` counts in `dispatch.rs:706,1569`, `collaborations.rs:399`, `line_kinds.rs:751` and
   `frontmatter_stores.rs:5856` are the old reader's own decisions encoded as counts.
 
 ## The target model
@@ -476,7 +476,7 @@ It is emitted as Perl's label fan-out: each member requests `fm:g<k>`, the item 
 - `annotate=all/N/new/run[:N]`, in both engines (`frontmatter_api.rs:621-826`, `resolver/api.rs:48-100`);
 - REVTeX/aastex's group rule and `_grouped` (`revtex4_support_sty.rs:1013`, `relocate.rs:769-1013`);
 - the collaborations' `annotate=N/new` (`collaborations.rs:544-557`);
-- R12 rows (`dispatch.rs:757,1733`, `LinkOwner::Group`, the observer's `R12:row-above`);
+- R12 rows (`dispatch.rs:757,1688`, `LinkOwner::Group`, the observer's `R12:row-above`);
 - relocate's fuzzy multi-owner (`relocate.rs:236-271`);
 - authblk's `TheNote` runs;
 - the `fm:block` shared creator.
