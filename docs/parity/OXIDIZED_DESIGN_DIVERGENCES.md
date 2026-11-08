@@ -32862,7 +32862,7 @@ calling the sink's own meaning, read by the lexer as `EventKind::ApiCall` "ltx:c
 digested as Perl digests it: no flush's reading answers its contacts (`Resolver::api`'s `ltx:pubnote`), its pubnote item is
 not wrapped in `\lx@frontmatter@itemonly` (`writer::emit::emit_commands`), so each contact goes to the creator newest when
 it is digested (`\lx@annotate@frontmatter`, Base_Utility.pool.ltxml:520-531) — 0807.4720's Juriaans has his address and
-e-mail, Ferrero neither (before: Juriaans none, Ferrero his e-mail); the content check requires the contacts after the
+e-mail, Ferrero only his own (before: Juriaans none, Ferrero Juriaans's e-mail too); the content check requires the contacts after the
 creator call and the note's binding e-mails placed, the note's other text beside (`resolver::api::note_owned_contacts`).
 Off: unchanged (0711.1152, 0802.0707's A&A `\offprints` notes, which make no creator, stay the reading's, byte-identical at
-`=2` too). Guard `perfect_kernel_batchio3b::a_note_making_a_creator_is_digested_as_perls`.
+`=2` too). Not covered: the order of creators — a note making Bob, then `\author{Carl}`, gives Ann, Carl, Bob at `=2` where Perl and off give Ann, Bob, Carl (the PDF prints Ann, Carl, Bob; review revH4 4). Guard `perfect_kernel_batchio3b::a_note_making_a_creator_is_digested_as_perls`.
