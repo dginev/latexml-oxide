@@ -547,12 +547,17 @@ fn em_pt(d: &Digested) -> f64 {
 
 /// The natural width in em of a spacing box with a `width` property (`\hspace`'s, `\hskip`'s), in its font's em.
 fn width_property_em(d: &Digested, width: &Stored) -> Option<f64> {
+  natural_width_em(d, width).map(|em| em.max(0.0))
+}
+
+/// [`width_property_em`] as it is, a negative width (a kern backing up) below zero.
+fn natural_width_em(d: &Digested, width: &Stored) -> Option<f64> {
   let pt = match width {
     Stored::Dimension(d) => d.pt_value(None),
     Stored::Glue(g) => g.pt_value(None),
     _ => return None,
   };
-  Some((pt / em_pt(d)).max(0.0))
+  Some(pt / em_pt(d))
 }
 
 /// The span of the author field a digested box covers: its `fieldSerial`'s cover in the field ledger, else its own
@@ -1736,7 +1741,9 @@ impl Walker {
           script: false,
           formula: None,
         });
-      } else if let Some(width) = whatsit_width_em(d, w) {
+      } else if let Some(width) = whatsit_width_em(d, w)
+        && width >= 0.0
+      {
         self.atoms.push(Atom::Space {
           width,
           fill: false,
@@ -1809,20 +1816,22 @@ const KEYED_CONSTRUCTORS: &[(&str, &[bool])] = &[
 ];
 
 /// The natural width in em (of its font) of a spacing whatsit (`\hskip`, `\hspace`, `\kern`, `\quad` made as a
-/// skip), when it has one.
+/// skip), when it has one — below zero for one backing up, which prints no space between the letters beside it:
+/// `B\kern-0.1em{\small A}` is one word "BA", as TeX sets it (a document's `\babar` logo of kerned letters, 0711.1544,
+/// 0804.0020: read "B A B A R", its words missing from what the emitter wrote, review revNL1 B1).
 fn whatsit_width_em(d: &Digested, w: &Whatsit) -> Option<f64> {
   let cs = whatsit_cs(w);
   if !(cs.contains("skip") || cs.contains("space") || cs.contains("kern") || cs.contains("quad")) {
     return None;
   }
   let pt = match w.get_property("width").as_deref() {
-    Some(width @ (Stored::Dimension(_) | Stored::Glue(_))) => return width_property_em(d, width),
+    Some(width @ (Stored::Dimension(_) | Stored::Glue(_))) => return natural_width_em(d, width),
     _ => match w.get_args().iter().flatten().next() {
       Some(arg) => arg.pt_value(None),
       None => return Some(1.0),
     },
   };
-  Some((pt / em_pt(d)).max(0.0))
+  Some(pt / em_pt(d))
 }
 
 /// The text events print, in order: names, contacts and inner notes as their text, a comma `,`, a separating word its

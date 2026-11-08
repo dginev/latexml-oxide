@@ -154,9 +154,9 @@ fn an_entry_of_several_pieces_is_written_whole() {
 
 /// What today's name held besides the name moves to where the reading puts it — but a remark on the name stays the
 /// name's: the line under it, `{\footnotesize for the Example collaboration}`, is the collaboration the name speaks
-/// for (`is_name_remark`; review rev94a S6), one personname in the reading (1502.03246: 94a made it an affiliation) and
-/// the name's collaboration contact in today's since batch 97d (OXIDIZED_DESIGN_DIVERGENCES #946; the reading's line
-/// under the name, resolver/blocks.rs, not yet — so the writer holds today's back); and `\and` columns whose last is a line of marked entries over an e-mail line, each piece a creator
+/// for (`is_name_remark`; review rev94a S6; 1502.03246: 94a made it an affiliation), the name's collaboration contact
+/// in today's since batch 97d and in the reading since NL1 (OXIDIZED_DESIGN_DIVERGENCES #946, #980; rule table RT3 row
+/// C5, resolver/blocks.rs — the writer had held today's back); and `\and` columns whose last is a line of marked entries over an e-mail line, each piece a creator
 /// of today's (2308.10621): the legend is the starred names' note, the entry the line under it continues read on over
 /// the break (`line:continued`), each item in print order.
 #[test]
@@ -168,10 +168,11 @@ fn what_a_name_held_is_written_where_the_reading_puts_it() {
     "affiliation=Univ X, Sometown, Country",
   ]];
   let reading = assert_reading(tex, Some(xml), &[
-    "C Ann Able for the Example collaboration [1] | line:names name:remark",
+    "C Ann Able [1] | line:names",
     "  a Univ X, Sometown, Country | ruling1:request",
+    "  c collaboration for the Example collaboration | line:names collaboration",
   ]);
-  assert_eq!(reading.3, Value::from("declined: the creators' names"));
+  assert_eq!(reading.3, Value::from("same"));
   assert_eq!(default_mode_creators(tex), owned(xml));
   let tex = repro!("author_names_reparted_columns_with_a_continued_line.tex");
   // (the continued line's list sharing the domain each an e-mail of the name it spells, Lab Y keeping its words — 95c,
@@ -643,7 +644,12 @@ fn a_creator_read_by_its_words_is_given_back() {
 /// observatory's, as 93a's), a shared one copied (`$^{1}$`) and a symbol legend the observatory's note alone
 /// (`$^{1,\dagger}$`, ruling 2: written) — and the same beside the re-part (today's merged `Cid Cole, Dee Dunn`,
 /// 1909.05311's shape: four names written, the observatory given back with its entry). Distinct paths: the plan's
-/// `same`, the plan's write, the re-part's write.
+/// `same`, the plan's write, the re-part's write. Since NL1 the reading itself reads each marked observatory as a
+/// name, as the old reader's generic split does (rule table RT3 rows N1-N3, `lines::marked_name`): today's creators are
+/// the reading's. A per-author class's line (revtex, IEEEtran) still takes it for an institution, but today's keeps
+/// that line one creator and the writer declines ("names differ"), so the give-back of trailing marks has no live
+/// shape left; the concession's live branch with a mark is a prefix mark's, its ink in doubt — the writer writes
+/// nothing, today's stays (`piece_ink`; review revNL1 S4, the twin below).
 #[test]
 fn a_conceded_creator_keeps_its_marks() {
   let tex = repro!("author_names_conceded_creator_keeps_its_marks.tex");
@@ -652,9 +658,9 @@ fn a_conceded_creator_keeps_its_marks() {
     "affiliation=Univ Y",
   ]];
   let reading = assert_reading(tex, Some(xml), &[
-    "C Ann Able [1,2] | line:names",
-    "  a Kitt Peak Observatory | line:names classify:institution",
+    "C Ann Able [1] | line:names",
     "  a Univ X | ruling1:request",
+    "C Kitt Peak Observatory [2] | line:names sep:comma",
     "  a Univ Y | ruling1:request",
   ]);
   assert_eq!(reading.3, Value::from("same"));
@@ -665,8 +671,9 @@ fn a_conceded_creator_keeps_its_marks() {
     "affiliation=Univ X",
   ]];
   let reading = assert_reading(tex, Some(xml), &[
-    "C Ann Able [1,1,†] | line:names",
-    "  a Kitt Peak Observatory | line:names classify:institution",
+    "C Ann Able [1] | line:names",
+    "  a Univ X | ruling1:request",
+    "C Kitt Peak Observatory [1,†] | line:names sep:comma",
     "  a Univ X | ruling1:request",
     "  n Corresponding | ruling2:symbol-line",
   ]);
@@ -691,9 +698,9 @@ fn a_conceded_creator_keeps_its_marks() {
     &["Dee Dunn", "affiliation=Univ Y"],
   ];
   let reading = assert_reading(tex, Some(xml), &[
-    "C Ann Able [1,2] | line:names",
-    "  a Kitt Peak Observatory | line:names classify:institution",
+    "C Ann Able [1] | line:names",
     "  a Univ X | ruling1:request",
+    "C Kitt Peak Observatory [2] | line:names sep:comma",
     "  a Univ Y | ruling1:request",
     "C Cid Cole [1] | line:names",
     "  a Univ X | ruling1:request",
@@ -701,6 +708,20 @@ fn a_conceded_creator_keeps_its_marks() {
     "  a Univ Y | ruling1:request",
   ]);
   assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(default_mode_creators(tex), owned(xml));
+  // (the prefix mark's twin: the reading's institution, its ink in doubt, today's creators kept)
+  let tex = repro!("author_names_conceded_creator_prefix_mark_in_doubt.tex");
+  let xml: &[&[&str]] = &[&["Ann Able", "affiliation=Univ X"], &[
+    "Kitt Peak Observatory",
+    "affiliation=Univ Y",
+  ]];
+  let reading = assert_reading(tex, Some(xml), &[
+    "C Ann Able [1,2] | line:names",
+    "  a Kitt Peak Observatory | line:names classify:institution",
+    "  a Univ X | ruling1:request",
+    "  a Univ Y | ruling1:request",
+  ]);
+  assert_eq!(reading.3, Value::from("declined: a conceded creator's ink"));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
@@ -855,8 +876,9 @@ fn a_legend_of_several_marks_is_each_carriers() {
     "affiliation=Univ Y",
   ]];
   let reading = assert_reading(tex, Some(xml), &[
-    "C Ann Able [1,2] | line:names",
-    "  a Kitt Peak Observatory | line:names classify:institution",
+    "C Ann Able [1] | line:names",
+    "  a Univ X | ruling1:request",
+    "C Kitt Peak Observatory [2] | line:names sep:comma",
     "  a Univ X | ruling1:request",
     "  a Univ Y | ruling1:request",
   ]);
@@ -889,8 +911,8 @@ fn a_legend_note_shows_its_mark() {
   assert_eq!(notes_with_marks(&xml), ["mark=∗ ∗ Equal contribution"]);
   let tex = repro!("author_names_conceded_creator_legend_note_mark.tex");
   let reading = assert_reading(tex, None, &[
-    "C Ann Able [*] | line:names",
-    "  a Kitt Peak Observatory | line:names classify:institution",
+    "C Ann Able [] | line:names",
+    "C Kitt Peak Observatory [*] | line:names sep:comma",
     "  n Equal contribution | ruling2:symbol-line",
   ]);
   assert_eq!(reading.3, Value::from("written"));
@@ -956,24 +978,40 @@ fn a_cells_font_reset_is_no_author() {
 }
 
 /// The writer cuts no author from a row of today's name on no structure (review rev94a r5 t06's mirror of the person
-/// no item is made of; `repart::opens_a_row_under_no_names`): a row the reading reads as names after a labelled line
-/// (`$^1$Univ X,\\ \bf City Z`) is an author only under a names row that ends with the name before it, or with a mark
-/// or a note of its own — a line ending with an institution is none: today's one creator stays (94a r5 wrote "City Z"
-/// an author). The supported side: `Ann Able, Bob Baker,\\ Cid Cole` is three authors (2407.03321's `\quad`-parted
-/// rows).
+/// no item is made of; `repart::opens_a_row_under_no_names`): a row the reading reads as names after a line of two
+/// labelled entries (`$^1$Univ X, $^2$Univ Y,\\ \bf City Z`) is an author only under a names row that ends with the
+/// name before it, or with a mark or a note of its own — a line ending with an institution is none: today's one creator
+/// stays (94a r5 wrote "City Z" an author). Under one entry (`$^1$Univ X,\\ \bf City Z`) the reading continues the
+/// entry, the old reader's N5 (decision K; 2501.04046, hep-ph0511130), and the writer declines the person it made an
+/// item of. The supported side: `Ann Able, Bob Baker,\\ Cid Cole` is three authors (2407.03321's `\quad`-parted rows).
 #[test]
 fn a_name_cut_from_a_row_needs_a_names_row() {
   let tex = repro!("author_names_tabular_row_after_an_institution_is_no_author.tex");
   let reading = assert_reading(tex, None, &[
     "C Ann Able [1] | line:names",
-    "  a Univ X | ruling1:request",
-    "C City Z [] | line:names",
+    "  a Univ X City Z | ruling1:request line:continued",
   ]);
   assert_eq!(reading.0.len(), 1, "today's one creator: {:?}", reading.0);
   assert_eq!(reading.0[0].len(), 1, "no item: {:?}", reading.0);
   assert_eq!(tabular_cells(&default_mode_xml(tex)), [
     "Ann Able 1",
     "1 Univ X,",
+    "City Z"
+  ]);
+  assert_eq!(default_mode_creators(tex), reading.0);
+  let tex = repro!("author_names_tabular_row_after_two_entries_is_no_author.tex");
+  let reading = assert_reading(tex, None, &[
+    "C Ann Able [1] | line:names",
+    "  a Univ X | ruling1:request",
+    "C Bob Baker [2] | line:names",
+    "  a Univ Y | ruling1:request",
+    "C City Z [] | line:names",
+  ]);
+  assert_eq!(reading.0.len(), 1, "today's one creator: {:?}", reading.0);
+  assert_eq!(reading.0[0].len(), 1, "no item: {:?}", reading.0);
+  assert_eq!(tabular_cells(&default_mode_xml(tex)), [
+    "Ann Able 1 Bob Baker 2",
+    "1 Univ X, 2 Univ Y,",
     "City Z"
   ]);
   assert_eq!(default_mode_creators(tex), reading.0);

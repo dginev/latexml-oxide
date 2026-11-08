@@ -378,8 +378,9 @@ pub(super) fn leading_mark(note: &Event) -> Option<(Vec<String>, String)> {
 /// `Juan Sebastian~Gomez-Diaz, and \newline Alejandro~Alvarez-Melcon`, 1403.0130), or the names row above has its
 /// affiliation line already and this line is set in a font of its own against it (`Kei Harada \\ {\it Nagoya
 /// University} \\ Hayato Saigo \\ …`: 1009.1429, 1108.3744; the same font, "Aptex Software" under "Chief Scientist",
-/// 0803.3838, is the affiliation's) or comes after the row's labelled lines (`$^\dagger$Univ A \quad $^\ddagger$Univ B
-/// \\ Cat Cole \\ Physics`, SYNC row 46), or its names show marks or notes (`Ann Able$^{1}$ Bob Baker$^{2}$`, `Irina Gheorghiciuc\thanks{…}`,
+/// 0803.3838, is the affiliation's) or comes after a line of two or more labelled entries (`after_labelled`: `$^\dagger$Univ
+/// A \quad $^\ddagger$Univ B \\ Cat Cole \\ Physics`, SYNC row 46 — under one entry it goes on with that entry, the old
+/// reader's N5: `Resolver::block`), or its names show marks or notes (`Ann Able$^{1}$ Bob Baker$^{2}$`, `Irina Gheorghiciuc\thanks{…}`,
 /// 1403.5246: a Mark or a Note right after a Name), or it is a row of two or more name pieces parted
 /// by separators (`Triantafyllos Afouras\quad\quad Himel Chowdhury …` under the first row, 2111.03635), none holding
 /// an acronym (`IBM India, IBM CIO`, 2609.10596: institutions); and then each
@@ -442,11 +443,15 @@ pub(super) fn later_line_is_names(
     && names.iter().all(|e| shows_a_person(e));
   // (a line under the names opening with "and" goes on with them, its piece reading as a name: `Anthony Berthelier \\ and
   // Yongzhe Yan`, 2007.10022, `author_block::names_list_continues`; "and Max--Planck Institut für Mathematik, Bonn" reads
-  // as no name, math0208081)
+  // as no name, math0208081; the space before the word, which the old test trims off the line's text, `text.trim()
+  // .starts_with("and ")` (`author_block/name_text.rs:221-226`), opens nothing: `\\~~and~~{\scshape Donald Robertson}`,
+  // 2603.27258, read as "and Donald Robertson" an affiliation of every name above it)
   let and_opens = !under_affiliation
     && events
       .iter()
-      .find(|e| e.kind != EventKind::Layout)
+      .find(|e| {
+        e.kind != EventKind::Layout && !matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }))
+      })
       .is_some_and(|e| match &e.kind {
         EventKind::Sep(SepKind::Word(word)) => word.eq_ignore_ascii_case("and") || word == "&",
         _ => false,

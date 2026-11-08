@@ -1,0 +1,18 @@
+% mechanism: a name annotation inside a name's collaboration remark goes onto the name, as the old reader's
+%   `name_takes_annotations` moves every one of `NAME_ANNOTATIONS` (`classify/notes.rs`): the reading's
+%   `lines::name_annotation` parts no run at a request, an `\inst`, a `\textsuperscript`, a `\cite` or a footnote mark
+%   (rows C2-C4; the main-session decision restoring the list, brief NL1d)
+% witness: brief NL1d item 1 (NL1r2 narrowed the list to a note's references; review revNL1r2 NIT 4)
+% oracle:  pdflatex 0 errors: "Ann Able (for the ATLASa Collaboration)", "Bob Baker"
+% engines: rust NL1r2, the switch on: the name "Ann Able (for the ATLAS" with the mark, the contact "Collaboration)";
+%   off: Ann Able with the mark, her contact "(for the ATLAS Collaboration)"
+% expect:  0 errors; Ann Able (her mark a), `collaboration=(for the ATLAS Collaboration)`, Bob Baker both ways; the
+%   switch on writes the joined name and remark from their text, a Warning each (OD #980, as 1212.4278)
+% status:  RED (NL1r2, the switch on) -> GREEN (perfect_kernel_batchnl1::a_mark_inside_a_remark_goes_onto_the_name)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}\author{Ann Able (for the ATLAS\textsuperscript{a} Collaboration) \and Bob Baker}
+\maketitle
+Text.
+\end{document}

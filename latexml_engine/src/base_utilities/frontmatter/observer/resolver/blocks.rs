@@ -139,12 +139,27 @@ impl Resolver {
           // another author's — `{hong3924.cs10, evan20010126.cs12, …}@nycu.edu.tw` under a corresponding Ching-Chun
           // Huang, 2512.08223; `{congjing, ryanflin}@uw.edu chris20030909@gmail.com`, 2602.04785; 2604.14972)
           _ if address_count > 1 => (None, "owner:block"),
-          _ => match chain {
-            Chain::DocumentNote { named: Some(named) } => match named {
-              [one] if candidates.len() > 1 => (Some(*one), "owner:corresponding api:note-name"),
-              _ => (None, "owner:block"),
-            },
-            _ => self.corresponding(candidates),
+          // (an address two or more names spell is the corresponding author's, or the author a document's note names,
+          // only where they are one of them, else the block's, as the old reader holds it for both
+          // (`author_block/email_block_calls.rs` `spelled`, `owners.marked`): `wang@x.org` under X. Wang, Y. Wang and a
+          // corresponding Z. Li — `perfect_kernel_batch64::marked_block_email_line_owner`, 77p r4; A&A's
+          // `\offprints{Z. Li, \email{wang@x.org}}` —
+          // `perfect_kernel_batchnl1::an_address_others_spell_is_not_the_named_authors`)
+          _ => {
+            let found = match chain {
+              Chain::DocumentNote { named: Some(named) } => match named {
+                [one] if candidates.len() > 1 => (Some(*one), "owner:corresponding api:note-name"),
+                _ => (None, "owner:block"),
+              },
+              _ => self.corresponding(candidates),
+            };
+            let spellers = self.spellers(&address, candidates);
+            match found {
+              (Some(c), _) if spellers.len() >= 2 && !spellers.contains(&c) => {
+                (None, "owner:block")
+              },
+              found => found,
+            }
           },
         },
       };
@@ -223,8 +238,8 @@ impl Resolver {
     let mut open_rows: Vec<usize> = Vec::new();
     // the columns whose names row has a line under it already (its affiliation)
     let mut answered_rows: Vec<usize> = Vec::new();
-    // the columns whose last line was labelled entries
-    let mut labelled_last: Vec<usize> = Vec::new();
+    // the columns whose last line was labelled entries, and how many entries it held
+    let mut labelled_last: Vec<(usize, usize)> = Vec::new();
     // an unmarked line's affiliation whose group runs on past the line (its places, where the group ends)
     let mut open_group: Option<(u16, Vec<(usize, usize)>)> = None;
     // the places of the unmarked affiliation the line before made, which a line after a break inside the same braced
@@ -244,10 +259,18 @@ impl Resolver {
       let unmarked_line_above = unmarked_above.is_some();
       let continued = open_rows.contains(&line.column);
       open_rows.retain(|c| *c != line.column);
-      // (the line before in the column was labelled entries: an unmarked name under them is a new row's — SYNC row 46,
-      // `$^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole \\ Physics`)
-      let after_labelled = labelled_last.contains(&line.column);
-      labelled_last.retain(|c| *c != line.column);
+      // (the line before in the column was labelled entries: an unmarked name under two or more of them is a new row's —
+      // SYNC row 46, `$^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole \\ Physics`; a line under one entry goes on
+      // with it, the old reader's N5 (`add_authors_calls_sectioned`'s unmarked line appended to the entry above), whatever
+      // its words read as: `$^1$The Graduate Center, CUNY\\ Computer Science\\ New York, USA`, 2501.04046; `$^{1}$Institute
+      // of …, Ionosphere and\\ Radio Wave Propagation\\ RAS, …`, hep-ph0511130 — each line one affiliation's)
+      let entries_above = labelled_last
+        .iter()
+        .find(|(c, _)| *c == line.column)
+        .map(|&(_, entries)| entries);
+      let after_labelled = entries_above.is_some();
+      let after_labelled_list = entries_above.is_some_and(|entries| entries >= 2);
+      labelled_last.retain(|(c, _)| *c != line.column);
       let under_affiliation = answered_rows.contains(&line.column);
       // (a line that is no names row answers the row above; a names row below takes this back)
       if !answered_rows.contains(&line.column) && row_above.iter().any(|(c, _)| *c == line.column) {
@@ -370,7 +393,7 @@ impl Resolver {
             row_above.push((line.column, row));
             continue;
           }
-          labelled_last.push(line.column);
+          labelled_last.push((line.column, entries.len()));
           continues = self.labelled_entries(index, entries, "");
         },
         Some(_) => {
@@ -414,7 +437,7 @@ impl Resolver {
           let names_line = !only_contacts
             && !address_line
             && (column_first
-              || later_line_is_names(line, continued, under_affiliation, after_labelled));
+              || later_line_is_names(line, continued, under_affiliation, after_labelled_list));
           if names_line {
             answered_rows.retain(|c| *c != line.column);
             // (a separator glyph before the line's contact parts the name from it, and ends no row: `Chiara Simeoni --
@@ -583,18 +606,30 @@ impl Resolver {
             continue;
           }
           // (a line under one name, the only name of its run of rows, that is the collaboration it speaks for is the
-          // name's, as today's and Perl's one personname: `{\slshape Maxime Defurne$^1$}\\ {\footnotesize for the
-          // Hall A DVCS collaboration}`, 1502.03246 — no affiliation, review rev94a S6; a bracketed line under rows of
-          // names is theirs, R12: `(The Nearby Supernova Factory)`, 1511.01102)
+          // name's collaboration contact, no part of the name and no affiliation (row C5, the old reader's
+          // `collaboration_line_before`; FIDELITY_CHARTER §4, OXIDIZED_DESIGN_DIVERGENCES #946): `{\slshape Maxime
+          // Defurne$^1$}\\ {\footnotesize for the Hall A DVCS collaboration}`, 1502.03246 (review rev94a S6 joined it to
+          // the name, as Perl's one personname); `Carolyn Brown$^1$\\ on behalf of the Bcool project team`, 1310.6507;
+          // a bracketed line under rows of names is theirs, R12: `(The Nearby Supernova Factory)`, 1511.01102)
           if speaks_for(&text)
             && let [c] = above[..]
             && run.iter().all(|&r| r == c)
             && self.out.creators[c].affiliations.is_empty()
             && self.out.creators[c].contacts.is_empty()
           {
-            let creator = &mut self.out.creators[c];
-            creator.name = s!("{} {text}", creator.name);
-            creator.join(NameJoin::Remark);
+            // (sourced at the line's ink, its first inked event to its last: the emitter writes it in the markup it prints
+            // in, `{\footnotesize …}`'s size — review revNL1 S3)
+            let mut inked_spans = line
+              .events
+              .iter()
+              .filter(|e| inked(e))
+              .filter_map(|e| e.span);
+            let span = inked_spans
+              .clone()
+              .next()
+              .zip(inked_spans.next_back())
+              .map(|((start, _), (_, end))| (start, end));
+            self.collaboration(index, span, &[c], text.trim());
             for note in notes {
               self.note(index, note, Some(c), "note:line-owner");
             }

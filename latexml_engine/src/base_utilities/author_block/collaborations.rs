@@ -194,46 +194,6 @@ fn annotated(name: &[Token]) -> bool {
   })
 }
 
-/// Whether the text after a name's notes is a remark naming the group the author speaks for: "for" or "on behalf of",
-/// then a few words that name a group (`Eleni Petrakou\inst{1}\fnsep\thanks{…} for CAPP/IBS`, webofc, 1702.03664) —
-/// the name ended at its notes, so the remark is no part of it, a collaboration contact as a collaboration's remark is
-/// ([`name_and_remark`]). A group's words are acronyms or slashed names (`CAPP/IBS`, `CMS`) or a team's word, with
-/// "the", "and", "of" between them; a remark naming anything else stays the name's, as before — a funding line or a
-/// number (`for NSF Grant 123`, `for Section Three`), a company (`for ACME Corp`), a person (`on behalf of Ed Eve`), a
-/// phrase going on in lowercase (`for discussions`), more than six words or an address (review rev106c).
-fn speaks_for_after_notes(text: &str) -> bool {
-  let lower = text.trim().to_lowercase();
-  let Some(rest) = ["for ", "on behalf of "]
-    .iter()
-    .find_map(|p| lower.starts_with(p).then(|| text.trim()[p.len()..].trim()))
-  else {
-    return false;
-  };
-  let words: Vec<&str> = rest.split_whitespace().collect();
-  let joining = |w: &str| ["the", "and", "of", "&"].contains(&w.to_lowercase().as_str());
-  let team = |w: &str| {
-    [
-      "collaboration",
-      "collaborations",
-      "consortium",
-      "team",
-      "group",
-    ]
-    .contains(&w.to_lowercase().as_str())
-  };
-  // (an acronym, `CMS`, or names a slash joins, `CAPP/IBS`: two capitals or a slash between letters, no lowercase
-  // letter nor digit)
-  let acronym = |w: &str| {
-    let w = w.trim_matches(|c: char| !c.is_alphanumeric());
-    !w.chars().any(|c| c.is_lowercase() || c.is_numeric())
-      && (w.chars().filter(|c| c.is_uppercase()).count() >= 2 || w.contains('/'))
-  };
-  words.len() <= 6
-    && !rest.contains('@')
-    && words.iter().any(|w| !joining(w))
-    && words.iter().all(|w| joining(w) || team(w) || acronym(w))
-}
-
 /// A name and its collaboration remark with the name's annotations the remark holds moved onto the name — a note
 /// reference, a footnote, a `\thanks` (`is_name_annotation`, `is_footnote_mark`) and its arguments: `Jan Fiete
 /// Grosse-Oetringhaus (for the ALICE\fnref{col1} Collaboration)` (1408.0414, 1408.5384) is the name's `\fnref`, which

@@ -5,7 +5,8 @@
 % engines: rust 77p r2 = 0 errors; creators "By" and "Bryna Kra", …, Donald Robertson only "and Donald Robertson" as
 %          an affiliation of every creator; int34a "By Bryna Kra" (the byline word in the name); Perl the same as int34a
 % expect:  0 errors, 0 warnings; creators "Bryna Kra", "Joel Moreira", "Florian K. Richter", "Donald Robertson"
-% status:  RED (77p r2) -> GREEN (77p r3)
+% status:  RED (77p r2) -> GREEN (77p r3); at LATEXML_FM_EMIT=2 RED (NL1d: "By Bryna Kra", "and Donald Robertson" an
+%          affiliation of three creators, a Warning) -> GREEN (FB2b2: the lexer's `byline_runs`, `later_line_is_names`)
 \documentclass{article}
 \title{T}
 \author{By~~{\scshape Bryna Kra}~~and~~{\scshape Joel~Moreira}~~and~~{\scshape Florian~K.~Richter}\\~~and~~{\scshape Donald Robertson}}

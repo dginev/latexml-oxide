@@ -801,6 +801,8 @@ pub(in crate::base_utilities::frontmatter::observer) fn check_blocks(
   let mut checks = BTreeMap::new();
   for (index, block) in live_blocks(ledger) {
     if let Outcome::Events { events, .. } = &block.outcome {
+      // (a command's ink inside a word its letters, as the reading reads them: `lines::words_through_one_command`)
+      let events = &words_through_one_command(events);
       let check = BlockCheck {
         lost:   written.lost_inks(index, events, true),
         excess: written.excess(index, events),

@@ -27973,7 +27973,8 @@ made (`repart::by_words`: the classify helpers' `classify:institution` is never 
 today's it took is given back, `repart::concede`); a name or made item whose brackets do not close is declined. The reading itself parts no name inside an
 open `(`/`[` (the lexer's `open`: a comma or "and" there is the bracket's — 0811.3142's `(on behalf of the H1 and ZEUS
 collaborations)`), reads a bracket or a collaboration a name speaks for after it as that name's remark
-(`is_name_remark`, `speaks_for`: `for the Hall A DVCS collaboration`, 1502.03246, the name's as today's), and continues
+(`is_name_remark`, `speaks_for`: `for the Hall A DVCS collaboration`, 1502.03246 — a collaboration remark the name's
+`collaboration` contact since NL1, #980), and continues
 an institution over the word "and" unless what follows reads as names (`Department of Physics and Astronomy`).
 Fail-safe on the digested text: the new creators are built beside today's and kept only when they read as the reading
 (`plan::difference` finds nothing), hold every word today's creators held, none duplicated — names and distinct items
@@ -32719,5 +32720,52 @@ separator word the cut drops between entries is recorded dropped, counted as wri
 (2404.00915). Off: byte-identical. Left: a name's mark printing a macro's letter beside a number (`$^{\a 1}$`, `\def\a{{a}}`)
 read as the one label "a1" (hep-ph0011101; RED repro `macro_letter_in_a_name_mark_is_its_own_label`). Guards
 `perfect_kernel_batchkey1`.
+**The names line, strictly ported (NL1; rule table RT3, `agent_reports/2026-11-08_ruletable_namesline.md`).** Five rules of
+the reading that decided on words where the old reader decided on structure, each translated from the old procedure (off
+declines every word-only reading, `writer::repart::by_words`, so these bit at `=2` only). (N1-N3) A names line's piece
+carrying its own mark — the next event past layout and notes, or past its comma a mark that stays with it — is a name
+whatever its words: the generic split never reads an institution word (`R. New$^2$`, 0904.4122; `S. Michelle
+Consiglio,$^{1}$`, 2103.02641; `Alexander New$^2$`, 2311.16860), a per-author class's line a surname after an initial
+(`Gary P. Centers,$^{1}$`, 1901.10843; `surname_after_initial` moved into `classify/names_split.rs`); an unmarked piece keeps
+the reading's institution (`John Smith, University of Toronto`, the main session's decision). Not ported: N2's whole-list
+condition, which chose between splitting a cautious line and keeping it whole (N4), a choice `=2` does not make
+(`resolver/lines.rs` `marked_name`). (S1, the reading's own rule) Initials after a comma join a bare surname only, the
+word read through its glued initials (`P.A.Vshivtseva$^{a,b}$, E.T.\, Einiev`, 2409.13569; `unglued_initials`). (C2-C5) A
+name's collaboration remark is its `collaboration` contact, never part of the name (FIDELITY_CHARTER §4, #946): from the
+piece a remark opens in (`lines::remark_start`: a bracket, "for" or "on behalf of"), the pieces of one remark that a note, a
+name annotation (`lines::name_annotation`, the old reader's `NAME_ANNOTATIONS`, `classify/notes.rs`, and `\footnotemark`
+as `name_takes_annotations` moves them: a request — `\altaffilmark`, `\thanksref`, `\corref`, `\fnref`, `\tnoteref` —,
+`\inst`, `\IEEEauthorrefmark`, `\textsuperscript`, `\cite`, a footnote symbol's `$^{*}$`; not a number's `$^{1}$`, which it
+keeps in the remark), a box or a command's own gap parts are read whole, their text
+joined as the source joins them (`lines::printed_join`: a space only where a token no event covers lies between two
+pieces), the notes the name's (`lines::remark_pieces_joined`, after `name_and_remark` and `name_takes_annotations`). A
+remark after the name's own event is a run of its own, so the name keeps its event and the remark a span of its own, written
+from its tokens in its markup as off writes it (`Kalanand Mishra\footnote{…} (for the \babar\ collaboration)`, 0711.1544,
+0804.0020; `Ann Able\thanks{…} (for the \textsc{Atlas} Collaboration)`; 1201.5130). A name whose own event opens the remark
+joins with it and the in-name split parts them (elsarticle's `Christian Schmidt (for the BNL-Bielefeld\fnref{col1}
+Collaboration)`, 1212.4278, 1408.0414): that contact and the name are written from their text, a Warning each (the joined
+event's span holds both; off writes no markup there either). A remark after the name's notes or marks naming whom the author
+speaks for is one too (webofc's `for CAPP/IBS`, 1702.03664; `speaks_for_after_notes` moved into `classify/collaborations.rs`,
+its words `SPEAKS_FOR` shared with the reading's `speaks_for`); and a line under one name speaking for a collaboration is that
+name's contact, sourced at the line's ink, so written in its size (`Carolyn Brown$^1$\\ on behalf of the Bcool project team`,
+1310.6507; `{\footnotesize for the Hall A DVCS collaboration}`, 1502.03246), where rev94a S6 joined it to the name. A kern
+backing up prints no space (`events::whatsit_width_em`): `\babar`'s `B\kern-0.1em{\small A}` is one word "BABAR", read
+"B A B A R" before, its words missing from what the emitter wrote; 1706.00234's `\OW` joins its name by layout alone. (A2)
+The ink one command draws inside its box, inside a word, is the word's letters: combelow's `\cb{t}` stacks a `t` over a comma
+in an alignment, so its comma and row break part no names and `Bogdan Rai\cb{t}\u{a}` is one name (2507.13598; `Andrei
+Negu\cb t`, 2301.00703, kept its ț); a comma or a row break a command prints at its own level, after its box, parts what it
+ends as any does (`\newcommand\nlx{\mbox{Jr.}\\}`; `lines::words_through_one_command`, in `read_events` and the content check
+alike). (N5, the main session's decision K) An unmarked line under a line of one labelled entry goes on with that entry,
+whatever its words read as, as the old reader appends it (`$^1$The Graduate Center, CUNY\\ Computer Science\\ New York, USA`,
+2501.04046; hep-ph0511130's `Ionosphere and\\ Radio Wave Propagation`); under two or more entries the line after them is
+evidence of a names row (SYNC row 46's `Cat Cole`), so cs0011034's `… and $^2$Centre for Computational Linguistics\\
+K.U.Leuven` keeps a junk creator, a residual (`Resolver::block`, `labels::later_line_is_names`' `after_labelled`). With
+it, an address several names spell is the corresponding author's only where they are one of them, else the block's, as
+the old reader holds it (`Resolver::spellers`; `perfect_kernel_batch64::marked_block_email_line_owner`'s `wang@x.org` under
+two Wangs, which the old writer, no longer declining the reading's names, wrote on the corresponding Z. Li). The
+concession's give-back of a conceded creator's trailing marks (`repart::give_back_ink`) has no live shape after N1-N3: a
+marked piece is a name, and today's keeps a per-author class's line one creator; its in-doubt branch, a prefix mark's, stays
+guarded (`perfect_kernel_batch94a::a_conceded_creator_keeps_its_marks`).
+Off: byte-identical. Guards `perfect_kernel_batchnl1`.
 
 Guards `perfect_kernel_batchz4`.
