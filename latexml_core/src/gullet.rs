@@ -2169,7 +2169,7 @@ pub fn input_mark() -> InputMark {
 /// has read no further, and its pushback still holds every token it held then (only what was pushed after the mark
 /// was read, or what a mouth opened since holds). Read-only, for an observer telling apart what a call's expansion
 /// did from what the input after the call did (the frontmatter observer's ledger, the title-page check's document
-/// calls). The pushback's tokens below the mark are compared whole ([`same_input`]): a token read and put back (a
+/// calls). The pushback's tokens below the mark are compared whole (`same_input`): a token read and put back (a
 /// peek) leaves the input unread, while tokens read below the mark and others pushed in their place read as read,
 /// though the token now at the mark's last slot equals the one it held — IEEEtran's
 /// `\IEEEauthorblockN{…}⏎\IEEEauthorblockA{…}`, whose line-end space was read with `\IEEEauthorblockA` and its
