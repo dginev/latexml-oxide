@@ -29,7 +29,7 @@ fn push_keyword_body_to_frontmatter(whatsit: &mut Whatsit) -> Result<Vec<Digeste
       if let Some(Stored::HashTagData(frnt)) = val_opt {
         frnt
           .entry("ltx:classification".to_string())
-          .or_insert_with(Vec::new)
+          .or_default()
           .push(entry);
       }
     });

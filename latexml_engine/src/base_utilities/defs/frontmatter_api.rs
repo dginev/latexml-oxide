@@ -55,7 +55,7 @@ pub(in crate::base_utilities) const CUT_LIST: &str = "_cutlist";
 /// OXIDIZED_DESIGN #159, FIDELITY_CHARTER §4). No name of the row, it takes no place in its role's count — no
 /// `_num`, no `author:N` label, no separator — and no pass that pairs names with contacts reads it as one
 /// (`insert::coalesce_empty_creators`, `distribute_upfront_contacts`; `relocate_annotations` reads authors by their
-/// `ltx:personname`).
+/// `ltx:personname`). The frontmatter list indexes its entries by it: `TagList`, whose `tag::BLOCK_CREATOR` is this key.
 pub(in crate::base_utilities) const BLOCK_CREATOR: &str = "_blockcreator";
 
 pub(in crate::base_utilities) fn load() -> Result<()> {
@@ -739,17 +739,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // in case digestion changes labels!
     // (nor the author block's own creator, which the emitter writes below the flush's names: no annotation's parent by
     // place, as no creator was before relocation made it — only a block item reaches it, by the orphan rules,
-    // `relocate_annotations`; [`BLOCK_CREATOR`], 2009.10916. Looked for only once a flush wrote it, `block_creator_written`:
-    // the scan is per item, over every entry)
+    // `relocate_annotations`; [`BLOCK_CREATOR`], 2009.10916. Left out only once a flush wrote it, `block_creator_written`;
+    // the list keeps both indices as entries are added, so this is a read, not a scan over every entry: `TagList`)
     let block_creator = block_creator_written();
     let (parent_indices, stub_idx) = with_value_mut("frontmatter", |val_opt| {
       if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
-        let list = frnt.entry(parenttag.clone()).or_insert_with(Vec::new);
-        let parent_indices: Vec<usize> = list.iter().enumerate()
-          .filter(|(_, e)| e.attr.get("role").map(String::as_str).unwrap_or("") != "pending"
-            && !(block_creator && e.attr.contains_key(BLOCK_CREATOR)))
-          .map(|(i, _)| i)
-          .collect();
+        let list = frnt.entry(parenttag.clone()).or_default();
+        let parent_indices = list.parent_indices(block_creator);
         // IF this item encountered WITHIN another frontmatter
         // we inherit that frontmatter's labels (even override!)
         if let Some(last) = list.last()
