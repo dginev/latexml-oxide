@@ -1,9 +1,10 @@
 //! Guards for CL9 (`agent_reports/2026-11-09_brief_CL9b.md`: the `=2` emitter's safe declines and counts), each off and at
 //! `=2`, one per mechanism:
-//! - two names written from overlapping runs of the block's tokens write the block whole, counted (`emit::names_overlap`;
-//!   review revX1 finding 1: the shared macro's note and marks were dropped; cond-mat9310042, 1602.03850);
+//! - two names written from overlapping runs of the block's tokens whose shared run prints a note or a footnote mark write
+//!   the block whole, counted (`emit::names_overlap`; review revX1 finding 1: the shared macro's note and marks were dropped);
+//!   names only keep each name its text (`batchne3`; cond-mat9310042, 1602.03850, review revCL9b finding 1);
 //! - a taken creator call no API call recorded, printing words the reading writes nowhere, is written as queued, counted
-//!   (dmtcs-episciences's `\affiliation`; 1810.10099, 2402.10676);
+//!   (dmtcs-episciences's `\affiliation`; 1810.10099, 2402.10676), two of them in queue order (review revCL9b finding 2);
 //! - a sequenced contact of a list of two or more (jheppub's `\emailAdd`) is never written as queued: no nameless creator
 //!   invented, its words counted lost (review revX2 finding 1; 1901.02012; a list of one stays as queued, batchcl7's
 //!   2112.14174);
@@ -136,6 +137,35 @@ fn an_unrecorded_creator_call_is_written_as_queued() {
         "{log}"
       );
     }
+    assert_eq!(creator_elements(&xml), expected, "emit={emit}");
+  }
+}
+
+/// Two dmtcs-episciences `\affiliation` calls in one flush, both unrecorded: at `=2` each is written as queued, in queue
+/// order, exactly as off (CL9b: the two reversed, each on the other creator — review revCL9b finding 2), one counted
+/// Warning each.
+#[test]
+fn two_unrecorded_calls_keep_their_order() {
+  let expected = [
+    "<creator role=\"author\"> <personname>Dun Qiu</personname> <contact role=\"affiliation\">Department of \
+     Mathematics, Beijing Jiaotong University</contact> </creator>",
+    "<creator before=\" \" role=\"author\"> <personname>Jeffrey Remmel</personname> <contact \
+     role=\"affiliation\">Department of Mathematics, University of California San Diego</contact> </creator>",
+  ];
+  for (emit, warnings) in [(0, 0), (2, 2)] {
+    let (log, xml) = run(repro!("cl9_two_unrecorded_calls_in_order"), emit);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, warnings),
+      "emit={emit}: {log}"
+    );
+    assert_eq!(
+      log
+        .matches("a queued creator call prints that no call recorded")
+        .count(),
+      warnings,
+      "{log}"
+    );
     assert_eq!(creator_elements(&xml), expected, "emit={emit}");
   }
 }
