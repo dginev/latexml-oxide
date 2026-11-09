@@ -1732,7 +1732,7 @@ impl Walker {
           // (an argument printing nothing but an e-mail call, whose verbatim argument is no shown one: its contact. llncs
           // queues each `\email` of an `\author` line as a creator call of its own,
           // `\lx@personname{\lx@author@withinst{\email{ann@x.org}}}` (llncs.cls:897 `{\tt#1}`, printed under the name),
-          // whose rehearsal read no event, and the content check no address)
+          // whose rehearsal read no event, and the content check no address: `perfect_kernel_batch77t::llncs_author_e_mail_line_ends_a_row`)
           let at = self.atoms.len();
           self.walk(arg, nest.saturating_add(1));
           let inside = self.atoms.split_off(at);

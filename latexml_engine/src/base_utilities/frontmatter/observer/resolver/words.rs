@@ -57,7 +57,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn ink_words(
   // (the braces of a group set in math, as [`addresses_in`] reads them: `$\{$fargyriou,mikebekos$\}$@math.ntua.gr`, 1106.2694;
   // and a tie a raw address text keeps, the space it prints — llncs's `\email{$\{$stomforde$|$bsick$\}$@uni-kassel.de;~cms@…}`,
   // whose `cms@sra.uni-hanover.de` the writer reads past the tie as the e-mail readers do (`email_block_calls`), was no run
-  // here and its domain words counted as printed words, missing: brief CK4)
+  // here and its domain words counted as printed words, missing: 1701.08125, `perfect_kernel_batch85b::llncs_listed_local_parts_keep_their_braces`)
   let unshifted;
   let text = if text.contains(['$', '~']) {
     unshifted = text.replace('$', "").replace('~', " ");
