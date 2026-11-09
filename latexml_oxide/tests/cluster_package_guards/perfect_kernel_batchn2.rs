@@ -78,8 +78,9 @@ fn a_word_beside_its_domain_is_kept() {
 }
 
 /// An address placed more often than the page prints it is counted, each e-mail contact one copy: twice on one creator
-/// (2607.00684's `mtablo@postech.ac.kr`); the output as the emitter wrote it. An address a note keeps in its text is no
-/// longer written as a contact too (0807.0895, 2208.10209; FX3): that shape counts nothing.
+/// (2607.00684's `mtablo@postech.ac.kr`), or kept in one creator's note and written as another's contact too (2410.20285's
+/// `antonis@ucsb.edu` in Örwall's note); the output as the emitter wrote it. An address a note keeps on its own owner is
+/// no longer written as a contact too (0807.0895, 2208.10209; FX3): that half counts nothing.
 #[test]
 fn an_address_placed_more_often_than_printed_is_counted() {
   let (log, xml) = run(repro!("emit_content_an_address_placed_twice"), 2);
@@ -105,12 +106,20 @@ fn an_address_placed_more_often_than_printed_is_counted() {
     row(&["email=xtra@b.org", "email=xtra@b.org"]),
   ]);
   let note = repro!("emit_content_an_address_a_note_keeps");
-  // (FX3: a note's link the written note still prints is that note's text alone, no contact too — the addresses held
-  // once, as the switch off holds them; the excess this shape had is gone, counted nothing)
+  // (FX3: a note's link the written note still prints, on the contact's own owner, is that note's text alone — Ann's
+  // address no contact; FX3b: Bob's address in Ann's note stays his contact, its only tie to him, and the excess is
+  // counted, as before FX3)
   let (log, xml) = run(note, 2);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(content_checks(&log), (vec![], vec![]), "{log}");
-  assert_eq!(creators(&xml), [row(&["Ann Able"]), row(&["Bob Baker"])]);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!(
+    content_checks(&log),
+    (vec![], vec!["bob@b.org".to_string()]),
+    "{log}"
+  );
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able"]),
+    row(&["Bob Baker", "email=bob@b.org"]),
+  ]);
   assert!(
     xml.contains("Univ A, Town (<text font=\"typewriter\" xml:id=\"id1.1\">ann@a.org</text>"),
     "{xml}"

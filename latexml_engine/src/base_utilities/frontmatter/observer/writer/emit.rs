@@ -1765,16 +1765,19 @@ fn items_to_emit<'a>(
   // \href{mailto:a@x}{a@x}}` (1410.4175, 2009.03378, 2604.08687, 2410.14846), aa's `\thanks{… (\email{\tt a@x}).}`
   // (0807.0895, the paper's own class), an ORCID link (2511.20681, 2609.20386), brief FX3. A binding's e-mail call — the
   // class's in place too — makes the contact and the note written prints it nowhere: that contact stays (siamart's
-  // `\thanks{…, \email{wning@vt.edu}.}`, 2511.14713; llncs's `\thanks{Corresponding author: \email{…}}`, 2406.13066)
-  let notes: Vec<(usize, (u16, u16))> = held
+  // `\thanks{…, \email{wning@vt.edu}.}`, 2511.14713; llncs's `\thanks{Corresponding author: \email{…}}`, 2406.13066).
+  // Only a note on the contact's own owner ties the address to it already: a note on another creator printing it leaves
+  // the contact the only tie, kept (iclr's `Antonis Antoniades$^{1*}$, Albert Örwall$^{2}$\thanks{… Correspondence to:
+  // \href{mailto:antonis@ucsb.edu}{…}, …}`, 2410.20285; brief FX3b, FIDELITY_CHARTER §4 "the author it spells")
+  let notes: Vec<(Owner, usize, (u16, u16))> = held
     .iter()
     .filter(|(_, key, _)| key.0 == Kind::Note)
-    .filter_map(|(_, _, note)| match note.source {
-      Some((index, Some(span))) => Some((index, span)),
+    .filter_map(|(owner, _, note)| match note.source {
+      Some((index, Some(span))) => Some((*owner, index, span)),
       _ => None,
     })
     .collect();
-  let in_a_written_note = |a: &Assoc| {
+  let in_a_written_note = |owner: Owner, a: &Assoc| {
     let Some((index, Some(span))) = a.source else {
       return false;
     };
@@ -1788,7 +1791,7 @@ fn items_to_emit<'a>(
       && routed == Some(false)
       && notes
         .iter()
-        .any(|&(i, (s, t))| i == index && s <= span.0 && span.1 <= t)
+        .any(|&(o, i, (s, t))| o == owner && i == index && s <= span.0 && span.1 <= t)
   };
   let prints_itself = |index: usize| {
     api_call(index).is_some_and(|call| {
@@ -1838,7 +1841,7 @@ fn items_to_emit<'a>(
     if inner_contact(assoc) && source.is_some_and(|(index, _)| !separate.contains(&index)) {
       continue;
     }
-    if in_a_written_note(assoc) {
+    if in_a_written_note(owner, assoc) {
       continue;
     }
     let id = match owner {
