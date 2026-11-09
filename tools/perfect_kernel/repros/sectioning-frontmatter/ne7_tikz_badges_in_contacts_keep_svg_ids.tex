@@ -1,0 +1,23 @@
+% mechanism: a TikZ picture the frontmatter writer copies into a contact or a note (`Document::append_clone`) keeps
+%   each SVG element's own `id` (the svg schema's ID attribute) as Perl copies it (Document.pm:1943-1954); the copy's
+%   `svg:svg` close renames the ids it repeats, with their `url(#…)` references (`record_svg_ids`). `append_clone_aux`
+%   remapped the plain `id` into an `xml:id`, which the svg schema forbids.
+% witness: tikz-shields-doc (TeX Live manual; `\githubBadge` in `\author`: 8 jing lines at `=2`, sweep #166; brief NE7)
+% oracle:  pdflatex 0 errors; "A Title", "Bob Baker* Ann Able GH", the note "GH"
+% engines: rust off (int153d): valid (the pictures are not copied); rust =2 (int153d): 6 jing lines,
+%          `svg:clipPath xml:id="pgfcp1"`, `svg:linearGradient xml:id="pgfsh2"`
+% expect:  off and =2: 0 errors, 0 warnings, schema-valid, every SVG id plain and unique, each referenced once
+% status:  RED (int153d) -> GREEN (perfect_kernel_batchne7::tikz_badges_in_frontmatter_contacts_keep_svg_ids)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz}
+\usepackage{hyperref}
+\DeclareRobustCommand\badge{\tikz{\shade[top color=red,bottom color=blue] (0,0) rectangle (1,0.3);%
+  \path[clip] (0,0) circle (0.2);\fill (0,0) circle (0.1);\node at (0.6,0.15) {GH};}}
+\title{A Title}
+\author{Ann Able\\ \href{https://example.org/a}{\badge}
+  \and Bob Baker\thanks{\href{https://example.org/b}{\badge}}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

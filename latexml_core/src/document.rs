@@ -4897,10 +4897,10 @@ impl Document {
   /// A walked element is marked (`_svgid`, a bookkeeping attribute finalize strips): the math
   /// parser re-creates a picture where it moves it (`append_tree`), each re-creation closing a new
   /// `svg:svg` — the mark travels with the copied attributes, so a moved picture keeps its ids and
-  /// references, where an unmarked one is a new copy. `append_clone` (the alignment split's MathFork)
-  /// instead makes a second copy beside the original; it keeps no duplicate today only because
-  /// `append_clone_aux` turns an svg `id` into an `xml:id` (SYNC_STATUS) — a fix copying the id as
-  /// Perl does must drop the mark from the clone, or its ids stay duplicated. A picture keeps Perl's
+  /// references, where an unmarked one is a new copy. `append_clone` (the alignment split's MathFork,
+  /// the frontmatter writer's contacts and notes) instead makes a second copy beside the original: it
+  /// copies the svg `id` as Perl does and drops the mark, so the copy's own walk renames the ids it
+  /// repeats (guard `perfect_kernel_batchne7::tikz_badges_in_frontmatter_contacts_keep_svg_ids`). A picture keeps Perl's
   /// ids unless an earlier element already holds them (a relocated footnote copy can). Perl writes
   /// the duplicates (KNOWN_PERL_ERRORS #391); the id map follows its `appendClone`
   /// (Document.pm:1920-1956). Guards: `perfect_kernel_batch57::copied_pictures_keep_unique_svg_ids`,
@@ -6937,8 +6937,25 @@ impl Document {
           // (`open_element_at` emits sorted; Perl's native clone keeps it).
           let mut attrs: Vec<(String, String)> = child.get_attributes().into_iter().collect();
           attrs.sort();
+          // `get_attributes` names both an `xml:id` and an SVG element's plain `id` (the svg
+          // schema's ID attribute) "id". Perl remaps only `xml:id` and copies every other
+          // attribute as it is (Document.pm:1943-1954), so an SVG element's own `id` is copied
+          // verbatim: remapped into an `xml:id`, the copy was schema-invalid (tikz-shields-doc,
+          // a TikZ badge in a frontmatter contact). Only on SVG elements: elsewhere a bare `id`
+          // stays the `xml:id` whose namespace a cloneNode stripped (1410.8508, below).
+          let svg_id = if with_node_qname(&child, |qname| qname.starts_with("svg:")) {
+            child.get_attribute_no_ns("id")
+          } else {
+            None
+          };
           for (key, val) in attrs {
             match key.as_str() {
+              // The walked mark of `record_svg_ids` stays on the original: the clone is a second
+              // copy, so its own `svg:svg` close renames the ids it repeats, with their references.
+              "_svgid" => {},
+              "xml:id" | "id" if svg_id.is_some() => {
+                new.set_attribute("id", svg_id.as_deref().unwrap_or_default())?;
+              },
               "xml:id" | "id" => {
                 // Use the replacement id. The pre-walk
                 // (findvalues/collect_xml_ids_from) normally populates
