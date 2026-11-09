@@ -54,8 +54,9 @@ fn a_shared_copy_hides_no_differently_worded_loss() {
 /// A block written whole exempts the creator it became, never the rest of the paper (review revN2 finding 2): the second
 /// author's ORCID link printing the name (2203.03523, 2306.13366) is written once beside the block written whole, the name's
 /// link its ORCID (FX4, `perfect_kernel_batchfx4::an_orcid_link_printing_the_name_is_written_once`), so nothing is in excess.
-/// Until FX4 the name was placed again as its ORCID contact's text and counted here; the exemption's scope has no other
-/// excess on this path to pin now.
+/// Until FX4 the name was placed again as its ORCID contact's text and counted here; no document shape on this path gives
+/// an excess word now, so the exemption's scope (a second creator's word placed twice still counted beside the block written
+/// whole) is pinned by the unit test `resolver::placed::whole_tests::a_whole_block_exempts_only_its_own_creator` (revI8).
 #[test]
 fn a_whole_block_exempts_only_its_own_creator() {
   let (log, xml) = run(repro!("emit_content_a_whole_block_exempts_only_itself"), 2);
