@@ -713,6 +713,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
         labels = vec![label.to_string()];
       }
     }
+    // (whether the call names its entry itself, which an entry digested inside it of its kind does not override: `_name`
+    // on the stub below)
+    let name_given = options.contains_key("name");
     match get_frontmatter_name(options.get("name"), &tag, &role)? {
       Some(name) => { options.insert("name".to_string(), name); },
       None => { options.remove("name"); },
@@ -785,6 +788,17 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
               _ => inherited,
             };
             options.insert("_label".to_string(), label);
+            // Rust-only: a contact of the kind and role of the entry it is digested in, naming none itself, takes the
+            // name that entry gave — the label the block prints before it, which the frontmatter emitter writes on the
+            // item whose content is the class binding's own call (`E-mail: \email{…}` on JHEP3's affiliation line, its
+            // `\lx@add@email` the contact kept, the empty one around it dropped: 0812.0465), never the default name
+            if !name_given
+              && last.attr.get("_for") == Some(&tag)
+              && last.attr.get("_role") == Some(&role)
+              && let Some(name) = last.attr.get("_name")
+            {
+              options.insert("name".to_string(), name.clone());
+            }
             // (a contact inside a name's note, `\thanks{\email{…}}`, prints in the footer, after every entry of the
             // block: its place is the footer's, `FOOTER_ZONE`)
             in_note = last.attr.get("_for").map(String::as_str) == Some("ltx:note");
@@ -795,6 +809,11 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
           options.get("_label").cloned().unwrap_or_default());
         // (what the stub annotates: a contact digested inside it knows it is a note's, `in_note` above)
         stub_attr.insert("_for".to_string(), tag.clone());
+        // (and the name it gives, when it gives one: inherited above by an entry of its kind digested inside it)
+        if name_given && let Some(name) = options.get("name") {
+          stub_attr.insert("_role".to_string(), role.clone());
+          stub_attr.insert("_name".to_string(), name.clone());
+        }
         let stub = TagData {
           tag: parenttag.clone(),
           attr: stub_attr,
