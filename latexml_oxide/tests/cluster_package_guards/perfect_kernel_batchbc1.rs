@@ -1,5 +1,5 @@
 //! Guards for BC1, the one-pass fold's first step (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`; OXIDIZED_DESIGN_DIVERGENCES
-//! #980): at `LATEXML_FM_EMIT=2` the emitter writes the author block's own creator (OXIDIZED_DESIGN #159), which relocate's
+//! #980): at `=2` the emitter writes the author block's own creator (OXIDIZED_DESIGN #159), which relocate's
 //! orphan-sharing branch made before.
 
 use latexml::util::test::{error_count, warning_count};

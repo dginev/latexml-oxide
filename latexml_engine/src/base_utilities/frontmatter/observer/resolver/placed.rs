@@ -4,7 +4,7 @@
 //! shared entry's address the Kind step keeps for every holder, digestion's junk in a name (2506.02663), a call written
 //! whole beside its piece (2607.00684's `mtablo@postech.ac.kr` twice), a binding's lost entry text — shows only in the
 //! frontmatter `insert_frontmatter` placed. So one pass after it (Perl's `insertFrontMatter` and `relocateAnnotations`,
-//! Base_Utility.pool.ltxml:736-740, :891-900), under `LATEXML_FM_EMIT=2` only: the words the ledger's author blocks and
+//! Base_Utility.pool.ltxml:736-740, :891-900): the words the ledger's author blocks and
 //! creator calls printed (their rehearsed events), against the words the placed creators hold (`emitter::dom`'s reading of
 //! the document). It counts, it never answers: placement is over.
 //!
@@ -469,7 +469,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
             .insert(words_of(text).collect())
             .then(|| (None, (vec![text.to_string()], vec![text.to_string()])))
         } else if !call.rehearsed {
-          // (the writer stays out for it, `writer::writer_stays_out`: the queue is digested as Perl's)
+          // (the writer stays out for it, `writer::writer_stays_out` (deleted): the queue is digested as Perl's)
           all_read = false;
           None
         } else if calls.insert(words_of(&events::printed_text(events)).collect()) {

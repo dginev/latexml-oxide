@@ -252,7 +252,7 @@ fn article_author(author: &str) -> String {
 
 /// Rank 15 (rev77t finding 1): an unmarked institution line is the names row's directly above it, not every name of
 /// the `\and` group made before it (review probe r1: 77t r1 gave University B to Ann Able too, `annotate=2`).
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; each institution line keeps the space
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; each institution line keeps the space
 /// before its text.
 #[test]
 fn dag_names_rows_each_over_their_institution() {
@@ -273,7 +273,7 @@ fn dag_names_rows_each_over_their_institution() {
 }
 
 /// Rank 15 (rev77t finding 1), the numbered marks nothing answers (review probe r2): as the `\dag` rows.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; each institution line keeps the space
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; each institution line keeps the space
 /// before its text.
 #[test]
 fn numbered_names_rows_each_over_their_institution() {
@@ -294,7 +294,7 @@ fn numbered_names_rows_each_over_their_institution() {
 
 /// Rank 15 (rev77t finding 2): a names row under an unmarked institution line is more authors, each holding the line
 /// under their own row (review probe r7: 77t r1 appended the row to the shared line, two authors lost).
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the shared institution line keeps the space
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; the shared institution line keeps the space
 /// before its text.
 #[test]
 fn second_names_row_under_a_shared_institution() {

@@ -7480,7 +7480,7 @@ revtex_mathrm_marked_affiliations_link_by_mark, revtex_textsuperscript_interleav
 revtex_interleaved_typo_mark_keeps_the_group_rule`. Open: a name-only piece sharing the next institute (RED
 `svjour3_name_only_piece_shares_the_next_institute`), the isotope split above.
 
-**At `LATEXML_FM_EMIT=2` (BC1).** The frontmatter emitter writes the trailing creator itself, once per conversion,
+**At `=2`, the default since the flip (BC1).** The frontmatter emitter writes the trailing creator itself, once per conversion,
 where a flush has an item of the author block (`addresses:block`): `\lx@add@frontmatter@now{ltx:creator}[role=author,
 annotations={addresses:block},_blockcreator=true]{}` (`observer::emitter::emit::block_creator`; none for a flush whose
 authors are sealed off as a supplement's). The Rust-only key `_blockcreator` (`frontmatter_api::BLOCK_CREATOR`) keeps
@@ -24287,7 +24287,7 @@ an_api_legend_is_explained_by_its_own_tag, a_part_is_a_line_or_a_run_of_lines}`;
 observer_rehearsal_leaves_a_shared_box_unchanged, observer_rehearsal_keeps_a_fallback_meaning}.tex`.
 
 **S2b r1 (int79, 2026-10-24): the observer writes one family, under the switch.** For a family whose policy entry is
-`written` — the pilot, revtex4_support's `revtex` — `observer::emitter::write_observed_frontmatter` runs at the end of
+`written` — the pilot, revtex4_support's `revtex` — `observer::writer::write_observed_frontmatter` runs at the end of
 `insert_frontmatter` with `LATEXML_FM_SHADOW=1`: the paper's creators are read back as the comparator reads them
 (`emitter::dom`), compared with the resolver's reading, and written only when every difference is one of the writer's
 operations (`emitter::plan`): an entry given to the names the reading gives it (owners by mark), one call's marked entries

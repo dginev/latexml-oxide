@@ -1,6 +1,6 @@
 % mechanism: positions per call: each `\author` call of a per-author class is stamped on its own (`ledger::record_author_call`),
-%   never after the calls before it, so 500 calls of 16,500 tokens together are each read with `LATEXML_FM_EMIT` on; with the
-%   switch off the calls past the 16,383 positions together stay unread, as before (`ledger::out_of_positions`, the dump's stamp `overflow`)
+%   never after the calls before it, so 500 calls of 16,500 tokens together are each read by the emitter; the
+%   old driver (deleted in DEL2) left the calls past the 16,383 positions together unread (`ledger::out_of_positions`, the dump's stamp `overflow`)
 % witness: 2607.15927 (1,365 calls, 15,954 tokens together), 2512.08803 (355 calls, 16,287), 2105.04111 (552 calls)
 % oracle:  pdflatex 0 errors; 500 authors "Annabelle Abernathy-Brandenburg <letters>", each its own `\author`, one
 %   `\affiliation{Univ A, Town}` under them all

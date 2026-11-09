@@ -842,7 +842,7 @@ impl Resolver {
               .any(|r| !is_symbol_label(r))
           });
           // (an address decides only its own ink, its holder too: a line the row holds whose addresses spell one of the
-          // row is that one's e-mail, the line's other text the row's, as the switch off places it — 2203.10777's
+          // row is that one's e-mail, the line's other text the row's, as the old driver placed it — 2203.10777's
           // `Dresden, Saxony 01062, Germany (martin.waltz@tu-dresden.de)` under Martin Waltz, written whole with the
           // address on int146a's LO1 (review revLO1 1); `Ann Able and Bob Baker\\ Univ A\\ Present address: Dept X, Univ Y
           // (ann.able@y.org)`, Ann's e-mail and both authors' text without it (revLO1 2). Only an address printed last on
@@ -995,7 +995,7 @@ impl Resolver {
       // Technology~~~~$^{3}$Univ C`, dev20k 2111.07950, 1503.06795, 2504.05692, 2008.02300, 2404.01856)
       // (a note after the entry's last other ink is the block's, no name's: Perl digests it inside the entry's contact,
       // where `\thanks` is `\lx@add@pubnote@thanks` (Base_Utility.pool.ltxml:332), and prints it once, a `<pubnote>` held by
-      // no author — 2504.09745's `$^{\ddagger}$Ericsson Canada\thanks{This work was supported …}`; the switch off prints it
+      // no author — 2504.09745's `$^{\ddagger}$Ericsson Canada\thanks{This work was supported …}`; the old driver printed it
       // once per author its contact is relocated to (two pubnotes there), the emitter's switch on before this a nameless
       // creator's note and the entry written with the note in it (review revLO2 1). The entry's span ends before it)
       let trailing = entry
@@ -1371,9 +1371,9 @@ impl Resolver {
     let live = self.live();
     let numbered = !note.footnote && numbered_thanks(note);
     // (one such `\thanks` holding several marked entries, `\thanks{$^{1}$UC Berkeley, $^{2}$Toyota Motor North America,
-    // $^{3}$Princeton university}`: each its own entry by its mark, as the switch off cuts it — 2509.19480, 2206.07648,
+    // $^{3}$Princeton university}`: each its own entry by its mark, as the old driver cut it — 2509.19480, 2206.07648,
     // where the whole stayed one note of the last name. Its lexed text cut before each top-level mark (`mark_led_pieces`, the API
-    // reader's cut, not the switch off's `split_marked_pieces`), so an entry's own comma stays its text, `$^{1}$Dept A, Univ A,
+    // reader's cut, not the old driver's `split_marked_pieces`), so an entry's own comma stays its text, `$^{1}$Dept A, Univ A,
     // $^{2}$Univ B`; each piece led by raised marks with labels, else it stays one note, as before. Each piece is sourced at
     // its own span, its first event's start to its last's end (a mark's formula whole), so the writer writes the reading's cut, not a cut of its own:
     // `$^{1}$Univ A; $^{2}$Univ B. $^{*}$Corresponding author.`, whose third piece the writer's re-cut of the whole note lost,
@@ -1471,7 +1471,7 @@ impl Resolver {
         })
     {
       let symbol = labels.iter().all(|l| is_symbol_label(l));
-      // (with the emitter's switch on, the switch-off procedure's kind, in its order (P2 NT; ported strictly, P2r2): a
+      // (the old driver's procedure's kind, in its order (P2 NT; ported strictly, P2r2): a
       // `\footnote` is a note (`\lx@add@note`, frontmatter_fields.rs); a `\thanks` is an affiliation only where
       // `\lx@add@thanks` re-routes it, its content opening with `$^` or `\textsuperscript` whose first character is an
       // ASCII digit (`starts_with_affiliation_mark`, OXIDIZED_DESIGN #52) — here the note's leading Mark, a superscript
@@ -1481,7 +1481,7 @@ impl Resolver {
       // symbol, affiliation or legend alike): `\thanks{\IEEEauthorrefmark{2} Also with …}`, 1107.5730; `\thanks{$\diamond$
       // Work conducted during an internship …}`, 2205.02029. One departure, the reading's own entry kept: a note that
       // prints e-mail addresses and is no legend stays the entry the reading made it, whose addresses go each to the
-      // carrier it spells (FIDELITY_CHARTER §4's symbol-line rule; the switch-off note keeps them in its text, every
+      // carrier it spells (FIDELITY_CHARTER §4's symbol-line rule; the old driver's note keeps them in its text, every
       // address on the note's owner): IEEEtran journal's `\thanks{\IEEEauthorrefmark{1}The authors are with …, E-mails:
       // a@, b@, c@}`, 1610.05419, 2405.06709 — review revP2 finding 1)
       let role =

@@ -301,12 +301,8 @@ pub(in crate::base_utilities) struct Ledger {
   pub analysis:   Option<Rc<Analysis>>,
   /// the frontmatter flushes so far (`reading::read_at_flush`)
   pub flushes:    usize,
-  /// the writer's outcome for a written family's paper (`writer::write_observed_frontmatter`): `same` (today's reads
-  /// as the reading), `written` (including a paper written with its e-mail calls each kept one contact, where their
-  /// write-out declined, `writer::give_back_listed`), `written-different: …` (what was written still differs, the
-  /// writer's own defect) or `declined: …` (a difference no operation explains, today's kept — also where keeping the
-  /// e-mail calls whole leaves today's as it was: the write-out the reading wanted, declined; and where an unwritten
-  /// family's items kept as today's leave it so, `writer::keep_as_today`); none where the writer did not run
+  /// `written` once a flush's emitter wrote the paper's frontmatter from the reading (`emitter::emit`), none otherwise
+  /// (the S2b writer's other outcomes, `same`, `written-different: …` and `declined: …`, went with it in DEL4)
   pub writer:     Option<String>,
   /// the contacts recorded that print nothing, in call order ([`UnprintedCall`])
   pub unprinted:  Vec<UnprintedCall>,

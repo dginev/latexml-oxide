@@ -1116,7 +1116,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn name_before_remark(
 /// B-1): it reads as names, or does once the remark after its name is set aside ([`name_before_remark`]), or its words
 /// before its first institution word are a full name of two words or more (`Bob Baker University` — a person and a
 /// place, or one place as `Johns Hopkins University` is). A word reading: it shapes the reading's `classify:institution`
-/// items only, which license no writer operation (`writer::repart::by_words`, review rev94a r3); the writer reads it only
+/// items only, which license no writer operation (`writer::repart::by_words` (deleted), review rev94a r3); the writer reads it only
 /// to decline (`emitter::repart::plan`'s person made an item, review rev94a r4).
 pub(in crate::base_utilities::frontmatter::observer) fn may_name_a_person(text: &str) -> bool {
   if reads_as_names(text) || name_before_remark(text).is_some() {

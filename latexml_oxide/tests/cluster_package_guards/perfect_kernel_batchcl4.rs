@@ -1,6 +1,6 @@
 //! Guards for CL4 (`agent_reports/2026-11-08_brief_CL4.md`; w56's report, SYNC leftovers (33)): the frontmatter observer
 //! reads a pgf/TikZ picture as it prints, its text nodes only (`util_text::ink_text_printed`, `picture_text`), never its
-//! drawing: a TikZ ORCID logo's SVG path data was a link's text, written into the address line at `LATEXML_FM_EMIT=2`
+//! drawing: a TikZ ORCID logo's SVG path data was a link's text, written into the address line at `=2`
 //! (2409.13798, jacow).
 
 use latexml::util::test::{error_count, warning_count};

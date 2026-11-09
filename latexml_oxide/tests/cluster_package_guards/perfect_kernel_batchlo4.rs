@@ -1,4 +1,4 @@
-//! Guards for LO4, notes and addresses the reading dropped at `LATEXML_FM_EMIT=2` only
+//! Guards for LO4, notes and addresses the reading dropped at `=2` only
 //! (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`; OXIDIZED_DESIGN_DIVERGENCES #980): a contact command in a span
 //! printing several events is its text (`a_contact_command_in_a_macro_is_its_text`); the one address left of a class's
 //! list goes to the author marked as the corresponding author, read on the reading's facts

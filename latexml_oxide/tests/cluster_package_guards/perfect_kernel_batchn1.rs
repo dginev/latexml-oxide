@@ -351,7 +351,7 @@ fn a_lost_name_spells_its_own_address() {
 /// (`{\it pzou94, ozel, suresh@gwu.edu}` under three names, 2003.14069; 2102.08981, 1901.01753, 1708.00818, 2307.03645), each
 /// named creator's element as it is. (Until LO1 the reading lost the parts the base writes as addresses, `aable@a.org`, kept as the
 /// block's note in a Warning; repro `emit_a_font_group_of_local_parts_is_a_list`.) `=2` alone since LO2: the reading's
-/// switch-on rules run with `LATEXML_FM_EMIT=2`, as its whole entries (`Resolver::emitting`, review revLO1 4); `=1` keeps the
+/// switch-on rules run with `=2`, as its whole entries (`Resolver::emitting`, review revLO1 4); `=1` keeps the
 /// switch-off reading, the parts its Warning.
 #[test]
 fn a_list_part_goes_to_no_line_author() {

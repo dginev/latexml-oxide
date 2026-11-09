@@ -243,7 +243,7 @@ fn spacing_run_off_the_names_line_parts_nothing() {
 /// its addresses (`\texttt{a@x}~~~~\texttt{b@y}`: 2603.04592, 2603.12193, 2605.06264); a name in a group of its own
 /// after a run that is already a separator still parts (2605.30545): three authors, each with its affiliation and its
 /// e-mail (was "Bob Baker Cat Cole" one creator, "Univ A 2Univ B" one affiliation and the row one contact).
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; each address keeps the font it prints in, as the
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; each address keeps the font it prints in, as the
 /// affiliations keep theirs.
 #[test]
 fn spacing_run_marked_rows() {
@@ -254,7 +254,7 @@ fn spacing_run_marked_rows() {
       r#"<text fontsize="{size}" xml:id="{id}">{text}</text>"#
     ))
   };
-  // (at `LATEXML_FM_EMIT=2` an address in the `\texttt` and the `\small` it prints in)
+  // (at `=2` an address in the `\texttt` and the `\small` it prints in)
   let small_tt = |id: &str, address: &str| {
     format!(
       r#"<contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="{id}">{address}</text></contact>"#
@@ -386,7 +386,7 @@ fn email_owner_by_elimination() {
 /// A marked block's e-mail line goes to the names its addresses spell, a given name too (2603.24730: yuqihu@, ahna@,
 /// vasha@), and the rest by elimination (j8675309@ to Jen E. Corbett): was in order — ahna@ on Vasha DuTell — and
 /// j8675309@ on a nameless creator.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the spacing parting the institutions trimmed.
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; the spacing parting the institutions trimmed.
 #[test]
 fn email_owner_by_given_name() {
   let xml = convert_repro!("author_email_owner_by_given_name.tex");
@@ -426,7 +426,7 @@ fn email_owner_by_given_name() {
 /// row of names makes that line a row of names too, the break before it going on with the list — seven authors, each
 /// with Microsoft (was "Dan B. Dorn" and "Fay Fox" read as address lines of Cat Cole and Eve Eads, Microsoft on Gil Gray
 /// only).
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same; the math `*` written ∗ as LaTeXML writes a math asterisk
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same; the math `*` written ∗ as LaTeXML writes a math asterisk
 /// (FIDELITY_CHARTER §4: all asterisks one label key, the glyph as printed).
 #[test]
 fn spacing_run_names_rows() {
@@ -618,7 +618,7 @@ fn institution_row_over_an_email_line_is_no_names() {
 /// name; main-session decision 2026-10-20, 77p r5; 2609.15028's
 /// `zihanxue@…`, `d09944015@…`, `serhii@…`, probe z2; 2609.05913, 2609.37829, 2609.38070). Was the whole line one
 /// contact of Dan Dorn.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; each address keeps the font it prints in, as the
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; each address keeps the font it prints in, as the
 /// affiliations keep theirs.
 #[test]
 fn settled_addresses_keep_their_owners() {
@@ -655,7 +655,7 @@ fn settled_addresses_keep_their_owners() {
 /// (user ruling R10 2026-10-20: `2796624556qw@…` first in its line, and so `mayhhu@…`, which elimination reached only
 /// through it, are the block's, on the shared creator; 77p r9 put them on Yijie Sun and Yaohua Hu); probe y1's
 /// `\{xx,yy\}@x.edu` over `ann.able@…`, spelling no one, the block's too (77p r9: Ann Able's and Bob Baker's by order).
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; each address in the `\texttt` it prints in.
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; each address in the `\texttt` it prints in.
 #[test]
 fn email_order_path_respects_spelled_owners() {
   let xml = convert_repro!("author_email_sequence_spelled_elsewhere.tex");
@@ -745,7 +745,7 @@ fn email_elimination_waits_on_the_other_lines() {
 /// `nnwang@` is the same case: Nannan Wang's joined "nwang" ends the word without opening it, a weak spelling that
 /// never breaks the tie "wang" makes with Zilong Wang (brief 107f r2, the one boundary predicate; review rev107f B1),
 /// so it and `dongsli@` are the block's (107f r1 had given them to Nannan Wang and Dongsheng Li).
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners, both shapes; each address in the `\tt \small` it
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners, both shapes; each address in the `\tt \small` it
 /// prints in, and the spacing after "NEL" trimmed as after the other entries.
 #[test]
 fn email_gap_counts_every_author() {
@@ -757,7 +757,7 @@ fn email_gap_counts_every_author() {
     affiliation("Xidian University"),
     affiliation("Microsoft Research Asia"),
   );
-  // (at `LATEXML_FM_EMIT=2` each address in the `\tt \small` it prints in)
+  // (at `=2` each address in the `\tt \small` it prints in)
   let small_tt = |id: usize, address: &str| {
     format!(
       r#"<contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="id{id}">{address}</text></contact>"#
@@ -908,7 +908,7 @@ fn link_line_of_an_and_column_is_its_names_url() {
 
 /// In a marked block's `\and` columns of one author each, a link line is the URL contact of its column's author, who
 /// the PDF prints it under, not of the whole block (user ruling 2026-10-20, 77p r7). Was an affiliation of Ann Able.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same; the math `*` written ∗ as LaTeXML writes a math asterisk
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same; the math `*` written ∗ as LaTeXML writes a math asterisk
 /// (FIDELITY_CHARTER §4: all asterisks one label key, the glyph as printed), the space after the break kept in the institution.
 #[test]
 fn link_line_of_a_marked_column_is_its_authors_url() {
@@ -931,7 +931,7 @@ fn link_line_of_a_marked_column_is_its_authors_url() {
 /// A command LaTeX's `\@fnsymbol` prints is a footnote symbol as `\S` is (2601.02680's `$^\mathsection$`; the r5
 /// re-review's probes r3, r5): shown on its name, and the run after it parts the names. Was "Cat Cole" and "Dan Dorn
 /// Eve Eads†Univ A", the § dropped.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same; the space after the line break kept in the institution.
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same; the space after the line break kept in the institution.
 #[test]
 fn fnsymbol_command_is_a_symbol_mark() {
   let xml = convert_repro!("author_symbol_command_marks.tex");
@@ -958,7 +958,7 @@ fn fnsymbol_command_is_a_symbol_mark() {
 /// A footnote symbol leading an affiliation line under another affiliation, the symbol an author carries, is its own
 /// entry labelled by its symbol (2601.05633's ⋄ line under its ♡ line, the r5 re-review's probe d1): Univ C on Cat Cole,
 /// who carries ⋄ though not last. Was "Univ B⋄ Univ C" on Ann Able.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
 /// (FIDELITY_CHARTER §4, a name's label is the name alone).
 #[test]
 fn symbol_led_affiliation_is_labelled_by_its_symbol() {
@@ -1209,7 +1209,7 @@ fn href(target: &str, text: &str) -> String {
 /// (2607.16926; the r6 re-review's finding 1): each address of the `;`-separated brace list the e-mail of the name it
 /// spells, Univ A on every † name, Lab B on the ∗ names. Was the whole address line an affiliation of the ∗ names, the
 /// carriers of the institution above it.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
 /// (FIDELITY_CHARTER §4, a name's label is the name alone), each address in the `\tt\small` the line prints it in.
 #[test]
 fn symbol_row_brace_list_goes_by_spelling() {
@@ -1217,7 +1217,7 @@ fn symbol_row_brace_list_goes_by_spelling() {
   assert_no_merged_names(&xml);
   let (univ_a, lab_b) = (affiliation(" Univ A"), affiliation(" Lab B"));
   // (the address as the list spells it; the group's `\tt\small` around the line is no wrapper an address keeps — at
-  // `LATEXML_FM_EMIT=2` it is, the address printed in it)
+  // `=2` it is, the address printed in it)
   let small_tt = |id: &str, address: &str| {
     format!(
       r#"<contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="{id}">{address}</text></contact>"#
@@ -1290,7 +1290,7 @@ fn link_column_is_no_creator() {
 
 /// The names carrying a symbol that labels a line under a row are the row's own, not those of another `\and` column
 /// (the r6 re-review's finding 3, probes x6, w28). Was Univ A on Cat Cole too.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks shown neither on the names
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks shown neither on the names
 /// nor in Univ C (FIDELITY_CHARTER §4, a name's label is the name alone), the space after a line's mark kept in its institution.
 #[test]
 fn symbol_carriers_stay_in_their_row() {
@@ -1305,7 +1305,7 @@ fn symbol_carriers_stay_in_their_row() {
 
 /// A compound symbol mark (`$^{\dagger*}$`) is one label per symbol: Ann Able carries † and so has Univ A (the r6
 /// re-review's finding 4, probes x1, w10, w11). Was Ann Able with no institution.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
 /// (FIDELITY_CHARTER §4, a name's label is the name alone), Ann Able's unanswered `*` shown, written ∗ as LaTeXML writes a
 /// math asterisk (§4: all asterisks one label key); the space after a line's mark kept in its institution.
 #[test]
@@ -1325,7 +1325,7 @@ fn compound_symbol_mark_is_a_label_per_symbol() {
 
 /// A scale factor is no letter of an address (`\scalebox{0.9}{…}`; the r6 re-review's finding 5, probe w14). Was
 /// "0.9aable@x.edu".
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; each address keeps the font it prints in, as the
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; each address keeps the font it prints in, as the
 /// affiliations keep theirs.
 #[test]
 fn scalebox_factor_is_no_address_letter() {
@@ -1387,7 +1387,7 @@ fn url_brace_list_is_addresses_by_spelling() {
 /// 2603.06578; user ruling R12 2026-10-20; the r6 re-review's finding 7); the legend goes to the name carrying its
 /// symbol, Bob Baker, as his note since 93a (OD #925; its "Corresponding author:" label no e-mail label: the address
 /// stays in its text). Was every line on Bob Baker alone.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the legend keeps the `\small` it prints in, as the
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; the legend keeps the `\small` it prints in, as the
 /// institutions do, and the comma ending a line, its separator from the next, is trimmed with it.
 #[test]
 fn legend_row_shares_the_institution() {
@@ -1398,7 +1398,7 @@ fn legend_row_shares_the_institution() {
       r#"<contact name="Affiliation: " role="affiliation"><text fontsize="90%" xml:id="{a}">Department of X,</text></contact> <contact name="Affiliation: " role="affiliation"><text fontsize="90%" xml:id="{b}">Univ A, City</text></contact>"#
     )
   };
-  // (at `LATEXML_FM_EMIT=2` the line's closing comma trimmed)
+  // (at `=2` the line's closing comma trimmed)
   let trimmed = |a: &str, b: &str| lines(a, b).replacen("Department of X,", "Department of X", 1);
   assert_eq!(creators(&xml), vec![
     creator(true, "Ann Able", &trimmed("id1", "id2")),
@@ -1489,7 +1489,7 @@ fn empty_mark_is_no_mark() {
 /// the legend is Bob Baker's note, a project role being a contribution (`classify_thanks`'s `project_role`; SYNC row
 /// 97c (d)), no longer his affiliation; its `mark` is the run's first symbol, as the observer's writer reads a compound
 /// label (`show_legend_mark`; the printed `†‡` stays in its text).
-/// At `LATEXML_FM_EMIT=2` this guard fails, the `=2` output wrong (T1 (w); revT1 F3: `Bob Baker‡`, a leftover of the mark `†‡` no entry is labelled with (mechanism B)).
+/// At `=2` this guard fails, the `=2` output wrong (T1 (w); revT1 F3: `Bob Baker‡`, a leftover of the mark `†‡` no entry is labelled with (mechanism B)).
 #[test]
 fn compound_legend_mark_names_its_carrier() {
   let xml = convert_repro!("author_compound_legend_mark_names_its_carrier.tex");
@@ -1574,7 +1574,7 @@ fn empty_mark_in_a_marked_block_stays() {
 /// 2606.28166; the r7 re-review's finding 1, probe g1) is read through the group: each institution goes to the names
 /// carrying its symbol, and the starred contact line under it, a legend, to the names carrying ∗. Was the whole line one
 /// affiliation of every name of the row and the contact line the block's (77p r10; r9 both the last name's).
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners and addresses; the answered marks no longer shown
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners and addresses; the answered marks no longer shown
 /// (FIDELITY_CHARTER §4, a name's label is the name alone), the institutions keep the `\small` they print in, and the line's
 /// word "Contact:" names its e-mail contacts as an e-mail line's label does (63k) — the old reader's "∗ Contact" affiliation gone.
 #[test]
@@ -1589,7 +1589,7 @@ fn symbol_row_group_wrapped_line_goes_by_its_marks() {
       r#"<contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="id{id}">{address}</text></contact>"#
     )
   };
-  // (at `LATEXML_FM_EMIT=2`: an institution in its `\small`, an address under the line's label "Contact:")
+  // (at `=2`: an institution in its `\small`, an address under the line's label "Contact:")
   let small = |id: usize, text: &str| {
     affiliation(&format!(
       r#"<text fontsize="90%" xml:id="id{id}">{text}</text>"#
@@ -1624,13 +1624,13 @@ fn symbol_row_group_wrapped_line_goes_by_its_marks() {
 /// Symbol-labelled lines each set in a group (`{\it \normalsize $^\sharp$Department of Biostatistics, …}`, 2602.16540;
 /// the r7 re-review's finding 1, probe g3) go to the names carrying their symbols. Was each line an affiliation of every
 /// name of the row (77p r10).
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
 /// (FIDELITY_CHARTER §4, a name's label is the name alone), each institution in the `\it` it prints in.
 #[test]
 fn symbol_row_group_wrapped_lines_go_by_their_marks() {
   let xml = convert_repro!("author_symbol_row_group_wrapped_lines.tex");
   assert_no_merged_names(&xml);
-  // (at `LATEXML_FM_EMIT=2` an institution in the `\it` it prints in)
+  // (at `=2` an institution in the `\it` it prints in)
   let italic = |id: &str, text: &str| {
     affiliation(&format!(
       r#"<text font="italic" xml:id="{id}">{text}</text>"#
@@ -1650,7 +1650,7 @@ fn symbol_row_group_wrapped_lines_go_by_their_marks() {
 /// 2602.16540's block (the r7 re-review's finding 1): names marked ⋆ and ♯, a `\hspace` before the line break, each
 /// institution on a line of its own in a group, led by its mark — two authors, each with the institution its mark
 /// labels. Was a creator named "⋆School of Mathematics …" (int34a, 77p r9) and the ♯ line on all three (77p r10).
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
 /// (FIDELITY_CHARTER §4, a name's label is the name alone), each institution keeps the `\it` it prints in.
 #[test]
 fn symbol_lines_after_a_spaced_break_go_by_their_marks() {
@@ -1692,7 +1692,7 @@ fn symbol_lines_after_a_spaced_break_go_by_their_marks() {
 /// A mark after its institution labels it (`Carnegie Mellon University, …$^{\dagger}$`, 2109.13296; the r7 re-review's
 /// finding 1, probes p7, p8): Univ A on the † names, Univ B on the ‡ one, each without its mark. Was each line an
 /// affiliation of every name of the row (77p r10).
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
 /// (FIDELITY_CHARTER §4, a name's label is the name alone), the space after a line's mark kept in its institution.
 #[test]
 fn trailing_symbol_mark_labels_its_line() {
@@ -1709,7 +1709,7 @@ fn trailing_symbol_mark_labels_its_line() {
 /// `\hspace`-parted names, then an institution and an address each marked † after the text — The Univ A on every name
 /// (R12), each listed address on the name it spells, Univ B and `bakerbob@` on Bob Baker, the † name, alone. Was Univ B
 /// on all three and `bakerbob@gmail.com†` on the shared creator (77p r10).
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; Bob Baker's answered mark no longer shown
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; Bob Baker's answered mark no longer shown
 /// (FIDELITY_CHARTER §4, a name's label is the name alone), each listed address in the `\texttt` it prints in.
 #[test]
 fn trailing_marks_under_spaced_names_label_their_lines() {
@@ -1789,7 +1789,7 @@ fn dotted_initials_link_is_an_authblk_name() {
 /// A doubled mark (`$^{**}$`, `$^{\dagger\dagger}$`) labels its institution as a single one does (the r7 re-review's
 /// finding 3, probes n1, n2): Univ B on Bob Baker, Univ C on Cat Cole. Was each an affiliation of the shared creator, its
 /// mark kept (77p r10).
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
 /// (FIDELITY_CHARTER §4, a name's label is the name alone), the space after a line's mark kept in its institution.
 #[test]
 fn doubled_symbol_marks_label_their_institutions() {
@@ -1836,7 +1836,7 @@ fn link_words_in_a_linked_institution_under_a_marked_row() {
   let xml = convert_repro!("author_linked_institution_with_link_words_marked.tex");
   assert_no_merged_names(&xml);
   let lab = affiliation(&href("https://www.ds.org", "Data Science Lab"));
-  // (at LATEXML_FM_EMIT=2 the answered marks no longer shown on the names, as T1's, and the
+  // (at `=2` the answered marks no longer shown on the names, as T1's, and the
   // space before each institution kept)
   assert_eq!(creators(&xml), [
     creator(
@@ -1911,7 +1911,7 @@ fn line_break_optional_after_spaces_prints_nothing() {
 /// A truncated family-first address (`zhuzhenh22@`, `chenyuxi22@`; 2602.03328, 2609.11716; the r7 re-review's finding
 /// 9) spells the name whose joined family-first spelling it opens with the first six letters of, as a surname's six
 /// letters do. Was each on the shared creator, two names tied by the surname (77p r10).
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; each address keeps the font it prints in, as the
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; each address keeps the font it prints in, as the
 /// affiliations keep theirs.
 #[test]
 fn truncated_family_first_address_spells_its_name() {
@@ -1983,7 +1983,7 @@ fn rules_phantoms_and_skips_print_no_letter() {
 /// Symbol-labelled institutions on one line parted by `\qquad` under a row of marked names (the r7 re-review's g2, x13;
 /// int34a the same): the block `\qquad` parts off after the line is the next institution of that line, no names —
 /// Univ A on the † names, Univ B on the ‡ one. Was a creator named "‡Univ B" and "†Univ A" on Cat Cole alone.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; the answered marks no longer shown on the names
 /// (FIDELITY_CHARTER §4, a name's label is the name alone).
 #[test]
 fn symbol_institution_row_parted_by_space() {

@@ -40,7 +40,7 @@ fn aa_author_replaces_and_keys_aa_blocks() {
   );
 }
 
-/// An empty call holds nothing back (`writer::written_resolution`): llncs's split of `Ann Able\inst{1} \and\\ Bob
+/// An empty call holds nothing back (`writer::written_resolution` (deleted)): llncs's split of `Ann Able\inst{1} \and\\ Bob
 /// Baker\inst{2}` leaves an empty piece between `\and` and `\\`, a block skipped as empty, which held a written
 /// paper back as an unread one (2409.09478: the scorer's R2 `email_spells_other`, its corresponding author's address
 /// on another name). Distinct from the write-out: the writer's gate, not its operations.

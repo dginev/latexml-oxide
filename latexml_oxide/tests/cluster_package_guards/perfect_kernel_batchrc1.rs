@@ -1,5 +1,5 @@
 //! Guards for RC1 (`agent_reports/2026-11-08_RC1_report.md`; OXIDIZED_DESIGN_DIVERGENCES #980): the charter's content
-//! invariant under `LATEXML_FM_EMIT=2` — every word TeX printed in an author block is in the output once, or counted in a
+//! invariant under `=2` — every word TeX printed in an author block is in the output once, or counted in a
 //! Warning. Two mechanisms, a guard each: the gullet's input mark is exact (`gullet::input_unread_since` reads how short
 //! the mouth's pushback has been since the mark, its watch's runs, so IEEEtran's affiliation calls are no longer read as
 //! the author block's own and lost: 2401.11731, 1801.03314; its unit tests

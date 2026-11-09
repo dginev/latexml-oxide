@@ -1,6 +1,6 @@
 % mechanism: a tail a raw macro appends to `\@author` after the block (`\g@addto@macro\@author{\\ #1}`) is handed to the
 %   creators the call made, `annotate={made}` with `lx_author_made` (frontmatter_stores.rs `author_tail_calls`); under
-%   `LATEXML_FM_EMIT=2` the call made one whole entry, so "made" was 1 and only the last name got the row (review revZ4b
+%   `=2` the call made one whole entry, so "made" was 1 and only the last name got the row (review revZ4b
 %   finding 4); where the call made every queued creator the tail is now `annotate=all`, Perl's every parent
 % witness: review revZ4b (no dev3/devh paper); the guard's rows: this file, three names `Ann Able, Bob Baker and Cat Cole`
 % oracle:  pdflatex 0 errors; "Ann Able" and "Bob Baker" in two `\and` columns, "Univ A, Town" under Bob Baker's (the tail

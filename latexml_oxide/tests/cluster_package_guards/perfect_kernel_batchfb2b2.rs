@@ -1,6 +1,6 @@
 //! Guards for FB2b2, two shapes of the old reader's names split ported onto the one engine's reading
 //! (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`; FB1's port P2), each fixture converted with the emitter's switch
-//! off and at `LATEXML_FM_EMIT=2`, the creators (name and every contact, in order) the same both ways: a byline's "By"
+//! off and at `=2`, the creators (name and every contact, in order) the same both ways: a byline's "By"
 //! that a spacing run parts from the names (the reading's `byline_dropped` on a names line, the old `without_leading_by`,
 //! the content check counting the word it drops as a separator's), and a line under the names opening with "and" after
 //! a space (`later_line_is_names`, the old `names_list_continues`).

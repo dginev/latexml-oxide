@@ -113,7 +113,7 @@ fn name(text: &str) -> FmEvent {
 
 fn and() -> FmEvent { FmEvent::new(FmEventKind::Sep(FmSepKind::And("\\and"))) }
 
-/// An author block's input (`ab_audit fmshadow --re-resolve`'s shape): `replace` the kernel `\author` given again.
+/// An author block's input (the deleted `ab_audit fmshadow --re-resolve`'s shape): `replace` the kernel `\author` given again.
 fn block(index: usize, binding: &str, replace: bool, events: Vec<FmEvent>) -> FmInput {
   FmInput::Block {
     index,

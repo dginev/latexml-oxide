@@ -263,7 +263,7 @@ fn xml_and_reading(tex: &str) -> (String, Vec<String>, Value) {
 
 /// A deferred label is read by the queue's readers too (review of 88b r2, finding 1): an author's letter label whose
 /// entry comes after it is `\lx@label@ref{…}` until the flush (`cas_mark_labels`), and the readers of the queued
-/// keyvals before the digestion — the observer's (`LATEXML_FM_SHADOW=1`) and `place.rs`'s — read the letter it stands
+/// keyvals before the digestion — the observer's and `place.rs`'s — read the letter it stands
 /// for (`resolve_label_refs`), as the digestion expands it; one known when the `\author` is read is written as the
 /// letter. Red on r2, whose reading read the raw reference as single-character requests (2303.00352, 2603.22658: every
 /// affiliation gone; 2504.19452, 2509.10496: every author every one):

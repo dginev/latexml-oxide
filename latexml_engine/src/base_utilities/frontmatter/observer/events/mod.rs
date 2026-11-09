@@ -128,7 +128,7 @@ impl EmailMeaning {
     }
   }
 
-  /// The meaning a dump's name gives (`ab_audit fmshadow`); a binding's for any other.
+  /// The meaning a dump's name gives (the deleted `ab_audit fmshadow`); a binding's for any other.
   pub fn from_name(name: &str) -> Self {
     match name {
       "in-place" => EmailMeaning::InPlace,
@@ -158,7 +158,7 @@ impl MarkBase {
     }
   }
 
-  /// The base a dump's name gives (`ab_audit fmshadow`).
+  /// The base a dump's name gives (the deleted `ab_audit fmshadow`).
   pub fn from_name(name: &str) -> Option<Self> {
     match name {
       "floating" => Some(MarkBase::Floating),
@@ -207,7 +207,7 @@ impl BreakKind {
     }
   }
 
-  /// The kind a dump's name gives (`ab_audit fmshadow`).
+  /// The kind a dump's name gives (the deleted `ab_audit fmshadow`).
   pub fn from_name(name: &str) -> Option<Self> {
     match name {
       "par" => Some(BreakKind::Par),

@@ -1,4 +1,4 @@
-//! Guards for CL7 (`agent_reports/2026-11-09_brief_CL7.md`): `LATEXML_FM_EMIT=2` never writes fewer of a block's printed
+//! Guards for CL7 (`agent_reports/2026-11-09_brief_CL7.md`): `=2` never writes fewer of a block's printed
 //! words than off. One guard per mechanism, each off and at `=2`: a block's own `annotations` holding a command are digested
 //! on its creators as off digests them, the note the document's (authblk's `\author[1\thanks{…}]`; 2308.08363,
 //! 2410.16774, 2207.11475, 2207.11842); a call whose printed words the reading writes none of is written as queued, as off

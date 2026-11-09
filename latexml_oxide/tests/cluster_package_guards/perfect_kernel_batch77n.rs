@@ -197,7 +197,7 @@ fn and_opening_a_box_separates_names() {
     ),
     creator(
       false,
-      // (at LATEXML_FM_EMIT=2 the name without its attribute-less box wrapper)
+      // (at `=2` the name without its attribute-less box wrapper)
       "Cat C. Cole",
       &affiliation(" Univ B, Town")
     ),

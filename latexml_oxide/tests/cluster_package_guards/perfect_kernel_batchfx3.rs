@@ -1,5 +1,5 @@
 //! Guards for FX3: a `\thanks` note's link its owner or the author it spells takes (`ruling4:inner-contact`, `Resolver::note`, OD
-//! #837's decision 2), is not written as a contact at `LATEXML_FM_EMIT=2` while the note written there still prints it —
+//! #837's decision 2), is not written as a contact at `=2` while the note written there still prints it —
 //! one record per fact, the switch off's output (its writer declines the contact; `emitter::emit::items_to_emit`'s
 //! `in_a_written_note`). One test per way the note prints the address: a `mailto:` link (1410.4175, 2009.03378,
 //! 2604.08687, 2410.14846) and the document's own `\email` printing its label (0807.0895); and the sibling it must keep, a

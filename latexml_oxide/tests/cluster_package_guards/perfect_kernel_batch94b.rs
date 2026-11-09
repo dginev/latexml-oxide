@@ -30,7 +30,7 @@
 //! Round 4 (review rev94b r3): a cut entry is digested in the font in effect where its cut starts, read from the
 //! rehearsal's digested ink (`events::entry_font`), and an argument other than a group spanning two entries is no cut
 //! (B1); a line leading with a mark no name requests, and a list of single-word keys, is in doubt — the class's line —
-//! and the writer never writes a creator without a name (B2, B2b; `writer::writes_a_nameless_creator`, unit-tested
+//! and the writer never writes a creator without a name (B2, B2b; `writer::writes_a_nameless_creator` (deleted), unit-tested
 //! there); a kept class body's call of a rerouted setter runs the setter's meaning when the document redefined it (S3);
 //! the authors' box is recorded by its frame's serial, whatever group the kernel's call stood in.
 //!

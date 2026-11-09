@@ -98,7 +98,7 @@ fn block_entry_of_several_words_is_cut_whole() {
   assert_ne!(comma, tex);
   assert_eq!(
     both_ways(&comma, &[]),
-    // at LATEXML_FM_EMIT=2 each entry keeps the space after its `$ ^1 $` mark (T1: whitespace only)
+    // at `=2` each entry keeps the space after its `$ ^1 $` mark (T1: whitespace only)
     r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"> Univ A, X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"> Univ B</contact> </creator>"#
   );
 }

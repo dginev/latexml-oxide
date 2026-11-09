@@ -1,4 +1,4 @@
-//! Guards for Z4b (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`, Route D; OXIDIZED_DESIGN_DIVERGENCES #980): `LATEXML_FM_EMIT=2`, each call
+//! Guards for Z4b (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`, Route D; OXIDIZED_DESIGN_DIVERGENCES #980): `=2`, each call
 //! queuing one whole block, reaches `=1`'s creators (`the_whole_block_queue_reaches_one`: a queue position names a call's entry, an address placed by
 //! the names it held whole is placed at the flush), and the emitter's safety net, the reading's word check: a block whose reading loses other ink
 //! keeps it, the ink a note of the author block (`a_block_losing_other_ink_keeps_its_reading`; Perl's whole-block `\lx@add@author` only where the

@@ -392,7 +392,7 @@ fn an_entry_whose_cut_fails_is_given_back() {
   let (log, xml, json) = run(repro!("z14r3_entry_given_back_where_its_cut_fails"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(json["writer"], "written", "{json}");
-  // (T1, `LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`: each address of the `e--mail:` line is the e-mail of the author
+  // (T1, `=2`, `perfect_kernel_batcht1::expect`: each address of the `e--mail:` line is the e-mail of the author
   // it spells)
   creators_are(&xml, &[
     &[

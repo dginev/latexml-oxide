@@ -963,7 +963,7 @@ fn mail_word_before(text: &str, at: usize) -> Option<usize> {
 
 /// The addresses printed in `text` as the reading takes them out of an affiliation entry
 /// (`Resolver::take_out_entry_addresses`, brief 95c): every address of its runs (`address_runs`, a list part spelling
-/// one of `names` read as a part), written out, and the text the cut leaves (`strip_address_runs`) — what `ab_audit
+/// one of `names` read as a part), written out, and the text the cut leaves (`strip_address_runs`) — what the deleted `ab_audit
 /// fmshadow` reads today's uncut entry, or today's e-mail printing several addresses, by.
 pub fn address_take_out(text: &str, names: &[&str]) -> (Vec<String>, String) {
   let spells = |local: &str| spelled_name(names, &s!("{local}@x.org")).is_some();

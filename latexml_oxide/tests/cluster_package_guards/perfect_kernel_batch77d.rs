@@ -197,7 +197,7 @@ x
   let xml = squash(&xml);
   // (the kernel family written, 94a: the observer reads the printed "And" as the word separating two names — any case,
   // 77p r4's rule — and the writer re-parts the one name today's old reader kept)
-  // (at LATEXML_FM_EMIT=2 Bob Baker's creator carries the printed space before him as its `before`)
+  // (at `=2` Bob Baker's creator carries the printed space before him as its `before`)
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", ""),
     creator(false, "Bob Baker", ""),

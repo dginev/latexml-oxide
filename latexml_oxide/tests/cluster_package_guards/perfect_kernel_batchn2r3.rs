@@ -97,7 +97,7 @@ fn a_class_label_in_a_name_is_no_excess() {
 }
 
 /// Under `=2` the flush reads every paper as the census does: llncs's `\institute`, a creator call of a paper with no author
-/// block, is rehearsed without `LATEXML_FM_SHADOW=1`, so the content check counts the `ann@a.org` it prints twice and the
+/// block, is rehearsed without the census (deleted in DEL4), so the content check counts the `ann@a.org` it prints twice and the
 /// output holds once, the same output and the same count with the census and without it (1401.5951: no finding without
 /// it). Switched off, nothing counts.
 #[test]

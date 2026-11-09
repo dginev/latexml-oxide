@@ -1,7 +1,7 @@
 % mechanism: positions per call: the rehearsal stamps each author call's tokens from where the field's own stamps end, in the
 %   author field's 15 bits (`ledger::record_author_call`, `token::AUTHOR_PROV_POS_MASK`), so a kernel `\author` past the 16,383
-%   positions the stamps take (its `\lx@field@mark` unstamped) is read with `LATEXML_FM_EMIT` on; with the switch off it stays
-%   unread, as before (`ledger::out_of_positions`, the dump's stamp `overflow`)
+%   positions the stamps take (its `\lx@field@mark` unstamped) is read by the emitter; the old driver (deleted in DEL2) left it
+%   unread (`ledger::out_of_positions`, the dump's stamp `overflow`)
 % witness: 2204.09614 (BESIII, 18,395 tokens, 559 names), 2404.06718 (20,918), 2103.16779, 2107.03604, 2201.02056,
 %   2212.07214, 2311.02347, 2410.11607 (21,304, dev20k's largest), 1605.03233, 1812.07638
 % oracle:  pdflatex 0 errors; 650 names "Annabelle Abernathy-<letters>", `\and` between them (16,899 tokens)

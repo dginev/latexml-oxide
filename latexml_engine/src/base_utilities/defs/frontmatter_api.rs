@@ -16,7 +16,7 @@ pub(in crate::base_utilities) const LABEL_PRINTS: &str = "_labelprints";
 /// the writer's `rekeyed`: authblk's `\affil[*]`, 2605.31330), or the first mark the entry's content printed
 /// (`\lx@sup@setlabel@affiliation`'s record). Read by the Kind step for a legend as a printed mark
 /// (`insert::legend_mark`; OD #980, P2 NT). A fact of the entry in a key of its own, as Perl keeps an entry's
-/// (`_label`, `_annotations`). None with the emitter's switch off.
+/// (`_label`, `_annotations`).
 pub(in crate::base_utilities) const PRINTED_LABEL: &str = "_printedlabel";
 
 /// The contact roles the frontmatter API's Cut reads ([`cut_marked_contact`]): the ones a printed list of entries is

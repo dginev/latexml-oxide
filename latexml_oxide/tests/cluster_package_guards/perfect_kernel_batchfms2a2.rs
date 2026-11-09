@@ -1,6 +1,6 @@
 //! Guards for batch FM S2a.2: the frontmatter observer's resolver and the families' conventions,
 //! (OXIDIZED_DESIGN_DIVERGENCES #837; KERNEL_CAPABILITIES K23). Read whole,
-//! the ledger's blocks and API calls are resolved into the tuples `ab_audit fmshadow` compares with the XML — each
+//! the ledger's blocks and API calls are resolved into the tuples the deleted `ab_audit fmshadow` compares with the XML — each
 //! creator's name without its marks, its affiliations, contacts and notes, the author block's own — each with the rule
 //! that decided it; the guards assert those tuples and rules for the design probes (symbol lines, a user mark macro),
 //! the gretsi shared-mark repro, 2401.16957's `,\inst`, the SYNC frontmatter rows' shapes, the 78f placements

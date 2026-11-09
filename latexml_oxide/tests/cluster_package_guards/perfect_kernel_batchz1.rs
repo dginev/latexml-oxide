@@ -1,7 +1,7 @@
 //! Guards for Z1 (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md` "Gaps in the event model", 1, 2, 6, 8, 9): what the
 //! observer's events gain, read from the digested list and its spans, for the old engine's removal. Nothing reads these
 //! fields but these guards; the reading and the writer's output stay as they were (the guards compare the whole events a
-//! dump holds; `ab_audit fmshadow --re-resolve`'s test reads them back). Each guard is a different code path:
+//! dump holds; the deleted `ab_audit fmshadow --re-resolve`'s test reads them back). Each guard is a different code path:
 //! `marks_say_…` the walker on a stamped block, `a_call_marks_…` on an API call's content, which has no positions;
 //! `a_contact_…` the ledger's unprinted call; `a_definition_…` the stomach's note of a boxless assignment,
 //! `a_declarations_span_…` where that note's span starts and what it may not hold; the two `held` guards the document's own

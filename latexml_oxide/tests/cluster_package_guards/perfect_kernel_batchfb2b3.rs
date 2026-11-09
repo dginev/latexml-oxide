@@ -1,5 +1,5 @@
 //! Guards for FB2b3, a names line's mark ported onto the one engine's writer (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`;
-//! FB1's port P4), each fixture converted with the emitter's switch off and at `LATEXML_FM_EMIT=2`, the creators (name and
+//! FB1's port P4), each fixture converted with the emitter's switch off and at `=2`, the creators (name and
 //! every contact, in order) the same both ways: a mark after a brace group of names is the last name's (`block_names`;
 //! the old reader's names split, `split_author_line`'s `names_in_wrapper`); FX2: a mark in the formula a name is in,
 //! the run taking it whole, written once (review revH5 finding 2).

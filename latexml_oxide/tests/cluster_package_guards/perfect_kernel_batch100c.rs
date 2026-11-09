@@ -5,7 +5,7 @@
 //!   `notes_line_joins_names`, `author_block/notes.rs` `notes_only_line`; Perl shares the defect, Base_Utility.pool.ltxml
 //!   :702-712). Witnesses 2609.17106, 2411.05212, 2312.10807.
 //! - A boxed author block's re-part writes an e-mail item, the reading's address in its row's fonts, and a
-//!   `\resizebox`'s sizes print no name ink (OD #958; `observer/writer/{plan,repart,apply}.rs` `Made::Email`,
+//!   `\resizebox`'s sizes print no name ink (OD #958; `observer/emitter/{plan,repart}.rs` and the S2b writer's `apply.rs` (deleted in DEL4) `Made::Email`,
 //!   `observer/events/mod.rs` `KEYED_CONSTRUCTORS`). Witnesses 2609.39183, 2507.07465, 2107.12423, 2603.10436,
 //!   2608.20401.
 //!

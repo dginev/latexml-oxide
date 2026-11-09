@@ -1,5 +1,5 @@
 //! Guards for KEY, the mark-keyed entries (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`; OXIDIZED_DESIGN_DIVERGENCES
-//! #980): where `LATEXML_FM_EMIT=2`'s reading made a mark a label the switch-off procedure does not, or kept whole what
+//! #980): where `=2`'s reading made a mark a label the switch-off procedure does not, or kept whole what
 //! it cuts by its marks, ported from that procedure (the rows of RT2's rule table). A printed mark no name requests is no
 //! label: an API call's entry keeps its call's placement (`an_unrequested_leading_mark_keeps_its_calls_placement`, K12),
 //! a block line a glyph leads continues the entry above it (`an_unrequested_glyph_line_continues_the_entry_above`,

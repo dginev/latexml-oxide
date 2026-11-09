@@ -1,5 +1,5 @@
 //! Guards for P1b (E1, the strict port of the switch-off writer's cut, RT1's rows 54-58): an address inside an entry's
-//! text is its owner's e-mail at `LATEXML_FM_EMIT=2` as with the switch off (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`;
+//! text is its owner's e-mail at `=2` as with the switch off (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`;
 //! OXIDIZED_DESIGN_DIVERGENCES #980 P1b): the reading's take-out (`Resolver::take_out_entry_addresses`) is written from the
 //! entry's own tokens without the runs its cut covers, at the positions the lexer recorded for each character of its inks
 //! (`events::InkTable`, `emitter::address_cut`), each address the e-mail of the owner the reading gives it, as printed. One test

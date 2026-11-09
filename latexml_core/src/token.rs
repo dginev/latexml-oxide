@@ -1033,7 +1033,7 @@ pub fn field_ledger_entry(serial: u32) -> Option<FieldLedgerEntry> {
 /// unstamped on drop as well (`field_stamp_noted`): a box the run did not make — a register's, `\copy`/`\usebox`
 /// handing back the stored box itself — would otherwise keep the run's serial, which the ledger no longer holds, and
 /// the document's own print of it, finding it stamped, would not stamp it again (FM S2a.2 r9: `\usebox{\ORCIDicon}` in
-/// an `\author`, wrapped in an `ltx:text` with an id with `LATEXML_FM_SHADOW` set: 2405.14627, 2603.26792; repro
+/// an `\author`, wrapped in an `ltx:text` with an id under the observer's census switch, since deleted: 2405.14627, 2603.26792; repro
 /// `sectioning-frontmatter/observer_rehearsal_leaves_a_used_box_unchanged`).
 pub struct FieldLedgerScope {
   len:     usize,

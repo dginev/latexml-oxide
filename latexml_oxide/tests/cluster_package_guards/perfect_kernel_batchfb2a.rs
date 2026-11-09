@@ -1,4 +1,4 @@
-//! Guards for batch FB2a (`pk/FB2a`, 2026-11-08): at `LATEXML_FM_EMIT=2` the whole-block fallback is Perl's raw call
+//! Guards for batch FB2a (`pk/FB2a`, 2026-11-08): at `=2` the whole-block fallback is Perl's raw call
 //! (`frontmatter/fallback.rs` `whole_block_author`, Base_Utility.pool.ltxml:693), and four of the old reader's rules that
 //! its raw-token rewrites carried are ported onto the digested reading (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`,
 //! the rows "Strict porting" and "The fallback"; OXIDIZED_DESIGN_DIVERGENCES #52, #980). Each guard is a distinct code

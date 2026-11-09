@@ -123,7 +123,7 @@ pub(in crate::base_utilities) fn rehearsal_budget() -> Option<usize> {
 }
 
 /// The Warning that says what no rehearsal read, when the document closes (`SkipReason::OverBudget`): an author block
-/// among them is written whole (Perl's whole-block creator, `writer::writer_stays_out`) and any other call's words are not
+/// among them is written whole (Perl's whole-block creator, `writer::writer_stays_out` (deleted)) and any other call's words are not
 /// written — the content check counts them (`resolver::placed::content_check`, `ApiCall::unread`).
 pub(in crate::base_utilities) fn rehearsal_budget_warning() {
   let left_out = LEFT_OUT.replace(0);
@@ -806,7 +806,7 @@ fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
     } else if let Some(len) = environment_call_len(&toks[i..], end, "tabular") {
       match (opened, reopen(i + len)) {
         (0, Some((start, past))) => {
-          // (what the commands between print goes with the column before, as the switch-off output orders it:
+          // (what the commands between print goes with the column before, as the old driver's output orders it:
           // `\mbox{Extra Words}` after Univ A, not the next column's first line, Bob Two lost with 2 Errors before —
           // review revH1 finding 2; the writer still writes the column's source, `\end{tabular}` in it, so the words
           // between are lost, counted by the content check: OD #980 (5))

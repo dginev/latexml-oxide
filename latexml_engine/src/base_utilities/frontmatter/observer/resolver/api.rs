@@ -366,7 +366,7 @@ impl Resolver {
         // `ltx:creator`, `{\lx@personname{#2}}` — "the name can contain much more than just the name"
         // (Base_Utility.pool.ltxml:585-589) —, so a `\thanks` there is a note of that creator; the reading attaches
         // it, and the emitter writes it with the creator (2505.09041's `\author{Craig M$^{\mathrm{c}}$Rae\thanks{…}}`,
-        // lost at `LATEXML_FM_EMIT=2`))
+        // lost by the emitter before this))
         for event in events.iter().filter(|e| e.kind == EventKind::Note) {
           self.note(index, event, Some(made), "note:adjacent");
         }
