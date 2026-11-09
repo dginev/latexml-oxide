@@ -170,7 +170,7 @@ pub(in crate::base_utilities) fn space_parted_name_line(line: &Tokens) -> bool {
 /// it).
 /// The block's groups are parted at `\and` and `\quad` before its lines (`author_group_splits`), so read as written
 /// `Ann Able \quad Bob Baker\\ Cat Cole \quad Dan Dee` gave Bob Baker the affiliation "Cat Cole" (in a `\parbox`
-/// too, once [`wrapper_over_lines_as_lines`] gives its lines to the block: the rev107b review's B1, probes q09, r01, r04;
+/// too, once `wrapper_over_lines_as_lines` gives its lines to the block: the rev107b review's B1, probes q09, r01, r04;
 /// `\\ \textbf{Ludwig Schmidt \quad Serena Yeung-Levy} \\` under a row of names, 2507.19054). A line holding an
 /// institution word parts nothing (a name-shaped institution row still does: rev107b2 F1), so an unmarked line under one name stays its affiliation (user ruling R12), and a row of
 /// addresses set by position under the names (`A \quad B \\ Univ A \quad Univ B`) stays one. A line of names a
@@ -465,33 +465,4 @@ fn begins_a_name(v: &[Token], i: usize, mark_leads: bool) -> bool {
     },
     _ => false,
   }
-}
-
-/// Whether `line`, which `delimiter` parts from the author `name` before it in a marked block, is more names on that
-/// name's printed line: the delimiter a wide space (`\quad`, `\qquad`, the horizontal spaces OD #52(i) writes so), no
-/// line break, and the name and the line read as two names or more ([`name_count`]: not `Ann Able$^{1}$ \quad Univ A`,
-/// nor a qualifier, `Ann Able$^{1}$ \quad PhD`).
-pub(in crate::base_utilities) fn space_parts_names(
-  delimiter: &[Token],
-  name: &Tokens,
-  line: &Tokens,
-) -> bool {
-  let wide = delimiter
-    .iter()
-    .any(|t| *t == T_CS!("\\quad") || *t == T_CS!("\\qquad"));
-  if !wide
-    || delimiter.iter().any(|t| {
-      author_line_breaks()
-        .iter()
-        .any(|d| matches!(d, SplitDelim::Token(d) if d == t))
-    })
-  {
-    return false;
-  }
-  let text = format!(
-    "{}, {}",
-    visible_name_text(name.unlist_ref()).trim(),
-    visible_name_text(line.unlist_ref()).trim()
-  );
-  name_count(&text) >= 2
 }

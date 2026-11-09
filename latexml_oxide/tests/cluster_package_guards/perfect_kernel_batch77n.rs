@@ -349,6 +349,8 @@ fn revtex3_glue_after_names_is_no_name() {
 }
 
 /// Negative guard: one name in a `\parbox` stays one author in its box.
+/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
+/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
 #[test]
 fn parbox_single_author_stays_whole() {
   convert_repro!("author_parbox_single_author_stays.tex");
@@ -714,6 +716,8 @@ fn authblk_affil_after_affils_in_author_reaches_them() {
 /// authblk `\affil{$^{1,2}$Univ X}` after `\author{Ann$^{1}$}\author{Bob$^{2}$}` (r3 review probes w1, v8): a combined
 /// mark keeps authblk's run, so both authors get Univ X (77n r3: Ann alone, the marked path labelling it by its first
 /// mark).
+/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
+/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
 #[test]
 fn authblk_combined_mark_affil_runs() {
   convert_repro!("author_authblk_combined_mark_affil.tex");
@@ -877,6 +881,8 @@ fn authblk_legend_after_passed_over_run() {
 /// ptephy's `\affil{}{Univ Z}` after `\affil{1}{Univ X}\affil{2}{Univ Y}` (r5 review probe t02; t04; witnesses
 /// 1605.07339, 2311.07297, 1902.10888): every author of the run answered, so Univ Z is the whole run's, as the class
 /// prints it under all of the names (77n r5: Bob's only). Each author's in print order, Univ Z last (Since 99a r2 in print order (R8: a relocated entry takes its call's place in the queue, `relocate::at_queue_position`, OD #954)).
+/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
+/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
 #[test]
 fn ptephy_unlabelled_affil_after_labelled_reaches_all() {
   convert_repro!("author_ptephy_unlabelled_affil_after_labelled.tex");
@@ -983,6 +989,8 @@ fn email_pile_beside_marked_affiliations_is_dealt() {
 /// not the page — pdflatex shows the ∗ on Bob only (77n r7 review finding 2; SYNC "A symbol legend reaches authors who
 /// do not show its symbol").
 /// 95b (authblk written, OD #942): the legend a note of the name showing its `∗` alone (ruling 2), its mark answered.
+/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
+/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
 #[test]
 fn authblk_symbol_mark_then_text_shown_once() {
   convert_repro!("author_authblk_symbol_mark_then_address_shown_once.tex");

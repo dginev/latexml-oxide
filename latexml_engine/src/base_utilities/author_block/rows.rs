@@ -2,49 +2,6 @@
 
 use super::*;
 
-/// [`strip_linebreak_options`], an author block's positive `\\[len]` kept as the gap it prints: written `\\ \\`, the
-/// spacer line pdflatex sets the same gap with (`\\ \vspace{len} \\`), which the unmarked branch reads as a gap before
-/// the next line ([`name_groups`]: gr-qc9906006's `… Puerto Rico 00931-3343 \\[12pt] Palash B. Pal`; the 85a r1
-/// review's finding 6). Only at the block's top level, outside braces and environments (a tabular's row is no line),
-/// and not after a row of names, a line holding a wide space or a run of spacing at its top level (`Ivy Ives\;\;\; Jon Jay \\[0.2em] Lou Lee\;\;\; Max Moss \\[0.2em] Oli Ott`,
-/// 2605.24414: rows going on with the names line, [`normalize_hspace_separators`]). The first line break of a group of
-/// names, the one ending their names line, keeps its gap too, though no lines stand above it for the gap to part: a
-/// gap there and before every later line is the block's spacing, parting no authors (`Ann Able \\[2pt] University of X
-/// \\[2pt] Hong Kong`, the 85a r2 review's finding 3; [`name_groups`]). A negative or zero length (`\\[-0.1cm]`,
-/// `\\[0pt]`) is no gap.
-pub(in crate::base_utilities) fn strip_linebreak_options_keeping_gaps(tokens: Tokens) -> Tokens {
-  linebreak_options_stripped(tokens, true)
-}
-
-/// Whether a line of an author block holds e-mail addresses and nothing else that reads as a word: a bare list, in its
-/// wrapper or link (`\texttt{a@x}`, `(a@x)`, `\href{mailto:a@x}{a@x}`), behind an e-mail label (`E-mail: a@x`). No name
-/// stands on it, so it names no one ([`resolver::only_addresses`]).
-pub(in crate::base_utilities) fn address_only_line(line: &Tokens) -> bool {
-  let text = visible_name_text(line.unlist_ref());
-  line_is_email_list(line)
-    || (!resolver::addresses_in(&text).is_empty() && resolver::only_addresses(&text))
-    || email_commands_alone(line)
-}
-
-/// Whether a line holds a class's `\email{…}` commands and nothing else (`\email{a@x}\qquad \email{b@y}`, 2404.04659,
-/// whose second was a creator).
-fn email_commands_alone(line: &Tokens) -> bool {
-  let v = line.unlist_ref();
-  let mut seen = false;
-  let mut i = 0;
-  while i < v.len() {
-    if v[i] == T_CS!("\\email") && v.get(i + 1) == Some(&T_BEGIN!()) {
-      seen = true;
-      i = skip_group(v, i + 1);
-    } else if v[i].get_catcode() == Catcode::SPACE || is_line_separator(&v[i]) {
-      i += 1;
-    } else {
-      return false;
-    }
-  }
-  seen
-}
-
 /// Whether `stuff` holds a piece, parted as the kernel's author read parts its names and lines, that is one macro whose
 /// expansion prints a link alone (`\newcommand{\githubrepo}{\href{https://github.com/NVIDIA/kvpress}{{\faGithub}
 /// NVIDIA/kvpress}\xspace}`, `… \\ \begin{center} \hflink{…}{NVIDIA/KVzap}\quad \githubrepo \end{center}`, 2601.07891): no
@@ -90,30 +47,6 @@ pub fn holds_a_macro_printing_a_link(stuff: &Tokens) -> bool {
           _ => false,
         }))
     })
-}
-
-/// Whether a line of an author block prints an icon or a graphic and no word (`\orcidlink{…}`,
-/// `\includegraphics{…}`): every command on it an ORCID icon's, one whose arguments print no name
-/// ([`NON_PRINTING_ARGUMENTS`]) or a font's, one such at least, no text left. A macro might print a name (`\AuthorOne
-/// \quad \AuthorTwo`), which only its expansion tells.
-pub(in crate::base_utilities) fn names_no_one(line: &Tokens) -> bool {
-  let v = line.unlist_ref();
-  let annotation = |t: &Token| {
-    t.get_catcode() == Catcode::CS
-      && t.with_str(|s| {
-        matches!(s, "\\orcidlink" | "\\orcidID" | "\\lx@aas@checkorcid")
-          || NON_PRINTING_ARGUMENTS.iter().any(|(c, ..)| *c == s)
-      })
-  };
-  v.iter().any(annotation)
-    && v.iter().all(|t| {
-      t.get_catcode() != Catcode::CS
-        || annotation(t)
-        || t.with_str(|s| NAME_TEXT_COMMANDS.contains(&s))
-    })
-    && !visible_name_text(&printed_words(v))
-      .chars()
-      .any(char::is_alphanumeric)
 }
 
 /// Whether the lines under an unmarked author line's names read as more names and nothing tells them from an
@@ -172,10 +105,4 @@ pub fn line_breaks_as_name_separators(stuff: &Tokens) -> Tokens {
     }
   }
   Tokens::new(out)
-}
-
-/// Whether `tokens` print only the word "and", in any case and wrapper (`and`, `\textnormal{AND}`, `{and}`): the
-/// separator between two names, never a name or an affiliation.
-pub(in crate::base_utilities) fn is_and_piece(tokens: &[Token]) -> bool {
-  visible_name_text(tokens).trim().eq_ignore_ascii_case("and")
 }

@@ -239,17 +239,14 @@ fn assert_debts(name: &str, pins: &[(&str, usize)], counts: &BTreeMap<String, us
 const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
   ("affiliations.rs lx@add@", 2),
   ("affiliations.rs lx@annotate@frontmatter", 2),
+  // (DEL2, 2 -> 1: `split_author_calls` deleted with the old driver; `dispatch.rs` (2 + 9) and `line_kinds.rs` (1 + 4) deleted whole)
   ("collaborations.rs annotate=", 1),
-  ("collaborations.rs lx@add@", 2),
-  ("dispatch.rs annotate=", 2),
-  // (the "Knowledge in, driver out, one pass" move, 10 -> 9: `whole_block_author`, Perl's whole-block `\lx@add@author`, moved to `frontmatter/fallback.rs`)
-  ("dispatch.rs lx@add@", 9),
+  ("collaborations.rs lx@add@", 1),
   // (the "Knowledge in, driver out, one pass" move, 6 -> 5, and `notes.rs`' 2 -> 0: `is_email_command` and `document_note_call`, `note_call_end` moved to the emitter,
-  // `writer/calls.rs`, which writes Perl's calls; no emission added)
-  ("email_block_calls.rs lx@add@", 5),
-  ("email_lines.rs lx@add@", 7),
-  ("line_kinds.rs annotate=", 1),
-  ("line_kinds.rs lx@add@", 4),
+  // `writer/calls.rs`, which writes Perl's calls; no emission added; DEL2, 5 -> 1: `block_email_calls` and its siblings deleted with the old driver)
+  ("email_block_calls.rs lx@add@", 1),
+  // (DEL2, 7 -> 6: the dead `AddressPlacement::Marked` arm)
+  ("email_lines.rs lx@add@", 6),
   // (the "Knowledge in, driver out, one pass" move, 3 -> 2 and 8 -> 2: the token primitives that recognize the API's commands in a note (`NAME_ANNOTATIONS`, `name_text`)
   // moved to `classify/`; they read, emit nothing)
   ("name_text.rs lx@add@", 2),
@@ -261,8 +258,9 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
 /// escape from the rest of this fence's reach: its token reads count in `token_reads_only_fall_toward_the_floor`'s
 /// catch-all, and its API names and keys in `the_frontmatter_api_stays_perls`.
 /// The "Knowledge in, driver out, one pass" move (2026-11-08) lowered it from 15,404 to 9,275: the knowledge the one engine reached moved into its own library,
-/// what is left is the token driver.
-const OLD_READER_CODE_LINES: usize = 9_275;
+/// what is left is the token driver. DEL2 (2026-11-09) lowered it to 5,079: the driver deleted, what is left the items the bindings,
+/// `frontmatter_stores` and the API's Cut and Kind still call.
+const OLD_READER_CODE_LINES: usize = 5_079;
 
 /// What the fence counts in the old reader's code: its ways into the API's queue, and a convention's mode.
 const OLD_READER_NEEDLES: [&str; 4] = [
@@ -1026,7 +1024,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("authblk_sty.rs", 23),
   // (F1r2, 1288 -> 1285: the membership readout finds its commas by `Token::group_step`, no catcode match)
   // (PF3, 628 -> 626: the layout-box and line-break membership tests read the token's own name, `frontmatter_stores::cs_in`)
-  ("author_block", 626),
+  // (DEL2, 626 -> 484: the old driver deleted)
+  ("author_block", 484),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
   ("classify", 348),
   ("defs/author_macros", 20),
@@ -1043,7 +1042,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("events", 61),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with Perl's whole-block fallback and its preparation, kept as its own, 826 = 629 + 197; none added)
   // (raised by one at PF1: `tabular_close_rest` reads the `\end` its copy of the body read, before the copy — no read added)
-  ("fallback", 197),
+  // (DEL2, 197 -> 151: the old driver's raw-token preparation deleted)
+  ("fallback", 151),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   // (Z4a, 4 -> 8: an environment step by its meaning, a CS whose definition is `\begin` or `\end`, a `\let` copy too, what no frame
   // says for a raw environment; the definition's name, not the token's spelling)

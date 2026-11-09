@@ -415,7 +415,7 @@ pub(in crate::base_utilities) fn marker_leads(line: &Tokens) -> bool {
   let line = &printed(line.unlist_ref());
   // (through each wrapper that opens the line and holds a mark, the wrappers a line keeps of the block's —
   // `{\small{\it \vspace{0.2cm} $^{a}$ also at …}}`, a legend line of 1202.2048's `\begin{small} … {\it …}` once
-  // [`wrapper_over_lines_as_lines`] gives each line its wrappers: read past one wrapper only, the spacing's letters
+  // `wrapper_over_lines_as_lines` gives each line its wrappers: read past one wrapper only, the spacing's letters
   // before the mark made the legend an author)
   let mut probe = line.clone();
   while let Some((_, inner, _)) = leading_wrapper(&probe) {

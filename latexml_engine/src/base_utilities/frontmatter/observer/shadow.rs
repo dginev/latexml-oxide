@@ -2,10 +2,9 @@
 //! `LATEXML_FM_SHADOW=1` (read once per process, at runtime) — the census: the ledger records the document's calls,
 //! the flush (`digest_front_matter`) rehearses and lexes each block not rehearsed yet and each API call's content, the
 //! CLI writes `<dest>.fmshadow.json` ([`write_fm_shadow`]) with the resolver's tuples (`resolved`, S2a.2), and a
-//! written family's paper is written; `=0` — off, nothing of the observer runs; unset — the default (FM S2b): the
-//! ledger records every paper, and only a paper whose author blocks are all a `written` family's (revtex4_support) is
-//! rehearsed, read and written, with no dump. A family not written keeps today's output in every state. The census's
-//! dump also says who decided the paper (`readback`, `json_read_back`), what the old engine's removal is measured by.
+//! written family's paper is written; `=0` — off, nothing of the observer runs; unset — the default: the ledger records
+//! every paper and the flush rehearses and reads it, with no dump. The census's dump also says who decided the paper
+//! (`readback`, `json_read_back`).
 
 use std::{cell::Cell, fmt::Write as _, sync::OnceLock};
 
@@ -23,7 +22,7 @@ use super::{
   policy::{TitleMarks, policy_for},
   rehearsal::{Rehearsal, for_the_check, rehearse},
   resolver::{Assoc, Resolved, ledger_inputs, resolve},
-  writer::{fm_emit_mode, writer_stays_out},
+  writer::writer_stays_out,
   *,
 };
 
@@ -34,7 +33,7 @@ pub enum FmShadow {
   On,
   /// `LATEXML_FM_SHADOW=0`: nothing of the observer runs (today's frontmatter).
   Off,
-  /// Unset: every paper recorded, a written family's read and written (FM S2b's default; the fleet).
+  /// Unset: every paper recorded and read (the fleet).
   Default,
 }
 
@@ -61,29 +60,10 @@ pub fn fm_shadow_mode() -> FmShadow {
 /// Whether the frontmatter observer records (the ledger, the binding loads, a footnote's text): unless switched off.
 pub fn fm_shadow_enabled() -> bool { fm_shadow_mode() != FmShadow::Off }
 
-/// Whether the flush rehearses and the writer reads: under the census every paper; by default a paper whose recorded
-/// author blocks are all a written family's (as `writer::written_resolution` requires), and under the emitter's `=2` every
-/// paper as the census reads it — the content check on the placed output (`writer::check_placed_content`) reads the
-/// rehearsed creator calls of a paper with no author block too (llncs's `\author` and `\institute`, 1401.5951: blind
-/// without the census); off, none.
-fn reads_now() -> bool {
-  match fm_shadow_mode() {
-    FmShadow::On => true,
-    FmShadow::Off => false,
-    FmShadow::Default if fm_emit_mode() == 2 => true,
-    FmShadow::Default => with_ledger(|ledger| {
-      let mut blocks = ledger.entries().iter().filter_map(|entry| match entry {
-        Entry::Author(block) => Some(block),
-        _ => None,
-      });
-      let mut any = false;
-      blocks.all(|block| {
-        any = true;
-        policy_for(&block.binding, block.hook).written
-      }) && any
-    }),
-  }
-}
+/// Whether the flush rehearses and the writer reads: every paper, as the census reads it — the content check on the
+/// placed output (`writer::check_placed_content`) reads the rehearsed creator calls of a paper with no author block too
+/// (llncs's `\author` and `\institute`, 1401.5951); off, none.
+fn reads_now() -> bool { fm_shadow_mode() != FmShadow::Off }
 
 /// Set (`Some`) or clear (`None`) this thread's override of the shadow switch (tests: the environment is read-only
 /// to them).
@@ -244,18 +224,14 @@ fn read_at_flush() -> Result<()> {
   // the API calls made outside the blocks' expansions: their contents rehearsed and lexed as a block's are (the
   // resolver reads an affiliation's leading marks and text, an e-mail's address, a creator's name from them); and a
   // call a block's own expansion made that annotates a creator, for the content check alone (`ApiCall::inside_events`:
-  // its words count unless its block's events print them; under `=2`, the check's only mode), the block's own creator
-  // entry being the block
-  let check = fm_emit_mode() == 2;
+  // its words count unless its block's events print them), the block's own creator entry being the block
   let calls: Vec<(usize, Tokens, bool)> = with_ledger(|ledger| {
     ledger
       .entries()
       .iter()
       .enumerate()
       .filter_map(|(i, entry)| match entry {
-        Entry::Api(call)
-          if !call.rehearsed && (!call.inside || (check && call.parent == "ltx:creator")) =>
-        {
+        Entry::Api(call) if !call.rehearsed && (!call.inside || call.parent == "ltx:creator") => {
           Some((i, call.content.clone(), call.inside))
         },
         _ => None,

@@ -45,6 +45,8 @@ fn contact(role: &str, text: &str) -> String {
 /// personname "Ann Able<sup>,</sup><sup>1</sup>", both institutes on both authors, the e-mail "e-mail: …" in a thanks
 /// note; 78e r1: an empty thanks note beside the e-mail contact. Witnesses 2301.07438, 1411.7792, 2409.01693. Repro
 /// class-bindings/webofc/webofc_authors_take_their_institutes.
+/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
+/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
 #[test]
 fn webofc_authors_take_their_institutes() {
   repro_with!(
@@ -123,6 +125,8 @@ fn llncs_author_line_break_options_with_inst_marks() {
 /// note either (ruling 2026-10-30, batch 92e, OD #916; Perl keeps it). Red (int45b): an empty thanks note on Ann Able.
 /// The rev78e review's finding 2 (webofc's 2409.01693 the same shape). Repro
 /// class-bindings/aa_thanks_email_leaves_no_empty_note.
+/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
+/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
 #[test]
 fn aa_thanks_email_leaves_no_empty_note() {
   repro_with!("class-bindings/aa_thanks_email_leaves_no_empty_note.tex",);
@@ -252,6 +256,8 @@ fn jinstpub_edited_header_is_a_preprint_note() {
 /// affiliation of the authors labelled `a`. Red (int45b): no e-mail, the addresses paragraphs after the title page.
 /// Witnesses 1508.02842, 1801.00977, 1411.4499, 1506.02940, 1601.01109. Repro
 /// class-bindings/vmsta/vmsta_emails_and_addresses_are_contacts.
+/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
+/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
 #[test]
 fn vmsta_emails_and_addresses_are_contacts() {
   repro_with!(
@@ -265,6 +271,8 @@ fn vmsta_emails_and_addresses_are_contacts() {
 /// `\end{frontmatter}` (:550-565). Red (int45b): no e-mail, no affiliation, both printed by the deposited title page.
 /// Witnesses 1805.02511, 1810.09681, 2001.02487, 1912.07948. Repro
 /// class-bindings/vmsta_2018/vmsta_2018_emails_and_addresses_are_contacts.
+/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
+/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
 #[test]
 fn vmsta_2018_emails_and_addresses_are_contacts() {
   repro_with!(

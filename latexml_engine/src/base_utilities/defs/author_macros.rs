@@ -16,30 +16,57 @@ pub(in crate::base_utilities) const EMITTED_LINE_MARK: &str = "_markread";
 /// `{opening}`, astro-ph9808358) has its own flush, which reads it or writes it whole and counted (`\lx@frontmatter@late`).
 pub(in crate::base_utilities) const KEPT_WHOLE: &str = "_merged_checked=1";
 
-/// Whether a sectioned caller's block (`\lx@add@authors`, `@adaptive`, `@list`) is an IJCAI sectioned one, as
-/// `add_authors_calls_sectioned` reads it (`has_ijcai_section_marker`, after the same macro expansions): at `=2` it goes to
-/// the section split as off does, whose names `\lx@ijcai@names` then queues whole — a piece cut through `\affiliations`
-/// is digested where a class defines it only in its `\@maketitle` (kr.sty, 2202.05511).
-fn ijcai_sectioned(stuff: &Tokens) -> Result<bool> {
+/// Whether a sectioned caller's block (`\lx@add@authors`, `@adaptive`, `@list`) is an IJCAI sectioned one
+/// (`has_ijcai_section_marker`, after the sole-author and separator macro expansions): it goes to the section split
+/// ([`ijcai_split_call`]), whose names `\lx@ijcai@names` then queues whole — a piece cut through `\affiliations` is
+/// digested where a class defines it only in its `\@maketitle` (kr.sty, 2202.05511). The ledger records it too
+/// (`AuthorBlock::sectioned`), whose held Errors are an IJCAI block's section markers (`resolver::Input::Block`'s
+/// `markers`) — never a raw `\@maketitle`'s own `\name`/`\email` held in a plain `\author` (1908.02923's JAIR rows;
+/// `perfect_kernel_batch63::author_markup_title_code_forms`), whose reading ended at the marker, its address a note.
+fn ijcai_block(stuff: &Tokens) -> Result<bool> {
   has_ijcai_section_marker(&expand_separator_macros(expand_sole_author_macro(
     stuff.clone(),
   )))
 }
 
-/// [`ijcai_sectioned`] where a reader needs it: the emitter's `=2` split, and the ledger's record of the block
-/// (`AuthorBlock::sectioned`), whose held Errors are an IJCAI block's section markers (`resolver::Input::Block`'s
-/// `markers`) — never a raw `\@maketitle`'s own `\name`/`\email` held in a plain `\author` (1908.02923's JAIR rows;
-/// `perfect_kernel_batch63::author_markup_title_code_forms`), whose reading ended at the marker, its address a note.
-/// Off without the census reads neither: false.
-fn ijcai_block(stuff: &Tokens) -> Result<bool> {
-  if fm_emit_mode() == 2 || fm_shadow_enabled() {
-    ijcai_sectioned(stuff)
-  } else {
-    Ok(false)
+/// An IJCAI sectioned block's split ([`ijcai_block`]), the old `\lx@add@authors` driver's first step, kept as the one
+/// path that still cuts a block at the call. Beyond-Perl (surpasses Perl; KNOWN_PERL_ERRORS #100): IJCAI-style author
+/// blocks — ijcai97.sty and its derivatives (e.g. the ttm.sty in arXiv:2401.03955) — pack names, `\affiliations` and a
+/// comma-separated `\emails` list into ONE `\author{}`. Perl's splitter does not recognise those section markers, so the
+/// comma-joined email list is shredded into phantom author creators and the affiliation is dropped (Perl 0.8.8, which
+/// raises `\affiliations`/`\emails` as undefined). The block goes to the shared sectioned-author machinery
+/// (`\lx@ijcai@authorsplit`, also used by `ijcai_sty`): it consumes the markers as `Until:` delimiters (so they no longer
+/// error) and splits names / affiliations / emails, each email placed as a class's address list is (OD #908); the names
+/// re-enter as `\lx@ijcai@names`, queued whole. Witness html_feedback#1361 + #1362. A marker counts at the block's top
+/// level only, and only as a separator: undefined there or the ijcai binding's no-op. A document's own
+/// `\emails`/`\affiliations` with text is author text, which LaTeX expands — counted, the split handed it back unsplit,
+/// without end (`\emails` before any `\affiliations`, 2407.10582; `\affiliations` inside `\thanks`, 2505.05474;
+/// `PushbackLimit`). The block is read as the driver read it first: a `\let` alias of a mark command is the command
+/// (`\let\up\textsuperscript`, 2209.14855; [`unalias_mark_commands`]); a note written inside a mark is taken out after
+/// it (`\textsuperscript{\rm 1,\rm 2\thanks{…}}`, 2512.05464; [`notes_out_of_marks`]); an empty mark is none
+/// ([`drop_empty_marks`]); a mark opening a line that prints no label is none (2303.08793;
+/// [`blank_line_marks_dropped`]); a line of notes only after a `\\` joins the line above, its notes no name requests
+/// the document's, added after the split (2609.17106, 2411.05212, 2312.10807; [`notes_line_joins_names`],
+/// OXIDIZED_DESIGN_DIVERGENCES #957). Where those steps leave no top-level marker, the block is queued whole
+/// ([`whole_block_call`]), as any other.
+fn ijcai_split_call(stuff: Tokens, replace: bool, late: bool) -> Result<Tokens> {
+  let read = unalias_mark_commands(expand_separator_macros(expand_sole_author_macro(
+    stuff.clone(),
+  )));
+  let read = blank_line_marks_dropped(drop_empty_marks(notes_out_of_marks(read)));
+  let (read, document_notes) = notes_line_joins_names(read);
+  if !has_ijcai_section_marker(&read)? {
+    return whole_block_call(stuff, replace, None, late);
   }
+  let mut out = vec![T_CS!("\\lx@ijcai@authorsplit")];
+  out.extend(read.unlist());
+  out.push(T_CS!("\\affiliations"));
+  out.push(T_CS!("\\done"));
+  out.extend(document_notes);
+  Ok(Tokens::new(out))
 }
 
-/// `LATEXML_FM_EMIT=2` (OD #980): one whole block queued for the call, as the reader won't be cutting it, which the emitter
+/// One whole block queued for the call (OD #980), as no reader cuts it at the call, which the emitter
 /// takes at the flush (`observer::writer::emit`): Perl's whole-block creator (`author_block::whole_block_author`). A `late`
 /// call, made while a flush digests its queue after reading it (the ledger's `AuthorBlock::late`), queues it for a flush
 /// of its own (`\lx@frontmatter@late`): Perl's `\lx@add@authors` there runs `@now`, split at the call
@@ -102,10 +129,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     let replace = !lookup_bool("\\author:redefined");
     let ijcai = ijcai_block(&stuff)?;
     let late = record_author_call("\\lx@add@authors@adaptive", &stuff, replace, ijcai, None, false);
-    if fm_emit_mode() == 2 && !ijcai {
-      return whole_block_call(stuff, replace, None, late);
+    if ijcai {
+      return ijcai_split_call(stuff, replace, late);
     }
-    add_authors_calls(stuff, replace)
+    whole_block_call(stuff, replace, None, late)
   });
   // The late block's flush (`whole_block_call`): its whole entry queued — the flush digesting it let the API to `@now`,
   // locally — then read by a flush of its own (re-entrant, `digest_front_matter`), which emits its split creators or
@@ -164,10 +191,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefMacro!("\\lx@add@authors{}", sub[(stuff)] {
     let ijcai = ijcai_block(&stuff)?;
     let late = record_author_call("\\lx@add@authors", &stuff, true, ijcai, None, false);
-    if fm_emit_mode() == 2 && !ijcai {
-      return whole_block_call(stuff, true, None, late);
+    if ijcai {
+      return ijcai_split_call(stuff, true, late);
     }
-    add_authors_calls(stuff, true)
+    whole_block_call(stuff, true, None, late)
   });
   // A class's own author command, called once per author or author group and each adding to the ones before
   // (informs4.cls:1198 `\AUTHOR{Ann Able$^{a}$, Bob Baker$^{b}$}`): the author-line parsing of `\lx@add@authors`
@@ -179,8 +206,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (revtex's `annotations=`).
   DefMacro!("\\lx@add@authors@append[]{}", sub[(keyvals, stuff)] {
     let late = record_author_call("\\lx@add@authors@append", &stuff, false, false, keyvals.as_ref(), true);
-    if fm_emit_mode() == 2 { return whole_block_call(stuff, false, keyvals, late); }
-    add_authors_calls_sectioned(stuff, false, false, keyvals, true)
+    whole_block_call(stuff, false, keyvals, late)
   });
   // A class's own author-list command (informs4.cls:1198 `\AUTHOR{Ann Able$^{a}$, Bob Baker$^{b}$}`, documented as a
   // name list): appended like `\lx@add@authors@append`, but split at every separator as the article `\author` is.
@@ -189,20 +215,19 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     assign_value("lx_authors_list_start", queued_author_count() as i64, Some(Scope::Global));
     let ijcai = ijcai_block(&stuff)?;
     let late = record_author_call("\\lx@add@authors@list", &stuff, false, ijcai, None, false);
-    if fm_emit_mode() == 2 && !ijcai {
-      return whole_block_call(stuff, false, None, late);
+    if ijcai {
+      return ijcai_split_call(stuff, false, late);
     }
-    add_authors_calls_sectioned(stuff, false, true, None, false)
+    whole_block_call(stuff, false, None, late)
   });
   // A name list where a binding has no lines or affiliations to read: each name `split_author_line` finds (comma,
   // " and ", " \& ") is an author of its own, the keyvals given to each (`\author{R. Braun\inst{1} and W. B.
   // Burton\inst{2}}`, astro-ph9810433; `\IEEEauthorblockN{Clemens Paul Zengler, Niels Troldborg, Mac Gaunaa.}`,
-  // 2410.19527). A collaboration the list names beside its names is a contact on them, no part of a name
-  // (`split_author_calls`, batch 103b: webofc's `… on behalf of the KLOE-2 Collaboration` after the notes, 1502.05517).
+  // 2410.19527). A collaboration the list names beside its names is a contact on them, no part of a name (batch 103b:
+  // webofc's `… on behalf of the KLOE-2 Collaboration` after the notes, 1502.05517). Queued whole, as the emitter reads it.
   DefMacro!("\\lx@add@author@split[]{}", sub[(keyvals, names)] {
     let late = record_author_call("\\lx@add@author@split", &names, false, false, keyvals.as_ref(), false);
-    if fm_emit_mode() == 2 { return whole_block_call(names, false, keyvals, late); }
-    Ok(Tokens::new(split_author_calls(keyvals, names)?))
+    whole_block_call(names, false, keyvals, late)
   });
   // That class's affiliation command, under its authors (informs4.cls:1199 `\AFF{$^a$Univ A}`): when the queued authors
   // carry marks, its marked lines are affiliations labelled by their marks, which go to the authors requesting them
@@ -231,8 +256,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   });
   DefMacro!("\\lx@ijcai@names{}", sub[(stuff)] {
     let late = record_author_call("\\lx@ijcai@names", &stuff, true, false, None, false);
-    if fm_emit_mode() == 2 { return whole_block_call(stuff, true, None, late); }
-    add_authors_calls_sectioned(stuff, true, false, None, false)
+    whole_block_call(stuff, true, None, late)
   });
 
   // Shared "sectioned author block" machinery for the IJCAI author idiom
@@ -587,7 +611,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   });
 
   // Rust-only: a label of the creator being made (inside its `\lx@add@author`), for a contact of the author block
-  // placed on it after the names are made, in the order its lines print ([`placed_label`]; batch 77p r9). Only on a
+  // placed on it after the names are made, in the order its lines print (`placed_label`; batch 77p r9). Only on a
   // creator, as `\lx@frontmatter@symbolmark`.
   DefPrimitive!("\\lx@author@placed@label{}", sub[(label)] {
     let label = label.to_string();
@@ -711,7 +735,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   });
 
   // A `\maketitle` that typesets authors an `\author` set after the last flush replaces
-  // the ones that flush digested (`add_authors_calls`; DIVERGENCES #406). First in
+  // the ones that flush digested (`whole_block_call`'s replace; DIVERGENCES #406). First in
   // `\lx@maketitle@body`: the class's stores (`\@address`, `\@email`, which `\@maketitle`
   // reads again) are handed to the new authors by the `\lx@store@defaults` after it.
   DefPrimitive!("\\lx@maketitle@supersede", sub[_args] {

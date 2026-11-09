@@ -87,6 +87,8 @@ fn jheppub_emailadd_in_author_order() {
 /// the first call's place), by the address it is the authors' in order, each address the n-th author's (zq1@, wy7@
 /// spelling no one). Red (int47a, Perl): one contact of the three addresses on Ann Able. Witnesses 2406.03543,
 /// 2505.23122, 2201.12390. Repro sectioning-frontmatter/jheppub_emailadd_one_call_lists_the_authors.
+/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
+/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
 #[test]
 fn jheppub_emailadd_one_call_lists_the_authors() {
   convert_repro!("jheppub_emailadd_one_call_lists_the_authors.tex");
@@ -196,6 +198,8 @@ fn iopart_ead_lists_are_an_address_each() {
 /// spelling; wy5@ under `$^2$`, which two authors request, the author block's. Red (78f r1): zq77@ on the block too.
 /// Witnesses 2407.14305, 2311.07087 (an `\ead` between the addresses); 1111.5264; not 1209.0173, 0910.0753, 1111.3344,
 /// 1911.06133 (every `\ead` after the last address). Repro sectioning-frontmatter/iopart_ead_under_its_address_mark.
+/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
+/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
 #[test]
 fn iopart_ead_under_its_address_mark() {
   convert_repro!("iopart_ead_under_its_address_mark.tex");
@@ -390,6 +394,8 @@ fn jheppub_emailadd_in_author_is_the_authors() {
 /// An `\emailAdd` list in markup is one contact, its markup kept, not written out address by address. Red (78f r1): two
 /// contacts, the `\mbox` dropped. Repro sectioning-frontmatter/jheppub_emailadd_markup_list_kept_whole (rev78f probe
 /// j06).
+/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
+/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
 #[test]
 fn jheppub_emailadd_markup_list_kept_whole() {
   convert_repro!("jheppub_emailadd_markup_list_kept_whole.tex");
@@ -410,6 +416,8 @@ fn llncs_inst_leading_marks_keep_their_names() {
 /// A document's own `\inst` that takes back no space (`\newcommand{\inst}[1]{$^{#1}$}`) gets no comma rule: Bob Baker
 /// keeps his 2. Red (78f r1): "1,2" on Ann Able. Repro sectioning-frontmatter/inst_without_unskip_keeps_the_next_name
 /// (rev78f probes c09, c08).
+/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
+/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
 #[test]
 fn inst_without_unskip_keeps_the_next_name() {
   convert_repro!("inst_without_unskip_keeps_the_next_name.tex");

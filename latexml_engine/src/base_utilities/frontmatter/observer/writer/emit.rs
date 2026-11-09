@@ -1,6 +1,6 @@
 //! The one added step at the flush (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`, Route D; OXIDIZED_DESIGN_DIVERGENCES
-//! #980), on by default (`LATEXML_FM_EMIT=0` the old driver until its deletion, [`fm_emit_mode`]): for a paper with an
-//! author block read, the queued creators and their annotations are replaced by Perl's own calls built from the reading
+//! #980), the one engine since the old driver's deletion: for a paper with an author block read, the queued creators and
+//! their annotations are replaced by Perl's own calls built from the reading
 //! (`Resolved`) — `\lx@add@frontmatter@now{ltx:creator}`,
 //! `\lx@annotate@frontmatter@now{ltx:creator}{ltx:contact}`, `\lx@add@thanks` — the owners by Perl's `label=` and
 //! `annotations=`. What Perl's `\lx@add@authors` (Base_Utility.pool.ltxml:687) cuts with `SplitTokens` at the call, this
@@ -8,7 +8,6 @@
 //! argument; where it's cut comes from the events' spans.
 
 use std::{
-  cell::Cell,
   collections::{BTreeMap, BTreeSet, btree_map::Entry as Entry2},
   rc::Rc,
 };
@@ -49,19 +48,6 @@ use crate::base_utilities::{
     relocate::{BLOCK_ZONE, FOOTER_ZONE},
   },
 };
-
-thread_local! {
-  static FM_EMIT_OVERRIDE: Cell<Option<u8>> = const { Cell::new(None) };
-}
-
-/// The frontmatter emitter's switch, fixed at 2 (DEL1, OD #980): each call queues one whole block and the emitter writes
-/// it. `LATEXML_FM_EMIT` is no longer read and the test override is ignored; the old driver's `=0`/`=1` branches behind
-/// this constant go with the engine (DEL2), the function staying until its call sites collapse.
-pub fn fm_emit_mode() -> u8 { 2 }
-
-/// Set (`Some`) or clear (`None`) this thread's override of the switch — no effect since DEL1 (`fm_emit_mode` is fixed
-/// at 2); kept for its last caller, this module's unit test, until DEL2 deletes both.
-pub fn set_fm_emit_override(mode: Option<u8>) { FM_EMIT_OVERRIDE.with(|o| o.set(mode)); }
 
 /// The State value saying a flush emitted (the writer has nothing left to do, `write_observed_frontmatter`): the ledger's
 /// generation whose reading the last emit wrote to its end ([`Ledger::generation`]), which a later flush with nothing queued
@@ -2991,14 +2977,14 @@ fn warn_net(key: &str, what: &str) {
 /// The flush's added step: `commands`' creators and their annotations replaced by calls built from the reading. Whether
 /// it did.
 pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter>) -> Result<bool> {
-  if fm_emit_mode() == 0 || rehearsal::rehearsing() {
+  if rehearsal::rehearsing() {
     return Ok(false);
   }
   if let Some(why) = stays_out() {
     DebugFeature!("frontmatter", "FRONT emit stays out: {why}");
     // (with no reader cutting at the call, a block no rehearsal read is Perl's whole-block creator, its queued entry: 2204.09614,
     // a block past the positions)
-    if fm_emit_mode() == 2 && why != NO_BLOCK {
+    if why != NO_BLOCK {
       if lookup_mapping(EMITTED_ITEMS, "unread").is_none() {
         assign_mapping(EMITTED_ITEMS, "unread", Some(Stored::Bool(true)));
         Warn!(
@@ -3840,7 +3826,7 @@ fn command_fingerprint(command: &Tokens) -> u64 {
 /// calls late (`\\lx@frontmatter@late`) — writes none of its items again. memsait's `\\@opening` note, which the safety net
 /// queues for a flush with no author block yet and whose digestion runs `\\title` and `\\author` (astro-ph9808358).
 pub(in crate::base_utilities) fn take_digested(commands: &[RawFrontmatter]) {
-  if fm_emit_mode() != 2 || rehearsal::rehearsing() {
+  if rehearsal::rehearsing() {
     return;
   }
   if commands.is_empty() {
@@ -3994,7 +3980,6 @@ mod tests {
   #[test]
   fn a_digested_queue_entry_is_never_written_again() {
     reset_fm_shadow();
-    set_fm_emit_override(Some(2));
     let call = |index: usize, text: &'static str| {
       let command = TokenizeInternal!(text);
       Entry::Api(ApiCall {
@@ -4051,7 +4036,6 @@ mod tests {
     };
     let (items, _) = items_to_emit(&resolved, &[], &BTreeSet::new(), &mut Vec::new());
     let texts: Vec<&str> = items.iter().map(|item| item.assoc.text.as_str()).collect();
-    set_fm_emit_override(None);
     reset_fm_shadow();
     assert_eq!(texts, ["Kept note"]);
   }

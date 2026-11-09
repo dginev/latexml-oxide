@@ -2540,9 +2540,9 @@ dag_names_rows_each_over_their_institution, numbered_names_rows_each_over_their_
 second_names_row_under_a_shared_institution, role_and_note_lines_are_no_unmarked_institution,
 unmarked_institution_line_under_a_column_is_its_names, symbol_led_line_under_marked_names_is_not_every_names}`,
 `perfect_kernel_batch64::{author_unmarked_affiliation_after_marked_names, author_styled_place_after_marked_names}`.
-At `LATEXML_FM_EMIT=2` none of this preparation runs: the whole-block fallback is Perl's raw `\lx@add@author{…}`
-(`frontmatter/fallback.rs` `whole_block_author`), and the rules it carried for the old reader live on the reading (OD #980,
-"The fallback raw, and its rules on the reading"); `lines_prepared` runs only in the switch-off driver.
+None of this preparation runs since the flip, and it is deleted with the old driver (DEL2, OD #980): the whole-block fallback is
+Perl's raw `\lx@add@author{…}` (`frontmatter/fallback.rs` `whole_block_author`), and the rules it carried for the old reader
+live on the reading (OD #980, "The fallback raw, and its rules on the reading").
 
 ### 53. `inst`-style `\author[marks]{name}` accepts the optional marks and accumulates
 
@@ -32500,9 +32500,9 @@ a_line_keeping_an_address_the_pass_leaves_is_made, an_only_carriers_address_besi
 `a_mark_past_a_marked_lists_leading_run_is_an_event_red` (`Town, USA\\ *ann@x.org` reads `USA1ann@x.org`: 2411.03172, 2510.06608,
 2602.11758).
 
-### 980. The one added step at the flush: a block's creators and contacts written from the reading, behind a switch
+### 980. The one added step at the flush: a block's creators and contacts written from the reading (once behind a switch)
 
-**Since DEL1 the switch is fixed at `=2`.** `writer::emit::fm_emit_mode` returns 2 and `LATEXML_FM_EMIT` is no longer read; `set_fm_emit_override` has no effect (its last caller, `emit.rs`'s own unit test, goes with it in DEL2). `=0` and `=1` are gone from the tests: the `red_at_two` guards that asserted only `=0` output were deleted with the fixtures nothing else used (retrievable at `29de9ed4dc`; the list stays in `docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), the guards' `=0` halves and mode-1 conversions removed, and `expect(off, two)` collapsed to `two`. The old driver's `=0`/`=1` branches behind the constant are DEL2's. The paragraph below describes the switch before DEL1.
+**The switch and the old driver are deleted (DEL1 tests, DEL2 code).** `LATEXML_FM_EMIT`, `fm_emit_mode` and `set_fm_emit_override` are gone; every call of the `\author` family queues its block whole (`defs/author_macros.rs` `whole_block_call`) and the emitter writes it. The `=0` arms are collapsed in the emitter, the resolver (`Resolver::emitting`/`whole_entries`, each now always on), the rehearsal (the juggles as columns, the budget Warning's one text), the shadow (`reads_now` true unless `LATEXML_FM_SHADOW=0`; the content check reads every inside creator call), the ledger (`out_of_positions` per call only, `Ledger::shadow_extra` removed, `ApiCall::command` always kept) and `frontmatter_stores` (`annotate=all` where the call made every queued creator). The old driver — `add_authors_calls_sectioned` (`author_block/dispatch.rs`), `split_author_calls`, `author_block/line_kinds.rs`, and every `author_block/` and `frontmatter/fallback.rs` item only it reached, deleted by the compiler's dead-code analysis — is gone; its one step still live, the IJCAI sectioned split, is `author_macros.rs` `ijcai_split_call` (the block read as the driver first read it, then `\lx@ijcai@authorsplit`; a block whose marker those steps remove is queued whole). `fallback::whole_block_author` and `tabular_juggles_in_a_whole_block` stay, the emitter's. Byte-identical on the int152c stage2 ids. The `red_at_two` guards that asserted only `=0` output were deleted with the fixtures nothing else used (retrievable at `29de9ed4dc`; the list stays in `docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`). The paragraphs below describe the switch as it stood before the deletion.
 
 `LATEXML_FM_EMIT` (`=2` by default since the flip, FLIP1: one whole-block entry per call, the emitter writing it; `LATEXML_FM_EMIT=0` the old driver — the reader at the call and the writer — reachable until Z18-Z19 delete it, its output changed by Route D only through a cut's environment extents, below; `=1` the reader still runs at the call; read once, by `writer::emit::fm_emit_mode`, the one definition every site calls) is Route D's emitter (`FRONTMATTER_SINGLE_ENGINE_PLAN.md`): `writer::emit::emit_commands` inside `digest_front_matter`, for every paper with a block read. The queued creators and their annotations are replaced by Perl's own calls built from `Resolved`. Perl's counterpart is `\lx@add@authors` (`Base_Utility.pool.ltxml:687`), which cuts a block with `SplitTokens` at the call; this cuts it at the flush, as digested material doesn't exist at the call. Papers with no block and the post-writer passes stay as they are. The writer doesn't run on an emitted paper.
 
@@ -32617,7 +32617,7 @@ its last name alone, so where the call made every queued creator the tail is `an
 (`relocateAnnotations`, Base_Utility.pool.ltxml:520), each name's row as with the switch off (review revZ4b 4; pdflatex prints such
 a tail in the last `\and` column, under every name of a one-column block). *Nits (revLO1 3-6, revN1r3 4-5):* the emitted entry's
 first mark read is a key on its pending entry (`_markread`, `with_digesting_entry_attr`: Perl keeps an entry's facts on it,
-:502-508), not a State flag; `Resolver::emitting` is `LATEXML_FM_EMIT=2`, as `whole_entries` (`=1` keeps the switch-off reading);
+:502-508), not a State flag; `Resolver::emitting` was `LATEXML_FM_EMIT=2`, as `whole_entries` (both removed with the switch);
 `FieldCreator::labels` cleans as the API cleans a label (`clean_frontmatter_labels`, Perl's `cleanFrontmatterLabels`, :360-372:
 `annotations={\ref{ed}}` answers `label={\ref{ed}}`, a nameless creator's before); the ledger's count of changes has one write
 path, `Ledger::entries_mut`, taken only where an entry changes (with the switch on: off, which keeps no reading, a change is made

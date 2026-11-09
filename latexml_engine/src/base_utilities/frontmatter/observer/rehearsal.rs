@@ -122,24 +122,14 @@ pub(in crate::base_utilities) fn rehearsal_budget() -> Option<usize> {
   (left != 0).then(|| left.min(RUN_READS.get()))
 }
 
-/// The Warning that says what no rehearsal read, when the document closes (`SkipReason::OverBudget`): with the emitter off
-/// its creators are read as they print, not from a reading of the block; under `LATEXML_FM_EMIT` an author block among
-/// them is written whole (Perl's whole-block creator, `writer::writer_stays_out`) and any other call's words are not
-/// written — under `=2` the content check counts them (`resolver::placed::content_check`, `ApiCall::unread`).
+/// The Warning that says what no rehearsal read, when the document closes (`SkipReason::OverBudget`): an author block
+/// among them is written whole (Perl's whole-block creator, `writer::writer_stays_out`) and any other call's words are not
+/// written — the content check counts them (`resolver::placed::content_check`, `ApiCall::unread`).
 pub(in crate::base_utilities) fn rehearsal_budget_warning() {
   let left_out = LEFT_OUT.replace(0);
   if left_out > 0 {
-    let read = match fm_emit_mode() {
-      0 => "they are read as they print",
-      1 => {
-        "an author block among them is written whole, as Perl's whole-block creator, and any other call's words are not \
-         written"
-      },
-      _ => {
-        "an author block among them is written whole, as Perl's whole-block creator, and any other call's words are not \
-         written, the frontmatter content check counting them"
-      },
-    };
+    let read = "an author block among them is written whole, as Perl's whole-block creator, and any other call's words \
+                are not written, the frontmatter content check counting them";
     Warn!(
       "frontmatter",
       "rehearsal_budget",
@@ -611,31 +601,29 @@ const TITLE_FOOTNOTE_HOOK: &str = crate::latex_constructs::TITLE_THEFOOTNOTE;
 /// First, a tabular juggle (`fallback::tabular_juggle_between`: `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`
 /// in sig-alternate's `\author`, 0712.1016, 1704.03168) is the column it prints, as the juggle written inline is
 /// ([`inline_juggles_as_columns`]), or the row break it prints between (1301.5612's `\end{tabular}\newline
-/// \begin{tabular}{c}`; the old driver wrote every juggle `\\`, `fallback::tabular_juggles_as_line_breaks`): digested as
+/// \begin{tabular}{c}`; the deleted old driver wrote every juggle `\\`): digested as
 /// defined, it closed a tabular the line never opened and left one open, whose lines no box held — lost with no Warning,
 /// the content check reading only what the events hold. A column after the names holding none is their shared
 /// affiliation (the reading's, `resolver::blocks`). A juggle reopens the tabular it closes, so a macro that only closes one (an
 /// `\\affiliation`'s `\\def\\ex{\\end{tabular}}` closing the tabular its `\\bx` opened, `perfect_kernel_batchz4`; an
-/// `\\author`'s `\\etab` closing the block's own) keeps its meaning, in any rehearsal; with the emitter's switch on (the
-/// switch-off output stays as it was until the flip); a command the binding declares a block break keeps its meaning.
+/// `\\author`'s `\\etab` closing the block's own) keeps its meaning, in any rehearsal; a command the binding declares a
+/// block break keeps its meaning.
 fn install_event_bindings(
   tokens: &Tokens,
   title_marks: TitleMarks,
   block_breaks: &[(&str, BreakKind)],
 ) -> Result<()> {
-  if fm_emit_mode() == 2 {
-    for t in tokens.unlist_ref() {
-      let declared = || t.with_cs_name(|name| block_breaks.iter().any(|(cs, _)| *cs == name));
-      if let Some(between) = tabular_juggle_between(t)
-        && !declared()
-      {
-        let target = if prints_a_row_break(&between) {
-          ROW_BREAK
-        } else {
-          AUTHOR_AND
-        };
-        let_i(t, &T_CS!(target), None);
-      }
+  for t in tokens.unlist_ref() {
+    let declared = || t.with_cs_name(|name| block_breaks.iter().any(|(cs, _)| *cs == name));
+    if let Some(between) = tabular_juggle_between(t)
+      && !declared()
+    {
+      let target = if prints_a_row_break(&between) {
+        ROW_BREAK
+      } else {
+        AUTHOR_AND
+      };
+      let_i(t, &T_CS!(target), None);
     }
   }
   for (cs, target) in ALWAYS_BOUND {
@@ -1147,11 +1135,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
   let _hook = FieldNotesHookGuard;
   let if_count_before = if_count();
   let budget = read_budget(budget);
-  let tokens = if fm_emit_mode() == 2 {
-    inline_juggles_as_columns(tokens)
-  } else {
-    tokens
-  };
+  let tokens = inline_juggles_as_columns(tokens);
   let result = with_origin(DefinitionOrigin::File, || {
     reading_from_mouth(Mouth::default(), || -> Result<Digested> {
       bgroup();
