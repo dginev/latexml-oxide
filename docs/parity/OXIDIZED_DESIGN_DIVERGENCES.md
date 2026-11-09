@@ -32940,7 +32940,11 @@ the marker: the reading ends at the first held marker whose section prints an ad
 `resolver::Input::Block::markers`, `blocks::address_section`), the address section the class
 split's, its e-mail call written as queued as off writes it (one counted Warning) — the reading had continued `$^4$CENIA
 Chile` onto the e-mail line and written the affiliations twice and the addresses as an affiliation (2501.02356). Guard
-`perfect_kernel_batchne6::an_ijcai_emails_section_is_the_class_split`.
+`perfect_kernel_batchne6::an_ijcai_emails_section_is_the_class_split`. Only a block holding `\affiliations` or `\emails`
+is IJCAI-sectioned (`AuthorBlock::sectioned`, `author_macros::ijcai_block`), not every block of a sectioned caller: a plain
+`\author` under a raw `\@maketitle` defining its own `\name`/`\email` holds Errors there too, and its reading ended at
+`\email`, its address a note (guards `perfect_kernel_batch63::author_markup_title_code_forms`,
+`perfect_kernel_batchn1::a_lost_name_spells_its_own_address`; JAIR 1908.02923).
 
 **Carried, not lost.** A note's footnote step in the creator where its name prints, in source order, and past a `\thanks` a mark
 follows (`note_steps`; 2505.07115, 1610.06031); labels written back into keys as characters (`key_tokens`, `annotations_key`;

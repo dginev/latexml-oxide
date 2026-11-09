@@ -29,3 +29,14 @@ pub(super) fn red_at_two(red: &str) -> bool {
   }
   two
 }
+
+/// [`red_at_two`]'s twin for a guard whose switch-off output is the known wrong reading (a user ruling the old driver
+/// predates): under `LATEXML_FM_EMIT=0` (and 1) it prints the RED and returns true, so the guard keeps its right expectation
+/// for the switch that is fixed to it.
+pub(super) fn red_off(red: &str) -> bool {
+  let off = fm_emit() != 2;
+  if off {
+    eprintln!("RED at LATEXML_FM_EMIT={}: {red}", fm_emit());
+  }
+  off
+}

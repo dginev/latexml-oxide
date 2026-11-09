@@ -34,7 +34,7 @@ use latexml::util::test::{convert_files_with, convert_with};
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch77d::{assert_no_merged_names, creator, creators, squash},
-  perfect_kernel_batcht1::{expect, red_at_two},
+  perfect_kernel_batcht1::{expect, red_at_two, red_off},
 };
 
 /// A `sectioning-frontmatter` repro's squashed XML, its conversion free of errors and warnings.
@@ -3503,11 +3503,15 @@ fn relax_mark_is_no_mark() {
   ]);
 }
 
-/// Comma-parted names whose own symbols label their lines (2603.07345; batch 77p r11 A/B): the unmarked
-/// institution before the labelled one on its line is every name's (R12), the labelled one its carrier's, and the
-/// e-mail line goes by the group's names as in any group — `bgh@` on Bob Baker by the order its neighbours confirm, the
-/// †-marked address on Dan Dorn — in the order the lines print. Was "Uber Technologies †University of British Columbia"
-/// one affiliation of every name (77p r10).
+/// Comma-parted names whose own symbols label their lines (2603.07345; batch 77p r11 A/B): the marks part the names in
+/// two groups (user ruling 2026-11-09, over R12 here) — the unmarked institution before the labelled one on its line is
+/// the unmarked names' (Ann Able, Bob Baker, Cat Cole at Uber Technologies), the labelled one its carrier's alone (Dan
+/// Dorn at the University of British Columbia), as the e-mails confirm (`{aable, bgh, ccole}@uber.com` vs
+/// `†dorn@cs.ubc.ca`); the e-mail line goes by the group's names as in any group — `bgh@` on Bob Baker by the order its
+/// neighbours confirm, the †-marked address on Dan Dorn — in the order the lines print. Was "Uber Technologies
+/// †University of British Columbia" one affiliation of every name (77p r10). RED in both modes: off gives Dan Dorn Uber
+/// Technologies too (R12's reading); `=2` keeps the line whole, its `<sup>†</sup>` kept on every name — NE6's mark growth
+/// dropped it there, "span letters differ" (`repart::prefix_tokens`, NE9), which the 0-warning count pins.
 #[test]
 fn comma_group_symbol_lines_go_by_their_marks() {
   let xml = convert_repro!("author_comma_group_symbol_lines.tex");
@@ -3520,6 +3524,8 @@ fn comma_group_symbol_lines_go_by_their_marks() {
   };
   if red_at_two(
     r#"unverified: keeps "† University of British Columbia" in a line the off reading parts by its marks"#,
+  ) || red_off(
+    r#"Dan Dorn holds Uber Technologies too, where the marks part the names (ruling 2026-11-09)"#,
   ) {
     return;
   }
@@ -3543,7 +3549,7 @@ fn comma_group_symbol_lines_go_by_their_marks() {
       false,
       r#"Dan Dorn<sup xml:id="id4">†</sup>"#,
       &format!(
-        "{uber} {} {}",
+        "{} {}",
         affiliation("University of British Columbia"),
         it("dorn@cs.ubc.ca", "id5")
       )

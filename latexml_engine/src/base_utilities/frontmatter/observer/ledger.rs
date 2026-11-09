@@ -164,7 +164,8 @@ pub(in crate::base_utilities) struct AuthorBlock {
   /// whether a later creator clear in its queue removed its authors ([`record_clear`]: llncs's `\author` given twice,
   /// its `\lx@clear@creators[role=author]` — a call of its own, not the block's `replace`)
   pub cleared:        bool,
-  /// whether the IJCAI sectioned split applies
+  /// whether the IJCAI sectioned split applies: a sectioned caller's block (`\lx@add@authors`, `@adaptive`, `@list`)
+  /// holding `\affiliations` or `\emails` (`author_macros::ijcai_block`), not every block such a caller records
   pub sectioned:      bool,
   /// made while a flush digests its queue (`lx_frontmatter_flushing`: an `\author` in the `\title`, in an amsart
   /// `\thanks`), after that flush's reading: the block's own flush reads it (`\lx@frontmatter@late`)
