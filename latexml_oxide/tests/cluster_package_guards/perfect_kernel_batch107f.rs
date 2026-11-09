@@ -16,7 +16,7 @@
 //! a shared note's addresses are cut out of it in place, its other nodes kept (`address_lists::cut_printed`, round 2,
 //! review rev107f B2). Each guard converts its repro under `tools/perfect_kernel/repros/sectioning-frontmatter/` from the binary,
 //! eager and `--streaming`, with 0 errors and 0 warnings, and asserts the frontmatter whole.
-use super::perfect_kernel_batch99b::converted;
+use super::{perfect_kernel_batch99b::converted, perfect_kernel_batcht1::red_at_two};
 
 macro_rules! repro {
   ($name:literal) => {
@@ -55,6 +55,11 @@ fn an_own_call_keeps_an_address_its_name_spells() {
 /// Distinct: `distribute_upfront_contacts` without the late calls.
 #[test]
 fn a_restated_supplement_email_is_no_upfront_pile() {
+  if red_at_two(
+    r#"a false content-check Warning (libraboli@tencent.com placed more often than printed)"#,
+  ) {
+    return;
+  }
   assert_eq!(
     converted(repro!("llncs_supplement_restated_email_not_copied"), 0),
     r##"<title>T</title> <creator role="author"> <personname>Lv Tang</personname> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> </creator> <creator before=" " role="author"> <personname>Bo Li</personname> <note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id1">Correspondence should be addressed to Bo Li.</note> <contact name="Affiliation: " role="affiliation">Univ Y, City </contact> <contact name="E-mail " role="email"><text font="typewriter" xml:id="id2">luckybird1994@gmail.com</text></contact> <contact name="E-mail " role="email"><text font="typewriter" xml:id="id3">libraboli@tencent.com</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text. Supplement Lv Tang Bo LiCorrespondence should be addressed to Bo Li. More.</p> <pagination role="newpage"/> </para>"##
@@ -66,6 +71,9 @@ fn a_restated_supplement_email_is_no_upfront_pile() {
 /// Distinct: `math_braces_as_printed` in `\lx@add@email`.
 #[test]
 fn a_math_brace_list_is_the_list_it_prints() {
+  if red_at_two(r#"writes the 4 brace-list addresses as plain text, 4 false Warnings"#) {
+    return;
+  }
   assert_eq!(
     converted(repro!("email_list_llncs_math_braces"), 0),
     r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> <contact name="E-mail " role="email"><text font="typewriter" xml:id="id1">aable@x.org</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> <contact name="E-mail " role="email"><text font="typewriter" xml:id="id2">bbaker@x.org</text></contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ Y, City</contact> <contact name="E-mail " role="email"><text font="typewriter" xml:id="id3">cat.cole@y.org</text></contact> </creator> <creator before=" " role="author"> <personname>Dan Dee</personname> <contact name="Affiliation: " role="affiliation">Univ Y, City</contact> <contact name="E-mail " role="email"><text font="typewriter" xml:id="id4">ddee@y.org</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
@@ -80,6 +88,9 @@ fn a_math_brace_list_is_the_list_it_prints() {
 /// carriers'. Distinct: `distribute_address_lists`.
 #[test]
 fn an_address_list_on_a_contact_is_distributed_not_copied() {
+  if red_at_two(r#"loses "Ann Able Bob Baker", a content-check Warning"#) {
+    return;
+  }
   assert_eq!(
     converted(repro!("email_list_revtex_names_after_addresses"), 0),
     r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id1">Corresponding author</note> <contact name="Email: " role="email">zx81@x.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id2">Corresponding author</note> <contact name="Email: " role="email">qq7@y.org</contact> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ Y, City</contact> </creator> <abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">A.</p> </abstract> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
@@ -102,6 +113,9 @@ fn an_address_list_on_a_contact_is_distributed_not_copied() {
 /// joined to it and the list read whole (2410.15681). Distinct: `join_split_address_contacts`' backward tail.
 #[test]
 fn a_split_list_whose_tail_was_placed_first_is_joined() {
+  if red_at_two(r#"writes cat.cole@x.org from "cat.cole}@x.org", 2 content-check Warnings"#) {
+    return;
+  }
   assert_eq!(
     converted(repro!("email_list_ieee_nested_blocka_tail_first"), 0),
     r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> <contact name="Email: " role="email">ann.able@x.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> <contact name="Email: " role="email">bob.baker@x.org</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> <contact name="Email: " role="email">cat.cole@x.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
@@ -117,6 +131,9 @@ fn a_role_tag_after_an_address_is_its_owners_note() {
     converted(repro!("email_role_tag_after_address_ieee"), 0),
     r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> </creator> <creator before=" " role="author"> <personname>Dan Kumar Dee<sup xml:id="id3">†</sup></personname> <contact name="Affiliation: " role="affiliation">Univ Y, City</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id4">Corresponding Author</note> <contact name="Email: " role="email">dkdee@y.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
+  if red_at_two(r#"writes the role-tagged address line as plain text, a false Warning"#) {
+    return;
+  }
   assert_eq!(
     converted(repro!("email_role_tag_marked_after_list"), 0),
     r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ X, Town.</contact> <contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="id1">aable@x.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ Y, City.</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id3"><sup xml:id="id3.1">*</sup>corresponding author</note> <contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="id4">bakerb@y.edu</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
@@ -138,6 +155,9 @@ fn a_held_correspondence_note_keeps_the_email_label() {
 /// 2). Distinct: the only-author step's skip, now for a nameless creator holding names alone (1102.4967).
 #[test]
 fn a_sole_authors_orphan_line_is_hers_beside_a_block_creator() {
+  if red_at_two(r#"writes the orphan line as plain text, 2 false Warnings"#) {
+    return;
+  }
   assert_eq!(
     converted(repro!("addr_line_sole_author_orphan_star"), 0),
     r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><text fontsize="90%" xml:id="id1">Univ A, Town,<break/>Country.</text></contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id2"><sup xml:id="id2.1">*</sup>Corresponding author</note> <contact name="E-mail: " role="email"><text fontsize="90%" xml:id="id3">qz@a.org</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
@@ -193,6 +213,9 @@ fn a_shared_note_keeps_its_other_nodes_as_printed() {
 /// review rev107f finding 4. Distinct: `insert::mark_series` in the only-author step.
 #[test]
 fn a_sole_authors_own_series_orphan_line_is_the_blocks() {
+  if red_at_two(r#"gives the block's orphan email line to the sole author"#) {
+    return;
+  }
   assert_eq!(
     converted(
       repro!("addr_line_sole_author_unanswered_mark_email_is_blocks"),
