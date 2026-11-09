@@ -100,6 +100,7 @@ fn entry_cut(taken: &Taken, names: &[&str]) -> Result<Option<EntryCut>> {
         environments,
         held,
         aligned: aligned(events),
+        groups: Default::default(),
       };
       // (a note's entry is its text; any other the text of the events its span covers, or of those from it on, the lines the
       // reading read on with it: 2308.10621)
@@ -207,6 +208,7 @@ fn api_cut(index: usize, (taken, spells): (&Taken, &dyn Fn(&str) -> bool)) -> Re
     environments: &environments,
     held:         &[],
     aligned:      aligned(&events),
+    groups:       Default::default(),
   };
   let apart = |e: &Event| {
     e.kind == EventKind::Contact && matches!(e.role.as_deref(), Some("email" | "orcid"))
@@ -747,6 +749,7 @@ pub(super) fn span_tokens_within(
         environments,
         held,
         aligned: aligned(events),
+        groups: Default::default(),
       };
       let start = at(span.0)?;
       return Some(field.content_cut((start, at(span.1)?), 0, start, cuts)?.0);
@@ -763,6 +766,7 @@ pub(super) fn span_tokens_within(
       environments,
       held,
       aligned: aligned(events),
+      groups: Default::default(),
     };
     let cuts: Vec<(usize, usize)> = cuts
       .iter()

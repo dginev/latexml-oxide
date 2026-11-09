@@ -735,6 +735,7 @@ fn block_names(
       environments,
       held,
       aligned: aligned(events),
+      groups: Default::default(),
     };
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
     let mut printed_at: BTreeMap<Option<(u16, u16)>, usize> = BTreeMap::new();
@@ -1105,6 +1106,7 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
     environments,
     held: &[],
     aligned: aligned(events),
+    groups: Default::default(),
   };
   let inks: Vec<&Event> = events
     .iter()
@@ -1693,6 +1695,7 @@ fn item_call(
           environments,
           held,
           aligned: aligned(events),
+          groups: Default::default(),
         };
         let within = |e: &&Event| {
           e.kind != EventKind::Layout && e.span.is_some_and(|s| s.0 >= span.0 && s.1 <= span.1)
@@ -1944,6 +1947,7 @@ fn call_contact(call: &ApiCall, assoc: &Assoc, within: bool) -> Result<Option<To
     environments: &environments,
     held:         &[],
     aligned:      aligned(&events),
+    groups:       Default::default(),
   };
   let contact = events.iter().find_map(|e| {
     let (start, end) = e.span?;
@@ -1972,6 +1976,7 @@ fn call_note(call: &ApiCall, assoc: &Assoc) -> Result<Option<(bool, Vec<Token>)>
     environments: &environments,
     held:         &[],
     aligned:      aligned(&events),
+    groups:       Default::default(),
   };
   let notes: Vec<&Event> = events
     .iter()
@@ -2016,6 +2021,7 @@ fn call_pieces(call: &ApiCall) -> Result<Vec<Piece>> {
     environments: &environments,
     held:         &[],
     aligned:      aligned(&events),
+    groups:       Default::default(),
   };
   let pieces = split_pieces(&events, &call.role);
   // (a list cut into entries shows the mark each opens with, as the Cut's `_markshown`: 1305.6194, hep-lat0501016)
@@ -3127,13 +3133,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   let (mut before, mut after, mut unprinted): (Vec<_>, Vec<_>, Vec<RawFrontmatter>) =
     Default::default();
   let mut seen = false;
-  // (the recorded calls' commands by a fingerprint as their equality reads them, a space by its catcode)
-  let fingerprint = |command: &Tokens| {
-    command.unlist_ref().iter().fold(0u64, |h, token| {
-      (h.rotate_left(5) ^ token.cycle_fingerprint()).wrapping_mul(0x9E37_79B9_7F4A_7C15)
-    })
-  };
-  // (by fingerprint: each recorded command, in ledger order, with its reading's source)
+  // (by fingerprint, `command_fingerprint`: each recorded command, in ledger order, with its reading's source)
   type Recorded = BTreeMap<u64, Vec<(Tokens, Option<usize>)>>;
   let mut recorded: Option<Recorded> = None;
   let mut unrecorded = Vec::new();
@@ -3163,7 +3163,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
                 Some(call.index)
               };
               recorded
-                .entry(fingerprint(command))
+                .entry(command_fingerprint(command))
                 .or_default()
                 .push((command.clone(), source));
             }
@@ -3171,7 +3171,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
           recorded
         })
       });
-      let calls = recorded.get(&fingerprint(&entry.2));
+      let calls = recorded.get(&command_fingerprint(&entry.2));
       if entry.0 == "ltx:creator" && parent.is_empty() {
         // (the first recorded call of its command that has a source)
         queued_creators.push(calls.and_then(|calls| {
@@ -3683,6 +3683,14 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   Ok(true)
 }
 
+/// A command's fingerprint as its equality reads it, a space by its catcode (`Token::cycle_fingerprint`): equal commands
+/// share it, so a lookup compares only the commands that do.
+fn command_fingerprint(command: &Tokens) -> u64 {
+  command.unlist_ref().iter().fold(0u64, |h, token| {
+    (h.rotate_left(5) ^ token.cycle_fingerprint()).wrapping_mul(0x9E37_79B9_7F4A_7C15)
+  })
+}
+
 /// The queue entries a flush digests as they stand (the emitter's rewrite done), each taken: the ledger call it is marked
 /// `taken|<index>` before its digestion, so a later flush's emitter — the nested one of a block the entry's own digestion
 /// calls late (`\\lx@frontmatter@late`) — writes none of its items again. memsait's `\\@opening` note, which the safety net
@@ -3691,13 +3699,30 @@ pub(in crate::base_utilities) fn take_digested(commands: &[RawFrontmatter]) {
   if fm_emit_mode() != 2 || rehearsal::rehearsing() {
     return;
   }
+  if commands.is_empty() {
+    return;
+  }
+  // (each call's command looked up among the queue's by its length, then its fingerprint, compared only where one shares
+  // both, not with every queued entry: 2103.04797's ~1,000 creators, each ledger call against each; a call of no queued
+  // length isn't read at all, 1901.01540's flush at each section)
+  let lengths: BTreeSet<usize> = commands.iter().map(|entry| entry.2.len()).collect();
+  let queued: BTreeMap<u64, Vec<&Tokens>> =
+    commands.iter().fold(BTreeMap::new(), |mut queued, entry| {
+      queued
+        .entry(command_fingerprint(&entry.2))
+        .or_default()
+        .push(&entry.2);
+      queued
+    });
   let taken: Vec<usize> = with_ledger(|ledger| {
     let calls = ledger.entries().iter().filter_map(|entry| match entry {
       Entry::Api(call)
-        if call
-          .command
-          .as_ref()
-          .is_some_and(|c| commands.iter().any(|e| e.2 == *c)) =>
+        if call.command.as_ref().is_some_and(|c| {
+          lengths.contains(&c.len())
+            && queued
+              .get(&command_fingerprint(c))
+              .is_some_and(|same| same.contains(&c))
+        }) =>
       {
         Some(call.index)
       },
