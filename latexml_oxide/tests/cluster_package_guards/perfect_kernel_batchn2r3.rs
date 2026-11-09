@@ -27,7 +27,7 @@ macro_rules! repro {
 
 fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).collect() }
 
-/// Convert `tex` without the census (the shadow switch unset: production's default): the log and the XML.
+/// Convert `tex` without the census (production's default): the log and the XML.
 fn run_default(tex: &str) -> (String, String) {
   let (log, xml, ()) =
     convert_files_with_setup_then(tex, &[], Some("ar5iv.sty"), move || {}, |_| ());

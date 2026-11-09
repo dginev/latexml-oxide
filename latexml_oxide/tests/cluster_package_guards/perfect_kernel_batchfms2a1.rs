@@ -1,6 +1,6 @@
 //! Guards for batch FM S2a.1: the frontmatter observer core (OXIDIZED_DESIGN_DIVERGENCES #837; KERNEL_CAPABILITIES
 //! K23). Each `\author`-family call is a ledger block whose stamped tokens are rehearsed under the Layer-B event bindings
-//! and lexed into events (read here through the ledger's JSON, `fm_shadow_json`); the guards assert those event lists
+//! and lexed into events (read here through the ledger's JSON, `fm_reading_json`); the guards assert those event lists
 //! for the design probes (symbol lines, a user mark macro), the gretsi shared-mark repro, 2401.16957's `,\inst` shape and
 //! the SYNC frontmatter rows' shapes, and that the rehearsal leaves nothing behind. (The census switch
 //! `LATEXML_FM_SHADOW` and the CLI's `<dest>.fmshadow.json` went in DEL4.) Every probe compiles clean with pdflatex
@@ -10,10 +10,10 @@ use std::cell::Cell;
 use latexml::util::test::{
   convert_files_with_setup_then, convert_with_setup_then, error_count, warning_count,
 };
-use latexml_engine::base_utilities::fm_shadow_json;
+use latexml_engine::base_utilities::fm_reading_json;
 use serde_json::Value;
 
-/// The shadow JSON of a conversion, parsed; for a written family's paper (revtex, ams) the writer must have kept the
+/// The reading's JSON of a conversion, parsed; for a written family's paper (revtex, ams) the writer must have kept the
 /// reading — its outcome `same` (today's reads so already) or `written` — so every reading a written family's guard
 /// pins is the XML users see: `declined: …` (a difference no writer operation explains, today's kept) or
 /// `written-different: …` (the writer's own defect) fails the guard (test audit 2026-10-26).
@@ -55,7 +55,7 @@ pub(super) fn reading_only<R>(guard: impl FnOnce() -> R) -> R {
   value
 }
 
-/// The shadow JSON of a written family's paper the writer holds back, parsed: its outcome `declined: <why>…` — a
+/// The reading's JSON of a written family's paper the writer holds back, parsed: its outcome `declined: <why>…` — a
 /// reading the writer has no operation for, today's XML kept, which the guard pins as such (the written-family
 /// writer gaps in OPEN_ROWS).
 pub(super) fn parsed_held(json: &str, why: &str) -> Value {
@@ -68,9 +68,9 @@ pub(super) fn parsed_held(json: &str, why: &str) -> Value {
   value
 }
 
-/// Convert `tex` (with `preload`) under the shadow switch: the log, the XML, and the shadow ledger as JSON.
-pub(super) fn shadow(tex: &str, preload: Option<&str>) -> (String, String, Value) {
-  let (log, xml, json) = convert_with_setup_then(tex, preload, || {}, |_| fm_shadow_json());
+/// Convert `tex` (with `preload`): the log, the XML, and the ledger as JSON.
+pub(super) fn reading_of(tex: &str, preload: Option<&str>) -> (String, String, Value) {
+  let (log, xml, json) = convert_with_setup_then(tex, preload, || {}, |_| fm_reading_json());
   let json: Value = parsed(&json);
   (log, xml, json)
 }
@@ -121,7 +121,7 @@ fn compact(event: &Value) -> String {
   }
 }
 
-/// The author blocks of a shadow ledger, each its compact event list (a skipped block: `["skipped: <reason>"]`).
+/// The author blocks of a ledger, each its compact event list (a skipped block: `["skipped: <reason>"]`).
 pub(super) fn blocks(json: &Value) -> Vec<Vec<String>> {
   json["entries"]
     .as_array()
@@ -141,7 +141,7 @@ pub(super) fn blocks(json: &Value) -> Vec<Vec<String>> {
 /// An event as (compact event, span `[start, end]`).
 type Spanned = (String, Option<(u64, u64)>);
 
-/// The author blocks of a shadow ledger, each its events [`Spanned`].
+/// The author blocks of a ledger, each its events [`Spanned`].
 fn block_spans(json: &Value) -> Vec<Vec<Spanned>> {
   json["entries"]
     .as_array()
@@ -167,7 +167,7 @@ fn block_spans(json: &Value) -> Vec<Vec<Spanned>> {
     .collect()
 }
 
-/// The API calls of a shadow ledger: (role, made inside its block's expansion, flushes before it, queue position).
+/// The API calls of a ledger: (role, made inside its block's expansion, flushes before it, queue position).
 fn api_calls(json: &Value) -> Vec<(String, bool, u64, u64)> {
   json["entries"]
     .as_array()
@@ -186,12 +186,12 @@ fn api_calls(json: &Value) -> Vec<(String, bool, u64, u64)> {
     .collect()
 }
 
-/// [`shadow`] of an article document holding `author` (and `preamble`), asserting a clean conversion: its blocks.
+/// [`reading_of`] of an article document holding `author` (and `preamble`), asserting a clean conversion: its blocks.
 fn article_blocks(preamble: &str, author: &str) -> Vec<Vec<String>> {
   let tex = format!(
     "\\documentclass{{article}}\n{preamble}\n\\begin{{document}}\n\\title{{T}}\n{author}\n\\maketitle\nBody.\n\\end{{document}}\n"
   );
-  let (log, _, json) = shadow(&tex, Some("ar5iv.sty"));
+  let (log, _, json) = reading_of(&tex, Some("ar5iv.sty"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   blocks(&json)
 }
@@ -264,7 +264,7 @@ fn user_mark_macro_prints_marks() {
 /// e-mail and the `\affils` list API calls after it.
 #[test]
 fn gretsi_author_blocks_and_their_api_calls() {
-  let (log, _, json) = shadow(
+  let (log, _, json) = reading_of(
     include_str!(
       "../../../tools/perfect_kernel/repros/class-bindings/gretsi_v13_shared_mark_affiliation.tex"
     ),
@@ -289,7 +289,7 @@ fn gretsi_author_blocks_and_their_api_calls() {
 /// llncs splits its `\author` at `\and` into blocks, and the `\institute` list is API calls after the last.
 #[test]
 fn llncs_comma_before_inst_events() {
-  let (log, _, json) = shadow(
+  let (log, _, json) = reading_of(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/llncs_comma_before_inst_is_the_name_before.tex"
     ),
@@ -393,7 +393,7 @@ fn sync_row_shapes_46_53_66() {
 /// organization link and a braced line under the kernel `\author`'s columns.
 #[test]
 fn sync_row_shapes_47_48_links() {
-  let (log, _, json) = shadow(
+  let (log, _, json) = reading_of(
     "\\documentclass{amsart}\n\\usepackage{hyperref}\n\\begin{document}\n\\title{T}\n\\author{Ann Able \\\\ \\href{https://x.org}{Project Page} \\\\ Univ B \\\\ contact@x.org}\n\\maketitle\nBody.\n\\end{document}\n",
     Some("ar5iv.sty"),
   );
@@ -437,7 +437,7 @@ fn sync_row_shapes_62_64_authblk() {
     [["N:Ann", "A:author", "A:affiliation", "A:affiliation"]]
   );
   // (the block's own creator is queued inside its expansion; the later `\author{Bob}` and the `\affil`s outside it)
-  let (log, _, json) = shadow(
+  let (log, _, json) = reading_of(
     "\\documentclass{article}\n\\usepackage{authblk}\n\\begin{document}\n\\title{T}\n\\author[1]{Ann}\n\\author{Bob}\n\\affil[1]{Univ X}\n\\affil{Univ Y}\n\\maketitle\nBody.\n\\end{document}\n",
     Some("ar5iv.sty"),
   );
@@ -499,7 +499,7 @@ fn notes_labels_fonts_and_cells() {
 fn ampersand_is_a_column_separator() {
   reading_only(|| {
     let tex = "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able \\& Bob Baker \\and Cat & Dan}\n\\maketitle\nBody.\n\\end{document}\n";
-    let (..) = shadow(tex, Some("ar5iv.sty"));
+    let (..) = reading_of(tex, Some("ar5iv.sty"));
   });
 }
 
@@ -541,7 +541,7 @@ fn font_switch_inside_a_run_keeps_the_name() {
     ),
     [["N:Ann Able Bob", "S:and", "N:Cat Cole"]]
   );
-  let (log, _, json) = shadow(
+  let (log, _, json) = reading_of(
     "\\documentclass{article}\n\\title{T}\n\\author{Ann Able\\begingroup\\bfseries Bob \\and Carl}\n\\begin{document}\n\\maketitle\nBody after.\n\\end{document}\n",
     Some("ar5iv.sty"),
   );
@@ -676,7 +676,7 @@ fn spans_fill_gaps_and_widths() {
     let tex = include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/observer_fill_gap_and_footnotemark_labels.tex"
     );
-    let (log, _, json) = shadow(tex, Some("ar5iv.sty"));
+    let (log, _, json) = reading_of(tex, Some("ar5iv.sty"));
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
     let spans = block_spans(&json);
     let first: Vec<(&str, (u64, u64))> = spans[0]
@@ -718,7 +718,7 @@ fn spans_fill_gaps_and_widths() {
 /// NeurIPS's and ICLR's `\AND` is a new row). The spans of this second shape: a mark's is its own command's.
 #[test]
 fn footnotemark_labels_and_and_commands() {
-  let (log, _, json) = shadow(
+  let (log, _, json) = reading_of(
     "\\documentclass{article}\n\\newcommand\\And{\\and}\n\\newcommand\\AND{\\and}\n\\begin{document}\n\\title{T}\n\\author{Ann Able\\thanks{First.} \\And Bob Baker\\footnotemark \\AND Cat Cole\\footnotemark[5] \\and Dan Doe\\footnotemark}\n\\maketitle\n\\footnotetext{Note.}\nBody: \\thefootnote.\n\\end{document}\n",
     Some("ar5iv.sty"),
   );
@@ -747,7 +747,7 @@ fn footnotemark_labels_and_and_commands() {
     "",
     r"\author{Ann Able\thanks{A.} \and Bob Baker\footnotemark[1]}",
   );
-  let (log, _, json) = shadow(
+  let (log, _, json) = reading_of(
     "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able\\thanks{A.} \\and Bob Baker\\footnotemark[1]}\n\\maketitle\nBody.\n\\end{document}\n",
     Some("ar5iv.sty"),
   );

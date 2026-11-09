@@ -10,7 +10,7 @@
 //! body has sealed them. An affiliation inside
 //! `\author{}` that opens with a mark is the entry the mark labels in the observer's reading (`\lx@fm@obs@affil`,
 //! `events::leading_marks`). Each guard converts its repro under `tools/perfect_kernel/repros/sectioning-frontmatter/` (a
-//! stand-in file cut to the witness's definitions, written by `{filecontents*}`) under the shadow switch in process and
+//! stand-in file cut to the witness's definitions, written by `{filecontents*}`) in process and
 //! with the binary, eager and `--streaming` (`perfect_kernel_batch92a::assert_reading`), asserts the XML's creators and
 //! the reading's tuples whole and no Error or Warning, and the default mode (the fleet's) writes the same creators.
 //! Every repro compiles clean with pdflatex (TL 2025).
@@ -70,7 +70,7 @@ macro_rules! repro {
   };
 }
 
-/// The default mode's log and XML (no shadow switch: what the fleet writes).
+/// The default mode's log and XML (what the fleet writes).
 #[track_caller]
 fn default_mode(tex: &str) -> (String, String) {
   let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| ());

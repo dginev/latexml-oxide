@@ -404,9 +404,9 @@ pub fn digest_front_matter() -> Result<()> {
   // (what the abstract's command form added before this flush is no longer in Perl's queue: [`COMMAND_FORM`])
   let flushes = lookup_int(FRONTMATTER_FLUSHES);
   assign_value(FRONTMATTER_FLUSHES, flushes + 1, Some(Scope::Global));
-  // The frontmatter observer's rehearsal of the author blocks, under its shadow switch only (nothing it finds is used
-  // yet; OXIDIZED_DESIGN_DIVERGENCES #837).
-  shadow_flush()?;
+  // The frontmatter observer's rehearsal of the author blocks, whose reading the emitter writes from at this flush
+  // (OXIDIZED_DESIGN_DIVERGENCES #837, #980).
+  read_at_flush()?;
   bgroup();
   // INTENTIONAL DIVERGENCE from Perl PR #2767 (KNOWN_PERL_ERRORS #30,
   // OXIDIZED_DESIGN): clear the queue BEFORE digesting. Perl digests

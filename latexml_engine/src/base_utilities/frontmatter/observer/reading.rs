@@ -1,6 +1,6 @@
 //! The observer's flush and its dump (OXIDIZED_DESIGN_DIVERGENCES #837): at every real flush (`digest_front_matter`)
 //! the ledger's author blocks not rehearsed yet are rehearsed and lexed, and each API call's content
-//! ([`shadow_flush`]); [`fm_shadow_json`] gives the ledger as JSON — its entries with their events and the resolver's
+//! ([`read_at_flush`]); [`fm_reading_json`] gives the ledger as JSON — its entries with their events and the resolver's
 //! tuples (`resolved`) — which the guards read the reading by, in process. The census that wrote it beside the output
 //! (`LATEXML_FM_SHADOW=1`, `<dest>.fmshadow.json`, `ab_audit fmshadow`) and its off state (`=0`) were deleted with the
 //! S2b writer (DEL4): the observer records and reads every paper.
@@ -24,7 +24,7 @@ use super::{
 
 /// Forget the observer's ledger: a conversion's start (the converter's session preparation, with the field
 /// provenance's reset).
-pub fn reset_fm_shadow() {
+pub fn reset_fm_reading() {
   reset_ledger();
   ledger::reset_author_owner();
   rehearsal::reset_rehearsing();
@@ -34,21 +34,21 @@ pub fn reset_fm_shadow() {
 /// rehearsed yet. A block without positions (out of positions) is skipped and says why; one no rehearsal could run for
 /// (a journal already open: the flush is itself inside a speculative run) waits for the next flush, deferred: left so
 /// at the end, the dump reports that reason (`JournalUnavailable`), not "no flush after the call".
-pub(in crate::base_utilities) fn shadow_flush() -> Result<()> {
+pub(in crate::base_utilities) fn read_at_flush() -> Result<()> {
   // (a rehearsal's flush is undone with it; every real flush empties the queue, read or not — the epoch a clear
   // compares, `ledger::record_clear`: an early `\maketitle` before any author block, in default mode, reads nothing
   // but flushes the title it digests, which a later `\title` must not clear; review rev92a_r1 S2)
   if rehearsal::rehearsing() {
     return Ok(());
   }
-  read_at_flush()?;
+  read_pending()?;
   // (the flush empties the frontmatter queue: the calls after it are queued from position 0 again)
   with_ledger(|ledger| ledger.flushes += 1);
   Ok(())
 }
 
-/// [`shadow_flush`]'s reading.
-fn read_at_flush() -> Result<()> {
+/// [`read_at_flush`]'s reading.
+fn read_pending() -> Result<()> {
   // (the labels the calls' keyvals defer, read as this flush's digestion expands them: `\lx@label@ref`, cas's
   // `\author[a]` under entries given after it — 2303.00352, 2603.22658, 2504.19452, 2509.10496)
   with_ledger(|ledger| {
@@ -422,7 +422,7 @@ fn json_held(out: &mut String, held: &[HeldError]) {
 /// The ledger as JSON (read by the guards, in process): its entries in call order — author blocks with their events, title
 /// stamps, API calls — and a summary (blocks with events, skipped by reason, out of positions, rehearsals that held
 /// diagnostics). An author block's ApiCall events are the API calls after it its own expansion did not make.
-pub fn fm_shadow_json() -> String {
+pub fn fm_reading_json() -> String {
   with_ledger(|ledger| {
     let mut out = String::from("{\"version\":1,\"entries\":[");
     let mut with_events = 0usize;
@@ -809,11 +809,11 @@ mod tests {
   /// rev92a_r1 S2).
   #[test]
   fn a_flush_that_reads_nothing_still_counts() {
-    reset_fm_shadow();
-    shadow_flush().unwrap();
-    shadow_flush().unwrap();
+    reset_fm_reading();
+    read_at_flush().unwrap();
+    read_at_flush().unwrap();
     assert_eq!(with_ledger(|ledger| ledger.flushes), 2);
-    reset_fm_shadow();
+    reset_fm_reading();
   }
 
   /// A block a flush deferred because no journal could open there (the flush was inside a speculative run) and no

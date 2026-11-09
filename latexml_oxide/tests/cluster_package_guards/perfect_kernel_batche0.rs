@@ -1376,7 +1376,7 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   ("resolver", 3),
   // (the "Knowledge in, driver out, one pass" move: the old reader's owner logic, moved unchanged from `author_block/`, its literals with it; none added)
   ("resolver/owners", 4),
-  ("shadow", 7),
+  ("reading", 7),
   // (Z4a, 81 -> 107: `emitter/emit.rs`, the calls it builds: Perl's `\lx@add@authors`, `\lx@annotate@frontmatter@now`, the
   // queue's own `\lx@frontmatter@item*`; it writes them, no decision reads them; NE3 +1: `\lx@fm@script@char`, written for a script
   // character its rehearsal erred at, 2204.01080; CL7 +1: `block_annotations`' `'\\'`, whether an author block's keyvals

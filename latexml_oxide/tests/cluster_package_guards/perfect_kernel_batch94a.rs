@@ -2,7 +2,7 @@
 //! OXIDIZED_DESIGN_DIVERGENCES #928; `docs/archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md`). Where the observer's reading parts
 //! the names and today's old reader parted them otherwise, the writer writes the creators again from the reading — each
 //! name from its span's ink, its items copied from today's or made from their spans — and keeps them only when they read
-//! as the reading and hold every word today's creators held. Each guard converts its repro under the shadow switch in
+//! as the reading and hold every word today's creators held. Each guard converts its repro in
 //! process and with the binary, eager and `--streaming` (`perfect_kernel_batch92a::assert_reading`), asserts the
 //! reading's tuples and the XML's creators whole, and no Error or Warning; and the default mode (the fleet's) writes the
 //! same XML, notes included. Every repro compiles clean with pdflatex (TL 2025).
@@ -320,7 +320,7 @@ fn phantom_ink_is_no_name() {
   ]);
 }
 
-/// Where the shadow reading took one whole creator of today's for another's affiliation from its words alone, the
+/// Where the reading took one whole creator of today's for another's affiliation from its words alone, the
 /// writer gives the creator back (`repart::concede`) and writes what the structure shows (review rev94a r3): `…, Bob
 /// Baker$^1$, and the PE11 team of {\it Kepler} WG\#1\\ {$^*$} Affiliations …` keeps the team a creator of its own,
 /// and the `$^*$` line, today's item on the team, goes to Ann Able, who shows its mark (1109.6488's García; the `1`
@@ -338,7 +338,7 @@ fn a_creator_read_by_its_words_is_given_back() {
   assert_eq!(reading.3, Value::from("written"));
 }
 
-/// A conceded creator keeps the ink it printed (review rev94a r4 B1, `repart::give_back_ink`): the shadow reading gave
+/// A conceded creator keeps the ink it printed (review rev94a r4 B1, `repart::give_back_ink`): the reading gave
 /// the marks after `Kitt Peak Observatory` — a piece it took for Ann Able's institution by its words — to Ann Able, and
 /// 94a r4 gave the observatory back bare, so the writer wrote every entry those marks answer on Ann Able. Given back
 /// with its marks and the entries they answer, each creator holds its own: a moved entry (`$^{2}$`: Univ Y the

@@ -8,7 +8,7 @@
 //! pdflatex (TL 2025). The reader's shapes as digested and as parsed: `observer::marks::tests`, and
 //! `ab_audit fmshadow`'s `a_parsed_prescript_on_a_word_is_text_a_script_on_a_base_the_base`.
 use latexml::util::test::{convert_with_then, error_count, warning_count};
-use latexml_engine::base_utilities::fm_shadow_json;
+use latexml_engine::base_utilities::fm_reading_json;
 use serde_json::Value;
 
 use super::perfect_kernel_batch84b::creators;
@@ -16,9 +16,9 @@ use super::perfect_kernel_batch84b::creators;
 /// The repro's conversion in the Default mode, clean: its writer's outcome and its creators.
 #[track_caller]
 fn converted(tex: &str) -> (String, Vec<Vec<String>>) {
-  let (log, xml, json) = convert_with_then(tex, Some("ar5iv.sty"), |_| fm_shadow_json());
+  let (log, xml, json) = convert_with_then(tex, Some("ar5iv.sty"), |_| fm_reading_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let json: Value = serde_json::from_str(&json).expect("the shadow JSON");
+  let json: Value = serde_json::from_str(&json).expect("the reading's JSON");
   (
     json["writer"].as_str().unwrap_or("none").to_string(),
     creators(&xml),

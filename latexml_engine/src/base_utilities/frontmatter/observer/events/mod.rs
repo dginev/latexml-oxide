@@ -19,7 +19,7 @@
 //! - **Layout**: a box or a styling container (its command), an alignment cell, a change of font between runs (a
 //!   run's first font against the previous run's: a switch inside a run shows at the next run, not where it was);
 //! - **Declaration**: a definition made in the block that prints nothing ([`declaration_events`], beside the block's
-//!   other events: `shadow.rs`).
+//!   other events: `reading.rs`).
 //!
 //! A Mark inside a formula or a group says so ([`MarkFormula`]: what encloses it, its base, the letter or digit after
 //! it); a contact that prints nothing ([`Event::unprinted`]) and an event an error was held at ([`Event::held`]) too. So
@@ -28,7 +28,7 @@
 //!
 //! Each event carries its span of the author field's positions (`fieldProv`/`fieldSerial` of the boxes it is made of,
 //! core `gullet::field_cover_of`), its ink text and its layout nesting. ApiCall events (setters called outside the
-//! field) are the ledger's, added to the block by the shadow dump.
+//! field) are the ledger's, added to the block by the reading's JSON.
 
 use latexml_core::{
   document::{FIELD_FORMULA_START_PROPERTY, FIELD_PROV_PROPERTY, FIELD_SERIAL_PROPERTY},
@@ -119,7 +119,7 @@ pub enum EmailMeaning {
 }
 
 impl EmailMeaning {
-  /// Its name in the shadow dump (`"meaning"`; a binding's, the default, is not written).
+  /// Its name in the reading's JSON (`"meaning"`; a binding's, the default, is not written).
   pub fn name(self) -> &'static str {
     match self {
       EmailMeaning::Binding => "binding",
@@ -150,7 +150,7 @@ pub enum MarkBase {
 }
 
 impl MarkBase {
-  /// Its name in the shadow dump (`"base"`).
+  /// Its name in the reading's JSON (`"base"`).
   pub fn name(self) -> &'static str {
     match self {
       MarkBase::Floating => "floating",
@@ -198,7 +198,7 @@ pub enum BreakKind {
 }
 
 impl BreakKind {
-  /// Its name in the shadow dump (`"break"`).
+  /// Its name in the reading's JSON (`"break"`).
   pub fn name(self) -> &'static str {
     match self {
       BreakKind::Par => "par",
@@ -2277,7 +2277,7 @@ pub(in crate::base_utilities) fn creator_roles(events: &mut [Event], calls: &[Fi
   }
 }
 
-/// Run `f` (the rehearsal of an author block, `shadow.rs`) with the block's `tokens`, its first at position `base`,
+/// Run `f` (the rehearsal of an author block, `reading.rs`) with the block's `tokens`, its first at position `base`,
 /// as the content its in-block contacts' entries are cut from ([`labelled_entries`]).
 pub(in crate::base_utilities) fn with_block_content<R>(
   base: usize,

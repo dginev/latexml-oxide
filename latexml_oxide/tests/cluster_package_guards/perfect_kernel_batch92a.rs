@@ -9,16 +9,16 @@
 //! exactly, the note's name, when one live creator's whole name, the corresponding author's designation; routed
 //! (amsart, REVTeX) the current author's whole own call —, a link in the note or a call of the paper's own `\email`
 //! staying its text (`ledger::email_meaning`, `Resolver::answer_document_notes`); a frontmatter clear removes the API calls and the author blocks queued before
-//! it (`ledger::record_clear`, llncs's `\author` given twice). Each guard converts its repros under the shadow switch
+//! it (`ledger::record_clear`, llncs's `\author` given twice). Each guard converts its repros
 //! in process and with the binary, eager and `--streaming`, and asserts every creator of the XML whole (today's output,
 //! which the reading agrees with, or the written family's output; a sibling's reading only where today's XML is
-//! the old reader's), the shadow reading's tuples whole, and no Error or Warning; the binary's two modes must give the
+//! the old reader's), the reading's tuples whole, and no Error or Warning; the binary's two modes must give the
 //! same XML creators and the same reading. Every repro compiles clean with pdflatex (TL 2025; the aa repros with
 //! 1707.06238's aa.cls, which TeX Live lacks).
 use std::{path::Path, process::Command};
 
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::fm_shadow_json;
+use latexml_engine::base_utilities::fm_reading_json;
 use serde_json::Value;
 
 use super::{
@@ -37,7 +37,7 @@ macro_rules! repro {
   };
 }
 
-/// The XML's creators and the shadow reading's tuples of one conversion, which must be clean, then its publication
+/// The XML's creators and the reading's tuples of one conversion, which must be clean, then its publication
 /// notes' text (`ltx:pubnote`, in order) and the writer's outcome (`"writer"`, null for a family not written).
 pub(super) type Reading = (Vec<Vec<String>>, Vec<String>, Vec<String>, Value);
 
@@ -72,7 +72,7 @@ fn reading_of(log: &str, xml: &str, json: &str) -> Reading {
 /// `tex` converted in process, its reading from the ledger's JSON.
 #[track_caller]
 fn in_process(tex: &str) -> Reading {
-  let (log, xml, json) = convert_with_setup_then(tex, Some(PRELOAD), || {}, |_| fm_shadow_json());
+  let (log, xml, json) = convert_with_setup_then(tex, Some(PRELOAD), || {}, |_| fm_reading_json());
   reading_of(&log, &xml, &json)
 }
 
@@ -106,12 +106,12 @@ fn with_binary(tex: &str, streaming: bool) -> (Vec<Vec<String>>, Vec<String>) {
   printed(&log, &xml)
 }
 
-/// Asserts `tex`'s XML creators are `xml` (when given; else only the same in every mode) and its shadow tuples
-/// `shadow`, in process; the binary's creators and notes, eager and `--streaming`, the same as in process.
+/// Asserts `tex`'s XML creators are `xml` (when given; else only the same in every mode) and its tuples
+/// `tuples`, in process; the binary's creators and notes, eager and `--streaming`, the same as in process.
 #[track_caller]
-pub(super) fn assert_reading(tex: &str, xml: Option<&[&[&str]]>, shadow: &[&str]) -> Reading {
-  let shadow: Vec<String> = shadow.iter().map(ToString::to_string).collect();
-  let (xml_in_process, shadow_in_process, notes, writer) = in_process(tex);
+pub(super) fn assert_reading(tex: &str, xml: Option<&[&[&str]]>, tuples: &[&str]) -> Reading {
+  let tuples: Vec<String> = tuples.iter().map(ToString::to_string).collect();
+  let (xml_in_process, reading_in_process, notes, writer) = in_process(tex);
   if let Some(xml) = xml {
     let xml: Vec<Vec<String>> = xml
       .iter()
@@ -119,16 +119,16 @@ pub(super) fn assert_reading(tex: &str, xml: Option<&[&[&str]]>, shadow: &[&str]
       .collect();
     assert_eq!(xml_in_process, xml, "in process");
   }
-  assert_eq!(shadow_in_process, shadow, "in process");
+  assert_eq!(reading_in_process, tuples, "in process");
   let printed = (xml_in_process.clone(), notes.clone());
   assert_eq!(with_binary(tex, false), printed, "the binary, eager");
   assert_eq!(with_binary(tex, true), printed, "the binary, --streaming");
-  (xml_in_process, shadow, notes, writer)
+  (xml_in_process, tuples, notes, writer)
 }
 
 /// aa class A of the llncs and aa gate study (1707.06238, 1302.1442; 52 papers): `\inst{\ref{ia},\ref{ib}}` prints "1, 2"
 /// once the references resolve, but nothing at digestion but the comma, which the lexer read as the separator between
-/// two marks: the shadow gave Ann Able no institute and Univ X to the block. Now one Mark `ref:ia,ref:ib`, each key a
+/// two marks: the reading gave Ann Able no institute and Univ X to the block. Now one Mark `ref:ia,ref:ib`, each key a
 /// request — the reading agrees with today's (and Perl's) XML; an owner found by a key says so (`api:ref-label`, ruling
 /// 1's change tag: 1302.1442's entry 1, keyed after its `\email` line, which today's left on a nameless creator), one
 /// found by the entry's number does not. Its sibling, the reading only: a space after the comma (1707.06238's

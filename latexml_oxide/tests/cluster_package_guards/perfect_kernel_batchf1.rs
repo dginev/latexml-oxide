@@ -5,7 +5,7 @@
 //! (`a_link_printing_a_name_is_the_name`), and a grade is read however long its group (`a_grade_with_a_long_note_is_the_grade`).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::fm_shadow_json;
+use latexml_engine::base_utilities::fm_reading_json;
 use regex::Regex;
 
 use super::{
@@ -31,14 +31,14 @@ fn letters(n: usize) -> String {
     .collect()
 }
 
-/// `tex` converted under the census switch: the log, the XML and the shadow dump (`fm_shadow_json`).
-fn run_with_shadow(tex: &str) -> (String, String, String) {
+/// `tex` converted in process: the log, the XML and the reading's JSON (`fm_reading_json`).
+fn run_with_reading(tex: &str) -> (String, String, String) {
   convert_files_with_setup_then(
     tex,
     &[],
     Some("ar5iv.sty"),
     move || {},
-    |_| fm_shadow_json(),
+    |_| fm_reading_json(),
   )
 }
 
@@ -58,13 +58,13 @@ fn a_block_past_the_stamps_positions_is_read() {
     .collect();
   assert_eq!(creators(&xml), names);
 
-  let (log, xml, json) = run_with_shadow(repro!(
+  let (log, xml, json) = run_with_reading(repro!(
     "emit_calls_past_the_stamps_positions_together_are_read"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   // (each block's stamp and why it went unread, its reason when it did)
   let stamps = |json: &str| -> Vec<(String, Option<String>)> {
-    let v: serde_json::Value = serde_json::from_str(json).expect("the shadow JSON");
+    let v: serde_json::Value = serde_json::from_str(json).expect("the reading's JSON");
     let entries = v["entries"].as_array().cloned().unwrap_or_default();
     entries
       .iter()

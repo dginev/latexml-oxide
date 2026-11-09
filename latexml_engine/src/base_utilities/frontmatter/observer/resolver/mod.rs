@@ -2,7 +2,8 @@
 //! each author block's events and the frontmatter API calls after them — read into the tuples `ab_audit`'s `front.rs`
 //! extracts from the XML (each creator's name, affiliations, contacts and notes, and the author block's own), each
 //! association with the rule that decided it. Class-independent; a family's conventions are those its binding declared
-//! (`policy.rs`, Layer B). In SHADOW mode only (stage S2a.2): nothing it decides reaches the output.
+//! (`policy.rs`, Layer B). Stage S2a.2 ran it in shadow mode, nothing it decided reaching the output; since the flip the
+//! emitter writes what it decides (OXIDIZED_DESIGN_DIVERGENCES #980).
 //!
 //! The rules, in order (design §2 points 1-9, the FIDELITY_CHARTER §4 rulings of 2026-10-21):
 //! 1. **Geometry**: columns from `Sep(And)` (the `\and` family) and alignment tabs, unless the policy reads `\and` as

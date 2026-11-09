@@ -3919,7 +3919,7 @@ fn per_author_marks(source: usize) -> bool {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::base_utilities::frontmatter::observer::{ledger::TitleStamp, reset_fm_shadow};
+  use crate::base_utilities::frontmatter::observer::{ledger::TitleStamp, reset_fm_reading};
 
   /// A creator's labels are written back as plain characters: authblk's `\author[D. Kopta et al.]` keeps the label
   /// `affiliation:D._Kopta_et_al.` (`clean_label`, Perl Package.pm:510), whose `_` the digested `annotations=` value read
@@ -3944,7 +3944,7 @@ mod tests {
   /// frontmatter per paper, never the engine). The count changes with the entries alone (`Ledger::entries_mut`).
   #[test]
   fn the_reset_drops_the_reading_and_its_count() {
-    reset_fm_shadow();
+    reset_fm_reading();
     with_ledger(|ledger| {
       ledger.push(Entry::Title(TitleStamp {
         index:  0,
@@ -3963,7 +3963,7 @@ mod tests {
         cuts:       Vec::new(),
       }));
     });
-    reset_fm_shadow();
+    reset_fm_reading();
     with_ledger(|ledger| {
       assert!(ledger.analysis.is_none());
       assert_eq!(ledger.generation(), 0);
@@ -3977,7 +3977,7 @@ mod tests {
   /// synthetic input reproduces.
   #[test]
   fn a_digested_queue_entry_is_never_written_again() {
-    reset_fm_shadow();
+    reset_fm_reading();
     let call = |index: usize, text: &'static str| {
       let command = TokenizeInternal!(text);
       Entry::Api(ApiCall {
@@ -4034,7 +4034,7 @@ mod tests {
     };
     let (items, _) = items_to_emit(&resolved, &[], &BTreeSet::new(), &mut Vec::new());
     let texts: Vec<&str> = items.iter().map(|item| item.assoc.text.as_str()).collect();
-    reset_fm_shadow();
+    reset_fm_reading();
     assert_eq!(texts, ["Kept note"]);
   }
 }

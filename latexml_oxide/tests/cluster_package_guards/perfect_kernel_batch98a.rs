@@ -3,7 +3,7 @@
 //! and Perl read it — the observer writer's "a name naming no person" decline reads the separator after the heading
 //! too, not only the one before it (B1, 2206.00684); and a control word inside an `\altaffilmark` list is no label of the
 //! observer's request, as it is none of the binding's key (B3, astro-ph0105133: one helper,
-//! `relocate::mark_spelling_printed`). Each guard converts its repros under the shadow switch in process and with the
+//! `relocate::mark_spelling_printed`). Each guard converts its repros in process and with the
 //! binary, eager and `--streaming` (`perfect_kernel_batch92a::assert_reading`), and asserts the XML's whole creator set
 //! with every contact, the reading's tuples, the writer's outcome, the default mode writing the same, and no Error or
 //! Warning. Every repro compiles clean with pdflatex (TL 2025; svjour with 0710.5369's svjour.cls and svepj.clo).

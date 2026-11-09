@@ -1,18 +1,19 @@
 //! Guards for FM S2a.2 r6: the frontmatter observer's resolver on the r5 landing review's findings (revfms2a2_5) and the
 //! main session's decisions 2 and 3 of 2026-10-22 (OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r6"; KERNEL_CAPABILITIES
-//! K23), in shadow mode. Each shape was red on r5 (the int63a code, 410a2a85e8): a replaced `\author` call's footnote
+//! K23). Each shape was red on r5 (the int63a code, 410a2a85e8): a replaced `\author` call's footnote
 //! mark taking the text built before it (finding 1, 2510.26354), a printed glyph dropped from a name (finding 2,
 //! 1706.00234), a note's inner links given to its owner whoever they name (decision 2: 2001.02600, 1803.04996,
 //! 2504.08644, 2602.13176), a braced `{a,b,c}@x` group in an `\institute` entry given whole to every owner (decision 3),
 //! an address list's note never placed (finding 6). Every probe compiles clean with pdflatex (TL 2025) and converts with
 //! no Error or Warning, and the XML is byte-identical with the switch on and off.
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::fm_shadow_json;
+use latexml_engine::base_utilities::fm_reading_json;
 use serde_json::Value;
 
-/// Convert `tex` under the shadow switch, asserting a clean conversion: the whole dump.
+/// Convert `tex`, asserting a clean conversion: the whole dump.
 fn dump(tex: &str) -> Value {
-  let (log, _, json) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| fm_shadow_json());
+  let (log, _, json) =
+    convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| fm_reading_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   super::perfect_kernel_batchfms2a1::parsed(&json)
 }

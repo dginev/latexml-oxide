@@ -8,13 +8,13 @@
 //! error and an error of the rehearsal alone.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::fm_shadow_json;
+use latexml_engine::base_utilities::fm_reading_json;
 use serde_json::{Value, json};
 
-/// Convert `tex` under the shadow switch: the log, the XML and the dump.
+/// Convert `tex`: the log, the XML and the dump.
 pub(super) fn run(tex: &str) -> (String, String, Value) {
   let (log, xml, json) =
-    convert_files_with_setup_then(tex, &[], Some("ar5iv.sty"), || {}, |_| fm_shadow_json());
+    convert_files_with_setup_then(tex, &[], Some("ar5iv.sty"), || {}, |_| fm_reading_json());
   (log, xml, serde_json::from_str(&json).expect("the dump"))
 }
 

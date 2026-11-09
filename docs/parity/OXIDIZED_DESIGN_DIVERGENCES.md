@@ -23666,7 +23666,7 @@ repro, 2401.16957's `,\inst` shape and the SYNC rows 46-48, 53, 62, 64, 66 shape
 fill, footnotemark labels and `\and` commands, the `inside` flags; the stamper's provenance and base; XML and log
 unchanged by the switch; the CLI dump only under it, 0 errors and 0 warnings; r3, review revfms2a1_2: placement
 arguments, rebound line breaks, the `&` column, the title-footnote hook, a font switch inside a run, an `\input`'s
-spans; engine unit test `shadow::tests::deferred_block_reports_the_journal_not_the_flush`); repros `sectioning-frontmatter/observer_*`
+spans; engine unit test `reading::tests::deferred_block_reports_the_journal_not_the_flush`); repros `sectioning-frontmatter/observer_*`
 (the four symbol-line and mark-macro ones RED for their output, the S2b targets: witness 2304.13998's shape and the
 design probes; `observer_rehearsal_aftergroup_stays_inside` and `observer_fill_gap_and_footnotemark_labels` GREEN, the
 review's probes), `class-bindings/gretsi_v13_shared_mark_affiliation` (2508.03934).
@@ -24476,7 +24476,7 @@ give-backs and `keep_as_today` (95b r3's unwritten-family calls, with the setter
 read-back `read_back_frontmatter`, `CHANGE_TAGS`, the ledger's census fields (`refusal`, `compared`, `read_back`,
 `authors_queued`) and the per-family `Policy::written` (#925, #948). The census goes with it: `LATEXML_FM_SHADOW` (`=1`
 and the observer-off `=0`), `set_fm_shadow_override`, the CLI's `<dest>.fmshadow.json` and `ab_audit fmshadow`. The
-observer records and reads every paper; the ledger's JSON (`fm_shadow_json`) stays as the guards' in-process view of
+observer records and reads every paper; the ledger's JSON (`fm_reading_json`) stays as the guards' in-process view of
 the reading. Guards deleted: the switch's byte-identity checks (`batchfms2a2::{resolver_leaves_the_xml_unchanged,
 r3_shapes_leave_the_xml_unchanged}`, `batchfms2a2r6`/`r7`/`r8`'s `r*_shapes_leave_the_xml_unchanged` with the fixtures
 only they read — 2506.07978's and 2604.19097's AASTeX shape among them —,
@@ -26900,7 +26900,7 @@ label a binding records for `key` once later input is read (`set_label_ref`, one
 fills `cas:<label>` and `cas@current` from its entry counter), and expands to it where the queued entry is digested, at
 the flush. The flush's readers of the queued keyvals before the digestion read the same text (`resolve_label_refs`,
 label_refs.rs): `digest_front_matter` resolves the queue's attribute maps (`place.rs`'s `author_labels`, legends and
-`sequenced_contact_labels`), and the observer's flush (`shadow_flush`) the ledger's block keyvals and API attributes
+`sequenced_contact_labels`), and the observer's flush (`read_at_flush`) the ledger's block keyvals and API attributes
 (`blocks.rs`'s requests, the resolver's labelled-author test, `api.rs`), so the dump holds the letters and an offline
 re-resolve reads them too. On r2 the readers saw the raw reference as single-character requests and the shadow
 misread every letter-labelled author whose entry came after it (2303.00352, 2603.22658: every affiliation gone;
@@ -27334,7 +27334,7 @@ the output is the old reader's.
   the clear (the kernel `\author`'s replacing call, which its `replace` already covers); a cleared call is no
   resolver input, a cleared block's creators are replaced as a replacing call's are. The dump writes `"cleared":true`.
   A flag, not an epoch counter: a clear is scoped by tag and role. The queue's epoch counts every real flush, read or
-  not (`shadow_flush`; in default mode an early `\maketitle` reads nothing but empties the queue: review rev92a_r1 S2).
+  not (`read_at_flush`; in default mode an early `\maketitle` reads nothing but empties the queue: review rev92a_r1 S2).
 
 Guards: `perfect_kernel_batch92a::{a_mark_of_refs_requests_every_key, a_written_family_reads_every_key_of_a_mark_of_refs,
 a_publication_note_email_is_placed_by_the_chain, a_publication_note_reads_only_its_email_calls,
@@ -27356,7 +27356,7 @@ a_note_email_of_no_bindings_meaning_stays_the_notes_text, a_frontmatter_clear_re
 `amsart_thanks_before_every_author_email`);
 `resolver::tests::fuzzy_labels_and_their_letters` (the ref-list split), `resolver::tests::a_note_piece_names_a_creator_only_when_it_is_their_name`
 (the name test), `resolver::tests::intake_takes_creator_calls_only`
-(`resolver_call`); `shadow::tests::a_flush_that_reads_nothing_still_counts`; `ab_audit`
+(`resolver_call`); `reading::tests::a_flush_that_reads_nothing_still_counts`; `ab_audit`
 `fmshadow::tests::a_dump_with_clears_publication_notes_and_ref_lists_re_resolves_to_itself` (the dump reader).
 Residual (today's XML, the old reader, stage 7): `\inst{2,\ref{ic}}` keeps the `2` in the name and loses its
 institute; `$^{\ref{ia},\ref{ic}}$` stays a formula in the name (Perl the same); the reading is pdflatex's.

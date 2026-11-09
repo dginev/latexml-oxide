@@ -232,7 +232,7 @@ pub(in crate::base_utilities) struct ApiCall {
   /// empty for an entry of its own (`\lx@add@frontmatter`)
   pub parent:         String,
   /// the entry's content (its command's last argument, inside the affiliation wrappers), and its events once the
-  /// flush rehearsed it (`shadow::shadow_flush`; empty before)
+  /// flush rehearsed it (`reading::read_at_flush`; empty before)
   pub content:        Tokens,
   pub events:         Vec<Event>,
   /// whether a flush rehearsed its content
@@ -311,7 +311,7 @@ pub(in crate::base_utilities) struct Ledger {
   /// the emitter's reading of `entries` and its checks, made at a generation (`emitter::emit::analysis`): kept while they
   /// read the same, dropped with the ledger (a conversion's start: no reading outlives its conversion, review revN1r2)
   pub analysis:   Option<Rc<Analysis>>,
-  /// the frontmatter flushes so far (`shadow::shadow_flush`)
+  /// the frontmatter flushes so far (`reading::read_at_flush`)
   pub flushes:    usize,
   /// the writer's outcome for a written family's paper (`writer::write_observed_frontmatter`): `same` (today's reads
   /// as the reading), `written` (including a paper written with its e-mail calls each kept one contact, where their
@@ -449,8 +449,7 @@ const OWNED: usize = OWNED_COMMANDS.len();
 
 thread_local! {
   /// For each of [`OWNED_COMMANDS`], the compiled binding that defined its current meaning, with that meaning itself
-  /// ([`note_binding_load`]; held, so its identity is `Rc::ptr_eq`'s and no later definition can take its address),
-  /// under the shadow switch only.
+  /// ([`note_binding_load`]; held, so its identity is `Rc::ptr_eq`'s and no later definition can take its address),.
   static OWNERS: RefCell<[Owner; OWNED]> = const { RefCell::new([const { None }; OWNED]) };
   /// The document class's compiled bindings: the first class binding loaded outside any other binding's load, and every
   /// binding its load loaded (`report.cls`; iopart.cls's `iopart_support.sty`), in load order; and how deep the loads
@@ -779,7 +778,7 @@ fn out_of_positions(real_base: usize, len: usize) -> bool {
   real_base + len > usize::from(AUTHOR_PROV_POS_MASK)
 }
 
-/// Record an `\author`-family call (`hook`, with `stuff` its argument), under the shadow switch only — whether it was
+/// Record an `\author`-family call (`hook`, with `stuff` its argument) — whether it was
 /// recorded late ([`AuthorBlock::late`]).
 pub(in crate::base_utilities) fn record_author_call(
   hook: &'static str,
@@ -921,7 +920,7 @@ pub(in crate::base_utilities) fn projected_is_stamped(
 }
 
 /// Record a queued creator, contact or note of the frontmatter API (`queue_front_matter`: its tag, its attributes and
-/// its command), under the shadow switch only: a binding's single-author call (`\lx@add@creator`, `\lx@add@author`:
+/// its command): a binding's single-author call (`\lx@add@creator`, `\lx@add@author`:
 /// authblk's unlabelled `\author{Bob}`) is an API call too, unless a block's own expansion made it. Its content (the
 /// command's last argument, inside the affiliation wrappers) is kept for the flush to rehearse.
 pub(in crate::base_utilities) fn record_api_call(
@@ -1253,8 +1252,8 @@ fn record_unprinted_call(attr: Option<&KeyVals>, command: &Tokens) {
   });
 }
 
-/// Record a clear of the frontmatter queue (`dequeue_front_matter`: `\lx@clear@frontmatter{tag}[role=…]`), under the
-/// shadow switch only: the API calls it removes — of its tag and every attribute it names, queued since the last flush,
+/// Record a clear of the frontmatter queue (`dequeue_front_matter`: `\lx@clear@frontmatter{tag}[role=…]`): the
+/// API calls it removes — of its tag and every attribute it names, queued since the last flush,
 /// as the dequeue matches the queue's entries — are cleared, and so are, for a creator clear of the authors, the
 /// author blocks queued before it, save the one whose own expansion makes the clear (the kernel `\author`'s replacing
 /// call, which its `replace` covers). llncs's `\author` given twice — an anonymous or template one, then the real
@@ -1332,7 +1331,7 @@ pub(in crate::base_utilities) fn record_author_body_end() {
 }
 
 /// Record that the frontmatter API's Cut took an uncut copy of a printed list it cut out of the queue (`content`, a
-/// contact of `role`: `affiliations::place_uncut_copies`), under the shadow switch only: the first such call queued
+/// contact of `role`: `affiliations::place_uncut_copies`): the first such call queued
 /// since the last flush and not cleared is cleared, as [`record_clear`] clears the calls a dequeue removes.
 pub(in crate::base_utilities) fn record_cut_copy(role: &str, content: &Tokens) {
   if !records_now() {
@@ -1372,8 +1371,8 @@ fn last_attr<'a>(attrs: &'a str, key: &str) -> &'a str {
     .unwrap_or("")
 }
 
-/// Record a footnote's text (`\lx@notetext`'s whatsit, once digested: `\footnotetext[<n>]{…}`), under the shadow switch
-/// only, after an author block or the title (whose `\footnotemark` it may answer: `\title{…\footnotemark[1]}`
+/// Record a footnote's text (`\lx@notetext`'s whatsit, once digested: `\footnotetext[<n>]{…}`),
+/// after an author block or the title (whose `\footnotemark` it may answer: `\title{…\footnotemark[1]}`
 /// `\footnotetext[1]{Based on observations …}`, 1111.4983): its printed mark, its counter value and its body's events
 /// (the body is digested for real, so nothing is rehearsed — only read).
 pub fn record_note_text(whatsit: &Whatsit) {
@@ -1418,7 +1417,7 @@ pub fn record_note_text(whatsit: &Whatsit) {
 /// A call's label with its parameterless macros written out — `fuzzy:\lx@aas@correspondent` is "fuzzy:Bob Baker", aastex's
 /// `\email` after a `\correspondingauthor` (aastex_cls.rs `\lx@aas@email@corresp`; 2506.07978, whose label spelled no
 /// one and went to the block): the label today's `\lx@annotate@frontmatter@now` reads once the flush digests its
-/// keyvals. A pure lookup of each macro's token body, nothing run through the gullet: the shadow changes no state.
+/// keyvals. A pure lookup of each macro's token body, nothing run through the gullet: the reading changes no state.
 /// Bounded by the tokens visited (macros expanding to nothing included, [`LABEL_VISITS`]) and the depth (8).
 fn label_text(value: &Tokens) -> String {
   fn written(tokens: &[Token], depth: usize, visited: &mut usize, out: &mut Vec<Token>) {

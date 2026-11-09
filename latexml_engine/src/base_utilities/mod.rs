@@ -94,7 +94,7 @@ LoadDefinitions!({
   defs::frontmatter_fields::load()?;
   defs::author_macros::load()?;
   defs::tags_refnums::load()?;
-  // (the frontmatter observer's event constructors, used only by its shadow rehearsal: OXIDIZED_DESIGN_DIVERGENCES #837)
+  // (the frontmatter observer's event constructors, used only by its rehearsal: OXIDIZED_DESIGN_DIVERGENCES #837)
   rehearsal::load()?;
 });
 

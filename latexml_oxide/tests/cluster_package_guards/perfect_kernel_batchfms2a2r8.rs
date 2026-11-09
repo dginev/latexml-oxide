@@ -1,5 +1,5 @@
 //! Guards for FM S2a.2 r8: the frontmatter observer's resolver on the r7 landing review's findings (revfms2a2_7) and the
-//! main session's decisions on r7's questions (OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r8"), in shadow mode. Each shape
+//! main session's decisions on r7's questions (OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r8"). Each shape
 //! was red on r7 (458382f335): a note placed once every name is read came after the later ones (finding 1), a note no
 //! name holds gave its only link to the block (finding 2, decision 4), a repository or a file under an author's account
 //! became that author's url (finding 3, decision 1: 2008.12970, 2511.08416, 2103.05251, 2503.02954, 2509.01952),
@@ -10,14 +10,14 @@
 //! byte-identical with the switch on and off.
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::{
-  FmEvent, FmEventKind, FmInput, FmResolved, fm_resolve, fm_shadow_json,
+  FmEvent, FmEventKind, FmInput, FmResolved, fm_reading_json, fm_resolve,
 };
 use serde_json::Value;
 
-/// Convert `tex` (beside `files`) under the shadow switch, asserting a clean conversion: the whole dump.
+/// Convert `tex` (beside `files`), asserting a clean conversion: the whole dump.
 fn dump_with(tex: &str, files: &[(&str, &str)]) -> Value {
   let (log, _, json) =
-    convert_files_with_setup_then(tex, files, Some("ar5iv.sty"), || {}, |_| fm_shadow_json());
+    convert_files_with_setup_then(tex, files, Some("ar5iv.sty"), || {}, |_| fm_reading_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   super::perfect_kernel_batchfms2a1::parsed(&json)
 }

@@ -1,5 +1,5 @@
-//! Guards for batch FM S2a.2: the frontmatter observer's resolver and the families' conventions, in shadow mode
-//! (OXIDIZED_DESIGN_DIVERGENCES #837; KERNEL_CAPABILITIES K23). Under the shadow switch (here the thread's override)
+//! Guards for batch FM S2a.2: the frontmatter observer's resolver and the families' conventions,
+//! (OXIDIZED_DESIGN_DIVERGENCES #837; KERNEL_CAPABILITIES K23). Read whole,
 //! the ledger's blocks and API calls are resolved into the tuples `ab_audit fmshadow` compares with the XML — each
 //! creator's name without its marks, its affiliations, contacts and notes, the author block's own — each with the rule
 //! that decided it; the guards assert those tuples and rules for the design probes (symbol lines, a user mark macro),
@@ -14,14 +14,14 @@
 //! compiles clean with pdflatex (TL 2025; the aa and svjour3 probes with 1809.08354's aa.cls and 0807.3898's
 //! svjour3.cls, which TeX Live lacks) and converts with no Error or Warning.
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::fm_shadow_json;
+use latexml_engine::base_utilities::fm_reading_json;
 use serde_json::Value;
 
 use super::perfect_kernel_batchfms2a1::reading_only;
 
-/// Convert `tex` (with `preload`) under the shadow switch, asserting a clean conversion: the dump's `resolved`.
+/// Convert `tex` (with `preload`), asserting a clean conversion: the dump's `resolved`.
 pub(super) fn resolved(tex: &str, preload: Option<&str>) -> Value {
-  let (log, _, json) = convert_with_setup_then(tex, preload, || {}, |_| fm_shadow_json());
+  let (log, _, json) = convert_with_setup_then(tex, preload, || {}, |_| fm_reading_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let json: Value = super::perfect_kernel_batchfms2a1::parsed(&json);
   json["resolved"].clone()
@@ -372,7 +372,7 @@ fn notes_labels_and_contacts() {
     "\\documentclass{article}\n\\usepackage{url}\n\\begin{document}\n\\title{T}\n\\author{Ann Able\\thanks{Corresponding author.\\protect\\label{fn:a}} \\and Bob Baker\\thanks{\\protect\\url{https://b.org}} \\and Cat Cole\\thanks{}\\\\ office@x.org}\n\\maketitle\nSee \\ref{fn:a}.\n\\end{document}\n",
     Some("ar5iv.sty"),
     || {},
-    |_| fm_shadow_json(),
+    |_| fm_reading_json(),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let json: Value = serde_json::from_str(&json).expect("json");
@@ -520,7 +520,7 @@ fn author_sequence_labels_place_their_contacts() {
 
 /// Item 4: Perl's prefix fallback (Base_Utility.pool.ltxml:891-900): elsarticle's `\fnref{l1}` requests `fn:l1`,
 /// which answers `\address[l1]` past the prefix (1712.00945; pdflatex prints footnote 1 there and the address apart,
-/// today's XML and the shadow read the misuse as Perl does).
+/// today's XML and the reading read the misuse as Perl does).
 #[test]
 fn prefix_fallback_answers_a_mismatched_label() {
   assert_eq!(
