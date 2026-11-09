@@ -405,16 +405,12 @@ pub(in crate::base_utilities::frontmatter::observer) fn read_events(
 /// ends the block read as lines under them: a row Break before it and its content the lines it prints, at the top level
 /// — `\author{Ann Able and Bob Baker \begin{center}Department of Physics and Astronomy\end{center}}` prints the
 /// department centred under both names, every name's of the row, its "and" no separator (R12; 2609.17357, 2609.01563,
-/// 2609.33831). The old driver's rule (`fallback::trailing_alignment_environment_as_lines`, which writes `\\` and the
+/// 2609.33831). The deleted old driver's rule (`trailing_alignment_environment_as_lines`, which wrote `\\` and the
 /// environment's content) on the digested container: one at the top level (nest 0) with an event before it and no ink
 /// past its content; a Break already before it is the line's own. Its container goes with it, as the old rule drops the
 /// environment, so its lines are lines of their own, not one print unit (`Resolver`'s open group). One that opens the
-/// block is a wrapper the lines read through (their Breaks part them at any nest: 2609.01563). With the emitter's switch
-/// on alone (`Resolver::emitting`): the switch-off output stays as it was until the flip.
+/// block is a wrapper the lines read through (their Breaks part them at any nest: 2609.01563).
 fn trailing_alignment_as_lines(events: &[Event]) -> Vec<Event> {
-  if fm_emit_mode() != 2 {
-    return events.to_vec();
-  }
   // (the environment a container is, by the command its role names: `\\begin{center}`)
   let alignment = |e: &Event| {
     let environment = e.role.as_deref().and_then(|role| role.split_once("begin{"));
@@ -530,16 +526,11 @@ struct Resolver {
   /// per creator of a block: that block's queue (its `epoch`); the creators a later block replaced
   epoch_of:           Vec<Option<usize>>,
   replaced:           Vec<usize>,
-  /// the creators each queued author entry made (`start..end`), in queue order: a block's or a creator call's, under
-  /// `LATEXML_FM_EMIT=2` (`whole_entries`), where each call queues one entry, a block whole (`author_entries`)
+  /// the creators each queued author entry made (`start..end`), in queue order: a block's or a creator call's, each call
+  /// queuing one entry, a block whole (`author_entries`)
   entries:            Vec<(usize, usize)>,
-  whole_entries:      bool,
   /// the block being read's creator calls' labels (`Input::Block::calls`)
   call_labels:        Vec<Vec<String>>,
-  /// the emitter's switch is on (`LATEXML_FM_EMIT=2`, as `whole_entries`): the reading's rules only its output may move yet,
-  /// the switch-off output as it was until the flip (brief LO1: a line's other text by its row, a line's addresses by the
-  /// address reader; brief LO2: a row line's address its holder's, an entry's trailing note its holders')
-  emitting:           bool,
   /// whether the block being read replaces the authors queued before it (the document's `\\author`, `Input::Block`'s
   /// `replace`): a URL line under all its names is the block's (`Resolver::block`)
   block_replaces:     bool,
@@ -547,7 +538,7 @@ struct Resolver {
   block_markers:      Vec<u16>,
   /// the flush's one contact declaring a run and sharing (`_share=authors,annotate=run`: cas's unlabelled
   /// `\affiliation`), every author's as `shared_row::share_row_contacts` shares it — with two or more, each its run's
-  /// (2201.00009, 2506.17280, 2106.02306; 2202.06096). Under `emitting` only
+  /// (2201.00009, 2506.17280, 2106.02306; 2202.06096)
   sole_shared_run:    bool,
   /// a note's links, and the notes they may empty, placed once every name is read (`answer_note_links`)
   note_links:         Vec<NoteLink>,
@@ -691,9 +682,7 @@ impl Resolver {
       epoch_of:           Vec::new(),
       replaced:           Vec::new(),
       entries:            Vec::new(),
-      whole_entries:      fm_emit_mode() == 2,
       call_labels:        Vec::new(),
-      emitting:           fm_emit_mode() == 2,
       block_replaces:     false,
       block_markers:      Vec::new(),
       sole_shared_run:    false,
@@ -850,13 +839,9 @@ impl Resolver {
   }
 
   /// The queue's author entries, each the live creators it made, in queue order, as an `author:N` label names the N-th
-  /// (`queued_author_marks`' positions at the call, the N-th digested author's label): under `LATEXML_FM_EMIT=2` one a call, a
-  /// block's whole entry its names (`whole_block_call`), an entry a later call dequeued none; else one a creator, as the old
-  /// reader queued them (the live ones, `label_owners`).
+  /// (`queued_author_marks`' positions at the call, the N-th digested author's label): one a call, a block's whole entry
+  /// its names (`whole_block_call`), an entry a later call dequeued none.
   fn author_entries(&self) -> Vec<Vec<usize>> {
-    if !self.whole_entries {
-      return self.live().into_iter().map(|c| vec![c]).collect();
-    }
     self
       .entries
       .iter()
@@ -1150,14 +1135,13 @@ pub fn resolve_with(
   let mut resolver = Resolver::new();
   let mut policy: &'static Policy = &policy::KERNEL;
   // (counted across the whole queue, as `share_row_contacts` counts them)
-  resolver.sole_shared_run = resolver.emitting
-    && inputs
-      .iter()
-      .filter(|input| {
-        matches!(input, Input::Api { tag, attrs, .. } if tag == "ltx:contact" && shares_a_run(attrs))
-      })
-      .count()
-      == 1;
+  resolver.sole_shared_run = inputs
+    .iter()
+    .filter(|input| {
+      matches!(input, Input::Api { tag, attrs, .. } if tag == "ltx:contact" && shares_a_run(attrs))
+    })
+    .count()
+    == 1;
   for input in inputs {
     match input {
       Input::Block {
@@ -1174,9 +1158,7 @@ pub fn resolve_with(
         markers,
       } => {
         policy = conventions(binding, hook);
-        if resolver.emitting {
-          resolver.read_note_legends(events, None);
-        }
+        resolver.read_note_legends(events, None);
         resolver.call_labels.clone_from(calls);
         resolver.line_column = None;
         resolver.block_addresses.clear();
@@ -1224,7 +1206,7 @@ pub fn resolve_with(
         events,
       } => {
         let start = resolver.out.creators.len();
-        if resolver.emitting && tag == "ltx:contact" && role == "note" {
+        if tag == "ltx:contact" && role == "note" {
           resolver.read_note_legends(events, Some(attr_value(attrs, "_mark").unwrap_or("")));
         }
         resolver.api(*index, tag, role, attrs, events, policy);

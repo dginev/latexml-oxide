@@ -1,6 +1,6 @@
 //! The one added step at the flush (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`, Route D; OXIDIZED_DESIGN_DIVERGENCES
-//! #980), on by default (`LATEXML_FM_EMIT=0` the old driver until its deletion, [`fm_emit_mode`]): for a paper with an
-//! author block read, the queued creators and their annotations are replaced by Perl's own calls built from the reading
+//! #980), the one engine since the old driver's deletion: for a paper with an author block read, the queued creators and
+//! their annotations are replaced by Perl's own calls built from the reading
 //! (`Resolved`) — `\lx@add@frontmatter@now{ltx:creator}`,
 //! `\lx@annotate@frontmatter@now{ltx:creator}{ltx:contact}`, `\lx@add@thanks` — the owners by Perl's `label=` and
 //! `annotations=`. What Perl's `\lx@add@authors` (Base_Utility.pool.ltxml:687) cuts with `SplitTokens` at the call, this
@@ -2991,14 +2991,14 @@ fn warn_net(key: &str, what: &str) {
 /// The flush's added step: `commands`' creators and their annotations replaced by calls built from the reading. Whether
 /// it did.
 pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter>) -> Result<bool> {
-  if fm_emit_mode() == 0 || rehearsal::rehearsing() {
+  if rehearsal::rehearsing() {
     return Ok(false);
   }
   if let Some(why) = stays_out() {
     DebugFeature!("frontmatter", "FRONT emit stays out: {why}");
     // (with no reader cutting at the call, a block no rehearsal read is Perl's whole-block creator, its queued entry: 2204.09614,
     // a block past the positions)
-    if fm_emit_mode() == 2 && why != NO_BLOCK {
+    if why != NO_BLOCK {
       if lookup_mapping(EMITTED_ITEMS, "unread").is_none() {
         assign_mapping(EMITTED_ITEMS, "unread", Some(Stored::Bool(true)));
         Warn!(
@@ -3840,7 +3840,7 @@ fn command_fingerprint(command: &Tokens) -> u64 {
 /// calls late (`\\lx@frontmatter@late`) — writes none of its items again. memsait's `\\@opening` note, which the safety net
 /// queues for a flush with no author block yet and whose digestion runs `\\title` and `\\author` (astro-ph9808358).
 pub(in crate::base_utilities) fn take_digested(commands: &[RawFrontmatter]) {
-  if fm_emit_mode() != 2 || rehearsal::rehearsing() {
+  if rehearsal::rehearsing() {
     return;
   }
   if commands.is_empty() {

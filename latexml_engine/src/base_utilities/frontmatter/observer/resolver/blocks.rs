@@ -39,12 +39,12 @@ impl Resolver {
       Chain::Line => rule,
       Chain::DocumentNote { .. } => s!("api:document-note {rule}"),
     };
-    // (with the emitter's switch on (`emitting`; the switch-off output stays as it was, brief LO1) by the address reader,
-    // which reads a list of local parts sharing one domain where it opens the line or a part spells an author: `{\it
+    // (by the address reader, which reads a list of local parts sharing one domain where it opens the line or a part
+    // spells an author: `{\it
     // pzou94, ozel, suresh@gwu.edu}` under three names, 2003.14069 — two of them nameless notes; spelling assigns them,
     // position where it fails, below)
     let addresses = addresses_in(text);
-    let addresses = if self.emitting {
+    let addresses = {
       let spells = |local: &str| self.spelled(&s!("{local}@x.org"), candidates).is_some();
       let read: Vec<String> = address_runs(text, &spells)
         .into_iter()
@@ -57,8 +57,6 @@ impl Resolver {
       } else {
         addresses
       }
-    } else {
-      addresses
     };
     if addresses.is_empty() {
       let (owner, rule) = match candidates {
@@ -195,12 +193,9 @@ impl Resolver {
     // reads it, its addresses the API's as off's are, so the reading ends there and no entry goes on over it — it
     // continued `$^2$Univ B` onto the e-mail line, and wrote "Univ B" twice (the entry by its text, the split's call)
     // and the addresses as an affiliation, 2501.02356)
-    let events = match self
-      .emitting
-      .then(|| address_section(&self.block_markers, events))
-    {
-      Some(Some(end)) => &events[..end],
-      _ => events,
+    let events = match address_section(&self.block_markers, events) {
+      Some(end) => &events[..end],
+      None => events,
     };
     let events = &read_events(events);
     let lines = lines_of(events, and_inline);
@@ -360,10 +355,8 @@ impl Resolver {
       // `(\ddag)` institutes, no author's marks, stay in the authors' affiliation as before, not a nameless creator's)
       // (only where an entry is open above it, which the line continues — Perl's `if (@entries)`; else, an e-mail
       // entry above or none, it stays the symbol line it was: `*Corresponding Author: Ayodeji Olalekan Salau (…)` under
-      // the `\textsuperscript{7}\texttt{…}` addresses is no names row, 2510.01302. With the emitter's switch on alone,
-      // `emitting`)
-      let unrequested_glyph = self.emitting
-        && carried.is_some()
+      // the `\textsuperscript{7}\texttt{…}` addresses is no names row, 2510.01302)
+      let unrequested_glyph = carried.is_some()
         && first_ink.is_some_and(|e| {
           e.kind == EventKind::Mark
             && e.role.as_deref() == Some("text")
@@ -576,8 +569,7 @@ impl Resolver {
               // `\href{https://www.google.com}{Google}`, `dispatch.rs`'s `link_prints_an_institution` (`href_prints_an_institution`), user ruling R12
               // 2026-10-20, the r5 re-review's u38, review revFB2a finding 3. A lone name's URL is its own, the group's
               // only author's — FIDELITY_CHARTER §4)
-              if self.emitting
-                && self.block_replaces
+              if self.block_replaces
                 && above.len() > 1
                 && contact_parts(contact).0 == "url"
                 && above
@@ -653,9 +645,8 @@ impl Resolver {
             let mixed = asked.contains(&true);
             // (a line of notes under a labelled entry is that entry's line, as today's one `\\`-joined contact: its notes
             // the block's, as Perl digests them in the contact (`\lx@add@pubnote@thanks`), one `<pubnote>` each — `$^{2}$Univ
-            // B, City\\ \thanks{Equal contribution.}` gave the last name the thanks, review revLO2 base; with the emitter's
-            // switch on alone, `emitting`)
-            let entry_line = self.emitting && matches!(carried, Some(Continued::Pending(_)));
+            // B, City\\ \thanks{Equal contribution.}` gave the last name the thanks, review revLO2 base)
+            let entry_line = matches!(carried, Some(Continued::Pending(_)));
             for (note, asked) in notes.into_iter().zip(asked) {
               if mixed && !asked {
                 self.note(index, note, None, "note:line-owner note:unrequested");
@@ -794,12 +785,8 @@ impl Resolver {
             .any(|address| spelled_name(&[rest.as_str()], address).is_some());
           let one_row =
             !run.is_empty() && lines.iter().all(|l| l.column == 0) && !after_labelled && !one_owner;
-          // (with the emitter's switch on alone, `emitting`: the switch-off output stays as it was, brief LO1)
-          let row_line = self.emitting
-            && other_ink
-            && !own_name
-            && !only_addresses(&text)
-            && (continues_above || one_row);
+          let row_line =
+            other_ink && !own_name && !only_addresses(&text) && (continues_above || one_row);
           if !addresses_in(&text).is_empty()
             && !row_line
             && (only_addresses(&text) || !is_institution(&beside))
@@ -859,7 +846,7 @@ impl Resolver {
           // `Dresden, Saxony 01062, Germany (martin.waltz@tu-dresden.de)` under Martin Waltz, written whole with the
           // address on int146a's LO1 (review revLO1 1); `Ann Able and Bob Baker\\ Univ A\\ Present address: Dept X, Univ Y
           // (ann.able@y.org)`, Ann's e-mail and both authors' text without it (revLO1 2). Only an address printed last on
-          // its line, so the emitter cuts the rest from its tokens; with the emitter's switch on alone, `emitting`)
+          // its line, so the emitter cuts the rest from its tokens)
           // (every address printed last: no other ink between or after them — `Dresden, Germany (bob.baker@a.org); Leipzig
           // (bob@b.org)` keeps its reading, review revLO2 3; the emitter's cut ends at the first one, `prefix_tokens`)
           let own_ink = || {
@@ -879,7 +866,7 @@ impl Resolver {
               .map(|_| strip_address_runs(&text, &runs))
               .filter(|rest| rest.chars().any(char::is_alphanumeric))
           };
-          let held = (self.emitting && one_owner && other_ink && !own_name)
+          let held = (one_owner && other_ink && !own_name)
             .then(own_ink)
             .flatten();
           let text = match (owners.iter().next(), held) {
@@ -1010,19 +997,14 @@ impl Resolver {
       // where `\thanks` is `\lx@add@pubnote@thanks` (Base_Utility.pool.ltxml:332), and prints it once, a `<pubnote>` held by
       // no author — 2504.09745's `$^{\ddagger}$Ericsson Canada\thanks{This work was supported …}`; the switch off prints it
       // once per author its contact is relocated to (two pubnotes there), the emitter's switch on before this a nameless
-      // creator's note and the entry written with the note in it (review revLO2 1). The entry's span ends before it; read
-      // with the emitter's switch on alone, `emitting`)
-      let trailing = if self.emitting {
-        entry
-          .events
-          .iter()
-          .rev()
-          .take_while(|e| !inked(e) || e.kind == EventKind::Note)
-          .filter(|e| e.kind == EventKind::Note)
-          .count()
-      } else {
-        0
-      };
+      // creator's note and the entry written with the note in it (review revLO2 1). The entry's span ends before it)
+      let trailing = entry
+        .events
+        .iter()
+        .rev()
+        .take_while(|e| !inked(e) || e.kind == EventKind::Note)
+        .filter(|e| e.kind == EventKind::Note)
+        .count();
       // (an entry of notes alone keeps them, as before)
       let trailing = if trailing < entry.events.iter().filter(|e| inked(e)).count() {
         trailing
@@ -1145,7 +1127,7 @@ impl Resolver {
 
   /// A line continuing the entry above it, an unmarked one or one a glyph no name requests leads: its text the entry's
   /// ([`Self::continue_entry`]); its notes, under a labelled entry, the block's, as a line of notes alone under it
-  /// (`$^{2}$Univ B\\ Funded by X.\thanks{Grant 5.}`, review revLO2 base; `emitting`), else the name's above it.
+  /// (`$^{2}$Univ B\\ Funded by X.\thanks{Grant 5.}`, review revLO2 base), else the name's above it.
   fn continue_line<'e>(
     &mut self,
     index: usize,
@@ -1155,7 +1137,7 @@ impl Resolver {
     above: Option<usize>,
   ) {
     self.continue_entry(carried, text);
-    let (owner, rule) = if self.emitting && matches!(carried, Continued::Pending(_)) {
+    let (owner, rule) = if matches!(carried, Continued::Pending(_)) {
       (None, "note:line-owner note:entry")
     } else {
       (above, "note:line-owner")
@@ -1306,10 +1288,8 @@ impl Resolver {
     for inner in &contacts {
       // (an e-mail call of a binding's meaning is no guess: its code routes the address to the current author, the note's
       // owner, as Perl's API does, `\lx@add@email`, and the note written prints it nowhere — siamart's `\thanks{…,
-      // \email{wning@vt.edu}, \email{amiedlar@vt.edu}.}`, 2511.14713; REVTeX's; main-session ruling 2026-11-08. With the
-      // emitter's switch on alone, `emitting`)
-      let routed = self.emitting
-        && owner.is_some()
+      // \email{wning@vt.edu}, \email{amiedlar@vt.edu}.}`, 2511.14713; REVTeX's; main-session ruling 2026-11-08)
+      let routed = owner.is_some()
         && inner.role.as_deref() == Some("email")
         && inner.meaning == EmailMeaning::Binding;
       let (role, text) = contact_parts(inner);
@@ -1389,7 +1369,7 @@ impl Resolver {
       return;
     }
     let live = self.live();
-    let numbered = self.emitting && !note.footnote && numbered_thanks(note);
+    let numbered = !note.footnote && numbered_thanks(note);
     // (one such `\thanks` holding several marked entries, `\thanks{$^{1}$UC Berkeley, $^{2}$Toyota Motor North America,
     // $^{3}$Princeton university}`: each its own entry by its mark, as the switch off cuts it — 2509.19480, 2206.07648,
     // where the whole stayed one note of the last name. Its lexed text cut before each top-level mark (`mark_led_pieces`, the API
@@ -1504,14 +1484,12 @@ impl Resolver {
       // carrier it spells (FIDELITY_CHARTER §4's symbol-line rule; the switch-off note keeps them in its text, every
       // address on the note's owner): IEEEtran journal's `\thanks{\IEEEauthorrefmark{1}The authors are with …, E-mails:
       // a@, b@, c@}`, 1610.05419, 2405.06709 — review revP2 finding 1)
-      let role = if (self.emitting && !numbered && addresses_in(&legend).is_empty())
-        || is_legend_text(&legend)
-        || symbol
-      {
-        "legend"
-      } else {
-        "affiliation"
-      };
+      let role =
+        if (!numbered && addresses_in(&legend).is_empty()) || is_legend_text(&legend) || symbol {
+          "legend"
+        } else {
+          "affiliation"
+        };
       self.pending.push((labels.clone(), symbol, Assoc {
         role:   role.into(),
         text:   legend.clone(),
@@ -1557,8 +1535,7 @@ fn raised_mark(e: &Event) -> bool {
 
 /// A `\thanks` whose text opens with a raised number: what `\lx@add@thanks` re-routes as affiliations, each segment
 /// its raised marks part it into an `\lx@affiliation@withsup` entry labelled by its mark (frontmatter_fields.rs
-/// `\lx@add@thanks`, `starts_with_affiliation_mark`, OXIDIZED_DESIGN #52; `split_wrapped_affiliation_marks`). Read with
-/// the emitter's switch on alone (`emitting`).
+/// `\lx@add@thanks`, `starts_with_affiliation_mark`, OXIDIZED_DESIGN #52; `split_wrapped_affiliation_marks`).
 fn numbered_thanks(note: &Event) -> bool {
   note
     .inner

@@ -14,7 +14,7 @@ use latexml_core::{
   state::{
     fallback_meaning_origin, frontmatter_setter_calls, lookup_catcode, open_frontmatter_setter,
   },
-  token::{AUTHOR_PROV_POS_MASK, FIELD_PROV_POS_MASK, field_prov},
+  token::{AUTHOR_PROV_POS_MASK, field_prov},
 };
 
 use super::{
@@ -311,46 +311,43 @@ pub(in crate::base_utilities) enum Entry {
 #[derive(Debug, Default)]
 pub(in crate::base_utilities) struct Ledger {
   /// its entries, in call order: read by [`Self::entries`], changed only by [`Self::entries_mut`], which counts the change
-  entries:          Vec<Entry>,
+  entries:        Vec<Entry>,
   /// the changes to `entries` so far: what the emitter's reading of them is made at ([`Self::analysis`]), counted by
   /// [`Self::entries_mut`] alone, which a caller takes only to change them
-  generation:       u64,
+  generation:     u64,
   /// the emitter's reading of `entries` and its checks, made at a generation (`writer::emit::analysis`): kept while they
   /// read the same, dropped with the ledger (a conversion's start: no reading outlives its conversion, review revN1r2)
-  pub analysis:     Option<Rc<Analysis>>,
-  /// the positions the projected blocks took beyond the field's own stamps, together: what [`out_of_positions`] counts
-  /// with the emitter's switch off
-  pub shadow_extra: usize,
+  pub analysis:   Option<Rc<Analysis>>,
   /// the frontmatter flushes so far (`shadow::shadow_flush`)
-  pub flushes:      usize,
+  pub flushes:    usize,
   /// the writer's outcome for a written family's paper (`writer::write_observed_frontmatter`): `same` (today's reads
   /// as the reading), `written` (including a paper written with its e-mail calls each kept one contact, where their
   /// write-out declined, `writer::give_back_listed`), `written-different: …` (what was written still differs, the
   /// writer's own defect) or `declined: …` (a difference no operation explains, today's kept — also where keeping the
   /// e-mail calls whole leaves today's as it was: the write-out the reading wanted, declined; and where an unwritten
   /// family's items kept as today's leave it so, `writer::keep_as_today`); none where the writer did not run
-  pub writer:       Option<String>,
+  pub writer:     Option<String>,
   /// the contacts recorded that print nothing, in call order ([`UnprintedCall`])
-  pub unprinted:    Vec<UnprintedCall>,
+  pub unprinted:  Vec<UnprintedCall>,
   /// the contents' texts ([`content_text`]) of the queued creator calls the emitter took out of the queue that no
   /// recorded call is (a stand-in binding's copy's, [`records_now`]), in queue order: what the content check counts them
   /// by (`writer::emit::emit_commands`, `resolver::placed::content_check`)
-  pub unrecorded:   Vec<ContentText>,
+  pub unrecorded: Vec<ContentText>,
   /// what a list setter call the emitter wrote replaces as its clear (`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`)
   /// would at the block, which pdflatex never prints: an affiliation call queued before the block (its ledger index, no
   /// span) and an earlier setter call of a block (the block's index and the call's span) — what the content check counts
   /// no word of (`writer::emit::replaced_by_setter`, `resolver::placed::content_check`; review revDEL3 S1)
-  pub replaced:     BTreeSet<(usize, Option<(u16, u16)>)>,
+  pub replaced:   BTreeSet<(usize, Option<(u16, u16)>)>,
   /// the census's (E0): why the writer's plan or re-part refused, its first refusal or the writer's own decline — what
   /// `writer: declined …` counts under in `ab_audit fmshadow`'s closed list (`writer::note_refusal`)
-  pub refusal:      Option<String>,
+  pub refusal:    Option<String>,
   /// the census's (E0): the reading the writer last compared today's with, its give-backs applied: what the read-back
   /// compares the final document with where the writer got that far (`writer::read_back_frontmatter`)
-  pub compared:     Option<Resolved>,
+  pub compared:   Option<Resolved>,
   /// the census's (E0): the read-back at the end of `insert_frontmatter`, none where it never got there
-  pub read_back:    Option<ReadBack>,
+  pub read_back:  Option<ReadBack>,
   /// the entries the last binding's `\author` body made, a later `\author` clears them ([`record_author_body_clear`])
-  author_body:      (usize, usize),
+  author_body:    (usize, usize),
 }
 
 impl Ledger {
@@ -366,22 +363,19 @@ impl Ledger {
   }
 
   /// Its entries in `range` that `picks` picks, each changed by `change`, a change counted ([`Self::entries_mut`]) only
-  /// where one is picked with the emitter's switch on, whose reading is kept while the entries read the same
-  /// ([`Self::analysis`]); with the switch off, which keeps no reading, changed in one pass, unread first (review revLO2 5:
-  /// the new code does no work with the switch off).
+  /// where one is picked, the emitter's reading being kept while the entries read the same ([`Self::analysis`]).
   pub(in crate::base_utilities) fn change_each(
     &mut self,
     range: std::ops::Range<usize>,
     picks: impl Fn(&Entry) -> bool,
     mut change: impl FnMut(&mut Entry),
   ) {
-    if fm_emit_mode() == 2
-      && !self
-        .entries
-        .iter()
-        .take(range.end)
-        .skip(range.start)
-        .any(&picks)
+    if !self
+      .entries
+      .iter()
+      .take(range.end)
+      .skip(range.start)
+      .any(&picks)
     {
       return;
     }
@@ -842,12 +836,9 @@ fn list_setter_called(stuff: &Tokens) -> Option<&'static str> {
 const LIST_CLEAR: &str = "\\lx@clear@frontmatter";
 
 /// Whether a block of `len` tokens whose positions start where the field's stamps end (`real_base`) is out of positions
-/// ([`Stamp::Overflow`]): the call alone past the author field's 15 bits (`token::AUTHOR_PROV_POS_MASK`), or, with the
-/// emitter's switch off, the field's calls together (`extra`, [`Ledger::shadow_extra`]) past the 14 bits of the stamps, as
-/// before positions were per call — that path's blocks read as they were, its output unmoved.
-fn out_of_positions(real_base: usize, extra: usize, len: usize) -> bool {
+/// ([`Stamp::Overflow`]): the call alone past the author field's 15 bits (`token::AUTHOR_PROV_POS_MASK`).
+fn out_of_positions(real_base: usize, len: usize) -> bool {
   real_base + len > usize::from(AUTHOR_PROV_POS_MASK)
-    || (fm_emit_mode() == 0 && real_base + extra + len > usize::from(FIELD_PROV_POS_MASK))
 }
 
 /// Record an `\author`-family call (`hook`, with `stuff` its argument), under the shadow switch only — whether it was
@@ -908,11 +899,9 @@ pub(in crate::base_utilities) fn record_author_call(
     let mut block = block;
     block.index = ledger.entries().len();
     block.epoch = ledger.flushes;
-    if out_of_positions(real_base, ledger.shadow_extra, len) {
+    if out_of_positions(real_base, len) {
       block.stamp = Stamp::Overflow;
       block.range = (0, 0);
-    } else {
-      ledger.shadow_extra += len;
     }
     let entries = ledger.entries_mut();
     for entry in entries.iter_mut() {
@@ -970,26 +959,13 @@ pub(in crate::base_utilities) fn note_field_stamp(field_id: u16, base: Option<us
     {
       return;
     }
-    let projected = block.stamp == Stamp::Projected;
-    if projected {
-      ledger.shadow_extra -= len;
-    }
     let Some(Entry::Author(block)) = ledger.entries_mut().get_mut(at) else {
       return;
     };
-    match base {
-      Some(base) => {
-        block.stamp = Stamp::Kernel;
-        block.range = (base, base + len);
-      },
-      // (past the stamps' positions, which with the emitter's switch off are the field's together, as before positions were
-      // per call: [`out_of_positions`])
-      None if fm_emit_mode() == 0 => {
-        block.stamp = Stamp::Overflow;
-        block.range = (0, 0);
-      },
-      // (else the call's own, projected, as a binding's)
-      None => {},
+    // (past the stamps' positions, none: the call's own, projected, as a binding's)
+    if let Some(base) = base {
+      block.stamp = Stamp::Kernel;
+      block.range = (base, base + len);
     }
     // (the kernel block's own calls are all digested once the mark is reached)
     block.window_open = false;
@@ -1122,7 +1098,7 @@ pub(in crate::base_utilities) fn record_api_call(
       inside_events: Box::default(),
       cleared: false,
       errors: 0,
-      command: (fm_emit_mode() != 0).then(|| command.clone()),
+      command: Some(command.clone()),
     }));
   });
 }

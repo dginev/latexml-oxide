@@ -146,13 +146,13 @@ pub(in crate::base_utilities) fn read_back_frontmatter(document: &mut Document) 
 }
 
 /// The content invariant's check on the placed output (`resolver::placed`; the safety net's bar (2)), the last step of
-/// `insert_frontmatter` under `LATEXML_FM_EMIT=2` only: the words the ledger's author blocks and creator calls printed
+/// `insert_frontmatter`: the words the ledger's author blocks and creator calls printed
 /// against the placed creators' (their names, contacts and notes, as [`dom::read`] reads them; a publication note's, a title's
 /// note's and a contact's label holding a word too), each finding counted in one Warning per paper naming its words — a printed word or
 /// address the output lacks (1605.03019's `IDSIA`), one placed more often than printed (2607.00684's `mtablo@postech.ac.kr`
 /// twice, 2506.02663's footnote junk). It counts; it changes nothing.
 pub(in crate::base_utilities) fn check_placed_content(document: &mut Document) {
-  if fm_emit_mode() != 2 || rehearsal::rehearsing() {
+  if rehearsal::rehearsing() {
     return;
   }
   let front = dom::read(document);

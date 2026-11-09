@@ -147,13 +147,9 @@ impl Resolver {
               .copied()
               .filter(|c| under.as_ref().is_none_or(|holders| holders.contains(c)))
               .collect();
-            // (with the emitter's switch on, the switch-off step's whole reading, its legends too: `listed_corresponding`;
-            // what the call prints, `zq77@x.org (Corresponding author)`, 2308.06532)
-            if self.emitting {
-              self.listed_corresponding(&candidates, &assoc.text)
-            } else {
-              self.corresponding(&candidates)
-            }
+            // (the switch-off step's whole reading, its legends too: `listed_corresponding`; what the call prints,
+            // `zq77@x.org (Corresponding author)`, 2308.06532)
+            self.listed_corresponding(&candidates, &assoc.text)
           },
         },
       };
@@ -668,7 +664,7 @@ impl Resolver {
         if !special(&request)
           && !entry_labels.contains(&b)
           && (digit_entries || !b.chars().all(|c| c.is_ascii_digit()))
-          && let Some(parts) = parted_label(&b, &entry_labels, true, self.emitting)
+          && let Some(parts) = parted_label(&b, &entry_labels, true, true)
         {
           let parts = sub_labels(parts, &entry_labels, &numbered);
           let alphanumeric = b.chars().all(char::is_alphanumeric);
@@ -1141,11 +1137,11 @@ impl Resolver {
       }
       let mut owners: Vec<usize> = Vec::new();
       for label in &labels {
-        // (under `LATEXML_FM_EMIT=2` the queue held each call whole: a position names a call's entry, and an address the call
-        // could place by no name it held apart, the block's, is the one live creator's it spells, as the names read here say)
+        // (the queue holds each call whole: a position names a call's entry, and an address the call could place by no
+        // name it held apart, the block's, is the one live creator's it spells, as the names read here say)
         let named = match label.strip_prefix("author:") {
-          Some(n) if self.whole_entries => self.entry_owners(n, &assoc),
-          _ if self.whole_entries && label == "addresses:block" && assoc.role == "email" => {
+          Some(n) => self.entry_owners(n, &assoc),
+          _ if label == "addresses:block" && assoc.role == "email" => {
             self.spelled(&assoc.text, &live).into_iter().collect()
           },
           _ => label_owners(&self.out.creators, &live, label),
@@ -1155,9 +1151,8 @@ impl Resolver {
           // own: a column of entries alone is no author's column, its label the whole block's as the switch off reads
           // the `\and` columns as lines (`affil_splits`), CVPR's `\author{Tianyu Huang$^{1}$ \and … \and $^{1}$The
           // Chinese University of Hong Kong \and $^{2}$University of Pennsylvania \and $^{1}${\tt …}}`, 2404.00915, whose
-          // entries went to a nameless creator. With the emitter's switch on alone, `emitting`)
-          let own_names =
-            !self.emitting || columns[at].is_some_and(|column| self.column.contains(&Some(column)));
+          // entries went to a nameless creator)
+          let own_names = columns[at].is_some_and(|column| self.column.contains(&Some(column)));
           if scoped[at].contains(label) && own_names && self.column[owner] != columns[at] {
             continue;
           }
@@ -1447,9 +1442,7 @@ impl Resolver {
       // `\affiliation{$\dag$Departamento de Ciencias Básicas, UAM-A}` under names showing `$^*$` is Luévano's, 0906.0396;
       // amsart's undeclared `\address{$^1$Texas A\&M University at Qatar}` under unmarked names is Alonso's, 2111.15565 —
       // both were a nameless creator's, the two give-backs above too narrow; 1202.3425's revtex marks stay a RED)
-      // (with the emitter's switch on alone, `emitting`)
       if owners.is_empty()
-        && self.emitting
         && assoc.role != "legend"
         && let Some((_, placed)) = self.piled.iter().find(|(p, _)| *p == at)
         && !placed.is_empty()
@@ -2086,8 +2079,7 @@ impl Resolver {
           label:     run.label.clone(),
         })
         .collect();
-      if self.emitting
-        && let Some(source) = source
+      if let Some(source) = source
         && take_labels(
           &lined,
           &mut taken_runs,
