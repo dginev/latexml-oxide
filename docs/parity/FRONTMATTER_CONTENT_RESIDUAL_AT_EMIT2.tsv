@@ -1,0 +1,245 @@
+source	id	distinct_words_lost	sample (words the off output holds that =2 lacks; text nodes, math excluded, contact names counted on =2)
+dev3_10k	hep-th0001181	16	them effective hk evidence 99 itep ep 2000 some kk pacs th
+dev3_10k	2503.02741	16	university mathematics 2025 wu faculty vienna munich lodron paris ag bmw salzburg
+dev3_10k	2207.11475	5	unité recherche du 3681 mixte
+dev3_10k	1508.04057	5	anganathan yler amp hruv oster
+dev3_10k	1202.2048	5	18a 18d 36e 17c 18b
+dev3_10k	1802.00231	4	iitkgp3 iitk5 iitkgp1 animeshm4
+dev3_10k	astro-ph0507388	3	road dh1 3le
+dev3_10k	2511.22023	3	school yin chen
+dev3_10k	1509.04564	3	êthe êroyal êschool
+dev3_10k	1211.4334	3	cb deb ab
+dev3_10k	hep-lat0209073	2	role annotate
+dev3_10k	2510.14949	2	footnote footnotes
+dev3_10k	2401.16110	2	cnnormalsize normalsizewangli
+dev3_10k	2111.10422	2	il lab
+dev3_10k	1903.05770	2	address mail
+dev3_10k	1703.07863	2	address mail
+dev3_10k	1005.2532	2	123 45
+dev3_10k	0809.4508	2	address mail
+dev3_10k	2609.24170	1	github
+dev3_10k	2506.12014	1	234
+dev3_10k	2211.16970	1	http
+dev3_10k	2004.00316	1	amp
+dev3_10k	1703.06483	1	ˆ1
+devh10k	0704.3909	52	43 49 55 65 72 70 77 38 52 75 71 78
+devh10k	hep-ex0503048	47	49 48 69 54 38 18 63 67 68 59 73 62
+devh10k	cond-mat9906335	14	presence reveal bm jb increasingly hc resonance despite reflects hs interaction 60
+devh10k	1905.11425	11	edu mark gatech e3 maguluriabel e2 shengzhang chenabel zchen458 zhangabel e1
+devh10k	math0608476	7	abel url edu wisc u1 math u2
+devh10k	2005.05034	4	ihep zhanl cn ac
+devh10k	1808.03136	4	school mathematics engineering department
+devh10k	cs0701193	3	antoine david laurent
+devh10k	2501.13826	3	github videommmu io
+devh10k	2401.09232	3	hk970213 stu xjtu
+devh10k	2211.07344	3	ethz ch inf
+devh10k	1901.02012	3	edu apturner wati
+devh10k	1202.4757	3	edu bgrinstein jffortin
+devh10k	2603.14273	2	zhangjh325 zhang
+devh10k	2508.21449	2	affiliations emails
+devh10k	2502.09135	2	textte texttext
+devh10k	1803.11263	2	addressii eilil
+devh10k	quant-ph0202124	1	ab
+devh10k	hep-ph0501043	1	glozmaninstitute
+devh10k	2605.20682	1	19
+devh10k	2601.14051	1	aa
+devh10k	2409.13684	1	helenjin
+devh10k	2104.14107	1	235
+devh10k	2101.10595	1	emails
+devh10k	2012.15142	1	ˆ1
+devh10k	2006.13494	1	st
+devh10k	0810.5446	1	efg
+devh10k	0711.0037	1	amp
+dev20k	2101.10506	16	edu mark gatech e2 rombergabel khodadadianabel thinhdoan ece e1 e3 doanabel maguluriabel
+dev20k	1910.13756	15	were issue hedla18 special accepted kurashiki okayama process virtual japan respective 12th
+dev20k	1411.6693	15	university rongcheng statistics science technology mathematics northeast changchun campus normal harbin school
+dev20k	2604.04523	9	ac kr junguk16 syeonp siung98 jessica314 leejinho scm8432 iamksj1212
+dev20k	2507.05173	6	university shanghai jiao zhejiang institute tong
+dev20k	2506.23648	6	163 cn edu gzhongshan1986 szu xinyang
+dev20k	2107.01557	6	17235 neustrelitz ariasmedina now 95616 07745
+dev20k	2503.17070	5	xx member october senior september
+dev20k	2209.04003	5	edu ucsb ziy zzhang01 junnanshan
+dev20k	1311.5811	5	center academy discovery niels bohr
+dev20k	1307.4424	5	snu kr ac nkang tdd502
+dev20k	hep-th0606194	4	smallpkssp uksmall insmall smallvhsatheeshkumar
+dev20k	2608.24435	4	eng uk ac ox
+dev20k	2204.11008	4	tech shawnwang phdweishao gmail
+dev20k	1607.08403	3	department faculty school
+dev20k	1211.2861	3	down elucidate properties
+dev20k	1202.0315	3	selin department cenberci
+dev20k	1009.3685	3	afg ah fg
+dev20k	hep-th0304189	2	april 2003
+dev20k	cond-mat0204589	2	astronomy university
+dev20k	astro-ph0507347	2	collaboration warner
+dev20k	2509.11260	2	qinghao ei
+dev20k	2508.03305	2	wpi skcm
+dev20k	1910.05600	2	trang elizabeth
+dev20k	1803.10887	2	address mail
+dev20k	1707.04744	2	address mail
+dev20k	1706.04764	2	yuchenli smu
+dev20k	1510.01440	2	ruobing wu
+dev20k	1503.00123	2	bc ad
+dev20k	1409.5204	2	address mail
+dev20k	1301.7749	2	bc ab
+dev20k	nucl-th0505022	1	atomic
+dev20k	hep-th0205152	1	2002
+dev20k	cs0701186	1	um
+dev20k	cond-mat0212162	1	mail
+dev20k	astro-ph0405319	1	esa
+dev20k	astro-ph0103299	1	johnsonand
+dev20k	2605.09461	1	12
+dev20k	2604.05343	1	footnote
+dev20k	2604.02118	1	fillers
+dev20k	2511.13422	1	amp
+dev20k	2504.21411	1	fuccchengff
+dev20k	2408.04913	1	affiliations
+dev20k	2407.03689	1	ue
+dev20k	2406.10808	1	456
+dev20k	2403.03814	1	stanford
+dev20k	2307.15584	1	nbinder
+dev20k	2303.09779	1	corresp
+dev20k	2211.03175	1	technology
+dev20k	2202.13081	1	ieeemembership
+dev20k	2107.08807	1	addr
+dev20k	2002.00523	1	authorend
+dev20k	1812.08627	1	kuzovlevkuzovlev
+dev20k	1810.13282	1	ae
+dev20k	1603.06146	1	avenida
+dev20k	1602.08319	1	mail
+dev20k	1601.01610	1	january
+dev20k	1511.03982	1	adrià
+dev20k	1510.06299	1	amp
+dev20k	1507.04774	1	aroy
+dev20k	1504.06306	1	ab
+dev20k	1503.05912	1	amp
+dev20k	1107.2462	1	steyversark
+dev20k	1002.0851	1	ac
+dev20k	0905.1266	1	cd
+dev20k	0904.3899	1	university
+dev20k	0812.5018	1	ab
+longtail3k	1402.4810	23	united further serrano alfonso america its instaled negra surface www http org
+longtail3k	2404.13552	21	works resale redistribution lists personal advertising reprinting republishing collective new 3456048 purposes
+longtail3k	2401.16967	11	supported nsfc project funds 12288101 12301523 research central universities 413000117 fundamental
+longtail3k	2007.15921	9	research grant foundation national africa south 121931 supported work
+longtail3k	2602.03744	5	iucrorcidlink iucremaillink iucrcemaillink 0009 nl
+longtail3k	2501.12093	5	es josefrancisco josef decasso alumnos
+longtail3k	astro-ph0406399	2	cogia tude
+longtail3k	2110.01613	2	mail address
+longtail3k	1910.04695	2	github edge
+longtail3k	1801.09857	2	mail address
+longtail3k	1711.00782	2	mail address
+longtail3k	1101.1197	2	mail address
+longtail3k	1004.3867	2	mail address
+longtail3k	astro-ph0011251	1	maolil
+longtail3k	2205.07248	1	via
+longtail3k	1302.0034	1	uwe
+longtail3k	0810.1880	1	amp
+ab_pop125a	1311.0012	2	der universität
+ab_pop125a	2012.14750	43	49 54 50 41 28 38 29 67 35 34 64 25
+ab_pop125a	hep-ex0103033	2	24 27
+ab_pop125a	hep-ex0409040	52	52 40 49 46 65 61 36 60 72 45 42 66
+ab_pop125a	hep-ex0612013	50	50 43 49 72 65 55 52 44 71 62 70 77
+ab_pop125a	hep-th0302032	5	fr univ pew uni tpi
+ab_pop125a	1409.0597	2	simons joseph
+ab_pop125a	2605.13069	2	国家网络安全学院 武汉大学
+ab_pop125a	hep-ph0502035	1	ab
+ab_pop125a	2102.11899	1	footnote
+ab_pop125a	q-bio0611012	1	amp
+ab_pop125a	2002.09363	1	footnote
+ab_pop125a	2108.11766	8	gmail nat de rer com dr uni duerr
+ab_pop125a	2601.12698	1	1ï1
+ab_pop125a	2601.14329	1	黄馨瑶
+ab_pop125a	2010.15047	1	23
+ab_pop125a	1603.08231	8	authoriii authoriv authorii authorv addressiv addressv addressii addressiii
+ab_pop125a	2305.15057	3	ethz ch inf
+ab_pop125a	1707.00624	2	lt gt
+ab_pop125a	2006.03859	2	mail address
+ab_pop125a	1707.09900	1	amp
+ab_pop125a	2503.00968	3	ric dé fré
+ab_pop125a	2605.02506	1	equal
+ab_pop125a	2008.05775	2	mail address
+ab_pop125a	2607.29185	1	internship
+ab_pop125a	2011.06659	5	campus rau assistant federal rua
+ab_pop125a	2304.10630	4	elikechi avid unson mar
+ab_pop125a	hep-ph9402347	2	xx xxxxxxxxl
+ab_pop125a	2609.31446	3	germany munich group
+ab_pop125a	2402.16140	2	member fellow
+ab_pop125a	1212.6638	2	mail address
+ab_pop125a	2507.16792	1	amp
+ab_pop125a	1201.2976	1	moradifamjanuary
+ab_pop125a	1211.3996	6	school mn minneapolis 55455 minnesota umn
+ab_pop125a	1305.3804	2	institute turkey
+ab_pop125a	2608.17538	3	sa edu dipietro
+ab_pop125a	2609.14496	1	innovation
+ab_pop125a	1706.05664	1	ohamaasao
+ab_pop125a	1507.02405	1	agga
+ab_pop125a	2408.01858	1	max
+ab_pop125a	astro-ph0309039	8	esa observatory chile inc aura collected southern european
+ab_pop125a	2508.08170	1	coo
+ab_pop125a	2508.21091	1	equalcorres
+ab_pop125a	2609.00161	2	aaai corrmultitrue
+ab_pop125a	0711.2174	1	bd
+ab_pop125a	1007.2355	2	brookhaven collaboration
+ab_pop125a	1101.4098	1	etc
+ab_pop125a	1310.3420	1	university
+ab_pop125a	1403.3888	1	amp
+ab_pop125a	1406.5876	2	rtd edu
+ab_pop125a	1706.00602	1	footnote
+ab_pop125a	1904.02213	1	rtd
+ab_pop125a	1904.07135	4	ch uzh lmu feray
+ab_pop125a	2206.01959	4	hust gssi edu cn
+ab_pop125a	2305.12056	1	amp
+ab_pop125a	2410.09616	1	apt
+ab_pop125a	2410.08879	4	ipp ac yfwang cn
+ab_pop125a	2509.25166	1	armijoc
+ab_pop125a	1001.2603	17	edu caltech university institute ie hong tsinghua gmail cuhk tho com tdikal
+ab_pop125a	1402.2906	1	aufnt
+ab_pop125a	1611.02001	3	seong lyun konstantinos
+ab_pop125a	2209.15337	1	yunxi
+ab_pop125a	2306.17536	17	editor behnke associate mm partially revised june received accepted publication reviewers comments
+ab_pop125a	2311.15269	9	ustc edu cn mail chengli7 saemal xugb fanyang yomia
+ab_pop125a	2503.04159	2	nd rd
+ab_pop125a	2607.15547	12	school engineering sydney electrical university australia telecommunications wales 2052 south nsw new
+ab_pop125a	1810.08035	2	senior student
+ab_pop125a	2408.06274	7	grant competitive supported program 20122022fd4125 development faculty
+ab_pop125a	hep-th9306034	1	address
+ab_pop125a	2205.12847	2	speaker email
+ab_pop125a	hep-ex0412056	2	3a 2a
+ab_pop125a	2011.05971	1	kuleuven
+ab_pop125a	2206.00320	8	cn ac cc edu hjl xtu smail sdr
+ab_pop125a	1301.1466	12	http abel url www edu u1 ac webee uchicago people u2 u5
+ab_pop125a	1808.09392	1	comma
+ab_pop125a	2002.11711	2	sunshuai gmail
+ab_pop125a	2405.06973	1	affiliations
+ab_pop125a	2602.18351	1	affiliations
+ab_pop125a	2601.17318	1	comma
+ab_pop125a	2604.26688	1	affiliations
+ab_pop125a	cond-mat0204571	1	engineering
+ab_pop125a	cond-mat9801109	8	wide setting draw mimic map discuss tries models
+ab_pop125a	cond-mat9805088	1	strada
+ab_pop125a	cond-mat9809277	7	revealed 87 40 sized 60 numbers pacs
+ab_pop125a	cond-mat9909213	5	investigated stabilization external based calculated
+ab_pop125a	hep-ph9810367	1	ll
+ab_pop125a	nlin0104051	1	footnote
+ab_pop125a	2511.01971	3	kcl uk ac
+ab_pop125a	1408.4577	2	org cn
+ab_pop125a	1602.06080	2	wangzhm ac
+ab_pop125a	2002.03368	3	liuyz249 sina com
+ab_pop125a	2405.13308	2	undefined thefnmark
+ab_pop125a	1502.03487	1	email
+ab_pop125a	1904.03776	2	tbd doi
+ab_pop125a	1307.2761	1	mironov
+ab_pop125a	1202.2889	1	harvard
+ab_pop125a	2103.05801	1	special
+ab_pop125a	2112.06251	4	authoriv authorv addressiv addressv
+ab_pop125a	2609.32756	1	amp
+ab_pop125a	2506.10896	1	andtwo
+ab_pop125a	1703.00628	4	007 pune bag ganeshkhind
+ab_pop125a	astro-ph0507171	7	school physics 9jt now ls2 astronomy uk
+ab_pop125a	astro-ph0511220	4	universita infn ifsi torino
+ab_pop125a	0710.2705	31	national university taiwan department electrical science engineering graduate acknowledge ohio funding cairo
+ab_pop125a	1509.08572	2	memory work
+ab_pop125a	1906.10509	1	uk
+ab_pop125a	2212.03638	1	informatics
+ab_pop125a	2606.18393	18	usa department cities mn minneapolis 55455 proving equally contributed aberdeen 21005 ground
+ab_pop125a	1708.05281	4	symeon bjorn sumei björn
