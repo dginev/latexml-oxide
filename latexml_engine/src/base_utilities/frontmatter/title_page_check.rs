@@ -797,14 +797,15 @@ fn undigested_queued(called: &[CalledText], content: &Tokens) -> Option<usize> {
 /// `}`, the count of tokens between each `{` it holds and that `}` (every `{`, the final group's and those inside it
 /// or before it: the comparison does not ask that the content be balanced).
 fn content_lengths(command: &[Token]) -> impl Iterator<Item = usize> + '_ {
-  let closed = command
-    .last()
-    .is_some_and(|t| t.get_catcode() == Catcode::END);
   command
     .iter()
     .enumerate()
-    .take(if closed { command.len() - 1 } else { 0 })
-    .filter(|(_, t)| t.get_catcode() == Catcode::BEGIN)
+    .take(if closes(command) {
+      command.len() - 1
+    } else {
+      0
+    })
+    .filter(|(_, t)| opens(t))
     .map(move |(at, _)| command.len() - at - 2)
 }
 
@@ -875,9 +876,21 @@ const DROPPED_THANKS: &str = r"\long\def\thanks#1{ #1 }";
 /// Is `content` the content of the queued invocation `command` (`…{<content>}`, its last argument)?
 fn queued_content_is(command: &Tokens, content: &Tokens) -> bool {
   let (command, content) = (command.unlist_ref(), content.unlist_ref());
-  content_lengths(command).any(|length| length == content.len())
+  command.len() >= content.len() + 2
+    && closes(command)
+    && opens(&command[command.len() - content.len() - 2])
     && command[command.len() - content.len() - 1..command.len() - 1] == *content
 }
+
+/// Does the queued invocation `command` end in a `}` ([`queued_content_is`])?
+fn closes(command: &[Token]) -> bool {
+  command
+    .last()
+    .is_some_and(|t| t.get_catcode() == Catcode::END)
+}
+
+/// Is `token` a `{` ([`queued_content_is`])?
+fn opens(token: &Token) -> bool { token.get_catcode() == Catcode::BEGIN }
 
 /// How many distinct words the spill notes hold (`SPILLED`), for `--debug=frontmatter`.
 fn spilled_word_count() -> usize { SPILLED.with_borrow(|spilled| spilled.words.len()) }
