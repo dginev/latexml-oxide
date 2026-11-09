@@ -53,9 +53,12 @@ pub(in crate::base_utilities) fn note_frozen_entry(tag: &str, command: &Tokens) 
 /// Whether a rehearsal is digesting now (the ledger records nothing of it).
 pub(in crate::base_utilities) fn rehearsing() -> bool { REHEARSING.with(Cell::get) }
 
-/// No rehearsal is digesting (a conversion's start: one a panic left marked on a reused thread is over).
+/// No rehearsal is digesting (a conversion's start: one a panic left marked on a reused thread is over), nor is a class's
+/// own e-mail command being printed for its label (one a panic inside the print left set would turn off every later
+/// conversion's label reading on the thread: [`own_email_properties`], review revX2 4).
 pub(in crate::base_utilities) fn reset_rehearsing() {
   REHEARSING.with(|r| r.set(false));
+  READING_OWN_EMAIL.set(false);
   field_notes_end();
   reset_rehearsal_budget();
 }

@@ -84,24 +84,25 @@ fn a_line_printed_per_author_is_no_loss() {
 }
 
 /// A contact's label, its `name`, is the label's words, never its text's: the document's `\email` printing `Email: `, which
-/// the rehearsal's `\email` doesn't print, is no excess (2307.11138's mpi2015-cscpreprint.cls, 1602.07570).
+/// the rehearsal's `\email` doesn't print, is no excess (2307.11138's mpi2015-cscpreprint.cls, 1602.07570). The label is
+/// the contact's `name`, printed once: the content, the `\email` call, drops it (CL10; it read `name="Email: "` beside
+/// `Email: ann@a.org`, the label rendered twice — review revX2 2).
 #[test]
 fn a_class_label_in_a_name_is_no_excess() {
   let (log, xml) = run(repro!("emit_content_a_class_label_in_a_name"), 2);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(content_checks(&log), (vec![], vec![]), "{log}");
   assert_eq!(creators(&xml), [
-    row(&[
-      "Ann Able",
-      "affiliation=Univ A, Town",
-      "email=Email: ann@a.org"
-    ]),
-    row(&[
-      "Bob Baker",
-      "affiliation=Univ B, City",
-      "email=Email: bob@b.org"
-    ]),
+    row(&["Ann Able", "affiliation=Univ A, Town", "email=ann@a.org"]),
+    row(&["Bob Baker", "affiliation=Univ B, City", "email=bob@b.org"]),
   ]);
+  assert_eq!(
+    xml
+      .matches("<contact name=\"Email: \" role=\"email\">")
+      .count(),
+    2,
+    "{xml}"
+  );
 }
 
 /// Under `=2` the flush reads every paper as the census does: llncs's `\institute`, a creator call of a paper with no author

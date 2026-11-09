@@ -4220,6 +4220,11 @@ pub(in crate::base_utilities) fn insert_frontmatter_entry(
     insert_frontmatter_rec(document, item)?;
   }
   drop_trailing_paragraph_breaks(document, &opened);
+  if tag == "ltx:contact" && attr.contains_key(NAME_PRINTED) {
+    drop_printed_name(document, &opened);
+    let mut contact = opened.clone();
+    contact.remove_attribute(NAME_PRINTED).ok();
+  }
   // Scoped close (OXIDIZED_DESIGN #202): a deferred body that ran to the end
   // of the input carries the `\end{document}` whatsit (an unbalanced
   // `\abstract{…`, #207); absorbing it here closes the document — and this
@@ -4234,6 +4239,82 @@ pub(in crate::base_utilities) fn insert_frontmatter_entry(
   // At this time, the frontmatter element should really carry the actual literal values intended.
   // (Perl PR #2767 disables the former empty-element pruning here.)
   Ok(())
+}
+
+/// The key of an e-mail contact whose content prints its `name` before the address: a class's own command printing its
+/// label with it (jfm/jpp's `\def\email#1{Email address for correspondence: #1}`, 2603.18265, 2310.05678; a document's
+/// `\def\email#1{E-mail: #1}`), the label read off its print as the name (`observer::rehearsal`'s own e-mail
+/// properties) and the call written as the content, by the frontmatter emitter under `=2` only. The name is taken out of
+/// the content once as it is placed ([`drop_printed_name`]): label text is markup, printed once (FIDELITY_CHARTER; review
+/// revX2 2, whose `name="E-mail: "` beside `E-mail: bob@bee.org` rendered the label twice).
+pub(in crate::base_utilities) const NAME_PRINTED: &str = "_nameprinted";
+
+/// Takes `contact`'s `name` out of the front of its text, once, with the spaces after it ([`NAME_PRINTED`]): the text
+/// nodes it spans, each emptied one and each wrapper it leaves empty removed. Nothing where the text does not open with
+/// the name, its spaces aside, or where an element printing no text (a break, a formula) comes before its end.
+fn drop_printed_name(document: &mut Document, contact: &Node) {
+  let Some(name) = contact.get_attribute("name") else {
+    return;
+  };
+  let label: Vec<char> = name.chars().filter(|c| !c.is_whitespace()).collect();
+  if label.is_empty() {
+    return;
+  }
+  fn texts(node: &Node, out: &mut Vec<Option<Node>>) {
+    for child in node.get_child_nodes() {
+      match child.get_type() {
+        Some(NodeType::TextNode) => out.push(Some(child)),
+        Some(NodeType::ElementNode) if child.get_name() != "Math" => texts(&child, out),
+        Some(NodeType::ElementNode) => out.push(None),
+        _ => {},
+      }
+    }
+  }
+  let mut nodes = Vec::new();
+  texts(contact, &mut nodes);
+  let mut matched = 0;
+  let mut cuts: Vec<(Node, usize)> = Vec::new();
+  'nodes: for node in nodes {
+    // (an element printing no text before the name's end: no name to take)
+    let Some(node) = node else {
+      if matched < label.len() {
+        return;
+      }
+      break;
+    };
+    let content = node.get_content();
+    let mut cut = 0;
+    for (at, c) in content.char_indices() {
+      if c.is_whitespace() {
+        cut = at + c.len_utf8();
+      } else if matched == label.len() {
+        cuts.push((node, cut));
+        break 'nodes;
+      } else if c == label[matched] {
+        matched += 1;
+        cut = at + c.len_utf8();
+      } else {
+        return;
+      }
+    }
+    cuts.push((node, cut));
+  }
+  if matched < label.len() {
+    return;
+  }
+  let mut parents = Vec::new();
+  for (mut node, cut) in cuts {
+    let content = node.get_content();
+    if cut >= content.len() {
+      if let Some(parent) = node.get_parent() {
+        parents.push(parent);
+      }
+      document.remove_node(node);
+    } else if cut > 0 {
+      let _ = node.set_content(&content[cut..]);
+    }
+  }
+  drop_emptied_wrappers(document, parents);
 }
 
 /// Perl: insertFrontMatter_rec($document, $item).

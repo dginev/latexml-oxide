@@ -110,16 +110,8 @@ pub(in crate::base_utilities::frontmatter::observer) fn printed_email_label(
   span: (u16, u16),
   address: &str,
 ) -> Option<String> {
-  // (the label the class's own command prints with it, read as it prints — jfm/jpp's `\email` printing "Email address
-  // for correspondence:" inside a `\thanks`, 2603.18265: the contact's `name`, the rehearsal's `own_email_properties`)
-  let at_span = |e: &&Event| e.kind == EventKind::Contact && e.span == Some(span);
-  if let Some(name) = events
-    .iter()
-    .flat_map(|e| std::iter::once(e).chain(&e.inner))
-    .find(at_span)
-    .and_then(|e| e.name.as_deref())
-  {
-    return Some(name.trim().to_string());
+  if let Some(name) = own_email_label(events, span) {
+    return Some(name);
   }
   let at = events.iter().position(|e| {
     matches!(e.kind, EventKind::Name | EventKind::Contact)
@@ -150,6 +142,23 @@ pub(in crate::base_utilities::frontmatter::observer) fn printed_email_label(
     .label
     .clone()
     .or_else(|| reads_as_email_label(before).then(|| before.to_string()))
+}
+
+/// The label the class's own e-mail command prints with the address at `span` of a block's `events`, read as it prints —
+/// jfm/jpp's `\email` printing "Email address for correspondence:" inside a `\thanks`, 2603.18265: the contact's `name`,
+/// the rehearsal's `own_email_properties`. The command's call prints it with the address wherever it is written whole
+/// (`insert::NAME_PRINTED`).
+pub(in crate::base_utilities::frontmatter::observer) fn own_email_label(
+  events: &[Event],
+  span: (u16, u16),
+) -> Option<String> {
+  let at_span = |e: &&Event| e.kind == EventKind::Contact && e.span == Some(span);
+  events
+    .iter()
+    .flat_map(|e| std::iter::once(e).chain(&e.inner))
+    .find(at_span)
+    .and_then(|e| e.name.as_deref())
+    .map(|name| name.trim().to_string())
 }
 
 /// Whether `before`, what a line prints before an address's run, is the address's label by its place, in any language: one
