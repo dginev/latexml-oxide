@@ -1,0 +1,21 @@
+% mechanism: a block's own `annotations` holding a command are written on its creators as the call's tokens, never their
+%   text retokenized, where a command glues to the letters after it: authblk's `\author[\dag a]` read back `\daga`
+%   (`ledger.rs` `AuthorBlock::keyval_tokens`, `emit.rs` `block_annotations`, `whole_block`)
+% witness: 2205.13776, 2406.04210, 2302.12131, 2307.15427, 2309.09081, 2310.00933, 2407.04435, 2210.04484 (lni's
+%   `\author[Christian Burkert \and Jonathan Balack …]`, `\andJonathan`; brief NE4)
+% oracle:  pdflatex 0 errors; "A Title", "Ann Able1 and Bob Baker1"
+% engines: rust off: 0 errors; rust =2 (int153d): Error:undefined:\daga, Error:undefined:\ddagb
+% expect:  =2 as off: 0 errors, 0 warnings, the same creators
+% status:  RED (int153d) -> GREEN (perfect_kernel_batchne4::a_command_in_an_authors_annotations_stays_one_token)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{A Title}
+\author[\dag a]{Ann Able}
+\author[\ddag b]{Bob Baker}
+\affil[a]{University A}
+\affil[b]{University B}
+\maketitle
+Body.
+\end{document}
