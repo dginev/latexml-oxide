@@ -19,8 +19,9 @@ fn expect<T>(off: T, two: T) -> T { if fm_emit() == 2 { two } else { off } }
 
 /// A guard whose switch-off expectation is right but whose `LATEXML_FM_EMIT=2` output is a known wrong reading — a named RED,
 /// fixed after the flip (user 2026-11-08: guards for shapes with no measured reach stay named REDs failing only at `=2`): at
-/// `=2` it prints the RED and returns true, so the guard skips its assertions there and keeps them under `LATEXML_FM_EMIT=0`. At the
-/// flip each such guard becomes an `#[ignore = "RED at =2: …"]` guard keeping the right expectation.
+/// `=2` it prints the RED and returns true, so the guard skips its assertions there and keeps them under `LATEXML_FM_EMIT=0` (run
+/// once per bundle until the old driver's deletion); that bundle turns each such guard into an `#[ignore = "RED at =2: …"]` guard
+/// keeping the right expectation.
 fn red_at_two(red: &str) -> bool {
   let two = fm_emit() == 2;
   if two {
