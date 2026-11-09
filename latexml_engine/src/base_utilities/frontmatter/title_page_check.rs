@@ -112,6 +112,7 @@ thread_local! {
 pub fn reset_title_page_check() {
   SPILLED.with_borrow_mut(|spilled| *spilled = SpilledWords::default());
   CALLED.with_borrow_mut(Vec::clear);
+  QUEUED_BY_LENGTH.with_borrow_mut(HashMap::clear);
   STORED.with_borrow_mut(Vec::clear);
   UNREAD.with_borrow_mut(String::clear);
   reset_check_budget();
@@ -156,6 +157,11 @@ thread_local! {
   static CALLED: RefCell<Vec<CalledText>> = const { RefCell::new(Vec::new()) };
   /// The number the next record of `CALLED` takes.
   static NEXT_ID: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+  /// The records of `CALLED` with a queued invocation, by the lengths of content it can end in
+  /// ([`content_lengths`]), in number order: what [`begin_frontmatter_entry_digestion`] compares an entry's content
+  /// to. It may hold a record since digested or taken out (`note_frontmatter_clear`), which a search drops as it
+  /// passes: a record not digested is under each of its lengths.
+  static QUEUED_BY_LENGTH: RefCell<HashMap<usize, Vec<usize>>> = RefCell::new(HashMap::default());
   /// What each argument the document gave raw setters prints, this conversion's: the check's third source
   /// ([`digest_raw_setter_calls`]).
   static STORED: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
@@ -586,6 +592,13 @@ pub fn note_frontmatter_entry(tag: &str, role: &str, command: Option<&Tokens>) -
   for call in &calls {
     pending.extend(never_digested(call));
   }
+  if let Some(command) = command {
+    QUEUED_BY_LENGTH.with_borrow_mut(|index| {
+      for length in content_lengths(command.unlist_ref()) {
+        index.entry(length).or_default().push(id);
+      }
+    });
+  }
   CALLED.with_borrow_mut(|called| {
     called.push(CalledText {
       id,
@@ -649,14 +662,24 @@ pub fn begin_frontmatter_entry_digestion(
     return None;
   }
   let id = CALLED.with_borrow_mut(|called| {
-    let call = called.iter_mut().find(|call| {
-      !call.digested
-        && match (id, content, call.command.as_ref()) {
-          (Some(id), ..) => call.id == id,
-          (None, Some(content), Some(command)) => queued_content_is(command, content),
-          _ => false,
-        }
-    })?;
+    let at = match (id, content) {
+      (Some(id), _) => record_at(called, id).filter(|&at| !called[at].digested),
+      (None, Some(content)) => undigested_queued(called, content),
+      (None, None) => None,
+    };
+    // (the first record not digested that the entry is: the search over every record the index replaces)
+    debug_assert_eq!(
+      at,
+      called.iter().position(|call| {
+        !call.digested
+          && match (id, content, call.command.as_ref()) {
+            (Some(id), ..) => call.id == id,
+            (None, Some(content), Some(command)) => queued_content_is(command, content),
+            _ => false,
+          }
+      })
+    );
+    let call = &mut called[at?];
     call.digested = true;
     Some(call.id)
   })?;
@@ -726,10 +749,63 @@ pub fn end_frontmatter_entry_digestion(
   Ok(())
 }
 
-/// The record `id` of `CALLED` (whose records are in number order: [`note_frontmatter_entry`]).
+/// The position of the record `id` in `CALLED` (whose records are in number order: [`note_frontmatter_entry`]).
+fn record_at(called: &[CalledText], id: usize) -> Option<usize> {
+  called.binary_search_by_key(&id, |call| call.id).ok()
+}
+
+/// The record `id` of `CALLED`.
 fn record_mut(called: &mut [CalledText], id: usize) -> Option<&mut CalledText> {
-  let at = called.binary_search_by_key(&id, |call| call.id).ok()?;
+  let at = record_at(called, id)?;
   called.get_mut(at)
+}
+
+/// The position in `CALLED` of the first record not digested whose queued invocation ends in `content`
+/// ([`queued_content_is`]), read from those of its length (`QUEUED_BY_LENGTH`): an entry no record queued — the
+/// emitter's under `LATEXML_FM_EMIT=2`, digested past every record — is told apart without a comparison. The records
+/// passed that are digested or taken out leave the index.
+fn undigested_queued(called: &[CalledText], content: &Tokens) -> Option<usize> {
+  QUEUED_BY_LENGTH.with_borrow_mut(|index| {
+    let ids = index.get_mut(&content.unlist_ref().len())?;
+    let mut found = None;
+    let mut kept = 0;
+    for read in 0..ids.len() {
+      let id = ids[read];
+      let Some(at) = record_at(called, id).filter(|&at| !called[at].digested) else {
+        continue;
+      };
+      ids[kept] = id;
+      kept += 1;
+      if called[at]
+        .command
+        .as_ref()
+        .is_some_and(|command| queued_content_is(command, content))
+      {
+        // (the rest stay as they are)
+        ids.copy_within(read + 1.., kept);
+        kept += ids.len() - read - 1;
+        found = Some(at);
+        break;
+      }
+    }
+    ids.truncate(kept);
+    found
+  })
+}
+
+/// The lengths of content the queued invocation `command` can end in ([`queued_content_is`]): when its last token is a
+/// `}`, the count of tokens between each `{` it holds and that `}` (every `{`, the final group's and those inside it
+/// or before it: the comparison does not ask that the content be balanced).
+fn content_lengths(command: &[Token]) -> impl Iterator<Item = usize> + '_ {
+  let closed = command
+    .last()
+    .is_some_and(|t| t.get_catcode() == Catcode::END);
+  command
+    .iter()
+    .enumerate()
+    .take(if closed { command.len() - 1 } else { 0 })
+    .filter(|(_, t)| t.get_catcode() == Catcode::BEGIN)
+    .map(move |(at, _)| command.len() - at - 2)
 }
 
 /// How deep [`writes`] reads the bodies of the document's macros an argument names.
@@ -799,11 +875,7 @@ const DROPPED_THANKS: &str = r"\long\def\thanks#1{ #1 }";
 /// Is `content` the content of the queued invocation `command` (`…{<content>}`, its last argument)?
 fn queued_content_is(command: &Tokens, content: &Tokens) -> bool {
   let (command, content) = (command.unlist_ref(), content.unlist_ref());
-  command.len() >= content.len() + 2
-    && command
-      .last()
-      .is_some_and(|t| t.get_catcode() == Catcode::END)
-    && command[command.len() - content.len() - 2].get_catcode() == Catcode::BEGIN
+  content_lengths(command).any(|length| length == content.len())
     && command[command.len() - content.len() - 1..command.len() - 1] == *content
 }
 
