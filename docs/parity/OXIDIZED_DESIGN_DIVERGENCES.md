@@ -33051,3 +33051,47 @@ converted; llncs's top-level one is taken out by `take_institutes`, eptcs's is n
 `perfect_kernel_batchdel3` (one per binding's setter definition; for (3) and (5)
 `batchdel3_typed_marks_stay_on_the_names_of_a_written_setter_call`, `batchdel3_a_written_setter_call_replaces_a_list_before_the_block`,
 `batchdel3_the_last_setter_call_of_a_block_is_written`); `perfect_kernel_batchcl2::a_list_setter_in_an_author_block_is_read_by_the_emitter`.
+
+### 983. An author block's undefined commands raise their Errors once: in place where a piece holds them, else at the flush (ERR2)
+
+**Perl:** the creator's whole block is digested once (Base_Utility.pool.ltxml:691-693); an undefined command raises
+`Error:undefined:\cs` at its first use and its stub leaves `<ltx:ERROR class="undefined">\cs</ltx:ERROR>` where it
+stands (State.pm:547-551 `generateErrorStub`) — `\author{Ann Able\undefinedprobecs \and Bob\email{b@x.org}}` (article)
+gives 2 Errors and the creators `Ann Able<ERROR>\undefinedprobecs</ERROR>` and `Bob<ERROR>\email</ERROR>b@x.org`.
+**Was (since the flip, `=2`):** the observer's rehearsal held each block Error and discarded it with its stub
+(`observer/rehearsal.rs`, `DiagnosticsHold::discard`), trusting the emitter's digestion of each piece to raise it again.
+It was lost (a) when the command's token fell in no piece — it prints nothing, so no event covers it and the piece
+before it stopped short of it (after a name, after a mark or a `\thanks` the reading writes apart) — and (b) when its
+piece was written as text. The command printing nothing also glued the ink around it: "Bobb@x.org" was read as an
+address and made Ann's e-mail, Bob lost (one creator). **Now:** (1) a piece grows over the held undefined commands
+right after it (`emitter/content.rs` `Field::past_held_undefined`, told by the rehearsal's `Error:undefined:` record at
+the command's position, not by its spelling); (2) a name takes the held undefined commands past its marks and notes, up
+to the next separator or name, written after them (`emitter/emit.rs` `block_names`; `event_run_at` returns where the
+written tokens end, so nothing is taken twice); (3) a Name event an undefined command's Error lies strictly inside
+(`events/mod.rs` `Event::glued_undef`, set by `mark_held`) is never read as an address — not by the names line's
+address extraction (`resolver/lines.rs` `names_without_addresses`) nor as an address line (`resolver/blocks.rs`): an
+undefined command never changes the segmentation, Bob stays a creator whose piece is digested from its tokens; (4) the
+flush's net (`observer/reading.rs` `HeldUndefined`, from `read_at_flush`, raised in `place.rs` `digest_front_matter`
+after the digest loop): each held `\cs` whose tally of undefined names (`LogState::undefined`) did not move during the
+flush and that no code of the flush assigned a meaning, even locally (a meaning recorder over the flush,
+`begin_meaning_recorder`) is raised once through `generate_error_stub` — its Error and its stub, standing for the rest
+of the document as after Perl's first use; its `ERROR` markup only where a piece holds it. Excluded: an IJCAI sectioned
+block's held Errors (its section markers, the resolver's `block_markers`, 2501.02356) and every command a class's title
+code defines inside its own `\author`/`\maketitle` (vmsta's `\fnm`/`\snm`/`\inits`, the IOS `\fnms`, JAIR's row
+`\name`/`\email`/`\addr`, kr.sty's `\affiliations`: pdflatex 0 errors there). (5) The emitter's reading of the placed XML
+reads an `ltx:ERROR` as no word (`emitter/dom.rs`), so the content check counts no "undefinedprobecs" or "songti" the
+block does not print. **Not raised, by design:** the `Error:expected:\fi` chains and `\@authorii`…`\@authorv` the old
+driver raised on sibarticle.sty's `\ifnum \c@numAuthors>1 \and …\fi` (1603.08231: 18, 2112.06251: 12): pdflatex 0
+errors, Perl only with `--includestyles` (22, its split at `\and` cutting each conditional, KNOWN_PERL_ERRORS #1218).
+**Witnesses** (the flip A/B's 19, Errors off / DEL5 / now): 1101.4098 1/0/1, 1402.2906 4/3/6 (`\affaddr`, `\email` undefined
+under the IEEEtran binding, which off's driver had not raised), 1808.09392 5/4/5, 2205.12847 7/5/7, 2309.09045,
+2506.10896, 2508.08170, 2508.21091, 2607.29185, hep-th9306034 each 1/0/1, 2601.17318 5/4/5, 2609.00161 2/0/1 (off's
+other Error a `merged_creators`), 2608.21165 1/1/1; 2405.06973, 2602.18351, 2604.26688 1/0/0 (kr.sty's `\affiliations`,
+defined in its `\maketitle`), 2405.13308 9/7/7 (off's `\@thefnmark`/`\@undefined` from a digestion that lost both names,
+which `=2` keeps), 1603.08231 18/0/0, 2112.06251 12/0/0. Creators never fewer than DEL5's on the 19 (the personnames
+gain the ERROR markup), 0 distinct words lost (`kit/emit/docwords.py`); the stage-2 1,434: 0 changed. Repros
+`sectioning-frontmatter/emitter_undefined_command_{in_author_errs_once,after_a_mark_errs_in_the_name,after_a_thanks_errs_in_the_name,in_a_name_written_as_text_errs_once}.tex`,
+`author_and_inside_a_conditional_reads_as_tex.tex`; guards `perfect_kernel_batcherr2` (one per path),
+`perfect_kernel_batchfms2a1::the_rehearsal_leaves_nothing_behind` (re-expected: 2 Errors, 0 Warnings),
+`perfect_kernel_batch105a::an_error_at_depth_in_a_note_line_is_no_word` (re-expected: the Warning it pinned was the
+content check counting "songti").

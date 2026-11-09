@@ -53,6 +53,73 @@ fn an_undefined_command_in_a_text_written_name_errs_once_at_the_flush() {
   assert_eq!(creators(&xml), [row(&["Ann Able"]), row(&["Bob Baker"])]);
 }
 
+/// ERR1's synthetic, Perl's two creators and two Errors: `\undefinedprobecs` right after Ann's name is the name's, its
+/// ERROR in her personname; `\email` (undefined in article) glues "Bob" and "b@x.org", which stays Bob's name — never Ann's
+/// e-mail "Bobb@x.org" (the base's one creator). And a command inside a name (`Bob Baker\undefinedprobecs\ Jr.`), raised in
+/// place as before, whose ERROR text the content check reads as no word of the creator's (the base's Warning). Distinct:
+/// the plain gap and the glued address, the segmentation unchanged.
+#[test]
+fn an_undefined_command_in_author_errs_in_place_and_never_resegments() {
+  let (log, xml) = convert(
+    repro!("emitter_undefined_command_in_author_errs_once"),
+    false,
+  );
+  assert_eq!(
+    undefined_errors(&log),
+    ["\\undefinedprobecs", "\\email"],
+    "{log}"
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (2, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able \\undefinedprobecs"]),
+    row(&["Bob \\email b@x.org"]),
+  ]);
+  let bob = xml
+    .find("<personname>Bob<ERROR class=\"undefined\"")
+    .expect("Bob's ERROR in his personname");
+  let close = bob + xml[bob..].find("</personname>").expect("closed personname");
+  assert!(xml[bob..close].ends_with("\\email</ERROR>b@x.org"), "{xml}");
+  let (log, xml) = convert(
+    "\\documentclass{article}\n\\author{Ann Able \\and Bob Baker\\undefinedprobecs\\ Jr.}\n\\title{T}\n\
+     \\begin{document}\n\\maketitle\n\\end{document}\n",
+    false,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able"]),
+    row(&["Bob Baker \\undefinedprobecs Jr."]),
+  ]);
+}
+
+/// An undefined command past a name's mark or its `\thanks`, before the next separator: no event covers it and the name's
+/// run stops at the mark or the note; it is written after the name, its Error raised in the personname
+/// (`emit::block_names`; 2607.29185's `\internship`, 2508.21091's `\equalcorres`, 1101.4098's `\ETC`). Distinct: the
+/// scan past what the reading writes apart.
+#[test]
+fn an_undefined_command_past_a_mark_or_a_note_errs_in_the_name() {
+  let (log, xml) = convert(
+    repro!("emitter_undefined_command_after_a_mark_errs_in_the_name"),
+    false,
+  );
+  assert_eq!(undefined_errors(&log), ["\\undefinedprobecs"], "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able \\undefinedprobecs", "affiliation=Univ A"]),
+    row(&["Bob Baker", "affiliation=Univ B"]),
+  ]);
+  let (log, xml) = convert(
+    repro!("emitter_undefined_command_after_a_thanks_errs_in_the_name"),
+    false,
+  );
+  assert_eq!(undefined_errors(&log), ["\\undefinedprobecs"], "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able \\undefinedprobecs"]),
+    row(&["Bob Baker"]),
+  ]);
+  assert!(xml.contains("Supported by X."), "{xml}");
+}
+
 /// The flip A/B's lost `Error:expected:\fi` chains (1603.08231: 18 off, 2112.06251: 12) are no Errors of the paper's: an
 /// `\and` inside a conditional (sibarticle.sty's `\ifnum \c@numAuthors>1 \and …\fi`) is skipped with the name after it,
 /// as TeX reads the block in one pass (pdflatex 0 errors, "Ann Able" alone); Perl's split at the `\and` tokens cuts each

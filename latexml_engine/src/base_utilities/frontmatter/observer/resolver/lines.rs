@@ -723,7 +723,10 @@ pub(super) fn names_without_addresses(events: &[&Event]) -> (Vec<Event>, Vec<Str
   let mut out = Vec::with_capacity(events.len());
   let mut addresses = Vec::new();
   for event in events {
-    if event.kind == EventKind::Name && !addresses_in(&event.text).is_empty() {
+    // (not a run an undefined command glued an address from, which no word of the source spells: `Bob\email{b@x.org}`,
+    // a name as Perl's creator holds it, `Event::glued_undef`)
+    if event.kind == EventKind::Name && !event.glued_undef && !addresses_in(&event.text).is_empty()
+    {
       // (where its first run starts, the label word with it; else, or where a word before that run prints an address
       // the run reader does not part from its neighbours, at that word: `Kristiaan Pelckmans |kp@it.uu.se|`, OT1's
       // `|` an em dash glued to the address, 1006.4832 — the name had taken the address)

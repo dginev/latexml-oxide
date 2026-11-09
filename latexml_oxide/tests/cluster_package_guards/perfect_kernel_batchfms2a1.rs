@@ -623,11 +623,10 @@ fn the_rehearsal_leaves_nothing_behind() {
       "Body after.",
       (1, 0),
     ),
-    // (the author field's undefined commands raise their Errors once, as Perl's: `\undefinedprobecs` and `\email`
-    // (undefined in article), at the flush's end (ERR2's net), the body's `\undefinedprobecs` the stub's markup after
-    // them, no Error again; the Warning counts "Bob", lost as a name — SYNC item 39, ERR2: before it, `\email` went
-    // unreported and the one Error was the body's; Perl: 2 Errors, the creators Ann Able and Bob; pdflatex 3 undefined
-    // control sequences)
+    // (the author field's undefined commands raise their Errors once, in place, as Perl's: `\undefinedprobecs` and
+    // `\email` (undefined in article) in the creators Ann Able and Bob, the body's `\undefinedprobecs` the stub's markup
+    // after them, no Error again — SYNC item 39, ERR2: before it, `\email` went unreported, the one Error was the body's
+    // and a Warning counted "Bob", lost as a name; pdflatex 3 undefined control sequences)
     (
       doc(
         "",
@@ -635,7 +634,7 @@ fn the_rehearsal_leaves_nothing_behind() {
         r"Body \undefinedprobecs.",
       ),
       "Body \\undefinedprobecs .",
-      (2, 1),
+      (2, 0),
     ),
     // (the token analyser reads the sole `\input`'s file since 107b, `sole_input_file`, and so sees the `\and` it
     // holds: no `merged_creators` Error, which int51a-106t raised — `input_field_events_carry_no_span`; the three
