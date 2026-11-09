@@ -3522,6 +3522,17 @@ fn comma_group_symbol_lines_go_by_their_marks() {
       r#"<contact name="Email: " role="email"><text font="italic" xml:id="{id}">{address}</text></contact>"#
     )
   };
+  // What each mode keeps today, pinned before the REDs return (revX7): the marks' ink — off one `†` (Dan Dorn's name),
+  // `=2` five (his name and the four copies of the whole line; NE6's mark growth had left one) — and the institutions.
+  assert_eq!(
+    (
+      xml.matches('†').count(),
+      xml.matches("University of British Columbia").count(),
+      xml.matches("Uber Technologies").count()
+    ),
+    expect((1, 1, 4), (5, 4, 4)),
+    "{xml}"
+  );
   if red_at_two(
     r#"unverified: keeps "† University of British Columbia" in a line the off reading parts by its marks"#,
   ) || red_off(
