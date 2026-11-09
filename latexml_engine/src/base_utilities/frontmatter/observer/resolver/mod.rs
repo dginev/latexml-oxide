@@ -382,7 +382,7 @@ pub(in crate::base_utilities::frontmatter::observer) use placed::{
   Placed, PlacedItem, PlacedKind, content_check,
 };
 pub(in crate::base_utilities::frontmatter::observer) use words::{
-  BlockCheck, LostInk, Written, check_blocks, printed_email_label, printed_words,
+  BlockCheck, LostInk, Written, check_blocks, own_email_label, printed_email_label, printed_words,
   reads_as_email_label,
 };
 

@@ -657,6 +657,10 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   // (LO2, 0 -> 1: an emitted entry's first mark read, a fact kept on its pending entry as Perl keeps its labels there
   // (Base_Utility.pool.ltxml:502-508), where LO1 kept a State flag; internal, never written out)
   ("const _markread base_utilities/defs/author_macros.rs", 1),
+  // (CL10, 0 -> 1: an e-mail item the emitter writes as the class's own call, whose content prints the label its `name`
+  // holds, read off that print: the content drops it once as it is placed, `insert::drop_printed_name` — label text
+  // printed once, review revX2 2. Perl's API has no key for "the content prints the name"; internal, never written out)
+  ("const _nameprinted base_utilities/frontmatter/insert.rs", 1),
   (
     "const _paragraph_break base_utilities/frontmatter/queue.rs",
     1,

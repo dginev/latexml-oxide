@@ -643,6 +643,20 @@ impl Resolver {
       .iter()
       .filter(|l| l.chars().all(|c| c.is_ascii_digit()))
       .all(|l| l.len() == 1);
+    // (each numbered entry's text, whose own sub-entries a glued mark's letter names: BESIII's `$^{67}$ University of
+    // Turin and INFN, (A)University of Turin …; (B)…; (C)INFN …`, [`sub_labels`])
+    let numbered: Vec<(String, &str)> = self
+      .pending
+      .iter()
+      .flat_map(|(labels, _, assoc)| {
+        labels
+          .iter()
+          .filter(|l| !special(l))
+          .map(|l| bare(l))
+          .filter(|l| !l.is_empty() && l.chars().all(|c| c.is_ascii_digit()))
+          .map(|l| (l, assoc.text.as_str()))
+      })
+      .collect();
     for c in 0..self.out.creators.len() {
       let requests = std::mem::take(&mut self.out.creators[c].requests);
       let mut parted: Vec<String> = Vec::new();
@@ -656,6 +670,7 @@ impl Resolver {
           && (digit_entries || !b.chars().all(|c| c.is_ascii_digit()))
           && let Some(parts) = parted_label(&b, &entry_labels, true, self.emitting)
         {
+          let parts = sub_labels(parts, &entry_labels, &numbered);
           let alphanumeric = b.chars().all(char::is_alphanumeric);
           for p in parts {
             if alphanumeric {
@@ -2202,4 +2217,44 @@ fn is_inner_email(assoc: &Assoc) -> bool {
       .rule
       .split_whitespace()
       .any(|tag| tag == "api:inner-contact")
+}
+
+/// The pieces of a glued mark ([`parted_label`]), a letter one of them the numbered entry's own sub-label where the
+/// entry prints that sub-entry itself ([`sub_label`]): the letter piece is then the request `67a` no entry answers, its
+/// mark shown whole beside the entry (`RCreator::whole_marks`), never the entry the letter alone labels. BESIII's
+/// `$^{67a,67c}$` under `$^{67}$ University of Turin and INFN, (A)University of Turin …; (C)INFN …` beside
+/// `$^{a}$`/`$^{c}$` "Also at Moscow …"/"Also at … Kurchatov …" is entry 67's alone (2201.02056). Where the entry prints
+/// no such sub-entry the letter is the other entry's as before: 1202.2048's `E.~Boger$^{18a}$` is institute 18 and the
+/// `a` legend (guard `perfect_kernel_batch107b`). A letter no entry labels is a piece as before (BESIII's upper-case
+/// `66A,66C`, 2103.16779, 2204.09614, 2404.06718, 2107.03604, 1705.11109; `1a`, the letter a note's mark, 1904.02582), and
+/// so is a letter before the number (`a1`: address a and note 1, hep-ph0011101).
+fn sub_labels(
+  mut parts: Vec<String>,
+  entry_labels: &[String],
+  numbered: &[(String, &str)],
+) -> Vec<String> {
+  let number = |p: &str| !p.is_empty() && p.chars().all(|c| c.is_ascii_digit());
+  for i in 0..parts.len() {
+    let mut chars = parts[i].chars();
+    let letter = chars.next().is_some_and(char::is_alphabetic) && chars.next().is_none();
+    if !letter || !entry_labels.contains(&parts[i]) {
+      continue;
+    }
+    if let Some(entry) = parts[..i].iter().rev().find(|p| number(p))
+      && numbered
+        .iter()
+        .any(|(label, text)| label == entry && sub_label(text, &parts[i]))
+    {
+      parts[i] = s!("{entry}{}", parts[i]);
+    }
+  }
+  parts
+}
+
+/// Whether an entry's `text` prints a sub-entry lettered `letter`, in either case: `(A)University of Turin` for the `a`
+/// of `67a` (2201.02056).
+fn sub_label(text: &str, letter: &str) -> bool {
+  [letter.to_uppercase(), letter.to_lowercase()]
+    .iter()
+    .any(|letter| text.contains(&s!("({letter})")))
 }

@@ -1,0 +1,24 @@
+% mechanism: a glued mark's letter is never another entry's label: `2a` under `$^{2}$ … (A)…; (B)…; (C)…` beside
+%   `$^{a}$ Also at …` parts into entry 2 and its sub-label `2a` no entry answers (`post::sub_labels` in
+%   `part_glued_labels`), the mark shown whole beside entry 2 (`RCreator::whole_marks`); a comma mark `1,a` still
+%   requests entry a; a letter no entry labels (`2b`) is a piece as before, and so is a letter whose numbered entry prints
+%   no such sub-entry (1202.2048's `E.~Boger$^{18a}$`: institute 18 and the `a` legend, guard perfect_kernel_batch107b).
+% witness: 2201.02056 (BESIII `$^{67a,67c}$` matched to `$^{a}$`/`$^{c}$` "Also at Moscow …"/"Also at … Kurchatov …":
+%   Amoroso, Bianchi, Bortone, Cheng, Cossio … gained them at =2); kept: 2103.16779, 2204.09614, 2404.06718, 2107.03604,
+%   1705.11109 (upper-case `66A,66C`), 1904.02582 (`1a`), hep-ph0011101 (`a1`)
+% oracle:  pdflatex 0 errors: "A. Amoroso2a,2c , B. Bee1,a , C. Cee3,c , D. Dee2b"; entries 1, 2 (with (A)(B)(C)), 3, a, c
+% engines: int153w off and =2: Amoroso also holds the a and c entries (=2 drops the mark); CL10 off and =2: Amoroso
+%   "2a,2c" with entry 2 only
+% expect:  0 errors; 0 warnings; Amoroso entry 2 and sup "2a,2c"; Bee entries 1 and a; Cee 3 and c; Dee entry 2, sup "2b"
+\documentclass{article}
+\title{Title}
+\author{A.~Amoroso$^{2a,2c}$, B.~Bee$^{1,a}$, C.~Cee$^{3,c}$, D.~Dee$^{2b}$\\
+$^{1}$ Institute One, City One\\
+$^{2}$ University of Turin and INFN, (A)University of Turin, Turin; (B)University of Piedmont, Alessandria; (C)INFN, Turin\\
+$^{3}$ Institute Three, City Three\\
+$^{a}$ Also at the Moscow Institute, Moscow\\
+$^{c}$ Also at the Kurchatov Institute, Gatchina}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -33,6 +33,7 @@ use crate::base_utilities::{
   },
   frontmatter::{
     fallback::{tabular_juggles_in_a_whole_block, whole_block_author},
+    insert::NAME_PRINTED,
     observer::{
       events::{EventKind, Formula, InkTable, lex_with_inks},
       field_notes::{EnvironmentStep, FieldCreator},
@@ -41,8 +42,8 @@ use crate::base_utilities::{
       rehearsal::{Rehearsal, rehearse},
       resolver::{
         BlockCheck, LostInk, RCreator, RuleDrop, Written, check_blocks, contact_parts,
-        creator_call, is_creator_call, merged_names, printed_email_label, read_events,
-        split_pieces, uncoordinated_marks,
+        creator_call, is_creator_call, merged_names, own_email_label, printed_email_label,
+        read_events, split_pieces, uncoordinated_marks,
       },
     },
     relocate::{BLOCK_ZONE, FOOTER_ZONE},
@@ -1352,11 +1353,18 @@ fn item_call(
   // \\email{…}`, 1412.5940; `E-mail: \\texttt{a@x}`, 0802.3384; `Emails:` on each of a list's, 2511.22090; `email`, 1209.0869)
   if role == "email"
     && let Some((index, Some(span))) = assoc.source
-    && let Some(word) = with_block(index, None, |_, events| {
+    && let Some((word, own)) = with_block(index, None, |_, events| {
       printed_email_label(events, span, &assoc.text)
+        .map(|word| (word, own_email_label(events, span).is_some()))
     })
   {
     keys = s!("{keys},name={{{word} }}");
+    // (the label the class's own command prints with the address, which its call written as the content prints again:
+    // taken out of the content once as it is placed, `insert::NAME_PRINTED` — `\\def\\email#1{E-mail: #1}` on the
+    // author's line, review revX2 2; 2603.18265)
+    if own {
+      keys = s!("{keys},{NAME_PRINTED}=true");
+    }
   }
   let contact_role = matches!(key.0, Kind::Contact(_));
   let note = key.0 == Kind::Note;
