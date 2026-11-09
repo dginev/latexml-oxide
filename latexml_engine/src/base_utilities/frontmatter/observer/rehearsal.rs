@@ -456,7 +456,8 @@ const BOUND_IN_A_BLOCK: &[(&str, &str)] = &[
 /// error, held, as pdflatex's), and whether the command's own definition must take an argument for it: a contact
 /// command taking none is a switch, not that contact (jmlr2e's `\email`, `\name Ann \email ann@x.org`, a font change
 /// a one-argument binding read as the e-mail "a": 2412.18293, 2305.17297; S2a.2 r2) — but url.sty's `\url` reads its
-/// argument itself, its macro taking none.
+/// argument itself, its macro taking none. A definition reading more required arguments than the binding is not that
+/// contact either (pnastwo's `\affil#1#2`, [`binding_required_arguments`]; 1312.3323).
 const BOUND_WHEN_DEFINED: &[(&str, &str, bool)] = &[
   ("\\email", "\\lx@fm@obs@email", true),
   ("\\emailAdd", "\\lx@fm@obs@email", true),
@@ -545,8 +546,10 @@ fn install_event_bindings(
   }
   for (cs, target, needs_argument) in BOUND_WHEN_DEFINED {
     if !block_breaks.iter().any(|(declared, _)| declared == cs)
-      && lookup_definition(&T_CS!(*cs))?
-        .is_some_and(|defn| !needs_argument || defn.get_num_args() > 0)
+      && lookup_definition(&T_CS!(*cs))?.is_some_and(|defn| {
+        (!needs_argument || defn.get_num_args() > 0)
+          && required_arguments(&*defn) <= binding_required_arguments(target)
+      })
     {
       // (an e-mail call is read with whose meaning it has here, when the note is rehearsed — at the flush,
       // `\maketitle`, not at the call (review rev92a_r4 B1, OD #913): `\lx@fm@obs@email` a binding's, the `@inplace`
@@ -568,6 +571,33 @@ fn install_event_bindings(
     }
   }
   Ok(())
+}
+
+/// How many arguments `defn` reads that are not optional (a `\newcommand`'s `[…]` default, a `[]` parameter): the
+/// arguments a call of it must carry.
+fn required_arguments(defn: &dyn Definition) -> usize {
+  defn.get_parameters().map_or(0, |params| {
+    params
+      .get_parameters()
+      .iter()
+      .filter(|param| !param.novalue && !param.optional)
+      .count()
+  })
+}
+
+/// The required arguments the rehearsal's binding `target` reads ([`BOUND_WHEN_DEFINED`]). A document command that reads
+/// more is not that contact and keeps its meaning: pnastwo.cls:368's `\affil#1#2` (the affiliation's number, then its
+/// text, stored for `\@maketitle` to print — the call prints only the mark), bound to the one-argument affiliation,
+/// was read as the affiliation "1" with `{Inst}` left in the name, and the emitter's item `\affil{1}`, digested as
+/// defined, read its second argument past the item's end — `\gdef`ing `\affil1` to `\let`, which, printed by
+/// `\@maketitle`, ate the closing braces of the title-page deposit: a group left open after `\maketitle`, every body
+/// `\footnote` in it gobbled, the deposit (the contributor line, the printed affiliations) dropped for its error
+/// (1312.3323, 1404.2960, 0903.4054, 0907.3600; `perfect_kernel_batchcl6`).
+fn binding_required_arguments(target: &str) -> usize {
+  lookup_definition(&T_CS!(target))
+    .ok()
+    .flatten()
+    .map_or(usize::MAX, |defn| required_arguments(&*defn))
 }
 
 /// Whether `between`, what a tabular juggle prints between its close and its reopen, holds a row break the rehearsal

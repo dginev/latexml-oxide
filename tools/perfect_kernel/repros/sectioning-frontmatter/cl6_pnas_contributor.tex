@@ -1,0 +1,19 @@
+% mechanism: pnastwo's `\contributor` line, printed by its `\@maketitle` (pnastwo.cls:437), is written at =2 as off
+%   writes it, in the title-page deposit: the deposit no longer raises the error that dropped it (the `\affil` arity,
+%   `rehearsal.rs` `binding_required_arguments`)
+% witness: 1404.2960, 0903.4054, 0907.3600 (the line counted `unclaimed` at =2), 1312.3323
+% oracle:  pdflatex 0 errors; "Ann Able * and Bob Baker †", "* Univ X,† Univ Y", "Submitted by Carl Contributor"
+% engines: rust off: 2 creators, the deposit with the contributor line; rust =2 (int153y): the deposit dropped,
+%   "Warning:frontmatter:unclaimed ... submitted carl contributor", "open groups" Warning
+% expect:  0 errors; the contributor line in the deposit, off and =2; off 0 warnings and 2 creators, =2 1 warning (the
+%   counter-move decline) and the block whole
+% status:  RED (int153y) -> GREEN (perfect_kernel_batchcl6::the_contributor_line_is_written_at_2_as_off)
+% preload: ar5iv.sty
+\documentclass{cl6_pnas_affil}
+\contributor{Submitted by Carl Contributor}
+\begin{document}
+\title{T}
+\author{Ann Able\affil{1}{Univ X}\and Bob Baker\affil{2}{Univ Y}}
+\maketitle
+Text.
+\end{document}
