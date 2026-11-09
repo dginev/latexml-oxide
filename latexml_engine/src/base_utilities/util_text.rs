@@ -721,7 +721,15 @@ fn fills_generated_text(w: &Whatsit) -> bool {
 /// arguments it shows (`shown_arguments`): an image's file name and options are not text on the page
 /// (`\includegraphics{\@logo}`), nor is a link's target (`\href{\@url}{Home}` prints "Home"). What a speculative
 /// title-page run printed (sect05.rs `speculative_title_page_run`; review probe `logo`).
-pub fn ink_text(d: &Digested, out: &mut String) {
+pub fn ink_text(d: &Digested, out: &mut String) { ink_text_with(d, false, out) }
+
+/// [`ink_text`], a pgf/TikZ picture read as it prints: only its text nodes ([`picture_text`]), apart, never its
+/// drawing (an SVG path's data). The frontmatter observer's event text (`events::ink_of`): the TikZ ORCID logo of
+/// `R. Apsimon\orcidB{}` (`\href{https://orcid.org/…}{\orcidicon}`, 2409.13798) printed its path data `M 0 0 M 6.3 0 C …`
+/// into a contact's text, which dissolved its names line into the address before it.
+pub fn ink_text_printed(d: &Digested, out: &mut String) { ink_text_with(d, true, out) }
+
+fn ink_text_with(d: &Digested, pictures: bool, out: &mut String) {
   match d.data() {
     DigestedData::TBox(b) => {
       if let Ok(s) = b.borrow().get_string() {
@@ -730,28 +738,35 @@ pub fn ink_text(d: &Digested, out: &mut String) {
     },
     DigestedData::List(l) => {
       for child in l.borrow().boxes.iter() {
-        ink_text(child, out);
+        ink_text_with(child, pictures, out);
+      }
+    },
+    DigestedData::Whatsit(w) if pictures && let Some(nodes) = picture_text(&w.borrow()) => {
+      out.push(' ');
+      for node in &nodes {
+        ink_text_with(node, pictures, out);
+        out.push(' ');
       }
     },
     DigestedData::Whatsit(w) => {
       let w = w.borrow();
       if let Some(Stored::Digested(a)) = w.get_property("alignment").as_deref() {
-        ink_text(a, out);
+        ink_text_with(a, pictures, out);
       }
       for (arg, shown) in w.get_args().iter().zip(shown_arguments(&w)) {
         if shown && let Some(arg) = arg {
-          ink_text(arg, out);
+          ink_text_with(arg, pictures, out);
         }
       }
       if let Ok(Some(body)) = w.get_body() {
-        ink_text(&body, out);
+        ink_text_with(&body, pictures, out);
       }
     },
     DigestedData::Alignment(a) => {
       for row in a.borrow().rows() {
         for cell in row.get_columns() {
           if let Some(boxes) = cell.boxes.as_ref() {
-            ink_text(boxes, out);
+            ink_text_with(boxes, pictures, out);
           }
         }
       }
