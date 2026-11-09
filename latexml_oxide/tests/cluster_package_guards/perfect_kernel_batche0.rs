@@ -1075,8 +1075,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // glue spec written out after `\hskip` as TeX's `scan_glue` does, its signs and digits by catcode, `past_dimen`: the
   // juggle's column after `\hskip 1em`, h3e; FB2b9 15 -> 16: a `\vskip` between a juggle's close and reopen is the
   // row break it prints, the paragraph's end, `prints_a_row_break` — TeX's vertical command, no name a document spells:
-  // review revI1 finding 3, g09)
-  ("rehearsal", 16),
+  // review revI1 finding 3, g09; CK3 16 -> 17: `past_line_break`, the reopen's `\\` and its `*`/`[…]` read once for the
+  // reopen and the content check (`ledger::content_text`: `\\[2mm]` read "2mm" lost, review revCK1b finding 5), the
+  // comparison with `\\` now one line of its own, no new name)
+  ("rehearsal", 17),
   ("relocate", 134),
   // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens`, printed text read
   // as tokens by `is_institution` and `NameKeys` (5 with their definitions), a `'\\'` read of a label (2), a call's hook (1).
