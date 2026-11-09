@@ -348,8 +348,10 @@ fn past_open_environment(field: &Field, start: usize, end: usize) -> usize {
   from
 }
 
-/// `end`, or past the letter or the group an accent sets, which the cover of its box stops short of, as nothing prints there
-/// but through it (`Živkovi\\'c`, `Petri\\v{c}`: 2406.17108, 1202.0103): a control sequence last, no event until past that.
+/// `end`, or past the letter, the control sequence or the group an accent sets, which the cover of its box stops short of, as
+/// nothing prints there but through it (`Živkovi\\'c`, `Petri\\v{c}`, ``Chiriv\\`\\i``: 2406.17108, 1202.0103, 1709.03335): a
+/// control sequence last, no event until past that. The argument as TeX reads an undelimited one: one token (a control word
+/// such as `\\i` included) or a balanced group.
 fn past_what_it_set(field: &Field, events: &[Event], end: usize) -> usize {
   let (tokens, pos) = (field.tokens, field.base + end);
   // (or the bytes a multi-byte character's first reads, under `inputenc`: `（李银杰）`, 2201.01905)
@@ -375,7 +377,7 @@ fn past_what_it_set(field: &Field, events: &[Event], end: usize) -> usize {
     .find(|&i| tokens[i].get_catcode() != Catcode::SPACE)
     .unwrap_or(tokens.len());
   let past = match tokens.get(at).map(Token::get_catcode) {
-    Some(Catcode::LETTER | Catcode::OTHER) => at + 1,
+    Some(Catcode::LETTER | Catcode::OTHER | Catcode::CS) => at + 1,
     Some(Catcode::BEGIN) => {
       let mut depth = 0;
       (at..tokens.len())
