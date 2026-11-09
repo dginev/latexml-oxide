@@ -954,6 +954,9 @@ fn block_names(
   })
 }
 
+/// The emitter's own reason to stay out ([`stays_out`]), beside the blocks' `SkipReason`s.
+const NO_BLOCK: &str = "no author block";
+
 /// Why the emitter stays out of the paper the ledger holds: no block, or a block no rehearsal read. A block calling a
 /// binding's list setter is read as any other, its setter's calls written as they are ([`list_setter_runs`]).
 fn stays_out() -> Option<&'static str> {
@@ -3804,12 +3807,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   }
   *commands = out;
   assign_value(EMITTED, Stored::Int(generation), Some(Scope::Global));
-  with_ledger(|ledger| {
-    ledger.writer = Some("written".to_string());
-    if ledger.compared.as_ref() != Some(&analysis.reading) {
-      ledger.compared = Some(analysis.reading.clone());
-    }
-  });
+  with_ledger(|ledger| ledger.writer = Some("written".to_string()));
   Ok(true)
 }
 

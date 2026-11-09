@@ -8,21 +8,12 @@
 use latexml::util::test::{
   convert_files_with_setup_then, error_count, rng_error_count, warning_count,
 };
-use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::perfect_kernel_batch84b::creators;
 
 /// Convert `tex`: the log and the XML.
 fn run(tex: &str, preload: Option<&str>) -> (String, String) {
-  let (log, xml, ()) = convert_files_with_setup_then(
-    tex,
-    &[],
-    preload,
-    move || {
-      set_fm_shadow_override(None);
-    },
-    |_| (),
-  );
+  let (log, xml, ()) = convert_files_with_setup_then(tex, &[], preload, move || {}, |_| ());
   (log, xml)
 }
 

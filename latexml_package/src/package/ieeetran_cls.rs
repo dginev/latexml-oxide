@@ -21,7 +21,6 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   binding: "IEEEtran.cls",
   unmarked_notes: true,
   cite: "IEEEtran.cls:4756 `\\def\\thefootnote{}`; OD #837 S2a.2 r6 (2001.02600, 1803.04996, 2504.08644, 2602.13176)",
-  written: true,
   ..FM_KERNEL_CONVENTIONS
 };
 

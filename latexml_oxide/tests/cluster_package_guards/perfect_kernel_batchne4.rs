@@ -4,7 +4,6 @@
 //! 2307.15427, 2309.09081, 2310.00933, 2407.04435, 2210.04484).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::perfect_kernel_batch84b::creators;
 
@@ -22,15 +21,8 @@ fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).co
 
 /// Convert `tex`: the log and the XML.
 fn run(tex: &str) -> (String, String) {
-  let (log, xml, ()) = convert_files_with_setup_then(
-    tex,
-    &[],
-    Some("ar5iv.sty"),
-    move || {
-      set_fm_shadow_override(None);
-    },
-    |_| (),
-  );
+  let (log, xml, ()) =
+    convert_files_with_setup_then(tex, &[], Some("ar5iv.sty"), move || {}, |_| ());
   (log, xml)
 }
 

@@ -11,7 +11,6 @@
 //! given its number (`\samethanks[1]`, 1912.01737; 1811.08622) keeps the creators, its loss counted.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::{perfect_kernel_batch84b::creators, perfect_kernel_batchz3::in_a_directory};
 
@@ -29,15 +28,8 @@ fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).co
 
 /// Convert `tex`: the log and the XML.
 fn run(tex: &str) -> (String, String) {
-  let (log, xml, ()) = convert_files_with_setup_then(
-    tex,
-    &[],
-    Some("ar5iv.sty"),
-    move || {
-      set_fm_shadow_override(None);
-    },
-    |_| (),
-  );
+  let (log, xml, ()) =
+    convert_files_with_setup_then(tex, &[], Some("ar5iv.sty"), move || {}, |_| ());
   (log, xml)
 }
 

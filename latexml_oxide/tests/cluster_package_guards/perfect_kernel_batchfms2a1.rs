@@ -1,16 +1,16 @@
-//! Guards for batch FM S2a.1: the frontmatter observer core in shadow mode (OXIDIZED_DESIGN_DIVERGENCES #837;
-//! KERNEL_CAPABILITIES K23). Under the shadow switch (`LATEXML_FM_SHADOW=1`, here the thread's override) each
-//! `\author`-family call is a ledger block whose stamped tokens are rehearsed under the Layer-B event bindings and lexed
-//! into events; the guards assert those event lists for the design probes (symbol lines, a user mark macro), the
-//! gretsi shared-mark repro, 2401.16957's `,\inst` shape and the SYNC frontmatter rows' shapes, that the conversion's
-//! XML is byte-identical with the switch on and off, and that the CLI writes `<dest>.fmshadow.json` only under the
-//! switch. Every probe compiles clean with pdflatex (TL 2025) and converts with no Error or Warning.
-use std::{cell::Cell, process::Command};
+//! Guards for batch FM S2a.1: the frontmatter observer core (OXIDIZED_DESIGN_DIVERGENCES #837; KERNEL_CAPABILITIES
+//! K23). Each `\author`-family call is a ledger block whose stamped tokens are rehearsed under the Layer-B event bindings
+//! and lexed into events (read here through the ledger's JSON, `fm_shadow_json`); the guards assert those event lists
+//! for the design probes (symbol lines, a user mark macro), the gretsi shared-mark repro, 2401.16957's `,\inst` shape and
+//! the SYNC frontmatter rows' shapes, and that the rehearsal leaves nothing behind. (The census switch
+//! `LATEXML_FM_SHADOW` and the CLI's `<dest>.fmshadow.json` went in DEL4.) Every probe compiles clean with pdflatex
+//! (TL 2025) and converts with no Error or Warning.
+use std::cell::Cell;
 
 use latexml::util::test::{
   convert_files_with_setup_then, convert_with_setup_then, error_count, warning_count,
 };
-use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
+use latexml_engine::base_utilities::fm_shadow_json;
 use serde_json::Value;
 
 /// The shadow JSON of a conversion, parsed; for a written family's paper (revtex, ams) the writer must have kept the
@@ -70,12 +70,7 @@ pub(super) fn parsed_held(json: &str, why: &str) -> Value {
 
 /// Convert `tex` (with `preload`) under the shadow switch: the log, the XML, and the shadow ledger as JSON.
 pub(super) fn shadow(tex: &str, preload: Option<&str>) -> (String, String, Value) {
-  let (log, xml, json) = convert_with_setup_then(
-    tex,
-    preload,
-    || set_fm_shadow_override(Some(true)),
-    |_| fm_shadow_json(),
-  );
+  let (log, xml, json) = convert_with_setup_then(tex, preload, || {}, |_| fm_shadow_json());
   let json: Value = parsed(&json);
   (log, xml, json)
 }
@@ -561,38 +556,27 @@ fn font_switch_inside_a_run_keeps_the_name() {
   ]]);
 }
 
-/// The log of a conversion without its run-specific parts (the timings, the sizes written, the temporary source path).
-fn stable_log(log: &str) -> Vec<String> {
-  log
-    .lines()
-    .filter(|line| !line.contains(" sec") && !line.contains("bytes)") && !line.contains("started "))
-    .map(|line| match line.find("/tmp/") {
-      Some(at) => line[..at].to_string(),
-      None => line.to_string(),
-    })
-    .collect()
-}
-
-/// The census switch decides nothing: a conversion's XML and log are the same with the shadow switch on and in the
-/// default mode (the fleet's: a written family's paper written in both, the kernel family's since 93a, OD #925), and
-/// the diagnostics with it off the same — here the
+/// The observer's rehearsal leaves nothing behind (the census switch that compared it with the observer off went in DEL4):
+/// nothing it reads lands in the body — here the
 /// symbol-line probe, the gretsi repro (blocks rehearsed, API calls recorded) and the review's adversarial shapes,
 /// whose rehearsal must leave nothing behind: an `\aftergroup` (it once leaked "LEAKED" into the body), a `\thanks`
 /// holding a `\label` with a `\ref` to it and a `\footnote` in `\author`, a `\gdef` and a `\stepcounter`, an unclosed
-/// `\begingroup` and an undefined command (each with its own diagnostics, counted exactly, the same either way); an
-/// `\input` in the field (review revfms2a1_2 finding 3: the rehearsal read the file again and the log gained a second
-/// `(Processing content …` note; the rehearsal silences progress notes).
+/// `\begingroup` and an undefined command; an `\input` in the field (review revfms2a1_2 finding 3: the rehearsal read the
+/// file again and the log gained a second `(Processing content …` note; the rehearsal silences progress notes).
 #[test]
-fn shadow_switch_leaves_the_xml_unchanged() {
+fn the_rehearsal_leaves_nothing_behind() {
   let doc = |preamble: &str, author: &str, body: &str| {
     format!(
       "\\documentclass{{article}}\n{preamble}\n\\title{{T}}\n\\author{{{author}}}\n\\begin{{document}}\n\\maketitle\n{body}\n\\end{{document}}\n"
     )
   };
   const AUTH_NAMES: &str = "Ann Able\\thanks{From file.} \\and Bob Baker\n";
-  let cases: Vec<(String, (usize, usize))> = vec![
+  // (each shape: its source, its whole body text as the binary gives it, its Error and Warning counts — at `=2`, since
+  // the flip; the body after the frontmatter, before post-processing, so a `\ref` is still empty)
+  let cases: Vec<(String, &str, (usize, usize))> = vec![
     (
       "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^{\\dag}$ \\and Bob Baker\\thanks{Funded.}\\\\ \\dag Univ A}\n\\maketitle\nBody.\n\\end{document}\n".to_string(),
+      "Body.",
       (0, 0),
     ),
     (
@@ -600,14 +584,18 @@ fn shadow_switch_leaves_the_xml_unchanged() {
         "../../../tools/perfect_kernel/repros/class-bindings/gretsi_v13_shared_mark_affiliation.tex"
       )
       .to_string(),
+      "1 section 1 1 §1 1 Introduction Body text.",
       (0, 0),
     ),
+    // (the `\aftergroup` once leaked "LEAKED" into the body; the one Warning counts the LEAKED box the creators lack,
+    // where pdflatex prints LEAKED on the title page)
     (
       include_str!(
         "../../../tools/perfect_kernel/repros/sectioning-frontmatter/observer_rehearsal_aftergroup_stays_inside.tex"
       )
       .to_string(),
-      (0, 0),
+      "Body after.",
+      (0, 1),
     ),
     (
       doc(
@@ -615,60 +603,67 @@ fn shadow_switch_leaves_the_xml_unchanged() {
         r"Ann Able\thanks{Supported by X.\label{fn:a}} \and Bob Baker\footnote{Second.}",
         r"See note \ref{fn:a}. Text\footnote{Body note.}",
       ),
+      "See note . Text 1 1 footnote 1 Body note.",
       (0, 0),
     ),
+    // (RED, SYNC item 39: since the flip the author's `\stepcounter` is lost, "0" where Perl and pdflatex print "1";
+    // the `\gdef` is kept — repro sectioning-frontmatter/observer_rehearsal_loses_an_author_stepcounter)
     (
       doc(
         r"\newcounter{probe}",
         r"Ann Able\stepcounter{probe}\ifx\foo\undefined\gdef\foo{ONE}\else\gdef\foo{TWO}\fi \and Bob",
         r"Value \foo{} and \theprobe.",
       ),
+      "Value ONE and 0.",
       (0, 0),
     ),
+    // (the unclosed `\begingroup` closes with the author item, its own Error only, the body not bold)
     (
       doc("", r"Ann Able\begingroup\bfseries Bob \and Carl", "Body after."),
+      "Body after.",
       (1, 0),
     ),
+    // (RED, SYNC item 39: since the flip the author field's undefined commands lose their Error and their `ERROR`
+    // markup — `\email` (undefined in article) is not reported, and the one Error is the body's `\undefinedprobecs`;
+    // the Warning counts "Bob", lost as a name. Perl: 2 Errors (`\undefinedprobecs`, `\email`), the creators Ann Able
+    // and Bob; pdflatex 3 undefined control sequences)
     (
       doc(
         "",
         r"Ann Able\undefinedprobecs \and Bob\email{b@x.org}",
         r"Body \undefinedprobecs.",
       ),
-      (2, 0),
+      "Body \\undefinedprobecs .",
+      (1, 1),
     ),
     // (the token analyser reads the sole `\input`'s file since 107b, `sole_input_file`, and so sees the `\and` it
-    // holds: no `merged_creators` Error, which int51a-106t raised — `input_field_events_carry_no_span`)
-    (doc("", r"\input{auth_names}", "Body after."), (0, 0)),
+    // holds: no `merged_creators` Error, which int51a-106t raised — `input_field_events_carry_no_span`; the three
+    // Warnings are the emitter's plain-text names and note)
+    (
+      doc("", r"\input{auth_names}", "Body after."),
+      "Body after.",
+      (0, 3),
+    ),
   ];
   let files = [("auth_names.tex", AUTH_NAMES)];
-  for (tex, _) in cases {
-    let (on_log, on_xml, _) = convert_files_with_setup_then(
-      &tex,
-      &files,
-      Some("ar5iv.sty"),
-      || set_fm_shadow_override(Some(true)),
-      |_| fm_shadow_json(),
-    );
-    let (..) = convert_files_with_setup_then(
-      &tex,
-      &files,
-      Some("ar5iv.sty"),
-      || set_fm_shadow_override(Some(false)),
-      |_| fm_shadow_json(),
-    );
-    // (the default, the fleet's, gives the census switch's XML: a written family's paper — the kernel family's since
-    // 93a, OD #925 — written in both; with the observer off, today's old reader's)
-    let (default_log, default_xml, ()) = convert_files_with_setup_then(
-      &tex,
-      &files,
-      Some("ar5iv.sty"),
-      || set_fm_shadow_override(None),
-      |_| (),
-    );
-    assert_eq!(on_xml, default_xml, "{tex}");
-    assert_eq!(stable_log(&on_log), stable_log(&default_log), "{tex}");
-  }
+  // (what a rehearsal leaks lands in the body, `<p>LEAKEDBody after.</p>`, and a `\gdef` or `\stepcounter` it rolls back
+  // too far is missing there)
+  let got: Vec<(String, (usize, usize))> = cases
+    .iter()
+    .map(|(tex, ..)| {
+      let (log, xml, ()) =
+        convert_files_with_setup_then(tex, &files, Some("ar5iv.sty"), || {}, |_| ());
+      (
+        super::perfect_kernel_batch94b::body_text(&xml),
+        (error_count(&log), warning_count(&log)),
+      )
+    })
+    .collect();
+  let want: Vec<(String, (usize, usize))> = cases
+    .iter()
+    .map(|(_, body, counts)| (body.to_string(), *counts))
+    .collect();
+  assert_eq!(got, want);
 }
 
 /// Spans and widths (review finding 2): each event's span of the author field's positions (the kernel `\author`'s
@@ -825,86 +820,4 @@ fn field_stamp_gives_back_its_argument() {
     .collect();
   assert_eq!(provs, expected);
   assert_eq!(base, 8);
-}
-
-/// The CLI writes `<dest>.fmshadow.json` beside the output under `LATEXML_FM_SHADOW=1` — the ledger's blocks with their
-/// events — and nothing without it; the XML is the same either way.
-#[test]
-fn cli_writes_the_shadow_dump_only_under_the_switch() {
-  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-  let workdir = tempfile::tempdir().expect("tempdir");
-  std::fs::write(
-    workdir.path().join("t.tex"),
-    "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^{1}$ \\and Bob Baker$^{2}$\\\\ $^1$Univ A\\\\ $^2$Univ B}\n\\maketitle\nBody.\n\\end{document}\n",
-  )
-  .expect("write t.tex");
-  let run = |dest: &str, on: bool| {
-    let mut command = Command::new(bin);
-    command
-      .args(["t.tex", "--dest", dest, "--nocomments", "--timeout=110"])
-      .current_dir(workdir.path())
-      .env_remove("LATEXML_FM_SHADOW");
-    if on {
-      command.env("LATEXML_FM_SHADOW", "1");
-    }
-    let output = command.output().expect("spawn");
-    String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "")
-  };
-  let on_log = run("on.xml", true);
-  let off_log = run("off.xml", false);
-  assert_eq!(
-    (error_count(&on_log), warning_count(&on_log)),
-    (0, 0),
-    "{on_log}"
-  );
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let read = |name: &str| std::fs::read_to_string(workdir.path().join(name));
-  assert_eq!(
-    read("on.xml").expect("on.xml"),
-    read("off.xml").expect("off.xml")
-  );
-  assert!(read("off.xml.fmshadow.json").is_err());
-  let json: Value =
-    serde_json::from_str(&read("on.xml.fmshadow.json").expect("the shadow dump")).expect("json");
-  assert_eq!(blocks(&json), [[
-    "N:Ann Able",
-    "M:1",
-    "S:and",
-    "N:Bob Baker",
-    "M:2",
-    "B",
-    "M:1^",
-    "N:Univ A",
-    "B",
-    "M:2^",
-    "N:Univ B"
-  ]]);
-  let block = json["entries"]
-    .as_array()
-    .and_then(|entries| entries.iter().find(|e| e["kind"] == "author"))
-    .expect("an author block");
-  assert_eq!(
-    (
-      block["hook"].as_str(),
-      block["policy"].as_str(),
-      block["stamp"].as_str(),
-      block["replace"].as_bool()
-    ),
-    (
-      Some("\\lx@add@authors@adaptive"),
-      Some("kernel"),
-      Some("kernel"),
-      Some(true)
-    )
-  );
-  assert_eq!(
-    json["summary"]["with_events"].as_u64(),
-    Some(1),
-    "{}",
-    json["summary"]
-  );
 }

@@ -9,7 +9,6 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   binding: "report.cls",
   title_marks: FmTitleMarks::Body,
   // (the kernel family's reading of its `\author`, written: OD #925 — each declaration states its own `written`)
-  written: true,
   cite: "report.cls:211 (OD #851, `declare_fnsymbol_title_block`)",
   ..FM_KERNEL_CONVENTIONS
 };

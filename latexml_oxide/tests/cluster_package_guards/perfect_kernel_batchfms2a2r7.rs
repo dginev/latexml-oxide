@@ -12,18 +12,13 @@
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::{
   FmEvent, FmEventKind, FmInput, FmResolved, FmSepKind, declare_frontmatter_conventions,
-  fm_resolve, fm_shadow_json, set_fm_shadow_override,
+  fm_resolve, fm_shadow_json,
 };
 use serde_json::Value;
 
 /// Convert `tex` under the shadow switch, asserting a clean conversion: the whole dump.
 fn dump(tex: &str) -> Value {
-  let (log, _, json) = convert_with_setup_then(
-    tex,
-    Some("ar5iv.sty"),
-    || set_fm_shadow_override(Some(true)),
-    |_| fm_shadow_json(),
-  );
+  let (log, _, json) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| fm_shadow_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   super::perfect_kernel_batchfms2a1::parsed(&json)
 }
@@ -171,29 +166,11 @@ fn a_replacing_calls_address_list_is_read_in_live_order() {
   ]);
 }
 
-const URL: &str = r#"\documentclass{article}
-\usepackage{hyperref}
-\begin{document}
-\title{T}
-\author{Ann Able\thanks{Univ A, City. The code is at \url{https://example.org/code}; Bob's page \url{https://www.bobbaker.org/}.} \and Bob Baker}
-\maketitle
-Text.
-\end{document}
-"#;
 const URL_GROUP: &str = r#"\documentclass{article}
 \usepackage{hyperref}
 \begin{document}
 \title{T}
 \author{Ann Able\thanks{Univ A, City. Contact: \url{able, baker@example.org}; code: \url{https://example.org/code}.} \and Bob Baker}
-\maketitle
-Text.
-\end{document}
-"#;
-const EMPTIED: &str = r#"\documentclass{article}
-\usepackage{hyperref}
-\begin{document}
-\title{T}
-\author{Ann Able\thanks{\href{mailto:ann.able@example.org}{ann.able@example.org}, \href{mailto:bob.baker@example.org}{bob.baker@example.org}} \and Bob Baker}
 \maketitle
 Text.
 \end{document}
@@ -340,15 +317,6 @@ fn a_note_mark_past_the_symbols_holds_no_rehearsal() {
   assert_eq!(roles[8..], ["thanks shows=‡‡", "thanks", "thanks"]);
 }
 
-const GLYPH_LEGEND: &str = r#"\documentclass{article}
-\begin{document}
-\title{T}
-\author{Ann Able,$^{1,\#}$ Bob Baker,$^{2,\#}$ Cat Cole$^{2,\star}$\\ $^1$Univ A, City.\\ $^2$Univ B, Town.\\ \normalsize{\# authors contributed equally and ${\star}$ to whom correspondence should be addressed.}}
-\maketitle
-Text.
-\end{document}
-"#;
-
 const RUNAWAY_MARK: &str = r#"\documentclass{article}
 \makeatletter
 \def\@fnsymbol#1{\ifnum\thefootnote=99\hbox{*}\else\textsuperscript{\thefootnote}\fi\relax}
@@ -383,41 +351,4 @@ fn a_runaway_note_mark_is_unwound() {
     "  n Speaker | note:adjacent",
     "C Bob Baker [] | line:names sep:column",
   ]);
-}
-
-/// The r7 shapes leave the XML byte-identical under the census switch and in the default mode (the fleet's; shadow
-/// only, or written in both — the kernel family since 93a, OD #925), and byte-identical with the observer off where the
-/// writer holds the paper back (GLYPHS and SEPARATORS are written: their guards pin the XML) — but `FOOTNOTE_MARK`, a
-/// REVTeX paper the writer writes (FM S2b, `perfect_kernel_batchfms2b::footnote_marked_affiliations_go_to_their_names`).
-#[test]
-fn r7_shapes_leave_the_xml_unchanged() {
-  let many = many_thanks();
-  for tex in [
-    URL,
-    URL_GROUP,
-    EMPTIED,
-    GLYPHS,
-    SEPARATORS,
-    many.as_str(),
-    RUNAWAY_MARK,
-    GLYPH_LEGEND,
-  ] {
-    let run = |on: Option<bool>| {
-      convert_with_setup_then(
-        tex,
-        Some("ar5iv.sty"),
-        move || set_fm_shadow_override(on),
-        |_| (),
-      )
-    };
-    let (_, on_xml, ()) = run(Some(true));
-    // (the default, as the fleet runs, writes as the census does; the observer off is today's XML, which a paper the
-    // writer holds back keeps — a written one, GLYPHS and SEPARATORS, differs from it by design and its guard pins its
-    // XML: review rev93a S3, against the default alone the check was a tautology for a written kernel shape)
-    let (_, default_xml, ()) = run(None);
-    assert_eq!(on_xml, default_xml, "{tex}");
-    if tex != GLYPHS && tex != SEPARATORS {
-      let (_, _, ()) = run(Some(false));
-    }
-  }
 }

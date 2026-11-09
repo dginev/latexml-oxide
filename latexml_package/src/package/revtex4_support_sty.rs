@@ -16,7 +16,6 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "revtex",
   binding: "revtex4_support.sty",
   // (the S2b pilot: 0.4 % unclassified, a seeded classified sample 39 of 39 right — SYNC "FM S2a.2" r9)
-  written: true,
   cite: "revtex4_support_sty.rs `\\affiliation`: `\\lx@add@affiliation[annotate=new]` (Perl \
          revtex4_support.sty.ltxml); 0911.0568",
   ..FM_KERNEL_CONVENTIONS

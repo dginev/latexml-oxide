@@ -1,6 +1,6 @@
-//! The frontmatter observer (frontmatter model M3, stage S2a; KERNEL_CAPABILITIES K23): what the document's
-//! `\title`/`\author`-family calls hold, read as TeX prints them, kept beside the conversion — in SHADOW mode only
-//! (OXIDIZED_DESIGN_DIVERGENCES #837).
+//! The frontmatter observer (frontmatter model M3; KERNEL_CAPABILITIES K23): what the document's `\title`/`\author`-family
+//! calls hold, read as TeX prints them, which the emitter writes Perl's own API calls from (OXIDIZED_DESIGN_DIVERGENCES
+//! #837, #980).
 //!
 //! - [`ledger`]: a block per `\author`-family call (the kernel `\author`, the bindings' `\lx@add@authors*` calls) with
 //!   its stamped position range, its options and its place in the frontmatter queue; the S1 stamp of each `\title`;
@@ -13,21 +13,18 @@
 //! - [`events`]: the digested list read into events (names, marks, separators, breaks, contacts, notes, layout), each
 //!   with its span of the field's positions (`fieldProv`/`fieldSerial`, core `gullet::field_cover_of`) and its ink.
 //! - [`marks`]: whether a formula in a name or an affiliation is a mark, read from its digested XMath (as digested and
-//!   as parsed), the one reading of the writer's view, `ab_audit fmshadow`, `relocate::shown_marks` and
+//!   as parsed), the one reading of the content check's view of the placed output, `relocate::shown_marks` and
 //!   `name_text::is_name_mark` (frontmatter refactor stage 1).
 //! - [`resolver`] (S2a.2): the ledger's blocks and API calls read into the frontmatter tuples (creators with their
 //!   names, affiliations, contacts and notes; the block's own), each association with the rule that decided it, under
 //!   the family's conventions from [`policy`] (each binding declares its own at load; read keyed on the binding owning
-//!   `\author` and the hook); written into the dump, compared with the XML by `ab_audit fmshadow`.
-//! - [`shadow`]: the switch, the runtime environment variable `LATEXML_FM_SHADOW=1`, under which the flush
-//!   (`digest_front_matter`) rehearses and lexes each block and the CLI writes `<dest>.fmshadow.json`. Without it no
-//!   part of the observer runs, and with it the conversion's output is the same: the observer decides nothing yet
-//!   (the resolver is stage S2a.2) — but for a family whose declared conventions are `written` (FM S2b):
-//! - [`writer`] (S2b): once today's frontmatter is in the document (`insert_frontmatter`), the paper of a written
-//!   family is compared with the resolver's reading, and the differences the writer's operations explain — an entry
-//!   given to the authors the reading gives it, one call's marked entries cut apart, a legend made a note, a url
-//!   printing an address made an e-mail — are written, from the tokens the document queued; the fail-safe declines
-//!   per item, each declined item left as today's output holds it (the writer's module docs).
+//!   `\author` and the hook).
+//! - [`shadow`]: the flush's part — every real flush (`digest_front_matter`) rehearses and lexes each block not
+//!   rehearsed yet — and the ledger's JSON dump the guards read the reading by, in process.
+//! - [`writer`]: the emitter (`writer::emit`, OD #980), which replaces the flush's queued creators and their annotations
+//!   by Perl's calls built from the reading, its vocabulary and cuts, and the content check on the placed output. (The S2b
+//!   writer that rewrote placed frontmatter after `insert_frontmatter`, and the census switch `LATEXML_FM_SHADOW`, were
+//!   deleted in DEL4.)
 
 use super::*;
 
@@ -41,7 +38,8 @@ pub(in crate::base_utilities) mod resolver;
 pub(in crate::base_utilities) mod shadow;
 pub(in crate::base_utilities) mod writer;
 
-// (for `ab_audit fmshadow`, which re-resolves a dump's events offline; prefixed, as the prelude re-exports these)
+// (for the guards, which read a dump's events and the resolver's tuples, and the types of a public event's fields;
+// prefixed, as the prelude re-exports these)
 pub use events::{
   BreakKind as FmBreakKind, EmailMeaning as FmEmailMeaning, Event as FmEvent,
   EventKind as FmEventKind, MarkBase as FmMarkBase, MarkFormula as FmMarkFormula,
@@ -52,32 +50,23 @@ pub(in crate::base_utilities) use ledger::{
   record_author_body_end, record_author_call, record_clear, record_cut_copy,
 };
 pub use ledger::{note_binding_load, record_note_text as fm_record_note_text};
-// (the one reading of a formula's mark-ness, for `ab_audit fmshadow`'s view of the final XML)
-pub use marks::{
-  FmMathNode, FormulaMarks as FmFormulaMarks, glued_in_a_word as fm_glued_in_a_word,
-  printed_children as fm_printed_children, read_formula as fm_read_formula,
+// (the one reading of a formula's mark-ness, for `relocate` and `classify`)
+pub(in crate::base_utilities) use marks::{
+  FormulaMarks as FmFormulaMarks, read_formula as fm_read_formula,
 };
-// (for the bindings, which declare their conventions at load, and `ab_audit fmshadow --re-resolve`)
+// (for the bindings, which declare their conventions at load)
 pub use policy::{
   EmailOwner as FmEmailOwner, KERNEL as FM_KERNEL_CONVENTIONS, Policy as FmConventions,
-  TitleMarks as FmTitleMarks, conventions_among as fm_conventions_among,
-  declare_frontmatter_conventions,
+  TitleMarks as FmTitleMarks, declare_frontmatter_conventions,
 };
 // (the old reader's owner logic, moved unchanged, for its callers in `author_block/` and `frontmatter/`: the plan's row "Knowledge in, driver out, one pass")
 pub(in crate::base_utilities) use resolver::owners::*;
-pub use resolver::{
-  Assoc as FmAssoc, CHANGE_TAGS as FM_CHANGE_TAGS, Input as FmInput, NameJoin as FmNameJoin,
-  RCreator as FmCreator, Resolved as FmResolved, address_take_out as fm_address_take_out,
-  addresses_in as fm_addresses_in, is_change_rule as fm_is_change_rule, resolve as fm_resolve,
-  resolve_with as fm_resolve_with, resolver_call as fm_resolver_call,
-};
+// (for the guards, which resolve a block's input again)
+pub use resolver::{Input as FmInput, Resolved as FmResolved, resolve as fm_resolve};
 pub(in crate::base_utilities) use shadow::shadow_flush;
-pub use shadow::{
-  fm_shadow_enabled, fm_shadow_json, reset_fm_shadow, set_fm_shadow_override, write_fm_shadow,
-};
+pub use shadow::{fm_shadow_json, reset_fm_shadow};
 // (the emitter's vocabulary, moved unchanged, for its callers in `author_block/`, `frontmatter/` and `defs/`: the plan's row "Knowledge in, driver out, one pass")
 pub(in crate::base_utilities) use writer::calls::*;
 pub(in crate::base_utilities) use writer::{
-  EMITTING, block_creator_written, check_placed_content, emit_commands, emitted,
-  read_back_frontmatter, take_digested, write_observed_frontmatter,
+  EMITTING, block_creator_written, check_placed_content, emit_commands, emitted, take_digested,
 };

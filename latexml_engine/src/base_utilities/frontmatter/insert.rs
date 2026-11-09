@@ -95,9 +95,6 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   let unshown_marks = show_unanswered_marks(document, &answered)?;
   drop_empty_contacts(document)?;
   drop_repeated_orcids(document);
-  // (FM S2b: a written family's paper, where it differs from the observer's reading by the writer's operations alone,
-  // written as the reading has it — under the shadow switch only; OXIDIZED_DESIGN_DIVERGENCES #837 "S2b")
-  write_observed_frontmatter(document)?;
   count_lost_marks(document, &unshown_marks);
   // (an entry's line of addresses, read once every route has placed the entry and the observer's writing is done: its
   // addresses the entry's e-mails, placed by the Link step; OD #966)
@@ -129,10 +126,6 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   keep_unclaimed_net_notes(document)?;
   // (the content invariant on the placed output, under the emitter's `=2`: every printed word placed once or counted, OD #980)
   check_placed_content(document);
-  // (the census's read-back of the final document against the reading: the plan's definition of done, item 5. Every pass
-  // after the writer is classed by what it may change in `perfect_kernel_batche0`'s allow-list, a debt: read that before
-  // adding one)
-  read_back_frontmatter(document);
   Ok(())
 }
 
@@ -2186,35 +2179,6 @@ fn email_address_word(text: &str) -> Option<String> {
         .trim_matches(|c: char| !c.is_alphanumeric())
         .to_string()
     })
-}
-
-/// The addresses [`kind_address_lines`] takes out of today's entry `entry` as its holders' e-mails, line by line, read
-/// as that pass reads them (`spells`: whether a local part spells an author): what the writer would lose making the
-/// entry's lines one author's each (`plan::cut_block_lines`, 2310.19837; a template it leaves as printed,
-/// 2203.17007's `firstname.secondname@ericsson.com`).
-pub(in crate::base_utilities) fn entry_line_addresses(
-  entry: &Node,
-  spells: &dyn Fn(&str) -> bool,
-) -> Vec<String> {
-  let lines = entry_lines(entry);
-  let printed_lines = lines
-    .iter()
-    .filter(|(nodes, _)| nodes.iter().any(|n| !n.get_content().trim().is_empty()))
-    .count();
-  let mut out = Vec::new();
-  for (nodes, _) in &lines {
-    let mut line = LineText::default();
-    if nodes.iter().all(|node| line.read(node))
-      && let Some(cut) = address_line_cut(
-        &line.text,
-        spells,
-        printed_lines == 1 && line.opens_with_mark(),
-      )
-    {
-      out.extend(cut.addresses);
-    }
-  }
-  out
 }
 
 /// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #966): the Kind step for a line of addresses inside an affiliation-kind entry

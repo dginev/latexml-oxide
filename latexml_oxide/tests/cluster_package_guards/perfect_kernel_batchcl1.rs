@@ -3,7 +3,6 @@
 //! (`observer/writer/emit.rs` `past_what_it_set`). A name ending in ``\`\i`` lost its letter, "Chiriv`" (1709.03335).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::perfect_kernel_batch84b::creators;
 
@@ -27,15 +26,8 @@ fn an_accent_over_a_control_word_keeps_its_letter() {
     row(&["Al Tiì", "address=Univ G"]),
     row(&["Di Niàb", "address=Univ H"]),
   ];
-  let (log, xml, ()) = convert_files_with_setup_then(
-    tex,
-    &[],
-    Some("ar5iv.sty"),
-    move || {
-      set_fm_shadow_override(None);
-    },
-    |_| (),
-  );
+  let (log, xml, ()) =
+    convert_files_with_setup_then(tex, &[], Some("ar5iv.sty"), move || {}, |_| ());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "\n{log}");
   assert_eq!(creators(&xml), expected);
 }

@@ -1,15 +1,13 @@
 //! Guards for batch E0 / Z0 of the old frontmatter engine's removal (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`, the
 //! user's ruling 2026-11-06: the old engine's code is deleted before the merge). Nothing here changes a conversion:
-//! the fence, the token-read count and the pass list read the source, the read-back runs under the census switch. Each
-//! pinned count is a debt on the way to the floor, not a permanent allowance: it may only fall, and a fall lowers its pin
-//! (the failure message prints the table to paste), so what was paid stays paid. Witnesses of the read-back: 2012.14750,
-//! 2201.02056 (overflow positions), 2606.18623, 1507.02068.
+//! the fence and the token-read count read the source. Each pinned count is a debt on the way to the floor, not a
+//! permanent allowance: it may only fall, and a fall lowers its pin (the failure message prints the table to paste), so
+//! what was paid stays paid. The S2b writer and the census's read-back are deleted (DEL4; their witnesses 2012.14750,
+//! 2201.02056 (overflow positions), 2606.18623, 1507.02068); the pass list after them is re-anchored where the writer
+//! ran, after the emitter's placement (`passes_after_the_emitter_are_an_allow_list`; its debts 2511.18438, 2608.22772).
 use std::{collections::BTreeMap, fs, path::Path};
 
-use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use regex::Regex;
-use serde_json::Value;
 
 const BASE: &str = "latexml_engine/src/base_utilities";
 
@@ -1128,7 +1126,6 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("shared_row/emails", 65),
   ("sv_support_sty.rs", 35),
   ("webofc_cls.rs", 0),
-  ("writer/apply", 7),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the emitter's vocabulary, 924 = 826 + 98; none added)
   ("writer/calls", 98),
   // (a new file, what is left of `writer/plan`'s walk-backs: brace balance and a formula's shifts; the two rows together fell by 25, Z3;
@@ -1153,7 +1150,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (P1b, 0 -> 1: `writer/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("writer/dom+mod", 1),
-  ("writer/plan", 84),
+  ("writer/plan", 72),
   // (LO2r2, 0 -> 4: a row line's cut ends at its address's own first token, which the letters check finds; the tokens between the
   // last letter it keeps and that one print no letter, so their kinds say which it keeps — the spacing, separators, commands and
   // bracket opening the address out, a bracket the cut leaves open closed by its own token: `prefix_tokens`, review revLO2 2)
@@ -1176,7 +1173,6 @@ const FRONTMATTER_AREAS: &[(&str, &str)] = &[
   ("insert", "insert.rs"),
   ("address_lists", "address_lists.rs"),
   ("writer/plan", "observer/writer/plan.rs"),
-  ("writer/apply", "observer/writer/apply.rs"),
   ("writer/content", "observer/writer/content.rs"),
   ("writer/calls", "observer/writer/calls.rs"),
   ("writer/emit", "observer/writer/emit.rs"),
@@ -1386,7 +1382,7 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // character its rehearsal erred at, 2204.01080; CL7 +1: `block_annotations`' `'\\'`, whether an author block's keyvals
   // annotations hold a command (a note, authblk's `\author[1\thanks{…}]`, 2308.08363), which the ledger keeps as text alone, so
   // that its creators carry them as off digests them — a label's `_` retokenized errs, 2201.04449)
-  ("writer", 109),
+  ("writer", 60),
   // (the "Knowledge in, driver out, one pass" move: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
   // mark and note commands it reads; none added)
   ("writer/calls", 44),
@@ -1505,9 +1501,9 @@ fn token_reads_only_fall_toward_the_floor() {
   assert_debts("the token reads", TOKEN_READS, &counts, WHY);
 }
 
-/// What a pass after the writer may change, on the way to deleting the old layers: passes may change kind and text, never
-/// who holds an item (the plan's definition of done, item 5). `OwnerDebt` is what breaks that today: the plan's Z8, Z9 pay
-/// each one down.
+/// What a pass after the emitter may change, on the way to deleting the old layers: passes may change kind and text,
+/// never who holds an item (the plan's definition of done, item 5). `OwnerDebt` is what breaks that today: the plan's
+/// Z8, Z9 pay each one down.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum PassMay {
   /// nothing: counts, flags or reads
@@ -1522,9 +1518,10 @@ enum PassMay {
   OwnerDebt,
 }
 
-/// The passes after `write_observed_frontmatter` in `insert_frontmatter`, in order, each classed. An allow-list and a
-/// debt: the three owner-moving ones go before the merge.
-const PASSES_AFTER_THE_WRITER: &[(&str, PassMay)] = &[
+/// The passes after `drop_repeated_orcids` in `insert_frontmatter`, in order, each classed: what runs once the emitter's
+/// entries are placed (the S2b writer's old spot, deleted in DEL4; its witnesses 2012.14750, 2201.02056, 2606.18623,
+/// 1507.02068). An allow-list and a debt: the three owner-moving ones go before the merge.
+const PASSES_AFTER_THE_EMITTER: &[(&str, PassMay)] = &[
   ("count_lost_marks", PassMay::ChangeNothing),
   ("join_split_address_contacts", PassMay::ChangeText),
   ("kind_address_lines", PassMay::ChangeKind),
@@ -1542,13 +1539,12 @@ const PASSES_AFTER_THE_WRITER: &[(&str, PassMay)] = &[
   ("keep_unclaimed_net_notes", PassMay::Drop),
   // (the content invariant on the placed output, under `=2`: it counts, N2)
   ("check_placed_content", PassMay::ChangeNothing),
-  ("read_back_frontmatter", PassMay::ChangeNothing),
 ];
 
-/// The calls after the writer in `insert_frontmatter`'s body, in order, by the path they are written with: any call of a
-/// lower-case name that is no method, so a pass taking other arguments, or in another module (`relocate::new_pass(document)?`),
-/// is seen too.
-fn calls_after_the_writer() -> Vec<String> {
+/// The calls after `drop_repeated_orcids` in `insert_frontmatter`'s body, in order, by the path they are written with:
+/// any call of a lower-case name that is no method, so a pass taking other arguments, or in another module
+/// (`relocate::new_pass(document)?`), is seen too.
+fn calls_after_the_emitter() -> Vec<String> {
   let lines = code_lines(&format!("{BASE}/frontmatter/insert.rs"));
   let start = lines
     .iter()
@@ -1559,24 +1555,25 @@ fn calls_after_the_writer() -> Vec<String> {
       .iter()
       .position(|l| l.starts_with('}'))
       .expect("its end");
-  let writer = start
+  let anchor = start
     + lines[start..end]
       .iter()
-      .position(|l| l.contains("write_observed_frontmatter("))
-      .expect("the writer");
+      .position(|l| l.contains("drop_repeated_orcids(document);"))
+      .expect("the anchor, `drop_repeated_orcids(document);`");
   let call =
     Regex::new(r"(?:^|[^.:\w])((?:[A-Za-z_]\w*::)*[a-z_][a-z_0-9]*)\(").expect("the regex");
-  lines[writer + 1..end]
+  lines[anchor + 1..end]
     .iter()
     .flat_map(|line| call.captures_iter(line))
     .map(|c| c[1].to_string())
     .collect()
 }
 
-/// The pass-list guard: a new pass after the writer fails until classed, and the owner-moving ones stay named as debts.
+/// The pass-list guard: a new pass after the emitter's placement fails until classed, and the owner-moving ones stay
+/// named as debts.
 #[test]
-fn passes_after_the_writer_are_an_allow_list() {
-  let calls = calls_after_the_writer();
+fn passes_after_the_emitter_are_an_allow_list() {
+  let calls = calls_after_the_emitter();
   // (a pass running twice — after the Kind step reads address lines — is one entry)
   let mut once: Vec<&str> = Vec::new();
   for call in &calls {
@@ -1584,18 +1581,18 @@ fn passes_after_the_writer_are_an_allow_list() {
       once.push(call);
     }
   }
-  let listed: Vec<&str> = PASSES_AFTER_THE_WRITER
+  let listed: Vec<&str> = PASSES_AFTER_THE_EMITTER
     .iter()
     .map(|(name, _)| *name)
     .collect();
   assert_eq!(
     once, listed,
-    "a pass after `write_observed_frontmatter` is classed in `PASSES_AFTER_THE_WRITER` by what it may change: kind and \
+    "a pass after `drop_repeated_orcids` is classed in `PASSES_AFTER_THE_EMITTER` by what it may change: kind and \
      text, never who holds an item (docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, definition of done item 5). An \
      ownership rule lands in `observer/resolver/`."
   );
   assert_eq!(
-    PASSES_AFTER_THE_WRITER
+    PASSES_AFTER_THE_EMITTER
       .iter()
       .filter(|(_, may)| *may == PassMay::OwnerDebt)
       .map(|(name, _)| *name)
@@ -1609,56 +1606,7 @@ fn passes_after_the_writer_are_an_allow_list() {
   );
   assert_eq!(
     calls.last().map(String::as_str),
-    Some("read_back_frontmatter"),
-    "the read-back reads the final document"
+    Some("check_placed_content"),
+    "the content check reads the final placed document"
   );
-}
-
-/// `tex` converted under the census: its `readback`, with its Error and Warning counts.
-fn read_back(tex: &str) -> (usize, usize, Value) {
-  let (log, _, json) = convert_with_setup_then(
-    tex,
-    Some("ar5iv.sty"),
-    || set_fm_shadow_override(Some(true)),
-    |_| fm_shadow_json(),
-  );
-  let dump: Value = serde_json::from_str(&json).expect("the shadow JSON");
-  (
-    error_count(&log),
-    warning_count(&log),
-    dump["readback"].clone(),
-  )
-}
-
-/// A paper's outcome, what the writer's own check and the ledger say, each path its own.
-#[test]
-fn each_outcome_is_read_back() {
-  // (the first case only: the RED returned there at `=2`, DEL1)
-  // (the reading and today's agree: the final document reads as the reading)
-  let (tex, counts) = (
-    r"\documentclass{article}\begin{document}\title{T}\author{Ann Able$^{1}$ \and Bob Baker$^{2}$\\ $^1$Univ A\\ $^2$Univ B}\maketitle Body.\end{document}",
-    (0, 0),
-  );
-  let (errors, warnings, _) = read_back(tex);
-  assert_eq!((errors, warnings), counts, "{tex}");
-}
-
-macro_rules! repro {
-  ($name:literal) => {
-    include_str!(concat!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
-      $name,
-      ".tex"
-    ))
-  };
-}
-
-/// A paper the writer held that a pass after it changed: `same` by the writer's own check, and the read-back names where
-/// the final document differs (the `changed_after` count: a kind or text a pass may change, an owner it may not, the debt
-/// Z8 and Z9 pay); so too `written`. An API-only paper's reading is read back though no writer ran (`no-block`, what wave 5
-/// opens).
-#[test]
-fn a_pass_after_the_writer_shows_in_the_read_back() {
-  let (errors, warnings, _) = read_back(repro!("email_list_split_order_only"));
-  assert_eq!((errors, warnings), (0, 0));
 }

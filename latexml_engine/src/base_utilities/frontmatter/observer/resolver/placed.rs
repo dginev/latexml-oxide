@@ -1061,7 +1061,6 @@ mod whole_tests {
       keyval_tokens: None,
       epoch: 0,
       queue_position: 0,
-      authors_queued: None,
       stamp: Stamp::Projected,
       range: (0, 0),
       tokens: Tokens::new(Vec::new()),

@@ -8,7 +8,7 @@
 //! (1106.0130), a column's first name (2006.13694), ORCID links in a mark and an e-mail (2506.11626, 2402.04675). Every probe compiles clean with pdflatex (TL 2025) and converts
 //! with no Error or Warning, and the XML is byte-identical with the switch on and off.
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
+use latexml_engine::base_utilities::fm_shadow_json;
 use serde_json::Value;
 
 /// Convert `tex` under the shadow switch, asserting a clean conversion: the whole dump.
@@ -16,12 +16,7 @@ fn dump(tex: &str) -> Value { dump_as(tex, None) }
 
 /// [`dump`], of a written family's paper the writer holds back (`declined: <why>`): today's XML kept.
 fn dump_as(tex: &str, held: Option<&str>) -> Value {
-  let (log, _, json) = convert_with_setup_then(
-    tex,
-    Some("ar5iv.sty"),
-    || set_fm_shadow_override(Some(true)),
-    |_| fm_shadow_json(),
-  );
+  let (log, _, json) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| fm_shadow_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   match held {
     Some(why) => super::perfect_kernel_batchfms2a1::parsed_held(&json, why),

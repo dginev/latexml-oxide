@@ -11,7 +11,6 @@
 //! same creators. Every repro compiles clean with pdflatex (TL 2025).
 
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::set_fm_shadow_override;
 use serde_json::Value;
 
 use super::{
@@ -180,12 +179,7 @@ fn an_api_entrys_address_is_its_spellers_email() {
 /// converted clean.
 #[track_caller]
 fn default_mode_elements(tex: &str) -> Vec<String> {
-  let (log, xml, ()) = convert_with_setup_then(
-    tex,
-    Some("ar5iv.sty"),
-    || set_fm_shadow_override(None),
-    |_| (),
-  );
+  let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| ());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   xml
     .match_indices("<creator ")
@@ -443,7 +437,6 @@ pub(super) fn assert_elements(tex: &str, want: &[&str]) {
           "--streaming=false"
         },
       ])
-      .env_remove("LATEXML_FM_SHADOW")
       .current_dir(workdir.path())
       .output()
       .expect("spawn latexml_oxide");

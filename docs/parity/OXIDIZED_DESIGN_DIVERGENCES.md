@@ -23563,7 +23563,8 @@ S2a, KERNEL_CAPABILITIES K23 step 1; design `agent_reports/2026-10-21_fms2_desig
 `base_utilities/frontmatter/observer/`. It runs only under the runtime environment variable `LATEXML_FM_SHADOW=1` (read
 once per process; a test sets the thread's override, `set_fm_shadow_override`), which stays **unset on the fleet**
 (`cortex_worker` writes no dump; the shadow census runs through the local CLI), and decides nothing: a conversion's XML
-and its log are the same with and without it (guard `shadow_switch_leaves_the_xml_unchanged`, over the review's
+and its log are the same with and without it (guard `shadow_switch_leaves_the_xml_unchanged`, since DEL4
+`the_rehearsal_leaves_nothing_behind`: the switch is gone, "Deleted (DEL4)" below; over the review's
 adversarial shapes: an `\aftergroup`, a `\thanks` holding a `\label` with a `\ref` to it, a `\footnote`, a `\gdef` and a
 `\stepcounter`, an unclosed `\begingroup`, an undefined command, an `\input` in the field).
 - **Ledger** (`ledger.rs`): a block per `\author`-family call — `\lx@add@authors@adaptive` (the kernel `\author`,
@@ -24461,6 +24462,39 @@ unit test `policy::tests::a_declaration_is_read_and_an_undeclared_family_takes_t
 `fmshadow::tests::{a_declared_familys_dump_re_resolves_under_its_bindings_conventions,
 the_declared_list_is_every_bindings_own_declaration,
 stale_conventions_have_their_own_column_count_in_the_gate_and_fail_the_run}`.
+
+**Deleted (DEL4, 2026-11-09): the S2b writer and the census.** Since DEL3 (#982) the emitter (#980) reads every author
+block a rehearsal read, and a block none read is Perl's whole-block creator under the emitter's counted Warning, so
+`write_observed_frontmatter` ran only where a flush did not emit, and there it stayed out (no block, a block no
+rehearsal read) or found no reading. Skipping it changed no paper: 0 of the 1,434 stage2 ids and 0 of the 900 E0
+population papers (XML byte-identical, E/F/W equal; 1710.01722 a timeout on both sides). Nothing was ported. Cost
+−0.02 … −0.34 % `instructions:u` on cost.sh's four arXiv documents. Deleted
+with its closure: `writer/apply.rs`, the plan's comparison and cuts (`difference`, `pair_names`, `cut_block_lines`,
+`cut_entry_addresses`, `Op`), the re-part's DOM writer (`repart::{plan, apply, concede, slice_name}`, #928), the
+give-backs and `keep_as_today` (95b r3's unwritten-family calls, with the setter watch that fed them,
+`ledger::watch_unwritten_setters`), `hide_answered_marks`, `insert::entry_line_addresses`, `names_no_person`, the
+read-back `read_back_frontmatter`, `CHANGE_TAGS`, the ledger's census fields (`refusal`, `compared`, `read_back`,
+`authors_queued`) and the per-family `Policy::written` (#925, #948). The census goes with it: `LATEXML_FM_SHADOW` (`=1`
+and the observer-off `=0`), `set_fm_shadow_override`, the CLI's `<dest>.fmshadow.json` and `ab_audit fmshadow`. The
+observer records and reads every paper; the ledger's JSON (`fm_shadow_json`) stays as the guards' in-process view of
+the reading. Guards deleted: the switch's byte-identity checks (`batchfms2a2::{resolver_leaves_the_xml_unchanged,
+r3_shapes_leave_the_xml_unchanged}`, `batchfms2a2r6`/`r7`/`r8`'s `r*_shapes_leave_the_xml_unchanged` with the fixtures
+only they read — 2506.07978's and 2604.19097's AASTeX shape among them —,
+`batchfms2a1::cli_writes_the_shadow_dump_only_under_the_switch`), e0's read-back checks (`each_outcome_is_read_back`,
+`a_pass_after_the_writer_shows_in_the_read_back`; witnesses 2012.14750, 2201.02056, 2606.18623, 1507.02068), the
+writer's unit tests and every ab_audit `fmshadow::tests` test above. Two guards of live code are kept (DEL4b): e0's pass
+list, re-anchored after `drop_repeated_orcids` where the writer ran, its last call `check_placed_content` and its three
+owner debts unchanged (`perfect_kernel_batche0::passes_after_the_emitter_are_an_allow_list`; debts 2511.18438,
+2608.22772), and the drift guard's live half, each declaration's `binding:` the declaring file's own registry entry
+(`perfect_kernel_batch87a::each_declared_binding_is_the_declaring_files_own_registry_entry`; the `DECLARED` equality
+half went with the census). `the_rehearsal_leaves_nothing_behind` (fms2a1, the switch comparison's successor) asserts
+each shape's whole body text and counts. Witnesses only the deleted code named: 0705.3751, 2506.05001 (a take-out the
+plan could not cut, declined, the ledger saying so rather than `same`), 1306.4792 (`)and I. Siutsou(`) and 2508.05192
+(an IEEE ordinal's `1 Felix Neubauer`), names opening with a bracket or a digit the census's comparator still read as
+whole names; 2207.10791 (an XML creator `*`, a fault other than a separator-only creator); 1511.09260 (`Krzysztof
+Pawłowski 2`, marks held as text matched to the reading's name); 2607.19263 (a `\thanks{$\star$ …}` legend read as the
+starred authors' affiliation, `note:legend`); 2603.24308 (`\textit{e-mail: \texttt{mdeleon@icmat.es}}`, the writer's
+contact copy keeping the italic and typewriter round the address alone).
 
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 
@@ -27887,7 +27921,8 @@ writer gaps (OPEN_ROWS). The `r5`-`r9` article shapes pin their outcome (review 
 back under `batchfms2a1::held(<why>)`, the decline's first difference (`declined: Note univacity…`, `the creators'
 names`, …), a written one strict with its XML rows.
 
-Since 97e (#948) `UNDECLARED` is written too: every binding owning `\author` with no declaration of its own.
+Since 97e (#948) `UNDECLARED` is written too: every binding owning `\author` with no declaration of its own. Since
+DEL4 the flag is gone with the S2b writer (#837 "Deleted (DEL4)"): every family's blocks are read and emitted (#980).
 
 ### 926. The writer cuts an author block's own lines: today's one affiliation joining several marked entries, or a legend line today's made an affiliation (Perl: the old reader's joined contact)
 
@@ -29861,7 +29896,8 @@ an_address_beside_an_institution_keeps_the_institution}` under `held`, `an_unmar
 `svproc_hand_marks_institutes_written`, `ws_procs_address_lines_written`, `mnras_block_line_accent_cut`,
 `mnras_block_line_dotless_i_cut`, `appolb_reparted_entries_keep_address_role`, `jfm_letter_spaced_name_is_one_name`,
 `svjour3_at_pieces_joined_are_not_written`, `elsarticle_key_labelled_address_is_no_mark`,
-`svjour_collaboration_heading_is_no_creator`.
+`svjour_collaboration_heading_is_no_creator`. Since DEL4 the `written` flag and the writer are gone (#837 "Deleted
+(DEL4)"); the emitter (#980) reads these families as every other.
 
 ### 949. A line before an author block's first that prints nothing is no names line, and a nameless creator's lines are the block's when no named author is left to take them (Perl: the spacer line an empty name, every line under it an affiliation)
 
@@ -33000,8 +33036,8 @@ request no entry answers; (5) the call written is the flush's last, and it repla
 (`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`) would at the block (the block's list is the one `\maketitle` prints — the last list set before it; a top-level `\institute` *after* the block is NOT yet cleared, revDEL3b R1, RED below): an
 affiliation call queued before the block and an earlier call of the block leave the reading (`replaced_by_setter`) and
 the content check (`Ledger::replaced`) — digested inside the flush, the call's own clear meets an empty queue
-(`place::digest_front_matter` takes the queue first; review revDEL3 S1). The S2b writer no longer runs at
-`=2` (the flush emitted). Witnesses: cond-mat0605195 (svjour, the setter in the last `\and` piece's group: the four
+(`place::digest_front_matter` takes the queue first; review revDEL3 S1). The S2b writer no longer ran at
+`=2` (the flush emitted); DEL4 deleted it (#837 "Deleted (DEL4)"). Witnesses: cond-mat0605195 (svjour, the setter in the last `\and` piece's group: the four
 creators and their institutes byte-identical to the writer's output, the stay-out Warning gone), 2502.07804 (svjour,
 marked lines after comma-parted names: creators equal; the ORCID links are written as the emitter writes every `=2`
 `\href` item, `ltx_href` with the paper's icon, where the whole block's `\lx@author@href` made OD #960's `ltx_orcid`).

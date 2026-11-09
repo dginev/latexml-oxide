@@ -37,10 +37,8 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
       .unwrap_or(""),
     Some(&command),
   );
-  // (the frontmatter observer's ledger, under its shadow switch only: OXIDIZED_DESIGN_DIVERGENCES #837)
-  if fm_shadow_enabled() {
-    record_api_call(tag, attr, &command);
-  }
+  // (the frontmatter observer's ledger: OXIDIZED_DESIGN_DIVERGENCES #837)
+  record_api_call(tag, attr, &command);
   note_document_sets_front_matter(
     tag,
     &attr
@@ -313,10 +311,8 @@ pub fn dequeue_front_matter(tag: &str, attr: &[(&str, &str)]) {
   if frontmatter_frozen_for_replay() {
     return;
   }
-  // (the observer's ledger, under its shadow switch only: the calls it removes, OXIDIZED_DESIGN_DIVERGENCES #837)
-  if fm_shadow_enabled() {
-    record_clear(tag, attr);
-  }
+  // (the observer's ledger: the calls it removes, OXIDIZED_DESIGN_DIVERGENCES #837)
+  record_clear(tag, attr);
   // (and the title-page check's: what the calls it removes were given is no longer wanted, #953 "106t")
   note_frontmatter_clear(
     tag,
@@ -414,9 +410,7 @@ pub fn begin_author_body() {
     Stored::Int(start as i64),
     Some(Scope::Global),
   );
-  if fm_shadow_enabled() {
-    record_author_body_clear();
-  }
+  record_author_body_clear();
 }
 
 /// End a binding's `\author` body ([`begin_author_body`]): what it queued is what a later `\author` takes back.
@@ -434,9 +428,7 @@ pub fn end_author_body() {
     Stored::FrontmatterRaw(entries),
     Some(Scope::Global),
   );
-  if fm_shadow_enabled() {
-    record_author_body_end();
-  }
+  record_author_body_end();
 }
 
 /// What the last author body queued, and where the queue stood when it began ([`begin_author_body`]).

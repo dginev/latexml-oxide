@@ -21,7 +21,6 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   binding: "elsart_support_core.sty",
   title_marks: FmTitleMarks::Body,
   keyed_labels: true,
-  written: true,
   cite: "elsarticle.cls:656-662, :819, :836; elsart.cls v2.18 :1107-1108, :1135-1164; OD #948 (1108.0201)",
   ..FM_KERNEL_CONVENTIONS
 };

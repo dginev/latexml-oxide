@@ -6,7 +6,6 @@
 //! (`a_creator_calls_annotations_answer_a_label`). Each runs the switch off and `LATEXML_FM_EMIT=2`.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::{
   perfect_kernel_batch84b::creators,
@@ -25,15 +24,8 @@ macro_rules! repro {
 
 /// `tex` beside `files` converted under the census switch: the log and the XML.
 fn run_with(tex: &str, files: &[(&str, &str)]) -> (String, String) {
-  let (log, xml, ()) = convert_files_with_setup_then(
-    tex,
-    files,
-    Some("ar5iv.sty"),
-    move || {
-      set_fm_shadow_override(Some(true));
-    },
-    |_| (),
-  );
+  let (log, xml, ()) =
+    convert_files_with_setup_then(tex, files, Some("ar5iv.sty"), move || {}, |_| ());
   (log, xml)
 }
 

@@ -6,7 +6,6 @@
 //! repro compiles clean with pdflatex (TL 2025; the mn2e repro with 0810.2791's mn2e.cls, which TeX Live lacks).
 
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::{perfect_kernel_batch84b::creators, perfect_kernel_batch92a::assert_reading};
 
@@ -22,12 +21,7 @@ macro_rules! repro {
 /// The XML's creators of `tex` converted in the default mode (no shadow switch: the fleet's), with no Error or Warning.
 #[track_caller]
 pub(super) fn default_mode_creators(tex: &str) -> Vec<Vec<String>> {
-  let (log, xml, ()) = convert_with_setup_then(
-    tex,
-    Some("ar5iv.sty"),
-    || set_fm_shadow_override(None),
-    |_| (),
-  );
+  let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| ());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   creators(&xml)
 }

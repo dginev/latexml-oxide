@@ -18,7 +18,7 @@
 use std::{path::Path, process::Command};
 
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
+use latexml_engine::base_utilities::fm_shadow_json;
 use serde_json::Value;
 
 use super::{
@@ -41,10 +41,10 @@ macro_rules! repro {
 /// notes' text (`ltx:pubnote`, in order) and the writer's outcome (`"writer"`, null for a family not written).
 pub(super) type Reading = (Vec<Vec<String>>, Vec<String>, Vec<String>, Value);
 
+/// The XML's creators and its publication notes' text (`ltx:pubnote`, in order), the conversion clean.
 #[track_caller]
-fn reading_of(log: &str, xml: &str, json: &str) -> Reading {
+fn printed(log: &str, xml: &str) -> (Vec<Vec<String>>, Vec<String>) {
   assert_eq!((error_count(log), warning_count(log)), (0, 0), "{log}");
-  let json: Value = serde_json::from_str(json).unwrap_or_else(|e| panic!("{e}: {json}"));
   let notes = xml
     .match_indices("<pubnote")
     .map(|(at, _)| {
@@ -54,30 +54,32 @@ fn reading_of(log: &str, xml: &str, json: &str) -> Reading {
       text(&xml[start..end])
     })
     .collect();
+  (creators(xml), notes)
+}
+
+#[track_caller]
+fn reading_of(log: &str, xml: &str, json: &str) -> Reading {
+  let (creators, notes) = printed(log, xml);
+  let json: Value = serde_json::from_str(json).unwrap_or_else(|e| panic!("{e}: {json}"));
   (
-    creators(xml),
+    creators,
     tuples(&json["resolved"]),
     notes,
     json["writer"].clone(),
   )
 }
 
-/// `tex` converted in process under the shadow switch.
+/// `tex` converted in process, its reading from the ledger's JSON.
 #[track_caller]
 fn in_process(tex: &str) -> Reading {
-  let (log, xml, json) = convert_with_setup_then(
-    tex,
-    Some(PRELOAD),
-    || set_fm_shadow_override(Some(true)),
-    |_| fm_shadow_json(),
-  );
+  let (log, xml, json) = convert_with_setup_then(tex, Some(PRELOAD), || {}, |_| fm_shadow_json());
   reading_of(&log, &xml, &json)
 }
 
-/// `tex` converted by the binary under the census switch (`LATEXML_FM_SHADOW=1`, `<dest>.fmshadow.json`),
-/// `--streaming=true` when `streaming`.
+/// `tex` converted by the binary, `--streaming=true` when `streaming`: its creators and publication notes, the conversion
+/// clean (the reading's tuples are read in process only since the census's `<dest>.fmshadow.json` went, DEL4).
 #[track_caller]
-fn with_binary(tex: &str, streaming: bool) -> Reading {
+fn with_binary(tex: &str, streaming: bool) -> (Vec<Vec<String>>, Vec<String>) {
   let bin = env!("CARGO_BIN_EXE_latexml_oxide");
   assert!(Path::new(bin).is_file(), "binary not staged at {bin}");
   let workdir = tempfile::tempdir().expect("create tempdir");
@@ -96,20 +98,16 @@ fn with_binary(tex: &str, streaming: bool) -> Reading {
         "--streaming=false"
       },
     ])
-    .env("LATEXML_FM_SHADOW", "1")
     .current_dir(workdir.path())
     .output()
     .expect("spawn latexml_oxide");
   let log = String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "");
   let xml = std::fs::read_to_string(workdir.path().join("t.xml")).expect("t.xml");
-  let json =
-    std::fs::read_to_string(workdir.path().join("t.xml.fmshadow.json")).expect("the shadow JSON");
-  reading_of(&log, &xml, &json)
+  printed(&log, &xml)
 }
 
 /// Asserts `tex`'s XML creators are `xml` (when given; else only the same in every mode) and its shadow tuples
-/// `shadow`, in process and from the binary, eager and `--streaming` (its notes and the writer's outcome the same in
-/// every mode).
+/// `shadow`, in process; the binary's creators and notes, eager and `--streaming`, the same as in process.
 #[track_caller]
 pub(super) fn assert_reading(tex: &str, xml: Option<&[&[&str]]>, shadow: &[&str]) -> Reading {
   let shadow: Vec<String> = shadow.iter().map(ToString::to_string).collect();
@@ -122,10 +120,10 @@ pub(super) fn assert_reading(tex: &str, xml: Option<&[&[&str]]>, shadow: &[&str]
     assert_eq!(xml_in_process, xml, "in process");
   }
   assert_eq!(shadow_in_process, shadow, "in process");
-  let want = (xml_in_process, shadow, notes, writer);
-  assert_eq!(with_binary(tex, false), want, "the binary, eager");
-  assert_eq!(with_binary(tex, true), want, "the binary, --streaming");
-  want
+  let printed = (xml_in_process.clone(), notes.clone());
+  assert_eq!(with_binary(tex, false), printed, "the binary, eager");
+  assert_eq!(with_binary(tex, true), printed, "the binary, --streaming");
+  (xml_in_process, shadow, notes, writer)
 }
 
 /// aa class A of the llncs and aa gate study (1707.06238, 1302.1442; 52 papers): `\inst{\ref{ia},\ref{ib}}` prints "1, 2"

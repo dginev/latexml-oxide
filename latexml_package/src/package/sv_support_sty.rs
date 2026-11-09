@@ -30,7 +30,6 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   inst_after_comma: true,
   email_in_place: true,
   cite: "svjour3.cls `\\inst` (`\\unskip`), :303 `\\email`; svmult.cls:2304, svjour.cls:256; OD #807, #913",
-  written: true,
   ..FM_KERNEL_CONVENTIONS
 };
 

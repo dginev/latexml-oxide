@@ -5,7 +5,6 @@
 //! at `=2`.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::perfect_kernel_batch84b::creators;
 
@@ -25,15 +24,8 @@ fn a_list_setter_in_an_author_block_is_read_by_the_emitter() {
     row(&["Bob Baker", "affiliation=Lab Y, Town"]),
     row(&["Cy Coe", "affiliation=Univ X, City"]),
   ];
-  let (log, xml, ()) = convert_files_with_setup_then(
-    tex,
-    &[],
-    Some("ar5iv.sty"),
-    move || {
-      set_fm_shadow_override(None);
-    },
-    |_| (),
-  );
+  let (log, xml, ()) =
+    convert_files_with_setup_then(tex, &[], Some("ar5iv.sty"), move || {}, |_| ());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "\n{log}");
   assert!(!log.contains("Orphaned frontmatter annotation"), "\n{log}");
   assert!(!log.contains("can't read an author block"), "\n{log}");

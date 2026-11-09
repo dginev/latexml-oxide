@@ -1,21 +1,13 @@
 //! Red/green guards for FM S2b r1 (OXIDIZED_DESIGN_DIVERGENCES #837 "S2b"; user frontmatter rulings 2026-10-17, M3
 //! observer): for a family whose declared conventions are `written` — the pilot, revtex4_support's `revtex` — the
 //! observer's reading is written into the document once today's frontmatter is placed, where every difference from
-//! today's is one of the writer's operations (`observer::writer`). Under the shadow switch only (`LATEXML_FM_SHADOW=1`): unset,
-//! the XML is today's (the shadow-neutral guards of the families not switched stay byte-identical, batchfms2a2r7/r8).
-//! Each guard converts with the switch on and off and asserts every creator whole.
+//! today's is one of the writer's operations (`observer::writer`). The writer and the census switch are gone (DEL4): each
+//! guard now pins the emitter's output, every creator whole.
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::set_fm_shadow_override;
 
-/// Convert `tex` with the shadow switch `on`, asserting a clean conversion; its creators, each with the whitespace
-/// between its tags removed.
-fn creators(tex: &str, on: bool) -> Vec<String> {
-  let (log, xml, ()) = convert_with_setup_then(
-    tex,
-    Some("ar5iv.sty"),
-    move || set_fm_shadow_override(Some(on)),
-    |_| (),
-  );
+/// Convert `tex`, asserting a clean conversion; its creators, each with the whitespace between its tags removed.
+fn creators(tex: &str) -> Vec<String> {
+  let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| ());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let mut found = Vec::new();
   let mut rest = xml.as_str();
@@ -68,7 +60,7 @@ fn glued_symbol_marks_part_into_their_affiliations() {
 Text.
 \end{document}
 ";
-  let on = creators(tex, true);
+  let on = creators(tex);
   assert!(on.iter().all(|c| c.contains("<personname")), "{on:#?}");
   holds(&on, "Roy", &["Univ A", "Univ B", "Univ C"], &[]);
   holds(&on, "Lowe", &["Univ A"], &["Univ B", "Univ C"]);
@@ -88,7 +80,7 @@ fn a_number_with_a_glued_letter_requests_the_number() {
 Text.
 \end{document}
 ";
-  let on = creators(tex, true);
+  let on = creators(tex);
   holds(&on, "Bob Baker", &["Univ A"], &["Univ B"]);
   holds(&on, "Cat Cole", &["Univ B"], &["Univ A"]);
 }
@@ -109,7 +101,7 @@ fn a_mark_after_the_comma_with_an_empty_base_is_the_name_before() {
 Text.
 \end{document}
 ";
-  let on = creators(tex, true);
+  let on = creators(tex);
   holds(&on, "Ann Able", &["Univ A"], &["Univ B", "Univ C"]);
   holds(&on, "Bob Baker", &["Univ A", "Univ B"], &["Univ C"]);
   holds(&on, "Cat Cole", &["Univ A", "Univ C"], &["Univ B"]);
@@ -134,7 +126,7 @@ fn author_footnote_symbols_carry_their_affiliations() {
 Text.
 \end{document}
 ";
-  let on = creators(tex, true);
+  let on = creators(tex);
   assert!(on.iter().all(|c| c.contains("<personname")), "{on:#?}");
   holds(&on, "Ann Able", &["Univ A"], &["Univ B"]);
   holds(&on, "Bob Baker", &["Univ B"], &["Univ A"]);
@@ -156,7 +148,7 @@ fn a_named_mark_holder_keeps_its_note_mark_as_the_notes() {
 Text.
 \end{document}
 ";
-  let on = creators(tex, true);
+  let on = creators(tex);
   holds(&on, "Ann Bera", &["Univ P", "Univ I"], &[]);
   holds(&on, "Pat Shukla", &["Univ P"], &["Univ I"]);
 }
@@ -176,7 +168,7 @@ fn a_mark_in_paren_math_is_cut_whole() {
 Text.
 \end{document}
 ";
-  let on = creators(tex, true);
+  let on = creators(tex);
   holds(&on, "Ann Able", &["Univ A"], &["Univ B"]);
   holds(&on, "Bob Baker", &["Univ A", "Univ B"], &[]);
   holds(&on, "Cat Cole", &["Univ B"], &["Univ A"]);
@@ -196,7 +188,7 @@ fn a_number_range_requests_every_number_in_it() {
 Text.
 \end{document}
 ";
-  let on = creators(tex, true);
+  let on = creators(tex);
   holds(&on, "Ann Able", &["Univ A", "Univ B", "Univ C"], &[
     "Univ D",
   ]);
@@ -226,7 +218,7 @@ fn an_unmarked_line_after_symbol_led_ones_is_the_groups() {
 Text.
 \end{document}
 ";
-  let on = creators(tex, true);
+  let on = creators(tex);
   holds(&on, "Ann Able", &["Univ A", "Council C"], &[
     "Univ B", "Univ D",
   ]);
@@ -261,7 +253,7 @@ fn a_marked_list_after_an_empty_affiliation_goes_by_marks() {
 Text.
 \end{document}
 ";
-  let on = creators(tex, true);
+  let on = creators(tex);
   holds(&on, "Ann Able", &["Univ A", "Univ B"], &[
     "Univ C", "Univ D",
   ]);
@@ -291,7 +283,7 @@ fn one_mark_lines_after_a_front_affiliation_go_by_marks() {
 Text.
 \end{document}
 ";
-  let on = creators(tex, true);
+  let on = creators(tex);
   holds(&on, "Ann Able", &["Univ A"], &["Univ B", "Univ C"]);
   holds(&on, "Bob Baker", &["Univ B"], &["Univ A", "Univ C"]);
   holds(&on, "Cat Cole", &["Univ C"], &["Univ A", "Univ B"]);
