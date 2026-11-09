@@ -1,5 +1,5 @@
 % mechanism: a mark heading a block's line from inside the line's own wrapper is read by its own print, its formula's extent or its
-%   `\textsuperscript` call (`writer::Field::own_print`): the first box in the wrapper takes the cover of the call around it, so
+%   `\textsuperscript` call (`emitter::Field::own_print`): the first box in the wrapper takes the cover of the call around it, so
 %   the Mark's span is the wrapper's, and `formula_span` the formula's
 % witness: 2605.25195 (`\textbf{$^1$Fudan University}  \textbf{$^2$Tencent Hunyuan}`), its `\textsuperscript` sibling
 % oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker2 Cat Cole3" over "1Univ X" bold, "2Univ Y" bold, "3Univ Z" italic on one line, then "* Equal Contribution"

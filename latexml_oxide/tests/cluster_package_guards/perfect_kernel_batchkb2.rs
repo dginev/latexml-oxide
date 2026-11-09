@@ -1,4 +1,4 @@
-//! Guards for KB2: the emitter's cut of an entry the reading took an address out of (P1b, `writer::address_cut`) keeps
+//! Guards for KB2: the emitter's cut of an entry the reading took an address out of (P1b, `emitter::address_cut`) keeps
 //! `LATEXML_FM_EMIT=2`'s improvements where it harms none (the standing ruling, user 2026-11-08; OXIDIZED_DESIGN_DIVERGENCES
 //! #980 KB2): an entry whose cut would strand the phrase its address completes is given back whole (`entry_cuts`,
 //! `strands_a_phrase`) where its holders are exactly its address's owners (`held_by_its_owners`), and a cut e-mail printed

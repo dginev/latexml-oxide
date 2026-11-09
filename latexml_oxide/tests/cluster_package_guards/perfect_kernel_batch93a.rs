@@ -208,7 +208,7 @@ fn a_trailing_mark_no_name_shows_leaves_the_line_unmarked() {
 }
 
 /// An entry the reading leaves to the block because no name requests its label (`label:unrequested owner:block`) is no
-/// ruling's owner decision: the writer leaves today's placement (`writer::writes`, OD #925). espcrc's `\address[ETHZ]`
+/// ruling's owner decision: the writer leaves today's placement (`emitter::writes`, OD #925). espcrc's `\address[ETHZ]`
 /// inside `\author`, after each name (78s's `espcrc_addressmark_key_not_printed`, hep-lat0409072, which pins the XML:
 /// CERN Philippe de Forcrand's), was moved to the block once the kernel family was written.
 #[test]

@@ -21,13 +21,14 @@
 //!   `\author` and the hook).
 //! - [`shadow`]: the flush's part — every real flush (`digest_front_matter`) rehearses and lexes each block not
 //!   rehearsed yet — and the ledger's JSON dump the guards read the reading by, in process.
-//! - [`writer`]: the emitter (`writer::emit`, OD #980), which replaces the flush's queued creators and their annotations
+//! - [`emitter`]: the emitter (`emitter::emit`, OD #980), which replaces the flush's queued creators and their annotations
 //!   by Perl's calls built from the reading, its vocabulary and cuts, and the content check on the placed output. (The S2b
 //!   writer that rewrote placed frontmatter after `insert_frontmatter`, and the census switch `LATEXML_FM_SHADOW`, were
 //!   deleted in DEL4.)
 
 use super::*;
 
+pub(in crate::base_utilities) mod emitter;
 pub(in crate::base_utilities) mod events;
 pub(in crate::base_utilities) mod field_notes;
 pub(in crate::base_utilities) mod ledger;
@@ -36,10 +37,14 @@ pub(in crate::base_utilities) mod policy;
 pub(in crate::base_utilities) mod rehearsal;
 pub(in crate::base_utilities) mod resolver;
 pub(in crate::base_utilities) mod shadow;
-pub(in crate::base_utilities) mod writer;
 
 // (for the guards, which read a dump's events and the resolver's tuples, and the types of a public event's fields;
 // prefixed, as the prelude re-exports these)
+// (the emitter's vocabulary, moved unchanged, for its callers in `author_block/`, `frontmatter/` and `defs/`: the plan's row "Knowledge in, driver out, one pass")
+pub(in crate::base_utilities) use emitter::calls::*;
+pub(in crate::base_utilities) use emitter::{
+  EMITTING, block_creator_written, check_placed_content, emit_commands, emitted, take_digested,
+};
 pub use events::{
   BreakKind as FmBreakKind, EmailMeaning as FmEmailMeaning, Event as FmEvent,
   EventKind as FmEventKind, MarkBase as FmMarkBase, MarkFormula as FmMarkFormula,
@@ -65,8 +70,3 @@ pub(in crate::base_utilities) use resolver::owners::*;
 pub use resolver::{Input as FmInput, Resolved as FmResolved, resolve as fm_resolve};
 pub(in crate::base_utilities) use shadow::shadow_flush;
 pub use shadow::{fm_shadow_json, reset_fm_shadow};
-// (the emitter's vocabulary, moved unchanged, for its callers in `author_block/`, `frontmatter/` and `defs/`: the plan's row "Knowledge in, driver out, one pass")
-pub(in crate::base_utilities) use writer::calls::*;
-pub(in crate::base_utilities) use writer::{
-  EMITTING, block_creator_written, check_placed_content, emit_commands, emitted, take_digested,
-};

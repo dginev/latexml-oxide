@@ -1,5 +1,5 @@
 % mechanism: a formula that opens a group where a line starts, at the field's start or right after a line break, by what digestion made (`Walker::note_a_formulas_group`,
-%   `events::Formula::opens_line_in`): the group starts at its brace, whatever follows the mark in it (`writer::Field::starts_at_its_brace`). After a comma it stays the fail-safe: an isotope
+%   `events::Formula::opens_line_in`): the group starts at its brace, whatever follows the mark in it (`emitter::Field::starts_at_its_brace`). After a comma it stays the fail-safe: an isotope
 % witness: 2005.08290 (`\affiliation{~\\ \normalsize{$^{1}$ Shemyakin… Chemistry,} \normalsize{Moscow, Russia}\\ …}`, review revZ3r2)
 % oracle:  pdflatex 0 errors, the three numbered lines as written
 % engines: Perl has no cut; int142a cut this shape by walking back, and `{\small $^1$…,}`, `{\it …}`, `{\noindent …}`, `{\footnotesize\it …}` lines go to a nameless creator there, a gain of Z3r3 (the guard's rows); Z3r2: every entry on a nameless creator, E 0, W 0, each name with no contact

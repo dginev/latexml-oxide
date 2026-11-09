@@ -15,11 +15,11 @@ use latexml_core::{
 };
 
 use super::{
+  emitter::Analysis,
   events::{EmailMeaning, Event, EventKind, HeldError, lex_events},
   field_notes::{EnvironmentStep, FieldCreator},
   rehearsal::{past_line_break, past_tabular_call},
   resolver::printed_words,
-  writer::Analysis,
   *,
 };
 
@@ -63,17 +63,17 @@ pub(in crate::base_utilities) enum Outcome {
   Events {
     events:        Vec<Event>,
     /// the extents of its formulas, outermost, in order (`events::lex_with_formulas`): what a span's content reads
-    /// (`writer::Field`). Not in a dump: nothing offline reads the content
+    /// (`emitter::Field`). Not in a dump: nothing offline reads the content
     formulas:      Vec<events::Formula>,
     /// where its inks printing an `@` print, and in what font (`events::InkTable`): what the emitter cuts an entry's
-    /// addresses at (`writer::address_cut`). Not in a dump
+    /// addresses at (`emitter::address_cut`). Not in a dump
     inks:          Box<events::InkTable>,
     errors:        usize,
     warnings:      usize,
     declarations:  Vec<Event>,
     breaks:        Vec<Event>,
     held:          Vec<HeldError>,
-    /// the environments its tokens open and close, what a span's content reads (`writer::Field`). Not in a dump
+    /// the environments its tokens open and close, what a span's content reads (`emitter::Field`). Not in a dump
     environments:  Vec<EnvironmentStep>,
     /// the creator calls its own expansion made (`field_notes::FieldCreator`), the keyvals the emitter writes on the
     /// creators their Names make (`Event::creator_call`), fixed once rehearsed (a slice: the variant stays under clippy's
@@ -84,7 +84,7 @@ pub(in crate::base_utilities) enum Outcome {
     /// (`resolver::placed::content_check`), as a call's no rehearsal read (`ApiCall::unread`). In a dump only when set
     unread:        Option<Box<ContentText>>,
     /// where its own digestion moved the footnote counter its marks print from, no event saying so
-    /// (`field_notes::FieldNotes::counter_moves`): what the emitter carries or writes whole (`writer::emit::counter_moved`).
+    /// (`field_notes::FieldNotes::counter_moves`): what the emitter carries or writes whole (`emitter::emit::counter_moved`).
     /// Not in a dump: only the emitter reads it
     counter_moves: Option<Box<CounterMoves>>,
   },
@@ -144,7 +144,7 @@ pub(in crate::base_utilities) struct AuthorBlock {
   /// when that is the kernel's — with `hook`, the key of its declared conventions (`policy::policy_for`; S2a.2)
   pub binding:        String,
   /// the tags its rehearsal queued besides its creators (`rehearsal::Rehearsal::Done::queued`): a frontmatter setter run inside
-  /// the block, a `\date` in `\author` (2503.02741), which the emitter counts (`writer::emit::warn_queued_unwritten`). Not in
+  /// the block, a `\date` in `\author` (2503.02741), which the emitter counts (`emitter::emit::warn_queued_unwritten`). Not in
   /// a dump: only the emitter reads it
   pub queued:         Vec<String>,
   /// the binding owning the `\author` meaning at the call ([`author_binding`]): a compiled binding's file name
@@ -192,7 +192,7 @@ pub(in crate::base_utilities) struct AuthorBlock {
   /// a binding's list setter the argument calls ([`list_setter_called`]): sv_support's `\institute` inside an author's
   /// group, `\and{Cy Coe\inst{1}\institute{Univ X \and Lab Y}}` (cond-mat0605195) — whose entries the binding numbers
   /// for the marks to point to, which the rehearsal reads as one in-block affiliation (`rehearsal::install_event_bindings`);
-  /// the emitter writes the call as it is, after the block's names (`writer::emit::list_setter_runs`, 2502.07804)
+  /// the emitter writes the call as it is, after the block's names (`emitter::emit::list_setter_runs`, 2502.07804)
   pub list_setter:    Option<&'static str>,
 }
 
@@ -248,7 +248,7 @@ pub(in crate::base_utilities) struct ApiCall {
   pub cleared:        bool,
   /// the errors its content's rehearsal held (no positions: an API call's content has none)
   pub errors:         usize,
-  /// the queued call itself, where the emitter may reuse it (`writer::emit`, under its switch)
+  /// the queued call itself, where the emitter may reuse it (`emitter::emit`, under its switch)
   pub command:        Option<Tokens>,
 }
 
@@ -308,7 +308,7 @@ pub(in crate::base_utilities) struct Ledger {
   /// the changes to `entries` so far: what the emitter's reading of them is made at ([`Self::analysis`]), counted by
   /// [`Self::entries_mut`] alone, which a caller takes only to change them
   generation:     u64,
-  /// the emitter's reading of `entries` and its checks, made at a generation (`writer::emit::analysis`): kept while they
+  /// the emitter's reading of `entries` and its checks, made at a generation (`emitter::emit::analysis`): kept while they
   /// read the same, dropped with the ledger (a conversion's start: no reading outlives its conversion, review revN1r2)
   pub analysis:   Option<Rc<Analysis>>,
   /// the frontmatter flushes so far (`shadow::shadow_flush`)
@@ -324,12 +324,12 @@ pub(in crate::base_utilities) struct Ledger {
   pub unprinted:  Vec<UnprintedCall>,
   /// the contents' texts ([`content_text`]) of the queued creator calls the emitter took out of the queue that no
   /// recorded call is (a stand-in binding's copy's, [`records_now`]), in queue order: what the content check counts them
-  /// by (`writer::emit::emit_commands`, `resolver::placed::content_check`)
+  /// by (`emitter::emit::emit_commands`, `resolver::placed::content_check`)
   pub unrecorded: Vec<ContentText>,
   /// what a list setter call the emitter wrote replaces as its clear (`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`)
   /// would at the block, which pdflatex never prints: an affiliation call queued before the block (its ledger index, no
   /// span) and an earlier setter call of a block (the block's index and the call's span) — what the content check counts
-  /// no word of (`writer::emit::replaced_by_setter`, `resolver::placed::content_check`; review revDEL3 S1)
+  /// no word of (`emitter::emit::replaced_by_setter`, `resolver::placed::content_check`; review revDEL3 S1)
   pub replaced:   BTreeSet<(usize, Option<(u16, u16)>)>,
   /// the entries the last binding's `\author` body made, a later `\author` clears them ([`record_author_body_clear`])
   author_body:    (usize, usize),
@@ -754,7 +754,7 @@ fn queue_length() -> usize {
 /// (`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`, then `labelseq=affiliation` entries), decided from the
 /// binding's definition, not a name list. In an author block the rehearsal reads such a call as one affiliation of the
 /// block, where the real call queues the numbered entries (cond-mat0605195): the emitter writes the call as it is, its
-/// entries the call's, none of the reading's items (`writer::emit::list_setter_runs`).
+/// entries the call's, none of the reading's items (`emitter::emit::list_setter_runs`).
 fn list_setter_called(stuff: &Tokens) -> Option<&'static str> {
   let toks = stuff.unlist_ref();
   FRONTMATTER_SETTERS.iter().copied().find(|name| {

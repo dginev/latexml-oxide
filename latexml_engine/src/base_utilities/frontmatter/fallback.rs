@@ -12,7 +12,7 @@ use super::*;
 /// Perl's whole-block creator (Base_Utility.pool.ltxml:693, `\lx@add@authors`' `{tabular}` fallback, and :588-589):
 /// `\lx@add@author[keyvals]{…}` of the block `written`, as given. The one writer of a block kept whole, Perl's raw call —
 /// the queued entry (`defs::author_macros`) and the emitter's for a block it can't read or whose reading loses a name's
-/// words (`observer::writer::emit`; OD #980). No raw-token preparation runs but the emitter's tabular juggles
+/// words (`observer::emitter::emit`; OD #980). No raw-token preparation runs but the emitter's tabular juggles
 /// ([`tabular_juggles_in_a_whole_block`], which digestion can't answer: 1511.05911): digestion does each rewrite's job in a
 /// block nothing splits — `\\[len]` is `\lx@newline`'s own optional, a `\begin{footnote}` runs `\footnote`, a
 /// mathcode-"8000 `^` reads as `\sp`, braces and superscripts digest to the same markup — and three of them hurt there
@@ -1132,7 +1132,7 @@ fn tabular_close_rest(t: &Token) -> Option<Vec<Token>> {
   })
 }
 
-/// A block written whole (the emitter's, `observer::writer::emit`; OD #980), each macro whose
+/// A block written whole (the emitter's, `observer::emitter::emit`; OD #980), each macro whose
 /// expansion starts by closing a tabular — a juggle or a column, `\alignauthor` too, which nothing splits there — the line
 /// break it prints between what it parts, one opening the block nothing: digested, it closed a tabular the block never
 /// opened, inside the creator's `\lx@personname`, four Errors and every name lost (vldb.cls:270 `\def\alignauthor{\end{tabular}

@@ -1,6 +1,6 @@
 % mechanism: an entry whose lines no balanced run holds (`\begin{small}…\end{small} \\ \begin{small}… a@x \end{small}`) is
 %   written line by line at `LATEXML_FM_EMIT=2` without the address run the cut takes inside one of its lines, its fonts
-%   and its break kept (`writer::emit::lines_run`, `writer::address_cut`; OD #980 P1br2); `=2` only
+%   and its break kept (`emitter::emit::lines_run`, `emitter::address_cut`; OD #980 P1br2); `=2` only
 % witness: 1312.5468 (the entry written as its plain text, counted, its `\small` and line break lost)
 % oracle:  pdflatex 0 errors; "Ann Able^a and Bob Baker^b"; "^a Univ A. City. ann@a.org"; "^b Univ B, Lab C." /
 %   "Road 2, Town. bob@b.org" (small)

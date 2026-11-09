@@ -2,7 +2,7 @@
 //! the words an author block or a creator's call prints (its Names, Contacts and Notes) that the reading writes nowhere,
 //! whatever lost them (review revZ4a: 1509.01480's creator and her note, 2607.28418's address). The block half is a pass after
 //! the resolver, on the ledger and [`Resolved`] alone ([`unwritten_block_inks`]); the call half, which needs what the emit
-//! wrote, is the emitter's, on [`Written`] (`writer::emit`).
+//! wrote, is the emitter's, on [`Written`] (`emitter::emit`).
 
 use std::collections::{BTreeMap, BTreeSet};
 

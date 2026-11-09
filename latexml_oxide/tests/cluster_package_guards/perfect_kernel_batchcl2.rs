@@ -1,6 +1,6 @@
 //! Guards for CL2b (`agent_reports/2026-11-08_brief_CL2b.md`; CL2's report), as DEL3 left it: a binding's list setter
 //! called inside an author block (`observer/ledger.rs` `list_setter_called`, `AuthorBlock::list_setter`) — the emitter
-//! reads the block and writes the setter's call as it is (`observer/writer/emit.rs` `list_setter_runs`), where CL2b made
+//! reads the block and writes the setter's call as it is (`observer/emitter/emit.rs` `list_setter_runs`), where CL2b made
 //! it stay out. cond-mat0605195's `\and{Cy Coe\inst{1}\institute{…}}` had its marks glued to the names and "Lab Y" lost
 //! at `=2`.
 

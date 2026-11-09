@@ -1,6 +1,6 @@
 //! Guards for CL1 (`agent_reports/2026-11-08_brief_CL1.md`; w56's report): under `LATEXML_FM_EMIT=2` the emitter reads on
 //! past an accent's argument as TeX reads an undelimited one — one token, a control word included, or a balanced group
-//! (`observer/writer/emit.rs` `past_what_it_set`). A name ending in ``\`\i`` lost its letter, "Chiriv`" (1709.03335).
+//! (`observer/emitter/emit.rs` `past_what_it_set`). A name ending in ``\`\i`` lost its letter, "Chiriv`" (1709.03335).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 

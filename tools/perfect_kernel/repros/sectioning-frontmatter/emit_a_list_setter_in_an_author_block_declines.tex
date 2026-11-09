@@ -1,5 +1,5 @@
 % mechanism: the ledger's `list_setter_called` (`observer/ledger.rs`, `AuthorBlock::list_setter`) and the emitter's
-%   `stays_out` (`observer/writer/emit.rs`): a binding's list setter (sv_support's `\institute`, whose definition clears the
+%   `stays_out` (`observer/emitter/emit.rs`): a binding's list setter (sv_support's `\institute`, whose definition clears the
 %   affiliation list and numbers its entries, `labelseq=affiliation`, for the `\inst` marks) called inside an author's
 %   group is read by the rehearsal as one affiliation of the last author, while the real call queues numbered entries no
 %   reading points to. Under `LATEXML_FM_EMIT=2` the emitter now stays out: every block written whole, its queued entries

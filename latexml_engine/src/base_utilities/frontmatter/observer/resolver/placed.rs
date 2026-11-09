@@ -5,7 +5,7 @@
 //! whole beside its piece (2607.00684's `mtablo@postech.ac.kr` twice), a binding's lost entry text — shows only in the
 //! frontmatter `insert_frontmatter` placed. So one pass after it (Perl's `insertFrontMatter` and `relocateAnnotations`,
 //! Base_Utility.pool.ltxml:736-740, :891-900), under `LATEXML_FM_EMIT=2` only: the words the ledger's author blocks and
-//! creator calls printed (their rehearsed events), against the words the placed creators hold (`writer::dom`'s reading of
+//! creator calls printed (their rehearsed events), against the words the placed creators hold (`emitter::dom`'s reading of
 //! the document). It counts, it never answers: placement is over.
 //!
 //! What counts, both sides by one definition ([`ink_words`]): every word, a mark excluded by its event, not by its
@@ -38,7 +38,7 @@ use super::{
 };
 use crate::base_utilities::defs::frontmatter_api::CUT_LIST;
 
-/// One item of the placed frontmatter (`writer::dom`'s reading of a creator): its creator, what it is, its printed text.
+/// One item of the placed frontmatter (`emitter::dom`'s reading of a creator): its creator, what it is, its printed text.
 pub(in crate::base_utilities::frontmatter::observer) struct PlacedItem {
   /// the creator holding it, by its place among the document's creators
   pub holder: usize,

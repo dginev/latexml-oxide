@@ -3,7 +3,7 @@
 //! notes run where they print (1507.05018, 2505.07115); an IJCAI sectioned block goes to its section split, its
 //! `labelseq=author` affiliation the N-th author's (2202.05511); initials a gap joins to a name end no surname-first name
 //! (cond-mat9905290); "representing" speaks for a collaboration (hep-ex9903035). A creator's labels written back as plain
-//! characters (1910.05766) is the unit test `writer::emit::tests::a_creators_labels_are_plain_characters`. NE2b (review
+//! characters (1910.05766) is the unit test `emitter::emit::tests::a_creators_labels_are_plain_characters`. NE2b (review
 //! revNE2): a counter move no name carries writes the block whole, with its Warning (1507.05018's Ombao, A1); a note
 //! before every name steps before the first name (A2). NE2c (review revNE2r2 Q2): a mark a name prints past its note stays
 //! with it, the note's step before it (1610.06031); a `\footnotemark` no name and no item writes writes the block whole,

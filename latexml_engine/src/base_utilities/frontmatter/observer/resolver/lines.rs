@@ -173,7 +173,7 @@ pub(super) fn words_through_one_command(events: &[Event]) -> Cow<'_, [Event]> {
       .text
       .push_str(&printed_join(&events[i..=through], named));
     i = through + 1;
-    // (its own tokens too, to the last letter: the emitter's run of the name, `writer::emit::event_run_at`)
+    // (its own tokens too, to the last letter: the emitter's run of the name, `emitter::emit::event_run_at`)
     word.span = word.span.map(|(a, _)| (a, to));
     word.marks = word.marks.map(|(a, _)| (a, to));
     out.push(word);
@@ -1117,7 +1117,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn name_before_remark(
 /// before its first institution word are a full name of two words or more (`Bob Baker University` — a person and a
 /// place, or one place as `Johns Hopkins University` is). A word reading: it shapes the reading's `classify:institution`
 /// items only, which license no writer operation (`writer::repart::by_words`, review rev94a r3); the writer reads it only
-/// to decline (`writer::repart::plan`'s person made an item, review rev94a r4).
+/// to decline (`emitter::repart::plan`'s person made an item, review rev94a r4).
 pub(in crate::base_utilities::frontmatter::observer) fn may_name_a_person(text: &str) -> bool {
   if reads_as_names(text) || name_before_remark(text).is_some() {
     return true;

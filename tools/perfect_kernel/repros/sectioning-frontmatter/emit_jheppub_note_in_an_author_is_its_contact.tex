@@ -1,6 +1,6 @@
 % mechanism: jheppub's `\note{…}` inside an `\author` is `\lx@add@contact[role=note]{…}` (Perl's jheppub.sty.ltxml:39), a
 %   Contact event of the block whose kind is a note: the emitter writes it as the contact command it is, the call inside
-%   taking the item's label, as for any contact command of the block (`writer::emit::item_call`); written as an `ltx:note`
+%   taking the item's label, as for any contact command of the block (`emitter::emit::item_call`); written as an `ltx:note`
 %   around the call, the call meant nothing inside the item and the note was lost; `=2` only
 % witness: 1403.1099, 2001.06318 (jcappub, `\author[a,b,1]{Luis B. Castro,\note{Corresponding author.}}`), 2308.04217
 %   (jinstpub, a "Speaker at …" note in each of three `\author`s)

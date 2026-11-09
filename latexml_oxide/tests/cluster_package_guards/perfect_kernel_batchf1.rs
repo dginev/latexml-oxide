@@ -91,7 +91,7 @@ fn a_block_past_the_stamps_positions_is_read() {
 
 /// A creator call a block's own expansion makes keeps its keyvals on the Name it prints (`field_notes::FieldCreator`,
 /// `events::creator_roles`): PoS's `\speaker{Ann Able}` (`\lx@add@creator[role=speaker]`, 0910.5686, 1007.2355, 1111.2428, 1111.6944) is
-/// `role=speaker` under `=1` and `=2` as with the switch off, written from the call's name and not the call (`writer::emit::event_run`:
+/// `role=speaker` under `=1` and `=2` as with the switch off, written from the call's name and not the call (`emitter::emit::event_run`:
 /// the call written again added a second creator, a nameless one, holding Ann Able's institute), Bob Baker beside it `role=author`.
 #[test]
 fn a_creator_call_in_a_block_keeps_its_role() {
@@ -171,7 +171,7 @@ fn a_grade_with_a_long_note_is_the_grade() {
 
 /// A creator call inside a block carries its keyvals as tokens (the rehearsal's `\lx@fm@obs@creator` reads them as the API does,
 /// `field_notes::FieldCreator`), and the emitter writes them on Perl's call `[role=author,#1]` (Base_Utility.pool.ltxml:586,
-/// `writer::emit::creator_keys`): `\lx@add@creator[role=editor,name={Edited by},annotations={ed}]{Bob Baker}` (ams's `\contrib` gives
+/// `emitter::emit::creator_keys`): `\lx@add@creator[role=editor,name={Edited by},annotations={ed}]{Bob Baker}` (ams's `\contrib` gives
 /// `name=`, icml's `\icmlauthor` `annotations=`) is `<creator name="Edited by" role="editor">` under `=2`; F1 kept the role alone. The
 /// switch-off path is the kernel reader's, which cuts the keyvals at their commas — not this path.
 #[test]

@@ -4,11 +4,11 @@
 //! `\color{red}`, `\bfseries`), a group or a font command's argument still open (`{\itshape …\\ …}`,
 //! `\textit{…\\ …}`, `\begin{itshape}…\end{itshape}`) — is lost unless the entry carries it: each entry carries the
 //! font in effect at its first token, against the call's own, and the writer digests the entry under it
-//! (`writer::plan::entry_font_tokens`). A container other than a group (an `\underline`, an `\emph`, an `\href`) holding
-//! the ink of two entries wraps each of them again (`writer::container_wrap`: each entry keeps its markup). A font the
+//! (`emitter::plan::entry_font_tokens`). A container other than a group (an `\underline`, an `\emph`, an `\href`) holding
+//! the ink of two entries wraps each of them again (`emitter::container_wrap`: each entry keeps its markup). A font the
 //! boxes cannot tell, or a container the writer cannot wrap again exactly, never undoes the cut (review rev94b r4 B1:
 //! attribution beats typography): the entry is cut as before fonts were read, with the switches opening the group it
-//! sits in (`writer::span_tokens`' `own_font`).
+//! sits in (`emitter::span_tokens`' `own_font`).
 
 use std::{
   collections::{BTreeMap, BTreeSet},
@@ -30,7 +30,7 @@ pub(in crate::base_utilities) struct InkFonts {
   whatsits: BTreeMap<u16, Rc<Font>>,
 }
 
-/// The containers a cut entry is wrapped in again (`writer::container_wrap`): the tokens opening each, outermost first
+/// The containers a cut entry is wrapped in again (`emitter::container_wrap`): the tokens opening each, outermost first
 /// (`\emph{`, `\textcolor{red}{`), each closed by one end-group after the entry's tokens.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Wrap {
@@ -102,7 +102,7 @@ impl InkFonts {
 
   /// The whatsits each holding the ink of two or more of the entries `spans` (an `\underline{$^1$Univ A\\ $^2$Univ B}`),
   /// with the entries (indices into `spans`) whose ink each holds: the containers a cut entry is re-wrapped in
-  /// (`writer::container_wrap`), outermost first.
+  /// (`emitter::container_wrap`), outermost first.
   pub(in crate::base_utilities) fn holders(
     &self,
     spans: &[(u16, u16)],
@@ -233,7 +233,7 @@ fn neutral_token(content: &[Token], base: usize, i: usize, events: &[Event]) -> 
 }
 
 /// Whether nothing in `content[from..to]` switches a font ([`neutral_token`], braces aside): a container's argument up
-/// to its first entry (`writer::container_wrap`).
+/// to its first entry (`emitter::container_wrap`).
 pub(in crate::base_utilities) fn switch_free(
   content: &[Token],
   base: usize,
@@ -249,7 +249,7 @@ pub(in crate::base_utilities) fn switch_free(
 
 /// Whether `t` is one of LaTeX's font declarations taking no argument (`\bfseries`, `\small`, `\em`, `\selectfont`: the
 /// head of `frontmatter_stores::LAYOUT`, up to `\selectfont`), a switch whose effect every entry after it shares
-/// (`writer::container_wrap`).
+/// (`emitter::container_wrap`).
 pub(in crate::base_utilities) fn font_declaration(t: &Token) -> bool {
   let layout = crate::frontmatter_stores::LAYOUT;
   let fonts = layout
@@ -278,7 +278,7 @@ const TEXT_FONT_COMMANDS: &[&str] = &[
 ];
 
 /// Whether `t` is one of LaTeX's text font commands ([`TEXT_FONT_COMMANDS`]), whose braced argument a cut entry is
-/// wrapped in again round a container it opens with (`writer::container_wrap`).
+/// wrapped in again round a container it opens with (`emitter::container_wrap`).
 pub(in crate::base_utilities) fn text_font_command(t: &Token) -> bool {
   t.get_catcode() == Catcode::CS && t.with_cs_name(|n| TEXT_FONT_COMMANDS.contains(&n))
 }

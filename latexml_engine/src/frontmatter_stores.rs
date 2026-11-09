@@ -8197,7 +8197,7 @@ LoadDefinitions!({
       Tokens!(cs)
     })
   });
-  // A cut entry's font (`observer::writer::plan::entry_font_tokens`): the font changes in effect where the entry's
+  // A cut entry's font (`observer::emitter::plan::entry_font_tokens`): the font changes in effect where the entry's
   // cut starts in its call's content, registered as the `n`-th — the entry digested under them, as in the call
   // (review rev94b r3 B1: `\affil{\itshape $^1$Univ A\\ $^2$Univ B}` lost the italic on Univ B).
   DefPrimitive!("\\lx@fm@entry@font{}", sub[(n)] {

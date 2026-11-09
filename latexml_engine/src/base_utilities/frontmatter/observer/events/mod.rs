@@ -276,7 +276,7 @@ pub struct Event {
   /// font of its first character as digested, for the emitter
   pub font:           Option<Rc<Font>>,
   /// a cut in-block contact entry's: the containers holding it and another entry, which the writer wraps it in again
-  /// (`fonts::Wrap`, `writer::container_wrap`)
+  /// (`fonts::Wrap`, `emitter::container_wrap`)
   pub wrap:           Option<Rc<Wrap>>,
   /// a mark's formula or group ([`MarkFormula`]), `None` for one at the block's top level
   pub formula:        Option<MarkFormula>,
@@ -299,9 +299,9 @@ pub struct Event {
   /// a Name's: the labels its words print by hand ([`PrintedLabel`])
   pub printed_labels: Vec<PrintedLabel>,
   /// a `\textsuperscript` Mark's: the call's own position, its `span` being the wrapper's when it is the first box in
-  /// one (`\textbf{\textsuperscript{2}Univ B}`, `writer::Field::own_print`). Not in a dump: only the content reads it
+  /// one (`\textbf{\textsuperscript{2}Univ B}`, `emitter::Field::own_print`). Not in a dump: only the content reads it
   pub own_at:         Option<u16>,
-  /// a cut in-block contact entry's: where its leading marks print, first to last, whole (`writer::span_tokens`). A Name's: its
+  /// a cut in-block contact entry's: where its leading marks print, first to last, whole (`emitter::span_tokens`). A Name's: its
   /// boxes' own tokens' positions, first to last, where `span` is their covers': the first box in a wrapper takes the cover of the
   /// call around it, `\\textbf{Ann, Bob}`'s Ann the whole group (the emitter's). Not in a dump: only the content reads it
   pub marks:          Option<(u16, u16)>,
@@ -311,7 +311,7 @@ pub struct Event {
   /// a footnote Mark's: it is given its number (`\footnotemark[1]`, a document's `\samethanks[1]`, 1912.01737,
   /// 1811.08622), latex.ltx's `\@xfootnotemark`, which sets the counter in a group of its own and steps nothing — it
   /// re-references a note written already; a bare `\footnotemark` steps the counter (`\stepcounter\@mpfn`). Not in a
-  /// dump: only the emitter's dropped-mark check reads it (`writer::emit::mark_dropped`)
+  /// dump: only the emitter's dropped-mark check reads it (`emitter::emit::mark_dropped`)
   pub given_number:   bool,
   /// a Name's: the block's creator call that printed it, its place among the rehearsal's (`creator_roles`;
   /// `ledger::Outcome::Events::creators`). Not in a dump: only the emitter reads it
@@ -345,7 +345,7 @@ pub struct InkAt {
 /// Note's text), one [`InkAt`] per character of its text, `None` for a space the lexer wrote — keyed by the event's span
 /// and text —, and the font each `@` prints in, at its token's position (its own, else its box's cover's start): where the
 /// reading's address runs print and in what, which the emitter cuts the entry's tokens at and writes each address in
-/// (`writer::address_cut`, OXIDIZED_DESIGN_DIVERGENCES #980 P1b). Beside the events, not on each: an `Event` is moved
+/// (`emitter::address_cut`, OXIDIZED_DESIGN_DIVERGENCES #980 P1b). Beside the events, not on each: an `Event` is moved
 /// and cloned throughout the reading, its size paid at each (1901.01540's thousand-author line: +0.35 % instructions for
 /// 24 bytes more). Not in a dump.
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -1125,7 +1125,7 @@ impl Walker {
   }
 
   /// A group of no formula printing symbols alone is a mark's own group as a formula's is, when a mark starts there: `{*\,} Univ X, {**\,} Univ Y`
-  /// (1605.02212). Its ink stands in the formulas, whole, so that a piece that starts at it starts at the brace (`writer::Field::starts_at_its_brace`).
+  /// (1605.02212). Its ink stands in the formulas, whole, so that a piece that starts at it starts at the brace (`emitter::Field::starts_at_its_brace`).
   /// A word or a digit after the symbol is no such group (`no_word`).
   fn note_a_symbols_group(&mut self, at: usize) {
     if self.formula_atoms.last().is_some_and(|run| run.0 >= at) {
@@ -2042,7 +2042,7 @@ pub(in crate::base_utilities) fn events_lined_text(events: &[&Event]) -> String 
 
 /// [`events_text`] and [`events_lined_text`] of `events`, each with where each of its characters prints
 /// ([`InkTable`]; a space or a line's end the text writes `None`): what the emitter reads an entry's address runs at
-/// (`writer::address_cut`).
+/// (`emitter::address_cut`).
 pub(in crate::base_utilities) type TextAt = (String, Vec<Option<InkAt>>);
 
 pub(in crate::base_utilities) fn events_texts_at(
@@ -2379,7 +2379,7 @@ fn labelled_entries(
     })
     .collect();
   // (each entry with the font its cut starts in, `fonts::entry_font`, and the containers holding it and another entry
-  // it is wrapped in again, `writer::container_wrap` — review rev94b r3 B1: a font open from earlier in the block was
+  // it is wrapped in again, `emitter::container_wrap` — review rev94b r3 B1: a font open from earlier in the block was
   // lost from every entry after the first. A font the boxes cannot tell, a container the writer cannot wrap again
   // exactly, no font of the call or no block content to read it from never undo the cut: the entry is cut as before
   // fonts were read, the switches of the group it sits in its own — review rev94b r4 B1: `$^1$\textbf{Univ A}\\
@@ -2399,7 +2399,7 @@ fn labelled_entries(
       let (base, tokens) = block.as_ref()?;
       let content = tokens.unlist_ref();
       let environments = field_notes::field_environments();
-      let field = writer::Field {
+      let field = emitter::Field {
         tokens: content,
         base: *base,
         formulas,
@@ -2408,23 +2408,23 @@ fn labelled_entries(
         aligned: true,
         groups: Default::default(),
       };
-      // (where each entry's cut starts: no such start is no cut the writer could make, `writer::span_tokens`)
+      // (where each entry's cut starts: no such start is no cut the writer could make, `emitter::span_tokens`)
       let starts: Vec<(usize, (u16, u16))> = entries
         .iter()
         .map(|entry| {
           let span = entry.span?;
-          Some((writer::labelled_start(&field, span, entry.marks)?, span))
+          Some((emitter::labelled_start(&field, span, entry.marks)?, span))
         })
         .collect::<Option<_>>()?;
       let forms = match scope {
-        Some(scope) => writer::entry_forms(content, *base, &starts, scope, events),
+        Some(scope) => emitter::entry_forms(content, *base, &starts, scope, events),
         None => vec![(None, None); entries.len()],
       };
       entries
         .into_iter()
         .zip(forms)
         .map(|(entry, (font, wrap))| {
-          writer::span_tokens(
+          emitter::span_tokens(
             &field,
             entry.span?,
             Some(&norm(&entry.text)),
@@ -2449,7 +2449,7 @@ pub(in crate::base_utilities) fn lex_events(digested: &Digested) -> Vec<Event> {
   lex_with_formulas(digested).0
 }
 
-/// [`lex_events`], and each outermost formula's extent in order (`writer::Field`): what a span's content is read by.
+/// [`lex_events`], and each outermost formula's extent in order (`emitter::Field`): what a span's content is read by.
 pub(in crate::base_utilities) fn lex_with_formulas(
   digested: &Digested,
 ) -> (Vec<Event>, Vec<Formula>) {
@@ -2458,7 +2458,7 @@ pub(in crate::base_utilities) fn lex_with_formulas(
 }
 
 /// [`lex_with_formulas`], and where its inks printing an `@` print ([`InkTable`]): what the emitter cuts an entry's addresses
-/// at (`writer::address_cut`).
+/// at (`emitter::address_cut`).
 pub(in crate::base_utilities) fn lex_with_inks(
   digested: &Digested,
 ) -> (Vec<Event>, Vec<Formula>, InkTable) {

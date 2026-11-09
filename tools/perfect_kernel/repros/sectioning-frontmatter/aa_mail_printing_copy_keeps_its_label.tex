@@ -1,7 +1,7 @@
 % aa's `\mail{x}` under a copy of aa.cls that prints it (v4.03-v7.0: `\def\mailname{{\it Correspondence to\/}:}`,
 % `\footnotetext[0]{\kern-\bibindent\mailname\ \ignorespaces\@mail}`; this file's stand-in, which the binding reads
 % only as text) is `\lx@add@address[name={\mailname}]` (aa_support_sty.rs, Perl aa_support.sty.ltxml:118-119); 95c's
-% take-out of an affiliation entry holding an e-mail alone (writer/plan.rs `cut_entry_addresses`) made it an e-mail
+% take-out of an affiliation entry holding an e-mail alone (emitter/plan.rs `cut_entry_addresses`) made it an e-mail
 % contact named "Email: ", and "Correspondence to" was printed nowhere. A take-out that empties its entry keeps the
 % entry's own printed label on the contacts it makes (`holder_label`).
 % witness: 1005.3784 (v7.0 :272, :466-468), 0805.1001 (v6.1, "Correspondence to: e-mail: …"), 1102.1556, 1505.05452,

@@ -226,7 +226,7 @@ fn a_row_address_cut_keeps_its_ink() {
     assert_eq!(creators(&xml), want, "{shape}");
   }
   // (two addresses on the line, each spelling Bob: his e-mails, the line's rest the row's, as with the switch off — the
-  // reading's take-out written cut from the line's tokens, P1, `writer::entry_cut`; LO2 to LO4 `=2` gave each author the
+  // reading's take-out written cut from the line's tokens, P1, `emitter::entry_cut`; LO2 to LO4 `=2` gave each author the
   // whole line)
   let two = tex.replace(
     line,

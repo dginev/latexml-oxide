@@ -241,7 +241,7 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
   ("collaborations.rs annotate=", 1),
   ("collaborations.rs lx@add@", 1),
   // (the "Knowledge in, driver out, one pass" move, 6 -> 5, and `notes.rs`' 2 -> 0: `is_email_command` and `document_note_call`, `note_call_end` moved to the emitter,
-  // `writer/calls.rs`, which writes Perl's calls; no emission added; DEL2, 5 -> 1: `block_email_calls` and its siblings deleted with the old driver)
+  // `emitter/calls.rs`, which writes Perl's calls; no emission added; DEL2, 5 -> 1: `block_email_calls` and its siblings deleted with the old driver)
   ("email_block_calls.rs lx@add@", 1),
   // (DEL2, 7 -> 6: the dead `AddressPlacement::Marked` arm)
   ("email_lines.rs lx@add@", 6),
@@ -312,7 +312,7 @@ fn the_old_reader_takes_no_new_decision() {
 /// `observer/resolver/`, on the digested events, instead. The "Knowledge in, driver out, one pass" move (2026-11-08) moved every name the one engine reached, 138
 /// pairs at int149a, into its own library (docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row "Knowledge in, driver out, one
 /// pass"): text rules and token primitives to `frontmatter/classify/`, owner logic to `observer/resolver/owners.rs`, Perl's
-/// API-call writers to `observer/writer/calls.rs`, Perl's whole-block fallback with its preparation to `frontmatter/fallback.rs`,
+/// API-call writers to `observer/emitter/calls.rs`, Perl's whole-block fallback with its preparation to `frontmatter/fallback.rs`,
 /// the API's attribute names to `defs/frontmatter_api.rs`. None is left: what `author_block/` still holds is the token driver.
 const ONE_ENGINE_REACH: &[(&str, usize)] = &[];
 
@@ -585,7 +585,7 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   // (CL8, 0 -> 1: the whole printed mark a glued sub-lettered request was parted from, `whole_marks_key` — Perl's own
   // `_refmarkshown` display, written by the emitter as `author_macros.rs` writes it; 1705.11109)
   (
-    "_refmarkshown= base_utilities/frontmatter/observer/writer/emit.rs",
+    "_refmarkshown= base_utilities/frontmatter/observer/emitter/emit.rs",
     1,
   ),
   ("_scopebegin= package/pgfsys_latexml_def.rs", 1),
@@ -1127,15 +1127,15 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("sv_support_sty.rs", 35),
   ("webofc_cls.rs", 0),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the emitter's vocabulary, 924 = 826 + 98; none added)
-  ("writer/calls", 98),
-  // (a new file, what is left of `writer/plan`'s walk-backs: brace balance and a formula's shifts; the two rows together fell by 25, Z3;
+  ("emitter/calls", 98),
+  // (a new file, what is left of `emitter/plan`'s walk-backs: brace balance and a formula's shifts; the two rows together fell by 25, Z3;
   // NE3 7 -> 11: a call cut between its arguments, by its meaning now (`reads_past`, 2209.12410), and a script character its
   // rehearsal erred at written as its character (2204.01080) — what the digestion read, the token's catcode only finding it;
   // NE6 11 -> 13: `arguments_end` reads an option's `[` and `]` as TeX reads the call's arguments, a mark macro written
   // with them and a call whose `\href` or `\author` reads past the run refused — 1505.07844, 2503.21719, 2603.11001;
   // NE8 13 -> 14: `past_closing_fis` reads the spaces between a run and the `\fi` closing a conditional it opens by their
   // catcode, as `balanced` reads closing braces — the `\fi` itself by its meaning, no name spelled)
-  ("writer/content", 14),
+  ("emitter/content", 14),
   // (Z4a, a new file: the emitter builds Perl's calls from the reading, its reads a call's own keys and pieces, `text_tokens` and the
   // catcodes of a cut: where a slice's edge falls past an option, a group or an accent's letter, OD #980; Z4ar2, 30 -> 28: an address
   // list's `@` no longer read, its inks are; NE3 28 -> 36: `key_tokens`' table of the specials a key value holds as characters,
@@ -1146,15 +1146,15 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (NE4 39 -> 43: `annotations_tokens`, the `annotations` value of a block's keyvals cut from the call's tokens at its top-level
   // `,` and `=`, so the writer hands on the call's tokens, never their text retokenized (`\and Jonathan` read back
   // `\andJonathan`, 2205.13776) — what it writes; whether to carry them stays `block_annotations`' text decision)
-  ("writer/emit", 43),
-  // (P1b, 0 -> 1: `writer/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
+  ("emitter/emit", 43),
+  // (P1b, 0 -> 1: `emitter/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
-  ("writer/dom+mod", 1),
-  ("writer/plan", 72),
+  ("emitter/dom+mod", 1),
+  ("emitter/plan", 72),
   // (LO2r2, 0 -> 4: a row line's cut ends at its address's own first token, which the letters check finds; the tokens between the
   // last letter it keeps and that one print no letter, so their kinds say which it keeps — the spacing, separators, commands and
   // bracket opening the address out, a bracket the cut leaves open closed by its own token: `prefix_tokens`, review revLO2 2)
-  ("writer/repart", 4),
+  ("emitter/repart", 4),
 ];
 
 /// The areas under `frontmatter/`, by path; the first that holds a file takes it.
@@ -1172,12 +1172,12 @@ const FRONTMATTER_AREAS: &[(&str, &str)] = &[
   ("queue", "queue.rs"),
   ("insert", "insert.rs"),
   ("address_lists", "address_lists.rs"),
-  ("writer/plan", "observer/writer/plan.rs"),
-  ("writer/content", "observer/writer/content.rs"),
-  ("writer/calls", "observer/writer/calls.rs"),
-  ("writer/emit", "observer/writer/emit.rs"),
-  ("writer/repart", "observer/writer/repart.rs"),
-  ("writer/dom+mod", "observer/writer/"),
+  ("emitter/plan", "observer/emitter/plan.rs"),
+  ("emitter/content", "observer/emitter/content.rs"),
+  ("emitter/calls", "observer/emitter/calls.rs"),
+  ("emitter/emit", "observer/emitter/emit.rs"),
+  ("emitter/repart", "observer/emitter/repart.rs"),
+  ("emitter/dom+mod", "observer/emitter/"),
   ("resolver", "observer/resolver/"),
   ("events", "observer/events/"),
   ("field_notes", "observer/field_notes.rs"),
@@ -1334,7 +1334,7 @@ fn a_spelling_rule_in_the_resolver_counts_however_it_is_written() {
 
 /// The old reader's knowledge moved under `observer/` unchanged (the "Knowledge in, driver out, one pass" move): its owner logic and the emitter's vocabulary, each
 /// counted as its own area by the fences, so that the resolver's and the writer's own counts stay what they were.
-const MOVED_UNDER_OBSERVER: [&str; 2] = ["resolver/owners.rs", "writer/calls.rs"];
+const MOVED_UNDER_OBSERVER: [&str; 2] = ["resolver/owners.rs", "emitter/calls.rs"];
 
 /// Backslash literals under `observer/`, per file or directory: the part of it that may spell a token's name, whatever the code around
 /// them does (the regexes of [`token_reads_only_fall_toward_the_floor`] see a comparison, not `fn spelled(x) { x.contains("\\foo") }`).
@@ -1377,15 +1377,15 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // (the "Knowledge in, driver out, one pass" move: the old reader's owner logic, moved unchanged from `author_block/`, its literals with it; none added)
   ("resolver/owners", 4),
   ("shadow", 7),
-  // (Z4a, 81 -> 107: `writer/emit.rs`, the calls it builds: Perl's `\lx@add@authors`, `\lx@annotate@frontmatter@now`, the
+  // (Z4a, 81 -> 107: `emitter/emit.rs`, the calls it builds: Perl's `\lx@add@authors`, `\lx@annotate@frontmatter@now`, the
   // queue's own `\lx@frontmatter@item*`; it writes them, no decision reads them; NE3 +1: `\lx@fm@script@char`, written for a script
   // character its rehearsal erred at, 2204.01080; CL7 +1: `block_annotations`' `'\\'`, whether an author block's keyvals
   // annotations hold a command (a note, authblk's `\author[1\thanks{…}]`, 2308.08363), which the ledger keeps as text alone, so
   // that its creators carry them as off digests them — a label's `_` retokenized errs, 2201.04449)
-  ("writer", 60),
+  ("emitter", 60),
   // (the "Knowledge in, driver out, one pass" move: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
   // mark and note commands it reads; none added)
-  ("writer/calls", 44),
+  ("emitter/calls", 44),
 ];
 
 /// revZ2r2: the token-read count's regexes are blind outside `resolver/` to a spelling not written as a comparison. This counts what such

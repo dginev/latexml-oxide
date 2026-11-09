@@ -67,7 +67,7 @@ fn ijcai_split_call(stuff: Tokens, replace: bool, late: bool) -> Result<Tokens> 
 }
 
 /// One whole block queued for the call (OD #980), as no reader cuts it at the call, which the emitter
-/// takes at the flush (`observer::writer::emit`): Perl's whole-block creator (`author_block::whole_block_author`). A `late`
+/// takes at the flush (`observer::emitter::emit`): Perl's whole-block creator (`author_block::whole_block_author`). A `late`
 /// call, made while a flush digests its queue after reading it (the ledger's `AuthorBlock::late`), queues it for a flush
 /// of its own (`\lx@frontmatter@late`): Perl's `\lx@add@authors` there runs `@now`, split at the call
 /// (Base_Utility.pool.ltxml:799-806).

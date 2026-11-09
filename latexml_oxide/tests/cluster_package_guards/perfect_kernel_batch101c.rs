@@ -1,5 +1,5 @@
 //! Red/green guard for batch 101c: the re-part's fail-safe for a person in a row an item joins
-//! (`observer/writer/repart.rs` `joined_rows`, batch 100c review rev100c B1, OXIDIZED_DESIGN_DIVERGENCES #958) exempts
+//! (`observer/emitter/repart.rs` `joined_rows`, batch 100c review rev100c B1, OXIDIZED_DESIGN_DIVERGENCES #958) exempts
 //! the first row of an item a mark labels — the line the mark makes the entry, as the continued-lines check already
 //! did. Its words may name a person ("Hellebore Capital Management") and the item is still the affiliation: 1507.08137's
 //! four authors were one creator and a `merged_creators` Error since 100c r2. The fail-safe's own guard,

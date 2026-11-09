@@ -127,7 +127,7 @@ fn sv_support_is_written() {
   );
 }
 
-/// The writer's block-line cut reads an accented line's letters as it prints them (`writer::plan::span_tokens`, both
+/// The writer's block-line cut reads an accented line's letters as it prints them (`emitter::plan::span_tokens`, both
 /// sides accent-folded, `resolver::base_letters`): an accent command (`Ca\~nada`) and a text symbol (`\i`, latex.ltx's
 /// OT1 `\chardef` glyph, read through the encoding's font map) — 1009.1371 (73 creators, every one wrong before),
 /// 2401.03603. Before, the span's letters ("Canada", "Astrofsica") were not the key's and the cut declined: two

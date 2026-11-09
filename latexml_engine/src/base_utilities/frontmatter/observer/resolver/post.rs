@@ -1929,11 +1929,11 @@ impl Resolver {
   /// reader could not part, stays in the entry, as today's prints it (the fail-safe of this text reading: the lines and
   /// notes the author block kinds go to the block once, ruling E; an address inside a line of other words is read here
   /// alone, SYNC 100b's residual). Each e-mail is one per print and carrier (`owner:entry-address`, a change tag: the
-  /// writer cuts today's entry, `writer::plan`).
+  /// writer cuts today's entry, `emitter::plan`).
   ///
   /// Under the emitter (`=2`), the label the Kind step for an address line reads before a run goes with it, the take-out's
   /// own ([`take_labels`]): the entry's text it leaves and its e-mails' names are the reading's, which the emitter writes
-  /// (`writer::address_cut`, OXIDIZED_DESIGN_DIVERGENCES #980 P1c).
+  /// (`emitter::address_cut`, OXIDIZED_DESIGN_DIVERGENCES #980 P1c).
   pub(super) fn take_out_entry_addresses(&mut self, inputs: &[Input]) {
     let live = self.live();
     let names: Vec<String> = self.out.creators.iter().map(|c| c.name.clone()).collect();

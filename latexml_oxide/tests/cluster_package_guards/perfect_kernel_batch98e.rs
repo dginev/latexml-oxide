@@ -8,7 +8,7 @@
 //! line wrapper is a line (`relocate::wrapped_lines_as_lines`, at REVTeX's and AASTeX's call), the fail-safe of the
 //! group rule (a block of two or more lines led by requested labels its reader cannot cut lands once at the block),
 //! the writer's cut of a block's lines placing a line no name requests once at the block with its printed label
-//! (`writer/plan.rs` `cut_block_lines`); round 2 (review rev98e): a mark on a spacing nucleus leads its line
+//! (`emitter/plan.rs` `cut_block_lines`); round 2 (review rev98e): a mark on a spacing nucleus leads its line
 //! (`relocate::spaced_marks_as_marks`, 2112.13115, 0807.4407), and a sub-lettered mark goes by its number
 //! (`resolver/labels.rs` `parted_label`, 2007.02542, 1507.02068).
 use super::{

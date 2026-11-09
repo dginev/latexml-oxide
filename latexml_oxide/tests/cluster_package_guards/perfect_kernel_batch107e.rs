@@ -14,7 +14,7 @@
 //!   2608.24199, 2609.35561; the observer's `Resolver::thenote_finish`).
 //!
 //! Round 2 (review rev107e):
-//! - the observer's writer cuts an entry from inside the font command its mark opens (`writer::plan::wrapped_entry_mark`),
+//! - the observer's writer cuts an entry from inside the font command its mark opens (`emitter::plan::wrapped_entry_mark`),
 //!   so a legend line under a wrapped run reaches the legend reader as under a plain run (finding 1, 2605.25195);
 //! - REVTeX's head + marked lines are read only where every top-level line of the tail opens with a mark and no box
 //!   holds one (`revtex4_support_sty::marks_lead_every_line`), else the 98e fail-safe (finding 2);

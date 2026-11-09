@@ -199,7 +199,7 @@ pub struct Taken {
   pub holders:  Vec<(Option<usize>, usize, Assoc)>,
   /// the text the runs were read in (`original` with its lines), the bytes of it the take-out cuts (`address_cuts`), and
   /// each run taken out: its bytes, its addresses and the label word it took (`E-mail:`) — what the emitter cuts the
-  /// entry's tokens at (`writer::address_cut`, OXIDIZED_DESIGN_DIVERGENCES #980 P1b)
+  /// entry's tokens at (`emitter::address_cut`, OXIDIZED_DESIGN_DIVERGENCES #980 P1b)
   pub lined:    String,
   pub cuts:     Vec<(usize, usize)>,
   pub runs:     Vec<TakenRun>,
@@ -966,7 +966,7 @@ const ENTRY_MAILBOX: &str = " api:entry-mailbox";
 
 /// The one of `names` an address spells (`spelled_owners`), if one — none for a list of local parts the address reader
 /// could not part (`lists_local_parts`); each name read as an address spells it, by its base letters ([`base_letters`])
-/// and its transliteration ([`transliterated`], both `NameKeys::of`; [`Resolver::spelled`]; the writer's check of an address today's holds on the creator it spells, `writer::plan`).
+/// and its transliteration ([`transliterated`], both `NameKeys::of`; [`Resolver::spelled`]; the writer's check of an address today's holds on the creator it spells, `emitter::plan`).
 pub(in crate::base_utilities::frontmatter::observer) fn spelled_name(
   names: &[&str],
   address: &str,

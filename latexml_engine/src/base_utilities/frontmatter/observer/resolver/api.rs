@@ -197,7 +197,7 @@ impl Resolver {
     // (a note making a creator — amsart's `\thanks{… \author{Bob}\address{Univ B}\email{bob@b.org}}`, 0807.4720, its
     // `EventKind::ApiCall` "ltx:creator" — is digested as Perl's: each contact in it goes to the creator newest when it is
     // digested, `\lx@annotate@frontmatter` (Base_Utility.pool.ltxml:520-531), and no reading of a flush answers one —
-    // the first flush's, before that creator exists, gave Ann Bob's e-mail; `writer::emit`'s pubnote wrapper keeps them)
+    // the first flush's, before that creator exists, gave Ann Bob's e-mail; `emitter::emit`'s pubnote wrapper keeps them)
     if tag == "ltx:pubnote" {
       if events.iter().any(is_creator_call) {
         return;

@@ -1,5 +1,5 @@
 % mechanism: a name's run holding an `\if...` whose `\fi` is outside the run (an opener cut from its `\fi`) is refused, the
-%   name written as its text, counted (`writer::content::conditional_cut`, symmetric now: an unbalanced opener cuts too)
+%   name written as its text, counted (`emitter::content::conditional_cut`, symmetric now: an unbalanced opener cuts too)
 % witness: synthetic (review revX4 2, `scratch_revX4/syn/c1.tex`); sibling of 1409.0597's `\else ... \fi` (ne5_cond_cut)
 % oracle:  pdflatex 0 errors; "T", "Ann Able1", "Bob Baker2", "Carl Cole1", "1Univ A", "2Univ B"
 % engines: rust off: 0 errors, 0 warnings; rust =2 (int153f): Warning "Attempt to end document with open groups,

@@ -1,7 +1,7 @@
 //! Red/green guards for batch 97b: a take-out removes what it read — the item's value and the label it took — and
 //! nothing else TeX prints (OXIDIZED_DESIGN_DIVERGENCES #944). aa's `\mail` is labelled as the paper's copy of aa.cls
 //! prints it (aa_support_sty.rs), and the writer's take-out of an entry it empties keeps the entry's own label
-//! (writer/plan.rs `holder_label`) or gives the entry back when no contact would carry it (writer/mod.rs
+//! (emitter/plan.rs `holder_label`) or gives the entry back when no contact would carry it (writer/mod.rs
 //! `give_back_entries`); a K11 store's label is read before its printed occurrence, not inside an argument TeX does not
 //! typeset (frontmatter_stores.rs `in_unprinted_argument`, `argument_of`), and leads a note's text; a names line split
 //! by its marks keeps the separators it prints in `before` (names_split.rs `with_printed_separators`), and a piece

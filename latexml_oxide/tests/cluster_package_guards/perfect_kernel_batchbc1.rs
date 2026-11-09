@@ -10,7 +10,7 @@ use super::{
 };
 
 /// A block's e-mail line no name spells (`label=addresses:block`): the nameless creator below the names holds it, written by
-/// the emitter (`writer::emit::block_creator`), into which relocate's orphan procedure shares where it would promote a stub,
+/// the emitter (`emitter::emit::block_creator`), into which relocate's orphan procedure shares where it would promote a stub,
 /// uncounted among the names (no `_num`: Bob Baker's separator stays the last name's). Witnesses 1012.4847, 1106.3045 (byte
 /// identical before and after on int149a `=2`). The creators' XML is the switch-off one.
 #[test]
