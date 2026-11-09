@@ -1581,7 +1581,25 @@ fn creator_keys(c: &RCreator, labels: &[String]) -> Vec<Token> {
   let labels = labels.join(",");
   let Some(call) = creator_call_of(c) else {
     let mut keys = internal(&s!("role={},", creator_role(c)));
-    keys.extend(annotations_key(&labels));
+    // (the block's own `annotations` where they hold a command, as the switch off digests them on each of its creators: a
+    // note there is the document's, authblk's `\\author[1\\thanks{Equal contribution.}]`, 2308.08363, 2410.16774, 2207.11475,
+    // 2207.11842 — [`block_annotations`]; brief CL7, C5)
+    let own = with_ledger(|ledger| match ledger.entries().get(c.source) {
+      Some(Entry::Author(block)) => block.keyvals.as_deref().and_then(block_annotations),
+      _ => None,
+    });
+    let Some(own) = own else {
+      keys.extend(annotations_key(&labels));
+      return keys;
+    };
+    keys.extend(internal("annotations="));
+    keys.push(T_BEGIN!());
+    keys.extend(internal(&own));
+    if !labels.is_empty() {
+      keys.push(T_OTHER!(","));
+    }
+    keys.extend(ExplodeText!(&labels));
+    keys.push(T_END!());
     return keys;
   };
   let mut keys = internal("role=author,");
@@ -1597,6 +1615,55 @@ fn creator_keys(c: &RCreator, labels: &[String]) -> Vec<Token> {
   keys.extend(ExplodeText!(&labels));
   keys.push(T_END!());
   keys
+}
+
+/// The `annotations` value of an author block's keyvals as the ledger keeps them (`AuthorBlock::keyvals`, the call's text), its
+/// outer braces off, where it is no label ([`no_label`]), as a note is: authblk's
+/// `\\author[1\\thanks{Equal contribution.}]`, `annotations={1\\thanks {…}}` (2308.08363, 2410.16774, 2207.11475, 2207.11842)
+/// — what the switch off digests on each creator.
+fn block_annotations(keyvals: &str) -> Option<String> {
+  let mut depth = 0i32;
+  let mut start = 0;
+  let mut parts = Vec::new();
+  for (i, c) in keyvals.char_indices() {
+    match c {
+      '{' => depth += 1,
+      '}' => depth -= 1,
+      ',' if depth == 0 => {
+        parts.push(&keyvals[start..i]);
+        start = i + 1;
+      },
+      _ => {},
+    }
+  }
+  parts.push(&keyvals[start..]);
+  let value = parts.into_iter().rev().find_map(|part| {
+    let (key, value) = part.split_once('=')?;
+    (key.trim() == "annotations").then(|| value.trim())
+  })?;
+  // (one group around the whole value is its braces)
+  let inner = value
+    .strip_prefix('{')
+    .and_then(|v| v.strip_suffix('}'))
+    .filter(|inner| {
+      let mut depth = 0i32;
+      inner.chars().all(|c| {
+        match c {
+          '{' => depth += 1,
+          '}' => depth -= 1,
+          _ => {},
+        }
+        depth >= 0
+      }) && depth == 0
+    })
+    .unwrap_or(value);
+  no_label(inner).then(|| inner.to_string())
+}
+
+/// Whether a creator's request is no label, its key's value tokenized: one spelled with a command, `\\author[a,b\\thanks{…}]`'s
+/// (2207.11842), or a character no label holds.
+fn no_label(request: &str) -> bool {
+  request.contains(['\\', '_', '^', '%', '#', '$', '&', '{', '}', '~'])
 }
 
 /// The creator call in its block that printed `c`'s name, its keyvals (`RCreator::call`, `field_notes::FieldCreator`).
@@ -2217,6 +2284,8 @@ enum Unwritten {
   Whole,
   /// the reading kept, each ink a note of the author block
   Kept,
+  /// the call written as the switch off writes it: its queued command, digested where the queue holds it
+  AsQueued,
   Lost,
 }
 
@@ -2231,6 +2300,7 @@ fn warn_unwritten(index: usize, words: &[String], then: Unwritten) -> bool {
   let then = match then {
     Unwritten::Whole => "the block is written whole, as Perl's whole-block creator",
     Unwritten::Kept => "they are kept as a note of the author block",
+    Unwritten::AsQueued => "the call is written as queued, as the switch off writes it",
     Unwritten::Lost => "they are lost",
   };
   Warn!(
@@ -2716,9 +2786,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .filter(|request| (!keeps || inst_marks.contains(request)) && !own.contains(request))
     {
       // (a key's value is tokenized: a request spelled with a command, `\\author[a,b\\thanks{…}]`'s, 2207.11842, is no label)
-      if !answered.contains(request)
-        && !request.contains(['\\', '_', '^', '%', '#', '$', '&', '{', '}', '~'])
-      {
+      if !answered.contains(request) && !no_label(request) {
         annotations[i].extend(clean_frontmatter_labels(request, "affiliation"));
       }
     }
@@ -2879,15 +2947,42 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   }
   // (a call written, at this flush or an earlier one, is never counted lost at a later one: its fact over the flushes, its
   // `lost|<index>` false, 2303.02975)
-  for index in written {
+  for index in &written {
     let once = s!("lost|{index}");
     if lookup_mapping(EMITTED_ITEMS, &once).is_none() {
       assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(false)));
     }
   }
+  // (a call whose printed words the reading holds no place for, and of which it writes nothing, is written as the switch off
+  // writes it — its queued command, below the items, the newest creator's as the switch off's queue digests it — never a
+  // silent loss: iopart's `\ead{jborkowska astro.uni.torun.pl}`, whose text holds no address, 2112.14174 (brief CL7, C6). One
+  // the reading writes part of keeps its reading, the rest counted)
   for (&index, (words, excess)) in &analysis.calls {
     if !words.is_empty() {
-      warn_unwritten(index, words, Unwritten::Lost);
+      let untouched = !written.contains(&index)
+        && !items
+          .iter()
+          .any(|item| item.assoc.source.is_some_and(|(at, _)| at == index));
+      let queued = untouched
+        .then(|| {
+          with_ledger(|ledger| match ledger.entries().get(index) {
+            Some(Entry::Api(call)) if !call.cleared => call
+              .command
+              .clone()
+              .map(|command| (call.tag.clone(), command)),
+            _ => None,
+          })
+        })
+        .flatten();
+      match queued {
+        Some((tag, command)) if lookup_mapping(EMITTED_ITEMS, &s!("lost|{index}")).is_none() => {
+          warn_unwritten(index, words, Unwritten::AsQueued);
+          out.push((tag, TagAttrs::default(), command));
+        },
+        _ => {
+          warn_unwritten(index, words, Unwritten::Lost);
+        },
+      }
     }
     if !excess.is_empty() {
       warn_excess(index, excess, false);

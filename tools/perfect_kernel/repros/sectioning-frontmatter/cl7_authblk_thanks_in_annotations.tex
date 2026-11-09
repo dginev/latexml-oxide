@@ -1,0 +1,20 @@
+% mechanism: a block's own `annotations` holding a command (authblk's `\author[1\thanks{…}]{…}`, `annotations={1\thanks{…}}`)
+%   are digested on each of its creators as the switch off digests them, so the note is the document's pubnote; `=2` wrote
+%   the reading's labels alone and lost the note silently (`ledger.rs` `annotations_command`, `emit.rs` `creator_keys`)
+% witness: 2308.08363, 2410.16774, 2207.11475, 2207.11842 (brief CL7, C5)
+% oracle:  pdflatex 0 errors; "Aviv Slobodkin1 and Niv Nachum2", footnote "Equal contribution alpha."
+% engines: rust off: the pubnote "Equal contribution alpha."; rust =2 (int153y): no pubnote, 0 warnings
+% expect:  =2 as off: 0 errors, 0 warnings, the pubnote kept
+% status:  RED (int153y) -> GREEN (perfect_kernel_batchcl7::a_note_in_an_authors_annotations_is_kept)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\author[1\thanks{Equal contribution alpha.}]{Aviv Slobodkin}
+\author[2]{Niv Nachum}
+\affil[1]{Bar-Ilan University}
+\affil[2]{Amazon}
+\title{T}
+\begin{document}
+\maketitle
+Body.
+\end{document}
