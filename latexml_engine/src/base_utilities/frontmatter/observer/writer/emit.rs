@@ -1654,7 +1654,8 @@ fn item_call(
       // (an IJCAI sectioned block's entry over a section marker its rehearsal held an Error at: the class's split, off's,
       // reads `\\emails` as its delimiter, defined only inside the class's `\\author` (ijcai19.sty:127), so the entry the
       // reading continued onto the address line past it (`line:continued`) written as its tokens digested the marker
-      // undefined, an Error off never raises — written by its text, counted: 2501.02356)
+      // undefined, an Error off never raises — written by its text, counted: 2501.02356. The reading ends at the held marker
+      // before the addresses now (`resolver::Input::Block`'s `markers`), so this is a backstop for any other)
       let over_marker = with_ledger(|ledger| match ledger.entries().get(index) {
         Some(Entry::Author(block)) if block.sectioned => match &block.outcome {
           Outcome::Events { held, .. } => held

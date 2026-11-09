@@ -132,6 +132,7 @@ fn block(index: usize, binding: &str, replace: bool, events: Vec<FmEvent>) -> Fm
     epoch: 0,
     events,
     calls: Vec::new(),
+    markers: Vec::new(),
   }
 }
 

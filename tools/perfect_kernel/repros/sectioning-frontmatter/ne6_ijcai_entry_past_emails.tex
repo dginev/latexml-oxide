@@ -1,10 +1,12 @@
-% mechanism: an IJCAI sectioned block's entry the reading continued past a section marker its rehearsal held an Error at
-%   (`\emails`, defined only inside the class's `\author`) is written by its text, counted (`emit.rs` `item_call`)
-% witness: 2501.02356 (ijcai's `$^4$CENIA Chile\\ \emails{{pablo.barcelo, …} @uc.cl}`); brief NE6
+% mechanism: an IJCAI sectioned block's address section, from its `\emails` marker on (defined only inside the class's
+%   `\author`, its rehearsal holding an Error there), is the class's own split's, the API's as off's: no entry the
+%   reading has above goes on over it (`resolver/blocks.rs` `Resolver::block`, `Input::Block::markers`)
+% witness: 2501.02356 (ijcai's `$^4$CENIA Chile\\ \emails{{pablo.barcelo, …} @uc.cl}`); briefs NE6, NE8 (review revX4 1)
 % oracle:  pdflatex 0 errors; "T", "Ann Able1 and Bob Baker2", "1Univ A", "2Univ B", "{ann, bob} @x.edu"
-% engines: rust off: 0 errors; rust =2 (NE4): Error:undefined:\emails
-% expect:  =2: 0 errors, 2 warnings (the entry by its text, the content check); off 0 errors, 0 warnings
-% status:  RED (NE4) -> GREEN (perfect_kernel_batchne6::an_ijcai_entry_past_emails_is_written_by_its_text)
+% engines: rust off: 0 errors; rust =2 (NE4): Error:undefined:\emails; rust =2 (NE6): "Univ B" twice, the addresses an
+%   affiliation's text (2 warnings)
+% expect:  =2: 0 errors, 1 warning (the e-mail call written as queued), the creators off's; off 0 errors, 0 warnings
+% status:  RED (NE4, NE6) -> GREEN (perfect_kernel_batchne6::an_ijcai_emails_section_is_the_class_split)
 % preload: ar5iv.sty
 \documentclass{article}
 \makeatletter

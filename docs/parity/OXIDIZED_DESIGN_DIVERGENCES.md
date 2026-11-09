@@ -32926,9 +32926,18 @@ synthetic); a declaration whose span holds a macro reading past it (`declaration
 whole reach): `\footremember{#1}{#2}` = `\footnote{#2}\newcounter{#1}…` defines after the note it prints, so its span is the
 macro alone, and its replay read past the entry (2505.04436, 1511.09009: a Fatal each). A cut holding an alignment's `&`
 outside the environment the run holds whole is refused (the item's text, counted; `Field::content_cut`), as is a cut holding
-a conditional cut apart (`content::conditional_cut`: `\ifFull and \else \and \fi Joseph A. Simons`, 1409.0597) and a name's
-run its balance grew over another name (`emit::event_run_at`: a `flushleft` the names sit in, 1208.0597). Guards
-`perfect_kernel_batchne5`.
+a conditional cut apart (`content::conditional_cut`: `\ifFull and \else \and \fi Joseph A. Simons`, 1409.0597; symmetric — an
+`\if…` whose `\fi` is outside the run cuts too, else it stays open to the end of the document, `\iffull Bob Baker\fnm{2}\fi`,
+synthetic; a switch's name not executed where it stands, `\newif\iffull`, counts as one, which no meaning tells apart, so
+such a run is refused as well; a run is first grown over the `\fi`s right after it that close what it opens, an entry
+printed by its last branch, `\ifx\zz\end Q\else X\fi`) and a name's run its balance grew over another name (`emit::event_run_at`: a
+`flushleft` the names sit in, 1208.0597). Guards `perfect_kernel_batchne5`, `perfect_kernel_batchne8`. An IJCAI sectioned
+block whose class defines `\emails` only inside its `\author` (ijcai19.sty:127, a raw `\@maketitle`) holds a rehearsal Error at
+the marker: the reading ends at the first held marker whose section prints an address (an `@` in the events' text;
+`resolver::Input::Block::markers`, `blocks::address_section`), the address section the class
+split's, its e-mail call written as queued as off writes it (one counted Warning) — the reading had continued `$^4$CENIA
+Chile` onto the e-mail line and written the affiliations twice and the addresses as an affiliation (2501.02356). Guard
+`perfect_kernel_batchne6::an_ijcai_emails_section_is_the_class_split`.
 
 **Carried, not lost.** A note's footnote step in the creator where its name prints, in source order, and past a `\thanks` a mark
 follows (`note_steps`; 2505.07115, 1610.06031); labels written back into keys as characters (`key_tokens`, `annotations_key`;

@@ -1,8 +1,8 @@
 //! Guards for NE6 (`agent_reports/2026-11-09_brief_NE6.md`): the last `=2`-only Errors of the flip A/B. A mark a macro
 //! prints is written on its name as the call with its arguments, and a run a call in which reads past it is no run
 //! (aiaa-tc's `\thanksibid{2}`: 1505.07844, 1411.3642, 1602.00849; apa6 with a preamble's `\footrecall{uva}`: 2503.21719,
-//! 2407.13730, 2606.19583; `\author\href{url}{name}`: 2603.11001); an IJCAI sectioned block's entry continued past
-//! `\emails` is written by its text (2501.02356).
+//! 2407.13730, 2606.19583; `\author\href{url}{name}`: 2603.11001); an IJCAI sectioned block's address section, from
+//! `\emails` on, is the class's own split's (2501.02356; NE8).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
@@ -85,30 +85,27 @@ fn a_url_cut_from_its_href_is_written_as_its_text() {
 }
 
 /// An IJCAI block (a class defining `\affiliations`/`\emails` only in its title code): the reading continued `Univ B`
-/// onto the e-mail line past `\emails`, whose rehearsal held an Error there; `=2` wrote the entry as its tokens and
-/// digested `\emails` undefined (an Error off never raises). Now the entry is its text, counted.
+/// onto the e-mail line past `\emails`, whose rehearsal held an Error there — `=2` wrote "Univ B" twice (the entry by its
+/// text, and the class split's `$^2$Univ B`) and the addresses as an affiliation (2501.02356, review revX4 1). The
+/// address section is the class's own split's now (`Resolver::block`'s `markers`): the creators off's, the e-mail call
+/// written as queued, counted.
 #[test]
-fn an_ijcai_entry_past_emails_is_written_by_its_text() {
+fn an_ijcai_emails_section_is_the_class_split() {
+  let expected = [
+    row(&["Ann Able", "affiliation=Univ A", "email=ann, bob @x.edu"]),
+    row(&["Bob Baker", "affiliation=Univ B"]),
+  ];
   let (log, xml) = run(repro!("ne6_ijcai_entry_past_emails"), 2);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains(
-      "writes \"Univ B ann, bob @x.edu\" as its plain text, its markup lost: a sectioned block's entry over an Error"
+      "The frontmatter emitter's reading holds no place for words its author block or call prints (x edu); the call \
+       is written as queued, as the switch off writes it"
     ),
     "{log}"
   );
-  assert_eq!(creators(&xml), [
-    row(&["Ann Able", "affiliation=Univ A"]),
-    row(&[
-      "Bob Baker",
-      "affiliation=Univ B ann, bob @x.edu",
-      "affiliation=Univ B"
-    ]),
-  ]);
+  assert_eq!(creators(&xml), expected);
   let (log, xml) = run(repro!("ne6_ijcai_entry_past_emails"), 0);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&xml), [
-    row(&["Ann Able", "affiliation=Univ A", "email=ann, bob @x.edu"]),
-    row(&["Bob Baker", "affiliation=Univ B"]),
-  ]);
+  assert_eq!(creators(&xml), expected);
 }

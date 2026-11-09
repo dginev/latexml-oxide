@@ -128,26 +128,70 @@ pub(super) fn arguments_end(tokens: &[Token], at: usize) -> Option<Option<usize>
   Some(Some(j))
 }
 
+/// A conditional's part `t` is, by its meaning now.
+fn conditional_of(t: &Token) -> Option<ConditionalType> {
+  lookup_definition(t)
+    .ok()
+    .flatten()
+    .and_then(|meaning| meaning.get_conditional_type())
+}
+
 /// Where `tokens` hold a conditional cut apart, by their meanings now: an `\else`, `\or` or `\fi` whose `\if…` is not
-/// theirs — digested apart, it errs ("not in a conditional"). An `\if…` whose `\fi` is not theirs is not judged: a
-/// switch's name is one too (`\newif\iffull`, `\let\ifa\iftrue`), which no meaning tells apart from a test.
+/// theirs, or an `\if…` whose `\fi` is not theirs — digested apart, the one errs ("not in a conditional"), the other
+/// stays open to the end of the document (`\iffull Bob Baker\fnm{2}\fi`'s name run `\iffull Bob Baker`, review revX4 2).
+/// A switch's name not executed where it stands is one as well (`\newif\iffull`, `\let\ifa\iftrue`, what `\ifx`
+/// compares), which no meaning tells apart from a test: such a run is refused too, its item written as its text, counted.
 fn conditional_cut(tokens: &[Token]) -> Option<usize> {
-  let mut open = 0usize;
+  let mut open = Vec::new();
   for (i, t) in tokens.iter().enumerate() {
-    let kind = lookup_definition(t)
-      .ok()
-      .flatten()
-      .and_then(|meaning| meaning.get_conditional_type());
-    match kind {
-      Some(ConditionalType::If) => open += 1,
-      Some(ConditionalType::Else | ConditionalType::Or | ConditionalType::Fi) if open == 0 => {
+    match conditional_of(t) {
+      Some(ConditionalType::If) => open.push(i),
+      Some(ConditionalType::Else | ConditionalType::Or | ConditionalType::Fi)
+        if open.is_empty() =>
+      {
         return Some(i);
       },
-      Some(ConditionalType::Fi) => open -= 1,
+      Some(ConditionalType::Fi) => {
+        open.pop();
+      },
       _ => {},
     }
   }
-  None
+  open.first().copied()
+}
+
+/// `end` grown over the `\fi`s right after `content[start..end]` that close a conditional it opens, as [`Field::balanced`]
+/// grows over closing braces: an entry printed by its last branch ends before the `\fi` that prints nothing (`\ifx\zz\end
+/// Q\else X\fi`, `perfect_kernel_batchz4::an_environment_by_its_frames`).
+fn past_closing_fis(content: &[Token], start: usize, end: usize) -> usize {
+  let mut open = 0usize;
+  for t in &content[start..end] {
+    match conditional_of(t) {
+      Some(ConditionalType::If) => open += 1,
+      Some(ConditionalType::Fi) => open = open.saturating_sub(1),
+      _ => {},
+    }
+  }
+  let mut end = end;
+  let mut next = end;
+  while open > 0 {
+    while content
+      .get(next)
+      .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+    {
+      next += 1;
+    }
+    if !content
+      .get(next)
+      .is_some_and(|t| conditional_of(t) == Some(ConditionalType::Fi))
+    {
+      break;
+    }
+    next += 1;
+    end = next;
+    open -= 1;
+  }
+  end
 }
 
 /// Whether `t` is the control sequence `name`.
@@ -264,6 +308,7 @@ impl Field<'_> {
     }
     end = end.min(content.len());
     let (start, end) = self.balanced(start, end, floor)?;
+    let end = past_closing_fis(content, start, end);
     // (the group the pieces sit in: its opening brace, and the switches before the first piece in it)
     let mut tokens = Vec::new();
     if let Some(&group) = open_groups(content, 0, start).last()

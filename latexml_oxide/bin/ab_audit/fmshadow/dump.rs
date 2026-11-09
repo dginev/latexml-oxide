@@ -107,8 +107,9 @@ pub fn json_inputs(dump: &Value) -> Vec<FmInput> {
           .filter(|ev| ev["kind"] != "ApiCall")
           .map(json_event)
           .collect(),
-        // (a creator call's labels are not in a dump)
+        // (a creator call's labels are not in a dump, nor a sectioned block's markers)
         calls:   Vec::new(),
+        markers: Vec::new(),
       }),
       Some("api")
         if e["inside"] == false
