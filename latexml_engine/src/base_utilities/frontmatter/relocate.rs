@@ -11,7 +11,7 @@ use super::{
 pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -> Result<()> {
   // Find dummy frontmatter elements containing not-yet-attached annotations
   let pending_nodes = document.findnodes(".//*[@role='pending']", None);
-  // The author block's own creator, which the frontmatter emitter writes (`observer::writer::emit::block_creator`): the
+  // The author block's own creator, which the frontmatter emitter writes (`observer::emitter::emit::block_creator`): the
   // trailing nameless creator the orphan procedure below shares into, written by the emitter where it would promote a
   // stub — no target by label (the block's items go through the orphan rules: a sole author's line, a copy an author
   // holds, a named owner's), placed below the last named author, and gone where nothing was shared into it. Witnesses

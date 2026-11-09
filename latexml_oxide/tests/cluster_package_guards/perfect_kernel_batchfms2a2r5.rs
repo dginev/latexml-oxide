@@ -1,6 +1,6 @@
 //! Guards for FM S2a.2 r5: the frontmatter observer's resolver and lexer on the r4 classified sample's wrong papers,
 //! the comparator's name-note gap (the text of a `\footnotemark` the name shows) and the r4 landing review's nits
-//! (OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r5"; KERNEL_CAPABILITIES K23), in shadow mode. Each shape was red on r4
+//! (OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r5"; KERNEL_CAPABILITIES K23). Each shape was red on r4
 //! (the int60a code, 3cba36f53d): a note of several marked legends (1802.03043), a glued mark opening an API entry
 //! (2202.06129), a `\footnotemark` inside an `\inst` (2404.09857), an address pattern (2006.12418), an acronym row
 //! (2609.10596, 1002.2573), a gap inside an accent macro (1706.00234), footnote texts read by their marks (1108.5155,
@@ -8,15 +8,16 @@
 //! (1106.0130), a column's first name (2006.13694), ORCID links in a mark and an e-mail (2506.11626, 2402.04675). Every probe compiles clean with pdflatex (TL 2025) and converts
 //! with no Error or Warning, and the XML is byte-identical with the switch on and off.
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::fm_shadow_json;
+use latexml_engine::base_utilities::fm_reading_json;
 use serde_json::Value;
 
-/// Convert `tex` under the shadow switch, asserting a clean conversion: the whole dump.
+/// Convert `tex`, asserting a clean conversion: the whole dump.
 fn dump(tex: &str) -> Value { dump_as(tex, None) }
 
 /// [`dump`], of a written family's paper the writer holds back (`declined: <why>`): today's XML kept.
 fn dump_as(tex: &str, held: Option<&str>) -> Value {
-  let (log, _, json) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| fm_shadow_json());
+  let (log, _, json) =
+    convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| fm_reading_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   match held {
     Some(why) => super::perfect_kernel_batchfms2a1::parsed_held(&json, why),

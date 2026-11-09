@@ -1,5 +1,5 @@
 //! Guards for FS1 (FS2: on juggles the reading takes as written): the frontmatter content check under
-//! `LATEXML_FM_EMIT=2` does not trust a block's events when the block's rehearsal left a group open
+//! `=2` does not trust a block's events when the block's rehearsal left a group open
 //! (`rehearsal::Rehearsal::Done::left_open`): the words of its content's text (`ledger::content_text`) the events lack
 //! are counted, a possible loss (`resolver::placed::content_check`).
 

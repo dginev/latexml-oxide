@@ -1,4 +1,4 @@
-% mechanism: a piece closing a mark's own font group takes the group from its opening brace (`writer::Field::balanced`), read forward from
+% mechanism: a piece closing a mark's own font group takes the group from its opening brace (`emitter::Field::balanced`), read forward from
 %   the content's brace balance, not back from the span. A group going on after its mark stays no run, the isotope's fail-safe
 %   (`cut_run_wrapped_isotope_is_entry_text`, batch107e)
 % witness: review 94a r6 (a cut never undone for its markup); no corpus witness read here

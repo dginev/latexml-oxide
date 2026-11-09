@@ -1,20 +1,20 @@
 //! Guards for Z1 (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md` "Gaps in the event model", 1, 2, 6, 8, 9): what the
 //! observer's events gain, read from the digested list and its spans, for the old engine's removal. Nothing reads these
 //! fields but these guards; the reading and the writer's output stay as they were (the guards compare the whole events a
-//! dump holds; `ab_audit fmshadow --re-resolve`'s test reads them back). Each guard is a different code path:
+//! dump holds; the deleted `ab_audit fmshadow --re-resolve`'s test reads them back). Each guard is a different code path:
 //! `marks_say_…` the walker on a stamped block, `a_call_marks_…` on an API call's content, which has no positions;
 //! `a_contact_…` the ledger's unprinted call; `a_definition_…` the stomach's note of a boxless assignment,
 //! `a_declarations_span_…` where that note's span starts and what it may not hold; the two `held` guards the document's own
 //! error and an error of the rehearsal alone.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::fm_shadow_json;
+use latexml_engine::base_utilities::fm_reading_json;
 use serde_json::{Value, json};
 
-/// Convert `tex` under the shadow switch: the log, the XML and the dump.
+/// Convert `tex`: the log, the XML and the dump.
 pub(super) fn run(tex: &str) -> (String, String, Value) {
   let (log, xml, json) =
-    convert_files_with_setup_then(tex, &[], Some("ar5iv.sty"), || {}, |_| fm_shadow_json());
+    convert_files_with_setup_then(tex, &[], Some("ar5iv.sty"), || {}, |_| fm_reading_json());
   (log, xml, serde_json::from_str(&json).expect("the dump"))
 }
 

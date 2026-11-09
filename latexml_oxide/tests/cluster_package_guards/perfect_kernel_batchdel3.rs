@@ -1,6 +1,6 @@
 //! Guards for DEL3: the frontmatter emitter writes a block calling a binding's list setter (`\institute` inside the author
 //! block) itself — its names from the reading, the setter's call digested as it is after them, its entries the list the
-//! names' marks request (`writer::emit::list_setter_runs`) — where it stayed out and the S2b writer wrote it
+//! names' marks request (`emitter::emit::list_setter_runs`) — where it stayed out and the S2b writer wrote it
 //! ("a binding's list setter called inside the block"). One guard per binding's setter, each a different definition:
 //! sv_support's (`\lx@sv@institute`, its `\and` pieces numbered for `\inst`) in a piece the split `\author` made, and its
 //! marked list (each line labelled by its mark, which a hand-typed mark on a name requests); llncs's dispatch
@@ -9,7 +9,7 @@
 //! Each asserts every creator's name and contacts, in order, and a clean conversion: no Warning (the emitter's stay-out
 //! one was the base's). DEL3b (review revDEL3): the names keep the marks they print (2502.07804's hand-typed `${}^{1}$`,
 //! with or without a setter call written as it is), and the written call replaces the lists before it as its clear does
-//! outside a flush (`writer::emit::replaced_by_setter`): a document's `\institute` before the block, an earlier call of
+//! outside a flush (`emitter::emit::replaced_by_setter`): a document's `\institute` before the block, an earlier call of
 //! the block.
 
 use super::{

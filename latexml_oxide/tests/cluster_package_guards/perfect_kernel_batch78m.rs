@@ -54,7 +54,7 @@ fn spie_copy_loading_authblk_reads_authblk_authors() {
 /// `Oleg Lychkovskiy\thanks{…}\hspace*{2mm}$^{\rm a,b}$, Sergei Blinnikov\hspace*{2mm}$^{\rm a,c}$` (0905.3658): the
 /// space before each mark is its name's, and `\rm` no part of the labels, so each creator has the institutes its marks
 /// name. pdflatex: "Oleg Lychkovskiy* a,b, Sergei Blinnikov a,c" over the three marked institutes.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners and institutes; each affiliation drops
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners and institutes; each affiliation drops
 /// the space before its text.
 #[test]
 fn author_space_before_own_mark_is_the_name() {
@@ -115,7 +115,7 @@ fn author_spacing_math_between_names_separates() {
 /// is that entry's, so the `\quad` before the mark parts two entries, not the space a name sets before its own mark
 /// (78m r1: Ann with "Univ A² Univ B³ Univ C", Bob and Cat with none; the corpus shape 2606.01993, 2402.19080, kept).
 /// pdflatex: "Ann Able^1, Bob Baker^2, Cat Cole^3", then "1 Univ A  2 Univ B  3 Univ C".
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same entries; Univ A and Univ B drop the tie
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same entries; Univ A and Univ B drop the tie
 /// before their text, Univ C the control space.
 #[test]
 fn author_tie_after_entry_mark_is_the_entry() {

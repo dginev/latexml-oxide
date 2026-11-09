@@ -468,7 +468,7 @@ fn author_third_line_names_after_affiliation() {
 
 /// 63e: `\newline` breaks an author line as `\\` does (latex.ltx:9256; 2401.14196). Repro
 /// sectioning-frontmatter/author_newline_separates_marked_name_lines.
-/// T1 (`LATEXML_FM_EMIT=2`): the same four and links; the names keep the `\small` they print in, as the
+/// T1 (`=2`): the same four and links; the names keep the `\small` they print in, as the
 /// affiliations do, and the first creator has no separator before it (the leading `\hspace` none).
 #[test]
 fn author_newline_separates_marked_name_lines() {
@@ -718,7 +718,7 @@ fn author_serial_comma_list_shares_one_affiliation() {
 
 /// 63e (negative): a line of only "and" before an affiliation is affiliation text, not the start of an author.
 /// Repro sectioning-frontmatter/author_and_line_before_an_institution_stays_text.
-/// T1 (`LATEXML_FM_EMIT=2`): no author invented; the two institutions John Smith's, the line "and" between them
+/// T1 (`=2`): no author invented; the two institutions John Smith's, the line "and" between them
 /// the separator word no contact keeps (`repart.rs` `SepKind::Word`), as between names.
 #[test]
 fn author_and_line_before_an_institution_stays_text() {
@@ -794,7 +794,7 @@ fn author_ieee_membership_in_a_block_stays_with_its_name() {
 
 /// 63e (negative): an "and" line before "SISSA, Trieste, Italy" is affiliation text. Repro
 /// sectioning-frontmatter/author_and_line_before_an_acronym_institution_stays_text.
-/// T1 (`LATEXML_FM_EMIT=2`): no author invented; the two institutions John Smith's, the line "and" between them
+/// T1 (`=2`): no author invented; the two institutions John Smith's, the line "and" between them
 /// the separator word no contact keeps (`repart.rs` `SepKind::Word`), as between names.
 #[test]
 fn author_and_line_before_an_acronym_institution_stays_text() {
@@ -871,7 +871,7 @@ fn author_amsart_marks_stay_visible() {
 
 /// 63e: a piece of marks and notes only (`$^{*}$\thanks{…}`) stays with the name before it, not an author showing
 /// only "*". Repro sectioning-frontmatter/author_symbol_mark_piece_stays_with_the_name.
-/// T1 (`LATEXML_FM_EMIT=2`): the same two; the math `*` written ∗ (U+2217), as LaTeXML writes a math asterisk
+/// T1 (`=2`): the same two; the math `*` written ∗ (U+2217), as LaTeXML writes a math asterisk
 /// (FIDELITY_CHARTER §4: all asterisks one label key, the printed glyph as written).
 #[test]
 fn author_symbol_mark_piece_stays_with_the_name() {
@@ -924,7 +924,7 @@ fn author_emulateapj_marked_name_lines_continue() {
 /// request: two authors, not an author and an affiliation labelled 2 (review r7). Repro
 /// sectioning-frontmatter/author_ieee_blockn_prefix_marks_across_quad.
 /// 64a: the block's marked affiliation lines answer the marks, each author linked to its own (KPE #553).
-/// T1 (`LATEXML_FM_EMIT=2`): each author linked as before; Bob Baker's answered mark no longer shown on his name
+/// T1 (`=2`): each author linked as before; Bob Baker's answered mark no longer shown on his name
 /// (FIDELITY_CHARTER §4, a name's label is the name alone), Ann Able's still (a residual both switches share, one fewer at 2;
 /// T1's mechanism B, answered marks left on names, as `…_affiliations_after_break`).
 #[test]
@@ -960,7 +960,7 @@ fn author_revtex_ijcai_marker_keeps_earlier_authors() {
 /// $^{1}$Bob Baker`), are two authors keeping their marks, not an author and her affiliation (review r8). Repro
 /// sectioning-frontmatter/author_ieee_blockn_prefix_marks_shared_label.
 /// 64a: the block's marked affiliation lines answer the marks, each author linked to its own (KPE #553).
-/// T1 (`LATEXML_FM_EMIT=2`): the same two links; the answered marks no longer shown on the names (FIDELITY_CHARTER
+/// T1 (`=2`): the same two links; the answered marks no longer shown on the names (FIDELITY_CHARTER
 /// §4, a name's label is the name alone), as a mark after a name is not.
 #[test]
 fn author_ieee_blockn_prefix_marks_shared_label() {
@@ -978,7 +978,7 @@ fn author_ieee_blockn_prefix_marks_shared_label() {
 /// 63e: three names marked before them on one printed line of an IEEE block are three authors (review r8). Repro
 /// sectioning-frontmatter/author_ieee_blockn_prefix_marks_three_names.
 /// 64a: the block's marked affiliation lines answer the marks, each author linked to its own (KPE #553).
-/// T1 (`LATEXML_FM_EMIT=2`): the same three links; the answered marks no longer shown on the names (FIDELITY_CHARTER
+/// T1 (`=2`): the same three links; the answered marks no longer shown on the names (FIDELITY_CHARTER
 /// §4, a name's label is the name alone), as a mark after a name is not.
 #[test]
 fn author_ieee_blockn_prefix_marks_three_names() {
@@ -2165,7 +2165,7 @@ fn ieee_membership_in_a_block_list() {
 
 /// 63l review: a document's own `\IEEEmembership` (2408.00647 prints its grades in italics) keeps its meaning; the
 /// grades are not made contacts behind its back. Repro sectioning-frontmatter/ieee_membership_own_definition_kept.
-/// T1 (`LATEXML_FM_EMIT=2`): the grades printed by the document's own macro, italic, each the name's
+/// T1 (`=2`): the grades printed by the document's own macro, italic, each the name's
 /// `membership` contact, as a written grade is (106c, OXIDIZED_DESIGN_DIVERGENCES #967) — the personname the name alone.
 #[test]
 fn ieee_membership_own_definition_kept() {
@@ -2360,7 +2360,7 @@ fn author_affiliation_comma_line_under_one_name() {
 /// 63m: a line of addresses parted by a spacing macro alone (no space token between them, 2410.07147's `\nsone`) is
 /// still an email line, one contact, not welded onto the affiliation. Repro
 /// sectioning-frontmatter/author_addresses_parted_by_a_macro.
-/// T1 (`LATEXML_FM_EMIT=2`): each address the e-mail of the author it spells (FIDELITY_CHARTER §4, the placement
+/// T1 (`=2`): each address the e-mail of the author it spells (FIDELITY_CHARTER §4, the placement
 /// order step 2), as printed.
 #[test]
 fn author_addresses_parted_by_a_macro() {

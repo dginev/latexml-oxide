@@ -4,8 +4,8 @@
 //! shared entry's address the Kind step keeps for every holder, digestion's junk in a name (2506.02663), a call written
 //! whole beside its piece (2607.00684's `mtablo@postech.ac.kr` twice), a binding's lost entry text — shows only in the
 //! frontmatter `insert_frontmatter` placed. So one pass after it (Perl's `insertFrontMatter` and `relocateAnnotations`,
-//! Base_Utility.pool.ltxml:736-740, :891-900), under `LATEXML_FM_EMIT=2` only: the words the ledger's author blocks and
-//! creator calls printed (their rehearsed events), against the words the placed creators hold (`writer::dom`'s reading of
+//! Base_Utility.pool.ltxml:736-740, :891-900): the words the ledger's author blocks and
+//! creator calls printed (their rehearsed events), against the words the placed creators hold (`emitter::dom`'s reading of
 //! the document). It counts, it never answers: placement is over.
 //!
 //! What counts, both sides by one definition ([`ink_words`]): every word, a mark excluded by its event, not by its
@@ -38,7 +38,7 @@ use super::{
 };
 use crate::base_utilities::defs::frontmatter_api::CUT_LIST;
 
-/// One item of the placed frontmatter (`writer::dom`'s reading of a creator): its creator, what it is, its printed text.
+/// One item of the placed frontmatter (`emitter::dom`'s reading of a creator): its creator, what it is, its printed text.
 pub(in crate::base_utilities::frontmatter::observer) struct PlacedItem {
   /// the creator holding it, by its place among the document's creators
   pub holder: usize,
@@ -469,7 +469,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
             .insert(words_of(text).collect())
             .then(|| (None, (vec![text.to_string()], vec![text.to_string()])))
         } else if !call.rehearsed {
-          // (the writer stays out for it, `writer::writer_stays_out`: the queue is digested as Perl's)
+          // (the writer stays out for it, `writer::writer_stays_out` (deleted): the queue is digested as Perl's)
           all_read = false;
           None
         } else if calls.insert(words_of(&events::printed_text(events)).collect()) {
@@ -1050,7 +1050,6 @@ mod whole_tests {
       policy: "kernel".to_string(),
       binding: "kernel".to_string(),
       owner: "kernel".to_string(),
-      setters_before: 0,
       counter: None,
       replace: false,
       cleared: false,

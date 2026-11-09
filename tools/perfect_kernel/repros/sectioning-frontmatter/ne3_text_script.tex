@@ -1,5 +1,5 @@
 % mechanism: a script character the block's rehearsal read outside math (an error held there) is written into a piece
-%   as the character it printed, `\lx@fm@script@char`, a counted Warning (`writer::content::Field::content_cut`)
+%   as the character it printed, `\lx@fm@script@char`, a counted Warning (`emitter::content::Field::content_cut`)
 % witness: 2204.01080 (=2: 6 x "Script ^ can only appear in math mode" from `\textbf{Ningkai Mo} ^1` re-digested)
 % oracle:  pdflatex INVALID on purpose: 9 errors (Missing $ at each text-mode `^`, the paper's own error)
 % engines: rust =2 (int153x): 3 errors; rust off: 0 (the old reader reads the marks)

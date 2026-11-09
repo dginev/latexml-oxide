@@ -197,14 +197,12 @@ thread_local! {
   static STAND_IN_OWN_CODE: Cell<bool> = const { Cell::new(false) };
   static STAND_IN_LOADER_OWN_CODE: Cell<bool> = const { Cell::new(false) };
   static STAND_IN_BASE_CLASS: Cell<bool> = const { Cell::new(false) };
-  /// Which setter watches are on: [`COPY_DEFAULT_WATCH`], [`FRONTMATTER_WATCH`] (one flag, read at every macro call).
+  /// Which setter watches are on: [`COPY_DEFAULT_WATCH`] and the title-page check's (one flag, read at every macro call).
   static SETTER_WATCH: Cell<u8> = const { Cell::new(0) };
 }
 
 /// [`watch_setter_calls`]' watch: a stand-in copy stored a default of the setters' fields.
 const COPY_DEFAULT_WATCH: u8 = 1;
-/// [`watch_frontmatter_setter_calls`]' watch: the frontmatter observer's.
-const FRONTMATTER_WATCH: u8 = 2;
 /// [`watch_document_calls`]' watch: the title-page check's (`state::note_document_call`).
 const DOCUMENT_CALL_WATCH: u8 = 4;
 /// [`watch_dropped_arguments`]' watch: the title-page check's (`state::note_dropped_argument`).
@@ -212,8 +210,8 @@ const DROPPED_ARGUMENT_WATCH: u8 = 8;
 /// [`watch_store_calls`]' watch: the title-page check's (`state::note_store_call`).
 const STORE_CALL_WATCH: u8 = 16;
 
-/// Are frontmatter setter calls observed ([`watch_setter_calls`], [`watch_frontmatter_setter_calls`])? Read at every
-/// macro call, so a flag.
+/// Is a setter watch on ([`watch_setter_calls`], [`watch_document_calls`], [`watch_dropped_arguments`],
+/// [`watch_store_calls`])? Read at every macro call, so a flag.
 pub fn setter_watch() -> bool { SETTER_WATCH.with(|c| c.get()) != 0 }
 
 /// What a macro's call must be for one of the watches on to see it, read at every macro call: `None` when no watch is on,
@@ -227,17 +225,8 @@ pub fn call_watch() -> Option<bool> {
   (watches != 0).then_some(watches & !(DOCUMENT_CALL_WATCH | STORE_CALL_WATCH) == 0)
 }
 
-/// Is [`watch_frontmatter_setter_calls`]' watch on?
-pub fn frontmatter_watch() -> bool { SETTER_WATCH.with(|c| c.get()) & FRONTMATTER_WATCH != 0 }
-
 /// Is [`watch_setter_calls`]' watch on?
 pub fn copy_default_watch() -> bool { SETTER_WATCH.with(|c| c.get()) & COPY_DEFAULT_WATCH != 0 }
-
-/// Is one of the setter watches of [`watch_setter_calls`] and [`watch_frontmatter_setter_calls`] on (the calls
-/// `state::note_setter_call` reads)?
-pub fn setter_name_watch() -> bool {
-  SETTER_WATCH.with(|c| c.get()) & (COPY_DEFAULT_WATCH | FRONTMATTER_WATCH) != 0
-}
 
 /// Is [`watch_document_calls`]' watch on?
 pub fn document_call_watch() -> bool { SETTER_WATCH.with(|c| c.get()) & DOCUMENT_CALL_WATCH != 0 }
@@ -333,19 +322,6 @@ pub fn note_document_mouth(document_text: bool) {
 pub fn watch_setter_calls(names: &[&str]) {
   crate::state::watch_setters(names);
   SETTER_WATCH.with(|c| c.set(c.get() | COPY_DEFAULT_WATCH));
-}
-
-/// Observe the expansions of the frontmatter setters `names` for this conversion (`state::note_setter_call`,
-/// `state::open_frontmatter_setter`: whose expansion an entry the frontmatter API queues was made in — latexml_engine's
-/// observer ledger), or stop observing them (`None`).
-pub fn watch_frontmatter_setter_calls(names: Option<&[&str]>) {
-  crate::state::watch_frontmatter_setters(names.unwrap_or_default());
-  SETTER_WATCH.with(|c| {
-    c.set(match names {
-      Some(_) => c.get() | FRONTMATTER_WATCH,
-      None => c.get() & !FRONTMATTER_WATCH,
-    })
-  });
 }
 
 /// Is a binding that stands in for an author's file loading ([`StandInLoadGuard`]), itself or a file it loads?
@@ -446,14 +422,10 @@ pub fn reset_copy_provides() {
   STAND_IN_OWN_CODE.with(|c| c.set(false));
   STAND_IN_LOADER_OWN_CODE.with(|c| c.set(false));
   STAND_IN_BASE_CLASS.with(|c| c.set(false));
-  // (the frontmatter observer's watch and the title-page check's are their own, set at their resets:
-  // `watch_frontmatter_setter_calls`, `watch_document_calls`, `watch_dropped_arguments`, `watch_store_calls`)
-  SETTER_WATCH.with(|c| {
-    c.set(
-      c.get()
-        & (FRONTMATTER_WATCH | DOCUMENT_CALL_WATCH | DROPPED_ARGUMENT_WATCH | STORE_CALL_WATCH),
-    )
-  });
+  // (the title-page check's watches are its own, set at its resets: `watch_document_calls`, `watch_dropped_arguments`,
+  // `watch_store_calls`)
+  SETTER_WATCH
+    .with(|c| c.set(c.get() & (DOCUMENT_CALL_WATCH | DROPPED_ARGUMENT_WATCH | STORE_CALL_WATCH)));
   COPY_PROVIDES.with(|c| c.set(0));
   COPY_PROVIDES_STACK.with(|s| s.borrow_mut().clear());
 }

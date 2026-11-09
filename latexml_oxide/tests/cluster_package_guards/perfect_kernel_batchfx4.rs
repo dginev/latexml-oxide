@@ -1,4 +1,4 @@
-//! Guards for FX4, an ORCID link printing the author's name under `LATEXML_FM_EMIT=2` (OXIDIZED_DESIGN_DIVERGENCES #980): the
+//! Guards for FX4, an ORCID link printing the author's name under `=2` (OXIDIZED_DESIGN_DIVERGENCES #980): the
 //! name written once (`an_orcid_link_printing_the_name_is_written_once`).
 
 use latexml::util::test::{error_count, warning_count};

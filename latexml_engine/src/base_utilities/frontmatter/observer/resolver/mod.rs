@@ -2,7 +2,8 @@
 //! each author block's events and the frontmatter API calls after them — read into the tuples `ab_audit`'s `front.rs`
 //! extracts from the XML (each creator's name, affiliations, contacts and notes, and the author block's own), each
 //! association with the rule that decided it. Class-independent; a family's conventions are those its binding declared
-//! (`policy.rs`, Layer B). In SHADOW mode only (stage S2a.2): nothing it decides reaches the output.
+//! (`policy.rs`, Layer B). Stage S2a.2 ran it in shadow mode, nothing it decided reaching the output; since the flip the
+//! emitter writes what it decides (OXIDIZED_DESIGN_DIVERGENCES #980).
 //!
 //! The rules, in order (design §2 points 1-9, the FIDELITY_CHARTER §4 rulings of 2026-10-21):
 //! 1. **Geometry**: columns from `Sep(And)` (the `\and` family) and alignment tabs, unless the policy reads `\and` as
@@ -118,7 +119,7 @@ impl NameJoin {
     NameJoin::Remark,
   ];
 
-  /// The join a tag names ([`Self::tag`]): a reading read back from its dump (`ab_audit fmshadow`), which writes a creator's
+  /// The join a tag names ([`Self::tag`]): a reading read back from its dump (the deleted `ab_audit fmshadow`), which writes a creator's
   /// joins as their tags.
   pub fn of_tag(tag: &str) -> Option<NameJoin> {
     Self::ALL.into_iter().find(|join| join.tag() == tag)
@@ -169,11 +170,11 @@ pub struct Resolved {
   pub continued: Option<Vec<Vec<String>>>,
   /// the affiliation entries whose printed e-mail addresses the reading took out (`Resolver::take_out_entry_addresses`,
   /// brief 95c), each as it was — for the writer, which gives an entry back where today's cannot cut it the same
-  /// (`writer::give_back_addresses`); not in the dump
+  /// (`writer::give_back_addresses` (deleted)); not in the dump
   pub taken:     Vec<Taken>,
   /// the e-mail calls printing several addresses alone that the reading wrote out address by address
   /// (`Resolver::answer_listed_emails`, brief 95c G3), each as today's holds it — for the writer's name re-part, which
-  /// reads them whole (`writer::give_back_addresses`, brief 95e); not in the dump
+  /// reads them whole (`writer::give_back_addresses` (deleted), brief 95e); not in the dump
   pub listed:    Vec<Listed>,
   /// the words a block prints that the reading drops by its own rule, each its ledger index, its Name event's span and
   /// word (trimmed, lowercased): a byline's "by" read as a separator (`lines::byline_dropped`, the old reader's
@@ -199,7 +200,7 @@ pub struct Taken {
   pub holders:  Vec<(Option<usize>, usize, Assoc)>,
   /// the text the runs were read in (`original` with its lines), the bytes of it the take-out cuts (`address_cuts`), and
   /// each run taken out: its bytes, its addresses and the label word it took (`E-mail:`) — what the emitter cuts the
-  /// entry's tokens at (`writer::address_cut`, OXIDIZED_DESIGN_DIVERGENCES #980 P1b)
+  /// entry's tokens at (`emitter::address_cut`, OXIDIZED_DESIGN_DIVERGENCES #980 P1b)
   pub lined:    String,
   pub cuts:     Vec<(usize, usize)>,
   pub runs:     Vec<TakenRun>,
@@ -831,7 +832,7 @@ impl Resolver {
   }
 
   /// The one candidate of a class's address list printed apart from the names (`address`, the one left over) marked as the
-  /// corresponding author, else the block: the switch-off step's reading (`place::marked_corresponding_author`, OD #809,
+  /// corresponding author, else the block: the old driver's step's reading (`place::marked_corresponding_author`, OD #809,
   /// user ruling 2026-10-21) on the reading's facts. A candidate is marked by a note of theirs naming them so — a
   /// `\thanks`, or a contact command's note, jheppub's `\note{Corresponding author.}` in their `\author` (1901.08773's
   /// A. Kopylov, 2510.11030's J.-H. Ha) — or by a mark they request whose legend says so: a labelled affiliation's
@@ -911,7 +912,7 @@ impl Resolver {
 
   /// The legends of the contact commands' notes an input holds (`note_legends`): an author block's notes, each its own
   /// mark or else the footnote counter's next number (jheppub.sty:84-89, the counter stepped by an unmarked `\note`
-  /// alone), and a note given apart from the names, its own mark only — as the switch-off step reads the names' notes
+  /// alone), and a note given apart from the names, its own mark only — as the old driver's step reads the names' notes
   /// and the queue's (`email_block_calls::author_notes`, `place::marked_corresponding_author`).
   fn read_note_legends(&mut self, events: &[Event], apart: Option<&str>) {
     if let Some(mark) = apart {
@@ -966,7 +967,7 @@ const ENTRY_MAILBOX: &str = " api:entry-mailbox";
 
 /// The one of `names` an address spells (`spelled_owners`), if one — none for a list of local parts the address reader
 /// could not part (`lists_local_parts`); each name read as an address spells it, by its base letters ([`base_letters`])
-/// and its transliteration ([`transliterated`], both `NameKeys::of`; [`Resolver::spelled`]; the writer's check of an address today's holds on the creator it spells, `writer::plan`).
+/// and its transliteration ([`transliterated`], both `NameKeys::of`; [`Resolver::spelled`]; the writer's check of an address today's holds on the creator it spells, `emitter::plan`).
 pub(in crate::base_utilities::frontmatter::observer) fn spelled_name(
   names: &[&str],
   address: &str,
@@ -1054,7 +1055,7 @@ pub(in crate::base_utilities) fn transliterated(text: &str) -> String {
 /// (`policy::policy_for`).
 pub fn resolve(inputs: &[Input]) -> Resolved { resolve_with(inputs, &policy_for) }
 
-/// Resolve inputs, each block under the conventions `conventions` gives for its binding and hook (`ab_audit fmshadow
+/// Resolve inputs, each block under the conventions `conventions` gives for its binding and hook (the deleted `ab_audit fmshadow
 /// --re-resolve`, offline: the declarations it holds, as `policy::conventions_among` reads them).
 pub fn resolve_with(
   inputs: &[Input],
@@ -1346,7 +1347,7 @@ pub fn creator_call(tag: &str, parent: &str) -> bool {
   (tag == "ltx:creator" && parent.is_empty()) || parent == "ltx:creator"
 }
 
-/// Whether an API call made apart from the blocks is the resolver's input (`ledger_inputs`, and `ab_audit fmshadow
+/// Whether an API call made apart from the blocks is the resolver's input (`ledger_inputs`, and the deleted `ab_audit fmshadow
 /// --re-resolve` reading a dump): a creator call (`creator_call`), the title (for the labels its marks request), or a
 /// publication note (`ltx:pubnote`, for the e-mails it prints: A&A's `\offprints{B. Baker, \email{…}}`, 0711.1152,
 /// 0802.0707).
@@ -1988,7 +1989,7 @@ mod tests {
       take("Univ Z\nCorrespondence: cy@z.org", false),
       ("Univ Z".into(), vec![Some("Correspondence:".into())])
     );
-    // (words before the label on its line: the Kind step declines the line, as the switch off — "Contact" stays)
+    // (words before the label on its line: the Kind step declines the line, as the old driver — "Contact" stays)
     assert_eq!(
       take("Univ Z, Contact e-mail: cy@z.org", false),
       ("Univ Z, Contact".into(), vec![Some("e-mail:".into())])

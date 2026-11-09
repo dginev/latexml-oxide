@@ -1,8 +1,8 @@
 % mechanism: the ledger's `list_setter_called` (`observer/ledger.rs`, `AuthorBlock::list_setter`) and the emitter's
-%   `stays_out` (`observer/writer/emit.rs`): a binding's list setter (sv_support's `\institute`, whose definition clears the
+%   `stays_out` (`observer/emitter/emit.rs`): a binding's list setter (sv_support's `\institute`, whose definition clears the
 %   affiliation list and numbers its entries, `labelseq=affiliation`, for the `\inst` marks) called inside an author's
 %   group is read by the rehearsal as one affiliation of the last author, while the real call queues numbered entries no
-%   reading points to. Under `LATEXML_FM_EMIT=2` the emitter now stays out: every block written whole, its queued entries
+%   reading points to. Under `=2` the emitter now stays out: every block written whole, its queued entries
 %   placed as off places them, one Warning counting it; off unchanged
 % witness: cond-mat0605195 (svjour, `\and{… \institute{…}}`); CL2's report (agent_reports/2026-11-08_CL2_report.md)
 % oracle:  pdflatex 0 errors: "Ann Able1 · Bob Baker2 · Cy Coe1", "1 Univ X, City", "2 Lab Y, Town"

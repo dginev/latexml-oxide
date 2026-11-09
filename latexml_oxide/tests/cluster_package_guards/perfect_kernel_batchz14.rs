@@ -1,5 +1,5 @@
 //! Guards for Z14 (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`, Route D): the reading's repairs before the flip. Each asserts the whole reading (the
-//! shadow's tuples, names and items with their roles) and the output, the writer's where it writes. Each guard is a different code path: `a_role_heading_…` a later line's
+//! reading's tuples, names and items with their roles) and the output, the writer's where it writes. Each guard is a different code path: `a_role_heading_…` a later line's
 //! test and a name's shape, `a_marked_list_…` the rehearsal's binding of `\lx@add@affiliation@marked` and an in-block line of addresses, `a_speakers_name_…` its binding of
 //! `\lx@add@creator`, `a_collaboration_in_a_call_…` a names line with no name before it in its block, `a_line_opening_with_and_…` and `an_address_is_no_piece_…` the later line's
 //! other two tests, `an_address_groups_braces_…` the address reader, `a_note_inside_a_link_…` the lexer of a link. Z14r2's (review revZ14): `an_entrys_addresses_are_cut_…` the
@@ -63,9 +63,9 @@ fn creators_are(xml: &str, expected: &[&[&str]]) {
 /// block of addresses alone is e-mails by the owner chain, whatever command made it, no affiliation of the last `\and` column's name; an entry's own line of address goes out of it.
 #[test]
 fn a_marked_list_in_a_plain_author_is_read_digested() {
-  let (xml, shadow) = dump(repro!("z14_ieee_marked_list_in_plain_author"));
-  nothing_held(&shadow);
-  assert_eq!(reading(&shadow), [
+  let (xml, json) = dump(repro!("z14_ieee_marked_list_in_plain_author"));
+  nothing_held(&json);
+  assert_eq!(reading(&json), [
     "C Ann Able [1]",
     "  a Univ A, Town A",
     "  c email ann.able@a.org",
@@ -94,9 +94,9 @@ fn a_marked_list_in_a_plain_author_is_read_digested() {
       "email=cat.cole@a.org",
     ],
   ]);
-  let (_, shadow) = dump(repro!("z14_ieee_marked_entry_with_address_lines"));
-  nothing_held(&shadow);
-  assert_eq!(reading(&shadow), [
+  let (_, json) = dump(repro!("z14_ieee_marked_entry_with_address_lines"));
+  nothing_held(&json);
+  assert_eq!(reading(&json), [
     "C Ann Able [1]",
     "  a Dept X, Univ X, Town X",
     "  c email ann@x.org",
@@ -109,8 +109,8 @@ fn a_marked_list_in_a_plain_author_is_read_digested() {
 /// A binding's own creator in a block prints its name there, as PoS.cls:681's `\speaker` does (1412.5940, 1509.01480, 1211.4334): the mark after it its request, no line's lead.
 #[test]
 fn a_speakers_name_prints_in_its_block() {
-  let (xml, shadow) = dump(repro!("z14_speaker_prints_its_name_in_the_block"));
-  assert_eq!(reading(&shadow), [
+  let (xml, json) = dump(repro!("z14_speaker_prints_its_name_in_the_block"));
+  assert_eq!(reading(&json), [
     "C A. Able [1]",
     "  a Univ A, Town A",
     "  c email able@a.org",
@@ -127,8 +127,8 @@ fn a_speakers_name_prints_in_its_block() {
 /// `creator_not_a_name` under the emitter).
 #[test]
 fn a_collaboration_in_a_call_of_its_own_covers_the_names_before() {
-  let (xml, shadow) = dump(repro!("z14_collaboration_in_a_call_of_its_own"));
-  assert_eq!(reading(&shadow), [
+  let (xml, json) = dump(repro!("z14_collaboration_in_a_call_of_its_own"));
+  assert_eq!(reading(&json), [
     "C A. Able [cor:cor]",
     "  a Univ A, Town A",
     "  c collaboration on behalf of the KM3NeT consortium",
@@ -151,20 +151,18 @@ fn a_collaboration_in_a_call_of_its_own_covers_the_names_before() {
     ],
   ]);
   // (a replaced call's names print nothing: the kernel's second `\\author` is the only one printed, so it is no one's collaboration; the Error on it the honest one)
-  let (log, _, shadow) = run(
+  let (log, _, json) = run(
     "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able}\n\\author{on behalf of the KM3NeT consortium}\n\\maketitle\nBody.\n\\end{document}\n",
   );
   assert_eq!(error_count(&log), 1, "{log}");
-  assert_eq!(reading(&shadow), [
-    "C on behalf of the KM3NeT consortium []"
-  ]);
+  assert_eq!(reading(&json), ["C on behalf of the KM3NeT consortium []"]);
 }
 
 /// A line under the names opening with "and" goes on with them (2007.10022), as `names_list_continues` reads it.
 #[test]
 fn a_line_opening_with_and_goes_on_with_the_names() {
-  let (xml, shadow) = dump(repro!("z14_name_line_opening_with_and"));
-  assert_eq!(reading(&shadow), [
+  let (xml, json) = dump(repro!("z14_name_line_opening_with_and"));
+  assert_eq!(reading(&json), [
     "C Ann Able []",
     "  a University of Town",
     "C Bob Baker []",
@@ -179,8 +177,8 @@ fn a_line_opening_with_and_goes_on_with_the_names() {
 /// A note inside a link is an event of its own after it (2507.22485): the link's text its name, its ORCID its contact.
 #[test]
 fn a_note_inside_a_link_is_an_event_of_its_own() {
-  let (xml, shadow) = dump(repro!("z14_note_inside_an_orcid_link"));
-  assert_eq!(reading(&shadow), [
+  let (xml, json) = dump(repro!("z14_note_inside_an_orcid_link"));
+  assert_eq!(reading(&json), [
     "C Ann Able [1]",
     "  a Univ A, Town A",
     "  c orcid 0000-0003-4578-5780",
@@ -192,8 +190,8 @@ fn a_note_inside_a_link_is_an_event_of_its_own() {
 /// A row whose pieces each carry a mark, most of them names and none an institution, is a row of names, its odd piece one too (2409.07809's `Aaron (Ari) Bornstein`).
 #[test]
 fn an_odd_piece_stays_in_its_marked_row() {
-  let (xml, shadow) = dump(repro!("z14_odd_piece_in_a_marked_row"));
-  assert_eq!(reading(&shadow), [
+  let (xml, json) = dump(repro!("z14_odd_piece_in_a_marked_row"));
+  assert_eq!(reading(&json), [
     "C Ann Able [1]",
     "  a Univ A, Town A",
     "C Bob Baker [2]",
@@ -218,9 +216,9 @@ fn an_odd_piece_stays_in_its_marked_row() {
 /// `author_block::separators` splits it; a binding that declares it keeps what it prints (OmniBus, `perfect_kernel_batchz2::a_break_a_binding_declares_stands_beside_the_events`).
 #[test]
 fn alignauthor_is_a_column_of_the_rehearsal() {
-  let (xml, shadow) = dump(repro!("z14_alignauthor_column_of_a_raw_class"));
-  nothing_held(&shadow);
-  assert_eq!(reading(&shadow), [
+  let (xml, json) = dump(repro!("z14_alignauthor_column_of_a_raw_class"));
+  nothing_held(&json);
+  assert_eq!(reading(&json), [
     "C Ann Able []",
     "  a Univ A",
     "  c email ann.able@a.org",
@@ -247,8 +245,8 @@ fn alignauthor_is_a_column_of_the_rehearsal() {
 /// A contact a link in it prints, the constructor's ink empty: its text the link's address (2603.01171; the e-mail was lost from the reading).
 #[test]
 fn a_url_in_a_contact_call_is_its_text() {
-  let (xml, shadow) = dump(repro!("z14_url_address_in_a_contact_call"));
-  assert_eq!(reading(&shadow), [
+  let (xml, json) = dump(repro!("z14_url_address_in_a_contact_call"));
+  assert_eq!(reading(&json), [
     "C Ann Able []",
     "  a Dept X Univ X",
     "  c email ann.able@x.no",
@@ -273,8 +271,8 @@ fn document(class: &str, author: &str) -> String {
 /// kept: a later pass gives it to its carriers). A give-back the writer applies is read back against the reading as resolved (`given_back`).
 #[test]
 fn an_entrys_addresses_are_cut_where_its_line_is_made() {
-  let (xml, shadow) = dump(repro!("z14r2_entry_addresses_cut_under_a_names_row"));
-  assert_eq!(reading(&shadow), [
+  let (xml, json) = dump(repro!("z14r2_entry_addresses_cut_under_a_names_row"));
+  assert_eq!(reading(&json), [
     "C Ann Able [†]",
     "  a Univ A",
     "  c email ann@a.org",
@@ -282,9 +280,9 @@ fn an_entrys_addresses_are_cut_where_its_line_is_made() {
     "  a Univ B",
     "  c email bob@b.org",
   ]);
-  assert_eq!(shadow["writer"], "written", "{shadow}");
-  assert_eq!(shadow["readback"]["difference"], Value::Null, "{shadow}");
-  assert_eq!(shadow["readback"]["given_back"], Value::Null, "{shadow}");
+  assert_eq!(json["writer"], "written", "{json}");
+  assert_eq!(json["readback"]["difference"], Value::Null, "{json}");
+  assert_eq!(json["readback"]["given_back"], Value::Null, "{json}");
   creators_are(&xml, &[
     &["Ann Able †", "affiliation=Univ A", "email=ann@a.org"],
     &["Bob Baker ‡", "affiliation=Univ B", "email=bob@b.org"],
@@ -333,8 +331,8 @@ fn an_elided_particle_is_a_surnames_only_after_an_initial() {
 /// block, as before Z14 (review revZ14's REDs: `Editors: Springer Nature` was a person).
 #[test]
 fn a_role_heading_over_words_opens_no_names() {
-  let (xml, shadow) = dump(repro!("z14r2_role_heading_over_words"));
-  assert_eq!(reading(&shadow), [
+  let (xml, json) = dump(repro!("z14r2_role_heading_over_words"));
+  assert_eq!(reading(&json), [
     "C Ann Able [1]",
     "  a Editors: Springer Nature",
     "  a Univ A",
@@ -365,8 +363,8 @@ fn a_role_heading_over_words_opens_no_names() {
       ],
     ),
   ] {
-    let (_, shadow) = dump(&document("article", author));
-    assert_eq!(reading(&shadow), expected, "{author}");
+    let (_, json) = dump(&document("article", author));
+    assert_eq!(reading(&json), expected, "{author}");
   }
 }
 
@@ -375,8 +373,8 @@ fn a_role_heading_over_words_opens_no_names() {
 #[test]
 #[ignore = "RED: a marked list's mark past its leading run is flattened into the text (events/mod.rs)"]
 fn a_mark_past_a_marked_lists_leading_run_is_an_event_red() {
-  let (_, shadow) = dump(repro!("z14r2_marked_list_mark_past_the_leading_run_red"));
-  assert_eq!(reading(&shadow), [
+  let (_, json) = dump(repro!("z14r2_marked_list_mark_past_the_leading_run_red"));
+  assert_eq!(reading(&json), [
     "C Ann Able [1]",
     "  a Univ X, Town, USA",
     "  c email ann@x.org",
@@ -391,10 +389,10 @@ fn a_mark_past_a_marked_lists_leading_run_is_an_event_red() {
 /// on both authors. An address today's holds as an author's contact stays taken out (2310.19837, `an_entrys_addresses_are_cut_where_its_line_is_made`).
 #[test]
 fn an_entry_whose_cut_fails_is_given_back() {
-  let (log, xml, shadow) = run(repro!("z14r3_entry_given_back_where_its_cut_fails"));
+  let (log, xml, json) = run(repro!("z14r3_entry_given_back_where_its_cut_fails"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(shadow["writer"], "written", "{shadow}");
-  // (T1, `LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`: each address of the `e--mail:` line is the e-mail of the author
+  assert_eq!(json["writer"], "written", "{json}");
+  // (T1, `=2`, `perfect_kernel_batcht1::expect`: each address of the `e--mail:` line is the e-mail of the author
   // it spells)
   creators_are(&xml, &[
     &[
@@ -418,7 +416,7 @@ fn an_entry_whose_cut_fails_is_given_back() {
 /// `an_entrys_addresses_are_cut_where_its_line_is_made`).
 #[test]
 fn a_line_keeping_an_address_the_pass_leaves_is_made() {
-  let (log, _, shadow) = run(repro!("z14r3_line_keeping_a_left_address_is_made"));
+  let (log, _, json) = run(repro!("z14r3_line_keeping_a_left_address_is_made"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(shadow["writer"], "written", "{shadow}");
+  assert_eq!(json["writer"], "written", "{json}");
 }

@@ -1,6 +1,6 @@
 //! Guards for IO1: a creator call's nested notes are its creator's — the reading attaches them (`Resolver::api`'s
 //! `ltx:creator` branch), as Perl's `\lx@add@author[]{}` digests the whole call into its `ltx:creator`
-//! (Base_Utility.pool.ltxml:588-589), so `LATEXML_FM_EMIT=2` writes them with it (2505.09041's `\author{Craig
+//! (Base_Utility.pool.ltxml:588-589), so `=2` writes them with it (2505.09041's `\author{Craig
 //! M$^{\mathrm{c}}$Rae\thanks{…}}`, whose thanks was lost at `=2`).
 
 use latexml::util::test::{error_count, warning_count};

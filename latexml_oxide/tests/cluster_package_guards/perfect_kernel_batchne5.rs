@@ -1,4 +1,4 @@
-//! Guards for NE5: the papers where `LATEXML_FM_EMIT=2` failed or erred only there, the flip's no-harm gate. One guard per
+//! Guards for NE5: the papers where `=2` failed or erred only there, the flip's no-harm gate. One guard per
 //! mechanism, each off and at `=2`: a declaration whose span holds a macro reading past it can't be replayed, the block
 //! written whole (2505.04436's and 1511.09009's `\footremember`, a Fatal each); a name's run holding a conditional cut apart is
 //! its text (1409.0597's `\ifFull and \else \and \fi`); a name's run its balance grew over other names is its text (1208.0597's

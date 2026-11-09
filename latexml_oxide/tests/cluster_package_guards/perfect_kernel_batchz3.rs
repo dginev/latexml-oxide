@@ -1,5 +1,5 @@
 //! Guards for Z3 (`docs/archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md`, Stage 3; `FRONTMATTER_SINGLE_ENGINE_PLAN.md` "What a rollback leaves"): what a span of a field holds, read
-//! from the digested list (`writer::Field`), and the rehearsal's isolation. Each guard is a different code path: `a_cut_takes_each_formula_whole`
+//! from the digested list (`emitter::Field`), and the rehearsal's isolation. Each guard is a different code path: `a_cut_takes_each_formula_whole`
 //! a piece's start and end in a formula, `a_cut_takes_a_group_it_closes` the brace balance, `a_mark_in_its_wrapper_…` a mark's own print and a
 //! block's line, `a_declarations_span_…` the settled declarations; the `the_rehearsal_leaves_no_trace_*` table the journal and what
 //! lives outside it, by theme, and its `_written` row the written family's path, where the writer runs too. Z3r2: `a_bindings_state_…` the package thread-locals

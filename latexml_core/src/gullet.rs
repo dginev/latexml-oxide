@@ -2274,7 +2274,7 @@ pub fn input_mark() -> InputMark {
 /// it was read. Tokens read below the mark and others pushed in their place read as read, though the token now at
 /// the mark's last slot equals the one it held — IEEEtran's `\IEEEauthorblockN{…}⏎\IEEEauthorblockA{…}`, whose
 /// line-end space was read with `\IEEEauthorblockA` and its argument and whose expansion, longer, put another space
-/// there: its affiliation calls read as the author block's own and were lost under `LATEXML_FM_EMIT=2` (2401.11731,
+/// there: its affiliation calls read as the author block's own and were lost by the frontmatter emitter (2401.11731,
 /// 1801.03314). No token is copied but the held ones: a mark costs at most one run of the watch, a test a binary
 /// search of its runs.
 pub fn input_unread_since(mark: &InputMark) -> bool {

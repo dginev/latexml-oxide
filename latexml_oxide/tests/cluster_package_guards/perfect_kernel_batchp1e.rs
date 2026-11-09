@@ -1,8 +1,8 @@
 //! Guards for P1b (E1, the strict port of the switch-off writer's cut, RT1's rows 54-58): an address inside an entry's
-//! text is its owner's e-mail at `LATEXML_FM_EMIT=2` as with the switch off (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`;
+//! text is its owner's e-mail at `=2` as with the switch off (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`;
 //! OXIDIZED_DESIGN_DIVERGENCES #980 P1b): the reading's take-out (`Resolver::take_out_entry_addresses`) is written from the
 //! entry's own tokens without the runs its cut covers, at the positions the lexer recorded for each character of its inks
-//! (`events::InkTable`, `writer::address_cut`), each address the e-mail of the owner the reading gives it, as printed. One test
+//! (`events::InkTable`, `emitter::address_cut`), each address the e-mail of the owner the reading gives it, as printed. One test
 //! per way the emitter writes an entry: a note's argument (`\thanks`, a font group and a bracketed address), an API call's
 //! content (llncs's `\institute`, authblk's `\affil`, a local-part list), a block line read on with an address line (the
 //! entry's own span), and a label word with brackets (the e-mail's name; RP1's draft regression, 2311.02475). Tests and
@@ -237,7 +237,7 @@ fn a_mark_after_a_cut_address_stays() {
 
 /// An entry whose lines no balanced run holds (`\\begin{small} $^{b}$Univ B, Lab C.\\end{small} \\\\ \\begin{small} Road 2,
 /// Town. bob@b.org \\end{small}`, 1312.5468) is written line by line without the address run the cut takes inside its last
-/// line (`writer::emit::lines_run`), its small type and its break kept, each e-mail in the small type its `@` prints in. Red
+/// line (`emitter::emit::lines_run`), its small type and its break kept, each e-mail in the small type its `@` prints in. Red
 /// (P1b): the entry its plain text, counted (`Warning:unexpected:frontmatter`), the e-mails plain.
 #[test]
 fn a_cut_entry_over_lines_keeps_its_markup() {

@@ -83,7 +83,7 @@ pub struct FieldCreator {
 
 impl FieldCreator {
   /// The labels its `annotations` give the creator its name makes, Perl's `\lx@add@creator[annotations={ed}]` (the reading's
-  /// requests of that creator, `resolver::Input::Block::calls`; the emitter's keys, `writer::emit::creator_keys`), cleaned as
+  /// requests of that creator, `resolver::Input::Block::calls`; the emitter's keys, `emitter::emit::creator_keys`), cleaned as
   /// the API cleans them, Perl's `cleanFrontmatterLabels` (Base_Utility.pool.ltxml:360-372: `\rm` out, `\ref{x}` the label
   /// `LABEL:x`, spaces `_`).
   pub fn labels(&self) -> Vec<String> {

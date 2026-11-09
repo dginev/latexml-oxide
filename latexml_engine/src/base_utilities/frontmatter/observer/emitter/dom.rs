@@ -14,7 +14,7 @@ pub(super) enum Kind {
 }
 
 impl Kind {
-  /// The kind a contact of `role` is compared as (`ab_audit fmshadow`'s `xml_tuples`).
+  /// The kind a contact of `role` is compared as (the deleted `ab_audit fmshadow`'s `xml_tuples`).
   pub(super) fn of_contact(role: &str) -> Kind {
     match role {
       "affiliation" | "address" => Kind::Affiliation,
@@ -65,7 +65,7 @@ pub(super) struct Front {
   pub pubnotes: Vec<String>,
 }
 
-/// Text compared by its letters and digits alone, lowercased (`ab_audit fmshadow`'s `norm`).
+/// Text compared by its letters and digits alone, lowercased (the deleted `ab_audit fmshadow`'s `norm`).
 pub(super) fn norm(text: &str) -> String {
   text
     .chars()
@@ -136,7 +136,7 @@ fn in_a_personname(node: &Node) -> bool {
 /// reads it: a mark prints none (`{}^{a,\;b}`, `^{1}`, `\rm ^a`: revtex names `Dadhich${}^{a,\;b}$`, 1307.6166;
 /// 2105.07958's `$\rm ^a$Email: …`), scripts on a base the base (`\text{Leon Bello}^{1,3}`, 2011.08099; an
 /// affiliation's `OR $97403^{1}$`, `Ul. Ainy $299^A$`: 2203.01892, 0707.4047), any other formula its text (an isotope,
-/// `${\rm ^{3}He}$`) — as `ab_audit fmshadow` reads the final XML.
+/// `${\rm ^{3}He}$`) — as the deleted `ab_audit fmshadow` reads the final XML.
 pub(super) fn text_without_marks(node: &Node) -> String { printed_text(node, false) }
 
 /// [`text_without_marks`], every cell, row, paragraph and box of a layout parting the words on its sides (a name in
@@ -192,7 +192,7 @@ impl Seg {
   }
 }
 
-/// The pieces `node` prints, in print order (a prescript before its base, as `ab_audit fmshadow` reads the parsed
+/// The pieces `node` prints, in print order (a prescript before its base, as the deleted `ab_audit fmshadow` reads the parsed
 /// XML): what [`text_without_marks`] reads — `parted`, every cell, row, paragraph and box of a layout a [`Seg::Space`]
 /// on each side.
 pub(super) fn segments(node: &Node, parted: bool) -> Vec<Seg> { segments_of(node, parted, false) }

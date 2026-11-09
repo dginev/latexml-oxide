@@ -4,7 +4,7 @@
 //! text, never TeX spelling: a font switch is a token's font, spacing an `XMHint`, `\{` and `\lbrace` one "{".
 //!
 //! It takes two vocabularies:
-//! - **as digested** (what every reader sees: the content check's reading of the placed frontmatter, `writer::dom`,
+//! - **as digested** (what every reader sees: the content check's reading of the placed frontmatter, `emitter::dom`,
 //!   `relocate::shown_marks`, `name_text::is_name_mark` — all inside `insert_frontmatter`, before `finish_document`'s
 //!   rewrite and math parse): `XMApp[@role]` of
 //!   `FLOATSUPERSCRIPT`/`FLOATSUBSCRIPT` (a script with nothing before it) or `POSTSUPERSCRIPT`/`POSTSUBSCRIPT` (a script

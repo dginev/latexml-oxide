@@ -1,6 +1,6 @@
 % mechanism: the creator call a block's own expansion makes (`\lx@add@creator[role=speaker]{…}`, PoS's and JHEP's `\speaker`)
 %   keeps its keyvals on the Name it prints (the rehearsal's notes, `field_notes::FieldCreator`, `events::creator_roles`), and the
-%   emitter writes that role and the call's name, the call left out (`writer::emit::creator_role`, `event_run`)
+%   emitter writes that role and the call's name, the call left out (`emitter::emit::creator_role`, `event_run`)
 % witness: 0910.5686, 1007.2355, 1111.2428, 1111.6944 (108 PoS/JHEP papers in dev20k)
 % oracle:  pdflatex (the witnesses' PoS.cls) 0 errors; Ann Able (the speaker, starred) and Bob Baker, each an institute
 % engines: rust int145a, `=1`/`=2`: Ann Able `role=author`; with `\speaker` alone before `\\`, a second creator, nameless

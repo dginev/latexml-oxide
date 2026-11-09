@@ -147,7 +147,7 @@ impl Resolver {
               .copied()
               .filter(|c| under.as_ref().is_none_or(|holders| holders.contains(c)))
               .collect();
-            // (the switch-off step's whole reading, its legends too: `listed_corresponding`; what the call prints,
+            // (the old driver's step's whole reading, its legends too: `listed_corresponding`; what the call prints,
             // `zq77@x.org (Corresponding author)`, 2308.06532)
             self.listed_corresponding(&candidates, &assoc.text)
           },
@@ -1148,7 +1148,7 @@ impl Resolver {
         };
         for owner in named {
           // (a label several columns answer: this entry's column's names only — where that column holds names of its
-          // own: a column of entries alone is no author's column, its label the whole block's as the switch off reads
+          // own: a column of entries alone is no author's column, its label the whole block's as the old driver read
           // the `\and` columns as lines (`affil_splits`), CVPR's `\author{Tianyu Huang$^{1}$ \and … \and $^{1}$The
           // Chinese University of Hong Kong \and $^{2}$University of Pennsylvania \and $^{1}${\tt …}}`, 2404.00915, whose
           // entries went to a nameless creator)
@@ -1929,11 +1929,11 @@ impl Resolver {
   /// reader could not part, stays in the entry, as today's prints it (the fail-safe of this text reading: the lines and
   /// notes the author block kinds go to the block once, ruling E; an address inside a line of other words is read here
   /// alone, SYNC 100b's residual). Each e-mail is one per print and carrier (`owner:entry-address`, a change tag: the
-  /// writer cuts today's entry, `writer::plan`).
+  /// writer cuts today's entry, `emitter::plan`).
   ///
   /// Under the emitter (`=2`), the label the Kind step for an address line reads before a run goes with it, the take-out's
   /// own ([`take_labels`]): the entry's text it leaves and its e-mails' names are the reading's, which the emitter writes
-  /// (`writer::address_cut`, OXIDIZED_DESIGN_DIVERGENCES #980 P1c).
+  /// (`emitter::address_cut`, OXIDIZED_DESIGN_DIVERGENCES #980 P1c).
   pub(super) fn take_out_entry_addresses(&mut self, inputs: &[Input]) {
     let live = self.live();
     let names: Vec<String> = self.out.creators.iter().map(|c| c.name.clone()).collect();

@@ -5,7 +5,7 @@
 % engines: rust 77p r2 = 0 errors; creators "By" and "Bryna Kra", …, Donald Robertson only "and Donald Robertson" as
 %          an affiliation of every creator; int34a "By Bryna Kra" (the byline word in the name); Perl the same as int34a
 % expect:  0 errors, 0 warnings; creators "Bryna Kra", "Joel Moreira", "Florian K. Richter", "Donald Robertson"
-% status:  RED (77p r2) -> GREEN (77p r3); at LATEXML_FM_EMIT=2 RED (NL1d: "By Bryna Kra", "and Donald Robertson" an
+% status:  RED (77p r2) -> GREEN (77p r3); at `=2` RED (NL1d: "By Bryna Kra", "and Donald Robertson" an
 %          affiliation of three creators, a Warning) -> GREEN (FB2b2: the lexer's `byline_runs`, `later_line_is_names`;
 %          NL1f: the reading's `byline_dropped` on a names line, recorded in `Resolved::drops` for the content
 %          check; perfect_kernel_batchfb2b2::a_byline_word_alone_is_no_name)

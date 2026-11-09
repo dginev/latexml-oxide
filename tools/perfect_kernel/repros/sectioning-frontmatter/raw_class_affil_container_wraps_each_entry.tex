@@ -7,7 +7,7 @@
 %          affiliation one contact on the first name (Bob Baker, Dan Doe, Fay Fox nothing); 94a r7 (base) cut each,
 %          the markup lost
 % expect:  0 errors, 0 warnings; a container other than a group holding two entries' ink wraps each entry again
-%          (`writer::container_wrap`): each name its own line, underlined or emphasized as printed; a container
+%          (`emitter::container_wrap`): each name its own line, underlined or emphasized as printed; a container
 %          whose entries the writer cannot wrap exactly (a switch inside it before its first entry, `\emph{\bfseries
 %          $^5$…}`) is cut as before fonts were read — attribution first (Fay Fox's line plain); eager and
 %          --streaming the same

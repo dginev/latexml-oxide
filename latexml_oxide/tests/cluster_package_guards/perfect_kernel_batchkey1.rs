@@ -1,5 +1,5 @@
 //! Guards for KEY, the mark-keyed entries (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`; OXIDIZED_DESIGN_DIVERGENCES
-//! #980): where `LATEXML_FM_EMIT=2`'s reading made a mark a label the switch-off procedure does not, or kept whole what
+//! #980): where `=2`'s reading made a mark a label the switch-off procedure does not, or kept whole what
 //! it cuts by its marks, ported from that procedure (the rows of RT2's rule table). A printed mark no name requests is no
 //! label: an API call's entry keeps its call's placement (`an_unrequested_leading_mark_keeps_its_calls_placement`, K12),
 //! a block line a glyph leads continues the entry above it (`an_unrequested_glyph_line_continues_the_entry_above`,
@@ -57,7 +57,7 @@ fn an_unrequested_leading_mark_keeps_its_calls_placement() {
 /// K12/K13, a block: a line a glyph leads (`(\S) Inst X`, no superscript) that no name requests is no labelled line; it
 /// continues the entry above (cond-mat0309053's translators' institutes). Red (int149a `=2`): a nameless creator's, a
 /// `)` left stray. The entry is written from the reading's text, which spells no mark — the glyphs `§`, `†` lost, counted
-/// by one Warning (the writer's span of an entry stops at a mark: `writer::repart::entry_span`).
+/// by one Warning (the writer's span of an entry stops at a mark: `emitter::repart::entry_span`).
 #[test]
 fn an_unrequested_glyph_line_continues_the_entry_above() {
   let tex = repro!("unrequested_glyph_lines_continue_the_entry_above");

@@ -1,6 +1,6 @@
 //! Guards for E1 (`agent_reports/2026-11-08_brief_E1.md`; w56's report): a Declaration's span runs to the close of the group
 //! its call opened, as TeX reads an undelimited argument whole (`observer/field_notes.rs` `balanced_reach`). Under
-//! `LATEXML_FM_EMIT=2` the emitter replayed icrc2009's `\IEEEauthorblockN{` cut from its argument: `readBalanced ran out`
+//! `=2` the emitter replayed icrc2009's `\IEEEauthorblockN{` cut from its argument: `readBalanced ran out`
 //! Errors the document does not raise (1111.2718).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};

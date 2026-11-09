@@ -196,7 +196,7 @@ pub fn declares_email_in_place(binding: &str) -> bool {
 /// The conventions among `declared` for a block recorded under `binding` (the `\author` owner) and `hook`: the first
 /// declaration whose binding and hook match (`*` any), else the kernel's for the kernel's own blocks, `UNDECLARED`
 /// for any other — `policy_for`'s rule, for a caller holding
-/// the declarations itself (`ab_audit fmshadow --re-resolve`).
+/// the declarations itself (the deleted `ab_audit fmshadow --re-resolve`).
 pub fn conventions_among<'a>(
   declared: impl IntoIterator<Item = &'a &'static Policy>,
   binding: &str,

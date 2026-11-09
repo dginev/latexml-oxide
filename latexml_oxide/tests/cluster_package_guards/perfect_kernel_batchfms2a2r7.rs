@@ -1,6 +1,6 @@
 //! Guards for FM S2a.2 r7: the frontmatter observer's resolver on the r6 landing review's findings (revfms2a2_6) and the
-//! main session's decisions of int66 (OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r7"; KERNEL_CAPABILITIES K23), in shadow
-//! mode. Each shape was red on r6 (the int69b code, f24574e043): a class's address list read out of order under a
+//! main session's decisions of int66 (OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r7"; KERNEL_CAPABILITIES K23) .
+//! Each shape was red on r6 (the int69b code, f24574e043): a class's address list read out of order under a
 //! replacing `\author` (finding 1), a url spelling a co-author left in the note's text (finding 2, 2001.02600), a note
 //! its links empty kept beside them before the names after it were read (finding 3), `author:N` counting a replaced
 //! call's creators (finding 4), a name's mark and separator glyphs read as its ink (decision 2: 0806.2911, 0907.1243,
@@ -12,13 +12,14 @@
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::{
   FmEvent, FmEventKind, FmInput, FmResolved, FmSepKind, declare_frontmatter_conventions,
-  fm_resolve, fm_shadow_json,
+  fm_reading_json, fm_resolve,
 };
 use serde_json::Value;
 
-/// Convert `tex` under the shadow switch, asserting a clean conversion: the whole dump.
+/// Convert `tex`, asserting a clean conversion: the whole dump.
 fn dump(tex: &str) -> Value {
-  let (log, _, json) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| fm_shadow_json());
+  let (log, _, json) =
+    convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| fm_reading_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   super::perfect_kernel_batchfms2a1::parsed(&json)
 }
@@ -112,7 +113,7 @@ fn name(text: &str) -> FmEvent {
 
 fn and() -> FmEvent { FmEvent::new(FmEventKind::Sep(FmSepKind::And("\\and"))) }
 
-/// An author block's input (`ab_audit fmshadow --re-resolve`'s shape): `replace` the kernel `\author` given again.
+/// An author block's input (the deleted `ab_audit fmshadow --re-resolve`'s shape): `replace` the kernel `\author` given again.
 fn block(index: usize, binding: &str, replace: bool, events: Vec<FmEvent>) -> FmInput {
   FmInput::Block {
     index,

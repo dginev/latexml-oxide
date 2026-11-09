@@ -1,5 +1,5 @@
 % RED (rev107e2 finding 2, synthetic; same on 107e r1): a legend line under a wrapped run whose last entry ends inside a
-%   nested group, `\textbf{$^2$Univ B, \emph{Rome}}`. `writer::plan::wrapped_entry_mark` (plan.rs ~660-689) gives up when
+%   nested group, `\textbf{$^2$Univ B, \emph{Rome}}`. `emitter::plan::wrapped_entry_mark` (plan.rs ~660-689) gives up when
 %   a nested group sits at either end of the entry, the writer declines the block, and finding 1 of rev107e returns: Bob
 %   and Cy hold "Univ B, Rome * Equal Contribution, † Project Leader" as affiliation text (still better than the base,
 %   where Ann held everything). Fix: allow the closing braces of groups opened inside the span between the entry's end

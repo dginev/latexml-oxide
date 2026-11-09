@@ -99,7 +99,7 @@ fn reset_rehearsal_budget() {
   LEFT_OUT.set(0);
 }
 
-/// Run `rehearsals` that read for the frontmatter content check alone (`shadow::read_at_flush`'s calls a block's own
+/// Run `rehearsals` that read for the frontmatter content check alone (`reading::read_at_flush`'s calls a block's own
 /// expansion made, `ApiCall::inside_events`) from the check's own allowance, one rehearsal's reads ([`RUN_READS`]) for
 /// the conversion, never from the reads the output's rehearsals may make: a check never moves what is written (a later
 /// call's or a later flush's block over budget for it: revtex's `\collaboration{…}` after an `\author`, its block's own
@@ -123,7 +123,7 @@ pub(in crate::base_utilities) fn rehearsal_budget() -> Option<usize> {
 }
 
 /// The Warning that says what no rehearsal read, when the document closes (`SkipReason::OverBudget`): an author block
-/// among them is written whole (Perl's whole-block creator, `writer::writer_stays_out`) and any other call's words are not
+/// among them is written whole (Perl's whole-block creator, `writer::writer_stays_out` (deleted)) and any other call's words are not
 /// written — the content check counts them (`resolver::placed::content_check`, `ApiCall::unread`).
 pub(in crate::base_utilities) fn rehearsal_budget_warning() {
   let left_out = LEFT_OUT.replace(0);
@@ -806,7 +806,7 @@ fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
     } else if let Some(len) = environment_call_len(&toks[i..], end, "tabular") {
       match (opened, reopen(i + len)) {
         (0, Some((start, past))) => {
-          // (what the commands between print goes with the column before, as the switch-off output orders it:
+          // (what the commands between print goes with the column before, as the old driver's output orders it:
           // `\mbox{Extra Words}` after Univ A, not the next column's first line, Bob Two lost with 2 Errors before —
           // review revH1 finding 2; the writer still writes the column's source, `\end{tabular}` in it, so the words
           // between are lost, counted by the content check: OD #980 (5))
@@ -1115,7 +1115,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
   let depth = get_frame_depth();
   let boxes = box_lists_mark();
   // (the tokens being invoked put back however the run ends; the conditionals are the sequence's, put back by the
-  // shadow after the last block — a block's run may open one the next block's closes, as TeX reads the list in one
+  // reading after the last block — a block's run may open one the next block's closes, as TeX reads the list in one
   // pass, 2606.17718 — and only those of a failed run here: `StomachMark`)
   let tokens_depth = token_stack_depth();
   let conditionals = if_stack_depth();
@@ -1129,8 +1129,8 @@ pub(in crate::base_utilities) fn rehearse<R>(
   // the document's current one (a `}` closing an alignment template's brace, `egroup`'s `close_template_brace`).
   // Guards: the repro `sectioning-frontmatter/observer_rehearsal_aftergroup_stays_inside` (its `\aftergroup\leak`
   // printed "LEAKED" into the body before this wrap) and `perfect_kernel_batchfms2a1::
-  // shadow_switch_leaves_the_xml_unchanged` (XML and log the same with the switch on and off over the adversarial
-  // shapes).
+  // the_rehearsal_leaves_nothing_behind` (no `LEAKED` in any adversarial shape's output, each shape's body text and
+  // counts pinned).
   local_current_token(T_CS!("\\relax"));
   let _hook = FieldNotesHookGuard;
   let if_count_before = if_count();

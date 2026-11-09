@@ -20,7 +20,7 @@ macro_rules! repro {
 }
 
 /// An entry whose lines no balanced run holds (`\textsuperscript{2}Univ Z\\ 2 Side Road, City\\ \small{\textbf{Correspondence:}
-/// \href{mailto:bob@z.org}{bob@z.org},}`, 2604.06805) whose label line the cut takes whole (`writer::emit::lines_run`): the
+/// \href{mailto:bob@z.org}{bob@z.org},}`, 2604.06805) whose label line the cut takes whole (`emitter::emit::lines_run`): the
 /// line goes with one break beside it, the entry's other lines and their break kept, the e-mail its owner's link named by
 /// the label. Red (P1br2): "Univ Z 2 Side Road, City" plain, counted by 2 Warnings.
 #[test]

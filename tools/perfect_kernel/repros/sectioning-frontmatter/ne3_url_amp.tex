@@ -1,5 +1,5 @@
 % mechanism: a run holding an alignment tab is refused only where the block's digestion holds an alignment
-%   (`writer::content::aligned`, the `Layout{role="cell"}` events): a `\url` argument's `&` is its character
+%   (`emitter::content::aligned`, the `Layout{role="cell"}` events): a `\url` argument's `&` is its character
 % witness: review revNE1 finding 1 (NE1's backstop refused any `&`)
 % oracle:  pdflatex 0 errors; "Ann Able*, Bob Baker / Univ B, http://y.org/?c=1&d=2"
 % engines: rust =2 (int153x): 0 errors, 1 warning, the URL's link lost; rust off: the link kept

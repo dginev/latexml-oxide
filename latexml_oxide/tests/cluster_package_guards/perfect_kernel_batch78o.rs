@@ -215,7 +215,7 @@ Body\footnote{bodyone}.
 #[test]
 fn declared_title_thefootnote_prints_the_marks_the_observer_labels() {
   let tex = "\\documentclass{article}\n\\makeatletter\\def\\lx@title@thefootnote{\\@alph\\c@footnote}\\makeatother\n\\begin{document}\n\\title{T}\n\\author{Ann Able\\thanks{A.} \\and Bob Baker\\footnotemark \\and Cat Cole\\footnotemark[5]}\n\\maketitle\nBody.\n\\end{document}\n";
-  let (log, _, json) = super::perfect_kernel_batchfms2a1::shadow(tex, Some(PRELOAD));
+  let (log, _, json) = super::perfect_kernel_batchfms2a1::reading_of(tex, Some(PRELOAD));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(super::perfect_kernel_batchfms2a1::blocks(&json), [[
     "N:Ann Able",

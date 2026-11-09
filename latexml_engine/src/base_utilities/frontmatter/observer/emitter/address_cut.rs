@@ -1,12 +1,12 @@
 //! An entry the reading took printed addresses out of (`Resolved::taken`, `Resolver::take_out_entry_addresses`), as the
-//! emitter writes it under `LATEXML_FM_EMIT=2` (OXIDIZED_DESIGN_DIVERGENCES #980 P1b): the switch-off writer's cut of
-//! today's XML (`plan::cut_entry_addresses`, `dom::address_cut`, `Op::CutAddresses`, `Op::Address`), translated onto the
+//! emitter writes it (OXIDIZED_DESIGN_DIVERGENCES #980 P1b): the old driver's writer's cut of
+//! its XML (deleted with it) (`plan::cut_entry_addresses`, `dom::address_cut`, `Op::CutAddresses`, `Op::Address`), translated onto the
 //! entry's tokens. The reading's runs and cut are bytes of its text; the lexer recorded where each character of an ink
 //! printing an `@` prints (`events::InkTable`, from its box's stamp), so each byte the cut takes is a position of the field,
 //! and the entry is its own tokens without the runs those positions cover (`Field::content_cut`). As the DOM cut: what
 //! prints nothing between a separator the cut takes and the ink beside it — a line break, a mark (`$^*\,$a@x`, a whole line
 //! with its mark: 2506.02272) — goes with it; a cut that would divide a box or take a note declines; the cut is the entry's
-//! own, so it declines entry by entry, never the paper (the switch off's `declined`). Each address is its owner's e-mail,
+//! own, so it declines entry by entry, never the paper (the old driver's `declined`). Each address is its owner's e-mail,
 //! as printed: its own tokens, in their font or wrapper (`\texttt{a@x}`, `{\tt\small a@x; b@x}`), else its text in its
 //! ink's font, named by the run's label word (`E-mail: `). Witnesses: ieeeconf's `\thanks{… {\tt\small a@x; b@x}}`
 //! (2011.02560, 2104.05078, 2204.02371), svmult's `\institute{… \texttt{a@x}}` (astro-ph0610446, cond-mat0610708),
@@ -60,7 +60,7 @@ impl EntryCut {
   }
 
   /// The e-mail `address` of `assoc`'s source this cut made: its tokens, and the `name=` its label gives (`E-mail: `, as the
-  /// switch off's `email_contact` names it).
+  /// old driver's `email_contact` names it).
   pub(super) fn mail(&self, assoc: &Assoc) -> Option<(Vec<Token>, Option<String>)> {
     if self.source != assoc.source {
       return None;
@@ -328,7 +328,7 @@ fn cut_at(
     .filter(|j| !cut_chars.contains(j))
     .filter_map(|j| at[j])
     .collect();
-  // (the runs the text prints, its spaces as printed — the switch off's `mailed_runs` on today's layout: each one the cut
+  // (the runs the text prints, its spaces as printed — the old driver's `mailed_runs` on today's layout: each one the cut
   // touches every address of which the reading takes, else no cut; `kwb,flynn,walter.scheirer@nd.edu` is one run of three, the
   // reading's text, spaced after each comma, one address after prose: 1903.10019)
   let letters: Vec<char> = text.chars().collect();
@@ -367,7 +367,7 @@ fn cut_at(
       return declined("a printed run not every address of which the reading takes");
     }
     // (or glued to a list's comma before it, a local part the reading leaves — `kwb,flynn,walter.scheirer@nd.edu`, a dotted
-    // part ending no list (`ends_a_listed_run`): the switch off's block reader reads the line as the list and its writer
+    // part ending no list (`ends_a_listed_run`): the old driver's block reader reads the line as the list and its writer
     // declines the paper, 1903.10019; here the entry alone, given back to the Kind steps. A word that is no local part
     // before it is the entry's, `México, D.F.,octavio@astro.unam.mx`, 1310.7021)
     let local = |c: char| c.is_ascii_lowercase() || c.is_ascii_digit() || "._-".contains(c);
@@ -497,7 +497,7 @@ fn cut_at(
       return declined("a cut takes a note");
     }
   }
-  // (each address as printed — RT1 row 56, the switch off's wrapper (`dom::address_cut`): the call wrapping it alone, whole, its
+  // (each address as printed — RT1 row 56, the old driver's wrapper (`dom::address_cut`): the call wrapping it alone, whole, its
   // cover's tokens where nothing else prints there and the cut takes it — `\href{mailto:a@x}{a@x}` (2608.15371), `\textit{a@x}`
   // —; else its characters' own tokens, with the switches of the group the run's first address opens (`{\tt\small a@x; b@x}`'s
   // second), else in the font of the ink printing it — `{\it Contact e-mail: a@x}` (2008.08137), `\texttt{a@x, b@y}`'s each
@@ -603,7 +603,7 @@ fn cut_at(
           return Some((tokens.unlist(), "its wrapper"));
         }
         let own = own?;
-        // (never its printed formula, `dcook12$@$uwyo.edu` (1409.0847): its text, as the switch off writes it)
+        // (never its printed formula, `dcook12$@$uwyo.edu` (1409.0847): its text, as the old driver wrote it)
         if others_print(own) || in_a_formula(own) {
           return None;
         }
@@ -803,11 +803,11 @@ pub(super) fn cut_entry_call(
 
 /// The cuts of the entries the reading took addresses out of (`Resolved::taken`), each in `resolved`; one that can't be cut given
 /// back whole there, the Kind steps' to cut in place after the flush, as for a paper with no block (`insert_frontmatter`) — entry
-/// by entry, not the switch off's whole paper (RT1 row 57a).
+/// by entry, not the old driver's whole paper (RT1 row 57a).
 ///
 /// The cut keeps `=2`'s improvements where it harms none (the standing ruling, user 2026-11-08; OD #980 KB2): an entry whose
 /// cut would strand the phrase its address completes ([`strands_a_phrase`]: 2306.04726) is given back whole, where its holders
-/// are exactly its addresses' owners ([`held_by_its_owners`]). The switch off's cut is unchanged.
+/// are exactly its addresses' owners ([`held_by_its_owners`]). The old driver's cut is unchanged.
 pub(super) fn entry_cuts(reading: &Resolved, resolved: &mut Resolved) -> Vec<EntryCut> {
   let names: Vec<&str> = reading.creators.iter().map(|c| c.name.as_str()).collect();
   let mut cuts = Vec::new();

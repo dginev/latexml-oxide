@@ -1,8 +1,8 @@
 //! Guards for batch 93a (frontmatter refactor stage 7: the kernel's own `\author` — `article` and every class whose
 //! bindings declare no conventions — written by the observer; `docs/archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md`,
-//! OXIDIZED_DESIGN_DIVERGENCES #837, #925-). Each guard converts its repro under the shadow switch in process and with
-//! the binary, eager and `--streaming` (`perfect_kernel_batch92a::assert_reading`), asserts the shadow reading's tuples
-//! and the XML's creators whole, and no Error or Warning; and the default mode (no shadow switch: the fleet's) writes
+//! OXIDIZED_DESIGN_DIVERGENCES #837, #925-). Each guard converts its repro in process and with
+//! the binary, eager and `--streaming` (`perfect_kernel_batch92a::assert_reading`), asserts the reading's tuples
+//! and the XML's creators whole, and no Error or Warning; and the default mode (the fleet's) writes
 //! the same XML. Every repro compiles clean with pdflatex (TL 2025).
 
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
@@ -41,7 +41,7 @@ pub(super) fn creators_with_notes(xml: &str) -> Vec<Vec<String>> {
   all
 }
 
-/// The default mode's XML creators with their notes (no shadow switch: what the fleet writes), converted clean.
+/// The default mode's XML creators with their notes (what the fleet writes), converted clean.
 #[track_caller]
 pub(super) fn default_mode_creators(tex: &str) -> Vec<Vec<String>> {
   let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| ());
@@ -208,7 +208,7 @@ fn a_trailing_mark_no_name_shows_leaves_the_line_unmarked() {
 }
 
 /// An entry the reading leaves to the block because no name requests its label (`label:unrequested owner:block`) is no
-/// ruling's owner decision: the writer leaves today's placement (`writer::writes`, OD #925). espcrc's `\address[ETHZ]`
+/// ruling's owner decision: the writer leaves today's placement (`emitter::writes`, OD #925). espcrc's `\address[ETHZ]`
 /// inside `\author`, after each name (78s's `espcrc_addressmark_key_not_printed`, hep-lat0409072, which pins the XML:
 /// CERN Philippe de Forcrand's), was moved to the block once the kernel family was written.
 #[test]

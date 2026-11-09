@@ -1,5 +1,5 @@
-//! Guards for Z4 (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`, Route D; OXIDIZED_DESIGN_DIVERGENCES #980): the emitter behind `LATEXML_FM_EMIT`, each
-//! fixture converted with the switch on and off in the conversion's thread. On a paper where the reading and the output agree the creators' XML is the
+//! Guards for Z4 (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`, Route D; OXIDIZED_DESIGN_DIVERGENCES #980): the emitter, then behind its switch (deleted in DEL2), each
+//! fixture then converted with the switch on and off in the conversion's thread. On a paper where the reading and the output agree the creators' XML is the
 //! same, ids masked (`the_emit_is_the_old_markup`, one row per markup class); each other guard is a code path of its own: `off_is_untouched` the switch,
 //! `an_environment_by_its_frames` the digested extents, `a_raw_environment_on_a_name_is_whole` what no frame says, `the_whole_block_queue_still_reads` `=2`.
 

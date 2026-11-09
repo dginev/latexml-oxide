@@ -1,5 +1,5 @@
 //! Guards for CL3 (`agent_reports/2026-11-08_brief_CL3.md`; w56's report, SYNC leftovers (33)): under
-//! `LATEXML_FM_EMIT=2` a block the emitter writes whole (`observer/writer/emit.rs` `whole_block`) has its tabular juggles
+//! `=2` a block the emitter writes whole (`observer/emitter/emit.rs` `whole_block`) has its tabular juggles
 //! and columns written as the line breaks they print (`fallback::tabular_juggles_in_a_whole_block`). vldb.cls's
 //! `\alignauthor`, inside the whole creator's `\lx@personname`, closed a tabular the block never opened: 4 Errors and all
 //! 8 names lost (1511.05911, its rehearsal over the read budget).

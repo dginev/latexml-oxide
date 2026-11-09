@@ -1,6 +1,6 @@
 % mechanism: a name written from a macro that prints its note too (`\newcommand{\ann}{Ann Able\thanks{…}}`, one source
 %   token for both events) digests the note with the name, so the reading's note is not written again
-%   (`writer::emit::block_names`, `on_names`): the same cause as a wrapper's note (the name's tokens print it), which
+%   (`emitter::emit::block_names`, `on_names`): the same cause as a wrapper's note (the name's tokens print it), which
 %   the cut leaves out instead (`emit_name_in_wrapper_mark_and_thanks_apart`)
 % witness: review revLO4 (synthetic; LO3 and LO4 `=2` W=2)
 % oracle:  pdflatex 0 errors: "Ann Able∗", "Univ A", "Bob Baker", "Univ B", footnote "∗Corresponding author."

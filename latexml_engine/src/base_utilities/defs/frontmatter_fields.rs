@@ -240,7 +240,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       // out of positions: this value is not stamped, and no earlier copy can be whole of it
       assign_value(&s!("lx_field_extent_{field_id}"), String::new(), Some(Scope::Global));
       assign_value(&s!("lx_field_range_{field_id}"), String::new(), Some(Scope::Global));
-      // (the frontmatter observer's ledger, under its shadow switch only: OXIDIZED_DESIGN_DIVERGENCES #837)
+      // (the frontmatter observer's ledger: OXIDIZED_DESIGN_DIVERGENCES #837)
       note_field_stamp(field_id, None, len);
       return Ok(Tokens::default());
     }
@@ -309,7 +309,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // value, the positions following the field's earlier stamps (`lx_field_base_<id>`): M3's "marked field argument",
   // for a binding's `\lx@add@authors*` call, whose argument no store holds. Nothing else changes (the extent and the
   // range of the field's current call are a store's, `\lx@field@mark`'s). An unknown field, a blank argument or one
-  // past the field's positions comes back unstamped. No call site yet: the observer's shadow ledger projects these
+  // past the field's positions comes back unstamped. No call site yet: the observer's ledger projects these
   // positions for the bindings' calls (`record_author_call`), and stage S2b stamps them.
   DefMacro!("\\lx@field@stamp{}{}", sub[(field, tokens)] {
     let Some(field_id) = field_id(field.to_string().trim()) else {
@@ -409,7 +409,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     Ok(())
   });
   // A script character an author block's rehearsal read outside math, as a piece of the block holds it
-  // (`observer::writer::content`'s `Field::content_cut`): TeX errs there (Missing $), the digestion's recovery prints the
+  // (`observer::emitter::content`'s `Field::content_cut`): TeX errs there (Missing $), the digestion's recovery prints the
   // character (`tex_math`: "Script ^ can only appear in math mode"); written back as a script, the piece erred once more
   // (2204.01080's `\textbf{Ningkai Mo} ^1`). The character, as the recovery prints it, the recovery a Warning.
   DefMacro!("\\lx@fm@script@char{}", sub[(c)] {

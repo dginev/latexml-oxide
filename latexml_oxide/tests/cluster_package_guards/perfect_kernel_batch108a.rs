@@ -153,7 +153,7 @@ fn a_name_shaped_line_with_no_affil_keeps_the_error() {
 
 /// The `\affil` run is every creator of its `\author` call: names the kernel read welded and the reading parts all hold
 /// it (2609.33075's first author lost it). Distinct: `Resolver::record_run`'s cap, `repart::plan`'s `same_run`.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same owners; the second creator keeps the space before it
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same owners; the second creator keeps the space before it
 /// as the third does.
 #[test]
 fn the_affil_run_is_every_creator_of_the_call() {

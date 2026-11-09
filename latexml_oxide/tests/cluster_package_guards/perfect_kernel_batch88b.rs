@@ -24,7 +24,7 @@
 //! printed group; eager and `--streaming`), cas-sc's numeric labels with and without an `[orcid]` (eager and
 //! `--streaming`), cas-dc's letter labels, a two-label author and the trailing keys (a `foot` entry among them), and
 //! the entry counter (numeric marks naming letter entries, letters written out of order, word labels read by the
-//! letter they print, a number entry before a letter one), the deferred labels read by the shadow (word labels,
+//! letter they print, a number entry before a letter one), the deferred labels read by the reading (word labels,
 //! cas-dc letter marks before their entries, one entry before and one after with a corresponding-author legend, a
 //! label written twice with an author between its entries and with both after the authors), and `\corref`'s label
 //! (inside the name and after the `\author`). Not
@@ -34,7 +34,7 @@
 use std::{path::Path, process::Command};
 
 use latexml::util::test::convert_with_setup_then;
-use latexml_engine::base_utilities::fm_shadow_json;
+use latexml_engine::base_utilities::fm_reading_json;
 use serde_json::Value;
 
 use super::{
@@ -203,13 +203,13 @@ fn cas_entries_are_labelled_by_the_letter_their_counter_prints() {
   );
 }
 
-/// Converts `tex` in process under the shadow switch (`LATEXML_FM_SHADOW=1`), checks it converts with no Error or
-/// Warning, and returns its XML, the shadow's reading of its creators — each creator's name and the affiliations it
+/// Converts `tex` in process, checks it converts with no Error or
+/// Warning, and returns its XML, the reading of its creators — each creator's name and the affiliations it
 /// gives it, in order (`<name> | <affiliation>; …`), then its contacts (`| <role>=<text>; …`) and its notes (`| notes:
 /// <text>; …`) when it gives any, then the block's affiliations (`block | …`) when it holds any — and the dump.
 #[track_caller]
-fn xml_and_shadow(tex: &str) -> (String, Vec<String>, Value) {
-  let (log, xml, json) = convert_with_setup_then(tex, Some(PRELOAD), || {}, |_| fm_shadow_json());
+fn xml_and_reading(tex: &str) -> (String, Vec<String>, Value) {
+  let (log, xml, json) = convert_with_setup_then(tex, Some(PRELOAD), || {}, |_| fm_reading_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let dump: Value = super::perfect_kernel_batchfms2a1::parsed(&json);
   let texts = |list: &Value| -> String {
@@ -222,7 +222,7 @@ fn xml_and_shadow(tex: &str) -> (String, Vec<String>, Value) {
       .join("; ")
   };
   let resolved = &dump["resolved"];
-  let mut shadow: Vec<String> = resolved["creators"]
+  let mut tuples: Vec<String> = resolved["creators"]
     .as_array()
     .expect("creators")
     .iter()
@@ -256,49 +256,49 @@ fn xml_and_shadow(tex: &str) -> (String, Vec<String>, Value) {
     .collect();
   let block = texts(&resolved["block"]);
   if !block.is_empty() {
-    shadow.push(format!("block | {block}"));
+    tuples.push(format!("block | {block}"));
   }
-  (xml, shadow, dump)
+  (xml, tuples, dump)
 }
 
 /// A deferred label is read by the queue's readers too (review of 88b r2, finding 1): an author's letter label whose
 /// entry comes after it is `\lx@label@ref{…}` until the flush (`cas_mark_labels`), and the readers of the queued
-/// keyvals before the digestion — the observer's (`LATEXML_FM_SHADOW=1`) and `place.rs`'s — read the letter it stands
+/// keyvals before the digestion — the observer's and `place.rs`'s — read the letter it stands
 /// for (`resolve_label_refs`), as the digestion expands it; one known when the `\author` is read is written as the
-/// letter. Red on r2, whose shadow read the raw reference as single-character requests (2303.00352, 2603.22658: every
+/// letter. Red on r2, whose reading read the raw reference as single-character requests (2303.00352, 2603.22658: every
 /// affiliation gone; 2504.19452, 2509.10496: every author every one):
 /// - word labels after the authors (`\author[aff1]` before `\address[aff1]`): Cid Cole has Univ Y;
 /// - cas-dc letter marks before their entries, written out of order (review probe q10): Ann Able's `[a]` prints "b",
 ///   Univ X;
 /// - one entry before the authors and one after, with cas's corresponding-author legend (`\cormark`, `\cortext`):
 ///   Bob Baker's `[b]` written as "a" (Univ Y) when his `\author` is read, Ann Able's `[a]` at the flush; Ann Able's
-///   ORCID (its id in the link) and e-mail hers in the XML and the shadow; the legend is a note on the title block, as
-///   cas's `\cormark` marks no one in the binding, and in the shadow no creator's;
+///   ORCID (its id in the link) and e-mail hers in the XML and the reading; the legend is a note on the title block, as
+///   cas's `\cormark` marks no one in the binding, and in the reading no creator's;
 /// - a label written twice (review of 88b r3, finding 1), the second entry between the authors or both after them:
 ///   both authors have the first entry, the second is the block's, as pdflatex prints it.
 #[test]
 fn cas_deferred_labels_are_read_before_digestion() {
-  let (xml, shadow, _) = xml_and_shadow(repro!("cas_word_labels_out_of_order.tex"));
+  let (xml, tuples, _) = xml_and_reading(repro!("cas_word_labels_out_of_order.tex"));
   let written = creators(&xml);
   assert_eq!(written, [
     vec!["Ann Able", "affiliation=Univ X"],
     vec!["Bob Baker", "affiliation=Univ Y"],
     vec!["Cid Cole", "affiliation=Univ Y"],
   ]);
-  assert_eq!(shadow, [
+  assert_eq!(tuples, [
     "Ann Able | Univ X",
     "Bob Baker | Univ Y",
     "Cid Cole | Univ Y"
   ]);
-  let (xml, shadow, _) = xml_and_shadow(repro!("cas_dc_letter_marks_before_their_entries.tex"));
+  let (xml, tuples, _) = xml_and_reading(repro!("cas_dc_letter_marks_before_their_entries.tex"));
   let written = creators(&xml);
   assert_eq!(written, [vec!["Ann Able", "affiliation=Univ X"], vec![
     "Bob Baker",
     "affiliation=Univ Y"
   ],]);
-  assert_eq!(shadow, ["Ann Able | Univ X", "Bob Baker | Univ Y"]);
-  let (xml, shadow, dump) =
-    xml_and_shadow(repro!("cas_corresponding_mark_on_a_deferred_label.tex"));
+  assert_eq!(tuples, ["Ann Able | Univ X", "Bob Baker | Univ Y"]);
+  let (xml, tuples, dump) =
+    xml_and_reading(repro!("cas_corresponding_mark_on_a_deferred_label.tex"));
   assert!(
     xml.contains("<note role=\"corresponding\" xml:id=\"id2\">Corresponding author</note>"),
     "{xml}"
@@ -321,11 +321,11 @@ fn cas_deferred_labels_are_read_before_digestion() {
     ),
     "{xml}"
   );
-  assert_eq!(shadow, [
+  assert_eq!(tuples, [
     "Ann Able | Univ X | orcid=0000-0002-1825-0097; email=aable@x.edu",
     "Bob Baker | Univ Y"
   ]);
-  // (the legend is the title block's note in the shadow too: one entry, given to no creator, which the rows show)
+  // (the legend is the title block's note in the reading too: one entry, given to no creator, which the rows show)
   let legends: Vec<&Value> = dump["entries"]
     .as_array()
     .expect("entries")
@@ -346,13 +346,13 @@ fn cas_deferred_labels_are_read_before_digestion() {
     repro!("cas_first_entry_under_a_label_keeps_it.tex"),
     repro!("cas_first_entry_under_a_deferred_label_keeps_it.tex"),
   ] {
-    let (xml, shadow, _) = xml_and_shadow(tex);
+    let (xml, tuples, _) = xml_and_reading(tex);
     assert_eq!(creators(&xml), [
       vec!["Ann Able", "affiliation=Univ X"],
       vec!["Bob Baker", "affiliation=Univ X"],
       vec!["affiliation=Univ Y"],
     ]);
-    assert_eq!(shadow, [
+    assert_eq!(tuples, [
       "Ann Able | Univ X",
       "Bob Baker | Univ X",
       "block | Univ Y"

@@ -208,7 +208,7 @@ relocate.rs `leading_line_label` compared with `\textsuperscript` literally; now
 `email_line_marked_addresses` (2209.10056, 2109.15322; `affiliations.rs` `entry_calls`). Invalid input under TL 2025
 (not kept): a group around a block, `{\small \IEEEauthorblockA{…}}` — IEEEtran's author `\halign` rejects it
 (cs0507001 ships an older IEEEtran.cls). Round 2: `starred_names_one_line` (1909.04111) — the writer's re-part gate
-(`writer/repart.rs`) accepts the API's `api:annotate:new`/`run` items, so the unsplit names line becomes three
+(`emitter/repart.rs`) accepts the API's `api:annotate:new`/`run` items, so the unsplit names line becomes three
 creators; `and_inside_a_block`, `and_inside_a_block_thanks` (2105.06537) — an `\and` that a block macro follows inside
 an affiliation block's argument closes it and starts the next author; `thanks_vspace` — a run of notes and spacing is
 the document's notes (`document_notes`); `ordinal_names` (2503.04159, 1806.11431, 2406.04658) the CONTROL that the gate's API exemption needs one holder of today's and no name opening with a mark (a re-part would take the IEEE ordinal's `\textsuperscript{st}` out). RED, no guard: `mixed_grid_column_major` (a grid left in its columns gives

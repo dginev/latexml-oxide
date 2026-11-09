@@ -1,6 +1,6 @@
 //! Guards for FM S2a.2 r4: the frontmatter observer's resolver and lexer on the revtex4_support residual of the r3
 //! census, and the landing review's ledger nits (OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r4"; KERNEL_CAPABILITIES
-//! K23), in shadow mode. Each shape was red on r3 (the int58a code): a prefix-marked name's notes (0710.4115,
+//! K23). Each shape was red on r3 (the int58a code): a prefix-marked name's notes (0710.4115,
 //! gr-qc0606119), an empty entry's run (1804.05750, 1507.03321), a `\lx@affiliation@withsup` line's first superscript
 //! (0812.4065, 2106.12584), a `\thanks` inside a superscript (1106.3485), ORCID links printing the name (2602.03244,
 //! 2301.02927), the frontmatter's position marker (cond-mat9801109), annotations before any author (2103.04797),
@@ -8,15 +8,16 @@
 //! policy counter read quietly, the `\ref`-mark commands by name. Every probe compiles clean with pdflatex (TL 2025)
 //! and converts with no Error or Warning, and the XML is byte-identical with the switch on and off.
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::fm_shadow_json;
+use latexml_engine::base_utilities::fm_reading_json;
 use serde_json::Value;
 
-/// Convert `tex` under the shadow switch, asserting a clean conversion: the whole dump.
+/// Convert `tex`, asserting a clean conversion: the whole dump.
 fn dump(tex: &str) -> Value { dump_as(tex, None) }
 
 /// [`dump`], of a written family's paper the writer holds back (`declined: <why>`): today's XML kept.
 fn dump_as(tex: &str, held: Option<&str>) -> Value {
-  let (log, _, json) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| fm_shadow_json());
+  let (log, _, json) =
+    convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| fm_reading_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   match held {
     Some(why) => super::perfect_kernel_batchfms2a1::parsed_held(&json, why),

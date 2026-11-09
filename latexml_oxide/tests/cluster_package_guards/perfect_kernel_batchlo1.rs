@@ -3,7 +3,7 @@
 //! superscript after an emitted entry's label is its text (`a_symbol_inside_an_entrys_brackets_is_its_text`), an address decides
 //! only its own ink (`an_address_decides_only_its_own_ink`; a list of local parts opening its line is a list of addresses,
 //! `perfect_kernel_batchn1::a_list_part_goes_to_no_line_author`), and a creator call's `annotations=` are its creator's labels
-//! (`a_creator_calls_annotations_answer_a_label`). Each runs the switch off and `LATEXML_FM_EMIT=2`.
+//! (`a_creator_calls_annotations_answer_a_label`). Each runs the switch off and `=2`.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 

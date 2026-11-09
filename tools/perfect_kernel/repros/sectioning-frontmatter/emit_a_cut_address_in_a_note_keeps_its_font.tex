@@ -1,7 +1,7 @@
-% mechanism: an address cut out of a note entry's text at `LATEXML_FM_EMIT=2` is its owner's e-mail in the font its `@`
+% mechanism: an address cut out of a note entry's text at `=2` is its owner's e-mail in the font its `@`
 %   prints in, where the note's ink switches font inside it (`\thanks{\IEEEauthorrefmark{1} … - \texttt{E-Mail: a@x}}`;
 %   `events::InkTable::fonts`), or the link wrapping it alone (`\href{mailto:…}{…}`) — RT1 row 56, the switch-off writer's
-%   wrapper (`writer::address_cut`; OD #980 P1br2); `=2` only
+%   wrapper (`emitter::address_cut`; OD #980 P1br2); `=2` only
 % witness: 2405.06709 (each `\texttt{E-Mail: …}` e-mail plain), 2608.15371 (`Electronic mail: \href{mailto:…}{…}`)
 % oracle:  pdflatex 0 errors; "Ann Able1, Bob Baker2"; footnotes "1 Ann Able is with Univ A, City - E-Mail: ann.able@a.org"
 %   (typewriter from E-Mail), "2 Bob Baker is with Univ B, Town, bob.baker@b.org"

@@ -173,7 +173,7 @@ pub(super) fn words_through_one_command(events: &[Event]) -> Cow<'_, [Event]> {
       .text
       .push_str(&printed_join(&events[i..=through], named));
     i = through + 1;
-    // (its own tokens too, to the last letter: the emitter's run of the name, `writer::emit::event_run_at`)
+    // (its own tokens too, to the last letter: the emitter's run of the name, `emitter::emit::event_run_at`)
     word.span = word.span.map(|(a, _)| (a, to));
     word.marks = word.marks.map(|(a, _)| (a, to));
     out.push(word);
@@ -1112,12 +1112,12 @@ pub(in crate::base_utilities::frontmatter::observer) fn name_before_remark(
   (!name.is_empty() && reads_as_names(name)).then_some(name)
 }
 
-/// Whether a piece may name a person, so that the shadow reading continues no institution into it (review rev94a r2
+/// Whether a piece may name a person, so that the reading continues no institution into it (review rev94a r2
 /// B-1): it reads as names, or does once the remark after its name is set aside ([`name_before_remark`]), or its words
 /// before its first institution word are a full name of two words or more (`Bob Baker University` — a person and a
 /// place, or one place as `Johns Hopkins University` is). A word reading: it shapes the reading's `classify:institution`
-/// items only, which license no writer operation (`writer::repart::by_words`, review rev94a r3); the writer reads it only
-/// to decline (`writer::repart::plan`'s person made an item, review rev94a r4).
+/// items only, which license no writer operation (`writer::repart::by_words` (deleted), review rev94a r3); the writer reads it only
+/// to decline (`emitter::repart::plan`'s person made an item, review rev94a r4).
 pub(in crate::base_utilities::frontmatter::observer) fn may_name_a_person(text: &str) -> bool {
   if reads_as_names(text) || name_before_remark(text).is_some() {
     return true;

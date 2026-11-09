@@ -27,7 +27,7 @@ macro_rules! repro {
 
 fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).collect() }
 
-/// Convert `tex` without the census (the shadow switch unset: production's default): the log and the XML.
+/// Convert `tex` without the census (production's default): the log and the XML.
 fn run_default(tex: &str) -> (String, String) {
   let (log, xml, ()) =
     convert_files_with_setup_then(tex, &[], Some("ar5iv.sty"), move || {}, |_| ());
@@ -97,7 +97,7 @@ fn a_class_label_in_a_name_is_no_excess() {
 }
 
 /// Under `=2` the flush reads every paper as the census does: llncs's `\institute`, a creator call of a paper with no author
-/// block, is rehearsed without `LATEXML_FM_SHADOW=1`, so the content check counts the `ann@a.org` it prints twice and the
+/// block, is rehearsed without the census (deleted in DEL4), so the content check counts the `ann@a.org` it prints twice and the
 /// output holds once, the same output and the same count with the census and without it (1401.5951: no finding without
 /// it). Switched off, nothing counts.
 #[test]

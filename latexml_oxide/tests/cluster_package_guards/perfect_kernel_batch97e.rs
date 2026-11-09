@@ -1,6 +1,6 @@
 //! Guards for batch 97e (FM S2b: every remaining observer-writer family written in one batch, each behind its gate —
 //! OXIDIZED_DESIGN_DIVERGENCES #837, #942 and this batch's entry). Each family guard converts its family's typical
-//! shape under the shadow switch in process and with the binary, eager and `--streaming`
+//! shape in process and with the binary, eager and `--streaming`
 //! (`perfect_kernel_batch92a::assert_reading`), and asserts the reading's tuples, the XML's whole creator set with
 //! every contact, the writer's outcome `written`, the default mode writing the same, and no Error or Warning
 //! (`perfect_kernel_batch95b::assert_written`). Every repro compiles clean with pdflatex (TL 2025; a class TeX Live
@@ -127,7 +127,7 @@ fn sv_support_is_written() {
   );
 }
 
-/// The writer's block-line cut reads an accented line's letters as it prints them (`writer::plan::span_tokens`, both
+/// The writer's block-line cut reads an accented line's letters as it prints them (`emitter::plan::span_tokens`, both
 /// sides accent-folded, `resolver::base_letters`): an accent command (`Ca\~nada`) and a text symbol (`\i`, latex.ltx's
 /// OT1 `\chardef` glyph, read through the encoding's font map) — 1009.1371 (73 creators, every one wrong before),
 /// 2401.03603. Before, the span's letters ("Canada", "Astrofsica") were not the key's and the cut declined: two
@@ -147,7 +147,7 @@ fn a_block_line_with_accents_is_cut() {
     ),
   ] {
     let second = format!("affiliation={line}");
-    let shadow = [
+    let tuples = [
       "C A. Able [1] | line:names mark:after-comma".to_string(),
       "  a Uni One, City | ruling1:request".to_string(),
       "C B. Baker [2] | line:names sep:comma mark:after-comma".to_string(),
@@ -163,7 +163,7 @@ fn a_block_line_with_accents_is_cut() {
         &["B. Baker", &second],
         &["C. Cole", "affiliation=Uni One, City", &second],
       ]),
-      &shadow.iter().map(String::as_str).collect::<Vec<_>>(),
+      &tuples.iter().map(String::as_str).collect::<Vec<_>>(),
     );
   }
 }

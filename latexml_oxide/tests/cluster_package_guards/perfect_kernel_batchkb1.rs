@@ -1,4 +1,4 @@
-//! Guards for KB1, a printed mark glued from an address label and a note's number under `LATEXML_FM_EMIT=2`
+//! Guards for KB1, a printed mark glued from an address label and a note's number under `=2`
 //! (`a_glued_address_and_note_mark_parts_at_emit_2`).
 
 use latexml::util::test::{error_count, warning_count};

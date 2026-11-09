@@ -8,18 +8,16 @@ use std::{cell::RefCell, collections::BTreeSet, rc::Rc};
 use latexml_core::{
   definition::{Definition, origin::DefinitionOrigin},
   gullet::{InputMark, input_mark, input_unread_since},
-  state::{
-    fallback_meaning_origin, frontmatter_setter_calls, lookup_catcode, open_frontmatter_setter,
-  },
+  state::{fallback_meaning_origin, lookup_catcode},
   token::{AUTHOR_PROV_POS_MASK, field_prov},
 };
 
 use super::{
+  emitter::Analysis,
   events::{EmailMeaning, Event, EventKind, HeldError, lex_events},
   field_notes::{EnvironmentStep, FieldCreator},
   rehearsal::{past_line_break, past_tabular_call},
   resolver::printed_words,
-  writer::Analysis,
   *,
 };
 
@@ -63,17 +61,17 @@ pub(in crate::base_utilities) enum Outcome {
   Events {
     events:        Vec<Event>,
     /// the extents of its formulas, outermost, in order (`events::lex_with_formulas`): what a span's content reads
-    /// (`writer::Field`). Not in a dump: nothing offline reads the content
+    /// (`emitter::Field`). Not in a dump: nothing offline reads the content
     formulas:      Vec<events::Formula>,
     /// where its inks printing an `@` print, and in what font (`events::InkTable`): what the emitter cuts an entry's
-    /// addresses at (`writer::address_cut`). Not in a dump
+    /// addresses at (`emitter::address_cut`). Not in a dump
     inks:          Box<events::InkTable>,
     errors:        usize,
     warnings:      usize,
     declarations:  Vec<Event>,
     breaks:        Vec<Event>,
     held:          Vec<HeldError>,
-    /// the environments its tokens open and close, what a span's content reads (`writer::Field`). Not in a dump
+    /// the environments its tokens open and close, what a span's content reads (`emitter::Field`). Not in a dump
     environments:  Vec<EnvironmentStep>,
     /// the creator calls its own expansion made (`field_notes::FieldCreator`), the keyvals the emitter writes on the
     /// creators their Names make (`Event::creator_call`), fixed once rehearsed (a slice: the variant stays under clippy's
@@ -84,7 +82,7 @@ pub(in crate::base_utilities) enum Outcome {
     /// (`resolver::placed::content_check`), as a call's no rehearsal read (`ApiCall::unread`). In a dump only when set
     unread:        Option<Box<ContentText>>,
     /// where its own digestion moved the footnote counter its marks print from, no event saying so
-    /// (`field_notes::FieldNotes::counter_moves`): what the emitter carries or writes whole (`writer::emit::counter_moved`).
+    /// (`field_notes::FieldNotes::counter_moves`): what the emitter carries or writes whole (`emitter::emit::counter_moved`).
     /// Not in a dump: only the emitter reads it
     counter_moves: Option<Box<CounterMoves>>,
   },
@@ -144,15 +142,12 @@ pub(in crate::base_utilities) struct AuthorBlock {
   /// when that is the kernel's — with `hook`, the key of its declared conventions (`policy::policy_for`; S2a.2)
   pub binding:        String,
   /// the tags its rehearsal queued besides its creators (`rehearsal::Rehearsal::Done::queued`): a frontmatter setter run inside
-  /// the block, a `\date` in `\author` (2503.02741), which the emitter counts (`writer::emit::warn_queued_unwritten`). Not in
+  /// the block, a `\date` in `\author` (2503.02741), which the emitter counts (`emitter::emit::warn_queued_unwritten`). Not in
   /// a dump: only the emitter reads it
   pub queued:         Vec<String>,
   /// the binding owning the `\author` meaning at the call ([`author_binding`]): a compiled binding's file name
   /// (`revtex4_support.sty`), else `kernel`, `document`, `raw` or `fallback` by its definition origin
   pub owner:          String,
-  /// the frontmatter setter calls made before it (`state::frontmatter_setter_calls`): a setter whose expansion is open
-  /// at an API call its own expansion makes was called inside it when its number is greater ([`record_api_call`])
-  pub setters_before: usize,
   /// the value of the policy's state counter at the call (`policy::Policy::state_counter`), when it has one defined
   pub counter:        Option<i64>,
   /// whether the call replaces the authors before it (`\lx@clear@frontmatter{ltx:creator}`)
@@ -192,7 +187,7 @@ pub(in crate::base_utilities) struct AuthorBlock {
   /// a binding's list setter the argument calls ([`list_setter_called`]): sv_support's `\institute` inside an author's
   /// group, `\and{Cy Coe\inst{1}\institute{Univ X \and Lab Y}}` (cond-mat0605195) — whose entries the binding numbers
   /// for the marks to point to, which the rehearsal reads as one in-block affiliation (`rehearsal::install_event_bindings`);
-  /// the emitter writes the call as it is, after the block's names (`writer::emit::list_setter_runs`, 2502.07804)
+  /// the emitter writes the call as it is, after the block's names (`emitter::emit::list_setter_runs`, 2502.07804)
   pub list_setter:    Option<&'static str>,
 }
 
@@ -219,20 +214,13 @@ pub(in crate::base_utilities) struct ApiCall {
   pub after_block:    Option<usize>,
   /// made by that block's own expansion (its calls), not by the input after it
   pub inside:         bool,
-  /// the binding of the frontmatter setter whose expansion made it ([`FRONTMATTER_SETTERS`], [`setter_binding`]:
-  /// svjour3's `\institute`, sv_support.sty's; authblk's `\affil`; a raw class's setter rerouted in place, the class's
-  /// family), `unobserved` for a call made before the watch began ([`watch_unwritten_setters`]) — `None` for a call no
-  /// observed setter's expansion made (a block's own, the document's `\lx@add@…`, a binding command of its own:
-  /// `\thanks`, `\IEEEauthorblockA`; an entry a raw file's store hands on at `\maketitle`): what the writer writes only
-  /// when that binding's family is written (`policy::family_written`, `writer::unwritten_calls`)
-  pub binding:        Option<String>,
   /// the entry's attributes as the call gave them (`role=affiliation,label=a,annotate=new`)
   pub attrs:          String,
   /// the element an annotation goes into (`\lx@annotate@frontmatter{ltx:creator}…`, `ltx:title` for a title's note),
   /// empty for an entry of its own (`\lx@add@frontmatter`)
   pub parent:         String,
   /// the entry's content (its command's last argument, inside the affiliation wrappers), and its events once the
-  /// flush rehearsed it (`shadow::shadow_flush`; empty before)
+  /// flush rehearsed it (`reading::read_at_flush`; empty before)
   pub content:        Tokens,
   pub events:         Vec<Event>,
   /// whether a flush rehearsed its content
@@ -248,7 +236,7 @@ pub(in crate::base_utilities) struct ApiCall {
   pub cleared:        bool,
   /// the errors its content's rehearsal held (no positions: an API call's content has none)
   pub errors:         usize,
-  /// the queued call itself, where the emitter may reuse it (`writer::emit`, under its switch)
+  /// the queued call itself, where the emitter may reuse it (`emitter::emit`, under its switch)
   pub command:        Option<Tokens>,
 }
 
@@ -308,28 +296,24 @@ pub(in crate::base_utilities) struct Ledger {
   /// the changes to `entries` so far: what the emitter's reading of them is made at ([`Self::analysis`]), counted by
   /// [`Self::entries_mut`] alone, which a caller takes only to change them
   generation:     u64,
-  /// the emitter's reading of `entries` and its checks, made at a generation (`writer::emit::analysis`): kept while they
+  /// the emitter's reading of `entries` and its checks, made at a generation (`emitter::emit::analysis`): kept while they
   /// read the same, dropped with the ledger (a conversion's start: no reading outlives its conversion, review revN1r2)
   pub analysis:   Option<Rc<Analysis>>,
-  /// the frontmatter flushes so far (`shadow::shadow_flush`)
+  /// the frontmatter flushes so far (`reading::read_at_flush`)
   pub flushes:    usize,
-  /// the writer's outcome for a written family's paper (`writer::write_observed_frontmatter`): `same` (today's reads
-  /// as the reading), `written` (including a paper written with its e-mail calls each kept one contact, where their
-  /// write-out declined, `writer::give_back_listed`), `written-different: …` (what was written still differs, the
-  /// writer's own defect) or `declined: …` (a difference no operation explains, today's kept — also where keeping the
-  /// e-mail calls whole leaves today's as it was: the write-out the reading wanted, declined; and where an unwritten
-  /// family's items kept as today's leave it so, `writer::keep_as_today`); none where the writer did not run
+  /// `written` once a flush's emitter wrote the paper's frontmatter from the reading (`emitter::emit`), none otherwise
+  /// (the S2b writer's other outcomes, `same`, `written-different: …` and `declined: …`, went with it in DEL4)
   pub writer:     Option<String>,
   /// the contacts recorded that print nothing, in call order ([`UnprintedCall`])
   pub unprinted:  Vec<UnprintedCall>,
   /// the contents' texts ([`content_text`]) of the queued creator calls the emitter took out of the queue that no
   /// recorded call is (a stand-in binding's copy's, [`records_now`]), in queue order: what the content check counts them
-  /// by (`writer::emit::emit_commands`, `resolver::placed::content_check`)
+  /// by (`emitter::emit::emit_commands`, `resolver::placed::content_check`)
   pub unrecorded: Vec<ContentText>,
   /// what a list setter call the emitter wrote replaces as its clear (`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`)
   /// would at the block, which pdflatex never prints: an affiliation call queued before the block (its ledger index, no
   /// span) and an earlier setter call of a block (the block's index and the call's span) — what the content check counts
-  /// no word of (`writer::emit::replaced_by_setter`, `resolver::placed::content_check`; review revDEL3 S1)
+  /// no word of (`emitter::emit::replaced_by_setter`, `resolver::placed::content_check`; review revDEL3 S1)
   pub replaced:   BTreeSet<(usize, Option<(u16, u16)>)>,
   /// the entries the last binding's `\author` body made, a later `\author` clears them ([`record_author_body_clear`])
   author_body:    (usize, usize),
@@ -402,30 +386,16 @@ type ClassBindings = (Vec<String>, usize, bool);
 
 /// The commands whose owning binding the observer tracks ([`note_binding_load`]): `\author` (the policy key's binding
 /// half, [`author_binding`]), the e-mail commands the rehearsal binds (`\email`, `\emailAdd`: whose a note's call
-/// is, [`email_meaning`]), and the other [`FRONTMATTER_SETTERS`] (whose an API call their expansion makes is,
-/// [`setter_binding`]).
-const OWNED_COMMANDS: [&str; 12] = [
-  "\\author",
-  "\\email",
-  "\\emailAdd",
-  "\\institute",
-  "\\address",
-  "\\affil",
-  "\\affiliation",
-  "\\ead",
-  "\\emailaddr",
-  "\\affaddr",
-  "\\department",
-  "\\institution",
-];
+/// is, [`email_meaning`]).
+const OWNED_COMMANDS: [&str; 3] = ["\\author", "\\email", "\\emailAdd"];
 const AUTHOR: usize = 0;
 
-/// The frontmatter setters whose expansions the observer watches (`state::open_frontmatter_setter`): an API call one
-/// of them makes is the binding's owning it ([`ApiCall::binding`]) — the e-mail commands, the brief's `\institute`,
-/// `\address` and `\affil` (95b r3), and the contact setters of a raw class's stores, which the store reroute makes
-/// API calls of (`latexml_core::binding::store_setters::STORE_SETTERS`: `\affiliation`, `\ead`, …) — not `\inst`, a
-/// binding's mark request (inst_support.sty's, which aa loads: no API call, and it would watch every aa paper).
-/// `\author` is a block's (its own expansion's calls are the block's, `ApiCall::inside`).
+/// The frontmatter setters a block may call a binding's list setter by ([`list_setter_called`]): the e-mail commands,
+/// the brief's `\institute`, `\address` and `\affil` (95b r3), and the contact setters of a raw class's stores, which
+/// the store reroute makes API calls of (`latexml_core::binding::store_setters::STORE_SETTERS`: `\affiliation`, `\ead`,
+/// …) — not `\inst`, a binding's mark request (inst_support.sty's, which aa loads). The core's watch of their
+/// expansions, which keyed an API call on the setter's binding (`ApiCall::binding`, never switched on since every family
+/// was written), was deleted with that field (DEL5).
 const FRONTMATTER_SETTERS: [&str; 11] = [
   "\\email",
   "\\emailAdd",
@@ -440,28 +410,18 @@ const FRONTMATTER_SETTERS: [&str; 11] = [
   "\\institution",
 ];
 
-/// The compiled bindings loaded, in load order, and each one's first nested load declaring conventions (`LOADED`).
-type LoadFamilies = (Vec<String>, rustc_hash::FxHashMap<String, String>);
-
 /// A tracked command's owning binding and the meaning it made.
 type Owner = Option<(String, Rc<dyn Definition>)>;
 const OWNED: usize = OWNED_COMMANDS.len();
 
 thread_local! {
   /// For each of [`OWNED_COMMANDS`], the compiled binding that defined its current meaning, with that meaning itself
-  /// ([`note_binding_load`]; held, so its identity is `Rc::ptr_eq`'s and no later definition can take its address),
-  /// under the shadow switch only.
+  /// ([`note_binding_load`]; held, so its identity is `Rc::ptr_eq`'s and no later definition can take its address),.
   static OWNERS: RefCell<[Owner; OWNED]> = const { RefCell::new([const { None }; OWNED]) };
   /// The document class's compiled bindings: the first class binding loaded outside any other binding's load, and every
   /// binding its load loaded (`report.cls`; iopart.cls's `iopart_support.sty`), in load order; and how deep the loads
   /// nest now, with whether the outermost is that class's.
   static CLASS_BINDINGS: RefCell<ClassBindings> = const { RefCell::new((Vec::new(), 0, false)) };
-  /// The binding owning `\author` when the document class's load ended, when one of the class's bindings: the class's
-  /// own `\author` reading (elsarticle's elsart_support_core.sty), whose family is the class's ([`class_family`]).
-  static CLASS_AUTHOR: RefCell<Option<String>> = const { RefCell::new(None) };
-  /// The compiled bindings loaded so far, in load order, and for each binding whose load loaded one declaring
-  /// conventions, the first such ([`note_binding_load`]): its family, when it declares none (`setter_binding`).
-  static LOADED: RefCell<LoadFamilies> = RefCell::new(Default::default());
 }
 
 /// The current meaning of the tracked command `n` ([`OWNED_COMMANDS`]), if any (what [`note_binding_load`] compares,
@@ -496,22 +456,15 @@ pub fn note_binding_load<R>(name: &str, extension: &str, load: impl FnOnce() -> 
   }
   let before: [Option<Rc<dyn Definition>>; OWNED] = std::array::from_fn(tracked_meaning);
   let owners_before: [Option<Rc<dyn Definition>>; OWNED] = std::array::from_fn(owned_meaning);
-  let loads_before = LOADED.with(|l| {
-    let mut l = l.borrow_mut();
-    l.0.push(s!("{name}.{extension}"));
-    l.0.len()
-  });
-  let class_load = CLASS_BINDINGS.with(|c| {
+  CLASS_BINDINGS.with(|c| {
     let (names, depth, in_class) = &mut *c.borrow_mut();
-    let class_load = *depth == 0 && extension == "cls" && names.is_empty();
-    if class_load {
+    if *depth == 0 && extension == "cls" && names.is_empty() {
       *in_class = true;
     }
     if *in_class && extension != "pool" {
       names.push(s!("{name}.{extension}"));
     }
     *depth += 1;
-    class_load
   });
   let value = load();
   CLASS_BINDINGS.with(|c| {
@@ -542,23 +495,6 @@ pub fn note_binding_load<R>(name: &str, extension: &str, load: impl FnOnce() -> 
       OWNERS.with(|o| o.borrow_mut()[n] = Some((owner, after)));
     }
   }
-  if class_load {
-    let owner = meaning_owner(AUTHOR);
-    let own = CLASS_BINDINGS.with(|c| c.borrow().0.contains(&owner));
-    CLASS_AUTHOR.with(|a| *a.borrow_mut() = own.then_some(owner));
-  }
-  // (the first binding its load loaded that declared conventions: whose family a binding declaring none is,
-  // `setter_binding` — revtex3_support.sty's revtex4_support.sty)
-  LOADED.with(|l| {
-    let mut l = l.borrow_mut();
-    if let Some(family) = l.0[loads_before..]
-      .iter()
-      .find(|n| policy::has_entry(n))
-      .cloned()
-    {
-      l.1.entry(s!("{name}.{extension}")).or_insert(family);
-    }
-  });
   value
 }
 
@@ -566,8 +502,6 @@ pub fn note_binding_load<R>(name: &str, extension: &str, load: impl FnOnce() -> 
 pub(in crate::base_utilities) fn reset_author_owner() {
   OWNERS.with(|o| *o.borrow_mut() = [const { None }; OWNED]);
   CLASS_BINDINGS.with(|c| *c.borrow_mut() = (Vec::new(), 0, false));
-  CLASS_AUTHOR.with(|a| *a.borrow_mut() = None);
-  LOADED.with(|l| *l.borrow_mut() = Default::default());
 }
 
 /// The binding a block's policy is keyed on (S2a.2 r2, review revfms2a2's answer to question 3): the binding owning
@@ -594,61 +528,6 @@ pub(in crate::base_utilities) fn policy_binding(owner: &str) -> String {
 /// document's own `\renewcommand`), `raw` (a class or package read raw), `fallback` (OmniBus), `binding` (a binding no
 /// load noted).
 pub(in crate::base_utilities) fn author_binding() -> String { meaning_owner(AUTHOR) }
-
-/// The binding an API call made in the expansion of the frontmatter setter `cs` ([`FRONTMATTER_SETTERS`]) is keyed on:
-/// the binding owning the setter's meaning now ([`meaning_owner`]: by the binding's own redefinition, OD #922; else
-/// `raw`, `document`, `fallback` by its origin), when it declared conventions of its own (authblk's `\affil`, also
-/// under a raw class that loads it — pnas-new.cls, 1706.06282; sv_support.sty's `\institute` under svjour3; aa.cls's
-/// own `\institute`); the family of the class ([`class_family`]) when the owner is the kernel, a file read raw (a raw
-/// class's or style's setter rerouted to the API in place, OD #936 — read as the kernel's under a class whose bindings
-/// declare none, the kernel's gate, OD #925) or one of the class's bindings declaring none (revtex4-2.cls's setters,
-/// revtex4_support.sty's family); for another binding declaring none, the first binding its load loaded that declared
-/// conventions (`\documentstyle{revtex}`'s revtex3_support.sty, loaded by revtex.sty after the article class, whose
-/// `\address` is REVTeX's under the revtex4_support.sty it loads: cond-mat0505458, cond-mat9803141, hep-ph9909393 —
-/// 95b r3's scorer run); else the owner, as a block's is keyed ([`policy_binding`]: a package binding declaring none
-/// and loading none that does, the document's own definition — `UNDECLARED`, written since 97e).
-fn setter_binding(cs: &Token) -> Option<String> {
-  // (a robust setter's body is its `\cs␣`'s: `state::watch_frontmatter_setters`)
-  let n = cs.with_cs_name(|name| {
-    OWNED_COMMANDS
-      .iter()
-      .position(|c| *c == name.trim_end_matches(' '))
-  })?;
-  let owner = meaning_owner(n);
-  if policy::has_entry(&owner) {
-    return Some(owner);
-  }
-  if matches!(owner.as_str(), "kernel" | "raw")
-    || CLASS_BINDINGS.with(|c| c.borrow().0.contains(&owner))
-  {
-    return Some(class_family());
-  }
-  Some(
-    LOADED
-      .with(|l| l.borrow().1.get(&owner).cloned())
-      .unwrap_or_else(|| policy_binding(&owner)),
-  )
-}
-
-/// The family of the document class: the first of its bindings that declared conventions, in load order (aa.cls
-/// before the aa_support.sty and inst_support.sty it loads; sv_support.sty under svjour3.cls), else the class's own
-/// `\author` binding (a class whose bindings declare none, its `\author` an undeclared support file's), else the
-/// kernel's (a class whose bindings read no `\author` of their own: OmniBus, the kernel's gate, OD #925).
-fn class_family() -> String {
-  CLASS_BINDINGS
-    .with(|c| {
-      c.borrow()
-        .0
-        .iter()
-        .find(|name| policy::has_entry(name))
-        .cloned()
-    })
-    .unwrap_or_else(|| {
-      CLASS_AUTHOR
-        .with(|a| a.borrow().clone())
-        .unwrap_or_else(|| "kernel".to_string())
-    })
-}
 
 /// The binding owning the tracked command `n`'s meaning now ([`author_binding`]'s reading, for any of
 /// [`OWNED_COMMANDS`]); `kernel` when it has none.
@@ -754,7 +633,7 @@ fn queue_length() -> usize {
 /// (`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`, then `labelseq=affiliation` entries), decided from the
 /// binding's definition, not a name list. In an author block the rehearsal reads such a call as one affiliation of the
 /// block, where the real call queues the numbered entries (cond-mat0605195): the emitter writes the call as it is, its
-/// entries the call's, none of the reading's items (`writer::emit::list_setter_runs`).
+/// entries the call's, none of the reading's items (`emitter::emit::list_setter_runs`).
 fn list_setter_called(stuff: &Tokens) -> Option<&'static str> {
   let toks = stuff.unlist_ref();
   FRONTMATTER_SETTERS.iter().copied().find(|name| {
@@ -779,7 +658,7 @@ fn out_of_positions(real_base: usize, len: usize) -> bool {
   real_base + len > usize::from(AUTHOR_PROV_POS_MASK)
 }
 
-/// Record an `\author`-family call (`hook`, with `stuff` its argument), under the shadow switch only — whether it was
+/// Record an `\author`-family call (`hook`, with `stuff` its argument) — whether it was
 /// recorded late ([`AuthorBlock::late`]).
 pub(in crate::base_utilities) fn record_author_call(
   hook: &'static str,
@@ -808,7 +687,6 @@ pub(in crate::base_utilities) fn record_author_call(
     policy: policy.to_string(),
     binding,
     owner,
-    setters_before: frontmatter_setter_calls(),
     counter,
     replace,
     cleared: false,
@@ -921,7 +799,7 @@ pub(in crate::base_utilities) fn projected_is_stamped(
 }
 
 /// Record a queued creator, contact or note of the frontmatter API (`queue_front_matter`: its tag, its attributes and
-/// its command), under the shadow switch only: a binding's single-author call (`\lx@add@creator`, `\lx@add@author`:
+/// its command): a binding's single-author call (`\lx@add@creator`, `\lx@add@author`:
 /// authblk's unlabelled `\author{Bob}`) is an API call too, unless a block's own expansion made it. Its content (the
 /// command's last argument, inside the affiliation wrappers) is kept for the flush to rehearse.
 pub(in crate::base_utilities) fn record_api_call(
@@ -986,12 +864,10 @@ pub(in crate::base_utilities) fn record_api_call(
   let content = queued_affiliation_text(&content);
   let parent = annotated_parent(command);
   let queue_position = queue_length();
-  let setter = open_frontmatter_setter();
   with_ledger(|ledger| {
     let index = ledger.entries().len();
     let mut after_block = None;
     let mut inside = false;
-    let mut setters_before = 0;
     let last_block = ledger
       .entries()
       .iter()
@@ -1000,7 +876,6 @@ pub(in crate::base_utilities) fn record_api_call(
       && let Some(Entry::Author(block)) = ledger.entries().get(at)
     {
       after_block = Some(block.index);
-      setters_before = block.setters_before;
       if block.window_open {
         if input_unread_since(&block.mark) {
           inside = true;
@@ -1009,11 +884,6 @@ pub(in crate::base_utilities) fn record_api_call(
         }
       }
     }
-    // (the innermost of the block's expansion and a setter's: a setter called inside the block's own expansion makes
-    // its calls, a block called inside a setter's its)
-    let binding = setter
-      .filter(|(called, _)| !inside || *called > setters_before)
-      .and_then(|(_, cs)| setter_binding(&cs));
     ledger.push(Entry::Api(ApiCall {
       index,
       tag: tag.to_string(),
@@ -1022,7 +892,6 @@ pub(in crate::base_utilities) fn record_api_call(
       queue_position,
       after_block,
       inside,
-      binding,
       attrs,
       parent,
       content,
@@ -1253,8 +1122,8 @@ fn record_unprinted_call(attr: Option<&KeyVals>, command: &Tokens) {
   });
 }
 
-/// Record a clear of the frontmatter queue (`dequeue_front_matter`: `\lx@clear@frontmatter{tag}[role=…]`), under the
-/// shadow switch only: the API calls it removes — of its tag and every attribute it names, queued since the last flush,
+/// Record a clear of the frontmatter queue (`dequeue_front_matter`: `\lx@clear@frontmatter{tag}[role=…]`): the
+/// API calls it removes — of its tag and every attribute it names, queued since the last flush,
 /// as the dequeue matches the queue's entries — are cleared, and so are, for a creator clear of the authors, the
 /// author blocks queued before it, save the one whose own expansion makes the clear (the kernel `\author`'s replacing
 /// call, which its `replace` covers). llncs's `\author` given twice — an anonymous or template one, then the real
@@ -1332,7 +1201,7 @@ pub(in crate::base_utilities) fn record_author_body_end() {
 }
 
 /// Record that the frontmatter API's Cut took an uncut copy of a printed list it cut out of the queue (`content`, a
-/// contact of `role`: `affiliations::place_uncut_copies`), under the shadow switch only: the first such call queued
+/// contact of `role`: `affiliations::place_uncut_copies`): the first such call queued
 /// since the last flush and not cleared is cleared, as [`record_clear`] clears the calls a dequeue removes.
 pub(in crate::base_utilities) fn record_cut_copy(role: &str, content: &Tokens) {
   if !records_now() {
@@ -1372,8 +1241,8 @@ fn last_attr<'a>(attrs: &'a str, key: &str) -> &'a str {
     .unwrap_or("")
 }
 
-/// Record a footnote's text (`\lx@notetext`'s whatsit, once digested: `\footnotetext[<n>]{…}`), under the shadow switch
-/// only, after an author block or the title (whose `\footnotemark` it may answer: `\title{…\footnotemark[1]}`
+/// Record a footnote's text (`\lx@notetext`'s whatsit, once digested: `\footnotetext[<n>]{…}`),
+/// after an author block or the title (whose `\footnotemark` it may answer: `\title{…\footnotemark[1]}`
 /// `\footnotetext[1]{Based on observations …}`, 1111.4983): its printed mark, its counter value and its body's events
 /// (the body is digested for real, so nothing is rehearsed — only read).
 pub fn record_note_text(whatsit: &Whatsit) {
@@ -1418,7 +1287,7 @@ pub fn record_note_text(whatsit: &Whatsit) {
 /// A call's label with its parameterless macros written out — `fuzzy:\lx@aas@correspondent` is "fuzzy:Bob Baker", aastex's
 /// `\email` after a `\correspondingauthor` (aastex_cls.rs `\lx@aas@email@corresp`; 2506.07978, whose label spelled no
 /// one and went to the block): the label today's `\lx@annotate@frontmatter@now` reads once the flush digests its
-/// keyvals. A pure lookup of each macro's token body, nothing run through the gullet: the shadow changes no state.
+/// keyvals. A pure lookup of each macro's token body, nothing run through the gullet: the reading changes no state.
 /// Bounded by the tokens visited (macros expanding to nothing included, [`LABEL_VISITS`]) and the depth (8).
 fn label_text(value: &Tokens) -> String {
   fn written(tokens: &[Token], depth: usize, visited: &mut usize, out: &mut Vec<Token>) {

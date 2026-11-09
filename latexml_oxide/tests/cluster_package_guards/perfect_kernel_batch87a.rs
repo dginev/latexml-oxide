@@ -3,13 +3,14 @@
 //! state, as it read the name-keyed policy table before — the table is gone. Every probe compiles clean with pdflatex
 //! (TL 2025) and converts with no Error or Warning.
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::fm_shadow_json;
+use latexml_engine::base_utilities::fm_reading_json;
 use serde_json::Value;
 
-/// Each author block of `tex`'s conversion under the shadow switch: the binding its conventions are keyed on, and the
+/// Each author block of `tex`'s conversion: the binding its conventions are keyed on, and the
 /// conventions it ran under (by name), as the dump records them.
 fn conventions(tex: &str) -> Vec<(String, String)> {
-  let (log, _, json) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| fm_shadow_json());
+  let (log, _, json) =
+    convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| fm_reading_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let dump: Value = super::perfect_kernel_batchfms2a1::parsed(&json);
   dump["entries"]

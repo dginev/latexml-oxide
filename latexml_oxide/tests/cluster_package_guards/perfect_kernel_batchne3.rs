@@ -1,4 +1,4 @@
-//! Guards for NE3: the last papers where `LATEXML_FM_EMIT=2` raised more Errors than off, the flip's no-harm gate. One guard
+//! Guards for NE3: the last papers where `=2` raised more Errors than off, the flip's no-harm gate. One guard
 //! per mechanism, each off and at `=2`: a key value the reading wrote back is characters (2607.18332's legend mark `#`); two
 //! names written from overlapping runs are their text (1602.03850's `\myauthors`); a run a macro of which reads past its end
 //! is refused (2209.12410's `\authord`); a script character the rehearsal read outside math is written as its character

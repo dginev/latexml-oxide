@@ -5,7 +5,7 @@
 //! addresses is decided address by address by spelling (G3, `Resolver::answer_listed_emails`); today's respell reads
 //! names by their base letters, so an address spelling its accented holder stays (G6, `insert::respell_emails`).
 //! OXIDIZED_DESIGN_DIVERGENCES #938. Each guard converts its repro under
-//! `tools/perfect_kernel/repros/sectioning-frontmatter/` under the shadow switch in process and with the binary, eager and
+//! `tools/perfect_kernel/repros/sectioning-frontmatter/` in process and with the binary, eager and
 //! `--streaming` (`perfect_kernel_batch92a::assert_reading`), asserts the XML's creators with every contact and the
 //! reading's tuples whole, no Error or Warning, the writer's outcome, and that the default mode (the fleet's) writes the
 //! same creators. Every repro compiles clean with pdflatex (TL 2025).

@@ -762,7 +762,7 @@ fn record_mut(called: &mut [CalledText], id: usize) -> Option<&mut CalledText> {
 
 /// The position in `CALLED` of the first record not digested whose queued invocation ends in `content`
 /// ([`queued_content_is`]), read from those of its length (`QUEUED_BY_LENGTH`): an entry no record queued — the
-/// emitter's under `LATEXML_FM_EMIT=2`, digested past every record — is told apart without a comparison. The records
+/// emitter's, digested past every record — is told apart without a comparison. The records
 /// passed that are digested or taken out leave the index.
 fn undigested_queued(called: &[CalledText], content: &Tokens) -> Option<usize> {
   QUEUED_BY_LENGTH.with_borrow_mut(|index| {

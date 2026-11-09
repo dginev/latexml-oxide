@@ -49,7 +49,7 @@ use crate::base_utilities::{
   },
 };
 
-/// The State value saying a flush emitted (the writer has nothing left to do, `write_observed_frontmatter`): the ledger's
+/// The State value saying a flush emitted: the ledger's
 /// generation whose reading the last emit wrote to its end ([`Ledger::generation`]), which a later flush with nothing queued
 /// and nothing new read writes again as nothing. A State value, as a speculative run's flush is undone with it.
 const EMITTED: &str = "lx_fm_emitted";
@@ -1269,7 +1269,7 @@ fn note_piece(index: usize, span: (u16, u16)) -> Option<(u16, u16)> {
 /// A note the reading gives the author block alone, as Perl prints it: digested inside the entry's contact, where `\\thanks`
 /// is `\\lx@add@pubnote@thanks` and `\\footnote` `\\lx@add@pubnote` (Base_Utility.pool.ltxml:331-332), one `<pubnote>` of
 /// the document — its own tokens so made (`document_note_call`, the token reader's one conversion of a note to the document's).
-/// 2504.09745's `$^{\\ddagger}$Ericsson Canada\\thanks{…}` once, where the switch off prints it per relocated copy and the
+/// 2504.09745's `$^{\\ddagger}$Ericsson Canada\\thanks{…}` once, where the old driver printed it per relocated copy and the
 /// block's creator held it (review revLO2 1). `None` for an item of another kind or owners, or a note of another command
 /// (`\\thanks[…]{…}`, `\\thanksref`), which the block's creator holds as before.
 fn block_pubnote(item: &Item) -> Option<Vec<Token>> {
@@ -1686,7 +1686,7 @@ fn item_call(
       }) > 1
       {
         let text = by_text(Some("a macro's span"), &assoc.text);
-        // (a note a contact command made there is that contact, by its text: `<contact role="note">`, as the switch off has
+        // (a note a contact command made there is that contact, by its text: `<contact role="note">`, as the old driver had
         // it — jheppub's `\note{…}` in `\newcommand{\ann}{Ann Able\note{…}}`, review revLO3 1)
         if note && event_at(index, span, |e| e.kind == EventKind::Contact, |_| ()).is_some() {
           return Ok(annotate_now("ltx:contact", &keys, &item_only(&text)));
@@ -1856,7 +1856,7 @@ fn creator_keys(c: &RCreator, labels: &[String]) -> Vec<Token> {
   let labels = labels.join(",");
   let Some(call) = creator_call_of(c) else {
     let mut keys = internal(&s!("role={},", creator_role(c)));
-    // (the block's own `annotations` where they hold a command, as the switch off digests them on each of its creators: a
+    // (the block's own `annotations` where they hold a command, as the old driver digested them on each of its creators: a
     // note there is the document's, authblk's `\\author[1\\thanks{Equal contribution.}]`, 2308.08363, 2410.16774, 2207.11475,
     // 2207.11842 — [`block_annotations`]; brief CL7, C5)
     let own = with_ledger(|ledger| match ledger.entries().get(c.source) {
@@ -1900,7 +1900,7 @@ fn creator_keys(c: &RCreator, labels: &[String]) -> Vec<Token> {
 /// The `annotations` value of an author block's keyvals as the ledger keeps them (`AuthorBlock::keyvals`, the call's text), its
 /// outer braces off, where it holds a command, which no label does and a note does: authblk's
 /// `\\author[1\\thanks{Equal contribution.}]`, `annotations={1\\thanks {…}}` (2308.08363, 2410.16774, 2207.11475, 2207.11842)
-/// — what the switch off digests on each creator.
+/// — what the old driver digested on each creator.
 fn block_annotations(keyvals: &str) -> Option<String> {
   let mut depth = 0i32;
   let mut start = 0;
@@ -2453,10 +2453,10 @@ fn analysis() -> Rc<Analysis> {
   }
   let (generation, inputs) = with_ledger(|ledger| (ledger.generation(), ledger_inputs(ledger)));
   let reading = resolve(&inputs);
-  // (an entry's addresses, taken out, are written cut from its tokens, each address its owner's e-mail, as the switch-off writer
+  // (an entry's addresses, taken out, are written cut from its tokens, each address its owner's e-mail, as the old driver's writer
   // cuts today's entry (`address_cut`: 2011.02560, astro-ph0610446, 2406.02913); an entry its tokens can't be cut so is given
   // back whole, the Kind steps' to cut in place after the flush, as for a paper with no block, `insert_frontmatter` — entry by
-  // entry, not the switch off's whole paper; the checks read the reading and its drops, `Resolved::drops`, 1610.05419)
+  // entry, not the old driver's whole paper; the checks read the reading and its drops, `Resolved::drops`, 1610.05419)
   let mut resolved = reading.clone();
   let cuts = entry_cuts(&reading, &mut resolved);
   with_ledger(|ledger| {
@@ -2854,7 +2854,7 @@ fn whole_block(index: usize, keys: &str, annotations: &[Token]) -> Option<Result
     Some(Entry::Author(block)) => Some((block.keyval_tokens.clone(), block.tokens.clone())),
     _ => None,
   })?;
-  // (the call's own keyvals as its tokens, as the switch off hands them on: never their text retokenized, where a command
+  // (the call's own keyvals as its tokens, as the old driver handed them on: never their text retokenized, where a command
   // glues to the letters after it, `\author[\dag a]` read back `\daga` — 2205.13776, brief NE4; the emit's own keys
   // `key_tokens`)
   let mut out: Vec<Token> = keyvals
@@ -2888,7 +2888,7 @@ enum Unwritten {
   Whole,
   /// the reading kept, each ink a note of the author block
   Kept,
-  /// the call written as the switch off writes it: its queued command, digested where the queue holds it
+  /// the call written as the old driver wrote it: its queued command, digested where the queue holds it
   AsQueued,
   Lost,
 }
@@ -3085,7 +3085,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     })
   };
   // (or a name or an item of it joins ink across an alignment's cells: no cut of the block makes it — its tokens hold the
-  // alignment's `&` or join two columns' rows —, so the block is Perl's whole-block creator, as the switch off writes it
+  // alignment's `&` or join two columns' rows —, so the block is Perl's whole-block creator, as the old driver wrote it
   // (Base_Utility.pool.ltxml:691-693): names one per cell read as one, 1504.01048, 2607.22455, 2609.36783, 2507.07623,
   // 2512.13460, 2510.03886, 1902.06698, 2101.00440; an affiliation run on into the next column, 1304.3138, 2511.14288,
   // 2605.30319, 1711.10325, 1802.06894, 1704.06967; each counted)
@@ -3266,7 +3266,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       }
       if !calls.is_some_and(|calls| calls.iter().any(|(command, _)| *command == entry.2)) {
         let text = content_text(&queued_affiliation_text(&last_group(&entry.2)));
-        // (one printing a word the reading writes nowhere is written as queued, as the switch off writes it — the newest
+        // (one printing a word the reading writes nowhere is written as queued, as the old driver wrote it — the newest
         // creator's —, never taken to be lost: dmtcs-episciences's `\affiliation`, `\@add@to@frontmatter{ltx:creator}`
         // of a constructor, 1810.10099, 2402.10676 (brief CL9, C4); counted)
         let reading = reading_words.get_or_insert_with(|| words_written(resolved));
@@ -3720,8 +3720,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(false)));
     }
   }
-  // (a call whose printed words the reading holds no place for, and of which it writes nothing, is written as the switch off
-  // writes it — its queued command, below the items, the newest creator's as the switch off's queue digests it — never a
+  // (a call whose printed words the reading holds no place for, and of which it writes nothing, is written as the old driver
+  // wrote it — its queued command, below the items, the newest creator's as the old driver's queue digested it — never a
   // silent loss: iopart's `\ead{jborkowska astro.uni.torun.pl}`, whose text holds no address, 2112.14174 (brief CL7, C6). One
   // the reading writes part of keeps its reading, the rest counted (1802.00231, 2609.24170: brief CL9b keeps the reading,
   // never declining a block for it — hep-ex0609057, 2304.07772). Not a contact of a
@@ -3919,7 +3919,7 @@ fn per_author_marks(source: usize) -> bool {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::base_utilities::frontmatter::observer::{ledger::TitleStamp, reset_fm_shadow};
+  use crate::base_utilities::frontmatter::observer::{ledger::TitleStamp, reset_fm_reading};
 
   /// A creator's labels are written back as plain characters: authblk's `\author[D. Kopta et al.]` keeps the label
   /// `affiliation:D._Kopta_et_al.` (`clean_label`, Perl Package.pm:510), whose `_` the digested `annotations=` value read
@@ -3944,7 +3944,7 @@ mod tests {
   /// frontmatter per paper, never the engine). The count changes with the entries alone (`Ledger::entries_mut`).
   #[test]
   fn the_reset_drops_the_reading_and_its_count() {
-    reset_fm_shadow();
+    reset_fm_reading();
     with_ledger(|ledger| {
       ledger.push(Entry::Title(TitleStamp {
         index:  0,
@@ -3963,7 +3963,7 @@ mod tests {
         cuts:       Vec::new(),
       }));
     });
-    reset_fm_shadow();
+    reset_fm_reading();
     with_ledger(|ledger| {
       assert!(ledger.analysis.is_none());
       assert_eq!(ledger.generation(), 0);
@@ -3977,7 +3977,7 @@ mod tests {
   /// synthetic input reproduces.
   #[test]
   fn a_digested_queue_entry_is_never_written_again() {
-    reset_fm_shadow();
+    reset_fm_reading();
     let call = |index: usize, text: &'static str| {
       let command = TokenizeInternal!(text);
       Entry::Api(ApiCall {
@@ -3988,7 +3988,6 @@ mod tests {
         queue_position: index,
         after_block: None,
         inside: false,
-        binding: None,
         attrs: "role=note".to_string(),
         parent: "ltx:creator".to_string(),
         content: Tokens::new(Vec::new()),
@@ -4034,7 +4033,7 @@ mod tests {
     };
     let (items, _) = items_to_emit(&resolved, &[], &BTreeSet::new(), &mut Vec::new());
     let texts: Vec<&str> = items.iter().map(|item| item.assoc.text.as_str()).collect();
-    reset_fm_shadow();
+    reset_fm_reading();
     assert_eq!(texts, ["Kept note"]);
   }
 }

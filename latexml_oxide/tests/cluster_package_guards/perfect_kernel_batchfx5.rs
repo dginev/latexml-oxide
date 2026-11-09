@@ -1,4 +1,4 @@
-//! Guards for FX5, an entry's e-mail under `LATEXML_FM_EMIT=2` (OXIDIZED_DESIGN_DIVERGENCES #980) when the entry is an affiliation
+//! Guards for FX5, an entry's e-mail under `=2` (OXIDIZED_DESIGN_DIVERGENCES #980) when the entry is an affiliation
 //! its owner already holds from another source: the e-mail kept as its own contact
 //! (`an_institute_email_under_a_repeated_affiliation_is_kept`).
 

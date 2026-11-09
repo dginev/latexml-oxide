@@ -266,8 +266,8 @@ impl Definition for Expandable {
 
   /// [`Self::invoke`] onto the input, a token-list body without building the expansion: the parameterless
   /// body is pushed as stored, a body with parameters through its substitution plan
-  /// ([`crate::gullet::unread_substituted`]). Closures, argument-only definitions and a frontmatter setter (whose
-  /// expansion is noted, as [`Self::invoke`] notes it) take the general path.
+  /// ([`crate::gullet::unread_substituted`]). Closures, argument-only definitions and a watched call (whose
+  /// arguments are kept, as [`Self::invoke`] keeps them) take the general path.
   fn invoke_onto_input(&self, once_only: bool) -> Result<()> {
     if self.may_be_watched()
       && let Some(watched) = self.watched_call()
@@ -338,8 +338,6 @@ impl Definition for Expandable {
 /// What a setter watch observes of a macro call ([`Expandable::watched_call`]).
 #[derive(Clone, Copy)]
 struct WatchedCall {
-  /// a frontmatter setter's: its expansion noted ([`note_frontmatter_setter_expansion`])
-  noted:    bool,
   /// a document call's: its arguments kept ([`note_document_call`])
   recorded: bool,
   /// a binding macro's while the document's frontmatter entry is digested: the arguments it drops kept
@@ -365,8 +363,8 @@ impl Expandable {
   #[inline]
   pub fn yields_calls(&self) -> bool { matches!(self.special_call, SpecialCall::YieldsCalls) }
 
-  /// What a setter watch (`definition::origin::setter_watch`) observes of this call, if anything: a frontmatter setter's
-  /// ([`note_setter_call`], whose expansion is noted), a call of LaTeXML's own macro that reads its arguments from the
+  /// What a setter watch (`definition::origin::setter_watch`) observes of this call, if anything: a watched setter's
+  /// ([`note_setter_call`], a stand-in copy's default replaced), a call of LaTeXML's own macro that reads its arguments from the
   /// document's text (`origin::document_call_watch`, [`crate::gullet::reading_document_text`]: its arguments kept,
   /// [`note_document_call`]), and a binding's macro called while a frontmatter entry the document gave is digested
   /// (`origin::dropped_argument_watch`, `DefinitionOrigin::is_binding_made`: the arguments it drops kept,
@@ -379,7 +377,9 @@ impl Expandable {
   #[cold]
   #[inline(never)]
   fn watched_call(&self) -> Option<WatchedCall> {
-    let noted = crate::definition::origin::setter_name_watch() && note_setter_call(&self.cs);
+    if crate::definition::origin::copy_default_watch() {
+      note_setter_call(&self.cs);
+    }
     let recorded = crate::definition::origin::document_call_watch()
       && self.paramlist.is_some()
       && self.origin.is_latexml_owned()
@@ -394,12 +394,7 @@ impl Expandable {
       && self.stored_parameters().numbers != 0
       && !lookup_bool("lx_replaying_class_setter")
       && !lookup_bool("lx_depositing_class_maketitle");
-    (noted || recorded || dropping || stored).then_some(WatchedCall {
-      noted,
-      recorded,
-      dropping,
-      stored,
-    })
+    (recorded || dropping || stored).then_some(WatchedCall { recorded, dropping, stored })
   }
 
   /// What this macro's token body writes into a store ([`stored_parameters`]), once per definition; nothing of a closure.
@@ -412,9 +407,7 @@ impl Expandable {
     })
   }
 
-  /// [`Self::expand`] for a watched call ([`Self::watched_call`]): a frontmatter setter's expansion noted once its
-  /// arguments are read, the input after them what it is read before (the frontmatter observer's ledger); a document
-  /// call's arguments kept, each with whether its parameter is optional and whether the body names it (the title-page
+  /// [`Self::expand`] for a watched call ([`Self::watched_call`]): a document call's arguments kept, each with whether its parameter is optional and whether the body names it (the title-page
   /// check); and the required arguments a binding's macro drops while a document's frontmatter entry is digested.
   #[cold]
   #[inline(never)]
@@ -485,9 +478,6 @@ impl Expandable {
     } else {
       self.expand(once_only)?
     };
-    if watched.noted {
-      note_frontmatter_setter_expansion(&self.cs);
-    }
     Ok(expansion)
   }
 

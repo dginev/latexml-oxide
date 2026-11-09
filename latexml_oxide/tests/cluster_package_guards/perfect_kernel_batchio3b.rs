@@ -1,6 +1,6 @@
 //! Guards for IO3b: a creator call a document note makes (amsart's `\thanks{… \author{…}\address{…}\email{…}}`,
 //! 0807.4720) is an event of the note's reading (`rehearsal`'s `\lx@fm@obs@add`, `EventKind::ApiCall` "ltx:creator"),
-//! and such a note is digested as Perl's at `LATEXML_FM_EMIT=2`: each contact in it the newest creator's
+//! and such a note is digested as Perl's at `=2`: each contact in it the newest creator's
 //! (`\lx@annotate@frontmatter`, Base_Utility.pool.ltxml:520-531), no flush's reading answering one.
 
 use latexml::util::test::{error_count, warning_count};

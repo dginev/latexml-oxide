@@ -176,7 +176,7 @@ fn caption_in_centered_minipage_with_adjustbox() {
 
 /// 64a: `Ann Able$^*$ and Bob Bee$^1$` with no `$^1$` line: Bob's unanswered mark stays in his name (the RED of 63x).
 /// Repro sectioning-frontmatter/author_unmatched_numeric_mark.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same; the math `*` written ∗ as LaTeXML writes a math
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same; the math `*` written ∗ as LaTeXML writes a math
 /// asterisk (FIDELITY_CHARTER §4).
 #[test]
 fn author_unmatched_numeric_mark() {
@@ -1086,7 +1086,7 @@ fn supplement_title_after_body_dropped() {
 }
 
 /// 64d (HF2 S3, site A): a block's unmarked first line of names is a names line later unmarked rows of names continue (2411.13503). Repro sectioning-frontmatter/author_unmarked_first_line_list_wraps.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same; the math `*` written ∗ as LaTeXML writes a math
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same; the math `*` written ∗ as LaTeXML writes a math
 /// asterisk (FIDELITY_CHARTER §4).
 #[test]
 fn author_unmarked_first_line_list_wraps() {
@@ -1109,7 +1109,7 @@ fn author_unmarked_first_line_list_wraps() {
 }
 
 /// 64d (HF2 S3, site A): rows of names without trailing commas continue the first line's names (2410.07701). Repro sectioning-frontmatter/author_unmarked_rows_without_trailing_comma.
-/// T1 (`LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`): the same; the math `*` written ∗ as LaTeXML writes a math
+/// T1 (`=2`, `perfect_kernel_batcht1::expect`): the same; the math `*` written ∗ as LaTeXML writes a math
 /// asterisk (FIDELITY_CHARTER §4).
 #[test]
 fn author_unmarked_rows_without_trailing_comma() {

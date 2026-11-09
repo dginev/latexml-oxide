@@ -1,5 +1,5 @@
 //! Guards for BC1, the one-pass fold's first step (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`; OXIDIZED_DESIGN_DIVERGENCES
-//! #980): at `LATEXML_FM_EMIT=2` the emitter writes the author block's own creator (OXIDIZED_DESIGN #159), which relocate's
+//! #980): at `=2` the emitter writes the author block's own creator (OXIDIZED_DESIGN #159), which relocate's
 //! orphan-sharing branch made before.
 
 use latexml::util::test::{error_count, warning_count};
@@ -10,7 +10,7 @@ use super::{
 };
 
 /// A block's e-mail line no name spells (`label=addresses:block`): the nameless creator below the names holds it, written by
-/// the emitter (`writer::emit::block_creator`), into which relocate's orphan procedure shares where it would promote a stub,
+/// the emitter (`emitter::emit::block_creator`), into which relocate's orphan procedure shares where it would promote a stub,
 /// uncounted among the names (no `_num`: Bob Baker's separator stays the last name's). Witnesses 1012.4847, 1106.3045 (byte
 /// identical before and after on int149a `=2`). The creators' XML is the switch-off one.
 #[test]

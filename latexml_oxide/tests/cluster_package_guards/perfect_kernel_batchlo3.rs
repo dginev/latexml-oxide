@@ -1,4 +1,4 @@
-//! Guards for LO3, content lost at `LATEXML_FM_EMIT=2` only (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`;
+//! Guards for LO3, content lost at `=2` only (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`;
 //! OXIDIZED_DESIGN_DIVERGENCES #980): a contact command of an author block whose kind is a note — jheppub's `\note{…}` —
 //! written as the contact command it is (`a_note_command_in_an_author_is_its_contact`).
 

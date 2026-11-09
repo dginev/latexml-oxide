@@ -1,7 +1,7 @@
 % mechanism: in an author `\thanks` whose text opens with a raised number, a later glyph that is no superscript (the
 %   `*` of "*Corresponding authors") is its text, not another entry's mark: the switch-off `\lx@add@thanks` parts the
 %   entry at raised marks alone (`split_wrapped_affiliation_marks`), so the note is the affiliation of its number —
-%   with `LATEXML_FM_EMIT=2` the glyph, which two names show, made the reading keep it a thanks note of the last name
+%   with `=2` the glyph, which two names show, made the reading keep it a thanks note of the last name
 % witness: 2505.06451 (the 4th `\thanks{$^{4}$ Department of Mechanical Engineering, The University of Tokyo, Japan.
 %   venture@g.ecc.u-tokyo.ac.jp *Corresponding authors}` under `Gentiane Venture$^{4,2*}$`)
 % oracle:  pdflatex 0 errors: "Ann Able1∗, Bob Baker2 and Cat Cole3,1∗", the footnotes "1 Univ A, Japan.", "2 Univ B,

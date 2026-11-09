@@ -1,4 +1,4 @@
-//! Guards for batch P2 (`pk/P2`, 2026-11-08), three switch-off mechanisms ported to `LATEXML_FM_EMIT=2` (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`;
+//! Guards for batch P2 (`pk/P2`, 2026-11-08), three switch-off mechanisms ported to `=2` (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`;
 //! OXIDIZED_DESIGN_DIVERGENCES #980): cas's one unlabelled `\affiliation` is every author's
 //! (`a_cas_shared_affiliation_is_every_authors`); a role note is the note the switch-off output writes — a labelled
 //! legend (`a_printed_label_legend_is_its_carriers_note`), a `\thanks` no number leads

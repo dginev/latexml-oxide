@@ -197,7 +197,7 @@ impl Resolver {
     // (a note making a creator — amsart's `\thanks{… \author{Bob}\address{Univ B}\email{bob@b.org}}`, 0807.4720, its
     // `EventKind::ApiCall` "ltx:creator" — is digested as Perl's: each contact in it goes to the creator newest when it is
     // digested, `\lx@annotate@frontmatter` (Base_Utility.pool.ltxml:520-531), and no reading of a flush answers one —
-    // the first flush's, before that creator exists, gave Ann Bob's e-mail; `writer::emit`'s pubnote wrapper keeps them)
+    // the first flush's, before that creator exists, gave Ann Bob's e-mail; `emitter::emit`'s pubnote wrapper keeps them)
     if tag == "ltx:pubnote" {
       if events.iter().any(is_creator_call) {
         return;
@@ -366,7 +366,7 @@ impl Resolver {
         // `ltx:creator`, `{\lx@personname{#2}}` — "the name can contain much more than just the name"
         // (Base_Utility.pool.ltxml:585-589) —, so a `\thanks` there is a note of that creator; the reading attaches
         // it, and the emitter writes it with the creator (2505.09041's `\author{Craig M$^{\mathrm{c}}$Rae\thanks{…}}`,
-        // lost at `LATEXML_FM_EMIT=2`))
+        // lost by the emitter before this))
         for event in events.iter().filter(|e| e.kind == EventKind::Note) {
           self.note(index, event, Some(made), "note:adjacent");
         }
