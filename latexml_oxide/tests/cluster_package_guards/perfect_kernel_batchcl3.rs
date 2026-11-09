@@ -21,31 +21,27 @@ fn a_whole_blocks_tabular_juggle_is_a_line_break() {
   );
   let class =
     include_str!("../../../tools/perfect_kernel/repros/sectioning-frontmatter/vldbjuggle.cls");
-  let off = [
-    row(&["Ann Able", "affiliation=Univ Alpha", "email=ann@alpha.edu"]),
-    row(&["Bob Baker", "affiliation=Univ Beta", "email=bob@beta.edu"]),
-  ];
   let whole = [row(&[
     "Ann Able 1 Bob Baker 2 1 Univ Alpha 2 Univ Beta",
     "email=ann@alpha.edu",
     "email=bob@beta.edu",
   ])];
-  for (emit, warnings, expected) in [("0", 1, &off[..]), ("2", 2, &whole[..])] {
-    let (log, xml) = in_a_directory(tex, &[("vldbjuggle.cls", class)], &[
-      ("LATEXML_REHEARSAL_READ_BUDGET", "20000"),
-      ("LATEXML_FM_EMIT", emit),
-    ]);
-    assert_eq!(
-      (error_count(&log), log.matches("\nFatal:").count()),
-      (0, 0),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(warning_count(&log), warnings, "emit={emit}: {log}");
-    assert_eq!(
-      log.matches("Warning:frontmatter:rehearsal_budget").count(),
-      1,
-      "emit={emit}: {log}"
-    );
-    assert_eq!(creators(&xml), expected, "emit={emit}: {xml}");
-  }
+  let warnings = 2;
+  let expected = &whole[..];
+  let (log, xml) = in_a_directory(tex, &[("vldbjuggle.cls", class)], &[(
+    "LATEXML_REHEARSAL_READ_BUDGET",
+    "20000",
+  )]);
+  assert_eq!(
+    (error_count(&log), log.matches("\nFatal:").count()),
+    (0, 0),
+    "{log}"
+  );
+  assert_eq!(warning_count(&log), warnings, "{log}");
+  assert_eq!(
+    log.matches("Warning:frontmatter:rehearsal_budget").count(),
+    1,
+    "{log}"
+  );
+  assert_eq!(creators(&xml), expected, "{xml}");
 }

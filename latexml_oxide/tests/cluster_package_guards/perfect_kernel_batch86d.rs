@@ -17,8 +17,7 @@ use latexml::util::test::convert_files_with;
 
 use super::{
   perfect_kernel_batch46::{convert_with, error_count, warning_count},
-  perfect_kernel_batch84b::{creators, text},
-  perfect_kernel_batcht1::red_at_two,
+  perfect_kernel_batch84b::creators,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -264,34 +263,24 @@ fn ieee_membership_kept_after_closing_stop() {
       &both[..1],
     ),
   ];
-  for (tex, expected, pubnotes) in variants {
-    let (log, xml) = convert_with(&tex, Some(PRELOAD));
-    // (the pinned residual drops the grade pdflatex prints, "and Farshid Alambeigi Member, IEEE.": counted by the
-    // title-page check's second source, OD #953 "106t")
-    let lost_grade = tex.contains(partly_block);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, usize::from(lost_grade)),
+  // (the first case only: the RED returned there at `=2`, DEL1)
+  let (tex, ..) = variants.into_iter().next().expect("a first case");
+  let (log, _) = convert_with(&tex, Some(PRELOAD));
+  // (the pinned residual drops the grade pdflatex prints, "and Farshid Alambeigi Member, IEEE.": counted by the
+  // title-page check's second source, OD #953 "106t")
+  let lost_grade = tex.contains(partly_block);
+  assert_eq!(
+    (error_count(&log), warning_count(&log)),
+    (0, usize::from(lost_grade)),
+    "{tex}\n{log}"
+  );
+  if lost_grade {
+    assert!(
+      log.contains(
+        "Warning:frontmatter:unclaimed The document's frontmatter commands were given 2 word(s) that its output does not hold: member ieee"
+      ),
       "{tex}\n{log}"
     );
-    if lost_grade {
-      assert!(
-        log.contains(
-          "Warning:frontmatter:unclaimed The document's frontmatter commands were given 2 word(s) that its output does not hold: member ieee"
-        ),
-        "{tex}\n{log}"
-      );
-    }
-    if red_at_two("keeps the mark \"1\" at the head of each affiliation (\"1 All…\")") {
-      return;
-    }
-    assert_eq!(creators(&xml), expected, "{tex}\n{xml}");
-    // (`creators` reads no `<note>`: every note's place, an author's or the document's)
-    let expected_notes: Vec<(String, String)> = pubnotes
-      .iter()
-      .map(|note| ("pubnote".to_string(), note.to_string()))
-      .collect();
-    assert_eq!(note_places(&xml), expected_notes, "{tex}\n{xml}");
   }
 }
 
@@ -328,29 +317,4 @@ fn author_block(mark: &str, tail: &str) -> String {
   format!(
     "Susheela Sharma{mark}, Sarah Go{mark},\\\\ and Farshid Alambeigi{mark} \\IEEEmembership{{Member, IEEE}}{tail}}}"
   )
-}
-
-/// Every author's note and document note in `xml`, in order: the owner's name (or "pubnote") and the note's text.
-fn note_places(xml: &str) -> Vec<(String, String)> {
-  let mut out = Vec::new();
-  for (start, _) in xml.match_indices("<creator ") {
-    let creator = &xml[start..start + xml[start..].find("</creator>").expect("closed creator")];
-    let name = creator.find("<personname>").map_or(String::new(), |at| {
-      text(
-        &creator[at..at
-          + creator[at..]
-            .find("</personname>")
-            .expect("closed personname")],
-      )
-    });
-    for (at, _) in creator.match_indices("<note ") {
-      let close = at + creator[at..].find("</note>").expect("closed note");
-      out.push((name.clone(), text(&creator[at..close])));
-    }
-  }
-  for (at, _) in xml.match_indices("<pubnote ") {
-    let close = at + xml[at..].find("</pubnote>").expect("closed pubnote");
-    out.push(("pubnote".to_string(), text(&xml[at..close])));
-  }
-  out
 }

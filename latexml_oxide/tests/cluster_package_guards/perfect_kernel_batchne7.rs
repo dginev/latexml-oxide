@@ -8,19 +8,18 @@
 use latexml::util::test::{
   convert_files_with_setup_then, error_count, rng_error_count, warning_count,
 };
-use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::perfect_kernel_batch84b::creators;
 
-/// Convert `tex` under `emit` (`None`: the default switch): the log and the XML.
-fn run(tex: &str, preload: Option<&str>, emit: Option<u8>) -> (String, String) {
+/// Convert `tex`: the log and the XML.
+fn run(tex: &str, preload: Option<&str>) -> (String, String) {
   let (log, xml, ()) = convert_files_with_setup_then(
     tex,
     &[],
     preload,
     move || {
       set_fm_shadow_override(None);
-      set_fm_emit_override(emit);
     },
     |_| (),
   );
@@ -68,57 +67,52 @@ fn tikz_badges_in_frontmatter_contacts_keep_svg_ids() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ne7_tikz_badges_in_contacts_keep_svg_ids.tex"
   );
-  for (emit, suffix) in [(0, ""), (2, "a")] {
-    let (log, xml) = run(tex, Some("ar5iv.sty"), Some(emit));
-    let context = format!("emit={emit}");
+  let suffix = "a";
+  let context = "=2";
+  let (log, xml) = run(tex, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  if let Some(lines) = rng_error_count(&xml) {
+    assert_eq!(lines, 0, "jing:\n{xml}");
+  }
+  let expected: Vec<String> = ["pgfcp1", "pgfcp3", "pgfcp4", "pgfcp6", "pgfsh2", "pgfsh5"]
+    .iter()
+    .map(|id| format!("{id}{suffix}"))
+    .collect();
+  let ids = svg_ids(&xml, context);
+  assert_eq!(ids, expected, "{context}:\n{xml}");
+  for id in &ids {
     assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "{context}: {log}"
+      xml.matches(&format!("url(#{id})")).count(),
+      1,
+      "{id} referenced once\n{xml}"
     );
-    if let Some(lines) = rng_error_count(&xml) {
-      assert_eq!(lines, 0, "{context}: jing:\n{xml}");
-    }
-    let expected: Vec<String> = ["pgfcp1", "pgfcp3", "pgfcp4", "pgfcp6", "pgfsh2", "pgfsh5"]
-      .iter()
-      .map(|id| format!("{id}{suffix}"))
-      .collect();
-    let ids = svg_ids(&xml, &context);
-    assert_eq!(ids, expected, "{context}:\n{xml}");
-    for id in &ids {
-      assert_eq!(
-        xml.matches(&format!("url(#{id})")).count(),
-        1,
-        "{context}: {id} referenced once\n{xml}"
-      );
-    }
-    assert_eq!(
-      creators(&xml),
-      [vec!["Ann Able".to_string(), "url=GH".to_string()], vec![
-        "Bob Baker".to_string()
-      ]],
-      "{context}"
+  }
+  assert_eq!(
+    creators(&xml),
+    [vec!["Ann Able".to_string(), "url=GH".to_string()], vec![
+      "Bob Baker".to_string()
+    ]],
+    "{context}"
+  );
+  for (holder, href) in [
+    (
+      "<contact name=\"URL:\u{a0}\" role=\"url\">",
+      "https://example.org/a",
+    ),
+    (
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">"#,
+      "https://example.org/b",
+    ),
+  ] {
+    let at = xml
+      .find(holder)
+      .unwrap_or_else(|| panic!("no {holder}\n{xml}"));
+    assert!(
+      xml[at + holder.len()..].trim_start().starts_with(&format!(
+        r#"<ref class="ltx_href" href="{href}"><picture height="19.69" width="47.24" "#
+      )),
+      "the badge's picture in {holder}\n{xml}"
     );
-    for (holder, href) in [
-      (
-        "<contact name=\"URL:\u{a0}\" role=\"url\">",
-        "https://example.org/a",
-      ),
-      (
-        r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">"#,
-        "https://example.org/b",
-      ),
-    ] {
-      let at = xml
-        .find(holder)
-        .unwrap_or_else(|| panic!("{context}: no {holder}\n{xml}"));
-      assert!(
-        xml[at + holder.len()..].trim_start().starts_with(&format!(
-          r#"<ref class="ltx_href" href="{href}"><picture height="19.69" width="47.24" "#
-        )),
-        "{context}: the badge's picture in {holder}\n{xml}"
-      );
-    }
   }
 }
 
@@ -132,7 +126,7 @@ fn an_eqnarray_copy_in_a_picture_keeps_its_references() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/graphics-tikz/eqnarray_copy_in_a_picture_keeps_its_references.tex"
   );
-  let (log, xml) = run(tex, None, None);
+  let (log, xml) = run(tex, None);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   if let Some(lines) = rng_error_count(&xml) {
     assert_eq!(lines, 0, "jing:\n{xml}");

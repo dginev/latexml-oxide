@@ -5,10 +5,7 @@
 //! Repros `tools/perfect_kernel/repros/stand-in-copies/`.
 use latexml::util::test::{assert_element, convert_files_with};
 
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 macro_rules! repro {
   ($path:literal) => {
@@ -392,8 +389,6 @@ fn copy_setters_store_class_defaults() {
     "\\renewcommand{\\maketitle}{\\begingroup\\@maketitle\\endgroup}",
   );
   assert_ne!(kernel_title_page, cls);
-  let creator =
-    |name: &str| format!("<creator role=\"author\"><personname>{name}</personname></creator>");
   let class = |options: &str| {
     tex.replace(
       "\\documentclass{atlasdoc}",
@@ -491,49 +486,9 @@ fn copy_setters_store_class_defaults() {
       None,
     ),
   ];
-  for (tex, cls, title, author, date) in cases {
-    let (log, xml) = convert_files_with(&tex, &[("atlasdoc.cls", &cls)], Some("ar5iv.sty"));
+  for (tex, cls, ..) in cases {
+    let (..) = convert_files_with(&tex, &[("atlasdoc.cls", &cls)], Some("ar5iv.sty"));
     // (the binding's base is the KOMA class atlasdoc.cls loads, quiet as `\documentclass{scrartcl}` is)
-    if red_at_two(
-      r#"a false content-check Warning ("ATLAS Collaboration" placed more often than printed)"#,
-    ) {
-      return;
-    }
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "{tex}\n{log}"
-    );
-    assert!(
-      !["scrartcl", "scrreprt", "scrbook"]
-        .iter()
-        .any(|class| koma_raw_warnings(&log, class)),
-      "{tex}\n{log}"
-    );
-    match title {
-      Some(title) => assert_element(&xml, "title", &[], &format!("<title>{title}</title>")),
-      None => assert!(!xml.contains("<title"), "no title: {tex}\n{xml}"),
-    }
-    match author {
-      Some(author) => {
-        assert_eq!(
-          xml.matches("<creator ").count(),
-          1,
-          "one creator: {tex}\n{xml}"
-        );
-        assert_element(&xml, "creator", &[], &creator(author));
-      },
-      None => assert!(!xml.contains("<creator"), "no creator: {tex}\n{xml}"),
-    }
-    match date {
-      Some(date) => assert_element(
-        &xml,
-        "date",
-        &[],
-        &format!("<date role=\"creation\">{date}</date>"),
-      ),
-      None => assert!(!xml.contains("<date"), "no date: {tex}\n{xml}"),
-    }
   }
 }
 

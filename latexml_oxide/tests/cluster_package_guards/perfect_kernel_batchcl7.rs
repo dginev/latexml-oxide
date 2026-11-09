@@ -5,7 +5,7 @@
 //! writes it (iopart's `\ead` with no address in its text; 2112.14174).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::perfect_kernel_batch84b::creators;
 
@@ -21,15 +21,14 @@ macro_rules! repro {
 
 fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).collect() }
 
-/// Convert `tex` under `emit`: the log and the XML.
-fn run(tex: &str, emit: u8) -> (String, String) {
+/// Convert `tex`: the log and the XML.
+fn run(tex: &str) -> (String, String) {
   let (log, xml, ()) = convert_files_with_setup_then(
     tex,
     &[],
     Some("ar5iv.sty"),
     move || {
       set_fm_shadow_override(None);
-      set_fm_emit_override(Some(emit));
     },
     |_| (),
   );
@@ -53,27 +52,17 @@ fn elements(xml: &str, tag: &str) -> Vec<String> {
 /// no Warning. Now its creators carry the block's own annotations, as off's.
 #[test]
 fn a_note_in_an_authors_annotations_is_kept() {
-  for emit in [0, 2] {
-    let (log, xml) = run(repro!("cl7_authblk_thanks_in_annotations"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(
-      creators(&xml),
-      [
-        row(&["Aviv Slobodkin", "affiliation=Bar-Ilan University"]),
-        row(&["Niv Nachum", "affiliation=Amazon"])
-      ],
-      "emit={emit}"
-    );
-    assert_eq!(
-      elements(&xml, "pubnote"),
-      ["<pubnote>Equal contribution alpha.</pubnote>"],
-      "emit={emit}: {xml}"
-    );
-  }
+  let (log, xml) = run(repro!("cl7_authblk_thanks_in_annotations"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Aviv Slobodkin", "affiliation=Bar-Ilan University"]),
+    row(&["Niv Nachum", "affiliation=Amazon"])
+  ]);
+  assert_eq!(
+    elements(&xml, "pubnote"),
+    ["<pubnote>Equal contribution alpha.</pubnote>"],
+    "{xml}"
+  );
 }
 
 /// iopart's `\ead{jborkowska astro.uni.torun.pl}` prints no address: `=2`'s reading holds no place for its words and wrote
@@ -81,33 +70,22 @@ fn a_note_in_an_authors_annotations_is_kept() {
 /// writes it — the e-mail contact of the newest creator as off's queue digests it —, with its one counted Warning.
 #[test]
 fn a_call_the_reading_writes_nothing_of_is_written_as_queued() {
-  for emit in [0, 2] {
-    let (log, xml) = run(repro!("cl7_iopart_ead_without_address"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, usize::from(emit == 2)),
-      "emit={emit}: {log}"
-    );
-    if emit == 2 {
-      assert!(
-        log.contains("the call is written as queued, as the switch off writes it"),
-        "{log}"
-      );
-    }
-    assert_eq!(
-      creators(&xml),
-      [
-        row(&[
-          "Justyna Borkowska",
-          "affiliation=Institute of Astronomy, Torun, Poland",
-          "email=jborkowska astro.uni.torun.pl"
-        ]),
-        row(&[
-          "Boudewijn F. Roukema",
-          "affiliation=Institute of Astronomy, Torun, Poland"
-        ])
-      ],
-      "emit={emit}"
-    );
-  }
+  let (log, xml) = run(repro!("cl7_iopart_ead_without_address"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("the call is written as queued, as the switch off writes it"),
+    "{log}"
+  );
+
+  assert_eq!(creators(&xml), [
+    row(&[
+      "Justyna Borkowska",
+      "affiliation=Institute of Astronomy, Torun, Poland",
+      "email=jborkowska astro.uni.torun.pl"
+    ]),
+    row(&[
+      "Boudewijn F. Roukema",
+      "affiliation=Institute of Astronomy, Torun, Poland"
+    ])
+  ]);
 }

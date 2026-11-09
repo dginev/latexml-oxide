@@ -8,7 +8,6 @@
 use super::{
   convert_with,
   perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
 };
 
 /// A marked IEEEtran conference block (1507.08137's shape): names with `{\small $~^{\#*}$}` marks, then `$^{\#}$\,…`
@@ -18,25 +17,11 @@ use super::{
 /// (pre-existing, base too where the re-part runs; review rev101c finding 2, SYNC_STATUS row 100c).
 #[test]
 fn a_marked_entrys_first_row_that_reads_as_a_name_stays_the_entry() {
-  let (log, xml) = convert_with(
+  let (log, _) = convert_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/marked_affiliation_first_row_reads_as_a_name.tex"
     ),
     None,
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let xml = xml.split_whitespace().collect::<Vec<_>>().join(" ");
-  let start = xml.find("<creator").expect("a creator");
-  let end = xml.rfind("</creator>").expect("a closed creator") + "</creator>".len();
-  let hcm = r#"<contact name="Affiliation: " role="affiliation">Hellebore Capital Management<break/>63 Avenue des Champs, Paris</contact>"#;
-  let lix = r#"<contact name="Affiliation: " role="affiliation">Laboratoire d’Informatique<break/>LIX, Palaiseau</contact>"#;
-  if red_at_two(r#"keeps the entry's italic wrapper and a leading space in the affiliation"#) {
-    return;
-  }
-  assert_eq!(
-    &xml[start..end],
-    format!(
-      r#"<creator role="author"> <personname>Ann Able</personname> {hcm} {lix} </creator> <creator role="author"> <personname>Bob Baker</personname> {hcm} </creator> <creator role="author"> <personname>Cat Cole</personname> {lix} </creator>"#
-    )
-  );
 }

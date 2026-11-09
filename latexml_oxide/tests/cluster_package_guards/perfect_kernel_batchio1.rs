@@ -14,16 +14,13 @@ fn a_creator_calls_nested_thanks_is_its_creators() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_authblk_superscript_inside_a_name.tex"
   );
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, emitted) = run(tex, 2);
+  let (log, emitted) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let creators = creators_xml(&emitted);
-  assert_eq!(creators, creators_xml(&off), "{emitted}");
+  assert_eq!(creators, vec![
+    "<creator role=\"author\">\n    <personname>Craig M<sup><text font=\"italic\">c</text></sup>Rae</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\">Electronic address: craig@x.org</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Y</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Y</contact>\n  </creator>"
+  ]);
   assert_eq!(creators.len(), 2, "{emitted}");
   assert!(
     creators[0].contains("Rae</personname>")
@@ -42,25 +39,19 @@ fn a_creator_calls_thanks_keeps_its_markup() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_authblk_call_thanks_markup.tex"
   );
-  for mode in [0, 2] {
-    let (log, out) = run(tex, mode);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "{mode}: {log}"
-    );
-    let creators = creators_xml(&out);
-    assert_eq!(creators.len(), 2, "{mode}: {out}");
-    let craig = &creators[0];
-    assert!(
-      craig.contains("Rae</personname>")
-        && craig.contains("role=\"thanks\"")
-        && craig.contains("Note <text font=\"italic\"")
-        && craig.contains("tex=\"x+y\"")
-        && craig.contains("<ref class=\"ltx_href\" href=\"http://x.org\">the site</ref>.</note>"),
-      "{mode}: {craig}"
-    );
-  }
+  let (log, out) = run(tex);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let creators = creators_xml(&out);
+  assert_eq!(creators.len(), 2, "{out}");
+  let craig = &creators[0];
+  assert!(
+    craig.contains("Rae</personname>")
+      && craig.contains("role=\"thanks\"")
+      && craig.contains("Note <text font=\"italic\"")
+      && craig.contains("tex=\"x+y\"")
+      && craig.contains("<ref class=\"ltx_href\" href=\"http://x.org\">the site</ref>.</note>"),
+    "{craig}"
+  );
 }
 
 /// IO2 (review revG5 2): an `\email` the document defines inside an authblk `\author` call is the name's text, as Perl's
@@ -70,16 +61,13 @@ fn a_creator_calls_email_stays_in_its_name() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_authblk_call_email_in_name.tex"
   );
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, emitted) = run(tex, 2);
+  let (log, emitted) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let creators = creators_xml(&emitted);
-  assert_eq!(creators, creators_xml(&off), "{emitted}");
+  assert_eq!(creators, vec![
+    "<creator role=\"author\">\n    <personname>Craig Rae <text font=\"typewriter\">craig@x.org</text></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Y</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Ann Able</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\">Note y.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Y</contact>\n  </creator>"
+  ]);
   assert_eq!(creators.len(), 2, "{emitted}");
   assert!(
     creators[0].contains("craig@x.org</text></personname>")

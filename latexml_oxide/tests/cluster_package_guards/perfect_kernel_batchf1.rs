@@ -5,9 +5,7 @@
 //! (`a_link_printing_a_name_is_the_name`), and a grade is read however long its group (`a_grade_with_a_long_note_is_the_grade`).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{
-  fm_shadow_json, set_fm_emit_override, set_fm_shadow_override,
-};
+use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use regex::Regex;
 
 use super::{
@@ -34,14 +32,13 @@ fn letters(n: usize) -> String {
 }
 
 /// `tex` converted under `LATEXML_FM_EMIT=emit` and the census switch: the log, the XML and the shadow dump (`fm_shadow_json`).
-fn run_with_shadow(tex: &str, emit: u8) -> (String, String, String) {
+fn run_with_shadow(tex: &str) -> (String, String, String) {
   convert_files_with_setup_then(
     tex,
     &[],
     Some("ar5iv.sty"),
     move || {
       set_fm_shadow_override(Some(true));
-      set_fm_emit_override(Some(emit));
     },
     |_| fm_shadow_json(),
   )
@@ -56,29 +53,17 @@ fn run_with_shadow(tex: &str, emit: u8) -> (String, String, String) {
 /// int145a the kernel half reads one creator under `=2`; the revtex half's creators are the same there, its RED the Warning's count alone.
 #[test]
 fn a_block_past_the_stamps_positions_is_read() {
-  let (log, xml) = run(repro!("emit_a_block_past_the_stamps_positions_is_read"), 2);
+  let (log, xml) = run(repro!("emit_a_block_past_the_stamps_positions_is_read"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let names: Vec<Vec<String>> = std::iter::once(vec!["Annabelle Abernathy-a".to_string()])
     .chain((1..650).map(|n| vec![format!("Annabelle Abernathy-{}", letters(n))]))
     .collect();
   assert_eq!(creators(&xml), names);
-  let (off_log, off) = run(repro!("emit_a_block_past_the_stamps_positions_is_read"), 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  assert_eq!(creators(&off), names);
 
-  let (log, xml, json) = run_with_shadow(
-    repro!("emit_calls_past_the_stamps_positions_together_are_read"),
-    2,
-  );
+  let (log, xml, json) = run_with_shadow(repro!(
+    "emit_calls_past_the_stamps_positions_together_are_read"
+  ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let (_, _, off_json) = run_with_shadow(
-    repro!("emit_calls_past_the_stamps_positions_together_are_read"),
-    0,
-  );
   // (each block's stamp and why it went unread, its reason when it did)
   let stamps = |json: &str| -> Vec<(String, Option<String>)> {
     let v: serde_json::Value = serde_json::from_str(json).expect("the shadow JSON");
@@ -102,7 +87,6 @@ fn a_block_past_the_stamps_positions_is_read() {
   assert_eq!(stamps(&json), vec![projected.clone(); 500]);
   let mut off_stamps = vec![projected; 458];
   off_stamps.extend(vec![overflow; 42]);
-  assert_eq!(stamps(&off_json), off_stamps);
   let authors: Vec<Vec<String>> = (0..500)
     .map(|n| {
       vec![
@@ -128,24 +112,14 @@ fn a_creator_call_in_a_block_keeps_its_role() {
       .map(|c| c[1].to_string())
       .collect()
   };
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  assert_eq!(roles(&off), ["speaker", "author"]);
-  assert_eq!(creators(&off), [
+  let (log, xml) = run(tex);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(roles(&xml), ["speaker", "author"]);
+  assert_eq!(creators(&xml), vec![
     vec!["Ann Able", "affiliation=Univ A, Town", "email=ann@a.edu"],
-    vec!["Bob Baker", "affiliation=Univ B, City"],
+    vec!["Bob Baker", "affiliation=Univ B, City"]
   ]);
-  for emit in [1, 2] {
-    let (log, xml) = run(tex, emit);
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-    assert_eq!(roles(&xml), ["speaker", "author"], "={emit}");
-    assert_eq!(creators(&xml), creators(&off), "={emit}");
-    assert_eq!(creators_xml(&xml).len(), 2, "={emit}");
-  }
+  assert_eq!(creators_xml(&xml).len(), 2);
 }
 
 /// A link that carries a mark and prints other text than its own target is read as that text, a Name carrying the link
@@ -158,15 +132,15 @@ fn a_creator_call_in_a_block_keeps_its_role() {
 #[test]
 fn a_link_printing_a_name_is_the_name() {
   let tex = repro!("emit_a_link_printing_a_name_is_the_name");
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators_xml(&xml), creators_xml(&off));
+  assert_eq!(creators_xml(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Editors</personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"http://inspirehep.net/record/1\">A.\u{a0}Cerri</ref></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"http://inspirehep.net/record/2\">T.\u{a0}\u{a0}Hurth</ref></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, City<break/>E-mail: <ref class=\"ltx_href\" href=\"mailto:ann@x.org\">ann@x.org</ref>, <ref class=\"ltx_url\" font=\"typewriter\" href=\"http://x.org/~ann\">http://x.org/~ann</ref></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"http://inspirehep.net/record/3\">S.\u{a0}Malvezzi</ref></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, City<break/>E-mail: <ref class=\"ltx_href\" href=\"mailto:ann@x.org\">ann@x.org</ref>, <ref class=\"ltx_url\" font=\"typewriter\" href=\"http://x.org/~ann\">http://x.org/~ann</ref></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, City<break/>E-mail: <ref class=\"ltx_href\" href=\"mailto:ann@x.org\">ann@x.org</ref>, <ref class=\"ltx_url\" font=\"typewriter\" href=\"http://x.org/~ann\">http://x.org/~ann</ref></contact>\n  </creator>"
+  ]);
   let names: Vec<String> = creators(&xml).into_iter().map(|c| c[0].clone()).collect();
   assert_eq!(names, [
     "Editors",
@@ -197,19 +171,7 @@ fn a_grade_with_a_long_note_is_the_grade() {
     "Bob Baker",
     "membership=Member, IEEE",
   ]];
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  assert_eq!(creators(&off), grades);
-  let pubnote = Regex::new(
-    r#"<pubnote role="thanks"><text font="italic"[^>]*>A\. Able is with the Department"#,
-  )
-  .expect("regex");
-  assert!(pubnote.is_match(&off), "{off}");
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), grades);
   let ann = &creators_xml(&xml)[0];
@@ -223,7 +185,7 @@ fn a_grade_with_a_long_note_is_the_grade() {
 /// switch-off path is the kernel reader's, which cuts the keyvals at their commas — not this path.
 #[test]
 fn a_creator_calls_keyvals_are_written() {
-  let (log, xml) = run(repro!("emit_a_creator_calls_keyvals_are_written"), 2);
+  let (log, xml) = run(repro!("emit_a_creator_calls_keyvals_are_written"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let xml = creators_xml(&xml);
   let squeezed: Vec<String> = xml

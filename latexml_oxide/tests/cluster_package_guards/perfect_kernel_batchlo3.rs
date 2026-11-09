@@ -20,13 +20,7 @@ fn a_note_command_in_an_author_is_its_contact() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/emit_jheppub_note_in_an_author_is_its_contact.tex"
   );
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let want = [
     vec![
@@ -44,7 +38,10 @@ fn a_note_command_in_an_author_is_its_contact() {
     ],
     vec!["Cy Cole", "note=Equal contribution.", "affiliation=Univ B"],
   ];
-  assert_eq!(creators(&off), want);
   assert_eq!(creators(&xml), want);
-  assert_eq!(creators_xml(&xml), creators_xml(&off));
+  assert_eq!(creators_xml(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">ann@a.org</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Note:\u{a0}\" role=\"note\">Also at Univ C.</contact>\n    <contact name=\"Note:\u{a0}\" role=\"note\">Visiting <Math mode=\"inline\" tex=\"\\alpha\" text=\"alpha\">\n        <XMath>\n          <XMTok font=\"italic\" name=\"alpha\" role=\"UNKNOWN\">α</XMTok>\n        </XMath>\n      </Math>-Lab, <emph font=\"italic\">Univ D</emph>.</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact name=\"Note:\u{a0}\" role=\"note\">Equal contribution.</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>"
+  ]);
 }

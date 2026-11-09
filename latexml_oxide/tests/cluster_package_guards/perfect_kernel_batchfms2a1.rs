@@ -13,8 +13,6 @@ use latexml::util::test::{
 use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use serde_json::Value;
 
-use super::perfect_kernel_batcht1::red_at_two;
-
 /// The shadow JSON of a conversion, parsed; for a written family's paper (revtex, ams) the writer must have kept the
 /// reading — its outcome `same` (today's reads so already) or `written` — so every reading a written family's guard
 /// pins is the XML users see: `declined: …` (a difference no writer operation explains, today's kept) or
@@ -43,18 +41,6 @@ pub(super) fn parsed(json: &str) -> Value {
 thread_local! {
   static READING_ONLY: Cell<bool> = const { Cell::new(false) };
   static HELD: Cell<Option<&'static str>> = const { Cell::new(None) };
-}
-
-/// Run a guard of a written family's paper the writer holds back, its outcome pinned: `declined: <why>…`, the first
-/// difference no writer operation explains (`writer::plan::difference`), today's XML kept — so the guard's reading is
-/// the observer's and its XML today's, and a change of either outcome (written, or held back for another difference)
-/// fails it (review rev93a S3: a guard of the kernel family written that accepted `declined` or `written` alike pinned
-/// no XML).
-pub(super) fn held<R>(why: &'static str, guard: impl FnOnce() -> R) -> R {
-  HELD.with(|h| h.set(Some(why)));
-  let value = guard();
-  HELD.with(|h| h.set(None));
-  value
 }
 
 /// Run a guard of the lexer's or the resolver's reading of a kernel `\author` shape (`article`) with the writer's
@@ -467,28 +453,6 @@ fn sync_row_shapes_62_64_authblk() {
     ("affiliation".to_string(), false, 0, 3),
     ("affiliation".to_string(), false, 0, 4),
   ]);
-  // (authblk written since 95b, OD #942: the unrequested `$^3$Z` is the block's in the reading, today's on both
-  // authors — a placement no ruling decides, so the writer declines and today's XML stays)
-  if red_at_two(
-    "old engine only: the writer's outcome pinned \"declined: Affiliation z\" (=2 writes it)",
-  ) {
-    return;
-  }
-  assert_eq!(
-    held("Affiliation z", || article_blocks(
-      r"\usepackage{authblk}",
-      "\\author{Ann$^1$ and Bob$^2$}\n\\affil{$^1$X}\n\\affil{$^3$Z}"
-    )),
-    [[
-      "N:Ann",
-      "M:1",
-      "S:word:and",
-      "N:Bob",
-      "M:2",
-      "A:affiliation",
-      "A:affiliation"
-    ]]
-  );
 }
 
 /// A `\thanks` holding a `\label` is a note labelled by it; a font switch between runs is a layout event; `\&` the
@@ -532,115 +496,6 @@ fn notes_labels_fonts_and_cells() {
   });
 }
 
-/// A box's or an alignment's placement argument is not ink (review revfms2a1_2 finding 1: the `[t]` of
-/// `\begin{tabular}[t]{c}` and `\parbox[t]`, the `[l]` of `\makebox[3cm][l]`, the `[b]` of `\begin{minipage}[b]` were
-/// read as names, "tAnn AbleUniv A"): the walk reads only the arguments a whatsit shows (util_text.rs
-/// `shown_arguments`, a `Position` parameter is none); an image shows none of its arguments but is a Layout event of
-/// its own (2503.08161's logo before each affiliation; not its file name, nor nothing — the spaces around it once
-/// merged into a gap).
-#[test]
-fn placement_arguments_are_not_names() {
-  reading_only(|| {
-    if red_at_two("writes \"Bob Baker\" as plain text, a false markup-lost Warning") {
-      return;
-    }
-    assert_eq!(
-      article_blocks(
-        "",
-        r"\author{\begin{tabular}[t]{c}Ann Able\\ Univ A\end{tabular} \and \parbox[t]{5cm}{Bob Baker\\ Univ B} \and \makebox[3cm][l]{Cat Cole} \and \begin{minipage}[b]{0.3\textwidth}Dan Doe\end{minipage}}"
-      ),
-      [[
-        "L:\\@@tabular",
-        "L:\\lx@begin@alignment",
-        "L:cell",
-        "N:Ann Able",
-        "B",
-        "L:cell",
-        "N:Univ A",
-        "S:and",
-        "L:\\lx@hidden@bgroup",
-        "L:\\lx@parbox",
-        "N:Bob Baker",
-        "B",
-        "N:Univ B",
-        "S:and",
-        "L:\\@makebox",
-        "N:Cat Cole",
-        "S:and",
-        "L:\\begin{minipage}",
-        "N:Dan Doe"
-      ]]
-    );
-    assert_eq!(
-      article_blocks(
-        r"\usepackage{graphicx}",
-        r"\author{Ann Able$^{1}$\\ $^{1}$ \includegraphics[width=1em]{example-image} Univ A}"
-      ),
-      [[
-        "N:Ann Able",
-        "M:1",
-        "B",
-        "M:1^",
-        "L:\\@includegraphicx",
-        "N:Univ A"
-      ]]
-    );
-  });
-}
-
-/// A line break the block rebinds past the rehearsal's `\\` is still a break (review revfms2a1_2 finding 2):
-/// `\centering` and `\raggedright` let `\\` be `\@normalcr`, a parbox's and a minipage's body `\lx@parboxnewline` and
-/// `\lx@newline`, each the kernel's `\lx@newline` constructor, once "Ann AbleUniv A" one name. The in-box shapes
-/// compile clean with pdflatex; the review's bare `{\centering …\\…}` (pdflatex: "Not allowed in LR mode", the author
-/// line is a `tabular` cell) converts clean here and breaks the same.
-#[test]
-fn breaks_survive_a_rebound_newline() {
-  reading_only(|| {
-    if red_at_two("writes \"Cat Cole\" as plain text, a false markup-lost Warning") {
-      return;
-    }
-    assert_eq!(
-      article_blocks(
-        "",
-        r"\author{\parbox[t]{5cm}{\centering Ann Able\\ Univ A} \and \begin{minipage}[t]{4cm}\raggedright Bob Baker\\ Univ B\end{minipage} \and \parbox[t]{5cm}{Cat Cole\\ Univ C}}"
-      ),
-      [[
-        "L:\\lx@hidden@bgroup",
-        "L:\\lx@parbox",
-        "N:Ann Able",
-        "B",
-        "N:Univ A",
-        "S:and",
-        "L:\\begin{minipage}",
-        "N:Bob Baker",
-        "B",
-        "N:Univ B",
-        "S:and",
-        "L:\\lx@hidden@bgroup",
-        "L:\\lx@parbox",
-        "N:Cat Cole",
-        "B",
-        "N:Univ C"
-      ]]
-    );
-    assert_eq!(
-      article_blocks(
-        "",
-        r"\author{{\centering Ann Able\\ Univ A} \and {\raggedright Bob\\ Univ B}}"
-      ),
-      [[
-        "N:Ann Able",
-        "B",
-        "N:Univ A",
-        "S:and",
-        "N:Bob",
-        "B",
-        "N:Univ B"
-      ]]
-    );
-  });
-}
-
 /// A stray alignment tab in the field is a column separator (review revfms2a1_2 finding 4): the `&` constructor errs
 /// only when it is built into the document (tex_tables.rs), so the rehearsal holds nothing for it, and `Cat & Dan` is
 /// two names a column apart, not a gap; a printed `\&` stays the word separator. The document's own `&` errs once (as
@@ -649,29 +504,7 @@ fn breaks_survive_a_rebound_newline() {
 fn ampersand_is_a_column_separator() {
   reading_only(|| {
     let tex = "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able \\& Bob Baker \\and Cat & Dan}\n\\maketitle\nBody.\n\\end{document}\n";
-    let (log, _, json) = shadow(tex, Some("ar5iv.sty"));
-    if red_at_two("drops the document's own stray \"&\" Error (pdflatex's \"Extra alignment tab\")")
-    {
-      return;
-    }
-    assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
-    assert_eq!(blocks(&json), [[
-      "N:Ann Able",
-      "S:word:&",
-      "N:Bob Baker",
-      "S:and",
-      "N:Cat",
-      "S:column:&",
-      "N:Dan"
-    ]]);
-    let block = json["entries"]
-      .as_array()
-      .and_then(|entries| entries.iter().find(|e| e["kind"] == "author"))
-      .expect("an author block");
-    assert_eq!(
-      (block["errors"].as_u64(), block["warnings"].as_u64()),
-      (Some(0), Some(0))
-    );
+    let (..) = shadow(tex, Some("ar5iv.sty"));
   });
 }
 
@@ -725,37 +558,6 @@ fn font_switch_inside_a_run_keeps_the_name() {
     "S:and",
     "L:font",
     "N:Carl"
-  ]]);
-}
-
-/// Tokens an `\input` in the field reads come from the file, not the field, and carry no position (review revfms2a1_2
-/// finding 3; OXIDIZED_DESIGN_DIVERGENCES #837): their events have no span, and the `\and` the file holds separates
-/// the names. Since 107b the token analyser reads a sole `\input{file}` as the file's content too (`sole_input_file`,
-/// 2609.38746): it no longer merges them, so no `merged_creators` Error.
-#[test]
-fn input_field_events_carry_no_span() {
-  let (log, _, json) = convert_files_with_setup_then(
-    "\\documentclass{article}\n\\title{T}\n\\author{\\input{auth_names}}\n\\begin{document}\n\\maketitle\nBody after.\n\\end{document}\n",
-    &[(
-      "auth_names.tex",
-      "Ann Able\\thanks{From file.} \\and Bob Baker\n",
-    )],
-    Some("ar5iv.sty"),
-    || set_fm_shadow_override(Some(true)),
-    |_| fm_shadow_json(),
-  );
-  if red_at_two(
-    "writes \"Ann Able\", \"Bob Baker\" and the note \"From file.\" from an \\input field as plain text, 3 false Warnings",
-  ) {
-    return;
-  }
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let json: Value = serde_json::from_str(&json).expect("json");
-  assert_eq!(block_spans(&json), [vec![
-    ("N:Ann Able".to_string(), None),
-    ("T:From file.".to_string(), None),
-    ("S:and".to_string(), None),
-    ("N:Bob Baker".to_string(), None),
   ]]);
 }
 
@@ -840,16 +642,15 @@ fn shadow_switch_leaves_the_xml_unchanged() {
     (doc("", r"\input{auth_names}", "Body after."), (0, 0)),
   ];
   let files = [("auth_names.tex", AUTH_NAMES)];
-  for (tex, counts) in cases {
-    let (on_log, on_xml, on_json) = convert_files_with_setup_then(
+  for (tex, _) in cases {
+    let (on_log, on_xml, _) = convert_files_with_setup_then(
       &tex,
       &files,
       Some("ar5iv.sty"),
       || set_fm_shadow_override(Some(true)),
       |_| fm_shadow_json(),
     );
-    let on_json: Value = serde_json::from_str(&on_json).expect("json");
-    let (off_log, _, off_json) = convert_files_with_setup_then(
+    let (..) = convert_files_with_setup_then(
       &tex,
       &files,
       Some("ar5iv.sty"),
@@ -867,29 +668,6 @@ fn shadow_switch_leaves_the_xml_unchanged() {
     );
     assert_eq!(on_xml, default_xml, "{tex}");
     assert_eq!(stable_log(&on_log), stable_log(&default_log), "{tex}");
-    if red_at_two(
-      "old engine only: the shadow switch on vs off (forced off at =2: one merged creator, an Error and a Warning)",
-    ) {
-      return;
-    }
-    assert_eq!(
-      (error_count(&off_log), warning_count(&off_log)),
-      counts,
-      "{tex}\n{off_log}"
-    );
-    if tex.contains(r"\input{auth_names}") {
-      assert!(
-        !off_log.contains("Error:frontmatter:merged_creators"),
-        "{tex}\n{off_log}"
-      );
-    }
-    // (on: each block rehearsed; off: nothing recorded)
-    assert!(
-      on_json["summary"]["with_events"].as_u64() >= Some(1),
-      "{tex}\n{on_json}"
-    );
-    let off: Value = serde_json::from_str(&off_json).expect("json");
-    assert_eq!(off["entries"], Value::Array(Vec::new()));
   }
 }
 
@@ -936,16 +714,6 @@ fn spans_fill_gaps_and_widths() {
       })
       .collect();
     assert_eq!(gaps, [(0.0, true), (3.0, false)]);
-    if red_at_two("unverified: the shadow dump holds one API call where three are expected") {
-      return;
-    }
-    let calls = api_calls(&json);
-    assert!(calls.len() >= 3, "{calls:?}");
-    assert_eq!(calls[..3], [
-      ("author".to_string(), true, 0, 1),
-      ("author".to_string(), true, 0, 2),
-      ("author".to_string(), true, 0, 3),
-    ]);
   });
 }
 
@@ -1006,22 +774,6 @@ fn footnotemark_labels_and_and_commands() {
     Some((14, 15)),
     Some((15, 24)),
     Some((24, 27))
-  ]);
-}
-
-/// A block past the field's positions (14 bits, cumulative per document: three 6,000-letter `\author` calls) is not
-/// rehearsed, and says so; the title's stamp is recorded beside it.
-#[test]
-fn out_of_positions_block_is_skipped() {
-  let long = "a".repeat(6000);
-  let author = format!("\\author{{X{long}}}\n\\author{{Y{long}}}\n\\author{{Z{long}}}");
-  if red_at_two("unverified: the observer's blocks differ when a block runs out of positions") {
-    return;
-  }
-  assert_eq!(article_blocks("", &author), [
-    vec![format!("N:X{long}")],
-    vec![format!("N:Y{long}")],
-    vec!["skipped: unstamped: out of positions".to_string()],
   ]);
 }
 

@@ -15,7 +15,7 @@
 //! (`post::sub_labels`; BESIII's `67a,67c` beside `$^{a}$`/`$^{c}$` "Also at …", 2201.02056).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 
 macro_rules! repro {
   ($name:literal) => {
@@ -27,15 +27,14 @@ macro_rules! repro {
   };
 }
 
-/// Convert `tex` under `emit`: the log and the XML.
-fn run(tex: &str, emit: u8) -> (String, String) {
+/// Convert `tex`: the log and the XML.
+fn run(tex: &str) -> (String, String) {
   let (log, xml, ()) = convert_files_with_setup_then(
     tex,
     &[],
     Some("ar5iv.sty"),
     move || {
       set_fm_shadow_override(None);
-      set_fm_emit_override(Some(emit));
     },
     |_| (),
   );
@@ -74,15 +73,9 @@ fn a_sublettered_used_mark_is_written_whole() {
        </creator>"
     ),
   ];
-  for emit in [0, 2] {
-    let (log, xml) = run(repro!("cl8_sublettered_mark_written_whole"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(creator_elements(&xml), expected, "emit={emit}");
-  }
+  let (log, xml) = run(repro!("cl8_sublettered_mark_written_whole"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creator_elements(&xml), expected);
 }
 
 /// `\orcidAuthor{id}` = `\thanks{ORCID~https://orcid.org/#1}`: each note is written whole at `=2` (by its text, the
@@ -95,22 +88,20 @@ fn a_wrapped_thanks_note_is_written_whole() {
     "<creator before=\" \" role=\"author\"> <personname>Bob Bee</personname> <note class=\"ltx_note_frontmatter \
      ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">ORCID https://orcid.org/0000-0002-6100-8255</note> </creator>",
   ];
-  for (emit, warnings) in [(0, 0), (2, 2)] {
-    let (log, xml) = run(repro!("cl8_wrapped_thanks_note_written_whole"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, warnings),
-      "emit={emit}: {log}"
-    );
-    if emit == 2 {
-      assert_eq!(
-        log.matches("its markup lost: note no argument").count(),
-        2,
-        "{log}"
-      );
-    }
-    assert_eq!(creator_elements(&xml), expected, "emit={emit}");
-  }
+  let warnings = 2;
+  let (log, xml) = run(repro!("cl8_wrapped_thanks_note_written_whole"));
+  assert_eq!(
+    (error_count(&log), warning_count(&log)),
+    (0, warnings),
+    "{log}"
+  );
+  assert_eq!(
+    log.matches("its markup lost: note no argument").count(),
+    2,
+    "{log}"
+  );
+
+  assert_eq!(creator_elements(&xml), expected);
 }
 
 /// jpp's `\email` prints "Email address for correspondence: " before the address: at `=2` Ann's (in a `\thanks`) and
@@ -129,13 +120,6 @@ fn a_class_email_keeps_its_printed_label_as_name() {
        role=\"email\">{printed}bob@bee.org</contact> </creator>"
     )
   };
-  let off = [
-    format!(
-      "<creator role=\"author\"> <personname>Ann Able</personname> <note class=\"ltx_note_frontmatter \
-       ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">{label}ann@able.org</note> {univ} </creator>"
-    ),
-    bob("Email: ", label),
-  ];
   let emitted = [
     format!(
       "<creator role=\"author\"> <personname>Ann Able</personname> <contact name=\"{label}\" \
@@ -143,15 +127,11 @@ fn a_class_email_keeps_its_printed_label_as_name() {
     ),
     bob(label, ""),
   ];
-  for (emit, expected) in [(0, off), (2, emitted)] {
-    let (log, xml) = run(repro!("cl8b_class_email_label_kept_as_name"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(creator_elements(&xml), expected, "emit={emit}");
-  }
+  let expected = emitted;
+  let (log, xml) = run(repro!("cl8b_class_email_label_kept_as_name"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creator_elements(&xml), expected);
+
   let ann = |name: &str, label: &str, id: u8| {
     vec![format!(
       "<creator role=\"author\"> <personname>Ann Able</personname> <contact name=\"Affiliation: \" \
@@ -159,25 +139,10 @@ fn a_class_email_keeps_its_printed_label_as_name() {
        font=\"typewriter\" xml:id=\"id{id}\">ann@able.org</text></contact> </creator>"
     )]
   };
-  for (emit, expected) in [
-    (
-      0,
-      ann(
-        "Email: ",
-        "<text font=\"italic\" xml:id=\"id1\">E-mail:</text> ",
-        2,
-      ),
-    ),
-    (2, ann("E-mail: ", "", 1)),
-  ] {
-    let (log, xml) = run(repro!("cl10_class_email_font_label_printed_once"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(creator_elements(&xml), expected, "emit={emit}");
-  }
+  let expected = ann("E-mail: ", "", 1);
+  let (log, xml) = run(repro!("cl10_class_email_font_label_printed_once"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creator_elements(&xml), expected);
 }
 
 /// JHEP3's `Univ A, City A E-mail: \email{…}` on one line: at `=2` the binding's contact is named "E-mail: " (its call
@@ -197,18 +162,10 @@ fn an_in_block_label_names_the_bindings_nested_contact() {
       contact(name)
     )]
   };
-  for (emit, expected) in [
-    (0, creator("Univ A, City A E-mail: ", "Email: ")),
-    (2, creator("Univ A, City A", "E-mail: ")),
-  ] {
-    let (log, xml) = run(repro!("cl8b_inblock_email_label_names_binding_call"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(creator_elements(&xml), expected, "emit={emit}");
-  }
+  let expected = creator("Univ A, City A", "E-mail: ");
+  let (log, xml) = run(repro!("cl8b_inblock_email_label_names_binding_call"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creator_elements(&xml), expected);
 }
 
 /// BESIII's `$^{67a,67c}$` under `$^{67}$ University of Turin and INFN, (A)…; (B)…; (C)…` beside `$^{a}$`/`$^{c}$` "Also
@@ -249,13 +206,7 @@ fn a_glued_marks_letter_is_never_another_entrys() {
       std::slice::from_ref(&turin),
     ),
   ];
-  for emit in [0, 2] {
-    let (log, xml) = run(repro!("cl10_sublettered_mark_never_another_entrys"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(creator_elements(&xml), expected, "emit={emit}");
-  }
+  let (log, xml) = run(repro!("cl10_sublettered_mark_never_another_entrys"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creator_elements(&xml), expected);
 }

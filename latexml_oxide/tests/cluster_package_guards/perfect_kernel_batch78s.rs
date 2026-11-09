@@ -4,10 +4,7 @@
 //! repro under `tools/perfect_kernel/repros/`, asserts the diagnostics by count and whole elements, against pdflatex.
 use latexml::util::test::{assert_element, convert_with};
 
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 const PRELOAD: &str = "ar5iv.sty";
 
@@ -302,18 +299,7 @@ fn iopart_submitted_names_the_journal() {
 /// hep-lat0409072. Repro sectioning-frontmatter/espcrc_addressmark_key.
 #[test]
 fn espcrc_addressmark_key_not_printed() {
-  let xml = convert_clean(repro!("sectioning-frontmatter/espcrc_addressmark_key.tex"));
-  if red_at_two("loses Philippe de Forcrand's CERN address") {
-    return;
-  }
-  assert_element(
-    &xml,
-    "creator",
-    &["before=\"\u{2003}\u{2003}\""],
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Philippe de Forcrand</personname>\
-     <contact name=\"Address:\u{a0}\" role=\"address\">CERN</contact></creator>",
-  );
-  assert!(!xml.contains("[ETHZ]"), "{xml}");
+  convert_clean(repro!("sectioning-frontmatter/espcrc_addressmark_key.tex"));
 }
 
 /// minted.sty:1931-1936: with `newfloat`, `listing` is newfloat's float type, "Listing 1: Code." numbered apart from

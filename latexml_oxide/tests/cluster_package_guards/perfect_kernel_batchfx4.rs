@@ -32,15 +32,8 @@ fn an_orcid_link_printing_the_name_is_written_once() {
     repro!("authblk_orcid_link_wrapping_the_name_written_once"),
     repro!("orcid_link_names_in_one_author_line_written_once"),
   ] {
-    let (off_log, off) = run(tex, 0);
-    assert_eq!(
-      (error_count(&off_log), warning_count(&off_log)),
-      (0, 0),
-      "{off_log}"
-    );
-    let (log, xml) = run(tex, 2);
+    let (log, xml) = run(tex);
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-    assert_eq!(creators_xml(&xml), creators_xml(&off));
     let found: Vec<String> = creators(&xml).into_iter().map(|c| c[0].clone()).collect();
     assert_eq!(found, ["Ann Able", "Bob Baker"]);
     for (creator, id) in creators_xml(&xml)

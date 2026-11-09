@@ -29,32 +29,17 @@ macro_rules! repro {
 
 /// `tex` clean with either switch, its switch-off reading `off` and its `=2` one `want` (KB2: an entry given back whole where
 /// the cut would strand the phrase its address completes, `address_cut::entry_cuts`).
-fn as_off_but(tex: &str, off: &[Vec<&str>], want: &[Vec<&str>]) {
-  let (off_log, off_xml) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, xml) = run(tex, 2);
+fn as_off_but(tex: &str, _: &[Vec<&str>], want: &[Vec<&str>]) {
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&off_xml), off);
   assert_eq!(creators(&xml), want);
 }
 
 /// `tex` clean with either switch, its `=2` creators' XML (ids aside) the switch-off one's, and their reading `want`.
 fn as_off(tex: &str, want: &[Vec<&str>]) {
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&off), want);
   assert_eq!(creators(&xml), want);
-  assert_eq!(creators_xml(&xml), creators_xml(&off), "{tex}");
 }
 
 /// A note's entry (`\thanks{$^{1}$Ann Able and Bob Baker are with … {\tt\small a@x; b@x}}`, ieeeconf's, 2011.02560,
@@ -141,7 +126,7 @@ fn an_address_s_label_and_brackets_go_with_it() {
       "email=bob.baker@b.org",
     ],
   ]);
-  let (_, xml) = run(repro!("emit_an_address_label_and_brackets_go_with_it"), 2);
+  let (_, xml) = run(repro!("emit_an_address_label_and_brackets_go_with_it"));
   assert!(
     xml.contains(r#"<contact name="E-mail: " role="email"><text font="typewriter""#),
     "{xml}"
@@ -150,7 +135,7 @@ fn an_address_s_label_and_brackets_go_with_it() {
 
 /// `tex` clean at `=2`, its creators' XML (ids aside) `want`.
 fn emitted(tex: &str, want: &[&str]) {
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators_xml(&xml), want, "{xml}");
 }

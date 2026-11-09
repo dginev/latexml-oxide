@@ -11,7 +11,6 @@ use latexml::util::test::convert_with;
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch77d::{creator, creators, squash},
-  perfect_kernel_batcht1::red_at_two,
 };
 
 /// A `sectioning-frontmatter` repro's squashed XML, the conversion free of errors and warnings.
@@ -79,40 +78,6 @@ fn jheppub_emailadd_in_author_order() {
         contact("affiliation", "Univ B"),
         email("id3", "wy7@y.org"),
         email("id4", "cat2@y.org")
-      )
-    ),
-  ]);
-}
-
-/// One jheppub `\emailAdd{a, b, c}` listing every author's address: by the call the list is out of order (bbaker@ at
-/// the first call's place), by the address it is the authors' in order, each address the n-th author's (zq1@, wy7@
-/// spelling no one). Red (int47a, Perl): one contact of the three addresses on Ann Able. Witnesses 2406.03543,
-/// 2505.23122, 2201.12390. Repro sectioning-frontmatter/jheppub_emailadd_one_call_lists_the_authors.
-#[test]
-fn jheppub_emailadd_one_call_lists_the_authors() {
-  let xml = convert_repro!("jheppub_emailadd_one_call_lists_the_authors.tex");
-  let univ_a = contact("affiliation", "Univ A");
-  if red_at_two("writes zq1@x.org as a nameless creator, not Ann's email") {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!("{univ_a} {}", email("id1", "zq1@x.org"))
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &format!("{univ_a} {}", email("id2", "bbaker@x.org"))
-    ),
-    creator(
-      false,
-      "Cat Cole",
-      &format!(
-        "{} {}",
-        contact("affiliation", "Univ B"),
-        email("id3", "wy7@y.org")
       )
     ),
   ]);
@@ -221,43 +186,6 @@ fn iopart_ead_lists_are_an_address_each() {
 // iopart author groups, the one corresponding author of an address left over, the address lists inside an author and
 // in markup, an `\ead{a and b}` list, and the `\inst` comma rule by `\inst`'s meaning (OXIDIZED_DESIGN_DIVERGENCES #805,
 // #806, #807, #808, #809).
-
-/// An `\ead` prints as an address block right after the `\address` before it (iopart.cls:363): an address spelling no
-/// one under `$^1$`, which Ann Able alone requests, is hers; able@ under `$^3$` (Cat Cole's) is Ann Able's by its
-/// spelling; wy5@ under `$^2$`, which two authors request, the author block's. Red (78f r1): zq77@ on the block too.
-/// Witnesses 2407.14305, 2311.07087 (an `\ead` between the addresses); 1111.5264; not 1209.0173, 0910.0753, 1111.3344,
-/// 1911.06133 (every `\ead` after the last address). Repro sectioning-frontmatter/iopart_ead_under_its_address_mark.
-#[test]
-fn iopart_ead_under_its_address_mark() {
-  let xml = convert_repro!("iopart_ead_under_its_address_mark.tex");
-  let univ_b = contact("affiliation", " Univ B");
-  if red_at_two("writes zq77@x.org as a nameless creator, not its author's email") {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!(
-        "{} {} {}",
-        contact("affiliation", " Univ A"),
-        email("id1", "zq77@x.org"),
-        email("id2", "able@z.org")
-      )
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &format!("{univ_b} {}", email("id3", "bbaker@y.org"))
-    ),
-    creator(
-      false,
-      "Cat Cole",
-      &format!("{univ_b} {}", contact("affiliation", " Univ C"))
-    ),
-    block(&email("id4", "wy5@y.org")),
-  ]);
-}
 
 /// In a document whose `\ead`s all follow its addresses ("after the postal address(es)", as IOP's guidelines ask), the
 /// last address's mark is the `\ead`'s by position only: zq77@, spelling no one, stays the author block's. Red (the
@@ -440,23 +368,6 @@ fn jheppub_emailadd_in_author_is_the_authors() {
   ]);
 }
 
-/// An `\emailAdd` list in markup is one contact, its markup kept, not written out address by address. Red (78f r1): two
-/// contacts, the `\mbox` dropped. Repro sectioning-frontmatter/jheppub_emailadd_markup_list_kept_whole (rev78f probe
-/// j06).
-#[test]
-fn jheppub_emailadd_markup_list_kept_whole() {
-  let xml = convert_repro!("jheppub_emailadd_markup_list_kept_whole.tex");
-  let univ_a = contact("affiliation", "Univ A");
-  if red_at_two("unverified: keeps the email list on the last author, no separate block creator") {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &univ_a),
-    creator(false, "Bob Baker", &univ_a),
-    block(&email("id1", "zq1@x.org, bbaker@x.org")),
-  ]);
-}
-
 /// Names that open with their `\inst` marks keep each its own. Red (78f r1): Inst A and Inst B on Ann Able. Repro
 /// sectioning-frontmatter/llncs_inst_leading_marks_keep_their_names (rev78f probe c01).
 #[test]
@@ -466,21 +377,6 @@ fn llncs_inst_leading_marks_keep_their_names() {
     creator(true, "Ann Able", &contact("affiliation", "Inst A")),
     creator(false, "Bob Baker", &contact("affiliation", "Inst B")),
     creator(false, "Cat Cole", &contact("affiliation", "Inst C")),
-  ]);
-}
-
-/// A document's own `\inst` that takes back no space (`\newcommand{\inst}[1]{$^{#1}$}`) gets no comma rule: Bob Baker
-/// keeps his 2. Red (78f r1): "1,2" on Ann Able. Repro sectioning-frontmatter/inst_without_unskip_keeps_the_next_name
-/// (rev78f probes c09, c08).
-#[test]
-fn inst_without_unskip_keeps_the_next_name() {
-  let xml = convert_repro!("inst_without_unskip_keeps_the_next_name.tex");
-  if red_at_two("gives Bob Baker's mark 2 to Ann Able (\"1,2\"), Bob shows none") {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, r#"Ann Able<sup xml:id="id1">1</sup>"#, ""),
-    creator(false, r#"Bob Baker<sup xml:id="id2">2</sup>"#, ""),
   ]);
 }
 

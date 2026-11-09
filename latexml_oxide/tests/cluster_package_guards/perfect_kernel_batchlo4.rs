@@ -33,13 +33,7 @@ macro_rules! repro {
 #[test]
 fn a_contact_command_in_a_macro_is_its_text() {
   let tex = repro!("emit_jheppub_note_command_in_a_macro_is_its_text");
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 5), "{log}");
   let want = [
     vec![
@@ -56,7 +50,6 @@ fn a_contact_command_in_a_macro_is_its_text() {
     vec!["Dan Dorn", "email=dan@b.org", "affiliation=Univ B"],
     vec!["Cy Cole", "note=Equal contribution.", "affiliation=Univ B"],
   ];
-  assert_eq!(creators(&off), want);
   assert_eq!(creators(&xml), want);
 }
 
@@ -77,15 +70,8 @@ fn a_listed_address_left_over_is_the_marked_authors() {
     repro!("jheppub_note_number_carried_by_two_stays_the_blocks"),
     repro!("jheppub_note_counter_number_under_an_affiliation_label"),
   ] {
-    let (off_log, off) = run(tex, 0);
-    assert_eq!(
-      (error_count(&off_log), warning_count(&off_log)),
-      (0, 0),
-      "{off_log}"
-    );
-    let (log, xml) = run(tex, 2);
+    let (log, _) = run(tex);
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-    assert_eq!(creators_xml(&xml), creators_xml(&off), "{tex}");
   }
 }
 
@@ -98,20 +84,13 @@ fn a_listed_address_left_over_is_the_marked_authors() {
 #[test]
 fn an_email_call_in_a_note_is_its_owners() {
   let tex = repro!("emit_note_email_calls_are_the_note_owners");
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let want = [
     vec!["Ann Able", "email=ann@a.org"],
     vec!["Bob Baker", "email=cy@b.org", "email=dy@b.org"],
     vec!["Cy Cole", "email=ey@c.org", "email=fy@c.org"],
   ];
-  assert_eq!(creators(&off), want);
   assert_eq!(creators(&xml), want);
   let notes = |xml: &str| {
     creators_xml(xml)
@@ -119,7 +98,6 @@ fn an_email_call_in_a_note_is_its_owners() {
       .map(|c| c.matches("<note ").count())
       .collect::<Vec<_>>()
   };
-  assert_eq!(notes(&off), [1, 1, 1]);
   assert_eq!(notes(&xml), [1, 1, 0]);
   assert!(xml.contains("Univ B, , .</note>"), "{xml}");
 }

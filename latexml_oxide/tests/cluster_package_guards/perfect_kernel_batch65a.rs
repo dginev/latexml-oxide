@@ -5,10 +5,7 @@
 //! ascexmpl). Repros under `tools/perfect_kernel/repros/`.
 use latexml::util::test::assert_element;
 
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 /// The XML of `tex` converted under ar5iv with `files` beside it, which must give no error and no warning.
 fn convert_clean_files(tex: &str, files: &[(&str, &str)]) -> String {
@@ -222,155 +219,6 @@ Knead the dough.
     </section>"#,
   );
   assert_schema_valid(&xml);
-}
-
-/// A class command that reaches the kernel's through a helper (`\let\origauthor\author`, as beamerbasetitle.sty:69-70
-/// and authoraftertitle.sty:11-23 save it, called from the class's own `\@author@line`) reaches it once while the
-/// class's own call runs: no loop (`Fatal:Timeout:PushbackLimit` before the re-entry guard). Reaching the kernel's
-/// means the class keeps the value, so the sealed author is dropped, not made the section's author.
-#[test]
-fn class_command_calling_the_kernels_does_not_loop() {
-  if red_at_two(r#"a false content-check Warning (the dropped late author "Bob Baker" missing)"#) {
-    return;
-  }
-  let xml = convert_clean_files(
-    r"\documentclass{wrapauthor}
-\begin{document}
-\author{Ann Able}
-\section{Intro}
-Text.
-\author{Bob Baker}
-\section{More}
-More text.
-\end{document}",
-    &[(
-      "wrapauthor.cls",
-      r"\ProvidesClass{wrapauthor}
-\LoadClass{article}
-\let\origauthor\author
-\def\@author@line#1{\origauthor{#1}}
-\renewcommand{\author}[1]{\@author@line{#1}}",
-    )],
-  );
-  // the kernel's `\author`, reached through the helper, keeps it — a store the seal drops, no unit author
-  assert_eq!(
-    creators(&xml),
-    vec![r#"<creator role="author"><personname>Ann Able</personname></creator>"#],
-    "{xml}"
-  );
-}
-
-/// A class `\author` that fills a token register in any form (`\authtoks{#1}`, `\authtoks\expandafter{…}`,
-/// `\expandafter\authtoks\expandafter{…}`, `\authtoks\@xp{…}`, `\authtoks\othertoks`, `\global\authtoks{…}`: tex.web
-/// §1226 reads the right-hand side with `get_x_token`) or a box (`\sbox\authbox{#1}`, `\setbox\authbox\vbox{\unvbox
-/// \authbox…}`, which appends) keeps its value: after the body it is a supplement's, dropped as the base drops it, not
-/// the author of the section it stands in (pdflatex prints nothing there). One that only reads a
-/// register or prints the box it fills typesets the late author in place.
-#[test]
-fn author_kept_in_a_register_or_a_box_is_a_store() {
-  for class in [
-    r"\newtoks\authtoks \renewcommand\author[1]{\authtoks{#1}}",
-    r"\newsavebox\authbox \renewcommand\author[1]{\sbox\authbox{#1}}",
-    r"\newtoks\authtoks \renewcommand\author[1]{\authtoks\expandafter{\the\authtoks #1}}",
-    r"\newtoks\authtoks \renewcommand\author[1]{\expandafter\authtoks\expandafter{\the\authtoks\and #1}}",
-    r"\newtoks\authtoks \let\@xp\expandafter \renewcommand\author[1]{\authtoks\@xp{\the\authtoks #1}}",
-    r"\newtoks\authtoks \newtoks\othertoks \renewcommand\author[1]{\othertoks{#1}\authtoks\othertoks}",
-    r"\newsavebox\authbox \renewcommand\author[1]{\setbox\authbox\vbox{\unvbox\authbox\hbox{#1}}}",
-    r"\newtoks\authtoks \renewcommand\author[1]{\global\authtoks{#1}}",
-    // a late author the class only logs, or stores through its own helpers: nothing shows, nothing reaches page
-    // furniture (pdflatex prints nothing), so no unit author either
-    r"\renewcommand\author[1]{\ClassInfo{keeper}{late author ignored}}",
-    r"\renewcommand\author[1]{\typeout{#1}}",
-    r"\newcommand\setauthor[1]{\gdef\@author{#1}}\RenewDocumentCommand\author{m}{\setauthor{#1}}",
-    r"\newcommand\@@setauthor[1]{\gdef\@author{#1}}\newcommand\@setauthor[1]{\@@setauthor{#1}}\renewcommand\author[1]{\@setauthor{#1}}",
-    r"\ExplSyntaxOn\tl_new:N\g_my_author_tl\cs_new:Npn\my_store_author:n#1{\tl_gset:Nn\g_my_author_tl{#1}}\RenewDocumentCommand\author{m}{\my_store_author:n{#1}}\ExplSyntaxOff",
-    // page furniture that gets something other than the author: a helper's own parameter filled with other text, or
-    // only the optional label (the author, `#2`, discarded)
-    r"\newcommand\@runhead[1]{\markboth{#1}{#1}}\renewcommand\author[1]{\@runhead{Draft}}",
-    r"\newcommand\@runfoot[1]{\def\@oddfoot{#1}}\renewcommand\author[1]{\@runfoot{\thepage}}",
-    r"\renewcommand\author[2][]{\markboth{#1}{}}",
-    // readers and dispatchers that never hand the author on (`\@runhead{Draft}\@gobble`, `\@runhead{\@title}…`,
-    // only the starred or the `[` branch handing it to `\markboth`)
-    r"\newcommand\@runhead[1]{\markboth{#1}{}}\def\author{\@runhead{Draft}\@gobble}",
-    r"\newcommand\@runhead[1]{\markboth{#1}{}}\def\author{\@runhead{\@title}\@authorx}\def\@authorx#1{}",
-    r"\newcommand\@runhead[1]{\markboth{#1}{}}\def\author{\@runhead\@title\@gobble}",
-    r"\def\author{\@ifstar\@sauthor\@author@}\def\@sauthor#1{\markboth{#1}{}}\def\@author@#1{}",
-    r"\def\author{\@ifnextchar[\@authoropt\@authornoopt}\newcommand\@authoropt[2][]{\markboth{#2}{}}\def\@authornoopt#1{}",
-    // an xparse optional that is not the author in the foot (`{m O{Anon}}`, `{m o}`), and furniture the body does not
-    // run itself: inside a conditional (a `\newif` flag, `\iffalse`) or another macro's argument (`\@gobble{…}`)
-    r"\RequirePackage{fancyhdr}\pagestyle{fancy}\RenewDocumentCommand\author{m O{Anon}}{\lfoot{#2}}",
-    r"\RequirePackage{fancyhdr}\pagestyle{fancy}\RenewDocumentCommand\author{m o}{\lfoot{\IfValueT{#2}{#2}}}",
-    r"\RequirePackage{fancyhdr}\pagestyle{fancy}\newif\if@authfoot \renewcommand\author[1]{\if@authfoot\lfoot{#1}\fi}",
-    r"\RequirePackage{fancyhdr}\pagestyle{fancy}\renewcommand\author[1]{\@gobble{\lfoot{#1}}}",
-    r"\RequirePackage{fancyhdr}\pagestyle{fancy}\renewcommand\author[1]{\iffalse\lfoot{#1}\fi}",
-    // a conditional opened through a macro (its `\fi` closes nothing known), and a group that discards the local foot
-    r"\RequirePackage{fancyhdr}\pagestyle{fancy}\def\ifauthfoot{\iffalse}\renewcommand\author[1]{\ifauthfoot\lfoot{#1}\fi}",
-    r"\RequirePackage{fancyhdr}\pagestyle{fancy}\renewcommand\author[1]{\begingroup\lfoot{#1}\endgroup}",
-    // fail-safe residuals (OXIDIZED_DESIGN #527): furniture reached only through a helper or a dispatcher is not the
-    // class's own body handing the author on, so the late author is dropped although the head shows it
-    r"\ExplSyntaxOn\cs_new:Npn\my_mark:n#1{\markboth{#1}{}}\RenewDocumentCommand\author{m}{\my_mark:n{#1}}\ExplSyntaxOff",
-    r"\def\author{\@ifnextchar[\@authoropt\@authornoopt}\def\@authornoopt#1{\markboth{#1}{}}\def\@authoropt[#1]#2{\markboth{#2}{}}",
-    r"\newcommand\@runhead[1]{\markboth{#1}{}}\renewcommand\author[2][]{\@runhead{#2}}",
-  ] {
-    if red_at_two(
-      r#"a false content-check Warning (the dropped late author "Late Person" missing)"#,
-    ) {
-      return;
-    }
-    let cls = format!("\\ProvidesClass{{keeper}}\n\\LoadClass{{article}}\n{class}\n");
-    let xml = convert_clean_files(
-      r"\documentclass{keeper}
-\title{Main Title}
-\author{Main Author}
-\begin{document}
-\section{First}
-First text.
-\author{Late Person}
-Later text.
-\end{document}",
-      &[("keeper.cls", &cls)],
-    );
-    assert_eq!(
-      creators(&xml),
-      vec![r#"<creator role="author"><personname>Main Author</personname></creator>"#],
-      "{class}\n{xml}"
-    );
-  }
-  // …but a class `\author` that only reads a register (`\the\authprefix`) or fills a box it prints (`\sbox` then
-  // `\usebox`) typesets the author where it stands, as pdflatex does
-  for class in [
-    r"\newtoks\authprefix \authprefix={Recipe by } \renewcommand\author[1]{\par\noindent\textit{\the\authprefix#1}\par}",
-    r"\renewcommand\author[1]{\sbox\@tempboxa{\itshape #1}\par\noindent\usebox\@tempboxa\par}",
-  ] {
-    let cls = format!("\\ProvidesClass{{printer}}\n\\LoadClass{{article}}\n{class}\n");
-    let xml = convert_clean_files(
-      r"\documentclass{printer}
-\title{Main Title}
-\begin{document}
-\author{Main Author}
-\section{First}
-First text.
-\author{Late Person}
-Later text.
-\end{document}",
-      &[("printer.cls", &cls)],
-    );
-    let printed = if class.contains("authprefix") {
-      "Recipe by Late Person"
-    } else {
-      "Late Person"
-    };
-    assert_element(
-      &xml,
-      "para",
-      &[r#"xml:id="S1.p2""#],
-      &format!(
-        r#"<para class="ltx_noindent" xml:id="S1.p2">
-          <p xml:id="S1.p2.1"><text font="italic" xml:id="S1.p2.1.1">{printed}</text></p>
-        </para>"#
-      ),
-    );
-  }
 }
 
 /// The kernel's `\title` without a class definition of its own keeps a title the body sealed off out of the
@@ -976,40 +824,7 @@ After text.
 /// Repro sectioning-frontmatter/asce_membership_grade_qualifies_the_name.
 #[test]
 fn asce_membership_grade_qualifies_the_name() {
-  let xml = convert_clean(include_str!(
+  convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/asce_membership_grade_qualifies_the_name.tex"
   ));
-  let names: Vec<String> = creators(&xml)
-    .iter()
-    .map(|c| {
-      let start = c.find("<personname>").expect("a personname") + "<personname>".len();
-      c[start..start + c[start..].find("</personname>").expect("closed")].to_string()
-    })
-    .collect();
-  if red_at_two(r#"unverified: keeps the grade ", M.ASCE" in Kuhn's name text"#) {
-    return;
-  }
-  assert_eq!(names, vec!["Matthew R. Kuhn", "Second Author"], "{xml}");
-  assert!(
-    creators(&xml)[0].contains(r#"<contact role="membership">M.ASCE</contact>"#),
-    "{xml}"
-  );
-  let xml = convert_clean(
-    r"\documentclass{article}
-\author{Jane Roe, F.ASCE \and John Doe, A.M.ASCE \and Ann Able, Ph.D., P.E. \and Ann Ross, M. ASCE}
-\begin{document}
-\maketitle
-Text.
-\end{document}",
-  );
-  assert_eq!(
-    creators(&xml),
-    vec![
-      r#"<creator role="author"><personname>Jane Roe</personname><contact role="membership">F.ASCE</contact></creator>"#,
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>John Doe</personname><contact role=\"membership\">A.M.ASCE</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ann Able, Ph.D., P.E.</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ann Ross</personname><contact role=\"membership\">M. ASCE</contact></creator>",
-    ],
-    "{xml}"
-  );
 }

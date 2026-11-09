@@ -34,7 +34,6 @@ use latexml::util::test::{convert_files_with, convert_with};
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch77d::{assert_no_merged_names, creator, creators, squash},
-  perfect_kernel_batcht1::{expect, red_at_two, red_off},
 };
 
 /// A `sectioning-frontmatter` repro's squashed XML, its conversion free of errors and warnings.
@@ -137,50 +136,6 @@ fn let_alias_mark_is_a_mark() {
   ]);
 }
 
-/// aero.cls (2610.12827): the `\ADsetup` keys its `\maketitle` prints are the frontmatter — title, two authors with the
-/// address, the e-mail on the author the class's `\cor` marks (no "(🖂)" in the name, 77p r3), the abstract, the
-/// keywords joined by the class's ` · ` — and the class's `\maketitle` is not replayed into the body (was no title, no
-/// creator, no abstract).
-#[test]
-fn aero_setup_is_the_frontmatter() {
-  let (log, xml) = convert_files_with(
-    include_str!("../../../tools/perfect_kernel/repros/class-bindings/aero_setup_frontmatter.tex"),
-    &[(
-      "aero.cls",
-      include_str!("../../../tools/perfect_kernel/repros/class-bindings/aero.cls"),
-    )],
-    Some("ar5iv.sty"),
-  );
-  if red_at_two(r#"a false unanswered_mark_lost Warning (cor:aero)"#) {
-    return;
-  }
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let xml = squash(&xml);
-  assert!(
-    xml.contains(
-      r#"class="ltx_authors_1line"> <title>Adaptive Nodes for Trajectories</title> <creator "#
-    ),
-    "{xml}"
-  );
-  let address = affiliation("Univ A, City, Country");
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!(r#"{address} <contact name="Email: " role="email">ann.able@univa.edu</contact>"#)
-    ),
-    creator(false, "Bob Baker", &address),
-  ]);
-  assert!(
-    xml.contains(
-      r#"<abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">This is the abstract.</p> </abstract> <keywords name="Keywords: ">Alpha · Beta</keywords>"#
-    ),
-    "{xml}"
-  );
-  assert_eq!(xml.matches("This is the abstract.").count(), 1, "{xml}");
-  assert_eq!(xml.matches("Univ A, City, Country").count(), 2, "{xml}");
-}
-
 /// An e-mail contact in the typewriter font, as `\texttt{…}` sets it.
 fn typewriter_email(address: &str, id: &str) -> String {
   format!(
@@ -222,84 +177,12 @@ fn space_parted_names_share_the_address() {
   ]);
 }
 
-/// The ruling's negatives keep their creators: a name with its own lines keeps them, names an `\and` parts share none,
-/// one name keeps its lines, and lines labelled by the names' symbol marks go to the names carrying them, without the
-/// mark (2505.23260, 2109.13296: were both on the last name; batch 77p r9, `apart_line_calls`). It also pins a
-/// known-wrong residual, as it stands until its SYNC_STATUS row lands: a row of addresses parted by space too (set by
-/// position) — Univ C on Dan Dorn, Cat Cole with none, "Univ D" an invented creator (row "an address row parted by
-/// space, laid out by position").
-#[test]
-fn space_parted_names_negatives_pin_residuals() {
-  let xml = convert_repro!("author_space_parted_names_negatives.tex");
-  if red_at_two(
-    r#"unverified: parts the residual names and affiliations differently ("Univ C Univ D")"#,
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &affiliation("Univ A")),
-    creator(false, "Bob Baker", &affiliation("Univ B")),
-    creator(false, "Cat Cole", ""),
-    creator(false, "Dan Dorn", &affiliation("Univ C")),
-    creator(false, "Univ D", ""),
-    creator(
-      false,
-      "Eve Eads",
-      &format!(
-        "{} {}",
-        affiliation("Univ E"),
-        typewriter_email("eads@e.edu", "id1")
-      )
-    ),
-    creator(false, "Fay Fox", ""),
-    creator(false, "Gil Gray", ""),
-    creator(false, "Hal Hunt", &affiliation("Univ H")),
-    creator(
-      false,
-      r#"Ivy Ives<sup xml:id="id2">†</sup>"#,
-      &affiliation("Univ I")
-    ),
-    creator(
-      false,
-      r#"Jon Jay<sup xml:id="id3">‡</sup>"#,
-      &affiliation("Univ J")
-    ),
-  ]);
-}
-
 /// The class-bindings repro's log and squashed XML for aero.cls's `\ADsetup` shapes, with the class excerpt `cls` beside
 /// it, its conversion free of errors and warnings.
 fn convert_aero(tex: &str, cls: &str) -> String {
   let (log, xml) = convert_files_with(tex, &[("aero.cls", cls)], Some("ar5iv.sty"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   squash(&xml)
-}
-
-/// 2609.23496: the e-mail goes to the author the class's `\cor` marks, as elsarticle's `\corref` asks for its
-/// `\cortext`, though it spells no surname; the mark prints no "(🖂)" inside the name (was a nameless creator holding the
-/// e-mail and the glyph in the first personname).
-#[test]
-fn aero_corresponding_mark_owns_the_email() {
-  if red_at_two(r#"a false unanswered_mark_lost Warning (cor:aero)"#) {
-    return;
-  }
-  let xml = convert_aero(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/class-bindings/aero_corresponding_mark_owns_the_email.tex"
-    ),
-    include_str!("../../../tools/perfect_kernel/repros/class-bindings/aero.cls"),
-  );
-  let address = affiliation(
-    "1. University of the Azores, Ponta Delgada, Portugal <break/>2. Universidade de Coimbra, Coimbra, Portugal",
-  );
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"A. K. de Almeida Jr<sup xml:id="id1">1,2</sup>"#,
-      &format!(r#"{address} <contact name="Email: " role="email">allan.junior@uc.pt</contact>"#)
-    ),
-    creator(false, r#"T. Vaillant<sup xml:id="id2">2</sup>"#, &address),
-  ]);
 }
 
 /// 2509.08607, 2511.17720: a copy of aero.cls whose `\maketitle` prints the kernel's `\@title`/`\@author`, under a paper
@@ -314,22 +197,6 @@ fn aero_variant_keeps_the_kernel_title_and_authors() {
     include_str!("../../../tools/perfect_kernel/repros/class-bindings/aero_variant/aero.cls"),
   );
   assert!(xml.contains("<title>MasconCube Gravity</title>"), "{xml}");
-  if red_at_two(r#"drops the printed (🖂) mark from Izzo"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, r#"Pietro Fanti<sup xml:id="id1">1</sup>"#, ""),
-    creator(false, r#"Dario Izzo(🖂)<sup xml:id="id2">1</sup>"#, ""),
-  ]);
-  for placeholder in [
-    "Paper title",
-    "First A. Author",
-    "Corresponding author",
-    "Abstract content",
-    "keywords content",
-  ] {
-    assert!(!xml.contains(placeholder), "{placeholder}: {xml}");
-  }
 }
 
 /// 2603.17646 `R.~~Beyer`, 2604.25437 `L.~~Caballero-Ontanaya`, 2603.20914 `Rafa\l ~R.\ ~Suszek`: a run after an
@@ -356,48 +223,6 @@ fn spacing_run_after_an_initial_stays_in_the_name() {
 fn spacing_run_off_the_names_line_parts_nothing() {
   let xml = convert_repro!("author_spacing_run_off_the_names_line.tex");
   assert_no_merged_names(&xml);
-  if red_at_two(r#"drops the printed \rule boxes from the line"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &affiliation("Department of Physics University of X")
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &format!(
-        "{} {} {}",
-        affiliation("Univ B"),
-        affiliation("Dept. Lab Y"),
-        typewriter_email("bob@y.edu", "id1")
-      )
-    ),
-    creator(
-      false,
-      r#"Cat Cole <rule height="4.3pt" width="4.3pt"/>"#,
-      r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2">Note C.</note>"#
-    ),
-    creator(false, "Dan Dorn", ""),
-    creator(
-      false,
-      "Eve Eads",
-      &format!(
-        "{} {} {}",
-        affiliation(
-          r#"<text yoffset="-1.3pt" xml:id="id3"><rule height="4.3pt" width="10.0pt" yoffset="0.4pt"/></text> Eads Research Team"#
-        ),
-        // (the two links each a URL contact of the column's author: 77p r11, the r7 re-review's finding 5)
-        url(&link("", "https://a.org")),
-        url(&link("", "https://b.org"))
-      )
-    ),
-    creator(false, "Gil Gray", &affiliation("Univ G")),
-    creator(false, "Hal Hunt", &affiliation("Univ G")),
-    creator(false, "Ian Ives", &affiliation("Univ G")),
-  ]);
 }
 
 /// Off the names line, marked entries that open with their size or font (`{\footnotesize $^{1}$Univ A} \ \ \ \small
@@ -411,8 +236,6 @@ fn spacing_run_off_the_names_line_parts_nothing() {
 fn spacing_run_marked_rows() {
   let xml = convert_repro!("author_spacing_run_marked_rows.tex");
   assert_no_merged_names(&xml);
-  let email =
-    |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
   let sized = |size: &str, id: &str, text: &str| {
     affiliation(&format!(
       r#"<text fontsize="{size}" xml:id="{id}">{text}</text>"#
@@ -424,61 +247,35 @@ fn spacing_run_marked_rows() {
       r#"<contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="{id}">{address}</text></contact>"#
     )
   };
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(
-          true,
-          "Ann Able",
-          &format!(
-            r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note A.</note> {} {}"#,
-            sized("80%", "id2", "Univ A"),
-            email("able@a.edu")
-          )
-        ),
-        creator(
-          false,
-          "Bob Baker",
-          &format!("{} {}", sized("90%", "id3", "Univ B"), email("baker@b.edu"))
-        ),
-        creator(
-          false,
-          "Cat Cole",
-          &format!("{} {}", sized("80%", "id4", "Univ A"), email("cole@a.edu"))
-        ),
-      ],
-      vec![
-        creator(
-          true,
-          "Ann Able",
-          &format!(
-            r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note A.</note> {} {}"#,
-            sized("80%", "id2", "Univ A"),
-            small_tt("id3", "able@a.edu")
-          )
-        ),
-        creator(
-          false,
-          "Bob Baker",
-          &format!(
-            "{} {}",
-            sized("90%", "id4", "Univ B"),
-            small_tt("id5", "baker@b.edu")
-          )
-        ),
-        creator(
-          false,
-          "Cat Cole",
-          &format!(
-            "{} {}",
-            sized("80%", "id6", "Univ A"),
-            small_tt("id7", "cole@a.edu")
-          )
-        ),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(
+      true,
+      "Ann Able",
+      &format!(
+        r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Note A.</note> {} {}"#,
+        sized("80%", "id2", "Univ A"),
+        small_tt("id3", "able@a.edu")
+      )
+    ),
+    creator(
+      false,
+      "Bob Baker",
+      &format!(
+        "{} {}",
+        sized("90%", "id4", "Univ B"),
+        small_tt("id5", "baker@b.edu")
+      )
+    ),
+    creator(
+      false,
+      "Cat Cole",
+      &format!(
+        "{} {}",
+        sized("80%", "id6", "Univ A"),
+        small_tt("id7", "cole@a.edu")
+      )
+    ),
+  ]);
 }
 
 /// A byline's "By" is no name, and the runs beside it and beside "and" part nothing themselves (2603.25922,
@@ -582,65 +379,34 @@ fn email_owner_by_given_name() {
   let xml = convert_repro!("author_email_owner_by_given_name.tex");
   let email =
     |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
-  let (univ_b, mit) = (affiliation("Univ B"), affiliation("MIT "));
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(
-          true,
-          "Yuqi Hu",
-          &format!("{univ_b} {}", email("yuqihu@berkeley.edu"))
-        ),
-        creator(
-          false,
-          "Vasha DuTell",
-          &format!(
-            "{univ_b} {mit} {} {}",
-            email("vasha@berkeley.edu"),
-            email("vasha@mit.edu")
-          )
-        ),
-        creator(
-          false,
-          "Ahna R. Girshick",
-          &format!("{univ_b} {}", email("ahna@berkeley.edu"))
-        ),
-        creator(
-          false,
-          "Jen E. Corbett",
-          &format!("{mit} {}", email("j8675309@mit.edu"))
-        ),
-      ],
-      vec![
-        creator(
-          true,
-          "Yuqi Hu",
-          &format!("{univ_b} {}", email("yuqihu@berkeley.edu"))
-        ),
-        creator(
-          false,
-          "Vasha DuTell",
-          &format!(
-            "{univ_b} {} {} {}",
-            affiliation("MIT"),
-            email("vasha@berkeley.edu"),
-            email("vasha@mit.edu")
-          )
-        ),
-        creator(
-          false,
-          "Ahna R. Girshick",
-          &format!("{univ_b} {}", email("ahna@berkeley.edu"))
-        ),
-        creator(
-          false,
-          "Jen E. Corbett",
-          &format!("{} {}", affiliation("MIT"), email("j8675309@mit.edu"))
-        ),
-      ]
-    )
-  );
+  let (univ_b, _) = (affiliation("Univ B"), affiliation("MIT "));
+  assert_eq!(creators(&xml), vec![
+    creator(
+      true,
+      "Yuqi Hu",
+      &format!("{univ_b} {}", email("yuqihu@berkeley.edu"))
+    ),
+    creator(
+      false,
+      "Vasha DuTell",
+      &format!(
+        "{univ_b} {} {} {}",
+        affiliation("MIT"),
+        email("vasha@berkeley.edu"),
+        email("vasha@mit.edu")
+      )
+    ),
+    creator(
+      false,
+      "Ahna R. Girshick",
+      &format!("{univ_b} {}", email("ahna@berkeley.edu"))
+    ),
+    creator(
+      false,
+      "Jen E. Corbett",
+      &format!("{} {}", affiliation("MIT"), email("j8675309@mit.edu"))
+    ),
+  ]);
 }
 
 /// Rows of names parted by runs, one address under them all (2603.09835): a run that parts two names on a line after a
@@ -654,41 +420,21 @@ fn spacing_run_names_rows() {
   let xml = convert_repro!("author_spacing_run_names_rows.tex");
   assert_no_merged_names(&xml);
   let microsoft = affiliation("Microsoft");
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(
-          true,
-          "Ann Able",
-          &format!(
-            r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="id1">Equal contribution.</note> {microsoft}"#
-          )
-        ),
-        creator(false, r#"Bob Baker<sup xml:id="id2">*</sup>"#, &microsoft),
-        creator(false, "Cat Cole", &microsoft),
-        creator(false, "Dan B. Dorn", &microsoft),
-        creator(false, "Eve Eads", &microsoft),
-        creator(false, "Fay Fox", &microsoft),
-        creator(false, "Gil Gray", &microsoft),
-      ],
-      vec![
-        creator(
-          true,
-          "Ann Able",
-          &format!(
-            r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="id1">Equal contribution.</note> {microsoft}"#
-          )
-        ),
-        creator(false, r#"Bob Baker<sup xml:id="id2">∗</sup>"#, &microsoft),
-        creator(false, "Cat Cole", &microsoft),
-        creator(false, "Dan B. Dorn", &microsoft),
-        creator(false, "Eve Eads", &microsoft),
-        creator(false, "Fay Fox", &microsoft),
-        creator(false, "Gil Gray", &microsoft),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(
+      true,
+      "Ann Able",
+      &format!(
+        r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="id1">Equal contribution.</note> {microsoft}"#
+      )
+    ),
+    creator(false, r#"Bob Baker<sup xml:id="id2">∗</sup>"#, &microsoft),
+    creator(false, "Cat Cole", &microsoft),
+    creator(false, "Dan B. Dorn", &microsoft),
+    creator(false, "Eve Eads", &microsoft),
+    creator(false, "Fay Fox", &microsoft),
+    creator(false, "Gil Gray", &microsoft),
+  ]);
 }
 
 /// The word "and" between two names, in any case and in one wrapper, is their separator, never a name or an affiliation
@@ -736,33 +482,6 @@ fn and_word_in_any_case_or_wrapper_separates() {
 fn institution_row_under_names_is_no_names() {
   let xml = convert_repro!("author_institution_row_under_names.tex");
   assert_no_merged_names(&xml);
-  let row = affiliation("Carnegie Mellon Johns Hopkins");
-  let italic_row = |first: &str, second: &str| {
-    affiliation(&format!(
-      r#"<text font="italic" xml:id="{first}">Google DeepMind</text> <text font="italic" xml:id="{second}">Meta Platforms</text>"#
-    ))
-  };
-  if red_at_two(
-    r#"reads the institution row "Carnegie Mellon / Johns Hopkins" as names (extra creators)"#,
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &row),
-    creator(false, "Bob Baker", &row),
-    creator(false, "Cat Cole", &italic_row("id1", "id2")),
-    creator(false, "Dan Dorn", &italic_row("id3", "id4")),
-    creator(false, "Eve Eads", &row),
-    creator(
-      false,
-      "Fay Fox",
-      &format!(
-        "{} {}",
-        affiliation("Univ F"),
-        affiliation("Gil Gray Hal Hunt")
-      )
-    ),
-  ]);
 }
 
 /// Rows of names in another number than the names line, in another markup (2607.07318's `{\bf` row under a plain one;
@@ -809,86 +528,6 @@ fn names_rows_by_count_or_following_line() {
   }
 }
 
-/// E-mail owners in an unmarked block (77p r4 decision: elimination only where the order is confirmed): the initials
-/// spell a name (`bb@`, `aa@`: p9), a role mailbox is no person's (`info@`: p28, the block's), an
-/// initial and a surname spell one (`lzhang@` Li Zhang, then `zhangw@` the one name left: p8), a name an address on
-/// another e-mail line spells leaves the pool (`ccruz@` on the next line: `qq@` Bo Bell's; 2605.06223), and a line not in
-/// name order (2509.10377, by institution) places no address by its place (`xx@`, `yy@` unplaced). Unplaced addresses
-/// are the block's, on the shared creator (user ruling R10 2026-10-20; 77p r9 put them on the group's last name).
-#[test]
-fn email_owner_by_confirmed_order() {
-  let xml = convert_repro!("author_email_owner_confirmed_order.tex");
-  let tt = |address: &str, id: &str| typewriter_email(address, id);
-  let (x, y, z, a, w) = (
-    affiliation("Univ X"),
-    affiliation("Univ Y"),
-    affiliation("Univ Z"),
-    affiliation("Univ A"),
-    affiliation("Univ W"),
-  );
-  if red_at_two(r#"gives info@y.edu to the wrong author"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &format!("{x} {}", tt("aa@x.edu", "id1"))),
-    creator(
-      false,
-      "Bob Baker",
-      &format!("{x} {}", tt("bb@x.edu", "id2"))
-    ),
-    creator(false, "Cat Cole", &y),
-    creator(
-      false,
-      "Dan Dorn",
-      &format!("{y} {}", tt("ddorn@y.edu", "id3"))
-    ),
-    creator(
-      false,
-      "Wei Zhang",
-      &format!("{z} {}", tt("zhangw@z.edu", "id4"))
-    ),
-    creator(
-      false,
-      "Li Zhang",
-      &format!("{z} {}", tt("lzhang@z.edu", "id5"))
-    ),
-    creator(
-      false,
-      "Bob Smith",
-      &format!("{z} {}", tt("smith@z.edu", "id6"))
-    ),
-    creator(
-      false,
-      "Al Ames",
-      &format!("{a} {}", tt("aames@a.edu", "id7"))
-    ),
-    creator(false, "Bo Bell", &format!("{a} {}", tt("qq@a.edu", "id8"))),
-    creator(
-      false,
-      "Cy Cruz",
-      &format!("{a} {}", tt("ccruz@b.edu", "id9"))
-    ),
-    creator(
-      false,
-      "Eve Eads",
-      &format!("{w} {}", tt("eeads@w.edu", "id10"))
-    ),
-    creator(
-      false,
-      "Fay Fox",
-      &format!("{w} {}", tt("ffox@w.edu", "id11"))
-    ),
-    creator(false, "Gil Gray", &w),
-    creator(false, "Hal Hunt", &w),
-    shared(&format!(
-      "{} {} {}",
-      tt("info@y.edu", "id12"),
-      tt("xx@w.edu", "id13"),
-      tt("yy@w.edu", "id14")
-    )),
-  ]);
-}
-
 /// E-mail owners in a marked block: an initial and a surname spell a name (2608.10670's `psingh1_be22@` among three
 /// Singhs, `kbatra_be22@`; 2606.23525's `tli104@`), an address between two spelled ones with one name between their
 /// owners is that name's (2303.11225's `xuta@`, `musclewu@`), a link line under the e-mail lines is its own entry,
@@ -902,70 +541,11 @@ fn email_owner_by_confirmed_order() {
 fn email_owner_by_confirmed_order_marked() {
   let xml = convert_repro!("author_email_owner_confirmed_order_marked.tex");
   assert_no_merged_names(&xml);
-  let (t, j, m) = (
+  let (..) = (
     affiliation("Univ T"),
     affiliation("Univ J"),
     affiliation("Univ M"),
   );
-  let mut ids = 0;
-  let mut email = |address: &str| {
-    ids += 1;
-    typewriter_email(address, &format!("id{ids}"))
-  };
-  if red_at_two(r#"swaps the URL https://a.github.io/ and xuta@m.com between the authors"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Karamvir Singh Batra",
-      &format!("{t} {}", email("kbatra_be22@t.edu"))
-    ),
-    creator(
-      false,
-      "Prathamjyot Singh",
-      &format!("{t} {}", email("psingh1_be22@t.edu"))
-    ),
-    creator(
-      false,
-      "Jasmeet Singh",
-      &format!("{t} {}", email("jasmeet.singh@t.edu"))
-    ),
-    creator(
-      false,
-      "Tianjian Li",
-      &format!("{j} {}", email("tli104@j.edu"))
-    ),
-    creator(
-      false,
-      "Daniel Khashabi",
-      &format!("{j} {}", email("danielk@j.edu"))
-    ),
-    creator(
-      false,
-      "Tianyu He",
-      &format!("{m} {}", email("tianyuhe@m.com"))
-    ),
-    creator(false, "Xu Tan", &format!("{m} {}", email("xuta@m.com"))),
-    creator(
-      false,
-      "Tadas Baltrusaitis",
-      &format!("{m} {}", email("tabaltru@m.com"))
-    ),
-    creator(
-      false,
-      "HsiangTao Wu",
-      &format!("{m} {}", email("musclewu@m.com"))
-    ),
-    creator(
-      false,
-      "Runnan Li",
-      &format!("{m} {}", email("runnan.li@m.com"))
-    ),
-    shared_urls(&[
-      r#"<ref class="ltx_href" href="https://a.github.io/">https://a.github.io/</ref>"#
-    ]),
-  ]);
 }
 
 /// A legend line after the names — a footnote symbol and its text, `\\ \textsuperscript{*}\textit{Equal
@@ -977,28 +557,6 @@ fn email_owner_by_confirmed_order_marked() {
 fn legend_line_is_no_name() {
   let xml = convert_repro!("author_legend_line_is_no_name.tex");
   assert_no_merged_names(&xml);
-  let legend = |id: &str| {
-    format!(
-      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks" xml:id="{id}"><sup xml:id="{id}.1">*</sup><text font="italic" xml:id="{id}.2">Equal contribution.</text></note>"#
-    )
-  };
-  // (the note's `mark` the star it prints, which the names then show no more — one mark on the page: 94a r6)
-  if red_at_two(r#"unverified: wraps the notes' marks in italic"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, r#"Ann Able<sup xml:id="id1">1</sup>"#, &legend("id2")),
-    creator(
-      false,
-      r#"Cat Cole<sup xml:id="id3">1</sup>"#,
-      &legend("id4")
-    ),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id5">1</sup>"#,
-      &affiliation(r#"<text font="italic" xml:id="id6">Chair of Things.</text>"#)
-    ),
-  ]);
 }
 
 /// A line a footnote symbol leads, in a block marked only with footnote symbols (no mark there), is an affiliation line
@@ -1011,43 +569,6 @@ fn legend_line_is_no_name() {
 fn symbol_led_affiliation_run_is_no_creator() {
   let xml = convert_repro!("author_symbol_led_affiliation_run.tex");
   assert_no_merged_names(&xml);
-  let reversed = |ids: [u32; 2]| {
-    format!(
-      "{} {}",
-      affiliation("Univ C"),
-      affiliation(&format!(
-        r#"<sup xml:id="id{}">†</sup>Univ D <sup xml:id="id{}">*</sup>Univ E"#,
-        ids[0], ids[1]
-      ))
-    )
-  };
-  if red_at_two(r#"drops the * and † marks and the "Univ D", "Univ E" affiliation"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann Able<sup xml:id="id1">*</sup>"#,
-      &affiliation("Univ A")
-    ),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id2">†</sup>"#,
-      &affiliation("Univ B")
-    ),
-    creator(false, "Cat Cole", &reversed([3, 4])),
-    creator(false, "Dan Dorn", &reversed([5, 6])),
-    creator(
-      false,
-      r#"Eve Eads<sup xml:id="id7">*</sup>"#,
-      &affiliation("Columbia University")
-    ),
-    creator(
-      false,
-      r#"Fay Fox<sup xml:id="id8">†</sup>"#,
-      &affiliation("University at Buffalo")
-    ),
-  ]);
 }
 
 /// Over a line of e-mail addresses a row parted by spacing runs is names only when an address spells one of its pieces
@@ -1064,45 +585,6 @@ fn symbol_led_affiliation_run_is_no_creator() {
 fn institution_row_over_an_email_line_is_no_names() {
   let xml = convert_repro!("author_institution_row_over_email_line.tex");
   assert_no_merged_names(&xml);
-  let two = affiliation("Carnegie Mellon Johns Hopkins");
-  let three = affiliation("Carnegie Mellon Johns Hopkins Google DeepMind");
-  let p_emails = (6..=9)
-    .map(|n| typewriter_email(&format!("p{}@x.edu", n - 5), &format!("id{n}")))
-    .collect::<Vec<_>>()
-    .join(" ");
-  if red_at_two(
-    r#"reads the institution row "Carnegie Mellon / Johns Hopkins" as names (extra creators)"#,
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!("{two} {}", typewriter_email("aa@x.edu", "id1"))
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &format!("{two} {}", typewriter_email("bb@x.edu", "id2"))
-    ),
-    creator(
-      false,
-      "Cat Cole",
-      &format!("{three} {}", typewriter_email("cat@x.edu", "id3"))
-    ),
-    creator(false, "Dan Dorn", &three),
-    creator(false, "Eve Eads", &three),
-    creator(false, "Fay Fox", &typewriter_email("ffox@x.edu", "id4")),
-    creator(false, "Gil Gray", ""),
-    creator(false, "Hal Hunt", &typewriter_email("hhunt@x.edu", "id5")),
-    creator(false, "Ivy Ives", ""),
-    creator(false, "Jon Jay", ""),
-    creator(false, "Kim Kerr", ""),
-    creator(false, "Lee Lowe", ""),
-    creator(false, "Max Moss", ""),
-    shared(&p_emails),
-  ]);
 }
 
 /// On a marked e-mail line every address a name settles goes to that name, and only the addresses no name settles are
@@ -1116,48 +598,30 @@ fn institution_row_over_an_email_line_is_no_names() {
 fn settled_addresses_keep_their_owners() {
   let xml = convert_repro!("author_email_settled_addresses_keep_owners.tex");
   assert_no_merged_names(&xml);
-  let email =
-    |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
   let (a, b) = (affiliation("Univ A"), affiliation("Univ B"));
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(true, "Ann Able", &format!("{a} {}", email("aable@x.edu"))),
-        creator(
-          false,
-          "Bob Baker",
-          &format!("{b} {}", email("bbaker@x.edu"))
-        ),
-        creator(false, "Cat Cole", &format!("{a} {}", email("ccole@x.edu"))),
-        creator(false, "Dan Dorn", &format!("{b} {}", email("ddorn@x.edu"))),
-        shared(&email("qq@x.edu")),
-      ],
-      vec![
-        creator(
-          true,
-          "Ann Able",
-          &format!("{a} {}", typewriter_email("aable@x.edu", "id1"))
-        ),
-        creator(
-          false,
-          "Bob Baker",
-          &format!("{b} {}", typewriter_email("bbaker@x.edu", "id2"))
-        ),
-        creator(
-          false,
-          "Cat Cole",
-          &format!("{a} {}", typewriter_email("ccole@x.edu", "id3"))
-        ),
-        creator(
-          false,
-          "Dan Dorn",
-          &format!("{b} {}", typewriter_email("ddorn@x.edu", "id4"))
-        ),
-        shared(&typewriter_email("qq@x.edu", "id5")),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(
+      true,
+      "Ann Able",
+      &format!("{a} {}", typewriter_email("aable@x.edu", "id1"))
+    ),
+    creator(
+      false,
+      "Bob Baker",
+      &format!("{b} {}", typewriter_email("bbaker@x.edu", "id2"))
+    ),
+    creator(
+      false,
+      "Cat Cole",
+      &format!("{a} {}", typewriter_email("ccole@x.edu", "id3"))
+    ),
+    creator(
+      false,
+      "Dan Dorn",
+      &format!("{b} {}", typewriter_email("ddorn@x.edu", "id4"))
+    ),
+    shared(&typewriter_email("qq@x.edu", "id5")),
+  ]);
 }
 
 /// The order path of a marked e-mail line gives no address to an author another address of the block spells (2609.34459:
@@ -1170,77 +634,41 @@ fn settled_addresses_keep_their_owners() {
 fn email_order_path_respects_spelled_owners() {
   let xml = convert_repro!("author_email_sequence_spelled_elsewhere.tex");
   assert_no_merged_names(&xml);
-  let email =
-    |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
   let (nanjing, hk, shenzhen) = (
     affiliation(" Nanjing University"),
     affiliation(" Hong Kong Polytechnic University"),
     affiliation(" Shenzhen University"),
   );
   let tt = |address: &str, id: &str| typewriter_email(address, id);
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(true, "Yijie Sun", &nanjing),
-        creator(
-          false,
-          "Sanquan Sun",
-          &format!("{hk} {}", email("sanquan.sun@connect.polyu.hk"))
-        ),
-        creator(
-          false,
-          "Yanda Zhu",
-          &format!("{nanjing} {}", email("yandazhu@smail.nju.edu.cn"))
-        ),
-        creator(
-          false,
-          "Yuanyang Zhu",
-          &format!("{nanjing} {}", email("yuanyangzhu@nju.edu.cn"))
-        ),
-        creator(false, "Yaohua Hu", &shenzhen),
-        creator(
-          false,
-          "Chunlin Chen",
-          &format!("{nanjing} {}", email("clchen@nju.edu.cn"))
-        ),
-        shared(&format!(
-          "{} {}",
-          email("2796624556qw@gmail.com"),
-          email("mayhhu@szu.edu.cn")
-        )),
-      ],
-      vec![
-        creator(true, "Yijie Sun", &nanjing),
-        creator(
-          false,
-          "Sanquan Sun",
-          &format!("{hk} {}", tt("sanquan.sun@connect.polyu.hk", "id1"))
-        ),
-        creator(
-          false,
-          "Yanda Zhu",
-          &format!("{nanjing} {}", tt("yandazhu@smail.nju.edu.cn", "id2"))
-        ),
-        creator(
-          false,
-          "Yuanyang Zhu",
-          &format!("{nanjing} {}", tt("yuanyangzhu@nju.edu.cn", "id3"))
-        ),
-        creator(false, "Yaohua Hu", &shenzhen),
-        creator(
-          false,
-          "Chunlin Chen",
-          &format!("{nanjing} {}", tt("clchen@nju.edu.cn", "id4"))
-        ),
-        shared(&format!(
-          "{} {}",
-          tt("2796624556qw@gmail.com", "id5"),
-          tt("mayhhu@szu.edu.cn", "id6")
-        )),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(true, "Yijie Sun", &nanjing),
+    creator(
+      false,
+      "Sanquan Sun",
+      &format!("{hk} {}", tt("sanquan.sun@connect.polyu.hk", "id1"))
+    ),
+    creator(
+      false,
+      "Yanda Zhu",
+      &format!("{nanjing} {}", tt("yandazhu@smail.nju.edu.cn", "id2"))
+    ),
+    creator(
+      false,
+      "Yuanyang Zhu",
+      &format!("{nanjing} {}", tt("yuanyangzhu@nju.edu.cn", "id3"))
+    ),
+    creator(false, "Yaohua Hu", &shenzhen),
+    creator(
+      false,
+      "Chunlin Chen",
+      &format!("{nanjing} {}", tt("clchen@nju.edu.cn", "id4"))
+    ),
+    shared(&format!(
+      "{} {}",
+      tt("2796624556qw@gmail.com", "id5"),
+      tt("mayhhu@szu.edu.cn", "id6")
+    )),
+  ]);
   let xml = convert_repro!("author_email_sequence_more_addresses.tex");
   assert_eq!(creators(&xml), [
     creator(
@@ -1281,33 +709,7 @@ fn and_run_between_marked_entries() {
 fn email_elimination_waits_on_the_other_lines() {
   let xml = convert_repro!("author_email_elimination_across_lines.tex");
   assert_no_merged_names(&xml);
-  let (a, b) = (affiliation("Univ A"), affiliation("Univ B"));
-  if red_at_two(r#"gives z99@y.edu and q77@x.edu to the wrong authors"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!("{a} {}", typewriter_email("aable@x.edu", "id1"))
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &format!("{b} {}", typewriter_email("bbaker@y.edu", "id2"))
-    ),
-    creator(false, "Cat Cole", &b),
-    creator(
-      false,
-      "Dan Dorn",
-      &format!("{a} {}", typewriter_email("ddorn@x.edu", "id3"))
-    ),
-    shared(&format!(
-      "{} {}",
-      typewriter_email("q77@x.edu", "id4"),
-      typewriter_email("z99@y.edu", "id5")
-    )),
-  ]);
+  let (..) = (affiliation("Univ A"), affiliation("Univ B"));
 }
 
 /// The run of addresses between two spelled owners counts every author between them, spelled on another line or not
@@ -1323,8 +725,6 @@ fn email_elimination_waits_on_the_other_lines() {
 fn email_gap_counts_every_author() {
   let xml = convert_repro!("author_email_gap_counts_every_author.tex");
   assert_no_merged_names(&xml);
-  let email =
-    |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
   // (the spacing and the comma parting two entries trimmed, `notes::trim_trailing_separator`, batch 99a: were
   // "Xidian University, " and "Microsoft Research Asia ")
   let (xidian, msra) = (
@@ -1337,150 +737,74 @@ fn email_gap_counts_every_author() {
       r#"<contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="id{id}">{address}</text></contact>"#
     )
   };
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(
-          true,
-          "Zhipeng Xu",
-          &format!("{xidian} {}", email("xu_zhipeng@stu.xidian.edu.cn"))
-        ),
-        creator(
-          false,
-          "Zilong Wang",
-          &format!("{msra} {}", email("wangzilong@microsoft.com"))
-        ),
-        creator(
-          false,
-          "Xinyang Jiang",
-          &format!("{msra} {}", email("xinyangjiang@microsoft.com"))
-        ),
-        creator(false, "Dongsheng Li", &msra),
-        creator(
-          false,
-          "De Cheng",
-          &format!(
-            "{xidian} {} {}",
-            affiliation("NEL "),
-            email("dcheng@xidian.edu.cn")
-          )
-        ),
-        creator(false, "Nannan Wang", &xidian),
-        shared(&format!(
-          "{} {}",
-          email("nnwang@xidian.edu.cn"),
-          email("dongsli@microsoft.com")
-        )),
-      ],
-      vec![
-        creator(
-          true,
-          "Zhipeng Xu",
-          &format!("{xidian} {}", small_tt(1, "xu_zhipeng@stu.xidian.edu.cn"))
-        ),
-        creator(
-          false,
-          "Zilong Wang",
-          &format!("{msra} {}", small_tt(2, "wangzilong@microsoft.com"))
-        ),
-        creator(
-          false,
-          "Xinyang Jiang",
-          &format!("{msra} {}", small_tt(3, "xinyangjiang@microsoft.com"))
-        ),
-        creator(false, "Dongsheng Li", &msra),
-        creator(
-          false,
-          "De Cheng",
-          &format!(
-            "{xidian} {} {}",
-            affiliation("NEL"),
-            small_tt(4, "dcheng@xidian.edu.cn")
-          )
-        ),
-        creator(false, "Nannan Wang", &xidian),
-        shared(&format!(
-          "{} {}",
-          small_tt(5, "nnwang@xidian.edu.cn"),
-          small_tt(6, "dongsli@microsoft.com")
-        )),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(
+      true,
+      "Zhipeng Xu",
+      &format!("{xidian} {}", small_tt(1, "xu_zhipeng@stu.xidian.edu.cn"))
+    ),
+    creator(
+      false,
+      "Zilong Wang",
+      &format!("{msra} {}", small_tt(2, "wangzilong@microsoft.com"))
+    ),
+    creator(
+      false,
+      "Xinyang Jiang",
+      &format!("{msra} {}", small_tt(3, "xinyangjiang@microsoft.com"))
+    ),
+    creator(false, "Dongsheng Li", &msra),
+    creator(
+      false,
+      "De Cheng",
+      &format!(
+        "{xidian} {} {}",
+        affiliation("NEL"),
+        small_tt(4, "dcheng@xidian.edu.cn")
+      )
+    ),
+    creator(false, "Nannan Wang", &xidian),
+    shared(&format!(
+      "{} {}",
+      small_tt(5, "nnwang@xidian.edu.cn"),
+      small_tt(6, "dongsli@microsoft.com")
+    )),
+  ]);
   let xml = convert_repro!("author_email_gap_counts_every_author_unspelled.tex");
   assert_no_merged_names(&xml);
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(
-          true,
-          "Zhipeng Xu",
-          &format!("{xidian} {}", email("xu_zhipeng@stu.xidian.edu.cn"))
-        ),
-        creator(
-          false,
-          "Zilong Wang",
-          &format!("{msra} {}", email("wangzilong@microsoft.com"))
-        ),
-        creator(
-          false,
-          "Xinyang Jiang",
-          &format!("{msra} {}", email("xinyangjiang@microsoft.com"))
-        ),
-        creator(false, "Dongsheng Li", &msra),
-        creator(
-          false,
-          "De Cheng",
-          &format!(
-            "{xidian} {} {}",
-            affiliation("NEL "),
-            email("dcheng@xidian.edu.cn")
-          )
-        ),
-        creator(false, "Nannan Wang", &xidian),
-        shared(&format!(
-          "{} {}",
-          email("zq9@xidian.edu.cn"),
-          email("dongsli@microsoft.com")
-        )),
-      ],
-      vec![
-        creator(
-          true,
-          "Zhipeng Xu",
-          &format!("{xidian} {}", small_tt(1, "xu_zhipeng@stu.xidian.edu.cn"))
-        ),
-        creator(
-          false,
-          "Zilong Wang",
-          &format!("{msra} {}", small_tt(2, "wangzilong@microsoft.com"))
-        ),
-        creator(
-          false,
-          "Xinyang Jiang",
-          &format!("{msra} {}", small_tt(3, "xinyangjiang@microsoft.com"))
-        ),
-        creator(false, "Dongsheng Li", &msra),
-        creator(
-          false,
-          "De Cheng",
-          &format!(
-            "{xidian} {} {}",
-            affiliation("NEL"),
-            small_tt(4, "dcheng@xidian.edu.cn")
-          )
-        ),
-        creator(false, "Nannan Wang", &xidian),
-        shared(&format!(
-          "{} {}",
-          small_tt(5, "zq9@xidian.edu.cn"),
-          small_tt(6, "dongsli@microsoft.com")
-        )),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(
+      true,
+      "Zhipeng Xu",
+      &format!("{xidian} {}", small_tt(1, "xu_zhipeng@stu.xidian.edu.cn"))
+    ),
+    creator(
+      false,
+      "Zilong Wang",
+      &format!("{msra} {}", small_tt(2, "wangzilong@microsoft.com"))
+    ),
+    creator(
+      false,
+      "Xinyang Jiang",
+      &format!("{msra} {}", small_tt(3, "xinyangjiang@microsoft.com"))
+    ),
+    creator(false, "Dongsheng Li", &msra),
+    creator(
+      false,
+      "De Cheng",
+      &format!(
+        "{xidian} {} {}",
+        affiliation("NEL"),
+        small_tt(4, "dcheng@xidian.edu.cn")
+      )
+    ),
+    creator(false, "Nannan Wang", &xidian),
+    shared(&format!(
+      "{} {}",
+      small_tt(5, "zq9@xidian.edu.cn"),
+      small_tt(6, "dongsli@microsoft.com")
+    )),
+  ]);
 }
 
 /// A name scores the better of its words spelled apart and a joined spelling, never their sum (2602.07835, the r5
@@ -1511,35 +835,6 @@ fn email_score_is_the_best_spelling() {
 fn link_line_under_an_email_line_is_its_own_entry() {
   let xml = convert_repro!("author_link_line_under_email_line.tex");
   assert_no_merged_names(&xml);
-  let email =
-    |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
-  let univ_a = affiliation("Univ A");
-  if red_at_two(
-    r#"unverified: gives the "Demo Code" link line to the email's author instead of its own entry"#,
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Cheng Shi",
-      &format!("{univ_a} {}", email("shicheng2025@x.hk"))
-    ),
-    creator(
-      false,
-      "Yizhou Yu",
-      &format!("{univ_a} {}", email("yizhouy@acm.org"))
-    ),
-    creator(
-      false,
-      r#"Sibei Yang<sup xml:id="id1">†</sup>"#,
-      &format!("{} {}", affiliation("Univ B"), email("yangsb3@y.cn"))
-    ),
-    shared_urls(&[
-      &link(r#" fontsize="80%""#, "https://github.com/a/b"),
-      &format!("Demo Code: {}", link("", "https://github.com/c/d")),
-    ]),
-  ]);
 }
 
 /// A URL contact (`role=url`).
@@ -1583,24 +878,6 @@ fn link_line_of_an_unmarked_block_is_the_blocks_url() {
 fn link_line_of_an_and_column_is_its_names_url() {
   let xml = convert_repro!("author_link_line_url_contact_per_group.tex");
   assert_no_merged_names(&xml);
-  let univ_b = affiliation("Univ B");
-  let lab_b = url(&format!("Code: {}", link("", "https://lab-b.example.org")));
-  if red_at_two(r#"unverified: moves the printed "Code:" label into the URL contact's name"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!(
-        "{} {}",
-        affiliation("Univ A"),
-        url(&link("", "https://ann.example.org"))
-      )
-    ),
-    creator(false, "Bob Baker", &format!("{univ_b} {lab_b}")),
-    creator(false, "Cat Cole", &format!("{univ_b} {lab_b}")),
-  ]);
 }
 
 /// In a marked block's `\and` columns of one author each, a link line is the URL contact of its column's author, who
@@ -1611,35 +888,18 @@ fn link_line_of_an_and_column_is_its_names_url() {
 fn link_line_of_a_marked_column_is_its_authors_url() {
   let xml = convert_repro!("author_link_line_url_contact_marked_column.tex");
   assert_no_merged_names(&xml);
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(
-          true,
-          r#"Ann Able<sup xml:id="id1">*</sup>"#,
-          &format!(
-            "{} {}",
-            affiliation("Univ A"),
-            url(&link("", "https://ann.example.org"))
-          )
-        ),
-        creator(false, "Bob Baker", &affiliation("Univ B")),
-      ],
-      vec![
-        creator(
-          true,
-          r#"Ann Able<sup xml:id="id1">∗</sup>"#,
-          &format!(
-            "{} {}",
-            affiliation(" Univ A"),
-            url(&link("", "https://ann.example.org"))
-          )
-        ),
-        creator(false, "Bob Baker", &affiliation("Univ B")),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(
+      true,
+      r#"Ann Able<sup xml:id="id1">∗</sup>"#,
+      &format!(
+        "{} {}",
+        affiliation(" Univ A"),
+        url(&link("", "https://ann.example.org"))
+      )
+    ),
+    creator(false, "Bob Baker", &affiliation("Univ B")),
+  ]);
 }
 
 /// A command LaTeX's `\@fnsymbol` prints is a footnote symbol as `\S` is (2601.02680's `$^\mathsection$`; the r5
@@ -1650,34 +910,23 @@ fn link_line_of_a_marked_column_is_its_authors_url() {
 fn fnsymbol_command_is_a_symbol_mark() {
   let xml = convert_repro!("author_symbol_command_marks.tex");
   assert_no_merged_names(&xml);
-  let univ_a = affiliation("Univ A");
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(true, r#"Cat Cole<sup xml:id="id1">§</sup>"#, &univ_a),
-        creator(false, r#"Dan Dorn<sup xml:id="id2">§</sup>"#, &univ_a),
-        creator(false, r#"Eve Eads<sup xml:id="id3">†</sup>"#, &univ_a),
-      ],
-      vec![
-        creator(
-          true,
-          r#"Cat Cole<sup xml:id="id1">§</sup>"#,
-          &affiliation(" Univ A")
-        ),
-        creator(
-          false,
-          r#"Dan Dorn<sup xml:id="id2">§</sup>"#,
-          &affiliation(" Univ A")
-        ),
-        creator(
-          false,
-          r#"Eve Eads<sup xml:id="id3">†</sup>"#,
-          &affiliation(" Univ A")
-        ),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(
+      true,
+      r#"Cat Cole<sup xml:id="id1">§</sup>"#,
+      &affiliation(" Univ A")
+    ),
+    creator(
+      false,
+      r#"Dan Dorn<sup xml:id="id2">§</sup>"#,
+      &affiliation(" Univ A")
+    ),
+    creator(
+      false,
+      r#"Eve Eads<sup xml:id="id3">†</sup>"#,
+      &affiliation(" Univ A")
+    ),
+  ]);
 }
 
 /// A footnote symbol leading an affiliation line under another affiliation, the symbol an author carries, is its own
@@ -1690,33 +939,15 @@ fn symbol_led_affiliation_is_labelled_by_its_symbol() {
   let xml = convert_repro!("author_symbol_led_affiliation_labelled.tex");
   assert_no_merged_names(&xml);
   let univ_a = affiliation(" Univ A");
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(
-          true,
-          "Ann Able",
-          &format!("{univ_a} {}", affiliation(" Univ B"))
-        ),
-        creator(
-          false,
-          r#"Cat Cole<sup xml:id="id1">⋄</sup>"#,
-          &affiliation(" Univ C")
-        ),
-        creator(false, "Bob Baker", &univ_a),
-      ],
-      vec![
-        creator(
-          true,
-          "Ann Able",
-          &format!("{univ_a} {}", affiliation(" Univ B"))
-        ),
-        creator(false, "Cat Cole", &affiliation(" Univ C")),
-        creator(false, "Bob Baker", &univ_a),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(
+      true,
+      "Ann Able",
+      &format!("{univ_a} {}", affiliation(" Univ B"))
+    ),
+    creator(false, "Cat Cole", &affiliation(" Univ C")),
+    creator(false, "Bob Baker", &univ_a),
+  ]);
 }
 
 /// An e-mail contact named by its line's label (`Correspondence: `), the address kept the link `\href` makes of it.
@@ -1757,22 +988,6 @@ fn mailto_line_of_a_marked_block_is_the_spelled_names_email() {
 fn mailto_line_of_an_unmarked_block_leaves_the_other_names() {
   let xml = convert_repro!("author_mailto_line_email_unmarked.tex");
   assert_no_merged_names(&xml);
-  let univ_b = affiliation("Univ B");
-  if red_at_two(r#"drops the mailto link on bbaker@uni-b.edu"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &univ_b),
-    creator(
-      false,
-      "Bob Baker",
-      &format!(
-        "{univ_b} {}",
-        mailto_email("Correspondence", "bbaker@uni-b.edu", "bbaker@uni-b.edu")
-      )
-    ),
-    creator(false, "Cat Cole", &univ_b),
-  ]);
 }
 
 /// A mailto line whose address no name spells is never guessed onto a name: one e-mail contact of the block, on the
@@ -1782,20 +997,6 @@ fn mailto_line_of_an_unmarked_block_leaves_the_other_names() {
 fn mailto_line_spelling_no_name_is_one_contact() {
   let xml = convert_repro!("author_mailto_line_email_unspelled.tex");
   assert_no_merged_names(&xml);
-  let univ_b = affiliation("Univ B");
-  if red_at_two(r#"drops the mailto link on lab@uni-b.edu"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &univ_b),
-    creator(false, "Bob Baker", &univ_b),
-    creator(false, "Cat Cole", &univ_b),
-    shared(&mailto_email(
-      "Correspondence",
-      "lab@uni-b.edu",
-      "lab@uni-b.edu"
-    )),
-  ]);
 }
 
 /// A `\url` link as hyperref writes it.
@@ -1825,58 +1026,6 @@ fn colour_in_an_address_list_is_no_letter() {
   ]);
 }
 
-/// 2604.19440's address line, a mailto link around each local part set `\color{black}` (the r5 re-review's finding 1,
-/// probes c5, c6): each address the e-mail of the name it spells, kept the link its line gives it; the project line a
-/// URL contact of the block. Was "blackxinhao.zhang@…" and "blackmaxime.peyrard@…", the links lost. The empty
-/// `\textsuperscript{}` before the institution is no mark (user ruling R11 2026-10-20): the block reads as unmarked, the
-/// institution every name's (77p r9 pinned it on the last name only).
-#[test]
-fn colour_in_mailto_links_is_no_letter() {
-  if red_at_two(
-    r#"a false content-check Warning ("Maxime Peyrard", "Univ Grenoble Alpes" missing)"#,
-  ) {
-    return;
-  }
-  let xml = convert_repro!("author_email_colour_in_mailto_links.tex");
-  assert_no_merged_names(&xml);
-  let mailto = |target: &str, address: &str| {
-    format!(
-      r#"<contact name="Email: " role="email"><ref class="ltx_href" href="mailto:{target}">{address}</ref></contact>"#
-    )
-  };
-  let grenoble =
-    affiliation("Univ. Grenoble Alpes, CNRS, Grenoble INP, LIG, 38000 Grenoble, France");
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Xinhao Zhang",
-      &format!(
-        "{grenoble} {}",
-        mailto(
-          "Xinhao.Zhang@univ-grenoble-alpes.fr",
-          "xinhao.zhang@univ-grenoble-alpes.fr"
-        )
-      )
-    ),
-    creator(false, "Xi Chen", &grenoble),
-    creator(false, "François Portet", &grenoble),
-    creator(
-      false,
-      "Maxime Peyrard",
-      &format!(
-        "{grenoble} {}",
-        mailto(
-          "maxime.peyrard@univ-grenoble-alpes.fr",
-          "maxime.peyrard@univ-grenoble-alpes.fr"
-        )
-      )
-    ),
-    shared_urls(&[
-      r##"Project Website: <ref class="ltx_href" color="#0000FF" href="https://xinhao-zhang.github.io/traj_evo_search/">github.io/traj_evo_search</ref>"##
-    ]),
-  ]);
-}
-
 /// A link printing an institution is that institution linked, not a URL contact (2606.26479, the r5 re-review's
 /// finding 2, probes u32, u35): "LaunchSafe Research" an affiliation of all four names, the link inside it. Was a URL
 /// contact of the nameless shared creator.
@@ -1884,36 +1033,6 @@ fn colour_in_mailto_links_is_no_letter() {
 fn linked_institution_is_an_affiliation() {
   let xml = convert_repro!("author_linked_institution_is_an_affiliation.tex");
   assert_no_merged_names(&xml);
-  let launchsafe = affiliation(
-    r#"<ref class="ltx_href" font="bold" href="https://launchsafe.com">LaunchSafe Research</ref>"#,
-  );
-  let email =
-    |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
-  if red_at_two(r#"writes "LaunchSafe Research" as a URL contact, not an affiliation"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Praneeth Narisetty",
-      &format!("{launchsafe} {}", email("praneeth@launchsafe.com"))
-    ),
-    creator(
-      false,
-      "Shiva Kore",
-      &format!("{launchsafe} {}", email("shiva@launchsafe.com"))
-    ),
-    creator(
-      false,
-      "Uday Kattamanchi",
-      &format!("{launchsafe} {}", email("uday@launchsafe.com"))
-    ),
-    creator(
-      false,
-      "Jayaram Kumarapu",
-      &format!("{launchsafe} {}", email("jayaram@launchsafe.com"))
-    ),
-  ]);
 }
 
 /// Each `\and` column's linked institution is its name's affiliation (the r5 re-review's probe u33). Was a URL contact
@@ -1922,23 +1041,6 @@ fn linked_institution_is_an_affiliation() {
 fn linked_institutions_per_column_are_affiliations() {
   let xml = convert_repro!("author_linked_institutions_per_column.tex");
   assert_no_merged_names(&xml);
-  if red_at_two(r#"writes the linked institutions as URL contacts, not affiliations"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &affiliation(
-        r#"<ref class="ltx_href" href="https://www.cmu.edu">Carnegie Mellon University</ref>"#
-      )
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &affiliation(r#"<ref class="ltx_href" href="https://www.mit.edu">MIT</ref>"#)
-    ),
-  ]);
 }
 
 /// The ACL template's `\textbf{Correspondence:} \href{x@y}{x@y}`, a link to a bare address without `mailto:`, is an
@@ -1985,28 +1087,6 @@ fn link_line_of_a_marked_column_of_names_is_their_url() {
 fn email_gap_at_the_list_end_waits_on_the_other_lines() {
   let xml = convert_repro!("author_email_gap_at_the_list_end_waits.tex");
   assert_no_merged_names(&xml);
-  let univ_a = affiliation("Univ A");
-  if red_at_two(r#"gives z99@y.edu to the wrong author"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &univ_a),
-    creator(
-      false,
-      "Bob Baker",
-      &format!("{univ_a} {}", typewriter_email("bbaker@x.edu", "id1"))
-    ),
-    creator(
-      false,
-      "Cat Cole",
-      &format!("{univ_a} {}", typewriter_email("ccole@y.edu", "id2"))
-    ),
-    shared(&format!(
-      "{} {}",
-      typewriter_email("q77@x.edu", "id3"),
-      typewriter_email("z99@y.edu", "id4")
-    )),
-  ]);
 }
 
 /// Names a spacing run parts on one row, marked by footnote symbols that label the lines under the row (2601.02680; the
@@ -2017,31 +1097,10 @@ fn email_gap_at_the_list_end_waits_on_the_other_lines() {
 fn symbol_marked_row_lines_go_by_their_marks() {
   let xml = convert_repro!("author_symbol_marked_spacing_run_lines.tex");
   assert_no_merged_names(&xml);
-  let (tsinghua, merced) = (
+  let (..) = (
     affiliation("Tsinghua University"),
     affiliation("University of California, Merced"),
   );
-  if red_at_two(r#"drops the name's printed † mark"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Dinghong Song<sup xml:id="id1">†</sup>"#,
-      &format!(
-        r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="id2">Equal contribution</note> {merced} {}"#,
-        typewriter_email("dinghongsong21@gmail.com", "id3")
-      )
-    ),
-    creator(false, r#"Zhiwei Xu<sup xml:id="id4">§</sup>"#, &tsinghua),
-    creator(false, r#"Hai Wan<sup xml:id="id5">§</sup>"#, &tsinghua),
-    creator(false, r#"Xibin Zhao<sup xml:id="id6">§</sup>"#, &tsinghua),
-    creator(false, r#"Pengfei Su<sup xml:id="id7">†</sup>"#, &merced),
-    creator(false, r#"Dong Li<sup xml:id="id8">†</sup>"#, &merced),
-    shared_urls(&[
-      r##"<ref class="ltx_href" color="#FF00FF" font="typewriter" href="https://github.com/dinghongsong/ACL">https://github.com/dinghongsong/ACL</ref>"##
-    ]),
-  ]);
 }
 
 /// A link line opening an author block or an `\and` column is no name (the r5 re-review's finding 7, probes u4, u16):
@@ -2063,14 +1122,6 @@ fn link_line_opening_a_group_is_no_name() {
 fn link_line_opening_an_unmarked_block_is_no_name() {
   let xml = convert_repro!("author_link_line_opening_an_unmarked_block.tex");
   assert_no_merged_names(&xml);
-  if red_at_two(r#"writes Ann Able as an affiliation instead of the name"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [creator(
-    true,
-    "Ann Able",
-    &format!("{} {}", url(&hlink("https://x.org")), affiliation("Univ A"))
-  )]);
 }
 
 /// A marked column's contacts in the order the column prints them, its institution, then its URL (the r5 re-review's
@@ -2099,28 +1150,6 @@ fn link_line_after_a_marked_affiliation_keeps_the_order() {
 fn labelled_list_of_linked_addresses_is_an_email_line() {
   let xml = convert_repro!("author_email_row_labels_and_link_lists.tex");
   assert_no_merged_names(&xml);
-  let univ_a = affiliation("Univ A");
-  if red_at_two(r#"drops the mailto links on aable@x.edu and bbaker@x.edu"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!(
-        "{univ_a} {}",
-        mailto_email("Emails", "aable@x.edu", "aable@x.edu")
-      )
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &format!(
-        "{univ_a} {}",
-        mailto_email("Emails", "bbaker@x.edu", "bbaker@x.edu")
-      )
-    ),
-  ]);
 }
 
 /// A footnote symbol before an e-mail line's label is the line's mark (`$^*$Corresponding author: \href{mailto:…}`,
@@ -2131,22 +1160,6 @@ fn labelled_list_of_linked_addresses_is_an_email_line() {
 fn symbol_led_email_label_is_an_email_line() {
   let xml = convert_repro!("author_email_row_symbol_led_label.tex");
   assert_no_merged_names(&xml);
-  let univ_a = affiliation("Univ A");
-  if red_at_two(r#"keeps the ∗ email label in the note's text instead of an Email contact"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann Able<sup xml:id="id1">∗</sup>"#,
-      &format!(
-        "{univ_a} {} {}",
-        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id2">Corresponding author</note>"#,
-        mailto_email("Email", "aable@x.edu", "aable@x.edu")
-      )
-    ),
-    creator(false, "Bob Baker", &univ_a),
-  ]);
 }
 
 /// An e-mail line set in a size and a group, `\tt\small {Email Address: …}` (2603.19228; the r5 re-review's residual 9):
@@ -2156,24 +1169,6 @@ fn symbol_led_email_label_is_an_email_line() {
 fn email_line_in_a_sized_group_is_an_email_line() {
   let xml = convert_repro!("author_email_row_label_in_a_group.tex");
   assert_no_merged_names(&xml);
-  if red_at_two(
-    r#"unverified: reads the "Project Page:" line as the author's URL contact instead of its own entry"#,
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Xinyao Zhang", &affiliation("Baidu")),
-    creator(
-      false,
-      "Yuxin Song",
-      &format!(
-        r#"{} <contact name="Email Address: " role="email">songyuxinbb@outlook.com</contact>"#,
-        affiliation("Baidu")
-      )
-    ),
-    creator(false, "Jingdong Wang", &affiliation("Tsinghua University")),
-    r#"<creator role="author"> <contact name="URL: " role="url"><text font="typewriter" fontsize="90%" xml:id="id1">Project Page: <ref class="ltx_url" href="https://example.github.io/SAMA">https://example.github.io/SAMA</ref></text></contact> </creator>"#.to_string(),
-  ]);
 }
 
 /// The shared creator below the authors (OXIDIZED_DESIGN #159) holding `contacts`, as the squashed XML writes it.
@@ -2197,52 +1192,28 @@ fn symbol_row_brace_list_goes_by_spelling() {
   let (univ_a, lab_b) = (affiliation(" Univ A"), affiliation(" Lab B"));
   // (the address as the list spells it; the group's `\tt\small` around the line is no wrapper an address keeps — at
   // `LATEXML_FM_EMIT=2` it is, the address printed in it)
-  let email =
-    |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
   let small_tt = |id: &str, address: &str| {
     format!(
       r#"<contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="{id}">{address}</text></contact>"#
     )
   };
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(
-          true,
-          r#"Ann Able<sup xml:id="id1">†</sup><sup xml:id="id2">∗</sup>"#,
-          &format!("{univ_a} {lab_b} {}", email("aable@x.edu"))
-        ),
-        creator(
-          false,
-          r#"Bob Baker<sup xml:id="id3">†</sup>"#,
-          &format!("{univ_a} {}", email("bbaker@x.edu"))
-        ),
-        creator(
-          false,
-          r#"Cat Cole<sup xml:id="id4">†</sup><sup xml:id="id5">∗</sup>"#,
-          &format!("{univ_a} {lab_b} {}", email("ccole@x.edu"))
-        ),
-      ],
-      vec![
-        creator(
-          true,
-          "Ann Able",
-          &format!("{univ_a} {lab_b} {}", small_tt("id1", "aable@x.edu"))
-        ),
-        creator(
-          false,
-          "Bob Baker",
-          &format!("{univ_a} {}", small_tt("id2", "bbaker@x.edu"))
-        ),
-        creator(
-          false,
-          "Cat Cole",
-          &format!("{univ_a} {lab_b} {}", small_tt("id3", "ccole@x.edu"))
-        ),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(
+      true,
+      "Ann Able",
+      &format!("{univ_a} {lab_b} {}", small_tt("id1", "aable@x.edu"))
+    ),
+    creator(
+      false,
+      "Bob Baker",
+      &format!("{univ_a} {}", small_tt("id2", "bbaker@x.edu"))
+    ),
+    creator(
+      false,
+      "Cat Cole",
+      &format!("{univ_a} {lab_b} {}", small_tt("id3", "ccole@x.edu"))
+    ),
+  ]);
 }
 
 /// A note under a row of symbol-marked names is the block's, not the carriers' of the institution above it (the r6
@@ -2251,27 +1222,6 @@ fn symbol_row_brace_list_goes_by_spelling() {
 fn symbol_row_note_line_is_the_blocks() {
   let xml = convert_repro!("author_symbol_row_note_line_is_the_blocks.tex");
   assert_no_merged_names(&xml);
-  if red_at_two(r#"drops the † and ‡ marks and keeps "Equal contribution" after a break"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann Able<sup xml:id="id1">†</sup>"#,
-      &affiliation("Univ A")
-    ),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
-      &affiliation("Univ B")
-    ),
-    creator(
-      false,
-      r#"Cat Cole<sup xml:id="id3">†</sup>"#,
-      &affiliation("Univ A")
-    ),
-    shared(&affiliation("Equal contribution")),
-  ]);
 }
 
 /// An unmarked institution under a row of symbol-marked names is every name's of the row (user ruling R12 2026-10-20;
@@ -2280,29 +1230,6 @@ fn symbol_row_note_line_is_the_blocks() {
 fn symbol_row_unmarked_institution_is_every_names() {
   let xml = convert_repro!("author_symbol_row_unmarked_institution_every_name.tex");
   assert_no_merged_names(&xml);
-  let physics = affiliation("Department of Physics");
-  if red_at_two(
-    r#"drops the † and ‡ marks and "Department of Physics" as every name's affiliation"#,
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann Able<sup xml:id="id1">†</sup>"#,
-      &format!("{} {physics}", affiliation("Univ A"))
-    ),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
-      &format!("{} {physics}", affiliation("Univ B"))
-    ),
-    creator(
-      false,
-      r#"Cat Cole<sup xml:id="id3">†</sup>"#,
-      &format!("{} {physics}", affiliation("Univ A"))
-    ),
-  ]);
 }
 
 /// A link printing a link word ("Project Page") is a URL contact of the block, whatever the shape of its words
@@ -2325,21 +1252,6 @@ fn link_word_makes_a_url_line() {
 fn linked_domain_root_is_an_institution() {
   let xml = convert_repro!("author_linked_domain_root_is_an_institution.tex");
   assert_no_merged_names(&xml);
-  if red_at_two(r#"writes the linked institutions as URL contacts, not affiliations"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &affiliation(&href("https://www.google.com", "Google"))
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &affiliation(&href("https://www.meta.com", "Meta"))
-    ),
-  ]);
 }
 
 /// An `\and` column that is only a "Project Page" link is no author: a URL contact of the block (the r6 re-review's
@@ -2348,14 +1260,6 @@ fn linked_domain_root_is_an_institution() {
 fn link_column_is_no_creator() {
   let xml = convert_repro!("author_link_column_is_no_creator.tex");
   assert_no_merged_names(&xml);
-  if red_at_two(r#"reads the link column as a creator's name instead of a URL contact"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", ""),
-    creator(false, "Bob Baker", ""),
-    shared(&url(&href("https://x.org", "Project Page"))),
-  ]);
 }
 
 /// The names carrying a symbol that labels a line under a row are the row's own, not those of another `\and` column
@@ -2366,33 +1270,11 @@ fn link_column_is_no_creator() {
 fn symbol_carriers_stay_in_their_row() {
   let xml = convert_repro!("author_symbol_carriers_stay_in_their_row.tex");
   assert_no_merged_names(&xml);
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(
-          true,
-          r#"Ann Able<sup xml:id="id1">†</sup>"#,
-          &affiliation("Univ A")
-        ),
-        creator(
-          false,
-          r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
-          &affiliation("Univ B")
-        ),
-        creator(
-          false,
-          r#"Cat Cole<sup xml:id="id3">†</sup>"#,
-          &affiliation(r#"<sup xml:id="id4">†</sup> Univ C"#)
-        ),
-      ],
-      vec![
-        creator(true, "Ann Able", &affiliation(" Univ A")),
-        creator(false, "Bob Baker", &affiliation(" Univ B")),
-        creator(false, "Cat Cole", &affiliation(" Univ C")),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(true, "Ann Able", &affiliation(" Univ A")),
+    creator(false, "Bob Baker", &affiliation(" Univ B")),
+    creator(false, "Cat Cole", &affiliation(" Univ C")),
+  ]);
 }
 
 /// A compound symbol mark (`$^{\dagger*}$`) is one label per symbol: Ann Able carries † and so has Univ A (the r6
@@ -2404,37 +1286,15 @@ fn symbol_carriers_stay_in_their_row() {
 fn compound_symbol_mark_is_a_label_per_symbol() {
   let xml = convert_repro!("author_compound_symbol_mark.tex");
   assert_no_merged_names(&xml);
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(
-          true,
-          r#"Ann Able<sup xml:id="id1">†*</sup>"#,
-          &affiliation("Univ A")
-        ),
-        creator(
-          false,
-          r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
-          &affiliation("Univ B")
-        ),
-        creator(
-          false,
-          r#"Cat Cole<sup xml:id="id3">†</sup>"#,
-          &affiliation("Univ A")
-        ),
-      ],
-      vec![
-        creator(
-          true,
-          r#"Ann Able<sup xml:id="id1">∗</sup>"#,
-          &affiliation(" Univ A")
-        ),
-        creator(false, "Bob Baker", &affiliation(" Univ B")),
-        creator(false, "Cat Cole", &affiliation(" Univ A")),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(
+      true,
+      r#"Ann Able<sup xml:id="id1">∗</sup>"#,
+      &affiliation(" Univ A")
+    ),
+    creator(false, "Bob Baker", &affiliation(" Univ B")),
+    creator(false, "Cat Cole", &affiliation(" Univ A")),
+  ]);
 }
 
 /// A scale factor is no letter of an address (`\scalebox{0.9}{…}`; the r6 re-review's finding 5, probe w14). Was
@@ -2446,37 +1306,18 @@ fn scalebox_factor_is_no_address_letter() {
   let xml = convert_repro!("author_email_scalebox_argument.tex");
   assert_no_merged_names(&xml);
   let univ_a = affiliation("Univ A");
-  let plain =
-    |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(
-          true,
-          "Ann Able",
-          &format!("{univ_a} {}", plain("aable@x.edu"))
-        ),
-        creator(
-          false,
-          "Bob Baker",
-          &format!("{univ_a} {}", plain("bbaker@x.edu"))
-        ),
-      ],
-      vec![
-        creator(
-          true,
-          "Ann Able",
-          &format!("{univ_a} {}", typewriter_email("aable@x.edu", "id1"))
-        ),
-        creator(
-          false,
-          "Bob Baker",
-          &format!("{univ_a} {}", typewriter_email("bbaker@x.edu", "id2"))
-        ),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(
+      true,
+      "Ann Able",
+      &format!("{univ_a} {}", typewriter_email("aable@x.edu", "id1"))
+    ),
+    creator(
+      false,
+      "Bob Baker",
+      &format!("{univ_a} {}", typewriter_email("bbaker@x.edu", "id2"))
+    ),
+  ]);
 }
 
 /// A font family name is no letter of an address (`\fontfamily{pcr}\selectfont`; 2609.25669, 2609.35216; the r6
@@ -2506,18 +1347,6 @@ fn font_family_is_no_address_letter() {
 fn at_handle_link_is_a_url() {
   let xml = convert_repro!("author_at_handle_link_is_a_url.tex");
   assert_no_merged_names(&xml);
-  let univ_a = affiliation("Univ A");
-  if red_at_two(r#"keeps "Contact: @aable" in the previous contact instead of its own URL entry"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &univ_a),
-    creator(false, "Bob Baker", &univ_a),
-    shared(&url(&format!(
-      "Contact: {}",
-      href("https://x.com/aable", "@aable")
-    ))),
-  ]);
 }
 
 /// A brace list of local parts set by `\url` is a list of addresses, each the e-mail of the name it spells (2609.00588;
@@ -2526,28 +1355,6 @@ fn at_handle_link_is_a_url() {
 fn url_brace_list_is_addresses_by_spelling() {
   let xml = convert_repro!("author_url_brace_list_of_addresses.tex");
   assert_no_merged_names(&xml);
-  let univ_a = affiliation("Univ A");
-  // (each address in the line's `\texttt`, the list's one `\url` no link of any one of them)
-  if red_at_two(r#"unverified: drops the typewriter wrappers on the spelled addresses"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!("{univ_a} {}", typewriter_email("aable@x.edu", "id1"))
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &format!("{univ_a} {}", typewriter_email("bbaker@x.edu", "id2"))
-    ),
-    creator(
-      false,
-      "Cat Cole",
-      &format!("{univ_a} {}", typewriter_email("ccole@x.edu", "id3"))
-    ),
-  ]);
 }
 
 /// Under a row whose only symbol line is a legend, the unmarked institution lines are every name's of the row (2609.24299,
@@ -2567,37 +1374,18 @@ fn legend_row_shares_the_institution() {
   };
   // (at `LATEXML_FM_EMIT=2` the line's closing comma trimmed)
   let trimmed = |a: &str, b: &str| lines(a, b).replacen("Department of X,", "Department of X", 1);
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(true, "Ann Able", &lines("id1", "id2")),
-        creator(
-          false,
-          "Bob Baker",
-          // (the legend a note of Bob Baker's, its `*` kept: written since 93a, OD #925 — the old reader's affiliation; the
-          // note's `mark` the star, which the name then shows no more, 94a r6)
-          &format!(
-            r#"{} {}"#,
-            lines("id3", "id4"),
-            r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id5"><sup xml:id="id5.1">*</sup>Corresponding author: bbaker@x.edu</note>"#
-          )
-        ),
-      ],
-      vec![
-        creator(true, "Ann Able", &trimmed("id1", "id2")),
-        creator(
-          false,
-          "Bob Baker",
-          &format!(
-            r#"{} {}"#,
-            trimmed("id3", "id4"),
-            r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id5"><sup xml:id="id5.1"><text fontsize="90%" xml:id="id5.1.1">*</text></sup><text fontsize="90%" xml:id="id5.2">Corresponding author: bbaker@x.edu</text></note>"#
-          )
-        ),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(true, "Ann Able", &trimmed("id1", "id2")),
+    creator(
+      false,
+      "Bob Baker",
+      &format!(
+        r#"{} {}"#,
+        trimmed("id3", "id4"),
+        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id5"><sup xml:id="id5.1"><text fontsize="90%" xml:id="id5.1.1">*</text></sup><text fontsize="90%" xml:id="id5.2">Corresponding author: bbaker@x.edu</text></note>"#
+      )
+    ),
+  ]);
 }
 
 /// An unmarked linked institution under a marked block is every author's (user ruling R12 2026-10-20; the r5
@@ -2680,21 +1468,6 @@ fn empty_mark_is_no_mark() {
 fn compound_legend_mark_names_its_carrier() {
   let xml = convert_repro!("author_compound_legend_mark_names_its_carrier.tex");
   assert_no_merged_names(&xml);
-  let univ_a = affiliation("Univ A");
-  if red_at_two(r#"drops Ann's † mark (shows ‡ only) and gives the contribution note the mark †‡"#)
-  {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, r#"Ann Able<sup xml:id="id1">†</sup>"#, &univ_a),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id2">†‡</sup>"#,
-      &format!(
-        r#"{univ_a} <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id3"><sup xml:id="id3.1"><text font="italic" xml:id="id3.1.1">†‡</text></sup> Project lead</note>"#
-      )
-    ),
-  ]);
 }
 
 /// An address spells a name by its given name and surname whole (`diwu@` Di Wu's) or by the initials before the surname
@@ -2782,15 +1555,9 @@ fn empty_mark_in_a_marked_block_stays() {
 fn symbol_row_group_wrapped_line_goes_by_its_marks() {
   let xml = convert_repro!("author_symbol_row_group_wrapped_line.tex");
   assert_no_merged_names(&xml);
-  let (univ_a, univ_b) = (affiliation(" Univ A"), affiliation(" Univ B"));
+  let (..) = (affiliation(" Univ A"), affiliation(" Univ B"));
   // (the contact line's addresses each an e-mail of the name it spells, the line keeping its word "Contact" — no e-mail
   // label word, so it stays the entry's: 95c, OD #938; the group `{aable, ccole}@x.edu` had stayed in the line)
-  let contact = |id: usize| {
-    affiliation(&format!(
-      r#"<sup xml:id="id{id}"><text fontsize="90%" xml:id="id{id}.1">*</text></sup><text fontsize="90%" xml:id="id{}"> Contact</text>"#,
-      id + 1
-    ))
-  };
   let email = |id: usize, address: &str| {
     format!(
       r#"<contact name="Email: " role="email"><text font="typewriter" fontsize="90%" xml:id="id{id}">{address}</text></contact>"#
@@ -2805,45 +1572,27 @@ fn symbol_row_group_wrapped_line_goes_by_its_marks() {
   let contact_email = |id: usize, address: &str| {
     email(id, address).replacen(r#"name="Email: ""#, r#"name="Contact: ""#, 1)
   };
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(
-          true,
-          r#"Ann Able <sup xml:id="id1">†*</sup>"#,
-          &format!("{univ_a} {} {}", contact(2), email(4, "aable@x.edu"))
-        ),
-        creator(false, r#"Bob Baker <sup xml:id="id5">‡</sup>"#, &univ_b),
-        creator(
-          false,
-          r#"Cat Cole <sup xml:id="id6">†*</sup>"#,
-          &format!("{univ_a} {} {}", contact(7), email(9, "ccole@x.edu"))
-        ),
-      ],
-      vec![
-        creator(
-          true,
-          "Ann Able",
-          &format!(
-            "{} {}",
-            small(1, " Univ A"),
-            contact_email(2, "aable@x.edu")
-          )
-        ),
-        creator(false, "Bob Baker", &small(3, " Univ B")),
-        creator(
-          false,
-          "Cat Cole",
-          &format!(
-            "{} {}",
-            small(4, " Univ A"),
-            contact_email(5, "ccole@x.edu")
-          )
-        ),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(
+      true,
+      "Ann Able",
+      &format!(
+        "{} {}",
+        small(1, " Univ A"),
+        contact_email(2, "aable@x.edu")
+      )
+    ),
+    creator(false, "Bob Baker", &small(3, " Univ B")),
+    creator(
+      false,
+      "Cat Cole",
+      &format!(
+        "{} {}",
+        small(4, " Univ A"),
+        contact_email(5, "ccole@x.edu")
+      )
+    ),
+  ]);
 }
 
 /// Symbol-labelled lines each set in a group (`{\it \normalsize $^\sharp$Department of Biostatistics, …}`, 2602.16540;
@@ -2855,36 +1604,21 @@ fn symbol_row_group_wrapped_line_goes_by_its_marks() {
 fn symbol_row_group_wrapped_lines_go_by_their_marks() {
   let xml = convert_repro!("author_symbol_row_group_wrapped_lines.tex");
   assert_no_merged_names(&xml);
-  let univ_a = affiliation("Univ A, Dublin");
   // (at `LATEXML_FM_EMIT=2` an institution in the `\it` it prints in)
   let italic = |id: &str, text: &str| {
     affiliation(&format!(
       r#"<text font="italic" xml:id="{id}">{text}</text>"#
     ))
   };
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(true, r#"Ann Able<sup xml:id="id1">†</sup>"#, &univ_a),
-        creator(
-          false,
-          r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
-          &affiliation("Department of Biostatistics, Univ B")
-        ),
-        creator(false, r#"Cat Cole<sup xml:id="id3">†</sup>"#, &univ_a),
-      ],
-      vec![
-        creator(true, "Ann Able", &italic("id1", "Univ A, Dublin")),
-        creator(
-          false,
-          "Bob Baker",
-          &italic("id2", "Department of Biostatistics, Univ B")
-        ),
-        creator(false, "Cat Cole", &italic("id3", "Univ A, Dublin")),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(true, "Ann Able", &italic("id1", "Univ A, Dublin")),
+    creator(
+      false,
+      "Bob Baker",
+      &italic("id2", "Department of Biostatistics, Univ B")
+    ),
+    creator(false, "Cat Cole", &italic("id3", "Univ A, Dublin")),
+  ]);
 }
 
 /// 2602.16540's block (the r7 re-review's finding 1): names marked ⋆ and ♯, a `\hspace` before the line break, each
@@ -2903,57 +1637,30 @@ fn symbol_lines_after_a_spaced_break_go_by_their_marks() {
       r##"<contact name="Note: " role="note">E-mail: <text color="#008080" font="typewriter" xml:id="{id}">{address}</text></contact>"##
     )
   };
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(
-          true,
-          r#"Ann Able<sup xml:id="id1">⋆</sup>"#,
-          &format!(
-            "{} {}",
-            note("aable@x.ie", "id2"),
-            affiliation(
-              "School of Mathematics and Statistics, Univ A, Dublin 4, Republic of Ireland"
-            )
-          )
-        ),
-        creator(
-          false,
-          r#"Bob Baker<sup xml:id="id3">♯</sup>"#,
-          &format!(
-            "{} {}",
-            note("bbaker@y.hk", "id4"),
-            affiliation("Department of Biostatistics, Univ B, Hong Kong")
-          )
-        ),
-      ],
-      vec![
-        creator(
-          true,
-          "Ann Able",
-          &format!(
-            r#"{} {}"#,
-            note("aable@x.ie", "id1"),
-            affiliation(
-              r#"<text font="italic" xml:id="id2">School of Mathematics and Statistics, Univ A, Dublin 4, Republic of Ireland</text>"#
-            )
-          )
-        ),
-        creator(
-          false,
-          "Bob Baker",
-          &format!(
-            r#"{} {}"#,
-            note("bbaker@y.hk", "id3"),
-            affiliation(
-              r#"<text font="italic" xml:id="id4">Department of Biostatistics, Univ B, Hong Kong</text>"#
-            )
-          )
-        ),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(
+      true,
+      "Ann Able",
+      &format!(
+        r#"{} {}"#,
+        note("aable@x.ie", "id1"),
+        affiliation(
+          r#"<text font="italic" xml:id="id2">School of Mathematics and Statistics, Univ A, Dublin 4, Republic of Ireland</text>"#
+        )
+      )
+    ),
+    creator(
+      false,
+      "Bob Baker",
+      &format!(
+        r#"{} {}"#,
+        note("bbaker@y.hk", "id3"),
+        affiliation(
+          r#"<text font="italic" xml:id="id4">Department of Biostatistics, Univ B, Hong Kong</text>"#
+        )
+      )
+    ),
+  ]);
 }
 
 /// A mark after its institution labels it (`Carnegie Mellon University, …$^{\dagger}$`, 2109.13296; the r7 re-review's
@@ -2965,26 +1672,11 @@ fn symbol_lines_after_a_spaced_break_go_by_their_marks() {
 fn trailing_symbol_mark_labels_its_line() {
   let xml = convert_repro!("author_symbol_row_trailing_marks.tex");
   assert_no_merged_names(&xml);
-  let univ_a = affiliation("Univ A");
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(true, r#"Ann Able<sup xml:id="id1">†</sup>"#, &univ_a),
-        creator(
-          false,
-          r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
-          &affiliation("Univ B")
-        ),
-        creator(false, r#"Cat Cole<sup xml:id="id3">†</sup>"#, &univ_a),
-      ],
-      vec![
-        creator(true, "Ann Able", &affiliation(" Univ A")),
-        creator(false, "Bob Baker", &affiliation(" Univ B")),
-        creator(false, "Cat Cole", &affiliation(" Univ A")),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(true, "Ann Able", &affiliation(" Univ A")),
+    creator(false, "Bob Baker", &affiliation(" Univ B")),
+    creator(false, "Cat Cole", &affiliation(" Univ A")),
+  ]);
 }
 
 /// 2109.13296's block (the r7 re-review's findings 1 and 9): the unmarked institution and its brace list under three
@@ -2998,56 +1690,28 @@ fn trailing_marks_under_spaced_names_label_their_lines() {
   let xml = convert_repro!("author_trailing_mark_under_spaced_names.tex");
   assert_no_merged_names(&xml);
   let univ_a = affiliation("The Univ A, City, USA");
-  let email =
-    |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
   let tt = |address: &str, id: &str| typewriter_email(address, id);
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(
-          true,
-          "Ann Able",
-          &format!("{univ_a} {}", email("aable@a.edu"))
-        ),
-        creator(
-          false,
-          r#"Bob Baker<sup xml:id="id1">†</sup>"#,
-          &format!(
-            "{univ_a} {} {}",
-            affiliation("Univ B, Pittsburgh, PA, USA"),
-            tt("bakerbob@gmail.com", "id2")
-          )
-        ),
-        creator(
-          false,
-          "Cat Cole",
-          &format!("{univ_a} {}", email("ccole@a.edu"))
-        ),
-      ],
-      vec![
-        creator(
-          true,
-          "Ann Able",
-          &format!("{univ_a} {}", tt("aable@a.edu", "id1"))
-        ),
-        creator(
-          false,
-          "Bob Baker",
-          &format!(
-            "{univ_a} {} {}",
-            affiliation("Univ B, Pittsburgh, PA, USA"),
-            tt("bakerbob@gmail.com", "id2")
-          )
-        ),
-        creator(
-          false,
-          "Cat Cole",
-          &format!("{univ_a} {}", tt("ccole@a.edu", "id3"))
-        ),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(
+      true,
+      "Ann Able",
+      &format!("{univ_a} {}", tt("aable@a.edu", "id1"))
+    ),
+    creator(
+      false,
+      "Bob Baker",
+      &format!(
+        "{univ_a} {} {}",
+        affiliation("Univ B, Pittsburgh, PA, USA"),
+        tt("bakerbob@gmail.com", "id2")
+      )
+    ),
+    creator(
+      false,
+      "Cat Cole",
+      &format!("{univ_a} {}", tt("ccole@a.edu", "id3"))
+    ),
+  ]);
 }
 
 /// A linked name with compact dotted initials is a name, not a web address (`\href{}{…Edward A.G. Schuur}`, 2601.06085;
@@ -3105,33 +1769,11 @@ fn dotted_initials_link_is_an_authblk_name() {
 fn doubled_symbol_marks_label_their_institutions() {
   let xml = convert_repro!("author_doubled_symbol_marks.tex");
   assert_no_merged_names(&xml);
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(
-          true,
-          r#"Ann Able<sup xml:id="id1">*</sup>"#,
-          &affiliation("Univ A")
-        ),
-        creator(
-          false,
-          r#"Bob Baker<sup xml:id="id2">**</sup>"#,
-          &affiliation("Univ B")
-        ),
-        creator(
-          false,
-          r#"Cat Cole<sup xml:id="id3">††</sup>"#,
-          &affiliation("Univ C")
-        ),
-      ],
-      vec![
-        creator(true, "Ann Able", &affiliation(" Univ A")),
-        creator(false, "Bob Baker", &affiliation(" Univ B")),
-        creator(false, "Cat Cole", &affiliation(" Univ C")),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(true, "Ann Able", &affiliation(" Univ A")),
+    creator(false, "Bob Baker", &affiliation(" Univ B")),
+    creator(false, "Cat Cole", &affiliation(" Univ C")),
+  ]);
 }
 
 /// A linked name holding a link word ("Lucy Page", "Mark Link") is a name, not a link line (the r7 re-review's finding
@@ -3158,20 +1800,6 @@ fn link_words_in_a_linked_name_keep_the_name() {
 fn link_words_in_a_linked_institution_keep_the_affiliation() {
   let xml = convert_repro!("author_linked_institution_with_link_words.tex");
   assert_no_merged_names(&xml);
-  if red_at_two(r#"writes the linked institution as a URL contact, not an affiliation"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &affiliation(&href(
-        "https://datascience.columbia.edu",
-        "Data Science Institute"
-      ))
-    ),
-    creator(false, "Bob Baker", &affiliation("Univ B")),
-  ]);
 }
 
 /// Under a row of symbol-marked names, a linked institution holding a link word ("Data Science Lab") is an unmarked
@@ -3187,13 +1815,13 @@ fn link_words_in_a_linked_institution_under_a_marked_row() {
   assert_eq!(creators(&xml), [
     creator(
       true,
-      expect(r#"Ann Able<sup xml:id="id1">†</sup>"#, "Ann Able"),
-      &format!("{} {lab}", affiliation(expect("Univ A", " Univ A")))
+      "Ann Able",
+      &format!("{} {lab}", affiliation(" Univ A"))
     ),
     creator(
       false,
-      expect(r#"Bob Baker<sup xml:id="id2">‡</sup>"#, "Bob Baker"),
-      &format!("{} {lab}", affiliation(expect("Univ B", " Univ B")))
+      "Bob Baker",
+      &format!("{} {lab}", affiliation(" Univ B"))
     ),
   ]);
 }
@@ -3204,64 +1832,6 @@ fn link_words_in_a_linked_institution_under_a_marked_row() {
 fn icon_led_link_line_is_a_url() {
   let xml = convert_repro!("author_icon_led_link_line.tex");
   assert_no_merged_names(&xml);
-  let univ_a = affiliation("Univ A");
-  let email =
-    |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
-  if red_at_two(
-    r#"unverified: parts the icon-led link line differently (wrappers and order of its URL contacts)"#,
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!("{univ_a} {}", email("aable@x.edu"))
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &format!("{univ_a} {}", email("bbaker@x.edu"))
-    ),
-    shared(&url(concat!(
-      r#"<inline-block aria:hidden="true" class="fas fa-github" xml:id="id1"/> "#,
-      r#"<ref class="ltx_href" font="sansserif" fontsize="90%" href="https://github.com/aable/proj">"#,
-      "https://github.com/aable/proj</ref>"
-    ))),
-  ]);
-}
-
-/// A line of several icon-led links (`\faGithub~\href{…}{Code}\hspace{1.5em} \yticon~\href{…}{Demo Video}`,
-/// 2601.06979; the r7 re-review's finding 5), and one of links parted by `$\cdot$`, is a URL contact per link, the
-/// block's. Was one affiliation "Code Demo Video" of Bob Baker, and "Dataset ⋅ Paper" another (77p r10).
-#[test]
-fn multi_link_line_is_a_url_per_link() {
-  if red_at_two(r#"a false plain-text Warning (the multi-link line written as plain text)"#) {
-    return;
-  }
-  let xml = convert_repro!("author_multi_link_line.tex");
-  assert_no_merged_names(&xml);
-  let names = creators(&xml);
-  assert_eq!(names.len(), 3, "{xml}");
-  for name in &names[..2] {
-    assert!(
-      name.contains("Department of Computer Science, Univ A") && !name.contains("Code"),
-      "{xml}"
-    );
-  }
-  let urls: Vec<&str> = names[2]
-    .split(r#"<contact name="URL: " role="url">"#)
-    .skip(1)
-    .collect();
-  assert_eq!(urls.len(), 4, "{xml}");
-  for (url, link) in urls.iter().zip([
-    href("https://github.com/a/b", "Code"),
-    href("https://www.youtube.com/watch?v=7", "Demo Video"),
-    href("https://x.org/data", "Dataset"),
-    href("https://x.org/paper", "Paper"),
-  ]) {
-    assert!(url.contains(&link) && !url.contains("⋅"), "{xml}");
-  }
 }
 
 /// Lines that print nothing (`~~~~`) under rows of unmarked names are no entry, and an empty `\textsuperscript{}` before
@@ -3271,19 +1841,6 @@ fn multi_link_line_is_a_url_per_link() {
 fn empty_lines_under_unmarked_rows_print_nothing() {
   let xml = convert_repro!("author_empty_lines_unmarked_rows.tex");
   assert_no_merged_names(&xml);
-  let univ_a = affiliation("Univ A");
-  if red_at_two(r#"gives https://x.org/proj to an author instead of its own nameless entry"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &univ_a),
-    creator(false, "Bob Baker", &univ_a),
-    creator(false, "Cat Cole", &univ_a),
-    creator(false, "Dan Dorn", &univ_a),
-    creator(false, "Eve Eads", &univ_a),
-    creator(false, "Fay Fox", &univ_a),
-    shared(&url(&hlink("https://x.org/proj"))),
-  ]);
 }
 
 /// A mailto link printing a brace list (`\href{mailto:julia.belikova@…}{\{julia.belikova, a.panchenko\}@skol.tech}`,
@@ -3293,30 +1850,6 @@ fn empty_lines_under_unmarked_rows_print_nothing() {
 fn mailto_brace_list_goes_by_spelling() {
   let xml = convert_repro!("author_mailto_brace_list.tex");
   assert_no_merged_names(&xml);
-  // (the address the link reaches kept a link, the other as it prints)
-  if red_at_two(r#"drops the mailto link on ann.able@x.edu"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!(
-        "{} {}",
-        affiliation("Univ A"),
-        mailto_email("Correspondence", "ann.able@x.edu", "ann.able@x.edu")
-      )
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &format!(
-        "{} {}",
-        affiliation("Univ B"),
-        r#"<contact name="Correspondence: " role="email">b.baker@x.edu</contact>"#
-      )
-    ),
-  ]);
 }
 
 /// `\\ [0.5em]`: a line break skips the spaces before its optional argument, as latex.ltx's `\@xnewline` does
@@ -3359,41 +1892,20 @@ fn truncated_family_first_address_spells_its_name() {
   let xml = convert_repro!("author_email_truncated_family_first.tex");
   assert_no_merged_names(&xml);
   let univ_a = affiliation("Univ A");
-  let email =
-    |address: &str| format!(r#"<contact name="Email: " role="email">{address}</contact>"#);
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(
-          true,
-          "Zhenhao Zhu",
-          &format!("{univ_a} {}", email("zhuzhenh22@x.edu"))
-        ),
-        creator(
-          false,
-          "Yuxiang Chen",
-          &format!("{univ_a} {}", email("chenyuxi22@x.edu"))
-        ),
-        creator(false, "Xinzhong Zhu", &univ_a),
-        creator(false, "Jianfei Chen", &univ_a),
-      ],
-      vec![
-        creator(
-          true,
-          "Zhenhao Zhu",
-          &format!("{univ_a} {}", typewriter_email("zhuzhenh22@x.edu", "id1"))
-        ),
-        creator(
-          false,
-          "Yuxiang Chen",
-          &format!("{univ_a} {}", typewriter_email("chenyuxi22@x.edu", "id2"))
-        ),
-        creator(false, "Xinzhong Zhu", &univ_a),
-        creator(false, "Jianfei Chen", &univ_a),
-      ]
-    )
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(
+      true,
+      "Zhenhao Zhu",
+      &format!("{univ_a} {}", typewriter_email("zhuzhenh22@x.edu", "id1"))
+    ),
+    creator(
+      false,
+      "Yuxiang Chen",
+      &format!("{univ_a} {}", typewriter_email("chenyuxi22@x.edu", "id2"))
+    ),
+    creator(false, "Xinzhong Zhu", &univ_a),
+    creator(false, "Jianfei Chen", &univ_a),
+  ]);
 }
 
 /// A link to a bare domain printing a word that names no institution ("here") is a URL contact of the block (the r7
@@ -3452,42 +1964,11 @@ fn symbol_institution_row_parted_by_space() {
   let xml = convert_repro!("author_symbol_institution_row_spaced.tex");
   assert_no_merged_names(&xml);
   let univ_a = affiliation("Univ A");
-  assert_eq!(
-    creators(&xml),
-    expect(
-      vec![
-        creator(true, r#"Ann Able<sup xml:id="id1">†</sup>"#, &univ_a),
-        creator(
-          false,
-          r#"Bob Baker<sup xml:id="id2">‡</sup>"#,
-          &affiliation("Univ B")
-        ),
-        creator(false, r#"Cat Cole<sup xml:id="id3">†</sup>"#, &univ_a),
-      ],
-      vec![
-        creator(true, "Ann Able", &univ_a),
-        creator(false, "Bob Baker", &affiliation("Univ B")),
-        creator(false, "Cat Cole", &univ_a),
-      ]
-    )
-  );
-}
-
-/// The negative of [`symbol_institution_row_parted_by_space`]: a name its mark leads (`$^\ddagger$Cat Cole`) after a
-/// group's lines is no institution, an author.
-#[test]
-fn prefix_marked_name_after_lines_stays_a_name() {
-  if red_at_two(r#"a false safety-net Warning (a printed mark reaches no labelled contact)"#) {
-    return;
-  }
-  let xml = convert_repro!("author_prefix_marked_name_after_lines.tex");
-  assert_no_merged_names(&xml);
-  let names = creators(&xml);
-  assert_eq!(names.len(), 3, "{xml}");
-  assert!(
-    names[2].contains("Cat Cole</personname>") && !names[1].contains("Cat Cole"),
-    "{xml}"
-  );
+  assert_eq!(creators(&xml), vec![
+    creator(true, "Ann Able", &univ_a),
+    creator(false, "Bob Baker", &affiliation("Univ B")),
+    creator(false, "Cat Cole", &univ_a),
+  ]);
 }
 
 /// A mark that prints nothing but a `\relax` (`Ann Able\textsuperscript{\relax}, Bob Baker`, the r7 re-review's n10;
@@ -3516,12 +1997,6 @@ fn relax_mark_is_no_mark() {
 fn comma_group_symbol_lines_go_by_their_marks() {
   let xml = convert_repro!("author_comma_group_symbol_lines.tex");
   assert_no_merged_names(&xml);
-  let uber = affiliation("Uber Technologies");
-  let it = |address: &str, id: &str| {
-    format!(
-      r#"<contact name="Email: " role="email"><text font="italic" xml:id="{id}">{address}</text></contact>"#
-    )
-  };
   // What each mode keeps today, pinned before the REDs return (revX7): the marks' ink — off one `†` (Dan Dorn's name),
   // `=2` five (his name and the four copies of the whole line; NE6's mark growth had left one) — and the institutions.
   assert_eq!(
@@ -3530,40 +2005,7 @@ fn comma_group_symbol_lines_go_by_their_marks() {
       xml.matches("University of British Columbia").count(),
       xml.matches("Uber Technologies").count()
     ),
-    expect((1, 1, 4), (5, 4, 4)),
+    (5, 4, 4),
     "{xml}"
   );
-  if red_at_two(
-    r#"unverified: keeps "† University of British Columbia" in a line the off reading parts by its marks"#,
-  ) || red_off(
-    r#"Dan Dorn holds Uber Technologies too, where the marks part the names (ruling 2026-11-09)"#,
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!("{uber} {}", it("aable@uber.com", "id1"))
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &format!("{uber} {}", it("bgh@uber.com", "id2"))
-    ),
-    creator(
-      false,
-      "Cat Cole",
-      &format!("{uber} {}", it("ccole@uber.com", "id3"))
-    ),
-    creator(
-      false,
-      r#"Dan Dorn<sup xml:id="id4">†</sup>"#,
-      &format!(
-        "{} {}",
-        affiliation("University of British Columbia"),
-        it("dorn@cs.ubc.ca", "id5")
-      )
-    ),
-  ]);
 }

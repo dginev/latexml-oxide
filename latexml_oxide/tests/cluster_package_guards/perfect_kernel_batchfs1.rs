@@ -52,30 +52,17 @@ fn an_open_group_rehearsals_words_are_counted() {
     ),
   ];
   for (case, tex, warnings, lost, names) in rows {
-    for (emit, errors, warnings, lost) in [
-      ("0", 4, 0, vec![]),
-      ("2", 0, warnings, vec![lost.to_string()]),
-    ] {
-      let (log, xml) = in_a_directory(tex, &[], &[("LATEXML_FM_EMIT", emit)]);
-      assert_eq!(
-        log.matches("\nFatal:").count(),
-        0,
-        "{case} emit={emit} {log}"
-      );
-      assert_eq!(
-        (error_count(&log), warning_count(&log)),
-        (errors, warnings),
-        "{case} emit={emit} {log}"
-      );
-      assert_eq!(
-        content_checks(&log),
-        (lost, vec![]),
-        "{case} emit={emit} {log}"
-      );
-      if emit == "2" {
-        assert_eq!(creators(&xml), names, "{case} emit={emit}");
-      }
-    }
+    let errors = 0;
+    let lost = vec![lost.to_string()];
+    let (log, xml) = in_a_directory(tex, &[], &[]);
+    assert_eq!(log.matches("\nFatal:").count(), 0, "{case} {log}");
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (errors, warnings),
+      "{case} {log}"
+    );
+    assert_eq!(content_checks(&log), (lost, vec![]), "{case} {log}");
+    assert_eq!(creators(&xml), names, "{case}");
   }
 }
 
@@ -237,18 +224,7 @@ fn an_open_group_rehearsals_word_matching() {
     ),
   ];
   for (case, tex, warnings, lost, names) in rows {
-    let (log, _) = in_a_directory(tex, &[], &[("LATEXML_FM_EMIT", "0")]);
-    assert_eq!(
-      (
-        error_count(&log),
-        log.matches("\nFatal:").count(),
-        warning_count(&log)
-      ),
-      (4, 0, 0),
-      "{case} off {log}"
-    );
-    assert_eq!(content_checks(&log), (vec![], vec![]), "{case} off {log}");
-    let (log, xml) = in_a_directory(tex, &[], &[("LATEXML_FM_EMIT", "2")]);
+    let (log, xml) = in_a_directory(tex, &[], &[]);
     assert_eq!(
       (
         error_count(&log),

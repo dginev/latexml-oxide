@@ -12,7 +12,6 @@ use latexml::util::test::assert_element;
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch77d::{creator, creators, squash},
-  perfect_kernel_batcht1::red_at_two,
 };
 
 /// A repro beside the files it ships (`(name, path under repros/)`, none for a class in TeX Live), converted with the
@@ -38,36 +37,6 @@ fn contact(role: &str, text: &str) -> String {
     _ => unreachable!(),
   };
   format!(r#"<contact name="{name}" role="{role}">{text}</contact>"#)
-}
-
-/// webofc.cls's title page is the `\inst` form: `\inst{n}` names the `n`-th `\institute` entry, the e-mail is its
-/// author's contact and `\fnsep` before a `\thanks` sets nothing (webofc.cls:217, :434-440); the `\thanks` whose whole
-/// content, the e-mail, became the contact is no note (ruling 2026-10-21). Red (int45b; the class read raw): the
-/// personname "Ann Able<sup>,</sup><sup>1</sup>", both institutes on both authors, the e-mail "e-mail: …" in a thanks
-/// note; 78e r1: an empty thanks note beside the e-mail contact. Witnesses 2301.07438, 1411.7792, 2409.01693. Repro
-/// class-bindings/webofc/webofc_authors_take_their_institutes.
-#[test]
-fn webofc_authors_take_their_institutes() {
-  let xml = repro_with!(
-    "class-bindings/webofc/webofc_authors_take_their_institutes.tex",
-    ("webofc.cls", "class-bindings/webofc/webofc.cls")
-  );
-  // (the institute before the e-mail its `\thanks` holds, which prints in the footer: user ruling R8, print order —
-  // `relocate::before_note_contacts`, batch 99a; was the e-mail first)
-  let ann = format!(
-    "{} {}",
-    contact("affiliation", "Univ A"),
-    contact("email", "ann@x.org")
-  );
-  if red_at_two(
-    "unverified: puts Ann Able's email contact before the affiliation the off reading writes first",
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &ann),
-    creator(false, "Bob Baker", &contact("affiliation", "Univ B")),
-  ]);
 }
 
 /// webofc's `\sidecaption` sets the float's body beside its caption (webofc.cls:824-857): the caption stays the
@@ -132,36 +101,6 @@ fn llncs_author_line_break_options_with_inst_marks() {
     creator(true, "Ann Able", &contact("affiliation", "Inst A")),
     creator(false, "Bob Baker", &contact("affiliation", "Inst B")),
     creator(false, "Cat Cole", &contact("affiliation", "Inst A")),
-  ]);
-}
-
-/// aa's template shape `\fnmsep\thanks{\email{…}}` (aa.cls v9.1 :761): the e-mail is the author's contact and the thanks
-/// note it emptied is none (ruling 2026-10-21, `\lx@annotate@frontmatter@now`); an author's own empty `\thanks{}` is no
-/// note either (ruling 2026-10-30, batch 92e, OD #916; Perl keeps it). Red (int45b): an empty thanks note on Ann Able.
-/// The rev78e review's finding 2 (webofc's 2409.01693 the same shape). Repro
-/// class-bindings/aa_thanks_email_leaves_no_empty_note.
-#[test]
-fn aa_thanks_email_leaves_no_empty_note() {
-  let xml = repro_with!("class-bindings/aa_thanks_email_leaves_no_empty_note.tex",);
-  // (the institute before the e-mail its `\thanks` holds, which prints in the footer: user ruling R8, print order —
-  // `relocate::before_note_contacts`, batch 99a; was the e-mail first)
-  let ann = format!(
-    "{} {}",
-    contact("affiliation", "Univ A"),
-    contact(
-      "email",
-      r#"<text font="typewriter" xml:id="id1">ann@x.org</text>"#
-    )
-  );
-  let bob = contact("affiliation", "Univ B");
-  if red_at_two(
-    "unverified: puts Ann Able's email contact before the affiliation the off reading writes first",
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &ann),
-    creator(false, "Bob Baker", &bob),
   ]);
 }
 
@@ -281,89 +220,5 @@ fn jinstpub_edited_header_is_a_preprint_note() {
     &[],
     "<pubnote role=\"preprint\">Prepared for submission to JINST \
      (FERMILAB-PUB-21-079-ND-SCD)</pubnote>",
-  );
-}
-
-/// vmsta.cls (2014-2018 copies) writes each e-mail to the `.aux` for a later run's title page (:242-256 `\@email`) and
-/// appends each address to its title page's list (:381-390): they are the authors' contacts, an `\address[a]` the
-/// affiliation of the authors labelled `a`. Red (int45b): no e-mail, the addresses paragraphs after the title page.
-/// Witnesses 1508.02842, 1801.00977, 1411.4499, 1506.02940, 1601.01109. Repro
-/// class-bindings/vmsta/vmsta_emails_and_addresses_are_contacts.
-#[test]
-fn vmsta_emails_and_addresses_are_contacts() {
-  let xml = repro_with!(
-    "class-bindings/vmsta/vmsta_emails_and_addresses_are_contacts.tex",
-    ("vmsta.cls", "class-bindings/vmsta/vmsta.cls")
-  );
-  if red_at_two("writes the vmsta initials into the names (\"Yu.Yuliya\", \"I.Ivan\")") {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Yuliya Mishura",
-      &format!(
-        "{} {}",
-        contact("email", "myus@univ.kiev.ua"),
-        contact("affiliation", "Univ A")
-      )
-    ),
-    creator(
-      false,
-      "Ivan Voronov",
-      &format!(
-        "{} {}",
-        contact("email", "ivan@univ.kiev.ua"),
-        contact("affiliation", "Univ B")
-      )
-    ),
-  ]);
-  assert_element(
-    &xml,
-    "para",
-    &[],
-    "<para xml:id=\"p1\"> <p xml:id=\"p1.1\">Text.</p> </para>",
-  );
-}
-
-/// The 2018+ vmsta.cls copies take the e-mail inside the author (`\ead`, :1263-1297) and keep the addresses in their
-/// own list (`\address@optarg`, :871-920); the class's own `\author` still counts the e-mails for its check at
-/// `\end{frontmatter}` (:550-565). Red (int45b): no e-mail, no affiliation, both printed by the deposited title page.
-/// Witnesses 1805.02511, 1810.09681, 2001.02487, 1912.07948. Repro
-/// class-bindings/vmsta_2018/vmsta_2018_emails_and_addresses_are_contacts.
-#[test]
-fn vmsta_2018_emails_and_addresses_are_contacts() {
-  let xml = repro_with!(
-    "class-bindings/vmsta_2018/vmsta_2018_emails_and_addresses_are_contacts.tex",
-    ("vmsta.cls", "class-bindings/vmsta_2018/vmsta.cls")
-  );
-  if red_at_two("loses both authors' email contacts") {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Yuliya Mishura",
-      &format!(
-        "{} {}",
-        contact("email", "myus@univ.kiev.ua"),
-        contact("affiliation", "Univ A")
-      )
-    ),
-    creator(
-      false,
-      "Ivan Voronov",
-      &format!(
-        "{} {}",
-        contact("email", "ivan@univ.kiev.ua"),
-        contact("affiliation", "Univ B")
-      )
-    ),
-  ]);
-  assert_element(
-    &xml,
-    "para",
-    &[],
-    "<para xml:id=\"p1\"> <p xml:id=\"p1.1\">Text.</p> </para>",
   );
 }

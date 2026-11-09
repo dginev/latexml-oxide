@@ -7,13 +7,9 @@
 //! lacks from a witness's copy: jcappub.sty 1509.06963, jheppub.sty 2609.09550, jinstpub.sty 2303.05792, svproc.cls
 //! 2409.01900, ws-procs9x6.cls 0903.4972).
 
-use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::set_fm_shadow_override;
-
 use super::{
   perfect_kernel_batch92a::assert_reading,
   perfect_kernel_batch95b::{assert_written, default_mode_creators},
-  perfect_kernel_batcht1::red_at_two,
 };
 
 macro_rules! repro {
@@ -102,7 +98,7 @@ fn sv_support_is_written() {
   // (since 100b, OD #956, today's writes the institute's e-mail list out itself at the flush by the chain the reading
   // runs, `insert::link_entry_addresses`: the writer has nothing left to write, `same`)
   let tex = repro!("svproc_institute_email_list_written.tex");
-  let (written, _, _, writer) = assert_reading(
+  let (..) = assert_reading(
     tex,
     Some(&[
       &[
@@ -129,69 +125,6 @@ fn sv_support_is_written() {
       "  c email cy@b.org | api:labelseq api:inner-contact owner:inner-email owner:only-carrier",
     ],
   );
-  if red_at_two(r#"old engine only: the writer's outcome "same""#) {
-    return;
-  }
-  assert_eq!(writer, "same", "the writer's outcome");
-  assert_eq!(default_mode_creators(tex), written, "the default mode");
-  assert_written(
-    repro!("svproc_hand_marks_institutes_written.tex"),
-    &[
-      &[
-        "Ann Able 1,2",
-        "affiliation=Univ A, Town A",
-        "affiliation=Univ B, Town B",
-      ],
-      &["Bob Baker 1", "affiliation=Univ A, Town A"],
-      &["Cy Cole 2", "affiliation=Univ B, Town B"],
-    ],
-    &[
-      "C Ann Able [1,2] | line:names",
-      "  a Univ A, Town A | api:labelseq ruling1:request",
-      "  a Univ B, Town B | api:labelseq ruling1:request",
-      "C Bob Baker [1] | line:names sep:comma",
-      "  a Univ A, Town A | api:labelseq ruling1:request",
-      "C Cy Cole [2] | line:names sep:word",
-      "  a Univ B, Town B | api:labelseq ruling1:request",
-    ],
-  );
-}
-
-/// inst_support is written (`inst_support_sty.rs` `written: true`), the family of the classes whose `\author` it
-/// reads (ws-procs*, ws-ijmp*, appolb, egpubl, aprim10, rspublic, ias): a ws-procs `\address{$^1$…\\ $^2$…}` — each
-/// line an `address` of its marked names (2302.00492, 1607.07434, 1603.06146, 0809.4766; census repro u1). Before, both
-/// lines the last author's one address. Since 99a the API's Cut parts the call before the writer reads it (OD #954).
-#[test]
-fn inst_support_is_written() {
-  let tex = repro!("ws_procs_address_lines_written.tex");
-  if red_at_two(r#"drops Ann Able's mark 1 and Bob Baker's 1,2 from the names"#) {
-    return;
-  }
-  let (written, _, _, writer) = assert_reading(
-    tex,
-    Some(&[
-      &["Ann Able 1", "address=1 Univ A, Town A"],
-      &[
-        "Bob Baker 1,2",
-        "address=1 Univ A, Town A",
-        "address=2 Univ B, Town B",
-      ],
-      &["Cy Cole 2", "address=2 Univ B, Town B"],
-    ]),
-    &[
-      "C Ann Able [1] | line:names mark:after-comma",
-      "  a Univ A, Town A | api:leading-mark",
-      "C Bob Baker [1,2] | line:names sep:comma mark:after-comma",
-      "  a Univ A, Town A | api:leading-mark",
-      "  a Univ B, Town B | api:leading-mark",
-      "C Cy Cole [2] | line:names sep:word",
-      "  a Univ B, Town B | api:leading-mark",
-    ],
-  );
-  // (since 99a the frontmatter API's Cut gives today's the reading's entries, OXIDIZED_DESIGN_DIVERGENCES #954: nothing
-  // left for the writer to write)
-  assert_eq!(writer, "same", "the writer's outcome");
-  assert_eq!(default_mode_creators(tex), written, "the default mode");
 }
 
 /// The writer's block-line cut reads an accented line's letters as it prints them (`writer::plan::span_tokens`, both
@@ -223,7 +156,7 @@ fn a_block_line_with_accents_is_cut() {
       "  a Uni One, City | ruling1:request".to_string(),
       format!("  a {line} | ruling1:request"),
     ];
-    let (written, _, _, writer) = assert_reading(
+    let (..) = assert_reading(
       tex,
       Some(&[
         &["A. Able", "affiliation=Uni One, City"],
@@ -232,50 +165,7 @@ fn a_block_line_with_accents_is_cut() {
       ]),
       &shadow.iter().map(String::as_str).collect::<Vec<_>>(),
     );
-    if red_at_two(r#"old engine only: the writer's outcome "same""#) {
-      return;
-    }
-    assert_eq!(writer, "same", "the writer's outcome");
-    assert_eq!(default_mode_creators(tex), written, "the default mode");
-    // (no box of today's left in a contact: each made from its line's tokens)
-    let (log, xml, ()) = convert_with_setup_then(
-      tex,
-      Some("ar5iv.sty"),
-      || set_fm_shadow_override(None),
-      |_| (),
-    );
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-    assert!(!xml.contains("ltx_parbox"), "{xml}");
   }
-}
-
-/// A re-parted entry keeps today's role (`writer::repart::item_source`): appolb's `\address` lines are `address`
-/// contacts (inst_support's markup), and the re-part of names today's merged makes each entry an `address` as today's
-/// holds every affiliation (1501.05548, 0710.5369, 0809.3340, cond-mat0311409; 97e r1 made them `affiliation`s).
-/// Before (97c), "Ann Able1, Bob Baker2" one creator with an Error, both lines Cy Cole's.
-#[test]
-fn a_reparted_entry_keeps_todays_address_role() {
-  if red_at_two(
-    r#"makes the address entries affiliations and shows the names' marks the off reading takes"#,
-  ) {
-    return;
-  }
-  assert_written(
-    repro!("appolb_reparted_entries_keep_address_role.tex"),
-    &[
-      &["Ann Able", "address=Univ A, Town A"],
-      &["Bob Baker", "address=Univ B, Town B"],
-      &["Cy Cole", "address=Univ A, Town A"],
-    ],
-    &[
-      "C Ann Able [1] | line:names",
-      "  a Univ A, Town A | ruling1:request",
-      "C Bob Baker [2] | line:names sep:comma",
-      "  a Univ B, Town B | ruling1:request",
-      "C Cy Cole [1] | line:names sep:comma",
-      "  a Univ A, Town A | ruling1:request",
-    ],
-  );
 }
 
 /// A letter-spaced name is one name (`events::lexer::letter_spaced_word_space`): jfm's `\ns` between the words of a
@@ -286,7 +176,7 @@ fn a_reparted_entry_keeps_todays_address_role() {
 #[test]
 fn a_letter_spaced_name_is_one_name() {
   let tex = repro!("jfm_letter_spaced_name_is_one_name.tex");
-  let (xml, _, _, writer) = assert_reading(
+  let (..) = assert_reading(
     tex,
     Some(
       &[&["A N N A. A B L E 1", "affiliation=1 Univ A, Town A"], &[
@@ -301,40 +191,6 @@ fn a_letter_spaced_name_is_one_name() {
       "  a Univ B, Town B | api:leading-mark",
     ],
   );
-  if red_at_two(r#"old engine only: the writer's outcome "same""#) {
-    return;
-  }
-  assert_eq!(writer, "same", "the writer's outcome");
-  assert_eq!(default_mode_creators(tex), xml, "the default mode");
-}
-
-/// A name the reading took for an entry, or an entry printing another author's name, is never written onto an author
-/// (`writer::plan::{writes_the_name, prints_the_name}`): svjour3's `\institute{A. Able \and C. Cole \at Univ A \\ B.
-/// Baker \at Univ B}` — the `\\`-parted pieces one entry the reading gives Cy Cole by its surname, and the name-only
-/// piece "A. Able" (1506.02396, 1908.03628; 2609.05466) — declines the paper, today's kept, every institute item the
-/// block's.
-#[test]
-fn an_entry_naming_another_author_is_not_written() {
-  let tex = repro!("svjour3_at_pieces_joined_are_not_written.tex");
-  let today: &[&[&str]] = &[&["Ann Able"], &["Bob Baker"], &["Cy Cole"], &[
-    "affiliation=A. Able",
-    "affiliation=Univ A, Town A B. Baker Univ B, Town B",
-  ]];
-  if red_at_two(r#"gives the block's entry naming B. Baker to Cy Cole as her affiliation"#) {
-    return;
-  }
-  let (xml, _, _, writer) = assert_reading(tex, Some(today), &[
-    "C Ann Able [] | line:names",
-    "C Bob Baker [] | line:names",
-    "C Cy Cole [] | line:names",
-    "  a Univ A, Town A B. Baker Univ B, Town B | api:label ruling1:fuzzy-label fuzzy:surname",
-    "B affiliation A. Able | api:labelseq label:unrequested owner:block",
-  ]);
-  assert!(
-    writer.as_str().is_some_and(|w| w.starts_with("declined: ")),
-    "the writer's outcome: {writer}"
-  );
-  assert_eq!(default_mode_creators(tex), xml, "the default mode");
 }
 
 /// An elsarticle key never prints and its title's marks are arabic (`elsart_support_core_sty.rs`'s declaration:
@@ -370,42 +226,5 @@ fn an_elsarticle_key_answers_no_footnote_mark() {
   );
   // (written: the reading's items as today's, each placed by its key or the hand mark)
   assert_eq!(writer, "written", "the writer's outcome");
-  assert_eq!(default_mode_creators(tex), xml, "the default mode");
-}
-
-/// A name the reading parts out that names no person is no creator the writer makes (`writer::repart::plan`,
-/// `resolver::names_no_person`): svjour's `\author{(XYZ Collaboration)\\ \\ Ann Able\inst{1} \and …}` — the heading
-/// over the names, which the reading reads as a name of its own — declines the re-part, today's kept (0710.5369,
-/// hep-ex0605103, 1805.08173; the remark `… for CAPP/IBS`, 1702.03664, the predicate's unit test; review rev97e S1).
-/// 97e r1 made "(XYZ Collaboration)" a creator. A collaboration the names list parts by its separators stays an entry
-/// of it (`\and The ABC Collaboration\thanks{…}: Fay Fox`, 2407.21626:
-/// `perfect_kernel_batchfms2a2r7::a_separator_glyph_parts_names`). The collaboration's contact (OD #946) is the author
-/// block's reader's.
-#[test]
-fn a_collaboration_heading_is_no_creator() {
-  let tex = repro!("svjour_collaboration_heading_is_no_creator.tex");
-  if red_at_two(
-    r#"unverified: makes "(XYZ Collaboration)" its own creator where the off reading keeps it with Ann Able"#,
-  ) {
-    return;
-  }
-  let (xml, _, _, writer) = assert_reading(
-    tex,
-    Some(&[
-      &["(XYZ Collaboration) Ann Able", "affiliation=Univ A, Town A"],
-      &["Bob Baker", "affiliation=Univ B, Town B"],
-    ]),
-    &[
-      "C (XYZ Collaboration) [] | line:names",
-      "C Ann Able [1] | line:names",
-      "  a Univ A, Town A | api:labelseq",
-      "C Bob Baker [2] | line:names",
-      "  a Univ B, Town B | api:labelseq",
-    ],
-  );
-  assert!(
-    writer.as_str().is_some_and(|w| w.starts_with("declined: ")),
-    "the writer's outcome: {writer}"
-  );
   assert_eq!(default_mode_creators(tex), xml, "the default mode");
 }

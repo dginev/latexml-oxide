@@ -3,21 +3,20 @@
 //! the end of the document. (The IJCAI address section, revX4 1, is `perfect_kernel_batchne6`'s re-expected guard.)
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::perfect_kernel_batch84b::creators;
 
 fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).collect() }
 
-/// Convert `tex` under `emit`: the log and the XML.
-fn run(tex: &str, emit: u8) -> (String, String) {
+/// Convert `tex`: the log and the XML.
+fn run(tex: &str) -> (String, String) {
   let (log, xml, ()) = convert_files_with_setup_then(
     tex,
     &[],
     Some("ar5iv.sty"),
     move || {
       set_fm_shadow_override(None);
-      set_fm_emit_override(Some(emit));
     },
     |_| (),
   );
@@ -38,7 +37,7 @@ fn a_name_run_holding_an_open_conditional_is_its_text() {
     row(&["Bob Baker", "affiliation=Univ B"]),
     row(&["Carl Cole", "affiliation=Univ A"]),
   ];
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains(r#"The frontmatter emitter writes "Bob Baker" as its plain text"#),
@@ -48,8 +47,5 @@ fn a_name_run_holding_an_open_conditional_is_its_text() {
     !log.contains("open groups, environments or conditionals"),
     "{log}"
   );
-  assert_eq!(creators(&xml), expected);
-  let (log, xml) = run(tex, 0);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), expected);
 }

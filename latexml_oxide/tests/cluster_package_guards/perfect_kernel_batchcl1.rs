@@ -3,7 +3,7 @@
 //! (`observer/writer/emit.rs` `past_what_it_set`). A name ending in ``\`\i`` lost its letter, "Chiriv`" (1709.03335).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::perfect_kernel_batch84b::creators;
 
@@ -27,22 +27,15 @@ fn an_accent_over_a_control_word_keeps_its_letter() {
     row(&["Al Tiì", "address=Univ G"]),
     row(&["Di Niàb", "address=Univ H"]),
   ];
-  for emit in [0, 2] {
-    let (log, xml, ()) = convert_files_with_setup_then(
-      tex,
-      &[],
-      Some("ar5iv.sty"),
-      move || {
-        set_fm_shadow_override(None);
-        set_fm_emit_override(Some(emit));
-      },
-      |_| (),
-    );
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "emit={emit}\n{log}"
-    );
-    assert_eq!(creators(&xml), expected, "emit={emit}");
-  }
+  let (log, xml, ()) = convert_files_with_setup_then(
+    tex,
+    &[],
+    Some("ar5iv.sty"),
+    move || {
+      set_fm_shadow_override(None);
+    },
+    |_| (),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "\n{log}");
+  assert_eq!(creators(&xml), expected);
 }

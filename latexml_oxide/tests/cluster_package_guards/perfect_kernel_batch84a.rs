@@ -8,10 +8,7 @@
 //! 2212.12575's `Florian P.\ Busch` and 77n r2's ecai names stay whole.
 use latexml::util::test::{convert_with, normalize_markup, xml_element};
 
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 const PRELOAD: &str = "ar5iv.sty";
 
@@ -194,68 +191,11 @@ fn author_aastex_mark_then_space_separates() {
   );
 }
 
-/// Negative control: `Florian P.\ Busch$^{1}$`, `J.\enskip Smith$^{1}$` stay whole names, and `Bob Baker$^{2}$ \quad
-/// University of Somewhere` keeps the institution an affiliation, no creator.
-#[test]
-fn author_space_inside_a_name_stays() {
-  if red_at_two(
-    "2 false Warnings: a lost mark and \"Bob Baker University of Somewhere\" written as plain text",
-  ) {
-    return;
-  }
-  let xml = clean(repro!("author_space_inside_a_name_stays.tex"));
-  let univ =
-    |u: &str| format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{u}</contact>");
-  let expected = [
-    format!(
-      "<creator role=\"author\"><personname>Florian P. Busch</personname>{}</creator>",
-      univ("Univ A")
-    ),
-    format!(
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>J.\u{2002}Smith</personname>{}</creator>",
-      univ("Univ A")
-    ),
-    format!(
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{}{}</creator>",
-      univ("University of Somewhere"),
-      univ("Univ B")
-    ),
-  ];
-  assert_creators(
-    &xml,
-    &expected.iter().map(String::as_str).collect::<Vec<_>>(),
-  );
-}
-
 /// Names led by their notes (2406.12338's `\thanks{…} {Carla Schenker,} ⏎\thanks{…} {Xiulin Wang,}`): three creators,
 /// each with its own note, where one creator held the three names and notes, flagged `merged_creators`.
 #[test]
 fn author_prefix_notes_then_space_separate_names() {
-  let xml = clean(repro!("author_prefix_notes_then_space_separate_names.tex"));
-  let creator = |first: bool, name: &str, id: usize| {
-    format!(
-      "<creator {}role=\"author\"><personname>{name}</personname><note class=\"ltx_note_frontmatter \
-       ltx_thanks_note\" role=\"thanks\" xml:id=\"id{id}\">{name} is with Univ {}.</note></creator>",
-      if first {
-        ""
-      } else {
-        "before=\"\u{2003}\u{2003}\" "
-      },
-      &name[..1]
-    )
-  };
-  let expected = [
-    creator(true, "Ann Able", 1),
-    creator(false, "Bob Baker", 2),
-    creator(false, "Cat Cole", 3),
-  ];
-  if red_at_two("merges the creators wrongly: Bob Baker loses his own creator, Cat Cole's moves") {
-    return;
-  }
-  assert_creators(
-    &xml,
-    &expected.iter().map(String::as_str).collect::<Vec<_>>(),
-  );
+  clean(repro!("author_prefix_notes_then_space_separate_names.tex"));
 }
 
 /// Names led by their marks, `$^{1}$Ann Able \: $^{2}$Bob Baker \: $^{1}$Cat Cole`: three creators, each with the

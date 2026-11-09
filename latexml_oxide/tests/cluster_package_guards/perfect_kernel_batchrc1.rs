@@ -10,7 +10,7 @@
 //! print them (`resolver::placed::content_check`: a call no rehearsal read counted by its content's text).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::{
   perfect_kernel_batch84b::creators, perfect_kernel_batchn2::content_checks,
@@ -29,15 +29,14 @@ macro_rules! repro {
 
 fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).collect() }
 
-/// Convert `tex` under `emit` without the census (production's default): the log and the XML.
-fn run_default(tex: &str, emit: u8) -> (String, String) {
+/// Convert `tex` without the census (production's default): the log and the XML.
+fn run_default(tex: &str) -> (String, String) {
   let (log, xml, ()) = convert_files_with_setup_then(
     tex,
     &[],
     Some("ar5iv.sty"),
     move || {
       set_fm_shadow_override(None);
-      set_fm_emit_override(Some(emit));
     },
     |_| (),
   );
@@ -60,11 +59,9 @@ fn an_affiliation_after_a_refilled_mark_is_read() {
     ]),
     row(&["affiliation=Univ Line3"]),
   ];
-  for emit in [0, 2] {
-    let (log, xml) = run_default(tex, emit);
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-    assert_eq!(creators(&xml), expected, "emit={emit}");
-  }
+  let (log, xml) = run_default(tex);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), expected);
 }
 
 /// A call the rehearsal gave up on (`SkipReason::OverBudget`, a guard's small budget) is read from no rehearsal, and the
@@ -74,7 +71,6 @@ fn an_affiliation_after_a_refilled_mark_is_read() {
 fn an_unread_calls_words_are_counted() {
   let (log, xml) = in_a_directory(repro!("emit_content_check_counts_an_unread_call"), &[], &[
     ("LATEXML_REHEARSAL_READ_BUDGET", "20000"),
-    ("LATEXML_FM_EMIT", "2"),
   ]);
   assert_eq!(
     (error_count(&log), log.matches("\nFatal:").count()),
@@ -135,10 +131,7 @@ fn a_macro_held_author_list_costs_no_copy_per_mark() {
   // (the peak from here on: `/proc/self/clear_refs`' 5 resets it to the resident set now)
   let _ = std::fs::write("/proc/self/clear_refs", "5");
   let (_, before) = resident_kb();
-  let (log, xml) = run_default(&tex, 0);
   let (peak, _) = resident_kb();
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(xml.matches("<creator").count(), 3000);
   eprintln!("peak growth {} kB", peak.saturating_sub(before));
   assert!(
     peak.saturating_sub(before) < 1_000_000,
@@ -158,10 +151,7 @@ fn an_unread_calls_accented_words_count_whole() {
   let (log, xml) = in_a_directory(
     repro!("emit_content_check_counts_accented_words_whole"),
     &[],
-    &[
-      ("LATEXML_REHEARSAL_READ_BUDGET", "20000"),
-      ("LATEXML_FM_EMIT", "2"),
-    ],
+    &[("LATEXML_REHEARSAL_READ_BUDGET", "20000")],
   );
   assert_eq!(
     (error_count(&log), log.matches("\nFatal:").count()),
@@ -195,10 +185,10 @@ fn an_unread_calls_accented_words_count_whole() {
 /// accounting, no reading or counting of words.
 #[test]
 fn the_checks_rehearsals_leave_the_budget() {
-  let (log, xml) = in_a_directory(repro!("emit_check_rehearsals_leave_the_budget"), &[], &[
-    ("LATEXML_REHEARSAL_READ_BUDGET", "6000"),
-    ("LATEXML_FM_EMIT", "2"),
-  ]);
+  let (log, xml) = in_a_directory(repro!("emit_check_rehearsals_leave_the_budget"), &[], &[(
+    "LATEXML_REHEARSAL_READ_BUDGET",
+    "6000",
+  )]);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [
     row(&[

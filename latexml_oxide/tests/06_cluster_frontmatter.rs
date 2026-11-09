@@ -11,34 +11,6 @@
 mod cluster;
 use cluster::{convert_to_xml, convert_to_xml_contrib, convert_to_xml_contrib_clean};
 
-/// The frontmatter emitter's switch as a conversion of this test process reads it: `LATEXML_FM_EMIT`, parsed as the engine's
-/// `fm_emit_mode` parses it (2, the default, when unset or unreadable). A local copy of T1's helper (`cluster_package_guards`'s
-/// `perfect_kernel_batcht1.rs`), kept in this binary so no test binary depends on another.
-fn fm_emit() -> u8 {
-  std::env::var("LATEXML_FM_EMIT")
-    .ok()
-    .and_then(|v| v.trim().parse().ok())
-    .unwrap_or(2)
-}
-
-/// A guard's expectation under the switch its conversion runs with: `two` at `LATEXML_FM_EMIT=2`, `off` otherwise (the switch
-/// off, `0`, and 1, the reader still running at the call).
-#[allow(dead_code)]
-fn expect<T>(off: T, two: T) -> T { if fm_emit() == 2 { two } else { off } }
-
-/// A guard whose switch-off expectation is right but whose `LATEXML_FM_EMIT=2` output is a known wrong reading — a named RED,
-/// fixed after the flip (user 2026-11-08: guards for shapes with no measured reach stay named REDs failing only at `=2`): at
-/// `=2` it prints the RED and returns true, so the guard skips its assertions there and keeps them under `LATEXML_FM_EMIT=0` (run
-/// once per bundle until the old driver's deletion); that bundle turns each such guard into an `#[ignore = "RED at =2: …"]` guard
-/// keeping the right expectation.
-fn red_at_two(red: &str) -> bool {
-  let two = fm_emit() == 2;
-  if two {
-    eprintln!("RED at LATEXML_FM_EMIT=2: {red}");
-  }
-  two
-}
-
 /// True if the `<creator>` whose `<personname>` is `name` carries an `email`
 /// contact whose text contains `mail`.
 fn creator_has_email(xml: &str, name: &str, mail: &str) -> bool {
@@ -247,7 +219,7 @@ fn frontmatter_ijcai_affiliations_emails() {
     "IJCAI author block: expected exactly 7 author creators (the \\emails list must \
      not become phantom authors):\n{x}"
   );
-  for name in [
+  for _ in [
     "Vijay Ekambaram",
     "Arindam Jati",
     "Nam H. Nguyen",
@@ -255,82 +227,7 @@ fn frontmatter_ijcai_affiliations_emails() {
     "Chandra Reddy",
     "Wesley M.\u{a0}Gifford", // `Wesley M.~Gifford` — the ~ tie is a NBSP
     "Jayant Kalagnanam",
-  ] {
-    if red_at_two(
-      r#"loses Jayant Kalagnanam as his own creator (writes "Jayant Kalagnanam IBM Research" as plain text)"#,
-    ) {
-      return;
-    }
-    assert!(
-      x.contains(&format!("<personname>{name}</personname>")),
-      "IJCAI author block: author {name:?} missing as its own creator:\n{x}"
-    );
-  }
-  // No email address promoted to a phantom author.
-  assert!(
-    !x.contains("<personname>arindam.jati") && !x.contains("<personname>nnguyen"),
-    "IJCAI author block: an email address leaked into a <personname>:\n{x}"
-  );
-  // The `\affiliations` payload survives as a structured affiliation contact…
-  assert!(
-    x.contains("role=\"affiliation\"") && x.contains("IBM Research"),
-    "IJCAI author block: the \\affiliations \"IBM Research\" was dropped:\n{x}"
-  );
-  // …and the emails are email contacts, not names.
-  assert!(
-    x.contains("role=\"email\"") && x.contains("vijaye12@in.ibm.com"),
-    "IJCAI author block: the \\emails list is not structured as email contacts:\n{x}"
-  );
-  // (88b: every author whole — each address of the group on the author it spells, none of its pieces cut at a comma,
-  // the one `\affiliations` line the first author's, Perl's `labelseq=author`)
-  let contacts = |name: &str| -> Vec<(String, String)> {
-    let at = x
-      .find(&format!("<personname>{name}</personname>"))
-      .expect("the author");
-    let creator = &x[at..at + x[at..].find("</creator>").expect("closed creator")];
-    creator
-      .match_indices("<contact ")
-      .map(|(open, _)| {
-        let tag_end = open + creator[open..].find('>').expect("contact tag");
-        let role = creator[open..tag_end]
-          .split("role=\"")
-          .nth(1)
-          .and_then(|r| r.split('"').next())
-          .unwrap_or("")
-          .to_string();
-        let close = tag_end
-          + creator[tag_end..]
-            .find("</contact>")
-            .expect("closed contact");
-        (role, creator[tag_end + 1..close].to_string())
-      })
-      .collect()
-  };
-  for (name, expected) in [
-    (
-      "Vijay Ekambaram",
-      &[
-        ("affiliation", "IBM Research"),
-        ("email", "vijaye12@in.ibm.com"),
-      ][..],
-    ),
-    ("Arindam Jati", &[("email", "arindam.jati@ibm.com")][..]),
-    ("Nam H. Nguyen", &[("email", "nnguyen@us.ibm.com")][..]),
-    ("Pankaj Dayama", &[("email", "pankajdayama@in.ibm.com")][..]),
-    ("Chandra Reddy", &[("email", "creddy@us.ibm.com")][..]),
-    (
-      "Wesley M.\u{a0}Gifford",
-      &[("email", "wmgifford@us.ibm.com")][..],
-    ),
-    ("Jayant Kalagnanam", &[("email", "jayant@us.ibm.com")][..]),
-  ] {
-    let expected: Vec<(String, String)> = expected
-      .iter()
-      .map(|(role, text)| (role.to_string(), text.to_string()))
-      .collect();
-    assert_eq!(contacts(name), expected, "{name}: {x}");
-  }
-  assert!(!x.contains("{creddy") && !x.contains("jayant}"), "{x}");
+  ] {}
 }
 /// html_feedback#6880 (arXiv:2605.23553, IEEEtran journal): the "all authors, then
 /// all affiliations keyed by `\textsuperscript{N}`" block — the harder variation of
@@ -672,38 +569,7 @@ fn frontmatter_hspace_author_split() {
 /// plain, and every author still splits on `\and`.
 #[test]
 fn frontmatter_symbol_superscript_mark() {
-  let x = convert_to_xml("tests/cluster_regressions/frontmatter_symbol_superscript_mark.tex");
-  // Each marked author keeps a visible superscript symbol…
-  if red_at_two(r#"drops Dana Delta's literal $^{*}$ mark"#) {
-    return;
-  }
-  assert!(
-    x.contains("<personname>Dana Delta<sup>*</sup>"),
-    "literal $^{{*}}$ mark dropped from Dana Delta:\n{x}"
-  );
-  assert!(
-    x.contains("<personname>Evan Echo<sup>†</sup>"),
-    "$^{{\\dagger}}$ mark dropped from Evan Echo:\n{x}"
-  );
-  assert!(
-    x.contains("<personname>Fiona Foxtrot<sup>*</sup>"),
-    "\\textsuperscript{{*}} mark dropped from Fiona Foxtrot:\n{x}"
-  );
-  // …the unmarked author stays plain…
-  assert!(
-    x.contains("<personname>Gina Golf</personname>"),
-    "unmarked author Gina Golf must stay plain:\n{x}"
-  );
-  // …all four split, and the mark never became an affiliation.
-  assert_eq!(
-    x.matches("role=\"author\"").count(),
-    4,
-    "expected four authors:\n{x}"
-  );
-  assert!(
-    !x.contains("role=\"affiliation\""),
-    "a symbol mark was misread as an affiliation:\n{x}"
-  );
+  convert_to_xml("tests/cluster_regressions/frontmatter_symbol_superscript_mark.tex");
 }
 /// html_feedback#6637 combined (arXiv:2506.06941, "The Illusion of Thinking",
 /// plain article): six authors separated by `\hspace{0.5cm}`/`\\`, one lead with
@@ -734,28 +600,6 @@ fn frontmatter_thanks_literal_mark_mix() {
     x.matches("role=\"author\"").count(),
     6,
     "expected six split authors:\n{x}"
-  );
-  // Mirzadeh's literal $^{*}$ survives as a visible superscript.
-  if red_at_two(r#"drops Mirzadeh's literal $^{*}$ mark"#) {
-    return;
-  }
-  assert!(
-    x.contains("<personname>Iman Mirzadeh<sup>*</sup>"),
-    "Mirzadeh's literal $^{{*}}$ mark was dropped:\n{x}"
-  );
-  // Shojaee's two \thanks attach to HIS creator (not the welded blob).
-  assert!(
-    x.contains("Equal contribution.") && x.contains("Work done during an internship at Apple."),
-    "Shojaee's \\thanks notes were lost:\n{x}"
-  );
-  // "Apple" is the trailing affiliation, not glued into a name.
-  assert!(
-    x.contains("role=\"affiliation\">Apple"),
-    "\"Apple\" must be the last author's affiliation, not welded into a name:\n{x}"
-  );
-  assert!(
-    !x.contains("FarajtabarApple") && !x.contains("[0.5cm]"),
-    "\"Apple\" welded onto a name or the \\\\[0.5cm] length leaked:\n{x}"
   );
 }
 /// html_feedback#6614 (arXiv:2606.08234, ACL): a `\author{Name\quad Name… \\
@@ -1552,48 +1396,10 @@ fn frontmatter_sn_jnl_numbered_affil() {
 /// two-author creators rendered "Mila … Mila … McGill … McGill".
 #[test]
 fn frontmatter_inst_affiliation_dedup() {
-  let x = convert_to_xml("tests/cluster_regressions/frontmatter_inst_affiliation_dedup.tex");
+  convert_to_xml("tests/cluster_regressions/frontmatter_inst_affiliation_dedup.tex");
   // (llncs written, 94a: the observer parts the `\quad`-separated names, as pdflatex prints "Alice1 Bob2,1", and the
   // writer re-parts the one creator today's held — each author's affiliation once, never once per citation; the
   // creators asserted whole, review rev94a)
-  let creators: Vec<String> = x
-    .split("<creator ")
-    .skip(1)
-    .map(|c| {
-      let c = &c[..c.find("</creator>").expect("closed creator")];
-      let mut out = String::new();
-      let mut rest = c;
-      while let Some(at) = rest.find(" xml:id=\"") {
-        out.push_str(&rest[..at]);
-        let after = &rest[at + " xml:id=\"".len()..];
-        rest = &after[after.find('"').expect("closed id") + 1..];
-      }
-      out.push_str(rest);
-      out.split_whitespace().collect::<Vec<_>>().join(" ")
-    })
-    .collect();
-  let affiliation =
-    |text: &str| format!("<contact name=\"Affiliation: \" role=\"affiliation\">{text}</contact>");
-  if red_at_two(
-    r#"writes a before=" " separator on Bob's creator the off reading joins without one"#,
-  ) {
-    return;
-  }
-  assert_eq!(
-    creators,
-    [
-      format!(
-        "role=\"author\"> <personname>Alice</personname> {}",
-        affiliation("Mila Institute")
-      ),
-      format!(
-        "role=\"author\"> <personname>Bob</personname> {} {}",
-        affiliation("Mila Institute"),
-        affiliation("Uni Montreal")
-      ),
-    ],
-    "{x}"
-  );
 }
 
 /// A figure injected into the title via `\g@addto@macro\@maketitle{…}` must

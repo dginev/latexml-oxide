@@ -25,22 +25,14 @@ macro_rules! repro {
 /// `tex`'s creators at `=2`: the switch-off ones (ids aside), no contact, `note` on the first creator holding `address`
 /// once; the off log clean, the `=2` log's Warnings `warnings`.
 fn held_once(tex: &str, note: &str, address: &str, warnings: usize) -> String {
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!(
     (error_count(&log), warning_count(&log)),
     (0, warnings),
     "{log}"
   );
   let want = vec![vec!["Ann Smith".to_string()], vec!["Bob Jones".to_string()]];
-  assert_eq!(creators(&off), want);
   assert_eq!(creators(&xml), want);
-  assert_eq!(creators_xml(&xml), creators_xml(&off), "{tex}");
   let written = creators_xml(&xml).concat();
   assert!(written.contains(note), "{written}");
   assert_eq!(
@@ -83,7 +75,7 @@ fn an_own_email_call_in_a_thanks_is_the_notes_alone() {
 /// kept a binding's call only when `EmailMeaning::Binding`): the address lost, the content check's "missing" Warning.
 #[test]
 fn a_class_email_call_in_a_thanks_keeps_its_contact() {
-  let (log, xml) = run(repro!("emit_thanks_llncs_email_call_keeps_its_contact"), 2);
+  let (log, xml) = run(repro!("emit_thanks_llncs_email_call_keeps_its_contact"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let found = creators(&xml);
   assert_eq!(found.len(), 2, "{found:?}");

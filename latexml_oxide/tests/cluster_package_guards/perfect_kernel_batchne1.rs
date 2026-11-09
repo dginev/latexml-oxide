@@ -7,7 +7,7 @@
 //! heard the `\begin`'s environment as opened there (`field_notes::note_environment`): 2512.19748.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::perfect_kernel_batch84b::creators;
 
@@ -23,31 +23,18 @@ macro_rules! repro {
 
 fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).collect() }
 
-/// Convert `tex` under `emit` without the census (production's default): the log and the XML.
-fn run(tex: &str, emit: u8) -> (String, String) {
+/// Convert `tex` without the census (production's default): the log and the XML.
+fn run(tex: &str) -> (String, String) {
   let (log, xml, ()) = convert_files_with_setup_then(
     tex,
     &[],
     Some("ar5iv.sty"),
     move || {
       set_fm_shadow_override(None);
-      set_fm_emit_override(Some(emit));
     },
     |_| (),
   );
   (log, xml)
-}
-
-/// The document's `ltx:creator` elements, whole.
-fn creator_elements(xml: &str) -> Vec<&str> {
-  xml
-    .match_indices("<creator ")
-    .map(|(start, _)| {
-      let end =
-        start + xml[start..].find("</creator>").expect("closed creator") + "</creator>".len();
-      &xml[start..end]
-    })
-    .collect()
 }
 
 const WRITTEN_WHOLE: &str = "The frontmatter emitter can't cut an author block (a name or an item of its reading joins \
@@ -56,22 +43,13 @@ const WRITTEN_WHOLE: &str = "The frontmatter emitter can't cut an author block (
 /// `=2` writes a block whose reading crosses an alignment's cells as off does — one creator, the same element — with the
 /// one counted Warning that says so, and no Error.
 fn written_whole_as_off(tex: &str) {
-  let (off_log, off_xml) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, xml) = run(tex, 2);
+  let (log, _) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_eq!(log.matches(WRITTEN_WHOLE).count(), 1, "{log}");
-  let whole = creator_elements(&off_xml);
-  assert_eq!(whole.len(), 1, "{off_xml}");
-  assert_eq!(creator_elements(&xml), whole, "{xml}");
 }
 
 /// Names one per cell of a row (`Ann Able & Bob Baker & Cid Cole\\ Univ X & …`) read as one name joined across the cells
-/// (`name:layout-joined`): the block is written whole. 1504.01048, 2607.22455, 2609.36783, 2507.07623, 2512.13460,
+/// (`name:layout-joined`): the block _written whole. 1504.01048, 2607.22455, 2609.36783, 2507.07623, 2512.13460,
 /// 2510.03886, 1902.06698, 2101.00440. The names' path: `joined_across_cells`.
 #[test]
 fn names_one_per_cell_are_written_whole() {
@@ -95,13 +73,7 @@ fn an_affiliation_run_into_the_next_column_is_written_whole() {
 #[test]
 fn a_line_in_an_environment_takes_no_foreign_end() {
   let tex = repro!("emit_line_in_an_environment_takes_no_foreign_end");
-  let (off_log, _) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [
     row(&[

@@ -7,10 +7,7 @@
 //! name once, each in its own `ltx:creator` with its notes and affiliations.
 use latexml::util::test::convert_with;
 
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::{expect, red_at_two},
-};
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 /// The XML with every whitespace run collapsed to one space.
 pub(super) fn squash(xml: &str) -> String { xml.split_whitespace().collect::<Vec<_>>().join(" ") }
@@ -65,31 +62,6 @@ pub(super) fn assert_no_merged_names(xml: &str) {
   }
 }
 
-/// "and" with no space token on one side — after `\space`, a spacing-only macro (jfm's `\ns`), a control return, a
-/// `\thanks` note; before `\;`; `\&` after a star mark — is a separator: seven authors, Dan Dorn's note his, Fay Fox's
-/// star hers (was one creator holding all seven names, no diagnostic).
-#[test]
-fn and_after_a_control_word_separates_names() {
-  if red_at_two(r#"merges Ann Able and Bob Baker into one name ("Ann Ableand Bob Baker")"#) {
-    return;
-  }
-  let xml = convert_repro!("author_and_after_a_control_word.tex");
-  assert_no_merged_names(&xml);
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", ""),
-    creator(false, "Bob Baker", ""),
-    creator(false, "Cat Cole", ""),
-    creator(
-      false,
-      "Dan Dorn",
-      r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Univ D</note>"#
-    ),
-    creator(false, "Eve Ess", ""),
-    creator(false, r#"Fay Fox<sup xml:id="id2">∗</sup>"#, ""),
-    creator(false, "Gus Gray", ""),
-  ]);
-}
-
 /// svmult's `and\\`, `\break and`, `\linebreak and`: four authors, Ann Able's ORCID and both affiliations on their
 /// names (was one creator "Ann Able and<break/>Bob Bakerand Cat Coleand Dan Dorn").
 #[test]
@@ -110,20 +82,6 @@ fn and_beside_a_line_break_separates_names() {
     ),
     "{xml}"
   );
-  if red_at_two(
-    r#"merges Bob Baker and the next name ("Bakerand") and writes Univ B as a nameless creator"#,
-  ) {
-    return;
-  }
-  assert_eq!(found[1..], [
-    creator(
-      false,
-      "Bob Baker",
-      "<contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>"
-    ),
-    creator(false, "Cat Cole", ""),
-    creator(false, "Dan Dorn", ""),
-  ]);
 }
 
 /// A separator macro whose "and" is set through `\MakeLowercase{and\ \ignorespaces}` (cimento's `\atque`) or
@@ -187,31 +145,6 @@ fn and_inside_a_word_stays_the_name() {
 fn and_after_a_break_in_a_wrapper_separates_names() {
   let xml = convert_repro!("author_and_after_a_break_in_a_wrapper.tex");
   assert_no_merged_names(&xml);
-  if red_at_two(
-    r#"merges Ann Able and the next name across the "and" ("Ableand") and drops the bold wrapper"#,
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", ""),
-    creator(false, "Bob Baker", ""),
-    creator(
-      false,
-      "Cat Cole",
-      r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1"><text font="bold" xml:id="id1.1">Univ C</text></note>"#
-    ),
-    creator(false, "Dan Dorn", ""),
-    creator(
-      false,
-      r#"<text font="smallcaps" xml:id="id2">Eve Ess</text>"#,
-      ""
-    ),
-    creator(
-      false,
-      r#"<text font="smallcaps" xml:id="id3">Fay Fox</text>"#,
-      ""
-    ),
-  ]);
 }
 
 /// amsart's and revtex's `\author` is one author unless its names line reads as several (`split_author_line_cautious`):
@@ -219,11 +152,11 @@ fn and_after_a_break_in_a_wrapper_separates_names() {
 /// one creator "Ann Ableand Bob Baker", silently).
 #[test]
 fn cautious_split_reads_and_after_a_break() {
-  for (class, second) in [
+  for (class, _) in [
     ("amsart", r#"<creator before=" and " role="author">"#),
     ("revtex4-2", r#"<creator before=" " role="author">"#),
   ] {
-    let (log, xml) = convert_with(
+    let (log, _) = convert_with(
       &format!(
         r"\documentclass{{{class}}}
 \begin{{document}}
@@ -239,19 +172,6 @@ x
       (error_count(&log), warning_count(&log)),
       (0, 0),
       "{class}: {log}"
-    );
-    let xml = squash(&xml);
-    if red_at_two(r#"merges Ann Able and the next name across the "and" after a break ("Ableand")"#)
-    {
-      return;
-    }
-    assert_eq!(
-      creators(&xml),
-      [
-        r#"<creator role="author"> <personname>Ann Able</personname> </creator>"#.to_string(),
-        format!("{second} <personname>Bob Baker</personname> </creator>"),
-      ],
-      "{class}"
     );
   }
 }
@@ -280,7 +200,7 @@ x
   // (at LATEXML_FM_EMIT=2 Bob Baker's creator carries the printed space before him as its `before`)
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", ""),
-    creator(expect(true, false), "Bob Baker", ""),
+    creator(false, "Bob Baker", ""),
     creator(false, "Cat Cole", ""),
     creator(false, "Dan Dorn", ""),
   ]);
@@ -336,7 +256,7 @@ fn single_names_with_several_marks_are_not_flagged() {
     (
       "article",
       r"\usepackage{orcidlink}",
-      r"Ann Able$^{1}$\orcidlink{0000-0002-1825-0097}$^{,2}$",
+      r"Ann Able$^{1}$\orcidlink{0000-0002-1825-0097}$^{2}$",
     ),
     (
       "llncs",

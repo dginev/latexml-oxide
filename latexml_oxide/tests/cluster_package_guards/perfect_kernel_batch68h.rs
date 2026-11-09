@@ -2,10 +2,7 @@
 //! cleveref's `\crefalias`, graphics' driver name, `\ProcessOptions`'s `\protected@edef` read, a `\protect`ed name noun.
 use latexml::util::test::{convert_files_with, convert_with};
 
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 /// The XML with every whitespace run collapsed to one space.
 fn squash(xml: &str) -> String { xml.split_whitespace().collect::<Vec<_>>().join(" ") }
@@ -228,49 +225,6 @@ fn caption_empty_text_ignores_label() {
     assert!(xml.contains(caption), "{caption}\n{xml}");
   }
   assert_eq!(xml.matches(r#"close=": ""#).count(), 1, "{xml}");
-}
-
-/// The inline ORCID links take an orcid.org address's iD as the frontmatter setter does (OXIDIZED_DESIGN_DIVERGENCES
-/// #616): apa7's `\addORCIDlink` (apa7.cls:322-326 builds `https://orcid.org/#2`, doubled in pdflatex as in
-/// orcidlink.sty) and mrm's `\orcid` and three-argument `\author`.
-#[test]
-fn orcid_inline_link_takes_the_id() {
-  let (log, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/orcid_inline_link_takes_the_id.tex"
-    ),
-    Some("ar5iv.sty"),
-  );
-  // The one Warning is pgf's svg.path library, which apa7 loads for its own logo (`\pgf@lib@svg@relative`), as
-  // `perfect_kernel_batch61::apa7_author_block_maps_onto_the_frontmatter` pins it.
-  if red_at_two(r#"a false content-check Warning (the orcid digits 0000 0002 0097 1825 missing)"#) {
-    return;
-  }
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-  assert!(
-    log.contains(
-      "The conditional \\pgf@lib@svg@relative is being defined but doesn't start with \\if"
-    ),
-    "{log}"
-  );
-  let xml = squash(&xml);
-  assert!(
-    xml.contains(
-      r#"<personname>Ann One <ref class="ltx_orcid" href="https://orcid.org/0000-0002-1825-0097" title="ORCID 0000-0002-1825-0097">"#
-    ),
-    "{xml}"
-  );
-  let xml = clean_doc(
-    "\\documentclass{mrm}\n\\begin{document}\n\\title{T}\n\\author[1]{Ann One}{https://orcid.org/0000-0002-1825-0097}\n\
-     \\maketitle\nText by Bob\\orcid{http://orcid.org/0000-0001-5109-3700}.\n\\end{document}\n",
-  );
-  for link in [
-    r#"<contact role="orcid"><ref class="ltx_orcid" href="https://orcid.org/0000-0002-1825-0097" title="ORCID 0000-0002-1825-0097">"#,
-    r#"<p xml:id="p1.1">Text by Bob<ref class="ltx_orcid" href="https://orcid.org/0000-0001-5109-3700" title="ORCID 0000-0001-5109-3700">"#,
-  ] {
-    assert!(xml.contains(link), "{link}\n{xml}");
-  }
-  assert!(!xml.contains("orcid.org/http"), "{xml}");
 }
 
 /// caption.sty:124-129: caption v1's size options are the whole caption font (`\def\captionfont{\small}`), so

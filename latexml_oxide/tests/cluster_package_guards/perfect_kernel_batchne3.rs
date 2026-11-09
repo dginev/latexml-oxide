@@ -6,7 +6,7 @@
 //! alignment (review revNE1 finding 1: a `\url`'s `&`).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::perfect_kernel_batch84b::creators;
 
@@ -22,15 +22,14 @@ macro_rules! repro {
 
 fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).collect() }
 
-/// Convert `tex` under `emit`: the log and the XML.
-fn run(tex: &str, emit: u8) -> (String, String) {
+/// Convert `tex`: the log and the XML.
+fn run(tex: &str) -> (String, String) {
   let (log, xml, ()) = convert_files_with_setup_then(
     tex,
     &[],
     Some("ar5iv.sty"),
     move || {
       set_fm_shadow_override(None);
-      set_fm_emit_override(Some(emit));
     },
     |_| (),
   );
@@ -54,23 +53,17 @@ fn a_legends_mark_is_written_as_characters() {
     row(&["Ann Able", "affiliation=Univ A, City A"]),
     row(&["Bob Baker", "affiliation=Univ B, City B"]),
   ];
-  for emit in [0, 2] {
-    let (log, xml) = run(repro!("ne3_mark_hash"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(creators(&xml), expected, "emit={emit}");
-    assert_eq!(
-      note_tags(&xml),
-      [
-        r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks" xml:id="id1""#,
-        r##"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="#" role="thanks" xml:id="id2""##,
-      ],
-      "emit={emit}: {xml}"
-    );
-  }
+  let (log, xml) = run(repro!("ne3_mark_hash"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), expected);
+  assert_eq!(
+    note_tags(&xml),
+    [
+      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks" xml:id="id1""#,
+      r##"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="#" role="thanks" xml:id="id2""##,
+    ],
+    "{xml}"
+  );
 }
 
 /// `\newcommand{\myauthors}{Xing Shi Cai, Luc Devroye}` under scrartcl: `=2` read two names and wrote each creator from a
@@ -79,11 +72,7 @@ fn a_legends_mark_is_written_as_characters() {
 /// (1602.03850, cond-mat9310042; review revCL9b finding 1). Off is the old reader's one merged creator, unchanged.
 #[test]
 fn names_a_macro_prints_together_are_their_text() {
-  let (log, xml) = run(repro!("ne3_macro_names"), 0);
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
-  assert!(log.contains("merged_creators"), "{log}");
-  assert_eq!(creators(&xml).len(), 1, "{xml}");
-  let (log, xml) = run(repro!("ne3_macro_names"), 2);
+  let (log, xml) = run(repro!("ne3_macro_names"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
   assert_eq!(creators(&xml), [
     row(&[
@@ -104,10 +93,7 @@ fn names_a_macro_prints_together_are_their_text() {
 /// which reads past its end is refused: the name is its text, counted. Off is the old reader's one merged creator.
 #[test]
 fn a_macro_cut_from_its_arguments_is_its_text() {
-  let (log, xml) = run(repro!("ne3_macro_args"), 0);
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
-  assert_eq!(creators(&xml).len(), 1, "{xml}");
-  let (log, xml) = run(repro!("ne3_macro_args"), 2);
+  let (log, xml) = run(repro!("ne3_macro_args"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
   let univ_ab = ["affiliation=Univ A, City A", "affiliation=Univ B, City B"];
   assert_eq!(creators(&xml), [
@@ -123,10 +109,7 @@ fn a_macro_cut_from_its_arguments_is_its_text() {
 /// marks, no Error.
 #[test]
 fn a_text_mode_script_is_written_as_its_character() {
-  let (log, xml) = run(repro!("ne3_text_script"), 0);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&xml).len(), 2, "{xml}");
-  let (log, xml) = run(repro!("ne3_text_script"), 2);
+  let (log, xml) = run(repro!("ne3_text_script"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 3), "{log}");
   assert_eq!(
     log
@@ -149,19 +132,13 @@ fn a_text_mode_script_is_written_as_its_character() {
 /// has no tab of one: the link is kept, as off.
 #[test]
 fn a_urls_ampersand_in_a_block_of_no_alignment_keeps_its_link() {
-  for emit in [0, 2] {
-    let (log, xml) = run(repro!("ne3_url_amp"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "emit={emit}: {log}"
-    );
-    assert!(
-      xml.contains(
-        r#"<ref class="ltx_nolink ltx_url" font="typewriter" href="http://y.org/?c=1&amp;d=2">"#
-      ),
-      "emit={emit}: {xml}"
-    );
-    assert_eq!(creators(&xml).len(), 2, "emit={emit}: {xml}");
-  }
+  let (log, xml) = run(repro!("ne3_url_amp"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    xml.contains(
+      r#"<ref class="ltx_nolink ltx_url" font="typewriter" href="http://y.org/?c=1&amp;d=2">"#
+    ),
+    "{xml}"
+  );
+  assert_eq!(creators(&xml).len(), 2, "{xml}");
 }

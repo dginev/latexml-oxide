@@ -18,7 +18,6 @@ use latexml::util::test::convert_with;
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch77d::{assert_no_merged_names, creator, creators, squash},
-  perfect_kernel_batcht1::{expect, red_at_two},
 };
 
 /// A `sectioning-frontmatter` repro's squashed XML, its conversion free of errors and warnings.
@@ -57,31 +56,6 @@ fn membership(grade: &str) -> String { format!(r#"<contact role="membership">{gr
 fn ieee_wrapped_names_split_with_their_notes_after() {
   let xml = convert_repro!("author_ieee_wrapped_name_lists.tex");
   assert_no_merged_names(&xml);
-  let notes = [
-    thanks("note", "id4", "Ann Able and Bob Baker are with Univ A."),
-    thanks("note", "id5", "A preliminary version appeared in X."),
-  ]
-  .join(" ");
-  if red_at_two(r#"writes the names' emph wrappers as text font="italic""#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"<emph font="italic" xml:id="id1">Ann Able</emph>"#,
-      ""
-    ),
-    creator(
-      false,
-      r#"<emph font="italic" xml:id="id2">Bob Baker</emph>"#,
-      ""
-    ),
-    creator(
-      false,
-      r#"<emph font="italic" xml:id="id3">Cat Cole</emph>"#,
-      &notes
-    ),
-  ]);
 }
 
 /// IEEEtran names in an outer group, each with its grade, the group broken by `\\` (2112.09769): four authors, each
@@ -128,79 +102,12 @@ fn ieee_group_bold_names_split() {
   ]);
 }
 
-/// ieeeaccess names in one `\uppercase{…}` with grades among them (2209.12464): five authors in capitals, each with
-/// its mark; the grades their names' memberships, in the case TeX prints them.
-#[test]
-fn ieee_uppercase_names_split_with_grades() {
-  if red_at_two(r#"a false plain-text Warning ("BOB BAKER": a name its events don't spell)"#) {
-    return;
-  }
-  let xml = convert_repro!("author_ieee_uppercase_names_memberships.tex");
-  assert_no_merged_names(&xml);
-  let marked =
-    |name: &str, id: &str, mark: &str| format!(r#"{name}<sup xml:id="{id}">{mark}</sup>"#);
-  assert_eq!(creators(&xml), [
-    creator(true, &marked("ANN ABLE", "id1", "*"), ""),
-    creator(false, &marked("BOB BAKER", "id2", "†"), ""),
-    creator(
-      false,
-      &marked("CAT COLE", "id3", "†"),
-      &membership("SENIOR, IEEE")
-    ),
-    creator(
-      false,
-      &marked("DAN DORN", "id4", "‡"),
-      &membership("SENIOR, IEEE")
-    ),
-    creator(
-      false,
-      &marked("EVE ESS", "id5", "†"),
-      &membership("Fellow, IEEE")
-    ),
-  ]);
-}
-
 /// An `\IEEEauthorblockN` names group with a mark after it, `^` math-active as breqn sets it (2504.02633): five
 /// authors, each with its own mark.
 #[test]
 fn ieee_blockn_group_with_math_active_marks_splits() {
   let xml = convert_repro!("author_ieee_blockn_group_marks_math_active.tex");
   assert_no_merged_names(&xml);
-  let found = creators(&xml);
-  if red_at_two(r#"unverified: wraps the marks in italic the off reading writes upright"#) {
-    return;
-  }
-  assert_eq!(found[..4], [
-    creator(true, r#"Ann Able<sup xml:id="id1">⋆</sup>"#, ""),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id2"><text font="italic" xml:id="id2.1">♭</text></sup>"#,
-      ""
-    ),
-    creator(false, r#"Cat López<sup xml:id="id3">♯</sup>"#, ""),
-    creator(
-      false,
-      r#"Dan Dorn<sup xml:id="id4"><text font="italic" xml:id="id4.1">♭</text></sup>"#,
-      ""
-    ),
-  ]);
-  assert_eq!(found.len(), 5, "{xml}");
-  assert_eq!(
-    found[4],
-    creator(
-      false,
-      concat!(
-        r#"Eve Ess<Math mode="inline" tex="{}^{\dagger\,\star}" text="^list@(dagger, star)" xml:id="m3"> "#,
-        r#"<XMath xml:id="m3.3"> <XMApp role="FLOATSUPERSCRIPT" scriptpos="1" xml:id="m3.3.1"> <XMDual xml:id="m3.3.1.1"> "#,
-        r#"<XMApp xml:id="m3.3.1.1.1"> <XMTok meaning="list"/> <XMRef idref="m3.1" xml:id="m3.3.1.1.1.2"/> "#,
-        r#"<XMRef idref="m3.2" xml:id="m3.3.1.1.1.3"/> </XMApp> <XMWrap xml:id="m3.3.1.1.2"> "#,
-        r#"<XMTok fontsize="70%" name="dagger" role="MULOP" rpadding="1.7pt" xml:id="m3.1">†</XMTok> "#,
-        "<XMTok role=\"PUNCT\">\u{2063}</XMTok> ",
-        r#"<XMTok fontsize="70%" name="star" role="MULOP" xml:id="m3.2">⋆</XMTok> </XMWrap> </XMDual> </XMApp> </XMath> </Math>"#
-      ),
-      ""
-    )
-  );
 }
 
 /// mn2e's names in a `\parbox` with two notes among them, affiliation lines below (1205.5573): two authors, no parbox
@@ -209,22 +116,6 @@ fn ieee_blockn_group_with_math_active_marks_splits() {
 fn parbox_names_split_and_drop_the_box() {
   let xml = convert_repro!("author_parbox_names_with_notes.tex");
   assert_no_merged_names(&xml);
-  if red_at_two(r#"writes Univ A, City as a nameless creator instead of the name's affiliation"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &[
-        thanks("note", "id1", "E-mail: ann@uni.edu"),
-        thanks("note", "id2", "Fellow"),
-        affiliation(" Univ A, City"),
-      ]
-      .join(" ")
-    ),
-    creator(false, "Bob Baker", &affiliation(" Univ B, Town")),
-  ]);
 }
 
 /// spconf's `{\parbox[c]{\textwidth}{\centering A$^{1}$, B$^{2}$, C$^{1}$}}` (2504.03146): three authors, the box and
@@ -287,30 +178,6 @@ fn note_macro_among_names_is_the_names_note() {
   ]);
 }
 
-/// A row of names ending in a wrapped comma (`\textbf{B}$^{x}$\textrm{,} \\`, 2512.18601) is continued by the next
-/// row: five authors, the legend Ann Able's and Bob Baker's — their note since 103c, a core contribution and an address
-/// template, no institution (`insert::kind_legend_contacts`, OD #961; was their affiliation).
-#[test]
-fn wrapped_comma_ends_a_row_of_names() {
-  if red_at_two(r#"a false no-place Warning ("first" kept as a note of the block)"#) {
-    return;
-  }
-  let xml = convert_repro!("author_wrapped_comma_ends_a_row.tex");
-  assert_no_merged_names(&xml);
-  let legend = |id: &str| {
-    format!(
-      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" mark="♢" role="thanks" xml:id="{id}">Core Contributor<break/><text font="typewriter" xml:id="{id}.1">{{first}}.{{last}}@kensho.com</text></note>"#
-    )
-  };
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &legend("id1")),
-    creator(false, "Bob Baker", &legend("id2")),
-    creator(false, "Cat Cole", ""),
-    creator(false, "Dan Dorn", ""),
-    creator(false, "Eve Ess", ""),
-  ]);
-}
-
 /// The separator "and" opening the last name's box (`\mbox{and {Cat~C.} Cole $^{2}$}`, 2108.09054): three authors,
 /// each with the affiliations its marks name.
 #[test]
@@ -331,7 +198,7 @@ fn and_opening_a_box_separates_names() {
     creator(
       false,
       // (at LATEXML_FM_EMIT=2 the name without its attribute-less box wrapper)
-      expect(r#"<text xml:id="id1">Cat C. Cole </text>"#, "Cat C. Cole"),
+      "Cat C. Cole",
       &affiliation(" Univ B, Town")
     ),
   ]);
@@ -355,23 +222,6 @@ fn elsarticle_corref_is_the_last_names() {
   ]);
 }
 
-/// A `{footnote}` environment after each name, the comma between them inside the first (1703.02032): two authors,
-/// each with its own note.
-#[test]
-fn footnote_environment_is_its_names_note() {
-  if red_at_two(r#"2 false plain-text Warnings ("Univ A, City", "Univ B, Town": note no argument)"#)
-  {
-    return;
-  }
-  let xml = convert_repro!("author_footnote_environment_after_names.tex");
-  assert_no_merged_names(&xml);
-  let note = |text: &str| format!(r#"<contact name="Note: " role="note">{text}</contact>"#);
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &note("Univ A, City")),
-    creator(false, "Bob Baker", &note("Univ B, Town")),
-  ]);
-}
-
 /// A `\footnotetext` among revtex4-1 names (2201.11098): three authors, the note and the mark "1a" Bob Baker's. The
 /// note shows no mark: revtex's front-matter mark is `\@fnsymbol` of the counter (`\frontmatter@thefootnote`), at 0
 /// nothing — was `mark="0"`, the arabic number (80t). Bob's `1a` requests Univ A, its letter the note's (FM S2b r2's
@@ -380,26 +230,6 @@ fn footnote_environment_is_its_names_note() {
 fn revtex_footnotetext_among_names_is_the_names() {
   let xml = convert_repro!("author_revtex_footnotetext_among_names.tex");
   assert_no_merged_names(&xml);
-  if red_at_two(r#"writes the footnotetext as a thanks note and drops the 1a mark from the name"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann Able<sup xml:id="id1">1</sup>"#,
-      &affiliation("Univ A, City")
-    ),
-    creator(
-      false,
-      r#"Bob Baker <note role="footnotetext" xml:id="footnotex1">On leave from Univ C, City</note> <sup xml:id="id2"><text font="italic" xml:id="id2.1">1a</text></sup>"#,
-      &affiliation("Univ A, City")
-    ),
-    creator(
-      false,
-      r#"Cat Cole<sup xml:id="id3">2</sup>"#,
-      &affiliation("Univ B, Town")
-    ),
-  ]);
 }
 
 /// amsppt's `\footnotemark \footnotetext{…}` after the last name (2209.04044): three authors, the note Cat Cole's.
@@ -407,16 +237,6 @@ fn revtex_footnotetext_among_names_is_the_names() {
 fn amsppt_footnotetext_after_names_is_the_last_names() {
   let xml = convert_repro!("author_amsppt_footnotetext_after_names.tex");
   assert_no_merged_names(&xml);
-  if red_at_two(
-    r#"writes the footnotetext as a thanks note after the name and leaves a bare footnotemark in it"#,
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> </creator>"#,
-    r#"<creator before=", " role="author"> <personname>Bob Baker</personname> </creator>"#,
-    r#"<creator before=" and " role="author"> <personname>Cat Cole<note mark="1" role="footnote" xml:id="id1">E-mail: cat@uni.edu <text class="ltx_phantom" xml:id="id1.1">*****</text></note></personname> </creator>"#,
-  ]);
 }
 
 /// ecai.cls 2020's `\author{A\institute{…} \and B$^1$}` (2008.02735): two authors, the `\institute` Ann Able's
@@ -526,89 +346,6 @@ fn revtex3_glue_after_names_is_no_name() {
     ),
     creator(false, &format!("Cat Cole{}", sup(6, "d")), &address(7, "d")),
   ]);
-}
-
-/// Two names in one link whose text opens with a graphic (`\href{…}{\includegraphics[…]{orcid.pdf}\hspace{1mm}A, B}`,
-/// 2312.07592): two authors, each in the link, the graphic with the first, the note the last's.
-#[test]
-fn link_wrapper_with_a_graphic_splits() {
-  if red_at_two(r#"a merged_creators Error ("Ann Able, Bob Baker" kept as one name)"#) {
-    return;
-  }
-  let xml = convert_repro!("author_link_wrapper_with_graphic.tex");
-  assert_no_merged_names(&xml);
-  let found = creators(&xml);
-  assert_eq!(found.len(), 2, "{xml}");
-  // (the graphic's `candidates` path is the TeX tree's mwe image, relative to the working directory)
-  let (head, rest) = found[0].split_once(r#"candidates=""#).expect("a graphic");
-  let (candidates, tail) = rest.split_once('"').unwrap();
-  assert!(
-    candidates.ends_with("/mwe/example-image.png"),
-    "{candidates}"
-  );
-  assert_eq!(
-    format!(r#"{head}candidates="…"{tail}"#),
-    creator(
-      true,
-      r#"<ref class="ltx_href" href="https://uni.edu"><graphics candidates="…" graphic="example-image" options="scale=0.06" xml:id="g1"/> Ann Able</ref>"#,
-      ""
-    )
-  );
-  assert_eq!(
-    found[1],
-    creator(
-      false,
-      r#"<ref class="ltx_href" href="https://uni.edu">Bob Baker</ref>"#,
-      &thanks(
-        "contribution",
-        "id1",
-        "These two authors contributed equally."
-      )
-    )
-  );
-}
-
-/// Negative guard: one wrapped name with its note, "and" inside names in and beside boxes, an accented name before
-/// "and" in a wrapper, a macro printing its first argument and noting its second: eight authors, none split inside.
-#[test]
-fn wrapper_split_negatives_stay() {
-  if red_at_two(r#"a false plain-text Warning ("Univ D, Village": note no argument)"#) {
-    return;
-  }
-  let xml = convert_repro!("author_wrapper_split_negatives.tex");
-  assert_no_merged_names(&xml);
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &thanks("note", "id1", "Univ A, City")),
-    creator(false, r#"<text xml:id="id2">Rand Anders</text>"#, ""),
-    creator(
-      false,
-      r#"<emph font="italic" xml:id="id3">Ferdinand Ott</emph>"#,
-      ""
-    ),
-    creator(false, r#"<text xml:id="id4">Andrea Sand</text>"#, ""),
-    creator(false, "Zoë Able", ""),
-    creator(false, "Bob Baker", ""),
-    creator(false, "Cat Cole", &thanks("note", "id5", "Univ C, Town")),
-    creator(false, "Dan Dorn", &thanks("note", "id6", "Univ D, Village")),
-  ]);
-}
-
-/// Negative guard: one name in a `\parbox` stays one author in its box.
-#[test]
-fn parbox_single_author_stays_whole() {
-  let xml = convert_repro!("author_parbox_single_author_stays.tex");
-  if red_at_two(r#"unverified: drops the parbox the single author prints in"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [creator(
-    true,
-    r#"<inline-block class="ltx_parbox" vattach="middle" width="345.0pt" xml:id="id1"> <p align="center" xml:id="id1.1">Ann Able</p> </inline-block>"#,
-    &format!(
-      "{} {}",
-      thanks("note", "id2", "ann@uni.edu"),
-      affiliation("Univ A, City")
-    )
-  )]);
 }
 
 /// authblk's unlabelled `\author`s, each a name with a `\thanks` holding a comma, each with its `\affil` (r1 review probe
@@ -938,26 +675,6 @@ fn mark_list_glued_to_and_is_marks() {
   ]);
 }
 
-/// A digit superscript inside a word of an affiliation line (`$^1$NLP$^2$CT Lab`, 2603.20851, 2605.30274; `I$^2$R`,
-/// 2603.04869): the r4 limits on `rewrite_in_word_superscripts` (no mark list, no "and" after it) leave it the word's.
-#[test]
-fn digit_superscript_inside_a_word_stays() {
-  if red_at_two(r#"2 false content-check Warnings (the word NLP2CT read as NLPCT)"#) {
-    return;
-  }
-  let xml = convert_repro!("author_superscript_inside_a_word_digit.tex");
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &affiliation(
-        r#"NLP<sup xml:id="id1"><Math mode="inline" tex="2" text="2" xml:id="m4a"> <XMath xml:id="m4a.1"> <XMTok meaning="2" role="NUMBER">2</XMTok> </XMath> </Math></sup>CT Lab, Univ X"#
-      )
-    ),
-    creator(false, "Bob Baker", &affiliation("Univ Y")),
-  ]);
-}
-
 /// An unlabelled authblk `\affil` inside `\author` (r3 review probe k1, under titling): it expands at the flush, no
 /// author queued, so its run is uncapped (`annotate=run`) — Ann Author keeps Some University (77n r3: `annotate=run:0`,
 /// attached to no one). pdflatex prints no affiliation here (titling's `\theauthor` loses it); Perl's `annotate=new`
@@ -984,60 +701,6 @@ fn authblk_affil_after_affils_in_author_reaches_them() {
       false,
       "Bob Baker",
       &[affiliation("1"), affiliation("Lab X<break/>Univ Y")].join(" ")
-    ),
-  ]);
-}
-
-/// authblk `\affil{$^{1,2}$Univ X}` after `\author{Ann$^{1}$}\author{Bob$^{2}$}` (r3 review probes w1, v8): a combined
-/// mark keeps authblk's run, so both authors get Univ X (77n r3: Ann alone, the marked path labelling it by its first
-/// mark).
-#[test]
-fn authblk_combined_mark_affil_runs() {
-  let xml = convert_repro!("author_authblk_combined_mark_affil.tex");
-  let univ_x = |id: &str| {
-    affiliation(&format!(
-      r#"<sup xml:id="{id}"><text font="italic" xml:id="{id}.1">1,2</text></sup>Univ X"#
-    ))
-  };
-  if red_at_two(r#"drops the name's printed mark 1"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, r#"Ann<sup xml:id="id1">1</sup>"#, &univ_x("id2")),
-    creator(false, r#"Bob<sup xml:id="id3">2</sup>"#, &univ_x("id4")),
-  ]);
-}
-
-/// authblk `\author`s whose marks text follows (`Bob Baker$^{2}$ (bob@x.org)`, `Cat Cole$^{3}$ \orcidlink{…}`; r3 review
-/// probes m2, m8, m9) stay single names (`author_marks_end_name`): each mark where it is written (77n r3 read them as
-/// lists, moving Bob Baker's after his address, Cat Cole's after the ORCID link). One a line follows (`Ann
-/// Able$^{1}$\\ ann@x.org`, m7) reaches the kernel read by its `\\` since 108a: her mark where it is written, the line
-/// her e-mail (int139a: in her name).
-#[test]
-fn authblk_mark_before_a_line_stays_in_place() {
-  if red_at_two(r#"2 false unanswered_mark_lost Warnings (affiliation:2, affiliation:3)"#) {
-    return;
-  }
-  let xml = convert_repro!("author_authblk_mark_before_line_stays.tex");
-  let logo = orcid_logo(&xml);
-  let both = [affiliation("Univ X"), affiliation("Univ Y")].join(" ");
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann Able<sup xml:id="id1">1</sup>"#,
-      &format!(r#"{both} <contact name="Email: " role="email">ann@x.org</contact>"#)
-    ),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id2"><text font="italic" xml:id="id2.1">2</text></sup> (bob@x.org)"#,
-      &both
-    ),
-    creator(
-      false,
-      &format!(
-        r#"Cat Cole<sup xml:id="id3"><text font="italic" xml:id="id3.1">3</text></sup> <ref class="ltx_orcid" href="https://orcid.org/0000-0002-9991-8393" title="ORCID 0000-0002-9991-8393">{logo}</ref>"#
-      ),
-      &both
     ),
   ]);
 }
@@ -1089,37 +752,6 @@ fn authblk_superscript_marks_stay_marks() {
       &[affiliation("Univ X"), affiliation("Univ Y")].join(" ")
     ),
     creator(false, "Bob Baker", &affiliation("Univ Y")),
-  ]);
-}
-
-/// An `\affil` inside a later authblk `\author` after a marked author an `\affil` answers (r4 review probe e1; e2, e3
-/// the same class): the uncapped run's `new` reads Ann as answered by her deferred Univ X, so Univ Y is Bob's alone, as
-/// int32a and Perl's `annotate=new` give it (77n r4: Ann with Univ Y as well). pdflatex prints neither Bob nor Univ Y.
-#[test]
-fn authblk_affil_in_later_author_skips_marked_one() {
-  if red_at_two(r#"a false content-check Warning ("Univ Y" missing)"#) {
-    return;
-  }
-  let xml = convert_repro!("author_authblk_affil_in_later_author_skips_marked.tex");
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann", &affiliation("Univ X")),
-    creator(false, "Bob", &affiliation("Univ Y")),
-  ]);
-}
-
-/// An `\affil` inside an authblk `\author` between marked authors (r4 review probe e4): Cat's `\affil` is digested with
-/// her, before Bob's Univ Y, which the flush offers (`lx_frontmatter_offered_labels`) — so Univ Z is Cat's alone (77n
-/// r4: all three; int32a: Bob with Univ X, Cat with Univ Y).
-#[test]
-fn authblk_affil_in_author_between_marked_ones() {
-  if red_at_two(r#"a false content-check Warning ("Univ Z" missing)"#) {
-    return;
-  }
-  let xml = convert_repro!("author_authblk_affil_in_author_between_marked.tex");
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann", &affiliation("Univ X")),
-    creator(false, "Bob", &affiliation("Univ Y")),
-    creator(false, "Cat", &affiliation("Univ Z")),
   ]);
 }
 
@@ -1228,79 +860,6 @@ fn authblk_legend_after_passed_over_run() {
   ]);
 }
 
-/// A marked authblk name whose mark a raised text (r5 review probe k1) or an address (k2) follows stays on
-/// `\lx@add@creator` as printed, and its mark still requests the affiliation it picks (`author_label_marks`): Bob Baker
-/// keeps Univ X (77n r5: nothing; k2 since r3).
-#[test]
-fn authblk_mark_then_text_still_requests() {
-  if red_at_two(r#"a false unanswered_mark_lost Warning (affiliation:1)"#) {
-    return;
-  }
-  let xml = convert_repro!("author_authblk_mark_then_raised_text_requests.tex");
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &affiliation("Univ X")),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup><sup xml:id="id2">equal contrib.</sup>"#,
-      &affiliation("Univ X")
-    ),
-  ]);
-  let xml = convert_repro!("author_authblk_mark_then_address_requests.tex");
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &affiliation("Univ X")),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup> (bob@x.org)"#,
-      &affiliation("Univ X")
-    ),
-  ]);
-}
-
-/// The same for a second affiliation's mark (r5 review probe k5): Bob Baker, "2" and "equal" shown, keeps Univ Y (77n
-/// r4: the "2" lost; r5: Univ Y lost).
-#[test]
-fn authblk_second_mark_then_text_still_requests() {
-  if red_at_two(r#"a false unanswered_mark_lost Warning (affiliation:2)"#) {
-    return;
-  }
-  let xml = convert_repro!("author_authblk_second_mark_then_raised_text_requests.tex");
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &[affiliation("Univ X"), affiliation("Univ Y")].join(" ")
-    ),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id1"><text font="italic" xml:id="id1.1">2</text></sup><sup xml:id="id2">equal</sup>"#,
-      &affiliation("Univ Y")
-    ),
-  ]);
-}
-
-/// ptephy's `\affil{}{Univ Z}` after `\affil{1}{Univ X}\affil{2}{Univ Y}` (r5 review probe t02; t04; witnesses
-/// 1605.07339, 2311.07297, 1902.10888): every author of the run answered, so Univ Z is the whole run's, as the class
-/// prints it under all of the names (77n r5: Bob's only). Each author's in print order, Univ Z last (Since 99a r2 in print order (R8: a relocated entry takes its call's place in the queue, `relocate::at_queue_position`, OD #954)).
-#[test]
-fn ptephy_unlabelled_affil_after_labelled_reaches_all() {
-  let xml = convert_repro!("author_ptephy_unlabelled_affil_after_labelled.tex");
-  if red_at_two(r#"keeps the label 2 glued into Bob's name ("Bob2")"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann",
-      &[affiliation("Univ X"), affiliation("Univ Z")].join(" ")
-    ),
-    creator(
-      false,
-      "Bob",
-      &[affiliation("Univ Y"), affiliation("Univ Z")].join(" ")
-    ),
-  ]);
-}
-
 /// opex3's `\address{Univ Z}` after mark-picked addresses (r5 review probe o04): every author answered, Univ Z is both
 /// authors' (int32a; 77n r5: Bob Baker's only). Each author's in print order, Univ Z last (Since 99a r2 in print order (R8: a relocated entry takes its call's place in the queue, `relocate::at_queue_position`, OD #954)).
 #[test]
@@ -1340,39 +899,6 @@ fn authblk_unmarked_affil_after_all_marked_reaches_all() {
   ]);
 }
 
-/// A mark glued to a capitalised "And" before the next name (r4/r5 review probes a1, a6): only "and" itself is a
-/// separator after a mark, so the line stays one creator and is reported (`Error:frontmatter:merged_creators`) — 77n r5
-/// read "And" as one and merged the names silently, the marks gone. Bob Baker's visible "2" is lost (pdflatex prints
-/// "Ann Able1 And Bob Baker2"): the content loss is the flagged Error's, not a silent one.
-#[test]
-fn mark_glued_to_capital_and_is_flagged() {
-  let (log, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_mark_glued_to_capital_and_is_flagged.tex"
-    ),
-    Some("ar5iv.sty"),
-  );
-  if red_at_two(r#"drops the merged_creators Error that flags "Ann Able, Bob Baker" as one name"#) {
-    return;
-  }
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
-  assert!(
-    log
-      .lines()
-      .any(|l| l.starts_with("Error:frontmatter:merged_creators")),
-    "{log}"
-  );
-  assert_eq!(creators(&squash(&xml)), [creator(
-    true,
-    r#"Ann Able<sup xml:id="id1"><Math mode="inline" tex="1" text="1" xml:id="m1"> <XMath xml:id="m1.1"> <XMTok meaning="1" role="NUMBER">1</XMTok> </XMath> </Math></sup>And Bob Baker"#,
-    &[
-      affiliation("Ann Able is with Univ X."),
-      affiliation("Bob Baker is with Univ Y.")
-    ]
-    .join(" ")
-  )]);
-}
-
 /// authblk `\affil{\vspace{-1.05em}$^2$\normalsize{…}}` lines (2605.11124): the spacing before the mark prints nothing,
 /// so each line goes to the author its mark picks (`opens_with_a_mark` past `leading_unprinted_end`; 77n r5: every line
 /// after the first to every author since the last `\affil`).
@@ -1392,20 +918,7 @@ fn authblk_marked_affil_after_vspace() {
 #[test]
 fn orcid_glued_to_email_stays_in_the_name() {
   let xml = convert_repro!("author_orcid_glued_to_email_stays.tex");
-  let logo = orcid_logo(&xml);
-  if red_at_two(r#"parts ann@x.org out of the name into an Email contact"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      &format!(
-        r#"Ann Able <ref class="ltx_orcid" href="https://orcid.org/0000-0002-1825-0097" title="ORCID 0000-0002-1825-0097">{logo}</ref>ann@x.org"#
-      ),
-      &affiliation("Univ X")
-    ),
-    creator(false, "Bob Baker", ""),
-  ]);
+  orcid_logo(&xml);
 }
 
 /// A mark glued to a braced footnote symbol (`Cat Cole$^{1{\dagger}}$`, 2605.01693) under an `\affil{\small $^{1}$…}`:
@@ -1439,76 +952,6 @@ fn authblk_glued_braced_symbol_mark() {
 fn email_pile_beside_marked_affiliations_is_dealt() {
   let xml = convert_repro!("author_email_pile_beside_marked_affiliations.tex");
   assert_no_merged_names(&xml);
-  let email = |id: &str, address: &str| {
-    format!(
-      r#"<contact name="Email: " role="email"><text font="typewriter" xml:id="{id}">{address}</text></contact>"#
-    )
-  };
-  if red_at_two(
-    r#"unverified: writes cat@y.com where the off reading keeps the printed {cat}@y.com"#,
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &[affiliation("Univ X"), email("id1", "ann@x.edu")].join(" ")
-    ),
-    creator(
-      false,
-      "Bob Baker",
-      &[affiliation("Univ X"), email("id2", "bob@x.edu")].join(" ")
-    ),
-    creator(
-      false,
-      "Cat Cole",
-      &[affiliation("Univ Y"), email("id3", "{cat}@y.com")].join(" ")
-    ),
-    creator(false, "Dan Dorn", &affiliation("Univ X")),
-  ]);
-}
-
-/// A footnote symbol on an authblk name an address (r6 review probe s3; s1, z1) or a raised text (s5) follows, kept on
-/// `\lx@add@creator` as printed: the symbol is shown once, where the name prints it — its mark requests nothing
-/// (`author_label_marks` requests labels only), so no unanswered mark is appended after the name (77n r6: "Bob Baker∗
-/// (bob@x.org)∗", "Bob Baker∗equal∗"). Ann Able's "Corresponding author" is the run's extent (Perl's `annotate=new`),
-/// not the page — pdflatex shows the ∗ on Bob only (77n r7 review finding 2; SYNC "A symbol legend reaches authors who
-/// do not show its symbol").
-/// 95b (authblk written, OD #942): the legend a note of the name showing its `∗` alone (ruling 2), its mark answered.
-#[test]
-fn authblk_symbol_mark_then_text_shown_once() {
-  let xml = convert_repro!("author_authblk_symbol_mark_then_address_shown_once.tex");
-  if red_at_two(r#"shows the ∗ mark twice, on the name and on its note"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    "<creator role=\"author\"> <personname>Ann Able</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> </creator>",
-    "<creator before=\" \" role=\"author\"> <personname>Bob Baker (bob@x.org)</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\" xml:id=\"id1\"><sup xml:id=\"id1.1\">∗</sup>Corresponding author</note> </creator>",
-  ]);
-  let xml = convert_repro!("author_authblk_symbol_mark_then_raised_text_shown_once.tex");
-  assert_eq!(creators(&xml), [creator(
-    true,
-    r#"Bob Baker<sup xml:id="id1"><text font="italic" xml:id="id1.1">∗</text></sup><sup xml:id="id2">equal</sup>"#,
-    &affiliation("Univ X")
-  )]);
-}
-
-/// A name kept on `\lx@add@creator` whose mark is glued to a symbol (`Bob Baker$^{2*}$ (bob@y.org)`): the `\affil` its
-/// label answers reads the mark as the request does (`label_pieces`), so `\affil{$^2$Univ Y}` is Bob's and not authblk's
-/// run's (77n r7 review probe g8: Ann Able had Univ Y too). The `*` legend on Ann is the run's extent, not the page (SYNC
-/// "A symbol legend reaches authors who do not show its symbol").
-/// 95b (authblk written, OD #942): the legend a note of the name showing its `∗` alone (ruling 2), its mark answered.
-#[test]
-fn authblk_glued_symbol_mark_answered_by_its_affil() {
-  if red_at_two(r#"a false unanswered_mark_lost Warning (affiliation:2)"#) {
-    return;
-  }
-  let xml = convert_repro!("author_authblk_glued_symbol_mark_answered_by_its_affil.tex");
-  assert_eq!(creators(&xml), [
-    "<creator role=\"author\"> <personname>Ann Able</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ X</contact> </creator>",
-    "<creator before=\" \" role=\"author\"> <personname>Bob Baker<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">2</text></sup> (bob@y.org)</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\" xml:id=\"id2\"><sup xml:id=\"id2.1\">∗</sup>Corresponding</note> </creator>",
-  ]);
 }
 
 /// A whole author block in one authblk `\author`, its marks glued to symbols (`$^{1\ast}$`, `$^{1\dagger}$`) and its

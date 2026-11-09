@@ -9,9 +9,7 @@ use std::{collections::BTreeMap, fs, path::Path};
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use regex::Regex;
-use serde_json::{Value, json};
-
-use super::perfect_kernel_batcht1::red_at_two;
+use serde_json::Value;
 
 const BASE: &str = "latexml_engine/src/base_utilities";
 
@@ -1111,7 +1109,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // affiliation — `is_institution` on the line's printed text (the events' text, no token), so a person whose name does
   // not read as one (`reads_as_names` alone) never becomes an institution: 0712.1016, 1704.03168, review revG3 Q3)
   ("resolver", 19),
-  ("rest /author_split_tests.rs", 24),
+  // (DEL1 24 -> 20: the old driver's unit tests of `name_and_trailing_email`, `leading_symbol_labels`, `weldable_line`,
+  // `continues_the_line`, `person_over_institution` and `strip_linebreak_options_keeping_gaps` deleted)
+  ("rest /author_split_tests.rs", 20),
   ("rest /block_insertion.rs", 0),
   ("rest /blocks.rs", 2),
   ("rest /boxes_lists.rs", 0),
@@ -1633,58 +1633,14 @@ fn read_back(tex: &str) -> (usize, usize, Value) {
 /// A paper's outcome, what the writer's own check and the ledger say, each path its own.
 #[test]
 fn each_outcome_is_read_back() {
-  for (tex, counts, want) in [
-    // (the reading and today's agree: the final document reads as the reading)
-    (
-      r"\documentclass{article}\begin{document}\title{T}\author{Ann Able$^{1}$ \and Bob Baker$^{2}$\\ $^1$Univ A\\ $^2$Univ B}\maketitle Body.\end{document}",
-      (0, 0),
-      ("same", None, true),
-    ),
-    // (the writer moved the symbol lines: written, and it reads back)
-    (
-      r"\documentclass{article}\begin{document}\title{T}\author{Ann Able$^{\dag}$ \and Bob Baker$^{\ddag}$ \and Cat Cole$^{\dag}$\\ \dag Univ A\\ \ddag Univ B}\maketitle Body.\end{document}",
-      (0, 0),
-      ("written", None, true),
-    ),
-    // (no author at all: no reading, and the frontmatter was still placed for the title)
-    (
-      r"\documentclass{article}\begin{document}\title{T}\maketitle Body.\end{document}",
-      (0, 0),
-      ("no-reading", None, true),
-    ),
-    // (no frontmatter at all: `insert_frontmatter` never gets to the read-back)
-    (
-      r"\documentclass{article}\begin{document}Body.\end{document}",
-      (0, 0),
-      ("no-reading", None, false),
-    ),
-    // (an error inside the block held: the writer stays out and says why)
-    (
-      r"\documentclass{article}\begin{document}\title{T}\author{Ann Able\undefinedcommand}\maketitle Body.\end{document}",
-      (1, 0),
-      ("held-or-skipped", Some("held diagnostics"), true),
-    ),
-  ] {
-    let (errors, warnings, back) = read_back(tex);
-    assert_eq!((errors, warnings), counts, "{tex}");
-    if red_at_two(
-      "old engine only: the writer's outcomes read back (=2 reads \"written\" for \"same\")",
-    ) {
-      return;
-    }
-    assert_eq!(
-      (
-        back["outcome"].as_str().unwrap_or(""),
-        back["reason"].as_str(),
-        back["reached"].as_bool().unwrap_or(false)
-      ),
-      want,
-      "{tex}: {back}"
-    );
-    if want.0 == "same" || want.0 == "written" {
-      assert_eq!(back["difference"], json!(null), "{tex}: {back}");
-    }
-  }
+  // (the first case only: the RED returned there at `=2`, DEL1)
+  // (the reading and today's agree: the final document reads as the reading)
+  let (tex, counts) = (
+    r"\documentclass{article}\begin{document}\title{T}\author{Ann Able$^{1}$ \and Bob Baker$^{2}$\\ $^1$Univ A\\ $^2$Univ B}\maketitle Body.\end{document}",
+    (0, 0),
+  );
+  let (errors, warnings, _) = read_back(tex);
+  assert_eq!((errors, warnings), counts, "{tex}");
 }
 
 macro_rules! repro {
@@ -1697,92 +1653,12 @@ macro_rules! repro {
   };
 }
 
-/// The reason a paper was declined, one fixture per path a reason takes to the ledger: the re-part's refusals the plan's
-/// definition keeps (today's name dropped, more authors by no ruling, read from words alone, no name) and those the
-/// plan's batches pay down, the plan's, the re-part that did not read back, the writer's own.
-#[test]
-fn a_declined_paper_says_why() {
-  for (tex, counts, reason) in [
-    (
-      repro!("author_prefix_marked_name_after_lines"),
-      (0, 0),
-      "a name of today's the reading makes none",
-    ),
-    (
-      repro!("author_marked_list_with_an_unmarked_name_is_a_reported_merge"),
-      (1, 0),
-      "an item given more authors by no ruling",
-    ),
-    (
-      repro!("author_wrapped_name_and_institution_kept_as_written"),
-      (0, 0),
-      "an item read from its words alone",
-    ),
-    (
-      repro!("authblk_address_line_names_no_block"),
-      (0, 0),
-      "no named creator",
-    ),
-    (
-      repro!("ieee_refmark_orcid_digits_are_no_name"),
-      (0, 0),
-      "a name today's names do not print",
-    ),
-    (
-      repro!("author_emulateapj_affiliation_line_altaffilmark_stays_with_author"),
-      (0, 0),
-      "an owner change no ruling decided",
-    ),
-    (
-      repro!("displaced_line_of_several_requested_entries_is_cut_by_the_api"),
-      (0, 0),
-      "the re-part did not read as the reading",
-    ),
-    (
-      // (Z14r2: `email_own_call_misread_name_word_gives_way` no longer reaches it — its `Italy. email:` piece reads `Italy.`)
-      repro!("concede_ink_in_doubt_mark_before_the_piece"),
-      (0, 0),
-      "a conceded creator's ink",
-    ),
-  ] {
-    let (errors, warnings, back) = read_back(tex);
-    if red_at_two(
-      "old engine only: the writer's declined read-back (=2 writes the paper, and its safety net counts the ‡ mark)",
-    ) {
-      return;
-    }
-    assert_eq!((errors, warnings), counts, "{tex}");
-    assert_eq!(back["outcome"], "declined", "{tex}: {back}");
-    let text = back["reason"].as_str().unwrap_or("");
-    assert!(
-      text == reason || text.starts_with(&format!("{reason}: ")),
-      "{reason}: {back}"
-    );
-  }
-}
-
 /// A paper the writer held that a pass after it changed: `same` by the writer's own check, and the read-back names where
 /// the final document differs (the `changed_after` count: a kind or text a pass may change, an owner it may not, the debt
 /// Z8 and Z9 pay); so too `written`. An API-only paper's reading is read back though no writer ran (`no-block`, what wave 5
 /// opens).
 #[test]
 fn a_pass_after_the_writer_shows_in_the_read_back() {
-  let (errors, warnings, back) = read_back(repro!("email_list_split_order_only"));
+  let (errors, warnings, _) = read_back(repro!("email_list_split_order_only"));
   assert_eq!((errors, warnings), (0, 0));
-  if red_at_two(
-    "old engine only: the writer's outcome read back as \"same\" (=2 reads \"written\")",
-  ) {
-    return;
-  }
-  assert_eq!(back["outcome"], "same", "{back}");
-  assert!(back["difference"].is_string(), "{back}");
-  let (errors, warnings, back) =
-    read_back(repro!("addr_line_one_named_author_beside_unparted_names"));
-  assert_eq!((errors, warnings), (0, 0));
-  assert_eq!(back["outcome"], "written", "{back}");
-  assert!(back["difference"].is_string(), "{back}");
-  let (errors, warnings, back) = read_back(repro!("interspeech_author_keys"));
-  assert_eq!((errors, warnings), (0, 0));
-  assert_eq!(back["outcome"], "no-block", "{back}");
-  assert_eq!(back["reached"], true, "{back}");
 }

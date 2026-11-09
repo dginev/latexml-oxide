@@ -11,7 +11,7 @@
 //! given its number (`\samethanks[1]`, 1912.01737; 1811.08622) keeps the creators, its loss counted.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::{perfect_kernel_batch84b::creators, perfect_kernel_batchz3::in_a_directory};
 
@@ -27,15 +27,14 @@ macro_rules! repro {
 
 fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).collect() }
 
-/// Convert `tex` under `emit`: the log and the XML.
-fn run(tex: &str, emit: u8) -> (String, String) {
+/// Convert `tex`: the log and the XML.
+fn run(tex: &str) -> (String, String) {
   let (log, xml, ()) = convert_files_with_setup_then(
     tex,
     &[],
     Some("ar5iv.sty"),
     move || {
       set_fm_shadow_override(None);
-      set_fm_emit_override(Some(emit));
     },
     |_| (),
   );
@@ -47,32 +46,25 @@ fn run(tex: &str, emit: u8) -> (String, String) {
 /// now his mark is the "*" pdflatex prints, as off's.
 #[test]
 fn a_notes_footnote_step_runs_where_it_prints() {
-  for emit in [0, 2] {
-    let (log, xml) = run(repro!("ne2_thanks_addtocounter_order"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(
-      creators(&xml),
-      [row(&["Ann Able"]), row(&["Bob Baker * * footnote *"])],
-      "emit={emit}"
-    );
-    let notes: Vec<&str> = xml
-      .match_indices("<note ")
-      .map(|(at, _)| &xml[at..at + xml[at..].find('>').expect("a note's tag")])
-      .collect();
-    assert_eq!(
-      notes,
-      [
-        r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1""#,
-        r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2""#,
-        r#"<note mark="*" role="footnotemark" xml:id="footnote1""#,
-      ],
-      "emit={emit}: {xml}"
-    );
-  }
+  let (log, xml) = run(repro!("ne2_thanks_addtocounter_order"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able"]),
+    row(&["Bob Baker * * footnote *"])
+  ]);
+  let notes: Vec<&str> = xml
+    .match_indices("<note ")
+    .map(|(at, _)| &xml[at..at + xml[at..].find('>').expect("a note's tag")])
+    .collect();
+  assert_eq!(
+    notes,
+    [
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1""#,
+      r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2""#,
+      r#"<note mark="*" role="footnotemark" xml:id="footnote1""#,
+    ],
+    "{xml}"
+  );
 }
 
 /// kr.sty's `\affiliations` and `\emails` are defined only in its `\@maketitle`: `=2` queued the block whole before the
@@ -85,23 +77,15 @@ fn an_ijcai_block_is_split_at_its_sections() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ne2_kr_affiliations.sty"
   );
   let univ = "affiliation=Univ X, City, Country";
-  for (emit, bob) in [
-    ("0", row(&["Bob Baker", "email=bob@x.edu"])),
-    ("2", row(&["Bob Baker", univ, "email=bob@x.edu"])),
-  ] {
-    let expected = [row(&["Ann Able", univ, "email=ann@x.edu"]), bob];
-    let (log, xml) = in_a_directory(
-      repro!("ne2_kr_affiliations"),
-      &[("ne2_kr_affiliations.sty", sty)],
-      &[("LATEXML_FM_EMIT", emit)],
-    );
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(creators(&xml), expected, "emit={emit}");
-  }
+  let bob = row(&["Bob Baker", univ, "email=bob@x.edu"]);
+  let expected = [row(&["Ann Able", univ, "email=ann@x.edu"]), bob];
+  let (log, xml) = in_a_directory(
+    repro!("ne2_kr_affiliations"),
+    &[("ne2_kr_affiliations.sty", sty)],
+    &[],
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), expected);
 }
 
 /// `F. M.\, Munteanu` after a comma: the surname-first rule (`Santucho, V.`) joined the initials to "Yongmin Kim" and the
@@ -118,15 +102,9 @@ fn initials_a_thin_space_joins_are_a_name_of_their_own() {
     row(&["C. H. Perry ∗,†", lab, dept]),
     row(&["D. G. Rickel *", lab]),
   ];
-  for emit in [0, 2] {
-    let (log, xml) = run(repro!("ne2_merged_kim"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(creators(&xml), expected, "emit={emit}");
-  }
+  let (log, xml) = run(repro!("ne2_merged_kim"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), expected);
 }
 
 /// `\author{representing the ATLAS Pixel Collaboration}`, a call of its own: the names' collaboration, as off frames it
@@ -138,15 +116,9 @@ fn representing_a_collaboration_is_its_contact() {
     "affiliation=Lawrence Berkeley Laboratory",
     "collaboration=representing the ATLAS Pixel Collaboration",
   ])];
-  for emit in [0, 2] {
-    let (log, xml) = run(repro!("ne2_representing_collab"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(creators(&xml), expected, "emit={emit}");
-  }
+  let (log, xml) = run(repro!("ne2_representing_collab"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), expected);
 }
 
 /// An author block whose digestion moves the footnote counter where no name's run or mark carries it (Bob Baker's
@@ -157,48 +129,33 @@ fn representing_a_collaboration_is_its_contact() {
 /// `\addtocounter{footnote}{-2}\footnotemark`, is carried: `a_notes_footnote_step_runs_where_it_prints`.)
 #[test]
 fn a_counter_move_no_name_carries_writes_the_block_whole() {
-  for (emit, expected, warnings) in [
-    (
-      0,
-      vec![
-        row(&["Ann Able † † footnote †"]),
-        row(&["Bob Baker"]),
-        row(&["Carl Cole * * footnote *"]),
-      ],
-      0,
-    ),
-    (
-      2,
-      vec![row(&[
-        "Ann Able † † footnote † and Bob Baker and Carl Cole * * footnote *",
-      ])],
-      1,
-    ),
-  ] {
-    let (log, xml) = run(repro!("ne2b_counter_moved_between_notes"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, warnings),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(creators(&xml), expected, "emit={emit}");
-    let notes: Vec<&str> = xml
-      .match_indices("<note ")
-      .map(|(at, _)| &xml[at..at + xml[at..].find('>').expect("a note's tag")])
-      .collect();
-    // (every note kept, each mark as pdflatex prints it: Ann's footnotemark †, Carl's *; the block written whole holds both
-    // marks in its one creator, before the thanks notes)
-    let (mark_ann, mark_carl) = (
-      r#"<note mark="†" role="footnotemark" xml:id="footnote2""#,
-      r#"<note mark="*" role="footnotemark" xml:id="footnote1""#,
-    );
-    let thanks = |n: u8| {
-      format!(r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id{n}""#)
-    };
-    let mut expected = vec![mark_ann.to_string(), thanks(1), thanks(2), thanks(3)];
-    expected.insert(if emit == 0 { 4 } else { 1 }, mark_carl.to_string());
-    assert_eq!(notes, expected, "emit={emit}: {xml}");
-  }
+  let expected = vec![row(&[
+    "Ann Able † † footnote † and Bob Baker and Carl Cole * * footnote *",
+  ])];
+  let warnings = 1;
+  let (log, xml) = run(repro!("ne2b_counter_moved_between_notes"));
+  assert_eq!(
+    (error_count(&log), warning_count(&log)),
+    (0, warnings),
+    "{log}"
+  );
+  assert_eq!(creators(&xml), expected);
+  let notes: Vec<&str> = xml
+    .match_indices("<note ")
+    .map(|(at, _)| &xml[at..at + xml[at..].find('>').expect("a note's tag")])
+    .collect();
+  // (every note kept, each mark as pdflatex prints it: Ann's footnotemark †, Carl's *; the block written whole holds both
+  // marks in its one creator, before the thanks notes)
+  let (mark_ann, mark_carl) = (
+    r#"<note mark="†" role="footnotemark" xml:id="footnote2""#,
+    r#"<note mark="*" role="footnotemark" xml:id="footnote1""#,
+  );
+  let thanks = |n: u8| {
+    format!(r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id{n}""#)
+  };
+  let mut expected = vec![mark_ann.to_string(), thanks(1), thanks(2), thanks(3)];
+  expected.insert(1, mark_carl.to_string());
+  assert_eq!(notes, expected, "{xml}");
 }
 
 /// A note before every name steps the counter before the first creator's name, where LaTeX reads it: `=2` stepped it
@@ -206,19 +163,12 @@ fn a_counter_move_no_name_carries_writes_the_block_whole() {
 /// from `a_notes_footnote_step_runs_where_it_prints`: the step before a name, not after one.
 #[test]
 fn a_note_before_every_name_steps_before_it() {
-  for emit in [0, 2] {
-    let (log, xml) = run(repro!("ne2b_note_before_every_name"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(
-      creators(&xml),
-      [row(&["Ann Able † † footnote †"]), row(&["Bob Baker"])],
-      "emit={emit}"
-    );
-  }
+  let (log, xml) = run(repro!("ne2b_note_before_every_name"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able † † footnote †"]),
+    row(&["Bob Baker"])
+  ]);
 }
 
 /// The marks' notes of `xml` (a `\footnotemark`'s, an `\endnotemark`'s), each its opening tag, in document order.
@@ -295,16 +245,10 @@ fn a_mark_after_its_names_note_stays_with_it() {
         .collect(),
     ),
   ] {
-    for emit in [0, 2] {
-      let (log, xml) = run(tex, emit);
-      assert_eq!(
-        (error_count(&log), warning_count(&log)),
-        (0, 0),
-        "emit={emit}: {log}"
-      );
-      assert_eq!(creators(&xml), expected, "emit={emit}");
-      assert_eq!(footnotemarks(&xml), marks, "emit={emit}: {xml}");
-    }
+    let (log, xml) = run(tex);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(creators(&xml), expected);
+    assert_eq!(footnotemarks(&xml), marks, "{xml}");
   }
 }
 
@@ -316,46 +260,32 @@ fn a_mark_after_its_names_note_stays_with_it() {
 /// a counter move, that the reading has no place for.
 #[test]
 fn a_mark_on_no_name_writes_the_block_whole() {
-  for (emit, expected, warnings) in [
-    (
-      0,
-      vec![
-        row(&["Ann Able", "affiliation=† † footnote †"]),
-        row(&["Bob Baker ‡ ‡ footnote ‡"]),
-      ],
-      0,
-    ),
-    (
-      2,
-      vec![row(&[
-        "Ann Able † † footnote † and Bob Baker ‡ ‡ footnote ‡",
-      ])],
-      1,
-    ),
-  ] {
-    let (log, xml) = run(repro!("ne2c_mark_on_no_name_writes_the_block_whole"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, warnings),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(creators(&xml), expected, "emit={emit}");
-    assert_eq!(
-      footnotemarks(&xml),
-      [
-        r#"<note mark="†" role="footnotemark" xml:id="footnote2""#,
-        r#"<note mark="‡" role="footnotemark" xml:id="footnote3""#,
-      ],
-      "emit={emit}: {xml}"
-    );
-    assert_eq!(
-      xml
-        .matches(r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks""#)
-        .count(),
-      1,
-      "emit={emit}: {xml}"
-    );
-  }
+  let expected = vec![row(&[
+    "Ann Able † † footnote † and Bob Baker ‡ ‡ footnote ‡",
+  ])];
+  let warnings = 1;
+  let (log, xml) = run(repro!("ne2c_mark_on_no_name_writes_the_block_whole"));
+  assert_eq!(
+    (error_count(&log), warning_count(&log)),
+    (0, warnings),
+    "{log}"
+  );
+  assert_eq!(creators(&xml), expected);
+  assert_eq!(
+    footnotemarks(&xml),
+    [
+      r#"<note mark="†" role="footnotemark" xml:id="footnote2""#,
+      r#"<note mark="‡" role="footnotemark" xml:id="footnote3""#,
+    ],
+    "{xml}"
+  );
+  assert_eq!(
+    xml
+      .matches(r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks""#)
+      .count(),
+    1,
+    "{xml}"
+  );
 }
 
 /// A `\footnotemark` given its number that no name and no item writes (`D. R. G. Schleicher,$^{1}$\samethanks[1]`,
@@ -375,71 +305,44 @@ fn a_given_mark_on_no_name_keeps_the_creators() {
       row(&["Dan Dory", "affiliation=Univ B"]),
     ]
   };
-  for (emit, expected, marks) in [
-    (0, names("* * footnote * Carl Cole * * footnote *"), vec![
-      r#"<note mark="*" role="footnotemark" xml:id="footnotex1""#,
-      r#"<note mark="*" role="footnotemark" xml:id="footnotex2""#,
-    ]),
-    (2, names("Carl Cole"), vec![]),
-  ] {
-    let (log, xml) = run(repro!("ne2d_given_mark_dropped_keeps_the_creators"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, if emit == 2 { 1 } else { 0 }),
-      "emit={emit}: {log}"
-    );
-    if emit == 2 {
-      assert!(
-        log.contains("writes 2 footnote mark(s) of its author block given their number (a note's, written already) on no name and no item; lost: *, *"),
-        "{log}"
-      );
-    }
-    assert_eq!(creators(&xml), expected, "emit={emit}");
-    assert_eq!(footnotemarks(&xml), marks, "emit={emit}: {xml}");
-    assert_eq!(
-      xml
-        .matches(r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks""#)
-        .count(),
-      1,
-      "emit={emit}: {xml}"
-    );
-  }
+  let expected = names("Carl Cole");
+  let marks: Vec<String> = vec![];
+  let (log, xml) = run(repro!("ne2d_given_mark_dropped_keeps_the_creators"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("writes 2 footnote mark(s) of its author block given their number (a note's, written already) on no name and no item; lost: *, *"),
+    "{log}"
+  );
+
+  assert_eq!(creators(&xml), expected);
+  assert_eq!(footnotemarks(&xml), marks, "{xml}");
+  assert_eq!(
+    xml
+      .matches(r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks""#)
+      .count(),
+    1,
+    "{xml}"
+  );
+
   // (a bare `\footnotemark` dropped too: the block written whole, every mark kept, its Warning)
-  for (emit, expected) in [
-    (0, vec![
-      row(&["Ann Able", "affiliation=Univ A"]),
-      row(&["Bob Baker", "affiliation=Univ A"]),
-      row(&["* * footnote * Carl Cole", "affiliation=Univ B"]),
-      row(&[
-        "† † footnote † Dan Dory ‡ ‡ footnote ‡",
-        "affiliation=Univ B",
-      ]),
-    ]),
-    (2, vec![row(&[
-      "Ann Able, 1 Bob Baker, 1 * * footnote * Carl Cole, 2 † † footnote † Dan Dory 2 ‡ ‡ footnote ‡ 1 Univ A 2 Univ B",
-    ])]),
-  ] {
-    let (log, xml) = run(repro!("ne2d_given_and_fresh_mark_dropped"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, if emit == 2 { 1 } else { 0 }),
-      "emit={emit}: {log}"
-    );
-    if emit == 2 {
-      assert!(
-        log.contains("on no name and no item; the block is written whole"),
-        "{log}"
-      );
-    }
-    assert_eq!(creators(&xml), expected, "emit={emit}");
-    assert_eq!(
-      footnotemarks(&xml),
-      [
-        r#"<note mark="*" role="footnotemark" xml:id="footnotex1""#,
-        r#"<note mark="†" role="footnotemark" xml:id="footnote2""#,
-        r#"<note mark="‡" role="footnotemark" xml:id="footnote3""#,
-      ],
-      "emit={emit}: {xml}"
-    );
-  }
+  let expected = vec![row(&[
+    "Ann Able, 1 Bob Baker, 1 * * footnote * Carl Cole, 2 † † footnote † Dan Dory 2 ‡ ‡ footnote ‡ 1 Univ A 2 Univ B",
+  ])];
+  let (log, xml) = run(repro!("ne2d_given_and_fresh_mark_dropped"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("on no name and no item; the block is written whole"),
+    "{log}"
+  );
+
+  assert_eq!(creators(&xml), expected);
+  assert_eq!(
+    footnotemarks(&xml),
+    [
+      r#"<note mark="*" role="footnotemark" xml:id="footnotex1""#,
+      r#"<note mark="†" role="footnotemark" xml:id="footnote2""#,
+      r#"<note mark="‡" role="footnotemark" xml:id="footnote3""#,
+    ],
+    "{xml}"
+  );
 }

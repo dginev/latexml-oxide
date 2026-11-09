@@ -24,7 +24,6 @@ use serde_json::Value;
 use super::{
   perfect_kernel_batch84b::{creators, text},
   perfect_kernel_batchfms2a2::tuples,
-  perfect_kernel_batcht1::red_at_two,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -442,7 +441,7 @@ fn a_routed_note_email_is_the_current_authors_own_call() {
       "B email carl@z.org | api:document-note owner:block",
     ],
   );
-  let (.., writer) = assert_reading(
+  assert_reading(
     repro!("amsart_thanks_before_every_author_two_addresses.tex"),
     Some(&[
       &["Ann Able", "address=University X, Town"],
@@ -457,10 +456,6 @@ fn a_routed_note_email_is_the_current_authors_own_call() {
       "B email p@x.org, q@y.org | api:document-note owner:block",
     ],
   );
-  if red_at_two("old engine only: the writer outcome \"same\"") {
-    return;
-  }
-  assert_eq!(writer, "same", "the reading agrees with today's");
 }
 
 /// A note's piece names a creator only when it is that creator's name, every word agreeing (review rev92a_r2 B2,

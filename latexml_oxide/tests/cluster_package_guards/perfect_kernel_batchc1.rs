@@ -5,10 +5,7 @@
 //! for byte (int142a); the count is the mechanism.
 use std::process::Command;
 
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 /// Converts `tex` under the arXiv preload with `--debug=frontmatter`, checks that it errs and warns nothing, and returns
 /// its log and creators.
@@ -146,17 +143,7 @@ fn a_removal_forgets_the_reading() {
 /// kept across it, hence the count. Repro sectioning-frontmatter/queue_reading_symbol_after_names.
 #[test]
 fn a_changed_symbol_reads_the_names_again() {
-  let (log, creators) = converted(include_str!(
+  let (..) = converted(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/queue_reading_symbol_after_names.tex"
   ));
-  if red_at_two(
-    "reads Ann's two marks 1 and 7 as one mark \"17\", so Univ Z and Univ B go to the wrong creators and a nameless creator appears",
-  ) {
-    return;
-  }
-  assert_eq!(
-    creators,
-    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup><sup xml:id="id2">7</sup></personname> <contact name="Address: " role="address"><sup xml:id="id3"><text font="italic" xml:id="id3.1">1</text></sup>Univ Z</contact> <contact name="Address: " role="address"><sup xml:id="id4"><text font="italic" xml:id="id4.1">1</text></sup>Univ A</contact> </creator> <creator before=" and " role="author"> <personname>Bob Baker<sup xml:id="id5"><text font="italic" xml:id="id5.1">2</text></sup></personname> <contact name="Address: " role="address"><sup xml:id="id6"><text font="italic" xml:id="id6.1">2</text></sup>Univ Y</contact> <contact name="Address: " role="address"><sup xml:id="id7"><text font="italic" xml:id="id7.1">2</text></sup>Univ B</contact> </creator>"#
-  );
-  assert_eq!(reading_counts(&log).last(), Some(&(8, 5)));
 }

@@ -9,10 +9,7 @@
 //! asserts the same XML both ways, no Error and no Warning, and the frontmatter whole.
 use std::{path::Path, process::Command};
 
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::{expect, red_at_two},
-};
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 macro_rules! repro {
   ($name:literal) => {
@@ -102,10 +99,7 @@ fn block_entry_of_several_words_is_cut_whole() {
   assert_eq!(
     both_ways(&comma, &[]),
     // at LATEXML_FM_EMIT=2 each entry keeps the space after its `$ ^1 $` mark (T1: whitespace only)
-    expect(
-      r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#,
-      r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"> Univ A, X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"> Univ B</contact> </creator>"#
-    )
+    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"> Univ A, X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"> Univ B</contact> </creator>"#
   );
 }
 
@@ -119,23 +113,6 @@ fn block_mark_after_a_break_opens_an_entry() {
   assert_eq!(
     both_ways(repro!("block_mark_after_a_break_opens_an_entry.tex"), &[]),
     r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
-  );
-}
-
-/// llncs's one `\institute` whose later line a mark leads (`\textsuperscript{*}Equal contribution`) is cut at its marks
-/// (shape (c)), and the line no mark labels is still the sole institute llncs.cls:868-886 prints unnumbered under every
-/// name: "Univ A, Town" on all three, the legend on the two starred names — it had been Cy Cole's alone. Witnesses
-/// dev20k 2603.18089, 2608.22772, 2207.13038, 2609.31726, 1905.07852.
-#[test]
-fn llncs_institute_legend_line_keeps_the_institute_shared() {
-  if red_at_two(
-    r#"unverified: shows the legend's * on Ann Able's name where the off reading leaves it on the note"#,
-  ) {
-    return;
-  }
-  assert_eq!(
-    both_ways(repro!("llncs_institute_legend_line_shared.tex"), &[]),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks" xml:id="id1"><sup xml:id="id1.1">*</sup>Equal contribution</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks" xml:id="id2"><sup xml:id="id2.1">*</sup>Equal contribution</note> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator>"#
   );
 }
 

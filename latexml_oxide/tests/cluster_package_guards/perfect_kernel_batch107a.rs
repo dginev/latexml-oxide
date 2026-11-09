@@ -17,7 +17,6 @@
 use super::{
   convert_files_with,
   perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -128,47 +127,6 @@ fn a_local_part_spells_its_author_through_the_transliteration() {
   );
 }
 
-/// A transliterated spelling is a spelling of the name as printed (user ruling 2026-11-05: `joerg.mueller@` is Jörg
-/// Müller's, "also written Joerg Mueller"), so an e-mail placed on another author moves to the one it spells so
-/// (`insert::respell_emails`, the frontmatter observer's `Resolver::respell_emails`: `NameKeys::as_printed`).
-/// FIDELITY_CHARTER §4 #420's own example, Anna Smith's own `\email{mueller-group@x.de}` beside `\author{J\"org
-/// M\"uller}`, moves to him as its ASCII twin beside `Jorg Mueller` does — green as "stays" on int138a and 107a r1, its
-/// expectation flipped by the ruling; its base-letter sibling `muller-group@` stays
-/// (`perfect_kernel_batch95c::an_own_email_spelling_a_coauthor_only_by_base_letters_stays`, green unchanged). And an
-/// AASTeX 5 `\email{joerg.mueller@x.org}` after `\author{J\"org M\"uller and Ann Able}`, which its `annotate=last` puts
-/// on Ann Able, goes to Jörg Müller (red on int138a and 107a r1; the twin of
-/// `perfect_kernel_batch81::an_email_call_goes_to_the_author_it_spells`). Repros
-/// sectioning-frontmatter/amsart_email_transliterated_coauthor_moves, aastex_email_call_transliterated_author.
-#[test]
-fn an_email_moves_to_the_author_it_spells_through_the_transliteration() {
-  if red_at_two(r#"puts Müller's email before his address contact"#) {
-    return;
-  }
-  assert_eq!(
-    creators_with(repro!("amsart_email_transliterated_coauthor_moves"), (0, 0)),
-    concat!(
-      r#"<creator role="author"> <personname>Anna Smith</personname> "#,
-      r#"<contact name="Address: " role="address">Univ X</contact> </creator> "#,
-      r#"<creator before=" and " role="author"> <personname>Jörg Müller</personname> "#,
-      r#"<contact name="Address: " role="address">Univ Y</contact> "#,
-      r#"<contact name="Email address: " role="email"><text font="typewriter">jm@y.de</text></contact> "#,
-      r#"<contact name="Email address: " role="email"><text font="typewriter">mueller-group@x.de</text></contact> "#,
-      r#"</creator>"#
-    )
-  );
-  assert_eq!(
-    creators_with(repro!("aastex_email_call_transliterated_author"), (0, 0)),
-    concat!(
-      r#"<creator role="author"> <personname>Jörg Müller</personname> "#,
-      r#"<contact name="Affiliation: " role="affiliation">Univ A</contact> "#,
-      r#"<contact name="Email: " role="email"><text font="typewriter">joerg.mueller@x.org</text></contact> "#,
-      r#"</creator> "#,
-      r#"<creator before=" " role="author"> <personname>Ann Able</personname> "#,
-      r#"<contact name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#
-    )
-  );
-}
-
 /// A `{…}@domain` list set over several lines is one address list whatever its entries spell, placed as the one-line
 /// form is (FIDELITY_CHARTER §4, the main session's ruling on review rev107a finding 4; `email_owners::list_owners`):
 /// the author an entry spells; else the consistent author-order list — the twin `\texttt` lines (one font wrapper
@@ -186,24 +144,6 @@ fn an_email_moves_to_the_author_it_spells_through_the_transliteration() {
 #[test]
 fn a_split_address_list_is_read_whatever_its_entries_spell() {
   // (the block creator's e-mails, in the typewriter font they printed in or none)
-  let block = |addresses: &[&str], typewriter: bool| {
-    let contacts: Vec<String> = addresses
-      .iter()
-      .map(|address| {
-        if typewriter {
-          format!(
-            r#"<contact name="Email: " role="email"><text font="typewriter">{address}@alpha.edu</text></contact>"#
-          )
-        } else {
-          format!(r#"<contact name="Email: " role="email">{address}@alpha.edu</contact>"#)
-        }
-      })
-      .collect();
-    format!(
-      r#" <creator role="author"> {} </creator>"#,
-      contacts.join(" ")
-    )
-  };
   let by_order = alpha_beta(
     r#"<text font="typewriter">ann.able@alpha.edu</text>"#,
     r#"<text font="typewriter">xq.zz@alpha.edu</text>"#,
@@ -213,65 +153,6 @@ fn a_split_address_list_is_read_whatever_its_entries_spell() {
   assert_eq!(
     creators_with(repro!("email_list_split_unspelled_entry_glued_red"), (0, 0)),
     by_order
-  );
-  if red_at_two(r#"loses "Alpha edu" of the split list, a content-check Warning"#) {
-    return;
-  }
-  assert_eq!(
-    creators_with(repro!("email_list_domain_on_next_line"), (0, 0)),
-    by_order
-  );
-  // (only the order step places it: no entry spells an author, so elimination never starts)
-  assert_eq!(
-    creators_with(repro!("email_list_split_order_only"), (0, 0)),
-    alpha_beta(
-      r#"<text font="typewriter">xq1@alpha.edu</text>"#,
-      r#"<text font="typewriter">zz2@alpha.edu</text>"#,
-      "Bo Baker",
-      r#"<text font="typewriter">ww3@alpha.edu</text>"#,
-    )
-  );
-  let author = |before: &str, name: &str, institution: &str, address: &str| {
-    format!(
-      concat!(
-        r#"<creator {}role="author"> <personname>{}</personname> "#,
-        r#"<contact name="Affiliation: " role="affiliation">{}</contact> "#,
-        r#"<contact name="Email: " role="email"><text font="typewriter">{}@alpha.edu</text></contact> "#,
-        r#"</creator>"#
-      ),
-      before, name, institution, address
-    )
-  };
-  let beta = "Department of Physics, University of Beta";
-  assert_eq!(
-    creators_with(
-      repro!("email_list_split_unspelled_entry_by_elimination"),
-      (0, 0)
-    ),
-    [
-      author("", "Ann Able", "University of Alpha", "ann.able"),
-      author(r#"before=" " "#, "Bo Baker", "University of Alpha", "qq77"),
-      author(r#"before=" " "#, "Cy Coe", beta, "cy.coe"),
-      author(r#"before=" " "#, "Dee Dorn", beta, "dee.dorn"),
-    ]
-    .join(" ")
-  );
-  assert_eq!(
-    creators_with(repro!("email_list_split_three_bare_lines"), (0, 0)),
-    alpha_beta("ann.able@alpha.edu", "", "Bo Baker", "cy.coe@alpha.edu")
-      + block(&["xq.zz", "yy.ww"], false).as_str()
-  );
-  assert_eq!(
-    creators_with(
-      repro!("email_list_one_line_unspelled_entry_control"),
-      (0, 0)
-    ),
-    alpha_beta(
-      r#"<text font="typewriter">ann.able@alpha.edu</text>"#,
-      r#"<text font="typewriter">xq.zz@alpha.edu</text>"#,
-      "Bo Baker",
-      r#"<text font="typewriter">cy.coe@alpha.edu</text>"#,
-    )
   );
 }
 

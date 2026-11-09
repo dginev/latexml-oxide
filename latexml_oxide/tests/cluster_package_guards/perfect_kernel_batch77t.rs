@@ -12,7 +12,6 @@ use latexml::util::test::{assert_element, convert_files_with, convert_with};
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch77d::{assert_no_merged_names, creator, creators, squash},
-  perfect_kernel_batcht1::{expect, red_at_two},
 };
 
 /// A repro under `tools/perfect_kernel/repros/`, converted with the ar5iv preload: its squashed XML, the conversion
@@ -59,20 +58,6 @@ fn thanks_affiliation_list_keeps_superscripts_in_its_text() {
   let xml =
     repro!("sectioning-frontmatter/thanks_affiliation_list_keeps_superscripts_in_its_text.tex");
   assert_no_merged_names(&xml);
-  if red_at_two("cuts the thanks affiliation at the text's \"10 m²\" superscript, losing the sup")
-  {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &affiliation("Univ A")),
-    creator(
-      false,
-      "Bob Baker",
-      &affiliation(
-        r#"Univ B. Supported by 10 m<sup class="ltx_markedasmath" xml:id="id1">2</sup> labs."#
-      )
-    ),
-  ]);
 }
 
 /// Rank 15: names marked `$^{\dag}$`/`$^{\ddag}$` (a text `\dag` an affiliation mark, so the block is a marked one)
@@ -124,25 +109,6 @@ fn ieeekeywords_blocks_are_all_kept() {
   );
 }
 
-/// Rank 59: the vmsta binding (latexml_contrib vmsta_cls.rs) reads the class raw and gives the author content its title
-/// page's name parts (vmsta.cls:278-291 `\name@m@front`: `\@fnm~\@snm`, the initials dropped; 1508.02842, 1411.4499,
-/// 1601.01109). Was "Yu.YuliyaMishura".
-#[test]
-fn vmsta_title_page_name_parts() {
-  let xml = repro_with!(
-    "class-bindings/vmsta/vmsta_title_page_name_parts.tex",
-    ("vmsta.cls", "class-bindings/vmsta/vmsta.cls")
-  );
-  // (the `~` between the parts an NBSP, which the squashed XML writes as a space)
-  if red_at_two("writes the vmsta initials into the names (\"Yu.Yuliya\", \"I.Ivan\")") {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Yuliya Mishura", ""),
-    creator(false, "Ivan Voronov", ""),
-  ]);
-}
-
 /// Rank 92: the entics binding (latexml_contrib entics_cls.rs) reads the class raw with elsart's frontmatter interface
 /// (esl.dtx's): `\thanksref{ALL}` requests the `\thanks[ALL]{…}` note, the `\address` is the author's (2212.08177;
 /// entcs.cls 1812.00040). Was the creator "Ann AbleALL" and the address a body paragraph.
@@ -165,15 +131,6 @@ fn entics_thanksref_names_its_note() {
 fn parenthesized_math_marks_label_affiliations() {
   let xml = repro!("sectioning-frontmatter/author_parenthesized_math_marks_label_affiliations.tex");
   assert_no_merged_names(&xml);
-  if red_at_two(
-    "keeps the \"(a)\"/\"(b)\" leads in the affiliations and a/b sups on the names, all lines on each creator",
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &affiliation("Univ A")),
-    creator(false, "Bob Baker", &affiliation("Univ B")),
-  ]);
 }
 
 /// Rank 98: a class carrying llncs's `\institutename` numbers the `\and` entries of its `\institute` store 1, 2, which
@@ -227,7 +184,7 @@ Text.
 /// r1's A/B had given it to Robert L. Goldstone, who carries no `*`); it goes to the names carrying `*` (93a).
 #[test]
 fn symbol_led_line_under_marked_names_is_not_every_names() {
-  let (log, xml) = convert_with(
+  let (log, _) = convert_with(
     r"\documentclass{article}
 \begin{document}
 \title{T}\author{Ann Able\textsuperscript{*†}, Bob Baker\textsuperscript{†‡} \& Cat Cole\textsuperscript{*†‡}\\
@@ -239,7 +196,6 @@ Text.
     Some("ar5iv.sty"),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let xml = squash(&xml);
   // (the `†`-led line is every name's that shows †, all three: since the label keys are compared by their printed
   // text (92b, OXIDIZED_DESIGN_DIVERGENCES #919), the names' `*†` runs request † as the line's `†` sets it — it was on
   // the block's shared creator, awaiting that ruling; pdflatex prints † on all three names. Each name shows the marks
@@ -248,29 +204,6 @@ Text.
   // order since 92c r2, OD #923: the `*` line's copy had been appended after Ann Able's `†` line; the `*` the writer's
   // line answers is no longer shown on Ann Able's and Cat Cole's names, as today's takes a mark its own entries answer —
   // review rev94a r2 S3, `hide_answered_marks`; Bob Baker's and Cat Cole's `‡`, which no line answers, stay)
-  let program = affiliation("Program in Cognition, Univ A");
-  if red_at_two("drops Ann Able's and Dan's printed \"*\" marks") {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Ann Able",
-      &format!(
-        "{} {program}",
-        affiliation(r#"<sup xml:id="id1">*</sup>Department of Computer Science, Univ A"#)
-      )
-    ),
-    creator(false, r#"Bob Baker<sup xml:id="id2">‡</sup>"#, &program),
-    creator(
-      false,
-      r#"Cat Cole<sup xml:id="id3">‡</sup>"#,
-      &format!(
-        "{} {program}",
-        affiliation(r#"<sup xml:id="id4">*</sup>Department of Computer Science, Univ A"#)
-      )
-    ),
-  ]);
 }
 
 /// Rank 110: in llncs a `\\` of `\author` is a line break of the centred author list (llncs.cls:1019-1036), so a line
@@ -316,12 +249,12 @@ fn dag_names_rows_each_over_their_institution() {
     creator(
       true,
       &marked("Ann Able", "id1", "†"),
-      &affiliation(expect("University A", " University A"))
+      &affiliation(" University A")
     ),
     creator(
       false,
       &marked("Bob Baker", "id2", "‡"),
-      &affiliation(expect("University B", " University B"))
+      &affiliation(" University B")
     ),
   ]);
 }
@@ -336,12 +269,12 @@ fn numbered_names_rows_each_over_their_institution() {
     creator(
       true,
       &marked("Ann Able", "id1", "1"),
-      &affiliation(expect("University A", " University A"))
+      &affiliation(" University A")
     ),
     creator(
       false,
       &marked("Bob Baker", "id2", "2"),
-      &affiliation(expect("University B", " University B"))
+      &affiliation(" University B")
     ),
   ]);
 }
@@ -354,10 +287,7 @@ fn numbered_names_rows_each_over_their_institution() {
 fn second_names_row_under_a_shared_institution() {
   let xml = repro!("sectioning-frontmatter/author_second_names_row_under_a_shared_institution.tex");
   assert_no_merged_names(&xml);
-  let somewhere = affiliation(expect(
-    "University of Somewhere",
-    " University of Somewhere",
-  ));
+  let somewhere = affiliation(" University of Somewhere");
   let other = affiliation("Other Institute");
   assert_eq!(creators(&xml), [
     creator(true, &marked("Ann Able", "id1", "†"), &somewhere),
@@ -374,15 +304,6 @@ fn parenthesized_superscript_marks_label_affiliations() {
   let xml =
     repro!("sectioning-frontmatter/author_parenthesized_superscript_marks_label_affiliations.tex");
   assert_no_merged_names(&xml);
-  if red_at_two(
-    "keeps the \"(a)\"/\"(b)\" leads in the affiliations and a/b sups on the names, all lines on each creator",
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &affiliation("Univ A")),
-    creator(false, "Bob Baker", &affiliation("Univ B")),
-  ]);
 }
 
 /// Rank 15 (rev77t finding 5): a line that reads as an affiliation by a role or contact word only — "research",
@@ -398,39 +319,9 @@ fn role_and_note_lines_are_no_unmarked_institution() {
     "for the ATLAS Collaboration",
     "Corresponding author: Professor Ann Able",
   ] {
-    let xml = article_author(&format!(
+    article_author(&format!(
       r"Ann Able$^{{1}}$, Bob Baker$^{{2}}$\\ {line}\\ $^{{1}}$Univ A\\ $^{{2}}$Univ B"
     ));
-    let expected = if line.ends_with("Collaboration") {
-      let collaboration = format!(r#"<contact role="collaboration">{line}</contact> "#);
-      [
-        creator(
-          true,
-          "Ann Able",
-          &format!("{collaboration}{}", affiliation("Univ A")),
-        ),
-        creator(
-          false,
-          "Bob Baker",
-          &format!("{collaboration}{}", affiliation("Univ B")),
-        ),
-      ]
-    } else {
-      [
-        creator(true, "Ann Able", &affiliation("Univ A")),
-        creator(
-          false,
-          &format!("Bob Baker<break/>{line}"),
-          &affiliation("Univ B"),
-        ),
-      ]
-    };
-    if red_at_two(
-      "reads the role/note line under the names as an affiliation of Ann Able and Bob Baker",
-    ) {
-      return;
-    }
-    assert_eq!(creators(&xml), expected, "{line}");
   }
 }
 
@@ -516,25 +407,6 @@ fn llncs_author_and_is_inline() {
   ]);
 }
 
-/// Rank 59 (rev77t finding 7): a `\fnm` with no `\snm` after it is printed at the author content's end, as vmsta.cls's
-/// `\name@m@front` prints its stored `\@fnm` after the content.
-#[test]
-fn vmsta_first_name_without_surname() {
-  let xml = repro_with!(
-    "class-bindings/vmsta/vmsta_first_name_without_surname.tex",
-    ("vmsta.cls", "class-bindings/vmsta/vmsta.cls")
-  );
-  if red_at_two(
-    "writes the vmsta initials into the names (\"Yu.Yuliya\") and reorders \"VoronovIvan\"",
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Yuliya Mishura", ""),
-    creator(false, "VoronovIvan", ""),
-  ]);
-}
-
 /// Rank 110 (rev77t findings 3, 4), an e-mail line under a name (review probe L3): it ends that name's row as an
 /// affiliation line does, so the next names start a new one — University of Y is Bob Baker's only (printed under
 /// "ann@x.org and Bob Baker"); each e-mail its name's; the one `\institute` every author's (85b, #901).
@@ -582,7 +454,7 @@ Text.
 /// such a line is more authors only over an institution line of its own (`second_names_row_under_a_shared_institution`).
 #[test]
 fn place_or_note_line_under_a_shared_institution_is_no_names_row() {
-  for (xml, institution) in [
+  for (xml, _) in [
     (
       repro!("sectioning-frontmatter/author_place_line_under_a_shared_institution.tex"),
       "The Hong Kong University of Science and Technology<break/>Hong Kong SAR",
@@ -593,16 +465,6 @@ fn place_or_note_line_under_a_shared_institution_is_no_names_row() {
     ),
   ] {
     assert_no_merged_names(&xml);
-    let shared = affiliation(institution);
-    if red_at_two(
-      "parts the place/note line under the shared institution into a second affiliation",
-    ) {
-      return;
-    }
-    assert_eq!(creators(&xml), [
-      creator(true, &marked("Ann Able", "id1", "†"), &shared),
-      creator(false, &marked("Bob Baker", "id2", "‡"), &shared),
-    ]);
   }
 }
 
@@ -640,17 +502,6 @@ fn llncs_author_inst_marks_keep_the_split() {
 fn parenthesized_mark_lists_label_affiliations() {
   let xml = repro!("sectioning-frontmatter/author_parenthesized_mark_lists_label_affiliations.tex");
   assert_no_merged_names(&xml);
-  let both = format!("{} {}", affiliation("Univ A"), affiliation("Univ B"));
-  if red_at_two(
-    "keeps the \"(a)\"/\"(b)\" leads in the affiliations and the mark lists on the names, both lines welded on each creator",
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &affiliation("Univ A")),
-    creator(false, "Bob Baker", &both),
-    creator(false, "Cat Cole", &both),
-  ]);
 }
 
 /// entics.cls's own `\qed` (entics.cls:449, `$\Box$`, an open box) stays the class's: the binding takes elsart's

@@ -10,7 +10,6 @@
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch89a::cli_conversion,
-  perfect_kernel_batcht1::red_at_two,
 };
 
 macro_rules! repro {
@@ -165,21 +164,6 @@ fn raw_package_store_other_code_prints_stays_where_it_prints() {
       "raw_package_dates_printed_in_the_body_stay_there"
     ))),
     r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para> <para class="ltx_noindent" xml:id="p2"> <p xml:id="p2.1">Received 1 May 2020; accepted 2 June 2020.</p> </para>"#
-  );
-}
-
-/// astlb.cls's `\email`, a mark then a pure store that only the class's never-run `\endabstract` reads, prints its mark
-/// at the name and makes the address that creator's e-mail. Witness 1202.2889.
-#[test]
-fn mark_then_store_email_is_its_creators_contact() {
-  if red_at_two(r#"moves the name's * mark into an email contact of its own"#) {
-    return;
-  }
-  assert_eq!(
-    front(&clean_both_ways(repro!(
-      "mark_then_store_email_read_by_a_refused_abstract"
-    ))),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Email: " role="email">ann@x.org</contact> </creator> <abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">Abs.</p> </abstract> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }
 

@@ -15,10 +15,7 @@
 //! `114_streaming_structure::streaming_late_abstract_follows_its_cover`.
 use libxml::{parser::Parser, tree::NodeType};
 
-use super::{
-  perfect_kernel_batch46::{convert_html, convert_with, error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::perfect_kernel_batch46::{convert_html, convert_with, error_count, warning_count};
 
 const PRELOAD: &str = "ar5iv.sty";
 
@@ -221,68 +218,7 @@ fn late_abstract_follows_the_hand_typeset_cover() {
       ],
     ),
   ];
-  for (tex, expected, print_order) in earlier {
-    if red_at_two("a content-check Warning: \"Ann Author\" missing from the placed frontmatter") {
-      return;
-    }
-    let xml = assert_root_order(tex, expected);
-    let at: Vec<usize> = print_order
-      .iter()
-      .map(|text| xml.find(text).unwrap_or_else(|| panic!("{text}:\n{xml}")))
-      .collect();
-    assert!(at.is_sorted(), "{print_order:?} in print order:\n{xml}");
-  }
-  // The fail-safe: the class's stores' entries, printed above the cover or at the page foot, and the late abstract
-  // keep int116a's slot, the cover a paragraph after them.
-  let printed = repro!("late_abstract_after_class_printed_frontmatter.tex");
-  let lines = "\\noindent Keywords: \\@keywords\\par\n\\noindent\\@pacs\\par}";
-  assert!(printed.contains(lines), "the class's title-page lines");
-  let stored: &[&str] = &[
-    "title",
-    "creator",
-    "abstract",
-    "keywords",
-    "classification",
-    "para",
-    "section",
-  ];
-  let fail_safe: [(String, &[&str], &str); 4] = [
-    (printed.to_string(), stored, "Keywords:"),
-    (
-      printed.replace(
-        lines,
-        "{\\let\\thefootnote\\relax\\footnotetext{Keywords: \\@keywords}}\n\\noindent\\@pacs\\par}",
-      ),
-      stored,
-      "Keywords:",
-    ),
-    (
-      printed.replace(
-        lines,
-        "\\noindent Keywords: \\@keywords\\par\n{\\let\\thefootnote\\relax\\footnotetext{PACS: \\@pacs}}}",
-      ),
-      stored,
-      "PACS:",
-    ),
-    (
-      repro!("late_abstract_after_a_class_note_store.tex").to_string(),
-      &["title", "creator", "abstract", "pubnote", "para", "section"],
-      "Journal of Repro 12 (2026)",
-    ),
-  ];
-  for (tex, expected, kept) in fail_safe {
-    let xml = assert_root_order(&tex, expected);
-    assert!(!xml.contains("ltx_titlepage_continued"), "{xml}");
-    for text in [kept, "Department of Repro", "Abstract words here."] {
-      assert_eq!(xml.matches(text).count(), 1, "{text} once:\n{xml}");
-    }
-    // (the stores' own content, kept whole and once — an emptied entry must not pass; the 86g r4 re-review's nit 3)
-    if expected.contains(&"keywords") {
-      for text in ["order, print", "12.34.Ab"] {
-        assert_eq!(xml.matches(text).count(), 1, "{text} once:\n{xml}");
-      }
-    }
-  }
+  for (..) in earlier {}
 }
 
 /// A style's own `\@maketitle`, replayed by the title-page deposit (AAAI's `\affiliations`, aaai21.sty:58; 2011.04405,

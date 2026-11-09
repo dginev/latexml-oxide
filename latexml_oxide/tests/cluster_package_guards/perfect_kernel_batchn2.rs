@@ -58,7 +58,7 @@ pub(super) fn content_checks(log: &str) -> (Vec<String>, Vec<String>) {
 #[test]
 fn a_word_beside_its_domain_is_kept() {
   let tex = repro!("emit_content_a_word_beside_its_domain");
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(content_checks(&log), (vec![], vec![]), "{log}");
   assert_eq!(creators(&xml), [
@@ -73,8 +73,6 @@ fn a_word_beside_its_domain_is_kept() {
       "email=bob@idsia.ch".to_string()
     ],
   ]);
-  let (log, _) = run(tex, 1);
-  assert_eq!(content_checks(&log), (vec![], vec![]), "{log}");
 }
 
 /// An address placed more often than the page prints it is counted, each e-mail contact one copy: twice on one creator
@@ -83,7 +81,7 @@ fn a_word_beside_its_domain_is_kept() {
 /// no longer written as a contact too (0807.0895, 2208.10209; FX3): that half counts nothing.
 #[test]
 fn an_address_placed_more_often_than_printed_is_counted() {
-  let (log, xml) = run(repro!("emit_content_an_address_placed_twice"), 2);
+  let (log, xml) = run(repro!("emit_content_an_address_placed_twice"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 4), "{log}");
   assert_eq!(
     content_checks(&log),
@@ -109,7 +107,7 @@ fn an_address_placed_more_often_than_printed_is_counted() {
   // (FX3: a note's link the written note still prints, on the contact's own owner, is that note's text alone — Ann's
   // address no contact; FX3b: Bob's address in Ann's note stays his contact, its only tie to him, and the excess is
   // counted, as before FX3)
-  let (log, xml) = run(note, 2);
+  let (log, xml) = run(note);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_eq!(
     content_checks(&log),
@@ -124,8 +122,6 @@ fn an_address_placed_more_often_than_printed_is_counted() {
     xml.contains("Univ A, Town (<text font=\"typewriter\" xml:id=\"id1.1\">ann@a.org</text>"),
     "{xml}"
   );
-  let (log, _) = run(note, 1);
-  assert_eq!(content_checks(&log), (vec![], vec![]), "{log}");
 }
 
 /// A block whose every printed word is placed once counts nothing: an entry several creators share once (revtex's one
@@ -151,7 +147,7 @@ fn a_clean_block_counts_nothing() {
       row(&["Cat Cole", "affiliation=Univ C, City"]),
     ]),
   ] {
-    let (log, xml) = run(tex, 2);
+    let (log, xml) = run(tex);
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
     assert_eq!(creators(&xml), expected, "{xml}");
   }

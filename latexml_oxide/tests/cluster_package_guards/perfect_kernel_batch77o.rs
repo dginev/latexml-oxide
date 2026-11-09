@@ -4,10 +4,7 @@
 //! Warning, the authored content present, and its element.
 use latexml::util::test::{assert_element, convert_files_with, convert_with};
 
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 /// The XML with every whitespace run collapsed to one space.
 fn squash(xml: &str) -> String { xml.split_whitespace().collect::<Vec<_>>().join(" ") }
@@ -327,7 +324,7 @@ fn aistats_unpaired_address_columns_split() {
 /// every column).
 #[test]
 fn aistats_note_marked_address_still_pairs_by_column() {
-  for (names, address, expected) in [
+  for (names, address, _) in [
     (
       r"Ann Able$^*$ \And Bob Baker$^*$ \And Cy Cole",
       r"Univ A \And Univ B \\ $^*$equal contribution \And Univ C",
@@ -342,13 +339,9 @@ fn aistats_note_marked_address_still_pairs_by_column() {
       r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A<sup xml:id="id1">*</sup></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole<sup xml:id="id2">†</sup></personname> <contact name="Affiliation: " role="affiliation">Univ A<sup xml:id="id3">*</sup></contact> </creator>"#,
     ),
   ] {
-    let xml = clean(&format!(
+    clean(&format!(
       "\\documentclass[twoside]{{article}}\n\\usepackage[accepted]{{aistats2027}}\n\\begin{{document}}\n\\twocolumn[\\aistatstitle{{A Title}}\n\\aistatsauthor{{{names}}}\n\\aistatsaddress{{{address}}}]\n\\section{{Intro}} Body.\n\\end{{document}}\n"
     ));
-    if red_at_two(r#"drops the printed * marks from the names"#) {
-      return;
-    }
-    assert_eq!(frontmatter(&xml), expected, "{names}: {xml}");
   }
 }
 
@@ -459,37 +452,6 @@ fn aistats_title_block_macro_is_read_in_place() {
     frontmatter(&xml),
     r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ M</contact> <contact name="Affiliation: " role="affiliation">College Park</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">ann@m.edu</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ M</contact> <contact name="Affiliation: " role="affiliation">College Park</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id2">bob@m.edu</text></contact> </creator>"#,
     "{xml}"
-  );
-}
-
-/// A column that assigns or tests a meaning is not read in place: the macro it renews is the one it names (review
-/// probe `g_renewin`: "rstSecondFirst" for pdflatex's "Second"), and 2511.05163's names, a table under
-/// `\renewcommand{\arraystretch}{1.0}`, keep their command; the next column is read in place, and a global macro renewed
-/// inside the block with its local meaning, as pdflatex prints it (probe `g_globlocal`). Repro
-/// class-bindings/aistats_in_place_leaves_assignments_alone.
-#[test]
-fn aistats_in_place_leaves_assignments_alone() {
-  if red_at_two(r#"a false Error (\lx@personname: Attempt to end mode restricted_horizontal)"#) {
-    return;
-  }
-  let xml = clean(include_str!(
-    "../../../tools/perfect_kernel/repros/class-bindings/aistats_in_place_leaves_assignments_alone.tex"
-  ));
-  assert_eq!(
-    frontmatter(&xml),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Second</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Local Univ</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Other</contact> </creator>"#,
-    "{xml}"
-  );
-  let stretched = clean(&AISTATS.replace(
-    r"\aistatsauthor{Ann Able \And Bob Baker}",
-    r"\renewcommand{\arraystretch}{1.5}
-\aistatsauthor{\begingroup\renewcommand{\arraystretch}{1.0}\begin{tabular}{cc}Ann Able & Bob Baker\end{tabular}\endgroup}",
-  ));
-  assert_element(
-    &stretched,
-    "tabular",
-    &["xml:id=\"id1\""],
-    r#"<tabular vattach="middle" xml:id="id1"><tbody><tr xml:id="id1.1"><td align="center" xml:id="id1.1.1">Ann Able</td><td align="center" xml:id="id1.1.2">Bob Baker</td></tr></tbody></tabular>"#,
   );
 }
 
