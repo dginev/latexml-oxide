@@ -823,7 +823,11 @@ fn reads_as(word: &str, places: &[(usize, bool)], other: &str) -> bool {
 /// `\IEEEauthorblockA{…\\ Burwood 3125, Australia \\ ann@deakin.edu.au}`, 2311.03657): what a shared item's copies count
 /// up to, each print taken once.
 #[derive(Default)]
-struct Prints(Vec<(usize, Vec<String>, bool)>);
+struct Prints {
+  prints: Vec<(usize, Vec<String>, bool)>,
+  /// each print's position by its first word, in order: where a run of prints spelling a text can start
+  starts: BTreeMap<String, Vec<usize>>,
+}
 
 impl Prints {
   /// `text`'s words, lowercased.
@@ -834,8 +838,13 @@ impl Prints {
 
   fn add(&mut self, source: usize, text: &str) {
     let key = Self::key(text);
-    if !key.is_empty() {
-      self.0.push((source, key, false));
+    if let Some(first) = key.first() {
+      self
+        .starts
+        .entry(first.clone())
+        .or_default()
+        .push(self.prints.len());
+      self.prints.push((source, key, false));
     }
   }
 
@@ -848,28 +857,40 @@ impl Prints {
     let key = Self::key(text);
     let mut found = Vec::new();
     let mut at = 0;
-    while at < self.0.len() && found.len() < total {
-      // (how much of `key` the prints from `at` spell, in a row)
-      let (mut spelled, mut end) = (0, at);
-      while end < self.0.len()
+    // (a run spelling `key` starts at a print its first word starts — a print's words are a prefix of what is left to spell —,
+    // so only those are tried, in order, not every print for every item: 2103.04797's ~1,000 creators)
+    let starts = key
+      .first()
+      .and_then(|first| self.starts.get(first))
+      .map_or(&[][..], Vec::as_slice);
+    for &start in starts {
+      if found.len() >= total {
+        break;
+      }
+      if start < at {
+        continue;
+      }
+      // (how much of `key` the prints from `start` spell, in a row)
+      let (mut spelled, mut end) = (0, start);
+      while end < self.prints.len()
         && spelled < key.len()
-        && !self.0[end].2
-        && self.0[end].0 == self.0[at].0
-        && key[spelled..].starts_with(&self.0[end].1)
+        && !self.prints[end].2
+        && self.prints[end].0 == self.prints[start].0
+        && key[spelled..].starts_with(&self.prints[end].1)
       {
-        spelled += self.0[end].1.len();
+        spelled += self.prints[end].1.len();
         end += 1;
       }
-      if !key.is_empty() && spelled == key.len() {
-        found.push(at..end);
+      if spelled == key.len() {
+        found.push(start..end);
         at = end;
-      } else {
-        at += 1;
       }
     }
     let n = found.len().clamp(most, total);
     for range in found.into_iter().take(n) {
-      self.0[range].iter_mut().for_each(|print| print.2 = true);
+      self.prints[range]
+        .iter_mut()
+        .for_each(|print| print.2 = true);
     }
     n
   }

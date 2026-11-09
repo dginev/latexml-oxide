@@ -401,6 +401,7 @@ fn cut(call: &ApiCall) -> Result<Option<Vec<(String, Tokens)>>> {
     environments: &environments,
     held:         &[],
     aligned:      aligned(&events),
+    groups:       Default::default(),
   };
   let pieces = split_pieces(&events, &call.role);
   let spans: Vec<Option<(usize, usize)>> = pieces.iter().map(|(_, p)| piece_span(p)).collect();
@@ -497,6 +498,7 @@ pub(super) fn block_span_tokens(
       environments,
       held,
       aligned: aligned(events),
+      groups: Default::default(),
     };
     // (the event printed last before the line, a layout change aside)
     let mut mark = events

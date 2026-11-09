@@ -28,6 +28,47 @@ pub(in crate::base_utilities::frontmatter::observer) struct Field<'a> {
   pub held:         &'a [HeldError],
   /// whether their digestion holds an alignment ([`aligned`])
   pub aligned:      bool,
+  /// their groups as the braces open them, read once for the field ([`Groups`])
+  pub groups:       Groups,
+}
+
+/// A field's groups as its braces open and close them, read once as far as asked, not again from its start for each
+/// piece: before token `i`, the innermost group still open — `inner[i]`, its opening brace's index plus one, 0 for none —,
+/// a group's own enclosing one the innermost open before its brace (`inner[brace]`). A closing brace no group is open at
+/// closes none (1507.02068's 418 names, each piece's open groups read from the block's start: about 0.7 % of the run).
+#[derive(Debug, Default)]
+pub(in crate::base_utilities::frontmatter::observer) struct Groups {
+  inner: std::cell::RefCell<Vec<usize>>,
+}
+
+impl Groups {
+  /// The opening braces in `content[from..to]` of the groups still open at `to`, in order: the innermost open group's
+  /// enclosing ones down to `from`, each read once for the field.
+  fn open(&self, content: &[Token], from: usize, to: usize) -> Vec<usize> {
+    let to = to.min(content.len());
+    let mut inner = self.inner.borrow_mut();
+    if inner.is_empty() {
+      inner.push(0);
+    }
+    while inner.len() <= to {
+      let i = inner.len() - 1;
+      let here = inner[i];
+      let next = match content[i].group_step() {
+        1 => i + 1,
+        -1 => here.checked_sub(1).map_or(0, |brace| inner[brace]),
+        _ => here,
+      };
+      inner.push(next);
+    }
+    let mut open = Vec::new();
+    let mut at = inner[to];
+    while let Some(brace) = at.checked_sub(1).filter(|&brace| brace >= from) {
+      open.push(brace);
+      at = inner[brace];
+    }
+    open.reverse();
+    open
+  }
 }
 
 /// Whether a digested list's events hold an alignment's cell (`events::Walker`'s `Layout{role="cell"}`): where none is, no tab of
@@ -199,22 +240,12 @@ pub(super) fn is_cs(t: &Token, name: &str) -> bool {
   t.get_catcode() == Catcode::CS && t.with_cs_name(|n| n == name)
 }
 
-/// The opening braces in `content[from..to]` of the groups still open at `to`.
-fn open_groups(content: &[Token], from: usize, to: usize) -> Vec<usize> {
-  let mut open = Vec::new();
-  for (i, t) in content.iter().enumerate().take(to).skip(from) {
-    match t.group_step() {
-      1 => open.push(i),
-      -1 => {
-        open.pop();
-      },
-      _ => {},
-    }
-  }
-  open
-}
-
 impl Field<'_> {
+  /// The opening braces in `tokens[from..to]` of the groups still open at `to` ([`Groups`]).
+  fn open_groups(&self, from: usize, to: usize) -> Vec<usize> {
+    self.groups.open(self.tokens, from, to)
+  }
+
   /// The formula holding `tokens[index]`: its indices, opening shift to past its closing shift.
   fn formula_at(&self, index: usize) -> Option<(usize, usize)> {
     let pos = u16::try_from(self.base + index).ok()?;
@@ -311,7 +342,7 @@ impl Field<'_> {
     let end = past_closing_fis(content, start, end);
     // (the group the pieces sit in: its opening brace, and the switches before the first piece in it)
     let mut tokens = Vec::new();
-    if let Some(&group) = open_groups(content, 0, start).last()
+    if let Some(&group) = self.open_groups(0, start).last()
       && group < first
     {
       let switches = &content[group + 1..first.min(start)];
@@ -463,7 +494,7 @@ impl Field<'_> {
   pub(super) fn balanced(&self, start: usize, end: usize, floor: usize) -> Option<(usize, usize)> {
     let content = self.tokens;
     let (mut start, mut end) = (start, end);
-    let mut before = open_groups(content, floor, start);
+    let mut before = self.open_groups(floor, start);
     let from = start;
     let mut depth = 0;
     let mut closed = 0u8;
