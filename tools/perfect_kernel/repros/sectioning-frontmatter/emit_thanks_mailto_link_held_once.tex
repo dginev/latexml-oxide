@@ -1,0 +1,20 @@
+% mechanism: a `\thanks` note's only link, an e-mail its owner takes (`ruling4:inner-contact`, `Resolver::note`, OD #837's
+%   decision 2), while the note written at `=2` still prints it whole: the note's text, never a contact too — one record
+%   per fact, as the switch off holds it (its writer declines the contact, today's note kept); brief FX3
+% witness: 1410.4175 (article), 2009.03378 (mnras), 2604.08687 (aa), 2410.14846 (openjournal): `\thanks{Corresponding
+%   author: \href{mailto:a@x}{a@x}}`
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Smith∗ Bob Jones", footnote "∗Corresponding author:
+%   ann@x.org" — the address printed once
+% engines: off = Ann's note "Corresponding author: ann@x.org", no contact; FX3base `=2` = the note and a contact
+%   role=email "ann@x.org" (the address twice, the content check's "more often" Warning)
+% expect:  0 errors, 0 warnings (off and `=2`); Ann Smith: the note "Corresponding author: ann@x.org" (its link kept), no
+%   contact; Bob Jones: nothing
+% status:  RED (FX3base `=2`) -> GREEN (FX3)
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{A Title}
+\author{Ann Smith\thanks{Corresponding author: \href{mailto:ann@x.org}{ann@x.org}} \and Bob Jones}
+\maketitle
+Text.
+\end{document}
