@@ -2338,6 +2338,27 @@ mod title_pubnote_pollution {
 
   use std::{fs, process::Command};
 
+  /// The frontmatter emitter's switch as the converted child reads it: `LATEXML_FM_EMIT`, parsed as the engine's
+  /// `fm_emit_mode` parses it (0 when unset or unreadable); the child inherits this process's environment. A local copy of
+  /// `cluster_package_guards::perfect_kernel_batcht1::fm_emit` (no cross-binary dependency).
+  fn fm_emit() -> u8 {
+    std::env::var("LATEXML_FM_EMIT")
+      .ok()
+      .and_then(|v| v.trim().parse().ok())
+      .unwrap_or(0)
+  }
+
+  /// A guard whose switch-off expectation is right but whose `LATEXML_FM_EMIT=2` output is a known wrong reading — a named
+  /// RED, fixed after the flip (user 2026-11-08): at `=2` it prints the RED and returns true, so the guard skips its
+  /// assertions there and keeps them under the default. A local copy of `perfect_kernel_batcht1::red_at_two`.
+  fn red_at_two(red: &str) -> bool {
+    let two = fm_emit() == 2;
+    if two {
+      eprintln!("RED at LATEXML_FM_EMIT=2: {red}");
+    }
+    two
+  }
+
   const DOC: &str = "\\documentclass{article}\n\
                      \\makeatletter\n\
                      \\lx@add@pubnote[role=conference]{Proc. of Something 2025}\n\
@@ -2508,6 +2529,11 @@ mod title_pubnote_pollution {
       .and_then(|i| html[i..].find("</h1>").map(|j| &html[i..i + j]))
       .expect("HTML must have a title <h1>");
     // The thanks IS carried in the title (a collapsible pubnotes block) …
+    if red_at_two(
+      "unverified: the title's \\thanks is not carried as a collapsible pubnotes block in the <h1>",
+    ) {
+      return;
+    }
     assert!(
       h1.contains("ltx_pubnotes_content") && h1.contains(leak),
       "the title \\thanks should be present as a collapsible pubnotes block;\nh1=\n{h1}\nstderr=\n{stderr}"

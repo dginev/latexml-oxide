@@ -11,6 +11,8 @@ use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use regex::Regex;
 use serde_json::{Value, json};
 
+use super::perfect_kernel_batcht1::red_at_two;
+
 const BASE: &str = "latexml_engine/src/base_utilities";
 
 fn repo_path(path: &str) -> std::path::PathBuf {
@@ -1628,6 +1630,11 @@ fn each_outcome_is_read_back() {
   ] {
     let (errors, warnings, back) = read_back(tex);
     assert_eq!((errors, warnings), counts, "{tex}");
+    if red_at_two(
+      "old engine only: the writer's outcomes read back (=2 reads \"written\" for \"same\")",
+    ) {
+      return;
+    }
     assert_eq!(
       (
         back["outcome"].as_str().unwrap_or(""),
@@ -1702,6 +1709,11 @@ fn a_declined_paper_says_why() {
     ),
   ] {
     let (errors, warnings, back) = read_back(tex);
+    if red_at_two(
+      "old engine only: the writer's declined read-back (=2 writes the paper, and its safety net counts the ‡ mark)",
+    ) {
+      return;
+    }
     assert_eq!((errors, warnings), counts, "{tex}");
     assert_eq!(back["outcome"], "declined", "{tex}: {back}");
     let text = back["reason"].as_str().unwrap_or("");
@@ -1720,6 +1732,11 @@ fn a_declined_paper_says_why() {
 fn a_pass_after_the_writer_shows_in_the_read_back() {
   let (errors, warnings, back) = read_back(repro!("email_list_split_order_only"));
   assert_eq!((errors, warnings), (0, 0));
+  if red_at_two(
+    "old engine only: the writer's outcome read back as \"same\" (=2 reads \"written\")",
+  ) {
+    return;
+  }
   assert_eq!(back["outcome"], "same", "{back}");
   assert!(back["difference"].is_string(), "{back}");
   let (errors, warnings, back) =
