@@ -1,0 +1,36 @@
+% mechanism: the field notes' environment steps (`field_notes::note_environment`): what runs at a `\begin`'s position
+%   (`\begingroup`, then `\lx@setcurrenvir`, one frame) is read though the frame count is unchanged, so the next group's
+%   frame (`Universit{\`a}`) no longer hears the `\begin`'s environment as one opened there, which `Field::balanced`
+%   paired with the line's `\end{small}`: the line's run took an `\end` whose `\begin` is before it
+% witness: 2512.19748 (an affiliation continued over two `{small}` lines, the second with an accent group; NE1's root
+%   cause, agent_reports/2026-11-09_NE1_report.md); without the group (`Universita`) it was clean
+% oracle:  pdflatex 0 errors; "Ann Able1,2, Bob Baker1,3", "1Univ X, City", "2Dept of Things,", "Università di A, City",
+%   "3Univ B, Town"
+% engines: perl: 19 errors (it splits at `\\` through `\begin{small}…\end{small}`, Base_Utility.pool.ltxml:682-684);
+%   rust off: 0 errors; rust =2 (int152c): 1 error (`\endgroup` Attempt to close non-boxing group)
+% expect:  =2: 0 errors, 0 warnings, Ann Able's affiliations "Univ X, City" and "Dept of Things, Università di A, City"
+\documentclass{article}
+\title{A Title}
+\author{Ann Able$^{1,2}$, Bob Baker$^{1,3}$
+\\
+\begin{small}
+$^{1}$Univ X, City
+ \end{small}
+\\
+\begin{small}
+$^{2}$Dept of Things,
+ \end{small}
+ \\
+ \begin{small}
+Universit{\`a} di A, City
+ \end{small}
+\\
+ \begin{small}
+$^{3}$Univ B, Town
+ \end{small}
+\\
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

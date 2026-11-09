@@ -7,7 +7,7 @@
 //! is left of the tokens is brace balance, a property of the content itself, as the declarations' spans clamp at it
 //! (`field_notes::settle_declarations`).
 
-use super::{super::field_notes::EnvironmentStep, *};
+use super::{super::field_notes::EnvironmentStep, plan::reads_as_alignment, *};
 
 /// A field's tokens as a rehearsal read them: `tokens[0]` at position `base`, and its formulas (`events::lex_with_formulas`:
 /// outermost, in order).
@@ -158,7 +158,51 @@ impl Field<'_> {
       let cut = |i: &usize| cuts.iter().any(|&(s, t)| (s..t).contains(i));
       tokens.extend((start..end).filter(|i| !cut(i)).map(|i| content[i]));
     }
+    // (never a run holding an alignment's tab or alignment-only command outside an environment or a formula it holds whole, as
+    // the digestion's frames say them (a macro pair's `\bx a&b\\ c&d\ex` is one): digested apart, it is a stray one, an Error
+    // — its caller writes the item's text, counted (the rule of `plan::cell_tokens`; 1304.3138, 1504.01048, 2607.22455))
+    let held = self.held_whole(start, end);
+    if let Some(stray) = (start..end).find(|&i| {
+      reads_as_alignment(&content[i])
+        && !cuts.iter().any(|&(s, t)| (s..t).contains(&i))
+        && !held.iter().any(|&(s, t)| (s..t).contains(&i))
+    }) {
+      DebugFeature!(
+        "frontmatter",
+        "FRONT writer: the run {start}..{end} holds an alignment's {:?} at {stray}",
+        content[stray]
+      );
+      return None;
+    }
     Some((Tokens::new(tokens), end))
+  }
+
+  /// The environments (their frames' steps, paired) and the formulas the run `start..end` holds whole: their indices.
+  fn held_whole(&self, start: usize, end: usize) -> Vec<(usize, usize)> {
+    let at = |p: u16| usize::from(p).checked_sub(self.base);
+    let mut held = Vec::new();
+    let mut open = Vec::new();
+    for step in self.environments {
+      let (Some(from), Some(to)) = (at(step.start), at(step.end)) else {
+        continue;
+      };
+      if from < start || from >= end {
+        continue;
+      }
+      if step.opens {
+        open.push(from);
+      } else if let Some(opened) = open.pop()
+        && to <= end
+      {
+        held.push((opened, to));
+      }
+    }
+    let formulas = self
+      .formulas
+      .iter()
+      .filter_map(|formula| Some((at(formula.start)?, at(formula.end)?)));
+    held.extend(formulas.filter(|&(s, t)| start <= s && t <= end));
+    held
   }
 
   /// Whether the `nth` group around the formula starting at `from`, from the innermost, closing at `close`, starts at its brace with that formula: it prints

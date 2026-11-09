@@ -1229,6 +1229,12 @@ const ALIGNMENT_ONLY: &[&str] = &[
   "\\tabularnewline",
 ];
 
+/// Whether `t` is what only an alignment reads: its tab, or a command of [`ALIGNMENT_ONLY`] — outside an alignment, a stray
+/// one, an Error ([`cell_tokens`], `Field::content_cut`).
+pub(super) fn reads_as_alignment(t: &Token) -> bool {
+  t.get_catcode() == Catcode::ALIGN || ALIGNMENT_ONLY.iter().any(|cs| is_cs(t, cs))
+}
+
 /// Tokens cut from a block at `from` as an item digests them outside the block's alignment, cut at its cells: `None`
 /// when they hold, outside any whole environment of their own, an alignment tab or a command only an alignment reads
 /// ([`ALIGNMENT_ONLY`]) — made outside the alignment, the tab is a stray one, an Error, and the item one of two columns
@@ -1308,8 +1314,7 @@ fn cell_tokens(content: &[Token], from: usize, tokens: &Tokens) -> Option<Tokens
       _ if is_cs(t, "\\begin") && env_name(run, i).is_some() => own += 1,
       _ if is_cs(t, "\\end") && env_name(run, i).is_some() => own = own.saturating_sub(1),
       _ if own > 0 => {},
-      Catcode::ALIGN => return None,
-      _ if ALIGNMENT_ONLY.iter().any(|cs| is_cs(t, cs)) => return None,
+      _ if reads_as_alignment(t) => return None,
       _ if in_rows && is_cs(t, "\\\\") => {
         if depth != 0 {
           return None;
