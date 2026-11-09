@@ -112,6 +112,8 @@ fn ieeekeywords_blocks_are_all_kept() {
 /// Rank 59: the vmsta binding (latexml_contrib vmsta_cls.rs) reads the class raw and gives the author content its title
 /// page's name parts (vmsta.cls:278-291 `\name@m@front`: `\@fnm~\@snm`, the initials dropped; 1508.02842, 1411.4499,
 /// 1601.01109). Was "Yu.YuliyaMishura".
+/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
+/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
 #[test]
 fn vmsta_title_page_name_parts() {
   repro_with!(
@@ -420,6 +422,8 @@ fn llncs_author_and_is_inline() {
 
 /// Rank 59 (rev77t finding 7): a `\fnm` with no `\snm` after it is printed at the author content's end, as vmsta.cls's
 /// `\name@m@front` prints its stored `\@fnm` after the content.
+/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
+/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
 #[test]
 fn vmsta_first_name_without_surname() {
   repro_with!(

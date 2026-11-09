@@ -73,10 +73,10 @@ fn a_two_argument_affil_keeps_its_meaning_and_closes_its_groups() {
   );
 }
 
-/// The `\contributor` line `\@maketitle` prints is in the title-page deposit at `=2` as off — at `=2` the deposit was
-/// dropped and the line counted `unclaimed`.
+/// The `\contributor` line `\@maketitle` prints is in the title-page deposit — the emitter dropped the deposit once, the
+/// line counted `unclaimed`.
 #[test]
-fn the_contributor_line_is_written_at_2_as_off() {
+fn the_contributor_line_is_in_the_title_page_deposit() {
   let names = vec![row(&["Ann Able ∗ and Bob Baker †"])];
   let (log, xml) = in_a_directory(repro!("cl6_pnas_contributor.tex"), &[CLASS], &[]);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");

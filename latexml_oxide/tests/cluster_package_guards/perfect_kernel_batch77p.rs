@@ -183,6 +183,8 @@ fn space_parted_names_share_the_address() {
 /// known-wrong residual, as it stands until its SYNC_STATUS row lands: a row of addresses parted by space too (set by
 /// position) — Univ C on Dan Dorn, Cat Cole with none, "Univ D" an invented creator (row "an address row parted by
 /// space, laid out by position").
+/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
+/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
 #[test]
 fn space_parted_names_negatives_pin_residuals() {
   convert_repro!("author_space_parted_names_negatives.tex");
@@ -545,6 +547,8 @@ fn names_rows_by_count_or_following_line() {
 /// another e-mail line spells leaves the pool (`ccruz@` on the next line: `qq@` Bo Bell's; 2605.06223), and a line not in
 /// name order (2509.10377, by institution) places no address by its place (`xx@`, `yy@` unplaced). Unplaced addresses
 /// are the block's, on the shared creator (user ruling R10 2026-10-20; 77p r9 put them on the group's last name).
+/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
+/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
 #[test]
 fn email_owner_by_confirmed_order() {
   convert_repro!("author_email_owner_confirmed_order.tex");

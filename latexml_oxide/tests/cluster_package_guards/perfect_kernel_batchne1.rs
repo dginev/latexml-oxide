@@ -52,9 +52,9 @@ fn creator_elements(xml: &str) -> Vec<&str> {
 const WRITTEN_WHOLE: &str = "The frontmatter emitter can't cut an author block (a name or an item of its reading joins \
                              ink across an alignment's cells): it is written whole, as Perl's whole-block creator";
 
-/// `=2` writes a block whose reading crosses an alignment's cells as off does — one creator, its element `whole` (recorded
-/// at `=2`, where it equalled the switch-off one) — with the one counted Warning that says so, and no Error.
-fn written_whole_as_off(tex: &str, whole: &[&str]) {
+/// A block whose reading crosses an alignment's cells is written whole — one creator, its element `whole` — with the one
+/// counted Warning that says so, and no Error.
+fn written_whole_counted(tex: &str, whole: &[&str]) {
   let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_eq!(log.matches(WRITTEN_WHOLE).count(), 1, "{log}");
@@ -66,7 +66,7 @@ fn written_whole_as_off(tex: &str, whole: &[&str]) {
 /// 2510.03886, 1902.06698, 2101.00440. The names' path: `joined_across_cells`.
 #[test]
 fn names_one_per_cell_are_written_whole() {
-  written_whole_as_off(repro!("emit_names_one_per_cell_are_written_whole"), &[
+  written_whole_counted(repro!("emit_names_one_per_cell_are_written_whole"), &[
     "<creator role=\"author\">\n    <personname><tabular vattach=\"middle\" xml:id=\"id1\">\n        <tbody>\n          <tr xml:id=\"id1.1\">\n            <td align=\"center\" xml:id=\"id1.1.1\">Ann Able</td>\n            <td align=\"center\" xml:id=\"id1.1.2\">Bob Baker</td>\n            <td align=\"center\" xml:id=\"id1.1.3\">Cid Cole</td>\n          </tr>\n          <tr xml:id=\"id1.2\">\n            <td align=\"center\" xml:id=\"id1.2.1\">Univ X</td>\n            <td align=\"center\" xml:id=\"id1.2.2\">Univ Y</td>\n            <td align=\"center\" xml:id=\"id1.2.3\">Univ Z</td>\n          </tr>\n        </tbody>\n      </tabular></personname>\n  </creator>",
   ]);
 }
@@ -77,7 +77,7 @@ fn names_one_per_cell_are_written_whole() {
 /// `crosses_columns` over the entry's continued lines (`entry_span`).
 #[test]
 fn an_affiliation_run_into_the_next_column_is_written_whole() {
-  written_whole_as_off(
+  written_whole_counted(
     repro!("emit_affiliation_run_into_the_next_column_is_written_whole"),
     &[
       "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">⋆</sup>, Bob Baker<sup xml:id=\"id2\">†</sup><break/><tabular class=\"ltx_guessed_headers\" vattach=\"middle\" xml:id=\"id3\">\n        <thead>\n          <tr xml:id=\"id3.1\">\n            <td align=\"center\" thead=\"column\" xml:id=\"id3.1.1\"><sup xml:id=\"id3.1.1.1\">⋆</sup>Univ X</td>\n            <td align=\"center\" thead=\"column\" xml:id=\"id3.1.2\"><sup xml:id=\"id3.1.2.1\">†</sup>Univ Y</td>\n          </tr>\n        </thead>\n        <tbody>\n          <tr xml:id=\"id3.2\">\n            <td align=\"center\" xml:id=\"id3.2.1\">Dept A</td>\n            <td align=\"center\" xml:id=\"id3.2.2\">Dept B</td>\n          </tr>\n        </tbody>\n      </tabular></personname>\n  </creator>",

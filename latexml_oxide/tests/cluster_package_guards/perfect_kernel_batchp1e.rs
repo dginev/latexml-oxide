@@ -34,9 +34,8 @@ fn reads(tex: &str, want: &[Vec<&str>]) {
   assert_eq!(creators(&xml), want);
 }
 
-/// `tex` clean, its creators' XML (ids aside) `whole` (recorded at `=2`, where it equalled the switch-off one's), and their
-/// reading `want`.
-fn as_off(tex: &str, want: &[Vec<&str>], whole: &[&str]) {
+/// `tex` clean, its creators' XML (ids aside) `whole`, and their reading `want`.
+fn reads_whole(tex: &str, want: &[Vec<&str>], whole: &[&str]) {
   let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), want);
@@ -51,7 +50,7 @@ fn as_off(tex: &str, want: &[Vec<&str>], whole: &[&str]) {
 fn an_address_in_a_note_entry_is_its_owners_email() {
   let entry =
     "affiliation=Ann Able and Bob Baker are with the Department of X, Univ A, City, Country";
-  as_off(
+  reads_whole(
     repro!("emit_an_address_in_a_note_entry_is_its_owners"),
     &[
       vec!["Ann Able", entry, "email=ann.able@a.org"],
@@ -76,7 +75,7 @@ fn an_address_in_a_note_entry_is_its_owners_email() {
 /// one of a local-part list each its own. Red (LO4 `=2`): every carrier of an entry held its addresses as text.
 #[test]
 fn an_address_in_an_api_entry_is_its_owners_email() {
-  as_off(
+  reads_whole(
     repro!("emit_an_address_in_an_institute_is_its_owners"),
     &[
       vec![
@@ -97,7 +96,7 @@ fn an_address_in_an_api_entry_is_its_owners_email() {
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, Road 2, Town, Country</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">cy.cole@b.org</text></contact>\n  </creator>",
     ],
   );
-  as_off(
+  reads_whole(
     repro!("emit_an_address_list_in_an_affil_is_its_owners"),
     &[
       vec!["Ann Able", "affiliation=Univ A", "email=ann.able@a.org"],
@@ -134,7 +133,7 @@ fn an_address_line_read_on_is_its_owners_email() {
 /// after the flush) and the switch off agree.
 #[test]
 fn an_address_s_label_and_brackets_go_with_it() {
-  as_off(
+  reads_whole(
     repro!("emit_an_address_label_and_brackets_go_with_it"),
     &[
       vec![
