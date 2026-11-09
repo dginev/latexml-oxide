@@ -173,6 +173,9 @@ pub(in crate::base_utilities) struct AuthorBlock {
   pub cautious:       bool,
   /// the keyvals the call hands each author (revtex `annotations=`)
   pub keyvals:        Option<String>,
+  /// those keyvals as the call's tokens: what a writer hands on is these, never [`keyvals`](Self::keyvals) retokenized, where
+  /// a command glues to the letters after it (`\and Jonathan` read back `\andJonathan`, 2205.13776)
+  pub keyval_tokens:  Option<Tokens>,
   /// the frontmatter flushes (`digest_front_matter`) before the call: the queue the position is in (each flush
   /// empties it)
   pub epoch:          usize,
@@ -879,6 +882,7 @@ pub(in crate::base_utilities) fn record_author_call(
     late,
     cautious,
     keyvals: keyvals.map(|kv| kv.to_string()),
+    keyval_tokens: keyvals.cloned(),
     epoch: 0,
     queue_position: queue_length(),
     authors_queued: (fm_shadow_mode() == FmShadow::On).then(queued_author_count),

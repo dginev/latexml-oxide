@@ -1747,7 +1747,12 @@ fn creator_keys(c: &RCreator, labels: &[String]) -> Vec<Token> {
     // note there is the document's, authblk's `\\author[1\\thanks{Equal contribution.}]`, 2308.08363, 2410.16774, 2207.11475,
     // 2207.11842 — [`block_annotations`]; brief CL7, C5)
     let own = with_ledger(|ledger| match ledger.entries().get(c.source) {
-      Some(Entry::Author(block)) => block.keyvals.as_deref().and_then(block_annotations),
+      Some(Entry::Author(block)) => block
+        .keyvals
+        .as_deref()
+        .and_then(block_annotations)
+        .and(block.keyval_tokens.as_ref())
+        .and_then(annotations_tokens),
       _ => None,
     });
     let Some(own) = own else {
@@ -1756,7 +1761,7 @@ fn creator_keys(c: &RCreator, labels: &[String]) -> Vec<Token> {
     };
     keys.extend(internal("annotations="));
     keys.push(T_BEGIN!());
-    keys.extend(internal(&own));
+    keys.extend(own);
     if !labels.is_empty() {
       keys.push(T_OTHER!(","));
     }
@@ -1822,6 +1827,27 @@ fn block_annotations(keyvals: &str) -> Option<String> {
   // (a command, not `no_label`'s every character a label can't hold: elsarticle's `\\author[inst_riteh]` is a label whose `_`
   // retokenized is a subscript, 10 Errors, 2201.04449)
   inner.contains('\\').then(|| inner.to_string())
+}
+
+/// The tokens of the last `annotations` value in an author block's keyvals as the call gave them
+/// (`AuthorBlock::keyval_tokens`), its outer braces off: what the writer hands on where [`block_annotations`] carries them,
+/// never their text retokenized, where a command glues to the letters after it — lni's `\\author[Christian Burkert \\and
+/// Jonathan Balack …]` read back `\\andJonathan`, an Error per name (2205.13776, 2406.04210, 2302.12131, 2307.15427,
+/// 2309.09081, 2310.00933, 2407.04435, 2210.04484; brief NE4).
+fn annotations_tokens(keyvals: &Tokens) -> Option<Vec<Token>> {
+  let mut depth = 0;
+  keyvals
+    .unlist_ref()
+    .split(|t| {
+      depth += t.group_step();
+      depth == 0 && t.with_str(|s| s == ",")
+    })
+    .filter_map(|pair| {
+      let eq = pair.iter().position(|t| t.with_str(|s| s == "="))?;
+      (Tokens::new(pair[..eq].to_vec()).to_string().trim() == "annotations")
+        .then(|| Tokens::new(pair[eq + 1..].to_vec()).strip_braces().unlist())
+    })
+    .last()
 }
 
 /// Whether a creator's request is no label, its key's value tokenized: one spelled with a command, `\\author[a,b\\thanks{…}]`'s
@@ -2666,12 +2692,24 @@ pub(super) fn kept_whole(index: usize) -> bool {
 /// breaks they print (`tabular_juggles_in_a_whole_block`: 1511.05911's vldb.cls `\\alignauthor`).
 fn whole_block(index: usize, keys: &str, annotations: &[Token]) -> Option<Result<Tokens>> {
   let (keyvals, written) = with_ledger(|ledger| match ledger.entries().get(index) {
-    Some(Entry::Author(block)) => Some((block.keyvals.clone(), block.tokens.clone())),
+    Some(Entry::Author(block)) => Some((block.keyval_tokens.clone(), block.tokens.clone())),
     _ => None,
   })?;
-  let keys: Vec<&str> = keyvals.iter().map(String::as_str).chain([keys]).collect();
-  let keys = keys.into_iter().filter(|keys| !keys.trim().is_empty());
-  let mut keys = key_tokens(&keys.collect::<Vec<_>>().join(","));
+  // (the call's own keyvals as its tokens, as the switch off hands them on: never their text retokenized, where a command
+  // glues to the letters after it, `\author[\dag a]` read back `\daga` — 2205.13776, brief NE4; the emit's own keys
+  // `key_tokens`)
+  let mut out: Vec<Token> = keyvals
+    .filter(|kv| !kv.to_string().trim().is_empty())
+    .map(Tokens::unlist)
+    .unwrap_or_default();
+  let keys = key_tokens(keys.trim());
+  if !keys.is_empty() {
+    if !out.is_empty() {
+      out.push(T_OTHER!(","));
+    }
+    out.extend(keys);
+  }
+  let mut keys = out;
   if !annotations.is_empty() {
     if !keys.is_empty() {
       keys.push(T_OTHER!(","));

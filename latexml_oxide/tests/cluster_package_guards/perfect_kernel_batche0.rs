@@ -1142,7 +1142,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (CL8 36 -> 39: `whole_marks_key`, a key's tokens as `key_tokens` writes them (1705.11109); `note_argument` /
   // `brace_argument`, a note span's brace argument taken only where its text prints the note's, 2608.08994 — what it writes,
   // no decision on a name)
-  ("writer/emit", 39),
+  // (NE4 39 -> 43: `annotations_tokens`, the `annotations` value of a block's keyvals cut from the call's tokens at its top-level
+  // `,` and `=`, so the writer hands on the call's tokens, never their text retokenized (`\and Jonathan` read back
+  // `\andJonathan`, 2205.13776) — what it writes; whether to carry them stays `block_annotations`' text decision)
+  ("writer/emit", 43),
   // (P1b, 0 -> 1: `writer/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("writer/dom+mod", 1),
