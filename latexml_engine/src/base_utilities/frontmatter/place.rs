@@ -616,7 +616,7 @@ pub fn digest_front_matter() -> Result<()> {
     };
     with_value_mut("frontmatter", |val_opt| {
       if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
-        && let Some(entry) = frnt.get_mut("ltx:creator").and_then(|l| l.get_mut(index))
+        && let Some(mut entry) = frnt.get_mut("ltx:creator").and_then(|l| l.get_mut(index))
       {
         entry.attr.insert("before".to_string(), text.clone());
       }

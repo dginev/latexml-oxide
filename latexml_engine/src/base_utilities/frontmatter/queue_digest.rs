@@ -1432,10 +1432,12 @@ pub(crate) fn frontmatter_release_store(store: &str) {
           .collect();
         let mut dropped: Vec<usize> = Vec::new();
         for &i in &released {
-          list[i].attr.remove("_store");
-          list[i]
-            .attr
-            .insert(RELEASED_STORE.to_string(), "true".to_string());
+          if let Some(mut entry) = list.get_mut(i) {
+            entry.attr.remove("_store");
+            entry
+              .attr
+              .insert(RELEASED_STORE.to_string(), "true".to_string());
+          }
           let (name, lang) = (list[i].attr.get("name"), list[i].attr.get("xml:lang"));
           let replaced = list.iter().enumerate().any(|(j, e)| {
             j != i
@@ -1486,7 +1488,7 @@ pub(in crate::base_utilities) fn frontmatter_set_first_content(
 ) {
   with_value_mut("frontmatter", |val_opt| {
     if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt
-      && let Some(entry) = frnt.get_mut(tag).and_then(|l| l.get_mut(index))
+      && let Some(mut entry) = frnt.get_mut(tag).and_then(|l| l.get_mut(index))
     {
       if let Some(first) = entry.content.first_mut() {
         *first = content;
@@ -1528,9 +1530,9 @@ pub(in crate::base_utilities) fn with_digesting_entry_attr(f: impl FnOnce(&mut T
           e.attr.get("role").map(String::as_str) == Some("pending")
             && !matches!(e.content.first(), Some(TagContent::PlaceKeeper))
         };
-        if let Some(last) = frnt
-          .get_mut(&tag)
-          .and_then(|entries| entries.iter_mut().rev().find(|e| !deferred(e)))
+        if let Some(entries) = frnt.get_mut(&tag)
+          && let Some(at) = entries.iter().rposition(|e| !deferred(e))
+          && let Some(mut last) = entries.get_mut(at)
           && matches!(last.content.first(), Some(TagContent::PlaceKeeper))
         {
           f(&mut last.attr);

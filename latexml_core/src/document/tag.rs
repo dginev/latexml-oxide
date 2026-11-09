@@ -30,9 +30,9 @@ pub const BLOCK_CREATOR: &str = "_blockcreator";
 /// One tag's frontmatter entries, Perl's `@{$frontmatter{$tag}}` (Base_Utility.pool.ltxml), with the indices of the
 /// entries an annotation may attach to kept as the list changes — Perl's `grep { ($$_[1]{role} || '') ne 'pending' }`
 /// (Base_Utility.pool.ltxml:492), read per annotation instead of rescanned over every entry. The
-/// entries are a slice to read and to edit in place; the list changes length only through its own methods, which keep
-/// the index. An entry's role and [`BLOCK_CREATOR`] key are set when it is made, never edited in place (debug builds
-/// check the index against the scan at every read).
+/// entries are a slice to read; they change only through the list's own methods, which keep the index exact: `push`,
+/// `remove`, `retain`, and [`TagList::get_mut`]/[`TagList::last_mut`], whose [`EntryMut`] re-files its entry when an edit
+/// changed its kind (debug builds also check the index against the scan at every read).
 #[derive(Clone, Default, PartialEq)]
 pub struct TagList {
   entries: Vec<TagData>,
@@ -120,15 +120,79 @@ impl TagList {
   }
   /// The entries, as a `Vec`.
   pub fn into_entries(self) -> Vec<TagData> { self.entries }
+  /// The entry at `index` to edit in place, `None` out of bounds (`slice::get_mut`): the index follows whatever the
+  /// edit does to its role or [`BLOCK_CREATOR`] key.
+  pub fn get_mut(&mut self, index: usize) -> Option<EntryMut<'_>> {
+    let entry = self.entries.get_mut(index)?;
+    Some(EntryMut {
+      kind: parent_kind(entry),
+      entry,
+      index,
+      parents: &mut self.parents,
+      block: &mut self.block,
+    })
+  }
+  /// The last entry to edit in place, as [`TagList::get_mut`].
+  pub fn last_mut(&mut self) -> Option<EntryMut<'_>> {
+    let last = self.entries.len().checked_sub(1)?;
+    self.get_mut(last)
+  }
+}
+
+/// One entry of a [`TagList`] edited in place ([`TagList::get_mut`]): when it is dropped, an entry whose kind (pending
+/// stub, parent, block creator) the edit changed moves to the index of its new kind — an O(1) check when unchanged.
+pub struct EntryMut<'a> {
+  entry:   &'a mut TagData,
+  index:   usize,
+  kind:    Option<bool>,
+  parents: &'a mut Vec<usize>,
+  block:   &'a mut Vec<usize>,
+}
+
+impl std::ops::Deref for EntryMut<'_> {
+  type Target = TagData;
+  fn deref(&self) -> &TagData { self.entry }
+}
+
+impl std::ops::DerefMut for EntryMut<'_> {
+  fn deref_mut(&mut self) -> &mut TagData { self.entry }
+}
+
+impl Drop for EntryMut<'_> {
+  fn drop(&mut self) {
+    let kind = parent_kind(self.entry);
+    if kind == self.kind {
+      return;
+    }
+    let index = self.index;
+    match self.kind {
+      Some(false) => sorted_remove(self.parents, index),
+      Some(true) => sorted_remove(self.block, index),
+      None => {},
+    }
+    match kind {
+      Some(false) => sorted_insert(self.parents, index),
+      Some(true) => sorted_insert(self.block, index),
+      None => {},
+    }
+  }
+}
+
+fn sorted_remove(indices: &mut Vec<usize>, index: usize) {
+  if let Ok(at) = indices.binary_search(&index) {
+    indices.remove(at);
+  }
+}
+
+fn sorted_insert(indices: &mut Vec<usize>, index: usize) {
+  if let Err(at) = indices.binary_search(&index) {
+    indices.insert(at, index);
+  }
 }
 
 impl std::ops::Deref for TagList {
   type Target = [TagData];
   fn deref(&self) -> &[TagData] { &self.entries }
-}
-
-impl std::ops::DerefMut for TagList {
-  fn deref_mut(&mut self) -> &mut [TagData] { &mut self.entries }
 }
 
 impl std::fmt::Debug for TagList {
@@ -317,6 +381,42 @@ impl TagOptions {
 #[cfg(test)]
 mod tests {
   use super::*;
+
+  #[test]
+  fn tag_list_entry_edit_refiles_its_kind() {
+    let entry = |attrs: &[(&str, &str)]| TagData {
+      tag:     "ltx:creator".to_string(),
+      attr:    attrs
+        .iter()
+        .map(|(k, v)| (k.to_string(), v.to_string()))
+        .collect(),
+      content: Vec::new(),
+    };
+    let mut list = TagList::from_entries(vec![
+      entry(&[]),
+      entry(&[("role", "pending")]),
+      entry(&[(BLOCK_CREATOR, "1")]),
+    ]);
+    assert_eq!(list.parent_indices(true), vec![0]);
+    assert_eq!(list.parent_indices(false), vec![0, 2]);
+    // a stub made a parent, a parent made a stub, a block creator made a parent: each re-filed on drop
+    list.get_mut(1).unwrap().attr.remove("role");
+    list
+      .get_mut(0)
+      .unwrap()
+      .attr
+      .insert("role".into(), "pending".into());
+    list.last_mut().unwrap().attr.remove(BLOCK_CREATOR);
+    assert_eq!(list.parent_indices(true), vec![1, 2]);
+    list
+      .get_mut(1)
+      .unwrap()
+      .attr
+      .insert(BLOCK_CREATOR.into(), "1".into());
+    assert_eq!(list.parent_indices(true), vec![2]);
+    assert_eq!(list.parent_indices(false), vec![1, 2]);
+    assert!(list.get_mut(3).is_none());
+  }
 
   #[test]
   fn tag_option_name_all_has_six() {
