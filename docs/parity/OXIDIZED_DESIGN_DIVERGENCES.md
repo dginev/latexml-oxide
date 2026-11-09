@@ -29119,7 +29119,11 @@ unwritten family's call made is written: the call's setter, not the author block
   otherwise.
   The watch costs every macro call, so it starts only at a written family's block that finds an unwritten family's
   setter defined (`ledger::watch_unwritten_setters`); calls made before then are `unobserved`, not written. Unwatched,
-  the expansion path costs +0.02-0.05 % instructions (1106.2670, 1103.4425; base noise ±0.03 %).
+  the expansion path costs +0.02-0.05 % instructions (1106.2670, 1103.4425; base noise ±0.03 %). Deleted in DEL5: once
+  `Policy::written` went (DEL4) no family was unwritten, so the watch never started; the core's `FRONTMATTER_WATCH`,
+  `state::open_frontmatter_setter` and `frontmatter_setter_calls`, `ApiCall::binding`, `AuthorBlock::setters_before`,
+  `setter_binding`, `class_family`, `CLASS_AUTHOR`, `LOADED` and the nine setters' owner tracking went with it (output
+  byte-identical).
   Not observed, so written under a written block as before: a binding's other commands (`\thanks`,
   `\IEEEauthorblockA`, elsarticle's `\cortext`), and a raw class's stores handed on at `\maketitle`
   (`frontmatter_stores::harvest_stores`, where no setter's expansion is open; SYNC row "unobserved frontmatter calls").

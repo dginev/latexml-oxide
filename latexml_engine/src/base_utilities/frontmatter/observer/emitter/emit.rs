@@ -3988,7 +3988,6 @@ mod tests {
         queue_position: index,
         after_block: None,
         inside: false,
-        binding: None,
         attrs: "role=note".to_string(),
         parent: "ltx:creator".to_string(),
         content: Tokens::new(Vec::new()),

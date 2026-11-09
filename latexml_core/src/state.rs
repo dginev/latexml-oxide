@@ -2501,14 +2501,9 @@ pub fn watched_meaning_changed() -> Option<SymStr> { state!().watched_meaning_ch
 /// Would [`note_setter_call`] observe a call of `cs`? Without the observation, for a native reader that declines such a
 /// call to whoever then makes it.
 pub fn setter_call_is_observed(cs: &Token) -> bool {
-  if !crate::definition::origin::setter_name_watch()
-    || crate::definition::origin::copy_provides() != 0
-  {
-    return false;
-  }
-  let key = meaning_key(cs);
-  (crate::definition::origin::copy_default_watch() && state!().watched_setters.contains(&key))
-    || FRONTMATTER_SETTERS.with(|f| f.borrow().names.contains(&key))
+  crate::definition::origin::copy_default_watch()
+    && crate::definition::origin::copy_provides() == 0
+    && state!().watched_setters.contains(&meaning_key(cs))
 }
 
 /// Observe the calls of the setters `names` ([`State::watched_setters`]).
@@ -2520,85 +2515,15 @@ pub fn watch_setters(names: &[&str]) {
 /// A macro `cs` is called (`Expandable::invoke`, while [`crate::definition::origin::setter_watch`]): a watched setter
 /// called outside a stand-in copy's read is the document's (or its binding's) call, `<cs>:called`, whatever its
 /// arguments — `\author{}` as much as `\author{Jane Doe}`, which a binding's accumulating `\author` (inst_support's)
-/// does not queue nor clear. Whether `cs` is one of the frontmatter observer's setters
-/// ([`watch_frontmatter_setters`]), whose expansion the caller then notes ([`note_frontmatter_setter_expansion`]).
-pub fn note_setter_call(cs: &Token) -> bool {
-  if crate::definition::origin::copy_provides() != 0 {
-    return false;
-  }
-  let key = meaning_key(cs);
-  if crate::definition::origin::copy_default_watch() && state!().watched_setters.contains(&key) {
+/// does not queue nor clear.
+pub fn note_setter_call(cs: &Token) {
+  if setter_call_is_observed(cs) {
     assign_value(
       &cs.with_cs_name(|name| s!("{name}:called")),
       true,
       Some(Scope::Global),
     );
   }
-  FRONTMATTER_SETTERS.with(|f| f.borrow().names.contains(&key))
-}
-
-/// The frontmatter observer's setters ([`watch_frontmatter_setters`]) and the expansions of them still open.
-#[derive(Default)]
-struct FrontmatterSetters {
-  names:  HashSet<SymStr>,
-  /// each call so far: its number among them, its name, and the input after its arguments — what its expansion is read
-  /// before ([`gullet::input_unread_since`]); closed ones are dropped as they are met
-  open:   Vec<(usize, Token, gullet::InputMark)>,
-  called: usize,
-}
-
-thread_local! {
-  static FRONTMATTER_SETTERS: RefCell<FrontmatterSetters> = RefCell::default();
-}
-
-/// Observe the expansions of the frontmatter setters `names` (their calls forgotten): the observer's, at a
-/// conversion's start (`definition::origin::watch_frontmatter_setter_calls`). A robust macro's body is its `\cs␣`'s
-/// (`binding::def::dialect`, the `\protect\cs␣` wrapper reading no argument): both are watched.
-pub fn watch_frontmatter_setters(names: &[&str]) {
-  FRONTMATTER_SETTERS.with(|f| {
-    *f.borrow_mut() = FrontmatterSetters {
-      names: names
-        .iter()
-        .flat_map(|name| {
-          [
-            meaning_key(&T_CS!(name)),
-            meaning_key(&T_CS!(s!("{name} "))),
-          ]
-        })
-        .collect(),
-      ..FrontmatterSetters::default()
-    }
-  });
-}
-
-/// A frontmatter setter `cs` read its arguments ([`note_setter_call`]): its expansion, pushed back now, is read before
-/// the input after the call.
-pub fn note_frontmatter_setter_expansion(cs: &Token) {
-  let mark = gullet::input_mark();
-  FRONTMATTER_SETTERS.with(|f| {
-    let mut f = f.borrow_mut();
-    f.called += 1;
-    let called = f.called;
-    f.open.push((called, *cs, mark));
-  });
-}
-
-/// How many frontmatter setter calls were made so far ([`note_frontmatter_setter_expansion`]).
-pub fn frontmatter_setter_calls() -> usize { FRONTMATTER_SETTERS.with(|f| f.borrow().called) }
-
-/// The innermost frontmatter setter whose expansion is being read now, if any: its call's number (from 1,
-/// [`frontmatter_setter_calls`]) and name.
-pub fn open_frontmatter_setter() -> Option<(usize, Token)> {
-  FRONTMATTER_SETTERS.with(|f| {
-    let mut f = f.borrow_mut();
-    while let Some((called, cs, mark)) = f.open.last() {
-      if gullet::input_unread_since(mark) {
-        return Some((*called, *cs));
-      }
-      f.open.pop();
-    }
-    None
-  })
 }
 
 /// A call of one of LaTeXML's own macros (a binding's or the kernel's) that read its arguments from the document's own

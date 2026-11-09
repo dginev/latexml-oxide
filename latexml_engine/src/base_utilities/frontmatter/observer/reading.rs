@@ -486,10 +486,6 @@ pub fn fm_reading_json() -> String {
               .map_or("null".to_string(), |b| b.to_string()),
             call.inside
           );
-          if let Some(binding) = &call.binding {
-            out.push_str(",\"binding\":");
-            json_str(&mut out, binding);
-          }
           out.push_str(",\"attrs\":");
           json_str(&mut out, &call.attrs);
           if call.errors > 0 {

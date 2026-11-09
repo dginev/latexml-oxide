@@ -1353,8 +1353,9 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // meaning, a `\let` copy too, what no frame says for a raw environment)
   ("field_notes", 2),
   // (CK1b 29 -> 30: `ledger::spacing_symbol`'s `'\\'`, a line break parting a word in the content text, review revCK1 3;
-  // CL2b 30 -> 31: `LIST_CLEAR`, the API clear in a binding's list setter's definition, cond-mat0605195, as in `TOKEN_READS`)
-  ("ledger", 31),
+  // CL2b 30 -> 31: `LIST_CLEAR`, the API clear in a binding's list setter's definition, cond-mat0605195, as in `TOKEN_READS`;
+  // DEL5 31 -> 22: `OWNED_COMMANDS` keeps `\author`, `\email`, `\emailAdd`, the nine setters' owners went with `setter_binding`)
+  ("ledger", 22),
   ("marks", 0),
   ("mod", 0),
   ("policy", 0),

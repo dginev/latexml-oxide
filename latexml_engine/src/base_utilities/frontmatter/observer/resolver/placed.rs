@@ -1050,7 +1050,6 @@ mod whole_tests {
       policy: "kernel".to_string(),
       binding: "kernel".to_string(),
       owner: "kernel".to_string(),
-      setters_before: 0,
       counter: None,
       replace: false,
       cleared: false,
