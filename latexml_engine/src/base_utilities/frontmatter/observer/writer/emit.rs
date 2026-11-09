@@ -1618,7 +1618,7 @@ fn creator_keys(c: &RCreator, labels: &[String]) -> Vec<Token> {
 }
 
 /// The `annotations` value of an author block's keyvals as the ledger keeps them (`AuthorBlock::keyvals`, the call's text), its
-/// outer braces off, where it is no label ([`no_label`]), as a note is: authblk's
+/// outer braces off, where it holds a command, which no label does and a note does: authblk's
 /// `\\author[1\\thanks{Equal contribution.}]`, `annotations={1\\thanks {…}}` (2308.08363, 2410.16774, 2207.11475, 2207.11842)
 /// — what the switch off digests on each creator.
 fn block_annotations(keyvals: &str) -> Option<String> {
@@ -1657,7 +1657,9 @@ fn block_annotations(keyvals: &str) -> Option<String> {
       }) && depth == 0
     })
     .unwrap_or(value);
-  no_label(inner).then(|| inner.to_string())
+  // (a command, not `no_label`'s every character a label can't hold: elsarticle's `\\author[inst_riteh]` is a label whose `_`
+  // retokenized is a subscript, 10 Errors, 2201.04449)
+  inner.contains('\\').then(|| inner.to_string())
 }
 
 /// Whether a creator's request is no label, its key's value tokenized: one spelled with a command, `\\author[a,b\\thanks{…}]`'s

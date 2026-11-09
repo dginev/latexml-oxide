@@ -1348,8 +1348,10 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   ("resolver/owners", 4),
   ("shadow", 7),
   // (Z4a, 81 -> 107: `writer/emit.rs`, the calls it builds: Perl's `\lx@add@authors`, `\lx@annotate@frontmatter@now`, the
-  // queue's own `\lx@frontmatter@item*`; it writes them, no decision reads them)
-  ("writer", 107),
+  // queue's own `\lx@frontmatter@item*`; it writes them, no decision reads them. CL7 +1: `block_annotations`' `'\\'`, whether
+  // an author block's keyvals annotations hold a command (a note, authblk's `\author[1\thanks{…}]`, 2308.08363), which the
+  // ledger keeps as text alone, so that its creators carry them as off digests them — a label's `_` retokenized errs, 2201.04449)
+  ("writer", 108),
   // (the "Knowledge in, driver out, one pass" move: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
   // mark and note commands it reads; none added)
   ("writer/calls", 44),
