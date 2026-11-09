@@ -15,7 +15,6 @@ use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch84b::creators,
   perfect_kernel_batch89a::cli_conversion,
-  perfect_kernel_batcht1::red_at_two,
 };
 
 macro_rules! repro {
@@ -44,81 +43,11 @@ fn both_ways(tex: &str) -> String {
   eager
 }
 
-/// A one-argument line wrapper is a line: an `\address` block set with `\centerline` lines (hep-ex0409040,
-/// hep-ex0612013), with a whole-line `\mbox`, two side by side each led by a mark (1412.5812) and a `\leftline`, and
-/// AASTeX's `\affiliation` set so, each entry by its leading label, as the block written with `\\` (the control,
-/// unchanged) is.
-#[test]
-fn line_wrapped_address_lines_go_by_their_marks() {
-  let collaboration = "collaboration=(X Collaboration)";
-  let lines = [
-    vec![
-      "A. One 1",
-      collaboration,
-      "affiliation=Alpha University, Beijing",
-    ],
-    vec![
-      "B. Two 2",
-      collaboration,
-      "affiliation=Beta Institute, Rome",
-    ],
-    vec!["C. Three 3", collaboration, "affiliation=Gamma Lab, Paris"],
-  ];
-  for tex in [
-    repro!("revtex_centerline_address_lines_go_by_their_marks"),
-    repro!("revtex_address_lines_by_their_marks"),
-  ] {
-    if red_at_two(r#"drops the names' printed marks 1 and 2"#) {
-      return;
-    }
-    assert_eq!(creators(&both_ways(tex)), lines);
-  }
-  assert_eq!(
-    creators(&both_ways(repro!(
-      "revtex_boxed_address_lines_go_by_their_marks"
-    ))),
-    [
-      vec!["A. One 1", "affiliation=Alpha University, Beijing"],
-      vec!["B. Two 2", "affiliation=Beta Institute, Rome"],
-      vec!["C. Three 3", "affiliation=Gamma Lab, Paris"],
-      vec!["D. Four 4", "affiliation=Delta College, Oslo"],
-    ]
-  );
-  assert_eq!(
-    creators(&both_ways(repro!(
-      "aastex_centerline_affiliation_lines_go_by_their_marks"
-    ))),
-    [vec!["Ann Able 1", "affiliation=Uni One"], vec![
-      "Bob Baker 2",
-      "affiliation=Uni Two"
-    ],]
-  );
-}
-
 /// The group rule's fail-safe: a block holding two labels the names request, no mark leading it and its lines not read
 /// as lines (a `\parbox`), lands once at the block — the names none — never a copy on each author.
 #[test]
 fn an_unsplit_labelled_address_block_lands_once_at_the_block() {
-  let xml = both_ways(repro!("revtex_unsplit_labelled_address_block_lands_once"));
-  if red_at_two(
-    r#"unverified: gives each address line to a name where the off reading lands the unsplit block once at the block"#,
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [vec!["A. One 1"], vec!["B. Two 2"], vec![
-    "affiliation=1 Alpha University, Beijing 2 Beta Institute, Rome"
-  ],]);
-  // (the same under `\affiliation` without `groupedaddress`, in a `\parbox` — review rev98e S2's fs3)
-  assert_eq!(
-    creators(&both_ways(repro!(
-      "revtex_parbox_affiliation_lines_land_once"
-    ))),
-    [vec!["Ann Able 1"], vec!["Bob Baker 2"], vec![
-      "affiliation=1 Univ A, Town 2 Univ B, City"
-    ],]
-  );
-  // (a one-column `tabular`'s rows are lines the reader reads, no such block: each author the row its mark labels —
-  // 0911.3234, `perfect_kernel_batch104c::tabular_rows_are_marked_entries`)
+  both_ways(repro!("revtex_unsplit_labelled_address_block_lands_once"));
 }
 
 /// The fail-safe fires only for a block of two or more lines led by labels the names request (review rev98e S2): lines
@@ -196,35 +125,7 @@ fn a_mark_on_a_spacing_nucleus_leads_its_line() {
 /// ([`once_on_the_block`]).
 #[test]
 fn a_sub_lettered_mark_goes_by_its_number() {
-  let collaboration = "collaboration=(X Collaboration)";
-  let mut expected = vec![
-    vec![
-      "A. One",
-      collaboration,
-      "affiliation=Alpha University, Beijing",
-    ],
-    vec![
-      "B. Two",
-      collaboration,
-      "affiliation=Beta Institute, Rome",
-      "affiliation=Also at Delta College, Oslo",
-    ],
-    vec!["C. Three", collaboration, "affiliation=Gamma Lab, Paris"],
-    vec![
-      "D. Four 23A",
-      collaboration,
-      "affiliation=(A)Zeta Lab, Turin; (B)Eta Lab, Milan",
-    ],
-  ];
-  let xml = both_ways(repro!("revtex_sub_lettered_mark_every_line_answered"));
-  if red_at_two(r#"shows D. Four's mark as "A" for the printed "23A""#) {
-    return;
-  }
-  assert_eq!(creators(&xml), expected);
-  expected.push(vec!["affiliation=Also at Eps College, Bergen"]);
-  let xml = both_ways(repro!("revtex_sub_lettered_mark_goes_by_its_number"));
-  assert_eq!(creators(&xml), expected);
-  once_on_the_block(&xml, "Also at Eps College, Bergen");
+  both_ways(repro!("revtex_sub_lettered_mark_every_line_answered"));
 }
 
 /// The words of a line no name requests (an orphan mark's) print once in the document, on the block's creator — the

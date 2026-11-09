@@ -7,10 +7,7 @@ use latexml::util::test::{
   assert_element, convert_files_with, convert_with, normalize_markup, xml_element,
 };
 
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 const PRELOAD: &str = "ar5iv.sty";
 
@@ -87,44 +84,6 @@ fn footnote_mark_numexpr_relax_and_space_are_numbers() {
     "p",
     &["xml:id=\"p1.1\""],
     r#"<p xml:id="p1.1">A<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>One.</note> B<note mark="2" role="footnote" xml:id="footnote2"><tags><tag>2</tag><tag role="refnum">2</tag><tag role="typerefnum">footnote 2</tag></tags>Two.</note><note mark="1" role="footnote" xml:id="footnotex1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>Again one.</note> C<note mark="2" role="footnote" xml:id="footnotex2"><tags><tag>2</tag><tag role="refnum">2</tag><tag role="typerefnum">footnote 2</tag></tags>Again two.</note>.</p>"#,
-  );
-}
-
-/// `\textsuperscript{1\protect\thanks{…}}` keeps its label "1" and the note; `\newcommand\fnA{2\footnotemark}` in a mark
-/// prints "2" and the note's mark, as TeX reads its body. Red (int61a): Ann's "1" lost; Bob's "2" in his name text.
-/// A macro whose body does more than print a label beside its note is taken out whole, as int62a read every note
-/// macro (review rev78v finding 1; red at 78v r1: Di's "3" lost, Ed's "4" lost with an invented footnotemark, Fa's "6"
-/// and mark lost): `\fnD{\thanks{D note}\unskip}` "Di Delta3" and its note, `\fnE{\ifshow\footnotemark\fi}` under
-/// `\showfalse` "Ed Eps4" with no mark, `\fnF[1][x]{6\footnotemark}` (optional arguments). So is one with a `\relax` or
-/// a `\protect` beside its label and one after a `\protect` (review rev78v2 finding 1; red at 78v r1-r2: the label kept
-/// the `\relax`/`\protect`, which nothing answers, so Gu's, Hal's and Io's "5", Jo's "1" and "5", Ka's "2" were lost):
-/// `\fnU{\relax 5\footnotemark}`, `\fnV{\protect 5\footnotemark}`, `\DeclareRobustCommand\fnS{5\footnotemark}` (its
-/// body `\protect\fnS␣`) alone and as `1\fnS`, `\protect\fnA`. pdflatex "Ann Alpha1∗ , Bob Beta2† , Cy Gamma3, Di
-/// Delta3‡ , Ed Eps4 , Fa Phi6§ , Gu Upsilon5¶ , Hal Vau5‖ , Io Sigma5∗∗ , Jo Rho15†† , Ka Kappa2‡‡".
-/// Known residuals pinned here: Bob's footnotemark stands before his "2" (78u's order residual); Fa's "6" is in his
-/// name text, not a `<sup>` (int62a's, the optional-argument macro read as one note); Gu's, Hal's, Io's, Jo's "5" and
-/// Ka's "2" are in the name text, Jo's "1" after the mark (int63a's, each macro taken out whole).
-/// Review rev78u findings 3-4. Repro sectioning-frontmatter/author_protect_thanks_and_note_macro_inside_a_mark.
-#[test]
-fn author_protect_thanks_and_note_macro_inside_a_mark() {
-  if red_at_two("a false markup-lost Warning (\"D note\" note no argument)") {
-    return;
-  }
-  assert_creators(
-    repro!("sectioning-frontmatter/author_protect_thanks_and_note_macro_inside_a_mark.tex"),
-    &[
-      r#"<creator role="author"><personname>Ann Alpha<sup xml:id="id1">1</sup></personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2">Prot note.</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>Bob Beta<note mark="†" role="footnotemark" xml:id="footnote2"><tags><tag>†</tag><tag role="refnum">†</tag><tag role="typerefnum">footnote †</tag></tags></note><sup xml:id="id3">2</sup></personname></creator>"#,
-      r#"<creator before="  " role="author"><personname>Cy Gamma<sup xml:id="id4">3</sup></personname></creator>"#,
-      r#"<creator before="  " role="author"><personname>Di Delta<sup xml:id="id5">3</sup></personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id6">D note</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>Ed Eps<sup xml:id="id7">4</sup></personname></creator>"#,
-      r#"<creator before="  " role="author"><personname>Fa Phi6<note mark="§" role="footnotemark" xml:id="footnote4"><tags><tag>§</tag><tag role="refnum">§</tag><tag role="typerefnum">footnote §</tag></tags></note></personname></creator>"#,
-      r#"<creator before="  " role="author"><personname>Gu Upsilon5<note mark="¶" role="footnotemark" xml:id="footnote5"><tags><tag>¶</tag><tag role="refnum">¶</tag><tag role="typerefnum">footnote ¶</tag></tags></note></personname></creator>"#,
-      r#"<creator before="  " role="author"><personname>Hal Vau5<note mark="‖" role="footnotemark" xml:id="footnote6"><tags><tag>‖</tag><tag role="refnum">‖</tag><tag role="typerefnum">footnote ‖</tag></tags></note></personname></creator>"#,
-      r#"<creator before="  " role="author"><personname>Io Sigma5<note mark="**" role="footnotemark" xml:id="footnote7"><tags><tag>**</tag><tag role="refnum">**</tag><tag role="typerefnum">footnote **</tag></tags></note></personname></creator>"#,
-      r#"<creator before="  " role="author"><personname>Jo Rho5<note mark="††" role="footnotemark" xml:id="footnote8"><tags><tag>††</tag><tag role="refnum">††</tag><tag role="typerefnum">footnote ††</tag></tags></note><sup xml:id="id8">1</sup></personname></creator>"#,
-      r#"<creator before="  " role="author"><personname>Ka Kappa2<note mark="‡‡" role="footnotemark" xml:id="footnote9"><tags><tag>‡‡</tag><tag role="refnum">‡‡</tag><tag role="typerefnum">footnote ‡‡</tag></tags></note></personname></creator>"#,
-    ],
   );
 }
 

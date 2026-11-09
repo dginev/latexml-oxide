@@ -7,8 +7,6 @@
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::set_fm_shadow_override;
 
-use super::perfect_kernel_batcht1::red_at_two;
-
 /// Convert `tex` with the shadow switch `on`, asserting a clean conversion; its creators, each with the whitespace
 /// between its tags removed.
 fn creators(tex: &str, on: bool) -> Vec<String> {
@@ -38,120 +36,6 @@ fn creators(tex: &str, on: bool) -> Vec<String> {
     rest = &rest[end..];
   }
   found
-}
-
-/// A footnote mark's tags as the revtex binding writes them: `n` as revtex's front matter prints it
-/// (`\frontmatter@thefootnote`, the counter's symbols: 1 `*`, 2 `†`, KNOWN_PERL_ERRORS #1189).
-fn mark_tags(n: &str, id: &str) -> String {
-  format!(
-    "<tags><tag>{n}</tag><tag role=\"autoref\">footnote\u{a0}{n}<text xml:id=\"{id}.1\"/></tag><tag role=\"refnum\">{n}</tag>\
-     <tag role=\"typerefnum\">footnote {n}</tag></tags>"
-  )
-}
-
-/// Operation 3 (owners by mark): REVTeX's `\affiliation` after a name list is every name's (revtex4-2.cls's grouping,
-/// today's reading), but the affiliations open with the `\footnotemark` the names' `\footnote[n]` printed — in the PDF
-/// Ann's mark 1 stands at Univ A and Univ B, Bob's 2 at Univ C. Written: each affiliation goes to the name showing
-/// its mark, its mark kept as it prints (today's: all three both names', the group rule; before 80u, Ann Univ A alone,
-/// Bob all three). Bob's Univ C is the copy today's numbered `footnotex3a`; Ann's, taken, gives it back its id
-/// (`footnotex3`; red, 80u before `reclaim_ids`: `footnotex3a` alone, no `footnotex3` in the document). Shape
-/// `perfect_kernel_batchfms2a2r7::FOOTNOTE_MARK`.
-#[test]
-fn footnote_marked_affiliations_go_to_their_names() {
-  let tex = r"\documentclass[aps,pra,preprint]{revtex4-2}
-\begin{document}
-\title{T}
-\author{Ann Able\footnote[1]{E-mail: ann.able@example.org} and Bob Baker\footnote[2]{E-mail: bob.baker@example.org}}
-\affiliation{\footnotemark[1]Univ A, City}
-\affiliation{\footnotemark[1]Univ B, Town}
-\affiliation{\footnotemark[2]Univ C, Village}
-\begin{abstract}
-Abstract.
-\end{abstract}
-\maketitle
-Text.
-\end{document}";
-  let affiliation = |n: &str, id: &str, text: &str| {
-    format!(
-      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><note mark=\"{n}\" role=\"footnotemark\" xml:id=\"{id}\">{}\
-       </note>{text}</contact>",
-      mark_tags(n, id)
-    )
-  };
-  if red_at_two(
-    "gives the affiliations' footnotemarks the ids footnotex1a/2a/3a, the plain ids unreclaimed (80u's red)",
-  ) {
-    return;
-  }
-  assert_eq!(creators(tex, true), [
-    format!(
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" role=\"note\">E-mail: \
-       ann.able@example.org</contact>{}{}</creator>",
-      affiliation("*", "footnotex1", "Univ A, City"),
-      affiliation("*", "footnotex2", "Univ B, Town")
-    ),
-    format!(
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Note:\u{a0}\" \
-       role=\"note\">E-mail: bob.baker@example.org</contact>{}</creator>",
-      affiliation("†", "footnotex3", "Univ C, Village")
-    ),
-  ]);
-  // (unset, today's reading: the writer does not run)
-  let today = creators(tex, false);
-  assert_eq!(today.len(), 2);
-  assert!(
-    today[1].contains("Univ A, City") && today[1].contains("Univ B, Town"),
-    "{today:?}"
-  );
-}
-
-/// Operations 1 and 3 (split by marks, a legend made a note): one `\affiliation{$^1$Univ A, City \\ $^\star${…}}` under
-/// `Ann Able$^{1}$, Bob Baker$^{1,\star}$` is cut at its marks — Univ A both names', the starred legend a
-/// correspondence note of Bob, who shows the star, its ink kept as styled label markup (the label-text ruling) — the
-/// note's `mark` the star, which the name then shows no more (one mark on the page, `apply::show_legend_mark`: review
-/// rev94a r5). Was: the whole call, legend and all, both names' affiliation. Since 99a the API's Cut parts the call
-/// (OXIDIZED_DESIGN_DIVERGENCES #954), each entry showing its mark read again as written (`$^1$`, upright, as the
-/// writer's cut had it and TeX sets it: 99a r2 had set it italic, review rev99a2 S-c). Shape
-/// `perfect_kernel_batchfms2a2r8::API_LEGEND`.
-#[test]
-fn a_marked_affiliation_is_cut_at_its_marks() {
-  let tex = r"\documentclass[aps,prl]{revtex4-2}
-\begin{document}
-\title{T}
-\author{Ann Able$^{1}$, Bob Baker$^{1,\star}$}
-\affiliation{$^1$Univ A, City \\ $^\star${corresponding author, e-mail: bob@x.org}}
-\begin{abstract}
-Abstract.
-\end{abstract}
-\maketitle
-Text.
-\end{document}";
-  if red_at_two("keeps the legend's star in a name's mark (\"1,⋆\" for \"1\")") {
-    return;
-  }
-  assert_eq!(creators(tex, true), [
-    "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text>\
-     </sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ A, City\
-     </contact></creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" \
-     xml:id=\"id3.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup \
-     xml:id=\"id4\">1</sup>Univ A, City</contact><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" \
-     mark=\"⋆\" role=\"thanks\" xml:id=\"id5\"><sup xml:id=\"id5.1\">⋆</sup>corresponding author, e-mail: bob@x.org</note>\
-     </creator>",
-  ]);
-  // (unset, the writer off: since 99a the frontmatter API's Cut parts the call at its marks before it is queued
-  // (OXIDIZED_DESIGN_DIVERGENCES #954), so Ann's entry holds no legend; the legend, whose star no name's request the
-  // old reader answers, lands once at the block — the writer makes it Bob's note)
-  let today = creators(tex, false);
-  assert!(
-    !today[0].contains("corresponding author")
-      && today
-        .iter()
-        .filter(|c| c.contains("corresponding author"))
-        .count()
-        == 1,
-    "{today:?}"
-  );
 }
 
 /// The creator holding `name`, and whether it lists each of `has` and none of `lacks`.

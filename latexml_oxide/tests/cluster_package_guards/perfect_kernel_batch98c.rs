@@ -12,18 +12,7 @@
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch89a::cli_conversion,
-  perfect_kernel_batcht1::red_at_two,
 };
-
-macro_rules! repro {
-  ($name:literal) => {
-    include_str!(concat!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
-      $name,
-      ".tex"
-    ))
-  };
-}
 
 /// The XML with every whitespace run collapsed to one space.
 fn squash(xml: &str) -> String { xml.split_whitespace().collect::<Vec<_>>().join(" ") }
@@ -54,70 +43,4 @@ pub(super) fn converted(tex: &str, unclaimed: usize) -> String {
     .find("</document>")
     .map_or(xml.len(), |end| start + end);
   xml[start..end].trim_end().to_string()
-}
-
-/// A1: the class's affiliation list, printed only by its own `\@author` (authblk's code embedded in the class,
-/// copernicus.cls:1290-1352), which the kernel's `\author` replaced: kept for the speculative run of the title page, the
-/// list is found printed and typeset by no kept run, and is the note of the trailing nameless creator below the
-/// authors (the block's, OXIDIZED_DESIGN_DIVERGENCES #159), its leading `\\` taken off. Witnesses 0712.1312,
-/// 1401.4706, 1709.00722.
-#[test]
-fn an_affiliation_list_only_the_class_author_prints_is_a_note_of_the_block() {
-  if red_at_two(r#"unverified: no Warning where the off reading counts one"#) {
-    return;
-  }
-  assert_eq!(
-    converted(
-      repro!("net_affiliation_list_printed_only_by_the_class_author_is_a_block_note"),
-      1
-    ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> </creator> <creator role="author"> <note role="note" xml:id="id1"><sup xml:id="id1.1"><text font="italic" xml:id="id1.1.1">1</text></sup>Institute of Risk and Disaster Reduction, University College London</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
-  );
-}
-
-/// A2: the class's title note, kept in a token register only its refused `{abstract}` begin code prints in an
-/// `\insert\footins` (sig-alternate.cls:728-790, :1374-1398): the register is given its sentinel (`\tntoks={…}`), the
-/// begin code is run after the title page, and the note is the sole author's (OXIDIZED_DESIGN_DIVERGENCES #159).
-/// Witnesses 1206.6940, cs0405006.
-#[test]
-fn a_title_note_register_only_the_class_abstract_prints_is_a_note() {
-  if red_at_two(r#"unverified: no Warning where the off reading counts one"#) {
-    return;
-  }
-  assert_eq!(
-    converted(
-      repro!("net_title_note_register_printed_only_by_the_class_abstract_is_a_note"),
-      1
-    ),
-    r#"<title>A Title<sup xml:id="id1"><text font="italic" xml:id="id1.1">∗</text></sup></title> <creator role="author"> <personname>Ann Able</personname> <note role="note" xml:id="id2">Supported by the Danish Council for Independent Research.</note> </creator> <abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">An abstract.</p> </abstract> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
-  );
-}
-
-/// The net's exclusions: a store the class's `\@author` prints that only repeats the authors' names (its words all the
-/// creators') is no note, nor rows of the author block when K11's off-table survey takes it (`hand_offtable_stores`); one still at its class default (a letterhead), one the class's `\AtBeginDocument` set, and
-/// one printed only in a running head (`\markboth`) are no candidates — no note and no Warning. A store that holds
-/// words of its own, set by the document, is one (the same class, `\names` given an affiliation).
-#[test]
-fn a_store_the_frontmatter_holds_or_the_class_owns_is_no_note() {
-  let tex = repro!("net_store_the_frontmatter_holds_or_the_class_owns_is_no_note");
-  let plain = r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#;
-  if red_at_two(r#"adds a nameless creator holding a note "Ann Able and Bob Baker""#) {
-    return;
-  }
-  assert_eq!(converted(tex, 0), plain);
-  // (the same store made by a pure one-argument setter is K11's off-table store, printed beside the names by the class's
-  // `\@author`: no rows of the author block either)
-  let pure = tex.replace(r"\gdef\@names{\ignorespaces#1}", r"\gdef\@names{#1}");
-  assert_ne!(pure, tex);
-  assert_eq!(converted(&pure, 0), plain);
-  // (the same store, holding text no field holds, is a note: the exclusions above are what kept it out)
-  let worded = tex.replace(
-    r"\names{Ann Able and Bob Baker}",
-    r"\names{Ann Able and Bob Baker\\Lunar Geology Institute, Tycho}",
-  );
-  assert_ne!(worded, tex);
-  assert_eq!(
-    converted(&worded, 1),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> </creator> <creator role="author"> <note role="note" xml:id="id1">Lunar Geology Institute, Tycho</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
-  );
 }

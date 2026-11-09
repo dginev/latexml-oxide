@@ -23,17 +23,11 @@ macro_rules! repro {
   };
 }
 
-/// `tex` converted off and at `=2`, both clean: their creators' XML.
-fn both(tex: &str) -> (Vec<String>, Vec<String>) {
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, two) = run(tex, 2);
+/// `tex` converted, clean: their creators' XML.
+fn both(tex: &str) -> Vec<String> {
+  let (log, two) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  (creators_xml(&off), creators_xml(&two))
+  creators_xml(&two)
 }
 
 /// cas prints its one unlabelled `\affiliation` under the whole row of names, so with the switch off it is every author's
@@ -41,7 +35,7 @@ fn both(tex: &str) -> (Vec<String>, Vec<String>) {
 /// only. Witnesses 2506.17280, 2106.02306, 2201.00009, 2207.13923, 2411.19633, 2606.24054.
 #[test]
 fn a_cas_shared_affiliation_is_every_authors() {
-  let (off, two) = both(repro!(
+  let two = both(repro!(
     "emit_cas_unlabelled_affiliation_after_first_author_shared"
   ));
   assert_eq!(two.len(), 3);
@@ -52,7 +46,11 @@ fn a_cas_shared_affiliation_is_every_authors() {
     );
     assert!(creator.contains(">Univ A, Xland</contact>"), "{creator}");
   }
-  assert_eq!(two, off);
+  assert_eq!(two, vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Xland</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Xland</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Xland</contact>\n  </creator>"
+  ]);
 }
 
 /// authblk's `\affil[*]{Corresponding author. E-mail: …}` and `\affil[$\dagger$]{These authors contributed equally …}`
@@ -60,7 +58,7 @@ fn a_cas_shared_affiliation_is_every_authors() {
 /// writes it in its own key, `_printedlabel` (P2r2). Witnesses 2605.31330, 2606.17567, 2201.11910, 2602.03863, 2605.11756.
 #[test]
 fn a_printed_label_legend_is_its_carriers_note() {
-  let (off, two) = both(repro!("emit_authblk_label_legend_is_its_carriers_note"));
+  let two = both(repro!("emit_authblk_label_legend_is_its_carriers_note"));
   let notes = |kind: &str| {
     two
       .iter()
@@ -79,7 +77,11 @@ fn a_printed_label_legend_is_its_carriers_note() {
       .all(|c| !c.contains("role=\"affiliation\">Corresponding")),
     "{two:#?}"
   );
-  assert_eq!(two, off);
+  assert_eq!(two, vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"*\" role=\"thanks\">Corresponding author.</note>\n    <contact name=\"E-mail: \" role=\"email\">ann@a.org</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"†\" role=\"thanks\">These authors contributed equally to this work.</note>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n    <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"†\" role=\"thanks\">These authors contributed equally to this work.</note>\n  </creator>"
+  ]);
 }
 
 /// A `\thanks` opening with a mark that is no number in a superscript (`\IEEEauthorrefmark{2}`) is a note, as the
@@ -88,12 +90,11 @@ fn a_printed_label_legend_is_its_carriers_note() {
 /// 1107.5730, 2205.02029.
 #[test]
 fn a_thanks_no_number_leads_is_a_note() {
-  let (off, two) = both(repro!("emit_thanks_symbol_led_is_its_carriers_note"));
+  let two = both(repro!("emit_thanks_symbol_led_is_its_carriers_note"));
   let note = "class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\"><sup>†</sup> Also with the School of \
               Physics, Univ B.</note>";
   let holders = |xml: &[String]| xml.iter().map(|c| c.contains(note)).collect::<Vec<_>>();
   assert_eq!(holders(&two), [true, true, false], "{two:#?}");
-  assert_eq!(holders(&off), [false, true, false], "{off:#?}");
   assert!(
     two.iter().all(|c| !c.contains("role=\"affiliation\">Also")),
     "{two:#?}"
@@ -107,7 +108,7 @@ fn a_thanks_no_number_leads_is_a_note() {
 /// (`Resolver::keep_note`'s address test). Witnesses 1610.05419, 2405.06709.
 #[test]
 fn a_thanks_note_printing_addresses_keeps_its_entry() {
-  let (off, two) = both(repro!("emit_thanks_note_with_addresses_keeps_its_entry"));
+  let two = both(repro!("emit_thanks_note_with_addresses_keeps_its_entry"));
   let expected = [
     (
       "Ann Able",
@@ -140,7 +141,6 @@ fn a_thanks_note_printing_addresses_keeps_its_entry() {
     );
     assert!(!creator.contains("<note"), "{creator}");
   }
-  assert!(off[2].contains("ann@a.org, bob@a.org.</note>"), "{off:#?}");
 }
 
 /// A `\thanks{\textsuperscript{1}These authors contributed equally …}` is re-routed as an entry and is then its
@@ -148,7 +148,7 @@ fn a_thanks_note_printing_addresses_keeps_its_entry() {
 /// Cat Cole's mixed `\thanks{$^{2}$Lab C, Univ C. All correspondence …}` stays her affiliation (2102.08072's shape).
 #[test]
 fn a_numbered_thanks_legend_is_a_note() {
-  let (off, two) = both(repro!("emit_thanks_numbered_legend_is_a_note"));
+  let two = both(repro!("emit_thanks_numbered_legend_is_a_note"));
   let legend = |c: &String| c.contains("ltx_thanks_contribution");
   assert_eq!(
     two.iter().map(legend).collect::<Vec<_>>(),
@@ -160,14 +160,18 @@ fn a_numbered_thanks_legend_is_a_note() {
     "{}",
     two[2]
   );
-  assert_eq!(two, off);
+  assert_eq!(two, vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"1\" role=\"thanks\">These authors contributed equally to this work.</note>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"1\" role=\"thanks\">These authors contributed equally to this work.</note>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Lab C, Univ C. All correspondence should be sent to Cat Cole.</contact>\n  </creator>"
+  ]);
 }
 
 /// An author's `\footnote{\textsuperscript{1}These authors contributed equally …}` is a note (`\lx@add@note` never
 /// re-routes it), its carriers' at `=2` as off; it was an affiliation of both. Witness 2110.12892.
 #[test]
 fn a_numbered_footnote_legend_is_a_note() {
-  let (off, two) = both(repro!("emit_footnote_numbered_legend_is_a_note"));
+  let two = both(repro!("emit_footnote_numbered_legend_is_a_note"));
   let noted = |xml: &[String]| {
     xml
       .iter()
@@ -179,7 +183,7 @@ fn a_numbered_footnote_legend_is_a_note() {
       .collect::<Vec<_>>()
   };
   assert_eq!(noted(&two), [true, true, false], "{two:#?}");
-  assert_eq!(noted(&off), noted(&two));
+  assert_eq!(noted(&two), vec![true, true, false]);
   assert!(
     two
       .iter()
@@ -194,8 +198,11 @@ fn a_numbered_footnote_legend_is_a_note() {
 /// the name, which is not written again (the same cause). Witnesses 2309.13682, 2212.02936, 2305.16982; review revLO4.
 #[test]
 fn a_name_and_its_note_are_written_once() {
-  let (off, two) = both(repro!("emit_name_in_wrapper_mark_and_thanks_apart"));
-  assert_eq!(two[..2], off[..2]);
+  let two = both(repro!("emit_name_in_wrapper_mark_and_thanks_apart"));
+  assert_eq!(two[..2], vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>"
+  ]);
   assert!(
     two[2].contains("<personname>Cat Cole</personname>"),
     "{}",
@@ -212,12 +219,15 @@ fn a_name_and_its_note_are_written_once() {
     "{}",
     two[2]
   );
-  let (off, two) = both(repro!("emit_revtex_macro_name_with_thanks_written_once"));
+  let two = both(repro!("emit_revtex_macro_name_with_thanks_written_once"));
   assert_eq!(
     two[0].matches("Corresponding author.").count(),
     1,
     "{}",
     two[0]
   );
-  assert_eq!(two, off);
+  assert_eq!(two, vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\">Corresponding author.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n  </creator>"
+  ]);
 }

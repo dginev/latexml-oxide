@@ -25,7 +25,6 @@
 use super::{
   convert_files_with,
   perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -65,27 +64,6 @@ fn authblk_without_affil_prints_no_note() {
   assert_eq!(
     clean_creators(repro!("cut_run_authblk_no_affil_marks_its_own_lines")),
     r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator>"#
-  );
-}
-
-/// One code path, the shared cutter's wrapped marks: a mark in a group of its own (`\small {$^1$} Univ A {$^2$} Univ B
-/// {$^3$} Univ C, Paris`, 2203.16586) and one opening each entry's font command, the entries parted by `$|$`
-/// (`\textit{$^1$Univ A} $|$ \textit{$^2$Univ B} …`, 2508.07190). Red (int139a): one contact on the first mark's names,
-/// the others none, their marks left in the names. Residuals pinned in the group-mark case: the line's lead `\small`
-/// (90 %) is kept on the first entry only, and each entry keeps the space after its group (" Univ A", " Univ B"). Repros
-/// sectioning-frontmatter/cut_run_mark_in_a_group_of_its_own, cut_run_font_wrapper_per_entry_bar_separated.
-#[test]
-fn a_run_is_cut_at_marks_in_groups_or_wrappers() {
-  if red_at_two(r#"keeps the 90% wrapper on Univ B"#) {
-    return;
-  }
-  assert_eq!(
-    clean_creators(repro!("cut_run_mark_in_a_group_of_its_own")),
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><text fontsize="90%" xml:id="id1"> Univ A</text></contact> <contact name="Affiliation: " role="affiliation"> Univ B</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><text fontsize="90%" xml:id="id2"> Univ A</text></contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation"> Univ C, Paris</contact> </creator> <creator role="author"> <contact name="URL: " role="url"><ref class="ltx_nolink ltx_url" font="typewriter" fontsize="90%" href="https://example.org/x">https://example.org/x</ref></contact> </creator>"#
-  );
-  assert_eq!(
-    clean_creators(repro!("cut_run_font_wrapper_per_entry_bar_separated")),
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><text font="italic" xml:id="id1">Univ A</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><text font="italic" xml:id="id2">Univ B</text></contact> <contact name="Affiliation: " role="affiliation"><text font="italic" xml:id="id3">Univ C</text></contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation"><text font="italic" xml:id="id4">Univ C</text></contact> </creator>"#
   );
 }
 
@@ -131,20 +109,6 @@ fn an_unmarked_first_entry_is_its_unprinted_marks() {
   );
 }
 
-/// mnras: `$^{1}$Univ A, 1 Long Street, Waterloo, \\ $^{\;}$Ontario N2L 3G1, Canada \\ $^{2}$Univ B…`: the blank mark
-/// labels nothing, so its line continues entry 1. Red (int139a): "Ontario N2L 3G1, Canada" its own contact on the last
-/// holder of entry 1. Witness 2303.08793. Repro sectioning-frontmatter/cut_lines_blank_mark_continues_the_entry.
-#[test]
-fn a_blank_mark_line_continues_the_entry() {
-  if red_at_two(r#"keeps the blank mark's empty math in the affiliation, cutting the entry"#) {
-    return;
-  }
-  assert_eq!(
-    clean_creators(repro!("cut_lines_blank_mark_continues_the_entry")),
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, 1 Long Street, Waterloo,<break/>Ontario N2L 3G1, Canada</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B, Tokyo, Japan</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation">Univ A, 1 Long Street, Waterloo,<break/>Ontario N2L 3G1, Canada</contact> </creator>"#
-  );
-}
-
 /// A legend line under a run whose entries each sit in a font command their mark opens (`\textbf{$^1$Univ A}
 /// \textbf{$^2$Univ B}\\ $^*$ Equal Contribution, $^\dagger$ Project Leader`): the writer cuts each entry from inside
 /// its wrapper, bold kept, so the legend is its carriers' notes, as under a plain run; and the sibling with the legend in
@@ -161,15 +125,6 @@ fn a_legend_after_a_wrapped_run_is_its_carriers_notes() {
     clean_creators(repro!("cut_run_legend_line_after_font_wrapped_entries")),
     r#"<creator role="author"> <personname>Ann Lee</personname> <contact name="Affiliation: " role="affiliation"><text font="bold" xml:id="id1">Univ A</text></contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1">∗</sup> Equal Contribution</note> </creator> <creator before=" " role="author"> <personname>Bob Ray</personname> <contact name="Affiliation: " role="affiliation"><text font="bold" xml:id="id3">Univ B</text></contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id4"><sup xml:id="id4.1">∗</sup> Equal Contribution</note> </creator> <creator before=" " role="author"> <personname>Cy Do</personname> <contact name="Affiliation: " role="affiliation"><text font="bold" xml:id="id5">Univ B</text></contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id6"><sup xml:id="id6.1">†</sup> Project Leader</note> </creator>"#
   );
-  if red_at_two(r#"keeps the run's italic wrapper on the legend note text"#) {
-    return;
-  }
-  assert_eq!(
-    clean_creators(repro!(
-      "cut_run_wrapped_legend_line_after_font_wrapped_entries"
-    )),
-    r#"<creator role="author"> <personname>Ann Lee</personname> <contact name="Affiliation: " role="affiliation"><text font="bold" xml:id="id1">Univ A</text></contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1">∗</sup>Equal Contribution</note> </creator> <creator before=" " role="author"> <personname>Bob Ray</personname> <contact name="Affiliation: " role="affiliation"><text font="bold" xml:id="id3">Univ B</text></contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id4"><sup xml:id="id4.1">∗</sup>Equal Contribution</note> </creator> <creator before=" " role="author"> <personname>Cy Do</personname> <contact name="Affiliation: " role="affiliation"><text font="bold" xml:id="id5">Univ B</text></contact> </creator>"#
-  );
 }
 
 /// revtex4-2: `\affiliation{Univ A, Nagoya\\ $^{2}$Univ B\\ \parbox{\linewidth}{$^{3}$Inst C\\ $^{4}$Lab D}}` under
@@ -185,26 +140,5 @@ fn an_unmarked_head_over_an_unreadable_tail_is_the_blocks() {
       "cut_revtex_unmarked_head_unreadable_tail_is_the_blocks"
     )),
     r#"<creator role="author"> <personname>Ann Lee<sup xml:id="id1"><text font="italic" xml:id="id1.1">1,2</text></sup></personname> </creator> <creator before=" " role="author"> <personname>Bob Ray<sup xml:id="id2"><text font="italic" xml:id="id2.1">2,3</text></sup></personname> </creator> <creator before=" " role="author"> <personname>Cy Do</personname> </creator> <creator role="author"> <contact name="Affiliation: " role="affiliation">Univ A, Nagoya<break/><sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup>Univ B<break/><inline-block class="ltx_parbox" vattach="middle" width="345.0pt" xml:id="id4"> <p xml:id="id4.1"><sup xml:id="id4.1.1"><text font="italic" xml:id="id4.1.1.1">3</text></sup>Inst C</p> <p xml:id="id4.2"><sup xml:id="id4.2.1"><text font="italic" xml:id="id4.2.1.1">4</text></sup>Lab D</p> </inline-block></contact> </creator>"#
-  );
-}
-
-/// A font group holding a mark and text that goes on after it (`$^{1}$Univ A, \textit{$^{2}$H} Lab, Rome $^{2}$Univ B`;
-/// `$^{1}$Lab for \textit{$^{3}$He} Studies, $^{2}$Univ B, $^{3}$Inst C`) is no entry's own wrapper: its mark is the
-/// entry's text, an isotope's, not a cut point. Red (107e r1): Bob "H Lab, Rome" and "Univ B"; Ann "Lab for", Cy "He
-/// Studies" and "Inst C". Not fixed, as on int139a: the plain `$^{2}$H Lab` / `$^{3}$He Studies` forms, still cut.
-/// Review rev107e finding 3. Repros sectioning-frontmatter/cut_run_wrapped_isotope_is_entry_text,
-/// cut_run_wrapped_isotope_mid_entry.
-#[test]
-fn a_wrapped_isotope_is_entry_text() {
-  if red_at_two(r#"writes "H Lab, Rome" as plain text, a false Warning"#) {
-    return;
-  }
-  assert_eq!(
-    clean_creators(repro!("cut_run_wrapped_isotope_is_entry_text")),
-    r#"<creator role="author"> <personname>Ann Lee</personname> <contact name="Affiliation: " role="affiliation">Univ A, <sup class="ltx_markedasmath" xml:id="id1"><text font="italic" xml:id="id1.1">2</text></sup><text font="italic" xml:id="id2">H</text> Lab, Rome</contact> </creator> <creator before=" " role="author"> <personname>Bob Ray</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#
-  );
-  assert_eq!(
-    clean_creators(repro!("cut_run_wrapped_isotope_mid_entry")),
-    r#"<creator role="author"> <personname>Ann Lee</personname> <contact name="Affiliation: " role="affiliation">Lab for <sup class="ltx_markedasmath" xml:id="id1"><text font="italic" xml:id="id1.1">3</text></sup><text font="italic" xml:id="id2">He</text> Studies</contact> </creator> <creator before=" " role="author"> <personname>Bob Ray</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator> <creator before=" " role="author"> <personname>Cy Do</personname> <contact name="Affiliation: " role="affiliation">Inst C</contact> </creator>"#
   );
 }

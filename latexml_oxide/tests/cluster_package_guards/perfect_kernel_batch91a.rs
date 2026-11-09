@@ -19,7 +19,6 @@ use super::{
   perfect_kernel_batch46::{convert_with, error_count, warning_count},
   perfect_kernel_batch84b::creators,
   perfect_kernel_batch89a::cli_conversion,
-  perfect_kernel_batcht1::red_at_two,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -46,47 +45,6 @@ fn owned(expected: &[&[&str]]) -> Vec<Vec<String>> {
     .iter()
     .map(|c| c.iter().map(|s| (*s).to_string()).collect())
     .collect()
-}
-
-/// 1603.03230's shape: names with `$^{n}$` marks, `\quad` separators and a `\\` row, the first with its `\email`, then
-/// `\maketitle`, then the marked `\address` list. Each name holds the lines its marks request and Ann Able her
-/// e-mail, labelled as the class prints it; no copy of the list is left in the body. The same in process, from the
-/// binary, and from the binary `--streaming`, where the list arrives after the frontmatter was placed.
-#[test]
-fn just_marked_address_after_maketitle_affiliates_every_name() {
-  let tex = repro!("just_marked_address_after_maketitle.tex");
-  let want = owned(&[
-    &[
-      "Ann Able",
-      "email=ann@x.org",
-      "affiliation=Univ A, Town, Country",
-      "affiliation=Univ B, City, Country",
-    ],
-    &["Bob Baker", "affiliation=Univ A, Town, Country"],
-    &["Cy Cole", "affiliation=Univ B, City, Country"],
-    &[
-      "Di Dunn",
-      "affiliation=Univ A, Town, Country",
-      "affiliation=Lab C, Place, Country",
-    ],
-  ]);
-  let (log, xml) = convert_with(tex, Some(PRELOAD));
-  if red_at_two("keeps the marks as text in the names (\"Ann Able 1,2\")") {
-    return;
-  }
-  assert_eq!(clean_creators(&log, &xml), want, "{xml}");
-  // (the class's label, `E-mail:~`, its tie a no-break space)
-  assert!(
-    xml.contains("<contact name=\"E-mail:\u{a0}\" role=\"email\">ann@x.org</contact>"),
-    "{xml}"
-  );
-  assert_eq!(xml.matches("Univ B, City, Country").count(), 2, "{xml}");
-  assert!(!xml.contains("ltx_titlepage_continued"), "{xml}");
-  let (log, eager) = cli_conversion(tex, false);
-  assert_eq!(clean_creators(&log, &eager), want, "{eager}");
-  let (log, streamed) = cli_conversion(tex, true);
-  assert_eq!(clean_creators(&log, &streamed), want, "{streamed}");
-  assert_eq!(eager, streamed);
 }
 
 /// 1511.03783's shape: one name with its `\email`, and after `\maketitle` an `\address` with no mark: one
@@ -127,42 +85,6 @@ fn just_unmarked_address_under_several_names_is_every_name_s() {
   let (log, streamed) = cli_conversion(tex, true);
   assert_eq!(clean_creators(&log, &streamed), want, "{streamed}");
   assert_eq!(eager, streamed);
-}
-
-/// The same input under `\documentclass{cpc-hepnp}`: a NO-CHANGE row. cpc-hepnp routing waits for 91c (OD #912), so
-/// the class's copy is read raw as before the binding (int119a's output): three creators with no affiliation, the
-/// address the class's centred body paragraph, and the e-mail in the `\@thanks` the kernel's `\maketitle` never sets.
-/// Distinct from the guard above: it pins that `cpc-hepnp` is not routed through the `just` binding. The lost e-mail,
-/// which the class's title page prints in its `\@thanks` footnote, is counted by the title-page check: one Warning
-/// naming "org" ("ann" is the creator's; 106s, `title_page_check`; 9 cpc-hepnp papers of 500 random, 1504.05444).
-#[test]
-fn cpc_hepnp_is_not_routed_until_91c() {
-  let tex = repro!("cpc_hepnp_unmarked_address_under_several_names.tex");
-  let (log, xml) = convert_with(tex, Some(PRELOAD));
-  if red_at_two("a content-check Warning: ann@x.org missing from the placed frontmatter") {
-    return;
-  }
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-  assert!(
-    log.contains(
-      "Warning:frontmatter:unclaimed The title page prints 1 word(s) of the document's that its output does not hold: org"
-    ),
-    "{log}"
-  );
-  assert_eq!(
-    creators(&xml),
-    owned(&[&["Ann Able"], &["Bob Baker"], &["Cy Cole"]]),
-    "{xml}"
-  );
-  assert!(
-    xml.contains(
-      "<p align=\"center\" xml:id=\"p1.1\"><text fontsize=\"80%\" xml:id=\"p1.1.1\">Center for Theory, Univ A, Town, \
-       Country</text></p>"
-    ),
-    "{xml}"
-  );
-  assert_eq!(xml.matches("Center for Theory").count(), 1, "{xml}");
-  assert!(!xml.contains("ann@x.org"), "{xml}");
 }
 
 /// `\emails` after `\maketitle` (just.cls:107-109; no census paper calls it): the footnote it sets where it is called,

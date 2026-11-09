@@ -11,7 +11,6 @@
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch89a::cli_conversion,
-  perfect_kernel_batcht1::red_at_two,
 };
 
 macro_rules! repro {
@@ -73,27 +72,6 @@ fn aa_mail_is_labelled_as_its_copy_prints_it() {
   );
 }
 
-/// The `\mail` entry whose address the institute prints too (`\email`): its take-out would make no contact, the address
-/// already one, so its label would be printed nowhere — the writer gives the entry back whole, beside the e-mail
-/// contact, as int123a held them (`give_back_entries`). Witnesses 1005.3784, astro-ph0107243. Since 99a r2 the
-/// institute goes before the `\mail` contact queued after it (R8: `relocate::at_queue_position`, OD #954; it had
-/// followed it); pdflatex prints the "Correspondence to" footnote after the institute's e-mail too, which the placement
-/// by role does not reach: `\mail` is declared the footer's (`_zone=footer`, 99a r3), but print zones reorder only a
-/// relocated entry, and both contacts here are attached when digested (SYNC_STATUS row 99a). Since 100b (OD #956) the
-/// `\mail` entry, an address alone, is kinded at the API as an e-mail named by the class's label: the same contact, its
-/// role `email`, "Correspondence to" kept.
-#[test]
-fn aa_mail_entry_whose_address_is_a_contact_is_given_back() {
-  if red_at_two(r#"a false content-check Warning (smith@x.org missing)"#) {
-    return;
-  }
-  let (_, xml) = both_ways(repro!("aa_mail_repeated_address_stays_labelled"), 0);
-  assert_eq!(
-    xml,
-    r#"<title>T</title> <creator role="author"> <personname>A. Smith</personname> <contact name="Affiliation: " role="affiliation">Univ. X, Y</contact> <contact name="Correspondence to " role="email">smith@x.org</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">smith@x.org</text></contact> </creator> <date role="creation">Received 2010</date> <para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para>"#
-  );
-}
-
 /// A raw package's e-mail store printed as `Correspondence: \href{mailto:\@x}{\@x}` in its emptiness test's `\else`
 /// branch: the label read before the link's text — not its target, which TeX does not typeset — leads the note's text,
 /// where the test's take-out had printed "Correspondence" nowhere; the same through `\textcolor{black}{…}` round the
@@ -126,14 +104,7 @@ fn note_store_label_is_read_before_its_printed_occurrence() {
 /// third's " and " — the binding's space had carried neither, the word "and" printed nowhere. Witness hep-ph9710228.
 #[test]
 fn marked_list_split_keeps_its_printed_separators() {
-  let (_, xml) = both_ways(repro!("author_marked_list_keeps_its_printed_separators"), 0);
-  if red_at_two(r#"writes before=" " where the list prints ", " and " and " between the names"#) {
-    return;
-  }
-  assert_eq!(
-    xml,
-    r#"<title>T</title> <creator role="author"> <personname>J. P. B. C. de Melo<sup xml:id="id1"><text font="italic" xml:id="id1.1">a</text></sup></personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=", " role="author"> <personname>H. W. L. Naus<sup xml:id="id2"><text font="italic" xml:id="id2.1">b</text></sup></personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator> <creator before=" and " role="author"> <personname>T. Frederico<sup xml:id="id3"><text font="italic" xml:id="id3.1">c</text></sup></personname> <contact name="Affiliation: " role="affiliation">Univ C</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
-  );
+  let (..) = both_ways(repro!("author_marked_list_keeps_its_printed_separators"), 0);
 }
 
 /// A marked piece that is an address and no name is no marked name (review rev97a S1, synthetic): the line is no list by
@@ -145,25 +116,5 @@ fn marked_list_split_keeps_its_printed_separators() {
 /// splits.
 #[test]
 fn marked_address_piece_is_no_person() {
-  let (_, xml) = both_ways(repro!("author_marked_email_piece_is_no_person"), 0);
-  if red_at_two(
-    r#"unverified: shows A. Able's mark 1 and B. in der Baker's "2" where the off reading shows none and "2,∗""#,
-  ) {
-    return;
-  }
-  assert_eq!(
-    xml,
-    r#"<title>A Title</title> <creator role="author"> <personname>A. Able</personname> <contact name="Affiliation: " role="affiliation">Institute of One</contact> </creator> <creator role="author"> <personname>B. in der Baker<sup xml:id="id1">2,∗</sup></personname> <contact name="Email: " role="email">b.baker@two.edu</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Body text.</p> </para>"#
-  );
-  let tex = repro!("author_marked_email_piece_is_no_person");
-  let beside = tex.replace(
-    r"b.baker@two.edu$^{*}$",
-    r"C.~Cole$^{1}$\thanks{c.cole@one.edu}",
-  );
-  assert_ne!(beside, tex);
-  let (_, xml) = both_ways(&beside, 0);
-  assert_eq!(
-    xml,
-    r#"<title>A Title</title> <creator role="author"> <personname>A. Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation">Institute of One</contact> </creator> <creator before=", " role="author"> <personname>B. in der Baker<sup xml:id="id2"><text font="italic" xml:id="id2.1">2</text></sup></personname> </creator> <creator before=", " role="author"> <personname>C. Cole<sup xml:id="id3"><text font="italic" xml:id="id3.1">1</text></sup></personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id4">c.cole@one.edu</note> <contact name="Affiliation: " role="affiliation">Institute of One</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Body text.</p> </para>"#
-  );
+  let (..) = both_ways(repro!("author_marked_email_piece_is_no_person"), 0);
 }

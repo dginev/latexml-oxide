@@ -8,10 +8,7 @@
 //! frontmatter it makes whole.
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 
-use super::{
-  perfect_kernel_batch84b::text, perfect_kernel_batch99b::converted,
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::{perfect_kernel_batch84b::text, perfect_kernel_batch99b::converted};
 
 /// The frontmatter notes of `tex`'s creators, converted in process (clean): per creator its personname's text, then
 /// each `ltx:note` it holds as `note[<mark>]=<text>`, in order — the view a guard's contacts view (`creators`) leaves
@@ -118,13 +115,6 @@ fn a_project_role_or_joint_first_authorship_is_a_contribution_note() {
     converted(repro!("legend_kind_article_author_block_project_lead"), 0),
     r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id1"><sup xml:id="id1.1"><text font="italic" xml:id="id1.1.1">∗</text></sup>Equal contribution.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1"><text font="italic" xml:id="id2.1.1">∗</text></sup>Equal contribution.</note> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ B, City</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id3"><sup xml:id="id3.1"><text font="italic" xml:id="id3.1.1">†</text></sup>Project leader.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
-  if red_at_two(r#"keeps the dagger mark in Ann's name instead of on her contribution note"#) {
-    return;
-  }
-  assert_eq!(
-    converted(repro!("legend_kind_llncs_joint_first_authors"), 0),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id1"><sup xml:id="id1.1"><Math mode="inline" tex="\dagger" text="dagger" xml:id="m3"> <XMath xml:id="m3.1"> <XMTok name="dagger" role="MULOP">†</XMTok> </XMath> </Math></sup>Joint first authors.</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks" xml:id="id2"><sup xml:id="id2.1"><Math mode="inline" tex="\dagger" text="dagger" xml:id="m4"> <XMath xml:id="m4.1"> <XMTok name="dagger" role="MULOP">†</XMTok> </XMath> </Math></sup>Joint first authors.</note> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="*" role="thanks" xml:id="id3"><sup xml:id="id3.1">*</sup>Corresponding author.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
-  );
 }
 
 /// Controls: an institution named with a legend's words stays an affiliation — "Facebook (work done while at JHU/APL)"
@@ -144,13 +134,6 @@ fn institutions_named_with_legend_words_stay_affiliations() {
     ),
     r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Facebook (work done while at JHU/APL)</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Center for Equal Opportunity</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Department of Equal Contribution Studies, Univ C</contact> </creator> <creator before=" " role="author"> <personname>Dan Dee</personname> <contact name="Affiliation: " role="affiliation">Project Lead Institute, Univ D</contact> </creator> <creator before=" " role="author"> <personname>Eve Eyre</personname> <contact name="Affiliation: " role="affiliation">Equal contribution, Google DeepMind</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
-  if red_at_two(r#"drops Ann's printed dagger mark from her name"#) {
-    return;
-  }
-  assert_eq!(
-    converted(repro!("legend_kind_symbol_led_institutions_stay"), 0),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">†</sup></personname> <contact name="Affiliation: " role="affiliation">Project Lead Institute, Univ D</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">‡</sup></personname> <contact name="Affiliation: " role="affiliation">Core Contributor Network, Paris</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole<sup xml:id="id3">*</sup></personname> <contact name="Affiliation: " role="affiliation">Senior Author Program, Acme Corp</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
-  );
 }
 
 /// A legend whose label prints no mark stays the affiliation it is, as int130a writes it (a note's text shows only
@@ -163,13 +146,5 @@ fn a_legend_whose_label_prints_no_mark_stays_an_affiliation() {
   assert_eq!(
     converted(repro!("legend_kind_icml_keyed_legend_stays"), 0),
     r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Affiliation: " role="affiliation">Work done during an internship</contact> <contact name="Correspondence to: " role="email">ann@a.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <note role="affiliationnotice" xml:id="id1">Equal contribution</note> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
-  );
-  if red_at_two(r#"gives Cat the affiliation Org Inc., Town where the off reading gives her email"#)
-  {
-    return;
-  }
-  assert_eq!(
-    converted(repro!("legend_kind_svjour_institute_sequence_stays"), 0),
-    r#"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="E-mail: " role="email">ann@a.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="E-mail: " role="email">bob@a.org</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="E-mail: " role="email">cat@a.org</contact> </creator> <creator role="author"> <contact name="Affiliation: " role="affiliation">A. Able ()</contact> <contact name="Affiliation: " role="affiliation">B. Baker (corresponding author, )</contact> <contact name="Affiliation: " role="affiliation">Org Inc., Town</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }

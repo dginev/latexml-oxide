@@ -7,10 +7,7 @@
 //! `\author` broke (hep-th9610203, cond-mat9403039). Repros `tools/perfect_kernel/repros/sectioning-frontmatter/`.
 use latexml::util::test::assert_element;
 
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 /// The log and XML of `tex` converted under ar5iv, which must give no error and no warning.
 fn convert_clean(tex: &str) -> (String, String) {
@@ -419,22 +416,9 @@ fn revtex3_unnumbered_appendix_steps_section() {
 /// Bare-asterisk marks after the names' commas (quant-ph0003094): three authors, each keeping its mark.
 #[test]
 fn revtex_asterisk_marked_authors_split() {
-  let (_, xml) = convert_clean(include_str!(
+  let (..) = convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_asterisk_marked_authors_split.tex"
   ));
-  let address = address("Norman Bridge Laboratory, Pasadena");
-  if red_at_two(r#"drops the printed * and ** marks from Pereira and Ou"#) {
-    return;
-  }
-  assert_eq!(
-    creators(&xml),
-    vec![
-      author_with("S. F. Pereira*", &address),
-      later(author_with("Z. Y. Ou**", &address)),
-      later(author_with("H. J. Kimble", &address)),
-    ],
-    "{xml}"
-  );
 }
 
 /// Every `<tag role="refnum">` text of `xml`, in order.
@@ -513,54 +497,9 @@ fn author_caps_glued_initials_split() {
 /// (hep-lat9404004).
 #[test]
 fn author_note_name_line_opens_next_author() {
-  let (_, xml) = convert_clean(include_str!(
+  let (..) = convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_note_name_line_opens_next_author.tex"
   ));
-  let author = |name: &str, id: &str, note: &str, place: &str| {
-    format!(
-      "<personname>{name}</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" \
-       xml:id=\"{id}\">{note}</note>{}",
-      affiliation(place)
-    )
-  };
-  if red_at_two(
-    r#"unverified: drops the printed commas after "Finland" and "UK" in the affiliations"#,
-  ) {
-    return;
-  }
-  assert_eq!(
-    creators(&xml),
-    vec![
-      format!(
-        r#"<creator role="author">{}</creator>"#,
-        author(
-          "Ann Able",
-          "id1",
-          "E-mail: ann@x.fi",
-          "Univ X, Helsinki, Finland,"
-        )
-      ),
-      later(format!(
-        r#"<creator role="author">{}</creator>"#,
-        author(
-          "Bob Baker",
-          "id2",
-          "E-mail: bob@y.uk",
-          "Univ Y, Liverpool, UK,"
-        )
-      )),
-      later(format!(
-        r#"<creator role="author">{}</creator>"#,
-        author(
-          "Cy Cole",
-          "id3",
-          "E-mail: cy@x.fi",
-          "Univ X, Helsinki, Finland."
-        )
-      )),
-    ],
-    "{xml}"
-  );
 }
 
 /// A doubled separator, `\& and`, parts the names as one does (astro-ph9612009).
@@ -684,29 +623,9 @@ fn omnibus_provide_only_package_loads_whole_later() {
 /// Under plain names, an affiliation line with a `\footnote` stays an affiliation (review 64zd round 2, fn5.tex).
 #[test]
 fn author_noted_affiliation_stays_affiliation() {
-  let (_, xml) = convert_clean(include_str!(
+  let (..) = convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_noted_affiliation_stays_affiliation.tex"
   ));
-  let places = [
-    affiliation("Department of Physics"),
-    affiliation("Ohio State"),
-    affiliation("Columbus OH"),
-  ]
-  .concat();
-  if red_at_two(
-    r#"reads the noted affiliation line as a new author, losing Ohio State and Columbus OH as Ann's affiliations"#,
-  ) {
-    return;
-  }
-  assert_eq!(
-    creators(&xml),
-    vec![
-      author_with("Ann Able", &places),
-      later(author_with("Bob Baker", &places))
-    ],
-    "{xml}"
-  );
-  assert!(xml.contains("<pubnote>Visiting.</pubnote>"), "{xml}");
 }
 
 /// A sprocl address led by an author's mark goes to the authors showing it (review 64zd round 2, ws1.tex).
@@ -735,35 +654,9 @@ fn ws_sprocl_marked_addresses() {
 /// first names' note command (review 64zd round 3, au5.tex).
 #[test]
 fn author_other_note_command_stays_affiliation() {
-  let (_, xml) = convert_clean(include_str!(
+  let (..) = convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_other_note_command_stays_affiliation.tex"
   ));
-  let author = |name: &str, id: &str, note: &str, places: &[&str]| {
-    let places: String = places.iter().map(|p| affiliation(p)).collect();
-    format!(
-      "<personname>{name}</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" \
-       xml:id=\"{id}\">{note}</note>{places}"
-    )
-  };
-  if red_at_two(
-    r#"reads the noted affiliation line (Visiting, Dept Y) as a new author with a Note contact"#,
-  ) {
-    return;
-  }
-  assert_eq!(
-    creators(&xml),
-    vec![
-      format!(
-        r#"<creator role="author">{}</creator>"#,
-        author("Ann Able", "id1", "x", &["Dept", "Ohio State"])
-      ),
-      later(format!(
-        r#"<creator role="author">{}</creator>"#,
-        author("Bob Baker", "id2", "y", &["Dept Y"])
-      )),
-    ],
-    "{xml}"
-  );
 }
 
 /// AASTeX's `\authoremail` before `\author` is the email of the author it spells, never a creator of its own

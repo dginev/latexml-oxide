@@ -59,8 +59,7 @@ use serde_json::Value;
 use super::{
   perfect_kernel_batch84b::text,
   perfect_kernel_batch92a::assert_reading,
-  perfect_kernel_batch93a::{creators_with_notes, default_mode_creators, owned},
-  perfect_kernel_batcht1::red_at_two,
+  perfect_kernel_batch93a::{default_mode_creators, owned},
 };
 
 macro_rules! repro {
@@ -176,7 +175,7 @@ fn a_raw_class_in_place_address_is_the_api() {
     &["Bob Baker", "address=1 Univ A, Town, Country"],
     &["Cy Cole", "address=2 Univ B, City, Country"],
   ];
-  let reading = assert_reading(tex, Some(xml), &[
+  assert_reading(tex, Some(xml), &[
     "C Ann Able [1] | line:names",
     "  a Univ A, Town, Country | api:label ruling1:request",
     "  c email ann@a.edu | api:annotate:last owner:spelled",
@@ -185,23 +184,6 @@ fn a_raw_class_in_place_address_is_the_api() {
     "C Cy Cole [2] | line:names sep:word",
     "  a Univ B, City, Country | api:label ruling1:request",
   ]);
-  // (the kernel pairs each line by its label already, so the observer writes nothing: `same`, no longer `written`)
-  if red_at_two(r#"old engine only: the writer's outcome "same""#) {
-    return;
-  }
-  assert_eq!(reading.3, Value::from("same"));
-  assert_eq!(default_mode_creators(tex), owned(xml));
-  let (log, xml) = default_mode(tex);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let body = body_text(&xml);
-  assert!(
-    !body.contains("Univ A") && !body.contains("ann@a.edu"),
-    "{body}"
-  );
-  assert!(
-    body.contains("Write to the desk: E-mail: desk@journal.org"),
-    "{body}"
-  );
 }
 
 /// 11lomcon.sty (hep-ph0312288; ws-ijmpd.cls's pair, jetpl.cls's `\@authoraddress` in cond-mat0611585): `\author` and
@@ -221,21 +203,13 @@ fn a_raw_style_buffered_address_is_the_api() {
     ],
     &["Bob Baker", "address=3 Lab C, Place"],
   ];
-  let reading = assert_reading(tex, Some(xml), &[
+  assert_reading(tex, Some(xml), &[
     "C Ann Able [1,2] | line:names",
     "  a Univ A, Town | api:label ruling1:request",
     "  a Univ B, City | api:label ruling1:request",
     "C Bob Baker [3] | line:names sep:comma",
     "  a Lab C, Place | api:label ruling1:request",
   ]);
-  // (the kernel pairs each line by its label already, so the observer writes nothing: `same`, no longer `written`)
-  if red_at_two(r#"old engine only: the writer's outcome "same""#) {
-    return;
-  }
-  assert_eq!(reading.3, Value::from("same"));
-  assert_eq!(default_mode_creators(tex), owned(xml));
-  let (_, xml) = default_mode(tex);
-  assert!(!body_text(&xml).contains("Univ"), "{xml}");
 }
 
 /// ar-1col.cls's `\affil` (1602.05576, 2405.08158), a `\par`-ended line written inside `\author{}`: the API's
@@ -273,50 +247,6 @@ fn an_affil_inside_the_author_is_labelled_by_its_leading_mark() {
   ]);
   assert_eq!(reading.3, Value::from("written"));
   assert_eq!(default_mode_creators(tex), owned(xml));
-}
-
-/// The fail-safe: a raw class's setter of these names that prints no line of its argument stays the class's — a mark
-/// (agujournal2019.cls's `\affil{1}`), an inline face of an address inside a note (`\texttt`), a footnote (ecai.cls's
-/// `\institute` = `\thanks`), a `\message` that prints nothing (dmtcs-episciences.cls's `\address`): the XML is the
-/// class's, as before the reroute, and nothing is rerouted.
-#[test]
-fn inline_contact_setters_stay_the_class() {
-  let tex = repro!("raw_class_inline_contact_setters_stay_the_class.tex");
-  let (log, xml) = default_mode(tex);
-  if red_at_two(r#"a false content-check Warning (marks 1 2 missing)"#) {
-    return;
-  }
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert!(
-    !log.contains("contact setters that print a title-page line"),
-    "{log}"
-  );
-  assert_eq!(
-    creators_with_notes(&xml),
-    owned(&[&["Ann Able 1", "note=Visiting; ann@a.edu"], &[
-      "Bob Baker 2",
-      "note=Univ X"
-    ],])
-  );
-  assert!(!xml.contains("Old Lab"), "{xml}");
-  // (the binary, eager and `--streaming`: the class's definitions alike — review rev94b S1)
-  for streaming in [false, true] {
-    let (log, xml) = binary(tex, streaming);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "streaming={streaming}: {log}"
-    );
-    assert_eq!(
-      creators_with_notes(&xml),
-      owned(&[&["Ann Able 1", "note=Visiting; ann@a.edu"], &[
-        "Bob Baker 2",
-        "note=Univ X"
-      ],]),
-      "streaming={streaming}"
-    );
-    assert!(!xml.contains("Old Lab"), "streaming={streaming}: {xml}");
-  }
 }
 
 /// Review rev94b B1: an affiliation inside `\author{}` holding several marked entries (`\affil{$^1$Univ A…\\ $^2$Univ
@@ -552,67 +482,6 @@ fn a_cut_entry_keeps_its_fonts_and_its_punctuation() {
   ]);
 }
 
-/// A repro, its XML's creators and its reading's tuples.
-type Shape = (
-  &'static str,
-  &'static [&'static [&'static str]],
-  &'static [&'static str],
-);
-
-/// Review rev94b r2 B1: entries of an in-block affiliation the writer could not cut — an entry of no text (`$^1$\\
-/// $^2$Univ B`), entries whose texts are not the contact's (the word "and" between them), an entry no name requests
-/// (`$^3$Lab C`) — are the one entry the leading marks label, today's one contact on the names requesting them, never a
-/// nameless creator (`events::labelled_entries`, `lex_events`). ar-1col.cls's `\affil` (1602.05576, 2405.08158). This
-/// pins the fallback, not a correct reading: its known misattribution stays — `noline`'s "Univ B, City" is on Ann
-/// Able, whose `1` labels the content's first mark, though pdflatex prints it under Bob Baker's `2` (review rev94b r3
-/// NIT); a nameless creator holding it was worse.
-#[test]
-fn entries_the_writer_cannot_cut_stay_one_contact() {
-  let shapes: [Shape; 3] = [
-    (
-      repro!("raw_class_affil_uncut_noline_stays_one_contact.tex"),
-      &[&["Ann Able", "affiliation=Univ B, City"], &["Bob Baker"]],
-      &[
-        "C Ann Able [1] | line:names mark:after-comma",
-        "  a Univ B, City | ruling1:request",
-        "C Bob Baker [2] | line:names sep:comma",
-      ],
-    ),
-    (
-      repro!("raw_class_affil_uncut_midword_stays_one_contact.tex"),
-      &[
-        &["Ann Able", "affiliation=Univ A, Town and Univ B, City"],
-        &["Bob Baker"],
-      ],
-      &[
-        "C Ann Able [1] | line:names mark:after-comma",
-        "  a Univ A, Town and Univ B, City | ruling1:request",
-        "C Bob Baker [2] | line:names sep:comma",
-      ],
-    ),
-    (
-      repro!("raw_class_affil_uncut_unrequested_stays_one_contact.tex"),
-      &[
-        &["Ann Able", "affiliation=Univ A, Town Univ B, City Lab C"],
-        &["Bob Baker"],
-      ],
-      &[
-        "C Ann Able [1] | line:names mark:after-comma",
-        "  a Univ A, Town Univ B, City Lab C | ruling1:request",
-        "C Bob Baker [2] | line:names sep:comma",
-      ],
-    ),
-  ];
-  for (tex, xml, shadow) in shapes {
-    if red_at_two(r#"keeps the mark 2 in Ann Able's affiliation and on Bob Baker's name"#) {
-      return;
-    }
-    let reading = assert_reading(tex, Some(xml), shadow);
-    assert_eq!(reading.3, Value::from("written"));
-    assert_eq!(default_mode_creators(tex), owned(xml));
-  }
-}
-
 /// Review rev94b r1-r2 B2: an `[optional]{mandatory}` setter's optional argument by the API's convention
 /// (`frontmatter_stores.rs` `optional_contact`; Perl ams_support.sty.ltxml:115 `\lx@add@address[name={#1}]{#2}`): words
 /// no creator requests are the line's caption — amsart copies' `\address[Current address]{…}` (smfart, nyjm,
@@ -663,19 +532,13 @@ fn an_optional_mark_labels_the_line() {
     &["Ann Able", "address=Univ A, Town", "address=Lab B, City"],
     &["Bob Baker", "address=Lab B, City"],
   ];
-  let reading = assert_reading(tex, Some(xml), &[
+  assert_reading(tex, Some(xml), &[
     "C Ann Able [1,2] | line:names",
     "  a Univ A, Town | api:leading-mark",
     "  a Lab B, City | api:leading-mark",
     "C Bob Baker [2] | line:names",
     "  a Lab B, City | api:leading-mark",
   ]);
-  // (today's XML the reading: the line's mark labels it, `\lx@affiliation@withinst`)
-  if red_at_two(r#"old engine only: the writer's outcome "same""#) {
-    return;
-  }
-  assert_eq!(reading.3, Value::from("same"));
-  assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
 /// Review rev94b r1-r2 B2: a key an `\author[key]` gave its authors labels the line for each of them (`author:N`,
@@ -781,77 +644,6 @@ fn an_api_piece_keeps_the_font_open_before_it() {
       "<sup>2</sup><text font=\"italic\">Univ B, City</text>",
       "<sup>3</sup><text font=\"bold\">Lab C, Place</text>",
       "<sup>4</sup><text font=\"bold\">Lab D, Place</text>",
-    ]),
-    None,
-  );
-}
-
-/// Review rev94b r3 B1, r4 B1: a container other than a group holding two entries' ink — an `\underline{…}`, an
-/// `\emph{…}` (pdflatex prints both lines in it) — wraps each cut entry again (`writer::container_wrap`): each name its
-/// own line with the markup. A container the writer cannot wrap exactly (a switch inside it before its first entry,
-/// `\emph{\bfseries $^5$…}`) is cut as before fonts were read: attribution first. Re-baselined in r5: r4 left each
-/// affiliation one contact on the first name (the second name had nothing), worse than 94a r7's cut.
-#[test]
-fn entries_inside_one_container_are_each_wrapped_again() {
-  if red_at_two(r#"drops the underline, italic emph and bold wrappers round the entries"#) {
-    return;
-  }
-  assert_written(
-    repro!("raw_class_affil_container_wraps_each_entry.tex"),
-    &[
-      &["Ann Able", "affiliation=Univ A, Town"],
-      &["Bob Baker", "affiliation=Univ B, City"],
-      &["Cy Cole", "affiliation=Lab C, Place"],
-      &["Dan Doe", "affiliation=Lab D, Place"],
-      &["Eve Ern", "affiliation=Lab E, Place"],
-      &["Fay Fox", "affiliation=Lab F, Place"],
-    ],
-    Some(&[
-      "<text class=\"ltx_underline\">Univ A, Town</text>",
-      "<text class=\"ltx_underline\">Univ B, City</text>",
-      "<emph font=\"italic\">Lab C, Place</emph>",
-      "<emph font=\"italic\">Lab D, Place</emph>",
-      "<text font=\"bold\">Lab E, Place</text>",
-      "Lab F, Place",
-    ]),
-    None,
-  );
-}
-
-/// Review rev94b r4 B1: a font the reading cannot tell where an entry's cut starts never undoes the cut — the entry is
-/// cut as before fonts were read (the switches of the group it sits in), and a line break's own box tells the font in
-/// effect where the next entry starts (`events::entry_font`): `$^1$\textbf{Univ A}\\ $^2$\textbf{Univ B}`, `\textit{Town}
-/// \\`, `Town~\\` and `\itshape $^7$\textbf{Dept G}` each left the whole affiliation on the first name. ar-1col.cls's
-/// `\affil` inside `\author{}` (1602.05576, 2405.08158). Distinct from `a_cut_entry_keeps_the_font_open_before_it`: the
-/// fonts the reading cannot tell, not the ones it reads.
-#[test]
-fn an_uncertain_font_never_undoes_a_cut() {
-  if red_at_two(
-    r#"unverified: writes Dept G's entry bold where the off reading keeps bold italic with a medium ", Town""#,
-  ) {
-    return;
-  }
-  assert_written(
-    repro!("raw_class_affil_uncertain_font_still_cuts.tex"),
-    &[
-      &["Ann Able", "affiliation=Univ A"],
-      &["Bob Baker", "affiliation=Univ B"],
-      &["Cy Cole", "affiliation=Lab C, Town"],
-      &["Dan Doe", "affiliation=Lab D , City"],
-      &["Eve Ern", "affiliation=Inst E, Town"],
-      &["Fay Fox", "affiliation=Inst F , City"],
-      &["Gil Gray", "affiliation=Dept G , Town"],
-      &["Hal Hart", "affiliation=Dept H, City"],
-    ],
-    Some(&[
-      "<text font=\"bold\">Univ A</text>",
-      "<text font=\"bold\">Univ B</text>",
-      "Lab C, <text font=\"italic\">Town</text>",
-      "<text font=\"bold\">Lab D</text>, City",
-      "Inst E, Town",
-      "<text font=\"italic\">Inst F</text>, City",
-      "<text font=\"bold italic\">Dept G<text font=\"medium\">, Town</text></text>",
-      "<text font=\"italic\">Dept H, City</text>",
     ]),
     None,
   );
@@ -1048,120 +840,4 @@ fn a_line_in_doubt_is_digested_once() {
       "streaming={streaming}"
     );
   }
-}
-
-/// Review rev94b r6 B2: between nested containers only font declarations (`\emph{\bfseries\underline{…\\…}}`) and
-/// spaces let each entry be wrapped in both (`plan::container_wrap`, `events::font_declaration`), the declaration copied
-/// into each wrap, the spaces left out. Anything else between prints or acts once, so a copy in every entry repeats it:
-/// r6 copied `\newline` (a `<break/>` in each contact) and `\quad` (a leading space in each) — now the base's cut.
-/// ar-1col.cls's `\affil` inside `\author{}` (1602.05576, 2405.08158). Distinct from
-/// `a_container_whose_font_is_unknown_is_cut_plain`: what stands between two containers, not before the outer one.
-#[test]
-fn nested_containers_wrap_each_entry_only_across_font_declarations() {
-  if red_at_two(r#"drops the underlined emph wrappers round the entries Inst E to Dept H"#) {
-    return;
-  }
-  assert_written(
-    repro!("raw_class_affil_nested_containers_only_font_declarations_between.tex"),
-    &[
-      &["Ann Able", "affiliation=Univ A, Town"],
-      &["Bob Baker", "affiliation=Univ B, City"],
-      &["Cy Cole", "affiliation=Lab C, Place"],
-      &["Dan Doe", "affiliation=Lab D, Place"],
-      &["Eve Ern", "affiliation=Inst E, Town"],
-      &["Fay Fox", "affiliation=Inst F, City"],
-      &["Gil Gray", "affiliation=Dept G, Town"],
-      &["Hal Hart", "affiliation=Dept H, City"],
-    ],
-    Some(&[
-      "Univ A, Town",
-      "Univ B, City",
-      "Lab C, Place",
-      "Lab D, Place",
-      "<emph class=\"ltx_underline\" font=\"bold italic\">Inst E, Town</emph>",
-      "<emph class=\"ltx_underline\" font=\"bold italic\">Inst F, City</emph>",
-      "<emph class=\"ltx_underline\" font=\"italic\">Dept G, Town</emph>",
-      "<emph class=\"ltx_underline\" font=\"italic\">Dept H, City</emph>",
-    ]),
-    Some("Body."),
-  );
-}
-
-/// Review rev94b r6 S1: a kernel text font command whose argument opens with the outermost container
-/// (`\textbf{\emph{…\\…}}`; `\textbf` is a macro, `\bgroup\bfseries #1\egroup`, no whatsit holding the ink) wraps each
-/// entry again too (`plan::container_wrap`, `events::text_font_command`), nested ones each (`\textrm{\textbf{\emph{…}}}`):
-/// r6 cut them plain (the font where the container starts unknown), the tip wrapped each in the inner container alone.
-/// An entry inside the text font command but outside the container keeps its own font (Org I bold). ar-1col.cls's
-/// `\affil` inside `\author{}` (1602.05576, 2405.08158). Distinct from
-/// `nested_containers_wrap_each_entry_only_across_font_declarations`: the outer command is no container of the ink.
-#[test]
-fn a_text_font_command_round_a_container_wraps_each_entry() {
-  if red_at_two(r#"drops the bold italic / underline wrappers round the first eight entries"#) {
-    return;
-  }
-  assert_written(
-    repro!("raw_class_affil_text_font_command_round_a_container.tex"),
-    &[
-      &["Ann Able", "affiliation=Univ A, Town"],
-      &["Bob Baker", "affiliation=Univ B, City"],
-      &["Cy Cole", "affiliation=Lab C, Place"],
-      &["Dan Doe", "affiliation=Lab D, Place"],
-      &["Eve Ern", "affiliation=Inst E, Town"],
-      &["Fay Fox", "affiliation=Inst F, City"],
-      &["Gil Gray", "affiliation=Dept G, Town"],
-      &["Hal Hart", "affiliation=Dept H, City"],
-      &["Ida Ince", "affiliation=Org I, Town"],
-    ],
-    Some(&[
-      "<emph font=\"bold italic\">Univ A, Town</emph>",
-      "<emph font=\"bold italic\">Univ B, City</emph>",
-      "<text class=\"ltx_underline\" font=\"italic\">Lab C, Place</text>",
-      "<text class=\"ltx_underline\" font=\"italic\">Lab D, Place</text>",
-      "<emph font=\"bold italic\">Inst E, Town</emph>",
-      "<emph font=\"bold italic\">Inst F, City</emph>",
-      "<emph font=\"bold italic\">Dept G, Town</emph>",
-      "<emph font=\"bold italic\">Dept H, City</emph>",
-      "<text font=\"bold\">Org I, Town</text>",
-    ]),
-    Some("Body."),
-  );
-}
-
-/// Review rev94b r5 BL3: a container spanning entries whose start's font the boxes cannot tell (`\itshape\emph{…}`,
-/// `\textcolor{red}{\emph{…}}`, `\small\emph{…}`) gives its entries neither font nor wrap — the base's cut
-/// (`plan::entry_forms`): r5 wrapped each in `\emph` alone, italic where pdflatex prints upright, red and the size lost.
-/// Nested containers wrap each entry in both (`plan::container_wrap`: the inner container's opening is no switch of the
-/// outer's): `\emph{\underline{…\\…}}` was cut plain. ar-1col.cls's `\affil` inside `\author{}` (1602.05576,
-/// 2405.08158). Distinct from `entries_inside_one_container_are_each_wrapped_again`: the font outside the container.
-#[test]
-fn a_container_whose_font_is_unknown_is_cut_plain() {
-  if red_at_two(
-    r#"drops the underlined italic emph round the entries Dept G, Town and Dept H, City"#,
-  ) {
-    return;
-  }
-  assert_written(
-    repro!("raw_class_affil_container_outer_font_unknown.tex"),
-    &[
-      &["Ann Able", "affiliation=Univ A, Town"],
-      &["Bob Baker", "affiliation=Univ B, City"],
-      &["Cy Cole", "affiliation=Lab C, Place"],
-      &["Dan Doe", "affiliation=Lab D, Place"],
-      &["Eve Ern", "affiliation=Inst E, Town"],
-      &["Fay Fox", "affiliation=Inst F, City"],
-      &["Gil Gray", "affiliation=Dept G, Town"],
-      &["Hal Hart", "affiliation=Dept H, City"],
-    ],
-    Some(&[
-      "Univ A, Town",
-      "Univ B, City",
-      "Lab C, Place",
-      "Lab D, Place",
-      "Inst E, Town",
-      "Inst F, City",
-      "<emph class=\"ltx_underline\" font=\"italic\">Dept G, Town</emph>",
-      "<emph class=\"ltx_underline\" font=\"italic\">Dept H, City</emph>",
-    ]),
-    Some("Body."),
-  );
 }

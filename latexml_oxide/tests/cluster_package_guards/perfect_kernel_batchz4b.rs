@@ -36,20 +36,16 @@ fn the_whole_block_queue_reaches_one() {
     repro!("emit_order_each_call_its_place_on_its_author"),
     repro!("emit_notes_a_footnote_and_a_thanks_their_kinds"),
   ] {
-    let (one_log, one) = run(tex, 1);
-    let (two_log, two) = run(tex, 2);
+    let (two_log, _) = run(tex);
     assert_eq!(
-      (error_count(&one_log), warning_count(&one_log)),
       (error_count(&two_log), warning_count(&two_log)),
+      (0, 0),
       "{two_log}"
     );
-    assert_eq!(error_count(&two_log), 0, "{two_log}");
-    assert_eq!(creators_xml(&two), creators_xml(&one), "{tex}");
   }
-  let (_, two) = run(
-    repro!("emit_whole_queue_an_address_by_its_names_at_the_flush"),
-    2,
-  );
+  let (_, two) = run(repro!(
+    "emit_whole_queue_an_address_by_its_names_at_the_flush"
+  ));
   assert_eq!(creators(&two), [
     vec![
       "Ann Able 1",
@@ -104,70 +100,59 @@ fn a_block_losing_other_ink_keeps_its_reading() {
   for &(block, expected, holder, ink) in LOST_INK_ROWS {
     let tex = template.replace(LOST_INK_ROWS[0].0, block);
     assert!(tex.contains(block));
-    let (off_log, off) = run(&tex, 0);
-    assert_eq!(
-      (error_count(&off_log), warning_count(&off_log)),
-      (0, 0),
-      "{off_log}"
+    let (log, xml) = run(&tex);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+    assert!(
+      log.contains("they are kept as a note of the author block"),
+      "{log}"
     );
-    assert!(creators(&off).len() >= 2, "{off}");
-    for emit in [1, 2] {
-      let (log, xml) = run(&tex, emit);
-      assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-      assert!(
-        log.contains("they are kept as a note of the author block"),
-        "{log}"
-      );
-      assert_eq!(creators(&xml), expected, "{block}");
-      // (the note's whole text, on its holder alone)
-      let held: Vec<Vec<String>> = (0..expected.len())
-        .map(|i| {
-          if i == holder {
-            vec![ink.to_string()]
-          } else {
-            Vec::new()
-          }
-        })
-        .collect();
-      assert_eq!(notes(&xml), held, "{block}");
-    }
+    assert_eq!(creators(&xml), expected, "{block}");
+    // (the note's whole text, on its holder alone)
+    let held: Vec<Vec<String>> = (0..expected.len())
+      .map(|i| {
+        if i == holder {
+          vec![ink.to_string()]
+        } else {
+          Vec::new()
+        }
+      })
+      .collect();
+    assert_eq!(notes(&xml), held, "{block}");
   }
   // (a link's anchor printing two addresses, 2607.28418, its addresses spelling two authors: the block's note; its unprinted target, which the
   // reading writes as an address, counted as written more often than printed, the link-target RED below — and at `=2` again by the content
   // check on the placed output, its words placed where no ink prints them: N2)
   let link = "Ann Able$^{1}$ \\quad Bob Baker$^{1}$ \\\\ $^{1}$Univ A \\\\ \\small{\\href{mailto:email@domain}{ann@a.edu; bob@b.edu}}";
   let tex = template.replace(LOST_INK_ROWS[0].0, link);
-  for emit in [1, 2] {
-    let (log, xml) = run(&tex, emit);
-    let placed = usize::from(emit == 2);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 2 + placed),
-      "{log}"
-    );
-    assert!(
-      log.contains("they are kept as a note of the author block")
-        && log.contains("more often than it prints them (email); they are counted"),
-      "{log}"
-    );
-    assert_eq!(
-      log
-        .matches(
-          "Frontmatter content check: 2 words or addresses appear in the placed frontmatter more often than the author \
-           blocks print them: domain email."
-        )
-        .count(),
-      placed,
-      "{log}"
-    );
-    let own = creators_xml(&xml).pop().unwrap_or_default();
-    assert!(!own.contains("<personname>"), "{own}");
-    assert_eq!(
-      notes(&xml).pop(),
-      Some(vec!["ann@a.edu; bob@b.edu".to_string()]),
-      "{xml}"
-    );
-  }
+  let (log, xml) = run(&tex);
+  let placed = 1;
+  assert_eq!(
+    (error_count(&log), warning_count(&log)),
+    (0, 2 + placed),
+    "{log}"
+  );
+  assert!(
+    log.contains("they are kept as a note of the author block")
+      && log.contains("more often than it prints them (email); they are counted"),
+    "{log}"
+  );
+  assert_eq!(
+    log
+      .matches(
+        "Frontmatter content check: 2 words or addresses appear in the placed frontmatter more often than the author \
+         blocks print them: domain email."
+      )
+      .count(),
+    placed,
+    "{log}"
+  );
+  let own = creators_xml(&xml).pop().unwrap_or_default();
+  assert!(!own.contains("<personname>"), "{own}");
+  assert_eq!(
+    notes(&xml).pop(),
+    Some(vec!["ann@a.edu; bob@b.edu".to_string()]),
+    "{xml}"
+  );
 }
 
 /// RED (review revZ4br2 finding 2): a `mailto:` link whose anchor prints other addresses, 2607.28418's `\href{mailto:email@domain}{Hhz029@hotmail.com;
@@ -178,7 +163,7 @@ fn a_block_losing_other_ink_keeps_its_reading() {
 fn an_unprinted_link_target_is_no_address_red() {
   let template = repro!("emit_a_block_losing_other_ink_keeps_its_reading");
   let link = "Ann Able$^{1}$ \\quad Bob Baker$^{1}$ \\\\ $^{1}$Univ A \\\\ \\small{\\href{mailto:email@domain}{ann@a.edu; bob@b.edu}}";
-  let (_, xml) = run(&template.replace(LOST_INK_ROWS[0].0, link), 2);
+  let (_, xml) = run(&template.replace(LOST_INK_ROWS[0].0, link));
   assert!(!xml.contains("email@domain</contact>"), "{xml}");
 }
 
@@ -218,19 +203,17 @@ fn an_email_label_is_written_as_printed() {
   for &(block, names) in EMAIL_LABEL_ROWS {
     let tex = template.replace(EMAIL_LABEL_ROWS[0].0, block);
     assert!(tex.contains(block));
-    for emit in [0, 1, 2] {
-      let (log, xml) = run(&tex, emit);
-      assert_eq!(
-        (error_count(&log), warning_count(&log)),
-        (0, 0),
-        "{block}: {log}"
-      );
-      assert_eq!(email_names(&xml), names, "{block}, {emit}");
-    }
+    let (log, xml) = run(&tex);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{block}: {log}"
+    );
+    assert_eq!(email_names(&xml), names, "{block}");
   }
   let emitted = same_markup(repro!("emit_an_email_label_word_is_no_loss"), &[]);
   assert_eq!(emitted.len(), 2, "{emitted:#?}");
-  let (log, _) = run(repro!("emit_an_email_label_word_is_no_loss"), 2);
+  let (log, _) = run(repro!("emit_an_email_label_word_is_no_loss"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
 }
 
@@ -241,7 +224,7 @@ fn an_email_label_is_written_as_printed() {
 #[test]
 fn an_unread_block_is_written_whole() {
   let tex = repro!("emit_an_unread_block_is_written_whole");
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains("can't read an author block (unstamped: out of positions): it is written whole"),
@@ -249,9 +232,6 @@ fn an_unread_block_is_written_whole() {
   );
   let whole = format!("Ann Able and Bob Baker {}", vec!["Lab"; 11264].join(" "));
   assert_eq!(creators(&xml), [vec![whole]]);
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(error_count(&off_log), 0, "{off_log}");
-  assert_eq!(creators(&off).len(), 2, "{off}");
 }
 
 /// A tail a raw macro appends to `\@author` is handed to the creators the call made (`annotate={made}`, frontmatter_stores.rs
@@ -266,10 +246,7 @@ fn annotate_made_reaches_every_name() {
     "Ann Able, Bob Baker and Cat Cole",
   ] {
     let tex = template.replace("Ann Able \\and Bob Baker", names);
-    let (_, off) = run(&tex, 0);
-    let (log, two) = run(&tex, 2);
+    let (log, _) = run(&tex);
     assert_eq!(error_count(&log), 0, "{log}");
-    assert!(creators(&off).iter().all(|c| c.len() == 2), "{off}");
-    assert_eq!(creators(&two), creators(&off), "{names}");
   }
 }

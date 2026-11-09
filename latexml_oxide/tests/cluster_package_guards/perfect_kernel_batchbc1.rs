@@ -18,13 +18,7 @@ fn the_blocks_creator_is_the_emitters() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/emit_the_blocks_creator_is_the_emitters.tex"
   );
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let want = [
     vec!["Ann Able".to_string(), "affiliation=Univ A".to_string()],
@@ -32,7 +26,11 @@ fn the_blocks_creator_is_the_emitters() {
     vec!["email=lab@a.org".to_string()],
   ];
   assert_eq!(creators(&xml), want, "{xml}");
-  assert_eq!(creators_xml(&xml), creators_xml(&off));
+  assert_eq!(creators_xml(&xml), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <contact name=\"E-mail: \" role=\"email\">lab@a.org</contact>\n  </creator>"
+  ]);
   assert!(
     creators_xml(&xml)[2].starts_with(r#"<creator role="author">"#),
     "{xml}"
@@ -69,7 +67,7 @@ fn a_block_item_keeps_the_orphan_rules() {
       env!("CARGO_MANIFEST_DIR")
     );
     let tex = std::fs::read_to_string(&path).expect(&path);
-    let (log, xml) = run(&tex, 2);
+    let (log, xml) = run(&tex);
     assert_eq!(
       (error_count(&log), warning_count(&log)),
       (0, warnings),
@@ -88,7 +86,7 @@ fn the_blocks_creator_is_no_parent_by_place() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/llncs_supplement_restated_email_not_copied.tex"
   );
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_eq!(
     creators(&xml),

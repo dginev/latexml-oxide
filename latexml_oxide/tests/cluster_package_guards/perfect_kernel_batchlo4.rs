@@ -33,13 +33,7 @@ macro_rules! repro {
 #[test]
 fn a_contact_command_in_a_macro_is_its_text() {
   let tex = repro!("emit_jheppub_note_command_in_a_macro_is_its_text");
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 5), "{log}");
   let want = [
     vec![
@@ -56,7 +50,6 @@ fn a_contact_command_in_a_macro_is_its_text() {
     vec!["Dan Dorn", "email=dan@b.org", "affiliation=Univ B"],
     vec!["Cy Cole", "note=Equal contribution.", "affiliation=Univ B"],
   ];
-  assert_eq!(creators(&off), want);
   assert_eq!(creators(&xml), want);
 }
 
@@ -66,26 +59,64 @@ fn a_contact_command_in_a_macro_is_its_text() {
 /// 1901.08773's A. Kopylov, 2510.11030's J.-H. Ha; `\note[*]{…}`), one given apart after their `\author`, the `*` no
 /// legend explains when the address says so (2308.06532), and the footnote counter's number a note prints under, which
 /// two authors carrying it leave the address to the block (1802.03677) unless an affiliation is labelled with it
-/// (2005.05695). Red (LO3 `=2`): each a nameless creator's. The creators' XML (ids aside) is the switch-off one.
+/// (2005.05695). Red (LO3 `=2`): each a nameless creator's. Each fixture's creators' XML (ids aside) is pinned as recorded at `=2`, where it
+/// equalled the switch-off one.
 #[test]
 fn a_listed_address_left_over_is_the_marked_authors() {
-  for tex in [
-    repro!("jheppub_emailadd_corresponding_author_note"),
-    repro!("jheppub_note_mark_corresponding_author"),
-    repro!("jheppub_note_mark_apart_from_the_names"),
-    repro!("jheppub_emailadd_address_naming_correspondence_goes_to_the_star"),
-    repro!("jheppub_note_number_carried_by_two_stays_the_blocks"),
-    repro!("jheppub_note_counter_number_under_an_affiliation_label"),
+  for (tex, whole) in [
+    (
+      repro!("jheppub_emailadd_corresponding_author_note"),
+      &[
+        "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">zq77@x.org</text></contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">ccole@y.org</text></contact>\n  </creator>",
+      ][..],
+    ),
+    (
+      repro!("jheppub_note_mark_corresponding_author"),
+      &[
+        "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">zq77@x.org</text></contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+      ][..],
+    ),
+    (
+      repro!("jheppub_note_mark_apart_from_the_names"),
+      &[
+        "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">zq77@x.org</text></contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+      ][..],
+    ),
+    (
+      repro!("jheppub_emailadd_address_naming_correspondence_goes_to_the_star"),
+      &[
+        "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">zq77@x.org (Corresponding author)</text></contact>\n  </creator>",
+      ][..],
+    ),
+    (
+      repro!("jheppub_note_number_carried_by_two_stays_the_blocks"),
+      &[
+        "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">ccole@y.org</text></contact>\n  </creator>",
+        "<creator role=\"author\">\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">zq77@x.org</text></contact>\n  </creator>",
+      ][..],
+    ),
+    (
+      repro!("jheppub_note_counter_number_under_an_affiliation_label"),
+      &[
+        "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">zq77@x.org</text></contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">ccole@y.org</text></contact>\n  </creator>",
+      ][..],
+    ),
   ] {
-    let (off_log, off) = run(tex, 0);
-    assert_eq!(
-      (error_count(&off_log), warning_count(&off_log)),
-      (0, 0),
-      "{off_log}"
-    );
-    let (log, xml) = run(tex, 2);
+    let (log, xml) = run(tex);
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-    assert_eq!(creators_xml(&xml), creators_xml(&off), "{tex}");
+    assert_eq!(creators_xml(&xml), whole, "{tex}");
   }
 }
 
@@ -98,20 +129,13 @@ fn a_listed_address_left_over_is_the_marked_authors() {
 #[test]
 fn an_email_call_in_a_note_is_its_owners() {
   let tex = repro!("emit_note_email_calls_are_the_note_owners");
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let want = [
     vec!["Ann Able", "email=ann@a.org"],
     vec!["Bob Baker", "email=cy@b.org", "email=dy@b.org"],
     vec!["Cy Cole", "email=ey@c.org", "email=fy@c.org"],
   ];
-  assert_eq!(creators(&off), want);
   assert_eq!(creators(&xml), want);
   let notes = |xml: &str| {
     creators_xml(xml)
@@ -119,7 +143,6 @@ fn an_email_call_in_a_note_is_its_owners() {
       .map(|c| c.matches("<note ").count())
       .collect::<Vec<_>>()
   };
-  assert_eq!(notes(&off), [1, 1, 1]);
   assert_eq!(notes(&xml), [1, 1, 0]);
   assert!(xml.contains("Univ B, , .</note>"), "{xml}");
 }

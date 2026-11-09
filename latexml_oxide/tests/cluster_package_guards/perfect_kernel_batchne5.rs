@@ -5,7 +5,7 @@
 //! `flushleft` of 13 names).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::perfect_kernel_batch84b::creators;
 
@@ -21,15 +21,14 @@ macro_rules! repro {
 
 fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).collect() }
 
-/// Convert `tex` under `emit`: the log and the XML.
-fn run(tex: &str, emit: u8) -> (String, String) {
+/// Convert `tex`: the log and the XML.
+fn run(tex: &str) -> (String, String) {
   let (log, xml, ()) = convert_files_with_setup_then(
     tex,
     &[],
     Some("ar5iv.sty"),
     move || {
       set_fm_shadow_override(None);
-      set_fm_emit_override(Some(emit));
     },
     |_| (),
   );
@@ -38,19 +37,12 @@ fn run(tex: &str, emit: u8) -> (String, String) {
 
 /// `\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}` after four names: its
 /// definitions follow the note it printed, so each declaration's span is the macro alone, and `=2` replayed
-/// `\footremember\footremember\footremember\footremember`, the last reading past its entry (2 x Missing {, an undefined
+/// `\footremember\footremember\footremember\footremember`, the last reading past its entry (2 x Missing {an undefined
 /// `\lx@thistheorem`; the papers' 20 and a Fatal, 2505.04436, 1511.09009). The block is written whole, Perl's whole-block
 /// creator, a counted Warning; its notes and the recalled mark kept. Off reads five creators, no Error.
 #[test]
 fn a_declaration_reading_past_its_span_writes_the_block_whole() {
-  let (log, xml) = run(repro!("ne5_decl_reads_past"), 0);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let names: Vec<String> = creators(&xml)
-    .into_iter()
-    .filter_map(|c| c.first().cloned())
-    .collect();
-  assert_eq!(names.len(), 5, "{xml}");
-  let (log, xml) = run(repro!("ne5_decl_reads_past"), 2);
+  let (log, xml) = run(repro!("ne5_decl_reads_past"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains(
@@ -78,9 +70,7 @@ fn a_declaration_reading_past_its_span_writes_the_block_whole() {
 /// Off is the old reader's, its `\else` creator an Error.
 #[test]
 fn a_name_run_holding_a_cut_conditional_is_its_text() {
-  let (log, _) = run(repro!("ne5_cond_cut"), 0);
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
-  let (log, xml) = run(repro!("ne5_cond_cut"), 2);
+  let (log, xml) = run(repro!("ne5_cond_cut"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains(r#"The frontmatter emitter writes "Joseph A. Simons" as its plain text"#),
@@ -110,16 +100,12 @@ fn a_name_run_grown_over_other_names_is_its_text() {
   ];
   // (the `\thanks` once, as off writes it)
   let thanks = |xml: &str| xml.matches("E-mail: ann@a.edu").count();
-  let (log, xml) = run(repro!("ne5_env_names"), 0);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&xml), expected, "{xml}");
-  let off_thanks = thanks(&xml);
-  let (log, xml) = run(repro!("ne5_env_names"), 2);
+  let (log, xml) = run(repro!("ne5_env_names"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains(r#"The frontmatter emitter writes "Ann Able" as its plain text"#),
     "{log}"
   );
   assert_eq!(creators(&xml), expected, "{xml}");
-  assert_eq!(thanks(&xml), off_thanks, "{xml}");
+  assert_eq!(thanks(&xml), 1);
 }

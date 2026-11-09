@@ -15,20 +15,8 @@ fn a_take_out_writes_every_word_it_cuts() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ck2b_take_out_and_between_addresses.tex"
   );
-  // (off: today's names with their printed marks, the notes beside them)
-  let (off_log, off) = run(tex, 0);
-  let (log, two) = run(tex, 2);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
+  let (log, two) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&off), [
-    vec!["Ann Able *"],
-    vec!["Bob Baker *"],
-    vec!["Cy Dee \u{2020}"]
-  ]);
   let univ_x = "affiliation=The authors are with the Dept of Physics, Univ of X, Town, USA";
   assert_eq!(creators(&two), [
     vec!["Ann Able", univ_x, "email=ann.able@x.org"],

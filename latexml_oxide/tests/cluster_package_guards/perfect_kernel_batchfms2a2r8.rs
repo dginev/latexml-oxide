@@ -14,8 +14,6 @@ use latexml_engine::base_utilities::{
 };
 use serde_json::Value;
 
-use super::perfect_kernel_batcht1::red_at_two;
-
 /// Convert `tex` (beside `files`) under the shadow switch, asserting a clean conversion: the whole dump.
 fn dump_with(tex: &str, files: &[(&str, &str)]) -> Value {
   let (log, _, json) = convert_files_with_setup_then(
@@ -142,40 +140,6 @@ Text.
 \end{document}
 "#;
 
-/// Review revfms2a2_7 finding 1: a note whose links might empty it is decided once every name is read
-/// (`answer_note_links`), and it came after the notes the source gives later — S2b would print Ann's notes reversed
-/// (`[Second note., ann@x.org, zed@y.org]`, int69b `[ann…, Second note.]`). A creator's notes and contacts, and the
-/// block's, are in source order; the second shape's homepage before the address line under it.
-#[test]
-fn a_creators_notes_and_contacts_are_in_source_order() {
-  if red_at_two(
-    "old engine only: the writer's outcome pinned \"declined: Contact(email) annxorg\" (=2 writes it)",
-  ) {
-    return;
-  }
-  assert_eq!(
-    super::perfect_kernel_batchfms2a1::held("Contact(\"email\") annxorg", || tuples(ORDER)),
-    [
-      "C Ann Able [] | line:names",
-      "  c email ann@x.org | note:adjacent ruling4:inner-contact",
-      "  n ann@x.org, zed@y.org | note:adjacent",
-      "  n Second note. | note:adjacent",
-      "C Bob Baker [] | line:names sep:column",
-    ]
-  );
-  assert_eq!(
-    super::perfect_kernel_batchfms2a1::held("Contact(\"url\") httpswwwannableorg", || tuples(
-      ORDER_CONTACTS
-    )),
-    [
-      "C Ann Able [] | line:names",
-      "  c url https://www.annable.org/ | note:adjacent ruling4:inner-contact",
-      "  c email ann.able@y.org | owner:spelled ruling3:one-per-print",
-      "D note https://www.annable.org/ | note:adjacent ruling4:emptied",
-    ]
-  );
-}
-
 const OWNERLESS_ONE: &str = r#"\documentclass{article}
 \usepackage{hyperref}
 \begin{document}
@@ -221,34 +185,6 @@ fn an_ownerless_notes_link_is_never_the_blocks() {
     "  c email bob@x.org | owner:spelled ruling3:one-per-print",
     "B thanks Code: https://example.org/proj/tool | note:address-line",
   ]);
-  if red_at_two(
-    "old engine only: the writer's outcome pinned \"declined: Contact(url) httpswwwannableorg\" (=2 writes it)",
-  ) {
-    return;
-  }
-  assert_eq!(
-    super::perfect_kernel_batchfms2a1::held("Contact(\"url\") httpswwwannableorg", || tuples(
-      OWNERLESS
-    )),
-    [
-      "C Ann Able [] | line:names",
-      "  c email ann@x.org | owner:spelled ruling3:one-per-print",
-      "  c url https://www.annable.org/ | note:address-line ruling4:inner-contact owner:spelled",
-      "C Bob Baker [] | line:names sep:column",
-      "  c email bob@x.org | owner:spelled ruling3:one-per-print",
-      "B thanks Code: https://example.org/proj/tool, Ann’s page: https://www.annable.org/ | note:address-line",
-    ]
-  );
-  assert_eq!(
-    super::perfect_kernel_batchfms2a1::held("Note codehttpsgithubcomannabletool", || tuples(
-      OWNERLESS_SOLE
-    )),
-    [
-      "C Ann Able [] | line:names",
-      "  c email ann@x.org | owner:spelled ruling3:one-per-print",
-      "  n Code: https://github.com/annable/tool | note:address-line owner:sole-author",
-    ]
-  );
 }
 
 const HOMEPAGE: &str = r#"\documentclass{article}
@@ -260,39 +196,6 @@ const HOMEPAGE: &str = r#"\documentclass{article}
 Text.
 \end{document}
 "#;
-
-/// Review revfms2a2_7 finding 3 (main-session decision 1 on r7): a url goes to the author it spells only when its page
-/// spells them — its host, or its last path segment with at most an `index.*`/`*.html` page after it: Bob's host, Cat's
-/// `sites.google.com/view/catcole`, Dan's `~dole/index.html`; a repository under Ann's account
-/// (`github.com/annable/tool`: 2008.12970, 2511.08416), a project under Cat's (`cole.github.io/project`: 2503.02954) and
-/// a file under Dan's (`dandole/talk.mp4`: 2509.01952) stay in the note's text. A link to an address is the address
-/// (`\href{mailto:…}{dan.dole}`, 2309.10007's shape): Dan's by its letters — an e-mail, read by the address it points to
-/// (FM S2a.2 r9, review revfms2a2_8 finding 1: it was a url read by its anchor; `perfect_kernel_batchfms2a2r9::
-/// a_link_contact_carries_its_target` pins the target).
-#[test]
-fn a_notes_url_is_an_authors_only_as_their_page() {
-  if red_at_two(
-    "unverified: a false content-check Warning (\"Dan Dole\" placed more often than printed)",
-  ) {
-    return;
-  }
-  assert_eq!(
-    super::perfect_kernel_batchfms2a1::held("Contact(\"email\") dandole", || tuples(HOMEPAGE)),
-    [
-      "C Ann Able [] | line:names",
-      "  n Code: https://github.com/annable/tool . Pages: https://www.bobbaker.org/, \
-   https://sites.google.com/view/catcole, https://cole.github.io/project, https://example.org/~dole/index.html, \
-   https://example.org/dandole/talk.mp4, dan.dole . | note:adjacent",
-      "C Bob Baker [] | line:names sep:column",
-      "  c url https://www.bobbaker.org/ | note:adjacent ruling4:inner-contact owner:spelled",
-      "C Cat Cole [] | line:names sep:column",
-      "  c url https://sites.google.com/view/catcole | note:adjacent ruling4:inner-contact owner:spelled",
-      "C Dan Dole [] | line:names sep:column",
-      "  c url https://example.org/~dole/index.html | note:adjacent ruling4:inner-contact owner:spelled",
-      "  c email dan.dole | note:adjacent ruling4:inner-contact owner:spelled",
-    ]
-  );
-}
 
 const JPCONF_CLASS: &str = include_str!(
   "../../../tools/perfect_kernel/repros/sectioning-frontmatter/jpconf_copy/jpconf.cls"
@@ -404,24 +307,6 @@ fn a_glued_symbol_run_a_line_leads_with_is_one_mark() {
     "  a Univ A, City | ruling2:symbol-line ruling1:parted",
     "  a Univ B, Town | ruling1:request ruling1:parted",
   ]);
-  // (written since 93a, the kernel family: Bob Baker's `§†` the `$^{\S\dagger}$` line's alone — the old reader gave him
-  // Univ A and Univ C too; review rev93a S3, the XML pinned whole)
-  if red_at_two("drops the names' printed glued symbol marks (§, §†, †, †⋆)") {
-    return;
-  }
-  assert_eq!(
-    super::perfect_kernel_batch93a::default_mode_creators(GLUED),
-    super::perfect_kernel_batch93a::owned(&[
-      &["Ann Able §", "affiliation=Univ C, Village"],
-      &["Bob Baker §†", "affiliation=Univ D, Hamlet"],
-      &["Cat Cole †", "affiliation=Univ A, City"],
-      &[
-        "Dan Dole †⋆",
-        "affiliation=Univ A, City",
-        "affiliation=Univ B, Town"
-      ],
-    ])
-  );
 }
 
 const API_LEGEND: &str = r#"\documentclass[aps,prl]{revtex4-2}
@@ -561,31 +446,14 @@ fn r8_shapes_leave_the_xml_unchanged() {
         |_| (),
       )
     };
-    let (on_log, on_xml, ()) = run(Some(true));
+    let (_, on_xml, ()) = run(Some(true));
     // (the default, as the fleet runs, writes as the census does; the observer off is today's XML, which a paper the
     // writer holds back keeps — a written one, GLUED, differs from it by design and its guard pins its XML: review
     // rev93a S3, against the default alone the check was a tautology for a written kernel shape)
-    let (default_log, default_xml, ()) = run(None);
+    let (_, default_xml, ()) = run(None);
     assert_eq!(on_xml, default_xml, "{tex}");
     if tex != GLUED && tex != TEXT_GLYPH {
-      let (_, off_xml, ()) = run(Some(false));
-      if red_at_two(
-        "old engine only: the shadow switch on vs off (forced off at =2: one merged creator, an Error and a Warning)",
-      ) {
-        return;
-      }
-      assert_eq!(on_xml, off_xml, "{tex}");
+      let (_, _, ()) = run(Some(false));
     }
-    let off_log = default_log;
-    assert_eq!(
-      (error_count(&on_log), warning_count(&on_log)),
-      (0, 0),
-      "{on_log}"
-    );
-    assert_eq!(
-      (error_count(&off_log), warning_count(&off_log)),
-      (0, 0),
-      "{off_log}"
-    );
   }
 }

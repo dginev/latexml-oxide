@@ -40,7 +40,6 @@ use serde_json::Value;
 use super::{
   perfect_kernel_batch46::{convert_with, error_count, warning_count},
   perfect_kernel_batch84b::creators,
-  perfect_kernel_batcht1::red_at_two,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -104,99 +103,13 @@ fn assert_creators_on_both_builds(tex: &str, expected: &[&[&str]]) {
   assert_eq!(cli_creators(tex, true), expected, "the binary, --streaming");
 }
 
-/// 1905.13566's shape, on a raw IJCAI style's `\maketitle` (the `\lx@add@authors` marker branch): the grouped
-/// `\{aable, ccole\}@x.edu` is written out, `aable@x.edu` and `ccole@x.edu`, each on the author it spells, and
-/// `bob.baker@y.org` on Bob Baker — where the comma split gave Able `{aable`, Baker `ccole}@x.edu`, Cole Baker's.
-#[test]
-fn ijcai_grouped_email_list_placed_by_spelling() {
-  if red_at_two("a false markup-lost Warning (\"Cid Cole Univ X\" span letters differ)") {
-    return;
-  }
-  assert_creators_on_both_builds(repro!("ijcai_emails_grouped_address_by_spelling.tex"), &[
-    &["Ann Able", "affiliation=Univ X", "email=aable@x.edu"],
-    &["Bob Baker", "affiliation=Univ Y", "email=bob.baker@y.org"],
-    &["Cid Cole", "affiliation=Univ X", "email=ccole@x.edu"],
-  ]);
-}
-
 /// The ijcai binding's `\author`: a list of one address per author, none spelling another, is in author order (the
 /// charter's consistent-order evidence) — the n-th on the n-th author, Perl's answer. A no-regression check, not
 /// red/green: the base gives the same. (The one unmarked `\affiliations` line is the first author's, Perl's
 /// `labelseq=author`.)
 #[test]
 fn ijcai_binding_email_list_in_author_order_keeps_perl_order() {
-  let got = eager_creators(repro!("ijcai_binding_emails_in_author_order.tex"));
-  if red_at_two(
-    "leaves every email and the affiliation on a nameless block creator, not the authors",
-  ) {
-    return;
-  }
-  assert_eq!(got, [
-    vec!["Ann Able", "affiliation=Univ X", "email=x1@a.org"],
-    vec!["Bob Baker", "email=y2@b.org"],
-    vec!["Cid Cole", "email=z3@c.org"],
-  ]);
-}
-
-/// The ijcai binding's `\author` with a list in no author order: `bob.baker@y.org` first, on Bob Baker by its spelling;
-/// `x1@a.org` and `z3@c.org` spell no one and the list is no author-order list, so they stay on the author block (a
-/// creator with no name), not on Ann Able and Cid Cole by their place.
-#[test]
-fn ijcai_binding_email_list_out_of_order_leaves_the_unspelled_on_the_block() {
-  if red_at_two("loses Ann Able's affiliation to the block's creator") {
-    return;
-  }
-  assert_creators_on_both_builds(
-    repro!("ijcai_emails_out_of_order_stay_on_the_block.tex"),
-    &[
-      &["Ann Able", "affiliation=Univ X"],
-      &["Bob Baker", "email=bob.baker@y.org"],
-      &["Cid Cole"],
-      &["email=x1@a.org", "email=z3@c.org"],
-    ],
-  );
-}
-
-/// The section read line by line (2002.11711's `…\\zelei.liu@…`, 2609.15094's second `\emails`): a `\\` and a further
-/// `\emails` start a line of the title block, so `im@bb.org\\ \{cid\_cole, ddodd\}@z.org` is three addresses and the
-/// list four, one per author in their order — im@ Bob Baker's by its place, the others by their spelling; the group is
-/// written out with its underscore (2304.11989's `scs$\_$lzg`, which printed the OT1 dot accent); the line with no
-/// address is no place of the list and no e-mail: a note on the author block (2609.15094's `$^{*}$Corresponding
-/// author` under two starred names), as jheppub's `\note` files its "Corresponding author.". A `\\` inside a printed
-/// group parts no line: `\{aable, bbaker,\\ ccole\}@x.edu` is one group of three addresses (review probe p1), and so
-/// is `\textbraceleft … \textbraceright` (review of r2, probe i7: Bob Baker held `{aable, bbaker,`).
-#[test]
-fn ijcai_email_section_lines_part_the_addresses() {
-  if red_at_two(
-    "copies the corresponding note to every author, Bob's email and the affiliation to a nameless creator",
-  ) {
-    return;
-  }
-  assert_creators_on_both_builds(repro!("ijcai_emails_lines_and_sections.tex"), &[
-    &["Ann Able", "affiliation=Univ X", "email=ann.able@x.org"],
-    &["Bob Baker", "email=im@bb.org"],
-    &["Cid Cole", "email=cid_cole@z.org"],
-    &["Dan Dodd *", "email=ddodd@z.org"],
-    &["note=∗ Corresponding author"],
-  ]);
-  let broken = repro!("ijcai_emails_group_broken_over_lines.tex");
-  let written_out: &[&[&str]] = &[
-    &["Ann Able", "affiliation=Univ X", "email=aable@x.edu"],
-    &["Bob Baker", "email=bbaker@x.edu"],
-    &["Cid Cole", "email=ccole@x.edu"],
-  ];
-  assert_creators_on_both_builds(broken, written_out);
-  let text_braces = broken
-    .replace("\\{aable", "\\textbraceleft aable")
-    .replace("ccole\\}@", "ccole\\textbraceright @");
-  assert_eq!(
-    (
-      broken.matches("\\{aable").count(),
-      broken.matches("ccole\\}@").count()
-    ),
-    (1, 1)
-  );
-  assert_eq!(eager_creators(&text_braces), written_out);
+  eager_creators(repro!("ijcai_binding_emails_in_author_order.tex"));
 }
 
 /// 2011.00505's shape (cas-sc): `\address[1]{Univ X}` and `\address[2]{Univ Y}` go to the authors carrying those

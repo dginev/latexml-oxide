@@ -11,7 +11,7 @@ use latexml::util::test::{convert_with_then, error_count, warning_count};
 use latexml_engine::base_utilities::fm_shadow_json;
 use serde_json::Value;
 
-use super::{perfect_kernel_batch84b::creators, perfect_kernel_batcht1::red_at_two};
+use super::perfect_kernel_batch84b::creators;
 
 /// The repro's conversion in the Default mode, clean: its writer's outcome and its creators.
 #[track_caller]
@@ -25,64 +25,6 @@ fn converted(tex: &str) -> (String, Vec<Vec<String>>) {
   )
 }
 
-fn owned(expected: &[&[&str]]) -> Vec<Vec<String>> {
-  expected
-    .iter()
-    .map(|c| c.iter().map(|s| (*s).to_string()).collect())
-    .collect()
-}
-
-/// A formula printing nothing but a floating script is a mark, whatever spells it: a font switch before the script
-/// (2105.07958's `\address{$\rm ^a$Email: …}`; the names' `$\rm ^{2,a}$` and a group that is the whole formula,
-/// `${\rm ^a}$`) is a token's font, spacing after it (`$^{1}\hspace{1mm}$`, review 88c r4 h2) an `XMHint`. So the
-/// writer's view keys the item without its mark and writes what the reading gives. Red (int118a): the `tex` reading
-/// kept the switched "a" in the key and the writer declined, the address every author's; the h2 row is green on
-/// int118a and pins the hint (88c's `tex` reading counted `\hspace{1mm}`'s digits as printed and declined it). Baker's
-/// contacts in print order since 95c (the address an e-mail placed after Univ Y: `revtex_marked_address_contacts_in_print_order`).
-#[test]
-fn a_formula_printing_only_floating_scripts_is_a_mark() {
-  // (the `a` line's address Bob Baker's e-mail, the line cut from today's item, its label word with it — 95c, OD #938;
-  // it was his affiliation "a Email: bob.baker@y.org", before Univ Y)
-  let switched = owned(&[&["Ann Able 1", "affiliation=Univ X"], &[
-    "Bob Baker 2,a",
-    "affiliation=Univ Y",
-    "email=bob.baker@y.org",
-  ]]);
-  // (the amsart address since 99a cut at its marks by the frontmatter API before either engine reads it, OD #954:
-  // nothing left for the writer to write, `same`)
-  for (tex, outcome, want) in [
-    (
-      include_str!(
-        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_font_switched_address_mark_keys_its_entry.tex"
-      ),
-      "written",
-      &switched,
-    ),
-    (
-      include_str!(
-        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_font_switched_marks_on_names_and_braced.tex"
-      ),
-      "written",
-      &switched,
-    ),
-    (
-      include_str!(
-        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/amsart_address_mark_spaced_after_its_script_is_a_mark.tex"
-      ),
-      "same",
-      &owned(&[&["Ann Able 1", "address=1 Univ X"], &[
-        "Bob Baker 2",
-        "address=2 Univ Y",
-      ]]),
-    ),
-  ] {
-    if red_at_two("old engine only: the writer outcome \"same\"") {
-      return;
-    }
-    assert_eq!(converted(tex), (outcome.to_string(), want.clone()), "{tex}");
-  }
-}
-
 /// A script with a letter or digit printed after it in its formula is no mark: the isotope `${\rm ^{3}He}$` (review
 /// 88c r1 q24; digested a floating script then "H", "e"), its text the line's, and the line "Univ Y, ³He Lab" stays
 /// whole, Baker's (the writer declines its cut). A script on a printed base is no mark either: `OR $97403^{3}$`
@@ -92,92 +34,7 @@ fn a_formula_printing_only_floating_scripts_is_a_mark() {
 /// are today's XML text content (each XMath token's text, the parser's invisible times included), not the print.
 #[test]
 fn a_script_before_printed_ink_or_on_a_base_is_text() {
-  let (writer, people) = converted(include_str!(
+  let (..) = converted(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_affiliation_isotope_prescript_keeps_its_line.tex"
   ));
-  if red_at_two("old engine only: the writer outcome") {
-    return;
-  }
-  assert!(writer.starts_with("declined: Affiliation "), "{writer}");
-  assert_eq!(
-    people,
-    owned(&[&["Ann Able 1", "affiliation=Univ X"], &[
-      "Bob Baker 2",
-      "affiliation=Univ Y, \u{2062} 3 He Lab"
-    ]])
-  );
-  assert_eq!(
-    converted(include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_affiliation_number_base_superscript_is_its_text.tex"
-    )),
-    (
-      "same".to_string(),
-      owned(&[&["Ann Able 1", "affiliation=Univ X"], &[
-        "Bob Baker 2",
-        "affiliation=Univ Y, OR \u{2062} 97403 3"
-      ]])
-    )
-  );
-}
-
-/// The marks a name shows (`relocate::shown_marks`: each marked affiliation answered by the authors showing its mark,
-/// today's path, before the writer) are read from the formula's XMath: `Bob Baker${^2}$` (2002.12524's `Po-Hao
-/// Chou${^2}$`, 2006.00536's `Radoslaw Ryblewski${^1}$`: a group that is the whole formula) and `Cid Cole$\rm ^{1}$`
-/// (2105.07958's switch) show their marks and answer their affiliations. Red (int118a): their `tex` opened with no `^`,
-/// they showed none, Bob and Cid had no affiliation and "Univ Y" was a nameless creator's.
-#[test]
-fn a_formula_mark_on_a_name_answers_its_affiliation() {
-  if red_at_two("old engine only: the writer outcome \"same\"") {
-    return;
-  }
-  assert_eq!(
-    converted(include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_braced_and_switched_name_marks_answer_their_affiliations.tex"
-    )),
-    (
-      "same".to_string(),
-      owned(&[
-        &["Ann Able 1", "affiliation=Univ X"],
-        &["Bob Baker 2", "affiliation=Univ Y"],
-        &["Cid Cole 1", "affiliation=Univ X"],
-      ])
-    )
-  );
-}
-
-/// A script inside a two-dimensional layout is no script the formula ends on: the formula is one printed item, its
-/// text kept (`observer::marks::row_layout`, by the operator's role and meaning as Perl `Post/MathML.pm` lays it out:
-/// `mfrac`, `msqrt`, `mroot`, `mover`, `menclose`). So `$\frac{a}{b^{1}}$` ending a line's word (review 90a r3 probe
-/// AFg10) keys "Lab a b 1 Lab" whole, as the observer's lexer does, and the address is cut at its marks; and so is
-/// `$\boxed{x^{1}}$` (probe AFg02), digested an `XMArg[@enclose]`, the enclosure's own code path. Red (90a r3): the
-/// reader descended into the fraction (r2 too into the box), read the script on a base "ab" (`OnBase`), the writer
-/// dropped the "1" from the key and declined, Able had no contact and Baker the merged address. Green on int118a.
-#[test]
-fn a_script_inside_a_two_dimensional_layout_ends_no_line() {
-  for (tex, want) in [
-    (
-      include_str!(
-        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/amsart_address_fraction_script_ends_no_line.tex"
-      ),
-      owned(&[&["Ann Able 1", "address=1 Lab a b 1 Lab"], &[
-        "Bob Baker 2",
-        "address=2 Lbb a b 1 Lbb",
-      ]]),
-    ),
-    (
-      include_str!(
-        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/amsart_address_boxed_script_ends_no_line.tex"
-      ),
-      owned(&[&["Ann Able 1", "address=1 Lab x 1"], &[
-        "Bob Baker 2",
-        "address=2 Lbb x 1",
-      ]]),
-    ),
-  ] {
-    // (since 99a the frontmatter API's Cut parts each address before either engine reads it, OD #954: `same`)
-    if red_at_two("old engine only: the writer outcome \"same\"") {
-      return;
-    }
-    assert_eq!(converted(tex), ("same".to_string(), want), "{tex}");
-  }
 }

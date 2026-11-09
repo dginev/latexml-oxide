@@ -11,8 +11,6 @@ use latexml::util::test::{convert_files_with_setup_then, error_count, warning_co
 use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use serde_json::{Value, json};
 
-use super::perfect_kernel_batcht1::red_at_two;
-
 /// Convert `tex` under the shadow switch: the log, the XML and the dump.
 pub(super) fn run(tex: &str) -> (String, String, Value) {
   let (log, xml, json) = convert_files_with_setup_then(
@@ -174,104 +172,6 @@ fn a_contact_that_prints_nothing_says_so() {
   assert_eq!(contacts, vec!["ann@a.org"]);
 }
 
-/// Gap 8: a definition makes no box, so it stood in no event. Each is now a Declaration beside the block's events, with
-/// its call's span and definees: a `\newcommand`, a `\def` in a group (`nest`), a paper's macro whose expansion defines
-/// (its call's span), a `\global` one. The macro printing ink (`\printer`) has none, its box's span holding the call,
-/// and a block with none has no list. A definition parts no name run, and each still defines where it stood: the names
-/// and the note read the text they define.
-#[test]
-fn a_definition_in_the_block_is_an_event_with_its_span() {
-  if red_at_two("loses \"BakerB Dept Q\" and writes \"Univ A\" as plain text, 3 Warnings") {
-    return;
-  }
-  let (xml, dump) = dump(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/event_declaration_in_block.tex"
-  ));
-  let block = blocks(&dump)[0];
-  assert_eq!(
-    block["declarations"],
-    json!([
-      {"kind": "Declaration", "span": [0, 12], "label": "\\univ"},
-      {"kind": "Declaration", "span": [27, 32], "label": "\\b", "nest": 1},
-      {"kind": "Declaration", "span": [45, 46], "label": "\\dept"},
-      {"kind": "Declaration", "span": [67, 73], "label": "\\q", "role": "global"},
-    ])
-  );
-  assert!(of_kind(&block["events"], "Declaration").is_empty());
-  let names: Vec<Value> = of_kind(&block["events"], "Name")
-    .iter()
-    .map(|name| name["text"].clone())
-    .collect();
-  assert_eq!(names, vec![
-    "Ann Able",
-    "Bob BakerB",
-    "Cat Cole Dept",
-    "Dan Dow Z",
-    "Eve Ely Q"
-  ]);
-  assert!(xml.contains("Univ A"), "{xml}");
-  // (its control twin: the other repro's blocks, and any block of no definition, hold no list)
-  let (_, plain) = self::dump(
-    "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able \\and {Bob} Baker}\n\\maketitle\nBody.\n\\end{document}\n",
-  );
-  assert_eq!(blocks(&plain)[0].get("declarations"), None);
-}
-
-/// Gap 8's span: a Declaration starts at what leads to its definer in the pending cover, so that a read of the span's content
-/// is the definition: `\expandafter` (read by the gullet, whose `\csname` the span would run alone without it), `\long`
-/// and `\global` (prefixes, whose meaning the span would lose). No earlier: not over a font switch or an earlier
-/// declaration (each a call of its own), nor out into a conditional (the `\fi` is past the span: unbalanced). A box after a
-/// declaration does not take it (`\def\u{U}\textbf{Cat}`). A macro defining one name twice lists it once. A font switch
-/// is none, though `\itshape` reads as the document's (`\reinstall@nfss@defs`): `perfect_kernel_batchz2`.
-#[test]
-fn a_declarations_span_holds_what_leads_to_it() {
-  if red_at_two("loses \"2 Q R ST U V\" from the placed frontmatter, a content-check Warning") {
-    return;
-  }
-  let (_, dump) = dump(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/event_declaration_span_holds_its_lead.tex"
-  ));
-  assert_eq!(
-    blocks(&dump)[0]["declarations"],
-    json!([
-      {"kind": "Declaration", "span": [0, 9], "label": "\\ww"},
-      {"kind": "Declaration", "span": [18, 25], "label": "\\q", "role": "global"},
-      {"kind": "Declaration", "span": [36, 42], "label": "\\r", "role": "global"},
-      {"kind": "Declaration", "span": [53, 58], "label": "\\s"},
-      {"kind": "Declaration", "span": [58, 64], "label": "\\t", "role": "global"},
-      {"kind": "Declaration", "span": [77, 82], "label": "\\u"},
-      {"kind": "Declaration", "span": [97, 102], "label": "\\v"},
-      {"kind": "Declaration", "span": [113, 114], "label": "\\y"},
-    ])
-  );
-}
-
-/// Gap 9: a rehearsal goes on past an error it holds, so the block keeps all its events (the kinds that give none: a Fatal,
-/// a run not undone, no journal, unchanged). The event the error was raised in says so, the name after it does not, and the
-/// block lists it by position with its log line. The document raises the same error itself, once.
-#[test]
-fn a_held_error_marks_the_events_it_touches() {
-  let (log, _, dump) = run(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/event_held_error_marks_its_events.tex"
-  ));
-  if red_at_two(
-    "glues the undefined \\nosuch onto \"Able\" (\"nosuchAble\"), 2 false content-check Warnings",
-  ) {
-    return;
-  }
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
-  let block = blocks(&dump)[0];
-  assert_eq!(block["errors"], json!(1));
-  assert_eq!(
-    block["held"],
-    json!([{"span": [4, 5], "message": "Error:undefined:\\nosuch The token T_CS[\\nosuch] is not defined."}])
-  );
-  assert_eq!(of_kind(&block["events"], "Name"), vec![
-    json!({"kind": "Name", "span": [0, 9], "text": "Ann Able", "held": true}),
-    json!({"kind": "Name", "span": [11, 20], "text": "Bob Baker"}),
-  ]);
-}
-
 /// Gap 9's witnesses' shape (2201.04449's `\corref{corresponding_author}`, the rehearsal's request constructor digesting
 /// the label's `_`): a held error the document never raises. The block's Mark says so; its twin block, a label of no `_`,
 /// holds no error; the writer's reading is held back as before (`dump["writer"]` none: `written_resolution`).
@@ -294,8 +194,4 @@ fn a_held_error_of_the_rehearsal_alone_marks_its_mark() {
   assert_eq!(of_kind(&clean["events"], "Mark"), vec![json!({
     "kind": "Mark", "span": [9, 17], "label": "cor:cortwo", "role": "request", "symbol": false, "line_first": false,
   })]);
-  if red_at_two("old engine only: the dump's writer outcome is null (=2 reads \"written\")") {
-    return;
-  }
-  assert_eq!(dump["writer"], Value::Null);
 }

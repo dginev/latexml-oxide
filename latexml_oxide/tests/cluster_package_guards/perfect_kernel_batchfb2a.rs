@@ -32,17 +32,11 @@ macro_rules! repro {
   };
 }
 
-/// `tex` converted off and at `=2`, both clean: their creators' XML.
-fn both(tex: &str) -> (Vec<String>, Vec<String>) {
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, two) = run(tex, 2);
+/// `tex` converted, clean: their creators' XML.
+fn both(tex: &str) -> Vec<String> {
+  let (log, two) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  (creators_xml(&off), creators_xml(&two))
+  creators_xml(&two)
 }
 
 /// The affiliation contact `text`, as both engines write a plain one (its label's space a no-break one).
@@ -55,7 +49,7 @@ fn affiliation(text: &str) -> String {
 /// (2608.19750); the note is his, as the PDF prints it under his address. (Off glues it too: the old reader's.)
 #[test]
 fn a_raw_queued_call_feeds_no_symbol_mark_to_the_reading() {
-  let (log, xml) = run(repro!("emit_raw_fallback_symbol_mark_is_no_affiliation"), 2);
+  let (log, xml) = run(repro!("emit_raw_fallback_symbol_mark_is_no_affiliation"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let two = creators_xml(&xml);
   assert_eq!(two.len(), 2, "{two:#?}");
@@ -83,7 +77,7 @@ fn a_raw_queued_call_feeds_no_symbol_mark_to_the_reading() {
 /// juggle's tabular open and "Dept" in no box, lost with no Warning (0712.1016, 1704.03168, 1301.5612, 1401.6981).
 #[test]
 fn a_tabular_juggle_is_a_column_or_its_break() {
-  let (off, two) = both(repro!("author_shared_affiliation_line"));
+  let two = both(repro!("author_shared_affiliation_line"));
   assert_eq!(two.len(), 1, "{two:#?}");
   assert!(
     two[0].contains("<personname>A One</personname>"),
@@ -91,12 +85,14 @@ fn a_tabular_juggle_is_a_column_or_its_break() {
     two[0]
   );
   assert!(two[0].contains(&affiliation("Dept")), "{}", two[0]);
-  assert_eq!(two, off);
+  assert_eq!(two, vec![
+    "<creator role=\"author\">\n    <personname>A One</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept</contact>\n  </creator>"
+  ]);
   // (a juggle printing a break between its close and its reopen, 1301.5612's `\end{tabular}\newline\begin{tabular}{c}`)
   let tex = repro!("author_shared_affiliation_line");
   let newline = tex.replacen("\\end{tabular}\n", "\\end{tabular}\\newline\n", 1);
   assert_ne!(newline, tex);
-  let (_, two_newline) = both(&newline);
+  let two_newline = both(&newline);
   assert_eq!(two_newline, two);
 }
 
@@ -105,7 +101,7 @@ fn a_tabular_juggle_is_a_column_or_its_break() {
 /// "Astronomy"; with the Break alone, the environment's lines were one print unit, one affiliation.
 #[test]
 fn a_trailing_alignment_environment_is_lines_under_the_names() {
-  let (off, two) = both(repro!("author_trailing_center_lines_are_lines"));
+  let two = both(repro!("author_trailing_center_lines_are_lines"));
   assert_eq!(two.len(), 2, "{two:#?}");
   for (creator, name) in two.iter().zip(["Ann Able", "Bob Baker"]) {
     assert!(
@@ -123,10 +119,16 @@ fn a_trailing_alignment_environment_is_lines_under_the_names() {
       .collect();
     assert!(at.windows(2).all(|w| w[0] < w[1]), "{creator}");
   }
-  assert_eq!(two, off);
-  let (off, two) = both(repro!("author_block_environment_is_one_unit"));
+  assert_eq!(two, vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics and Astronomy</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of X</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">City</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics and Astronomy</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of X</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">City</contact>\n  </creator>"
+  ]);
+  let two = both(repro!("author_block_environment_is_one_unit"));
   assert_eq!(two.len(), 2, "{two:#?}");
-  assert_eq!(two, off);
+  assert_eq!(two, vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics and Astronomy</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics and Astronomy</contact>\n  </creator>"
+  ]);
 }
 
 /// A `\thanks` set in a formula (`Bob Baker$^{1}\thanks{…}$`) is read in text mode, as its content is digested in the
@@ -134,14 +136,17 @@ fn a_trailing_alignment_environment_is_lines_under_the_names() {
 /// Warning "note no argument"; 2407.15815, 2603.20851).
 #[test]
 fn a_note_in_a_formula_keeps_its_words() {
-  let (off, two) = both(repro!("author_thanks_in_a_formula_keeps_its_spaces"));
+  let two = both(repro!("author_thanks_in_a_formula_keeps_its_spaces"));
   assert_eq!(two.len(), 2, "{two:#?}");
   assert!(
     two[1].contains("role=\"thanks\">The first two authors contributed equally</note>"),
     "{}",
     two[1]
   );
-  assert_eq!(two, off);
+  assert_eq!(two, vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\">The first two authors contributed equally</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>"
+  ]);
 }
 
 /// A URL line under every name of the document's author list is the block's, its shared creator (OD #159; user ruling
@@ -149,7 +154,7 @@ fn a_note_in_a_formula_keeps_its_words() {
 /// several, the column's names' — known only once the block's later columns are read.
 #[test]
 fn a_url_line_under_every_name_is_the_blocks() {
-  let (off, two) = both(repro!("author_link_line_url_contact_unmarked"));
+  let two = both(repro!("author_link_line_url_contact_unmarked"));
   assert_eq!(two.len(), 3, "{two:#?}");
   assert!(!two[2].contains("<personname"), "{}", two[2]);
   assert!(
@@ -161,12 +166,20 @@ fn a_url_line_under_every_name_is_the_blocks() {
     two[..2].iter().all(|c| !c.contains("role=\"url\"")),
     "{two:#?}"
   );
-  assert_eq!(two, off);
-  let (off, two) = both(repro!("author_url_line_under_one_column_is_its_names"));
+  assert_eq!(two, vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <contact name=\"URL:\u{a0}\" role=\"url\"><ref class=\"ltx_nolink ltx_url\" font=\"typewriter\" fontsize=\"90%\" href=\"https://project.example.org\">https://project.example.org</ref></contact>\n  </creator>"
+  ]);
+  let two = both(repro!("author_url_line_under_one_column_is_its_names"));
   assert_eq!(two.len(), 3, "{two:#?}");
   let urls: Vec<bool> = two.iter().map(|c| c.contains("role=\"url\"")).collect();
   assert_eq!(urls, [true, true, false], "{two:#?}");
-  assert_eq!(two, off);
+  assert_eq!(two, vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"URL:\u{a0}\" role=\"url\"><ref class=\"ltx_nolink ltx_url\" font=\"typewriter\" href=\"https://project.example.org\">https://project.example.org</ref></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"URL:\u{a0}\" role=\"url\"><ref class=\"ltx_nolink ltx_url\" font=\"typewriter\" href=\"https://project.example.org\">https://project.example.org</ref></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ C</contact>\n  </creator>"
+  ]);
 }
 
 /// A juggle reopens the tabular it closes: a macro that only closes one (`\newcommand{\etab}{\end{tabular}}`, closing the
@@ -177,7 +190,7 @@ fn a_url_line_under_every_name_is_the_blocks() {
 /// first shape, E 4: kept until the flip.)
 #[test]
 fn a_macro_closing_a_tabular_is_no_juggle() {
-  let (log, xml) = run(repro!("author_tabular_close_macro_is_no_juggle"), 2);
+  let (log, xml) = run(repro!("author_tabular_close_macro_is_no_juggle"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let expected = vec![
     vec!["Ann Able".to_string(), "affiliation=Univ A".to_string()],
@@ -185,7 +198,7 @@ fn a_macro_closing_a_tabular_is_no_juggle() {
   ];
   assert_eq!(creators(&xml), expected, "{xml}");
   let text = "1 Univ X a b c d";
-  let (log, xml) = run(&environment_row(ENVIRONMENT_SHAPE, text), 2);
+  let (log, xml) = run(&environment_row(ENVIRONMENT_SHAPE, text));
   assert_eq!(error_count(&log), 0, "{log}");
   let expected = vec![vec![
     "Ann Able".to_string(),
@@ -201,7 +214,7 @@ fn a_macro_closing_a_tabular_is_no_juggle() {
 /// "url: Google" (review revFB2a finding 3). Distinct from `a_url_line_under_every_name_is_the_blocks`: the exception.
 #[test]
 fn a_link_printing_an_institution_is_every_names() {
-  let (off, two) = both(repro!("author_link_printing_an_institution_is_every_names"));
+  let two = both(repro!("author_link_printing_an_institution_is_every_names"));
   assert_eq!(two.len(), 2, "{two:#?}");
   let google = affiliation("<ref class=\"ltx_href\" href=\"https://www.google.com\">Google</ref>");
   for (creator, name) in two.iter().zip(["Ann Able", "Bob Baker"]) {
@@ -216,7 +229,10 @@ fn a_link_printing_an_institution_is_every_names() {
     assert!(at[0] < at[1], "{creator}");
     assert!(!creator.contains("role=\"url\""), "{creator}");
   }
-  assert_eq!(two, off);
+  assert_eq!(two, vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><ref class=\"ltx_href\" href=\"https://www.google.com\">Google</ref></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><ref class=\"ltx_href\" href=\"https://www.google.com\">Google</ref></contact>\n  </creator>"
+  ]);
 }
 
 /// Batch FB2b4: the juggle written inline in `\author`, `\end{tabular}\begin{tabular}[t]{c}` between two authors, is the
@@ -228,7 +244,7 @@ fn a_link_printing_an_institution_is_every_names() {
 #[test]
 fn an_inline_tabular_juggle_is_a_column() {
   let tex = repro!("author_raw_tabular_juggle_is_a_column");
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let expected = vec![
     vec!["A One".to_string(), "affiliation=Univ A".to_string()],
@@ -241,7 +257,7 @@ fn an_inline_tabular_juggle_is_a_column() {
     1,
   );
   assert_ne!(newline, tex);
-  let (log, xml) = run(&newline, 2);
+  let (log, xml) = run(&newline);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let expected = vec![vec![
     "A One".to_string(),
@@ -266,7 +282,7 @@ fn a_nameless_column_after_the_names_is_every_names() {
     ]
   };
   let expected = vec![shared("A One"), shared("Bob Two")];
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), expected, "{xml}");
   let macro_form = tex
@@ -284,7 +300,7 @@ fn a_nameless_column_after_the_names_is_every_names() {
     macro_form.contains("Bob Two \\sharedaffiliation Univ"),
     "{macro_form}"
   );
-  let (log, xml) = run(&macro_form, 2);
+  let (log, xml) = run(&macro_form);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), expected, "{xml}");
 }
@@ -312,7 +328,7 @@ fn a_juggle_judges_the_command_between_by_what_it_prints() {
       1,
     );
     assert_ne!(shape, tex);
-    let (log, xml) = run(&shape, 2);
+    let (log, xml) = run(&shape);
     ((error_count(&log), warning_count(&log)), creators(&xml))
   };
   let row = vec![vec![
@@ -352,7 +368,7 @@ fn a_team_column_is_no_shared_affiliation() {
   let names = vec![vec!["Ann Able 1".to_string()], vec![
     "Bob Baker 2".to_string(),
   ]];
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let read = creators(&xml);
   assert_eq!(read[..2], names[..], "{xml}");
@@ -375,7 +391,7 @@ fn a_team_column_is_no_shared_affiliation() {
     1,
   );
   assert_ne!(remark, tex);
-  let (log, xml) = run(&remark, 2);
+  let (log, xml) = run(&remark);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let mut expected = names;
   expected.push(vec![
@@ -392,7 +408,7 @@ fn a_team_column_is_no_shared_affiliation() {
     1,
   );
   assert!(group.contains("The Theory Group"), "{group}");
-  let (log, xml) = run(&group, 2);
+  let (log, xml) = run(&group);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let shared = |name: &str| {
     vec![

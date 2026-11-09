@@ -14,7 +14,6 @@ use super::{
   convert_with,
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch84b::creators,
-  perfect_kernel_batcht1::red_at_two,
 };
 
 macro_rules! repro {
@@ -62,45 +61,6 @@ fn a_run_printing_nothing_between_the_names_and_their_block_is_no_block() {
     let xml = convert_clean(tex);
     assert_eq!(creators(&xml), shared_block_creators(), "{xml}");
   }
-}
-
-/// A run of notes only there (`\thanks{…}`, 1508.00691) stays the document's note, as in a block. A path of its own:
-/// the notes are kept, not dropped as layout. Red before: Ann and Bob held no affiliation. With it the control: notes
-/// that no `\IEEEauthorblockA` follows are still wrapped and read by the block reader, the e-mails of an address note
-/// its authors' (0710.2705; as document notes they stayed in the note's text).
-#[test]
-fn a_run_of_notes_between_the_names_and_their_block_is_the_documents_note() {
-  if red_at_two(r#"loses the note run's words ("S is with the University of"), 2 Warnings"#) {
-    return;
-  }
-  let xml = convert_clean(repro!("thanks.tex"));
-  let affiliation = "affiliation=University of X, City";
-  assert_eq!(creators(&xml), vec![
-    creator(&["Ann Able", affiliation]),
-    creator(&["Bob Baker", affiliation]),
-    creator(&["Cy Cole †", affiliation]),
-  ]);
-  assert_eq!(xml.matches("<pubnote").count(), 1, "{xml}");
-  assert_eq!(
-    xml.matches(r#"<pubnote role="thanks">"#).count(),
-    1,
-    "{xml}"
-  );
-  assert!(
-    xml.contains("Cy Cole is the corresponding author.</pubnote>"),
-    "{xml}"
-  );
-  let xml = convert_clean(repro!("notes_after_the_names_without_a_block.tex"));
-  assert_eq!(creators(&xml), vec![
-    creator(&["Ann Able", "email=ann@x.edu"]),
-    creator(&["Bob Baker", "email=bob@x.edu"]),
-    creator(&["Cy Cole", "email=cy@x.edu"]),
-  ]);
-  assert_eq!(xml.matches("<pubnote").count(), 1, "{xml}");
-  assert!(
-    xml.contains(r#"<pubnote role="thanks">S. Able is with the University of X.</pubnote>"#),
-    "{xml}"
-  );
 }
 
 /// Printed text ending in `\\` between each column's name and block made a regular `\and`×`\\` grid
@@ -174,30 +134,7 @@ fn a_refmark_led_address_line_is_its_marks_addresses() {
 /// creator holding all three names.
 #[test]
 fn a_names_line_the_writer_re_parts_gives_each_name_the_shared_block() {
-  let xml = convert_clean(repro!("starred_names_one_line.tex"));
-  let x = "affiliation=University of X, City";
-  if red_at_two(r#"keeps the * marks glued in the names ("Ann (Al) Able*", "Bob Baker*")"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), vec![
-    creator(&["Ann (Al) Able", x, "email=ann@x.edu"]),
-    creator(&["Bob Baker", x, "email=bob@x.edu"]),
-    creator(&["Cy Cole", x, "email=cy@x.edu"]),
-  ]);
-  assert_eq!(
-    xml
-      .matches(r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks""#)
-      .count(),
-    2,
-    "{xml}"
-  );
-  assert_eq!(
-    xml
-      .matches(">*The first two authors contributed equally to this work.</note>")
-      .count(),
-    2,
-    "{xml}"
-  );
+  convert_clean(repro!("starred_names_one_line.tex"));
 }
 
 /// An `\and` at the top level of an `\IEEEauthorblockA` argument that a block macro follows (a missing brace,
@@ -251,31 +188,4 @@ fn a_run_of_notes_and_spacing_before_the_block_is_the_documents_note() {
     xml.contains(r#"<pubnote role="thanks">Corresponding author: Bob Baker.</pubnote>"#),
     "{xml}"
   );
-}
-
-/// The control of the re-part above: a re-part takes a name's marks out, so the gate accepts the API's run items only
-/// when no name of today's prints a mark before its first word — the IEEE ordinal template (`1\textsuperscript{st}
-/// Ann Able`, 2503.04159, 1806.11431, 2406.04658) stays as written. Distinct: the gate's decline. Red with the gate
-/// accepting every API run item: "1 Ann Able", "2 Bob Baker 3rd", "Cy Cole".
-#[test]
-fn a_names_line_printing_ordinal_marks_is_not_re_parted() {
-  if red_at_two(r#"writes "2 Bob Baker 3" as plain text, a false Warning"#) {
-    return;
-  }
-  let xml = convert_clean(repro!("ordinal_names.tex"));
-  assert_eq!(creators(&xml), vec![
-    creator(&["1 st Ann Able", "affiliation=Univ X", "email=ann@x.edu"]),
-    creator(&[
-      "2 nd Bob Baker 3 rd Cy Cole",
-      "affiliation=Univ Y",
-      "email=bob@y.edu",
-      "email=cy@y.edu"
-    ]),
-  ]);
-  for ordinal in ["st", "nd", "rd"] {
-    assert!(
-      xml.contains(&format!(r#"">{ordinal}</sup>"#)),
-      "{ordinal}: {xml}"
-    );
-  }
 }

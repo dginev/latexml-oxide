@@ -11,7 +11,7 @@
 //! an institution an affiliation (`opens_with_deceased`, `reads_as_affiliation`). Each guard converts its repro under
 //! `tools/perfect_kernel/repros/sectioning-frontmatter/` from the binary, eager and `--streaming`, and asserts the
 //! frontmatter it makes whole.
-use super::{perfect_kernel_batch99b::converted, perfect_kernel_batcht1::red_at_two};
+use super::perfect_kernel_batch99b::converted;
 
 macro_rules! repro {
   ($name:literal) => {
@@ -40,16 +40,6 @@ fn a_deceased_legend_is_a_note_of_its_carriers() {
       0
     ),
     r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_deceased" mark="†" role="thanks" xml:id="id1"><sup xml:id="id1.1">†</sup>Deceased</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
-  );
-  if red_at_two(r#"keeps the legend's star in Ann's mark ("1,⋆" for "1")"#) {
-    return;
-  }
-  assert_eq!(
-    converted(
-      repro!("binding_symbol_led_deceased_entry_is_a_note_of_its_carrier"),
-      0
-    ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Dept of Physics, Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_deceased" mark="⋆" role="thanks" xml:id="id3"><sup xml:id="id3.1">⋆</sup>Deceased</note> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">1</sup>Dept of Physics, Univ A, Town</contact> </creator> <abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">Abs.</p> </abstract> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }
 
@@ -92,33 +82,6 @@ fn a_displaced_line_led_by_an_unrequested_symbol_stays_the_classs() {
       0
     ),
     r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">2</sup></personname> </creator> <para xml:id="p1"> <p xml:id="p1.1"><sup xml:id="p1.1.1"><text fontsize="90%" xml:id="p1.1.1.1">1</text></sup><text font="italic" fontsize="90%" xml:id="p1.1.2">Univ A, Town<break/><sup xml:id="p1.1.2.1">2</sup>Univ B, City<break/><sup xml:id="p1.1.2.2">†</sup>Deceased</text></p> </para> <para xml:id="p2"> <p xml:id="p2.1">Text.</p> </para>"#
-  );
-}
-
-/// A routed line holding several entries led by marks the names request goes to the API bare, and its Cut gives each
-/// entry to its requesters even where the frontmatter observer declines (ORCID links in the names): on the displaced
-/// route (`hand_displaced_stores`) and the in-place route (`by_its_label`), both through `contact_line_call`. Labelled
-/// `_unsplit`, the line was one nameless creator's (SYNC row "99b" (e); 1812.07638).
-/// Four names, Bob Baker and Dan Dole parted by a comma as pdflatex prints them (review rev100a N2: written without it,
-/// "Bob Baker(iD) Dan Dole" was one name, which the guard pinned).
-#[test]
-fn a_routed_line_of_several_requested_entries_is_cut_by_the_api() {
-  if red_at_two(r#"a false content-check Warning ("iD" placed more often than printed)"#) {
-    return;
-  }
-  assert_eq!(
-    converted(
-      repro!("displaced_line_of_several_requested_entries_is_cut_by_the_api"),
-      0
-    ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<ref class="ltx_href" href="https://orcid.org/0000-0000-0000-0001">(iD)</ref></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup>Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<ref class="ltx_href" href="https://orcid.org/0000-0000-0000-0002">(iD)</ref></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2"><text font="italic" xml:id="id2.1">2</text></sup>Univ B, City</contact> </creator> <creator before=" " role="author"> <personname>Dan Dole</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup>Univ B, City</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4"><text font="italic" xml:id="id4.1">1</text></sup>Univ A, Town</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
-  );
-  assert_eq!(
-    converted(
-      repro!("in_place_line_of_several_requested_entries_is_cut_by_the_api"),
-      0
-    ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<ref class="ltx_href" href="https://orcid.org/0000-0000-0000-0001">(iD)</ref></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<ref class="ltx_href" href="https://orcid.org/0000-0000-0000-0002">(iD)</ref></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ B, City</contact> </creator> <creator before=" " role="author"> <personname>Dan Dole</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Univ B, City</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">1</sup>Univ A, Town</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }
 

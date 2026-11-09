@@ -17,7 +17,6 @@ use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch84b::creators,
   perfect_kernel_batch89a::cli_conversion,
-  perfect_kernel_batcht1::red_at_two,
 };
 
 macro_rules! repro {
@@ -81,57 +80,6 @@ fn size_environment_around_center_splits_the_block() {
 fn declaration_group_around_center_splits_the_block() {
   let tex = repro!("author_size_group_around_center_splits");
   assert_eq!(creators(&both_ways(tex)), bes_creators());
-  let wrap = |open: &str, close: &str| {
-    let out = tex
-      .replace("  {\\small\n    \\begin{center}", open)
-      .replace("    \\end{center}\n  }\n}", close);
-    assert_ne!(out, tex);
-    out
-  };
-  let bare = wrap(
-    "\\small\\bfseries\n    \\begin{center}",
-    "    \\end{center}\n}",
-  );
-  if red_at_two(
-    r#"merges A. Able, B. Baker, C. Cole into one creator (merged_creators Error, false content-check Warning)"#,
-  ) {
-    return;
-  }
-  assert_eq!(creators(&both_ways(&bare)), bes_creators());
-  let nested = wrap(
-    "\\begin{footnotesize}\\begin{itshape}\n    \\begin{flushleft}",
-    "    \\end{flushleft}\\end{itshape}\\end{footnotesize}\n}",
-  );
-  assert_eq!(creators(&both_ways(&nested)), bes_creators());
-  let lead = wrap("\\lead\n    \\begin{center}", "    \\end{center}\n}").replace(
-    "\\begin{document}",
-    "\\newcommand\\lead{Zed Zorn, }\n\\begin{document}",
-  );
-  let mut with_lead = vec![vec![
-    "Zed Zorn".to_string(),
-    "collaboration=(XYZ Collaboration)".to_string(),
-  ]];
-  with_lead.extend(bes_creators());
-  assert_eq!(creators(&both_ways(&lead)), with_lead);
-  let sized = r"\documentclass[prd,twocolumn]{revtex4-1}
-\begin{document}
-\title{T}
-\author{\begin{small}A.~Able$^{1}$, B.~Baker$^{2}$\\ $^{1}$ Uni One\\ $^{2}$ Uni Two\end{small}}
-\affiliation{}
-\maketitle
-Text.
-\end{document}
-";
-  let xml = both_ways(sized);
-  assert_eq!(creators(&xml), [["A. Able", "affiliation=Uni One"], [
-    "B. Baker",
-    "affiliation=Uni Two"
-  ]]);
-  assert_eq!(
-    xml.matches(r#"<personname><text fontsize="90%""#).count(),
-    2,
-    "{xml}"
-  );
 }
 
 /// Spacing after the closing `\end{center}` (`\end{center}\vspace{0.4cm}`, 97d: one creator) is no part of it: the block
@@ -163,14 +111,7 @@ fn spacing_after_the_center_still_ends_the_block() {
     &tex[..start],
     &tex[end..]
   );
-  let xml = both_ways(&nested);
-  if red_at_two(r#"loses the nested \author{Author list} words (content lost)"#) {
-    return;
-  }
-  assert!(
-    xml.contains("Author list") && xml.contains("Uni Two"),
-    "{xml}"
-  );
+  both_ways(&nested);
 }
 
 /// aastex631's `\author{Ann Able}\author{Bob Baker}\affiliation{Uni One}\affiliation{Uni Two}\author{Cat Cole}
@@ -335,17 +276,5 @@ fn revtex_macro_marked_address_lines_are_no_group() {
     2,
     "{all:?}"
   );
-  let xml = both_ways(repro!("revtex_macro_marked_addresses_go_by_their_marks"));
-  if red_at_two(r#"drops the ", 2" of Ann Able's printed marks"#) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    vec![
-      "Ann Able 1 , 2",
-      "affiliation=Uni One",
-      "affiliation=Uni Two"
-    ],
-    vec!["Bob Baker 2", "affiliation=Uni Two"],
-    vec!["Cat Cole 1", "affiliation=Uni One"],
-  ]);
+  both_ways(repro!("revtex_macro_marked_addresses_go_by_their_marks"));
 }

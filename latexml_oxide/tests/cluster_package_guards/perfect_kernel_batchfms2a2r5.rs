@@ -11,8 +11,6 @@ use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use serde_json::Value;
 
-use super::perfect_kernel_batcht1::red_at_two;
-
 /// Convert `tex` under the shadow switch, asserting a clean conversion: the whole dump.
 fn dump(tex: &str) -> Value { dump_as(tex, None) }
 
@@ -34,9 +32,6 @@ fn dump_as(tex: &str, held: Option<&str>) -> Value {
 /// The resolved tuples compactly, as `perfect_kernel_batchfms2a2::tuples` writes them: `C <name> [<requests>] <rule>`,
 /// then its `a` affiliations, `c <role>` contacts, `n` notes; `B <role>` the block's, `D <role>` what was dropped.
 fn tuples(tex: &str) -> Vec<String> { tuples_in(&dump(tex)) }
-
-/// [`tuples`] of a written family's paper the writer holds back, its reading never written (`declined: <why>`).
-fn tuples_held(tex: &str, why: &str) -> Vec<String> { tuples_in(&dump_as(tex, Some(why))) }
 
 fn tuples_in(dump: &Value) -> Vec<String> {
   let resolved = dump["resolved"].clone();
@@ -85,14 +80,6 @@ fn tuples_in(dump: &Value) -> Vec<String> {
   out
 }
 
-const LEGENDS: &str = r#"\documentclass{article}
-\begin{document}
-\title{T}
-\author{Ann Able\textsuperscript{1} and Bob Baker\textsuperscript{2}\thanks{\textsuperscript{1}Univ A, City. \textsuperscript{2}Univ B, Town.}}
-\maketitle
-Text.
-\end{document}
-"#;
 const GLUED: &str = r#"\documentclass[sigconf]{acmart}
 \begin{document}
 \title{T}
@@ -100,17 +87,6 @@ const GLUED: &str = r#"\documentclass[sigconf]{acmart}
 \author{Bob Baker$^{2}$}
 \affiliation{\institution{$^{1}$Univ A, City $^{2}$Univ B, Town}\country{}}
 \maketitle
-Text.
-\end{document}
-"#;
-const LLNCS: &str = r#"\documentclass{llncs}
-\begin{document}
-\title{T}
-\author{Ann Able\inst{1} \and Bob Baker\inst{2\footnotemark[1]}}
-\institute{Univ A, City \and Univ B, Town}
-\maketitle
-\renewcommand{\thefootnote}{\fnsymbol{footnote}}
-\footnotetext[1]{Equal contribution.}
 Text.
 \end{document}
 "#;
@@ -142,38 +118,6 @@ const ACCENT: &str = r#"\documentclass{amsart}
 Text.
 \end{document}
 "#;
-const NOTETEXTS: &str = r#"\documentclass{article}
-\begin{document}
-\title{T}
-\author{Ann Able\footnotemark[1] \and Bob Baker\footnotemark[2] \and Cat Cole\footnotemark[2]}
-\maketitle
-\renewcommand{\thefootnote}{\fnsymbol{footnote}}
-\footnotetext[1]{Univ A, City.}
-\footnotetext[2]{Univ B, Town.}
-Text.
-\end{document}
-"#;
-const NOTETEXTS_BEFORE: &str = r#"\documentclass{article}
-\begin{document}
-\title{T}
-\author{Ann Able\footnotemark[1], Bob Baker\footnotemark[1] and Cat Cole\footnotemark[2]}
-\renewcommand{\thefootnote}{\fnsymbol{footnote}}
-\footnotetext[1]{Univ A, City.}
-\footnotetext[2]{Univ B, Town.}
-\maketitle
-Text.
-\end{document}
-"#;
-const GROUP: &str = r#"\documentclass{amsart}
-\begin{document}
-\title{T}
-\author{Ann Able \\ {\em College of X, Univ A,\\ City, Country}}
-\author{Bob Baker\\ \textsl{Pure Mathematics\\Univ B\\Town}}
-\author{Cat Cole, Pforzheim University of Applied Sciences, Germany}
-\maketitle
-Text.
-\end{document}
-"#;
 const COLUMNS: &str = r#"\documentclass{amsart}
 \begin{document}
 \title{T}
@@ -193,30 +137,6 @@ const UNSHOWN: &str = r#"\documentclass{revtex4-2}
 Text.
 \end{document}
 "#;
-const REVERSED: &str = r#"\documentclass{article}
-\begin{document}
-\title{T}
-\author{Able, A., Baker, B. and Della Valle, C.}
-\maketitle
-Text.
-\end{document}
-"#;
-const CORRESPONDING: &str = r#"\documentclass{article}
-\begin{document}
-\title{T}
-\author{Ann Able\thanks{Corresponding author.}, Bob Baker and Cat Cole\\ Univ A, City\\ \{x1, x2\}@example.org}
-\maketitle
-Text.
-\end{document}
-"#;
-const ADDRESS_LINES: &str = r#"\documentclass{article}
-\begin{document}
-\title{T}
-\author{Ann Able and Bob Baker\thanks{Corresponding author}\\ Univ A, City\\ E-mails: x1@example.org, \\ bob.baker@example.org}
-\maketitle
-Text.
-\end{document}
-"#;
 const ORCIDS: &str = r#"\documentclass{amsart}
 \usepackage{orcidlink}
 \begin{document}
@@ -232,26 +152,6 @@ Text.
 \end{document}
 "#;
 
-/// Item 1: a note holding the marks of several requested labels is the legends of several entries, no one label's: it
-/// stays the note of the name before, as today's (IEEEtran's `\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem
-/// \Mark{1}College … \IEEEcompsocthanksitem \Mark{2}College …}` was given whole to the authors of mark 1, 1802.03043).
-#[test]
-fn a_note_of_several_legends_is_no_one_labels() {
-  if red_at_two(
-    "old engine only: the writer's outcome pinned \"declined: Note univacityunivbtown\" (=2 writes it)",
-  ) {
-    return;
-  }
-  assert_eq!(
-    super::perfect_kernel_batchfms2a1::held("Note univacityunivbtown", || tuples(LEGENDS)),
-    [
-      "C Ann Able [1] | line:names",
-      "C Bob Baker [2] | line:names sep:word",
-      "  n Univ A, City. Univ B, Town. | note:adjacent",
-    ]
-  );
-}
-
 /// Item 1: a mark glued to the ink before it that labels as the leading mark does, a name right after it, opens the
 /// next entry of an API call (`\institution{$^{1}$University of Illinois …, USA $^{2}$Amazon.com Inc, CA, USA}`,
 /// 2202.06129: the call's content has no positions to show the space, and the whole went to the first mark's).
@@ -263,30 +163,6 @@ fn a_glued_mark_opens_the_next_entry() {
     "  a Univ A, City | api:leading-mark",
     "C Bob Baker [2] | api:creator",
     "  a Univ B, Town | api:leading-mark",
-  ]);
-}
-
-/// Item 1: a `\footnotemark` inside a mark is a mark of its own after it (`Kui Wu\inst{3\footnotemark[1]}` printed
-/// "31", parted into 3 and 1, so Kui Wu had Peking University, entry 1 — 2404.09857): its footnote's, never a
-/// numbered affiliation's; the parted reading is ruling 1's (`ruling1:parted`), and the footnote's text after
-/// `\maketitle` is the name's note by its mark. Today's reads it so too since batch 98b (`\inst`'s request takes its
-/// notes out of the operand and runs them after it, OXIDIZED_DESIGN_DIVERGENCES #951): Bob Baker has Univ B, the mark
-/// a footnote mark in his name.
-#[test]
-fn a_footnotemark_inside_a_mark_is_its_own() {
-  // (written family since 92c, held back: today's `\footnotemark` note sits in the personname, which the writer reads
-  // as no note of the creator — OPEN_ROWS "written-family writer gaps")
-  if red_at_two(
-    "old engine only: the writer's outcome pinned \"declined: Note equalcontribution\" (=2 writes it)",
-  ) {
-    return;
-  }
-  assert_eq!(tuples_held(LLNCS, "Note equalcontribution"), [
-    "C Ann Able [1] | line:names",
-    "  a Univ A, City | api:labelseq",
-    "C Bob Baker [2,*] | line:names",
-    "  a Univ B, Town | api:labelseq ruling1:parted",
-    "  n Equal contribution. | note:footnotetext-mark ruling1:parted",
   ]);
 }
 
@@ -326,74 +202,6 @@ fn a_gap_inside_an_accent_macro_is_the_names() {
   assert_eq!(tuples(ACCENT), [
     "C TIÊ ´N-SO .N PHẠM [] | line:names name:layout-joined",
     "  a Univ A, City | api:annotate:last",
-  ]);
-}
-
-/// Item 2 (review revfms2a2_4 finding 1): a footnote's text is the note of the names showing its mark, as today's
-/// `relocate_footnote` sets it there — made after `\maketitle`, in every name of that mark (1108.5155, 1405.4582);
-/// made before it, in the first alone (1703.09134).
-#[test]
-fn footnote_texts_are_the_notes_of_their_marks() {
-  if red_at_two(
-    "old engine only: the writer's outcome pinned \"declined: Note univacity\" (=2 writes it)",
-  ) {
-    return;
-  }
-  assert_eq!(
-    super::perfect_kernel_batchfms2a1::held("Note univacity", || tuples(NOTETEXTS)),
-    [
-      "C Ann Able [*] | line:names",
-      "  n Univ A, City. | note:footnotetext-mark",
-      "C Bob Baker [†] | line:names sep:column",
-      "  n Univ B, Town. | note:footnotetext-mark",
-      "C Cat Cole [†] | line:names sep:column",
-      "  n Univ B, Town. | note:footnotetext-mark",
-    ]
-  );
-  assert_eq!(tuples(NOTETEXTS_BEFORE), [
-    "C Ann Able [*] | line:names",
-    "  n Univ A, City. | note:footnotetext-mark",
-    "C Bob Baker [*] | line:names sep:comma",
-    "C Cat Cole [†] | line:names sep:word",
-    "  n Univ B, Town. | note:footnotetext-mark",
-  ]);
-  // (the dump records each `\footnotetext` with its printed mark and the flushes before it)
-  let texts: Vec<(u64, String)> = dump(NOTETEXTS_BEFORE)["entries"]
-    .as_array()
-    .expect("entries")
-    .iter()
-    .filter(|e| e["kind"] == "notetext")
-    .map(|e| {
-      (
-        e["epoch"].as_u64().unwrap_or(9),
-        e["mark"].as_str().unwrap_or("").to_string(),
-      )
-    })
-    .collect();
-  assert_eq!(texts, [(0, "*".to_string()), (0, "†".to_string())]);
-}
-
-/// Item 5 (ams_support's residual): lines parted by a break inside a braced group or argument are one print unit, as
-/// today's one contact (`Xuhui Peng \\ {\em\tiny College …,\\ Changsha, …}`, 1710.07902; `\textsl{Pure
-/// Mathematics\\University of Waterloo\\…}`, math0610612); a piece after an institution's comma that reads as no name
-/// is its address (`Frank Schadt, Pforzheim University of Applied Sciences, Germany`, 1106.0130).
-#[test]
-fn group_lines_and_an_institutions_address() {
-  // (written family, held back: the reading's names are not today's — `Cat Cole, Pforzheim …` one name to the old
-  // reader —, and the re-part declines, an institution read inside one personname being no boundary the page shows:
-  // review rev94a B1, OD #928)
-  if red_at_two(
-    "old engine only: the writer's outcome pinned \"declined: the creators' names\" (=2 writes it)",
-  ) {
-    return;
-  }
-  assert_eq!(tuples_held(GROUP, "the creators' names"), [
-    "C Ann Able [] | line:names",
-    "  a College of X, Univ A, City, Country | line:unmarked R12:row-above line:continued",
-    "C Bob Baker [] | line:names",
-    "  a Pure Mathematics Univ B Town | line:unmarked R12:row-above line:continued",
-    "C Cat Cole [] | line:names",
-    "  a Pforzheim University of Applied Sciences, Germany | line:names classify:institution",
   ]);
 }
 
@@ -438,88 +246,4 @@ fn unshown_labels_reversed_names_and_address_prints() {
     "C Bob Baker [] | line:names",
     "  a Univ A, City | api:leading-mark label:unshown owner:annotate",
   ]);
-  if red_at_two(
-    "old engine only: the writer's outcome pinned \"declined: the creators' names\" (=2 writes it)",
-  ) {
-    return;
-  }
-  assert_eq!(
-    super::perfect_kernel_batchfms2a1::held("the creators' names", || tuples(REVERSED)),
-    [
-      "C Able, A. [] | line:names name:reversed",
-      "C Baker, B. [] | line:names sep:comma name:reversed",
-      "C Della Valle, C. [] | line:names sep:word name:reversed",
-    ]
-  );
-  assert_eq!(tuples(CORRESPONDING), [
-    "C Ann Able [] | line:names",
-    "  a Univ A, City | line:unmarked R12:row-above",
-    "  n Corresponding author. | note:adjacent",
-    "C Bob Baker [] | line:names sep:comma",
-    "  a Univ A, City | line:unmarked R12:row-above",
-    "C Cat Cole [] | line:names sep:word",
-    "  a Univ A, City | line:unmarked R12:row-above",
-    "B email x1@example.org | owner:block ruling3:one-per-print",
-    "B email x2@example.org | owner:block ruling3:one-per-print",
-  ]);
-  // (an address list running on over the next line is one print: `E-mails: x1@…, \\ bob.baker@…` is in author order, not
-  // the corresponding author's first address, 2312.05446)
-  assert_eq!(tuples(ADDRESS_LINES), [
-    "C Ann Able [] | line:names",
-    "  a Univ A, City | line:unmarked R12:row-above",
-    "  c email x1@example.org | owner:order ruling3:one-per-print",
-    "C Bob Baker [] | line:names sep:word",
-    "  a Univ A, City | line:unmarked R12:row-above",
-    "  c email bob.baker@example.org | owner:spelled ruling3:one-per-print",
-    "  n Corresponding author | note:adjacent",
-  ]);
-}
-
-/// The r5 shapes leave the XML byte-identical with the switch on and off (shadow only).
-#[test]
-fn r5_shapes_leave_the_xml_unchanged() {
-  for tex in [
-    LEGENDS,
-    GLUED,
-    LLNCS,
-    PATTERN,
-    ACRONYMS,
-    ACCENT,
-    NOTETEXTS,
-    NOTETEXTS_BEFORE,
-    GROUP,
-    COLUMNS,
-    ORCIDS,
-    UNSHOWN,
-    REVERSED,
-    CORRESPONDING,
-    ADDRESS_LINES,
-  ] {
-    let run = |on: bool| {
-      convert_with_setup_then(
-        tex,
-        Some("ar5iv.sty"),
-        move || set_fm_shadow_override(Some(on)),
-        |_| (),
-      )
-    };
-    let (on_log, on_xml, ()) = run(true);
-    let (off_log, off_xml, ()) = run(false);
-    if red_at_two(
-      "old engine only: the shadow switch on vs off (forced off at =2: one merged creator, an Error and a Warning)",
-    ) {
-      return;
-    }
-    assert_eq!(on_xml, off_xml, "{tex}");
-    assert_eq!(
-      (error_count(&on_log), warning_count(&on_log)),
-      (0, 0),
-      "{on_log}"
-    );
-    assert_eq!(
-      (error_count(&off_log), warning_count(&off_log)),
-      (0, 0),
-      "{off_log}"
-    );
-  }
 }

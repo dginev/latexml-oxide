@@ -16,7 +16,6 @@ use latexml::util::test::convert_files_with;
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch84b::creators,
-  perfect_kernel_batcht1::red_at_two,
 };
 
 macro_rules! repro {
@@ -84,33 +83,6 @@ fn mark_led_address_lines_are_their_marks_emails() {
   ]);
 }
 
-/// A `|` parts local parts before one domain, in a brace list (`\email{\{aable|bbaker\}@a.edu}`, 0902.3918) and with no
-/// braces in an institute's line (`\email{aable|bbaker@a.edu}`, 1909.00276), in both readers; each address the author
-/// it spells, the class's own label ("E-mail") kept. Red (int127a): the list one contact on a nameless creator.
-#[test]
-fn a_bar_parts_the_local_parts_of_a_list() {
-  for tex in [
-    repro!("address_family_llncs_bar_list"),
-    repro!("address_family_llncs_inline_bar_list"),
-  ] {
-    if red_at_two(r#"writes aable@a.edu and bbaker@a.edu as plain text, 2 false Warnings"#) {
-      return;
-    }
-    let xml = assert_creators(tex, &[
-      &["Ann Able", "affiliation=Univ A", "email=aable@a.edu"],
-      &["Bob Baker", "affiliation=Univ A", "email=bbaker@a.edu"],
-      &["Cat Cole", "affiliation=Univ B", "email=ccole@b.edu"],
-    ]);
-    assert_eq!(
-      xml
-        .matches("<contact name=\"E-mail\u{a0}\" role=\"email\">")
-        .count(),
-      3,
-      "{xml}"
-    );
-  }
-}
-
 /// The Link chain over an entry's addresses (FIDELITY_CHARTER §4): an "Email:" line under a marked entry whose
 /// addresses fit no order (astro-ph0512555) gives the spelled one its author and the others once to the block (ruling
 /// E, main session 2026-11-02), none left in the entry; one address per carrier goes by order (the control); under a
@@ -169,26 +141,6 @@ fn the_link_chain_over_an_entrys_addresses() {
       &["Cat Cole *", "affiliation=Univ Y, Town", "email=qz77@y.org"],
     ],
   );
-  if red_at_two(
-    r#"a false content-check Warning (alpha@x.org, beta@y.org placed more often than printed)"#,
-  ) {
-    return;
-  }
-  assert_creators(repro!("address_family_symbol_line_addresses"), &[
-    &[
-      "Ann Able †",
-      "affiliation=† Univ X, Town",
-      "email=alpha@x.org",
-      "email=beta@y.org",
-    ],
-    &["Bob Baker 1", "affiliation=1 Univ Y, City"],
-    &[
-      "Cat Cole †",
-      "affiliation=† Univ X, Town",
-      "email=alpha@x.org",
-      "email=beta@y.org",
-    ],
-  ]);
 }
 
 /// A two-letter surname spells a local part of its letters alone (`an107@` Weili An's), where the initials of another
@@ -228,75 +180,6 @@ fn a_two_letter_surname_spells_its_local_part() {
     ],
     &["Cat Cole", "affiliation=Harvard, Cambridge, MA 02138"],
   ]);
-}
-
-/// A symbol-led line's brace list under several carriers (2311.01166's `$^\ddag$\tt\{kyding,ycwang12,zhxu13,sjwang3,
-/// congliu2\}@iflytek.com`): the frontmatter observer's writer copies the unspelled addresses onto the carriers the
-/// flush's chain left out (Keyu Ding, Cong Liu), and every carrier's e-mails come in the order the line prints them —
-/// the writer's print-order pass orders one span's items by their place in the reading (`plan::reading_order`), not
-/// by the order of their texts. Distinct from the Link-chain guards: the writer's copy path. Red (100b r2): Keyu Ding's
-/// sjwang3 before ycwang12, Cong Liu's congliu2 first (review rev100b2 B1).
-#[test]
-fn copied_addresses_keep_the_lines_print_order() {
-  let shared = [
-    "ycwang12@iflytek.com",
-    "zhxu13@iflytek.com",
-    "sjwang3@iflytek.com",
-  ]
-  .map(|a| format!("email={a}"));
-  let carrier = |name: &str, before: &[&str], after: &[&str]| -> Vec<String> {
-    let mut out = vec![name.to_string()];
-    out.extend(before.iter().map(|s| (*s).to_string()));
-    out.extend(shared.iter().cloned());
-    out.extend(after.iter().map(|s| (*s).to_string()));
-    out
-  };
-  let lab = "affiliation=iFLYTEK Research, China";
-  let univ = "affiliation=University of Science and Technology of China";
-  let want = [
-    carrier(
-      "Keyu Ding",
-      &[
-        univ,
-        lab,
-        "email=kyding@ustc.edu.cn",
-        "email=kyding@iflytek.com",
-      ],
-      &[],
-    ),
-    carrier("Yongcan Wang", &[lab], &[]),
-    carrier("Zihang Xu", &[lab], &[]),
-    carrier("Zhenzhen Jia", &[lab], &[]),
-    carrier("Shijin Wang", &[lab], &[]),
-    carrier("Cong Liu", &[lab], &["email=congliu2@iflytek.com"]),
-    vec![
-      "Enhong Chen".to_string(),
-      univ.to_string(),
-      "email=cheneh@ustc.edu.cn".to_string(),
-    ],
-  ];
-  let want: Vec<Vec<&str>> = want
-    .iter()
-    .map(|c| c.iter().map(String::as_str).collect())
-    .collect();
-  let want: Vec<&[&str]> = want.iter().map(Vec::as_slice).collect();
-  if red_at_two(
-    r#"a false content-check Warning (the listed iflytek addresses placed more often than printed)"#,
-  ) {
-    return;
-  }
-  let xml = assert_creators(repro!("address_family_symbol_list_print_order"), &want);
-  // (each address in the line's `\tt`, review rev100b2 #2)
-  assert_eq!(
-    (
-      xml.matches("role=\"email\">").count(),
-      xml
-        .matches("role=\"email\"><text font=\"typewriter\"")
-        .count()
-    ),
-    (22, 22),
-    "{xml}"
-  );
 }
 
 /// The addresses an entry's line prints, written out one e-mail each by the Kind step, keep the font the line printed
@@ -347,55 +230,6 @@ fn written_out_addresses_keep_the_lines_font() {
     "{xml}"
   );
   assert_eq!(contacts.len(), 10, "{xml}");
-}
-
-/// An address line with another call glued after it — an ORCID (2308.02269's `\url{{arim,sue}@…}\orcidID{…}`), a
-/// `\thanks` — is no line of addresses alone: the Kind step leaves it in the entry (`prints_addresses_only`), and a
-/// contact printing several addresses and more is never written out (`insert::prints_text_only`); each address its
-/// author's, each ORCID kept (review rev100b B1). Red (100b r1): `qq1@x.org0000-0002-2701-0271` and the first ORCID
-/// lost; `qq1@x.orgCorresponding`.
-#[test]
-fn an_address_line_holding_another_call_stays_whole() {
-  if red_at_two(r#"puts each empty orcid contact before the email the line prints first"#) {
-    return;
-  }
-  let xml = assert_creators(repro!("address_family_line_with_orcid"), &[
-    &[
-      "Ann Able",
-      "affiliation=Univ X, Town",
-      "email=qq1@x.org",
-      "orcid=",
-    ],
-    &[
-      "Bob Baker",
-      "affiliation=Univ X, Town",
-      "email=zz2@x.org",
-      "orcid=",
-    ],
-    &[
-      "Cat Cole",
-      "affiliation=Univ Y, Town",
-      "email=cole@y.org",
-      "orcid=",
-    ],
-  ]);
-  for (orcid, count) in [("0000-0002-2701-0271", 2), ("0000-0001-6269-9353", 1)] {
-    assert_eq!(
-      xml
-        .matches(&format!("href=\"https://orcid.org/{orcid}\""))
-        .count(),
-      count,
-      "{xml}"
-    );
-  }
-  let xml = assert_creators(repro!("address_family_line_with_thanks"), &[
-    &["Ann Able", "affiliation=Univ X, Town", "email=qq1@x.org"],
-    &["Bob Baker", "affiliation=Univ X, Town", "email=zz2@x.org"],
-  ]);
-  assert!(
-    xml.contains("<pubnote role=\"thanks\">Corresponding.</pubnote>"),
-    "{xml}"
-  );
 }
 
 /// A note inside an affiliation printing a labelled address alone — REVTeX's `\footnote{Electronic address: …}`

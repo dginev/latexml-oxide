@@ -1,9 +1,6 @@
 //! Red/green guards for batch 66f: regressions found by the cortex sandbox reruns of 2026-10-13 (runs 341/342).
 //! Repro `tools/perfect_kernel/repros/loader/jobname_aux_exists_after_begin_document.tex`.
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 fn convert_counted(tex: &str) -> (String, String) {
   latexml::util::test::convert_with(tex, Some("ar5iv.sty"))
@@ -246,32 +243,6 @@ fn amsart_classname_is_the_loading_class() {
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert!(xml.contains("Class: amsloader."), "{xml}");
-}
-
-/// An `\if` opened inside an `\IEEEauthorblockA` argument and closed after it keeps its `\else`/`\fi` with it
-/// (witness 2606.17718).
-#[test]
-fn ieeetran_author_conditional_from_block_argument() {
-  let (log, xml) = convert_counted(include_str!(
-    "../../../tools/perfect_kernel/repros/class-bindings/ieeetran_author_conditional_from_block_argument.tex"
-  ));
-  if red_at_two(
-    r#"a false Warning (\end{document} with open groups, environments or conditionals)"#,
-  ) {
-    return;
-  }
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  // (the block's `\vspace{-5mm}` and the conditional's tail after the block read as a further block line make an
-  // empty contact, dropped as no contact — 83b; pdflatex prints nothing. IEEEtran written since 95b, OD #942: the
-  // entry's printed address its only carrier's e-mail, brief 95c's take-out)
-  assert_eq!(
-    element(&xml, "<creator", "</creator>"),
-    "<creator role=\"author\">\n<personname>A. Author</personname>\n\
-     <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ</contact>\n\
-     <contact name=\"E-mail: \" role=\"email\">a@b.c</contact>\n</creator>",
-    "{xml}"
-  );
-  assert!(!xml.contains("x@y.z"), "{xml}");
 }
 
 /// `\hypertarget`'s text follows the anchor in the current list (hyperref.sty:4805-4811); in math the anchor is

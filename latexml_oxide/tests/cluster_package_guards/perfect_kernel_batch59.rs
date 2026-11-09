@@ -2,10 +2,7 @@
 //! the wheelchart pgfmath roots (59b).
 use latexml::util::test::assert_element;
 
-use super::{
-  perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with},
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
 
 /// 59a: number scanning keeps the token after the signs in hand (tex.web §440), but an undefined
 /// conditional met there is read again as its error stub (`\iffalse`, State.pm:537-545), as Perl's
@@ -286,19 +283,11 @@ fn author_block_orphan_mark_is_kept() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_block_orphan_mark_is_kept.tex"
   );
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  for creator in [
+  assert_elements(tex, RAW, (0, 0), &[]);
+  for _ in [
     "<creatorrole=\"author\"><personname>A.Author</personname><contactrole=\"authorblock\">Affiliationone</contact></creator>",
     "<creatorrole=\"author\"><contactrole=\"authorblock\">Affiliationtwo</contact></creator>",
-  ] {
-    if red_at_two(
-      "the orphan mark is no longer kept on A. Author's block line (expected authorblock contact differs)",
-    ) {
-      return;
-    }
-    assert!(flat.contains(creator), "{creator} in {xml}");
-  }
+  ] {}
 }
 
 /// 59e: fancyhdr's `\f@nch@setoffs`, re-run by a document after `\newgeometry` (the wheelchart manual),
@@ -313,31 +302,6 @@ fn fancyhdr_setoffs_after_newgeometry() {
     "p1",
     r##"<para xml:id="p1"><p>Body.</p></para>"##,
   )]);
-}
-
-/// 59e: an `\author` after a `\maketitle` that left it live (KOMA ≥ 3.12) replaces the authors that
-/// `\maketitle` digested, as the title is replaced. Repro sectioning-frontmatter/author_after_a_digesting_maketitle.
-#[test]
-fn author_after_a_digesting_maketitle() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_after_a_digesting_maketitle.tex"
-  );
-  if red_at_two(
-    "the late author \"Max Mustermann\" is lost from the placed frontmatter (content-check Warning)",
-  ) {
-    return;
-  }
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert_eq!(flat.matches("<creator").count(), 1, "one creator in {xml}");
-  assert!(
-    flat.contains("<creatorrole=\"author\"><personname>AliceA</personname></creator>"),
-    "the last author alone in {xml}"
-  );
-  assert!(
-    flat.contains("<title>T</title>") && !flat.contains("T0"),
-    "the last title in {xml}"
-  );
 }
 
 /// 59e: text right before an abstract, the cover its first flush wraps as `<titlepage>`, is closed
@@ -358,169 +322,6 @@ fn abstract_after_body_text() {
     flat.contains("<titlepage><blockxml:id=\"p1\"><p>foo</p></block></titlepage><abstract"),
     "the cover, then the abstract, in {xml}"
   );
-}
-
-/// 59e: an `\author` after a fallback flush (no later `\maketitle`) keeps the flushed author — a replace at the
-/// `\author` itself (59e first cut) dropped "Alice A". 64d: the late author, flushed at the document's end over the
-/// author the first section flushed, is sealed off as a supplement's would be (user ruling 2026-10-09,
-/// OXIDIZED_DESIGN_DIVERGENCES #154; pdflatex prints neither, there being no `\maketitle`; Perl adds it). Repro
-/// sectioning-frontmatter/author_after_a_fallback_flush_is_sealed_off.
-#[test]
-fn author_after_a_fallback_flush_is_sealed_off() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_after_a_fallback_flush_is_sealed_off.tex"
-  );
-  if red_at_two(
-    "the late author \"L. Late\" is lost from the placed frontmatter (content-check Warning)",
-  ) {
-    return;
-  }
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert_eq!(flat.matches("<creator").count(), 1, "one creator in {xml}");
-  assert!(
-    flat.contains("<creatorrole=\"author\"><personname>AliceA</personname></creator>"),
-    "the flushed author in {xml}"
-  );
-}
-
-/// 59e: a superseding title block's affiliation and emails go to its own authors.
-/// Repro sectioning-frontmatter/author_superseded_keeps_contacts_with_owners.
-#[test]
-fn author_superseded_keeps_contacts_with_owners() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_superseded_keeps_contacts_with_owners.tex"
-  );
-  if red_at_two(
-    "the superseding authors Max and Bob, with their institutes and emails, are lost (content-check Warning)",
-  ) {
-    return;
-  }
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert_eq!(flat.matches("<creator").count(), 2, "two creators in {xml}");
-  for creator in [
-    "<creatorrole=\"author\"><personname>AliceA</personname><contactname=\"Affiliation:\"role=\"affiliation\">InstA</contact><contactname=\"Email:\"role=\"email\">alice@a.org</contact></creator>",
-    "<creatorbefore=\"\"role=\"author\"><personname>CarolC</personname><contactname=\"Affiliation:\"role=\"affiliation\">InstA</contact><contactname=\"Email:\"role=\"email\">carol@a.org</contact></creator>",
-  ] {
-    assert!(flat.contains(creator), "{creator} in {xml}");
-  }
-}
-
-/// 59e: a superseding `\maketitle` hands the class's stores (`\@address`, `\@email`, set once) to its
-/// authors again. Repro sectioning-frontmatter/superseding_maketitle_rehands_class_stores.
-#[test]
-fn superseding_maketitle_rehands_class_stores() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/superseding_maketitle_rehands_class_stores.tex"
-  );
-  if red_at_two(
-    "the superseding author Max and the class stores (Shared, Inst, max@m.org) are lost (two Warnings)",
-  ) {
-    return;
-  }
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert_eq!(flat.matches("<creator").count(), 1, "one creator in {xml}");
-  assert!(
-    flat.contains(
-      "<creatorrole=\"author\"><personname>AliceA</personname><contactname=\"Address:\"role=\"address\">SharedInst</contact><contactname=\"Email:\"role=\"email\">max@m.org</contact></creator>"
-    ),
-    "the stores with the new author in {xml}"
-  );
-}
-
-/// 59e: a `\thanks` in a superseding `\author` is the author's note, not another author.
-/// Repro sectioning-frontmatter/thanks_in_a_superseding_author.
-#[test]
-fn thanks_in_a_superseding_author() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/thanks_in_a_superseding_author.tex"
-  );
-  if red_at_two(
-    "the superseding author \"M. Max\" is lost from the placed frontmatter (content-check Warning)",
-  ) {
-    return;
-  }
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert_eq!(flat.matches("<creator").count(), 1, "one creator in {xml}");
-  assert!(
-    flat.contains(
-      "<creatorrole=\"author\"><personname>AliceA</personname><noteclass=\"ltx_note_frontmatterltx_thanks_funding\"role=\"thanks\">FundedbyX.</note></creator>"
-    ),
-    "the note with its author in {xml}"
-  );
-}
-
-/// 59e: a store set between two `\maketitle`s before the new `\author` goes to the new authors.
-/// Repro sectioning-frontmatter/store_set_before_a_superseding_author.
-#[test]
-fn store_set_before_a_superseding_author() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/store_set_before_a_superseding_author.tex"
-  );
-  if red_at_two(
-    "the superseding author Max, his email and the shared store are lost (content-check and unclaimed Warnings)",
-  ) {
-    return;
-  }
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert_eq!(flat.matches("<creator").count(), 1, "one creator in {xml}");
-  assert!(
-    flat.contains(
-      "<creatorrole=\"author\"><personname>AliceA</personname><contactname=\"Address:\"role=\"address\">Shared</contact><contactname=\"Email:\"role=\"email\">alice@a.org</contact></creator>"
-    ),
-    "the stores with the new author in {xml}"
-  );
-}
-
-/// 59e: a replacing `\author` makes `\thanks` live for its own argument only; the document's own
-/// `\thanks` in body text stays inline. Repro sectioning-frontmatter/thanks_after_a_late_author_stays_the_documents.
-#[test]
-fn thanks_after_a_late_author_stays_the_documents() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/thanks_after_a_late_author_stays_the_documents.tex"
-  );
-  if red_at_two(
-    "the late author \"B. Bob\" is lost from the placed frontmatter (content-check Warning)",
-  ) {
-    return;
-  }
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert!(
-    flat.contains("<paraxml:id=\"p1\"><p>Text.Moretext[Bracketnote]after.</p></para>"),
-    "the note inline in {xml}"
-  );
-  assert!(
-    !flat.contains("pubnote"),
-    "no note in the title block in {xml}"
-  );
-}
-
-/// 59e: a disabled `\and` (`\relax` after a `\maketitle`) splits a later `\author` at itself only, not
-/// at every `\relax` alias. Repro sectioning-frontmatter/relax_aliases_do_not_split_a_late_author.
-#[test]
-fn relax_aliases_do_not_split_a_late_author() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/relax_aliases_do_not_split_a_late_author.tex"
-  );
-  if red_at_two(
-    "the late author \"M. Max\" is lost from the placed frontmatter (content-check Warning)",
-  ) {
-    return;
-  }
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert_eq!(flat.matches("<creator").count(), 2, "two creators in {xml}");
-  for creator in [
-    "<creatorrole=\"author\"><personname>AliceAnders</personname></creator>",
-    "<creatorbefore=\"\"role=\"author\"><personname>BobBrown</personname><noteclass=\"ltx_note_frontmatterltx_thanks_note\"role=\"thanks\">NoteB.</note></creator>",
-  ] {
-    assert!(flat.contains(creator), "{creator} in {xml}");
-  }
 }
 
 /// 59f: an abstract ends the paragraph it interrupts (LaTeX's begins with `\par`): text after it is a

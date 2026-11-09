@@ -21,17 +21,11 @@ macro_rules! repro {
   };
 }
 
-/// `tex` converted off and at `=2`, both clean: the creators of each.
-fn both(tex: &str) -> (Vec<Vec<String>>, Vec<Vec<String>>) {
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, on) = run(tex, 2);
+/// `tex` converted, clean: the creators of each.
+fn both(tex: &str) -> Vec<Vec<String>> {
+  let (log, on) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  (creators(&off), creators(&on))
+  creators(&on)
 }
 
 /// K12, an API call: a leading mark no name requests leaves the entry where its call puts it — revtex's
@@ -40,15 +34,14 @@ fn both(tex: &str) -> (Vec<Vec<String>>, Vec<Vec<String>>) {
 /// `=2`): each a nameless creator's.
 #[test]
 fn an_unrequested_leading_mark_keeps_its_calls_placement() {
-  let (off, on) = both(repro!("unrequested_glyph_led_affiliation_keeps_its_call"));
+  let on = both(repro!("unrequested_glyph_led_affiliation_keeps_its_call"));
   let want = [
     vec!["Ann Able", "affiliation=Univ A, City A"],
     vec!["Bob Baker", "affiliation=† Univ B, City B"],
     vec!["Cat Cole *", "affiliation=Univ C, City C"],
   ];
-  assert_eq!(off, want);
   assert_eq!(on, want);
-  let (off, on) = both(repro!("unrequested_numbered_address_keeps_its_call"));
+  let on = both(repro!("unrequested_numbered_address_keeps_its_call"));
   let want = [
     vec![
       "Ann Able",
@@ -58,7 +51,6 @@ fn an_unrequested_leading_mark_keeps_its_calls_placement() {
     ],
     vec!["Bob Baker", "address=Univ C, City C"],
   ];
-  assert_eq!(off, want);
   assert_eq!(on, want);
 }
 
@@ -69,25 +61,13 @@ fn an_unrequested_leading_mark_keeps_its_calls_placement() {
 #[test]
 fn an_unrequested_glyph_line_continues_the_entry_above() {
   let tex = repro!("unrequested_glyph_lines_continue_the_entry_above");
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, on) = run(tex, 2);
+  let (log, on) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   let line = "affiliation=Univ A, City A Translated by: Cid Cole ( ) and Dan Dorn ( ) ( ) Inst X, City X ( ) Inst Y, City Y";
   assert_eq!(creators(&on), [vec!["Ann Able", line], vec![
     "Bob Baker",
     line
   ]]);
-  let off = creators(&off);
-  assert_eq!(off.len(), 2, "{off:?}");
-  assert!(
-    off[0][1].contains("(§) Inst X, City X") && off[0][1].contains("(†) Inst Y"),
-    "{off:?}"
-  );
 }
 
 /// K4: a `\thanks` opening with a raised number is affiliations, one per raised mark, each its mark's carriers'
@@ -95,7 +75,7 @@ fn an_unrequested_glyph_line_continues_the_entry_above() {
 /// (2505.06451's `*Corresponding authors` made the entry a thanks note).
 #[test]
 fn a_marked_thanks_is_its_marks_affiliations() {
-  let (off, on) = both(repro!(
+  let on = both(repro!(
     "marked_thanks_entries_are_affiliations_by_their_marks"
   ));
   let want = [
@@ -103,11 +83,10 @@ fn a_marked_thanks_is_its_marks_affiliations() {
     vec!["Bob Baker", "affiliation=Univ A"],
     vec!["Cat Cole", "affiliation=Univ C"],
   ];
-  assert_eq!(off, want);
   assert_eq!(on, want);
   // (cut before each top-level mark, so an entry's own comma stays its text: review revKEY1 finding 1, where the
   // comma count kept the whole one note of the last name)
-  let (off, on) = both(repro!("marked_thanks_entry_keeps_its_own_comma"));
+  let on = both(repro!("marked_thanks_entry_keeps_its_own_comma"));
   let want = [
     vec![
       "Ann Able",
@@ -117,32 +96,33 @@ fn a_marked_thanks_is_its_marks_affiliations() {
     vec!["Bob Baker", "affiliation=Dept A, Univ A"],
     vec!["Cat Cole", "affiliation=Univ C"],
   ];
-  assert_eq!(off, want);
   assert_eq!(on, want);
-  let (off, on) = both(repro!("marked_thanks_legend_glyph_is_its_text"));
-  assert_eq!(
-    off[2].last().map(String::as_str),
-    Some("affiliation=Univ C, Japan. cat@c.edu *Corresponding authors")
-  );
-  assert_eq!(on, off);
+  let on = both(repro!("marked_thanks_legend_glyph_is_its_text"));
+  assert_eq!(on, vec![
+    vec!["Ann Able ∗", "affiliation=Univ A, Japan."],
+    vec!["Bob Baker", "affiliation=Univ B, Japan"],
+    vec![
+      "Cat Cole ∗",
+      "affiliation=Univ A, Japan.",
+      "affiliation=Univ C, Japan. cat@c.edu *Corresponding authors"
+    ]
+  ]);
   // (each piece the reading cut written from its own span, not re-cut by the writer: review revG5 finding 1, where the
   // third piece, "Corresponding author" and its address, was lost at `=2`, counted by 2 Warnings)
-  let (off, on) = both(repro!("marked_thanks_piece_is_written_as_read"));
+  let on = both(repro!("marked_thanks_piece_is_written_as_read"));
   let want = [vec!["Ann Able ∗", "affiliation=Univ A"], vec![
     "Bob Baker",
     "affiliation=Univ B. * Corresponding author.",
   ]];
-  assert_eq!(off, want);
   assert_eq!(on, want);
   let tex = repro!("marked_thanks_piece_with_address_is_written_as_read");
-  let (off, on) = both(tex);
+  let on = both(tex);
   let want = [
     vec!["Ann Able ∗", "affiliation=Univ A", "email=a@x.org"],
     vec!["Bob Baker", "affiliation=Univ B."],
   ];
-  assert_eq!(off, want);
   assert_eq!(on, want);
-  let (_, xml) = run(tex, 2);
+  let (_, xml) = run(tex);
   assert!(
     xml.contains(r#"mark="*" role="thanks""#) && xml.contains("Corresponding author</note>"),
     "{xml}"
@@ -150,14 +130,13 @@ fn a_marked_thanks_is_its_marks_affiliations() {
   // (the `\thanks` inside the name's mark formula: each piece read within the note, never widened to the formula holding
   // it — review rck2, where both affiliations were lost and the note written as two identical pubnotes, 0 Warnings)
   let tex = repro!("marked_thanks_in_a_formula_is_read_within_its_note");
-  let (off, on) = both(tex);
+  let on = both(tex);
   let want = [vec!["Ann Able", "affiliation=Univ A"], vec![
     "Bob Baker",
     "affiliation=Univ B",
   ]];
-  assert_eq!(off, want);
   assert_eq!(on, want);
-  let (_, xml) = run(tex, 2);
+  let (_, xml) = run(tex);
   assert!(!xml.contains("pubnote"), "{xml}");
 }
 
@@ -165,11 +144,10 @@ fn a_marked_thanks_is_its_marks_affiliations() {
 /// affiliations and an e-mail a nameless creator's).
 #[test]
 fn entry_columns_without_names_label_the_whole_block() {
-  let (off, on) = both(repro!("entry_columns_without_names_label_the_whole_block"));
+  let on = both(repro!("entry_columns_without_names_label_the_whole_block"));
   let want = [
     vec!["Ann Able", "affiliation=Univ A", "email=ann@a.edu"],
     vec!["Bob Baker", "affiliation=Univ B", "email=bob@b.edu"],
   ];
-  assert_eq!(off, want);
   assert_eq!(on, want);
 }

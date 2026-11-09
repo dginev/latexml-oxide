@@ -45,16 +45,14 @@ fn an_email_label_in_any_language_is_written_as_printed() {
     ("Courriel : ann@a.org", "Courriel : "),
   ] {
     let tex = template.replace(printed, label);
-    for emit in [1, 2] {
-      let (log, xml) = run(&tex, emit);
-      assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-      assert_eq!(
-        emails(&xml),
-        [(name.to_string(), "ann@a.org".to_string())],
-        "{label}"
-      );
-      assert!(!xml.contains("role=\"note\""), "{xml}");
-    }
+    let (log, xml) = run(&tex);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(
+      emails(&xml),
+      [(name.to_string(), "ann@a.org".to_string())],
+      "{label}"
+    );
+    assert!(!xml.contains("role=\"note\""), "{xml}");
   }
 }
 
@@ -69,25 +67,23 @@ fn a_role_heading_in_a_name_is_counted() {
     (block, 2, "Authors: | Ann Able"),
     (revtex, 1, "Editor: | Ann Able"),
   ] {
-    for emit in [1, 2] {
-      let (log, xml) = run(tex, emit);
-      assert_eq!(
-        (error_count(&log), warning_count(&log)),
-        (0, warnings),
-        "{log}"
-      );
-      assert!(
-        log.contains(&format!(
-          "safety net: a separator its author block prints between names parts no creators ({heading}); they are counted"
-        )),
-        "{log}"
-      );
-      let first = heading.replace(" |", "");
-      assert_eq!(creators(&xml), [
-        vec![first, "affiliation=Univ A".to_string()],
-        vec!["Bob Baker".to_string(), "affiliation=Univ B".to_string()],
-      ]);
-    }
+    let (log, xml) = run(tex);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, warnings),
+      "{log}"
+    );
+    assert!(
+      log.contains(&format!(
+        "safety net: a separator its author block prints between names parts no creators ({heading}); they are counted"
+      )),
+      "{log}"
+    );
+    let first = heading.replace(" |", "");
+    assert_eq!(creators(&xml), [
+      vec![first, "affiliation=Univ A".to_string()],
+      vec!["Bob Baker".to_string(), "affiliation=Univ B".to_string()],
+    ]);
   }
 }
 
@@ -96,19 +92,17 @@ fn a_role_heading_in_a_name_is_counted() {
 #[test]
 fn a_mark_reaching_no_contact_is_counted() {
   let tex = repro!("emit_net_a_mark_reaches_no_contact");
-  for emit in [1, 2] {
-    let (log, xml) = run(tex, emit);
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-    assert!(
-      log.contains("reaches no contact carrying its label, or a labelled contact no name's mark reaches (2); they are counted"),
-      "{log}"
-    );
-    assert_eq!(creators(&xml), [
-      vec!["Ann Able", "affiliation=Univ A, Town", "email=ann@a.org"],
-      vec!["Bob Baker 2", "affiliation=Univ A, Town", "email=bob@b.org"],
-      vec!["Cat Cole", "affiliation=Univ C, City", "email=cat@c.org"],
-    ]);
-  }
+  let (log, xml) = run(tex);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("reaches no contact carrying its label, or a labelled contact no name's mark reaches (2); they are counted"),
+    "{log}"
+  );
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able", "affiliation=Univ A, Town", "email=ann@a.org"],
+    vec!["Bob Baker 2", "affiliation=Univ A, Town", "email=bob@b.org"],
+    vec!["Cat Cole", "affiliation=Univ C, City", "email=cat@c.org"],
+  ]);
 }
 
 /// Per creator of `xml`, the text of each of its notes (`role="note"`), in order.
@@ -186,22 +180,14 @@ fn a_note_cuts_out_its_written_address() {
   for &(block, expected, held) in NOTE_ROWS {
     let tex = template.replace(NOTE_ROWS[0].0, block);
     assert!(tex.contains(block));
-    let (off_log, _) = run(&tex, 0);
-    assert_eq!(
-      (error_count(&off_log), warning_count(&off_log)),
-      (0, 0),
-      "{off_log}"
+    let (log, xml) = run(&tex);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+    assert!(
+      log.contains("they are kept as a note of the author block"),
+      "{log}"
     );
-    for emit in [1, 2] {
-      let (log, xml) = run(&tex, emit);
-      assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-      assert!(
-        log.contains("they are kept as a note of the author block"),
-        "{log}"
-      );
-      assert_eq!(creators(&xml), expected, "{block}");
-      assert_eq!(notes(&xml), held, "{block}");
-    }
+    assert_eq!(creators(&xml), expected, "{block}");
+    assert_eq!(notes(&xml), held, "{block}");
   }
 }
 
@@ -229,22 +215,14 @@ fn a_lost_name_writes_the_block_whole() {
       block,
     );
     assert!(tex.contains(block));
-    let (off_log, _) = run(&tex, 0);
-    assert_eq!(
-      (error_count(&off_log), warning_count(&off_log)),
-      (0, 0),
-      "{off_log}"
+    let (log, xml) = run(&tex);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+    assert!(
+      log.contains("the block is written whole, as Perl's whole-block creator"),
+      "{log}"
     );
-    for emit in [1, 2] {
-      let (log, xml) = run(&tex, emit);
-      assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-      assert!(
-        log.contains("the block is written whole, as Perl's whole-block creator"),
-        "{log}"
-      );
-      assert_eq!(creators(&xml), [vec![whole.to_string()]], "{block}");
-      assert_eq!(notes(&xml), [Vec::<String>::new()], "{block}");
-    }
+    assert_eq!(creators(&xml), [vec![whole.to_string()]], "{block}");
+    assert_eq!(notes(&xml), [Vec::<String>::new()], "{block}");
   }
 }
 
@@ -255,7 +233,7 @@ fn in_turn(docs: Vec<&'static str>) -> Vec<(Vec<String>, String)> {
 
   use latexml::converter::Converter;
   use latexml_core::common::{Config, OutputFormat};
-  use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+  use latexml_engine::base_utilities::set_fm_shadow_override;
   std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
     .spawn(move || {
@@ -265,7 +243,6 @@ fn in_turn(docs: Vec<&'static str>) -> Vec<(Vec<String>, String)> {
         .into_iter()
         .map(|tex| {
           set_fm_shadow_override(Some(true));
-          set_fm_emit_override(Some(2));
           let opts = Config {
             format: OutputFormat::XML,
             include_comments: Some(false),
@@ -339,46 +316,37 @@ fn a_lost_name_spells_its_own_address() {
   ] {
     let tex = template.replace(row, &format!("\\name {name} \\email {address}"));
     assert!(tex.contains(name));
-    let convert = |emit: u8| {
+    let convert = || {
       let (log, xml, ()) = latexml::util::test::convert_files_with_setup_then(
         &tex,
         &[("emit_jair_rows.sty", style)],
         Some("ar5iv.sty"),
         move || {
           latexml_engine::base_utilities::set_fm_shadow_override(Some(true));
-          latexml_engine::base_utilities::set_fm_emit_override(Some(emit));
         },
         |_| (),
       );
       (log, xml)
     };
-    let (off_log, _) = convert(0);
-    assert_eq!(
-      (error_count(&off_log), warning_count(&off_log)),
-      (0, 0),
-      "{off_log}"
+    let (log, xml) = convert();
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+    assert!(
+      log.contains(&format!(
+        "prints ({name}); the block is written whole, as Perl's whole-block creator"
+      )),
+      "{log}"
     );
-    for emit in [1, 2] {
-      let (log, xml) = convert(emit);
-      assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-      assert!(
-        log.contains(&format!(
-          "prints ({name}); the block is written whole, as Perl's whole-block creator"
-        )),
-        "{log}"
-      );
-      let creators = creators(&xml);
-      assert_eq!(creators.len(), 1, "{name}: {creators:?}");
-      let whole = &creators[0][0];
-      for printed in [
-        "Steven Minton minton@ptolemy.arc.nasa.gov",
-        &format!("{name} {address}"),
-        "Philip Laird laird@ptolemy.arc.nasa.gov",
-      ] {
-        assert!(whole.contains(printed), "{printed}: {whole}");
-      }
-      assert_eq!(notes(&xml), [Vec::<String>::new()], "{name}");
+    let creators = creators(&xml);
+    assert_eq!(creators.len(), 1, "{name}: {creators:?}");
+    let whole = &creators[0][0];
+    for printed in [
+      "Steven Minton minton@ptolemy.arc.nasa.gov",
+      &format!("{name} {address}"),
+      "Philip Laird laird@ptolemy.arc.nasa.gov",
+    ] {
+      assert!(whole.contains(printed), "{printed}: {whole}");
     }
+    assert_eq!(notes(&xml), [Vec::<String>::new()], "{name}");
   }
 }
 
@@ -396,7 +364,7 @@ fn a_list_part_goes_to_no_line_author() {
     NOTE_ROWS[0].0,
     "Ann Able \\qquad Bob Baker \\qquad Cat Cole \\\\ Univ A \\\\ {\\it aable, bbaker, cat@a.org}",
   );
-  let (log, xml) = run(&tex, 2);
+  let (log, xml) = run(&tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [
     vec!["Ann Able", "affiliation=Univ A", "email=aable@a.org"],
@@ -406,23 +374,6 @@ fn a_list_part_goes_to_no_line_author() {
   assert_eq!(
     notes(&xml),
     [Vec::<String>::new(), Vec::new(), Vec::new()],
-    "{xml}"
-  );
-  // (`=1` keeps the switch-off reading: the parts the block's note, kept in its Warning — review revLO2 6)
-  let (log, xml) = run(&tex, 1);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-  assert_eq!(creators(&xml), [
-    vec!["Ann Able", "affiliation=Univ A"],
-    vec!["Bob Baker", "affiliation=Univ A"],
-    vec!["Cat Cole", "affiliation=Univ A", "email=cat@a.org"],
-    vec![],
-  ]);
-  assert_eq!(
-    notes(&xml),
-    [vec![], vec![], vec![], vec![
-      "aable".to_string(),
-      "bbaker".to_string()
-    ]],
     "{xml}"
   );
 }

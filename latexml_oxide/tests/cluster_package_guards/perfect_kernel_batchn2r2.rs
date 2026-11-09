@@ -32,7 +32,7 @@ fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).co
 #[test]
 fn a_shared_copy_hides_no_differently_worded_loss() {
   let tex = repro!("emit_content_a_shared_copy_hides_no_loss");
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
   assert_eq!(
     content_checks(&log),
@@ -46,9 +46,6 @@ fn a_shared_copy_hides_no_differently_worded_loss() {
     row(&["Dan Dorn", "email=dan@idsia.ch"]),
     row(&[]),
   ]);
-  let (log, _) = run(tex, 1);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-  assert_eq!(content_checks(&log), (vec![], vec![]), "{log}");
 }
 
 /// A block written whole exempts the creator it became, never the rest of the paper (review revN2 finding 2): the second
@@ -59,7 +56,7 @@ fn a_shared_copy_hides_no_differently_worded_loss() {
 /// whole) is pinned by the unit test `resolver::placed::whole_tests::a_whole_block_exempts_only_its_own_creator` (revI8).
 #[test]
 fn a_whole_block_exempts_only_its_own_creator() {
-  let (log, xml) = run(repro!("emit_content_a_whole_block_exempts_only_itself"), 2);
+  let (log, xml) = run(repro!("emit_content_a_whole_block_exempts_only_itself"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains("the block is written whole, as Perl's whole-block creator"),
@@ -80,7 +77,7 @@ fn a_whole_block_exempts_only_its_own_creator() {
 /// finding 5: a lost initial, a one-letter word or a two-digit number was never counted).
 #[test]
 fn a_lost_letter_is_counted() {
-  let (log, xml) = run(repro!("emit_content_a_lost_letter_is_counted"), 2);
+  let (log, xml) = run(repro!("emit_content_a_lost_letter_is_counted"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
   assert_eq!(
     content_checks(&log),
@@ -109,10 +106,8 @@ fn an_email_parted_by_and_keeps_its_addresses() {
     row(&["Bob Baker", "email=bob@b.org"]),
     row(&["affiliation=Univ A, Town"]),
   ];
-  for emit in [0, 2] {
-    let (log, xml) = run(tex, emit);
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-    assert!(!xml.contains("lx@fm@obs"), "{xml}");
-    assert_eq!(creators(&xml), expected, "emit={emit}: {xml}");
-  }
+  let (log, xml) = run(tex);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(!xml.contains("lx@fm@obs"), "{xml}");
+  assert_eq!(creators(&xml), expected, "{xml}");
 }

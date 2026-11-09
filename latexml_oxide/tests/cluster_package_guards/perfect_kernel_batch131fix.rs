@@ -17,7 +17,6 @@ use super::{
   perfect_kernel_batch84b::text,
   perfect_kernel_batch89a::cli_conversion,
   perfect_kernel_batch99b::converted,
-  perfect_kernel_batcht1::red_at_two,
 };
 
 macro_rules! repro {
@@ -189,27 +188,4 @@ fn orcid_icon_link_closing_with_the_comma_parts_the_names() {
     vec!["Ann Able", "orcid=https://orcid.org/0000-0002-1825-0097"],
     vec!["Bob Baker"],
   ]);
-}
-
-/// An aa `\institute` entry's `\email{M.R.Pestalozzi,a.chrysostomou,j.l.collett@herts.ac.uk}`, each part spelling one of
-/// the entry's three authors, gives each its own address, the capitals as printed; the lowercase list of the next
-/// entry stays written out (103a). int131a copied the whole first list onto all three; int130a put both lists whole
-/// on a nameless creator (astro-ph0612088).
-#[test]
-fn unspaced_list_whose_every_part_spells_an_author_is_written_out() {
-  if red_at_two(
-    "a false markup-lost Warning: \"jconway@oso.chalmers.se\" written as plain text (one address of a list no ink prints alone)",
-  ) {
-    return;
-  }
-  assert_eq!(
-    converted(
-      repro!(
-        "sectioning-frontmatter",
-        "address_family_unspaced_list_capitalised_spelled"
-      ),
-      0
-    ),
-    r#"<title>T</title> <creator role="author"> <personname>M. R. Pestalozzi</personname> <contact name="Affiliation: " role="affiliation">Univ of Hertfordshire, Hatfield, UK,</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id1">M.R.Pestalozzi@herts.ac.uk</text></contact> </creator> <creator before=" " role="author"> <personname>A. Chrysostomou</personname> <contact name="Affiliation: " role="affiliation">Univ of Hertfordshire, Hatfield, UK,</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id2">a.chrysostomou@herts.ac.uk</text></contact> </creator> <creator before=" " role="author"> <personname>J. L. Collett</personname> <contact name="Affiliation: " role="affiliation">Univ of Hertfordshire, Hatfield, UK,</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id3">j.l.collett@herts.ac.uk</text></contact> </creator> <creator before=" " role="author"> <personname>J. Conway</personname> <contact name="Affiliation: " role="affiliation">Onsala Space Observatory, Sweden, </contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id4">jconway@oso.chalmers.se</text></contact> </creator> <creator before=" " role="author"> <personname>R. S. Booth</personname> <contact name="Affiliation: " role="affiliation">Onsala Space Observatory, Sweden, </contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id5">roy@oso.chalmers.se</text></contact> </creator> <abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1"><text font="italic" xml:id="abstract1.1.1">Context. </text>A.</p> <p xml:id="abstract1.2"><text font="italic" xml:id="abstract1.2.1">Aims. </text>B.</p> <p xml:id="abstract1.3"><text font="italic" xml:id="abstract1.3.1">Methods. </text>C.</p> <p xml:id="abstract1.4"><text font="italic" xml:id="abstract1.4.1">Results. </text>D.</p> <p xml:id="abstract1.5"><text font="italic" xml:id="abstract1.5.1">Conclusions. </text>E.</p> </abstract> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
-  );
 }

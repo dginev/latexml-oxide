@@ -9,7 +9,7 @@
 //! place, the flush's reading.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::{
   perfect_kernel_batch84b::creators, perfect_kernel_batchn2::content_checks,
@@ -28,15 +28,14 @@ macro_rules! repro {
 
 fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).collect() }
 
-/// Convert `tex` under `emit` without the census (the shadow switch unset: production's default): the log and the XML.
-fn run_default(tex: &str, emit: u8) -> (String, String) {
+/// Convert `tex` without the census (the shadow switch unset: production's default): the log and the XML.
+fn run_default(tex: &str) -> (String, String) {
   let (log, xml, ()) = convert_files_with_setup_then(
     tex,
     &[],
     Some("ar5iv.sty"),
     move || {
       set_fm_shadow_override(None);
-      set_fm_emit_override(Some(emit));
     },
     |_| (),
   );
@@ -50,14 +49,14 @@ fn run_default(tex: &str, emit: u8) -> (String, String) {
 /// e-mail's: IEEEtran's `\IEEEauthorblockA` under each author (2311.03657, 2003.10159).
 #[test]
 fn a_line_printed_per_author_is_no_loss() {
-  let (log, xml) = run(repro!("emit_content_a_line_printed_per_author"), 2);
+  let (log, xml) = run(repro!("emit_content_a_line_printed_per_author"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(content_checks(&log), (vec![], vec![]), "{log}");
   assert_eq!(creators(&xml), [
     row(&["Ann Able", "affiliation=IDSIA Lab, Lugano"]),
     row(&["Bob Baker", "affiliation=IDSIA Lab, Lugano"]),
   ]);
-  let (log, xml) = run(repro!("emit_content_a_line_inside_a_longer_entry"), 2);
+  let (log, xml) = run(repro!("emit_content_a_line_inside_a_longer_entry"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(content_checks(&log), (vec![], vec![]), "{log}");
   let two_lines = "affiliation=Univ A, Town Science and Technology Lab, City";
@@ -66,7 +65,7 @@ fn a_line_printed_per_author_is_no_loss() {
     row(&["Bob Baker", "affiliation=Univ A, Town"]),
     row(&["Cat Cole", two_lines]),
   ]);
-  let (log, xml) = run(repro!("emit_content_a_line_beside_its_address"), 2);
+  let (log, xml) = run(repro!("emit_content_a_line_beside_its_address"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(content_checks(&log), (vec![], vec![]), "{log}");
   assert_eq!(creators(&xml), [
@@ -89,7 +88,7 @@ fn a_line_printed_per_author_is_no_loss() {
 /// `Email: ann@a.org`, the label rendered twice — review revX2 2).
 #[test]
 fn a_class_label_in_a_name_is_no_excess() {
-  let (log, xml) = run(repro!("emit_content_a_class_label_in_a_name"), 2);
+  let (log, xml) = run(repro!("emit_content_a_class_label_in_a_name"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(content_checks(&log), (vec![], vec![]), "{log}");
   assert_eq!(creators(&xml), [
@@ -116,8 +115,8 @@ fn the_calls_are_read_without_the_census() {
     row(&["Ann Able", "affiliation=Univ A, Town", "email=ann@a.org"]),
     row(&["Bob Baker", "affiliation=Univ A, Town"]),
   ];
-  let (census_log, census_xml) = run(tex, 2);
-  let (log, xml) = run_default(tex, 2);
+  let (census_log, census_xml) = run(tex);
+  let (log, xml) = run_default(tex);
   for log in [&census_log, &log] {
     assert_eq!((error_count(log), warning_count(log)), (0, 1), "{log}");
     assert_eq!(
@@ -128,7 +127,4 @@ fn the_calls_are_read_without_the_census() {
   }
   assert_eq!(creators(&xml), expected, "{xml}");
   assert_eq!(xml, census_xml);
-  let (log, xml) = run_default(tex, 0);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&xml), expected, "{xml}");
 }

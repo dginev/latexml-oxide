@@ -25,7 +25,7 @@ macro_rules! repro {
 /// the label. Red (P1br2): "Univ Z 2 Side Road, City" plain, counted by 2 Warnings.
 #[test]
 fn a_whole_label_line_cut_keeps_the_breaks() {
-  let (log, xml) = run(repro!("emit_a_whole_label_line_cut_keeps_the_breaks"), 2);
+  let (log, xml) = run(repro!("emit_a_whole_label_line_cut_keeps_the_breaks"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(
     creators_xml(&xml),

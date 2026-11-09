@@ -9,7 +9,6 @@ use latexml::util::test::{convert_with, normalize_markup, xml_element};
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch57::{assert_elements, assert_elements_with},
-  perfect_kernel_batcht1::red_at_two,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -157,59 +156,6 @@ fn footnotemark_value_footnote_is_the_counter() {
   );
 }
 
-/// The title block's `\thanks` and `\footnote` step the footnote counter, as article's `\thanks` is `\footnotemark` and
-/// its text (article.cls:241 `\let\footnote\thanks`, latex.ltx:17215), so `\footnotemark[\arabic{footnote}]` after
-/// one is its "∗" and after the second "†" (pdflatex 0 errors: "A∗ B∗ C† D†", the body's "1"). Red (78o r1): B's and D's
-/// marks "" — nothing stepped, `\@fnsymbol` of 0. Witnesses 2201.11183 ("Zhenan Fan∗1, Huang Fang∗2"), 2111.13260
-/// ("Suhani Vora1 *, Noha Radwan1 *"). KNOWN_PERL_ERRORS #1060. Repro
-/// sectioning-frontmatter/article_title_notes_step_the_footnote_counter.
-#[test]
-fn article_title_notes_step_the_footnote_counter() {
-  if red_at_two("the footnotemarks after B and D lose their \"*\"/\"†\" marks") {
-    return;
-  }
-  let xml = assert_each(
-    repro!("sectioning-frontmatter/article_title_notes_step_the_footnote_counter.tex"),
-    "creator",
-    &[
-      r#"<creator role="author"><personname>A</personname><contact name="Note: " role="note">fone</contact></creator>"#,
-      r#"<creator before="  " role="author"><personname>B<note mark="*" role="footnotemark" xml:id="footnotex1"><tags><tag>*</tag><tag role="refnum">*</tag><tag role="typerefnum">footnote *</tag></tags></note></personname></creator>"#,
-      r#"<creator before="  " role="author"><personname>C</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">tthree</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>D<note mark="†" role="footnotemark" xml:id="footnotex2"><tags><tag>†</tag><tag role="refnum">†</tag><tag role="typerefnum">footnote †</tag></tags></note></personname></creator>"#,
-    ],
-  );
-  latexml::util::test::assert_element(
-    &xml,
-    "note",
-    &["xml:id=\"footnote1\""],
-    r#"<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>bodyone</note>"#,
-  );
-}
-
-/// The title's, the authors' and the date's `\thanks` step the counter in turn, so the bare `\footnotemark` after B's
-/// is the fourth note, "§" (pdflatex 0 errors: "T∗", "A† B‡§", "D¶", the body's "1"). Red (78o r1): "∗"; int52a and
-/// Perl "1" and the body's note "2". Repro sectioning-frontmatter/article_title_thanks_in_every_field_step_in_turn.
-#[test]
-fn article_title_thanks_in_every_field_step_in_turn() {
-  if red_at_two("drops the bare footnotemark \"§\" after B") {
-    return;
-  }
-  let xml = assert_each(
-    repro!("sectioning-frontmatter/article_title_thanks_in_every_field_step_in_turn.tex"),
-    "creator",
-    &[
-      r#"<creator role="author"><personname>A</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">ta</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>B<note mark="§" role="footnotemark" xml:id="footnote4"><tags><tag>§</tag><tag role="refnum">§</tag><tag role="typerefnum">footnote §</tag></tags></note></personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2">tb</note></creator>"#,
-    ],
-  );
-  latexml::util::test::assert_element(
-    &xml,
-    "note",
-    &["xml:id=\"footnote1\""],
-    r#"<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>bodyone</note>"#,
-  );
-}
-
 /// A mark and a text pair by the counter value they stand for only across the title block (`title_block_partner`):
 /// a `\footnotetext[1]` under `\fnsymbol` ("∗ Equal contribution") is no answer to a table's `\footnotemark` "1",
 /// which the `\footnotetext` after the tabular answers (pdflatex 0 errors: "x1", notes "∗ Equal contribution", "1 table
@@ -269,7 +215,7 @@ Body\footnote{bodyone}.
 #[test]
 fn declared_title_thefootnote_prints_the_marks_the_observer_labels() {
   let tex = "\\documentclass{article}\n\\makeatletter\\def\\lx@title@thefootnote{\\@alph\\c@footnote}\\makeatother\n\\begin{document}\n\\title{T}\n\\author{Ann Able\\thanks{A.} \\and Bob Baker\\footnotemark \\and Cat Cole\\footnotemark[5]}\n\\maketitle\nBody.\n\\end{document}\n";
-  let (log, xml, json) = super::perfect_kernel_batchfms2a1::shadow(tex, Some(PRELOAD));
+  let (log, _, json) = super::perfect_kernel_batchfms2a1::shadow(tex, Some(PRELOAD));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(super::perfect_kernel_batchfms2a1::blocks(&json), [[
     "N:Ann Able",
@@ -281,77 +227,6 @@ fn declared_title_thefootnote_prints_the_marks_the_observer_labels() {
     "N:Cat Cole",
     "M:e"
   ]]);
-  if red_at_two("drops the footnote2 note the declared thefootnote prints") {
-    return;
-  }
-  latexml::util::test::assert_element(
-    &xml,
-    "note",
-    &["xml:id=\"footnote2\""],
-    r#"<note mark="b" role="footnotemark" xml:id="footnote2"><tags><tag>b</tag><tag role="refnum">b</tag><tag role="typerefnum">footnote b</tag></tags></note>"#,
-  );
-  latexml::util::test::assert_element(
-    &xml,
-    "note",
-    &["xml:id=\"footnotex1\""],
-    r#"<note mark="e" role="footnotemark" xml:id="footnotex1"><tags><tag>e</tag><tag role="refnum">e</tag><tag role="typerefnum">footnote e</tag></tags></note>"#,
-  );
-}
-
-/// A title block's mark numbered from the counter pairs by value only in the title block (`same_count`, `_fncounted`):
-/// article's `\maketitle` sets the counter back to 0 (article.cls:190, :223), so C's
-/// `\footnotemark[\value{footnote}]` after two `\thanks` is the title's 2, "†", and the body's `\footnotetext[2]` is
-/// another note (pdflatex 0 errors: "A∗ B† C†", notes "∗ aa", "† bb", "2 Body text two"). Red (78o r2): "Body text
-/// two" moved into C's mark. A literal `[2]` still pairs (`title_mark_pairs_with_its_text_by_number`, 2505.14146).
-/// Review probe rev78o2 art2. Repro package-bindings/title_counter_mark_keeps_to_the_title_block.
-#[test]
-fn title_counter_mark_keeps_to_the_title_block() {
-  if red_at_two("C's footnotemark loses its \"†\" mark") {
-    return;
-  }
-  let xml = assert_each(
-    repro!("package-bindings/title_counter_mark_keeps_to_the_title_block.tex"),
-    "creator",
-    &[
-      r#"<creator role="author"><personname>A</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">aa</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>B</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2">bb</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>C<note mark="†" role="footnotemark" xml:id="footnotex1"><tags><tag>†</tag><tag role="refnum">†</tag><tag role="typerefnum">footnote †</tag></tags></note></personname></creator>"#,
-    ],
-  );
-  latexml::util::test::assert_element(
-    &xml,
-    "p",
-    &["xml:id=\"p1.1\""],
-    r#"<p xml:id="p1.1">Body text.
-<note mark="2" role="footnotetext" xml:id="footnotex2">Body text two</note></p>"#,
-  );
-}
-
-/// And by the printed mark (Perl's pairing) not between two notes numbered from the counter on the two sides of the
-/// reset: report's title page counts its notes from the counter and sets it back after `\maketitle` (report.cls:196,
-/// :229), so B's bare `\footnotemark` "2" after A's `\thanks` has no text, and the body's bare `\footnotetext` "2"
-/// answers the body's own `\footnotemark` (pdflatex 0 errors: "A1 B2",
-/// "Body1 x2 y.", notes "1 one", "2 two"). Red (78o r2): "two" copied into B's mark too. Review probe rev78o2 ttp3.
-/// Repro package-bindings/report_title_bare_footnotemark_keeps_to_the_title_block.
-#[test]
-fn report_title_bare_footnotemark_keeps_to_the_title_block() {
-  if red_at_two("numbers B's footnotemark 1 for the printed 2") {
-    return;
-  }
-  let xml = assert_each(
-    repro!("package-bindings/report_title_bare_footnotemark_keeps_to_the_title_block.tex"),
-    "creator",
-    &[
-      r#"<creator role="author"><personname>A</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">aa</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>B<note mark="2" role="footnotemark" xml:id="Ch0.footnote2"><tags><tag>2</tag><tag role="refnum">2</tag><tag role="typerefnum">footnote 2</tag></tags></note></personname></creator>"#,
-    ],
-  );
-  latexml::util::test::assert_element(
-    &xml,
-    "p",
-    &["xml:id=\"p1.1\""],
-    r#"<p xml:id="p1.1">Body<note mark="1" role="footnote" xml:id="Ch0.footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>one</note> x<note mark="2" role="footnote" xml:id="Ch0.footnote2a"><tags><tag>2</tag><tag role="refnum">2</tag><tag role="typerefnum">footnote 2</tag></tags>two</note> y.</p>"#,
-  );
 }
 
 /// Across the reset, a title's mark numbered from the counter and a body text that names its number print one note

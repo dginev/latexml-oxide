@@ -17,22 +17,7 @@ fn a_glued_address_and_note_mark_parts_at_emit_2() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/class-bindings/ws_p8_glued_mark_address_and_note.tex"
   );
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  assert_eq!(creators(&off), [
-    vec!["Maarten Golterman a1", "email=maarten@aapje.wustl.edu"],
-    vec![
-      "Santi Peris b",
-      "address=a Department of Physics, Washington University, St. Louis MO 63130, USA b IFAE, Univ. Autonoma de \
-       Barcelona, Spain",
-      "email=peris@ifae.es"
-    ],
-  ]);
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [
     vec![
