@@ -1202,6 +1202,20 @@ pub(super) fn joins_previous(events: &[&Event], i: usize) -> bool {
       .is_some_and(|e| e.kind == EventKind::Name)
 }
 
+/// Whether a Name joins the initials at `i` as the next piece of their name: past a Layout ([`joins_previous`]), or past a
+/// gap, where initials alone do not end a name (the gap rule: `V.G.~ Kagramanova`, 0802.4349; `F. M.\, Munteanu`,
+/// cond-mat9905290).
+fn next_name_joins(events: &[&Event], i: usize) -> bool {
+  let mut next = (i + 1..events.len()).filter(|&j| events[j].kind != EventKind::Layout);
+  match next.next() {
+    Some(j) if events[j].kind == EventKind::Name => j > i + 1 && joins_previous(events, j),
+    Some(j) if matches!(events[j].kind, EventKind::Sep(SepKind::Gap { .. })) => next
+      .next()
+      .is_some_and(|k| events[k].kind == EventKind::Name),
+    _ => false,
+  }
+}
+
 /// Whether `gap`, the separator before the Name at `i`, is inside a word: one source token (a command) printed it with
 /// the end of the Name before and the start of the Name at `i`, each of which runs on past that token — a glyph a
 /// document builds of boxes in the middle of a name (`S\OW N`, 1706.00234). A gap of two calls' spaces (`\redact{Ann
@@ -1501,7 +1515,10 @@ impl Resolver {
                 .flat_map(unglued_initials)
                 .collect();
               !before.contains(',') && words.len() <= 2 && words.iter().all(|w| !initials_only(w))
-            } =>
+            }
+            // (the initials end their piece: a name a gap or a layout joins to them is theirs, a name of its own after the
+            // comma — `Yongmin\, Kim$^*$, F. M.\, Munteanu$^{*,\dag}$`, cond-mat9905290, two people)
+            && !next_name_joins(events, i) =>
         {
           let c = *made.last().expect("a name");
           let creator = &mut self.out.creators[c];

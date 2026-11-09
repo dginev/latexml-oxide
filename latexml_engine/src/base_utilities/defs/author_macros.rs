@@ -16,6 +16,16 @@ pub(in crate::base_utilities) const EMITTED_LINE_MARK: &str = "_markread";
 /// `{opening}`, astro-ph9808358) has its own flush, which reads it or writes it whole and counted (`\lx@frontmatter@late`).
 pub(in crate::base_utilities) const KEPT_WHOLE: &str = "_merged_checked=1";
 
+/// Whether a sectioned caller's block (`\lx@add@authors`, `@adaptive`, `@list`) is an IJCAI sectioned one, as
+/// `add_authors_calls_sectioned` reads it (`has_ijcai_section_marker`, after the same macro expansions): at `=2` it goes to
+/// the section split as off does, whose names `\lx@ijcai@names` then queues whole — a piece cut through `\affiliations`
+/// is digested where a class defines it only in its `\@maketitle` (kr.sty, 2202.05511).
+fn ijcai_sectioned(stuff: &Tokens) -> Result<bool> {
+  has_ijcai_section_marker(&expand_separator_macros(expand_sole_author_macro(
+    stuff.clone(),
+  )))
+}
+
 /// `LATEXML_FM_EMIT=2` (OD #980): one whole block queued for the call, as the reader won't be cutting it, which the emitter
 /// takes at the flush (`observer::writer::emit`): Perl's whole-block creator (`author_block::whole_block_author`). A `late`
 /// call, made while a flush digests its queue after reading it (the ledger's `AuthorBlock::late`), queues it for a flush
@@ -78,7 +88,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefMacro!("\\lx@add@authors@adaptive{}", sub[(stuff)] {
     let replace = !lookup_bool("\\author:redefined");
     let late = record_author_call("\\lx@add@authors@adaptive", &stuff, replace, true, None, false);
-    if fm_emit_mode() == 2 { return whole_block_call(stuff, replace, None, late); }
+    if fm_emit_mode() == 2 && !ijcai_sectioned(&stuff)? {
+      return whole_block_call(stuff, replace, None, late);
+    }
     add_authors_calls(stuff, replace)
   });
   // The late block's flush (`whole_block_call`): its whole entry queued — the flush digesting it let the API to `@now`,
@@ -137,7 +149,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
 
   DefMacro!("\\lx@add@authors{}", sub[(stuff)] {
     let late = record_author_call("\\lx@add@authors", &stuff, true, true, None, false);
-    if fm_emit_mode() == 2 { return whole_block_call(stuff, true, None, late); }
+    if fm_emit_mode() == 2 && !ijcai_sectioned(&stuff)? {
+      return whole_block_call(stuff, true, None, late);
+    }
     add_authors_calls(stuff, true)
   });
   // A class's own author command, called once per author or author group and each adding to the ones before
@@ -159,7 +173,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefMacro!("\\lx@add@authors@list{}", sub[(stuff)] {
     assign_value("lx_authors_list_start", queued_author_count() as i64, Some(Scope::Global));
     let late = record_author_call("\\lx@add@authors@list", &stuff, false, true, None, false);
-    if fm_emit_mode() == 2 { return whole_block_call(stuff, false, None, late); }
+    if fm_emit_mode() == 2 && !ijcai_sectioned(&stuff)? {
+      return whole_block_call(stuff, false, None, late);
+    }
     add_authors_calls_sectioned(stuff, false, true, None, false)
   });
   // A name list where a binding has no lines or affiliations to read: each name `split_author_line` finds (comma,
