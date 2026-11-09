@@ -144,6 +144,32 @@ fn annotations_key(labels: &str) -> Vec<Token> {
   key
 }
 
+/// The key `_refmarkshown={…}` (`insert::show_unanswered_marks`' printed text of a request) for each of `labels` a glued
+/// mark was parted into ([`RCreator::whole_marks`]): a piece no entry answers shows the whole mark, as printed —
+/// BESIII's `$^{50A,50C}$` stays "50A,50C" beside its entry 50, never "A,C" (1705.11109, 1507.02068, 2204.09614); empty
+/// where none is.
+fn whole_marks_key(c: &RCreator, labels: &[String]) -> Vec<Token> {
+  let shown: Vec<String> = c
+    .whole_marks
+    .iter()
+    .flat_map(|(piece, whole)| {
+      clean_frontmatter_labels(piece, "affiliation")
+        .into_iter()
+        .filter(|label| labels.contains(label))
+        .map(move |label| s!("{label}={whole}"))
+    })
+    .collect();
+  if shown.is_empty() {
+    return Vec::new();
+  }
+  let mut key = vec![T_OTHER!(",")];
+  key.extend(key_tokens("_refmarkshown="));
+  key.push(T_BEGIN!());
+  key.extend(ExplodeText!(&shown.join(";")));
+  key.push(T_END!());
+  key
+}
+
 /// `f` on the rehearsed block at ledger index `index`, else `default`.
 fn with_block<R>(index: usize, default: R, f: impl FnOnce(&AuthorBlock, &[Event]) -> R) -> R {
   with_ledger(|ledger| match ledger.entries().get(index) {
@@ -345,8 +371,31 @@ fn call_tokens(mut call: Vec<Token>, only: bool) -> Tokens {
 }
 
 /// The content of a note's span: the argument of the note command it covers (`\thanks{…}`, `\footnote[1]{…}`), by the
-/// span's brace structure alone.
-fn note_argument(tokens: &Tokens) -> Option<Vec<Token>> {
+/// span's brace structure — but never an argument of plain characters printing less than the note `printed` (its
+/// digested text): the command around it prints more, its argument no note, as SCITEPRESS's `\orcidAuthor{0000-…}`
+/// (`\thanks{\epsfig{…}~https://orcid.org/#1}`) printing its link whole, never the id alone (2608.08994, 2202.03759).
+fn note_argument(tokens: &Tokens, printed: Option<&str>) -> Option<Vec<Token>> {
+  let argument = brace_argument(tokens)?;
+  let plain = argument.iter().all(|t| {
+    matches!(
+      t.get_catcode(),
+      Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
+    )
+  });
+  let text = || {
+    argument
+      .iter()
+      .map(|t| t.with_str(str::to_string))
+      .collect::<String>()
+  };
+  if plain && printed.is_some_and(|printed| norm(printed) != norm(&text())) {
+    return None;
+  }
+  Some(argument)
+}
+
+/// [`note_argument`]'s argument, by the span's brace structure alone.
+fn brace_argument(tokens: &Tokens) -> Option<Vec<Token>> {
   let v = tokens.unlist_ref();
   let mut at = v.iter().position(|t| t.get_catcode() != Catcode::SPACE)?;
   (v[at].get_catcode() == Catcode::CS).then_some(())?;
@@ -1393,14 +1442,20 @@ fn item_call(
       // (a note in a formula is its own call's, the formula around it the name's mark: `Derek F. Wong$^1\thanks{Corresponding
       // Author}$`, 2603.20851, 2407.15815 — its span's content is the whole formula, `content_of`)
       let cut_runs = cut.map_or(&[][..], |cut| &cut.cuts[..]);
-      let argument = event_at(index, span, |e| e.kind == EventKind::Note, |_| ()).and_then(|()| {
+      let argument = event_at(
+        index,
+        span,
+        |e| e.kind == EventKind::Note,
+        |e| e.text.clone(),
+      )
+      .and_then(|printed| {
         (span_tokens_cut(index, span, cut_runs)
           .as_ref()
-          .and_then(note_argument))
+          .and_then(|tokens| note_argument(tokens, Some(&printed))))
         .or_else(|| {
           span_call_tokens(index, span)
             .as_ref()
-            .and_then(note_argument)
+            .and_then(|tokens| note_argument(tokens, Some(&printed)))
         })
       });
       // (or one piece of a note the reading cut at its marks, sourced at its own span: those tokens, the reading's cut, never
@@ -1792,7 +1847,7 @@ fn call_note(call: &ApiCall, assoc: &Assoc) -> Result<Option<(bool, Vec<Token>)>
   Ok(
     field
       .content_of((start, end), 0, start)
-      .and_then(|(tokens, _)| note_argument(&tokens))
+      .and_then(|(tokens, _)| note_argument(&tokens, Some(&note.text)))
       .map(|argument| (note.footnote, argument)),
   )
 }
@@ -2928,7 +2983,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   }
   for &i in &fresh {
     let c = &resolved.creators[i];
-    let keys = annotations_key(&annotations[i].join(","));
+    let mut keys = annotations_key(&annotations[i].join(","));
+    keys.extend(whole_marks_key(c, &annotations[i]));
     // (kept whole on purpose, as a tabular block is: no merge to flag beside its Warning, `flag_merged_creators`)
     if whole.contains(&c.source)
       && let Some(tokens) = whole_block(c.source, KEPT_WHOLE, &keys)
@@ -2972,7 +3028,9 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       content.extend(step(true));
       let mut head = vec![add_now()];
       head.extend(cs_group_args(&["ltx:creator"]));
-      with_key_tokens(head, creator_keys(c, &annotations[i]), &content)
+      let mut keys = creator_keys(c, &annotations[i]);
+      keys.extend(whole_marks_key(c, &annotations[i]));
+      with_key_tokens(head, keys, &content)
     });
     out.push(entry("ltx:creator", tokens.unlist()));
   }

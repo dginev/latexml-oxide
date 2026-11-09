@@ -86,6 +86,10 @@ pub struct RCreator {
   pub affiliations: Vec<Assoc>,
   pub contacts:     Vec<Assoc>,
   pub notes:        Vec<Assoc>,
+  /// each request a glued mark of letters and digits was parted into, with that mark as printed (`part_glued_labels`):
+  /// a piece no entry answers shows the whole mark, never the piece alone — BESIII's `$^{50A,50C}$` under entries
+  /// numbered 1 to 54 requests entry 50 and prints "50A,50C", not "A,C" (1705.11109, 1507.02068, 2204.09614)
+  pub whole_marks:  Vec<(String, String)>,
 }
 
 /// A rule of the reading joining runs a separator parts into one name (`lines.rs`, `blocks.rs`), each its tag in the

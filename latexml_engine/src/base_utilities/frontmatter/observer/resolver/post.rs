@@ -656,7 +656,13 @@ impl Resolver {
           && (digit_entries || !b.chars().all(|c| c.is_ascii_digit()))
           && let Some(parts) = parted_label(&b, &entry_labels, true, self.emitting)
         {
+          let alphanumeric = b.chars().all(char::is_alphanumeric);
           for p in parts {
+            if alphanumeric {
+              self.out.creators[c]
+                .whole_marks
+                .push((s!("{prefix}{p}"), b.clone()));
+            }
             parted.push(s!("{prefix}{p}"));
             out.push(s!("{prefix}{p}"));
           }
