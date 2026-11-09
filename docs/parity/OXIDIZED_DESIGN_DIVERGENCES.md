@@ -23839,7 +23839,11 @@ only (XML byte-identical against int54a with the switch unset and set, SYNC "FM 
   1712.02568); a sole author's orphans are that author's, as today's (#159: 0911.5235, 0712.4133); a note made before
   any author is the title's, kept in the block (`api:title-note`; 1603.01892, 1802.05590, cond-mat0502298); a numbered
   legend reading as an institution is an affiliation (`is_legend_text`; `classify_thanks`'s "erc" matched "Perception"
-  until 78u, #880, 2509.05368).
+  until 78u, #880, 2509.05368). Under `=2` an entry's inner e-mail rides with its entry's call unless that entry is not
+  written: an affiliation its owner already holds from another source is written once, so the e-mail it holds is its own
+  contact item (`writer::emit::items_to_emit`'s `separate`; FX5: 2111.06447's svjour3 `\institute{Sibo Cheng \at …\\
+  \email{sibo.cheng@imperial.ac.uk}}` under an author line printing the same affiliation, where `=2` lost the address;
+  `perfect_kernel_batchfx5::an_institute_email_under_a_repeated_affiliation_is_kept`).
 - **Comparator**: a name's marks the XML holds as text (`R. Vasile 1`, 0807.4407; 1309.7542) or as a floating-superscript
   formula (`{}^{a,\;b}`, `\,^{3}`: 1307.6166, 0804.4669) are no name text (`xml_names`; read from the XMath, #911); notes compare
   without the creator's ORCID identifier (2106.12436); an e-mail's glued label aside (2108.12329); an XML item is the
