@@ -24480,10 +24480,21 @@ observer records and reads every paper; the ledger's JSON (`fm_shadow_json`) sta
 the reading. Guards deleted: the switch's byte-identity checks (`batchfms2a2::{resolver_leaves_the_xml_unchanged,
 r3_shapes_leave_the_xml_unchanged}`, `batchfms2a2r6`/`r7`/`r8`'s `r*_shapes_leave_the_xml_unchanged` with the fixtures
 only they read — 2506.07978's and 2604.19097's AASTeX shape among them —,
-`batchfms2a1::cli_writes_the_shadow_dump_only_under_the_switch`), e0's pass list after the writer and its read-back
-(`passes_after_the_writer_are_an_allow_list`, `each_outcome_is_read_back`,
-`a_pass_after_the_writer_shows_in_the_read_back`; witnesses 2012.14750, 2201.02056, 2606.18623, 1507.02068, 2511.18438,
-2608.22772), the writer's unit tests and every ab_audit `fmshadow::tests` test above.
+`batchfms2a1::cli_writes_the_shadow_dump_only_under_the_switch`), e0's read-back checks (`each_outcome_is_read_back`,
+`a_pass_after_the_writer_shows_in_the_read_back`; witnesses 2012.14750, 2201.02056, 2606.18623, 1507.02068), the
+writer's unit tests and every ab_audit `fmshadow::tests` test above. Two guards of live code are kept (DEL4b): e0's pass
+list, re-anchored after `drop_repeated_orcids` where the writer ran, its last call `check_placed_content` and its three
+owner debts unchanged (`perfect_kernel_batche0::passes_after_the_emitter_are_an_allow_list`; debts 2511.18438,
+2608.22772), and the drift guard's live half, each declaration's `binding:` the declaring file's own registry entry
+(`perfect_kernel_batch87a::each_declared_binding_is_the_declaring_files_own_registry_entry`; the `DECLARED` equality
+half went with the census). `the_rehearsal_leaves_nothing_behind` (fms2a1, the switch comparison's successor) asserts
+each shape's whole body text and counts. Witnesses only the deleted code named: 0705.3751, 2506.05001 (a take-out the
+plan could not cut, declined, the ledger saying so rather than `same`), 1306.4792 (`)and I. Siutsou(`) and 2508.05192
+(an IEEE ordinal's `1 Felix Neubauer`), names opening with a bracket or a digit the census's comparator still read as
+whole names; 2207.10791 (an XML creator `*`, a fault other than a separator-only creator); 1511.09260 (`Krzysztof
+Pawłowski 2`, marks held as text matched to the reading's name); 2607.19263 (a `\thanks{$\star$ …}` legend read as the
+starred authors' affiliation, `note:legend`); 2603.24308 (`\textit{e-mail: \texttt{mdeleon@icmat.es}}`, the writer's
+contact copy keeping the italic and typewriter round the address alone).
 
 ### 840. A space a name sets before its own mark is the name's; spacing-only math, `\enskip` after a mark part names
 

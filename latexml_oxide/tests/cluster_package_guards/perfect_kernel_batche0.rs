@@ -2,8 +2,9 @@
 //! user's ruling 2026-11-06: the old engine's code is deleted before the merge). Nothing here changes a conversion:
 //! the fence and the token-read count read the source. Each pinned count is a debt on the way to the floor, not a
 //! permanent allowance: it may only fall, and a fall lowers its pin (the failure message prints the table to paste), so
-//! what was paid stays paid. The pass list after the S2b writer and the census's read-back went with them (DEL4;
-//! their witnesses 2012.14750, 2201.02056 (overflow positions), 2606.18623, 1507.02068, 2511.18438, 2608.22772).
+//! what was paid stays paid. The S2b writer and the census's read-back are deleted (DEL4; their witnesses 2012.14750,
+//! 2201.02056 (overflow positions), 2606.18623, 1507.02068); the pass list after them is re-anchored where the writer
+//! ran, after the emitter's placement (`passes_after_the_emitter_are_an_allow_list`; its debts 2511.18438, 2608.22772).
 use std::{collections::BTreeMap, fs, path::Path};
 
 use regex::Regex;
@@ -1498,4 +1499,114 @@ fn token_reads_only_fall_toward_the_floor() {
     }
   }
   assert_debts("the token reads", TOKEN_READS, &counts, WHY);
+}
+
+/// What a pass after the emitter may change, on the way to deleting the old layers: passes may change kind and text,
+/// never who holds an item (the plan's definition of done, item 5). `OwnerDebt` is what breaks that today: the plan's
+/// Z8, Z9 pay each one down.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PassMay {
+  /// nothing: counts, flags or reads
+  ChangeNothing,
+  /// an item's kind (and with it the words a Kind step takes out)
+  ChangeKind,
+  /// an item's printed text
+  ChangeText,
+  /// drop an empty or repeated item, or a line of a note
+  Drop,
+  /// **moves items between owners**: a debt, witnesses 2511.18438, 2608.22772
+  OwnerDebt,
+}
+
+/// The passes after `drop_repeated_orcids` in `insert_frontmatter`, in order, each classed: what runs once the emitter's
+/// entries are placed (the S2b writer's old spot, deleted in DEL4; its witnesses 2012.14750, 2201.02056, 2606.18623,
+/// 1507.02068). An allow-list and a debt: the three owner-moving ones go before the merge.
+const PASSES_AFTER_THE_EMITTER: &[(&str, PassMay)] = &[
+  ("count_lost_marks", PassMay::ChangeNothing),
+  ("join_split_address_contacts", PassMay::ChangeText),
+  ("kind_address_lines", PassMay::ChangeKind),
+  ("link_entry_addresses", PassMay::OwnerDebt),
+  ("drop_empty_contacts", PassMay::Drop),
+  ("distribute_address_lists", PassMay::OwnerDebt),
+  ("write_role_notes", PassMay::ChangeKind),
+  ("show_line_marks", PassMay::ChangeText),
+  ("kind_dedication_lines", PassMay::ChangeKind),
+  ("kind_legend_contacts", PassMay::ChangeKind),
+  // (the URL part moves a link to the block: Z9's; the grade part is a kind)
+  ("kind_link_and_grade_contacts", PassMay::OwnerDebt),
+  ("drop_repeated_contacts", PassMay::Drop),
+  ("flag_merged_creators", PassMay::ChangeNothing),
+  ("keep_unclaimed_net_notes", PassMay::Drop),
+  // (the content invariant on the placed output, under `=2`: it counts, N2)
+  ("check_placed_content", PassMay::ChangeNothing),
+];
+
+/// The calls after `drop_repeated_orcids` in `insert_frontmatter`'s body, in order, by the path they are written with:
+/// any call of a lower-case name that is no method, so a pass taking other arguments, or in another module
+/// (`relocate::new_pass(document)?`), is seen too.
+fn calls_after_the_emitter() -> Vec<String> {
+  let lines = code_lines(&format!("{BASE}/frontmatter/insert.rs"));
+  let start = lines
+    .iter()
+    .position(|l| l.starts_with("pub fn insert_frontmatter("))
+    .expect("insert_frontmatter");
+  let end = start
+    + lines[start..]
+      .iter()
+      .position(|l| l.starts_with('}'))
+      .expect("its end");
+  let anchor = start
+    + lines[start..end]
+      .iter()
+      .position(|l| l.contains("drop_repeated_orcids(document);"))
+      .expect("the anchor, `drop_repeated_orcids(document);`");
+  let call =
+    Regex::new(r"(?:^|[^.:\w])((?:[A-Za-z_]\w*::)*[a-z_][a-z_0-9]*)\(").expect("the regex");
+  lines[anchor + 1..end]
+    .iter()
+    .flat_map(|line| call.captures_iter(line))
+    .map(|c| c[1].to_string())
+    .collect()
+}
+
+/// The pass-list guard: a new pass after the emitter's placement fails until classed, and the owner-moving ones stay
+/// named as debts.
+#[test]
+fn passes_after_the_emitter_are_an_allow_list() {
+  let calls = calls_after_the_emitter();
+  // (a pass running twice — after the Kind step reads address lines — is one entry)
+  let mut once: Vec<&str> = Vec::new();
+  for call in &calls {
+    if !once.contains(&call.as_str()) {
+      once.push(call);
+    }
+  }
+  let listed: Vec<&str> = PASSES_AFTER_THE_EMITTER
+    .iter()
+    .map(|(name, _)| *name)
+    .collect();
+  assert_eq!(
+    once, listed,
+    "a pass after `drop_repeated_orcids` is classed in `PASSES_AFTER_THE_EMITTER` by what it may change: kind and \
+     text, never who holds an item (docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, definition of done item 5). An \
+     ownership rule lands in `observer/resolver/`."
+  );
+  assert_eq!(
+    PASSES_AFTER_THE_EMITTER
+      .iter()
+      .filter(|(_, may)| *may == PassMay::OwnerDebt)
+      .map(|(name, _)| *name)
+      .collect::<Vec<_>>(),
+    [
+      "link_entry_addresses",
+      "distribute_address_lists",
+      "kind_link_and_grade_contacts"
+    ],
+    "a debt paid goes from the list; no pass joins it"
+  );
+  assert_eq!(
+    calls.last().map(String::as_str),
+    Some("check_placed_content"),
+    "the content check reads the final placed document"
+  );
 }

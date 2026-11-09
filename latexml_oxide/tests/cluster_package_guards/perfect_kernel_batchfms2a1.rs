@@ -571,9 +571,12 @@ fn the_rehearsal_leaves_nothing_behind() {
     )
   };
   const AUTH_NAMES: &str = "Ann Able\\thanks{From file.} \\and Bob Baker\n";
-  let cases: Vec<(String, (usize, usize))> = vec![
+  // (each shape: its source, its whole body text as the binary gives it, its Error and Warning counts — at `=2`, since
+  // the flip; the body after the frontmatter, before post-processing, so a `\ref` is still empty)
+  let cases: Vec<(String, &str, (usize, usize))> = vec![
     (
       "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^{\\dag}$ \\and Bob Baker\\thanks{Funded.}\\\\ \\dag Univ A}\n\\maketitle\nBody.\n\\end{document}\n".to_string(),
+      "Body.",
       (0, 0),
     ),
     (
@@ -581,14 +584,18 @@ fn the_rehearsal_leaves_nothing_behind() {
         "../../../tools/perfect_kernel/repros/class-bindings/gretsi_v13_shared_mark_affiliation.tex"
       )
       .to_string(),
+      "1 section 1 1 §1 1 Introduction Body text.",
       (0, 0),
     ),
+    // (the `\aftergroup` once leaked "LEAKED" into the body; the one Warning counts the LEAKED box the creators lack,
+    // where pdflatex prints LEAKED on the title page)
     (
       include_str!(
         "../../../tools/perfect_kernel/repros/sectioning-frontmatter/observer_rehearsal_aftergroup_stays_inside.tex"
       )
       .to_string(),
-      (0, 0),
+      "Body after.",
+      (0, 1),
     ),
     (
       doc(
@@ -596,40 +603,67 @@ fn the_rehearsal_leaves_nothing_behind() {
         r"Ann Able\thanks{Supported by X.\label{fn:a}} \and Bob Baker\footnote{Second.}",
         r"See note \ref{fn:a}. Text\footnote{Body note.}",
       ),
+      "See note . Text 1 1 footnote 1 Body note.",
       (0, 0),
     ),
+    // (RED, SYNC item 39: since the flip the author's `\stepcounter` is lost, "0" where Perl and pdflatex print "1";
+    // the `\gdef` is kept — repro sectioning-frontmatter/observer_rehearsal_loses_an_author_stepcounter)
     (
       doc(
         r"\newcounter{probe}",
         r"Ann Able\stepcounter{probe}\ifx\foo\undefined\gdef\foo{ONE}\else\gdef\foo{TWO}\fi \and Bob",
         r"Value \foo{} and \theprobe.",
       ),
+      "Value ONE and 0.",
       (0, 0),
     ),
+    // (the unclosed `\begingroup` closes with the author item, its own Error only, the body not bold)
     (
       doc("", r"Ann Able\begingroup\bfseries Bob \and Carl", "Body after."),
+      "Body after.",
       (1, 0),
     ),
+    // (RED, SYNC item 39: since the flip the author field's undefined commands lose their Error and their `ERROR`
+    // markup — `\email` (undefined in article) is not reported, and the one Error is the body's `\undefinedprobecs`;
+    // the Warning counts "Bob", lost as a name. Perl: 2 Errors (`\undefinedprobecs`, `\email`), the creators Ann Able
+    // and Bob; pdflatex 3 undefined control sequences)
     (
       doc(
         "",
         r"Ann Able\undefinedprobecs \and Bob\email{b@x.org}",
         r"Body \undefinedprobecs.",
       ),
-      (2, 0),
+      "Body \\undefinedprobecs .",
+      (1, 1),
     ),
     // (the token analyser reads the sole `\input`'s file since 107b, `sole_input_file`, and so sees the `\and` it
-    // holds: no `merged_creators` Error, which int51a-106t raised — `input_field_events_carry_no_span`)
-    (doc("", r"\input{auth_names}", "Body after."), (0, 0)),
+    // holds: no `merged_creators` Error, which int51a-106t raised — `input_field_events_carry_no_span`; the three
+    // Warnings are the emitter's plain-text names and note)
+    (
+      doc("", r"\input{auth_names}", "Body after."),
+      "Body after.",
+      (0, 3),
+    ),
   ];
   let files = [("auth_names.tex", AUTH_NAMES)];
-  // (each shape's diagnostics as first pinned beside it; not asserted since the flip, as before DEL4 — at `=2` the
-  // aftergroup shape counts its lost `LEAKED` box (0, 1), the undefined command (1, 1) and the `\input` field (0, 3))
-  for (tex, _) in &cases {
-    let (_, xml, ()) = convert_files_with_setup_then(tex, &files, Some("ar5iv.sty"), || {}, |_| ());
-    // (what a rehearsal leaks lands before the body's text: `<p>LEAKEDBody after.</p>`)
-    assert!(!xml.contains("LEAKEDBody"), "{tex}");
-  }
+  // (what a rehearsal leaks lands in the body, `<p>LEAKEDBody after.</p>`, and a `\gdef` or `\stepcounter` it rolls back
+  // too far is missing there)
+  let got: Vec<(String, (usize, usize))> = cases
+    .iter()
+    .map(|(tex, ..)| {
+      let (log, xml, ()) =
+        convert_files_with_setup_then(tex, &files, Some("ar5iv.sty"), || {}, |_| ());
+      (
+        super::perfect_kernel_batch94b::body_text(&xml),
+        (error_count(&log), warning_count(&log)),
+      )
+    })
+    .collect();
+  let want: Vec<(String, (usize, usize))> = cases
+    .iter()
+    .map(|(_, body, counts)| (body.to_string(), *counts))
+    .collect();
+  assert_eq!(got, want);
 }
 
 /// Spans and widths (review finding 2): each event's span of the author field's positions (the kernel `\author`'s

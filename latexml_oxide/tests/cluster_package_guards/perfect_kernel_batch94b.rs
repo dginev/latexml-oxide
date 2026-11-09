@@ -139,7 +139,7 @@ fn named_contacts(xml: &str) -> Vec<String> {
 }
 
 /// The text of the document's body: everything after its frontmatter, the first `<section` or `<para` on.
-fn body_text(xml: &str) -> String {
+pub(super) fn body_text(xml: &str) -> String {
   let at = [xml.find("<section"), xml.find("<para")]
     .into_iter()
     .flatten()
