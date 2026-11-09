@@ -55,8 +55,29 @@ pub(in crate::base_utilities) const CUT_LIST: &str = "_cutlist";
 /// OXIDIZED_DESIGN #159, FIDELITY_CHARTER §4). No name of the row, it takes no place in its role's count — no
 /// `_num`, no `author:N` label, no separator — and no pass that pairs names with contacts reads it as one
 /// (`insert::coalesce_empty_creators`, `distribute_upfront_contacts`; `relocate_annotations` reads authors by their
-/// `ltx:personname`). The frontmatter list indexes its entries by it: `TagList`, whose `tag::BLOCK_CREATOR` is this key.
+/// `ltx:personname`). The frontmatter list indexes its entries by it: `TagList`, whose `tag::BLOCK_CREATOR` is this key
+/// (the assertion below keeps the two copies equal at compile time).
 pub(in crate::base_utilities) const BLOCK_CREATOR: &str = "_blockcreator";
+const _: () = assert!(
+  same_str(BLOCK_CREATOR, document::tag::BLOCK_CREATOR),
+  "frontmatter_api::BLOCK_CREATOR and tag::BLOCK_CREATOR differ"
+);
+
+/// `a == b` for strings, in a `const` context.
+const fn same_str(a: &str, b: &str) -> bool {
+  let (a, b) = (a.as_bytes(), b.as_bytes());
+  if a.len() != b.len() {
+    return false;
+  }
+  let mut i = 0;
+  while i < a.len() {
+    if a[i] != b[i] {
+      return false;
+    }
+    i += 1;
+  }
+  true
+}
 
 pub(in crate::base_utilities) fn load() -> Result<()> {
   //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1034,34 +1055,36 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
                 break;
               }
               nprev -= 1;
-              if let Some(parent) = list.get_mut(pi) {
-                attached += 1;
-                parent.content.push(datum.clone());
-                if !role.is_empty() {
-                  reached_unanswered |= !answered(parent);
-                  parent.attr.insert(has_role_key.clone(), "1".to_string());
-                  let Some(&next_pi) = indices.last().filter(|_| newonly) else {
-                    continue;
-                  };
-                  if list.get(next_pi).is_some_and(|next| next.attr.contains_key(&has_role_key))
-                    || marked_at.is_some_and(|at| next_pi < at)
-                  {
-                    break;
-                  }
-                  if reached_unanswered && list.get(next_pi).is_some_and(answered) {
-                    // (the authors Perl's `new` reaches past here, for a legend of the run)
-                    passed = indices
-                      .iter()
-                      .rev()
-                      .take(nprev.max(0) as usize)
-                      .take_while(|&&pi| {
-                        list
-                          .get(pi)
-                          .is_some_and(|p| !p.attr.contains_key(&has_role_key))
-                      })
-                      .count() as i64;
-                    break;
-                  }
+              let Some(mut parent) = list.get_mut(pi) else {
+                continue;
+              };
+              attached += 1;
+              parent.content.push(datum.clone());
+              if !role.is_empty() {
+                reached_unanswered |= !answered(&parent);
+                parent.attr.insert(has_role_key.clone(), "1".to_string());
+                drop(parent);
+                let Some(&next_pi) = indices.last().filter(|_| newonly) else {
+                  continue;
+                };
+                if list.get(next_pi).is_some_and(|next| next.attr.contains_key(&has_role_key))
+                  || marked_at.is_some_and(|at| next_pi < at)
+                {
+                  break;
+                }
+                if reached_unanswered && list.get(next_pi).is_some_and(answered) {
+                  // (the authors Perl's `new` reaches past here, for a legend of the run)
+                  passed = indices
+                    .iter()
+                    .rev()
+                    .take(nprev.max(0) as usize)
+                    .take_while(|&&pi| {
+                      list
+                        .get(pi)
+                        .is_some_and(|p| !p.attr.contains_key(&has_role_key))
+                    })
+                    .count() as i64;
+                  break;
                 }
               }
             }
