@@ -1115,12 +1115,15 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("writer/apply", 7),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the emitter's vocabulary, 924 = 826 + 98; none added)
   ("writer/calls", 98),
-  // (a new file, what is left of `writer/plan`'s walk-backs: brace balance and a formula's shifts; the two rows together fell by 25, Z3)
-  ("writer/content", 7),
+  // (a new file, what is left of `writer/plan`'s walk-backs: brace balance and a formula's shifts; the two rows together fell by 25, Z3;
+  // NE3 7 -> 11: a call cut between its arguments, by its meaning now (`reads_past`, 2209.12410), and a script character its
+  // rehearsal erred at written as its character (2204.01080) — what the digestion read, the token's catcode only finding it)
+  ("writer/content", 11),
   // (Z4a, a new file: the emitter builds Perl's calls from the reading, its reads a call's own keys and pieces, `text_tokens` and the
   // catcodes of a cut: where a slice's edge falls past an option, a group or an accent's letter, OD #980; Z4ar2, 30 -> 28: an address
-  // list's `@` no longer read, its inks are)
-  ("writer/emit", 28),
+  // list's `@` no longer read, its inks are; NE3 28 -> 36: `key_tokens`' table of the specials a key value holds as characters,
+  // a legend's `mark={#}`, 2607.18332 — what it writes, no decision)
+  ("writer/emit", 36),
   // (P1b, 0 -> 1: `writer/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("writer/dom+mod", 1),
@@ -1348,8 +1351,9 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   ("resolver/owners", 4),
   ("shadow", 7),
   // (Z4a, 81 -> 107: `writer/emit.rs`, the calls it builds: Perl's `\lx@add@authors`, `\lx@annotate@frontmatter@now`, the
-  // queue's own `\lx@frontmatter@item*`; it writes them, no decision reads them)
-  ("writer", 107),
+  // queue's own `\lx@frontmatter@item*`; it writes them, no decision reads them; NE3 +1: `\lx@fm@script@char`, written for a script
+  // character its rehearsal erred at, 2204.01080)
+  ("writer", 108),
   // (the "Knowledge in, driver out, one pass" move: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
   // mark and note commands it reads; none added)
   ("writer/calls", 44),

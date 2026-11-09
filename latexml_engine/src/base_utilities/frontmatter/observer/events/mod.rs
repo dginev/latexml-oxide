@@ -2387,6 +2387,8 @@ fn labelled_entries(
         base: *base,
         formulas,
         environments: &environments,
+        held: &[],
+        aligned: true,
       };
       // (where each entry's cut starts: no such start is no cut the writer could make, `writer::span_tokens`)
       let starts: Vec<(usize, (u16, u16))> = entries

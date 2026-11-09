@@ -1,0 +1,25 @@
+% mechanism: two names the emitter would write from runs of the block that overlap each print the other's ink (a macro
+%   printing both): each is written as its text, counted (`writer::emit`, the names' runs)
+% witness: 1602.03850 (=2: each of two creators written as `\myauthors`, 2 x merged_creators; off 1 x, the old reader
+%   merging the names)
+% oracle:  pdflatex 0 errors; "Xing Shi Cai, Luc Devroye", the affiliation, the two addresses
+% engines: rust =2 (int153x): 2 errors, both creators "Xing Shi Cai, Luc Devroye"; rust off: 1 error, one merged creator
+% expect:  =2: 0 errors, 2 warnings (each name its text), creators "Xing Shi Cai" and "Luc Devroye" with their addresses;
+%   off unchanged (1 merged_creators)
+% status:  RED (int153x) -> GREEN (perfect_kernel_batchne3::names_a_macro_prints_together_are_their_text)
+\documentclass[12pt]{scrartcl}
+\newcommand{\myauthors}{Xing Shi Cai, Luc Devroye}
+\title{T}
+\author{\small \myauthors
+  \\
+  \small
+  Univ A, City A,\\
+  \small
+  \texttt{xingshi.cai@mail.mcgill.ca}\\
+  \small
+  \texttt{lucdevroye@gmail.com}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

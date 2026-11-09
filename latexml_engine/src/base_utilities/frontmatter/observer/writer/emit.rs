@@ -102,12 +102,42 @@ fn internal(text: &str) -> Vec<Token> {
   mouth::tokenize_internal(TeXString::assembled(text.to_string())).unlist()
 }
 
+/// Tokens of a key list `keys`, its values characters: its structure (`=`, `,`, braces, a command) as [`internal`] reads it,
+/// every other special a character of catcode other. A key's value is digested, and what the reading wrote back into it is
+/// text (a label, a mark, a name): `mark={#}` of the legend `\textsuperscript{\#}Corresponding author.` read `#` as a
+/// parameter there (2607.18332), a cleaned label's `_` a subscript (1910.05766).
+pub(super) fn key_tokens(keys: &str) -> Vec<Token> {
+  // (the catcodes `internal` gives a special that no key list's structure is)
+  const SPECIALS: [Catcode; 6] = [
+    Catcode::MATH,
+    Catcode::ALIGN,
+    Catcode::PARAM,
+    Catcode::SUPER,
+    Catcode::SUB,
+    Catcode::ACTIVE,
+  ];
+  let mut out = Vec::new();
+  for (i, part) in keys.split('%').enumerate() {
+    if i > 0 {
+      out.push(T_OTHER!("%"));
+    }
+    out.extend(internal(part).into_iter().map(|t| {
+      if SPECIALS.contains(&t.get_catcode()) {
+        T_OTHER!(t.with_str(|s| s.to_string()))
+      } else {
+        t
+      }
+    }));
+  }
+  out
+}
+
 /// The key `annotations={…}` holding `labels` as plain characters, as a label is written back elsewhere
 /// (`frontmatter_stores.rs`'s legend note): the key's value is digested, and a cleaned label holds the `_` its spaces
 /// became (`affiliation:D._Kopta_et_al.`, authblk's `\author[D. Kopta et al.]`, 1910.05766), an error in text mode as
 /// `internal`'s subscript.
 fn annotations_key(labels: &str) -> Vec<Token> {
-  let mut key = internal("annotations=");
+  let mut key = key_tokens("annotations=");
   key.push(T_BEGIN!());
   key.extend(ExplodeText!(labels));
   key.push(T_END!());
@@ -138,7 +168,7 @@ fn cs_group(cs: &str, args: &[&[Token]]) -> Vec<Token> {
 
 /// `[keys]{content}` after `head`.
 fn with_keys(head: Vec<Token>, keys: &str, content: &[Token]) -> Tokens {
-  with_key_tokens(head, internal(keys), content)
+  with_key_tokens(head, key_tokens(keys), content)
 }
 
 /// `[keys]{content}` after `head`, the keys tokens.
@@ -600,7 +630,11 @@ fn block_names(
       return vec![(None, Vec::new(), None); names.len()];
     };
     let Outcome::Events {
-      events, formulas, environments, ..
+      events,
+      formulas,
+      environments,
+      held,
+      ..
     } = &block.outcome
     else {
       return vec![(None, Vec::new(), None); names.len()];
@@ -616,6 +650,8 @@ fn block_names(
       base: block.range.0,
       formulas,
       environments,
+      held,
+      aligned: aligned(events),
     };
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
     let mut printed_at: BTreeMap<Option<(u16, u16)>, usize> = BTreeMap::new();
@@ -929,6 +965,8 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
     base: 0,
     formulas,
     environments,
+    held: &[],
+    aligned: aligned(events),
   };
   let inks: Vec<&Event> = events
     .iter()
@@ -1249,7 +1287,7 @@ fn item_call(
       let command = one_address(command, &assoc.text)?;
       if let Some(tokens) = rekeyed(
         &command,
-        &internal(&s!("label={{{label}}}")),
+        &key_tokens(&s!("label={{{label}}}")),
         true,
         false,
         true,
@@ -1260,7 +1298,7 @@ fn item_call(
       // (an entry the block prints moves back to its place by its zone, what a label places alone: `at_queue_position`)
       rekeyed(
         cut.and_then(|cut| cut.command.as_ref()).unwrap_or(command),
-        &internal(&s!("label={{{label}}}")),
+        &key_tokens(&s!("label={{{label}}}")),
         true,
         separate.contains(&index),
         by_label(assoc) || !matches!(role, "affiliation" | "address"),
@@ -1468,7 +1506,11 @@ fn item_call(
           return None;
         };
         let Outcome::Events {
-          events, formulas, environments, ..
+          events,
+          formulas,
+          environments,
+          held,
+          ..
         } = &block.outcome
         else {
           return None;
@@ -1478,6 +1520,8 @@ fn item_call(
           base: block.range.0,
           formulas,
           environments,
+          held,
+          aligned: aligned(events),
         };
         let within = |e: &&Event| {
           e.kind != EventKind::Layout && e.span.is_some_and(|s| s.0 >= span.0 && s.1 <= span.1)
@@ -1632,6 +1676,8 @@ fn call_contact(call: &ApiCall, assoc: &Assoc, within: bool) -> Result<Option<To
     base:         0,
     formulas:     &formulas,
     environments: &environments,
+    held:         &[],
+    aligned:      aligned(&events),
   };
   let contact = events.iter().find_map(|e| {
     let (start, end) = e.span?;
@@ -1658,6 +1704,8 @@ fn call_note(call: &ApiCall, assoc: &Assoc) -> Result<Option<(bool, Vec<Token>)>
     base:         0,
     formulas:     &formulas,
     environments: &environments,
+    held:         &[],
+    aligned:      aligned(&events),
   };
   let notes: Vec<&Event> = events
     .iter()
@@ -1700,6 +1748,8 @@ fn call_pieces(call: &ApiCall) -> Result<Vec<Piece>> {
     base:         0,
     formulas:     &formulas,
     environments: &environments,
+    held:         &[],
+    aligned:      aligned(&events),
   };
   let pieces = split_pieces(&events, &call.role);
   // (a list cut into entries shows the mark each opens with, as the Cut's `_markshown`: 1305.6194, hep-lat0501016)
@@ -2131,7 +2181,7 @@ fn whole_block(index: usize, keys: &str, annotations: &[Token]) -> Option<Result
   })?;
   let keys: Vec<&str> = keyvals.iter().map(String::as_str).chain([keys]).collect();
   let keys = keys.into_iter().filter(|keys| !keys.trim().is_empty());
-  let mut keys = internal(&keys.collect::<Vec<_>>().join(","));
+  let mut keys = key_tokens(&keys.collect::<Vec<_>>().join(","));
   if !annotations.is_empty() {
     if !keys.is_empty() {
       keys.push(T_OTHER!(","));
@@ -2542,11 +2592,28 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .map(|&i| resolved.creators[i].name.clone())
       .collect();
     let tokens = block_names(source, &spelled, keeps(source), &mut on_names);
+    // (two names written from runs that overlap each print the other's ink: a macro printing both, `\author{\small
+    // \myauthors \\ …}` with `\newcommand{\myauthors}{Xing Shi Cai, Luc Devroye}` under scrartcl, each creator written as the
+    // macro, a name of two people twice (2 × merged_creators, 1602.03850). Each is its text, counted)
+    let overlapping: BTreeSet<usize> = tokens
+      .iter()
+      .enumerate()
+      .filter(|(k, (name, _, run))| {
+        name.is_some()
+          && run.is_some_and(|(s, t)| {
+            tokens.iter().enumerate().any(|(l, (other, _, run))| {
+              l != *k && other.is_some() && run.is_some_and(|(s2, t2)| s < t2 && s2 < t)
+            })
+          })
+      })
+      .map(|(k, _)| k)
+      .collect();
     let mut runs: Vec<(usize, (usize, usize))> = Vec::new();
-    for (&i, (name, cites, run)) in members.iter().zip(tokens) {
+    for (k, (&i, (name, cites, run))) in members.iter().zip(tokens).enumerate() {
       if let Some(run) = run {
         runs.push((i, run));
       }
+      let name = name.filter(|_| !overlapping.contains(&k));
       names.insert(i, (name, cites));
     }
     steps.extend(note_steps(source, &runs));
@@ -2726,7 +2793,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     let keyed = owner.and_then(|owner| {
       rekeyed(
         &rdf.2,
-        &internal(&s!("label={{{owner}}}")),
+        &key_tokens(&s!("label={{{owner}}}")),
         true,
         false,
         true,

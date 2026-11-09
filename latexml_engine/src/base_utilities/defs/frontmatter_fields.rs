@@ -408,6 +408,20 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
     Ok(())
   });
+  // A script character an author block's rehearsal read outside math, as a piece of the block holds it
+  // (`observer::writer::content`'s `Field::content_cut`): TeX errs there (Missing $), the digestion's recovery prints the
+  // character (`tex_math`: "Script ^ can only appear in math mode"); written back as a script, the piece erred once more
+  // (2204.01080's `\textbf{Ningkai Mo} ^1`). The character, as the recovery prints it, the recovery a Warning.
+  DefMacro!("\\lx@fm@script@char{}", sub[(c)] {
+    let c = c.to_string();
+    let c = c.trim();
+    Warn!(
+      "unexpected",
+      c,
+      s!("Script {c} can only appear in math mode; the frontmatter writes it as its character")
+    );
+    Ok(Tokens!(if c == "^" { T_CS!("\\textasciicircum") } else { T_CS!("\\_") }))
+  });
   // Add random notes about the document itself
   DefMacro!(
     "\\lx@add@pubnote[]{}",

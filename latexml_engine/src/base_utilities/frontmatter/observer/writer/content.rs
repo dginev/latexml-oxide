@@ -7,7 +7,14 @@
 //! is left of the tokens is brace balance, a property of the content itself, as the declarations' spans clamp at it
 //! (`field_notes::settle_declarations`).
 
-use super::{super::field_notes::EnvironmentStep, plan::reads_as_alignment, *};
+use super::{
+  super::{
+    events::{EventKind, HeldError},
+    field_notes::EnvironmentStep,
+  },
+  plan::reads_as_alignment,
+  *,
+};
 
 /// A field's tokens as a rehearsal read them: `tokens[0]` at position `base`, and its formulas (`events::lex_with_formulas`:
 /// outermost, in order).
@@ -17,6 +24,74 @@ pub(in crate::base_utilities::frontmatter::observer) struct Field<'a> {
   pub formulas:     &'a [Formula],
   /// the environments they open and close, as the digestion's frames say it (`field_notes::EnvironmentStep`)
   pub environments: &'a [EnvironmentStep],
+  /// the errors its rehearsal held, where (`events::HeldError`; none for a call's rehearsal)
+  pub held:         &'a [HeldError],
+  /// whether their digestion holds an alignment ([`aligned`])
+  pub aligned:      bool,
+}
+
+/// Whether a digested list's events hold an alignment's cell (`events::Walker`'s `Layout{role="cell"}`): where none is, no tab of
+/// it is an alignment's — a verbatim argument read it as a character (`\url{http://y.org/?c=1&d=2}`), or it was a stray one in
+/// the rehearsal as everywhere. A note's events too (`Event::inner`, `Event::body`): a tabular in a `\thanks`.
+pub(in crate::base_utilities::frontmatter::observer) fn aligned(events: &[Event]) -> bool {
+  events.iter().any(|e| {
+    (e.kind == EventKind::Layout && e.role.as_deref() == Some("cell"))
+      || aligned(&e.inner)
+      || aligned(&e.body)
+  })
+}
+
+/// Where a call in `tokens` is cut between its arguments: a macro at their top level whose parameters are all undelimited
+/// (TeX's `#1#2`, `\newcommand`'s `[2]`), by its meaning now, which the tokens give some of its arguments and not all — the
+/// next read at a closing brace or past the last token. A parameter of any other kind (an optional, a delimited one) is not
+/// judged, nor a command the tokens end at, none of its arguments theirs, nor one inside a group of theirs (an argument a
+/// primitive may never expand: `\detokenize{\begin}`).
+fn reads_past(tokens: &[Token]) -> Option<usize> {
+  let plain = pin!("Plain");
+  let mut depth = 0i32;
+  tokens.iter().enumerate().position(|(i, t)| {
+    depth += t.group_step();
+    if depth != 0 {
+      return false;
+    }
+    let Some(Stored::Expandable(meaning)) = lookup_meaning(t) else {
+      return false;
+    };
+    let Some(parameters) = meaning.get_parameters() else {
+      return false;
+    };
+    let parameters = parameters.get_parameters();
+    if parameters.is_empty() || parameters.iter().any(|p| p.name != plain) {
+      return false;
+    }
+    let mut j = i + 1;
+    for (read, _) in parameters.iter().enumerate() {
+      while tokens
+        .get(j)
+        .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+      {
+        j += 1;
+      }
+      match tokens.get(j).map(Token::group_step) {
+        None | Some(-1) => return read > 0,
+        Some(1) => {
+          let mut inner = 0i32;
+          loop {
+            let Some(t) = tokens.get(j) else {
+              return true;
+            };
+            inner += t.group_step();
+            j += 1;
+            if inner == 0 {
+              break;
+            }
+          }
+        },
+        Some(_) => j += 1,
+      }
+    }
+    false
+  })
 }
 
 /// Whether `t` is the control sequence `name`.
@@ -152,18 +227,53 @@ impl Field<'_> {
     {
       return None;
     }
-    if cuts.is_empty() {
+    if cuts.is_empty() && self.held.is_empty() {
       tokens.extend_from_slice(&content[start..end]);
     } else {
+      // (a script character its rehearsal read outside math, in no formula, an error held there, is the character that rehearsal printed:
+      // `\textbf{Ningkai Mo} ^1` is a text-mode `^`, which TeX errs at (Missing $) and the digestion's recovery prints;
+      // digested apart as a script it erred again, once per piece (2204.01080). `\lx@fm@script@char` prints it and
+      // counts the recovery, a Warning. An `_` a verbatim argument reads as a character holds no error: `\url{a_b}` stays)
       let cut = |i: &usize| cuts.iter().any(|&(s, t)| (s..t).contains(i));
-      tokens.extend((start..end).filter(|i| !cut(i)).map(|i| content[i]));
+      for i in (start..end).filter(|i| !cut(i)) {
+        let t = content[i];
+        if matches!(t.get_catcode(), Catcode::SUPER | Catcode::SUB)
+          && self.formula_at(i).is_none()
+          && self.held_at(i)
+        {
+          tokens.push(T_CS!("\\lx@fm@script@char"));
+          tokens.push(T_BEGIN!());
+          tokens.push(T_OTHER!(if t.get_catcode() == Catcode::SUPER {
+            "^"
+          } else {
+            "_"
+          }));
+          tokens.push(T_END!());
+        } else {
+          tokens.push(t);
+        }
+      }
     }
     // (never a run holding an alignment's tab or alignment-only command outside an environment or a formula it holds whole, as
     // the digestion's frames say them (a macro pair's `\bx a&b\\ c&d\ex` is one): digested apart, it is a stray one, an Error
-    // — its caller writes the item's text, counted (the rule of `plan::cell_tokens`; 1304.3138, 1504.01048, 2607.22455))
+    // — its caller writes the item's text, counted (the rule of `plan::cell_tokens`; 1304.3138, 1504.01048, 2607.22455). Only
+    // where the digestion holds an alignment ([`aligned`]): a `\url{…?c=1&d=2}` in a block of none keeps its link (review
+    // revNE1 1))
+    // (nor a run a macro of which reads past its end, by its meaning, which the run is digested under: `\def\authord#1#2{…}`'s
+    // `\authord{Anh Thu Nguyen}`, its second argument the affiliation's piece, read the item's closing brace (an undefined
+    // `\@undefined` and a group ended in the wrong mode, 2209.12410) — its caller writes the item's text, counted)
+    if let Some(call) = reads_past(&tokens) {
+      DebugFeature!(
+        "frontmatter",
+        "FRONT writer: the run {start}..{end} holds {:?}, whose arguments run past it",
+        tokens[call]
+      );
+      return None;
+    }
     let held = self.held_whole(start, end);
     if let Some(stray) = (start..end).find(|&i| {
-      reads_as_alignment(&content[i])
+      self.aligned
+        && reads_as_alignment(&content[i])
         && !cuts.iter().any(|&(s, t)| (s..t).contains(&i))
         && !held.iter().any(|&(s, t)| (s..t).contains(&i))
     }) {
@@ -175,6 +285,16 @@ impl Field<'_> {
       return None;
     }
     Some((Tokens::new(tokens), end))
+  }
+
+  /// Whether its rehearsal held an error at `tokens[index]`'s position.
+  fn held_at(&self, index: usize) -> bool {
+    let pos = self.base + index;
+    self
+      .held
+      .iter()
+      .filter_map(|error| error.span)
+      .any(|(from, to)| usize::from(from) <= pos && pos < usize::from(to))
   }
 
   /// The environments (their frames' steps, paired) and the formulas the run `start..end` holds whole: their indices.
