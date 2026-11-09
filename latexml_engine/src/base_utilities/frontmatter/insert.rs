@@ -80,7 +80,7 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
         )
         .into(),
       );
-      for item in list {
+      for item in list.into_entries() {
         insert_frontmatter_entry(document, &item)?;
       }
       document.expire_box_to_absorb();

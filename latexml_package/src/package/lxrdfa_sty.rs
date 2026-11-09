@@ -251,7 +251,7 @@ LoadDefinitions!({
           attr: attrs,
           content: vec![document::tag::TagContent::Box(empty_content)],
         };
-        let f_entry = frontmatter.entry(tag).or_insert_with(Vec::new);
+        let f_entry = frontmatter.entry(tag).or_default();
         f_entry.push(entry);
         Ok(())
       })?;

@@ -22,6 +22,129 @@ pub struct TagData {
   pub content: Vec<TagContent>,
 }
 
+/// The attribute key of the author block's own creator, which the frontmatter emitter writes below a flush's names: no
+/// annotation's parent by place ([`TagList::parent_indices`]). The same key as the engine's `frontmatter_api::BLOCK_CREATOR`,
+/// which declares it for the frontmatter API.
+pub const BLOCK_CREATOR: &str = "_blockcreator";
+
+/// One tag's frontmatter entries, Perl's `@{$frontmatter{$tag}}` (Base_Utility.pool.ltxml), with the indices of the
+/// entries an annotation may attach to kept as the list changes — Perl's `grep { ($$_[1]{role} || '') ne 'pending' }`
+/// (Base_Utility.pool.ltxml:492), read per annotation instead of rescanned over every entry. The
+/// entries are a slice to read and to edit in place; the list changes length only through its own methods, which keep
+/// the index. An entry's role and [`BLOCK_CREATOR`] key are set when it is made, never edited in place (debug builds
+/// check the index against the scan at every read).
+#[derive(Clone, Default, PartialEq)]
+pub struct TagList {
+  entries: Vec<TagData>,
+  /// the entries not `role=pending`, in order, without the block creators
+  parents: Vec<usize>,
+  /// the entries not `role=pending` with the [`BLOCK_CREATOR`] key, in order
+  block:   Vec<usize>,
+}
+
+/// Which of [`TagList`]'s indices an entry goes to: none (a pending stub), the parents, or the block creators.
+fn parent_kind(entry: &TagData) -> Option<bool> {
+  (entry.attr.get("role").map(String::as_str) != Some("pending"))
+    .then(|| entry.attr.contains_key(BLOCK_CREATOR))
+}
+
+impl TagList {
+  /// The list of `entries`, indexed.
+  pub fn from_entries(entries: Vec<TagData>) -> Self {
+    let mut list = TagList {
+      entries,
+      parents: Vec::new(),
+      block: Vec::new(),
+    };
+    list.reindex();
+    list
+  }
+  fn reindex(&mut self) {
+    self.parents.clear();
+    self.block.clear();
+    for (i, entry) in self.entries.iter().enumerate() {
+      match parent_kind(entry) {
+        Some(false) => self.parents.push(i),
+        Some(true) => self.block.push(i),
+        None => {},
+      }
+    }
+  }
+  /// Append `entry` (Perl's `push(@{$frontmatter{$tag}}, $entry)`).
+  pub fn push(&mut self, entry: TagData) {
+    let i = self.entries.len();
+    match parent_kind(&entry) {
+      Some(false) => self.parents.push(i),
+      Some(true) => self.block.push(i),
+      None => {},
+    }
+    self.entries.push(entry);
+  }
+  /// Remove and return the entry at `index` (panics if out of bounds, as `Vec::remove`).
+  pub fn remove(&mut self, index: usize) -> TagData {
+    let entry = self.entries.remove(index);
+    for indices in [&mut self.parents, &mut self.block] {
+      if let Ok(at) = indices.binary_search(&index) {
+        indices.remove(at);
+      }
+      let from = indices.partition_point(|&i| i < index);
+      for i in &mut indices[from..] {
+        *i -= 1;
+      }
+    }
+    entry
+  }
+  /// Keep only the entries `keep` holds (`Vec::retain`).
+  pub fn retain(&mut self, keep: impl FnMut(&TagData) -> bool) {
+    self.entries.retain(keep);
+    self.reindex();
+  }
+  /// The entries an annotation may attach to: those not `role=pending`, in order — without the block creators when
+  /// `exclude_block` (once a flush wrote one).
+  pub fn parent_indices(&self, exclude_block: bool) -> Vec<usize> {
+    debug_assert!(
+      {
+        let scan = TagList::from_entries(self.entries.clone());
+        scan.parents == self.parents && scan.block == self.block
+      },
+      "TagList index out of step with its entries"
+    );
+    if exclude_block || self.block.is_empty() {
+      return self.parents.clone();
+    }
+    let mut all = Vec::with_capacity(self.parents.len() + self.block.len());
+    all.extend_from_slice(&self.parents);
+    all.extend_from_slice(&self.block);
+    all.sort_unstable();
+    all
+  }
+  /// The entries, as a `Vec`.
+  pub fn into_entries(self) -> Vec<TagData> { self.entries }
+}
+
+impl std::ops::Deref for TagList {
+  type Target = [TagData];
+  fn deref(&self) -> &[TagData] { &self.entries }
+}
+
+impl std::ops::DerefMut for TagList {
+  fn deref_mut(&mut self) -> &mut [TagData] { &mut self.entries }
+}
+
+impl std::fmt::Debug for TagList {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { self.entries.fmt(f) }
+}
+
+impl From<Vec<TagData>> for TagList {
+  fn from(entries: Vec<TagData>) -> Self { TagList::from_entries(entries) }
+}
+
+impl<'a> IntoIterator for &'a TagList {
+  type Item = &'a TagData;
+  type IntoIter = std::slice::Iter<'a, TagData>;
+  fn into_iter(self) -> Self::IntoIter { self.entries.iter() }
+}
+
 /// A content item within a frontmatter entry: digested material (Box, List,
 /// Whatsit), recursively a nested `[tag, {attr}, @content]` annotation entry,
 /// or the `'place_keeper'` marker used while the entry's own content is still

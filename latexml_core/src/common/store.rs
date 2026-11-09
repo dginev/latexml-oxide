@@ -28,7 +28,7 @@ use crate::{
     primitive::Primitive,
     register::{Register, RegisterValue},
   },
-  document::tag::{RawFrontmatter, TagData},
+  document::tag::{RawFrontmatter, TagList},
   keyval::KeyVal,
   keyvals::KeyVals,
   ligature::Ligature,
@@ -97,7 +97,7 @@ pub enum Stored {
   /// boxed map - Stored
   HashStored(SymHashMap<Stored>),
   /// boxed map (latexml)
-  HashTagData(HashMap<String, Vec<TagData>>),
+  HashTagData(HashMap<String, TagList>),
   /// queued-but-undigested frontmatter commands (Perl: `frontmatter_raw`)
   FrontmatterRaw(Vec<RawFrontmatter>),
   // LaTeXML primitives (Copy types)
@@ -961,8 +961,8 @@ impl From<HashMap<String, Stored>> for Stored {
   }
 }
 
-impl From<HashMap<String, Vec<TagData>>> for Stored {
-  fn from(value: HashMap<String, Vec<TagData>>) -> Self { Stored::HashTagData(value) }
+impl From<HashMap<String, TagList>> for Stored {
+  fn from(value: HashMap<String, TagList>) -> Self { Stored::HashTagData(value) }
 }
 
 impl From<RegisterValue> for Stored {

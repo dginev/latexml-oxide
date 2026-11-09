@@ -820,7 +820,7 @@ pub(in crate::base_utilities) fn frontmatter_push(tag: &str, mut entry: TagData)
   }
   with_value_mut("frontmatter", |val_opt| {
     if let Some(&mut Stored::HashTagData(ref mut frnt)) = val_opt {
-      let list = frnt.entry(tag.to_string()).or_insert_with(Vec::new);
+      let list = frnt.entry(tag.to_string()).or_default();
       list.push(entry);
       list.len() - 1
     } else {

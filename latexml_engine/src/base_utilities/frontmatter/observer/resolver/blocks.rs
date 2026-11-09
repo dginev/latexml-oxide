@@ -250,12 +250,18 @@ impl Resolver {
     // the URL lines under every name so far, each with those names: the block's if no name comes after them
     let mut block_links: Vec<(&Event, Vec<usize>)> = Vec::new();
     // the last column holding a line that reads as names: a column after it opening with an institution holds no name
-    // of its own, and is the shared affiliation of every name above it
-    let last_named = lines
-      .iter()
-      .filter(|line| reads_as_names(&events_text(&line.events)))
-      .map(|line| line.column)
-      .max();
+    // of its own, and is the shared affiliation of every name above it (read on first need: only a column's first line
+    // past column 0 asks, so a one-column block never reads every line as names — 1507.02068's 200-name `\author`)
+    let last_named_once = std::cell::OnceCell::new();
+    let last_named = || {
+      *last_named_once.get_or_init(|| {
+        lines
+          .iter()
+          .filter(|line| reads_as_names(&events_text(&line.events)))
+          .map(|line| line.column)
+          .max()
+      })
+    };
     for (n, line) in lines.iter().enumerate() {
       if n > 0 && n <= skip_to {
         continue;
@@ -308,7 +314,7 @@ impl Resolver {
       // \textit{SVOM} collaboration\inst{24}.`, 2607.01090 — each every author's affiliation before)
       let shared_column = column_first
         && line.column > 0
-        && last_named.is_some_and(|named| line.column > named)
+        && last_named().is_some_and(|named| line.column > named)
         && self.out.creators.len() > block_creators_start
         && is_institution(&events_text(&line.events))
         && !names_collaboration(&events_text(&line.events));
