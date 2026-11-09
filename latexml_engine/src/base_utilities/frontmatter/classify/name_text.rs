@@ -833,7 +833,7 @@ pub(in crate::base_utilities) fn flag_merged_creators(document: &mut Document) -
     document.findnodes("//ltx:creator[@role='author'][not(@_merged_checked)]", None)
   {
     document.set_attribute(&mut creator, "_merged_checked", "1")?;
-    // An author block laid out as a tabular or a minipage is kept whole on purpose (`add_authors_calls`; Perl
+    // An author block laid out as a tabular or a minipage is kept whole on purpose (the old driver's `add_authors_calls`, deleted in DEL2; Perl
     // Base_Utility.pool.ltxml:693): its names are there, in their layout.
     let Some(person) = document.findnode(
       "ltx:personname[not(.//ltx:tabular) and not(.//ltx:inline-block[contains(@class, 'ltx_minipage')])]",

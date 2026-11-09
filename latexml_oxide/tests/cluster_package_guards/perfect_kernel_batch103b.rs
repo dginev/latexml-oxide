@@ -1,6 +1,6 @@
 //! Red/green guards for batch 103b: name tails left inside `personname` (census129 cluster 5). (C) a name list a
 //! binding splits at its commas and "and" (`\lx@add@author@split`: llncs, aa, inst_support, sv_support, webofc, ptephy)
-//! reads the collaboration it names beside its names, as the kernel's author line does (`split_author_calls`,
+//! reads the collaboration it names beside its names, as the kernel's author line did (the old driver's `split_author_calls`, deleted in DEL2;
 //! OXIDIZED_DESIGN_DIVERGENCES #946): webofc's `… on behalf of the KLOE-2 Collaboration` after the name's notes
 //! (1502.05517, 1904.12569, 2411.14337, 1611.00816, 1512.03605). (O) an `\href` to an ORCID record in an author's
 //! name that prints no word is the author's ORCID contact, its ink no part of the name

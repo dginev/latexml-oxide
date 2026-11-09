@@ -1,7 +1,7 @@
 //! Guards for NL1, the names line of the one engine's reading ported from the old reader's procedure
 //! (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`; the rule table RT3, rows N1-N3, C2-C5, S1, A2): each fixture
-//! converted with the emitter's switch off and at `LATEXML_FM_EMIT=2`, the creators (name and every contact, in order)
-//! the same both ways. One guard per rule: a marked name (N1-N3), glued initials (S1), a collaboration remark (C2-C5),
+//! converted with the single engine (until DEL1 also with the switch off), the creators (name and every contact, in
+//! order) pinned. One guard per rule: a marked name (N1-N3), glued initials (S1), a collaboration remark (C2-C5),
 //! a comma a command draws inside a word (A2).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
@@ -229,7 +229,7 @@ fn a_remark_after_a_note_keeps_its_own_span() {
   }
 }
 
-/// Row N5 of the old reader (`add_authors_calls_sectioned`: an unmarked line under a labelled entry is appended to it),
+/// Row N5 of the old reader (the deleted `add_authors_calls_sectioned`: an unmarked line under a labelled entry is appended to it),
 /// behind the line above holding one labelled entry (the main session's decision K, 2026-11-08): `$^1$The Graduate
 /// Center, CUNY\\ Computer Science\\ New York, USA` is one affiliation (2501.04046; hep-ph0511130). Red (MV1, NL1
 /// `=2`): "Computer Science" a creator. Under two entries a line of names stays a names row (SYNC row 46,

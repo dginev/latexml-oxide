@@ -213,7 +213,7 @@ fn entry_calls(
 /// `\textsuperscript{\,}`), braces, spaces and `\relax` aside: such a line is unmarked, so it continues the entry above
 /// it as any unmarked line does, not an entry of its own (mnras 2303.08793's `$^{8}$Institute for Quantum Computing …,
 /// Waterloo, \\ $^{\;}$Ontario N2L 3G1, Canada`, which pdflatex prints under entry 8 with no label; the line had gone to
-/// the last name). Read by the author block's reader (`dispatch::add_authors_calls_sectioned`) and by every list's cutter
+/// the last name). Read by every list's cutter (and, until DEL2, by the old author block reader `dispatch::add_authors_calls_sectioned`)
 /// ([`entry_calls`]). A blank mark elsewhere is left to the mark readers (`email_lines::drop_empty_marks`).
 pub(in crate::base_utilities) fn blank_line_marks_dropped(stuff: Tokens) -> Tokens {
   let v = stuff.unlist_ref();

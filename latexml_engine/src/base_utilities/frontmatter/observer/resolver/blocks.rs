@@ -283,7 +283,7 @@ impl Resolver {
       open_rows.retain(|c| *c != line.column);
       // (the line before in the column was labelled entries: an unmarked name under two or more of them is a new row's —
       // SYNC row 46, `$^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole \\ Physics`; a line under one entry goes on
-      // with it, the old reader's N5 (`add_authors_calls_sectioned`'s unmarked line appended to the entry above), whatever
+      // with it, the old reader's N5 (the deleted `add_authors_calls_sectioned`'s unmarked line appended to the entry above), whatever
       // its words read as: `$^1$The Graduate Center, CUNY\\ Computer Science\\ New York, USA`, 2501.04046; `$^{1}$Institute
       // of …, Ionosphere and\\ Radio Wave Propagation\\ RAS, …`, hep-ph0511130 — each line one affiliation's)
       let entries_above = labelled_last

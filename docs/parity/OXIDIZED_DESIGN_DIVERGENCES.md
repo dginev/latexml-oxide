@@ -32911,6 +32911,8 @@ creator call and the note's binding e-mails placed, the note's other text beside
 Off: unchanged (0711.1152, 0802.0707's A&A `\offprints` notes, which make no creator, stay the reading's, byte-identical at
 `=2` too). Not covered: the order of creators — a note making Bob, then `\author{Carl}`, gives Ann, Carl, Bob at `=2` where Perl and off give Ann, Bob, Carl (the PDF prints Ann, Carl, Bob; review revH4 4). Guard `perfect_kernel_batchio3b::a_note_making_a_creator_is_digested_as_perls`.
 
+**After DEL2 (2026-11-09):** the switch is deleted and the old driver with it (`dispatch.rs`, `line_kinds.rs`, `split_author_calls`, the fallback's driver; −5,833 lines, output byte-identical on the 1,434 stage2 ids and 479 of a reviewer's sample). Witnesses whose comments went with the deleted code, kept here for the emitter (each converts with 0 errors, XML unchanged): 1205.7067, 1210.0427, 2404.04962, 2505.23367, 2604.03394, 2606.09024, 2609.33182, 2610.34467. Residual, synthetic and suspected unreachable (revDEL2): an IJCAI block whose `\affiliations`/`\emails` marker vanished in `ijcai_split_call`'s preprocessing would be recorded sectioned yet queued whole (`author_macros.rs` ~:27 checks before ~:56-69 preprocess); none of the 539 IJCAI-style A/B papers has it.
+
 ### 981. The flip's no-harm pass: what the emitter declines rather than err or lose, and the few rules shared with the switch off
 
 The flip (`=2` the default, #980) is gated on no harm: no Error and no content at `=2` that the switch off doesn't raise or keep

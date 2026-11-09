@@ -11,7 +11,7 @@ pub(in crate::base_utilities) const EMITTED_LINE_MARK: &str = "_markread";
 
 /// The key of a creator written whole, Perl's fallback, whose merge a Warning counts: `flag_merged_creators`' own mark of a
 /// creator it checked (a tabular block is kept whole on purpose alike). The emitter sets it where its Warning counts the block
-/// (OD #980): not on `LATEXML_FM_EMIT=2`'s queued entry. A block arriving while the frontmatter is digested (an `\author` in
+/// (OD #980): not on the emitter's queued entry. A block arriving while the frontmatter is digested (an `\author` in
 /// the `\title`, 1502.01001, 1510.00875, hep-ph0207056, hep-th0111116; in an amsart `\thanks`, 0807.4720; in a re-digested
 /// `{opening}`, astro-ph9808358) has its own flush, which reads it or writes it whole and counted (`\lx@frontmatter@late`).
 pub(in crate::base_utilities) const KEPT_WHOLE: &str = "_merged_checked=1";
