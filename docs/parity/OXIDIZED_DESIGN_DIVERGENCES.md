@@ -32900,3 +32900,48 @@ e-mail, Ferrero only his own (before: Juriaans none, Ferrero Juriaans's e-mail t
 creator call and the note's binding e-mails placed, the note's other text beside (`resolver::api::note_owned_contacts`).
 Off: unchanged (0711.1152, 0802.0707's A&A `\offprints` notes, which make no creator, stay the reading's, byte-identical at
 `=2` too). Not covered: the order of creators — a note making Bob, then `\author{Carl}`, gives Ann, Carl, Bob at `=2` where Perl and off give Ann, Bob, Carl (the PDF prints Ann, Carl, Bob; review revH4 4). Guard `perfect_kernel_batchio3b::a_note_making_a_creator_is_digested_as_perls`.
+
+### 981. The flip's no-harm pass: what the emitter declines rather than err or lose, and the few rules shared with the switch off
+
+The flip (`=2` the default, #980) is gated on no harm: no Error and no content at `=2` that the switch off doesn't raise or keep
+(user 2026-11-07; for the residual, user 2026-11-09). The no-harm pass compared, paper by paper on the dev sets, Errors (37
+papers erred at `=2` only) and **whole-document words** (`kit/emit/docwords.py`; the creators' words alone had missed body
+footnotes and whole affiliations). Perl's shape is the fallback throughout: a block the emitter can't write cleanly is
+**written whole** (Perl's one creator per `@authorsplits` piece, `Base_Utility.pool.ltxml:691-693`) with a counted Warning.
+
+**Declined (written whole, counted).** A name or contact whose ink crosses an alignment's cells (`repart::joined_across_cells`,
+`crosses_columns`, from the digested `Layout{role="cell"}` events; 1304.3138, 1504.01048, 2101.00440 and eleven more erred
+"Stray alignment &"); its own digestion moving the footnote counter where no name carries the move (`counter_moved`, the
+`\c@footnote` value after each invocation that prints nothing; 1507.05018); a footnote mark held by no name and no item
+(`mark_dropped`; 1911.13299, 2511.12633); names one shared macro prints whose run also prints a note or mark (`names_overlap`;
+synthetic). A cut holding an alignment's `&` outside the environment the run holds whole is refused (the item's text,
+counted; `Field::content_cut`).
+
+**Carried, not lost.** A note's footnote step in the creator where its name prints, in source order, and past a `\thanks` a mark
+follows (`note_steps`; 2505.07115, 1610.06031); labels written back into keys as characters (`key_tokens`, `annotations_key`;
+1910.05766, 2607.18332); a text-mode script character the rehearsal erred at, printed with a Warning (`\lx@fm@script@char`,
+Perl's recovery `TeX_Math.pool.ltxml:425-428`; 2204.01080); a contact command whose definition reads more required arguments
+than the rehearsal's binding keeps its meaning (`binding_required_arguments`; pnastwo's `\affil#1#2`, whose misbinding left a
+TeX group open and swallowed 1312.3323's body footnotes); an author block's own `annotations` holding a command carried by its
+creators (2308.08363); a call the reading writes nothing of written as queued — never a sequenced list of two or more, whose
+order it would break (1901.02012); a taken creator call the reading never recorded written as queued (dmtcs, 1810.10099); a
+sub-lettered mark written whole where its pieces go unanswered (`RCreator::whole_marks`; 1705.11109's "50A,50C"); a note's
+content taken from its digested text where the first argument is a plain id (`note_argument`; SCITEPRESS `\orcidAuthor`); the
+label a class's own `\email` prints kept as the contact's `name` and printed once (`own_email_properties`, `drop_printed_name`;
+2603.18265's "Email address for correspondence:"). The rehearsal records the entries a block would have queued
+(`AuthorBlock::queued`), so a nested `\date` lost with the block is counted (2503.02741).
+
+**Shared with the switch off (each byte-identical off on the dev witnesses but the one named).** The API: an inner contact that
+names nothing takes its enclosing entry's `_name`, as it takes its labels (`frontmatter_api.rs` `\lx@annotate@frontmatter@now`;
+Perl's has no name inheritance; 0812.0465's JHEP3 "E-mail:"), and `_nameprinted` marks a `name` the content also prints (no
+Perl key). The reading: a glued mark's letter that is also another entry's label stays with the entry printing that sub-entry
+(`post.rs` `sub_labels`; 2201.02056's `67a,67c`, which gave 33 authors 48 "Also at" affiliations; 1202.2048's `$^{18a}$` keeps
+institute 18 + legend a); the surname-first rule declines where a gap joins the next name to the initials (`next_name_joins`;
+cond-mat9905290 off 7 → 6 creators, right by its PDF); "representing " speaks for a collaboration (`SPEAKS_FOR`;
+hep-ex9903035); the IJCAI marker is read before the whole-block branch, and a `labelseq=author` entry is `author:N` as Perl's
+`CleanLabel` (2202.05511).
+
+**The residual (user 2026-11-09: flip with it as named REDs).** What `=2` still loses against off, per dev paper, with its
+witnesses: `docs/parity/FRONTMATTER_CONTENT_RESIDUAL_AT_EMIT2.tsv` — ≈ 0.1 % of dev papers losing three or more words (e-mail
+local parts, some affiliations, funding and copyright lines, an abstract inside a revtex3 `\address`), ≈ 0.3 % one or two
+label or separator words. Guards: `perfect_kernel_batchne1`, `_batchne2`, `_batchne3`, `_batchcl6`-`_batchcl9`.
