@@ -541,19 +541,26 @@ fn event_run_at(
 }
 
 /// A block's name as [`block_names`] takes it: its tokens, the cites written after its text, the run (from, to) it was taken
-/// from.
-type BlockName = (Option<Vec<Token>>, Vec<Token>, Option<(usize, usize)>);
+/// from, and the runs of the marks written past it, apart (each (from, to)).
+type BlockName = (
+  Option<Vec<Token>>,
+  Vec<Token>,
+  Option<(usize, usize)>,
+  Vec<(usize, usize)>,
+);
 
 /// The footnote counter's steps a block's notes take where they print, each note's on the creator whose name's run it is
-/// in or follows (`runs`, by creator; the block's first name's for a note before every name): a note the emitter writes
+/// in or follows (`runs`, by creator), after its name; a note before every name, or in a block none of whose names has a
+/// run, on the block's first creator (`first`), before its name (review revNE2 A2): a note the emitter writes
 /// apart (`note_call`) is digested after every creator, and its step there ran a later name's `\addtocounter{footnote}{-2}
 /// \footnotemark` at the counter's 0, "Counter too large" (1507.05018, 2505.07115); off digests the `\thanks` in its
 /// creator, as LaTeX's `\maketitle` steps it in place. A note a name's run holds is digested in it, its own step there.
-fn note_steps(index: usize, runs: &[(usize, (usize, usize))]) -> BTreeMap<usize, usize> {
+fn note_steps(
+  index: usize,
+  runs: &[(usize, (usize, usize))],
+  first: usize,
+) -> BTreeMap<(usize, bool), usize> {
   let mut steps = BTreeMap::new();
-  let Some(&(first, _)) = runs.first() else {
-    return steps;
-  };
   let notes: Vec<usize> = with_block(index, Vec::new(), |block, events| {
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
     events
@@ -568,12 +575,13 @@ fn note_steps(index: usize, runs: &[(usize, (usize, usize))]) -> BTreeMap<usize,
     if runs.iter().any(|(_, (from, to))| *from <= at && at < *to) {
       continue;
     }
+    // (keyed by the creator and whether the step goes after its name)
     let owner = runs
       .iter()
       .filter(|(_, (from, _))| *from <= at)
-      .map(|(i, _)| *i)
+      .map(|(i, _)| (*i, true))
       .next_back()
-      .unwrap_or(first);
+      .unwrap_or((first, false));
     *steps.entry(owner).or_default() += 1;
   }
   steps
@@ -594,13 +602,13 @@ fn block_names(
 ) -> Vec<BlockName> {
   with_ledger(|ledger| {
     let Some(Entry::Author(block)) = ledger.entries().get(index) else {
-      return vec![(None, Vec::new(), None); names.len()];
+      return vec![(None, Vec::new(), None, Vec::new()); names.len()];
     };
     let Outcome::Events {
       events, formulas, environments, ..
     } = &block.outcome
     else {
-      return vec![(None, Vec::new(), None); names.len()];
+      return vec![(None, Vec::new(), None, Vec::new()); names.len()];
     };
     let read = read_events(events);
     let found: Vec<(usize, &Event)> = read
@@ -622,7 +630,8 @@ fn block_names(
     {
       *printed_at.entry(e.span).or_default() += 1;
     }
-    let mut name_tokens = |from: usize, to: usize| -> Option<(Vec<Token>, (usize, usize))> {
+    type Taken = (Vec<Token>, (usize, usize), Vec<(usize, usize)>);
+    let mut name_tokens = |from: usize, to: usize| -> Option<Taken> {
       // (several events of one span: a macro printed them, `\\author{\\authorBlock}`, 2604.09547)
       if found[from..=to]
         .iter()
@@ -664,6 +673,7 @@ fn block_names(
       }
       // (past marks that stay out of it, each its own run)
       let mut apart: Vec<Token> = Vec::new();
+      let mut apart_runs: Vec<(usize, usize)> = Vec::new();
       for e in read[after_name..]
         .iter()
         .take_while(beside)
@@ -703,6 +713,7 @@ fn block_names(
           grown.1 = grown.1.max(t);
         } else if let Some((tokens, _)) = field.content_of((s, t), 0, s) {
           apart.extend(tokens.unlist());
+          apart_runs.push((s, t));
         }
         if is_orcid(e) {
           on_names.insert((index, span));
@@ -743,7 +754,7 @@ fn block_names(
       } else {
         out.extend(apart);
       }
-      Some((out, (run_from, run_to)))
+      Some((out, (run_from, run_to), apart_runs))
     };
     // (each name the Name events from the last one on spell, joined)
     let spelled_from = |from: usize, key: &str| {
@@ -789,12 +800,12 @@ fn block_names(
       let Some((from, to)) =
         (cursor..found.len()).find_map(|from| Some((from, from + spelled_from(from, &key)?)))
       else {
-        return (None, cites_of(cursor, &key), None);
+        return (None, cites_of(cursor, &key), None, Vec::new());
       };
       cursor = to + 1;
       match name_tokens(from, to) {
-        Some((tokens, run)) => (Some(tokens), Vec::new(), Some(run)),
-        None => (None, Vec::new(), None),
+        Some((tokens, run, apart)) => (Some(tokens), Vec::new(), Some(run), apart),
+        None => (None, Vec::new(), None, Vec::new()),
       }
     };
     names.iter().map(&mut tokens_of).collect()
@@ -2110,6 +2121,61 @@ fn written_whole(index: usize, lost: bool) -> bool {
   }
 }
 
+/// Whether the author block at ledger index `index`'s own digestion moved the footnote counter where its names don't carry it
+/// (`Outcome::Events::counter_moves`, `field_notes::FieldNotes::counter_moves`): an assignment no event says, written only
+/// where a name's run or a mark written with it holds it (`\addtocounter{footnote}{-2}\footnotemark` after a name: the
+/// mark's box covers it, NE2's A, 1507.05018's Ortega, 2505.07115); elsewhere — between a name's notes, past the marks its
+/// name takes — its place among the notes' steps decides what each prints, so the block is written whole, Perl's
+/// whole-block creator, its tokens digested in order (1507.05018's Ombao, whose `=2` creators gave Ortega † where LaTeX
+/// prints *: review revNE2 A1), with a counted Warning, once per block over the flushes.
+fn counter_moved(index: usize, resolved: &Resolved) -> bool {
+  let moves: Vec<(usize, usize)> = with_block(index, Vec::new(), |block, _| {
+    let Outcome::Events {
+      counter_moves: Some(counter_moves),
+      ..
+    } = &block.outcome
+    else {
+      return Vec::new();
+    };
+    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+    counter_moves
+      .0
+      .iter()
+      .filter_map(|&(s, t)| Some((at(s)?, at(t)?)))
+      .collect()
+  });
+  if moves.is_empty() {
+    return false;
+  }
+  let spelled: Vec<String> = resolved
+    .creators
+    .iter()
+    .filter(|c| c.source == index)
+    .map(|c| c.name.clone())
+    .collect();
+  let mut on_names = BTreeSet::new();
+  let written: Vec<(usize, usize)> =
+    block_names(index, &spelled, per_author_marks(index), &mut on_names)
+      .into_iter()
+      .flat_map(|(_, _, run, apart)| run.into_iter().chain(apart))
+      .collect();
+  let carried = |&(s, t): &(usize, usize)| written.iter().any(|&(from, to)| from <= s && t <= to);
+  if moves.iter().all(carried) {
+    return false;
+  }
+  let once = s!("counter|{index}");
+  if lookup_mapping(EMITTED_ITEMS, &once).is_none() {
+    assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
+    Warn!(
+      "unexpected",
+      "frontmatter",
+      "The frontmatter emitter's reading holds no place for what its author block does to the footnote counter; the block \
+       is written whole, as Perl's whole-block creator"
+    );
+  }
+  true
+}
+
 /// Whether the author block at ledger index `index` was written whole ([`written_whole`]), as a flush decided.
 pub(super) fn kept_whole(index: usize) -> bool {
   matches!(
@@ -2321,9 +2387,17 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       check.lost.iter().any(|ink| ink.names_fail) || check.excess.iter().any(|(_, name)| *name)
     })
   };
+  // (or its own digestion moves the footnote counter where no event says, which the reading has no place for: the block is
+  // Perl's whole-block creator, its tokens digested in order — 1507.05018's `\addtocounter{footnote}{-2}` between Ombao's
+  // notes, whose creators gave Ortega † where LaTeX prints *; review revNE2 A1)
   let whole: BTreeSet<usize> = read_blocks
     .into_iter()
-    .filter(|&source| written_whole(source, names_fail(source)))
+    .filter(|&source| {
+      written_whole(
+        source,
+        names_fail(source) || counter_moved(source, resolved),
+      )
+    })
     .collect();
   let mut kept_inks: Vec<(usize, &LostInk)> = Vec::new();
   for (&index, check) in checks {
@@ -2480,7 +2554,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   let keeps = |source: usize| keeps_marks.get(&source).copied().unwrap_or(false);
   let mut names: BTreeMap<usize, (Option<Vec<Token>>, Vec<Token>)> = BTreeMap::new();
   // (the footnote counter's steps of the notes written apart, on the creator where each prints: `note_steps`)
-  let mut steps: BTreeMap<usize, usize> = BTreeMap::new();
+  let mut steps: BTreeMap<(usize, bool), usize> = BTreeMap::new();
   let mut on_names: BTreeSet<(usize, (u16, u16))> = BTreeSet::new();
   for (&source, members) in &by_block {
     let spelled: Vec<String> = members
@@ -2489,13 +2563,15 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .collect();
     let tokens = block_names(source, &spelled, keeps(source), &mut on_names);
     let mut runs: Vec<(usize, (usize, usize))> = Vec::new();
-    for (&i, (name, cites, run)) in members.iter().zip(tokens) {
+    for (&i, (name, cites, run, _)) in members.iter().zip(tokens) {
       if let Some(run) = run {
         runs.push((i, run));
       }
       names.insert(i, (name, cites));
     }
-    steps.extend(note_steps(source, &runs));
+    if let Some(&first) = members.first() {
+      steps.extend(note_steps(source, &runs, first));
+    }
   }
   let mut kept: Vec<RawFrontmatter> = Vec::new();
   let (mut items, separate) = items_to_emit(resolved, &owners, &on_names, &mut kept);
@@ -2638,14 +2714,19 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
         name.extend(cites);
         name
       });
-      let content = cs_group("\\lx@frontmatter@item", &[&name]);
-      let mut content = cs_group("\\lx@personname", &[&cs_group("\\lx@author@withinst", &[
-        &content,
-      ])]);
-      content.extend(std::iter::repeat_n(
-        T_CS!("\\lx@title@footnote@step"),
-        steps.get(&i).copied().unwrap_or(0),
-      ));
+      let item = cs_group("\\lx@frontmatter@item", &[&name]);
+      let step = |after: bool| {
+        std::iter::repeat_n(
+          T_CS!("\\lx@title@footnote@step"),
+          steps.get(&(i, after)).copied().unwrap_or(0),
+        )
+      };
+      let mut content: Vec<Token> = step(false).collect();
+      content.extend(cs_group("\\lx@personname", &[&cs_group(
+        "\\lx@author@withinst",
+        &[&item],
+      )]));
+      content.extend(step(true));
       let mut head = vec![add_now()];
       head.extend(cs_group_args(&["ltx:creator"]));
       with_key_tokens(head, creator_keys(c, &annotations[i]), &content)

@@ -1032,6 +1032,7 @@ mod whole_tests {
         environments: Vec::new(),
         creators: Box::new([]),
         unread: None,
+        counter_moves: None,
       },
       list_setter: None,
     }))

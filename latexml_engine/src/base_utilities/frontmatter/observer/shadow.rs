@@ -17,8 +17,8 @@ use super::{
     mark_held, with_block_content,
   },
   ledger::{
-    Entry, Outcome, SkipReason, Stamp, content_text, reset_ledger, stamped_block_tokens,
-    with_ledger,
+    CounterMoves, Entry, Outcome, SkipReason, Stamp, content_text, reset_ledger,
+    stamped_block_tokens, with_ledger,
   },
   policy::{TitleMarks, policy_for},
   rehearsal::{Rehearsal, for_the_check, rehearse},
@@ -203,6 +203,7 @@ fn read_at_flush() -> Result<()> {
           environments,
           creators,
           left_open,
+          counter_moves,
         } => {
           mark_held(&mut value, &held);
           creator_roles(&mut value, &creators);
@@ -218,6 +219,8 @@ fn read_at_flush() -> Result<()> {
             environments,
             creators: creators.into_boxed_slice(),
             unread: left_open.then(|| content_text(&block.tokens).into()),
+            counter_moves: (!counter_moves.is_empty())
+              .then(|| Box::new(CounterMoves(counter_moves))),
           }
         },
         // (waits for the next flush; if none comes, the dump says why it was never rehearsed)
@@ -970,17 +973,18 @@ mod tests {
     );
     assert_eq!(
       skip_reason(&Outcome::Events {
-        formulas:     Vec::new(),
-        inks:         Box::default(),
-        events:       Vec::new(),
-        errors:       0,
-        warnings:     0,
-        declarations: Vec::new(),
-        breaks:       Vec::new(),
-        held:         Vec::new(),
-        environments: Vec::new(),
-        creators:     Box::default(),
-        unread:       None,
+        formulas:      Vec::new(),
+        inks:          Box::default(),
+        events:        Vec::new(),
+        errors:        0,
+        warnings:      0,
+        declarations:  Vec::new(),
+        breaks:        Vec::new(),
+        held:          Vec::new(),
+        environments:  Vec::new(),
+        creators:      Box::default(),
+        unread:        None,
+        counter_moves: None,
       }),
       None
     );

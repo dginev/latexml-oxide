@@ -402,6 +402,16 @@ thread_local! {
   static FOOTNOTE_BASE_DEFINED: Cell<bool> = const { Cell::new(false) };
 }
 
+/// `\\c@footnote`'s value, `None` where the format has no such register: what the bare marks print from, which the
+/// rehearsal reads at its start and the field notes after each invocation printing nothing (`field_notes::FieldNotes::
+/// counter_moves`).
+pub(super) fn footnote_counter() -> Option<i64> {
+  match lookup_definition(&T_CS!("\\c@footnote")) {
+    Ok(Some(defn)) if defn.is_register() => defn.value_of(Vec::new()).map(NumericOps::value_of),
+    _ => None,
+  }
+}
+
 /// The event constructor of a row break (`\\`, `\\newline`, `\\linebreak`; a tabular juggle, `install_event_bindings`).
 const ROW_BREAK: &str = "\\lx@fm@obs@break";
 /// The event constructor of an author separator (`\\and`; a raw class's column, `\\alignauthor`).
@@ -875,23 +885,25 @@ pub(in crate::base_utilities) enum Rehearsal<R> {
   /// The callback's value on the digested list, the errors and warnings the rehearsal raised (held, then discarded with
   /// it), and what its boxes do not say.
   Done {
-    value:        R,
-    errors:       usize,
-    warnings:     usize,
+    value:         R,
+    errors:        usize,
+    warnings:      usize,
     /// the definitions made in the tokens' positions ([`declaration_events`]; none for tokens without positions)
-    declarations: Vec<Event>,
+    declarations:  Vec<Event>,
     /// the block breaks its binding declares, by the positions they were called at ([`break_events`]; `Policy::block_breaks`)
-    breaks:       Vec<Event>,
+    breaks:        Vec<Event>,
     /// the errors held, by the positions they were raised at, in order (none positioned for tokens without positions)
-    held:         Vec<HeldError>,
+    held:          Vec<HeldError>,
     /// the environments its tokens open and close ([`EnvironmentStep`])
-    environments: Vec<EnvironmentStep>,
+    environments:  Vec<EnvironmentStep>,
     /// the creator calls its own expansion made, which no box says the keyvals of ([`FieldCreator`])
-    creators:     Vec<FieldCreator>,
+    creators:      Vec<FieldCreator>,
     /// whether the run left a group open — its frames not back where they started, the mode it switched to not ended (an
     /// `\end{tabular}\begin{tabular}{c}` juggle in the line, 1401.6981): what it digested past that point is in no box of
     /// the list, so no event says it, and the content check reads the block's content too (`resolver::placed::content_check`)
-    left_open:    bool,
+    left_open:     bool,
+    /// where the block's own digestion moved the footnote counter (`field_notes::FieldNotes::counter_moves`)
+    counter_moves: Vec<(u16, u16)>,
   },
   /// No rehearsal was made or kept, and why: no journal could open (one is already open), its assignments could not be
   /// undone, or it ended in a Fatal error of its own (discarded with it).
@@ -909,8 +921,8 @@ pub(in crate::base_utilities) fn rehearse<R>(
   inspect: impl FnOnce(&Digested) -> R,
 ) -> Result<Rehearsal<R>> {
   // (read before anything is changed: the counter the bare `\footnotemark`s print from)
-  let footnotes = lookup_definition(&T_CS!("\\c@footnote"))?.is_some()
-    && lookup_definition(&T_CS!("\\thefootnote"))?.is_some();
+  let footnotes =
+    footnote_counter().is_some() && lookup_definition(&T_CS!("\\thefootnote"))?.is_some();
   let counter = if footnotes {
     counter_value("footnote")?.value_of()
   } else {
@@ -1102,6 +1114,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
       environments: notes.environments,
       creators: notes.creators,
       left_open,
+      counter_moves: notes.counter_moves,
     },
     _ => Rehearsal::Skipped(SkipReason::NotUndone),
   })

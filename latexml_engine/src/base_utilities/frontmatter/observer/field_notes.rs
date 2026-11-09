@@ -27,7 +27,7 @@ use latexml_core::{
   tokens::Tokens,
 };
 
-use super::events::BreakKind;
+use super::{events::BreakKind, rehearsal::footnote_counter};
 use crate::base_utilities::clean_frontmatter_labels;
 
 /// A definition made while a rehearsal digests a field's tokens ([`FieldNotes`]): what no box says, a definition printing
@@ -111,54 +111,62 @@ pub struct FieldBreak {
 #[derive(Debug, Default)]
 pub struct FieldNotes {
   /// the definitions made by invocations that made no box ([`FieldDeclaration`])
-  pub declarations: Vec<FieldDeclaration>,
+  pub declarations:  Vec<FieldDeclaration>,
   /// the positions `start..end` of the invocations during which errors were raised, each with how many
-  pub errors:       Vec<(u16, u16, usize)>,
+  pub errors:        Vec<(u16, u16, usize)>,
   /// the positions the field's tokens end at (the reach of the field's last invocation)
-  end:              u16,
+  end:               u16,
   /// the calls of a block break its binding declares ([`FieldBreak`])
-  pub breaks:       Vec<FieldBreak>,
+  pub breaks:        Vec<FieldBreak>,
   /// the creator calls the block's own expansion made ([`FieldCreator`])
-  pub creators:     Vec<FieldCreator>,
+  pub creators:      Vec<FieldCreator>,
   /// which commands those are
-  block_breaks:     Vec<(Token, BreakKind)>,
+  block_breaks:      Vec<(Token, BreakKind)>,
   /// the errors counted so far, and the groups open and the tokens being invoked when the notes began
-  errors_seen:      usize,
-  depth:            usize,
-  stack:            usize,
+  errors_seen:       usize,
+  depth:             usize,
+  stack:             usize,
   /// the meaning log's last read, an empty buffer between two reads (`state::swap_meaning_log`)
-  assigned:         Vec<MeaningAssigned>,
+  assigned:          Vec<MeaningAssigned>,
   /// the field's tokens by position, what was called there ([`keep_declared`]), the first at each
-  field:            Vec<Option<Token>>,
+  field:             Vec<Option<Token>>,
   /// the runs of a kernel's or a binding's macro a paper's macro reached, being read ([`close_runs`]): the position they take
   /// and how many tokens the pushback held before each
-  kernel_runs:      Vec<(u16, usize)>,
+  kernel_runs:       Vec<(u16, usize)>,
   /// where the prefixes waiting for their command start (`\global`, `\long`). With the `\expandafter`s expanded right before
   /// it they lead to a declaration ([`read_lead`]), since a content read of its span without them would be another definition,
   /// or run `\csname` on its own (`\expandafter\def\csname ww\endcsname{1}`, repro `event_declaration_span_holds_its_lead`).
   /// Invocations, not positions: an earlier declaration, a font switch or a conditional ends it, and what those read is theirs
   /// (`\let\xa\global\def\y{1}`, `\ifx\global\global\def\y{1}\fi`)
-  lead:             Option<u16>,
+  lead:              Option<u16>,
   /// the same, as the invocation being noted reads it
-  lead_read:        Option<u16>,
+  lead_read:         Option<u16>,
   /// the last run of one field token expanded since the last invocation, where it starts (an `\expandafter` chain's), and that of
   /// the invocation being noted: the expansions of a block of a thousand names, no list of them
-  expanded:         Option<(u16, Token)>,
-  read_expanded:    Option<(u16, Token)>,
+  expanded:          Option<(u16, Token)>,
+  read_expanded:     Option<(u16, Token)>,
   /// whether a declaration's call may still be being read ([`FieldDeclaration`] `open`)
-  any_open:         bool,
+  any_open:          bool,
   /// the last call of a macro at a position no definition of the field holds, and as far as it read: what a token of a body the
   /// field defined runs at ([`FieldDeclaration::run_at`]), `\def\m{\def\n{1}} Ann\m`'s `\n` at `\m` past " Ann"
-  last_call:        Option<(u16, u16)>,
+  last_call:         Option<(u16, u16)>,
   /// the environments opened and closed ([`EnvironmentStep`]), and what reading them takes: the frames and environments open at
   /// the last field token heard, and that token, whether it was expanded (what it opens is open by the next token heard); and the
   /// position of the last `\begin` or `\end` heard and as far as what ran at its position read (its arguments, the
   /// environment's own: `{tabular}{c}`), which says what changed there
-  pub environments: Vec<EnvironmentStep>,
-  frames_heard:     usize,
-  open_heard:       usize,
-  token_heard:      Option<(u16, u16, bool, bool)>,
-  meaning_heard:    Option<(u16, u16)>,
+  pub environments:  Vec<EnvironmentStep>,
+  frames_heard:      usize,
+  open_heard:        usize,
+  token_heard:       Option<(u16, u16, bool, bool)>,
+  meaning_heard:     Option<(u16, u16)>,
+  /// `\c@footnote` as the last invocation left it (`None`: the format has none), and the positions `start..end` of the
+  /// invocations that moved it, making no box: an assignment of the register, whatever spells it
+  /// (`\addtocounter{footnote}{-2}`, `\setcounter`, `\global\advance\c@footnote`), which no event says. The rehearsal's
+  /// own note and mark bindings never step it (`rehearsal::load`), so each move is the block's own (1507.05018's Ombao)
+  footnote:          Option<i64>,
+  pub counter_moves: Vec<(u16, u16)>,
+  /// each of those moves' position and the value it moved the counter from
+  moved_from:        Vec<(u16, Option<i64>)>,
 }
 
 /// How many environments are open: the frames binding `current_environment` (an environment a binding defines).
@@ -302,6 +310,7 @@ pub fn field_notes_begin(tokens: &Tokens, block_breaks: &[(&str, BreakKind)]) {
       frames_heard: state::get_frame_depth(),
       open_heard: environments_open(),
       stack: token_stack_depth(),
+      footnote: footnote_counter(),
       block_breaks: block_breaks
         .iter()
         .map(|(command, kind)| (T_CS!(*command), *kind))
@@ -720,6 +729,31 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
     }
     (inside, errors == notes.errors_seen && !notes.any_open)
   });
+  // (an invocation printing nothing that moved the footnote counter: where, `FieldNotes::counter_moves`)
+  if result.is_empty() {
+    FIELD_NOTES.with(|notes| {
+      let notes = &mut *notes.borrow_mut();
+      if notes.footnote.is_some() {
+        let now = footnote_counter();
+        if now != notes.footnote {
+          // (one invocation's moves that come back where they started are none: a given `\footnotemark[<n>]`'s
+          // binding sets the counter in a group of its own, `rehearsal::load`, both at the mark's position)
+          if notes
+            .moved_from
+            .last()
+            .is_some_and(|&(at, from)| at == pos && from == now)
+          {
+            notes.moved_from.pop();
+            notes.counter_moves.pop();
+          } else {
+            notes.moved_from.push((pos, notes.footnote));
+            notes.counter_moves.push((pos, cover.end.max(pos + 1)));
+          }
+          notes.footnote = now;
+        }
+      }
+    });
+  }
   if quiet && state::meaning_log_is_empty() {
     return;
   }

@@ -1,0 +1,16 @@
+% mechanism: a note before every name of an author block steps the footnote counter before the first creator's name, as
+%   LaTeX reads it: `=2` put that step after the name's `\lx@personname`, so Ann Able's `\footnotemark` printed * at the
+%   counter's 1 where LaTeX prints † (`emit.rs` `note_steps`, a step keyed before or after its creator's name)
+% witness: review revNE2 A2 (synthetic)
+% oracle:  pdflatex 0 errors; "Ann Able†  Bob Baker", the note's ∗ above (pdftotext -layout)
+% engines: rust off: 0 errors, Ann †; rust =2 (NE2): 0 errors, Ann *
+% expect:  =2 as off: 0 errors, 0 warnings, Ann's footnotemark †
+% status:  RED (NE2) -> GREEN (perfect_kernel_batchne2::a_note_before_every_name_steps_before_it)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\thanks{Lead note.}Ann Able\footnotemark \and Bob Baker}
+\maketitle
+Text.
+\end{document}
