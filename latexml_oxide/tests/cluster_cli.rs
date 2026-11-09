@@ -2339,18 +2339,18 @@ mod title_pubnote_pollution {
   use std::{fs, process::Command};
 
   /// The frontmatter emitter's switch as the converted child reads it: `LATEXML_FM_EMIT`, parsed as the engine's
-  /// `fm_emit_mode` parses it (0 when unset or unreadable); the child inherits this process's environment. A local copy of
+  /// `fm_emit_mode` parses it (2, the default, when unset or unreadable); the child inherits this process's environment. A local copy of
   /// `cluster_package_guards::perfect_kernel_batcht1::fm_emit` (no cross-binary dependency).
   fn fm_emit() -> u8 {
     std::env::var("LATEXML_FM_EMIT")
       .ok()
       .and_then(|v| v.trim().parse().ok())
-      .unwrap_or(0)
+      .unwrap_or(2)
   }
 
   /// A guard whose switch-off expectation is right but whose `LATEXML_FM_EMIT=2` output is a known wrong reading — a named
   /// RED, fixed after the flip (user 2026-11-08): at `=2` it prints the RED and returns true, so the guard skips its
-  /// assertions there and keeps them under the default. A local copy of `perfect_kernel_batcht1::red_at_two`.
+  /// assertions there and keeps them under `LATEXML_FM_EMIT=0`. A local copy of `perfect_kernel_batcht1::red_at_two`.
   fn red_at_two(red: &str) -> bool {
     let two = fm_emit() == 2;
     if two {

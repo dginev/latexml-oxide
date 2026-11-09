@@ -1,6 +1,7 @@
 //! The one added step at the flush (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`, Route D; OXIDIZED_DESIGN_DIVERGENCES
-//! #980), behind `LATEXML_FM_EMIT`: for a paper with an author block read, the queued creators and their annotations are
-//! replaced by Perl's own calls built from the reading (`Resolved`) — `\lx@add@frontmatter@now{ltx:creator}`,
+//! #980), on by default (`LATEXML_FM_EMIT=0` the old driver until its deletion, [`fm_emit_mode`]): for a paper with an
+//! author block read, the queued creators and their annotations are replaced by Perl's own calls built from the reading
+//! (`Resolved`) — `\lx@add@frontmatter@now{ltx:creator}`,
 //! `\lx@annotate@frontmatter@now{ltx:creator}{ltx:contact}`, `\lx@add@thanks` — the owners by Perl's `label=` and
 //! `annotations=`. What Perl's `\lx@add@authors` (Base_Utility.pool.ltxml:687) cuts with `SplitTokens` at the call, this
 //! cuts at the digested list's positions, as digested material doesn't exist at the call. A token slice is the API's
@@ -52,8 +53,10 @@ thread_local! {
   static FM_EMIT_OVERRIDE: Cell<Option<u8>> = const { Cell::new(None) };
 }
 
-/// `LATEXML_FM_EMIT` (read once per process), or this thread's test override: 0 off, 1 the reader still runs at the call,
-/// 2 each call queues one whole block.
+/// The frontmatter emitter's switch, the one place `LATEXML_FM_EMIT` is read (once per process), or this thread's test
+/// override: 2, the default (unset or unreadable), each call queues one whole block and the emitter writes it; 0 the old
+/// driver (the reader at the call and the writer), reachable until its deletion (Z18-Z19); 1 the reader still runs at the
+/// call (OD #980).
 pub fn fm_emit_mode() -> u8 {
   static MODE: OnceLock<u8> = OnceLock::new();
   FM_EMIT_OVERRIDE.with(Cell::get).unwrap_or_else(|| {
@@ -61,7 +64,7 @@ pub fn fm_emit_mode() -> u8 {
       std::env::var("LATEXML_FM_EMIT")
         .ok()
         .and_then(|v| v.trim().parse().ok())
-        .unwrap_or(0)
+        .unwrap_or(2)
     })
   })
 }

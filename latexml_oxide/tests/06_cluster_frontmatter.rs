@@ -12,23 +12,23 @@ mod cluster;
 use cluster::{convert_to_xml, convert_to_xml_contrib, convert_to_xml_contrib_clean};
 
 /// The frontmatter emitter's switch as a conversion of this test process reads it: `LATEXML_FM_EMIT`, parsed as the engine's
-/// `fm_emit_mode` parses it (0 when unset or unreadable). A local copy of T1's helper (`cluster_package_guards`'s
+/// `fm_emit_mode` parses it (2, the default, when unset or unreadable). A local copy of T1's helper (`cluster_package_guards`'s
 /// `perfect_kernel_batcht1.rs`), kept in this binary so no test binary depends on another.
 fn fm_emit() -> u8 {
   std::env::var("LATEXML_FM_EMIT")
     .ok()
     .and_then(|v| v.trim().parse().ok())
-    .unwrap_or(0)
+    .unwrap_or(2)
 }
 
 /// A guard's expectation under the switch its conversion runs with: `two` at `LATEXML_FM_EMIT=2`, `off` otherwise (the switch
-/// off, the default, and 1, the reader still running at the call).
+/// off, `0`, and 1, the reader still running at the call).
 #[allow(dead_code)]
 fn expect<T>(off: T, two: T) -> T { if fm_emit() == 2 { two } else { off } }
 
 /// A guard whose switch-off expectation is right but whose `LATEXML_FM_EMIT=2` output is a known wrong reading — a named RED,
 /// fixed after the flip (user 2026-11-08: guards for shapes with no measured reach stay named REDs failing only at `=2`): at
-/// `=2` it prints the RED and returns true, so the guard skips its assertions there and keeps them under the default. At the
+/// `=2` it prints the RED and returns true, so the guard skips its assertions there and keeps them under `LATEXML_FM_EMIT=0`. At the
 /// flip each such guard becomes an `#[ignore = "RED at =2: …"]` guard keeping the right expectation.
 fn red_at_two(red: &str) -> bool {
   let two = fm_emit() == 2;
