@@ -75,30 +75,6 @@ fn unlabelled_email_line_calls(line: Tokens, placement: AddressPlacement) -> Res
     _ => Ok(line),
   };
   let addrs = email_addresses(&line).unwrap_or_default();
-  if let AddressPlacement::Marked(carriers) = &placement
-    && !addrs.is_empty()
-  {
-    // (one address: the line itself, as written)
-    let addresses = if addrs.len() == 1 {
-      vec![unwrapped(line.clone())?]
-    } else {
-      address_tokens(&line, addrs)?
-    };
-    for address in addresses {
-      for author in carriers {
-        calls.extend(
-          Invocation!(T_CS!("\\lx@add@email"), vec![
-            Some(mouth::tokenize_internal(TeXString::assembled(s!(
-              "label=author:{author}"
-            )))),
-            Some(address.clone())
-          ])
-          .unlist(),
-        );
-      }
-    }
-    return Ok(calls);
-  }
   let placement = match placement {
     AddressPlacement::Settled(owners) if !addrs.is_empty() && owners.len() == addrs.len() => {
       if owners.iter().all(Option::is_none) {
@@ -123,14 +99,10 @@ fn unlabelled_email_line_calls(line: Tokens, placement: AddressPlacement) -> Res
         return Ok(calls);
       }
     },
-    AddressPlacement::Settled(_) | AddressPlacement::Marked(..) => AddressPlacement::Shared,
+    AddressPlacement::Settled(_) => AddressPlacement::Shared,
     placement => placement,
   };
   let options: Vec<Option<Tokens>> = match placement {
-    AddressPlacement::Sequence if !addrs.is_empty() => addrs
-      .iter()
-      .map(|_| Some(mouth::tokenize_internal("labelseq=author")))
-      .collect(),
     AddressPlacement::Inner if !addrs.is_empty() => addrs.iter().map(|_| None).collect(),
     AddressPlacement::Shared if addrs.len() > 1 => addrs
       .iter()
@@ -263,96 +235,6 @@ const FONT_WRAPPERS: &[&str] = &[
   "\\textnormal",
   "\\emph",
 ];
-
-/// A name line and the address it ends with, as the JMLR family writes an author (`\name Ann Able \email ann@uni.edu`,
-/// jmlr2e.sty:271-273; 2405.13980, 2407.04153, 2411.04991, 2502.14381, 2511.15722): the name, and the line's last run
-/// without a space, the class's email markup with it (`\email ann@uni.edu`), when that run prints one plain address and a
-/// name stands before it, its markup leading the address. A run with a note or a command that adds to the frontmatter
-/// itself (`\thanks{ann@uni.edu}`, `\footnote{…}`, a class's `\email{x}` expanding to `\lx@add@email`, aa's `\mail`
-/// adding a contact) is the author's as it stands, and a line that is only an address is kept whole.
-pub(in crate::base_utilities) fn name_and_trailing_email(
-  line: &Tokens,
-) -> Result<(Tokens, Option<Tokens>)> {
-  let tokens = line.unlist_ref();
-  let end = spacing_end(tokens);
-  // the last run without a space outside braces
-  let mut start = end;
-  let mut depth = 0usize;
-  while start > 0 {
-    match tokens[start - 1].get_catcode() {
-      Catcode::END => depth += 1,
-      Catcode::BEGIN if depth == 0 => break,
-      Catcode::BEGIN => depth -= 1,
-      Catcode::SPACE if depth == 0 => break,
-      _ => {},
-    }
-    start -= 1;
-  }
-  let whole = || Ok((line.clone(), None));
-  if start == end || depth != 0 {
-    return whole();
-  }
-  // the markup leads the address (`\email ann@uni.edu`, `\texttt{ann@uni.edu}`): a command or group after printed text
-  // is not an address's (`Peng\thanks{bp2601@columbia.edu}`, 2402.08164, is a name and its note)
-  let mut printed = false;
-  for t in &tokens[start..end] {
-    match t.get_catcode() {
-      Catcode::LETTER | Catcode::OTHER => printed = true,
-      Catcode::CS
-        if printed
-          && !matches!(
-            t.with_str(str::to_string).as_str(),
-            "\\_" | "\\textunderscore"
-          ) =>
-      {
-        return whole();
-      },
-      Catcode::BEGIN | Catcode::ACTIVE if printed => return whole(),
-      _ => {},
-    }
-  }
-  let run = Tokens::new(tokens[start..end].to_vec());
-  // (a name annotation other than the address's markup glued to it, `\orcidlink{…}ann@x.org`, `\cite{x}ann@x.org`, is
-  // the name's, printed beside it: the run is no address, 77n r5 review probes n02, n04)
-  if run.unlist_ref().iter().any(|t| {
-    t.code == Catcode::CS
-      && t.with_str(|name| name != "\\email" && NAME_ANNOTATIONS.contains(&name))
-  }) {
-    return whole();
-  }
-  let commands = run
-    .unlist_ref()
-    .iter()
-    .filter(|t| t.code == Catcode::CS)
-    .map(adds_to_frontmatter)
-    .collect::<Result<Vec<bool>>>()?;
-  let plain = |address: &str| {
-    address.split_once('@').is_some_and(|(local, domain)| {
-      !local.is_empty()
-        && local
-          .chars()
-          .all(|c| c.is_alphanumeric() || "._%+-".contains(c))
-        && domain.contains('.')
-        && domain
-          .chars()
-          .all(|c| c.is_alphanumeric() || ".-".contains(c))
-    })
-  };
-  let one_address =
-    email_addresses(&run).is_some_and(|addresses| addresses.len() == 1 && plain(&addresses[0]));
-  let name = Tokens::new(tokens[..start].to_vec());
-  if commands.contains(&true)
-    || !one_address
-    || visible_name_text(name.unlist_ref()).trim().is_empty()
-  {
-    return whole();
-  }
-  let mut name = name.unlist();
-  while name.last() == Some(&T_SPACE!()) {
-    name.pop();
-  }
-  Ok((Tokens::new(name), Some(run)))
-}
 
 /// The definitions in force where a class's title code reads `\@author`: the statements of the groups still open there
 /// in its `\@maketitle` (else a dropped `\maketitle`'s) body — `\def`, `\gdef`, `\let`, `\newcommand`, `\providecommand`

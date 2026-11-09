@@ -1,57 +1,18 @@
 //! Perl's whole-block fallback (`Base_Utility.pool.ltxml:693`, `\lx@add@author` of the raw block) with its own preparation,
 //! moved unchanged from `author_block/` (the plan's row "Knowledge in, driver out, one pass", user ruling 2026-11-08; the preparation
-//! moves with it as the fallback's own, the keep-improvements ruling). [`whole_block_author`] is Perl's raw call; the old
-//! driver (`author_block::dispatch`, off) gives it the block through [`strip_linebreak_options`] and `lines_prepared`,
-//! the raw-token rewrites of OXIDIZED_DESIGN_DIVERGENCES #52 that go beyond Perl: note environments as commands, math-active scripts, tabular juggles and ACM columns as line breaks,
-//! alignment environments unwrapped, `\hspace` runs between names as separators (`normalize_hspace_separators` and its
-//! row helpers), icons joined to their links, glued marks as marks, the ordinal and in-word superscripts. At
-//! `LATEXML_FM_EMIT=2` the emitter and `defs/author_macros.rs` (the queued entry) call it raw, with none of them (the emitter's
-//! tabular juggles aside, [`tabular_juggles_in_a_whole_block`]); three
-//! items are a binding's too (`strip_linebreak_options`, `has_author_marks`, `glued_line_marks_as_marks`).
+//! moves with it as the fallback's own, the keep-improvements ruling). [`whole_block_author`] is Perl's raw call, which the
+//! emitter and `defs/author_macros.rs` (the queued entry) make with the block raw, the emitter's tabular juggles aside
+//! ([`tabular_juggles_in_a_whole_block`]). The old driver's raw-token preparation (OXIDIZED_DESIGN_DIVERGENCES #52: note
+//! environments as commands, math-active scripts, tabular juggles and ACM columns as line breaks, alignment environments
+//! unwrapped, `\hspace` runs between names as separators, icons joined to their links) went with that driver; what is
+//! left is a binding's too (`strip_linebreak_options`, `has_author_marks`, `glued_line_marks_as_marks`).
 
 use super::*;
 
-/// A block kept whole as the old driver gives it to [`whole_block_author`] (`author_block::dispatch`, off): its lines prepared
-/// ([`lines_prepared`]) and its breaks' options gone ([`strip_linebreak_options`]).
-pub(in crate::base_utilities) fn prepared_block(written: Tokens) -> Tokens {
-  lines_prepared(strip_linebreak_options(written))
-}
-
-/// The lines of an author block as `\lx@add@authors` reads them, its marks, separators and alignments normalized
-/// ([`add_authors_calls_sectioned`]; the tabular fallback's, [`whole_block_author`]).
-pub(in crate::base_utilities) fn lines_prepared(stuff: Tokens) -> Tokens {
-  let stuff = note_environments_as_commands(stuff);
-  let stuff = math_active_scripts(stuff);
-  let stuff = tabular_juggles_as_line_breaks(stuff);
-  let stuff = unbrace_acm_author_columns(stuff);
-  let stuff = unwrap_alignment_environment(stuff);
-  let stuff = trailing_alignment_environment_as_lines(stuff);
-  // Beyond-Perl (OXIDIZED_DESIGN #52), two composable normalizations applied
-  // BEFORE branch selection so both branches benefit, and so a symbol mark can
-  // no longer spuriously trigger the affiliation-marker branch:
-  //   1. horizontal-space separators (`\hspace{len}` / `\hfill`) → `\quad`, the
-  //      "regular" poor-man's author separator LaTeXML's `\and`/`\quad` splitter
-  //      otherwise misses (witness arXiv:2506.06941, six authors bunched);
-  //   2. footnote-SYMBOL superscripts (`$^{*}$`, `\textsuperscript{\dagger}` —
-  //      equal-contribution / corresponding notes, NEVER affiliation numbers) →
-  //      a visible `\lx@frontmatter@keepsup` sup, so they render instead of
-  //      being consumed into an unmatched `affiliation:*` label and dropped.
-  // For the witness, (2) removes its ONLY `^`, dropping the whole block into the
-  // clean no-marker branch where (1)'s `\quad`s split all six authors.
-  let stuff = normalize_hspace_separators(stuff);
-  let stuff = join_icons_to_links(stuff);
-  let stuff = glued_line_marks_as_marks(stuff, false);
-  let stuff = rewrite_symbol_superscripts(stuff);
-  let stuff = rewrite_ordinal_superscripts(stuff);
-  rewrite_in_word_superscripts(stuff)
-}
-
 /// Perl's whole-block creator (Base_Utility.pool.ltxml:693, `\lx@add@authors`' `{tabular}` fallback, and :588-589):
-/// `\lx@add@author[keyvals]{…}` of the block `written`, as given. The one writer of a block kept whole: the old driver's
-/// tabular fallback (`author_block::dispatch`, which gives it the block [`prepared_block`]), and at `LATEXML_FM_EMIT=2`
-/// Perl's raw call — the queued entry
-/// (`defs::author_macros`) and the emitter's for a block it can't read or whose reading loses a name's words
-/// (`observer::writer::emit`; OD #980). At `=2` no raw-token preparation runs but the emitter's tabular juggles
+/// `\lx@add@author[keyvals]{…}` of the block `written`, as given. The one writer of a block kept whole, Perl's raw call —
+/// the queued entry (`defs::author_macros`) and the emitter's for a block it can't read or whose reading loses a name's
+/// words (`observer::writer::emit`; OD #980). No raw-token preparation runs but the emitter's tabular juggles
 /// ([`tabular_juggles_in_a_whole_block`], which digestion can't answer: 1511.05911): digestion does each rewrite's job in a
 /// block nothing splits — `\\[len]` is `\lx@newline`'s own optional, a `\begin{footnote}` runs `\footnote`, a
 /// mathcode-"8000 `^` reads as `\sp`, braces and superscripts digest to the same markup — and three of them hurt there
@@ -66,59 +27,6 @@ pub(in crate::base_utilities) fn whole_block_author(
     keyvals,
     Some(written)
   ]))
-}
-
-/// `tokens` with each `\quad`/`\qquad` that parts an icon from the link after it a space: a piece of an author block
-/// that is only an icon — what prints no word, an icon macro or a graphic ([`without_non_printing_arguments`]) — before
-/// a link line ([`is_link_line`]) is that link's, one link line with it, a URL contact ([`is_url_line`]), not an
-/// affiliation holding the logo alone (`\github \quad \url{…}`, 2601.17879's
-/// `\def\github{\raisebox{-1.5pt}{\includegraphics…}}`; the r8 re-review's finding 9).
-pub(in crate::base_utilities) fn join_icons_to_links(tokens: Tokens) -> Tokens {
-  let mut v = tokens.unlist();
-  let separator = |t: &Token| {
-    [
-      T_CS!("\\\\"),
-      T_CS!("\\newline"),
-      T_CS!("\\and"),
-      T_CS!("\\And"),
-      T_CS!("\\AND"),
-      T_CS!("\\quad"),
-      T_CS!("\\qquad"),
-    ]
-    .contains(t)
-  };
-  let mut delimiters = Vec::new();
-  let mut depth = 0usize;
-  for (at, t) in v.iter().enumerate() {
-    match t.get_catcode() {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END => depth = depth.saturating_sub(1),
-      _ if depth == 0 && separator(t) => delimiters.push(at),
-      _ => {},
-    }
-  }
-  let icon_only = |piece: &[Token]| {
-    let piece = Tokens::new(piece.to_vec());
-    !prints_nothing(&piece)
-      && prints_nothing(&Tokens::new(without_non_printing_arguments(
-        piece.unlist_ref(),
-      )))
-  };
-  for (index, at) in delimiters.iter().enumerate() {
-    let before = if index == 0 {
-      0
-    } else {
-      delimiters[index - 1] + 1
-    };
-    let after = delimiters.get(index + 1).copied().unwrap_or(v.len());
-    if (v[*at] == T_CS!("\\quad") || v[*at] == T_CS!("\\qquad"))
-      && icon_only(&v[before..*at])
-      && is_link_line(&Tokens::new(v[at + 1..after].to_vec()))
-    {
-      v[*at] = T_SPACE!();
-    }
-  }
-  Tokens::new(v)
 }
 
 /// Does an author block mark its names (`$^{a}$`, `\textsuperscript{1}`)? A superscript inside a `\footnote` or
@@ -162,99 +70,6 @@ pub fn has_author_marks(stuff: &Tokens) -> bool {
     i += 1;
   }
   false
-}
-
-/// An author block's math-active `^` and `_` (catcode 12, mathcode "8000: mathstyle.sty, which breqn loads through
-/// flexisym.sty:418, sets them so — :233-236 its default `mathactivechars` option, `\AtBeginDocument{\catcode`\^=12
-/// …}`, and :251-258 `\mathcode`\^="8000` with the active `^` `\let` to `\sp`; latexml_contrib's breqn_sty.rs:138-163) written as the
-/// superscript and subscript they are in math, where TeX reads the active character's meaning, `\sp`/`\sb` (tex.web
-/// §1151): the marks of `{Mohamed Benzaghta$^{\star}$, …, David
-/// López-Pérez}$^{\sharp}$` (2504.02633) are marks, as they are with `^` of catcode 7.
-pub(in crate::base_utilities) fn math_active_scripts(stuff: Tokens) -> Tokens {
-  let v = stuff.unlist_ref();
-  let active = |c: &str| lookup_mathcode(c) == Some(0x8000);
-  let (sup, sub) = (
-    v.contains(&T_OTHER!("^")) && active("^"),
-    v.contains(&T_OTHER!("_")) && active("_"),
-  );
-  if !(sup || sub) {
-    return stuff;
-  }
-  let mut in_math = false;
-  Tokens::new(
-    v.iter()
-      .map(|t| {
-        if t.get_catcode() == Catcode::MATH {
-          in_math = !in_math;
-        }
-        if in_math && sup && *t == T_OTHER!("^") {
-          T_SUPER!()
-        } else if in_math && sub && *t == T_OTHER!("_") {
-          T_SUB!()
-        } else {
-          *t
-        }
-      })
-      .collect(),
-  )
-}
-
-/// An author block's `\begin{footnote}{text}…\end{footnote}` as LaTeX reads it: `\begin{footnote}` runs `\footnote`,
-/// which takes the braced text after it as its argument, so what follows up to `\end{footnote}` is the author line's
-/// (`Velibor \v{Z}eli\begin{footnote}{Linn\'{e} FLOW Centre, …},\end{footnote} Du\v{s}an Zorica\begin{footnote}…`,
-/// 1703.02032: the comma printed after the first note's mark parts the names). Written `\footnote{text}` and the rest,
-/// the note is the name's and its comma a separator; read as one unit, the environment hid it. Only a `{footnote}` whose
-/// braced text and `\end{footnote}` follow. The environment's group (`\begin` is `\begingroup`, `\end` its
-/// `\endgroup`, latex.ltx) is not kept: it would open in one name and close in the next. So a declaration between the
-/// note and `\end{footnote}` is no longer confined to it; in an author block that span is the separator after the mark.
-pub(in crate::base_utilities) fn note_environments_as_commands(stuff: Tokens) -> Tokens {
-  let v = stuff.unlist_ref();
-  let name_is = |at: usize, name: &str| -> Option<usize> {
-    if v.get(at)?.get_catcode() != Catcode::BEGIN {
-      return None;
-    }
-    let close = (at + 1..v.len()).find(|&k| v[k].get_catcode() == Catcode::END)?;
-    let read: String = v[at + 1..close].iter().map(ToString::to_string).collect();
-    (read == name).then_some(close + 1)
-  };
-  if !v.iter().any(|t| *t == T_CS!("\\begin")) {
-    return stuff;
-  }
-  let mut out: Vec<Token> = Vec::with_capacity(v.len());
-  let mut changed = false;
-  let mut i = 0;
-  while i < v.len() {
-    if v[i] == T_CS!("\\begin")
-      && let Some(mut j) = name_is(i + 1, "footnote")
-    {
-      while v.get(j) == Some(&T_SPACE!()) {
-        j += 1;
-      }
-      let text_end =
-        (v.get(j).is_some_and(|t| t.get_catcode() == Catcode::BEGIN)).then(|| skip_group(v, j));
-      let end = text_end.and_then(|from| {
-        (from..v.len()).find_map(|k| {
-          (v[k] == T_CS!("\\end"))
-            .then(|| name_is(k + 1, "footnote").map(|e| (k, e)))
-            .flatten()
-        })
-      });
-      if let (Some(text_end), Some((end_at, past_end))) = (text_end, end)
-        && text_end <= v.len()
-        && !v[text_end..end_at].iter().any(|t| *t == T_CS!("\\begin"))
-      {
-        out.push(T_CS!("\\footnote"));
-        out.extend_from_slice(&v[j..text_end]);
-        out.extend_from_slice(&v[text_end..end_at]);
-        i = past_end;
-        changed = true;
-        continue;
-      }
-    }
-    out.push(v[i]);
-    i += 1;
-  }
-  if changed { Tokens::new(out) } else { stuff }
 }
 
 /// Drop the optional `*` and `[<len>]` that follow a `\\` line-break token in an
@@ -1251,155 +1066,6 @@ fn reads_as_name_piece(piece: &[Token]) -> bool {
     && !reads_as_affiliation(&Tokens::new(piece))
 }
 
-/// An alignment environment (`center`, `flushleft`, `flushright`) that wraps a whole author block, or a whole `\and`
-/// group, is layout around the lines the splitter reads, not one unit of them: its content, so its names, `\\`
-/// lines and marks split as written (`\author{\begin{center}Ann Able$^{1}$, Bob Baker$^{2}$ \\ $^1$Univ A
-/// ...\end{center}}`). One inside a piece — a `{center}` affiliation under the names — stays whole
-/// (`split_tokens_delimited`; 2609.01563, 17357). Nested wrappers unwrap in turn.
-///
-/// The declarations around such an environment go with it ([`is_wrapping_declaration`]): a declaration environment
-/// (latex.ltx `\begin{small}` is `\begingroup\small`), a group opening with declarations (`{\small …}`), or bare
-/// declarations before it (`\small\bfseries\begin{center}…`) — the 2015 BESIII template's
-/// `\author{\begin{small}\begin{center} names \\ (BESIII Collaboration)\\ {\it $^{1}$ aff\\ …}\end{center}
-/// \vspace{0.4cm}\end{small}}` (1507.02068's 385 names, 1512.08197's 377, 2201.02056's 472) had stayed one creator.
-/// The size or font they set is dropped with them (OXIDIZED_DESIGN #947). They are peeled only on the way to an
-/// alignment environment: a declaration wrapper with no alignment environment inside keeps its declarations on the
-/// names as before (`\author{\begin{small}Ann Able$^{1}$ \\ $^{1}$Univ A\end{small}}`), and a command that prints
-/// (`\lead\begin{center}…`) is no declaration. After a wrapper's close only spacing may follow ([`only_spacing`]: that
-/// template's `\vspace{0.4cm}` after `\end{center}`).
-pub(in crate::base_utilities) fn unwrap_alignment_environment(tokens: Tokens) -> Tokens {
-  let v = tokens.unlist_ref();
-  // (each unwrapping keeps a span of the one before: the span as of the last alignment environment unwrapped, the
-  // declarations peeled past it with no alignment environment inside staying)
-  let (mut lo, mut hi) = (0, v.len());
-  let mut committed: Option<(usize, usize)> = None;
-  loop {
-    let toks = &v[lo..hi];
-    let start = leading_wrapping_declarations_end(toks);
-    let end = toks.len() - toks.iter().rev().take_while(|t| **t == T_SPACE!()).count();
-    if start >= end {
-      break;
-    }
-    let ends_block = |close: usize| close <= end && only_spacing(&toks[close..end]);
-    if toks[start] == T_CS!("\\begin") {
-      let stream: VecDeque<Token> = toks[start + 1..end].iter().copied().collect();
-      let Some(span) = environment_closes_ahead(&stream) else {
-        break;
-      };
-      let name_end = (start + 2..end)
-        .find(|&k| toks[k].get_catcode() == Catcode::END)
-        .unwrap_or(start + 1);
-      let name: String = toks[start + 2..name_end]
-        .iter()
-        .map(|t| t.to_string())
-        .collect();
-      let close = start + 1 + span;
-      let alignment = matches!(name.as_str(), "center" | "flushleft" | "flushright");
-      // The environment must end the block, its `\end{name}` the last thing that prints.
-      if !ends_block(close) || !(alignment || is_wrapping_declaration(&s!("\\{name}"))) {
-        break;
-      }
-      let end_cs = (name_end + 1..close)
-        .rev()
-        .find(|&k| toks[k] == T_CS!("\\end"))
-        .unwrap_or(close);
-      (lo, hi) = (lo + name_end + 1, lo + end_cs);
-      if alignment {
-        committed = Some((lo, hi));
-      }
-    } else if toks[start].get_catcode() == Catcode::BEGIN && ends_block(skip_group(toks, start)) {
-      // a group around the block: its declarations are peeled at the next turn
-      let close = skip_group(toks, start);
-      (lo, hi) = (lo + start + 1, lo + close - 1);
-    } else {
-      break;
-    }
-  }
-  match committed {
-    Some((lo, hi)) => Tokens::new(v[lo..hi].to_vec()),
-    None => tokens,
-  }
-}
-
-/// The declarations that may wrap an alignment environment around an author block ([`unwrap_alignment_environment`]),
-/// as a command or as an environment's name: the font and size declarations of [`NAME_TEXT_COMMANDS`] (not the
-/// commands among them that take their text as an argument, `\textbf`, `\emph`) and the paragraph layout ones.
-pub(in crate::base_utilities) fn is_wrapping_declaration(cs: &str) -> bool {
-  (NAME_TEXT_COMMANDS.contains(&cs) && !cs.starts_with("\\text") && cs != "\\emph")
-    || matches!(
-      cs,
-      "\\centering" | "\\raggedright" | "\\raggedleft" | "\\noindent" | "\\par"
-    )
-}
-
-/// Where the spaces, spacing ([`leading_spacing_end`]) and wrapping declarations ([`is_wrapping_declaration`]) that open
-/// `v` end.
-fn leading_wrapping_declarations_end(v: &[Token]) -> usize {
-  let mut i = 0;
-  loop {
-    i += leading_spacing_end(&v[i..]);
-    match v.get(i) {
-      Some(t) if t.get_catcode() == Catcode::CS && t.with_str(is_wrapping_declaration) => i += 1,
-      _ => return i,
-    }
-  }
-}
-
-/// An alignment environment (`center`, `flushleft`, `flushright`) that opens after the names and ends the block is
-/// layout too: it starts a line of its own, its content the lines under the names — `\author{Ann Able and Bob Baker
-/// \begin{center}Department of Physics and Astronomy\end{center}}` prints the department centred under both names, read
-/// as `… Bob Baker \\ Department …`, every name's of the row (R12; 2609.01563, 2609.17357, 2609.33831 — it had been kept
-/// whole inside the last personname). One opening the block is [`unwrap_alignment_environment`]'s. Spacing after its
-/// `\end{…}` is no line ([`only_spacing`]: `…\end{center}\vspace{2mm}}`); an `\end{small}` there is none — it
-/// closes an environment opened before the names (2012.14750's `\author{\author{Author list} \begin{small}
-/// \begin{center}…\end{center}\vspace{0.6cm}\end{small}}`, whose `\begin{small}` a names line had kept open).
-pub(in crate::base_utilities) fn trailing_alignment_environment_as_lines(tokens: Tokens) -> Tokens {
-  let toks = tokens.unlist();
-  let end = toks.len() - toks.iter().rev().take_while(|t| **t == T_SPACE!()).count();
-  let mut depth = 0i32;
-  for start in 0..end {
-    match toks[start].get_catcode() {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END => depth -= 1,
-      _ => {},
-    }
-    if depth != 0
-      || toks[start] != T_CS!("\\begin")
-      || toks[..start].iter().all(|t| *t == T_SPACE!())
-    {
-      continue;
-    }
-    let stream: VecDeque<Token> = toks[start + 1..end].iter().copied().collect();
-    let Some(span) = environment_closes_ahead(&stream) else {
-      continue;
-    };
-    let name_end = (start + 2..end)
-      .find(|&k| toks[k].get_catcode() == Catcode::END)
-      .unwrap_or(start + 1);
-    let name: String = toks[start + 2..name_end]
-      .iter()
-      .map(|t| t.to_string())
-      .collect();
-    // (only spacing follows its close: `\end{center}\vspace{2mm}`)
-    let close = start + 1 + span;
-    if close > end
-      || !only_spacing(&toks[close..end])
-      || !matches!(name.as_str(), "center" | "flushleft" | "flushright")
-    {
-      continue;
-    }
-    let end_cs = (name_end + 1..close)
-      .rev()
-      .find(|&k| toks[k] == T_CS!("\\end"))
-      .unwrap_or(close);
-    let mut out = toks[..start].to_vec();
-    out.push(T_CS!("\\\\"));
-    out.extend_from_slice(&toks[name_end + 1..end_cs]);
-    return Tokens::new(out);
-  }
-  Tokens::new(toks)
-}
-
 /// A parameterless macro whose expansion closes the title page's tabular and opens another, not an author separator
 /// ([`author_and_splits`]): the ACM SIG template's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}` in `\author`
 /// (sig-alternate.cls:283's `\alignauthor` juggles the same way) prints a line break between the names above and the
@@ -1414,10 +1080,6 @@ pub(in crate::base_utilities) fn tabular_juggle_between(t: &Token) -> Option<Vec
     .find(|&at| environment_call_len(&rest[at..], T_CS!("\\begin"), "tabular").is_some())
     .map(|at| rest[..at].to_vec())
 }
-
-/// The old driver's looser test, kept as it was until the switch flips (the switch-off output stays as it was): a
-/// macro whose expansion starts by closing a tabular, written `\\` ([`tabular_juggles_as_line_breaks`]).
-fn closes_a_tabular(t: &Token) -> bool { tabular_close_rest(t).is_some() }
 
 /// The rest of `body` past the environment command `cs` and the `{name}` group after it (`\end{tabular}`), if it
 /// starts with them.
@@ -1470,12 +1132,12 @@ fn tabular_close_rest(t: &Token) -> Option<Vec<Token>> {
   })
 }
 
-/// A block written whole at `LATEXML_FM_EMIT=2` (the emitter's, `observer::writer::emit`; OD #980), each macro whose
+/// A block written whole (the emitter's, `observer::writer::emit`; OD #980), each macro whose
 /// expansion starts by closing a tabular — a juggle or a column, `\alignauthor` too, which nothing splits there — the line
 /// break it prints between what it parts, one opening the block nothing: digested, it closed a tabular the block never
 /// opened, inside the creator's `\lx@personname`, four Errors and every name lost (vldb.cls:270 `\def\alignauthor{\end{tabular}
 /// \begin{tabular}[t]{p{\auwidth}}\centering}`, which its `\@maketitle` sets inside its own `\begin{tabular}[t]{c}\@author
-/// \end{tabular}`; 1511.05911). The old driver's own rewrite of a juggle ([`tabular_juggles_as_line_breaks`]),
+/// \end{tabular}`; 1511.05911). The deleted old driver's own rewrite of a juggle (`tabular_juggles_as_line_breaks`),
 /// the column's split ([`author_and_splits`]) a line break where nothing splits.
 pub(in crate::base_utilities) fn tabular_juggles_in_a_whole_block(tokens: Tokens) -> Tokens {
   let toks = tokens.unlist();
@@ -1517,125 +1179,12 @@ fn tabular_close_rest_of_any(t: &Token) -> Option<Vec<Token>> {
       .iter()
       .filter(|t| t.get_catcode() != Catcode::SPACE)
   };
-  // (its `\end` read before the body is copied: this runs for every macro of every `=2` rehearsal)
+  // (its `\end` read before the body is copied: this runs for every macro of every rehearsal)
   if unspaced().next() != Some(&T_CS!("\\end")) {
     return None;
   }
   let body: Vec<Token> = unspaced().copied().collect();
   past_environment(&body, T_CS!("\\end"), "tabular")
-}
-
-/// An author block's parameterless macro whose expansion closes the title page's tabular and opens another — the ACM
-/// SIG template's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}`, set inside the class's own author tabular
-/// (sig-alternate.cls:283's `\alignauthor` juggles the same way) — is the line break it prints between the names
-/// above and the affiliation below: digested, it closed a tabular no author block opens and left one open, whose
-/// lines (the shared affiliation) were lost (1704.03168, 1301.5612, 1401.6981, 0712.1016). The author separators
-/// (`\alignauthor`) stay for the splitter. The old driver's test ([`closes_a_tabular`]) reads a macro closing a tabular
-/// alone as one too; the rehearsal binds a juggle only ([`tabular_juggle_between`]) to its column or row break.
-pub(in crate::base_utilities) fn tabular_juggles_as_line_breaks(tokens: Tokens) -> Tokens {
-  let toks = tokens.unlist();
-  if !toks.iter().any(closes_a_tabular) {
-    return Tokens::new(toks);
-  }
-  Tokens::new(
-    toks
-      .into_iter()
-      .map(|t| {
-        if closes_a_tabular(&t) {
-          T_CS!("\\\\")
-        } else {
-          t
-        }
-      })
-      .collect(),
-  )
-}
-
-/// The ACM SIG classes' author columns (DIVERGENCES #445), read through their own commands: the brace group that
-/// follows `\alignauthor` and is the whole column — sigchi.cls writes each column as one, `\alignauthor{Name\\ \affaddr{…}\\ \email{…}}` — is
-/// its content, so the column's `\\` lines split (1906.01122); and an `\affaddr{…}` is its content, so a mark that
-/// leads it (`\affaddr{\textsuperscript{1} Univ…}`, 1608.06253) leads the affiliation line, as Perl's OmniBus reads
-/// `\affaddr` as `\address` (OmniBus.cls.ltxml:92). Only at depth 0 and only after these two commands, which no
-/// TeX Live file defines: a brace group anywhere else (`\author{{Smith, Jr., John}}`) keeps its braces.
-pub(in crate::base_utilities) fn unbrace_acm_author_columns(tokens: Tokens) -> Tokens {
-  let toks = tokens.unlist();
-  if !toks
-    .iter()
-    .any(|t| *t == T_CS!("\\alignauthor") || *t == T_CS!("\\affaddr"))
-  {
-    return Tokens::new(toks);
-  }
-  let mut out = Vec::with_capacity(toks.len());
-  let mut depth = 0usize;
-  let mut i = 0;
-  while i < toks.len() {
-    let t = toks[i];
-    i += 1;
-    let column = t == T_CS!("\\alignauthor");
-    if depth == 0 && (column || t == T_CS!("\\affaddr")) {
-      if column {
-        out.push(t);
-      }
-      let mut k = i;
-      while k < toks.len() && toks[k].get_catcode() == Catcode::SPACE {
-        k += 1;
-      }
-      if k < toks.len() && toks[k].get_catcode() == Catcode::BEGIN {
-        let mut level = 0usize;
-        let mut close = None;
-        for (n, u) in toks[k..].iter().enumerate() {
-          match u.get_catcode() {
-            Catcode::BEGIN => level += 1,
-            Catcode::END => {
-              level -= 1;
-              if level == 0 {
-                close = Some(k + n);
-                break;
-              }
-            },
-            _ => {},
-          }
-        }
-        // A column's group is its whole content only when nothing but spaces and `\\` follow it before the next
-        // author: `\alignauthor {\large Ann}\\ \affaddr{…}` is a name's font group, kept.
-        let whole = |close: usize| {
-          let mut n = close + 1;
-          while n < toks.len()
-            && (toks[n].get_catcode() == Catcode::SPACE || toks[n] == T_CS!("\\\\"))
-          {
-            n += 1;
-          }
-          n == toks.len()
-            || [
-              T_CS!("\\alignauthor"),
-              T_CS!("\\and"),
-              T_CS!("\\And"),
-              T_CS!("\\AND"),
-            ]
-            .contains(&toks[n])
-        };
-        if let Some(close) = close
-          && (!column || whole(close))
-        {
-          // The column's own `\affaddr`s are read the same way.
-          out.extend(unbrace_acm_author_columns(Tokens::new(toks[k + 1..close].to_vec())).unlist());
-          i = close + 1;
-          continue;
-        }
-      }
-      if !column {
-        out.push(t);
-      }
-      continue;
-    }
-    match t.get_catcode() {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END => depth = depth.saturating_sub(1),
-      _ => {},
-    }
-    out.push(t);
-  }
-  Tokens::new(out)
 }
 
 /// `tokens` with a mark that leads a line of labelled entries written without the symbols glued to it (`$^{*1}$Kyoto

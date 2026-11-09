@@ -1691,7 +1691,7 @@ pub(in crate::base_utilities) enum ContactOwner {
 ///    groups);
 /// 4. else the block's.
 ///
-/// An author block's labelled email lines rank otherwise ([`block_email_calls`]): there the spelling outranks the mark
+/// An author block's labelled email lines rank otherwise (`block_email_calls`): there the spelling outranks the mark
 /// of a correspondence NOTE before the line (1710.00802's `aleder@` under another author's "Corresponding Author"),
 /// a mark on a nearby note being weaker evidence than one on the address.
 ///
@@ -1780,8 +1780,6 @@ pub(in crate::base_utilities) fn frontmatter_group_first() -> usize {
 
 /// Where the addresses of a line in an author block go.
 pub(in crate::base_utilities) enum AddressPlacement {
-  /// The n-th address to the n-th author, counted over the emails so far (`labelseq=author`).
-  Sequence,
   /// Each address to the author at that queue position, by the `author:N` label the creator digests with.
   Authors(Vec<usize>),
   /// Each address a name settles to the author at that queue position, as [`AddressPlacement::Authors`]; each other
@@ -1792,10 +1790,6 @@ pub(in crate::base_utilities) enum AddressPlacement {
   /// when the line lists several (1802.07182's `\{jrr41,$\,$wct23,…\}@cam.ac.uk`, whose raw line a Semiverbatim
   /// contact showed as `{jrr41,$ $wct23,…}`), else the line.
   Shared,
-  /// The line's, no address of which a name settles, to every author at these queue positions, those carrying the marks
-  /// that led it (`$^*$zq77@x.edu` under `Ann Able$^{1,*}$`; main-session decision 3 on the 77p r11 questions;
-  /// 2605.01818's `$^*$nbes@itu.dk` on the ∗ author).
-  Marked(Vec<usize>),
   /// Each address its own contact, with no placement of its own: an address line of an affiliation-kind entry, digested
   /// inside it, the entry's address — its owners the entry's Link step gives ([`kind_entry_addresses`],
   /// `owners::entry_address_owners`).

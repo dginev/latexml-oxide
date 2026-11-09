@@ -195,54 +195,6 @@ pub(in crate::base_utilities) fn unwrapped(tokens: &[Token]) -> &[Token] {
   }
 }
 
-/// `tokens` before the footnote symbol marks that end them after their text (`Carnegie Mellon University, Pittsburgh, PA,
-/// USA$^{\dagger}$`, `\texttt{mazeyuwhu@gmail.com}$^{\dagger}$`, 2109.13296; the r7 re-review's finding 1), inside a
-/// group around the whole of them ([`unwrapped`]), without the spaces before the marks, and the marks as written
-/// (`\lx@frontmatter@keepsup{…}\lx@frontmatter@symbolmark{…}`, [`keepsup`]): a mark after its text labels that text, as
-/// one before it does. `None` when no mark ends them, or nothing stands before it.
-pub(in crate::base_utilities) fn before_trailing_symbol_mark(
-  tokens: &[Token],
-) -> Option<(&[Token], &[Token])> {
-  let v = unwrapped(tokens);
-  let last = v.iter().rposition(|t| *t != T_SPACE!())? + 1;
-  let mut end = last;
-  while let Some(open) = group_opening(v, end)
-    && open >= 1
-    && v[open - 1] == T_CS!("\\lx@frontmatter@symbolmark")
-    && let Some(sup) = group_opening(v, open - 1)
-    && sup >= 1
-    && v[sup - 1] == T_CS!("\\lx@frontmatter@keepsup")
-  {
-    end = sup - 1;
-  }
-  if end == last {
-    return None;
-  }
-  let text = v[..end].iter().rposition(|t| *t != T_SPACE!())? + 1;
-  Some((&v[..text], &v[end..last]))
-}
-
-/// Where the group that the `}` at `end - 1` of `v` closes opens; `None` when `v[end - 1]` closes none.
-fn group_opening(v: &[Token], end: usize) -> Option<usize> {
-  if end == 0 || v.get(end - 1)?.get_catcode() != Catcode::END {
-    return None;
-  }
-  let mut depth = 0usize;
-  for at in (0..end).rev() {
-    match v[at].get_catcode() {
-      Catcode::END => depth += 1,
-      Catcode::BEGIN => {
-        depth -= 1;
-        if depth == 0 {
-          return Some(at);
-        }
-      },
-      _ => {},
-    }
-  }
-  None
-}
-
 /// The items of `tokens` at its commas and semicolons outside groups, each without the spaces around it; empty items
 /// dropped.
 fn split_top_level_list(tokens: &[Token]) -> Vec<Tokens> {
@@ -324,16 +276,4 @@ pub(in crate::base_utilities) fn math_braces_as_printed(address: &Tokens) -> Tok
 pub(in crate::base_utilities) struct EmailAddress {
   pub(in crate::base_utilities) address: Tokens,
   pub(in crate::base_utilities) call:    Option<Tokens>,
-}
-
-/// How many of a line's `addresses` no name spells ([`spelled_owner`]), a role mailbox aside: the addresses that keep
-/// the names of the other e-mail lines of the block from going by elimination ([`owners_by_elimination`]).
-pub(in crate::base_utilities) fn unspelled_addresses(
-  name_keys: &[NameKeys],
-  addresses: &[String],
-) -> usize {
-  addresses
-    .iter()
-    .filter(|address| spelled_owner(name_keys, address).is_none() && !is_role_mailbox(address))
-    .count()
 }

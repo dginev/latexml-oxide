@@ -79,7 +79,7 @@ pub(in crate::base_utilities) fn collaboration_word(word: &str) -> bool {
 /// 1711.07097), and no word before it names an institution (`The ATLAS Collaboration Office`, `Theory Group, Department
 /// of Physics` stay affiliations); or brackets hold a name opening with "The" that no word names an institution in
 /// (`(The Nearby Supernova Factory)`, 1511.01102). A name the collaboration follows is a name and its remark
-/// ([`collaboration_split`]), no collaboration: `Bob Baker for the ATLAS Collaboration`; nor is a surname holding such a
+/// (`collaboration_split`), no collaboration: `Bob Baker for the ATLAS Collaboration`; nor is a surname holding such a
 /// word (`M.~Huertas-Company`, 1212.4143: "Company" no collaboration's).
 pub fn reads_as_collaboration(text: &str, listed: bool) -> bool {
   collaboration_framing(text, listed, false).is_some()
