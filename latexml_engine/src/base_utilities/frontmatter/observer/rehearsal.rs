@@ -12,7 +12,7 @@
 //! What its boxes do not say is noted beside them (`field_notes::FieldNotes`): the definitions made, the errors held, by the
 //! field position of the invocation.
 
-use std::cell::Cell;
+use std::{cell::Cell, ops::Range};
 
 use latexml_core::{
   definition::origin::{DefinitionOrigin, with_origin},
@@ -768,13 +768,47 @@ pub(super) fn past_line_break(toks: &[Token], at: usize) -> Option<usize> {
   Some(past_optional(toks, at).map_or(at, |(_, end)| end))
 }
 
-/// Where a tabular's own call at `at` ends, which prints nothing: `\begin{tabular}` with its `[…]` and its column spec
-/// `{…}` (the juggle's reopen, [`inline_juggles_as_columns`]), or `\end{tabular}`. The content check reads no word in it
-/// (`ledger::content_text`: `\begin{tabular}{c}` counted "c" and "tabular" lost, review revI2 finding 1).
-pub(super) fn past_tabular_call(toks: &[Token], at: usize) -> Option<usize> {
-  environment_call_len(&toks[at..], environment_commands().0, "tabular")
-    .map(|len| at + len)
-    .or_else(|| past_tabular_open(toks, at))
+/// Where a tabular's own call at `at` ends, and the spans in it that print: `\begin{tabular}` with its `[…]` and its
+/// column spec `{…}` (the juggle's reopen, [`inline_juggles_as_columns`]), or `\end{tabular}`. The call prints nothing
+/// but the text its spec places ([`spec_printed`]); the content check reads only those spans (`ledger::content_text`:
+/// `\begin{tabular}{c}` counted "c" and "tabular" lost, review revI2 finding 1; `{@{Inst }c}` prints "Inst", review
+/// revI3 finding 1).
+pub(super) fn past_tabular_call(toks: &[Token], at: usize) -> Option<(usize, Vec<Range<usize>>)> {
+  if let Some(len) = environment_call_len(&toks[at..], environment_commands().0, "tabular") {
+    return Some((at + len, Vec::new()));
+  }
+  let (spec, end) = tabular_open_spec(toks, at)?;
+  let mut printed = Vec::new();
+  spec_printed(toks, spec + 1..end - 1, &mut printed);
+  Some((end, printed))
+}
+
+/// The spans a column spec's tokens `spec` print (latex.ltx `\@mkpream`, array.sty `\@mkpream`): the text of `@{…}`
+/// and `!{…}` between columns and of `>{…}` and `<{…}` in each cell (pdflatex: `{>{Prof }c<{ Dr}!{ or }c}` prints
+/// "Prof Dept Dr or"), and those in a `*{n}{…}`'s repeated spec; a column letter, its argument (`p{3cm}`) and the
+/// count `n` print nothing.
+fn spec_printed(toks: &[Token], spec: Range<usize>, printed: &mut Vec<Range<usize>>) {
+  let mut k = spec.start;
+  while k < spec.end {
+    let token = &toks[k];
+    let group = |from: usize| past_braced(&toks[..spec.end], from);
+    if token.get_catcode() == Catcode::OTHER
+      && let Some(c @ ('@' | '!' | '>' | '<' | '*')) = char::from_u32(token.get_charcode())
+      && let Some((open, close)) = group(k + 1)
+    {
+      k = close;
+      if c != '*' {
+        printed.push(open + 1..close - 1);
+      } else if let Some((open, close)) = group(k) {
+        spec_printed(toks, open + 1..close - 1, printed);
+        k = close;
+      }
+    } else if let Some((_, close)) = group(k).filter(|&(open, _)| open == k) {
+      k = close;
+    } else {
+      k += 1;
+    }
+  }
 }
 
 /// `\end` and `\begin`, the environment commands a tabular's call reads.
@@ -782,9 +816,15 @@ fn environment_commands() -> (Token, Token) { (T_CS!("\\end"), T_CS!("\\begin"))
 
 /// Where `\begin{tabular}[…]{…}` at `at` ends, if one starts there.
 fn past_tabular_open(toks: &[Token], at: usize) -> Option<usize> {
+  tabular_open_spec(toks, at).map(|(_, end)| end)
+}
+
+/// Where the column spec `{…}` of a `\begin{tabular}[…]{…}` at `at` starts, and where the call ends, if one starts
+/// there.
+fn tabular_open_spec(toks: &[Token], at: usize) -> Option<(usize, usize)> {
   let k = at + environment_call_len(&toks[at..], environment_commands().1, "tabular")?;
   let k = past_optional(toks, k).map_or(k, |(_, end)| end);
-  Some(past_braced(toks, k)?.1)
+  past_braced(toks, k)
 }
 
 /// Where the `[…]` that starts at `at` after spaces starts, and the position past it, if one does.

@@ -1,0 +1,19 @@
+% mechanism: the content check's reading of a juggle's printed text: array's `>{…}` (and `<{…}`, `!{…}`) print their
+%            text in each cell, also inside a `*{n}{…}`'s repeated spec, whose count prints nothing
+%            (`rehearsal::past_tabular_call`, `spec_printed`)
+% witness: synthetic, review revI3 finding 1 (the array package's `!{}`/`>{}`/`<{}`, not probed there)
+% shape:   the tie juggle, the reopened tabular's spec `{*{1}{>{Inst }p{3cm}}}`
+% oracle:  pdflatex: 0 errors; "A One Inst Dept"
+% engines: rust CK3 `=2`: E=0 W=1, the content-check Warning `Dept` ("Inst", printed and lacking, not counted)
+% expect:  "A One"; at `=2` 1 Warning (the content check), `Dept Inst`
+% status:  RED (CK3) -> GREEN (perfect_kernel_batchfs1::an_open_group_rehearsals_word_matching, CK3b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage{array}
+\begin{document}
+\title{T}
+\author{A One \end{tabular}~\begin{tabular}{*{1}{>{Inst }p{3cm}}} Dept}
+\maketitle
+Text.
+\end{document}

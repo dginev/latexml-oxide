@@ -146,6 +146,25 @@ fn an_open_group_rehearsals_word_matching() {
       ]],
     ),
     (
+      // (a column spec's `@{…}` prints its text, its letters and a `p{…}` width nothing: review revI3 finding 1)
+      "a column spec's placed text",
+      repro!("author_raw_tabular_juggle_spec_at_text_prints"),
+      3,
+      "and Lab",
+      vec![vec![
+        "A One Dept".to_string(),
+        "affiliation=Inst".to_string(),
+      ]],
+    ),
+    (
+      // (array's `>{…}` prints in each cell, inside a `*{n}{…}` too, its count nothing: the spec's recursion)
+      "array's cell text inside a repeated spec",
+      repro!("author_raw_tabular_juggle_array_spec_text_prints"),
+      1,
+      "Dept Inst",
+      vec![vec!["A One".to_string()]],
+    ),
+    (
       "a line break opening a word",
       repro!("author_raw_tabular_juggle_break_opens_word"),
       2,

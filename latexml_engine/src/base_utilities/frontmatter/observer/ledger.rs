@@ -1084,7 +1084,7 @@ pub(in crate::base_utilities) fn record_api_call(
 /// `Fsica` for `física`, `resolver::placed`); a spacing control symbol (`Dept\\Muller`, `Dept,\\Muller`, review revCK1
 /// 2-3; [`spacing_symbol`]; a `\\`'s `*` and `[…]` print nothing, `\\[2mm]`, review revCK1b finding 5,
 /// `rehearsal::past_line_break`; a tabular's own call prints nothing, `\begin{tabular}{c}`, review revI2 finding 1,
-/// `rehearsal::past_tabular_call`), another control sequence, its argument's group (`\IEEEauthorrefmark{1}Univ Alpha` →
+/// but the text its column spec places, `@{Inst }`, review revI3 finding 1, `rehearsal::past_tabular_call`), another control sequence, its argument's group (`\IEEEauthorrefmark{1}Univ Alpha` →
 /// ` 1 Univ Alpha`) or a math shift parts words. Nothing is spelled but a control sequence's length, its letter's
 /// catcode and a control symbol's character: a letter command (`Gro{\ss}e`, a control word) parts its word.
 pub(super) fn content_text(content: &Tokens) -> ContentText {
@@ -1098,10 +1098,16 @@ pub(super) fn content_text(content: &Tokens) -> ContentText {
   let mut parted_by_command = false;
   let tokens = content.unlist_ref();
   // (past what prints nothing: a `\\`'s `*` and `[…]`, `\\[2mm]`, review revCK1b finding 5; a tabular's own call,
-  // `\begin{tabular}{c}`)
+  // `\begin{tabular}{c}`, but for the spans its column spec prints, `{@{Inst }c}`, review revI3 finding 1)
   let mut unprinted_to = 0;
+  let mut printed: Vec<std::ops::Range<usize>> = Vec::new();
   for (at, token) in tokens.iter().enumerate() {
-    if at < unprinted_to {
+    if at < unprinted_to && !printed.iter().any(|span| span.contains(&at)) {
+      // (what prints nothing parts what is around it: `@{ and }` read apart from the spec around it)
+      if !text.ends_with(' ') {
+        text.push(' ');
+      }
+      parted_by_command = false;
       continue;
     }
     // (inside a word, a letter or digit or a place read past before it, or before its first letter, an accent's
@@ -1130,10 +1136,12 @@ pub(super) fn content_text(content: &Tokens) -> ContentText {
         }
       },
       Catcode::CS => {
-        if let Some(end) = past_tabular_call(tokens, at) {
-          // (a tabular's own call prints nothing: `\begin{tabular}{c}`, review revI2 finding 1)
+        if let Some((end, spans)) = past_tabular_call(tokens, at) {
+          // (a tabular's own call prints nothing but its spec's printed spans: `\begin{tabular}{c}`, review revI2
+          // finding 1; `{c@{ and }c}` prints "and", review revI3 finding 1)
           text.push(' ');
           unprinted_to = end;
+          printed = spans;
         } else if let Some(end) = past_line_break(tokens, at) {
           // (a `\\` parts words and takes no group, its `*` and `[…]` print nothing: `\\[2mm]`, review revCK1b
           // finding 5)
