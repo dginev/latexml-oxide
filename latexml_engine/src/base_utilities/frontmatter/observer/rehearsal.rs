@@ -786,13 +786,14 @@ pub(super) fn past_tabular_call(toks: &[Token], at: usize) -> Option<(usize, Vec
 /// The spans a column spec's tokens `spec` print (latex.ltx `\@mkpream`, array.sty `\@mkpream`): the text of `@{…}`
 /// and `!{…}` between columns and of `>{…}` and `<{…}` in each cell (pdflatex: `{>{Prof }c<{ Dr}!{ or }c}` prints
 /// "Prof Dept Dr or"), and those in a `*{n}{…}`'s repeated spec; a column letter, its argument (`p{3cm}`) and the
-/// count `n` print nothing.
+/// count `n` print nothing. `\@mkpream` compares the spec's characters by code (`\if`), so a letter `@` under
+/// `\makeatletter` is read as an other one (review revI4 finding 2: `{@{Inst }c}` there printed "Inst" uncounted).
 fn spec_printed(toks: &[Token], spec: Range<usize>, printed: &mut Vec<Range<usize>>) {
   let mut k = spec.start;
   while k < spec.end {
     let token = &toks[k];
     let group = |from: usize| past_braced(&toks[..spec.end], from);
-    if token.get_catcode() == Catcode::OTHER
+    if matches!(token.get_catcode(), Catcode::OTHER | Catcode::LETTER)
       && let Some(c @ ('@' | '!' | '>' | '<' | '*')) = char::from_u32(token.get_charcode())
       && let Some((open, close)) = group(k + 1)
     {
