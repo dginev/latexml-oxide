@@ -1799,14 +1799,24 @@ fn items_to_emit<'a>(
       call.events.iter().any(own)
     })
   };
+  // (an entry an earlier item of its owner already writes, the same text from another source, is not written — the loop below
+  // writes each owner's text once —, so the contact it holds is its own item, not left to it: svjour3's `\institute{Sibo
+  // Cheng \at Data Science …\\ \email{sibo.cheng@…}}` under an author line printing the same affiliation, 2111.06447, brief FX5)
+  let written_again = |at: usize| {
+    let (owner, key, a) = &held[at];
+    held[..at]
+      .iter()
+      .any(|(o, k, other)| o == owner && k == key && other.source != a.source)
+  };
   let separate: BTreeSet<usize> = held
     .iter()
     .filter(|(owner, _, a)| {
-      let entry_of = |(o, key, other): &(Owner, Key, &Assoc)| {
-        o == owner && key.0 == Kind::Affiliation && other.source == a.source
+      let entry_of = |(at, (o, key, other)): (usize, &(Owner, Key, &Assoc))| {
+        o == owner && key.0 == Kind::Affiliation && other.source == a.source && !written_again(at)
       };
       inner_contact(a)
-        && (!held.iter().any(entry_of) || a.source.is_some_and(|(index, _)| prints_itself(index)))
+        && (!held.iter().enumerate().any(entry_of)
+          || a.source.is_some_and(|(index, _)| prints_itself(index)))
     })
     .filter_map(|(_, _, a)| a.source.map(|(index, _)| index))
     .collect();
