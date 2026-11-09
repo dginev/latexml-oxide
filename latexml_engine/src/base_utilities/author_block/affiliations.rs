@@ -1021,10 +1021,8 @@ fn place_uncut_copies(parenttag: &Tokens, role: &str, key: &str, list: &Tokens) 
     }
   });
   // (the frontmatter observer's ledger: the calls taken out, as a clear's, `ledger::record_clear`)
-  if fm_shadow_enabled() {
-    for content in removed {
-      record_cut_copy(role, &content);
-    }
+  for content in removed {
+    record_cut_copy(role, &content);
   }
 }
 

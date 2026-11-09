@@ -1,15 +1,11 @@
-//! The observer's shadow switch and dump (OXIDIZED_DESIGN_DIVERGENCES #837). Three states ([`FmShadow`]):
-//! `LATEXML_FM_SHADOW=1` (read once per process, at runtime) — the census: the ledger records the document's calls,
-//! the flush (`digest_front_matter`) rehearses and lexes each block not rehearsed yet and each API call's content, the
-//! CLI writes `<dest>.fmshadow.json` ([`write_fm_shadow`]) with the resolver's tuples (`resolved`, S2a.2), and a
-//! written family's paper is written; `=0` — off, nothing of the observer runs; unset — the default (FM S2b): the
-//! ledger records every paper, and only a paper whose author blocks are all a `written` family's (revtex4_support) is
-//! rehearsed, read and written, with no dump. A family not written keeps today's output in every state. The census's
-//! dump also says who decided the paper (`readback`, `json_read_back`), what the old engine's removal is measured by.
+//! The observer's flush and its dump (OXIDIZED_DESIGN_DIVERGENCES #837): at every real flush (`digest_front_matter`)
+//! the ledger's author blocks not rehearsed yet are rehearsed and lexed, and each API call's content
+//! ([`shadow_flush`]); [`fm_shadow_json`] gives the ledger as JSON — its entries with their events and the resolver's
+//! tuples (`resolved`) — which the guards read the reading by, in process. The census that wrote it beside the output
+//! (`LATEXML_FM_SHADOW=1`, `<dest>.fmshadow.json`, `ab_audit fmshadow`) and its off state (`=0`) were deleted with the
+//! S2b writer (DEL4): the observer records and reads every paper.
 
-use std::{cell::Cell, fmt::Write as _, sync::OnceLock};
-
-use latexml_core::definition::origin::watch_frontmatter_setter_calls;
+use std::fmt::Write as _;
 
 use super::{
   events::{
@@ -27,77 +23,12 @@ use super::{
   *,
 };
 
-/// The shadow switch's states (module docs).
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum FmShadow {
-  /// `LATEXML_FM_SHADOW=1`: every family read, the dump written (the census).
-  On,
-  /// `LATEXML_FM_SHADOW=0`: nothing of the observer runs (today's frontmatter).
-  Off,
-  /// Unset: every paper recorded, a written family's read and written (FM S2b's default; the fleet).
-  Default,
-}
-
-static FM_SHADOW_ENV: OnceLock<FmShadow> = OnceLock::new();
-
-thread_local! {
-  static FM_SHADOW_OVERRIDE: Cell<Option<bool>> = const { Cell::new(None) };
-}
-
-/// The shadow switch: this thread's test override ([`set_fm_shadow_override`]: on, off), else `LATEXML_FM_SHADOW` (a
-/// runtime read, once per process). Unset on the fleet: `cortex_worker` runs the default and writes no dump.
-pub fn fm_shadow_mode() -> FmShadow {
-  match FM_SHADOW_OVERRIDE.with(Cell::get) {
-    Some(true) => FmShadow::On,
-    Some(false) => FmShadow::Off,
-    None => *FM_SHADOW_ENV.get_or_init(|| match std::env::var_os("LATEXML_FM_SHADOW") {
-      Some(v) if v == "1" => FmShadow::On,
-      Some(v) if v == "0" => FmShadow::Off,
-      _ => FmShadow::Default,
-    }),
-  }
-}
-
-/// Whether the frontmatter observer records (the ledger, the binding loads, a footnote's text): unless switched off.
-pub fn fm_shadow_enabled() -> bool { fm_shadow_mode() != FmShadow::Off }
-
-/// Whether the flush rehearses and the writer reads: under the census every paper; by default a paper whose recorded
-/// author blocks are all a written family's (as `writer::written_resolution` requires), and under the emitter's `=2` every
-/// paper as the census reads it — the content check on the placed output (`writer::check_placed_content`) reads the
-/// rehearsed creator calls of a paper with no author block too (llncs's `\author` and `\institute`, 1401.5951: blind
-/// without the census); off, none.
-fn reads_now() -> bool {
-  match fm_shadow_mode() {
-    FmShadow::On => true,
-    FmShadow::Off => false,
-    FmShadow::Default if fm_emit_mode() == 2 => true,
-    FmShadow::Default => with_ledger(|ledger| {
-      let mut blocks = ledger.entries().iter().filter_map(|entry| match entry {
-        Entry::Author(block) => Some(block),
-        _ => None,
-      });
-      let mut any = false;
-      blocks.all(|block| {
-        any = true;
-        policy_for(&block.binding, block.hook).written
-      }) && any
-    }),
-  }
-}
-
-/// Set (`Some`) or clear (`None`) this thread's override of the shadow switch (tests: the environment is read-only
-/// to them).
-pub fn set_fm_shadow_override(on: Option<bool>) { FM_SHADOW_OVERRIDE.with(|o| o.set(on)); }
-
 /// Forget the observer's ledger: a conversion's start (the converter's session preparation, with the field
 /// provenance's reset).
 pub fn reset_fm_shadow() {
   reset_ledger();
   ledger::reset_author_owner();
   rehearsal::reset_rehearsing();
-  // (no frontmatter setter watched until a written family's block finds an unwritten one's defined:
-  // `ledger::watch_unwritten_setters`)
-  watch_frontmatter_setter_calls(None);
 }
 
 /// The flush's part (`digest_front_matter`, before the queue is digested): rehearse and lex each author block not
@@ -111,15 +42,13 @@ pub(in crate::base_utilities) fn shadow_flush() -> Result<()> {
   if rehearsal::rehearsing() {
     return Ok(());
   }
-  if reads_now() {
-    read_at_flush()?;
-  }
+  read_at_flush()?;
   // (the flush empties the frontmatter queue: the calls after it are queued from position 0 again)
   with_ledger(|ledger| ledger.flushes += 1);
   Ok(())
 }
 
-/// [`shadow_flush`]'s reading, when the observer reads.
+/// [`shadow_flush`]'s reading.
 fn read_at_flush() -> Result<()> {
   // (the labels the calls' keyvals defer, read as this flush's digestion expands them: `\lx@label@ref`, cas's
   // `\author[a]` under entries given after it — 2303.00352, 2603.22658, 2504.19452, 2509.10496)
@@ -495,7 +424,7 @@ fn json_held(out: &mut String, held: &[HeldError]) {
   out.push(']');
 }
 
-/// The ledger as JSON (`<dest>.fmshadow.json`): its entries in call order — author blocks with their events, title
+/// The ledger as JSON (read by the guards, in process): its entries in call order — author blocks with their events, title
 /// stamps, API calls — and a summary (blocks with events, skipped by reason, out of positions, rehearsals that held
 /// diagnostics). An author block's ApiCall events are the API calls after it its own expansion did not make.
 pub fn fm_shadow_json() -> String {
@@ -628,12 +557,8 @@ pub fn fm_shadow_json() -> String {
           json_opt_str(&mut out, block.keyvals.as_deref());
           let _ = write!(
             out,
-            ",\"epoch\":{},\"queue_position\":{},\"authors_queued\":{},\"stamp\":",
-            block.epoch,
-            block.queue_position,
-            block
-              .authors_queued
-              .map_or_else(|| "null".to_string(), |n| n.to_string())
+            ",\"epoch\":{},\"queue_position\":{},\"stamp\":",
+            block.epoch, block.queue_position
           );
           json_str(&mut out, block.stamp.name());
           out.push_str(",\"range\":");
@@ -880,31 +805,19 @@ fn bump<'a>(counts: &mut Vec<(&'a str, usize)>, reason: &'a str) {
   }
 }
 
-/// Write the ledger ([`fm_shadow_json`]) to `<destination>.fmshadow.json`, under the census switch only (the CLI, after
-/// the conversion's output is written). Its directory is the destination's own.
-pub fn write_fm_shadow(destination: &str) -> std::io::Result<()> {
-  if fm_shadow_mode() != FmShadow::On {
-    return Ok(());
-  }
-  std::fs::write(s!("{destination}.fmshadow.json"), fm_shadow_json())
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
 
-  /// Every real flush counts, whether the observer reads at it or not: the epoch a clear compares
-  /// (`ledger::record_clear`). Switched off, no block recorded yet — what default mode reads at an early
-  /// `\maketitle` before any author block — the flush still empties the queue (review rev92a_r1 S2).
+  /// Every real flush counts, whether it reads anything or not: the epoch a clear compares (`ledger::record_clear`). No
+  /// block recorded yet — an early `\maketitle` before any author block — the flush still empties the queue (review
+  /// rev92a_r1 S2).
   #[test]
   fn a_flush_that_reads_nothing_still_counts() {
-    set_fm_shadow_override(Some(false));
     reset_fm_shadow();
-    assert!(!reads_now());
     shadow_flush().unwrap();
     shadow_flush().unwrap();
     assert_eq!(with_ledger(|ledger| ledger.flushes), 2);
-    set_fm_shadow_override(None);
     reset_fm_shadow();
   }
 

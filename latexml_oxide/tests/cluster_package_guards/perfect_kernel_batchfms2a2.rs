@@ -14,19 +14,14 @@
 //! compiles clean with pdflatex (TL 2025; the aa and svjour3 probes with 1809.08354's aa.cls and 0807.3898's
 //! svjour3.cls, which TeX Live lacks) and converts with no Error or Warning.
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
+use latexml_engine::base_utilities::fm_shadow_json;
 use serde_json::Value;
 
 use super::perfect_kernel_batchfms2a1::reading_only;
 
 /// Convert `tex` (with `preload`) under the shadow switch, asserting a clean conversion: the dump's `resolved`.
 pub(super) fn resolved(tex: &str, preload: Option<&str>) -> Value {
-  let (log, _, json) = convert_with_setup_then(
-    tex,
-    preload,
-    || set_fm_shadow_override(Some(true)),
-    |_| fm_shadow_json(),
-  );
+  let (log, _, json) = convert_with_setup_then(tex, preload, || {}, |_| fm_shadow_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let json: Value = super::perfect_kernel_batchfms2a1::parsed(&json);
   json["resolved"].clone()
@@ -376,7 +371,7 @@ fn notes_labels_and_contacts() {
   let (log, _, json) = convert_with_setup_then(
     "\\documentclass{article}\n\\usepackage{url}\n\\begin{document}\n\\title{T}\n\\author{Ann Able\\thanks{Corresponding author.\\protect\\label{fn:a}} \\and Bob Baker\\thanks{\\protect\\url{https://b.org}} \\and Cat Cole\\thanks{}\\\\ office@x.org}\n\\maketitle\nSee \\ref{fn:a}.\n\\end{document}\n",
     Some("ar5iv.sty"),
-    || set_fm_shadow_override(Some(true)),
+    || {},
     |_| fm_shadow_json(),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
@@ -451,48 +446,6 @@ fn footnotemark_number_reads_the_stepped_counter() {
       "C Bob Baker [*] | line:names sep:column",
     ]
   );
-}
-
-/// The census switch still decides nothing with the resolver in: the XML is the same under it and in the default mode
-/// (the fleet's) over the shapes above — the kernel family's written in both since 93a (OD #925).
-#[test]
-fn resolver_leaves_the_xml_unchanged() {
-  for tex in [
-    "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^{\\dag}$ \\and Bob Baker$^{\\ddag}$\\\\ \\dag Univ A\\\\ \\ddag Univ B}\n\\maketitle\nBody.\n\\end{document}\n",
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/jheppub_emailadd_in_author_order.tex"
-    ),
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/llncs_comma_before_inst_is_the_name_before.tex"
-    ),
-    NOTE_URL,
-    IEEE_LEGENDS,
-    AUTHBLK_THENOTE,
-    AMS_GRID,
-  ] {
-    let run = |on: Option<bool>| {
-      convert_with_setup_then(
-        tex,
-        Some("ar5iv.sty"),
-        move || set_fm_shadow_override(on),
-        |_| (),
-      )
-    };
-    let (on_log, on_xml, ()) = run(Some(true));
-    // (the default, as the fleet runs: a written family's paper written there too)
-    let (off_log, off_xml, ()) = run(None);
-    assert_eq!(on_xml, off_xml, "{tex}");
-    assert_eq!(
-      (error_count(&on_log), warning_count(&on_log)),
-      (0, 0),
-      "{on_log}"
-    );
-    assert_eq!(
-      (error_count(&off_log), warning_count(&off_log)),
-      (0, 0),
-      "{off_log}"
-    );
-  }
 }
 
 // ---- FM S2a.2 r2: the defect classes of review revfms2a2 (each RED on r1 eac47a244e) ----
@@ -804,10 +757,6 @@ fn fuzzy_labels_by_surname_and_with_their_macros() {
   );
 }
 
-/// AASTeX 7: a corresponding author's `\email` after the authors (2506.07978's shape), and an `\author{Surname,
-/// Given}` (2604.19097).
-const AAS_CORRESPONDENT: &str = "\\documentclass{aastex701}\n\\begin{document}\n\\title{T}\n\\author{Ann Able}\n\\affiliation{Univ A}\n\\email{ann@x.org}\n\\author{Bob Baker}\n\\affiliation{Univ B}\n\\email{bbaker@y.org}\n\\author{Sanhueza, Patricio}\n\\affiliation{Univ C}\n\\email{ps@z.org}\n\\correspondingauthor{Bob Baker}\n\\email{bbaker@y.org}\n\\begin{abstract}\nAbs.\n\\end{abstract}\n\\section{S}\nText.\n\\end{document}\n";
-
 /// Item 1c: glued labels part by the marks the other side shows — `12` under entries `1` and `2` (2103.10685), `1⋆`
 /// (2606.01911) — each found owner tagged `ruling1:parted`; and a mark glued to the mark before it goes where that one
 /// went (`Oh,$^{1}$$^{,2}$ Nordlander`, mn2e, 2306.15492). (FM S2a.2 r7: the `⋆` line's text is a legend, a note of
@@ -980,28 +929,6 @@ fn address_lists_in_author_order_and_collaborations() {
       "  c collaboration the MAST Team | line:names collaboration",
     ]
   );
-}
-
-/// The r3 shapes leave the XML byte-identical and clean under the census switch, in the default mode (the fleet's) and
-/// with the observer off.
-#[test]
-fn r3_shapes_leave_the_xml_unchanged() {
-  // (the first case only: the RED returned there at `=2`, DEL1)
-  let tex = AAS_CORRESPONDENT;
-  let run = |on: Option<bool>| {
-    convert_with_setup_then(
-      tex,
-      Some("ar5iv.sty"),
-      move || set_fm_shadow_override(on),
-      |_| (),
-    )
-  };
-  let (_, on_xml, ()) = run(Some(true));
-  // (the default, as the fleet runs: a written family's paper written there too — and the observer off, today's XML,
-  // which neither shape changes: review rev93a S3, against the default alone the check was a tautology)
-  let (_, off_xml, ()) = run(None);
-  assert_eq!(on_xml, off_xml, "{tex}");
-  assert_eq!(on_xml, run(Some(false)).1, "{tex}");
 }
 
 /// The creators of a reading: each `C` line's name.

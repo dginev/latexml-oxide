@@ -5,7 +5,7 @@
 //! (`a_link_printing_a_name_is_the_name`), and a grade is read however long its group (`a_grade_with_a_long_note_is_the_grade`).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
+use latexml_engine::base_utilities::fm_shadow_json;
 use regex::Regex;
 
 use super::{
@@ -37,9 +37,7 @@ fn run_with_shadow(tex: &str) -> (String, String, String) {
     tex,
     &[],
     Some("ar5iv.sty"),
-    move || {
-      set_fm_shadow_override(Some(true));
-    },
+    move || {},
     |_| fm_shadow_json(),
   )
 }

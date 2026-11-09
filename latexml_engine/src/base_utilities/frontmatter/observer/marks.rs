@@ -9,7 +9,7 @@
 //!   `FLOATSUPERSCRIPT`/`FLOATSUBSCRIPT` (a script with nothing before it) or `POSTSUPERSCRIPT`/`POSTSUBSCRIPT` (a script
 //!   after a base), its `XMArg[@rule]` the script, beside flat `XMTok`/`XMText`/`XMHint` siblings (the constructors of
 //!   `tex_math.rs` `\lx@floating@superscript`, `\lx@post@superscript`, chosen at digestion by `script_handler`);
-//! - **as parsed** (`ab_audit fmshadow`, the final XML): a lone floating script is `ltx:sup` (no formula: the rewrite
+//! - **as parsed** (the content check's reading of the placed output, `writer::dom`, the final XML): a lone floating script is `ltx:sup` (no formula: the rewrite
 //!   of `tex_math.rs`'s floating-script rule; Perl `TeX_Math.pool.ltxml:530`); a script the parser attached is
 //!   `XMApp(XMTok[@role='SUPERSCRIPTOP'][@scriptpos], base, script)`, `scriptpos` `preN` for a script before its base
 //!   (³He, `^{a})`) and `postN` after it; a surviving `FLOATSUPERSCRIPT` holds its script unwrapped; `XMDual` (its
@@ -34,8 +34,8 @@
 
 use super::*;
 
-/// A node of a formula as [`read_formula`] walks it: the engine's libxml node, or `ab_audit fmshadow`'s roxmltree one
-/// (a newtype there).
+/// A node of a formula as [`read_formula`] walks it: the engine's libxml node (a test's own tree in the unit tests;
+/// `ab_audit fmshadow`'s roxmltree newtype went with the census, DEL4).
 pub trait FmMathNode: Sized + Clone {
   /// The element's local name when it is a LaTeXML element (`XMApp`, `XMTok`, …); `None` for any other node.
   fn ltx_name(&self) -> Option<String>;

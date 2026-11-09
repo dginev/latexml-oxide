@@ -1,15 +1,12 @@
 //! The observer's ledger: one block per `\author`-family call, the S1 stamp of each `\title` call, and the
-//! contact/affiliation API calls, in call order (OXIDIZED_DESIGN_DIVERGENCES #837). Recorded only under the shadow
-//! switch ([`super::shadow::fm_shadow_enabled`]) and never while the frontmatter is frozen (a replayed class setter, a
-//! speculative title-page run, the observer's own rehearsal: those calls are not the document's).
+//! contact/affiliation API calls, in call order (OXIDIZED_DESIGN_DIVERGENCES #837). Never recorded while the frontmatter
+//! is frozen (a replayed class setter, a speculative title-page run, the observer's own rehearsal: those calls are not
+//! the document's).
 
 use std::{cell::RefCell, collections::BTreeSet, rc::Rc};
 
 use latexml_core::{
-  definition::{
-    Definition,
-    origin::{DefinitionOrigin, frontmatter_watch, watch_frontmatter_setter_calls},
-  },
+  definition::{Definition, origin::DefinitionOrigin},
   gullet::{InputMark, input_mark, input_unread_since},
   state::{
     fallback_meaning_origin, frontmatter_setter_calls, lookup_catcode, open_frontmatter_setter,
@@ -22,7 +19,6 @@ use super::{
   field_notes::{EnvironmentStep, FieldCreator},
   rehearsal::{past_line_break, past_tabular_call},
   resolver::printed_words,
-  shadow::{FmShadow, fm_shadow_mode},
   writer::Analysis,
   *,
 };
@@ -180,11 +176,8 @@ pub(in crate::base_utilities) struct AuthorBlock {
   /// the frontmatter flushes (`digest_front_matter`) before the call: the queue the position is in (each flush
   /// empties it)
   pub epoch:          usize,
-  /// the frontmatter queue's length at the call, and the authors queued then — counted under the census only
-  /// (`FmShadow::On`), the dump ([`fm_shadow_json`](super::fm_shadow_json)) its only reader: a count of the queue per
-  /// author call is quadratic in the authors
+  /// the frontmatter queue's length at the call
   pub queue_position: usize,
-  pub authors_queued: Option<usize>,
   /// how the tokens got their positions, and the positions `start..end`
   pub stamp:          Stamp,
   pub range:          (usize, usize),
@@ -501,10 +494,10 @@ fn same_meaning(a: Option<&Rc<dyn Definition>>, b: Option<&Rc<dyn Definition>>) 
 /// owner of each tracked command's meaning (`OWNED_COMMANDS`) when its load changed it and no binding it loaded did, or
 /// its own code redefined it after one did (revtex4-2.cls's binding loads revtex4_support.sty, whose `\author` it is;
 /// aa.cls's loads aa_support.sty, whose `\email` it is, and defines its own `\author` after inst_support.sty's): the binding half of the policy key (`author_binding`), and an e-mail call's binding
-/// (`email_meaning`). Under the shadow switch only; otherwise just the load.
+/// (`email_meaning`).
 pub fn note_binding_load<R>(name: &str, extension: &str, load: impl FnOnce() -> R) -> R {
   // (a speculative run's load is undone with it: the document's own, if any, is the one noted)
-  if !fm_shadow_enabled() || in_speculative_digestion() {
+  if in_speculative_digestion() {
     return load();
   }
   let before: [Option<Rc<dyn Definition>>; OWNED] = std::array::from_fn(tracked_meaning);
@@ -643,42 +636,6 @@ fn setter_binding(cs: &Token) -> Option<String> {
   )
 }
 
-/// The binding an API call is given when its setter's expansion went unobserved ([`watch_unwritten_setters`]): no
-/// family's — not written (`policy::family_written`).
-const UNOBSERVED: &str = policy::UNOBSERVED_BINDING;
-
-/// At a written family's block: observe the frontmatter setters' expansions from now on ([`ApiCall::binding`]) when one
-/// of them is defined and an unwritten family's ([`setter_binding`]: svjour3's `\institute` beside authblk's
-/// `\author`, 2609.05466) — the only paper whose API calls the writer must tell apart; every other converts without the
-/// watch, which costs every macro call (`Expandable::invoke`). The API calls made before it, by no block's expansion,
-/// are given [`UNOBSERVED`]: whose they were is not known, so they are not written (a setter called before `\author`).
-fn watch_unwritten_setters() {
-  if frontmatter_watch() {
-    return;
-  }
-  let unwritten = FRONTMATTER_SETTERS.iter().any(|name| {
-    let cs = T_CS!(name);
-    lookup_definition(&cs).ok().flatten().is_some()
-      && setter_binding(&cs).is_some_and(|binding| !policy::family_written(&binding))
-  });
-  if !unwritten {
-    return;
-  }
-  watch_frontmatter_setter_calls(Some(&FRONTMATTER_SETTERS[..]));
-  with_ledger(|ledger| {
-    let unobserved = |entry: &Entry| {
-      matches!(entry, Entry::Api(call) if !call.inside
-        && call.binding.is_none()
-        && !matches!(call.tag.as_str(), "ltx:title" | "ltx:creator"))
-    };
-    ledger.change_each(0..usize::MAX, unobserved, |entry| {
-      if let Entry::Api(call) = entry {
-        call.binding = Some(UNOBSERVED.to_string());
-      }
-    });
-  });
-}
-
 /// The family of the document class: the first of its bindings that declared conventions, in load order (aa.cls
 /// before the aa_support.sty and inst_support.sty it loads; sv_support.sty under svjour3.cls), else the class's own
 /// `\author` binding (a class whose bindings declare none, its `\author` an undeclared support file's), else the
@@ -784,8 +741,7 @@ pub(in crate::base_utilities) fn email_meaning(cs: &str) -> EmailMeaning {
 /// Whether a call now is the document's own: not one the frontmatter is frozen for (a replayed class setter, a
 /// speculative run, a rehearsal), nor one a stand-in binding's copy makes (its defaults queue).
 fn records_now() -> bool {
-  fm_shadow_enabled()
-    && !lookup_bool("lx_replaying_class_setter")
+  !lookup_bool("lx_replaying_class_setter")
     && !rehearsal::rehearsing()
     && definition::origin::copy_provides() == 0
 }
@@ -855,9 +811,6 @@ pub(in crate::base_utilities) fn record_author_call(
   let counter = policy::policy_for(&binding, hook)
     .state_counter
     .and_then(|name| lookup_register_quiet(&s!("\\c@{name}")).map(|value| value.value_of()));
-  if policy::policy_for(&binding, hook).written {
-    watch_unwritten_setters();
-  }
   let block = AuthorBlock {
     index: 0,
     hook,
@@ -875,7 +828,6 @@ pub(in crate::base_utilities) fn record_author_call(
     keyval_tokens: keyvals.cloned(),
     epoch: 0,
     queue_position: queue_length(),
-    authors_queued: (fm_shadow_mode() == FmShadow::On).then(queued_author_count),
     stamp: Stamp::Projected,
     range: (real_base, real_base + len),
     tokens: stuff.clone(),

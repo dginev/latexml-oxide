@@ -4,7 +4,6 @@
 //! `an_environment_by_its_frames` the digested extents, `a_raw_environment_on_a_name_is_whole` what no frame says, `the_whole_block_queue_still_reads` `=2`.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::set_fm_shadow_override;
 use regex::Regex;
 
 use super::perfect_kernel_batch84b::creators;
@@ -21,15 +20,8 @@ macro_rules! repro {
 
 /// Convert `tex`: the log and the XML.
 pub(super) fn run(tex: &str) -> (String, String) {
-  let (log, xml, ()) = convert_files_with_setup_then(
-    tex,
-    &[],
-    Some("ar5iv.sty"),
-    move || {
-      set_fm_shadow_override(Some(true));
-    },
-    |_| (),
-  );
+  let (log, xml, ()) =
+    convert_files_with_setup_then(tex, &[], Some("ar5iv.sty"), move || {}, |_| ());
   (log, xml)
 }
 

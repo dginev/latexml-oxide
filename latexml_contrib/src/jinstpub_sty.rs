@@ -15,7 +15,6 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   binding: "jinstpub.sty",
   email_owner: FmEmailOwner::SpelledElseOrder,
   cite: "OD #801, #805 (jinstpub's placement: steps 1 and 4)",
-  written: true,
   ..FM_KERNEL_CONVENTIONS
 };
 

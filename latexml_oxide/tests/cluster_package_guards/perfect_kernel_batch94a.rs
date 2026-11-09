@@ -8,7 +8,6 @@
 //! same XML, notes included. Every repro compiles clean with pdflatex (TL 2025).
 
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::set_fm_shadow_override;
 use serde_json::Value;
 
 use super::{
@@ -227,12 +226,7 @@ fn without_ids(xml: &str) -> String {
 
 /// The default mode's XML of `tex`, no Error or Warning.
 fn default_mode_xml(tex: &str) -> String {
-  let (log, xml, ()) = convert_with_setup_then(
-    tex,
-    Some("ar5iv.sty"),
-    || set_fm_shadow_override(None),
-    |_| (),
-  );
+  let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| ());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   xml
 }

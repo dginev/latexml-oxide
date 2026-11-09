@@ -17,7 +17,6 @@ use crate::{
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "acmart",
   binding: "acmart.cls",
-  written: true,
   cite: "acmart.cls:1620-1621 (several authors in one `\\author`); OD #942 (2311.10779, 2010.12245)",
   ..FM_KERNEL_CONVENTIONS
 };

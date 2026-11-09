@@ -6,7 +6,6 @@
 //! the same XML. Every repro compiles clean with pdflatex (TL 2025).
 
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::set_fm_shadow_override;
 use serde_json::Value;
 
 use super::{
@@ -45,12 +44,7 @@ pub(super) fn creators_with_notes(xml: &str) -> Vec<Vec<String>> {
 /// The default mode's XML creators with their notes (no shadow switch: what the fleet writes), converted clean.
 #[track_caller]
 pub(super) fn default_mode_creators(tex: &str) -> Vec<Vec<String>> {
-  let (log, xml, ()) = convert_with_setup_then(
-    tex,
-    Some("ar5iv.sty"),
-    || set_fm_shadow_override(None),
-    |_| (),
-  );
+  let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| ());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   creators_with_notes(&xml)
 }

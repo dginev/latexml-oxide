@@ -53,7 +53,6 @@
 use std::{path::Path, process::Command};
 
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::set_fm_shadow_override;
 use serde_json::Value;
 
 use super::{
@@ -74,12 +73,7 @@ macro_rules! repro {
 /// The default mode's log and XML (no shadow switch: what the fleet writes).
 #[track_caller]
 fn default_mode(tex: &str) -> (String, String) {
-  let (log, xml, ()) = convert_with_setup_then(
-    tex,
-    Some("ar5iv.sty"),
-    || set_fm_shadow_override(None),
-    |_| (),
-  );
+  let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| ());
   (log, xml)
 }
 

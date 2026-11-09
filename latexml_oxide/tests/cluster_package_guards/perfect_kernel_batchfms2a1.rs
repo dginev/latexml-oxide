@@ -1,16 +1,16 @@
-//! Guards for batch FM S2a.1: the frontmatter observer core in shadow mode (OXIDIZED_DESIGN_DIVERGENCES #837;
-//! KERNEL_CAPABILITIES K23). Under the shadow switch (`LATEXML_FM_SHADOW=1`, here the thread's override) each
-//! `\author`-family call is a ledger block whose stamped tokens are rehearsed under the Layer-B event bindings and lexed
-//! into events; the guards assert those event lists for the design probes (symbol lines, a user mark macro), the
-//! gretsi shared-mark repro, 2401.16957's `,\inst` shape and the SYNC frontmatter rows' shapes, that the conversion's
-//! XML is byte-identical with the switch on and off, and that the CLI writes `<dest>.fmshadow.json` only under the
-//! switch. Every probe compiles clean with pdflatex (TL 2025) and converts with no Error or Warning.
-use std::{cell::Cell, process::Command};
+//! Guards for batch FM S2a.1: the frontmatter observer core (OXIDIZED_DESIGN_DIVERGENCES #837; KERNEL_CAPABILITIES
+//! K23). Each `\author`-family call is a ledger block whose stamped tokens are rehearsed under the Layer-B event bindings
+//! and lexed into events (read here through the ledger's JSON, `fm_shadow_json`); the guards assert those event lists
+//! for the design probes (symbol lines, a user mark macro), the gretsi shared-mark repro, 2401.16957's `,\inst` shape and
+//! the SYNC frontmatter rows' shapes, and that the rehearsal leaves nothing behind. (The census switch
+//! `LATEXML_FM_SHADOW` and the CLI's `<dest>.fmshadow.json` went in DEL4.) Every probe compiles clean with pdflatex
+//! (TL 2025) and converts with no Error or Warning.
+use std::cell::Cell;
 
 use latexml::util::test::{
   convert_files_with_setup_then, convert_with_setup_then, error_count, warning_count,
 };
-use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
+use latexml_engine::base_utilities::fm_shadow_json;
 use serde_json::Value;
 
 /// The shadow JSON of a conversion, parsed; for a written family's paper (revtex, ams) the writer must have kept the
@@ -70,12 +70,7 @@ pub(super) fn parsed_held(json: &str, why: &str) -> Value {
 
 /// Convert `tex` (with `preload`) under the shadow switch: the log, the XML, and the shadow ledger as JSON.
 pub(super) fn shadow(tex: &str, preload: Option<&str>) -> (String, String, Value) {
-  let (log, xml, json) = convert_with_setup_then(
-    tex,
-    preload,
-    || set_fm_shadow_override(Some(true)),
-    |_| fm_shadow_json(),
-  );
+  let (log, xml, json) = convert_with_setup_then(tex, preload, || {}, |_| fm_shadow_json());
   let json: Value = parsed(&json);
   (log, xml, json)
 }
@@ -561,29 +556,15 @@ fn font_switch_inside_a_run_keeps_the_name() {
   ]]);
 }
 
-/// The log of a conversion without its run-specific parts (the timings, the sizes written, the temporary source path).
-fn stable_log(log: &str) -> Vec<String> {
-  log
-    .lines()
-    .filter(|line| !line.contains(" sec") && !line.contains("bytes)") && !line.contains("started "))
-    .map(|line| match line.find("/tmp/") {
-      Some(at) => line[..at].to_string(),
-      None => line.to_string(),
-    })
-    .collect()
-}
-
-/// The census switch decides nothing: a conversion's XML and log are the same with the shadow switch on and in the
-/// default mode (the fleet's: a written family's paper written in both, the kernel family's since 93a, OD #925), and
-/// the diagnostics with it off the same — here the
+/// The observer's rehearsal leaves nothing behind (the census switch that compared it with the observer off went in DEL4):
+/// nothing it reads lands in the body — here the
 /// symbol-line probe, the gretsi repro (blocks rehearsed, API calls recorded) and the review's adversarial shapes,
 /// whose rehearsal must leave nothing behind: an `\aftergroup` (it once leaked "LEAKED" into the body), a `\thanks`
 /// holding a `\label` with a `\ref` to it and a `\footnote` in `\author`, a `\gdef` and a `\stepcounter`, an unclosed
-/// `\begingroup` and an undefined command (each with its own diagnostics, counted exactly, the same either way); an
-/// `\input` in the field (review revfms2a1_2 finding 3: the rehearsal read the file again and the log gained a second
-/// `(Processing content …` note; the rehearsal silences progress notes).
+/// `\begingroup` and an undefined command; an `\input` in the field (review revfms2a1_2 finding 3: the rehearsal read the
+/// file again and the log gained a second `(Processing content …` note; the rehearsal silences progress notes).
 #[test]
-fn shadow_switch_leaves_the_xml_unchanged() {
+fn the_rehearsal_leaves_nothing_behind() {
   let doc = |preamble: &str, author: &str, body: &str| {
     format!(
       "\\documentclass{{article}}\n{preamble}\n\\title{{T}}\n\\author{{{author}}}\n\\begin{{document}}\n\\maketitle\n{body}\n\\end{{document}}\n"
@@ -642,32 +623,12 @@ fn shadow_switch_leaves_the_xml_unchanged() {
     (doc("", r"\input{auth_names}", "Body after."), (0, 0)),
   ];
   let files = [("auth_names.tex", AUTH_NAMES)];
-  for (tex, _) in cases {
-    let (on_log, on_xml, _) = convert_files_with_setup_then(
-      &tex,
-      &files,
-      Some("ar5iv.sty"),
-      || set_fm_shadow_override(Some(true)),
-      |_| fm_shadow_json(),
-    );
-    let (..) = convert_files_with_setup_then(
-      &tex,
-      &files,
-      Some("ar5iv.sty"),
-      || set_fm_shadow_override(Some(false)),
-      |_| fm_shadow_json(),
-    );
-    // (the default, the fleet's, gives the census switch's XML: a written family's paper — the kernel family's since
-    // 93a, OD #925 — written in both; with the observer off, today's old reader's)
-    let (default_log, default_xml, ()) = convert_files_with_setup_then(
-      &tex,
-      &files,
-      Some("ar5iv.sty"),
-      || set_fm_shadow_override(None),
-      |_| (),
-    );
-    assert_eq!(on_xml, default_xml, "{tex}");
-    assert_eq!(stable_log(&on_log), stable_log(&default_log), "{tex}");
+  // (each shape's diagnostics as first pinned beside it; not asserted since the flip, as before DEL4 — at `=2` the
+  // aftergroup shape counts its lost `LEAKED` box (0, 1), the undefined command (1, 1) and the `\input` field (0, 3))
+  for (tex, _) in &cases {
+    let (_, xml, ()) = convert_files_with_setup_then(tex, &files, Some("ar5iv.sty"), || {}, |_| ());
+    // (what a rehearsal leaks lands before the body's text: `<p>LEAKEDBody after.</p>`)
+    assert!(!xml.contains("LEAKEDBody"), "{tex}");
   }
 }
 
@@ -825,86 +786,4 @@ fn field_stamp_gives_back_its_argument() {
     .collect();
   assert_eq!(provs, expected);
   assert_eq!(base, 8);
-}
-
-/// The CLI writes `<dest>.fmshadow.json` beside the output under `LATEXML_FM_SHADOW=1` — the ledger's blocks with their
-/// events — and nothing without it; the XML is the same either way.
-#[test]
-fn cli_writes_the_shadow_dump_only_under_the_switch() {
-  let bin = env!("CARGO_BIN_EXE_latexml_oxide");
-  let workdir = tempfile::tempdir().expect("tempdir");
-  std::fs::write(
-    workdir.path().join("t.tex"),
-    "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^{1}$ \\and Bob Baker$^{2}$\\\\ $^1$Univ A\\\\ $^2$Univ B}\n\\maketitle\nBody.\n\\end{document}\n",
-  )
-  .expect("write t.tex");
-  let run = |dest: &str, on: bool| {
-    let mut command = Command::new(bin);
-    command
-      .args(["t.tex", "--dest", dest, "--nocomments", "--timeout=110"])
-      .current_dir(workdir.path())
-      .env_remove("LATEXML_FM_SHADOW");
-    if on {
-      command.env("LATEXML_FM_SHADOW", "1");
-    }
-    let output = command.output().expect("spawn");
-    String::from_utf8_lossy(&output.stderr).replace('\u{1b}', "")
-  };
-  let on_log = run("on.xml", true);
-  let off_log = run("off.xml", false);
-  assert_eq!(
-    (error_count(&on_log), warning_count(&on_log)),
-    (0, 0),
-    "{on_log}"
-  );
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let read = |name: &str| std::fs::read_to_string(workdir.path().join(name));
-  assert_eq!(
-    read("on.xml").expect("on.xml"),
-    read("off.xml").expect("off.xml")
-  );
-  assert!(read("off.xml.fmshadow.json").is_err());
-  let json: Value =
-    serde_json::from_str(&read("on.xml.fmshadow.json").expect("the shadow dump")).expect("json");
-  assert_eq!(blocks(&json), [[
-    "N:Ann Able",
-    "M:1",
-    "S:and",
-    "N:Bob Baker",
-    "M:2",
-    "B",
-    "M:1^",
-    "N:Univ A",
-    "B",
-    "M:2^",
-    "N:Univ B"
-  ]]);
-  let block = json["entries"]
-    .as_array()
-    .and_then(|entries| entries.iter().find(|e| e["kind"] == "author"))
-    .expect("an author block");
-  assert_eq!(
-    (
-      block["hook"].as_str(),
-      block["policy"].as_str(),
-      block["stamp"].as_str(),
-      block["replace"].as_bool()
-    ),
-    (
-      Some("\\lx@add@authors@adaptive"),
-      Some("kernel"),
-      Some("kernel"),
-      Some(true)
-    )
-  );
-  assert_eq!(
-    json["summary"]["with_events"].as_u64(),
-    Some(1),
-    "{}",
-    json["summary"]
-  );
 }

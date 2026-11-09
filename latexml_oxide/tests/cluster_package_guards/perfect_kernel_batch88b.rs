@@ -34,7 +34,7 @@
 use std::{path::Path, process::Command};
 
 use latexml::util::test::convert_with_setup_then;
-use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
+use latexml_engine::base_utilities::fm_shadow_json;
 use serde_json::Value;
 
 use super::{
@@ -209,12 +209,7 @@ fn cas_entries_are_labelled_by_the_letter_their_counter_prints() {
 /// <text>; …`) when it gives any, then the block's affiliations (`block | …`) when it holds any — and the dump.
 #[track_caller]
 fn xml_and_shadow(tex: &str) -> (String, Vec<String>, Value) {
-  let (log, xml, json) = convert_with_setup_then(
-    tex,
-    Some(PRELOAD),
-    || set_fm_shadow_override(Some(true)),
-    |_| fm_shadow_json(),
-  );
+  let (log, xml, json) = convert_with_setup_then(tex, Some(PRELOAD), || {}, |_| fm_shadow_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let dump: Value = super::perfect_kernel_batchfms2a1::parsed(&json);
   let texts = |list: &Value| -> String {

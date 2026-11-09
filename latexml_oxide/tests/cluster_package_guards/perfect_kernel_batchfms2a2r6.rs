@@ -7,17 +7,12 @@
 //! an address list's note never placed (finding 6). Every probe compiles clean with pdflatex (TL 2025) and converts with
 //! no Error or Warning, and the XML is byte-identical with the switch on and off.
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
+use latexml_engine::base_utilities::fm_shadow_json;
 use serde_json::Value;
 
 /// Convert `tex` under the shadow switch, asserting a clean conversion: the whole dump.
 fn dump(tex: &str) -> Value {
-  let (log, _, json) = convert_with_setup_then(
-    tex,
-    Some("ar5iv.sty"),
-    || set_fm_shadow_override(Some(true)),
-    |_| fm_shadow_json(),
-  );
+  let (log, _, json) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| fm_shadow_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   super::perfect_kernel_batchfms2a1::parsed(&json)
 }
@@ -139,29 +134,4 @@ fn an_address_lists_lines_place_their_notes() {
     "  c email bob.baker@example.org | owner:spelled ruling3:one-per-print",
     "B thanks Corresponding author. | note:address-line",
   ]);
-}
-
-/// The r6 shapes of a family the observer does not write leave the XML byte-identical with the switch on and off
-/// (shadow only). (The llncs shapes, GROUP and GROUP_UNREQUESTED, are written since 92c, OD #923: their guard's outcome
-/// is the writer's `written`, `perfect_kernel_batchfms2a1::parsed`.)
-#[test]
-fn r6_shapes_leave_the_xml_unchanged() {
-  // (the first case only: the RED returned there at `=2`, DEL1)
-  let tex = REPLACED;
-  let run = |on: bool| {
-    convert_with_setup_then(
-      tex,
-      Some("ar5iv.sty"),
-      move || set_fm_shadow_override(Some(on)),
-      |_| (),
-    )
-  };
-  let (on_log, on_xml, ()) = run(true);
-  let (_, off_xml, ()) = run(false);
-  assert_eq!(on_xml, off_xml, "{tex}");
-  assert_eq!(
-    (error_count(&on_log), warning_count(&on_log)),
-    (0, 0),
-    "{on_log}"
-  );
 }

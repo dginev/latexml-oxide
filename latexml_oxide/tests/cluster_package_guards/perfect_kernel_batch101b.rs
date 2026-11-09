@@ -10,7 +10,6 @@
 //! affiliation list's address run (`entry_calls`), with the frontmatter observer on and off — its writer read that
 //! line right already, the token reader now agrees.
 use latexml::util::test::convert_with_setup_then;
-use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -24,17 +23,11 @@ macro_rules! repro {
   };
 }
 
-/// Converts `tex` in process (the frontmatter observer as `shadow` sets it, the default when `None`), checks it has no
-/// Error and no Warning, and returns its creators, then its pubnotes, each whitespace run one space and without
+/// Converts `tex` in process, checks it has no Error and no Warning, and returns its creators, then its pubnotes, each whitespace run one space and without
 /// `xml:id`s.
 #[track_caller]
-fn creators_and_pubnotes(tex: &str, shadow: Option<bool>) -> (String, Vec<String>) {
-  let (log, xml, ()) = convert_with_setup_then(
-    tex,
-    Some("ar5iv.sty"),
-    move || set_fm_shadow_override(shadow),
-    |_| (),
-  );
+fn creators_and_pubnotes(tex: &str) -> (String, Vec<String>) {
+  let (log, xml, ()) = convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| ());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let xml = xml.split_whitespace().collect::<Vec<_>>().join(" ");
   let mut without_ids = String::with_capacity(xml.len());
@@ -68,19 +61,19 @@ const MARKED_CREATORS: &str = r#"<creator role="author"> <personname>Ann Able</p
 #[test]
 fn an_address_line_carrying_a_note_in_a_marked_block_is_one() {
   assert_eq!(
-    creators_and_pubnotes(repro!("address_line_note_marked_block"), None),
+    creators_and_pubnotes(repro!("address_line_note_marked_block")),
     (MARKED_CREATORS.to_string(), vec![
       r#"<pubnote role="thanks">Submitted somewhere.</pubnote>"#.to_string()
     ])
   );
   assert_eq!(
-    creators_and_pubnotes(repro!("address_line_footnote_marked_block"), None),
+    creators_and_pubnotes(repro!("address_line_footnote_marked_block")),
     (MARKED_CREATORS.to_string(), vec![
       "<pubnote>Submitted somewhere.</pubnote>".to_string()
     ])
   );
   assert_eq!(
-    creators_and_pubnotes(repro!("address_line_note_labelled_marked_block"), None),
+    creators_and_pubnotes(repro!("address_line_note_labelled_marked_block")),
     (
       r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ X, Italy</contact> <contact name="E-mail: " role="email"><text font="typewriter">ann.able@x.it</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ Y, Italy</contact> <contact name="E-mail: " role="email"><text font="typewriter">bob.baker@y.it</text></contact> </creator>"#
         .to_string(),
@@ -94,7 +87,7 @@ fn an_address_line_carrying_a_note_in_a_marked_block_is_one() {
 #[test]
 fn an_address_line_carrying_a_note_in_an_unmarked_block_is_one() {
   assert_eq!(
-    creators_and_pubnotes(repro!("address_line_note_unmarked_block"), None),
+    creators_and_pubnotes(repro!("address_line_note_unmarked_block")),
     (
       r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ X, Italy</contact> <contact name="Email: " role="email"><text font="typewriter">ann.able@x.it</text></contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ X, Italy</contact> <contact name="Email: " role="email"><text font="typewriter">bob.baker@y.it</text></contact> </creator>"#
         .to_string(),

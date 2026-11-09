@@ -7,8 +7,9 @@
 //! and the `\lx@add@authors*` hook it called. Each declaration reproduces a convention the binding's family already
 //! had and cites the OXIDIZED_DESIGN_DIVERGENCES entry or the witness it reproduces. The kernel's own blocks (`\author`
 //! still LaTeXML's, under `article` or any class whose bindings declare none) take [`KERNEL`] (Perl's `@authorsplits`
-//! reading, Base_Utility.pool.ltxml:676-700), written (OD #925); a binding owning `\author` that declares none takes the
-//! same reading, `UNDECLARED`, written since every remaining family passed its gate in one batch (97e, OD #948).
+//! reading, Base_Utility.pool.ltxml:676-700, OD #925); a binding owning `\author` that declares none takes the same
+//! reading, `UNDECLARED` (OD #948). Every family is read and emitted: the `written` flag that gated the S2b writer per
+//! family went with the writer (DEL4).
 
 use std::rc::Rc;
 
@@ -90,11 +91,6 @@ pub struct Policy {
   /// (`annotations=` of `\author[a,b]`) and a mark typed by hand do, the places keys in order spell (0907.5014's
   /// `Denes Molnar$^{a,b}$`)
   pub keyed_labels:     bool,
-  /// the observer writes this family's frontmatter (FM S2b, `writer/`): the family passed its per-family gate — its own
-  /// seeded classified-precision sample ≥ 95 % right and its unclassified rate < 0.5 % (main-session decision at int63,
-  /// OXIDIZED_DESIGN_DIVERGENCES #837 "S2a.2 r5 at landing"); what differs between its output and the observer's
-  /// reading is written where the writer's operations explain it (`writer::plan`), each other item left as today's
-  pub written:          bool,
   /// the commands that part a block's lines or columns whatever they print here, as the class's title page does, each declared by
   /// the binding owning the `\author` they stand in: OmniBus's no-op `\alignauthor` a column (inst_support_sty.rs; what sig-alternate.cls,
   /// sigchi.cls print, whose `\alignauthor` read raw is the tabular it makes), ijcai's `\affiliations` and `\emails` a section
@@ -106,9 +102,8 @@ pub struct Policy {
 }
 
 /// The kernel's conventions: the blocks of the kernel's `\author` under a class whose bindings declare none (`article`
-/// and every class without a frontmatter binding of its own), written (FM stage 7, OD #925: the writer applies the
-/// reading where its operations explain every difference, else today's output stays); and the template a declaration
-/// completes (`..KERNEL`, each declaration stating its own `written`).
+/// and every class without a frontmatter binding of its own, OD #925); and the template a declaration completes
+/// (`..KERNEL`).
 pub const KERNEL: Policy = Policy {
   name:             "kernel",
   binding:          "*",
@@ -125,25 +120,18 @@ pub const KERNEL: Policy = Policy {
   unmarked_notes:   false,
   email_in_place:   false,
   keyed_labels:     false,
-  written:          true,
   block_breaks:     &[],
   cite:             "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4; OD #925",
 };
 
 /// The conventions of a binding owning the `\author` meaning that declares none of its own (JHEP.cls, aas_support.sty,
 /// sn-jnl.cls, …; elsart_support_core.sty declares its own since 97e r2), or of a meaning no binding owns (the
-/// document's own, a file read raw, the fallback class's): the kernel's reading, written — the family passed its gate
-/// (OD #837 S2b) in 97e's one-batch gate (OD #948); a binding failing its own declares `written: false`.
+/// document's own, a file read raw, the fallback class's): the kernel's reading (OD #948).
 pub const UNDECLARED: Policy = Policy {
   name: "undeclared",
-  written: true,
   cite: "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); OD #925",
   ..KERNEL
 };
-
-/// The binding an API call is given when its setter's expansion went unobserved (`ledger::watch_unwritten_setters`):
-/// no family's, so not written whatever `UNDECLARED` says ([`family_written`]).
-pub const UNOBSERVED_BINDING: &str = "unobserved";
 
 /// The owner name the ledger gives the kernel's `\author` (`ledger::meaning_owner`, `ledger::policy_binding`).
 pub const KERNEL_BINDING: &str = "kernel";
@@ -199,20 +187,6 @@ pub fn declare_frontmatter_conventions(conventions: &'static Policy) {
 
 /// Whether a binding declared conventions of its own (the class fallback's test, `ledger::policy_binding`).
 pub fn has_entry(binding: &str) -> bool { declared(binding).is_some() }
-
-/// Whether the family of the binding `binding` is written ([`Policy::written`]): the kernel's (its own blocks, [`KERNEL`]),
-/// or a binding with a declaration of its own that is written (any of its hooks) — what an API call a setter of the
-/// binding made is written under (`ledger::ApiCall::binding`, `writer::unwritten_calls`); `UNDECLARED` for any other
-/// but [`UNOBSERVED_BINDING`], whose calls no family is known to have made: never written.
-pub fn family_written(binding: &str) -> bool {
-  if binding == UNOBSERVED_BINDING {
-    return false;
-  }
-  match declared(binding) {
-    Some(d) => d.iter().any(|p| p.written),
-    None => undeclared(binding).written,
-  }
-}
 
 /// Whether a binding declared that its class's `\email` prints in place ([`Policy::email_in_place`], any of its hooks).
 pub fn declares_email_in_place(binding: &str) -> bool {
@@ -290,15 +264,6 @@ mod tests {
       policy_for("undeclared_binding", "\\lx@add@authors@append").name,
       "undeclared"
     );
-    assert!(policy_for("kernel", "\\lx@add@authors@adaptive").written);
-    // (every family written since 97e: an undeclared binding's blocks too)
-    assert!(policy_for("undeclared_binding", "\\lx@add@authors@append").written);
-    // (a setter's family, any hook's declaration: an API call's, `ledger::ApiCall::binding` — 95b r3; an unobserved
-    // call is no family's, never written)
-    assert!(family_written("kernel"));
-    assert!(family_written("synthetic_binding"));
-    assert!(family_written("undeclared_binding"));
-    assert!(!family_written(UNOBSERVED_BINDING));
     // (a declaration again for a hook replaces the earlier in its place: a binding loaded again)
     declare_frontmatter_conventions(&APPEND_HOOK);
     assert_eq!(

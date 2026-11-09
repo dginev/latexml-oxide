@@ -10,19 +10,14 @@
 //! byte-identical with the switch on and off.
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::{
-  FmEvent, FmEventKind, FmInput, FmResolved, fm_resolve, fm_shadow_json, set_fm_shadow_override,
+  FmEvent, FmEventKind, FmInput, FmResolved, fm_resolve, fm_shadow_json,
 };
 use serde_json::Value;
 
 /// Convert `tex` (beside `files`) under the shadow switch, asserting a clean conversion: the whole dump.
 fn dump_with(tex: &str, files: &[(&str, &str)]) -> Value {
-  let (log, _, json) = convert_files_with_setup_then(
-    tex,
-    files,
-    Some("ar5iv.sty"),
-    || set_fm_shadow_override(Some(true)),
-    |_| fm_shadow_json(),
-  );
+  let (log, _, json) =
+    convert_files_with_setup_then(tex, files, Some("ar5iv.sty"), || {}, |_| fm_shadow_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   super::perfect_kernel_batchfms2a1::parsed(&json)
 }
@@ -121,48 +116,11 @@ fn block_entry(dump: &Value) -> &Value {
     .expect("a block")
 }
 
-const ORDER: &str = r#"\documentclass{article}
-\usepackage{hyperref}
-\begin{document}
-\title{T}
-\author{Ann Able\thanks{\url{ann@x.org}, \url{zed@y.org}}\thanks{Second note.} \and Bob Baker}
-\maketitle
-Text.
-\end{document}
-"#;
-const ORDER_CONTACTS: &str = r#"\documentclass{article}
-\usepackage{hyperref}
-\begin{document}
-\title{T}
-\author{Ann Able\thanks{\url{https://www.annable.org/}} \\ ann.able@y.org}
-\maketitle
-Text.
-\end{document}
-"#;
-
 const OWNERLESS_ONE: &str = r#"\documentclass{article}
 \usepackage{hyperref}
 \begin{document}
 \title{T}
 \author{Ann Able \and Bob Baker\\ ann@x.org, bob@x.org\thanks{Code: \url{https://example.org/proj/tool}}}
-\maketitle
-Text.
-\end{document}
-"#;
-const OWNERLESS: &str = r#"\documentclass{article}
-\usepackage{hyperref}
-\begin{document}
-\title{T}
-\author{Ann Able \and Bob Baker\\ ann@x.org, bob@x.org\thanks{Code: \url{https://example.org/proj/tool}; Ann's page: \url{https://www.annable.org/}}}
-\maketitle
-Text.
-\end{document}
-"#;
-const OWNERLESS_SOLE: &str = r#"\documentclass{article}
-\usepackage{hyperref}
-\begin{document}
-\title{T}
-\author{Ann Able\\ ann@x.org\thanks{Code: \url{https://github.com/annable/tool}}}
 \maketitle
 Text.
 \end{document}
@@ -186,16 +144,6 @@ fn an_ownerless_notes_link_is_never_the_blocks() {
     "B thanks Code: https://example.org/proj/tool | note:address-line",
   ]);
 }
-
-const HOMEPAGE: &str = r#"\documentclass{article}
-\usepackage{hyperref}
-\begin{document}
-\title{T}
-\author{Ann Able\thanks{Code: \url{https://github.com/annable/tool}. Pages: \url{https://www.bobbaker.org/}, \url{https://sites.google.com/view/catcole}, \url{https://cole.github.io/project}, \url{https://example.org/~dole/index.html}, \url{https://example.org/dandole/talk.mp4}, \href{mailto:dan.dole@x.org}{dan.dole}.} \and Bob Baker \and Cat Cole \and Dan Dole}
-\maketitle
-Text.
-\end{document}
-"#;
 
 const JPCONF_CLASS: &str = include_str!(
   "../../../tools/perfect_kernel/repros/sectioning-frontmatter/jpconf_copy/jpconf.cls"
@@ -415,45 +363,4 @@ fn an_unlabelled_entry_is_no_legend() {
     "C Ann Able [1] | line:names",
     "  a Corresponding author. | ruling1:request label:unrequested owner:block owner:sole-author",
   ]);
-}
-
-/// The r8 shapes leave the XML byte-identical under the census switch and in the default mode (the fleet's; shadow
-/// only, or written in both — the kernel family since 93a, OD #925), and byte-identical with the observer off where the
-/// writer holds the paper back (GLUED and, since 97c, TEXT_GLYPH are written: their guards pin the XML) — but `API_LEGEND`, a REVTeX
-/// paper the writer writes (FM S2b, `perfect_kernel_batchfms2b::a_marked_affiliation_is_cut_at_its_marks`).
-#[test]
-fn r8_shapes_leave_the_xml_unchanged() {
-  let jpfnx = JPCONF_CLASS.replace("\\ProvidesClass{jpconf}", "\\ProvidesClass{jpfnx}");
-  let shapes: [(&str, Vec<(&str, &str)>); 10] = [
-    (ORDER, vec![]),
-    (ORDER_CONTACTS, vec![]),
-    (OWNERLESS_ONE, vec![]),
-    (OWNERLESS, vec![]),
-    (OWNERLESS_SOLE, vec![]),
-    (HOMEPAGE, vec![]),
-    (JPCONF, vec![("jpconf.cls", JPCONF_CLASS)]),
-    (JPFNX, vec![("jpfnx.cls", jpfnx.as_str())]),
-    (GLUED, vec![]),
-    (TEXT_GLYPH, vec![]),
-  ];
-  for (tex, files) in shapes {
-    let run = |on: Option<bool>| {
-      convert_files_with_setup_then(
-        tex,
-        &files,
-        Some("ar5iv.sty"),
-        move || set_fm_shadow_override(on),
-        |_| (),
-      )
-    };
-    let (_, on_xml, ()) = run(Some(true));
-    // (the default, as the fleet runs, writes as the census does; the observer off is today's XML, which a paper the
-    // writer holds back keeps — a written one, GLUED, differs from it by design and its guard pins its XML: review
-    // rev93a S3, against the default alone the check was a tautology for a written kernel shape)
-    let (_, default_xml, ()) = run(None);
-    assert_eq!(on_xml, default_xml, "{tex}");
-    if tex != GLUED && tex != TEXT_GLYPH {
-      let (_, _, ()) = run(Some(false));
-    }
-  }
 }

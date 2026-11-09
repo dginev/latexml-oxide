@@ -233,7 +233,6 @@ fn in_turn(docs: Vec<&'static str>) -> Vec<(Vec<String>, String)> {
 
   use latexml::converter::Converter;
   use latexml_core::common::{Config, OutputFormat};
-  use latexml_engine::base_utilities::set_fm_shadow_override;
   std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
     .spawn(move || {
@@ -242,7 +241,6 @@ fn in_turn(docs: Vec<&'static str>) -> Vec<(Vec<String>, String)> {
       let runs = docs
         .into_iter()
         .map(|tex| {
-          set_fm_shadow_override(Some(true));
           let opts = Config {
             format: OutputFormat::XML,
             include_comments: Some(false),
@@ -321,9 +319,7 @@ fn a_lost_name_spells_its_own_address() {
         &tex,
         &[("emit_jair_rows.sty", style)],
         Some("ar5iv.sty"),
-        move || {
-          latexml_engine::base_utilities::set_fm_shadow_override(Some(true));
-        },
+        move || {},
         |_| (),
       );
       (log, xml)

@@ -30,14 +30,7 @@ fn ijcai_sectioned(stuff: &Tokens) -> Result<bool> {
 /// (`AuthorBlock::sectioned`), whose held Errors are an IJCAI block's section markers (`resolver::Input::Block`'s
 /// `markers`) — never a raw `\@maketitle`'s own `\name`/`\email` held in a plain `\author` (1908.02923's JAIR rows;
 /// `perfect_kernel_batch63::author_markup_title_code_forms`), whose reading ended at the marker, its address a note.
-/// Off without the census reads neither: false.
-fn ijcai_block(stuff: &Tokens) -> Result<bool> {
-  if fm_emit_mode() == 2 || fm_shadow_enabled() {
-    ijcai_sectioned(stuff)
-  } else {
-    Ok(false)
-  }
-}
+fn ijcai_block(stuff: &Tokens) -> Result<bool> { ijcai_sectioned(stuff) }
 
 /// `LATEXML_FM_EMIT=2` (OD #980): one whole block queued for the call, as the reader won't be cutting it, which the emitter
 /// takes at the flush (`observer::writer::emit`): Perl's whole-block creator (`author_block::whole_block_author`). A `late`

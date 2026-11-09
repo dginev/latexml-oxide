@@ -10,7 +10,6 @@ use crate::prelude::*;
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "mn2e",
   binding: "mn2e_support.sty",
-  written: true,
   cite: "mnras.cls:1072-1079 (`\\newauthor`: the one author tabular); OD #942 (0810.2791)",
   ..FM_KERNEL_CONVENTIONS
 };

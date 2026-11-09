@@ -15,7 +15,6 @@
 //! (`post::sub_labels`; BESIII's `67a,67c` beside `$^{a}$`/`$^{c}$` "Also at …", 2201.02056).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::set_fm_shadow_override;
 
 macro_rules! repro {
   ($name:literal) => {
@@ -29,15 +28,8 @@ macro_rules! repro {
 
 /// Convert `tex`: the log and the XML.
 fn run(tex: &str) -> (String, String) {
-  let (log, xml, ()) = convert_files_with_setup_then(
-    tex,
-    &[],
-    Some("ar5iv.sty"),
-    move || {
-      set_fm_shadow_override(None);
-    },
-    |_| (),
-  );
+  let (log, xml, ()) =
+    convert_files_with_setup_then(tex, &[], Some("ar5iv.sty"), move || {}, |_| ());
   (log, xml)
 }
 
