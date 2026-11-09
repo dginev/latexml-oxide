@@ -256,6 +256,28 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
         // (a Name the reading drops by its own rule is the separator it reads it as, its word beside the names: a byline's
         // "by", `By~~{\scshape Bryna Kra}`, 2603.27258; 2603.25922, 2604.07186, 2604.12864)
         let separated: Vec<Event>;
+        // (an earlier list setter call of the block the written one replaces prints nothing: `Ledger::replaced`)
+        let unreplaced: Vec<Event>;
+        let events = if ledger
+          .replaced
+          .iter()
+          .any(|(at, run)| *at == index && run.is_some())
+        {
+          let within = |span: (u16, u16)| {
+            ledger
+              .replaced
+              .iter()
+              .any(|&(at, run)| at == index && run.is_some_and(|(s, t)| s <= span.0 && span.1 <= t))
+          };
+          unreplaced = events
+            .iter()
+            .filter(|e| !e.span.is_some_and(within))
+            .cloned()
+            .collect();
+          &unreplaced
+        } else {
+          events
+        };
         let events = if placed.dropped.iter().any(|(at, ..)| *at == index) {
           separated = events
             .iter()
@@ -422,7 +444,11 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
   };
   for (index, entry) in ledger.entries().iter().enumerate() {
     let piece = match entry {
-      Entry::Api(call) if !call.cleared && creator_call(&call.tag, &call.parent) => {
+      Entry::Api(call)
+        if !call.cleared
+          && !ledger.replaced.contains(&(call.index, None))
+          && creator_call(&call.tag, &call.parent) =>
+      {
         if let Some(label) = call_label(&call.attrs) {
           beside.add(label, 1);
         }

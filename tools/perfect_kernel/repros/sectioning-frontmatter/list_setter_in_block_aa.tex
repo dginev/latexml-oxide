@@ -1,0 +1,12 @@
+% witness: the cond-mat0605195 shape under aa (aa.cls's `\institute`, the kernel's `\author` one block)
+% oracle:  pdflatex: aa.cls is not in TL 2025 (invalid input for the oracle); aa.cls:736-757 numbers the `\and` pieces
+% engines: rust base (=2) = the emitter stays out, whole blocks plus the S2b writer; DEL3 = the emitter
+% expect:  Ann Able holds Univ X, Town; Bob Baker holds Lab Y, City; 0 errors, 0 warnings
+% status:  RED (base: the emitter's Warning) -> GREEN (DEL3)
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}\institute{Univ X, Town \and Lab Y, City}}
+\maketitle
+Text.
+\end{document}

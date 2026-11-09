@@ -1,0 +1,14 @@
+% witness: cond-mat0605195 (svjour: `\and{M. Li~Vigni\inst{1}\institute{… \and …}}`, the institute list in the last name's group)
+% oracle:  pdflatex (svjour.cls + svepjST.clo of 2502.07804) 0 errors: "Ann Able1 , Bob Baker2 , and Cy Coe1"; "1 Univ X, Town · 2 Lab Y, City"
+% engines: Perl = each piece a creator, the institutes numbered for the `\inst` marks; rust base (=2) = the emitter stays out
+%          ("a binding's list setter called inside the block"), whole blocks plus the S2b writer; DEL3 = the emitter
+% expect:  Ann Able and Cy Coe hold Univ X, Town; Bob Baker holds Lab Y, City; no mark in a name; 0 errors, 0 warnings
+% status:  RED (base: the emitter's Warning) -> GREEN (DEL3)
+\documentclass[epjST]{svjour}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}
+\and{Cy Coe\inst{1}\institute{Univ X, Town \and Lab Y, City}}}
+\maketitle
+Text.
+\end{document}

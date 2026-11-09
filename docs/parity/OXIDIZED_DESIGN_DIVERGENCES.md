@@ -32974,3 +32974,36 @@ hep-ex9903035); the IJCAI marker is read before the whole-block branch, and a `l
 witnesses: `docs/parity/FRONTMATTER_CONTENT_RESIDUAL_AT_EMIT2.tsv` — ≈ 0.1 % of dev papers losing three or more words (e-mail
 local parts, some affiliations, funding and copyright lines, an abstract inside a revtex3 `\address`), ≈ 0.3 % one or two
 label or separator words. Guards: `perfect_kernel_batchne1`, `_batchne2`, `_batchne3`, `_batchcl6`-`_batchcl9`.
+
+### 982. A block calling a binding's list setter is the emitter's: the setter's call written as it is, its entries the list the marks request (DEL3)
+
+**Perl:** `\author{… \inst{1} … \institute{A \and B}}` digests its block whole at the call; the binding's `\institute`
+(sv_support.sty.ltxml:40-42, inst_support.sty.ltxml:36-38, aa.cls, llncs.cls) clears the affiliations and queues its
+pieces `labelseq=affiliation`, numbered for the `\inst` marks. **Was (CL2b, `=2`):** the emitter stayed out of any paper
+with such a block (`LIST_SETTER_IN_BLOCK`), each block written whole and the S2b writer (`write_observed_frontmatter`)
+comparing it with the reading — its last `=2` path. **Now:** the emitter reads the block as any other
+(`writer/emit.rs` `stays_out` has no list-setter decline). For each written block whose ledger records a list setter
+(`AuthorBlock::list_setter`, the binding's definition holding `\lx@clear@frontmatter`): (1) the rehearsal's Contact of
+each call that reads it whole (`\lx@fm@obs@affil`, its span opening with the setter's command) is the call
+(`list_setter_runs`); its items and everything inside it leave the reading (`without_list_setters`), and its balanced
+tokens (`list_setter_call`, `span_tokens_of`) are written after the flush's items, as the whole block digests it after
+the names' own contacts — the binding's digestion numbers or labels its entries; (2) a call the reading cut into the
+entries its marks label (`\institute{${}^1$Univ X\\ ${}^2$Univ Y}`) stays the reading's items; (3) either way the names
+keep the marks they print, as any block's (`per_author_marks`: 2502.07804's hand-typed `${}^{1}$`, which pdflatex, off
+and Perl print — review revDEL3 B1), an `\inst` printing nothing and requesting its entry; (4) the marks net skips a
+block whose call is written (the reading holds none of its entries); the insertion's orphan Warning still counts a
+request no entry answers; (5) the call written is the flush's last, and it replaces what its clear
+(`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`) would at the block, as pdflatex prints only the last list: an
+affiliation call queued before the block and an earlier call of the block leave the reading (`replaced_by_setter`) and
+the content check (`Ledger::replaced`) — digested inside the flush, the call's own clear meets an empty queue
+(`place::digest_front_matter` takes the queue first; review revDEL3 S1). The S2b writer no longer runs at
+`=2` (the flush emitted). Witnesses: cond-mat0605195 (svjour, the setter in the last `\and` piece's group: the four
+creators and their institutes byte-identical to the writer's output, the stay-out Warning gone), 2502.07804 (svjour,
+marked lines after comma-parted names: creators equal; the ORCID links are written as the emitter writes every `=2`
+`\href` item, `ltx_href` with the paper's icon, where the whole block's `\lx@author@href` made OD #960's `ltx_orcid`).
+Population: 2 papers of 73,251 A/B-population papers (a source scan for `\institute` inside `\author`, 252 candidates
+converted; llncs's top-level one is taken out by `take_institutes`, eptcs's is no list setter). Repros
+`sectioning-frontmatter/list_setter_in_block_{sv_inst,sv_marked,llncs,aa,inst_support,sv_marked_typed,sv_earlier_institute,sv_two_calls}.tex`; guards
+`perfect_kernel_batchdel3` (one per binding's setter definition; for (3) and (5)
+`batchdel3_typed_marks_stay_on_the_names_of_a_written_setter_call`, `batchdel3_a_written_setter_call_replaces_a_list_before_the_block`,
+`batchdel3_the_last_setter_call_of_a_block_is_written`); `perfect_kernel_batchcl2::a_list_setter_in_an_author_block_is_read_by_the_emitter`.

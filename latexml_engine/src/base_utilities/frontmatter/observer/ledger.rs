@@ -3,7 +3,7 @@
 //! switch ([`super::shadow::fm_shadow_enabled`]) and never while the frontmatter is frozen (a replayed class setter, a
 //! speculative title-page run, the observer's own rehearsal: those calls are not the document's).
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::BTreeSet, rc::Rc};
 
 use latexml_core::{
   definition::{
@@ -198,7 +198,8 @@ pub(in crate::base_utilities) struct AuthorBlock {
   pub outcome:        Outcome,
   /// a binding's list setter the argument calls ([`list_setter_called`]): sv_support's `\institute` inside an author's
   /// group, `\and{Cy Coe\inst{1}\institute{Univ X \and Lab Y}}` (cond-mat0605195) — whose entries the binding numbers
-  /// for the marks to point to, which the rehearsal reads as one in-block affiliation (`rehearsal::install_event_bindings`)
+  /// for the marks to point to, which the rehearsal reads as one in-block affiliation (`rehearsal::install_event_bindings`);
+  /// the emitter writes the call as it is, after the block's names (`writer::emit::list_setter_runs`, 2502.07804)
   pub list_setter:    Option<&'static str>,
 }
 
@@ -335,6 +336,11 @@ pub(in crate::base_utilities) struct Ledger {
   /// recorded call is (a stand-in binding's copy's, [`records_now`]), in queue order: what the content check counts them
   /// by (`writer::emit::emit_commands`, `resolver::placed::content_check`)
   pub unrecorded:   Vec<ContentText>,
+  /// what a list setter call the emitter wrote replaces as its clear (`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`)
+  /// would at the block, which pdflatex never prints: an affiliation call queued before the block (its ledger index, no
+  /// span) and an earlier setter call of a block (the block's index and the call's span) — what the content check counts
+  /// no word of (`writer::emit::replaced_by_setter`, `resolver::placed::content_check`; review revDEL3 S1)
+  pub replaced:     BTreeSet<(usize, Option<(u16, u16)>)>,
   /// the census's (E0): why the writer's plan or re-part refused, its first refusal or the writer's own decline — what
   /// `writer: declined …` counts under in `ab_audit fmshadow`'s closed list (`writer::note_refusal`)
   pub refusal:      Option<String>,
@@ -815,7 +821,8 @@ fn queue_length() -> usize {
 /// sv_support.sty's, inst_support.sty's, aa.cls's and llncs.cls's `\institute`
 /// (`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`, then `labelseq=affiliation` entries), decided from the
 /// binding's definition, not a name list. In an author block the rehearsal reads such a call as one affiliation of the
-/// block, where the real call queues the numbered entries (cond-mat0605195).
+/// block, where the real call queues the numbered entries (cond-mat0605195): the emitter writes the call as it is, its
+/// entries the call's, none of the reading's items (`writer::emit::list_setter_runs`).
 fn list_setter_called(stuff: &Tokens) -> Option<&'static str> {
   let toks = stuff.unlist_ref();
   FRONTMATTER_SETTERS.iter().copied().find(|name| {
