@@ -32729,6 +32729,21 @@ but the fixes named above. Open (RED, no guard): an icon or a rule inside the li
 (`\href{mailto:a@x}{\rule{1ex}{1ex}\,a@x}`, review revP1br2 S3, repro `emit_a_cut_never_takes_an_icon`) goes with the e-mail;
 the switch off cuts the text alone, which needs the link's characters' own positions (the lexer reads `\href`'s text as its
 argument's ink). Off: byte-identical. Guards `perfect_kernel_batchp1e`, `perfect_kernel_batchp1c`.
+**KB2 (the cut keeps `=2`'s improvements; ruling 2026-11-08: strict porting keeps every improvement).** `=2` gives an entry
+back whole where P1b's cut would strand the phrase its address completes (`writer/address_cut.rs` `entry_cuts`,
+`strands_a_phrase`): a run with no label word the take-out takes (`take_labels`) after a colon or a "to" the cut keeps, the
+words before it on its line naming a contact (`names_a_contact`) — revtex4's `…, USA \\ $^{a}$Author to whom correspondence
+should be addressed: a@x` (2306.04726), `Correspondence to: a@x` (2004.11812), `Email for correspondence:` (2110.05460),
+`…, *Corresponding author: \texttt{a@x}` (2602.09324); a place's colon (`…, France: a@x`, 1103.3532) strands nothing and is
+cut. A cut e-mail printed as a formula (`dcook12$@$uwyo.edu`, 1409.0847) is written as its text, never its math tokens
+(`cut_at`), as off writes it. Off: unchanged. Open: an entry several authors hold whose address one owns (1409.0847's line
+under Cook, Dale and Staudaher; llncs's shared `\institute{Univ A, \texttt{a@x}}`, astro-ph0610446, cond-mat0610708,
+2309.10932) is cut on every holder, the co-holders' copies losing the address. Two remedies were tried and dropped: keeping
+the cut on the owner beside a whole copy on the others is two records of one printed entry, which the content check counts
+(`Warning:unexpected:frontmatter`); giving the entry back whole hands it to the Kind steps after the flush, which then lose or
+misplace e-mails of the paper's other entries (1103.3532: Chaari's and Pesquet's e-mails lost; 2604.06805: Xiong's
+`Correspondence:` e-mail on a nameless creator). Guards `perfect_kernel_batchkb2`; `perfect_kernel_batchp1e`'s read-on case
+pins `=2`'s whole entry beside off's cut.
 
 Guards `perfect_kernel_batchz4`.
 
