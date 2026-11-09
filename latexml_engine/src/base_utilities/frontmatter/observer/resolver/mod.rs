@@ -357,7 +357,6 @@ mod words;
 
 pub(in crate::base_utilities::frontmatter::observer) use api::split_pieces;
 use blocks::Chain;
-pub(in crate::base_utilities::frontmatter::observer) use labels::label_matches;
 // (and the flush's Kind step for an entry's address line, `insert::kind_address_lines`: OD #966)
 pub(in crate::base_utilities::frontmatter) use labels::{AddressRun, address_runs};
 // (the address reader of an entry's printed text, the reading's and the writer's cut of today's item alike: brief 95c)
@@ -366,6 +365,7 @@ pub(in crate::base_utilities::frontmatter::observer) use labels::{
 };
 // (named, as the prelude has its own of these names: the resolver's shadow them)
 pub use labels::{address_take_out, addresses_in, mark_labels, only_addresses};
+pub(in crate::base_utilities::frontmatter::observer) use labels::{contact_parts, label_matches};
 use labels::{text_tokens, *};
 use lines::*;
 pub(in crate::base_utilities::frontmatter::observer) use lines::{

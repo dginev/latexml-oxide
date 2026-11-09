@@ -1283,7 +1283,9 @@ pub(super) fn contact_role(role: Option<&str>, text: &str) -> String {
 /// [`contact_role`] and its text.
 /// A link to an address (`mailto:`) is an e-mail, whatever it prints (`\href{mailto:tsamak@clemson.edu}{tsamak}`,
 /// 2309.10007 — review revfms2a2_8 finding 1, FM S2a.2 r9).
-pub(super) fn contact_parts(event: &Event) -> (String, String) {
+pub(in crate::base_utilities::frontmatter::observer) fn contact_parts(
+  event: &Event,
+) -> (String, String) {
   if let Some(id) = event
     .target
     .as_deref()

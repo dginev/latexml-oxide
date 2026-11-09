@@ -39,9 +39,9 @@ use crate::base_utilities::{
       policy::TitleMarks,
       rehearsal::{Rehearsal, rehearse},
       resolver::{
-        BlockCheck, LostInk, RCreator, RuleDrop, Written, check_blocks, creator_call,
-        is_creator_call, merged_names, printed_email_label, read_events, split_pieces,
-        uncoordinated_marks,
+        BlockCheck, LostInk, RCreator, RuleDrop, Written, check_blocks, contact_parts,
+        creator_call, is_creator_call, merged_names, printed_email_label, read_events,
+        split_pieces, uncoordinated_marks,
       },
     },
     relocate::{BLOCK_ZONE, FOOTER_ZONE},
@@ -663,8 +663,14 @@ fn block_names(
       )?;
       // (a note the name's tokens print is written with it, not again as an item: `\\newcommand{\\ann}{Ann
       // Able\\thanks{…}}`, whose name is the one token `\\ann` — revLO4; a wrapper's note is cut out of the run,
-      // `event_run`: P2 B)
-      for e in events.iter().filter(|e| e.kind == EventKind::Note) {
+      // `event_run`: P2 B. So is an ORCID link the run prints, the link printing the name (`link_names`): the name's
+      // `ltx:ref` to orcid.org is its ORCID, as off and Perl hold it, not a contact writing the link and the name again —
+      // `\\href{https://orcid.org/…}{\\usebox{\\orcid}\\hspace{1mm}Luca Fehlings\\thanks{…}}`, 2410.07791, 2507.22485,
+      // 2602.05817; `\\href{https://orcid.org/…}{E. L. Gagnon}$^{*,1,2}$`, 2312.16289)
+      let printed_with_name = |e: &&Event| {
+        e.kind == EventKind::Note || (e.kind == EventKind::Contact && contact_parts(e).0 == "orcid")
+      };
+      for e in events.iter().filter(printed_with_name) {
         if let Some(span) = e.span
           && at(span.0).is_some_and(|s| run_from <= s)
           && at(span.1).is_some_and(|t| t <= run_to)
