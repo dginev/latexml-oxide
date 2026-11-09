@@ -27,13 +27,24 @@ use super::{
     EnvironmentStep, FieldCreator, FieldNotesHookGuard, field_notes_begin, field_notes_end,
     note_creator_call,
   },
-  ledger::{SkipReason, email_meaning},
+  ledger::{SkipReason, annotated_parent, email_meaning},
   policy::TitleMarks,
   *,
 };
 
 thread_local! {
   static REHEARSING: Cell<bool> = const { Cell::new(false) };
+  /// the tags of the entries the rehearsal's run would have queued besides its creators ([`note_frozen_entry`])
+  static FROZEN_ENTRIES: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Note, while a rehearsal digests, an entry `tag` its run would queue (`command`, the frozen frontmatter queues none:
+/// `queue::queue_front_matter`) that makes no creator nor annotates one (`resolver::creator_call`): a frontmatter setter run
+/// inside the block, a `\date` in `\author` (2503.02741), which `Rehearsal::Done::queued` says.
+pub(in crate::base_utilities) fn note_frozen_entry(tag: &str, command: &Tokens) {
+  if rehearsing() && !resolver::creator_call(tag, &annotated_parent(command)) {
+    FROZEN_ENTRIES.with(|entries| entries.borrow_mut().push(tag.to_string()));
+  }
 }
 
 /// Whether a rehearsal is digesting now (the ledger records nothing of it).
@@ -1044,6 +1055,9 @@ pub(in crate::base_utilities) enum Rehearsal<R> {
     left_open:     bool,
     /// where the block's own digestion moved the footnote counter (`field_notes::FieldNotes::counter_moves`)
     counter_moves: Vec<(u16, u16)>,
+    /// the tags the run queued besides its creators ([`note_frozen_entry`]): a frontmatter setter run inside the block, a
+    /// `\date` in `\author` (2503.02741), undone with the run
+    queued:        Vec<String>,
   },
   /// No rehearsal was made or kept, and why: no journal could open (one is already open), its assignments could not be
   /// undone, or it ended in a Fatal error of its own (discarded with it).
@@ -1112,6 +1126,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
   let tokens_depth = token_stack_depth();
   let conditionals = if_stack_depth();
   let ledger_scope = FieldLedgerScope::begin();
+  FROZEN_ENTRIES.with(|entries| entries.borrow_mut().clear());
   REHEARSING.with(|r| r.set(true));
   FOOTNOTE_STEPS.with(|steps| steps.set(0));
   // The whole group in a reading context of its own: what its end unreads (an `\aftergroup` of the block's,
@@ -1185,6 +1200,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
   } else {
     Vec::new()
   };
+  let queued = FROZEN_ENTRIES.with(|entries| std::mem::take(&mut *entries.borrow_mut()));
   let undone = journal.rollback();
   for (flag, value) in FLAGS.iter().zip(saved) {
     assign_value(flag, value, Some(Scope::Global));
@@ -1255,6 +1271,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
       creators: notes.creators,
       left_open,
       counter_moves: notes.counter_moves,
+      queued,
     },
     _ => Rehearsal::Skipped(SkipReason::NotUndone),
   })

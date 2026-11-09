@@ -20,6 +20,9 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
     // (an abstract it queues no more: its late marker's ordinal goes with it, not to the next abstract added,
     // [`take_late_mark`])
     drop_late_mark(tag);
+    // (a block's rehearsal notes what it would have queued: the emitter declines a block queuing an entry of its own,
+    // `rehearsal::note_frozen_entry`, 2503.02741)
+    rehearsal::note_frozen_entry(tag, &command);
     return;
   }
   let queue = frontmatter_queue_name();

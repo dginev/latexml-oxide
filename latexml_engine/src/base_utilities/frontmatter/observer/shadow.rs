@@ -174,6 +174,7 @@ fn read_at_flush() -> Result<()> {
     }) else {
       continue;
     };
+    let mut queued_tags = Vec::new();
     let outcome = if block.stamp == Stamp::Overflow {
       Outcome::Skipped(SkipReason::Overflow)
     } else if block.tokens.is_empty() {
@@ -204,7 +205,9 @@ fn read_at_flush() -> Result<()> {
           creators,
           left_open,
           counter_moves,
+          queued,
         } => {
+          queued_tags = queued;
           mark_held(&mut value, &held);
           creator_roles(&mut value, &creators);
           Outcome::Events {
@@ -233,6 +236,7 @@ fn read_at_flush() -> Result<()> {
     with_ledger(|ledger| {
       if let Some(Entry::Author(block)) = ledger.entries_mut().get_mut(i) {
         block.outcome = outcome;
+        block.queued = queued_tags;
       }
     });
   }
