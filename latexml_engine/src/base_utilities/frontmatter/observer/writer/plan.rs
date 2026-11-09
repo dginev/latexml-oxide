@@ -399,6 +399,8 @@ fn cut(call: &ApiCall) -> Result<Option<Vec<(String, Tokens)>>> {
     base:         0,
     formulas:     &formulas,
     environments: &environments,
+    held:         &[],
+    aligned:      aligned(&events),
   };
   let pieces = split_pieces(&events, &call.role);
   let spans: Vec<Option<(usize, usize)>> = pieces.iter().map(|(_, p)| piece_span(p)).collect();
@@ -479,7 +481,11 @@ pub(super) fn block_span_tokens(
       return None;
     };
     let Outcome::Events {
-      events, formulas, environments, ..
+      events,
+      formulas,
+      environments,
+      held,
+      ..
     } = &block.outcome
     else {
       return None;
@@ -489,6 +495,8 @@ pub(super) fn block_span_tokens(
       base: block.range.0,
       formulas,
       environments,
+      held,
+      aligned: aligned(events),
     };
     // (the event printed last before the line, a layout change aside)
     let mut mark = events

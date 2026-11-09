@@ -87,6 +87,7 @@ fn entry_cut(taken: &Taken, names: &[&str]) -> Result<Option<EntryCut>> {
         formulas,
         environments,
         inks,
+        held,
         ..
       } = &block.outcome
       else {
@@ -97,6 +98,8 @@ fn entry_cut(taken: &Taken, names: &[&str]) -> Result<Option<EntryCut>> {
         base: block.range.0,
         formulas,
         environments,
+        held,
+        aligned: aligned(events),
       };
       // (a note's entry is its text; any other the text of the events its span covers, or of those from it on, the lines the
       // reading read on with it: 2308.10621)
@@ -202,6 +205,8 @@ fn api_cut(index: usize, (taken, spells): (&Taken, &dyn Fn(&str) -> bool)) -> Re
     base:         0,
     formulas:     &formulas,
     environments: &environments,
+    held:         &[],
+    aligned:      aligned(&events),
   };
   let apart = |e: &Event| {
     e.kind == EventKind::Contact && matches!(e.role.as_deref(), Some("email" | "orcid"))
@@ -722,7 +727,14 @@ pub(super) fn span_tokens_within(
     let Some(Entry::Author(block)) = ledger.entries().get(index) else {
       return None;
     };
-    let Outcome::Events { formulas, environments, .. } = &block.outcome else {
+    let Outcome::Events {
+      events,
+      formulas,
+      environments,
+      held,
+      ..
+    } = &block.outcome
+    else {
       return None;
     };
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
@@ -733,6 +745,8 @@ pub(super) fn span_tokens_within(
         base: block.range.0,
         formulas,
         environments,
+        held,
+        aligned: aligned(events),
       };
       let start = at(span.0)?;
       return Some(field.content_cut((start, at(span.1)?), 0, start, cuts)?.0);
@@ -747,6 +761,8 @@ pub(super) fn span_tokens_within(
       base: block.range.0 + from,
       formulas: &formulas[first..first + count],
       environments,
+      held,
+      aligned: aligned(events),
     };
     let cuts: Vec<(usize, usize)> = cuts
       .iter()
