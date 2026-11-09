@@ -163,8 +163,11 @@ pub fn reads_as_listed_collaboration(text: &str, listed: bool) -> bool {
 pub fn collaboration_heads(text: &str) -> bool { text.trim_end().ends_with(':') }
 
 /// The words a remark on a name opens with when it names whom the author speaks for (`for the ATLAS Collaboration`, `on
-/// behalf of the CMS Team`), lowercased with the space after them: `name_and_remark`'s and the reading's one list.
-pub(in crate::base_utilities) const SPEAKS_FOR: [&str; 2] = ["for ", "on behalf of "];
+/// behalf of the CMS Team`, `representing the ATLAS Pixel Collaboration` — a call of its own under the names,
+/// hep-ex9903035, as [`collaboration_core`]'s framing reads it), lowercased with the space after them:
+/// `name_and_remark`'s and the reading's one list.
+pub(in crate::base_utilities) const SPEAKS_FOR: [&str; 3] =
+  ["for ", "on behalf of ", "representing "];
 
 /// Whether the text after a name's notes is a remark naming the group the author speaks for: "for" or "on behalf of",
 /// then a few words that name a group (`Eleni Petrakou\inst{1}\fnsep\thanks{…} for CAPP/IBS`, webofc, 1702.03664) —

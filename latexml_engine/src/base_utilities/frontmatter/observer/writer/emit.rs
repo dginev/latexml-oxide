@@ -99,6 +99,18 @@ fn internal(text: &str) -> Vec<Token> {
   mouth::tokenize_internal(TeXString::assembled(text.to_string())).unlist()
 }
 
+/// The key `annotations={…}` holding `labels` as plain characters, as a label is written back elsewhere
+/// (`frontmatter_stores.rs`'s legend note): the key's value is digested, and a cleaned label holds the `_` its spaces
+/// became (`affiliation:D._Kopta_et_al.`, authblk's `\author[D. Kopta et al.]`, 1910.05766), an error in text mode as
+/// `internal`'s subscript.
+fn annotations_key(labels: &str) -> Vec<Token> {
+  let mut key = internal("annotations=");
+  key.push(T_BEGIN!());
+  key.extend(ExplodeText!(labels));
+  key.push(T_END!());
+  key
+}
+
 /// `f` on the rehearsed block at ledger index `index`, else `default`.
 fn with_block<R>(index: usize, default: R, f: impl FnOnce(&AuthorBlock, &[Event]) -> R) -> R {
   with_ledger(|ledger| match ledger.entries().get(index) {
@@ -180,7 +192,7 @@ pub(super) fn text_tokens(text: &str) -> Vec<Token> {
 /// the API call's own key list, which `queue_front_matter`'s caller built, at its top-level commas: no TeX spelling.
 fn rekeyed(
   command: &Tokens,
-  add: &str,
+  add: &[Token],
   keep_annotations: bool,
   only: bool,
   zone: bool,
@@ -204,7 +216,7 @@ fn rekeyed(
   let mut out: Vec<Token> = Vec::with_capacity(v.len() + 8);
   if let (Some(open), Some(close)) = (open, close) {
     out.extend_from_slice(&v[..=open]);
-    out.extend(internal(add));
+    out.extend_from_slice(add);
     // (a label its binding prints with the line, `_labelprints`: the call's label goes with it, in a key of its own,
     // `_printedlabel`, which says it prints, the reading's label replacing the call's — the Kind step for a legend reads it,
     // `insert::legend_mark`: authblk's `\\affil[*]{Corresponding author …}`, 2605.31330, 2201.11910; P2 NT, P2r2)
@@ -257,7 +269,7 @@ fn rekeyed(
   })?;
   out.extend_from_slice(&v[..start]);
   out.push(T_OTHER!("["));
-  out.extend(internal(add));
+  out.extend_from_slice(add);
   out.push(T_OTHER!("]"));
   out.extend_from_slice(&v[start..]);
   Some(call_tokens(out, only))
@@ -528,27 +540,67 @@ fn event_run_at(
   Some((tokens, (from, run_end)))
 }
 
+/// A block's name as [`block_names`] takes it: its tokens, the cites written after its text, the run (from, to) it was taken
+/// from.
+type BlockName = (Option<Vec<Token>>, Vec<Token>, Option<(usize, usize)>);
+
+/// The footnote counter's steps a block's notes take where they print, each note's on the creator whose name's run it is
+/// in or follows (`runs`, by creator; the block's first name's for a note before every name): a note the emitter writes
+/// apart (`note_call`) is digested after every creator, and its step there ran a later name's `\addtocounter{footnote}{-2}
+/// \footnotemark` at the counter's 0, "Counter too large" (1507.05018, 2505.07115); off digests the `\thanks` in its
+/// creator, as LaTeX's `\maketitle` steps it in place. A note a name's run holds is digested in it, its own step there.
+fn note_steps(index: usize, runs: &[(usize, (usize, usize))]) -> BTreeMap<usize, usize> {
+  let mut steps = BTreeMap::new();
+  let Some(&(first, _)) = runs.first() else {
+    return steps;
+  };
+  let notes: Vec<usize> = with_block(index, Vec::new(), |block, events| {
+    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+    events
+      .iter()
+      .filter(|e| {
+        e.kind == EventKind::Note && e.role.as_deref().is_some_and(|r| r.starts_with("thanks"))
+      })
+      .filter_map(|e| at(e.span?.0))
+      .collect()
+  });
+  for at in notes {
+    if runs.iter().any(|(_, (from, to))| *from <= at && at < *to) {
+      continue;
+    }
+    let owner = runs
+      .iter()
+      .filter(|(_, (from, _))| *from <= at)
+      .map(|(i, _)| *i)
+      .next_back()
+      .unwrap_or(first);
+    *steps.entry(owner).or_default() += 1;
+  }
+  steps
+}
+
 /// A block's names' tokens: their marks with them where `marks` (a per-author class's block, whose names keep them printed as
 /// Perl does), a `\\footnotemark` (what `relocate_footnote` moves its text to, 2203.12964) and an ORCID written on it, its logo in
 /// the name as today's (2208.05251), in `on_names`; a `\\cite` with it always, a mark of no text of its own that the old reader
 /// keeps in the personname (`name_takes_annotations`). `None` for a name its events don't spell, with the cites the
 /// reading moved onto it from the remark its event opens (`Ann Able (for the\\cite{k} ATLAS Collaboration)`, review revG1
-/// 3), which the writer writes after its text.
+/// 3), which the writer writes after its text. With each name, the run of the block's tokens it was taken from (its offsets
+/// in the block: [`note_steps`]).
 fn block_names(
   index: usize,
   names: &[String],
   marks: bool,
   on_names: &mut BTreeSet<(usize, (u16, u16))>,
-) -> Vec<(Option<Vec<Token>>, Vec<Token>)> {
+) -> Vec<BlockName> {
   with_ledger(|ledger| {
     let Some(Entry::Author(block)) = ledger.entries().get(index) else {
-      return vec![(None, Vec::new()); names.len()];
+      return vec![(None, Vec::new(), None); names.len()];
     };
     let Outcome::Events {
       events, formulas, environments, ..
     } = &block.outcome
     else {
-      return vec![(None, Vec::new()); names.len()];
+      return vec![(None, Vec::new(), None); names.len()];
     };
     let read = read_events(events);
     let found: Vec<(usize, &Event)> = read
@@ -570,7 +622,7 @@ fn block_names(
     {
       *printed_at.entry(e.span).or_default() += 1;
     }
-    let mut name_tokens = |from: usize, to: usize| -> Option<Vec<Token>> {
+    let mut name_tokens = |from: usize, to: usize| -> Option<(Vec<Token>, (usize, usize))> {
       // (several events of one span: a macro printed them, `\\author{\\authorBlock}`, 2604.09547)
       if found[from..=to]
         .iter()
@@ -691,7 +743,7 @@ fn block_names(
       } else {
         out.extend(apart);
       }
-      Some(out)
+      Some((out, (run_from, run_to)))
     };
     // (each name the Name events from the last one on spell, joined)
     let spelled_from = |from: usize, key: &str| {
@@ -737,10 +789,13 @@ fn block_names(
       let Some((from, to)) =
         (cursor..found.len()).find_map(|from| Some((from, from + spelled_from(from, &key)?)))
       else {
-        return (None, cites_of(cursor, &key));
+        return (None, cites_of(cursor, &key), None);
       };
       cursor = to + 1;
-      (name_tokens(from, to), Vec::new())
+      match name_tokens(from, to) {
+        Some((tokens, run)) => (Some(tokens), Vec::new(), Some(run)),
+        None => (None, Vec::new(), None),
+      }
     };
     names.iter().map(&mut tokens_of).collect()
   })
@@ -788,6 +843,7 @@ fn by_text(why: Option<&str>, text: &str) -> Vec<Token> {
 
 /// A note's call under `label`, as `\lx@add@thanks` and `\lx@add@note` make it (their `Let`s in an author's content,
 /// `digest_frontmatter_item`), on `@now`: what's inside it is the reading's already. A legend's with the `mark` it prints.
+/// Its footnote step is its creator's, where the note prints ([`note_steps`]).
 fn note_call(footnote: bool, mark: Option<&str>, label: &str, content: Vec<Token>) -> Tokens {
   let kind = classify_thanks(Tokens::new(content.clone()).untex_string().as_ref());
   let body = cs_group("\\lx@frontmatter@itemonly", &[note_body(Tokens::new(
@@ -795,16 +851,13 @@ fn note_call(footnote: bool, mark: Option<&str>, label: &str, content: Vec<Token
   ))
   .unlist_ref()]);
   let marked = mark.map_or_else(String::new, |mark| s!("mark={{{mark}}},"));
-  let call = if footnote {
+  if footnote {
     annotate_now("ltx:contact", &s!("role=note,label={{{label}}}"), &body)
   } else {
     let keys =
       s!("role=thanks,class=ltx_note_frontmatter ltx_thanks_{kind},{marked}label={{{label}}}");
     annotate_now("ltx:note", &keys, &body)
-  };
-  let mut out = vec![T_CS!("\\lx@title@footnote@step")];
-  out.extend(call.unlist());
-  Tokens::new(out)
+  }
 }
 
 /// A block's or a piece's entry: `\\lx@frontmatter@itemkinded`, whose Kind step reads its lines of addresses.
@@ -1191,14 +1244,20 @@ fn item_call(
   {
     if written_out {
       let command = one_address(command, &assoc.text)?;
-      if let Some(tokens) = rekeyed(&command, &s!("label={{{label}}}"), true, false, true) {
+      if let Some(tokens) = rekeyed(
+        &command,
+        &internal(&s!("label={{{label}}}")),
+        true,
+        false,
+        true,
+      ) {
         return Ok(tokens);
       }
     } else if let Some(tokens) =
       // (an entry the block prints moves back to its place by its zone, what a label places alone: `at_queue_position`)
       rekeyed(
         cut.and_then(|cut| cut.command.as_ref()).unwrap_or(command),
-        &s!("label={{{label}}}"),
+        &internal(&s!("label={{{label}}}")),
         true,
         separate.contains(&index),
         by_label(assoc) || !matches!(role, "affiliation" | "address"),
@@ -1507,7 +1566,9 @@ fn creator_role(c: &RCreator) -> String {
 fn creator_keys(c: &RCreator, labels: &[String]) -> Vec<Token> {
   let labels = labels.join(",");
   let Some(call) = creator_call_of(c) else {
-    return internal(&s!("role={},annotations={{{labels}}}", creator_role(c)));
+    let mut keys = internal(&s!("role={},", creator_role(c)));
+    keys.extend(annotations_key(&labels));
+    return keys;
   };
   let mut keys = internal("role=author,");
   keys.extend(call.keys.unlist());
@@ -1519,7 +1580,7 @@ fn creator_keys(c: &RCreator, labels: &[String]) -> Vec<Token> {
       keys.push(T_OTHER!(","));
     }
   }
-  keys.extend(internal(&labels));
+  keys.extend(ExplodeText!(&labels));
   keys.push(T_END!());
   keys
 }
@@ -2060,14 +2121,20 @@ pub(super) fn kept_whole(index: usize) -> bool {
 /// The creator Perl's `\\lx@add@author` makes of the author block at ledger index `index`, with its keys and `keys`
 /// (`author_block::whole_block_author`, the one writer of a block kept whole), its tabular juggles and columns the line
 /// breaks they print (`tabular_juggles_in_a_whole_block`: 1511.05911's vldb.cls `\\alignauthor`).
-fn whole_block(index: usize, keys: &str) -> Option<Result<Tokens>> {
+fn whole_block(index: usize, keys: &str, annotations: &[Token]) -> Option<Result<Tokens>> {
   let (keyvals, written) = with_ledger(|ledger| match ledger.entries().get(index) {
     Some(Entry::Author(block)) => Some((block.keyvals.clone(), block.tokens.clone())),
     _ => None,
   })?;
   let keys: Vec<&str> = keyvals.iter().map(String::as_str).chain([keys]).collect();
   let keys = keys.into_iter().filter(|keys| !keys.trim().is_empty());
-  let keys = internal(&keys.collect::<Vec<_>>().join(","));
+  let mut keys = internal(&keys.collect::<Vec<_>>().join(","));
+  if !annotations.is_empty() {
+    if !keys.is_empty() {
+      keys.push(T_OTHER!(","));
+    }
+    keys.extend_from_slice(annotations);
+  }
   Some(whole_block_author(
     Some(Tokens::new(keys)),
     tabular_juggles_in_a_whole_block(written),
@@ -2186,7 +2253,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
         if let Some(&(_, block)) = whole_entries
           .iter()
           .find(|(command, _)| *command == entry.2)
-          && let Some(tokens) = whole_block(block, KEPT_WHOLE)
+          && let Some(tokens) = whole_block(block, KEPT_WHOLE, &[])
         {
           entry.2 = tokens?;
         }
@@ -2412,6 +2479,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     .collect();
   let keeps = |source: usize| keeps_marks.get(&source).copied().unwrap_or(false);
   let mut names: BTreeMap<usize, (Option<Vec<Token>>, Vec<Token>)> = BTreeMap::new();
+  // (the footnote counter's steps of the notes written apart, on the creator where each prints: `note_steps`)
+  let mut steps: BTreeMap<usize, usize> = BTreeMap::new();
   let mut on_names: BTreeSet<(usize, (u16, u16))> = BTreeSet::new();
   for (&source, members) in &by_block {
     let spelled: Vec<String> = members
@@ -2419,7 +2488,14 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .map(|&i| resolved.creators[i].name.clone())
       .collect();
     let tokens = block_names(source, &spelled, keeps(source), &mut on_names);
-    names.extend(members.iter().copied().zip(tokens));
+    let mut runs: Vec<(usize, (usize, usize))> = Vec::new();
+    for (&i, (name, cites, run)) in members.iter().zip(tokens) {
+      if let Some(run) = run {
+        runs.push((i, run));
+      }
+      names.insert(i, (name, cites));
+    }
+    steps.extend(note_steps(source, &runs));
   }
   let mut kept: Vec<RawFrontmatter> = Vec::new();
   let (mut items, separate) = items_to_emit(resolved, &owners, &on_names, &mut kept);
@@ -2533,10 +2609,10 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   }
   for &i in &fresh {
     let c = &resolved.creators[i];
-    let keys = s!("annotations={{{}}}", annotations[i].join(","));
+    let keys = annotations_key(&annotations[i].join(","));
     // (kept whole on purpose, as a tabular block is: no merge to flag beside its Warning, `flag_merged_creators`)
     if whole.contains(&c.source)
-      && let Some(tokens) = whole_block(c.source, &s!("{KEPT_WHOLE},{keys}"))
+      && let Some(tokens) = whole_block(c.source, KEPT_WHOLE, &keys)
     {
       let tokens = tokens?;
       out.push(entry("ltx:creator", tokens.unlist()));
@@ -2547,7 +2623,11 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     let call = (!by_block.contains_key(&c.source) && sole)
       .then(|| api_call(c.source).and_then(|call| call.command))
       .flatten()
-      .and_then(|command| rekeyed(&command, &s!("{keys},"), false, true, true));
+      .and_then(|command| {
+        let mut add = keys.clone();
+        add.push(T_OTHER!(","));
+        rekeyed(&command, &add, false, true, true)
+      });
     let tokens = call.unwrap_or_else(|| {
       let (name, cites) = names.remove(&i).unwrap_or_default();
       let name = name.unwrap_or_else(|| {
@@ -2559,9 +2639,13 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
         name
       });
       let content = cs_group("\\lx@frontmatter@item", &[&name]);
-      let content = cs_group("\\lx@personname", &[&cs_group("\\lx@author@withinst", &[
+      let mut content = cs_group("\\lx@personname", &[&cs_group("\\lx@author@withinst", &[
         &content,
       ])]);
+      content.extend(std::iter::repeat_n(
+        T_CS!("\\lx@title@footnote@step"),
+        steps.get(&i).copied().unwrap_or(0),
+      ));
       let mut head = vec![add_now()];
       head.extend(cs_group_args(&["ltx:creator"]));
       with_key_tokens(head, creator_keys(c, &annotations[i]), &content)
@@ -2585,8 +2669,15 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .iter()
       .rposition(|c| c.source < at)
       .map(|last| &owners[last]);
-    let keyed =
-      owner.and_then(|owner| rekeyed(&rdf.2, &s!("label={{{owner}}}"), true, false, true));
+    let keyed = owner.and_then(|owner| {
+      rekeyed(
+        &rdf.2,
+        &internal(&s!("label={{{owner}}}")),
+        true,
+        false,
+        true,
+      )
+    });
     (rdf.0, rdf.1, keyed.unwrap_or(rdf.2))
   };
   let mut pieces = BTreeMap::new();
@@ -2788,6 +2879,24 @@ fn per_author_marks(source: usize) -> bool {
 mod tests {
   use super::*;
   use crate::base_utilities::frontmatter::observer::{ledger::TitleStamp, reset_fm_shadow};
+
+  /// A creator's labels are written back as plain characters: authblk's `\author[D. Kopta et al.]` keeps the label
+  /// `affiliation:D._Kopta_et_al.` (`clean_label`, Perl Package.pm:510), whose `_` the digested `annotations=` value read
+  /// as a subscript in text mode, an Error per underscore per creator under `=2` (1910.05766: 33). Its `_` is catcode
+  /// other (batch NE2w B; no small document reaches it).
+  #[test]
+  fn a_creators_labels_are_plain_characters() {
+    let key = annotations_key("item:1:2,affiliation:D._Kopta_et_al.");
+    assert_eq!(
+      Tokens::new(key.clone()).untex_string().as_ref(),
+      "annotations={item:1:2,affiliation:D._Kopta_et_al.}"
+    );
+    // (three `_` of catcode other, none a subscript's, as `internal` makes it)
+    let other = ExplodeText!("_");
+    let subscript = internal("_");
+    assert_eq!(key.iter().filter(|t| other.contains(t)).count(), 3);
+    assert!(!key.iter().any(|t| subscript.contains(t)));
+  }
 
   /// No reading outlives its conversion: the conversion's reset drops the ledger's reading and starts its count again, so a
   /// later conversion's first entries, counted from 0 as these were, read afresh (review revN1r3 5; the cortex worker resets the

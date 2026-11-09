@@ -550,7 +550,14 @@ impl Resolver {
           1
         },
       };
-      labels = vec![at.to_string()];
+      // (Perl's label is `CleanLabel($n, $labelseq)`, Base_Utility.pool.ltxml:489: a sequence of the authors, ijcai's
+      // `\lx@add@affiliations[labelseq=author]` (ijcai.sty.ltxml:45), is the N-th author's own `author:N`
+      // ([`label_owners`]), not a mark's number — kr.sty's `\affiliations` under its names, 2202.05511)
+      labels = vec![if seq == "author" {
+        s!("author:{at}")
+      } else {
+        at.to_string()
+      }];
       labels.extend(keys.iter().cloned());
       label_rule = "api:labelseq";
     } else if !lead.is_empty() {
