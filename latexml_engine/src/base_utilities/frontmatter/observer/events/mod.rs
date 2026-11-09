@@ -320,6 +320,11 @@ pub struct Event {
   /// a `\thanks` of several marked entries is cut by, before each top-level mark (`mark_led_pieces`). Not in a dump:
   /// only the reading's note step reads it (`Resolver::keep_note`)
   pub body:           Vec<Event>,
+  /// an annotated contact's (`\lx@annotate@frontmatter`'s `name=` key, a nested `\lx@add@email[name=…]`): the label its
+  /// class prints with it — authblk's `\affil{Univ A\thanks{Corresponding author e-mail: …}}`, the Kind step's
+  /// `\lx@add@email[name={Corresponding author e-mail:~}]{…}` (cond-mat0202268) —, as a call's own label is its `name=`
+  /// attribute (`resolver::placed::call_label`). Not in a dump: only the content check reads it
+  pub name:           Option<String>,
 }
 
 /// Where one character of an ink prints ([`InkTable`]): its box's cover (`span`, a wrapper's call for the first box in
@@ -407,6 +412,7 @@ impl Event {
       creator_call: None,
       note_mark: None,
       body: Vec::new(),
+      name: None,
     }
   }
 }
@@ -1560,6 +1566,9 @@ impl Walker {
         }
         event.role = Some(role);
         event.annotate = option_value(&options, "annotate");
+        if event.kind == EventKind::Contact {
+          event.name = option_value(&options, "name");
+        }
         event.text = arg(4);
         // (a contact a link in it prints, no ink of the constructor's: `\IEEEauthorblockA{Dept\\ Univ\\ Email: \url{ann@x.no}}`,
         // its address read as `\url`'s argument, 2603.01171 — the e-mail was lost)
@@ -1716,9 +1725,21 @@ impl Walker {
       if let Some(arg) = arg
         && shown
         && !environment
-        && typesets_content(arg)
       {
-        contents.push(arg.clone());
+        if typesets_content(arg) {
+          contents.push(arg.clone());
+        } else {
+          // (an argument printing nothing but an e-mail call, whose verbatim argument is no shown one: its contact. llncs
+          // queues each `\email` of an `\author` line as a creator call of its own,
+          // `\lx@personname{\lx@author@withinst{\email{ann@x.org}}}` (llncs.cls:897 `{\tt#1}`, printed under the name),
+          // whose rehearsal read no event, and the content check no address)
+          let at = self.atoms.len();
+          self.walk(arg, nest.saturating_add(1));
+          let inside = self.atoms.split_off(at);
+          self.atoms.extend(inside.into_iter().filter(|atom| {
+            matches!(atom, Atom::Event(e) if e.kind == EventKind::Contact && e.role.as_deref() == Some("email"))
+          }));
+        }
       }
     }
     if let Ok(Some(body)) = w.get_body() {

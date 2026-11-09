@@ -132,7 +132,7 @@ impl Tally {
 /// `https://members.loria.fr/AClement alexandre.clement@loria.fr`, is no list, 2206.10577); a contact a mark's formula
 /// holds beside them (an ORCID's logo in `$^{1\,\orcidicon{…}}$`, 2210.03748; the names a formula prints with their marks
 /// are names, `$\text{Li Cheng}^{1}, …$`, 2001.05492, 2303.12302). Into `beside`, what prints beside them: a separator's
-/// word, a mark's text (into `marks` too, its words), a link's target where its anchor prints no address of its own
+/// word, a mark's text (into `marks` too, its words), a contact's label (`Event::name`), a link's target where its anchor prints no address of its own
 /// (`Written::excess`'s). And the same texts with their separators' words, as an item's text holds them (`Japan Science and
 /// Technology Corporation`, cond-mat0305063), each a print a shared item counts by ([`Prints`]).
 fn ink_texts(
@@ -192,6 +192,13 @@ fn ink_texts(
       _ => {},
     }
     for inner in std::iter::once(e).chain(&e.inner) {
+      // (a contact's label, printed with it, beside its address as a call's is (`call_label`): authblk's `Corresponding
+      // author e-mail:` before the address of an affiliation's `\thanks`, cond-mat0202268)
+      if inner.kind == EventKind::Contact
+        && let Some(name) = inner.name.as_deref()
+      {
+        beside.add(name, 1);
+      }
       if inner.kind == EventKind::Contact
         && let Some(target) = inner.target.as_deref()
         && addresses_in(&inner.text).is_empty()
