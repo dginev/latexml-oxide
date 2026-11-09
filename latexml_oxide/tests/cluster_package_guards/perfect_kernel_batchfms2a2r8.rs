@@ -523,6 +523,7 @@ fn an_unlabelled_entry_is_no_legend() {
       name("Corresponding author."),
     ],
     calls:   Vec::new(),
+    markers: Vec::new(),
   }];
   let tuples = resolved_tuples(&fm_resolve(&inputs));
   assert_eq!(tuples, [

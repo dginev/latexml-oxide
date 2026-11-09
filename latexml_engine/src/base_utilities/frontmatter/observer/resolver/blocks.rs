@@ -190,6 +190,18 @@ impl Resolver {
     self.out.policies.push((index, policy.name));
     self.notes_marked = !policy.unmarked_notes;
     let and_inline = policy.and_inline;
+    // (an IJCAI sectioned block's address section, from the marker its rehearsal held an Error at before the addresses
+    // it prints (`Input::Block`'s `markers`: `\emails`, defined only inside the class's `\author`): the class's own split
+    // reads it, its addresses the API's as off's are, so the reading ends there and no entry goes on over it — it
+    // continued `$^2$Univ B` onto the e-mail line, and wrote "Univ B" twice (the entry by its text, the split's call)
+    // and the addresses as an affiliation, 2501.02356)
+    let events = match self
+      .emitting
+      .then(|| address_section(&self.block_markers, events))
+    {
+      Some(Some(end)) => &events[..end],
+      _ => events,
+    };
     let events = &read_events(events);
     let lines = lines_of(events, and_inline);
     let block_requests: Vec<String> = keyvals
@@ -1577,4 +1589,23 @@ fn names_collaboration(text: &str) -> bool {
   let listed = t.split_whitespace().any(|w| matches!(w, "and" | "&"));
   let reads = |s: &str| collaboration_framing(s, listed, true).is_some();
   reads(t) || remark_start(t).is_some_and(|at| reads(&t[at..]))
+}
+
+/// Where a sectioned block's address section starts in `events`: the first of the section `markers` (positions, ascending)
+/// whose events, up to the next one, print an address (an `@` in their text) — its `\emails`, not its `\affiliations`.
+fn address_section(markers: &[u16], events: &[Event]) -> Option<usize> {
+  let at = |marker: u16| {
+    events
+      .iter()
+      .position(|e| e.span.is_some_and(|(start, _)| start >= marker))
+      .unwrap_or(events.len())
+  };
+  markers.iter().enumerate().find_map(|(n, &marker)| {
+    let (from, to) = (
+      at(marker),
+      markers.get(n + 1).map_or(events.len(), |&next| at(next)),
+    );
+    let section: Vec<&Event> = events[from..to.max(from)].iter().collect();
+    events_text(&section).contains('@').then_some(from)
+  })
 }

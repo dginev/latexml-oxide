@@ -328,6 +328,10 @@ pub enum Input {
     /// per creator call of its own expansion (`Event::creator_call`), the labels its `annotations=` give the creator its
     /// Name makes, as Perl's `\lx@add@creator[annotations={ed}]` gives them (`field_notes::FieldCreator`). Not in a dump
     calls:   Vec<Vec<String>>,
+    /// where an IJCAI sectioned block's rehearsal held its Errors (`ledger::AuthorBlock::sectioned`, `events::HeldError`):
+    /// a section marker a class defines only inside its `\author` (ijcai19.sty:127, a raw `\@maketitle`), the one before
+    /// the addresses its `\emails` (`Resolver::block`, where the reading ends); none for any other block. Not in a dump
+    markers: Vec<u16>,
   },
   Api {
     index:  usize,
@@ -539,6 +543,8 @@ struct Resolver {
   /// whether the block being read replaces the authors queued before it (the document's `\\author`, `Input::Block`'s
   /// `replace`): a URL line under all its names is the block's (`Resolver::block`)
   block_replaces:     bool,
+  /// the block being read's section markers (`Input::Block`'s `markers`)
+  block_markers:      Vec<u16>,
   /// the flush's one contact declaring a run and sharing (`_share=authors,annotate=run`: cas's unlabelled
   /// `\affiliation`), every author's as `shared_row::share_row_contacts` shares it — with two or more, each its run's
   /// (2201.00009, 2506.17280, 2106.02306; 2202.06096). Under `emitting` only
@@ -689,6 +695,7 @@ impl Resolver {
       call_labels:        Vec::new(),
       emitting:           fm_emit_mode() == 2,
       block_replaces:     false,
+      block_markers:      Vec::new(),
       sole_shared_run:    false,
       note_links:         Vec::new(),
       document_emails:    Vec::new(),
@@ -1164,6 +1171,7 @@ pub fn resolve_with(
         epoch,
         events,
         calls,
+        markers,
       } => {
         policy = conventions(binding, hook);
         if resolver.emitting {
@@ -1173,6 +1181,7 @@ pub fn resolve_with(
         resolver.line_column = None;
         resolver.block_addresses.clear();
         resolver.block_replaces = *replace;
+        resolver.block_markers.clone_from(markers);
         // (a call replacing the authors before it in its queue: `\author{A, B}` then `\author{A\thanks{…}, B}`,
         // 2502.11323, 2509.11381 — the later one's are the document's)
         if *replace {
@@ -1369,7 +1378,7 @@ pub(in crate::base_utilities) fn ledger_inputs(ledger: &ledger::Ledger) -> Vec<I
   for entry in ledger.entries() {
     match entry {
       ledger::Entry::Author(block) => {
-        if let ledger::Outcome::Events { events, creators, .. } = &block.outcome {
+        if let ledger::Outcome::Events { events, creators, held, .. } = &block.outcome {
           inputs.push(Input::Block {
             index:   block.index,
             binding: block.binding.clone(),
@@ -1384,6 +1393,14 @@ pub(in crate::base_utilities) fn ledger_inputs(ledger: &ledger::Ledger) -> Vec<I
               .iter()
               .map(field_notes::FieldCreator::labels)
               .collect(),
+            markers: if block.sectioned {
+              held
+                .iter()
+                .filter_map(|error| error.span.map(|(from, _)| from))
+                .collect()
+            } else {
+              Vec::new()
+            },
           });
         }
       },
