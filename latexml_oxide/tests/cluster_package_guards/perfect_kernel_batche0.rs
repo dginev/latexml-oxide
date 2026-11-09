@@ -1129,7 +1129,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("rest /util_text.rs", 25),
   ("revtex4_support_sty.rs", 12),
   ("shared_row", 13),
-  ("shared_row/emails", 65),
+  ("shared_row/emails", 68),
   ("sv_support_sty.rs", 35),
   ("webofc_cls.rs", 0),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the emitter's vocabulary, 924 = 826 + 98; none added)
@@ -1152,7 +1152,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (NE4 39 -> 43: `annotations_tokens`, the `annotations` value of a block's keyvals cut from the call's tokens at its top-level
   // `,` and `=`, so the writer hands on the call's tokens, never their text retokenized (`\and Jonathan` read back
   // `\andJonathan`, 2205.13776) — what it writes; whether to carry them stays `block_annotations`' text decision)
-  ("emitter/emit", 43),
+  ("emitter/emit", 48),
   // (P1b, 0 -> 1: `emitter/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("emitter/dom+mod", 1),

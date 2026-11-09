@@ -133,7 +133,7 @@ fn class_email_paths_keep_their_font_and_underscore() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_institute_email_keeps_its_underscore.tex"
     )),
     vec![
-      "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of A </contact>\n    <contact name=\"E-mail: \" role=\"email\">ann_able@a.edu</contact>\n  </creator>",
+      "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of A</contact>\n    <contact name=\"E-mail: \" role=\"email\">ann_able@a.edu</contact>\n  </creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of B</contact>\n  </creator>",
     ]
   );

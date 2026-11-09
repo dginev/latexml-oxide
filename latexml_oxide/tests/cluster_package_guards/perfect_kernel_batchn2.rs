@@ -78,16 +78,16 @@ fn a_word_beside_its_domain_is_kept() {
 /// An address placed more often than the page prints it is counted, each e-mail contact one copy: twice on one creator
 /// (2607.00684's `mtablo@postech.ac.kr`), or kept in one creator's note and written as another's contact too (2410.20285's
 /// `antonis@ucsb.edu` in Örwall's note); the output as the emitter wrote it. An address a note keeps on its own owner is
-/// no longer written as a contact too (0807.0895, 2208.10209; FX3): that half counts nothing.
+/// no longer written as a contact too (0807.0895, 2208.10209; FX3): that half counts nothing. The first repro's duplicate is
+/// gone since Z18c (`xtra@b.org` once).
 #[test]
 fn an_address_placed_more_often_than_printed_is_counted() {
+  // (since Z18c the brace list is written out whole — each address its own item, the call no copy left in the entry, and
+  // a plain list written as text no Warning (`emitter::emit::one_address`) —, so `xtra@b.org` is placed once: the
+  // block's, as the chain gives it; was twice, counted)
   let (log, xml) = run(repro!("emit_content_an_address_placed_twice"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 4), "{log}");
-  assert_eq!(
-    content_checks(&log),
-    (vec![], vec!["xtra@b.org".to_string()]),
-    "{log}"
-  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(content_checks(&log), (vec![], vec![]), "{log}");
   let row = |items: &[&str]| items.iter().map(ToString::to_string).collect::<Vec<_>>();
   assert_eq!(creators(&xml), [
     row(&["Ann Able", "affiliation=Univ A, Town", "email=ann@a.org"]),
@@ -101,7 +101,7 @@ fn an_address_placed_more_often_than_printed_is_counted() {
       "affiliation=Univ B, City",
       "email=cat.cole@b.org"
     ]),
-    row(&["email=xtra@b.org", "email=xtra@b.org"]),
+    row(&["email=xtra@b.org"]),
   ]);
   let note = repro!("emit_content_an_address_a_note_keeps");
   // (FX3: a note's link the written note still prints, on the contact's own owner, is that note's text alone — Ann's

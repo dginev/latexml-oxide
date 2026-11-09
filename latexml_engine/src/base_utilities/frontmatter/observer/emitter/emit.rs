@@ -1223,17 +1223,46 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
     .iter()
     .find(|e| spaced(&e.text) == spaced(address))
     .and_then(|e| event_run(&field, events, (e, e), None, &[]));
-  tokens.extend_from_slice(&content[..from]);
+  // (the separators the list's argument opens or ends with print no part of one address: `\email{\{neeraj.battan,
+  // abbhinav.venkat\}@research.iiit.ac.in, }`, 1908.05750 — "…iiit.ac.in," had been each address)
+  let separators = |run: &[Token]| {
+    run
+      .iter()
+      .all(|t| t.get_catcode() == Catcode::SPACE || *t == T_OTHER!(",") || *t == T_OTHER!(";"))
+  };
+  let (before, after_list) = (&content[..from], &content[to..]);
+  if !separators(before) {
+    tokens.extend_from_slice(before);
+  }
   // (or its text in the font the list prints in, where no ink is it alone, `a@x; b@y`, 1305.0477, 1510.05412, or no rehearsal
   // reads the argument, past the positions: counted, its link lost)
   let font = inks.first().and_then(|e| e.font.clone());
-  let why = if read.is_none() {
-    "one address of a list past the positions"
-  } else {
-    "one address of a list no ink prints alone"
+  // (a list written in plain characters and control symbols — `\email{\{able,baker\}@x.edu}`, as the old split
+  // wrote each address of it (`shared_row::row_email_calls`): its text is all it printed, so writing an address of it
+  // as text loses no markup, and no Warning counts one (2501.11774's `\email{\{kalinowski, lromao, …\}@inf.puc-rio.br}`)
+  // (a control symbol prints its one character: `\{`, `\}`, `\_`)
+  let control_symbol = |t: &Token| {
+    t.get_catcode() == Catcode::CS
+      && t.with_str(|name| {
+        let mut chars = name.chars().skip(1);
+        chars.next().is_some_and(|c| !c.is_alphabetic()) && chars.next().is_none()
+      })
   };
-  tokens.extend(printed.unwrap_or_else(|| in_its_font(font, by_text(Some(why), address)).unlist()));
-  tokens.extend_from_slice(&content[to..]);
+  let plain = content[from..to].iter().all(|t| {
+    matches!(
+      t.get_catcode(),
+      Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
+    ) || control_symbol(t)
+  });
+  let why = if read.is_none() {
+    Some("one address of a list past the positions")
+  } else {
+    (!plain).then_some("one address of a list no ink prints alone")
+  };
+  tokens.extend(printed.unwrap_or_else(|| in_its_font(font, by_text(why, address)).unlist()));
+  if !separators(after_list) {
+    tokens.extend_from_slice(after_list);
+  }
   tokens.extend(after);
   Ok(Tokens::new(tokens))
 }
@@ -1536,16 +1565,24 @@ fn item_call(
       ) {
         return Ok(tokens);
       }
-    } else if let Some(tokens) =
+    } else if let Some(tokens) = {
+      let command = cut.and_then(|cut| cut.command.as_ref()).unwrap_or(command);
+      // (an affiliation-kind entry's class e-mail calls, which the reading places: without the separators and labels
+      // around them, `entry_email_cut` — `\institute{Univ X\\ \email{p1@x.edu}, \email{p2@x.edu}}` had kept "Univ X ,")
+      let emails_cut = if matches!(role, "affiliation" | "address" | "altaffiliation") {
+        entry_email_cut(command, label, separate.contains(&index))?
+      } else {
+        None
+      };
       // (an entry the block prints moves back to its place by its zone, what a label places alone: `at_queue_position`)
       rekeyed(
-        cut.and_then(|cut| cut.command.as_ref()).unwrap_or(command),
+        emails_cut.as_ref().unwrap_or(command),
         &key_tokens(&s!("label={{{label}}}")),
         true,
         separate.contains(&index),
         by_label(assoc) || !matches!(role, "affiliation" | "address"),
       )
-    {
+    } {
       whole.insert(index);
       cut
         .filter(|cut| cut.command.is_some())
@@ -2308,17 +2345,56 @@ fn items_to_emit<'a>(
   let by_pieces = |index: usize| {
     api_call(index).is_some_and(|call| split_pieces(&call.events, &call.role).len() >= 2)
   };
+  // (an entry whose inner e-mail the reading wrote out whole — each address it prints its own item, `ruling3:written-out` —
+  // keeps no copy of the call either: `\institute{University of Arizona\\ \email{$\{$npcarpenter\,|\,giacobazzi$\}@$arizona.edu}}`,
+  // 2607.09128, whose whole call had stayed on both authors beside each one's own address. Not one written out in part, whose
+  // call the Link step still writes out: 2410.20769's `\{eebinpu, eexmli\textsuperscript{\Letter}\}@ust.hk`)
+  let written_whole = |index: usize| {
+    let written: BTreeSet<&str> = held
+      .iter()
+      .filter(|(_, _, a)| {
+        a.source.map(|s| s.0) == Some(index) && a.rule.contains("ruling3:written-out")
+      })
+      .map(|(_, _, a)| a.text.as_str())
+      .collect();
+    api_call(index).is_some_and(|call| {
+      let inner = call.events.iter().flat_map(|e| &e.inner);
+      let emails: Vec<&Event> = call
+        .events
+        .iter()
+        .chain(inner)
+        .filter(|e| e.kind == EventKind::Contact && e.role.as_deref() == Some("email"))
+        .collect();
+      !emails.is_empty()
+        && emails.iter().all(|e| {
+          // (every address it prints read: no `@` left outside the runs the take-out reads, a group set in math as
+          // `addresses_in` reads it)
+          let printed = resolver::addresses_in(&e.text);
+          !printed.is_empty()
+            && !resolver::address_take_out(&e.text.replace('$', ""), &[])
+              .1
+              .contains('@')
+            && printed.iter().all(|a| written.contains(a.as_str()))
+        })
+    })
+  };
+  let written_out_inner = |a: &Assoc| {
+    a.rule.contains("api:inner-contact")
+      && a.rule.contains("ruling3:written-out")
+      && a.source.is_some_and(|(index, _)| written_whole(index))
+  };
   let separate: BTreeSet<usize> = held
     .iter()
     .filter(|(owner, _, a)| {
       let entry_of = |(at, (o, key, other)): (usize, &(Owner, Key, &Assoc))| {
         o == owner && key.0 == Kind::Affiliation && other.source == a.source && !written_again(at)
       };
-      inner_contact(a)
-        && (!held.iter().enumerate().any(entry_of)
-          || a
-            .source
-            .is_some_and(|(index, _)| prints_itself(index) || by_pieces(index)))
+      written_out_inner(a)
+        || (inner_contact(a)
+          && (!held.iter().enumerate().any(entry_of)
+            || a
+              .source
+              .is_some_and(|(index, _)| prints_itself(index) || by_pieces(index))))
     })
     .filter_map(|(_, _, a)| a.source.map(|(index, _)| index))
     .collect();

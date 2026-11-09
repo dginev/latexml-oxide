@@ -78,16 +78,18 @@ fn a_block_item_keeps_the_orphan_rules() {
 }
 
 /// The block's own creator is no annotation's parent by place (BC1r2): an unlabelled annotation goes to the last named
-/// creator before it, as before the emitter wrote one — llncs's restated `\institute`'s second `\email` stays Bo Li's,
-/// beside the note, and the nameless creator holds the block's addresses once each. Witness 2009.10916 (byte-identical
-/// to int149a `=2`).
+/// creator before it, as before the emitter wrote one. Witness 2009.10916 (byte-identical to int149a `=2`). Since Z18c
+/// llncs's restated `\institute`'s second `\email` is the entry's, written by its label (`shared_row::entry_email_cut`):
+/// the Link step's chain gives both unspelled addresses under Bo Li's one entry to the block, each once (FIDELITY_CHARTER
+/// §4, several unspelled under one name are no one name's) — it had stayed on Bo Li as an unlabelled annotation and
+/// on the block too, counted.
 #[test]
 fn the_blocks_creator_is_no_parent_by_place() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/llncs_supplement_restated_email_not_copied.tex"
   );
   let (log, xml) = run(tex);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(
     creators(&xml),
     [
@@ -95,11 +97,7 @@ fn the_blocks_creator_is_no_parent_by_place() {
         "Lv Tang".to_string(),
         "affiliation=Univ X, Town".to_string()
       ],
-      vec![
-        "Bo Li".to_string(),
-        "affiliation=Univ Y, City".to_string(),
-        "email=libraboli@tencent.com".to_string(),
-      ],
+      vec!["Bo Li".to_string(), "affiliation=Univ Y, City".to_string(),],
       vec![
         "email=luckybird1994@gmail.com".to_string(),
         "email=libraboli@tencent.com".to_string(),

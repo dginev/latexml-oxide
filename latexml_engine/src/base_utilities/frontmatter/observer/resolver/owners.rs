@@ -861,6 +861,7 @@ pub fn entry_address_owners(
   symbol_line: bool,
   addressed: &[usize],
   sole_author: bool,
+  facts: &EntryOwnerFacts,
 ) -> Vec<(Option<Vec<usize>>, &'static str)> {
   // (the only carrier's only where the entry prints that one address no one spells and the carrier holds none of its own:
   // several unspelled under one name are no one name's — 2403.17706's `1022041122@, 1223045440@, hhp@` under Haiping
@@ -869,6 +870,10 @@ pub fn entry_address_owners(
   let unspelled = spelled.iter().filter(|s| s.is_none()).count();
   let in_order = run.len() == carriers.len()
     && carriers.len() >= 2
+    && facts.spellers[run.clone()]
+      .iter()
+      .zip(carriers)
+      .all(|(names, c)| names.len() < 2 || names.contains(c))
     && spelled[run.clone()]
       .iter()
       .zip(carriers)
@@ -881,7 +886,7 @@ pub fn entry_address_owners(
     .copied()
     .filter(|c| !spelled.contains(&Some(*c)))
     .collect();
-  run
+  let mut owners: Vec<(Option<Vec<usize>>, &'static str)> = run
     .clone()
     .map(|at| match (spelled[at], carriers) {
       (Some(owner), _) => (Some(vec![owner]), "owner:spelled"),
@@ -896,7 +901,39 @@ pub fn entry_address_owners(
       (None, _) if in_order => (Some(vec![carriers[at - run.start]]), "owner:order"),
       (None, _) => (None, "owner:block"),
     })
-    .collect()
+    .collect();
+  // (the one address left on the block of several carriers: the carrier marked the corresponding author's, when they own no
+  // other address of the run — the old split's row e-mail owners, `shared_row::row_email_calls`)
+  let left: Vec<usize> = (0..owners.len())
+    .filter(|&at| owners[at].0.is_none())
+    .collect();
+  if let ([at], Some(author)) = (left.as_slice(), facts.corresponding)
+    && !facts.no_ones[run.start + *at]
+    && carriers.len() > 1
+    && carriers.contains(&author)
+    && owners
+      .iter()
+      .all(|(to, _)| to.as_ref().is_none_or(|to| !to.contains(&author)))
+  {
+    owners[*at] = (Some(vec![author]), "owner:corresponding");
+  }
+  owners
+}
+
+/// What [`entry_address_owners`] reads beyond the spelling (the old split's row e-mail owners, `shared_row::row_email_calls`'s
+/// `row_address_owners`, Z18c): every name each address spells (`spellers`) — one spelling several names alike, none of
+/// them the carrier at its place, puts the run in no order: `x1@, x2@, lee@` under Ann Lee, Bob Lee and Cid Cole is the
+/// block's (repro llncs_ambiguous_spelling_is_no_place), while 2102.08148's `jtchen721@` at Jintai Chen's place beside
+/// Danny Z. Chen stays his —; and the one carrier marked the corresponding author (a note naming them so),
+/// whose the one address left on the block of several is (`\author{Ann Able\thanks{Corresponding author} \and Bob
+/// Baker}\institute{Univ X\\ \email{zz@x.edu}}`, repro llncs_corresponding_author_takes_the_left_address).
+/// A template's address or a list the reader could not part (`{first.last}@x.org`, `is_pattern_address`,
+/// `lists_local_parts`) is no one's, never the corresponding author's (`no_ones`: 2408.14427's `\{first.last\}@uii-ai.com`
+/// beside a corresponding Meng Zheng).
+pub struct EntryOwnerFacts<'a> {
+  pub spellers:      &'a [Vec<usize>],
+  pub no_ones:       &'a [bool],
+  pub corresponding: Option<usize>,
 }
 
 /// The owners of the addresses of a `{…}@domain` list set over several lines, which the Kind step for an address line

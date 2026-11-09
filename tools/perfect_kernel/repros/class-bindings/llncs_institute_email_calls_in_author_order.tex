@@ -1,0 +1,19 @@
+% mechanism: the class e-mail calls after the first inside an institute entry are the entry's, written by its label
+%   (`entry_email_cut`), so the Link step's chain places each (FIDELITY_CHARTER §4: spelled, one per carrier in order,
+%   corresponding, block); a call digested after another takes no label (Base_Utility.pool.ltxml:497-501 inherits
+%   from the last stub only) and had stayed on the last author as their own call.
+% witness: the old split's row e-mail owners (`row_address_owners`); the marked form at ERR2 already
+% oracle:  pdflatex 0 errors; "Ann Able, Bob Baker, and Cid Cole" over "Univ X" and "a1@x.edu, b2@x.edu, c3@x.edu"
+% engines: rust Z18b3 = a1@ Ann Able's, b2@ and c3@ Cid Cole's
+% expect:  0 errors, 0 warnings; Univ X on the three; a1@, b2@, c3@ each its author's in order
+% status:  RED (Z18b3) -> GREEN (Z18c)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able \and Bob Baker \and Cid Cole}
+\institute{Univ X\\ \email{a1@x.edu}, \email{b2@x.edu}, \email{c3@x.edu}}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

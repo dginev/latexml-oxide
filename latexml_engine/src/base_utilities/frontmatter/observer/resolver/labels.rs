@@ -998,7 +998,9 @@ pub(in crate::base_utilities::frontmatter::observer) fn listed_addresses(
 /// leaves stranded, each read within its line (a `\n`, a line break, ends one: brief 95c r2 N2): a run ending its line
 /// takes the separators before it (`Trieste, Italy, (ann@x.org)` leaves `Trieste, Italy`; cond-mat0607219's `FAX:
 /// 951-827-2425; email: rlake@…` its `FAX: 951-827-2425` before the break), a run opening it those after it, a run
-/// that is its line the line's break too, a run between two separators the one after it (`FAX: 1, email: a@x.org, Jan.
+/// that is its line the line's break too — the last line the separators the line before ends in as well, as a row
+/// contact's e-mail unit takes them (`shared_row::row_email_calls`: `CVLab, EPFL, \\ \texttt{\{…\}@epfl.ch}` leaves
+/// `CVLab, EPFL`, 2407.18381) —, a run between two separators the one after it (`FAX: 1, email: a@x.org, Jan.
 /// 4` leaves `FAX: 1, Jan. 4`), a run between a word and a separator the spaces before it (`Univ X (a@x.org), City`
 /// leaves `Univ X, City`); and a cut between two spaces one of them (N1: `Univ Y, ann@x.org, Phone` leaves `Univ Y,
 /// Phone`).
@@ -1024,7 +1026,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn address_cuts(
         if line_end < text.len() {
           end = line_end + 1;
         } else if line_start > 0 {
-          start = line_start - 1;
+          start = text[..line_start - 1].trim_end_matches(stray).len();
         }
       }
     } else if before.chars().all(stray) {
@@ -1229,8 +1231,10 @@ fn domain_inside_group(inner: &str) -> Option<Vec<String>> {
 /// written out, each part at it (`ann@a.edu; dzyang,ashishbshah@fb.com`, 2112.00969 — `dzyang` was lost: the author
 /// block's reading too, `author_block::write_out_unspaced_lists`).
 pub(super) fn plain_addresses(text: &str) -> Vec<String> {
+  // (a tie a space, as it prints: `\email{…@uni-kassel.de;~cms@sra.uni-hanover.de}`, 1701.08125 — "~cms@" had been the
+  // address, as the old split's reader never read it)
   write_out_unspaced_lists(text)
-    .split(|c: char| c.is_whitespace() || ",;<>()[]{}".contains(c))
+    .split(|c: char| c.is_whitespace() || ",;<>()[]{}~".contains(c))
     .map(|w| {
       let w = w.trim_matches(|c: char| ".:".contains(c));
       // (a label glued to the address: `E-mail:lcai@cse.cuhk.edu.hk`, 1807.11339)
