@@ -26,6 +26,19 @@ fn ijcai_sectioned(stuff: &Tokens) -> Result<bool> {
   )))
 }
 
+/// [`ijcai_sectioned`] where a reader needs it: the emitter's `=2` split, and the ledger's record of the block
+/// (`AuthorBlock::sectioned`), whose held Errors are an IJCAI block's section markers (`resolver::Input::Block`'s
+/// `markers`) — never a raw `\@maketitle`'s own `\name`/`\email` held in a plain `\author` (1908.02923's JAIR rows;
+/// `perfect_kernel_batch63::author_markup_title_code_forms`), whose reading ended at the marker, its address a note.
+/// Off without the census reads neither: false.
+fn ijcai_block(stuff: &Tokens) -> Result<bool> {
+  if fm_emit_mode() == 2 || fm_shadow_enabled() {
+    ijcai_sectioned(stuff)
+  } else {
+    Ok(false)
+  }
+}
+
 /// `LATEXML_FM_EMIT=2` (OD #980): one whole block queued for the call, as the reader won't be cutting it, which the emitter
 /// takes at the flush (`observer::writer::emit`): Perl's whole-block creator (`author_block::whole_block_author`). A `late`
 /// call, made while a flush digests its queue after reading it (the ledger's `AuthorBlock::late`), queues it for a flush
@@ -87,8 +100,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // stops `\@ifnextchar`).
   DefMacro!("\\lx@add@authors@adaptive{}", sub[(stuff)] {
     let replace = !lookup_bool("\\author:redefined");
-    let late = record_author_call("\\lx@add@authors@adaptive", &stuff, replace, true, None, false);
-    if fm_emit_mode() == 2 && !ijcai_sectioned(&stuff)? {
+    let ijcai = ijcai_block(&stuff)?;
+    let late = record_author_call("\\lx@add@authors@adaptive", &stuff, replace, ijcai, None, false);
+    if fm_emit_mode() == 2 && !ijcai {
       return whole_block_call(stuff, replace, None, late);
     }
     add_authors_calls(stuff, replace)
@@ -148,8 +162,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   );
 
   DefMacro!("\\lx@add@authors{}", sub[(stuff)] {
-    let late = record_author_call("\\lx@add@authors", &stuff, true, true, None, false);
-    if fm_emit_mode() == 2 && !ijcai_sectioned(&stuff)? {
+    let ijcai = ijcai_block(&stuff)?;
+    let late = record_author_call("\\lx@add@authors", &stuff, true, ijcai, None, false);
+    if fm_emit_mode() == 2 && !ijcai {
       return whole_block_call(stuff, true, None, late);
     }
     add_authors_calls(stuff, true)
@@ -172,8 +187,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (where the list starts in the queue: the row an address shared by its authors falls back to, `queued_row_start`)
   DefMacro!("\\lx@add@authors@list{}", sub[(stuff)] {
     assign_value("lx_authors_list_start", queued_author_count() as i64, Some(Scope::Global));
-    let late = record_author_call("\\lx@add@authors@list", &stuff, false, true, None, false);
-    if fm_emit_mode() == 2 && !ijcai_sectioned(&stuff)? {
+    let ijcai = ijcai_block(&stuff)?;
+    let late = record_author_call("\\lx@add@authors@list", &stuff, false, ijcai, None, false);
+    if fm_emit_mode() == 2 && !ijcai {
       return whole_block_call(stuff, false, None, late);
     }
     add_authors_calls_sectioned(stuff, false, true, None, false)

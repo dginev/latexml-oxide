@@ -2,9 +2,11 @@
 % oracle:  pdflatex 0 errors: the comma-parted names (Dan Dorn marked †), "Uber Technologies   †University of British
 %          Columbia" on one line, the brace list of addresses and Dan Dorn's †-marked address under them
 % engines: rust 77p r10 = 0 errors; "Uber Technologies †University of British Columbia" one affiliation of every name
-% expect:  0 errors, 0 warnings; Uber Technologies on every name (R12), UBC on Dan Dorn alone; aable@, ccole@, dorn@ on
-%          the names they spell, bgh@ on Bob Baker by the order its neighbours confirm
-% status:  RED (77p r10) -> GREEN (77p r11)
+% expect:  0 errors, 0 warnings; Uber Technologies on Ann, Bob and Cat, UBC alone on Dan Dorn (user ruling 2026-11-09,
+%          over R12: the marks part the names); aable@, ccole@, dorn@ on the names they spell, bgh@ on Bob Baker by the
+%          order its neighbours confirm
+% status:  RED (77p r10) -> GREEN (77p r11) -> RED both modes (ruling 2026-11-09: off gives Dan Uber too; =2 keeps
+%          the line whole, its † kept: NE6 dropped it, "span letters differ", NE9 restored)
 \documentclass{article}
 \usepackage{hyperref}
 \title{T}

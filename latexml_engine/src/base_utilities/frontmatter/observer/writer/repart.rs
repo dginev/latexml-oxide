@@ -197,8 +197,12 @@ pub(super) fn prefix_tokens(
     None
   })?;
   let prints_key = |end: u16| block_span_tokens(index, (span.0, end), Some(key), false);
-  // (the first address's own first token: the last end still printing `key` alone)
-  let mut address = (ends_in.0 + 1..ends_in.1).find(|&end| prints_key(end).is_some())?;
+  // (the first address's own first token: the last end still printing `key` alone — or the address's start, where its
+  // first token is a call reading its arguments, `\textit{\{aable, bgh, ccole\}@uber.com, …}`: the end past the call
+  // alone is no run (`content::reads_past`, the call reading what follows the run), 2603.07345)
+  let mut address = (ends_in.0 + 1..ends_in.1)
+    .find(|&end| prints_key(end).is_some())
+    .or_else(|| prints_key(ends_in.0).map(|_| ends_in.0))?;
   while address + 1 < ends_in.1 && prints_key(address + 1).is_some() {
     address += 1;
   }
