@@ -2662,6 +2662,22 @@ fn warn_queued_unwritten(index: usize, whole: bool) {
 /// `\def\riera{Riera$^1$ and Elbio Dagotto$^2$}`), keeps the reading, each name its text (NE3): `\author{\small\myauthors \\
 /// …}` with `\newcommand{\myauthors}{Xing Shi Cai, Luc Devroye}` under scrartcl (1602.03850; review revCL9b finding 1).
 fn names_overlap(index: usize, resolved: &Resolved) -> bool {
+  // (what a shared run would digest: a note, or a footnote mark — never a mark the reading answers to a labelled
+  // affiliation —, each its offsets in the block; a block printing none has no run to share, and its names aren't read)
+  let notes: Vec<(usize, usize)> = with_block(index, Vec::new(), |block, events| {
+    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+    events
+      .iter()
+      .filter(|e| {
+        e.kind == EventKind::Note
+          || (e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark"))
+      })
+      .filter_map(|e| Some((at(e.span?.0)?, at(e.span?.1)?)))
+      .collect()
+  });
+  if notes.is_empty() {
+    return false;
+  }
   let spelled: Vec<String> = resolved
     .creators
     .iter()
@@ -2678,32 +2694,18 @@ fn names_overlap(index: usize, resolved: &Resolved) -> bool {
       .filter(|(name, ..)| name.is_some())
       .filter_map(|(_, _, run, ..)| run)
       .collect();
-  // (the shared runs: each two names' runs' common tokens)
-  let shared: Vec<(usize, usize)> = runs
-    .iter()
-    .enumerate()
-    .flat_map(|(k, &(s, t))| {
-      runs
-        .iter()
-        .skip(k + 1)
-        .filter(move |&&(s2, t2)| s < t2 && s2 < t)
-        .map(move |&(s2, t2)| (s.max(s2), t.min(t2)))
-    })
-    .collect();
-  if shared.is_empty() {
-    return false;
-  }
-  // (what a shared run digests: a note, or a footnote mark — never a mark the reading answers to a labelled affiliation)
-  let prints_a_note = with_block(index, false, |block, events| {
-    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
-    events
+  // (a note two names' runs share: two overlapping runs both holding it — each name's run against the notes, not each two
+  // runs against each other)
+  let prints_a_note = notes.iter().any(|&(s, t)| {
+    let holding: Vec<(usize, usize)> = runs
       .iter()
-      .filter(|e| {
-        e.kind == EventKind::Note
-          || (e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark"))
-      })
-      .filter_map(|e| Some((at(e.span?.0)?, at(e.span?.1)?)))
-      .any(|(s, t)| shared.iter().any(|&(from, to)| from <= s && t <= to))
+      .copied()
+      .filter(|&(from, to)| from <= s && t <= to)
+      .collect();
+    holding
+      .iter()
+      .enumerate()
+      .any(|(k, &(s1, t1))| holding[k + 1..].iter().any(|&(s2, t2)| s1 < t2 && s2 < t1))
   });
   if !prints_a_note {
     return false;
@@ -3014,6 +3016,16 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   // 2512.13460, 2510.03886, 1902.06698, 2101.00440; an affiliation run on into the next column, 1304.3138, 2511.14288,
   // 2605.30319, 1711.10325, 1802.06894, 1704.06967; each counted)
   let across_cells = |source: usize| {
+    // (a block of no alignment cell has none to cross: `repart::joined_across_cells` and `repart::crosses_columns` read its
+    // digested `Layout{role="cell"}` events — its creators and items aren't read)
+    let has_cells = with_block(source, false, |_, events| {
+      events
+        .iter()
+        .any(|e| e.kind == EventKind::Layout && e.role.as_deref() == Some("cell"))
+    });
+    if !has_cells {
+      return false;
+    }
     let items = resolved
       .creators
       .iter()
@@ -3121,7 +3133,9 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       (h.rotate_left(5) ^ token.cycle_fingerprint()).wrapping_mul(0x9E37_79B9_7F4A_7C15)
     })
   };
-  let mut recorded: Option<BTreeMap<u64, Vec<Tokens>>> = None;
+  // (by fingerprint: each recorded command, in ledger order, with its reading's source)
+  type Recorded = BTreeMap<u64, Vec<(Tokens, Option<usize>)>>;
+  let mut recorded: Option<Recorded> = None;
   let mut unrecorded = Vec::new();
   // (each kept with the queued creators before it: the last one's the creator off writes it on)
   let mut unrecorded_kept: Vec<(Vec<String>, RawFrontmatter, usize)> = Vec::new();
@@ -3134,38 +3148,39 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       unprinted.push(entry);
     } else if creator_call(&entry.0, &parent) && !wordless_calls.contains(&entry.2) {
       seen = true;
-      if entry.0 == "ltx:creator" && parent.is_empty() {
-        queued_creators.push(with_ledger(|ledger| {
-          ledger.entries().iter().find_map(|e| match e {
-            Entry::Api(call) if call.command.as_ref() == Some(&entry.2) => Some(if call.inside {
-              call.after_block?
-            } else {
-              call.index
-            }),
-            _ => None,
-          })
-        }));
-      }
+      // (each recorded call's command, in ledger order, with its reading's source — a call inside a block its block's
+      // (`after_block`, none while unset), else its own —, read once per flush, not once per queued creator)
       let recorded = recorded.get_or_insert_with(|| {
         with_ledger(|ledger| {
-          let mut recorded: BTreeMap<u64, Vec<Tokens>> = BTreeMap::new();
+          let mut recorded: Recorded = BTreeMap::new();
           for entry in ledger.entries() {
             if let Entry::Api(call) = entry
               && let Some(command) = &call.command
             {
+              let source = if call.inside {
+                call.after_block
+              } else {
+                Some(call.index)
+              };
               recorded
                 .entry(fingerprint(command))
                 .or_default()
-                .push(command.clone());
+                .push((command.clone(), source));
             }
           }
           recorded
         })
       });
-      if !recorded
-        .get(&fingerprint(&entry.2))
-        .is_some_and(|commands| commands.contains(&entry.2))
-      {
+      let calls = recorded.get(&fingerprint(&entry.2));
+      if entry.0 == "ltx:creator" && parent.is_empty() {
+        // (the first recorded call of its command that has a source)
+        queued_creators.push(calls.and_then(|calls| {
+          calls
+            .iter()
+            .find_map(|(command, source)| (*command == entry.2).then_some(*source).flatten())
+        }));
+      }
+      if !calls.is_some_and(|calls| calls.iter().any(|(command, _)| *command == entry.2)) {
         let text = content_text(&queued_affiliation_text(&last_group(&entry.2)));
         // (one printing a word the reading writes nowhere is written as queued, as the switch off writes it — the newest
         // creator's —, never taken to be lost: dmtcs-episciences's `\affiliation`, `\@add@to@frontmatter{ltx:creator}`

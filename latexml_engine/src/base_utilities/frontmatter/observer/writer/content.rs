@@ -337,12 +337,16 @@ impl Field<'_> {
       );
       return None;
     }
-    let held = self.held_whole(start, end);
+    // (what it holds whole read only for a run holding such a token at all)
+    let mut held: Option<Vec<(usize, usize)>> = None;
     if let Some(stray) = (start..end).find(|&i| {
       self.aligned
         && reads_as_alignment(&content[i])
         && !cuts.iter().any(|&(s, t)| (s..t).contains(&i))
-        && !held.iter().any(|&(s, t)| (s..t).contains(&i))
+        && !held
+          .get_or_insert_with(|| self.held_whole(start, end))
+          .iter()
+          .any(|&(s, t)| (s..t).contains(&i))
     }) {
       DebugFeature!(
         "frontmatter",
