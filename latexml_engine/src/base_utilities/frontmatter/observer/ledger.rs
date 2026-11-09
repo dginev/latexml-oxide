@@ -3,7 +3,7 @@
 //! switch ([`super::shadow::fm_shadow_enabled`]) and never while the frontmatter is frozen (a replayed class setter, a
 //! speculative title-page run, the observer's own rehearsal: those calls are not the document's).
 
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::BTreeSet, rc::Rc};
 
 use latexml_core::{
   definition::{
@@ -336,6 +336,11 @@ pub(in crate::base_utilities) struct Ledger {
   /// recorded call is (a stand-in binding's copy's, [`records_now`]), in queue order: what the content check counts them
   /// by (`writer::emit::emit_commands`, `resolver::placed::content_check`)
   pub unrecorded:   Vec<ContentText>,
+  /// what a list setter call the emitter wrote replaces as its clear (`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`)
+  /// would at the block, which pdflatex never prints: an affiliation call queued before the block (its ledger index, no
+  /// span) and an earlier setter call of a block (the block's index and the call's span) — what the content check counts
+  /// no word of (`writer::emit::replaced_by_setter`, `resolver::placed::content_check`; review revDEL3 S1)
+  pub replaced:     BTreeSet<(usize, Option<(u16, u16)>)>,
   /// the census's (E0): why the writer's plan or re-part refused, its first refusal or the writer's own decline — what
   /// `writer: declined …` counts under in `ab_audit fmshadow`'s closed list (`writer::note_refusal`)
   pub refusal:      Option<String>,

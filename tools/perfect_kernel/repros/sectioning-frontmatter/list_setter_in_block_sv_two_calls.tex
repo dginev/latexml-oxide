@@ -1,0 +1,13 @@
+% witness: cond-mat0605195's shape with two `\institute` calls in one block (review revDEL3 S1's sibling, synthetic)
+% oracle:  pdflatex (svjour.cls + svepjST.clo of 2502.07804) 0 errors: "1 Univ X, Town · 2 Lab Y, City" (the last list)
+% engines: rust DEL3 = both calls written, the second's entries numbered after the first's
+% expect:  Ann Able and Cy Coe hold Univ X, Town; Bob Baker holds Lab Y, City; Old Place nowhere; 0 errors, 0 warnings
+% status:  RED (DEL3) -> GREEN (DEL3b)
+\documentclass[epjST]{svjour}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}\institute{Old Place, Nowhere} \and Bob Baker\inst{2}
+\and{Cy Coe\inst{1}\institute{Univ X, Town \and Lab Y, City}}}
+\maketitle
+Text.
+\end{document}

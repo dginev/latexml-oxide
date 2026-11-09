@@ -1038,20 +1038,23 @@ fn list_setter_call(index: usize, run: (usize, usize)) -> Option<Vec<Token>> {
 }
 
 /// `resolved` without what its blocks' list setter calls hold (`runs`, by block: [`list_setter_runs`]): an item read in a
-/// call, which the call writes as it is digested.
+/// call, which the call writes as it is digested — and without the calls the written call's clear replaces (`replaced`,
+/// [`replaced_by_setter`]).
 fn without_list_setters(
   resolved: &Resolved,
   runs: &BTreeMap<usize, Vec<(usize, usize)>>,
+  replaced: &BTreeSet<usize>,
 ) -> Resolved {
   let outside = |assoc: &Assoc| {
     !assoc.source.is_some_and(|(at, span)| {
-      span.is_some_and(|(s, e)| {
-        runs.get(&at).is_some_and(|runs| {
-          runs
-            .iter()
-            .any(|&(start, end)| start <= usize::from(s) && usize::from(e) <= end)
+      replaced.contains(&at)
+        || span.is_some_and(|(s, e)| {
+          runs.get(&at).is_some_and(|runs| {
+            runs
+              .iter()
+              .any(|&(start, end)| start <= usize::from(s) && usize::from(e) <= end)
+          })
         })
-      })
     })
   };
   let mut resolved = resolved.clone();
@@ -1062,6 +1065,34 @@ fn without_list_setters(
   }
   resolved.block.retain(outside);
   resolved
+}
+
+/// The ledger indices of the calls the list setter call of the block at `block` replaces as the binding's clear does
+/// (`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`, [`list_setter_runs`]): each affiliation call queued before the
+/// block since the last flush and not cleared already, a document's `\institute{Old Place}` before `\author{… \and{Cy
+/// Coe\inst{1}\institute{Univ X \and Lab Y}}}` (cond-mat0605195's shape) — pdflatex prints only the block's list. The
+/// emitter writes the call inside the flush, where its clear meets an empty queue (`place::digest_front_matter` takes
+/// the queue first), so the reading drops them instead.
+fn replaced_by_setter(block: usize) -> BTreeSet<usize> {
+  with_ledger(|ledger| {
+    let Some(Entry::Author(of)) = ledger.entries().get(block) else {
+      return BTreeSet::new();
+    };
+    let calls = ledger.entries()[..block]
+      .iter()
+      .filter_map(|entry| match entry {
+        Entry::Api(call)
+          if call.epoch == of.epoch
+            && !call.cleared
+            && call.tag == "ltx:contact"
+            && call.role == "affiliation" =>
+        {
+          Some(call.index)
+        },
+        _ => None,
+      });
+    calls.collect()
+  })
 }
 
 /// An item or a name written from the reading's text, its markup lost (fonts, links, math): a Warning naming it and `why`, the
@@ -3167,13 +3198,19 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     });
     blocks.collect()
   });
-  // (the coordination and separator checks, counted: `resolver::net` — not a list setter's block's marks, which request
-  // the entries its call queues and the reading holds none of: the insertion counts a request no entry answers, as
-  // Perl's)
+  // (each such block's setter calls the reading holds as one affiliation, by block: `list_setter_runs`)
+  let all_runs: BTreeMap<usize, Vec<(usize, usize)>> = setters
+    .iter()
+    .map(|&source| (source, list_setter_runs(source)))
+    .filter(|(_, runs)| !runs.is_empty())
+    .collect();
+  // (the coordination and separator checks, counted: `resolver::net` — not the marks of a block whose setter call is
+  // written as it is, which request the entries the call queues and the reading holds none of: the insertion counts a
+  // request no entry answers, as Perl's. A call the reading cut into its marked entries is checked as any block's)
   for (index, labels) in analysis
     .marks
     .iter()
-    .filter(|(index, _)| !whole.contains(index) && !setters.contains(index))
+    .filter(|(index, _)| !whole.contains(index) && !all_runs.contains_key(index))
   {
     warn_net(
       &s!("marks|{index}"),
@@ -3348,22 +3385,42 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   });
   // (each written block's list setter calls the reading holds as one affiliation (`list_setter_runs`): their entries the
   // call's, none of the reading's items. A call the reading cut into the entries its marks label is the reading's,
-  // 2502.07804's `\institute{${}^1$…\\ ${}^2$…}`. Either way the names' marks request the setter's entries, none printed,
-  // as `\inst` requests, whoever prints it)
-  let setter_runs: BTreeMap<usize, Vec<(usize, usize)>> = by_block
-    .keys()
-    .filter(|source| setters.contains(source))
-    .map(|&source| (source, list_setter_runs(source)))
-    .filter(|(_, runs)| !runs.is_empty())
+  // 2502.07804's `\institute{${}^1$…\\ ${}^2$…}`, its block's marks as any block's)
+  let setter_runs: BTreeMap<usize, Vec<(usize, usize)>> = all_runs
+    .iter()
+    .filter(|(source, _)| by_block.contains_key(source))
+    .map(|(&source, runs)| (source, runs.clone()))
     .collect();
+  // (the call written: the flush's last, whose clear (`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`) replaces
+  // every list queued before it — an earlier call of the block, a document's `\institute` before the block — as the binding's
+  // call does outside a flush and as pdflatex prints the last list; digested inside the flush, its clear meets an empty
+  // queue, so what it replaces leaves the reading here (`replaced_by_setter`), not written to be numbered before its list)
+  let written_run: Option<(usize, (usize, usize))> = setter_runs
+    .iter()
+    .flat_map(|(&source, runs)| runs.iter().map(move |&run| (source, run)))
+    .max();
+  let replaced: BTreeSet<usize> =
+    written_run.map_or_else(BTreeSet::new, |(block, _)| replaced_by_setter(block));
+  // (and what the content check counts no word of: the calls replaced, the setter calls not written)
+  if written_run.is_some() {
+    let runs = setter_runs.iter().flat_map(|(&source, runs)| {
+      runs
+        .iter()
+        .filter(move |&&run| Some((source, run)) != written_run)
+        .filter_map(move |&(s, t)| {
+          Some((
+            source,
+            Some((u16::try_from(s).ok()?, u16::try_from(t).ok()?)),
+          ))
+        })
+    });
+    let calls = replaced.iter().map(|&index| (index, None));
+    let gone: Vec<(usize, Option<(u16, u16)>)> = calls.chain(runs).collect();
+    with_ledger(|ledger| ledger.replaced.extend(gone));
+  }
   let keeps_marks: BTreeMap<usize, bool> = by_block
     .keys()
-    .map(|&source| {
-      (
-        source,
-        !setters.contains(&source) && per_author_marks(source),
-      )
-    })
+    .map(|&source| (source, per_author_marks(source)))
     .collect();
   let keeps = |source: usize| keeps_marks.get(&source).copied().unwrap_or(false);
   let mut names: BTreeMap<usize, (Option<Vec<Token>>, Vec<Token>)> = BTreeMap::new();
@@ -3411,7 +3468,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   let resolved = if setter_runs.is_empty() {
     resolved
   } else {
-    without_setters = without_list_setters(resolved, &setter_runs);
+    without_setters = without_list_setters(resolved, &setter_runs, &replaced);
     &without_setters
   };
   let mut kept: Vec<RawFrontmatter> = Vec::new();
@@ -3638,12 +3695,10 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   }
   // (each list setter call after the items, as the whole block digests it after the names' own contacts (2502.07804's
   // ORCID links): its entries numbered in the count of the entries of their role before them, `labelseq`)
-  for (&source, runs) in &setter_runs {
-    for &run in runs {
-      if let Some(call) = list_setter_call(source, run) {
-        out.push(entry("ltx:contact", call));
-      }
-    }
+  if let Some((source, run)) = written_run
+    && let Some(call) = list_setter_call(source, run)
+  {
+    out.push(entry("ltx:contact", call));
   }
   out.extend(unprinted.map(|(at, rdf)| rdf_entry(at, rdf)));
   // (the block's notes Perl prints as the document's: `block_pubnote`)
