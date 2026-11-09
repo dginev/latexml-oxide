@@ -50,21 +50,31 @@ fn rows(expected: &[&[&str]]) -> Vec<Vec<String>> {
 /// (`\author[1,2]{\href{kaizheng.wang@ntu.edu.sg}{Kaizheng Wang}\thanks{…}}`, 2602.22747). Distinct from
 /// `perfect_kernel_batchf1::a_link_printing_a_name_is_the_name` (a link carrying a mark, 1812.07638's, on a later line): the slot
 /// is the rule, the mark only one thing a name carries. On int146a `=2` each link was a url contact of the next name, or of a
-/// nameless creator; every creator is now the switch-off one, element for element.
+/// nameless creator; every creator is now the switch-off one, element for element (pinned as recorded at `=2`).
 #[test]
 fn a_link_filling_a_name_slot_is_the_name() {
-  for (tex, names) in [
+  for (tex, names, whole) in [
     (
       repro!("emit_a_link_filling_a_name_slot_is_the_name"),
       &["Ann Able", "Bob Baker", "Cy Cole"][..],
+      &[
+        "<creator role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"http://ann.org\">Ann Able</ref></personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_funding\" role=\"thanks\">Supported by X.</note>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"http://bob.org/home\">Bob Baker</ref></personname>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, City</contact>\n  </creator>",
+      ][..],
     ),
     (
       repro!("emit_a_link_filling_a_call_is_the_name"),
       &["Ann Able", "Bob Baker"][..],
+      &[
+        "<creator role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"ann.able@a.org\">Ann Able</ref></personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\">This work was done at Univ A.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, City</contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, City</contact>\n  </creator>",
+      ][..],
     ),
   ] {
     let (log, xml) = run(tex);
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(creators_xml(&xml), whole, "{tex}");
     let found: Vec<String> = creators(&xml).into_iter().map(|c| c[0].clone()).collect();
     assert_eq!(found, names);
     let ann = &creators_xml(&xml)[0];

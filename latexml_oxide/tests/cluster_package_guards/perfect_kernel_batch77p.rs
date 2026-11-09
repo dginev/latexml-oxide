@@ -177,6 +177,17 @@ fn space_parted_names_share_the_address() {
   ]);
 }
 
+/// The ruling's negatives keep their creators: a name with its own lines keeps them, names an `\and` parts share none,
+/// one name keeps its lines, and lines labelled by the names' symbol marks go to the names carrying them, without the
+/// mark (2505.23260, 2109.13296: were both on the last name; batch 77p r9, `apart_line_calls`). It also pins a
+/// known-wrong residual, as it stands until its SYNC_STATUS row lands: a row of addresses parted by space too (set by
+/// position) — Univ C on Dan Dorn, Cat Cole with none, "Univ D" an invented creator (row "an address row parted by
+/// space, laid out by position").
+#[test]
+fn space_parted_names_negatives_pin_residuals() {
+  convert_repro!("author_space_parted_names_negatives.tex");
+}
+
 /// The class-bindings repro's log and squashed XML for aero.cls's `\ADsetup` shapes, with the class excerpt `cls` beside
 /// it, its conversion free of errors and warnings.
 fn convert_aero(tex: &str, cls: &str) -> String {
@@ -526,6 +537,17 @@ fn names_rows_by_count_or_following_line() {
     );
     assert_eq!(c.matches("role=\"affiliation\"").count(), 1, "{c}");
   }
+}
+
+/// E-mail owners in an unmarked block (77p r4 decision: elimination only where the order is confirmed): the initials
+/// spell a name (`bb@`, `aa@`: p9), a role mailbox is no person's (`info@`: p28, the block's), an
+/// initial and a surname spell one (`lzhang@` Li Zhang, then `zhangw@` the one name left: p8), a name an address on
+/// another e-mail line spells leaves the pool (`ccruz@` on the next line: `qq@` Bo Bell's; 2605.06223), and a line not in
+/// name order (2509.10377, by institution) places no address by its place (`xx@`, `yy@` unplaced). Unplaced addresses
+/// are the block's, on the shared creator (user ruling R10 2026-10-20; 77p r9 put them on the group's last name).
+#[test]
+fn email_owner_by_confirmed_order() {
+  convert_repro!("author_email_owner_confirmed_order.tex");
 }
 
 /// E-mail owners in a marked block: an initial and a surname spell a name (2608.10670's `psingh1_be22@` among three

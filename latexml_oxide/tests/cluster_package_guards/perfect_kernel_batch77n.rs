@@ -348,6 +348,12 @@ fn revtex3_glue_after_names_is_no_name() {
   ]);
 }
 
+/// Negative guard: one name in a `\parbox` stays one author in its box.
+#[test]
+fn parbox_single_author_stays_whole() {
+  convert_repro!("author_parbox_single_author_stays.tex");
+}
+
 /// authblk's unlabelled `\author`s, each a name with a `\thanks` holding a comma, each with its `\affil` (r1 review probe
 /// a1): two authors, each with its note and affiliation (int31a and 77n r1 counted the note's comma as a list separator
 /// and replaced Ann Able, 0 errors).
@@ -705,6 +711,14 @@ fn authblk_affil_after_affils_in_author_reaches_them() {
   ]);
 }
 
+/// authblk `\affil{$^{1,2}$Univ X}` after `\author{Ann$^{1}$}\author{Bob$^{2}$}` (r3 review probes w1, v8): a combined
+/// mark keeps authblk's run, so both authors get Univ X (77n r3: Ann alone, the marked path labelling it by its first
+/// mark).
+#[test]
+fn authblk_combined_mark_affil_runs() {
+  convert_repro!("author_authblk_combined_mark_affil.tex");
+}
+
 /// A raised text after an authblk name's mark (`Ann Able$^{1}$\textsuperscript{equal contrib.}`, r4 review probe d4; d1
 /// `\textsuperscript{(*)}`, d3 `$^{\rm (a)}$`, c4 the same class): a superscript is a mark only when its operand reads
 /// as labels (`reads_as_labels`), so the name is no list and shows its text as int32a and pdflatex do (77n r4: "Ann
@@ -860,6 +874,14 @@ fn authblk_legend_after_passed_over_run() {
   ]);
 }
 
+/// ptephy's `\affil{}{Univ Z}` after `\affil{1}{Univ X}\affil{2}{Univ Y}` (r5 review probe t02; t04; witnesses
+/// 1605.07339, 2311.07297, 1902.10888): every author of the run answered, so Univ Z is the whole run's, as the class
+/// prints it under all of the names (77n r5: Bob's only). Each author's in print order, Univ Z last (Since 99a r2 in print order (R8: a relocated entry takes its call's place in the queue, `relocate::at_queue_position`, OD #954)).
+#[test]
+fn ptephy_unlabelled_affil_after_labelled_reaches_all() {
+  convert_repro!("author_ptephy_unlabelled_affil_after_labelled.tex");
+}
+
 /// opex3's `\address{Univ Z}` after mark-picked addresses (r5 review probe o04): every author answered, Univ Z is both
 /// authors' (int32a; 77n r5: Bob Baker's only). Each author's in print order, Univ Z last (Since 99a r2 in print order (R8: a relocated entry takes its call's place in the queue, `relocate::at_queue_position`, OD #954)).
 #[test]
@@ -952,6 +974,18 @@ fn authblk_glued_braced_symbol_mark() {
 fn email_pile_beside_marked_affiliations_is_dealt() {
   let xml = convert_repro!("author_email_pile_beside_marked_affiliations.tex");
   assert_no_merged_names(&xml);
+}
+
+/// A footnote symbol on an authblk name an address (r6 review probe s3; s1, z1) or a raised text (s5) follows, kept on
+/// `\lx@add@creator` as printed: the symbol is shown once, where the name prints it — its mark requests nothing
+/// (`author_label_marks` requests labels only), so no unanswered mark is appended after the name (77n r6: "Bob Baker∗
+/// (bob@x.org)∗", "Bob Baker∗equal∗"). Ann Able's "Corresponding author" is the run's extent (Perl's `annotate=new`),
+/// not the page — pdflatex shows the ∗ on Bob only (77n r7 review finding 2; SYNC "A symbol legend reaches authors who
+/// do not show its symbol").
+/// 95b (authblk written, OD #942): the legend a note of the name showing its `∗` alone (ruling 2), its mark answered.
+#[test]
+fn authblk_symbol_mark_then_text_shown_once() {
+  convert_repro!("author_authblk_symbol_mark_then_address_shown_once.tex");
 }
 
 /// A whole author block in one authblk `\author`, its marks glued to symbols (`$^{1\ast}$`, `$^{1\dagger}$`) and its

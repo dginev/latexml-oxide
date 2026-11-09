@@ -37,8 +37,11 @@ fn the_whole_block_queue_reaches_one() {
     repro!("emit_notes_a_footnote_and_a_thanks_their_kinds"),
   ] {
     let (two_log, _) = run(tex);
-    assert_eq!((error_count(&two_log), warning_count(&two_log)), (0, 0));
-    assert_eq!(error_count(&two_log), 0, "{two_log}");
+    assert_eq!(
+      (error_count(&two_log), warning_count(&two_log)),
+      (0, 0),
+      "{two_log}"
+    );
   }
   let (_, two) = run(repro!(
     "emit_whole_queue_an_address_by_its_names_at_the_flush"

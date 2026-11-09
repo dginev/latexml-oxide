@@ -31,7 +31,7 @@ fn letters(n: usize) -> String {
     .collect()
 }
 
-/// `tex` converted under `LATEXML_FM_EMIT=emit` and the census switch: the log, the XML and the shadow dump (`fm_shadow_json`).
+/// `tex` converted under the census switch: the log, the XML and the shadow dump (`fm_shadow_json`).
 fn run_with_shadow(tex: &str) -> (String, String, String) {
   convert_files_with_setup_then(
     tex,
@@ -79,14 +79,7 @@ fn a_block_past_the_stamps_positions_is_read() {
       })
       .collect()
   };
-  let projected = ("projected".to_string(), None);
-  let overflow = (
-    "overflow".to_string(),
-    Some("unstamped: out of positions".to_string()),
-  );
-  assert_eq!(stamps(&json), vec![projected.clone(); 500]);
-  let mut off_stamps = vec![projected; 458];
-  off_stamps.extend(vec![overflow; 42]);
+  assert_eq!(stamps(&json), vec![("projected".to_string(), None); 500]);
   let authors: Vec<Vec<String>> = (0..500)
     .map(|n| {
       vec![

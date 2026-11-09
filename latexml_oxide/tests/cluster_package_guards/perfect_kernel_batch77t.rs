@@ -109,6 +109,17 @@ fn ieeekeywords_blocks_are_all_kept() {
   );
 }
 
+/// Rank 59: the vmsta binding (latexml_contrib vmsta_cls.rs) reads the class raw and gives the author content its title
+/// page's name parts (vmsta.cls:278-291 `\name@m@front`: `\@fnm~\@snm`, the initials dropped; 1508.02842, 1411.4499,
+/// 1601.01109). Was "Yu.YuliyaMishura".
+#[test]
+fn vmsta_title_page_name_parts() {
+  repro_with!(
+    "class-bindings/vmsta/vmsta_title_page_name_parts.tex",
+    ("vmsta.cls", "class-bindings/vmsta/vmsta.cls")
+  );
+}
+
 /// Rank 92: the entics binding (latexml_contrib entics_cls.rs) reads the class raw with elsart's frontmatter interface
 /// (esl.dtx's): `\thanksref{ALL}` requests the `\thanks[ALL]{…}` note, the `\address` is the author's (2212.08177;
 /// entcs.cls 1812.00040). Was the creator "Ann AbleALL" and the address a body paragraph.
@@ -405,6 +416,16 @@ fn llncs_author_and_is_inline() {
     creator(true, "Ann Able", &somewhere),
     creator(false, "Bob Baker", &somewhere),
   ]);
+}
+
+/// Rank 59 (rev77t finding 7): a `\fnm` with no `\snm` after it is printed at the author content's end, as vmsta.cls's
+/// `\name@m@front` prints its stored `\@fnm` after the content.
+#[test]
+fn vmsta_first_name_without_surname() {
+  repro_with!(
+    "class-bindings/vmsta/vmsta_first_name_without_surname.tex",
+    ("vmsta.cls", "class-bindings/vmsta/vmsta.cls")
+  );
 }
 
 /// Rank 110 (rev77t findings 3, 4), an e-mail line under a name (review probe L3): it ends that name's row as an
