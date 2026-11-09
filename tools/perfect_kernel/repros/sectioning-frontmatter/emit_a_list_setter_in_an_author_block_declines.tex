@@ -1,0 +1,22 @@
+% mechanism: the ledger's `list_setter_called` (`observer/ledger.rs`, `AuthorBlock::list_setter`) and the emitter's
+%   `stays_out` (`observer/writer/emit.rs`): a binding's list setter (sv_support's `\institute`, whose definition clears the
+%   affiliation list and numbers its entries, `labelseq=affiliation`, for the `\inst` marks) called inside an author's
+%   group is read by the rehearsal as one affiliation of the last author, while the real call queues numbered entries no
+%   reading points to. Under `LATEXML_FM_EMIT=2` the emitter now stays out: every block written whole, its queued entries
+%   placed as off places them, one Warning counting it; off unchanged
+% witness: cond-mat0605195 (svjour, `\and{… \institute{…}}`); CL2's report (agent_reports/2026-11-08_CL2_report.md)
+% oracle:  pdflatex 0 errors: "Ann Able1 · Bob Baker2 · Cy Coe1", "1 Univ X, City", "2 Lab Y, Town"
+% engines: rust CL2base at =2 = marks glued to the names ("Ann Able1"), A and B with no affiliation, "Lab Y, Town" lost,
+%   an orphan-annotation Warning; off: each author with the institute their mark names
+% expect:  three creators, each with its institute by mark (A: Univ X, B: Lab Y, C: Univ X); =2 one Warning (the emitter
+%   staying out), off none; 0 Errors
+% status:  RED (CL2base, =2) -> GREEN (CL2)
+% preload: ar5iv.sty
+\documentclass[epj]{svjour}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}\and Bob Baker\inst{2}
+\and{Cy Coe\inst{1}\institute{Univ X, City \and Lab Y, Town}}}
+\maketitle
+Body.
+\end{document}

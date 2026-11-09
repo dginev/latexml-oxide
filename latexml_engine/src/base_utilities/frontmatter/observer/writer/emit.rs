@@ -746,13 +746,19 @@ fn block_names(
   })
 }
 
-/// Why the emitter stays out of the paper the ledger holds: no block, or a block no rehearsal read.
+/// Why the emitter stays out of the paper the ledger holds: no block, a block no rehearsal read, or a block calling a
+/// binding's list setter (`AuthorBlock::list_setter`: the rehearsal reads the call as one affiliation of the block, the real
+/// call queues entries numbered for the marks, which no reading points to — cond-mat0605195's `\institute` in an author's
+/// group; each block then written whole, its queued entries as today's).
 fn stays_out() -> Option<&'static str> {
   with_ledger(|ledger| {
     let mut blocks = 0;
     for entry in ledger.entries() {
       if let Entry::Author(block) = entry {
         blocks += 1;
+        if block.list_setter.is_some() {
+          return Some(LIST_SETTER_IN_BLOCK);
+        }
         match &block.outcome {
           Outcome::Events { .. } | Outcome::Skipped(SkipReason::Empty) => {},
           Outcome::Skipped(reason) | Outcome::Deferred(reason) => return Some(reason.name()),
@@ -763,6 +769,9 @@ fn stays_out() -> Option<&'static str> {
     (blocks == 0).then_some(NO_BLOCK)
   })
 }
+
+/// The emitter's reason to stay out of a paper a block of which calls a binding's list setter ([`stays_out`]).
+const LIST_SETTER_IN_BLOCK: &str = "a binding's list setter called inside the block";
 
 /// An item or a name written from the reading's text, its markup lost (fonts, links, math): a Warning naming it and `why`, the
 /// charter's count of what the emitter could not take from the tokens. `None` for an item that is its text (an ORCID's id).
