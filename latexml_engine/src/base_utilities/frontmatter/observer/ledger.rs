@@ -65,32 +65,41 @@ pub(in crate::base_utilities) enum Outcome {
   /// Rehearsed and lexed: its events, the errors and warnings the rehearsal held, and beside the events the block's
   /// definitions, the breaks its binding declares and the errors by position (`rehearsal::Rehearsal::Done`).
   Events {
-    events:       Vec<Event>,
+    events:        Vec<Event>,
     /// the extents of its formulas, outermost, in order (`events::lex_with_formulas`): what a span's content reads
     /// (`writer::Field`). Not in a dump: nothing offline reads the content
-    formulas:     Vec<events::Formula>,
+    formulas:      Vec<events::Formula>,
     /// where its inks printing an `@` print, and in what font (`events::InkTable`): what the emitter cuts an entry's
     /// addresses at (`writer::address_cut`). Not in a dump
-    inks:         Box<events::InkTable>,
-    errors:       usize,
-    warnings:     usize,
-    declarations: Vec<Event>,
-    breaks:       Vec<Event>,
-    held:         Vec<HeldError>,
+    inks:          Box<events::InkTable>,
+    errors:        usize,
+    warnings:      usize,
+    declarations:  Vec<Event>,
+    breaks:        Vec<Event>,
+    held:          Vec<HeldError>,
     /// the environments its tokens open and close, what a span's content reads (`writer::Field`). Not in a dump
-    environments: Vec<EnvironmentStep>,
+    environments:  Vec<EnvironmentStep>,
     /// the creator calls its own expansion made (`field_notes::FieldCreator`), the keyvals the emitter writes on the
     /// creators their Names make (`Event::creator_call`), fixed once rehearsed (a slice: the variant stays under clippy's
     /// `large_enum_variant` bound). Not in a dump
-    creators:     Box<[FieldCreator]>,
+    creators:      Box<[FieldCreator]>,
     /// where the rehearsal left a group open (`rehearsal::Rehearsal::Done::left_open`), what it read past it no event
     /// says: the block's content's text ([`content_text`]), whose words the events lack the content check counts
     /// (`resolver::placed::content_check`), as a call's no rehearsal read (`ApiCall::unread`). In a dump only when set
-    unread:       Option<Box<ContentText>>,
+    unread:        Option<Box<ContentText>>,
+    /// where its own digestion moved the footnote counter its marks print from, no event saying so
+    /// (`field_notes::FieldNotes::counter_moves`): what the emitter carries or writes whole (`writer::emit::counter_moved`).
+    /// Not in a dump: only the emitter reads it
+    counter_moves: Option<Box<CounterMoves>>,
   },
   /// Not rehearsed, and why.
   Skipped(SkipReason),
 }
+
+/// Where a block's own digestion moved the footnote counter, `start..end` each (`Outcome::Events::counter_moves`): boxed,
+/// none for most blocks, so the variant stays under clippy's `large_enum_variant` bound.
+#[derive(Debug, Clone, PartialEq)]
+pub(in crate::base_utilities) struct CounterMoves(pub Vec<(u16, u16)>);
 
 /// Why a block was not rehearsed (or its rehearsal not kept).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
