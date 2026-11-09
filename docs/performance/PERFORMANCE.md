@@ -1522,5 +1522,5 @@ queue loses entries). `instructions:u`, `int142a-rel` → `C1-rel`, XML byte-ide
 12.70 G (+0.05 %); `hello.tex` 1.0810 G → 1.0812 G (+0.02 %); `b5_fill1000.tex` 11.563 G → 11.562 G. Generated blocks, 600
 names: 300 marked `\affiliation`s 21.6 G → 4.4 G, the 20-entry list repeated after every name 175.3 G → 8.0 G. Left, both
 synthetic-only so far: `relocate::for_run_names` per `\affiliation` after a long run (9.9 % of the 300 marked calls under
-aastex631), `affiliations::place_uncut_copies`'s queue walk per repeated list (15 % of the repeated list, its copies'
+aastex631), `frontmatter_api::cut::place_uncut_copies`'s queue walk per repeated list (15 % of the repeated list, its copies'
 `printed_marks_as_marks` reading the queue's marks). Guard `perfect_kernel_batchc1`.

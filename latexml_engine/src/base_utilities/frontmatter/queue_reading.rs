@@ -2,7 +2,7 @@
 //!
 //! Every contact of an author block asks what the queued names request, so reading the names again at each call made the
 //! block's cost the product of its names and its contacts: 28 % of 2103.04797's instructions (975 authors, the Cut,
-//! `affiliations::cut_marked_contact`) and 56 % of 1901.01540's (1,202, AASTeX's `\affiliation` and the Cut); 2005.08745's
+//! `frontmatter_api::cut::cut_marked_contact`) and 56 % of 1901.01540's (1,202, AASTeX's `\affiliation` and the Cut); 2005.08745's
 //! 592 are labelled, so the Cut leaves them at once. The reading is a value of the state beside the queue, so an
 //! assignment journal rolls both back together (a rehearsal) and it goes with the state; an entry is read once, when a
 //! reader first finds it queued. Perl has no counterpart, as it reads no names at a contact: this is only a cache of what
@@ -185,4 +185,66 @@ pub(in crate::base_utilities) fn queued_requesters(operand: &[Token]) -> Vec<usi
 /// `\altaffilmark{…}` (which request `altaffil:` labels), and those of their superscripts (`affiliation:` labels).
 pub fn queued_name_marks() -> Rc<(Vec<String>, Vec<String>)> {
   Rc::clone(&queue_reading().name_marks)
+}
+
+/// Whether the queued authors' names (`queued_name`) print every word `text` prints — each word one of a name's, or
+/// an initial of one, accents aside (`visible_name_text`), or the word "and" between names: `text` then prints no
+/// word the authors do not. True for a `text` printing no word; else false when no author is queued. svjour3's
+/// `\institute{F. Author \at …}` piece names its authors before the address (`sv_support_sty.rs`): a piece writing
+/// only their names adds nothing to the XML (`B. Baker, and C. Cole \at …`, batch 63's piece naming two), one writing
+/// more (`\textit{Contact author:} Erwan {Le Merrer}`, 1711.01894; `Xin-long Luo, Corresponding author`, 2107.13864;
+/// the whole name `Leonardo Anjoletto Ferreira` of `Leonardo A. Ferreira`, 1705.01399) prints words no name does.
+pub fn queued_author_name_prints(text: &Tokens) -> bool {
+  let written = printed_words(text);
+  if written.is_empty() {
+    return true;
+  }
+  let names: Vec<String> = queued_author_name_words().into_iter().flatten().collect();
+  !names.is_empty()
+    && written.iter().all(|w| {
+      w == "and"
+        || names
+          .iter()
+          .any(|o| o == w || (w.chars().count() == 1 && o.starts_with(w.as_str())))
+    })
+}
+
+/// How many queued authors' names (`queued_name`) `text` spells whole: each author whose name's words (as
+/// [`queued_author_name_prints`] reads them) stand together, in order, among the words `text` prints. svjour3's
+/// `\institute{\begin{itemize}\item[\Letter] Ann Able \\ \email{…} \item[] Bob Baker \\ \email{…} \at \item[1]
+/// Univ X …}` names its list's authors before the one `\at` (2312.14898): two or more names it no one by.
+pub fn queued_author_names_spelled(text: &Tokens) -> usize {
+  let written = printed_words(text);
+  queued_author_name_words()
+    .into_iter()
+    .filter(|name| {
+      !name.is_empty()
+        && written
+          .windows(name.len())
+          .any(|run| run == name.as_slice())
+    })
+    .count()
+}
+
+/// The words `tokens` print as a name-shape test reads them ([`visible_name_text`]), accents aside, lowercased.
+fn printed_words(tokens: &Tokens) -> Vec<String> {
+  resolver::base_letters(&visible_name_text(tokens.unlist_ref()))
+    .split(|c: char| !c.is_alphanumeric())
+    .filter(|w| !w.is_empty())
+    .map(str::to_lowercase)
+    .collect()
+}
+
+/// Each queued author's name ([`queued_name`]) as its [`printed_words`], in queue order.
+fn queued_author_name_words() -> Vec<Vec<String>> {
+  with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue
+      .iter()
+      .filter(|entry| {
+        entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+      })
+      .map(|entry| printed_words(&queued_name(&entry.2)))
+      .collect(),
+    _ => Vec::new(),
+  })
 }

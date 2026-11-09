@@ -4,6 +4,11 @@
 use super::*;
 use crate::base_utilities::frontmatter::observer::block_creator_written;
 
+mod cut;
+pub(in crate::base_utilities) use cut::*;
+mod kind;
+use kind::*;
+
 /// The attribute (and `\lx@add@contact` option, a declared `Frontmatter` key) of a contact whose label its binding
 /// prints before its line, as written: authblk's `\affil[x]` (`\AB@affilnote`, authblk.sty:142), jheppub's
 /// `\affiliation[x]` (`\item[$^{#1}$]`), cas's letter (`cas_labelled_entry`); its value `true`. The Kind step for a
@@ -592,7 +597,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   );
 
   // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #954): where an uncut copy of a printed list the Cut cut later stood in the
-  // queue (`affiliations::place_uncut_copies`): its place, an annotation's ordinal, recorded for the authors it
+  // queue (`frontmatter_api::cut::place_uncut_copies`): its place, an annotation's ordinal, recorded for the authors it
   // reached, whose entry of the list keeps it (`relocate::at_queue_position`).
   DefPrimitive!("\\lx@cut@copy@place {}{}{}", sub[(key, authors, zone)] {
     let ordinal = lookup_int(QUEUE_ORDINAL_COUNTER) + 1;
@@ -1200,4 +1205,17 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     });
   });
   Ok(())
+}
+
+/// Whether a name's last word is one its period belongs to: an initial (a single capital, `K`) or a suffix written with
+/// a period (`Jr`, `Esq`, [`NAME_SUFFIXES`]). A two-letter word is a surname as often as an initial (`Wei Li.`, `Andrew
+/// Ng.`: sentence punctuation), so its period goes, as Perl's.
+pub(in crate::base_utilities) fn ends_with_abbreviation(name: &str) -> bool {
+  let Some(word) = name.split_whitespace().next_back() else {
+    return false;
+  };
+  let mut chars = word.chars();
+  let initial = chars.next().is_some_and(char::is_uppercase) && chars.next().is_none();
+  // (and "et al." ending a list, `is_name_qualifier`)
+  initial || NAME_SUFFIXES.contains(&format!("{word}.").as_str()) || word == "al" || word == "et.al"
 }

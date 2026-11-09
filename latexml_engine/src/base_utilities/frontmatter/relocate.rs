@@ -648,7 +648,7 @@ pub(in crate::base_utilities) fn at_queue_position(target: &Node) {
     return;
   };
   // (an entry of a printed list the Cut cut, which an uncut copy of the list printed for this author earlier, keeps
-  // that copy's place: `affiliations::place_uncut_copies`, `\lx@cut@copy@place`)
+  // that copy's place: `frontmatter_api::cut::place_uncut_copies`, `\lx@cut@copy@place`)
   if let Some(key) = moved.get_attribute(CUT_LIST)
     && let Some(copy) = target
       .get_attribute("_annotations")

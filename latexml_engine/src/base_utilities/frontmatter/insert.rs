@@ -1493,7 +1493,7 @@ fn drop_repeated_orcids(document: &mut Document) {
 
 /// The Link step for the addresses printed inside an affiliation-kind entry (OXIDIZED_DESIGN_DIVERGENCES #956): every
 /// e-mail digested inside one (an `\email` in an `\institute` entry, an address line the Kind step made one,
-/// `affiliations::kind_entry_addresses`), wherever its label or call placed it, goes where FIDELITY_CHARTER §4's chain
+/// `frontmatter_api::kind::kind_entry_addresses`), wherever its label or call placed it, goes where FIDELITY_CHARTER §4's chain
 /// over that entry puts it ([`entry_address_owners`], the frontmatter observer's chain too): the author it spells, else
 /// the entry's only carrier, else every carrier of a symbol-led entry, else one per carrier in order, else the block's
 /// own creator, once (ruling E, main session 2026-11-02). The entry's carriers are the authors holding it after
@@ -2189,7 +2189,7 @@ fn email_address_word(text: &str) -> Option<String> {
 /// (`\normalsize{$^*$These authors contributed equally. \\ Email: a@x, b@y}`, 2207.11193) —, each entry relocated to
 /// its holders and the frontmatter observer's writing done (so the writer reads today's frontmatter as before: run
 /// ahead of it, the pass made the writer decline 1509.06333's IEEE names re-part and 2501.04244's notes), before the
-/// Kind step for a legend. The token-level Kind step (`affiliations::kind_entry_addresses`) reads a line its tokens
+/// Kind step for a legend. The token-level Kind step (`frontmatter_api::kind::kind_entry_addresses`) reads a line its tokens
 /// show; this reads the line as it printed, past a document's macros, `\authorcr`, a font switch, a connective "and", a
 /// mark before an address. A line (the entry's children between two `ltx:break`s) whose printed text, a mark aside (a
 /// superscript or a formula printing footnote symbols or a number: [`is_mark_text`]), is one run of addresses
@@ -3334,7 +3334,7 @@ const LINE_MARK: &str = "_linemark";
 const LINE_MARK_SHOWN: &str = "_linemarkshown";
 
 /// The attribute (and `\lx@add@email` option) of an e-mail a Kind step for an address line made of a line printed before
-/// every line its entry keeps ([`kind_address_lines`], `affiliations::kind_entry_addresses`): placed before the entry on
+/// every line its entry keeps ([`kind_address_lines`], `frontmatter_api::kind::kind_entry_addresses`): placed before the entry on
 /// its owner, as it prints (user ruling R8; [`link_entry_addresses`], review rev107c N1).
 pub(in crate::base_utilities) const LINE_FIRST: &str = "_linefirst";
 

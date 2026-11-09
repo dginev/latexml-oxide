@@ -235,11 +235,11 @@ fn assert_debts(name: &str, pins: &[(&str, usize)], counts: &BTreeMap<String, us
 /// `symbols::glued_marks`, `email_lines::address_row_pieces`) added no emission: they feed the existing ones, so only
 /// [`OLD_READER_CODE_LINES`] sees that kind of growth.
 const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
+  // (Z18a, `affiliations.rs lx@annotate@frontmatter` 2 -> 0: the API's own Cut moved unchanged to `defs/frontmatter_api/cut.rs`)
   ("affiliations.rs lx@add@", 2),
-  ("affiliations.rs lx@annotate@frontmatter", 2),
-  // (DEL2, 2 -> 1: `split_author_calls` deleted with the old driver; `dispatch.rs` (2 + 9) and `line_kinds.rs` (1 + 4) deleted whole)
-  ("collaborations.rs annotate=", 1),
-  ("collaborations.rs lx@add@", 1),
+  // (DEL2, 2 -> 1: `split_author_calls` deleted with the old driver; `dispatch.rs` (2 + 9) and `line_kinds.rs` (1 + 4) deleted whole;
+  // Z18a, `collaborations.rs annotate=` 1 -> 0 and `lx@add@` 1 -> 0, `name_text.rs lx@add@` 2 -> 0: `\lx@add@author`'s own
+  // collaboration and membership readouts moved unchanged to `defs/frontmatter_fields/names.rs`)
   // (the "Knowledge in, driver out, one pass" move, 6 -> 5, and `notes.rs`' 2 -> 0: `is_email_command` and `document_note_call`, `note_call_end` moved to the emitter,
   // `emitter/calls.rs`, which writes Perl's calls; no emission added; DEL2, 5 -> 1: `block_email_calls` and its siblings deleted with the old driver)
   ("email_block_calls.rs lx@add@", 1),
@@ -247,7 +247,6 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
   ("email_lines.rs lx@add@", 6),
   // (the "Knowledge in, driver out, one pass" move, 3 -> 2 and 8 -> 2: the token primitives that recognize the API's commands in a note (`NAME_ANNOTATIONS`, `name_text`)
   // moved to `classify/`; they read, emit nothing)
-  ("name_text.rs lx@add@", 2),
 ];
 
 /// The old reader's non-blank code lines at int140a: a ceiling, for the growth its emissions don't show (108a's +703
@@ -257,8 +256,11 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
 /// catch-all, and its API names and keys in `the_frontmatter_api_stays_perls`.
 /// The "Knowledge in, driver out, one pass" move (2026-11-08) lowered it from 15,404 to 9,275: the knowledge the one engine reached moved into its own library,
 /// what is left is the token driver. DEL2 (2026-11-09) lowered it to 5,079: the driver deleted, what is left the items the bindings,
-/// `frontmatter_stores` and the API's Cut and Kind still call.
-const OLD_READER_CODE_LINES: usize = 5_079;
+/// `frontmatter_stores` and the API's Cut and Kind still call. Z18a (2026-11-09) lowered it to 3,631: the API's own Cut and Kind
+/// moved to `defs/frontmatter_api/`, the field readers to `defs/frontmatter_fields/`, `frontmatter/queue_reading.rs` and
+/// `classify/marks.rs`, unchanged; what is left the items the bindings and `frontmatter_stores` call (with the five the Cut
+/// shares with them made visible to it, `entry_calls`, `cut_list_key`, …).
+const OLD_READER_CODE_LINES: usize = 3_631;
 
 /// What the fence counts in the old reader's code: its ways into the API's queue, and a convention's mode.
 const OLD_READER_NEEDLES: [&str; 4] = [
@@ -576,7 +578,8 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ("_mark= package/jheppub_sty.rs", 1),
   ("_markpiece= package/llncs_cls.rs", 1),
   ("_marks= base_utilities/defs/frontmatter_fields.rs", 1),
-  ("_markshown= base_utilities/author_block/affiliations.rs", 1),
+  // (Z18a: moved with the Cut from `author_block/affiliations.rs`)
+  ("_markshown= base_utilities/defs/frontmatter_api/cut.rs", 1),
   // (Z4b: `flag_merged_creators`' own mark of a creator it checked, on a block written whole, Perl's fallback, whose merge its Warning
   // counts: a tabular block is kept whole on purpose alike, OD #980; Z4br2: `author_macros::KEPT_WHOLE`, the `=2` queued entry's and the
   // emitter's)
@@ -1022,14 +1025,17 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("authblk_sty.rs", 23),
   // (F1r2, 1288 -> 1285: the membership readout finds its commas by `Token::group_step`, no catcode match)
   // (PF3, 628 -> 626: the layout-box and line-break membership tests read the token's own name, `frontmatter_stores::cs_in`)
-  // (DEL2, 626 -> 484: the old driver deleted)
-  ("author_block", 484),
+  // (DEL2, 626 -> 484: the old driver deleted; Z18a, 484 -> 338: the API's Cut and Kind and the field readers moved unchanged to
+  // `defs/frontmatter_api/` (63) and `defs/frontmatter_fields/` (83), 484 = 338 + 63 + 83; none added)
+  ("author_block", 338),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
   ("classify", 348),
   ("defs/author_macros", 20),
   // (Z4a, 7 -> 8: `\lx@frontmatter@itemnone` reads its tag argument, an element's name: an `ltx:rdf` passes through, the rest goes)
   ("defs/frontmatter_api", 8),
+  ("defs/frontmatter_api/", 63),
   ("defs/frontmatter_fields", 21),
+  ("defs/frontmatter_fields/", 83),
   ("defs/general", 8),
   ("epl_cls.rs", 43),
   ("eptcs_cls.rs", 28),
@@ -1196,8 +1202,16 @@ const OTHER_AREAS: &[(&str, &str)] = &[
     "latexml_engine/src/base_utilities/defs/frontmatter_api.rs",
   ),
   (
+    "defs/frontmatter_api/",
+    "latexml_engine/src/base_utilities/defs/frontmatter_api",
+  ),
+  (
     "defs/frontmatter_fields",
     "latexml_engine/src/base_utilities/defs/frontmatter_fields.rs",
+  ),
+  (
+    "defs/frontmatter_fields/",
+    "latexml_engine/src/base_utilities/defs/frontmatter_fields",
   ),
   (
     "defs/author_macros",

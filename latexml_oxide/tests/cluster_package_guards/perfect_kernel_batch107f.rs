@@ -6,7 +6,7 @@
 //! address only a key of its own name is a whole word of or opens (`email_owners::own_call_keeps`, both
 //! `respell_emails`; round 2, review rev107f B1 and finding 3); (2) a restated supplement's e-mail is no
 //! upfront pile (`insert::distribute_upfront_contacts`); (3) a list in math braces is the list it prints
-//! (`email_owners::math_braces_as_printed`); (4) a contact printing a list of addresses for several people is parted
+//! (`frontmatter_fields::contacts::math_braces_as_printed`); (4) a contact printing a list of addresses for several people is parted
 //! into each address's e-mail on its owner — the name printed beside it, else the placement order
 //! (`address_lists::distribute_address_lists`); (5) a split list whose tail was placed before its head is joined
 //! (`insert::join_split_address_contacts`); (6) a role tag after an address is its owner's correspondence note

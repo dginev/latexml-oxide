@@ -1,7 +1,10 @@
 //! `LoadDefinitions!` part 1: `\lx@ifundefined`, the dash/space primitives, CSS-class and attribute setters, the
 //! splitting macros.
 
-use super::*;
+use super::{
+  frontmatter_fields::{math_braces_as_printed, text_tokens},
+  *,
+};
 
 pub(in crate::base_utilities) fn load() -> Result<()> {
   //======================================================================

@@ -906,7 +906,7 @@ fn mark_separator(e: &Event) -> bool {
 }
 
 /// A names line's pieces with a name's collaboration remark that notes, layout or a command's own gap part read whole
-/// (rows C2-C4 of the old reader's names split, `author_block/collaborations.rs` `name_and_remark` and
+/// (rows C2-C4 of the old reader's names split, `defs/frontmatter_fields/names.rs` `name_and_remark` and
 /// `name_takes_annotations`): from a piece a remark opens in ([`remark_start`]), the Name events of one run, parted
 /// only by notes, name annotations ([`name_annotation`]), layout and gaps inside one command ([`gap_inside_one_command`]),
 /// are one Name where their text is a name and its remark naming a collaboration — or, after a name, such a remark —

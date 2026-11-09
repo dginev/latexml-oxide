@@ -1,6 +1,6 @@
 //! Guards for batch C1: what the frontmatter queue's names ask of their marks is read once per entry and kept with the
 //! queue (`frontmatter/queue_reading.rs`), where each of a block's contacts read every name again: the Cut
-//! (`affiliations::cut_marked_contact`, 2103.04797's 975 authors; 2005.08745's 592 are labelled, so it leaves them at
+//! (`frontmatter_api::cut::cut_marked_contact`, 2103.04797's 975 authors; 2005.08745's 592 are labelled, so it leaves them at
 //! once) and AASTeX's `\affiliation` (`relocate::queued_name_marks`, 1901.01540's 1,202). The output is the base's, byte
 //! for byte (int142a); the count is the mechanism.
 use std::process::Command;

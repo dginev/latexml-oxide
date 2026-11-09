@@ -228,50 +228,6 @@ fn split_top_level_list(tokens: &[Token]) -> Vec<Tokens> {
   items
 }
 
-/// An address's tokens as TeX prints them where a brace is set in math: `$\{$`, `$\lbrace$` the brace `\{`, `$\}$`,
-/// `$\rbrace$` the brace `\}` — the math shifts read as characters (a class's verbatim `\email` argument: llncs's
-/// `\email{$\{$fargyriou,mikebekos,symvonis$\}$@math.ntua.gr}`, 1106.2694, 2308.00146, 1602.04934) or as shifts —, so
-/// a list of local parts in math braces is the list in text braces (`\lx@add@email`, `\lx@split@addresses`; census138
-/// ADDR-b, OXIDIZED_DESIGN_DIVERGENCES #972). Anything else in math stays as it is.
-pub(in crate::base_utilities) fn math_braces_as_printed(address: &Tokens) -> Tokens {
-  let v = address.unlist_ref();
-  let shift = |t: &Token| *t == T_OTHER!("$") || t.get_catcode() == Catcode::MATH;
-  let brace = |t: &Token| {
-    if *t == T_CS!("\\{") || *t == T_CS!("\\lbrace") {
-      Some(T_CS!("\\{"))
-    } else if *t == T_CS!("\\}") || *t == T_CS!("\\rbrace") {
-      Some(T_CS!("\\}"))
-    } else {
-      None
-    }
-  };
-  let spaces = |from: usize| {
-    from
-      + v[from.min(v.len())..]
-        .iter()
-        .take_while(|t| **t == T_SPACE!())
-        .count()
-  };
-  let mut out: Vec<Token> = Vec::with_capacity(v.len());
-  let mut at = 0;
-  while at < v.len() {
-    if shift(&v[at]) {
-      let inner = spaces(at + 1);
-      if let Some(printed) = v.get(inner).and_then(brace) {
-        let close = spaces(inner + 1);
-        if v.get(close).is_some_and(shift) {
-          out.push(printed);
-          at = close + 1;
-          continue;
-        }
-      }
-    }
-    out.push(v[at]);
-    at += 1;
-  }
-  Tokens::new(out)
-}
-
 /// One address of an email line, and the class's email command that gave it (`\email{x}`), if any.
 pub(in crate::base_utilities) struct EmailAddress {
   pub(in crate::base_utilities) address: Tokens,

@@ -2,7 +2,7 @@
 //! chain both engines run (OXIDIZED_DESIGN_DIVERGENCES #956; FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model";
 //! census127 cluster 1, the address family). Code paths: the Kind step at the frontmatter API's one call site after the
 //! Cut — a line of addresses, an entry of addresses alone, a marked entry's mark-led line, a note of a labelled address
-//! (latexml_engine/src/base_utilities/author_block/affiliations.rs `kind_entry_addresses`); the Link step over each
+//! (latexml_engine/src/base_utilities/defs/frontmatter_api/kind.rs `kind_entry_addresses`); the Link step over each
 //! entry's e-mails at the flush (frontmatter/insert.rs `link_entry_addresses`, the chain
 //! `email_owners::entry_address_owners`, the frontmatter observer's too); the readers' `|` separator
 //! (`ADDRESS_GROUP_SEPARATORS`) and a two-letter surname (`NameKeys`). Each guard converts its repros under

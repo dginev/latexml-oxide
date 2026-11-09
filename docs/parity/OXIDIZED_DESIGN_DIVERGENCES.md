@@ -16406,7 +16406,7 @@ inner mark on (1204.5397; a superscript glued to a letter or digit, `5$^{th}$`, 
 the characters, 1210.1049), and addresses separated by commas or semicolons (a bare "and" between them dropped), each
 perhaps marked before or after it, a parenthesis after it naming its owner (`x@y (A. Able)`) no part of the address the
 contact links to: each address is an email contact named by the label, placed by the Rust-only kernel
-`\lx@add@contact@placed` ([`placed_contact_owner`], base_utilities/author_block/affiliations.rs): (1) the one author requesting the address's own
+`\lx@add@contact@placed` ([`placed_contact_owner`], base_utilities/defs/frontmatter_fields/contacts.rs): (1) the one author requesting the address's own
 mark (of several, the one it spells; a numeric mark by its label, so it is answered and leaves the name, a symbol by
 the author's position) — the address's own mark outranks the spelling, where an author block's email lines rank the
 spelling above a correspondence note's mark (1710.00802), a mark on the address being the stronger evidence; (2) the
@@ -23129,7 +23129,7 @@ jheppub_emailadd_one_call_lists_the_authors, jheppub_emailadd_out_of_order_by_sp
 `perfect_kernel_batch78e::jinstpub_emails_go_to_the_authors_they_spell`.
 
 **Amended (107f).** `\lx@split@addresses` reads a brace set in math as the brace it prints
-(`\emailAdd{$\{$a, b$\}$@x}`, `email_owners::math_braces_as_printed`, #972), so such a list is an address each as the
+(`\emailAdd{$\{$a, b$\}$@x}`, `frontmatter_fields::contacts::math_braces_as_printed`, #972), so such a list is an address each as the
 text-brace list is.
 
 ### 806. iopart's `\ead` goes to the author it spells, not the last author
@@ -30005,7 +30005,7 @@ a_footnotemark_inside_a_mark_is_its_own`, its decline reason re-pinned).
 **What** (brief 98b; census mechanism E). sv_support_sty.rs `\lx@sv@institute@`: a labelled piece's text before
 `\at` (its `fuzzy:` owner label, unchanged) is the affiliation's first line, a line break before the address, as
 svjour3 prints it (svjour3.cls:506 `\def\at{\\\let\and=\iand}`, in the institute footnote) — when it prints a word
-no queued author's name prints (`queued_author_name_prints`, author_block/affiliations.rs: each word a word of a name,
+no queued author's name prints (`queued_author_name_prints`, frontmatter/queue_reading.rs: each word a word of a name,
 an initial of one, or "and" between names, accents aside): "Contact author:", "Corresponding author", a fuller name
 than the author line's, an institution written before `\at` (2010.12315, 2208.01887). A piece printing only its
 authors' names adds nothing and stays as before, so the svjour3 writer's declines (#948) and the readings are
@@ -30024,7 +30024,7 @@ piece's last `\item[…]` when the address opens with no item of its own; none o
 not close it; and an `\end` the piece did not open (`\begin{itemize}\item A \at X \and \item B \at Y \end{itemize}`) is
 dropped. A kept line's `\email` calls stay with the label, which files them (kept in the line too, they were filed
 twice). A list whose items spell two or more queued names whole before its one `\at` (`queued_author_names_spelled`,
-author_block/affiliations.rs; 2312.14898's seven names) is a list of its authors, no one's: its owner label names no
+frontmatter/queue_reading.rs; 2312.14898's seven names) is a list of its authors, no one's: its owner label names no
 one (`fuzzy:` empty), its `\email` calls are in the affiliation, each answered by the author it spells, and the list is
 placed as an orphan (#159: shared, below the authors); the surname reading had given it the last name's alone. Names a
 comma or "and" parts, outside a list, stay each their own owner (`Paulo Rezeck and Hector Azp\'urua \at …`,
@@ -30561,7 +30561,7 @@ calls they record.
 **What** (batch 99a; FRONTMATTER_SINGLE_ENGINE_PLAN "The target model", placement step 0: "one item per printed
 entry; marked lists cut at their marks"). `\lx@annotate@frontmatter` (defs/frontmatter_api.rs), through which
 `\lx@add@affiliation`, `\lx@add@address`, `\lx@add@altaffiliation` and `\lx@add@contact` queue, reads an affiliation,
-alternate affiliation or address contact before it is queued (`author_block/affiliations.rs` `cut_marked_contact`):
+alternate affiliation or address contact before it is queued (`defs/frontmatter_api/cut.rs` `cut_marked_contact`):
 content holding two or more entries, its first printed line led by a mark, whose marks a queued name requests (two or
 more distinct labels, `requesting_authors`) is read again as one call per entry — the cutter the author blocks use
 (`affiliation_calls`, now `entry_calls` with the call that held the list as its emitter: lines at `\\`, `\quad` and the
@@ -30632,7 +30632,7 @@ appended); a contact attached when digested keeps the queue's order (REVTeX's `\
 2209.09217), a binding's own label-relocated list too (REVTeX 3's institute, hep-th9805210; authblk's `\affil[1]`
 before an unlabelled `\affil`); 99a's first round appended them after every contact attached when digested.
 
-**Parts after the wrapper** (`affiliations::shared_closing_parts`, the Cut's): a list held in a wrapper and followed by
+**Parts after the wrapper** (`frontmatter_api::cut::shared_closing_parts`, the Cut's): a list held in a wrapper and followed by
 parts of their own (`\institution{$^1$A \quad $^2$B}\country{X}`; pdflatex prints "X" on a line under both entries)
 gives each entry the address parts, repeated as the opening declarations are — a reading of a part the entries
 share, which the PDF prints once under all of them (`\institution{$^1$Univ A, Paris \quad $^2$Univ B,
@@ -31049,7 +31049,7 @@ were document `<pubnote>`s (1002.3223, cond-mat0202268; Perl-origin, Base_Utilit
 observer read some of them (`take_out_entry_addresses`, OD #938), but its writer never runs on API-only papers.
 
 **Fix (the structure model's Kind and Link, one call site, one chain).**
-- **Kind**, `affiliations::kind_entry_addresses`, at `\lx@annotate@frontmatter` right after the Cut (OD #954; each cut
+- **Kind**, `frontmatter_api::kind::kind_entry_addresses`, at `\lx@annotate@frontmatter` right after the Cut (OD #954; each cut
   piece passes once): an affiliation-kind contact's lines (`affil_splits`) read by the author block's reader of an
   address line (`line_addresses`: a list, a brace group, one behind an e-mail label) — or, on a marked entry's first
   line, the rest behind the mark (`mark_led_addresses`) — and its notes (`\footnote`, `\thanks`) printing a labelled
@@ -31704,7 +31704,7 @@ sectioning-frontmatter/
 IEEEtran 12, revtex 4). An "Email:" / "E-mail:" / "Corresponding author:" line, a braced list (`{a, b}@x`), a comma
 list or `(a; b)` inside an affiliation, alternate affiliation or address stayed in the entry's text — after a line
 break, or the whole entry — and was copied onto every holder (the scorer's `email_of_other`, `aff_unexplained`). The
-token-level Kind step (#956, `affiliations::kind_entry_addresses`) reads only a line its tokens show; it misses a
+token-level Kind step (#956, `frontmatter_api::kind::kind_entry_addresses`) reads only a line its tokens show; it misses a
 document's macros (`\IEEEauthorblockA{\hpcaaffiliation\\\hpcaemail}`, 2608.22602), authblk's `\authorcr`
 (2111.01631, 2309.05601), a connective "and" (`E-mail: a@x, \{b, c\}@y, and d@z`, 2302.02638), a nested
 `\IEEEauthorblockA` (2410.11002), a font switch or a nested group round a list (2609.01511, 1904.04821), marks inside
@@ -31825,7 +31825,7 @@ phrase to a correspondence note of the creator holding it — the address's owne
 went there — before it, with its line's mark (`LINE_MARK`), and keeps the label's rest ("E-mail: ", "e-mail: "), else its
 role's name (`write_role_notes`); a creator holding a correspondence note already keeps that one. (4) An address line
 printed before every line its entry keeps is placed before the entry on its owner (`LINE_FIRST`, set by this cut and by
-the token-level Kind step, `affiliations::kind_entry_addresses`; user ruling R8: IEEEtran's
+the token-level Kind step, `frontmatter_api::kind::kind_entry_addresses`; user ruling R8: IEEEtran's
 `\IEEEauthorblockA{\href{mailto:…}{…}\\ \url{https://orcid.org/…}\\ …}`, 2206.10577, 2105.06537's shape — N1).
 (5) A stop the tail cut strands after a list's separator goes with the addresses (`…, USA; . wen.lu@…`, 1503.09120,
 once the token-level step took the first address out — N2). (6) `drop_emptied_wrappers` reads each wrapper once and
@@ -31895,7 +31895,7 @@ creator of its own.
 
 **Fix.** `\lx@add@author` and `\lx@add@creator` (frontmatter_fields.rs `creator_call`; Perl Base_Utility.pool.ltxml's
 token bodies, now read first), the one call every author route makes:
-- **A written grade** (`membership_read_out`, author_block/name_text.rs `written_membership_out`): the text after the
+- **A written grade** (`membership_read_out`, defs/frontmatter_fields/names.rs `written_membership_out`): the text after the
   first comma of the name line's own — outside its groups and math, inside the block reader's `\lx@author@withsup{…}` and
   a command the line is set in as its one argument (`name_line_span`) — after which only a grade prints
   (`is_membership_grade`: grade and society words with a rank, `Member`/`Fellow`, among them — `Fellow, IEEE`, `Senior
@@ -31907,7 +31907,7 @@ token bodies, now read first), the one call every author route makes:
   IEEE}; Bob Baker}, \textit{Fellow, IEEE}`: taking the last out alone left the names before it one creator). A degree
   or suffix (`Ph.D., P.E.`, `Jr.`) still qualifies the name; a document's own `\IEEEmembership` definition keeps its
   meaning (63l).
-- **A framed collaboration as the whole author** (`whole_name_collaboration`, author_block/collaborations.rs): content
+- **A framed collaboration as the whole author** (`whole_name_collaboration`, defs/frontmatter_fields/names.rs): content
   naming a collaboration framed as a remark (`Framing::Framed`: "on behalf of", "for", "representing", brackets), with no
   note or mark of its own and authors queued before it, is the collaboration contact of every author before it that
   carries none (`annotate=new`, as aastex's `\collaboration`, aas_support.sty.ltxml:126), no creator (FIDELITY_CHARTER
@@ -32298,7 +32298,7 @@ each carrier (2302.03296, 2508.07950), and the names printed beside the addresse
 lianghongstefanie@… (Hong Liang)}` on Hong Liang's call, 2009.14655; `\cortext{… Abrar Faiyaz (abrar\_faiyaz@…) and Md
 Nasir Uddin (nasir\_uddin@…)}`, 2507.07920) were text of the one e-mail or note.
 
-**Fix (1)** (`email_owners::math_braces_as_printed`, in `\lx@add@email` and `\lx@split@addresses`): `$\{$`, `$\lbrace$`
+**Fix (1)** (`frontmatter_fields::contacts::math_braces_as_printed`, in `\lx@add@email` and `\lx@split@addresses`): `$\{$`, `$\lbrace$`
 are the `\{` they print, `$\}$`, `$\rbrace$` the `\}`, the shifts read as characters or as shifts; anything else in math
 stays. The list is then read as the text-brace list everywhere it already is (the Link step, the observer). A braced
 group of one local part, `$\{$meier.schindler$\}$@…` (1602.04934: a typo for a comma, as printed), stays one address,
@@ -32589,7 +32589,7 @@ closing slash aside, in any case: `prints_its_target`) is read as that text, a N
 (`resolver::lines::link_names`, the ORCID links' pass): 1812.07638's 304 `\href{http://inspirehep.net/record/…}{A.~Cerri}$^{1}$`,
 304 creators and 3,063 links under `=2` (F1: 2 creators, 2,760 links); "carries a mark" was a proxy, replaced at LO1 by the name
 slot (below). *The read-back's cost:* `\lx@add@author`'s membership
-readout (`name_text::written_membership_out`) read the rest of the content past each comma, quadratic on `=2`'s queued whole
+readout (`frontmatter_fields::names::written_membership_out`) read the rest of the content past each comma, quadratic on `=2`'s queued whole
 entry of 418 names (1507.02068, +7.3 % instructions on against off). A grade is a suffix of grade words, so its commas are read
 from the last leftward and the first tail holding a word no grade has ends the reading (every tail before it holds that word):
 each tail read once, no cap, the output byte-identical to int145a's (F1's 256-token cap read `{\itshape Fellow,

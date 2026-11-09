@@ -19060,7 +19060,7 @@ Text.
 ```
 
 Rust reads `$\{$`, `$\lbrace$` as the `\{` they print and `$\}$`, `$\rbrace$` as the `\}` in `\lx@add@email` and
-`\lx@split@addresses` (`email_owners::math_braces_as_printed`, OXIDIZED_DESIGN_DIVERGENCES #972), so the list is an
+`\lx@split@addresses` (`frontmatter_fields::contacts::math_braces_as_printed`, OXIDIZED_DESIGN_DIVERGENCES #972), so the list is an
 address each. Witnesses 1106.2694, 2308.00146, 1602.04934; guard `perfect_kernel_batch107f::a_math_brace_list_is_the_list_it_prints`.
 
 ## 1211. `\begin` is not `\protected`: an `\edef` runs it
