@@ -147,6 +147,10 @@ pub(in crate::base_utilities) struct AuthorBlock {
   /// the binding the policy is keyed on ([`policy_binding`]): the `\author` owner, or the document class's binding
   /// when that is the kernel's — with `hook`, the key of its declared conventions (`policy::policy_for`; S2a.2)
   pub binding:        String,
+  /// the tags its rehearsal queued besides its creators (`rehearsal::Rehearsal::Done::queued`): a frontmatter setter run inside
+  /// the block, a `\date` in `\author` (2503.02741), which the emitter counts (`writer::emit::warn_queued_unwritten`). Not in
+  /// a dump: only the emitter reads it
+  pub queued:         Vec<String>,
   /// the binding owning the `\author` meaning at the call ([`author_binding`]): a compiled binding's file name
   /// (`revtex4_support.sty`), else `kernel`, `document`, `raw` or `fallback` by its definition origin
   pub owner:          String,
@@ -886,6 +890,7 @@ pub(in crate::base_utilities) fn record_author_call(
     window_open: true,
     outcome: Outcome::Pending,
     list_setter: list_setter_called(stuff),
+    queued: Vec::new(),
   };
   with_ledger(|ledger| {
     let mut block = block;

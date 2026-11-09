@@ -1035,6 +1035,7 @@ mod whole_tests {
         counter_moves: None,
       },
       list_setter: None,
+      queued: Vec::new(),
     }))
   }
 

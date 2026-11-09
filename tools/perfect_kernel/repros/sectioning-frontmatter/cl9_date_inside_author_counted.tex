@@ -1,0 +1,18 @@
+% mechanism: a frontmatter setter run inside the author block (`\date` in `\author`) queues an entry the =2 emitter's
+%   reading holds no place for: the block's rehearsal records it (`rehearsal::note_frozen_entry` -> `AuthorBlock::queued`)
+%   and the emitter counts it lost (`emit::warn_queued_unwritten`), never silently. Open: its recovery.
+% witness: 2503.02741 (`\author{Bernd Prostmaier\textsuperscript{1,2} … \date{\textsuperscript{1}BMW AG, Munich\\ …}}`)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker2 / 1Univ X / 2Univ Y" (LaTeX prints the date)
+% engines: off `<date>Univ X Univ Y</date>`; int153w =2 the date lost silently; CL9b =2 lost, the queued-entry Warning
+% expect:  =2 0 errors; the "queues besides its creators (date)" Warning once
+\documentclass{article}
+\title{T}
+\author{Ann Able\textsuperscript{1} \hspace{0.5em} Bob Baker\textsuperscript{2}
+  \vspace{2em}
+  \date{\textsuperscript{1}Univ X\\\vspace{0.5em}
+  \textsuperscript{2}Univ Y}
+}
+\begin{document}
+\maketitle
+Body.
+\end{document}

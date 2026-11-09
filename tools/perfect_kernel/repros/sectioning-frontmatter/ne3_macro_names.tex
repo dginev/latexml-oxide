@@ -4,9 +4,9 @@
 %   merging the names)
 % oracle:  pdflatex 0 errors; "Xing Shi Cai, Luc Devroye", the affiliation, the two addresses
 % engines: rust =2 (int153x): 2 errors, both creators "Xing Shi Cai, Luc Devroye"; rust off: 1 error, one merged creator
-% expect:  =2: 0 errors, 2 warnings (each name its text), creators "Xing Shi Cai" and "Luc Devroye" with their addresses;
-%   off unchanged (1 merged_creators)
-% status:  RED (int153x) -> GREEN (perfect_kernel_batchne3::names_a_macro_prints_together_are_their_text)
+% expect:  =2: 0 errors, 1 warning, the block written whole (CL9 `emit::names_overlap`: each name as its text dropped what
+%   else the macro prints, review revX1 finding 1); off unchanged (1 merged_creators)
+% status:  RED (int153x) -> GREEN (perfect_kernel_batchne3::names_a_macro_prints_together_are_their_text; CL9b re-expected)
 \documentclass[12pt]{scrartcl}
 \newcommand{\myauthors}{Xing Shi Cai, Luc Devroye}
 \title{T}
