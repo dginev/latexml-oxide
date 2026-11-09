@@ -32913,7 +32913,10 @@ footnotes and whole affiliations). Perl's shape is the fallback throughout: a bl
 `crosses_columns`, from the digested `Layout{role="cell"}` events; 1304.3138, 1504.01048, 2101.00440 and eleven more erred
 "Stray alignment &"); its own digestion moving the footnote counter where no name carries the move (`counter_moved`, the
 `\c@footnote` value after each invocation that prints nothing; 1507.05018); a footnote mark held by no name and no item
-(`mark_dropped`; 1911.13299, 2511.12633); names one shared macro prints whose run also prints a note or mark (`names_overlap`;
+that steps the counter, a bare `\footnotemark` (`mark_dropped`; 1111.1979) — one given its number (`\footnotemark[n]`,
+`\samethanks[n]`: latex.ltx's `\@xfootnotemark`, which steps nothing, `Event::given_number`) moves no later mark, so the names
+are written as read and its loss counted by a Warning naming it (1912.01737, 1811.08622, 1911.13299, 2511.12633, 2101.04763;
+user 2026-11-09: a decline never throws away a right reading); names one shared macro prints whose run also prints a note or mark (`names_overlap`;
 synthetic). A cut holding an alignment's `&` outside the environment the run holds whole is refused (the item's text,
 counted; `Field::content_cut`).
 

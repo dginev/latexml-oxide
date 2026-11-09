@@ -308,6 +308,11 @@ pub struct Event {
   /// a Note's: a `\footnote`, whose meaning in an author's content is no `\thanks`'s (`digest_frontmatter_item`). Not in
   /// a dump: only the emitter reads it
   pub footnote:       bool,
+  /// a footnote Mark's: it is given its number (`\footnotemark[1]`, a document's `\samethanks[1]`, 1912.01737,
+  /// 1811.08622), latex.ltx's `\@xfootnotemark`, which sets the counter in a group of its own and steps nothing — it
+  /// re-references a note written already; a bare `\footnotemark` steps the counter (`\stepcounter\@mpfn`). Not in a
+  /// dump: only the emitter's dropped-mark check reads it (`writer::emit::mark_dropped`)
+  pub given_number:   bool,
   /// a Name's: the block's creator call that printed it, its place among the rehearsal's (`creator_roles`;
   /// `ledger::Outcome::Events::creators`). Not in a dump: only the emitter reads it
   pub creator_call:   Option<u16>,
@@ -409,6 +414,7 @@ impl Event {
       own_at: None,
       marks: None,
       footnote: false,
+      given_number: false,
       creator_call: None,
       note_mark: None,
       body: Vec::new(),
@@ -1335,7 +1341,9 @@ impl Walker {
           Some(Stored::String(printed)) => to_string(*printed),
           _ => String::new(),
         };
-        if let Some(mark) = mark_event(printed, "footnotemark") {
+        if let Some(mut mark) = mark_event(printed, "footnotemark") {
+          // (its optional argument, `\footnotemark[<n>]`: a mark that steps no counter, `Event::given_number`)
+          mark.given_number = w.get_arg(1).is_some();
           self.event(mark, d, nest);
         }
       },
