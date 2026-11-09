@@ -7,7 +7,8 @@
 //! revNE2): a counter move no name carries writes the block whole, with its Warning (1507.05018's Ombao, A1); a note
 //! before every name steps before the first name (A2). NE2c (review revNE2r2 Q2): a mark a name prints past its note stays
 //! with it, the note's step before it (1610.06031); a `\footnotemark` no name and no item writes writes the block whole,
-//! with its Warning (1911.13299).
+//! with its Warning (1911.13299). NE2d (user ruling 2026-11-09): only a dropped mark that steps the counter declines; one
+//! given its number (`\samethanks[1]`, 1912.01737; 1811.08622) keeps the creators, its loss counted.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
@@ -352,6 +353,92 @@ fn a_mark_on_no_name_writes_the_block_whole() {
         .matches(r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks""#)
         .count(),
       1,
+      "emit={emit}: {xml}"
+    );
+  }
+}
+
+/// A `\footnotemark` given its number that no name and no item writes (`D. R. G. Schleicher,$^{1}$\samethanks[1]`,
+/// 1912.01737's document `\samethanks`; `Cheng Xu\textsuperscript{1},\footnotemark[1]`, 1811.08622) re-references a note
+/// written already and steps no counter (latex.ltx's `\@xfootnotemark`), so no later mark moves: NE2c's decline wrote the
+/// block whole and threw away a right reading. Now the names are written as read, the marks' loss counted by 1 Warning
+/// naming them (user ruling 2026-11-09). A block that also drops a bare `\footnotemark` (which steps the counter: the next
+/// mark would print one symbol short; 1111.1979) is still written whole. Distinct from
+/// `a_mark_on_no_name_writes_the_block_whole`: the dropped mark's step decides, the same check's other branch.
+#[test]
+fn a_given_mark_on_no_name_keeps_the_creators() {
+  let names = |carl: &str| {
+    vec![
+      row(&["Ann Able", "affiliation=Univ A"]),
+      row(&["Bob Baker", "affiliation=Univ A"]),
+      row(&[carl, "affiliation=Univ B"]),
+      row(&["Dan Dory", "affiliation=Univ B"]),
+    ]
+  };
+  for (emit, expected, marks) in [
+    (0, names("* * footnote * Carl Cole * * footnote *"), vec![
+      r#"<note mark="*" role="footnotemark" xml:id="footnotex1""#,
+      r#"<note mark="*" role="footnotemark" xml:id="footnotex2""#,
+    ]),
+    (2, names("Carl Cole"), vec![]),
+  ] {
+    let (log, xml) = run(repro!("ne2d_given_mark_dropped_keeps_the_creators"), emit);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, if emit == 2 { 1 } else { 0 }),
+      "emit={emit}: {log}"
+    );
+    if emit == 2 {
+      assert!(
+        log.contains("writes 2 footnote mark(s) of its author block given their number (a note's, written already) on no name and no item; lost: *, *"),
+        "{log}"
+      );
+    }
+    assert_eq!(creators(&xml), expected, "emit={emit}");
+    assert_eq!(footnotemarks(&xml), marks, "emit={emit}: {xml}");
+    assert_eq!(
+      xml
+        .matches(r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks""#)
+        .count(),
+      1,
+      "emit={emit}: {xml}"
+    );
+  }
+  // (a bare `\footnotemark` dropped too: the block written whole, every mark kept, its Warning)
+  for (emit, expected) in [
+    (0, vec![
+      row(&["Ann Able", "affiliation=Univ A"]),
+      row(&["Bob Baker", "affiliation=Univ A"]),
+      row(&["* * footnote * Carl Cole", "affiliation=Univ B"]),
+      row(&[
+        "† † footnote † Dan Dory ‡ ‡ footnote ‡",
+        "affiliation=Univ B",
+      ]),
+    ]),
+    (2, vec![row(&[
+      "Ann Able, 1 Bob Baker, 1 * * footnote * Carl Cole, 2 † † footnote † Dan Dory 2 ‡ ‡ footnote ‡ 1 Univ A 2 Univ B",
+    ])]),
+  ] {
+    let (log, xml) = run(repro!("ne2d_given_and_fresh_mark_dropped"), emit);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, if emit == 2 { 1 } else { 0 }),
+      "emit={emit}: {log}"
+    );
+    if emit == 2 {
+      assert!(
+        log.contains("on no name and no item; the block is written whole"),
+        "{log}"
+      );
+    }
+    assert_eq!(creators(&xml), expected, "emit={emit}");
+    assert_eq!(
+      footnotemarks(&xml),
+      [
+        r#"<note mark="*" role="footnotemark" xml:id="footnotex1""#,
+        r#"<note mark="†" role="footnotemark" xml:id="footnote2""#,
+        r#"<note mark="‡" role="footnotemark" xml:id="footnote3""#,
+      ],
       "emit={emit}: {xml}"
     );
   }

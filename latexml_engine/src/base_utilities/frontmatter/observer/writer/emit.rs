@@ -2421,17 +2421,30 @@ fn counter_moved(index: usize, resolved: &Resolved) -> bool {
 /// Whether the author block at ledger index `index` prints a `\footnotemark` that neither a name its reading writes nor an
 /// item holds: one past a line break under a name (`Vivek Ramanujan \thanks{…} \\ \footnotemark[2]`, 1911.13299), past
 /// a name's separating comma (`Colin P.~McNally,$^{1}$\footnotemark[…]`, 2101.04763), inside a formula with a note
-/// (`Xunzhi Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$`, 2511.12633). A dropped mark loses its symbol and steps the counter
-/// no more, so a later mark prints one symbol short: the block is written whole, Perl's whole-block creator, its tokens
-/// digested in order, with a counted Warning, once per block over the flushes (review revNE2r2 Q2: never a silent loss). A
-/// mark past its name's note is carried (`block_names`: 1610.06031).
-fn mark_dropped(index: usize, resolved: &Resolved) -> bool {
-  let marks: Vec<(usize, usize)> = with_block(index, Vec::new(), |block, events| {
+/// (`Xunzhi Xiang$^{1}\thanks{…}\,\,\footnotemark[2]$`, 2511.12633). A dropped mark that steps the counter (a bare
+/// `\footnotemark`, `\stepcounter\@mpfn`) loses its symbol and steps the counter no more, so a later mark prints one
+/// symbol short: the block is written whole, Perl's whole-block creator, its tokens digested in order, with a counted
+/// Warning, once per block over the flushes (review revNE2r2 Q2: never a silent loss). A dropped mark given its number
+/// (`\footnotemark[1]`, a document's `\samethanks[1]`: latex.ltx's `\@xfootnotemark`, `Event::given_number`)
+/// re-references a note written already and moves no later mark: the names are written as read, its loss counted by a
+/// Warning naming it, once per block over the flushes (`D. R. G. Schleicher,$^{1}$\samethanks[1]`, 1912.01737; `Cheng
+/// Xu\textsuperscript{1},\footnotemark[1]`, 1811.08622 — user ruling 2026-11-09: a decline never throws away a right
+/// reading): their printed labels go to `given_lost`, the Warning's ([`warn_given_marks_lost`]) where no other decline
+/// writes the block whole. A mark past its name's note is carried (`block_names`: 1610.06031).
+fn mark_dropped(index: usize, resolved: &Resolved, given_lost: &mut Vec<String>) -> bool {
+  let marks: Vec<(usize, usize, bool, String)> = with_block(index, Vec::new(), |block, events| {
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
     events
       .iter()
       .filter(|e| e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark"))
-      .filter_map(|e| Some((at(e.span?.0)?, at(e.span?.1)?)))
+      .filter_map(|e| {
+        Some((
+          at(e.span?.0)?,
+          at(e.span?.1)?,
+          e.given_number,
+          e.text.clone(),
+        ))
+      })
       .collect()
   });
   if marks.is_empty() {
@@ -2463,8 +2476,15 @@ fn mark_dropped(index: usize, resolved: &Resolved) -> bool {
         _ => None,
       }),
   );
-  let carried = |&(s, t): &(usize, usize)| written.iter().any(|&(from, to)| from <= s && t <= to);
-  if marks.iter().all(carried) {
+  let carried = |&(s, t, ..): &(usize, usize, bool, String)| {
+    written.iter().any(|&(from, to)| from <= s && t <= to)
+  };
+  let dropped: Vec<&(usize, usize, bool, String)> = marks.iter().filter(|m| !carried(m)).collect();
+  if dropped.is_empty() {
+    return false;
+  }
+  if dropped.iter().all(|&&(_, _, given, _)| given) {
+    given_lost.extend(dropped.iter().map(|m| m.3.clone()));
     return false;
   }
   let once = s!("mark|{index}");
@@ -2478,6 +2498,38 @@ fn mark_dropped(index: usize, resolved: &Resolved) -> bool {
     );
   }
   true
+}
+
+/// The counted Warning of the footnote marks given their number that the author block at ledger index `index`'s reading,
+/// its names written as read, writes on no name and no item (`lost`, their printed labels: [`mark_dropped`]), once per
+/// block over the flushes: never a silent loss.
+fn warn_given_marks_lost(index: usize, lost: &[String]) {
+  let once = s!("markgiven|{index}");
+  if lost.is_empty() || lookup_mapping(EMITTED_ITEMS, &once).is_some() {
+    return;
+  }
+  assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
+  // (a mark whose print failed, `\footnotemark[\value{foo}]` of a counter the rehearsal reads no number of: 2101.04763)
+  let labels: Vec<&str> = lost
+    .iter()
+    .map(|label| {
+      if label.is_empty() {
+        "a mark printing nothing"
+      } else {
+        label
+      }
+    })
+    .collect();
+  Warn!(
+    "unexpected",
+    "frontmatter",
+    s!(
+      "The frontmatter emitter's reading writes {} footnote mark(s) of its author block given their number (a note's, \
+       written already) on no name and no item; lost: {}",
+      lost.len(),
+      labels.join(", ")
+    )
+  );
 }
 
 /// Whether `call` is a contact of a class's address list printed apart from the names (`owner=sequence`, recorded
@@ -2869,16 +2921,20 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     .into_iter()
     .filter(|&source| {
       let cells = across_cells(source);
+      let mut given_lost = Vec::new();
       let whole = written_whole(
         source,
         names_fail(source)
           || cells
           || counter_moved(source, resolved)
-          || mark_dropped(source, resolved)
+          || mark_dropped(source, resolved, &mut given_lost)
           || names_overlap(source, resolved),
       );
       if whole && cells {
         warn_across_cells(source);
+      }
+      if !whole {
+        warn_given_marks_lost(source, &given_lost);
       }
       warn_queued_unwritten(source, whole);
       whole
