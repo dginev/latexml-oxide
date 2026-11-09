@@ -405,8 +405,10 @@ pub fn digest_front_matter() -> Result<()> {
   let flushes = lookup_int(FRONTMATTER_FLUSHES);
   assign_value(FRONTMATTER_FLUSHES, flushes + 1, Some(Scope::Global));
   // The frontmatter observer's rehearsal of the author blocks, whose reading the emitter writes from at this flush
-  // (OXIDIZED_DESIGN_DIVERGENCES #837, #980).
-  read_at_flush()?;
+  // (OXIDIZED_DESIGN_DIVERGENCES #837, #980), and the undefined commands its rehearsals held an Error for.
+  let held_undefined = read_at_flush()?;
+  // (and the meanings the flush assigns, which the held commands it defines are told by: `HeldUndefined`)
+  begin_meaning_recorder();
   bgroup();
   // INTENTIONAL DIVERGENCE from Perl PR #2767 (KNOWN_PERL_ERRORS #30,
   // OXIDIZED_DESIGN): clear the queue BEFORE digesting. Perl digests
@@ -571,6 +573,9 @@ pub fn digest_front_matter() -> Result<()> {
       digest(command)?;
     }
   }
+  // The held Errors no piece raised again — a command printing nothing between pieces, or in a piece written as text
+  // —, each once, as Perl's one digestion of the block raises it (`HeldUndefined`, OXIDIZED_DESIGN_DIVERGENCES #983).
+  held_undefined.raise_unraised(&end_meaning_recorder())?;
   // Add punctuation to all ltx:creators, now that we know how many of each role.
   let mut updates: Vec<(usize, bool)> = Vec::new(); // (index, use_conjunction)
   with_value("frontmatter", |v| {

@@ -338,6 +338,7 @@ impl Field<'_> {
       end = end.max(e);
     }
     end = end.min(content.len());
+    let end = self.past_held_undefined(end);
     let (start, end) = self.balanced(start, end, floor)?;
     let end = past_closing_fis(content, start, end);
     // (the group the pieces sit in: its opening brace, and the switches before the first piece in it)
@@ -432,6 +433,37 @@ impl Field<'_> {
       return None;
     }
     Some((Tokens::new(tokens), end))
+  }
+
+  /// `end` moved past the undefined commands right after it, each one its rehearsal held an Error at (one past a space or
+  /// a mark is a name's by [`super::emit`]'s `block_names`, else the flush's net raises it, `reading::HeldUndefined`): the
+  /// command prints nothing (TeX's "Undefined control sequence"), so no event covers it and the piece before it would
+  /// stop short of it, its Error — the rehearsal's, held and discarded with its stub — never raised again. Taken into the
+  /// piece, its digestion raises it there once, its `<ltx:ERROR>` in the piece, as Perl's whole-block creator raises it
+  /// in the personname (Base_Utility.pool.ltxml:691-693, State.pm:547-551). Told by the rehearsal's own record of the
+  /// Error (`Error:undefined:`, at the command's position), not by the command's spelling or meaning. The segmentation is
+  /// the reading's, unchanged: the piece only grows over what prints nothing. Repro
+  /// sectioning-frontmatter/emitter_undefined_command_in_author_errs_once; 2309.09045, 2405.06973, 2506.10896,
+  /// 2508.08170, 2602.18351, 2604.26688, 1101.4098, 1808.09392, 2601.17318, hep-th9306034 (OXIDIZED_DESIGN_DIVERGENCES
+  /// #983).
+  fn past_held_undefined(&self, end: usize) -> usize {
+    let mut end = end;
+    while end < self.tokens.len() && self.held_undefined_at(end) {
+      end += 1;
+    }
+    end
+  }
+
+  /// Whether its rehearsal held an undefined command's Error (`Error:undefined:`) at `tokens[index]`'s position: the
+  /// command's own, raised where it was invoked.
+  pub(super) fn held_undefined_at(&self, index: usize) -> bool {
+    let pos = self.base + index;
+    self.held.iter().any(|error| {
+      error.message.starts_with("Error:undefined:")
+        && error
+          .span
+          .is_some_and(|(from, to)| usize::from(from) <= pos && pos < usize::from(to))
+    })
   }
 
   /// Whether its rehearsal held an error at `tokens[index]`'s position.

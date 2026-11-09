@@ -287,6 +287,11 @@ pub struct Event {
   /// an error of the block's rehearsal was held at a position it covers (`mark_held`): what it reads may be the
   /// error's recovery, not the ink it stands for
   pub held:           bool,
+  /// an undefined command its rehearsal held an Error at lies inside its span, between its ink (`mark_held`): it prints
+  /// nothing, so the text read glues the ink on either side — `Bob\email{b@x.org}` (`\email` undefined in article)
+  /// reads "Bobb@x.org", an address no word of the source spells, which no reading of addresses may take: Perl's creator
+  /// holds it in the personname, `Bob<ERROR>\email</ERROR>b@x.org` (OXIDIZED_DESIGN_DIVERGENCES #983)
+  pub glued_undef:    bool,
   /// a Break's: what made it, `None` for a line break ([`BreakKind`])
   pub break_kind:     Option<BreakKind>,
   /// a Break's or a comma's: the braces printed and not yet closed before it in its column (`\{aable, bbaker,\\ ccole\}@x.edu`:
@@ -407,6 +412,7 @@ impl Event {
       formula: None,
       unprinted: None,
       held: false,
+      glued_undef: false,
       break_kind: None,
       braces: 0,
       ordinal: false,
@@ -2606,6 +2612,15 @@ pub(in crate::base_utilities) fn mark_held(events: &mut [Event], held: &[HeldErr
         .filter_map(|error| error.span)
         .any(|(from, to)| from < end && start < to)
     });
+    // (an undefined command's Error strictly inside the span: ink on both sides of it, [`Event::glued_undef`])
+    event.glued_undef = event.kind == EventKind::Name
+      && event.span.is_some_and(|(start, end)| {
+        held
+          .iter()
+          .filter(|error| error.message.starts_with("Error:undefined:"))
+          .filter_map(|error| error.span)
+          .any(|(from, to)| start < from && to < end)
+      });
     mark_held(&mut event.inner, held);
   }
 }
