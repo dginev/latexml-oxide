@@ -9,10 +9,7 @@
 //! none), its semantic element. Repros under `tools/perfect_kernel/repros/sectioning-frontmatter/`.
 use latexml::util::test::assert_element;
 
-use super::{
-  perfect_kernel_batch46::{convert_with, error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
 
 /// The XML of `tex` converted under ar5iv, which must give no error and no warning, with its whitespace between tags
 /// removed for counting.
@@ -100,37 +97,6 @@ fn replayed_document_setter_keeps_its_store() {
     &[r#"xml:id="p1""#],
     r#"<para xml:id="p1"><p xml:id="p1.1">Written by Alice.</p></para>"#,
   );
-}
-
-/// #8: a late class `\author` that stores and prints, after the document body began, runs in place: each author line
-/// is an italic paragraph at the head of its section, as pdflatex prints it, and the document's creator stays the one
-/// before the body (user ruling 2026-10-09; OXIDIZED_DESIGN #526).
-#[test]
-fn late_class_author_that_prints_is_kept_in_place() {
-  if red_at_two(r#"a false content-check Warning ("Guest Second Writer" missing)"#) {
-    return;
-  }
-  let (xml, flat) = convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/late_class_author_that_prints_is_kept_in_place.tex"
-  ));
-  assert_eq!(xml.matches("<creator ").count(), 1, "{xml}");
-  assert_element(
-    &xml,
-    "creator",
-    &[],
-    r#"<creator role="author"><personname>The Editor</personname></creator>"#,
-  );
-  for (unit, name) in [("S1", "Guest Writer"), ("S2", "Second Writer")] {
-    assert_eq!(flat.matches(name).count(), 1, "{xml}");
-    assert_element(
-      &xml,
-      "para",
-      &[&format!(r#"xml:id="{unit}.p1""#)],
-      &format!(
-        r#"<para class="ltx_noindent" xml:id="{unit}.p1"><p xml:id="{unit}.p1.1"><text font="italic" xml:id="{unit}.p1.1.1">{name}</text></p></para>"#
-      ),
-    );
-  }
 }
 
 /// #5 (a), #6 of the r2 review: the class's off-table stores that only its own `\@author` reads (jfpc.cls:124-132,

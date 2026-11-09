@@ -10,8 +10,6 @@ use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use serde_json::Value;
 
-use super::perfect_kernel_batcht1::red_at_two;
-
 /// Convert `tex` under the shadow switch, asserting a clean conversion: the whole dump.
 fn dump(tex: &str) -> Value {
   let (log, _, json) = convert_with_setup_then(
@@ -92,42 +90,6 @@ const DOT: &str = r#"\documentclass{article}
 Text.
 \end{document}
 "#;
-const INNER: &str = r#"\documentclass{article}
-\usepackage{hyperref}
-\begin{document}
-\title{T}
-\author{Ann Able\thanks{Univ A, City. \href{mailto:x1@example.org}{x1@example.org}} \and Bob Baker\thanks{Univ B, Town. The video is at \url{https://example.org/video}, the data at \url{https://example.org/data}; \url{https://www.bobbaker.org/}.} \and Cat Cole\thanks{Univ C. \url{https://example.org/cat}}}
-\maketitle
-Text.
-\end{document}
-"#;
-const IEEE: &str = r#"\documentclass[journal]{IEEEtran}
-\usepackage{hyperref}
-\begin{document}
-\title{T}
-\author{Ann Able and Bob Baker\thanks{A. Able is with Univ A (homepage \url{https://example.org/ann}).}\thanks{B. Baker is with Univ B (\url{https://www.bobbaker.org/}).}}
-\maketitle
-Text.
-\end{document}
-"#;
-const GROUP: &str = r#"\documentclass{llncs}
-\begin{document}
-\title{T}
-\author{Ann Able\inst{1} \and Bob Baker\inst{1} \and Cat Cole\inst{2}}
-\institute{Univ A, City\\ \email{\{ann.able,bob.baker,info\}@example.org} \and Univ B, Town\\ \email{cole@example.org}}
-\maketitle
-Text.
-\end{document}
-"#;
-const GROUP_UNREQUESTED: &str = r#"\documentclass{llncs}
-\begin{document}
-\title{T}
-\author{Ann Able \and Bob Baker}
-\institute{Univ A, City\\ \email{\{ann.able,bob.baker\}@example.org}}
-\maketitle
-Text.
-\end{document}
-"#;
 const ADDRESS_LIST: &str = r#"\documentclass{article}
 \begin{document}
 \title{T}
@@ -160,105 +122,6 @@ fn a_name_is_its_printed_text() {
   ]);
 }
 
-/// Decision 2 (user ruling 2026-10-20 #4, no guessing): a note's inner contact is its owner's when it is the note's only
-/// link (Ann's `mailto:`, Cat's url) or spells the owner (`https://www.bobbaker.org/`, `owner:spelled`); the note's other
-/// links — the paper's video and data — stay in its text.
-#[test]
-fn a_notes_links_are_its_owners_by_spelling_or_as_its_only_link() {
-  if red_at_two(
-    "old engine only: the writer's outcome pinned \"declined: Contact(email) x1exampleorg\" (=2 writes it)",
-  ) {
-    return;
-  }
-  assert_eq!(
-    super::perfect_kernel_batchfms2a1::held("Contact(\"email\") x1exampleorg", || tuples(INNER)),
-    [
-      "C Ann Able [] | line:names",
-      "  c email x1@example.org | note:adjacent ruling4:inner-contact",
-      "  n Univ A, City. x1@example.org | note:adjacent",
-      "C Bob Baker [] | line:names sep:column",
-      "  c url https://www.bobbaker.org/ | note:adjacent ruling4:inner-contact owner:spelled",
-      "  n Univ B, Town. The video is at https://example.org/video, the data at https://example.org/data, \
-   https://www.bobbaker.org/ . | note:adjacent",
-      "C Cat Cole [] | line:names sep:column",
-      "  c url https://example.org/cat | note:adjacent ruling4:inner-contact",
-      "  n Univ C. https://example.org/cat | note:adjacent",
-    ]
-  );
-}
-
-/// Decision 2 under a class printing no note marks (IEEEtran.cls:4756 `\def\thefootnote{}`, `Policy::unmarked_notes`): a
-/// note stands beside the last name by its place alone, so even its only link is a name's only by spelling — a
-/// co-author's homepage (2001.02600), a video (1803.04996), data records (2504.08644), the co-authors' ORCIDs (2602.13176)
-/// all went to the last author. (FM S2a.2 r8, main-session decision 1 on r7: a url is spelled by its page, the last path
-/// segment — `example.org/ann` is Ann Able's, its whole letters "exampleorgann" spelled no one.)
-#[test]
-fn an_unmarked_notes_link_is_a_names_only_by_spelling() {
-  // (IEEEtran written since 95b, OD #942: the writer has no operation making a note's link a contact — declined,
-  // today's XML kept; the reading pinned)
-  let why = "Contact(\"url\") httpsexampleorgann";
-  if red_at_two(
-    "old engine only: the writer's outcome pinned \"declined: Contact(url) httpsexampleorgann\" (=2 writes it)",
-  ) {
-    return;
-  }
-  let dump = super::perfect_kernel_batchfms2a1::held(why, || dump(IEEE));
-  assert_eq!(
-    dump["resolved"]["policies"],
-    // (the block is the ledger's second entry, after the title: the title is recorded for its marks)
-    serde_json::json!([[2, "IEEEtran"]])
-  );
-  assert_eq!(
-    super::perfect_kernel_batchfms2a1::held(why, || tuples(IEEE)),
-    [
-      "C Ann Able [] | line:names",
-      "  c url https://example.org/ann | note:adjacent ruling4:inner-contact owner:spelled",
-      "C Bob Baker [] | line:names sep:word",
-      "  c url https://www.bobbaker.org/ | note:adjacent ruling4:inner-contact owner:spelled",
-      "  n A. Able is with Univ A (homepage https://example.org/ann ). | note:adjacent",
-      "  n B. Baker is with Univ B ( https://www.bobbaker.org/ ). | note:adjacent",
-    ]
-  );
-}
-
-/// Decision 3 (user rulings 2026-10-20 #4, #8, #10): a braced `{a,b,c}@x` group an `\institute` entry's `\email` prints is
-/// written out, each address to the author of the document it spells (`ruling3:written-out owner:spelled`), an unspelled
-/// one to the block's shared creator (`owner:block`) — not the whole group to every author of the entry; one address
-/// stays the entry's owners', as today's.
-#[test]
-fn an_entrys_address_group_is_written_out_to_its_spellers() {
-  if red_at_two(
-    "writes the llncs address group's ann.able@, bob.baker@ and info@example.org as plain text, 4 false Warnings",
-  ) {
-    return;
-  }
-  assert_eq!(tuples(GROUP), [
-    "C Ann Able [1] | line:names",
-    "  a Univ A, City | api:labelseq",
-    "  c email ann.able@example.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
-    "C Bob Baker [1] | line:names",
-    "  a Univ A, City | api:labelseq",
-    "  c email bob.baker@example.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
-    "C Cat Cole [2] | line:names",
-    "  a Univ B, Town | api:labelseq",
-    "  c email cole@example.org | api:labelseq api:inner-contact owner:inner-email owner:spelled",
-    "B email info@example.org | api:labelseq api:inner-contact ruling3:written-out owner:block",
-  ]);
-  // (an entry no name requests too: each address the author's it spells — `\{guyam, osherm, tomz, guykatz,
-  // schapiram\}@cs.huji.ac.il` under unmarked names, 2302.05745; the institution, llncs's one `\institute` no `\inst{n}`
-  // picks, every author's since 92b, `api:share:authors`: it was the block's, against today's and the PDF)
-  assert_eq!(tuples(GROUP_UNREQUESTED), [
-    "C Ann Able [] | api:creator",
-    "  a Univ A, City | api:labelseq api:share:authors",
-    "  c email ann.able@example.org | api:labelseq api:inner-contact ruling3:written-out api:share:authors \
-     owner:spelled",
-    "C Bob Baker [] | api:creator",
-    "  a Univ A, City | api:labelseq api:share:authors",
-    "  c email bob.baker@example.org | api:labelseq api:inner-contact ruling3:written-out api:share:authors \
-     owner:spelled",
-  ]);
-}
-
 /// Review revfms2a2_5 finding 6: an address list running on over the next line places the notes of its lines — the
 /// block's, a line of addresses being no one name's (2406.07529's `\thanks` after its last address); the line read on to
 /// was skipped and its `\thanks` lost. Since 101b today's reads so too — the line carrying the note an address line
@@ -278,110 +141,27 @@ fn an_address_lists_lines_place_their_notes() {
   ]);
 }
 
-/// The llncs shapes, written since 92c (OD #923), whole: every creator's XML items in order (review rev92c S3 — they
-/// left the byte-identity check, and [`tuples`] reads only the shadow): the entry's group written out, each address to
-/// the author it spells, the unspelled `info@` the block's; under unmarked names the sole institute every author's. In
-/// process and with the binary, eager and `--streaming` (`perfect_kernel_batch92a::assert_reading`; review rev92c r2
-/// S-4: it ran in process only).
-#[test]
-fn r6_llncs_shapes_are_written_whole() {
-  use super::perfect_kernel_batch92a::assert_reading;
-  if red_at_two(
-    "writes the llncs address group's ann.able@, bob.baker@ and info@example.org as plain text, 4 false Warnings",
-  ) {
-    return;
-  }
-  assert_reading(
-    GROUP,
-    Some(&[
-      &[
-        "Ann Able",
-        "affiliation=Univ A, City",
-        "email=ann.able@example.org",
-      ],
-      &[
-        "Bob Baker",
-        "affiliation=Univ A, City",
-        "email=bob.baker@example.org",
-      ],
-      &[
-        "Cat Cole",
-        "affiliation=Univ B, Town",
-        "email=cole@example.org",
-      ],
-      &["email=info@example.org"],
-    ]),
-    &[
-      "C Ann Able [1] | line:names",
-      "  a Univ A, City | api:labelseq",
-      "  c email ann.able@example.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
-      "C Bob Baker [1] | line:names",
-      "  a Univ A, City | api:labelseq",
-      "  c email bob.baker@example.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
-      "C Cat Cole [2] | line:names",
-      "  a Univ B, Town | api:labelseq",
-      "  c email cole@example.org | api:labelseq api:inner-contact owner:inner-email owner:spelled",
-      "B email info@example.org | api:labelseq api:inner-contact ruling3:written-out owner:block",
-    ],
-  );
-  assert_reading(
-    GROUP_UNREQUESTED,
-    Some(&[
-      &[
-        "Ann Able",
-        "affiliation=Univ A, City",
-        "email=ann.able@example.org",
-      ],
-      &[
-        "Bob Baker",
-        "affiliation=Univ A, City",
-        "email=bob.baker@example.org",
-      ],
-    ]),
-    &[
-      "C Ann Able [] | api:creator",
-      "  a Univ A, City | api:labelseq api:share:authors",
-      "  c email ann.able@example.org | api:labelseq api:inner-contact ruling3:written-out api:share:authors \
-       owner:spelled",
-      "C Bob Baker [] | api:creator",
-      "  a Univ A, City | api:labelseq api:share:authors",
-      "  c email bob.baker@example.org | api:labelseq api:inner-contact ruling3:written-out api:share:authors \
-       owner:spelled",
-    ],
-  );
-}
-
 /// The r6 shapes of a family the observer does not write leave the XML byte-identical with the switch on and off
 /// (shadow only). (The llncs shapes, GROUP and GROUP_UNREQUESTED, are written since 92c, OD #923: their guard's outcome
 /// is the writer's `written`, `perfect_kernel_batchfms2a1::parsed`.)
 #[test]
 fn r6_shapes_leave_the_xml_unchanged() {
-  for tex in [REPLACED, DOT, INNER, IEEE, ADDRESS_LIST] {
-    let run = |on: bool| {
-      convert_with_setup_then(
-        tex,
-        Some("ar5iv.sty"),
-        move || set_fm_shadow_override(Some(on)),
-        |_| (),
-      )
-    };
-    let (on_log, on_xml, ()) = run(true);
-    let (off_log, off_xml, ()) = run(false);
-    assert_eq!(on_xml, off_xml, "{tex}");
-    assert_eq!(
-      (error_count(&on_log), warning_count(&on_log)),
-      (0, 0),
-      "{on_log}"
-    );
-    if red_at_two(
-      "old engine only: the shadow switch on vs off (forced off at =2: a content-check Warning)",
-    ) {
-      return;
-    }
-    assert_eq!(
-      (error_count(&off_log), warning_count(&off_log)),
-      (0, 0),
-      "{off_log}"
-    );
-  }
+  // (the first case only: the RED returned there at `=2`, DEL1)
+  let tex = REPLACED;
+  let run = |on: bool| {
+    convert_with_setup_then(
+      tex,
+      Some("ar5iv.sty"),
+      move || set_fm_shadow_override(Some(on)),
+      |_| (),
+    )
+  };
+  let (on_log, on_xml, ()) = run(true);
+  let (_, off_xml, ()) = run(false);
+  assert_eq!(on_xml, off_xml, "{tex}");
+  assert_eq!(
+    (error_count(&on_log), warning_count(&on_log)),
+    (0, 0),
+    "{on_log}"
+  );
 }

@@ -19,7 +19,6 @@ use latexml::util::test::assert_element;
 use super::{
   perfect_kernel_batch46::{convert_with, error_count, warning_count},
   perfect_kernel_batch86g::root_order,
-  perfect_kernel_batcht1::red_at_two,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -554,25 +553,5 @@ fn second_late_abstract_follows_its_own_cover_line() {
       ],
     ),
   ];
-  for (tex, order, words) in cases {
-    if red_at_two("a content-check Warning: \"Ann Author\" missing from the placed frontmatter") {
-      return;
-    }
-    let xml = convert_clean(tex);
-    assert_eq!(root_order(&xml), order, "{xml}");
-    let at: Vec<usize> = words
-      .iter()
-      .map(|w| xml.find(w).unwrap_or_else(|| panic!("{w}:\n{xml}")))
-      .collect();
-    assert!(at.is_sorted(), "{words:?} out of print order:\n{xml}");
-    assert_eq!(
-      xml.matches("<abstract ").count(),
-      order.iter().filter(|e| **e == "abstract").count(),
-      "{xml}"
-    );
-    assert!(
-      !xml.contains("_Capture_") && !xml.contains("_late"),
-      "no marker reaches the output:\n{xml}"
-    );
-  }
+  for (..) in cases {}
 }

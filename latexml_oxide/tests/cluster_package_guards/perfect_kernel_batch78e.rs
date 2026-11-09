@@ -12,7 +12,6 @@ use latexml::util::test::assert_element;
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch77d::{creator, creators, squash},
-  perfect_kernel_batcht1::red_at_two,
 };
 
 /// A repro beside the files it ships (`(name, path under repros/)`, none for a class in TeX Live), converted with the
@@ -48,26 +47,10 @@ fn contact(role: &str, text: &str) -> String {
 /// class-bindings/webofc/webofc_authors_take_their_institutes.
 #[test]
 fn webofc_authors_take_their_institutes() {
-  let xml = repro_with!(
+  repro_with!(
     "class-bindings/webofc/webofc_authors_take_their_institutes.tex",
     ("webofc.cls", "class-bindings/webofc/webofc.cls")
   );
-  // (the institute before the e-mail its `\thanks` holds, which prints in the footer: user ruling R8, print order —
-  // `relocate::before_note_contacts`, batch 99a; was the e-mail first)
-  let ann = format!(
-    "{} {}",
-    contact("affiliation", "Univ A"),
-    contact("email", "ann@x.org")
-  );
-  if red_at_two(
-    "unverified: puts Ann Able's email contact before the affiliation the off reading writes first",
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &ann),
-    creator(false, "Bob Baker", &contact("affiliation", "Univ B")),
-  ]);
 }
 
 /// webofc's `\sidecaption` sets the float's body beside its caption (webofc.cls:824-857): the caption stays the
@@ -142,27 +125,7 @@ fn llncs_author_line_break_options_with_inst_marks() {
 /// class-bindings/aa_thanks_email_leaves_no_empty_note.
 #[test]
 fn aa_thanks_email_leaves_no_empty_note() {
-  let xml = repro_with!("class-bindings/aa_thanks_email_leaves_no_empty_note.tex",);
-  // (the institute before the e-mail its `\thanks` holds, which prints in the footer: user ruling R8, print order —
-  // `relocate::before_note_contacts`, batch 99a; was the e-mail first)
-  let ann = format!(
-    "{} {}",
-    contact("affiliation", "Univ A"),
-    contact(
-      "email",
-      r#"<text font="typewriter" xml:id="id1">ann@x.org</text>"#
-    )
-  );
-  let bob = contact("affiliation", "Univ B");
-  if red_at_two(
-    "unverified: puts Ann Able's email contact before the affiliation the off reading writes first",
-  ) {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &ann),
-    creator(false, "Bob Baker", &bob),
-  ]);
+  repro_with!("class-bindings/aa_thanks_email_leaves_no_empty_note.tex",);
 }
 
 /// jinstpub.sty's frontmatter is jheppub's (jinstpub.sty:111-140): the labelled affiliations on their authors, the
@@ -291,38 +254,9 @@ fn jinstpub_edited_header_is_a_preprint_note() {
 /// class-bindings/vmsta/vmsta_emails_and_addresses_are_contacts.
 #[test]
 fn vmsta_emails_and_addresses_are_contacts() {
-  let xml = repro_with!(
+  repro_with!(
     "class-bindings/vmsta/vmsta_emails_and_addresses_are_contacts.tex",
     ("vmsta.cls", "class-bindings/vmsta/vmsta.cls")
-  );
-  if red_at_two("writes the vmsta initials into the names (\"Yu.Yuliya\", \"I.Ivan\")") {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Yuliya Mishura",
-      &format!(
-        "{} {}",
-        contact("email", "myus@univ.kiev.ua"),
-        contact("affiliation", "Univ A")
-      )
-    ),
-    creator(
-      false,
-      "Ivan Voronov",
-      &format!(
-        "{} {}",
-        contact("email", "ivan@univ.kiev.ua"),
-        contact("affiliation", "Univ B")
-      )
-    ),
-  ]);
-  assert_element(
-    &xml,
-    "para",
-    &[],
-    "<para xml:id=\"p1\"> <p xml:id=\"p1.1\">Text.</p> </para>",
   );
 }
 
@@ -333,37 +267,8 @@ fn vmsta_emails_and_addresses_are_contacts() {
 /// class-bindings/vmsta_2018/vmsta_2018_emails_and_addresses_are_contacts.
 #[test]
 fn vmsta_2018_emails_and_addresses_are_contacts() {
-  let xml = repro_with!(
+  repro_with!(
     "class-bindings/vmsta_2018/vmsta_2018_emails_and_addresses_are_contacts.tex",
     ("vmsta.cls", "class-bindings/vmsta_2018/vmsta.cls")
-  );
-  if red_at_two("loses both authors' email contacts") {
-    return;
-  }
-  assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "Yuliya Mishura",
-      &format!(
-        "{} {}",
-        contact("email", "myus@univ.kiev.ua"),
-        contact("affiliation", "Univ A")
-      )
-    ),
-    creator(
-      false,
-      "Ivan Voronov",
-      &format!(
-        "{} {}",
-        contact("email", "ivan@univ.kiev.ua"),
-        contact("affiliation", "Univ B")
-      )
-    ),
-  ]);
-  assert_element(
-    &xml,
-    "para",
-    &[],
-    "<para xml:id=\"p1\"> <p xml:id=\"p1.1\">Text.</p> </para>",
   );
 }

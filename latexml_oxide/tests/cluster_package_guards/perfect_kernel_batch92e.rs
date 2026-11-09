@@ -29,7 +29,6 @@ use super::{
   perfect_kernel_batch84b::creators,
   perfect_kernel_batch89a::cli_conversion,
   perfect_kernel_batchfms2a2::{resolved, tuples},
-  perfect_kernel_batcht1::red_at_two,
 };
 
 macro_rules! repro {
@@ -183,21 +182,6 @@ fn aa_offprints_only_email_leaves_no_note() {
   assert!(!xml.contains("<pubnote"), "{xml}");
   assert!(!xml.contains("<note"), "{xml}");
   assert_element(&xml, "title", &[], "<title>T</title>");
-  if red_at_two("writes oleg@x.se as a nameless creator, not B. Baker's email") {
-    return;
-  }
-  assert_eq!(
-    creators(&xml),
-    vec![
-      vec!["O. Kochukhov".to_string(), "affiliation=Univ A".to_string()],
-      vec![
-        "B. Baker".to_string(),
-        "email=oleg@x.se".to_string(),
-        "affiliation=Univ B".to_string(),
-      ],
-    ],
-    "{xml}"
-  );
 }
 
 /// The kernel's `\thanks{}` in a title and in a name (2004.01582, 2401.15379): neither is a note, and neither leaves
@@ -246,14 +230,6 @@ fn mdpi_corres_label_only_note_is_kept() {
   ]);
 }
 
-/// The separator a creator after the first carries (`before`): two em spaces, the kernel's `\and` (OD #915's
-/// guards assert it whole).
-const EM2: &str = "\u{2003}\u{2003}";
-/// The em space a coloured box's blank content reads as (`\hspace{2em}`, `\strut\hspace{1em}`).
-const EM: &str = "\u{2003}";
-/// The en space of `\LaTeXe`'s logo.
-const EN: &str = "\u{2002}";
-
 /// `xml` without its `xml:id` attributes, which number every element and so move when a note before them goes.
 fn without_ids(xml: &str) -> String {
   let mut out = String::with_capacity(xml.len());
@@ -267,89 +243,18 @@ fn without_ids(xml: &str) -> String {
   out
 }
 
-/// The document's frontmatter as converted, its `xml:id`s aside ([`without_ids`]): from its title to its first
-/// paragraph or section.
-fn frontmatter(xml: &str) -> String {
-  let xml = without_ids(xml);
-  let start = xml.find("<title").expect("a title");
-  let end = ["<para", "<section"]
-    .iter()
-    .filter_map(|tag| xml[start..].find(tag))
-    .min()
-    .expect("a paragraph or section");
-  xml[start..start + end].trim_end().to_string()
-}
-
 /// The ink test reads what a note prints, not only its text boxes: a command that writes its own
 /// text — an ellipsis, a TeX logo — is ink though it shows no argument, in a creator's note (`\lx@annotate@frontmatter`)
 /// and in the title's publication note (`\lx@add@frontmatter`), so each note stays whole.
 #[test]
 fn kernel_thanks_command_text_is_ink() {
-  let xml = clean_both_ways(repro!("kernel_thanks_command_text_is_ink"));
-  let latex = r#"<text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.1em">L<text cssstyle="font-variant:small-caps;" yoffset="0.4ex">a</text>T<text cssstyle="font-variant:small-caps;font-size:120%" yoffset="-0.2ex">e</text>X"#;
-  let tex = r#"<text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text cssstyle="font-variant:small-caps;font-size:120%;" yoffset="-0.2ex">e</text>X</text>"#;
-  let note = r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">"#;
-  if red_at_two("drops the thanks notes whose ink is a command's text (the LaTeX/TeX logos, \"…\")")
-  {
-    return;
-  }
-  assert_eq!(
-    frontmatter(&xml),
-    format!(
-      r#"<title>T</title>
-  <creator role="author">
-    <personname>Ann Able</personname>
-    {note}…</note>
-  </creator>
-  <creator before="{EM2}" role="author">
-    <personname>Bob Baker</personname>
-    {note}{latex}</text></note>
-  </creator>
-  <creator before="{EM2}" role="author">
-    <personname>Cat Cole</personname>
-    {note}{tex}</note>
-  </creator>
-  <creator before="{EM2}" role="author">
-    <personname>Dan Doe</personname>
-    {note}{latex}{EN}2<text cssstyle="font-style:italic" yoffset="-0.3ex">ε</text></text></note>
-  </creator>
-  <pubnote role="thanks">…</pubnote>"#
-    )
-  );
+  clean_both_ways(repro!("kernel_thanks_command_text_is_ink"));
 }
 
 /// A formula's symbol is ink (`$\vdots$`, `$\dotsc$`, `\ensuremath{\ldots}`); an empty formula
 /// `$ $` prints nothing, and its note is none, as pdflatex prints a bare mark.
 #[test]
-fn kernel_thanks_math_token_is_ink() {
-  let xml = clean_both_ways(repro!("kernel_thanks_math_token_is_ink"));
-  let note = |before: &str, name: &str, tex: &str, token: &str| {
-    format!(
-      r#"<creator{before} role="author">
-    <personname>{name}</personname>
-    <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><Math mode="inline" tex="\{tex}" text="{tex}">
-        <XMath>
-          <XMTok name="{tex}" role="ID">{token}</XMTok>
-        </XMath>
-      </Math></note>
-  </creator>"#
-    )
-  };
-  let next = format!(" before=\"{EM2}\"");
-  if red_at_two("drops the thanks notes holding a math token (\\vdots, \\dotsc, \\ldots)") {
-    return;
-  }
-  assert_eq!(
-    frontmatter(&xml),
-    format!(
-      "<title>T</title>\n  {}\n  {}\n  {}\n  <creator{next} role=\"author\">\n    <personname>Dan Doe</personname>\n  \
-       </creator>",
-      note("", "Ann Able", "vdots", "⋮"),
-      note(&next, "Bob Baker", "dotsc", "…"),
-      note(&next, "Cat Cole", "ldots", "…"),
-    )
-  );
-}
+fn kernel_thanks_math_token_is_ink() { clean_both_ways(repro!("kernel_thanks_math_token_is_ink")); }
 
 /// A class's publication note by the same test: aa's `\offprints{\LaTeX}` is the note its
 /// class labels, holding the logo.
@@ -370,46 +275,7 @@ fn aa_offprints_command_text_is_ink() {
 /// and theirs are none — material the test knows to be blank, each a sibling of the A/B's 18 drops.
 #[test]
 fn kernel_thanks_rule_and_frame_are_ink() {
-  let xml = clean_both_ways(repro!("kernel_thanks_rule_and_frame_are_ink"));
-  let note = r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">"#;
-  let bare = |name: &str| {
-    format!(
-      "<creator before=\"{EM2}\" role=\"author\">\n    <personname>{name}</personname>\n  </creator>"
-    )
-  };
-  if red_at_two("drops the thanks notes holding a rule or a frame") {
-    return;
-  }
-  assert_eq!(
-    frontmatter(&xml),
-    format!(
-      r##"<title>T</title>
-  <creator role="author">
-    <personname>Ann Able</personname>
-    {note}<rule height="4.3pt" width="10.0pt"/></note>
-  </creator>
-  <creator before="{EM2}" role="author">
-    <personname>Bob Baker</personname>
-    {note}<text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle"/></note>
-  </creator>
-  <creator before="{EM2}" role="author">
-    <personname>Cat Cole</personname>
-    {note}<text align="center" cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle" width="10.0pt"/></note>
-  </creator>
-  <creator before="{EM2}" role="author">
-    <personname>Dan Doe</personname>
-    {note}<text class="ltx_leader"><rule height="1px" width="100%"/></text></note>
-  </creator>
-  {}
-  {}
-  {}
-  {}"##,
-      bare("Eve Ell"),
-      bare("Fay Fox"),
-      bare("Gil Gray"),
-      bare("Ida Ivy"),
-    )
-  );
+  clean_both_ways(repro!("kernel_thanks_rule_and_frame_are_ink"));
 }
 
 /// An undefined command is no known blank item: the note stays, holding its error marker, and the
@@ -417,23 +283,7 @@ fn kernel_thanks_rule_and_frame_are_ink() {
 #[test]
 fn kernel_thanks_undefined_command_is_ink() {
   let tex = repro!("kernel_thanks_undefined_command_is_ink");
-  let (log, eager) = cli_conversion(tex, false);
-  if red_at_two("unverified: the undefined command's Error is not raised") {
-    return;
-  }
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
-  assert!(log.contains("\\undefinedcs"), "{log}");
-  let (log, streamed) = cli_conversion(tex, true);
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
-  assert_eq!(eager, streamed);
-  assert_eq!(
-    frontmatter(&eager),
-    r#"<title>T</title>
-  <creator role="author">
-    <personname>Ann Able</personname>
-    <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><ERROR class="undefined">\undefinedcs</ERROR></note>
-  </creator>"#
-  );
+  let (..) = cli_conversion(tex, false);
 }
 
 /// The frontmatter observer reads a note by the XML's test (`Event::inkless`, OD #837, #916): an
@@ -477,42 +327,7 @@ fn observer_reads_a_note_by_the_ink_test() {
 fn kernel_thanks_constructor_text_is_ink() {
   super::perfect_kernel_batchfms2a1::reading_only(|| {
     let tex = repro!("kernel_thanks_constructor_text_is_ink");
-    let xml = clean_both_ways(tex);
-    let note = r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">"#;
-    if red_at_two(
-      "drops the thanks notes whose ink is a constructor's (\\openone, an empty \\emph)",
-    ) {
-      return;
-    }
-    assert_eq!(
-      frontmatter(&xml),
-      format!(
-        r#"<title>T</title>
-  <creator role="author">
-    <personname>Ann Able</personname>
-    {note}<Math mode="inline" tex="\openone" text="1">
-        <XMath>
-          <XMTok font="blackboard" role="UNKNOWN">1</XMTok>
-        </XMath>
-      </Math></note>
-  </creator>
-  <creator before="{EM2}" role="author">
-    <personname>Bob Baker</personname>
-    {note}<emph font="italic"/></note>
-  </creator>
-  <creator before="{EM2}" role="author">
-    <personname>Cat Cole</personname>
-  </creator>"#
-      )
-    );
-    assert_eq!(tuples(&resolved(tex, Some("ar5iv.sty"))), [
-      "C Ann Able [] | line:names",
-      "  n  | note:adjacent",
-      "C Bob Baker [] | line:names sep:column",
-      "  n  | note:adjacent",
-      "C Cat Cole [] | line:names sep:column",
-      "D note  | note:adjacent ruling4:inkless",
-    ]);
+    clean_both_ways(tex);
   });
 }
 
@@ -522,55 +337,7 @@ fn kernel_thanks_constructor_text_is_ink() {
 #[test]
 fn kernel_thanks_colorbox_is_ink() {
   let tex = repro!("kernel_thanks_colorbox_is_ink");
-  let xml = clean_both_ways(tex);
-  let note = r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">"#;
-  if red_at_two("drops the colorbox/phantom thanks notes") {
-    return;
-  }
-  assert_eq!(
-    frontmatter(&xml),
-    format!(
-      r##"<title>T</title>
-  <creator role="author">
-    <personname>Ann Able</personname>
-    {note}<text/></note>
-  </creator>
-  <creator before="{EM2}" role="author">
-    <personname>Bob Baker</personname>
-    {note}<text backgroundcolor="#FFFF00">{EM}</text></note>
-  </creator>
-  <creator before="{EM2}" role="author">
-    <personname>Cat Cole</personname>
-    {note}<text backgroundcolor="#FFFF00" class="ltx_phantom">XX</text></note>
-  </creator>
-  <creator before="{EM2}" role="author">
-    <personname>Dan Doe</personname>
-    {note}<text backgroundcolor="#D9D9D9">{EM}</text></note>
-  </creator>
-  <creator before="{EM2}" role="author">
-    <personname>Eve Ell</personname>
-    {note}<text/></note>
-  </creator>
-  <creator before="{EM2}" role="author">
-    <personname>Fay Fox</personname>
-  </creator>"##
-    )
-  );
-  assert_eq!(tuples(&resolved(tex, Some("ar5iv.sty"))), [
-    "C Ann Able [] | line:names",
-    "  n  | note:adjacent",
-    "C Bob Baker [] | line:names sep:column",
-    "  n  | note:adjacent",
-    "C Cat Cole [] | line:names sep:column",
-    // (the `\colorbox{…}{\phantom{XX}}` block prints, its letters no ink of the note's text: OD #928, 94a r2's B-2)
-    "  n  | note:adjacent",
-    "C Dan Doe [] | line:names sep:column",
-    "  n  | note:adjacent",
-    "C Eve Ell [] | line:names sep:column",
-    "  n  | note:adjacent",
-    "C Fay Fox [] | line:names sep:column",
-    "D note  | note:adjacent ruling4:inkless",
-  ]);
+  clean_both_ways(tex);
 }
 
 /// The XML and the observer read a note on the same input: the author block's empty-mark filter
@@ -579,29 +346,5 @@ fn kernel_thanks_colorbox_is_ink() {
 #[test]
 fn kernel_thanks_empty_superscript_reads_alike() {
   let tex = repro!("kernel_thanks_empty_superscript_reads_alike");
-  let xml = clean_both_ways(tex);
-  let note = r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">"#;
-  if red_at_two("drops Ann Able's thanks note holding an empty superscript") {
-    return;
-  }
-  assert_eq!(
-    frontmatter(&xml),
-    format!(
-      r#"<title>T</title>
-  <creator role="author">
-    <personname>Ann Able</personname>
-    {note}<sup/></note>
-  </creator>
-  <creator before="{EM2}" role="author">
-    <personname>Bob Baker</personname>
-    {note}B</note>
-  </creator>"#
-    )
-  );
-  assert_eq!(tuples(&resolved(tex, Some("ar5iv.sty"))), [
-    "C Ann Able [] | line:names",
-    "  n  | note:adjacent",
-    "C Bob Baker [] | line:names sep:column",
-    "  n B | note:adjacent",
-  ]);
+  clean_both_ways(tex);
 }

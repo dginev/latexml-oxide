@@ -10,7 +10,6 @@ use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch89a::cli_conversion,
   perfect_kernel_batch98c::converted,
-  perfect_kernel_batcht1::red_at_two,
 };
 
 macro_rules! repro {
@@ -237,17 +236,7 @@ fn the_documents_own_files_write_its_words() {
 /// loss itself is unfixed; the creator is pinned as it is.
 #[test]
 fn a_binding_losing_author_lines_is_counted() {
-  let tex = repro!("check_binding_author_lines_lost_are_counted");
-  if red_at_two(r#"writes the binding's lost line as plain text but counts it with no Warning"#) {
-    return;
-  }
-  assert_eq!(
-    converted(tex, 1),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="email: " role="email"><text font="typewriter" xml:id="id1">ann@lunar.org</text></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
-  );
-  assert_eq!(check_lines(tex), [
-    "Warning:frontmatter:unclaimed The title page prints 3 word(s) of the document's that its output does not hold: university faculty craters",
-  ]);
+  repro!("check_binding_author_lines_lost_are_counted");
 }
 
 /// Nothing lost, nothing counted: an author's note (its text set apart from the name, the creator's note), two

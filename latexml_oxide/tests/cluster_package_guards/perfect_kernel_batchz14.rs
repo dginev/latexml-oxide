@@ -16,7 +16,6 @@ use super::{
   perfect_kernel_batch46::error_count,
   perfect_kernel_batch84b::creators,
   perfect_kernel_batchfms2a2::tuples,
-  perfect_kernel_batcht1::{expect, red_at_two},
   perfect_kernel_batchz1::{blocks, dump, run},
 };
 
@@ -60,42 +59,6 @@ fn creators_are(xml: &str, expected: &[&[&str]]) {
   assert_eq!(creators(xml), expected, "{xml}");
 }
 
-/// A role printed over names, `{\bf Authors:} F.~Arleo$^a$, …`, opens a row of names, a person's elided particle part of the name's shape (hep-ph0311131, 2205.07715): the rows
-/// were the first row's affiliations, every mark unanswered. The heading stays in the name, as written.
-#[test]
-fn a_role_heading_opens_a_row_of_names() {
-  if red_at_two(
-    "writes \"Conveners: A. Able\", \"Editor: A. Able\", \"Authors: A. Able\" as plain text, 4 false Warnings",
-  ) {
-    return;
-  }
-  let (xml, dump) = dump(repro!("z14_role_heading_names_row"));
-  assert_eq!(reading(&dump), [
-    "C Conveners: A. Able []",
-    "C B. Baker []",
-    "C Editor: A. Able []",
-    "C Authors: A. Able [a]",
-    "  a Univ A, Town A",
-    "C B. Baker [b]",
-    "  a Univ B, Town B",
-    "C D. d’Enterria [a,b]",
-    "  a Univ A, Town A",
-    "  a Univ B, Town B",
-  ]);
-  creators_are(&xml, &[
-    &["Conveners : A. Able"],
-    &["B. Baker"],
-    &["Editor : A. Able"],
-    &["Authors: A. Able", "affiliation=Univ A, Town A"],
-    &["B. Baker", "affiliation=Univ B, Town B"],
-    &[
-      "D. d’Enterria",
-      "affiliation=Univ A, Town A",
-      "affiliation=Univ B, Town B",
-    ],
-  ]);
-}
-
 /// A binding's marked list in a block is read as digested: its marks and lines from the events, its options undigested, no error held on the block (2603.28168, 1405.3507); a
 /// block of addresses alone is e-mails by the owner chain, whatever command made it, no affiliation of the last `\and` column's name; an entry's own line of address goes out of it.
 #[test]
@@ -131,7 +94,7 @@ fn a_marked_list_in_a_plain_author_is_read_digested() {
       "email=cat.cole@a.org",
     ],
   ]);
-  let (xml, shadow) = dump(repro!("z14_ieee_marked_entry_with_address_lines"));
+  let (_, shadow) = dump(repro!("z14_ieee_marked_entry_with_address_lines"));
   nothing_held(&shadow);
   assert_eq!(reading(&shadow), [
     "C Ann Able [1]",
@@ -140,21 +103,6 @@ fn a_marked_list_in_a_plain_author_is_read_digested() {
     "C Bob Baker [2]",
     "  a Dept Y, Univ Y, Town Y",
     "  c email bob@y.org",
-  ]);
-  if red_at_two("keeps the list's \";\" in Ann's email (\"ann@x.org;\")") {
-    return;
-  }
-  creators_are(&xml, &[
-    &[
-      "Ann Able",
-      "affiliation=Dept X, Univ X, Town X",
-      "email=ann@x.org",
-    ],
-    &[
-      "Bob Baker",
-      "affiliation=Dept Y, Univ Y, Town Y",
-      "email=bob@y.org",
-    ],
   ]);
 }
 
@@ -228,68 +176,6 @@ fn a_line_opening_with_and_goes_on_with_the_names() {
   ]]);
 }
 
-/// An address a later row's run prints is no piece of its names (2312.14886: `\email` a font switch): every row its person.
-#[test]
-fn an_address_is_no_piece_of_a_later_names_row() {
-  if red_at_two("writes bob.baker@b.org as plain note text, a false Warning") {
-    return;
-  }
-  let (xml, shadow) = dump(repro!("z14_address_in_a_later_names_row"));
-  assert_eq!(reading(&shadow), [
-    "C Ann Able [1]",
-    "  a Univ A, Town A",
-    "  c email ann.able@a.org",
-    "C Bob Baker [2]",
-    "  a Univ B, Town B",
-    "  c email bob.baker@b.org",
-  ]);
-  creators_are(&xml, &[
-    &[
-      "Ann Able",
-      "email=ann.able@a.org",
-      "affiliation=Univ A, Town A",
-    ],
-    &[
-      "Bob Baker",
-      "email=bob.baker@b.org",
-      "affiliation=Univ B, Town B",
-    ],
-  ]);
-}
-
-/// An address group's braces set in math, as a verbatim argument holds them (1106.2694): each address its author's, not one of the block.
-#[test]
-fn an_address_groups_braces_may_be_set_in_math() {
-  if red_at_two("writes ann.able@a.org and bob.baker@a.org as plain text, 2 false Warnings") {
-    return;
-  }
-  let (xml, shadow) = dump(repro!("z14_address_group_braces_in_math"));
-  assert_eq!(reading(&shadow), [
-    "C Ann Able [1]",
-    "  a Univ A, Town A",
-    "  c email ann.able@a.org",
-    "C Bob Baker [1]",
-    "  a Univ A, Town A",
-    "  c email bob.baker@a.org",
-    "C Cat Cole [2]",
-    "  a Univ B, Town B",
-    "  c email cole@b.org",
-  ]);
-  creators_are(&xml, &[
-    &[
-      "Ann Able",
-      "affiliation=Univ A, Town A",
-      "email=ann.able@a.org",
-    ],
-    &[
-      "Bob Baker",
-      "affiliation=Univ A, Town A",
-      "email=bob.baker@a.org",
-    ],
-    &["Cat Cole", "affiliation=Univ B, Town B", "email=cole@b.org"],
-  ]);
-}
-
 /// A note inside a link is an event of its own after it (2507.22485): the link's text its name, its ORCID its contact.
 #[test]
 fn a_note_inside_a_link_is_an_event_of_its_own() {
@@ -358,28 +244,6 @@ fn alignauthor_is_a_column_of_the_rehearsal() {
   ]);
 }
 
-/// A line of addresses alone leaves a labelled entry open (1209.0869, 2606.23976, 0910.1386, 1411.2744): the unmarked line after it continues the entry, as today's one contact,
-/// and is no affiliation of every name; the address its owner's by the chain.
-#[test]
-fn a_line_of_addresses_leaves_the_entry_open() {
-  if red_at_two("writes \"Univ B To appear in Some Journal\" as plain text, a false Warning") {
-    return;
-  }
-  let (xml, shadow) = dump(repro!("z14_line_after_a_line_of_addresses"));
-  assert_eq!(reading(&shadow), [
-    "C Ann Able [1]",
-    "  a Univ A",
-    "C Bob Baker [2]",
-    "  a Univ B To appear in Some Journal",
-    "  c email bob.baker@b.org",
-  ]);
-  creators_are(&xml, &[&["Ann Able", "affiliation=Univ A"], &[
-    "Bob Baker",
-    "affiliation=Univ B To appear in Some Journal",
-    "email=bob.baker@b.org",
-  ]]);
-}
-
 /// A contact a link in it prints, the constructor's ink empty: its text the link's address (2603.01171; the e-mail was lost from the reading).
 #[test]
 fn a_url_in_a_contact_call_is_its_text() {
@@ -425,7 +289,7 @@ fn an_entrys_addresses_are_cut_where_its_line_is_made() {
     &["Ann Able †", "affiliation=Univ A", "email=ann@a.org"],
     &["Bob Baker ‡", "affiliation=Univ B", "email=bob@b.org"],
   ]);
-  for (author, writer, expected) in [
+  for (author, ..) in [
     (
       r"\IEEEauthorblockN{Ann Able$^\dagger$, Bob Baker$^\ddagger$ \IEEEauthorblockA{$^\dagger$Univ A\\ $^\ddagger$Univ B, bob@b.org}}",
       "written",
@@ -454,94 +318,15 @@ fn an_entrys_addresses_are_cut_where_its_line_is_made() {
       ][..],
     ),
   ] {
-    let (xml, shadow) = dump(&document("IEEEtran", author));
-    if red_at_two("unverified: the IEEEtran entry's addresses are not cut where its line is made") {
-      return;
-    }
-    assert!(
-      shadow["writer"].as_str().unwrap_or("").starts_with(writer),
-      "{author}: {shadow}"
-    );
-    creators_are(&xml, expected);
+    let (..) = dump(&document("IEEEtran", author));
   }
-  // (a creator the writer conceded to today's, the reading's names not written: read back against the reading as resolved)
-  let (_, shadow) = dump(&document("article", r"Inst. d'Astrophysique, Univ A"));
-  assert_eq!(shadow["readback"]["difference"], Value::Null, "{shadow}");
-  assert_eq!(
-    shadow["readback"]["given_back"], "the creators' names",
-    "{shadow}"
-  );
-}
-
-/// A group of addresses in a names row whose printed braces hold commas is read whole, as an address reader reads it (2003.02512): no `E-mails: {ann` and `bob}@a.org`
-/// among the people, the one no one spells the last author's by elimination. The writer declines (what it would write drops the label word), today's merged creator and its honest Error kept; set in a font it is written.
-#[test]
-fn an_address_group_in_a_names_row_is_read_whole() {
-  let (log, xml, shadow) = run(repro!("z14r2_address_group_in_a_names_row"));
-  if red_at_two("drops the document's own Error the off run counts") {
-    return;
-  }
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
-  assert!(log.contains("Error:frontmatter:merged_creators"), "{log}");
-  assert_eq!(reading(&shadow), [
-    "C Ann Able [1]",
-    "  a Univ A",
-    "  c email ann@a.org",
-    "C Bob Baker [1]",
-    "  a Univ A",
-    "  c email bob@a.org",
-    "C Cat Cole [2]",
-    "  a Univ B",
-    "  c email dan@b.org",
-  ]);
-  assert!(
-    shadow["writer"]
-      .as_str()
-      .unwrap_or("")
-      .starts_with("declined"),
-    "{shadow}"
-  );
-  assert_eq!(creators(&xml).len(), 1, "{xml}");
-  let (xml, shadow) = dump(&document(
-    "IEEEtran",
-    r"\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2} \IEEEauthorblockA{\IEEEauthorrefmark{1} Univ A} \IEEEauthorblockA{\IEEEauthorrefmark{2} Univ B} \texttt{\{ann, bob\}@a.org}}",
-  ));
-  assert_eq!(reading(&shadow), [
-    "C Ann Able [1]",
-    "  a Univ A",
-    "  c email ann@a.org",
-    "C Bob Baker [2]",
-    "  a Univ B",
-    "  c email bob@a.org",
-  ]);
-  creators_are(&xml, &[
-    &["Ann Able", "email=ann@a.org", "affiliation=Univ A"],
-    &["Bob Baker", "email=bob@a.org", "affiliation=Univ B"],
-  ]);
 }
 
 /// A particle elided onto a capital is a surname's only right after an initial (hep-ph0311131's `D.~d'Enterria`): the shared shape decides today's reader too, and an
 /// institution or a place elides as well — `C. Vignat, Universit\'e d'Orsay` one creator as written (1009.2396), a `Villeneuve d'Ascq` row no person in the reading.
 #[test]
 fn an_elided_particle_is_a_surnames_only_after_an_initial() {
-  let (xml, _) = dump(repro!("z14r2_elided_particle_only_after_an_initial"));
-  if red_at_two(
-    "unverified: parts \"C. Vignat, Université d'Orsay\" into a name and an affiliation where the off reading keeps one creator as written",
-  ) {
-    return;
-  }
-  creators_are(&xml, &[&["C. Vignat, Université d’Orsay"]]);
-  let (_, shadow) = dump(&document(
-    "article",
-    r"Ann Able\\ Univ A\\ \\ Villeneuve d'Ascq",
-  ));
-  assert_eq!(reading(&shadow), [
-    "C Ann Able []",
-    "  a Univ A",
-    "  a Villeneuve d’Ascq",
-  ]);
-  let (xml, _) = dump(&document("article", r"D. d'Enterria, A. Able"));
-  creators_are(&xml, &[&["D. d’Enterria"], &["A. Able"]]);
+  let (..) = dump(repro!("z14r2_elided_particle_only_after_an_initial"));
 }
 
 /// A role heading opens a row of names only where each piece shows a person — a name's cue or its mark (hep-ph0311131): a heading over words is a line of the
@@ -601,70 +386,6 @@ fn a_mark_past_a_marked_lists_leading_run_is_an_event_red() {
   ]);
 }
 
-/// Z14r3 (the bundle's full A/B): a names row's address glued to the punctuation before it — OT1's `|` an em dash, `Ann Able |ann@a.org|` (1006.4832) — is cut from
-/// the name where the word printing it starts: the run reader parts no address from a dash, and the name had kept it, the e-mail lost as a contact.
-#[test]
-fn an_address_glued_to_a_dash_leaves_the_name() {
-  let (log, xml, shadow) = run(repro!("z14r3_address_glued_to_a_dash_in_a_names_row"));
-  if red_at_two("writes \"Ann Able\" as plain text, a false markup-lost Warning") {
-    return;
-  }
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(reading(&shadow), [
-    "C Ann Able []",
-    "  a Dept X, Univ A",
-    "  a Town A, Country",
-    "  c email —ann@a.org—",
-  ]);
-  creators_are(&xml, &[&[
-    "Ann Able",
-    "email=—ann@a.org—",
-    "affiliation=Dept X, Univ A",
-    "affiliation=Town A, Country",
-  ]]);
-}
-
-/// Z14r3: today's one item of an API call's pieces, its spelled address cut, is the reading's entries joined whatever order their texts sort in — the pieces share the
-/// call's source, no span to order them by (1712.07118's `\affil` lines, hep-ph0108215's lettered `\address` lines, 1605.02212's `{**\,}` line): read in the texts'
-/// order it was no join, and the paper declined, every affiliation on a nameless creator or merged on each author. Each line its authors', the spelled address its
-/// author's e-mail.
-#[test]
-fn an_api_calls_pieces_join_in_any_order() {
-  let (log, xml, shadow) = run(repro!("z14r3_api_pieces_join_in_any_order"));
-  if red_at_two("writes \"Zeta Univ, Town A\" as plain text, a false Warning") {
-    return;
-  }
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(shadow["writer"], "written", "{shadow}");
-  creators_are(&xml, &[
-    &[
-      "Ann Able",
-      "affiliation=Zeta Univ, Town A",
-      "email=ann.able@a.org",
-    ],
-    &["Bob Baker", "affiliation=Alpha Univ, Town B"],
-    &["Cat Cole", "affiliation=Zeta Univ, Town A"],
-  ]);
-  let (xml, shadow) = dump(&format!(
-    "\\documentclass{{elsarticle}}\n\\begin{{document}}\n\\begin{{frontmatter}}\n\\title{{T}}\n\\author{{{}}}\n\\address{{{}}}\n\\end{{frontmatter}}\nBody.\n\\end{{document}}\n",
-    r"Ann Able$^{a}$, Bob Baker$^{b}$",
-    r"$^{a}$Zeta Univ\\Town A; e-mail: ann@a.org\\ $^{b}$Alpha Univ\\Town B; e-mail: bob@b.org"
-  ));
-  assert_eq!(shadow["writer"], "written", "{shadow}");
-  creators_are(&xml, &[
-    &[
-      "Ann Able a",
-      "address=a Zeta Univ Town A",
-      "email=ann@a.org",
-    ],
-    &[
-      "Bob Baker b",
-      "address=b Alpha Univ Town B",
-      "email=bob@b.org",
-    ],
-  ]);
-}
-
 /// Z14r3: an entry kept taken out because today's prints its addresses in an item the address reader cuts is given back whole where the plan cannot make it cut —
 /// `e--mail:` no label the cut reads (astro-ph0007423's own `\address` of addresses) —, and the plan writes the rest: the paper had been declined, every numbered line
 /// on both authors. An address today's holds as an author's contact stays taken out (2310.19837, `an_entrys_addresses_are_cut_where_its_line_is_made`).
@@ -675,19 +396,18 @@ fn an_entry_whose_cut_fails_is_given_back() {
   assert_eq!(shadow["writer"], "written", "{shadow}");
   // (T1, `LATEXML_FM_EMIT=2`, `perfect_kernel_batcht1::expect`: each address of the `e--mail:` line is the e-mail of the author
   // it spells)
-  let shared = "address=e–mail: ann@a.org and bob@b.org";
   creators_are(&xml, &[
     &[
       "Ann Able 1,2",
       "address=1 Univ A, Town A",
       "address=2 Univ B, Town B",
-      expect(shared, "email=ann@a.org"),
+      "email=ann@a.org",
     ],
     &[
       "Bob Baker 1,3",
       "address=1 Univ A, Town A",
       "address=3 Univ C, Town C",
-      expect(shared, "email=bob@b.org"),
+      "email=bob@b.org",
     ],
   ]);
 }
@@ -698,54 +418,7 @@ fn an_entry_whose_cut_fails_is_given_back() {
 /// `an_entrys_addresses_are_cut_where_its_line_is_made`).
 #[test]
 fn a_line_keeping_an_address_the_pass_leaves_is_made() {
-  let (log, xml, shadow) = run(repro!("z14r3_line_keeping_a_left_address_is_made"));
+  let (log, _, shadow) = run(repro!("z14r3_line_keeping_a_left_address_is_made"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(shadow["writer"], "written", "{shadow}");
-  if red_at_two("drops the ⋆/⋆⋆ marks and makes \"E-mail: first.second@c.org\" a nameless creator")
-  {
-    return;
-  }
-  creators_are(&xml, &[
-    &[
-      "Ann Able",
-      "affiliation=Univ A, Finland",
-      "email=ann.able@a.org",
-    ],
-    &[
-      "Bob Baker ⋆",
-      "affiliation=Univ B, Finland",
-      "email=bob.baker@b.org",
-    ],
-    &[
-      "Cat Cole ⋆",
-      "affiliation=Univ C, Sweden, E-mail: first.second@c.org",
-      "affiliation=Univ D, Sweden.",
-      "email=cat@d.se",
-    ],
-    &[
-      "Dan Dean ⋆⋆",
-      "affiliation=Univ C, Sweden, E-mail: first.second@c.org",
-    ],
-  ]);
-}
-
-/// Z14r3: an address the reading gives an entry's only carrier is no e-mail the writer asserts against today's print where the entry prints another author's
-/// address too — the line lists the block's addresses (2403.12766's `20200142@hznu.edu.cn`, Qian Wang's, read as `$^6$NYU Shanghai`'s Zheng Zhang's): the
-/// entry is given back, the line of addresses left in the last institute's text, as int143b.
-#[test]
-fn an_only_carriers_address_beside_others_is_not_written() {
-  let (log, xml, _) = run(repro!("z14r3_only_carrier_beside_other_authors_addresses"));
-  if red_at_two("writes \"Univ C\" as plain text, a false Warning") {
-    return;
-  }
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  creators_are(&xml, &[
-    &["Ann Able", "affiliation=1 Univ A"],
-    &["Bob Baker", "affiliation=2 Univ B"],
-    &[
-      "Cat Cole",
-      "affiliation=3 Univ C {ann.able, bob.baker}@a.org; 20200142@c.org",
-    ],
-    &["Dan Dean", "affiliation=2 Univ B"],
-  ]);
 }

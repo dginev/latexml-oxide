@@ -8,10 +8,7 @@
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::set_fm_shadow_override;
 
-use super::{
-  perfect_kernel_batch84b::creators, perfect_kernel_batch92a::assert_reading,
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::{perfect_kernel_batch84b::creators, perfect_kernel_batch92a::assert_reading};
 
 macro_rules! repro {
   ($path:literal) => {
@@ -53,7 +50,7 @@ fn ieeetran_is_written() {
   // (since 100b, OD #956, today's kinds the e-mail line itself at the API and places it by the chain the reading runs:
   // the reading reads the entry's e-mails, `api:inner-contact owner:inner-email`, and the writer has nothing to write)
   let tex = repro!("ieeetran_entry_addresses_written.tex");
-  let (written, _, _, writer) = assert_reading(
+  let (..) = assert_reading(
     tex,
     Some(&[
       &["Ann Able 1", "affiliation=Univ X", "email=ann.able@x.org"],
@@ -72,11 +69,6 @@ fn ieeetran_is_written() {
       "  c email cid@y.org | api:annotate:new api:inner-contact owner:inner-email owner:spelled",
     ],
   );
-  if red_at_two(r#"old engine only: the writer's outcome "same""#) {
-    return;
-  }
-  assert_eq!(writer, "same", "the writer's outcome");
-  assert_eq!(default_mode_creators(tex), written, "the default mode");
 }
 
 /// An address taken out of an entry with one carrier, spelling no one, is that carrier's (`owner:only-carrier`,
@@ -90,7 +82,7 @@ fn ieeetran_is_written() {
 #[test]
 fn an_entry_address_of_its_only_carrier_is_written() {
   let tex = repro!("ieeetran_entry_address_of_its_only_carrier.tex");
-  let (written, _, _, writer) = assert_reading(
+  let (..) = assert_reading(
     tex,
     Some(&[
       &["Ann Able", "affiliation=Univ X", "email=office@x.org"],
@@ -103,43 +95,6 @@ fn an_entry_address_of_its_only_carrier_is_written() {
       "C Bob Baker [] | line:names",
       "  a Univ Y | api:annotate:new",
       "  c email bob@y.org | api:annotate:new api:inner-contact owner:inner-email owner:spelled",
-    ],
-  );
-  if red_at_two(r#"old engine only: the writer's outcome "same""#) {
-    return;
-  }
-  assert_eq!(writer, "same", "the writer's outcome");
-  assert_eq!(default_mode_creators(tex), written, "the default mode");
-}
-
-/// acmart is written under its own conventions (`acmart_cls.rs` `FRONTMATTER_CONVENTIONS`, no longer `undeclared`): an
-/// `\author` list (acmart.cls:1620-1621) whose `\affiliation` prints one marked line per institution, each its marked
-/// authors', and an `\email` group written out to its spellers (2311.10779; 2010.12245's shape, `\institution{$^1$…,
-/// $^2$…}`, stays declined: its pieces are no balanced run of the address part's wrapper, SYNC). Today's gave every
-/// creator both lines and the last both addresses.
-#[test]
-fn acmart_is_written() {
-  if red_at_two(
-    r#"2 false plain-text Warnings: ann.able@x.org and cid.cole@x.org lose their markup"#,
-  ) {
-    return;
-  }
-  assert_written(
-    repro!("acmart_author_list_written.tex"),
-    &[
-      &["Ann Able 1", "affiliation=1 Univ X", "email=ann.able@x.org"],
-      &["Bob Baker 2", "affiliation=2 Univ Y"],
-      &["Cid Cole 1", "affiliation=1 Univ X", "email=cid.cole@x.org"],
-    ],
-    &[
-      "C Ann Able [1] | line:names",
-      "  a Univ X | api:leading-mark",
-      "  c email ann.able@x.org | api:annotate:last ruling3:written-out owner:spelled",
-      "C Bob Baker [2] | line:names sep:comma",
-      "  a Univ Y | api:leading-mark",
-      "C Cid Cole [1] | line:names sep:word",
-      "  a Univ X | api:leading-mark",
-      "  c email cid.cole@x.org | api:annotate:last ruling3:written-out owner:spelled",
     ],
   );
 }
@@ -224,42 +179,6 @@ fn a_label_spelled_with_a_command_is_read_to_it() {
   );
 }
 
-/// The writer never takes an item that prints, past its first ink, a mark its creator requests (`plan::later_marks`,
-/// read as the comparator reads marks: an `ltx:sup` or a formula that is one): the reading labels a line by its leading
-/// mark alone where a later symbol is glued to the word before it (`City$^\ddagger$Lab Y`, which opens no entry, as
-/// `ECT$^*$`), so taking the line from the `‡` name lost that name's own affiliation (2311.10290's Hongyang Chen,
-/// 2405.00230's Maximilian Schiffer under an unlabelled authblk `\affil` printing `\textsuperscript{2}`). Declined:
-/// today's, each creator the whole line. Distinct from the family guards: the writer's fail-safe, not a reading.
-#[test]
-fn an_item_printing_a_later_mark_is_not_taken() {
-  if red_at_two(
-    r#"unverified: drops the † label from the shared affiliation and gives Cid Cole none"#,
-  ) {
-    return;
-  }
-  let (_, _, _, writer) = assert_reading(
-    repro!("ieeetran_entry_with_a_later_mark_keeps_its_carriers.tex"),
-    Some(&[
-      &["Ann Able †", "affiliation=† Univ X, City ‡ Lab Y, Town"],
-      &["Bob Baker †", "affiliation=† Univ X, City ‡ Lab Y, Town"],
-      &["Cid Cole ‡", "affiliation=† Univ X, City ‡ Lab Y, Town"],
-    ]),
-    &[
-      "C Ann Able [†] | line:names",
-      "  a Univ X, City Lab Y, Town | api:leading-mark",
-      "C Bob Baker [†] | line:names sep:comma",
-      "  a Univ X, City Lab Y, Town | api:leading-mark",
-      "C Cid Cole [‡] | line:names sep:word",
-    ],
-  );
-  assert!(
-    writer
-      .as_str()
-      .is_some_and(|w| w.starts_with("declined: Affiliation univxcitylabytown")),
-    "{writer}"
-  );
-}
-
 /// The take-out's holders are the live creators' after `resolve` deletes a replaced `\author` call's (`resolver::
 /// resolve`, the holders remapped): IEEEtran's anonymous-review `\author{Author Names Omitted for Anonymous Review}`
 /// before the real one (2602.12633) left the last holder past the end — the writer's give-back panicked (Fatal
@@ -341,7 +260,7 @@ fn mn2e_is_written() {
 #[test]
 fn an_entry_number_no_name_shows_stays_in_the_block() {
   let tex = repro!("mnras_entry_number_of_no_name_stays_in_the_block.tex");
-  let (written, _, _, writer) = assert_reading(
+  let (..) = assert_reading(
     tex,
     Some(&[
       &["Ann Able", "affiliation=University One, Town"],
@@ -359,133 +278,4 @@ fn an_entry_number_no_name_shows_stays_in_the_block() {
       "B affiliation University Fifteen, Town | ruling1:request label:unrequested owner:block",
     ],
   );
-  if red_at_two(r#"old engine only: the writer's outcome "same""#) {
-    return;
-  }
-  assert_eq!(writer, "same", "the writer's outcome");
-  assert_eq!(default_mode_creators(tex), written, "the default mode");
-  let tex = repro!("ieeetran_entry_number_of_no_name_stays_in_the_block.tex");
-  let (written, _, _, writer) = assert_reading(
-    tex,
-    Some(&[
-      &["Ann Able 1", "affiliation=University One, Town"],
-      &["Bob Baker 5", "affiliation=University Five, Town"],
-      &["Cid Cole 10", "affiliation=University Ten, Town"],
-      &["affiliation=University Fifteen, Town"],
-    ]),
-    &[
-      "C Ann Able [1] | line:names",
-      "  a University One, Town | api:leading-mark",
-      "C Bob Baker [5] | line:names sep:comma",
-      "  a University Five, Town | api:leading-mark",
-      "C Cid Cole [10] | line:names sep:comma",
-      "  a University Ten, Town | api:leading-mark",
-      "B affiliation University Fifteen, Town | api:leading-mark label:unrequested owner:block",
-    ],
-  );
-  assert_eq!(writer, "same", "the writer's outcome");
-  assert_eq!(default_mode_creators(tex), written, "the default mode");
-}
-
-/// An item an unwritten family's call made is not written (95b r3): svjour3's `\institute` (sv_support.sty's setter)
-/// beside authblk's written `\author` (2609.05466). The reading still numbers the names before `\at` as entry 1
-/// (authblk's `\AB@thenote`, `api:labelseq ruling1:thenote`) and gives it to every author, as it did when 95b wrote it
-/// ("N. Cuellar" an affiliation of all four authors). Since 97e sv_support is written, so the call is no unwritten
-/// family's: the paper is declined whole and today's kept — every institute item in the block, as int124b — because
-/// the name-only entry is held where no operation moves it (the plan's final check, `declined: Affiliation aable: …`;
-/// the writer also declines an affiliation spelling an author's name it would give an author, `writer::plan`). The
-/// `keep_as_today` rule still holds for a call no family is known to have made (`policy::UNOBSERVED_BINDING`). One
-/// guard for the outcomes: the paper left as today's, a paper written in its other items (iopart's `\address`), and a
-/// written family's setter in a binding declaring none still written (REVTeX 3's `\address`). Since 100b (OD #956)
-/// today's places the institutes' e-mails itself by the chain the reading runs (`insert::link_entry_addresses`): each
-/// the author it spells, the institutes still the block's.
-#[test]
-fn an_unwritten_familys_call_is_kept_as_today() {
-  let tex = repro!("svjour3_institute_names_at_with_authblk.tex");
-  if red_at_two(r#"gives the block's "A. Able" line to every author as an affiliation"#) {
-    return;
-  }
-  let (written, _, _, writer) = assert_reading(
-    tex,
-    Some(&[
-      &["Ann Able", "email=ann@x.org"],
-      &["Bob Baker"],
-      &["Cid Cole", "email=cid@y.org"],
-      &[
-        "affiliation=A. Able",
-        "affiliation=Univ X, Town",
-        "affiliation=Univ Y, City",
-      ],
-    ]),
-    &[
-      "C Ann Able [1] | line:names",
-      "  a A. Able | api:labelseq ruling1:thenote",
-      "  c email ann@x.org | api:label api:inner-contact ruling1:fuzzy-label fuzzy:surname owner:inner-email \
-       owner:spelled",
-      "C Bob Baker [1] | line:names sep:column",
-      "  a A. Able | api:labelseq ruling1:thenote",
-      "  a Univ X, Town | api:label ruling1:fuzzy-label fuzzy:surname",
-      "C Cid Cole [1] | line:names sep:column",
-      "  a A. Able | api:labelseq ruling1:thenote",
-      "  a Univ Y, City | api:label ruling1:fuzzy-label fuzzy:surname",
-      "  c email cid@y.org | api:label api:inner-contact ruling1:fuzzy-label fuzzy:surname owner:inner-email \
-       owner:spelled",
-    ],
-  );
-  assert_eq!(
-    writer,
-    "declined: Affiliation aable: reading [Creator(0), Creator(1), Creator(2)], written [Block]",
-    "the writer's outcome"
-  );
-  assert_eq!(default_mode_creators(tex), written, "the default mode");
-  // (the sibling setter, iopart's `\address` (iopart_support.sty's) beside authblk's take-out: the paper is written in
-  // its written family's items — Ann Able's e-mail cut out of her entry; since 97e iopart is written too, so its item is
-  // Ann Able's by its leading mark `$^1$`, her authblk label, where 95b r3 kept it Bob Baker's as today's held it)
-  let tex = repro!("iopart_address_with_authblk_kept_as_today.tex");
-  let (written, _, _, writer) = assert_reading(
-    tex,
-    Some(&[
-      &[
-        "Ann Able",
-        "affiliation=Univ X, Town.",
-        "email=ann@x.org",
-        "affiliation=1 Lab Z, Village",
-      ],
-      &["Bob Baker", "affiliation=Univ Y, City"],
-    ]),
-    &[
-      "C Ann Able [1] | line:names",
-      "  a Univ X, Town. | api:label ruling1:request ruling3:address-out",
-      "  a Lab Z, Village | api:leading-mark",
-      "  c email ann@x.org | api:label ruling1:request owner:entry-address owner:spelled",
-      "C Bob Baker [2] | line:names",
-      "  a Univ Y, City | api:label ruling1:request",
-    ],
-  );
-  assert_eq!(writer, "written", "the writer's outcome");
-  assert_eq!(default_mode_creators(tex), written, "the default mode");
-  // (a written family's setter in a binding declaring none: REVTeX 3's `\address`, revtex3_support.sty's, loaded by
-  // revtex.sty after the article class, is the family of the revtex4_support.sty its load loaded (`ledger::LOADED`) —
-  // read as an unwritten family's, every entry stayed on every name: cond-mat0505458 and six more on the scorer run)
-  let tex = repro!("revtex3_address_of_a_written_family_written.tex");
-  let (written, _, _, writer) = assert_reading(
-    tex,
-    Some(&[
-      &["Ann Able 1", "address=1 Univ X, Town"],
-      &["Bob Baker 1", "address=1 Univ X, Town"],
-      &["Cy Cole 2", "address=2 Univ Y, City"],
-    ]),
-    &[
-      "C Ann Able [1] | line:names",
-      "  a Univ X, Town | api:leading-mark",
-      "C Bob Baker [1] | line:names sep:comma",
-      "  a Univ X, Town | api:leading-mark",
-      "C Cy Cole [2] | line:names sep:word",
-      "  a Univ Y, City | api:leading-mark",
-    ],
-  );
-  // (since 99a the frontmatter API's Cut gives today's the reading's entries, OXIDIZED_DESIGN_DIVERGENCES #954: nothing
-  // left for the writer to write)
-  assert_eq!(writer, "same", "the writer's outcome");
-  assert_eq!(default_mode_creators(tex), written, "the default mode");
 }

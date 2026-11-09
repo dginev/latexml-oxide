@@ -17,14 +17,7 @@ fn an_institute_email_under_a_repeated_affiliation_is_kept() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/class-bindings/svjour3_institute_email_under_a_repeated_affiliation.tex"
   );
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  assert!(off.contains(r#"<contact name="E-mail: " role="email">ann@one.uk</contact>"#));
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains("missing from the placed frontmatter: First Inst UK."),

@@ -12,7 +12,7 @@
 //!   (`AuthorBlock::queued`; 2503.02741).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 
 macro_rules! repro {
   ($name:literal) => {
@@ -24,15 +24,14 @@ macro_rules! repro {
   };
 }
 
-/// Convert `tex` under `emit`: the log and the XML.
-fn run(tex: &str, emit: u8) -> (String, String) {
+/// Convert `tex`: the log and the XML.
+fn run(tex: &str) -> (String, String) {
   let (log, xml, ()) = convert_files_with_setup_then(
     tex,
     &[],
     Some("ar5iv.sty"),
     move || {
       set_fm_shadow_override(None);
-      set_fm_emit_override(Some(emit));
     },
     |_| (),
   );
@@ -62,15 +61,7 @@ const OVERLAP: &str = "the block is written whole, as Perl's whole-block creator
 fn overlapping_names_write_the_block_whole_with_its_note() {
   let note = "<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\"><text \
               fontsize=\"91%\" xml:id=\"id2.1\">Univ X.</text></note>";
-  let (log, xml) = run(repro!("cl9_shared_macro_note"), 0);
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
-  assert!(log.contains("merged_creators"), "{log}");
-  assert_eq!(creator_elements(&xml), [format!(
-    "<creator role=\"author\"> <personname><text fontsize=\"91%\" xml:id=\"id1\">Ann Able, Bob Baker</text></personname> \
-     {note} <contact name=\"Affiliation: \" role=\"affiliation\"><text fontsize=\"91%\" xml:id=\"id3\">Univ \
-     Z</text></contact> </creator>"
-  )]);
-  let (log, xml) = run(repro!("cl9_shared_macro_note"), 2);
+  let (log, xml) = run(repro!("cl9_shared_macro_note"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_eq!(log.matches(OVERLAP).count(), 1, "{log}");
   assert_eq!(creator_elements(&xml), [format!(
@@ -94,14 +85,7 @@ fn overlapping_names_keep_the_macros_marks() {
   let names = format!("Ann Able{}, Bob Baker{}", mark(1), mark(2));
   let note = "<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\"><text \
               fontsize=\"91%\" xml:id=\"id2.1\">Univ X.</text></note>";
-  let (log, xml) = run(repro!("cl9_shared_macro_note_and_marks"), 0);
-  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
-  assert_eq!(creator_elements(&xml), [format!(
-    "<creator role=\"author\"> <personname><text fontsize=\"91%\" xml:id=\"id1\">{names}</text></personname> {note} \
-     <contact name=\"Affiliation: \" role=\"affiliation\"><text fontsize=\"91%\" xml:id=\"id3\">Univ \
-     Z</text></contact> </creator>"
-  )]);
-  let (log, xml) = run(repro!("cl9_shared_macro_note_and_marks"), 2);
+  let (log, xml) = run(repro!("cl9_shared_macro_note_and_marks"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_eq!(log.matches(OVERLAP).count(), 1, "{log}");
   assert_eq!(creator_elements(&xml), [format!(
@@ -121,24 +105,22 @@ fn an_unrecorded_creator_call_is_written_as_queued() {
      role=\"affiliation\">Department of Mathematics, Beijing Jiaotong University<break/>Department of Mathematics, \
      University of California San Diego</contact> </creator>",
   ];
-  for (emit, warnings) in [(0, 0), (2, 1)] {
-    let (log, xml) = run(repro!("cl9_dmtcs_unrecorded_affiliation"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, warnings),
-      "emit={emit}: {log}"
-    );
-    if emit == 2 {
-      assert_eq!(
-        log
-          .matches("a queued creator call prints that no call recorded")
-          .count(),
-        1,
-        "{log}"
-      );
-    }
-    assert_eq!(creator_elements(&xml), expected, "emit={emit}");
-  }
+  let warnings = 1;
+  let (log, xml) = run(repro!("cl9_dmtcs_unrecorded_affiliation"));
+  assert_eq!(
+    (error_count(&log), warning_count(&log)),
+    (0, warnings),
+    "{log}"
+  );
+  assert_eq!(
+    log
+      .matches("a queued creator call prints that no call recorded")
+      .count(),
+    1,
+    "{log}"
+  );
+
+  assert_eq!(creator_elements(&xml), expected);
 }
 
 /// Two dmtcs-episciences `\affiliation` calls in one flush, both unrecorded: at `=2` each is written as queued, in queue
@@ -152,22 +134,21 @@ fn two_unrecorded_calls_keep_their_order() {
     "<creator before=\" \" role=\"author\"> <personname>Jeffrey Remmel</personname> <contact \
      role=\"affiliation\">Department of Mathematics, University of California San Diego</contact> </creator>",
   ];
-  for (emit, warnings) in [(0, 0), (2, 2)] {
-    let (log, xml) = run(repro!("cl9_two_unrecorded_calls_in_order"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, warnings),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(
-      log
-        .matches("a queued creator call prints that no call recorded")
-        .count(),
-      warnings,
-      "{log}"
-    );
-    assert_eq!(creator_elements(&xml), expected, "emit={emit}");
-  }
+  let warnings = 2;
+  let (log, xml) = run(repro!("cl9_two_unrecorded_calls_in_order"));
+  assert_eq!(
+    (error_count(&log), warning_count(&log)),
+    (0, warnings),
+    "{log}"
+  );
+  assert_eq!(
+    log
+      .matches("a queued creator call prints that no call recorded")
+      .count(),
+    warnings,
+    "{log}"
+  );
+  assert_eq!(creator_elements(&xml), expected);
 }
 
 /// jheppub's `\emailAdd` × 2 after `\author{Washington Taylor}\author{and Andrew P. Turner}`: at `=2` exactly the two
@@ -175,26 +156,7 @@ fn two_unrecorded_calls_keep_their_order() {
 /// Taylor none); both addresses counted lost. Off gives each author his address.
 #[test]
 fn a_sequenced_contact_never_invents_a_creator() {
-  let email = |n: u8, user: &str| {
-    format!(
-      "<contact name=\"Email: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id{n}\">{user} </text>at<text \
-       font=\"typewriter\" xml:id=\"id{}\"> mit.edu</text></contact>",
-      n + 1
-    )
-  };
-  let (log, xml) = run(repro!("cl9_sequenced_email_never_as_queued"), 0);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creator_elements(&xml), [
-    format!(
-      "<creator role=\"author\"> <personname>Washington Taylor</personname> {} </creator>",
-      email(1, "wati")
-    ),
-    format!(
-      "<creator before=\" \" role=\"author\"> <personname>Andrew P. Turner</personname> {} </creator>",
-      email(3, "apturner")
-    ),
-  ]);
-  let (log, xml) = run(repro!("cl9_sequenced_email_never_as_queued"), 2);
+  let (log, xml) = run(repro!("cl9_sequenced_email_never_as_queued"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 3), "{log}");
   assert_eq!(log.matches("); they are lost").count(), 2, "{log}");
   assert!(
@@ -216,15 +178,7 @@ fn a_setter_inside_the_author_block_is_counted() {
     "<creator role=\"author\"> <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname> </creator>",
     "<creator before=\" \" role=\"author\"> <personname>Bob Baker<sup xml:id=\"id2\">2</sup></personname> </creator>",
   ];
-  let (log, xml) = run(repro!("cl9_date_inside_author_counted"), 0);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert!(
-    xml.contains("<date role=\"creation\">Univ X<break/>"),
-    "{xml}"
-  );
-  // (off's "2,1" on Bob is the old reader's, not this guard's: only the names are pinned)
-  assert_eq!(creator_elements(&xml).len(), 2, "{xml}");
-  let (log, xml) = run(repro!("cl9_date_inside_author_counted"), 2);
+  let (log, xml) = run(repro!("cl9_date_inside_author_counted"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_eq!(
     log

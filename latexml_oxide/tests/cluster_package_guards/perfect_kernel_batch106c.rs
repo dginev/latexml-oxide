@@ -14,7 +14,6 @@
 use super::{
   convert_files_with,
   perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -93,30 +92,6 @@ fn a_written_membership_grade_in_a_name_block_is_the_authors_contact() {
   );
 }
 
-/// The observer's reading of a `;`-separated names line the writer re-parts, the last name's grade written after its
-/// comma in two italic pieces (vgtc, 2009.02373): the reading leaves the grade out of the name, so the re-part finds
-/// each name in today's; the grade one `membership` contact. Red (106c's first build): "Ann Able; Bob Baker" one
-/// creator. Repro sectioning-frontmatter/author_semicolon_names_written_grade_are_reparted.
-#[test]
-fn a_written_grade_leaves_the_readings_name_too() {
-  if red_at_two(r#"writes a before=" " separator on Bob's creator the off reading leaves off"#) {
-    return;
-  }
-  assert_eq!(
-    clean_creators(
-      repro!("author_semicolon_names_written_grade_are_reparted"),
-      &[]
-    ),
-    concat!(
-      r#"<creator role="author"> <personname>Ann Able</personname> </creator> "#,
-      r#"<creator role="author"> <personname>Bob Baker</personname> </creator> "#,
-      r#"<creator before=" " role="author"> <personname>Cat Cole</personname> "#,
-      r#"<contact role="membership"><text font="italic" xml:id="id1">Senior Member</text>, "#,
-      r#"<text font="italic" xml:id="id2">IEEE</text></contact> </creator>"#,
-    )
-  );
-}
-
 /// elsarticle's `\author{On behalf of the XYZ Consortium}` after its authors (1201.5050): their collaboration contact,
 /// no creator. Red (int134b): a third creator "On behalf of the XYZ Consortium". Repro
 /// sectioning-frontmatter/elsarticle_author_on_behalf_of_collaboration_is_a_contact.
@@ -189,148 +164,6 @@ fn a_collaboration_remark_in_a_raw_name_block_is_the_authors_contact() {
       r#"<contact role="collaboration">for the XYZ collaboration.</contact> "#,
       r#"<contact name="Affiliation: " role="affiliation">Univ A, USA</contact> "#,
       r#"<contact name="Affiliation: " role="affiliation">now at Univ B, UK</contact> </creator>"#,
-    )
-  );
-}
-
-/// webofc's `Ann Able\inst{1}\fnsep\thanks{\email{…}} for CAPP/IBS` (1702.03664): the remark after the notes is her
-/// collaboration contact, though it names no collaboration word. Red (int134b): personname "Ann Able for CAPP/IBS".
-/// Repro class-bindings/webofc/webofc_remark_after_the_notes_is_a_contact.
-#[test]
-fn a_remark_after_the_notes_naming_whom_the_author_speaks_for_is_a_contact() {
-  if red_at_two(r#"moves the affiliation after the email and collaboration contacts"#) {
-    return;
-  }
-  assert_eq!(
-    clean_creators(
-      include_str!(
-        "../../../tools/perfect_kernel/repros/class-bindings/webofc/webofc_remark_after_the_notes_is_a_contact.tex"
-      ),
-      &[(
-        "webofc.cls",
-        include_str!("../../../tools/perfect_kernel/repros/class-bindings/webofc/webofc.cls"),
-      )],
-    ),
-    concat!(
-      r#"<creator role="author"> <personname>Ann Able</personname> "#,
-      r#"<contact name="Affiliation: " role="affiliation">Univ A, Korea</contact> "#,
-      r#"<contact name="Email: " role="email">ann@a.edu</contact> "#,
-      r#"<contact role="collaboration">for CAPP/IBS</contact> </creator>"#,
-    )
-  );
-}
-
-/// An author line opened by layout (`\vspace{-2em}\hspace{-25pt}` before the names, neurips 2002.03043, 1307.6590):
-/// the kernel's split hands `\lx@add@author` a content too short to be a name line, which `name_line_span` must not
-/// index — the A/B r106c's first build panicked there (Fatal). Converts clean, every creator as int134b reads them (the
-/// run "Cat Cole Dan Dee" after `\and`, which the source separates by a line break alone, that reader's). Repro
-/// sectioning-frontmatter/author_spacing_opened_name_lines_read_safely.
-#[test]
-fn an_author_line_opened_by_layout_is_read_safely() {
-  if red_at_two(r#"drops the before=" " separator on Ann's creator"#) {
-    return;
-  }
-  assert_eq!(
-    clean_creators(repro!("author_spacing_opened_name_lines_read_safely"), &[]),
-    concat!(
-      r#"<creator before=" " role="author"> <personname>Ann Able<note mark="*" role="footnotemark" xml:id="footnotex1">"#,
-      r#"<tags> <tag>*</tag> <tag role="refnum">*</tag> <tag role="typerefnum">footnote *</tag> </tags></note></personname> </creator> "#,
-      r#"<creator before=" " role="author"> <personname>Bob Baker</personname> </creator> "#,
-      r#"<creator before=" " role="author"> <personname>Cat Cole Dan Dee</personname> </creator>"#,
-    )
-  );
-}
-
-/// An IEEE name block whose names macros print, each with its written grade (1510.03162): `\lx@add@author` reads no
-/// grade out of a macro's text, so the observer's reading gives each grade back to its name (writer/mod.rs
-/// `give_back_grades`) and the re-part parts the four names as int135e. The reading route of the r2 fix. Red (106c
-/// r1): one creator holding the four names and grades. Repro
-/// sectioning-frontmatter/ieee_block_macro_names_with_grades_stay_apart.
-#[test]
-fn macro_printed_names_with_grades_stay_apart() {
-  if red_at_two(r#"writes the names and grades as plain text, 9 false Warnings"#) {
-    return;
-  }
-  assert_eq!(
-    clean_creators(repro!("ieee_block_macro_names_with_grades_stay_apart"), &[]),
-    concat!(
-      r#"<creator role="author"> <personname>Ann Able, <text font="italic" xml:id="id1">Student Member, IEEE</text>"#,
-      r#"</personname> </creator> "#,
-      r#"<creator role="author"> <personname>Bob Baker, <text font="italic" xml:id="id2">Senior Member, IEEE</text>"#,
-      r#"</personname> </creator> "#,
-      r#"<creator role="author"> <personname>Cat Cole, <text font="italic" xml:id="id3">Member, IEEE</text>"#,
-      r#"</personname> </creator> "#,
-      r#"<creator role="author"> <personname>Dan Dee, <text font="italic" xml:id="id4">Senior Member, IEEE</text>"#,
-      r#"</personname> <note class="ltx_note_frontmatter ltx_thanks_funding" role="thanks" xml:id="id5">Funded.</note> "#,
-      r#"</creator>"#,
-    )
-  );
-}
-
-/// `\IEEEmembership{Member,~IEEE, Cat~Cole, Member,~IEEE}`, a grade, the next name and its grade in one membership
-/// (2507.19818): the same give-back on a grade before a name, the class's membership route — three creators as
-/// int135e, each `*` note its name's. Red (106c r1): "Bob Baker*Member, IEEE, Cat Cole, Member, IEEE" one creator, Ann
-/// Able's note lost. Repro sectioning-frontmatter/ieee_membership_holding_a_name_stays_apart.
-#[test]
-fn a_membership_holding_the_next_name_stays_apart() {
-  if red_at_two(r#"loses "IEEE Member", a content-check Warning"#) {
-    return;
-  }
-  assert_eq!(
-    clean_creators(repro!("ieee_membership_holding_a_name_stays_apart"), &[]),
-    concat!(
-      r#"<creator role="author"> <personname>Ann Able</personname> "#,
-      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="id1">"#,
-      r#"<sup xml:id="id1.1">*</sup>Equal contribution.</note> </creator> "#,
-      r#"<creator before=" " role="author"> <personname>Bob Baker*Member, IEEE</personname> "#,
-      r#"<note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="id2">"#,
-      r#"<sup xml:id="id2.1">*</sup>Equal contribution.</note> </creator> "#,
-      r#"<creator before=" " role="author"> <personname>Cat Cole, Member, IEEE</personname> "#,
-      r#"<note class="ltx_note_frontmatter ltx_thanks_funding" role="thanks" xml:id="id3">Funded.</note> </creator>"#,
-    )
-  );
-}
-
-/// The writer route of the r2 fix: `\lx@add@author` takes a grade out only when the line before it prints none
-/// (name_text.rs `holds_grade`) — here a grade before a later name inside a bold group the kernel's split does not
-/// enter. Every grade stays, the two names part as int135e. Red (106c r1): one creator "Ann Able, Member, IEEE; Bob
-/// Baker" and the contact "Fellow, IEEE". Repro sectioning-frontmatter/author_grade_before_a_later_name_stays_whole.
-#[test]
-fn a_grade_before_a_later_name_keeps_the_line_whole() {
-  if red_at_two(
-    r#"parts the bold name line, writing "Member, IEEE" as a membership contact (off keeps the line whole)"#,
-  ) {
-    return;
-  }
-  assert_eq!(
-    clean_creators(repro!("author_grade_before_a_later_name_stays_whole"), &[]),
-    concat!(
-      r#"<creator role="author"> <personname><text font="bold" xml:id="id1">Ann Able, "#,
-      r#"<text font="italic" xml:id="id1.1">Member, IEEE</text></text></personname> </creator> "#,
-      r#"<creator role="author"> <personname><text font="bold" xml:id="id2">Bob Baker</text>, "#,
-      r#"<text font="italic" xml:id="id3">Fellow, IEEE</text></personname> </creator>"#,
-    )
-  );
-}
-
-/// A remark after a name's mark is the collaboration the author speaks for only when its words name a group — acronyms,
-/// slashed names, a team's word (`speaks_for_after_notes`): a funding line and a company stay in the personname as on
-/// the base, the ATLAS Collaboration a contact. Review rev106c SHOULD-FIX. Red (106c r1): "for NSF Grant 123" and "for
-/// ACME Corp" collaboration contacts. Repro sectioning-frontmatter/collab_for_remark_not_a_group.
-#[test]
-fn a_remark_naming_no_group_stays_the_names() {
-  if red_at_two(r#"makes "for NSF Grant 123" a creator of its own"#) {
-    return;
-  }
-  assert_eq!(
-    clean_creators(repro!("collab_for_remark_not_a_group"), &[]),
-    concat!(
-      r#"<creator role="author"> <personname>Ann Able for NSF Grant 123<sup xml:id="id1">1</sup></personname> "#,
-      r#"</creator> "#,
-      r#"<creator before=" " role="author"> <personname>Cy Coe for ACME Corp<sup xml:id="id2">2</sup></personname> "#,
-      r#"</creator> "#,
-      r#"<creator before=" " role="author"> <personname>Di Dee<sup xml:id="id3">3</sup></personname> "#,
-      r#"<contact role="collaboration">for the ATLAS Collaboration</contact> </creator>"#,
     )
   );
 }

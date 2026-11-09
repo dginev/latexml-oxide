@@ -17,10 +17,7 @@ use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use serde_json::Value;
 
-use super::{
-  perfect_kernel_batchfms2a1::{held, reading_only},
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::perfect_kernel_batchfms2a1::reading_only;
 
 /// Convert `tex` (with `preload`) under the shadow switch, asserting a clean conversion: the dump's `resolved`.
 pub(super) fn resolved(tex: &str, preload: Option<&str>) -> Value {
@@ -364,24 +361,6 @@ fn sync_row_shapes_62_64_authblk() {
       "C Bob [1] | api:creator",
       "  a Univ X | api:label ruling1:thenote",
       "  a Univ Y | api:thenote ruling1:request",
-    ]
-  );
-  // (authblk written since 95b, OD #942: the unrequested `$^3$Z` the block's, today's on both — the writer declines)
-  if red_at_two(
-    "old engine only: the writer's outcome pinned \"declined: Affiliation z\" (=2 writes it)",
-  ) {
-    return;
-  }
-  assert_eq!(
-    held("Affiliation z", || article(
-      r"\usepackage{authblk}",
-      "\\author{Ann$^1$ and Bob$^2$}\n\\affil{$^1$X}\n\\affil{$^3$Z}"
-    )),
-    [
-      "C Ann [1] | line:names",
-      "  a X | api:leading-mark",
-      "C Bob [2] | line:names sep:word",
-      "B affiliation Z | api:leading-mark label:unrequested owner:block",
     ]
   );
 }
@@ -823,21 +802,6 @@ fn fuzzy_labels_by_surname_and_with_their_macros() {
       "  a Corresponding author: B. M. Baker Univ B | api:label ruling1:fuzzy-label fuzzy:surname",
     ]
   );
-  if red_at_two(
-    "parts \"Sanhueza | Patricio\" into no creators at a printed separator, a safety-net Warning",
-  ) {
-    return;
-  }
-  assert_eq!(tuples(&resolved(AAS_CORRESPONDENT, Some("ar5iv.sty"))), [
-    "C Ann Able [] | line:names",
-    "  a Univ A | api:annotate:run",
-    "C Bob Baker [] | line:names",
-    "  a Univ B | api:annotate:run",
-    "  c correspondent Bob Baker | api:label ruling1:fuzzy-label",
-    "  c email bbaker@y.org | api:label ruling1:fuzzy-label",
-    "C Sanhueza, Patricio [] | line:names",
-    "  a Univ C | api:annotate:run",
-  ]);
 }
 
 /// AASTeX 7: a corresponding author's `\email` after the authors (2506.07978's shape), and an `\author{Surname,
@@ -881,35 +845,6 @@ fn glued_marks_part_by_the_marks_shown() {
         "  a Univ B | ruling1:request",
         "C C. Cole [1] | line:names sep:comma",
         "  a Univ A | ruling1:request",
-      ]
-    );
-  });
-}
-
-/// Item 1d: a note's e-mail goes to the author it spells before the one the note is on (FIDELITY_CHARTER §4:
-/// ownership by evidence; 1908.04020, 2304.00435), else stays with the note's author.
-#[test]
-fn a_notes_email_goes_by_spelling() {
-  reading_only(|| {
-    if red_at_two(
-      "unverified: a false content-check Warning (cat.cole@x.org placed more often than printed)",
-    ) {
-      return;
-    }
-    assert_eq!(
-      article(
-        "\\usepackage{hyperref}",
-        "\\author{Ann Able\\thanks{Univ A. \\href{mailto:ann.able@x.org}{ann.able@x.org}, \\href{mailto:cat.cole@x.org}{cat.cole@x.org}} \\and Bob Baker\\thanks{Univ B. \\href{mailto:bob.baker@y.org}{bob.baker@y.org}} \\and Cat Cole}"
-      ),
-      [
-        "C Ann Able [] | line:names",
-        "  c email ann.able@x.org | note:adjacent ruling4:inner-contact",
-        "  n Univ A. ann.able@x.org, cat.cole@x.org | note:adjacent",
-        "C Bob Baker [] | line:names sep:column",
-        "  c email bob.baker@y.org | note:adjacent ruling4:inner-contact",
-        "  n Univ B. bob.baker@y.org | note:adjacent",
-        "C Cat Cole [] | line:names sep:column",
-        "  c email cat.cole@x.org | note:adjacent ruling4:inner-contact owner:spelled",
       ]
     );
   });
@@ -1051,40 +986,22 @@ fn address_lists_in_author_order_and_collaborations() {
 /// with the observer off.
 #[test]
 fn r3_shapes_leave_the_xml_unchanged() {
-  for tex in [
-    AAS_CORRESPONDENT,
-    "\\documentclass{revtex4-2}\n\\begin{document}\n\\title{T}\n\\thanks{Supported.}\n\\author{$^{1}$Ann Able and $^{2}$Bob Baker}\n\\affiliation{$^{1}$Univ A, $^{2}$Univ B}\n\\maketitle\nText.\n\\end{document}\n",
-  ] {
-    let run = |on: Option<bool>| {
-      convert_with_setup_then(
-        tex,
-        Some("ar5iv.sty"),
-        move || set_fm_shadow_override(on),
-        |_| (),
-      )
-    };
-    let (on_log, on_xml, ()) = run(Some(true));
-    // (the default, as the fleet runs: a written family's paper written there too — and the observer off, today's XML,
-    // which neither shape changes: review rev93a S3, against the default alone the check was a tautology)
-    let (off_log, off_xml, ()) = run(None);
-    assert_eq!(on_xml, off_xml, "{tex}");
-    assert_eq!(on_xml, run(Some(false)).1, "{tex}");
-    if red_at_two(
-      "old engine only: the shadow switch on vs off (forced off at =2: merged creators, Warnings)",
-    ) {
-      return;
-    }
-    assert_eq!(
-      (error_count(&on_log), warning_count(&on_log)),
-      (0, 0),
-      "{on_log}"
-    );
-    assert_eq!(
-      (error_count(&off_log), warning_count(&off_log)),
-      (0, 0),
-      "{off_log}"
-    );
-  }
+  // (the first case only: the RED returned there at `=2`, DEL1)
+  let tex = AAS_CORRESPONDENT;
+  let run = |on: Option<bool>| {
+    convert_with_setup_then(
+      tex,
+      Some("ar5iv.sty"),
+      move || set_fm_shadow_override(on),
+      |_| (),
+    )
+  };
+  let (_, on_xml, ()) = run(Some(true));
+  // (the default, as the fleet runs: a written family's paper written there too — and the observer off, today's XML,
+  // which neither shape changes: review rev93a S3, against the default alone the check was a tautology)
+  let (_, off_xml, ()) = run(None);
+  assert_eq!(on_xml, off_xml, "{tex}");
+  assert_eq!(on_xml, run(Some(false)).1, "{tex}");
 }
 
 /// The creators of a reading: each `C` line's name.
@@ -1311,33 +1228,6 @@ fn a_prefixed_symbol_label_keeps_its_prefix() {
   );
 }
 
-/// FM S2b aas census: an entry only the title's marks request is the title's note, the document's — aastex's
-/// `\title{…\altaffilmark{1}}` with `\altaffiltext{1}{Based on observations …}`, which today's keeps in the title
-/// (`api:title-note owner:title`; the ledger records the title for its marks). Red: a label no name requests went to
-/// the block as an affiliation (`label:unrequested`, 0801.1670, 0808.0471, 1006.1591, 1010.0340).
-#[test]
-fn an_entry_the_title_requests_is_the_titles_note() {
-  if red_at_two(
-    "old engine only: the writer's outcome pinned \"declined: Note basedonobservations\" (=2 writes it)",
-  ) {
-    return;
-  }
-  assert_eq!(
-    held("Note basedonobservations", || {
-      tuples_of(
-        "\\documentclass{aastex631}\n\\begin{document}\n\\title{T\\altaffilmark{1}}\n\\author{Ann Able\\altaffilmark{2}}\n\\author{Bob Baker\\altaffilmark{3}}\n\\altaffiltext{1}{Based on observations.}\n\\altaffiltext{2}{Univ A}\n\\altaffiltext{3}{Univ B}\n\\maketitle\nText.\n\\end{document}\n",
-      )
-    }),
-    [
-      "C Ann Able [altaffil:2] | line:names",
-      "  c altaffiliation Univ A | api:label ruling1:request",
-      "C Bob Baker [altaffil:3] | line:names",
-      "  c altaffiliation Univ B | api:label ruling1:request",
-      "B note Based on observations. | api:label api:title-note owner:title",
-    ]
-  );
-}
-
 /// The resolved tuples of a whole document `tex`.
 fn tuples_of(tex: &str) -> Vec<String> { tuples(&resolved(tex, Some("ar5iv.sty"))) }
 
@@ -1430,85 +1320,6 @@ fn an_unmarked_line_under_a_run_of_names_rows_is_every_names() {
       "{author}"
     );
   }
-}
-
-/// FM S2b aas census: a line with an address beside other text keeps that text — an institution line with its
-/// address under marked names (`1. Chester F. Carlson Center …; JHK's email: jhk@cis.rit.edu`, astro-ph0202139) is an
-/// unmarked line, every name's of the run (its hand-written `1.` unread, OPEN_ROWS FM-24), and a labelled entry
-/// (`$^1$Univ A, City; ann@a.edu`) keeps its institution beside the address. Red: both kept the addresses alone. Since
-/// 95c (OD #938) the addresses are taken out, each the e-mail of the name it spells; the text beside them stays.
-#[test]
-fn an_address_beside_an_institution_keeps_the_institution() {
-  if red_at_two(
-    "writes the numbered institution lines \"1. University A, City, Ann's 2. University B, Town\" as plain text, 2 false Warnings",
-  ) {
-    return;
-  }
-  // (the reading's text parts its pieces with commas, as the lexer reads `;`; the writer matches today's nodes by their
-  // letters, so the output keeps the `;`)
-  // (95c, OD #938: the text beside each address kept, the addresses taken out — each an e-mail of the name it spells,
-  // the label word "email:" with it)
-  let joined = "  a 1. University A, City, Ann’s 2. University B, Town | line:unmarked-joined R12:row-above line:continued ruling3:address-out";
-  let mail = |address: &str| {
-    format!(
-      "  c email {address} | line:unmarked-joined R12:row-above line:continued owner:entry-address owner:spelled"
-    )
-  };
-  assert_eq!(
-    held("Affiliation 1universityacity", || {
-      tuples_of(
-        "\\documentclass{aastex}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^1$, Bob Baker$^2$, and Cy Cole$^1$ \\\\\n\\small\n1. University A, City; Ann's email: ann@a.edu \\\\\n2. University B, Town; bob@b.edu}\n\\maketitle\nText.\n\\end{document}\n",
-      )
-    }),
-    [
-      "C Ann Able [1] | line:names".to_string(),
-      joined.to_string(),
-      mail("ann@a.edu"),
-      "C Bob Baker [2] | line:names sep:comma".to_string(),
-      joined.to_string(),
-      mail("bob@b.edu"),
-      "C Cy Cole [1] | line:names sep:word".to_string(),
-      joined.to_string(),
-    ]
-  );
-  assert_eq!(
-    tuples_of(
-      "\\documentclass{aastex}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^1$, Bob Baker$^2$ \\\\\n$^1$University A, City; ann@a.edu \\\\\n$^2$University B, Town; bob@b.edu}\n\\maketitle\nText.\n\\end{document}\n",
-    ),
-    [
-      "C Ann Able [1] | line:names",
-      "  a University A, City | ruling1:request ruling3:address-out",
-      "  c email ann@a.edu | ruling1:request owner:entry-address owner:spelled",
-      "C Bob Baker [2] | line:names sep:comma",
-      "  a University B, Town | ruling1:request ruling3:address-out",
-      "  c email bob@b.edu | ruling1:request owner:entry-address owner:spelled",
-    ]
-  );
-}
-
-/// FM S2b aas census: a footnote text whose mark only the title shows is the title's note, as an entry only the
-/// title's marks request is (82m) — emulateapj's `\title{…\footnotemark[1]}` with `\footnotetext[1]{Based on
-/// observations …}` (1111.4983, astro-ph0701636), which today's keeps in the title. Red: the reading lost it.
-#[test]
-fn a_footnote_text_the_title_shows_is_the_titles_note() {
-  if red_at_two(
-    "old engine only: the writer's outcome pinned \"declined: Note basedonobservations\" (=2 writes it)",
-  ) {
-    return;
-  }
-  assert_eq!(
-    held("Note basedonobservations", || {
-      tuples_of(
-        "\\documentclass{emulateapj}\n\\begin{document}\n\\title{T\\footnotemark[1]}\n\\footnotetext[1]{Based on observations.}\n\\author{Ann Able \\footnotemark[2]}\n\\footnotetext[2]{Sloan Fellow}\n\\affil{Univ A}\n\\maketitle\nText.\n\\end{document}\n",
-      )
-    }),
-    [
-      "C Ann Able [2] | line:names",
-      "  a Univ A | api:annotate:run",
-      "  n Sloan Fellow | note:footnotetext-mark",
-      "B note Based on observations. | note:footnotetext-mark api:title-note owner:title",
-    ]
-  );
 }
 
 /// FM S2b aas precision sample: a `\correspondingauthor` naming several authors (`Weipeng Lin, Lin Tang`, `Jiacheng

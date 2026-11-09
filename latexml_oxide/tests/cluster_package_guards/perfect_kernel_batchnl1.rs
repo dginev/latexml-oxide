@@ -5,7 +5,7 @@
 //! a comma a command draws inside a word (A2).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::{perfect_kernel_batch84b::creators, perfect_kernel_batchz4::run};
 
@@ -19,53 +19,36 @@ macro_rules! repro {
   };
 }
 
-/// `tex` with `files` beside it converted under `emit`: the log and the XML.
-fn run_with(tex: &str, files: &[(&str, &str)], emit: u8) -> (String, String) {
+/// `tex` with `files` beside it converted: the log and the XML.
+fn run_with(tex: &str, files: &[(&str, &str)]) -> (String, String) {
   let (log, xml, ()) = convert_files_with_setup_then(
     tex,
     files,
     Some("ar5iv.sty"),
     move || {
       set_fm_shadow_override(Some(true));
-      set_fm_emit_override(Some(emit));
     },
     |_| (),
   );
   (log, xml)
 }
 
-/// `tex`'s creators off and at `=2`, each run clean (`warnings` each way).
-pub(super) fn both(tex: &str, warnings: (usize, usize)) -> (Vec<Vec<String>>, Vec<Vec<String>>) {
-  both_with(tex, &[], warnings)
-}
+/// `tex`'s creators, its run clean but for `warnings`.
+pub(super) fn both(tex: &str, warnings: usize) -> Vec<Vec<String>> { both_with(tex, &[], warnings) }
 
 /// [`both`] with `files` beside `tex`.
-fn both_with(
-  tex: &str,
-  files: &[(&str, &str)],
-  warnings: (usize, usize),
-) -> (Vec<Vec<String>>, Vec<Vec<String>>) {
-  let (off_log, off) = if files.is_empty() {
-    run(tex, 0)
-  } else {
-    run_with(tex, files, 0)
-  };
+fn both_with(tex: &str, files: &[(&str, &str)], warnings: usize) -> Vec<Vec<String>> {
   let (log, xml) = if files.is_empty() {
-    run(tex, 2)
+    run(tex)
   } else {
-    run_with(tex, files, 2)
+    run_with(tex, files)
   };
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, warnings.0),
-    "{off_log}"
-  );
   assert_eq!(
     (error_count(&log), warning_count(&log)),
-    (0, warnings.1),
+    (0, warnings),
     "{log}"
   );
-  (creators(&off), creators(&xml))
+  creators(&xml)
 }
 
 /// The `collaboration` contacts of `xml`, each element whole, its `xml:id`s dropped: their text and markup as written.
@@ -92,20 +75,19 @@ fn collaborations(xml: &str) -> Vec<String> {
 /// (`John Smith, University of Toronto`, the main session's decision 2026-11-08), off a creator of its own.
 #[test]
 fn a_marked_name_with_an_institution_word_is_a_name() {
-  let (off, two) = both(
+  let two = both(
     repro!("emit_a_marked_name_with_an_institution_word_is_a_name"),
-    (0, 0),
+    0,
   );
   let want = [
     vec!["A. M. Broomhall", "affiliation=Univ A"],
     vec!["S. Michelle Consiglio", "affiliation=Univ A"],
     vec!["R. New", "affiliation=Univ B"],
   ];
-  assert_eq!(off, want);
   assert_eq!(two, want);
-  let (off, two) = both(
+  let two = both(
     repro!("revtex_marked_list_surname_after_initial_is_a_name"),
-    (0, 0),
+    0,
   );
   let alpha = "affiliation=University of Alpha";
   let beta = "affiliation=University of Beta";
@@ -116,15 +98,11 @@ fn a_marked_name_with_an_institution_word_is_a_name() {
     vec!["Dan Dee", beta],
     vec!["Eve Eden 1,2", alpha, beta],
   ]);
-  assert_eq!(off.len(), 5);
-  let (off, two) = both(
+  let two = both(
     "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able$^1$, University of \
      Toronto\\\\ $^1$Univ A}\n\\maketitle\nx\n\\end{document}\n",
-    (0, 0),
+    0,
   );
-  assert_eq!(off, [vec!["Ann Able", "affiliation=Univ A"], vec![
-    "University of Toronto"
-  ],]);
   assert_eq!(two, [vec![
     "Ann Able",
     "affiliation=University of Toronto",
@@ -137,16 +115,15 @@ fn a_marked_name_with_an_institution_word_is_a_name() {
 /// `P.A.Vshivtseva$^{a}$, E.T.\, Einiev` is two names (2409.13569). Red (MV1 `=2`): one creator, `merged_creators`.
 #[test]
 fn glued_initials_are_no_surname_before_initials() {
-  let (off, two) = both(
+  let two = both(
     repro!("emit_glued_initials_are_no_surname_before_initials"),
-    (0, 0),
+    0,
   );
   let want = [
     vec!["M.O. Astashenkov", "affiliation=Univ A"],
     vec!["P.A.Vshivtseva", "affiliation=Univ A"],
     vec!["E.T. Einiev", "affiliation=Univ B"],
   ];
-  assert_eq!(off, want);
   assert_eq!(two, want);
 }
 
@@ -165,22 +142,20 @@ fn glued_initials_are_no_surname_before_initials() {
 #[test]
 fn a_collaboration_remark_is_the_names_contact() {
   let tex = repro!("emit_a_collaboration_remark_parted_by_a_note_and_a_box_is_a_contact");
-  let (off, two) = both(tex, (0, 0));
+  let two = both(tex, 0);
   let want = [vec![
     "Kalanand Mishra",
     "note=Email: k@x.edu",
     "collaboration=(for the B A B AR collaboration)",
     "affiliation=Univ A",
   ]];
-  assert_eq!(off, want);
   assert_eq!(two, want);
   let babar = "<contact role=\"collaboration\">(for the <text font=\"slanted\">B<text fontsize=\"90%\">A</text>B<text \
                fontsize=\"90%\">AR</text></text> collaboration)</contact>";
-  assert_eq!(collaborations(&run(tex, 0).1), [babar]);
-  assert_eq!(collaborations(&run(tex, 2).1), [babar]);
-  let (off, two) = both(
+  assert_eq!(collaborations(&run(tex).1), [babar]);
+  let two = both(
     repro!("elsarticle_collaboration_remark_note_reference_is_the_names"),
-    (0, 2),
+    2,
   );
   let want = [vec![
     "Ann Able",
@@ -188,9 +163,8 @@ fn a_collaboration_remark_is_the_names_contact() {
     "address=Univ X",
     "note=A list of members is at the end.",
   ]];
-  assert_eq!(off, want);
   assert_eq!(two, want);
-  let (off, two) = both_with(
+  let two = both_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/class-bindings/webofc/webofc_remark_after_the_notes_is_a_contact.tex"
     ),
@@ -198,23 +172,17 @@ fn a_collaboration_remark_is_the_names_contact() {
       "webofc.cls",
       include_str!("../../../tools/perfect_kernel/repros/class-bindings/webofc/webofc.cls"),
     )],
-    (0, 0),
+    0,
   );
-  assert_eq!(off, [vec![
-    "Ann Able",
-    "affiliation=Univ A, Korea",
-    "email=ann@a.edu",
-    "collaboration=for CAPP/IBS"
-  ]]);
   assert_eq!(two, [vec![
     "Ann Able",
     "email=ann@a.edu",
     "collaboration=for CAPP/IBS",
     "affiliation=Univ A, Korea"
   ]]);
-  let (off, two) = both(
+  let two = both(
     repro!("emit_a_line_speaking_for_a_collaboration_is_a_contact"),
-    (0, 0),
+    0,
   );
   let want = [
     vec!["Ann Able", "affiliation=Univ A"],
@@ -225,13 +193,11 @@ fn a_collaboration_remark_is_the_names_contact() {
       "affiliation=Univ A",
     ],
   ];
-  assert_eq!(off, want);
   assert_eq!(two, want);
   let bcool = "<contact role=\"collaboration\"><text fontsize=\"80%\">on behalf of the Bcool project \
                team</text></contact>";
   let tex = repro!("emit_a_line_speaking_for_a_collaboration_is_a_contact");
-  assert_eq!(collaborations(&run(tex, 0).1), [bcool]);
-  assert_eq!(collaborations(&run(tex, 2).1), [bcool]);
+  assert_eq!(collaborations(&run(tex).1), [bcool]);
 }
 
 /// Rows C2-C3 (review revNL1 S1): a remark after the name's note opens a run of its own (`lines::remark_start`), so the
@@ -242,16 +208,15 @@ fn a_collaboration_remark_is_the_names_contact() {
 #[test]
 fn a_remark_after_a_note_keeps_its_own_span() {
   let tex = repro!("emit_a_remark_after_a_note_keeps_its_own_span");
-  let (off, two) = both(tex, (0, 0));
+  let two = both(tex, 0);
   let want = [vec![
     "Ann Able",
     "collaboration=(for the Atlas Collaboration)",
   ]];
-  assert_eq!(off, want);
   assert_eq!(two, want);
   let atlas = "<contact role=\"collaboration\">(for the <text font=\"smallcaps\">Atlas</text> Collaboration)</contact>";
-  for emit in [0, 2] {
-    let xml = run(tex, emit).1;
+  for _ in [0, 2] {
+    let xml = run(tex).1;
     assert_eq!(collaborations(&xml), [atlas]);
     // (her thanks note before the collaboration, as the source prints them)
     let note = xml.find("<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\"");
@@ -271,13 +236,12 @@ fn a_remark_after_a_note_keeps_its_own_span() {
 /// `perfect_kernel_batchfms2a2::sync_row_shapes_46_53_66`'s `Cat Cole`; cs0011034 a residual).
 #[test]
 fn a_line_under_one_labelled_entry_continues_it() {
-  let (off, two) = both(
+  let two = both(
     repro!("emit_a_line_under_one_labelled_entry_continues_it"),
-    (0, 0),
+    0,
   );
   let cuny = "affiliation=The Graduate Center, CUNY Computer Science New York, USA";
   let want = [vec!["Ann Able", cuny], vec!["Bob Baker", cuny]];
-  assert_eq!(off, want);
   assert_eq!(two, want);
 }
 
@@ -287,9 +251,9 @@ fn a_line_under_one_labelled_entry_continues_it() {
 /// affiliation, two creators lost.
 #[test]
 fn a_comma_a_command_draws_inside_a_name_parts_no_names() {
-  let (off, two) = both(
+  let two = both(
     repro!("emit_a_comma_a_command_draws_inside_a_name_parts_no_names"),
-    (0, 0),
+    0,
   );
   let want = [
     vec!["Ann Able", "affiliation=Univ A"],
@@ -297,24 +261,21 @@ fn a_comma_a_command_draws_inside_a_name_parts_no_names() {
     vec!["Bogdan Rai t , ă", "affiliation=Univ B"],
     vec!["Sarah Adel Bargal", "affiliation=Univ A"],
   ];
-  assert_eq!(off, want);
   assert_eq!(two, want);
   // (a comma or a row break the command prints after its box, at its own level, parts names as any does — review
   // revNL1 S2: `\newcommand\nlx{\mbox{Jr.},}`; red (NL1): "Ann Able" and "Jr.,Bob Baker", off a `merged_creators`
   // Error)
-  let (off, two) = both(
+  let two = both(
     repro!("emit_a_comma_a_command_prints_after_its_box_parts_names"),
-    (0, 0),
+    0,
   );
   let want = [vec!["Ann Able Jr."], vec!["Bob Baker"]];
-  assert_eq!(off, want);
   assert_eq!(two, want);
   // (its row break, `\mbox{Jr.}\\`: "Jr." stays Ann Able's, the line after it the reading's to read — red (NL1): the
   // names "Ann Able" and "Jr. Bob Baker"; off holds both lines in one name, a `merged_creators` Error)
   let (log, xml) = run(
     "\\documentclass{article}\n\\newcommand\\nlx{\\mbox{Jr.}\\\\}\n\\begin{document}\n\\title{T}\n\\author{Ann \
      Able~\\nlx Bob Baker}\n\\maketitle\nx\n\\end{document}\n",
-    2,
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [vec![
@@ -330,15 +291,11 @@ fn a_comma_a_command_draws_inside_a_name_parts_no_names() {
 /// [`a_collaboration_remark_is_the_names_contact`]'s note reference: a mark of the name's own, no note's.
 #[test]
 fn a_mark_inside_a_remark_goes_onto_the_name() {
-  let (off, two) = both(
-    repro!("emit_a_mark_inside_a_remark_goes_onto_the_name"),
-    (0, 2),
-  );
+  let two = both(repro!("emit_a_mark_inside_a_remark_goes_onto_the_name"), 2);
   let want = [
     vec!["Ann Able a", "collaboration=(for the ATLAS Collaboration)"],
     vec!["Bob Baker"],
   ];
-  assert_eq!(off, want);
   assert_eq!(two, want);
 }
 
@@ -379,19 +336,18 @@ fn a_mark_separator_or_a_number_inside_a_remark_parts_no_run() {
     vec!["Bob Baker"],
   ];
   // (pdflatex: "Ann Able (for the1 ATLAS Collaboration)")
-  let (off, two) = both(
+  let two = both(
     "\\documentclass{article}\n\\begin{document}\n\\title{T}\\author{Ann Able (for the$^{1}$ ATLAS \
      Collaboration) \\and Bob Baker}\n\\maketitle\nText.\n\\end{document}\n",
-    (0, 2),
+    2,
   );
-  assert_eq!(off, want);
   assert_eq!(two, want);
   // (pdflatex: "Ann Able (for the1,⋆ ATLAS Collaboration) and Bob Baker1", llncs)
-  let (off, two) = both(
+  let two = both(
     "\\documentclass{llncs}\n\\begin{document}\n\\title{T}\\author{Ann Able (for \
      the\\inst{1}\\fnmsep\\thanks{x} ATLAS Collaboration) \\and Bob \
      Baker\\inst{1}}\\institute{U}\n\\maketitle\nText.\n\\end{document}\n",
-    (0, 2),
+    2,
   );
   let want = [
     vec![
@@ -401,7 +357,6 @@ fn a_mark_separator_or_a_number_inside_a_remark_parts_no_run() {
     ],
     vec!["Bob Baker", "affiliation=U"],
   ];
-  assert_eq!(off, want);
   assert_eq!(two, want);
 }
 
@@ -422,17 +377,14 @@ fn a_cite_on_a_name_is_written_with_it() {
       "\\documentclass{{article}}\n\\begin{{document}}\n\\title{{T}}\\author{{{author} \\and Bob \
        Baker}}\n\\maketitle\nText.\n\\end{{document}}\n"
     );
-    let (off, two) = both(&tex, (0, warnings));
+    let two = both(&tex, warnings);
     let mut first = vec!["Ann Able [ ]"];
     if remark {
       first.push("collaboration=(for the ATLAS Collaboration)");
     }
     let want = [first, vec!["Bob Baker"]];
-    assert_eq!(off, want, "{author}");
     assert_eq!(two, want, "{author}");
-    for emit in [0, 2] {
-      let xml = run(&tex, emit).1;
-      assert!(xml.contains(cite), "{xml}");
-    }
+    let xml = run(&tex).1;
+    assert!(xml.contains(cite), "{xml}");
   }
 }

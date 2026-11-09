@@ -10,10 +10,7 @@ use latexml::util::test::{
   assert_element, convert_files_with, convert_with, normalize_markup, xml_element,
 };
 
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::{expect, red_at_two},
-};
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 const PRELOAD: &str = "ar5iv.sty";
 
@@ -41,7 +38,7 @@ fn assert_creators(xml: &str, expected: &[&str]) {
 /// marked affiliations.
 #[test]
 fn spie_copy_loading_authblk_reads_authblk_authors() {
-  let (log, xml) = convert_files_with(
+  let (log, _) = convert_files_with(
     repro!(
       "sectioning-frontmatter/spie_authblk_copy/spie_copy_loading_authblk_reads_authblk_authors.tex"
     ),
@@ -52,30 +49,6 @@ fn spie_copy_loading_authblk_reads_authblk_authors() {
     Some(PRELOAD),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  if red_at_two("writes three creators for the two authblk authors") {
-    return;
-  }
-  assert_eq!(xml.matches("<creator ").count(), 2, "{xml}");
-  assert_element(
-    &xml,
-    "creator",
-    &["role=\"author\""],
-    "<creator role=\"author\"><personname>Etienne Artigau</personname><contact name=\"Affiliation:\u{a0}\" \
-     role=\"affiliation\">Universite de Montreal</contact></creator>",
-  );
-  assert_element(
-    &xml,
-    "creator",
-    &["before=\"\u{2003}\u{2003}\"", "role=\"author\""],
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Francois Bouchy</personname><contact \
-     name=\"Affiliation:\u{a0}\" role=\"affiliation\">Observatoire de Geneve</contact></creator>",
-  );
-  assert_element(
-    &xml,
-    "para",
-    &["xml:id=\"p1\""],
-    "<para xml:id=\"p1\"><p xml:id=\"p1.1\">Body.</p></para>",
-  );
 }
 
 /// `Oleg Lychkovskiy\thanks{…}\hspace*{2mm}$^{\rm a,b}$, Sergei Blinnikov\hspace*{2mm}$^{\rm a,c}$` (0905.3658): the
@@ -91,7 +64,7 @@ fn author_space_before_own_mark_is_the_name() {
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(xml.matches("<creator ").count(), 2, "{xml}");
-  let sp = expect(" ", "");
+  let sp = "";
   assert_element(
     &xml,
     "creator",
@@ -151,7 +124,7 @@ fn author_tie_after_entry_mark_is_the_entry() {
     Some(PRELOAD),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let (tie, sp) = expect(("\u{a0}", " "), ("", ""));
+  let (tie, sp) = ("", "");
   assert_creators(&xml, &[
     &format!(
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" \

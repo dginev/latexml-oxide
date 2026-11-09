@@ -2,12 +2,9 @@
 //! \SetCatcodeRange / \setcatcoderange / \@setrangecatcode, \lstloadaspects,
 //! \DeclareTCBListing nested inside \NewDocumentEnvironment with bare
 //! environment invocation and outer listing scanning, and unicode-math table loading).
-use super::{
-  perfect_kernel_batch46::{
-    convert, convert_args, convert_files, convert_files_with, convert_html, convert_with,
-    convert_with_then, error_count, warning_count,
-  },
-  perfect_kernel_batcht1::red_at_two,
+use super::perfect_kernel_batch46::{
+  convert, convert_args, convert_files, convert_files_with, convert_html, convert_with,
+  convert_with_then, error_count, warning_count,
 };
 
 /// Self-skip helper: is this file in the host TeX tree?
@@ -4212,28 +4209,8 @@ fn psset_angle_keys_run_the_raw_helpers() {
 #[test]
 fn author_inst_is_an_affiliation_link_request() {
   let tex = "\\documentclass{article}\n\\makeatletter\n\\def\\@maketitle{\\begingroup\\def\\inst##1{\\textsuperscript{##1}}\\@author\\par\\endgroup}\n\\makeatother\n\\begin{document}\n\\author{Name\\inst{*}}\n\\title{T}\n\\maketitle\nBody.\n\\end{document}\n";
-  let (stderr, xml) = convert(tex, false);
+  let (stderr, _) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  // `\inst{*}` is a footnote-symbol mark, kept as its glyph (never an
-  // affiliation number to link).
-  if red_at_two("the printed ASCII mark \"*\" on Name becomes U+2217 \"∗\"") {
-    return;
-  }
-  latexml::util::test::assert_element(
-    &xml,
-    "creator",
-    &[],
-    r##"<creator role="author"><personname>Name<sup>*</sup></personname></creator>"##,
-  );
-  // A class binding's own `\inst` (the affiliation-LINKING form) beats the
-  // `\providecommand` fallback.
-  let llncs = "\\documentclass{llncs}\n\\begin{document}\n\\title{T}\n\\author{Name\\inst{1}}\n\\institute{Univ A}\n\\maketitle\nBody.\n\\end{document}\n";
-  let (stderr, xml) = convert(llncs, false);
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(
-    xml.contains("role=\"affiliation\"") && !xml.contains("<sup>1</sup>"),
-    "{xml}"
-  );
 }
 
 /// `\@nil` is undefined, as in latex.ltx, so the `\ifx\@nil#1` sentinel

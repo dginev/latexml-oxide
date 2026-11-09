@@ -33,13 +33,7 @@ macro_rules! repro {
 #[test]
 fn a_lines_address_spelling_one_is_its() {
   let tex = repro!("emit_a_lines_address_spelling_one_is_its");
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let author = |name: &str, email: Option<&str>| -> Vec<String> {
     let mut row = vec![
@@ -54,11 +48,10 @@ fn a_lines_address_spelling_one_is_its() {
     author("Ann Able", Some("ann.able@y.org")),
     author("Bob Baker", None),
   ];
-  assert_eq!(creators(&off), want);
   assert_eq!(creators(&xml), want);
   // (an address spelling no one of the row: the line whole on each, as with the switch off)
   let unspelled = tex.replace("ann.able@y.org", "xq7@y.org");
-  let (log, xml) = run(&unspelled, 2);
+  let (log, xml) = run(&unspelled);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let whole = |name: &str| -> Vec<String> {
     vec![
@@ -94,20 +87,7 @@ fn creator_notes(xml: &str) -> bool { creators_xml(xml).iter().any(|c| c.contain
 #[test]
 fn a_note_after_the_entries_is_the_blocks() {
   let tex = repro!("emit_a_note_after_the_entries_is_the_blocks");
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  // (the switch off: the marks on the names, each `‡` entry's thanks a pubnote)
-  assert_eq!(creators(&off), [
-    vec!["Ann Able ⋆", "affiliation=Univ A, Town"],
-    vec!["Bob Baker ‡", "affiliation=Ericsson Canada"],
-    vec!["Cy Cole ‡", "affiliation=Ericsson Canada"],
-  ]);
-  assert_eq!(pubnotes(&off).len(), 2, "{off}");
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [
     vec!["Ann Able", "affiliation=Univ A, Town"],
@@ -137,7 +117,7 @@ fn a_note_after_the_entries_is_the_blocks() {
       "Corresponding author.",
     ]),
   ] {
-    let (log, xml) = run(&tex.replace(block, &format!("{names}{tail}")), 2);
+    let (log, xml) = run(&tex.replace(block, &format!("{names}{tail}")));
     assert_eq!(
       (error_count(&log), warning_count(&log)),
       (0, 0),
@@ -149,7 +129,7 @@ fn a_note_after_the_entries_is_the_blocks() {
   }
   // (on the first entry's line, under the names: the block's too)
   let mid = "Ann Able$^{1}$, Bob Baker$^{2}$\\\\ $^1$Univ A\\thanks{Equal.}\\\\ $^2$Univ B";
-  let (log, xml) = run(&tex.replace(block, mid), 2);
+  let (log, xml) = run(&tex.replace(block, mid));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [
     vec!["Ann Able", "affiliation=Univ A"],
@@ -190,14 +170,7 @@ fn a_note_line_under_an_entry_is_the_blocks() {
     ),
   ] {
     let tex = tex.replace(line, shape);
-    let (off_log, off) = run(&tex, 0);
-    assert_eq!(
-      (error_count(&off_log), warning_count(&off_log)),
-      (0, 0),
-      "{shape}: {off_log}"
-    );
-    assert_eq!(pubnotes(&off).len(), 1, "{shape}: {off}");
-    let (log, xml) = run(&tex, 2);
+    let (log, xml) = run(&tex);
     assert_eq!(
       (error_count(&log), warning_count(&log)),
       (0, 0),
@@ -244,14 +217,7 @@ fn a_row_address_cut_keeps_its_ink() {
       author("Ann Able", rest, false),
       author("Bob Baker", rest, true),
     ];
-    let (off_log, off) = run(&tex, 0);
-    assert_eq!(
-      (error_count(&off_log), warning_count(&off_log)),
-      (0, 0),
-      "{shape}: {off_log}"
-    );
-    assert_eq!(creators(&off), want, "{shape}");
-    let (log, xml) = run(&tex, 2);
+    let (log, xml) = run(&tex);
     assert_eq!(
       (error_count(&log), warning_count(&log)),
       (0, 0),
@@ -266,18 +232,11 @@ fn a_row_address_cut_keeps_its_ink() {
     line,
     "Dresden, Germany (bob.baker@a.org); Leipzig (bob@b.org)",
   );
-  let (off_log, off) = run(&two, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, xml) = run(&two, 2);
+  let (log, xml) = run(&two);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let mut bob = author("Bob Baker", "Dresden, Germany; Leipzig", true);
   bob.push("email=bob@b.org".to_string());
   let want = [author("Ann Able", "Dresden, Germany; Leipzig", false), bob];
-  assert_eq!(creators(&off), want);
   assert_eq!(creators(&xml), want);
 }
 
@@ -290,7 +249,7 @@ fn a_creator_calls_ref_label_answers_its_ref() {
   let tex = repro!("emit_a_creator_calls_annotations_answer_a_label")
     .replace("annotations={ed}", "annotations={\\ref{ed}}")
     .replace("label=ed]", "label={\\ref{ed}}]");
-  let (log, xml) = run(&tex, 2);
+  let (log, xml) = run(&tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [
     vec!["Ann Able", "affiliation=Univ A, Town"],
@@ -305,7 +264,7 @@ fn a_creator_calls_ref_label_answers_its_ref() {
   // (a label spelled with a font switch and spaces, cleaned on both sides, the `label=` side too: `Ed_Office` — LO2 `=2` read
   // `label={\rm Ed Office}` raw, and Bob's name showed `E,d,Office`, review revLO2 4; repro
   // `emit_a_spelled_label_answers_its_spelling`)
-  let (log, xml) = run(repro!("emit_a_spelled_label_answers_its_spelling"), 2);
+  let (log, xml) = run(repro!("emit_a_spelled_label_answers_its_spelling"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [
     vec!["Ann Able", "affiliation=Univ A, Town"],

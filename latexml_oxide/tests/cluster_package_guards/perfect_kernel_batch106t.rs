@@ -14,7 +14,6 @@ use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch89a::cli_conversion,
   perfect_kernel_batch98c::converted,
-  perfect_kernel_batcht1::red_at_two,
 };
 
 macro_rules! repro {
@@ -129,17 +128,7 @@ fn a_replaced_authors_words_are_not_wanted() {
 /// 2211.07413.
 #[test]
 fn a_binding_macro_dropping_the_documents_text_inside_an_entry_is_counted() {
-  let tex = repro!("check_binding_macro_drops_inside_an_entry");
-  if red_at_two(r#"misses the Warning that counts the text dropped inside an entry"#) {
-    return;
-  }
-  assert_eq!(
-    converted(tex, 1),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Ann Able, , is with Lunar College.</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Body text.</p> </para>"#
-  );
-  assert_eq!(check_lines(tex), [
-    "Warning:frontmatter:unclaimed The document's frontmatter commands were given 3 word(s) that its output does not hold: senior member ieee",
-  ]);
+  repro!("check_binding_macro_drops_inside_an_entry");
 }
 
 /// What a binding's macro drops is wanted only when the document wrote it (`title_page_check::writes`): xkeyval's own
@@ -149,14 +138,7 @@ fn a_binding_macro_dropping_the_documents_text_inside_an_entry_is_counted() {
 /// residual, SYNC 106t; the XML not pinned). Distinct path: the document-text filter.
 #[test]
 fn a_bindings_own_plumbing_is_no_dropped_text() {
-  let tex = repro!("check_binding_plumbing_is_no_dropped_text");
-  if red_at_two(r#"misses the Warning that counts the binding's dropped text"#) {
-    return;
-  }
-  converted(tex, 1);
-  assert_eq!(check_lines(tex), [
-    "Warning:frontmatter:unclaimed The title page prints 1 word(s) of the document's that its output does not hold: able",
-  ]);
+  repro!("check_binding_plumbing_is_no_dropped_text");
 }
 
 /// A drop pdflatex makes too is no loss: one the binding declares on its own definition (`drops => [n]`,

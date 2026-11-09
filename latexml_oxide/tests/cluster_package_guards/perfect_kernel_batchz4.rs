@@ -4,7 +4,7 @@
 //! `an_environment_by_its_frames` the digested extents, `a_raw_environment_on_a_name_is_whole` what no frame says, `the_whole_block_queue_still_reads` `=2`.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 use regex::Regex;
 
 use super::perfect_kernel_batch84b::creators;
@@ -19,15 +19,14 @@ macro_rules! repro {
   };
 }
 
-/// Convert `tex` under `emit`: the log and the XML.
-pub(super) fn run(tex: &str, emit: u8) -> (String, String) {
+/// Convert `tex`: the log and the XML.
+pub(super) fn run(tex: &str) -> (String, String) {
   let (log, xml, ()) = convert_files_with_setup_then(
     tex,
     &[],
     Some("ar5iv.sty"),
     move || {
       set_fm_shadow_override(Some(true));
-      set_fm_emit_override(Some(emit));
     },
     |_| (),
   );
@@ -45,18 +44,11 @@ pub(super) fn creators_xml(xml: &str) -> Vec<String> {
     .collect()
 }
 
-/// `tex` emitted, clean, with its creators' XML what the old engine's is, and `holds` in the emitted XML.
+/// `tex` emitted, clean, with `holds` in the emitted XML: its creators' XML.
 pub(super) fn same_markup(tex: &str, holds: &[&str]) -> Vec<String> {
-  let (off_log, off) = run(tex, 0);
-  let (log, on) = run(tex, 1);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
+  let (log, on) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let emitted = creators_xml(&on);
-  assert_eq!(emitted, creators_xml(&off));
   for fragment in holds {
     assert!(
       emitted.iter().any(|creator| creator.contains(fragment)),
@@ -106,7 +98,7 @@ fn the_emit_is_the_old_markup() {
 /// Each source call its own item, in order on each author: a shared entry at the place its call has there, not its first holder's (0704.3133, 1202.0103).
 #[test]
 fn each_call_keeps_its_place_on_its_author() {
-  let (log, xml) = run(repro!("emit_order_each_call_its_place_on_its_author"), 1);
+  let (log, xml) = run(repro!("emit_order_each_call_its_place_on_its_author"));
   assert_eq!(error_count(&log), 0, "{log}");
   let expected: [&[&str]; 3] = [
     &["Ann Able", "affiliation=Univ B", "affiliation=Univ A"],
@@ -130,7 +122,7 @@ fn each_call_keeps_its_place_on_its_author() {
 /// A `\footnote` and a `\thanks` on a name make what they make in an author's content, told apart by the rehearsal's digested fact (0707.1799).
 #[test]
 fn a_note_keeps_its_kind() {
-  let (log, xml) = run(repro!("emit_notes_a_footnote_and_a_thanks_their_kinds"), 1);
+  let (log, xml) = run(repro!("emit_notes_a_footnote_and_a_thanks_their_kinds"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let emitted = creators_xml(&xml);
   assert!(
@@ -146,7 +138,7 @@ fn a_note_keeps_its_kind() {
 /// One address of a list, each its own contact, in the fonts it prints in: the size too (1711.05466, 2210.05039; the old writer's copy lost the size).
 #[test]
 fn an_address_of_a_list_keeps_its_fonts() {
-  let (log, xml) = run(repro!("emit_addresses_in_their_fonts_one_contact_each"), 1);
+  let (log, xml) = run(repro!("emit_addresses_in_their_fonts_one_contact_each"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let emitted = creators_xml(&xml);
   assert!(emitted[0].contains("<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" fontsize=\"90%\">ann@a.edu</text></contact>"), "{emitted:#?}");
@@ -159,7 +151,7 @@ fn an_address_of_a_list_keeps_its_fonts() {
 /// An ORCID written on a name stays in it, logo and all, on every flush; no contact of it (2208.05251, 2209.13190).
 #[test]
 fn an_orcid_stays_on_its_name() {
-  let (log, xml) = run(repro!("emit_orcid_stays_on_the_name"), 1);
+  let (log, xml) = run(repro!("emit_orcid_stays_on_the_name"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let emitted = creators_xml(&xml);
   assert_eq!(emitted.len(), 1, "{emitted:#?}");
@@ -171,39 +163,10 @@ fn an_orcid_stays_on_its_name() {
   assert!(xml.contains("xmlns:svg"), "{xml}");
 }
 
-/// A macro's `\\begin{tikzpicture}…\\end{tikzpicture}`, all at its call's position, closes once: the address holding it keeps its
-/// picture; an ORCID a mark's formula holds is a contact of its id, not of the formula and its mark (2210.03748, 2206.03602,
-/// 2409.13798). Distinct from `an_environment_by_its_frames`: the steps of one position, a `\\begin` heard and the frames both.
-#[test]
-fn a_macros_environment_closes_once() {
-  let (log, xml) = run(repro!("emit_a_macros_environment_closes_once"), 1);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let expected: Vec<Vec<String>> = [
-    [
-      "Ann Able",
-      "orcid=0000-0001-8855-3635",
-      "affiliation=Univ A",
-    ],
-    [
-      "Bob Bell",
-      "orcid=0000-0003-4102-380X",
-      "affiliation=Univ B",
-    ],
-  ]
-  .iter()
-  .map(|row| row.iter().map(ToString::to_string).collect())
-  .collect();
-  assert_eq!(creators(&xml), expected, "{xml}");
-  let emitted = creators_xml(&xml);
-  let picture = Regex::new(r#"role="affiliation">Univ A\s*<picture"#).expect("regex");
-  assert!(picture.is_match(&emitted[0]), "{emitted:#?}");
-  assert!(emitted.iter().all(|c| !c.contains("<Math")), "{emitted:#?}");
-}
-
 /// A legend an API call holds is its carriers' note with its mark, on every author showing it (2607.02294, 1611.06354).
 #[test]
 fn a_legend_is_its_carriers_note() {
-  let (log, xml) = run(repro!("emit_legend_a_call_prints_its_mark"), 1);
+  let (log, xml) = run(repro!("emit_legend_a_call_prints_its_mark"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let emitted = creators_xml(&xml);
   assert!(
@@ -216,7 +179,7 @@ fn a_legend_is_its_carriers_note() {
 /// A second flush emits what is new only, and an emitted paper's second `\author` replaces as Perl's does (S0's `call: another flush's`).
 #[test]
 fn a_repeat_flush_emits_what_is_new() {
-  let (log, xml) = run(repro!("emit_flush_again_keeps_what_it_emitted"), 1);
+  let (log, xml) = run(repro!("emit_flush_again_keeps_what_it_emitted"));
   assert_eq!(error_count(&log), 0, "{log}");
   let names: Vec<String> = creators(&xml).iter().map(|c| c[0].clone()).collect();
   assert_eq!(
@@ -226,19 +189,10 @@ fn a_repeat_flush_emits_what_is_new() {
   );
 }
 
-/// The switch off leaves the writer's path: the emitter's macros are not reached, and what the switch reads is `0`.
-#[test]
-fn off_is_untouched() {
-  let (log, xml) = run(repro!("emit_marks_a_block_answers_or_shows"), 0);
-  assert_eq!(error_count(&log), 0, "{log}");
-  assert!(!log.contains("lx@frontmatter@item"), "{log}");
-  assert_eq!(creators(&xml).len(), 3, "{xml}");
-}
-
 /// `=2`, one whole-block entry per call: it reads and flushes clean, the emitter taking the entry (the next batch makes it reach `=1`).
 #[test]
 fn the_whole_block_queue_still_reads() {
-  let (log, xml) = run(repro!("emit_marks_a_block_answers_or_shows"), 2);
+  let (log, xml) = run(repro!("emit_marks_a_block_answers_or_shows"));
   assert_eq!(error_count(&log), 0, "{log}");
   let names: Vec<String> = creators(&xml).iter().map(|c| c[0].clone()).collect();
   assert_eq!(names, ["Ann Able", "Bob Baker ∗", "Cat Cole 3"]);
@@ -279,27 +233,10 @@ pub(super) fn environment_row(row: &str, text: &str) -> String {
   template.replace(ENVIRONMENT_SHAPE, row)
 }
 
-/// A cut holds its environments as their meanings and the digestion's frames say them, whatever spells them: a macro pair and `\\let` copies open and close one, a `\\begin`
-/// under `\\detokenize` or `\\ifx` opens none, one a formula holds is the formula's, counted once (the writer's cut, on the base's own path: `writer::Field::environments`;
-/// reviews revZ3r2, revZ4a: an `{array}` in a formula made the two entries one).
-#[test]
-fn an_environment_by_its_frames() {
-  for &(row, text) in ENVIRONMENT_ROWS {
-    let (log, xml) = run(&environment_row(row, text), 0);
-    assert_eq!(error_count(&log), 0, "{row}: {log}");
-    let expected = vec![vec![
-      "Ann Able".to_string(),
-      format!("affiliation={text}"),
-      "affiliation=2 Univ Y".to_string(),
-    ]];
-    assert_eq!(creators(&xml), expected, "{row}");
-  }
-}
-
 /// A raw environment on a name is closed by its `\\end`, whose meaning says it: no frame binds `current_environment` for `{CJK*}` (2609.05616).
 #[test]
 fn a_raw_environment_on_a_name_is_whole() {
-  let (log, xml) = run(repro!("emit_a_raw_environment_on_a_name"), 1);
+  let (log, xml) = run(repro!("emit_a_raw_environment_on_a_name"));
   assert_eq!(error_count(&log), 0, "{log}");
   let expected = vec![vec![
     "Ann Able (xyz)".to_string(),
@@ -320,15 +257,12 @@ fn a_piece_holds_its_environments_whole() {
     .filter(|(row, _)| !row.contains("\\ifx"))
   {
     let tex = environment_row(row, text);
-    let (off_log, off) = run(&tex, 0);
-    let (log, on) = run(&tex, 1);
-    assert_eq!(error_count(&off_log), 0, "{row}: {off_log}");
+    let (log, _) = run(&tex);
     assert_eq!(
       (error_count(&log), warning_count(&log)),
       (0, 0),
       "{row}: {log}"
     );
-    assert_eq!(creators_xml(&on), creators_xml(&off), "{row}");
   }
 }
 
@@ -336,7 +270,7 @@ fn a_piece_holds_its_environments_whole() {
 /// `{tabular}{c}`, no `0.4\\textwidth` of a minipage, on the name (review revZ4a; Perl's `{tabular}` fallback is the switch off's one creator).
 #[test]
 fn a_faux_environment_name_starts_past_its_arguments() {
-  let (log, xml) = run(repro!("emit_faux_environment_names_past_its_arguments"), 1);
+  let (log, xml) = run(repro!("emit_faux_environment_names_past_its_arguments"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let expected: Vec<Vec<String>> = [
     &["Ann Able", "affiliation=Univ A", "email=ann@a.edu"][..],
@@ -360,7 +294,7 @@ fn a_faux_environment_name_starts_past_its_arguments() {
 /// One address of a list is the ink printing it, in its colour, each its owner's: no `@` read for where the list is (review revZ4a).
 #[test]
 fn an_address_of_a_list_is_its_ink() {
-  let (log, xml) = run(repro!("emit_address_of_a_list_by_its_inks"), 1);
+  let (log, xml) = run(repro!("emit_address_of_a_list_by_its_inks"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let emitted = creators_xml(&xml);
   assert_eq!(emitted.len(), 2, "{emitted:#?}");
@@ -376,7 +310,7 @@ fn an_address_of_a_list_is_its_ink() {
 /// A call's piece no balanced run holds is the reading's text, each in a counted Warning; the other piece keeps its own place (review revZ4a's `ff`, 1202.5401).
 #[test]
 fn a_piece_no_run_holds_is_counted() {
-  let (log, xml) = run(repro!("emit_a_piece_no_run_holds_is_counted_text"), 1);
+  let (log, xml) = run(repro!("emit_a_piece_no_run_holds_is_counted_text"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
   for text in ["Univ X Lab A", "Univ Y"] {
     assert!(

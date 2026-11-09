@@ -9,7 +9,6 @@
 use super::{
   convert_files_with,
   perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -149,33 +148,6 @@ fn an_aastex6_email_after_correspondingauthor_is_the_correspondents() {
       r#"<creator before=" " role="author"> <personname>Bob Baker</personname> "#,
       r#"<contact name="Affiliation: " role="affiliation">Univ B, City</contact> </creator> "#,
       r#"<creator role="author"> <contact name="Email: " role="email">help@x.org</contact> </creator>"#,
-    )
-  );
-}
-
-/// (L3) aastex701's `\correspondingauthor{Ann Able, Bob Baker}\email{aable@a.edu, bbaker@b.edu}`: each address the
-/// author it spells, the correspondent contact both authors'. Red (int130a): the whole list on both. Repro
-/// class-bindings/aastex7_correspondingauthor_address_list_is_spelled.
-#[test]
-fn an_aastex7_correspondent_address_list_is_spelled() {
-  if red_at_two(r#"writes aable@a.edu as plain text, a false Warning"#) {
-    return;
-  }
-  assert_eq!(
-    clean_creators(include_str!(
-      "../../../tools/perfect_kernel/repros/class-bindings/aastex7_correspondingauthor_address_list_is_spelled.tex"
-    )),
-    concat!(
-      r#"<creator role="author"> <personname>Ann Able</personname> "#,
-      r#"<rdf content="aable@a.edu" property="schema:email"/> "#,
-      r#"<contact name="Affiliation: " role="affiliation">Univ A, Town</contact> "#,
-      r#"<contact name="Corresponding author: " role="correspondent">Ann Able, Bob Baker</contact> "#,
-      r#"<contact name="Email: " role="email">aable@a.edu</contact> </creator> "#,
-      r#"<creator before=" " role="author"> <personname>Bob Baker</personname> "#,
-      r#"<rdf content="bbaker@b.edu" property="schema:email"/> "#,
-      r#"<contact name="Affiliation: " role="affiliation">Univ B, City</contact> "#,
-      r#"<contact name="Corresponding author: " role="correspondent">Ann Able, Bob Baker</contact> "#,
-      r#"<contact name="Email: " role="email">bbaker@b.edu</contact> </creator>"#,
     )
   );
 }

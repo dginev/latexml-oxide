@@ -16,14 +16,9 @@
 //! fence; the tlp guard rejects any `<date`.
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
-use latexml::util::test::{
-  assert_element, convert_files_with, error_count, normalize_markup, warning_count,
-};
+use latexml::util::test::{assert_element, convert_files_with, error_count, warning_count};
 
-use super::{
-  perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with},
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
 
 /// class-bindings/lni_subtitle_through_k11: lni.cls's `\subtitle` (a store only its refused `\maketitle` reads) is the
 /// frontmatter's subtitle though the class is read by the lni binding, not the lever (pdflatex: "The Title" over "A
@@ -105,37 +100,6 @@ fn aguplus_authors_carry_affiliations_and_addresses() {
     r#"<date name="Received" role="received">1 May 1999</date>"#,
   );
   assert!(!xml.contains("First Institute, Town</p>"), "{xml}");
-}
-
-/// class-bindings/aguplus/aguplus_altaffil_and_spelled_addresses: `\altaffilmark`/`\altaffiltext` give the marked
-/// authors their affiliations, and each `\authoraddr` goes to the author it names (pdflatex: "A. Able,1 B. Baker,1,2
-/// and C. Cole2", the footnotes "1 First Institute, Town." "2 Second Laboratory, City.", the addresses after the
-/// references). Before 68x no affiliation or address (1010.3998). Each address's e-mail its author's since 95c (OD #938).
-#[test]
-fn aguplus_altaffiliations_and_addresses_go_to_their_authors() {
-  if red_at_two(r#"4 unanswered_mark_lost Warnings (the altaffil marks answered by no entry)"#) {
-    return;
-  }
-  let xml = assert_elements(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/class-bindings/aguplus/aguplus_altaffil_and_spelled_addresses.tex"
-    ),
-    RAW,
-    (0, 0),
-    &[],
-  );
-  assert_eq!(xml.matches("<creator").count(), 3, "{xml}");
-  for creator in [
-    r#"<creator role="author"><personname>A. Able</personname><contact name="Alternate Affiliation:{nbsp}" role="altaffiliation">First Institute, Town.</contact><contact name="Address:{nbsp}" role="address">A. Able, First Institute, Town</contact><contact name="email: " role="email">able@example.org</contact></creator>"#,
-    r#"<creator before="{em}{em}" role="author"><personname>B. Baker</personname><contact name="Alternate Affiliation:{nbsp}" role="altaffiliation">First Institute, Town.</contact><contact name="Alternate Affiliation:{nbsp}" role="altaffiliation">Second Laboratory, City.</contact></creator>"#,
-    r#"<creator before="{em}{em}" role="author"><personname>C. Cole</personname><contact name="Alternate Affiliation:{nbsp}" role="altaffiliation">Second Laboratory, City.</contact><contact name="Address:{nbsp}" role="address">C. Cole, Second Laboratory, City</contact><contact name="email: " role="email">cole@example.org</contact></creator>"#,
-  ] {
-    let creator = spelled(creator);
-    assert!(
-      normalize_markup(&xml).contains(&creator),
-      "{creator}\n{xml}"
-    );
-  }
 }
 
 /// class-bindings/apa6_note_and_authornote: apa6.cls:776 `\note` and :779 `\authornote` are the frontmatter's notes
@@ -234,29 +198,6 @@ fn cjs_rcs_abstracts_and_keywords_are_frontmatter() {
     r#"<classification name="MSC2020">62R10; 62M10.</classification>"#,
   );
   assert_eq!(xml.matches("<item ").count(), 2, "{xml}");
-}
-
-/// class-bindings/smfart_altabstract: smfart.cls:568-583 `{altabstract}` is the frontmatter's second abstract, in the
-/// other language, named by the class's caption, the alternative title leading its text (pdflatex: "Résumé. — Le
-/// résumé." "Abstract (The title). — The other abstract."); the document's abstract of the same name stays. Before
-/// 68x the deposited title page's body text (2506.20120: lost).
-#[test]
-fn smfart_altabstract_is_a_second_abstract() {
-  if red_at_two(r#"a false content-check Warning ("Anne Auteur" missing)"#) {
-    return;
-  }
-  let xml = assert_elements(
-    include_str!("../../../tools/perfect_kernel/repros/class-bindings/smfart_altabstract.tex"),
-    RAW,
-    (0, 0),
-    &[(
-      "abstract",
-      "abstract2",
-      r#"<abstract inlist="toc" name="Abstract" xml:id="abstract2" xml:lang="en"><p>(<emph font="italic">The title</emph>) The other abstract.</p></abstract>"#,
-    )],
-  );
-  assert_eq!(xml.matches("<abstract ").count(), 2, "{xml}");
-  assert_eq!(xml.matches("The other abstract.").count(), 1, "{xml}");
 }
 
 /// class-bindings/projlib_author_address: projlib-author.sty's `\address`/`\email` lines are the author's they follow

@@ -4,7 +4,7 @@
 //! 2307.15427, 2309.09081, 2310.00933, 2407.04435, 2210.04484).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::perfect_kernel_batch84b::creators;
 
@@ -20,15 +20,14 @@ macro_rules! repro {
 
 fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).collect() }
 
-/// Convert `tex` under `emit`: the log and the XML.
-fn run(tex: &str, emit: u8) -> (String, String) {
+/// Convert `tex`: the log and the XML.
+fn run(tex: &str) -> (String, String) {
   let (log, xml, ()) = convert_files_with_setup_then(
     tex,
     &[],
     Some("ar5iv.sty"),
     move || {
       set_fm_shadow_override(None);
-      set_fm_emit_override(Some(emit));
     },
     |_| (),
   );
@@ -40,21 +39,11 @@ fn run(tex: &str, emit: u8) -> (String, String) {
 /// Now the call's own tokens are written, the creators off's.
 #[test]
 fn a_command_in_an_authors_annotations_stays_one_token() {
-  for emit in [0, 2] {
-    let (log, xml) = run(repro!("ne4_authblk_command_glued_in_annotations"), emit);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "emit={emit}: {log}"
-    );
-    assert_eq!(
-      creators(&xml),
-      [
-        row(&["Ann Able"]),
-        row(&["Bob Baker"]),
-        row(&["affiliation=University A", "affiliation=University B"])
-      ],
-      "emit={emit}"
-    );
-  }
+  let (log, xml) = run(repro!("ne4_authblk_command_glued_in_annotations"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able"]),
+    row(&["Bob Baker"]),
+    row(&["affiliation=University A", "affiliation=University B"])
+  ]);
 }

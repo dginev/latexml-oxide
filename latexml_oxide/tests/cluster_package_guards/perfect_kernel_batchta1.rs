@@ -32,29 +32,25 @@ fn a_late_author_block_is_read_at_its_own_flush() {
     repro!("late_author_in_title_survives_the_seal"),
     repro!("late_author_in_title_fallback_flush"),
   ] {
-    for emit in [0, 2] {
-      let (log, xml) = run(tex, emit);
-      assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-      assert_eq!(creators(&xml), affiliations, "emit={emit} {tex}");
-    }
+    let (log, xml) = run(tex);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(creators(&xml), affiliations, "{tex}");
   }
   let tex = repro!("late_author_in_title_thanks_each_its_own");
-  for emit in [0, 2] {
-    let (log, xml) = run(tex, emit);
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-    let names: Vec<Vec<String>> = creators(&xml);
-    assert_eq!(names.len(), 2, "emit={emit} {xml}");
-    for (creator, (name, thanks)) in xml
-      .split("<creator ")
-      .skip(1)
-      .zip([("Ann Able", "Univ A"), ("Bob Baker", "Univ B")])
-    {
-      let creator = &creator[..creator.find("</creator>").expect("closed creator")];
-      assert!(creator.contains(name), "emit={emit} {creator}");
-      assert!(
-        creator.contains("role=\"thanks\"") && creator.contains(thanks),
-        "emit={emit} {creator}"
-      );
-    }
+  let (log, xml) = run(tex);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let names: Vec<Vec<String>> = creators(&xml);
+  assert_eq!(names.len(), 2, "{xml}");
+  for (creator, (name, thanks)) in xml
+    .split("<creator ")
+    .skip(1)
+    .zip([("Ann Able", "Univ A"), ("Bob Baker", "Univ B")])
+  {
+    let creator = &creator[..creator.find("</creator>").expect("closed creator")];
+    assert!(creator.contains(name), "{creator}");
+    assert!(
+      creator.contains("role=\"thanks\"") && creator.contains(thanks),
+      "{creator}"
+    );
   }
 }

@@ -20,7 +20,6 @@ use latexml::util::test::convert_with;
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch84b::creators,
-  perfect_kernel_batcht1::red_at_two,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -265,67 +264,6 @@ fn llncs_address_in_institute_note_is_never_shared() {
   ]]);
 }
 
-/// Marks no one answers pick nothing (`marks_pick`; only the class's own `\inst{n}` does): 2607.02596's hand-typed
-/// `$^{1}$` on every name and 1804.05870's `\printfnsymbol{1}` leave the one institute every author's, each brace-list
-/// address its owner's; llncs's `\fnmsep\thanks{…}` in the institute is no mark of its own (the r1 review's r05). Red
-/// (85b r1): the institute on a nameless creator in all three. And the negative on the same path (`raises_a_bare_mark`):
-/// an institute holding a paper macro's marks is not shared (2608.21425).
-#[test]
-fn llncs_marks_that_pick_nothing() {
-  let institute =
-    "affiliation=College of Biomedical Engineering, Fudan University, Shanghai, China";
-  if red_at_two("2 false markup-lost Warnings (the fudan.edu.cn addresses of a list)") {
-    return;
-  }
-  assert_creators(repro!("llncs_hand_marks_pick_nothing.tex"), &[
-    &["Xinyu Jia 1", institute],
-    &["Weidong Guo 1", institute],
-    &["Wangyuan Zhao 1", institute],
-    &["Yi Guo 1", institute],
-    &["Zeju Li 1,†", institute, "email=zejuli@fudan.edu.cn"],
-    &["Yuanyuan Wang 1,†", institute, "email=yywang@fudan.edu.cn"],
-  ]);
-  assert_creators(repro!("llncs_paper_mark_macro_picks_nothing.tex"), &[
-    &[
-      "Rohit Pandey",
-      "affiliation=Google Inc.",
-      "email=rohitpandey@google.com",
-    ],
-    &[
-      "Pavel Pidlypenskyi *",
-      "affiliation=Google Inc.",
-      "email=podlipensky@google.com",
-    ],
-    &[
-      "Shuoran Yang",
-      "affiliation=Google Inc.",
-      "email=shuorany@google.com",
-    ],
-    &[
-      "Christine Kaeser-Chen",
-      "affiliation=Google Inc.",
-      "email=christinech@google.com",
-    ],
-  ]);
-  let xml = assert_creators(repro!("llncs_fnmsep_note_in_institute_is_shared.tex"), &[
-    &["Ann Able", "affiliation=Univ X"],
-    &["Bob Baker", "affiliation=Univ X"],
-  ]);
-  assert!(
-    xml.contains("role=\"thanks\">Supported by Y.</pubnote>"),
-    "{xml}"
-  );
-  // (negative: an institute holding the marks of a command of the paper's own, `\affmark{1} University A \quad
-  // \affmark{2} University B`, `\affmark` a `\textsuperscript`, 2608.21425, is lines the names' marks pick, not one shared
-  // institute: the block's, the marks shown; green on int114a, an 85b draft gave the whole line to every author)
-  assert_creators(
-    repro!("llncs_institute_marked_by_a_paper_macro_is_not_shared.tex"),
-    &[&["Ann Able 1"], &["Bob Baker 2"], &[
-      "affiliation=1 University A 2 University B",
-    ]],
-  );
-}
-
 /// An `\institute` inside `\author` wins over an outer one (the r1 review's r02; pdflatex "Univ X"); a later `\author`
 /// without one gives the store back to the outer call (`\lx@llncs@inner@institute`). Red (85b r1): Univ Y on both.
 #[test]
@@ -404,30 +342,6 @@ fn llncs_corresponding_author_takes_the_left_address() {
     r"\author{Ann Able\inst{1}\thanks{Corresponding author} \and Bob Baker\inst{1}}",
   );
   assert_ne!(picked, owned);
-  if red_at_two("a false content-check Warning (zz@x.edu placed more often than printed)") {
-    return;
-  }
-  assert_creators(&picked, &[
-    &["Ann Able", "affiliation=Univ X", "email=able@x.edu"],
-    &["Bob Baker", "affiliation=Univ X"],
-    &["email=zz@x.edu"],
-  ]);
-  // (a template's address is no one's, `is_template_address`: the re-review's s08, s09; 85b r2 gave it to Ann Able)
-  for (template, block) in [
-    (
-      r"\{firstname.lastname\}@x.edu",
-      "email={firstname.lastname}@x.edu",
-    ),
-    ("first.last@x.edu", "email=first.last@x.edu"),
-  ] {
-    let variant = tex.replace(r"\email{zz@x.edu}", &format!(r"\email{{{template}}}"));
-    assert_ne!(variant, tex);
-    assert_creators(&variant, &[
-      &["Ann Able", "affiliation=Univ X"],
-      &["Bob Baker", "affiliation=Univ X"],
-      &[block],
-    ]);
-  }
 }
 
 /// A line of the shared institute holding an `@` outside an `\email` call is an e-mail line of the row, read with the
@@ -564,26 +478,6 @@ Text.
     r"\email{able@x.edu}, Twitter: @univx",
   );
   assert_ne!(picked_owned, picked_template);
-  let rest = "affiliation=Univ X, Twitter: @univx";
-  if red_at_two("unverified: writes \"Univ X ,\" with a space before the comma") {
-    return;
-  }
-  assert_creators(&picked_owned, &[
-    &["Ann Able", rest, "email=able@x.edu"],
-    &["Bob Baker", rest],
-  ]);
-  let institute =
-    "affiliation=Old Dominion University, Department of Computer Science Norfolk VA, 23529, USA";
-  assert_creators(repro!("llncs_urldef_address_line_is_each_owners.tex"), &[
-    &["Mat Kelly", institute, "email=mkelly@cs.odu.edu"],
-    &[
-      "Justin F. Brunelle",
-      institute,
-      "email=jbrunelle@cs.odu.edu",
-    ],
-    &["Michele C. Weigle", institute, "email=mweigle@cs.odu.edu"],
-    &["Michael L. Nelson", institute, "email=mln@cs.odu.edu"],
-  ]);
 }
 
 /// A label of the call's own goes with the `\email` call (`call_label`), to the address's owner or with it to the

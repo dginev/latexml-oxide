@@ -24,18 +24,17 @@ macro_rules! repro {
 #[test]
 fn a_mark_after_a_group_of_names_is_the_last_names() {
   let tex = repro!("author_ieee_blockn_group_marks_math_active");
-  for emit in [0, 2] {
-    let xml = super::perfect_kernel_batchz4::run(tex, emit).1;
-    let at = xml
-      .find("<personname>Cat López<sup")
-      .expect("Cat López's mark a superscript");
-    let end = at
-      + xml[at..]
-        .find("</personname>")
-        .expect("a closed personname");
-    assert!(xml[at..end].contains('♯'), "{}", &xml[at..end]);
-  }
-  let (off, two) = both(tex, (0, 0));
+  let xml = super::perfect_kernel_batchz4::run(tex).1;
+  let at = xml
+    .find("<personname>Cat López<sup")
+    .expect("Cat López's mark a superscript");
+  let end = at
+    + xml[at..]
+      .find("</personname>")
+      .expect("a closed personname");
+  assert!(xml[at..end].contains('♯'), "{}", &xml[at..end]);
+
+  let two = both(tex, 0);
   let want = [
     vec!["Ann Able ⋆"],
     vec!["Bob Baker ♭"],
@@ -43,14 +42,13 @@ fn a_mark_after_a_group_of_names_is_the_last_names() {
     vec!["Dan Dorn ♭"],
     vec!["Eve Ess † \u{2063} ⋆"],
   ];
-  assert_eq!(off, want);
   assert_eq!(two, want);
   // (pdflatex: "Ann Able⋆ , Bob Baker♭ , Cat Cole♯ , Dan Dorn♭ , and Eve Ess†")
-  let (off, two) = both(
+  let two = both(
     "\\documentclass[journal]{IEEEtran}\n\\begin{document}\n\\title{T}\n\\author{\\IEEEauthorblockN{{Ann \
      Able$^{\\star}$, Bob Baker$^{\\flat}$, Cat Cole}$^{\\sharp}$, Dan Dorn$^{\\flat}$, and Eve \
      Ess$^{\\dagger}$}}\n\\maketitle\nx\n\\end{document}\n",
-    (0, 0),
+    0,
   );
   let want = [
     vec!["Ann Able ⋆"],
@@ -59,16 +57,14 @@ fn a_mark_after_a_group_of_names_is_the_last_names() {
     vec!["Dan Dorn ♭"],
     vec!["Eve Ess †"],
   ];
-  assert_eq!(off, want);
   assert_eq!(two, want);
   // (pdflatex: "Ann Able⋆ , Bob Baker♭")
-  let (off, two) = both(
+  let two = both(
     "\\documentclass[journal]{IEEEtran}\n\\begin{document}\n\\title{T}\n\\author{\\IEEEauthorblockN{{\\large Ann \
      Able}$^{\\star}$, Bob Baker$^{\\flat}$}}\n\\maketitle\nx\n\\end{document}\n",
-    (0, 0),
+    0,
   );
   let want = [vec!["Ann Able ⋆"], vec!["Bob Baker ♭"]];
-  assert_eq!(off, want);
   assert_eq!(two, want);
   // (a name inside a formula, its mark there: the run takes the formula whole, the `}` of the `{\rm` the name opens in
   // no names group's close — at `=2` the mark and the name written twice, 4 Maths and W=2, review revH5 finding 2;
@@ -76,13 +72,12 @@ fn a_mark_after_a_group_of_names_is_the_last_names() {
   let tex = "\\documentclass[aps,prl]{revtex4-2}\n\\begin{document}\n\\title{T}\n\\author{${\\rm Ann~Able}^{a}$ \
              and ${\\rm Bob~Baker}^{b}$}\n\\affiliation{Univ A}\n\\begin{abstract}A.\\end{abstract}\n\\maketitle\n\
              x\n\\end{document}\n";
-  let (off, two) = both(tex, (0, 0));
+  let two = both(tex, 0);
   let want = [vec!["\u{2062} Ann Able a", "affiliation=Univ A"], vec![
     "\u{2062} Bob Baker b",
     "affiliation=Univ A",
   ]];
-  assert_eq!(off, want);
   assert_eq!(two, want);
-  let xml = super::perfect_kernel_batchz4::run(tex, 2).1;
+  let xml = super::perfect_kernel_batchz4::run(tex).1;
   assert_eq!(xml.matches("<Math ").count(), 2, "{xml}");
 }

@@ -25,16 +25,15 @@ macro_rules! repro {
 /// Bryna Kra", "BY Max Moss", "By Ann Able"; (NL1e `=2`) a Warning "missing from the placed frontmatter: By".
 #[test]
 fn a_byline_word_alone_is_no_name() {
-  let (off, two) = both(repro!("author_byline_by_before_spacing_runs"), (0, 0));
+  let two = both(repro!("author_byline_by_before_spacing_runs"), 0);
   let want = [
     vec!["Bryna Kra"],
     vec!["Joel Moreira"],
     vec!["Florian K. Richter"],
     vec!["Donald Robertson"],
   ];
-  assert_eq!(off, want);
   assert_eq!(two, want);
-  let (off, two) = both(repro!("author_and_word_in_any_case_or_wrapper"), (0, 0));
+  let two = both(repro!("author_and_word_in_any_case_or_wrapper"), 0);
   let want: Vec<Vec<&str>> = [
     "Ann Able",
     "Bob Baker",
@@ -54,19 +53,17 @@ fn a_byline_word_alone_is_no_name() {
   .into_iter()
   .map(|name| vec![name])
   .collect();
-  assert_eq!(off, want);
   assert_eq!(two, want);
   // (pdflatex: "By Ann Able and Bob Baker" over "Univ A")
-  let (off, two) = both(
+  let two = both(
     "\\documentclass{article}\n\\title{T}\n\\author{By~~Ann Able~~and~~Bob Baker \\\\ Univ A}\n\
      \\begin{document}\n\\maketitle\nText.\n\\end{document}\n",
-    (0, 0),
+    0,
   );
   let want = [vec!["Ann Able", "affiliation=Univ A"], vec![
     "Bob Baker",
     "affiliation=Univ A",
   ]];
-  assert_eq!(off, want);
   assert_eq!(two, want);
 }
 
@@ -77,13 +74,12 @@ fn a_byline_word_alone_is_no_name() {
 #[test]
 fn an_and_line_after_a_space_goes_on_with_the_names() {
   // (pdflatex: "Ann Able and Bob Baker" over "and Cat Cole")
-  let (off, two) = both(
+  let two = both(
     "\\documentclass{article}\n\\title{T}\n\\author{Ann Able and Bob Baker\\\\ \\quad and Cat \
      Cole}\n\\begin{document}\n\\maketitle\nText.\n\\end{document}\n",
-    (0, 0),
+    0,
   );
   let want = [vec!["Ann Able"], vec!["Bob Baker"], vec!["Cat Cole"]];
-  assert_eq!(off, want);
   assert_eq!(two, want);
 }
 
@@ -97,17 +93,14 @@ fn a_byline_word_on_an_affiliation_line_keeps_its_ink() {
   let want = [vec!["Ann Able", "affiliation=By Lee Hall, Univ X"]];
   let italic = "Lee Hall, <text font=\"italic\"";
   // (pdflatex: "Ann Able" over "By Lee Hall, Univ X", both)
-  for (spacing, off_too) in [("\\quad ", false), (" ", true)] {
+  for (spacing, _) in [("\\quad ", false), (" ", true)] {
     let tex = format!(
       "\\documentclass{{article}}\n\\begin{{document}}\n\\title{{T}}\\author{{Ann Able \\\\ By{spacing}Lee Hall, \
        \\textit{{Univ X}}}}\n\\maketitle\nText.\n\\end{{document}}\n"
     );
-    let (off, two) = both(&tex, (0, 0));
+    let two = both(&tex, 0);
     assert_eq!(two, want, "{spacing}");
-    let xml = super::perfect_kernel_batchz4::run(&tex, 2).1;
+    let xml = super::perfect_kernel_batchz4::run(&tex).1;
     assert!(xml.contains(italic), "{xml}");
-    if off_too {
-      assert_eq!(off, want);
-    }
   }
 }

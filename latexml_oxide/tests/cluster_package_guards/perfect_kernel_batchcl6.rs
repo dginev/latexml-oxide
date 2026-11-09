@@ -46,70 +46,45 @@ fn paragraphs(xml: &str) -> Vec<String> {
     .collect()
 }
 
-/// The decline's Warning at `=2` (the block whole), none off.
-fn expected_warnings(emit: &str) -> usize { usize::from(emit == "2") }
-
 /// The group repro: `\maketitle` leaves the group level at 1 and the body's `\footnote` is a footnote in the body, the
 /// title-page deposit (the printed affiliation, the default contributor line) kept — at `=2` the level was 2, the note
 /// a `<pubnote>` and the deposit dropped, with an "open groups" Warning.
 #[test]
 fn a_two_argument_affil_keeps_its_meaning_and_closes_its_groups() {
-  for (emit, names) in [
-    ("0", vec![row(&["Ann Able ∗"])]),
-    ("2", vec![row(&["Ann Able ∗"])]),
-  ] {
-    let (log, xml) = in_a_directory(repro!("cl6_pnas_affil_group.tex"), &[CLASS], &[(
-      "LATEXML_FM_EMIT",
-      emit,
-    )]);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, expected_warnings(emit)),
-      "emit={emit}: {log}"
-    );
-    assert!(log.contains("GROUPLEVEL=1"), "emit={emit}: {log}");
-    assert!(!log.contains("open groups"), "emit={emit}: {log}");
-    assert_eq!(creators(&xml), names, "emit={emit}");
-    assert!(!xml.contains("<pubnote"), "emit={emit}: {xml}");
-    assert_eq!(
-      paragraphs(&xml),
-      [
-        "∗Univ X",
-        "Submitted to the Proceedings",
-        "Body 1 1 footnote 1 BODYNOTE alpha. text."
-      ],
-      "emit={emit}: {xml}"
-    );
-    assert!(
-      xml.contains(r#"<p xml:id="p3.1">Body<note mark="1" role="footnote" xml:id="footnote1">"#),
-      "emit={emit}: {xml}"
-    );
-  }
+  let names = vec![row(&["Ann Able ∗"])];
+  let (log, xml) = in_a_directory(repro!("cl6_pnas_affil_group.tex"), &[CLASS], &[]);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(log.contains("GROUPLEVEL=1"), "{log}");
+  assert!(!log.contains("open groups"), "{log}");
+  assert_eq!(creators(&xml), names);
+  assert!(!xml.contains("<pubnote"), "{xml}");
+  assert_eq!(
+    paragraphs(&xml),
+    [
+      "∗Univ X",
+      "Submitted to the Proceedings",
+      "Body 1 1 footnote 1 BODYNOTE alpha. text."
+    ],
+    "{xml}"
+  );
+  assert!(
+    xml.contains(r#"<p xml:id="p3.1">Body<note mark="1" role="footnote" xml:id="footnote1">"#),
+    "{xml}"
+  );
 }
 
 /// The `\contributor` line `\@maketitle` prints is in the title-page deposit at `=2` as off — at `=2` the deposit was
 /// dropped and the line counted `unclaimed`.
 #[test]
 fn the_contributor_line_is_written_at_2_as_off() {
-  for (emit, names) in [
-    ("0", vec![row(&["Ann Able ∗"]), row(&["Bob Baker †"])]),
-    ("2", vec![row(&["Ann Able ∗ and Bob Baker †"])]),
-  ] {
-    let (log, xml) = in_a_directory(repro!("cl6_pnas_contributor.tex"), &[CLASS], &[(
-      "LATEXML_FM_EMIT",
-      emit,
-    )]);
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, expected_warnings(emit)),
-      "emit={emit}: {log}"
-    );
-    assert!(!log.contains("unclaimed"), "emit={emit}: {log}");
-    assert_eq!(creators(&xml), names, "emit={emit}");
-    assert_eq!(
-      paragraphs(&xml),
-      ["∗Univ X,†Univ Y", "Submitted by Carl Contributor", "Text."],
-      "emit={emit}: {xml}"
-    );
-  }
+  let names = vec![row(&["Ann Able ∗ and Bob Baker †"])];
+  let (log, xml) = in_a_directory(repro!("cl6_pnas_contributor.tex"), &[CLASS], &[]);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(!log.contains("unclaimed"), "{log}");
+  assert_eq!(creators(&xml), names);
+  assert_eq!(
+    paragraphs(&xml),
+    ["∗Univ X,†Univ Y", "Submitted by Carl Contributor", "Text."],
+    "{xml}"
+  );
 }

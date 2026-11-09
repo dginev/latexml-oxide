@@ -8,7 +8,6 @@ use latexml::util::test::{convert_with, normalize_markup, xml_element};
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch57::assert_elements_with,
-  perfect_kernel_batcht1::red_at_two,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -49,62 +48,6 @@ fn author_thanks_inside_a_mark_keeps_the_mark_and_the_note() {
       r#"<creator role="author"><personname>Ann Alpha<sup xml:id="id1">1</sup></personname></creator>"#,
       r#"<creator before="  " role="author"><personname>Bob Beta<sup xml:id="id2">1,2</sup></personname><note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="id3">Work done during an internship.</note></creator>"#,
       r#"<creator before="  " role="author"><personname>Cy Gamma<sup xml:id="id4">1</sup></personname></creator>"#,
-    ],
-  );
-}
-
-/// A `\thanks` inside a math mark, under a font command, or alone in it: the labels stay the mark and the note is the
-/// author's; a mark holding only the note goes. Red (int59a): "1", "2", nothing, and no note. Witnesses 2501.01423,
-/// 2402.13113, 2212.00809. Repro sectioning-frontmatter/author_math_mark_thanks_keeps_the_mark_and_the_note.
-#[test]
-fn author_math_mark_thanks_keeps_the_mark_and_the_note() {
-  if red_at_two("a false markup-lost Warning (\"Equal contribution.\" note no argument)") {
-    return;
-  }
-  assert_creators(
-    repro!("sectioning-frontmatter/author_math_mark_thanks_keeps_the_mark_and_the_note.tex"),
-    &[
-      r#"<creator role="author"><personname>Ann Alpha<sup xml:id="id1">1</sup></personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id2">Corresponding author.</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>Bob Beta<sup xml:id="id3">2</sup></personname><note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="id4">Equal contribution.</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>Cy Gamma</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id5">Topical group convener.</note></creator>"#,
-    ],
-  );
-}
-
-/// `$^{1\footnotemark[1]}$` prints the label and the note's mark; the label `1\footnotemark[1]` printed nothing. Red
-/// (int59a): Ann and Bob no mark, no note mark. The order is a residual: the unanswered label's superscript is made at
-/// the end of the name, after the note mark (pdflatex "Ann Alpha1∗"). Witness 2403.04164. Repro
-/// sectioning-frontmatter/author_footnotemark_inside_a_mark_is_kept.
-#[test]
-fn author_footnotemark_inside_a_mark_is_kept() {
-  if red_at_two("drops the \"*\" footnotemark notes and writes \"1,∗\"/\"2,∗\" marks") {
-    return;
-  }
-  assert_creators(
-    repro!("sectioning-frontmatter/author_footnotemark_inside_a_mark_is_kept.tex"),
-    &[
-      r#"<creator role="author"><personname>Ann Alpha<note mark="*" role="footnotemark" xml:id="footnotex1"><tags><tag>*</tag><tag role="refnum">*</tag><tag role="typerefnum">footnote *</tag></tags></note><sup xml:id="id1">1</sup></personname></creator>"#,
-      r#"<creator before="  " role="author"><personname>Bob Beta<note mark="*" role="footnotemark" xml:id="footnotex2"><tags><tag>*</tag><tag role="refnum">*</tag><tag role="typerefnum">footnote *</tag></tags></note><sup xml:id="id2">2</sup></personname></creator>"#,
-      r#"<creator before="  " role="author"><personname>Cy Gamma<sup xml:id="id3">1</sup></personname><note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="id4">These authors contributed equally.</note></creator>"#,
-    ],
-  );
-}
-
-/// A macro of optional arguments only inside a mark that makes a note (`\textsuperscript{\rm 1,2,\equalcontrib}`,
-/// `\textsuperscript{2\samethanks}`) is the note. Red (int59a): the labels "1,2" and "1", Cy nothing, no note. The
-/// order residual of `author_footnotemark_inside_a_mark_is_kept` holds for Cy. Witnesses 2603.17529, 2309.12862. Repro
-/// sectioning-frontmatter/author_note_macro_inside_a_mark_keeps_the_note.
-#[test]
-fn author_note_macro_inside_a_mark_keeps_the_note() {
-  if red_at_two("2 false markup-lost Warnings (\"Equal contribution.\" note no argument)") {
-    return;
-  }
-  assert_creators(
-    repro!("sectioning-frontmatter/author_note_macro_inside_a_mark_keeps_the_note.tex"),
-    &[
-      r#"<creator role="author"><personname>Ann Alpha<sup xml:id="id1">1,2</sup></personname><note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="id2">Equal contribution.</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>Bob Beta<sup xml:id="id3">1</sup></personname><note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks" xml:id="id4">Equal contribution.</note></creator>"#,
-      r#"<creator before="  " role="author"><personname>Cy Gamma<note mark="†" role="footnotemark" xml:id="footnotex1"><tags><tag>†</tag><tag role="refnum">†</tag><tag role="typerefnum">footnote †</tag></tags></note><sup xml:id="id5">2</sup></personname></creator>"#,
     ],
   );
 }

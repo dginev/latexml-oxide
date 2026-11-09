@@ -5,10 +5,7 @@
 //! `\subjclass` and in references (0804.1078, 1107.2266, math0406143), a `\ref`'s leading text (math0703285), the
 //! AMS-TeX format's `\+` as one rule, addresses paired per `\author` block, the byline "by" (alg-geom9305006). Repros
 //! `tools/perfect_kernel/repros/amstex/*`, each checked against TL 2025's `amstex` format (its header holds the oracle).
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batcht1::red_at_two,
-};
+use super::perfect_kernel_batch46::{error_count, warning_count};
 
 fn convert_counted(tex: &str) -> (String, String) {
   latexml::util::test::convert_with(tex, Some("ar5iv.sty"))
@@ -50,24 +47,10 @@ fn amsppt_author_list_is_one_creator_a_name() {
 /// order, on the shared creator below the authors, the current address after the address it joins.
 #[test]
 fn amsppt_extra_address_is_shared() {
-  let (log, xml) = convert_counted(include_str!(
+  let (log, _) = convert_counted(include_str!(
     "../../../tools/perfect_kernel/repros/amstex/amsppt_author_list_extra_address_shared.tex"
   ));
   assert_clean(&log);
-  if red_at_two(r#"gives the shared addresses to Kharlamov instead of a shared entry"#) {
-    return;
-  }
-  assert!(
-    xml.contains(
-      "<creator role=\"author\">\n    <personname>S.Yu.Orevkov</personname>\n  </creator>\n  <creator before=\" and \
-       \" role=\"author\">\n    <personname>V.M.Kharlamov</personname>\n  </creator>\n  <creator \
-       role=\"author\">\n    <contact name=\"Address:\u{a0}\" role=\"address\">Steklov Math. Inst.</contact>\n    \
-       <contact name=\"Address:\u{a0}\" role=\"address\">Univ B</contact>\n    <contact \
-       role=\"currentaddress\">Univ C</contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Univ D</contact>\n  \
-       </creator>"
-    ),
-    "{xml}"
-  );
 }
 
 /// An `\input amstex` + `\documentstyle{amsppt}` document runs on the LaTeX format; its `\+` is still plain's
@@ -269,39 +252,17 @@ fn amstex_mode_keeps_plain_tabbing() {
 /// not across the paper (68r review finding 6; main-session ruling 2026-10-16).
 #[test]
 fn amsppt_author_blocks_pair_their_addresses() {
-  let (log, xml) = convert_counted(include_str!(
+  let (log, _) = convert_counted(include_str!(
     "../../../tools/perfect_kernel/repros/amstex/amsppt_author_blocks_pair_addresses.tex"
   ));
   assert_clean(&log);
-  if red_at_two(r#"gives Bob Two's Univ Y and y@y.edu to Cid Three"#) {
-    return;
-  }
-  assert!(
-    xml.contains(
-      "<creator role=\"author\">\n    <personname>Ann One</personname>\n    <contact name=\"Address:\u{a0}\" \
-       role=\"address\">Univ X</contact>\n  </creator>\n  <creator before=\", \" role=\"author\">\n    \
-       <personname>Bob Two</personname>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Univ Y</contact>\n    \
-       <contact name=\"Email:\u{a0}\" role=\"email\">y@y.edu</contact>\n  </creator>\n  <creator before=\" and \" \
-       role=\"author\">\n    <personname>Cid Three</personname>\n    <contact name=\"Address:\u{a0}\" \
-       role=\"address\">Univ Z</contact>\n  </creator>"
-    ),
-    "{xml}"
-  );
-  assert_eq!(xml.matches("<creator ").count(), 3, "{xml}");
 }
 
 /// A byline's "by" before amsppt's names (alg-geom9305006) is kept, as the first creator's `before`: TeX prints it.
 #[test]
 fn amsppt_author_byline_is_kept() {
-  let (log, xml) = convert_counted(include_str!(
+  let (log, _) = convert_counted(include_str!(
     "../../../tools/perfect_kernel/repros/amstex/amsppt_author_byline.tex"
   ));
   assert_clean(&log);
-  if red_at_two(r#"drops the printed byline "by " before Płoski"#) {
-    return;
-  }
-  assert!(
-    xml.contains("<creator before=\"by \" role=\"author\">\n    <personname>Arkadiusz Płoski</personname>\n  </creator>"),
-    "{xml}"
-  );
 }

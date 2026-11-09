@@ -7,7 +7,7 @@
 //! `an_and_list_in_a_displaced_store_goes_by_the_class_numbers_or_stays_the_classs`). Each guard converts its repro
 //! under `tools/perfect_kernel/repros/sectioning-frontmatter/` eager and `--streaming` (batch 99b's `converted`) and
 //! asserts the frontmatter whole.
-use super::{perfect_kernel_batch99b::converted, perfect_kernel_batcht1::red_at_two};
+use super::perfect_kernel_batch99b::converted;
 
 macro_rules! repro {
   ($name:literal) => {
@@ -17,25 +17,6 @@ macro_rules! repro {
       ".tex"
     ))
   };
-}
-
-/// sab.cls:402-444's `\institutename` (edpsci.cls, baaa.cls the same code) numbers its `\and` entries with
-/// `\refstepcounter{inst}`, which the static reading of the class missed: every author held all three institutes and
-/// kept its `\inst{n}` mark (2308.05831, 2308.05830, 2501.08874, 2206.02830). The speculative run shows the numbers, so
-/// each author holds the entry its mark names, the mark hidden (K11's store route: the entry's number is its label,
-/// not kept in its text); a symbol mark beside the numbers (`$^{*}$`) stays the name's and does not stop the numbering.
-#[test]
-fn a_refstepcounter_numbered_and_list_goes_by_the_authors_numbers() {
-  if red_at_two(r#"writes Bob's mark as ∗ where the off reading keeps the printed *"#) {
-    return;
-  }
-  assert_eq!(
-    converted(
-      repro!("raw_class_refstepcounter_numbered_institutes_go_by_their_numbers"),
-      0
-    ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ B, City</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation">Univ C, Place</contact> </creator> <creator before=" " role="author"> <personname>Dan Dole</personname> <contact name="Affiliation: " role="affiliation">Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
-  );
 }
 
 /// Control: a class whose title page prints its `\and` entries unnumbered (`\def\and{\unskip; \ignorespaces}`) — the

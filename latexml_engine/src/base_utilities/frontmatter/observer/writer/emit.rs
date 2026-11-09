@@ -11,7 +11,6 @@ use std::{
   cell::Cell,
   collections::{BTreeMap, BTreeSet, btree_map::Entry as Entry2},
   rc::Rc,
-  sync::OnceLock,
 };
 
 use latexml_core::document::tag::RawFrontmatter;
@@ -55,23 +54,13 @@ thread_local! {
   static FM_EMIT_OVERRIDE: Cell<Option<u8>> = const { Cell::new(None) };
 }
 
-/// The frontmatter emitter's switch, the one place `LATEXML_FM_EMIT` is read (once per process), or this thread's test
-/// override: 2, the default (unset or unreadable), each call queues one whole block and the emitter writes it; 0 the old
-/// driver (the reader at the call and the writer), reachable until its deletion (Z18-Z19); 1 the reader still runs at the
-/// call (OD #980).
-pub fn fm_emit_mode() -> u8 {
-  static MODE: OnceLock<u8> = OnceLock::new();
-  FM_EMIT_OVERRIDE.with(Cell::get).unwrap_or_else(|| {
-    *MODE.get_or_init(|| {
-      std::env::var("LATEXML_FM_EMIT")
-        .ok()
-        .and_then(|v| v.trim().parse().ok())
-        .unwrap_or(2)
-    })
-  })
-}
+/// The frontmatter emitter's switch, fixed at 2 (DEL1, OD #980): each call queues one whole block and the emitter writes
+/// it. `LATEXML_FM_EMIT` is no longer read and the test override is ignored; the old driver's `=0`/`=1` branches behind
+/// this constant go with the engine (DEL2), the function staying until its call sites collapse.
+pub fn fm_emit_mode() -> u8 { 2 }
 
-/// Set (`Some`) or clear (`None`) this thread's override of the switch (tests: the environment is read-only to them).
+/// Set (`Some`) or clear (`None`) this thread's override of the switch — no effect since DEL1 (`fm_emit_mode` is fixed
+/// at 2); kept for its last caller, this module's unit test, until DEL2 deletes both.
 pub fn set_fm_emit_override(mode: Option<u8>) { FM_EMIT_OVERRIDE.with(|o| o.set(mode)); }
 
 /// The State value saying a flush emitted (the writer has nothing left to do, `write_observed_frontmatter`): the ledger's

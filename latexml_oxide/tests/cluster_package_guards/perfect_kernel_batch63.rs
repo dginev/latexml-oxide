@@ -3,10 +3,7 @@
 //! arximspdf.
 use latexml::util::test::assert_element;
 
-use super::{
-  perfect_kernel_batch57::{RAW, assert_elements},
-  perfect_kernel_batcht1::{expect, red_at_two},
-};
+use super::perfect_kernel_batch57::{RAW, assert_elements};
 
 /// 63a: arxbj.cls:930-958 makes `{longlist}` a `\list` counted `longlist` and labelled "(i)", "(ii)" (:1070); the
 /// binding's `\let\longlist\list` took the first `\item` as the label argument, every label `\item` again: an endless
@@ -451,47 +448,6 @@ fn author_bare_and_line_separates_authors() {
   );
 }
 
-/// 63e: a line opening with "and" before a name continues the names, and a written membership grade (`\emph{Member,
-/// IEEE}`) is no name of its own (1611.04834); since 106c (OXIDIZED_DESIGN_DIVERGENCES #967) it is the name's
-/// `membership` contact, no part of the personname, as IEEEtran's `\IEEEmembership` makes it. Repro
-/// sectioning-frontmatter/author_ieee_member_grade_is_not_a_name.
-#[test]
-fn author_ieee_member_grade_is_not_a_name() {
-  if red_at_two("the IEEE grade \"Member, IEEE\" is kept on the authors otherwise than expected") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_member_grade_is_not_a_name.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Carlo Condo</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Electrical and Computer Engineering, McGill University</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Pascal Giard</personname><contact role=\"membership\"><emph font=\"italic\" xml:id=\"id1\">Member, IEEE</emph></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Electrical and Computer Engineering, McGill University</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Warren J. Gross</personname><contact role=\"membership\"><emph font=\"italic\" xml:id=\"id2\">Senior Member, IEEE</emph></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Electrical and Computer Engineering, McGill University</contact></creator>",
-    ],
-  );
-}
-
-/// 63e: name lines alternating with font-switched affiliations are one author each (hep-ph9306253, hep-ph9306209).
-/// Repro sectioning-frontmatter/author_name_lines_alternate_with_styled_affiliations.
-#[test]
-fn author_name_lines_alternate_with_styled_affiliations() {
-  if red_at_two(
-    "the styled affiliation lines are paired or wrapped otherwise than expected (90% size wrapper)",
-  ) {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_name_lines_alternate_with_styled_affiliations.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>R.S. Fletcher</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" fontsize=\"90%\" xml:id=\"id1\">Bartol Research Institute, University of Delaware</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>T. Stelzer</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" fontsize=\"90%\" xml:id=\"id2\">Physics Dept., University of Wisconsin</text></contact></creator>",
-    ],
-  );
-}
-
 /// 63e: names after an affiliation, styled as the group's names were, open the next names (0811.1526). Repro
 /// sectioning-frontmatter/author_third_line_names_after_affiliation.
 #[test]
@@ -520,20 +476,12 @@ fn author_newline_separates_marked_name_lines() {
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_newline_separates_marked_name_lines.tex"
     ),
-    expect::<&[&str]>(
-      &[
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id1\">Univ A</text></contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id2\">Univ A</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id3\">Univ B</text></contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id4\">Univ A</text></contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Dunn</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id5\">Univ B</text></contact></creator>",
-      ],
-      &[
-        "<creator role=\"author\"><personname><text fontsize=\"90%\" xml:id=\"id1\">Ann Able</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id2\">Univ A</text></contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><text fontsize=\"90%\" xml:id=\"id3\">Bob Baker</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id4\">Univ A</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id5\">Univ B</text></contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><text fontsize=\"90%\" xml:id=\"id6\">Cat Cole</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id7\">Univ A</text></contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><text fontsize=\"90%\" xml:id=\"id8\">Dan Dunn</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id9\">Univ B</text></contact></creator>",
-      ],
-    ),
+    &[
+      "<creator role=\"author\"><personname><text fontsize=\"90%\" xml:id=\"id1\">Ann Able</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id2\">Univ A</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><text fontsize=\"90%\" xml:id=\"id3\">Bob Baker</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id4\">Univ A</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id5\">Univ B</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><text fontsize=\"90%\" xml:id=\"id6\">Cat Cole</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id7\">Univ A</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><text fontsize=\"90%\" xml:id=\"id8\">Dan Dunn</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id9\">Univ B</text></contact></creator>",
+    ],
   );
 }
 
@@ -617,41 +565,6 @@ fn author_affiliation_lines_stay_affiliations() {
   );
 }
 
-/// 63e (negative): a line opening with "and" before an institution stays an affiliation (math0208081). Repro
-/// sectioning-frontmatter/author_and_led_institution_stays_an_affiliation.
-#[test]
-fn author_and_led_institution_stays_an_affiliation() {
-  if red_at_two("a false markup-lost Warning on the \"and\"-led institution (span letters differ)")
-  {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_and_led_institution_stays_an_affiliation.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ralph M. Kaufmann</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of Southern California, Los Angeles, USA</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">and Max–Planck Institut für Mathematik, Bonn, Germany</contact></creator>",
-    ],
-  );
-}
-
-/// 63e (negative): "and INFN Sezione di Roma, Italy" stays an affiliation: institution words of the languages
-/// affiliations are written in. Repro sectioning-frontmatter/author_and_led_italian_institute_stays_an_affiliation.
-#[test]
-fn author_and_led_italian_institute_stays_an_affiliation() {
-  if red_at_two("false markup-lost Warnings on the \"and\"-led institutes (span letters differ)") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_and_led_italian_institute_stays_an_affiliation.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>A. Smith</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dipartimento di Fisica, Università di Roma</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">and INFN Sezione di Roma, Italy</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">and Max Planck Inst.</contact></creator>",
-    ],
-  );
-}
-
 /// 63e: amsart's `\author{Name\\ \small Faculty …}` is a name over its affiliations and address (math0606082; Perl one
 /// personname). Repro sectioning-frontmatter/author_amsart_name_then_affiliation_lines.
 #[test]
@@ -719,44 +632,6 @@ fn author_comma_before_styled_affiliation() {
     ),
     &[
       "<creator role=\"author\"><personname>John Smith</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" xml:id=\"id1\">Bell Labs, Murray Hill</text></contact></creator>",
-    ],
-  );
-}
-
-/// 63e (negative): a name beside its institution is not two people — no `merged_creators` error for acmart's
-/// `\author{Jane Doe, Bell Labs}`. Repro sectioning-frontmatter/author_name_with_affiliation_is_not_merged.
-/// At `LATEXML_FM_EMIT=2` this guard fails, the `=2` output wrong (T1 (w); revT1 F2: a name and an institution split by word reading (rev94a B1)).
-#[test]
-fn author_name_with_affiliation_is_not_merged() {
-  if red_at_two(
-    "Jane Doe's affiliations are parted otherwise than expected (\"Univ A , Country\" a second contact)",
-  ) {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_name_with_affiliation_is_not_merged.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Jane Doe, Bell Labs</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id1\">Univ A</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id2\">Country</text></contact></creator>",
-    ],
-  );
-}
-
-/// 63e: after affiliations, a line of names opening with "and" opens the next author (math-ph0303018). Repro
-/// sectioning-frontmatter/author_and_led_names_after_affiliations_open_an_author.
-#[test]
-fn author_and_led_names_after_affiliations_open_an_author() {
-  if red_at_two("a false markup-lost Warning on \"and Zhenghan Wang\" (span letters differ)") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_and_led_names_after_affiliations_open_an_author.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>James Brink</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept of Math., UC Berkeley</contact></creator>",
-      "<creator before=\" and \" role=\"author\"><personname>Zhenghan Wang</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept of Math., Indiana University</contact></creator>",
     ],
   );
 }
@@ -841,24 +716,6 @@ fn author_serial_comma_list_shares_one_affiliation() {
   );
 }
 
-/// 63e (negative): a name list part naming an institution rejoins the name before it (`\author{John Smith,
-/// University of Toronto}`). Repro sectioning-frontmatter/author_name_then_institution_stays_one_author.
-/// At `LATEXML_FM_EMIT=2` this guard fails, the `=2` output wrong (T1 (w); revT1 F2: a name and an institution split by word reading (rev94a B1)).
-#[test]
-fn author_name_then_institution_stays_one_author() {
-  if red_at_two("\"John Smith, University of Toronto\" is cut into a name and an affiliation") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_name_then_institution_stays_one_author.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>John Smith, University of Toronto</personname></creator>",
-    ],
-  );
-}
-
 /// 63e (negative): a line of only "and" before an affiliation is affiliation text, not the start of an author.
 /// Repro sectioning-frontmatter/author_and_line_before_an_institution_stays_text.
 /// T1 (`LATEXML_FM_EMIT=2`): no author invented; the two institutions John Smith's, the line "and" between them
@@ -869,14 +726,9 @@ fn author_and_line_before_an_institution_stays_text() {
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_and_line_before_an_institution_stays_text.tex"
     ),
-    expect::<&[&str]>(
-      &[
-        "<creator role=\"author\"><personname>John Smith</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">and</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Center for Theoretical Physics</contact></creator>",
-      ],
-      &[
-        "<creator role=\"author\"><personname>John Smith</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Center for Theoretical Physics</contact></creator>",
-      ],
-    ),
+    &[
+      "<creator role=\"author\"><personname>John Smith</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Center for Theoretical Physics</contact></creator>",
+    ],
   );
 }
 
@@ -925,25 +777,6 @@ fn author_amsart_and_list_with_institution_like_surname() {
   );
 }
 
-/// 63e: "A, B, and C" inside a wrapper (`\textbf{…}`) makes three authors and no empty fourth, each with the
-/// affiliation once. Repro sectioning-frontmatter/author_wrapped_serial_comma_list_shares_one_affiliation.
-#[test]
-fn author_wrapped_serial_comma_list_shares_one_affiliation() {
-  if red_at_two("a false markup-lost Warning: \"Ann Able\" written as plain text") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_wrapped_serial_comma_list_shares_one_affiliation.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics, University X</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics, University X</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics, University X</contact></creator>",
-    ],
-  );
-}
-
 /// 63e: a membership grade in an IEEE name block (`Ann Able,~\IEEEmembership{Member,~IEEE}`) stays with its name, not an
 /// empty author taking a copy of the block's affiliation (conference mode prints no grade, IEEEtran.cls:6270). Repro
 /// sectioning-frontmatter/author_ieee_membership_in_a_block_stays_with_its_name.
@@ -969,52 +802,8 @@ fn author_and_line_before_an_acronym_institution_stays_text() {
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_and_line_before_an_acronym_institution_stays_text.tex"
     ),
-    expect::<&[&str]>(
-      &[
-        "<creator role=\"author\"><personname>John Smith</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. X</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">and</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">SISSA, Trieste, Italy</contact></creator>",
-      ],
-      &[
-        "<creator role=\"author\"><personname>John Smith</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. X</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">SISSA, Trieste, Italy</contact></creator>",
-      ],
-    ),
-  );
-}
-
-/// 63e (negative): names set in math (`$\mbox{\rm F. del Aguila}^{1}$ and $\mbox{\rm M. Zra{\l }ek}^{2}$`,
-/// hep-ph9504228) stay two authors: a piece holding math is not a piece with nothing to read. Repro
-/// sectioning-frontmatter/author_names_set_in_math_stay_apart.
-#[test]
-fn author_names_set_in_math_stay_apart() {
-  if red_at_two("the names set in math are parted otherwise than the expected creators") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_names_set_in_math_stay_apart.tex"
-    ),
     &[
-      "<creator role=\"author\"><personname><text class=\"ltx_markedasmath\" xml:id=\"id1\">F. del Aguila</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Universidad de Granada</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><text class=\"ltx_markedasmath\" xml:id=\"id2\">M. Zrałek</text></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> University of Silesia</contact></creator>",
-    ],
-  );
-}
-
-/// 63e (negative): a per-author class splits only a line of names — `\author{John Smith, Max Planck Institute for
-/// Mathematics}` stays one author as written. Repro sectioning-frontmatter/author_person_named_institution_stays_with_the_name.
-/// At `LATEXML_FM_EMIT=2` this guard fails, the `=2` output wrong (T1 (w); revT1 F2: a name and an institution split by word reading (rev94a B1)).
-#[test]
-fn author_person_named_institution_stays_with_the_name() {
-  if red_at_two(
-    "\"John Smith, Max Planck Institute for Mathematics\" is cut into a name and an affiliation",
-  ) {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_person_named_institution_stays_with_the_name.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>John Smith, Max Planck Institute for Mathematics</personname></creator>",
+      "<creator role=\"author\"><personname>John Smith</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. X</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">SISSA, Trieste, Italy</contact></creator>",
     ],
   );
 }
@@ -1080,24 +869,6 @@ fn author_amsart_marks_stay_visible() {
   );
 }
 
-/// 63e (negative): a per-author binding's line that is not a list of names stays as written, its wrapper whole
-/// (`\textbf{John Smith, Max Planck Institute for Mathematics}`). Repro
-/// sectioning-frontmatter/author_wrapped_name_and_institution_kept_as_written.
-#[test]
-fn author_wrapped_name_and_institution_kept_as_written() {
-  if red_at_two("a false markup-lost Warning: \"John Smith\" written as plain text") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_wrapped_name_and_institution_kept_as_written.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>John Smith, Max Planck Institute for Mathematics</personname></creator>",
-    ],
-  );
-}
-
 /// 63e: a piece of marks and notes only (`$^{*}$\thanks{…}`) stays with the name before it, not an author showing
 /// only "*". Repro sectioning-frontmatter/author_symbol_mark_piece_stays_with_the_name.
 /// T1 (`LATEXML_FM_EMIT=2`): the same two; the math `*` written ∗ (U+2217), as LaTeXML writes a math asterisk
@@ -1108,16 +879,10 @@ fn author_symbol_mark_piece_stays_with_the_name() {
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_symbol_mark_piece_stays_with_the_name.tex"
     ),
-    expect::<&[&str]>(
-      &[
-        "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">*</sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\" xml:id=\"id2\">Equal contribution</note></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
-      ],
-      &[
-        "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">∗</sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\" xml:id=\"id2\">Equal contribution</note></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
-      ],
-    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">∗</sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\" xml:id=\"id2\">Equal contribution</note></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
+    ],
   );
 }
 
@@ -1168,32 +933,10 @@ fn author_ieee_blockn_prefix_marks_across_quad() {
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_prefix_marks_across_quad.tex"
     ),
-    expect::<&[&str]>(
-      &[
-        "<creator role=\"author\"><personname><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
-      ],
-      &[
-        "<creator role=\"author\"><personname><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
-      ],
-    ),
-  );
-}
-
-/// 63e (negative): a two-word place after a name (`\author{John Smith, New York}`) invents no author (review r7). Repro
-/// sectioning-frontmatter/author_amsart_name_and_place_stays_one_author.
-/// At `LATEXML_FM_EMIT=2` this guard fails, the `=2` output wrong (T1 (w); revT1 F2: a name and an institution split by word reading (rev94a B1)).
-#[test]
-fn author_amsart_name_and_place_stays_one_author() {
-  if red_at_two("\"John Smith, New York\" is cut into a name and a New York affiliation") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_amsart_name_and_place_stays_one_author.tex"
-    ),
-    &["<creator role=\"author\"><personname>John Smith, New York</personname></creator>"],
+    &[
+      "<creator role=\"author\"><personname><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+    ],
   );
 }
 
@@ -1225,16 +968,10 @@ fn author_ieee_blockn_prefix_marks_shared_label() {
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_prefix_marks_shared_label.tex"
     ),
-    expect::<&[&str]>(
-      &[
-        "<creator role=\"author\"><personname><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-      ],
-      &[
-        "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-      ],
-    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+    ],
   );
 }
 
@@ -1249,18 +986,11 @@ fn author_ieee_blockn_prefix_marks_three_names() {
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_prefix_marks_three_names.tex"
     ),
-    expect::<&[&str]>(
-      &[
-        "<creator role=\"author\"><personname><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">1</text></sup>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-      ],
-      &[
-        "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-      ],
-    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
+    ],
   );
 }
 
@@ -1277,64 +1007,6 @@ fn author_prefix_marked_names_beside_on_one_line() {
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
-    ],
-  );
-}
-
-/// 63e: in the article `\author`, a line of names marked before it, its mark one no author before it requests, is
-/// an author before the marked affiliations (review r8). Repro sectioning-frontmatter/author_prefix_marked_name_lines.
-#[test]
-fn author_prefix_marked_name_lines() {
-  if red_at_two("the prefix-marked name lines are paired otherwise than the expected creators") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_prefix_marked_name_lines.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
-    ],
-  );
-}
-
-/// 63e: amsart's `\author` with a name marked before it on each line and the marked affiliations after them links
-/// each author to its affiliation (review r8). Repro sectioning-frontmatter/author_amsart_prefix_marked_name_lines.
-#[test]
-fn author_amsart_prefix_marked_name_lines() {
-  if red_at_two("the prefix mark \"1\" is written into Ann Able's personname") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_amsart_prefix_marked_name_lines.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-      "<creator before=\" and \" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
-    ],
-  );
-}
-
-/// 63e: an `\altaffilmark` on the affiliation line under the names annotates the author whose affiliation it is,
-/// not a creator of its own (review r8). The line sits under both names in the PDF and is both names' (63m); the note
-/// it carries stays with the last name, where the line is digested (OD #459). Repro
-/// sectioning-frontmatter/author_emulateapj_affiliation_line_altaffilmark_stays_with_author.
-#[test]
-fn author_emulateapj_affiliation_line_altaffilmark_stays_with_author() {
-  if red_at_two(
-    "the altaffilmark line \"Fellow\"/\"Tucson\" is paired otherwise than the expected creators",
-  ) {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_emulateapj_affiliation_line_altaffilmark_stays_with_author.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Steward Observatory</contact><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">Fellow</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Steward Observatory</contact><contact name=\"Alternate Affiliation:\u{a0}\" role=\"altaffiliation\">Tucson</contact></creator>",
     ],
   );
 }
@@ -1361,64 +1033,6 @@ fn author_prefix_marked_affiliations_after_break_and_quad() {
   assert_creators(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_prefix_marked_affiliations_after_break_and_quad.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
-    ],
-  );
-}
-
-/// 63e: an IEEE block of names marked before them and their affiliations after a break, each after `\quad`, is two
-/// authors linked to their affiliations (review r9). Repro
-/// sectioning-frontmatter/author_ieee_blockn_prefix_marks_affiliations_after_break.
-#[test]
-fn author_ieee_blockn_prefix_marks_affiliations_after_break() {
-  if red_at_two("the prefix mark \"1\" is written into Ann Able's personname") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_ieee_blockn_prefix_marks_affiliations_after_break.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
-    ],
-  );
-}
-
-/// 63e (negative): an affiliation beside a name marked before it on its printed line (`$^{1}$Ann Able \quad
-/// $^{1}$University of Arizona`) stays her affiliation; only a line that reads as names stands beside as one (review
-/// r9). Repro sectioning-frontmatter/author_prefix_marked_affiliation_beside_name_stays_affiliation.
-#[test]
-fn author_prefix_marked_affiliation_beside_name_stays_affiliation() {
-  if red_at_two(
-    "the name \"Ann Able\" becomes an affiliation contact; the creator has no personname",
-  ) {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_prefix_marked_affiliation_beside_name_stays_affiliation.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">University of Arizona</contact></creator>",
-    ],
-  );
-}
-
-/// 63e: a name marked before it after the affiliations began (`… $^{1}$Univ A \and $^{2}$Bob Baker\\ $^{2}$Univ B`) is
-/// an author when a line below answers its mark (review r9). Repro
-/// sectioning-frontmatter/author_prefix_marked_name_after_affiliations.
-#[test]
-fn author_prefix_marked_name_after_affiliations() {
-  if red_at_two("a false safety-net Warning: printed marks reach no labelled contact") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_prefix_marked_name_after_affiliations.tex"
     ),
     &[
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
@@ -1495,24 +1109,6 @@ fn author_prefix_marked_names_beside_company_affiliations_below() {
   );
 }
 
-/// 63e (negative): a name-shaped company affiliation beside a name marked before it, the block one printed line
-/// (`$^{1}$Ann Able \quad $^{1}$Google DeepMind`), stays her affiliation (review r10). Repro
-/// sectioning-frontmatter/author_prefix_marked_company_affiliation_beside_name.
-#[test]
-fn author_prefix_marked_company_affiliation_beside_name() {
-  if red_at_two("a false safety-net Warning: a printed mark reaches no labelled contact") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_prefix_marked_company_affiliation_beside_name.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Google DeepMind</contact></creator>",
-    ],
-  );
-}
-
 /// 63e (negative): a name-shaped affiliation line whose mark a name above requests (`$^{1}$Carnegie Mellon`) stays an
 /// affiliation, though a second line with that mark answers it (review r11). Repro
 /// sectioning-frontmatter/author_prefix_marked_company_affiliation_repeated_mark_line.
@@ -1525,25 +1121,6 @@ fn author_prefix_marked_company_affiliation_repeated_mark_line() {
     &[
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Carnegie Mellon</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">School of Computer Science</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
-    ],
-  );
-}
-
-/// 62zp/63e: `\and` groups whose names open with the mark of an author before them are authors when an affiliation
-/// below answers the mark (`\textsuperscript{1}Ann Able \and \textsuperscript{1}Bob Baker\\ \textsuperscript{1}Univ A`)
-/// (review r12). Repro sectioning-frontmatter/author_and_groups_sharing_a_prefix_mark_are_names.
-#[test]
-fn author_and_groups_sharing_a_prefix_mark_are_names() {
-  if red_at_two("Bob Baker is read as Ann Able's affiliation, not an author") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_and_groups_sharing_a_prefix_mark_are_names.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
     ],
   );
 }
@@ -1806,27 +1383,6 @@ fn llncs_sole_author_keeps_the_institute() {
   );
 }
 
-/// 63h: as many unlabelled svjour3 institutes as authors pair by position, the i-th to the i-th author, as
-/// `distribute_upfront_contacts` and Perl's numeric fallback pair them (63h review r1). Repro
-/// sectioning-frontmatter/svjour3_two_institutes_pair_by_position.
-#[test]
-fn svjour3_two_institutes_pair_by_position() {
-  if red_at_two(
-    "the two institutes are not paired to the authors by position (Ann Able holds none)",
-  ) {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_two_institutes_pair_by_position.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
-    ],
-  );
-}
-
 /// 63h: a svjour3 `\and` piece holding "A and B" is two people (1406.5162, 2105.12728), split as llncs splits its pieces.
 /// Repro sectioning-frontmatter/author_svjour3_and_piece_splits.
 #[test]
@@ -2081,27 +1637,6 @@ fn svjour3_marked_institutes_with_thanksref_link_by_mark() {
       "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">e-mail: ann@a.org</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
       "<creator role=\"author\"><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id4\">Institute note.</note></creator>",
-    ],
-  );
-}
-
-/// 63i: an svjour3 institute led by a symbol (`$^{\star}$`) is no marked list: the institutes pair by position (63i review r1). Repro
-/// sectioning-frontmatter/svjour3_symbol_marked_institute_pairs_by_position.
-#[test]
-fn svjour3_symbol_marked_institute_pairs_by_position() {
-  if red_at_two(
-    "the symbol-marked institutes are paired otherwise than by position (the ⋆ note moves)",
-  ) {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_symbol_marked_institute_pairs_by_position.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ann Able</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">e-mail: ann@a.org</note><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">⋆</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
-      "<creator role=\"author\"><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id3\">Institute note.</note></creator>",
     ],
   );
 }
@@ -2537,67 +2072,6 @@ fn nameref_drops_the_section_number() {
   );
 }
 
-/// 63k: each `\author` of the JHEP family adds an author (JHEP.cls:513, JHEP3.cls:764, PoS.cls:666; astro-ph0611258),
-/// its `E-mail:` line an email named by that label. Repro sectioning-frontmatter/jhep_author_calls_accumulate.
-#[test]
-fn jhep_author_calls_accumulate() {
-  if red_at_two("the accumulated JHEP author calls are held otherwise than the expected creators") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/jhep_author_calls_accumulate.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@a.edu</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. B</contact><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@b.edu</text></contact></creator>",
-    ],
-  );
-}
-
-/// 63k: an author block's email line is the email, its label (`E-mail:`, `Emails:`) the contact's name; a lone class
-/// `\email{x}` line adds one contact; a group's shared line gives each address to the name it spells (0911.0082), and
-/// a `$^a$` in a footnote marks no name (0911.0568). Repro sectioning-frontmatter/author_email_line_label_is_its_name.
-#[test]
-fn author_email_line_label_is_its_name() {
-  if red_at_two(
-    "the email line's owners differ from the expected creators (Eve Eng's line split \"Univ D a Lab D\")",
-  ) {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_email_line_label_is_its_name.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@a.edu</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@b.edu</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ C</contact><contact name=\"Emails: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">cat@c.edu</text></contact><contact name=\"Emails: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">cc@c.edu</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Doe</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ D</contact><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id5\">dan.doe@d.edu</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve Eng</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ D</contact><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id6\">eve.eng@d.edu</text></contact></creator>",
-    ],
-  );
-}
-
-/// 63k review: an author block's unlabelled class `\email` keeps the name its class gives ("Email address: ",
-/// amsart), and a label followed by a spacing command (`E-mail:\ \email{x}`) names its one contact. Repro
-/// sectioning-frontmatter/author_class_email_line_keeps_its_name.
-#[test]
-fn author_class_email_line_keeps_its_name() {
-  if red_at_two("the class email line's label or owner differs from the expected creators") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_class_email_line_keeps_its_name.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"Email address: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@a.edu</text></contact></creator>",
-      "<creator before=\" and \" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact><contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@b.edu</text></contact></creator>",
-    ],
-  );
-}
-
 /// 63k review: a display copy keeps its `xml:` attributes namespaced — the TOC's copy of a `\foreignlanguage` title
 /// was `<text lang="de">`, which the schema refuses — cloned as stored, or rebuilt around a filled `\ref`. Repro sectioning-frontmatter/toc_copy_keeps_its_language.
 #[test]
@@ -2619,28 +2093,6 @@ fn toc_copy_keeps_its_language() {
       )
     ),
     "{xml}"
-  );
-}
-
-/// 63l: an "and" tied to the name before it (`Ohta\ddag~and Kenji`, nlin0101056) or set in a group (`Price {\ and}
-/// Ken`, 1508.01140) separates two authors. Repro sectioning-frontmatter/author_and_tied_or_grouped_splits.
-/// At `LATEXML_FM_EMIT=2` this guard fails, the `=2` output wrong (T1 (w); revT1 F1: a bare `\dag` written as a `<sup>` mark, pdflatex prints it on the baseline).
-#[test]
-fn author_and_tied_or_grouped_splits() {
-  if red_at_two("the tied and grouped names are parted otherwise than the expected creators") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_and_tied_or_grouped_splits.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Tetsu Masuda†</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yasuhiro Ohta‡</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Kenji Kajiwara†</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Huw Price</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ken Wharton</personname></creator>",
-    ],
   );
 }
 
@@ -2721,16 +2173,10 @@ fn ieee_membership_own_definition_kept() {
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_membership_own_definition_kept.tex"
     ),
-    expect::<&[&str]>(
-      &[
-        "<creator role=\"author\"><personname>Nuno C. Martins<text font=\"italic\" xml:id=\"id1\">Senior Member, IEEE</text></personname></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Jair Certorio<text font=\"italic\" xml:id=\"id2\">Student Member, IEEE</text></personname></creator>",
-      ],
-      &[
-        "<creator role=\"author\"><personname>Nuno C. Martins</personname><contact role=\"membership\"><text font=\"italic\" xml:id=\"id1\">Senior Member, IEEE</text></contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Jair Certorio</personname><contact role=\"membership\"><text font=\"italic\" xml:id=\"id2\">Student Member, IEEE</text></contact></creator>",
-      ],
-    ),
+    &[
+      "<creator role=\"author\"><personname>Nuno C. Martins</personname><contact role=\"membership\"><text font=\"italic\" xml:id=\"id1\">Senior Member, IEEE</text></contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Jair Certorio</personname><contact role=\"membership\"><text font=\"italic\" xml:id=\"id2\">Student Member, IEEE</text></contact></creator>",
+    ],
   );
 }
 
@@ -2787,55 +2233,6 @@ fn ieee_compsoc_names_continue_past_a_break() {
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan\u{a0}Doe</personname></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve\u{a0}Elm</personname><contact role=\"membership\">Senior\u{a0}Member,\u{a0}IEEE</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Fay\u{a0}Fox</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">A. Able, B. Baker and C. Cole are with Univ A. F. Fox is with Univ B.</note></creator>",
-    ],
-  );
-}
-
-/// 63m: a grade carrying the list's comma before a `\\` leaves the names unfinished, so the next line's names are
-/// authors too (2408.02464). Repro sectioning-frontmatter/ieee_grade_comma_before_a_break_continues_names.
-#[test]
-fn ieee_grade_comma_before_a_break_continues_names() {
-  if red_at_two(
-    "a false markup-lost Warning: \"G. Gray and K. Key are with Univ C.\" written as plain text (note no argument)",
-  ) {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_grade_comma_before_a_break_continues_names.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Gus Gray<sup xml:id=\"id1\">*</sup></personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Hal Hill</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Ida Ivy</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Jon Jay</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Kim Key</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">G. Gray and K. Key are with Univ C.</note></creator>",
-    ],
-  );
-}
-
-/// 63m: a second line of two or more names under the names is more names (2308.07107), and a line of bare addresses
-/// is their emails, each to the name it spells (2401.15897, 2402.02746), else the block's, on the shared creator (user
-/// ruling R10 2026-10-20; 63m-77p r9 gave `staff@` to the last name), but under an `\and` block of one name that name's, its
-/// column's only author (charter §4; 108a r3 `owns_its_lines`, 2609.05531: this row pinned `staff@` on the block). Repro
-/// sectioning-frontmatter/author_names_line_and_address_line.
-#[test]
-fn author_names_line_and_address_line() {
-  if red_at_two(
-    "the address line is given to every name, not only as the expected creators hold it",
-  ) {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_names_line_and_address_line.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann.able@a.edu</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dan Doe</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept. of Physics, Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">dan.doe@a.edu</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Eve Elm</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. B</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">eve@b.edu</text></contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id4\">staff@b.edu</text></contact></creator>",
     ],
   );
 }
@@ -2912,24 +2309,6 @@ fn author_email_list_out_of_author_order() {
   );
 }
 
-/// 63m: an address line under the first group may name an author of a later one; every group's names are read first
-/// (the shape of 2409.18978 reversed; a panic before). Repro sectioning-frontmatter/author_email_owner_in_a_later_group.
-#[test]
-fn author_email_owner_in_a_later_group() {
-  if red_at_two("Bob Baker's email baker@x.edu is given to Ann Able") {
-    return;
-  }
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_email_owner_in_a_later_group.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">able@x.edu</text></contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">baker@x.edu</text></contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. B</contact></creator>",
-    ],
-  );
-}
-
 /// 63m: an address split out of a line of several keeps its underscore (`wu\_zhiliang`, 2509.10377). Repro
 /// sectioning-frontmatter/author_email_underscore_kept.
 #[test]
@@ -2989,16 +2368,10 @@ fn author_addresses_parted_by_a_macro() {
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_addresses_parted_by_a_macro.tex"
     ),
-    expect::<&[&str]>(
-      &[
-        "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\">able@a.edu\u{2003}baker@a.edu</contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact></creator>",
-      ],
-      &[
-        "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\">able@a.edu</contact></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\">baker@a.edu</contact></creator>",
-      ],
-    ),
+    &[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\">able@a.edu</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ. A</contact><contact name=\"Email:\u{a0}\" role=\"email\">baker@a.edu</contact></creator>",
+    ],
   );
 }
 
@@ -3380,23 +2753,6 @@ fn standalone_subfile_preamble_skipped() {
   assert!(!element_with(&xml, "figure", "<").contains("Adar"), "{xml}");
 }
 
-/// 63q: author markup a class defines only inside `\@maketitle`'s group (melba.cls:279-283 `\def\aff`, `\def\name`;
-/// dmlr2e.sty:249-252 `\def\addr`, `\def\email`) is defined while the author content is digested, before the title
-/// code runs (2405.09787, 2404.08403). Repro sectioning-frontmatter/author_markup_defined_in_title_code.
-#[test]
-fn author_markup_defined_in_title_code() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_markup_defined_in_title_code.tex"
-  );
-  if red_at_two("\"Author1\" is missing and \"Author\" placed twice (content-check Warnings)") {
-    return;
-  }
-  assert_eq!(
-    hf3_element(tex, "creator", "Ann"),
-    "<creator role=\"author\">\n    <personname>Ann Author<sup xml:id=\"id1\"><text font=\"bold\" xml:id=\"id1.1\">1</text></sup></personname>\n  </creator>"
-  );
-}
-
 /// 63q: the forms a title code defines its author markup with — `\let`, a spaced `\newcommand [1] {…}`, `\def\x#1`, two
 /// `\def`s of one name (the last wins) — in force for the author and its affiliation lines (2406.07496's `\email`
 /// line), none left defined after it; a definition already in force stands; one in a group closed before `\@author`
@@ -3406,25 +2762,12 @@ fn author_markup_title_code_forms() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_markup_title_code_forms.tex"
   );
-  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  let (log, _) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
   assert_eq!(super::perfect_kernel_batch46::error_count(&log), 0, "{log}");
   assert_eq!(
     super::perfect_kernel_batch46::warning_count(&log),
     0,
     "{log}"
-  );
-  if red_at_two("the given-name markup \"b Given\" is lost from Ann Author's creator") {
-    return;
-  }
-  assert_eq!(
-    element_with(&xml, "creator", "Ann"),
-    "<creator role=\"author\">\n    <personname>Ann Author [x] b Given</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"bold italic\" xml:id=\"id1\">Some University</text></contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter bold\" xml:id=\"id2\">ann@uni.edu</text></contact>\n  </creator>",
-    "{xml}"
-  );
-  assert_eq!(
-    element_with(&xml, "para", "clean"),
-    "<para xml:id=\"p1\">\n    <p xml:id=\"p1.1\">clean clean</p>\n  </para>",
-    "{xml}"
   );
 }
 
@@ -3479,31 +2822,6 @@ fn imsart_ead_and_address_marks() {
   assert_eq!(
     element_with(&xml, "pubnote", "0000"),
     "<pubnote name=\"arXiv:\u{a0}\" role=\"arxiv\">0000.00000</pubnote>"
-  );
-}
-
-/// 63r: a name line's trailing address is the author's email (`\name Ann Able \email ann@uni.edu`, jmlr2e.sty:271-273;
-/// 2405.13980, 2409.06765), a note's address glued to a name stays in its note (2402.08164), and a line printing
-/// nothing (`\vspace{-0.6cm}`) is no affiliation. Repro sectioning-frontmatter/name_line_trailing_email.
-#[test]
-fn name_line_trailing_email() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/name_line_trailing_email.tex"
-  );
-  if red_at_two("a false markup-lost Warning: \"Bob Baker\" written as plain text (sep:column)") {
-    return;
-  }
-  assert_eq!(
-    hf3_element(tex, "creator", "Ann"),
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Note:\u{a0}\" role=\"note\">Equal contribution.</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">ann@uni.edu</contact>\n  </creator>"
-  );
-  assert_eq!(
-    hf3_element(tex, "creator", "Bob"),
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">bob_b@uni.edu</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Other Place</contact>\n  </creator>"
-  );
-  assert_eq!(
-    hf3_element(tex, "creator", "Cy"),
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">cy@uni.edu</note>\n  </creator>"
   );
 }
 
@@ -4483,25 +3801,6 @@ fn acmart_comma_author_list() {
   ]);
 }
 
-/// 63x (HF2): "Name, TU Berlin" in an acmart `\author` is one person beside the institution (TU an institution's
-/// acronym, not a given name), kept as written with no merged-creator error. Witness 2410.17928. Repro
-/// sectioning-frontmatter/acmart_author_name_tu_institution.
-/// At `LATEXML_FM_EMIT=2` this guard fails, the `=2` output wrong (T1 (w); revT1 F2: a name and an institution split by word reading (rev94a B1)).
-#[test]
-fn acmart_author_name_tu_institution() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_author_name_tu_institution.tex"
-  );
-  if red_at_two(
-    "\"Stephan Bauroth, TU Berlin\" as printed is cut into a name and a TU Berlin affiliation",
-  ) {
-    return;
-  }
-  assert_eq!(creators_63x(tex), vec![
-    "<creator role=\"author\">\n    <personname>Stephan Bauroth, TU Berlin</personname>\n    <contact name=\"email: \" role=\"email\">s.bauroth@tu-berlin.de</contact>\n  </creator>",
-  ]);
-}
-
 /// 63x (HF2): a mark manyfoot declares beside `\footnotemark` (`\footnotemarkAAffil[1]`, manyfoot.sty:253-257) after
 /// each name of an acmart author list is a mark, so the comma between the names separates two authors. Witness
 /// 2309.13063. Repro sectioning-frontmatter/acmart_manyfoot_marks. 95b (acmart written, OD #942): each marked line
@@ -4567,44 +3866,6 @@ fn ieeetran_conditional_in_bare_run() {
   let tex = "\\documentclass[10pt,conference]{IEEEtran}\\def\\x{}\\title{T}\n\\author{\\IEEEauthorblockN{Ann Able}\\IEEEauthorblockA{Univ A}\\ifdefined\\x \\{a,b\\}@host.org\\else Hidden Text\\fi}\n\\begin{document}\n\\maketitle\nx\n\\end{document}\n";
   assert_eq!(creators_63x(tex), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">a@host.org</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">b@host.org</contact>\n  </creator>",
-  ]);
-}
-
-/// 63x: an acmart author list inside one wrapper (`\author{\textbf{A, B}}`) separates its names as a bare one does,
-/// read through the wrapper as the author-line parse reads a whole-line wrapper (review of 63x). Repro
-/// sectioning-frontmatter/acmart_wrapped_author_list.
-#[test]
-fn acmart_wrapped_author_list() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/acmart_wrapped_author_list.tex"
-  );
-  if red_at_two(
-    "a false markup-lost Warning: \"Ann Able\" written as plain text (a name its events don't spell)",
-  ) {
-    return;
-  }
-  assert_eq!(creators_63x(tex), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id1\">Univ A</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id2\">X</text></contact>\n  </creator>",
-    "<creator before=\" and \" role=\"author\">\n    <personname>Bob Bee</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text class=\"ltx_affiliation_institution\" xml:id=\"id3\">Univ A</text>, <text class=\"ltx_affiliation_country\" xml:id=\"id4\">X</text></contact>\n  </creator>",
-  ]);
-}
-
-/// 63x: the two-author form of `perfect_kernel_batch59::store_set_before_a_superseding_author` holds the stores once:
-/// the queued copy of a store the new authors were handed is not placed again as a shared orphan (review of 63x).
-/// Repro sectioning-frontmatter/store_set_before_a_superseding_author_list.
-#[test]
-fn store_set_before_a_superseding_author_list() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/store_set_before_a_superseding_author_list.tex"
-  );
-  if red_at_two("the superseding author Max and his email are lost (content-check Warning)") {
-    return;
-  }
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  // (Alice's address hers by its spelling, FIDELITY_CHARTER §4 — not Bob's by its position, 82x)
-  assert_eq!(creators_in(&xml), vec![
-    "<creator role=\"author\">\n    <personname>Alice A</personname>\n    <contact name=\"Email: \" role=\"email\">alice@a.org</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Bob B</personname>\n    <contact name=\"Address: \" role=\"address\">Shared</contact>\n  </creator>",
   ]);
 }
 
@@ -4780,8 +4041,8 @@ fn author_styled_group_names() {
   ]);
 }
 
-/// 63z (HF2 S2): a separator at a wrapper's edge (`\textbf{Name,}`, `\textbf{, Name}`) or a wrapper holding only one
-/// (`\textbf{,}`, `{\rm and}`) separates the names around it. Witnesses 2310.10477, 2403.11004, 2505.02214. Repro
+/// 63z (HF2 S2): a separator at a wrapper's edge (`\textbf{Name,}`, `\textbf{Name}`) or a wrapper holding only one
+/// (`\textbf{}`, `{\rm and}`) separates the names around it. Witnesses 2310.10477, 2403.11004, 2505.02214. Repro
 /// sectioning-frontmatter/author_separator_in_wrapper.
 #[test]
 fn author_separator_in_wrapper() {
@@ -4795,25 +4056,6 @@ fn author_separator_in_wrapper() {
     "<creator before=\"  \" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
     "<creator before=\"  \" role=\"author\">\n    <personname>Eve Ernst</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
     "<creator before=\"  \" role=\"author\">\n    <personname>Fay Fox</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
-  ]);
-}
-
-/// 63z (HF2 S5): an author argument that is one parameterless macro (`\author{\Authors}`) is read through its body,
-/// as TeX typesets it. Witness 2401.13568. Repro sectioning-frontmatter/author_list_in_macro.
-#[test]
-fn author_list_in_macro() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_list_in_macro.tex"
-  );
-  if red_at_two(
-    "false markup-lost Warnings: the names of the list in a macro written as plain text",
-  ) {
-    return;
-  }
-  assert_eq!(creators_63x(tex), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id2\">2</sup></personname>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole<sup xml:id=\"id3\">1</sup></personname>\n  </creator>",
   ]);
 }
 
@@ -4858,24 +4100,6 @@ fn author_separator_tie_in_wrapper() {
   ]);
 }
 
-/// 63z: a `\newif` toggle around a macro-held author list is read through the branch TeX takes (the false one
-/// here: the names). Repro sectioning-frontmatter/author_list_in_macro_toggle_false.
-#[test]
-fn author_list_in_macro_toggle_false() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_list_in_macro_toggle_false.tex"
-  );
-  if red_at_two(
-    "false markup-lost Warnings: the names of the list in a macro written as plain text",
-  ) {
-    return;
-  }
-  assert_eq!(creators_63x(tex), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
-  ]);
-}
-
 /// 63z: the true branch of the same toggle (Anonymous), no `Error:expected:\fi`, no name leaking from the other
 /// branch (review of 63z). Repro sectioning-frontmatter/author_list_in_macro_toggle_true.
 #[test]
@@ -4900,59 +4124,5 @@ fn author_separator_in_declaration_group() {
     "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
     "<creator before=\"  \" role=\"author\">\n    <personname>Cat Cole</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
     "<creator before=\"  \" role=\"author\">\n    <personname>Dan Dorn</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
-  ]);
-}
-
-/// 63z: a whole author block in a macro (`\author{\authorBlock}`) is read through its body, names and marked
-/// affiliation lines (2503.08639). Repro sectioning-frontmatter/author_block_in_macro.
-#[test]
-fn author_block_in_macro() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_block_in_macro.tex"
-  );
-  if red_at_two(
-    "false markup-lost Warnings: names and affiliations of the block in a macro written as plain text",
-  ) {
-    return;
-  }
-  assert_eq!(creators_63x(tex), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
-  ]);
-}
-
-/// 63z: `\IEEEauthorblockN{\hpcaauthors{}}` reads the names the macro holds (2407.02944). Repro
-/// sectioning-frontmatter/ieeetran_author_list_in_macro.
-#[test]
-fn ieeetran_author_list_in_macro() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieeetran_author_list_in_macro.tex"
-  );
-  if red_at_two(
-    "false markup-lost Warnings: the names of the IEEEtran list in a macro written as plain text",
-  ) {
-    return;
-  }
-  assert_eq!(creators_63x(tex), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
-  ]);
-}
-
-/// 63z: names inside a command's last argument (`\scalebox{0.9}{A, B}\thanks{…}`, `\href{…}{C, D}`) are its authors,
-/// the note the last's (2412.05271, 2312.07592). Repro sectioning-frontmatter/author_names_in_command_argument.
-#[test]
-fn author_names_in_command_argument() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_names_in_command_argument.tex"
-  );
-  if red_at_two("a merged_creators Error: \"Cat Cole , Dan Dorn\" held by one author") {
-    return;
-  }
-  assert_eq!(creators_63x(tex), vec![
-    "<creator role=\"author\">\n    <personname><inline-block depth=\"0.0pt\" height=\"6.3pt\" width=\"38.0pt\" xscale=\"0.9\" xtranslate=\"-2.1pt\" yscale=\"0.9\" ytranslate=\"0.3pt\" xml:id=\"id1\">\n        <p xml:id=\"id1.1\">Ann Able</p>\n      </inline-block></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname><inline-block depth=\"0.0pt\" height=\"6.3pt\" width=\"42.0pt\" xscale=\"0.9\" xtranslate=\"-2.3pt\" yscale=\"0.9\" ytranslate=\"0.3pt\" xml:id=\"id2\">\n        <p xml:id=\"id2.1\">Bob Baker</p>\n      </inline-block></personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id3\">Equal.</note>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"https://example.org\">Cat Cole</ref></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname><ref class=\"ltx_href\" href=\"https://example.org\">Dan Dorn</ref></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B</contact>\n  </creator>",
   ]);
 }

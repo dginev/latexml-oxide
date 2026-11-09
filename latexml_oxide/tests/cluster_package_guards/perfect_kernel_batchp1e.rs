@@ -27,34 +27,20 @@ macro_rules! repro {
   };
 }
 
-/// `tex` clean with either switch, its switch-off reading `off` and its `=2` one `want` (KB2: an entry given back whole where
-/// the cut would strand the phrase its address completes, `address_cut::entry_cuts`).
-fn as_off_but(tex: &str, off: &[Vec<&str>], want: &[Vec<&str>]) {
-  let (off_log, off_xml) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, xml) = run(tex, 2);
+/// `tex` clean, its reading `want`.
+fn reads(tex: &str, want: &[Vec<&str>]) {
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&off_xml), off);
   assert_eq!(creators(&xml), want);
 }
 
-/// `tex` clean with either switch, its `=2` creators' XML (ids aside) the switch-off one's, and their reading `want`.
-fn as_off(tex: &str, want: &[Vec<&str>]) {
-  let (off_log, off) = run(tex, 0);
-  assert_eq!(
-    (error_count(&off_log), warning_count(&off_log)),
-    (0, 0),
-    "{off_log}"
-  );
-  let (log, xml) = run(tex, 2);
+/// `tex` clean, its creators' XML (ids aside) `whole` (recorded at `=2`, where it equalled the switch-off one's), and their
+/// reading `want`.
+fn as_off(tex: &str, want: &[Vec<&str>], whole: &[&str]) {
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&off), want);
   assert_eq!(creators(&xml), want);
-  assert_eq!(creators_xml(&xml), creators_xml(&off), "{tex}");
+  assert_eq!(creators_xml(&xml), whole, "{tex}");
 }
 
 /// A note's entry (`\thanks{$^{1}$Ann Able and Bob Baker are with … {\tt\small a@x; b@x}}`, ieeeconf's, 2011.02560,
@@ -65,15 +51,23 @@ fn as_off(tex: &str, want: &[Vec<&str>]) {
 fn an_address_in_a_note_entry_is_its_owners_email() {
   let entry =
     "affiliation=Ann Able and Bob Baker are with the Department of X, Univ A, City, Country";
-  as_off(repro!("emit_an_address_in_a_note_entry_is_its_owners"), &[
-    vec!["Ann Able", entry, "email=ann.able@a.org"],
-    vec!["Bob Baker", entry, "email=bob.baker@a.org"],
-    vec![
-      "Cy Cole",
-      "affiliation=Cy Cole is with Univ B, Town",
-      "email=cy.cole@b.org",
+  as_off(
+    repro!("emit_an_address_in_a_note_entry_is_its_owners"),
+    &[
+      vec!["Ann Able", entry, "email=ann.able@a.org"],
+      vec!["Bob Baker", entry, "email=bob.baker@a.org"],
+      vec![
+        "Cy Cole",
+        "affiliation=Cy Cole is with Univ B, Town",
+        "email=cy.cole@b.org",
+      ],
     ],
-  ]);
+    &[
+      "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Ann Able and Bob Baker are with the Department of X, Univ A, City, Country</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" fontsize=\"90%\">ann.able@a.org</text></contact>\n  </creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Ann Able and Bob Baker are with the Department of X, Univ A, City, Country</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" fontsize=\"90%\">bob.baker@a.org</text></contact>\n  </creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Cy Cole is with Univ B, Town</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" fontsize=\"90%\">cy.cole@b.org</text></contact>\n  </creator>",
+    ],
+  );
 }
 
 /// An API call's content: llncs's `\institute{Univ A, … \texttt{ann.able@a.org} \and …}` (svmult's, astro-ph0610446,
@@ -82,24 +76,40 @@ fn an_address_in_a_note_entry_is_its_owners_email() {
 /// one of a local-part list each its own. Red (LO4 `=2`): every carrier of an entry held its addresses as text.
 #[test]
 fn an_address_in_an_api_entry_is_its_owners_email() {
-  as_off(repro!("emit_an_address_in_an_institute_is_its_owners"), &[
-    vec![
-      "Ann Able",
-      "affiliation=Univ A, Street 1, City, Country",
-      "email=ann.able@a.org",
+  as_off(
+    repro!("emit_an_address_in_an_institute_is_its_owners"),
+    &[
+      vec![
+        "Ann Able",
+        "affiliation=Univ A, Street 1, City, Country",
+        "email=ann.able@a.org",
+      ],
+      vec!["Bob Baker", "affiliation=Univ A, Street 1, City, Country"],
+      vec![
+        "Cy Cole",
+        "affiliation=Univ B, Road 2, Town, Country",
+        "email=cy.cole@b.org",
+      ],
     ],
-    vec!["Bob Baker", "affiliation=Univ A, Street 1, City, Country"],
-    vec![
-      "Cy Cole",
-      "affiliation=Univ B, Road 2, Town, Country",
-      "email=cy.cole@b.org",
+    &[
+      "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Street 1, City, Country</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">ann.able@a.org</text></contact>\n  </creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Street 1, City, Country</contact>\n  </creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, Road 2, Town, Country</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">cy.cole@b.org</text></contact>\n  </creator>",
     ],
-  ]);
-  as_off(repro!("emit_an_address_list_in_an_affil_is_its_owners"), &[
-    vec!["Ann Able", "affiliation=Univ A", "email=ann.able@a.org"],
-    vec!["Bob Baker", "affiliation=Univ A", "email=bbaker@a.org"],
-    vec!["Cy Cole", "affiliation=Univ B", "email=cy.cole@b.org"],
-  ]);
+  );
+  as_off(
+    repro!("emit_an_address_list_in_an_affil_is_its_owners"),
+    &[
+      vec!["Ann Able", "affiliation=Univ A", "email=ann.able@a.org"],
+      vec!["Bob Baker", "affiliation=Univ A", "email=bbaker@a.org"],
+      vec!["Cy Cole", "affiliation=Univ B", "email=cy.cole@b.org"],
+    ],
+    &[
+      "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">ann.able@a.org</text></contact>\n  </creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">bbaker@a.org</text></contact>\n  </creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">cy.cole@b.org</text></contact>\n  </creator>",
+    ],
+  );
 }
 
 /// A labelled line the reading read on with an address line (`$^2$Univ B, Town, Country\\ Correspondence to:
@@ -109,18 +119,13 @@ fn an_address_in_an_api_entry_is_its_owners_email() {
 #[test]
 fn an_address_line_read_on_is_its_owners_email() {
   let ann = vec!["Ann Able", "affiliation=Univ A, City, Country"];
-  as_off_but(
-    repro!("emit_an_address_line_read_on_is_its_owners"),
-    &[ann.clone(), vec![
-      "Bob Baker",
-      "affiliation=Univ B, Town, Country Correspondence to",
-      "email=bob.baker@b.org",
-    ]],
-    &[ann, vec![
+  reads(repro!("emit_an_address_line_read_on_is_its_owners"), &[
+    ann,
+    vec![
       "Bob Baker",
       "affiliation=Univ B, Town, Country Correspondence to: bob.baker@b.org",
-    ]],
-  );
+    ],
+  ]);
 }
 
 /// A label word and brackets the reading's run takes (`… Country (E-mail: \texttt{ann.able@a.org})`, `…, (E-mail: …)`;
@@ -129,19 +134,26 @@ fn an_address_line_read_on_is_its_owners_email() {
 /// after the flush) and the switch off agree.
 #[test]
 fn an_address_s_label_and_brackets_go_with_it() {
-  as_off(repro!("emit_an_address_label_and_brackets_go_with_it"), &[
-    vec![
-      "Ann Able",
-      "affiliation=Department of X, Univ A, City, Country",
-      "email=ann.able@a.org",
+  as_off(
+    repro!("emit_an_address_label_and_brackets_go_with_it"),
+    &[
+      vec![
+        "Ann Able",
+        "affiliation=Department of X, Univ A, City, Country",
+        "email=ann.able@a.org",
+      ],
+      vec![
+        "Bob Baker",
+        "affiliation=Lab Y, Univ B, Town, Country",
+        "email=bob.baker@b.org",
+      ],
     ],
-    vec![
-      "Bob Baker",
-      "affiliation=Lab Y, Univ B, Town, Country",
-      "email=bob.baker@b.org",
+    &[
+      "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of X, Univ A, City, Country</contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\">ann.able@a.org</text></contact>\n  </creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Lab Y, Univ B, Town, Country</contact>\n    <contact name=\"E-mail: \" role=\"email\"><text font=\"typewriter\">bob.baker@b.org</text></contact>\n  </creator>",
     ],
-  ]);
-  let (_, xml) = run(repro!("emit_an_address_label_and_brackets_go_with_it"), 2);
+  );
+  let (_, xml) = run(repro!("emit_an_address_label_and_brackets_go_with_it"));
   assert!(
     xml.contains(r#"<contact name="E-mail: " role="email"><text font="typewriter""#),
     "{xml}"
@@ -150,7 +162,7 @@ fn an_address_s_label_and_brackets_go_with_it() {
 
 /// `tex` clean at `=2`, its creators' XML (ids aside) `want`.
 fn emitted(tex: &str, want: &[&str]) {
-  let (log, xml) = run(tex, 2);
+  let (log, xml) = run(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators_xml(&xml), want, "{xml}");
 }

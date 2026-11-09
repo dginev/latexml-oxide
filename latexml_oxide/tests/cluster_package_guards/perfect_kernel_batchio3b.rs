@@ -14,17 +14,10 @@ fn a_note_making_a_creator_is_digested_as_perls() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/late_author_in_amsart_thanks_once.tex"
   );
-  for emit in [0, 2] {
-    let (log, xml) = run(tex, emit);
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-    assert_eq!(
-      creators(&xml),
-      [vec!["Ann Able", "address=Univ A", "email=ann@a.org"], vec![
-        "Bob Baker",
-        "address=Univ B",
-        "email=bob@b.org"
-      ]],
-      "emit={emit}"
-    );
-  }
+  let (log, xml) = run(tex);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able", "address=Univ A", "email=ann@a.org"],
+    vec!["Bob Baker", "address=Univ B", "email=bob@b.org"]
+  ]);
 }

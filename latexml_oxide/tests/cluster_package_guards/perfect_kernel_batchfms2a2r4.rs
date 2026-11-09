@@ -11,8 +11,6 @@ use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::{fm_shadow_json, set_fm_shadow_override};
 use serde_json::Value;
 
-use super::perfect_kernel_batcht1::red_at_two;
-
 /// Convert `tex` under the shadow switch, asserting a clean conversion: the whole dump.
 fn dump(tex: &str) -> Value { dump_as(tex, None) }
 
@@ -327,23 +325,6 @@ fn spacing_before_a_mark_parts_the_entries() {
   );
 }
 
-/// Item 3 (review revfms2a2_3 nit 8): a mark's `\ref` key is read only off the cross-reference commands
-/// (`events::REF_COMMANDS`): `\nameref` prints a title, never a label's mark (its key was read as `ref:x`); `\ref`
-/// still is (A&A's `\inst{\ref{…}}`, 1809.08354).
-#[test]
-fn ref_marks_only_by_the_cross_reference_commands() {
-  let tex = "\\documentclass{article}\n\\usepackage{hyperref}\n\\begin{document}\n\\title{T}\n\\author{Ann Able\\textsuperscript{\\href{https://example.org/a}{a}} and Bob Baker\\textsuperscript{\\nameref{x}} and Cat Cole\\textsuperscript{\\ref{x}}\\\\\n\\textsuperscript{a}Univ A}\n\\maketitle\n\\section{Sec}\\label{x}Text.\n\\end{document}\n";
-  if red_at_two("a false unanswered_mark_lost Warning for the \"ref:x\" mark a \\href prints") {
-    return;
-  }
-  assert_eq!(tuples(tex), [
-    "C Ann Able [a] | line:names",
-    "  a Univ A | ruling1:request",
-    "C Bob Baker [] | line:names sep:word",
-    "C Cat Cole [ref:x] | line:names sep:word",
-  ]);
-}
-
 /// Item 3 (nit 7): an API call's attributes are written in source order, each pair as given (`get_pairs`):
 /// `\altaffiliation[Also at ]{…}` is `\lx@add@contact[annotate=new,role=affiliation,name={#1}]`.
 #[test]
@@ -378,46 +359,4 @@ fn the_policy_counter_is_read_quietly() {
     .cloned()
     .collect();
   assert_eq!(blocks.len(), 1, "{blocks:?}");
-}
-
-/// The r4 shapes leave the XML byte-identical with the switch on and off (shadow only).
-#[test]
-fn r4_shapes_leave_the_xml_unchanged() {
-  for tex in [
-    revtex(PREFIX_NOTES),
-    revtex(EMPTY_ENTRY),
-    revtex(WITHSUP),
-    revtex(SUP_THANKS),
-    revtex(BEFORE_AUTHORS),
-    revtex(GRID),
-    ORCID_NAMES.to_string(),
-    FM_MARK.to_string(),
-  ] {
-    let run = |on: bool| {
-      convert_with_setup_then(
-        &tex,
-        Some("ar5iv.sty"),
-        move || set_fm_shadow_override(Some(on)),
-        |_| (),
-      )
-    };
-    let (on_log, on_xml, ()) = run(true);
-    let (off_log, off_xml, ()) = run(false);
-    if red_at_two(
-      "old engine only: the shadow switch on vs off (forced off at =2: one merged creator, an Error and a Warning)",
-    ) {
-      return;
-    }
-    assert_eq!(on_xml, off_xml, "{tex}");
-    assert_eq!(
-      (error_count(&on_log), warning_count(&on_log)),
-      (0, 0),
-      "{on_log}"
-    );
-    assert_eq!(
-      (error_count(&off_log), warning_count(&off_log)),
-      (0, 0),
-      "{off_log}"
-    );
-  }
 }

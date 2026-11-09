@@ -5,7 +5,7 @@
 //! at `=2`.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
-use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
+use latexml_engine::base_utilities::set_fm_shadow_override;
 
 use super::perfect_kernel_batch84b::creators;
 
@@ -25,30 +25,17 @@ fn a_list_setter_in_an_author_block_is_read_by_the_emitter() {
     row(&["Bob Baker", "affiliation=Lab Y, Town"]),
     row(&["Cy Coe", "affiliation=Univ X, City"]),
   ];
-  for emit in [0, 2] {
-    let (log, xml, ()) = convert_files_with_setup_then(
-      tex,
-      &[],
-      Some("ar5iv.sty"),
-      move || {
-        set_fm_shadow_override(None);
-        set_fm_emit_override(Some(emit));
-      },
-      |_| (),
-    );
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "emit={emit}\n{log}"
-    );
-    assert!(
-      !log.contains("Orphaned frontmatter annotation"),
-      "emit={emit}\n{log}"
-    );
-    assert!(
-      !log.contains("can't read an author block"),
-      "emit={emit}\n{log}"
-    );
-    assert_eq!(creators(&xml), expected, "emit={emit}");
-  }
+  let (log, xml, ()) = convert_files_with_setup_then(
+    tex,
+    &[],
+    Some("ar5iv.sty"),
+    move || {
+      set_fm_shadow_override(None);
+    },
+    |_| (),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "\n{log}");
+  assert!(!log.contains("Orphaned frontmatter annotation"), "\n{log}");
+  assert!(!log.contains("can't read an author block"), "\n{log}");
+  assert_eq!(creators(&xml), expected);
 }
