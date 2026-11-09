@@ -5,7 +5,8 @@
 //! the raw-token rewrites of OXIDIZED_DESIGN_DIVERGENCES #52 that go beyond Perl: note environments as commands, math-active scripts, tabular juggles and ACM columns as line breaks,
 //! alignment environments unwrapped, `\hspace` runs between names as separators (`normalize_hspace_separators` and its
 //! row helpers), icons joined to their links, glued marks as marks, the ordinal and in-word superscripts. At
-//! `LATEXML_FM_EMIT=2` the emitter and `defs/author_macros.rs` (the queued entry) call it raw, with none of them; three
+//! `LATEXML_FM_EMIT=2` the emitter and `defs/author_macros.rs` (the queued entry) call it raw, with none of them (the emitter's
+//! tabular juggles aside, [`tabular_juggles_in_a_whole_block`]); three
 //! items are a binding's too (`strip_linebreak_options`, `has_author_marks`, `glued_line_marks_as_marks`).
 
 use super::*;
@@ -50,7 +51,8 @@ pub(in crate::base_utilities) fn lines_prepared(stuff: Tokens) -> Tokens {
 /// tabular fallback (`author_block::dispatch`, which gives it the block [`prepared_block`]), and at `LATEXML_FM_EMIT=2`
 /// Perl's raw call — the queued entry
 /// (`defs::author_macros`) and the emitter's for a block it can't read or whose reading loses a name's words
-/// (`observer::writer::emit`; OD #980). At `=2` no raw-token preparation runs: digestion does each rewrite's job in a
+/// (`observer::writer::emit`; OD #980). At `=2` no raw-token preparation runs but the emitter's tabular juggles
+/// ([`tabular_juggles_in_a_whole_block`], which digestion can't answer: 1511.05911): digestion does each rewrite's job in a
 /// block nothing splits — `\\[len]` is `\lx@newline`'s own optional, a `\begin{footnote}` runs `\footnote`, a
 /// mathcode-"8000 `^` reads as `\sp`, braces and superscripts digest to the same markup — and three of them hurt there
 /// (the gap of `\\[0.5cm]`, hep-ph0207056; `\hspace` turned `\quad`, hep-th0111116, 1511.05911; a symbol superscript's
@@ -1461,6 +1463,40 @@ fn spells(group: &[Token], name: &str) -> bool {
 /// For a parameterless macro, not an author separator ([`author_and_splits`]), whose expansion starts with
 /// `\end{tabular}`: the rest of its expansion (spaces out).
 fn tabular_close_rest(t: &Token) -> Option<Vec<Token>> {
+  tabular_close_rest_of_any(t).filter(|_| {
+    !author_and_splits()
+      .iter()
+      .any(|s| matches!(s, SplitDelim::Token(d) if d == t))
+  })
+}
+
+/// A block written whole at `LATEXML_FM_EMIT=2` (the emitter's, `observer::writer::emit`; OD #980), each macro whose
+/// expansion starts by closing a tabular — a juggle or a column, `\alignauthor` too, which nothing splits there — the line
+/// break it prints between what it parts, one opening the block nothing: digested, it closed a tabular the block never
+/// opened, inside the creator's `\lx@personname`, four Errors and every name lost (vldb.cls:270 `\def\alignauthor{\end{tabular}
+/// \begin{tabular}[t]{p{\auwidth}}\centering}`, which its `\@maketitle` sets inside its own `\begin{tabular}[t]{c}\@author
+/// \end{tabular}`; 1511.05911). The old driver's own rewrite of a juggle ([`tabular_juggles_as_line_breaks`]),
+/// the column's split ([`author_and_splits`]) a line break where nothing splits.
+pub(in crate::base_utilities) fn tabular_juggles_in_a_whole_block(tokens: Tokens) -> Tokens {
+  let toks = tokens.unlist();
+  if !toks.iter().any(|t| tabular_close_rest_of_any(t).is_some()) {
+    return Tokens::new(toks);
+  }
+  let mut out: Vec<Token> = Vec::with_capacity(toks.len());
+  for t in toks {
+    if tabular_close_rest_of_any(&t).is_some() {
+      if !out.is_empty() {
+        out.push(T_CS!("\\\\"));
+      }
+    } else {
+      out.push(t);
+    }
+  }
+  Tokens::new(out)
+}
+
+/// For a parameterless macro whose expansion starts with `\end{tabular}`: the rest of its expansion (spaces out).
+fn tabular_close_rest_of_any(t: &Token) -> Option<Vec<Token>> {
   if t.get_catcode() != Catcode::CS {
     return None;
   }
@@ -1486,11 +1522,7 @@ fn tabular_close_rest(t: &Token) -> Option<Vec<Token>> {
     return None;
   }
   let body: Vec<Token> = unspaced().copied().collect();
-  past_environment(&body, T_CS!("\\end"), "tabular").filter(|_| {
-    !author_and_splits()
-      .iter()
-      .any(|s| matches!(s, SplitDelim::Token(d) if d == t))
-  })
+  past_environment(&body, T_CS!("\\end"), "tabular")
 }
 
 /// An author block's parameterless macro whose expansion closes the title page's tabular and opens another — the ACM

@@ -31,7 +31,7 @@ use crate::base_utilities::{
     frontmatter_api::{BLOCK_CREATOR, LABEL_PRINTS, PRINTED_LABEL},
   },
   frontmatter::{
-    fallback::whole_block_author,
+    fallback::{tabular_juggles_in_a_whole_block, whole_block_author},
     observer::{
       events::{EventKind, Formula, InkTable, lex_with_inks},
       field_notes::{EnvironmentStep, FieldCreator},
@@ -2049,7 +2049,8 @@ pub(super) fn kept_whole(index: usize) -> bool {
 }
 
 /// The creator Perl's `\\lx@add@author` makes of the author block at ledger index `index`, with its keys and `keys`
-/// (`author_block::whole_block_author`, the one writer of a block kept whole).
+/// (`author_block::whole_block_author`, the one writer of a block kept whole), its tabular juggles and columns the line
+/// breaks they print (`tabular_juggles_in_a_whole_block`: 1511.05911's vldb.cls `\\alignauthor`).
 fn whole_block(index: usize, keys: &str) -> Option<Result<Tokens>> {
   let (keyvals, written) = with_ledger(|ledger| match ledger.entries().get(index) {
     Some(Entry::Author(block)) => Some((block.keyvals.clone(), block.tokens.clone())),
@@ -2058,7 +2059,10 @@ fn whole_block(index: usize, keys: &str) -> Option<Result<Tokens>> {
   let keys: Vec<&str> = keyvals.iter().map(String::as_str).chain([keys]).collect();
   let keys = keys.into_iter().filter(|keys| !keys.trim().is_empty());
   let keys = internal(&keys.collect::<Vec<_>>().join(","));
-  Some(whole_block_author(Some(Tokens::new(keys)), written))
+  Some(whole_block_author(
+    Some(Tokens::new(keys)),
+    tabular_juggles_in_a_whole_block(written),
+  ))
 }
 
 /// What the emit does with the words a block or a call prints that it doesn't write ([`warn_unwritten`]).
