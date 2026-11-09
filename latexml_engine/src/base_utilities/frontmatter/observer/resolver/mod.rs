@@ -375,10 +375,8 @@ pub(in crate::base_utilities::frontmatter::observer) use labels::{
 pub use labels::{address_take_out, addresses_in, mark_labels, only_addresses};
 pub(in crate::base_utilities::frontmatter::observer) use labels::{contact_parts, label_matches};
 use labels::{text_tokens, *};
+pub(in crate::base_utilities::frontmatter::observer) use lines::reads_as_names;
 use lines::*;
-pub(in crate::base_utilities::frontmatter::observer) use lines::{
-  NoPerson, may_name_a_person, name_before_remark, names_no_person, reads_as_names,
-};
 // (the reading's word check, its block half and what the emitter's call half reads: OD #980)
 pub(in crate::base_utilities::frontmatter::observer) use net::{merged_names, uncoordinated_marks};
 // (the content invariant on the placed output, under the emitter's `=2`: OD #980)

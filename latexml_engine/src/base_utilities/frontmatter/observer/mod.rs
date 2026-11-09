@@ -80,6 +80,5 @@ pub(in crate::base_utilities) use writer::calls::*;
 pub(crate) use writer::fm_emit_mode;
 pub use writer::set_fm_emit_override;
 pub(in crate::base_utilities) use writer::{
-  EMITTING, block_creator_written, check_placed_content, emit_commands, emitted,
-  read_back_frontmatter, take_digested, write_observed_frontmatter,
+  EMITTING, block_creator_written, check_placed_content, emit_commands, emitted, take_digested,
 };

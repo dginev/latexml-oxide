@@ -23,7 +23,7 @@ use super::{
   policy::{TitleMarks, policy_for},
   rehearsal::{Rehearsal, for_the_check, rehearse},
   resolver::{Assoc, Resolved, ledger_inputs, resolve},
-  writer::{fm_emit_mode, writer_stays_out},
+  writer::fm_emit_mode,
   *,
 };
 
@@ -754,60 +754,9 @@ pub fn fm_shadow_json() -> String {
     // (the writer's outcome for a written family's paper: `same`, `written`, `declined: …`, `written-different: …`)
     out.push_str("}},\"writer\":");
     json_opt_str(&mut out, ledger.writer.as_deref());
-    json_read_back(&mut out, ledger, blocks);
     out.push_str("}\n");
     out
   })
-}
-
-/// The paper's outcome (E0, `ab_audit fmshadow`'s per-family table): `same`, `written` and `written-different` the
-/// writer's own check (its reason the difference), `declined` with its reason (`Ledger::refusal`); where the writer did
-/// not run, `no-reading` (the resolver read nothing), `no-block` (no author block, `writer_stays_out`) or
-/// `held-or-skipped` with its reason. And the read-back at the end of `insert_frontmatter`, none where it never got
-/// there: `difference`, the first place the final document differs from the reading; `given_back`, from the reading as
-/// resolved where the writer gave an item back.
-fn json_read_back(out: &mut String, ledger: &ledger::Ledger, blocks: usize) {
-  let read_nothing = || {
-    let resolved = resolve(&ledger_inputs(ledger));
-    resolved.creators.is_empty() && resolved.block.is_empty()
-  };
-  let (outcome, reason) = match ledger.writer.as_deref() {
-    Some(writer) => match writer.split_once(": ") {
-      Some(("written-different", difference)) => ("written-different", Some(difference)),
-      Some(("declined", _)) => ("declined", ledger.refusal.as_deref()),
-      None if writer == "same" || writer == "written" => (writer, None),
-      // (fail toward flagging: a shape no reader knows, which the table refuses)
-      _ => (writer, None),
-    },
-    None if read_nothing() => ("no-reading", None),
-    None if blocks == 0 => ("no-block", None),
-    None => (
-      "held-or-skipped",
-      Some(writer_stays_out(ledger).unwrap_or("the writer did not run")),
-    ),
-  };
-  out.push_str(",\"readback\":{\"outcome\":");
-  json_str(out, outcome);
-  out.push_str(",\"reason\":");
-  json_opt_str(out, reason);
-  let _ = write!(out, ",\"reached\":{}", ledger.read_back.is_some());
-  out.push_str(",\"difference\":");
-  json_opt_str(
-    out,
-    ledger
-      .read_back
-      .as_ref()
-      .and_then(|read_back| read_back.difference.as_deref()),
-  );
-  out.push_str(",\"given_back\":");
-  json_opt_str(
-    out,
-    ledger
-      .read_back
-      .as_ref()
-      .and_then(|read_back| read_back.given_back.as_deref()),
-  );
-  out.push('}');
 }
 
 fn json_assoc(out: &mut String, assoc: &Assoc) {

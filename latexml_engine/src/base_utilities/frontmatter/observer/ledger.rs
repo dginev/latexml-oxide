@@ -21,7 +21,7 @@ use super::{
   events::{EmailMeaning, Event, EventKind, HeldError, lex_events},
   field_notes::{EnvironmentStep, FieldCreator},
   rehearsal::{past_line_break, past_tabular_call},
-  resolver::{Resolved, printed_words},
+  resolver::printed_words,
   shadow::{FmShadow, fm_shadow_mode},
   writer::Analysis,
   *,
@@ -341,14 +341,6 @@ pub(in crate::base_utilities) struct Ledger {
   /// span) and an earlier setter call of a block (the block's index and the call's span) — what the content check counts
   /// no word of (`writer::emit::replaced_by_setter`, `resolver::placed::content_check`; review revDEL3 S1)
   pub replaced:     BTreeSet<(usize, Option<(u16, u16)>)>,
-  /// the census's (E0): why the writer's plan or re-part refused, its first refusal or the writer's own decline — what
-  /// `writer: declined …` counts under in `ab_audit fmshadow`'s closed list (`writer::note_refusal`)
-  pub refusal:      Option<String>,
-  /// the census's (E0): the reading the writer last compared today's with, its give-backs applied: what the read-back
-  /// compares the final document with where the writer got that far (`writer::read_back_frontmatter`)
-  pub compared:     Option<Resolved>,
-  /// the census's (E0): the read-back at the end of `insert_frontmatter`, none where it never got there
-  pub read_back:    Option<ReadBack>,
   /// the entries the last binding's `\author` body made, a later `\author` clears them ([`record_author_body_clear`])
   author_body:      (usize, usize),
 }
@@ -402,16 +394,6 @@ impl Ledger {
 
   /// The changes to its entries so far.
   pub(in crate::base_utilities) fn generation(&self) -> u64 { self.generation }
-}
-
-/// The final document read against the reading (`writer::read_back_frontmatter`).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(in crate::base_utilities) struct ReadBack {
-  /// where they first differ (`plan::difference`), none where the document reads as the reading
-  pub difference: Option<String>,
-  /// where the document, reading as the reading with its give-backs applied, first differs from the reading as resolved:
-  /// an item the writer did not write as read
-  pub given_back: Option<String>,
 }
 
 thread_local! {
