@@ -45,8 +45,6 @@ mod repart;
 
 // (the writer's cut of a block's entry, which the reading checks an in-block contact's entries by: `events::labelled_entries`)
 pub(super) use content::{Field, aligned};
-pub(crate) use emit::fm_emit_mode;
-pub use emit::set_fm_emit_override;
 pub(in crate::base_utilities) use emit::{
   Analysis, EMITTING, block_creator_written, emit_commands, emitted, take_digested,
 };

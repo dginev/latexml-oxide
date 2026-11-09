@@ -8,7 +8,6 @@
 //! argument; where it's cut comes from the events' spans.
 
 use std::{
-  cell::Cell,
   collections::{BTreeMap, BTreeSet, btree_map::Entry as Entry2},
   rc::Rc,
 };
@@ -49,19 +48,6 @@ use crate::base_utilities::{
     relocate::{BLOCK_ZONE, FOOTER_ZONE},
   },
 };
-
-thread_local! {
-  static FM_EMIT_OVERRIDE: Cell<Option<u8>> = const { Cell::new(None) };
-}
-
-/// The frontmatter emitter's switch, fixed at 2 (DEL1, OD #980): each call queues one whole block and the emitter writes
-/// it. `LATEXML_FM_EMIT` is no longer read and the test override is ignored; the old driver's `=0`/`=1` branches behind
-/// this constant go with the engine (DEL2), the function staying until its call sites collapse.
-pub fn fm_emit_mode() -> u8 { 2 }
-
-/// Set (`Some`) or clear (`None`) this thread's override of the switch — no effect since DEL1 (`fm_emit_mode` is fixed
-/// at 2); kept for its last caller, this module's unit test, until DEL2 deletes both.
-pub fn set_fm_emit_override(mode: Option<u8>) { FM_EMIT_OVERRIDE.with(|o| o.set(mode)); }
 
 /// The State value saying a flush emitted (the writer has nothing left to do, `write_observed_frontmatter`): the ledger's
 /// generation whose reading the last emit wrote to its end ([`Ledger::generation`]), which a later flush with nothing queued
@@ -3994,7 +3980,6 @@ mod tests {
   #[test]
   fn a_digested_queue_entry_is_never_written_again() {
     reset_fm_shadow();
-    set_fm_emit_override(Some(2));
     let call = |index: usize, text: &'static str| {
       let command = TokenizeInternal!(text);
       Entry::Api(ApiCall {
@@ -4051,7 +4036,6 @@ mod tests {
     };
     let (items, _) = items_to_emit(&resolved, &[], &BTreeSet::new(), &mut Vec::new());
     let texts: Vec<&str> = items.iter().map(|item| item.assoc.text.as_str()).collect();
-    set_fm_emit_override(None);
     reset_fm_shadow();
     assert_eq!(texts, ["Kept note"]);
   }
