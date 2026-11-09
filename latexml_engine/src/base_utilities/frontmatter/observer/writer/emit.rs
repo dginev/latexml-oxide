@@ -2526,11 +2526,13 @@ fn warn_queued_unwritten(index: usize, whole: bool) {
   );
 }
 
-/// Whether two names of the author block at ledger index `index` are written from runs of its tokens that overlap: a macro
-/// printing both, `\author{\small\myauthors \\ …}` with `\newcommand{\myauthors}{Xing Shi Cai, Luc Devroye}` under scrartcl
-/// (1602.03850, 2 × merged_creators where each creator wrote the macro; cond-mat9310042). No cut of the block writes each
-/// name alone and keeps what else the shared run prints (a `\thanks` note, a `\footnotemark`: review revX1 finding 1), so
-/// the block is written whole, Perl's whole-block creator, with a counted Warning, once per block over the flushes.
+/// Whether two names of the author block at ledger index `index` are written from runs of its tokens that overlap — a macro
+/// printing both — and the shared run digests a note (a `\thanks`, a `\footnote`) or a `\footnotemark`: no cut of the block
+/// writes each name alone and keeps it, each name writing the run would print it twice (review revX1 finding 1). Then the
+/// block is written whole, Perl's whole-block creator, with a counted Warning, once per block over the flushes. A shared run
+/// printing names only, or marks the reading answers to labelled affiliations (math superscripts, cond-mat9310042's
+/// `\def\riera{Riera$^1$ and Elbio Dagotto$^2$}`), keeps the reading, each name its text (NE3): `\author{\small\myauthors \\
+/// …}` with `\newcommand{\myauthors}{Xing Shi Cai, Luc Devroye}` under scrartcl (1602.03850; review revCL9b finding 1).
 fn names_overlap(index: usize, resolved: &Resolved) -> bool {
   let spelled: Vec<String> = resolved
     .creators
@@ -2548,13 +2550,34 @@ fn names_overlap(index: usize, resolved: &Resolved) -> bool {
       .filter(|(name, ..)| name.is_some())
       .filter_map(|(_, _, run, ..)| run)
       .collect();
-  let overlap = runs.iter().enumerate().any(|(k, &(s, t))| {
-    runs
+  // (the shared runs: each two names' runs' common tokens)
+  let shared: Vec<(usize, usize)> = runs
+    .iter()
+    .enumerate()
+    .flat_map(|(k, &(s, t))| {
+      runs
+        .iter()
+        .skip(k + 1)
+        .filter(move |&&(s2, t2)| s < t2 && s2 < t)
+        .map(move |&(s2, t2)| (s.max(s2), t.min(t2)))
+    })
+    .collect();
+  if shared.is_empty() {
+    return false;
+  }
+  // (what a shared run digests: a note, or a footnote mark — never a mark the reading answers to a labelled affiliation)
+  let prints_a_note = with_block(index, false, |block, events| {
+    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+    events
       .iter()
-      .enumerate()
-      .any(|(l, &(s2, t2))| l != k && s < t2 && s2 < t)
+      .filter(|e| {
+        e.kind == EventKind::Note
+          || (e.kind == EventKind::Mark && e.role.as_deref() == Some("footnotemark"))
+      })
+      .filter_map(|e| Some((at(e.span?.0)?, at(e.span?.1)?)))
+      .any(|(s, t)| shared.iter().any(|&(from, to)| from <= s && t <= to))
   });
-  if !overlap {
+  if !prints_a_note {
     return false;
   }
   let once = s!("overlap|{index}");
@@ -2914,7 +2937,10 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   };
   let mut recorded: Option<BTreeMap<u64, Vec<Tokens>>> = None;
   let mut unrecorded = Vec::new();
-  let mut unrecorded_kept: Vec<(Vec<String>, RawFrontmatter)> = Vec::new();
+  // (each kept with the queued creators before it: the last one's the creator off writes it on)
+  let mut unrecorded_kept: Vec<(Vec<String>, RawFrontmatter, usize)> = Vec::new();
+  // (the queued creators, in queue order, each its reading's source: its block's, or its own call's)
+  let mut queued_creators: Vec<Option<usize>> = Vec::new();
   let mut reading_words: Option<BTreeSet<String>> = None;
   for entry in std::mem::take(commands) {
     let parent = annotated_parent(&entry.2);
@@ -2922,6 +2948,18 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       unprinted.push(entry);
     } else if creator_call(&entry.0, &parent) && !wordless_calls.contains(&entry.2) {
       seen = true;
+      if entry.0 == "ltx:creator" && parent.is_empty() {
+        queued_creators.push(with_ledger(|ledger| {
+          ledger.entries().iter().find_map(|e| match e {
+            Entry::Api(call) if call.command.as_ref() == Some(&entry.2) => Some(if call.inside {
+              call.after_block?
+            } else {
+              call.index
+            }),
+            _ => None,
+          })
+        }));
+      }
       let recorded = recorded.get_or_insert_with(|| {
         with_ledger(|ledger| {
           let mut recorded: BTreeMap<u64, Vec<Tokens>> = BTreeMap::new();
@@ -2953,7 +2991,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
         // (its text the content check's either way: written, it counts it printed once)
         unrecorded.push(text);
         if !unwritten.is_empty() {
-          unrecorded_kept.push((unwritten, entry));
+          unrecorded_kept.push((unwritten, entry, queued_creators.len()));
         }
       }
     } else if seen {
@@ -2965,7 +3003,12 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   if !unrecorded.is_empty() {
     with_ledger(|ledger| ledger.unrecorded.extend(unrecorded));
   }
-  for (words, entry) in unrecorded_kept {
+  // (an unrecorded call a queued creator follows is the last creator's before it, as off digests the queue: written after
+  // that creator's source's last creator of this flush, `mid_queue`; the rest after the items, in queue order — review
+  // revCL9b finding 2)
+  let mut mid_queue: Vec<(usize, RawFrontmatter)> = Vec::new();
+  let mut at_end: Vec<RawFrontmatter> = Vec::new();
+  for (words, entry, creators_before) in unrecorded_kept {
     let once = s!("unrecorded|{}", words.join(" "));
     if lookup_mapping(EMITTED_ITEMS, &once).is_none() {
       assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
@@ -2978,7 +3021,12 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
         )
       );
     }
-    after.insert(0, entry);
+    match queued_creators.get(..creators_before).and_then(<[_]>::last) {
+      Some(&Some(source)) if creators_before < queued_creators.len() => {
+        mid_queue.push((source, entry))
+      },
+      _ => at_end.push(entry),
+    }
   }
   // (the creators: each its Perl label, `author:N`, new or emitted at an earlier flush: as `num_<tag>` carries a flush's counts.
   // A block written whole is one creator, its first name's, which its other names' items go to)
@@ -3043,13 +3091,31 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .map(|&i| resolved.creators[i].name.clone())
       .collect();
     let tokens = block_names(source, &spelled, keeps(source), &mut on_names);
+    // (two names written from runs that overlap each print the other's ink: a macro printing both, `\author{\small
+    // \myauthors \\ …}` with `\newcommand{\myauthors}{Xing Shi Cai, Luc Devroye}` under scrartcl, each creator written as the
+    // macro, a name of two people twice (2 × merged_creators, 1602.03850; cond-mat9310042). Each is its text, counted — where
+    // the shared run prints a note or a footnote mark, the block is written whole instead, `names_overlap`)
+    let overlapping: BTreeSet<usize> = tokens
+      .iter()
+      .enumerate()
+      .filter(|(k, (name, _, run, ..))| {
+        name.is_some()
+          && run.is_some_and(|(s, t)| {
+            tokens.iter().enumerate().any(|(l, (other, _, run, ..))| {
+              l != *k && other.is_some() && run.is_some_and(|(s2, t2)| s < t2 && s2 < t)
+            })
+          })
+      })
+      .map(|(k, _)| k)
+      .collect();
     let mut runs: Vec<(usize, (usize, usize))> = Vec::new();
     let mut stepped: BTreeSet<usize> = BTreeSet::new();
-    for (&i, (name, cites, run, _, in_name)) in members.iter().zip(tokens) {
+    for (k, (&i, (name, cites, run, _, in_name))) in members.iter().zip(tokens).enumerate() {
       if let Some(run) = run {
         runs.push((i, run));
       }
       stepped.extend(in_name);
+      let name = name.filter(|_| !overlapping.contains(&k));
       names.insert(i, (name, cites));
     }
     if let Some(&first) = members.first() {
@@ -3164,8 +3230,11 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   if !decls.is_empty() {
     out.push(entry("ltx:emit", decls));
   }
+  // (where each source's last creator of this flush ends in `out`, for `mid_queue`)
+  let mut creator_end: BTreeMap<usize, usize> = BTreeMap::new();
   for &i in &fresh {
     let c = &resolved.creators[i];
+    creator_end.insert(c.source, out.len() + 1);
     let mut keys = annotations_key(&annotations[i].join(","));
     keys.extend(whole_marks_key(c, &annotations[i]));
     // (kept whole on purpose, as a tabular block is: no merge to flag beside its Warning, `flag_merged_creators`)
@@ -3366,9 +3435,22 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     }
   }
   out.extend(kept);
+  // (each mid-queue call after its creator, in queue order; one whose creator this flush doesn't write, then the rest, after
+  // the items, in queue order)
+  let mut placed: BTreeMap<usize, Vec<RawFrontmatter>> = BTreeMap::new();
+  for (source, call) in mid_queue {
+    match creator_end.get(&source) {
+      Some(&at) => placed.entry(at).or_default().push(call),
+      None => out.push(call),
+    }
+  }
+  out.extend(at_end);
   out.extend(after);
   if let Some(creator) = block_creator(of_the_block) {
     out.insert(block_at, entry("ltx:creator", creator.unlist()));
+  }
+  for (at, calls) in placed.into_iter().rev() {
+    out.splice(at..at, calls);
   }
   // (a document's note's own `\\email` is the reading's item already: `api:note-spelled`, 0910.1640 — but in a note making a
   // creator, which no reading answers, each contact is the newest creator's as the note is digested, as Perl's:
