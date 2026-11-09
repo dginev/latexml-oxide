@@ -141,6 +141,8 @@ impl TagList {
 
 /// One entry of a [`TagList`] edited in place ([`TagList::get_mut`]): when it is dropped, an entry whose kind (pending
 /// stub, parent, block creator) the edit changed moves to the index of its new kind — an O(1) check when unchanged.
+/// The re-filing runs in `Drop`, so a guard passed to `std::mem::forget` would leave the index stale (no caller does;
+/// debug builds check the index against a scan at every read: review revI7).
 pub struct EntryMut<'a> {
   entry:   &'a mut TagData,
   index:   usize,
