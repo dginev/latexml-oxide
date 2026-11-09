@@ -13612,7 +13612,10 @@ by node address and renamed each re-creation, leaving `xlink:href` dangling). `a
 writer's contacts and notes) makes a second copy instead: `append_clone_aux` copies an svg element's plain `id` as Perl
 does (Document.pm:1943-1954, only `xml:id` is remapped) and drops the mark, so the copy's own `svg:svg` close renames the
 ids it repeats with their references (NE7: it had remapped the `id` into an `xml:id`, schema-invalid — tikz-shields-doc,
-8 jing lines at `=2`, whose writer copies each contact into its creator, `repart.rs` `write_items`). A picture
+8 jing lines at `=2`, whose writer copies each contact into its creator, `repart.rs` `write_items`). The change is
+mode-independent: a MathFork copy of a picture changes off too (2206.10577: the copy's clipPath `id="S2.Ex13.m3.4"`
+with `url(#pgfcp14)` — a reference into the original — becomes `pgfcp14a` with `url(#pgfcp14a)`, later math `xml:id`s
+shift by one; content, Errors and rendering unchanged; accepted at the flip as a Perl-parity fix, revX5). A picture
 keeps Perl's ids unless an earlier element holds them (a relocated footnote copy can); nothing is dropped (content_diff: suanpan-l3, thuaslogos unchanged). Modelled on Perl's own
 `appendClone` id map (Document.pm:1920-1956). Witnesses: suanpan-l3 (9,480 of 9,481 jing lines), thuaslogos-doc-english,
 thuaslogos-doc-dutch (4 each; copies nested in one picture) — +2 schema-valid manuals. Residual: an `xml:id` recorded
