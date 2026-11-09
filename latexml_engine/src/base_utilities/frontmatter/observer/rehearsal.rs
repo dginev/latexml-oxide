@@ -12,7 +12,10 @@
 //! What its boxes do not say is noted beside them (`field_notes::FieldNotes`): the definitions made, the errors held, by the
 //! field position of the invocation.
 
-use std::{cell::Cell, ops::Range};
+use std::{
+  cell::{Cell, RefCell},
+  ops::Range,
+};
 
 use latexml_core::{
   definition::origin::{DefinitionOrigin, with_origin},
@@ -35,7 +38,7 @@ use super::{
 thread_local! {
   static REHEARSING: Cell<bool> = const { Cell::new(false) };
   /// the tags of the entries the rehearsal's run would have queued besides its creators ([`note_frozen_entry`])
-  static FROZEN_ENTRIES: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+  static FROZEN_ENTRIES: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
 }
 
 /// Note, while a rehearsal digests, an entry `tag` its run would queue (`command`, the frozen frontmatter queues none:

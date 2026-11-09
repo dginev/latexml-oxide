@@ -2478,7 +2478,8 @@ fn sequenced(call: &ApiCall) -> bool {
   call
     .attrs
     .split(',')
-    .any(|kv| kv.trim().starts_with("_sequence="))
+    .filter_map(|kv| kv.split_once('='))
+    .any(|(key, _)| key.trim() == "_sequence")
 }
 
 /// The words of `text`, lowercased: its runs of two or more letters or digits (the content check's words).
@@ -2527,9 +2528,9 @@ fn warn_queued_unwritten(index: usize, whole: bool) {
 
 /// Whether two names of the author block at ledger index `index` are written from runs of its tokens that overlap: a macro
 /// printing both, `\author{\small\myauthors \\ …}` with `\newcommand{\myauthors}{Xing Shi Cai, Luc Devroye}` under scrartcl
-/// (1602.03850, 2 × merged_creators where each creator wrote the macro). No cut of the block writes each name alone and keeps
-/// what else the shared run prints (a `\thanks` note, a `\footnotemark`: review revX1 finding 1), so the block is written
-/// whole, Perl's whole-block creator, with a counted Warning, once per block over the flushes.
+/// (1602.03850, 2 × merged_creators where each creator wrote the macro; cond-mat9310042). No cut of the block writes each
+/// name alone and keeps what else the shared run prints (a `\thanks` note, a `\footnotemark`: review revX1 finding 1), so
+/// the block is written whole, Perl's whole-block creator, with a counted Warning, once per block over the flushes.
 fn names_overlap(index: usize, resolved: &Resolved) -> bool {
   let spelled: Vec<String> = resolved
     .creators
@@ -2786,48 +2787,23 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       with_ledger(|ledger| matches!(ledger.entries().get(source), Some(Entry::Author(_))))
     })
     .collect();
-  // (the block's own content check sees a printed word it won't write: any ink of it lost — a name's (`LostInk::names_fail`)
-  // or another (an affiliation line, a remark, an address's label: brief CL9, C3 cond-mat9906335, hep-th0001181; C4) — or a
-  // word of a name written more often than it prints. The block is declined, Perl's whole-block creator, never a reading
-  // that loses a printed word)
-  let loses_ink = |source: usize| {
+  // (the names themselves fail: an ink among them lost, or a word of a name written more often than it prints. Not any lost
+  // ink: an affiliation line, a remark or an address's label lost keeps the reading, kept as a note of the block below
+  // (brief CL9b — declining on any ink cost the segmentation of 2605.16481 and 2607.28418 and false-alarmed on 1905.00862's
+  // one glued word; C3 cond-mat9906335, hep-th0001181 stay open))
+  let names_fail = |source: usize| {
     checks.get(&source).is_some_and(|check| {
-      for ink in &check.lost {
+      for ink in check.lost.iter().filter(|ink| ink.names_fail) {
         DebugFeature!(
           "frontmatter",
-          "FRONT net: an ink lost at {source} (a name's: {}): {}",
-          ink.names_fail,
+          "FRONT net: a name lost at {source}: {}",
           ink.text
         );
       }
-      !check.lost.is_empty() || check.excess.iter().any(|(_, name)| *name)
+
+      check.lost.iter().any(|ink| ink.names_fail) || check.excess.iter().any(|(_, name)| *name)
     })
   };
-  // (a creator call the block's own expansion made, or one annotating its creators after it, whose printed words the reading
-  // writes in part: the reading holds no place for the rest, so the block it goes with is declined, its tokens and queued
-  // calls as the switch off writes them — brief CL9, the rest of C6: 1802.00231, 2609.24170)
-  let partly_lost: BTreeMap<usize, Option<usize>> = with_ledger(|ledger| {
-    analysis
-      .calls
-      .iter()
-      .filter(|(_, (words, _))| !words.is_empty())
-      .filter_map(|(&index, _)| match ledger.entries().get(index) {
-        Some(Entry::Api(call)) if !call.cleared && call.command.is_some() && !sequenced(call) => {
-          Some((index, call.after_block))
-        },
-        _ => None,
-      })
-      .filter(|(index, _)| {
-        resolved
-          .creators
-          .iter()
-          .flat_map(|c| c.affiliations.iter().chain(&c.contacts).chain(&c.notes))
-          .chain(&resolved.block)
-          .any(|a| a.source.is_some_and(|(at, _)| at == *index))
-      })
-      .collect()
-  });
-  let call_lost = |source: usize| partly_lost.values().any(|&block| block == Some(source));
   // (or a name or an item of it joins ink across an alignment's cells: no cut of the block makes it — its tokens hold the
   // alignment's `&` or join two columns' rows —, so the block is Perl's whole-block creator, as the switch off writes it
   // (Base_Utility.pool.ltxml:691-693): names one per cell read as one, 1504.01048, 2607.22455, 2609.36783, 2507.07623,
@@ -2864,8 +2840,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       let cells = across_cells(source);
       let whole = written_whole(
         source,
-        loses_ink(source)
-          || call_lost(source)
+        names_fail(source)
           || cells
           || counter_moved(source, resolved)
           || mark_dropped(source, resolved)
@@ -3083,14 +3058,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   }
   let mut kept: Vec<RawFrontmatter> = Vec::new();
   let (mut items, separate) = items_to_emit(resolved, &owners, &on_names, &mut kept);
-  // (a block written whole prints its own items; its names' others are its creator's. A call the reading writes in part is
-  // written as queued, below: none of its items from the reading)
-  items.retain(|item| {
-    !item
-      .assoc
-      .source
-      .is_some_and(|(at, _)| whole.contains(&at) || partly_lost.contains_key(&at))
-  });
+  // (a block written whole prints its own items; its names' others are its creator's)
+  items.retain(|item| !item.assoc.source.is_some_and(|(at, _)| whole.contains(&at)));
   for item in &mut items {
     let mut seen_owners = BTreeSet::new();
     item.owners = item
@@ -3351,11 +3320,20 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   // (a call whose printed words the reading holds no place for, and of which it writes nothing, is written as the switch off
   // writes it — its queued command, below the items, the newest creator's as the switch off's queue digests it — never a
   // silent loss: iopart's `\ead{jborkowska astro.uni.torun.pl}`, whose text holds no address, 2112.14174 (brief CL7, C6). One
-  // the reading writes part of is written so too, none of its items from the reading (`partly_lost`: brief CL9, 1802.00231,
-  // 2609.24170); a call its block's expansion made, the block written whole, is the block's tokens' again. Not a contact of a
-  // class's address list printed apart from the names (`sequenced`): its owner is its place in the list, which only the
-  // whole list digested in queue order gives — written below the items it named no creator, a nameless creator invented
-  // (1901.02012, review revX2 finding 1) —, so its words stay counted lost)
+  // the reading writes part of keeps its reading, the rest counted (1802.00231, 2609.24170: brief CL9b keeps the reading,
+  // never declining a block for it — hep-ex0609057, 2304.07772). Not a contact of a
+  // class's address list of two or more calls printed apart from the names (`sequenced`): its owner is its place in the list,
+  // which only the whole list digested in queue order gives — written below the items it named no creator, a nameless
+  // creator invented (1901.02012, review revX2 finding 1) —, so its words stay counted lost. A list of one call is written
+  // as queued, as off (iopart's single `\ead`, 2112.14174))
+  let many_sequenced = with_ledger(|ledger| {
+    ledger
+      .entries()
+      .iter()
+      .filter(|e| matches!(e, Entry::Api(call) if !call.cleared && sequenced(call)))
+      .count()
+      > 1
+  });
   for (&index, (words, excess)) in &analysis.calls {
     if !words.is_empty() {
       let untouched = !written.contains(&index)
@@ -3365,16 +3343,10 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       let queued = untouched
         .then(|| {
           with_ledger(|ledger| match ledger.entries().get(index) {
-            Some(Entry::Api(call))
-              if !call.cleared
-                && !(call.inside && call.after_block.is_some_and(|b| whole.contains(&b)))
-                && !sequenced(call) =>
-            {
-              call
-                .command
-                .clone()
-                .map(|command| (call.tag.clone(), command))
-            },
+            Some(Entry::Api(call)) if !call.cleared && !(many_sequenced && sequenced(call)) => call
+              .command
+              .clone()
+              .map(|command| (call.tag.clone(), command)),
             _ => None,
           })
         })
@@ -3385,16 +3357,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
           out.push((tag, TagAttrs::default(), command));
         },
         _ => {
-          let in_whole = with_ledger(|ledger| {
-            matches!(ledger.entries().get(index), Some(Entry::Api(call))
-              if call.inside && call.after_block.is_some_and(|b| whole.contains(&b)))
-          });
-          let then = if in_whole {
-            Unwritten::Whole
-          } else {
-            Unwritten::Lost
-          };
-          warn_unwritten(index, words, then);
+          warn_unwritten(index, words, Unwritten::Lost);
         },
       }
     }

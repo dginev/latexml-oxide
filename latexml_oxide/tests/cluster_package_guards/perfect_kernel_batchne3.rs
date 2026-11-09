@@ -74,8 +74,10 @@ fn a_legends_mark_is_written_as_characters() {
 }
 
 /// `\newcommand{\myauthors}{Xing Shi Cai, Luc Devroye}` under scrartcl: `=2` read two names and wrote each creator from a
-/// run holding the macro, both names twice (2 x merged_creators). Runs that overlap print each other's ink: each name is its
-/// text, a counted Warning each. Off is the old reader's one merged creator, unchanged.
+/// run holding the macro, both names twice (2 x merged_creators). Runs that overlap print each other's ink: the block is
+/// written whole, Perl's whole-block creator, one counted Warning (CL9 `emit::names_overlap`, review revX1 finding 1: each
+/// name as its text dropped what else the macro prints; `perfect_kernel_batchcl9`). Off is the old reader's one merged
+/// creator, unchanged.
 #[test]
 fn names_a_macro_prints_together_are_their_text() {
   let (log, xml) = run(repro!("ne3_macro_names"), 0);
@@ -83,19 +85,14 @@ fn names_a_macro_prints_together_are_their_text() {
   assert!(log.contains("merged_creators"), "{log}");
   assert_eq!(creators(&xml).len(), 1, "{xml}");
   let (log, xml) = run(repro!("ne3_macro_names"), 2);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
-  assert_eq!(creators(&xml), [
-    row(&[
-      "Xing Shi Cai",
-      "affiliation=Univ A, City A",
-      "email=xingshi.cai@mail.mcgill.ca"
-    ]),
-    row(&[
-      "Luc Devroye",
-      "affiliation=Univ A, City A",
-      "email=lucdevroye@gmail.com"
-    ]),
-  ]);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("two names of its author block from one run of its tokens"),
+    "{log}"
+  );
+  assert_eq!(creators(&xml), [row(&[
+    "Xing Shi Cai, Luc Devroye Univ A, City A, xingshi.cai@mail.mcgill.ca lucdevroye@gmail.com"
+  ])]);
 }
 
 /// `\def\authord#1#2{\indent\Mr{#1}\\ \textit{\indent#2}\vsm}`: `=2` wrote the name `\authord{Cat Cole}`, cut from its
