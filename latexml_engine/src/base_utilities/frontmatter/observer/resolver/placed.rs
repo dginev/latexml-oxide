@@ -975,3 +975,105 @@ mod note_tests {
     );
   }
 }
+
+#[cfg(test)]
+mod whole_tests {
+  use latexml_core::{gullet::input_mark, tokens::Tokens};
+
+  use super::{
+    super::super::{
+      events::{Event, EventKind, InkTable},
+      ledger::{AuthorBlock, Entry, Ledger, Outcome, Stamp},
+    },
+    ContentCheck, Placed, PlacedItem, PlacedKind, content_check,
+  };
+
+  /// A rehearsed author block whose events are `names`, each a Name on a line of its own.
+  fn block(index: usize, names: &[&str]) -> Entry {
+    let mut events = Vec::new();
+    for name in names {
+      let mut event = Event::new(EventKind::Name);
+      event.text = name.to_string();
+      events.push(event);
+      events.push(Event::new(EventKind::Break));
+    }
+    Entry::Author(Box::new(AuthorBlock {
+      index,
+      hook: "\\lx@add@authors@adaptive",
+      policy: "kernel".to_string(),
+      binding: "kernel".to_string(),
+      owner: "kernel".to_string(),
+      setters_before: 0,
+      counter: None,
+      replace: false,
+      cleared: false,
+      sectioned: false,
+      late: false,
+      cautious: false,
+      keyvals: None,
+      epoch: 0,
+      queue_position: 0,
+      authors_queued: None,
+      stamp: Stamp::Projected,
+      range: (0, 0),
+      tokens: Tokens::new(Vec::new()),
+      source: names.join(" \\\\ "),
+      mark: input_mark(),
+      window_open: false,
+      outcome: Outcome::Events {
+        events,
+        formulas: Vec::new(),
+        inks: Box::new(InkTable::default()),
+        errors: 0,
+        warnings: 0,
+        declarations: Vec::new(),
+        breaks: Vec::new(),
+        held: Vec::new(),
+        environments: Vec::new(),
+        creators: Box::new([]),
+        unread: None,
+      },
+    }))
+  }
+
+  fn name(holder: usize, text: &str) -> PlacedItem {
+    PlacedItem {
+      holder,
+      kind: PlacedKind::Name,
+      text: text.to_string(),
+      label: None,
+    }
+  }
+
+  /// A block written whole exempts the words of the creator it became, never another creator's (review revN2 finding 2,
+  /// revI8 finding 1): the whole block's creator holds an `and` its class's `\and` printed and no event holds (JAIR's,
+  /// 1908.02923), which is no excess; the second creator, from a block of its own, holds its name twice where its block
+  /// printed it once (until FX4, the ORCID link's text placed again as its contact: 2203.03523, 2306.13366), which is.
+  /// The repro `emit_content_a_whole_block_exempts_only_itself` has no excess on this path since FX4.
+  #[test]
+  fn a_whole_block_exempts_only_its_own_creator() {
+    let mut ledger = Ledger::default();
+    ledger.push(block(0, &["Ann Able", "Bob Baker", "Univ A"]));
+    ledger.push(block(1, &["Cat Cole"]));
+    let placed = Placed {
+      items: vec![
+        name(0, "Ann Able and Bob Baker Univ A"),
+        name(1, "Cat Cole"),
+        name(1, "Cat Cole"),
+      ],
+      ..Placed::default()
+    };
+    assert_eq!(
+      content_check(&ledger, &placed, &|index| index == 0),
+      ContentCheck {
+        lost:   vec![],
+        excess: vec!["Cat".to_string(), "Cole".to_string()],
+      }
+    );
+    // (the same words with the whole block read like any other: its `and` in excess too)
+    assert_eq!(content_check(&ledger, &placed, &|_| false), ContentCheck {
+      lost:   vec![],
+      excess: vec!["and".to_string(), "Cat".to_string(), "Cole".to_string()],
+    });
+  }
+}
