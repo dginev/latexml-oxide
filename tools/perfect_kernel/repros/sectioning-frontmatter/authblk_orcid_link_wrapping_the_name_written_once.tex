@@ -1,0 +1,27 @@
+% An ORCID link whose printed text is the author's name (an icon's box before it): `=2` read it as the name and its
+% ORCID (`link_names`), wrote the name from the link's call — the link whole, icon and name — and wrote the ORCID contact
+% from the same call again, so the name was held twice. The name's run prints the link, so the ORCID is on the name (as
+% off and Perl hold it: one personname `ltx:ref` to orcid.org), no contact of its own.
+% witness: 2410.07791, 2507.22485, 2602.05817 (arxiv.sty's authblk template; their `\hspace{1mm}` after the icon is a
+%          space instead here: `=2` writes it U+2005, off U+2003, a difference apart from this one)
+% oracle:  pdflatex 0 errors: icon "Ann Able*", icon "Bob Baker", "Univ X", "Univ Y", footnote "ann@x.org"
+% engines: rust FX4base =2 = each name twice (personname link and `contact role=orcid` holding icon + name); off = once
+%          (the personname's link); perl = not run (Perl's authblk binding writes the argument as the personname, no ORCID contact)
+% expect:  0 errors, 0 warnings; Ann: personname ref(orcid 0000-0001-…, icon, "Ann Able") + thanks, no orcid contact;
+%          Bob: personname ref(orcid 0000-0002-…, icon, "Bob Baker"), no orcid contact; Univ X/Y affiliations
+% status:  RED (FX4base =2) -> GREEN (FX4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{authblk}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\newbox{\orcid}\sbox{\orcid}{\includegraphics[scale=0.06]{example-image}}
+\author[1]{\href{https://orcid.org/0000-0001-0000-0001}{\usebox{\orcid} Ann Able\thanks{ann@x.org}}}
+\author[2]{\href{https://orcid.org/0000-0002-0000-0002}{\usebox{\orcid} Bob Baker}}
+\affil[1]{Univ X}
+\affil[2]{Univ Y}
+\maketitle
+Text.
+\end{document}

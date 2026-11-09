@@ -51,26 +51,28 @@ fn a_shared_copy_hides_no_differently_worded_loss() {
   assert_eq!(content_checks(&log), (vec![], vec![]), "{log}");
 }
 
-/// A block written whole exempts the creator it became, never the rest of the paper: the second author's name, placed in
-/// its personname and again as its ORCID link's text, is counted in excess beside the block written whole (review revN2
-/// finding 2; the link's text 2203.03523, 2306.13366).
+/// A block written whole exempts the creator it became, never the rest of the paper (review revN2 finding 2): the second
+/// author's ORCID link printing the name (2203.03523, 2306.13366) is written once beside the block written whole, the name's
+/// link its ORCID (FX4, `perfect_kernel_batchfx4::an_orcid_link_printing_the_name_is_written_once`), so nothing is in excess.
+/// Until FX4 the name was placed again as its ORCID contact's text and counted here; the exemption's scope has no other
+/// excess on this path to pin now.
 #[test]
 fn a_whole_block_exempts_only_its_own_creator() {
   let (log, xml) = run(repro!("emit_content_a_whole_block_exempts_only_itself"), 2);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
     log.contains("the block is written whole, as Perl's whole-block creator"),
     "{log}"
   );
-  assert_eq!(
-    content_checks(&log),
-    (vec![], vec!["Cat Cole".to_string()]),
-    "{log}"
-  );
+  assert_eq!(content_checks(&log), (vec![], vec![]), "{log}");
   assert_eq!(creators(&xml), [
     row(&["Ann Able ann@a.org Bob Baker bob@b.org Univ A Town, Country"]),
-    row(&["Cat Cole", "orcid=Cat Cole", "affiliation=Univ C"]),
+    row(&["Cat Cole", "affiliation=Univ C"]),
   ]);
+  assert!(
+    xml.contains(r#"<personname><ref class="ltx_href" href="https://orcid.org/0000-0001-5935-6018">Cat Cole</ref></personname>"#),
+    "{xml}"
+  );
 }
 
 /// A lost one-letter word is counted: every word counts, a mark excluded by its Mark event, not by its length (review revN2

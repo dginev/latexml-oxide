@@ -1,0 +1,19 @@
+% Names each printed by an ORCID link in one `\author` line (`\href{https://orcid.org/…}{E. L. Gagnon}$^{*,1,2}$, …`):
+% `link_names` reads each link as its name and its ORCID; the name is written from the link's call, so the ORCID is on
+% the name, not a second contact holding the name again.
+% witness: 2312.16289 (shape), 2410.07791
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2", "1Univ X", "2Univ Y"
+% engines: rust FX4base =2 = each name twice (the personname's link and a `contact role=orcid` holding the link again);
+%          off = once, the link in the personname; perl = not run
+% expect:  0 errors, 0 warnings; Ann and Bob: each personname ref(orcid, name), no orcid contact holding the name
+% status:  RED (FX4base =2) -> GREEN (FX4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{\href{https://orcid.org/0000-0001-0000-0001}{Ann Able}$^{1}$, \href{https://orcid.org/0000-0002-0000-0002}{Bob Baker}$^{2}$\\
+$^{1}$Univ X\\ $^{2}$Univ Y}
+\maketitle
+Text.
+\end{document}

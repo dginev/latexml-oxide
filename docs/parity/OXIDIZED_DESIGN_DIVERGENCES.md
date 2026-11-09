@@ -23888,7 +23888,10 @@ against int58a with the switch unset and set, SYNC "FM S2a.2").
   else the block's (2103.04797: 17 of its 188 pre-declared `\affiliation`s; 2401.15779) — where r3 dropped them.
 - **Names**: a prefix-marked name keeps its notes and contacts (0710.4115, gr-qc0606119: the notes were lost); a link
   to an ORCID record printing a name is that name and its ORCID (`lines::link_names`: 2312.16289's
-  `\href{https://orcid.org/…}{E. L. Gagnon}`, 2301.02927, 2602.03244); spacing before a mark (`${\,\!}^2$`) neither
+  `\href{https://orcid.org/…}{E. L. Gagnon}`, 2301.02927, 2602.03244), and under `=2` the name is written from the
+  link's call, so that ORCID is the personname's link, as off and Perl hold it (authblk's `\lx@add@creator{#2}`), with no
+  contact writing the link and the name again (`writer::emit::block_names`; FX4: 2410.07791, 2507.22485, 2602.05817,
+  `perfect_kernel_batchfx4::an_orcid_link_printing_the_name_is_written_once`); spacing before a mark (`${\,\!}^2$`) neither
   joins nor ends the marked entries of one call (2112.13115).
 - **Lexer**: a `\thanks` inside a superscript is a note after the mark, not its label (1106.3485; 2512.05464, where
   today's XML loses the note and the mark `2` — a content loss of today's output, recorded in SYNC); the kernel's
