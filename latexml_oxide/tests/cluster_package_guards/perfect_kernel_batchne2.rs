@@ -5,7 +5,9 @@
 //! (cond-mat9905290); "representing" speaks for a collaboration (hep-ex9903035). A creator's labels written back as plain
 //! characters (1910.05766) is the unit test `writer::emit::tests::a_creators_labels_are_plain_characters`. NE2b (review
 //! revNE2): a counter move no name carries writes the block whole, with its Warning (1507.05018's Ombao, A1); a note
-//! before every name steps before the first name (A2).
+//! before every name steps before the first name (A2). NE2c (review revNE2r2 Q2): a mark a name prints past its note stays
+//! with it, the note's step before it (1610.06031); a `\footnotemark` no name and no item writes writes the block whole,
+//! with its Warning (1911.13299).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::{set_fm_emit_override, set_fm_shadow_override};
@@ -214,6 +216,143 @@ fn a_note_before_every_name_steps_before_it() {
       creators(&xml),
       [row(&["Ann Able † † footnote †"]), row(&["Bob Baker"])],
       "emit={emit}"
+    );
+  }
+}
+
+/// The marks' notes of `xml` (a `\footnotemark`'s, an `\endnotemark`'s), each its opening tag, in document order.
+fn footnotemarks(xml: &str) -> Vec<&str> {
+  xml
+    .match_indices("<note ")
+    .map(|(at, _)| &xml[at..at + xml[at..].find('>').expect("a note's tag")])
+    .filter(|tag| tag.contains(" mark="))
+    .collect()
+}
+
+/// A mark a name prints past its note stays with the name, in source order, the note's footnote step before it: `=2`'s
+/// past-marks scan stopped at the note, so Ann Able's `\footnotemark` was dropped with no Warning and the next name's mark
+/// printed one symbol short (Bob †, Carl ‡). Each shape off and at `=2` as pdflatex prints it: glued, past `\ `, `~` and
+/// `\,`, a given `\footnotemark[1]`, past a `\footnote`, past a formula's `$^,$` (1610.06031's `G.
+/// Citti\thanks{...}\footnotemark[1]`, review revNE2r2 Q2; 1703.08733's
+/// `\protect\endnotemark[1]$^,$\protect\endnotemark[2]`). Distinct from `a_notes_footnote_step_runs_where_it_prints`:
+/// the note's step inside the name's tokens, between its text and its mark.
+#[test]
+fn a_mark_after_its_names_note_stays_with_it() {
+  let mark = |m: &str, n: &str| format!(r#"<note mark="{m}" role="footnotemark" xml:id="{n}""#);
+  for (tex, expected, marks) in [
+    (
+      repro!("ne2c_mark_after_note"),
+      vec![
+        row(&["Ann Able † † footnote †"]),
+        row(&["Bob Baker ‡ ‡ footnote ‡"]),
+      ],
+      vec![mark("†", "footnote2"), mark("‡", "footnote3")],
+    ),
+    (
+      repro!("ne2c_mark_after_note_spaced"),
+      vec![
+        row(&["Ann Able † † footnote †"]),
+        row(&["Bob Baker"]),
+        row(&["Carl Cole § § footnote §"]),
+      ],
+      vec![mark("†", "footnote2"), mark("§", "footnote4")],
+    ),
+    (
+      repro!("ne2c_mark_after_note_numbered"),
+      vec![
+        row(&["Ann Able * * footnote *"]),
+        row(&["Bob Baker * * footnote *"]),
+        row(&["Carl Cole"]),
+      ],
+      vec![mark("*", "footnotex1"), mark("*", "footnotex2")],
+    ),
+    (
+      repro!("ne2c_mark_after_footnote_glued"),
+      vec![
+        row(&["Ann Able † † footnote †"]),
+        row(&["Bob Baker * * footnote *", "note=Univ Y."]),
+        row(&["Carl Cole § § footnote §"]),
+      ],
+      vec![
+        mark("†", "footnote2"),
+        mark("*", "footnotex1"),
+        mark("§", "footnote4"),
+      ],
+    ),
+    (
+      repro!("ne2c_mark_after_math_comma"),
+      vec![
+        row(&["Ann Able 1 1 endnote 1"]),
+        row(&["Bob Baker 1 1 endnote 1 , 2 2 endnote 2"]),
+      ],
+      ["1", "2", "3"]
+        .iter()
+        .zip(["1", "1", "2"])
+        .map(|(n, m)| {
+          format!(r#"<note inlist="ent" mark="{m}" role="endnotemark" xml:id="endnotex{n}""#)
+        })
+        .collect(),
+    ),
+  ] {
+    for emit in [0, 2] {
+      let (log, xml) = run(tex, emit);
+      assert_eq!(
+        (error_count(&log), warning_count(&log)),
+        (0, 0),
+        "emit={emit}: {log}"
+      );
+      assert_eq!(creators(&xml), expected, "emit={emit}");
+      assert_eq!(footnotemarks(&xml), marks, "emit={emit}: {xml}");
+    }
+  }
+}
+
+/// A `\footnotemark` no name of the `=2` reading writes and no item holds (on the line a `\\` opens under Ann Able's name,
+/// 1911.13299's `Vivek Ramanujan \thanks{equal contribution} \\ \footnotemark[2]`) was dropped with no Warning, Bob
+/// Baker's mark one symbol short. The block is written whole, Perl's whole-block creator, its tokens digested in order:
+/// Ann †, Bob ‡, the note kept, the counted Warning (review revNE2r2 Q2: never a silent loss). Off reads Ann's † as the
+/// mark of an affiliation line of hers. Distinct from `a_counter_move_no_name_carries_writes_the_block_whole`: a mark, not
+/// a counter move, that the reading has no place for.
+#[test]
+fn a_mark_on_no_name_writes_the_block_whole() {
+  for (emit, expected, warnings) in [
+    (
+      0,
+      vec![
+        row(&["Ann Able", "affiliation=† † footnote †"]),
+        row(&["Bob Baker ‡ ‡ footnote ‡"]),
+      ],
+      0,
+    ),
+    (
+      2,
+      vec![row(&[
+        "Ann Able † † footnote † and Bob Baker ‡ ‡ footnote ‡",
+      ])],
+      1,
+    ),
+  ] {
+    let (log, xml) = run(repro!("ne2c_mark_on_no_name_writes_the_block_whole"), emit);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, warnings),
+      "emit={emit}: {log}"
+    );
+    assert_eq!(creators(&xml), expected, "emit={emit}");
+    assert_eq!(
+      footnotemarks(&xml),
+      [
+        r#"<note mark="†" role="footnotemark" xml:id="footnote2""#,
+        r#"<note mark="‡" role="footnotemark" xml:id="footnote3""#,
+      ],
+      "emit={emit}: {xml}"
+    );
+    assert_eq!(
+      xml
+        .matches(r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks""#)
+        .count(),
+      1,
+      "emit={emit}: {xml}"
     );
   }
 }
