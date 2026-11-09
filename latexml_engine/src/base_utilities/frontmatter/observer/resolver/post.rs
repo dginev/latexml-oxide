@@ -654,7 +654,7 @@ impl Resolver {
         if !special(&request)
           && !entry_labels.contains(&b)
           && (digit_entries || !b.chars().all(|c| c.is_ascii_digit()))
-          && let Some(parts) = parted_label(&b, &entry_labels, true)
+          && let Some(parts) = parted_label(&b, &entry_labels, true, self.emitting)
         {
           for p in parts {
             parted.push(s!("{prefix}{p}"));
@@ -703,7 +703,7 @@ impl Resolver {
         if !special(&label)
           && !shown.contains(&b)
           && !digits(&b)
-          && let Some(parts) = parted_label(&b, &shown, false)
+          && let Some(parts) = parted_label(&b, &shown, false, false)
         {
           // (a compound of distinct footnote symbols names the names carrying them all, as the line prints it beside
           // them — `$^{\dagger\ddagger}$ Project lead` under `Ann Able$^{\dagger}$` and `Bob Baker$^{\dagger\ddagger}$`

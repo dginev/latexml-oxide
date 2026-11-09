@@ -1808,6 +1808,13 @@ fn items_to_emit<'a>(
       .iter()
       .any(|(o, k, other)| o == owner && k == key && other.source != a.source)
   };
+  // (a call written by its pieces — each line cut at its own mark, `item_call` writing the whole call only when it holds
+  // fewer than two — prints its e-mails in none of them, so each is its own item: ws-p8's `\address{{}$^a$Dept …\\E-mail:
+  // maarten@…\\{}$^b$IFAE …\\E-mail: peris@…}` whose names' marks the queue did not cut it by (`$^{\a 1}$` printing
+  // "a1"), hep-ph0011101, brief KB1)
+  let by_pieces = |index: usize| {
+    api_call(index).is_some_and(|call| split_pieces(&call.events, &call.role).len() >= 2)
+  };
   let separate: BTreeSet<usize> = held
     .iter()
     .filter(|(owner, _, a)| {
@@ -1816,7 +1823,9 @@ fn items_to_emit<'a>(
       };
       inner_contact(a)
         && (!held.iter().enumerate().any(entry_of)
-          || a.source.is_some_and(|(index, _)| prints_itself(index)))
+          || a
+            .source
+            .is_some_and(|(index, _)| prints_itself(index) || by_pieces(index)))
     })
     .filter_map(|(_, _, a)| a.source.map(|(index, _)| index))
     .collect();
