@@ -638,7 +638,8 @@ fn deep_span(d: &Digested) -> Option<(u16, u16)> {
 /// The ink of `d`, whitespace collapsed.
 fn ink_of(d: &Digested) -> String {
   let mut text = String::new();
-  ink_text(d, &mut text);
+  // (a pgf/TikZ picture its text nodes, never its drawing: `ink_text_printed`, 2409.13798)
+  ink_text_printed(d, &mut text);
   text.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
