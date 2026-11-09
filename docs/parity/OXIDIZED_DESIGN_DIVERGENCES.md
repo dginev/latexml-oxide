@@ -32733,10 +32733,16 @@ argument's ink). Off: byte-identical. Guards `perfect_kernel_batchp1e`, `perfect
 back whole where P1b's cut would strand the phrase its address completes (`writer/address_cut.rs` `entry_cuts`,
 `strands_a_phrase`): a run with no label word the take-out takes (`take_labels`) after a colon or a "to" the cut keeps, the
 words before it on its line naming a contact (`names_a_contact`) — revtex4's `…, USA \\ $^{a}$Author to whom correspondence
-should be addressed: a@x` (2306.04726), `Correspondence to: a@x` (2004.11812), `Email for correspondence:` (2110.05460),
-`…, *Corresponding author: \texttt{a@x}` (2602.09324); a place's colon (`…, France: a@x`, 1103.3532) strands nothing and is
-cut. A cut e-mail printed as a formula (`dcook12$@$uwyo.edu`, 1409.0847) is written as its text, never its math tokens
-(`cut_at`), as off writes it. Off: unchanged. Open: an entry several authors hold whose address one owns (1409.0847's line
+should be addressed: a@x` (2306.04726), `Email for correspondence:` (2110.05460), `…, *Corresponding author: \texttt{a@x}`
+(2602.09324); a place's colon (`…, France: a@x`, 1103.3532) strands nothing and is cut. It is given back whole only where its
+holders are exactly its addresses' owners (`held_by_its_owners`: every creator, or the block, holding an `owner:entry-address`
+contact from its source, and no other holder; the author an address spells owns it, FIDELITY_CHARTER §4); every other entry
+keeps P1b's cut, its phrase stranded as on the base: neurips's last line `Correspondence to: \texttt{pascal.klink@…}` read onto
+the Aalto entry only Pajarinen holds (2004.11812: whole, it put Klink's address in her affiliation and took his e-mail), and an
+entry two authors share with one address (authblk's `\affil[1]{…, USA. Correspondence to: ann@alpha.edu}`, review revJ2 k7;
+revtex's shared `\affiliation`, k8: whole, it went on both holders and the owner lost her e-mail). A cut e-mail printed as a formula (`dcook12$@$uwyo.edu`, 1409.0847) is written as its text, never its math tokens
+(`cut_at`), as off writes it. Off: unchanged. Open: the phrase a shared or foreign-owned entry's cut strands (2004.11812's
+"…Finland Correspondence to"); an entry several authors hold whose address one owns (1409.0847's line
 under Cook, Dale and Staudaher; llncs's shared `\institute{Univ A, \texttt{a@x}}`, astro-ph0610446, cond-mat0610708,
 2309.10932) is cut on every holder, the co-holders' copies losing the address. Two remedies were tried and dropped: keeping
 the cut on the owner beside a whole copy on the others is two records of one printed entry, which the content check counts

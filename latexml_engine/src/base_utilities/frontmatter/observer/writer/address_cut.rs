@@ -786,13 +786,14 @@ pub(super) fn cut_entry_call(
 /// by entry, not the switch off's whole paper (RT1 row 57a).
 ///
 /// The cut keeps `=2`'s improvements where it harms none (the standing ruling, user 2026-11-08; OD #980 KB2): an entry whose
-/// cut would strand the phrase its address completes ([`strands_a_phrase`]: 2306.04726) is given back whole. The switch off's
-/// cut is unchanged.
+/// cut would strand the phrase its address completes ([`strands_a_phrase`]: 2306.04726) is given back whole, where its holders
+/// are exactly its addresses' owners ([`held_by_its_owners`]). The switch off's cut is unchanged.
 pub(super) fn entry_cuts(reading: &Resolved, resolved: &mut Resolved) -> Vec<EntryCut> {
   let names: Vec<&str> = reading.creators.iter().map(|c| c.name.as_str()).collect();
   let mut cuts = Vec::new();
   for taken in &reading.taken {
-    let cut = (!strands_a_phrase(taken))
+    let whole = strands_a_phrase(taken) && held_by_its_owners(reading, taken);
+    let cut = (!whole)
       .then(|| entry_cut(taken, &names).ok().flatten())
       .flatten();
     match cut {
@@ -843,6 +844,33 @@ fn strands_a_phrase(taken: &Taken) -> bool {
       let beside = head[..from].chars().any(char::is_alphanumeric);
       phrase && names && beside && kept(phrase_end - 1)
     })
+}
+
+/// Whether the holders of `taken` are exactly the owners of the addresses the reading took out of it: the creators (the block,
+/// `None`) holding an `owner:entry-address` contact from its source. An entry given back whole gives its addresses to its
+/// holders, so one whose address another author owns (2004.11812's last line, "Correspondence to: \texttt{pascal.klink@…}",
+/// Klink's, read onto the Aalto entry only Pajarinen holds) or that a holder shares without owning it (authblk's `\affil[1]`
+/// held by two authors, one address) keeps its cut (the author an address spells owns it, FIDELITY_CHARTER §4).
+fn held_by_its_owners(reading: &Resolved, taken: &Taken) -> bool {
+  let owns = |contacts: &[Assoc]| {
+    contacts
+      .iter()
+      .any(|a| a.source == taken.source && a.rule.contains("owner:entry-address"))
+  };
+  let mut owners: Vec<Option<usize>> = reading
+    .creators
+    .iter()
+    .enumerate()
+    .filter(|(_, c)| owns(&c.contacts))
+    .map(|(i, _)| Some(i))
+    .collect();
+  if owns(&reading.block) {
+    owners.insert(0, None);
+  }
+  let mut holders: Vec<Option<usize>> = taken.holders.iter().map(|(c, ..)| *c).collect();
+  holders.sort_unstable();
+  holders.dedup();
+  !owners.is_empty() && owners == holders
 }
 
 /// The e-mail call of `assoc`, an address the reading took out of an entry (`owner:entry-address`) that a cut made, under `keys`
