@@ -1,0 +1,29 @@
+% mechanism: a name's run holding a conditional cut apart (an `\else ... \fi` whose `\if` is outside the run) is refused,
+%   the name written as its text, counted (`writer::content::conditional_cut`)
+% witness: 1409.0597 (=2: `\ifFull and \else \and \fi Joseph A. Simons` written with its `\else \and \fi`: 6 errors, \else,
+%   \fi, \@end@tabular, \endgroup, \@@tabular, \lx@personname; "Joseph Simons" lost)
+% oracle:  pdflatex 0 errors; "Michael T. Goodrich and Joseph A. Simons / Dept. of Computer Science, …"
+% engines: rust =2 (int153d): 6 errors, 3 warnings; rust off: 1 error (expected:\fi, the old reader's `\else` creator)
+% expect:  =2: 0 errors, the two names, "Joseph A. Simons" its text (a counted warning); off unchanged
+% status:  RED (int153d) -> GREEN (perfect_kernel_batchne5::a_name_run_holding_a_cut_conditional_is_its_text)
+\newif\ifFull
+\Fulltrue
+\documentclass[letter,11pt]{journal}
+\title{Graph Algorithms}
+\author
+{
+Michael T. Goodrich
+\ifFull
+and
+\else
+\and
+\fi
+Joseph A. Simons
+\ifFull\\
+Dept. of Computer Science, Univ. of California, Irvine, USA
+\fi
+}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

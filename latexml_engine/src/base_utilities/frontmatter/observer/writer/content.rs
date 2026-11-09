@@ -44,9 +44,10 @@ pub(in crate::base_utilities::frontmatter::observer) fn aligned(events: &[Event]
 /// Where a call in `tokens` is cut between its arguments: a macro at their top level whose parameters are all undelimited
 /// (TeX's `#1#2`, `\newcommand`'s `[2]`), by its meaning now, which the tokens give some of its arguments and not all — the
 /// next read at a closing brace or past the last token. A parameter of any other kind (an optional, a delimited one) is not
-/// judged, nor a command the tokens end at, none of its arguments theirs, nor one inside a group of theirs (an argument a
-/// primitive may never expand: `\detokenize{\begin}`).
-fn reads_past(tokens: &[Token]) -> Option<usize> {
+/// judged, nor one inside a group of theirs (an argument a primitive may never expand: `\detokenize{\begin}`), nor a command
+/// the tokens end at, none of its arguments theirs — but where the tokens are all its invocation read (`whole_reach`: a
+/// declaration's span, [`super::emit`]'s replay), which a call reading none of its arguments in them read past.
+pub(super) fn reads_past(tokens: &[Token], whole_reach: bool) -> Option<usize> {
   let plain = pin!("Plain");
   let mut depth = 0i32;
   tokens.iter().enumerate().position(|(i, t)| {
@@ -73,7 +74,7 @@ fn reads_past(tokens: &[Token]) -> Option<usize> {
         j += 1;
       }
       match tokens.get(j).map(Token::group_step) {
-        None | Some(-1) => return read > 0,
+        None | Some(-1) => return read > 0 || whole_reach,
         Some(1) => {
           let mut inner = 0i32;
           loop {
@@ -92,6 +93,28 @@ fn reads_past(tokens: &[Token]) -> Option<usize> {
     }
     false
   })
+}
+
+/// Where `tokens` hold a conditional cut apart, by their meanings now: an `\else`, `\or` or `\fi` whose `\if…` is not
+/// theirs — digested apart, it errs ("not in a conditional"). An `\if…` whose `\fi` is not theirs is not judged: a
+/// switch's name is one too (`\newif\iffull`, `\let\ifa\iftrue`), which no meaning tells apart from a test.
+fn conditional_cut(tokens: &[Token]) -> Option<usize> {
+  let mut open = 0usize;
+  for (i, t) in tokens.iter().enumerate() {
+    let kind = lookup_definition(t)
+      .ok()
+      .flatten()
+      .and_then(|meaning| meaning.get_conditional_type());
+    match kind {
+      Some(ConditionalType::If) => open += 1,
+      Some(ConditionalType::Else | ConditionalType::Or | ConditionalType::Fi) if open == 0 => {
+        return Some(i);
+      },
+      Some(ConditionalType::Fi) => open -= 1,
+      _ => {},
+    }
+  }
+  None
 }
 
 /// Whether `t` is the control sequence `name`.
@@ -262,7 +285,18 @@ impl Field<'_> {
     // (nor a run a macro of which reads past its end, by its meaning, which the run is digested under: `\def\authord#1#2{…}`'s
     // `\authord{Anh Thu Nguyen}`, its second argument the affiliation's piece, read the item's closing brace (an undefined
     // `\@undefined` and a group ended in the wrong mode, 2209.12410) — its caller writes the item's text, counted)
-    if let Some(call) = reads_past(&tokens) {
+    // (nor a run holding a conditional cut apart, an `\else` whose `\if` is not the run's: `\ifFull and \else \and \fi
+    // Joseph A. Simons`, whose name's run took the `\else \and \fi` the rehearsal skipped, an Error and a tabular's group
+    // ended in the wrong mode (1409.0597) — its caller writes the item's text, counted)
+    if let Some(at) = conditional_cut(&tokens) {
+      DebugFeature!(
+        "frontmatter",
+        "FRONT writer: the run {start}..{end} holds {:?}, a conditional cut apart",
+        tokens[at]
+      );
+      return None;
+    }
+    if let Some(call) = reads_past(&tokens, false) {
       DebugFeature!(
         "frontmatter",
         "FRONT writer: the run {start}..{end} holds {:?}, whose arguments run past it",
