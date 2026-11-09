@@ -827,6 +827,12 @@ fn block_names(
         let t = past_option(field.tokens, s + 1)
           .max(past_option(field.tokens, t.saturating_sub(1)))
           .max(t);
+        // (a mark a macro prints, its span the call alone, is the call with its arguments: aiaa-tc's `\thanksibid{2}`
+        // (1505.07844, 1411.3642, 1602.00849), a preamble's `\footrecall{uva}` (2503.21719, 2407.13730, 2606.19583) —
+        // the call written without them read the author wrapper's `\let` (`content::arguments_end`))
+        let t = content::arguments_end(field.tokens, s)
+          .flatten()
+          .map_or(t, |end| end.max(t));
         // (a mark past the close of a group of names the name's run opens no part of is the last name's, its own run
         // after the name: `{Ann Able$^{\star}$, …, David López-Pérez}$^{\sharp}$`, 2504.02633 — the old reader's names
         // split reads it so, `split_author_line`'s step 1 (`names_in_wrapper`, `author_block/names_split.rs`: a wrapper
@@ -1645,6 +1651,26 @@ fn item_call(
         return Ok(wrap(&by_text(Some("span letters differ"), &assoc.text)));
       }
       let span = found.unwrap_or(span);
+      // (an IJCAI sectioned block's entry over a section marker its rehearsal held an Error at: the class's split, off's,
+      // reads `\\emails` as its delimiter, defined only inside the class's `\\author` (ijcai19.sty:127), so the entry the
+      // reading continued onto the address line past it (`line:continued`) written as its tokens digested the marker
+      // undefined, an Error off never raises — written by its text, counted: 2501.02356)
+      let over_marker = with_ledger(|ledger| match ledger.entries().get(index) {
+        Some(Entry::Author(block)) if block.sectioned => match &block.outcome {
+          Outcome::Events { held, .. } => held
+            .iter()
+            .filter_map(|error| error.span)
+            .any(|(from, _)| span.0 <= from && from < span.1),
+          _ => false,
+        },
+        _ => false,
+      });
+      if over_marker {
+        return Ok(wrap(&by_text(
+          Some("a sectioned block's entry over an Error its rehearsal held"),
+          &assoc.text,
+        )));
+      }
       // (its tokens, from its mark for a note's legend; in the font it prints in, the group or the switch before its mark too)
       let run = with_ledger(|ledger| {
         let Some(Entry::Author(block)) = ledger.entries().get(index) else {
@@ -2714,7 +2740,7 @@ fn declaration_reads_past(index: usize) -> bool {
       .iter()
       .filter_map(|event| event.span)
       .filter_map(|(start, end)| tokens.get(at(start)?..at(end)?))
-      .find_map(|span| reads_past(span, true).map(|call| span[call]))
+      .find_map(|span| reads_past(span).map(|call| span[call]))
   });
   let Some(call) = past else {
     return false;

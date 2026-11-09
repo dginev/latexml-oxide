@@ -41,58 +41,91 @@ pub(in crate::base_utilities::frontmatter::observer) fn aligned(events: &[Event]
   })
 }
 
-/// Where a call in `tokens` is cut between its arguments: a macro at their top level whose parameters are all undelimited
-/// (TeX's `#1#2`, `\newcommand`'s `[2]`), by its meaning now, which the tokens give some of its arguments and not all — the
-/// next read at a closing brace or past the last token. A parameter of any other kind (an optional, a delimited one) is not
-/// judged, nor one inside a group of theirs (an argument a primitive may never expand: `\detokenize{\begin}`), nor a command
-/// the tokens end at, none of its arguments theirs — but where the tokens are all its invocation read (`whole_reach`: a
-/// declaration's span, [`super::emit`]'s replay), which a call reading none of its arguments in them read past.
-pub(super) fn reads_past(tokens: &[Token], whole_reach: bool) -> Option<usize> {
-  let plain = pin!("Plain");
+/// Where a call in `tokens` reads past them: a macro at their top level whose parameters are each undelimited (TeX's
+/// `#1#2`, `\newcommand`'s `[2]`; a verbatim group, `\href`'s URL) or an optional one (`[…]`), by its meaning now, an
+/// undelimited argument of which the tokens don't hold — the next read at a closing brace or past the last token, there
+/// the wrapper's own tokens (`\lx@author@withinst`'s `\let\inst\lx@saved@inst…`, `frontmatter_fields.rs`) or the item's
+/// brace. Whether it is cut between its arguments (`\def\authord#1#2{…}`'s `\authord{Anh Thu Nguyen}`, 2209.12410) or
+/// the tokens end at it, none of its arguments theirs (a mark's span covering the call alone: aiaa-tc's
+/// `\thanksibid{2}`, 1505.07844, 1411.3642, 1602.00849; a preamble's `\footrecall{uva}`, 2503.21719, 2407.13730,
+/// 2606.19583; a URL cut out of `\href{…}{…}`, 2603.11001). A parameter of any other kind (a delimited one) is not
+/// judged, nor a command inside a group of theirs (an argument a primitive may never expand: `\detokenize{\begin}`).
+pub(super) fn reads_past(tokens: &[Token]) -> Option<usize> {
   let mut depth = 0i32;
   tokens.iter().enumerate().position(|(i, t)| {
     depth += t.group_step();
-    if depth != 0 {
-      return false;
-    }
-    let Some(Stored::Expandable(meaning)) = lookup_meaning(t) else {
-      return false;
-    };
-    let Some(parameters) = meaning.get_parameters() else {
-      return false;
-    };
-    let parameters = parameters.get_parameters();
-    if parameters.is_empty() || parameters.iter().any(|p| p.name != plain) {
-      return false;
-    }
-    let mut j = i + 1;
-    for (read, _) in parameters.iter().enumerate() {
-      while tokens
-        .get(j)
-        .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
-      {
-        j += 1;
-      }
-      match tokens.get(j).map(Token::group_step) {
-        None | Some(-1) => return read > 0 || whole_reach,
-        Some(1) => {
-          let mut inner = 0i32;
-          loop {
-            let Some(t) = tokens.get(j) else {
-              return true;
-            };
-            inner += t.group_step();
-            j += 1;
-            if inner == 0 {
-              break;
-            }
-          }
-        },
-        Some(_) => j += 1,
-      }
-    }
-    false
+    depth == 0 && arguments_end(tokens, i) == Some(None)
   })
+}
+
+/// Where the call at `tokens[at]` ends, past the arguments its meaning now reads ([`reads_past`]'s parameters):
+/// `Some(None)` where an undelimited one is not in the tokens, `None` for no such call (a primitive, an unexpandable
+/// command, no parameters, a parameter of another kind).
+pub(super) fn arguments_end(tokens: &[Token], at: usize) -> Option<Option<usize>> {
+  let (plain, verbatim, hyper, optional) = (
+    pin!("Plain"),
+    pin!("Semiverbatim"),
+    pin!("HyperVerbatim"),
+    pin!("Optional"),
+  );
+  let Some(Stored::Expandable(meaning)) = lookup_meaning(&tokens[at]) else {
+    return None;
+  };
+  let parameters = meaning.get_parameters()?.get_parameters();
+  if parameters.is_empty()
+    || parameters
+      .iter()
+      .any(|p| !(p.name == plain || p.name == verbatim || p.name == hyper || p.name == optional))
+  {
+    return None;
+  }
+  let mut j = at + 1;
+  for parameter in parameters {
+    while tokens
+      .get(j)
+      .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+    {
+      j += 1;
+    }
+    if parameter.name == optional {
+      // (an option present is read to its `]` at the top level; one absent reads nothing: the next token is peeked)
+      if tokens
+        .get(j)
+        .is_some_and(|t| t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == "["))
+      {
+        let mut inner = 0i32;
+        loop {
+          let Some(t) = tokens.get(j) else {
+            return Some(None);
+          };
+          inner += t.group_step();
+          j += 1;
+          if inner == 0 && t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == "]") {
+            break;
+          }
+        }
+      }
+      continue;
+    }
+    match tokens.get(j).map(Token::group_step) {
+      None | Some(-1) => return Some(None),
+      Some(1) => {
+        let mut inner = 0i32;
+        loop {
+          let Some(t) = tokens.get(j) else {
+            return Some(None);
+          };
+          inner += t.group_step();
+          j += 1;
+          if inner == 0 {
+            break;
+          }
+        }
+      },
+      Some(_) => j += 1,
+    }
+  }
+  Some(Some(j))
 }
 
 /// Where `tokens` hold a conditional cut apart, by their meanings now: an `\else`, `\or` or `\fi` whose `\if…` is not
@@ -296,7 +329,7 @@ impl Field<'_> {
       );
       return None;
     }
-    if let Some(call) = reads_past(&tokens, false) {
+    if let Some(call) = reads_past(&tokens) {
       DebugFeature!(
         "frontmatter",
         "FRONT writer: the run {start}..{end} holds {:?}, whose arguments run past it",

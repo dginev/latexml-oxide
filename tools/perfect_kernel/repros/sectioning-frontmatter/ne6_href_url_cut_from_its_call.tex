@@ -1,0 +1,22 @@
+% mechanism: a run holding a call whose arguments run past it is no run, its parameters judged when each is
+%   undelimited, a verbatim group (`\href`'s URL, HyperVerbatim) or an option (`\author[…]`) (`content.rs` `reads_past`,
+%   `arguments_end`): the URL contact of `\author\href{url}{name}` cut out of its `\href`, written as its tokens, read
+%   the author wrapper's `\let` as the link text and its `\lx@saved@inst` undefined; now its text, counted
+% witness: 2603.11001 (`\author[2]{\author\href{https://orcid.org/…}{\usebox{\orcid}…Shen~Zhou~Hong}}`); brief NE6
+% oracle:  pdflatex 0 errors; "T", "Ann Able1 and Bob Baker2", "Univ A", "Univ B"
+% engines: rust off: 0 errors (a third creator of two empty links); rust =2 (NE4): Error:undefined:\lx@saved@inst
+% expect:  =2: 0 errors, 1 warning (the URL written as its text), the two names with their affiliations
+% status:  RED (NE4) -> GREEN (perfect_kernel_batchne6::a_url_cut_from_its_href_is_written_as_its_text)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\usepackage{hyperref}
+\author[1]{\href{https://orcid.org/0000-0002-8961-9859}{Ann~Able}}
+\author[2]{\author\href{https://orcid.org/0009-0002-2849-5423}{Bob~Baker}}
+\affil[1]{Univ A}
+\affil[2]{Univ B}
+\title{T}
+\begin{document}
+\maketitle
+Text.
+\end{document}
