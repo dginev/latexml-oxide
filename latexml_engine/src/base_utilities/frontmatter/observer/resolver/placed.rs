@@ -1033,6 +1033,7 @@ mod whole_tests {
         creators: Box::new([]),
         unread: None,
       },
+      list_setter: None,
     }))
   }
 

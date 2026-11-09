@@ -179,6 +179,10 @@ pub(in crate::base_utilities) struct AuthorBlock {
   /// still the latest block whose expansion has not ended
   pub window_open:    bool,
   pub outcome:        Outcome,
+  /// a binding's list setter the argument calls ([`list_setter_called`]): sv_support's `\institute` inside an author's
+  /// group, `\and{Cy Coe\inst{1}\institute{Univ X \and Lab Y}}` (cond-mat0605195) — whose entries the binding numbers
+  /// for the marks to point to, which the rehearsal reads as one in-block affiliation (`rehearsal::install_event_bindings`)
+  pub list_setter:    Option<&'static str>,
 }
 
 /// The S1 stamp of one `\title` call (`\lx@field@mark`).
@@ -789,6 +793,30 @@ fn queue_length() -> usize {
   })
 }
 
+/// The binding's list setter `stuff` calls, if any: a [`FRONTMATTER_SETTERS`] command written in it whose meaning is a
+/// binding's that replaces the whole list ([`LIST_CLEAR`]) and numbers its entries by place for the marks to point to —
+/// sv_support.sty's, inst_support.sty's, aa.cls's and llncs.cls's `\institute`
+/// (`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`, then `labelseq=affiliation` entries), decided from the
+/// binding's definition, not a name list. In an author block the rehearsal reads such a call as one affiliation of the
+/// block, where the real call queues the numbered entries (cond-mat0605195).
+fn list_setter_called(stuff: &Tokens) -> Option<&'static str> {
+  let toks = stuff.unlist_ref();
+  FRONTMATTER_SETTERS.iter().copied().find(|name| {
+    let cs = T_CS!(*name);
+    toks.contains(&cs)
+      && lookup_definition(&cs).ok().flatten().is_some_and(|defn| {
+        matches!(
+          defn.get_origin(),
+          DefinitionOrigin::Binding | DefinitionOrigin::Borrowed
+        ) && matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(body))
+          if body.unlist_ref().contains(&T_CS!(LIST_CLEAR)))
+      })
+  })
+}
+
+/// The frontmatter API's clear, with which a binding's list setter replaces the list it numbers ([`list_setter_called`]).
+const LIST_CLEAR: &str = "\\lx@clear@frontmatter";
+
 /// Whether a block of `len` tokens whose positions start where the field's stamps end (`real_base`) is out of positions
 /// ([`Stamp::Overflow`]): the call alone past the author field's 15 bits (`token::AUTHOR_PROV_POS_MASK`), or, with the
 /// emitter's switch off, the field's calls together (`extra`, [`Ledger::shadow_extra`]) past the 14 bits of the stamps, as
@@ -848,6 +876,7 @@ pub(in crate::base_utilities) fn record_author_call(
     mark: input_mark(),
     window_open: true,
     outcome: Outcome::Pending,
+    list_setter: list_setter_called(stuff),
   };
   with_ledger(|ledger| {
     let mut block = block;
