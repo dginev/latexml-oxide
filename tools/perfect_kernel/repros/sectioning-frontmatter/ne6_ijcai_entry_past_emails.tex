@@ -1,0 +1,27 @@
+% mechanism: an IJCAI sectioned block's entry the reading continued past a section marker its rehearsal held an Error at
+%   (`\emails`, defined only inside the class's `\author`) is written by its text, counted (`emit.rs` `item_call`)
+% witness: 2501.02356 (ijcai's `$^4$CENIA Chile\\ \emails{{pablo.barcelo, …} @uc.cl}`); brief NE6
+% oracle:  pdflatex 0 errors; "T", "Ann Able1 and Bob Baker2", "1Univ A", "2Univ B", "{ann, bob} @x.edu"
+% engines: rust off: 0 errors; rust =2 (NE4): Error:undefined:\emails
+% expect:  =2: 0 errors, 2 warnings (the entry by its text, the content check); off 0 errors, 0 warnings
+% status:  RED (NE4) -> GREEN (perfect_kernel_batchne6::an_ijcai_entry_past_emails_is_written_by_its_text)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\def\@maketitle{{\def\And{\unskip\enspace{\rm and}\enspace}\def\affiliations{\egroup\par\bgroup\rm}%
+  \def\emails{\egroup\par\bgroup\rm}\centering{\LARGE\bf \@title \par}\bgroup\Large\bf\@author\egroup}}
+\makeatother
+\title{T}
+\author{
+Ann Able$^{1}$
+\And
+Bob Baker$^{2}$\\
+\affiliations
+$^1$Univ A\\
+$^2$Univ B\\
+\emails{
+{ann, bob} @x.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

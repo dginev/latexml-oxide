@@ -1133,8 +1133,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("writer/calls", 98),
   // (a new file, what is left of `writer/plan`'s walk-backs: brace balance and a formula's shifts; the two rows together fell by 25, Z3;
   // NE3 7 -> 11: a call cut between its arguments, by its meaning now (`reads_past`, 2209.12410), and a script character its
-  // rehearsal erred at written as its character (2204.01080) — what the digestion read, the token's catcode only finding it)
-  ("writer/content", 11),
+  // rehearsal erred at written as its character (2204.01080) — what the digestion read, the token's catcode only finding it;
+  // NE6 11 -> 13: `arguments_end` reads an option's `[` and `]` as TeX reads the call's arguments, a mark macro written
+  // with them and a call whose `\href` or `\author` reads past the run refused — 1505.07844, 2503.21719, 2603.11001)
+  ("writer/content", 13),
   // (Z4a, a new file: the emitter builds Perl's calls from the reading, its reads a call's own keys and pieces, `text_tokens` and the
   // catcodes of a cut: where a slice's edge falls past an option, a group or an accent's letter, OD #980; Z4ar2, 30 -> 28: an address
   // list's `@` no longer read, its inks are; NE3 28 -> 36: `key_tokens`' table of the specials a key value holds as characters,
