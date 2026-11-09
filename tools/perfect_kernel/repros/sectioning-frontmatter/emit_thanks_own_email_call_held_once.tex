@@ -1,0 +1,20 @@
+% mechanism: a `\thanks` note holding the document's own `\email` (no binding's: it prints where it is called, "e-mail:"
+%   and the address), its only link, which its owner takes (`ruling4:inner-contact`): at `=2` the note written prints it,
+%   label and brackets in place, so it is the note's text alone, as the switch off holds it — no contact repeating
+%   "e-mail:" and the address; brief FX3
+% witness: 0807.0895 (an.cls's `\def\email#1{\textrm{e-mail:~#1}}`, `\thanks{Corresponding author: José A. Caballero, …
+%   (\email{\tt caballero@astrax.fis.ucm.es}).\newline}`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Smith∗ Bob Jones", footnote "∗Corresponding author: Ann
+%   Smith, Univ A (e-mail: ann@x.org)." — the address printed once
+% engines: off = Ann's note, no contact; FX3base `=2` = the note and a contact role=email "e-mail: ann@x.org"
+% expect:  0 errors, 0 warnings (off and `=2`); Ann Smith: the note "Corresponding author: Ann Smith, Univ A (e-mail:
+%   ann@x.org).", no contact; Bob Jones: nothing
+% status:  RED (FX3base `=2`) -> GREEN (FX3)
+\documentclass{article}
+\def\email#1{\textrm{e-mail:~#1}}
+\begin{document}
+\title{A Title}
+\author{Ann Smith\thanks{Corresponding author: Ann Smith, Univ A (\email{\tt ann@x.org}).} \and Bob Jones}
+\maketitle
+Text.
+\end{document}
