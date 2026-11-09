@@ -1,0 +1,14 @@
+% witness: 2502.07804 (svjour: `\author{Christopher Grayson${}^{1}$…, Johann Rafelski${}^{2}$…\institute{${}^1$Wigner …\\ ${}^2$…}}`)
+% oracle:  pdflatex (svjour.cls + svepjST.clo of 2502.07804) 0 errors: "Ann Able1 , Bob Baker2"; "1Univ X, Town · 2Lab Y, City"
+% engines: Perl = one creator of both names (the comma no separator of Perl's sv `\author`), the institute's lines one
+%          entry; rust base (=2) = the emitter stays out, the S2b writer re-parts the names; DEL3 = the emitter
+% expect:  Ann Able holds Univ X, Town; Bob Baker holds Lab Y, City; no mark in a name; 0 errors, 0 warnings
+% status:  RED (base: the emitter's Warning) -> GREEN (DEL3)
+\documentclass[epjST]{svjour}
+\begin{document}
+\title{T}
+\author{Ann Able${}^{1}$, Bob Baker${}^{2}$
+\institute{${}^1$Univ X, Town\\ ${}^2$Lab Y, City}}
+\maketitle
+Text.
+\end{document}

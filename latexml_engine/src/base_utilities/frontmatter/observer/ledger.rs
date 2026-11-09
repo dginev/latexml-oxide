@@ -198,7 +198,8 @@ pub(in crate::base_utilities) struct AuthorBlock {
   pub outcome:        Outcome,
   /// a binding's list setter the argument calls ([`list_setter_called`]): sv_support's `\institute` inside an author's
   /// group, `\and{Cy Coe\inst{1}\institute{Univ X \and Lab Y}}` (cond-mat0605195) — whose entries the binding numbers
-  /// for the marks to point to, which the rehearsal reads as one in-block affiliation (`rehearsal::install_event_bindings`)
+  /// for the marks to point to, which the rehearsal reads as one in-block affiliation (`rehearsal::install_event_bindings`);
+  /// the emitter writes the call as it is, after the block's names (`writer::emit::list_setter_runs`, 2502.07804)
   pub list_setter:    Option<&'static str>,
 }
 
@@ -815,7 +816,8 @@ fn queue_length() -> usize {
 /// sv_support.sty's, inst_support.sty's, aa.cls's and llncs.cls's `\institute`
 /// (`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`, then `labelseq=affiliation` entries), decided from the
 /// binding's definition, not a name list. In an author block the rehearsal reads such a call as one affiliation of the
-/// block, where the real call queues the numbered entries (cond-mat0605195).
+/// block, where the real call queues the numbered entries (cond-mat0605195): the emitter writes the call as it is, its
+/// entries the call's, none of the reading's items (`writer::emit::list_setter_runs`).
 fn list_setter_called(stuff: &Tokens) -> Option<&'static str> {
   let toks = stuff.unlist_ref();
   FRONTMATTER_SETTERS.iter().copied().find(|name| {

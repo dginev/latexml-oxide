@@ -10,7 +10,9 @@
 %   an orphan-annotation Warning; off: each author with the institute their mark names
 % expect:  three creators, each with its institute by mark (A: Univ X, B: Lab Y, C: Univ X); =2 one Warning (the emitter
 %   staying out), off none; 0 Errors
-% status:  RED (CL2base, =2) -> GREEN (CL2)
+% status:  RED (CL2base, =2) -> GREEN (CL2); superseded at DEL3: the emitter writes the block itself, the setter's call
+%   digested as it is after the names (`list_setter_runs`), =2 no Warning (guard perfect_kernel_batchdel3, repro
+%   list_setter_in_block_sv_inst)
 % preload: ar5iv.sty
 \documentclass[epj]{svjour}
 \begin{document}
