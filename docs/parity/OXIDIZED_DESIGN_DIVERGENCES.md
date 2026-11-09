@@ -13608,14 +13608,19 @@ handed out): an id already handed out (or held by an `xml:id`) takes the next `r
 a reference to a definition in another picture is left alone. A walked element carries a `_svgid` mark (stripped at
 finalize): the math parser moves a picture by re-creating it (`append_tree` copies attributes), closing a new `svg:svg`
 each time, and the mark tells that move from a TeX copy — so a picture in math keeps Perl's ids (57cl keyed the registry
-by node address and renamed each re-creation, leaving `xlink:href` dangling). `append_clone` (MathFork) makes a second
-copy instead; a fix to `append_clone_aux` copying the svg `id` as Perl does must drop the mark from the clone. A picture
+by node address and renamed each re-creation, leaving `xlink:href` dangling). `append_clone` (MathFork, the frontmatter
+writer's contacts and notes) makes a second copy instead: `append_clone_aux` copies an svg element's plain `id` as Perl
+does (Document.pm:1943-1954, only `xml:id` is remapped) and drops the mark, so the copy's own `svg:svg` close renames the
+ids it repeats with their references (NE7: it had remapped the `id` into an `xml:id`, schema-invalid — tikz-shields-doc,
+8 jing lines at `=2`, whose writer copies each contact into its creator, `repart.rs` `write_items`). A picture
 keeps Perl's ids unless an earlier element holds them (a relocated footnote copy can); nothing is dropped (content_diff: suanpan-l3, thuaslogos unchanged). Modelled on Perl's own
 `appendClone` id map (Document.pm:1920-1956). Witnesses: suanpan-l3 (9,480 of 9,481 jing lines), thuaslogos-doc-english,
 thuaslogos-doc-dutch (4 each; copies nested in one picture) — +2 schema-valid manuals. Residual: an `xml:id` recorded
-after a picture that holds the same svg id is not renamed (the check is one-way); `append_clone_aux` turns an svg `id`
-into an `xml:id` (SYNC_STATUS). **Guards**: `perfect_kernel_batch57::copied_pictures_keep_unique_svg_ids`,
-`perfect_kernel_batch57::rebuilt_math_pictures_keep_their_svg_ids`; repros
+after a picture that holds the same svg id is not renamed (the check is one-way). **Guards**:
+`perfect_kernel_batch57::copied_pictures_keep_unique_svg_ids`,
+`perfect_kernel_batch57::rebuilt_math_pictures_keep_their_svg_ids`,
+`perfect_kernel_batchne7::tikz_badges_in_frontmatter_contacts_keep_svg_ids`,
+`perfect_kernel_batchne7::an_eqnarray_copy_in_a_picture_keeps_its_references`; repros
 `graphics-tikz/copied_picture_keeps_unique_svg_ids`, `graphics-tikz/rebuilt_math_picture_keeps_its_svg_ids`.
 
 ### 384. tabularray tables are reduced to the kernel's `tabular`/`array`

@@ -5,7 +5,8 @@
 % nothing. Inherited from 57cl (57ck3 happened to resolve it to the cell original).
 % witness: 57cl.1 re-review (probe q8eqnode). html5 drops the main branch; jing does not check
 %   xlink:href, so the defect is visible only in the core XML.
-% status:  RED
+% status:  RED (57cl4) -> GREEN (perfect_kernel_batchne7::an_eqnarray_copy_in_a_picture_keeps_its_references;
+%          append_clone_aux copies the svg id as Perl and drops _svgid from the clone, brief NE7)
 % oracle:  pdflatex has no ids. perl: append_clone copies the svg id unchanged (Document.pm:1942-1951,
 %          only xml:id is remapped) — duplicates, but no dangling reference.
 % engines: rust 57cl4: main-branch copy ids S0.E2.m4.2/.3 and xlink:href="#pgfpath2" dangling.
