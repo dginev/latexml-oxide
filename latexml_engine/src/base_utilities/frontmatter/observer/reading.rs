@@ -34,21 +34,84 @@ pub fn reset_fm_reading() {
 /// rehearsed yet. A block without positions (out of positions) is skipped and says why; one no rehearsal could run for
 /// (a journal already open: the flush is itself inside a speculative run) waits for the next flush, deferred: left so
 /// at the end, the dump reports that reason (`JournalUnavailable`), not "no flush after the call".
-pub(in crate::base_utilities) fn read_at_flush() -> Result<()> {
+pub(in crate::base_utilities) fn read_at_flush() -> Result<HeldUndefined> {
   // (a rehearsal's flush is undone with it; every real flush empties the queue, read or not — the epoch a clear
   // compares, `ledger::record_clear`: an early `\maketitle` before any author block, in default mode, reads nothing
   // but flushes the title it digests, which a later `\title` must not clear; review rev92a_r1 S2)
   if rehearsal::rehearsing() {
-    return Ok(());
+    return Ok(HeldUndefined::default());
   }
-  read_pending()?;
+  let held = read_pending()?;
   // (the flush empties the frontmatter queue: the calls after it are queued from position 0 again)
   with_ledger(|ledger| ledger.flushes += 1);
-  Ok(())
+  Ok(held)
 }
 
-/// [`read_at_flush`]'s reading.
-fn read_pending() -> Result<()> {
+/// The undefined commands this flush's rehearsals held an Error for (`Error:undefined:\cs`, State.pm:547-551's
+/// `generateErrorStub`), each once, with how many times the conversion had raised it as the flush began (the tally of
+/// undefined names, `LogState::undefined`). A rehearsal holds each of its Errors and discards it with its stub, trusting
+/// the emitter's digestion of each piece to raise it again; a command whose token falls in no piece the emitter
+/// digests (it prints nothing, so no event covers it: `\author{… Lee\textsuperscript{1}\internship, …}`, 2607.29185),
+/// or that sits in a piece written as text, is raised by no one — Perl digests the block once and raises it in place
+/// (Base_Utility.pool.ltxml:691-693). [`HeldUndefined::raise_unraised`] is the flush's net for those: the Error the
+/// rest of the flush did not raise, once, as Perl's first encounter. Not an IJCAI sectioned block's: its Errors are the
+/// section markers its class defines only inside its own `\author` (ijcai19.sty:127, `\emails`, `\affiliations`;
+/// the resolver's `block_markers`, 2501.02356). OXIDIZED_DESIGN_DIVERGENCES #983; repro
+/// sectioning-frontmatter/emitter_undefined_command_in_author_errs_once; witnesses 1101.4098, 1402.2906, 1808.09392,
+/// 2205.12847, 2309.09045, 2405.06973, 2405.13308, 2506.10896, 2508.08170, 2508.21091, 2601.17318, 2602.18351,
+/// 2604.26688, 2607.29185, 2609.00161, hep-th9306034.
+#[derive(Debug, Default)]
+pub(in crate::base_utilities) struct HeldUndefined(Vec<(Token, usize)>);
+
+impl HeldUndefined {
+  /// Raise, through `generate_error_stub`, each held command the flush did not raise again — its tally of undefined
+  /// names unmoved since the flush began — that no code of the flush gave a meaning, even locally (`defined`, the
+  /// flush's meaning recorder: a class's title code defining its name parts only inside its own `\author` or
+  /// `\maketitle`, where the emitter's pieces are digested — vmsta's `\fnm`/`\snm`/`\inits`, the IOS classes'
+  /// `\fnms`, JAIR's row `\name`/`\email`/`\addr` —, as pdflatex and Perl digest them there, no error; the recorder
+  /// opens as the rehearsals' stubs are gone, so a command it saw no assignment of has no meaning): its Error once, its
+  /// stub standing for the rest of the document, as Perl's first encounter leaves it. Decided by the tally and the recorder, not by spelled names: a piece that raised it in place counted it there,
+  /// so nothing is raised twice.
+  pub(in crate::base_utilities) fn raise_unraised(
+    self,
+    defined: &[(SymStr, Option<Stored>)],
+  ) -> Result<()> {
+    for (token, before) in self.0 {
+      let (raised, assigned) = token.with_cs_name(|name| {
+        (
+          undefined_tally(name) > before,
+          defined.iter().any(|(key, _)| with(*key, |k| k == name)),
+        )
+      });
+      if !raised && !assigned {
+        generate_error_stub(&token)?;
+      }
+    }
+    Ok(())
+  }
+}
+
+/// How many times the conversion raised `name` undefined (the summary's tally, `LogState::undefined`).
+fn undefined_tally(name: &str) -> usize {
+  latexml_core::report!()
+    .undefined
+    .get(name)
+    .copied()
+    .unwrap_or(0)
+}
+
+/// The command a held `Error:undefined:\cs` record names (`generate_error_stub`'s message, its first line, which names a
+/// control sequence's token `T_CS[…]`): `None` for any other record.
+fn held_undefined(message: &str) -> Option<Token> {
+  let rest = message.strip_prefix("Error:undefined:")?;
+  let (name, tail) = rest.split_once(' ')?;
+  tail
+    .starts_with(&s!("The token T_CS[{name}] is not defined"))
+    .then_some(T_CS!(name))
+}
+
+/// [`read_at_flush`]'s reading, with the undefined commands its rehearsals held ([`HeldUndefined`]).
+fn read_pending() -> Result<HeldUndefined> {
   // (the labels the calls' keyvals defer, read as this flush's digestion expands them: `\lx@label@ref`, cas's
   // `\author[a]` under entries given after it — 2303.00352, 2603.22658, 2504.19452, 2509.10496)
   with_ledger(|ledger| {
@@ -95,6 +158,7 @@ fn read_pending() -> Result<()> {
   // opens one the next block's closes, 2606.17718 — and the document gets them back as they were after the last:
   // `StomachMark`)
   let blocks_mark = StomachMark::take();
+  let mut undefined = HeldUndefined::default();
   for i in pending {
     let Some(block) = with_ledger(|ledger| match ledger.entries().get(i) {
       Some(Entry::Author(block)) => Some(block.clone()),
@@ -136,6 +200,17 @@ fn read_pending() -> Result<()> {
           queued,
         } => {
           queued_tags = queued;
+          if !block.sectioned {
+            for token in held
+              .iter()
+              .filter_map(|error| held_undefined(&error.message))
+            {
+              if !undefined.0.iter().any(|(t, _)| *t == token) {
+                let before = token.with_cs_name(undefined_tally);
+                undefined.0.push((token, before));
+              }
+            }
+          }
           mark_held(&mut value, &held);
           creator_roles(&mut value, &creators);
           Outcome::Events {
@@ -222,7 +297,7 @@ fn read_pending() -> Result<()> {
     }
   }
   calls_mark.restore();
-  Ok(())
+  Ok(undefined)
 }
 
 /// A JSON string literal.

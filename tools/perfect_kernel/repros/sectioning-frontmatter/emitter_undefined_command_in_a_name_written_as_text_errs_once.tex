@@ -1,0 +1,15 @@
+% mechanism: an undefined command inside a name the emitter writes as its plain text (a name its events don't spell,
+%   counted by a Warning): its tokens are never digested, so the Error its rehearsal held is raised by the flush's net,
+%   once (`reading::HeldUndefined`), as Perl's one digestion of the block raises it. OXIDIZED_DESIGN_DIVERGENCES #983
+% witness: 2609.00161 (`\aaai@corrmultitrue`), the flip A/B's text-written names (1603.08231, 2112.06251, 2405.13308)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 1 "Undefined control sequence": "Ann Able, Bob Baker"
+% engines: Perl 0.8.8: 1 Error, one creator <text font="bold">Ann Able<ERROR>\undefinedprobecs</ERROR>, Bob Baker</text>;
+%   DEL5 (=2): 0 Errors, the creators Ann Able (written as text, a Warning) and Bob Baker
+% expect:  1 Error, 1 Warning (the text-written name); the creators Ann Able and Bob Baker
+% status:  RED (DEL5) -> GREEN (ERR2)
+\documentclass{article}
+\author{\textbf{Ann Able\undefinedprobecs{}, Bob Baker}}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

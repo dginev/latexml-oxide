@@ -19194,3 +19194,27 @@ Fixed in Rust on the package's own timing (listings_sty.rs, `\AtBeginDocument[li
 2405.15073: E 92 → 77, those three 0, its 8 affiliation contacts back, recall of pdflatex's words 99.7 %. A preamble's `\setcounter{lstlisting}{5}`, `\numberwithin{lstlisting}{section}`
 and `\renewcommand\thelstlisting` no longer number the listings, as in pdflatex, which errs on each ("No counter", "undefined"); ours has no Error there (`\setcounter` a Warning), the numbers the same.
 Guard `perfect_kernel_batchm3::the_lstlisting_counter_waits_for_begin_document`.
+
+## 1218. An `\and` inside a conditional of an author block: Perl splits at it, each conditional cut from its `\fi`
+
+TeX reads `\@author` in one pass at `\maketitle`: a conditional skips the `\and` and the name after it. Perl splits the
+block at its `\and` tokens before digesting (Base_Utility.pool.ltxml:173-175 `andSplit`: each piece its own
+`\lx@author{…}`, digested apart), so the conditional opened in one piece is closed in the next: `Error:expected:\fi` ("conditional fell off end"),
+and a creator for the name TeX skipped. Minimal trigger (pdflatex 0 errors, "Ann Able" alone; Perl 0.8.8: 1 Error,
+creators Ann Able and Bob Baker):
+
+```latex
+\documentclass{article}
+\newcount\na \na=1
+\author{Ann Able \ifnum\na>1 \and Bob Baker\fi}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}
+```
+
+sibarticle.sty's `\author{… \ifnum \c@numAuthors>1 \and \ifx\@URLii\@empty … \@authorii … \fi …}` chains (1603.08231:
+22 Errors with `--includestyles`, `\@authorii`…`\@authorv` undefined and 14 `expected:\fi`; 2112.06251) — the old
+frontmatter driver raised them the same way (18 and 12). Not in Rust: the observer rehearses the block whole, as TeX
+(repro sectioning-frontmatter/author_and_inside_a_conditional_reads_as_tex; guard
+`perfect_kernel_batcherr2::an_and_inside_a_conditional_is_read_as_tex_reads_it`; OXIDIZED_DESIGN_DIVERGENCES #983).
