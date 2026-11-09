@@ -1201,7 +1201,7 @@ pub(in crate::base_utilities) fn record_author_body_end() {
 }
 
 /// Record that the frontmatter API's Cut took an uncut copy of a printed list it cut out of the queue (`content`, a
-/// contact of `role`: `affiliations::place_uncut_copies`): the first such call queued
+/// contact of `role`: `frontmatter_api::cut::place_uncut_copies`): the first such call queued
 /// since the last flush and not cleared is cleared, as [`record_clear`] clears the calls a dequeue removes.
 pub(in crate::base_utilities) fn record_cut_copy(role: &str, content: &Tokens) {
   if !records_now() {

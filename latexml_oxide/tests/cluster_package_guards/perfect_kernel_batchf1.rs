@@ -150,7 +150,7 @@ fn a_link_printing_a_name_is_the_name() {
   assert_eq!(linked, ["1", "2", "3"]);
 }
 
-/// `\lx@add@author`'s membership readout (`author_block::name_text::written_membership_out`) reads a grade as a suffix of grade words,
+/// `\lx@add@author`'s membership readout (`frontmatter_fields::names::written_membership_out`) reads a grade as a suffix of grade words,
 /// its commas from the last leftward, stopping at the first tail holding another word: linear (the readout per comma was quadratic on
 /// `=2`'s queued block of 418 names, 1507.02068) with no cap on what the grade's group holds. `{\itshape Fellow, IEEE\thanks{<300
 /// characters>}}` is Ann Able's `membership` with the switch off, as int145a's, the thanks the document's pubnote there; F1's 256-token

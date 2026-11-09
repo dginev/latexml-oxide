@@ -1,5 +1,7 @@
 use latexml_core::state::{State, StateOptions, set_state};
 
+// (the field readers' units, moved from `author_block/` to `defs/frontmatter_fields/` by Z18a)
+use super::defs::frontmatter_fields::{definitions_at_author, math_braces_as_printed};
 use super::*;
 
 fn setup() {

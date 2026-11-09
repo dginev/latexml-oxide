@@ -3,6 +3,11 @@
 
 use super::*;
 
+mod contacts;
+pub(in crate::base_utilities) use contacts::*;
+mod names;
+pub(in crate::base_utilities) use names::*;
+
 pub(in crate::base_utilities) fn load() -> Result<()> {
   //======================================================================
   // Some shorthands?

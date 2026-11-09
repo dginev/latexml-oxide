@@ -97,3 +97,18 @@ pub(in crate::base_utilities) fn name_precedes_marker(line: &Tokens, marker_pos:
     .iter()
     .any(|t| t.code == Catcode::LETTER)
 }
+
+/// How many distinct marks (by operand) `stuff` shows outside its notes. Two or more make an address a key the names'
+/// marks index (aistats' marked address over a marked row, 2312.06786, 1901.02427); a single mark is a note's
+/// (`$^*$equal contribution`, `Univ A$^*$` twice), and the address still pairs by column (77o r3 review: 1905.11190,
+/// 2405.18281, 2011.03885, 2301.11862, 2410.15516; probes m_lead, m_star).
+pub fn distinct_author_marks(stuff: &Tokens) -> usize {
+  let mut seen: Vec<String> = Vec::new();
+  for operand in author_mark_operands(stuff.unlist_ref()) {
+    let key = Tokens::new(operand).to_string();
+    if !seen.contains(&key) {
+      seen.push(key);
+    }
+  }
+  seen.len()
+}
