@@ -37,14 +37,14 @@ fn an_open_group_rehearsals_words_are_counted() {
       "a tie between",
       repro!("author_raw_tabular_juggle_counted"),
       1,
-      "c Dept tabular",
+      "Dept",
       vec![vec!["A One".to_string()]],
     ),
     (
       "a bare group between",
       repro!("author_raw_tabular_juggle_bare_group_between_counted"),
       2,
-      "B c tabular Univ",
+      "B Univ",
       vec![vec![
         "A One".to_string(),
         "affiliation=Univ A Extra Words Bob Two".to_string(),
@@ -91,7 +91,10 @@ fn an_open_group_rehearsals_words_are_counted() {
 /// macro's `Liu`, a plain `Muller` no macro's `Müller`, both lost; exact matches come first, so the Warning names the lost
 /// `Lan` beside a printed `Lian` and the lost `Fisica` beside `F\'{\i}sica`; an accent opening a word (`\'Ecole`, review
 /// revH3 finding 2) is read past as one inside it, a line break opening one (`Dept,\\Muller`, review revCK1 2) never: the
-/// plain `Muller` is matched as spelled, lost beside the macro's printed `Müller`. Distinct from
+/// plain `Muller` is matched as spelled, lost beside the macro's printed `Müller`; a one-letter accent command opening
+/// one (`\v{S}koda`, `\c{C}elik`, review revCK1b finding 4) is read past as an accent's control symbol is; what prints
+/// nothing reads no word: a `\\`'s `*` and `[…]` (`\\[2mm]`, finding 5) and a tabular's own call with its column spec
+/// (`\begin{tabular}{c}`, review revI2 finding 1). Distinct from
 /// [`an_open_group_rehearsals_words_are_counted`]: there no word the check reads is the block's.
 #[test]
 fn an_open_group_rehearsals_word_matching() {
@@ -109,24 +112,63 @@ fn an_open_group_rehearsals_word_matching() {
       "accented word",
       repro!("author_raw_tabular_juggle_accented_word"),
       1,
-      "c Dept tabular",
+      "Dept",
       vec![vec!["A Müller".to_string()]],
     ),
     (
       "an accent opening a word",
       repro!("author_raw_tabular_juggle_accent_opens_word"),
       1,
-      "c Dept tabular",
+      "Dept",
       vec![vec![
         "A One".to_string(),
         "affiliation=École Normale".to_string(),
       ]],
     ),
     (
+      "a one-letter accent command opening a word",
+      repro!("author_raw_tabular_juggle_accent_command_opens_word"),
+      1,
+      "Dept",
+      vec![vec![
+        "A One".to_string(),
+        "affiliation=Škoda Çelik Inst".to_string(),
+      ]],
+    ),
+    (
+      "a line break's star and optional argument, a tabular's own call",
+      repro!("author_raw_tabular_juggle_break_optional_prints_nothing"),
+      2,
+      "Lab",
+      vec![vec![
+        "A One".to_string(),
+        "affiliation=Univ A Dept".to_string(),
+      ]],
+    ),
+    (
+      // (a column spec's `@{…}` prints its text, its letters and a `p{…}` width nothing: review revI3 finding 1)
+      "a column spec's placed text",
+      repro!("author_raw_tabular_juggle_spec_at_text_prints"),
+      3,
+      "and Lab",
+      vec![vec![
+        "A One Dept".to_string(),
+        "affiliation=Inst".to_string(),
+      ]],
+    ),
+    (
+      // (array's `>{…}` prints in each cell, inside a `*{n}{…}` too, its count nothing: the spec's recursion)
+      "array's cell text inside a repeated spec",
+      repro!("author_raw_tabular_juggle_array_spec_text_prints"),
+      1,
+      "Dept Inst",
+      vec![vec!["A One".to_string()]],
+    ),
+    (
       "a line break opening a word",
       repro!("author_raw_tabular_juggle_break_opens_word"),
       2,
-      "c Muller tabular",
+      "Muller",
       vec![vec![
         "A Müller".to_string(),
         "affiliation=Univ A Dept,".to_string(),
@@ -136,14 +178,14 @@ fn an_open_group_rehearsals_word_matching() {
       "dotless i",
       repro!("author_raw_tabular_juggle_dotless_i"),
       1,
-      "c Dept tabular",
+      "Dept",
       vec![vec!["A One".to_string(), "affiliation=Física".to_string()]],
     ),
     (
       "control symbol parts",
       repro!("author_raw_tabular_juggle_control_symbol_parts"),
       1,
-      "c tabular Univ",
+      "Univ",
       vec![vec!["A One".to_string()], vec![
         "Brasília Naïve Pîle Smith".to_string(),
       ]],
@@ -152,7 +194,7 @@ fn an_open_group_rehearsals_word_matching() {
       "plain word, no dotless allowance",
       repro!("author_raw_tabular_juggle_plain_word_exact"),
       1,
-      "c Dept Lu tabular",
+      "Dept Lu",
       vec![vec![
         "Wei Liu".to_string(),
         "affiliation=Univ A".to_string(),
@@ -162,7 +204,7 @@ fn an_open_group_rehearsals_word_matching() {
       "plain word, no base letters",
       repro!("author_raw_tabular_juggle_plain_word_unaccented"),
       1,
-      "c Dept Muller tabular",
+      "Dept Muller",
       vec![vec![
         "A Müller".to_string(),
         "affiliation=Univ A".to_string(),
@@ -172,7 +214,7 @@ fn an_open_group_rehearsals_word_matching() {
       "the lost word named, not the printed one",
       repro!("author_raw_tabular_juggle_lost_beside_printed"),
       1,
-      "c Dept Lan tabular",
+      "Dept Lan",
       vec![vec![
         "Lian Wu".to_string(),
         "affiliation=Univ A".to_string(),
@@ -182,7 +224,7 @@ fn an_open_group_rehearsals_word_matching() {
       "the plain word lost beside the dotless one",
       repro!("author_raw_tabular_juggle_lost_beside_dotless"),
       1,
-      "c Dept Fisica tabular",
+      "Dept Fisica",
       vec![vec!["A One".to_string(), "affiliation=Física".to_string()]],
     ),
   ];

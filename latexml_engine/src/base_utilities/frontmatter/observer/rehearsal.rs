@@ -12,7 +12,7 @@
 //! What its boxes do not say is noted beside them (`field_notes::FieldNotes`): the definitions made, the errors held, by the
 //! field position of the invocation.
 
-use std::cell::Cell;
+use std::{cell::Cell, ops::Range};
 
 use latexml_core::{
   definition::origin::{DefinitionOrigin, with_origin},
@@ -594,14 +594,13 @@ fn prints_a_bound_break(between: &[Token]) -> bool {
 /// the block opened (`\begin{tabular}…\end{tabular}`) or one no reopen follows keeps its meaning; with the emitter's
 /// switch on.
 fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
-  let (end, begin) = (T_CS!("\\end"), T_CS!("\\begin"));
+  let (end, begin) = environment_commands();
   let toks = tokens.unlist_ref();
   if !toks.contains(&end) {
     return tokens;
   }
-  let is = |cat: Catcode| move |t: &Token| t.get_catcode() == cat;
-  let optional = |k: usize| past_group(toks, k, |t| *t == T_OTHER!("["), |t| *t == T_OTHER!("]"));
-  let braced = |k: usize| past_group(toks, k, is(Catcode::BEGIN), is(Catcode::END));
+  let optional = |k: usize| past_optional(toks, k);
+  let braced = |k: usize| past_braced(toks, k);
   // The span past the reopen's `\begin{tabular}[…]{…}`, if one follows `at` after only spaces and commands, each with
   // the `[…]` and `{…}` arguments right after it (a bare group, `\end{tabular} {Extra Words} \begin{tabular}`, is no
   // command's: the juggle is read as written, review revH1 finding 2).
@@ -612,7 +611,6 @@ fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
       .map(|(_, end)| end)
   };
   let (space, command) = (Catcode::SPACE, Catcode::CS);
-  let (crlf, star) = (T_CS!("\\\\"), T_OTHER!("*"));
   let (glue, dimen) = ([T_CS!("\\hskip"), T_CS!(VERTICAL_SKIP)], T_CS!("\\kern"));
   let reopen = |at: usize| -> Option<(usize, usize)> {
     let mut start = at;
@@ -628,14 +626,8 @@ fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
         // `\@ifnextchar` (latex.ltx `\@normalcr`/`\@xnewline`, `\@tabularcr`/`\@xtabularcr`; `\\ [2mm]`, review
         // revH4 finding 1, "Univ B" lost with no Warning before), and a glue or dimen spec written out
         // (`\hskip 1em`, h3e). A `{…}` comes right after its command (`argument`).
-        if cs == crlf {
-          // (the `*` right after it only, as the binding reads it, `\lx@fm@obs@break OptionalMatch:*` and Perl's
-          // `readMatch`, Gullet.pm:604: `\\ *[2mm]` read past its space ended a mode it never opened, 1 Error at `=2`,
-          // review revI1 finding 2)
-          if toks.get(start) == Some(&star) {
-            start += 1;
-          }
-          start = optional(start).map_or(start, |(_, end)| end);
+        if let Some(k) = past_line_break(toks, start - 1) {
+          start = k;
         } else if glue.contains(&cs) {
           start = past_glue(toks, start).unwrap_or(start);
         } else if cs == dimen {
@@ -646,9 +638,7 @@ fn inline_juggles_as_columns(tokens: Tokens) -> Tokens {
         }
       }
     }
-    let k = start + environment_call_len(&toks[start..], begin, "tabular")?;
-    let k = optional(k).map_or(k, |(_, end)| end);
-    Some((start, braced(k)?.1))
+    Some((start, past_tabular_open(toks, start)?))
   };
   let mut out = Vec::with_capacity(toks.len());
   let mut opened = 0usize;
@@ -759,6 +749,97 @@ fn past_keyword(toks: &[Token], at: usize, word: &str) -> Option<usize> {
 /// The first position from `at` that holds no space, if one does.
 fn non_space(toks: &[Token], at: usize) -> Option<usize> {
   (at..toks.len()).find(|&k| toks[k].get_catcode() != Catcode::SPACE)
+}
+
+/// Where a `\\` at `at` and what it reads after it end, if one is there: its `*` right after it only, as the binding
+/// reads it (`\lx@fm@obs@break OptionalMatch:*` and Perl's `readMatch`, Gullet.pm:604: `\\ *[2mm]` read past its space
+/// ended a mode it never opened, 1 Error at `=2`, review revI1 finding 2), then its `[…]` past spaces, by `\@ifstar` and
+/// `\@ifnextchar` (latex.ltx `\@normalcr`/`\@xnewline`, `\@tabularcr`/`\@xtabularcr`). Both print nothing: the juggle's
+/// reopen reads past them, and the content check reads no word in them (`ledger::content_text`, `\\[2mm]`, review
+/// revCK1b finding 5).
+pub(super) fn past_line_break(toks: &[Token], at: usize) -> Option<usize> {
+  if *toks.get(at)? != T_CS!("\\\\") {
+    return None;
+  }
+  let mut at = at + 1;
+  if toks.get(at) == Some(&T_OTHER!("*")) {
+    at += 1;
+  }
+  Some(past_optional(toks, at).map_or(at, |(_, end)| end))
+}
+
+/// Where a tabular's own call at `at` ends, and the spans in it that print: `\begin{tabular}` with its `[…]` and its
+/// column spec `{…}` (the juggle's reopen, [`inline_juggles_as_columns`]), or `\end{tabular}`. The call prints nothing
+/// but the text its spec places ([`spec_printed`]); the content check reads only those spans (`ledger::content_text`:
+/// `\begin{tabular}{c}` counted "c" and "tabular" lost, review revI2 finding 1; `{@{Inst }c}` prints "Inst", review
+/// revI3 finding 1).
+pub(super) fn past_tabular_call(toks: &[Token], at: usize) -> Option<(usize, Vec<Range<usize>>)> {
+  if let Some(len) = environment_call_len(&toks[at..], environment_commands().0, "tabular") {
+    return Some((at + len, Vec::new()));
+  }
+  let (spec, end) = tabular_open_spec(toks, at)?;
+  let mut printed = Vec::new();
+  spec_printed(toks, spec + 1..end - 1, &mut printed);
+  Some((end, printed))
+}
+
+/// The spans a column spec's tokens `spec` print (latex.ltx `\@mkpream`, array.sty `\@mkpream`): the text of `@{…}`
+/// and `!{…}` between columns and of `>{…}` and `<{…}` in each cell (pdflatex: `{>{Prof }c<{ Dr}!{ or }c}` prints
+/// "Prof Dept Dr or"), and those in a `*{n}{…}`'s repeated spec; a column letter, its argument (`p{3cm}`) and the
+/// count `n` print nothing.
+fn spec_printed(toks: &[Token], spec: Range<usize>, printed: &mut Vec<Range<usize>>) {
+  let mut k = spec.start;
+  while k < spec.end {
+    let token = &toks[k];
+    let group = |from: usize| past_braced(&toks[..spec.end], from);
+    if token.get_catcode() == Catcode::OTHER
+      && let Some(c @ ('@' | '!' | '>' | '<' | '*')) = char::from_u32(token.get_charcode())
+      && let Some((open, close)) = group(k + 1)
+    {
+      k = close;
+      if c != '*' {
+        printed.push(open + 1..close - 1);
+      } else if let Some((open, close)) = group(k) {
+        spec_printed(toks, open + 1..close - 1, printed);
+        k = close;
+      }
+    } else if let Some((_, close)) = group(k).filter(|&(open, _)| open == k) {
+      k = close;
+    } else {
+      k += 1;
+    }
+  }
+}
+
+/// `\end` and `\begin`, the environment commands a tabular's call reads.
+fn environment_commands() -> (Token, Token) { (T_CS!("\\end"), T_CS!("\\begin")) }
+
+/// Where `\begin{tabular}[…]{…}` at `at` ends, if one starts there.
+fn past_tabular_open(toks: &[Token], at: usize) -> Option<usize> {
+  tabular_open_spec(toks, at).map(|(_, end)| end)
+}
+
+/// Where the column spec `{…}` of a `\begin{tabular}[…]{…}` at `at` starts, and where the call ends, if one starts
+/// there.
+fn tabular_open_spec(toks: &[Token], at: usize) -> Option<(usize, usize)> {
+  let k = at + environment_call_len(&toks[at..], environment_commands().1, "tabular")?;
+  let k = past_optional(toks, k).map_or(k, |(_, end)| end);
+  past_braced(toks, k)
+}
+
+/// Where the `[…]` that starts at `at` after spaces starts, and the position past it, if one does.
+fn past_optional(toks: &[Token], at: usize) -> Option<(usize, usize)> {
+  past_group(toks, at, |t| *t == T_OTHER!("["), |t| *t == T_OTHER!("]"))
+}
+
+/// Where the `{…}` that starts at `at` after spaces starts, and the position past it, if one does.
+fn past_braced(toks: &[Token], at: usize) -> Option<(usize, usize)> {
+  past_group(
+    toks,
+    at,
+    |t| t.get_catcode() == Catcode::BEGIN,
+    |t| t.get_catcode() == Catcode::END,
+  )
 }
 
 /// Where the balanced `open`…`close` group that starts at `at` after spaces starts, and the position past it, if one

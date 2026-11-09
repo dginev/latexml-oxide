@@ -20,6 +20,7 @@ use latexml_core::{
 use super::{
   events::{EmailMeaning, Event, EventKind, HeldError, lex_events},
   field_notes::{EnvironmentStep, FieldCreator},
+  rehearsal::{past_line_break, past_tabular_call},
   resolver::{Resolved, printed_words},
   shadow::{FmShadow, fm_shadow_mode},
   writer::Analysis,
@@ -1076,33 +1077,50 @@ pub(in crate::base_utilities) fn record_api_call(
 /// (`resolver::words::printed_words`): its characters; a control symbol or a one-letter control word inside a word (an
 /// accent, `Universit\"at`, a dotless i: a letter or digit, or a place read past, before it; a letter, a digit or a
 /// group after it, past any group's end and one-letter control word, `F\'{\i}sica`, `Bras\'\i lia`; not past a control
-/// symbol, `Smith\,\\Univ` two words), an accent's control symbol before a word's first letter (`\'Ecole`, review revH3
-/// 2; [`accent_symbol`]) and a group there (`M{\"u}nchen`) part nothing, the word counted whole, its accents and
-/// dotless letters unread (the check takes a word one side reads without them for the one the other prints with them,
+/// symbol, `Smith\,\\Univ` two words), an accent's control symbol or a one-letter control word before a word's first
+/// letter (`\'Ecole`, review revH3 2, [`accent_symbol`]; `\v{S}koda`, `\c{C}elik`, review revCK1b finding 4: the
+/// accent and its argument one printed letter where the word begins) and a group there (`M{\"u}nchen`) part nothing,
+/// the word counted whole, its accents and dotless letters unread (the check takes a word one side reads without them for the one the other prints with them,
 /// `Fsica` for `física`, `resolver::placed`); a spacing control symbol (`Dept\\Muller`, `Dept,\\Muller`, review revCK1
-/// 2-3; [`spacing_symbol`]), another control sequence, its argument's group (`\IEEEauthorrefmark{1}Univ Alpha` →
+/// 2-3; [`spacing_symbol`]; a `\\`'s `*` and `[…]` print nothing, `\\[2mm]`, review revCK1b finding 5,
+/// `rehearsal::past_line_break`; a tabular's own call prints nothing, `\begin{tabular}{c}`, review revI2 finding 1,
+/// but the text its column spec places, `@{Inst }`, review revI3 finding 1, `rehearsal::past_tabular_call`), another control sequence, its argument's group (`\IEEEauthorrefmark{1}Univ Alpha` →
 /// ` 1 Univ Alpha`) or a math shift parts words. Nothing is spelled but a control sequence's length, its letter's
 /// catcode and a control symbol's character: a letter command (`Gro{\ss}e`, a control word) parts its word.
 pub(super) fn content_text(content: &Tokens) -> ContentText {
   let mut text = String::new();
-  // (where it read past a control symbol or a one-letter control word inside a word, or an accent's control symbol
-  // before its first letter, `\'Ecole Normale` (review revH3 2): its byte in `text`, and whether a one-letter control
+  // (where it read past a control symbol or a one-letter control word inside a word, or an accent's control symbol or a
+  // one-letter control word before its first letter, `\'Ecole Normale` (review revH3 2), `\v{S}koda`: its byte in `text`, and whether a one-letter control
   // word, which may print a letter)
   let mut past: Vec<(usize, bool)> = Vec::new();
   // (for each open group, whether it is a parting command's argument, which parts what is around it)
   let mut groups: Vec<bool> = Vec::new();
   let mut parted_by_command = false;
   let tokens = content.unlist_ref();
+  // (past what prints nothing: a `\\`'s `*` and `[…]`, `\\[2mm]`, review revCK1b finding 5; a tabular's own call,
+  // `\begin{tabular}{c}`, but for the spans its column spec prints, `{@{Inst }c}`, review revI3 finding 1)
+  let mut unprinted_to = 0;
+  let mut printed: Vec<std::ops::Range<usize>> = Vec::new();
   for (at, token) in tokens.iter().enumerate() {
+    if at < unprinted_to && !printed.iter().any(|span| span.contains(&at)) {
+      // (what prints nothing parts what is around it: `@{ and }` read apart from the spec around it)
+      if !text.ends_with(' ') {
+        text.push(' ');
+      }
+      parted_by_command = false;
+      continue;
+    }
     // (inside a word, a letter or digit or a place read past before it, or before its first letter, an accent's
-    // control symbol there (`\'Ecole`, never `\\`, `\ `, `\,`, `\;`, `\:`, `\>`, the [`spacing_symbol`]s: review revCK1 2); and a letter, a digit or
-    // a group after it, past any group's end and one-letter control word: `F\'{\i}sica`, `Bras\'\i lia`; a control
+    // control symbol or a one-letter control word there (`\v{S}koda`, review revCK1b finding 4; `\'Ecole`, never
+    // `\\`, `\ `, `\,`, `\;`, `\:`, `\>`, the [`spacing_symbol`]s: review revCK1 2); and a letter, a digit or a group
+    // after it, past any group's end and one-letter control word: `F\'{\i}sica`, `Bras\'\i lia`; a control
     // symbol before another parts, `Smith\,\\Univ` two words; a spacing one parts, `Dept\\Muller`, review revCK1 3)
     let in_word = || {
       !spacing_symbol(token)
         && (text.chars().next_back().is_some_and(char::is_alphanumeric)
           || past.last().is_some_and(|&(place, _)| place == text.len())
-          || accent_symbol(token))
+          || accent_symbol(token)
+          || letter_cs(token))
         && tokens[at + 1..]
           .iter()
           .find(|next| next.get_catcode() != Catcode::END && !letter_cs(next))
@@ -1118,7 +1136,18 @@ pub(super) fn content_text(content: &Tokens) -> ContentText {
         }
       },
       Catcode::CS => {
-        if short_cs(token) && in_word() {
+        if let Some((end, spans)) = past_tabular_call(tokens, at) {
+          // (a tabular's own call prints nothing but its spec's printed spans: `\begin{tabular}{c}`, review revI2
+          // finding 1; `{c@{ and }c}` prints "and", review revI3 finding 1)
+          text.push(' ');
+          unprinted_to = end;
+          printed = spans;
+        } else if let Some(end) = past_line_break(tokens, at) {
+          // (a `\\` parts words and takes no group, its `*` and `[…]` print nothing: `\\[2mm]`, review revCK1b
+          // finding 5)
+          text.push(' ');
+          unprinted_to = end;
+        } else if short_cs(token) && in_word() {
           past.push((text.len(), letter_cs(token)));
         } else {
           text.push(' ');
