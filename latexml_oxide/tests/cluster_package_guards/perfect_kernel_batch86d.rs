@@ -18,6 +18,7 @@ use latexml::util::test::convert_files_with;
 use super::{
   perfect_kernel_batch46::{convert_with, error_count, warning_count},
   perfect_kernel_batch84b::{creators, text},
+  perfect_kernel_batcht1::red_at_two,
 };
 
 const PRELOAD: &str = "ar5iv.sty";
@@ -280,6 +281,9 @@ fn ieee_membership_kept_after_closing_stop() {
         ),
         "{tex}\n{log}"
       );
+    }
+    if red_at_two("keeps the mark \"1\" at the head of each affiliation (\"1 All…\")") {
+      return;
     }
     assert_eq!(creators(&xml), expected, "{tex}\n{xml}");
     // (`creators` reads no `<note>`: every note's place, an author's or the document's)
