@@ -32993,7 +32993,7 @@ keep the marks they print, as any block's (`per_author_marks`: 2502.07804's hand
 and Perl print — review revDEL3 B1), an `\inst` printing nothing and requesting its entry; (4) the marks net skips a
 block whose call is written (the reading holds none of its entries); the insertion's orphan Warning still counts a
 request no entry answers; (5) the call written is the flush's last, and it replaces what its clear
-(`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`) would at the block, as pdflatex prints only the last list: an
+(`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`) would at the block (the block's list is the one `\maketitle` prints — the last list set before it; a top-level `\institute` *after* the block is NOT yet cleared, revDEL3b R1, RED below): an
 affiliation call queued before the block and an earlier call of the block leave the reading (`replaced_by_setter`) and
 the content check (`Ledger::replaced`) — digested inside the flush, the call's own clear meets an empty queue
 (`place::digest_front_matter` takes the queue first; review revDEL3 S1). The S2b writer no longer runs at
