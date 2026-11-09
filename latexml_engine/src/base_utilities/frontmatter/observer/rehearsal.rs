@@ -240,7 +240,11 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefConstructor!("\\lx@fm@obs@email [] Semiverbatim", "", alias => "\\email");
   // (an e-mail call by the class's binding printing in place, and by no binding's meaning: `ledger::email_meaning`)
   DefConstructor!("\\lx@fm@obs@email@inplace [] Semiverbatim", "", alias => "\\email");
-  DefConstructor!("\\lx@fm@obs@email@own [] Semiverbatim", "", alias => "\\email");
+  // (the label the class's own command prints before the address is read as it prints: `own_email_properties`)
+  DefConstructor!("\\lx@fm@obs@email@own [] Semiverbatim", "", alias => "\\email",
+    properties => sub[args] { own_email_properties(OWN_EMAIL[0].2, args.get(1).and_then(|a| a.as_ref())) });
+  DefConstructor!("\\lx@fm@obs@emailAdd@own [] Semiverbatim", "", alias => "\\email",
+    properties => sub[args] { own_email_properties(OWN_EMAIL[1].2, args.get(1).and_then(|a| a.as_ref())) });
   DefConstructor!("\\lx@fm@obs@url Semiverbatim", "");
   DefConstructor!("\\lx@fm@obs@href Semiverbatim {}", "");
   DefConstructor!("\\lx@fm@obs@orcid [] Semiverbatim", "");
@@ -352,6 +356,12 @@ fn printed_footnote_mark(value: i64) -> Result<String> {
 /// `\footnote[3]{Speaker}` left 12,000 conditionals open and the conversion Fatal). A resource Fatal that is no runaway
 /// stays one.
 fn note_mark_quietly(value: i64) -> Result<String> {
+  print_quietly(|| printed_footnote_mark(value))
+}
+
+/// The text `print` reads from what it digests ([`note_mark_quietly`]'s reading, any print's): its diagnostics set
+/// aside, a print that fails unwound where it stopped and read as nothing, a resource Fatal that is no runaway kept.
+fn print_quietly(print: impl FnOnce() -> Result<String>) -> Result<String> {
   let hold = util::logger::DiagnosticsHold::begin();
   let latched_before = resource_fatal_latched();
   let depth = get_frame_depth();
@@ -359,7 +369,7 @@ fn note_mark_quietly(value: i64) -> Result<String> {
   // (the tokens being invoked and the conditionals put back however the print ends, after a failed print's unwinding:
   // `StomachMark`)
   let stomach_mark = StomachMark::take();
-  let printed = printed_footnote_mark(value);
+  let printed = print();
   let failed = hold.errors_raised() > 0;
   match printed {
     Ok(printed) => {
@@ -393,7 +403,96 @@ fn note_mark_quietly(value: i64) -> Result<String> {
   }
 }
 
+/// Whether digested material holds a frontmatter API call, as the rehearsal binds it (`\lx@annotate@frontmatter`).
+fn calls_the_api(d: &Digested) -> bool {
+  match d.data() {
+    DigestedData::List(l) => l.borrow().boxes.iter().any(calls_the_api),
+    DigestedData::Whatsit(w) => {
+      let w = w.borrow();
+      w.get_definition().get_cs_name() == "\\lx@fm@obs@annotate"
+        || w.get_args().iter().flatten().any(calls_the_api)
+        || w
+          .get_body()
+          .ok()
+          .flatten()
+          .is_some_and(|body| calls_the_api(&body))
+    },
+    _ => false,
+  }
+}
+
+/// The class's own e-mail commands the rehearsal reads (`EmailMeaning::Own`: the document's or a raw class's meaning, no
+/// binding's): each command, the binding it is read by, and where its own meaning is kept while the block is rehearsed,
+/// for the binding to print ([`own_email_properties`]).
+const OWN_EMAIL: [(&str, &str, &str); 2] = [
+  (
+    "\\email",
+    "\\lx@fm@obs@email@own",
+    "\\lx@fm@obs@email@print",
+  ),
+  (
+    "\\emailAdd",
+    "\\lx@fm@obs@emailAdd@own",
+    "\\lx@fm@obs@emailAdd@print",
+  ),
+];
+
+/// The properties of a class's own e-mail call: the label its command prints before its address (`name`), as it prints
+/// it — the class's meaning (kept at `print`) digested on the call's address, quietly ([`print_quietly`]), the text its
+/// ink holds before the address. jfm/jpp's `\def\email#1{Email address for correspondence: #1}` (2603.18265, 2310.05678,
+/// 1805.11102, 1705.00517, 2401.17126, 2110.10346, 2608.21737): the contact's `name` "Email address for correspondence:",
+/// the note's label as the class prints it (FIDELITY_CHARTER: label text is markup, never dropped). None where the
+/// command prints nothing before the address, or prints no address at the call (amsart-like classes store it for a
+/// list at the end: AIMS.cls's `\g@addto@macro\addresses`, 1903.05770), and for a meaning LaTeXML made.
+fn own_email_properties(print: &str, address: Option<&Digested>) -> Result<SymHashMap<Stored>> {
+  let Some(address) = address else {
+    return Ok(SymHashMap::default());
+  };
+  let mut text = String::new();
+  ink_text(address, &mut text);
+  let address = text.trim().to_string();
+  // (a raw file's or the document's meaning, which prints as it is: never a binding's guess, whose meaning is the
+  // frontmatter API's call — elsarticle's fallback `\email` = `\lx@add@contact[role=email]{#1}`, unlocked)
+  let prints_itself =
+    lookup_definition(&T_CS!(print))?.is_some_and(|defn| !defn.get_origin().is_latexml_owned());
+  if address.is_empty() || !prints_itself {
+    return Ok(SymHashMap::default());
+  }
+  // (never inside its own print: a meaning calling the command again, bound here to this binding, reads no label)
+  if READING_OWN_EMAIL.replace(true) {
+    return Ok(SymHashMap::default());
+  }
+  // (a `\thanks` the class's command prints steps no mark of the block's notes)
+  let steps = FOOTNOTE_STEPS.with(Cell::get);
+  let printed = print_quietly(|| {
+    let mut tokens = vec![T_BEGIN!(), T_CS!(print), T_BEGIN!()];
+    tokens.extend(Explode!(address.as_str()));
+    tokens.extend([T_END!(), T_END!()]);
+    let printed = digest(Tokens::new(tokens))?;
+    // (a print reaching the frontmatter API is a binding's call, read as one, never the class's own label: cej-simone2's
+    // `\email[1][E-mail: ]{\begingroup\sanitize@url\@email{#1}}`, its `\@email` revtex's `\lx@add@email`, 1608.07191)
+    if calls_the_api(&printed) {
+      return Ok(String::new());
+    }
+    let mut text = String::new();
+    ink_text(&printed, &mut text);
+    Ok(text)
+  });
+  FOOTNOTE_STEPS.with(|s| s.set(steps));
+  READING_OWN_EMAIL.set(false);
+  let label = printed?
+    .split_once(address.as_str())
+    .map(|(before, _)| before.trim().to_string())
+    .filter(|label| label.chars().any(char::is_alphabetic));
+  Ok(match label {
+    Some(label) => stored_map!("name" => Stored::String(pin(&label))),
+    None => SymHashMap::default(),
+  })
+}
+
 thread_local! {
+  /// Whether a class's own e-mail command is being printed for its label ([`own_email_properties`]).
+  static READING_OWN_EMAIL: Cell<bool> = const { Cell::new(false) };
   /// The footnote steps the block being rehearsed made so far (`\thanks`, `\footnote` and bare `\footnotemark`s),
   /// from 0 at each rehearsal.
   static FOOTNOTE_STEPS: Cell<i64> = const { Cell::new(0) };
@@ -558,7 +657,10 @@ fn install_event_bindings(
         match email_meaning(cs) {
           EmailMeaning::Binding => *target,
           EmailMeaning::InPlace => "\\lx@fm@obs@email@inplace",
-          EmailMeaning::Own => "\\lx@fm@obs@email@own",
+          EmailMeaning::Own => OWN_EMAIL
+            .iter()
+            .find(|(own, ..)| own == cs)
+            .map_or(OWN_EMAIL[0].1, |(_, target, _)| *target),
         }
       } else if *target == "\\lx@fm@obs@affil"
         && lookup_definition(&T_CS!(&s!("\\lx@class@contact@{}", &cs[1..])))?.is_some()
@@ -567,6 +669,14 @@ fn install_event_bindings(
       } else {
         *target
       };
+      // (a class's own e-mail command kept beside its binding, which prints it to read its label:
+      // `own_email_properties`; never the binding itself, bound again)
+      if let Some((_, own, print)) = OWN_EMAIL.iter().find(|(_, own, _)| *own == target)
+        && lookup_definition(&T_CS!(*cs))?
+          .is_some_and(|defn| defn.get_cs().as_ref() != &T_CS!(*own))
+      {
+        let_i(&T_CS!(*print), &T_CS!(*cs), None);
+      }
       let_i(&T_CS!(*cs), &T_CS!(target), None);
     }
   }

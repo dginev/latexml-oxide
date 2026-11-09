@@ -110,6 +110,17 @@ pub(in crate::base_utilities::frontmatter::observer) fn printed_email_label(
   span: (u16, u16),
   address: &str,
 ) -> Option<String> {
+  // (the label the class's own command prints with it, read as it prints — jfm/jpp's `\email` printing "Email address
+  // for correspondence:" inside a `\thanks`, 2603.18265: the contact's `name`, the rehearsal's `own_email_properties`)
+  let at_span = |e: &&Event| e.kind == EventKind::Contact && e.span == Some(span);
+  if let Some(name) = events
+    .iter()
+    .flat_map(|e| std::iter::once(e).chain(&e.inner))
+    .find(at_span)
+    .and_then(|e| e.name.as_deref())
+  {
+    return Some(name.trim().to_string());
+  }
   let at = events.iter().position(|e| {
     matches!(e.kind, EventKind::Name | EventKind::Contact)
       && e.span.is_some_and(|s| s.0 <= span.0 && span.1 <= s.1)

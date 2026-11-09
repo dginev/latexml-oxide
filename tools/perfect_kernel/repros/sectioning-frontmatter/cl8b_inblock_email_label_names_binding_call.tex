@@ -1,0 +1,17 @@
+% mechanism: a label the block prints before a binding's `\email` on an affiliation's line ("E-mail:") is the e-mail
+%   contact's `name` at =2: the emitter's item names it (`printed_email_label`) and its content is the binding's own call,
+%   whose nested `\lx@add@email` (naming none itself) takes the name of the entry it is digested in
+%   (`\lx@annotate@frontmatter@now`'s `_name` on the stub) — never the default "Email: ", the empty contact around it dropped.
+% witness: 0812.0465 (JHEP3 `\author{…\\ Department …, Canada T6G 2G7 E-mail: \email{hyoshino@phys.ualberta.ca}}`)
+% oracle:  pdflatex (with cl8b_jhep3_stub.cls as JHEP3.cls, JHEP3 not in TeX Live) 0 errors:
+%   "Ann Able / Univ A, City A E-mail: ann@able.org"
+% engines: off the label left in the affiliation, `name="Email: "`; int153z =2 the label dropped, `name="Email: "`
+%   (Warning "E mail" missing); CL8b =2 `name="E-mail: "`
+% expect:  0 errors; 0 warnings; the e-mail contact named "E-mail: " at =2
+\documentclass{JHEP3}
+\title{Title}
+\author{Ann Able\\ Univ A, City A E-mail: \email{ann@able.org}}
+\abstract{Abs.}
+\begin{document}
+Body.
+\end{document}

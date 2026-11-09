@@ -65,19 +65,16 @@ fn a_mailto_link_in_a_thanks_is_the_notes_alone() {
 
 /// `\def\email#1{\textrm{e-mail:~#1}}` and `\thanks{Corresponding author: Ann Smith, Univ A (\email{\tt ann@x.org}).}`: the
 /// note, label (its tie a no-break space) and brackets in place, no contact repeating "e-mail:" and the address. Red (FX3base `=2`): that contact.
-/// The one Warning left is the content check's false count of the label (its printed side reads "e-mail:" as the
-/// contact's name and counts it nowhere; the note holds it once, as the PDF prints it — cw78's mechanism A, 1001.0337).
+/// No Warning: the content check reads the label the document's `\email` prints as the call's event's `name`
+/// (`rehearsal::own_email_properties`, CL8b), printed beside the address, where it counted "e mail" more often than
+/// printed (cw78's mechanism A, 1001.0337).
 #[test]
 fn an_own_email_call_in_a_thanks_is_the_notes_alone() {
-  let log = held_once(
+  held_once(
     repro!("emit_thanks_own_email_call_held_once"),
     "role=\"thanks\">Corresponding author: Ann Smith, Univ A (e-mail:\u{a0}<text font=\"typewriter\">ann@x.org</text>).</note>",
     "ann@x.org",
-    1,
-  );
-  assert!(
-    log.contains("more often than the author blocks print them: e mail."),
-    "{log}"
+    0,
   );
 }
 

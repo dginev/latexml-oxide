@@ -1412,6 +1412,7 @@ impl Walker {
       "\\lx@fm@obs@email"
       | "\\lx@fm@obs@email@inplace"
       | "\\lx@fm@obs@email@own"
+      | "\\lx@fm@obs@emailAdd@own"
       | "\\lx@fm@obs@orcid"
       | "\\lx@fm@obs@affil"
       | "\\lx@fm@obs@affil@run"
@@ -1437,9 +1438,17 @@ impl Walker {
         }
         contact.meaning = match cs.as_str() {
           "\\lx@fm@obs@email@inplace" => EmailMeaning::InPlace,
-          "\\lx@fm@obs@email@own" => EmailMeaning::Own,
+          "\\lx@fm@obs@email@own" | "\\lx@fm@obs@emailAdd@own" => EmailMeaning::Own,
           _ => EmailMeaning::Binding,
         };
+        // (the label a class's own command prints before the address, read as it prints (the rehearsal's
+        // `own_email_properties`): jfm/jpp's "Email address for correspondence:", 2603.18265 — its `name`, as an annotated
+        // contact's label is)
+        if let Some(Stored::String(name)) = w.get_property("name").as_deref()
+          && contact.meaning == EmailMeaning::Own
+        {
+          contact.name = Some(to_string(*name));
+        }
         let label = if marked { String::new() } else { arg(1) };
         contact.label = (!label.is_empty()).then_some(label);
         contact.text = if cs.starts_with("\\lx@fm@obs@affil") {

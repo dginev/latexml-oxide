@@ -191,6 +191,8 @@ pub fn json_resolved(v: &Value) -> FmResolved {
         affiliations: assocs(&c["affiliations"]),
         contacts:     assocs(&c["contacts"]),
         notes:        assocs(&c["notes"]),
+        // (not in a dump: only the emitter reads it)
+        whole_marks:  Vec::new(),
       });
   }
   out.block = assocs(&v["block"]);

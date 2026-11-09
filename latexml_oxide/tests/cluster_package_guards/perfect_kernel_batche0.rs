@@ -588,6 +588,12 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   // emitter's)
   ("_merged_checked= base_utilities/defs/author_macros.rs", 1),
   ("_net= frontmatter_stores.rs", 1),
+  // (CL8, 0 -> 1: the whole printed mark a glued sub-lettered request was parted from, `whole_marks_key` — Perl's own
+  // `_refmarkshown` display, written by the emitter as `author_macros.rs` writes it; 1705.11109)
+  (
+    "_refmarkshown= base_utilities/frontmatter/observer/writer/emit.rs",
+    1,
+  ),
   ("_scopebegin= package/pgfsys_latexml_def.rs", 1),
   ("_sequence= base_utilities/defs/frontmatter_fields.rs", 1),
   ("_share= cas_dc_cls.rs", 1),
@@ -701,6 +707,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "insert _mergednames base_utilities/defs/author_macros.rs",
     1,
   ),
+  // (CL8b, 0 -> 1 each: the name an entry's call gives, which a contact of its kind and role digested inside it and naming
+  // none takes, as it takes the entry's labels — the label JHEP3's block prints before its `\email`, 0812.0465)
+  ("insert _name base_utilities/defs/frontmatter_api.rs", 1),
   ("insert _noautoclose algpseudocodex_sty.rs", 1),
   ("insert _nowrap package/latexml_sty/declare.rs", 1),
   (
@@ -712,6 +721,7 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
     "insert _refmarkshown base_utilities/defs/author_macros.rs",
     1,
   ),
+  ("insert _role base_utilities/defs/frontmatter_api.rs", 1),
   ("insert _scopebegin package/pgfsys_latexml_def.rs", 3),
   ("insert _split_ref package/amsmath_sty.rs", 1),
   ("insert _textmarks base_utilities/frontmatter/insert.rs", 1),
@@ -1085,7 +1095,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // comparison with `\\` now one line of its own, no new name; CK3b 17 -> 19: `spec_printed`, a column spec's grammar
   // read as latex.ltx/array.sty `\@mkpream` reads it, its `@`/`!`/`>`/`<`/`*` and their groups, so the content check
   // reads the text `@{Inst }` prints, review revI3 finding 1 — TeX syntax, no name a document spells)
-  ("rehearsal", 19),
+  // (CL8b 19 -> 21: `own_email_properties` digests a class's own `\email` on the call's address to read the label it prints
+  // before it — what it prints, no name spelled; 2603.18265)
+  ("rehearsal", 21),
   ("relocate", 134),
   // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens`, printed text read
   // as tokens by `is_institution` and `NameKeys` (5 with their definitions), a `'\\'` read of a label (2), a call's hook (1).
@@ -1123,7 +1135,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // catcodes of a cut: where a slice's edge falls past an option, a group or an accent's letter, OD #980; Z4ar2, 30 -> 28: an address
   // list's `@` no longer read, its inks are; NE3 28 -> 36: `key_tokens`' table of the specials a key value holds as characters,
   // a legend's `mark={#}`, 2607.18332 — what it writes, no decision)
-  ("writer/emit", 36),
+  // (CL8 36 -> 39: `whole_marks_key`, a key's tokens as `key_tokens` writes them (1705.11109); `note_argument` /
+  // `brace_argument`, a note span's brace argument taken only where its text prints the note's, 2608.08994 — what it writes,
+  // no decision on a name)
+  ("writer/emit", 39),
   // (P1b, 0 -> 1: `writer/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("writer/dom+mod", 1),
@@ -1324,7 +1339,9 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // Z4a +2: a note's kind, `\lx@fm@obs@fnnote`, the rehearsal's own name for a footnote it heard; N2r2 +3: `raw_lines` reads the
   // `\and` family's whatsits as it reads a break's, by their definition, 2106.06418; IO3b +1: the arm for the rehearsal's
   // own `\lx@fm@obs@creatorcall`, a binding's definition, no name spelled, 0807.4720)
-  ("events", 90),
+  // (CL8b +2: the arm and the meaning of the rehearsal's own `\lx@fm@obs@emailAdd@own`, a binding's definition, no name a
+  // document spells)
+  ("events", 92),
   // (Z4a, 0 -> 2, ruled at Z4ar2: names two kernel definitions (`\begin`, `\end`), not a token's spelling: an environment step by its
   // meaning, a `\let` copy too, what no frame says for a raw environment)
   ("field_notes", 2),
@@ -1344,7 +1361,10 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // name a document spells, 0807.4720; FB2b8 +4: the commands whose arguments the reopen's scan reads past spaces as TeX
   // reads them, `\\`'s `*` and `[…]` and the glue or dimen spec of `\hskip`, `\vskip`, `\kern` — what the
   // command reads in TeX, no decision on a name: h3g `\\ [2mm]`, h3e `\hskip 1em`, review revH4 finding 1)
-  ("rehearsal", 128),
+  // (CL8b +8: `OWN_EMAIL`, the two e-mail commands the rehearsal binds, their bindings and where each keeps the class's
+  // meaning to print it (6); the `\emailAdd` binding's constructor (1); `calls_the_api`, a digested whatsit by its definition,
+  // the rehearsal's own `\lx@fm@obs@annotate` (1) — no decision on a name a document spells)
+  ("rehearsal", 136),
   // (also among `resolver`'s 18 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook)
   ("resolver", 3),
   // (the "Knowledge in, driver out, one pass" move: the old reader's owner logic, moved unchanged from `author_block/`, its literals with it; none added)
