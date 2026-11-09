@@ -165,6 +165,14 @@ fn an_open_group_rehearsals_word_matching() {
       vec![vec!["A One".to_string()]],
     ),
     (
+      // (a letter `@` under `\makeatletter` is read by its code, as `\@mkpream`'s `\if`: review revI4 finding 2)
+      "a letter-catcode spec character",
+      repro!("author_raw_tabular_juggle_spec_letter_at_prints"),
+      1,
+      "Dept Inst",
+      vec![vec!["A One".to_string()]],
+    ),
+    (
       "a line break opening a word",
       repro!("author_raw_tabular_juggle_break_opens_word"),
       2,
