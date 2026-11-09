@@ -21,6 +21,7 @@ use super::{
     EntryCut, cut_entry_call, cut_mail_call, entry_cuts, span_tokens_cut, span_tokens_within,
   },
   calls::{document_note_call, note_call_end},
+  content::reads_past,
   dom::{Kind, norm},
   plan::{self, Key, Owner, api_call},
   repart::{crosses_columns, entry_span, joined_across_cells, prefix_tokens},
@@ -614,7 +615,22 @@ fn event_run_at(
     run_end = run_end.max(t);
   }
   let from = in_a_group(field.tokens, run_start, run_end);
-  let (tokens, _) = field.content_cut((from, run_end), 0, run_start, cuts)?;
+  let (tokens, balanced_end) = field.content_cut((from, run_end), 0, run_start, cuts)?;
+  // (never a run its balance grew over another name, one past the name's own run: an environment the names sit in opening
+  // before the first, `\parbox{…}{\vspace{…}\begin{flushleft} Anja von der Linden$^{1,2,3}$\thanks{…}, Mark T. Allen$^{1,2}$,
+  // … \end{flushleft}}`, whose first name's run took the environment whole, every name in one creator and each written again
+  // (1208.0597) — its caller writes the name's text, counted)
+  let other_name = events.iter().any(|e| {
+    e.kind == EventKind::Name
+      && !inside(e)
+      && e
+        .span
+        .and_then(|span| Some((at(span.0)?, at(span.1)?)))
+        .is_some_and(|(s, t)| from <= s && t <= balanced_end && (s < run_start || t > run_end))
+  });
+  if other_name {
+    return None;
+  }
   let tokens = if wider || first_own <= start {
     in_its_font(first.font.clone(), tokens.unlist()).unlist()
   } else {
@@ -2653,6 +2669,47 @@ fn names_overlap(index: usize, resolved: &Resolved) -> bool {
   true
 }
 
+/// Whether a declaration of the author block at ledger index `index` can't be replayed ([`declarations`]): its span, all its
+/// invocation read as the rehearsal heard it, holds a macro whose undelimited arguments run past it, by its meaning now
+/// ([`reads_past`]). A macro printing a note then defining, `\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}…}`,
+/// defines past the note its arguments made, its call's reach the macro alone: replayed, it read the next declaration's
+/// tokens and on past the entry — `\footremember\footremember\footremember\footremember`, its `\newcounter{\footremember}`
+/// a counter of no name, every theorem then missing its `{` and a Fatal (2505.04436, 1511.09009). No cut of the
+/// block holds the definition apart from what it prints, so the block is written whole, Perl's whole-block creator, its
+/// tokens digested in order, with a counted Warning, once per block over the flushes.
+fn declaration_reads_past(index: usize) -> bool {
+  let past = with_block(index, None, |block, _| {
+    let Outcome::Events { declarations, .. } = &block.outcome else {
+      return None;
+    };
+    let tokens = block.tokens.unlist_ref();
+    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+    declarations
+      .iter()
+      .filter_map(|event| event.span)
+      .filter_map(|(start, end)| tokens.get(at(start)?..at(end)?))
+      .find_map(|span| reads_past(span, true).map(|call| span[call]))
+  });
+  let Some(call) = past else {
+    return false;
+  };
+  DebugFeature!(
+    "frontmatter",
+    "FRONT emit: block {index}'s declaration holds {call:?}, whose arguments run past it"
+  );
+  let once = s!("declaration|{index}");
+  if lookup_mapping(EMITTED_ITEMS, &once).is_none() {
+    assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
+    Warn!(
+      "unexpected",
+      "frontmatter",
+      "The frontmatter emitter can't replay a definition of its author block apart from what the block prints; the block \
+       is written whole, as Perl's whole-block creator"
+    );
+  }
+  true
+}
+
 /// Whether the author block at ledger index `index` was written whole ([`written_whole`]), as a flush decided.
 pub(super) fn kept_whole(index: usize) -> bool {
   matches!(
@@ -2928,7 +2985,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
           || cells
           || counter_moved(source, resolved)
           || mark_dropped(source, resolved, &mut given_lost)
-          || names_overlap(source, resolved),
+          || names_overlap(source, resolved)
+          || declaration_reads_past(source),
       );
       if whole && cells {
         warn_across_cells(source);

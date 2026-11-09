@@ -32917,8 +32917,13 @@ that steps the counter, a bare `\footnotemark` (`mark_dropped`; 1111.1979) — o
 `\samethanks[n]`: latex.ltx's `\@xfootnotemark`, which steps nothing, `Event::given_number`) moves no later mark, so the names
 are written as read and its loss counted by a Warning naming it (1912.01737, 1811.08622, 1911.13299, 2511.12633, 2101.04763;
 user 2026-11-09: a decline never throws away a right reading); names one shared macro prints whose run also prints a note or mark (`names_overlap`;
-synthetic). A cut holding an alignment's `&` outside the environment the run holds whole is refused (the item's text,
-counted; `Field::content_cut`).
+synthetic); a declaration whose span holds a macro reading past it (`declaration_reads_past`, `content::reads_past` with the
+whole reach): `\footremember{#1}{#2}` = `\footnote{#2}\newcounter{#1}…` defines after the note it prints, so its span is the
+macro alone, and its replay read past the entry (2505.04436, 1511.09009: a Fatal each). A cut holding an alignment's `&`
+outside the environment the run holds whole is refused (the item's text, counted; `Field::content_cut`), as is a cut holding
+a conditional cut apart (`content::conditional_cut`: `\ifFull and \else \and \fi Joseph A. Simons`, 1409.0597) and a name's
+run its balance grew over another name (`emit::event_run_at`: a `flushleft` the names sit in, 1208.0597). Guards
+`perfect_kernel_batchne5`.
 
 **Carried, not lost.** A note's footnote step in the creator where its name prints, in source order, and past a `\thanks` a mark
 follows (`note_steps`; 2505.07115, 1610.06031); labels written back into keys as characters (`key_tokens`, `annotations_key`;
