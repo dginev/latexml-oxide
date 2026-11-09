@@ -438,6 +438,7 @@ mod perfect_kernel_batchint20;
 mod perfect_kernel_batchint23;
 mod perfect_kernel_batchio1;
 mod perfect_kernel_batchio3b;
+mod perfect_kernel_batchkb1;
 mod perfect_kernel_batchkey1;
 mod perfect_kernel_batchlo1;
 mod perfect_kernel_batchlo2;

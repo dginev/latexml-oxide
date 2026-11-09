@@ -1573,58 +1573,70 @@ mod tests {
   fn glued_labels_part_into_known_ones() {
     let known = |ls: &[&str]| ls.iter().map(|l| l.to_string()).collect::<Vec<_>>();
     assert_eq!(
-      parted_label("12", &known(&["1", "2"]), true),
+      parted_label("12", &known(&["1", "2"]), true, false),
       Some(vec!["1".into(), "2".into()])
     );
     assert_eq!(
-      parted_label("1⋆", &known(&["1", "2"]), true),
+      parted_label("1⋆", &known(&["1", "2"]), true, false),
       Some(vec!["1".into(), "⋆".into()])
     );
-    assert_eq!(parted_label("1⋆", &known(&["1", "2"]), false), None);
+    assert_eq!(parted_label("1⋆", &known(&["1", "2"]), false, false), None);
     assert_eq!(
-      parted_label("**", &known(&["*"]), false),
+      parted_label("**", &known(&["*"]), false, false),
       Some(vec!["*".into(), "*".into()])
     );
-    assert_eq!(parted_label("ab", &known(&["1"]), true), None);
-    assert_eq!(parted_label("7", &known(&["7"]), true), None);
+    assert_eq!(parted_label("ab", &known(&["1"]), true, false), None);
+    assert_eq!(parted_label("7", &known(&["7"]), true, false), None);
     // a run of symbols is parted into the known labels it spells, before it stands alone as one symbol piece
     // (`$^{\dagger\natural\sharp}$` under entries `†`, `♮`, `♯`: 1004.1402)
     assert_eq!(
-      parted_label("†♮♯", &known(&["†", "♮", "♯"]), true),
+      parted_label("†♮♯", &known(&["†", "♮", "♯"]), true, false),
       Some(vec!["†".into(), "♮".into(), "♯".into()])
     );
     // a known number with a single letter glued to it, the letter a note's mark (`$^{1{\rm a}}$` under entries `1`,
     // `2`: 1904.02582); letters alone part nothing
     assert_eq!(
-      parted_label("1a", &known(&["1", "2"]), true),
+      parted_label("1a", &known(&["1", "2"]), true, false),
       Some(vec!["1".into(), "a".into()])
     );
-    assert_eq!(parted_label("1a", &known(&["1", "2"]), false), None);
-    assert_eq!(parted_label("ab", &known(&["1", "2"]), true), None);
+    assert_eq!(parted_label("1a", &known(&["1", "2"]), false, false), None);
+    assert_eq!(parted_label("ab", &known(&["1", "2"]), true, false), None);
+    // a known letter with a number glued to it under letter-labelled entries, the number a note's mark (`$^{\a 1}$`
+    // under entries `a`, `b`: hep-ph0011101); never under numbered entries, where a number is an entry's label
+    assert_eq!(
+      parted_label("a1", &known(&["a", "b"]), true, true),
+      Some(vec!["a".into(), "1".into()])
+    );
+    assert_eq!(parted_label("a1", &known(&["a", "b"]), false, true), None);
+    assert_eq!(parted_label("a1", &known(&["a", "b"]), true, false), None);
+    assert_eq!(parted_label("a7", &known(&["a", "1"]), true, true), None);
     // (a label as its source spells it is what it spells before its first command: authblk's `\author[3\authfn{2}]`,
     // 2405.16051; `\author[1\thanks{…}]`, 2202.05736)
     assert_eq!(
-      parted_label("3\\authfn{2}", &known(&["1", "2", "3"]), true),
+      parted_label("3\\authfn{2}", &known(&["1", "2", "3"]), true, false),
       Some(vec!["3".into()])
     );
     assert_eq!(
-      parted_label("1\\thanks{\\tt{a@b.de}}", &known(&["1", "2"]), true),
+      parted_label("1\\thanks{\\tt{a@b.de}}", &known(&["1", "2"]), true, false),
       Some(vec!["1".into()])
     );
     assert_eq!(
-      parted_label("12\\fn{3}", &known(&["1", "2", "3"]), true),
+      parted_label("12\\fn{3}", &known(&["1", "2", "3"]), true, false),
       Some(vec!["1".into(), "2".into()])
     );
-    assert_eq!(parted_label("\\dag", &known(&["1"]), true), None);
+    assert_eq!(parted_label("\\dag", &known(&["1"]), true, false), None);
     // a run of digits is one number under multi-digit numbering: BESIII's sub-lettered `23A` is `23` and `A`, never
     // `2`, `3` and `A` (2007.02542), and `48A` with no entry 48 parts into nothing (1507.02068; review rev98e B1)
     assert_eq!(
-      parted_label("23A", &known(&["1", "2", "3", "23", "a"]), true),
+      parted_label("23A", &known(&["1", "2", "3", "23", "a"]), true, false),
       Some(vec!["23".into(), "A".into()])
     );
-    assert_eq!(parted_label("48A", &known(&["4", "8", "12"]), true), None);
     assert_eq!(
-      parted_label("12A", &known(&["1", "2"]), true),
+      parted_label("48A", &known(&["4", "8", "12"]), true, false),
+      None
+    );
+    assert_eq!(
+      parted_label("12A", &known(&["1", "2"]), true, false),
       Some(vec!["1".into(), "2".into(), "A".into()])
     );
   }

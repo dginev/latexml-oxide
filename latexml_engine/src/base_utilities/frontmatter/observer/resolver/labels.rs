@@ -1514,7 +1514,9 @@ pub(super) fn surname_owners(creators: &[RCreator], letters: &str) -> Vec<usize>
 
 /// `label` as two or more labels of `known` written together (`12` → `1`, `2`); with `symbols`, a run of characters that
 /// are no letter or digit may stand alone too (`1⋆` → `1`, `⋆`), and so may one letter (`1a` → `1`, `a`: the letter a
-/// note's mark, `$^{1{\rm a}}$`, 1904.02582), as long as one piece is known. The most known pieces win, then the fewest
+/// note's mark, `$^{1{\rm a}}$`, 1904.02582), and, with `note_numbers` (the emitter's switch on), so may a number when
+/// no known label is one (`a1` → `a`, `1`: the number a note's mark, `$^{\a 1}$` under entries `a`, `b`,
+/// hep-ph0011101), as long as one piece is known. The most known pieces win, then the fewest
 /// pieces: a symbol run spelling known labels is parted into them before it stands alone as one piece (`†♮♯` under
 /// entries `†`, `♮`, `♯`: `$^{\dagger\natural\sharp}$`, 1004.1402). A combining mark is part of the character before
 /// it, never parted from it (`\~{x}`'s `x̃` is no `x` and a `̃`, review rev92b_r2 B1). A run of digits is one number,
@@ -1526,10 +1528,15 @@ pub(super) fn surname_owners(creators: &[RCreator], letters: &str) -> Vec<usize>
 /// the labels that part (authblk's `\author[3\authfn{2}]{…}`, which prints `3†`, is `3` — 2405.16051: parted whole,
 /// its command's letters were labels and its argument the `2` of `\affil[1,2,4]`; `\author[1\thanks{…}]{…}` is `1`,
 /// 2202.05736, 2410.10922).
-pub(super) fn parted_label(label: &str, known: &[String], symbols: bool) -> Option<Vec<String>> {
+pub(super) fn parted_label(
+  label: &str,
+  known: &[String],
+  symbols: bool,
+  note_numbers: bool,
+) -> Option<Vec<String>> {
   if let Some(at) = label.find('\\') {
     let spelled = label[..at].trim();
-    return match parted_label(spelled, known, symbols) {
+    return match parted_label(spelled, known, symbols, note_numbers) {
       Some(parts) => Some(parts),
       None => known
         .iter()
@@ -1554,6 +1561,14 @@ pub(super) fn parted_label(label: &str, known: &[String], symbols: bool) -> Opti
     .all(|k| k.len() == 1);
   let digit_at = |i: usize| chars.get(i).is_some_and(|(_, c)| c.is_ascii_digit());
   let cuts = |i: usize| single_digit || i == 0 || i == n || !(digit_at(i - 1) && digit_at(i));
+  // (under entries no number labels, a number is no entry's label but a note's mark, as a letter is under numbered
+  // entries: `$^{\a 1}$` printing "a1" under entries `a`, `b` is address a and the footnote "$^1$presenter at
+  // conference", hep-ph0011101 — never one label no entry holds)
+  let lettered = note_numbers
+    && !known.is_empty()
+    && known
+      .iter()
+      .all(|k| !k.is_empty() && !k.chars().all(|c| c.is_ascii_digit()));
   // best[i]: the fewest pieces covering label[..i], with how many are known, and the piece before
   let mut best: Vec<Option<(usize, usize, usize)>> = vec![None; n + 1];
   best[0] = Some((0, 0, 0));
@@ -1568,7 +1583,8 @@ pub(super) fn parted_label(label: &str, known: &[String], symbols: bool) -> Opti
       let mut bases = piece.chars().filter(|c| !is_combining_mark(*c));
       let is_letter =
         symbols && bases.next().is_some_and(char::is_alphabetic) && bases.next().is_none();
-      if !is_known && !is_symbol && !is_letter {
+      let is_note_number = symbols && lettered && piece.chars().all(|c| c.is_ascii_digit());
+      if !is_known && !is_symbol && !is_letter && !is_note_number {
         continue;
       }
       let candidate = (count + 1, hits + usize::from(is_known), i);
