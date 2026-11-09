@@ -811,7 +811,7 @@ fn opens_a_row_under_no_names(c: &RCreator, before: &RCreator) -> bool {
 /// Whether the reading joined a creator's name of Name events with nothing but layout between them
 /// (`name:layout-joined`, the resolver's `joins_previous`) where an alignment's cell boundary is among that layout: the
 /// name's words run on from one cell into the next.
-fn joined_across_cells(c: &RCreator) -> bool {
+pub(super) fn joined_across_cells(c: &RCreator) -> bool {
   if !c.rule.contains("name:layout-joined") {
     return false;
   }
@@ -852,6 +852,72 @@ fn joined_across_cells(c: &RCreator) -> bool {
       }
     }
     false
+  })
+}
+
+/// Whether the ink the span `span` of the author block at ledger index `index` covers runs on from one column of an
+/// alignment into another ([`events_cross_columns`]): its tokens hold the alignment's `&`, or join a column's row with
+/// another column's — an item no cut of the block can make, which the emitter declines with its block (Perl's
+/// whole-block creator, Base_Utility.pool.ltxml:691-693): `$^\star$Univ X & $^\dagger$Univ Y\\ Dept A & Dept B`
+/// (1304.3138, 1711.10325, 1704.06967, 2511.14288, 2605.30319, 1802.06894).
+pub(super) fn crosses_columns(index: usize, span: (u16, u16)) -> bool {
+  with_ledger(|ledger| {
+    let Some(Entry::Author(block)) = ledger.entries().get(index) else {
+      return false;
+    };
+    let Outcome::Events { events, .. } = &block.outcome else {
+      return false;
+    };
+    events_cross_columns(events, span)
+  })
+}
+
+/// Whether, between the first and the last ink of `events` inside `start..end`, an alignment enclosing that ink (at a
+/// lower nest than any of it) starts a cell of a later column (its digested `Layout{role="cell"}`, labelled
+/// `row,column`) or ends a row of more than one cell (`Break{role="row"}` after a cell of a later column). The rows of
+/// one column are lines an item reads on over (`Univ X\\ City`, nucl-th0306055); an alignment the ink holds whole is
+/// its own.
+fn events_cross_columns(events: &[Event], (start, end): (u16, u16)) -> bool {
+  // (a separator is no ink of its own: a gap's is made at the block's level, `Canada~~G1V 0A6` in a cell, 1304.3138)
+  let ink = |e: &Event| {
+    !matches!(
+      e.kind,
+      EventKind::Layout | EventKind::Break | EventKind::Sep(_)
+    ) && e.span.is_some_and(|(s, t)| s >= start && t <= end)
+  };
+  let (Some(first), Some(last)) = (events.iter().position(ink), events.iter().rposition(ink))
+  else {
+    return false;
+  };
+  let Some(nest) = events[first..=last]
+    .iter()
+    .filter(|e| ink(e))
+    .map(|e| e.nest)
+    .min()
+  else {
+    return false;
+  };
+  let column = |e: &Event| {
+    (e.kind == EventKind::Layout && e.role.as_deref() == Some("cell"))
+      .then(|| e.label.as_deref()?.split_once(',')?.1.parse::<usize>().ok())
+      .flatten()
+  };
+  (first..last).any(|at| {
+    let e = &events[at];
+    if e.nest >= nest {
+      return false;
+    }
+    match e.kind {
+      EventKind::Layout => column(e).is_some_and(|c| c > 0),
+      // (the row's last cell: the event before the row end at its alignment's nest)
+      EventKind::Break if e.role.as_deref() == Some("row") => events[..at]
+        .iter()
+        .rev()
+        .find(|cell| cell.nest <= e.nest)
+        .and_then(column)
+        .is_some_and(|c| c > 0),
+      _ => false,
+    }
   })
 }
 

@@ -1124,7 +1124,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (P1b, 0 -> 1: `writer/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("writer/dom+mod", 1),
-  ("writer/plan", 85),
+  ("writer/plan", 84),
   // (LO2r2, 0 -> 4: a row line's cut ends at its address's own first token, which the letters check finds; the tokens between the
   // last letter it keeps and that one print no letter, so their kinds say which it keeps — the spacing, separators, commands and
   // bracket opening the address out, a bracket the cut leaves open closed by its own token: `prefix_tokens`, review revLO2 2)

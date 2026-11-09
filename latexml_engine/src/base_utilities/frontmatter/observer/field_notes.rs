@@ -186,7 +186,12 @@ fn note_environment(token: &Token, pos: u16, reach: u16, expanded: bool) {
   };
   FIELD_NOTES.with(|notes| {
     let notes = &mut *notes.borrow_mut();
-    if frames != notes.frames_heard {
+    // (what runs at the position of a `\begin` or `\end` heard is read too, its frame count unchanged: `\begin{small}`'s
+    // `\begingroup` opens the frame, its `\lx@setcurrenvir` then the environment, which the `\begin` said — left unread, the
+    // next group's frame (`Universit{\`a}`) heard it as an environment opened there, which the `\end` closed: the line's run
+    // took that `\end` and not its `\begin`, 2512.19748)
+    let at_said = notes.meaning_heard.is_some_and(|(at, _)| at == pos);
+    if frames != notes.frames_heard || at_said {
       notes.frames_heard = frames;
       let open = environments_open();
       if open != notes.open_heard {

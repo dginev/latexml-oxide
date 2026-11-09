@@ -23,7 +23,7 @@ use super::{
   calls::{document_note_call, note_call_end},
   dom::{Kind, norm},
   plan::{self, Key, Owner, api_call},
-  repart::{entry_span, prefix_tokens},
+  repart::{crosses_columns, entry_span, joined_across_cells, prefix_tokens},
   *,
 };
 use crate::base_utilities::{
@@ -2207,6 +2207,23 @@ fn warn_excess(index: usize, words: &[(String, bool)], whole: bool) {
   );
 }
 
+/// The counted Warning of an author block written whole because a name or an item of its reading joins ink across an
+/// alignment's cells ([`crosses_columns`], [`joined_across_cells`]), once per block over the flushes.
+fn warn_across_cells(index: usize) {
+  let once = s!("cells|{index}");
+  if lookup_mapping(EMITTED_ITEMS, &once).is_some() {
+    return;
+  }
+  assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
+  Warn!(
+    "unexpected",
+    "frontmatter",
+    s!(
+      "The frontmatter emitter can't cut an author block (a name or an item of its reading joins ink across an alignment's cells): it is written whole, as Perl's whole-block creator"
+    )
+  );
+}
+
 /// The counted Warning of a check of the safety net (`resolver::net`) its reading fails, once per `key` over the flushes.
 fn warn_net(key: &str, what: &str) {
   if lookup_mapping(EMITTED_ITEMS, key).is_some() {
@@ -2324,9 +2341,43 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       check.lost.iter().any(|ink| ink.names_fail) || check.excess.iter().any(|(_, name)| *name)
     })
   };
+  // (or a name or an item of it joins ink across an alignment's cells: no cut of the block makes it — its tokens hold the
+  // alignment's `&` or join two columns' rows —, so the block is Perl's whole-block creator, as the switch off writes it
+  // (Base_Utility.pool.ltxml:691-693): names one per cell read as one, 1504.01048, 2607.22455, 2609.36783, 2507.07623,
+  // 2512.13460, 2510.03886, 1902.06698, 2101.00440; an affiliation run on into the next column, 1304.3138, 2511.14288,
+  // 2605.30319, 1711.10325, 1802.06894, 1704.06967; each counted)
+  let across_cells = |source: usize| {
+    let items = resolved
+      .creators
+      .iter()
+      .flat_map(|c| c.affiliations.iter().chain(&c.contacts).chain(&c.notes))
+      .chain(&resolved.block);
+    // (its whole entry: the span the emit writes, over the lines it continues, `entry_span`)
+    let crosses = |assoc: &Assoc| {
+      assoc.source.is_some_and(|(at, span)| {
+        at == source
+          && span.is_some_and(|span| {
+            let span = entry_span(at, span, &plan::contact_key(assoc).1).unwrap_or(span);
+            crosses_columns(at, span)
+          })
+      })
+    };
+    resolved
+      .creators
+      .iter()
+      .any(|c| c.source == source && joined_across_cells(c))
+      || items.into_iter().any(crosses)
+  };
   let whole: BTreeSet<usize> = read_blocks
     .into_iter()
-    .filter(|&source| written_whole(source, names_fail(source)))
+    .filter(|&source| {
+      let cells = across_cells(source);
+      let whole = written_whole(source, names_fail(source) || cells);
+      if whole && cells {
+        warn_across_cells(source);
+      }
+      whole
+    })
     .collect();
   let mut kept_inks: Vec<(usize, &LostInk)> = Vec::new();
   for (&index, check) in checks {

@@ -1,0 +1,20 @@
+% mechanism: the emitter's block decline (`emit::emit_commands`, `across_cells`): a block whose reading joins a name's
+%   ink across an alignment's cells (`repart::joined_across_cells`, the digested `Layout{role="cell"}` events) is written
+%   whole, Perl's whole-block creator (Base_Utility.pool.ltxml:691-693); the backstop `Field::content_cut` refuses a run
+%   holding a stray `&` (`plan::holds_stray_alignment`)
+% witness: 1504.01048, 2607.22455, 2609.36783, 2507.07623, 2512.13460, 2510.03886, 1902.06698, 2101.00440 (names one per
+%   cell read as one name; NE1's root cause, agent_reports/2026-11-09_NE1_report.md)
+% oracle:  pdflatex 0 errors; three columns "Ann Able / Univ X", "Bob Baker / Univ Y", "Cid Cole / Univ Z"
+% engines: perl: 0 errors, one creator of the whole block; rust off: the same; rust =2 (int152c): 2 errors (Stray
+%   alignment "&"), one creator "Ann Able Bob Baker Cid Cole" with the affiliation "Univ X Univ Y Univ Z"
+% expect:  =2 as off: one creator holding the whole block, 0 errors, 1 warning (the block written whole)
+\documentclass{article}
+\title{A Title}
+\author{\begin{tabular}{ccc}
+Ann Able & Bob Baker & Cid Cole\\
+Univ X & Univ Y & Univ Z
+\end{tabular}}
+\begin{document}
+\maketitle
+Text.
+\end{document}
