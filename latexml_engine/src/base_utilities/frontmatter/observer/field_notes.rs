@@ -444,6 +444,38 @@ fn macro_of(token: &Token) -> Option<Rc<Expandable>> {
   }
 }
 
+/// `reach`, or past the group the call at `start` opened before it and had not closed: an opening brace a macro reads is the start
+/// of an undelimited argument, which TeX reads whole to its matching close, though the cover seen so far stops at the brace
+/// (icrc2009's raw `\IEEEauthorblockN{J.K. de Jong …}`, whose expansion's `\gdef`s are made after it read the argument, 1111.2718).
+/// A span ending at that brace would be replayed as the call cut from its argument, with the names inside it printed by the
+/// call's box. A reach that closes a group opened before `start` (`\textbf{\def\x{1}}`) is `settle_declarations`'s.
+fn balanced_reach(field: &[Option<Token>], start: u16, reach: u16) -> u16 {
+  let step = |pos: usize| {
+    field
+      .get(pos)
+      .copied()
+      .flatten()
+      .map_or(0, |t| t.group_step())
+  };
+  let mut depth = 0i32;
+  for pos in usize::from(start)..usize::from(reach).min(field.len()) {
+    depth += step(pos);
+    if depth < 0 {
+      return reach;
+    }
+  }
+  let mut end = usize::from(reach);
+  while depth > 0 && end < field.len() {
+    depth += step(end);
+    end += 1;
+  }
+  if depth > 0 {
+    reach
+  } else {
+    u16::try_from(end).unwrap_or(reach)
+  }
+}
+
 /// What the field hands a call at `pos` reading up to `reach`: its arguments' tokens.
 fn handed_to_a_call(field: &[Option<Token>], pos: u16, reach: u16) -> &[Option<Token>] {
   field
@@ -776,7 +808,7 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
     match notes.declarations.last_mut() {
       // (a macro's expansion defining several, one after another: one call's)
       Some(last) if last.open && last.call == pos => {
-        last.end = last.end.max(reach);
+        last.end = balanced_reach(&notes.field, last.start, last.end.max(reach));
         last.global &= global;
         for key in definees {
           if !last.definees.contains(&key) {
@@ -791,9 +823,10 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
             once.push(key);
           }
         }
+        let start = read_lead(notes.lead_read, notes.read_expanded).unwrap_or(pos);
         notes.declarations.push(FieldDeclaration {
-          start: read_lead(notes.lead_read, notes.read_expanded).unwrap_or(pos),
-          end: reach.max(pos + 1),
+          start,
+          end: balanced_reach(&notes.field, start, reach.max(pos + 1)),
           definees: once,
           global,
           depth: depth.unwrap_or(0).saturating_sub(notes.depth),
