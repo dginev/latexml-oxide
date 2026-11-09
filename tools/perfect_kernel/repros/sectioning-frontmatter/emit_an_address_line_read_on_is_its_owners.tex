@@ -6,7 +6,8 @@
 % oracle:  pdflatex 0 errors; "Ann Able1, Bob Baker2"; "1 Univ A, City, Country"; "2 Univ B, Town, Country"; "Correspondence
 %   to: bob.baker@b.org"
 % engines: rust LO4 `=2`: Bob's affiliation `Univ B, Town, Country Correspondence to: bob.baker@b.org`, no e-mail; off: the entry without them, each address its owner's e-mail
-% expect:  0 errors, 0 warnings; `=2` creators' XML as with the switch off
+% expect:  0 errors, 0 warnings; off: Bob's entry cut, "Correspondence to" left in it; `=2` (KB2): the entry whole, as LO4,
+%   the cut stranding the phrase its address completes (`address_cut::strands_a_phrase`; 2306.04726)
 % status:  RED (LO4) -> GREEN (perfect_kernel_batchp1e::an_address_line_read_on_is_its_owners_email)
 % preload: ar5iv.sty
 \documentclass{article}

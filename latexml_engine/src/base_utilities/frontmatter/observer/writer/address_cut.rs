@@ -21,9 +21,12 @@ use super::{
   plan::{api_call, spells_one_of},
   *,
 };
-use crate::base_utilities::frontmatter::observer::{
-  events::{EventKind, InkAt, InkTable, TextAt, events_texts_at},
-  resolver::{Taken, address_runs},
+use crate::base_utilities::frontmatter::{
+  classify::names_a_contact,
+  observer::{
+    events::{EventKind, InkAt, InkTable, TextAt, events_texts_at},
+    resolver::{Taken, address_runs},
+  },
 };
 
 /// One e-mail a cut made: its address, its tokens as printed, the label its run took.
@@ -517,6 +520,13 @@ fn cut_at(
       .chain(around.marks.iter().filter_map(|e| mark_of(e)))
       .any(|(a, b)| a < t && b > s)
   };
+  // (whether a formula the field prints overlaps `range`)
+  let in_a_formula = |(s, t): (usize, usize)| {
+    field
+      .formulas
+      .iter()
+      .any(|f| usize::from(f.start) < t && usize::from(f.end) > s)
+  };
   for run in &taken.runs {
     let run_at = reach_of(run.bytes.0, run.bytes.1);
     let bytes_of = |address: &str| {
@@ -576,12 +586,18 @@ fn cut_at(
         };
         let (from, to, first) = (index(range.0)?, index(range.1)?, index(run_at.0)?);
         let taken_whole = cuts.iter().any(|&(s, t)| s <= from && to <= t);
-        if Some(range) != own && taken_whole && !others_print(range) && !holds_event(range) {
+        if Some(range) != own
+          && taken_whole
+          && !others_print(range)
+          && !holds_event(range)
+          && !in_a_formula(range)
+        {
           let (tokens, _) = field.content_of((from, to), 0, from)?;
           return Some((tokens.unlist(), "its wrapper"));
         }
         let own = own?;
-        if others_print(own) {
+        // (never its printed formula, `dcook12$@$uwyo.edu` (1409.0847): its text, as the switch off writes it)
+        if others_print(own) || in_a_formula(own) {
           return None;
         }
         let (own_from, own_to) = (index(own.0)?, index(own.1)?);
@@ -768,11 +784,18 @@ pub(super) fn cut_entry_call(
 /// The cuts of the entries the reading took addresses out of (`Resolved::taken`), each in `resolved`; one that can't be cut given
 /// back whole there, the Kind steps' to cut in place after the flush, as for a paper with no block (`insert_frontmatter`) — entry
 /// by entry, not the switch off's whole paper (RT1 row 57a).
+///
+/// The cut keeps `=2`'s improvements where it harms none (the standing ruling, user 2026-11-08; OD #980 KB2): an entry whose
+/// cut would strand the phrase its address completes ([`strands_a_phrase`]: 2306.04726) is given back whole. The switch off's
+/// cut is unchanged.
 pub(super) fn entry_cuts(reading: &Resolved, resolved: &mut Resolved) -> Vec<EntryCut> {
   let names: Vec<&str> = reading.creators.iter().map(|c| c.name.as_str()).collect();
   let mut cuts = Vec::new();
   for taken in &reading.taken {
-    match entry_cut(taken, &names).ok().flatten() {
+    let cut = (!strands_a_phrase(taken))
+      .then(|| entry_cut(taken, &names).ok().flatten())
+      .flatten();
+    match cut {
       Some(cut) => cuts.push(cut),
       None => {
         DebugFeature!(
@@ -785,6 +808,41 @@ pub(super) fn entry_cuts(reading: &Resolved, resolved: &mut Resolved) -> Vec<Ent
     }
   }
   cuts
+}
+
+/// Whether the cut of `taken` would strand the phrase an address it takes completes: a run with no label word the take-out
+/// takes with it (`Taken::runs`, `resolver::labels::take_labels`) after a colon or a "to" the cut keeps, the words before it
+/// on its line, from the last separator, naming a contact (`names_a_contact`) — "Author to whom correspondence should be
+/// addressed: a@x" (2306.04726), "Correspondence to: a@x" (2004.11812), "Email for correspondence: a@x" (2110.05460), "…,
+/// *Corresponding author: \texttt{a@x}" (2602.09324) —: the phrase is the address's own label, which the cut would leave
+/// dangling in the entry, its colon lost. An address after a place's colon (`…, France: a@x`, 1103.3532) strands nothing, nor
+/// does a phrase the entry holds alone: a legend's, its carriers' note (`\affil[*]{Corresponding author: a@x}`, 1812.03816).
+fn strands_a_phrase(taken: &Taken) -> bool {
+  let kept = |at: usize| !taken.cuts.iter().any(|&(s, t)| s <= at && at < t);
+  taken
+    .runs
+    .iter()
+    .filter(|run| run.label.is_none())
+    .any(|run| {
+      let Some(before) = taken.lined.get(..run.bytes.0) else {
+        return false;
+      };
+      let before = before.trim_end_matches(|c: char| c.is_whitespace() || "([<".contains(c));
+      let word = before
+        .rsplit(char::is_whitespace)
+        .next()
+        .unwrap_or_default();
+      let phrase = before.ends_with(':') || word.eq_ignore_ascii_case("to");
+      let phrase_end = before.trim_end_matches(':').len();
+      let head = &before[..phrase_end];
+      let from = head.rfind(['\n', ',', ';', '.']).map_or(0, |p| p + 1);
+      let names = head[from..]
+        .split(|c: char| !c.is_alphabetic() && c != '-')
+        .any(names_a_contact);
+      // (a phrase the entry holds alone, `\affil[*]{Corresponding author: a@x}`, is the legend its carriers' note is made of)
+      let beside = head[..from].chars().any(char::is_alphanumeric);
+      phrase && names && beside && kept(phrase_end - 1)
+    })
 }
 
 /// The e-mail call of `assoc`, an address the reading took out of an entry (`owner:entry-address`) that a cut made, under `keys`

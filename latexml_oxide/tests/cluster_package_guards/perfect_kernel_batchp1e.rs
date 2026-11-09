@@ -27,6 +27,21 @@ macro_rules! repro {
   };
 }
 
+/// `tex` clean with either switch, its switch-off reading `off` and its `=2` one `want` (KB2: an entry given back whole where
+/// the cut would strand the phrase its address completes, `address_cut::entry_cuts`).
+fn as_off_but(tex: &str, off: &[Vec<&str>], want: &[Vec<&str>]) {
+  let (off_log, off_xml) = run(tex, 0);
+  assert_eq!(
+    (error_count(&off_log), warning_count(&off_log)),
+    (0, 0),
+    "{off_log}"
+  );
+  let (log, xml) = run(tex, 2);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&off_xml), off);
+  assert_eq!(creators(&xml), want);
+}
+
 /// `tex` clean with either switch, its `=2` creators' XML (ids aside) the switch-off one's, and their reading `want`.
 fn as_off(tex: &str, want: &[Vec<&str>]) {
   let (off_log, off) = run(tex, 0);
@@ -88,18 +103,24 @@ fn an_address_in_an_api_entry_is_its_owners_email() {
 }
 
 /// A labelled line the reading read on with an address line (`$^2$Univ B, Town, Country\\ Correspondence to:
-/// bob.baker@b.org`; 2004.11812, 1203.0253, 2405.03617): the entry's tokens over both lines cut, its label word kept as
-/// with the switch off, the address its spelled author's e-mail. Red (LO4 `=2`): the address in Bob's affiliation.
+/// bob.baker@b.org`; 2004.11812, 1203.0253, 2405.03617): off cuts the entry's tokens over both lines, its label word kept,
+/// the address its spelled author's e-mail. KB2: at `=2` the cut would strand "Correspondence to", the phrase the address
+/// completes (2306.04726), so the entry is whole, as LO4's `=2` wrote it.
 #[test]
 fn an_address_line_read_on_is_its_owners_email() {
-  as_off(repro!("emit_an_address_line_read_on_is_its_owners"), &[
-    vec!["Ann Able", "affiliation=Univ A, City, Country"],
-    vec![
+  let ann = vec!["Ann Able", "affiliation=Univ A, City, Country"];
+  as_off_but(
+    repro!("emit_an_address_line_read_on_is_its_owners"),
+    &[ann.clone(), vec![
       "Bob Baker",
       "affiliation=Univ B, Town, Country Correspondence to",
       "email=bob.baker@b.org",
-    ],
-  ]);
+    ]],
+    &[ann, vec![
+      "Bob Baker",
+      "affiliation=Univ B, Town, Country Correspondence to: bob.baker@b.org",
+    ]],
+  );
 }
 
 /// A label word and brackets the reading's run takes (`… Country (E-mail: \texttt{ann.able@a.org})`, `…, (E-mail: …)`;
