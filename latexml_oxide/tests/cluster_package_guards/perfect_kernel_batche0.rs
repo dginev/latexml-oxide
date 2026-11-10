@@ -382,8 +382,13 @@ fn the_moved_cut_and_kind_take_no_new_decision() {
 /// the API's attribute names to `defs/frontmatter_api.rs`. None is left: what `author_block/` still holds is the token driver.
 /// (revZ18j S1: the names [`MOVED_OLD_READER_FILES`] export count too, so a move out of `author_block/` leaves no name
 /// unfenced; `relocate.rs`'s `s!("{CUT_COPY_PLACE}{key}:{label}")` is revZ18a's capture, unfenced since Z18a moved
-/// `CUT_COPY_PLACE` to `cut.rs`)
-const ONE_ENGINE_REACH: &[(&str, usize)] = &[("relocate.rs CUT_COPY_PLACE", 1)];
+/// `CUT_COPY_PLACE` to `cut.rs`). `fallback.rs title_code_author_statements` (int155a, the main session's decision): PBb's
+/// juggle reader reads the class's title-code statements, which ERR2 (OD #983) put in `names.rs` beside the moved field
+/// readers — the class's code read, not the old reader's; Z18m moves that reader to `frontmatter/classify/`, paying it.
+const ONE_ENGINE_REACH: &[(&str, usize)] = &[
+  ("fallback.rs title_code_author_statements", 2),
+  ("relocate.rs CUT_COPY_PLACE", 1),
+];
 
 /// The old reader's files moved out of `author_block/` unchanged, whose exports [`old_reader_exports`] counts as the old
 /// reader's (revZ18j S1): Z18a's Cut, Kind and field readers, Z18j's entry cutter and its e-mail line and mark readers. Each
