@@ -1258,9 +1258,9 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
   // `\email{{jsliwinski,wattenhofer}@ethz.ch}`), nor a separator between the list's addresses (a tie, spacing:
   // `shared_row::is_call_separator`), which the address written holds none of (1701.08125's
   // `$\{$stomforde$|$bsick$\}$@uni-kassel.de;~cms@…`, which the old split wrote as text too): no markup lost.
-  use Catcode::{BEGIN, END, LETTER, MATH, OTHER, SPACE};
   let plain = !address.contains(['\\', '~'])
     && content[from..to].iter().all(|t| {
+      use Catcode::{BEGIN, END, LETTER, MATH, OTHER, SPACE};
       matches!(t.get_catcode(), LETTER | OTHER | SPACE | MATH | BEGIN | END)
         || symbol(t).is_some()
         || is_call_separator(t)
