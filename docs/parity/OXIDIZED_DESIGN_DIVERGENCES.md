@@ -29952,7 +29952,7 @@ sectioning-frontmatter/`author_block_leading_spacer_lines_are_no_names_line` (RE
   `\author`, so each grade reached `\lx@IEEE@membership@drop`. IEEEtran's binding now hooks authblk's load
   (`\AddToHook{package/authblk/after}`): authblk's `\author` is kept as `\lx@IEEE@AB@author`, and `\author` reads the
   grades of its names as the binding's own does (`name_memberships`, `block_name_memberships`, only while
-  `\IEEEmembership` is the class's) before handing the names to authblk's, the optional label exactly as written (an
+  `\IEEEmembership` is the class's) before handing the names to authblk's (a body of `\IEEEauthorblockN` blocks is read as the class's: #987), the optional label exactly as written (an
   empty `\author[]{…}` is no unlabelled `\author`: dropped, 2005.04149's, 2105.12254's and 2312.15778's addresses were
   welded into the affiliation). Conference mode
   still swallows them (`\lx@IEEE@membership`; pdflatex errs on an `\IEEEmembership` in authblk's `\author` there, an
@@ -33415,3 +33415,32 @@ ties no block to an author, but the block reprints its authors' e-mails, which t
 alike).
 
 **Known REDs (review revCR4b finding 2, synthetic):** the per-label attribution's `annotate=run` fallback does not end its run at the `author:N` contacts an earlier cited block made, so an uncited block also reaches authors an earlier block went to (`imsart_address_block_fallback_run_q1_red.tex`), and a block naming three authors but citing only `e2` goes to that one (`…_q2_red.tex`); no word lost.
+
+### 987. IEEEtran's author blocks under authblk's `\author` are read as the class reads them, added after the authors before (CR6)
+
+**What.** ieeetran_cls.rs `\lx@IEEE@authblk@author` (authblk's `\author` once IEEEtran's binding hooks authblk's load,
+#950). A body holding `\IEEEauthorblockN` (`\author{\IEEEauthorblockN{Ann Able,~\IEEEmembership{Member,~IEEE}, Bob Baker
+and Cy Coe}\thanks{…}}`) went to authblk's one creator call, inside which the binding's `\IEEEauthorblockN`
+(`\lx@add@authors@append`) is a nested author call that printed nothing in the rehearsal: the creator was dropped, every
+author lost with 0 Warnings. Now such a body is read as the class's own `\author` reads it (`printed_refmarks`,
+`author_block_body`: the grid transposed, bare trailing text wrapped, each name's grade its `membership` contact), run in
+a group with `\and` empty (`\lx@IEEE@authblk@blocks`) — without the class's `\lx@IEEE@author@begin`/`@end`, so its
+authors are added after those before them as authblk adds every `\author`'s (authblk.sty:114-145), where the class's own
+`\author` replaces them — then authblk's bookkeeping (`\lx@AB@author@state`, `\lx@author@after`). A labelled call gives
+each block's names its label (`\lx@IEEE@authorblockN@labelled` → `\lx@add@authors@append[annotations={label}]`), as
+authblk's `\author[1]{Ann Able, Bob Baker}`, so `\affil[label]` reaches them.
+
+**Why.** pdflatex prints every name (IEEEtran.cls's `\IEEEauthorblockN` under authblk's `\author`). Perl:
+`\IEEEauthorblockN` is `#1` (IEEEtran.cls.ltxml:144) and authblk's unlabelled `\author` without `\and` one
+`\lx@add@creator` (authblk.sty.ltxml:55), so it keeps the names as one creator, no grade (IEEEtran.cls.ltxml:143).
+
+**Witnesses** (int154u → CR6): 2402.16140, 1611.02001, 1810.08035, 2409.09417 (0 creators → 3, 4, 3, 3, the grades as
+membership contacts), 1708.05281 (one nameless creator holding every line, 4 Warnings → 6 authors, each with its marked
+affiliation and e-mail, 0 frontmatter Warnings). 2602.05517 (no authblk) and 1,434 stage2 papers byte-identical.
+
+**Left** (pre-existing in the class's own path, identical without authblk): a `\\` inside an `\IEEEauthorblockN` names
+list before more names (`\IEEEauthorblockN{Ann Able, {\em Member, IEEE}, Bob Baker,\\ Cy Coe, … and Dee Dale}`,
+1810.08035) reads the names after it as the first names' affiliation, 0 Warnings (words kept).
+
+Repros `class-bindings/ieeetran_authblk_blockn_names`, `class-bindings/ieeetran_authblk_blockn_calls_accumulate`; guards
+`perfect_kernel_batchcr6::{authblk_author_reads_ieee_author_blocks, authblk_author_blocks_accumulate_and_take_labels}`.
