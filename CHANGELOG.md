@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+  - **Intermittent SIGSEGV at startup: libkpathsea's environment writes now
+    precede the prewarm thread.** The binaries spawned the kpathsea prewarm
+    thread before the process-global `Kpaths` handle existed, so the handle was
+    constructed on that thread: `kpathsea_set_program_name` → `putenv` of
+    `SELFAUTOLOC`/`SELFAUTODIR`/`SELFAUTOPARENT`/`SELFAUTOGRANDPARENT`/`progname`.
+    glibc's `putenv` reallocates `environ` when it adds a variable, and the
+    conversion thread was walking that array through `getenv` (dump load, option
+    lookups) at the same time — a use-after-free that killed 9 of 540
+    conversions on x86_64 Linux (glibc 2.39), always at the same instruction, and
+    0 of 540 with `LATEXML_NO_KPATHSEA_PREWARM=1`. `latexml_oxide` and
+    `cortex_worker` now call the new `pathname::init_kpathsea()` on the worker
+    main thread before the spawn, so every environment write libkpathsea makes
+    happens while that thread is alone; the prewarm thread only warms format
+    tables. The one Rust-side writer, `set_var("LATEXML_INI_MODE")` under
+    `--init`, moves ahead of the same spawn (the hunk #812 proposes; the prewarm
+    thread reads the environment from C while it warms, so the rule is: every
+    environment write in the binaries precedes the first spawn). Witness:
+    STABILITY_WITNESSES.md Cluster J.
+
 ## [0.7.6] (graphics & SVG figure fidelity; minted highlighting + overpic; author/frontmatter class sweep; Rhai runtime binding API; latexmlpost CLI parity; wider package & bibliography coverage)
 
   - **OmniBus fallback captures `\orcid` and no-ops the `\lefttitle`/`\righttitle`

@@ -495,6 +495,94 @@ faithfulness argument and guards: OXIDIZED_DESIGN **#80**.
 attributable to an *uncited* entry disappears with this change. Re-measure rather
 than reading a drop as a separate fix.
 
+## Cluster J — `putenv` on the kpathsea prewarm thread vs `getenv` on the conversion thread → SIGSEGV (✅ FIXED 2026-11-10)
+
+**Symptom.** A conversion that normally succeeds dies with exit 139 (SIGSEGV) a
+few percent of the time, with nothing in the log; re-running the same input
+succeeds. Kernel log entries all name the same instruction (`ip` minus the
+mapping base is constant, `error 4` = user-mode read), in a non-main thread.
+
+**Witness (0.7.5 release binary, x86_64 Linux, glibc 2.39, TeX Live 2023 host
+kpathsea).** Six proof-sized documents (2–27 KB, heavy inline math) each
+converted 90 times by a shell loop with `ulimit -c unlimited`:
+
+| run | conversions | SIGSEGV |
+|---|---|---|
+| default | 540 | **9** (1.7 %) |
+| `LATEXML_NO_KPATHSEA_PREWARM=1` | 540 | 0 |
+| `main` @ 1ef264a2b, dev build, default | 540 | 0 (does not reproduce; see below) |
+| with this fix, dev build, default | 558 | 0 |
+| `main` @ 1ef264a2b, release build, default | 540 | 1 |
+| with this fix, release build, default | 540 | 0 |
+| `main` @ 1ef264a2b, release build, default, longer run | 3600 | 0 |
+| with this fix, release build, default, longer run | 3600 | 0 |
+
+Release pair on `main` in total: 1 in 4140 against 0 in 4140. The race is rare
+in this build (dynamic libkpathsea, this toolchain); the loop counts alone do
+not separate the two binaries. The `main` core, the gdb thread picture below
+and the 0.7.5 with/without-prewarm rates are the witness.
+
+**Reproduced on `main` (1ef264a2b, `cargo build --release`, dynamically linked
+host libkpathsea).** 1 SIGSEGV in 540 conversions, lower than 0.7.5's rate
+(the release asset links kpathsea statically and was built on a different
+toolchain; the window is timing-sensitive). The core is the diagnosed race with
+no interpretation needed: thread 1 (the worker `main` joins, thread 3 is in
+`pthread_join`) is stopped *inside* `__GI_getenv (name="HOME")` at
+`stdlib/getenv.c:31`, faulting on `0x7864b0003` (low bits of a freed chunk),
+while thread 2 (prewarm) is in `kpathsea_init_format` →
+`kpathsea_cnf_get` → `kpathsea_readable_file` → `access("…/web2c/texmf.cnf")`,
+i.e. past `kpathsea_set_program_name`'s five `putenv`s and still warming
+formats.
+
+The dev-profile pair does not discriminate: the unoptimised baseline did not
+reproduce in 540 conversions either (the race window moves with timing), even
+though under gdb it still calls `putenv` on the prewarm thread while the worker
+thread is live. The discriminating evidence is the release-build pair plus the
+structural picture after the fix (every `putenv` on the worker thread, before
+any other thread exists).
+
+Every core has the same shape: the crashing thread is the 256 MB worker that
+`main` spawns and joins (it is the thread running `real_main`), stopped in a
+byte-scan loop (`cmpb $0x0,(%rbx); jne`) reading through a pointer that is not an
+address (`0x7xxxxxxx002`, the low bits of a freed chunk), while the only other
+live thread is the kpathsea prewarm thread inside `malloc`. Under gdb with a
+breakpoint on `putenv`, that prewarm thread writes the environment five times
+during the first ~100 ms — `SELFAUTOLOC`, `SELFAUTODIR`, `SELFAUTOPARENT`,
+`SELFAUTOGRANDPARENT`, `progname` — from `kpathsea_set_program_name`, called by
+`Kpaths::new` when the `KPSE` `Lazy` is first forced on that thread.
+
+With symbols (dev build, dynamically linked libkpathsea) the chain is
+`once_cell::sync::Lazy::force(KPSE)` → `select_kpaths` → `Kpaths::new`
+(`kpathsea/src/lib.rs:423`) → `kpathsea_set_program_name` → `kpathsea_xputenv` →
+`putenv`.
+
+**Cause.** glibc's `putenv` of a *new* variable calls `__add_to_environ`, which
+`realloc`s the `environ` array; `getenv` walks `environ` with no lock. Rust's
+`std::env` locks only its own `ENV_LOCK`, which libkpathsea's C `putenv` does not
+take. So the worker thread's `std::env::var` calls during dump load race the
+prewarm thread's construction of the kpathsea handle, and read the array after it
+has moved. PR #812 found the second writer (`set_var("LATEXML_INI_MODE")` after
+the spawn, `--init` only); this is the first writer, on every conversion.
+
+**Fix.** `pathname::init_kpathsea()` forces the `KPSE` handle on the calling
+thread; `latexml_oxide` and `cortex_worker` call it before spawning the prewarm
+thread, so every environment write libkpathsea makes precedes the first thread
+spawn. `prewarm_kpathsea` keeps its job (format tables) and its `Once`. Rule, as
+#812 states it: **every environment write in the binaries precedes the prewarm
+spawn** — now including the C library's own.
+
+**After the fix** (release build, gdb breakpoints on `putenv`, `setenv`,
+`unsetenv`, `pthread_create`, run to exit): all five `putenv` calls run on the
+worker thread, and at each hit the only other thread in the process is the main
+thread blocked in `pthread_join`; the prewarm thread does not exist yet, and no
+environment write happens later in the run. Under `--init=plain.tex` the order
+is `setenv("LATEXML_INI_MODE")` → `putenv` ×5 → spawn, all on the worker; on
+`main` it was spawn → `setenv` on the worker → `putenv` ×5 on the prewarm
+thread, i.e. both writers after the spawn.
+
+**Repro.** Any input; loop the binary ~200 times with `ulimit -c unlimited` and
+count exit 139. `dmesg | grep latexml_oxide` shows the constant `ip` offset.
+
 ## Method notes
 
 - Sweep failure logs: `~/data/large_scale_canvas_3/canvas/stage_*/failures/<id>.<KIND>.log`.

@@ -253,8 +253,11 @@ pub fn ambient_kpsewhich_version() -> Option<&'static str> {
 /// every subsequent real lookup hits the post-init fast path.
 ///
 /// **Concurrency:** safe to invoke on a background thread spawned at
-/// process start. `KPSE` is process-global (`Lazy<Mutex<…>>`), so the
-/// init done on a background thread is visible to the main thread.
+/// process start **provided `init_kpathsea` ran first on the spawning
+/// thread** — constructing the handle writes the environment, which must not
+/// race a `getenv` on another thread (see `init_kpathsea`). `KPSE` is
+/// process-global (`Lazy<Mutex<…>>`), so the init done on a background
+/// thread is visible to the main thread.
 /// The Mutex briefly serializes the prewarm against the main thread's
 /// first real lookup, but dump load + arg parsing take >50 ms before
 /// digest reaches its first package resolution, by which point the
@@ -307,6 +310,35 @@ pub fn prewarm_kpathsea() {
 /// proc-macro build, which never resolves TeX files).
 #[cfg(not(feature = "kpathsea"))]
 pub fn prewarm_kpathsea() {}
+
+/// Construct the process-global kpathsea handle on the calling thread, before
+/// any other thread exists.
+///
+/// `Kpaths::new` runs libkpathsea's `kpathsea_set_program_name`, which writes
+/// the environment: `putenv` of `SELFAUTOLOC`, `SELFAUTODIR`, `SELFAUTOPARENT`,
+/// `SELFAUTOGRANDPARENT` and `progname`. glibc's `putenv` reallocates the
+/// `environ` array when it adds a variable, and `getenv` on another thread
+/// walks that array without a lock — so if the handle is first constructed on
+/// the background prewarm thread while the conversion thread is reading the
+/// environment (dump load, option lookup), the reader walks freed memory and
+/// the process dies with SIGSEGV. Measured on 0.7.5, x86_64 Linux, glibc 2.39:
+/// 9 of 540 conversions crashed at one instruction, 0 of 540 with the prewarm
+/// disabled (`LATEXML_NO_KPATHSEA_PREWARM=1`); see
+/// `docs/performance/STABILITY_WITNESSES.md`, Cluster J.
+///
+/// The binaries call this from their worker `main` before spawning the prewarm
+/// thread, so every environment write libkpathsea makes precedes the first
+/// thread spawn; `prewarm_kpathsea` then only warms the format tables. Embedders
+/// that spawn threads should do the same. Idempotent; a no-op once constructed.
+#[cfg(feature = "kpathsea")]
+pub fn init_kpathsea() {
+  report_unavailable_kpathsea();
+  Lazy::force(&KPSE);
+}
+
+/// No-op when built without the `kpathsea` feature.
+#[cfg(not(feature = "kpathsea"))]
+pub fn init_kpathsea() {}
 
 // Perl: $pathname =~ s|^($PROTOCOL_RE//[^/]*)/|/|
 static CANONICAL_URL_RE: Lazy<Regex> =

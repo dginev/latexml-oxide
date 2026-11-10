@@ -794,6 +794,33 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // both this binary and the library (`latexml::api`, tests) funnel through, so
   // the library can no longer drift from the binaries the way it did (the flaky
   // spurious "1 warning" root-caused 2026-07-16).
+  // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
+  // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base
+  // → plain_constructs and the latex equivalent) reads
+  // `LATEXML_INI_MODE` to decide whether to fully load the format
+  // or stop after the bootstrap pool. If it's not set yet,
+  // `prepare_session` pre-loads `plain_base` / `latex_base`, which
+  // pollutes the snapshot taken later in `ini_tex::dump_format` and
+  // silences the diff for everything raw plain.tex / latex.ltx defines
+  // (the `\countdef\allocationnumber=21` → `Stored::Register{...}`
+  // problem from 2026-04-26).
+  if cli.init.is_some() {
+    // SAFETY: no thread exists yet. The kpathsea prewarm thread spawned just
+    // below reads the environment from C (`getenv`, no Rust lock) while it
+    // warms format tables, so this write must come before that spawn (#812
+    // found this writer; Cluster J found the one in `Kpaths::new`).
+    unsafe {
+      std::env::set_var("LATEXML_INI_MODE", "1");
+    }
+  }
+
+  // Construct the kpathsea handle HERE, before the prewarm thread (or any
+  // other thread) exists: `Kpaths::new` → libkpathsea `kpathsea_set_program_name`
+  // → `putenv` ×5, and glibc's `putenv` may `realloc` `environ` while a `getenv`
+  // on this thread walks it (use-after-free → SIGSEGV, 9 of 540 conversions on
+  // 0.7.5/x86_64 Linux; STABILITY_WITNESSES.md Cluster J). Every environment
+  // write precedes the first spawn; the thread below only warms format tables.
+  latexml_core::util::pathname::init_kpathsea();
   let _kpse_warmup_handle = if std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err() {
     Some(std::thread::spawn(
       latexml_core::util::pathname::prewarm_kpathsea,
@@ -1069,24 +1096,6 @@ fn real_main() -> Result<(), Box<dyn Error>> {
     inputencoding: cli.inputencoding.clone(),
     streaming: resolve_streaming(cli.streaming, resolve_max_memory(cli.max_memory), &source),
   };
-  // CRITICAL: must be set BEFORE `prepare_session`. `tex.rs` /
-  // `latex.rs`'s LoadFormat split (plain_bootstrap → plain_dump|base
-  // → plain_constructs and the latex equivalent) reads
-  // `LATEXML_INI_MODE` to decide whether to fully load the format
-  // or stop after the bootstrap pool. If it's not set yet,
-  // `prepare_session` pre-loads `plain_base` / `latex_base`, which
-  // pollutes the snapshot taken later in `ini_tex::dump_format` and
-  // silences the diff for everything raw plain.tex / latex.ltx defines
-  // (the `\countdef\allocationnumber=21` → `Stored::Register{...}`
-  // problem from 2026-04-26).
-  if cli.init.is_some() {
-    // SAFETY: setting the var before any thread is spawned. `prepare_session`
-    // and `ini_tex::dump_format` both read it but neither mutates env.
-    unsafe {
-      std::env::set_var("LATEXML_INI_MODE", "1");
-    }
-  }
-
   let mut converter = Converter::from_config(opts.clone());
   // `--whatsin=xml` forces the already-converted-XML input path regardless of the
   // file's extension (Perl-style: the input analog of `--format` for output),

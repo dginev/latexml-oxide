@@ -1650,6 +1650,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   // Latency pre-warm only: the correctness invariant (warm before first lookup)
   // is enforced by the shared `Converter::initialize_session`, so this is a
   // best-effort overlap, not the guarantee.
+  // Construct the kpathsea handle HERE, before the prewarm thread (or any
+  // other thread) exists: `Kpaths::new` → libkpathsea `kpathsea_set_program_name`
+  // → `putenv` ×5, and glibc's `putenv` may `realloc` `environ` while a `getenv`
+  // on this thread walks it (use-after-free → SIGSEGV, 9 of 540 conversions on
+  // 0.7.5/x86_64 Linux; STABILITY_WITNESSES.md Cluster J). Every environment
+  // write precedes the first spawn; the thread below only warms format tables.
+  latexml_core::util::pathname::init_kpathsea();
   let _kpse_warmup_handle = if std::env::var("LATEXML_NO_KPATHSEA_PREWARM").is_err() && !cli.harness
   {
     Some(std::thread::spawn(
