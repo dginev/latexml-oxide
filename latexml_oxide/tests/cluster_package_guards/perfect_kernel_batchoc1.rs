@@ -10,10 +10,22 @@
 //! order. The shapes still red on the base, each a mechanism of its own, are catalog repros with no guard:
 //! `author_let_copy_of_and_parts_the_names` (a `\let` copy of `\and` prints no `Sep(And)` in the rehearsal) and
 //! `ieeetran_author_grid_in_a_macro` / `ieeetran_author_grid_through_a_wrapper` (the IEEEtran grid's token split).
+//! These are the block routes only: an API creator call holding the `\and` (acmart's `\author` with no comma) is not
+//! cut (OD #993 "Open: the API route"; catalog repros `acmart_author_{and,macro_held_and}_parts_the_names_red`).
 
 use latexml::util::test::{convert_files_with, error_count, warning_count};
 
-use super::{perfect_kernel_batchz4::run, perfect_kernel_batchz18o::assert_creators};
+use super::{
+  perfect_kernel_batch84b::creators, perfect_kernel_batchz4::run,
+  perfect_kernel_batchz18o::assert_creators,
+};
+
+/// A repro and its name, for a table's failure message to say which row broke (review revOC1 N2).
+macro_rules! row {
+  ($dir:literal, $name:literal) => {
+    ($name, repro!($dir, $name))
+  };
+}
 
 macro_rules! repro {
   ($dir:literal, $name:literal) => {
@@ -35,9 +47,9 @@ macro_rules! repro {
 /// expansion: P3), and OmniBus's missing class binding.
 #[test]
 fn a_block_parts_at_the_and_its_spelling_hides() {
-  for (tex, counts, creators) in [
+  for ((name, tex), counts, expected) in [
     (
-      repro!(
+      row!(
         "sectioning-frontmatter",
         "author_call_cut_at_a_macro_held_and_omnibus"
       ),
@@ -45,7 +57,7 @@ fn a_block_parts_at_the_and_its_spelling_hides() {
       &[&["Ann Able"][..], &["Bob Baker"][..]][..],
     ),
     (
-      repro!(
+      row!(
         "sectioning-frontmatter",
         "author_call_cut_at_a_wrapper_held_and_omnibus"
       ),
@@ -53,7 +65,7 @@ fn a_block_parts_at_the_and_its_spelling_hides() {
       &[&["Ann Able"][..], &["Bob Baker"][..]][..],
     ),
     (
-      repro!(
+      row!(
         "sectioning-frontmatter",
         "author_call_cut_at_a_macro_held_and_llncs"
       ),
@@ -64,7 +76,7 @@ fn a_block_parts_at_the_and_its_spelling_hides() {
       ][..],
     ),
     (
-      repro!(
+      row!(
         "sectioning-frontmatter",
         "author_call_cut_at_a_macro_held_and_llncs_marked"
       ),
@@ -75,7 +87,7 @@ fn a_block_parts_at_the_and_its_spelling_hides() {
       ][..],
     ),
     (
-      repro!(
+      row!(
         "sectioning-frontmatter",
         "author_call_cut_at_a_csname_and_ieeetran"
       ),
@@ -84,8 +96,16 @@ fn a_block_parts_at_the_and_its_spelling_hides() {
     ),
   ] {
     let (log, xml) = run(tex);
-    assert_eq!((error_count(&log), warning_count(&log)), counts, "{log}");
-    assert_creators(&xml, creators);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      counts,
+      "{name}: {log}"
+    );
+    let expected: Vec<Vec<String>> = expected
+      .iter()
+      .map(|c| c.iter().map(|s| s.to_string()).collect())
+      .collect();
+    assert_eq!(creators(&xml), expected, "{name}: {xml}");
   }
 }
 

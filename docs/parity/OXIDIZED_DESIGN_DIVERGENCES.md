@@ -34007,7 +34007,7 @@ creators) and 2604.04847 byte-identical too.
 1,656, `TOKEN_READS` `author_block` 236 → 195 and `rest /author_split_tests.rs` 19 → 18). Repros
 `tools/perfect_kernel/repros/sectioning-frontmatter/aastex_affil_marked_email_line_{no_one_spells_is_the_marked_authors,of_its_own_no_one_spells}.tex`.
 
-### 993. An author call parts at the `\and` its spelling hides: the reading cuts the rehearsed block at its own `Sep(And)` events (OC1, Option C's P1)
+### 993. An author call parts at the `\and` its spelling hides, on the block routes: the reading cuts the rehearsed block at its own `Sep(And)` events (OC1, Option C's P1; the API route open, OC1b)
 
 **Perl.** Every binding splits an author list by spelling before digestion: `SplitTokens` compares tokens by name
 (`Base_Utility.pool.ltxml:114-140`, `@authorsplits` :679), so a separator held in a macro (`\author{\aut}`,
@@ -34024,9 +34024,33 @@ that `Sep(And)`, as TeX parts it: two creators, each `\inst` picking its numbere
 argument passing, not a cut: each `\IEEEauthorblockN` is a call of its own, and the class's `\def\and{}`
 (`\lx@IEEE@author@blocks`) makes a macro-held `\and` between them print nothing, as IEEEtran.cls's. This held before OC1 (the 2026-11-07 bindsplit
 probes om1, ln1, ie1 and ep1, one merged creator at int143b, are green at int156a, through #980, #984 and #991); OC1
-pins each route. The class splits by spelling stay in front of the reading (`\lx@splitting{\lx@add@author@split}{\and\And}`
-in inst_support, aa, sv_support, webofc and ptephy; llncs's marked split; the IEEEtran grid; eptcs's cells): redundant
-for the names the reading now cuts, they are P2's to remove. Residuals, red at int156a and outside this mechanism: a
+pins each of these block routes (OmniBus, llncs whole and marked, IEEEtran plain and grid, eptcs). The splits by
+spelling stay in front of the reading, redundant for the names it now cuts, and are P2's to remove
+(`FRONTMATTER_SINGLE_ENGINE_PLAN.md` row P2): `\lx@splitting{\lx@add@author@split}{\and\And}` in inst_support, aa,
+sv_support, webofc and ptephy; llncs's marked split; the IEEEtran grid and wrap (`ieeetran_cls.rs` `author_block_body`,
+`wrap_bare_author_block_text`) and both of its routes by spelling (`ieeetran_cls.rs:364` `\author`, `:391`
+`\lx@IEEE@authblk@author`, `contains("authorblockN")`); eptcs's cells; `note_and_numbering` (`frontmatter_stores.rs:4481`);
+nowfnt's `\and` blocks (`frontmatter_stores.rs:6000`); and the 11 gates on a literal `\and` the plan's row counts.
+
+**Open: the API route (OC1b; revOC1 B1).** A binding that hands one whole argument to `\lx@add@creator` /
+`\lx@add@author` makes an API creator call that holds the `\and`, and nothing cuts it: acmart's `\author` with no comma
+(`acmart_cls.rs` `\lx@acmart@author`) gives one creator "Ann Able and Bob Baker" (E 1, `merged_creators`) for the
+literal, macro-held, `\csname`, wrapper and active-character spellings, where pdflatex prints two authors and Perl one
+(acmart.cls.ltxml:89); quantumarticle's `\author` the same (no oracle: TL 2025 pdflatex fails on the class); ecai's
+`\author` routes only a literal top-level `\and` to the block (`ecai_cls.rs`), so a macro-held one reaches the API.
+Witnesses 1909.10278 (E 1) and 2501.11185 (both institutes in the one name, E 0 W 1); 15 of the census's 873 acmart
+papers spell a literal `\and` with no top-level comma (a source scan). A cut in the reading (`Resolver::api`) is not
+enough: the emitter stays out of a paper with no author block (`emitter/emit.rs` `stays_out`) and in one with a block
+writes an API creator call as it was queued, so the cut changes no output, and it shifts the owner labels (`author:N`)
+the emitter gives the creators after the call; the call's rehearsal has no positions to cut its tokens by
+(`ledger.rs` `ApiCall`). The fix is the emitter writing a cut call (a batch of its own). The API creator callers, by
+a grep for `\lx@add@creator` / `\lx@add@author` in `latexml_package/src` and `latexml_contrib/src`: acmart (`\author`,
+`\editor`), quantumarticle, arximspdf, aipproc, icml_support (`\icmlauthor`), jmlr (`\Name`), czipreprint, meta_class,
+interspeech, bytedance_seed, mrm, ceurart, lmcs, ecai, lipics, bmcart, beilstein, brief and g_brief (sender), jhep and
+omnibus (`\speaker`), ams_support (`\contrib`, `\commby`), authblk. Probed: acmart and quantumarticle (red), jmlr
+(`\Name{Ann Able \and Bob Baker}` prints one name, "Ann Able and Bob Baker", jmlr's `\and` a word: no two-author
+shape); the others unprobed (most have no class file in TL 2025). Repros
+`class-bindings/acmart_author_{and,macro_held_and}_parts_the_names_red.tex` (catalog, no guard). Residuals, red at int156a and outside this mechanism: a
 `\let` copy of `\and` (`\let\nx\and`) keeps the kernel's meaning in the rehearsal, which binds its vocabulary by name,
 so the block holds no `Sep(And)` (one merged creator and `Error:frontmatter:merged_creators` under article, eptcs and
 IEEEtran journal; Perl two creators); and IEEEtran's `\author` routes to the grid by spelling (`body.to_string().contains("authorblockN")`,

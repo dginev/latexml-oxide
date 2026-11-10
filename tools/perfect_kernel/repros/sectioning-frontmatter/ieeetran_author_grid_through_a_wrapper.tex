@@ -5,8 +5,9 @@
 %   scrambled. P2 (the IEEEtran grid), not P1
 % witness: OC1's spelling probe of bindsplit ie1 (the wrapper)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able" over "Univ A", "Bob Baker" over "Univ B"
-% engines: Perl 0.8.8: one creator "Ann Able and Bob Baker" with both affiliations; int156a (MB1): Bob Baker (and,
-%   Univ B, Univ A), Ann Able (Univ A) twice, 0 errors, 1 warning (the content check's extra "A and Univ")
+% engines: Perl 0.8.8: one creator "Ann Able and Bob Baker" with both affiliations; int156a (MB1): three creators —
+%   Bob Baker (affiliations "and", Univ B, Univ A), Ann Able (Univ A), Ann Able again (Univ A twice) —, 0 errors,
+%   1 warning (the content check's extra "A and Univ")
 % expect:  0 errors; Ann Able (Univ A), Bob Baker (Univ B)
 % status:  RED (int156a; catalog, no guard — P2)
 \documentclass[conference]{IEEEtran}
