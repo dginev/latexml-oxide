@@ -36,7 +36,7 @@ use crate::base_utilities::{
     observer::{
       events::{EventKind, Formula, InkTable, lex_with_inks},
       field_notes::{EnvironmentStep, FieldCreator},
-      ledger::{ApiCall, AuthorBlock, annotated_parent, content_text, field_stamped},
+      ledger::{ApiCall, AuthorBlock, annotated_parent, content_text, field_stamped, symbol},
       policy::TitleMarks,
       rehearsal::{Rehearsal, rehearse},
       resolver::{
@@ -1244,21 +1244,17 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
   let font = inks.first().and_then(|e| e.font.clone());
   // (a list written in plain characters and control symbols — `\email{\{able,baker\}@x.edu}`, as the old split
   // wrote each address of it (`shared_row::row_email_calls`): its text is all it printed, so writing an address of it
-  // as text loses no markup, and no Warning counts one (2501.11774's `\email{\{kalinowski, lromao, …\}@inf.puc-rio.br}`)
-  // (a control symbol prints its one character: `\{`, `\}`, `\_`)
-  let control_symbol = |t: &Token| {
-    t.get_catcode() == Catcode::CS
-      && t.with_str(|name| {
-        let mut chars = name.chars().skip(1);
-        chars.next().is_some_and(|c| !c.is_alphabetic()) && chars.next().is_none()
-      })
-  };
-  let plain = content[from..to].iter().all(|t| {
-    matches!(
-      t.get_catcode(),
-      Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
-    ) || control_symbol(t)
-  });
+  // as text loses no markup, and no Warning counts one (2501.11774's `\email{\{kalinowski, lromao, …\}@inf.puc-rio.br}`);
+  // a control symbol prints its one character (`\{`, `\}`, `\_`, the content text's `ledger::symbol`). The text written
+  // is tested too, as the row's reader tests an address (`shared_row`'s `is_whole_address`): one that is no address whole
+  // lost what it printed, counted (`\email{\{a, b\}@x\footnote{…}}` writes `a@x\lx@fm@obs@fnnote`, review revZ18c S3)
+  let plain = is_whole_address(address)
+    && content[from..to].iter().all(|t| {
+      matches!(
+        t.get_catcode(),
+        Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
+      ) || symbol(t).is_some()
+    });
   let why = if read.is_none() {
     Some("one address of a list past the positions")
   } else {

@@ -33135,12 +33135,14 @@ separators and label; every entry the emitter writes from an API call (llncs und
 llncs papers), `…; Email: ;`, `Unity Technologies Corresponding author:`, svjour3's "Univ B " — and its e-mail calls
 after the first stayed on the last author as their own call (`owner:call`): three addresses under three names gave the
 third author two. **Now:** (1) an affiliation-kind entry the emitter writes from an API call
-(`emitter::emit::item_call`) is written by `shared_row::entry_email_cut`, the row's unit cut moved onto the entry: each
-class e-mail call takes the separators before it back to the text or call before it, the e-mail label naming it
+(`emitter::emit::item_call`) is written by `shared_row::entry_email_cut`, which cuts by the row's own unit cut, one copy
+both callers share (`row_email_calls` and it: `unit_cut`, `UnitCut::labelled_address`, the reassembly `kept_without`,
+the call reader `read_call`; Z18d, review revZ18c S1): each class e-mail call takes the separators before it back to the text or call before it, the e-mail label naming it
 (`Email:`, its contact's name) and a label of its own (`call_label`: `Corresponding author:`, `(Corresponding author)`,
 in its text); a line break stays where text the entry keeps follows (2310.01324's `\url` line); an entry whose inner
 contacts are items of their own (`\lx@frontmatter@itemonly`) loses the calls only, a label staying its text
-(2606.02634's `Correspondence:`). (2) Each call after the first that reads as whole addresses is written by the entry's
+(2606.02634's `Correspondence:`). (2) Each call after the first that reads as whole addresses (`read_call`: one address in printed braces
+too, `\email{\{b2@x.edu\}}`, which had stayed on the last author, revZ18c S2) is written by the entry's
 label (`\lx@row@email`), so the Link step's chain (`insert::link_entry_addresses`, #956) places it among the entry's
 carriers; a template or an unread list stays as written. (3) The chain (`entry_address_owners`) gains the row's two
 facts (`EntryOwnerFacts`): no order where an address spells several names, none the carrier at its place (`x1@, x2@,
@@ -33151,15 +33153,26 @@ keeps no copy of the call (2607.09128's `$\{$npcarpenter\,|\,giacobazzi$\}@$ariz
 it, 2410.20769). (5) One address in printed braces is that address to the Link step (2410.04091's
 `\email{\{fatima.iribu@gmail.com\}}`, on every carrier before); a tie parts addresses (`;~cms@`, 1701.08125); an address
 of a plain list is written without the list's trailing separators (1908.05750) and with no Warning, nothing but its text
-printed (2501.11774); an address line ending an entry takes the separator the line before it ends in (`address_cuts`:
+printed (2501.11774), unless the text written holds a control sequence's name (`\email{\{a, b\}@x\footnote{…}}` writes
+`a@x\lx@fm@obs@fnnote`: each address counted "markup lost", revZ18c S3); an address line ending an entry takes the separator the line before it ends in (`address_cuts`:
 2407.18381's `(EPFL), \\ \texttt{…}`). **Not moved here** (the reroute's own, kept with it): the `\\` line rules of a whole
 llncs list (a names line after an affiliation line, a line after an inline `\and`, a name carrying an ORCID). **Residuals:**
 1004.3134's `\href{mailto:…}{\email{…}}` inside a `\thanks` (no contact the reading makes; counted by the content check
-before and after); address lists printed across several `\url`/`\path` pieces (1504.01099's `\urldef`s, 1710.01968).
+before and after); address lists printed across several `\url`/`\path` pieces (1504.01099's `\urldef`s, 1710.01968);
+the Link step's corresponding-author fact reads the DOM's notes only, not a legend that says so (`\inst{1,2}` under
+`\and Corresponding author`: the left address the block's; the old rule, `Resolver::listed_corresponding`, reads both:
+RED `class-bindings/llncs_legend_corresponding_author_takes_the_left_address.tex`); separators after an entry's last call
+stay (`Naples, Italy,`, 2605.21246, 2210.09234, 1408.0510, as in the old split); a later template call stays on the
+last author, a list's control-symbol macro is counted missing (pre-existing); a `\footnote` inside a list `\email`
+leaves the note's name in the address text (pre-existing, RED `class-bindings/llncs_list_email_note_name_leaks_into_address.tex`).
 **Measured** (base ERR2, Z18a dumps): the 699 llncs papers 477 identical, 144 XML only, 75 creators changed, none worse (42 a separator gone, 25 a duplicate address placed once, 4 a whole-list copy gone, 4 an address to its author), E/F never higher, 0 distinct words lost; 614 papers whose author block has an affiliation line
 above a names line 612 identical (2505.20009 killed on both sides, 2503.14381 not compared); the 1,434 stage2 ids 30 changed, all read: 23 a trailing space or break out of an affiliation, 3 separators, 3 a duplicate placed once, 2009.10916's libraboli@ the block's once; 0 words lost; cost ≤ +0.42 % per document. Repros `class-bindings/llncs_{inner_email_separators_leave_the_institute,institute_email_calls_in_author_order,institute_last_address_line_takes_its_separator}.tex`;
 guards `perfect_kernel_batchz18c`; re-expected: `perfect_kernel_batch63::svjour3_{at_piece_naming_several_authors,sole_author_keeps_the_institute,name_only_piece_keeps_the_institute_shared}`
 and `perfect_kernel_batch64zc::class_email_paths_keep_their_font_and_underscore` (the separator's trailing space gone),
 `perfect_kernel_batchbc1::the_blocks_creator_is_no_parent_by_place` and `perfect_kernel_batchn2::an_address_placed_more_often_than_printed_is_counted`
-(the duplicate address each counted is placed once), `perfect_kernel_batche0` (token-read pins `emitter/emit` 43 → 48 and
-`shared_row/emails` 65 → 68: the unit cut reads the API call's tokens, as the row's did).
+(the duplicate address each counted is placed once), `perfect_kernel_batche0` (token-read pin `emitter/emit` 43 → 48 at
+Z18c, `one_address`'s catcode reads of a list written as text, not the unit cut; 46 at Z18d, its control-symbol test the
+content text's `ledger::symbol`; `shared_row/emails` 65 → 68 → 65, the copy gone). Z18d (review revZ18c S1-S4):
+repros `class-bindings/llncs_{later_braced_email_call_keeps_its_author,list_email_note_written_as_text_is_counted}.tex`,
+guards `perfect_kernel_batchz18d`; the 1,434 stage2 ids and the 699 llncs papers byte-identical to the base
+(`6271ba8076`), save 0909.4443's math ids, which vary run to run on the base too.
