@@ -1,0 +1,16 @@
+% mechanism: in a declined block's marks branch a line of no mark continues the entry before it only across a line
+%   break (or `\quad`, the space it prints); one cut at the `\and` family starts an author, the kernel's boundary
+%   (`author_and_splits`, OXIDIZED_DESIGN_DIVERGENCES #52(g), #988)
+% witness: synthetic; review revCR67 S1's p7a (the marks-branch declines of 1404.5602, 0809.5152, 1110.6375)
+% oracle:  pdflatex 0 errors: "Ann Able1∗" and "Bob Baker" two authors, "1Univ X", "∗Zebra note."
+% engines: rust CR7: one creator "Ann Able and Bob Baker"; perl 0 errors: one creator "Ann AbleBob Baker"
+% expect:  0 errors, 1 warning (the decline's); Ann (note, Univ X), Bob Baker (nothing: no mark)
+% status:  RED (CR7) -> GREEN (perfect_kernel_batchcr7::a_line_of_no_mark_cut_at_and_starts_an_author)
+\documentclass{article}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\title{T}
+\author{Ann Able$^{1}$\footremember{zz}{Zebra note.} \and Bob Baker\\ $^{1}$Univ X}
+\begin{document}
+\maketitle
+Body.
+\end{document}

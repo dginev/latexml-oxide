@@ -1,0 +1,18 @@
+% mechanism: a declined block's split carries the reading's corresponding author as `_corresponding` on the Perl call
+%   that author maps to, so the Link step gives it the entry's one left-over address (`emit`'s `perl_block`)
+% witness: synthetic; review revS5CR7b S5-1 (S5's single resolver fact through CR7's split)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker⋆⋆, and Carl Cole", "Univ X", "zz@x.edu" (the thanks notes at the foot)
+% engines: rust S5+CR7b: no split creator carries `_corresponding`, so zz@x.edu went to a nameless block creator; perl
+%   0 errors
+% expect:  0 errors, 1 warning (the decline's); Ann Able (Corresponding author, Univ X, zz@x.edu), Bob Baker (Univ X,
+%   Univ Y., Univ Z.), Carl Cole (Univ X)
+% status:  RED (S5+CR7b) -> GREEN (perfect_kernel_batchcr7::a_split_gives_the_corresponding_author_the_left_address)
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able\thanks{Corresponding author} \and Bob Baker\thanks{Univ Y.}\addtocounter{footnote}{-1}\thanks{Univ Z.} \and Carl Cole}
+\institute{Univ X\\ \email{zz@x.edu}}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

@@ -1100,7 +1100,10 @@ fn every_shape_of_a_key_is_seen() {
 /// `cs_in(`, `text_tokens(`, `to_string() ==`, a comparison or a match arm on a quoted `\\…`); and 85 in the rest of
 /// `base_utilities/`. `frontmatter (rest)` holds any new file under `frontmatter/`, and a `rest <file>` row each file under
 /// `base_utilities/` no area lists, a new one or a sibling directory's too, so a read moved there is no debt paid.
-/// Bindings are the study's list, so a binding outside it is not watched.
+/// Bindings are the study's list, so a binding outside it is not watched. Raised at CR7 (main session 2026-11-10, "follow
+/// Perl"): the footnote-counter and definition declines write Perl's `\lx@add@authors` (Base_Utility.pool.ltxml:686-720),
+/// token-level by definition — its branch test and `positionOf` in `fallback` (+2), `literal_and`/`position_of` moved from
+/// `author_block/` into `classify` (+1, `author_block` -1).
 const TOKEN_READS: &[(&str, usize)] = &[
   ("aa_cls.rs", 5),
   ("aas_support_sty.rs", 17),
@@ -1114,9 +1117,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (PF3, 628 -> 626: the layout-box and line-break membership tests read the token's own name, `frontmatter_stores::cs_in`)
   // (DEL2, 626 -> 484: the old driver deleted; Z18a, 484 -> 338: the API's Cut and Kind and the field readers moved unchanged to
   // `defs/frontmatter_api/` (63) and `defs/frontmatter_fields/` (83), 484 = 338 + 63 + 83; none added)
-  ("author_block", 338),
+  ("author_block", 337),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
-  ("classify", 348),
+  ("classify", 349),
   ("defs/author_macros", 20),
   // (Z4a, 7 -> 8: `\lx@frontmatter@itemnone` reads its tag argument, an element's name: an `ltx:rdf` passes through, the rest goes)
   ("defs/frontmatter_api", 8),
@@ -1140,7 +1143,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with Perl's whole-block fallback and its preparation, kept as its own, 826 = 629 + 197; none added)
   // (raised by one at PF1: `tabular_close_rest` reads the `\end` its copy of the body read, before the copy — no read added)
   // (DEL2, 197 -> 151: the old driver's raw-token preparation deleted)
-  ("fallback", 151),
+  ("fallback", 153),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   // (Z4a, 4 -> 8: an environment step by its meaning, a CS whose definition is `\begin` or `\end`, a `\let` copy too, what no frame
   // says for a raw environment; the definition's name, not the token's spelling)
@@ -1261,7 +1264,13 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // the text font commands and declaration groups still open there, the run's own tokens being what is written, as
   // `span_tokens_of` and `plan::container_wrap` write theirs —, the decision whether an address is linked made on the
   // events' targets (`linkable`), review revZ18h S-a and B1r)
-  ("emitter/emit", 58),
+  // (CR7b, 58 -> 59: `perl_block_pieces`' text of Perl's split creators — Perl's `\lx@add@authors` cuts tokens, and its
+  // creators exist as nothing else before digestion — that `perl_piece_of` matches the reading's names against, so an item
+  // goes to the creator holding its name, not the one at its count, review revCR67 S4; CR7c, 59 -> 61: `words_parted`'s
+  // reads of where a word of those names ends unprinted, after a formula and before a command's argument — the same
+  // tokens' words, matched whole now ("li" no word of "Blinn", review revS5CR7b S1; 1404.5602's "robicheauxcurrent"), no
+  // owner decided by a spelling)
+  ("emitter/emit", 61),
   // (P1b, 0 -> 1: `emitter/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("emitter/dom+mod", 1),

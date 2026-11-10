@@ -1,0 +1,20 @@
+% mechanism: a declined block's split gives each name the reading read the Perl label of the creator whose names hold
+%   it, matched by name (`emit`'s `perl_piece_of`), not by position: equal counts need not be the same names
+% witness: synthetic; review revCR67 S4 (suspected, confirmed here)
+% oracle:  pdflatex 0 errors: "Robert Heath, Jr.a and Ann Able / Univ A", "Bob Baker†", "a Zebra note.", "† bob@x.org"
+% engines: rust CR7: Perl's three creators "Robert Heath", "Jr.", "Ann Able Bob Baker", the reading's three names
+%   "Robert Heath, Jr.", "Ann Able", "Bob Baker" matched by count, so Ann's Univ A went to "Jr."; perl 0 errors:
+%   the same three creators, Univ A and the e-mail on the last
+% expect:  0 errors, 1 warning (the decline's); Robert Heath (Univ A), Jr. (the note), Ann Able Bob Baker (Univ A,
+%   bob@x.org)
+% status:  RED (CR7) -> GREEN (perfect_kernel_batchcr7::a_split_gives_each_name_its_items_by_name)
+\documentclass{revtex4-1}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\begin{document}
+\title{T}
+\author{Robert Heath, Jr.\footremember{zz}{Zebra note.} and Ann Able~~~~Bob Baker}
+\email{bob@x.org}
+\affiliation{Univ A}
+\maketitle
+Body.
+\end{document}

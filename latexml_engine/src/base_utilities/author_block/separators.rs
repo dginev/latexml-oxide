@@ -586,18 +586,6 @@ pub(in crate::base_utilities) fn has_ijcai_section_marker(stuff: &Tokens) -> Res
   Ok(false)
 }
 
-/// Perl: positionOf($tokens, @delims) — Base_Utility.pool.ltxml (PR #2767).
-/// Find the position of a Token from `delims` within `tokens`.
-/// 1 based, so None == token not present.
-pub fn position_of(tokens: &Tokens, delims: &[Token]) -> Option<usize> {
-  for (i, t) in tokens.unlist_ref().iter().enumerate() {
-    if delims.contains(t) {
-      return Some(i + 1);
-    }
-  }
-  None
-}
-
 /// " and~", the "and" tied to the name after it (`Luca~Varotto, Angelo~Cenedese, and~Andrea~Cavallaro`, IEEE
 /// 2011.10474, 2408.09035; svjour3 1406.6147). Unsplit, the "and" was read as the first word of the last name (63j).
 pub(in crate::base_utilities) fn literal_and_tie() -> SplitDelim {
@@ -638,14 +626,6 @@ pub(in crate::base_utilities) fn tied_ampersands() -> [SplitDelim; 3] {
     amp(T_ACTIVE!('~'), T_SPACE!()),
     amp(T_SPACE!(), T_ACTIVE!('~')),
   ]
-}
-// Things to split authors (Perl PR #2767, Base_Utility.pool.ltxml)
-// This is " and " without the spaces stripped.
-pub(in crate::base_utilities) fn literal_and() -> SplitDelim {
-  let mut tks = vec![T_SPACE!()];
-  tks.extend(mouth::tokenize_internal("and").unlist());
-  tks.push(T_SPACE!());
-  SplitDelim::Tokens(Tokens::new(tks))
 }
 
 // GROUP-level separators for the no-marker author heuristic (OXIDIZED_DESIGN

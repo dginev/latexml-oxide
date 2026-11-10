@@ -12,7 +12,8 @@ use super::*;
 /// Perl's whole-block creator (Base_Utility.pool.ltxml:693, `\lx@add@authors`' `{tabular}` fallback, and :588-589):
 /// `\lx@add@author[keyvals]{…}` of the block `written`, as given. The one writer of a block kept whole, Perl's raw call —
 /// the queued entry (`defs::author_macros`) and the emitter's for a block it can't read or whose reading loses a name's
-/// words (`observer::emitter::emit`; OD #980). No raw-token preparation runs but the emitter's tabular juggles
+/// words (`observer::emitter::emit`; OD #980) — not a footnote-counter or definition decline, which writes the block as
+/// Perl's `\lx@add@authors` splits it ([`perl_author_calls`], this only for its tabular branch; OD #988). No raw-token preparation runs but the emitter's tabular juggles
 /// ([`tabular_juggles_in_a_whole_block`], which digestion can't answer: 1511.05911): digestion does each rewrite's job in a
 /// block nothing splits — `\\[len]` is `\lx@newline`'s own optional, a `\begin{footnote}` runs `\footnote`, a
 /// mathcode-"8000 `^` reads as `\sp`, braces and superscripts digest to the same markup — and three of them hurt there
@@ -27,6 +28,225 @@ pub(in crate::base_utilities) fn whole_block_author(
     keyvals,
     Some(written)
   ]))
+}
+
+/// Which of Perl's `\lx@add@authors` branches (Base_Utility.pool.ltxml:686-720) a block takes ([`perl_author_branch`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(in crate::base_utilities) enum PerlAuthorBranch {
+  /// `{tabular}`, `{minipage}` or `\halign` in the block: one `\lx@add@author` of it whole (:691-693)
+  Whole,
+  /// a superscript mark in the block: its lines cut at `@authoraffilsplits`, each an author line cut at its commas (and
+  /// " and ") or a marked affiliation, a line of no mark continuing the entry before it (:694-712) — but across the `\and`
+  /// family an author of its own (OD #52(g))
+  Marks,
+  /// neither: cut at `@authorsplits`, each piece an author whose `\\` lines are its affiliations (:713-719), the comma and
+  /// " and " cutting only the piece's names line
+  Split,
+}
+
+impl PerlAuthorBranch {
+  /// What the decline's counted Warning says the block is written as.
+  pub(in crate::base_utilities) fn written_as(self) -> &'static str {
+    match self {
+      PerlAuthorBranch::Whole => {
+        "the block is written whole, as Perl's \\lx@add@authors writes a block holding a tabular"
+      },
+      PerlAuthorBranch::Marks => {
+        "the block is written as Perl's \\lx@add@authors splits a block with superscript marks, its pieces digested in order"
+      },
+      PerlAuthorBranch::Split => {
+        "the block is written as Perl's \\lx@add@authors splits it at its separators, its pieces digested in order"
+      },
+    }
+  }
+}
+
+/// Perl's `@authorsup_markers` (Base_Utility.pool.ltxml:684).
+fn perl_authorsup_markers() -> [Token; 2] { [T_SUPER!(), T_CS!("\\textsuperscript")] }
+
+/// The branch Perl's `\lx@add@authors` takes for the block `stuff` (Base_Utility.pool.ltxml:691-694): `ToString($stuff) =~
+/// /\{tabular\}|\{minipage\}|\\halign/`, else `positionOf($stuff, @authorsup_markers)`.
+pub(in crate::base_utilities) fn perl_author_branch(stuff: &Tokens) -> PerlAuthorBranch {
+  let text = stuff.to_string();
+  if text.contains("{tabular}") || text.contains("{minipage}") || text.contains("\\halign") {
+    PerlAuthorBranch::Whole
+  } else if position_of(stuff, &perl_authorsup_markers()).is_some() {
+    PerlAuthorBranch::Marks
+  } else {
+    PerlAuthorBranch::Split
+  }
+}
+
+/// Perl's `\lx@add@authors` (Base_Utility.pool.ltxml:676-720) of a block the frontmatter emitter declines to read
+/// (`observer::emitter::emit`'s footnote-counter and definition declines): its calls, in order, the `n`-th `\lx@add@author`
+/// (from 0) given `keys(n)` — and how many creators they make —, its `dequeueFrontMatter` the emitter's own (it writes the queue's creators). The tabular branch is
+/// [`whole_block_author`] of the block, its tabular juggles the line breaks they print
+/// ([`tabular_juggles_in_a_whole_block`]); the two split branches cut it as Perl does (`@authorsplits`,
+/// `@authoraffilsplits`, :678-682), each piece digested in its place, so the footnote counter and a definition step as
+/// TeX steps them. Perl's comma and " and " cut only a names line, never a `\\` line under it (the kernel's own lists,
+/// OXIDIZED_DESIGN_DIVERGENCES #52, #988: `author_affil_splits`, witness 2605.00347): Perl's cut PoS's `\\ Department of
+/// Physics, College of Science, Swansea University, …` into four authors (1302.3028) and 1110.6375's `D. Schmidiger,\\
+/// E. Wulf, S. Zhao and A. Zheludev$^\dag$` glued "D. SchmidigerE. Wulf, S. Zhao" (cr5_fncounter_and: Ann Able∗ and Bob Baker‡; 1003.2281, cs0404029, 2410.22720; the `\footremember`
+/// of 1404.5602, 2503.21719, 0809.5152, 1110.6375). There a juggle — a macro closing the class's tabular,
+/// `\alignauthor` — parts two authors, as `\and` does (`author_and_splits`; Perl's OmniBus makes it empty,
+/// OmniBus.cls.ltxml:76, 1003.2281's sig-alternate). A `\\[len]` or `\\*` cut leaves no "[len]" or "*" at the head of
+/// the next piece ([`strip_linebreak_options`], the kernel's own beyond-Perl fix of Perl's `\\[1em]` gap,
+/// Base_Utility.pool.ltxml:670, KNOWN_PERL_ERRORS #75: 2007.01340's creator "[1em] Julia Fukuyama"). With the calls,
+/// each creator's names as written, in order (the names line of its piece, not the affiliations under it): what the
+/// emitter matches the reading's names against (`emit`'s owner labels). Beyond Perl, where the kernel reads a line
+/// otherwise (OD #52, #988): a line of no mark that starts an author at the `\and` family is a names line, cut at its
+/// commas as one is. As Perl's `next unless $block->unlist` (:714), an empty name between two cuts (`\corrauth, and
+/// Zhengru Zhang`, 2004.03371) makes no creator. And each call's tokens as cut, its wrapping aside, with the creator
+/// it makes (`None` for an affiliation): what a call digests of the block, in order ([`PerlCalls::cut`]).
+pub(in crate::base_utilities) fn perl_author_calls(
+  keys: impl Fn(usize) -> Option<Tokens>,
+  stuff: Tokens,
+) -> Result<PerlCalls> {
+  let branch = perl_author_branch(&stuff);
+  if branch == PerlAuthorBranch::Whole {
+    return Ok(PerlCalls {
+      calls: vec![whole_block_author(
+        keys(0),
+        tabular_juggles_in_a_whole_block(stuff.clone()),
+      )?],
+      cut:   vec![(Some(0), stuff.unlist_ref().to_vec())],
+      names: vec![stuff],
+    });
+  }
+  let mut cut: Vec<(Option<usize>, Vec<Token>)> = Vec::new();
+  // (the creators the calls cut so far make: `cut`'s numbers, as `author` numbers its keys)
+  let mut made = 0usize;
+  let mut next = || {
+    made += 1;
+    made - 1
+  };
+  let stuff = strip_linebreak_options(tabular_juggles_as(stuff, T_CS!("\\and")));
+  let mut pieces: Vec<Tokens> = Vec::new();
+  let mut author = |names: Tokens, content: Tokens| {
+    let n = pieces.len();
+    pieces.push(names);
+    whole_block_author(keys(n), content)
+  };
+  let affiliation = |content: Tokens| -> Result<Tokens> {
+    Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+      None,
+      Some(content)
+    ]))
+  };
+  let markers = perl_authorsup_markers();
+  // (the `\and` family parts two authors: OD #52(g)'s hard boundary, `author_and_splits`)
+  let and_family = author_and_splits();
+  let parts_authors = |cut: &[Token]| {
+    cut.first().is_some_and(|t| {
+      and_family
+        .iter()
+        .any(|d| matches!(d, SplitDelim::Token(u) if u == t))
+    })
+  };
+  // (a names line's own cuts, Perl's comma and " and " — at the top level, as `SplitTokens` cuts: a note's text keeps its
+  // commas)
+  let names = |line: Tokens| split_tokens(line, vec![T_OTHER!(",").into(), literal_and()]);
+  // (a names line's names, none empty: Perl's `next unless $block->unlist`, :714)
+  let people_of = |line: Tokens| -> Vec<Vec<Token>> {
+    names(line)
+      .into_iter()
+      .filter(|name| !name.is_empty())
+      .map(Tokens::unlist)
+      .collect()
+  };
+  let mut calls = Vec::new();
+  if branch == PerlAuthorBranch::Marks {
+    // (each entry: whether an author, and its tokens)
+    let mut entries: Vec<(bool, Vec<Token>)> = Vec::new();
+    for (cut, line) in split_tokens_delimited(stuff, author_affil_splits()) {
+      if line.is_empty() {
+        continue;
+      }
+      match position_of(&line, &markers) {
+        // (a line of no mark continues the entry before it with the cut it was cut at — a line break, `\quad` the space
+        // it prints —, which Perl's `Tokens(…)` drops: 1609.02993's "Soumith ChintalaFacebook AI Research", 1110.6375's
+        // "G. EhlersOak Ridge" glued, their words lost; but one cut at the `\and` family starts an author, the kernel's
+        // boundary, OD #52(g): `Ann Able$^{1}$… \and Bob Baker\\ $^{1}$Univ X` is two authors, as pdflatex prints them,
+        // where Perl glues "Ann AbleBob Baker" — a names line, cut at its commas as one is: `\and Bob Baker, Carl Cole\\`
+        // two authors, review revS5CR7b S3)
+        None => match entries.last_mut() {
+          Some(last) if !parts_authors(&cut) => {
+            last.1.extend(cut);
+            last.1.extend(line.unlist());
+          },
+          Some(_) => entries.extend(people_of(line).into_iter().map(|name| (true, name))),
+          None => entries.push((true, line.unlist())),
+        },
+        Some(p) if p < 8 => entries.push((false, line.unlist())),
+        Some(_) => entries.extend(names(line).into_iter().map(|name| (true, name.unlist()))),
+      }
+    }
+    for (is_author, line) in entries {
+      cut.push((is_author.then(&mut next), line.clone()));
+      let line = Tokens::new(line);
+      calls.push(if is_author {
+        author(
+          line.clone(),
+          Invocation!(T_CS!("\\lx@author@withsup"), vec![Some(line)]),
+        )?
+      } else {
+        affiliation(Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(
+          line
+        )]))?
+      });
+    }
+  } else {
+    let splits: Vec<SplitDelim> = vec![
+      T_CS!("\\and").into(),
+      T_CS!("\\And").into(),
+      T_CS!("\\AND").into(),
+      T_CS!("\\quad").into(),
+      T_CS!("\\qquad").into(),
+    ];
+    for block in split_tokens(stuff, splits) {
+      if block.is_empty() {
+        continue;
+      }
+      let mut lines = split_tokens(block, vec![T_CS!("\\\\").into()]).into_iter();
+      // (each person: their names as written, and their call's content)
+      let mut people: Vec<(Vec<Token>, Vec<Token>)> = lines
+        .next()
+        .map(people_of)
+        .unwrap_or_default()
+        .into_iter()
+        .map(|name| (name.clone(), name))
+        .collect();
+      if people.is_empty() {
+        people.push((Vec::new(), Vec::new()));
+      }
+      // (the block's `\\` lines its last name's, as Perl's one author of the piece has them)
+      let mut raw: Vec<Vec<Token>> = people.iter().map(|(names, _)| names.clone()).collect();
+      if let Some(last) = people.last_mut() {
+        for line in lines.filter(|line| !line.is_empty()) {
+          if let Some(raw) = raw.last_mut() {
+            raw.extend_from_slice(line.unlist_ref());
+          }
+          last.1.extend(affiliation(line)?.unlist());
+        }
+      }
+      for ((names, person), raw) in people.into_iter().zip(raw) {
+        cut.push((Some(next()), raw));
+        calls.push(author(Tokens::new(names), Tokens::new(person))?);
+      }
+    }
+  }
+  Ok(PerlCalls { calls, names: pieces, cut })
+}
+
+/// What [`perl_author_calls`] makes of a block: Perl's calls, in order.
+pub(in crate::base_utilities) struct PerlCalls {
+  /// the `\lx@add@author` and `\lx@add@affiliation` calls
+  pub calls: Vec<Tokens>,
+  /// each creator's names as written (its piece's names line)
+  pub names: Vec<Tokens>,
+  /// each call's tokens of the block as cut, its wrapping aside, with the creator it makes (`None` for an affiliation):
+  /// a subsequence of the block's tokens, in order
+  pub cut:   Vec<(Option<usize>, Vec<Token>)>,
 }
 
 /// Does an author block mark its names (`$^{a}$`, `\textsuperscript{1}`)? A superscript inside a `\footnote` or
@@ -1140,6 +1360,12 @@ fn tabular_close_rest(t: &Token) -> Option<Vec<Token>> {
 /// \end{tabular}`; 1511.05911). The deleted old driver's own rewrite of a juggle (`tabular_juggles_as_line_breaks`),
 /// the column's split ([`author_and_splits`]) a line break where nothing splits.
 pub(in crate::base_utilities) fn tabular_juggles_in_a_whole_block(tokens: Tokens) -> Tokens {
+  tabular_juggles_as(tokens, T_CS!("\\\\"))
+}
+
+/// `tokens` with each macro whose expansion starts by closing a tabular ([`tabular_juggles_in_a_whole_block`]) the
+/// `separator`, one opening the block nothing.
+fn tabular_juggles_as(tokens: Tokens, separator: Token) -> Tokens {
   let toks = tokens.unlist();
   if !toks.iter().any(|t| tabular_close_rest_of_any(t).is_some()) {
     return Tokens::new(toks);
@@ -1148,7 +1374,7 @@ pub(in crate::base_utilities) fn tabular_juggles_in_a_whole_block(tokens: Tokens
   for t in toks {
     if tabular_close_rest_of_any(&t).is_some() {
       if !out.is_empty() {
-        out.push(T_CS!("\\\\"));
+        out.push(separator);
       }
     } else {
       out.push(t);

@@ -116,14 +116,16 @@ fn representing_a_collaboration_is_its_contact() {
 /// An author block whose digestion moves the footnote counter where no name's run or mark carries it (Bob Baker's
 /// `\addtocounter{footnote}{-2}` between his notes, 1507.05018's Ombao): `=2` lost the move and Ann Able's
 /// `\footnotemark` after her note, so Carl Cole printed † where LaTeX prints *, with no Warning (review revNE2 A1). The
-/// block is written whole, Perl's whole-block creator, its tokens digested in order: Ann †, Carl *, every note kept, the
-/// counted Warning. Off reads it per name, as pdflatex prints the marks. (A move a mark's box covers,
+/// block is written as Perl's `\lx@add@authors` splits it at its `\and`s (CR7, OD #988: it was one whole-block creator,
+/// Perl's tabular branch), its pieces digested in order: Ann †, Carl *, every note kept, the counted Warning. Off reads it per name, as pdflatex prints the marks. (A move a mark's box covers,
 /// `\addtocounter{footnote}{-2}\footnotemark`, is carried: `a_notes_footnote_step_runs_where_it_prints`.)
 #[test]
-fn a_counter_move_no_name_carries_writes_the_block_whole() {
-  let expected = vec![row(&[
-    "Ann Able † † footnote † and Bob Baker and Carl Cole * * footnote *",
-  ])];
+fn a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it() {
+  let expected = vec![
+    row(&["Ann Able † † footnote †"]),
+    row(&["Bob Baker"]),
+    row(&["Carl Cole * * footnote *"]),
+  ];
   let warnings = 1;
   let (log, xml) = run(repro!("ne2b_counter_moved_between_notes"));
   assert_eq!(
@@ -136,8 +138,8 @@ fn a_counter_move_no_name_carries_writes_the_block_whole() {
     .match_indices("<note ")
     .map(|(at, _)| &xml[at..at + xml[at..].find('>').expect("a note's tag")])
     .collect();
-  // (every note kept, each mark as pdflatex prints it: Ann's footnotemark †, Carl's *; the block written whole holds both
-  // marks in its one creator, before the thanks notes)
+  // (every note kept, each mark as pdflatex prints it: Ann's footnotemark †, Carl's *; each creator's in order, Ann's mark
+  // and thanks, Bob's two thanks, Carl's mark)
   let (mark_ann, mark_carl) = (
     r#"<note mark="†" role="footnotemark" xml:id="footnote2""#,
     r#"<note mark="*" role="footnotemark" xml:id="footnote1""#,
@@ -145,8 +147,13 @@ fn a_counter_move_no_name_carries_writes_the_block_whole() {
   let thanks = |n: u8| {
     format!(r#"<note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id{n}""#)
   };
-  let mut expected = vec![mark_ann.to_string(), thanks(1), thanks(2), thanks(3)];
-  expected.insert(1, mark_carl.to_string());
+  let expected = vec![
+    mark_ann.to_string(),
+    thanks(1),
+    thanks(2),
+    thanks(3),
+    mark_carl.to_string(),
+  ];
   assert_eq!(notes, expected, "{xml}");
 }
 
@@ -248,7 +255,7 @@ fn a_mark_after_its_names_note_stays_with_it() {
 /// 1911.13299's `Vivek Ramanujan \thanks{equal contribution} \\ \footnotemark[2]`) was dropped with no Warning, Bob
 /// Baker's mark one symbol short. The block is written whole, Perl's whole-block creator, its tokens digested in order:
 /// Ann †, Bob ‡, the note kept, the counted Warning (review revNE2r2 Q2: never a silent loss). Off reads Ann's † as the
-/// mark of an affiliation line of hers. Distinct from `a_counter_move_no_name_carries_writes_the_block_whole`: a mark, not
+/// mark of an affiliation line of hers. Distinct from `a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it`: a mark, not
 /// a counter move, that the reading has no place for.
 #[test]
 fn a_mark_on_no_name_writes_the_block_whole() {

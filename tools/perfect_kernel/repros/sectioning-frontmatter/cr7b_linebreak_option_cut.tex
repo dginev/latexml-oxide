@@ -1,0 +1,16 @@
+% mechanism: a declined block's split cuts at `\\` and leaves no "[len]" (or "*") of a `\\[len]`/`\\*` at the head of
+%   the next piece: `fallback::perl_author_calls` runs `strip_linebreak_options` on the block before its cuts (the
+%   kernel's fix of Perl's `\\[1em]` gap, Base_Utility.pool.ltxml:670, KNOWN_PERL_ERRORS #75)
+% witness: 2007.01340 (CR7 wrote the creator "[1em] Julia Fukuyama"); review revCR67 B1's p7b
+% oracle:  pdflatex 0 errors: "Ann Able1∗", "Bob Baker1", "1Univ X", "∗Zebra note." (no "[1em]")
+% engines: rust CR7: "[1em] Bob Baker" and a content-check Warning "1em"; perl: the same "[1em] Bob Baker"
+% expect:  0 errors, 1 warning (the decline's); Ann (note, Univ X), Bob Baker (Univ X)
+% status:  RED (CR7) -> GREEN (perfect_kernel_batchcr7::a_split_at_a_linebreak_option_leaves_no_option_text)
+\documentclass{article}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\title{T}
+\author{Ann Able$^{1}$\footremember{zz}{Zebra note.}\\[1em] Bob Baker$^{1}$\\ $^{1}$Univ X}
+\begin{document}
+\maketitle
+Body.
+\end{document}

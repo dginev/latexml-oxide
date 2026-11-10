@@ -178,6 +178,27 @@ pub(in crate::base_utilities) fn is_text_font_command(t: &Token) -> bool {
     })
 }
 
+/// Perl: positionOf($tokens, @delims) — Base_Utility.pool.ltxml (PR #2767).
+/// Find the position of a Token from `delims` within `tokens`.
+/// 1 based, so None == token not present.
+pub fn position_of(tokens: &Tokens, delims: &[Token]) -> Option<usize> {
+  for (i, t) in tokens.unlist_ref().iter().enumerate() {
+    if delims.contains(t) {
+      return Some(i + 1);
+    }
+  }
+  None
+}
+
+// Things to split authors (Perl PR #2767, Base_Utility.pool.ltxml)
+// This is " and " without the spaces stripped.
+pub(in crate::base_utilities) fn literal_and() -> SplitDelim {
+  let mut tks = vec![T_SPACE!()];
+  tks.extend(mouth::tokenize_internal("and").unlist());
+  tks.push(T_SPACE!());
+  SplitDelim::Tokens(Tokens::new(tks))
+}
+
 /// The `\and` family only — the HARD author boundary the superscript-marker
 /// branch groups on FIRST, so a marker-less line never merges into an author
 /// from a previous `\and` group (html_feedback#1021 F2; OXIDIZED_DESIGN #52(g)).
