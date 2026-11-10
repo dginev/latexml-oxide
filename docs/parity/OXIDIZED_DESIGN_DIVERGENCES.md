@@ -33207,19 +33207,60 @@ beside an `\begin{abstract}` written; review revCR2 finding 2). A call whose run
 queued, the old driver's rule, so its digestion runs every setter in it — with the attributes it was queued with, back at
 its ledger position among the emitter's item calls, labelled for its run's creators (`run_labels`: the owners of the item
 of its role before it when no author came between, else the creators since that item), so the insertion places its
-contact with theirs in queue order — save a run of two or more creators since that item, whose labels go out joined as one
-`label={author:1,author:2}` the insertion's exact-label lookup (`relocate::find_targets`) never finds: its contact, always
-empty on that path (a minipage with visible text is a call the reading writes), is dropped with an orphaned-annotation
-Warning the base did not raise (RED `revtex3_minipage_address_first_joins_run_labels.tex`, review revCR2b finding 1; no census
-paper hit). Appended unlabelled, its contact went into each creator before the items' moved
+contact with theirs in queue order. Only one owner's label is given (`labelled`, which drops the call's own `label`,
+`annotate` and `owner` keys as `rekeyed` does, `routing_key`); a run of two or more owners leaves the call unlabelled,
+placed by its own `annotate=` as the old driver digested it: joined as one `label={author:1,author:2}`, the insertion's exact-label lookup
+(`relocate::find_targets`) never found it (an orphaned-annotation Warning, review revCR2b finding 1), and a copy per label
+would digest the call's setters once each. The resolver's empty `annotate=run` entry records its run
+(`Resolver::empty_entry_holds_its_role` → `record_run`), so the next `\address` is the same run's: `\author{Ann Able and
+Bob Baker}` + the minipage `\address` + `\address{Univ A}` gives Univ A to both, as the old driver (it went to Bob alone,
+review revCR2b P1). Appended unlabelled, its contact went into each creator before the items' moved
 contacts, and cond-mat9809277's e-mails, cut from the first address, landed after the journal line (review revCR2
 finding 1); now Address, Email, Address(PRL), as the base, REVTeX 3's print and the old driver. An entry digested in place
-in a read block, which no step writes, is counted (`warn_queued_lost`). **Open:** 1411.6693 nests the block inside
-`\title{…\author{…\date{…}}}`: the emitter stays out at the first flush (no author block), the `\author` runs in the
-title's digestion, and the date is lost with no Warning (pre-existing, review revCR2 P1; minimal trigger
-`\title{A Title\author{Ann Able$^{1}$ \date{$^1$ School of Zebrawords}}}\maketitle` under article). cond-mat9809277
+in a read block, which no step writes, is counted (`warn_queued_lost`). A setter inside a block read while a flush
+digests its queue runs `\lx@add@frontmatter@now`, not the queue: 1411.6693's `\title{…\author{…\date{…}}}`, whose
+`\author` runs in the title's digestion at the `\maketitle` flush (the emitter stays out of that flush: no author block),
+a late block with a flush of its own (`\lx@frontmatter@late`). Its rehearsal notes the `@now` entry as the command a
+queued one is digested by (`queue::now_command`, `rehearsal::note_frozen_entry`; never a creator), so that flush's
+emitter queues it as above: the date is kept (it was lost with no Warning, review revCR2 P1). cond-mat9809277
 keeps Perl's and the old driver's empty minipage `ltx:contact`, last (RED: `\vskip -0.5in $ $` after the `\pacs` keeps
 the minipage's paragraph). Repros
-`sectioning-frontmatter/{svjour3_institute_email_before_at_is_its_owners,date_inside_author_is_the_date,revtex3_abstract_inside_address_minipage,revtex3_minipage_address_keeps_contact_order,revtex3_setter_in_written_address_once}.tex`;
+`sectioning-frontmatter/{svjour3_institute_email_before_at_is_its_owners,date_inside_author_is_the_date,revtex3_abstract_inside_address_minipage,revtex3_minipage_address_keeps_contact_order,revtex3_setter_in_written_address_once,revtex3_minipage_address_first_joins_run_labels,date_inside_author_inside_title_is_the_date}.tex`;
 guards `perfect_kernel_batchcr2` (one per path: the owner label, a block's queued setter, a call's in-place digest, the
-call's place among the items, a written call).
+call's place among the items, a written call), `perfect_kernel_batchcr3::{revtex3_minipage_address_first_one_run` (a run
+of several owners), `date_inside_author_inside_title_is_the_date}` (a flush-time `@now` setter).
+
+**Residual (review revCR3b finding 2, synthetic, pre-existing):** a date recovered from `\title`'s `\author` loses to a later top-level `\date` (`\title{A Title \author{Ann Able \date{Dinner One}}}` `\date{Dinner Two}` `\maketitle`: pdflatex prints "Dinner One", we write "Dinner Two", no Warning) — the recovered entry goes in before a `\date` after `\title`; correct when the outer `\date` comes before `\title`.
+
+### 986. imsart.sty is a binding of its own, so a shipped copy declaring itself imsart.sty is read through it (CR3)
+
+The imsart.cls binding (latexml_contrib `imsart_cls.rs`) owns imsart.sty's frontmatter (`\ead`, `\printead`, `\author`,
+`\address`, `\thanksref`, `\thankstext`, `\thanksmark`), its keyword blocks and `\arxiv`, defined before it reads
+imsart.sty raw. A paper that loads imsart.sty without that class read it raw: a renamed copy that declares itself
+`\ProvidesFile{imsart.sty}` — stylefile.sty, loaded by stylefile.cls (`\ProvidesClass{stylefile}`, a renamed imsart.cls;
+1905.11425, 2101.10506), imsart_mod.sty beside article (math0608476) — or imsart.sty under its own name beside article
+(1301.1466). Its `\ead[label=e1,mark]{…}` inside `\author` typeset nothing the frontmatter kept, so every e-mail and every
+`\address` was lost with no Warning (CR1 class C; the old driver glued "label=e1" into the name). Now imsart.sty has a
+binding (`imsart_sty.rs`, an author-file stand-in in `author_files.rs`) sharing the class binding's markup
+(`imsart_cls::imsart_sty_markup`, `imsart_arxiv`), so the charter's copy rule (a shipped copy goes to the binding whose
+file it declares itself, FIDELITY_CHARTER "bindings and copies") and the existing declaration route (`content.rs`
+`provided_binding`, #731) read each copy after it as the stand-in's copy. Two additions the route needs: imsart.sty's
+author markup (`\degs`, `\fnms`, `\inits`, `\snm`, `\roles`, defined only inside its `\author@fmt`) is the binding's
+`\lx@author@markup@class`, since a copy's refused `\author` records no `\author:redefined` for the kernel's own provide
+list ("\snm undefined", 2 Errors per witness otherwise); and the sty binding's own `\affiliation` (the run of new
+authors, or its label's), since a stand-in's copy is no raw class read for the kernel's class readers, which give the
+class path's raw `\affiliation` to the frontmatter (it printed in the body). The class path is unchanged (its
+`\lx@author@markup@class` provides what the refused `\author` list provides already). Witnesses 1905.11425, 2101.10506
+(e-mails and addresses on each author), math0608476 (URLs, addresses, the `\thankstext` note), 1301.1466 (e-mails and
+URLs; its affiliation kept; its three addresses printed at the end, each no author's, as below). An unlabelled `\address`
+after `\end{frontmatter}` is no author's (review revCR3 finding 1): under the journal options that set
+`\@addressatendtrue` (`aap`, imsart.sty:150 of 1301.1466's copy) imsart.sty stores each block (:1242-1252) and prints
+them all at the end of the document (`\printaddresses`, :1269-1290), tied to no author, and the API's default owner, the
+last author, took all three of 1301.1466's (crackle.tex:1109-1125, after its `\bibliography`). The shared `\address`
+prints such a call where it is called, as `\printaddressnum` sets a block (`\address@size`, `{tabular}[t]{@{}l@{}}`;
+the `env/frontmatter/after` hook marks the close); inside `{frontmatter}`, or labelled, it stays a contact. Under the
+class binding too (the same markup). Repros
+`sectioning-frontmatter/{imsart_renamed_sty_copy_reads_through_its_binding,imsart_address_after_frontmatter_prints_in_place}.tex`;
+guards `perfect_kernel_batchcr3::{imsart_renamed_sty_copy_reads_through_its_binding,imsart_address_after_frontmatter_prints_in_place}`.
+
+**Residuals (review revCR3b, SHIP; to the next batch with the API's e-mail/URL re-read):** the in-place end-of-paper blocks drop the e-mail and URL rows the PDF prints (`\printead{e1}\\ \printead{u1}` inside each `\address`; the binding's `\printead` is empty, `imsart_cls.rs`, as the address is the author's contact — untrue in the in-place branch; 1301.1466, no worse than the base's "e-mail: ??" rows, the addresses on their authors); an unlabelled `\address` inside `{aug}` after `\author{A}\and\author{B}` goes to B only where imsart.sty:1021 ties it to every author since the last (synthetic, the class path too); under `aap` an unlabelled `\address` right after `\end{frontmatter}` prints before the body where the PDF prints it at the end (nothing lost).

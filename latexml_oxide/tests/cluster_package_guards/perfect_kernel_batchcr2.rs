@@ -6,7 +6,7 @@
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
 /// The XML of the repro `name` converted under ar5iv, which must give no error and no warning.
-fn convert_clean(tex: &str) -> String {
+pub(super) fn convert_clean(tex: &str) -> String {
   let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
   assert_eq!(error_count(&log), 0, "{log}");
   assert_eq!(warning_count(&log), 0, "{log}");
@@ -14,7 +14,7 @@ fn convert_clean(tex: &str) -> String {
 }
 
 /// Every element `tag` of `xml`, whole and in document order; one opened and never closed fails, with the input.
-fn elements(xml: &str, tag: &str) -> Vec<String> {
+pub(super) fn elements(xml: &str, tag: &str) -> Vec<String> {
   let (open, close) = (format!("<{tag} "), format!("</{tag}>"));
   let mut found = Vec::new();
   let mut rest = xml;
@@ -43,7 +43,8 @@ fn svjour3_institute_email_before_at_is_its_owners() {
 }
 
 /// CR2 A, an author block: `\date` inside `\author` is the date LaTeX prints, its entry queued at the flush, no Warning
-/// (2503.02741, hep-th0304189; 1411.6693, whose block nests inside `\title`, stays open). Repro
+/// (2503.02741, hep-th0304189; 1411.6693, whose block nests inside `\title`: batchcr3's
+/// `date_inside_author_inside_title_is_the_date`). Repro
 /// sectioning-frontmatter/date_inside_author_is_the_date.
 #[test]
 fn date_inside_author_is_the_date() {

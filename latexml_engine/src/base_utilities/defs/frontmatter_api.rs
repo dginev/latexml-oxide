@@ -298,6 +298,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefPrimitive!("\\lx@add@frontmatter@now OptionalKeyVals {} OptionalKeyVals:Frontmatter {}",
     sub[(_obsoletekeys, tag_tks, kv, content)] {
     let tag = tag_tks.to_string();
+    // (a rehearsal's run notes the entry it would make, as the command a queued one is digested by: a setter inside a
+    // block read while a flush digests its queue — `\date` in an `\author` nested in `\title`, 1411.6693 — runs `@now`, not
+    // the queue, `rehearsal::note_frozen_entry`)
+    if rehearsal::rehearsing() && tag != "ltx:creator" {
+      rehearsal::note_frozen_entry(&tag, kv.as_ref(), &now_command(None, &tag_tks, kv.as_ref(), Some(&content))?);
+    }
     // %options = digested keyvals hash; role read from the UNdigested keyvals
     // (Careful! Multiple values — Perl getValue returns the last one.)
     let mut options = TagAttrs::default();

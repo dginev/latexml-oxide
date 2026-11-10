@@ -242,6 +242,42 @@ fn key_list_bounds(v: &[Token]) -> (Option<usize>, Option<usize>) {
   (open, None)
 }
 
+/// Whether a queued call's key `key` places it — the keys the reading's own placement replaces: `label`, `labelseq`,
+/// `annotate`, `owner`, `annotations` unless kept, and the internal `_` keys but `_kinded`, `_markshown` (read already)
+/// and, where kept, `_zone` (where it prints).
+fn routing_key(key: &str, keep_annotations: bool, zone: bool) -> bool {
+  (key.starts_with('_') && !(matches!(key, "_kinded" | "_markshown") || (zone && key == "_zone")))
+    || matches!(key, "label" | "labelseq" | "annotate" | "owner")
+    || (key == "annotations" && !keep_annotations)
+}
+
+/// The key list of a queued call between its brackets `open` and `close`, cut at its top-level commas: each key's name
+/// (trimmed, before any `=`), its tokens, and how many of them come before the `=`.
+fn key_pairs(v: &[Token], open: usize, close: usize) -> Vec<(String, &[Token], usize)> {
+  let mut pairs = Vec::new();
+  let (mut depth, mut from) = (0, open + 1);
+  for i in open + 1..=close {
+    depth += v[i].group_step();
+    if i == close
+      || (depth == 0 && v[i].get_catcode() == Catcode::OTHER && v[i].with_str(|s| s == ","))
+    {
+      let pair = &v[from..i];
+      let mut eq = 0;
+      let key: String = pair
+        .iter()
+        .take_while(|t| !t.with_str(|s| s == "="))
+        .inspect(|_| eq += 1)
+        .map(|t| t.with_str(ToString::to_string))
+        .collect::<String>()
+        .trim()
+        .to_string();
+      pairs.push((key, pair, eq));
+      from = i + 1;
+    }
+  }
+  pairs
+}
+
 /// A queued call's tokens with its routing keys gone and `add` first: its other keys (`role`, `name`, …) stand. This reads
 /// the API call's own key list, which `queue_front_matter`'s caller built, at its top-level commas: no TeX spelling.
 fn rekeyed(
@@ -261,37 +297,15 @@ fn rekeyed(
     // `_printedlabel`, which says it prints, the reading's label replacing the call's — the Kind step for a legend reads it,
     // `insert::legend_mark`: authblk's `\\affil[*]{Corresponding author …}`, 2605.31330, 2201.11910; P2 NT, P2r2)
     let (mut label, mut prints) = (None, false);
-    let (mut depth, mut from) = (0, open + 1);
-    for i in open + 1..=close {
-      let t = &v[i];
-      depth += t.group_step();
-      if i == close || (depth == 0 && t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == ","))
-      {
-        let pair = &v[from..i];
-        let mut eq = 0;
-        let key: String = pair
-          .iter()
-          .take_while(|t| !t.with_str(|s| s == "="))
-          .inspect(|_| eq += 1)
-          .map(|t| t.with_str(ToString::to_string))
-          .collect::<String>()
-          .trim()
-          .to_string();
-        // (the keys that place it go, the reading places it; `_zone`, where it prints, and `_kinded`, read already, stay)
-        let routes = (key.starts_with('_')
-          && !(matches!(key.as_str(), "_kinded" | "_markshown") || (zone && key == "_zone")))
-          || matches!(key.as_str(), "label" | "labelseq" | "annotate" | "owner")
-          || (key == "annotations" && !keep_annotations);
-        if !key.is_empty() && !routes {
-          out.push(T_OTHER!(","));
-          out.extend_from_slice(pair);
-        }
-        if key == "label" {
-          label = pair.get(eq..);
-        }
-        prints |= key == LABEL_PRINTS;
-        from = i + 1;
+    for (key, pair, eq) in key_pairs(v, open, close) {
+      if !key.is_empty() && !routing_key(&key, keep_annotations, zone) {
+        out.push(T_OTHER!(","));
+        out.extend_from_slice(pair);
       }
+      if key == "label" {
+        label = pair.get(eq..);
+      }
+      prints |= key == LABEL_PRINTS;
     }
     if prints && let Some(label) = label {
       out.extend(internal(&s!(",{PRINTED_LABEL}")));
@@ -3996,10 +4010,11 @@ struct Taken<'a> {
 /// The entries a frontmatter setter run inside an author block or an API call queues (`AuthorBlock::queued`,
 /// `ApiCall::queued`: what its rehearsal noted, the frontmatter frozen), queued at the flush after the emitter's own, as the
 /// old driver's digestion of the block or the call at the flush made them, so each is its own entry where the schema puts
-/// it: `\date{$^1$ School of …}` inside `\author`, which LaTeX prints as the date (2503.02741, hep-th0304189; open:
-/// 1411.6693's, its block nested in `\title`, lost uncounted), and REVTeX 3's `\pacs` inside an `\address`'s minipage (cond-mat9801109,
-/// cond-mat9906335, cond-mat9809277, cond-mat9909213), whose emitted creators digest no setter (OXIDIZED_DESIGN_DIVERGENCES
-/// #985). A call whose run also digested an entry where it stands (`rehearsal::note_frozen_digest`: that minipage's
+/// it: `\date{$^1$ School of …}` inside `\author`, which LaTeX prints as the date (2503.02741, hep-th0304189; 1411.6693's,
+/// its block nested in `\title` and read at a flush of its own, its setter's `@now` noted as such a command), and REVTeX
+/// 3's `\pacs` inside an `\address`'s minipage (cond-mat9801109, cond-mat9906335, cond-mat9809277, cond-mat9909213), whose
+/// emitted creators digest no setter (OXIDIZED_DESIGN_DIVERGENCES #985). A call whose run also digested an entry where it
+/// stands (`rehearsal::note_frozen_digest`: that minipage's
 /// `\begin{abstract}`), which no queue holds, and of which the reading writes nothing, is written as queued, as the old
 /// driver wrote it — its digestion at the flush runs every setter in it —, with the attributes it was queued with, back at
 /// its ledger position among the item calls and labelled for its run's creators ([`run_labels`]), so its contact is placed
@@ -4087,7 +4102,12 @@ fn recover_queued(
           .map(|(_, attrs)| attrs.clone())
           .unwrap_or_default();
         let labels = run_labels(index, &role, resolved, taken);
-        let command = labelled(&command, &labels).unwrap_or(command);
+        // (one owner's label places it; a run of several, whose labels no one label joins, leaves it unlabelled, its
+        // own `annotate=` placing it as the old driver's digestion did — a copy a label would digest its setters twice)
+        let command = match labels.as_slice() {
+          [label] => labelled(&command, label).unwrap_or(command),
+          _ => command,
+        };
         // (after the last item call of a source before it)
         let after = out.iter().rposition(|entry| {
           taken
@@ -4126,9 +4146,10 @@ fn recover_queued(
 /// The labels the call at ledger index `index` of role `role`, written as queued, goes to: its run's creators, as the
 /// insertion's `annotate=run` reaches them while the queue is digested — the owners of the item of its role written before
 /// it when no author came between them (REVTeX 3's second `\address` after the first, the same authors'), else the
-/// creators since the last item of its role. None before any creator. Known RED: two or more creators since that item
-/// go out as one joined `label=` the insertion's exact lookup never finds (an empty contact dropped with an orphaned
-/// annotation Warning, review revCR2b finding 1, `revtex3_minipage_address_first_joins_run_labels.tex`).
+/// creators since the last item of its role. None before any creator. Only one is given as the call's label
+/// ([`labelled`]); two or more leave it unlabelled, placed by its own `annotate=` as the old driver: joined as one
+/// `label=`, the insertion's exact lookup never found it (an orphaned-annotation Warning, review revCR2b finding 1,
+/// `revtex3_minipage_address_first_joins_run_labels.tex`).
 fn run_labels(index: usize, role: &str, resolved: &Resolved, taken: &Taken) -> Vec<String> {
   let last_creator = resolved
     .creators
@@ -4163,19 +4184,23 @@ fn run_labels(index: usize, role: &str, resolved: &Resolved, taken: &Taken) -> V
   labels
 }
 
-/// A queued call's tokens with `label={labels}` first among its keys, which the insertion places it by; none where it has
-/// no key list or no label is given.
-fn labelled(command: &Tokens, labels: &[String]) -> Option<Tokens> {
-  if labels.is_empty() {
-    return None;
-  }
+/// A queued call's tokens with `label={label}` first among its keys, which the insertion places it by, and its own routing
+/// keys gone, as [`rekeyed`] drops them ([`routing_key`]: no second `label`, nor an `annotate` or `owner` beside it); none
+/// where it has no key list.
+fn labelled(command: &Tokens, label: &str) -> Option<Tokens> {
   let v = command.unlist_ref();
-  let (Some(open), Some(_)) = key_list_bounds(v) else {
+  let (Some(open), Some(close)) = key_list_bounds(v) else {
     return None;
   };
   let mut out: Vec<Token> = v[..=open].to_vec();
-  out.extend(key_tokens(&s!("label={{{}}},", labels.join(","))));
-  out.extend_from_slice(&v[open + 1..]);
+  out.extend(key_tokens(&s!("label={{{label}}}")));
+  for (key, pair, _) in key_pairs(v, open, close) {
+    if !key.is_empty() && !routing_key(&key, true, true) {
+      out.push(T_OTHER!(","));
+      out.extend_from_slice(pair);
+    }
+  }
+  out.extend_from_slice(&v[close..]);
   Some(Tokens::new(out))
 }
 

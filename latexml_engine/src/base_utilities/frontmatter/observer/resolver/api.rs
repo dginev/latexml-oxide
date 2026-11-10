@@ -34,8 +34,17 @@ impl Resolver {
   /// An empty entry's authors hold its role, as today's attaches the empty contact to them (`annotate=`: the last
   /// author, all, the run of new ones, the last N) — part of today's contact pile too (`distribute_upfront`: amsart's
   /// `\email{}` before the three `\address`/`\email` pairs is a seventh contact, no grid, 1302.1274).
+  /// An empty `annotate=run` entry records its run as today's attaches it at once ([`Self::record_run`]): REVTeX 3's
+  /// `\address{\begin{minipage}…\pacs{…}\end{minipage}}` after `\author{Ann Able and Bob Baker}`, then `\address{Univ
+  /// A}`, gives Univ A to both, as the old driver (review revCR2b P1, `revtex3_minipage_address_first_joins_run_labels`);
+  /// hep-ph9810367's `\address{\phantom{ll}}` before its real `\address{MSU…}`, after `\author{He and Yuan}`, gives
+  /// the real one to both.
   fn empty_entry_holds_its_role(&mut self, index: usize, annotate: &str, role: &str) {
-    let owners = self.annotate_owners(annotate, role);
+    let owners = if annotate.starts_with("run") && !self.out.creators.is_empty() {
+      self.record_run(annotate, role, false)
+    } else {
+      self.annotate_owners(annotate, role)
+    };
     for &c in &owners {
       self.roles[c].push(role.to_string());
     }
