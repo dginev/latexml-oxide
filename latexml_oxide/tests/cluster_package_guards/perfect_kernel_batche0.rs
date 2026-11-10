@@ -340,7 +340,11 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// `replayable`), the macro readers of `\@author` (aaai2026's `\theauthors`, 2508.08170), the copy's kept `\@maketitle`
 /// merged (neurips_2022, 2205.14141) and its `\newcounter`s (2508.04047). The juggle reader, a split decision, moved to
 /// `fallback.rs` (`title_code_juggle`).
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_383;
+/// Z18o raised it to 2,402 (+19, all in `kind.rs`): the Kind step's mailbox link line (review revZ18l F2, which the brief
+/// homes in the Kind step, user ruling 2026-10-20), its line recognized by `classify/links.rs` `mailbox_link_line` and
+/// written by the Kind step's existing e-mail call writer (`email_line_calls`, no new emission); pending the main
+/// session's confirmation.
+const MOVED_CUT_KIND_CODE_LINES: usize = 2_402;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]

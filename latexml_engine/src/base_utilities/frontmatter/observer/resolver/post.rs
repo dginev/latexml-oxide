@@ -1354,7 +1354,11 @@ impl Resolver {
           self.attach(
             Some(owner),
             Assoc {
-              rule: s!("{} ruling2:uncarried owner:annotate", assoc.rule),
+              rule: s!(
+                "{} ruling2:uncarried owner:annotate{}",
+                assoc.rule,
+                self.stopgap_tag(at)
+              ),
               ..assoc.clone()
             },
             false,
@@ -1383,8 +1387,9 @@ impl Resolver {
             Some(owner),
             Assoc {
               rule: s!(
-                "{} ruling2:uncarried label:unshown owner:annotate",
-                assoc.rule
+                "{} ruling2:uncarried label:unshown owner:annotate{}",
+                assoc.rule,
+                self.stopgap_tag(at)
               ),
               ..assoc.clone()
             },
@@ -1410,7 +1415,11 @@ impl Resolver {
           self.attach(
             Some(owner),
             Assoc {
-              rule: s!("{} label:unshown owner:annotate", assoc.rule),
+              rule: s!(
+                "{} label:unshown owner:annotate{}",
+                assoc.rule,
+                self.stopgap_tag(at)
+              ),
               ..assoc.clone()
             },
             false,
@@ -1451,7 +1460,11 @@ impl Resolver {
           self.attach(
             Some(owner),
             Assoc {
-              rule: s!("{} label:unrequested owner:annotate", assoc.rule),
+              rule: s!(
+                "{} label:unrequested owner:annotate{}",
+                assoc.rule,
+                self.stopgap_tag(at)
+              ),
               ..assoc.clone()
             },
             false,
@@ -1808,6 +1821,17 @@ impl Resolver {
         })
         .collect();
       let symbol = emails.iter().any(|(_, symbol)| *symbol);
+      // (an entry its run's stopgap alone gave its one carrier is no carrier's of an address no one spells: the block's,
+      // `RUN_LEFTOVER`, review revZ18l F1)
+      let link_carriers: &[usize] = if live.len() > 1
+        && emails
+          .iter()
+          .all(|(assoc, _)| assoc.rule.contains(RUN_LEFTOVER))
+      {
+        &[]
+      } else {
+        &carriers
+      };
       let addressed = self.addressed(&carriers);
       let spellers: Vec<Vec<usize>> = emails
         .iter()
@@ -1816,7 +1840,7 @@ impl Resolver {
       let mut owners = entry_address_owners(
         &spelled,
         0..emails.len(),
-        &carriers,
+        link_carriers,
         symbol,
         &addressed,
         live.len() == 1,
@@ -1926,6 +1950,15 @@ impl Resolver {
 }
 
 impl Resolver {
+  /// [`RUN_LEFTOVER`] for a pending entry whose `annotate=` placement is its run's stopgap alone (`stopgap`), else none.
+  fn stopgap_tag(&self, at: usize) -> &'static str {
+    if self.stopgap.contains(&at) {
+      RUN_LEFTOVER
+    } else {
+      ""
+    }
+  }
+
   /// The authors of `carriers` holding an e-mail address of their own (`entry_address_owners`' `addressed`).
   fn addressed(&self, carriers: &[usize]) -> Vec<usize> {
     carriers
@@ -2061,15 +2094,21 @@ impl Resolver {
       if runs.is_empty() {
         continue;
       }
-      let carriers: Vec<usize> = carriers_of
-        .iter()
-        .find(|(t, _)| *t == text)
-        .map(|(_, carriers)| carriers.clone())
-        .unwrap_or_default();
       let assoc_of = |(c, i): (Option<usize>, usize)| match c {
         Some(c) => self.out.creators[c].affiliations[i].clone(),
         None => self.out.block[i].clone(),
       };
+      // (an entry its run's stopgap alone gave its carriers holds its addresses for none of them: `RUN_LEFTOVER`, review
+      // revZ18l F1 — an unrequested `\affil{$^*$ Email: zz@uni.edu}` under `$^{N}$` names)
+      let leftover = live.len() > 1
+        && holders
+          .iter()
+          .all(|&at| assoc_of(at).rule.contains(RUN_LEFTOVER));
+      let carriers: Vec<usize> = carriers_of
+        .iter()
+        .find(|(t, _)| *t == text && !leftover)
+        .map(|(_, carriers)| carriers.clone())
+        .unwrap_or_default();
       let first = assoc_of(holders[0]);
       let symbol_line = first.rule.contains("ruling2:symbol-line");
       let addressed = self.addressed(&carriers);

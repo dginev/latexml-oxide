@@ -1,0 +1,19 @@
+% mechanism: a bracketed piece after a separator carrying its own mark is a name of its own only when it prints words
+%   after its bracket closes (`[ver3]S. Curry`, `[v3]{Cy Cole}`, `(Dee) Dorn`: observer/resolver/lines.rs
+%   `names_line_events`, `bracket_spans_whole`); a piece the bracket spans whole is a remark, joined to the name before
+%   it, and since both pieces carry marks the join is the safety net's counted Warning (`net::merged_names`), never a
+%   creator invented from a remark (OXIDIZED_DESIGN_DIVERGENCES #991)
+% witness: none in the corpus (synthetic; review revZ18k3 R1, introduced by Z18k3); 2308.02720 kept at 11 creators
+% oracle:  pdflatex 0 errors: "Ann Able1, (deceased)†, Bob Baker2 / 1Univ One / 2Lab Two / †Died 2020"
+% engines: rust int155a4 = 3 creators, "(deceased)" one of its own holding "Died 2020", 0 warnings
+% expect:  0 errors, 1 warning (the safety net's, "Ann Able | (deceased)"); "Ann Able¹, (deceased)" (the name as it
+%          prints, its mark inside): Univ One, Died 2020; Bob Baker: Lab Two
+% status:  RED (int155a4) -> GREEN (Z18o)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, (deceased)$^{\dagger}$, Bob Baker$^{2}$\\ $^1$Univ One\\ $^2$Lab Two\\ $^\dagger$Died 2020}
+\maketitle
+Text.
+\end{document}

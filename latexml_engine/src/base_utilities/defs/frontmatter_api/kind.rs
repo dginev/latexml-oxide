@@ -81,7 +81,8 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
       })
   };
   let mut kept: Vec<(Vec<Token>, Vec<Token>)> = Vec::new();
-  let mut address_lines: Vec<Tokens> = Vec::new();
+  // (each address line, and for a mailbox link line the label before its link: [`mailbox_link_line`])
+  let mut address_lines: Vec<(Tokens, Option<Option<Tokens>>)> = Vec::new();
   // (for each address line, whether no line the entry keeps prints before it)
   let mut leading: Vec<bool> = Vec::new();
   let mut first = true;
@@ -97,14 +98,23 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
       && addresses_of(&rest).is_some()
     {
       kept.push((delimiter, mark));
-      address_lines.push(rest);
+      address_lines.push((rest, None));
       leading.push(false);
       first = false;
       continue;
     }
     // (a line a mark leads is no address line: its mark is no letter of an address, `$^2$bob@y.org`)
     if printed && author_mark_position(&line).is_none() && addresses_of(&line).is_some() {
-      address_lines.push(line);
+      address_lines.push((line, None));
+      leading.push(!prints_else);
+      first = false;
+      continue;
+    }
+    if printed
+      && author_mark_position(&line).is_none()
+      && let Some((label, link)) = mailbox_link_line(&line)
+    {
+      address_lines.push((link, Some(label)));
       leading.push(!prints_else);
       first = false;
       continue;
@@ -160,12 +170,23 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
     "{ENTRY_KINDED}=true,{LINE_FIRST}=true"
   )))
   .unlist();
-  for (line, leading) in address_lines.into_iter().zip(leading) {
+  for ((line, link_label), leading) in address_lines.into_iter().zip(leading) {
     let kinded = if leading && prints_else {
       &kinded_first
     } else {
       &kinded
     };
+    // (a mailbox link line: the link the e-mail, named by the label before it, else by the class's name of the entry)
+    if let Some(label) = link_label {
+      let calls = email_line_calls(line, AddressPlacement::Inner)?;
+      let calls = match (label, &entry_name) {
+        (Some(label), _) => named_email_calls(calls, &label),
+        (None, Some(name)) => optioned_email_calls(calls, name),
+        (None, None) => calls,
+      };
+      entry.extend(optioned_email_calls(calls, kinded));
+      continue;
+    }
     // (the class's name before the line's own label where both print: aa's `\mail{e-mail: x}`, "Correspondence to
     // e-mail:", 0805.1001; REVTeX's `\altaffiliation[Authors for Correspondence: ]{Email: …}`, 2208.10784)
     let (label, rest) = split_email_label(&line);

@@ -616,6 +616,9 @@ struct Resolver {
   annotated:          Vec<(usize, Vec<usize>)>,
   /// the pending entries whose marked line the binding attached by its group rule (`_grouped=true` at the call)
   grouped:            Vec<usize>,
+  /// the pending entries labelled by a leading mark whose `annotate=new` placement (`piled`) is its run's stopgap alone:
+  /// every author it reaches held the role before it ([`RUN_LEFTOVER`])
+  stopgap:            Vec<usize>,
   /// the requests a `\footnotemark` made (creator, label): a footnote's mark, answered by a note, never by a labelled
   /// affiliation (`Kui Wu\inst{3\footnotemark[1]}` under `\institute{A \and B …}`, 2404.09857)
   fn_requests:        Vec<(usize, String)>,
@@ -740,6 +743,7 @@ impl Resolver {
       empty_piled:        Vec::new(),
       annotated:          Vec::new(),
       grouped:            Vec::new(),
+      stopgap:            Vec::new(),
       fn_requests:        Vec::new(),
       class_requests:     Vec::new(),
       shared:             Vec::new(),
@@ -1094,6 +1098,14 @@ impl Resolver {
 /// The rule tag of an entry's e-mail whose two-letter local part is a word the entry prints, a mailbox spelling no one
 /// (`email_owners::is_entry_word_mailbox`; review rev100b S3).
 const ENTRY_MAILBOX: &str = " api:entry-mailbox";
+
+/// The rule tag of an e-mail inside an unlabelled entry whose carriers an `annotate=new`/`run` walk reached only by its
+/// stopgap — every author of the run held the role before it, the last one taken all the same (Perl's `new`,
+/// Base_Utility.pool.ltxml:520-536), not a run continuing the contact's before it: no mark, label or place ties the entry
+/// to them, so its one carrier is no owner of an address that spells no one (`owner:only-carrier` is a requested
+/// carrier's): emulateapj's `\author{Ann Able$^{1}$ and Bob Baker$^{1}$}\affil{$^1$Univ A}\affil{Email: zz@x.org}`
+/// prints the address under no one, the block's (review revZ18l F1, `Resolver::answer_inner_emails`).
+const RUN_LEFTOVER: &str = " api:run-leftover";
 
 /// The one of `names` an address spells (`spelled_owners`), if one — none for a list of local parts the address reader
 /// could not part (`lists_local_parts`); each name read as an address spells it, by its base letters ([`base_letters`])

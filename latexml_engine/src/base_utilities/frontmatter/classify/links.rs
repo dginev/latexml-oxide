@@ -399,3 +399,30 @@ pub(in crate::base_utilities) fn lists_local_parts(address: &str) -> bool {
     local.contains([',', ';', '|']) || (local.contains(['{', '}']) && !lone)
   })
 }
+
+/// A line that is one link to a mailbox, an address it prints or none (`\href{mailto:zz@x.org}{Write to us}`,
+/// `Contact: \href{mailto:…}{here}`; a target without `mailto:` that is a bare address, `\href{zz@x.org}{…}`, the ACL
+/// template's, [`links_a_mailbox`]): an e-mail line under the text before the link (user ruling 2026-10-20, batch 77p
+/// r8: 2601.00240, 2601.07974, 2604.23002, 2606.03014, 2605.18563; 2604.04847, 2605.29064, 2605.29893, 2606.01600) —
+/// that text as it prints without its font (`Correspondence:`), if any, and the link, kept a link, the address, whatever
+/// it prints (`Correspondence: \href{mailto:zz@x.org}{zz@x.org}`; a line [`line_addresses`] reads is read so before
+/// it). `None` for any other line. Perl reads no e-mail
+/// inside an affiliation: the link stays an affiliation's text (aas_support.sty.ltxml `\affil`). Review revZ18l F2,
+/// the home of the deleted `author_block/links.rs::mailto_line`; the Kind step's (`kind_entry_addresses`).
+pub(in crate::base_utilities) fn mailbox_link_line(
+  line: &Tokens,
+) -> Option<(Option<Tokens>, Tokens)> {
+  let (at, end) = link_line_link(line)?;
+  let v = line.unlist_ref();
+  let (target, printed) = link_texts(&v[..end], at);
+  if !links_a_mailbox(&target, &printed) {
+    return None;
+  }
+  // (the label as it prints, as `is_url_line` reads a link line's label)
+  let label = visible_name_text(&printed_words(&v[..at]));
+  let label = label.split_whitespace().collect::<Vec<_>>().join(" ");
+  Some((
+    (!label.is_empty()).then(|| Tokens::new(ExplodeText!(label.as_str()))),
+    Tokens::new(v[at..end].to_vec()),
+  ))
+}
