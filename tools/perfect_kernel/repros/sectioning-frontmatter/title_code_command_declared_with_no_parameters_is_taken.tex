@@ -1,0 +1,22 @@
+% mechanism: a command the class's title code defines where it reads `\@author` is undefined in the observer's
+%   rehearsal, its Error held; one declared reading arguments is no command a piece takes alone
+%   (`content::Field::held_undefined_at`, `title_code::reads_arguments`), a parameterless one is taken by the name
+%   (`emit::block_names`) and digested under the title code's definitions. `\newcommand{\address}[0]{…}` declares
+%   none: `[0]` is no parameter count (latex.ltx:1267-1281 `\@yargd@f`), so the name takes `\address` and its "x"
+%   prints. OXIDIZED_DESIGN_DIVERGENCES #983 (RA0; revPC3 finding 2)
+% witness: synthetic (revPC3 `p/s1b.tex`, here without its `\email`); the `[n]` reading is PC3's for pazhastl.cls:112
+%   (1108.4222, 1202.2889, 1206.0451, 1207.2226, 1301.4791, 1307.2761, 2103.05801, 2408.01858, 2412.06362; pazha2.cls
+%   2607.07582)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Ablex , Bob Baker"
+% engines: int156a0: 0 Errors, 0 Warnings; Ann Able's "x" in no output, uncounted (red)
+% expect:  0 Errors, 0 Warnings; Ann Able<sup>x</sup>, Bob Baker
+\documentclass{article}
+\makeatletter
+\def\@maketitle{\begin{center}{\newcommand{\address}[0]{\textsuperscript{x}}\bfseries\@author}\end{center}}
+\makeatother
+\begin{document}
+\title{T}
+\author{Ann Able\address, Bob Baker}
+\maketitle
+Text.
+\end{document}

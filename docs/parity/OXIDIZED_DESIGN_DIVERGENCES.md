@@ -33172,7 +33172,7 @@ pazhastl.cls:112's `\@maketitle` minipage (`\def\address##1{\textsuperscript{##1
 held undefined command that the title code defines, reading arguments, where it reads `\@author` (`emitter/content.rs`
 `Field::held_undefined_at`, the one predicate `past_held_undefined` and `block_names` share, leaves out such definees of
 `title_code_author_definitions`, told by its `reads_arguments` (both in `frontmatter/classify/title_code.rs` since Z18m), on the title code's own statement: a parameter in a `\def`'s parameter text, a
-`\newcommand`'s `[n]`; the flush's net spares them already, by its meaning recorder) — the rehearsal, without the title
+`\newcommand`'s `[n]` with n > 0; the flush's net spares them already, by its meaning recorder) — the rehearsal, without the title
 code's definitions, read the argument's print as the block's own — so the e-mail piece is `\email{…}` alone and
 `\address{1}` stays the name's mark, digested under the title code's definitions. A parameterless definee is still taken:
 it prints, under those definitions, what the piece holds (aaai2026.sty's `\co`, the corresponding-author note: leaving it
@@ -33204,9 +33204,17 @@ a two-author block (revPC3's `vldb/v1.tex`: W 4 with `\normalsize`, 2 without), 
 unexpanded it is read into 7 creators with their affiliations and e-mails (2 Warnings fewer) — the block's length plays
 no part. Repro `own_email_normalsize_rehearsal_reads_in_budget` (the class's `\email` and `\normalsize` stood in for in
 the preamble; int155a2: `rehearsal_budget`, the block whole); guard
-`perfect_kernel_batchz18o::own_email_normalsize_rehearsal_reads_in_budget` (Z18o). **Known RED (revPC3, synthetic):** `content.rs` `reads_arguments` takes any `[` as a
-parameter count, so `\newcommand{\x}[0]{x}` is kept out of the piece and its "x", which pdflatex prints, is in neither
-output (0 Errors; the base wrote an `ERROR`); `n > 0` is the fix. Pre-existing (revPC3): a real undefined `\inst{2}` in
+`perfect_kernel_batchz18o::own_email_normalsize_rehearsal_reads_in_budget` (Z18o). A definee reads arguments by a `\def` parameter or
+a `\newcommand`/`\providecommand` count n > 0 (`classify/title_code.rs` `reads_arguments`, RA0, revPC3 finding 2):
+`[0]` declares none (latex.ltx:1267-1281), nor does a `\def`'s delimiter alone (`\def\x[]{…}`, as `\def\x.{…}` was
+read already). After a name, such a definee is the name's and prints (`\author{Ann Able\address, …}` under
+`\newcommand{\address}[0]{\textsuperscript{x}}`: "x" had been in no output, uncounted); repro
+`title_code_command_declared_with_no_parameters_is_taken`, guard
+`perfect_kernel_batchra0::a_title_code_command_declared_with_no_parameters_is_taken`, the forms pinned by
+`title_code`'s unit test `reads_arguments_counts_parameters_not_brackets`. **Known RED (RA0, synthetic):** right after
+an `\email{…}` it is the e-mail piece's, whose contact is digested without the title code's definitions:
+`<sup>*</sup><ERROR>\address</ERROR>` and 1 Error where pdflatex prints "x" (int156a0: 0 Errors, the "x" in no output,
+uncounted; the `\def\x[]` shape the same); repro `title_code_command_with_no_parameters_after_an_email_red`. Pre-existing (revPC3): a real undefined `\inst{2}` in
 an article author raises no Error (the rehearsal binds `\inst` as a mark, `rehearsal.rs` ~572) where pdflatex does;
 `\thanks{Funded\address{9}}` under the title code's `\address` raises a false Error. **Not raised, by design:** the `Error:expected:\fi` chains and `\@authorii`…`\@authorv` the old
 driver raised on sibarticle.sty's `\ifnum \c@numAuthors>1 \and …\fi` (1603.08231: 18, 2112.06251: 12): pdflatex 0

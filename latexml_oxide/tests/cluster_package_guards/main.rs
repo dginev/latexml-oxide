@@ -487,6 +487,9 @@ mod perfect_kernel_batchpb;
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.
 mod perfect_kernel_batchpc3;
 mod perfect_kernel_batchr1;
+/// RA0: a title-code definee declared with no parameters (`\newcommand`'s `[0]`) is taken by the name it follows;
+/// OD #983.
+mod perfect_kernel_batchra0;
 mod perfect_kernel_batchrc1;
 mod perfect_kernel_batchs5;
 mod perfect_kernel_batchta1;
