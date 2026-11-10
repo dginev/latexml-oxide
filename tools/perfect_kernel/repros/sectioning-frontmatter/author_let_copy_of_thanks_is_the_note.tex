@@ -1,0 +1,17 @@
+% mechanism: a `\let` copy of `\thanks` in the author line (`\let\Thanks\thanks`, acl.sty's own `\let\Thanks\thanks`
+%   in 2407.16574): bound by its meaning to `\thanks`'s event (`copies_bound_by_meaning`, OD #994), so the note is the
+%   author's `thanks` contact, as `\thanks` written out is; bound by name only, the copy printed the kernel's note and
+%   the creator held none
+% witness: 2407.16574 (acl.sty `\let\Thanks\thanks`, `\author{… Yoon$^{1}$\Thanks{ Equal contribution}…}`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗" and "Bob Baker", the note "Univ A, ann@a.org"
+% engines: OC1b: two creators, Ann Able with no note
+% expect:  0 errors, 0 warnings; creators Ann Able (thanks "Univ A, ann@a.org"), Bob Baker
+% status:  GREEN (SEP1; guard perfect_kernel_batchsep1)
+\documentclass{article}
+\let\Thanks\thanks
+\title{T}
+\author{Ann Able\Thanks{Univ A, ann@a.org} \and Bob Baker}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -574,6 +574,68 @@ const ALWAYS_BOUND: &[(&str, &str)] = &[
   ("\\lx@request@frontmatter@annotation", "\\lx@fm@obs@request"),
 ];
 
+/// The [`ALWAYS_BOUND`] commands a copy of is bound as the command is, by its meaning ([`copies_bound_by_meaning`]): the
+/// author line's separators, its row break and its notes. TeX's `\let\nx\and` makes `\nx` the separator, which pdflatex
+/// and Perl part the names at (OXIDIZED_DESIGN_DIVERGENCES #994).
+const BOUND_BY_MEANING: &[&str] = &["\\and", "\\And", "\\AND", "\\\\", "\\thanks", "\\footnote"];
+
+/// How many of the document's own macros [`copies_bound_by_meaning`] reads into, at most, from one block.
+const COPY_SEARCH_MACROS: usize = 256;
+
+/// The `\let` copies of a [`BOUND_BY_MEANING`] command the block's tokens reach — spelled in it, or held in a macro of the
+/// document's own it spells (`\newcommand\aut{Ann \nx Bob}`, `\author{\aut}`) — each with the event constructor the
+/// command is bound to: a command whose meaning is the command's own definition (`\ifx` equal, and that definition made
+/// for it, so a `\relax` or an undefined name is no copy of a separator `\let` to `\relax` or left undefined). Read
+/// before the bindings change any meaning; a name bound by its own name, or one the binding declares a block break, is
+/// left to those. The kernel's `\and` is a constructor printing " and " (`sect05.rs`): bound by name only, the copy kept
+/// it, the names merged into one creator (OC1's `\let` probe; article, eptcs, IEEEtran journal).
+fn copies_bound_by_meaning(
+  tokens: &Tokens,
+  block_breaks: &[(&str, BreakKind)],
+) -> Vec<(Token, &'static str)> {
+  let mut found = Vec::new();
+  // (the distinct commands read, few: a block's and its macros')
+  let mut seen: Vec<Token> = Vec::new();
+  let mut pending: Vec<Token> = tokens.unlist_ref().iter().rev().copied().collect();
+  let mut macros = 0;
+  while let Some(t) = pending.pop() {
+    if !matches!(t.code, Catcode::CS | Catcode::ACTIVE) || seen.contains(&t) {
+      continue;
+    }
+    seen.push(t);
+    let by_name = t.with_cs_name(|name| {
+      ALWAYS_BOUND.iter().any(|(cs, _)| *cs == name)
+        || BOUND_WHEN_DEFINED.iter().any(|(cs, ..)| *cs == name)
+        || block_breaks.iter().any(|(cs, _)| *cs == name)
+    });
+    if by_name {
+      continue;
+    }
+    let Ok(Some(defn)) = lookup_definition(&t) else {
+      continue;
+    };
+    let made_for = *defn.get_cs();
+    let separator = BOUND_BY_MEANING
+      .iter()
+      .find(|cs| made_for == T_CS!(**cs) && x_equals(&t, &made_for));
+    if let Some(cs) = separator {
+      if let Some((_, target)) = ALWAYS_BOUND.iter().find(|(bound, _)| bound == cs) {
+        found.push((t, *target));
+      }
+      continue;
+    }
+    if macros < COPY_SEARCH_MACROS
+      && defn.is_expandable()
+      && defn.get_origin() == DefinitionOrigin::Document
+      && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+    {
+      macros += 1;
+      pending.extend(body.unlist_ref().iter().rev().copied());
+    }
+  }
+  found
+}
+
 /// What a block's own API calls are in its rehearsal, read as digested: an API call's content, rehearsed alone, has no names
 /// of its own (a `\lx@add@creator` a class's address holds prints nothing there, 2203.02446, 1709.02726, 2411.10888).
 const BOUND_IN_A_BLOCK: &[(&str, &str)] = &[
@@ -630,12 +692,16 @@ const TITLE_FOOTNOTE_HOOK: &str = crate::latex_constructs::TITLE_THEFOOTNOTE;
 /// affiliation (the reading's, `resolver::blocks`). A juggle reopens the tabular it closes, so a macro that only closes one (an
 /// `\\affiliation`'s `\\def\\ex{\\end{tabular}}` closing the tabular its `\\bx` opened, `perfect_kernel_batchz4`; an
 /// `\\author`'s `\\etab` closing the block's own) keeps its meaning, in any rehearsal; a command the binding declares a
-/// block break keeps its meaning.
+/// block break keeps its meaning. Before any of it, a `\let` copy of a separator or note command the block reaches is
+/// bound as the command is ([`copies_bound_by_meaning`]: `\let\nx\and` parts the names).
 fn install_event_bindings(
   tokens: &Tokens,
   title_marks: TitleMarks,
   block_breaks: &[(&str, BreakKind)],
 ) -> Result<()> {
+  for (copy, target) in copies_bound_by_meaning(tokens, block_breaks) {
+    let_i(&copy, &T_CS!(target), None);
+  }
   for t in tokens.unlist_ref() {
     let declared = || t.with_cs_name(|name| block_breaks.iter().any(|(cs, _)| *cs == name));
     if let Some(between) = tabular_juggle_between(t)

@@ -7,9 +7,10 @@
 //! reading, which P2 (the bindings no longer pre-splitting by spelling) must keep.
 //!
 //! Each converts its repro and asserts the exact Error and Warning counts and every creator's name and contacts in
-//! order. The shapes still red on the base, each a mechanism of its own, are catalog repros with no guard:
-//! `author_let_copy_of_and_parts_the_names` (a `\let` copy of `\and` prints no `Sep(And)` in the rehearsal) and
-//! `ieeetran_author_grid_in_a_macro` / `ieeetran_author_grid_through_a_wrapper` (the IEEEtran grid's token split).
+//! order. The shapes still red on the base, each a mechanism of its own: `author_let_copy_of_and_parts_the_names` (a
+//! `\let` copy of `\and` printed no `Sep(And)` in the rehearsal; green since SEP1, the copy bound by its meaning,
+//! `perfect_kernel_batchsep1`) and the catalog repros with no guard `ieeetran_author_grid_in_a_macro` /
+//! `ieeetran_author_grid_through_a_wrapper` (the IEEEtran grid's token split).
 //! These are the block routes only: an API creator call holding the `\and` (acmart's `\author` with no comma) is not
 //! cut (OD #993 "Open: the API route"; catalog repros `acmart_author_{and,macro_held_and}_parts_the_names_red`).
 

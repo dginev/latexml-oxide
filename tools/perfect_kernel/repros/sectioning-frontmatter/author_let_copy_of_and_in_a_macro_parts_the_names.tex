@@ -1,0 +1,19 @@
+% mechanism: a `\let` copy of `\and` held in a macro of the document's own (`\let\nx\and`,
+%   `\newcommand\aut{Ann Able \nx Bob Baker}`, `\author{\aut}`): the rehearsal's search for copies reads into the
+%   document's macros the block spells (`copies_bound_by_meaning`, OD #994), binds `\nx` to the separator's event, and
+%   the reading cuts the block at that `Sep(And)`. The two Warnings are the emitter writing names its events don't
+%   spell (a macro's expansion: P3, as OC1's macro-held rows)
+% witness: SEP1's sibling of OC1's `\let` probe (the copy one macro deep)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able" and "Bob Baker" side by side
+% engines: OC1b: one creator "Ann Able and Bob Baker", 1 error, 1 warning
+% expect:  0 errors, 2 warnings; creators Ann Able, Bob Baker
+% status:  GREEN (SEP1; guard perfect_kernel_batchsep1)
+\documentclass{article}
+\let\nx\and
+\newcommand\aut{Ann Able \nx Bob Baker}
+\title{T}
+\author{\aut}
+\begin{document}
+\maketitle
+Text.
+\end{document}
