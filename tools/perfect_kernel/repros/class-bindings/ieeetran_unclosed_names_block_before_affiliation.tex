@@ -1,0 +1,19 @@
+% witness: 2605.20445 (IEEEtran conference: `\IEEEauthorblockN{Arslan Shaukat\\ \IEEEauthorblockA{…}\\
+%          \IEEEauthorblockN{Umer Asgher} \IEEEauthorblockA{…} }`, the names block's brace closed after the next
+%          author's blocks)
+% oracle:  pdflatex 0 errors: "Ann Able", "Zebra University", "ann@z.edu", then "Bob Baker", "Yak Institute",
+%          "bob@y.edu" (two stacked authors, a names block only setting its style)
+% engines: rust int154q = Bob Baker lost, 2 warnings; int154o (CR10a) = "Bob Baker" Ann Able's affiliation, his lines
+%          hers, 2 warnings (the inner block spliced into the outer's names); Perl 0.8.8 = 0 errors, one creator "Ann
+%          Able Bob Baker" holding both affiliations
+% expect:  0 errors, 0 warnings; Ann Able (Zebra University, ann@z.edu), Bob Baker (Yak Institute, bob@y.edu): the
+%          outer block closed before its own affiliation block, the rest read at the top level as stacked blocks
+% status:  RED (int154o) -> GREEN (CR10c) — perfect_kernel_batchcr10c::unclosed_names_block_closes_before_its_affiliation
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\\ \IEEEauthorblockA{Zebra University\\ ann@z.edu}\\ \IEEEauthorblockN{Bob Baker} \IEEEauthorblockA{Yak Institute\\ bob@y.edu}}}
+\maketitle
+Body.
+\end{document}

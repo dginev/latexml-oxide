@@ -1,0 +1,21 @@
+% witness: none on arXiv (OXIDIZED_DESIGN_DIVERGENCES #987's labelled-path RED, review revCR67 CR6 S1): the old name
+%          `\authorblockN` in authblk's labelled `\author`, beside an unlabelled `\IEEEauthorblockN` call
+% oracle:  pdflatex 0 errors: "Ann AbleUniv X1 and Cy Coe, Dee Dale2", "2Univ Z" (IEEEtran.cls 1.8 defines no
+%          `\authorblockN`, hence the `\providecommand`)
+% engines: rust int154o = Ann Able (Univ X), Cy Coe and Dee Dale without Univ Z, a nameless creator holding it,
+%          0 warnings (the labelled call rewrote `\IEEEauthorblockN` only); Perl 0.8.8 = 0 errors, one creator "Cy Coe,
+%          Dee Dale" with Univ Z
+% expect:  0 errors, 0 warnings; Ann Able (Univ X); Cy Coe and Dee Dale, each labelled 2, Univ Z
+% status:  RED (int154o) -> GREEN (CR10c) — perfect_kernel_batchcr10c::old_block_name_takes_the_label
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\usepackage{authblk}
+\providecommand{\authorblockN}{\IEEEauthorblockN}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ X}}
+\author[2]{\authorblockN{Cy Coe, Dee Dale}}
+\affil[2]{Univ Z}
+\maketitle
+Body.
+\end{document}
