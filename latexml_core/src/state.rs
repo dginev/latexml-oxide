@@ -5926,6 +5926,7 @@ pub const BRACED_ARGUMENT_TYPES: &[&str] = &[
   "Position",
   "Semiverbatim",
   "ExpandedSemiverbatim",
+  "UnexpandedSemiverbatim",
   "Undigested",
   "Digested",
   "Expanded",

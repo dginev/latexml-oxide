@@ -19244,4 +19244,7 @@ one creator holding `<ERROR>\affiliations</ERROR>`):
 Witnesses 2602.18351 (main.tex line 110; 1 Error with `--includestyles` too, kr.sty then loaded) and 2604.26688
 (main.tex line 322); 2405.06973 uses kr.sty the same way (not run on Perl). Not in Rust: the observer's rehearsal holds
 the block's Error, and the flush's net raises no command the flush's code assigns a meaning — the class's `\maketitle`
-defining it (`reading::HeldUndefined`): 0 Errors, the affiliation "Univ X" (OXIDIZED_DESIGN_DIVERGENCES #983).
+defining it (`reading::HeldUndefined`): 0 Errors, the affiliation "Univ X" (OXIDIZED_DESIGN_DIVERGENCES #983). A
+command with an argument the title code defines, right after an e-mail call (pazhastl.cls:112's `\def\address##1{…}`:
+`\author{Ann Able\email{ann@x.org}\address{1}}`, Perl 1 Error `\address`), is no real undefined command for the e-mail
+piece either (`content::Field::held_undefined_at`): 0 Errors, `\address{1}` the name's mark (1108.4222, 2607.07582; PC3).

@@ -940,6 +940,22 @@ LoadDefinitions!({
     },
     semiverbatim => Some(vec!['%']));
 
+  // Rust-only: a Semiverbatim whose argument is not expanded before it is digested (Parameter.pm:124-132's pre-expansion
+  // left out, `Parameter::digest`): its tokens neutralized as read and digested in order, as a class's own macro reads its
+  // `#1`. For the frontmatter rehearsal's reading of a class's own e-mail command (`\lx@fm@obs@email@own`): sig-alternate.cls:462
+  // `\def\email#1{{{\eaddfnt{\par #1}}}}` on `\email{\fontsize{11pt}{12pt}\selectfont …}` — the kernel `\fontsize`'s
+  // `\@defaultunits` (`\afterassignment\remove@to@nnil`, latex.ltx:10537, :12678) expanded ahead of its assignment missed
+  // its `\@nnil` delimiter and `\@nil` ran undefined, an Error pdflatex never raises (1802.01191).
+  DefParameterType!(UnexpandedSemiverbatim,
+    sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
+    reversion => sub[arg, _inner, _extra] {
+      let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+      read_tokens.extend(arg.iter().map(|t| t.revert()));
+      read_tokens.push(T_END!());
+      Ok(Tokens::new(read_tokens))
+    },
+    semiverbatim => Some(Vec::new()));
+
   // Semiverbatim variant for FILE-NAME arguments that may arrive as
   // expandable tokens: tokenize PLAIN at the CURRENT catcodes (so an expl3
   // `\l_..._tl` class name stays ONE control sequence — the real kernel's

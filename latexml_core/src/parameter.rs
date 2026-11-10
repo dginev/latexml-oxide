@@ -395,6 +395,16 @@ impl Parameter {
     !arena::with(self.name, |n| n == "ExpandedSemiverbatim")
   }
 
+  /// Whether a semiverbatim argument is expanded before it is digested (Perl Parameter.pm:124-132, "Expand (before
+  /// digest), so tokens can be neutralized"): every one but the Rust-only `UnexpandedSemiverbatim`, whose tokens are
+  /// neutralized as read and digested in order, as a macro's `#1` is — `\afterassignment\remove@to@nnil`, the kernel
+  /// `\fontsize`'s `\@defaultunits` (latex.ltx:10537), expanded ahead of its assignment missed its `\@nnil` delimiter
+  /// and `\@nil` ran undefined (1802.01191's `\email{\fontsize{11pt}{12pt}\selectfont …}`).
+  #[inline(never)]
+  fn semiverbatim_expands_before_digest(&self) -> bool {
+    !arena::with(self.name, |n| n == "UnexpandedSemiverbatim")
+  }
+
   #[inline]
   pub fn setup_catcodes(&self) {
     if self.semiverbatim_read_setup() {
@@ -572,7 +582,19 @@ impl Parameter {
       // read-time carve-out lives in semiverbatim_read_setup) — use the
       // raw begin, not setup_catcodes.
       begin_semiverbatim(self.semiverbatim.as_deref());
-      if value_arg.is_tokens() {
+      if value_arg.is_tokens() && !self.semiverbatim_expands_before_digest() {
+        value_arg = value_arg
+          .owned_tokens()
+          .map_or_else(ArgWrap::default, |value| {
+            ArgWrap::Tokens(Tokens::new(
+              value
+                .unlist()
+                .into_iter()
+                .map(|t| t.neutralize(&[]))
+                .collect(),
+            ))
+          });
+      } else if value_arg.is_tokens() {
         if let Some(value) = value_arg.owned_tokens() {
           let neutralized = gullet::reading_from_mouth(Mouth::default(), move || {
             gullet::unread(value);
