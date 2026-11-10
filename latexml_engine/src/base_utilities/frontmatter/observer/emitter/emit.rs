@@ -1590,10 +1590,17 @@ fn item_call(
       } else {
         None
       };
-      // (an entry the block prints moves back to its place by its zone, what a label places alone: `at_queue_position`)
+      // (an entry the block prints moves back to its place by its zone, what a label places alone: `at_queue_position`;
+      // an entry the reading shares among every author says so, `insert::ROW_SHARED`, which the Kind step for an address
+      // line reads)
+      let keys = if assoc.rule.contains("api:share:authors") {
+        s!("label={{{label}}},{}={{true}}", insert::ROW_SHARED)
+      } else {
+        s!("label={{{label}}}")
+      };
       rekeyed(
         emails_cut.as_ref().unwrap_or(command),
-        &key_tokens(&s!("label={{{label}}}")),
+        &key_tokens(&keys),
         true,
         separate.contains(&index),
         by_label(assoc) || !matches!(role, "affiliation" | "address"),

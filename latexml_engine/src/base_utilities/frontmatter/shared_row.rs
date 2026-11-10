@@ -4,7 +4,9 @@ use super::*;
 
 mod emails;
 use emails::row_email_calls;
-pub(in crate::base_utilities) use emails::{entry_email_cut, is_call_separator, shared_call_item};
+pub(in crate::base_utilities) use emails::{
+  entry_email_cut, is_call_separator, is_whole_address, shared_call_item,
+};
 
 /// The label every author of a flush requests, which a shared contact ([`share_row_contacts`]) is placed by.
 const SHARED_LABEL: &str = "shared";

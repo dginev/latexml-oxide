@@ -509,6 +509,9 @@ struct Resolver {
   /// whether it is a piece its institute's marks split it into (`_markpiece=true`: the numbers shown by hand label the
   /// other pieces, not it — [`Resolver::share_unpicked`])
   shared:             Vec<(usize, bool, bool)>,
+  /// each e-mail call of a `_share=authors` entry written out (`row:unit:<n>` on each of its addresses' entries): the
+  /// call whole, which [`Resolver::answer_shared_emails`] places as written where all its addresses go one way
+  row_units:          Vec<Assoc>,
   /// the pending entries (their place in `pending`) a call labelled by a key its class never prints
   /// (`Policy::keyed_labels`, elsarticle's `\address[*]{…}`): no footnote's mark answers them (`answer_pending`)
   keyed:              Vec<usize>,
@@ -620,6 +623,7 @@ impl Resolver {
       fn_requests:        Vec::new(),
       class_requests:     Vec::new(),
       shared:             Vec::new(),
+      row_units:          Vec::new(),
       keyed:              Vec::new(),
       marked_entries:     Vec::new(),
       note_texts:         Vec::new(),
