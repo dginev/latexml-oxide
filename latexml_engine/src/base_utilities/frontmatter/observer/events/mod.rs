@@ -233,6 +233,15 @@ pub struct PrintedLabel {
   pub span:       Option<(u16, u16)>,
 }
 
+/// The role of a picture's Note event (a pgf/TikZ picture in the block: `Lexer::walk_whatsit`), which the writer writes as
+/// the picture's tokens whole (`emit::item_call`), never as an argument or a text.
+pub const PICTURE_NOTE: &str = "picture";
+
+/// Whether `event` is a picture's Note ([`PICTURE_NOTE`]).
+pub(in crate::base_utilities) fn is_picture_note(event: &Event) -> bool {
+  event.kind == EventKind::Note && event.role.as_deref() == Some(PICTURE_NOTE)
+}
+
 /// One event of an author block.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Event {
@@ -1647,6 +1656,19 @@ impl Walker {
         self.atoms.extend(inside.into_iter().filter(|atom| {
           matches!(atom, Atom::Event(e) if matches!(e.kind, EventKind::Note | EventKind::Contact))
         }));
+      },
+      // A pgf/TikZ picture (pgfsys-latexml.def's `\lxSVG@insertpicture`) is no ink of a name or an item: a Note of its own,
+      // role `picture` ([`PICTURE_NOTE`]), its text its text nodes' ([`ink_of`], none for a drawing alone), kept whole as
+      // markup by the writer — never its drawing's transforms and path data read as a name or written as text. Inside
+      // `\author` it goes out of the name, a frontmatter note in source order (user ruling 2026-11-10, "a note, kept
+      // whole", OXIDIZED_DESIGN_DIVERGENCES #989): 2404.13552's page-overlay copyright notice was a creator
+      // "1.00.00.01.0", its 21 words lost. Inside a note it is that note's, printed in it (a `\thanks{… \tikz\draw …;}` had
+      // its path data as the note's text, CR5).
+      _ if picture_text(w).is_some() => {
+        let mut picture = Event::new(EventKind::Note);
+        picture.role = Some(PICTURE_NOTE.to_string());
+        picture.text = ink_of(d);
+        self.event(picture, d, nest);
       },
       _ if w.is_math() || cs.contains("math") && w.get_body().ok().flatten().is_some() => {
         self.walk_math(d, w, nest)

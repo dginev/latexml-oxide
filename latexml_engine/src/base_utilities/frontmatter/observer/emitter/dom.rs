@@ -28,7 +28,7 @@ impl Kind {
   pub(super) fn of_block(role: &str) -> Kind {
     match role {
       "affiliation" | "address" => Kind::Affiliation,
-      "note" | "thanks" | "legend" | "footnotetext" => Kind::Note,
+      "note" | "thanks" | "legend" | "footnotetext" | events::PICTURE_NOTE => Kind::Note,
       other => Kind::Contact(other.to_string()),
     }
   }

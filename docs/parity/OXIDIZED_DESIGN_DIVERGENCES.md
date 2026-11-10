@@ -33446,3 +33446,35 @@ Repros `class-bindings/ieeetran_authblk_blockn_names`, `class-bindings/ieeetran_
 `perfect_kernel_batchcr6::{authblk_author_reads_ieee_author_blocks, authblk_author_blocks_accumulate_and_take_labels}`.
 
 **Known RED (review revCR67, CR6 S1, synthetic — TL 2025's pdflatex cannot compile it):** the labelled path rewrites `\IEEEauthorblockN` only, not its old alias `\authorblockN`, so `\author[1]{\authorblockN{Ann Able} …}` with `\affil[1]{Univ Z}` gives the names no Univ Z (a nameless creator holds it, 0 Warnings; the base lost the names entirely).
+
+### 989. A pgf/TikZ picture in a frontmatter field is kept as markup: inside `\author` a note of its own, inside a note that note's (CR8)
+
+**What.** The observer's lexer reads a pgf/TikZ picture (pgfsys-latexml.def's `\lxSVG@insertpicture`) as one Note event
+of role `picture` (`events::PICTURE_NOTE`, `Lexer::walk_whatsit`), its text its text nodes' only (`ink_of`), never its
+drawing's transforms and SVG path data. In an author block it goes out of the name: the reading attaches it as any
+adjacent note (to the name before it, in source order) and the writer writes it as a frontmatter `ltx:note` holding the
+picture's tokens whole (`emit::item_call`'s picture branch), so the `ltx:picture` and its `svg` are kept; a picture
+printing no text is keyed by its place (`plan::note_key`). Inside a `\thanks` it is part of the note's text and is
+digested with it. A span is its boxes' (`deep_span`), so it ends before what its call read past its last box and
+printed nothing of (`\tikz…;`'s `;`, a `\thanks{…\tikz…;}`'s `}`): `emit::past_unprinted_tail` grows it, up to the next
+event's start, over the group it leaves open and never past a brace closing a group it does not open. With that tail
+the rewritten picture keeps its `;` and the note's argument is balanced.
+
+**Why.** User ruling 2026-11-10: a picture or a page-overlay notice inside `\author` is "a note, kept whole", never
+read as a name. Perl (0 Errors on the witness) keeps it inside the personname. That placement is the divergence. pdflatex
+prints the notice at the page foot and a drawing where it stands.
+
+**Witnesses** (int154t → CR8): 2404.13552 (a creator "1.00.00.01.0" and the notice's 21 words lost, 1 Warning → 6
+creators, the notice a note of the last one, holding the picture, 0 frontmatter Warnings). CR5's textless repro: the
+note "Zebra University M 0 0 L 39.37 0fill:none" ("note no argument") → "Zebra University" with its picture.
+
+**Left** (pre-existing, recorded, not changed): an `\includegraphics` beside a name in `\author` is still dropped
+without a Warning (`\author{Ann Able \includegraphics[width=1cm]{example-image}}`; Perl keeps it in the personname). A
+LaTeX `picture` environment there is read as text, as before (`\begin{picture}(10,10)\put(0,0){Qwerty}\end{picture}`
+→ the name "Ann Able Qwerty", the same words pdflatex prints). A drawing on an affiliation line of `\author`
+(`Ann Able\\ Zebra University \tikz\draw…;`) is now a note beside the affiliation rather than inside it (the base had an
+empty picture there and 1 Error).
+
+Repros `sectioning-frontmatter/fm_picture_text_in_author_is_a_note`, `fm_picture_textless_in_author_is_a_note`,
+`fm_picture_textless_in_thanks_stays_in_note`; guards `perfect_kernel_batchcr8::{picture_in_author_is_a_note_kept_whole,
+textless_picture_in_author_is_a_note, textless_picture_in_thanks_stays_in_the_note}`.

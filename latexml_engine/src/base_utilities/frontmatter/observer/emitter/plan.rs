@@ -9,8 +9,8 @@ use std::collections::BTreeSet;
 use super::{
   super::{
     events::{
-      Event, EventKind, FontScope, Wrap, changes_font, entry_font, font_declaration, switch_free,
-      text_font_command,
+      Event, EventKind, FontScope, PICTURE_NOTE, Wrap, changes_font, entry_font, font_declaration,
+      switch_free, text_font_command,
     },
     ledger::{ApiCall, Outcome},
     resolver::{base_letters, spelled_name},
@@ -40,10 +40,23 @@ pub(super) fn creator_items(c: &RCreator) -> Vec<(Key, &Assoc)> {
     items.push((contact_key(a), a));
   }
   for a in &c.notes {
-    items.push(((Kind::Note, norm(&a.text)), a));
+    items.push(((Kind::Note, note_key(a)), a));
   }
   items.retain(|(key, _)| !key.1.is_empty());
   items
+}
+
+/// A note's comparison key: its text, normalized; a picture's ([`PICTURE_NOTE`]) printing no text (a drawing alone,
+/// a logo) keyed by where it is, as no text keys it — an item still, written whole (OD #989).
+pub(super) fn note_key(a: &Assoc) -> String {
+  let key = norm(&a.text);
+  if key.is_empty()
+    && a.role == PICTURE_NOTE
+    && let Some((at, Some((start, end)))) = a.source
+  {
+    return s!("picture@{at}:{start}-{end}");
+  }
+  key
 }
 
 /// A resolved creator's contact `a` as the comparison keys it ([`creator_items`]).
@@ -60,7 +73,14 @@ pub(super) fn block_items(resolved: &Resolved) -> Vec<(Key, &Assoc)> {
   resolved
     .block
     .iter()
-    .map(|a| ((Kind::of_block(&a.role), norm(&a.text)), a))
+    .map(|a| {
+      let key = if a.role == PICTURE_NOTE {
+        note_key(a)
+      } else {
+        norm(&a.text)
+      };
+      ((Kind::of_block(&a.role), key), a)
+    })
     .filter(|(key, _)| !key.1.is_empty())
     .collect()
 }
