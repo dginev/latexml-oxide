@@ -242,11 +242,13 @@ fn closes_only_its_own_groups(tokens: &[Token]) -> bool {
 
 /// Whether the title-code statement `statement` ([`title_code_author_statements`]) defines
 /// `definee` reading arguments: a parameter in a `\def`'s parameter text (pazhastl.cls:112's
-/// `\def\address##1{\textsuperscript{##1}}`), or a `\newcommand`'s `[n]` past its definee. Its argument prints what the
-/// rehearsal, which runs without the title code's definitions, read as the block's own (`\address{1}`'s "1", a mark), so
-/// the command is no undefined token for a piece to take alone (`emitter::content::Field::held_undefined_at`, PC3's;
-/// Z18m moved it here with this reader); a parameterless one
-/// (aaai2026.sty's `\co`, a note; a `\let`, a `\newcounter`'s `\c@x`) is.
+/// `\def\address##1{\textsuperscript{##1}}`; a delimiter alone, `\def\x[]{…}`, reads none), or a `\newcommand`'s
+/// (`\providecommand`'s) `[n]` past its definee with n > 0: `[0]` defines a parameterless macro (latex.ltx:1267-1281,
+/// `\@yargd@f`'s parameter text runs `#1`…`#n`, none for 0). A count that is no number here (`[\n]`) is taken as
+/// reading. Its argument prints what the rehearsal, which runs without the title code's definitions, read as the block's
+/// own (`\address{1}`'s "1", a mark), so the command is no undefined token for a piece to take alone
+/// (`emitter::content::Field::held_undefined_at`, PC3's; Z18m moved it here with this reader); a parameterless one
+/// (aaai2026.sty's `\co`, a note; `\newcommand{\x}[0]{…}` (RA0); a `\let`, a `\newcounter`'s `\c@x`) is.
 pub(in crate::base_utilities::frontmatter) fn reads_arguments(
   definee: &Token,
   statement: &[Token],
@@ -255,11 +257,22 @@ pub(in crate::base_utilities::frontmatter) fn reads_arguments(
     return false;
   };
   // (its parameter text up to the body's group, past a braced definee's closing brace: a `\newcommand{\x}`'s `[1]`)
-  statement[at + 2..]
+  let mut parameters = statement[at + 2..]
     .iter()
     .skip_while(|t| t.group_step() == -1)
-    .take_while(|t| t.group_step() != 1)
-    .any(|t| t.get_catcode() == Catcode::PARAM || *t == T_OTHER!("["))
+    .take_while(|t| t.group_step() != 1);
+  if ![T_CS!("\\newcommand"), T_CS!("\\providecommand")].contains(&statement[0]) {
+    return parameters.any(|t| t.get_catcode() == Catcode::PARAM);
+  }
+  // (the count in its first `[…]`, a second being the optional argument's default; none, a parameterless macro)
+  let count: String = parameters
+    .skip_while(|t| **t != T_OTHER!("["))
+    .skip(1)
+    .take_while(|t| **t != T_OTHER!("]"))
+    .filter(|t| t.get_catcode() != Catcode::SPACE)
+    .map(ToString::to_string)
+    .collect();
+  count.parse::<u32>().map_or(!count.is_empty(), |n| n > 0)
 }
 
 #[cfg(test)]
@@ -356,6 +369,38 @@ mod tests {
         ),
         (r"\co".to_string(), r"\def\co{\value{corfn}}".to_string())
       ]
+    );
+  }
+
+  #[test]
+  fn reads_arguments_counts_parameters_not_brackets() {
+    setup();
+    // a title-code definee reads arguments by a `\def` parameter or a `\newcommand`/`\providecommand` count n > 0;
+    // `[0]` and a `\def`'s bracket delimiter alone read none (RA0, revPC3 finding 2)
+    let definitions = definitions_at_author(
+      r"\def\a##1{##1}\def\b[]{b}\def\c[##1]{##1}\newcommand{\d}[0]{d}\newcommand*\e[ 0 ]{e}\providecommand{\f}[0]{f}\newcommand{\g}[1]{g}\providecommand*{\h}[2]{h}\newcommand\i[1][x]{i}\newcommand{\j}{j}\newcommand\k[\n]{k}\let\l\relax\@author",
+    )
+    .expect("reads \\@author");
+    assert_eq!(
+      definitions
+        .iter()
+        .map(|(definee, statement)| (definee.to_string(), reads_arguments(definee, statement)))
+        .collect::<Vec<_>>(),
+      [
+        (r"\a", true),
+        (r"\b", false),
+        (r"\c", true),
+        (r"\d", false),
+        (r"\e", false),
+        (r"\f", false),
+        (r"\g", true),
+        (r"\h", true),
+        (r"\i", true),
+        (r"\j", false),
+        (r"\k", true),
+        (r"\l", false),
+      ]
+      .map(|(name, reads)| (name.to_string(), reads))
     );
   }
 }

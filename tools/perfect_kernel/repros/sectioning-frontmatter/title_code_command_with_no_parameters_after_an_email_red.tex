@@ -1,0 +1,22 @@
+% mechanism: a parameterless title-code definee (`\newcommand{\address}[0]{…}`, RA0's `title_code::reads_arguments`)
+%   right after an `\email{…}` is taken by the e-mail piece (`content::Field::past_held_undefined`), whose contact is
+%   digested without the title code's definitions, so it is undefined there; only a name is digested under them
+%   (`\lx@author@withinst`). The same with a `\def`'s delimiter alone (`\def\address[]{…}`, `\def\address.{…}`).
+%   OXIDIZED_DESIGN_DIVERGENCES #983 Known RED (RA0; revPC3 finding 2's `p/s1b.tex`)
+% witness: synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able*x , Bob Baker"
+% engines: int156a0: 0 Errors, 1 Warning (the content check's "ann@x.org"), the "x" in no output, uncounted;
+%   RA0: 1 Error (`\address` undefined), the e-mail contact `<sup>*</sup><ERROR>\address</ERROR>`, the "x" lost, counted
+% expect:  0 Errors, 1 Warning ("ann@x.org": pdflatex prints no address, `\email` stores it); Ann Able's "x" after the
+%   e-mail contact's `*`, Bob Baker
+\documentclass{article}
+\makeatletter
+\def\email#1{\textsuperscript{*}\gdef\@email{#1}}
+\def\@maketitle{\begin{center}{\newcommand{\address}[0]{\textsuperscript{x}}\bfseries\@author}\end{center}}
+\makeatother
+\begin{document}
+\title{T}
+\author{Ann Able\email{ann@x.org}\address, Bob Baker}
+\maketitle
+Text.
+\end{document}

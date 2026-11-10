@@ -1450,7 +1450,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // `reads_arguments` moved with that reader from `emitter/content.rs`, as its row says)
   // (E0h, 515 -> 384: the old reader's own `classify/old_reader/` split off into a row of its own, review revZ18m2 S1's
   // sibling, so a read the library takes cannot hide behind one the old reader drops; 515 = 384 + 131, none added)
-  ("classify", 384),
+  // (RA0, 384 -> 386: `title_code::reads_arguments` tells a `\newcommand`/`\providecommand` statement from a `\def` and
+  // reads its `[n]` count, so `[0]` declares no parameters (revPC3 finding 2): a class statement's own tokens, never a
+  // document's, as PC3's read it — the head's table and the count's chain beside the one parameter test it had)
+  ("classify", 386),
   // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row)
   ("old_reader", 131),
   ("defs/author_macros", 20),
