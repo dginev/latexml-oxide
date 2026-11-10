@@ -458,31 +458,66 @@ fn collaboration_contact_call(text: &Tokens, covers: Option<usize>) -> Result<Ve
   )
 }
 
-/// The definitions in force where a class's title code reads `\@author`: the statements of the groups still open there
-/// in its `\@maketitle` (else a dropped `\maketitle`'s) body — `\def`, `\gdef`, `\let`, `\newcommand`, `\providecommand`
-/// — with a global one kept past its group, in source order; each with its definee.
+/// The definitions in force where a class's title code reads `\@author`, to replay for the author content: its
+/// statements ([`title_code_author_statements`]) but one that closes a group it did not open
+/// ([`closes_only_its_own_groups`]: 2601.13359's `\def\affiliations{\egroup\par\Large\bgroup\rm}`, `\let\x\egroup`, a
+/// tabular juggle `fallback::title_code_juggle` reads as a separator by its meaning) — the title code's layout between
+/// its own groups, which the author content is not inside.
 pub(in crate::base_utilities) fn title_code_author_definitions() -> Vec<(Token, Vec<Token>)> {
-  [T_CS!("\\@maketitle"), T_CS!("\\lx@dropped@maketitle")]
-    .iter()
-    .find_map(|cs| match lookup_meaning(cs) {
-      Some(Stored::Expandable(definition)) => match definition.get_expansion() {
-        Some(ExpansionBody::Tokens(body)) => definitions_at_author(body.unlist_ref()),
-        _ => None,
-      },
-      _ => None,
-    })
-    .unwrap_or_default()
+  title_code_author_statements()
+    .into_iter()
+    .filter(|(_, statement)| replayable(statement))
+    .collect()
 }
 
-/// The definition statements of `body`'s groups open at its first `\@author` ([`title_code_author_definitions`]),
-/// in source order; `None` when it reads no `\@author`. Groups are brace groups, `\bgroup`/`\egroup`,
+/// Whether the title-code statement `statement` ([`statements_at_author`]) is replayed for the author content: it closes
+/// only the groups it opens ([`closes_only_its_own_groups`]).
+pub(in crate::base_utilities) fn replayable(statement: &[Token]) -> bool {
+  closes_only_its_own_groups(statement.get(2..).unwrap_or_default())
+}
+
+/// The definition statements in force where a class's title code reads `\@author`: those of the groups still open there
+/// in its `\@maketitle` (else a dropped `\maketitle`'s) body — `\def`, `\gdef`, `\let`, `\newcommand`, `\providecommand`,
+/// `\newcounter` (its definee `\c@<name>`) — with a global one kept past its group, in source order; each with its
+/// definee ([`statements_at_author`]). Where a
+/// binding keeps its own `\@maketitle` while the paper's copy of the file it stands in for carries another
+/// (`state::copy_kept_meaning`, the copy's overlay: neurips_2022.sty:285-293's `\def\NewAnd`, 2205.14141, 2205.14539),
+/// the copy's title code is the one pdflatex runs: its statements follow, a definee the live code defines first kept as
+/// that defines it.
+pub(in crate::base_utilities) fn title_code_author_statements() -> Vec<(Token, Vec<Token>)> {
+  let at_author = |meaning: Option<Stored>| match meaning {
+    Some(Stored::Expandable(definition)) => match definition.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => statements_at_author(body.unlist_ref()),
+      _ => None,
+    },
+    _ => None,
+  };
+  let mut definitions = [T_CS!("\\@maketitle"), T_CS!("\\lx@dropped@maketitle")]
+    .iter()
+    .find_map(|cs| at_author(lookup_meaning(cs)))
+    .unwrap_or_default();
+  if let Some(copys) = at_author(copy_kept_meaning(&T_CS!("\\@maketitle"))) {
+    for (definee, statement) in copys {
+      if !definitions.iter().any(|(d, _)| *d == definee) {
+        definitions.push((definee, statement));
+      }
+    }
+  }
+  definitions
+}
+
+/// The definition statements of `body`'s groups open at its first `\@author` ([`title_code_author_statements`]),
+/// in source order; `None` when it reads no `\@author`. A macro the body defines whose statement holds `\@author` (or
+/// such a macro) reads it where it is used: its first use is the reading point, aaai2026.sty:73's `\def\theauthors{\if
+/// T\showauthors@on\@author\else …\fi}`, used at :98 inside the `\sbox{\titlearea}` group that defines `\coo` and
+/// `\equalcontrib` (2508.00545, 2508.04047, 2508.04749, 2508.05996, 2508.08170). Groups are brace groups, `\bgroup`/`\egroup`,
 /// `\begingroup`/`\endgroup` and environments. A statement runs locally where it is replayed: a `\gdef` is a `\def`
 /// there, and the `\global` before a definition is left out. `\edef`/`\xdef` are not replayed (expanded now, not at
 /// the title code), nor `\renewcommand` (of a command already defined, which stands). A statement whose shape is not
-/// read whole (a `\def` without its body's `{`, a `\newcommand` without a body) is left out, and so is one that closes
-/// a group it did not open (2601.13359's `\def\affiliations{\egroup\par\Large\bgroup\rm}`, `\let\x\egroup`): the
-/// title code's layout between its own groups, which the author content is not inside.
-pub(in crate::base_utilities) fn definitions_at_author(
+/// read whole (a `\def` without its body's `{`, a `\newcommand` without a body) is left out. One that closes a group it
+/// did not open is kept, for its readers (a tabular juggle, `fallback::title_code_juggle`), and its tokens are read on as
+/// the title code's own (its group steps counted).
+pub(in crate::base_utilities) fn statements_at_author(
   body: &[Token],
 ) -> Option<Vec<(Token, Vec<Token>)>> {
   // the index after the balanced group starting at `i` (a BEGIN), else after the one token there
@@ -511,10 +546,22 @@ pub(in crate::base_utilities) fn definitions_at_author(
     }
     j
   };
+  // the index after the `[…]` options from `j` on, each with the spaces after it
+  let past_options = |mut j: usize| -> usize {
+    while body.get(j) == Some(&T_OTHER!("[")) {
+      while j < body.len() && body[j] != T_OTHER!("]") {
+        j += 1;
+      }
+      j = skip_spaces(j + 1);
+    }
+    j
+  };
   // each statement with the group it is made in (None: global)
   let mut statements: Vec<(Token, Vec<Token>, Option<usize>)> = Vec::new();
   let mut open: Vec<usize> = vec![0];
   let mut groups = 0usize;
+  // (the macros the body defines that read `\@author`: their first use reads it)
+  let mut readers: Vec<Token> = Vec::new();
   let mut i = 0;
   while i < body.len() {
     let t = body[i];
@@ -536,7 +583,7 @@ pub(in crate::base_utilities) fn definitions_at_author(
       i += 1;
       continue;
     }
-    if t == T_CS!("\\@author") {
+    if t == T_CS!("\\@author") || readers.contains(&t) {
       return Some(
         statements
           .into_iter()
@@ -567,6 +614,17 @@ pub(in crate::base_utilities) fn definitions_at_author(
           .filter(|target| !matches!(target.get_catcode(), Catcode::BEGIN | Catcode::END))
           .map(|_| (body.get(i + 1).copied(), j + 1, t))
       },
+      // (a counter the title code declares for its own macros: aaai2026.sty:77's `\newcounter{corfn}`, which its `\co` reads
+      // — the definee `\c@corfn`, replayed only while undefined, so a second pass declares nothing; 2508.04047)
+      "\\newcounter" if t.get_catcode() == Catcode::CS => {
+        let j = skip_spaces(i + 1);
+        let end = group_end(j);
+        let name: String = (body.get(j + 1..end.saturating_sub(1)).unwrap_or_default())
+          .iter()
+          .map(ToString::to_string)
+          .collect();
+        (!name.is_empty()).then(|| (Some(T_CS!(&s!("\\c@{name}"))), past_options(end), t))
+      },
       "\\newcommand" | "\\providecommand" if t.get_catcode() == Catcode::CS => {
         let mut j = i + 1;
         if body.get(j) == Some(&T_OTHER!("*")) {
@@ -577,13 +635,7 @@ pub(in crate::base_utilities) fn definitions_at_author(
           Some(b) if b.get_catcode() == Catcode::BEGIN => body.get(j + 1).copied(),
           other => other.copied(),
         };
-        j = skip_spaces(group_end(j));
-        while body.get(j) == Some(&T_OTHER!("[")) {
-          while j < body.len() && body[j] != T_OTHER!("]") {
-            j += 1;
-          }
-          j = skip_spaces(j + 1);
-        }
+        j = past_options(skip_spaces(group_end(j)));
         body
           .get(j)
           .filter(|b| b.get_catcode() != Catcode::END)
@@ -593,18 +645,25 @@ pub(in crate::base_utilities) fn definitions_at_author(
     };
     match read {
       Some((Some(definee), stop, head))
-        if matches!(definee.get_catcode(), Catcode::CS | Catcode::ACTIVE)
-          && stop <= body.len()
-          && closes_only_its_own_groups(&body[i + 2..stop]) =>
+        if matches!(definee.get_catcode(), Catcode::CS | Catcode::ACTIVE) && stop <= body.len() =>
       {
         let mut statement = vec![head];
         statement.extend_from_slice(&body[i + 1..stop]);
+        let own = closes_only_its_own_groups(&body[i + 2..stop]);
+        if own
+          && statement[2..]
+            .iter()
+            .any(|u| *u == T_CS!("\\@author") || readers.contains(u))
+        {
+          readers.push(definee);
+        }
         statements.push((
           definee,
           statement,
           (!global).then(|| *open.last().unwrap_or(&0)),
         ));
-        i = stop;
+        // (one closing a group it did not open is read on, its group steps the title code's)
+        i = if own { stop } else { i + 1 };
       },
       _ => i += 1,
     }

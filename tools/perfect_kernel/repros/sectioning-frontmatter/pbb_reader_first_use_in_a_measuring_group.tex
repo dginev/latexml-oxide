@@ -1,0 +1,20 @@
+% mechanism: OD #983's title-code replay takes the definitions in force at the FIRST use of a macro that reads `\@author`
+%   (`defs/frontmatter_fields/names.rs` `statements_at_author`'s readers); pdflatex errs at any reading lacking them, so a
+%   first use inside a measuring group that defines `\coo`, the shipped reading outside it, errs there and not here
+% witness: review revPB S5, synthetic; aaai2026.sty:79-146 is safe (both its passes define the same `\co`)
+% oracle:  pdflatex 1 error: "! Undefined control sequence. \@author ->Ann Able\coo" (the shipped reading)
+% engines: rust int155a0: Error:undefined:\coo (1); rust PB, PBb: 0 errors, 0 warnings (the Error silenced); perl not run
+% expect:  1 error (Error:undefined:\coo), Ann Able and Bob Baker
+% status:  RED (PBb) — fix: replay only the definitions in force at every reading point (their intersection)
+\documentclass{article}
+\makeatletter
+\def\@maketitle{\def\theauthors{\@author}%
+  {\def\coo{\textsuperscript{\dag}}\setbox0\hbox{\begin{tabular}{c}\theauthors\end{tabular}}}%
+  \begin{tabular}[t]{c}\theauthors\end{tabular}}
+\makeatother
+\title{T}
+\author{Ann Able\coo{} \and Bob Baker}
+\begin{document}
+\maketitle
+Body.
+\end{document}

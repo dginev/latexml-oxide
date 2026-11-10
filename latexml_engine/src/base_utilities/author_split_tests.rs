@@ -2,7 +2,7 @@ use latexml_core::state::{State, StateOptions, set_state};
 
 // (the field readers' units, moved from `author_block/` to `defs/frontmatter_fields/` by Z18a)
 use super::defs::frontmatter_fields::{
-  definitions_at_author, math_braces_as_printed, math_glyphs_as_printed,
+  math_braces_as_printed, math_glyphs_as_printed, replayable, statements_at_author,
 };
 use super::*;
 
@@ -13,9 +13,20 @@ fn setup() {
 }
 fn tk(s: &'static str) -> Tokens { mouth::tokenize_internal(s) }
 
-/// The replayed statements of a title code `body`, as strings (`definitions_at_author`).
+/// The definitions of a title code `body` replayed for the author content, with their definees
+/// (`statements_at_author`, `replayable`).
+fn definitions_at_author(body: &'static str) -> Option<Vec<(Token, Vec<Token>)>> {
+  statements_at_author(tk(body).unlist_ref()).map(|statements| {
+    statements
+      .into_iter()
+      .filter(|(_, statement)| replayable(statement))
+      .collect()
+  })
+}
+
+/// The replayed statements of a title code `body`, as strings.
 fn replayed(body: &'static str) -> Vec<String> {
-  definitions_at_author(tk(body).unlist_ref())
+  definitions_at_author(body)
     .expect("reads \\@author")
     .into_iter()
     .map(|(_, statement)| Tokens::new(statement).to_string())
@@ -55,7 +66,35 @@ fn title_code_definitions_global_local_and_skipped() {
       r"\def\ok{\begin{center}c\end{center}}"
     ]
   );
-  assert!(definitions_at_author(tk(r"{\def\name{N}}").unlist_ref()).is_none());
+  assert!(definitions_at_author(r"{\def\name{N}}").is_none());
+}
+
+#[test]
+fn title_code_counters_replay_by_their_count_register() {
+  setup();
+  // aaai2026.sty:77's `\newcounter{corfn}`, which its `\co` reads (2508.04047): replayed, its definee `\c@corfn` (so
+  // only while that is undefined), the optional `[within]` with it
+  let definitions = definitions_at_author(
+    r"\newcounter{corfn}\setcounter{corfn}{0}\newcounter {eqfn}[section]\def\co{\value{corfn}}\@author",
+  )
+  .expect("reads \\@author");
+  assert_eq!(
+    definitions
+      .iter()
+      .map(|(definee, statement)| (
+        definee.to_string(),
+        Tokens::new(statement.clone()).to_string()
+      ))
+      .collect::<Vec<_>>(),
+    [
+      (r"\c@corfn".to_string(), r"\newcounter{corfn}".to_string()),
+      (
+        r"\c@eqfn".to_string(),
+        r"\newcounter{eqfn}[section]".to_string()
+      ),
+      (r"\co".to_string(), r"\def\co{\value{corfn}}".to_string())
+    ]
+  );
 }
 
 #[test]

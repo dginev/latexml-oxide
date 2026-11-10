@@ -332,7 +332,12 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// grow back into a reader of its own). Z18j raised it from 1,393 to 2,346 with the code it moved here from
 /// `author_block/` unchanged, which lowered [`OLD_READER_CODE_LINES`] from 3,631 to 2,665 (no line added but the moved
 /// files' headers and imports).
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_346;
+/// PB raised it to 2,404 and PBb lowered it to 2,383 (+37 over Z18j, all in `names.rs`, OD #983's definition replay, which
+/// lives there; review revPB S3): the title code's raw statements apart from the replayed ones (`title_code_author_statements`,
+/// `replayable`), the macro readers of `\@author` (aaai2026's `\theauthors`, 2508.08170), the copy's kept `\@maketitle`
+/// merged (neurips_2022, 2205.14141) and its `\newcounter`s (2508.04047). The juggle reader, a split decision, moved to
+/// `fallback.rs` (`title_code_juggle`).
+const MOVED_CUT_KIND_CODE_LINES: usize = 2_383;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -1145,7 +1150,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // compare; how an address prints, no owner decided)
   ("defs/frontmatter_fields", 30),
   // (Z18j, 83 -> 95: moved from `author_block` with its code, as that row says)
-  ("defs/frontmatter_fields/", 95),
+  // (PB 95 -> 102, PBb 102 -> 100: `names.rs`' definition replay of a class's title code (OD #983) reads the class's macro
+  // bodies, TeX definitions no event says. +1 the copy's kept `\@maketitle` read beside the live one (2205.14141); +1 a macro
+  // whose statement holds `\@author` is a reader of it (2508.08170); +3 a `\newcounter{x}` replayed by its `\c@x` (its arm,
+  // its `{x}`, its definee: 2508.04047). The juggle reader moved to `fallback`, review revPB S3)
+  ("defs/frontmatter_fields/", 100),
   ("defs/general", 8),
   ("epl_cls.rs", 43),
   ("eptcs_cls.rs", 28),
@@ -1157,7 +1166,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with Perl's whole-block fallback and its preparation, kept as its own, 826 = 629 + 197; none added)
   // (raised by one at PF1: `tabular_close_rest` reads the `\end` its copy of the body read, before the copy — no read added)
   // (DEL2, 197 -> 151: the old driver's raw-token preparation deleted)
-  ("fallback", 153),
+  // (PBb, 153 -> 159: +2 the title code's tabular juggle read by its `\def` and body group, moved from `names.rs` with
+  // the shared body test `tabular_close_rest_of_body` (2205.14141; review revPB S3); +4 `without_optional_line_breaks`, a
+  // `\linebreak[n<4]` between a juggle's columns no row break (latex.ltx:9235-9270; review revPB S2))
+  ("fallback", 159),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   // (Z4a, 4 -> 8: an environment step by its meaning, a CS whose definition is `\begin` or `\end`, a `\let` copy too, what no frame
   // says for a raw environment; the definition's name, not the token's spelling)
