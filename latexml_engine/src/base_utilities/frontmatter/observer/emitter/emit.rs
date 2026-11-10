@@ -957,16 +957,15 @@ fn block_names(
           .flatten()
           .map_or(t, |end| end.max(t));
         // (a mark past the close of a group of names the name's run opens no part of is the last name's, its own run
-        // after the name: `{Ann Able$^{\star}$, …, David López-Pérez}$^{\sharp}$`, 2504.02633 — the old reader's names
-        // split reads it so, `split_author_line`'s step 1 (`names_in_wrapper`, `author_block/names_split.rs`: a wrapper
-        // holding names with only marks after it split into them, the marks the last name's; `math_active_scripts` only
-        // makes breqn's `^` a superscript); grown over the group's close, the run was no balanced one and the name lost
-        // its markup, FB1's P4; the depth is counted from the name's first token, so only a close of a group opened before
-        // the name counts — a group the name's run opens and closes itself is none: revtex's `D. ${\rm Dorn}^{*}$`, whose
-        // `}` closes `{\rm Dorn}` and whose mark the run already holds, written once; nor a mark in the formula the
-        // name's first token is in, the formula opening before it, which the run takes whole: revtex's `${\rm
-        // Ann~Able}^{a}$`, whose `}` closes the `{\rm` the name opens inside, its mark written twice — review revH5
-        // finding 2)
+        // after the name: `{Ann Able$^{\star}$, …, David López-Pérez}$^{\sharp}$`, 2504.02633 — as the old reader's
+        // names split, deleted in Z18k2, read it (a wrapper holding names with only marks after it split into them, the
+        // marks the last name's); this writer's run is now its one owner; grown over the group's close, the run was no
+        // balanced one and the name lost its markup, FB1's P4; the depth is counted from the name's first token, so
+        // only a close of a group opened before the name counts — a group the name's run opens and closes itself is
+        // none: revtex's `D. ${\rm Dorn}^{*}$`, whose `}` closes `{\rm Dorn}` and whose mark the run already holds,
+        // written once; nor a mark in the formula the name's first token is in, the formula opening before it, which
+        // the run takes whole: revtex's `${\rm Ann~Able}^{a}$`, whose `}` closes the `{\rm` the name opens inside, its
+        // mark written twice — review revH5 finding 2)
         let past_group = || {
           let name_from = at(found[from].1.span?.0)?;
           let formula = field.formula_start(name_from);
@@ -1380,12 +1379,15 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
   let (from, to) = list
     .and_then(|(s, t)| field.balanced(usize::from(s), usize::from(t), 0))
     .unwrap_or((0, content.len()));
-  // (the ink that is the address, as printed: a brace list's `gilba\}@x` is no ink of `gilba@x`, 2411.10891)
+  // (the ink that is the address, as printed: a brace list's `gilba\}@x` is no ink of `gilba@x`, 2411.10891; without the
+  // spacing between the list's addresses its run opens with, `a@x \quad b@y`'s `\quad` before `b@y`, which prints no part
+  // of the address: 2310.01324's `\email{xinhaoli00@… \quad zyuhan0812@… \quad lmwang@…}`)
   let spaced = |text: &str| text.split_whitespace().collect::<Vec<_>>().join(" ");
   let printed = inks
     .iter()
     .find(|e| spaced(&e.text) == spaced(address))
-    .and_then(|e| event_run(&field, events, (e, e), None, &[]));
+    .and_then(|e| event_run(&field, events, (e, e), None, &[]))
+    .map(|run| run[leading_spacing_end(&run)..].to_vec());
   // (the separators the list's argument opens or ends with print no part of one address: `\email{\{neeraj.battan,
   // abbhinav.venkat\}@research.iiit.ac.in, }`, 1908.05750 — "…iiit.ac.in," had been each address)
   let separators = |run: &[Token]| {
@@ -2106,6 +2108,21 @@ fn item_call(
             });
           (font, links, linkable)
         });
+        // (an address of a class's e-mail call's list, which the rehearsal reads plain, set as the class's command sets
+        // the list (`calls::email_command_address`): eptcs's `\email{a@x \qquad b@y}`, `{\footnotesize\tt #1}`, each
+        // address in typewriter type as the single call's (1101.4424))
+        let command = with_block(index, None, |block, events| {
+          let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+          events
+            .iter()
+            .filter(|e| {
+              e.kind == EventKind::Contact
+                && e.role.as_deref() == Some("email")
+                && e.span.is_some_and(|s| s.0 <= span.0 && span.1 <= s.1)
+            })
+            .find_map(|e| block.tokens.unlist_ref().get(at(e.span?.0)?).copied())
+        })
+        .filter(|cs| font.is_none() && !links && is_email_command(cs).unwrap_or(false));
         let written = links
           .then(|| {
             with_block(index, None, |block, _| {
@@ -2129,6 +2146,10 @@ fn item_call(
               &assoc.text,
             ),
           ),
+        };
+        let content = match command {
+          Some(cmd) => email_command_address(&cmd, content)?,
+          None => content,
         };
         return Ok(annotate_now("ltx:contact", &keys, content.unlist_ref()));
       }

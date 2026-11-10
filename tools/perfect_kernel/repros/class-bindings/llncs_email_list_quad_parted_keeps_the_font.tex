@@ -1,0 +1,22 @@
+% mechanism: an e-mail list whose addresses a `\quad` parts (`\email{a@x \quad b@y \quad c@z}`): the reading's e-mail
+%   text writes a control word's box as what it prints, a space when it prints nothing (`events::raw_lines`), so no
+%   address is `\quadb@y`; each address is written as it prints, without the spacing its run opens with
+%   (`emit::one_address`), in llncs's typewriter type (OXIDIZED_DESIGN_DIVERGENCES #991)
+% witness: 2310.01324 (`\email{xinhaoli00@… \quad zyuhan0812@… \quad lmwang@…}` under a shared `\institute`)
+% oracle:  pdflatex 0 errors; "Ann Able, Bob Baker, and Cy Cole" over "Univ X", "Lab Y" and
+%   "able@x.org baker@x.org cole@y.org" in typewriter type
+% engines: rust int155a0 = Bob Baker's and Cy Cole's e-mails each twice, once as "\quadbaker@x.org", "\quadcole@y.org"
+%   written as text; 3 Warnings
+% expect:  0 errors, 0 warnings; Ann Able: Univ X, Lab Y, able@x.org; Bob Baker: Univ X, baker@x.org; Cy Cole: Univ X,
+%   Lab Y, cole@y.org; each address in typewriter type
+% status:  RED (int155a0) -> GREEN (Z18k2)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1,2} \and Bob Baker\inst{1} \and Cy Cole\inst{1,2}}
+\institute{Univ X \and Lab Y \\
+\email{able@x.org \quad baker@x.org \quad cole@y.org}}
+\maketitle
+Text.
+\end{document}

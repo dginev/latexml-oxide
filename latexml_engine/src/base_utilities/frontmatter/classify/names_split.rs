@@ -125,8 +125,8 @@ pub(in crate::base_utilities) fn leading_spacing_end(v: &[Token]) -> usize {
 /// Whether `text` reads as a person's name whose last word, an institution's ([`non_name_word`]: `Centers`,
 /// `College`, `Fellows`), follows the initial of a given name: two to five capitalised words, the one before the last
 /// an initial (`Gary P. Centers`; not `W. M. Keck Observatory`, whose institution word follows a name), no other
-/// institution word, no digit or address. In a list by its marks (`author_block`'s `marked_names`; the reading's
-/// `marked_name`) such a piece is a marked name (rows N2-N3; moved from `author_block/names_split.rs`).
+/// institution word, no digit or address. In a list by its marks (the reading's `marked_name`, `resolver/lines.rs`) such
+/// a piece is a marked name (rows N2-N3).
 pub(in crate::base_utilities) fn surname_after_initial(text: &str) -> bool {
   let text = text
     .trim()

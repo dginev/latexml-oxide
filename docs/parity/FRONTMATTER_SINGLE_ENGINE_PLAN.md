@@ -79,7 +79,7 @@ natural variations from authors into a compact semantic representation with mark
 | **P5** | The facts that don't exist yet, each before its port: an `\IEEEmembership` grade digested as a contact, a framing rule for "on behalf of", the surname match of `placed_contact_owner` | ie3, col1 |
 | **P6** | Delete what each step leaves unused; report the real line count | Each batch net-deletes |
 
-Stays on tokens (argument passing, or a text rule on ink): `email_addresses`, `reads_as_affiliation`, `note_body`, `row_email_owners`, `email_calls`, and each binding's reading of its own separate arguments.
+Stays on tokens (argument passing, or a text rule on ink): `email_addresses`, `reads_as_affiliation`, `note_body`, `email_calls`, and each binding's reading of its own separate arguments.
 
 **Stop rules, per batch (user-accepted 2026-11-06):** more than 3 fix rounds or 3 M tokens: stop and report, no fourth round. A round whose findings are all hostile-only: REDs, and ship. Real emit more than 0.1 below the counterfactual: stop. A Fatal added on dev3, or any of the 18 documents up more than 1 % in `instructions:u`: stop. An emitter over 2,000 code lines or 10 named rewrites: stop and reassess. (Counted on the emitter's own code, not the helpers it reuses nor the reading's checks: a trigger to stop and reassess with the user, not a cap; user 2026-11-07. At int145a: 1,730 lines, 9 named rewrites.) After the flip, a batch that doesn't net-delete states why.
 

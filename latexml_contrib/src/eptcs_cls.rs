@@ -8,10 +8,12 @@
 //! `\author{Ann Able \institute{Univ A} \email{ann@a.edu} \and Bob Baker \institute{Univ B}}`. Read as the kernel's
 //! author line, the institute and e-mail stayed in the name ("Ilaria De Crescenzo Università degli Studi di Salerno
 //! Dipartimento di Informatica", 1408.5969; 1909.07676, 2406.16409, 2109.08295's "Jens Lehmann SDA Research Group, … \{grubenmann,
-//! jens.lehmann\}@cs.uni-bonn.de"). The binding reads the block as the class prints it: each `\and` cell a row of names
-//! (`Tobias Grubenmann and Jens Lehmann`, 2109.08295), every institute under the row each name's affiliation, and an
-//! e-mail the author it spells, else, a list of one address per name in order, the name at its place, else the row's
-//! only author, else the block's (FIDELITY_CHARTER §4; `row_email_owners`). A cell that opens with a `tabular` of its
+//! jens.lehmann\}@cs.uni-bonn.de"). The binding writes the block as the class prints it and gives it whole to the
+//! reading (`\lx@add@author@split`, OXIDIZED_DESIGN_DIVERGENCES #984): each `\and` cell a column, its names
+//! (`Tobias Grubenmann and Jens Lehmann`, 2109.08295) and each `\institute` and `\email` a `\\` line under them; the
+//! reading places each line — an institute every name's of the column, an e-mail the author it spells, else, a list of
+//! one address per name in order, the name at its place (1101.4424's `g.stavrinos@… \qquad tassiana98@…`), else the
+//! column's only author, else the block's (FIDELITY_CHARTER §4). A cell that opens with a `tabular` of its
 //! own — the names as its columns, a row of e-mails under them, and lines under the table (1407.7928) — or with an
 //! environment of the paper's own that opens one (2409.15014's `{authors}{5}`, its `\institute` and `\email` lines
 //! spanning the columns) is read the same way: a column's names its cell, a full row's cell a line under its column,
@@ -65,108 +67,65 @@ fn eptcs_structured(body: &Tokens) -> bool {
       .any(|cell| leading_table(cell.unlist_ref()).is_some())
 }
 
-/// One author: the name, and the contact calls digested with it.
-struct Author {
-  name:     Vec<Token>,
-  contacts: Vec<Token>,
-}
-
-/// The authors of the block, in order, and the calls of the contacts the block shares.
+/// The block as the class prints it, for the reading: each `\and` cell a column of names and the lines under them
+/// (an `\institute` or `\email` call is a `\\` line of its own, eptcs.cls:188-190 `\newcommand{\institute}[1]{…\\…}`,
+/// :191 `\newcommand{\email}[1]{\\…}`), and the lines under every name of a table, each a `_share=authors` entry.
 #[derive(Default)]
 struct Block {
-  authors: Vec<Author>,
-  shared:  Vec<Token>,
+  columns: Vec<Vec<Token>>,
+  shared:  Vec<Vec<Token>>,
 }
 
 impl Block {
-  /// The names of a names line, each a new author; their places.
-  fn add_names(&mut self, line: Tokens) -> Vec<usize> {
-    let mut row = Vec::new();
-    for name in split_author_line(line) {
-      row.push(self.authors.len());
-      self.authors.push(Author {
-        name:     name.unlist(),
-        contacts: Vec::new(),
-      });
-    }
-    row
+  /// A new column holding `names`; its place.
+  fn add_names(&mut self, names: Vec<Token>) -> usize {
+    self.columns.push(names);
+    self.columns.len() - 1
   }
 
-  /// An affiliation under the names at `row`: each name's.
-  fn affiliation(&mut self, row: &[usize], line: Vec<Token>) -> Result<()> {
-    // (one before any name is the block's)
-    if row.is_empty() {
-      let options = mouth::tokenize_internal("label=addresses:block");
-      self.shared.extend(
+  /// A line under the names of column `at`.
+  fn line_under(&mut self, at: usize, line: Vec<Token>) {
+    let column = &mut self.columns[at];
+    column.push(T_CS!("\\\\"));
+    column.extend(line);
+  }
+
+  /// The block's whole list to the reading (`\lx@add@author@split`, as llncs's `\author`, OD #984), its columns parted
+  /// by `\and`; then each line every name shares, an affiliation (e-mail calls in it are lines of the row, placed by the
+  /// reading: the address the author it spells, a list in order, else the block's — FIDELITY_CHARTER §4).
+  fn calls(self) -> Result<Tokens> {
+    let mut list = Vec::new();
+    for (at, column) in self.columns.into_iter().enumerate() {
+      if at > 0 {
+        list.extend([T_SPACE!(), T_CS!("\\and"), T_SPACE!()]);
+      }
+      list.extend(column);
+    }
+    let mut out = Invocation!(T_CS!("\\lx@add@author@split"), vec![
+      None,
+      Some(Tokens::new(list))
+    ])
+    .unlist();
+    for line in self.shared {
+      let options = mouth::tokenize_internal("labelseq={affiliation},_share={authors}");
+      out.extend(
         Invocation!(T_CS!("\\lx@add@affiliation"), vec![
           Some(options),
           Some(Tokens::new(line))
         ])
         .unlist(),
       );
-      return Ok(());
     }
-    let call = Invocation!(T_CS!("\\lx@add@affiliation"), vec![
-      None,
-      Some(Tokens::new(line))
-    ])
-    .unlist();
-    for &at in row {
-      self.authors[at].contacts.extend(call.iter().copied());
-    }
-    Ok(())
-  }
-
-  /// An e-mail line under the names at `row`: the row's only author's; else each address the name it spells, or the
-  /// name at its place in a list in their order, else the block's.
-  fn email(&mut self, row: &[usize], line: Vec<Token>) -> Result<()> {
-    let call = |address: Tokens, block: bool| -> Result<Vec<Token>> {
-      let address = Invocation!(T_CS!("\\lx@address@urlfont"), vec![Some(address)]);
-      let options = block.then(|| mouth::tokenize_internal("label=addresses:block"));
-      Ok(Invocation!(T_CS!("\\lx@add@email"), vec![options, Some(address)]).unlist())
-    };
-    let line = Tokens::new(line);
-    if let [only] = row {
-      self.authors[*only].contacts.extend(call(line, false)?);
-      return Ok(());
-    }
-    let names: Vec<Tokens> = row
-      .iter()
-      .map(|&at| Tokens::new(self.authors[at].name.clone()))
-      .collect();
-    match row_email_owners(&names, &line)? {
-      Some(addresses) => {
-        for (address, owner) in addresses {
-          match owner {
-            Some(place) => self.authors[row[place]]
-              .contacts
-              .extend(call(address, false)?),
-            None => self.shared.extend(call(address, true)?),
-          }
-        }
-      },
-      None => self.shared.extend(call(line, true)?),
-    }
-    Ok(())
-  }
-
-  /// The `\lx@add@author` calls, then the shared contacts.
-  fn calls(self) -> Result<Tokens> {
-    let mut out = Vec::new();
-    for author in self.authors {
-      let mut content = author.name;
-      content.extend(author.contacts);
-      out.extend(
-        Invocation!(T_CS!("\\lx@add@author"), vec![
-          None,
-          Some(Tokens::new(content))
-        ])
-        .unlist(),
-      );
-    }
-    out.extend(self.shared);
     Ok(Tokens::new(out))
   }
+}
+
+/// A call the class prints as a line of its own (`\institute{…}`, `\email{…}`), written as it is called.
+fn call_line(cs: Token, argument: Vec<Token>) -> Vec<Token> {
+  let mut line = vec![cs, T_BEGIN!()];
+  line.extend(argument);
+  line.push(T_END!());
+  line
 }
 
 /// An item of a cell: a line of text (after a `\\` or not), an `\institute`'s argument or an `\email`'s.
@@ -185,8 +144,8 @@ fn eptcs_author_calls(body: Tokens) -> Result<Tokens> {
   for cell in split_tokens(strip_linebreak_options(body), and_delims()) {
     let cell = cell.unlist();
     match leading_table(&cell) {
-      Some(table) => read_table(&mut block, table)?,
-      None => read_cell(&mut block, cell_items(&cell))?,
+      Some(table) => read_table(&mut block, table),
+      None => read_cell(&mut block, cell_items(&cell)),
     }
   }
   block.calls()
@@ -233,44 +192,21 @@ fn cell_items(cell: &[Token]) -> Vec<Item> {
   items
 }
 
-/// A cell read as the class prints it: its first line the names, an `\institute` and an `\email` lines under them, a
-/// `\\` line under them an e-mail when it is a list of addresses, an affiliation when it reads as one, else names of a
-/// row of their own (as the llncs binding reads its author paragraph).
-fn read_cell(block: &mut Block, items: Vec<Item>) -> Result<()> {
-  let mut row: Vec<usize> = Vec::new();
-  // (whether a line under the names came since they did, so that the next names start a new row)
-  let mut under = false;
+/// A cell read as the class prints it: a column, its first line the names and each `\institute`, `\email` and `\\`
+/// line a line under them, each decided by the reading (an e-mail list, an affiliation, else a row of names of its own).
+fn read_cell(block: &mut Block, items: Vec<Item>) {
+  let mut column: Option<usize> = None;
   for item in items {
-    match item {
-      Item::Institute(line) => {
-        block.affiliation(&row, line)?;
-        under = true;
-      },
-      Item::Email(line) => {
-        block.email(&row, line)?;
-        under = true;
-      },
-      Item::Text { after_break, line } => {
-        let tokens = Tokens::new(line.clone());
-        if after_break && !row.is_empty() && line_is_email_list(&tokens) {
-          block.email(&row, line)?;
-          under = true;
-        } else if after_break && !row.is_empty() && reads_as_affiliation(&tokens) {
-          block.affiliation(&row, line)?;
-          under = true;
-        } else {
-          let names = block.add_names(tokens);
-          if under || row.is_empty() {
-            row = names;
-            under = false;
-          } else {
-            row.extend(names);
-          }
-        }
-      },
+    let line = match item {
+      Item::Institute(argument) => call_line(T_CS!("\\institute"), argument),
+      Item::Email(argument) => call_line(T_CS!("\\email"), argument),
+      Item::Text { line, .. } => line,
+    };
+    match column {
+      Some(at) => block.line_under(at, line),
+      None => column = Some(block.add_names(line)),
     }
   }
-  Ok(())
 }
 
 /// A table opening a cell: its rows, and what follows its end in the cell.
@@ -425,22 +361,15 @@ fn multicolumn(cell: Vec<Token>) -> (Vec<Token>, usize) {
 
 /// A table of names read as the class prints it: its first row the names, a cell of each column its names; a full row
 /// under them a line under each column, unless it reads as names, a row of names of its own; any other row a line
-/// under every name of the table; and after the table, what stands beside it the last name's (2409.15014's `\thanks`
-/// after `\end{authors}`, its mark printed after "Verena Wolf") and each line under it every name's.
-fn read_table(block: &mut Block, table: Table) -> Result<()> {
-  let mut columns: Vec<Vec<usize>> = Vec::new();
-  let mut all: Vec<usize> = Vec::new();
-  let line_under = |block: &mut Block, names: &[usize], line: Vec<Token>| -> Result<()> {
-    if line_is_email_list(&Tokens::new(line.clone())) {
-      block.email(names, line)
-    } else {
-      block.affiliation(names, line)
-    }
-  };
+/// under every name of the table, a `_share=authors` entry; and after the table, what stands beside it the last name's
+/// (2409.15014's `\thanks` after `\end{authors}`, its mark printed after "Verena Wolf") and each line under it every
+/// name's (1407.7928's institute lines).
+fn read_table(block: &mut Block, table: Table) {
+  let mut columns: Vec<usize> = Vec::new();
   for row in table.rows {
     match row {
-      Row::Institute(line) => block.affiliation(&all.clone(), line)?,
-      Row::Email(line) => block.email(&all.clone(), line)?,
+      Row::Institute(line) => block.shared.push(call_line(T_CS!("\\institute"), line)),
+      Row::Email(line) => block.shared.push(call_line(T_CS!("\\email"), line)),
       Row::Cells(cells) => {
         let full = !columns.is_empty()
           && cells.len() == columns.len()
@@ -454,13 +383,12 @@ fn read_table(block: &mut Block, table: Table) -> Result<()> {
         if names_row && (columns.is_empty() || full) {
           columns = cells
             .into_iter()
-            .map(|(cell, _)| block.add_names(Tokens::new(trim_spaces(cell))))
+            .map(|(cell, _)| block.add_names(trim_spaces(cell)))
             .collect();
-          all.extend(columns.iter().flatten().copied());
         } else if full {
-          for ((cell, _), column) in cells.into_iter().zip(columns.clone()) {
+          for ((cell, _), &column) in cells.into_iter().zip(&columns) {
             if !is_blank(&cell) {
-              line_under(block, &column, trim_spaces(cell))?;
+              block.line_under(column, trim_spaces(cell));
             }
           }
         } else {
@@ -473,24 +401,23 @@ fn read_table(block: &mut Block, table: Table) -> Result<()> {
               line.extend(trim_spaces(cell));
             }
           }
-          line_under(block, &all.clone(), line)?;
+          block.shared.push(line);
         }
       },
     }
   }
   for item in cell_items(&table.tail) {
     match item {
-      Item::Institute(line) => block.affiliation(&all.clone(), line)?,
-      Item::Email(line) => block.email(&all.clone(), line)?,
+      Item::Institute(line) => block.shared.push(call_line(T_CS!("\\institute"), line)),
+      Item::Email(line) => block.shared.push(call_line(T_CS!("\\email"), line)),
       Item::Text { after_break: false, line } => {
-        if let Some(&last) = all.last() {
-          block.authors[last].name.extend(line);
+        if let Some(last) = block.columns.last_mut() {
+          last.extend(line);
         }
       },
-      Item::Text { line, .. } => line_under(block, &all.clone(), line)?,
+      Item::Text { line, .. } => block.shared.push(line),
     }
   }
-  Ok(())
 }
 
 /// Where the unit at `at` ends: a group, an environment (`\begin{x}…\end{x}`), else the one token.

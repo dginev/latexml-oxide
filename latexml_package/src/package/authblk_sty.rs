@@ -140,7 +140,7 @@ fn author_call(label: Option<Tokens>, author: Tokens) -> Result<Tokens> {
     // path, as the list's names' marks do; on `\lx@add@creator` it requested nothing, and an affiliation a list author
     // took from it was lost to it, 77n r2 review — a name whose marks other text follows, `Ann Able$^{a}$ (ann@x.org)`,
     // stays on `\lx@add@creator`: the list path shows an unanswered mark after the name's last text, 77n r3 review
-    // probes m2, m8, m9) → a multi-author list, split into separate creators by `split_author_line` (the same comma /
+    // probes m2, m8, m9) → a multi-author list, split into separate creators by the reading (the same comma /
     // " and " name split the DEFAULT `\author`
     // already applies) and added after the authors before it, as authblk adds every `\author` to its list
     // (authblk.sty:114-145): `\lx@add@authors@list`. authblk's own no-`\and` branch keeps the whole comma list as ONE

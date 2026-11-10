@@ -380,10 +380,27 @@ fn the_moved_cut_and_kind_take_no_new_decision() {
 /// pass"): text rules and token primitives to `frontmatter/classify/`, owner logic to `observer/resolver/owners.rs`, Perl's
 /// API-call writers to `observer/emitter/calls.rs`, Perl's whole-block fallback with its preparation to `frontmatter/fallback.rs`,
 /// the API's attribute names to `defs/frontmatter_api.rs`. None is left: what `author_block/` still holds is the token driver.
-const ONE_ENGINE_REACH: &[(&str, usize)] = &[];
+/// (revZ18j S1: the names [`MOVED_OLD_READER_FILES`] export count too, so a move out of `author_block/` leaves no name
+/// unfenced; `relocate.rs`'s `s!("{CUT_COPY_PLACE}{key}:{label}")` is revZ18a's capture, unfenced since Z18a moved
+/// `CUT_COPY_PLACE` to `cut.rs`)
+const ONE_ENGINE_REACH: &[(&str, usize)] = &[("relocate.rs CUT_COPY_PLACE", 1)];
 
-/// The names the old reader exports into `base_utilities`: the `pub`, `pub(crate)` and `pub(in …)` items of `mod.rs` and of
-/// each submodule `mod.rs` re-exports with `pub use <submodule>::*`, at a file's top level: a method is no name the glob
+/// The old reader's files moved out of `author_block/` unchanged, whose exports [`old_reader_exports`] counts as the old
+/// reader's (revZ18j S1): Z18a's Cut, Kind and field readers, Z18j's entry cutter and its e-mail line and mark readers. Each
+/// is deleted or rerouted by Option C.
+const MOVED_OLD_READER_FILES: &[&str] = &[
+  "defs/frontmatter_api/cut.rs",
+  "defs/frontmatter_api/kind.rs",
+  "defs/frontmatter_fields/names.rs",
+  "defs/frontmatter_fields/contacts.rs",
+  "defs/frontmatter_api/affiliations.rs",
+  "defs/frontmatter_api/email_lines.rs",
+  "defs/frontmatter_api/line_marks.rs",
+];
+
+/// The names the old reader exports into `base_utilities`: the `pub`, `pub(crate)` and `pub(in …)` items of `mod.rs`, of
+/// each submodule `mod.rs` re-exports with `pub use <submodule>::*` and of each of [`MOVED_OLD_READER_FILES`], at a file's
+/// top level: a method is no name the glob
 /// exports, its type is (a gap closed 2026-11-08: the driver's `Collaborations::author` read every `author` argument as a use).
 fn old_reader_exports() -> std::collections::BTreeSet<String> {
   let dir = format!("{BASE}/author_block");
@@ -401,6 +418,11 @@ fn old_reader_exports() -> std::collections::BTreeSet<String> {
       files.extend(rust_files(&sub));
     }
   }
+  files.extend(
+    MOVED_OLD_READER_FILES
+      .iter()
+      .map(|file| format!("{BASE}/{file}")),
+  );
   let mut names = std::collections::BTreeSet::new();
   for file in files {
     for found in item.captures_iter(&read_rust(&file).code) {
@@ -678,6 +700,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ("_scopebegin= package/pgfsys_latexml_def.rs", 1),
   ("_sequence= base_utilities/defs/frontmatter_fields.rs", 1),
   ("_share= cas_dc_cls.rs", 1),
+  // (Z18k: a line under eptcs's whole table of names is every name's entry, `labelseq={affiliation},_share={authors}` —
+  // the key llncs's, aa's and cas-dc's shared institute already uses, no new one: 1407.7928's institute lines)
+  ("_share= eptcs_cls.rs", 1),
   ("_share= package/aa_cls.rs", 1),
   ("_share= package/llncs_cls.rs", 2),
   ("_store= frontmatter_stores.rs", 11),
@@ -1134,7 +1159,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // `defs/frontmatter_api/` (63) and `defs/frontmatter_fields/` (83), 484 = 338 + 63 + 83; none added)
   // (Z18j, 337 -> 279: the API's entry cutter and its line readers moved unchanged to `defs/frontmatter_api/` (+46), the
   // readers the field readouts share to `defs/frontmatter_fields/` (+12), 337 = 279 + 46 + 12; none added)
-  ("author_block", 279),
+  // (Z18k2, 279 -> 236: `split_author_line`'s closure and `row_email_owners` deleted, unreached once eptcs and OmniBus's
+  // `\authors` went to the reading)
+  ("author_block", 236),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
   ("classify", 349),
   ("defs/author_macros", 20),
@@ -1247,7 +1274,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("resolver", 20),
   // (DEL1 24 -> 20: the old driver's unit tests of `name_and_trailing_email`, `leading_symbol_labels`, `weldable_line`,
   // `continues_the_line`, `person_over_institution` and `strip_linebreak_options_keeping_gaps` deleted)
-  ("rest /author_split_tests.rs", 20),
+  ("rest /author_split_tests.rs", 19),
   ("rest /block_insertion.rs", 0),
   ("rest /blocks.rs", 2),
   ("rest /boxes_lists.rs", 0),

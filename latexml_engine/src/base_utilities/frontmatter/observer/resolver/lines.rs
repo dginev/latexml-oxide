@@ -808,17 +808,18 @@ fn address_groups_whole(events: &[&Event]) -> Vec<Event> {
   out
 }
 
-/// A names line's events with a byline's "by" (in any case) that a line opens with, a Name of its own the lexer keeps as
-/// printed, read as the separator it is when the line's next Name reads as a name: the old reader's `without_leading_by`
-/// (`author_block/name_text.rs:669`, which `split_author_line` applies to every names line and only there: "`line`
-/// without the byline word "by" (in any case) that opens it, when names follow it", `name_count(…) >= 1`). A line opens
-/// after an `\and` or an alignment tab too, each author's lines as the old reader splits them (`\and BY~~Max Moss~~and~~Ned
-/// Nash`). In the line or a run of its own, the spacing or the font after it parting it from the names: `\author{by David
-/// Harari and Tam\'as Szamuely}`, 0808.2556; `By~~{\scshape Vitaly~Bergelson}~~and~~…`, 2603.25922, 2604.07186,
-/// 2604.12864; `By~~{\scshape Bryna Kra}`, 2603.27258. A line the reading reads as no names keeps it: `Ann Able \\
-/// By\quad Lee Hall, \textit{Univ X}`'s affiliation, review revG1 1. With the spans of the words it read so, which the
-/// reading records with their words ([`Resolved::drops`](super::Resolved::drops)): the content check counts them as the
-/// separators' words they are, no word lost.
+/// A names line's events with a byline's "by" (in any case) that a line opens with, a Name of its own the lexer keeps
+/// as printed, read as the separator it is when the line's next Name reads as a name: the one owner of the rule since
+/// the old reader's `without_leading_by` was deleted with its names split in Z18k2 ("`line` without the byline word
+/// "by" (in any case) that opens it, when names follow it", `name_count(…) >= 1`, applied to every names line and only
+/// there). A line opens after an `\and` or an alignment tab too, each author's lines as the old reader splits them
+/// (`\and BY~~Max Moss~~and~~Ned Nash`). In the line or a run of its own, the spacing or the font after it parting it
+/// from the names: `\author{by David Harari and Tam\'as Szamuely}`, 0808.2556; `By~~{\scshape
+/// Vitaly~Bergelson}~~and~~…`, 2603.25922, 2604.07186, 2604.12864; `By~~{\scshape Bryna Kra}`, 2603.27258. A line the
+/// reading reads as no names keeps it: `Ann Able \\ By\quad Lee Hall, \textit{Univ X}`'s affiliation, review revG1 1.
+/// With the spans of the words it read so, which the reading records with their words
+/// ([`Resolved::drops`](super::Resolved::drops)): the content check counts them as the separators' words they are, no
+/// word lost.
 fn byline_dropped(index: usize, mut events: Vec<Event>) -> (Vec<Event>, Vec<RuleDrop>) {
   let mut dropped = Vec::new();
   let ends_line =
@@ -1282,12 +1283,12 @@ fn mark_goes_next(events: &[&Event], i: usize, last_sep: Option<&Event>, policy:
   last_sep.is_some() && next_is_name && nearer_next && !(inst && policy.inst_after_comma)
 }
 
-/// Whether the Name at `i` of a names line is a marked name (rows N1-N3 of the old reader's names split,
-/// `author_block/names_split.rs` `marked_names` and `split_author_line`): it carries its own mark — the next event past
+/// Whether the Name at `i` of a names line is a marked name (rows N1-N3, the reading's since the old reader's names split,
+/// `marked_names`, was deleted in Z18k2): it carries its own mark — the next event past
 /// layout and notes, or past the comma after it a mark that stays with it ([`mark_goes_next`]: `Teng Wu,$^{1,*}$`,
 /// revtex) —, and on a per-author class's line (`cautious`, the old reader's cautious split) its institution word is a
 /// surname after an initial ([`surname_after_initial`]: `Gary P. Centers,$^{1}$`, 1901.10843, which no address is —
-/// `marked_names`' `!only_addresses` test holds in it: it refuses a text holding an `@`). The
+/// the old `!only_addresses` test holds in it: it refuses a text holding an `@`). The
 /// generic split of any other names line never reads an institution word (`R. New$^2$`, 0904.4122; `S. Michelle
 /// Consiglio,$^{1}$`, 2103.02641; `Alexander New$^2$`, 2311.16860). An unmarked piece keeps the reading's institution
 /// (`John Smith, University of Toronto`).
@@ -1565,9 +1566,18 @@ impl Resolver {
         // (and so is a remark on the name after it, a bracket or a collaboration it speaks for: `Ann Able$^1$ (on
         // behalf of the A and B teams)`, `Maxime Defurne \\ for the Hall A DVCS collaboration`, 0811.3142, 1502.03246 —
         // review rev94a B2, S6)
+        // (but a bracketed piece after a separator carrying its own mark is a name of its own, marks win (charter §4 R1):
+        // `Y. Dong\affil{6}, \add[ver3]{S. Curry}\affil{1}` printing "[ver3]S. Curry¹", trackchanges' `\add` undefined
+        // (OmniBus's `\authors`, 2308.02720); llncs's `Bob Baker\inst{2}, [v3]{Cy Cole}\inst{1}` — each joined to the
+        // name before it with both affiliations; review revZ18k B1. A join of two marked names left is the safety net's
+        // counted Warning, `net::merged_names`)
         EventKind::Name
           if !made.is_empty()
-            && (is_name_qualifier(&event.text) || is_name_remark(&event.text)) =>
+            && (is_name_qualifier(&event.text)
+              || (is_name_remark(&event.text)
+                && !(last_sep.is_some()
+                  && !speaks_for(&event.text)
+                  && marked_name(events, i, false, policy)))) =>
         {
           let c = *made.last().expect("a name");
           // (but a membership grade written after the comma is the author's `membership` contact, no part of the name

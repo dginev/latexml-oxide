@@ -188,7 +188,7 @@ fn grade_and_annotations(tail: &[Token]) -> (Vec<Token>, Vec<Token>) {
 }
 
 /// Whether a names-line piece reads as one person's name: by its shape, or marked after the name and no institution or
-/// address, as the cautious split reads a list by its marks (`marked_names`).
+/// address, as the reading's `marked_name` reads a list by its marks.
 fn reads_as_one_name(piece: &Tokens) -> bool {
   let text = visible_name_text(piece.unlist_ref());
   name_count(&text) == 1

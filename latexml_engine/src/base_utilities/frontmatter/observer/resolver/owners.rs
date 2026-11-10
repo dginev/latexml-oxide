@@ -1070,8 +1070,8 @@ pub(in crate::base_utilities) fn label_pieces(operand: &[Token]) -> Option<Vec<T
   (!kept.is_empty()).then_some(kept)
 }
 
-/// The place among a row's `names` of the owner of each of `addresses`, the e-mail addresses printed under the row
-/// ([`row_email_owners`]): the name it spells; else, in a list of one address per name that every spelled address
+/// The place among a row's `names` of the owner of each of `addresses`, the e-mail addresses printed under the row:
+/// the name it spells; else, in a list of one address per name that every spelled address
 /// agrees with, the name at its place; else `None`, the row's names' (FIDELITY_CHARTER §4). An address several names
 /// spell agrees with the list only when the name at its place is one of them: `lee@x.edu` at Cid Cole's place under
 /// "Ann Lee, Bob Lee and Cid Cole" spells another author than the one there, so the list is in no author order (the

@@ -203,6 +203,8 @@ impl Lexer {
         self.events.push(by);
         continue;
       }
+      // (a word "and", a printed `&` — `Zheng Zheng \& Jordi Miralda-Escud\'e`, astro-ph0201275; 0908.0757, a witness
+      // of the old reader's deleted names split — or a separator glyph parts two names)
       if opens[at] == 0
         && (word.eq_ignore_ascii_case("and") || word == "&" || is_separator_word(&word))
       {

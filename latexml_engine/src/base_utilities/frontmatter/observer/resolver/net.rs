@@ -176,7 +176,8 @@ pub(in crate::base_utilities::frontmatter::observer) fn uncoordinated_marks(
 /// Per block (its ledger index) the reading of which fails the separators check, the pairs of names it joins: two Names
 /// of its events a separator parts (a `Sep` other than a gap, or a `Break`, between them, only marks, notes and layout
 /// beside it), whose words one creator's name holds both of, the second no qualifier or remark and the name joined by no
-/// rule of the reading's (`RCreator::joins`); and a name holding a label before a colon and a space.
+/// rule of the reading's (`RCreator::joins`) — or, each carrying its own mark, joined by any rule (review revZ18k B1); and a
+/// name holding a label before a colon and a space.
 pub(in crate::base_utilities::frontmatter::observer) fn merged_names(
   ledger: &Ledger,
   resolved: &Resolved,
@@ -247,6 +248,51 @@ pub(in crate::base_utilities::frontmatter::observer) fn merged_names(
         },
         EventKind::Mark | EventKind::Note | EventKind::Layout | EventKind::Declaration => {},
         EventKind::Contact | EventKind::ApiCall => last = None,
+      }
+    }
+    // (two names a separator parts, each carrying its own mark, are two people whatever rule of the reading's joined them:
+    // a qualifier or a remark carries no mark of its own — `Y. Dong\affil{6}, \add[ver3]{S. Curry}\affil{1}`, 2308.02720,
+    // review revZ18k B1, which the names line now reads as two names; any such join left is counted here)
+    let all: Vec<Vec<String>> = creators.iter().map(|c| words(&c.name)).collect();
+    // (each Name with whether a separator parts it from the Name before and whether a mark follows it before the next
+    // separator; a contact or a call ends the run)
+    let mut pieces: Vec<Option<(&Event, bool, bool)>> = Vec::new();
+    let mut parted = false;
+    for e in events {
+      match &e.kind {
+        EventKind::Name => {
+          pieces.push(Some((e, parted, false)));
+          parted = false;
+        },
+        EventKind::Mark => {
+          if let Some(Some((_, _, marked))) = pieces.last_mut()
+            && !parted
+          {
+            *marked = true;
+          }
+        },
+        EventKind::Sep(SepKind::Gap { .. }) => {},
+        EventKind::Sep(_) | EventKind::Break => parted = true,
+        EventKind::Note | EventKind::Layout | EventKind::Declaration => {},
+        EventKind::Contact | EventKind::ApiCall => {
+          pieces.push(None);
+          parted = false;
+        },
+      }
+    }
+    for pair in pieces.windows(2) {
+      if let [Some((before, _, true)), Some((after, true, true))] = pair {
+        // (each a word of its own: a bracket's `(` before a line's `$^1$` names no one, `($^1$) Univ A`)
+        let (a, b) = (words(&before.text), words(&after.text));
+        let joined = [a.clone(), b.clone()].concat();
+        let pair = s!("{} | {}", before.text, after.text);
+        if !a.is_empty()
+          && !b.is_empty()
+          && all.iter().any(|name| holds(name, &joined))
+          && !failed.contains(&pair)
+        {
+          failed.push(pair);
+        }
       }
     }
     // (a label printed before a colon inside a name: a role's heading read into it, `Editor: Andrei V. Gritsan`, 2205.07715;
