@@ -33165,14 +33165,40 @@ address) is the affiliation of the last name only (David Barber), where the PDF 
 revPB S5, synthetic): a reader macro's first use is the reading point, so where that use sits in a group defining `\coo`
 (a measuring `\setbox`) and the shipped reading outside it, `\coo` is replayed and pdflatex's `Error:undefined:\coo` is
 silenced (repro `pbb_reader_first_use_in_a_measuring_group`, no guard; aaai2026.sty's two passes define the same `\co`);
-the fix is to replay only the definitions in force at every reading point. Not reached: the pazh classes' `\address`, defined only in
-pazhastl.cls:112's `\@maketitle` minipage — the e-mail cut writes `\email{…}\address` as an e-mail contact apart from its
-`{1}`, digested outside the author content (`<contact role="email"><sup>*</sup><ERROR>\address</ERROR></contact>`:
-1108.4222, 1202.2889, 1206.0451, 1207.2226, 1301.4791, 1307.2761, 2103.05801, 2408.01858, 2412.06362; 2607.07582's
-`\addres`), so a replay there would make the command read past its piece: the cut must keep a command with its argument;
-and neurips_2024.sty, which the stand-in binding never reads (2401.16452, `\name`, `\addr`, `\email`). (5) The emitter's reading of the placed XML
+the fix is to replay only the definitions in force at every reading point. The pazh classes' `\address`, defined only in
+pazhastl.cls:112's `\@maketitle` minipage (`\def\address##1{\textsuperscript{##1}}`; PC3): a piece never takes alone a
+held undefined command that the title code defines, reading arguments, where it reads `\@author` (`emitter/content.rs`
+`Field::held_undefined_at`, the one predicate `past_held_undefined` and `block_names` share, leaves out such definees of
+`title_code_author_definitions`, told by its `reads_arguments`, on the title code's own statement: a parameter in a `\def`'s parameter text, a
+`\newcommand`'s `[n]`; the flush's net spares them already, by its meaning recorder) — the rehearsal, without the title
+code's definitions, read the argument's print as the block's own — so the e-mail piece is `\email{…}` alone and
+`\address{1}` stays the name's mark, digested under the title code's definitions. A parameterless definee is still taken:
+it prints, under those definitions, what the piece holds (aaai2026.sty's `\co`, the corresponding-author note: leaving it
+out lost the note on 2508.04047, 2508.08170, 2508.00545, 2508.05996, 2508.21091, 2607.29185). It had grown the
+e-mail piece over the one held token and not its argument, writing `\email{…}\address` as an e-mail contact apart from its
+`{1}`, digested outside the author content (`<contact role="email"><sup>*</sup><ERROR>\address</ERROR></contact>`, 1 → 0
+Errors each: 1108.4222, 1202.2889, 1206.0451, 1207.2226, 1301.4791, 1307.2761, 2103.05801, 2408.01858, 2412.06362;
+2607.07582's `\addres`, pazha2.cls:126); Perl raises `\address` on the synthetic, digesting `\author` outside the title code
+(KNOWN_PERL_ERRORS #1219), and 3 other Errors on 1108.4222, never reading the class. Repro
+`title_code_command_after_an_email_keeps_its_argument` (its 2 Warnings the content check's: pdflatex prints no address);
+guard `perfect_kernel_batchpc3::a_title_code_command_after_an_email_keeps_its_argument`. Known REDs: 2607.07582's
+`\addres{1}` prints nothing in pdflatex (`\textsuperscript{}`) but its "1" is read as the name's mark — only a rehearsal
+under the title code's definitions fixes that (PBb reverted it for aaai's Warnings); pazh's `\email` prints only `*` (it
+stores the address in `\@email`), so the e-mail contact holds `<sup>*</sup>` alone. Not reached: neurips_2024.sty, which
+the stand-in binding never reads (2401.16452, `\name`, `\addr`, `\email`). (5) The emitter's reading of the placed XML
 reads an `ltx:ERROR` as no word (`emitter/dom.rs`), so the content check counts no "undefinedprobecs" or "songti" the
-block does not print. **Not raised, by design:** the `Error:expected:\fi` chains and `\@authorii`…`\@authorv` the old
+block does not print. (6) A class's own e-mail command (`EmailMeaning::Own`) is rehearsed as `\lx@fm@obs@email@own` /
+`\lx@fm@obs@emailAdd@own [] UnexpandedSemiverbatim` (PC3), a Rust-only parameter type: Semiverbatim's catcodes and
+digest-time protection, its tokens neutralized as read and never expanded before they are digested
+(`Parameter::digest`, `semiverbatim_expands_before_digest`), as the class's macro reads its `#1`. Semiverbatim's
+pre-expansion (Parameter.pm:124-132) ran the kernel `\fontsize`'s `\@defaultunits` (`\afterassignment\remove@to@nnil`,
+latex.ltx:10537, :12678) ahead of its assignment: its `\@nnil` delimiter (the macro `\@nil`) was expanded first and
+missed, and `\@nil` ran undefined, held and raised by the flush's net — sig-alternate.cls:462 `\def\email#1{{{\eaddfnt{\par
+#1}}}}` on `\email{\fontsize{11pt}{12pt}\selectfont …}`, 1802.01191 (1 → 0 Errors, the XML unchanged; Perl raises no
+`\@nil`, its `\fontsize` a primitive). Repro `email_argument_holding_fontsize_errs_not`; guard
+`perfect_kernel_batchpc3::an_own_email_argument_holding_fontsize_errs_not`. Reading no pre-expansion also costs the
+rehearsal fewer reads: 1810.03464 (vldb-modify.cls's own `\email{\normalsize …}`) no longer runs past the rehearsal's
+budget, its block read into 7 creators with their affiliations and e-mails where it was written whole (2 Warnings fewer). **Not raised, by design:** the `Error:expected:\fi` chains and `\@authorii`…`\@authorv` the old
 driver raised on sibarticle.sty's `\ifnum \c@numAuthors>1 \and …\fi` (1603.08231: 18, 2112.06251: 12): pdflatex 0
 errors, Perl only with `--includestyles` (22, its split at `\and` cutting each conditional, KNOWN_PERL_ERRORS #1218).
 **Witnesses** (the flip A/B's 19, Errors off / DEL5 / now): 1101.4098 1/0/1, 1402.2906 4/3/6 (`\affaddr`, `\email` undefined

@@ -385,8 +385,15 @@ fn the_moved_cut_and_kind_take_no_new_decision() {
 /// `CUT_COPY_PLACE` to `cut.rs`). `fallback.rs title_code_author_statements` (int155a, the main session's decision): PBb's
 /// juggle reader reads the class's title-code statements, which ERR2 (OD #983) put in `names.rs` beside the moved field
 /// readers — the class's code read, not the old reader's; Z18m moves that reader to `frontmatter/classify/`, paying it.
+/// `observer/emitter/content.rs title_code_author_definitions` (PC3, the brief's mechanism): `Field::held_undefined_at`
+/// leaves out a held undefined command the class's title code defines reading arguments — the same class code, which
+/// the flush's net already spares (1108.4222, 2607.07582); paid with that reader's move.
 const ONE_ENGINE_REACH: &[(&str, usize)] = &[
   ("fallback.rs title_code_author_statements", 2),
+  (
+    "observer/emitter/content.rs title_code_author_definitions",
+    2,
+  ),
   ("relocate.rs CUT_COPY_PLACE", 1),
 ];
 
@@ -1306,8 +1313,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // NE6 11 -> 13: `arguments_end` reads an option's `[` and `]` as TeX reads the call's arguments, a mark macro written
   // with them and a call whose `\href` or `\author` reads past the run refused — 1505.07844, 2503.21719, 2603.11001;
   // NE8 13 -> 14: `past_closing_fis` reads the spaces between a run and the `\fi` closing a conditional it opens by their
-  // catcode, as `balanced` reads closing braces — the `\fi` itself by its meaning, no name spelled)
-  ("emitter/content", 14),
+  // catcode, as `balanced` reads closing braces — the `\fi` itself by its meaning, no name spelled; PC3 14 -> 15:
+  // `reads_arguments` reads a title-code statement's parameter text — the class's own `\def`, never a document token —
+  // for whether its definee takes arguments, so a held undefined title-code command is not cut from them, 1108.4222)
+  ("emitter/content", 15),
   // (Z4a, a new file: the emitter builds Perl's calls from the reading, its reads a call's own keys and pieces, `text_tokens` and the
   // catcodes of a cut: where a slice's edge falls past an option, a group or an accent's letter, OD #980; Z4ar2, 30 -> 28: an address
   // list's `@` no longer read, its inks are; NE3 28 -> 36: `key_tokens`' table of the specials a key value holds as characters,
