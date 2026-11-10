@@ -1,0 +1,22 @@
+% witness: 2402.16140 (IEEEtran journal + authblk: `\author{\IEEEauthorblockN{Shanuja Sasi, ~\IEEEmembership{Member,
+%          ~IEEE}, Onur Günlü, … and B. Sundar Rajan, ~\IEEEmembership{Fellow, ~IEEE}}\thanks{…}\thanks{…}}`),
+%          1611.02001, 1810.08035, 2409.09417 (the same shape)
+% oracle:  pdflatex 0 errors: "Ann Able, Member, IEEE, Bob Baker, Senior Member, IEEE and Cy Coe, Fellow, IEEE", the
+%          notes at the foot
+% engines: rust int154u = no creator, 0 warnings (authblk's one creator call held the nested `\IEEEauthorblockN` call,
+%          which printed nothing there); Perl 0.8.8 = 0 errors, one creator holding every name, no grade
+% expect:  0 errors, 0 warnings; three creators, each with its grade as a membership contact; the notes the
+%          document's pubnotes, as without authblk
+% status:  RED (int154u) -> GREEN (CR6) — perfect_kernel_batchcr6::authblk_author_reads_ieee_author_blocks
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able, ~\IEEEmembership{Member, ~IEEE}, Bob Baker, ~\IEEEmembership{Senior Member,
+  ~IEEE} and Cy Coe, ~\IEEEmembership{Fellow, ~IEEE}}%
+\thanks{A. Able and B. Baker are with Zebra University.}%
+\thanks{C. Coe is with Yak College.}}
+\maketitle
+Body.
+\end{document}
