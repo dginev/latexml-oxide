@@ -46,6 +46,7 @@ use crate::base_utilities::{
       },
     },
     relocate::{BLOCK_ZONE, FOOTER_ZONE},
+    shared_row::shared_call_item,
   },
 };
 
@@ -1253,12 +1254,16 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
   // `ledger::symbol`). The text written is tested too: one holding a control sequence's name or a tie lost what it
   // printed, counted (`\email{\{a, b\}@x\footnote{…}}` writes `a@x\lx@fm@obs@fnnote`, review revZ18c S3; 2008.05861's
   // `…hk~~`); a well-formedness test would count `\{a,b\}@x\_y.org`'s `a@x_y.org`, all it prints (review revZ18d finding 1)
+  // A math shift around a printed character prints nothing of its own, nor a tie between the list's addresses, which the
+  // address written holds none of (`$\{$stomforde$|$bsick$\}$@uni-kassel.de;~cms@…`, 1701.08125, which the old split
+  // wrote as text too): no markup lost.
   let plain = !address.contains(['\\', '~'])
     && content[from..to].iter().all(|t| {
       matches!(
         t.get_catcode(),
-        Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
+        Catcode::LETTER | Catcode::OTHER | Catcode::SPACE | Catcode::MATH
       ) || symbol(t).is_some()
+        || *t == T_ACTIVE!('~')
     });
   let why = if read.is_none() {
     Some("one address of a list past the positions")
@@ -1459,6 +1464,15 @@ pub(super) fn in_its_font(font: Option<Rc<Font>>, tokens: Vec<Token>) -> Tokens 
   }
 }
 
+/// Whether `call` is a row contact every author shares unless marks pick it (`_share=authors`: llncs's sole `\institute`,
+/// `shared_row::share_row_contacts`), whose e-mail calls carry their labels to their items (`entry_email_cut`).
+fn shares_the_row(call: &ApiCall) -> bool {
+  call
+    .attrs
+    .split(',')
+    .any(|kv| kv.trim() == "_share=authors" || kv.trim() == "_share={authors}")
+}
+
 /// The call for one item of the reading, under `label`.
 fn item_call(
   key: &Key,
@@ -1576,7 +1590,12 @@ fn item_call(
       // (an affiliation-kind entry's class e-mail calls, which the reading places: without the separators and labels
       // around them, `entry_email_cut` — `\institute{Univ X\\ \email{p1@x.edu}, \email{p2@x.edu}}` had kept "Univ X ,")
       let emails_cut = if matches!(role, "affiliation" | "address" | "altaffiliation") {
-        entry_email_cut(command, label, separate.contains(&index))?
+        entry_email_cut(
+          command,
+          label,
+          separate.contains(&index),
+          shares_the_row(&call),
+        )?
       } else {
         None
       };
@@ -1880,6 +1899,18 @@ fn item_call(
       };
       // (a contact inside it: its command as written, as a block's)
       if contact_role && let Some(tokens) = call_contact(&call, assoc, written_out)? {
+        // (a shared row entry's e-mail: the labels its call carries go with it, as `entry_email_cut` cuts them from the
+        // entry — the e-mail label its name, a label of its own in its content, `shared_call_item`)
+        if role == "email"
+          && shares_the_row(&call)
+          && let Some((name, content)) = shared_call_item(&call.content, &assoc.text, &tokens)?
+        {
+          let keys = match name {
+            Some(name) if !keys.contains(",name=") => s!("{keys},name={{{name} }}"),
+            _ => keys,
+          };
+          return Ok(annotate_now("ltx:contact", &keys, &content));
+        }
         return Ok(annotate_now("ltx:contact", &keys, tokens.unlist_ref()));
       }
       // (a note inside it: its command's argument as written, under the note's own kind, as a block's note — its fonts,
