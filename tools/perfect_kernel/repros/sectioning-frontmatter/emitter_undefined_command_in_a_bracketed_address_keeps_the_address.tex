@@ -1,0 +1,15 @@
+% mechanism: an undefined command glues an address only when it stands between ink of the address's word and its `@`
+%   (`events::glues_an_address`, `Event::glued_undef`): one past the domain inside the word's bracket (`(ann@x.org\foo)`) glues no name — so the address is read as without the command, the
+%   segmentation unchanged. OXIDIZED_DESIGN_DIVERGENCES #983
+% witness: review revERR2 finding 1 (ERR2 declined the address: Ann's e-mail folded into her personname)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 1 "Undefined control sequence": "Ann Able (ann@x.org)" and "Bob Baker (bob@y.org)"
+% engines: Perl 0.8.8: 1 Error, creators Ann Able (ann@x.org<ERROR>\foo</ERROR>) and Bob Baker (bob@y.org), no contact;
+%   DEL5 (=2): 0 Errors, creators Ann Able (e-mail ann@x.org) and Bob Baker (e-mail bob@y.org)
+% expect:  1 Error (`\foo`), DEL5's 2 Warnings ("Ann Able", "Bob Baker" written as text); the creators Ann Able (e-mail ann@x.org) and Bob Baker (e-mail bob@y.org)
+% status:  RED (ERR2) -> GREEN (ERR2b)
+\documentclass{article}
+\author{Ann Able (ann@x.org\foo) \and Bob Baker (bob@y.org)}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

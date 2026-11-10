@@ -211,7 +211,7 @@ fn read_pending() -> Result<HeldUndefined> {
               }
             }
           }
-          mark_held(&mut value, &held);
+          mark_held(&mut value, &held, &inks);
           creator_roles(&mut value, &creators);
           Outcome::Events {
             events: value,

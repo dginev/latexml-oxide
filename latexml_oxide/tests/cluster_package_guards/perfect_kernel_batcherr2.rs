@@ -2,8 +2,9 @@
 //! Errors the observer's rehearsal holds and discards with their stubs, are raised again — once, as Perl's one
 //! digestion of the block raises them (State.pm:547-551, Base_Utility.pool.ltxml:691-693). In place where a piece the
 //! emitter digests holds the command: right after a name (`content::Field::past_held_undefined`), past its marks and
-//! notes (`emit::block_names`), and between two inks it glues, which no reading of addresses takes
-//! (`events::Event::glued_undef`: an undefined command never changes the segmentation). Else at the flush's end
+//! notes (`emit::block_names`), and where it glues a word's ink onto an address's local part, which no reading of
+//! addresses takes (`events::Event::glued_undef`; elsewhere the address is read as without the Error: an undefined command
+//! never changes the segmentation). Else at the flush's end
 //! (`reading::HeldUndefined::raise_unraised`), for a piece written as text. Each guard asserts every creator's name and
 //! contacts, in order, and the exact Error and Warning counts; witnesses 1101.4098, 1402.2906, 1808.09392, 2205.12847,
 //! 2309.09045, 2405.06973, 2405.13308, 2506.10896, 2508.08170, 2508.21091, 2601.17318, 2602.18351, 2604.26688,
@@ -133,4 +134,54 @@ fn an_and_inside_a_conditional_is_read_as_tex_reads_it() {
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml), [row(&["Ann Able"])]);
+}
+
+/// An undefined command stops an address being read only where it glues ink of the address's word onto its local part
+/// (`events::glues_an_address`; the synthetic's "Bobb@x.org" above). Past the `@`, after the word or inside its bracket
+/// it glues no name into an address: the reading is the one without the Error, its 1 Error raised by the flush's net, its
+/// Warnings the base's (review revERR2 finding 1: ERR2 read a third creator, or folded the e-mail into the name).
+/// Distinct: the narrowed rule's three negatives, one code path.
+#[test]
+fn an_undefined_command_outside_an_address_local_part_keeps_the_address() {
+  let (log, xml) = convert(
+    repro!("emitter_undefined_command_past_an_address_domain_keeps_the_address"),
+    false,
+  );
+  assert_eq!(undefined_errors(&log), ["\\IEEEmembership"], "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 1), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able", "email=ann@x.orgMember"]),
+    row(&["Bob Baker", "email=bob@y.org"]),
+  ]);
+  let (log, xml) = convert(
+    repro!("emitter_undefined_command_after_an_address_word_keeps_the_address"),
+    false,
+  );
+  assert_eq!(undefined_errors(&log), ["\\foo"], "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 2), "{log}");
+  assert_eq!(creators(&xml), [row(&["Ann Able", "email=ann@x.org"])]);
+  assert!(xml.contains(">Univ X</note>"), "{xml}");
+  let (log, xml) = convert(
+    repro!("emitter_undefined_command_in_a_bracketed_address_keeps_the_address"),
+    false,
+  );
+  assert_eq!(undefined_errors(&log), ["\\foo"], "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 2), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able", "email=ann@x.org"]),
+    row(&["Bob Baker", "email=bob@y.org"]),
+  ]);
+}
+
+/// A command the class's `\maketitle` defines before `\@author` (kr.sty's `\affiliations`) is defined where TeX reads the
+/// block: no Error (pdflatex 0; Perl's 1 is KNOWN_PERL_ERRORS #1219), the affiliation read; 2602.18351, 2604.26688,
+/// 2405.06973. Distinct: the net's exclusion of what the flush's code defines.
+#[test]
+fn a_command_the_class_maketitle_defines_raises_no_error() {
+  let (log, xml) = convert(
+    repro!("author_command_defined_in_maketitle_raises_no_error"),
+    false,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [row(&["Ann Able", "affiliation=Univ X"])]);
 }

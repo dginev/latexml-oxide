@@ -19218,3 +19218,30 @@ sibarticle.sty's `\author{… \ifnum \c@numAuthors>1 \and \ifx\@URLii\@empty …
 frontmatter driver raised them the same way (18 and 12). Not in Rust: the observer rehearses the block whole, as TeX
 (repro sectioning-frontmatter/author_and_inside_a_conditional_reads_as_tex; guard
 `perfect_kernel_batcherr2::an_and_inside_a_conditional_is_read_as_tex_reads_it`; OXIDIZED_DESIGN_DIVERGENCES #983).
+
+## 1219. A command a class defines inside its `\maketitle`, used in `\author`: Perl digests the block where it stands undefined
+
+TeX expands `\@author` inside `\maketitle`, where the class's title code has defined the commands an author block may
+use. kr.sty's `\@maketitle` defines `\affiliations` (and `\emails`, `\and`, `\And`) locally before `\@author`
+(kr.sty:94-100, 126-135), and nowhere else. Perl digests the `\author` block outside that code — its creator binding
+(Base_Utility.pool.ltxml:691-693) runs on the block itself, not under the class's `\maketitle` — so `\affiliations`
+is undefined there: `Error:undefined:\affiliations` and a creator "Ann Able \affiliations Univ X". The same
+eager-digestion family as #1218. Minimal trigger (pdflatex 0 errors, "Ann Able" over "Univ X"; Perl 0.8.8: 1 Error,
+one creator holding `<ERROR>\affiliations</ERROR>`):
+
+```latex
+\documentclass{article}
+\makeatletter
+\def\@maketitle{{\def\affiliations{\par}\@author}}
+\makeatother
+\author{Ann Able \affiliations Univ X}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}
+```
+
+Witnesses 2602.18351 (main.tex line 110; 1 Error with `--includestyles` too, kr.sty then loaded) and 2604.26688
+(main.tex line 322); 2405.06973 uses kr.sty the same way (not run on Perl). Not in Rust: the observer's rehearsal holds
+the block's Error, and the flush's net raises no command the flush's code assigns a meaning — the class's `\maketitle`
+defining it (`reading::HeldUndefined`): 0 Errors, the affiliation "Univ X" (OXIDIZED_DESIGN_DIVERGENCES #983).

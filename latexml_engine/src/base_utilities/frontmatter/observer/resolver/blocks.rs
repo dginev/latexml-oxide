@@ -475,8 +475,8 @@ impl Resolver {
           // Himel Chowdhury …` under the first row, 2111.03635; the classify helpers on each piece, not the run of them)
           // (a line of e-mail addresses alone is never names, a column's first line too: `\And
           // \{sagghosh, …, niranjan\}@cs.stonybrook.edu`, 2210.05991)
-          // (nor one whose address an undefined command glued from the ink on its sides, which no word of the source
-          // spells: `\and Bob\email{b@x.org}` reads "Bobb@x.org" — a name, as Perl's creator holds it, never the author
+          // (nor one whose address an undefined command glued a word's ink onto, before its `@`, which no word of the
+          // source spells: `\and Bob\email{b@x.org}` reads "Bobb@x.org" — a name, as Perl's creator holds it, never the author
           // before's e-mail; an undefined command never changes the segmentation, `Event::glued_undef`)
           let address_line = !addresses_in(&text).is_empty()
             && only_addresses(&text)

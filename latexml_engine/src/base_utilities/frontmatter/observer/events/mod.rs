@@ -287,10 +287,12 @@ pub struct Event {
   /// an error of the block's rehearsal was held at a position it covers (`mark_held`): what it reads may be the
   /// error's recovery, not the ink it stands for
   pub held:           bool,
-  /// an undefined command its rehearsal held an Error at lies inside its span, between its ink (`mark_held`): it prints
-  /// nothing, so the text read glues the ink on either side — `Bob\email{b@x.org}` (`\email` undefined in article)
-  /// reads "Bobb@x.org", an address no word of the source spells, which no reading of addresses may take: Perl's creator
-  /// holds it in the personname, `Bob<ERROR>\email</ERROR>b@x.org` (OXIDIZED_DESIGN_DIVERGENCES #983)
+  /// a Name's: an undefined command its rehearsal held an Error at glues ink onto an address's local part (`mark_held`):
+  /// it prints nothing, so a word's ink before it and the address's `@` after it read as one address — `Bob\email{b@x.org}`
+  /// (`\email` undefined in article) reads "Bobb@x.org", an address no word of the source spells, which no reading of
+  /// addresses may take: Perl's creator holds it in the personname, `Bob<ERROR>\email</ERROR>b@x.org`. One past the `@`
+  /// (`ann@x.org\IEEEmembership{Member}`), before the word (`Bob \foo b@x.org`) or in another word (`\texttt{ann@x.org}\foo{}
+  /// Univ X`, `(ann@x.org\foo)`) glues no name into an address and is none (OXIDIZED_DESIGN_DIVERGENCES #983)
   pub glued_undef:    bool,
   /// a Break's: what made it, `None` for a line break ([`BreakKind`])
   pub break_kind:     Option<BreakKind>,
@@ -2602,9 +2604,15 @@ pub struct HeldError {
   pub message: String,
 }
 
-/// Mark the events an error held covers ([`Event::held`]), a note's inner events too. A rehearsal goes on past a held
-/// error, so the events are all there, the block's whole: what the marker adds is which of them the error touched.
-pub(in crate::base_utilities) fn mark_held(events: &mut [Event], held: &[HeldError]) {
+/// Mark the events an error held covers ([`Event::held`]), a note's inner events too, and the Names an undefined
+/// command glues an address in ([`Event::glued_undef`], told by where `inks` says their characters print). A rehearsal
+/// goes on past a held error, so the events are all there, the block's whole: what the marker adds is which of them the
+/// error touched.
+pub(in crate::base_utilities) fn mark_held(
+  events: &mut [Event],
+  held: &[HeldError],
+  inks: &InkTable,
+) {
   for event in events {
     event.held = event.span.is_some_and(|(start, end)| {
       held
@@ -2612,15 +2620,51 @@ pub(in crate::base_utilities) fn mark_held(events: &mut [Event], held: &[HeldErr
         .filter_map(|error| error.span)
         .any(|(from, to)| from < end && start < to)
     });
-    // (an undefined command's Error strictly inside the span: ink on both sides of it, [`Event::glued_undef`])
-    event.glued_undef = event.kind == EventKind::Name
-      && event.span.is_some_and(|(start, end)| {
-        held
-          .iter()
-          .filter(|error| error.message.starts_with("Error:undefined:"))
-          .filter_map(|error| error.span)
-          .any(|(from, to)| start < from && to < end)
-      });
-    mark_held(&mut event.inner, held);
+    event.glued_undef = event.kind == EventKind::Name && glues_an_address(event, held, inks);
+    mark_held(&mut event.inner, held, inks);
   }
+}
+
+/// Whether an undefined command's held Error lies between a word's ink and the `@` after it in that word of `event`'s
+/// text ([`Event::glued_undef`]): the address's local part is glued from ink on both sides of a command printing nothing.
+/// A Name's characters print where `inks` records them, on a line printing an `@` — no line without one prints an
+/// address. Each character is before the Error when its own token is (else its box's cover ends by it), after it when
+/// at or past its end.
+fn glues_an_address(event: &Event, held: &[HeldError], inks: &InkTable) -> bool {
+  let errors: Vec<(u16, u16)> = held
+    .iter()
+    .filter(|error| error.message.starts_with("Error:undefined:"))
+    .filter_map(|error| error.span)
+    .collect();
+  if errors.is_empty() || !event.text.contains('@') {
+    return false;
+  }
+  let Some(at) = inks.of(event) else {
+    return false;
+  };
+  let before = |ink: &InkAt, from: u16| ink.own.map_or(ink.cover.1 <= from, |own| own < from);
+  let after = |ink: &InkAt, to: u16| ink.own.map_or(ink.cover.0 >= to, |own| own >= to);
+  // (each word's characters up to its first `@`: its local part)
+  let mut local: Vec<&InkAt> = Vec::new();
+  let mut past_at = false;
+  for (c, ink) in event.text.chars().zip(at.iter().map(Option::as_ref)) {
+    if c.is_whitespace() {
+      local.clear();
+      past_at = false;
+    } else if past_at {
+      continue;
+    } else if c == '@' {
+      if let Some(sign) = ink
+        && errors
+          .iter()
+          .any(|&(from, to)| after(sign, to) && local.iter().any(|ink| before(ink, from)))
+      {
+        return true;
+      }
+      past_at = true;
+    } else {
+      local.extend(ink);
+    }
+  }
+  false
 }
