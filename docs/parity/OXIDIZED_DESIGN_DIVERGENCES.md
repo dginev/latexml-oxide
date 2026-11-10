@@ -33185,6 +33185,19 @@ personname's, as ERR2's did),
 `perfect_kernel_batchfms2a1::the_rehearsal_leaves_nothing_behind` (re-expected: 2 Errors, 0 Warnings),
 `perfect_kernel_batch105a::an_error_at_depth_in_a_note_line_is_no_word` (re-expected: the Warning it pinned was the
 content check counting "songti").
+**Known REDs (review revPBb, synthetic):** (S2) the inline juggle path (`rehearsal.rs` ~771
+`inline_juggles_as_columns`) still reads `\hfil\linebreak[0]\hfil` between columns as a row break — only a juggle
+macro's `\linebreak[n<4]` is stripped; one filter in `prints_a_bound_break` would serve both. (S3) The stale-copy side
+of `copy_kept_meaning` (a later `\renewcommand\@maketitle` without the copy's `\NewAnd`, pdflatex E=1) has no guard.
+Pre-existing on int155a0, PB and PBb: any `\linebreak` inside a name in the title tabular is a row break where
+pdflatex (restricted horizontal mode) prints the name on one line — 4 creators, "Bob" a name and "Baker" an
+affiliation, no word lost (`sectioning-frontmatter/title_tabular_linebreak_inside_a_name`); a title-code mark macro that
+steps a counter (`\def\co{\stepcounter{corfn}\textsuperscript{\arabic{corfn}}}`) prints its mark for the first author
+only, the second's lost silently (`sectioning-frontmatter/title_code_counter_mark_first_author_only`). The content
+check's excess Warning on 2508.00545, 2508.04047, 2508.05996, 2508.08170, 2508.21091 and 2607.29185 (W +1 each, with E
+1 → 0; main session: accepted): the block's rehearsal runs without the title code's definitions, so `\co` prints
+nothing there while the creator prints the note; running them in the rehearsal traded it for "note no argument"
+Warnings and moved 2508.08170 to a counter decline (PBb, reverted).
 
 ### 984. The emitter keeps only an affiliation entry's own text, and the Link step places every inner e-mail of it (Z18c: llncs's old split's rules, in the emitter)
 
@@ -33613,7 +33626,12 @@ Hwang, Wei Wang" were lost (counted by a Warning, 5 words) and ‡ and § printe
 marks are kept, as before CR7. Perl's own comma cut makes 14 creators (5 Errors) there; following it would undo #52, so the
 fail-safe stands. A piece of the split printing no word is the name a macro spells (`\cat$^{1}$` of
 `\newcommand{\cat}{Cat Cole}`): `perl_piece_of` gives that name the first such piece, so it is no loss and its marks are
-its creator's (`piece_marks`; PBb, review revPB S1: PB wrote that block whole). Repros `pb_split_loses_name`,
+its creator's (`piece_marks`; PBb, review revPB S1: PB wrote that block whole). **Known weakness (revPBb S1, no failing
+probe):** the wordless-piece fallback never uses a piece up — `split_loses_a_name` searches each name from piece 0 and
+`piece_marks` restarts at the previous piece — so two macro-spelled names in a row take the same piece (the second
+one's marks the first one's; revPBb `p1_two_macro_names` still converts right), and one wordless piece could hide a
+name the split really loses (revPBb `p6`/`p7` still fire); the fix is to take each wordless piece once, in order.
+Repros `pb_split_loses_name`,
 `pbb_macro_spelled_name`; guards `perfect_kernel_batchpb::{a_split_losing_a_name_keeps_the_block_whole,
 a_name_a_macro_spells_is_no_lost_name}`.
 

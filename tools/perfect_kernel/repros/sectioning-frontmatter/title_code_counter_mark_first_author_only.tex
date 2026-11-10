@@ -1,0 +1,16 @@
+% RED (synthetic, review revPBb; pre-existing on int155a0, PB and PBb; silent)
+% oracle:  pdflatex 0 errors: "Ann Able1" and "Bob Baker2" (the title code's `\co` steps `corfn` per author)
+% engines: rust PBb = "Ann Able 1", "Bob Baker" with no mark, 0 warnings: the mark macro prints its mark for the first
+%          author only; the second `\maketitle` raises no "already defined" (the `\newcounter` replay, PBb)
+\documentclass{article}
+\makeatletter
+\def\@maketitle{\newcounter{corfn}\def\co{\stepcounter{corfn}\textsuperscript{\arabic{corfn}}}%
+  \begin{tabular}[t]{c}\@author\end{tabular}\par\@date}
+\makeatother
+\title{T}
+\author{Ann Able\co \and Bob Baker\co}
+\begin{document}
+\maketitle
+\maketitle
+Body \arabic{corfn}.
+\end{document}

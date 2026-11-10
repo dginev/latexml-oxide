@@ -1,0 +1,16 @@
+% RED (synthetic, review revPBb; pre-existing on int155a0, PB and PBb)
+% oracle:  pdflatex 0 errors: "Ann Able1  Bob Baker1" then "Carl Cole2", "1Univ X  2Univ Y" — in a `c` column the
+%          tabular is restricted horizontal mode, where `\@no@lnbk`'s penalty does nothing: "Bob Baker" one line
+% engines: rust PBb = 4 creators: Ann Able with affiliation "Baker", "Bob", Carl Cole, a nameless "Univ X", 0 warnings
+%          (no word lost): any `\linebreak` / `\linebreak[0]` / `\linebreak[4]` inside a name is bound to ROW_BREAK
+\documentclass{article}
+\makeatletter
+\def\@maketitle{\def\NewAnd{\end{tabular}\hfil\linebreak[0]\hfil\begin{tabular}[t]{c}\ignorespaces}%
+  \begin{tabular}[t]{c}\@author\end{tabular}}
+\makeatother
+\title{T}
+\author{Ann Able\textsuperscript{1} \quad Bob\linebreak[0]{} Baker\textsuperscript{1} \NewAnd Carl Cole\textsuperscript{2}\\ $^1$Univ X \quad $^2$Univ Y}
+\begin{document}
+\maketitle
+Body.
+\end{document}
