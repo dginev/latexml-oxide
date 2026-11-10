@@ -556,7 +556,7 @@ impl Resolver {
       live
         .iter()
         .map(|&c| {
-          let name = text_tokens(&self.out.creators[c].name);
+          let name = text_as_tokens(&self.out.creators[c].name);
           if spelled {
             NameKeys::of(&name)
           } else {

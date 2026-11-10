@@ -254,9 +254,10 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
   // the tests by name of the API's `\lx@add@` commands a name or a note may hold, read, not written: review revZ18m B2)
 ];
 
-/// The old reader's non-blank code lines at int140a: a ceiling, for the growth its emissions don't show (108a's +703
-/// lines, no new emission). A ceiling, so no edit that shortens the reader fails on it; **a batch that deletes from the
-/// reader lowers it to the new count**, in the same commit, so what was deleted cannot grow back. A sibling directory is no
+/// The old reader's non-blank code lines at int140a: a pin, for the growth its emissions don't show (108a's +703
+/// lines, no new emission). Exact since E0h (review revZ18m2 S1; a ceiling before): **a batch that deletes from the
+/// reader, or moves an item out of its files, lowers it to the new count** in the same commit and says what left, so
+/// what was deleted cannot grow back and what moved cannot leave unseen. A sibling directory is no
 /// escape from the rest of this fence's reach: its token reads count in `token_reads_only_fall_toward_the_floor`'s
 /// catch-all, and its API names and keys in `the_frontmatter_api_stays_perls`.
 /// The "Knowledge in, driver out, one pass" move (2026-11-08) lowered it from 15,404 to 9,275: the knowledge the one engine reached moved into its own library,
@@ -312,6 +313,13 @@ fn the_old_reader_takes_no_new_decision() {
     lines <= OLD_READER_CODE_LINES,
     "the old reader grew to {lines} code lines, over {OLD_READER_CODE_LINES}. {WHY} Raising this ceiling needs the main \
      session's decision."
+  );
+  // (exact, review revZ18m2 S1: a fall frees headroom a later batch could grow back into, and is how an item moved out of
+  // the old reader's files into a library file shows)
+  assert_eq!(
+    lines, OLD_READER_CODE_LINES,
+    "the old reader fell to {lines} code lines, under {OLD_READER_CODE_LINES}: lower the ceiling to it, and state in the \
+     commit what left (deleted, or moved to which file)."
   );
 }
 
@@ -396,6 +404,13 @@ fn the_moved_cut_and_kind_take_no_new_decision() {
     lines <= MOVED_CUT_KIND_CODE_LINES,
     "the moved Cut and Kind grew to {lines} code lines, over {MOVED_CUT_KIND_CODE_LINES}. {WHY} Raising this ceiling \
      needs the main session's decision."
+  );
+  // (exact, review revE0h B1: the export pin sees only `pub` items, so a non-exported item moved out of these files
+  // into a library file shows only as this count's fall — `kind.rs`' `pub(super) fn within_inst` to `classify/marks.rs`)
+  assert_eq!(
+    lines, MOVED_CUT_KIND_CODE_LINES,
+    "the moved Cut and Kind fell to {lines} code lines, under {MOVED_CUT_KIND_CODE_LINES}: lower the ceiling to it, and \
+     state in the commit what left (deleted, or moved to which file)."
   );
 }
 
@@ -484,6 +499,95 @@ fn old_reader_exports() -> std::collections::BTreeSet<String> {
   names
 }
 
+/// Every name the old reader's files export ([`old_reader_exports`] over [`MOVED_OLD_READER_FILES`]), an exact pin (review
+/// revZ18m2 S1): the fence decides by file whether a name is the old reader's, so an item moved out of those files into
+/// one of the one engine's (`mark_prints_nothing` from `ijcai.rs` into `classify/marks.rs`) would stop counting with no
+/// test edited. A name that leaves this list was deleted, or moved with its uses rerouted: the commit that lowers the pin
+/// says which, and the review reads it. A name added is a new item of the old reader's, which takes none. 81 at E0h.
+const OLD_READER_EXPORTS: &[&str] = &[
+  "AddressPlacement",
+  "CUT_COPY_PLACE",
+  "ContactOwner",
+  "ENTRY_DIGESTING",
+  "ENTRY_KEY_COUNTER",
+  "EntryCall",
+  "address_line_notes",
+  "addresses_in_order",
+  "affil_splits",
+  "affiliation_calls",
+  "affiliation_is_marked",
+  "answered_symbol_key",
+  "author_group_splits",
+  "author_label_marks",
+  "author_marks_end_name",
+  "binding_cut_list_attr",
+  "blank_line_marks_dropped",
+  "class_numbered_institutes",
+  "collaboration_line",
+  "collaboration_line_reading",
+  "cut_list_key",
+  "cut_marked_contact",
+  "document_notes",
+  "drop_empty_marks",
+  "email_line_calls",
+  "entry_calls",
+  "expand_separator_macros",
+  "expand_sole_author_macro",
+  "frontmatter_group_first",
+  "has_author_block_separator",
+  "has_ijcai_section_marker",
+  "hoist_wrapped_separators",
+  "holds_a_macro_printing_a_link",
+  "holds_requested_marked_entries",
+  "inst_prints_its_mark",
+  "inst_takes_back_space",
+  "is_membership_grade",
+  "kind_entry_addresses",
+  "leading_markup",
+  "led_by_footnote_symbol",
+  "line_addresses",
+  "line_breaks_as_name_separators",
+  "line_is_email_list",
+  "line_notes",
+  "lines_under_names_read_as_names",
+  "mark_prints_nothing",
+  "math_braces_as_printed",
+  "membership_read_out",
+  "name_line_span",
+  "name_marks_end",
+  "named_email_calls",
+  "names_continue",
+  "names_list_continues",
+  "notes_line_joins_names",
+  "notes_only_line",
+  "notes_out_of_marks",
+  "numbered_marks_requested",
+  "only_marks_and_notes",
+  "optioned_email_calls",
+  "placed_contact_owner",
+  "printed_marks_as_marks",
+  "queued_author_name_keys",
+  "queued_row_start",
+  "requested_entry_marks",
+  "requested_marked_entries_in",
+  "requesting_authors",
+  "run_in_author_order",
+  "shared_affiliation_calls",
+  "space_parted_name_line",
+  "space_parted_names",
+  "space_parted_rows_joined",
+  "spaced_name_separators",
+  "starts_with_footnote_symbol",
+  "take_author_annotations",
+  "text_tokens",
+  "unalias_mark_commands",
+  "whole_line_group",
+  "whole_name_collaboration",
+  "wide_space_end",
+  "wrapped_collaboration_out",
+  "written_membership_out",
+];
+
 /// How often `source` uses the old reader's `name`: in its code ([`uses_of`]), and as an inline capture of a format string,
 /// `{name}` or `{name:…}` in a literal (`s!("{CUT_COPY_PLACE}{key}:{label}")`; review revZ18a, a blind spot of the lexing,
 /// which lifts every literal out of the code); `imports` are the byte ranges of its code's `use` statements.
@@ -568,25 +672,16 @@ fn one_engine_names(sources: &[(String, RustSource)]) -> std::collections::BTree
     .collect()
 }
 
-/// The old reader's exported names a one-engine file exports too, a different item of the same name: the reverse fence
-/// counts no use of them, since it cannot tell which one a use names. An exact list, which only falls.
-const OLD_READER_NAMESAKES: &[&str] = &[
-  // (`defs/frontmatter_fields/contacts.rs`' keyval-text tokens (Z18a's field readers) beside the resolver's and the
-  // emitter's own `pub(super)` helpers, `observer/resolver/labels.rs` and `observer/emitter/emit.rs`: three items)
-  "text_tokens",
-];
-
 /// The old reader's exported names that `ours` counts as the one engine's own, so that the reverse fence would count no
-/// use of them: none may be but [`OLD_READER_NAMESAKES`] (review revZ18m B1).
+/// use of them, since it cannot tell which item a use names: none may be (review revZ18m B1). No name is shared since
+/// E0h, so none is exempt (review revZ18m2 N1): the one exemption, `text_tokens`, three items (`defs/frontmatter_fields/contacts.rs`'
+/// keyval-text tokens, Z18a's field readers, beside the one engine's `pub(super)` helpers), went when the one engine's
+/// two were renamed `observer/resolver/labels.rs` `text_as_tokens` and `observer/emitter/emit.rs` `printed_text_tokens`.
 fn old_reader_names_owned(
   exports: &std::collections::BTreeSet<String>,
   ours: &std::collections::BTreeSet<String>,
 ) -> Vec<String> {
-  exports
-    .intersection(ours)
-    .filter(|name| !OLD_READER_NAMESAKES.contains(&name.as_str()))
-    .cloned()
-    .collect()
+  exports.intersection(ours).cloned().collect()
 }
 
 /// The reverse fence: the one engine reaches into the old reader only through the names it reaches today, each a debt.
@@ -671,6 +766,7 @@ fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
 /// The reverse fence counts every name the old reader exports (review revZ18m B1): a file under `classify/old_reader/` is
 /// the old reader's, listed in [`MOVED_OLD_READER_FILES`]; none of those is a source of the one engine's; and the names
 /// Z18m moved into `frontmatter/` (the 22 revZ18m found uncounted) are the old reader's exports, none the one engine's own.
+/// Since E0h every export is pinned by name ([`OLD_READER_EXPORTS`], review revZ18m2 S1), so none leaves those files unseen.
 #[test]
 fn the_old_readers_names_never_count_as_the_one_engines_own() {
   let old_reader_dir = format!("{BASE}/frontmatter/classify/old_reader");
@@ -705,44 +801,43 @@ fn the_old_readers_names_never_count_as_the_one_engines_own() {
   );
   let ours = one_engine_names(&sources);
   let exports = old_reader_exports();
+  // (the one engine's side is read, so the check below cannot pass on an empty set — review revE0h N1; and the rename
+  // stands)
+  assert!(
+    ours.contains("text_as_tokens") && ours.contains("printed_text_tokens"),
+    "the one engine's names were not read (or the `text_tokens` rename was undone)"
+  );
+  // (no name both sides export, none exempt: review revZ18m2 N1, the namesake `text_tokens` renamed on the one engine's
+  // side at E0h)
   assert_eq!(
     old_reader_names_owned(&exports, &ours),
-    Vec::<String>::new()
+    Vec::<String>::new(),
+    "names both the old reader's files and the one engine's export: rename the one engine's"
   );
   // (the check bites: a name both export is flagged)
   let both: std::collections::BTreeSet<String> = ["has_author_block_separator".to_string()].into();
   assert_eq!(old_reader_names_owned(&both, &both), vec![
     "has_author_block_separator".to_string()
   ]);
-  for name in [
-    "author_group_splits",
-    "author_label_marks",
-    "author_marks_end_name",
-    "collaboration_line",
-    "document_notes",
-    "drop_empty_marks",
-    "has_author_block_separator",
-    "hoist_wrapped_separators",
-    "holds_a_macro_printing_a_link",
-    "leading_markup",
-    "line_breaks_as_name_separators",
-    "lines_under_names_read_as_names",
-    "name_marks_end",
-    "names_continue",
-    "names_list_continues",
-    "notes_only_line",
-    "space_parted_name_line",
-    "space_parted_names",
-    "space_parted_rows_joined",
-    "spaced_name_separators",
-    "whole_line_group",
-    "wide_space_end",
-  ] {
-    assert!(
-      exports.contains(name) && !ours.contains(name),
-      "{name}: the old reader's export, counted by the reverse fence"
-    );
-  }
+  // (every export pinned, review revZ18m2 S1: the 22 names revZ18m B1 found sitting in `classify/` uncounted among them,
+  // `author_group_splits` … `wide_space_end`; none left the old reader's files unseen, none is the one engine's own)
+  let pinned: std::collections::BTreeSet<String> = OLD_READER_EXPORTS
+    .iter()
+    .map(|name| name.to_string())
+    .collect();
+  let left: Vec<&String> = pinned.difference(&exports).collect();
+  let added: Vec<&String> = exports.difference(&pinned).collect();
+  assert!(
+    left.is_empty(),
+    "{left:?} no longer exported by the old reader's files (MOVED_OLD_READER_FILES): deleted, or moved out of them, \
+     where the reverse fence no longer counts its uses. Lower OLD_READER_EXPORTS (and OLD_READER_CODE_LINES) and state \
+     in the commit which, and where it went."
+  );
+  assert!(
+    added.is_empty(),
+    "{added:?}: new exports of the old reader's files. The old reader takes no new item: a new rule lands in \
+     `observer/resolver/`."
+  );
 }
 
 /// Perl LaTeXML's Frontmatter API names, generated once from `LaTeXML/lib/LaTeXML` (absent in worktrees and CI, so hard-coded
@@ -1321,7 +1416,8 @@ fn every_shape_of_a_key_is_seen() {
 /// no new read: a name's prefix or suffix, a `TOKEN_…` constant compared, a table of names or tokens (once each), a method on a
 /// `to_string()`. The engine's total was 2,264 at Z01: the study's 1,962, plus
 /// `title_page_check.rs`, which its list left out (14), plus the helpers' shapes the study did not count (`with_str(`,
-/// `cs_in(`, `text_tokens(`, `to_string() ==`, a comparison or a match arm on a quoted `\\…`); and 85 in the rest of
+/// `cs_in(`, `text_tokens(` (and the one engine's two of that shape, `text_as_tokens(`, `printed_text_tokens(`, so
+/// named since E0h), `to_string() ==`, a comparison or a match arm on a quoted `\\…`); and 85 in the rest of
 /// `base_utilities/`. `frontmatter (rest)` holds any new file under `frontmatter/`, and a `rest <file>` row each file under
 /// `base_utilities/` no area lists, a new one or a sibling directory's too, so a read moved there is no debt paid.
 /// Bindings are the study's list, so a binding outside it is not watched. Raised at CR7 (main session 2026-11-10, "follow
@@ -1352,7 +1448,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (Z18m, 349 -> 514: moved from `author_block` with its code (+131), and ERR2's title-code reader from
   // `defs/frontmatter_fields/` (+34, `classify/title_code.rs`), 514 = 349 + 131 + 34; none added; then 514 -> 515: PC3's
   // `reads_arguments` moved with that reader from `emitter/content.rs`, as its row says)
-  ("classify", 515),
+  // (E0h, 515 -> 384: the old reader's own `classify/old_reader/` split off into a row of its own, review revZ18m2 S1's
+  // sibling, so a read the library takes cannot hide behind one the old reader drops; 515 = 384 + 131, none added)
+  ("classify", 384),
+  // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row)
+  ("old_reader", 131),
   ("defs/author_macros", 20),
   // (Z18m, a new directory: the IJCAI chain moved from `author_block` with its code, as that row says)
   ("defs/author_macros/", 64),
@@ -1453,7 +1553,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // before it — what it prints, no name spelled; 2603.18265)
   ("rehearsal", 21),
   ("relocate", 134),
-  // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens`, printed text read
+  // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens` (`text_as_tokens`
+  // since E0h, its name no longer the old reader's), printed text read
   // as tokens by `is_institution` and `NameKeys` (5 with their definitions), a `'\\'` read of a label (2), a call's hook (1).
   // Z14r2: 18, not 9 — the count now sees `is_institution(`, review revZ14: Z14's fall from 15 was the seven `text_tokens` sites
   // it moved behind that name; counted again, with the name's definition and Z14's one new call (`carried`); none of Z14r2's.
@@ -1499,7 +1600,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // for whether its definee takes arguments, so a held undefined title-code command is not cut from them, 1108.4222;
   // Z18m 15 -> 14: `reads_arguments` moved with the title-code reader to `classify/title_code.rs`, its read with it)
   ("emitter/content", 14),
-  // (Z4a, a new file: the emitter builds Perl's calls from the reading, its reads a call's own keys and pieces, `text_tokens` and the
+  // (Z4a, a new file: the emitter builds Perl's calls from the reading, its reads a call's own keys and pieces, `text_tokens` (`printed_text_tokens` since E0h) and the
   // catcodes of a cut: where a slice's edge falls past an option, a group or an accent's letter, OD #980; Z4ar2, 30 -> 28: an address
   // list's `@` no longer read, its inks are; NE3 28 -> 36: `key_tokens`' table of the specials a key value holds as characters,
   // a legend's `mark={#}`, 2607.18332 — what it writes, no decision)
@@ -1534,7 +1635,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // owner decided by a spelling)
   ("emitter/emit", 72),
   // (P1b, 0 -> 1: `emitter/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
-  // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
+  // it, `text_tokens` (`printed_text_tokens` since E0h) — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("emitter/dom+mod", 1),
   ("emitter/plan", 72),
   // (LO2r2, 0 -> 4: a row line's cut ends at its address's own first token, which the letters check finds; the tokens between the
@@ -1546,6 +1647,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
 /// The areas under `frontmatter/`, by path; the first that holds a file takes it.
 const FRONTMATTER_AREAS: &[(&str, &str)] = &[
   // (the "Knowledge in, driver out, one pass" move: the old reader's text rules and token primitives, moved unchanged from `author_block/`, their reads with them)
+  // (E0h: the old reader's own files under `classify/`, Z18m's move of the rest of `author_block/`, a row of their own)
+  ("old_reader", "classify/old_reader/"),
   ("classify", "classify/"),
   // (the "Knowledge in, driver out, one pass" move: Perl's whole-block fallback and its own preparation, moved unchanged from `author_block/`)
   ("fallback", "fallback.rs"),
@@ -1666,7 +1769,7 @@ fn resolver_reads(source: &RustSource) -> usize {
     r"\bT_[A-Z]+!|\bTOKEN_[A-Z_]+|\bTokens?\b|\.tokens\b|\.to_string\(\)\s*\.\s*[a-z_]",
     r"|\.content\b|to_string\(\)\s*(?:==|!=)",
     r"|\.get_cs\(\)|\.cs_name\(\)|\.with_cs_name\(|\.get_string\(\)|\.get_catcode\(\)|\bCatcode::|\bToString\b",
-    r"|\bposition_of\(|\bis_cs\(|\.as_cs\(|\bmeaning\(|\bwith_str\(|\bcs_in\(|\btext_tokens\(",
+    r"|\bposition_of\(|\bis_cs\(|\.as_cs\(|\bmeaning\(|\bwith_str\(|\bcs_in\(|\b(?:text|text_as|printed_text)_tokens\(",
     // (Z14r2: `is_institution`, `text_tokens` behind a name, review revZ14 — Z14's six sites moved behind it read as fewer)
     r"|\bis_institution\(",
   ))
@@ -1847,7 +1950,7 @@ fn token_reads_only_fall_toward_the_floor() {
     r"|(?:matches!\([^)]*T_[A-Z]+!)|(?:position_of\()|(?:get_catcode\(\))|(?:Catcode::[A-Z]+)|(?:\.get_cs\(\))",
     r"|(?:\.cs_name\(\))|(?:\.get_string\(\))|(?:tokens?\.to_string\(\))|(?:content\.to_string\(\))|(?:\bToString\b)",
     r"|(?:\|\s*T_[A-Z]+!)|(?:Some\(&?T_[A-Z]+!)|(?:\bis_cs\()|(?:\.as_cs\()|(?:meaning\()",
-    r"|(?:\bwith_str\()|(?:\bcs_in\()|(?:\btext_tokens\()|(?:to_string\(\)\s*(?:==|!=))",
+    r"|(?:\bwith_str\()|(?:\bcs_in\()|(?:\b(?:text|text_as|printed_text)_tokens\()|(?:to_string\(\)\s*(?:==|!=))",
     r#"|(?:(?:==|!=)\s*&?\*?\s*"\\\\)|(?:"\\\\[^"]*"\s*(?:==|!=|\||=>))"#,
     // (a name's prefix or suffix; a `TOKEN_…` constant compared; a table of names or of tokens, `.contains` read off it; a
     // method on a token list's text)

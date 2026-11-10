@@ -16,7 +16,7 @@ use std::cell::Cell;
 
 use super::{
   content::Field,
-  emit::{annotate_now, in_its_font, item_only, last_argument, rehearsed, text_tokens},
+  emit::{annotate_now, in_its_font, item_only, last_argument, printed_text_tokens, rehearsed},
   give_back_entry,
   plan::{api_call, spells_one_of},
   *,
@@ -618,7 +618,7 @@ fn cut_at(
       });
       let (tokens, how) = printed.unwrap_or_else(|| {
         (
-          in_its_font(font(), text_tokens(address)).unlist(),
+          in_its_font(font(), printed_text_tokens(address)).unlist(),
           "its text",
         )
       });
