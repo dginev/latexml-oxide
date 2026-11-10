@@ -3611,6 +3611,25 @@ pub fn stand_in_copy_meaning(file: &str, token: &Token) -> Option<Stored> {
     .and_then(|copy| copy.overlay.get(&key).cloned())
 }
 
+/// The meaning the latest stand-in copy that redefined `token` for its own code only gave it (its overlay, the copy's
+/// `declined` name: "keeps LaTeXML's definition", [`note_copy_provides_assignment`]), while the binding's meaning is still
+/// the one in force (`owned_by_the_semantic_layer`): what the paper's copy runs where the binding's version runs
+/// here. For the frontmatter's reading of a class's title code (latexml_engine `title_code_author_definitions`:
+/// neurips_2022.sty's `\@maketitle`, which defines `\NewAnd`, where the neurips binding keeps its own; 2205.14141,
+/// 2205.14539).
+pub fn copy_kept_meaning(token: &Token) -> Option<Stored> {
+  let key = meaning_key(token);
+  if !owned_by_the_semantic_layer(token) {
+    return None;
+  }
+  state!()
+    .copy_provides_copies
+    .iter()
+    .rev()
+    .find(|copy| copy.declined.contains(&key))
+    .and_then(|copy| copy.overlay.get(&key).cloned())
+}
+
 /// Is `token`'s current meaning owned by LaTeXML's semantic layer, for [`note_copy_provides_assignment`]? Either the
 /// name was assigned while a stand-in binding loaded ([`crate::definition::origin::StandInLoadGuard`]: its own definitions,
 /// `\let`s and `RawTeX`, and the bindings it required), at an origin of LaTeXML's own, or its meaning is a definition

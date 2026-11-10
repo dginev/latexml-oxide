@@ -460,22 +460,37 @@ fn collaboration_contact_call(text: &Tokens, covers: Option<usize>) -> Result<Ve
 
 /// The definitions in force where a class's title code reads `\@author`: the statements of the groups still open there
 /// in its `\@maketitle` (else a dropped `\maketitle`'s) body — `\def`, `\gdef`, `\let`, `\newcommand`, `\providecommand`
-/// — with a global one kept past its group, in source order; each with its definee.
+/// — with a global one kept past its group, in source order; each with its definee. Where a binding keeps its own
+/// `\@maketitle` while the paper's copy of the file it stands in for carries another (`state::copy_kept_meaning`, the
+/// copy's overlay: neurips_2022.sty:285-293's `\def\NewAnd`, 2205.14141, 2205.14539), the copy's title code is the one
+/// pdflatex runs: its definitions follow, a definee the live code defines first kept as that defines it.
 pub(in crate::base_utilities) fn title_code_author_definitions() -> Vec<(Token, Vec<Token>)> {
-  [T_CS!("\\@maketitle"), T_CS!("\\lx@dropped@maketitle")]
-    .iter()
-    .find_map(|cs| match lookup_meaning(cs) {
-      Some(Stored::Expandable(definition)) => match definition.get_expansion() {
-        Some(ExpansionBody::Tokens(body)) => definitions_at_author(body.unlist_ref()),
-        _ => None,
-      },
+  let at_author = |meaning: Option<Stored>| match meaning {
+    Some(Stored::Expandable(definition)) => match definition.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => definitions_at_author(body.unlist_ref()),
       _ => None,
-    })
-    .unwrap_or_default()
+    },
+    _ => None,
+  };
+  let mut definitions = [T_CS!("\\@maketitle"), T_CS!("\\lx@dropped@maketitle")]
+    .iter()
+    .find_map(|cs| at_author(lookup_meaning(cs)))
+    .unwrap_or_default();
+  if let Some(copys) = at_author(copy_kept_meaning(&T_CS!("\\@maketitle"))) {
+    for (definee, statement) in copys {
+      if !definitions.iter().any(|(d, _)| *d == definee) {
+        definitions.push((definee, statement));
+      }
+    }
+  }
+  definitions
 }
 
 /// The definition statements of `body`'s groups open at its first `\@author` ([`title_code_author_definitions`]),
-/// in source order; `None` when it reads no `\@author`. Groups are brace groups, `\bgroup`/`\egroup`,
+/// in source order; `None` when it reads no `\@author`. A macro the body defines whose statement holds `\@author` (or
+/// such a macro) reads it where it is used: its first use is the reading point, aaai2026.sty:73's `\def\theauthors{\if
+/// T\showauthors@on\@author\else …\fi}`, used at :98 inside the `\sbox{\titlearea}` group that defines `\coo` and
+/// `\equalcontrib` (2508.00545, 2508.04047, 2508.04749, 2508.05996, 2508.08170). Groups are brace groups, `\bgroup`/`\egroup`,
 /// `\begingroup`/`\endgroup` and environments. A statement runs locally where it is replayed: a `\gdef` is a `\def`
 /// there, and the `\global` before a definition is left out. `\edef`/`\xdef` are not replayed (expanded now, not at
 /// the title code), nor `\renewcommand` (of a command already defined, which stands). A statement whose shape is not
@@ -515,6 +530,8 @@ pub(in crate::base_utilities) fn definitions_at_author(
   let mut statements: Vec<(Token, Vec<Token>, Option<usize>)> = Vec::new();
   let mut open: Vec<usize> = vec![0];
   let mut groups = 0usize;
+  // (the macros the body defines that read `\@author`: their first use reads it)
+  let mut readers: Vec<Token> = Vec::new();
   let mut i = 0;
   while i < body.len() {
     let t = body[i];
@@ -536,7 +553,7 @@ pub(in crate::base_utilities) fn definitions_at_author(
       i += 1;
       continue;
     }
-    if t == T_CS!("\\@author") {
+    if t == T_CS!("\\@author") || readers.contains(&t) {
       return Some(
         statements
           .into_iter()
@@ -599,6 +616,30 @@ pub(in crate::base_utilities) fn definitions_at_author(
       {
         let mut statement = vec![head];
         statement.extend_from_slice(&body[i + 1..stop]);
+        if statement[2..]
+          .iter()
+          .any(|u| *u == T_CS!("\\@author") || readers.contains(u))
+        {
+          readers.push(definee);
+        }
+        statements.push((
+          definee,
+          statement,
+          (!global).then(|| *open.last().unwrap_or(&0)),
+        ));
+        i = stop;
+      },
+      // (a separator the title code defines, a parameterless `\def` closing the tabular `\@author` is set in and opening
+      // another — latex.ltx's `\and` — is kept as defined, for the readers of a juggle by its meaning
+      // ([`title_code_juggle`]), not replayed: neurips_2022.sty:285's `\NewAnd`, 2205.14141)
+      Some((Some(definee), stop, head))
+        if head == T_CS!("\\def")
+          && definee.get_catcode() == Catcode::CS
+          && stop <= body.len()
+          && juggle_body(&body[i + 2..stop]).is_some() =>
+      {
+        let mut statement = vec![head];
+        statement.extend_from_slice(&body[i + 1..stop]);
         statements.push((
           definee,
           statement,
@@ -610,6 +651,44 @@ pub(in crate::base_utilities) fn definitions_at_author(
     }
   }
   None
+}
+
+/// The meaning of a parameterless `\def` whose body is `body_group` (its `{…}`), spaces out, if it is a tabular juggle:
+/// `\end{tabular}` first and a `\begin{tabular}` after it (latex.ltx's `\and`).
+fn juggle_body(body_group: &[Token]) -> Option<Vec<Token>> {
+  let (open, rest) = body_group.split_first()?;
+  let (close, inner) = rest.split_last()?;
+  if open.get_catcode() != Catcode::BEGIN || close.get_catcode() != Catcode::END {
+    return None;
+  }
+  let tokens: Vec<Token> = inner
+    .iter()
+    .filter(|t| t.get_catcode() != Catcode::SPACE)
+    .copied()
+    .collect();
+  let len = environment_call_len(&tokens, T_CS!("\\end"), "tabular")?;
+  (len..tokens.len())
+    .any(|at| environment_call_len(&tokens[at..], T_CS!("\\begin"), "tabular").is_some())
+    .then_some(tokens)
+}
+
+/// Whether the title-code statement `statement` ([`title_code_author_definitions`]) defines a tabular juggle
+/// ([`juggle_body`]): a separator, read by its meaning, never replayed for the author content.
+pub(in crate::base_utilities) fn is_juggle_statement(statement: &[Token]) -> bool {
+  statement.first() == Some(&T_CS!("\\def"))
+    && statement.len() > 2
+    && juggle_body(&statement[2..]).is_some()
+}
+
+/// The meaning (spaces out) of the tabular juggle the title code defines for `t` where it reads `\@author`, `t` itself
+/// undefined ([`title_code_author_definitions`], [`juggle_body`]): neurips_2022.sty:285's `\NewAnd`, which its
+/// `\@maketitle` defines beside `\And` and `\AND` (2205.14141). What `fallback::tabular_juggle_between` reads it by, as
+/// a juggle defined at the block (`\sharedaffiliation`).
+pub(in crate::base_utilities) fn title_code_juggle(t: &Token) -> Option<Vec<Token>> {
+  title_code_author_definitions()
+    .into_iter()
+    .find(|(definee, statement)| definee == t && is_juggle_statement(statement))
+    .and_then(|(_, statement)| juggle_body(&statement[2..]))
 }
 
 /// Whether `tokens` (a definition's meaning) close only the groups and environments they open (`\bgroup`,

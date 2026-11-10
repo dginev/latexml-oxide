@@ -332,7 +332,9 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// grow back into a reader of its own). Z18j raised it from 1,393 to 2,346 with the code it moved here from
 /// `author_block/` unchanged, which lowered [`OLD_READER_CODE_LINES`] from 3,631 to 2,665 (no line added but the moved
 /// files' headers and imports).
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_346;
+/// PB raised it to 2,404, PENDING the main session's decision: the title-code reader's macro readers, the copy's kept
+/// `\@maketitle` and its juggles (OD #983's exclusion, 2508.08170, 2205.14141), definitions put in force, no owner decided.
+const MOVED_CUT_KIND_CODE_LINES: usize = 2_404;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -1145,7 +1147,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // compare; how an address prints, no owner decided)
   ("defs/frontmatter_fields", 30),
   // (Z18j, 83 -> 95: moved from `author_block` with its code, as that row says)
-  ("defs/frontmatter_fields/", 95),
+  // (PB, 95 -> 102, PENDING the main session's decision: `names.rs`' reading of a class's title code — a macro of it whose
+  // statement holds `\@author`, a tabular juggle it defines (`juggle_body`, `title_code_juggle`) — reads the class's macro
+  // bodies, TeX definitions no event says, to put its definitions in force for the author content (OD #983's exclusion);
+  // no owner decided: 2508.08170, 2205.14141)
+  ("defs/frontmatter_fields/", 102),
   ("defs/general", 8),
   ("epl_cls.rs", 43),
   ("eptcs_cls.rs", 28),

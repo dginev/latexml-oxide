@@ -105,7 +105,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       .map(|(definee, _)| lookup_meaning(definee).is_none())
       .collect();
     for ((definee, statement), undefined) in definitions.into_iter().zip(undefined) {
-      if !undefined {
+      // (a juggle is a separator, read by its meaning, `title_code_juggle`: digested, it closes the tabular)
+      if !undefined || is_juggle_statement(&statement) {
         continue;
       }
       out.extend(statement);

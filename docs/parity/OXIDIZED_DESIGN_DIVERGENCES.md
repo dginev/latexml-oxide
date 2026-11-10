@@ -33126,7 +33126,30 @@ block's held Errors (its section markers, the resolver's `block_markers`, 2501.0
 code defines inside its own `\author`/`\maketitle` (vmsta's `\fnm`/`\snm`/`\inits`, the IOS `\fnms`, JAIR's row
 `\name`/`\email`/`\addr`, kr.sty's `\affiliations`: pdflatex 0 errors there; Perl raises `Error:undefined:\affiliations` on 2602.18351 (with
 `--includestyles` too) and 2604.26688, because it digests `\author` outside the class's `\maketitle`, KNOWN_PERL_ERRORS
-#1219). (5) The emitter's reading of the placed XML
+#1219). The title code is read where it reads `\@author` (`defs/frontmatter_fields/names.rs`
+`definitions_at_author`, `title_code_author_definitions`; PB): (a) through a macro it defines whose statement holds
+`\@author` — its first use is the reading point (aaai2026.sty:73 `\def\theauthors{\if T\showauthors@on\@author…}`,
+used at :98 inside the `\sbox{\titlearea}` group that defines `\coo`: 2508.00545 `\equalcontriblast`, 2508.04047 `\co`,
+2508.04749 `\corres`, 2508.05996 `\Corresponding`, 2508.08170 `\coo`, each 1 → 0 Errors, the corresponding-author note
+the mark prints now kept); (b) where a binding keeps its own `\@maketitle` beside the paper's copy's
+(`state::copy_kept_meaning`, the copy's overlay of a name it `declined`), the copy's statements follow the live ones
+(neurips_2022.sty:281-293); (c) a tabular juggle the title code defines there (a parameterless `\def`
+of `\end{tabular}…\begin{tabular}`, latex.ltx's `\and`) is never replayed — digested, it closes the tabular — but read by
+its meaning as a separator (`title_code_juggle`, through `fallback::tabular_close_rest_of_any`: the rehearsal's column,
+the whole block's line break, the split's `\and`), as a juggle defined at the block is (2205.14141's `\NewAnd`, 1 → 0
+Errors, 8 creators; 2205.14539's `\Aff`, a `\linebreak[4]` juggle before the affiliations, 1 → 0 and 3 → 4 creators,
+David Barber no longer glued into an affiliation). Repros `pb_title_code_macro_reads_author`, `pb_title_code_juggle_separator`; guards
+`perfect_kernel_batchpb::{a_title_code_macro_reading_the_author_defines_its_marks, a_title_code_juggle_parts_two_authors}`.
+Known residuals: the content check counts a note such a mark prints as written more often than printed (its rehearsal
+reads none: 2508.08170, 2508.04047, one Warning each), and a `\newcounter` of the title code is not replayed
+(2508.04047's `\co` reads `corfn`: `Warning:undefined:corfn`); a juggle between two names of a line with no marks reads
+the column after it as their shared affiliation (`\author{Ann Able \And Bob Baker \NewAnd Carl Cole}`: Carl an
+affiliation; the base merged him into Bob's name with the Error). Not reached: the pazh classes' `\address`, defined only in
+pazhastl.cls:112's `\@maketitle` minipage — the e-mail cut writes `\email{…}\address` as an e-mail contact apart from its
+`{1}`, digested outside the author content (`<contact role="email"><sup>*</sup><ERROR>\address</ERROR></contact>`:
+1108.4222, 1202.2889, 1206.0451, 1207.2226, 1301.4791, 1307.2761, 2103.05801, 2408.01858, 2412.06362; 2607.07582's
+`\addres`), so a replay there would make the command read past its piece: the cut must keep a command with its argument;
+and neurips_2024.sty, which the stand-in binding never reads (2401.16452, `\name`, `\addr`, `\email`). (5) The emitter's reading of the placed XML
 reads an `ltx:ERROR` as no word (`emitter/dom.rs`), so the content check counts no "undefinedprobecs" or "songti" the
 block does not print. **Not raised, by design:** the `Error:expected:\fi` chains and `\@authorii`…`\@authorv` the old
 driver raised on sibarticle.sty's `\ifnum \c@numAuthors>1 \and …\fi` (1603.08231: 18, 2112.06251: 12): pdflatex 0
@@ -33561,6 +33584,14 @@ Y` line under `… and Carl Cole\affil{1}` went to Carl, each `\\` line being it
 `\lx@author@withsup` made the address a creator with its mark moved after the text — Perl keeps both address lines inside
 the last creator's name, after a `<break/>`, and makes no address creator. Of the 23 decline papers, 0809.5152 and
 1110.6375 are written whole, byte-identical to the base; the other 21 are unchanged by it.
+(iii) A creator the reading made of the block whose name no creator's names hold (`emit::note_split_loses_a_name`,
+`perl_piece_of` of its words in `perl_names_words`, decided once per block before the decline; PB) — the reading's
+creators, not its Name events, which hold comma pieces the resolver reads as an affiliation ("Dept of Physics"): 1511.09009's aaai `Yi Zhang\footremember{yi} \\, Yanghua Xiao\footremember{yh} \\, Seung-won Hwang…`, each `\\`
+the macro's second argument so pdflatex prints one line of four names, is cut at the first `\\` (the kernel cuts only a
+names line at its commas, #52), and `\footremember` then took each `\lx@add@affiliation` as its argument: "Seung-won
+Hwang, Wei Wang" were lost (counted by a Warning, 5 words) and ‡ and § printed †. Written whole, all four names and
+marks are kept, as the base. Perl's own comma cut makes 14 creators (5 Errors) there; following it would undo #52, so the
+fail-safe stands. Repro `pb_split_loses_name`, guard `perfect_kernel_batchpb::a_split_losing_a_name_keeps_the_block_whole`.
 
 **Left (Perl's own, kept):** a line of no mark continues the entry before it, so a second group of names after an
 affiliation line joins the creator before it. Every `\\` line of a split piece after its first is

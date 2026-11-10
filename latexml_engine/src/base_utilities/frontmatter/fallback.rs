@@ -8,6 +8,7 @@
 //! left is a binding's too (`strip_linebreak_options`, `has_author_marks`, `glued_line_marks_as_marks`).
 
 use super::*;
+use crate::base_utilities::defs::frontmatter_fields::title_code_juggle;
 
 /// Perl's whole-block creator (Base_Utility.pool.ltxml:693, `\lx@add@authors`' `{tabular}` fallback, and :588-589):
 /// `\lx@add@author[keyvals]{…}` of the block `written`, as given. The one writer of a block kept whole, Perl's raw call —
@@ -1388,7 +1389,12 @@ fn tabular_close_rest_of_any(t: &Token) -> Option<Vec<Token>> {
   if t.get_catcode() != Catcode::CS {
     return None;
   }
-  let defn = lookup_definition(t).ok()??;
+  // (a juggle the class's title code defines where it reads `\@author`, undefined at the block: neurips_2022.sty's
+  // `\NewAnd`, 2205.14141)
+  let Some(defn) = lookup_definition(t).ok()? else {
+    let body = title_code_juggle(t)?;
+    return past_environment(&body, T_CS!("\\end"), "tabular");
+  };
   if !defn.is_expandable()
     || defn
       .get_parameters()

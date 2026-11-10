@@ -33,8 +33,8 @@ use crate::base_utilities::{
   },
   frontmatter::{
     fallback::{
-      PerlAuthorBranch, perl_author_branch, perl_author_calls, tabular_juggles_in_a_whole_block,
-      whole_block_author,
+      PerlAuthorBranch, PerlCalls, perl_author_branch, perl_author_calls,
+      tabular_juggles_in_a_whole_block, whole_block_author,
     },
     insert::NAME_PRINTED,
     observer::{
@@ -3453,14 +3453,17 @@ fn perl_block(
 fn perl_block_pieces(index: usize) -> Option<Vec<Vec<String>>> {
   block_keys(index, "", &[])
     .and_then(|(_, written)| perl_author_calls(|_| None, written).ok())
-    .map(|perl| {
-      let words = |piece: &Tokens| {
-        name_words(&visible_name_text(&words_parted(&outside_notes(
-          piece.unlist_ref(),
-        ))))
-      };
-      perl.names.iter().map(words).collect()
-    })
+    .map(|perl| perl_names_words(&perl))
+}
+
+/// The words of each creator's names in Perl's split `perl` ([`perl_block_pieces`]).
+fn perl_names_words(perl: &PerlCalls) -> Vec<Vec<String>> {
+  let words = |piece: &Tokens| {
+    name_words(&visible_name_text(&words_parted(&outside_notes(
+      piece.unlist_ref(),
+    ))))
+  };
+  perl.names.iter().map(words).collect()
 }
 
 /// Whether Perl's split of the author block at ledger index `index` (`fallback::perl_author_calls`) would state an owner
@@ -3477,8 +3480,14 @@ fn perl_block_pieces(index: usize) -> Option<Vec<Vec<String>>> {
 ///   `\vspace{6pt} \vspace{3pt} $^{a}${\em{Istituto …}}`, whose mark sits past Perl's 8 tokens of a marked affiliation
 ///   line (:701; review revCR7c B2).
 ///
+/// - or a creator the reading found has a name in no creator's names ([`note_split_loses_a_name`]): the
+///   split loses it, 1511.09009's `Yi Zhang\footremember{yi} \\, Yanghua Xiao\footremember{yh} \\, …`, whose `\\`
+///   is each `\footremember`'s second argument (one printed line of four names) but parts the split's names line from
+///   the three names under it (the kernel's comma cut of a names line only, OD #52), Perl's `\lx@add@authors`
+///   splitting at every comma instead.
+///
 /// Ownership stated by marks is the rule: an address never an author, an item never on a name that doesn't print its
-/// mark.
+/// mark; and no name the reading found lost.
 fn split_owns_falsely(index: usize) -> bool {
   let Some(perl) =
     block_keys(index, "", &[]).and_then(|(_, written)| perl_author_calls(|_| None, written).ok())
@@ -3570,9 +3579,44 @@ fn split_owns_falsely(index: usize) -> bool {
         leading[k],
         mark_first[k]
       );
+      return true;
     }
-    fails.is_some()
-  })
+    false
+  }) || matches!(
+    lookup_mapping(EMITTED_ITEMS, &s!("loses|{index}")),
+    Some(Stored::Bool(true))
+  )
+}
+
+/// Note whether Perl's split of the author block at ledger index `index` loses a name the reading `resolved` found: one of
+/// its creators of the block whose name no creator's names hold ([`perl_piece_of`] of its words in [`perl_names_words`]),
+/// for [`split_owns_falsely`] (1511.09009). Once per block, before its decline is decided.
+fn note_split_loses_a_name(index: usize, resolved: &Resolved) {
+  let once = s!("loses|{index}");
+  if lookup_mapping(EMITTED_ITEMS, &once).is_some() {
+    return;
+  }
+  let Some(pieces) = perl_block_pieces(index) else {
+    return;
+  };
+  let lost = resolved
+    .creators
+    .iter()
+    .filter(|c| c.source == index)
+    .find(|c| {
+      name_words(&c.name)
+        .iter()
+        .any(|word| word.chars().count() > 1)
+        && perl_piece_of(&c.name, &pieces, 0).is_none()
+    });
+  if let Some(c) = lost {
+    DebugFeature!(
+      "frontmatter",
+      "FRONT emit: block {index}'s Perl split loses the name {:?}: no creator's names hold it",
+      c.name
+    );
+  }
+  assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(lost.is_some())));
 }
 
 /// What a footnote-counter or definition decline of the author block at ledger index `index` says the block is written
@@ -3989,6 +4033,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     .into_iter()
     .filter(|&source| {
       let cells = across_cells(source);
+      note_split_loses_a_name(source, resolved);
       let mut given_lost = Vec::new();
       let (declined, as_perl) = if names_fail(source) || cells {
         (true, false)
