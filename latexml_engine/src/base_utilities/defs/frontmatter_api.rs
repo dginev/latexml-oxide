@@ -34,6 +34,12 @@ pub(in crate::base_utilities) const CUT_ROLES: [&str; 3] =
 /// (`insert::link_entry_addresses`; OXIDIZED_DESIGN_DIVERGENCES #956).
 pub(in crate::base_utilities) const ENTRY_KEY: &str = "_entry";
 
+/// The transient attribute of a creator the reading marks the corresponding author, by a note or a legend
+/// (`resolver::RCreator::corresponding`, the reading's one fact, written by the emitter's creator call): the Link step of an
+/// entry's addresses reads it for the one address left of several carriers (`insert::link_entry_addresses`; repro
+/// llncs_legend_corresponding_author_takes_the_left_address). Dropped at output, as every `_` attribute is.
+pub(in crate::base_utilities) const CORRESPONDING: &str = "_corresponding";
+
 /// The attribute saying a footnote symbol leads the entry [`ENTRY_KEY`] names (`$^\dagger$…`), whose addresses no
 /// carrier spells are every carrier's (FIDELITY_CHARTER §4, "every symbol carrier").
 pub(in crate::base_utilities) const ENTRY_SYMBOL: &str = "_entrysymbol";
@@ -207,6 +213,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefKeyVal!("Frontmatter", "_printedlabel", "");
   // Rust-only: the author block's own creator, which the frontmatter emitter writes ([`BLOCK_CREATOR`]).
   DefKeyVal!("Frontmatter", "_blockcreator", "");
+  // Rust-only: a creator the reading marks the corresponding author, which the frontmatter emitter writes and the Link step
+  // of an entry's addresses reads ([`CORRESPONDING`]). Declared, as `_labelprints` is: an unknown key's report
+  // (`Info:undefined`) changed the paragraphs after the title page (1512.06325's first paragraph lost `ltx_noindent`).
+  DefKeyVal!("Frontmatter", "_corresponding", "");
 
   // Rust-only: `\lx@label@ref{<key>}`, the label a binding recorded for `key` once later input was read
   // ([`set_label_ref`]: cas's `\stmRef`, which LaTeX reads from the `.aux` of the run before), nothing for one never

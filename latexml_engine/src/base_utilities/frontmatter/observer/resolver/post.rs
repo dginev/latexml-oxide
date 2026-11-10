@@ -1892,7 +1892,7 @@ impl Resolver {
   /// one-address calls, [`Resolver::answer_inner_emails`]; a shared entry's lines, [`Resolver::answer_shared_emails`]),
   /// then each attached by its owner: the ONE address left on the block of a multi-author paper — no other of them left,
   /// none on the block already — goes to the one author of its candidates marked the corresponding author (a
-  /// "Corresponding author" note: [`Resolver::corresponding`]) who holds no other address; a template
+  /// "Corresponding author" note or a legend saying so: [`Resolver::corresponding`]) who holds no other address; a template
   /// (`owner:pattern`) and a list of local parts the reader could not part (`(npalmer|pwg)@…`, `lists_local_parts`)
   /// stay the block's, every author's address and no one's own — and count as left on it: a template under Univ X and
   /// `office@y.org` under Univ Y are two left, each the block's (review rev92b_r2 S1: `office@y.org` went to the
