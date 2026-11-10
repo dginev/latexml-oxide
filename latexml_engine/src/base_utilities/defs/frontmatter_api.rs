@@ -55,6 +55,13 @@ pub(in crate::base_utilities) const CORRESPONDING: &str = "_corresponding";
 /// carrier spells are every carrier's (FIDELITY_CHARTER §4, "every symbol carrier").
 pub(in crate::base_utilities) const ENTRY_SYMBOL: &str = "_entrysymbol";
 
+/// The attribute of an affiliation-kind entry the reading gave its carriers by its run's stopgap alone (`annotate=new`
+/// reaching only authors that held the role, no group in print of their own: `resolver::RUN_LEFTOVER`), which the
+/// frontmatter emitter writes: the Link step reads its carriers as no owners of an address no one spells, the block's, as
+/// the reading's `answer_inner_emails` does — emulateapj's `\author{Ann Able$^{1}$ and Bob Baker$^{1}$}\affil{$^1$Univ
+/// A}\affil{Univ C; zz@x.org}` (`insert::link_entry_addresses`; OXIDIZED_DESIGN_DIVERGENCES #992).
+pub(in crate::base_utilities) const STOPGAP_ENTRY: &str = "_stopgap";
+
 /// The attribute of a contact labelled by its place among its role's entries (`labelseq`: svjour's and llncs's
 /// `\institute{… \and …}`, aa's): the label `\lx@annotate@frontmatter@now` gave it, a number no mark printed — the
 /// Kind step for a legend reads it as a mark only where a carrier's name shows or requests it
@@ -228,6 +235,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // of an entry's addresses reads ([`CORRESPONDING`]). Declared, as `_labelprints` is: an unknown key's report
   // (`Info:undefined`) changed the paragraphs after the title page (1512.06325's first paragraph lost `ltx_noindent`).
   DefKeyVal!("Frontmatter", "_corresponding", "");
+  // Rust-only: an entry its run's stopgap alone gave its carriers, which the frontmatter emitter writes and the Link step
+  // of an entry's addresses reads ([`STOPGAP_ENTRY`]). Declared, as `_corresponding` is.
+  DefKeyVal!("Frontmatter", "_stopgap", "");
 
   // Rust-only: `\lx@label@ref{<key>}`, the label a binding recorded for `key` once later input was read
   // ([`set_label_ref`]: cas's `\stmRef`, which LaTeX reads from the `.aux` of the run before), nothing for one never

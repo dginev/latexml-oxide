@@ -33936,22 +33936,28 @@ path still writes an ordinary space.
 **The stopgap carrier and the mailbox link (Z18o; review revZ18l F1, F2, introduced by Z18l, synthetic).** (F1) Under
 `$^N$` names aas declares `annotate=new`, whose walk (Perl's `new`, Base_Utility.pool.ltxml:520-536) gives an unmarked
 `\affil` to the last author even when every author it reaches holds an affiliation already: that carrier is the run's
-stopgap, no mark, label or place, and `owner:only-carrier` had made him the owner of an address no one spells
+stopgap, no mark or label (the place, Z18o2 below), and `owner:only-carrier` had made him the owner of an address no one spells
 (`\affil{Email: zz@x.org}`, a bare `\affil{zz@x.org}`, `\affil{Correspondence: \href{mailto:zz@x.org}{zz@x.org}}`, an
 unrequested `\affil{$^*$ Email: zz@uni.edu}` whose `∗` was dropped). The reading now tags such an entry's e-mails
 (`RUN_LEFTOVER`, observer/resolver/api.rs) and, for a mark-led entry no name requests, its `annotate=` placement
 (`Resolver::stopgap`), and the Link step reads them with no carrier (`answer_inner_emails`; the text reading
 `take_out_entry_addresses`): the block's, once, the unrequested line's `∗` kept (`<sup>∗</sup>zz@uni.edu`). Only a walk's own
 stopgap: a `run` continuing the contact before it (`\author{Bob Baker}\affil{Univ B}\affil{Email: zz@x.org}`, printed
-under him) and a sole author keep their carrier; a requested `$^\dagger$` line stays its requester's. **Known RED (review revZ18o
-R-A, introduced, synthetic, 0 of the 1,166 aas census papers):** the `continued` exemption covers only `annotate=run`, so
-an `annotate=new` entry continuing its own `\author` call's block (`\author{Ann Able$^{1}$}\affil{$^1$Univ A}\author{Bob
-Baker$^{2}$}\affil{$^2$Univ B}\affil{Email: zz@x.org}`, printed in Bob's block) is tagged too and its e-mail goes to a
-nameless creator, silently (int155a4: Bob's); the place ties it, so the fix is to tag no entry whose run is the whole last
-`\author` call's names (Z18o2). Also Z18o2: the unrequested-symbol guard asserts by substring, and the Kind-step and
-text-reading rows share one guard (R-B); a labelled mailbox-link line is named by its label alone where the address path
-puts the class's entry name before it (`kind.rs` ~180-187, N1; fold into `split_email_label`); 2604.04847's link line,
-which prints an address, changed through this branch, untraced (N2). (F2) A line of an
+under him) and a sole author keep their carrier; a requested `$^\dagger$` line stays its requester's. **The place (Z18o2; review revZ18o R-A, introduced by Z18o, synthetic, 0 of the
+1,166 aas census papers):** a run that is the whole group of names printed since the role's last call is no stopgap
+(`Resolver::print_group`, read on the unmarked line's walk and on `Resolver::stopgap`): emulateapj prints each group of
+`\author` calls with the `\affil`s after it, so in `\author{Ann Able$^{1}$}\affil{$^1$Univ A}\author{Bob
+Baker$^{2}$}\affil{$^2$Univ B}\affil{Email: zz@x.org}` (or `\affil{$^*$ Email: zz@x.org}`) the line is in Bob's own block
+and his — Z18o gave it to a nameless creator, silently. The group in print decides, not the `\author` call: two calls
+before their shared `\affil` print as one call's `Ann Able$^{1}$ and Bob Baker$^{1}$` does, and the line stays the
+block's. The tag reaches the flush: the entry's own rule carries it, the emitter writes it as `_stopgap`
+(`frontmatter_api::STOPGAP_ENTRY`), and the Link step (`insert::link_entry_addresses`) reads every copy so written as no
+carrier of an address no one spells — `\affil{Univ C; zz@x.org}` under `$^N$` names gives Univ C to Bob Baker (Perl's
+`new`) and the address the Kind step takes out of it to the block (Z18o: Bob Baker's). The unrequested `∗` is not kept on
+an author's e-mail (as int155a4 dropped it on Bob Baker's), a residual of the line-mark path. Still open (review
+revZ18o): a labelled mailbox-link line is named by its label alone where the address path puts the class's entry name
+before it (`kind.rs` ~180-187, N1; fold into `split_email_label`); 2604.04847's link line, which prints an address,
+changed through this branch, untraced (N2). (F2) A line of an
 affiliation-kind entry that is one link to a mailbox — `\href{mailto:…}{Write to us}`, `Contact: \href{mailto:…}{here}`,
 a bare address as target (`\href{zz@x.org}{…}`, the ACL template's, `links_a_mailbox`) — is an e-mail line under the text
 before the link (user ruling 2026-10-20, batch 77p r8), the link kept a link: the Kind step's (`classify/links.rs`
@@ -33966,10 +33972,16 @@ the aas census 1,166, a REVTeX sample of 500 (`kit/pop.py`, seed 1110), OmniBus 
 ids, 3,938 converted — byte-identical, E/F/W identical; of 59 more (the aas papers whose `\affil` holds an `@` or a
 `mailto:`, the ruling's witnesses, 0909.0058, 2308.02720, 1810.03464) one changed: 2604.04847's `\textbf{Correspondence:}
 \href{daniel094144@gmail.com}{daniel094144@gmail.com}` keeps its link, the owner and every creator unchanged.
-**Residual (RED, synthetic; Z18o):** an address inside an unmarked line of other words under `$^N$` names,
-`\affil{Univ C; zz@x.org}`, is still the stopgap carrier's — the flush's Kind and Link steps place it
-(`insert::kind_address_lines`, `insert::link_entry_addresses`), which read no stopgap; the entry itself is that author's
-by Perl's `new`.
+Guards (Z18o2) `perfect_kernel_batchz18o2::{aastex_email_line_in_its_own_author_group_is_that_groups,
+aastex_unrequested_symbol_line_in_its_own_author_group_is_that_groups,
+aastex_line_address_the_flush_takes_out_follows_the_stopgap}`, and the text reading's row of Z18o's guard on a guard of
+its own (`perfect_kernel_batchz18o::aastex_unmarked_correspondence_link_line_under_marked_names_is_the_blocks`, review
+revZ18o R-B); repros `sectioning-frontmatter/aastex_affil_{email_line,unrequested_symbol_line,unmarked_line_address}_continuing_own_author_block_is_its_authors.tex`,
+`aastex_affil_email_line_under_two_author_calls_is_the_blocks.tex`,
+`aastex_affil_unmarked_line_address_under_marked_names_is_the_blocks.tex`. **Measured** (Z18o2 vs int156a0-rel, int155a's dumps, `kit/conv.sh`): the aas
+census (1,172 ids today: aastex*, emulateapj*), a REVTeX sample of 300 (`kit/pop.py`, seed 1111) and the stage2 1,434 —
+2,906 ids, 2,903 converted (3 no main file on both) — byte-identical, E/F/W identical; 0909.0058, 2308.02720 (11
+creators) and 2604.04847 byte-identical too.
 
 **Guards.** `perfect_kernel_batchz18l::aastex_affil_marked_email_line_no_one_spells_is_the_marked_authors`; re-expected:
 `perfect_kernel_batch97f::aastex_affil_holding_only_an_email_is_an_authors_email` (the name's no-break space);

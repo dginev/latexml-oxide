@@ -264,6 +264,12 @@ impl Resolver {
       }
       return;
     }
+    // (the role's record before this call, which this contact call updates: the group of names printed since the role's
+    // last call, `print_group`)
+    let reads = self.role_reads.get(role).copied();
+    if tag == "ltx:contact" {
+      self.read_role(role);
+    }
     // (a class's sole institute under the names, `_share=authors` (llncs's, aa's): with several authors a later line of
     // it printing addresses alone, outside the class's e-mail calls, is an e-mail line of the row, each address read
     // apart and placed as a call's — today's reads the row so (`shared_row::row_email_calls`, OD #901): aa
@@ -774,11 +780,14 @@ impl Resolver {
         });
         // (an `annotate=new` placement reaching only authors that hold the role: its run's stopgap, `RUN_LEFTOVER` — an
         // unrequested `\affil{$^*$ Email: zz@uni.edu}` under `$^{N}$` names, review revZ18l F1)
+        // (not a run that is the whole group of names printed since the role's last call, whose place ties the entry to
+        // them: `\affil{$^*$ Email: zz@x.org}` after Bob's own `\author` call and `\affil`, review revZ18o R-A)
         let stopgap = attr_value(attrs, "annotate") == Some("new")
           && !owners.is_empty()
           && owners
             .iter()
-            .all(|&c| self.roles[c].iter().any(|r| r == role));
+            .all(|&c| self.roles[c].iter().any(|r| r == role))
+          && !self.print_group(&owners, reads);
         for at in first_pending..self.pending.len() {
           if !withsup {
             if stopgap {
@@ -912,9 +921,13 @@ impl Resolver {
       } else {
         self.new_run(role)
       };
+      // (nor a run that is the whole group of names printed since the role's last call: the place ties the entry to
+      // them — emulateapj's `\author{Bob Baker$^{2}$}\affil{$^2$Univ B}\affil{Email: zz@x.org}` after Ann's own block
+      // prints the address in Bob's, review revZ18o R-A; `print_group`)
       leftover = !continued
         && !run.is_empty()
-        && run.iter().all(|&c| self.roles[c].iter().any(|r| r == role));
+        && run.iter().all(|&c| self.roles[c].iter().any(|r| r == role))
+        && !self.print_group(&run, reads);
       if run_rule && thenote_affil {
         // (its `\AB@thenote`: when the marks show it is the label, `thenote_finish`)
         let tag = s!("thenote:{}", self.thenote.affils.len());
@@ -1065,12 +1078,20 @@ impl Resolver {
         );
       }
     }
+    // (the entry itself carries its stopgap, which the emitter writes for the flush's Link step of an address the Kind
+    // step takes out of its text: `\affil{Univ C; zz@x.org}` under `$^{N}$` names, `insert::link_entry_addresses`)
+    let entry_rule =
+      if leftover && !note && matches!(role, "affiliation" | "address" | "altaffiliation") {
+        s!("{rule}{RUN_LEFTOVER}")
+      } else {
+        rule.to_string()
+      };
     for owner in owners {
       if !text.is_empty() || note {
         self.attach(
           owner,
           Assoc {
-            rule: rule.to_string(),
+            rule: entry_rule.clone(),
             ..assoc.clone()
           },
           note,

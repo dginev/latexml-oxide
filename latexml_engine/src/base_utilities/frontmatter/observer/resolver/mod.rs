@@ -619,6 +619,9 @@ struct Resolver {
   /// the pending entries labelled by a leading mark whose `annotate=new` placement (`piled`) is its run's stopgap alone:
   /// every author it reaches held the role before it ([`RUN_LEFTOVER`])
   stopgap:            Vec<usize>,
+  /// per role, the creators made when the last two contact calls of it were read, the counts apart (earlier, later): the
+  /// names printed since the role's last call before the newest name are one group in print ([`Resolver::print_group`])
+  role_reads:         HashMap<String, (usize, usize)>,
   /// the requests a `\footnotemark` made (creator, label): a footnote's mark, answered by a note, never by a labelled
   /// affiliation (`Kui Wu\inst{3\footnotemark[1]}` under `\institute{A \and B …}`, 2404.09857)
   fn_requests:        Vec<(usize, String)>,
@@ -744,6 +747,7 @@ impl Resolver {
       annotated:          Vec::new(),
       grouped:            Vec::new(),
       stopgap:            Vec::new(),
+      role_reads:         HashMap::default(),
       fn_requests:        Vec::new(),
       class_requests:     Vec::new(),
       shared:             Vec::new(),
@@ -867,6 +871,30 @@ impl Resolver {
   /// The creators today's output holds: those of no replaced `\author` call (`resolve` deletes them at the end; the
   /// post-passes that count the authors, or pick one, read these — review revfms2a2_5 finding 1; 2510.26354, 1611.08655).
   /// The creators of the last creator's group, in order (none before the first creator).
+  /// Whether `run` is the whole group of names printed since the role's last contact call before the newest name, a
+  /// group in print of its own (the names a class's `\author` calls print before an `\affil` closes them, emulateapj):
+  /// `reads` the role's record before this call's own contact ([`Resolver::read_role`]). `Ann Able$^{1}$ and Bob
+  /// Baker$^{1}$`, or two `\author` calls before their shared `\affil`, is one group of two whose stopgap reaches Bob
+  /// alone; Bob's own `\author` call after Ann's `\affil` is a group of one (review revZ18o R-A).
+  fn print_group(&self, run: &[usize], reads: Option<(usize, usize)>) -> bool {
+    let n = self.out.creators.len();
+    let from = match reads {
+      Some((earlier, later)) if later >= n => earlier,
+      Some((_, later)) => later,
+      None => 0,
+    };
+    from < n && run.iter().copied().eq(from..n)
+  }
+
+  /// Records a contact call of `role` read now, for [`Resolver::print_group`].
+  fn read_role(&mut self, role: &str) {
+    let n = self.out.creators.len();
+    let reads = self.role_reads.entry(role.to_string()).or_default();
+    if reads.1 != n {
+      *reads = (reads.1, n);
+    }
+  }
+
   fn last_group(&self) -> Vec<usize> {
     self
       .group
@@ -1101,11 +1129,16 @@ const ENTRY_MAILBOX: &str = " api:entry-mailbox";
 
 /// The rule tag of an e-mail inside an unlabelled entry whose carriers an `annotate=new`/`run` walk reached only by its
 /// stopgap — every author of the run held the role before it, the last one taken all the same (Perl's `new`,
-/// Base_Utility.pool.ltxml:520-536), not a run continuing the contact's before it: no mark, label or place ties the entry
-/// to them, so its one carrier is no owner of an address that spells no one (`owner:only-carrier` is a requested
-/// carrier's): emulateapj's `\author{Ann Able$^{1}$ and Bob Baker$^{1}$}\affil{$^1$Univ A}\affil{Email: zz@x.org}`
-/// prints the address under no one, the block's (review revZ18l F1, `Resolver::answer_inner_emails`).
-const RUN_LEFTOVER: &str = " api:run-leftover";
+/// Base_Utility.pool.ltxml:520-536), not a run continuing the contact's before it, nor a run that is the whole group of
+/// names printed since the role's last call (the place ties the entry to them: emulateapj prints
+/// `\author{Ann Able$^{1}$}\affil{$^1$Univ A}\author{Bob Baker$^{2}$}\affil{$^2$Univ B}\affil{Email: zz@x.org}`'s address
+/// in Bob's own block, review revZ18o R-A; [`Resolver::print_group`]): no mark, label or place ties the entry to them,
+/// so its one carrier is no owner of an address that spells no one (`owner:only-carrier` is a requested carrier's):
+/// emulateapj's `\author{Ann Able$^{1}$ and Bob Baker$^{1}$}\affil{$^1$Univ A}\affil{Email: zz@x.org}` prints the
+/// address under no one, the block's (review revZ18l F1, `Resolver::answer_inner_emails`). The entry carries it too,
+/// which the emitter writes as `frontmatter_api::STOPGAP_ENTRY` for the flush's Link step of an address its Kind step
+/// takes out (`\affil{Univ C; zz@x.org}`, `insert::link_entry_addresses`).
+pub(in crate::base_utilities) const RUN_LEFTOVER: &str = " api:run-leftover";
 
 /// The one of `names` an address spells (`spelled_owners`), if one — none for a list of local parts the address reader
 /// could not part (`lists_local_parts`); each name read as an address spells it, by its base letters ([`base_letters`])

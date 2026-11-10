@@ -506,6 +506,9 @@ mod perfect_kernel_batchz18l;
 /// Z18o: bundle int155a's REDs — an unmarked line's stopgap carrier no e-mail owner, a mailbox link line an e-mail, a
 /// marked whole-bracket piece no name, the own `\email`'s runaway; OD #992, #991, #983.
 mod perfect_kernel_batchz18o;
+/// Z18o2: the stopgap tag's scope — a run that is a whole group in print keeps its owner, the flush's Link step reads the
+/// tag; OD #992.
+mod perfect_kernel_batchz18o2;
 mod perfect_kernel_batchz2;
 mod perfect_kernel_batchz3;
 mod perfect_kernel_batchz4;
