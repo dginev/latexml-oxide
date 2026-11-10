@@ -33158,8 +33158,6 @@ printed (2501.11774), unless the text written holds a control sequence's name or
 an address merely not well-formed (`\{a,b\}@x\_y.org` prints `a@x_y.org`, all it is: review revZ18d finding 1); an address line ending an entry takes the separator the line before it ends in (`address_cuts`:
 2407.18381's `(EPFL), \\ \texttt{…}`). **Not moved here** (the reroute's own, kept with it): the `\\` line rules of a whole
 llncs list (a names line after an affiliation line, a line after an inline `\and`, a name carrying an ORCID). **Residuals:**
-1004.3134's `\href{mailto:…}{\email{…}}` inside a `\thanks` (no contact the reading makes; counted by the content check
-before and after); address lists printed across several `\url`/`\path` pieces (1504.01099's `\urldef`s, 1710.01968);
 the Link step's corresponding-author fact reads the DOM's notes only, not a legend that says so (`\inst{1,2}` under
 `\and Corresponding author`: the left address the block's; the old rule, `Resolver::listed_corresponding`, reads both:
 RED `class-bindings/llncs_legend_corresponding_author_takes_the_left_address.tex`); separators after an entry's last call
@@ -33185,10 +33183,33 @@ Email: \email{\{aable,bbaker,ccole\}@a.edu}`, each part "Email: "), a label of i
 owner or the block (s23's `Corresponding author email:`, 2410.06985); `one_address`'s plain test admits a math shift, a
 group's brace and a separator in the list (`shared_row::is_call_separator`: a tie), which the address written holds none
 of (1701.08125's `$\{$stomforde$|$bsick$\}$@…;~cms@…`; 2206.10050's `\email{{jsliwinski,wattenhofer}@ethz.ch}`, whose
-two "markup lost" Warnings were spurious); `resolver::shares_the_row` is the one reading of `_share=authors`. Still
-the old split's only (RED, `perfect_kernel_batch85b`): a shared line the reader cannot read goes to the block
-(`{\tt (joxan, navas)@…}`, 1103.2027's shape), and an unparted call `\email{{zz,yy}@x.edu}` (2206.10050) is one block
-address — the reading writes it out as `zz@`, `yy@`, `yy@`.
+two "markup lost" Warnings were spurious); `resolver::shares_the_row` is the one reading of `_share=authors`. Z18g (the old split's
+line rules on the reading, one copy each; Z18f's two REDs green): (7) a `_share=authors` entry's e-mail call written
+out is one unit (`row:unit:<n>`, `Resolver::row_units`): where all its addresses go one way it is placed whole, as
+written (`\email{{zz,yy}@x.edu}` spelling no one: one block address, not `zz@`, `yy@`, `yy@`; 85b q03, 2206.10050), and
+a call whose addresses are not whole (`[zz@insa-, yy@insa-]rouen.fr`, 2609.24668) is the block's whole, the order rule
+then off (`Resolver::answer_shared_emails`, the old `row_email_calls`' unread unit); the entry, holding an item the
+block carries, is written with its calls cut, so it keeps no copy. (8) An entry whose own first line prints an address
+outside the class's calls is not shared (`… Germany \mailsa`, 1706.02124; `National University of Singapore {\tt
+\{…\}@…}`): the block's whole, its addresses placed by the chain. (9) A later line of a shared entry holding an address no
+reader reads goes to the block once (`insert::kind_address_lines`, two or more authors; the reading marks the entry
+`insert::ROW_SHARED`; `{\tt (joxan, navas)@…}`, 1103.2027's shape). (10) A line of link pieces reads as addresses once
+their inks are joined: in an entry, the Kind step's second reading (`LineText::joined`, the whole line the run;
+1504.01099's `\mailsa, \mailsb, \mailsc`); in an author block, `resolver::joined_address_pieces` in `read_events`, the
+content check reading the same (1710.01968's `\url{robin.andre@…}, \{\url{sebastian.schlag, christian.schulz}\}\url{@kit.edu}`;
+2505.15472's `\href` pieces). (11) A shared institute holding marks typed by hand after a line's words is no lined list
+(`resolver::hand_marked_share`, the reading's `line_led_pieces` and the emitter's `item_call` both): the block's whole,
+as the old `marks_pick` left it (2608.21425's `\affmark{1} City University … \quad \affmark{2} …`; a line each led by
+its mark under `\inst{n}` is still read line by line, 1803.02579). (12) An ORCID link of a block that prints no word (an
+icon: TikZ's "iD", a logo graphic) is the kernel's ORCID link to the iD the reading read, the icon as printed
+(`frontmatter_fields::orcid_icon_link`, `\lx@orcid@href`): it had been a plain link, the iD's title lost (2008.02173,
+2009.11534; 2205.10834's own logo now inside it; 2107.01581, 2111.13066, 2303.12302, 2304.07772, 2310.19745,
+2409.13798 gain the iD's title). (13) A link whose text is a binding's e-mail call is that call in the rehearsal
+(`\lx@fm@obs@href`): `\thanks{… \href{mailto:…}{\email{samuel.mimram@cea.fr}}}` lost the address (1004.3134).
+Residual: a `\path|…|` piece's delimiters print in the rehearsal (OT1's `|`, an em dash), so the content check reads
+`cat.cole}@x.edu` as a word (2 Warnings, as on int154x; hiding them made the emitter's address cut leave that piece).
+Guards `perfect_kernel_batchz18g`; `perfect_kernel_batch85b::llncs_{each_email_call_is_decided_alone,address_lines_are_each_owners}`
+green; `perfect_kernel_batche0` key pin `const _rowshared insert.rs` 0 → 1 (its reason in the table).
 
 ### 985. What the old driver wrote at the flush and the emitter had lost: an svjour3 owner label's `\email`, and a frontmatter setter run inside an author block or an API call (CR2)
 

@@ -301,7 +301,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
         };
         // (a line of link pieces the reading joins into its addresses prints them, not the pieces' words:
         // `joined_address_pieces`, 1710.01968)
-        let joined = super::joined_address_pieces(events);
+        let joined = joined_address_pieces(events);
         let (texts, units) = ink_texts(&joined, &mut beside, &mut marks);
         for text in texts {
           printed.add(&text, 1);

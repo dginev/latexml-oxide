@@ -1596,7 +1596,7 @@ fn item_call(
       // an entry the reading shares among every author says so, `insert::ROW_SHARED`, which the Kind step for an address
       // line reads)
       let keys = if assoc.rule.contains("api:share:authors") {
-        s!("label={{{label}}},{}={{true}}", insert::ROW_SHARED)
+        s!("label={{{label}}},{}={{true}}", ROW_SHARED)
       } else {
         s!("label={{{label}}}")
       };

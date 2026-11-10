@@ -359,7 +359,7 @@ fn joined_address_pieces(events: &[Event]) -> Vec<Event> {
         .all(|e| inked(e) || matches!(e.kind, EventKind::Sep(SepKind::Comma) | EventKind::Layout))
       && only_addresses(&joined)
       && !addresses.is_empty()
-      && addresses.iter().all(|a| shared_row::is_whole_address(a));
+      && addresses.iter().all(|a| is_whole_address(a));
     let span = inks
       .iter()
       .filter_map(|e| e.span)
@@ -367,7 +367,7 @@ fn joined_address_pieces(events: &[Event]) -> Vec<Event> {
         Some(acc.map_or((s, t), |(a, b)| (a.min(s), b.max(t))))
       });
     if take && let Some(first) = inks.first() {
-      let at = line.iter().position(|e| inked(e)).unwrap_or(0);
+      let at = line.iter().position(inked).unwrap_or(0);
       out.extend(line[..at].iter().filter(|e| !inked(e)).cloned());
       out.push(Event {
         kind: EventKind::Contact,

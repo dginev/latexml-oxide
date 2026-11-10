@@ -2346,7 +2346,7 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
               && cut
                 .addresses
                 .iter()
-                .all(|address| shared_row::is_whole_address(address))
+                .all(|address| is_whole_address(address))
           })
         {
           line = joined;
