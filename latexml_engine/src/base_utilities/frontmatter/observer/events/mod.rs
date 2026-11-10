@@ -2545,6 +2545,7 @@ pub(in crate::base_utilities) fn lex_with_inks(
     }
   }
   let (mut events, mut inks) = lexer.finish();
+  place_pictures(&mut events);
   inks.at.append(&mut walker.inks.at);
   inks.fonts.append(&mut walker.inks.fonts);
   // (an in-block contact cut into entries one of which no name's mark requests is the one entry its leading marks
@@ -2589,6 +2590,106 @@ pub(in crate::base_utilities) fn lex_with_inks(
     }
   }
   (events, outermost, inks)
+}
+
+/// Each picture of a block in its place (user ruling 2026-11-10, a picture inside `\author` is "a note, kept whole";
+/// OXIDIZED_DESIGN_DIVERGENCES #989): one on a column's first line, its names', or ending a line is a note of its own
+/// ([`PICTURE_NOTE`]) — a pgf/TikZ picture is one already (`Walker::walk_whatsit`), an image (`\includegraphics`, the Layout
+/// event of a whatsit with a graphic, `resolver::lines::is_image`'s) becomes one: `\author{Ann Able
+/// \includegraphics[width=1cm]{example-image}}` lost its image silently, which Perl keeps in the personname. One inside a
+/// later line, a run of text right after it, stays in that line: joined to that run, and to the one right before it, as
+/// one Name whose span covers it — the line's entry written with the picture in it, in source order (`Ann Able\\
+/// \tikz\draw (0,0)--(1,0); Zebra University`: review revCR8 finding 4, the picture moved after the affiliation, whose
+/// markup was lost; `Ann Able\\ \includegraphics{…} Zebra University` lost its image silently, as 2503.08161's institutes
+/// their logos, `$^{1}$ \includegraphics[width=0.36cm]{polyu-logo.png} The Hong Kong …`). Any other stays as it is.
+fn place_pictures(events: &mut Vec<Event>) {
+  let image = |e: &Event| {
+    e.kind == EventKind::Layout
+      && e
+        .role
+        .as_deref()
+        .is_some_and(|r| r.contains("includegraphics") || r.contains("graphic"))
+  };
+  let parts_lines = |e: &Event| {
+    matches!(
+      e.kind,
+      EventKind::Break | EventKind::Sep(SepKind::And(_) | SepKind::Column(_))
+    )
+  };
+  let font_switch = |e: &Event| {
+    e.kind == EventKind::Layout && e.span.is_none() && e.role.as_deref() == Some("font")
+  };
+  let mut line = 0usize;
+  let mut i = 0;
+  while i < events.len() {
+    match events[i].kind {
+      EventKind::Break if events[i].break_kind == Some(BreakKind::Column) => line = 0,
+      EventKind::Break => line += 1,
+      EventKind::Sep(SepKind::And(_) | SepKind::Column(_)) => line = 0,
+      _ => {},
+    }
+    let picture = is_picture_note(&events[i]);
+    if !picture && !image(&events[i]) {
+      i += 1;
+      continue;
+    }
+    let ends_line = events[i + 1..]
+      .iter()
+      .take_while(|e| !parts_lines(e))
+      .all(|e| !inked(e));
+    // (the run right after it, past a font switch, a spanless Layout writing nothing: the first marked line after a
+    // bold names line switches back, `\textbf{Ann Able $^{1}$} \\ $^{1}$ \includegraphics{…} Zebra University`,
+    // review revCR8b finding 1, 2503.08161's polyu-logo.png)
+    let next = (i + 1..events.len()).find(|&j| !font_switch(&events[j]));
+    let run_after = next.filter(|&j| events[j].kind == EventKind::Name);
+    let Some(next) = run_after.filter(|_| line > 0 && !ends_line) else {
+      // (on the names line or ending its line, a note of its own in its place; an image before ink not a run of text —
+      // a mark, an address, a URL — stays the Layout event it is: `\includegraphics{hf-logo.png} \texttt{\url{…}}`,
+      // 2503.08161, is still lost silently, as a note beside the URL, in its place or at its line's end, made two lines'
+      // URLs one affiliation, their markup lost (2505.21327, 2503.08161; review revCR8b finding 1, RED
+      // sectioning-frontmatter/fm_image_before_url_is_a_note))
+      if !picture && (line == 0 || ends_line) {
+        events[i] = picture_note(&events[i]);
+      }
+      i += 1;
+      continue;
+    };
+    let mut after = events.remove(next);
+    let picture = events.remove(i);
+    let before_at = (0..i).rev().find(|&j| !font_switch(&events[j]));
+    let start = if let Some(at) = before_at.filter(|&j| events[j].kind == EventKind::Name) {
+      let before = events.remove(at);
+      i = at;
+      after.text = [
+        before.text.as_str(),
+        picture.text.as_str(),
+        after.text.as_str(),
+      ]
+      .iter()
+      .filter(|t| !t.is_empty())
+      .copied()
+      .collect::<Vec<_>>()
+      .join(" ");
+      before.span
+    } else {
+      if !picture.text.is_empty() {
+        after.text = s!("{} {}", picture.text, after.text);
+      }
+      picture.span
+    };
+    after.span = join_span(join_span(start, picture.span), after.span);
+    events.insert(i, after);
+    i += 1;
+  }
+}
+
+/// An image's ([`place_pictures`]) picture note: its span and nesting, role [`PICTURE_NOTE`].
+fn picture_note(image: &Event) -> Event {
+  let mut note = Event::new(EventKind::Note);
+  note.role = Some(PICTURE_NOTE.to_string());
+  note.span = image.span;
+  note.nest = image.nest;
+  note
 }
 
 /// The Declaration events of a block's definitions (`field_notes::FieldNotes`): a definition, printing nothing, is in no box, so

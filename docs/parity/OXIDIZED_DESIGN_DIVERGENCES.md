@@ -33556,34 +33556,81 @@ a_split_making_an_address_line_a_creator_keeps_the_block_whole}`; updated
 `perfect_kernel_batchne5::a_declaration_reading_past_its_span_writes_the_block_as_perl_splits_it` (five creators) and
 `perfect_kernel_batchne2::a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it` (three creators, the notes per creator).
 
-### 989. A pgf/TikZ picture in a frontmatter field is kept as markup: inside `\author` a note of its own, inside a note that note's (CR8)
+### 989. A picture in a frontmatter field is kept as markup: inside `\author` a plain note of its own or in its line, inside a note that note's (CR8, CR8b)
 
 **What.** The observer's lexer reads a pgf/TikZ picture (pgfsys-latexml.def's `\lxSVG@insertpicture`) as one Note event
 of role `picture` (`events::PICTURE_NOTE`, `Lexer::walk_whatsit`), its text its text nodes' only (`ink_of`), never its
-drawing's transforms and SVG path data. In an author block it goes out of the name: the reading attaches it as any
-adjacent note (to the name before it, in source order) and the writer writes it as a frontmatter `ltx:note` holding the
-picture's tokens whole (`emit::item_call`'s picture branch), so the `ltx:picture` and its `svg` are kept; a picture
-printing no text is keyed by its place (`plan::note_key`). Inside a `\thanks` it is part of the note's text and is
-digested with it. A span is its boxes' (`deep_span`), so it ends before what its call read past its last box and
-printed nothing of (`\tikz…;`'s `;`, a `\thanks{…\tikz…;}`'s `}`): `emit::past_unprinted_tail` grows it, up to the next
-event's start, over the group it leaves open and never past a brace closing a group it does not open. With that tail
-the rewritten picture keeps its `;` and the note's argument is balanced.
+drawing's transforms and SVG path data. In an author block, `events::place_pictures` decides its place by its line: one
+on a column's first line (the names') or ending a line goes out of the name, and an image (`\includegraphics`, the
+Layout event of a whatsit with a graphic) becomes such a note too; one inside a later line, a run of text right after
+it (past a font switch, a spanless Layout event: the first marked line after a bold names line switches back), is joined
+to that run (and to the run right before it) as one Name whose span covers it, so the line's entry is written with the
+picture in place, in source order. The reading attaches a picture note as any adjacent note (to the
+name before it, in source order) and the writer writes it as a plain frontmatter `ltx:note` (`role="note"`, no thanks
+class, no mark: `emit::picture_note_call`) holding the picture's tokens whole (`emit::item_call`'s picture branch), so
+the `ltx:picture` and its `svg`, or the `ltx:graphics`, are kept. Every picture note is keyed by its place
+(`plan::note_key`), and the relocation's one copy per label (`relocate`) compares no picture note (a `role="note"`
+holding a picture or an image, its creator's own label) by its text: two pictures printing the same text are two notes;
+any other note, a `\thanks` holding a logo too, is compared by its text as before. Inside a `\thanks` it is part of the note's text and is digested
+with it. A span is its boxes' (`deep_span`), so it ends before what its call read past its last box and printed nothing
+of: `emit::past_unprinted_tail` grows it over spaces, one `;` (`\tikz…;`; none when the span's last token is already
+the path's `;`, as a text node's box reaches past it: `\tikz\node{Zebraword};; Bob` prints the second), the `\end{…}` of an environment the span opens
+(`\end{tikzpicture}`) and the closers of the groups it leaves open (a `\thanks{…\tikz…;}`'s `}`), up to the next event's
+start, never past a brace closing a group it does not open, stopping at the first other command or character (a glued
+`\and`, `\\`, `,` is the block's separator, never the note's), trailing spaces not its own. With that tail the rewritten
+picture keeps its `;` and the note's argument is balanced.
 
 **Why.** User ruling 2026-11-10: a picture or a page-overlay notice inside `\author` is "a note, kept whole", never
 read as a name. Perl (0 Errors on the witness) keeps it inside the personname. That placement is the divergence. pdflatex
-prints the notice at the page foot and a drawing where it stands.
+prints the notice at the page foot and a drawing where it stands, which the in-line placement keeps.
 
-**Witnesses** (int154t → CR8): 2404.13552 (a creator "1.00.00.01.0" and the notice's 21 words lost, 1 Warning → 6
-creators, the notice a note of the last one, holding the picture, 0 frontmatter Warnings). CR5's textless repro: the
-note "Zebra University M 0 0 L 39.37 0fill:none" ("note no argument") → "Zebra University" with its picture.
+**Witnesses** (int154t → CR8 → CR8b): 2404.13552 (a creator "1.00.00.01.0" and the notice's 21 words lost, 1 Warning → 6
+creators, the notice a note of the last one, holding the picture, 0 frontmatter Warnings; CR8b: a plain note, no longer a
+"thanks"). CR5's textless repro: the note "Zebra University M 0 0 L 39.37 0fill:none" ("note no argument") → "Zebra
+University" with its picture. CR8b, images dropped silently before, kept: 2503.08161's three institute logos inside their
+affiliations (CR8c: `polyu-logo.png`, on the first marked line after the bold names, was lost behind the font switch;
+review revCR8b finding 1); 2107.13277's ORCID icons, 2208.11637's logo, 1905.00862's decorative bar, 2409.19094's first ORCID icon as
+notes. Review revCR8's shapes: a `\and` glued to a picture was the word "and" in its note; two same-text pictures kept
+one; a picture leading an affiliation line moved after it, its markup lost.
 
-**Left** (pre-existing, recorded, not changed): an `\includegraphics` beside a name in `\author` is still dropped
-without a Warning (`\author{Ann Able \includegraphics[width=1cm]{example-image}}`; Perl keeps it in the personname). A
-LaTeX `picture` environment there is read as text, as before (`\begin{picture}(10,10)\put(0,0){Qwerty}\end{picture}`
-→ the name "Ann Able Qwerty", the same words pdflatex prints). A drawing on an affiliation line of `\author`
-(`Ann Able\\ Zebra University \tikz\draw…;`) is now a note beside the affiliation rather than inside it (the base had an
-empty picture there and 1 Error).
+**Left** (pre-existing, recorded, not changed): a LaTeX `picture` environment in `\author` is read as text, as before
+(`\begin{picture}(10,10)\put(0,0){Qwerty}\end{picture}` → the name "Ann Able Qwerty", the same words pdflatex prints). A
+picture inside a name (`Ann \tikz\draw…; Able`) parts it in two creators (the base: 3 creators, 1 Error). An image in
+a later line before ink that is not a run of text (a mark, an address, a URL) stays a Layout event nothing writes, lost
+silently: 2503.08161's `\includegraphics{hf-logo.png} \texttt{\small\url{…}}`; a note for it, in its place or at its
+line's end, made two such lines' URLs one affiliation, their markup lost (2505.21327), so it was not taken (RED
+`sectioning-frontmatter/fm_image_before_url_is_a_note`). The HTML of these notes is #990.
 
 Repros `sectioning-frontmatter/fm_picture_text_in_author_is_a_note`, `fm_picture_textless_in_author_is_a_note`,
-`fm_picture_textless_in_thanks_stays_in_note`; guards `perfect_kernel_batchcr8::{picture_in_author_is_a_note_kept_whole,
-textless_picture_in_author_is_a_note, textless_picture_in_thanks_stays_in_the_note}`.
+`fm_picture_textless_in_thanks_stays_in_note`, `fm_picture_glued_to_a_separator_ends_the_note`,
+`fm_picture_same_text_twice_two_notes`, `fm_picture_inside_affiliation_line_stays`, `fm_includegraphics_in_author`,
+`fm_image_first_marked_line_after_bold_names`, `fm_picture_text_node_then_two_semicolons`; guards
+`perfect_kernel_batchcr8::{picture_in_author_is_a_note_kept_whole, textless_picture_in_author_is_a_note,
+textless_picture_in_thanks_stays_in_the_note, picture_glued_to_a_separator_ends_the_note,
+two_same_text_pictures_are_two_notes, picture_inside_an_affiliation_line_stays_in_place, includegraphics_in_author_is_kept,
+image_on_the_first_marked_line_is_kept, a_text_node_picture_takes_one_semicolon}`.
+
+**Known silent loss (review revCR8c finding 2; pre-existing, the base drops it too):** an image on a later line whose next event is not a run of text (before a URL, a mark or an address) stays a Layout event no written entry covers (`events/mod.rs` `place_pictures`, the `let … else` branch ~2645-2656), and `resolver/words.rs` `lost_inks` compares words only, so nothing counts it: 2503.08161's `hf-logo.png` (RED `fm_image_before_url_is_a_note`). A count of every Layout image left (tried, reverted: `scratch_CR8c/image_warning_attempt.patch`) also flags an icon the URL contact writes with its link (`perfect_kernel_batch77y::icon_parted_from_its_link_goes_with_it`, 2505.21327's `\huggingface` logos), so the count needs the written entries' span coverage, not the word check — open, in the silent-loss inventory.
+
+### 990. An unmarked frontmatter note renders inline, with no dagger (CR8c)
+
+**What.** In HTML an author's picture note — an `ltx:note` with `role="note"`, no `@mark`, no untyped tag, holding a
+picture or graphics (the meta XSLT's `ltx:creator/ltx:note[@role='note' and not(@mark) and not(ltx:tags/ltx:tag[not(@role)])
+and (.//ltx:picture or .//ltx:graphics)]`, `LaTeXML-meta-xhtml.xsl`) — is a span holding its content inline: no
+`ltx_note_mark` (†), no `ltx_note_outer`/`ltx_note_content` (which `LaTeXML.css` hides until hover, so the content would be
+invisible), no "note: " type label (#989's notes; 2404.13552, 2107.13277). Only those: a leftover-ink note with no mark that
+holds text — a `\titlenote`'s "Corresponding author. Email: …" (1003.2281, pdflatex prints ∗ and a footnote), `\pacs` codes
+(0803.0204, 1009.5642, printed under the abstract) — stands for a mark pdflatex prints or a line printed elsewhere and keeps
+the dagger: the first, broader rule inlined those 51 notes of 5,397 papers (review revCR8c finding 1).
+
+**Perl behavior.** The meta XSLT's `ltx:note` template (`LaTeXML-meta-xhtml.xsl`, `note-mark`) falls back to † for a
+note with no `@mark` and hides the content behind it. Perl writes no such frontmatter notes (it keeps a picture in the
+personname), so the fallback reached them only here.
+
+**Why.** User ruling 2026-11-10, "No dagger for unmarked notes": pdflatex prints these with no mark, where they stand (an
+ORCID icon before a name, 2107.13277; 2404.13552's page-overlay notice). A `\thanks` note (role `thanks`, #156) keeps
+its dagger: it stands for the footnote mark pdflatex prints, which the note leaves implicit. jheppub's `\note` is a
+contact (`\lx@add@contact[role=note]`), unchanged (1203.0413, 2111.03202: HTML byte-identical).
+
+**Witnesses.** 2404.13552 (the notice's picture note: no †, shown inline); 2107.13277 (five ORCID icons, inline spans).
+Guard `perfect_kernel_batchcr8::an_unmarked_frontmatter_note_renders_inline_without_a_dagger`.

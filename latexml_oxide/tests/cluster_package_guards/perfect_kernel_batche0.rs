@@ -1263,6 +1263,13 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // -> 58: `joined_run_link` WRITES a joined run's link as printed — the `\url`/`\href` call it finds in the run's tokens,
   // the text font commands and declaration groups still open there, the run's own tokens being what is written, as
   // `span_tokens_of` and `plan::container_wrap` write theirs —, the decision whether an address is linked made on the
+  // events' targets (`linkable`), review revZ18h S-a and B1r; CR8b 58 -> 68: `past_unprinted_tail`'s reads of what a
+  // picture's call read past its last box and printed nothing of — spaces, one `;`, the `\end{name}` of an environment the
+  // span opens, a closing brace —, which no box or event records; it decides only where the picture's own tokens end,
+  // stopping at any other token, never what anything is, review revCR8 finding 1; CR8c 68 -> 69: whether the span's own last
+  // token is already its path's `;` — a text node's box reaches past it — so the tail takes no second, printed one, the same
+  // read as the tail's `;`, which pgf consumes in expansion and no cover records, review revCR8b finding 5)
+  // (merged with the CR7 line, whose own raises follow: 58 + 11 + 3 = 72)
   // events' targets (`linkable`), review revZ18h S-a and B1r)
   // (CR7b, 58 -> 59: `perl_block_pieces`' text of Perl's split creators — Perl's `\lx@add@authors` cuts tokens, and its
   // creators exist as nothing else before digestion — that `perl_piece_of` matches the reading's names against, so an item
@@ -1270,7 +1277,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // reads of where a word of those names ends unprinted, after a formula and before a command's argument — the same
   // tokens' words, matched whole now ("li" no word of "Blinn", review revS5CR7b S1; 1404.5602's "robicheauxcurrent"), no
   // owner decided by a spelling)
-  ("emitter/emit", 61),
+  ("emitter/emit", 72),
   // (P1b, 0 -> 1: `emitter/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("emitter/dom+mod", 1),
@@ -1519,8 +1526,10 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // an output check, no reading decision: `\email{\{a,b\}@x\footnote{…}}` writes `a@x\lx@fm@obs@fnnote`, counted "markup
   // lost", while `\{a,b\}@x\_y.org`'s `a@x_y.org` is all it prints, review revZ18d finding 1)
   // (Z18i 61 -> 63: `joined_run_link`'s `"\\url"` and `"\\href"`, the calls it writes again as printed — no reading
-  // decision, which the events' targets make; review revZ18h S-a and B1r)
-  ("emitter", 63),
+  // decision, which the events' targets make; review revZ18h S-a and B1r; CR8b 63 -> 66: `past_unprinted_tail`'s
+  // `"\\begin"`, `"\\end"` twice, pairing an environment the picture's span opens with the `\end{…}` its call read after
+  // its last box, `\end{tikzpicture}` — no box holds it — never a reading decision, review revCR8 finding 1)
+  ("emitter", 66),
   // (the "Knowledge in, driver out, one pass" move: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
   // mark and note commands it reads; none added)
   ("emitter/calls", 44),
