@@ -33217,16 +33217,18 @@ Bob Baker}` + the minipage `\address` + `\address{Univ A}` gives Univ A to both,
 review revCR2b P1). Appended unlabelled, its contact went into each creator before the items' moved
 contacts, and cond-mat9809277's e-mails, cut from the first address, landed after the journal line (review revCR2
 finding 1); now Address, Email, Address(PRL), as the base, REVTeX 3's print and the old driver. An entry digested in place
-in a read block, which no step writes, is counted (`warn_queued_lost`). **Open:** 1411.6693 nests the block inside
-`\title{…\author{…\date{…}}}`: the emitter stays out at the first flush (no author block), the `\author` runs in the
-title's digestion, and the date is lost with no Warning (pre-existing, review revCR2 P1; minimal trigger
-`\title{A Title\author{Ann Able$^{1}$ \date{$^1$ School of Zebrawords}}}\maketitle` under article). cond-mat9809277
+in a read block, which no step writes, is counted (`warn_queued_lost`). A setter inside a block read while a flush
+digests its queue runs `\lx@add@frontmatter@now`, not the queue: 1411.6693's `\title{…\author{…\date{…}}}`, whose
+`\author` runs in the title's digestion at the `\maketitle` flush (the emitter stays out of that flush: no author block),
+a late block with a flush of its own (`\lx@frontmatter@late`). Its rehearsal notes the `@now` entry as the command a
+queued one is digested by (`queue::now_command`, `rehearsal::note_frozen_entry`; never a creator), so that flush's
+emitter queues it as above: the date is kept (it was lost with no Warning, review revCR2 P1). cond-mat9809277
 keeps Perl's and the old driver's empty minipage `ltx:contact`, last (RED: `\vskip -0.5in $ $` after the `\pacs` keeps
 the minipage's paragraph). Repros
-`sectioning-frontmatter/{svjour3_institute_email_before_at_is_its_owners,date_inside_author_is_the_date,revtex3_abstract_inside_address_minipage,revtex3_minipage_address_keeps_contact_order,revtex3_setter_in_written_address_once,revtex3_minipage_address_first_joins_run_labels}.tex`;
+`sectioning-frontmatter/{svjour3_institute_email_before_at_is_its_owners,date_inside_author_is_the_date,revtex3_abstract_inside_address_minipage,revtex3_minipage_address_keeps_contact_order,revtex3_setter_in_written_address_once,revtex3_minipage_address_first_joins_run_labels,date_inside_author_inside_title_is_the_date}.tex`;
 guards `perfect_kernel_batchcr2` (one per path: the owner label, a block's queued setter, a call's in-place digest, the
-call's place among the items, a written call), `perfect_kernel_batchcr3::revtex3_minipage_address_first_one_run` (a run of
-several owners).
+call's place among the items, a written call), `perfect_kernel_batchcr3::{revtex3_minipage_address_first_one_run` (a run
+of several owners), `date_inside_author_inside_title_is_the_date}` (a flush-time `@now` setter).
 
 ### 986. imsart.sty is a binding of its own, so a shipped copy declaring itself imsart.sty is read through it (CR3)
 

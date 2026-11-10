@@ -231,6 +231,18 @@ pub(in crate::base_utilities) fn queue_add_frontmatter_now(
   attrs_opt: Option<&KeyVals>,
   content: Option<&Tokens>,
 ) -> Result<()> {
+  let command = now_command(keys_opt, tag_tks, attrs_opt, content)?;
+  queue_front_matter(&tag_tks.to_string(), attrs_opt, command);
+  Ok(())
+}
+
+/// The command a queued entry is digested by: `\lx@add@frontmatter@now[keys]{tag}[attributes]{content}`.
+pub(in crate::base_utilities) fn now_command(
+  keys_opt: Option<&KeyVals>,
+  tag_tks: &Tokens,
+  attrs_opt: Option<&KeyVals>,
+  content: Option<&Tokens>,
+) -> Result<Tokens> {
   let mut inv_tokens: Vec<Token> = vec![T_CS!("\\lx@add@frontmatter@now")];
   if let Some(keys) = keys_opt {
     inv_tokens.push(T_OTHER!("["));
@@ -250,8 +262,7 @@ pub(in crate::base_utilities) fn queue_add_frontmatter_now(
     inv_tokens.extend(content.unlist_ref().iter().copied());
   }
   inv_tokens.push(T_END!());
-  queue_front_matter(&tag_tks.to_string(), attrs_opt, Tokens::new(inv_tokens));
-  Ok(())
+  Ok(Tokens::new(inv_tokens))
 }
 
 /// The number of creators queued so far (`frontmatter_raw`).

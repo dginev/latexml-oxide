@@ -69,3 +69,22 @@ fn imsart_address_after_frontmatter_prints_in_place() {
     "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p5.1.2.1\">Univ C</td>",
   ]);
 }
+
+/// CR3b item 2 (CR2b item 5): `\date` inside an `\author` nested in `\title` (1411.6693) runs while the `\maketitle` flush
+/// digests the title: the late block's rehearsal notes the `@now` entry as a queued command, and the emitter queues it at
+/// the block's flush, so the date is kept, with no Warning (it was lost with none). Distinct from cr2's
+/// `date_inside_author_is_the_date` (a top-level `\author`, its `\date` queued): the flush-time `@now` path. Repro
+/// sectioning-frontmatter/date_inside_author_inside_title_is_the_date.
+#[test]
+fn date_inside_author_inside_title_is_the_date() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/date_inside_author_inside_title_is_the_date.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(elements(&xml, "date"), vec![
+    "<date role=\"creation\"><sup xml:id=\"id3\">1</sup> School of Zebrawords, Northeast Normal University, Changchun 130024, China</date>",
+  ]);
+  assert_eq!(elements(&xml, "creator"), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id2\">1</sup></personname>\n  </creator>",
+  ]);
+}

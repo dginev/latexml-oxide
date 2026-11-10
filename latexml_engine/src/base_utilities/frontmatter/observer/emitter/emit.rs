@@ -4010,10 +4010,11 @@ struct Taken<'a> {
 /// The entries a frontmatter setter run inside an author block or an API call queues (`AuthorBlock::queued`,
 /// `ApiCall::queued`: what its rehearsal noted, the frontmatter frozen), queued at the flush after the emitter's own, as the
 /// old driver's digestion of the block or the call at the flush made them, so each is its own entry where the schema puts
-/// it: `\date{$^1$ School of …}` inside `\author`, which LaTeX prints as the date (2503.02741, hep-th0304189; open:
-/// 1411.6693's, its block nested in `\title`, lost uncounted), and REVTeX 3's `\pacs` inside an `\address`'s minipage (cond-mat9801109,
-/// cond-mat9906335, cond-mat9809277, cond-mat9909213), whose emitted creators digest no setter (OXIDIZED_DESIGN_DIVERGENCES
-/// #985). A call whose run also digested an entry where it stands (`rehearsal::note_frozen_digest`: that minipage's
+/// it: `\date{$^1$ School of …}` inside `\author`, which LaTeX prints as the date (2503.02741, hep-th0304189; 1411.6693's,
+/// its block nested in `\title` and read at a flush of its own, its setter's `@now` noted as such a command), and REVTeX
+/// 3's `\pacs` inside an `\address`'s minipage (cond-mat9801109, cond-mat9906335, cond-mat9809277, cond-mat9909213), whose
+/// emitted creators digest no setter (OXIDIZED_DESIGN_DIVERGENCES #985). A call whose run also digested an entry where it
+/// stands (`rehearsal::note_frozen_digest`: that minipage's
 /// `\begin{abstract}`), which no queue holds, and of which the reading writes nothing, is written as queued, as the old
 /// driver wrote it — its digestion at the flush runs every setter in it —, with the attributes it was queued with, back at
 /// its ledger position among the item calls and labelled for its run's creators ([`run_labels`]), so its contact is placed
