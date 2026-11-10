@@ -1,6 +1,7 @@
 //! Names parted by horizontal space alone: a wide space, or a name's marks and any space after them.
 
 use super::*;
+use crate::base_utilities::defs::frontmatter_fields::only_marks_and_notes;
 
 /// An author line's names parted by horizontal space alone, each such space written as the comma the split reads
 /// (OXIDIZED_DESIGN_DIVERGENCES #897): pdflatex sets the names apart, where the split saw one name. At the line's top

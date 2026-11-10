@@ -1,6 +1,7 @@
 //! Author notes and thanks: affiliation-mark splits, leading declarations, name annotations.
 
 use super::*;
+use crate::base_utilities::defs::frontmatter_api::line_notes;
 
 /// Whether an author block's `line` holds authors' notes only: one or more `\thanks{…}`, `\footnote{…}` or
 /// `\IEEEcompsocitemizethanks{…}` (each with an optional `[…]`), and else only spacing (spaces, `~`, `\par`). Such a
@@ -37,22 +38,4 @@ pub fn document_notes(line: &[Token]) -> Option<Vec<Token>> {
     }
   }
   prints_nothing(&Tokens::new(rest)).then_some(out)
-}
-
-/// The notes of a line of notes only ([`notes_only_line`]), each the span `(start, end)` of `line` from its command
-/// through its closing brace; `None` when the line holds other ink.
-pub(in crate::base_utilities) fn line_notes(line: &[Token]) -> Option<Vec<(usize, usize)>> {
-  let spacing = |t: &Token| *t == T_SPACE!() || *t == T_ACTIVE!('~') || *t == T_CS!("\\par");
-  let mut notes = Vec::new();
-  let mut i = 0;
-  while i < line.len() {
-    if spacing(&line[i]) {
-      i += 1;
-    } else {
-      let end = note_call_end(line, i)?;
-      notes.push((i, end));
-      i = end;
-    }
-  }
-  Some(notes)
 }

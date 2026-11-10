@@ -196,12 +196,3 @@ pub(in crate::base_utilities) fn email_command_calls(
   }
   Ok(if calls.is_empty() { None } else { Some(calls) })
 }
-
-/// A marker-less line that is *purely* a list of email addresses — a shared
-/// `\texttt{a@x, b@y,}` / `\email{...}` / `\{a,b\}@x` line covering all authors. Like
-/// `line_is_email` but tolerates a comma-separated list (and the trailing
-/// comma authors often leave), as `email_addresses` reads it: every item a full
-/// address or a braced list of local parts before its domain. A prose affiliation
-/// line ("Dept. of Foo, University of Pisa, Italy") is rejected, so this never
-/// misclassifies an address as an email.
-pub fn line_is_email_list(line: &Tokens) -> bool { email_addresses(line).is_some() }

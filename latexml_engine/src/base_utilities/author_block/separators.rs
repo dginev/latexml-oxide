@@ -1,7 +1,9 @@
 //! Author-line separators: line parts, words, `and` splits, alignment and ACM column unwrapping.
 
 use super::*;
-use crate::frontmatter_stores::LAYOUT;
+use crate::{
+  base_utilities::defs::frontmatter_api::inst_takes_back_space, frontmatter_stores::LAYOUT,
+};
 
 /// If `tokens` (spaces around it aside) is one brace group, its opening declarations ([`opening_declarations`]:
 /// `\bf`, `\small`) and the rest of its content.
@@ -505,53 +507,6 @@ fn orcid_icon_end_within(tokens: &[Token], depth: usize) -> usize {
     i += 2;
   }
   i
-}
-
-/// Whether the document's `\inst` is the inst convention's mark, which takes back the space before it: its meaning starts
-/// with `\unskip` (llncs.cls:894 `\def\inst#1{\unskip$^{#1}$}`, aa.cls:759, svjour3.cls, read raw), or it is the
-/// request the convention's bindings give it for that definition (`\lx@request@frontmatter@annotation`: llncs_cls.rs,
-/// inst_support_sty.rs, sv_support_sty.rs). Beamer's (beamerbasetitle.sty:169 `\textsuperscript{#1}`) and a document's
-/// own `\newcommand{\inst}[1]{$^{#1}$}` are none.
-/// Inside author content, where `\lx@author@withinst` makes `\inst` its mark reader, the one it saved decides; a class
-/// that defines `\inst` only inside its title, where it prints the names (epl2.cls:725 `\def\inst##1{\unskip${}^{##1}$…}`,
-/// 1201.1900), has its binding declare that meaning as `\lx@title@inst`, which decides first.
-fn inst_takes_back_space() -> bool {
-  let first = |cs: &str| match lookup_definition(&T_CS!(cs)) {
-    Ok(Some(defn)) => match defn.get_expansion() {
-      Some(ExpansionBody::Tokens(body)) => body
-        .unlist_ref()
-        .iter()
-        .find(|t| **t != T_SPACE!())
-        .copied(),
-      _ => None,
-    },
-    _ => None,
-  };
-  let lead = match first("\\lx@title@inst").or_else(|| first("\\inst")) {
-    Some(t) if t == T_CS!("\\lx@inst@mark") => first("\\lx@saved@inst"),
-    lead => lead,
-  };
-  lead.is_some_and(|t| t == T_CS!("\\unskip") || t == T_CS!("\\lx@request@frontmatter@annotation"))
-}
-
-/// Does the document's `\inst` print its one argument as a raised mark — the inst convention's
-/// ([`inst_takes_back_space`]: aa.cls:759 `\def\inst#1{\unskip\hbox{$^{#1}$}}`, mem.cls:318, llncs), or a definition of
-/// one parameter that raises it (beamerbasetitle.sty:169 `\textsuperscript{#1}`, a document's `$^{#1}$`)? By its
-/// meaning, not its name: a document's `\newcommand{\inst}{Institute}` is a word (review rev99a S2).
-pub(in crate::base_utilities) fn inst_prints_its_mark() -> bool {
-  if inst_takes_back_space() {
-    return true;
-  }
-  let Ok(Some(defn)) = lookup_definition(&T_CS!("\\inst")) else {
-    return false;
-  };
-  let one_argument = defn.get_parameters().is_some_and(|p| {
-    let params = p.get_parameters();
-    params.len() == 1 && !params[0].optional
-  });
-  one_argument
-    && matches!(defn.get_expansion(), Some(ExpansionBody::Tokens(body))
-      if body.unlist_ref().iter().any(|t| *t == T_SUPER!() || is_mark_command(t)))
 }
 
 /// Whether an author block is an IJCAI sectioned one: `\affiliations` or `\emails` at its top level (the split's

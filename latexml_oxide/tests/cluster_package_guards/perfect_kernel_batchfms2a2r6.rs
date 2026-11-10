@@ -121,7 +121,7 @@ fn a_name_is_its_printed_text() {
 /// Review revfms2a2_5 finding 6: an address list running on over the next line places the notes of its lines — the
 /// block's, a line of addresses being no one name's (2406.07529's `\thanks` after its last address); the line read on to
 /// was skipped and its `\thanks` lost. Since 101b today's reads so too — the line carrying the note an address line
-/// (`author_block::address_line_notes`; it was an affiliation of both names, and `x1@example.org,` a nameless
+/// (`frontmatter_api::address_line_notes`; it was an affiliation of both names, and `x1@example.org,` a nameless
 /// creator's), the note the document's pubnote, where the writer holds the block's (`plan::held_as_pubnote`) — so the
 /// writer's outcome is `same` (it held back at Bob Baker's e-mail).
 #[test]

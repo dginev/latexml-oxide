@@ -1,7 +1,13 @@
 //! `LoadDefinitions!` part 4: the author macros (`\lx@add@authors*`, affiliations, superscript marks), the default text
 //! names, and `\maketitle` supersede/fallback.
 
-use super::{frontmatter_api::PRINTED_LABEL, *};
+use super::{
+  frontmatter_api::{
+    PRINTED_LABEL, affiliation_calls, affiliation_is_marked, binding_cut_list_attr,
+    blank_line_marks_dropped, shared_affiliation_calls, unalias_mark_commands,
+  },
+  *,
+};
 
 /// The key on the entry the frontmatter emitter is writing (its pending entry, `with_digesting_entry_attr`) saying it has read
 /// its first mark, its label (`\lx@sup@setlabel@affiliation`; taken off as each emitted item starts,

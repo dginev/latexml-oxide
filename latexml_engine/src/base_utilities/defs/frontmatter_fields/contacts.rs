@@ -1,6 +1,7 @@
 //! The contact fields' own readers: the owner of a contact placed apart from the names (`\lx@add@contact@placed`), and
 //! the text of an address as its field writes it. Moved unchanged from `author_block/affiliations.rs` and
-//! `author_block/email_owners.rs` (Z18a): field logic, not author-block parsing.
+//! `author_block/email_owners.rs` (Z18a): field logic, not author-block parsing; and `queued_author_name_keys`, which the
+//! API's address placement shares, moved unchanged from `author_block/affiliations.rs` (Z18j).
 
 use super::*;
 
@@ -150,4 +151,19 @@ pub(in crate::base_utilities) fn math_braces_as_printed(address: &Tokens) -> Tok
     at += 1;
   }
   Tokens::new(out)
+}
+
+/// The keys ([`NameKeys`]) of each queued author's name ([`queued_name`]), in queue order (the n-th digests
+/// with `author:n`).
+pub(in crate::base_utilities) fn queued_author_name_keys() -> Vec<NameKeys> {
+  with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue
+      .iter()
+      .filter(|entry| {
+        entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+      })
+      .map(|entry| NameKeys::of(&queued_name(&entry.2)))
+      .collect(),
+    _ => Vec::new(),
+  })
 }

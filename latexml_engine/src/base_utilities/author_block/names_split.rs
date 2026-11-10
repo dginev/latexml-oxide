@@ -1,7 +1,9 @@
 //! Splitting an author line into names: separators expanded, wrappers, leading spacing.
 
 use super::*;
-use crate::frontmatter_stores::cs_in;
+use crate::{
+  base_utilities::defs::frontmatter_fields::only_marks_and_notes, frontmatter_stores::cs_in,
+};
 
 /// Second-level split of the author heuristic: divide ONE line that has already
 /// been classified as an *author* line (its superscript marker sits far enough

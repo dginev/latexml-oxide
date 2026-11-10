@@ -67,6 +67,15 @@ pub use author_block::*;
 use defs::frontmatter_api::{
   CUT_COPY_PLACE, CUT_LIST, CUT_ROLES, ENTRY_KEY, ENTRY_KINDED, ENTRY_SYMBOL, SEQUENCE_LABEL,
 };
+// (the API's gates `frontmatter_stores` and the bindings call — llncs's `\institute`, eptcs's e-mail rows — moved with the
+// API's entry cutter from `author_block/` to `defs/frontmatter_api/`: Z18j)
+pub use defs::frontmatter_api::{
+  affiliations::{
+    affiliation_calls, class_numbered_institutes, holds_requested_marked_entries,
+    numbered_marks_requested,
+  },
+  email_lines::line_is_email_list,
+};
 mod frontmatter;
 pub use frontmatter::*;
 mod util_text;

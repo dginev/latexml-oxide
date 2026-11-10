@@ -130,7 +130,7 @@ Text.
 /// no owner to fall back to: its only link went to the block as a url contact (and on to a sole author by
 /// `sole_author_takes_the_block`, 2103.05251's shape); now it stays in the note's text, and a link spelling an author
 /// is that author's. The note itself stays the block's (a sole author's). Since 101b today's reads the address line
-/// carrying the note as one too (`author_block::address_line_notes`; it was an affiliation, the writer held back at
+/// carrying the note as one too (`frontmatter_api::address_line_notes`; it was an affiliation, the writer held back at
 /// the first e-mail), its note the document's pubnote, where the writer holds the block's (`plan::held_as_pubnote`):
 /// the one-link shape reads as today's; the writer still holds back the others, at Ann's page (a url contact today's
 /// leaves in the note) and at the sole author's note (today's the document's).

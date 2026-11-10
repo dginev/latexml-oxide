@@ -2,7 +2,7 @@
 //! collaboration the whole name or its wrapper writes, and the definitions a title-code block makes at `\author`. Moved
 //! unchanged from `author_block/name_text.rs`, `collaborations.rs` and `email_lines.rs` (Z18a): field logic, not
 //! author-block parsing. The readers it shares with the bindings (`collaboration_line_reading`, `only_marks_and_notes`)
-//! stay there.
+//! moved here after it, unchanged (Z18j).
 
 use super::*;
 
@@ -630,4 +630,73 @@ fn closes_only_its_own_groups(tokens: &[Token]) -> bool {
     }
   }
   true
+}
+
+/// Whether `tokens` hold nothing to read but marks and notes: spaces (`~`, `\ `, `\,`), a note or mark command with
+/// its arguments ([`NAME_ANNOTATIONS`], `\footnotemark[…]`, the mark commands of [`mark_commands`]:
+/// `\textsuperscript`, `\IEEEauthorrefmark`, `\authorrefmark`), a superscript or subscript, or math holding only those
+/// (`$^{*}$`). An author written as a macro (`\A`) is something to read.
+pub(in crate::base_utilities) fn only_marks_and_notes(tokens: &[Token]) -> bool {
+  let mut i = 0;
+  let mut any = false;
+  while i < tokens.len() {
+    let t = tokens[i];
+    match t.get_catcode() {
+      Catcode::SPACE => i += 1,
+      Catcode::ACTIVE if t.with_str(|s| s == "~") => i += 1,
+      Catcode::CS if t == T_CS!("\\ ") || t == T_CS!("\\,") => i += 1,
+      // `${}^{1}$`'s empty group
+      Catcode::BEGIN
+        if tokens
+          .get(i + 1)
+          .is_some_and(|n| n.get_catcode() == Catcode::END) =>
+      {
+        i += 2
+      },
+      // (a mark command too: ieeeaccess's `\authorrefmark{2}` after a list's closing period, 2201.07394)
+      Catcode::CS if is_footnote_mark(&t) || is_name_annotation(&t) || is_mark_command(&t) => {
+        any = true;
+        i += 1;
+        if tokens.get(i) == Some(&T_OTHER!("[")) {
+          while i < tokens.len() && tokens[i] != T_OTHER!("]") {
+            i += 1;
+          }
+          i += 1;
+        }
+        if !is_footnote_mark(&t) {
+          i = skip_group(tokens, i);
+        }
+      },
+      Catcode::SUPER | Catcode::SUB => {
+        any = true;
+        i = skip_group(tokens, i + 1);
+      },
+      Catcode::MATH => {
+        let Some(close) = tokens[i + 1..]
+          .iter()
+          .position(|t| t.get_catcode() == Catcode::MATH)
+        else {
+          return false;
+        };
+        if !only_marks_and_notes(&tokens[i + 1..i + 1 + close])
+          || tokens[i + 1..i + 1 + close].is_empty()
+        {
+          return false;
+        }
+        any = true;
+        i += close + 2;
+      },
+      _ => return false,
+    }
+  }
+  any
+}
+
+/// How the collaboration a line of an author block names is framed ([`collaboration_line_framing`]), `None` for a line
+/// naming none or marked.
+pub(in crate::base_utilities) fn collaboration_line_reading(line: &Tokens) -> Option<Framing> {
+  if author_mark_position(line).is_some() {
+    return None;
+  }
+  collaboration_line_framing(&visible_name_text(line.unlist_ref()))
 }
