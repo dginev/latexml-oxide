@@ -5,11 +5,14 @@
 % witness: 0805.1001 (v6.1, "Correspondence to: e-mail: …")
 % oracle:  pdflatex (TL 2025) 0 errors: "T", "A. Smith", "Univ. X, Y", "Body.", footnote "Correspondence to: e-mail:
 %          zz@x.org"
-% engines: rust int156a (27ca6acecc) = the expected contact
-% expect:  0 errors, 0 warnings; A. Smith: Univ. X, Y and <contact name="Correspondence to  e-mail: " role="email">
-%          zz@x.org (the double space: our `\mailname`'s trailing `\ ` before the joining space)
-% status:  GREEN (int156a, pinned when MB1 moved its naming into `entry_line_label`) —
-%          perfect_kernel_batchmb1::labelled_line_is_named_after_the_class
+% engines: rust int156a (27ca6acecc), MB1 (0da5a8b23c) = <contact name="Correspondence to  e-mail: " role="email">:
+%          a double space and no colon — the entry's name is `name={\mailname}`, which the join reads unexpanded, so
+%          it saw no spacing at its end and added a space after the one `\mailname` held (review revMB1 N1), and the
+%          binding's `\mailname` lacked aa.cls's colon (revMB1 P2)
+% expect:  0 errors, 0 warnings; A. Smith: Univ. X, Y and <contact name="Correspondence to: e-mail: " role="email">
+%          zz@x.org (`\mailname` aa.cls's `{\it Correspondence to\/}:`, the space after it `\mail`'s `name={\mailname\ }`,
+%          as aa.cls's `\mailname\ \ignorespaces\@mail`: the join sees the `\ ` and adds none)
+% status:  RED (MB1) -> GREEN (MB2) — perfect_kernel_batchmb1::labelled_line_is_named_after_the_class
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{aa.cls}
 \NeedsTeXFormat{LaTeX2e}\ProvidesClass{aa}[2010/01/01 v7.0 stand-in]

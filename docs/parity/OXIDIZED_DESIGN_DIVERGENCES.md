@@ -29259,8 +29259,12 @@ item's label, or left in place.
   label; one without it (v8 on, `\newcommand*\mail[1]{\renewcommand*\aa@mail{#1}}`, read by nothing: 2007.14739
   :965-966) prints neither the address nor a label, and the item has none (`name={}`, FIDELITY_CHARTER §4). No copy
   shipped: Perl's label. `\mailname`'s `\it` is in a group, as aa.cls's `{\it Correspondence to\/}`: Perl's unbraced
-  `\it` set every frontmatter item after `\mail` in italic (2012.11607's names and affiliations, the date); its text and
-  trailing space stay Perl's.
+  `\it` set every frontmatter item after `\mail` in italic (2012.11607's names and affiliations, the date). Its text is
+  aa.cls's own `\def\mailname{{\it Correspondence to\/}:}` (the one definition of every copy that has it, 129 of the 434
+  `\mail` papers: 0705.1240, 1005.3784, 0805.1001), not Perl's colonless `\it Correspondence to \/`, with no copy shipped
+  too (1209.2606: no TL aa.cls, the class the paper was written for prints the colon); the space after it is the print
+  code's (`\mailname\ \ignorespaces\@mail`), so `\mail`'s name is `{\mailname\ }`: "Correspondence to: " (MB2, review
+  revMB1 P2; the join's space, #992).
 - **The writer's take-out of an entry it empties** (observer/emitter/plan.rs `cut_entry_addresses`, `holder_label`).
   95c cut an affiliation-kind entry printing only addresses and named each e-mail contact by the label word the cut took,
   else the class default, so the `\mail` holder's "Correspondence to " was printed nowhere (1005.3784, 0805.1001, …).
@@ -33962,12 +33966,24 @@ review revZ18o N1, N2, synthetic).** A labelled mailbox-link line had been named
 line puts the class's name of the entry before its label: aa's `\mail{Contact: \href{mailto:zz@x.org}{here}}` was
 `name="Contact: "`, REVTeX's `\altaffiliation[Authors for Correspondence: ]{Contact: \href{…}{here}}` too. Both readers'
 lines now take one match, `entry_line_label` beside `split_email_label` (frontmatter/classify/email_block_calls.rs; the
-e-mail label's half, `email_line_label`, shared with `email_line_calls`): "Correspondence to  Contact: ", "Authors for
-Correspondence: Contact: ". 2604.04847's `\textbf{Correspondence:} \href{daniel094144@gmail.com}{…}`, which prints an
+e-mail label's half, `email_line_label`, shared with `email_line_calls`): "Correspondence to  Contact: " (MB1), "Authors for
+Correspondence: Contact: " (aa's "Correspondence to: Contact: " since MB2). 2604.04847's `\textbf{Correspondence:} \href{daniel094144@gmail.com}{…}`, which prints an
 address, is the link line's rightly: "Correspondence" is no e-mail label, so `line_addresses` reads no address of the
 line; an e-mail label's line printing a link (`e-mail: \href{mailto:zz@x.org}{zz@x.org}`) is the address reader's
-first, as before. Its link kept, the block's. The double space after aa's name is our `\mailname`'s trailing `\ `
-before the joining space, the address line's since 97b (0805.1001). Guards
+first, as before. Its link kept, the block's. A line whose label is glued to its address (`Email:zz@x.org`) is one
+address list, so it has no label of its own and takes the class's name of the entry (the arm the line with no label
+takes): aa's `\mail{Email:zz@x.org}` is "Correspondence to: ", REVTeX's `\altaffiliation[Corresponding author:
+]{Email:zz@x.org}` gives Ann's correspondence note "Corresponding author" before the e-mail; before MB1 both were named
+"Email: " and the class's name was printed nowhere (review revMB1 S1, synthetic; guard
+`perfect_kernel_batchmb2::glued_label_line_takes_the_class_name`, repros
+`sectioning-frontmatter/{aa_mail,revtex_altaffiliation}_glued_email_label_takes_the_class_name.tex`). **The join's space
+(MB2; review revMB1 N1, P2).** The join adds a space after the class's name unless the name's last token is spacing
+(`is_spacing`, which counts `\ `); aa's entry name was `name={\mailname}`, which `kv.revert()` returns unexpanded, so the
+join saw the CS and added a space after the one `\mailname` held — "Correspondence to  e-mail: ", a double space, the
+address line's since 97b (0805.1001). The space is now the binding's, as aa.cls's print code
+`\mailname\ \ignorespaces\@mail` has it: `\mail` is `name={\mailname\ }` and `\mailname` holds none, so the join adds
+nothing and a line with no label keeps its trailing space: "Correspondence to: e-mail: ", "Correspondence to: " (the
+colon, #944). Guards
 `perfect_kernel_batchmb1::{labelled_line_is_named_after_the_class, correspondence_link_line_keeps_the_link}`; repros
 `sectioning-frontmatter/{aa_mail_labelled_mailbox_link_names_after_the_class,
 revtex_altaffiliation_labelled_mailbox_link_names_after_the_class, aa_mail_email_label_names_after_the_class,

@@ -8,10 +8,13 @@
 %          astro-ph0107266, astro-ph0108379, astro-ph0609025, astro-ph9907206; no copy shipped: 1209.2606
 % oracle:  pdflatex 0 errors: "T", "A. Smith", "Univ. X, Y", "Body.", footnote "Correspondence to: smith@x.org"
 % engines: rust int123a = <contact name="Correspondence to " role="address">; rust int124b-int125b = <contact
-%          name="Email: " role="email">, "Correspondence" nowhere; perl = the int123a contact
-% expect:  0 errors, 0 warnings; one contact holding smith@x.org, <contact name="Correspondence to " role="email">,
-%          no italic on it or the date (`\mailname`'s `\it` in a group, as aa.cls's)
-% status:  RED (int125b) -> GREEN (97b)
+%          name="Email: " role="email">, "Correspondence" nowhere; perl = the int123a contact; rust 97b-MB1 =
+%          <contact name="Correspondence to " role="email">, the copy's colon lost (review revMB1 P2)
+% expect:  0 errors, 0 warnings; one contact holding smith@x.org, <contact name="Correspondence to: " role="email">,
+%          no italic on it or the date (`\mailname` aa.cls's `{\it Correspondence to\/}:`, its `\it` in a group; the
+%          space after it `\mail`'s `name={\mailname\ }`)
+% status:  RED (int125b) -> GREEN (97b); RED (MB1) -> GREEN (MB2) —
+%          perfect_kernel_batch97b::aa_mail_is_labelled_as_its_copy_prints_it
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{aa.cls}
 \NeedsTeXFormat{LaTeX2e}\ProvidesClass{aa}[2010/01/01 v7.0 stand-in]

@@ -27,7 +27,9 @@ macro_rules! repro {
 /// Correspondence: ]` — holding a line led by a label of its own: the e-mail is named by the class's name, then the
 /// line's label, as both print, whichever reader reads the line (a mailbox link line, `Contact: \href{mailto:…}{here}`;
 /// an e-mail label's line, `e-mail: zz@x.org`, 0805.1001). Red (int156a): each link line's e-mail named "Contact:"
-/// alone; the address line green there, pinned as the rule's other reader.
+/// alone; the address line green there, pinned as the rule's other reader. Red (MB1): aa's "Correspondence to  …",
+/// a double space and no colon — the join added a space after the unexpanded `\mailname`, which held its own; aa.cls
+/// prints "Correspondence to: …" (MB2, review revMB1 N1, P2).
 #[test]
 fn labelled_line_is_named_after_the_class() {
   let link = "<ref class=\"ltx_href\" href=\"mailto:zz@x.org\">here</ref>";
@@ -35,7 +37,7 @@ fn labelled_line_is_named_after_the_class() {
     (
       repro!("aa_mail_labelled_mailbox_link_names_after_the_class"),
       &[&["A. Smith", "affiliation=Univ. X, Y", "email=here"][..]][..],
-      format!("<contact name=\"Correspondence to  Contact: \" role=\"email\">{link}</contact>"),
+      format!("<contact name=\"Correspondence to: Contact: \" role=\"email\">{link}</contact>"),
     ),
     (
       repro!("revtex_altaffiliation_labelled_mailbox_link_names_after_the_class"),
@@ -50,7 +52,7 @@ fn labelled_line_is_named_after_the_class() {
     (
       repro!("aa_mail_email_label_names_after_the_class"),
       &[&["A. Smith", "affiliation=Univ. X, Y", "email=zz@x.org"][..]][..],
-      "<contact name=\"Correspondence to  e-mail: \" role=\"email\">zz@x.org</contact>".to_string(),
+      "<contact name=\"Correspondence to: e-mail: \" role=\"email\">zz@x.org</contact>".to_string(),
     ),
   ] {
     let (log, xml) = run(tex);
