@@ -413,7 +413,11 @@ fn old_reader_exports() -> std::collections::BTreeSet<String> {
       files.extend(rust_files(&sub));
     }
   }
-  files.extend(MOVED_OLD_READER_FILES.iter().map(|file| format!("{BASE}/{file}")));
+  files.extend(
+    MOVED_OLD_READER_FILES
+      .iter()
+      .map(|file| format!("{BASE}/{file}")),
+  );
   let mut names = std::collections::BTreeSet::new();
   for file in files {
     for found in item.captures_iter(&read_rust(&file).code) {

@@ -99,10 +99,20 @@ impl Block {
       }
       list.extend(column);
     }
-    let mut out = Invocation!(T_CS!("\\lx@add@author@split"), vec![None, Some(Tokens::new(list))]).unlist();
+    let mut out = Invocation!(T_CS!("\\lx@add@author@split"), vec![
+      None,
+      Some(Tokens::new(list))
+    ])
+    .unlist();
     for line in self.shared {
       let options = mouth::tokenize_internal("labelseq={affiliation},_share={authors}");
-      out.extend(Invocation!(T_CS!("\\lx@add@affiliation"), vec![Some(options), Some(Tokens::new(line))]).unlist());
+      out.extend(
+        Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+          Some(options),
+          Some(Tokens::new(line))
+        ])
+        .unlist(),
+      );
     }
     Ok(Tokens::new(out))
   }

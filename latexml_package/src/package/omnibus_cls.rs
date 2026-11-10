@@ -61,7 +61,9 @@ fn numbered_affil_marks(list: Tokens) -> Tokens {
           .iter()
           .take_while(|t| t.get_catcode() == Catcode::SPACE)
           .count();
-      if tokens.get(open).is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+      if tokens
+        .get(open)
+        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
         && let Some(close) = tokens[open + 1..]
           .iter()
           .position(|t| t.get_catcode() == Catcode::END)
@@ -69,7 +71,9 @@ fn numbered_affil_marks(list: Tokens) -> Tokens {
       {
         let text = Tokens::new(tokens[open + 1..close].to_vec()).to_string();
         let numbers = text.chars().any(|c| c.is_ascii_digit())
-          && text.chars().all(|c| c.is_ascii_digit() || c == ',' || c == ' ');
+          && text
+            .chars()
+            .all(|c| c.is_ascii_digit() || c == ',' || c == ' ');
         if numbers {
           out.push(T_CS!("\\inst"));
           continue;

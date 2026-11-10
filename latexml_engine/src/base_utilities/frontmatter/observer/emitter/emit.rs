@@ -2106,6 +2106,21 @@ fn item_call(
             });
           (font, links, linkable)
         });
+        // (an address of a class's e-mail call's list, which the rehearsal reads plain, set as the class's command sets
+        // the list (`calls::email_command_address`): eptcs's `\email{a@x \qquad b@y}`, `{\footnotesize\tt #1}`, each
+        // address in typewriter type as the single call's (1101.4424))
+        let command = with_block(index, None, |block, events| {
+          let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+          events
+            .iter()
+            .filter(|e| {
+              e.kind == EventKind::Contact
+                && e.role.as_deref() == Some("email")
+                && e.span.is_some_and(|s| s.0 <= span.0 && span.1 <= s.1)
+            })
+            .find_map(|e| block.tokens.unlist_ref().get(at(e.span?.0)?).copied())
+        })
+        .filter(|cs| font.is_none() && !links && calls::is_email_command(cs).unwrap_or(false));
         let written = links
           .then(|| {
             with_block(index, None, |block, _| {
@@ -2129,6 +2144,10 @@ fn item_call(
               &assoc.text,
             ),
           ),
+        };
+        let content = match command {
+          Some(cmd) => calls::email_command_address(&cmd, content)?,
+          None => content,
         };
         return Ok(annotate_now("ltx:contact", &keys, content.unlist_ref()));
       }

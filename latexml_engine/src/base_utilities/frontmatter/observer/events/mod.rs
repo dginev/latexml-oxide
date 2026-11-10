@@ -711,8 +711,25 @@ fn option_value(options: &str, key: &str) -> Option<String> {
 /// address, read twice from the target and the text — two contacts written for one print: aa 2210.16066, 1907.11241,
 /// 2007.06573, 2103.15844, llncs 2405.04152, 2603.13900; `\href{mailto:ann@a.org}{Ann}` prints no address), a `\url`'s
 /// argument (review rev92c B1). A separator it holds parts its addresses as a break does (svjour3's `\email{yjansson@kth.se
-/// \and tony@kth.se}`, 2106.06418: no `\andtony@kth.se`, review revN2).
+/// \and tony@kth.se}`, 2106.06418: no `\andtony@kth.se`, review revN2). A box of a control word is what it prints, a
+/// space when it prints nothing: the space after it the tokenizer skipped parted it from the next box, and the boxes
+/// still do — `\email{a@x \qquad b@y}` is `a@x b@y`, never the address `\qquadb@y` nor the word `qquad` (eptcs's
+/// `\email{g.stavrinos@… \qquad\qquad\qquad tassiana98@gmail.com}`, 1101.4424).
 fn raw_lines(w: &Whatsit, n: usize) -> String {
+  fn push_box(d: &Digested, out: &mut String) {
+    let text = d.to_string();
+    let control_word = text
+      .strip_prefix('\\')
+      .is_some_and(|name| !name.is_empty() && name.chars().all(|c| c.is_ascii_alphabetic()));
+    if control_word {
+      match ink_of(d) {
+        ink if ink.is_empty() => out.push(' '),
+        ink => out.push_str(&ink),
+      }
+    } else {
+      out.push_str(&text);
+    }
+  }
   fn walk(d: &Digested, out: &mut String) {
     match d.data() {
       DigestedData::List(l) => {
@@ -735,10 +752,10 @@ fn raw_lines(w: &Whatsit, n: usize) -> String {
               walk(text, out);
             }
           },
-          _ => out.push_str(&d.to_string()),
+          _ => push_box(d, out),
         }
       },
-      _ => out.push_str(&d.to_string()),
+      _ => push_box(d, out),
     }
   }
   let mut out = String::new();
