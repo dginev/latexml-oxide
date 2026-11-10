@@ -1134,20 +1134,6 @@ fn split_top_level(tokens: &[Token], delim: &Token) -> Vec<Vec<Token>> {
   parts
 }
 
-/// Transpose a genuine IEEEtran `\and`×`\\` author grid from column-major
-/// (declaration order) to row-major (reading order).
-///
-/// html_feedback#6242-adjacent (arXiv:2403.16405): a conference `\author{}` lays
-/// authors out as a 2-D grid — `\and` starts a new COLUMN, top-level `\\` a new ROW
-/// within a column. Each `\IEEEauthorblockN` emits its creator in token order, so
-/// LaTeXML (and Perl) linearize down each column = column-major, scrambling the
-/// reading (row-major) order shown in the PDF and the arXiv metadata. Transpose so
-/// creators come out row-major. Guarded TIGHTLY: only a REGULAR grid (≥2 columns,
-/// every column the SAME number of rows ≥2) is reordered. A single-row `\and` list
-/// (no top-level `\\`) and `\\` used only INSIDE `\IEEEauthorblockA{…\\…}` (nested,
-/// depth>0) are left exactly as declared, and so is a grid with a cell naming no author (a column's affiliation rows
-/// under its name, 2605.15804). Surpass-Perl divergence: OXIDIZED_DESIGN
-/// #128 (shared upstream bug KNOWN_PERL_ERRORS #94).
 /// An author-block body (`\IEEEauthorblockN`) as IEEEtran's `\author` runs it, the class's own and authblk's alike: a
 /// genuine `\and`×`\\` grid transposed to row-major reading order first (arXiv:2403.16405; a single-row `\and` list is
 /// returned unchanged), then any trailing bare-text run (a loose email after `\IEEEauthorblockA`) wrapped in
@@ -1162,6 +1148,20 @@ fn author_block_body(body: Tokens, ours: bool) -> Tokens {
   }
 }
 
+/// Transpose a genuine IEEEtran `\and`×`\\` author grid from column-major
+/// (declaration order) to row-major (reading order).
+///
+/// html_feedback#6242-adjacent (arXiv:2403.16405): a conference `\author{}` lays
+/// authors out as a 2-D grid — `\and` starts a new COLUMN, top-level `\\` a new ROW
+/// within a column. Each `\IEEEauthorblockN` emits its creator in token order, so
+/// LaTeXML (and Perl) linearize down each column = column-major, scrambling the
+/// reading (row-major) order shown in the PDF and the arXiv metadata. Transpose so
+/// creators come out row-major. Guarded TIGHTLY: only a REGULAR grid (≥2 columns,
+/// every column the SAME number of rows ≥2) is reordered. A single-row `\and` list
+/// (no top-level `\\`) and `\\` used only INSIDE `\IEEEauthorblockA{…\\…}` (nested,
+/// depth>0) are left exactly as declared, and so is a grid with a cell naming no author (a column's affiliation rows
+/// under its name, 2605.15804). Surpass-Perl divergence: OXIDIZED_DESIGN
+/// #128 (shared upstream bug KNOWN_PERL_ERRORS #94).
 fn transpose_ieee_author_grid(body: Tokens) -> Tokens {
   let toks = body.unlist();
   let columns = split_top_level(&toks, &T_CS!("\\and"));

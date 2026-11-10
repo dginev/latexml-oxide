@@ -33444,3 +33444,5 @@ list before more names (`\IEEEauthorblockN{Ann Able, {\em Member, IEEE}, Bob Bak
 
 Repros `class-bindings/ieeetran_authblk_blockn_names`, `class-bindings/ieeetran_authblk_blockn_calls_accumulate`; guards
 `perfect_kernel_batchcr6::{authblk_author_reads_ieee_author_blocks, authblk_author_blocks_accumulate_and_take_labels}`.
+
+**Known RED (review revCR67, CR6 S1, synthetic — TL 2025's pdflatex cannot compile it):** the labelled path rewrites `\IEEEauthorblockN` only, not its old alias `\authorblockN`, so `\author[1]{\authorblockN{Ann Able} …}` with `\affil[1]{Univ Z}` gives the names no Univ Z (a nameless creator holds it, 0 Warnings; the base lost the names entirely).
