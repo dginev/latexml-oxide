@@ -1,0 +1,17 @@
+% witness: review revCR8 finding 4: a picture inside an affiliation line of `\author` — at its start and between
+%          its words
+% oracle:  pdflatex 0 errors: "Ann Able", then the line drawn, "Zebra", "Quokka", "University" in that order
+% engines: rust int154t = the pictures inside the affiliation, in source order, 1 warning (path data read as words);
+%          int154r (CR8) = the affiliation plain "Zebra University" (1 warning, "its markup lost"), the pictures in
+%          notes after it
+% expect:  0 errors, 0 warnings; one creator "Ann Able" whose affiliation holds both pictures in place, no note
+% status:  RED (int154r) -> GREEN (CR8b) — perfect_kernel_batchcr8::picture_inside_an_affiliation_line_stays_in_place
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz}
+\title{T}
+\author{Ann Able\\ \tikz\draw (0,0)--(1,0); Zebra \tikz\node{Quokka}; University}
+\begin{document}
+\maketitle
+Body.
+\end{document}

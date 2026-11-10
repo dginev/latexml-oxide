@@ -1,0 +1,20 @@
+% witness: review revCR8 P1 (Perl keeps `<graphics/>` in the personname): `\includegraphics` beside a name in
+%          `\author`, at the start of an affiliation line, and ending one
+% oracle:  pdflatex 0 errors: "Ann Able" and the image; "Bob Baker", the image, "Zebra University"; "Cara Cole",
+%          "Quokka Institute" and the image
+% engines: rust int154r = all three images dropped, 0 warnings (a silent loss); Perl 0.8.8 = the image inside the
+%          personname
+% expect:  0 errors, 0 warnings; Ann Able with a note holding her image; Bob Baker's affiliation holding its image
+%          before its words; Cara Cole's affiliation, then a note holding the image ending its line
+% status:  RED (int154r) -> GREEN (CR8b) — perfect_kernel_batchcr8::includegraphics_in_author_is_kept
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}
+\title{T}
+\author{Ann Able \includegraphics[width=1cm]{example-image}\and Bob Baker\\
+\includegraphics[width=1cm]{example-image-a} Zebra University\and Cara Cole\\ Quokka Institute
+\includegraphics[width=1cm]{example-image-b}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -1260,8 +1260,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // -> 58: `joined_run_link` WRITES a joined run's link as printed — the `\url`/`\href` call it finds in the run's tokens,
   // the text font commands and declaration groups still open there, the run's own tokens being what is written, as
   // `span_tokens_of` and `plan::container_wrap` write theirs —, the decision whether an address is linked made on the
-  // events' targets (`linkable`), review revZ18h S-a and B1r)
-  ("emitter/emit", 58),
+  // events' targets (`linkable`), review revZ18h S-a and B1r; CR8b 58 -> 68: `past_unprinted_tail`'s reads of what a
+  // picture's call read past its last box and printed nothing of — spaces, one `;`, the `\end{name}` of an environment the
+  // span opens, a closing brace —, which no box or event records; it decides only where the picture's own tokens end,
+  // stopping at any other token, never what anything is, review revCR8 finding 1)
+  ("emitter/emit", 68),
   // (P1b, 0 -> 1: `emitter/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("emitter/dom+mod", 1),
@@ -1510,8 +1513,10 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // an output check, no reading decision: `\email{\{a,b\}@x\footnote{…}}` writes `a@x\lx@fm@obs@fnnote`, counted "markup
   // lost", while `\{a,b\}@x\_y.org`'s `a@x_y.org` is all it prints, review revZ18d finding 1)
   // (Z18i 61 -> 63: `joined_run_link`'s `"\\url"` and `"\\href"`, the calls it writes again as printed — no reading
-  // decision, which the events' targets make; review revZ18h S-a and B1r)
-  ("emitter", 63),
+  // decision, which the events' targets make; review revZ18h S-a and B1r; CR8b 63 -> 66: `past_unprinted_tail`'s
+  // `"\\begin"`, `"\\end"` twice, pairing an environment the picture's span opens with the `\end{…}` its call read after
+  // its last box, `\end{tikzpicture}` — no box holds it — never a reading decision, review revCR8 finding 1)
+  ("emitter", 66),
   // (the "Knowledge in, driver out, one pass" move: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
   // mark and note commands it reads; none added)
   ("emitter/calls", 44),

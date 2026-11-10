@@ -433,13 +433,16 @@ fn brace_argument(tokens: &Tokens) -> Option<Vec<Token>> {
   None
 }
 
-/// `span` of the block at ledger index `index`, its end grown over the tokens after it no event of the block covers — what
-/// its call read past its last box and printed nothing of: `\tikz\draw (0,0)--(1,0);`'s `;`, read as the path's end after
-/// the picture's last box, and the `}` closing a `\thanks{… \tikz…;}` its last box leaves open (a note's span is its
-/// boxes', `events::deep_span`). Up to the next event's start or the block's end, through the group the span leaves open
-/// and never past a brace closing one it doesn't open. The picture written whole is then its tokens as written (the
-/// rewritten `\tikz…` without its `;` erred "Giving up on this path. Did you forget a semicolon?", CR5's textless
-/// repro, as Perl's split does), and such a note's argument balanced.
+/// `span` of the block at ledger index `index`, its end grown over what its call read past its last box and printed nothing
+/// of: `\tikz\draw (0,0)--(1,0);`'s `;`, read as the path's end after the picture's last box, and the `}` closing a
+/// `\thanks{… \tikz…;}` its last box leaves open (a note's span is its boxes', `events::deep_span`). Only those: spaces, one
+/// `;`, the `\end{…}` of an environment the span opens (`\end{tikzpicture}`) and the closers of the groups the span leaves
+/// open, never past a brace closing one it doesn't open, up to the next
+/// event's start or the block's end, and stopping at the first command or other character — a `\and`, `\\` or `,` glued to
+/// the picture is the block's separator, never the note's (`…\end{tikzpicture}\and Bob Baker`, `\tikz\node{Zebraword};\and
+/// Bob Baker`: the note held the word "and", review revCR8 finding 1). Spaces after the last such token are not the call's. The
+/// picture written whole is then its tokens as written (the rewritten `\tikz…` without its `;` erred "Giving up on this
+/// path. Did you forget a semicolon?", CR5's textless repro, as Perl's split does), and such a note's argument balanced.
 fn past_unprinted_tail(index: usize, span: (u16, u16)) -> (u16, u16) {
   with_block(index, span, |block, events| {
     fn starts(events: &[Event], from: u16, out: &mut Option<u16>) {
@@ -461,18 +464,71 @@ fn past_unprinted_tail(index: usize, span: (u16, u16)) -> (u16, u16) {
       return span;
     };
     let limit = next.and_then(at).unwrap_or(tokens.len()).min(tokens.len());
-    let Some(inside) = tokens.get(from..to) else {
+    if tokens.get(from..to).is_none() || from > limit {
       return span;
+    }
+    // (`\begin{name}`'s or `\end{name}`'s name, its group's characters, at `k`, and where the group ends: the environments
+    // the span opens and doesn't close, whose `\end{…}` after its last box — a `tikzpicture`'s — its call read too, and
+    // the name of one whose `\end` the span's last box is, `{tikzpicture}` after it. Token reads, as no box or event holds
+    // what a call read past its last box: e0's pins raised for them, CR8b)
+    let env_name = |k: usize| -> Option<(String, usize)> {
+      let mut k = k;
+      while tokens.get(k) == Some(&T_SPACE!()) {
+        k += 1;
+      }
+      (tokens.get(k)?.get_catcode() == Catcode::BEGIN).then_some(())?;
+      let close = tokens[k + 1..]
+        .iter()
+        .position(|t| t.get_catcode() != Catcode::LETTER && t.get_catcode() != Catcode::OTHER)?;
+      let close = k + 1 + close;
+      (tokens[close].get_catcode() == Catcode::END).then_some(())?;
+      let name: String = tokens[k + 1..close]
+        .iter()
+        .map(|t| t.with_str(str::to_string))
+        .collect();
+      Some((name, close + 1))
     };
-    let mut depth: i32 = inside.iter().map(Token::group_step).sum();
-    let mut end = to;
-    while end < limit {
-      let step = tokens[end].group_step();
-      if depth + step < 0 {
+    let mut open: Vec<String> = Vec::new();
+    let mut to = to;
+    for (k, token) in tokens.iter().enumerate().take(to).skip(from) {
+      if *token == T_CS!("\\begin") {
+        open.extend(env_name(k + 1).map(|(name, _)| name));
+      } else if *token == T_CS!("\\end")
+        && let Some((name, past)) = env_name(k + 1)
+        && open.last() == Some(&name)
+      {
+        open.pop();
+        to = to.max(past.min(limit));
+      }
+    }
+    let mut depth: i32 = tokens[from..to].iter().map(Token::group_step).sum();
+    let (mut at, mut end, mut semicolon) = (to, to, false);
+    while at < limit {
+      let token = &tokens[at];
+      let step = token.group_step();
+      if *token == T_SPACE!() {
+        at += 1;
+        continue;
+      }
+      if *token == T_CS!("\\end")
+        && let Some((name, past)) = env_name(at + 1)
+        && open.last() == Some(&name)
+        && past <= limit
+      {
+        open.pop();
+        at = past;
+        end = at;
+        continue;
+      }
+      let unread_end = step < 0 && depth + step >= 0;
+      let path_end = !semicolon && step == 0 && *token == T_OTHER!(";");
+      if !(unread_end || path_end) {
         break;
       }
+      semicolon |= path_end;
       depth += step;
-      end += 1;
+      at += 1;
+      end = at;
       if depth == 0 && step < 0 {
         break;
       }
@@ -1222,6 +1278,18 @@ fn note_call(footnote: bool, mark: Option<&str>, label: &str, content: Vec<Token
   }
 }
 
+/// A picture's note under `label` ([`events::PICTURE_NOTE`]): a plain frontmatter note, role `note`, holding the picture's
+/// tokens whole — no thanks (no `ltx_thanks_*` class, no "thanks:" label in HTML) and no mark it invents, as pdflatex
+/// prints none (OD #989; review revCR8 finding 2: as a thanks, 2404.13552's notice read "† thanks:" behind Kim Butts
+/// Pauly's name). The note an ink the reading holds no place for makes (`kept_inks`) is written so too.
+fn picture_note_call(label: &str, content: &[Token]) -> Tokens {
+  annotate_now(
+    "ltx:note",
+    &s!("role=note,label={{{label}}}"),
+    &item_only(content),
+  )
+}
+
 /// A block's or a piece's entry: `\\lx@frontmatter@itemkinded`, whose Kind step reads its lines of addresses.
 fn kinded_affiliation(keys: &str, content: &[Token]) -> Tokens {
   let mut head = vec![T_CS!("\\lx@frontmatter@itemkinded")];
@@ -1831,17 +1899,11 @@ fn item_call(
       // written apart from the name, as the user's ruling of 2026-11-10 has a picture inside `\author`, OD #989:
       // 2404.13552's page-overlay notice)
       if note && event_at(index, span, events::is_picture_note, |_| ()).is_some() {
-        return Ok(
-          match span_call_tokens(index, past_unprinted_tail(index, span)) {
-            Some(tokens) => note_call(false, None, label, tokens.unlist()),
-            None => note_call(
-              false,
-              None,
-              label,
-              by_text(Some("a picture no balanced run draws"), &assoc.text),
-            ),
-          },
-        );
+        let content = match span_call_tokens(index, past_unprinted_tail(index, span)) {
+          Some(tokens) => tokens.unlist(),
+          None => by_text(Some("a picture no balanced run draws"), &assoc.text),
+        };
+        return Ok(picture_note_call(label, &content));
       }
       let argument = event_at(
         index,

@@ -46,17 +46,17 @@ pub(super) fn creator_items(c: &RCreator) -> Vec<(Key, &Assoc)> {
   items
 }
 
-/// A note's comparison key: its text, normalized; a picture's ([`PICTURE_NOTE`]) printing no text (a drawing alone,
-/// a logo) keyed by where it is, as no text keys it — an item still, written whole (OD #989).
+/// A note's comparison key: its text, normalized; a picture's ([`PICTURE_NOTE`]) keyed by where it is, whatever text it
+/// prints — an item of its own, written whole (OD #989): a drawing alone or a logo prints none, and two pictures printing
+/// the same text are two (`Ann Able \tikz\node{Zebraword}; \tikz\node{Zebraword};` kept one, its twin's word lost: review
+/// revCR8 finding 3).
 pub(super) fn note_key(a: &Assoc) -> String {
-  let key = norm(&a.text);
-  if key.is_empty()
-    && a.role == PICTURE_NOTE
+  if a.role == PICTURE_NOTE
     && let Some((at, Some((start, end)))) = a.source
   {
     return s!("picture@{at}:{start}-{end}");
   }
-  key
+  norm(&a.text)
 }
 
 /// A resolved creator's contact `a` as the comparison keys it ([`creator_items`]).
