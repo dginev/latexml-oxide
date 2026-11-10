@@ -254,7 +254,9 @@ pub fn imsart_sty_markup() -> Result<()> {
   // `\@addressatendtrue` (`aap`, imsart.sty:150 of 1301.1466's copy) `\address` stores each block (:1242-1252) and the
   // end of the document prints them all (`\printaddresses`, :1269-1290), each tied to no author; the API's default
   // owner, the last author, would take every one (1301.1466's three after its `\bibliography`). It is set as
-  // `\printaddressnum` sets a block (`\address@size`, `{tabular}[t]{@{}l@{}}`, :1255-1264), where it is called. Inside `{frontmatter}`, or labelled (`\address[A]`, the authors marked A), it is a contact;
+  // `\printaddressnum` sets a block (`\address@size`, `{tabular}[t]{@{}l@{}}`, :1255-1264), at the end of the document under
+  // `\@addressatendtrue` (`\AtEndDocument`, as imsart.sty's `\enddocument` runs `\printaddresses`; review revCR3b NIT 4),
+  // else where it is called. Inside `{frontmatter}`, or labelled (`\address[A]`, the authors marked A), it is a contact;
   // unlabelled, of every author since the last `\address` (`annotate=run`, as the sty binding's `\affiliation`):
   // imsart.sty:1021 resets `\author@fmt@init` there, so `\author{A}\and\author{B}\address{Univ AB}` prints the address
   // under both (review revCR3b finding 3).
@@ -262,7 +264,10 @@ pub fn imsart_sty_markup() -> Result<()> {
     r"\AddToHook{env/frontmatter/after}{\lx@imsart@frontmatter@closed}
 \def\lx@imsart@address@contact#1#2{\lx@add@contact[label={#1},role=address]{#2}}
 \def\lx@imsart@address@run#1#2{\lx@add@contact[label={#1},role=address,annotate=run]{#2}}
-\def\lx@imsart@address@inplace#1#2{\par\begingroup\lx@imsart@address@inplace@on\csname address@size\endcsname\noindent\begin{tabular}[t]{@{}l@{}}#2\end{tabular}\par\endgroup}"
+\def\lx@imsart@address@inplace#1#2{\@ifundefined{if@addressatend}{\lx@imsart@address@print{#2}}{\csname if@addressatend\endcsname\expandafter\g@addto@macro\expandafter\lx@imsart@addresses@end\else\expandafter\@firstofone\fi{\lx@imsart@address@print{#2}}}}
+\def\lx@imsart@address@print#1{\par\begingroup\lx@imsart@address@inplace@on\csname address@size\endcsname\noindent\begin{tabular}[t]{@{}l@{}}#1\end{tabular}\par\endgroup}
+\def\lx@imsart@addresses@end{}
+\AtEndDocument{\lx@imsart@addresses@end}"
   );
   DefPrimitive!("\\lx@imsart@address@inplace@on", sub[_args] {
     assign_value("lx_imsart_address_inplace", true, Some(Scope::Local));

@@ -33278,4 +33278,22 @@ class binding too (the same markup). Repros
 `sectioning-frontmatter/{imsart_renamed_sty_copy_reads_through_its_binding,imsart_address_after_frontmatter_prints_in_place}.tex`;
 guards `perfect_kernel_batchcr3::{imsart_renamed_sty_copy_reads_through_its_binding,imsart_address_after_frontmatter_prints_in_place}`.
 
-**Residuals (review revCR3b, SHIP; to the next batch with the API's e-mail/URL re-read):** the in-place end-of-paper blocks drop the e-mail and URL rows the PDF prints (`\printead{e1}\\ \printead{u1}` inside each `\address`; the binding's `\printead` is empty, `imsart_cls.rs`, as the address is the author's contact — untrue in the in-place branch; 1301.1466, no worse than the base's "e-mail: ??" rows, the addresses on their authors); an unlabelled `\address` inside `{aug}` after `\author{A}\and\author{B}` goes to B only where imsart.sty:1021 ties it to every author since the last (synthetic, the class path too); under `aap` an unlabelled `\address` right after `\end{frontmatter}` prints before the body where the PDF prints it at the end (nothing lost).
+**CR4 (review revCR3b findings 1, 3 and NIT 4).** (1) In an address printed in place, no author's contact,
+`\printead{e1,u1}` prints what imsart.sty's `\@@printead` prints (:506-519): each labelled address, "e-mail: " or "url: "
+before it (none under `*`), `;~` between, in typewriter type, through the API's address reading (`\lx@address@printed`,
+#972); `\printead[text]{…}` the text; a label no `\ead` gave "??", as `\saferef`. Inside the frontmatter it stays empty: the
+address is the author's contact there. imsart.sty's `\ead` writes its label to the aux file (`\safelabel`) for the next
+run's `\printead`, so the order does not matter in TeX; here the binding records each `\ead[label=…]{…}` at the
+`\author` call (`record_eads`: the author is digested only at the frontmatter's flush, at the end of the document when no
+`\maketitle` comes, after the addresses) and where `\ead` expands (`record_ead`), past any speculative run's rollback
+(core `state::assign_value_past_rollback`: a rehearsal and a label's ink run undo every assignment, and TeX never takes
+back what it wrote to a file). 1301.1466's three end blocks gain their six "e-mail:"/"url:" rows, as the PDF. (2) The
+unlabelled in-frontmatter `\address` is `annotate=run` (`\lx@imsart@address@run`), as the sty binding's `\affiliation`:
+`\author{A}\and\author{B}\address{Univ AB}` gives the address to both (it went to B alone), on the class and the sty path.
+(3) Under `\@addressatendtrue` the in-place block is deferred to `\AtEndDocument`, as imsart.sty's `\enddocument` runs
+`\printaddresses`: one called right after `\end{frontmatter}` prints after the body. Repros
+`imsart_printead_in_address_at_end`, `imsart_unlabelled_address_is_the_runs`; guards
+`perfect_kernel_batchcr4::{imsart_printead_in_address_at_end, imsart_unlabelled_address_is_the_runs}`;
+`perfect_kernel_batchcr3::imsart_address_after_frontmatter_prints_in_place` now holds each block's "e-mail: …" row.
+**Left** (pre-existing): imsart's `\and` between `\author`s in `{aug}` prints a stray centred "and" paragraph (int154x
+alike).

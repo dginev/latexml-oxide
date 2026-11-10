@@ -40,6 +40,14 @@ fn imsart_printead_in_address_at_end() {
     "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p2.1.3.1\">e-mail: <text font=\"typewriter\" xml:id=\"p2.1.3.1.1\">ann@x.edu</text></td>",
     "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p2.1.4.1\">url: <text font=\"typewriter\" xml:id=\"p2.1.4.1.1\">http://www.zebra.edu/\u{223c}ann</text></td>",
   ]);
+  let (body, block) = (
+    xml.find("Body.").expect("the body"),
+    xml.find("<tabular").expect("the block"),
+  );
+  assert!(
+    body < block,
+    "the address block prints after the body:\n{xml}"
+  );
 }
 
 /// CR4 item 3 (review revCR3b finding 3): an unlabelled `\address` inside `{aug}` after `\author{A}\and\author{B}` is
