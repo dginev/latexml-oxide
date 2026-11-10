@@ -1867,6 +1867,32 @@ The flip's facts are live in `perfect_kernel/SILENT_LOSS_INVENTORY.md` "Bundle i
 - fm_checks vs int153d: merged/lost 130 → 133 (the six NE5 blocks); 2402.02104's content check 0 distinct words lost; gone: 1208.0597, 1409.0597, 2407.13730, 2606.19583; 0907.1243's lost "dagger diamond star" are the math token names of its marks.
 - flip200 per paper 69.21 % at `=2`.
 
+## Bundle int155a — `author_block/` deleted and the push's REDs fixed
+
+On `pk/int155a` after the int154a push (`1969cb34cb`), head `92f7f78adb`; every batch reviewed and merged. Its open
+residuals are live in [`../perfect_kernel/SILENT_LOSS_INVENTORY.md`](../perfect_kernel/SILENT_LOSS_INVENTORY.md)
+"Bundle int155a — the residual" and in `SYNC_STATUS.md` rows R and 0b.
+
+- **The push's REDs:** PB/PBb — B1, a decline split that would lose a name the reading found writes the block whole
+  (1511.09009's four names, OD #988); B2, the title code's definitions in force for the author content (aaai2026's
+  `\theauthors`, neurips_2022's kept `\@maketitle` and juggles, a title-code `\newcounter`; OD #983); PC3 — pazh
+  `\address` and 1802.01191's `\@nil` (a title-code command reading arguments is not cut from them; a class's own `\email`
+  read unexpanded).
+- **CR9's silent losses:** CR10b — a mark-split entry's continuation line keeps its `<break/>`, an `\fcolorbox` e-mail line
+  read through the box's text, a nameless `\author`'s setters recovered (1211.2861); CR10c — IEEEtran grades and the old
+  block names (OD #987).
+- **Plan A done:** Z18k/Z18k2/Z18k3 eptcs and OmniBus rerouted (OD #991), Z18l aas rerouted (OD #992), Z18m/Z18m2 the rest moved
+  unchanged and `author_block/` deleted (the old reader's code in `classify/old_reader/` and `defs/author_macros/ijcai.rs`,
+  fenced by e0), Z18o the bundle's own REDs (F1 stopgap carrier, F2 mailbox link, R1 whole bracket), PF10 the cost of Z18k3's
+  counted join check (a word index; PM1's bisect).
+- **The chain** (`chain/out/int155a/`): gates 8017/8017 (twice, the second on the final tree), clippy 0, doc 0, dumps 0/0;
+  A/B 28,354 papers, 85 changed (77 frontmatter), E 45,827 → 45,818, F 172 → 172 — its worse list 2505.20009 (OOM on both
+  alone), 1710.01722 (the candidate over the A/B's 180 s; −0.37 % instructions, ~190 s alone), 2503.21719 (−65 words, a
+  de-duplication: no word absent); nets 136, worse 0; manual sweep #169 G1-G4 0, G5 57 (as #168); cost 1507.02068 +1.716 %
+  → PF10 +0.14 % (bar +0.5 %), the rest flat; PF10's stage2 byte-identity 1,433/1,434 (0909.4443's math ids).
+- **Reviews:** first-review NO-SHIP on PB (docs), Z18k2 (2308.02720), Z18m (the fence); the brief trial
+  (`agent_reports/BRIEF_TRIAL_fm_rules.md`) started after them.
+
 ## Bundle int154a — the deletion pass and the real-paper REDs
 
 On `pk/int154a` after the flip push (`29de9ed4dc`), head `2269fdd1fa`; every batch reviewed and merged. Its open
