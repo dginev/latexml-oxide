@@ -287,12 +287,15 @@ pub struct Event {
   /// an error of the block's rehearsal was held at a position it covers (`mark_held`): what it reads may be the
   /// error's recovery, not the ink it stands for
   pub held:           bool,
-  /// a Name's: an undefined command its rehearsal held an Error at glues ink onto an address's local part (`mark_held`):
-  /// it prints nothing, so a word's ink before it and the address's `@` after it read as one address — `Bob\email{b@x.org}`
-  /// (`\email` undefined in article) reads "Bobb@x.org", an address no word of the source spells, which no reading of
-  /// addresses may take: Perl's creator holds it in the personname, `Bob<ERROR>\email</ERROR>b@x.org`. One past the `@`
-  /// (`ann@x.org\IEEEmembership{Member}`), before the word (`Bob \foo b@x.org`) or in another word (`\texttt{ann@x.org}\foo{}
-  /// Univ X`, `(ann@x.org\foo)`) glues no name into an address and is none (OXIDIZED_DESIGN_DIVERGENCES #983)
+  /// a Name's: an undefined command its rehearsal held an Error at glues ink onto an address's local part (`mark_held`,
+  /// `glues_an_address`): the same word has ink before it and ink after it, both before its `@` ("Bob|b@") — it prints
+  /// nothing, so `Bob\email{b@x.org}` (`\email` undefined in article) reads "Bobb@x.org", an address no word of the source
+  /// spells, which no reading of addresses may take: Perl's creator holds it in the personname,
+  /// `Bob<ERROR>\email</ERROR>b@x.org`. A Name whose characters the ink table cannot align (a mark glued into it,
+  /// "Bob Baker1b@x.org") fails closed on its span: an Error strictly inside it, an `@` token of it past the Error. One
+  /// past the `@` (`ann@x.org\IEEEmembership{Member}`), before the word (`Bob \foo b@x.org`), in another word
+  /// (`\texttt{ann@x.org}\foo{} Univ X`, `(ann@x.org\foo)`) or with the whole local part before it (`ann\foo@x.org`)
+  /// glues no name into an address and is none (OXIDIZED_DESIGN_DIVERGENCES #983)
   pub glued_undef:    bool,
   /// a Break's: what made it, `None` for a line break ([`BreakKind`])
   pub break_kind:     Option<BreakKind>,
@@ -2625,11 +2628,15 @@ pub(in crate::base_utilities) fn mark_held(
   }
 }
 
-/// Whether an undefined command's held Error lies between a word's ink and the `@` after it in that word of `event`'s
-/// text ([`Event::glued_undef`]): the address's local part is glued from ink on both sides of a command printing nothing.
-/// A Name's characters print where `inks` records them, on a line printing an `@` — no line without one prints an
-/// address. Each character is before the Error when its own token is (else its box's cover ends by it), after it when
-/// at or past its end.
+/// Whether an undefined command's held Error glues a word's ink onto an address's local part in `event`'s text
+/// ([`Event::glued_undef`]): the same word has ink before the Error and ink after it, both before the word's first `@`
+/// ("Bob|b@" — the local part is glued from ink on both sides of a command printing nothing). A local part wholly on one
+/// side ("ann|@", `ann\foo@x.org`) is the address itself, read as without the Error. A Name's characters print where
+/// `inks` records them, on a line printing an `@` — no line without one prints an address. Each character is before the
+/// Error when its own token is (else its box's cover ends by it), after it when at or past its end. A Name whose
+/// characters `inks` cannot align — no record for its span and text, or one of another length (a mark glued into it:
+/// `Bob Baker\textsuperscript{1}\foo b@x.org` reads "Bob Baker1b@x.org") — fails closed on its span: an Error strictly
+/// inside it, with an `@` token of it past the Error's end, is a glue.
 fn glues_an_address(event: &Event, held: &[HeldError], inks: &InkTable) -> bool {
   let errors: Vec<(u16, u16)> = held
     .iter()
@@ -2639,8 +2646,16 @@ fn glues_an_address(event: &Event, held: &[HeldError], inks: &InkTable) -> bool 
   if errors.is_empty() || !event.text.contains('@') {
     return false;
   }
-  let Some(at) = inks.of(event) else {
-    return false;
+  let Some(at) = inks
+    .of(event)
+    .filter(|at| at.len() == event.text.chars().count())
+  else {
+    let Some((start, end)) = event.span else {
+      return false;
+    };
+    return errors.iter().any(|&(from, to)| {
+      start < from && inks.fonts.iter().any(|&(sign, _)| to < sign && sign < end)
+    });
   };
   let before = |ink: &InkAt, from: u16| ink.own.map_or(ink.cover.1 <= from, |own| own < from);
   let after = |ink: &InkAt, to: u16| ink.own.map_or(ink.cover.0 >= to, |own| own >= to);
@@ -2655,9 +2670,11 @@ fn glues_an_address(event: &Event, held: &[HeldError], inks: &InkTable) -> bool 
       continue;
     } else if c == '@' {
       if let Some(sign) = ink
-        && errors
-          .iter()
-          .any(|&(from, to)| after(sign, to) && local.iter().any(|ink| before(ink, from)))
+        && errors.iter().any(|&(from, to)| {
+          after(sign, to)
+            && local.iter().any(|ink| before(ink, from))
+            && local.iter().any(|ink| after(ink, to))
+        })
       {
         return true;
       }

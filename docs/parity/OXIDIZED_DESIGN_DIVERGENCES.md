@@ -33067,20 +33067,26 @@ address and made Ann's e-mail, Bob lost (one creator). **Now:** (1) a piece grow
 right after it (`emitter/content.rs` `Field::past_held_undefined`, told by the rehearsal's `Error:undefined:` record at
 the command's position, not by its spelling); (2) a name takes the held undefined commands past its marks and notes, up
 to the next separator or name, written after them (`emitter/emit.rs` `block_names`; `event_run_at` returns where the
-written tokens end, so nothing is taken twice); (3) an address is declined in exactly one shape: an undefined command's Error stands between ink of
-the address's word and the word's first `@`, so the silent command glues that ink onto the local part — "Bobb@x.org", an
-address no word of the source spells (`events/mod.rs` `glues_an_address`, setting `Event::glued_undef` in `mark_held`,
-told by where `InkTable` says each character prints). Such a Name is never read as an address, by the names line's
-address extraction (`resolver/lines.rs` `names_without_addresses`) or as an address line (`resolver/blocks.rs`): Bob
-stays a creator whose piece is digested from its tokens, as Perl's split at `\and` makes him. Every other undefined
-command leaves the reading exactly as without its Error: one past the `@` (`ann@x.org\IEEEmembership{Member}`, the
-e-mail `ann@x.orgMember` as before), one before the word or in another word (`\texttt{ann@x.org}\foo{} Univ X`,
-`(ann@x.org\foo)`). So an undefined command never changes the segmentation: no boundary moves for an Error, and the one
-declined reading is the address its silence fabricated; (4) the
+written tokens end, so nothing is taken twice); (3) an address is declined only where an undefined command glues it: the same word has ink before the
+command's Error and ink after it, both before the word's first `@` ("Bob|b@": `Bob\email{b@x.org}` prints "Bobb@x.org",
+an address no word of the source spells), told by where `InkTable` says each character prints (`events/mod.rs`
+`glues_an_address`, setting `Event::glued_undef` in `mark_held`). A Name the ink table cannot align — no record for its
+span and text, or one of another length, as when a mark is glued into it (`Bob Baker\textsuperscript{1}\foo b@x.org`
+reads "Bob Baker1b@x.org") — fails closed on its span: an Error strictly inside it with an `@` token of it past the
+Error's end declines it (review revERR2b finding 2: the ink path alone made up the e-mail "Baker1b@x.org"; it also
+declines `Bob\textsuperscript{1}b\foo{}@x.org`, whose local part is wholly before the command). Such a Name is never
+read as an address, by the names line's address extraction (`resolver/lines.rs` `names_without_addresses`) or as an
+address line (`resolver/blocks.rs`): Bob stays a creator whose piece is digested from its tokens, as Perl's split at
+`\and` makes him. Every other undefined command leaves the reading exactly as without its Error: one past the `@`
+(`ann@x.org\IEEEmembership{Member}`, the e-mail `ann@x.orgMember`), one before the word or in another word
+(`\texttt{ann@x.org}\foo{} Univ X`, `(ann@x.org\foo)`), and one with the whole local part before it ("ann|@":
+`ann\foo@x.org`, Ann's e-mail `ann@x.org` as with `\def\foo{}`; review revERR2b finding 3), each Error raised by the
+flush's net. So an undefined command never moves a separator: the creators are those of the reading without its Error,
+except that the address it glued is declined; (4) the
 flush's net (`observer/reading.rs` `HeldUndefined`, from `read_at_flush`, raised in `place.rs` `digest_front_matter`
 after the digest loop): each held `\cs` whose tally of undefined names (`LogState::undefined`) did not move during the
 flush and that no code of the flush assigned a meaning, even locally (a meaning recorder over the flush,
-`begin_meaning_recorder`) is raised once through `generate_error_stub` — its Error and its stub, standing for the rest
+`begin_meaning_recorder`, closed by its depth on every path out: `place.rs` `FlushMeanings`, `end_meaning_recorder_at`) is raised once through `generate_error_stub` — its Error and its stub, standing for the rest
 of the document as after Perl's first use; its `ERROR` markup only where a piece holds it. Known residual: a second use of the same undefined command in
 the block keeps no `ERROR` markup (`\author{Ann Able\foo \and Bob Baker\foo}`: Perl writes `Bob Baker<ERROR>\foo</ERROR>`),
 because only the first use has a rehearsal record to grow a piece over; the count is Perl's (1). Excluded: an IJCAI sectioned
@@ -33102,7 +33108,10 @@ which `=2` keeps), 1603.08231 18/0/0, 2112.06251 12/0/0. Creators never fewer th
 gain the ERROR markup), 0 distinct words lost (`kit/emit/docwords.py`); the stage-2 1,434: 0 changed. Repros
 `sectioning-frontmatter/emitter_undefined_command_{in_author_errs_once,after_a_mark_errs_in_the_name,after_a_thanks_errs_in_the_name,in_a_name_written_as_text_errs_once}.tex`,
 `emitter_undefined_command_{past_an_address_domain,after_an_address_word,in_a_bracketed_address}_keeps_the_address.tex`
-(review revERR2 finding 1),
+(review revERR2 finding 1), `emitter_undefined_command_before_an_address_at_keeps_the_address.tex` and
+`emitter_undefined_command_after_a_glued_mark_declines_the_address.tex` (review revERR2b findings 3 and 2; the latter's
+2 Warnings are the content check's, which reads the glued mark into the block's word "baker1b@x.org" and not into the
+personname's, as ERR2's did),
 `author_and_inside_a_conditional_reads_as_tex.tex`; guards `perfect_kernel_batcherr2` (one per path),
 `perfect_kernel_batchfms2a1::the_rehearsal_leaves_nothing_behind` (re-expected: 2 Errors, 0 Warnings),
 `perfect_kernel_batch105a::an_error_at_depth_in_a_note_line_is_no_word` (re-expected: the Warning it pinned was the

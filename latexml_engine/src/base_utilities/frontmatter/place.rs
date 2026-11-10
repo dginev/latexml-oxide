@@ -399,28 +399,33 @@ pub(in crate::base_utilities) fn last_group(tokens: &Tokens) -> Tokens {
 }
 
 /// The meaning recorder over a flush ([`begin_meaning_recorder`]), closed when it is ended or dropped: a flush leaving
-/// by an `Err` leaves none open, whose recording every later meaning assignment of the conversion would pay.
+/// by an `Err` leaves none open, whose recording every later meaning assignment of the conversion would pay. Closed by
+/// its depth ([`end_meaning_recorder_at`]), so a displaced call's recorder an `Err` left open inside it is closed with
+/// it, never in its place.
 struct FlushMeanings {
-  open: bool,
+  depth: usize,
+  open:  bool,
 }
 
 impl FlushMeanings {
   fn begin() -> Self {
-    begin_meaning_recorder();
-    FlushMeanings { open: true }
+    FlushMeanings {
+      depth: begin_meaning_recorder(),
+      open:  true,
+    }
   }
 
-  /// The meanings assigned since it began ([`end_meaning_recorder`]).
+  /// The meanings assigned since it began ([`end_meaning_recorder_at`]).
   fn end(mut self) -> Vec<(SymStr, Option<Stored>)> {
     self.open = false;
-    end_meaning_recorder()
+    end_meaning_recorder_at(self.depth)
   }
 }
 
 impl Drop for FlushMeanings {
   fn drop(&mut self) {
     if self.open {
-      end_meaning_recorder();
+      end_meaning_recorder_at(self.depth);
     }
   }
 }

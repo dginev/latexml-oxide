@@ -2,9 +2,10 @@
 //! Errors the observer's rehearsal holds and discards with their stubs, are raised again — once, as Perl's one
 //! digestion of the block raises them (State.pm:547-551, Base_Utility.pool.ltxml:691-693). In place where a piece the
 //! emitter digests holds the command: right after a name (`content::Field::past_held_undefined`), past its marks and
-//! notes (`emit::block_names`), and where it glues a word's ink onto an address's local part, which no reading of
-//! addresses takes (`events::Event::glued_undef`; elsewhere the address is read as without the Error: an undefined command
-//! never changes the segmentation). Else at the flush's end
+//! notes (`emit::block_names`), and where it glues a word's ink onto an address's local part — the same word has ink on
+//! both sides of it before its `@`, "Bob|b@" —, which no reading of addresses takes (`events::Event::glued_undef`; a Name
+//! the ink table cannot align fails closed on its span). Elsewhere the address is read as without the Error: an
+//! undefined command never changes the segmentation. Else at the flush's end
 //! (`reading::HeldUndefined::raise_unraised`), for a piece written as text. Each guard asserts every creator's name and
 //! contacts, in order, and the exact Error and Warning counts; witnesses 1101.4098, 1402.2906, 1808.09392, 2205.12847,
 //! 2309.09045, 2405.06973, 2405.13308, 2506.10896, 2508.08170, 2508.21091, 2601.17318, 2602.18351, 2604.26688,
@@ -26,6 +27,17 @@ macro_rules! repro {
 }
 
 fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).collect() }
+
+/// Each `<creator>` element of `xml`, whole, in order.
+fn creator_elements(xml: &str) -> Vec<&str> {
+  xml
+    .match_indices("<creator ")
+    .map(|(at, _)| {
+      let end = at + xml[at..].find("</creator>").expect("a closed creator") + "</creator>".len();
+      &xml[at..end]
+    })
+    .collect()
+}
 
 /// The undefined command names of the log's Errors, in order.
 fn undefined_errors(log: &str) -> Vec<&str> {
@@ -136,11 +148,12 @@ fn an_and_inside_a_conditional_is_read_as_tex_reads_it() {
   assert_eq!(creators(&xml), [row(&["Ann Able"])]);
 }
 
-/// An undefined command stops an address being read only where it glues ink of the address's word onto its local part
-/// (`events::glues_an_address`; the synthetic's "Bobb@x.org" above). Past the `@`, after the word or inside its bracket
-/// it glues no name into an address: the reading is the one without the Error, its 1 Error raised by the flush's net, its
-/// Warnings the base's (review revERR2 finding 1: ERR2 read a third creator, or folded the e-mail into the name).
-/// Distinct: the narrowed rule's three negatives, one code path.
+/// An undefined command stops an address being read only where the same word has ink on both sides of it before its `@`
+/// (`events::glues_an_address`; the synthetic's "Bob|b@x.org" above). Past the `@`, after the word, inside its bracket,
+/// or with the whole local part before it (`ann\foo@x.org`) it glues no name into an address: the reading is the one
+/// without the Error, its 1 Error raised by the flush's net, its Warnings the base's (review revERR2 finding 1: ERR2 read
+/// a third creator, or folded the e-mail into the name; revERR2b finding 3: ERR2b's third creator "ann \foo @x.org").
+/// Distinct: the narrowed rule's negatives, one code path.
 #[test]
 fn an_undefined_command_outside_an_address_local_part_keeps_the_address() {
   let (log, xml) = convert(
@@ -160,7 +173,10 @@ fn an_undefined_command_outside_an_address_local_part_keeps_the_address() {
   assert_eq!(undefined_errors(&log), ["\\foo"], "{log}");
   assert_eq!((error_count(&log), warning_count(&log)), (1, 2), "{log}");
   assert_eq!(creators(&xml), [row(&["Ann Able", "email=ann@x.org"])]);
-  assert!(xml.contains(">Univ X</note>"), "{xml}");
+  assert_eq!(creator_elements(&xml), [
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Email:\u{a0}\" \
+     role=\"email\">ann@x.org</contact>\n    <note role=\"note\">Univ X</note>\n  </creator>"
+  ]);
   let (log, xml) = convert(
     repro!("emitter_undefined_command_in_a_bracketed_address_keeps_the_address"),
     false,
@@ -171,6 +187,57 @@ fn an_undefined_command_outside_an_address_local_part_keeps_the_address() {
     row(&["Ann Able", "email=ann@x.org"]),
     row(&["Bob Baker", "email=bob@y.org"]),
   ]);
+  let (log, xml) = convert(
+    repro!("emitter_undefined_command_before_an_address_at_keeps_the_address"),
+    false,
+  );
+  assert_eq!(undefined_errors(&log), ["\\foo"], "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able", "email=ann@x.org"]),
+    row(&["Bob Baker", "email=bob@y.org"]),
+  ]);
+}
+
+/// A Name the ink table cannot align — a mark glued into it: "Bob Baker1b@x.org", a text no ink record has — fails closed
+/// on its span (`events::glues_an_address`): the Error strictly inside it with an `@` token past it declines the address,
+/// so the name keeps its word, the mark, the ERROR and the local part, Perl's reading (review revERR2b finding 2: ERR2b
+/// made up Bob's e-mail "Baker1b@x.org", and Ann's "Bob1b@x.org" for a one-word name). Its 2 Warnings are the content
+/// check's: the block's word "baker1b@x.org" holds the mark, the personname's words do not. Distinct: the fallback when
+/// the ink is missing, both name lengths.
+#[test]
+fn an_undefined_command_after_a_glued_mark_declines_the_address() {
+  let (log, xml) = convert(
+    repro!("emitter_undefined_command_after_a_glued_mark_declines_the_address"),
+    false,
+  );
+  assert_eq!(undefined_errors(&log), ["\\foo"], "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 2), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able"]),
+    row(&["Bob Baker 1 \\foo b@x.org"]),
+  ]);
+  assert_eq!(
+    creator_elements(&xml)[1],
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<sup>1</sup><ERROR \
+     class=\"undefined\">\\foo</ERROR>b@x.org</personname>\n  </creator>"
+  );
+  let (log, xml) = convert(
+    "\\documentclass{article}\n\\author{Ann Able \\and Bob\\textsuperscript{1}\\foo b@x.org}\n\\title{T}\n\
+     \\begin{document}\n\\maketitle\n\\end{document}\n",
+    false,
+  );
+  assert_eq!(undefined_errors(&log), ["\\foo"], "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 2), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able"]),
+    row(&["Bob 1 \\foo b@x.org"])
+  ]);
+  assert_eq!(
+    creator_elements(&xml)[1],
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob<sup>1</sup><ERROR \
+     class=\"undefined\">\\foo</ERROR>b@x.org</personname>\n  </creator>"
+  );
 }
 
 /// A command the class's `\maketitle` defines before `\@author` (kr.sty's `\affiliations`) is defined where TeX reads the
