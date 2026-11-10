@@ -868,9 +868,6 @@ impl Resolver {
     }
   }
 
-  /// The creators today's output holds: those of no replaced `\author` call (`resolve` deletes them at the end; the
-  /// post-passes that count the authors, or pick one, read these — review revfms2a2_5 finding 1; 2510.26354, 1611.08655).
-  /// The creators of the last creator's group, in order (none before the first creator).
   /// Whether `run` is the whole group of names printed since the role's last contact call before the newest name, a
   /// group in print of its own (the names a class's `\author` calls print before an `\affil` closes them, emulateapj):
   /// `reads` the role's record before this call's own contact ([`Resolver::read_role`]). `Ann Able$^{1}$ and Bob
@@ -895,6 +892,9 @@ impl Resolver {
     }
   }
 
+  /// The creators today's output holds: those of no replaced `\author` call (`resolve` deletes them at the end; the
+  /// post-passes that count the authors, or pick one, read these — review revfms2a2_5 finding 1; 2510.26354, 1611.08655).
+  /// The creators of the last creator's group, in order (none before the first creator).
   fn last_group(&self) -> Vec<usize> {
     self
       .group

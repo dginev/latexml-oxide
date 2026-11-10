@@ -4,7 +4,7 @@
 %   a run that is a whole group of its own (`Resolver::print_group`) reads the group in print, not the `\author` call
 %   (OXIDIZED_DESIGN_DIVERGENCES #992)
 % witness: none in the corpus (synthetic; Z18o2, the sibling of review revZ18o R-A)
-% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Ann Able and Bob Baker1 / 1 Univ A and / Email: zz@x.org", as
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Ann Able1 and Bob Baker1 / 1 Univ A and / Email: zz@x.org", as
 %          the one-call print — nothing ties the address to either author
 % engines: rust int156a0 (Z18o) = the block's; a rule reading the `\author` call alone would give it to Bob Baker
 % expect:  0 errors, 0 warnings; Ann Able and Bob Baker: 1 Univ A; the block's nameless creator: the e-mail zz@x.org

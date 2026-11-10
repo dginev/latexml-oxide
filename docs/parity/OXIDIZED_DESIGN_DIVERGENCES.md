@@ -33953,8 +33953,11 @@ before their shared `\affil` print as one call's `Ann Able$^{1}$ and Bob Baker$^
 block's. The tag reaches the flush: the entry's own rule carries it, the emitter writes it as `_stopgap`
 (`frontmatter_api::STOPGAP_ENTRY`), and the Link step (`insert::link_entry_addresses`) reads every copy so written as no
 carrier of an address no one spells — `\affil{Univ C; zz@x.org}` under `$^N$` names gives Univ C to Bob Baker (Perl's
-`new`) and the address the Kind step takes out of it to the block (Z18o: Bob Baker's). The unrequested `∗` is not kept on
-an author's e-mail (as int155a4 dropped it on Bob Baker's), a residual of the line-mark path. Still open (review
+`new` walk over our split names; Perl itself makes one joint creator "Ann Able 1 and Bob Baker 1" holding the line
+whole, review revZ18o2 N2) and the address the Kind step takes out of it to the block (Z18o: Bob Baker's). The unrequested `∗` is not kept on
+an author's e-mail (as int155a4 dropped it on Bob Baker's), a residual of the line-mark path — **Known RED (review
+revZ18o2 R1, synthetic):** dropped silently, 0 W; the guard `aastex_unrequested_symbol_line_in_its_own_author_group_is_that_groups`
+pins the `∗`-less contact as that known loss; keep the mark or count its drop on the line-mark path. Still open (review
 revZ18o): a labelled mailbox-link line is named by its label alone where the address path puts the class's entry name
 before it (`kind.rs` ~180-187, N1; fold into `split_email_label`); 2604.04847's link line, which prints an address,
 changed through this branch, untraced (N2). (F2) A line of an

@@ -58,6 +58,8 @@ fn aastex_email_line_in_its_own_author_group_is_that_groups() {
 
 /// `\affil{$^*$ Email: zz@x.org}`, no name requesting `*`, after Bob Baker's own `\author` call and `\affil`: Bob Baker's
 /// e-mail. Distinct: the pending entries' placement path (`Resolver::stopgap`). Red (int156a0): the block's, `∗ zz@x.org`.
+/// The `∗` pdflatex prints is dropped from Bob's contact with no Warning (as on int155a4): a KNOWN LOSS this guard pins,
+/// OD #992's Known RED (review revZ18o2 R1), not a target.
 #[test]
 fn aastex_unrequested_symbol_line_in_its_own_author_group_is_that_groups() {
   let (log, xml) = run(repro!(
