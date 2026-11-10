@@ -1,0 +1,19 @@
+% mechanism: a declined block's split matches the reading's names to Perl's creators by whole words of each creator's
+%   names line (`emit`'s `perl_piece_of`), not by letters glued across names and notes: "li" of `J. K. Li` is no word of
+%   `Ann Blinn`
+% witness: synthetic; review revS5CR7b S1 (the two-letter surnames Li, Wu, Xu, Ma, Yu)
+% oracle:  pdflatex 0 errors: "Ann Blinn^a and J. K. Li^†", "Univ A", "a Visiting Paris.", "† li@x.org"
+% engines: rust CR7b: "li" found inside "blinn", so Ann Blinn took the note, li@x.org and Univ A, J. K. Li nothing; perl
+%   0 errors: two creators, both items on the last
+% expect:  0 errors, 1 warning (the decline's); Ann Blinn (the note, Univ A), J. K. Li (li@x.org, Univ A)
+% status:  RED (CR7b) -> GREEN (perfect_kernel_batchcr7::a_split_matches_names_by_whole_words)
+\documentclass{revtex4-1}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\begin{document}
+\title{T}
+\author{Ann Blinn\footremember{zz}{Visiting Paris.} and J. K. Li}
+\email{li@x.org}
+\affiliation{Univ A}
+\maketitle
+Body.
+\end{document}

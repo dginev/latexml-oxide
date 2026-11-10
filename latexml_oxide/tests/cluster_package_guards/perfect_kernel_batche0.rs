@@ -1266,8 +1266,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // events' targets (`linkable`), review revZ18h S-a and B1r)
   // (CR7b, 58 -> 59: `perl_block_pieces`' text of Perl's split creators — Perl's `\lx@add@authors` cuts tokens, and its
   // creators exist as nothing else before digestion — that `perl_piece_of` matches the reading's names against, so an item
-  // goes to the creator holding its name, not the one at its count, review revCR67 S4)
-  ("emitter/emit", 59),
+  // goes to the creator holding its name, not the one at its count, review revCR67 S4; CR7c, 59 -> 61: `words_parted`'s
+  // reads of where a word of those names ends unprinted, after a formula and before a command's argument — the same
+  // tokens' words, matched whole now ("li" no word of "Blinn", review revS5CR7b S1; 1404.5602's "robicheauxcurrent"), no
+  // owner decided by a spelling)
+  ("emitter/emit", 61),
   // (P1b, 0 -> 1: `emitter/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("emitter/dom+mod", 1),

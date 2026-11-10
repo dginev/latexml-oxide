@@ -4,7 +4,9 @@
 //! only, which stays `whole_block_author`). One guard per path: each decline on the split branch (CR5's repros), the
 //! marks branch, the split's `\\` lines keeping their commas (the divergence from Perl's comma), and each split name's
 //! own label for the items the reading gave it. CR7b (review revCR67): a `\\[len]` cut leaves no "[len]" in a name, a line
-//! of no mark cut at `\and` starts an author, and the labels match the reading's names to Perl's creators by name.
+//! of no mark cut at `\and` starts an author, and the labels match the reading's names to Perl's creators by name. CR7c
+//! (review revS5CR7b): the names matched as whole words, the `\and`-started line cut at its commas, and the corresponding
+//! author's `_corresponding` on its split creator.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 
@@ -208,4 +210,58 @@ fn a_split_gives_each_name_its_items_by_name() {
       "email=bob@x.org"
     ]),
   ]);
+}
+
+/// `\author{Ann Blinn\footremember… and J. K. Li}\email{li@x.org}\affiliation{Univ A}`: the names matched in the letters
+/// of a creator's piece glued, notes and all, found "li" inside "blinn", and Ann took Li's e-mail; matched as whole words
+/// of the piece's names line, Li's items are his, and revtex's `\affiliation` both names' (review revS5CR7b S1: the
+/// two-letter surnames). Distinct from `a_split_gives_each_name_its_items_by_name`: a name whose words another piece
+/// holds inside its own.
+#[test]
+fn a_split_matches_names_by_whole_words() {
+  let (log, xml) = run(repro!("cr7c_split_names_whole_words"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Blinn", "note=Visiting Paris.", "affiliation=Univ A"]),
+    row(&["J. K. Li", "email=li@x.org", "affiliation=Univ A"]),
+  ]);
+}
+
+/// `Ann Able$^{1}$\footremember… \and Bob Baker, Carl Cole\\ $^{1}$Univ X`: the line of no mark that `\and` starts an
+/// author with is a names line, cut at its comma as one is — it stayed one creator "Bob Baker, Carl Cole" (review
+/// revS5CR7b S3). Distinct from `a_line_of_no_mark_cut_at_and_starts_an_author`: the comma cut after the `\and` start.
+#[test]
+fn a_line_started_at_and_is_cut_at_its_commas() {
+  let (log, xml) = run(repro!("cr7c_and_line_comma_cut"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able", "note=Zebra note.", "affiliation=Univ X"]),
+    row(&["Bob Baker"]),
+    row(&["Carl Cole"]),
+  ]);
+}
+
+/// llncs `\author{Ann Able\thanks{Corresponding author} \and Bob Baker\thanks{Univ Y.}\addtocounter{footnote}{-1}…
+/// \and Carl Cole}\institute{Univ X\\ \email{zz@x.edu}}`: the counter move declines the block, and its split creators
+/// carried no `_corresponding`, so the Link step's one left-over address had no corresponding author to take it; the
+/// Perl call the reading's corresponding author maps to carries it, and zz@x.edu is Ann's (review revS5CR7b S5-1).
+#[test]
+fn a_split_gives_the_corresponding_author_the_left_address() {
+  let (log, xml) = run(repro!("cr7c_split_corresponding_left_address"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able", "affiliation=Univ X", "email=zz@x.edu"]),
+    row(&["Bob Baker", "affiliation=Univ X"]),
+    row(&["Carl Cole", "affiliation=Univ X"]),
+  ]);
+  // (the thanks notes, each on its own name: `<note>`s, which `creators` doesn't list)
+  let elements = creator_elements(&xml);
+  assert!(
+    elements[0].contains(">Corresponding author</note>"),
+    "{xml}"
+  );
+  assert!(
+    elements[1].contains(">Univ Y.</note>") && elements[1].contains(">Univ Z.</note>"),
+    "{xml}"
+  );
 }

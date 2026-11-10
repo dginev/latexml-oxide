@@ -2513,6 +2513,8 @@ struct Item<'a> {
   owners: Vec<Owner>,
   assoc:  &'a Assoc,
   place:  i64,
+  /// the Perl labels of a declined block's split creators it goes to that no owner above names ([`marked_pieces`])
+  labels: Vec<String>,
 }
 
 /// The items of `resolved` still to emit, one per source and text (a line printed for each of its authors, a call for each of
@@ -2739,6 +2741,7 @@ fn items_to_emit<'a>(
           owners: vec![owner],
           assoc,
           place: 0,
+          labels: Vec::new(),
         });
       },
     }
@@ -3283,57 +3286,156 @@ fn declined_branch(index: usize) -> PerlAuthorBranch {
 
 /// The calls Perl's `\lx@add@authors` makes of the author block at ledger index `index` (`fallback::perl_author_calls`),
 /// each creator given its keys and `keys`, the first `annotations` too (the items of the names it folds, as the creator of
-/// a block written whole has them), joined in order: a block a decline writes as Perl does ([`split_decline`]).
-fn perl_block(index: usize, keys: &str, annotations: &[Token]) -> Option<Result<Tokens>> {
+/// a block written whole has them), the `corresponding`-th the key `_corresponding=true` (the creator the reading's
+/// corresponding author maps to, [`perl_piece_of`]: the one the Link step's left-over address goes to, review revS5CR7b
+/// S5-1), joined in order: a block a decline writes as Perl does ([`split_decline`]).
+fn perl_block(
+  index: usize,
+  keys: &str,
+  annotations: &[Token],
+  corresponding: Option<usize>,
+) -> Option<Result<Tokens>> {
   let (first, written) = block_keys(index, keys, annotations)?;
   let (rest, _) = block_keys(index, keys, &[])?;
+  let keys_of = |n: usize| {
+    let mut keys = if n == 0 { first.clone() } else { rest.clone() }.unlist();
+    if corresponding == Some(n) {
+      keys.push(T_OTHER!(","));
+      keys.extend(key_tokens(&s!("{CORRESPONDING}=true")));
+    }
+    Some(Tokens::new(keys))
+  };
   Some(
-    perl_author_calls(Some(first), Some(rest), written)
+    perl_author_calls(keys_of, written)
       .map(|(calls, _)| Tokens::new(calls.into_iter().flat_map(Tokens::unlist).collect())),
   )
 }
 
 /// The names of each creator Perl's `\lx@add@authors` makes of the author block at ledger index `index` ([`perl_block`]),
-/// as written, in order: how many labels a flush gives the creators after it, and what the reading's names are matched
-/// against ([`perl_piece_of`]). `None` where the block can't be read.
-fn perl_block_pieces(index: usize) -> Option<Vec<String>> {
+/// in order, each the words of its names line as it prints them, its notes' arguments aside (`outside_notes`,
+/// `visible_name_text`; [`name_words`]): how many labels a flush gives the creators after it, and what the reading's names
+/// are matched against ([`perl_piece_of`]). `None` where the block can't be read.
+fn perl_block_pieces(index: usize) -> Option<Vec<Vec<String>>> {
   block_keys(index, "", &[])
-    .and_then(|(_, written)| perl_author_calls(None, None, written).ok())
-    .map(|(_, pieces)| pieces.iter().map(ToString::to_string).collect())
+    .and_then(|(_, written)| perl_author_calls(|_| None, written).ok())
+    .map(|(_, pieces)| {
+      let words = |piece: &Tokens| {
+        name_words(&visible_name_text(&words_parted(&outside_notes(
+          piece.unlist_ref(),
+        ))))
+      };
+      pieces.iter().map(words).collect()
+    })
+}
+
+/// `tokens` with a space where a word of a name ends though no space prints — after a formula (`Robicheaux$^{2}$`), before
+/// a command's argument (`\footremember{*}{Current address …}`) — so that [`visible_name_text`], which sets aside the
+/// script and keeps the argument's letters, reads "Robicheaux Current", not the one word "robicheauxcurrent" no reading
+/// name matches (1404.5602). An accent's argument keeps its word (`M\"{u}ller`: the accent's spaces are no text).
+fn words_parted(tokens: &[Token]) -> Vec<Token> {
+  let mut out = Vec::with_capacity(tokens.len());
+  let mut in_math = false;
+  for &t in tokens {
+    let after_argument = out
+      .last()
+      .is_some_and(|p: &Token| matches!(p.get_catcode(), Catcode::CS | Catcode::END));
+    if t.get_catcode() == Catcode::BEGIN && after_argument {
+      out.push(T_SPACE!());
+    }
+    out.push(t);
+    if t.get_catcode() == Catcode::MATH {
+      if in_math {
+        out.push(T_SPACE!());
+      }
+      in_math = !in_math;
+    }
+  }
+  out
+}
+
+/// The words of a name as [`perl_piece_of`] matches them: its runs of letters and digits, accents folded
+/// (`resolver::base_letters`: `Müller` as `M\"uller` prints, "muller"), lowercased.
+fn name_words(text: &str) -> Vec<String> {
+  resolver::base_letters(text)
+    .to_lowercase()
+    .split(|c: char| !c.is_alphanumeric())
+    .filter(|word| !word.is_empty())
+    .map(str::to_string)
+    .collect()
 }
 
 /// The creator of Perl's split ([`perl_block_pieces`]) whose names hold the reading's name `name`, at `from` or after it
-/// (the names in order): the one holding most of its words — each run of ASCII letters and digits of two or more, matched
-/// in the piece's own letters and digits, lowercased, so a name accented in the source (`M\"uller`) still finds "ller"
-/// — and at least half of them. `None` where no piece does: a name a macro spells, or one Perl's split doesn't hold
-/// (review revCR67 S4: equal counts need not be the same names — `Robert Heath, Jr.… \and Ann Able~~~~Bob Baker` is
-/// Perl's "Robert Heath", "Jr.", "Ann Able~~~~Bob Baker" and the reading's "Robert Heath, Jr.", "Ann Able", "Bob Baker").
-fn perl_piece_of(name: &str, pieces: &[String], from: usize) -> Option<usize> {
-  let words: Vec<String> = name
-    .split(|c: char| !c.is_ascii_alphanumeric())
-    .filter(|word| word.len() > 1)
-    .map(str::to_ascii_lowercase)
+/// (the names in order): the one holding most of its words of two letters or more ([`name_words`]), each matched whole
+/// among the piece's words — not inside one: "li" of `J. K. Li` is no word of `Ann Blinn` (review revS5CR7b S1, the
+/// two-letter surnames Li, Wu, Xu, Ma, Yu) — and at least half of them. `None` where no piece does: a name a macro spells,
+/// or one Perl's split doesn't hold (review revCR67 S4: equal counts need not be the same names — `Robert Heath, Jr.…
+/// \and Ann Able~~~~Bob Baker` is Perl's "Robert Heath", "Jr.", "Ann Able~~~~Bob Baker" and the reading's "Robert Heath,
+/// Jr.", "Ann Able", "Bob Baker").
+fn perl_piece_of(name: &str, pieces: &[Vec<String>], from: usize) -> Option<usize> {
+  let words: Vec<String> = name_words(name)
+    .into_iter()
+    .filter(|word| word.chars().count() > 1)
     .collect();
   if words.is_empty() {
     return None;
   }
   let mut best: Option<(usize, usize)> = None;
   for (k, piece) in pieces.iter().enumerate().skip(from) {
-    let letters: String = piece
-      .chars()
-      .filter(char::is_ascii_alphanumeric)
-      .map(|c| c.to_ascii_lowercase())
-      .collect();
-    let found = words
-      .iter()
-      .filter(|word| letters.contains(word.as_str()))
-      .count();
+    let found = words.iter().filter(|word| piece.contains(word)).count();
     if 2 * found >= words.len() && best.is_none_or(|(_, most)| found > most) {
       best = Some((k, found));
     }
   }
   best.map(|(k, _)| k)
 }
+
+/// The marks each creator of Perl's split of the author block at ledger index `index` prints ([`perl_block_pieces`]): what
+/// the block prints after each of its names, up to the next name — a mark's labels (`mark_labels`), or a contact's whole
+/// text, cicp's `\affil{1}` the in-block affiliation "1" — given to the creator whose names hold that name
+/// ([`perl_piece_of`]). An item its leading mark labels goes to those printing it ([`printed_mark_labels`]).
+fn piece_marks(index: usize, pieces: &[Vec<String>]) -> Vec<BTreeSet<String>> {
+  let mut marks = vec![BTreeSet::new(); pieces.len()];
+  with_block(index, (), |_, events| {
+    let mut at: Option<usize> = None;
+    let mut from = 0;
+    for e in events {
+      match e.kind {
+        EventKind::Name => {
+          at = perl_piece_of(&e.text, pieces, from);
+          from = at.unwrap_or(from);
+        },
+        EventKind::Mark => {
+          if let (Some(k), Some(label)) = (at, e.label.as_deref()) {
+            marks[k].extend(mark_labels(label));
+          }
+        },
+        EventKind::Contact => {
+          if let Some(k) = at
+            && !e.text.trim().is_empty()
+          {
+            marks[k].insert(e.text.trim().to_string());
+          }
+        },
+        _ => {},
+      }
+    }
+  });
+  marks
+}
+
+/// The labels of an item a printed mark labels — an API call's leading mark (`api:leading-mark`) or a `_withsup` line's
+/// (`api:withsup-mark`) —, `None` for any other item.
+fn printed_mark_labels(assoc: &Assoc) -> Option<Vec<String>> {
+  let printed = assoc
+    .rule
+    .split_whitespace()
+    .any(|t| matches!(t, "api:leading-mark" | "api:withsup-mark"));
+  let labels = mark_labels(assoc.label.as_deref().filter(|_| printed)?);
+  (!labels.is_empty()).then_some(labels)
+}
+
+/// The number of a creator's Perl label, `author:N`.
+fn piece_number(owner: &str) -> Option<usize> { owner.rsplit_once(':')?.1.parse().ok() }
 
 /// The keys of the author block at ledger index `index` with `keys` and `annotations`, and its tokens.
 fn block_keys(index: usize, keys: &str, annotations: &[Token]) -> Option<(Tokens, Tokens)> {
@@ -3844,7 +3946,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   // names hold it, `author:N` after its first's (`perl_piece_of`, matched by name, not by count: review revCR67 S4), which
   // the items the reading gave it address — a revtex `\affiliation` under `\author{Ann\footremember{…}{…} and Bob}` both
   // names'; a name no later creator holds the first's, as a block written whole)
-  let pieces_of: BTreeMap<usize, Vec<String>> = split
+  let pieces_of: BTreeMap<usize, Vec<Vec<String>>> = split
     .iter()
     .filter_map(|&source| perl_block_pieces(source).map(|pieces| (source, pieces)))
     .collect();
@@ -3855,8 +3957,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
         let from = piece_at.get(&c.source).copied().unwrap_or(0);
         if let Some(k) = pieces_of
           .get(&c.source)
-          .and_then(|pieces| perl_piece_of(&c.name, pieces, from))
-          .filter(|&k| k > 0)
+          .and_then(|pieces| perl_piece_of(&c.name, pieces, from.max(1)))
           && let Some((role, n)) = owners[first].rsplit_once(':')
           && let Ok(n) = n.parse::<usize>()
         {
@@ -4010,6 +4111,48 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .filter(|owner| seen_owners.insert(*owner))
       .collect();
   }
+  // (an item a printed mark labels, of a block a decline writes as Perl splits it: the creators whose pieces print its
+  // mark, never the one the reading's names gave it — which read no request of that mark, review revS5CR7b B1:
+  // cicp's `Lixiu Dong\affil{1}, …` under `\address{\affilnum{1}…\\\affilnum{2}…\\\affilnum{3}…}`, 2004.03371,
+  // 2410.22720, 1510.04579 —; the block's own creator where none does)
+  for (&source, pieces) in &pieces_of {
+    let Some(&first) = first_of.get(&source) else {
+      continue;
+    };
+    let Some((role, n)) = owners[first]
+      .rsplit_once(':')
+      .and_then(|(role, n)| Some((role.to_string(), n.parse::<usize>().ok()?)))
+    else {
+      continue;
+    };
+    let marks = piece_marks(source, pieces);
+    for item in &mut items {
+      let ours = |owner: &Owner| matches!(owner, Owner::Creator(i) if resolved.creators[*i].source == source);
+      if !item.owners.iter().any(ours) {
+        continue;
+      }
+      let Some(labels) = printed_mark_labels(item.assoc) else {
+        continue;
+      };
+      item.owners.retain(|owner| !ours(owner));
+      let printing: Vec<usize> = (0..marks.len())
+        .filter(|&k| labels.iter().any(|label| marks[k].contains(label)))
+        .collect();
+      if printing.is_empty() {
+        if !item.owners.contains(&Owner::Block) {
+          item.owners.push(Owner::Block);
+        }
+        continue;
+      }
+      for k in printing {
+        if k == 0 {
+          item.owners.push(Owner::Creator(first));
+        } else {
+          item.labels.push(s!("{role}:{}", n + k));
+        }
+      }
+    }
+  }
   in_perl_order(&mut items);
   // (the labels: an item's own on every new owner; an owner made at an earlier flush holds its own copy under its Perl
   // `author:N`, its annotations long digested)
@@ -4029,6 +4172,9 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     }
     if item.owners.contains(&Owner::Block) {
       calls.push(("addresses:block".to_string(), item));
+    }
+    for label in &item.labels {
+      calls.push((label.clone(), item));
     }
     for owner in &item.owners {
       if let Owner::Creator(i) = owner
@@ -4112,7 +4258,14 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     // (kept whole on purpose, as a tabular block is: no merge to flag beside its Warning, `flag_merged_creators`)
     let written = || {
       if split.contains(&c.source) {
-        perl_block(c.source, KEPT_WHOLE, &keys)
+        // (the creator the reading's corresponding author maps to: the first, or a name its piece holds)
+        let corresponding = resolved.creators.iter().enumerate().find_map(|(j, other)| {
+          (other.source == c.source && other.corresponding && (j == i || rep[j] == j))
+            .then(|| piece_number(&owners[j]).zip(piece_number(&owners[i])))
+            .flatten()
+            .map(|(at, first)| at.saturating_sub(first))
+        });
+        perl_block(c.source, KEPT_WHOLE, &keys, corresponding)
       } else {
         whole_block(c.source, KEPT_WHOLE, &keys)
       }

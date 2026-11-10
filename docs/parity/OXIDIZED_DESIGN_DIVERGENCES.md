@@ -33288,7 +33288,8 @@ emitter writes it as the declared transient key `_corresponding` (`frontmatter_a
 the Link step (`insert::link_entry_addresses`) reads that key in place of its own scan of the DOM's notes, deleted.
 `\author{Ann Able\inst{1,2} \and Bob Baker\inst{1}}\institute{Univ X, Town\\ \email{zz9@x.edu} \and Corresponding author}`
 gives zz9@ to Ann Able (the block's before). A declined paper (the emitter stays out) marks no one, its left-over address the
-block's. `insert::link_entry_addresses`' `readable` stays: it reads which addresses a contact prints, not who is the
+block's; a block the emitter declines but writes as Perl splits it (#988) marks the split creator the reading's
+corresponding author maps to (review revS5CR7b S5-1). `insert::link_entry_addresses`' `readable` stays: it reads which addresses a contact prints, not who is the
 corresponding author. Repro `class-bindings/llncs_legend_corresponding_author_takes_the_left_address.tex` (RED → GREEN),
 guard `perfect_kernel_batchs5`; `perfect_kernel_batche0` key pins `const _corresponding` and `declared _corresponding`
 0 → 1 (undeclared, the key's `Info:undefined` report changed 1512.06325's paragraphs after its title page). **Measured**
@@ -33480,12 +33481,24 @@ definition step as TeX steps them. A tabular juggle (`\alignauthor`) parts two a
 empty). The Warning names the branch taken ("the block is written as Perl's \lx@add@authors splits it at its separators, its
 pieces digested in order"). The block's creators take their Perl labels (`author:N`, `perl_block_pieces`), so a later
 block's items address their own. Each name the reading read takes the label of the creator whose names hold it, matched by
-name, not by count (`perl_piece_of`: most of its words of two or more ASCII letters or digits, at least half, the names in
-order), so an item the reading gave the names goes to each (a revtex `\affiliation` after `\author{Ann\footremember{…}{…}
+name, not by count (`perl_piece_of`: most of its words of two or more letters, accents folded, each found whole among the
+words of the piece's names line, its notes' arguments aside (`outside_notes`, `visible_name_text`), at least half, the names
+in order, a name after the first searched from the second creator on), so an item the reading gave the names goes to each (a revtex `\affiliation` after `\author{Ann\footremember{…}{…}
 and Bob}`). Equal counts need not be the same names: `Robert Heath, Jr.… and Ann Able~~~~Bob Baker` is Perl's "Robert
 Heath", "Jr.", "Ann Able~~~~Bob Baker" and the reading's "Robert Heath, Jr.", "Ann Able", "Bob Baker"; matched by count, Ann's
-`\affiliation` went to "Jr." (review revCR67 S4). A name no later creator holds (one a macro spells) goes to the first
-creator, as the block written whole did. The other declines (`names_fail`, cells, `mark_dropped`,
+`\affiliation` went to "Jr." (review revCR67 S4). Matched inside glued letters, "li" of `J. K. Li` was found in `Ann
+Blinn\footremember{zz}{Visiting Paris.}` and Ann took Li's e-mail (review revS5CR7b S1: the two-letter surnames Li, Wu, Xu,
+Ma, Yu). A name no piece after the first holds (one a macro spells) goes to the first creator, as the block written whole
+did. An item a printed mark labels (an API call's leading mark, `api:leading-mark`, or a `_withsup` line's) goes to each
+creator whose piece prints that mark, never to the one the reading's names gave it, and to the block's own creator where
+none does: what the block prints after each name up to the next — a mark's labels, or a contact's whole text — is its
+piece's (`piece_marks`, `printed_mark_labels`). cicp's `Lixiu Dong\affil{1}, Cheng Wang\affil{3}, …` (`\affil{n}` =
+`${}^{n}$`, read as the in-block affiliation "n", so no name requests a mark) under `\address{\affilnum{1}…\\\affilnum{2}…
+\\\affilnum{3}…}` gave every address to the reading's owner of the call, the last name: 2004.03371 and 2410.22720 stated
+false affiliations, and 1510.04579's one address reached one of its three authors (review revS5CR7b B1). The creator the
+reading's corresponding author maps to carries `_corresponding` (`perl_block`), so the Link step's one left-over address of
+an entry still goes to that author (#984; review revS5CR7b S5-1). As Perl's `next unless $block->unlist` (:714), an empty
+name between two cuts (`\corrauth, and Zhengru Zhang`) makes no creator. The other declines (`names_fail`, cells, `mark_dropped`,
 `names_overlap`, the unread block) still write it whole.
 
 **Divergences from Perl's split** (the kernel's own lists, #52): Perl's comma and " and " cut only a names line, never a
@@ -33496,21 +33509,29 @@ its names lines cut at the comma and " and ". A line of no mark cut at a line br
 the entry before it and keeps that cut, which Perl's `Tokens(…)` drops: 1609.02993's "Soumith ChintalaFacebook AI Research"
 and 1110.6375's "G. EhlersOak Ridge" lost their words glued. One cut at the `\and` family (`\and`, `\And`, `\AND`,
 `\alignauthor`) starts an author, the kernel's boundary (#52(g), `author_and_splits`): `Ann Able$^{1}$… \and Bob Baker\\
-$^{1}$Univ X` is two authors, as pdflatex prints them, where Perl glues one "Ann AbleBob Baker". Both split branches drop a
+$^{1}$Univ X` is two authors, as pdflatex prints them, where Perl glues one "Ann AbleBob Baker"; that line is a names
+line, cut at its commas as one is (`\and Bob Baker, Carl Cole\\` two authors, review revS5CR7b S3). Both split branches drop a
 `\\[len]`'s and a `\\*`'s option before their cuts (`strip_linebreak_options`, KNOWN_PERL_ERRORS #75; Perl's own comment,
 :670): 2007.01340's creator read "[1em] Julia Fukuyama", Perl alike. `position_of` and
 `literal_and` moved from `author_block/` to `frontmatter/classify/separators.rs` (Perl's `positionOf`, `$literaland`).
 
 **Left (Perl's own, kept):** a mark past position 8 reads a line as an author line, so `\vspace{3pt} $^{a}$Istituto …`
 under 0809.5152's names is a creator (Perl alike). A line of no mark continues the entry before it, so 1110.6375's
-second group `T. Hong, V. O. Garlea, …` joins A. Zheludev's creator. No word is lost.
+second group `T. Hong, V. O. Garlea, …` joins A. Zheludev's creator. Every `\\` line of a split piece after its first is
+an affiliation of its last name (:713-719), so 2503.21719's `…Lourens Waldorp\footrecall{uva}, \\Quentin F.
+Gronau\footremember{uon}{University of Newcastle, Australia}, and Eric-Jan Wagenmakers\footrecall{uva}` is an affiliation
+of Waldorp: the line reads as names only with the document's `\footremember` arguments set aside, which no token reading
+of the kernel can tell from text (`is_note_macro` declines a macro an argument of which `\newcounter` takes); its words are
+kept, better than the base's one merged creator. No word is lost.
 
 Repros `cr7_fncounter_and`, `cr7_ne5_footremember`, `cr7_marks_branch_footremember`, `cr7_split_lines_keep_commas`,
-`cr7_split_items_to_each_name`, `cr7b_linebreak_option_cut`, `cr7b_and_cut_starts_author`, `cr7b_split_items_by_name`;
+`cr7_split_items_to_each_name`, `cr7b_linebreak_option_cut`, `cr7b_and_cut_starts_author`, `cr7b_split_items_by_name`,
+`cr7c_split_names_whole_words`, `cr7c_and_line_comma_cut`, `cr7c_split_corresponding_left_address`;
 guards `perfect_kernel_batchcr7::{a_counter_decline_writes_the_block_as_perl_splits_it,
 a_definition_decline_writes_the_block_as_perl_splits_it, a_declined_block_with_marks_takes_perls_marks_branch,
 a_split_keeps_the_commas_of_its_lines, a_split_gives_each_name_its_items,
 a_split_at_a_linebreak_option_leaves_no_option_text, a_line_of_no_mark_cut_at_and_starts_an_author,
-a_split_gives_each_name_its_items_by_name}`; updated
+a_split_gives_each_name_its_items_by_name, a_split_matches_names_by_whole_words,
+a_line_started_at_and_is_cut_at_its_commas, a_split_gives_the_corresponding_author_the_left_address}`; updated
 `perfect_kernel_batchne5::a_declaration_reading_past_its_span_writes_the_block_as_perl_splits_it` (five creators) and
 `perfect_kernel_batchne2::a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it` (three creators, the notes per creator).
