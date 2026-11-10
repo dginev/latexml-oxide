@@ -115,7 +115,8 @@ pub(in crate::base_utilities) fn frontmatter_group_first() -> usize {
 /// `$\rbrace$` the brace `\}` — the math shifts read as characters (a class's verbatim `\email` argument: llncs's
 /// `\email{$\{$fargyriou,mikebekos,symvonis$\}$@math.ntua.gr}`, 1106.2694, 2308.00146, 1602.04934) or as shifts —, so
 /// a list of local parts in math braces is the list in text braces (`\lx@add@email`, `\lx@split@addresses`; census138
-/// ADDR-b, OXIDIZED_DESIGN_DIVERGENCES #972). Anything else in math stays as it is.
+/// ADDR-b, OXIDIZED_DESIGN_DIVERGENCES #972). The shifts pair left to right, as TeX pairs them; any other formula
+/// stays as it is.
 pub(in crate::base_utilities) fn math_braces_as_printed(address: &Tokens) -> Tokens {
   let v = address.unlist_ref();
   let shift = |t: &Token| *t == T_OTHER!("$") || t.get_catcode() == Catcode::MATH;
@@ -128,26 +129,22 @@ pub(in crate::base_utilities) fn math_braces_as_printed(address: &Tokens) -> Tok
       None
     }
   };
-  let spaces = |from: usize| {
-    from
-      + v[from.min(v.len())..]
-        .iter()
-        .take_while(|t| **t == T_SPACE!())
-        .count()
-  };
   let mut out: Vec<Token> = Vec::with_capacity(v.len());
   let mut at = 0;
   while at < v.len() {
-    if shift(&v[at]) {
-      let inner = spaces(at + 1);
-      if let Some(printed) = v.get(inner).and_then(brace) {
-        let close = spaces(inner + 1);
-        if v.get(close).is_some_and(shift) {
-          out.push(printed);
-          at = close + 1;
-          continue;
-        }
+    // the shifts pair left to right, as TeX pairs them: any other pair stays as read, whole, and the next pair opens
+    // after its closing shift (`$x$\}$y$` keeps both formulas)
+    if shift(&v[at])
+      && let Some(len) = v[at + 1..].iter().position(shift)
+    {
+      let pair = &v[at..at + len + 2];
+      let mut inner = pair[1..=len].iter().filter(|t| **t != T_SPACE!());
+      match (inner.next().and_then(brace), inner.next()) {
+        (Some(printed), None) => out.push(printed),
+        _ => out.extend_from_slice(pair),
       }
+      at += len + 2;
+      continue;
     }
     out.push(v[at]);
     at += 1;

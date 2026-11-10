@@ -45,6 +45,7 @@ use crate::base_utilities::{
         read_events, split_pieces, uncoordinated_marks,
       },
     },
+    place::DEFERRED_TO_FLUSH_END,
     relocate::{BLOCK_ZONE, FOOTER_ZONE},
   },
 };
@@ -4071,6 +4072,8 @@ fn recover_queued(
   });
   // (each entry, after the `out` entry it follows: none at the end)
   let mut recovered: Vec<(Option<usize>, RawFrontmatter)> = Vec::new();
+  // (an outer flush digests its queue around this one: a late block's, `\lx@frontmatter@late`)
+  let outer_flushing = lookup_bool("lx_frontmatter_flushing");
   for (index, queued, as_queued) in sources {
     let once = s!("recovered|{index}");
     if lookup_mapping(EMITTED_ITEMS, &once).is_some() {
@@ -4123,6 +4126,18 @@ fn recover_queued(
         recovered.push((after, (tag, attrs, command)));
       },
       _ => {
+        // (a date set in a block read while an outer flush digests its queue — `\title{…\author{…\date{One}}}` read at
+        // `\maketitle`'s flush — is set as TeX typesets the block, after the queue's own: queued for the end of the
+        // outermost flush, so a `\date{Two}` queued before it does not replace it; pdflatex prints "One", review revCR3b
+        // finding 2, with a `\section` after `\maketitle` too, revCR4 finding 3. A date only: `\@maketitle` prints the
+        // title before the author line, so a `\title` run in it changes nothing printed — `\title{A Title \author{Ann
+        // Able \title{Inner}}}` prints "A Title", review revCR4b finding 1)
+        let (deferred, queued): (Vec<RawFrontmatter>, Vec<RawFrontmatter>) = queued
+          .into_iter()
+          .partition(|entry| outer_flushing && entry.0 == "ltx:date");
+        if !deferred.is_empty() {
+          defer_to_flush_end(deferred);
+        }
         recovered.extend(queued.into_iter().map(|entry| (None, entry)));
         let lost: Vec<String> = digested.into_iter().map(|entry| entry.0).collect();
         warn_queued_lost(&lost);
@@ -4141,6 +4156,27 @@ fn recover_queued(
   for (at, _, entry) in placed {
     out.insert(at + 1, entry);
   }
+}
+
+/// Queues `entries` as they are for the end of the outermost flush, which digests them after its own queue
+/// ([`DEFERRED_TO_FLUSH_END`], `place::digest_front_matter`): what a flush digests is off the queue before it digests,
+/// so they come after the outer flush's remaining entries ([`recover_queued`]), and no `\section` closing the
+/// frontmatter before a later flush loses them (review revCR4 finding 3).
+fn defer_to_flush_end(entries: Vec<RawFrontmatter>) {
+  if with_value(DEFERRED_TO_FLUSH_END, |v| {
+    !matches!(v, Some(Stored::FrontmatterRaw(_)))
+  }) {
+    assign_value(
+      DEFERRED_TO_FLUSH_END,
+      Stored::FrontmatterRaw(Vec::new()),
+      Some(Scope::Global),
+    );
+  }
+  with_value_mut(DEFERRED_TO_FLUSH_END, |queue| {
+    if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = queue {
+      queue.extend(entries);
+    }
+  });
 }
 
 /// The labels the call at ledger index `index` of role `role`, written as queued, goes to: its run's creators, as the

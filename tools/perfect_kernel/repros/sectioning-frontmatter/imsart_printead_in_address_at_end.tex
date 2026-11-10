@@ -1,0 +1,56 @@
+% mechanism: imsart.sty's `\printead{e1}` inside an unlabelled `\address` after `\end{frontmatter}` prints the address
+%   `\ead[label=e1]` gave ("e-mail: …", "url: …": `\@@printead`, :506-519 of 1301.1466's copy), and under
+%   `\@addressatendtrue` (`aap`) the block prints at the end of the document (`\printaddresses` from `\enddocument`).
+%   The binding's `\ead` records each label at the `\author` call (latexml_contrib imsart_cls.rs `record_eads`, as the
+%   aux file holds it for the next run), its `\printead` prints it only in an address printed in place (inside the
+%   frontmatter the address is the author's contact), through the API's address reading (`\lx@address@printed`: a
+%   formula of glyphs its glyphs); the block is deferred with `\AtEndDocument`. OXIDIZED_DESIGN_DIVERGENCES #986, #972
+% witness: 1301.1466 (crackle.tex:1109-1125, `\printead{e1}\\ \printead{u1}` in each end-of-paper `\address`, option
+%          `aap`); here as a minimal stand-in of the shipped imsart.sty (its `\ead`/`\printead` and addressatend code,
+%          shortened)
+% oracle:  pdflatex 0 errors: "Ann Able" / "Body." / then the block "Ann Able / Univ A / e-mail: ann@x.edu /
+%          url: http://www.zebra.edu/∼ann"
+% engines: CR3b: the block printed before "Body.", its e-mail and URL rows empty (`\printead` printed nothing)
+% expect:  0 errors, 0 warnings; Ann Able: email ann@x.edu, url http://www.zebra.edu/∼ann; one tabular after "Body."
+%          with rows Ann Able, Univ A, "e-mail: ann@x.edu", "url: http://www.zebra.edu/∼ann"
+% status:  RED (CR3b) -> GREEN (CR4; guard perfect_kernel_batchcr4::imsart_printead_in_address_at_end)
+\begin{filecontents*}{imsart.sty}
+\NeedsTeXFormat{LaTeX2e}\ProvidesFile{imsart.sty}[2012/01/01 IMS article style, shortened and modified]
+\RequirePackage{keyval}
+\newif\if@addressatend \@addressatendtrue
+\define@key{ead}{email}[true]{\def\ead@type{email}}
+\define@key{ead}{url}[true]{\def\ead@type{url}}
+\define@key{ead}{label}{\def\ead@label{#1}}
+\def\ead@url{url}
+\DeclareRobustCommand\ead[2][label= ,email]{{\def\ead@type{email}\setkeys{ead}{#1}%
+  \expandafter\gdef\csname ead@a@\ead@label\endcsname{#2}%
+  \expandafter\global\expandafter\let\csname ead@t@\ead@label\endcsname\ead@type}}
+\def\printead#1{\expandafter\ifx\csname ead@t@#1\endcsname\ead@url url: \else e-mail: \fi
+  {\ttfamily\csname ead@a@#1\endcsname}}
+\newenvironment{aug}{}{\par}
+\newenvironment{frontmatter}{\begin{center}}{\end{center}}
+\def\author{\@ifnextchar[{\author@fmt}{\author@fmt[]}}
+\def\author@fmt[#1]#2{\bgroup\def\fnms##1{##1}\def\snm##1{##1}\noindent#2\egroup}
+\newcount\c@address
+\def\address{\@ifnextchar[{\address@fmt}{\address@fmt[default]}}
+\def\address@fmt[#1]#2{\global\advance\c@address1
+  \expandafter\gdef\csname @address@\the\c@address\endcsname{#2}}
+\newcount\addr@n
+\def\printaddresses{\addr@n=0
+  \loop\ifnum\addr@n<\c@address\global\advance\addr@n1
+    \par\noindent\begin{tabular}[t]{@{}l@{}}\csname @address@\the\addr@n\endcsname\end{tabular}\repeat\par}
+\let\old@enddocument\enddocument
+\def\enddocument{\printaddresses\old@enddocument}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{imsart}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\begin{aug}
+\author{\fnms{Ann} \snm{Able}\ead[label=e1]{ann@x.edu}\ead[label=u1,url]{http://www.zebra.edu/$\sim$ann}}
+\end{aug}
+\end{frontmatter}
+\address{Ann Able\\ Univ A\\ \printead{e1}\\ \printead{u1}}
+Body.
+\end{document}

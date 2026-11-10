@@ -32343,6 +32343,31 @@ and unit `author_split_tests::a_name_spells_a_run_of_the_local_parts_words` (the
 `a@x (X.X.); b@y (M.Y.)` match no printed name (2002.08904); an unbraced list beside a printed name not in brackets
 (`Ann Able: a@x`) is not read as a name; a list in reverse author order stays unplaced (2508.07950).
 
+**Fix (3) (CR4): a formula of glyphs in an e-mail or URL is its glyphs, for every binding** (Perl: the same `$∼$`, its
+`\lx@add@url`/`\lx@add@email` Semiverbatim too). The API's `\lx@add@url` and `\lx@add@email` read the address
+Semiverbatim, which turns a `$` already read as a math shift into a character (Perl's `neutralize`), so imsart's
+`\ead[label=u2,url]{http://www.math.duke.edu/$\sim$omer}` wrote "…/$∼$omer" where pdflatex prints "…/∼omer" — and so did
+any binding's call (`\def\myurl{\lx@add@url{http://www.zebra.edu/$\sim$ann}}`, review revCR3b). Both now pass the address
+through `contacts::address_as_printed`: the brace sets of fix (1), then `math_glyphs_as_printed` — a pair of shifts
+(characters or shifts) round characters and math symbols that each print one glyph (`math_symbol_glyph`: the text of the
+one box a math primitive without arguments makes, `\sim` "∼", `\cdot` "·") is that run, each symbol its glyph as a
+character of the address (TeX takes it from the math font), the shifts and spaces dropped; the address stays one text,
+so the XSLT's link (its first text node) is whole. A run with a script (`$^*$x@y`'s mark), another command or nothing in it
+stays as read (`$x^2$` prints "$x^2$": left, no paper seen). `\lx@address@printed` gives a binding the same reading for an
+address it prints itself (imsart's `\printead`, #986). Witnesses 1301.1466, math0608476 (`www.math.wisc.edu/$\sim$swanson`).
+Repro `sectioning-frontmatter/imsart_ead_url_reads_a_tex_argument` (RED since CR3b); guard
+`perfect_kernel_batchcr4::imsart_ead_url_prints_its_formula`. **CR4b (review revCR4 findings 1 and 4):** both readings
+pair the shifts left to right, as TeX pairs them — a pair that is not glyphs (a script, `$$`) stays as read, whole, and
+the next pair opens after its closing shift. CR4 resumed one token after such a pair's opening shift, so its closing shift
+paired with the next formula's opening one and the text between was "printed", spaces dropped, with no Warning:
+2508.20055's `ej$_$dresselhaus@berkeley.edu, s$_$g@berkeley.edu` became "ej$_dresselhaus@berkeley.edu,s_$g@…";
+`math_braces_as_printed` had the same restart (`$^a$\{$b$` turned the `\{` between two formulas into a brace). A
+character command in math prints its character (`text_glyph`: `\_`, `\{`, `\}`, `\#`, `\%`, `\&`, `\lbrace`/`\rbrace`),
+so `$\{a,b\}$@w.edu` is the brace list (each address) and `p$\_$r` "p_r". Repro
+`email_math_shifts_pair_as_tex_pairs_them`; guards `perfect_kernel_batchcr4b::email_math_shifts_pair_as_tex_pairs_them`,
+`author_split_tests::math_shifts_pair_left_to_right`. **Left:** `$\dag$` (2604.07356; `\dag` is an `\ifmmode` macro,
+no math primitive) keeps its dollars.
+
 ### 973. pgfmath reads arrays: a `{…}[i]` primary, text elements, `array`, `dim` (Perl: `Error:pgfparse`, its parser numeric)
 
 `pgfmath_code_tex.rs`, the winnow grammar skips `{`, `}` as blanks and has only numbers, so `{1,2,3}[1]` was 1 (pgf 2),
@@ -33230,7 +33255,25 @@ guards `perfect_kernel_batchcr2` (one per path: the owner label, a block's queue
 call's place among the items, a written call), `perfect_kernel_batchcr3::{revtex3_minipage_address_first_one_run` (a run
 of several owners), `date_inside_author_inside_title_is_the_date}` (a flush-time `@now` setter).
 
-**Residual (review revCR3b finding 2, synthetic, pre-existing):** a date recovered from `\title`'s `\author` loses to a later top-level `\date` (`\title{A Title \author{Ann Able \date{Dinner One}}}` `\date{Dinner Two}` `\maketitle`: pdflatex prints "Dinner One", we write "Dinner Two", no Warning) — the recovered entry goes in before a `\date` after `\title`; correct when the outer `\date` comes before `\title`.
+A date such a late block recovers while an outer flush digests its queue is set as TeX typesets the
+block (a date only: `\@maketitle` prints the title before the author line, so a `\title` run there changes nothing printed — `\title{A Title \author{Ann Able \title{Inner}}}` prints "A Title"; CR4/CR4b deferred titles too and printed "Inner", review revCR4b finding 1, guard `perfect_kernel_batchcr4b::title_inside_author_inside_title_keeps_the_outer_title`), after the queue's own entries (`\maketitle` runs the inner `\date` while typesetting `\@author`, after every
+`\date` before it): it is queued for the end of the outermost flush (`emitter::emit::defer_to_flush_end`, digested by
+`place::digest_front_matter` after its own queue), not digested inside the late flush, so `\title{A Title \author{Ann Able \date{Dinner
+One}}}` `\date{Dinner Two}` `\maketitle` gives "Dinner One", as pdflatex (it gave "Dinner Two", no Warning; review revCR3b
+finding 2, CR4). The title-page check's "unclaimed: two" there (its run prints the outer `\date`, which TeX never prints)
+is a false positive erring the safe way, as with the outer `\date` before `\title`. Repro
+`date_inside_author_inside_title_over_later_date`; guard `perfect_kernel_batchcr4::date_inside_author_inside_title_over_later_date`.
+CR4 queued it for the next flush, which a `\section` after `\maketitle` (the common case) never ran: the date was
+dropped and "Dinner Two" kept, with no Warning (review revCR4 finding 3; int154w alike); placed at the end of the
+outermost flush, "Dinner One" holds with or without the section (repro
+`date_inside_author_inside_title_section_after`; guard
+`perfect_kernel_batchcr4b::date_inside_author_inside_title_section_after`).
+**Left** (synthetic, pre-existing): a `\date` set in `\title` itself (`\title{A Title \date{Dinner One}}` `\date{Dinner
+Two}` `\author{Ann Able}` `\maketitle`; pdflatex "Dinner One") still loses to the later `\date`, with no Warning: an
+`@now` setter inside a queued entry's digestion, no late block.
+
+
+**Known REDs (review revCR4b):** a `\date` nested two levels deep (`\title{…\author{…\title{…\author{…\date{X}}}}}`) never runs in TeX (pdflatex prints the outer "Dinner Two") but is deferred and replaces it ("Dinner X", counted by the content check: `date_nested_twice_never_runs_red.tex`).
 
 ### 986. imsart.sty is a binding of its own, so a shipped copy declaring itself imsart.sty is read through it (CR3)
 
@@ -33263,4 +33306,34 @@ class binding too (the same markup). Repros
 `sectioning-frontmatter/{imsart_renamed_sty_copy_reads_through_its_binding,imsart_address_after_frontmatter_prints_in_place}.tex`;
 guards `perfect_kernel_batchcr3::{imsart_renamed_sty_copy_reads_through_its_binding,imsart_address_after_frontmatter_prints_in_place}`.
 
-**Residuals (review revCR3b, SHIP; to the next batch with the API's e-mail/URL re-read):** the in-place end-of-paper blocks drop the e-mail and URL rows the PDF prints (`\printead{e1}\\ \printead{u1}` inside each `\address`; the binding's `\printead` is empty, `imsart_cls.rs`, as the address is the author's contact — untrue in the in-place branch; 1301.1466, no worse than the base's "e-mail: ??" rows, the addresses on their authors); an unlabelled `\address` inside `{aug}` after `\author{A}\and\author{B}` goes to B only where imsart.sty:1021 ties it to every author since the last (synthetic, the class path too); under `aap` an unlabelled `\address` right after `\end{frontmatter}` prints before the body where the PDF prints it at the end (nothing lost).
+**CR4 (review revCR3b findings 1, 3 and NIT 4).** (1) In an address printed in place, no author's contact,
+`\printead{e1,u1}` prints what imsart.sty's `\@@printead` prints (:506-519): each labelled address, "e-mail: " or "url: "
+before it (none under `*`), `;~` between, in typewriter type, through the API's address reading (`\lx@address@printed`,
+#972); `\printead[text]{…}` the text; a label no `\ead` gave "??", as `\saferef`. Inside the frontmatter it stays empty: the
+address is the author's contact there. imsart.sty's `\ead` writes its label to the aux file (`\safelabel`) for the next
+run's `\printead`, so the order does not matter in TeX; here the binding records each `\ead[label=…]{…}` at the
+`\author` call (`record_eads`: the author is digested only at the frontmatter's flush, at the end of the document when no
+`\maketitle` comes, after the addresses) and where `\ead` expands (`record_ead`), past any speculative run's rollback
+(core `state::assign_value_past_rollback`: a rehearsal and a label's ink run undo every assignment, and TeX never takes
+back what it wrote to a file). 1301.1466's three end blocks gain their six "e-mail:"/"url:" rows, as the PDF. (2) The
+unlabelled in-frontmatter `\address` is `annotate=run` (`\lx@imsart@address@run`), as the sty binding's `\affiliation`:
+`\author{A}\and\author{B}\address{Univ AB}` gives the address to both (it went to B alone), on the class and the sty path.
+(3) Under `\@addressatendtrue` the in-place block is deferred to `\AtEndDocument`, as imsart.sty's `\enddocument` runs
+`\printaddresses`: one called right after `\end{frontmatter}` prints after the body. Repros
+`imsart_printead_in_address_at_end`, `imsart_unlabelled_address_is_the_runs`; guards
+`perfect_kernel_batchcr4::{imsart_printead_in_address_at_end, imsart_unlabelled_address_is_the_runs}`;
+`perfect_kernel_batchcr3::imsart_address_after_frontmatter_prints_in_place` now holds each block's "e-mail: …" row.
+
+**CR4b** (review revCR4 finding 2): a block whose `\printead{e1}` calls cite labels a queued author's `\ead` gave is
+those authors', each a contact `label=author:N` (`citing_authors`, the queue read when `\address` expands): imsart.sty
+ties no block to an author, but the block reprints its authors' e-mails, which tells the reader whose it is —
+1407.2451's ETH block (`\printead{e1}\\ \printead{e2}`) is Nandy's and Maathuis's, its University of Washington block
+(`\printead{e3}`) Richardson's, where `annotate=run` gave every author both (1409.0912, 1504.04814, 1704.07606,
+1810.08264 alike). `annotate=run` stays for a block citing no author's label. Repro
+`imsart_address_block_goes_to_the_authors_it_cites`; guard
+`perfect_kernel_batchcr4b::imsart_address_block_goes_to_the_authors_it_cites`.
+
+**Left** (pre-existing): imsart's `\and` between `\author`s in `{aug}` prints a stray centred "and" paragraph (int154x
+alike).
+
+**Known REDs (review revCR4b finding 2, synthetic):** the per-label attribution's `annotate=run` fallback does not end its run at the `author:N` contacts an earlier cited block made, so an uncited block also reaches authors an earlier block went to (`imsart_address_block_fallback_run_q1_red.tex`), and a block naming three authors but citing only `e2` goes to that one (`…_q2_red.tex`); no word lost.

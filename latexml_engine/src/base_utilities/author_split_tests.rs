@@ -1,7 +1,9 @@
 use latexml_core::state::{State, StateOptions, set_state};
 
 // (the field readers' units, moved from `author_block/` to `defs/frontmatter_fields/` by Z18a)
-use super::defs::frontmatter_fields::{definitions_at_author, math_braces_as_printed};
+use super::defs::frontmatter_fields::{
+  definitions_at_author, math_braces_as_printed, math_glyphs_as_printed,
+};
 use super::*;
 
 fn setup() {
@@ -989,6 +991,45 @@ fn a_name_spells_a_run_of_the_local_parts_words() {
     math_braces_as_printed(&tk(r"$x$@y.org")).to_string(),
     tk(r"$x$@y.org").to_string()
   );
+}
+
+/// CR4b item 1 (review revCR4 finding 1): the math shifts of an address pair left to right, as TeX pairs them, in both
+/// readings: a pair that is not glyphs (a script, the empty `$$`) stays as read, whole, and the next pair opens after its
+/// closing shift — 2508.20055's `ej$_$dresselhaus@berkeley.edu, s$_$g@berkeley.edu` had paired the first formula's
+/// closing shift with the second's opening one, "ej$_dresselhaus@berkeley.edu,s_$g@berkeley.edu". Distinct from the
+/// conversion guard `perfect_kernel_batchcr4b::email_math_shifts_pair_as_tex_pairs_them` (the printed formulas): the
+/// pairing alone, on shapes pdflatex errs on (`$_$` with `_` a subscript) or no binding reaches whole.
+#[test]
+fn math_shifts_pair_left_to_right() {
+  setup();
+  for kept in [
+    r"ej$_$d@x.org, s$_$g@y.org",
+    r"$^a$a@x.org, $^b$b@y.org",
+    r"a$$b@x.org, c$$d@y.org",
+    r"$^*$x@y.org$",
+  ] {
+    assert_eq!(
+      math_glyphs_as_printed(&tk(kept)).to_string(),
+      tk(kept).to_string(),
+      "{kept}"
+    );
+  }
+  assert_eq!(
+    math_glyphs_as_printed(&tk(r"$^*$x$y$z@w.org")).to_string(),
+    tk(r"$^*$xyz@w.org").to_string()
+  );
+  assert_eq!(
+    math_glyphs_as_printed(&tk(r"$\{a,b\}$@w.org, p$\_$r@w.org")).to_string(),
+    tk(r"\{a,b\}@w.org, p\_r@w.org").to_string()
+  );
+  // (a brace pair after a formula that is not one: `$x$\}$y$` is two formulas round a text brace)
+  for kept in [r"$x$\}$y$@w.org", r"$^a$\{$b$@w.org"] {
+    assert_eq!(
+      math_braces_as_printed(&tk(kept)).to_string(),
+      tk(kept).to_string(),
+      "{kept}"
+    );
+  }
 }
 
 #[test]

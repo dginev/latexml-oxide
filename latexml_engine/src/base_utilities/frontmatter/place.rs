@@ -433,6 +433,8 @@ impl Drop for FlushMeanings {
 /// Digest FrontMatter (if not already?)
 /// Perl: digestFrontMatter().
 pub fn digest_front_matter() -> Result<()> {
+  // (whether no flush digests its queue around this one: the outermost places what a late block deferred to its end)
+  let outermost = !lookup_bool("lx_frontmatter_flushing");
   // (what the abstract's command form added before this flush is no longer in Perl's queue: [`COMMAND_FORM`])
   let flushes = lookup_int(FRONTMATTER_FLUSHES);
   assign_value(FRONTMATTER_FLUSHES, flushes + 1, Some(Scope::Global));
@@ -563,47 +565,33 @@ pub fn digest_front_matter() -> Result<()> {
       &T_CS!("\\lx@annotate@frontmatter@now"),
       None,
     );
-    for (tag, attr, command) in commands {
-      DebugFeature!(
-        "frontmatter",
-        "FRONT Digesting {tag} [{:?}] {command}",
-        attr
+    for entry in commands {
+      digest_queued_entry(entry)?;
+    }
+  }
+  // (an entry a late block's flush set after this queue's own, `defer_to_flush_end`: a title, subtitle or date read
+  // in a block this outermost flush digests — `\title{…\author{…\date{One}}}` — placed here, at the end of the
+  // flush, as TeX typesets it after the queue's entries; pdflatex prints "One" over a `\date{Two}`, with or without a
+  // `\section` after `\maketitle`: review revCR4 finding 3)
+  if outermost {
+    let deferred = match remove_value(DEFERRED_TO_FLUSH_END) {
+      Some(Stored::FrontmatterRaw(deferred)) => deferred,
+      _ => Vec::new(),
+    };
+    if !deferred.is_empty() {
+      let_i(
+        &T_CS!("\\lx@add@frontmatter"),
+        &T_CS!("\\lx@add@frontmatter@now"),
+        None,
       );
-      // Perl parity (review 2026-06-04, replacing the master-era
-      // fatal-swallow from witness arXiv:1903.01633): a Fatal raised
-      // while digesting deferred frontmatter propagates and aborts
-      // the conversion with a proper `Fatal:` log line, exactly like
-      // Perl's un-eval'd `$stomach->digest($command)`. The 1903.01633
-      // bug was the *silent* swallow (`let _ = digest(...)` left
-      // `report.fatal=true` with no log line); propagation fixes the
-      // silence without diverging from Perl. Non-fatal Error!s inside
-      // the digest log-and-continue in both engines as before.
-      // (its element is late when the entry was queued late: `frontmatter_push`)
-      assign_value(
-        "lx_frontmatter_entry_late",
-        Stored::Bool(attr.contains_key(LATE_ENTRY)),
-        Some(Scope::Local),
+      let_i(
+        &T_CS!("\\lx@annotate@frontmatter"),
+        &T_CS!("\\lx@annotate@frontmatter@now"),
+        None,
       );
-      // (and its late marker's ordinal, [`LATE_MARK_ORDINAL`])
-      assign_value(
-        "lx_frontmatter_entry_mark",
-        Stored::String(pin(
-          attr
-            .get(LATE_MARK_ORDINAL)
-            .map(String::as_str)
-            .unwrap_or(""),
-        )),
-        Some(Scope::Local),
-      );
-      // (and handed on from the store its title-page provenance names: `frontmatter_push`)
-      assign_value(
-        "lx_frontmatter_entry_from",
-        Stored::String(pin(
-          attr.get(TITLE_PAGE_ENTRY).map(String::as_str).unwrap_or(""),
-        )),
-        Some(Scope::Local),
-      );
-      digest(command)?;
+      for entry in deferred {
+        digest_queued_entry(entry)?;
+      }
     }
   }
   // The held Errors no piece raised again — a command printing nothing between pieces, or in a piece written as text
@@ -676,6 +664,52 @@ pub fn digest_front_matter() -> Result<()> {
     Some(Scope::Global),
   );
   egroup()?;
+  Ok(())
+}
+
+/// Digests one queued frontmatter entry at a flush ([`digest_front_matter`]), with its lateness, late marker and
+/// title-page provenance in force.
+fn digest_queued_entry((tag, attr, command): RawFrontmatter) -> Result<()> {
+  DebugFeature!(
+    "frontmatter",
+    "FRONT Digesting {tag} [{:?}] {command}",
+    attr
+  );
+  // Perl parity (review 2026-06-04, replacing the master-era
+  // fatal-swallow from witness arXiv:1903.01633): a Fatal raised
+  // while digesting deferred frontmatter propagates and aborts
+  // the conversion with a proper `Fatal:` log line, exactly like
+  // Perl's un-eval'd `$stomach->digest($command)`. The 1903.01633
+  // bug was the *silent* swallow (`let _ = digest(...)` left
+  // `report.fatal=true` with no log line); propagation fixes the
+  // silence without diverging from Perl. Non-fatal Error!s inside
+  // the digest log-and-continue in both engines as before.
+  // (its element is late when the entry was queued late: `frontmatter_push`)
+  assign_value(
+    "lx_frontmatter_entry_late",
+    Stored::Bool(attr.contains_key(LATE_ENTRY)),
+    Some(Scope::Local),
+  );
+  // (and its late marker's ordinal, [`LATE_MARK_ORDINAL`])
+  assign_value(
+    "lx_frontmatter_entry_mark",
+    Stored::String(pin(
+      attr
+        .get(LATE_MARK_ORDINAL)
+        .map(String::as_str)
+        .unwrap_or(""),
+    )),
+    Some(Scope::Local),
+  );
+  // (and handed on from the store its title-page provenance names: `frontmatter_push`)
+  assign_value(
+    "lx_frontmatter_entry_from",
+    Stored::String(pin(
+      attr.get(TITLE_PAGE_ENTRY).map(String::as_str).unwrap_or(""),
+    )),
+    Some(Scope::Local),
+  );
+  digest(command)?;
   Ok(())
 }
 
@@ -760,6 +794,10 @@ pub enum FrontmatterAnchor {
 
 /// Attribute marking a root child built before `\begin{document}` (see
 /// [`mark_preamble_residue`]). Internal (`_`-prefixed): stripped from the output.
+/// The entries a late block's flush sets after the outer flush's queue (emit.rs `defer_to_flush_end`), which the
+/// outermost flush digests at its end ([`digest_front_matter`]).
+pub(in crate::base_utilities) const DEFERRED_TO_FLUSH_END: &str =
+  "lx_frontmatter_deferred_to_flush_end";
 const PREAMBLE_RESIDUE: &str = "_preamble";
 
 /// Mark every element child of the document root as PREAMBLE residue. Called by the

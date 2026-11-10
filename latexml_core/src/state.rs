@@ -3978,6 +3978,20 @@ pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(key: &str, value: T
   state_mut!().assign_value(key, value, scope)
 }
 
+/// Assigns `value` to `key` globally and past the open assignment journal's rollback (Rust-only), as TeX never takes back
+/// what it wrote to a file: no speculative run's undoing (a frontmatter rehearsal, a label's ink run) takes it back. Only
+/// for a record TeX writes to a file and reads back on a later run — an aux-file label, imsart.sty's `\ead` `\safelabel`
+/// that its `\printead` reads —, never for a value a rehearsal's own reading decides: that one must roll back with it.
+/// OXIDIZED_DESIGN_DIVERGENCES #986.
+pub fn assign_value_past_rollback(key: &str, value: impl Into<Stored>) {
+  let mut state = state_mut!();
+  state.assign_value(key, value, Some(Scope::Global));
+  let key = arena::pin(key);
+  if let Some(journal) = state.journal.as_mut() {
+    journal.saved.remove(&(TableName::Value, key));
+  }
+}
+
 /// assigns a `Stored` value 'inplace': replaces the front value in whatever frame
 /// it was originally assigned in, without recording an undo entry.
 /// This matches Perl's `assignValue(key, value, 'inplace')`.
