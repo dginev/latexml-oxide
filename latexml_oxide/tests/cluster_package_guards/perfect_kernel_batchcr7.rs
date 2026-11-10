@@ -6,7 +6,9 @@
 //! own label for the items the reading gave it. CR7b (review revCR67): a `\\[len]` cut leaves no "[len]" in a name, a line
 //! of no mark cut at `\and` starts an author, and the labels match the reading's names to Perl's creators by name. CR7c
 //! (review revS5CR7b): the names matched as whole words, the `\and`-started line cut at its commas, and the corresponding
-//! author's `_corresponding` on its split creator.
+//! author's `_corresponding` on its split creator. CR7d (review revCR7c, the fail-safe): where the split would state an
+//! owner its marks don't support — an item led by a mark its piece doesn't print, an address line made a creator — the
+//! block is written whole, as before the split, one guard per path.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 
@@ -262,6 +264,99 @@ fn a_split_gives_the_corresponding_author_the_left_address() {
   );
   assert!(
     elements[1].contains(">Univ Y.</note>") && elements[1].contains(">Univ Z.</note>"),
+    "{xml}"
+  );
+}
+
+/// The fail-safe (review revCR7c S1, B1's class without cicp.cls): Perl's split gives each `\\` line to its piece's last
+/// name, so `… and Carl Cole\affil{1}\\ \affil{1} Univ X\\ \affil{2} Univ Y` gave Carl Univ Y, whose mark 2 Carl doesn't
+/// print (CR7c: Carl both, Ann and Bob nothing). The block is written whole, the Warning saying so: one creator.
+#[test]
+fn a_split_stating_a_false_owner_keeps_the_block_whole() {
+  let (log, xml) = run(repro!("cr7d_split_affil_line_false_owner"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  assert!(
+    log.contains(
+      "The frontmatter emitter's reading holds no place for what its author block does to the footnote counter; the \
+       block is written whole, as Perl's whole-block creator"
+    ),
+    "{log}"
+  );
+  assert_eq!(
+    creator_elements(&xml),
+    [
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">\
+       <text font=\"italic\" xml:id=\"id1.1\">1</text></sup>, Bob Baker<sup xml:id=\"id2\">\
+       <text font=\"italic\" xml:id=\"id2.1\">2</text></sup>\
+       <Math mode=\"inline\" tex=\"{}^{\\textrm{,}}\" text=\"^[,]\" xml:id=\"m3\"><XMath xml:id=\"m3.1\">\
+       <XMApp role=\"FLOATSUPERSCRIPT\" scriptpos=\"1\" xml:id=\"m3.1.1\"><XMText xml:id=\"m3.1.1.1\">\
+       <text fontsize=\"70%\" xml:id=\"m3.1.1.1.1\">,</text></XMText></XMApp></XMath></Math>\
+       <note mark=\"*\" role=\"footnote\" xml:id=\"footnotex1\"><tags><tag>*</tag>\
+       <tag role=\"refnum\">*</tag><tag role=\"typerefnum\">footnote *</tag>\
+       </tags>Corresponding author.</note>, and Carl Cole<sup xml:id=\"id3\">\
+       <text font=\"italic\" xml:id=\"id3.1\">1</text></sup><break/><sup xml:id=\"id4\">\
+       <text font=\"italic\" xml:id=\"id4.1\">1</text></sup> Univ X<break/><sup xml:id=\"id5\">\
+       <text font=\"italic\" xml:id=\"id5.1\">2</text></sup> Univ Y</personname></creator>",
+    ],
+    "{xml}"
+  );
+}
+
+/// The fail-safe on a note (review revCR7c B1, 1110.6375): Perl's comma cut sends `Ann Able$^\ast$,\thanks{$^\ast$Permanent
+/// address: Univ Z.}` into Bob Baker's piece, whose name prints no ∗ (CR7c: the address on Bob). Written whole: one
+/// creator holding every note.
+#[test]
+fn a_split_giving_a_note_to_a_name_not_printing_its_mark_keeps_the_block_whole() {
+  let (log, xml) = run(repro!("cr7d_split_note_mark_false_owner"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("the block is written whole, as Perl's whole-block creator"),
+    "{log}"
+  );
+  assert_eq!(
+    creator_elements(&xml),
+    ["<creator role=\"author\">\
+       <personname>Ann Able<sup xml:id=\"id1\">∗</sup>, Bob Baker, Carl Cole<sup xml:id=\"id2\">\
+       <text font=\"italic\" xml:id=\"id2.1\">†</text></sup><break/>\
+       <text font=\"italic\" xml:id=\"id3\">Univ X</text></personname>\
+       <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id4\">\
+       <sup xml:id=\"id4.1\">∗</sup>Permanent address: Univ Z.</note>\
+       <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id5\">\
+       <sup xml:id=\"id5.1\"><text font=\"italic\" xml:id=\"id5.1.1\">†</text>\
+       </sup> Corresponding author.</note>\
+       <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id6\">Visiting.</note>\
+       </creator>",],
+    "{xml}"
+  );
+}
+
+/// The fail-safe on an address line (review revCR7c B2, 0809.5152): `\\\vspace{6pt} \vspace{3pt} $^{a}${\em{Univ X,
+/// Town}}`, its mark past Perl's 8 tokens of a marked affiliation line, is a piece of names that starts with a mark — an
+/// address that would be a creator (CR7c: two address creators, their marks after the text). Written whole: one creator,
+/// no address an author.
+#[test]
+fn a_split_making_an_address_line_a_creator_keeps_the_block_whole() {
+  let (log, xml) = run(repro!("cr7d_split_address_line_as_author"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains("the block is written whole, as Perl's whole-block creator"),
+    "{log}"
+  );
+  assert_eq!(
+    creator_elements(&xml),
+    [
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">\
+       <text font=\"italic\" xml:id=\"id1.1\">a</text></sup>, Bob Baker<sup xml:id=\"id2\">\
+       <text font=\"italic\" xml:id=\"id2.1\">b</text></sup> and Carl Cole<sup xml:id=\"id3\">\
+       <text font=\"italic\" xml:id=\"id3.1\">a</text></sup> <break/><sup xml:id=\"id4\">\
+       <text font=\"italic\" xml:id=\"id4.1\">a</text></sup>\
+       <text font=\"italic\" xml:id=\"id5\">Univ X, Town<break/></text> <sup xml:id=\"id6\">\
+       <text font=\"italic\" xml:id=\"id6.1\">b</text></sup>\
+       <text font=\"italic\" xml:id=\"id7\">Univ Y, City</text></personname>\
+       <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id8\">Corresponding author.</note>\
+       <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id9\">Visiting.</note>\
+       </creator>",
+    ],
     "{xml}"
   );
 }

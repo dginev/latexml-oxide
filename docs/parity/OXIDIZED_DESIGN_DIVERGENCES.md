@@ -33515,9 +33515,23 @@ line, cut at its commas as one is (`\and Bob Baker, Carl Cole\\` two authors, re
 :670): 2007.01340's creator read "[1em] Julia Fukuyama", Perl alike. `position_of` and
 `literal_and` moved from `author_block/` to `frontmatter/classify/separators.rs` (Perl's `positionOf`, `$literaland`).
 
-**Left (Perl's own, kept):** a mark past position 8 reads a line as an author line, so `\vspace{3pt} $^{a}$Istituto …`
-under 0809.5152's names is a creator (Perl alike). A line of no mark continues the entry before it, so 1110.6375's
-second group `T. Hong, V. O. Garlea, …` joins A. Zheludev's creator. Every `\\` line of a split piece after its first is
+**Fail-safe (review revCR7c B1, B2, S1).** Before the split is used, `emit::split_owns_falsely` checks that it states no
+owner its marks don't support; where it does, the block is written whole (`whole_block_author`, as before CR7) and the
+decline's Warning says "the block is written whole, as Perl's whole-block creator". Each call's tokens as cut
+(`PerlCalls::cut`, a subsequence of the block's) are found in the block in order, and each digested event belongs to the
+creator whose call holds its first token. A creator's piece fails where (i) an item in it — a note, or a line under its
+names — leads with a printed mark (a note's text's first mark; a mark, or an in-block affiliation's label, that is its
+line's first ink after the piece's first) that the piece prints on none of its names, or (ii) it is not the first and its
+first ink is a mark (an address line made a creator). Perl's comma cut gave 1110.6375's `T. Yankova$^\ast$,\thanks{$^\ast$Permanent
+address: …} D. H\"uvonen` note to Hüvonen, whose name prints no ∗ (Perl alike: a false affiliation); a `\\ \affil{2} Univ
+Y` line under `… and Carl Cole\affil{1}` went to Carl, each `\\` line being its piece's last name's (:713-719; Perl alike);
+0809.5152's `\\\vspace{6pt} \vspace{3pt} $^{a}${\em{Istituto …}}`, its mark past position 8, read as a names line whose
+`\lx@author@withsup` made the address a creator with its mark moved after the text — Perl keeps both address lines inside
+the last creator's name, after a `<break/>`, and makes no address creator. Of the 23 decline papers, 0809.5152 and
+1110.6375 are written whole, byte-identical to the base; the other 21 are unchanged by it.
+
+**Left (Perl's own, kept):** a line of no mark continues the entry before it, so a second group of names after an
+affiliation line joins the creator before it. Every `\\` line of a split piece after its first is
 an affiliation of its last name (:713-719), so 2503.21719's `…Lourens Waldorp\footrecall{uva}, \\Quentin F.
 Gronau\footremember{uon}{University of Newcastle, Australia}, and Eric-Jan Wagenmakers\footrecall{uva}` is an affiliation
 of Waldorp: the line reads as names only with the document's `\footremember` arguments set aside, which no token reading
@@ -33526,12 +33540,16 @@ kept, better than the base's one merged creator. No word is lost.
 
 Repros `cr7_fncounter_and`, `cr7_ne5_footremember`, `cr7_marks_branch_footremember`, `cr7_split_lines_keep_commas`,
 `cr7_split_items_to_each_name`, `cr7b_linebreak_option_cut`, `cr7b_and_cut_starts_author`, `cr7b_split_items_by_name`,
-`cr7c_split_names_whole_words`, `cr7c_and_line_comma_cut`, `cr7c_split_corresponding_left_address`;
+`cr7c_split_names_whole_words`, `cr7c_and_line_comma_cut`, `cr7c_split_corresponding_left_address`,
+`cr7d_split_affil_line_false_owner`, `cr7d_split_note_mark_false_owner`, `cr7d_split_address_line_as_author`;
 guards `perfect_kernel_batchcr7::{a_counter_decline_writes_the_block_as_perl_splits_it,
 a_definition_decline_writes_the_block_as_perl_splits_it, a_declined_block_with_marks_takes_perls_marks_branch,
 a_split_keeps_the_commas_of_its_lines, a_split_gives_each_name_its_items,
 a_split_at_a_linebreak_option_leaves_no_option_text, a_line_of_no_mark_cut_at_and_starts_an_author,
 a_split_gives_each_name_its_items_by_name, a_split_matches_names_by_whole_words,
-a_line_started_at_and_is_cut_at_its_commas, a_split_gives_the_corresponding_author_the_left_address}`; updated
+a_line_started_at_and_is_cut_at_its_commas, a_split_gives_the_corresponding_author_the_left_address,
+a_split_stating_a_false_owner_keeps_the_block_whole,
+a_split_giving_a_note_to_a_name_not_printing_its_mark_keeps_the_block_whole,
+a_split_making_an_address_line_a_creator_keeps_the_block_whole}`; updated
 `perfect_kernel_batchne5::a_declaration_reading_past_its_span_writes_the_block_as_perl_splits_it` (five creators) and
 `perfect_kernel_batchne2::a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it` (three creators, the notes per creator).

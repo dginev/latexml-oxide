@@ -2947,7 +2947,7 @@ fn counter_moved(index: usize, resolved: &Resolved) -> bool {
       "frontmatter",
       s!(
         "The frontmatter emitter's reading holds no place for what its author block does to the footnote counter; {}",
-        declined_branch(index).written_as()
+        decline_written_as(index)
       )
     );
   }
@@ -3250,7 +3250,7 @@ fn declaration_reads_past(index: usize) -> bool {
       "frontmatter",
       s!(
         "The frontmatter emitter can't replay a definition of its author block apart from what the block prints; {}",
-        declined_branch(index).written_as()
+        decline_written_as(index)
       )
     );
   }
@@ -3307,7 +3307,7 @@ fn perl_block(
   };
   Some(
     perl_author_calls(keys_of, written)
-      .map(|(calls, _)| Tokens::new(calls.into_iter().flat_map(Tokens::unlist).collect())),
+      .map(|perl| Tokens::new(perl.calls.into_iter().flat_map(Tokens::unlist).collect())),
   )
 }
 
@@ -3318,14 +3318,136 @@ fn perl_block(
 fn perl_block_pieces(index: usize) -> Option<Vec<Vec<String>>> {
   block_keys(index, "", &[])
     .and_then(|(_, written)| perl_author_calls(|_| None, written).ok())
-    .map(|(_, pieces)| {
+    .map(|perl| {
       let words = |piece: &Tokens| {
         name_words(&visible_name_text(&words_parted(&outside_notes(
           piece.unlist_ref(),
         ))))
       };
-      pieces.iter().map(words).collect()
+      perl.names.iter().map(words).collect()
     })
+}
+
+/// Whether Perl's split of the author block at ledger index `index` (`fallback::perl_author_calls`) would state an owner
+/// its marks don't support — the fail-safe of a footnote-counter or definition decline ([`split_decline`]; OD #988):
+/// then the block is written whole, Perl's whole-block creator, as the reading's decline wrote it before the split. Each
+/// call's tokens are found in the block in order (`PerlCalls::cut`, a subsequence of them), and each digested event in the
+/// call holding its first token. A creator's piece fails where
+/// - an item in it — a note, a line under its names — leads with a printed mark (a note's text's first mark, a mark that
+///   is its line's first ink after the piece's first) that the piece prints on none of its names: Perl's comma cut
+///   gives 1110.6375's `T. Yankova$^\ast$,\thanks{$^\ast$Permanent address: …} D. H\"uvonen` note to Hüvonen, whose
+///   name prints no ∗; `Carl Cole\affil{1}\\ \affil{2} Univ Y`, each `\\` line its piece's last name's
+///   (Base_Utility.pool.ltxml:713-719), gives Univ Y to Carl, who prints 1 (review revCR7c B1, S1);
+/// - or it isn't the first and its first ink is a mark: an address line led by its mark made a creator, 0809.5152's
+///   `\vspace{6pt} \vspace{3pt} $^{a}${\em{Istituto …}}`, whose mark sits past Perl's 8 tokens of a marked affiliation
+///   line (:701; review revCR7c B2).
+///
+/// Ownership stated by marks is the rule: an address never an author, an item never on a name that doesn't print its
+/// mark.
+fn split_owns_falsely(index: usize) -> bool {
+  let Some(perl) =
+    block_keys(index, "", &[]).and_then(|(_, written)| perl_author_calls(|_| None, written).ok())
+  else {
+    return false;
+  };
+  with_block(index, false, |block, events| {
+    // (each token of the block: the creator whose call holds it — `cut` found in the block in order)
+    let tokens = block.tokens.unlist_ref();
+    let mut holder: Vec<Option<usize>> = vec![None; tokens.len()];
+    let mut at = 0;
+    for (piece, cut) in &perl.cut {
+      for t in cut {
+        if let Some(k) = tokens[at.min(tokens.len())..].iter().position(|u| u == t) {
+          holder[at + k] = *piece;
+          at += k + 1;
+        }
+      }
+    }
+    let n = perl.names.len();
+    // (each creator's marks printed on its names, the marks its items lead with, and whether its first ink is a mark)
+    let mut printed = vec![BTreeSet::new(); n];
+    let mut leading = vec![BTreeSet::new(); n];
+    let mut inked = vec![false; n];
+    let mut mark_first = vec![false; n];
+    // (whether the next ink is its line's first: after a line break)
+    let mut line_start = false;
+    for e in events {
+      if e.kind == EventKind::Break {
+        line_start = true;
+      }
+      let Some(k) = e
+        .span
+        .and_then(|(s, _)| usize::from(s).checked_sub(block.range.0))
+        .and_then(|s| holder.get(s).copied().flatten())
+      else {
+        continue;
+      };
+      // (a printed mark: a mark's labels, or an in-block affiliation's, cicp's `\affil{1}` the affiliation "1")
+      let labels = match e.kind {
+        EventKind::Mark => e.label.as_deref().map(mark_labels).unwrap_or_default(),
+        EventKind::Contact
+          if e.role.as_deref() == Some("affiliation") && !e.text.trim().is_empty() =>
+        {
+          vec![e.text.trim().to_string()]
+        },
+        EventKind::Name | EventKind::Contact => Vec::new(),
+        EventKind::Note => {
+          let opens = e
+            .inner
+            .iter()
+            .filter(|i| i.kind == EventKind::Mark && i.line_first);
+          leading[k].extend(
+            opens
+              .filter_map(|i| i.label.as_deref())
+              .flat_map(mark_labels),
+          );
+          Vec::new()
+        },
+        _ => continue,
+      };
+      let first = !inked[k];
+      let line_first =
+        std::mem::take(&mut line_start) || (e.kind == EventKind::Mark && e.line_first);
+      inked[k] = true;
+      if labels.is_empty() {
+        // (a contact's whole text is what a later address's label may name: `piece_marks`)
+        if e.kind == EventKind::Contact && !e.text.trim().is_empty() {
+          printed[k].insert(e.text.trim().to_string());
+        }
+        continue;
+      }
+      if first {
+        mark_first[k] = true;
+        printed[k].extend(labels);
+      } else if line_first {
+        leading[k].extend(labels);
+      } else {
+        printed[k].extend(labels);
+      }
+    }
+    let fails = (0..n).find(|&k| (k > 0 && mark_first[k]) || !leading[k].is_subset(&printed[k]));
+    if let Some(k) = fails {
+      DebugFeature!(
+        "frontmatter",
+        "FRONT emit: block {index}'s Perl split states a false owner at creator {k}: prints {:?}, its items lead \
+         with {:?}, its first ink a mark: {}",
+        printed[k],
+        leading[k],
+        mark_first[k]
+      );
+    }
+    fails.is_some()
+  })
+}
+
+/// What a footnote-counter or definition decline of the author block at ledger index `index` says the block is written
+/// as: Perl's split ([`declined_branch`]), or whole where the split would state a false owner ([`split_owns_falsely`]).
+fn decline_written_as(index: usize) -> &'static str {
+  if split_owns_falsely(index) {
+    "the block is written whole, as Perl's whole-block creator"
+  } else {
+    declined_branch(index).written_as()
+  }
 }
 
 /// `tokens` with a space where a word of a name ends though no space prints — after a formula (`Robicheaux$^{2}$`), before
@@ -3469,7 +3591,8 @@ fn block_keys(index: usize, keys: &str, annotations: &[Token]) -> Option<(Tokens
 
 /// Whether the author block at ledger index `index`, written whole, is written as Perl's `\lx@add@authors` writes it
 /// (`split`: its footnote-counter or definition decline, [`counter_moved`], [`declaration_reads_past`]) rather than whole
-/// (Perl's tabular branch, [`whole_block`]), as the flush that decided it whole decided ([`written_whole`]).
+/// (Perl's tabular branch, [`whole_block`]), as the flush that decided it whole decided ([`written_whole`]); a split
+/// stating an owner its marks don't support ([`split_owns_falsely`]) is never asked for (the fail-safe, OD #988).
 fn split_decline(index: usize, split: bool) -> bool {
   let once = s!("split|{index}");
   match lookup_mapping(EMITTED_ITEMS, &once) {
@@ -3744,7 +3867,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
         (false, false)
       };
       let whole = written_whole(source, declined);
-      if whole && split_decline(source, as_perl) {
+      // (the fail-safe: a split stating an owner its marks don't support is the whole block, review revCR7c B1/B2)
+      if whole && split_decline(source, as_perl && !split_owns_falsely(source)) {
         split.insert(source);
       }
       if whole && cells {

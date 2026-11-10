@@ -1,0 +1,19 @@
+% mechanism: the decline split's fail-safe — a `\\` line led by a printed mark that the piece's last name doesn't print
+%   would be that name's affiliation in Perl's split (each `\\` line its piece's last name's), so the block is written
+%   whole, as the base did (`emit`'s `split_owns_falsely`)
+% witness: synthetic; review revCR7c S1 (probe g1; the cicp shape without cicp.cls)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2,,∗ and Carl Cole1", "1 Univ X", "2 Univ Y", the note at the foot
+% engines: rust CR7c: Carl Cole gets Univ X and Univ Y (false for Univ Y), Ann and Bob nothing; perl 0 errors, the same
+% expect:  0 errors, 2 warnings (the decline's, written whole; the content check's marks); one creator holding every name
+%   and both lines
+% status:  RED (CR7c) -> GREEN (perfect_kernel_batchcr7d::a_split_stating_a_false_owner_keeps_the_block_whole)
+\documentclass{article}
+\newcommand\affil[1]{${}^{#1}$}
+\newcommand\comma{$^{\textrm{,}}$}
+\newcommand\corrauth{\footnotemark[1]\footnotetext[1]{Corresponding author.}\stepcounter{footnote}}
+\title{T}
+\author{Ann Able\affil{1}, Bob Baker\affil{2}\comma\corrauth, and Carl Cole\affil{1}\\ \affil{1} Univ X\\ \affil{2} Univ Y}
+\begin{document}
+\maketitle
+Body.
+\end{document}

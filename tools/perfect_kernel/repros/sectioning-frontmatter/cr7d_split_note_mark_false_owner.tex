@@ -1,0 +1,15 @@
+% mechanism: the decline split's fail-safe — Perl's comma cut sends a note led by a printed mark into the next name's
+%   piece, whose name doesn't print that mark, so the block is written whole, as the base did (`emit`'s
+%   `split_owns_falsely`)
+% witness: 1110.6375 (tPHM2e: `T. Yankova$^\ast$,\thanks{$^\ast$Permanent address: …} D. H\"uvonen`); review revCR7c B1
+% oracle:  pdflatex 0 errors: "Ann Able∗,∗Bob Baker, Carl Cole††", "Univ X", the notes at the foot
+% engines: rust CR7c: "∗Permanent address: Univ Z." on Bob Baker; perl 0 errors, the same
+% expect:  0 errors, 1 warning (the decline's, written whole); one creator holding every name and every note
+% status:  RED (CR7c) -> GREEN (perfect_kernel_batchcr7d::a_split_stating_a_false_owner_keeps_the_block_whole)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^\ast$,\thanks{$^\ast$Permanent address: Univ Z.} Bob Baker, Carl Cole$^\dag$\thanks{$^\dag$ Corresponding author.}\addtocounter{footnote}{-1}\thanks{Visiting.}\\ {\em Univ X}}
+\maketitle
+Body.
+\end{document}

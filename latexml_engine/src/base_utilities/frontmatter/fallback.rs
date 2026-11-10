@@ -96,21 +96,30 @@ pub(in crate::base_utilities) fn perl_author_branch(stuff: &Tokens) -> PerlAutho
 /// emitter matches the reading's names against (`emit`'s owner labels). Beyond Perl, where the kernel reads a line
 /// otherwise (OD #52, #988): a line of no mark that starts an author at the `\and` family is a names line, cut at its
 /// commas as one is. As Perl's `next unless $block->unlist` (:714), an empty name between two cuts (`\corrauth, and
-/// Zhengru Zhang`, 2004.03371) makes no creator.
+/// Zhengru Zhang`, 2004.03371) makes no creator. And each call's tokens as cut, its wrapping aside, with the creator
+/// it makes (`None` for an affiliation): what a call digests of the block, in order ([`PerlCalls::cut`]).
 pub(in crate::base_utilities) fn perl_author_calls(
   keys: impl Fn(usize) -> Option<Tokens>,
   stuff: Tokens,
-) -> Result<(Vec<Tokens>, Vec<Tokens>)> {
+) -> Result<PerlCalls> {
   let branch = perl_author_branch(&stuff);
   if branch == PerlAuthorBranch::Whole {
-    return Ok((
-      vec![whole_block_author(
+    return Ok(PerlCalls {
+      calls: vec![whole_block_author(
         keys(0),
         tabular_juggles_in_a_whole_block(stuff.clone()),
       )?],
-      vec![stuff],
-    ));
+      cut:   vec![(Some(0), stuff.unlist_ref().to_vec())],
+      names: vec![stuff],
+    });
   }
+  let mut cut: Vec<(Option<usize>, Vec<Token>)> = Vec::new();
+  // (the creators the calls cut so far make: `cut`'s numbers, as `author` numbers its keys)
+  let mut made = 0usize;
+  let mut next = || {
+    made += 1;
+    made - 1
+  };
   let stuff = strip_linebreak_options(tabular_juggles_as(stuff, T_CS!("\\and")));
   let mut pieces: Vec<Tokens> = Vec::new();
   let mut author = |names: Tokens, content: Tokens| {
@@ -173,6 +182,7 @@ pub(in crate::base_utilities) fn perl_author_calls(
       }
     }
     for (is_author, line) in entries {
+      cut.push((is_author.then(&mut next), line.clone()));
       let line = Tokens::new(line);
       calls.push(if is_author {
         author(
@@ -210,17 +220,33 @@ pub(in crate::base_utilities) fn perl_author_calls(
         people.push((Vec::new(), Vec::new()));
       }
       // (the block's `\\` lines its last name's, as Perl's one author of the piece has them)
+      let mut raw: Vec<Vec<Token>> = people.iter().map(|(names, _)| names.clone()).collect();
       if let Some(last) = people.last_mut() {
         for line in lines.filter(|line| !line.is_empty()) {
+          if let Some(raw) = raw.last_mut() {
+            raw.extend_from_slice(line.unlist_ref());
+          }
           last.1.extend(affiliation(line)?.unlist());
         }
       }
-      for (names, person) in people {
+      for ((names, person), raw) in people.into_iter().zip(raw) {
+        cut.push((Some(next()), raw));
         calls.push(author(Tokens::new(names), Tokens::new(person))?);
       }
     }
   }
-  Ok((calls, pieces))
+  Ok(PerlCalls { calls, names: pieces, cut })
+}
+
+/// What [`perl_author_calls`] makes of a block: Perl's calls, in order.
+pub(in crate::base_utilities) struct PerlCalls {
+  /// the `\lx@add@author` and `\lx@add@affiliation` calls
+  pub calls: Vec<Tokens>,
+  /// each creator's names as written (its piece's names line)
+  pub names: Vec<Tokens>,
+  /// each call's tokens of the block as cut, its wrapping aside, with the creator it makes (`None` for an affiliation):
+  /// a subsequence of the block's tokens, in order
+  pub cut:   Vec<(Option<usize>, Vec<Token>)>,
 }
 
 /// Does an author block mark its names (`$^{a}$`, `\textsuperscript{1}`)? A superscript inside a `\footnote` or
