@@ -258,7 +258,7 @@ pub fn typesets_content(d: &Digested) -> bool {
         || w.get_definition().replacement_template().is_some_and(template_prints_text)
         // A tabular or `\halign` keeps its rows in its `alignment` property (tex_tables.rs): a class's `\maketitle`
         // that is only a table typesets it (simplecv's header, brandeis-problemset's title table; dropped since 59p).
-        || matches!(w.get_property("alignment").as_deref(), Some(Stored::Digested(a)) if typesets_content(a))
+        || printed_properties(&w).iter().any(typesets_content)
         || w
           .get_args()
           .iter()
@@ -499,7 +499,7 @@ pub fn picture_text(w: &Whatsit) -> Option<Vec<Digested>> {
       }
       return;
     }
-    if let Some(Stored::Digested(a)) = w.get_property("alignment").as_deref() {
+    for a in &printed_properties(w) {
       text_nodes(a, nodes);
     }
     for arg in w.get_args().iter().flatten() {
@@ -750,7 +750,7 @@ fn ink_text_with(d: &Digested, pictures: bool, out: &mut String) {
     },
     DigestedData::Whatsit(w) => {
       let w = w.borrow();
-      if let Some(Stored::Digested(a)) = w.get_property("alignment").as_deref() {
+      for a in &printed_properties(&w) {
         ink_text_with(a, pictures, out);
       }
       for (arg, shown) in w.get_args().iter().zip(shown_arguments(&w)) {
@@ -825,7 +825,7 @@ pub fn ink_word_text(d: &Digested, out: &mut String) {
       let mut inner = String::new();
       {
         let w = w.borrow();
-        if let Some(Stored::Digested(a)) = w.get_property("alignment").as_deref() {
+        for a in &printed_properties(&w) {
           ink_word_text(a, &mut inner);
         }
         // (each argument a field of its own: `\lx@note`'s type, "footnote", and its text are no one word; a quantity —
@@ -890,6 +890,22 @@ const VERBATIM_PRINTERS: &[(&str, &[bool])] = &[
   ("\\lx@doi", &[true]),
   ("\\harvardurl", &[true]),
 ];
+
+/// The digested material a whatsit keeps in a property its constructor prints, as the text walkers read it beside its
+/// shown arguments and body: a tabular's or `\halign`'s rows (`alignment`, tex_tables.rs), and the text of color.sty's
+/// and xcolor.sty's `\fcolorbox` (`text`, digested in its `afterDigest` from an `Undigested` argument and printed by the
+/// pattern's `#text`: Perl color.sty.ltxml:108-117, xcolor.sty.ltxml:878-888). An `\author` line boxed so
+/// (`\fcolorbox{white}{white}{$\{$\texttt{\href{mailto:…}{ann}, }…$\}$\texttt{@inf.ethz.ch}}`, acl 2211.07344, 2305.15057)
+/// read nothing, its e-mails lost with no Warning.
+pub(crate) fn printed_properties(w: &Whatsit) -> Vec<Digested> {
+  ["alignment", "text"]
+    .into_iter()
+    .filter_map(|key| match w.get_property(key).as_deref() {
+      Some(Stored::Digested(d)) => Some(d.clone()),
+      _ => None,
+    })
+    .collect()
+}
 
 /// Which arguments of the whatsit `w` it shows as text, for [`ink_text`], by their declared parameter types: none of an
 /// image (a whatsit carrying a `graphic` or image `candidates`: its arguments are the file and its options); else a

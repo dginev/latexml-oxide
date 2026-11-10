@@ -1,0 +1,20 @@
+% witness: 2212.03638 (elsarticle `\address`), 2211.03175 (jfm `\affiliation`), cond-mat0204589, 0904.3899, 1311.0012,
+%          1007.2355 (CR9's glue class)
+% oracle:  pdflatex 0 errors: "1 Department of Zebra, School of Yak" / "Owl University, Gnu City" on two lines, then
+%          "2 Emu Institute" / "E-mail: bob@emu.edu" / "Kiwi Town"; Perl keeps the <break/>
+% engines: rust (PBb) "School of YakOwl University", 0 Warnings
+% expect:  0 errors, 0 warnings; Ann's address "1 Department of Zebra, School of Yak<break/>Owl University, Gnu City",
+%          Bob's "2 Emu Institute<break/>Kiwi Town" (one break: the e-mail line between is cut out, its own contact)
+% status:  RED (PBb) -> GREEN (CR10b)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$}
+\address{$^{1}$ Department of Zebra, School of Yak\\
+Owl University, Gnu City\\
+$^{2}$ Emu Institute\\ E-mail: bob@emu.edu\\ Kiwi Town}
+\end{frontmatter}
+x
+\end{document}

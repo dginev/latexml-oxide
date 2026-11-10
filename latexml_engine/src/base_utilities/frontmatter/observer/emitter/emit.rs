@@ -2573,15 +2573,24 @@ fn call_pieces(call: &ApiCall) -> Result<Vec<Piece>> {
       out.push((norm(&text), None));
       continue;
     };
+    // (a line break between two printed lines of the piece is the piece's: its mark's entry runs on to the next mark, as
+    // Perl's address and pdflatex print it, the break kept — `\address{$^{1}$ Dept, School of Yak\\ Owl University\\
+    // $^{2}$ …}`, 2212.03638, 2211.03175, cond-mat0204589, 0904.3899, 1311.0012, 1007.2355, which printed "School of
+    // YakOwl University". A break with no printed line before it since the last one kept, or none after it, is cut, as
+    // the contact it parts off is: `Dept\\ \email{x}\\ Univ` keeps one)
+    let kept = kept_breaks(&piece);
     let cuts = piece
       .iter()
-      .filter(|e| {
+      .enumerate()
+      .filter(|&(at, e)| {
         !(matches!(
           e.kind,
           EventKind::Name | EventKind::Sep(_) | EventKind::Layout
         ) || (shown && e.kind == EventKind::Mark)
-          || e.nest > 0)
+          || e.nest > 0
+          || kept.contains(&at))
       })
+      .map(|(_, e)| e)
       .filter_map(|e| e.span)
       .filter(|&(s, t)| {
         let (s, t) = (usize::from(s), usize::from(t));
@@ -2610,6 +2619,34 @@ fn call_pieces(call: &ApiCall) -> Result<Vec<Piece>> {
     ));
   }
   Ok(out)
+}
+
+/// The line breaks of a piece ([`call_pieces`]) it keeps: a `\\` (no paragraph, section or column break) outside any
+/// container, with a printed line before it since the last one kept and one after it before the next break — a name's
+/// letters, or a word the reading parts at (`Turkey\\ and\\ Institute …`, a line of "and" alone: 1305.3804).
+fn kept_breaks(piece: &[Event]) -> Vec<usize> {
+  let printed = |e: &Event| match &e.kind {
+    EventKind::Name => e.text.chars().any(char::is_alphanumeric),
+    EventKind::Sep(events::SepKind::Word(_)) => true,
+    _ => false,
+  };
+  let mut kept = Vec::new();
+  let mut line = false;
+  for (at, e) in piece.iter().enumerate() {
+    if printed(e) {
+      line = true;
+    } else if e.kind == EventKind::Break {
+      let next = piece[at + 1..]
+        .iter()
+        .take_while(|e| e.kind != EventKind::Break)
+        .any(printed);
+      if line && next && e.nest == 0 && e.break_kind.is_none() && e.span.is_some() {
+        kept.push(at);
+        line = false;
+      }
+    }
+  }
+  kept
 }
 
 /// The declarations of the blocks not yet emitted: an entry of their tokens, digested in the flush's group.
@@ -4890,10 +4927,33 @@ fn recover_queued(
   // (each source: its index, its noted entries, and its command and role when it is a call)
   type Source = (usize, Vec<RawFrontmatter>, Option<(String, String, Tokens)>);
   let sources: Vec<Source> = with_ledger(|ledger| {
-    let sources = ledger.entries().iter().filter_map(|entry| match entry {
+    // (a block of no name in the queue of a block read here — jheppub's `\author{\abstract{We define …} \keywords{defect
+    // operator, …}}` after three named `\author[x]{…}`, which pdflatex prints as the abstract and the keywords, 1211.2861:
+    // all lost with no Warning — runs its setters as a read block does, when no later block of its queue replaced it nor a
+    // clear removed it: a replaced `\author` is never typeset, nor are the setters in it)
+    let entries = ledger.entries();
+    let epochs: BTreeSet<usize> = read
+      .iter()
+      .filter_map(|&at| match entries.get(at) {
+        Some(Entry::Author(block)) => Some(block.epoch),
+        _ => None,
+      })
+      .collect();
+    let replaced = |block: &AuthorBlock| {
+      entries[block.index + 1..].iter().any(|entry| {
+        matches!(entry, Entry::Author(later) if later.epoch == block.epoch && later.replace)
+      })
+    };
+    let nameless = |block: &AuthorBlock| {
+      epochs.contains(&block.epoch)
+        && !block.cleared
+        && !replaced(block)
+        && matches!(block.outcome, Outcome::Events { .. })
+    };
+    let sources = entries.iter().filter_map(|entry| match entry {
       Entry::Author(block)
         if !block.queued.is_empty()
-          && read.contains(&block.index)
+          && (read.contains(&block.index) || nameless(block))
           && !whole.contains(&block.index) =>
       {
         Some((block.index, block.queued.clone(), None))

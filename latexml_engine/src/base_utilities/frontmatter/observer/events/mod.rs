@@ -841,7 +841,7 @@ fn script_ink(d: &Digested, refs: bool) -> String {
       // (what any other whatsit shows, walked as `ink_text` walks it, its notes and printless references read here)
       DigestedData::Whatsit(w) => {
         let w = w.borrow();
-        if let Some(Stored::Digested(a)) = w.get_property("alignment").as_deref() {
+        for a in &printed_properties(&w) {
           ink(a, refs, out);
         }
         for (arg, shown) in w.get_args().iter().zip(shown_arguments(&w)) {
@@ -1764,9 +1764,7 @@ impl Walker {
   /// shows nothing, nothing.
   fn walk_container(&mut self, d: &Digested, w: &Whatsit, cs: &str, nest: u8) {
     let mut contents: Vec<Digested> = Vec::new();
-    if let Some(Stored::Digested(a)) = w.get_property("alignment").as_deref() {
-      contents.push(a.clone());
-    }
+    contents.extend(printed_properties(w));
     // (only the arguments it shows, as `typesets_content` reads them: not a box's or an alignment's placement — the
     // `[t]` of `\begin{tabular}[t]{c}`, `\parbox[t]`, `\begin{minipage}[b]`, the `[l]` of `\makebox[3cm][l]`: a
     // `Position` parameter, util_text.rs `shown_arguments` —, nor keyvals or a verbatim key)
