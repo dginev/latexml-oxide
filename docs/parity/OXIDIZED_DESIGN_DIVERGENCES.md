@@ -34007,7 +34007,7 @@ creators) and 2604.04847 byte-identical too.
 1,656, `TOKEN_READS` `author_block` 236 → 195 and `rest /author_split_tests.rs` 19 → 18). Repros
 `tools/perfect_kernel/repros/sectioning-frontmatter/aastex_affil_marked_email_line_{no_one_spells_is_the_marked_authors,of_its_own_no_one_spells}.tex`.
 
-### 993. An author call parts at the `\and` its spelling hides, on the block routes: the reading cuts the rehearsed block at its own `Sep(And)` events (OC1, Option C's P1; the API route open, OC1b)
+### 993. An author call parts at the `\and` its spelling hides: the reading cuts the rehearsed block, or an API creator call, at its own `Sep(And)` events (OC1, Option C's P1; the API route OC1c)
 
 **Perl.** Every binding splits an author list by spelling before digestion: `SplitTokens` compares tokens by name
 (`Base_Utility.pool.ltxml:114-140`, `@authorsplits` :679), so a separator held in a macro (`\author{\aut}`,
@@ -34032,33 +34032,46 @@ sv_support, webofc and ptephy; llncs's marked split; the IEEEtran grid and wrap 
 `\lx@IEEE@authblk@author`, `contains("authorblockN")`); eptcs's cells; `note_and_numbering` (`frontmatter_stores.rs:4481`);
 nowfnt's `\and` blocks (`frontmatter_stores.rs:6000`); and the 11 gates on a literal `\and` the plan's row counts.
 
-**Open: the API route (OC1b; revOC1 B1).** A binding that hands one whole argument to `\lx@add@creator` /
-`\lx@add@author` makes an API creator call that holds the `\and`, and nothing cuts it: acmart's `\author` with no comma
-(`acmart_cls.rs` `\lx@acmart@author`) gives one creator "Ann Able and Bob Baker" (E 1, `merged_creators`) for the
-literal, macro-held, `\csname`, wrapper and active-character spellings, where pdflatex prints two authors and Perl one
-(acmart.cls.ltxml:89); quantumarticle's `\author` the same (no oracle: TL 2025 pdflatex fails on the class); ecai's
-`\author` routes only a literal top-level `\and` to the block (`ecai_cls.rs`), so a macro-held one reaches the API.
-Witnesses 1909.10278 (E 1) and 2501.11185 (both institutes in the one name, E 0 W 1); 15 of the census's 873 acmart
-papers spell a literal `\and` with no top-level comma (a source scan). A cut in the reading (`Resolver::api`) is not
-enough where it counts most: the emitter stays out of a paper with no author block (`emitter/emit.rs` `stays_out`,
-"no author block"), where acmart's papers are. In a paper with a block the emitter reuses a queued API call only when it
-gives exactly one creator (`sole`, ~4646-4655) and otherwise writes each creator by name or by text, its own
-`author:N` (~4317-4358), so OC1b's byte-identical block-plus-call probe more likely shows the cut not firing than the
-emitter ignoring it (review revOC1b S1, suspected from the code); the call's rehearsal has no positions to cut its tokens
-by (`ledger.rs` `ApiCall`). The next batch first prints the API call's events and whether the cut fires
-(`acm_mixblock.tex`; the call's content is the whole `\lx@personname{\lx@author@withinst{…}}` group), then has the emitter
-run in a no-block paper holding such a call and write it as N creator calls, by text where no spans exist, as the
-contact side's `split_pieces` does (`resolver/api.rs`, used at `emit.rs` ~1833). authblk is red on this route too
-(review revOC1b S2): `\newcommand\aut{Ann Able \and Bob Baker}\author{\aut}\affil{Univ X}` gives one merged creator, E 1
-W 1, where its literal `\and` parts — `authblk_sty.rs` ~122-126 tests the spelling and falls back to `\lx@add@creator`
-(~173), the general shape of any binding whose spelling test finds no separator (ecai's too). The API creator callers, by
-a grep for `\lx@add@creator` / `\lx@add@author` in `latexml_package/src` and `latexml_contrib/src` (which misses, review revOC1b S3, `\lx@add@editor` — omnibus `\editors` —, `\lx@add@translator` — ams_support's and amsppt's `\translator` —, and the raw-class store route, `latexml_core/src/binding/store_setters.rs` ~88-90): acmart (`\author`,
-`\editor`), quantumarticle, arximspdf, aipproc, icml_support (`\icmlauthor`), jmlr (`\Name`), czipreprint, meta_class,
-interspeech, bytedance_seed, mrm, ceurart, lmcs, ecai, lipics, bmcart, beilstein, brief and g_brief (sender), jhep and
-omnibus (`\speaker`), ams_support (`\contrib`, `\commby`), authblk. Probed: acmart and quantumarticle (red), jmlr
-(`\Name{Ann Able \and Bob Baker}` prints one name, "Ann Able and Bob Baker", jmlr's `\and` a word: no two-author
-shape); the others unprobed (most have no class file in TL 2025). Repros
-`class-bindings/acmart_author_{and,macro_held_and}_parts_the_names_red.tex` (catalog, no guard). Residuals, red at int156a and outside this mechanism: a
+**The API route (OC1c; OC1b, revOC1 B1, revOC1b S1-S3).** A binding that hands one whole argument to the API makes one
+creator call holding the `\and`, which Perl keeps whole (acmart.cls.ltxml:89 `\lx@add@creator{#1}`; authblk.sty.ltxml:52-55
+by spelling): acmart's `\author` with no comma (`acmart_cls.rs` `\lx@acmart@author`, `separates_names`), quantumarticle's,
+authblk's and ecai's where their spelling test finds no separator (`authblk_sty.rs` `author_call` falls back to
+`\lx@add@creator`; ecai routes only a literal top-level `\and` to the block). pdflatex prints two authors (acmart.cls:2726
+`\let\and\@typeset@author@line`). The call's content is the whole `\lx@personname{\lx@author@withinst{…}}` group, so its
+`\and` is a `Sep(And)` at nest 1, inside the `\lx@personname` Layout: the reading's cut
+(`resolver::api::creator_call_pieces`, shared by `Resolver::api` and the emitter) takes an `\and` at that level, where every
+piece holding ink holds a name (one inside a container of the name or a note is that container's; `Ann Able \and
+\thanks{…}` stays whole). OC1b's cut tested nest 0 and never fired (measured by an event print on `acm_mixblock.tex`). The
+emitter writes such a call as one creator call per piece (`emit::creator_call_cut`): the call's own command, keyvals (role,
+label, annotations) and wrappers, the group holding the `\and`s holding the tokens between two of them, by positions from a
+fresh rehearsal of the content (the ledger's events carry none, `ApiCall::errors`), where each `\and`'s own tokens (a
+literal one, `\csname and\endcsname`, an active character) part no ink; else, a macro holding names and `\and`s together
+(`\author{\aut}`), each name by its text with a counted Warning (`by_text`), only where each piece prints its name alone
+(else the call stays whole, its merge counted by `merged_creators`). In a paper with no author block, where the emitter
+otherwise stays out (`emit.rs` `stays_out`), the queued entry is replaced by its pieces' calls (`cut_creator_calls`), the
+rest of the queue digested as Perl's, and an `annotate={run:<cap>}` after it (authblk's unlabelled `\affil`, `affil_run`,
+the authors queued since the last `\affil`) counts the pieces, so the `\affil` goes to every name, as pdflatex prints it
+under the shared mark. Beside a block the emission's per-creator loop writes each creator of the cut call as its piece, its
+own `author:N`. Witnesses 1909.10278 (one merged creator, E 1 → two, the affiliation on both and the shared
+`\email{{dlerch,dmegias}@uoc.edu}` on the last, as the PDF prints it under both; E 0) and 2501.11185 (one merged creator
+holding both institutes, W 1 → two, each with its institute line, W 0); 15 of the census's 873 acmart papers spell a
+literal `\and` with no top-level comma (a source scan). Routes, enumerated by the one choke point every API creator call
+passes, `queue_front_matter` → `ledger::record_api_call` (tag `ltx:creator`, not made by a block's own expansion), whose
+binding callers a grep for `\lx@add@(creator|author|editor|translator)` (not followed by `@` or a letter) and
+`\lx@add@frontmatter(@now)?{ltx:creator}` over `latexml_package/src`, `latexml_contrib/src` and `latexml_core/src/binding`
+finds (28 files, 3 of them comments only: openmoss, selfevolagent, sn_jnl): acmart (`\author`, `\editor`), quantumarticle,
+authblk, ecai, arximspdf, aipproc, icml_support (`\icmlauthor`), jmlr (`\Name`), czipreprint, meta_class, interspeech,
+bytedance_seed, mrm, ceurart, lmcs, lipics, bmcart, beilstein, brief and g_brief (sender), jhep and omnibus (`\speaker`,
+`\editors`), ams_support (`\contrib`, `\commby`, `\translator`), amsppt (`\translator`), and the core store reroute
+(`store_setters.rs`: `editor`, `editors`, `speaker`); the engine's own callers in `latexml_engine/src` are not listed. Probed and green: acmart
+(literal, `\csname`, active character, wrapper, macro-held; beside a block), authblk macro-held, quantumarticle literal and
+macro-held (two creators; no oracle, TL 2025 pdflatex fails on the class). jmlr's `\Name{Ann Able \and Bob Baker}` now
+gives two creators where the base gave one with `merged_creators`; pdflatex prints "Ann Able and Bob Baker" in one
+`\Name` (jmlr's `\and` a word there). Not cut: a call in a paper whose author block no rehearsal read (`stays_out` with a
+`SkipReason`: the queue is Perl's), and a call a block's own expansion made (`ApiCall::inside`). The others unprobed (most
+have no class file in TL 2025). Guard `perfect_kernel_batchoc1c::an_api_creator_call_parts_at_its_own_and`; repros
+`class-bindings/acmart_author_{and,csname_and,active_and,wrapper_and,macro_held_and,and_call_beside_a_block}_parts_the_names.tex`,
+`sectioning-frontmatter/authblk_author_macro_held_and_parts_the_names.tex`. Residuals, red at int156a and outside this mechanism: a
 `\let` copy of `\and` (`\let\nx\and`) keeps the kernel's meaning in the rehearsal, which binds its vocabulary by name,
 so the block holds no `Sep(And)` (one merged creator and `Error:frontmatter:merged_creators` under article, eptcs and
 IEEEtran journal; Perl two creators); and IEEEtran's `\author` routes to the grid by spelling (`body.to_string().contains("authorblockN")`,
