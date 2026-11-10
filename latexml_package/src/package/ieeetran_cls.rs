@@ -360,16 +360,7 @@ LoadDefinitions!({
     // (a reference mark among other marks is the symbol it prints: 2312.10807, OXIDIZED_DESIGN_DIVERGENCES #968)
     let body = printed_refmarks(body);
     let (target, body) = if body.to_string().contains("authorblockN") {
-      // Transpose a genuine `\and`×`\\` grid to row-major reading order first
-      // (arXiv:2403.16405); a single-row `\and` list is returned unchanged. Then
-      // wrap any trailing bare-text run (a loose email after `\IEEEauthorblockA`) in
-      // `\IEEEauthorblockA{}` so it attaches to the creator instead of leaking into
-      // the body (arXiv 1901.07768).
-      (T_CS!("\\lx@IEEE@author@blocks"),
-       {
-         let body = wrap_bare_author_block_text(transpose_ieee_author_grid(body));
-         if ours { block_name_memberships(body) } else { body }
-       })
+      (T_CS!("\\lx@IEEE@author@blocks"), author_block_body(body, ours))
     } else {
       (T_CS!("\\lx@IEEE@author@plain"), if ours { Tokens::new(name_memberships(body.unlist())) } else { body })
     };
@@ -381,16 +372,51 @@ LoadDefinitions!({
   // 2505.19506, 2506.05637; Perl the same, IEEEtran.cls.ltxml:143). Once authblk is loaded, its `\author` reads the
   // grades of its names as this one does (`name_memberships`, `block_name_memberships`) and then adds the authors as
   // authblk does — conference mode still swallowing them (`\lx@IEEE@membership`; OXIDIZED_DESIGN_DIVERGENCES #950).
+  // A body of author blocks (`\author{\IEEEauthorblockN{Ann Able,~\IEEEmembership{Member,~IEEE}, Bob Baker and Cy
+  // Coe}\thanks{…}}`; 2402.16140, 1611.02001, 1708.05281, 1810.08035, 2310.18257, 2409.09417) is read as the class's
+  // own `\author` reads it (`printed_refmarks`, `author_block_body`; `\IEEEauthorblockN` one author each), its authors
+  // added after those before them as authblk adds every `\author`'s (authblk.sty:114-145; the class's
+  // `\lx@IEEE@author@blocks` replaces them), then authblk's bookkeeping (`\lx@AB@author@state`, `\lx@author@after`,
+  // authblk_sty.rs). Through authblk's own call the block was one creator around the nested `\IEEEauthorblockN` call,
+  // which printed nothing there: every author lost without a Warning. Perl's `\IEEEauthorblockN` is `#1`
+  // (IEEEtran.cls.ltxml:144), its authblk `\author` one creator holding every name (authblk.sty.ltxml:55); pdflatex
+  // prints each name. A labelled call gives each name the label (`\lx@IEEE@authorblockN@labelled`), as authblk's
+  // `\author[1]{Ann Able, Bob Baker}` does. OXIDIZED_DESIGN_DIVERGENCES #987.
+  DefMacro!("\\lx@IEEE@authblk@blocks{}", "\\begingroup\\def\\and{}#1\\endgroup");
+  DefMacro!("\\lx@IEEE@authorblockN@labelled{}{}", "\\lx@add@authors@append[annotations={#1}]{#2}");
   DefMacro!("\\lx@IEEE@authblk@author[]{}", sub[(label, body)] {
-    let body = if class_membership()? {
-      if body.to_string().contains("authorblockN") {
-        block_name_memberships(body)
-      } else {
-        Tokens::new(name_memberships(body.unlist()))
+    let ours = class_membership()?;
+    if body.to_string().contains("authorblockN") {
+      let label_tokens = label.clone().unwrap_or_default();
+      let mut blocks = author_block_body(printed_refmarks(body.clone()), ours).unlist();
+      if label.is_some() {
+        let blockn = T_CS!("\\IEEEauthorblockN");
+        blocks = blocks
+          .into_iter()
+          .flat_map(|t| {
+            if t == blockn {
+              let mut call = vec![T_CS!("\\lx@IEEE@authorblockN@labelled"), T_BEGIN!()];
+              call.extend(label_tokens.unlist_ref().iter().copied());
+              call.push(T_END!());
+              call
+            } else {
+              vec![t]
+            }
+          })
+          .collect();
       }
-    } else {
-      body
-    };
+      let mut call = vec![T_CS!("\\lx@IEEE@authblk@blocks"), T_BEGIN!()];
+      call.extend(blocks);
+      call.extend([T_END!(), T_CS!("\\lx@AB@author@state"), T_BEGIN!()]);
+      call.extend(label_tokens.unlist_ref().iter().copied());
+      call.extend([T_END!(), T_BEGIN!()]);
+      call.extend(body.unlist_ref().iter().copied());
+      call.extend([T_END!(), T_CS!("\\lx@author@after"), T_BEGIN!()]);
+      call.extend(body.unlist_ref().iter().copied());
+      call.push(T_END!());
+      return Ok(Tokens::new(call));
+    }
+    let body = if ours { Tokens::new(name_memberships(body.unlist())) } else { body };
     // (its optional label exactly as written, an empty one too: authblk's `\author[]{…}` is no unlabelled `\author`,
     // 2005.04149, 2105.12254)
     let mut call = vec![T_CS!("\\lx@IEEE@AB@author")];
@@ -1106,6 +1132,20 @@ fn split_top_level(tokens: &[Token], delim: &Token) -> Vec<Vec<Token>> {
     }
   }
   parts
+}
+
+/// An author-block body (`\IEEEauthorblockN`) as IEEEtran's `\author` runs it, the class's own and authblk's alike: a
+/// genuine `\and`×`\\` grid transposed to row-major reading order first (arXiv:2403.16405; a single-row `\and` list is
+/// returned unchanged), then any trailing bare-text run (a loose email after `\IEEEauthorblockA`) wrapped in
+/// `\IEEEauthorblockA{}` so it attaches to the creator instead of leaking into the body (arXiv 1901.07768), then, when
+/// `\IEEEmembership` is the class's (`ours`), each name's grade made its contact (`block_name_memberships`).
+fn author_block_body(body: Tokens, ours: bool) -> Tokens {
+  let body = wrap_bare_author_block_text(transpose_ieee_author_grid(body));
+  if ours {
+    block_name_memberships(body)
+  } else {
+    body
+  }
 }
 
 /// Transpose a genuine IEEEtran `\and`×`\\` author grid from column-major

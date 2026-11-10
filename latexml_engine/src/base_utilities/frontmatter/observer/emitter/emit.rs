@@ -28,7 +28,7 @@ use super::{
 use crate::base_utilities::{
   defs::{
     author_macros::KEPT_WHOLE,
-    frontmatter_api::{BLOCK_CREATOR, LABEL_PRINTS, PRINTED_LABEL},
+    frontmatter_api::{BLOCK_CREATOR, CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL},
     frontmatter_fields::orcid_icon_link,
   },
   frontmatter::{
@@ -152,6 +152,18 @@ fn whole_marks_key(c: &RCreator, labels: &[String]) -> Vec<Token> {
   key.push(T_BEGIN!());
   key.extend(ExplodeText!(&shown.join(";")));
   key.push(T_END!());
+  key
+}
+
+/// The key `_corresponding=true` on a creator the reading marks the corresponding author ([`RCreator::corresponding`]), which
+/// the Link step of an entry's addresses reads for the one address left of several carriers (`insert::link_entry_addresses`,
+/// repro llncs_legend_corresponding_author_takes_the_left_address); empty for any other.
+fn corresponding_key(c: &RCreator) -> Vec<Token> {
+  if !c.corresponding {
+    return Vec::new();
+  }
+  let mut key = vec![T_OTHER!(",")];
+  key.extend(key_tokens(&s!("{CORRESPONDING}=true")));
   key
 }
 
@@ -4112,6 +4124,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       out.push(entry("ltx:creator", tokens.unlist()));
       continue;
     }
+    // (a block kept whole is no one creator: none of its names is the corresponding author's)
+    keys.extend(corresponding_key(c));
     // (the call, where it is this creator alone)
     let sole = per_source.get(&c.source) == Some(&1);
     let call = (!by_block.contains_key(&c.source) && sole)
@@ -4149,6 +4163,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       head.extend(cs_group_args(&["ltx:creator"]));
       let mut keys = creator_keys(c, &annotations[i]);
       keys.extend(whole_marks_key(c, &annotations[i]));
+      keys.extend(corresponding_key(c));
       with_key_tokens(head, keys, &content)
     });
     out.push(entry("ltx:creator", tokens.unlist()));

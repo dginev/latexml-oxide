@@ -29952,7 +29952,7 @@ sectioning-frontmatter/`author_block_leading_spacer_lines_are_no_names_line` (RE
   `\author`, so each grade reached `\lx@IEEE@membership@drop`. IEEEtran's binding now hooks authblk's load
   (`\AddToHook{package/authblk/after}`): authblk's `\author` is kept as `\lx@IEEE@AB@author`, and `\author` reads the
   grades of its names as the binding's own does (`name_memberships`, `block_name_memberships`, only while
-  `\IEEEmembership` is the class's) before handing the names to authblk's, the optional label exactly as written (an
+  `\IEEEmembership` is the class's) before handing the names to authblk's (a body of `\IEEEauthorblockN` blocks is read as the class's: #987), the optional label exactly as written (an
   empty `\author[]{…}` is no unlabelled `\author`: dropped, 2005.04149's, 2105.12254's and 2312.15778's addresses were
   welded into the affiliation). Conference mode
   still swallows them (`\lx@IEEE@membership`; pdflatex errs on an `\IEEEmembership` in authblk's `\author` there, an
@@ -33184,9 +33184,7 @@ printed (2501.11774), unless the text written holds a control sequence's name or
 an address merely not well-formed (`\{a,b\}@x\_y.org` prints `a@x_y.org`, all it is: review revZ18d finding 1); an address line ending an entry takes the separator the line before it ends in (`address_cuts`:
 2407.18381's `(EPFL), \\ \texttt{…}`). **Not moved here** (the reroute's own, kept with it): the `\\` line rules of a whole
 llncs list (a names line after an affiliation line, a line after an inline `\and`, a name carrying an ORCID). **Residuals:**
-the Link step's corresponding-author fact reads the DOM's notes only, not a legend that says so (`\inst{1,2}` under
-`\and Corresponding author`: the left address the block's; the old rule, `Resolver::listed_corresponding`, reads both:
-RED `class-bindings/llncs_legend_corresponding_author_takes_the_left_address.tex`); separators after an entry's last call
+separators after an entry's last call
 stay (`Naples, Italy,`, 2605.21246, 2210.09234, 1408.0510, as in the old split); a later template call stays on the
 last author, a list's control-symbol macro is counted missing (pre-existing); a `\footnote` inside a list `\email`
 leaves the note's name in the address text (pre-existing, RED `class-bindings/llncs_list_email_note_name_leaks_into_address.tex`).
@@ -33281,7 +33279,22 @@ llncs_institute_labelled_unread_line_is_block_email}` (the links kept, W 2 → 0
 `perfect_kernel_batche0` pins `emitter/emit` 44 → 58 and `emitter` 61 → 63 (`joined_run_link` writes the run's calls
 as printed; the decision is the events' targets). **Measured** (the same 2,734): against Z18h 2,732 byte-identical, so
 against int154x the same 2,625; the 2 others are 2505.15472 (W 3 → 1, int154x 2) and 1710.01968 (W 1 → 4, int154x 2:
-three addresses counted, robin.andre@'s link kept).
+three addresses counted, robin.andre@'s link kept). S5 (review revZ18c S5, revZ18d): the corresponding author is
+decided once, on the reading. `Resolver::corresponding` reads a note naming the creator so **and** a legend a mark of theirs
+requests (`correspondence_legends`, `marked_corresponding`: the predicate `listed_corresponding` had alone); every step
+placing a left-over address reads it — `answer_inner_emails` and `take_out_entry_addresses` (`EntryOwnerFacts`),
+`place_emails_left`, the block's address step. The reading stores it on the creator (`RCreator::corresponding`), the
+emitter writes it as the declared transient key `_corresponding` (`frontmatter_api::CORRESPONDING`; dropped at output), and
+the Link step (`insert::link_entry_addresses`) reads that key in place of its own scan of the DOM's notes, deleted.
+`\author{Ann Able\inst{1,2} \and Bob Baker\inst{1}}\institute{Univ X, Town\\ \email{zz9@x.edu} \and Corresponding author}`
+gives zz9@ to Ann Able (the block's before). A declined paper (the emitter stays out) marks no one, its left-over address the
+block's. `insert::link_entry_addresses`' `readable` stays: it reads which addresses a contact prints, not who is the
+corresponding author. Repro `class-bindings/llncs_legend_corresponding_author_takes_the_left_address.tex` (RED → GREEN),
+guard `perfect_kernel_batchs5`; `perfect_kernel_batche0` key pins `const _corresponding` and `declared _corresponding`
+0 → 1 (undeclared, the key's `Info:undefined` report changed 1512.06325's paragraphs after its title page). **Measured**
+(ERR2 dumps, against int154u): the 699 llncs, the 1,434 stage2 ids and 658 aa/elsarticle papers using `\cortext`/`\corref`
+(2,780 ids, 2,776 compared, 4 unconverted on both sides) byte-identical in XML and E/F/W, save 0909.4443's math ids
+(differing between two runs of the base too).
 
 ### 985. What the old driver wrote at the flush and the emitter had lost: an svjour3 owner label's `\email`, and a frontmatter setter run inside an author block or an API call (CR2)
 
@@ -33416,6 +33429,37 @@ ties no block to an author, but the block reprints its authors' e-mails, which t
 alike).
 
 **Known REDs (review revCR4b finding 2, synthetic):** the per-label attribution's `annotate=run` fallback does not end its run at the `author:N` contacts an earlier cited block made, so an uncited block also reaches authors an earlier block went to (`imsart_address_block_fallback_run_q1_red.tex`), and a block naming three authors but citing only `e2` goes to that one (`…_q2_red.tex`); no word lost.
+
+### 987. IEEEtran's author blocks under authblk's `\author` are read as the class reads them, added after the authors before (CR6)
+
+**What.** ieeetran_cls.rs `\lx@IEEE@authblk@author` (authblk's `\author` once IEEEtran's binding hooks authblk's load,
+#950). A body holding `\IEEEauthorblockN` (`\author{\IEEEauthorblockN{Ann Able,~\IEEEmembership{Member,~IEEE}, Bob Baker
+and Cy Coe}\thanks{…}}`) went to authblk's one creator call, inside which the binding's `\IEEEauthorblockN`
+(`\lx@add@authors@append`) is a nested author call that printed nothing in the rehearsal: the creator was dropped, every
+author lost with 0 Warnings. Now such a body is read as the class's own `\author` reads it (`printed_refmarks`,
+`author_block_body`: the grid transposed, bare trailing text wrapped, each name's grade its `membership` contact), run in
+a group with `\and` empty (`\lx@IEEE@authblk@blocks`) — without the class's `\lx@IEEE@author@begin`/`@end`, so its
+authors are added after those before them as authblk adds every `\author`'s (authblk.sty:114-145), where the class's own
+`\author` replaces them — then authblk's bookkeeping (`\lx@AB@author@state`, `\lx@author@after`). A labelled call gives
+each block's names its label (`\lx@IEEE@authorblockN@labelled` → `\lx@add@authors@append[annotations={label}]`), as
+authblk's `\author[1]{Ann Able, Bob Baker}`, so `\affil[label]` reaches them.
+
+**Why.** pdflatex prints every name (IEEEtran.cls's `\IEEEauthorblockN` under authblk's `\author`). Perl:
+`\IEEEauthorblockN` is `#1` (IEEEtran.cls.ltxml:144) and authblk's unlabelled `\author` without `\and` one
+`\lx@add@creator` (authblk.sty.ltxml:55), so it keeps the names as one creator, no grade (IEEEtran.cls.ltxml:143).
+
+**Witnesses** (int154u → CR6): 2402.16140, 1611.02001, 1810.08035, 2409.09417 (0 creators → 3, 4, 3, 3, the grades as
+membership contacts), 1708.05281 (one nameless creator holding every line, 4 Warnings → 6 authors, each with its marked
+affiliation and e-mail, 0 frontmatter Warnings). 2602.05517 (no authblk) and 1,434 stage2 papers byte-identical.
+
+**Left** (pre-existing in the class's own path, identical without authblk): a `\\` inside an `\IEEEauthorblockN` names
+list before more names (`\IEEEauthorblockN{Ann Able, {\em Member, IEEE}, Bob Baker,\\ Cy Coe, … and Dee Dale}`,
+1810.08035) reads the names after it as the first names' affiliation, 0 Warnings (words kept).
+
+Repros `class-bindings/ieeetran_authblk_blockn_names`, `class-bindings/ieeetran_authblk_blockn_calls_accumulate`; guards
+`perfect_kernel_batchcr6::{authblk_author_reads_ieee_author_blocks, authblk_author_blocks_accumulate_and_take_labels}`.
+
+**Known RED (review revCR67, CR6 S1, synthetic — TL 2025's pdflatex cannot compile it):** the labelled path rewrites `\IEEEauthorblockN` only, not its old alias `\authorblockN`, so `\author[1]{\authorblockN{Ann Able} …}` with `\affil[1]{Univ Z}` gives the names no Univ Z (a nameless creator holds it, 0 Warnings; the base lost the names entirely).
 
 ### 988. The footnote-counter and definition declines write the block as Perl's `\lx@add@authors` does, split where Perl splits it (CR7)
 

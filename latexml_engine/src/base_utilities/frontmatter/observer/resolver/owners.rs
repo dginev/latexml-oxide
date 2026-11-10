@@ -924,7 +924,9 @@ pub fn entry_address_owners(
 /// `row_address_owners`, Z18c): every name each address spells (`spellers`) — one spelling several names alike, none of
 /// them the carrier at its place, puts the run in no order: `x1@, x2@, lee@` under Ann Lee, Bob Lee and Cid Cole is the
 /// block's (repro llncs_ambiguous_spelling_is_no_place), while 2102.08148's `jtchen721@` at Jintai Chen's place beside
-/// Danny Z. Chen stays his —; and the one carrier marked the corresponding author (a note naming them so),
+/// Danny Z. Chen stays his —; and the one carrier marked the corresponding author (a note naming them so, or a legend
+/// a mark of theirs requests: the reading's one fact, `Resolver::corresponding`, the Link step's by the creator's
+/// `_corresponding`; repro llncs_legend_corresponding_author_takes_the_left_address),
 /// whose the one address left on the block of several is (`\author{Ann Able\thanks{Corresponding author} \and Bob
 /// Baker}\institute{Univ X\\ \email{zz@x.edu}}`, repro llncs_corresponding_author_takes_the_left_address).
 /// A template's address or a list the reader could not part (`{first.last}@x.org`, `is_pattern_address`,
