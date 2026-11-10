@@ -468,6 +468,9 @@ mod perfect_kernel_batchm3;
 /// MB1: the one label rule of the Kind step's lines — a labelled line named after the class's name of the entry, a
 /// mailbox link line's as an e-mail label's; OD #992.
 mod perfect_kernel_batchmb1;
+/// MB2: the entry-name join — aa's name as aa.cls prints it ("Correspondence to: ", one space before a label), a
+/// glued-label line named by the class; OD #944, #992.
+mod perfect_kernel_batchmb2;
 mod perfect_kernel_batchn1;
 mod perfect_kernel_batchn2;
 mod perfect_kernel_batchn2r2;

@@ -1,0 +1,31 @@
+% mechanism: the entry-name join's glued-label path (defs/frontmatter_api/kind.rs, the `(None, Some(name))` arm): a
+%   line whose e-mail label is glued to its address (`Email:zz@x.org`) is one address list (`email_addresses` reads it
+%   through its glued-label arm), so `email_line_label` gives no label and the line takes the class's name of the
+%   entry, aa's `\mail` `name={\mailname\ }` (aa_support_sty.rs); before MB1 it fell to the unnamed address call and
+%   was named "Email: ", the class's name printed nowhere. Perl reads no e-mail in `\mail` (aa_support.sty.ltxml:118-119)
+% witness: none in the corpus (synthetic, review revMB1 S1, probe p/a1)
+% oracle:  pdflatex (TL 2025) 0 errors: "T", "A. Smith", "Univ. X, Y", "Body.", footnote "Correspondence to:
+%          Email:zz@x.org"
+% engines: rust int156a (27ca6acecc) = <contact name="Email: " role="email">; rust MB1 (0da5a8b23c) = <contact
+%          name="Correspondence to " role="email">, the colon lost
+% expect:  0 errors, 0 warnings; A. Smith: Univ. X, Y and <contact name="Correspondence to: " role="email">
+%          Email:zz@x.org
+% status:  RED (MB1) -> GREEN (MB2) — perfect_kernel_batchmb2::glued_label_line_takes_the_class_name
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aa.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{aa}[2010/01/01 v7.0 stand-in]
+\LoadClass{article}
+\def\mailname{{\it Correspondence to\/}:}
+\def\email#1{{e-mail: \tt#1}}
+\def\institute#1{\gdef\@institute{#1}}\def\@institute{}
+\def\mail#1{\gdef\@mail{#1}}\def\@mail{}
+\def\@maketitle{{\Large\@title\par}\@author\par\@institute\par
+  \if!\@mail!\else\footnotetext[0]{\mailname\ \ignorespaces\@mail}\fi}
+\end{filecontents*}
+\documentclass{aa}
+\usepackage{hyperref}
+\begin{document}
+\title{T}\author{A. Smith}\institute{Univ. X, Y}\mail{Email:zz@x.org}\date{Received 2010}
+\maketitle
+Body.
+\end{document}

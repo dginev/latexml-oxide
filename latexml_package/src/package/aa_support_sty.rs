@@ -132,22 +132,25 @@ LoadDefinitions!({
   DefMacro!("\\rnotname", "(RN)");
   DefMacro!("\\headnote{}", "\\lx@add@pubnote[role={note},name={}]{#1}");
   DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication,name={}]{#1}");
-  // The italic in a group, as aa.cls's `{\it Correspondence to\/}`: Perl's `\it Correspondence to \/`
-  // (aa_support.sty.ltxml:118) left the name's `\it` on the address and on every frontmatter item after it (the date,
-  // 2012.11607's names and affiliations); the text, its space after it, Perl's.
-  DefMacro!("\\mailname", "{\\it Correspondence to\\/}\\ ");
+  // aa.cls's own `\def\mailname{{\it Correspondence to\/}:}` (every copy that defines it, 129 of 434 `\mail` papers:
+  // 0705.1240, 1005.3784, 0805.1001; OXIDIZED_DESIGN_DIVERGENCES #944), the italic in a group: Perl's
+  // `\it Correspondence to \/` (aa_support.sty.ltxml:118) left the name's `\it` on the address and on every frontmatter
+  // item after it (the date, 2012.11607's names and affiliations) and lost the colon the class prints. The space after
+  // it is the print code's, not the name's (`\mailname\ \ignorespaces\@mail`): `\mail`'s `name={\mailname\ }` below.
+  DefMacro!("\\mailname", "{\\it Correspondence to\\/}:");
   // Labelled as the paper's copy prints it (FIDELITY_CHARTER §4; OXIDIZED_DESIGN_DIVERGENCES #944): aa.cls v4.03-v7.0
   // print `\footnotetext[0]{\kern-\bibindent\mailname\ \ignorespaces\@mail}`, `\mailname` = `{\it Correspondence
   // to\/}:` (1005.3784's v7.0 :272, :466-468; 0805.1001's v6.1 :264, :457-459; 129 of 434 `\mail` papers); the later
   // copies only store it (`\newcommand*\mail[1]{\renewcommand*\aa@mail{#1}}`, 2007.14739's :965-966, which nothing
   // reads; 297 papers, 2012.11607, 2606.29508) and print neither the address nor a label, so the item has none. Read
-  // off the copy's code, not its version; no copy shipped (1209.2606), Perl's label (aa_support.sty.ltxml:118-119).
+  // off the copy's code, not its version; no copy shipped (1209.2606), labelled as Perl labels it
+  // (aa_support.sty.ltxml:118-119), in aa.cls's text above.
   // (printed in the footnote, after the institutes under the names, whenever it is queued: its print zone the footer's,
   // `_zone=footer`, OXIDIZED_DESIGN_DIVERGENCES #954)
   if shipped_class_text("aa")?.is_some_and(|text| !class_code_contains(&text, "\\mailname")) {
     DefMacro!("\\mail {}", "\\lx@add@address[name={},_zone=footer]{#1}");
   } else {
-    DefMacro!("\\mail {}", "\\lx@add@address[name={\\mailname},_zone=footer]{#1}");
+    DefMacro!("\\mail {}", "\\lx@add@address[name={\\mailname\\ },_zone=footer]{#1}");
   }
   DefMacro!("\\doi{}", "\\lx@add@pubnote[role=doi]{#1}");
   DefMacro!("\\DOI{}", "\\lx@add@pubnote[role=doi]{#1}");

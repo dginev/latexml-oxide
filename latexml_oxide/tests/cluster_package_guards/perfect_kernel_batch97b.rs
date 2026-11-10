@@ -54,7 +54,8 @@ fn both_ways(tex: &str, errors: usize) -> (String, String) {
 /// aa's `\mail{x}` under a copy of aa.cls that prints it ("Correspondence to: x", v4.03-v7.0) is one e-mail contact
 /// named by the class's label, where 95c's take-out of the address entry named it "Email: " and printed
 /// "Correspondence" nowhere (the writer keeps the emptied entry's own label, `holder_label`), the label's italic on no
-/// item after it (`\mailname`'s group); under a copy that only
+/// item after it (`\mailname`'s group), its colon the copy's ("Correspondence to: ", MB2, review revMB1 P2); under a
+/// copy that only
 /// stores it (v8 on, which prints neither), the binding gives it no label (`name={}`: no `\mailname`, no italic) and the
 /// contact has the class's e-mail default, as before. Witnesses 1005.3784, 0805.1001, 1102.1556 (printing); 2007.14739,
 /// 2012.11607, 2606.29508 (storing).
@@ -63,7 +64,7 @@ fn aa_mail_is_labelled_as_its_copy_prints_it() {
   let (_, xml) = both_ways(repro!("aa_mail_printing_copy_keeps_its_label"), 0);
   assert_eq!(
     xml,
-    r#"<title>T</title> <creator role="author"> <personname>A. Smith</personname> <contact name="Affiliation: " role="affiliation">Univ. X, Y</contact> <contact name="Correspondence to " role="email">smith@x.org</contact> </creator> <date role="creation">Received 2010</date> <para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para>"#
+    r#"<title>T</title> <creator role="author"> <personname>A. Smith</personname> <contact name="Affiliation: " role="affiliation">Univ. X, Y</contact> <contact name="Correspondence to: " role="email">smith@x.org</contact> </creator> <date role="creation">Received 2010</date> <para xml:id="p1"> <p xml:id="p1.1">Body.</p> </para>"#
   );
   let (_, xml) = both_ways(repro!("aa_mail_storing_copy_has_no_label"), 0);
   assert_eq!(
