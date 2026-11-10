@@ -46,6 +46,41 @@ fn is_all_ascii_digits(arg: &Tokens) -> bool {
   !s.is_empty() && s.chars().all(|c| c.is_ascii_digit())
 }
 
+/// An `\authors` list with each `\affil{…}` whose argument is numbers (`1`, `1,2`) written `\inst{…}`: the request
+/// of those numbered affiliations, read as llncs's mark is (`\authors`, below).
+fn numbered_affil_marks(list: Tokens) -> Tokens {
+  let tokens = list.unlist();
+  let mut out = Vec::with_capacity(tokens.len());
+  let mut at = 0;
+  while at < tokens.len() {
+    let t = tokens[at];
+    at += 1;
+    if t == T_CS!("\\affil") {
+      let open = at
+        + tokens[at..]
+          .iter()
+          .take_while(|t| t.get_catcode() == Catcode::SPACE)
+          .count();
+      if tokens.get(open).is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+        && let Some(close) = tokens[open + 1..]
+          .iter()
+          .position(|t| t.get_catcode() == Catcode::END)
+          .map(|end| open + 1 + end)
+      {
+        let text = Tokens::new(tokens[open + 1..close].to_vec()).to_string();
+        let numbers = text.chars().any(|c| c.is_ascii_digit())
+          && text.chars().all(|c| c.is_ascii_digit() || c == ',' || c == ' ');
+        if numbers {
+          out.push(T_CS!("\\inst"));
+          continue;
+        }
+      }
+    }
+    out.push(t);
+  }
+  Tokens::new(out)
+}
+
 /// OmniBus over the base class a stand-in binding loaded as its real file does (OXIDIZED_DESIGN_DIVERGENCES #736):
 /// provide-only ([`ProvideOnlyGuard`], as `\documentstyle` loads it over a class, sect01.rs), so it adds the frontmatter
 /// commands and environments the base class leaves undefined (`{keywords}`, `\email`, `\affiliation`, …) and replaces
@@ -221,26 +256,20 @@ LoadDefinitions!({
   // (AGU's agujournal2019, ametsoc, …) as an alternative to \author. It holds
   // ONE comma-separated list of authors, the last joined with "and", each name
   // trailed by an `\affil{n}` superscript that cross-references a numbered
-  // `\affiliation{n}{text}` block (see \affil / \affiliation below). Split it on
-  // comma + the literal " and " into SEPARATE creators (never one merged blob,
-  // never the old side-margin `<note role=authors>` — arXiv/html_feedback #6901,
-  // witness 2608.15512). Each piece keeps its `\affil{n}`, which registers the
-  // affiliation annotation on that creator during personname digestion. Empty
-  // pieces (a trailing comma, or the "and" split leaving nothing) are dropped.
+  // `\affiliation{n}{text}` block (see \affil / \affiliation below): separate
+  // creators (never one merged blob, never the old side-margin `<note role=authors>`
+  // — arXiv/html_feedback #6901, witness 2608.15512). The list goes whole to the
+  // reading (`\lx@add@author@split`, as llncs's `\author`, OD #984), which parts it
+  // at its commas and " and ". Inside it an `\affil` of numbers (`\affil{1}`,
+  // `\affil{1,2}`) is the request of those affiliations, as llncs's `\inst{n}` is,
+  // and is read as that mark (`\inst`, which every author's content makes the
+  // request, `\lx@author@withinst`): read as an affiliation call it gave the
+  // reading an entry "1" and left the numbered blocks on a nameless creator, and
+  // the old split made `\affil{1,2}` the affiliation text "1,2" (2003.03010,
+  // 2103.05990, 2209.10103). Any other `\affil{text}` stays the affiliation it is.
+  // Witnesses 1810.04324, 1903.07205, 2108.10255, 2604.17795 (agutexSI2019).
   DefMacro!("\\authors{}", sub[(list)] {
-    // Reuse the engine's canonical author-name splitter (comma + literal " and ",
-    // plus its font-wrapper descent) rather than re-listing separators — this is
-    // exactly the split `\lx@add@authors` applies to a superscript-marked author
-    // line. Each piece keeps its `\affil{n}`, which registers the affiliation
-    // annotation on that creator during personname digestion.
-    let mut calls: Vec<Token> = Vec::new();
-    for piece in split_author_line(list) {
-      if piece.to_string().trim().is_empty() {
-        continue;
-      }
-      calls.extend(Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(piece)]).unlist());
-    }
-    Ok(Tokens::new(calls))
+    Ok(Invocation!(T_CS!("\\lx@add@author@split"), vec![None, Some(numbered_affil_marks(list))]))
   });
   def_macro_noop("\\alignauthor")?;
   // \correspondingauthor{name/email} — common journal-class CS used

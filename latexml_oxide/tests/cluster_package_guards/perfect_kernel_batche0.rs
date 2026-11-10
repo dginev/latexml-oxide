@@ -375,10 +375,27 @@ fn the_moved_cut_and_kind_take_no_new_decision() {
 /// pass"): text rules and token primitives to `frontmatter/classify/`, owner logic to `observer/resolver/owners.rs`, Perl's
 /// API-call writers to `observer/emitter/calls.rs`, Perl's whole-block fallback with its preparation to `frontmatter/fallback.rs`,
 /// the API's attribute names to `defs/frontmatter_api.rs`. None is left: what `author_block/` still holds is the token driver.
-const ONE_ENGINE_REACH: &[(&str, usize)] = &[];
+/// (revZ18j S1: the names [`MOVED_OLD_READER_FILES`] export count too, so a move out of `author_block/` leaves no name
+/// unfenced; `relocate.rs`'s `s!("{CUT_COPY_PLACE}{key}:{label}")` is revZ18a's capture, unfenced since Z18a moved
+/// `CUT_COPY_PLACE` to `cut.rs`)
+const ONE_ENGINE_REACH: &[(&str, usize)] = &[("relocate.rs CUT_COPY_PLACE", 1)];
 
-/// The names the old reader exports into `base_utilities`: the `pub`, `pub(crate)` and `pub(in …)` items of `mod.rs` and of
-/// each submodule `mod.rs` re-exports with `pub use <submodule>::*`, at a file's top level: a method is no name the glob
+/// The old reader's files moved out of `author_block/` unchanged, whose exports [`old_reader_exports`] counts as the old
+/// reader's (revZ18j S1): Z18a's Cut, Kind and field readers, Z18j's entry cutter and its e-mail line and mark readers. Each
+/// is deleted or rerouted by Option C.
+const MOVED_OLD_READER_FILES: &[&str] = &[
+  "defs/frontmatter_api/cut.rs",
+  "defs/frontmatter_api/kind.rs",
+  "defs/frontmatter_fields/names.rs",
+  "defs/frontmatter_fields/contacts.rs",
+  "defs/frontmatter_api/affiliations.rs",
+  "defs/frontmatter_api/email_lines.rs",
+  "defs/frontmatter_api/line_marks.rs",
+];
+
+/// The names the old reader exports into `base_utilities`: the `pub`, `pub(crate)` and `pub(in …)` items of `mod.rs`, of
+/// each submodule `mod.rs` re-exports with `pub use <submodule>::*` and of each of [`MOVED_OLD_READER_FILES`], at a file's
+/// top level: a method is no name the glob
 /// exports, its type is (a gap closed 2026-11-08: the driver's `Collaborations::author` read every `author` argument as a use).
 fn old_reader_exports() -> std::collections::BTreeSet<String> {
   let dir = format!("{BASE}/author_block");
@@ -396,6 +413,7 @@ fn old_reader_exports() -> std::collections::BTreeSet<String> {
       files.extend(rust_files(&sub));
     }
   }
+  files.extend(MOVED_OLD_READER_FILES.iter().map(|file| format!("{BASE}/{file}")));
   let mut names = std::collections::BTreeSet::new();
   for file in files {
     for found in item.captures_iter(&read_rust(&file).code) {
