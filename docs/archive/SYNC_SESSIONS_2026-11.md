@@ -219,8 +219,9 @@ classes, a ruling question on ruling 4's inner contacts).
 ## Moved from SYNC_STATUS by the 2026-11-09 compaction (SYNC1)
 
 Moved from `docs/SYNC_STATUS.md` on 2026-11-09 (SYNC1, the compaction into one `###` section per row). Each entry
-is the row as it stood, split into one fact per line; nothing reworded. A row whose work is open kept its open facts
-in SYNC_STATUS under the same label or title; the full row is here. Search by the row label (R, 0, 0a, G, …) or
+is the row as it stood, split into one fact per line; nothing reworded. A row whose work is open is whole and live, in
+SYNC_STATUS or `perfect_kernel/SILENT_LOSS_INVENTORY.md` under the same label or title (SYNC1c, after review revSYNC1);
+this copy is the row as it stood at the compaction, its landed history included. Search by the row label (R, 0, 0a, G, …) or
 by its bold title.
 
 ### From "Ranked worklist — start here"
