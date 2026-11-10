@@ -33198,9 +33198,15 @@ latex.ltx:10537, :12678) ahead of its assignment: its `\@nnil` delimiter (the ma
 missed, and `\@nil` ran undefined, held and raised by the flush's net — sig-alternate.cls:462 `\def\email#1{{{\eaddfnt{\par
 #1}}}}` on `\email{\fontsize{11pt}{12pt}\selectfont …}`, 1802.01191 (1 → 0 Errors, the XML unchanged; Perl raises no
 `\@nil`, its `\fontsize` a primitive). Repro `email_argument_holding_fontsize_errs_not`; guard
-`perfect_kernel_batchpc3::an_own_email_argument_holding_fontsize_errs_not`. Reading no pre-expansion also costs the
-rehearsal fewer reads: 1810.03464 (vldb-modify.cls's own `\email{\normalsize …}`) no longer runs past the rehearsal's
-budget, its block read into 7 creators with their affiliations and e-mails where it was written whole (2 Warnings fewer). **Not raised, by design:** the `Error:expected:\fi` chains and `\@authorii`…`\@authorv` the old
+`perfect_kernel_batchpc3::an_own_email_argument_holding_fontsize_errs_not`. The same missed `\@nnil` was a runaway (review
+revPC3): 1810.03464's vldb-modify.cls `\email{\normalsize …}` looped the rehearsal past its 8,000,000-read budget even on
+a two-author block (revPC3's `vldb/v1.tex`: W 4 with `\normalsize`, 2 without), so the block was written whole; read
+unexpanded it is read into 7 creators with their affiliations and e-mails (2 Warnings fewer) — the block's length plays
+no part. No guard yet (next batch). **Known RED (revPC3, synthetic):** `content.rs` `reads_arguments` takes any `[` as a
+parameter count, so `\newcommand{\x}[0]{x}` is kept out of the piece and its "x", which pdflatex prints, is in neither
+output (0 Errors; the base wrote an `ERROR`); `n > 0` is the fix. Pre-existing (revPC3): a real undefined `\inst{2}` in
+an article author raises no Error (the rehearsal binds `\inst` as a mark, `rehearsal.rs` ~572) where pdflatex does;
+`\thanks{Funded\address{9}}` under the title code's `\address` raises a false Error. **Not raised, by design:** the `Error:expected:\fi` chains and `\@authorii`…`\@authorv` the old
 driver raised on sibarticle.sty's `\ifnum \c@numAuthors>1 \and …\fi` (1603.08231: 18, 2112.06251: 12): pdflatex 0
 errors, Perl only with `--includestyles` (22, its split at `\and` cutting each conditional, KNOWN_PERL_ERRORS #1218).
 **Witnesses** (the flip A/B's 19, Errors off / DEL5 / now): 1101.4098 1/0/1, 1402.2906 4/3/6 (`\affaddr`, `\email` undefined
