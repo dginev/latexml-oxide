@@ -1,0 +1,16 @@
+% RED (synthetic, review revZ18k3 R1; introduced by Z18k3, no corpus witness)
+% oracle:  pdflatex 0 errors: "Ann Able^1, (deceased)^2, Bob Baker^2 and [corresponding author]^1" over "1 Univ One",
+%          "2 Lab Two"
+% engines: rust Z18k3 = 4 creators, "(deceased)" and "[corresponding author]" creators of their own, 0 warnings;
+%          int155a0 = 2 creators, each holding both institutes. The marked-bracket rule (`resolver/lines.rs`
+%          `names_line_events` ~1575-1580) tests that the piece opens with a bracket, not that a name follows it.
+% fix:     exempt a marked bracket piece only when it prints words after its bracket closes (`[ver3]S. Curry`,
+%          `[v3]{Cy Cole}`, `(Dee) Dorn`); a piece the bracket spans whole stays a remark, its join the counted Warning
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}, (deceased)\inst{2}, Bob Baker\inst{2} and [corresponding author]\inst{1}}
+\institute{Univ One \and Lab Two}
+\maketitle
+Text.
+\end{document}

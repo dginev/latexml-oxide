@@ -33789,13 +33789,17 @@ author, but the line also stays a counted note of the block reading `a, b$ {tuom
 — TeX source (`$`, `^`) plus the addresses already placed on their authors (the content check counts them duplicated).
 The base wrote the same text as a nameless e-mail contact.
 
-**Guards.** `perfect_kernel_batchz18k::{eptcs_email_list_a_control_word_parts_keeps_the_font` (a keep-guard of the
-reroute, green on the base too)`, eptcs_email_row_of_boxes, eptcs_email_box_holding_addresses_is_its_ink,
+**Guards.** `perfect_kernel_batchz18k::{eptcs_email_list_a_control_word_parts_keeps_the_font, eptcs_email_row_of_boxes, eptcs_email_box_holding_addresses_is_its_ink,
 llncs_email_list_quad_parted_keeps_the_font, llncs_author_bracket_piece_marked_is_a_name,
 llncs_author_marked_qualifier_join_is_counted, omnibus_authors_affil_number_lists,
-omnibus_authors_bracket_piece_marked_is_a_name}`; the eptcs table and cell shapes stay `perfect_kernel_batch84b`'s. Repros
+omnibus_authors_bracket_piece_marked_is_a_name}` (the first a keep-guard of the reroute, green on the base too); the
+eptcs table and cell shapes stay `perfect_kernel_batch84b`'s. Repros
 `tools/perfect_kernel/repros/class-bindings/{eptcs/eptcs_email_row_of_boxes, eptcs/eptcs_email_box_holding_addresses_is_its_ink,
 llncs_email_list_quad_parted_keeps_the_font, llncs_author_bracket_piece_marked_is_a_name,
 llncs_author_marked_qualifier_join_is_counted, omnibus/omnibus_authors_affil_number_lists,
 omnibus/omnibus_authors_bracket_piece_marked_is_a_name}.tex`; the omnibus repros' pdflatex stand-in class is
 `omnibus/pdflatex/aguauthors.cls`, kept apart so a repro converted in place reads its class as unknown (OmniBus).
+**Known RED (review revZ18k3 R1, synthetic, no corpus witness):** a piece that is only a bracket and carries its own mark
+(`Ann Able\inst{1}, (deceased)\inst{2}, Bob Baker\inst{2} and [corresponding author]\inst{1}`) is a creator of its own, 0
+Warnings — the rule tests the opening bracket, not a name after it; the fix is to exempt only a piece that prints words
+after its bracket closes (repro `class-bindings/llncs_author_marked_bracket_remark_is_no_name`).
