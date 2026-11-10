@@ -4,7 +4,8 @@
 %   finds (an orphaned-annotation Warning); now the call is labelled only for one owner, and a run of several keeps its
 %   `annotate=run` unlabelled. The empty entry records its run (`Resolver::empty_entry_holds_its_role`), so the next
 %   `\address` is the same run's: Univ A on both authors, as the old driver. OXIDIZED_DESIGN_DIVERGENCES #985
-% witness: review revCR2b finding 1 and P1 (synthetic; none of the 604 revtex `\address` census papers)
+% witness: review revCR2b finding 1 and P1 (synthetic; none of the 604 revtex `\address` census papers); P1's real shape:
+%          hep-ph9810367 (`\address{\phantom{ll}}` before its real `\address{MSU…}`: the address both authors')
 % oracle:  REVTeX 3 is not in TL 2025 (no pdflatex check); the old driver: 0 Warnings, Univ A on both authors
 % engines: CR2b/int154x: 1 Warning "Orphaned frontmatter annotation couldn't find target for label=author:1,author:2";
 %   Ann has no address. CR3: 0 Warnings, Univ A on both, the abstract and the PACS once

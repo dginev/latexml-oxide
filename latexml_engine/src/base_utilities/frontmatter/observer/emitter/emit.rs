@@ -4103,7 +4103,7 @@ fn recover_queued(
           .unwrap_or_default();
         let labels = run_labels(index, &role, resolved, taken);
         // (one owner's label places it; a run of several, whose labels no one label joins, leaves it unlabelled, its
-        // `annotate=` reaching them as the old driver's digestion did — a copy a label would digest its setters twice)
+        // own `annotate=` placing it as the old driver's digestion did — a copy a label would digest its setters twice)
         let command = match labels.as_slice() {
           [label] => labelled(&command, label).unwrap_or(command),
           _ => command,
@@ -4147,7 +4147,7 @@ fn recover_queued(
 /// insertion's `annotate=run` reaches them while the queue is digested — the owners of the item of its role written before
 /// it when no author came between them (REVTeX 3's second `\address` after the first, the same authors'), else the
 /// creators since the last item of its role. None before any creator. Only one is given as the call's label
-/// ([`labelled`]); two or more leave it unlabelled, its `annotate=run` reaching them as the old driver: joined as one
+/// ([`labelled`]); two or more leave it unlabelled, placed by its own `annotate=` as the old driver: joined as one
 /// `label=`, the insertion's exact lookup never found it (an orphaned-annotation Warning, review revCR2b finding 1,
 /// `revtex3_minipage_address_first_joins_run_labels.tex`).
 fn run_labels(index: usize, role: &str, resolved: &Resolved, taken: &Taken) -> Vec<String> {

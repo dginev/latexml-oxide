@@ -33208,8 +33208,8 @@ queued, the old driver's rule, so its digestion runs every setter in it — with
 its ledger position among the emitter's item calls, labelled for its run's creators (`run_labels`: the owners of the item
 of its role before it when no author came between, else the creators since that item), so the insertion places its
 contact with theirs in queue order. Only one owner's label is given (`labelled`, which drops the call's own `label`,
-`annotate` and `owner` keys as `rekeyed` does, `routing_key`); a run of two or more owners keeps its `annotate=run`
-unlabelled, as the old driver digested it: joined as one `label={author:1,author:2}`, the insertion's exact-label lookup
+`annotate` and `owner` keys as `rekeyed` does, `routing_key`); a run of two or more owners leaves the call unlabelled,
+placed by its own `annotate=` as the old driver digested it: joined as one `label={author:1,author:2}`, the insertion's exact-label lookup
 (`relocate::find_targets`) never found it (an orphaned-annotation Warning, review revCR2b finding 1), and a copy per label
 would digest the call's setters once each. The resolver's empty `annotate=run` entry records its run
 (`Resolver::empty_entry_holds_its_role` → `record_run`), so the next `\address` is the same run's: `\author{Ann Able and

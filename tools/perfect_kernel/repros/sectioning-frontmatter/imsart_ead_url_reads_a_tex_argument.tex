@@ -1,0 +1,26 @@
+% mechanism: imsart.sty's `\ead[label=u1,url]{…}` reads its address as a TeX argument (`\DeclareRobustCommand\ead[2]`,
+%   `\protected@edef\@currentlabel{#2}`, imsart.sty:493-498 of 1301.1466's copy), so `$\sim$` in a URL prints `∼`. The
+%   binding's `\ead` (latexml_contrib imsart_cls.rs `imsart_sty_markup`) reads it Semiverbatim, and so do the API's
+%   `\lx@add@url`/`\lx@add@email` it calls (frontmatter_fields.rs), so the dollars print: reading `\ead`'s argument as a
+%   TeX argument alone changes nothing (CR3b, tried). A fix is the API's: the address as TeX prints it, as
+%   `math_braces_as_printed` does for `$\{$` (OXIDIZED_DESIGN_DIVERGENCES #972), for every binding's e-mail and URL.
+% witness: 1301.1466 (`\ead[label=u2,url]{http://www.math.duke.edu/$\sim$omer}`), math0608476
+%          (`\ead[label=u2,url]{www.math.wisc.edu/$\sim$swanson}`); here as a minimal stand-in of the shipped imsart.sty
+% oracle:  pdflatex 0 errors: "Ann Able http://www.zebra.edu/∼ann ann@zebra.edu" (the stand-in prints the addresses
+%          where `\ead` stands; the real imsart.sty prints them through `\printead`)
+% engines: CR3, CR3b: the URL contact reads "http://www.zebra.edu/$∼$ann" (int154x lost it: imsart.sty read raw)
+% expect:  0 errors, 0 warnings; Ann Able: url "http://www.zebra.edu/∼ann" (no dollar signs), then email ann@zebra.edu
+% status:  RED (CR3b; no guard: the API's address reading, out of the batch's mechanism)
+\begin{filecontents*}{imsart.sty}
+\NeedsTeXFormat{LaTeX2e}\ProvidesFile{imsart.sty}[2012/01/01 IMS article style, shortened and modified]
+\DeclareRobustCommand\ead[2][label= ,email]{ {\ttfamily #2}}
+\def\author{\@ifnextchar[{\author@fmt}{\author@fmt[]}}
+\def\author@fmt[#1]#2{\bgroup\def\fnms##1{##1}\def\snm##1{##1}\noindent#2\egroup\par}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{imsart}
+\begin{document}
+\title{A Title}
+\author{\fnms{Ann} \snm{Able}\ead[label=u1,url]{http://www.zebra.edu/$\sim$ann}\ead[label=e1]{ann@zebra.edu}}
+Body.
+\end{document}
