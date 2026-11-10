@@ -33538,6 +33538,8 @@ of Waldorp: the line reads as names only with the document's `\footremember` arg
 of the kernel can tell from text (`is_note_macro` declines a macro an argument of which `\newcounter` takes); its words are
 kept, better than the base's one merged creator. No word is lost.
 
+**Known REDs of the fail-safe (review revCR7d, synthetic, Perl the same; the base wrote each whole):** (S1) a later piece that starts with a note, not a mark — `\author{Ann Able,\thanks{Permanent address: Univ Z.} Bob Baker…, Carl Cole}` — gives the note to Bob: the check catches a mark-led piece, not a note-led one; (S2) an address line whose mark comes after its text (`{\it Dept. of Physics, Univ X}$^{a}$`) still becomes an author creator. (S3, no false owner) the check reads Perl's raw split, not the routed result, so a few shapes CR7c already routed right fall back whole (`\and Bob Baker\affil{b}\\ \affil{a} Univ X…`, a mark printed only in a note). 1110.6375 is now written whole (the fail-safe), so it no longer witnesses the split's behaviour above. Probes: `/home/deyan/data/pk_wt/scratch_revCR7d/probe/p1..p6.tex`.
+
 Repros `cr7_fncounter_and`, `cr7_ne5_footremember`, `cr7_marks_branch_footremember`, `cr7_split_lines_keep_commas`,
 `cr7_split_items_to_each_name`, `cr7b_linebreak_option_cut`, `cr7b_and_cut_starts_author`, `cr7b_split_items_by_name`,
 `cr7c_split_names_whole_words`, `cr7c_and_line_comma_cut`, `cr7c_split_corresponding_left_address`,
