@@ -1,10 +1,10 @@
 % mechanism: acmart's `\author{Ann Able \and Bob Baker}`, no comma in the argument: the binding (acmart_cls.rs `\author`,
 %   `separates_names` false) hands the whole argument to one API creator call, `\lx@add@creator[role=author]{…}`, which
 %   nothing cuts at its `\and` — the block routes' cut (OD #993) is the reading's, and the emitter stays out of a paper
-%   with no author block (emit.rs `stays_out`, "no author block") and writes an API creator call as it was queued in one
-%   with a block; the call's rehearsal carries no positions to cut its tokens by (ledger.rs `ApiCall::errors`). A cut
-%   in the reading alone (`Resolver::api`) changes no output and shifts the emitter's owner labels (`author:N`) of the
-%   creators after it, so it can't land without the emitter's half (OC1b report). Its siblings on the same path, red
+%   with no author block (emit.rs `stays_out`, "no author block"), where this paper is; the call's rehearsal carries no
+%   positions to cut its tokens by (ledger.rs `ApiCall::errors`). A cut in the reading alone (`Resolver::api`) changes
+%   no output here, so the emitter must run in such a paper and write the cut call as N creator calls (OC1b report;
+%   review revOC1b S1: in a paper with a block a cut call's creators are written each by name, its own `author:N`). Its siblings on the same path, red
 %   alike at int156a: `\csname and\endcsname`, a document wrapper `\newcommand\two[2]{\author{#1 \and #2}}`, an active
 %   character `\def|{\and}` (each E 1, one merged creator; pdflatex 0 `!`, two authors); quantumarticle's
 %   `\author{\aut}` (E 1 W 1, no oracle: TL 2025 pdflatex fails on the class). An `\affiliation` after it makes TL 2025's

@@ -34040,11 +34040,19 @@ literal, macro-held, `\csname`, wrapper and active-character spellings, where pd
 `\author` routes only a literal top-level `\and` to the block (`ecai_cls.rs`), so a macro-held one reaches the API.
 Witnesses 1909.10278 (E 1) and 2501.11185 (both institutes in the one name, E 0 W 1); 15 of the census's 873 acmart
 papers spell a literal `\and` with no top-level comma (a source scan). A cut in the reading (`Resolver::api`) is not
-enough: the emitter stays out of a paper with no author block (`emitter/emit.rs` `stays_out`) and in one with a block
-writes an API creator call as it was queued, so the cut changes no output, and it shifts the owner labels (`author:N`)
-the emitter gives the creators after the call; the call's rehearsal has no positions to cut its tokens by
-(`ledger.rs` `ApiCall`). The fix is the emitter writing a cut call (a batch of its own). The API creator callers, by
-a grep for `\lx@add@creator` / `\lx@add@author` in `latexml_package/src` and `latexml_contrib/src`: acmart (`\author`,
+enough where it counts most: the emitter stays out of a paper with no author block (`emitter/emit.rs` `stays_out`,
+"no author block"), where acmart's papers are. In a paper with a block the emitter reuses a queued API call only when it
+gives exactly one creator (`sole`, ~4646-4655) and otherwise writes each creator by name or by text, its own
+`author:N` (~4317-4358), so OC1b's byte-identical block-plus-call probe more likely shows the cut not firing than the
+emitter ignoring it (review revOC1b S1, suspected from the code); the call's rehearsal has no positions to cut its tokens
+by (`ledger.rs` `ApiCall`). The next batch first prints the API call's events and whether the cut fires
+(`acm_mixblock.tex`; the call's content is the whole `\lx@personname{\lx@author@withinst{…}}` group), then has the emitter
+run in a no-block paper holding such a call and write it as N creator calls, by text where no spans exist, as the
+contact side's `split_pieces` does (`resolver/api.rs`, used at `emit.rs` ~1833). authblk is red on this route too
+(review revOC1b S2): `\newcommand\aut{Ann Able \and Bob Baker}\author{\aut}\affil{Univ X}` gives one merged creator, E 1
+W 1, where its literal `\and` parts — `authblk_sty.rs` ~122-126 tests the spelling and falls back to `\lx@add@creator`
+(~173), the general shape of any binding whose spelling test finds no separator (ecai's too). The API creator callers, by
+a grep for `\lx@add@creator` / `\lx@add@author` in `latexml_package/src` and `latexml_contrib/src` (which misses, review revOC1b S3, `\lx@add@editor` — omnibus `\editors` —, `\lx@add@translator` — ams_support's and amsppt's `\translator` —, and the raw-class store route, `latexml_core/src/binding/store_setters.rs` ~88-90): acmart (`\author`,
 `\editor`), quantumarticle, arximspdf, aipproc, icml_support (`\icmlauthor`), jmlr (`\Name`), czipreprint, meta_class,
 interspeech, bytedance_seed, mrm, ceurart, lmcs, ecai, lipics, bmcart, beilstein, brief and g_brief (sender), jhep and
 omnibus (`\speaker`), ams_support (`\contrib`, `\commby`), authblk. Probed: acmart and quantumarticle (red), jmlr
