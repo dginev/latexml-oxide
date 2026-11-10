@@ -33182,8 +33182,10 @@ no longer runs for it): (6) a `_share=authors` entry (llncs's sole `\institute`)
 own cuts each call with its e-mail label and its own label (`entry_email_cut`'s `shared`), and the item carries them
 (`shared_call_item`, by the same `unit_cut`/`read_call`/`labelled_address`): the e-mail label its name (104d's `USA;\@
 Email: \email{\{aable,bbaker,ccole\}@a.edu}`, each part "Email: "), a label of its own in its content, to the address's
-owner or the block (s23's `Corresponding author email:`, 2410.06985); `one_address`'s plain test admits a math shift and
-a tie in the list, which the address written holds none of (1701.08125's `$\{$stomforde$|$bsick$\}$@…;~cms@…`). Still
+owner or the block (s23's `Corresponding author email:`, 2410.06985); `one_address`'s plain test admits a math shift, a
+group's brace and a separator in the list (`shared_row::is_call_separator`: a tie), which the address written holds none
+of (1701.08125's `$\{$stomforde$|$bsick$\}$@…;~cms@…`; 2206.10050's `\email{{jsliwinski,wattenhofer}@ethz.ch}`, whose
+two "markup lost" Warnings were spurious); `resolver::shares_the_row` is the one reading of `_share=authors`. Still
 the old split's only (RED, `perfect_kernel_batch85b`): a shared line the reader cannot read goes to the block
 (`{\tt (joxan, navas)@…}`, 1103.2027's shape), and an unparted call `\email{{zz,yy}@x.edu}` (2206.10050) is one block
 address — the reading writes it out as `zz@`, `yy@`, `yy@`.
