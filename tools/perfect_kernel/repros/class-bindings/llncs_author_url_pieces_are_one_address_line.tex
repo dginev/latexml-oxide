@@ -7,8 +7,10 @@
 %   "cat.cole@y.edu"
 % engines: rust Z18e = a URL "cat.cole @y.edu" and a URL "@y.edu" on every author, ann.able@ glued to the next local
 %   parts; int154x = each address line a nameless creator
-% expect:  0 errors, 0 warnings; ann.able@, bob.baker@, cat.cole@x.edu and cat.cole@y.edu each its author's
-% status:  RED (Z18e) -> GREEN (Z18g)
+% expect:  0 errors, 3 warnings (bob.baker@, cat.cole@x.edu and cat.cole@y.edu written as text, their `\url` links lost:
+%   review revZ18h B1r, Z18i; ann.able@ its own `\url` link); ann.able@, bob.baker@, cat.cole@x.edu and cat.cole@y.edu
+%   each its author's
+% status:  RED (Z18e) -> GREEN (Z18g); the count since Z18i
 % preload: ar5iv.sty
 \documentclass{llncs}
 \usepackage{hyperref}

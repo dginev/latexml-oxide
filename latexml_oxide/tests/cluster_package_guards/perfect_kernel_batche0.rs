@@ -1237,8 +1237,12 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // writing no Warning (2501.11774), and a control-symbol test of its own — what it writes, no name spelled; Z18d 48 -> 46: the
   // control-symbol test is the content text's `ledger::symbol`, review revZ18c S4; Z18f 46 -> 45: `plain`'s catcode test on one
   // line, a math shift and a group's brace admitted, the list's separators by the row's `is_call_separator`; Z18h 45 -> 44: an
-  // e-mail item of what prints several is written by `by_text`, a joined run's lost links counted, review revZ18g B1)
-  ("emitter/emit", 44),
+  // e-mail item of what prints several is written by `by_text`, a joined run's lost links counted, review revZ18g B1; Z18i 44
+  // -> 58: `joined_run_link` WRITES a joined run's link as printed — the `\url`/`\href` call it finds in the run's tokens,
+  // the text font commands and declaration groups still open there, the run's own tokens being what is written, as
+  // `span_tokens_of` and `plan::container_wrap` write theirs —, the decision whether an address is linked made on the
+  // events' targets (`linkable`), review revZ18h S-a and B1r)
+  ("emitter/emit", 58),
   // (P1b, 0 -> 1: `emitter/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("emitter/dom+mod", 1),
@@ -1486,7 +1490,9 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // `'\\'` (with `'~'`), whether the text it WRITES for an address of a plain list holds a control sequence's name or a tie —
   // an output check, no reading decision: `\email{\{a,b\}@x\footnote{…}}` writes `a@x\lx@fm@obs@fnnote`, counted "markup
   // lost", while `\{a,b\}@x\_y.org`'s `a@x_y.org` is all it prints, review revZ18d finding 1)
-  ("emitter", 61),
+  // (Z18i 61 -> 63: `joined_run_link`'s `"\\url"` and `"\\href"`, the calls it writes again as printed — no reading
+  // decision, which the events' targets make; review revZ18h S-a and B1r)
+  ("emitter", 63),
   // (the "Knowledge in, driver out, one pass" move: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
   // mark and note commands it reads; none added)
   ("emitter/calls", 44),

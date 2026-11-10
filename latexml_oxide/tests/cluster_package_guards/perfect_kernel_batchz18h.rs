@@ -38,20 +38,22 @@ fn email_contacts(xml: &str) -> Vec<String> {
 
 /// An article `\author` block whose address line is `\texttt{\href{mailto:ann@x.org}{\{ann}, \href{mailto:bob@x.org}
 /// {bob\}@x.org}}, \texttt{\href{mailto:cid@y.org}{cid@y.org}}` (2505.15472's shape): only the run of pieces is joined,
-/// ann@ and bob@ written as text (no ink of the run carries the group's font), their two lost links and fonts counted;
-/// cid@ stays its typewriter `mailto` link. Red (Z18g):
-/// cid@ plain text, no Warning (review revZ18g B1).
+/// and cid@ stays its typewriter `mailto` link. Red (Z18g): cid@ plain text, no Warning (review revZ18g B1). Re-expected
+/// in Z18i (review revZ18h S-a): each joined address is the run's link targeting it exactly, `mailto:ann@x.org` and
+/// `mailto:bob@x.org`, in the `\texttt` around it — Z18h wrote ann@ and bob@ as plain text, counting their lost links.
 #[test]
 fn article_author_href_pieces_beside_whole_link() {
   let (log, xml) = run(repro!("article_author_href_pieces_beside_whole_link.tex"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let names: Vec<String> = creators(&xml).iter().map(|c| c[0].clone()).collect();
   assert_eq!(names, ["Ann Able", "Bob Baker", "Cid Cole"], "{xml}");
   assert_eq!(
     email_contacts(&xml),
     [
-      "<contact name=\"Email:\u{a0}\" role=\"email\">ann@x.org</contact>",
-      "<contact name=\"Email:\u{a0}\" role=\"email\">bob@x.org</contact>",
+      "<contact name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" font=\"typewriter\" \
+       href=\"mailto:ann@x.org\">ann@x.org</ref></contact>",
+      "<contact name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" font=\"typewriter\" \
+       href=\"mailto:bob@x.org\">bob@x.org</ref></contact>",
       "<contact name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" font=\"typewriter\" \
        href=\"mailto:cid@y.org\">cid@y.org</ref></contact>",
     ],
@@ -61,7 +63,8 @@ fn article_author_href_pieces_beside_whole_link() {
 
 /// llncs's `\institute{Univ X, Town\\ e-mail: {\tt (ann, bob)@x.edu}}`, every author's: the unread later line is the
 /// block's e-mail, named by its label, as the old split made it (astro-ph0007270). Red (Z18g): the block's affiliation
-/// "e-mail: (ann, bob)@x.edu" (review revZ18g S1).
+/// "e-mail: (ann, bob)@x.edu" (review revZ18g S1). Its name ends in the old split's tie, `"e-mail:\u{a0}"` (review revZ18h
+/// N-a).
 #[test]
 fn llncs_institute_labelled_unread_line_is_block_email() {
   let (log, xml) = run(repro!(
@@ -76,7 +79,7 @@ fn llncs_institute_labelled_unread_line_is_block_email() {
   assert_eq!(
     email_contacts(&xml),
     [
-      r#"<contact name="e-mail: " role="email"><text font="typewriter" xml:id="id1">(ann, bob)@x.edu</text></contact>"#
+      "<contact name=\"e-mail:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">(ann, bob)@x.edu</text></contact>"
     ],
     "{xml}"
   );
@@ -84,8 +87,9 @@ fn llncs_institute_labelled_unread_line_is_block_email() {
 
 /// llncs's `\author{Ann Able$^{1}$, Bob Baker$^{2}$ and Cid Cole$^{1,2}$}` over a hand-marked `\institute`: the binding
 /// splits only a list marked with `\inst`, so this one is read whole by the reading, each name keeping its marks'
-/// institutes and its marks in its name, as int154x's split gave them (review revZ18g N3: the binding's dropped `author_mark_position` loses
-/// nothing here).
+/// institutes, as int154x's split gave them (review revZ18g N3: the binding's dropped `author_mark_position` loses
+/// nothing here). The marks left in the names ("Ann Able 1", "Cid Cole 1,2") are the base's residual, byte-equal on
+/// int154x, not the intended output: pinned so a change to them is seen (review revZ18h N-d).
 #[test]
 fn llncs_author_hand_marks_read_whole() {
   let (log, xml) = run(repro!("llncs_author_hand_marks_read_whole.tex"));

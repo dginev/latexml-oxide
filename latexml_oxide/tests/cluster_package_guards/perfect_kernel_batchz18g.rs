@@ -56,12 +56,15 @@ fn llncs_institute_urldef_pieces_are_one_address_line() {
 /// cat.cole}}\}\url{@x.edu}`, `\url{cat.cole}\url{@y.edu}`): one e-mail contact per line once joined, each address its
 /// author's (1710.01968). Red (Z18e): `cat.cole @y.edu` and `@y.edu` URLs on every author, `ann.able@` glued to the next
 /// local parts. Distinct from the institute's: the block's events are read (`read_events`), not the written entry.
+/// Re-expected in Z18i (review revZ18h B1r): the three addresses no link of the run targets — bob.baker@, cat.cole@x.edu,
+/// cat.cole@y.edu — are written as text and their lost `\url` links counted, 3 Warnings (Z18h lost them silently);
+/// ann.able@ keeps its own `\url` link.
 #[test]
 fn llncs_author_url_pieces_are_one_address_line() {
   let (x, y) = ("affiliation=Univ X", "affiliation=Univ Y");
   assert_creators(
     repro!("llncs_author_url_pieces_are_one_address_line.tex"),
-    (0, 0),
+    (0, 3),
     &[
       &["Ann Able", x, "email=ann.able@x.edu", y],
       &["Bob Baker", x, "email=bob.baker@x.edu", y],

@@ -2293,7 +2293,9 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
   let mut warned: HashSet<String> = HashSet::default();
   // (each shared row entry's later lines holding an address no reader reads, by entry, taken to the block once: their
   // nodes, from the first copy read)
-  let mut to_block: Vec<(String, Vec<Node>, Option<String>)> = Vec::new();
+  // (its entry's key, its nodes, the name of the e-mail label it opens with, the entry's own name)
+  type ToBlock = (String, Vec<Node>, Option<String>, Option<String>);
+  let mut to_block: Vec<ToBlock> = Vec::new();
   for entry in entries {
     let Some(creator) = entry.get_parent() else {
       continue;
@@ -2387,7 +2389,9 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
                 document.remove_node(node.clone());
               }
             }
-            to_block.push((key, kept, name));
+            // (else the block's affiliation, under the entry's own name, as the line's contact had it: `name="Affiliation: "`,
+            // review revZ18h N-b)
+            to_block.push((key, kept, name, entry.get_attribute("name")));
           } else {
             for node in nodes {
               document.remove_node(node.clone());
@@ -2607,13 +2611,16 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
     if let Some(creator) = block_creator(document, &authors)? {
       let saved = document.get_node().clone();
       document.set_node(&creator);
-      for (_, nodes, name) in to_block {
+      for (_, nodes, name, entry_name) in to_block {
         let mut attributes: HashMap<String, String> = HashMap::default();
         if let Some(name) = name {
           attributes.insert("role".to_string(), "email".to_string());
           attributes.insert("name".to_string(), name);
         } else {
           attributes.insert("role".to_string(), "affiliation".to_string());
+          if let Some(name) = entry_name {
+            attributes.insert("name".to_string(), name);
+          }
         }
         let mut contact = document.open_element("ltx:contact", Some(attributes), None)?;
         for mut node in nodes {
@@ -2911,7 +2918,8 @@ fn is_mark_text(text: &str) -> bool {
 }
 
 /// The e-mail label opening a line's `nodes` — the words before its first colon, read by `is_email_label` ("e-mail:",
-/// "Emails:") — cut from them, its name as a contact's (`"e-mail: "`): the text nodes it prints in, or the head of the one
+/// "Emails:") — cut from them, its name as a contact's (`"e-mail:\u{a0}"`, the old split's tie after the colon, review
+/// revZ18h N-a): the text nodes it prints in, or the head of the one
 /// it ends in, go: the name and the nodes left. `None`, and nothing cut, where no label opens the line or one ends inside
 /// an element.
 fn cut_email_label(nodes: &[Node]) -> Option<(String, Vec<Node>)> {
@@ -2951,7 +2959,7 @@ fn cut_email_label(nodes: &[Node]) -> Option<(String, Vec<Node>)> {
     .filter(|node| !covered.contains(node))
     .cloned()
     .collect();
-  Some((s!("{label}: "), kept))
+  Some((s!("{label}:\u{a0}"), kept))
 }
 
 /// The key a class's one institute every author shares (`_share=authors`, llncs's `\lx@llncs@institute@sole`) is written
