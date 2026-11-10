@@ -125,6 +125,42 @@ pub(in crate::base_utilities) fn split_email_label(line: &Tokens) -> (Option<Tok
   }
 }
 
+/// A line's leading e-mail label ([`split_email_label`]) where it names the addresses behind it — the rest a list of
+/// addresses the whole line is not — and that rest (`email: a@x, b@y`; `email_line_calls`).
+pub(in crate::base_utilities) fn email_line_label(line: &Tokens) -> Option<(Tokens, Tokens)> {
+  let (label, rest) = split_email_label(line);
+  label
+    .filter(|_| email_addresses(line).is_none() && email_addresses(&rest).is_some())
+    .map(|label| (label, rest))
+}
+
+/// The name of the contacts of an entry's line led by a label of its own — an e-mail label ([`email_line_label`]) or
+/// the text before a mailbox link ([`mailbox_link_line`]) — where the class names the entry too (`entry_name`, its
+/// `name=…`): the class's name before the line's label, as both print (aa's `\mail{e-mail: x}`, "Correspondence to
+/// e-mail:", 0805.1001; `\mail{Contact: \href{mailto:…}{here}}`, "Correspondence to Contact:", review revZ18o N1;
+/// REVTeX's `\altaffiliation[Authors for Correspondence: ]{Email: …}`, 2208.10784); the line's label alone where the
+/// class names nothing.
+pub(in crate::base_utilities) fn entry_line_label(
+  entry_name: Option<&[Token]>,
+  label: Tokens,
+) -> Tokens {
+  let Some(name) = entry_name else {
+    return label;
+  };
+  let mut both: Vec<Token> = name
+    .iter()
+    .copied()
+    .skip_while(|t| *t != T_OTHER!("="))
+    .skip(1)
+    .filter(|t| !matches!(t.get_catcode(), Catcode::BEGIN | Catcode::END))
+    .collect();
+  if both.last().is_some_and(|t| !is_spacing(t)) {
+    both.push(T_SPACE!());
+  }
+  both.extend(label.unlist());
+  Tokens::new(both)
+}
+
 /// Space between an email label and its addresses, or between addresses: a space, a tie, or a spacing command
 /// (`E-mail:~\email{x}`, `E-mail:\ \email{x}`) — the control return a line ending in `\` leaves among them, which
 /// latex.ltx:558 `\def\^^M{\ }` prints as a space (`$^1$Univ A \ \ \ \⏎ $^2$Univ B`, 2510.25684).

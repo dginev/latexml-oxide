@@ -1,0 +1,34 @@
+% mechanism: an affiliation line `\textbf{Correspondence:} \href{<address>}{<address>}` (the ACL template's, a bare
+%   address as the link's target) is a mailbox link line (classify/links.rs `mailbox_link_line`), not the Kind step's
+%   address line: "Correspondence" is no e-mail label (`split_email_label`), so `line_addresses` reads no address of
+%   it. Its e-mail keeps the link as the source writes it, named by its label (`entry_line_label`); the Link step
+%   gives it to the block (the address spells no one; its entry, "2 Univ B", has two carriers). Perl reads no e-mail
+%   inside an `\author` block's affiliation line (OXIDIZED_DESIGN_DIVERGENCES #992). Review revZ18o N2
+% witness: 2604.04847 (acl_latex.tex:108-110, `\small{\textbf{Correspondence:} \href{daniel094144@gmail.com}{…}}`)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 , Cid Cole2 , Dee Dorn1", "1 Univ A, 2 Univ B",
+%          "Correspondence: zz@x.org"
+% engines: rust int155a4 = the block's <contact name="Correspondence: " role="email">zz@x.org</contact>, the link lost
+% expect:  0 errors, 0 warnings; four creators, Univ A / Univ B / Univ B / Univ A; the block's nameless creator: the
+%          e-mail <contact name="Correspondence: " role="email"> holding `<ref href="zz@x.org">zz@x.org</ref>`
+% status:  RED (int155a4) -> GREEN (Z18o; kept by MB1) — perfect_kernel_batchmb1::correspondence_link_line_keeps_the_link
+% preload: ar5iv.sty
+\documentclass[11pt]{article}
+\usepackage{hyperref}
+\title{T}
+\author{
+ \textbf{Ann Able\textsuperscript{1}},
+ \textbf{Bob Baker\textsuperscript{2}},
+ \textbf{Cid Cole\textsuperscript{2}},
+ \textbf{Dee Dorn\textsuperscript{1}}
+\\
+ \textsuperscript{1}Univ A,
+ \textsuperscript{2}Univ B
+ \\
+ \small{
+   \textbf{Correspondence:} \href{zz@x.org}{zz@x.org}
+ }
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

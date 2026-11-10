@@ -33957,10 +33957,25 @@ carrier of an address no one spells — `\affil{Univ C; zz@x.org}` under `$^N$` 
 whole, review revZ18o2 N2) and the address the Kind step takes out of it to the block (Z18o: Bob Baker's). The unrequested `∗` is not kept on
 an author's e-mail (as int155a4 dropped it on Bob Baker's), a residual of the line-mark path — **Known RED (review
 revZ18o2 R1, synthetic):** dropped silently, 0 W; the guard `aastex_unrequested_symbol_line_in_its_own_author_group_is_that_groups`
-pins the `∗`-less contact as that known loss; keep the mark or count its drop on the line-mark path. Still open (review
-revZ18o): a labelled mailbox-link line is named by its label alone where the address path puts the class's entry name
-before it (`kind.rs` ~180-187, N1; fold into `split_email_label`); 2604.04847's link line, which prints an address,
-changed through this branch, untraced (N2). (F2) A line of an
+pins the `∗`-less contact as that known loss; keep the mark or count its drop on the line-mark path. **The one label rule (MB1;
+review revZ18o N1, N2, synthetic).** A labelled mailbox-link line had been named by its label alone where the address
+line puts the class's name of the entry before its label: aa's `\mail{Contact: \href{mailto:zz@x.org}{here}}` was
+`name="Contact: "`, REVTeX's `\altaffiliation[Authors for Correspondence: ]{Contact: \href{…}{here}}` too. Both readers'
+lines now take one match, `entry_line_label` beside `split_email_label` (frontmatter/classify/email_block_calls.rs; the
+e-mail label's half, `email_line_label`, shared with `email_line_calls`): "Correspondence to  Contact: ", "Authors for
+Correspondence: Contact: ". 2604.04847's `\textbf{Correspondence:} \href{daniel094144@gmail.com}{…}`, which prints an
+address, is the link line's rightly: "Correspondence" is no e-mail label, so `line_addresses` reads no address of the
+line; an e-mail label's line printing a link (`e-mail: \href{mailto:zz@x.org}{zz@x.org}`) is the address reader's
+first, as before. Its link kept, the block's. The double space after aa's name is our `\mailname`'s trailing `\ `
+before the joining space, the address line's since 97b (0805.1001). Guards
+`perfect_kernel_batchmb1::{labelled_line_is_named_after_the_class, correspondence_link_line_keeps_the_link}`; repros
+`sectioning-frontmatter/{aa_mail_labelled_mailbox_link_names_after_the_class,
+revtex_altaffiliation_labelled_mailbox_link_names_after_the_class, aa_mail_email_label_names_after_the_class,
+author_correspondence_link_line_printing_its_address_keeps_the_link}.tex`; `MOVED_CUT_KIND_CODE_LINES` 2,211 → 2,188.
+**Measured** (MB1 vs int156a1-rel, int155a's dumps, `kit/conv.sh`): the aas
+census (1,172: aastex*, emulateapj*), aa's `\mail` papers (434) and the stage2 1,434 — 3,040 ids, 3,036 converted (4 no
+main file on both) — byte-identical, E/F/W identical, but for 0909.4443 and 2308.08199, whose math `xml:id`s vary run to
+run (MB1 rerun gives the base's bytes); 0909.0058 and 2604.04847 byte-identical. (F2) A line of an
 affiliation-kind entry that is one link to a mailbox — `\href{mailto:…}{Write to us}`, `Contact: \href{mailto:…}{here}`,
 a bare address as target (`\href{zz@x.org}{…}`, the ACL template's, `links_a_mailbox`) — is an e-mail line under the text
 before the link (user ruling 2026-10-20, batch 77p r8), the link kept a link: the Kind step's (`classify/links.rs`

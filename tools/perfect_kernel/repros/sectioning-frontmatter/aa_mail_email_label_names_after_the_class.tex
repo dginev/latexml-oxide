@@ -1,0 +1,30 @@
+% mechanism: the address line of the one label rule (classify/email_block_calls.rs `entry_line_label`, the sibling of
+%   aa_mail_labelled_mailbox_link_names_after_the_class.tex): an e-mail label's line (`email_line_label`) inside an
+%   entry the class names, aa's `\mail{e-mail: …}`, is named after the class's name. Perl reads no e-mail in `\mail`
+%   (aa_support.sty.ltxml:118-119: an address contact)
+% witness: 0805.1001 (v6.1, "Correspondence to: e-mail: …")
+% oracle:  pdflatex (TL 2025) 0 errors: "T", "A. Smith", "Univ. X, Y", "Body.", footnote "Correspondence to: e-mail:
+%          zz@x.org"
+% engines: rust int156a (27ca6acecc) = the expected contact
+% expect:  0 errors, 0 warnings; A. Smith: Univ. X, Y and <contact name="Correspondence to  e-mail: " role="email">
+%          zz@x.org (the double space: our `\mailname`'s trailing `\ ` before the joining space)
+% status:  GREEN (int156a, pinned when MB1 moved its naming into `entry_line_label`) —
+%          perfect_kernel_batchmb1::labelled_line_is_named_after_the_class
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aa.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{aa}[2010/01/01 v7.0 stand-in]
+\LoadClass{article}
+\def\mailname{{\it Correspondence to\/}:}
+\def\email#1{{e-mail: \tt#1}}
+\def\institute#1{\gdef\@institute{#1}}\def\@institute{}
+\def\mail#1{\gdef\@mail{#1}}\def\@mail{}
+\def\@maketitle{{\Large\@title\par}\@author\par\@institute\par
+  \if!\@mail!\else\footnotetext[0]{\mailname\ \ignorespaces\@mail}\fi}
+\end{filecontents*}
+\documentclass{aa}
+\usepackage{hyperref}
+\begin{document}
+\title{T}\author{A. Smith}\institute{Univ. X, Y}\mail{e-mail: zz@x.org}\date{Received 2010}
+\maketitle
+Body.
+\end{document}

@@ -405,8 +405,10 @@ pub(in crate::base_utilities) fn lists_local_parts(address: &str) -> bool {
 /// template's, [`links_a_mailbox`]): an e-mail line under the text before the link (user ruling 2026-10-20, batch 77p
 /// r8: 2601.00240, 2601.07974, 2604.23002, 2606.03014, 2605.18563; 2604.04847, 2605.29064, 2605.29893, 2606.01600) —
 /// that text as it prints without its font (`Correspondence:`), if any, and the link, kept a link, the address, whatever
-/// it prints (`Correspondence: \href{mailto:zz@x.org}{zz@x.org}`; a line [`line_addresses`] reads is read so before
-/// it). `None` for any other line. Perl reads no e-mail
+/// it prints (`\textbf{Correspondence:} \href{zz@x.org}{zz@x.org}`, 2604.04847: "Correspondence" is no e-mail label,
+/// so [`line_addresses`] reads no address of that line; a line it reads — addresses alone, or behind an e-mail label,
+/// `E-mail: \href{mailto:zz@x.org}{zz@x.org}` — is the Kind step's address line, read so before this; both named by
+/// the one label rule, [`entry_line_label`]). `None` for any other line. Perl reads no e-mail
 /// inside an affiliation: the link stays an affiliation's text (aas_support.sty.ltxml `\affil`). Review revZ18l F2,
 /// the home of the deleted `author_block/links.rs::mailto_line`; the Kind step's (`kind_entry_addresses`).
 pub(in crate::base_utilities) fn mailbox_link_line(
