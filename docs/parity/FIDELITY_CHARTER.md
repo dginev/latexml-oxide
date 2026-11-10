@@ -164,6 +164,30 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
 - **No printed frontmatter word is lost** (2026-11-01, on the dev lost-words census): printed frontmatter text that no owner claims — a raw class's own stores that only its title-page code prints (raa's `\abstract`, sig-alternate's `\titlenote`, copernicus's `\AB@affillist`) — is written at the block as an `ltx:note` with a counted Warning, only for lines with several unmatched words; the large families also route through the API to their owners. Printed template placeholders ("dd Mmm YYYY", "00 Month 201X") are words like any other. The zero-lost-words bar covers the abstract and keywords against pdflatex's text.
   **Amended 2026-11-04 (user, after the diminishing-returns analysis):** the bar is now **every residual loss counted by a Warning**, not zero lost-words papers — one generic self-check compares the title page's printed words with the output and emits a counted `Warning:frontmatter:unclaimed` for each word lost; a loss is fixed only when its mechanism reaches about 500 arXiv papers or more. Shaped short lines below the note floor (addresses, codes, dates, labelled datelines, batch 105a) are kept.
 - **A second `\maketitle` keeps the latest title** (2026-10-01); multi-contribution volumes are deferred (KPE #1026).
+- **A picture or page-overlay notice inside `\author` is "A note, kept whole"** (user 2026-11-10): a pgf/TikZ picture
+  or an `\includegraphics` found in an author field — 2404.13552's TikZ "© 2024 IEEE … personal use permitted …", 21
+  words, which Perl keeps inside the creator and pdflatex prints as a page overlay — is kept as markup and written as a
+  frontmatter note, never read as a name; it stays on the author whose `\author` holds it (the user chose this over a
+  block note on no author). A divergence from Perl's placement (OD #989).
+- **"No dagger for unmarked notes"** (user 2026-11-10): an unmarked frontmatter note renders with no dagger — the meta
+  XSLT must not invent a † or an anchor for a note with no `@mark`, and since `LaTeXML.css` hides note content until
+  hover, the note shows its content inline, as print does. A divergence from Perl's XSLT (OD #990). Applied to the
+  notes pdflatex prints unmarked where they stand (picture notes: 2404.13552, 2107.13277); a leftover note that stands
+  for a mark pdflatex prints or a line printed elsewhere (a `\titlenote`, `\pacs` codes: 1003.2281, 0803.0204,
+  1009.5642) and a `\thanks` note keep their dagger (OD #990, review revCR8c finding 1).
+- **The rest of the old engine: "Plan A: move now, reroute in C"** (user 2026-11-10; plan
+  `agent_reports/2026-11-10_Z18P_report.md`): only eptcs, omnibus and aas are rerouted inside Z18; everything else
+  leaves `author_block/` by a byte-identical move and the module is deleted; authblk, IEEEtran, IJCAI, `@marked`, the
+  stores and the Cut are rerouted on the digested reading inside Option C P2-P4. **The declined path's row sharing:
+  "Route via reading helpers"** (user 2026-11-10): the declined emitter's Rust-only row sharing (OD #901, ≈730 lines in
+  `shared_row/`) keeps its gains but calls the reading's one copy of each rule, and the old token-level copy is deleted
+  (Z18n).
+- **The emitter's decline fallback is Perl's `\lx@add@authors`** (main session 2026-11-10, CR7, applying Perl as the
+  translation truth and the user's 2026-11-08 "robust and principled … Do not lose any of our already achieved
+  frontmatter semantics and segmentation features"; not a user ruling of its own): a block the emitter declines is
+  written as Perl writes it — the tabular branch whole (Base_Utility.pool.ltxml:692-693), else split as Perl splits it
+  (:676-719) — with a fail-safe: where the split would state a false owner or make an address an author, the block
+  stays whole with its Warning (CR7d; OD #988).
 
 ## 5. Bindings and shipped copies
 

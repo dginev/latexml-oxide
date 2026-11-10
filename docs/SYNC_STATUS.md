@@ -51,7 +51,7 @@ affected** → **is it unblocked** → **effort**.
 
 | # | item | state | size |
 |---|---|---|---|
-| R | Road to the main merge (user 2026-11-09: "keep planning out all steps … towards completing our main goal"; … | OPEN — step (1) in progress | L |
+| R | Road to the main merge (user 2026-11-09: "keep planning out all steps … towards completing our main goal"; … | OPEN — step (1) Plan A: Z18j done, Z18k-Z18n left; step (2) CR10b, CR10c left | L |
 | 0 | The TeX Live manuals: every regression addressed before the merge (user 2026-11-06: "This remains the primary … | met; margin batches landing | — |
 | 0a | M3: the manuals' remaining regressions | F1-F10 done, 3 deferred | S |
 | 0b | The frontmatter's old engine out of every decision before the merge, and all it leaves unused deleted (user … | **Route D (user 2026-11-06):** the experiment, then one switch for every paper with an author block; a failed … | about 12-15 batches |
@@ -84,14 +84,20 @@ affected** → **is it unblocked** → **effort**.
 
 - **Road to the main merge (user 2026-11-09: "keep planning out all steps … towards completing our main goal"; inventory `agent_reports/2026-11-09_PREMERGE_inventory.md`, 30 items; supersedes the 2026-11-05 close order)**
 - Plan:
-  - **Order, each step reviewed and bundled:** (1) **single engine clean** — the deletion pass DEL1-DEL4 merged on `pk/int154a` (tests −349, the switch, the old driver −5.8k, the S2b writer and census −12.2k; output byte-identical), DEL5 truthful names, Z18a the API's Cut/Kind out of `author_block/` (byte-identical), Z18 one batch per binding family (llncs, eptcs, omnibus, authblk, aas, ieeetran, sv, aistats, stores/fields, IJCAI; A/B each) (Z18c: the emitter's rules the llncs reroute needs, OD #984; the reroute itself next, its blockers in `agent_reports/2026-11-09_Z18c_report.md`) → `author_block/` gone (row 0b);
+  - **Order, each step reviewed and bundled:** (1) **single engine clean** — `author_block/` gone (row 0b);
+  - (1) done on `pk/int154a`: the deletion pass DEL1-DEL5 (tests −349, the switch, the old driver −5.8k, the S2b writer and census −12.2k; output byte-identical), Z18a the API's Cut/Kind out of `author_block/` (byte-identical), the llncs reroute Z18c-Z18i (OD #984; its first blockers in `agent_reports/2026-11-09_Z18c_report.md`), Z18j the API engine and field readers moved (Plan A batch 1, `256a8cd611`); history in `archive/SYNC_SESSIONS_2026-11.md` "Bundle int154a".
+  - (1) **Plan A for the rest of Z18 (user 2026-11-10, "Plan A: move now, reroute in C"; plan `agent_reports/2026-11-10_Z18P_report.md`):** Z18k the omnibus `\authors` + eptcs reroute (WIP not committed, `agent_reports/2026-11-10_Z18k_pending/Z18k_wip.patch`; → Z18k2 after the push); Z18l aas; Z18m move the rest (the IJCAI chain, the authblk/ieeetran gates, the shared mark readers) and delete `author_block/`; Z18n the declined path's row sharing routed through the reading's helpers ("Route via reading helpers": keep its gains, call the reading's one copy, delete `shared_row/`'s token-level copy); authblk, IEEEtran, IJCAI, `@marked`, the stores and the Cut rerouted inside Option C P2-P4.
+  - (1) State: Z18j merged; Z18k pending (Z18k2 after the push); Z18l-Z18n not started.
   - (2) **every RED seen on a real paper fixed** (user 2026-11-09): the silenced Errors FIRST (row 0b's item 39: an undefined command in an author field, 18 A/B papers), then the content residual (`FRONTMATTER_CONTENT_RESIDUAL_AT_EMIT2.tsv`: every word kept or counted), ejpecp, NE5's whole blocks, the footnote-counter whole block, the ORCID logo, 77p's grouping; synthetic-only stay REDs;
+  - (2) done on `pk/int154a`: the silenced Errors (ERR2, OD #983); the content residual triaged (CR1, CR5, CR9) and its real classes fixed (CR2-CR4 OD #985/#986/#972, CR6 + CR10a OD #987, CR8 OD #989/#990); ejpecp and the ORCID logo closed (CR5); the footnote-counter block written as Perl's split (CR7-CR7d, OD #988); NE5's whole blocks split but 0809.5152, 1110.6375 (the fail-safe) and 0906.2789.
+  - (2) State: left — CR10c (IEEEtran grades, running), CR10b (CR9's glued breaks, the `\fcolorbox` e-mail line, jheppub's abstract in `\author`), 77p's grouping (2603.07345), the image before a URL (2503.08161); every open fact in `perfect_kernel/SILENT_LOSS_INVENTORY.md` "Bundle int154a — the residual".
+  - **The push of `pk/int154a` to `perfect_kernel`:** through CR10c (main session 2026-11-10); the chain and push pending.
   - (3) **Option C P1-P6** (all segmentation on the digested reading; `FRONTMATTER_SINGLE_ENGINE_PLAN.md`) after Z18, with the plan's DoD items, frontmatter code and test compaction (table-driven, one conversion per fixture);
   - (4) **the bars**: truth set, then a fresh holdout v4 read once — 98/98 on dev3/devh/dev20k and v4, longtail ≥ off with no regression (user 2026-11-09);
   - (5) **non-frontmatter**: the generalization audit re-scoped and done before the merge (user 2026-11-09), T1 the repro suite move, the perf + RAM pass's remaining levers, row 0a's deferred manual REDs decided, workspace cleanup (keep-list to the user);
   - (6) **close**: goal docs current, the closing manual sweep on the final head (row 0's G1-G5), the 2605/2606 cortex reruns (G6; the fleet rebuild needs the user's OK), the merge PR (the user confirms).
   - **After the merge:** CI ≤ 30 min (user 2026-11-06), the arXiv rerun, A4, AutoTeX, forest, the ar5iv-css port, a release.
-- State: OPEN — step (1) in progress
+- State: OPEN — step (1) Plan A: Z18j done, Z18k-Z18n left; step (2) CR10b, CR10c left
 - Size: L
 - Detail: this row; the inventory
 
@@ -139,6 +145,10 @@ affected** → **is it unblocked** → **effort**.
   - **The experiment passed its score gates** and showed what a score can't see: creator XML changed on 47 % of agreeing papers, 805 tests move, whole-dev3 98.31 per creator before repairs (`agent_reports/2026-11-07_S0_report.md`, the plan's S0 row).
   - Z4a, the emitter with its markup, and Z14, the reading's repairs, landed (int144b);
   - today's state, the batches in flight and the next steps are the plan's "Where it stands".
+  - **The deletion pass done (DEL1-DEL5, bundle int154a):** no `LATEXML_FM_EMIT` switch, no old driver, no S2b writer or census.
+  - **`author_block/`: 6,458 → 3,364 file lines** (Z18a 6,458 → 4,637; Z18j 4,623 → 3,364, item lines 3,798 → 2,747).
+  - What still routes into it (Z18P map): `author_macros`' IJCAI chain (`ijcai_split_call`) and its `\lx@add@affiliation@marked`/`@shared` gates (through which sv, aistats, revtex, iopart and informs reach it); aas's placed e-mail lines (`placed_email_line_calls`); authblk's gates (`has_separated_names`, `lines_of_names_before_affil`) and label readers; eptcs's and omnibus's `split_author_line` (≈644 lines freed once Z18k lands); `frontmatter_stores`' `class_numbered_institutes`; ieeetran; llncs's `affiliation_calls` for `\lx@llncs@institute@sup`.
+  - Outside it, still an old leftover: the declined path's row sharing (`place.rs` `share_row_contacts` → `shared_row.rs` + `shared_row/emails.rs`, ≈730 lines, OD #901) — Z18n.
   - **Then all token segmentation onto the digested reading before the merge (user 2026-11-07, option C; the plan's "Segmentation is digested", P1-P6)**
 - Size: about 12-15 batches
 - Detail: `parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md` "The path"
