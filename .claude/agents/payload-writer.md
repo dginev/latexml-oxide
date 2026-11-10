@@ -59,8 +59,8 @@ to it, and where the brief is more specific, the brief wins.
   warning_count}`, `perfect_kernel_batch84b::{text, creators}`).
 - Every DISTINCT hard case the batch supports is a test in the repo, not a probe in a scratch dir. Give it one GREEN
   guard per mechanism or code path; probes on the same path share it. Unsupported shapes and near-duplicates stay out
-  of the test suite: record them as a one-line minimal input with a reason in the SYNC or OPEN_ROWS row, or as a
-  catalog repro with no guard. Coverage is balanced against cheap CI (user 2026-10-28); say why each new guard is
+  of the test suite: record them as a one-line minimal input with a reason in your report's "SYNC note" (the main session folds it into
+  SYNC/OPEN_ROWS), or as a catalog repro with no guard. Coverage is balanced against cheap CI (user 2026-10-28); say why each new guard is
   distinct.
 - An existing guard that pins the old, wrong output: update it to the right output and list it in the report with the
   reason. Never weaken a guard to make it pass.
@@ -99,11 +99,13 @@ to it, and where the brief is more specific, the brief wins.
 - Past the budget: stop and report what is done, what is left and why.
 
 ## Commit and docs
-- One commit on the branch (amend in later rounds). Message: `fix(<batch>): <what>` + a body (what, why, witnesses,
+- Commits on the branch: add a new commit per round; never amend or rewrite an existing one (the reviewed commit must
+  survive). Message: `fix(<batch>): <what>` + a body (what, why, witnesses,
   guards) + `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. NEVER push.
 - Docs IN the commit, with the brief's reserved numbers: OXIDIZED_DESIGN_DIVERGENCES entries (append in number order at
-  the end), KNOWN_PERL_ERRORS only for Perl-origin defects (with a minimal trigger), the SYNC_STATUS bullet or row the
-  brief names, and every doc site you made false. Record the conclusion, not the play-by-play (CLAUDE.md doc rules). Do
+  the end), KNOWN_PERL_ERRORS only for Perl-origin defects (with a minimal trigger), and every doc site you made false.
+  **Never edit `docs/SYNC_STATUS.md`** (user 2026-11-09: its rows conflicted on every merge): write the row text under a
+  "SYNC note" heading in your report; the main session folds it in at bundle time. Record the conclusion, not the play-by-play (CLAUDE.md doc rules). Do
   NOT edit the "next free number" index lines — the main session does at integration.
 - Rebases (only when the brief or the main session asks): keep both sides of appended doc blocks in number order; grep
   for conflict markers before every `git add`; keep a backup branch.
