@@ -476,6 +476,9 @@ pub struct CopyProvidesRecord {
   pub binding:       String,
   pub overlay:       rustc_hash::FxHashMap<SymStr, Stored>,
   pub declined:      rustc_hash::FxHashSet<SymStr>,
+  /// The meaning each declined name took back when the copy's frame ended ([`leave_copy_provides_frame`]): the one its
+  /// overlay stands beside, while still in force ([`copy_kept_meaning`]).
+  pub restored:      rustc_hash::FxHashMap<SymStr, Stored>,
   pub deferred:      rustc_hash::FxHashSet<SymStr>,
   /// The copy's own `\maketitle`/`\@maketitle` bodies, refused or overlaid as they may be
   /// ([`copy_provides_title_pages`]).
@@ -2858,6 +2861,9 @@ pub fn leave_copy_provides_frame() {
       if redefined && copy.declined.insert(key) {
         logged = Some(copy.file.clone());
       }
+      if redefined {
+        copy.restored.insert(key, kept.clone());
+      }
       copy.overlay.insert(key, copys);
     }
     state.assign_internal(TableName::Meaning, key, kept, Some(Scope::Global));
@@ -3612,9 +3618,9 @@ pub fn stand_in_copy_meaning(file: &str, token: &Token) -> Option<Stored> {
 }
 
 /// The meaning the latest stand-in copy that redefined `token` for its own code only gave it (its overlay, the copy's
-/// `declined` name: "keeps LaTeXML's definition", [`note_copy_provides_assignment`]), while the binding's meaning is still
-/// the one in force (`owned_by_the_semantic_layer`): what the paper's copy runs where the binding's version runs
-/// here. For the frontmatter's reading of a class's title code (latexml_engine `title_code_author_definitions`:
+/// `declined` name: "keeps LaTeXML's definition", [`note_copy_provides_assignment`]), while the meaning in force is still
+/// the binding's the copy's frame gave back ([`CopyProvidesRecord::restored`]; a later file's redefinition is no stale
+/// copy's to read, review revPB S4): what the paper's copy runs where the binding's version runs here. For the frontmatter's reading of a class's title code (latexml_engine `title_code_author_definitions`:
 /// neurips_2022.sty's `\@maketitle`, which defines `\NewAnd`, where the neurips binding keeps its own; 2205.14141,
 /// 2205.14539).
 pub fn copy_kept_meaning(token: &Token) -> Option<Stored> {
@@ -3622,11 +3628,18 @@ pub fn copy_kept_meaning(token: &Token) -> Option<Stored> {
   if !owned_by_the_semantic_layer(token) {
     return None;
   }
+  let current = meaning_by_key(key);
   state!()
     .copy_provides_copies
     .iter()
     .rev()
     .find(|copy| copy.declined.contains(&key))
+    .filter(|copy| {
+      copy
+        .restored
+        .get(&key)
+        .is_some_and(|kept| same_meaning(kept, &current))
+    })
     .and_then(|copy| copy.overlay.get(&key).cloned())
 }
 

@@ -2,7 +2,8 @@
 //! creator of Perl's split holds (B1, 1511.09009; `emit::split_owns_falsely`, OXIDIZED_DESIGN_DIVERGENCES #988), and two
 //! paths of OD #983's exclusion (the title code's definitions in force for the author content,
 //! `title_code_author_definitions`): a macro of the title code that reads `\@author` (aaai2026's `\theauthors`), and a
-//! tabular juggle the title code defines, read by its meaning as a separator (neurips_2022's `\NewAnd`).
+//! tabular juggle the title code defines, read by its meaning as a separator (neurips_2022's `\NewAnd`). PBb (review revPB):
+//! a name a macro spells is no lost name (S1), and a copy's title code, its juggle between unmarked names a column (S2, S4).
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 
@@ -17,9 +18,12 @@ macro_rules! repro {
 }
 
 /// Convert `tex`: the log and the XML.
-fn run(tex: &str) -> (String, String) {
+fn run(tex: &str) -> (String, String) { run_with(tex, &[]) }
+
+/// Convert `tex` beside the source files `files`: the log and the XML.
+fn run_with(tex: &str, files: &[(&str, &str)]) -> (String, String) {
   let (log, xml, ()) =
-    convert_files_with_setup_then(tex, &[], Some("ar5iv.sty"), move || {}, |_| ());
+    convert_files_with_setup_then(tex, files, Some("ar5iv.sty"), move || {}, |_| ());
   (log, xml)
 }
 
@@ -86,6 +90,51 @@ fn a_title_code_juggle_parts_two_authors() {
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact></creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Y</contact></creator>"
+    ],
+    "{xml}"
+  );
+}
+
+/// PBb S1 (review revPB, `probes/a_macro_name.tex`): `\cat$^{1}$` of `\newcommand{\cat}{Cat Cole}` is a piece of Perl's
+/// split printing no word, so the lost-name fail-safe read "Cat Cole" as lost and wrote the block whole (PB: one creator).
+/// A piece printing no word is the name a macro spells (`emit::perl_piece_of`): no loss, and its marks are Cat's.
+#[test]
+fn a_name_a_macro_spells_is_no_lost_name() {
+  let (log, xml) = run(repro!("pbb_macro_spelled_name"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!(
+    creator_elements(&xml),
+    [
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X, Dept Y</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Note:\u{a0}\" role=\"note\">Zebra note.</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Z</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cat Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X, Dept Y</contact></creator>"
+    ],
+    "{xml}"
+  );
+}
+
+/// PBb S2 + S4 (review revPB; 2205.14141, 2205.14539): the title code is a stand-in copy's (`state::copy_kept_meaning`, the
+/// path no guard took: the neurips binding keeps its own `\@maketitle`), and its `\NewAnd` juggle stands between names with
+/// no marks. Its `\hfil\linebreak[0]\hfil` forces no break (latex.ltx:9235-9270), so it parts authors as `\and` does: three
+/// creators, as the PDF's three columns (PB made "Carl Cole" Bob's affiliation, silently).
+#[test]
+fn a_copys_title_code_juggle_parts_unmarked_names() {
+  const COPY: &str = "\\ProvidesPackage{neurips_2022}\n\\renewcommand{\\@maketitle}{\\def\\NewAnd{\\end{tabular}\\hfil\\linebreak[0]\\hfil\\begin{tabular}[t]{c}\\ignorespaces}%\n  \\begin{tabular}[t]{c}\\@author\\end{tabular}}\n";
+  let (log, xml) = run_with(repro!("pbb_copy_title_code_juggle_unmarked"), &[(
+    "neurips_2022.sty",
+    COPY,
+  )]);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    log.contains("\\@maketitle keeps LaTeXML's definition"),
+    "the copy's \\@maketitle is read beside the binding's: {log}"
+  );
+  assert_eq!(
+    creator_elements(&xml),
+    [
+      "<creator role=\"author\"><personname>Ann Able</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname></creator>"
     ],
     "{xml}"
   );

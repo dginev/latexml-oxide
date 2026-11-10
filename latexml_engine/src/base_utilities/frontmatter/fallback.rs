@@ -8,7 +8,7 @@
 //! left is a binding's too (`strip_linebreak_options`, `has_author_marks`, `glued_line_marks_as_marks`).
 
 use super::*;
-use crate::base_utilities::defs::frontmatter_fields::title_code_juggle;
+use crate::base_utilities::defs::frontmatter_fields::title_code_author_statements;
 
 /// Perl's whole-block creator (Base_Utility.pool.ltxml:693, `\lx@add@authors`' `{tabular}` fallback, and :588-589):
 /// `\lx@add@author[keyvals]{…}` of the block `written`, as given. The one writer of a block kept whole, Perl's raw call —
@@ -1299,7 +1299,31 @@ pub(in crate::base_utilities) fn tabular_juggle_between(t: &Token) -> Option<Vec
   let rest = tabular_close_rest(t)?;
   (0..rest.len())
     .find(|&at| environment_call_len(&rest[at..], T_CS!("\\begin"), "tabular").is_some())
-    .map(|at| rest[..at].to_vec())
+    .map(|at| without_optional_line_breaks(&rest[..at]))
+}
+
+/// `between` without a `\linebreak[n]` of `n` below 4, which allows a break and forces none (latex.ltx:9235-9270
+/// `\@no@lnbk`, `\penalty-\@getpen{n}`: 0, `\@lowpenalty`, `\@medpenalty`, `\@highpenalty`; only 4 is `\@M`), so
+/// prints no row break: neurips_2022.sty:285's `\NewAnd`, `\hfil\linebreak[0]\hfil` between its columns, which the PDF
+/// sets side by side as `\and`'s (2205.14141; review revPB S2: an unmarked name after it was read as an address line).
+fn without_optional_line_breaks(between: &[Token]) -> Vec<Token> {
+  let mut out = Vec::with_capacity(between.len());
+  let mut i = 0;
+  while i < between.len() {
+    let optional = between[i] == T_CS!("\\linebreak")
+      && between.get(i + 1) == Some(&T_OTHER!("["))
+      && between.get(i + 3) == Some(&T_OTHER!("]"))
+      && between
+        .get(i + 2)
+        .is_some_and(|n| ["0", "1", "2", "3"].iter().any(|d| n.with_str(|s| s == *d)));
+    if optional {
+      i += 4;
+    } else {
+      out.push(between[i]);
+      i += 1;
+    }
+  }
+  out
 }
 
 /// The rest of `body` past the environment command `cs` and the `{name}` group after it (`\end{tabular}`), if it
@@ -1384,16 +1408,15 @@ fn tabular_juggles_as(tokens: Tokens, separator: Token) -> Tokens {
   Tokens::new(out)
 }
 
-/// For a parameterless macro whose expansion starts with `\end{tabular}`: the rest of its expansion (spaces out).
+/// For a parameterless macro whose expansion starts with `\end{tabular}`: the rest of its expansion (spaces out). An
+/// undefined one the class's title code defines where it reads `\@author` ([`title_code_juggle`]) is read by that
+/// definition.
 fn tabular_close_rest_of_any(t: &Token) -> Option<Vec<Token>> {
   if t.get_catcode() != Catcode::CS {
     return None;
   }
-  // (a juggle the class's title code defines where it reads `\@author`, undefined at the block: neurips_2022.sty's
-  // `\NewAnd`, 2205.14141)
   let Some(defn) = lookup_definition(t).ok()? else {
-    let body = title_code_juggle(t)?;
-    return past_environment(&body, T_CS!("\\end"), "tabular");
+    return title_code_juggle(t);
   };
   if !defn.is_expandable()
     || defn
@@ -1405,18 +1428,38 @@ fn tabular_close_rest_of_any(t: &Token) -> Option<Vec<Token>> {
   let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
     return None;
   };
-  let unspaced = || {
-    body
-      .unlist_ref()
-      .iter()
-      .filter(|t| t.get_catcode() != Catcode::SPACE)
-  };
+  tabular_close_rest_of_body(body.unlist_ref())
+}
+
+/// The rest (spaces out) of a parameterless macro's expansion `body` past the `\end{tabular}` it starts with, if it does.
+fn tabular_close_rest_of_body(body: &[Token]) -> Option<Vec<Token>> {
+  let unspaced = || body.iter().filter(|t| t.get_catcode() != Catcode::SPACE);
   // (its `\end` read before the body is copied: this runs for every macro of every rehearsal)
   if unspaced().next() != Some(&T_CS!("\\end")) {
     return None;
   }
   let body: Vec<Token> = unspaced().copied().collect();
   past_environment(&body, T_CS!("\\end"), "tabular")
+}
+
+/// For `t` undefined at the block, the rest of the expansion past its `\end{tabular}` ([`tabular_close_rest_of_body`]) of
+/// the parameterless `\def` the class's title code makes of it where it reads `\@author`
+/// (`defs::frontmatter_fields::title_code_author_statements`; never replayed for the author content, closing a group it
+/// did not open): neurips_2022.sty:285's `\def\NewAnd{\end{tabular}\hfil\linebreak[0]\hfil\begin{tabular}[t]{c}
+/// \ignorespaces}`, defined by its `\@maketitle` beside `\And` and `\AND` (2205.14141, 2205.14539) — read as a juggle
+/// defined at the block is (`\sharedaffiliation`, [`tabular_juggle_between`]).
+fn title_code_juggle(t: &Token) -> Option<Vec<Token>> {
+  title_code_author_statements()
+    .into_iter()
+    .find(|(definee, statement)| definee == t && statement.first() == Some(&T_CS!("\\def")))
+    .and_then(|(_, statement)| {
+      // (`\def\X{…}`: parameterless, its body's group right after the definee)
+      let (open, rest) = statement.get(2..)?.split_first()?;
+      let (close, inner) = rest.split_last()?;
+      (open.get_catcode() == Catcode::BEGIN && close.get_catcode() == Catcode::END)
+        .then_some(inner)
+        .and_then(tabular_close_rest_of_body)
+    })
 }
 
 /// `tokens` with a mark that leads a line of labelled entries written without the symbols glued to it (`$^{*1}$Kyoto

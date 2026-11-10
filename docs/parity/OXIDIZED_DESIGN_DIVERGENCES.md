@@ -33127,24 +33127,37 @@ code defines inside its own `\author`/`\maketitle` (vmsta's `\fnm`/`\snm`/`\init
 `\name`/`\email`/`\addr`, kr.sty's `\affiliations`: pdflatex 0 errors there; Perl raises `Error:undefined:\affiliations` on 2602.18351 (with
 `--includestyles` too) and 2604.26688, because it digests `\author` outside the class's `\maketitle`, KNOWN_PERL_ERRORS
 #1219). The title code is read where it reads `\@author` (`defs/frontmatter_fields/names.rs`
-`definitions_at_author`, `title_code_author_definitions`; PB): (a) through a macro it defines whose statement holds
+`title_code_author_statements`, its raw statements; replayed, `title_code_author_definitions`, each but one closing a group
+it did not open; PB): (a) through a macro it defines whose statement holds
 `\@author` — its first use is the reading point (aaai2026.sty:73 `\def\theauthors{\if T\showauthors@on\@author…}`,
 used at :98 inside the `\sbox{\titlearea}` group that defines `\coo`: 2508.00545 `\equalcontriblast`, 2508.04047 `\co`,
 2508.04749 `\corres`, 2508.05996 `\Corresponding`, 2508.08170 `\coo`, each 1 → 0 Errors, the corresponding-author note
 the mark prints now kept); (b) where a binding keeps its own `\@maketitle` beside the paper's copy's
 (`state::copy_kept_meaning`, the copy's overlay of a name it `declined`), the copy's statements follow the live ones
-(neurips_2022.sty:281-293); (c) a tabular juggle the title code defines there (a parameterless `\def`
+(neurips_2022.sty:281-293), only while the meaning in force is the one the copy's frame gave back (a later file's
+redefinition is no stale copy's to read: `CopyProvidesRecord::restored`, PBb, review revPB S4); (c) a tabular juggle the title code defines there (a parameterless `\def`
 of `\end{tabular}…\begin{tabular}`, latex.ltx's `\and`) is never replayed — digested, it closes the tabular — but read by
-its meaning as a separator (`title_code_juggle`, through `fallback::tabular_close_rest_of_any`: the rehearsal's column,
+its meaning as a separator (`fallback::title_code_juggle`, through `tabular_close_rest_of_any`, one body test for both,
+`tabular_close_rest_of_body`; a `\linebreak[n]` of `n` below 4 between its columns forces no break, latex.ltx:9235-9270,
+so neurips' `\NewAnd` parts authors as `\and` does, `without_optional_line_breaks`: the rehearsal's column,
 the whole block's line break, the split's `\and`), as a juggle defined at the block is (2205.14141's `\NewAnd`, 1 → 0
 Errors, 8 creators; 2205.14539's `\Aff`, a `\linebreak[4]` juggle before the affiliations, 1 → 0 and 3 → 4 creators,
 David Barber no longer glued into an affiliation). Repros `pb_title_code_macro_reads_author`, `pb_title_code_juggle_separator`; guards
-`perfect_kernel_batchpb::{a_title_code_macro_reading_the_author_defines_its_marks, a_title_code_juggle_parts_two_authors}`.
-Known residuals: the content check counts a note such a mark prints as written more often than printed (its rehearsal
-reads none: 2508.08170, 2508.04047, one Warning each), and a `\newcounter` of the title code is not replayed
-(2508.04047's `\co` reads `corfn`: `Warning:undefined:corfn`); a juggle between two names of a line with no marks reads
-the column after it as their shared affiliation (`\author{Ann Able \And Bob Baker \NewAnd Carl Cole}`: Carl an
-affiliation; the base merged him into Bob's name with the Error). Not reached: the pazh classes' `\address`, defined only in
+`perfect_kernel_batchpb::{a_title_code_macro_reading_the_author_defines_its_marks, a_title_code_juggle_parts_two_authors,
+a_copys_title_code_juggle_parts_unmarked_names}` (the copy path; `\author{Ann Able \and Bob Baker \NewAnd Carl Cole}`
+had made Carl Bob's affiliation, silently, review revPB S2). A `\newcounter{x}` of the title code is replayed too, its definee
+`\c@x`, only while undefined (aaai2026.sty:77's `corfn`, which `\co` reads: 2508.04047's `Warning:undefined:corfn` gone;
+unit `author_split_tests::title_code_counters_replay_by_their_count_register`). Known residuals: the content check counts
+a note such a macro prints as placed more often than printed (2508.04047, 2508.00545, 2508.05996, 2508.08170, 2508.21091,
+2607.29185: one Warning each, the PDF printing the note once), because the block's rehearsal runs without the title
+code's definitions (`\co` undefined there prints nothing) while the creator's content runs with them; running them in
+the rehearsal too trades it for the emitter's "note no argument" Warning (the note's tokens are the macro's body, not
+the block's: one per note) and moves 2508.08170 to a counter decline, so it is not taken. 2205.11640's `\Aff` column (an
+address) is the affiliation of the last name only (David Barber), where the PDF shares it among the three. RED (review
+revPB S5, synthetic): a reader macro's first use is the reading point, so where that use sits in a group defining `\coo`
+(a measuring `\setbox`) and the shipped reading outside it, `\coo` is replayed and pdflatex's `Error:undefined:\coo` is
+silenced (repro `pbb_reader_first_use_in_a_measuring_group`, no guard; aaai2026.sty's two passes define the same `\co`);
+the fix is to replay only the definitions in force at every reading point. Not reached: the pazh classes' `\address`, defined only in
 pazhastl.cls:112's `\@maketitle` minipage — the e-mail cut writes `\email{…}\address` as an e-mail contact apart from its
 `{1}`, digested outside the author content (`<contact role="email"><sup>*</sup><ERROR>\address</ERROR></contact>`:
 1108.4222, 1202.2889, 1206.0451, 1207.2226, 1301.4791, 1307.2761, 2103.05801, 2408.01858, 2412.06362; 2607.07582's
@@ -33156,7 +33169,8 @@ driver raised on sibarticle.sty's `\ifnum \c@numAuthors>1 \and …\fi` (1603.082
 errors, Perl only with `--includestyles` (22, its split at `\and` cutting each conditional, KNOWN_PERL_ERRORS #1218).
 **Witnesses** (the flip A/B's 19, Errors off / DEL5 / now): 1101.4098 1/0/1, 1402.2906 4/3/6 (`\affaddr`, `\email` undefined
 under the IEEEtran binding, which off's driver had not raised), 1808.09392 5/4/5, 2205.12847 7/5/7, 2309.09045,
-2506.10896, 2508.08170, 2508.21091, 2607.29185, hep-th9306034 each 1/0/1, 2601.17318 5/4/5, 2609.00161 2/0/1 (off's
+2506.10896, hep-th9306034 each 1/0/1, 2508.08170, 2508.21091, 2607.29185 each 1/0/0 (PB: the aaai title code read
+through its macros; pdflatex prints no undefined control sequence on 2508.21091 or 2607.29185), 2601.17318 5/4/5, 2609.00161 2/0/1 (off's
 other Error a `merged_creators`), 2608.21165 1/1/1; 2405.06973, 2602.18351, 2604.26688 1/0/0 (kr.sty's `\affiliations`,
 defined in its `\maketitle`), 2405.13308 9/7/7 (off's `\@thefnmark`/`\@undefined` from a digestion that lost both names,
 which `=2` keeps), 1603.08231 18/0/0, 2112.06251 12/0/0. Creators never fewer than DEL5's on the 19 (the personnames
@@ -33583,23 +33597,28 @@ Y` line under `… and Carl Cole\affil{1}` went to Carl, each `\\` line being it
 0809.5152's `\\\vspace{6pt} \vspace{3pt} $^{a}${\em{Istituto …}}`, its mark past position 8, read as a names line whose
 `\lx@author@withsup` made the address a creator with its mark moved after the text — Perl keeps both address lines inside
 the last creator's name, after a `<break/>`, and makes no address creator. Of the 23 decline papers, 0809.5152 and
-1110.6375 are written whole, byte-identical to the base; the other 21 are unchanged by it.
-(iii) A creator the reading made of the block whose name no creator's names hold (`emit::note_split_loses_a_name`,
-`perl_piece_of` of its words in `perl_names_words`, decided once per block before the decline; PB) — the reading's
+1110.6375 are written whole, byte-identical to the base, and 2503.21719 by (iii); the other 20 are unchanged by them.
+(iii) A creator the reading made of the block whose name no creator's names hold (`emit::split_loses_a_name`,
+`perl_piece_of` of its words in `perl_names_words`, read only for a block a decline writes as Perl's split; PB) — the reading's
 creators, not its Name events, which hold comma pieces the resolver reads as an affiliation ("Dept of Physics"): 1511.09009's aaai `Yi Zhang\footremember{yi} \\, Yanghua Xiao\footremember{yh} \\, Seung-won Hwang…`, each `\\`
 the macro's second argument so pdflatex prints one line of four names, is cut at the first `\\` (the kernel cuts only a
 names line at its commas, #52), and `\footremember` then took each `\lx@add@affiliation` as its argument: "Seung-won
 Hwang, Wei Wang" were lost (counted by a Warning, 5 words) and ‡ and § printed †. Written whole, all four names and
-marks are kept, as the base. Perl's own comma cut makes 14 creators (5 Errors) there; following it would undo #52, so the
-fail-safe stands. Repro `pb_split_loses_name`, guard `perfect_kernel_batchpb::a_split_losing_a_name_keeps_the_block_whole`.
+marks are kept, as before CR7. Perl's own comma cut makes 14 creators (5 Errors) there; following it would undo #52, so the
+fail-safe stands. A piece of the split printing no word is the name a macro spells (`\cat$^{1}$` of
+`\newcommand{\cat}{Cat Cole}`): `perl_piece_of` gives that name the first such piece, so it is no loss and its marks are
+its creator's (`piece_marks`; PBb, review revPB S1: PB wrote that block whole). Repros `pb_split_loses_name`,
+`pbb_macro_spelled_name`; guards `perfect_kernel_batchpb::{a_split_losing_a_name_keeps_the_block_whole,
+a_name_a_macro_spells_is_no_lost_name}`.
 
 **Left (Perl's own, kept):** a line of no mark continues the entry before it, so a second group of names after an
 affiliation line joins the creator before it. Every `\\` line of a split piece after its first is
 an affiliation of its last name (:713-719), so 2503.21719's `…Lourens Waldorp\footrecall{uva}, \\Quentin F.
-Gronau\footremember{uon}{University of Newcastle, Australia}, and Eric-Jan Wagenmakers\footrecall{uva}` is an affiliation
-of Waldorp: the line reads as names only with the document's `\footremember` arguments set aside, which no token reading
-of the kernel can tell from text (`is_note_macro` declines a macro an argument of which `\newcounter` takes); its words are
-kept, better than the base's one merged creator. No word is lost.
+Gronau\footremember{uon}{University of Newcastle, Australia}, and Eric-Jan Wagenmakers\footrecall{uva}` would be an
+affiliation of Waldorp: the line reads as names only with the document's `\footremember` arguments set aside, which no
+token reading of the kernel can tell from text (`is_note_macro` declines a macro an argument of which `\newcounter`
+takes). (iii) now writes that block whole: 3 → 1 creators, holding all five names of the PDF with every note, 0 words
+lost, where the base (int155a0) made Gronau and Wagenmakers Waldorp's affiliation.
 
 **Known REDs of the fail-safe (review revCR7d, synthetic, Perl the same; the base wrote each whole):** (S1) a later piece that starts with a note, not a mark — `\author{Ann Able,\thanks{Permanent address: Univ Z.} Bob Baker…, Carl Cole}` — gives the note to Bob: the check catches a mark-led piece, not a note-led one; (S2) an address line whose mark comes after its text (`{\it Dept. of Physics, Univ X}$^{a}$`) still becomes an author creator. (S3, no false owner) the check reads Perl's raw split, not the routed result, so a few shapes CR7c already routed right fall back whole (`\and Bob Baker\affil{b}\\ \affil{a} Univ X…`, a mark printed only in a note). 1110.6375 is now written whole (the fail-safe), so it no longer witnesses the split's behaviour above. Probes: `/home/deyan/data/pk_wt/scratch_revCR7d/probe/p1..p6.tex`.
 

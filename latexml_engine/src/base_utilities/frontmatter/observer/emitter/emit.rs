@@ -3082,7 +3082,7 @@ fn counter_moved(index: usize, resolved: &Resolved) -> bool {
       "frontmatter",
       s!(
         "The frontmatter emitter's reading holds no place for what its author block does to the footnote counter; {}",
-        decline_written_as(index)
+        decline_written_as(index, resolved)
       )
     );
   }
@@ -3357,7 +3357,7 @@ fn names_overlap(index: usize, resolved: &Resolved) -> bool {
 /// block holds the definition apart from what it prints, so the block is written as Perl's `\lx@add@authors` writes it
 /// ([`split_decline`]; OD #988: 1404.5602, 2503.21719, 0809.5152, 1110.6375 had merged into one creator), its pieces
 /// digested in order, with a counted Warning, once per block over the flushes.
-fn declaration_reads_past(index: usize) -> bool {
+fn declaration_reads_past(index: usize, resolved: &Resolved) -> bool {
   let past = with_block(index, None, |block, _| {
     let Outcome::Events { declarations, .. } = &block.outcome else {
       return None;
@@ -3385,7 +3385,7 @@ fn declaration_reads_past(index: usize) -> bool {
       "frontmatter",
       s!(
         "The frontmatter emitter can't replay a definition of its author block apart from what the block prints; {}",
-        decline_written_as(index)
+        decline_written_as(index, resolved)
       )
     );
   }
@@ -3480,7 +3480,7 @@ fn perl_names_words(perl: &PerlCalls) -> Vec<Vec<String>> {
 ///   `\vspace{6pt} \vspace{3pt} $^{a}${\em{Istituto …}}`, whose mark sits past Perl's 8 tokens of a marked affiliation
 ///   line (:701; review revCR7c B2).
 ///
-/// - or a creator the reading found has a name in no creator's names ([`note_split_loses_a_name`]): the
+/// - or a creator the reading found has a name in no creator's names ([`split_loses_a_name`]): the
 ///   split loses it, 1511.09009's `Yi Zhang\footremember{yi} \\, Yanghua Xiao\footremember{yh} \\, …`, whose `\\`
 ///   is each `\footremember`'s second argument (one printed line of four names) but parts the split's names line from
 ///   the three names under it (the kernel's comma cut of a names line only, OD #52), Perl's `\lx@add@authors`
@@ -3488,7 +3488,7 @@ fn perl_names_words(perl: &PerlCalls) -> Vec<Vec<String>> {
 ///
 /// Ownership stated by marks is the rule: an address never an author, an item never on a name that doesn't print its
 /// mark; and no name the reading found lost.
-fn split_owns_falsely(index: usize) -> bool {
+fn split_owns_falsely(index: usize, resolved: &Resolved) -> bool {
   let Some(perl) =
     block_keys(index, "", &[]).and_then(|(_, written)| perl_author_calls(|_| None, written).ok())
   else {
@@ -3582,22 +3582,15 @@ fn split_owns_falsely(index: usize) -> bool {
       return true;
     }
     false
-  }) || matches!(
-    lookup_mapping(EMITTED_ITEMS, &s!("loses|{index}")),
-    Some(Stored::Bool(true))
-  )
+  }) || split_loses_a_name(index, resolved)
 }
 
-/// Note whether Perl's split of the author block at ledger index `index` loses a name the reading `resolved` found: one of
+/// Whether Perl's split of the author block at ledger index `index` loses a name the reading `resolved` found: one of
 /// its creators of the block whose name no creator's names hold ([`perl_piece_of`] of its words in [`perl_names_words`]),
-/// for [`split_owns_falsely`] (1511.09009). Once per block, before its decline is decided.
-fn note_split_loses_a_name(index: usize, resolved: &Resolved) {
-  let once = s!("loses|{index}");
-  if lookup_mapping(EMITTED_ITEMS, &once).is_some() {
-    return;
-  }
+/// for [`split_owns_falsely`] (1511.09009). Read only for a block a decline writes as Perl's split.
+fn split_loses_a_name(index: usize, resolved: &Resolved) -> bool {
   let Some(pieces) = perl_block_pieces(index) else {
-    return;
+    return false;
   };
   let lost = resolved
     .creators
@@ -3616,13 +3609,13 @@ fn note_split_loses_a_name(index: usize, resolved: &Resolved) {
       c.name
     );
   }
-  assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(lost.is_some())));
+  lost.is_some()
 }
 
 /// What a footnote-counter or definition decline of the author block at ledger index `index` says the block is written
 /// as: Perl's split ([`declined_branch`]), or whole where the split would state a false owner ([`split_owns_falsely`]).
-fn decline_written_as(index: usize) -> &'static str {
-  if split_owns_falsely(index) {
+fn decline_written_as(index: usize, resolved: &Resolved) -> &'static str {
+  if split_owns_falsely(index, resolved) {
     "the block is written whole, as Perl's whole-block creator"
   } else {
     declined_branch(index).written_as()
@@ -3668,8 +3661,8 @@ fn name_words(text: &str) -> Vec<String> {
 /// The creator of Perl's split ([`perl_block_pieces`]) whose names hold the reading's name `name`, at `from` or after it
 /// (the names in order): the one holding most of its words of two letters or more ([`name_words`]), each matched whole
 /// among the piece's words — not inside one: "li" of `J. K. Li` is no word of `Ann Blinn` (review revS5CR7b S1, the
-/// two-letter surnames Li, Wu, Xu, Ma, Yu) — and at least half of them. `None` where no piece does: a name a macro spells,
-/// or one Perl's split doesn't hold (review revCR67 S4: equal counts need not be the same names — `Robert Heath, Jr.…
+/// two-letter surnames Li, Wu, Xu, Ma, Yu) — and at least half of them; where none does, the first piece printing no word
+/// (its name a macro spells, `\cat$^{1}$`). `None` where neither: one Perl's split doesn't hold (review revCR67 S4: equal counts need not be the same names — `Robert Heath, Jr.…
 /// \and Ann Able~~~~Bob Baker` is Perl's "Robert Heath", "Jr.", "Ann Able~~~~Bob Baker" and the reading's "Robert Heath,
 /// Jr.", "Ann Able", "Bob Baker").
 fn perl_piece_of(name: &str, pieces: &[Vec<String>], from: usize) -> Option<usize> {
@@ -3687,7 +3680,11 @@ fn perl_piece_of(name: &str, pieces: &[Vec<String>], from: usize) -> Option<usiz
       best = Some((k, found));
     }
   }
-  best.map(|(k, _)| k)
+  // (no piece holding its words: the first piece printing no word, a name a macro spells — `\cat$^{1}$` of
+  // `\newcommand{\cat}{Cat Cole}` — for the name has no evidence against it; review revPB S1)
+  best
+    .map(|(k, _)| k)
+    .or_else(|| (from..pieces.len()).find(|&k| pieces[k].is_empty()))
 }
 
 /// The marks each creator of Perl's split of the author block at ledger index `index` prints ([`perl_block_pieces`]): what
@@ -4033,7 +4030,6 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     .into_iter()
     .filter(|&source| {
       let cells = across_cells(source);
-      note_split_loses_a_name(source, resolved);
       let mut given_lost = Vec::new();
       let (declined, as_perl) = if names_fail(source) || cells {
         (true, false)
@@ -4041,14 +4037,14 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
         (true, true)
       } else if mark_dropped(source, resolved, &mut given_lost) || names_overlap(source, resolved) {
         (true, false)
-      } else if declaration_reads_past(source) {
+      } else if declaration_reads_past(source, resolved) {
         (true, true)
       } else {
         (false, false)
       };
       let whole = written_whole(source, declined);
       // (the fail-safe: a split stating an owner its marks don't support is the whole block, review revCR7c B1/B2)
-      if whole && split_decline(source, as_perl && !split_owns_falsely(source)) {
+      if whole && split_decline(source, as_perl && !split_owns_falsely(source, resolved)) {
         split.insert(source);
       }
       if whole && cells {
