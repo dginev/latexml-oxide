@@ -33122,3 +33122,29 @@ personname's, as ERR2's did),
 `perfect_kernel_batchfms2a1::the_rehearsal_leaves_nothing_behind` (re-expected: 2 Errors, 0 Warnings),
 `perfect_kernel_batch105a::an_error_at_depth_in_a_note_line_is_no_word` (re-expected: the Warning it pinned was the
 content check counting "songti").
+
+### 985. What the old driver wrote at the flush and the emitter had lost: an svjour3 owner label's `\email`, and a frontmatter setter run inside an author block or an API call (CR2)
+
+Two real losses of the flip's content residual (CR1 classes B and A): Perl keeps the words with 0 errors, pdflatex prints
+them, the old driver (`LATEXML_FM_EMIT=0`, int153m) kept them by digesting the label, block or call at the flush; the
+emitter, writing from the reading, digested none of it. The old driver's output is the target. (1) **svjour3
+`Name (\email{…}) \at Address`** inside `\institute`: the `\email` sat only in the piece's `fuzzy:` owner label, which the
+emitter reads as text (`observer/ledger.rs` `label_text`), so no contact was filed and no Warning raised. The binding
+now files each such `\email` under the label as its own call, before the affiliation as the line prints it
+(`sv_support_sty.rs` `\lx@sv@institute@` → `\lx@sv@institute@email`, `\lx@add@email[label={fuzzy:…}]`), the label
+holding the owner's name alone. Witnesses 2206.00320 (3 e-mails), 1307.4424 (2). (2) **A setter run inside an author
+block or a call** — `\date` inside `\author` (LaTeX prints its argument as the date: 2503.02741, hep-th0304189), REVTeX
+3's two-column `\address{\begin{minipage}…\begin{abstract}…\end{abstract}\pacs{…}\end{minipage}}` (cond-mat9801109,
+cond-mat9906335, cond-mat9809277, cond-mat9909213). The rehearsal, the frontmatter frozen, notes each entry the run would
+queue as the queue would hold it (`rehearsal::note_frozen_entry`, tag + attributes + command) and each it digests where
+it stands (`\lx@add@frontmatter@until`, `rehearsal::note_frozen_digest`); a block keeps them (`AuthorBlock::queued`), and
+now a call too (`ApiCall::queued`, `reading::read_at_flush`). At the flush the emitter queues them after its own entries,
+so each is its own entry where the schema puts it (`emitter::emit::recover_queued`, once per source): a read block's,
+not one written whole (whose digestion runs the setter itself, still counted by `warn_queued_unwritten`); a call's whose
+command is not already written as queued. A call whose run digested an entry in place and of which the reading writes
+nothing is written as queued, the old driver's rule, so its digestion runs every setter in it; an entry digested in place
+that no step writes is counted (`warn_queued_lost`). **Open:** 1411.6693 nests the block inside `\title{…\author{…\date{…}}}`
+(a title call written as queued, whose flush-time digestion queues the date past the queue it digests); cond-mat9809277
+keeps the old driver's empty minipage `ltx:contact` beside the abstract. Repros
+`sectioning-frontmatter/{svjour3_institute_email_before_at_is_its_owners,date_inside_author_is_the_date,revtex3_abstract_inside_address_minipage}.tex`;
+guards `perfect_kernel_batchcr2` (one per path: the owner label, a block's queued setter, a call's in-place digest).

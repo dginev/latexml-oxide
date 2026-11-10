@@ -2743,7 +2743,12 @@ fn words_written(resolved: &Resolved) -> BTreeSet<String> {
 /// writes (the setter's entry is queued during the flush's own digestion, past the queue it digests), once per block over the
 /// flushes: never a silent loss. Open: its recovery (the entry written at the flush).
 fn warn_queued_unwritten(index: usize, whole: bool) {
-  let queued: Vec<String> = with_block(index, Vec::new(), |block, _| block.queued.clone());
+  let queued: Vec<String> = with_block(index, Vec::new(), |block, _| {
+    block.queued.iter().map(|entry| entry.0.clone()).collect()
+  });
+  if !whole {
+    return;
+  }
   let once = s!("queued|{index}");
   if queued.is_empty() || lookup_mapping(EMITTED_ITEMS, &once).is_some() {
     return;
@@ -2757,6 +2762,23 @@ fn warn_queued_unwritten(index: usize, whole: bool) {
       "The frontmatter emitter's reading holds no place for what its author block, {how}, queues besides its creators \
        ({}); it is lost",
       queued.join(" ")
+    )
+  );
+}
+
+/// The counted Warning of the entries `lost` a frontmatter setter run inside a read author block or a call the reading writes
+/// from digested where it stands (`rehearsal::note_frozen_digest`), which [`recover_queued`] has no queued entry of.
+fn warn_queued_lost(lost: &[String]) {
+  if lost.is_empty() {
+    return;
+  }
+  Warn!(
+    "unexpected",
+    "frontmatter",
+    s!(
+      "The frontmatter emitter's reading holds no place for what a frontmatter setter inside an author block or a call \
+       digests where it stands ({}); it is lost",
+      lost.join(" ")
     )
   );
 }
@@ -3838,10 +3860,106 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .2
       .unlist_ref()]));
   }
+  // (and what a frontmatter setter run inside a read block or a taken call queues: `recover_queued`)
+  let recovered = recover_queued(resolved, &whole, &out);
+  out.extend(recovered);
   *commands = out;
   assign_value(EMITTED, Stored::Int(generation), Some(Scope::Global));
   with_ledger(|ledger| ledger.emitted = true);
   Ok(true)
+}
+
+/// The entries a frontmatter setter run inside an author block or an API call queues (`AuthorBlock::queued`,
+/// `ApiCall::queued`: what its rehearsal noted, the frontmatter frozen), queued at the flush after the emitter's own, as the
+/// old driver's digestion of the block or the call at the flush made them, so each is its own entry where the schema puts
+/// it: `\date{$^1$ School of …}` inside `\author`, which LaTeX prints as the date (1411.6693, 2503.02741, hep-th0304189),
+/// and REVTeX 3's `\pacs` inside an `\address`'s minipage (cond-mat9801109, cond-mat9906335, cond-mat9809277,
+/// cond-mat9909213), whose emitted creators digest no setter (OXIDIZED_DESIGN_DIVERGENCES #985). A call whose run also
+/// digested an entry where it stands (`rehearsal::note_frozen_digest`: that minipage's `\begin{abstract}`), which no queue
+/// holds, and of which the reading writes nothing, is written as queued, as the old driver wrote it: its digestion at the
+/// flush runs every setter in it. Each once per conversion; not a block of no creator of this reading, one written whole
+/// (`whole`, whose digestion runs the setter itself), nor a call written as queued already (in `out`) or one a later clear
+/// removed. What no step writes — an entry digested where it stands in a read block, or in a call the reading writes
+/// from — is counted ([`warn_queued_unwritten`]).
+fn recover_queued(
+  resolved: &Resolved,
+  whole: &BTreeSet<usize>,
+  out: &[RawFrontmatter],
+) -> Vec<RawFrontmatter> {
+  let read: BTreeSet<usize> = resolved.creators.iter().map(|c| c.source).collect();
+  let written: BTreeSet<usize> = resolved
+    .creators
+    .iter()
+    .flat_map(|c| c.affiliations.iter().chain(&c.contacts).chain(&c.notes))
+    .chain(&resolved.block)
+    .filter_map(|assoc| assoc.source.map(|(at, _)| at))
+    .collect();
+  // (each source: its index, its noted entries, and its command when it is a call the reading writes nothing of)
+  type Source = (usize, Vec<RawFrontmatter>, Option<(String, Tokens)>);
+  let sources: Vec<Source> = with_ledger(|ledger| {
+    let sources = ledger.entries().iter().filter_map(|entry| match entry {
+      Entry::Author(block)
+        if !block.queued.is_empty()
+          && read.contains(&block.index)
+          && !whole.contains(&block.index) =>
+      {
+        Some((block.index, block.queued.clone(), None))
+      },
+      Entry::Api(call)
+        if !call.queued.is_empty()
+          && !call.inside
+          && !call.cleared
+          && call
+            .command
+            .as_ref()
+            .is_none_or(|command| !out.iter().any(|entry| entry.2 == *command)) =>
+      {
+        let as_queued = call
+          .command
+          .clone()
+          .filter(|_| !written.contains(&call.index))
+          .map(|command| (call.tag.clone(), command));
+        Some((call.index, call.queued.clone(), as_queued))
+      },
+      _ => None,
+    });
+    sources.collect()
+  });
+  let mut recovered = Vec::new();
+  for (index, queued, as_queued) in sources {
+    let once = s!("recovered|{index}");
+    if lookup_mapping(EMITTED_ITEMS, &once).is_some() {
+      continue;
+    }
+    assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
+    let (digested, queued): (Vec<RawFrontmatter>, Vec<RawFrontmatter>) =
+      queued.into_iter().partition(|entry| entry.2.is_empty());
+    DebugFeature!(
+      "frontmatter",
+      "FRONT emit queues what a setter inside {index} queued: {}{}",
+      queued
+        .iter()
+        .map(|entry| entry.0.as_str())
+        .collect::<Vec<_>>()
+        .join(" "),
+      if digested.is_empty() {
+        ""
+      } else {
+        " (and digested in place)"
+      }
+    );
+    match as_queued {
+      Some((tag, command)) if !digested.is_empty() => {
+        recovered.push((tag, TagAttrs::default(), command));
+      },
+      _ => {
+        recovered.extend(queued);
+        let lost: Vec<String> = digested.into_iter().map(|entry| entry.0).collect();
+        warn_queued_lost(&lost);
+      },
+    }
+  }
+  recovered
 }
 
 /// A command's fingerprint as its equality reads it, a space by its catcode (`Token::cycle_fingerprint`): equal commands
@@ -4028,6 +4146,7 @@ mod tests {
         inside_events: Box::default(),
         unread: None,
         rehearsed: true,
+        queued: Vec::new(),
         cleared: false,
         errors: 0,
         command: Some(command),

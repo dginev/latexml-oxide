@@ -1,10 +1,12 @@
 % mechanism: a frontmatter setter run inside the author block (`\date` in `\author`) queues an entry the =2 emitter's
 %   reading holds no place for: the block's rehearsal records it (`rehearsal::note_frozen_entry` -> `AuthorBlock::queued`)
-%   and the emitter counts it lost (`emit::warn_queued_unwritten`), never silently. Open: its recovery.
+%   and the emitter queues it at the flush (`emit::recover_queued`, CR2, OXIDIZED_DESIGN_DIVERGENCES #985); CL9b had
+%   counted it lost (`emit::warn_queued_unwritten`, now for a block written whole only).
 % witness: 2503.02741 (`\author{Bernd Prostmaier\textsuperscript{1,2} … \date{\textsuperscript{1}BMW AG, Munich\\ …}}`)
 % oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker2 / 1Univ X / 2Univ Y" (LaTeX prints the date)
-% engines: off `<date>Univ X Univ Y</date>`; int153w =2 the date lost silently; CL9b =2 lost, the queued-entry Warning
-% expect:  =2 0 errors; the "queues besides its creators (date)" Warning once
+% engines: off `<date>Univ X Univ Y</date>`; int153w =2 the date lost silently; CL9b =2 lost, the queued-entry Warning;
+%   CR2 the date written
+% expect:  0 errors, 0 warnings; `<date role="creation">` "1Univ X / 2Univ Y" with its superscripts
 \documentclass{article}
 \title{T}
 \author{Ann Able\textsuperscript{1} \hspace{0.5em} Bob Baker\textsuperscript{2}

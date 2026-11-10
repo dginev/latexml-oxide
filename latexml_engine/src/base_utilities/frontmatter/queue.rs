@@ -22,7 +22,7 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
     drop_late_mark(tag);
     // (a block's rehearsal notes what it would have queued: the emitter counts an entry a block queues of its own,
     // `rehearsal::note_frozen_entry`, 2503.02741)
-    rehearsal::note_frozen_entry(tag, &command);
+    rehearsal::note_frozen_entry(tag, attr, &command);
     return;
   }
   let queue = frontmatter_queue_name();
@@ -46,16 +46,7 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
       .map(|role| role.to_string())
       .unwrap_or_default(),
   );
-  // Convert KeyVals to a hash, but be concerned about multiple values!?!?
-  // (Perl: ToString($attr->getValue($_)) — the last value for multi-valued keys)
-  let mut attr_hash = TagAttrs::default();
-  if let Some(kv) = attr {
-    for key in kv.get_keyvals().keys() {
-      if let Some(value) = kv.get_value(key) {
-        attr_hash.insert(key.clone(), value.to_string());
-      }
-    }
-  }
+  let mut attr_hash = queued_attributes(attr);
   // (queued after `\maketitle`'s flush: digested by a later one, still late, [`LATE_ENTRY`])
   if lookup_bool("lx_frontmatter_here_digested") {
     attr_hash.insert(LATE_ENTRY.to_string(), "true".to_string());
@@ -90,6 +81,21 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
       queue.push((tag.to_string(), attr_hash, command));
     }
   });
+}
+
+/// A queued entry's attributes, as `queue_front_matter` stores them.
+/// Convert KeyVals to a hash, but be concerned about multiple values!?!?
+/// (Perl: ToString($attr->getValue($_)) — the last value for multi-valued keys)
+pub(in crate::base_utilities) fn queued_attributes(attr: Option<&KeyVals>) -> TagAttrs {
+  let mut attr_hash = TagAttrs::default();
+  if let Some(kv) = attr {
+    for key in kv.get_keyvals().keys() {
+      if let Some(value) = kv.get_value(key) {
+        attr_hash.insert(key.clone(), value.to_string());
+      }
+    }
+  }
+  attr_hash
 }
 
 /// The queue a frontmatter entry goes to: the document's (`frontmatter_raw`), or, while a stand-in binding's copy of
