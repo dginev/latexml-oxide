@@ -1,0 +1,15 @@
+% RED (synthetic, revCR10c finding 1; no corpus witness: 51 of 3,369 IEEEtran papers use the old names, none defines
+%          them in its .tex)
+% oracle:  pdflatex 0 errors: "Ann Able, Member, IEEE, and Bob Baker, Fellow, IEEE", then "Zebra University"
+% engines: rust int154o = each creator its `membership` contact, 0 warnings; CR10c = neither creator a grade, 1 warning
+%          (`unclaimed … member ieee fellow`; flagged, not silent): `with_block_names` rewrites `\authorblockN` only
+%          while `defined_as` the binding's `\IEEEauthorblockN`, and a document's `\def` (or `\renewcommand`) of the
+%          old name to the new one fails that test (`\let`, `\providecommand`, `\newcommand` keep it)
+\documentclass[journal]{IEEEtran}
+\def\authorblockN#1{\IEEEauthorblockN{#1}}
+\begin{document}
+\title{T}
+\author{\authorblockN{Ann Able,~\IEEEmembership{Member,~IEEE}, and Bob Baker,~\IEEEmembership{Fellow,~IEEE}}\IEEEauthorblockA{Zebra University}}
+\maketitle
+Body.
+\end{document}

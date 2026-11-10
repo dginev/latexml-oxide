@@ -33493,6 +33493,12 @@ the name, in the PDF's reading order (#128), 0 Warnings; the other 3,368 of CR10
 Repros `class-bindings/ieeetran_unclosed_names_block_before_affiliation`,
 `class-bindings/ieeetran_authblk_labelled_old_block_name`; guards
 `perfect_kernel_batchcr10c::{unclosed_names_block_closes_before_its_affiliation, old_block_name_takes_the_label}`.
+**Known REDs (revCR10c, synthetic only, no corpus witness):** a document that `\def`s (or `\renewcommand`s) the old
+name to the new one (`\def\authorblockN#1{\IEEEauthorblockN{#1}}`) fails `defined_as`, so its blocks' grades are not
+read: 1 Warning (`unclaimed … member ieee fellow`), int154o read them
+(`class-bindings/ieeetran_def_old_block_name_loses_grades`); an unclosed names block wrapped in another names block is
+still spliced, the hoist one level deep (the inner branch skips `affiliation_before_names`): 1 creator holding the
+second author and affiliation, 0 Warnings, pre-existing (`class-bindings/ieeetran_wrapped_unclosed_names_block`).
 
 ### 988. The footnote-counter and definition declines write the block as Perl's `\lx@add@authors` does, split where Perl splits it (CR7)
 
