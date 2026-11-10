@@ -54,6 +54,12 @@ pub struct Policy {
   /// `\and` is inline text joining the names of one row, not a column (llncs.cls:1013-1018 `\def\and{\unskip,…}`
   /// in `\@maketitle`; OD #792: `Ann Able \and Bob Baker\\ University of Somewhere` is both names')
   pub and_inline:       bool,
+  /// the `\\` lines of the class's `\author` paragraph are read as the binding's own split read them before the block
+  /// went to the reading whole (llncs's `\lx@llncs@author` until Z18e, OXIDIZED_DESIGN_DIVERGENCES #984: its
+  /// `reads_as_affiliation` per line): under a row's affiliation line, a line reading as no institution over one reading
+  /// as one starts a new row of names, and a line whose name carries an ORCID is names. Off for the kernel, whose `\\`
+  /// lines keep their affiliation reading (an article's "Einstein Drive" over an address line, hep-th0212274)
+  pub author_lines:     bool,
   /// a `labelseq=<role>` entry is labelled by its place among the entries of that role (llncs's and aa's
   /// `\institute{A \and B}`, numbered 1, 2 as the class prints them: OD #791, #159)
   pub label_sequence:   bool,
@@ -110,6 +116,7 @@ pub const KERNEL: Policy = Policy {
   hook:             "*",
   inst_after_comma: false,
   and_inline:       false,
+  author_lines:     false,
   label_sequence:   true,
   email_owner:      EmailOwner::Chain,
   call_is_group:    false,

@@ -1147,7 +1147,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (`list_setter_called`: sv_support's `\institute` in an author's group, cond-mat0605195) — a binding's definition read,
   // no name a document spells; it decides only that the emitter stays out, the output then today's)
   ("ledger", 35),
-  ("llncs_cls.rs", 32),
+  // (Z18e 32 -> 31: the unmarked `\author` split `\lx@llncs@author` gone, the block read whole)
+  ("llncs_cls.rs", 31),
   ("osa_journal_sty.rs", 77),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the owner logic, 938 = 924 + 14; none added)
   ("owners", 14),
@@ -1181,7 +1182,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // FB2b5 18 -> 19: `blocks.rs`'s shared column, a column after the last name opening with an institution, every name's
   // affiliation — `is_institution` on the line's printed text (the events' text, no token), so a person whose name does
   // not read as one (`reads_as_names` alone) never becomes an institution: 0712.1016, 1704.03168, review revG3 Q3)
-  ("resolver", 19),
+  // Z18e 19 -> 20: llncs's `\author` lines (`Policy::author_lines`), a line over the next line of its column reading as
+  // an institution starts a row — the `reads_as_affiliation` per line moved from the binding's split it replaces
+  // (`\lx@llncs@author`, whose reads leave llncs_cls.rs), one `is_institution` on the lines' printed text)
+  ("resolver", 20),
   // (DEL1 24 -> 20: the old driver's unit tests of `name_and_trailing_email`, `leading_symbol_labels`, `weldable_line`,
   // `continues_the_line`, `person_over_institution` and `strip_linebreak_options_keeping_gaps` deleted)
   ("rest /author_split_tests.rs", 20),

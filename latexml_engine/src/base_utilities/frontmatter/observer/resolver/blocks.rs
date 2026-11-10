@@ -484,13 +484,35 @@ impl Resolver {
           let names_line = !only_contacts
             && !address_line
             && ((column_first && !shared_column)
-              || later_line_is_names(line, continued, under_affiliation, after_labelled_list));
+              || later_line_is_names(
+                line,
+                continued,
+                under_affiliation,
+                after_labelled_list,
+                policy.author_lines,
+                // (a line reading as no institution over the next line of its column reading as one, under a binding
+                // reading its `\\` lines as its own split did, `Policy::author_lines`; the kernel's keep their
+                // affiliation reading: an article's "Einstein Drive" (hep-th0212274), "James Clerk Maxwell Building"
+                // (math-ph9903017), "IIIT Delhi" (1910.07154) over an address line are no names)
+                policy.author_lines && {
+                  let institution = |l: &Line<'_>| is_institution(&events_text(&l.events));
+                  !institution(line)
+                    && lines[n + 1..]
+                      .iter()
+                      .find(|below| below.column == line.column)
+                      .is_some_and(institution)
+                },
+              ));
           if names_line {
             answered_rows.retain(|c| *c != line.column);
             // (a separator glyph before the line's contact parts the name from it, and ends no row: `Chiara Simeoni --
             // \url{…}`, 2511.07187 — only one the line ends with opens it)
             let ends_open = |e: &&Event| match &e.kind {
               EventKind::Sep(SepKind::Comma) => true,
+              // (an inline `\and` the line ends in, more names to come after the break: llncs's `Vatche Isahagian \and
+              // \\ Vinod Muthusamy`, 2207.10648 — the old split's `\and`-then-`\\` piece; "Vinod Muthusamy" had become the
+              // row's affiliation)
+              EventKind::Sep(SepKind::And(_)) => and_inline,
               EventKind::Sep(SepKind::Word(word)) => {
                 !events::is_separator_word(word)
                   || line

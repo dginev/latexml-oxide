@@ -632,6 +632,11 @@ fn a_frontmatter_clear_removes_the_calls_before_it() {
   assert_reading(
     repro!("llncs_marked_author_then_unmarked_keeps_the_last.tex"),
     Some(&[&["Cid Cole"], &["Dee Dunn"]]),
-    &["C Cid Cole [] | api:creator", "C Dee Dunn [] | api:creator"],
+    // (Z18e: the unmarked list read whole, `\lx@add@author@split`, its names a line's — no longer the old split's API
+    // creators — the second after the inline `\and`)
+    &[
+      "C Cid Cole [] | line:names",
+      "C Dee Dunn [] | line:names sep:and",
+    ],
   );
 }
