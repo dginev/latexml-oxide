@@ -405,6 +405,13 @@ fn the_moved_cut_and_kind_take_no_new_decision() {
     "the moved Cut and Kind grew to {lines} code lines, over {MOVED_CUT_KIND_CODE_LINES}. {WHY} Raising this ceiling \
      needs the main session's decision."
   );
+  // (exact, review revE0h B1: the export pin sees only `pub` items, so a non-exported item moved out of these files
+  // into a library file shows only as this count's fall — `kind.rs`' `pub(super) fn within_inst` to `classify/marks.rs`)
+  assert_eq!(
+    lines, MOVED_CUT_KIND_CODE_LINES,
+    "the moved Cut and Kind fell to {lines} code lines, under {MOVED_CUT_KIND_CODE_LINES}: lower the ceiling to it, and \
+     state in the commit what left (deleted, or moved to which file)."
+  );
 }
 
 /// The one engine's reach into the old reader, per file and name (user 2026-11-08: "stay focused on having only one engine
@@ -794,6 +801,12 @@ fn the_old_readers_names_never_count_as_the_one_engines_own() {
   );
   let ours = one_engine_names(&sources);
   let exports = old_reader_exports();
+  // (the one engine's side is read, so the check below cannot pass on an empty set — review revE0h N1; and the rename
+  // stands)
+  assert!(
+    ours.contains("text_as_tokens") && ours.contains("printed_text_tokens"),
+    "the one engine's names were not read (or the `text_tokens` rename was undone)"
+  );
   // (no name both sides export, none exempt: review revZ18m2 N1, the namesake `text_tokens` renamed on the one engine's
   // side at E0h)
   assert_eq!(
