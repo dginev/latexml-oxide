@@ -420,6 +420,7 @@ mod perfect_kernel_batchcl7;
 mod perfect_kernel_batchcl8;
 mod perfect_kernel_batchcl9;
 mod perfect_kernel_batchcr10a;
+mod perfect_kernel_batchcr10c;
 mod perfect_kernel_batchcr2;
 mod perfect_kernel_batchcr3;
 mod perfect_kernel_batchcr4;

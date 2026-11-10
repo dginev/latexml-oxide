@@ -20,6 +20,8 @@ pub(in crate::base_utilities) use links::*;
 mod marks;
 pub use marks::*;
 mod name_text;
+// (the IEEEtran binding reads an italic grade before a stop by it: ieeetran_cls.rs `grade_text`)
+pub use name_text::grade_words;
 pub(in crate::base_utilities) use name_text::*;
 mod names_split;
 pub(in crate::base_utilities) use names_split::*;

@@ -1170,8 +1170,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("gretsi_cls.rs", 14),
   // (CR10a, 119 -> 128: the class's author body is read as tokens before it is digested, as `author_block_body` reads it —
   // a names block nested in another's spliced in (`unnested_name_blocks`, 1511.03982), the alias `\authorblockN`'s grades,
-  // and a stop after an italic grade group, `{\em …}.`, `\emph{…}.` (`without_stop_after_grade`, `grade_text`, 1810.08035))
-  ("ieeetran_cls.rs", 128),
+  // and a stop after an italic grade group, `{\em …}.`, `\emph{…}.` (`without_stop_after_grade`, `grade_text`, 1810.08035);
+  // CR10c, 128 -> 126: the old block names read once as the ones they mean (`with_block_names`), so the block test reads
+  // one name each (-3), and an outer block's own affiliation block found before an inner names block
+  // (`affiliation_before_names`, 2605.20445, +1))
+  ("ieeetran_cls.rs", 126),
   ("insert", 14),
   // (from `frontmatter (rest)`, 24 -> 23, at Z2r2: `\alignauthor`, out of the kernel's conventions into the binding's own table; no read)
   ("inst_support_sty.rs", 1),
