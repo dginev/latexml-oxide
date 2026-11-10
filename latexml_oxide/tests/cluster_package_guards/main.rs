@@ -481,6 +481,9 @@ mod perfect_kernel_batchne6;
 mod perfect_kernel_batchne7;
 mod perfect_kernel_batchne8;
 mod perfect_kernel_batchnl1;
+/// OC1: an author call parts at the `\and` its spelling hides (a macro, a wrapper, a `\csname`), the reading cutting
+/// the rehearsed block at its `Sep(And)` events, on each class route (Option C's P1, green before OC1).
+mod perfect_kernel_batchoc1;
 mod perfect_kernel_batchp1;
 mod perfect_kernel_batchp1c;
 mod perfect_kernel_batchp1e;

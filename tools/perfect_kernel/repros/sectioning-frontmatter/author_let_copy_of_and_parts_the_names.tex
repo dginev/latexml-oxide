@@ -1,0 +1,20 @@
+% mechanism: a `\let` copy of `\and` (`\let\nx\and`, then `\author{Ann Able \nx Bob Baker}`): TeX's `\nx` has
+%   `\and`'s meaning and parts the names. The rehearsal binds its vocabulary by name (rehearsal.rs `ALWAYS_BOUND`,
+%   `let_i(\and, \lx@fm@obs@and)`), so the copy keeps the kernel's meaning, digests to the word "and", and the block
+%   holds no `Sep(And)` to cut: one merged creator, `Error:frontmatter:merged_creators`. The same under eptcs's and
+%   IEEEtran's (journal) kernel route; OmniBus's `\lx@splitting` parts it before the reading. Not P1's cut (the event
+%   is missing, not uncut): a batch of its own, the rehearsal binding a separator's meaning, not its name
+% witness: OC1's spelling probe of bindsplit om1/ie1/ep1 (the `\let` spelling)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able" and "Bob Baker" side by side
+% engines: Perl 0.8.8: two creators, Ann Able and Bob Baker; int156a (MB1): one creator "Ann Able and Bob Baker",
+%   1 error, 1 warning (the content check's extra "and")
+% expect:  0 errors, 0 warnings; creators Ann Able, Bob Baker
+% status:  RED (int156a; catalog, no guard — OC1 report, a proposed batch)
+\documentclass{article}
+\let\nx\and
+\title{T}
+\author{Ann Able \nx Bob Baker}
+\begin{document}
+\maketitle
+Text.
+\end{document}

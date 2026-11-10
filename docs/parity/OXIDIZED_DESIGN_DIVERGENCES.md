@@ -34006,3 +34006,33 @@ creators) and 2604.04847 byte-identical too.
 `perfect_kernel_batche0` (`OLD_READER_EMISSIONS` `email_block_calls.rs lx@add@` 1 → 0, `OLD_READER_CODE_LINES` 2,665 →
 1,656, `TOKEN_READS` `author_block` 236 → 195 and `rest /author_split_tests.rs` 19 → 18). Repros
 `tools/perfect_kernel/repros/sectioning-frontmatter/aastex_affil_marked_email_line_{no_one_spells_is_the_marked_authors,of_its_own_no_one_spells}.tex`.
+
+### 993. An author call parts at the `\and` its spelling hides: the reading cuts the rehearsed block at its own `Sep(And)` events (OC1, Option C's P1)
+
+**Perl.** Every binding splits an author list by spelling before digestion: `SplitTokens` compares tokens by name
+(`Base_Utility.pool.ltxml:114-140`, `@authorsplits` :679), so a separator held in a macro (`\author{\aut}`,
+`\newcommand\nx{\and}`), printed by a document wrapper (`\pair{Ann Able}{Bob Baker}`, `\pair` printing `#1 \and #2`)
+or spelled `\csname and\endcsname` leaves one piece: one creator, "Ann Able and Bob Baker" (Perl 0.8.8 under OmniBus,
+inst_support.sty.ltxml:33-38; llncs, llncs.cls.ltxml:43; IEEEtran, journal and conference grid). pdflatex prints two
+authors in each.
+
+**Now.** Each class route queues the piece its split left as a block (`\lx@add@author@split`: OmniBus's
+`inst_support_sty.rs` `\author`, llncs's whole and marked `\author`; the kernel's `\lx@add@authors`: IEEEtran's plain
+`\author`, `\lx@IEEE@author@plain`, and eptcs's unstructured one; eptcs's cells whole, #991), the rehearsal digests the
+hidden `\and` to its event constructor (`rehearsal.rs` `ALWAYS_BOUND`), and the reading's names line cuts the block at
+that `Sep(And)`, as TeX parts it: two creators, each `\inst` picking its numbered `\institute`. The IEEEtran grid is
+argument passing, not a cut: each `\IEEEauthorblockN` is a call of its own, and the class's `\def\and{}`
+(`\lx@IEEE@author@blocks`) makes a macro-held `\and` between them print nothing, as IEEEtran.cls's. This held before OC1 (the 2026-11-07 bindsplit
+probes om1, ln1, ie1 and ep1, one merged creator at int143b, are green at int156a, through #980, #984 and #991); OC1
+pins each route. The class splits by spelling stay in front of the reading (`\lx@splitting{\lx@add@author@split}{\and\And}`
+in inst_support, aa, sv_support, webofc and ptephy; llncs's marked split; the IEEEtran grid; eptcs's cells): redundant
+for the names the reading now cuts, they are P2's to remove. Residuals, red at int156a and outside this mechanism: a
+`\let` copy of `\and` (`\let\nx\and`) keeps the kernel's meaning in the rehearsal, which binds its vocabulary by name,
+so the block holds no `Sep(And)` (one merged creator and `Error:frontmatter:merged_creators` under article, eptcs and
+IEEEtran journal; Perl two creators); and IEEEtran's `\author` routes to the grid by spelling (`body.to_string().contains("authorblockN")`,
+`ieeetran_cls.rs` `\author`), so a grid held in a macro goes the plain route (one nameless creator) and one inside a
+wrapper's arguments is read scrambled (P2). Guards `perfect_kernel_batchoc1::{a_block_parts_at_the_and_its_spelling_hides,
+ieeetran_grid_parts_at_a_macro_held_and, eptcs_cells_part_at_a_macro_held_and}`; repros
+`sectioning-frontmatter/author_call_cut_at_{a_macro_held_and_omnibus,a_wrapper_held_and_omnibus,a_macro_held_and_llncs,a_macro_held_and_llncs_marked,a_csname_and_ieeetran,a_macro_held_and_ieeetran_grid}.tex`,
+`class-bindings/eptcs/eptcs_author_cut_at_a_macro_held_and.tex`; the residuals' catalog repros
+`sectioning-frontmatter/{author_let_copy_of_and_parts_the_names,ieeetran_author_grid_in_a_macro,ieeetran_author_grid_through_a_wrapper}.tex`.
