@@ -23,29 +23,22 @@ mod marks;
 pub use marks::*;
 mod name_text;
 // (the IEEEtran binding reads an italic grade before a stop by it: ieeetran_cls.rs `grade_text`)
-// (and the IEEEtran binding's names continued on a line below them: ieeetran_cls.rs; Z18m, from `author_block/name_text.rs`)
+pub use name_text::grade_words;
 pub(in crate::base_utilities) use name_text::*;
-pub use name_text::{grade_words, names_continue};
 mod names_split;
 pub(in crate::base_utilities) use names_split::*;
 mod notes;
 pub use notes::*;
+// (the old reader's last items, moved unchanged from `author_block/` by Z18m into files of their own, so the e0 fence
+// tells them from this library: `old_reader/mod.rs`)
+mod old_reader;
+pub use old_reader::*;
 mod preprocess;
 pub(in crate::base_utilities) use preprocess::*;
 mod rows;
-// (authblk's `\author` gates read an author line by them: authblk_sty.rs `has_separated_names`, `lines_of_names_before_affil`;
-// Z18m, from `author_block/rows.rs`)
 pub(in crate::base_utilities) use rows::*;
-pub use rows::{
-  holds_a_macro_printing_a_link, line_breaks_as_name_separators, lines_under_names_read_as_names,
-};
 mod separators;
-// (authblk's `\author` gate too; Z18m, from `author_block/separators.rs`)
-pub use separators::has_author_block_separator;
 pub(in crate::base_utilities) use separators::*;
-// (names parted by horizontal space alone, whose one caller is `rows::lines_under_names_read_as_names`; Z18m, from
-// `author_block/space_parted.rs`)
-mod space_parted;
 mod symbols;
 pub(in crate::base_utilities) use symbols::*;
 // (a class's title code read where it reads `\@author`, ERR2's; Z18m, from `defs/frontmatter_fields/names.rs`)

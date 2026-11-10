@@ -2,7 +2,7 @@
 //! (census127 clusters 6 and 3; prep `agent_reports/2026-11-02_prep99d_link.md`).
 //! - A line of notes only after a `\\` (`\thanks`, `\footnote`, `\IEEEcompsocitemizethanks` and spacing), its notes
 //!   marked in a marked block, joins the line above, its notes the names' (OXIDIZED_DESIGN_DIVERGENCES #957; `defs/author_macros/ijcai.rs`
-//!   `notes_line_joins_names`, `frontmatter/classify/notes.rs` `notes_only_line`; Perl shares the defect, Base_Utility.pool.ltxml
+//!   `notes_line_joins_names`, `frontmatter/classify/old_reader/notes.rs` `notes_only_line`; Perl shares the defect, Base_Utility.pool.ltxml
 //!   :702-712). Witnesses 2609.17106, 2411.05212, 2312.10807.
 //! - A boxed author block's re-part writes an e-mail item, the reading's address in its row's fonts, and a
 //!   `\resizebox`'s sizes print no name ink (OD #958; `observer/emitter/{plan,repart}.rs` and the S2b writer's `apply.rs` (deleted in DEL4) `Made::Email`,

@@ -247,7 +247,10 @@ fn closes_only_its_own_groups(tokens: &[Token]) -> bool {
 /// the command is no undefined token for a piece to take alone (`emitter::content::Field::held_undefined_at`, PC3's;
 /// Z18m moved it here with this reader); a parameterless one
 /// (aaai2026.sty's `\co`, a note; a `\let`, a `\newcounter`'s `\c@x`) is.
-pub(in crate::base_utilities) fn reads_arguments(definee: &Token, statement: &[Token]) -> bool {
+pub(in crate::base_utilities::frontmatter) fn reads_arguments(
+  definee: &Token,
+  statement: &[Token],
+) -> bool {
   let Some(at) = statement.iter().skip(1).position(|t| t == definee) else {
     return false;
   };

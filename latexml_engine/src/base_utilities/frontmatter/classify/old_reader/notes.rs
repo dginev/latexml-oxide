@@ -1,0 +1,43 @@
+//! The IEEEtran binding's lines of notes (`ieeetran_cls.rs`): a line holding authors' notes only (`notes_only_line`,
+//! which the API's line marks and the IJCAI chain read too), and a bare run of notes as the document's
+//! (`document_notes`). Moved unchanged by Z18m, which deleted `author_block/`, from `author_block/notes.rs`.
+
+use super::*;
+use crate::base_utilities::defs::frontmatter_api::line_notes;
+
+/// Whether an author block's `line` holds authors' notes only: one or more `\thanks{…}`, `\footnote{…}` or
+/// `\IEEEcompsocitemizethanks{…}` (each with an optional `[…]`), and else only spacing (spaces, `~`, `\par`). Such a
+/// line prints no text where it stands, only its notes' marks: the notes are the line's above, as written without the
+/// `\\` before them (`defs/author_macros/ijcai.rs` `notes_line_joins_names`; the IEEE reader's grade-and-notes line,
+/// `grade_only_line`).
+pub fn notes_only_line(line: &[Token]) -> bool {
+  line_notes(line).is_some_and(|notes| !notes.is_empty())
+}
+
+/// A line of notes and of parts printing nothing ([`prints_nothing`]: `\thanks{…}\vspace{2mm}`) as the document's notes,
+/// as an author block digests them in a contact (`document_note_call`; a note no pubnote takes as written), the rest
+/// left out: the IEEEtran binding's bare run of notes between the names and their shared block
+/// (`\IEEEauthorblockN{…}\thanks{…}\IEEEauthorblockA{…}`, 1508.00691, ieeetran_cls.rs `wrap_bare_author_block_text`).
+/// `None` for a line holding other ink.
+pub fn document_notes(line: &[Token]) -> Option<Vec<Token>> {
+  let mut out = Vec::with_capacity(line.len());
+  let mut rest = Vec::new();
+  let mut i = 0;
+  while i < line.len() {
+    match note_call_end(line, i) {
+      Some(end) => {
+        let note = &line[i..end];
+        match document_note_call(note) {
+          Some(call) => out.extend(call),
+          None => out.extend_from_slice(note),
+        }
+        i = end;
+      },
+      None => {
+        rest.push(line[i]);
+        i += 1;
+      },
+    }
+  }
+  prints_nothing(&Tokens::new(rest)).then_some(out)
+}

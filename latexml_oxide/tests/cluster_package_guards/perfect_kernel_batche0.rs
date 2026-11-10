@@ -249,11 +249,9 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
   // `defs/frontmatter_api/email_lines.rs`, where [`MOVED_CUT_KIND_EMISSIONS`] counts them)
   // (the "Knowledge in, driver out, one pass" move, 3 -> 2 and 8 -> 2: the token primitives that recognize the API's commands in a note (`NAME_ANNOTATIONS`, `name_text`)
   // moved to `classify/`; they read, emit nothing)
-  // (Z18m, 0 -> 1 and 0 -> 6: no emission added — the fence follows the moved code into its `classify/` homes, whose own
-  // code was already there: `NAME_ANNOTATIONS`' rows and the tests by name of the API's `\lx@add@` commands a name or a
-  // note may hold, read, not written)
-  ("frontmatter/classify/name_text.rs lx@add@", 1),
-  ("frontmatter/classify/notes.rs lx@add@", 6),
+  // (Z18m moved the rest of `author_block/` unchanged into files of their own, `frontmatter/classify/old_reader/`, which
+  // emit nothing; `classify/name_text.rs`' 1 and `notes.rs`' 6 are the one engine's library's, `NAME_ANNOTATIONS`' rows and
+  // the tests by name of the API's `\lx@add@` commands a name or a note may hold, read, not written: review revZ18m B2)
 ];
 
 /// The old reader's non-blank code lines at int140a: a ceiling, for the growth its emissions don't show (108a's +703
@@ -273,11 +271,12 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
 /// `defs/frontmatter_fields/`; [`MOVED_CUT_KIND_CODE_LINES`] took them. Z18l (2026-11-10) lowered it to 1,656: Z18k's
 /// deletion (`split_author_line`'s closure, `row_emails.rs`) and Z18l's (aas's e-mail line readers, `email_block_calls.rs`,
 /// `email_owners.rs` and `links.rs` whole), the ceiling left at 2,665 by the first. Z18m (2026-11-10) moved the rest of
-/// `author_block/` unchanged to its owners and deleted the directory; the ceiling follows the code to its homes
-/// ([`old_reader_homes`]) and counts them whole, 3,579 = the 1,656 moved + 23 of the IJCAI split moved with them from
-/// `defs/author_macros.rs` + the 1,900 those `classify/` files already held (the "Knowledge in, driver out, one pass" move's)
-/// — the moved lines' new home, no line added.
-const OLD_READER_CODE_LINES: usize = 3_579;
+/// `author_block/` unchanged to files of their own, `defs/author_macros/ijcai.rs` and `frontmatter/classify/old_reader/`,
+/// and deleted the directory; the ceiling counts those files ([`old_reader_homes`]), the old reader's code alone (review
+/// revZ18m B2: not the one engine's library beside it), 1,702 = the 1,656 moved + 23 of the IJCAI split moved with them
+/// from `defs/author_macros.rs` + 23 of the new files' own (7 `use super::*;`, 16 of `old_reader/mod.rs`'s module
+/// declarations and re-exports) — no line of an item added.
+const OLD_READER_CODE_LINES: usize = 1_702;
 
 /// What the fence counts in the old reader's code: its ways into the API's queue, and a convention's mode.
 const OLD_READER_NEEDLES: [&str; 4] = [
@@ -399,17 +398,22 @@ fn the_moved_cut_and_kind_take_no_new_decision() {
 /// The one engine's reach into the old reader, per file and name (user 2026-11-08: "stay focused on having only one engine
 /// for frontmatter"). Until Z18m deleted it, `author_block/mod.rs` re-exported each of its submodules (`pub use
 /// names_split::*`, …) and `base_utilities/mod.rs` re-exported it all (`pub use author_block::*`), so a frontmatter file's
-/// `use super::*` reached every name the old reader exported without spelling a path; the moved files' names still reach
-/// it through the globs of their new homes: the fence counts the names. A use is a call (`name(`), a
+/// `use super::*` reached every name the old reader exported without spelling a path; the moved files' names
+/// ([`MOVED_OLD_READER_FILES`]) still reach it through the globs of their new homes, so the fence counts those names, and
+/// reads the one engine's files alone: the old reader's own files, `classify/old_reader/` among them, are no source of
+/// its and export none of its names ([`one_engine_files`], [`old_reader_names_owned`]; review revZ18m B1, where 22 moved
+/// names sat in `classify/`'s library files and went uncounted). A use is a call (`name(`), a
 /// path (`::name`, `name::`), a name in a `use` list, a function passed as a value (`.with_str(name)`, `.map(name)`), or any
 /// occurrence of a constant or type name (upper case first); a name is the one engine's own where `frontmatter/` exports it
-/// (a visible item at a file's top level) or the file itself defines it (a nested function, a method, a closure). Each
+/// (a visible item at a one-engine file's top level) or the file itself defines it (a nested function, a method, a
+/// closure). Each
 /// pair is a debt: it may only fall. A new one is a decision the old engine takes for the new one; it lands in
 /// `observer/resolver/`, on the digested events, instead. The "Knowledge in, driver out, one pass" move (2026-11-08) moved every name the one engine reached, 138
 /// pairs at int149a, into its own library (docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row "Knowledge in, driver out, one
 /// pass"): text rules and token primitives to `frontmatter/classify/`, owner logic to `observer/resolver/owners.rs`, Perl's
 /// API-call writers to `observer/emitter/calls.rs`, Perl's whole-block fallback with its preparation to `frontmatter/fallback.rs`,
-/// the API's attribute names to `defs/frontmatter_api.rs`. None is left: what `author_block/` still holds is the token driver.
+/// the API's attribute names to `defs/frontmatter_api.rs`. None is left: what `author_block/` held then was the token
+/// driver, deleted at DEL2; its last items Z18m moved to the old reader's files of their own and deleted the directory.
 /// (revZ18j S1: the names [`MOVED_OLD_READER_FILES`] export count too, so a move out of `author_block/` leaves no name
 /// unfenced; `relocate.rs`'s `s!("{CUT_COPY_PLACE}{key}:{label}")` is revZ18a's capture, unfenced since Z18a moved
 /// `CUT_COPY_PLACE` to `cut.rs`). `fallback.rs title_code_author_statements` (int155a, the main session's decision): PBb's
@@ -419,12 +423,9 @@ fn the_moved_cut_and_kind_take_no_new_decision() {
 /// leaves out a held undefined command the class's title code defines reading arguments — the same class code, which
 /// the flush's net already spares (1108.4222, 2607.07582); paid with that reader's move (Z18m, its `reads_arguments` with it).
 const ONE_ENGINE_REACH: &[(&str, usize)] = &[
-  // (Z18m, 0 -> 2 each: no reach added — `author_block/`'s own uses of the moved field and line readers (an import and a
-  // call each), counted since that code's home, `classify/`, is the one engine's directory: `collaboration_line`'s,
-  // `notes_only_line`'s and `space_parted_names`')
-  ("classify/collaborations.rs collaboration_line_reading", 2),
-  ("classify/notes.rs line_notes", 2),
-  ("classify/space_parted.rs only_marks_and_notes", 2),
+  // (Z18m's three, `collaboration_line`'s, `notes_only_line`'s and `space_parted_names`' uses of the moved field and line
+  // readers, are the old reader's uses of its own code: their files, `classify/old_reader/`, are no source of the one
+  // engine's (review revZ18m B1))
   ("relocate.rs CUT_COPY_PLACE", 1),
 ];
 
@@ -444,15 +445,18 @@ const MOVED_OLD_READER_FILES: &[&str] = &[
   "defs/frontmatter_api/line_marks.rs",
   // (Z18m: the IJCAI chain, from `defs/author_macros.rs` and `author_block/{names_split,preprocess,separators}.rs`)
   "defs/author_macros/ijcai.rs",
-  // (Z18m: the rest of `author_block/`, each file's items appended to its `classify/` counterpart, or a module of its own)
-  "frontmatter/classify/collaborations.rs",
-  "frontmatter/classify/marks.rs",
-  "frontmatter/classify/name_text.rs",
-  "frontmatter/classify/names_split.rs",
-  "frontmatter/classify/notes.rs",
-  "frontmatter/classify/rows.rs",
-  "frontmatter/classify/separators.rs",
-  "frontmatter/classify/space_parted.rs",
+  // (Z18m: the rest of `author_block/`, in files of their own under `classify/old_reader/` (review revZ18m B1: not beside
+  // the one engine's library in `classify/`'s other files, which this list would count as the old reader's, nor among
+  // the one engine's own names, which [`the_one_engine_reaches_the_old_reader_only_through_its_survivors`] leaves out))
+  "frontmatter/classify/old_reader/collaborations.rs",
+  "frontmatter/classify/old_reader/marks.rs",
+  "frontmatter/classify/old_reader/mod.rs",
+  "frontmatter/classify/old_reader/name_text.rs",
+  "frontmatter/classify/old_reader/names_split.rs",
+  "frontmatter/classify/old_reader/notes.rs",
+  "frontmatter/classify/old_reader/rows.rs",
+  "frontmatter/classify/old_reader/separators.rs",
+  "frontmatter/classify/old_reader/space_parted.rs",
 ];
 
 /// The names the old reader exports into `base_utilities`: the `pub`, `pub(crate)` and `pub(in …)` items of each of
@@ -516,11 +520,77 @@ fn uses_of(code: &str, imports: &[std::ops::Range<usize>], name: &str) -> usize 
     .count()
 }
 
+/// A visible item at a file's top level, its name captured: what a file exports into `base_utilities` (not a method nor a
+/// nested function, which are indented).
+fn exported_items() -> Regex {
+  Regex::new(
+    r"(?m)^pub(?:\([^)]*\))?\s+(?:fn|const|static|struct|enum|type|trait|mod)\s+([A-Za-z_][A-Za-z0-9_]*)",
+  )
+  .expect("a regex")
+}
+
+/// The one engine's files among `files` (each under `frontmatter/`), with their paths under it: all but the old reader's,
+/// [`MOVED_OLD_READER_FILES`] (review revZ18m B1: the old reader's code moved into `frontmatter/` is still the old
+/// reader's; its names count as the old reader's exports, and its own uses of them are no reach of the one engine's).
+fn one_engine_files(files: &[String]) -> Vec<(String, String)> {
+  let dir = format!("{BASE}/frontmatter/");
+  files
+    .iter()
+    .filter(|file| {
+      !MOVED_OLD_READER_FILES
+        .iter()
+        .any(|moved| **file == format!("{BASE}/{moved}"))
+    })
+    .map(|file| {
+      let short = file.strip_prefix(&dir).unwrap_or(file).to_string();
+      (short, file.clone())
+    })
+    .collect()
+}
+
+/// The one engine's own names: what one of its files exports, a visible item at its top level ([`exported_items`]); what a
+/// file defines for itself at any depth — a private item, a nested function, a method, a closure — is its own in that file
+/// only.
+fn one_engine_names(sources: &[(String, RustSource)]) -> std::collections::BTreeSet<String> {
+  let exported = exported_items();
+  sources
+    .iter()
+    .flat_map(|(_, source)| {
+      exported
+        .captures_iter(&source.code)
+        .map(|found| found[1].to_string())
+        .collect::<Vec<_>>()
+    })
+    .collect()
+}
+
+/// The old reader's exported names a one-engine file exports too, a different item of the same name: the reverse fence
+/// counts no use of them, since it cannot tell which one a use names. An exact list, which only falls.
+const OLD_READER_NAMESAKES: &[&str] = &[
+  // (`defs/frontmatter_fields/contacts.rs`' keyval-text tokens (Z18a's field readers) beside the resolver's and the
+  // emitter's own `pub(super)` helpers, `observer/resolver/labels.rs` and `observer/emitter/emit.rs`: three items)
+  "text_tokens",
+];
+
+/// The old reader's exported names that `ours` counts as the one engine's own, so that the reverse fence would count no
+/// use of them: none may be but [`OLD_READER_NAMESAKES`] (review revZ18m B1).
+fn old_reader_names_owned(
+  exports: &std::collections::BTreeSet<String>,
+  ours: &std::collections::BTreeSet<String>,
+) -> Vec<String> {
+  exports
+    .intersection(ours)
+    .filter(|name| !OLD_READER_NAMESAKES.contains(&name.as_str()))
+    .cloned()
+    .collect()
+}
+
 /// The reverse fence: the one engine reaches into the old reader only through the names it reaches today, each a debt.
 #[test]
 fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
-  const WHY: &str = "The one engine decides on the digested events (`observer/resolver/`); `author_block/` is deleted after \
-                     the flip, and each name `frontmatter/` still uses moves or is translated: \
+  const WHY: &str = "The one engine decides on the digested events (`observer/resolver/`); the old reader \
+                     (`MOVED_OLD_READER_FILES`, what Z18m moved out of the deleted `author_block/`) is deleted or \
+                     rerouted by Option C, and each name `frontmatter/` still uses moves or is translated: \
                      docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md, row \"`author_block/`'s survivors\".";
   // (closed 2026-11-08: the two shapes the count missed — a function passed as a value, `relocate.rs`'s
   // `t.with_str(is_name_note_command)`, and a name hidden everywhere by a method or a nested function of one file, `skip_group`
@@ -538,10 +608,7 @@ fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
     uses_in(&lex_rust(r#"s!("{X}{X}{{X}}{X:?}{XY}")"#), &[], "X"),
     3
   );
-  let exported = Regex::new(
-    r"(?m)^pub(?:\([^)]*\))?\s+(?:fn|const|static|struct|enum|type|trait|mod)\s+([A-Za-z_][A-Za-z0-9_]*)",
-  )
-  .expect("a regex");
+  let exported = exported_items();
   let local = Regex::new(concat!(
     r"\b(?:fn|const|static|struct|enum|type|trait|mod)\s+([A-Za-z_][A-Za-z0-9_]*)",
     r"|\blet\s+(?:mut\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(?:move\s*)?\|",
@@ -551,29 +618,21 @@ fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
     !exported
       .is_match("impl Page {\n  pub fn skip_group(&self) {}\n}\nfn f() {\n  fn skip_group() {}\n}")
   );
-  let dir = format!("{BASE}/frontmatter");
-  let files = rust_files(&dir);
-  let sources: Vec<(String, RustSource)> = files
-    .iter()
-    .map(|file| {
-      let short = file
-        .strip_prefix(&format!("{dir}/"))
-        .unwrap_or(file)
-        .to_string();
-      (short, read_rust(file))
-    })
-    .collect();
-  // (the one engine's own names: what a frontmatter file exports, a visible item at its top level; what a file defines for
-  // itself at any depth — a private item, a nested function, a method, a closure — is its own in that file only)
-  let ours: std::collections::BTreeSet<String> = sources
-    .iter()
-    .flat_map(|(_, source)| {
-      exported
-        .captures_iter(&source.code)
-        .map(|found| found[1].to_string())
-        .collect::<Vec<_>>()
-    })
-    .collect();
+  let sources: Vec<(String, RustSource)> =
+    one_engine_files(&rust_files(&format!("{BASE}/frontmatter")))
+      .into_iter()
+      .map(|(short, file)| (short, read_rust(&file)))
+      .collect();
+  let ours = one_engine_names(&sources);
+  // (no name the old reader exports is the one engine's own, so every one is counted: review revZ18m B1, where 22 moved
+  // names sat in the one engine's directory, counted as its own, and a new call to them passed)
+  let owned = old_reader_names_owned(&old_reader_exports(), &ours);
+  assert!(
+    owned.is_empty(),
+    "the old reader's names {owned:?} count as the one engine's own, so no use of them is counted: a file that exports \
+     them is the old reader's, listed in MOVED_OLD_READER_FILES (and under `classify/old_reader/` if it moved there), or \
+     the name is defined twice. {WHY}"
+  );
   let names: Vec<String> = old_reader_exports()
     .into_iter()
     .filter(|name| !ours.contains(name))
@@ -603,6 +662,83 @@ fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
     &counts,
     WHY,
   );
+}
+
+/// The reverse fence counts every name the old reader exports (review revZ18m B1): a file under `classify/old_reader/` is
+/// the old reader's, listed in [`MOVED_OLD_READER_FILES`]; none of those is a source of the one engine's; and the names
+/// Z18m moved into `frontmatter/` (the 22 revZ18m found uncounted) are the old reader's exports, none the one engine's own.
+#[test]
+fn the_old_readers_names_never_count_as_the_one_engines_own() {
+  let old_reader_dir = format!("{BASE}/frontmatter/classify/old_reader");
+  let listed: Vec<String> = MOVED_OLD_READER_FILES
+    .iter()
+    .map(|file| format!("{BASE}/{file}"))
+    .collect();
+  let unlisted: Vec<String> = rust_files(&old_reader_dir)
+    .into_iter()
+    .filter(|file| !listed.contains(file))
+    .collect();
+  assert!(
+    unlisted.is_empty(),
+    "{unlisted:?}: old-reader files missing from MOVED_OLD_READER_FILES"
+  );
+  // (the filter itself: an old-reader file under `frontmatter/` is no source of the one engine's, a library file is)
+  let library = format!("{BASE}/frontmatter/classify/marks.rs");
+  let moved = format!("{BASE}/frontmatter/classify/old_reader/marks.rs");
+  assert_eq!(one_engine_files(&[library, moved]), vec![(
+    "classify/marks.rs".to_string(),
+    format!("{BASE}/frontmatter/classify/marks.rs")
+  )]);
+  let sources: Vec<(String, RustSource)> =
+    one_engine_files(&rust_files(&format!("{BASE}/frontmatter")))
+      .into_iter()
+      .map(|(short, file)| (short, read_rust(&file)))
+      .collect();
+  assert!(
+    sources
+      .iter()
+      .all(|(short, _)| !short.starts_with("classify/old_reader/"))
+  );
+  let ours = one_engine_names(&sources);
+  let exports = old_reader_exports();
+  assert_eq!(
+    old_reader_names_owned(&exports, &ours),
+    Vec::<String>::new()
+  );
+  // (the check bites: a name both export is flagged)
+  let both: std::collections::BTreeSet<String> = ["has_author_block_separator".to_string()].into();
+  assert_eq!(old_reader_names_owned(&both, &both), vec![
+    "has_author_block_separator".to_string()
+  ]);
+  for name in [
+    "author_group_splits",
+    "author_label_marks",
+    "author_marks_end_name",
+    "collaboration_line",
+    "document_notes",
+    "drop_empty_marks",
+    "has_author_block_separator",
+    "hoist_wrapped_separators",
+    "holds_a_macro_printing_a_link",
+    "leading_markup",
+    "line_breaks_as_name_separators",
+    "lines_under_names_read_as_names",
+    "name_marks_end",
+    "names_continue",
+    "names_list_continues",
+    "notes_only_line",
+    "space_parted_name_line",
+    "space_parted_names",
+    "space_parted_rows_joined",
+    "spaced_name_separators",
+    "whole_line_group",
+    "wide_space_end",
+  ] {
+    assert!(
+      exports.contains(name) && !ours.contains(name),
+      "{name}: the old reader's export, counted by the reverse fence"
+    );
+  }
 }
 
 /// Perl LaTeXML's Frontmatter API names, generated once from `LaTeXML/lib/LaTeXML` (absent in worktrees and CI, so hard-coded

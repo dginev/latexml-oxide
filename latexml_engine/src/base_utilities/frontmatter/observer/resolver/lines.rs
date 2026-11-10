@@ -901,7 +901,7 @@ pub(super) fn joined_single_name(events: Vec<Event>) -> Vec<Event> {
 }
 
 /// Whether a Mark is a name annotation a remark holds, moved onto the name as the old reader's `name_takes_annotations`
-/// moves every one of `NAME_ANNOTATIONS` (`classify/notes.rs`) and a `\footnotemark` (`author_block/collaborations.rs`):
+/// moves every one of `NAME_ANNOTATIONS` (`classify/notes.rs`) and a `\footnotemark` (`classify::is_footnote_mark`):
 /// a request (`\altaffilmark`, `\thanksref`, `\corref`, `\fnref`, `\tnoteref`), an `\inst` or `\IEEEauthorrefmark`
 /// (`inst`), a `\textsuperscript` (`sup`), a `\cite`, a footnote mark, and a footnote symbol's superscript (`$^{*}$`,
 /// `math`, the old reader's `\lx@frontmatter@keepsup`); not a number's formula superscript (`$^{1}$`) nor a glyph
