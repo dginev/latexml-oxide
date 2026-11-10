@@ -31,8 +31,8 @@ pub(in crate::base_utilities::frontmatter::observer) fn split_pieces(
 }
 
 /// Whether a call is a class's one shared institute (`_share=authors`, not a piece its marks split) holding marks typed by
-/// hand, a paper's own (`\affmark{1} City University … \quad \affmark{2} ShanghaiTech University … \\ \affmark{4} …`,
-/// 2608.21425): no line or mark of it leads an institute of its own — the one entry, which no class mark requests, the
+/// hand after a line's first words, a paper's own (`\affmark{1} City University … \quad \affmark{2} ShanghaiTech University
+/// … \\ \affmark{4} …`, 2608.21425): no line or mark of it leads an institute of its own — the one entry, which no class mark requests, the
 /// block's whole, as the old split's `marks_pick` left it ("an institute holding marks of its own" is not shared). The
 /// class's own `\inst` marks in it (aa's `\institute{\inst{1} Univ X \\ \inst{2} Univ Y}`, 1003.3020) still lead its
 /// lines. The reading keeps it whole ([`Resolver::api`]) and the emitter writes it so (`emit::item_call`).
@@ -40,11 +40,16 @@ pub(in crate::base_utilities::frontmatter::observer) fn hand_marked_share(
   attrs: &str,
   events: &[Event],
 ) -> bool {
+  // (a mark typed by hand after a line's first words: the line no one institute its leading mark labels — a line each
+  // led by its mark, `$^1$Univ A \\ $^2$Univ B` under `\inst{1,2}`, is still read line by line, 1803.02579)
   shares_the_row(attrs)
     && attr_value(attrs, "_markpiece") != Some("true")
-    && events
-      .iter()
-      .any(|e| e.kind == EventKind::Mark && !is_class_request(e))
+    && events.split(|e| e.kind == EventKind::Break).any(|line| {
+      line
+        .iter()
+        .skip_while(|e| e.kind != EventKind::Name)
+        .any(|e| e.kind == EventKind::Mark && !is_class_request(e))
+    })
 }
 
 impl Resolver {
