@@ -191,6 +191,7 @@ pub mod ieeetj_cls;
 pub mod ifoddpage_sty;
 pub mod ijsra_cls;
 pub mod imsart_cls;
+pub mod imsart_sty;
 pub mod informs_cls;
 pub mod interact_cls;
 pub mod interspeech_cls;
@@ -781,6 +782,7 @@ pub const BINDINGS: &[(&str, &str, BindingLoader)] = &[
   ),
   ("ieeecolor", "cls", ieeecolor_cls::load_definitions),
   ("imsart", "cls", imsart_cls::load_definitions),
+  ("imsart", "sty", imsart_sty::load_definitions),
   ("informs", "cls", informs_cls::load_definitions),
   ("interact", "cls", interact_cls::load_definitions),
   ("iucr", "cls", iucr_cls::load_definitions),

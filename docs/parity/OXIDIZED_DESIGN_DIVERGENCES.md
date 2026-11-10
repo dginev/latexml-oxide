@@ -33227,3 +33227,26 @@ the minipage's paragraph). Repros
 guards `perfect_kernel_batchcr2` (one per path: the owner label, a block's queued setter, a call's in-place digest, the
 call's place among the items, a written call), `perfect_kernel_batchcr3::revtex3_minipage_address_first_one_run` (a run of
 several owners).
+
+### 986. imsart.sty is a binding of its own, so a shipped copy declaring itself imsart.sty is read through it (CR3)
+
+The imsart.cls binding (latexml_contrib `imsart_cls.rs`) owns imsart.sty's frontmatter (`\ead`, `\printead`, `\author`,
+`\address`, `\thanksref`, `\thankstext`, `\thanksmark`), its keyword blocks and `\arxiv`, defined before it reads
+imsart.sty raw. A paper that loads imsart.sty without that class read it raw: a renamed copy that declares itself
+`\ProvidesFile{imsart.sty}` — stylefile.sty, loaded by stylefile.cls (`\ProvidesClass{stylefile}`, a renamed imsart.cls;
+1905.11425, 2101.10506), imsart_mod.sty beside article (math0608476) — or imsart.sty under its own name beside article
+(1301.1466). Its `\ead[label=e1,mark]{…}` inside `\author` typeset nothing the frontmatter kept, so every e-mail and every
+`\address` was lost with no Warning (CR1 class C; the old driver glued "label=e1" into the name). Now imsart.sty has a
+binding (`imsart_sty.rs`, an author-file stand-in in `author_files.rs`) sharing the class binding's markup
+(`imsart_cls::imsart_sty_markup`, `imsart_arxiv`), so the charter's copy rule (a shipped copy goes to the binding whose
+file it declares itself, FIDELITY_CHARTER "bindings and copies") and the existing declaration route (`content.rs`
+`provided_binding`, #731) read each copy after it as the stand-in's copy. Two additions the route needs: imsart.sty's
+author markup (`\degs`, `\fnms`, `\inits`, `\snm`, `\roles`, defined only inside its `\author@fmt`) is the binding's
+`\lx@author@markup@class`, since a copy's refused `\author` records no `\author:redefined` for the kernel's own provide
+list ("\snm undefined", 2 Errors per witness otherwise); and the sty binding's own `\affiliation` (the run of new
+authors, or its label's), since a stand-in's copy is no raw class read for the kernel's class readers, which give the
+class path's raw `\affiliation` to the frontmatter (it printed in the body). The class path is unchanged (its
+`\lx@author@markup@class` provides what the refused `\author` list provides already). Witnesses 1905.11425, 2101.10506
+(e-mails and addresses on each author), math0608476 (URLs, addresses, the `\thankstext` note), 1301.1466 (e-mails and
+URLs; its affiliation kept). Repro `sectioning-frontmatter/imsart_renamed_sty_copy_reads_through_its_binding.tex`; guard
+`perfect_kernel_batchcr3::imsart_renamed_sty_copy_reads_through_its_binding`.

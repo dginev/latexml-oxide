@@ -26,3 +26,20 @@ fn revtex3_minipage_address_first_one_run() {
     "<classification name=\"PACS:\u{a0}\" scheme=\"pacs\">PACS numbers: 05.40.+j</classification>",
   ]);
 }
+
+/// CR3 item 3 (CR1 class C): a shipped style declaring itself `\ProvidesFile{imsart.sty}` under another name is routed by
+/// its declaration to the imsart.sty binding and read after it as the stand-in's copy, so `\ead` inside `\author` is the
+/// author's e-mail, `\address[A]` the authors' marked A, `\affiliation` the run's (1905.11425, 2101.10506 stylefile.sty;
+/// math0608476 imsart_mod.sty; 1301.1466 imsart.sty under its own name). Distinct: the declaration route to a binding
+/// that had none for the `.sty`, and the binding's author markup (`\fnms`/`\snm`) where no lock records a refused
+/// `\author`. Repro sectioning-frontmatter/imsart_renamed_sty_copy_reads_through_its_binding.
+#[test]
+fn imsart_renamed_sty_copy_reads_through_its_binding() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/imsart_renamed_sty_copy_reads_through_its_binding.tex"
+  );
+  assert_eq!(elements(&convert_clean(tex), "creator"), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@x.edu</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Univ A, </contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Zebra Institute</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@y.org</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Univ B, </contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Zebra Institute</contact>\n  </creator>",
+  ]);
+}
