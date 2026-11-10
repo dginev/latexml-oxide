@@ -2596,7 +2596,7 @@ fn call_pieces(call: &ApiCall) -> Result<Vec<Piece>> {
     };
     // (a line break between two printed lines of the piece is the piece's: its mark's entry runs on to the next mark, as
     // Perl's address and pdflatex print it, the break kept — `\address{$^{1}$ Dept, School of Yak\\ Owl University\\
-    // $^{2}$ …}`, 2212.03638, 2211.03175, cond-mat0204589, 0904.3899, 1311.0012, 1007.2355, which printed "School of
+    // $^{2}$ …}`, 2212.03638, 2211.03175, cond-mat0204589, 0904.3899, 1311.0012, which printed "School of
     // YakOwl University". A break with no printed line before it since the last one kept, or none after it, is cut, as
     // the contact it parts off is: `Dept\\ \email{x}\\ Univ` keeps one)
     let kept = kept_breaks(&piece);

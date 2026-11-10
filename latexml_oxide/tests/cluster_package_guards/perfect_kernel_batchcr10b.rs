@@ -11,8 +11,8 @@ use super::{
 
 /// elsarticle `\address{$^{1}$ … School of Yak\\ Owl University, Gnu City\\ $^{2}$ Emu Institute\\ E-mail: bob@emu.edu\\
 /// Kiwi Town}`: each mark's entry runs on to the next mark with its line breaks kept, as pdflatex and Perl print it — the
-/// base printed "School of YakOwl University", 0 Warnings (2212.03638, 2211.03175, cond-mat0204589, 0904.3899, 1311.0012,
-/// 1007.2355) — and a break whose line was cut out (the e-mail, its own contact) not doubled. Repro
+/// base printed "School of YakOwl University", 0 Warnings (2212.03638, 2211.03175, cond-mat0204589, 0904.3899,
+/// 1311.0012) — and a break whose line was cut out (the e-mail, its own contact) not doubled. Repro
 /// sectioning-frontmatter/address_continuation_line_keeps_its_break.
 #[test]
 fn address_continuation_line_keeps_its_break() {
