@@ -33431,7 +33431,7 @@ alike).
 
 **Known REDs (review revCR4b finding 2, synthetic):** the per-label attribution's `annotate=run` fallback does not end its run at the `author:N` contacts an earlier cited block made, so an uncited block also reaches authors an earlier block went to (`imsart_address_block_fallback_run_q1_red.tex`), and a block naming three authors but citing only `e2` goes to that one (`…_q2_red.tex`); no word lost.
 
-### 987. IEEEtran's author blocks under authblk's `\author` are read as the class reads them, added after the authors before (CR6)
+### 987. IEEEtran's author blocks under authblk's `\author` are read as the class reads them, added after the authors before; a nested names block spliced in, a stop after an italic grade closing the names (CR6, CR10a)
 
 **What.** ieeetran_cls.rs `\lx@IEEE@authblk@author` (authblk's `\author` once IEEEtran's binding hooks authblk's load,
 #950). A body holding `\IEEEauthorblockN` (`\author{\IEEEauthorblockN{Ann Able,~\IEEEmembership{Member,~IEEE}, Bob Baker
@@ -33453,9 +33453,24 @@ authblk's `\author[1]{Ann Able, Bob Baker}`, so `\affil[label]` reaches them.
 membership contacts), 1708.05281 (one nameless creator holding every line, 4 Warnings → 6 authors, each with its marked
 affiliation and e-mail, 0 frontmatter Warnings). 2602.05517 (no authblk) and 1,434 stage2 papers byte-identical.
 
-**Left** (pre-existing in the class's own path, identical without authblk): a `\\` inside an `\IEEEauthorblockN` names
-list before more names (`\IEEEauthorblockN{Ann Able, {\em Member, IEEE}, Bob Baker,\\ Cy Coe, … and Dee Dale}`,
-1810.08035) reads the names after it as the first names' affiliation, 0 Warnings (words kept).
+**CR10a (both paths, `author_block_body`; `without_stop_after_grade`).** A names block written inside another's names
+(`\author{\authorblockN{\authorblockN{Ann Able, \IEEEmembership{…}, Bob Baker \\ and Cy Coe, \IEEEmembership{…}.} \\
+\thanks{…}}}`, 1511.03982) was the same nested author call inside the outer's argument: every author lost, 0 Warnings.
+`unnested_name_blocks` splices each inner block's argument into the outer one (its command and braces dropped), which
+is then read as any block; pdflatex prints each name (a names block only sets its style), Perl keeps them in one
+creator. The old alias `\authorblockN`'s name lines have their grades read as `\IEEEauthorblockN`'s
+(`block_name_memberships`). The full stop after a grade written as italic text (`{\em Member, IEEE}.`,
+`\emph{…}.`, `\textit{…}.`; `grade_text`, the names reader's `grade_words(…, true)`) closes the names as one after
+`\IEEEmembership{…}` does: the line after a `\\` that ends so (`\IEEEauthorblockN{…, Hesham ElSawy, {\em Senior Member,
+IEEE},\\ Mohamed-Slim Alouini, {\em Fellow, IEEE}, and Tareq Y. Al-Naffouri, {\em Senior Member, IEEE}.}`, 1810.08035)
+was read as the first names' affiliation (0 Warnings), and a one-line block so ended cut its grade into a membership
+"Fellow" and an affiliation "IEEE." (2 Warnings). A stop after an italic non-grade (`{\em Zebra University}.`) stays.
+Witnesses (int154q → CR10a): 1511.03982 0 creators → 3 with their grades, 1810.08035 3 creators → 5. Repros
+`class-bindings/ieeetran_nested_blockn_names`, `class-bindings/ieeetran_blockn_italic_grade_stop`; guards
+`perfect_kernel_batchcr10a::{nested_names_block_keeps_every_author, italic_grade_before_stop_ends_the_names}`.
+**Left:** a plain-text grade before the stop (`…, and Dee Dale, Member, IEEE.}` after a `\\`) still reads the line as
+an affiliation, 0 Warnings (words kept); the content check flags a repeated italic grade (`{\em Senior Member, IEEE}`
+twice) as 3 missing words though both are kept (pre-existing, base the same).
 
 Repros `class-bindings/ieeetran_authblk_blockn_names`, `class-bindings/ieeetran_authblk_blockn_calls_accumulate`; guards
 `perfect_kernel_batchcr6::{authblk_author_reads_ieee_author_blocks, authblk_author_blocks_accumulate_and_take_labels}`.
