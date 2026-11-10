@@ -3978,10 +3978,11 @@ pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(key: &str, value: T
   state_mut!().assign_value(key, value, scope)
 }
 
-/// Assigns `value` to `key` globally and past the open assignment journal's rollback (Rust-only): a record of what TeX
-/// writes outside its state — an aux-file label, imsart.sty's `\ead` `\safelabel` that its `\printead` reads back —, which
-/// no speculative run's undoing takes back (a frontmatter rehearsal, a label's ink run), as TeX never takes back what it
-/// wrote to a file. OXIDIZED_DESIGN_DIVERGENCES #986.
+/// Assigns `value` to `key` globally and past the open assignment journal's rollback (Rust-only), as TeX never takes back
+/// what it wrote to a file: no speculative run's undoing (a frontmatter rehearsal, a label's ink run) takes it back. Only
+/// for a record TeX writes to a file and reads back on a later run — an aux-file label, imsart.sty's `\ead` `\safelabel`
+/// that its `\printead` reads —, never for a value a rehearsal's own reading decides: that one must roll back with it.
+/// OXIDIZED_DESIGN_DIVERGENCES #986.
 pub fn assign_value_past_rollback(key: &str, value: impl Into<Stored>) {
   let mut state = state_mut!();
   state.assign_value(key, value, Some(Scope::Global));
