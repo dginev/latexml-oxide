@@ -611,7 +611,7 @@ pub(in crate::base_utilities) fn is_name_qualifier(text: &str) -> bool {
 
 /// Whether `text`'s words are all a membership grade's or its society's (`Senior Member, IEEE`); with `ranked`, one of
 /// them the grade's rank (`Member`, `Fellow`), so a society alone is none.
-pub(in crate::base_utilities) fn grade_words(text: &str, ranked: bool) -> bool {
+pub fn grade_words(text: &str, ranked: bool) -> bool {
   let words: Vec<&str> = text
     .split(|c: char| c.is_whitespace() || c == ',' || c == '~')
     .filter(|w| !w.is_empty())
