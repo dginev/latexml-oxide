@@ -169,13 +169,9 @@ pub struct Resolved {
   /// skipping an item with no source — no old dump's "any part")
   pub continued: Option<Vec<Vec<String>>>,
   /// the affiliation entries whose printed e-mail addresses the reading took out (`Resolver::take_out_entry_addresses`,
-  /// brief 95c), each as it was — for the writer, which gives an entry back where today's cannot cut it the same
-  /// (`writer::give_back_addresses` (deleted)); not in the dump
+  /// brief 95c), each as it was — for the emitter's entry cuts, which cut each in place or give it back whole
+  /// (`emitter::address_cut::entry_cuts`); not in the dump
   pub taken:     Vec<Taken>,
-  /// the e-mail calls printing several addresses alone that the reading wrote out address by address
-  /// (`Resolver::answer_listed_emails`, brief 95c G3), each as today's holds it — for the writer's name re-part, which
-  /// reads them whole (`writer::give_back_addresses` (deleted), brief 95e); not in the dump
-  pub listed:    Vec<Listed>,
   /// the words a block prints that the reading drops by its own rule, each its ledger index, its Name event's span and
   /// word (trimmed, lowercased): a byline's "by" read as a separator (`lines::byline_dropped`, the old reader's
   /// `without_leading_by`: `By~~{\scshape Bryna Kra}`, 2603.27258) and every word a take-out cuts that is no address's,
@@ -212,15 +208,6 @@ pub struct TakenRun {
   pub bytes:     (usize, usize),
   pub addresses: Vec<String>,
   pub label:     Option<String>,
-}
-
-/// One e-mail call printing several addresses alone that the reading wrote out ([`Resolved::listed`]): the contact as
-/// the call printed it — its text whole, the rule of the call's own placement (`api:annotate:last`, …) — and the
-/// creators that placement gives it, today's holders of the one contact (2109.07363).
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Listed {
-  pub whole:  Assoc,
-  pub owners: Vec<usize>,
 }
 
 /// One e-mail call a document's own note makes (`ltx:pubnote`, `Resolver::api`), placed by `answer_document_notes`.
@@ -1217,13 +1204,6 @@ pub fn resolve_with(
         .collect();
     }
     out.taken.retain(|taken| !taken.holders.is_empty());
-    for listed in &mut out.listed {
-      listed.owners = std::mem::take(&mut listed.owners)
-        .into_iter()
-        .filter_map(|c| shift(&live_creator, c))
-        .collect();
-    }
-    out.listed.retain(|listed| !listed.owners.is_empty());
   }
   // (every word a kept take-out cuts that is no address's — its label, an "and" stranded between two addresses,
   // `E-mails: ann.able@x.org and bob.baker@x.org` (1610.05419), a parenthesis' words —, in print order, each of no event

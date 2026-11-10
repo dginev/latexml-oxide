@@ -742,10 +742,8 @@ pub fn fm_reading_json() -> String {
       json_str(&mut out, reason);
       let _ = write!(out, ":{count}");
     }
-    // (the writer's outcome for a written family's paper: `same`, `written`, `declined: …`, `written-different: …`)
-    out.push_str("}},\"writer\":");
-    json_opt_str(&mut out, ledger.writer.as_deref());
-    out.push_str("}\n");
+    // (whether a flush's emitter wrote the paper's frontmatter, `Ledger::emitted`)
+    let _ = writeln!(out, "}}}},\"emitted\":{}}}", ledger.emitted);
     out
   })
 }

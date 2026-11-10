@@ -280,7 +280,7 @@ fn an_entrys_addresses_are_cut_where_its_line_is_made() {
     "  a Univ B",
     "  c email bob@b.org",
   ]);
-  assert_eq!(json["writer"], "written", "{json}");
+  assert_eq!(json["emitted"], true, "{json}");
   assert_eq!(json["readback"]["difference"], Value::Null, "{json}");
   assert_eq!(json["readback"]["given_back"], Value::Null, "{json}");
   creators_are(&xml, &[
@@ -391,7 +391,7 @@ fn a_mark_past_a_marked_lists_leading_run_is_an_event_red() {
 fn an_entry_whose_cut_fails_is_given_back() {
   let (log, xml, json) = run(repro!("z14r3_entry_given_back_where_its_cut_fails"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(json["writer"], "written", "{json}");
+  assert_eq!(json["emitted"], true, "{json}");
   // (T1, `=2`, `perfect_kernel_batcht1::expect`: each address of the `e--mail:` line is the e-mail of the author
   // it spells)
   creators_are(&xml, &[
@@ -418,5 +418,5 @@ fn an_entry_whose_cut_fails_is_given_back() {
 fn a_line_keeping_an_address_the_pass_leaves_is_made() {
   let (log, _, json) = run(repro!("z14r3_line_keeping_a_left_address_is_made"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(json["writer"], "written", "{json}");
+  assert_eq!(json["emitted"], true, "{json}");
 }

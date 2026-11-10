@@ -4,7 +4,7 @@
 //! `relocate::shown_marks` and `name_text::is_name_mark` share — never from its `tex`. A formula printing nothing but
 //! floating scripts (spacing aside, punctuation after) is a mark; a script with a letter or digit after it, or on a
 //! printed base, is the item's text. Each guard converts its repros in the shipping Default mode, asserts every creator
-//! whole (name and contacts, in order), no Error or Warning, and the writer's outcome. Every repro compiles clean with
+//! whole (name and contacts, in order), no Error or Warning, and the ledger's `emitted`. Every repro compiles clean with
 //! pdflatex (TL 2025). The reader's shapes as digested and as parsed: `observer::marks::tests`, and
 //! the deleted `ab_audit fmshadow`'s `a_parsed_prescript_on_a_word_is_text_a_script_on_a_base_the_base`.
 use latexml::util::test::{convert_with_then, error_count, warning_count};
@@ -13,16 +13,13 @@ use serde_json::Value;
 
 use super::perfect_kernel_batch84b::creators;
 
-/// The repro's conversion in the Default mode, clean: its writer's outcome and its creators.
+/// The repro's conversion in the Default mode, clean: whether the emitter wrote it, and its creators.
 #[track_caller]
-fn converted(tex: &str) -> (String, Vec<Vec<String>>) {
+fn converted(tex: &str) -> (bool, Vec<Vec<String>>) {
   let (log, xml, json) = convert_with_then(tex, Some("ar5iv.sty"), |_| fm_reading_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let json: Value = serde_json::from_str(&json).expect("the reading's JSON");
-  (
-    json["writer"].as_str().unwrap_or("none").to_string(),
-    creators(&xml),
-  )
+  (json["emitted"].as_bool() == Some(true), creators(&xml))
 }
 
 /// A script with a letter or digit printed after it in its formula is no mark: the isotope `${\rm ^{3}He}$` (review

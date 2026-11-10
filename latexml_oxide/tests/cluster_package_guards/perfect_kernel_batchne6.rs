@@ -79,7 +79,7 @@ fn an_ijcai_emails_section_is_the_class_split() {
   assert!(
     log.contains(
       "The frontmatter emitter's reading holds no place for words its author block or call prints (x edu); the call \
-       is written as queued, as the switch off writes it"
+       is written as queued, the queue digested as Perl's"
     ),
     "{log}"
   );

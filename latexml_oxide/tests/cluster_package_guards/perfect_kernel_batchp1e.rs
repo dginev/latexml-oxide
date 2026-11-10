@@ -130,7 +130,7 @@ fn an_address_line_read_on_is_its_owners_email() {
 /// A label word and brackets the reading's run takes (`… Country (E-mail: \texttt{ann.able@a.org})`, `…, (E-mail: …)`;
 /// 2311.02475, RT1 rows 47, 49, 52, 57): the entry without them or the comma before them, the e-mail named by the label
 /// (`E-mail: `), in its typewriter font. RP1's draft left the `)` and named the e-mail `Email: `; LO4 `=2` (the Kind step
-/// after the flush) and the switch off agree.
+/// after the flush) and the switch off agreed.
 #[test]
 fn an_address_s_label_and_brackets_go_with_it() {
   reads_whole(

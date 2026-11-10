@@ -3840,7 +3840,7 @@ regular arXiv idiom Perl does not structure. Upstream filing pending.
 **Rust status (FIXED, beneficial divergence — OXIDIZED_DESIGN #52(i)):** `\hspace`/`\hfill`
 normalize to the `\quad` separator, and footnote-SYMBOL superscripts rewrite to a visible
 `\lx@frontmatter@keepsup` sup before branch selection (`normalize_hspace_separators`,
-`rewrite_symbol_superscripts`, `base_utilities/frontmatter/observer/writer/calls.rs`). Numeric affiliation marks are untouched.
+`rewrite_symbol_superscripts`, `base_utilities/frontmatter/observer/emitter/calls.rs`). Numeric affiliation marks are untouched.
 Guards `06_cluster_frontmatter::{frontmatter_hspace_author_split,
 frontmatter_symbol_superscript_mark, frontmatter_thanks_literal_mark_mix}`.
 

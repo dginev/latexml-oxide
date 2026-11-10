@@ -17,8 +17,6 @@ use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
 use latexml_engine::base_utilities::fm_reading_json;
 use serde_json::Value;
 
-use super::perfect_kernel_batchfms2a1::reading_only;
-
 /// Convert `tex` (with `preload`), asserting a clean conversion: the dump's `resolved`.
 pub(super) fn resolved(tex: &str, preload: Option<&str>) -> Value {
   let (log, _, json) = convert_with_setup_then(tex, preload, || {}, |_| fm_reading_json());
@@ -91,27 +89,25 @@ fn article(preamble: &str, author: &str) -> Vec<String> {
 /// `‡Univ B` (today all of it is one contact on Cat Cole).
 #[test]
 fn symbol_lines_go_to_their_carriers() {
-  reading_only(|| {
-    let names_line = r"\author{Ann Able$^{\dag}$ \and Bob Baker$^{\ddag}$ \and Cat Cole$^{\dag}$\\";
-    for lines in [
-      r"\dag Univ A\\ \ddag Univ B}",
-      r"$^{\dagger}$Univ A\\ $^{\ddagger}$Univ B}",
-      r"$\dagger$ Univ A\\ $\ddagger$ Univ B}",
-    ] {
-      assert_eq!(
-        article("", &format!("{names_line}\n{lines}")),
-        [
-          "C Ann Able [†] | line:names",
-          "  a Univ A | ruling2:symbol-line",
-          "C Bob Baker [‡] | line:names sep:column",
-          "  a Univ B | ruling2:symbol-line",
-          "C Cat Cole [†] | line:names sep:column",
-          "  a Univ A | ruling2:symbol-line",
-        ],
-        "{lines}"
-      );
-    }
-  });
+  let names_line = r"\author{Ann Able$^{\dag}$ \and Bob Baker$^{\ddag}$ \and Cat Cole$^{\dag}$\\";
+  for lines in [
+    r"\dag Univ A\\ \ddag Univ B}",
+    r"$^{\dagger}$Univ A\\ $^{\ddagger}$Univ B}",
+    r"$\dagger$ Univ A\\ $\ddagger$ Univ B}",
+  ] {
+    assert_eq!(
+      article("", &format!("{names_line}\n{lines}")),
+      [
+        "C Ann Able [†] | line:names",
+        "  a Univ A | ruling2:symbol-line",
+        "C Bob Baker [‡] | line:names sep:column",
+        "  a Univ B | ruling2:symbol-line",
+        "C Cat Cole [†] | line:names sep:column",
+        "  a Univ A | ruling2:symbol-line",
+      ],
+      "{lines}"
+    );
+  }
 }
 
 /// The design's `mac` probe (2304.13998's shape): a user macro printing `\textsuperscript{#1}` marks the names, its
@@ -119,21 +115,19 @@ fn symbol_lines_go_to_their_carriers() {
 /// creator is made (today's token reading).
 #[test]
 fn user_mark_macro_marks_request_affiliations() {
-  reading_only(|| {
-    assert_eq!(
-      article(
-        r"\newcommand*{\affmark}[1][*]{\textsuperscript{#1}}",
-        r"\author{Ann Able\affmark[1]~~ Bob Baker\affmark[1,2]\\ \affmark[1]Univ A\\ \affmark[2]Univ B}"
-      ),
-      [
-        "C Ann Able [1] | line:names",
-        "  a Univ A | ruling1:request",
-        "C Bob Baker [1,2] | line:names sep:gap",
-        "  a Univ A | ruling1:request",
-        "  a Univ B | ruling1:request",
-      ]
-    );
-  });
+  assert_eq!(
+    article(
+      r"\newcommand*{\affmark}[1][*]{\textsuperscript{#1}}",
+      r"\author{Ann Able\affmark[1]~~ Bob Baker\affmark[1,2]\\ \affmark[1]Univ A\\ \affmark[2]Univ B}"
+    ),
+    [
+      "C Ann Able [1] | line:names",
+      "  a Univ A | ruling1:request",
+      "C Bob Baker [1,2] | line:names sep:gap",
+      "  a Univ A | ruling1:request",
+      "  a Univ B | ruling1:request",
+    ]
+  );
 }
 
 /// Ruling 1 on the gretsi v1.3 repro (2508.03934; class-bindings/gretsi_v13_shared_mark_affiliation, RED for its
@@ -265,45 +259,43 @@ fn iopart_ead_goes_to_the_author_it_spells() {
 /// `\hspace{1em}and\hspace{1em}` a separator.
 #[test]
 fn sync_row_shapes_46_53_66() {
-  reading_only(|| {
-    assert_eq!(
-      article(
-        "",
-        r"\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole \\ Physics}"
-      ),
-      [
-        "C Ann Able [†] | line:names",
-        "  a Univ A | ruling2:symbol-line",
-        "C Bob Baker [‡] | line:names sep:gap",
-        "  a Univ B | ruling2:symbol-line",
-        "C Cat Cole [] | line:names",
-        "  a Physics | line:unmarked R12:row-above",
-      ]
-    );
-    assert_eq!(
-      article(
-        "",
-        r"\author{Ann Able$^{*1}$, Bob Baker$^{1}$ \\ $^1$Univ A}"
-      ),
-      [
-        "C Ann Able [*,1] | line:names",
-        "  a Univ A | ruling1:request ruling1:parted",
-        "C Bob Baker [1] | line:names sep:comma",
-        "  a Univ A | ruling1:request",
-      ]
-    );
-    assert_eq!(article("", r"\author{Ann Able$^{1,}$ Bob Baker$^{2}$}"), [
-      "C Ann Able [1] | line:names",
-      "C Bob Baker [2] | line:names"
-    ]);
-    assert_eq!(
-      article("", r"\author{Ann Able\hspace{1em}and\hspace{1em}Bob Baker}"),
-      [
-        "C Ann Able [] | line:names",
-        "C Bob Baker [] | line:names sep:gap"
-      ]
-    );
-  });
+  assert_eq!(
+    article(
+      "",
+      r"\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole \\ Physics}"
+    ),
+    [
+      "C Ann Able [†] | line:names",
+      "  a Univ A | ruling2:symbol-line",
+      "C Bob Baker [‡] | line:names sep:gap",
+      "  a Univ B | ruling2:symbol-line",
+      "C Cat Cole [] | line:names",
+      "  a Physics | line:unmarked R12:row-above",
+    ]
+  );
+  assert_eq!(
+    article(
+      "",
+      r"\author{Ann Able$^{*1}$, Bob Baker$^{1}$ \\ $^1$Univ A}"
+    ),
+    [
+      "C Ann Able [*,1] | line:names",
+      "  a Univ A | ruling1:request ruling1:parted",
+      "C Bob Baker [1] | line:names sep:comma",
+      "  a Univ A | ruling1:request",
+    ]
+  );
+  assert_eq!(article("", r"\author{Ann Able$^{1,}$ Bob Baker$^{2}$}"), [
+    "C Ann Able [1] | line:names",
+    "C Bob Baker [2] | line:names"
+  ]);
+  assert_eq!(
+    article("", r"\author{Ann Able\hspace{1em}and\hspace{1em}Bob Baker}"),
+    [
+      "C Ann Able [] | line:names",
+      "C Bob Baker [] | line:names sep:gap"
+    ]
+  );
 }
 
 /// SYNC rows 47 and 48's shapes: a link under a name is that name's URL contact (the row above, R12), a bare address a
@@ -603,23 +595,21 @@ fn contact_roles_follow_the_call_and_the_address() {
 /// (2507.05750).
 #[test]
 fn marks_mid_line_and_trailing_label_entries() {
-  reading_only(|| {
-    assert_eq!(
-      article(
-        "",
-        r"\author{Ann Able$^{1}$, Bob Baker$^{2}$ \\ ($^1$) Univ A \\ $^1$Inst A $^2$Inst B \\ Lab C$^{1}$, Lab D$^{2}$}"
-      ),
-      [
-        "C Ann Able [1] | line:names",
-        "  a Univ A | ruling1:request",
-        "  a Inst A | ruling1:request",
-        "  a Lab C | ruling1:request mark:trailing",
-        "C Bob Baker [2] | line:names sep:comma",
-        "  a Inst B | ruling1:request",
-        "  a Lab D | ruling1:request mark:trailing",
-      ]
-    );
-  });
+  assert_eq!(
+    article(
+      "",
+      r"\author{Ann Able$^{1}$, Bob Baker$^{2}$ \\ ($^1$) Univ A \\ $^1$Inst A $^2$Inst B \\ Lab C$^{1}$, Lab D$^{2}$}"
+    ),
+    [
+      "C Ann Able [1] | line:names",
+      "  a Univ A | ruling1:request",
+      "  a Inst A | ruling1:request",
+      "  a Lab C | ruling1:request mark:trailing",
+      "C Bob Baker [2] | line:names sep:comma",
+      "  a Inst B | ruling1:request",
+      "  a Lab D | ruling1:request mark:trailing",
+    ]
+  );
 }
 
 /// Item 11: authblk's notes — with a letter label given the marks show, Bob shows `\AB@thenote` "1" and the unlabelled
@@ -763,61 +753,57 @@ fn fuzzy_labels_by_surname_and_with_their_macros() {
 /// the name showing the mark — a legend's mark is a symbol, a mark glyph of no `\@fnsymbol` kind too, 2401.00056.)
 #[test]
 fn glued_marks_part_by_the_marks_shown() {
-  reading_only(|| {
-    assert_eq!(
-      article(
-        "",
-        "\\author{Ann Able$^{12}$, Bob Baker$^{1\\star}$, Cat Cole$^{2}$\\\\ $^1$Univ A\\\\ $^2$Univ B\\\\ $^\\star$Equal contribution.}"
-      ),
-      [
-        "C Ann Able [1,2] | line:names mark:parted",
-        "  a Univ A | ruling1:request ruling1:parted",
-        "  a Univ B | ruling1:request ruling1:parted",
-        "C Bob Baker [1,⋆] | line:names sep:comma mark:parted",
-        "  a Univ A | ruling1:request ruling1:parted",
-        "  n Equal contribution. | ruling1:request ruling1:parted",
-        "C Cat Cole [2] | line:names sep:comma",
-        "  a Univ B | ruling1:request",
-      ]
-    );
-    assert_eq!(
-      article(
-        "",
-        "\\author{A. Able,$^{1}$$^{,2}$ B. Baker,$^{1}$$^{,2}$ C. Cole$^{1}$\\\\ $^1$Univ A\\\\ $^2$Univ B}"
-      ),
-      [
-        "C A. Able [1,2] | line:names mark:after-comma",
-        "  a Univ A | ruling1:request",
-        "  a Univ B | ruling1:request",
-        "C B. Baker [1,2] | line:names sep:comma mark:after-comma",
-        "  a Univ A | ruling1:request",
-        "  a Univ B | ruling1:request",
-        "C C. Cole [1] | line:names sep:comma",
-        "  a Univ A | ruling1:request",
-      ]
-    );
-  });
+  assert_eq!(
+    article(
+      "",
+      "\\author{Ann Able$^{12}$, Bob Baker$^{1\\star}$, Cat Cole$^{2}$\\\\ $^1$Univ A\\\\ $^2$Univ B\\\\ $^\\star$Equal contribution.}"
+    ),
+    [
+      "C Ann Able [1,2] | line:names mark:parted",
+      "  a Univ A | ruling1:request ruling1:parted",
+      "  a Univ B | ruling1:request ruling1:parted",
+      "C Bob Baker [1,⋆] | line:names sep:comma mark:parted",
+      "  a Univ A | ruling1:request ruling1:parted",
+      "  n Equal contribution. | ruling1:request ruling1:parted",
+      "C Cat Cole [2] | line:names sep:comma",
+      "  a Univ B | ruling1:request",
+    ]
+  );
+  assert_eq!(
+    article(
+      "",
+      "\\author{A. Able,$^{1}$$^{,2}$ B. Baker,$^{1}$$^{,2}$ C. Cole$^{1}$\\\\ $^1$Univ A\\\\ $^2$Univ B}"
+    ),
+    [
+      "C A. Able [1,2] | line:names mark:after-comma",
+      "  a Univ A | ruling1:request",
+      "  a Univ B | ruling1:request",
+      "C B. Baker [1,2] | line:names sep:comma mark:after-comma",
+      "  a Univ A | ruling1:request",
+      "  a Univ B | ruling1:request",
+      "C C. Cole [1] | line:names sep:comma",
+      "  a Univ A | ruling1:request",
+    ]
+  );
 }
 
 /// Item 1e: the e-mail addresses a names line prints as text are no names (jmlr2e's `\email` a font switch,
 /// 2507.03885: the second address was a creator) — each an e-mail of the line's names by the owner chain.
 #[test]
 fn addresses_in_a_names_line_are_emails() {
-  reading_only(|| {
-    assert_eq!(
-      article(
-        "\\def\\email{\\hfill\\small\\sc}\n\\def\\name{\\normalsize\\bf}",
-        "\\author{\\name Ann Able \\email {ann@x.org, aable@y.org}\\\\ Univ A\\\\ City}"
-      ),
-      [
-        "C Ann Able [] | line:names",
-        "  a Univ A | line:unmarked R12:row-above",
-        "  a City | line:unmarked R12:row-above",
-        "  c email ann@x.org | owner:spelled ruling3:one-per-print",
-        "  c email aable@y.org | owner:spelled ruling3:one-per-print",
-      ]
-    );
-  });
+  assert_eq!(
+    article(
+      "\\def\\email{\\hfill\\small\\sc}\n\\def\\name{\\normalsize\\bf}",
+      "\\author{\\name Ann Able \\email {ann@x.org, aable@y.org}\\\\ Univ A\\\\ City}"
+    ),
+    [
+      "C Ann Able [] | line:names",
+      "  a Univ A | line:unmarked R12:row-above",
+      "  a City | line:unmarked R12:row-above",
+      "  c email ann@x.org | owner:spelled ruling3:one-per-print",
+      "  c email aable@y.org | owner:spelled ruling3:one-per-print",
+    ]
+  );
 }
 
 /// Item 2 (the pilot families' lexer residuals): a link to an ORCID record is the creator's ORCID (2307.02633,
@@ -1222,13 +1208,9 @@ fn an_unmarked_line_under_a_run_of_names_rows_is_every_names() {
     } else {
       "a"
     };
-    // (aas_support is written since 97e: the writer declines these, a difference no operation explains — a reading
-    // guard)
-    let tuples = reading_only(|| {
-      tuples_of(&format!(
-        "\\documentclass{{aastex}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{{author}}}\n\\altaffiltext{{1}}{{Univ A}}\n\\altaffiltext{{2}}{{Univ B}}\n\\maketitle\nText.\n\\end{{document}}\n"
-      ))
-    });
+    let tuples = tuples_of(&format!(
+      "\\documentclass{{aastex}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{{author}}}\n\\altaffiltext{{1}}{{Univ A}}\n\\altaffiltext{{2}}{{Univ B}}\n\\maketitle\nText.\n\\end{{document}}\n"
+    ));
     let unmarked = format!("  {kind} {line} | line:unmarked-joined R12:row-above");
     let alt = |univ: &str| format!("  c altaffiliation {univ} | api:label ruling1:request");
     assert_eq!(

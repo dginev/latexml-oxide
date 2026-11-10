@@ -49,7 +49,7 @@ fn names_after_a_bold_line_are_reparted() {
     "C Dee Dunn [2] | line:names sep:comma",
     "  a Univ Y | ruling1:request",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
@@ -78,7 +78,7 @@ fn names_in_a_layout_are_reparted() {
     "  a Univ X | ruling1:request",
     "  n Equal advising. | ruling2:symbol-line",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(
     default_mode_creators(tex),
     owned(&[
@@ -105,7 +105,7 @@ fn names_in_a_layout_are_reparted() {
       "  n Corresponding author | ruling2:symbol-line ruling1:parted",
     ],
   );
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(
     default_mode_creators(tex),
     owned(&[
@@ -146,7 +146,7 @@ fn an_entry_of_several_pieces_is_written_whole() {
     "C Bob Baker [2] | line:names sep:word",
     "  a Department of Physics, Univ Y, Japan | ruling1:request",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
@@ -191,7 +191,7 @@ fn an_affil_in_the_author_led_by_its_mark_is_reparted() {
     "C Bob Baker [2] | line:names sep:word",
     "  a Department of Physics, Univ Y | ruling1:request",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
@@ -274,7 +274,7 @@ fn two_marked_groups_on_a_line_are_cut() {
     "  a Univ X | ruling1:request",
     "  a Univ Y | ruling1:request",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
@@ -306,7 +306,7 @@ fn phantom_ink_is_no_name() {
     "C Bob Baker [] | line:names sep:word",
     "  n B | note:adjacent",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(
     default_mode_creators(tex),
     owned(&[&["Ann Able", "note=A"], &["Bob Baker", "note=B"]])
@@ -335,7 +335,7 @@ fn a_creator_read_by_its_words_is_given_back() {
     "C Bob Baker [1] | line:names sep:comma",
     "  a the PE11 team of Kepler WG#1 | line:names classify:institution",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
 }
 
 /// A conceded creator keeps the ink it printed (review rev94a r4 B1, `repart::give_back_ink`): the reading gave
@@ -428,7 +428,7 @@ fn a_legend_of_several_marks_is_each_carriers() {
     "  a Univ X | ruling1:request",
     "  a Univ Y | ruling1:request",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
@@ -444,7 +444,7 @@ fn a_legend_note_shows_its_mark() {
     "  n Equal contribution | ruling2:symbol-line",
     "C Bob Baker [] | line:names sep:comma",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(
     default_mode_creators(tex),
     owned(&[&["Ann Able", "note=∗ Equal contribution"], &["Bob Baker"]])
@@ -461,7 +461,7 @@ fn a_legend_note_shows_its_mark() {
     "C Kitt Peak Observatory [*] | line:names sep:comma",
     "  n Equal contribution | ruling2:symbol-line",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(
     default_mode_creators(tex),
     owned(&[&["Ann Able"], &[
@@ -494,7 +494,7 @@ fn a_made_item_keeps_its_switch() {
     "C Bob Baker [2] | line:names sep:comma",
     "  a Univ Y | ruling1:request",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(contacts(&default_mode_xml(tex)), [
     "<text font=\"italic\">Univ X</text>",
     "<text fontsize=\"90%\">Univ Y</text>",
@@ -559,7 +559,7 @@ fn an_affil_after_a_run_of_names_is_the_runs() {
     "C EVE EGAN [] | line:names",
     "  a Univ D | owner:adjacent",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(default_mode_creators(tex), owned(xml));
   // (the run ends at the block's contact of its role before it, labelled or not — review rev94a r6 B1,
   // `Resolver::ends_a_run`, today's API `marked_at`: a labelled entry waits for its label, its owner holding no role yet,

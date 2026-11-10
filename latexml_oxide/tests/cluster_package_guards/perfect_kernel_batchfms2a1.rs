@@ -5,7 +5,6 @@
 //! the SYNC frontmatter rows' shapes, and that the rehearsal leaves nothing behind. (The census switch
 //! `LATEXML_FM_SHADOW` and the CLI's `<dest>.fmshadow.json` went in DEL4.) Every probe compiles clean with pdflatex
 //! (TL 2025) and converts with no Error or Warning.
-use std::cell::Cell;
 
 use latexml::util::test::{
   convert_files_with_setup_then, convert_with_setup_then, error_count, warning_count,
@@ -13,59 +12,9 @@ use latexml::util::test::{
 use latexml_engine::base_utilities::fm_reading_json;
 use serde_json::Value;
 
-/// The reading's JSON of a conversion, parsed; for a written family's paper (revtex, ams) the writer must have kept the
-/// reading — its outcome `same` (today's reads so already) or `written` — so every reading a written family's guard
-/// pins is the XML users see: `declined: …` (a difference no writer operation explains, today's kept) or
-/// `written-different: …` (the writer's own defect) fails the guard (test audit 2026-10-26).
+/// The reading's JSON of a conversion, parsed.
 pub(super) fn parsed(json: &str) -> Value {
-  let value: Value = serde_json::from_str(json).unwrap_or_else(|e| panic!("{e}: {json}"));
-  if let Some(outcome) = value["writer"].as_str() {
-    match HELD.with(Cell::get) {
-      Some(why) => assert!(
-        outcome.starts_with(&format!("declined: {why}")),
-        "the writer's outcome for a written family's paper held back for {why}: {outcome}"
-      ),
-      None => {
-        let reading_only = READING_ONLY.with(Cell::get);
-        assert!(
-          matches!(outcome, "same" | "written")
-            || (reading_only && outcome.starts_with("declined: ")),
-          "the writer's outcome for a written family's paper: {outcome}"
-        );
-      },
-    }
-  }
-  value
-}
-
-thread_local! {
-  static READING_ONLY: Cell<bool> = const { Cell::new(false) };
-  static HELD: Cell<Option<&'static str>> = const { Cell::new(None) };
-}
-
-/// Run a guard of the lexer's or the resolver's reading of a kernel `\author` shape (`article`) with the writer's
-/// outcome checked only for its own defect (`written-different`): a guard written before the kernel family was
-/// written (93a, OD #925), whose subject is the events or the reading, not what the writer applies. A shape the writer
-/// declines there is one of the stage-7 writer gaps the kernel family's census counts (the creators' names an old
-/// reader parted otherwise, an entry today's lacks): today's XML kept, the reading pinned as the observer's.
-pub(super) fn reading_only<R>(guard: impl FnOnce() -> R) -> R {
-  READING_ONLY.with(|r| r.set(true));
-  let value = guard();
-  READING_ONLY.with(|r| r.set(false));
-  value
-}
-
-/// The reading's JSON of a written family's paper the writer holds back, parsed: its outcome `declined: <why>…` — a
-/// reading the writer has no operation for, today's XML kept, which the guard pins as such (the written-family
-/// writer gaps in OPEN_ROWS).
-pub(super) fn parsed_held(json: &str, why: &str) -> Value {
-  let value: Value = serde_json::from_str(json).unwrap_or_else(|e| panic!("{e}: {json}"));
-  let outcome = value["writer"].as_str().unwrap_or("none");
-  assert!(
-    outcome.starts_with(&format!("declined: {why}")),
-    "the writer's outcome: {outcome}"
-  );
-  value
+  serde_json::from_str(json).unwrap_or_else(|e| panic!("{e}: {json}"))
 }
 
 /// Convert `tex` (with `preload`): the log, the XML, and the ledger as JSON.
@@ -201,62 +150,58 @@ fn article_blocks(preamble: &str, author: &str) -> Vec<Vec<String>> {
 /// printed it; the names' superscript symbols are marks after them, the `\and`s columns, the `\\`s rows.
 #[test]
 fn symbol_lines_are_symbol_marks_whatever_prints_them() {
-  reading_only(|| {
-    let names = [
-      "N:Ann Able",
-      "M:†*",
-      "S:and",
-      "N:Bob Baker",
-      "M:‡*",
-      "S:and",
-      "N:Cat Cole",
-      "M:†*",
-    ];
-    let expected: Vec<String> = names
-      .iter()
-      .chain(&["B", "M:†*^", "N:Univ A", "B", "M:‡*^", "N:Univ B"])
-      .map(|s| s.to_string())
-      .collect();
-    let names_line = r"\author{Ann Able$^{\dag}$ \and Bob Baker$^{\ddag}$ \and Cat Cole$^{\dag}$\\";
-    for lines in [
-      r"\dag Univ A\\ \ddag Univ B}",
-      r"$^{\dagger}$Univ A\\ $^{\ddagger}$Univ B}",
-      r"$\dagger$ Univ A\\ $\ddagger$ Univ B}",
-    ] {
-      assert_eq!(
-        article_blocks("", &format!("{names_line}\n{lines}")),
-        std::slice::from_ref(&expected),
-        "{lines}"
-      );
-    }
-  });
+  let names = [
+    "N:Ann Able",
+    "M:†*",
+    "S:and",
+    "N:Bob Baker",
+    "M:‡*",
+    "S:and",
+    "N:Cat Cole",
+    "M:†*",
+  ];
+  let expected: Vec<String> = names
+    .iter()
+    .chain(&["B", "M:†*^", "N:Univ A", "B", "M:‡*^", "N:Univ B"])
+    .map(|s| s.to_string())
+    .collect();
+  let names_line = r"\author{Ann Able$^{\dag}$ \and Bob Baker$^{\ddag}$ \and Cat Cole$^{\dag}$\\";
+  for lines in [
+    r"\dag Univ A\\ \ddag Univ B}",
+    r"$^{\dagger}$Univ A\\ $^{\ddagger}$Univ B}",
+    r"$\dagger$ Univ A\\ $\ddagger$ Univ B}",
+  ] {
+    assert_eq!(
+      article_blocks("", &format!("{names_line}\n{lines}")),
+      std::slice::from_ref(&expected),
+      "{lines}"
+    );
+  }
 }
 
 /// The design's `mac` probe (2304.13998's shape): a user macro printing `\textsuperscript{#1}` is a mark by what it
 /// prints, `~~ ` between two names a gap of three items, a line led by a mark labelled by it.
 #[test]
 fn user_mark_macro_prints_marks() {
-  reading_only(|| {
-    assert_eq!(
-      article_blocks(
-        r"\newcommand*{\affmark}[1][*]{\textsuperscript{#1}}",
-        r"\author{Ann Able\affmark[1]~~ Bob Baker\affmark[1,2]\\ \affmark[1]Univ A\\ \affmark[2]Univ B}"
-      ),
-      [[
-        "N:Ann Able",
-        "M:1",
-        "S:gap:3",
-        "N:Bob Baker",
-        "M:1,2",
-        "B",
-        "M:1^",
-        "N:Univ A",
-        "B",
-        "M:2^",
-        "N:Univ B"
-      ]]
-    );
-  });
+  assert_eq!(
+    article_blocks(
+      r"\newcommand*{\affmark}[1][*]{\textsuperscript{#1}}",
+      r"\author{Ann Able\affmark[1]~~ Bob Baker\affmark[1,2]\\ \affmark[1]Univ A\\ \affmark[2]Univ B}"
+    ),
+    [[
+      "N:Ann Able",
+      "M:1",
+      "S:gap:3",
+      "N:Bob Baker",
+      "M:1,2",
+      "B",
+      "M:1^",
+      "N:Univ A",
+      "B",
+      "M:2^",
+      "N:Univ B"
+    ]]
+  );
 }
 
 /// The gretsi v1.3 repro (2508.03934's shape; class-bindings/gretsi_v13_shared_mark_affiliation, RED for its
@@ -326,66 +271,64 @@ fn llncs_comma_before_inst_events() {
 /// gap); an empty `\textsuperscript{}` no mark.
 #[test]
 fn sync_row_shapes_46_53_66() {
-  reading_only(|| {
-    assert_eq!(
-      article_blocks(
-        "",
-        r"\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole \\ Physics}"
-      ),
-      [[
-        "N:Ann Able",
-        "M:†*",
-        "S:gap:2",
-        "N:Bob Baker",
-        "M:‡*",
-        "B",
-        "M:†*^",
-        "N:Univ A",
-        "S:gap:2",
-        "M:‡*",
-        "N:Univ B",
-        "B",
-        "N:Cat Cole",
-        "B",
-        "N:Physics"
-      ]]
-    );
-    assert_eq!(
-      article_blocks(
-        "",
-        r"\author{Ann Able$^{*1}$, Bob Baker$^{1}$ \\ $^1$Univ A}"
-      ),
-      [[
-        "N:Ann Able",
-        "M:\u{2217}1",
-        "S:,",
-        "N:Bob Baker",
-        "M:1",
-        "B",
-        "M:1^",
-        "N:Univ A"
-      ]]
-    );
-    assert_eq!(
-      article_blocks("", r"\author{Ann Able$^{1,}$ Bob Baker$^{2}$}"),
-      [["N:Ann Able", "M:1,", "N:Bob Baker", "M:2"]]
-    );
-    assert_eq!(
-      article_blocks("", r"\author{Ann Able\hspace{1em}and\hspace{1em}Bob Baker}"),
-      [[
-        "N:Ann Able",
-        "S:gap:1",
-        "S:word:and",
-        "S:gap:1",
-        "N:Bob Baker"
-      ]]
-    );
-    // (an empty superscript prints nothing and is no mark, the design note's row 4)
-    assert_eq!(
-      article_blocks("", r"\author{Ann Able\textsuperscript{}, Bob Baker}"),
-      [["N:Ann Able", "S:,", "N:Bob Baker"]]
-    );
-  });
+  assert_eq!(
+    article_blocks(
+      "",
+      r"\author{Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole \\ Physics}"
+    ),
+    [[
+      "N:Ann Able",
+      "M:†*",
+      "S:gap:2",
+      "N:Bob Baker",
+      "M:‡*",
+      "B",
+      "M:†*^",
+      "N:Univ A",
+      "S:gap:2",
+      "M:‡*",
+      "N:Univ B",
+      "B",
+      "N:Cat Cole",
+      "B",
+      "N:Physics"
+    ]]
+  );
+  assert_eq!(
+    article_blocks(
+      "",
+      r"\author{Ann Able$^{*1}$, Bob Baker$^{1}$ \\ $^1$Univ A}"
+    ),
+    [[
+      "N:Ann Able",
+      "M:\u{2217}1",
+      "S:,",
+      "N:Bob Baker",
+      "M:1",
+      "B",
+      "M:1^",
+      "N:Univ A"
+    ]]
+  );
+  assert_eq!(
+    article_blocks("", r"\author{Ann Able$^{1,}$ Bob Baker$^{2}$}"),
+    [["N:Ann Able", "M:1,", "N:Bob Baker", "M:2"]]
+  );
+  assert_eq!(
+    article_blocks("", r"\author{Ann Able\hspace{1em}and\hspace{1em}Bob Baker}"),
+    [[
+      "N:Ann Able",
+      "S:gap:1",
+      "S:word:and",
+      "S:gap:1",
+      "N:Bob Baker"
+    ]]
+  );
+  // (an empty superscript prints nothing and is no mark, the design note's row 4)
+  assert_eq!(
+    article_blocks("", r"\author{Ann Able\textsuperscript{}, Bob Baker}"),
+    [["N:Ann Able", "S:,", "N:Bob Baker"]]
+  );
 }
 
 /// SYNC rows 47 and 48's shapes: a link column under a name (`\href{…}{Project Page}` a URL contact printing its text,
@@ -454,41 +397,39 @@ fn sync_row_shapes_62_64_authblk() {
 /// word separator; a tabular's cells layout events with its rows' end a break.
 #[test]
 fn notes_labels_fonts_and_cells() {
-  reading_only(|| {
-    assert_eq!(
-      article_blocks(
-        "",
-        r"\author{Ann Able\thanks{\label{fn:a}Corresponding author: \texttt{ann@x.org}} \and Bob Baker \and {\bf Cat Cole}, \textsc{Dan Doe}\\ Dept of X, Univ Y \& Z\\ \begin{tabular}{c} Eve \\ Fay \end{tabular}}"
-      ),
-      [[
-        "N:Ann Able",
-        "T:Corresponding author: ann@x.org#fn:a",
-        "S:and",
-        "N:Bob Baker",
-        "S:and",
-        "L:font",
-        "N:Cat Cole",
-        "S:,",
-        "L:font",
-        "N:Dan Doe",
-        "B",
-        "L:font",
-        "N:Dept of X",
-        "S:,",
-        "N:Univ Y",
-        "S:word:&",
-        "N:Z",
-        "B",
-        "L:\\@@tabular",
-        "L:\\lx@begin@alignment",
-        "L:cell",
-        "N:Eve",
-        "B",
-        "L:cell",
-        "N:Fay"
-      ]]
-    );
-  });
+  assert_eq!(
+    article_blocks(
+      "",
+      r"\author{Ann Able\thanks{\label{fn:a}Corresponding author: \texttt{ann@x.org}} \and Bob Baker \and {\bf Cat Cole}, \textsc{Dan Doe}\\ Dept of X, Univ Y \& Z\\ \begin{tabular}{c} Eve \\ Fay \end{tabular}}"
+    ),
+    [[
+      "N:Ann Able",
+      "T:Corresponding author: ann@x.org#fn:a",
+      "S:and",
+      "N:Bob Baker",
+      "S:and",
+      "L:font",
+      "N:Cat Cole",
+      "S:,",
+      "L:font",
+      "N:Dan Doe",
+      "B",
+      "L:font",
+      "N:Dept of X",
+      "S:,",
+      "N:Univ Y",
+      "S:word:&",
+      "N:Z",
+      "B",
+      "L:\\@@tabular",
+      "L:\\lx@begin@alignment",
+      "L:cell",
+      "N:Eve",
+      "B",
+      "L:cell",
+      "N:Fay"
+    ]]
+  );
 }
 
 /// A stray alignment tab in the field is a column separator (review revfms2a1_2 finding 4): the `&` constructor errs
@@ -497,10 +438,8 @@ fn notes_labels_fonts_and_cells() {
 /// pdflatex's "Extra alignment tab"), the same with the switch on and off.
 #[test]
 fn ampersand_is_a_column_separator() {
-  reading_only(|| {
-    let tex = "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able \\& Bob Baker \\and Cat & Dan}\n\\maketitle\nBody.\n\\end{document}\n";
-    let (..) = reading_of(tex, Some("ar5iv.sty"));
-  });
+  let tex = "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able \\& Bob Baker \\and Cat & Dan}\n\\maketitle\nBody.\n\\end{document}\n";
+  let (..) = reading_of(tex, Some("ar5iv.sty"));
 }
 
 /// The title's footnote marks are the kernel `\maketitle`'s `\@fnsymbol` unless a binding declares its own through the
@@ -672,44 +611,42 @@ fn the_rehearsal_leaves_nothing_behind() {
 /// kernel block's creators API calls inside its expansion, queued in the first flush's queue after the title.
 #[test]
 fn spans_fill_gaps_and_widths() {
-  reading_only(|| {
-    let tex = include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/observer_fill_gap_and_footnotemark_labels.tex"
-    );
-    let (log, _, json) = reading_of(tex, Some("ar5iv.sty"));
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-    let spans = block_spans(&json);
-    let first: Vec<(&str, (u64, u64))> = spans[0]
-      .iter()
-      .map(|(event, span)| (event.as_str(), span.expect("a span")))
-      .collect();
-    assert_eq!(first, [
-      ("N:Ann Able", (0, 8)),
-      ("S:fill:1", (8, 9)),
-      ("N:Bob Baker", (9, 18)),
-      ("S:gap:1", (18, 24)),
-      ("N:Cat Cole", (24, 32)),
-      ("M:**", (32, 33)),
-      ("N:Dan", (34, 37)),
-      ("B", (37, 43)),
-      ("N:Univ A", (44, 50)),
-    ]);
-    let gaps: Vec<(f64, bool)> = json["entries"]
-      .as_array()
-      .expect("entries")
-      .iter()
-      .filter(|entry| entry["kind"] == "author")
-      .flat_map(|block| block["events"].as_array().cloned().unwrap_or_default())
-      .filter(|event| event["sep"] == "gap")
-      .map(|event| {
-        (
-          event["width"].as_f64().expect("width"),
-          event["fill"].as_bool().expect("fill"),
-        )
-      })
-      .collect();
-    assert_eq!(gaps, [(0.0, true), (3.0, false)]);
-  });
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/observer_fill_gap_and_footnotemark_labels.tex"
+  );
+  let (log, _, json) = reading_of(tex, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let spans = block_spans(&json);
+  let first: Vec<(&str, (u64, u64))> = spans[0]
+    .iter()
+    .map(|(event, span)| (event.as_str(), span.expect("a span")))
+    .collect();
+  assert_eq!(first, [
+    ("N:Ann Able", (0, 8)),
+    ("S:fill:1", (8, 9)),
+    ("N:Bob Baker", (9, 18)),
+    ("S:gap:1", (18, 24)),
+    ("N:Cat Cole", (24, 32)),
+    ("M:**", (32, 33)),
+    ("N:Dan", (34, 37)),
+    ("B", (37, 43)),
+    ("N:Univ A", (44, 50)),
+  ]);
+  let gaps: Vec<(f64, bool)> = json["entries"]
+    .as_array()
+    .expect("entries")
+    .iter()
+    .filter(|entry| entry["kind"] == "author")
+    .flat_map(|block| block["events"].as_array().cloned().unwrap_or_default())
+    .filter(|event| event["sep"] == "gap")
+    .map(|event| {
+      (
+        event["width"].as_f64().expect("width"),
+        event["fill"].as_bool().expect("fill"),
+      )
+    })
+    .collect();
+  assert_eq!(gaps, [(0.0, true), (3.0, false)]);
 }
 
 /// A bare `\footnotemark` is labelled with the mark it prints (review finding 3): `\thefootnote` at the counter's next

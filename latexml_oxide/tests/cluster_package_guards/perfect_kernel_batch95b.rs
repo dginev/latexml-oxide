@@ -1,6 +1,6 @@
 //! Guards for batch 95b (FM S2b: the observer writes IEEEtran, acmart, authblk and the MNRAS family, each family's own
 //! declaration `written`; OXIDIZED_DESIGN_DIVERGENCES #837, #942). Each guard converts its repro in process and with the binary, eager and `--streaming` (`perfect_kernel_batch92a::assert_reading`), and
-//! asserts the reading's tuples, the XML's creators with every contact, the writer's outcome, and no Error or
+//! asserts the reading's tuples, the XML's creators with every contact, the ledger's `emitted`, and no Error or
 //! Warning; the family guards also convert in the default mode (the fleet's), which writes the same creators. Every
 //! repro compiles clean with pdflatex (TL 2025; the mn2e repro with 0810.2791's mn2e.cls, which TeX Live lacks).
 
@@ -25,11 +25,11 @@ pub(super) fn default_mode_creators(tex: &str) -> Vec<Vec<String>> {
   creators(&xml)
 }
 
-/// The family guards: the reading written (the writer's outcome `written`), and the default mode writing the same.
+/// The family guards: the reading written (the ledger's `emitted`), and the default mode writing the same.
 #[track_caller]
 pub(super) fn assert_written(tex: &str, xml: &[&[&str]], tuples: &[&str]) {
-  let (written, _, _, writer) = assert_reading(tex, Some(xml), tuples);
-  assert_eq!(writer, "written", "the writer's outcome");
+  let (written, _, _, emitted) = assert_reading(tex, Some(xml), tuples);
+  assert_eq!(emitted, true, "emitted");
   assert_eq!(default_mode_creators(tex), written, "the default mode");
 }
 

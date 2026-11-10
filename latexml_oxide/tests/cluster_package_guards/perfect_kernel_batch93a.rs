@@ -82,7 +82,7 @@ fn marked_lines_joined_today_are_cut_by_the_writer() {
     "C Cid Cole [4] | line:names sep:comma",
     "  a Univ W | ruling1:request",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
@@ -106,7 +106,7 @@ fn a_legend_line_is_written_as_the_starred_names_note() {
     "C Cid Cole [2] | line:names sep:comma",
     "  a Univ Y | ruling1:request",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(
     default_mode_creators(tex),
     owned(&[

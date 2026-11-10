@@ -1881,18 +1881,10 @@ impl Resolver {
   /// hanaki, jimliu, pszepiet@umich.edu}`, 0812.3572; 0901.1641, 1110.2127, 2104.11218), once every name is read: each
   /// address the author's it spells — any live author, one read after the call too —, else the call's own authors', as
   /// today's places the call (`owner:call`; FIDELITY_CHARTER §4 #420: a call holding several addresses is no evidence
-  /// of one owner, spelling decides among them). Each call is kept as today's holds it, the one contact on the authors
-  /// its own placement gives it ([`Listed`]: the writer's name re-part reads it whole, brief 95e).
+  /// of one owner, spelling decides among them).
   pub(super) fn answer_listed_emails(&mut self) {
     let live = self.live();
     for (addresses, assoc, owners, rule) in std::mem::take(&mut self.listed_emails) {
-      self.out.listed.push(Listed {
-        whole:  Assoc {
-          rule: rule.clone(),
-          ..assoc.clone()
-        },
-        owners: owners.clone(),
-      });
       for address in addresses {
         let (to, tag) = match self.spelled(&address, &live) {
           Some(owner) => (vec![owner], "owner:spelled"),

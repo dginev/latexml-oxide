@@ -140,7 +140,7 @@ fn a_marked_thanks_is_its_marks_affiliations() {
   assert!(!xml.contains("pubnote"), "{xml}");
 }
 
-/// K14: `\and` columns of entries and no names label the whole block, as the switch off reads them (2404.00915: both
+/// K14: `\and` columns of entries and no names label the whole block, as the switch off read them (2404.00915: both
 /// affiliations and an e-mail a nameless creator's).
 #[test]
 fn entry_columns_without_names_label_the_whole_block() {

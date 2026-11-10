@@ -1,5 +1,5 @@
 //! Guards for NE1 (`agent_reports/2026-11-09_NE1_report.md`): two `=2`-only Errors the switch off never
-//! raises. (1) A name or an item the reading joins across an alignment's cells: the emitter declines the block
+//! raised. (1) A name or an item the reading joins across an alignment's cells: the emitter declines the block
 //! (`emit::emit_commands`' `across_cells`, from the digested `Layout{role="cell"}` events: `repart::joined_across_cells`,
 //! `repart::crosses_columns`), which is then Perl's whole-block creator, as off writes it, with a counted Warning; the
 //! backstop `Field::content_cut` refuses a run holding a stray `&` (`plan::holds_stray_alignment`). (2) A line of an

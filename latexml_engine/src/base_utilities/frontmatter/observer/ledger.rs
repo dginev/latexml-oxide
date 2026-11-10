@@ -301,9 +301,8 @@ pub(in crate::base_utilities) struct Ledger {
   pub analysis:   Option<Rc<Analysis>>,
   /// the frontmatter flushes so far (`reading::read_at_flush`)
   pub flushes:    usize,
-  /// `written` once a flush's emitter wrote the paper's frontmatter from the reading (`emitter::emit`), none otherwise
-  /// (the S2b writer's other outcomes, `same`, `written-different: …` and `declined: …`, went with it in DEL4)
-  pub writer:     Option<String>,
+  /// whether a flush's emitter wrote the paper's frontmatter from the reading (`emitter::emit`)
+  pub emitted:    bool,
   /// the contacts recorded that print nothing, in call order ([`UnprintedCall`])
   pub unprinted:  Vec<UnprintedCall>,
   /// the contents' texts ([`content_text`]) of the queued creator calls the emitter took out of the queue that no

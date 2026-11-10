@@ -239,7 +239,7 @@ fn an_affil_inside_the_author_is_labelled_by_its_leading_mark() {
     "C Cy Cole [1] | line:names sep:word",
     "  a Univ A, Town, Country | ruling1:request ruling3:address-out",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
@@ -269,7 +269,7 @@ fn an_affil_inside_the_author_of_several_marked_entries_is_cut_by_its_marks() {
     "C Cy Cole [1] | line:names sep:word",
     "  a Univ A, Town, Country | ruling1:request",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
@@ -364,7 +364,7 @@ fn every_affil_inside_one_author_is_the_api() {
     "C EVE EGAN [] | line:names",
     "  a Univ C | owner:adjacent",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
@@ -465,7 +465,7 @@ fn a_cut_entry_keeps_its_fonts_and_its_punctuation() {
     "C Cy Cole [3] | line:names sep:word",
     "  a Lab C, Place | ruling1:request",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(default_mode_creators(tex), owned(xml));
   let (log, xml) = default_mode(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");

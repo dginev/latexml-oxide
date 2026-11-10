@@ -12,17 +12,11 @@ use latexml_engine::base_utilities::fm_reading_json;
 use serde_json::Value;
 
 /// Convert `tex`, asserting a clean conversion: the whole dump.
-fn dump(tex: &str) -> Value { dump_as(tex, None) }
-
-/// [`dump`], of a written family's paper the writer holds back (`declined: <why>`): today's XML kept.
-fn dump_as(tex: &str, held: Option<&str>) -> Value {
+fn dump(tex: &str) -> Value {
   let (log, _, json) =
     convert_with_setup_then(tex, Some("ar5iv.sty"), || {}, |_| fm_reading_json());
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  match held {
-    Some(why) => super::perfect_kernel_batchfms2a1::parsed_held(&json, why),
-    None => super::perfect_kernel_batchfms2a1::parsed(&json),
-  }
+  super::perfect_kernel_batchfms2a1::parsed(&json)
 }
 
 /// The resolved tuples compactly, as `perfect_kernel_batchfms2a2::tuples` writes them: `C <name> [<requests>] <rule>`,

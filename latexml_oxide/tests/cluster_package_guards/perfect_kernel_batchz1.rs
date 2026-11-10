@@ -169,7 +169,7 @@ fn a_contact_that_prints_nothing_says_so() {
 
 /// Gap 9's witnesses' shape (2201.04449's `\corref{corresponding_author}`, the rehearsal's request constructor digesting
 /// the label's `_`): a held error the document never raises. The block's Mark says so; its twin block, a label of no `_`,
-/// holds no error; the writer's reading is held back as before (`dump["writer"]` none: `written_resolution`).
+/// holds no error; the writer's reading is held back as before (`written_resolution` (deleted)).
 #[test]
 fn a_held_error_of_the_rehearsal_alone_marks_its_mark() {
   let (_, dump) = dump(include_str!(

@@ -839,7 +839,7 @@ fn block_names(
         if marks && passed.is_empty() && stepped.is_empty() && past_group() != Some(true) {
           grown.1 = grown.1.max(t);
           seps.clear();
-        } else if let Some((tokens, _)) = field.content_of((s, t), 0, s) {
+        } else if let Some((tokens, end)) = field.content_of((s, t), 0, s) {
           if e.kind == EventKind::Mark {
             apart.extend(std::iter::repeat_n(T_CS!(FOOTNOTE_STEP), passed.len()));
             stepped.append(&mut passed);
@@ -854,7 +854,10 @@ fn block_names(
             }
           }
           apart.extend(tokens.unlist());
-          apart_runs.push((s, t));
+          // (to where its tokens end: past an undefined command `content::Field::past_held_undefined` grew the piece over,
+          // which the scan below then takes no more — `Ann Able\footnotemark\foo{} \and …` wrote `\foo` twice, two
+          // stubs for its one Error, review revERR2c finding 1)
+          apart_runs.push((s, end.max(t)));
         }
         if is_orcid(e) {
           on_names.insert((index, span));
@@ -2932,7 +2935,7 @@ fn warn_unwritten(index: usize, words: &[String], then: Unwritten) -> bool {
   let then = match then {
     Unwritten::Whole => "the block is written whole, as Perl's whole-block creator",
     Unwritten::Kept => "they are kept as a note of the author block",
-    Unwritten::AsQueued => "the call is written as queued, as the switch off writes it",
+    Unwritten::AsQueued => "the call is written as queued, the queue digested as Perl's",
     Unwritten::Lost => "they are lost",
   };
   Warn!(
@@ -3329,7 +3332,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
         "unexpected",
         "frontmatter",
         s!(
-          "The frontmatter emitter's reading holds no place for words a queued creator call prints that no call recorded ({}); the call is written as queued, as the switch off writes it",
+          "The frontmatter emitter's reading holds no place for words a queued creator call prints that no call recorded ({}); the call is written as queued, the queue digested as Perl's",
           words.join(" ")
         )
       );
@@ -3835,7 +3838,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   }
   *commands = out;
   assign_value(EMITTED, Stored::Int(generation), Some(Scope::Global));
-  with_ledger(|ledger| ledger.writer = Some("written".to_string()));
+  with_ledger(|ledger| ledger.emitted = true);
   Ok(true)
 }
 

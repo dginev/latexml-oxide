@@ -2,7 +2,7 @@
 //! `=2`'s improvements where it harms none (the standing ruling, user 2026-11-08; OXIDIZED_DESIGN_DIVERGENCES
 //! #980 KB2): an entry whose cut would strand the phrase its address completes is given back whole (`entry_cuts`,
 //! `strands_a_phrase`) where its holders are exactly its address's owners (`held_by_its_owners`), and a cut e-mail printed
-//! as a formula is written as its text (`cut_at`). The switch off's cut is unchanged. One test per rule.
+//! as a formula is written as its text (`cut_at`). One test per rule.
 
 use latexml::util::test::{error_count, warning_count};
 

@@ -325,10 +325,8 @@ fn observer_reads_a_note_by_the_ink_test() {
 /// observer reads each note so.
 #[test]
 fn kernel_thanks_constructor_text_is_ink() {
-  super::perfect_kernel_batchfms2a1::reading_only(|| {
-    let tex = repro!("kernel_thanks_constructor_text_is_ink");
-    clean_both_ways(tex);
-  });
+  let tex = repro!("kernel_thanks_constructor_text_is_ink");
+  clean_both_ways(tex);
 }
 
 /// A background colour is ink, whatever it is behind: `\colorbox{c}{…}` is

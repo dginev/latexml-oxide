@@ -5,7 +5,7 @@
 //! observer's request, as it is none of the binding's key (B3, astro-ph0105133: one helper,
 //! `relocate::mark_spelling_printed`). Each guard converts its repros in process and with the
 //! binary, eager and `--streaming` (`perfect_kernel_batch92a::assert_reading`), and asserts the XML's whole creator set
-//! with every contact, the reading's tuples, the writer's outcome, the default mode writing the same, and no Error or
+//! with every contact, the reading's tuples, the ledger's `emitted`, the default mode writing the same, and no Error or
 //! Warning. Every repro compiles clean with pdflatex (TL 2025; svjour with 0710.5369's svjour.cls and svepj.clo).
 
 use super::{
