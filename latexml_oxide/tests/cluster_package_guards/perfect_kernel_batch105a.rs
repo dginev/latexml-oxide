@@ -38,14 +38,16 @@ fn a_code_or_date_line_below_the_floor_is_a_note_line() {
 }
 
 /// An undefined font switch inside the store's bold group leaves its `ltx:ERROR` in the line's `ltx:text`: its text is
-/// no printed word, so the Warning names "lunarfund" alone (2601.14329's `{\songti\zihao{-4}#2}`). The fixture errs on
-/// purpose (pdflatex too). Distinct path: `text_without_errors`.
+/// no printed word (2601.14329's `{\songti\zihao{-4}#2}`). The line "Lunarfund" is kept as the creator's note, and the
+/// one Warning the guard pinned was the content check counting the ERROR's text "songti" as a word the author block
+/// does not print — no word, as the emitter's reading of the XML holds it since ERR2 (`emitter::dom`'s `ltx:ERROR`, OD
+/// #983). The fixture errs on purpose (pdflatex too). Distinct path: `text_without_errors`.
 #[test]
 fn an_error_at_depth_in_a_note_line_is_no_word() {
   let tex = repro!("net_line_words_skip_an_error_at_depth");
   for streaming in [false, true] {
     let (log, _) = cli_conversion(tex, streaming);
-    assert_eq!((error_count(&log), warning_count(&log)), (1, 1), "{log}");
+    assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
     assert_eq!(log.matches("Error:undefined:\\songti").count(), 1, "{log}");
   }
 }

@@ -398,6 +398,38 @@ pub(in crate::base_utilities) fn last_group(tokens: &Tokens) -> Tokens {
   last
 }
 
+/// The meaning recorder over a flush ([`begin_meaning_recorder`]), closed when it is ended or dropped: a flush leaving
+/// by an `Err` leaves none open, whose recording every later meaning assignment of the conversion would pay. Closed by
+/// its depth ([`end_meaning_recorder_at`]), so a displaced call's recorder an `Err` left open inside it is closed with
+/// it, never in its place.
+struct FlushMeanings {
+  depth: usize,
+  open:  bool,
+}
+
+impl FlushMeanings {
+  fn begin() -> Self {
+    FlushMeanings {
+      depth: begin_meaning_recorder(),
+      open:  true,
+    }
+  }
+
+  /// The meanings assigned since it began ([`end_meaning_recorder_at`]).
+  fn end(mut self) -> Vec<(SymStr, Option<Stored>)> {
+    self.open = false;
+    end_meaning_recorder_at(self.depth)
+  }
+}
+
+impl Drop for FlushMeanings {
+  fn drop(&mut self) {
+    if self.open {
+      end_meaning_recorder_at(self.depth);
+    }
+  }
+}
+
 /// Digest FrontMatter (if not already?)
 /// Perl: digestFrontMatter().
 pub fn digest_front_matter() -> Result<()> {
@@ -405,8 +437,11 @@ pub fn digest_front_matter() -> Result<()> {
   let flushes = lookup_int(FRONTMATTER_FLUSHES);
   assign_value(FRONTMATTER_FLUSHES, flushes + 1, Some(Scope::Global));
   // The frontmatter observer's rehearsal of the author blocks, whose reading the emitter writes from at this flush
-  // (OXIDIZED_DESIGN_DIVERGENCES #837, #980).
-  read_at_flush()?;
+  // (OXIDIZED_DESIGN_DIVERGENCES #837, #980), and the undefined commands its rehearsals held an Error for.
+  let held_undefined = read_at_flush()?;
+  // (and the meanings the flush assigns, which the held commands it defines are told by: `HeldUndefined`; closed on
+  // every path out, an `Err` one too)
+  let recorder = FlushMeanings::begin();
   bgroup();
   // INTENTIONAL DIVERGENCE from Perl PR #2767 (KNOWN_PERL_ERRORS #30,
   // OXIDIZED_DESIGN): clear the queue BEFORE digesting. Perl digests
@@ -571,6 +606,9 @@ pub fn digest_front_matter() -> Result<()> {
       digest(command)?;
     }
   }
+  // The held Errors no piece raised again — a command printing nothing between pieces, or in a piece written as text
+  // —, each once, as Perl's one digestion of the block raises it (`HeldUndefined`, OXIDIZED_DESIGN_DIVERGENCES #983).
+  held_undefined.raise_unraised(&recorder.end())?;
   // Add punctuation to all ltx:creators, now that we know how many of each role.
   let mut updates: Vec<(usize, bool)> = Vec::new(); // (index, use_conjunction)
   with_value("frontmatter", |v| {

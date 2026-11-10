@@ -205,7 +205,12 @@ fn segments_of(node: &Node, parted: bool, icons: bool) -> Vec<Seg> {
       match child.get_type() {
         Some(NodeType::TextNode) => out.push(Seg::Text(child)),
         Some(NodeType::ElementNode) => {
-          if is(&child, "ltx:Math") {
+          // (an undefined command's error markup, `<ltx:ERROR class="undefined">\cs</ltx:ERROR>` (Perl State.pm:549-551
+          // `makeError`), prints none of the source's ink — TeX's "Undefined control sequence" prints nothing, as the
+          // reading's events hold it: no word of the creator's, `Sanwoo Lee\internship` (2607.29185; OD #983))
+          if is(&child, "ltx:ERROR") {
+            out.push(Seg::Hidden);
+          } else if is(&child, "ltx:Math") {
             match marks::read_formula(&child) {
               // (one lowercase script glued inside a word is its letters, as the `ltx:sup` the rewrite makes of it)
               marks::FormulaMarks::Marks(scripts) => match scripts.as_slice() {

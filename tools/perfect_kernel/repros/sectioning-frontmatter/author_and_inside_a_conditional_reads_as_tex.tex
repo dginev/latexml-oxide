@@ -1,0 +1,18 @@
+% mechanism: an `\and` inside a conditional of the author block (sibarticle.sty's `\ifnum \c@numAuthors>1 \and …\fi`
+%   chains): TeX reads the block in one pass, the conditional skipping the `\and` and the name after it; Perl splits the
+%   block at its `\and` tokens first and digests each piece apart, each conditional cut from its `\fi` (KNOWN_PERL_ERRORS
+%   #1218). The rehearsal digests the block whole, as TeX: no Error, the one author pdflatex prints
+% witness: 1603.08231, 2112.06251 (sibarticle.sty raw-loaded; the off driver and Perl --includestyles raise the
+%   `Error:expected:\fi` chain and `\@authorii`…`\@authorv` undefined: 18 and 12 Errors, 22 for Perl on 1603.08231;
+%   pdflatex 0)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able" alone
+% engines: Perl 0.8.8: 1 Error (`expected:\fi`), creators Ann Able and Bob Baker; DEL5 (=2): 0 Errors, Ann Able
+% expect:  0 errors, 0 warnings; one creator, Ann Able
+% status:  GREEN (DEL5; ERR2 classifies the flip A/B's lost `\fi` chains by it)
+\documentclass{article}
+\newcount\na \na=1
+\author{Ann Able \ifnum\na>1 \and Bob Baker\fi}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

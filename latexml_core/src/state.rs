@@ -6105,11 +6105,12 @@ pub fn begin_assignment_journal() -> Option<AssignmentJournalGuard> {
 /// journal — recorders nest, and a journal (a speculative run's, a replay's) may open and close inside one. Made for a
 /// displaced setter's call (frontmatter_stores.rs `\lx@displaced@begin`), whose own code may run a speculative label
 /// read (queue_digest.rs `speculative_label_ink`: utarticle.cls:125's `\address` prints its `\@makeadmark{\@tempb}`,
-/// 1209.6020). Kept in the state, so a document that stops inside a call leaves none to the next.
-pub fn begin_meaning_recorder() {
-  state_mut!()
-    .meaning_recorders
-    .push(rustc_hash::FxHashMap::default());
+/// 1209.6020). Kept in the state, so a document that stops inside a call leaves none to the next. Returns its depth:
+/// how many were open before it, which [`end_meaning_recorder_at`] closes it by.
+pub fn begin_meaning_recorder() -> usize {
+  let recorders = &mut state_mut!().meaning_recorders;
+  recorders.push(rustc_hash::FxHashMap::default());
+  recorders.len() - 1
 }
 
 /// Close the innermost meaning recorder ([`begin_meaning_recorder`]): the meanings assigned since it began, each with
@@ -6117,6 +6118,21 @@ pub fn begin_meaning_recorder() {
 pub fn end_meaning_recorder() -> Vec<(SymStr, Option<Stored>)> {
   state_mut!()
     .meaning_recorders
+    .pop()
+    .map(|recorded| recorded.into_iter().collect())
+    .unwrap_or_default()
+}
+
+/// Close the meaning recorder [`begin_meaning_recorder`] opened at `depth`, and every one opened inside it and left open
+/// (an `Err` out of a displaced call between its begin and its end): the meanings it recorded, as
+/// [`end_meaning_recorder`]; empty when it is no longer open.
+pub fn end_meaning_recorder_at(depth: usize) -> Vec<(SymStr, Option<Stored>)> {
+  let recorders = &mut state_mut!().meaning_recorders;
+  if recorders.len() <= depth {
+    return Vec::new();
+  }
+  recorders.truncate(depth + 1);
+  recorders
     .pop()
     .map(|recorded| recorded.into_iter().collect())
     .unwrap_or_default()

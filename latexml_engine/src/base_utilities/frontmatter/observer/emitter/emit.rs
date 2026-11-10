@@ -519,17 +519,18 @@ fn event_run(
   grown: Option<(usize, usize)>,
   cuts: &[(usize, usize)],
 ) -> Option<Vec<Token>> {
-  event_run_at(field, events, ends, grown, cuts).map(|(tokens, _)| tokens)
+  event_run_at(field, events, ends, grown, cuts).map(|(tokens, ..)| tokens)
 }
 
-/// [`event_run`], and the run of the block's tokens it was taken from (from, to).
+/// [`event_run`], the run of the block's tokens it was taken from (from, to), and where the tokens written end (past
+/// `to` where the run's balance or `content::Field::past_held_undefined` grew it).
 fn event_run_at(
   field: &Field,
   events: &[Event],
   (first, last): (&Event, &Event),
   grown: Option<(usize, usize)>,
   cuts: &[(usize, usize)],
-) -> Option<(Vec<Token>, (usize, usize))> {
+) -> Option<(Vec<Token>, (usize, usize), usize)> {
   let at = |p: u16| usize::from(p).checked_sub(field.base);
   let (start, end) = (at(first.span?.0)?, at(last.span?.1)?);
   let start = past_open_environment(field, start, end);
@@ -611,7 +612,7 @@ fn event_run_at(
   } else {
     tokens.unlist()
   };
-  Some((tokens, (from, run_end)))
+  Some((tokens, (from, run_end), balanced_end))
 }
 
 /// A note's footnote step, as the title block digests it (`frontmatter_fields.rs`): a creator's notes written apart take
@@ -859,7 +860,7 @@ fn block_names(
           on_names.insert((index, span));
         }
       }
-      let (tokens, (run_from, run_to)) = event_run_at(
+      let (tokens, (run_from, run_to), written_to) = event_run_at(
         &field,
         events,
         (found[from].1, found[to].1),
@@ -882,6 +883,33 @@ fn block_names(
         {
           on_names.insert((index, span));
         }
+      }
+      // (an undefined command its rehearsal held an Error at, past the name's run, its marks and notes, before the next
+      // separator or name, is the name's, written after them: it prints nothing, so no event covers it, and the name
+      // stopped short of it, its Error never raised again — Perl raises it in the personname, its whole-block creator's
+      // one digestion (Base_Utility.pool.ltxml:691-693, State.pm:547-551): `Sanwoo
+      // Lee\textsuperscript{\rm 1,2,3}\internship,` (2607.29185), `Songwei Liu\textsuperscript{\rm 1}\thanks{Porject
+      // Leader.}\equalcorres,` (2508.21091), `E.Prandini\from{ins:x}\thanks{…}\ETC,` (1101.4098). The reading's
+      // segmentation stays: only what prints nothing joins the name (OXIDIZED_DESIGN_DIVERGENCES #983; repro
+      // sectioning-frontmatter/emitter_undefined_command_in_author_errs_once))
+      let next_at = read[after_name..]
+        .iter()
+        .find(|e| !past_note(e))
+        .and_then(|e| at(e.span?.0))
+        .unwrap_or(field.tokens.len());
+      let covered = |i: usize| {
+        events
+          .iter()
+          .filter_map(|e| Some((at(e.span?.0)?, at(e.span?.1)?)))
+          .chain(apart_runs.iter().copied())
+          .any(|(s, t)| s <= i && i < t)
+      };
+      let undefined: Vec<usize> = (run_to.max(written_to)..next_at.min(field.tokens.len()))
+        .filter(|&i| field.held_undefined_at(i) && !covered(i))
+        .collect();
+      for i in undefined {
+        apart.push(field.tokens[i]);
+        apart_runs.push((i, i + 1));
       }
       // (a footnote symbol in a kept mark is shown apart from its numbers, `rewrite_symbol_superscripts`'s: 1610.06117)
       let mut out = if marks {
@@ -1374,7 +1402,7 @@ fn lines_run(
     }
     kept += 1;
     if let (Some(first), Some(last)) = (line.first(), line.last()) {
-      let (tokens, run) = event_run_at(field, events, (first, last), None, cuts)?;
+      let (tokens, run, _) = event_run_at(field, events, (first, last), None, cuts)?;
       out.extend(tokens);
       runs.push(run);
     }

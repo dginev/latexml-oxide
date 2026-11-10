@@ -19194,3 +19194,54 @@ Fixed in Rust on the package's own timing (listings_sty.rs, `\AtBeginDocument[li
 2405.15073: E 92 → 77, those three 0, its 8 affiliation contacts back, recall of pdflatex's words 99.7 %. A preamble's `\setcounter{lstlisting}{5}`, `\numberwithin{lstlisting}{section}`
 and `\renewcommand\thelstlisting` no longer number the listings, as in pdflatex, which errs on each ("No counter", "undefined"); ours has no Error there (`\setcounter` a Warning), the numbers the same.
 Guard `perfect_kernel_batchm3::the_lstlisting_counter_waits_for_begin_document`.
+
+## 1218. An `\and` inside a conditional of an author block: Perl splits at it, each conditional cut from its `\fi`
+
+TeX reads `\@author` in one pass at `\maketitle`: a conditional skips the `\and` and the name after it. Perl splits the
+block at its `\and` tokens before digesting (Base_Utility.pool.ltxml:173-175 `andSplit`: each piece its own
+`\lx@author{…}`, digested apart), so the conditional opened in one piece is closed in the next: `Error:expected:\fi` ("conditional fell off end"),
+and a creator for the name TeX skipped. Minimal trigger (pdflatex 0 errors, "Ann Able" alone; Perl 0.8.8: 1 Error,
+creators Ann Able and Bob Baker):
+
+```latex
+\documentclass{article}
+\newcount\na \na=1
+\author{Ann Able \ifnum\na>1 \and Bob Baker\fi}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}
+```
+
+sibarticle.sty's `\author{… \ifnum \c@numAuthors>1 \and \ifx\@URLii\@empty … \@authorii … \fi …}` chains (1603.08231:
+22 Errors with `--includestyles`, `\@authorii`…`\@authorv` undefined and 14 `expected:\fi`; 2112.06251) — the old
+frontmatter driver raised them the same way (18 and 12). Not in Rust: the observer rehearses the block whole, as TeX
+(repro sectioning-frontmatter/author_and_inside_a_conditional_reads_as_tex; guard
+`perfect_kernel_batcherr2::an_and_inside_a_conditional_is_read_as_tex_reads_it`; OXIDIZED_DESIGN_DIVERGENCES #983).
+
+## 1219. A command a class defines inside its `\maketitle`, used in `\author`: Perl digests the block where it stands undefined
+
+TeX expands `\@author` inside `\maketitle`, where the class's title code has defined the commands an author block may
+use. kr.sty's `\@maketitle` defines `\affiliations` (and `\emails`, `\and`, `\And`) locally before `\@author`
+(kr.sty:94-100, 126-135), and nowhere else. Perl digests the `\author` block outside that code — its creator binding
+(Base_Utility.pool.ltxml:691-693) runs on the block itself, not under the class's `\maketitle` — so `\affiliations`
+is undefined there: `Error:undefined:\affiliations` and a creator "Ann Able \affiliations Univ X". The same
+eager-digestion family as #1218. Minimal trigger (pdflatex 0 errors, "Ann Able" over "Univ X"; Perl 0.8.8: 1 Error,
+one creator holding `<ERROR>\affiliations</ERROR>`):
+
+```latex
+\documentclass{article}
+\makeatletter
+\def\@maketitle{{\def\affiliations{\par}\@author}}
+\makeatother
+\author{Ann Able \affiliations Univ X}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}
+```
+
+Witnesses 2602.18351 (main.tex line 110; 1 Error with `--includestyles` too, kr.sty then loaded) and 2604.26688
+(main.tex line 322); 2405.06973 uses kr.sty the same way (not run on Perl). Not in Rust: the observer's rehearsal holds
+the block's Error, and the flush's net raises no command the flush's code assigns a meaning — the class's `\maketitle`
+defining it (`reading::HeldUndefined`): 0 Errors, the affiliation "Univ X" (OXIDIZED_DESIGN_DIVERGENCES #983).
