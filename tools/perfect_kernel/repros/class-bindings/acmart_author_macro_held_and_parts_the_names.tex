@@ -1,0 +1,24 @@
+% mechanism: acmart's `\author{\aut}`, `\aut` holding `Ann Able \and Bob Baker`: the binding sees no comma in the spelling
+%   and hands `\aut` whole to one API creator call, as for the literal `\and` (`acmart_author_and_parts_the_names.tex`,
+%   whose header names the path). The rehearsal digests the `\and` from `\aut` (a `Sep(And)` at the call's own level),
+%   but every event's position is `\aut`'s, so no token run holds a piece: each piece's name is written by its text,
+%   counted, one Warning a piece (`emit::creator_call_cut`, `by_text`), and only where the piece prints its name alone
+%   (a macro holding a note or a mark beside its names, `\newcommand\aut{Ann Able\thanks{…} \and Bob Baker}`, keeps the
+%   call whole, its merge counted by `merged_creators`). Kept apart from the literal form: a cut by the digested `\and`,
+%   which no spelling test in the binding can see
+% witness: revOC1 B1 (`scratch_revOC1/src/acm_macro.tex`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "ANN ABLE BOB BAKER", "Author's Contact Information: Ann Able;
+%   Bob Baker."
+% engines: Perl 0.8.8: one creator "Ann Able and Bob Baker", 0 errors (acmart.cls.ltxml:89); int156a (OC1b-rel):
+%   one creator "Ann Able and Bob Baker", 1 error (`merged_creators`), 0 warnings
+% expect:  0 errors, 2 warnings (each name written by its text, "a creator call whose `\and`s a macro holds with its
+%   names, cut at them"); creators Ann Able, Bob Baker (a surpass over Perl, as OD #993)
+% status:  RED (int156a) -> GREEN (OC1c; guard perfect_kernel_batchoc1c::an_api_creator_call_parts_at_its_own_and)
+\documentclass{acmart}
+\newcommand\aut{Ann Able \and Bob Baker}
+\title{T}
+\author{\aut}
+\begin{document}
+\maketitle
+Text.
+\end{document}

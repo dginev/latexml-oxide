@@ -52,6 +52,39 @@ pub(in crate::base_utilities::frontmatter::observer) fn hand_marked_share(
     })
 }
 
+/// The pieces a creator call's own `\and`s cut it into, each holding a name: `\lx@add@creator[role=author]{Ann Able \and
+/// Bob Baker}`, a binding handing one whole argument to the API — acmart's `\author` with no comma, quantumarticle's,
+/// authblk's and ecai's where their spelling test finds no separator (a macro-held `\and`) — whose `\and`, literal, held
+/// in a macro, spelled `\csname and\endcsname`, printed by a wrapper or by an active character, pdflatex parts into two
+/// authors (acmart.cls:2726 `\let\and\@typeset@author@line`; 1909.10278, 2501.11185), as the block routes' names line
+/// cuts (OXIDIZED_DESIGN_DIVERGENCES #993). `None` for a call it doesn't cut. Only an `\and` at the call's own level, in
+/// the name its call wraps (`\lx@personname`, a Layout event holding the rest): one inside a layout container of the name
+/// (a `tabular`, a `\parbox`) or a note is that container's. And only where every piece holding ink holds a name: a piece
+/// of a note or a contact alone (`Ann Able \and \thanks{…}`) has no creator to hold it, so the call stays whole. The
+/// reading's (`Resolver::api`) and the emitter's (`emit::creator_call_cut`), on the same events.
+pub(in crate::base_utilities::frontmatter::observer) fn creator_call_pieces(
+  events: &[Event],
+) -> Option<Vec<&[Event]>> {
+  let own = u8::from(events.first().is_some_and(|e| {
+    e.kind == EventKind::Layout && e.nest == 0 && e.role.as_deref() == Some("\\lx@personname")
+  }));
+  let own_and = |e: &Event| e.nest == own && matches!(e.kind, EventKind::Sep(SepKind::And(_)));
+  let named = |piece: &[Event]| piece.iter().any(|e| e.kind == EventKind::Name);
+  let inked = |piece: &[Event]| {
+    piece.iter().any(|e| {
+      matches!(
+        e.kind,
+        EventKind::Name | EventKind::Mark | EventKind::Contact | EventKind::Note
+      )
+    })
+  };
+  if !events.iter().any(own_and) || !events.split(own_and).all(|p| named(p) || !inked(p)) {
+    return None;
+  }
+  let pieces: Vec<&[Event]> = events.split(own_and).filter(|piece| named(piece)).collect();
+  (pieces.len() > 1).then_some(pieces)
+}
+
 impl Resolver {
   /// An empty entry's authors hold its role, as today's attaches the empty contact to them (`annotate=`: the last
   /// author, all, the run of new ones, the last N) — part of today's contact pile too (`distribute_upfront`: amsart's
@@ -198,6 +231,15 @@ impl Resolver {
     events: &[Event],
     policy: &'static Policy,
   ) {
+    // (a creator call its own `\and`s cut, each piece a creator of its own with the call's keyvals: `creator_call_pieces`)
+    if tag == "ltx:creator"
+      && let Some(pieces) = creator_call_pieces(events)
+    {
+      for piece in pieces {
+        self.api(index, tag, role, attrs, piece, policy);
+      }
+      return;
+    }
     let led_line = self.led_line.take();
     // (the title gives no creator or contact; its marks are requests: aastex's `\title{…\altaffilmark{1}}`, whose
     // `\altaffiltext{1}{Based on observations …}` is the title's note, 0801.1670)
