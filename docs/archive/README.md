@@ -93,10 +93,13 @@ citations are why the file is kept.
 - `SYNC_SESSIONS_2026-09.md`, `SYNC_SESSIONS_2026-10.md` — the same for September and for 2026-10-04's compaction: the
   cortex sandbox validation (61r), the stop and resumption of the full arXiv run 329 (62a-62c) and the run-329 cluster
   batches 62d-62f; their open residuals stay in SYNC_STATUS "Run-329 and sandbox open residuals".
-- `SYNC_SESSIONS_2026-11.md` — the frontmatter series' landed rows, moved verbatim 2026-11-08 from SYNC_STATUS's
-  "Silent-loss inventory" (batches 77d-108b, the S2b families, Z1-Z14, the bundle rows int117a-int145b) and from
-  `../perfect_kernel/OPEN_ROWS.md`, and `../perfect_kernel/KERNEL_CAPABILITIES.md`'s K23 design record; each live
-  residual keeps a one-line row in SYNC_STATUS ("— the residual").
+- `SYNC_SESSIONS_2026-11.md` — two moves, both verbatim. (1) DOC1, 2026-11-08: the frontmatter series' landed rows
+  from SYNC_STATUS's "Silent-loss inventory" (batches 77d-108b, the S2b families, Z1-Z14, the bundle rows
+  int117a-int145b), from `../perfect_kernel/OPEN_ROWS.md`, and `../perfect_kernel/KERNEL_CAPABILITIES.md`'s K23 design
+  record. (2) SYNC1, 2026-11-09, section "Moved from SYNC_STATUS by the 2026-11-09 compaction (SYNC1)": the closed
+  ranked rows (G, XP, R4), the bundle rows int119a-int152a and int133a, row 98d, the pre-flip leftovers' history, the
+  long rows' full records and the Rust Error Fixes' bodies, split into one fact per line. Each live residual keeps its
+  row, under the same title, in SYNC_STATUS or (since SYNC1b) `../perfect_kernel/SILENT_LOSS_INVENTORY.md`.
 - `GEMINI_IMPROVEMENT_IDEAS_2026-09-19.md` — the Gemini engineering review; P1/P5/P6/P7 landed, P3/P4 settled, the
   open ideas lifted into `../performance/BEYOND_PERL_LEVERS.md`.
 - `round19_iteration_log.md` — pre-Round-25 sprint narratives. Cited by `CHANGELOG.md`.

@@ -104,7 +104,8 @@ to it, and where the brief is more specific, the brief wins.
   guards) + `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`. NEVER push.
 - Docs IN the commit, with the brief's reserved numbers: OXIDIZED_DESIGN_DIVERGENCES entries (append in number order at
   the end), KNOWN_PERL_ERRORS only for Perl-origin defects (with a minimal trigger), and every doc site you made false.
-  **Never edit `docs/SYNC_STATUS.md`** (user 2026-11-09: its rows conflicted on every merge): write the row text under a
+  **Never edit `docs/SYNC_STATUS.md`** (workflow the user agreed to 2026-11-09; the main session's reason: its one-line rows
+  conflicted on nearly every merge): write the row text under a
   "SYNC note" heading in your report; the main session folds it in at bundle time. Record the conclusion, not the play-by-play (CLAUDE.md doc rules). Do
   NOT edit the "next free number" index lines — the main session does at integration.
 - Rebases (only when the brief or the main session asks): keep both sides of appended doc blocks in number order; grep

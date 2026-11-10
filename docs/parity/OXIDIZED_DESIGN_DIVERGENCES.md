@@ -7169,7 +7169,7 @@ two_setters_of_one_store_make_one_entry, abstract_store_read_but_not_printed_yie
 the class's own running `\maketitle` cleared after printing it is handed on with the value its setter stored,
 `lx_store_value_<name>`: ptptex `[preprint]`, 0906.3938, 0907.2968 — which keeps the `ltx:abstract` base has; that
 class's printed block keeps the abstract too, so its text is there twice where pdflatex prints it once, on base as
-here: a residual, SYNC_STATUS "Silent-loss inventory" row "ptptex `[preprint]` double abstract", pinned by the
+here: a residual, SYNC_STATUS "Silent-loss inventory" row "ptptex `[preprint]` double abstract" (now `perfect_kernel/SILENT_LOSS_INVENTORY.md`), pinned by the
 guard's count; a store the title page prints in a footnote or a `\thanks` is
 printed: the speculative run typesets both, and the footnote its label and store leave empty goes with them — a
 `\footnotetext`'s `\footnotemark` too —, `\lx@replay@records`).
@@ -22193,11 +22193,11 @@ the confirming run checks only what the sentinel runs found printed, so it does 
 whose letters TeX prints as other characters (a font's ligature glyph) would fail it; a label with an accent
 (`R\'esum\'e :`, `\textbf{Mots-cl\'es :}`) is not read off the code (`label_item`), and a heading-style label before an
 abstract the kernel's `\abstract` owns (`\begin{center}{\bf Abstract}\end{center}`, `{\bf Abstract.}`) is not this
-mechanism's: both stay orphan paragraphs, as on base (SYNC_STATUS "Silent-loss inventory" #6a residual); a constructor
+mechanism's: both stay orphan paragraphs, as on base (SYNC_STATUS "Silent-loss inventory" #6a residual, now `perfect_kernel/SILENT_LOSS_INVENTORY.md`); a constructor
 outside `VERBATIM_PRINTERS` that prints a verbatim argument (a binding's two-verbatim `\href`, jhep_cls.rs) does not
 count it printed; a store the class prints only behind a label macro it defines at `\maketitle`
 (bullsrsl.cls:747-765 `\BSRSL@CorrespIntro` "Correspondence to:", 2401.09121, 2410.19120) is a pubnote without that
-label, a hover-only popup (SYNC_STATUS row "bullsrsl correspondence"). Guards
+label, a hover-only popup (SYNC_STATUS row "bullsrsl correspondence", now `perfect_kernel/SILENT_LOSS_INVENTORY.md`). Guards
 `perfect_kernel_batch77i::{offtable_stores_read_by_class_author_are_the_creators,
 offtable_store_typeset_by_the_deposit_stays_there, offtable_store_the_class_title_hands_on_is_the_title,
 offtable_store_the_title_page_does_not_print_is_not_handed_on, unset_store_reads_as_the_title_page_tests_it,
@@ -22249,7 +22249,7 @@ are not captured; `adjusted title`'s `\vphantom` renders as a hidden span with w
 environment still shows its code (the delegation always displays it; `\newtcbinputlisting` honours the mode); a
 `text only` input listing has no listing to carry its title (a paragraph before the text) or its label (dropped); the `comment` modes' comment
 is not typeset; `captionpos=tb` keeps Perl's `eq 't'` reading for a listings title (bottom only). A box `label=`'s
-`\ref` prints the enclosing section's number, not the box's counter (Perl identical; SYNC silent-loss row "tcolorbox
+`\ref` prints the enclosing section's number, not the box's counter (Perl identical; `perfect_kernel/SILENT_LOSS_INVENTORY.md`, the SYNC silent-loss row "tcolorbox
 box label").
 
 Witnesses 2405.01480, 2405.02221, 2405.02462, 2405.03285, incgraph-doc (and the same template shipped unused by the
@@ -30467,7 +30467,7 @@ furniture that pdflatex does print stays there (a first page's foot, RED catalog
 line, 1406.6413).
 A `\write` reads as read: its reader is the next run. Known undercount: a body `\newcommand` ignored under a kernel
 definition has no record, so its stores read as unread (`\@maketitle` of cjpsuppl.cls:199, hep-ph0402063: an Info, and
-SYNC row "108b `\newcommand`"). **B (`writes`):** a binding's dropped argument is the document's text also when a macro
+SYNC row "108b `\newcommand`", now `perfect_kernel/SILENT_LOSS_INVENTORY.md`). **B (`writes`):** a binding's dropped argument is the document's text also when a macro
 of the document's the arguments name holds it, read to 3 levels and 4,096 tokens: `\SeMieee` →
 `\IEEEmembership{, Senior Member,~IEEE}` (2503.14354; the drop is Perl's, IEEEtran.cls.ltxml:143, KNOWN_PERL_ERRORS
 #534). **C (`\@listi`):** `latex_constructs_rust_only.rs` defined `\@listi`-`\@listvi` empty; a class's non-robust
@@ -30493,7 +30493,7 @@ int139c-rel vs 108b2): CMS +3.17 to +3.88 % (200-400 M): all in `check_title_pag
 unheld word starts; the third source's run itself pays nothing measurable (1607.06975: candidate 6,470 M, with the check
 off 6,266 M, with the digestion off 6,264 M, one build apart, base 6,205-6,278 M). A witness +0.83 %; others −0.05 to
 +0.08 %. No one-line cap: the scan is what tells a lost word from a held one. **Still counted only, not
-kept:** Perl keeps the words on 2305.00867, 1011.2770, 2605.02209 and the repro of A (SYNC row "108b content"). Guards
+kept:** Perl keeps the words on 2305.00867, 1011.2770, 2605.02209 and the repro of A (SYNC row "108b content", now `perfect_kernel/SILENT_LOSS_INVENTORY.md`). Guards
 `perfect_kernel_batch108b::{a_store_the_print_gates_out_is_counted, a_store_of_a_refused_replay_is_counted,
 each_writer_of_a_store_counts_and_a_replaced_call_does_not, a_tex_live_packages_setter_or_no_title_page_wants_nothing,
 a_bindings_drop_inside_a_documents_macro_is_counted, list_parameter_macros_keep_the_letter_after_them,
@@ -32457,7 +32457,7 @@ macro and `\__fp_parse_infix_end:N`: 2025-11-06 (TL 2025) and 2026-01-19 (the ho
 argument where the tokens differ, which cannot see what a run reports; `LATEXML_L3FP_TRACE=1` prints the answers and the fallbacks by reason at the
 thread's end.
 
-**The proof.** The self-check over the census, the 346 of 2,374 TeX Live manuals that reach l3fp: 971,116 calls, 0 mismatches, 94.3 % answered natively, and over 52 of 1,995 arXiv papers (seeded from those using `siunitx`, `xfp`, `l3draw`, `pgf-interference` or `\fp`) 97.6 % in the first form of this door. It compares tokens; for what a run reports, `run_doc.sh` over those 346, base P1 against native and `LATEXML_L3FP_NATIVE=0`: Errors, Fatals, Warnings and XML equal on every one but l3kernel/source3, which varies on its own under load and is equal at `--max-memory=0` (SYNC_STATUS "l3kernel/source3"). pdflatex as oracle (`kit/l3fp_oracle.sh`, `-no-shell-escape`, TL 2025): 36 families, seeded operations in the shapes that matter (16-digit mantissas, ties, exponent limits, angles next to multiples of pi/4, huge and tiny angles, literals past 16 digits, registers, composed expressions), `\fp_to_tl`, 0 mismatches: 100,000 each in the first form, 20,000 each on this one, 97.9 % native; on the host's expl3 2026-01-19, 1,000 each. Every expression of the review's fuzz that differed, each native vs raw vs pdflatex, is a row of the guards. A/B of 2,495 papers (`popP2`: the census's 2,000 and 500 controls) against P1: 0 changed, E 7,795 = 7,795, F 77 = 77, Warnings equal.
+**The proof.** The self-check over the census, the 346 of 2,374 TeX Live manuals that reach l3fp: 971,116 calls, 0 mismatches, 94.3 % answered natively, and over 52 of 1,995 arXiv papers (seeded from those using `siunitx`, `xfp`, `l3draw`, `pgf-interference` or `\fp`) 97.6 % in the first form of this door. It compares tokens; for what a run reports, `run_doc.sh` over those 346, base P1 against native and `LATEXML_L3FP_NATIVE=0`: Errors, Fatals, Warnings and XML equal on every one but l3kernel/source3, which varies on its own under load and is equal at `--max-memory=0` (SYNC_STATUS "l3kernel/source3", now `perfect_kernel/SILENT_LOSS_INVENTORY.md`). pdflatex as oracle (`kit/l3fp_oracle.sh`, `-no-shell-escape`, TL 2025): 36 families, seeded operations in the shapes that matter (16-digit mantissas, ties, exponent limits, angles next to multiples of pi/4, huge and tiny angles, literals past 16 digits, registers, composed expressions), `\fp_to_tl`, 0 mismatches: 100,000 each in the first form, 20,000 each on this one, 97.9 % native; on the host's expl3 2026-01-19, 1,000 each. Every expression of the review's fuzz that differed, each native vs raw vs pdflatex, is a row of the guards. A/B of 2,495 papers (`popP2`: the census's 2,000 and 500 controls) against P1: 0 changed, E 7,795 = 7,795, F 77 = 77, Warnings equal.
 
 Guards `perfect_kernel_batchp2::{the_hard_values_are_pdflatexs, a_seeded_slice_matches_pdflatex, what_it_declines_is_the_raw_macros,
 it_expands_when_the_raw_parser_does, an_expression_in_a_printed_title_stays_a_field, a_dimension_too_large_is_reported_once,
