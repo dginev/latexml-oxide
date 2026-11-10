@@ -182,12 +182,6 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   "Route via reading helpers"** (user 2026-11-10): the declined emitter's Rust-only row sharing (OD #901, ≈730 lines in
   `shared_row/`) keeps its gains but calls the reading's one copy of each rule, and the old token-level copy is deleted
   (Z18n).
-- **The emitter's decline fallback is Perl's `\lx@add@authors`** (main session 2026-11-10, CR7, applying Perl as the
-  translation truth and the user's 2026-11-08 "robust and principled … Do not lose any of our already achieved
-  frontmatter semantics and segmentation features"; not a user ruling of its own): a block the emitter declines is
-  written as Perl writes it — the tabular branch whole (Base_Utility.pool.ltxml:692-693), else split as Perl splits it
-  (:676-719) — with a fail-safe: where the split would state a false owner or make an address an author, the block
-  stays whole with its Warning (CR7d; OD #988).
 
 ## 5. Bindings and shipped copies
 
