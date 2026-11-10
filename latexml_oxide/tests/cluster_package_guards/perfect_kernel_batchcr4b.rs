@@ -1,7 +1,10 @@
 //! Red/green guards for batch CR4b, CR4's fix round: the math shifts of an e-mail pair as TeX pairs them, each imsart
 //! address block goes to the authors whose `\ead` labels it cites, and a date a late block defers is placed at the end
 //! of the outermost flush. OXIDIZED_DESIGN_DIVERGENCES #972, #985, #986.
-use super::perfect_kernel_batchcr2::{convert_clean, elements};
+use super::{
+  perfect_kernel_batch46::{error_count, warning_count},
+  perfect_kernel_batchcr2::{convert_clean, elements},
+};
 
 /// CR4b items 1 and 2 (review revCR4 findings 1 and 4): two formulas in one e-mail argument, `$^a$ann@x.edu,
 /// $^b$bob@y.edu`, keep both marks and the text between them (CR4 paired the first formula's closing shift with the
@@ -36,5 +39,28 @@ fn imsart_address_block_goes_to_the_authors_it_cites() {
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@x.edu</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">A. Able<break/>B. Baker<break/>Univ AB</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@y.org</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">A. Able<break/>B. Baker<break/>Univ AB</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Carl Cole</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">carl@z.edu</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">C. Cole<break/>Univ C</contact>\n  </creator>",
+  ]);
+}
+
+/// CR4b item 4 (review revCR4 finding 3): cr4's `\title{A Title \author{Ann Able \date{Dinner One}}}` then
+/// `\date{Dinner Two}`, with a `\section` after `\maketitle`: "Dinner One" is the date, as pdflatex prints. It was
+/// queued for a next flush the section's closing of the frontmatter never ran, and dropped with no Warning. Distinct
+/// from cr4's `date_inside_author_inside_title_over_later_date` (no section, the end-of-document flush placed it): the
+/// placement at the end of the outermost flush. The one Warning is the title-page check's "unclaimed: two", as there.
+/// Repro sectioning-frontmatter/date_inside_author_inside_title_section_after.
+#[test]
+fn date_inside_author_inside_title_section_after() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/date_inside_author_inside_title_section_after.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 1, "{log}");
+  assert!(log.contains("unclaimed"), "{log}");
+  assert_eq!(elements(&xml, "date"), vec![
+    "<date role=\"creation\">Dinner One</date>"
+  ]);
+  assert_eq!(elements(&xml, "creator"), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n  </creator>",
   ]);
 }

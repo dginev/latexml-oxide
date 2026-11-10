@@ -45,6 +45,7 @@ use crate::base_utilities::{
         read_events, split_pieces, uncoordinated_marks,
       },
     },
+    place::DEFERRED_TO_FLUSH_END,
     relocate::{BLOCK_ZONE, FOOTER_ZONE},
   },
 };
@@ -4127,14 +4128,14 @@ fn recover_queued(
       _ => {
         // (a title, subtitle or date set in a block read while an outer flush digests its queue — `\title{…\author{…
         // \date{One}}}` read at `\maketitle`'s flush — is set as TeX typesets the block, after the queue's own: queued
-        // for the next flush, so a `\date{Two}` queued before it does not replace it; pdflatex prints "One", review
-        // revCR3b finding 2)
+        // for the end of the outermost flush, so a `\date{Two}` queued before it does not replace it; pdflatex prints
+        // "One", review revCR3b finding 2, with a `\section` after `\maketitle` too, revCR4 finding 3)
         let (deferred, queued): (Vec<RawFrontmatter>, Vec<RawFrontmatter>) =
           queued.into_iter().partition(|entry| {
             outer_flushing && matches!(entry.0.as_str(), "ltx:title" | "ltx:subtitle" | "ltx:date")
           });
         if !deferred.is_empty() {
-          defer_to_next_flush(deferred);
+          defer_to_flush_end(deferred);
         }
         recovered.extend(queued.into_iter().map(|entry| (None, entry)));
         let lost: Vec<String> = digested.into_iter().map(|entry| entry.0).collect();
@@ -4156,20 +4157,21 @@ fn recover_queued(
   }
 }
 
-/// Queues `entries` as they are for the next flush (the end of the document's, when no later `\maketitle` flushes): what
-/// a flush digests is off the queue before it digests ([`digest_front_matter`]), so they come after the outer flush's
-/// remaining entries ([`recover_queued`]).
-fn defer_to_next_flush(entries: Vec<RawFrontmatter>) {
-  if with_value("frontmatter_raw", |v| {
+/// Queues `entries` as they are for the end of the outermost flush, which digests them after its own queue
+/// ([`DEFERRED_TO_FLUSH_END`], `place::digest_front_matter`): what a flush digests is off the queue before it digests,
+/// so they come after the outer flush's remaining entries ([`recover_queued`]), and no `\section` closing the
+/// frontmatter before a later flush loses them (review revCR4 finding 3).
+fn defer_to_flush_end(entries: Vec<RawFrontmatter>) {
+  if with_value(DEFERRED_TO_FLUSH_END, |v| {
     !matches!(v, Some(Stored::FrontmatterRaw(_)))
   }) {
     assign_value(
-      "frontmatter_raw",
+      DEFERRED_TO_FLUSH_END,
       Stored::FrontmatterRaw(Vec::new()),
       Some(Scope::Global),
     );
   }
-  with_value_mut("frontmatter_raw", |queue| {
+  with_value_mut(DEFERRED_TO_FLUSH_END, |queue| {
     if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = queue {
       queue.extend(entries);
     }

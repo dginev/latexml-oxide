@@ -33257,12 +33257,17 @@ of several owners), `date_inside_author_inside_title_is_the_date}` (a flush-time
 
 A title, subtitle or date such a late block recovers while an outer flush digests its queue is set as TeX typesets the
 block, after the queue's own entries (`\maketitle` runs the inner `\date` while typesetting `\@author`, after every
-`\date` before it): it is queued for the next flush (`emitter::emit::defer_to_next_flush`, the end of the document's when
-no later `\maketitle` flushes), not digested inside the late flush, so `\title{A Title \author{Ann Able \date{Dinner
+`\date` before it): it is queued for the end of the outermost flush (`emitter::emit::defer_to_flush_end`, digested by
+`place::digest_front_matter` after its own queue), not digested inside the late flush, so `\title{A Title \author{Ann Able \date{Dinner
 One}}}` `\date{Dinner Two}` `\maketitle` gives "Dinner One", as pdflatex (it gave "Dinner Two", no Warning; review revCR3b
 finding 2, CR4). The title-page check's "unclaimed: two" there (its run prints the outer `\date`, which TeX never prints)
 is a false positive erring the safe way, as with the outer `\date` before `\title`. Repro
 `date_inside_author_inside_title_over_later_date`; guard `perfect_kernel_batchcr4::date_inside_author_inside_title_over_later_date`.
+CR4 queued it for the next flush, which a `\section` after `\maketitle` (the common case) never ran: the date was
+dropped and "Dinner Two" kept, with no Warning (review revCR4 finding 3; int154w alike); placed at the end of the
+outermost flush, "Dinner One" holds with or without the section (repro
+`date_inside_author_inside_title_section_after`; guard
+`perfect_kernel_batchcr4b::date_inside_author_inside_title_section_after`).
 **Left** (synthetic, pre-existing): a `\date` set in `\title` itself (`\title{A Title \date{Dinner One}}` `\date{Dinner
 Two}` `\author{Ann Able}` `\maketitle`; pdflatex "Dinner One") still loses to the later `\date`, with no Warning: an
 `@now` setter inside a queued entry's digestion, no late block.
