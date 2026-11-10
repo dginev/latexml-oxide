@@ -849,7 +849,9 @@ fn block_names(
                 && end <= s
               {
                 apart.extend(sep.unlist());
-                apart_runs.push((from, to));
+                // (to where the separator's tokens end, as the mark's run below: `$^,$\foo\footnotemark[2]` wrote
+                // `\foo` twice, review revDEL5b finding 1)
+                apart_runs.push((from, end.max(to)));
               }
             }
           }

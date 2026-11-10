@@ -27915,8 +27915,8 @@ Guards `perfect_kernel_batch93a`; the guards pinning the old reader's kernel out
 (`batch77p::legend_line_is_no_name`, `legend_row_shares_the_institution`, `batch77t::
 symbol_led_line_under_marked_names_is_not_every_names`, `batch61::marked_affiliation_review_shapes` and
 `marked_affiliation_wrappers_and_legends`); the lexer's and resolver's guards of kernel shapes written before
-(`batchfms2a1`/`fms2a2`, `batch92e::kernel_thanks_constructor_text_is_ink`) run under
-`batchfms2a1::reading_only`: the writer's outcome checked for its own defect only, a decline there one of the stage-7
+(`batchfms2a1`/`fms2a2`, `batch92e::kernel_thanks_constructor_text_is_ink`) ran under
+`batchfms2a1::reading_only` (deleted by DEL5b, the fence it served gone with the switch): the writer's outcome checked for its own defect only, a decline there one of the stage-7
 writer gaps (OPEN_ROWS). The `r5`-`r9` article shapes pin their outcome (review rev93a S3): each one the writer holds
 back under `batchfms2a1::held(<why>)`, the decline's first difference (`declined: Note univacity…`, `the creators'
 names`, …), a written one strict with its XML rows.
@@ -28886,7 +28886,7 @@ today's holds the call as one contact on its author, the reading one contact per
 parts and today's does not stayed one creator (2109.07363's `\author{Jinsong Liu\textsuperscript{1,2} $\&$ Fei
 Tao\textsuperscript{1,2} $\&$ Huaying Wei\textsuperscript{3}}` with `\email{liujsong@…,\:ferrytau@…,\:hywei@…}`: one
 creator and `merged_creators`, where int123a wrote three). The resolver keeps each such call as today's holds it
-(`Resolved::listed`, `resolver::Listed`: the contact whole, the rule of the call's own placement — `api:annotate:last` —,
+(`Resolved::listed`, `resolver::Listed`, both deleted by DEL5b as never read: the contact whole, the rule of the call's own placement — `api:annotate:last` —,
 the authors it gives it), and the re-part reads it so (`writer::give_back_listed`, beside the entries'
 `give_back_addresses`); the plan writes the addresses out after it, as the take-outs (`take_out_again`: only when the
 re-part's reading is the whole reading). Fail-safe: where the plan declines with the calls written out, it plans again
@@ -29895,7 +29895,7 @@ iopart_ead_corresponding_author_not_under_its_mark}`, `batch95b::an_unwritten_fa
 `batch95c::an_email_spelling_its_accented_holder_is_not_respelled`; the aas reading guards the writer declines held
 (`batchfms2a2::{a_footnote_text_the_title_shows_is_the_titles_note, an_entry_the_title_requests_is_the_titles_note,
 an_address_beside_an_institution_keeps_the_institution}` under `held`, `an_unmarked_line_under_a_run_of_names_rows_is_every_names`
-`reading_only`). Repros class-bindings/`jcappub_marked_affiliation_lines_written`, `jheppub_marked_affiliations_written`,
+`reading_only`, deleted by DEL5b). Repros class-bindings/`jcappub_marked_affiliation_lines_written`, `jheppub_marked_affiliations_written`,
 `jinstpub_marked_affiliation_pieces_written`, `svproc_institute_email_list_written`,
 `svproc_hand_marks_institutes_written`, `ws_procs_address_lines_written`, `mnras_block_line_accent_cut`,
 `mnras_block_line_dotless_i_cut`, `appolb_reparted_entries_keep_address_role`, `jfm_letter_spaced_name_is_one_name`,
@@ -33067,8 +33067,9 @@ address and made Ann's e-mail, Bob lost (one creator). **Now:** (1) a piece grow
 right after it (`emitter/content.rs` `Field::past_held_undefined`, told by the rehearsal's `Error:undefined:` record at
 the command's position, not by its spelling); (2) a name takes the held undefined commands past its marks and notes, up
 to the next separator or name, written after them (`emitter/emit.rs` `block_names`; `event_run_at` returns where the
-written tokens end, and a mark written apart counts to where its piece's tokens end, so nothing is taken twice:
-`Ann Able\footnotemark\foo{} \and Bob Baker` writes one stub, review revERR2c finding 1); (3) an address is declined only where an undefined command glues it: the same word has ink before the
+written tokens end, and a mark or separator written apart counts to where its piece's tokens end, so nothing is taken twice:
+`Ann Able\footnotemark\foo{} \and Bob Baker` writes one stub, review revERR2c finding 1; `Ann Able\thanks{…}\footnotemark[1]$^,$\foo\footnotemark[2]`
+one, between the marks, review revDEL5b finding 1); (3) an address is declined only where an undefined command glues it: the same word has ink before the
 command's Error and ink after it, both before the word's first `@` ("Bob|b@": `Bob\email{b@x.org}` prints "Bobb@x.org",
 an address no word of the source spells), told by where `InkTable` says each character prints (`events/mod.rs`
 `glues_an_address`, setting `Event::glued_undef` in `mark_held`). A Name the ink table cannot align — no record for its

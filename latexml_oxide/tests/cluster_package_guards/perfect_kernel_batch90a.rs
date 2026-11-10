@@ -3,8 +3,9 @@
 //! digested XMath (`observer::marks::read_formula`), the one reading the observer's writer, the deleted `ab_audit fmshadow`,
 //! `relocate::shown_marks` and `name_text::is_name_mark` share — never from its `tex`. A formula printing nothing but
 //! floating scripts (spacing aside, punctuation after) is a mark; a script with a letter or digit after it, or on a
-//! printed base, is the item's text. Each guard converts its repros in the shipping Default mode, asserts every creator
-//! whole (name and contacts, in order), no Error or Warning, and the ledger's `emitted`. Every repro compiles clean with
+//! printed base, is the item's text. The guard converts its repro in the shipping Default mode and asserts no Error or
+//! Warning only: the creators and the ledger's `emitted` it returns are not pinned (review revDEL5b N4; the frontmatter
+//! test compaction pins them whole). Every repro compiles clean with
 //! pdflatex (TL 2025). The reader's shapes as digested and as parsed: `observer::marks::tests`, and
 //! the deleted `ab_audit fmshadow`'s `a_parsed_prescript_on_a_word_is_text_a_script_on_a_base_the_base`.
 use latexml::util::test::{convert_with_then, error_count, warning_count};

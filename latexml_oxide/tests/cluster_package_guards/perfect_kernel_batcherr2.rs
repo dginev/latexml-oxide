@@ -167,6 +167,25 @@ fn an_undefined_command_after_a_footnotemark_writes_one_stub() {
      class=\"undefined\">\\foo</ERROR></personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">ann@x.org</contact>\n  \
      </creator>",
   ]);
+  // A separator written apart counts to where its tokens end too (`$^,$` grew over `\foo`): one stub, in source order,
+  // between the marks (review revDEL5b finding 1; pdflatex 1 error, Perl one stub).
+  let (log, xml) = convert(
+    "\\documentclass{article}\n\\author{Ann Able\\thanks{Univ X.}\\footnotemark[1]$^,$\\foo\\footnotemark[2] \\and Bob \
+     Baker}\\title{T}\n\\begin{document}\\maketitle\\end{document}\n",
+    false,
+  );
+  assert_eq!(undefined_errors(&log), ["\\foo"], "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert_eq!(creator_elements(&xml), [
+    "<creator role=\"author\">\n    <personname>Ann Able<note mark=\"*\" role=\"footnotemark\" \
+     xml:id=\"footnotex1\"><tags>\n          <tag>*</tag>\n          <tag role=\"refnum\">*</tag>\n          <tag \
+     role=\"typerefnum\">footnote *</tag>\n        </tags></note><sup>,</sup><ERROR \
+     class=\"undefined\">\\foo</ERROR><note mark=\"\u{2020}\" role=\"footnotemark\" xml:id=\"footnotex2\"><tags>\n          \
+     <tag>\u{2020}</tag>\n          <tag role=\"refnum\">\u{2020}</tag>\n          <tag role=\"typerefnum\">footnote \
+     \u{2020}</tag>\n        </tags></note></personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" \
+     role=\"thanks\">Univ X.</note>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
+  ]);
 }
 
 /// The flip A/B's lost `Error:expected:\fi` chains (1603.08231: 18 off, 2112.06251: 12) are no Errors of the paper's: an
