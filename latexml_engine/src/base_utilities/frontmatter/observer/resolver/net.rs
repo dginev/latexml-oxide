@@ -254,6 +254,16 @@ pub(in crate::base_utilities::frontmatter::observer) fn merged_names(
     // a qualifier or a remark carries no mark of its own — `Y. Dong\affil{6}, \add[ver3]{S. Curry}\affil{1}`, 2308.02720,
     // review revZ18k B1, which the names line now reads as two names; any such join left is counted here)
     let all: Vec<Vec<String>> = creators.iter().map(|c| words(&c.name)).collect();
+    // (each word's creators, as `holding` is for the join check above: a name holding the joined words holds the first
+    // piece's first word, so its creators are the only candidates — the same answer for a fraction of the `holds` calls,
+    // which copy a name each; 1507.02068's 418 creators made the scan over every one, added by Z18k `27360530a4`, +1.76 %
+    // instructions)
+    let mut all_holding: BTreeMap<&str, BTreeSet<usize>> = BTreeMap::new();
+    for (n, name) in all.iter().enumerate() {
+      for word in name {
+        all_holding.entry(word).or_default().insert(n);
+      }
+    }
     // (each Name with whether a separator parts it from the Name before and whether a mark follows it before the next
     // separator; a contact or a call ends the run)
     let mut pieces: Vec<Option<(&Event, bool, bool)>> = Vec::new();
@@ -288,7 +298,9 @@ pub(in crate::base_utilities::frontmatter::observer) fn merged_names(
         let pair = s!("{} | {}", before.text, after.text);
         if !a.is_empty()
           && !b.is_empty()
-          && all.iter().any(|name| holds(name, &joined))
+          && all_holding
+            .get(a[0].as_str())
+            .is_some_and(|holders| holders.iter().any(|&n| holds(&all[n], &joined)))
           && !failed.contains(&pair)
         {
           failed.push(pair);
