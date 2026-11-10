@@ -1877,11 +1877,23 @@ do not block the E/F rerun.
 - Fix: place the picture as a note at its line (the picture ruling, user 2026-11-10 "A note, kept whole") or count it by span coverage.
 - State: open (main session at the CR8b/CR8c merge `08460a0ea6`).
 
+### Bundle int155a — the residual (OD #983, #987, #988, #980, #985, #989, #991)
+
+- Landed: PB/PBb (the push's B1/B2), Z18k/Z18k2/Z18k3 (eptcs + OmniBus off `author_block/`, 3,364 → 2,552 lines), CR10b (CR9's glue, `\fcolorbox` line, nameless `\author`'s setters), revCR10c's REDs recorded. Open facts, one per line; repros under `tools/perfect_kernel/repros/`.
+- pazh `\address` false Errors (9 papers) and 1802.01191 `\@nil`: a cut parting a command from its argument or delimiter (root-cause RCcut); neurips_2024.sty unread (2401.16452, HARD).
+- 6 aaai2026 papers W +1 (the content check's "more often"; the block's rehearsal lacks the title code's definitions) with E 1 → 0 — accepted by the main session (OD #983).
+- OD #983 REDs (revPB/revPBb, synthetic): a reader macro's first use as the reading point (`pbb_reader_first_use_in_a_measuring_group`); the inline juggle path's `\hfil\linebreak[0]\hfil`; the stale-copy side of `copy_kept_meaning` unguarded; a `\linebreak` inside a title-tabular name a row break (`title_tabular_linebreak_inside_a_name`); a counter-stepping title-code mark lost after the first author (`title_code_counter_mark_first_author_only`).
+- OD #988: the wordless-piece fallback never uses a piece up (revPBb S1, no failing probe).
+- OD #987 REDs (revCR10c): a `\def`'d old block name loses its grades (`ieeetran_def_old_block_name_loses_grades`, 1 W); a wrapped unclosed names block spliced (`ieeetran_wrapped_unclosed_names_block`).
+- OD #991: 2304.02524's e-mail marks `$^{a,b}$` a counted block note (source plus placed addresses); a marked bracket-only piece a creator (`llncs_author_marked_bracket_remark_is_no_name`, revZ18k3 R1).
+- OD #980 (revCR10b): 1007.2355's `\speaker` control-space glue (counted); the `{a, b}@x` content-check false Warning; `\fcolorbox` around a name loses its frame. Pre-existing, Perl the same: a setter inside `\author` adds rather than replaces (two `<abstract>` with `\begin{abstract}` too); amsart `\date` inside `\author` written though unprinted; authblk `\affil`'s `\\` a `<break/>` where pdflatex prints ", ".
+
 ### Bundle int154a — the residual (OD #983-#990)
 
 - **Pushed with these REDs (user 2026-11-10, "Push now, fix next"; push checks `agent_reports/2026-11-10_PC1_report.md`, `PC2_report.md`):**
-- B1, a content loss on a real paper: 1511.09009 loses "Seung-won Hwang, Wei Wang" (the flip kept all four names in one merged creator; a Warning counts the 5 words; ‡ and § become †); CR7's Perl split (OD #988) — its fail-safe checks false owners, not a name the reading found and the split loses: fall back whole there too. Next bundle, first.
+- B1, a content loss on a real paper: 1511.09009 loses "Seung-won Hwang, Wei Wang" (the flip kept all four names in one merged creator; a Warning counts the 5 words; ‡ and § become †); CR7's Perl split (OD #988) — its fail-safe checks false owners, not a name the reading found and the split loses: fall back whole there too. FIXED in bundle int155a (PB/PBb, OD #988): written whole, all four names with ‡ and §.
 - B2, false `Error:undefined` lines pdflatex does not print (Perl-origin, the KNOWN_PERL_ERRORS #1219 family; ERR2 raises them, the flip had silenced them): the pazh/Astronomy Letters class (`\address` defined only inside its `\@maketitle`, pazhastl.cls:112; the e-mail cut re-digests a piece outside it) on 1108.4222, 1202.2889, 1206.0451, 1207.2226, 1301.4791, 1307.2761, 2103.05801, 2408.01858, 2412.06362, 2607.07582; aaai2026 copies whose `\@maketitle` reads `\@author` only through `\def\theauthors{…}` (`definitions_at_author` names.rs:485 skips `\def` bodies; 2508.00545, 2508.04047, 2508.04749, 2508.05996, 2508.08170); neurips_2022 copies whose `\@maketitle` the binding keeps its own of (`title_code_author_definitions` names.rs:464 reads the live one only; 2205.14141, 2205.14539); neurips_2024.sty never read (2401.16452 1 → 4, HARD, deferred). Repros `scratch_PC2/rep/c1.tex`, `c2.tex`, `n22/n1.tex`. OD #983's exclusion to cover all four.
+- B2 in bundle int155a (PB/PBb, OD #983): FIXED for aaai2026's `\theauthors` (2508.00545, 2508.04047, 2508.04749, 2508.05996, 2508.08170, 2508.21091, 2607.29185: E 1 → 0, pdflatex 0) and neurips_2022's kept `\@maketitle` and juggles (2205.14141, 2205.14539, 2205.11640); OPEN for pazh `\address` (the e-mail cut parts it from its `{1}`; root-caused in RCcut) and neurips_2024.sty (never read, 2401.16452).
 - 1802.01191 +1 `Error:undefined:\@nil` (Rust only, Perl none, pdflatex none; probably ERR2's catch-all on a delimiter a piece cut apart; not proven). 2206.01959 "Script _" (ejpecp: the e-mail text re-digested with normal catcodes; Perl raises it too, pdflatex not).
 - 1003.2281: the corresponding-author note a nameless creator (after CR3/CR7 gained it 1 → 6 creators).
 - Cost: 1507.02068 at the +0.5 % bar (+0.496 % over 3 reps), the growth in the frontmatter from the DEL1-5/Z18a/ERR2/DEL5b stretch (ERR2's flush-wide meaning recorder × 418 creators the likely lever).
@@ -1890,15 +1902,15 @@ The bundle's history: [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSI
 
 - **Closed by this bundle:** CR1 class A (frozen setters in an author block or call: CR2/CR2b, cond-mat9801109, 1411.6693 by CR3b), class B (svjour3 `(\email{…}) \at`: CR2, 2206.00320, 1307.4424), class C (shipped imsart copies: CR3, 1905.11425, 2101.10506); ejpecp's e-mail notes (CR5: 0 words lost on all 7); the ORCID icon-only logo (2507.12319, 2406.08258; Z18g `orcid_icon_link`); the textless TikZ picture in `\author`/`\thanks` (CR8, `perfect_kernel_batchcr8`); `\includegraphics` beside a name (CR8b); the silenced author-field Errors (ERR2, OD #983); the footnote-counter whole block (CR7, OD #988); 1411.6693's nested date (CR3b); imsart `\ead`'s `$\sim$` (CR4; repro `imsart_ead_url_reads_a_tex_argument.tex`); IEEEtran + authblk names (CR6), nested names blocks (CR10a, 1511.03982).
 - NE5's six whole blocks: CR7's split un-merged 1404.5602 (1→4, right), 2503.21719 (1→3); 2404.18592 1→2; 0809.5152 and 1110.6375 stay whole by CR7d's fail-safe (revCR7c B1, 1110.6375: `$^\ast$,\thanks{$^\ast$Permanent address…}` → the next author; B2, 0809.5152: two `$^{a}${\em …}` address lines become authors); 0906.2789 still one creator (1→1 under CR7).
-- CR7c S2: 2503.21719's `\\` line of names read as an affiliation (Perl does the same); its affiliation now to all 3.
+- CR7c S2: 2503.21719's `\\` line of names read as an affiliation (Perl does the same); since PB (int155a) the block is written whole — all 5 PDF names in one creator, 0 words lost.
 - CR7: should the other declines (names_fail, cells, mark_dropped, names_overlap, the unread block) take Perl's split too — measure first.
 - CR7: 1302.3028 writes an empty "affiliation: E-mail:".
 - CR7c: a mark digit glued in cicp names ("Lixiu Dong1"; pre-existing); no B1 guard (no pdflatex-clean synthetic).
 - CR7 S2 recorded: 1003.2281, cs0404029 hand their notes on the block creator (charter §4's #159 amendment allows).
 - revCR7d synthetic REDs (OD #988): S1 a note-led later piece; S2 an address line whose mark follows its text; S3 the raw-split fallbacks.
-- CR9's glued-break class (6 rows: 2212.03638, 2211.03175, 0904.3899, cond-mat0204589, 1311.0012, 1007.2355): `line_led_pieces` (`resolver/lines.rs:672`) → `mark_led_pieces` (`api.rs:459-471`) loses the `\\` — CR10b.
-- CR9: `\fcolorbox` e-mail line in `\author` lost silently (2211.07344, 2305.15057) — CR10b.
-- CR9: jheppub's abstract inside `\author` lost silently (1211.2861) — CR10b, schema placement by CR2's recovery.
+- CR9's glued-break class: FIXED by CR10b (int155a, OD #980 `kept_breaks`) on 2212.03638, 2211.03175, 0904.3899, cond-mat0204589, 1311.0012; 1007.2355 is another path (PoS `\speaker`'s control space in the reading's text, counted; OD #980 Known RED).
+- CR9: `\fcolorbox` e-mail line in `\author`: FIXED by CR10b (2211.07344, 2305.15057; OD #989); left the content check's false "missing" Warning on a `{a, b}@x` line, boxed or not (OD #980 Known RED).
+- CR9: jheppub's abstract inside `\author`: FIXED by CR10b (1211.2861, OD #985: a nameless `\author`'s setters recovered).
 - CR5: H's rebuilt 134 rows / 436 words are mostly artefacts or `=2` right; the IJCAI `@` cut is synthetic only (RED catalog).
 - CR10a: 2605.20445's Umer Asgher kept, but as an affiliation (an unclosed outer block) — CR10c.
 - CR10a: `grade_text` is a local copy of the engine's `grade_words`; `\authorblockN`/`\authorblockA` to be normalised once at `author_block_body` — CR10c, which also fixes OD #987's labelled-path RED (`\authorblockN` alias, synthetic).

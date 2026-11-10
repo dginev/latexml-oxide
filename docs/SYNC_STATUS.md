@@ -51,7 +51,7 @@ affected** → **is it unblocked** → **effort**.
 
 | # | item | state | size |
 |---|---|---|---|
-| R | Road to the main merge (user 2026-11-09: "keep planning out all steps … towards completing our main goal"; … | OPEN — step (1) Plan A: Z18j done, Z18k-Z18n left; step (2) CR10b, CR10c left | L |
+| R | Road to the main merge (user 2026-11-09: "keep planning out all steps … towards completing our main goal"; … | OPEN — step (1) Plan A: Z18j, Z18k done (int155a), Z18l running, Z18m-Z18n left; step (2) CR10b, CR10c, the push's B1/B2 done (int155a); pazh `\address`, neurips_2024, 77p, the image before a URL left | L |
 | 0 | The TeX Live manuals: every regression addressed before the merge (user 2026-11-06: "This remains the primary … | met; margin batches landing | — |
 | 0a | M3: the manuals' remaining regressions | F1-F10 done, 3 deferred | S |
 | 0b | The frontmatter's old engine out of every decision before the merge, and all it leaves unused deleted (user … | **Route D (user 2026-11-06):** the experiment, then one switch for every paper with an author block; a failed … | about 12-15 batches |
@@ -86,18 +86,18 @@ affected** → **is it unblocked** → **effort**.
 - Plan:
   - **Order, each step reviewed and bundled:** (1) **single engine clean** — `author_block/` gone (row 0b);
   - (1) done on `pk/int154a`: the deletion pass DEL1-DEL5 (tests −349, the switch, the old driver −5.8k, the S2b writer and census −12.2k; output byte-identical), Z18a the API's Cut/Kind out of `author_block/` (byte-identical), the llncs reroute Z18c-Z18i (OD #984; its first blockers in `agent_reports/2026-11-09_Z18c_report.md`), Z18j the API engine and field readers moved (Plan A batch 1, `256a8cd611`); history in `archive/SYNC_SESSIONS_2026-11.md` "Bundle int154a".
-  - (1) **Plan A for the rest of Z18 (user 2026-11-10, "Plan A: move now, reroute in C"; plan `agent_reports/2026-11-10_Z18P_report.md`):** Z18k the omnibus `\authors` + eptcs reroute (WIP not committed, `agent_reports/2026-11-10_Z18k_pending/Z18k_wip.patch`; → Z18k2 after the push); Z18l aas; Z18m move the rest (the IJCAI chain, the authblk/ieeetran gates, the shared mark readers) and delete `author_block/`; Z18n the declined path's row sharing routed through the reading's helpers ("Route via reading helpers": keep its gains, call the reading's one copy, delete `shared_row/`'s token-level copy); authblk, IEEEtran, IJCAI, `@marked`, the stores and the Cut rerouted inside Option C P2-P4.
-  - (1) State: Z18j merged; Z18k pending (Z18k2 after the push); Z18l-Z18n not started.
+  - (1) **Plan A for the rest of Z18 (user 2026-11-10, "Plan A: move now, reroute in C"; plan `agent_reports/2026-11-10_Z18P_report.md`):** Z18k the omnibus `\authors` + eptcs reroute (done in int155a: Z18k/Z18k2/Z18k3, OD #991); Z18l aas; Z18m move the rest (the IJCAI chain, the authblk/ieeetran gates, the shared mark readers) and delete `author_block/`; Z18n the declined path's row sharing routed through the reading's helpers ("Route via reading helpers": keep its gains, call the reading's one copy, delete `shared_row/`'s token-level copy); authblk, IEEEtran, IJCAI, `@marked`, the stores and the Cut rerouted inside Option C P2-P4.
+  - (1) State: Z18j, Z18k merged; Z18l running (`pk/Z18l`); Z18m (scope `agent_reports/2026-11-10_Z18m_scope_notes.md`, incl. ERR2's title-code reader out of `names.rs`, paying e0's `fallback.rs title_code_author_statements` pin) and Z18n not started.
   - (2) **every RED seen on a real paper fixed** (user 2026-11-09): the silenced Errors FIRST (row 0b's item 39: an undefined command in an author field, 18 A/B papers), then the content residual (`FRONTMATTER_CONTENT_RESIDUAL_AT_EMIT2.tsv`: every word kept or counted), ejpecp, NE5's whole blocks, the footnote-counter whole block, the ORCID logo, 77p's grouping; synthetic-only stay REDs;
   - (2) done on `pk/int154a`: the silenced Errors (ERR2, OD #983); the content residual triaged (CR1, CR5, CR9) and its real classes fixed (CR2-CR4 OD #985/#986/#972, CR6 + CR10a OD #987, CR8 OD #989/#990); ejpecp and the ORCID logo closed (CR5); the footnote-counter block written as Perl's split (CR7-CR7d, OD #988); NE5's whole blocks split but 0809.5152, 1110.6375 (the fail-safe) and 0906.2789.
-  - (2) State: left — CR10c (IEEEtran grades, running), CR10b (CR9's glued breaks, the `\fcolorbox` e-mail line, jheppub's abstract in `\author`), 77p's grouping (2603.07345), the image before a URL (2503.08161); every open fact in `perfect_kernel/SILENT_LOSS_INVENTORY.md` "Bundle int154a — the residual".
-  - **The push of `pk/int154a` to `perfect_kernel`:** through CR10c (main session 2026-11-10); the chain and push pending.
+  - (2) State: done in int155a — CR10c (IEEEtran grades), CR10b (CR9's glued breaks, the `\fcolorbox` e-mail line, jheppub's abstract in `\author`), the push's B1 (1511.09009) and B2 for aaai2026/neurips_2022 (PB/PBb); left — pazh `\address` and 1802.01191 `\@nil` (RCcut), neurips_2024, 77p's grouping (2603.07345), the image before a URL (2503.08161); every open fact in `perfect_kernel/SILENT_LOSS_INVENTORY.md` "Bundle int154a — the residual".
+  - **Pushed:** `pk/int154a` → `perfect_kernel` `1969cb34cb` (user 2026-11-10 "Push now, fix next", REDs B1/B2); next push `pk/int155a` after Z18l.
   - (3) **Option C P1-P6** (all segmentation on the digested reading; `FRONTMATTER_SINGLE_ENGINE_PLAN.md`) after Z18, with the plan's DoD items, frontmatter code and test compaction (table-driven, one conversion per fixture);
   - (4) **the bars**: truth set, then a fresh holdout v4 read once — 98/98 on dev3/devh/dev20k and v4, longtail ≥ off with no regression (user 2026-11-09);
   - (5) **non-frontmatter**: the generalization audit re-scoped and done before the merge (user 2026-11-09), T1 the repro suite move, the perf + RAM pass's remaining levers, row 0a's deferred manual REDs decided, workspace cleanup (keep-list to the user);
   - (6) **close**: goal docs current, the closing manual sweep on the final head (row 0's G1-G5), the 2605/2606 cortex reruns (G6; the fleet rebuild needs the user's OK), the merge PR (the user confirms).
   - **After the merge:** CI ≤ 30 min (user 2026-11-06), the arXiv rerun, A4, AutoTeX, forest, the ar5iv-css port, a release.
-- State: OPEN — step (1) Plan A: Z18j done, Z18k-Z18n left; step (2) CR10b, CR10c left
+- State: OPEN — step (1) Plan A: Z18j, Z18k done, Z18l running, Z18m-Z18n left; step (2) CR10b, CR10c, B1/B2 done; pazh `\address`, neurips_2024, 77p, the image before a URL left
 - Size: L
 - Detail: this row; the inventory
 
@@ -146,8 +146,8 @@ affected** → **is it unblocked** → **effort**.
   - Z4a, the emitter with its markup, and Z14, the reading's repairs, landed (int144b);
   - today's state, the batches in flight and the next steps are the plan's "Where it stands".
   - **The deletion pass done (DEL1-DEL5, bundle int154a):** no `LATEXML_FM_EMIT` switch, no old driver, no S2b writer or census.
-  - **`author_block/`: 6,458 → 3,364 file lines** (Z18a 6,458 → 4,637; Z18j 4,623 → 3,364, item lines 3,798 → 2,747).
-  - What still routes into it (Z18P map): `author_macros`' IJCAI chain (`ijcai_split_call`) and its `\lx@add@affiliation@marked`/`@shared` gates (through which sv, aistats, revtex, iopart and informs reach it); aas's placed e-mail lines (`placed_email_line_calls`); authblk's gates (`has_separated_names`, `lines_of_names_before_affil`) and label readers; eptcs's and omnibus's `split_author_line` (≈644 lines freed once Z18k lands); `frontmatter_stores`' `class_numbered_institutes`; ieeetran; llncs's `affiliation_calls` for `\lx@llncs@institute@sup`.
+  - **`author_block/`: 6,458 → 2,552 file lines** (Z18a 6,458 → 4,637; Z18j 4,623 → 3,364, item lines 3,798 → 2,747; Z18k2 3,364 → 2,552, `split_author_line` and `row_email_owners` deleted).
+  - What still routes into it (Z18P map): `author_macros`' IJCAI chain (`ijcai_split_call`) and its `\lx@add@affiliation@marked`/`@shared` gates (through which sv, aistats, revtex, iopart and informs reach it); aas's placed e-mail lines (`placed_email_line_calls`); authblk's gates (`has_separated_names`, `lines_of_names_before_affil`) and label readers; `frontmatter_stores`' `class_numbered_institutes`; ieeetran; llncs's `affiliation_calls` for `\lx@llncs@institute@sup`.
   - Outside it, still an old leftover: the declined path's row sharing (`place.rs` `share_row_contacts` → `shared_row.rs` + `shared_row/emails.rs`, ≈730 lines, OD #901) — Z18n.
   - **Then all token segmentation onto the digested reading before the merge (user 2026-11-07, option C; the plan's "Segmentation is digested", P1-P6)**
 - Size: about 12-15 batches
