@@ -376,8 +376,11 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// Z18o raised it by 19 (all in `kind.rs`; the main session's decision on review revZ18o's reading that the lines choose no
 /// owner): the Kind step's mailbox link line (review revZ18l F2, homed in the Kind step, user ruling 2026-10-20), its line
 /// recognized by `classify/links.rs` `mailbox_link_line` and written by the Kind step's existing e-mail call writer
-/// (`email_line_calls`, no new emission); Z18o2 folds its naming match into `split_email_label`, shrinking it.
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_211;
+/// (`email_line_calls`, no new emission). MB1 lowered it to 2,188: the naming of a labelled line — the class's name of
+/// the entry before the line's own label, and an e-mail label's line — moved to the label rule's file,
+/// `frontmatter/classify/email_block_calls.rs` (`entry_line_label`, `email_line_label`), one match for both readers of the
+/// Kind step (review revZ18o N1).
+const MOVED_CUT_KIND_CODE_LINES: usize = 2_188;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -1463,7 +1466,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (RA0, 384 -> 386: `title_code::reads_arguments` tells a `\newcommand`/`\providecommand` statement from a `\def` and
   // reads its `[n]` count, so `[0]` declares no parameters (revPC3 finding 2): a class statement's own tokens, never a
   // document's, as PC3's read it — the head's table and the count's chain beside the one parameter test it had)
-  ("classify", 386),
+  // (MB1, 386 -> 387: the class's name of an entry before a line's own label moved unchanged from `kind.rs` to
+  // `email_block_calls.rs` `entry_line_label`, beside the label rule, `split_email_label`; `defs/frontmatter_api/` 109 ->
+  // 108, none added)
+  ("classify", 387),
   // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row)
   ("old_reader", 131),
   ("defs/author_macros", 20),
@@ -1471,8 +1477,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("defs/author_macros/", 64),
   // (Z4a, 7 -> 8: `\lx@frontmatter@itemnone` reads its tag argument, an element's name: an `ltx:rdf` passes through, the rest goes)
   ("defs/frontmatter_api", 8),
-  // (Z18j, 63 -> 109: moved from `author_block` with its code, as that row says)
-  ("defs/frontmatter_api/", 109),
+  // (Z18j, 63 -> 109: moved from `author_block` with its code, as that row says; MB1, 109 -> 108: one moved to `classify`, as
+  // that row says)
+  ("defs/frontmatter_api/", 108),
   // (CR4, 21 -> 28: `address_as_printed`'s `math_glyphs_as_printed`, the API's e-mail/URL reading — how an address prints,
   // `$\sim$` its glyph "∼" (1301.1466, math0608476; OD #972), no owner decided: a sibling of `math_braces_as_printed`, whose
   // reads `defs/frontmatter_fields/` holds; it reads the Semiverbatim argument's tokens, which no event says)

@@ -176,43 +176,21 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
     } else {
       &kinded
     };
-    // (a mailbox link line: the link the e-mail, named by the label before it, else by the class's name of the entry)
-    if let Some(label) = link_label {
-      let calls = email_line_calls(line, AddressPlacement::Inner)?;
-      let calls = match (label, &entry_name) {
-        (Some(label), _) => named_email_calls(calls, &label),
-        (None, Some(name)) => optioned_email_calls(calls, name),
-        (None, None) => calls,
-      };
-      entry.extend(optioned_email_calls(calls, kinded));
-      continue;
-    }
-    // (the class's name before the line's own label where both print: aa's `\mail{e-mail: x}`, "Correspondence to
-    // e-mail:", 0805.1001; REVTeX's `\altaffiliation[Authors for Correspondence: ]{Email: …}`, 2208.10784)
-    let (label, rest) = split_email_label(&line);
-    let calls = match (&entry_name, label) {
-      (Some(name), None) => {
+    // (the line's own label — a mailbox link line's text before its link, else its e-mail label — names its contacts,
+    // after the class's name of the entry where both print, one rule: [`entry_line_label`]; else the class's name)
+    let labelled = match link_label {
+      Some(label) => label.map(|label| (label, line.clone())),
+      None => email_line_label(&line),
+    };
+    let calls = match (labelled, &entry_name) {
+      (Some((label, rest)), name) => named_email_calls(
+        email_line_calls(rest, AddressPlacement::Inner)?,
+        &entry_line_label(name.as_deref(), label),
+      ),
+      (None, Some(name)) => {
         optioned_email_calls(email_line_calls(line, AddressPlacement::Inner)?, name)
       },
-      (Some(name), Some(label)) if line_is_email_list(&rest) && !line_is_email_list(&line) => {
-        let value: Vec<Token> = name
-          .iter()
-          .copied()
-          .skip_while(|t| *t != T_OTHER!("="))
-          .skip(1)
-          .filter(|t| !matches!(t.get_catcode(), Catcode::BEGIN | Catcode::END))
-          .collect();
-        let mut both = value;
-        if both.last().is_some_and(|t| !is_spacing(t)) {
-          both.push(T_SPACE!());
-        }
-        both.extend(label.unlist());
-        named_email_calls(
-          email_line_calls(rest, AddressPlacement::Inner)?,
-          &Tokens::new(both),
-        )
-      },
-      _ => email_line_calls(line, AddressPlacement::Inner)?,
+      (None, None) => email_line_calls(line, AddressPlacement::Inner)?,
     };
     entry.extend(optioned_email_calls(calls, kinded));
   }

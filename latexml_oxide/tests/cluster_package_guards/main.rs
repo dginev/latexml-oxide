@@ -465,6 +465,9 @@ mod perfect_kernel_batchlo3;
 mod perfect_kernel_batchlo4;
 mod perfect_kernel_batchm1;
 mod perfect_kernel_batchm3;
+/// MB1: the one label rule of the Kind step's lines — a labelled line named after the class's name of the entry, a
+/// mailbox link line's as an e-mail label's; OD #992.
+mod perfect_kernel_batchmb1;
 mod perfect_kernel_batchn1;
 mod perfect_kernel_batchn2;
 mod perfect_kernel_batchn2r2;

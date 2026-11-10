@@ -15,9 +15,7 @@ pub(in crate::base_utilities) fn email_line_calls(
   line: Tokens,
   placement: AddressPlacement,
 ) -> Result<Vec<Token>> {
-  let (label, rest) = split_email_label(&line);
-  let Some(label) = label.filter(|_| !line_is_email_list(&line) && line_is_email_list(&rest))
-  else {
+  let Some((label, rest)) = email_line_label(&line) else {
     return unlabelled_email_line_calls(line, placement);
   };
   let calls = unlabelled_email_line_calls(rest, placement)?;
