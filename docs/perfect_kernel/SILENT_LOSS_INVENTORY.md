@@ -8,7 +8,7 @@ reached".
 
 **Every row is open unless it says otherwise** (a `State:` of closed, accepted or no action). **An open row stays
 here whole** (SYNC1c, 2026-11-09): only closed rows moved to [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md),
-and an open row's "Full row (with landed history)" pointer names the verbatim copy there, never a part missing here. The same
+and an open row's "Full row (verbatim)" pointer names the verbatim copy there, never a part missing here. The same
 rules as SYNC_STATUS: verify a status against its named guard before acting on it; writers hand the main session a
 SYNC note rather than editing this file.
 
@@ -39,7 +39,7 @@ do not block the E/F rerun.
 
 - ptptex `[preprint]` double abstract: the class's own `[preprint]` `\maketitle` runs (ptp-prep.clo:111-119), prints `\@abst` in its block and clears it (:27-34); the frontmatter's `ltx:abstract` comes from the value the setter stored (`lx_store_value_<name>`, OD #154 addendum), and the class's printed block stays in the body — the abstract text twice where pdflatex prints it once (0906.3938, 0907.2968; base int29a the same)
 - State: open residual (not new in 77i; pinned by count in `perfect_kernel_batch77i::abstract_store_cleared_by_the_class_title_page_is_kept`, repro `sectioning-frontmatter/abstract_store_cleared_by_the_class_title_page_is_kept.tex`): the store is handed on, but the block the class's running `\maketitle` typesets is not the deposit's, so its label and store are not taken out with it
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "ptptex `[preprint]` double abstract".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "ptptex `[preprint]` double abstract".
 
 ### #6a labels
 
@@ -47,7 +47,7 @@ do not block the E/F rerun.
 - State:
   - open residual (base too; review probes `x/q2`, `x/ab1`-`x/ab3`, `n/d_nolab` of 77i r4): an accented label needs `label_item` to read accents and the label check to compare folded letters; the heading-style shapes need the kernel `\abstract`'s deposit to take the class's heading out.
   - Also (77i r5 re-check, synthetic, sample reach 0): with the deposit dropped, a label before a case-changing argument (`Conference: \MakeLowercase{\@va}`) is lost with its line while the value is kept as a pubnote (probe `rev77i5/n/p2c`; guard `store_values_typeset_with_quotes_are_printed` pins it); a store the title page only reads (`pdfsubject`) stays a visible `name="Abstract"` abstract beside a document abstract of another name/language (`n/p3`, base identical: `frontmatter_release_store` drops only on the same name and language); a document `{abstract}` before and another after `\maketitle` keep only the second (`n/p4`, plain `article` and base the same — the kernel's replacement rule; pdflatex prints both)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "#6a labels".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "#6a labels".
 
 ### nowfnt creators
 
@@ -72,7 +72,7 @@ do not block the E/F rerun.
   - **Open (a)**: refsections opened at headings (`refsection=chapter|section`) are not counted — each `\printbibliography` prints every refsection's list and their citations misroute (arXiv 2406.01695: 8 `\printbibliography` → 96 lists, 4,888 items, 566/566 citations outside their chapter's list; minimal trigger = 77a r4 review probe q3: `report`, `\usepackage[refsection=chapter]{biblatex}`, two `\chapter`s each citing and calling `\printbibliography[heading=subbibliography]` with biber's two-refsection `.bbl` — pdflatex prints each chapter's own list, we print both lists twice); model biblatex's `\blx@refpatch@sect` heading patch (biblatex.sty `\blx@patchsection@switch`, a no-op in the binding) so each heading bumps the refsection and its `CITE_UNIT`.
   - **Open (b)**: the hidden list digests whole entries, so the errors their data raises are raised although pdflatex never typesets them (pinned: `biblatex_filtered_out_entries_errors`, 2 errors, pdflatex 0; review probe e3).
   - Faithful route (77a r4 review): build hidden-list entries label-only (labelnumber, labelalpha/extraalpha/shorthand, labelname, labeldate/extradate, labeltitle) and digest whole entries only for keys a full-entry citation typesets (`\fullcite`, `\footfullcite`, the `\citetitle`/`\citeurl` fields)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "biblatex `\printbibliography` filters".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "biblatex `\printbibliography` filters".
 
 ### an IEEE affiliation block whose refmarked entries a tie run parts is one entry
 
@@ -95,7 +95,7 @@ do not block the E/F rerun.
 
 - `\@@underline` is defined under the dump (record `M \@@underline PA \underline`, latex.ltx:16368's `\let`) but undefined under `LATEXML_NODUMP=1`: the two `LoadFormat` branches disagree on that name (77g review finding 8)
 - State: FIXED (main session): latex_base.rs carries latex.ltx:16368's `\let\@@underline\underline` (KNOWN_PERL_ERRORS #987; guards `dump_gate_init::nodump_latex_branch_converts_healthily`, `perfect_kernel_batch77g::kernel_primitive_standins_mean_their_primitive`); the NODUMP branch still lacks latex.ltx's other saved copies (77j/77l review, meaning probe dump vs `LATEXML_NODUMP=1`): `\let` copies `\@@italiccorr` (:1192), `\@@math@bgroup`/`\@@math@egroup` (:14322-14323), `\@@startpbox`/`\@@endpbox` (:16757-16758), `\@@fileswith@pti@ns` (:18881), `\@@write` (:20427); `\def`s `\@@enc@update` (:10502), `\@@sverb` (:15486), `\@@eqncr` (:15790), `\@@line` (:16403), `\@@unprocessedoptions` (:18923) — open, NODUMP only (the arXiv runs use the dump)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "`\@@underline` is defined under the dump (record `M \@@under".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "`\@@underline` is defined under the dump (record `M \@@under".
 
 ### merges now flagged by 77d's mark-as-comma re-read (`flag_merged_creators`; XML unchanged, the content was merged silently before)
 
@@ -119,7 +119,7 @@ do not block the E/F rerun.
 
 - a split name's mark that a line or other text follows: the same placement on every name the author-line splitter reads — `Ann Able$^{a}$ (ann@x.org)` gives "Ann Able (ann@x.org)ᵃ", and one before a `\\` is dropped (`\author{Ann Able$^{1}$\\ ann@x.org \and Bob Baker$^{2}$}`: "Ann Able", int32a too)
 - State: open (77n r3 review probes m2, m7-m10; the same mechanism as the ORCID row above). authblk's single marked `\author` takes the split only when its marks end what it prints (`author_marks_end_name`, 77n r4; guard `perfect_kernel_batch77n::authblk_mark_before_a_line_stays_in_place`); the article `\author` lists still do, and so does an authblk name whose mark holds a comma (`author_call`'s comma test: `\author{Bob Baker$^{1,\dagger}$ (bob@x.org)}` gives "Bob Baker (bob@x.org)†" where pdflatex prints "Bob Baker1,† (bob@x.org)"; int32a moves both marks, 77n r7)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "a split name's mark that a line or other text follows".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "a split name's mark that a line or other text follows".
 
 ### a combined legend mark is labelled by its first label only
 
@@ -134,7 +134,7 @@ do not block the E/F rerun.
   - Open: 2406.09417's second line, where a brace the author left open makes one group of `{$^{1}$ ~ Aleksander Holynski{$^{1}$} ~ Angjoo Kanazawa{$^{1}$}}` inside `\textbf{Alexei A. Efros…}` (one creator of three names, silent before and after); 2610.21682 (`{\centering\bfseries …\\ …\par}`) not in the local corpus, unchecked; a `\\` inside a wrapper still does not part names (77p; HF14 M2(c)); Perl merges the same.
   - 2406.09417's single ` ~ ` between spaces is no separator (user ruling 2026-10-19, 77p r2: the spacing-run ruling covers runs of two or more), so its four names wait on this row (the group) and stay flagged.
   - Also in a marked block: a second row of names whose later names carry no marks stays one creator with the address after it, `… Guanheng Chen$^{2}$ He Zhu Xun Wu Shaohan Huang Furu Wei \\ Microsoft Research` → "He Zhu Xun Wu Shaohan Huang Furu Wei Microsoft Research" (2607.18110, the r3 re-review; int34a the same)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "names parted by a separator inside a layout or declaring gro".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "names parted by a separator inside a layout or declaring gro".
 
 ### a row of addresses parted by space under a row of names parted by space (`\author{Cat Cole \quad Dan Dorn \\ Univ C \quad Univ D}`, each address printed under the name …
 
@@ -144,26 +144,26 @@ do not block the E/F rerun.
   - Since 77p r3 a spacing run on such a row parts nothing (the names-line rule), so `Ann Able~~~Bob Baker \\ Univ A~~~~Univ B` gives "Univ A Univ B" as one affiliation of both names — no invented creator, the pairing still lost; since 77p r4 also when the institutions read as names (`Ann Able~~~~Bob Baker \\ Carnegie Mellon~~~~Johns Hopkins`, `\textbf` names over `\textit` institutions: `row_of_names`, guard `perfect_kernel_batch77p::institution_row_under_names_is_no_names`), and since 77p r5 over an e-mail line the addresses do not spell (guard `institution_row_over_an_email_line_is_no_names`).
   - Still read as names going on, creators "Carnegie Mellon", "Johns Hopkins", …: a row in another count than the names (`Ann Able~~~~Bob Baker \\ Carnegie Mellon~~~~Johns Hopkins~~~~Google DeepMind`, the r4 re-review's probe v4) and a row with a legend line under it (`… \\ \textsuperscript{*}Equal contribution`, probe v2) — no corpus case among 933 papers; the count and the line under the row are all `row_of_names` reads, markup does not tell institutions from names (2607.07318, 2603.16856).
   - The r5 trade (recorded 77p r6): a real second row of names over an e-mail line with fewer addresses than the names of both rows, none spelling a piece of the row, reads as one affiliation of the names above, as in int34a (`Ann Able~~~~Bob Baker \ Cat Cole~~~~Dan Dory \ 	exttt{ann.able@x.edu}`, the r5 re-review's probes n1-n4, n10: Cat Cole and Dan Dory lost as authors) — v3 (institutions) and n1 (names) have the same structure, so no address rule parts them; no case among the 1083 A/B papers (2602.13551 has an affiliation line between)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "a row of addresses parted by space under a row of names part".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "a row of addresses parted by space under a row of names part".
 
 ### names parted by horizontal space under symbol-labelled address lines (77p-77y; OD #52(o)) — the residual
 
 - **names parted by horizontal space under symbol-labelled address lines (77p-77y; OD #52(o)) — the residual** (landed; the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md)): a legend's "Corresponding author:" before a bare address is no e-mail label (2609.24299); one `\textsuperscript{\textdagger}` in run-parted rows merges 7 + 5 names with no Error (2601.11514, probe s4); a legend line holding a mark after its text reads as names (2602.09443); a comma list of symbols in a name's mark or leading a line (probes x1, x3, y1-y3, q1-q3).
 - Also open (recorded 77p r4-77y, not fixed since): a starred legend in a numbered block goes to the last author (2608.22149's `{\small $^{*}$Equal contribution.}` on Yuchen Cui, 2605.03042's `$^\dagger$Project Leader \quad $^*$Corresponding Author` on Shuai Li); a marked block's legend line `\\ \textsuperscript{*}\textit{Equal contribution.}` lands as an affiliation of the last author (2509.20748); a line of several tie-joined entries is paired by its last mark (2609.24797's `$^{\triangle}$EPFL,~$^{\bigcirc}$OpenEuroLLM,` on Jenia Jitsev; probe f1); a second row of marked names styled otherwise than the first, after a names line ending in a comma, reads as an affiliation (2601.18077: two authors lost; 2609.35807 the same shape); a marked address line in a numbered block doubles its mark inside the address (probe f4); the numbered block's x12 weld welds a note line too (probes x1-x3); a mark-only piece before a `\quad`-parted link is a creator "‡" (probe h3).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "names parted by horizontal space under symbol-labelled addre".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "names parted by horizontal space under symbol-labelled addre".
 
 ### a linked two-word text whose last word is a link word, alone in its `\and` column, reads as a name
 
 - a linked two-word text whose last word is a link word, alone in its `\and` column, reads as a name: `\author{Ann Able \\ Univ A \and Bob Baker \\ Univ B \and \href{…}{Source Code}}` makes a creator "Source Code" (no corpus witness, probes a5, a6 — "Online Demo" too; and a three-word one whose last word is a link word that is also a surname, "Full Source Code", "Google Scholar Page", "Hugging Face Link", the link column first or last: probes s1, s3, s4, s7 of the rev77y3 re-review's finding 5 — or its plural, "Other Useful Links", the rev77y4 re-review's probe s20 — no author block linking such a text among 519,672 papers of 2025-2026, int38b the same, 77y r2 URL contacts; 2606.06924 prints "Datasets  Source Code" on one line under its e-mail line, both URL contacts of the shared creator as its PDF shows, the rev77y2 re-review's finding 6; int38b the same), 0 Errors
 - State: open (77y r2, the 77y review's finding 1): `link_words_beyond_a_surname` keeps a two-word text a name for "Lucy Page" alone in its column (`perfect_kernel_batch77p`'s linked-names guard) and cannot tell it from "Source Code" without a word list; options: a column holding a linked text alone is the block's link unless the text spells the link's target (`x.org/lp` for Lucy Page), or accept.
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "a linked two-word text whose last word is a link word, alone".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "a linked two-word text whose last word is a link word, alone".
 
 ### a name alone under a row's merged symbol lines over a one-word generic institution noun or a connective-led institution of its own is lost
 
 - a name alone under a row's merged symbol lines over a one-word generic institution noun or a connective-led institution of its own is lost: `Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole \\ Physics` gives "Cat Cole" to the shared creator as an affiliation and "Physics" to Ann Able and Bob Baker (pdflatex prints it under Cat Cole only); also `\\ Research`, `\\ Polytechnique`, `\\ at Univ C`, `\\ University`, `\\ Institute` (the rev77y4 re-review's finding 1, probes c1, c3, c4, c8, k27, k30; int38b and 77y r3/r4 the same, 77y r2 right), no corpus witness, 0 Errors
 - State: open (77y, accepted cost of `continues_the_line`, which reads `Shanghai Jiao Tong \\ University` as one institution, probe k12; the hyphenated `Max-Planck-Institut` FIXED in int41, guard `perfect_kernel_batch77y::names_split_under_symbol_lines_reads_the_line_under`).
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "a name alone under a row's merged symbol lines over a one-wo".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "a name alone under a row's merged symbol lines over a one-wo".
 
 ### in a per-author `\author` that adds to its block, a link column (`\href{…}{Project Page} \\ Univ B \\ contact@x.org`) goes to the current author
 
@@ -179,7 +179,7 @@ do not block the E/F rerun.
 
 - a name alone under a row's merged symbol lines with a place under it is lost: `Ann Able$^{\dagger}$ \quad Bob Baker$^{\ddagger}$ \\ $^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole \\ Palo Alto, CA` gives "Cat Cole" and "Palo Alto, CA" to the shared creator (the rev77y2 re-review's probe k10; int38b and 77y r2 the same; 77y r1 an author), 0 Errors
 - State: open (77y r3, the rev77y2 re-review's finding 4; no corpus witness): the names split (`names_at`) accepts a line of names over an institution (not one its words go on into, `continues_the_line`) or over an e-mail address it spells (`addresses_spelling`, probe k15), not over a place — `Google DeepMind \\ London, UK` (probe k11) has the same shape and is no author; options: a place under a line of a given name and a surname only, or accept.
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "a name alone under a row's merged symbol lines with a place ".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "a name alone under a row's merged symbol lines with a place ".
 
 ### a place line with no comma under a welded symbol row's labelled institution goes to the shared creator
 
@@ -197,13 +197,13 @@ do not block the E/F rerun.
 - State:
   - open, narrowed (85a r2, OD #900): a row that a gap (`\\ \\`, `\vspace{…}\\`, a positive `\\[len]`), the names' styling or the alternation opens after a name's lines is a names line, parted into its creators, each with the lines under it (`perfect_kernel_batch85a::row_of_names_opens_the_next_author`); left: the row with none of these, as above (RED `author_block_row_of_names_with_no_signal`; no person's cue, no gap, no styling — the same reading as a cue-less `Bob Baker \\ Univ B`; 77p r4: `row_of_names` joins only the line right after the names line; pinned by `perfect_kernel_batch77p::institution_row_under_names_is_no_names`).
   - Also a row of names under a single name (`\textbf{Ann Able}\\[2pt] \textbf{Bob Baker}~~~\textbf{Cat Cole}`, the r4 re-review's probes t1/t2: Bob Baker and Cat Cole an affiliation of Ann Able; `row_of_names` needs two names on the names line; int34a the same)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "in an unmarked block a row of names after an affiliation lin".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "in an unmarked block a row of names after an affiliation lin".
 
 ### an author mark with a footnote symbol before the number, `$^{*1}$`, requests no affiliation
 
 - an author mark with a footnote symbol before the number, `$^{*1}$`, requests no affiliation: `Ann Able$^{*1}$, Bob Baker$^{1}$ \\ $^1$Univ A` gives Ann Able none (the 77p r4 re-review's probe k1); 2609.16161's `Sebastian Zhao\blfootnote{…}$^{*1}$ \enspace\enspace Minseo Kim$^{*1}$ …` leaves its three starred authors without UC Berkeley, visible on three creators since 77p split the names (int34a the same, merged), 0 Errors
 - State: open (77p r5, recorded): `split_glued_symbol` (`rewrite_symbol_superscripts`) splits a number before the symbol (`$^{1*}$`), not one after it; the same paper's `{$^{1}$~UC Berkeley\qquad $^{2}$~ICSI\qquad $^{3}$~LBNL}` is one entry (the layout-group row); and a symbol glued to the last number of a list, `$^{1,2*}$`, is no part of the split either: its labels are 1 and "2*", so 2605.03042's Shuai Li misses Shanghai Innovation Institute, which goes to the shared creator, and shows no star (the r8 re-review's A/B, recorded in 77y)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "an author mark with a footnote symbol before the number, `$^".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "an author mark with a footnote symbol before the number, `$^".
 
 ### a horizontal skip that opens a line of an unmarked block parts it as a separator
 
@@ -229,7 +229,7 @@ do not block the E/F rerun.
 - The r6 trade, recorded: an address the r5 rules placed by the names left over stays on the last name when another line holds an unspelled address (2605.30274's `zhangmin186@`).
 - Also: the trade's second witness 2609.02349's `xiahou@` (on Junping Zhang; accepted residuals, user ruling 2026-10-20); the order path gives no address to an author another address spells when the block lists one per author at most (2609.34459's `mayhhu@`); a star after a line break and a space stays text, a legend's mark (2608.23637's `\\ *$\S$$\P$ …`).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "an e-mail that spells no surname (77p r3-r11, 77y; OD #52(o)".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "an e-mail that spells no surname (77p r3-r11, 77y; OD #52(o)".
 
 ### an unmarked author block's brace-list emails (`\{nlp2ct.guanhua, nlp2ct.chuyue, …, xqsongangie\}@gmail.com\\ \{derekfw, lidiasc\}@um.edu.mo`, 2605.15019) go to the last …
 
@@ -254,13 +254,13 @@ do not block the E/F rerun.
 - State:
   - open (77n r5; guard `perfect_kernel_batch77n::authblk_superscript_inside_a_name_stays` pins it).
   - The first half of this row closed in 77n r6: an authblk name kept on `\lx@add@creator` (`Ann Able$^{1}$\textsuperscript{equal contrib.}`) requests the affiliations its marks pick (`author_label_marks`), so the run passes it over (guard `authblk_textual_superscript_after_mark_is_shown`)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "a run always reaches its last author (Perl's `new`, Base_Uti".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "a run always reaches its last author (Perl's `new`, Base_Uti".
 
 ### authblk's note numbering (`\AB@thenote`, authblk.sty:114-167) is not modelled
 
 - authblk's note numbering (`\AB@thenote`, authblk.sty:114-167) is not modelled: an unlabelled `\author` after a labelled one shares its note (`\author[1]{Ann}\author{Bob}\affil[1]{Univ X}\affil{Univ Y}`: pdflatex "Ann1 and Bob1 / 1Univ X / 1Univ Y", Univ X under Bob too; we give Bob Univ Y only), and an `\affil` inside a later `\author` steps it (`\author[1]{Ann}\affil[1]{Univ X}\author{Bob \affil{Univ Y}}`: pdflatex "Ann1 Bob2 / 1Univ X / 2Univ Y"; we give Ann Univ Y as well, 77n r4 review probe e3); a marked author before an `\author[1]` shares its note too (`\author{Ann$^{1}$}\author[1]{Bob}\affil{$^1$Univ X}\affil{Univ Y}`: pdflatex "Ann11 and Bob1 / 11Univ X / 1Univ Y"; we give Ann Univ X only, 77n r6 review probe f2 — Bob's Univ X fixed in 77n r7)
 - State: open (77n r6; int32a and Perl's `annotate=new`, authblk.sty.ltxml:57, the same; guard `perfect_kernel_batch77n::authblk_labelled_author_shares_the_run` pins it): number the notes as authblk does — an `\author` steps `\AB@thenote` after an `\affil`, an unlabelled one takes it — and label each unlabelled `\author`/`\affil` by it
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "authblk's note numbering (`\AB@thenote`, authblk.sty:114-167".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "authblk's note numbering (`\AB@thenote`, authblk.sty:114-167".
 
 ### a symbol legend after a run reaches authors who do not show its symbol
 
@@ -289,7 +289,7 @@ do not block the E/F rerun.
 
 - aistats paired column: an address line starting "and" is read as an author separator by the kernel `\author` line reading, so 2402.12508's `Department of Mathematics \\ and Computer Science \\ University of Basel` makes a creator "Computer Science" (both rows since 77o r3; up to 32 paired papers carry such a line; 2310.02702 reads right); the same kernel line reading turns a marked line under a paired column into a creator (`Apple$^\ddag$`) and glues a name to its first line when the next column's line is marked — 2202.05722 ("Apple ‡" a creator, two names flagged `merged_creators`), 2401.02609, 2503.08203 (77o r3 review probe m_trail)
 - State: open (77o r2 review finding 6, r3 finding 1). Fix when taken: the binding knows line 1 of each column is the name — add the name, then each address line as an affiliation or e-mail explicitly, instead of the kernel's guess
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "aistats paired column".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "aistats paired column".
 
 ### aistats in-place reading and e-mail splitting, small (77o r3 review nits 2-4; corpus reach 0 for each)
 
@@ -330,7 +330,7 @@ do not block the E/F rerun.
 - State:
   - RULED 2026-10-21: the separator is the binding's (default ": " as Perl), and a copy's caption format (`\fnum@<type>`) is the binding's too — only its declared text names (`\figurename`) reach the label (OD #731 rule 14); no raw `\@makecaption` is read.
   - The 7 doubled separators of 78h r1 are gone (78h r2) — closed
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "caption separator vs a copy's own label".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "caption separator vs a copy's own label".
 
 ### a stand-in's copy under the binding's own name (rule 0: a shipped svjour3.cls, aas_macros.sty) keeps the binding's text names (OD #731 rule 1); the 2026-10-21 ruling's …
 
@@ -452,7 +452,7 @@ do not block the E/F rerun.
 - K11's line rule (OD #662) after 79a r2 — a store printed in one line with another value of the class's, or glued to its text, stays the class's: (a) a store kept the class's when the class is loaded (another value in its line printing text then) is not judged again at `\maketitle`, so a document that empties that value still leaves the store in the class's line; (b) a line whose other value the document leaves empty hands the store on and leaves the class's text around it in the body — zzfmf.cls's `{\itshape \@issueinfo; DOI \@doi\par}` without `\issueinfo` leaves "; DOI" (the control of `perfect_kernel_batch79a::a_store_in_one_line_with_a_document_value_stays_the_class_line`; int68a the same): the label before a store is taken out with it only for an abstract, keywords or a classification (`labelled_api`); (c) a store printed outside any group is never in a class's line (the group bound kept from 68x); (d) `glued_to_class_text` exempts only `\href`'s first argument as a link target, so WileyASNA-v1.cls's `\burlalt{http://dx.doi.org/\@doi}{…}` keeps `\@doi` the class's (1 census paper).
 - Review rev79a findings 2, 4, Q1
 - State: open (accepted unless a paper shows (a) or (d))
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "K11's line rule (OD #662) after 79a r2 — a store printed in ".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "K11's line rule (OD #662) after 79a r2 — a store printed in ".
 
 ### Design
 
@@ -590,7 +590,7 @@ do not block the E/F rerun.
 - The vector branch is TeX's (`graphicx_box_pt`, 78z).
 - Direction: an explicit `width=`/`height=` is the box's size in pt, as TeX's; reach every raster with a stated size (box and row widths shift by ≤ 0.4 %)
 - State: open
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "A raster graphic's explicit size comes out at 72/72.27 of it".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "A raster graphic's explicit size comes out at 72/72.27 of it".
 
 ### `\adjustbox{max width=\columnwidth}{\subfloat[a]{…}\subfloat[b]{…}}` in a float (revtex4-1 twocolumn)
 
@@ -610,7 +610,7 @@ do not block the E/F rerun.
 
 - Rows TeX keeps tight or overfull (a `~` tie, `}\subfloat` with no breakpoint, tight TikZ, two 4.5cm sub-floats in a 252pt column, a nested `\subfloat` beside a 4.5cm one with ~1pt to spare in a 246pt column — base the same, review rev78x5 finding 2, `rev78x5/p/m3.tex` fourth figure): 1108.5543 Fig 9, 2009.04593 Fig 5, 1712.01536 Fig 2, 1703.09165 (2 floats), 2406.05437 Fig 12; and the `figure_mixed_content` fixture's 0.56/0.42 minipages with `\hspace{8px}` (8.03pt), one overfull line in pdflatex (`\showbox`: both in one `\hbox`, glue set −1.0), two rows under the rule (review rev78x finding 10); and a subfigure.sty body whose stated `\hspace` makes its row overfull (two `\subfigure[]{\includegraphics[width=0.47\textwidth]{…}\hspace{0.5cm}}`: pdflatex one overfull line, glue set −1.0; int69b one row, 78x r4 two, the body's glue counted: review rev78x4 `n4.tex` F4)
 - State: accepted residual (user 2026-10-22: overflow)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Rows TeX keeps tight or overfull (a `~` tie, `}\subfloat` wi".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Rows TeX keeps tight or overfull (a `~` tie, `}\subfloat` wi".
 
 ### Panel grid markup
 
@@ -626,7 +626,7 @@ do not block the E/F rerun.
   - 79c r2 (review rev79c): a `tabular` cell counts only for a graphic 24pt+ wide and tall (13 data tables lose the matrix), sub-captions allow a matrix only on exactly one whole row (6 partial-caption grids → galleries), a beside-content collapse drops the inner's widths, a `width=`-only graphic panel states its stated width, the grid attributes typed numeric and the XSLT emits numbers only; guards `perfect_kernel_batch79c::*`, `integration::panel_grid_markup_states_only_numbers`.
   - Residuals: text-labelled matrices (label rows are `ltx:p` panels), a `\resizebox` of measured content states no width (its stated width is not on the element), a raster inside a sub-float body keeps KPE #1142's rounding in its sub-float's width; a float held in a minipage — FIXED 79f (the page outside the box, 0.5 as the PDF); a `\captionof` figure gets no grid markup (not a float environment; Perl alike); class pages declared — FIXED 79f (OD #887).
   - LANDED int74 (61039b657e + 140d474145)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Panel grid markup".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Panel grid markup".
 
 ### The natural `cssstyle` is the size pdflatex prints a graphic at (`first_natural_size`, util/image.rs; 79a), but post renders the candidate it finds most desirable …
 
@@ -663,7 +663,7 @@ do not block the E/F rerun.
 - Fix: read the label from what it typesets (expand macros, drop an unexpandable `\relax`/`\protect`) before matching it.
 - Review rev78v2 finding 6a, widened by rev78v3 finding 3 (probes `rev78v3/q/pl.tex`, `pra.tex`, `prc.tex`, `rev78v2/p/sh3.tex`); RED repro `sectioning-frontmatter/author_mark_relax_before_its_label`
 - State: open
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "An author's mark whose label holds any control sequence prin".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "An author's mark whose label holds any control sequence prin".
 
 ### A note macro reached through four macros (`\fnM→\fnN→\fnO→\fnP{8\footnotemark}`) inside an author's mark loses both its "8" and the footnotemark (pdflatex "Di Delta8†")
 
@@ -683,7 +683,7 @@ do not block the E/F rerun.
 - Fix: accept a `\protect` before a `makes_a_note` macro in the body loop as `split_mark_notes` does, a row in `perfect_kernel_batch78v::author_protect_thanks_and_note_macro_inside_a_mark`, OD #881 "before a note command or note macro".
 - Review rev78v3 finding 1 (probe `rev78v3/q/prb.tex`)
 - State: open
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Author marks".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Author marks".
 
 ### A formula silently degrades to `ltx_math_unparsed` under load
 
@@ -701,7 +701,7 @@ do not block the E/F rerun.
 - Not ours (pdflatex or the arXiv PDF breaks too): a file not shipped, xr without the other `.aux`, a stale shipped `.bbl` (ruling 2026-10-24: 2509.06285, 2205.10368, 2402.06576, 2311.01729, 2205.00263, 2004.00833, 2507.01293, 1806.02261), the harness\'s main-file guess, a document\'s own `\def\label`, a shipped namesake of a TL package (ruling 2026-10-17 H1: 0802.3014\'s and 1210.0342\'s pretex `units.sty`).
 - Residuals and the brk94/brk96/brk100/brk102 tails: [`perfect_kernel/OPEN_ROWS.md`](OPEN_ROWS.md) § "Breakage residuals".
 - State: OPEN
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Complete breakage at 100 % (user 2026-10-24)".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Complete breakage at 100 % (user 2026-10-24)".
 
 ### FM S2b: the observer's writer on by default for revtex4_support (OD #837 "S2b r1") — the residual
 
@@ -713,7 +713,7 @@ do not block the E/F rerun.
 
 - **K11 store residuals after 95d** (OD #939-#941; the scorer's four lost-words papers 2607.06973, 2608.26053, 2307.16262, 1202.2889 fixed; 95d-r2: a setter's own store only when no running code reads it, a date's label in an `\else` branch, an unlabelled date unnamed, fancyhdr styles read not run; 95d-r3: a date's label read in any code the title page reaches, a label phrase ending at a `;` or `,`, the label before a store's emptiness test, a role's default only where its word is printed right before the store): unsupported shapes, each a one-line input — (a) a footer token register selected only at the class's top level or in `\AtBeginDocument` (`\pagestyle{firststyle}` outside `\maketitle`), or set by `\fancyfoot[L]{\the\correspondingauthor}` under `\pagestyle{fancy}` outside `\fancypagestyle` (fancyhdr's fields stay no-ops), stays unread; (b) the same classes' `\paperurl` / `\reportnumber` registers (deepseek.cls:113-114, googlecloud.cls:81-82) are not in the table; (c) a macro store a `\ps@` style prints under another name (`\def\correspondingauthor#1{\gdef\@corr{#1}}` + `\def\ps@firststyle{\def\@oddfoot{\@corr}}`) is no store (its readers are no title-page code); (d) a footer toks value set after `\maketitle` (pdflatex prints it at shipout) is not read; (e) a register printed under a switch the class leaves false (`\ifshowca … \the\correspondingauthor\fi` + `\showcafalse`) still makes the note — `printed_register` knows only the `\if\relax\the\X\relax` test (RED `toks_store_printed_under_a_false_switch_is_no_note`, rev95d S4; fix: read the printing branch live or dead, as `reads_of_branches`); (f) a preamble `\fancypagestyle{firststyle}{\fancyfoot[L]{Preprint}}` that drops the register still makes the note — the style is read at the class's end (RED `toks_store_page_style_the_document_redefines_is_no_note`, rev95d S5; fix: re-read `\ps@<style>` at `harvest_stores`); (g) a setter's own store no macro reads, or one read by a page style the class never selects, is still rerouted — kept for astlb.cls:361-372's `\@shorttitle`, printed only by a running head its top level sets (1202.2889's `<toctitle>`) —, so a dead store (`\def\keywords#1{\gdef\@keywords{#1}}`, nothing reading `\@keywords`) is an invented item; whether an uncalled macro runs is not read off the code (`read_where_nothing_runs` takes any reader the never-running code reaches: cesj.sty's unselected `\cejpmaketitle`, physics0510010); (h) a label printed through a macro that reads the store (ujp.sty:107/:421 `\udkpacs~\udkpacsnum`, `\def\udkpacsnum{\@pacs}`; 1906.11531), or in a group that is a command's argument with layout the label reader does not take (CSML.cls:227-229's `\@footnotetext{\textit{\ACMCCSname:}\enspace\@ACMCCS.}`, the stand-in tpccs.cls:12; 1608.04592, 1602.00476), is not read: the classification is unnamed where the class prints "PACS", "2012 ACM CCS:" (review rev95d-r2 finding 3; charter-correct, better hidden than mislabelled); (i) `\fancycenter{a}{b}{c}` called in a style body outside a field (pdflatex typesets it where `\pagestyle` runs the style) prints nothing — the style runs nothing (int124a and Perl the same); (j) an unlabelled date among labelled ones is handed on as it is set, the labelled ones at `\maketitle` (`labelled_api` defers only a named one), so it comes first: medima's shape with `\@finalform` printed bare gives the final-form date before "Received"; (k) a raw class's own store only an uncalled macro reads (`\def\makecover{… \@keywords …}`, never called) is still an invented item — the raw package's test (`read_where_nothing_runs`) is not applied to classes, where it lost bfhthesis's `\@department` (read through a `\@titlefooterleft` a scrlayer layer prints) and dmtcs's keywords (0905.1102) (RED `raw_class_store_only_an_uncalled_macro_reads_is_no_item`, rev95d p9); (l) a role's default kept because its word is printed right before the store (`ClassReaders::prints_default_name_before`: wiley2sp.cls:296-302's `\receivedname\ignorespaces\@received`, 1211.4450, 1306.2559; zaa.cls:513-515's `\AtEndDocument` hook `Received \rm\@received`, 1902.07328, the date also printed there, the class path's double print of (k)) leaves that printed label in the title-page deposit ("Received:" over nothing, as before 95d-r2; `perfect_kernel_batch95d::a_date_with_no_label_read_keeps_its_default_only_where_printed`), and a date stored right after a `;` or `,` (no label of its own: `\@revised; \@accepted`, iaus.cls's `No. \@volume, \@pubyear`, 0707.3527) leaves that separator there, the unnamed date first by (j); (m) a raw package's table store that no macro reads is still rerouted (`read_where_nothing_runs` takes it for one a running head its top level sets), so `\def\keywords#1{\gdef\@keywords{#1}}` with nothing reading `\@keywords` invents `<keywords name="Keywords: ">` and a received date (RED `raw_package_store_no_macro_reads_is_no_item`, review rev95d-r2 finding 2, probe qn; a static scan of the 712-paper package population found no real paper); (n) pazha2.cls's `\submitted` date ("Received December 15, 2022" in 2408.01858, "Received January 21, 2025" in 2607.07582) is in no output: `submitted` is not in STORE_SETTERS, its class is read raw and the refused `\endabstract` that runs `\maketitle` never prints the title page (one-line input: `\def\submitted#1{\gdef\@submitted{#1}}` printed only by a refused `\@maketitle` reached through `\endabstract`); OLDER than 95d — int123a and int124a lose it too
 - State: open
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "K11 store residuals after 95d".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "K11 store residuals after 95d".
 
 ### 95d r3 review should-fixes (rev95d-r3 SHIP, 2026-10-31; synthetic only, no census paper changed this way)
 
@@ -723,13 +723,13 @@ do not block the E/F rerun.
 - Pre-existing, from the review: 2109.14785 (ectj.cls:352 commented out) emits dates it never prints — a real-paper witness for (m) above; 1409.1462 loses the printed "(January 2015)" set by `\received` inside `\affil` (base and r3; content loss); 2210.05326 a stray "Received:" paragraph.
 - Review `agent_reports/2026-10-31_rev95d_r3.md`
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "95d r3 review should-fixes (rev95d-r3 SHIP, 2026-10-31; synt".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "95d r3 review should-fixes (rev95d-r3 SHIP, 2026-10-31; synt".
 
 ### 95e residuals (OD #938)
 
 - **95e residuals (OD #938)** — the several-address `\email` give-back (2109.07363 three creators again, 0 E) leaves: (a) `\address{$1.$ …}` labels unread, so the reading's upfront grid gives the entries by position, its pile lacking the listed call (`answer_listed_emails` runs after `Resolver::distribute_upfront`): 2109.07363 Liu {1}, Tao {2} where the PDF prints {1,2} for both (RED `amsart_dollar_numbered_addresses_under_shared_marks`), synthetic reversed marks both wrong where int123a had one wrong (RED `amsart_dollar_numbered_addresses_under_reversed_marks`, rev95e S1); fix: the call one contact in the grid's pile, as today's, or the `$1.$` label read; (b) a listed call's address spelling no one is the call's author's (`owner:call`: 2109.07363 `ferrytau@` on Wei, Tao by the list's order); (c) the fail-safe keeps every listed call whole when one cannot be written out (RED `amsart_several_address_emails_one_kept_whole_keeps_all_whole`, rev95e S3; = int123a); (d) revtex `\author{Ann Able $\&$ Bob Baker}` stays one creator with no `merged_creators` Error (= int123a)
 - State: open
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "95e residuals (OD #938)".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "95e residuals (OD #938)".
 
 ### Unlanded payload branches (inventory 2026-10-31; all work reintegrates into perfect_kernel, user 2026-10-31)
 
@@ -738,14 +738,14 @@ do not block the E/F rerun.
 - **RETIRED 2026-11-01** (row "K9 row F residual": 264 Errors in 29 of its 62 witnesses on the pushed tip).
 - Trial merge against int125a (`git merge-tree`): NOT clean — `latexml_engine/src/base_utilities.rs`, where its 1,261 added lines live, was split into `base_utilities/` since (modify/delete), plus 12 conflict hunks (state.rs 5, error.rs, tex_debugging.rs, docs, the test list); so the retire path: re-derive its family from the branch's `perfect_kernel_batch66u` witnesses and repros (its scratch tables are gone), measure E/F on the pushed tip, and record what is left as a residual row with those numbers
 - State: open
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Unlanded payload branches (inventory 2026-10-31; all work re".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Unlanded payload branches (inventory 2026-10-31; all work re".
 
 ### K9 row F residual: a macro that closes and reopens the author block's environment (66u RETIRED 2026-11-01, user ruling 2026-10-31)
 
 - **K9 row F residual: a macro that closes and reopens the author block's environment (66u RETIRED 2026-11-01, user ruling 2026-10-31)** — `\author{\begin{tabular}{c}Ann\end{tabular}\hskip1em\begin{tabular}{c}Bob\end{tabular}}`-style blocks (sig-alternate `\alignauthor`, hand-made `\end{tabular}…\begin{tabular}` breaks) read as `\and` by pdflatex leave a run of Errors: on 66u's 62 code/test witnesses (`pk/66u` `perfect_kernel_batch66u`; job tmp `w66u.txt`, `m66u/run.sh`) the pushed tip (int125c `8a87df771c`) gives 264 Errors in 29 papers, 33 error-free (int123a 272 / 32; the bundle fixed 2405.18462) — `unexpected:\hbox` 66, `\lx@personname` 52, `\endgroup` 52, `\@@tabular` 52, `\@end@tabular` 39, `&` 3; top 1106.3195 66, astro-ph0507026 55, 0810.5607 30, astro-ph9904014 / astro-ph0007224 / 1101.0179 / 0812.4013 6.
 - The branch's mechanism (`author_block_reopenings`, `pk/66u` 1b7360cc1e: Errors 4,387 → 379, error-free 2 → 318 on its 370-paper family at 2026-10-14) lives in the pre-split `base_utilities.rs` (now `base_utilities/`) and does not rebase (modify/delete + 12 conflict hunks); re-implement it on the current layout as a fresh batch with the branch's witnesses and repros as the red set
 - State: open
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "K9 row F residual: a macro that closes and reopens the autho".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "K9 row F residual: a macro that closes and reopens the autho".
 
 ### Bundle int126a/int126b (97c-98e) — the residual
 
@@ -763,7 +763,7 @@ do not block the E/F rerun.
 - **Frontmatter on the digested representation — the freeze and the refactor's batches 90a-95c (task #423; now `parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`, row 0b) — the residual** (landed; the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md)): REDs `amsart_email_of_a_two_name_call_spelling_an_accented_name` (2112.10604) and `revtex_email_spelling_its_holders_given_name`; amsart's routed `\thanks` (the row "A routed amsart note").
 - REDs' witnesses 0711.3633, 0809.3090 (`santos@` off Santos Bravo Yuste); open RED `raw_class_store_trailing_line_after_last_mark` (quant-ph0101015's rspublic.cls store line after the last mark); left: 1304.1574 (`Computer Science` read as names), llncs's 1901.07288 (a trailing-mark `\institute` whose entries span two lines), 1505.06588 and 2203.08964 (scorer source-reading limits, ours the PDF's).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Frontmatter on the digested representation — the freeze and ".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Frontmatter on the digested representation — the freeze and ".
 
 ### A routed amsart note belongs to the last live author at `\maketitle`; needs a change tag and a ruling
 
@@ -772,7 +772,7 @@ do not block the E/F rerun.
 - Moving it changes written output against Perl.
 - RED catalog repros `class-bindings/amsart_thanks_between_authors_email`, `amsart_thanks_before_every_author_email`
 - State: DEFERRED (ams written family)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "A routed amsart note belongs to the last live author at `\ma".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "A routed amsart note belongs to the last live author at `\ma".
 
 ### Compound marks: one rule for the superscript path, the formula path's runs and the legend's label (94a r9 residual; OD #928 round 9, OD #927)
 
@@ -782,14 +782,14 @@ do not block the E/F rerun.
 - Remove the comma only when the whole comma-delimited run is taken (`apply.rs` ~l.258; rev94a r9 r12).
 - RED catalog repros: `author_names_compound_mark_superscript_beside_its_legend`, `author_names_compound_legend_goes_to_a_partial_carrier`, `author_names_kernel_repeated_symbol_beside_a_legend_hidden` (the kernel path's `**` hidden; rev94a r9 a03, siblings a01, a05, a10, a11)
 - State: OPEN (refactor)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Compound marks: one rule for the superscript path, the formu".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Compound marks: one rule for the superscript path, the formu".
 
 ### A trailing answered name takes the unmarked in-place line, before its own (94a r9 residual P3)
 
 - **A trailing answered name takes the unmarked in-place line, before its own (94a r9 residual P3)**: `ANN ABLE$^1$ and BOB BAKER and CID COLE$^1$ \affil{$^1$Univ A} \affil{Univ B}` (a class printing `\affil` in place) gives Univ B to BOB BAKER and CID COLE, CID COLE's Univ B before his Univ A; pdflatex prints Univ B after the names, CID COLE answered by Univ A. Today's API walk (`frontmatter_api.rs` `reached_unanswered`) and the reading's (`Resolver::record_run`) start at the trailing name and stop only once past an unanswered one: the premise "when the last author is answered, every author of the run is" fails with an unmarked name between answered ones. authblk's `\author{Ann Able$^{1}$}\author{Bob Baker}\author{Cid Cole$^{1}$}\affil{$^1$Univ A}\affil{Univ B}` the same (review rev94a r8 u04, z14).
 - RED catalog repro `raw_class_affil_run_trailing_answered_name_takes_the_unmarked_line`
 - State: OPEN
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "A trailing answered name takes the unmarked in-place line, b".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "A trailing answered name takes the unmarked in-place line, b".
 
 ### IEEEtran's `annotate=new` affiliation block after a marked one, contact order (94a r9 residual P4; since 93a)
 
@@ -805,14 +805,14 @@ do not block the E/F rerun.
 - Review rev94b r4-r6 probes `p/m/later`, `p/n` aug/tc/two/l3, `p/u` u1-u3, `p/w` w1-w2, `p/s/s4`.
 - RED catalog repro `raw_class_optional_mark_a_later_author_requests`
 - State: OPEN (deferred)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "A raw class's line whose mark only a later `\author` request".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "A raw class's line whose mark only a later `\author` request".
 
 ### Per-entry wraps of nested containers, and an `\href` around entries (94b r7 review residuals; synthetic, triage 2026-10-31: RED catalog, no fix round)
 
 - **Per-entry wraps of nested containers, and an `\href` around entries (94b r7 review residuals; synthetic, triage 2026-10-31: RED catalog, no fix round)**: (1) a container inside a kernel text font command with more entries after its group loses the container's font (`\textbf{\emph{$^1$…\\ $^2$…}} $^3$…`: bold kept, italic lost; `emitter/plan.rs` `entry_forms`/`container_wrap`); (2) `events/fonts.rs` `font_declaration` matches by name, so a redefined `\bfseries` (`\quad`) is copied into every entry (the B2 class: what prints once copied into each entry) — compare meanings (the S3 `x_equals` pattern); (3) the allow-list between nested containers (`plan.rs` ~:681-687) refuses a text font command between containers, `\relax`, `\fontseries{b}\selectfont`, `\LARGE`/`\huge` (plain cut, = base); (4) `\href` around the entries (± a font command) → a nameless creator holding the contact and two names merged (pre-existing since 94a r9).
 - RED catalog repros `raw_class_affil_text_font_container_then_more_entries`, `raw_class_affil_redefined_font_declaration_between_containers`, `raw_class_affil_text_font_command_between_containers`, `raw_class_affil_href_around_entries_nameless_creator` (review rev94b r7 probes p/z/bt, rds, ebun, ihref; p/x/href)
 - State: OPEN
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Per-entry wraps of nested containers, and an `\href` around ".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Per-entry wraps of nested containers, and an `\href` around ".
 
 ### A `\thanks` opening with `\label` sits on a nameless creator (94a r9 residual P5; 94b r4 and on)
 
@@ -873,7 +873,7 @@ do not block the E/F rerun.
 - **frontmatter notes read as the class prints them (92e, 92g) — the residual** (landed; the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md)): the version-dependent shapes left are elsarticle's `\journal` (copies up to v3.3 print "Preprint submitted to X", 2609.40131; TL 2025's v3.4c none) and elsart's ("Article published in …" when `\volume` is set); aa's `\mail` went to 97b.
 - The e-mail inside an aa/svjour `\offprints` note ("O. Kochukhov, e-mail: …", 0903.3512) sat on the last author named before it while placing it by the note's name waited for aa/llncs as written families: that landed (int123a; `written: true` in `aa_cls.rs`, `llncs_cls.rs`, `sv_support_sty.rs`), and the reading places a note's address by the chain (`perfect_kernel_batch92a::a_publication_note_email_is_placed_by_the_chain`, a reading assert); the written XML on 0903.3512 is not re-checked (DOC1c, docs only).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "frontmatter notes read as the class prints them (92e, 92g) —".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "frontmatter notes read as the class prints them (92e, 92g) —".
 
 ### An unmarked address after a name list goes to the last name only (iopart, informs4; pre-existing, Perl's default)
 
@@ -895,7 +895,7 @@ do not block the E/F rerun.
 - Largest unclassified buckets: an `\altaffiltext{n}` no name requests (13 papers) — many are the title's note (`\title{…\altaffilmark{1}}`, 0801.1670, 0808.0471, 1006.1591, 1010.0340: "Based on observations …"), which today's XML keeps in `<title>` and the reading sends to the block: the reading needs the title as an owner of a labelled entry, and the comparator and writer with it, before anything is written; labelled contacts by `\altaffilmark` (9 papers; 0707.2093, 0804.2539, 0911.4695 to read against their PDFs).
 - Fixed: 82k — an API entry its call labels, placed by the names' marks, is ruling 1 (`ruling1:request`; 0707.2093's `Woods\altaffilmark{5,6}`, today's gives the last author); 82l — a prefixed mark label keeps its prefix on each piece (`altaffil:*`/`altaffil:**`, 0911.4695's swapped corresponding-author notes); census int110s: 22 unclassified (3.5 %); 82m — the ledger records the title and an entry only the title's marks request is the title's note (`api:title-note owner:title`; the comparator counts a note in the title as the document's); census int110u: 8 → (comparator 82n) 7 unclassified (1.1 %); 82o (a request of a separator is a mark, astro-ph0601584), 82p (emulateapj's title marks are the number given, 1111.4983), 82r (R12: an unmarked line under a run of names rows is every name's, 1511.01102), 82s (an address beside an institution keeps the institution, astro-ph0202139), comparator 82q (2003.01448, 1903.08299, 0910.4381) — census rerun on the 82s build next, then the seeded precision sample; design row (entry identity, owner kinds, group-level labels) in OPEN_ROWS; 82t (a footnote text only the title's mark shows is the title's note, 1111.4983), 82u (AASTeX 6.1's one-argument `\collaboration`, 1802.09023's lost author; KPE #1193), 82v (a `\correspondingauthor` naming several authors names each), 82w (every written family's observer guard checks the XML via the writer's outcome; the plan skips empty items; `{\,\!}^{…}` is a mark), 82x (an e-mail placed by position goes to the author it spells, FIDELITY_CHARTER §4 — 92 of 688 aas papers; today's and the reading alike). Census int111b: 2 unclassified (0.3 %: 1501.05343 collaboration placement — decided 2026-10-28 by the difficulty rule, the label stays at the block — and astro-ph0202139 FM-24 — in scope, a hand-written `1.` is the line's label); precision sample seed 110: 30/34 on int110w, the 4 wrong (multi-name correspondents) agree since 82v — gate met pending those two rulings
 - State: OPEN (rulings)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Frontmatter correctness scorer (2026-10-27)".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Frontmatter correctness scorer (2026-10-27)".
 
 ### dev giant-list census (2026-11-01) — the residual
 
@@ -926,7 +926,7 @@ do not block the E/F rerun.
 - Three scorer source-reading limits were fixed, each checked against its PDF (`score_tiers.py`; runs `fm_scorer/run_{dev20k,lt}_int126b_s5`): (1) an authblk key written twice holds both entries (`\affil[1,3*]{…}` then `\affil[1]{priyadarshi@…}`; 9 dev20k papers to 0 wrong: 2212.11454, 2006.03117, 2301.13111, 2010.16159, 2503.07893, …), guarded by test `test_2026_11_01_authblk_key_written_twice`; (2) after an e-mail label a spaced local-part list is one address group (`e-mail address: digiaco, paffuti@…`, hep-lat9906024), guarded by test `test_2026_11_01_labelled_local_part_list`; (3) a revtex `\thanks` contact naming its holder among others is a joint note, its addresses the note's (`Corresponding authors. a@x, b@x` under each, 2501.08373, 1407.5407, 1803.05275; one spelling only another creator still counts against its holder, 1209.2676), guarded by test `test_2026_11_01_thanks_contact_is_a_note`.
 - The rest of census127 §4 stays as scorer limits.
 - State: OPEN (the exit bar's judge)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Holdout10k v3 (2026-11-01; spent: any further read is a fres".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Holdout10k v3 (2026-11-01; spent: any further read is a fres".
 
 ### a marked author list merged by a name the split test does not know (97a) — the residual
 
@@ -941,7 +941,7 @@ do not block the E/F rerun.
 - Scorer limits: SL-mid (17 / 6) `find_marks` backs a `\textsuperscript` mark over its space so `$^1$A \textsuperscript{2}B` is one source affiliation (`score_tiers.py:~1300-1311`, :1742, :1751; 2303.05807) — FIXED 2026-11-01 (spaces are the mark's only inside its math; test `test_2026_11_01_sl_mid_*`): 4 dev papers right (2303.05807 3 → 0, 2308.12032 6 → 0, 2504.01503, 2505.22016), and two whose int125b output the old reading hid now score honestly wrong (2109.02066 lost `Institute of Computing Technology, Beijing` and entry 2; 2501.09538's Takamura no affiliation); dev20k 96.06 → 96.08 %, devh10k 93.05 → 93.03 %; SL-sym (12 / 3) symbol and parenthesised marks ignored (cond-mat0611096, 2601.21839, 2404.11930); SL-mail (9 / 2) an e-mail line inside `\affiliation` read as affiliation text; SL-legend (llncs legend folded into the institute).
 - Per-paper data: job tmp `devaff/`
 - State: open (worklist; 97c takes W1, L1, SV1)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "dev20k `aff_missing` census (int125b, 2026-11-01; 451 creato".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "dev20k `aff_missing` census (int125b, 2026-11-01; 451 creato".
 
 ### dev20k `name:unmatched` census (int125b, 2026-11-01; 284 creators / 103 papers: 198 / 44 ours, 86 / 59 scorer limits)
 
@@ -952,7 +952,7 @@ do not block the E/F rerun.
 - Side finding: renamed ICML copies print their layout check ("marginparsep has been altered…") because article leaves `\marginparsep`/`\marginparpush`/`\topmargin` at 0 (`latex_constructs/sect05.rs:896-910` = Perl; TeX sets them in size10.clo:95-168; 2502.01411, 1903.03536, 2110.08350).
 - Per-paper classes: job tmp `devnames/classes.tsv`
 - State: open (worklist)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "dev20k `name:unmatched` census (int125b, 2026-11-01; 284 cre".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "dev20k `name:unmatched` census (int125b, 2026-11-01; 284 cre".
 
 ### dev lost-words census (int126a-pre, 2026-11-01; dev20k + devh10k, 171 flagged papers: 101 real, 69 scorer artefacts, 1 deferred)
 
@@ -964,7 +964,7 @@ do not block the E/F rerun.
 - Artefacts left (26): glued/split kept text 8, accent splits 6, aastex7 hidden e-mails 3, label words 2, one-offs 7.
 - Per-paper data: job tmp `devlost/verdicts.tsv` **Abstract-piece artefacts fixed (census127, 2026-11-01):** an abstract heading (`\subsubsection{Abstract}`, 1205.6867), `\import{dir}{file}` (2507.10897), acronym/glossary commands printing their expansion (`\acp{LLM}`, 2403.15886), display math `\[…\]` (2607.23302), an unknown command's separate arguments (aa `\ion{N}{ii}` → "N ii", 1606.01066); test `test_2026_11_01_abstract_piece_artefacts`. dev20k on int126b: lost-words papers 100 → 81, readability violations 323 → 274, D3 unchanged.
 - State: open (98b; A needs the net)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "dev lost-words census (int126a-pre, 2026-11-01; dev20k + dev".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "dev lost-words census (int126a-pre, 2026-11-01; dev20k + dev".
 
 ### the unclaimed-text net (int127a; FIDELITY_CHARTER §4) — the residual
 
@@ -982,7 +982,7 @@ do not block the E/F rerun.
 - Open (b): a name showing a legend's symbol in its own superscript keeps it beside the note's mark (2602.03759; legend notes 2609.15125, 2604.08878, 2607.12158); Kind: an e-mail line inside an affiliation (2607.25849); (c) R8 order: a run-in `\email` precedes the affiliations (2412.06969, 2503.13373); (d) a displaced call's leading font switch reaches its first entry only; a class's own label printed outside the store stays in the body; sifrev's `\split@rg` numbering (1704.03333, base too); a `$^10$` typo labels no line (2608.19687).
 - Open (100a): authblk's `\affil[$\dagger$]{Deceased}` an affiliation of its carrier; a displaced store with one line in doubt leaves every line the class's text (`displaced_in_doubt`); hep-ex0106079's notes.
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "99b: a raw class's title-page affiliation or address (OD #95".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "99b: a raw class's title-page affiliation or address (OD #95".
 
 ### 100a: hand-printed letter notes and unmarked note lines after a marked list (99a's Cut)
 
@@ -992,7 +992,7 @@ do not block the E/F rerun.
 - RED repros `displaced_hand_lettered_notes_after_the_marked_entries_go_to_their_requesters`, `displaced_unmarked_trailing_note_line_is_the_blocks`.
 - **rev100a2 residuals (SHIP; synthetic):** a displaced store with one unrequested symbol line (`$^\bigstar$Deceased`) keeps the whole store in the body, its requested lines losing their carriers (RED probe `rev100a/s/dsu08`; fix = per-entry doubt); the "opens with Deceased" exception reads `$^\dagger$Deceased Estates Unit, Univ C` as a note (probe `rev100a2/v/v5`; decide on the first clause, "Unit" an institution word); a requested ♮/♭ "Deceased" line is an affiliation while ★ is a note (`is_footnote_symbol_operand` narrower than `prints_a_mark`); OD #955 (f): a math `$^*$` gives `mark="*"` while the sup prints ∗, and the U+2217-only maps in `post.rs:836` and `lexer.rs:387` are unnamed there.
 - State: OPEN (RED)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "100a: hand-printed letter notes and unmarked note lines afte".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "100a: hand-printed letter notes and unmarked note lines afte".
 
 ### 100c: two Link fixes the observer read right and its writer declined (census127 clusters 6 and 3; prep `agent_reports/2026-11-02_prep99d_link.md`)
 
@@ -1022,7 +1022,7 @@ do not block the E/F rerun.
 - (3C) 2603.24245's legend welded over `\quad` into `\small{{{Code: \url{}}}}` (a template placeholder) — the Cut residuals.
 - **rev100c2 residuals (SHIP; synthetic):** B1's person-row decline counts a `\quad` gap as a row edge, so `\quad`-separated place names ("San Diego", "New York", "Los Alamos") decline a reading round 1 had right (RED probes `rev100c2/probes/b6.tex`, `b3`; only line and cell edges should count); unrequested-note pubnotes are appended after the block's calls, out of print order (probe `m7`); OD #957 should say 2312.10807's `$^{*}$` is printed by the names via `\IEEEauthorrefmark`.
 - State: open (3B, cells, exposed, Kind, S2, q10, S3, 6', 3C; held FIXED 101b)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "100c: two Link fixes the observer read right and its writer ".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "100c: two Link fixes the observer read right and its writer ".
 
 ### Z14's REDs and follow-ups (revZ14r2, SHIP)
 
@@ -1031,7 +1031,7 @@ do not block the E/F rerun.
 - Fix: take the label word with the addresses, as `address_runs` does for a names row; repro `sectioning-frontmatter/z14_affiliation_label_word_left_red.tex`.
 - (2) **The narrowed heading row needs a person cue on every piece** (`labels.rs` `later_line_is_names`): `Cat Cole$^1$\\ Authors: Ann Able and Bob Baker\\ $^1$Univ A` and `Editor: A. Able, Bob Baker` read one creator with the row as an affiliation, as int143b; repro `z14_heading_row_plain_names_red.tex`.
 - (3) `given_back` in `ab_audit fmshadow` carries no paper id per row: add one, so that the papers it fires on (3 in popZ01, 6 each on dev3 and devh10k) can be read
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Z14's REDs and follow-ups (revZ14r2, SHIP)".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Z14's REDs and follow-ups (revZ14r2, SHIP)".
 
 ### Z14r3's REDs (revZ14r3, SHIP; the reading's repairs had their two fix rounds, so these go to the next reading batch)
 
@@ -1041,7 +1041,7 @@ do not block the E/F rerun.
 - (2) **Addresses glued by a dash or a comma** (earlier rounds; int143b the same): `Ann Able---ann@a.org` gives name `Ann`, e-mail `Able—ann@a.org` (`labels.rs` `plain_addresses` ~:1125), and the guard `an_address_glued_to_a_dash_leaves_the_name` pins the e-mail text with its dashes; `Ann Able,ann@a.org` makes a second creator `ann@a.org`; repros `plain_address_glued_by_a_dash_red.tex`, `plain_address_glued_by_a_comma_red.tex`.
 - (3) **Lines with the same text under two marks are one entry** (entries keyed by text; the any-order join can't use one twice, the take-out declines): Ann's spelled address stays in Cat Cole's affiliation; `an_only_carriers_address_beside_others_is_not_written` pins int143b's fallback as green; repro `z14r3_same_line_text_under_two_marks_red.tex`, with the OPEN `entry_address_owners` row (2403.12766).
 - Report `agent_reports/2026-11-07_revZ14r3_report.md`
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Z14r3's REDs (revZ14r3, SHIP; the reading's repairs had thei".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Z14r3's REDs (revZ14r3, SHIP; the reading's repairs had thei".
 
 ### Z14: the reading's repairs before the flip (int144b) — the residual
 
@@ -1069,7 +1069,7 @@ do not block the E/F rerun.
 - **Z3: spans from the digested list, the rehearsal's isolation (int143b; OD #978) — the residual** (landed; the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md)): RED `writer_second_digestion_says_an_error_twice_red`; `#[ignore]`d REDs of `perfect_kernel_batchz3`: `affiliation_cut_environments_by_spelling_red`, `affiliation_cut_group_siblings_stay_uncut_red`, `rehearsal_no_lua_loses_a_cut_red`.
 - Open: the rehearsal has no read budget yet (`rehearse`, `emitter::plan::cut` to take `gullet::read_budget` when R1 lands); a file only a rehearsal reads stays in `RAW_READ_PATHS`; package-level thread-locals not read one by one; the marked-lines path keeps a printed mark on `$\rm ^{1}$` lines (`aastex_affil_font_switched_marks_cut_with_their_lines`, Z6's); an entry cut at a mark a plain group's switch opens loses it (`{\it $^3$Univ Z}`, base the same: `block_line_mark_in_its_wrapper_whatever_prints_it`).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Z3: spans from the digested list, the rehearsal's isolation ".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Z3: spans from the digested list, the rehearsal's isolation ".
 
 ### Z2: event gaps 3, 4, 5, 7, 10 (int143b) — the residual
 
@@ -1092,7 +1092,7 @@ do not block the E/F rerun.
 - Self-check 0 mismatches in 971,116 calls over the 346 manuals that reach l3fp (94.3 % native), which also agree base, native and raw on E, F, W and XML; pdflatex oracle 36 families, 0 mismatches; A/B 2,495 papers 0 changed.
 - OD #977, `performance/PERFORMANCE.md` 2026-11-06 | landed on the branch | speed left: `\exp_args:*`, `\arabic`, `\box_wd:N`, `\pgfkeysvalueof`, conditionals, `\numexpr` in an expression; native only over expl3 2025-11-06 and 2026-01-19, other years keep the macros; a document's redefinition of the kernel's macros l3fp uses (`\exp_after:wN`) or of primitives is not watched
 - State: [`performance/PERFORMANCE.md`](../performance/PERFORMANCE.md)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "A native answer for l3fp's doors, `pk/P2` (user 2026-11-06, ".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "A native answer for l3fp's doors, `pk/P2` (user 2026-11-06, ".
 
 ### l3kernel/source3: the XML varies with the streaming yield (found by P2's comparison, not caused by it)
 
@@ -1120,7 +1120,7 @@ do not block the E/F rerun.
 - A failed reading context closes its mouths by depth, the mouth in reading counted (`reading_from_mouth`, `mouth_depth`; same-named mouths left the document's text to the next close).
 - | DONE (R1, R1r2) | The rehearsal and the stores' sentinel runs have no budget yet (plan, "Before Z4"); SASnRdisplay's `Warning:unexpected:\end{document}`, a `\ifx` left open since between #149 and P1, not root-caused
 - State: [`performance/PERFORMANCE.md`](../performance/PERFORMANCE.md)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "R1: the title-page check's cost, the last regression of #151".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "R1: the title-page check's cost, the last regression of #151".
 
 ### A second `\author` in article keeps the first call's contact
 
@@ -1139,7 +1139,7 @@ do not block the E/F rerun.
 - Guards `perfect_kernel_batchdel3` (8), `perfect_kernel_batchcl2::a_list_setter_in_an_author_block_is_read_by_the_emitter` (renamed, re-expected: no stay-out Warning).
 - **DEL4 (2026-11-09): done** — `write_observed_frontmatter`, `read_back_frontmatter` and their closure, `Policy::written` and the census (`LATEXML_FM_SHADOW`, `set_fm_shadow_override`, `<dest>.fmshadow.json`, `ab_audit fmshadow`) deleted (OD #837 "Deleted (DEL4)"): skipping the writer changed 0 of the 1,434 stage2 ids and 0 of 900 E0 papers, nothing ported; −6.4k engine lines, −4.8k `ab_audit`; cost −0.02…−0.34 % (cost.sh's four arXiv documents).
 - Kept: the ledger's JSON `fm_reading_json` as the guards' view of the reading (≈15 guard modules read it); the core setter watch (`origin::watch_frontmatter_setter_calls`, `state::open_frontmatter_setter`) now has no caller turning it on (follow-up: delete in latexml_core)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Z19 list setters (DEL3, OD #982)".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Z19 list setters (DEL3, OD #982)".
 
 ### Bundle int153a — THE FLIP: `LATEXML_FM_EMIT=2` (the single frontmatter engine) is the default; `=0` keeps the old driver until the deletion pass (FLIP1; user 2026-11-09 …
 
@@ -1190,7 +1190,7 @@ do not block the E/F rerun.
 - RESIDUALs: names welded into an entry by an upstream misparse (2506.06908's `Jiawei Yan, …` under Chenzhi Xu; 2504.14657, jmlr's `\AND`: `bellabruin5711@` the block's); a one-address line with an ORCID glued after it is declined whole (2601.09524, 2308.02269 `inenaga@`, `nakashima.yuto.003@`); (S2) the own-call step runs in today's engine only (jmlr's `\AND` 1504.01446, 2509.23923); (N1) addresses left to the block whose author is identifiable (1912.12193 `xi@`, astro-ph9809079 ö read as oe, 2308.02269's `arim@`/`koba@`, 1410.0127's `bcz@`); 2501.13021's `author1@` after the misparsed creator's own two; 1611.10059 (elsarticle) loses typewriter on the address the `\ead` copy merges with.
 - Also: the HARD shape's fail-safe witness 2401.08092 (the writer declines a re-part needing a block creator); (S2) compare 2002.00057; not read (ruled out): surname-first initials (2512.18755).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "100b: one Kind for the addresses inside affiliation entries,".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "100b: one Kind for the addresses inside affiliation entries,".
 
 ### Cortex sandbox reruns on `3e4819bfee` (user 2026-11-02; runs 368 sandbox-arxiv-2605, 369 sandbox-arxiv-2606)
 
@@ -1199,7 +1199,7 @@ do not block the E/F rerun.
 - Lists: job tmp `rerun2605/`, `rerun2606/` `clusters.txt`.
 - The fleet was found dead (its `WORKER_BIN` deleted, harness unable to spawn workers) and was rebuilt (`build_fleet.sh` at `3e4819bfee`), its distro-tree dumps regenerated (backup `fleet_dumps_backup_2026-11-02`), and restarted.
 - State: OPEN (triage)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Cortex sandbox reruns on `3e4819bfee` (user 2026-11-02; runs".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Cortex sandbox reruns on `3e4819bfee` (user 2026-11-02; runs".
 
 ### Author blocks routed through user macros — example collection (user 2026-11-02: no approach decided; collect examples, data and tests first)
 
@@ -1239,7 +1239,7 @@ do not block the E/F rerun.
 - Minimal input: llncs `\author{XYZ Collaboration: Ann Able\inst{1} \and Bob Baker\inst{2} \and Cat Cole\inst{1}}` — RED repro class-bindings/`llncs_collaboration_heading_covers_every_name` (no guard).
 - Options: carry a heading parted by its colon from the first name to every later `\and` piece of the same call (in scope of the split, a brief patch), or leave the first name's only.
 - State: OPEN (review rev103b S3, record only)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "103b residual: a collaboration heading over an `\and` list c".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "103b residual: a collaboration heading over an `\and` list c".
 
 ### 103c: a legend line read as an affiliation is its carriers' note (census129 cluster 6 / mechanism 4, Bundle 1c; OD #961)
 
@@ -1256,7 +1256,7 @@ do not block the E/F rerun.
 - Pre-existing, pinned as base: in the svjour guard's repro (`legend_kind_svjour_institute_sequence_stays`) the `\institute{… \and C. Cole (\email{…}) \at Org Inc.}` name "C. Cole" appears nowhere in the XML (pdftotext prints it) — a content loss of svjour's `\at` institute names, base too.
 - Open for the user: IEEE legend notes take the number the names show ("1") where IEEEtran prints ∗/§/‡ (2205.00125, 2410.12184) — the binding's `\IEEEauthorrefmark` form, not this step.
 - State: open
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "103c: a legend line read as an affiliation is its carriers' ".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "103c: a legend line read as an affiliation is its carriers' ".
 
 ### 104b: a raw class's `\and` institute store (OD #791, #955) — the residual
 
@@ -1264,7 +1264,7 @@ do not block the E/F rerun.
 - RED `raw_class_numbered_institutes_with_legend_lines` (2207.09249).
 - Explicit-mark stores, each its own shape, not `\and` numbering: 1105.3133 appolb, 2212.04765 ETHpaper, 2507.18198 tlp, 2605.21951 lumia, 2410.14846 and 2609.04385 openjournal, 2205.03755 bioinfo, 2209.11470 anstrans, 2512.21849 antgroup, 2608.19687 pas, bound 2602.03671 llncs and 2606.24132 aa; known and left 2609.39929 (alta), 2604.26839 (xiaomiev).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "104b: a raw class's `\and` institute store (OD #791, #955) —".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "104b: a raw class's `\and` institute store (OD #791, #955) —".
 
 ### int131fix: the Bundle 1 A/B's regressions — the residual
 
@@ -1279,7 +1279,7 @@ do not block the E/F rerun.
 - Witnesses 2410.07647/2105.02599 (fixed by the clear); 2502.10606 (a speculative title-page run's discarded `Stomach:Recursion`, 106s at int135b) fixed by `stomach::StomachMark`, which the speculative runs now take and put back (row 106s) — a binding's own `catch` is still uncovered.
 - Pre-existing, from review rev135c (synthetic): an `Err` inside `invoke_conditional` (a recursion while reading a test) leaks the localized `if_frames` entry (local_assignments.rs:68), so `open_conditional_count() == 0` (stomach.rs fragment yields under memory pressure) never holds again — `StomachMark` could truncate it too; speculative runs advance `if_count` toward `iflimit`; a false test opened in one rehearsed block and closed in the next takes the wrong branch (base the same).
 - State: OPEN
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Token-stack RAII (int131fix follow-up)".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Token-stack RAII (int131fix follow-up)".
 
 ### `\string` of the null control sequence (int131fix follow-up)
 
@@ -1302,7 +1302,7 @@ do not block the E/F rerun.
 - Also open, readings before 104c (recorded, no guard): a tabular of marked entries then `\\ Joint Lab` gives "Joint Lab" to the last entry only; `$^1$ Univ A, Lab for ${}^{3}$He Physics` parted at the isotope; `$3$\textsuperscript{rd} floor` loses "rd".
 - Outside the Cut's reading: llncs's `\mailsa` line glued to the last entry (1604.03221), a second author block (2006.15775), ieeeconf's `\:\:$^{2}$` (2110.11491), authblk's `\affil[\hspace{-1ex}]` label (2502.06575), a legend on an entry (2609.38081).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "104c: marked runs the Cut left whole (OD #964) — the residua".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "104c: marked runs the Cut left whole (OD #964) — the residua".
 
 ### 104d: link lists — the residual
 
@@ -1310,7 +1310,7 @@ do not block the E/F rerun.
 - Also L3's 2607.12952 (`\email` under Gurwell's call, unprinted), 2609.27403 (`\email[show]{\parbox…}` swallowing the next lines); L5's 2311.12521; P1's RED `aastex631_correspondingauthor_after_authors_email_is_the_named_authors`.
 - Also: `\correspondingauthor{Chengchao Yuan}` over `\author{Chengchao Yuan (袁成超)}` stays an orphan correspondent (the name's parenthetical, 2306.15659, 2511.16056).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "104d: link lists — the residual".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "104d: link lists — the residual".
 
 ### 105a: the net's lines below its floor (OD #953) — the residual
 
@@ -1318,7 +1318,7 @@ do not block the E/F rerun.
 - REDs `net_class_default_placeholder_is_counted_red`, `net_non_english_month_line_red`; revtex's `\@author@finish` under the revtex binding prints `\alt@affil@toks` (aeb_emulateapj 1410.3797, openjournal 2604.08196).
 - Each of (b)-(h) needs its own mechanism or binding: (b) a store whose name is computed or passed (cup-journal 2508.08363, 2607.18758, 2412.08333, 2503.22083, 2510.05654, 2510.18398; ptapap 1912.07241, 1612.02970; compositionality 1904.09322, 2603.03774; JUSTC 2409.17603; opendatalab 2601.09733, 2601.21821, 2605.10341); (d) a candidate the sentinel run does not print (2205.05046, 2412.08184, 2205.01391); (e) memsait's handed `\@opening` (astro-ph0102098, astro-ph9909366, astro-ph0005436); (f) printed only from the `.aux` (1206.2980, 2310.08896); (g) a K11 or kernel field losing part of its value (2304.08300, 2312.02510, 1909.06690, cond-mat9610136, cond-mat9812194, cond-mat9906132, 2004.13105, 2408.12585, 2410.15356); (h) outside raw-class stores (`\offprints{…\email{…}}` 1511.07638, 0805.4214, 1311.4988; econsocart 2203.00070; icrc29 astro-ph0507347; 2308.16621; single words of kept fields 1709.00722, 2409.01067, 2205.11450, 1908.07849, astro-ph9912176); a Chinese line whose ideographs all appear in the title or abstract goes with no Warning (rev105a2 nit, suspected).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "105a: the net's lines below its floor (OD #953) — the residu".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "105a: the net's lines below its floor (OD #953) — the residu".
 
 ### 106b: IEEEtran's `\IEEEauthorrefmark{n}`, URL and grade lines — the residual
 
@@ -1326,7 +1326,7 @@ do not block the E/F rerun.
 - Open: a sentence holding a URL (2310.15190).
 - Also open (one-line inputs): amsart `\author{Name\\ \today}` dateline as an affiliation (1910.12289); a suit-led legend line read into the last name (2402.14804); a publication note after an affiliation's break (2406.05205); llncs mixed URL lines (1608.02693); the observer writer's re-part shows an unanswered refmark's number (`ieee_affil_block_after_a_marked_block_of_two`, synthetic, pinned in 94a); 2409.20550's `\thanks{\IEEEauthorrefmark{1} Corresponding author.}` stays a document note; two calls of one author printing one text the class prints once (REVTeX's two `\email{x}`, 2402.07705; two `\thanks{…}`, 2302.04271) — a class merge no binding declares; aastex `\correspondingauthor{Name\altaffiliation{1}}` beside `\author{Name\altaffiliation{1}}` (2307.05833).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "106b: IEEEtran's `\IEEEauthorrefmark{n}`, URL and grade line".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "106b: IEEEtran's `\IEEEauthorrefmark{n}`, URL and grade line".
 
 ### 106a: an address line kept as affiliation text (OD #966) — the residual
 
@@ -1334,7 +1334,7 @@ do not block the E/F rerun.
 - REDs: `addr_line_authblk_two_carriers_line_marks_red` (the older route), `addr_line_authblk_thanks_requested_mark_red` (a `\thanks`-requested mark unread by `author_mark_keys`); left: an address inside a legend note (2312.10429, 2501.04244).
 - Also open: a phrase-led `\altaffiliation{Correspondence should be sent to a, b and c.}` (1209.3452); tagged runs `a@x (Matvey)` (2512.10975); `{a@mails., b@}tsinghua.edu.cn` (2602.07769); an affiliation the observer's writer makes after the flush (mn2e, 2008.08137); a template `{name.surname}@ 1polytechnique.edu` (2009.04283); e-mail contacts holding lists or names (2004.13933, 2005.04027, 2510.11067, 1512.01552, 2404.09958); class contacts other than affiliations (elsarticle 2310.13481, a `\thanks` 2509.07695, amsart `\address` glued to `\email` 2301.00107); unspelled addresses to the block (2608.22602's `chris241`, `chand158`); recorded: 1310.7913's unmarked `Corresponding Authors: a, b` names the e-mails rather than becoming a note (#961 needs a printed mark).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "106a: an address line kept as affiliation text (OD #966) — t".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "106a: an address line kept as affiliation text (OD #966) — t".
 
 ### 106s: the title-page check (OD #953) — the residual
 
@@ -1362,7 +1362,7 @@ do not block the E/F rerun.
 - That RED: `check_binding_selector_untaken_branch_unwanted` (fancyhdr's `\iffloatpage`).
 - Also: the kernel's author splitter parts a name at a comma inside an optional argument's brackets (`\author{Ann Able\ead[label=e1,mark]{a@x}}`, 2101.10506, repro `check_binding_plumbing_is_no_dropped_text`), a content fix; dmtcs `\publicationdata`'s dates counted, the content fix open; silent: a raw file's macro inside a command's argument (europhys `\Pacs` cond-mat9610136, cond-mat9812194, cond-mat9906132; cpcHACK 0706.0578), non-UTF-8 sources (0906.3407).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "106t: the title-page check's second source (OD #953) — the r".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "106t: the title-page check's second source (OD #953) — the r".
 
 ### 107a: an address spells its author by transliteration — the residual
 
@@ -1385,7 +1385,7 @@ do not block the E/F rerun.
 - Left beside a fixed defect: 2602.07392 (aastex631's second affiliation on the last author only), 2503.04130 (`aff_foreign`).
 - Also open (one line each): a template line `Emails: name.surname@polito.it, …` (2401.15236); initials tags `a@x (X.X.); b@y (M.Y.)` (2002.08904); a sentence `Correspondence … should be addressed to F. B. at x@y.` (2208.12334); authblk `\affil[ ]{Email}` (2009.11285); PoS speaker e-mail on the mark-1 entry (1412.5940); a marked `$^\ast$~Correspondence: a@x` line outside a wrapper stays a legend note; an institution after "work done during …" keeps 103c's reading; a parenthesized list `(a, b)@x` stays unread; a ✉ line the writer parts leaves "🖂 Corresponding author" in the affiliation; authblk `…USA; a@x. b@y` stays whole; a correspondence note from the author block's route carries no mark; `In memory of …, and supported by …` stays one dedication.
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "107c: an address, legend or URL line kinded affiliation (OD ".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "107c: an address, legend or URL line kinded affiliation (OD ".
 
 ### 107d: the title-page check where no `\maketitle` of ours runs (OD #953) — the residual
 
@@ -1399,7 +1399,7 @@ do not block the E/F rerun.
 - Also `cut_run_legend_after_wrapped_entry_ending_in_a_group_red`, `cut_run_nested_wrapper_per_entry_red`.
 - Also open: the kernel alone welds a legend line into the entry above it after any run (base the same); plain isotope forms `$^{1}$Lab for $^{3}$He Studies` still cut (base the same); an entry led by two marks labelled by its first only (2411.03010); the unmarked last name revtex prints the head's number on holds nothing (2109.01501's Oshiyama, 1903.07834's Matos-Abiague); the kernel cut shows no mark and repeats no lead declaration (2603.19086, 2609.20163); consecutive marked/unmarked `\affiliation` calls (gr-qc0611116); PoS `\footnotesize` group in `\author` (1509.01480); 2309.12239's two unspelled addresses on the last name (ADDR-b); pre-existing: a stray space before a comma after a wrapper, a legend line directly under the names becomes extra creators.
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "107e: a marked run cut whatever parts it (OD #954) — the res".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "107e: a marked run cut whatever parts it (OD #954) — the res".
 
 ### 107f: e-mail ownership (OD #970, #972, #966) — the residual
 
@@ -1407,7 +1407,7 @@ do not block the E/F rerun.
 - RED `addr_line_sole_author_symbol_series_orphan_is_blocks_red` (`mark_series`' symbol branch does not fire).
 - Also open: a note holding a list for its carriers is not parted; initials tags `a@x (X.X.)` (2002.08904); a list in reverse author order stays on the block (2508.07950's `wzy218@`, `jhma@`); a local part with no separator spells the surname it ends with (`rickyang@`); 2009.10916's two institute e-mails stay both Bo Li's under the supplement; the tie elimination would not part 2501.11284's `yyzhang@` (three Zhangs).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "107f: e-mail ownership (OD #970, #972, #966) — the residual".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "107f: e-mail ownership (OD #970, #972, #966) — the residual".
 
 ### 107g: the Bundle 5 fix round (OD #970, #966, #897) — the residual
 
@@ -1415,7 +1415,7 @@ do not block the E/F rerun.
 - Also `author_tie_space_inside_three_word_name_red`, `email_own_call_in_an_entry_tie_moves_red`, `addr_line_glued_word_before_a_font_observer_route_red`.
 - Open: 2010.09850's two institutes in one `\parbox` are one affiliation as on base (the shape of 2509.02924, no rule tells them apart); 2604.19098's `\parbox` of address lines stays in the affiliation as on base (the option: `@` as a third reason a wrapper is transparent); RED `email_own_call_last_author_every_author_addressed_stays_red` and its twin `email_own_call_last_author_every_author_addressed_stays_twin_red` (`last` too broad; 0 rows in 3 dev runs); not blocking: 1103.0889 `Faranda, Davide` mis-split, `v.lucarini@` on "Davide"; out of scope, unchanged: 1406.2912's legend tail on the Hanoi affiliation, 0807.2167's `$^1$NIKHEF` welded into a name, 2601.12698's dropped mark.
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "107g: the Bundle 5 fix round (OD #970, #966, #897) — the res".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "107g: the Bundle 5 fix round (OD #970, #966, #897) — the res".
 
 ### 108a: authors merged under authblk (2610.06709; OD #52(h)) — the residual
 
@@ -1423,7 +1423,7 @@ do not block the E/F rerun.
 - RED `authblk_link_macro_under_names_stays_merged_uncounted_red` (2601.07891); the trade, recorded: "as many left, in order" requires the order to hold, so out-of-order lists go to the block (2606.04646, 2605.26032, 2102.08716); int140a's open: 2511.07187 (`Name -- \url{…}\\ …`: 3 of 4 authors read as affiliation lines, no self-check fires).
 - Also int140a's open: cpc-hepnp's `1;1)` could part into its affiliation and its note instead of counting a lost mark (#431); an e-mail keeps a glued mark in its text, `cak29@mail.aub.edu *` (2609.25833), `*archnalakhani@` (1201.5255).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "108a: authors merged under authblk (2610.06709; OD #52(h)) —".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "108a: authors merged under authblk (2610.06709; OD #52(h)) —".
 
 ### 108b: the silent lost words counted (OD #953) — the residual
 
@@ -1457,7 +1457,7 @@ do not block the E/F rerun.
 
 - **97a review should-fixes (rev97a, SHIP, 2026-10-31)** — (S1, synthetic; FIXED 97b, OD #944: a piece that is an address and no name is no marked name, GREEN `perfect_kernel_batch97b::marked_address_piece_is_no_person`) a marked e-mail piece is made a person: `names_split.rs` `marked_names` counts any piece `reads_as_affiliation` declines as a marked name, and `frontmatter/classify/marks.rs:8-11` declines every text holding `@`, so `\author{A.~Able$^{1}$, B.~in der Baker$^{2}$, b.baker@two.edu$^{*}$}` (revtex4-2) gives three creators, the third `<personname>b.baker@two.edu<sup>*</sup></personname>` (95b r3: one creator); the same for a marked URL, ORCID or place name the shape test reads as a name; fix: a piece the e-mail reader would take is no name, the line then a reported merge; no census paper's changed creators hold an `@` (RED `author_marked_email_piece_is_no_person`); (N1) the merge message "One author holds N names" is a lower bound read as exact (`name_text.rs:549-554` `names.max(_mergednames)`: 2508.04092 says 2 of 4, 1012.4815 3 of 4, 1212.4143 6 of 7) — word it "at least N" or take the larger of the marked and comma-piece counts; (P2, older) 2312.16289's e-mail contact carries raw TeX in its label, `name="${}^{\ast}$: Corresponding author: "` (int123a the same)
 - State: open
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "97a review should-fixes (rev97a, SHIP, 2026-10-31)".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "97a review should-fixes (rev97a, SHIP, 2026-10-31)".
 
 ### 97b: a take-out removes what it read and nothing else TeX prints
 
@@ -1466,13 +1466,13 @@ do not block the E/F rerun.
 - Guards `perfect_kernel_batch97b` (five).
 - Residuals, each a one-line input: (a) a shape-split names line keeps the binding's `before` — `\documentclass{revtex4}…\author{Ann Able, Bob Baker and Cat Cole}` before="  " (int123a the same; "and" printed nowhere); (b) two prints of one address with two labels keep one — `\institute{Univ X \\ email: x@y.org}\mail{x@y.org}` under a printing aa.cls gives one contact "Correspondence to ", the institute's "email:" nowhere (95c's first-print order); (c) 2508.08560: a raw package's `\affiliation` store whose ★⧫♠♣ e-mail legend follows two `\vspace{0.3cm} $ $ \\` lines is one affiliation of the last name, its marks stripped — the store-affiliation line reading, not a take-out (RED `store_affiliation_email_legend_after_spacing_lines`); (e) a label part the deposit takes out of the first place its tokens stand, not the branch that runs: jpsj2.cls:789-818 prints `KEYWORDS:\hskip.5em\parbox[t]{…}{\@kword}` in five option branches, so the printed "KEYWORDS:" stays a body paragraph beside the keywords' name (int125b the same; 416 papers of the bundle population, 0704.0082); (d) the 95d r3 RED rows `raw_class_date_branch_with_trailing_text_keeps_it`, `raw_class_label_with_a_comma_stays_whole` stay RED (other mechanisms: the whole-test removal, the clause split)
 - State: open
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "97b: a take-out removes what it read and nothing else TeX pr".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "97b: a take-out removes what it read and nothing else TeX pr".
 
 ### 97b review should-fixes (rev97b, SHIP, 2026-11-01)
 
 - **97b review should-fixes (rev97b, SHIP, 2026-11-01)** — (S1, synthetic) the store-label reader knows which arguments print only for the commands its table names (`frontmatter_stores.rs` `argument_of`, `PRINTED_ARGUMENTS`), so a printed label is still lost through a raw file's own wrapper (`\newcommand{\mymailto}[1]{\href{mailto:#1}{#1}}`, `Correspondence: \mymailto{\@corremail}`), `\hyperlink{corr}{\@corremail}` or `{\color{black}\@corremail}` (int125b the same); parameter types cannot decide it (`\url` and `\href`'s target both Semiverbatim); fix: read a raw-file macro with parameters through its body, `\hyperlink`'s 2nd and `\hyperref[…]`'s argument print, a `\color` inside the store's group is layout (RED `raw_package_note_label_before_a_wrapper_macro_names_it`); (S2, synthetic) rev97a S1's siblings: a marked address piece led by a label word (`E-mail: b.baker@two.edu$^{*}$`, 1504.06050's line shape) or a marked URL (`www.two.edu/~baker$^{*}$`) still reads as a marked name (`names_split.rs:173-179` `only_addresses`; int125b the same; RED `author_marked_labelled_address_piece_is_no_person`); fix: skip a leading label word ending in `:`, count URL-shaped words as addresses; (N2) the `in_unprinted_argument` doc comment still claims a `\write`'s text, but `argument_of` looks only at the token before the group (`\write\@auxout{…}`, `\marks3{…}` never match) — OD #944 corrected, the comment waits on the next writer in that file; (N3) the guard name `aa_mail_storing_copy_has_no_label` asserts the kernel default `name="Email: "` on an address pdflatex prints nowhere; (N4) `argument_of` skips one `[…]` only (`\parbox[t][3cm][s]{w}{\@x}`); (P1, older) HTML shows a note's role name before its text (`<span class="ltx_note_type">email: </span>`, LaTeXML-meta-xhtml.xsl:77-83, bold in CSS): 2506.10896 renders "email: Correspondence: …" — a role name the class never prints (FIDELITY_CHARTER §4); (P2, older) printed words around a store still go with it without a Warning ("Write to the author", a trailing "(preferred)", a leading "Mail"; the conservation rule of brief 97b part B); (P3, older) a given-back `\mail` address goes to the last creator, not the one it spells (1005.3784 Woodcraft; astro-ph0107243 `faraggiana@`; int123a the same); (P4, older) 1504.06050's per-address marks a/a/b collapse to one `a,b` on a nameless creator (appolb, no TL oracle)
 - State: open
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "97b review should-fixes (rev97b, SHIP, 2026-11-01)".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "97b review should-fixes (rev97b, SHIP, 2026-11-01)".
 
 ### 97c: an affiliation the reading already has reaches its author
 
@@ -1481,7 +1481,7 @@ do not block the E/F rerun.
 - Guards `perfect_kernel_batch97c` (five); changed `perfect_kernel_batchfms2a2r8::a_text_mark_glyph_is_no_footnote_symbol` (written now, XML pinned), `r8_shapes_leave_the_xml_unchanged`.
 - Residuals, each a one-line input: (a) two group-wrapped entry lines do not cut — `\author{Ann Able$^{1}$ \quad Bob Baker$^{2}$ \quad Cy Cole$^{3}$ \\ \textnormal{$^{1}$Univ A \quad $^{2}$Univ B} \\ \textnormal{$^{3}$Univ C}}` gives Ann "Univ A 2Univ B" (2609.38081; 97b the same); (b) llncs legend line first — `\institute{\textsuperscript{*}Equal contribution \\ Univ A, Town}` continues the legend, Ann "Equal contributionUniv A, Town", Bob none; (c) svproc/svjour sole institute with an `\email` — `\author{Ann Able \and Bob Baker}\institute{Univ A, Town A\\ \email{ann@x.org}}` the block's, address included (1705.10638, 2010.10850, 2207.12084, 2307.06258); under numbered institutes hand-typed `${}^{1}$` marks answer no piece today (2608.25509: affiliations the block's, three of five addresses off their authors; the reading is right, sv_support is no written family); (d) "†Project lead" read as an affiliation of its mark's names (2609.18514, 2609.19719: `classify_thanks` knows no project role) — FIXED 103c (OD #961, row 103c); (e) the scorer folds an llncs legend into the institute (SL-legend): 2603.18089, 2608.22772, 2207.13038 score `aff_unexplained` though the XML matches pdflatex  Review rev97cd (NO-SHIP on 97c alone): C1 (svproc addresses on every author of their institute) and C2 (2608.25509) are fixed by 97e's sv_support writer — on 97c + 97e none of the seven C1 papers shares an address, each gains its affiliations, and 2608.25509 holds every affiliation and the two spelled addresses on their authors, its three initials-only addresses (`ngr@`, `ygt@`, `frt@`) at the block (base: by position; initials as evidence is the refactor's placement order) — so SV1 lands only with 97e (OD #945 amended); C3 synthetic, RED `author_digit_mark_glued_after_an_entry_opens_the_next` (the in-word digit glue takes a requested label); C4 `_markpiece` is binding data.
 - State: open
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "97c: an affiliation the reading already has reaches its auth".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "97c: an affiliation the reading already has reaches its auth".
 
 ### 97d: a collaboration named in the author line is a contact (OD #946) — the residual
 
@@ -1489,7 +1489,7 @@ do not block the E/F rerun.
 - (a)'s witness 1912.05868; (j)'s RED `author_team_piece_mark_labels_its_own_line`.
 - Also left: (a) 2512.08803 (`XYZ Collaboration: A.~Able\inst{1}` one name); (b) the IEEE block reader (1111.2718; 0907.0548's "Brigidaon behalf …"); (c) the reading's heading over later lines, its remark line under one name (the writer declines); (d) `\author{Ann Able, University of Toronto and Bob Baker for the CMS Collaboration}`; (e) emulateapj `$^{n}$` marks under `\address{$^{n}$ …}` not linked (0910.4381); (f) PoS 1708.04166's `E-mail:` line to all 15 names; (h) `\affiliation{(WA98 Collaboration)}` an affiliation (0708.2630), awaiting a ruling; (i) PoS's `\author{Fermilab Lattice, MILC, and HPQCD Collaborations}` three creators (hep-lat0509169); (j) 1508.03930's `$^b$` line; (k) an unmarked `\and` group led by a collaboration over a names line; (l) a bracketed team under a name.
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "97d: a collaboration named in the author line is a contact (".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "97d: a collaboration named in the author line is a contact (".
 
 ### 97f: giant lists in a size environment; AASTeX 6.x's shared affiliations — the residual
 
@@ -1497,7 +1497,7 @@ do not block the E/F rerun.
 - (b)'s witness 1202.0629; the unmarked e-mail line's 2008.05143.
 - Also: (a)'s witnesses 1507.02068, 1512.08197, 2201.02056, 2410.11607's `75A,75C`; an `\altaffilmark{1$\dagger$}` request matches no label (2006.10291's N. Fraija); (c) aa's `XYZ Collaboration: R.~Abuter\inst{1}` one name (2206.00684); (d) a `{\it $^{1}$ Uni One\\ …}` group keeps a trailing `<break/>` and a leading space (every BESIII affiliation); (f) a `{\it …}` group glued after its line breaks is one entry (2007.02542: 347 of 490 names no affiliation); (g) a marked entry glued after a comma inside one `\affil` is not cut (0909.3044).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "97f: giant lists in a size environment; AASTeX 6.x's shared ".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "97f: giant lists in a size environment; AASTeX 6.x's shared ".
 
 ### 99a: one Cut (OD #954) — the residual
 
@@ -1516,7 +1516,7 @@ do not block the E/F rerun.
 - **98b: four lost-words mechanisms (OD #949-#952) — the residual** (landed; the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md)): left: pathological 2008.12867 (RED `svjour3_institute_environment_before_at_is_lost`).
 - Also left: an affiliation-only `\IEEEauthorblockA{X, Y\\ …}` parted at its first line's commas (words kept); a `\at` name with a remark the fuzzy owner misses (`Lun Ai (corresponding author)`, 2405.06724) stays on the block's creator, with its text; an itemize list whose later names come after its first `\at` (2306.07927, 2605.09054) is the first author's whole, as int126a (`\lx@sv@institute@` reads the first `\at` only); `\institute{\begin{itemize}\item A \at X \and \item B \at Y \end{itemize}}` not split at its `\and` (synthetic, no paper known); the list's items reach no author by their marks (`\item[\textsuperscript{1}] …`: the list is one contact).
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "98b: four lost-words mechanisms (OD #949-#952) — the residua".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "98b: four lost-words mechanisms (OD #949-#952) — the residua".
 
 ### field stamps overflow on a large block (2410.11607) — the residual
 
@@ -1571,7 +1571,7 @@ do not block the E/F rerun.
 
 - **97e r2 residuals (review rev97e; OD #948)** — (N1) 1108.2557 (ws-ijmpd, inst_support): the e-mail line printed under the addresses is read into entry b, so all three addresses go to Geng (97c: on no one) — the reading's line cut; (N2) the paper-wide corresponding-author fallback is gone where an e-mail call's group is empty (`resolver/post.rs` `answer_sequence`, 97e r1's scoping): the address falls to the block, fail-safe; `events::lexer::letter_spaced_word_space` reads `Smith A B\enspace Jones C` (two names, the last word one letter) as one name — no witness yet; (key) a hand-typed mark equal to an elsarticle key whose place prints otherwise, `\author[a]{Cy Cole$^{*}$}` under `\address[*]{…}`: today's and the reading give Cy Cole the line, pdflatex prints "c current address" — a hand mark is read against the key, not the place letter the class prints (`\theaffn`; keys in order agree, 0907.5014), RED note in repro class-bindings/`elsarticle_key_labelled_address_is_no_mark`; (note) a `\footnotetext[n]` after `\maketitle` the reading pairs with a name's `\footnotemark[n]` is a note today's holds only after the writer runs (its relocation followed the S2b writer, deleted in DEL4), so the paper declines whole — pre-existing in every family (`article` with `\renewcommand\thefootnote{\fnsymbol{footnote}}`), reached in elsarticle by its arabic marks since r2: 1108.0201, 0909.2782 (r1 had split its e-mails onto their authors); fix: the writer leaves a text built after the names' flush to today's relocation (neither wanted nor compared), then a whole-population A/B; (keys) the other bindings labelling an entry by a key (`label={#1}`: imsart, ecai, ceurart, icml, sn-jnl, bmcart, beilstein, interspeech, vmsta, quantumarticle; `UNDECLARED`, their own `\author`) are not audited for printed keys — a class printing the entry's place, not the key, declares `keyed_labels` as elsart_support_core does; (pre-existing) the fms2a2 `addr` source (`1. University A … 2. University B`) gives every author every line, against FIDELITY_CHARTER §4 R1/R2; marks left in the names of 1201.0008, 2307.11481, 2506.22621
 - State: OPEN
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "97e r2 residuals (review rev97e; OD #948)".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "97e r2 residuals (review rev97e; OD #948)".
 
 ### int126a review (rev126a; OD #947, #948)
 
@@ -1583,7 +1583,7 @@ do not block the E/F rerun.
 - **Review rev98e's findings FIXED in 98e r2 (OD #947 round 3):** a sub-lettered mark goes by its number — a digit run is cut only under single-digit numbering and an entry's own leading number is never parted (`parted_label`, `part_glued_labels`: 2007.02542's 36 sub-lettered authors had two wrong institutes each, R. Baldini Ferroli `23A` Beihang and Beijing Petrochemical; 1507.02068 `48A` → `4`, `8`); a cut block line no name requests keeps its printed label (`b Also at …`; ruling tentative, the user away); the fail-safe fires only for two or more lines led by requested labels (a line holding marks inside its text, `Joint Institute, \textsuperscript{1}Univ A and \textsuperscript{2}Univ B`, is the group's copy on each again) and a mark spelled otherwise is the mark it prints, read by one shared reader of a line's leading label (`relocate::spaced_mark_at`, used by `notes::leads_with_mark`, `leading_line_label`, `requested_mark_lines`; REVTeX's `spaced_marks_as_marks` writes such marks as `$^{1}$`): `${\,\!}^1$`, `${}^1$`, `$~^1$`, `${^1}$`, `\( ^{1} \)`, `\mbox{${\ }^{1}$}` — 2112.13115 each author its departments (98e r1 none), 0807.4407 and 1211.5032 each author its lines, a `tabular` block (0911.3234) once on the block; guards `perfect_kernel_batch98e` (`a_sub_lettered_mark_goes_by_its_number`, `the_fail_safe_fires_only_for_labelled_lines`, `a_mark_on_a_spacing_nucleus_leads_its_line`).
 - Residuals, recorded (no fix in 98e): 2506.19040 `drohr@mit.edu` copied to the other two `*` authors beside their own addresses (suspected `frontmatter/observer/resolver/owners.rs:666` `spelled_owners` reading "drohr" as spelling no one); BESIII sub-lettered marks (`75A,75C`, `29A`, `63A,63C`) keep the mark in the name, the name given the whole numbered entry, not its lettered part (33-36 names a paper; R6, tentative: sub-entries at Stage 4a); 1609.03822's `\pounds` label is not split; nameless creators holding a stray copy: 2307.16667 [5], 2312.09590 [3], 2109.02295 [4]; `&&`/`\nonumber` affiliation lines (eqnarray residue; pdflatex errs) keep the block one entry (2208.09667, 2308.02280: pathological — defer); numbered lines set in a `\parbox` inside one `\affiliation` land once at the block (review rev98e fs3: pathological — defer; a one-column `tabular`'s rows are each author's since 104c, 0911.3234, OD #964); 2112.13115's second department keeps its line's printed `and` at its head ("and Department of Physics …", the marked list keeps a line's text before its mark); the observer reads no Mark event from a nucleus formula (`${\,\!}^1$`, `\mbox{${\ }^{1}$}`: 98e r1's `_unsplit` cut never fired on them; the binding's token reader now covers them, the observer's `observer::marks` does not — a second engine's reading of the same spelling, open); the kernel `\author` block's unrequested line keeps no printed label (`\author{Ann Able$^{1}$, …\\ $^{1}$Alpha …\\ $^{b}$Also at Eps College}` → a nameless creator "Also at Eps College", 98a the same: the `\lx@affiliation@withsup` pending creator relocate_annotations leaves unanswered, not the writer's cut — review rev98e's sp2)
 - State: OPEN
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "int126a review (rev126a; OD #947, #948)".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "int126a review (rev126a; OD #947, #948)".
 
 ### authblk: a label holding a command before its number
 
@@ -1624,7 +1624,7 @@ do not block the E/F rerun.
 - Census: no paper of the 95b populations or the 419 authblk papers under other classes changed but 2609.05466.
 - Options: (a) the harvest names the raw file for every hand-on (`\lx@store@from`, frontmatter_stores.rs); (b) watch the bindings' other contact commands by name; (c) leave
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Unobserved frontmatter calls under a written author block (9".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Unobserved frontmatter calls under a written author block (9".
 
 ### svjour3 `\institute`: the names before `\at` are no entry (pre-existing; 95b r3)
 
@@ -1632,7 +1632,7 @@ do not block the E/F rerun.
 - Fix in sv_support's reading: the names before `\at` the entry's carriers (each matched to its author by surname, as the print sets them), then svjour3's own gate.
 - Repros class-bindings/`svjour3_institute_names_at_with_authblk`, `svjour3_at_pieces_joined_are_not_written`
 - State: OPEN (the reading; the writer declines)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "svjour3 `\institute`: the names before `\at` are no entry (p".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "svjour3 `\institute`: the names before `\at` are no entry (p".
 
 ### 95b r3 review should-fixes (rev95b-r3 SHIP, 2026-10-31; none a regression or a loss)
 
@@ -1644,7 +1644,7 @@ do not block the E/F rerun.
 - Nits: `writer/mod.rs:259`'s outcome "declined: … beside a re-part" is also given for an unwritten call's creator and for unpaired names; `\inst` is unwatched while a raw `\inst` store is rerouted to an API call (store_setters.rs:36).
 - Review `agent_reports/2026-10-31_rev95b_r3.md`
 - State: OPEN (residual)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "95b r3 review should-fixes (rev95b-r3 SHIP, 2026-10-31; none".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "95b r3 review should-fixes (rev95b-r3 SHIP, 2026-10-31; none".
 
 ### AMS contact setters under raw amsart derivatives (next batch; 86c r1, reverted)
 
@@ -1655,7 +1655,7 @@ do not block the E/F rerun.
 - Its census (`ab_66bundle/pop86c.tsv`, 880 AMS-derived/redefining papers + a 292-paper amsart sample): 14 changed, also 1909.04033, 2001.07042, 2609.01974 and 2411.00367 (d-omega3.sty: E 18 → 9, `\organization`/`\orcid` still lost).
 - Review `agent_reports/2026-10-28_review_86c_r1.md` (B1–B3, S1–S3); from the r2 re-review: B1's visible `name` label is what Perl itself gives 0902.1737 (it never reads stacs.cls, 1 missing file, and keeps `\address[ref]`'s key as the contact name), so the stacs binding goes beyond Perl rather than restoring parity; its guard must assert `@name` (the `creators()` helper cannot see it); the lock paths that held in r1 (`\let\address\relax` + `\newcommand`, a `\renewcommand` in a class option; probes `p_relaxnew`, `p_option`) are its boundaries; 2305.18054's thanks note loses its "∗" mark and its two-name `\author`'s address attaches to the last name only
 - State: open
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "AMS contact setters under raw amsart derivatives (next batch".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "AMS contact setters under raw amsart derivatives (next batch".
 
 ### Frontmatter e-mail ↔ name spelling
 
@@ -1681,7 +1681,7 @@ do not block the E/F rerun.
 - " where pdflatex prints "Fig. 2: ", and `\restylefloat*{table}` after a `\restylefloat{table}` leaves "TABLE II: " where pdflatex prints "TABLE II" over the text (78z probe `scratch_78z/rs/rs.tex`; the preamble forms are right, guard `perfect_kernel_batch78y::ieeetran_restylefloat_table_keeps_float_sty_format`).
 - 78y r2
 - State: OPEN (pre-existing; found at 78y r2)
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "float.sty's `\restylefloat{<type>}` of a kernel float (figur".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "float.sty's `\restylefloat{<type>}` of a kernel float (figur".
 
 ### acmart copies older than TL 2025's v2.16 (v1.55-era, review rev78y acmcls/cs12.cls) set sigchi's small caption fonts on figures only, not tables; acmart_cls.rs ports the …
 
@@ -1700,7 +1700,7 @@ do not block the E/F rerun.
 - Fix for the knob (78z): ar5iv.sty declares `classcaptionfonts`/`noclasscaptionfonts` and passes the one given to latexml.sty with its own options (`ar5iv_sty.rs` `pass_options`), so `--preload=[classcaptionfonts]ar5iv.sty` sets the knob and keeps ar5iv's options (OD #884).
 - Pre-existing; reachable since 78y r2 (review rev78y2 finding 1, probes `k1_*`, `k2_*`)
 - State: the class caption fonts knob FIXED 78z (guards `perfect_kernel_batch78z::{ar5iv_classcaptionfonts_option_sets_the_knob, ar5iv_classcaptionfonts_option_keeps_ar5iv_options}`); the general repeat-preload behaviour OPEN
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "A preload's options do not reach a package another preload a".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "A preload's options do not reach a package another preload a".
 
 ### Determinism (det354 B2)
 
@@ -1709,7 +1709,7 @@ do not block the E/F rerun.
 - Fix: a document-order walk, with the prefixes of streaming-spilled content sorted after it; or sort by prefix (simpler, not Perl's).
 - Not in 78w (main-session decision 2026-10-22)
 - State: open
-- Full row (with landed history): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Determinism (det354 B2)".
+- Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Determinism (det354 B2)".
 
 ### appendix.sty
 
@@ -1865,4 +1865,5 @@ Each landed row is verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/S
 - **98d: `\end{X}` over a `\begingroup` opened inside X (kernel; SYNC "The unclaimed-text net" R0; OD #965, KNOWN_PERL_ERRORS #1207)**:
   - Round 2 (review rev98d S1): the branch also refuses when the open environment is not X or a group above X records another (LaTeX's `\@badend`); re-A/B, both sides on `vendor_dumpsint132a`: 40 changed vs int132a1 (E 4,215 → 4,214), vs round 1 only 2101.04970, now byte-identical to int132a1 (ntheorem's `\theoremprework{\begin{changemargin}…}` raw group above `\end{fabsmfabstract}`).
   - Open: the bare `\X … \endX` form over a `\begingroup` (no witness; `\endX` keeps batch 66t's Warning); X's layout state (`\leftskip`, `\centering`, `\raggedright`) does not reach a paragraph ended between `\end{X}` and the class's `\endgroup` (TeX keeps it; no witness has content there; OD #965); raa's `\abstract{}` is still the class's body paragraphs, not `<ltx:abstract>` (R routing); 2101.04970's `Can't close environment fabsmfabstract` + `Attempt to end mode` (pdflatex 0: ntheorem's `\theorempostwork{\end{changemargin}}` runs inside `\endX` in TeX, after our `\end{X}`'s check; pre-existing).
-  - Review rev98d2 (round 2 SHIP): an inner X the branch already ended, then a raw environment's frame or a second `\end{X}` against the outer X, is refused where TeX closes the still-open inner group (synthetic, better than base: pdflatex 0, base 5 / 3 E, round 2 3 / 1 E; RED boxes-groups/`end_inner_ended_x_over_a_raw_environment_red`, `end_nested_x_over_begingroups_closed_twice_red`). landed in bundle int133a
+  - Review rev98d2 (round 2 SHIP): an inner X the branch already ended, then a raw environment's frame or a second `\end{X}` against the outer X, is refused where TeX closes the still-open inner group (synthetic, better than base: pdflatex 0, base 5 / 3 E, round 2 3 / 1 E; RED boxes-groups/`end_inner_ended_x_over_a_raw_environment_red`, `end_nested_x_over_begingroups_closed_twice_red`).
+  - State: landed in bundle int133a; the open facts and REDs above remain

@@ -442,7 +442,8 @@ Each entry's body (defect, cause, fix, guards, witnesses) is verbatim in [`archi
 - **thmtools' unnamed theorems (78k)**
 - **subfig's `\newsubfloat` was a no-op (78s)**
 - **A class copy with classic Mac line ends was one comment (79b)**
-- **lamstex arrowheads print as letters**
+- **lamstex arrowheads print as letters** (PERL-ORIGIN, rev78b; OPEN): a `\newCD` diagram's arrowheads and dotted shafts are `\char`s of the lams1-lams5 fonts, which no font map covers, so they print as "w", "h", "ﬂ" (math0005042's pullback diagram).
+  - Open: lams1-lams5 font maps (arrowheads and shafts to Unicode arrows and rules) or drop the glyphs.
 - **A pgfkeys key that expands to one brace group (79w)**
 - **A package's own `\zap@space` around a load (79x)**
 - **An argument a template's cell brace closes (79y)**
