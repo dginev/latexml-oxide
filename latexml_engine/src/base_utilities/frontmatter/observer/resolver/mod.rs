@@ -313,8 +313,79 @@ pub(in crate::base_utilities::frontmatter::observer) fn read_events(
   events: &[Event],
 ) -> Vec<Event> {
   glue_shown_runs(&split_text_marks(&join_ordinals(&link_names(
-    &words_through_one_command(&trailing_alignment_as_lines(events)),
+    &words_through_one_command(&joined_address_pieces(&trailing_alignment_as_lines(events))),
   ))))
+}
+
+/// A block's events with a line of link pieces that reads as addresses only once their inks are joined one e-mail
+/// contact, the line's addresses — `\url{robin.andre@ira.uka.de}, \{\url{sebastian.schlag, christian.schulz}\}\url{@kit.edu}`,
+/// `\url{christian.schulz}\url{@univie.ac.at}` (1710.01968): each link read apart was a URL, `@univie.ac.at` on every
+/// author, `christian.schulz @univie.ac.at` too. The old split's raw address line (`shared_row::row_email_calls`), read
+/// as the line prints: two or more links (`url`), a piece printing no `@` among them, between them only separators and
+/// the braces of a list of local parts; the contact spans them (its span the first ink's start to the last ink's end).
+fn joined_address_pieces(events: &[Event]) -> Vec<Event> {
+  let mut out: Vec<Event> = Vec::with_capacity(events.len());
+  let mut start = 0usize;
+  while start <= events.len() {
+    let end = (start..events.len())
+      .find(|&at| events[at].kind == EventKind::Break)
+      .unwrap_or(events.len());
+    let line = &events[start..end];
+    let inks: Vec<&Event> = line.iter().filter(|e| inked(e)).collect();
+    let url = |e: &Event| e.kind == EventKind::Contact && e.role.as_deref() == Some("url");
+    let glue = |e: &Event| {
+      e.kind == EventKind::Name
+        && e
+          .text
+          .chars()
+          .all(|c| "{}".contains(c) || c.is_whitespace())
+    };
+    let mut joined = String::new();
+    for e in line {
+      match &e.kind {
+        EventKind::Name | EventKind::Contact => joined.push_str(&e.text),
+        EventKind::Sep(SepKind::Comma) => joined.push_str(", "),
+        EventKind::Sep(_) => joined.push(' '),
+        _ => {},
+      }
+    }
+    let addresses = addresses_in(&joined);
+    let pieces = inks.iter().filter(|e| url(e)).count();
+    let take = pieces >= 2
+      && inks.iter().all(|e| url(e) || glue(e))
+      && inks.iter().any(|e| url(e) && !e.text.contains('@'))
+      && line
+        .iter()
+        .all(|e| inked(e) || matches!(e.kind, EventKind::Sep(SepKind::Comma) | EventKind::Layout))
+      && only_addresses(&joined)
+      && !addresses.is_empty()
+      && addresses.iter().all(|a| shared_row::is_whole_address(a));
+    let span = inks
+      .iter()
+      .filter_map(|e| e.span)
+      .fold(None, |acc: Option<(u16, u16)>, (s, t)| {
+        Some(acc.map_or((s, t), |(a, b)| (a.min(s), b.max(t))))
+      });
+    if take && let Some(first) = inks.first() {
+      let at = line.iter().position(|e| inked(e)).unwrap_or(0);
+      out.extend(line[..at].iter().filter(|e| !inked(e)).cloned());
+      out.push(Event {
+        kind: EventKind::Contact,
+        role: Some("email".to_string()),
+        text: joined.split_whitespace().collect::<Vec<_>>().join(" "),
+        target: None,
+        span,
+        ..(*first).clone()
+      });
+    } else {
+      out.extend(line.iter().cloned());
+    }
+    if end < events.len() {
+      out.push(events[end].clone());
+    }
+    start = end + 1;
+  }
+  out
 }
 
 /// A block's events with an alignment environment (`center`, `flushleft`, `flushright`) that opens after the names and

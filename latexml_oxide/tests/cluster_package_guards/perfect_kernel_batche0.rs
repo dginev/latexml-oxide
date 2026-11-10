@@ -733,6 +733,11 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ),
   ("const _preamble base_utilities/frontmatter/place.rs", 1),
   ("const _queued base_utilities/frontmatter/relocate.rs", 1),
+  // (Z18g, raised with its reason: an entry the reading shares among every author (`_share=authors`, llncs's sole
+  // `\institute`) says so on the entry the emitter writes, `insert::ROW_SHARED`, so the Kind step for an address line sends
+  // a later line holding an address no reader reads to the block, once, as the old split's `row_email_calls` did — `_share`
+  // itself would make the token-level Kind step pass the entry over, which reads its address lines; 1103.2027's shape)
+  ("const _rowshared base_utilities/frontmatter/insert.rs", 1),
   (
     "const _released_store base_utilities/frontmatter/queue_digest.rs",
     1,

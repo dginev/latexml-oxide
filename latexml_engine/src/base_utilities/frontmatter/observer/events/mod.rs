@@ -745,22 +745,6 @@ fn href_target(w: &Whatsit) -> String { raw_arg(w, 1).trim().to_string() }
 
 /// The notes and footnote marks a mark's script holds (`$^{1,\thanks{…}}$`, `\inst{3\footnotemark[1]}`), outermost
 /// first.
-/// Whether `d` holds a binding's e-mail call as the rehearsal records it (`\lx@fm@obs@email`, in place or not; not the
-/// document's own `\email`, which prints its text).
-fn holds_email_call(d: &Digested) -> bool {
-  match d.data() {
-    DigestedData::List(l) => l.borrow().boxes.iter().any(holds_email_call),
-    DigestedData::Whatsit(w) => {
-      let w = w.borrow();
-      matches!(
-        whatsit_cs(&w).as_str(),
-        "\\lx@fm@obs@email" | "\\lx@fm@obs@email@inplace"
-      ) || w.get_args().iter().flatten().any(holds_email_call)
-    },
-    _ => false,
-  }
-}
-
 fn notes_in(d: &Digested) -> Vec<Digested> {
   fn collect(d: &Digested, out: &mut Vec<Digested>) {
     match d.data() {
@@ -1562,28 +1546,34 @@ impl Walker {
         contact.target = Some(contact.text.clone());
         self.event(contact, d, nest);
       },
-      // (a link whose text is a binding's e-mail call is that call, the link printing what the call prints: `\thanks{…
-      // E-mail: \href{mailto:samuel.mimram@cea.fr}{\email{samuel.mimram@cea.fr}}.}`, 1004.3134 — read as the link, whose
-      // ink the call's rehearsal prints nothing of, the address was lost)
-      "\\lx@fm@obs@href" if w.get_arg(2).is_some_and(holds_email_call) => {
-        if let Some(text) = w.get_arg(2) {
-          self.walk(text, nest);
-        }
-      },
       "\\lx@fm@obs@href" => {
-        let mut contact = Event::new(EventKind::Contact);
-        contact.role = Some("url".to_string());
-        contact.target = Some(href_target(w));
-        // (a note in the link is no text of it, an event of its own after it: `\href{https://orcid.org/…}{\usebox{\orcid}
-        // Nils~Bochow\thanks{\texttt{contact@…}}}`, 2507.22485 — "Nils Bochowcontact@…" read as no name)
-        let notes = w.get_arg(2).map(notes_in).unwrap_or_default();
-        contact.text = if notes.is_empty() {
-          arg(2)
+        // (a link whose text is a binding's e-mail call is that call, the link printing what the call prints: `\thanks{…
+        // E-mail: \href{mailto:samuel.mimram@cea.fr}{\email{samuel.mimram@cea.fr}}.}`, 1004.3134 — read as the link,
+        // whose ink the call's rehearsal prints nothing of, the address was lost)
+        let call = w.get_arg(2).filter(|text| {
+          lex_with_inks(text).0.iter().any(|e| {
+            e.kind == EventKind::Contact
+              && e.role.as_deref() == Some("email")
+              && e.meaning != EmailMeaning::Own
+          })
+        });
+        if let Some(text) = call {
+          self.walk(text, nest);
         } else {
-          w.get_arg(2).map(ink_of_without_notes).unwrap_or_default()
-        };
-        self.event(contact, d, nest);
-        self.walk_notes(&notes, nest);
+          let mut contact = Event::new(EventKind::Contact);
+          contact.role = Some("url".to_string());
+          contact.target = Some(href_target(w));
+          // (a note in the link is no text of it, an event of its own after it: `\href{https://orcid.org/…}{\usebox{\orcid}
+          // Nils~Bochow\thanks{\texttt{contact@…}}}`, 2507.22485 — "Nils Bochowcontact@…" read as no name)
+          let notes = w.get_arg(2).map(notes_in).unwrap_or_default();
+          contact.text = if notes.is_empty() {
+            arg(2)
+          } else {
+            w.get_arg(2).map(ink_of_without_notes).unwrap_or_default()
+          };
+          self.event(contact, d, nest);
+          self.walk_notes(&notes, nest);
+        }
       },
       // (the kernel's ORCID link, frontmatter_fields.rs `\lx@orcidlink{id}{content}` — orcidlink.sty's `\orcidlink`
       // family, `\lx@add@orcid` —: a link to the iD's record, its first argument no ink; `\orcidlinki{José-María

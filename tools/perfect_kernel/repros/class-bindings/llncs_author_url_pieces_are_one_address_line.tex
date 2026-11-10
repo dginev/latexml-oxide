@@ -1,0 +1,26 @@
+% mechanism: a line of llncs's `\author` block printing addresses through several `\url` pieces, one of which prints
+%   no `@` (a local part, a domain apart), is one e-mail contact once the pieces' inks are joined
+%   (`resolver::joined_address_pieces` in `read_events`, the content check reading the same): each address its owner's.
+% witness: 1710.01968 (`\url{robin.andre@ira.uka.de}, \{\url{sebastian.schlag, christian.schulz}\}\url{@kit.edu}`,
+%   `\url{christian.schulz}\url{@univie.ac.at}`)
+% oracle:  pdflatex 0 errors; "Ann Able, Bob Baker and Cat Cole" over "Univ X", the addresses, "Univ Y" and
+%   "cat.cole@y.edu"
+% engines: rust Z18e = a URL "cat.cole @y.edu" and a URL "@y.edu" on every author, ann.able@ glued to the next local
+%   parts; int154x = each address line a nameless creator
+% expect:  0 errors, 0 warnings; ann.able@, bob.baker@, cat.cole@x.edu and cat.cole@y.edu each its author's
+% status:  RED (Z18e) -> GREEN (Z18g)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\usepackage{hyperref}
+\begin{document}
+\title{A Title}
+\author{Ann Able, Bob Baker and Cat Cole \\
+\textit{Univ X} \\
+\textit{\url{ann.able@x.edu}, \{\url{bob.baker, cat.cole}}\}\url{@x.edu} \\
+\textit{Univ Y} \\
+\textit{\url{cat.cole}\url{@y.edu}}}
+\institute{}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

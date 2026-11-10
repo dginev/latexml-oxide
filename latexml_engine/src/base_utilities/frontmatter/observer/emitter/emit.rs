@@ -29,6 +29,7 @@ use crate::base_utilities::{
   defs::{
     author_macros::KEPT_WHOLE,
     frontmatter_api::{BLOCK_CREATOR, LABEL_PRINTS, PRINTED_LABEL},
+    frontmatter_fields::orcid_icon_link,
   },
   frontmatter::{
     fallback::{tabular_juggles_in_a_whole_block, whole_block_author},
@@ -1744,21 +1745,7 @@ fn item_call(
           .all(|word| word.is_empty() || word.eq_ignore_ascii_case("id"));
         let id = dom::orcid_id(&assoc.text).trim();
         if role == "orcid" && icon && !id.is_empty() {
-          let mut content = vec![
-            T_BEGIN!(),
-            T_CS!("\\def"),
-            T_CS!("\\lx@orcid@known"),
-            T_BEGIN!(),
-          ];
-          content.extend(mouth::tokenize_internal(TeXString::assembled(id.to_string())).unlist());
-          content.extend([
-            T_END!(),
-            T_CS!("\\let"),
-            T_CS!("\\href"),
-            T_CS!("\\lx@orcid@href"),
-          ]);
-          content.extend(tokens.unlist_ref().iter().copied());
-          content.push(T_END!());
+          let content = orcid_icon_link(id, tokens.unlist_ref());
           return Ok(annotate_now("ltx:contact", &keys, &content));
         }
         return Ok(annotate_now("ltx:contact", &keys, tokens.unlist_ref()));
