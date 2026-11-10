@@ -264,7 +264,7 @@ fn read_pending() -> Result<HeldUndefined> {
   let calls_mark = StomachMark::take();
   for (i, content, inside) in calls {
     let read = if content.is_empty() {
-      Some((Vec::new(), 0, None))
+      Some((Vec::new(), 0, None, Vec::new()))
     } else {
       // (an inside call's, for the check alone, from the check's own allowance: `rehearsal::for_the_check`)
       let rehearsal = || rehearse(content.clone(), TitleMarks::Fnsymbol, &[], lex_events);
@@ -274,14 +274,19 @@ fn read_pending() -> Result<HeldUndefined> {
         rehearsal()
       };
       match rehearsed? {
-        Rehearsal::Done { value, errors, .. } => Some((value, errors, None)),
+        Rehearsal::Done { value, errors, queued, .. } => Some((value, errors, None, queued)),
         // (a flush inside a speculative run: the next flush rehearses it)
         Rehearsal::Skipped(SkipReason::JournalUnavailable) => None,
         // (given up on: what it printed is its content's text, `ApiCall::unread`)
-        Rehearsal::Skipped(_) => Some((Vec::new(), 0, Some(content_text(&content).into()))),
+        Rehearsal::Skipped(_) => Some((
+          Vec::new(),
+          0,
+          Some(content_text(&content).into()),
+          Vec::new(),
+        )),
       }
     };
-    if let Some((events, errors, unread)) = read {
+    if let Some((events, errors, unread, queued)) = read {
       with_ledger(|ledger| {
         if let Some(Entry::Api(call)) = ledger.entries_mut().get_mut(i) {
           if call.inside {
@@ -289,6 +294,7 @@ fn read_pending() -> Result<HeldUndefined> {
           } else {
             call.events = events;
             call.errors = errors;
+            call.queued = queued;
           }
           call.rehearsed = true;
           call.unread = unread;

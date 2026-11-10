@@ -1,0 +1,25 @@
+% mechanism: a frontmatter setter inside an API call the reading writes from (an `\address` whose text is an address):
+%   the written contact's digestion at the flush runs the setter, so `recover_queued` neither queues the call's noted
+%   entries again nor counts its in-place ones lost (`emitter::emit::recover_queued`; OXIDIZED_DESIGN_DIVERGENCES #985;
+%   review revCR2 finding 2). Without the abstract (`\address{Univ A, Oviedo, Spain \pacs{71.25.Hc}}`) the same path.
+% witness: none in the census (6 of 604 revtex `\address` papers hold a setter inside it; the 3 with other text,
+%   quant-ph0211040, hep-ph9409220, quant-ph9903094, are byte-identical to int154a)
+% oracle:  no pdflatex (TL 2025 has no revtex.sty); Perl: one abstract, one PACS classification, 0 errors, 0 warnings
+% engines: rust int154a: the same as Perl, 0 Warnings; CR2: two PACS classifications and 1 Warning ("digests where it
+%   stands (ltx:abstract); it is lost") with the abstract written; old engine (int153m, LATEXML_FM_EMIT=0): as Perl
+% expect:  one <abstract> ("zebraword"), one <classification scheme="pacs"> 71.25.Hc, the address Ann Able's contact;
+%   0 errors, 0 warnings
+% status:  RED (CR2) -> GREEN (CR2b)
+% preload: ar5iv.sty
+\documentstyle[aps,prb]{revtex}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\address{Univ A, Oviedo, Spain
+\begin{abstract}
+We study an extended Hubbard zebraword model.
+\end{abstract}
+\pacs{71.25.Hc}}
+\maketitle
+Body.
+\end{document}

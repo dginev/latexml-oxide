@@ -37,16 +37,36 @@ use super::{
 
 thread_local! {
   static REHEARSING: Cell<bool> = const { Cell::new(false) };
-  /// the tags of the entries the rehearsal's run would have queued besides its creators ([`note_frozen_entry`])
-  static FROZEN_ENTRIES: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+  /// the entries the rehearsal's run would have queued besides its creators ([`note_frozen_entry`])
+  static FROZEN_ENTRIES: RefCell<Vec<RawFrontmatter>> = const { RefCell::new(Vec::new()) };
 }
 
 /// Note, while a rehearsal digests, an entry `tag` its run would queue (`command`, the frozen frontmatter queues none:
 /// `queue::queue_front_matter`) that makes no creator nor annotates one (`resolver::creator_call`): a frontmatter setter run
-/// inside the block, a `\date` in `\author` (2503.02741), which `Rehearsal::Done::queued` says.
-pub(in crate::base_utilities) fn note_frozen_entry(tag: &str, command: &Tokens) {
+/// inside the block, a `\date` in `\author` (2503.02741), which `Rehearsal::Done::queued` says, as the queue would hold
+/// it (the emitter queues it at the flush: `emitter::emit::recover_queued`).
+pub(in crate::base_utilities) fn note_frozen_entry(
+  tag: &str,
+  attr: Option<&KeyVals>,
+  command: &Tokens,
+) {
   if rehearsing() && !resolver::creator_call(tag, &annotated_parent(command)) {
-    FROZEN_ENTRIES.with(|entries| entries.borrow_mut().push(tag.to_string()));
+    let entry = (tag.to_string(), queued_attributes(attr), command.clone());
+    FROZEN_ENTRIES.with(|entries| entries.borrow_mut().push(entry));
+  }
+}
+
+/// Note, while a rehearsal digests, an entry `tag` its run digests where it stands (`\lx@add@frontmatter@until`: an
+/// abstract or keywords environment), undone with the run, which no queue holds: noted with no command, never queued again
+/// (`emitter::emit::recover_queued`). REVTeX 3's `\begin{abstract}` inside an `\address`'s minipage (cond-mat9801109).
+pub(in crate::base_utilities) fn note_frozen_digest(tag: &str) {
+  if rehearsing() {
+    let entry = (
+      tag.to_string(),
+      TagAttrs::default(),
+      Tokens::new(Vec::new()),
+    );
+    FROZEN_ENTRIES.with(|entries| entries.borrow_mut().push(entry));
   }
 }
 
@@ -1049,9 +1069,9 @@ pub(in crate::base_utilities) enum Rehearsal<R> {
     left_open:     bool,
     /// where the block's own digestion moved the footnote counter (`field_notes::FieldNotes::counter_moves`)
     counter_moves: Vec<(u16, u16)>,
-    /// the tags the run queued besides its creators ([`note_frozen_entry`]): a frontmatter setter run inside the block, a
-    /// `\date` in `\author` (2503.02741), undone with the run
-    queued:        Vec<String>,
+    /// the entries the run queued besides its creators ([`note_frozen_entry`]): a frontmatter setter run inside the block,
+    /// a `\date` in `\author` (2503.02741), undone with the run
+    queued:        Vec<RawFrontmatter>,
   },
   /// No rehearsal was made or kept, and why: no journal could open (one is already open), its assignments could not be
   /// undone, or it ended in a Fatal error of its own (discarded with it).

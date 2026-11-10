@@ -499,6 +499,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
     // (the document's frontmatter commands this entry is made in, for the title-page check: `queue_front_matter`)
     let checked = note_frontmatter_entry(&tag, &role, None);
+    // (a rehearsal's run notes the entry it digests: `rehearsal::note_frozen_digest`)
+    rehearsal::note_frozen_digest(&tag);
     let index = frontmatter_push(&tag, entry);
     // the body's own paragraph breaks are the field's (`frontmatter_paragraph_break`); the enclosing notes come back
     // after it
