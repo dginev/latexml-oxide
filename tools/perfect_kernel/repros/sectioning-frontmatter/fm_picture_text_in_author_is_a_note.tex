@@ -1,0 +1,18 @@
+% witness: 2404.13552 (IEEE TUFFC: `\author{Kasra Naftchi-Ardebili, …, Kim Butts Pauly \thanks{…}…\copyrightnotice}`,
+%          `\copyrightnotice` a `tikzpicture[remember picture,overlay]` node printing "© 2024 IEEE. Personal use …")
+% oracle:  pdflatex 0 errors: "Ann Able∗" and the node's "Zebraword copyright notice" beside it, the note at the foot
+% engines: rust int154t = a second creator "1.00.00.01.0" (the picture's transforms read as a name), its words lost, 1
+%          warning ("markup lost"); Perl 0.8.8 = 0 errors, the picture inside the personname
+% expect:  0 errors, 0 warnings; one creator "Ann Able" with its thanks note, then a note holding the picture whole
+%          (its svg and the node's text) — user ruling 2026-11-10 "a note, kept whole", OXIDIZED_DESIGN_DIVERGENCES #989
+% status:  RED (int154t) -> GREEN (CR8) — perfect_kernel_batchcr8::picture_in_author_is_a_note_kept_whole
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz}
+\title{T}
+\author{Ann Able\thanks{Zebra University.}
+\begin{tikzpicture}\node {Zebraword copyright notice};\end{tikzpicture}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

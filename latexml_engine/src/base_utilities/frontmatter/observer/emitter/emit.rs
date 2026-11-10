@@ -36,7 +36,8 @@ use crate::base_utilities::{
     insert::NAME_PRINTED,
     observer::{
       events::{
-        EventKind, Formula, InkTable, font_declaration, inked, lex_with_inks, text_font_command,
+        self as events, EventKind, Formula, InkTable, font_declaration, inked, lex_with_inks,
+        text_font_command,
       },
       field_notes::{EnvironmentStep, FieldCreator},
       ledger::{ApiCall, AuthorBlock, annotated_parent, content_text, field_stamped, symbol},
@@ -430,6 +431,54 @@ fn brace_argument(tokens: &Tokens) -> Option<Vec<Token>> {
     }
   }
   None
+}
+
+/// `span` of the block at ledger index `index`, its end grown over the tokens after it no event of the block covers — what
+/// its call read past its last box and printed nothing of: `\tikz\draw (0,0)--(1,0);`'s `;`, read as the path's end after
+/// the picture's last box, and the `}` closing a `\thanks{… \tikz…;}` its last box leaves open (a note's span is its
+/// boxes', `events::deep_span`). Up to the next event's start or the block's end, through the group the span leaves open
+/// and never past a brace closing one it doesn't open. The picture written whole is then its tokens as written (the
+/// rewritten `\tikz…` without its `;` erred "Giving up on this path. Did you forget a semicolon?", CR5's textless
+/// repro, as Perl's split does), and such a note's argument balanced.
+fn past_unprinted_tail(index: usize, span: (u16, u16)) -> (u16, u16) {
+  with_block(index, span, |block, events| {
+    fn starts(events: &[Event], from: u16, out: &mut Option<u16>) {
+      for e in events {
+        if let Some((s, _)) = e.span
+          && s >= from
+        {
+          *out = Some(out.map_or(s, |o| o.min(s)));
+        }
+        starts(&e.inner, from, out);
+        starts(&e.body, from, out);
+      }
+    }
+    let mut next = None;
+    starts(events, span.1, &mut next);
+    let tokens = block.tokens.unlist_ref();
+    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+    let (Some(from), Some(to)) = (at(span.0), at(span.1)) else {
+      return span;
+    };
+    let limit = next.and_then(at).unwrap_or(tokens.len()).min(tokens.len());
+    let Some(inside) = tokens.get(from..to) else {
+      return span;
+    };
+    let mut depth: i32 = inside.iter().map(Token::group_step).sum();
+    let mut end = to;
+    while end < limit {
+      let step = tokens[end].group_step();
+      if depth + step < 0 {
+        break;
+      }
+      depth += step;
+      end += 1;
+      if depth == 0 && step < 0 {
+        break;
+      }
+    }
+    u16::try_from(end + block.range.0).map_or(span, |end| (span.0, end))
+  })
 }
 
 /// `start`, or past the environment a span opens and doesn't close: its first box takes the cover of what opened it
@@ -1778,6 +1827,22 @@ fn item_call(
       // (a note in a formula is its own call's, the formula around it the name's mark: `Derek F. Wong$^1\thanks{Corresponding
       // Author}$`, 2603.20851, 2407.15815 — its span's content is the whole formula, `content_of`)
       let cut_runs = cut.map_or(&[][..], |cut| &cut.cuts[..]);
+      // (a picture's note: the tokens drawing it, whole — its markup, `ltx:picture` and its `svg`, never its text; a note
+      // written apart from the name, as the user's ruling of 2026-11-10 has a picture inside `\author`, OD #989:
+      // 2404.13552's page-overlay notice)
+      if note && event_at(index, span, events::is_picture_note, |_| ()).is_some() {
+        return Ok(
+          match span_call_tokens(index, past_unprinted_tail(index, span)) {
+            Some(tokens) => note_call(false, None, label, tokens.unlist()),
+            None => note_call(
+              false,
+              None,
+              label,
+              by_text(Some("a picture no balanced run draws"), &assoc.text),
+            ),
+          },
+        );
+      }
       let argument = event_at(
         index,
         span,
@@ -1790,6 +1855,11 @@ fn item_call(
           .and_then(|tokens| note_argument(tokens, Some(&printed))))
         .or_else(|| {
           span_call_tokens(index, span)
+            .as_ref()
+            .and_then(|tokens| note_argument(tokens, Some(&printed)))
+        })
+        .or_else(|| {
+          span_call_tokens(index, past_unprinted_tail(index, span))
             .as_ref()
             .and_then(|tokens| note_argument(tokens, Some(&printed)))
         })
