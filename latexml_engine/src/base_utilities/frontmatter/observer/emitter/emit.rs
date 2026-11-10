@@ -224,6 +224,24 @@ pub(super) fn text_tokens(text: &str) -> Vec<Token> {
   out
 }
 
+/// Where a queued call's key list opens and closes: its first `[` and `]` outside any group.
+fn key_list_bounds(v: &[Token]) -> (Option<usize>, Option<usize>) {
+  let mut depth = 0;
+  let mut open = None;
+  for (i, t) in v.iter().enumerate() {
+    depth += t.group_step();
+    if depth != 0 {
+      continue;
+    }
+    if open.is_none() && t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == "[") {
+      open = Some(i);
+    } else if open.is_some() && t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == "]") {
+      return (open, Some(i));
+    }
+  }
+  (open, None)
+}
+
 /// A queued call's tokens with its routing keys gone and `add` first: its other keys (`role`, `name`, …) stand. This reads
 /// the API call's own key list, which `queue_front_matter`'s caller built, at its top-level commas: no TeX spelling.
 fn rekeyed(
@@ -234,21 +252,7 @@ fn rekeyed(
   zone: bool,
 ) -> Option<Tokens> {
   let v = command.unlist_ref();
-  let mut depth = 0;
-  let mut open = None;
-  let mut close = None;
-  for (i, t) in v.iter().enumerate() {
-    depth += t.group_step();
-    if depth != 0 {
-      continue;
-    }
-    if open.is_none() && t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == "[") {
-      open = Some(i);
-    } else if open.is_some() && t.get_catcode() == Catcode::OTHER && t.with_str(|s| s == "]") {
-      close = Some(i);
-      break;
-    }
-  }
+  let (open, close) = key_list_bounds(v);
   let mut out: Vec<Token> = Vec::with_capacity(v.len() + 8);
   if let (Some(open), Some(close)) = (open, close) {
     out.extend_from_slice(&v[..=open]);
@@ -2741,33 +2745,33 @@ fn words_written(resolved: &Resolved) -> BTreeSet<String> {
 /// (`AuthorBlock::queued`): a frontmatter setter run inside the block, `\date{\textsuperscript{1}BMW AG, Munich …}` inside
 /// `\author` (2503.02741, LaTeX prints it as the date), which neither the emitter's creators nor its whole-block creator
 /// writes (the setter's entry is queued during the flush's own digestion, past the queue it digests), once per block over the
-/// flushes: never a silent loss. Open: its recovery (the entry written at the flush).
+/// flushes: never a silent loss. Only a block written whole: a read block's entries are queued at the flush
+/// ([`recover_queued`]).
 fn warn_queued_unwritten(index: usize, whole: bool) {
-  let queued: Vec<String> = with_block(index, Vec::new(), |block, _| {
-    block.queued.iter().map(|entry| entry.0.clone()).collect()
-  });
   if !whole {
     return;
   }
+  let queued: Vec<String> = with_block(index, Vec::new(), |block, _| {
+    block.queued.iter().map(|entry| entry.0.clone()).collect()
+  });
   let once = s!("queued|{index}");
   if queued.is_empty() || lookup_mapping(EMITTED_ITEMS, &once).is_some() {
     return;
   }
   assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
-  let how = if whole { "written whole" } else { "read" };
   Warn!(
     "unexpected",
     "frontmatter",
     s!(
-      "The frontmatter emitter's reading holds no place for what its author block, {how}, queues besides its creators \
-       ({}); it is lost",
+      "The frontmatter emitter's reading holds no place for what its author block, written whole, queues besides its \
+       creators ({}); it is lost",
       queued.join(" ")
     )
   );
 }
 
-/// The counted Warning of the entries `lost` a frontmatter setter run inside a read author block or a call the reading writes
-/// from digested where it stands (`rehearsal::note_frozen_digest`), which [`recover_queued`] has no queued entry of.
+/// The counted Warning of the entries `lost` a frontmatter setter run inside a read author block (or a call of no recorded
+/// command) digested where it stands (`rehearsal::note_frozen_digest`), which [`recover_queued`] has no queued entry of.
 fn warn_queued_lost(lost: &[String]) {
   if lost.is_empty() {
     return;
@@ -3281,12 +3285,25 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   // (the queued creators, in queue order, each its reading's source: its block's, or its own call's)
   let mut queued_creators: Vec<Option<usize>> = Vec::new();
   let mut reading_words: Option<BTreeSet<String>> = None;
+  // (the calls a frontmatter setter ran inside, which `recover_queued` may write as queued — none in most papers —, and
+  // the attributes each was queued with, which it keeps)
+  let setter_calls: Vec<Tokens> = with_ledger(|ledger| {
+    let calls = ledger.entries().iter().filter_map(|entry| match entry {
+      Entry::Api(call) if !call.queued.is_empty() && !call.inside => call.command.clone(),
+      _ => None,
+    });
+    calls.collect()
+  });
+  let mut taken_attrs: Vec<(Tokens, TagAttrs)> = Vec::new();
   for entry in std::mem::take(commands) {
     let parent = annotated_parent(&entry.2);
     if entry.0 == "ltx:rdf" && parent == "ltx:creator" {
       unprinted.push(entry);
     } else if creator_call(&entry.0, &parent) && !wordless_calls.contains(&entry.2) {
       seen = true;
+      if setter_calls.contains(&entry.2) {
+        taken_attrs.push((entry.2.clone(), entry.1.clone()));
+      }
       // (each recorded call's command, in ledger order, with its reading's source — a call inside a block its block's
       // (`after_block`, none while unset), else its own —, read once per flush, not once per queued creator)
       let recorded = recorded.get_or_insert_with(|| {
@@ -3700,6 +3717,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   // (the calls written whole, and the ones kept as they are)
   let mut written = wordless.clone();
   let base = lookup_int(QUEUE_ORDINAL_COUNTER);
+  // (each item call's source, role, label and entry, where `recover_queued` puts a call back: only when one may be)
+  let mut item_calls: Vec<ItemCall> = Vec::new();
   for (label, item) in calls {
     while let Some((at, rdf)) =
       unprinted.next_if(|(at, _)| item.assoc.source.is_some_and(|(index, _)| *at <= index))
@@ -3724,7 +3743,18 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       &(base + item.place).to_string(),
     )]);
     placed.extend(tokens.unlist());
-    out.push(entry(tag, placed));
+    let placed = entry(tag, placed);
+    if !setter_calls.is_empty()
+      && let Some((source, _)) = item.assoc.source
+    {
+      item_calls.push(ItemCall {
+        source,
+        role: item.assoc.role.clone(),
+        label: label.clone(),
+        command: placed.2.clone(),
+      });
+    }
+    out.push(placed);
   }
   // (each list setter call after the items, as the whole block digests it after the names' own contacts (2502.07804's
   // ORCID links): its entries numbered in the count of the entries of their role before them, `labelseq`)
@@ -3861,31 +3891,57 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .unlist_ref()]));
   }
   // (and what a frontmatter setter run inside a read block or a taken call queues: `recover_queued`)
-  let recovered = recover_queued(resolved, &whole, &out);
-  out.extend(recovered);
+  let taken = Taken {
+    attrs:  &taken_attrs,
+    items:  &item_calls,
+    owners: &owners,
+  };
+  recover_queued(resolved, &whole, &mut out, &taken);
   *commands = out;
   assign_value(EMITTED, Stored::Int(generation), Some(Scope::Global));
   with_ledger(|ledger| ledger.emitted = true);
   Ok(true)
 }
 
+/// An item call the emitter wrote: its source (the ledger index of its block or call), its role, the label its owners
+/// carry, and its entry in the flush's queue.
+struct ItemCall {
+  source:  usize,
+  role:    String,
+  label:   String,
+  command: Tokens,
+}
+
+/// What [`recover_queued`] reads of the emitter's own entries: the attributes each taken call a setter ran inside was
+/// queued with, the item calls written, and each creator's owner label (`author:N`).
+struct Taken<'a> {
+  attrs:  &'a [(Tokens, TagAttrs)],
+  items:  &'a [ItemCall],
+  owners: &'a [String],
+}
+
 /// The entries a frontmatter setter run inside an author block or an API call queues (`AuthorBlock::queued`,
 /// `ApiCall::queued`: what its rehearsal noted, the frontmatter frozen), queued at the flush after the emitter's own, as the
 /// old driver's digestion of the block or the call at the flush made them, so each is its own entry where the schema puts
-/// it: `\date{$^1$ School of …}` inside `\author`, which LaTeX prints as the date (1411.6693, 2503.02741, hep-th0304189),
-/// and REVTeX 3's `\pacs` inside an `\address`'s minipage (cond-mat9801109, cond-mat9906335, cond-mat9809277,
-/// cond-mat9909213), whose emitted creators digest no setter (OXIDIZED_DESIGN_DIVERGENCES #985). A call whose run also
-/// digested an entry where it stands (`rehearsal::note_frozen_digest`: that minipage's `\begin{abstract}`), which no queue
-/// holds, and of which the reading writes nothing, is written as queued, as the old driver wrote it: its digestion at the
-/// flush runs every setter in it. Each once per conversion; not a block of no creator of this reading, one written whole
-/// (`whole`, whose digestion runs the setter itself), nor a call written as queued already (in `out`) or one a later clear
-/// removed. What no step writes — an entry digested where it stands in a read block, or in a call the reading writes
-/// from — is counted ([`warn_queued_unwritten`]).
+/// it: `\date{$^1$ School of …}` inside `\author`, which LaTeX prints as the date (2503.02741, hep-th0304189; open:
+/// 1411.6693's, its block nested in `\title`, lost uncounted), and REVTeX 3's `\pacs` inside an `\address`'s minipage (cond-mat9801109,
+/// cond-mat9906335, cond-mat9809277, cond-mat9909213), whose emitted creators digest no setter (OXIDIZED_DESIGN_DIVERGENCES
+/// #985). A call whose run also digested an entry where it stands (`rehearsal::note_frozen_digest`: that minipage's
+/// `\begin{abstract}`), which no queue holds, and of which the reading writes nothing, is written as queued, as the old
+/// driver wrote it — its digestion at the flush runs every setter in it —, with the attributes it was queued with, back at
+/// its ledger position among the item calls and labelled for its run's creators ([`run_labels`]), so its contact is placed
+/// with theirs in queue order: unlabelled, the insertion put it in each creator before the items' moved contacts, and an
+/// e-mail cut from the address before it landed after it (cond-mat9809277, review revCR2 finding 1). Each once per
+/// conversion; not a block of no creator of this reading, one written whole (`whole`, whose digestion runs the setter
+/// itself), a call the reading writes from (its written contact's digestion runs the setter: review revCR2 finding 2), a
+/// call written as queued already (in `out`) or one a later clear removed. What no step writes — an entry digested where it
+/// stands in a read block — is counted ([`warn_queued_lost`]).
 fn recover_queued(
   resolved: &Resolved,
   whole: &BTreeSet<usize>,
-  out: &[RawFrontmatter],
-) -> Vec<RawFrontmatter> {
+  out: &mut Vec<RawFrontmatter>,
+  taken: &Taken,
+) {
   let read: BTreeSet<usize> = resolved.creators.iter().map(|c| c.source).collect();
   let written: BTreeSet<usize> = resolved
     .creators
@@ -3894,8 +3950,8 @@ fn recover_queued(
     .chain(&resolved.block)
     .filter_map(|assoc| assoc.source.map(|(at, _)| at))
     .collect();
-  // (each source: its index, its noted entries, and its command when it is a call the reading writes nothing of)
-  type Source = (usize, Vec<RawFrontmatter>, Option<(String, Tokens)>);
+  // (each source: its index, its noted entries, and its command and role when it is a call)
+  type Source = (usize, Vec<RawFrontmatter>, Option<(String, String, Tokens)>);
   let sources: Vec<Source> = with_ledger(|ledger| {
     let sources = ledger.entries().iter().filter_map(|entry| match entry {
       Entry::Author(block)
@@ -3909,6 +3965,7 @@ fn recover_queued(
         if !call.queued.is_empty()
           && !call.inside
           && !call.cleared
+          && !written.contains(&call.index)
           && call
             .command
             .as_ref()
@@ -3917,15 +3974,15 @@ fn recover_queued(
         let as_queued = call
           .command
           .clone()
-          .filter(|_| !written.contains(&call.index))
-          .map(|command| (call.tag.clone(), command));
+          .map(|command| (call.tag.clone(), call.role.clone(), command));
         Some((call.index, call.queued.clone(), as_queued))
       },
       _ => None,
     });
     sources.collect()
   });
-  let mut recovered = Vec::new();
+  // (each entry, after the `out` entry it follows: none at the end)
+  let mut recovered: Vec<(Option<usize>, RawFrontmatter)> = Vec::new();
   for (index, queued, as_queued) in sources {
     let once = s!("recovered|{index}");
     if lookup_mapping(EMITTED_ITEMS, &once).is_some() {
@@ -3949,17 +4006,102 @@ fn recover_queued(
       }
     );
     match as_queued {
-      Some((tag, command)) if !digested.is_empty() => {
-        recovered.push((tag, TagAttrs::default(), command));
+      Some((tag, role, command)) if !digested.is_empty() => {
+        let attrs = taken
+          .attrs
+          .iter()
+          .find(|(queued, _)| *queued == command)
+          .map(|(_, attrs)| attrs.clone())
+          .unwrap_or_default();
+        let labels = run_labels(index, &role, resolved, taken);
+        let command = labelled(&command, &labels).unwrap_or(command);
+        // (after the last item call of a source before it)
+        let after = out.iter().rposition(|entry| {
+          taken
+            .items
+            .iter()
+            .any(|item| item.source < index && item.command == entry.2)
+        });
+        DebugFeature!(
+          "frontmatter",
+          "FRONT emit writes the call {index} as queued, label={}, after entry {after:?}",
+          labels.join(",")
+        );
+        recovered.push((after, (tag, attrs, command)));
       },
       _ => {
-        recovered.extend(queued);
+        recovered.extend(queued.into_iter().map(|entry| (None, entry)));
         let lost: Vec<String> = digested.into_iter().map(|entry| entry.0).collect();
         warn_queued_lost(&lost);
       },
     }
   }
-  recovered
+  // (in order: the ones at the end, then each placed one from the last place back, so no place shifts)
+  let (at_end, placed): (Vec<_>, Vec<_>) = recovered.into_iter().partition(|(at, _)| at.is_none());
+  out.extend(at_end.into_iter().map(|(_, entry)| entry));
+  let mut placed: Vec<(usize, usize, RawFrontmatter)> = placed
+    .into_iter()
+    .enumerate()
+    .filter_map(|(n, (at, entry))| Some((at?, n, entry)))
+    .collect();
+  placed.sort_by_key(|(at, n, _)| std::cmp::Reverse((*at, *n)));
+  for (at, _, entry) in placed {
+    out.insert(at + 1, entry);
+  }
+}
+
+/// The labels the call at ledger index `index` of role `role`, written as queued, goes to: its run's creators, as the
+/// insertion's `annotate=run` reaches them while the queue is digested — the owners of the item of its role written before
+/// it when no author came between them (REVTeX 3's second `\address` after the first, the same authors'), else the
+/// creators since the last item of its role. None before any creator.
+fn run_labels(index: usize, role: &str, resolved: &Resolved, taken: &Taken) -> Vec<String> {
+  let last_creator = resolved
+    .creators
+    .iter()
+    .map(|c| c.source)
+    .filter(|&source| source < index)
+    .max();
+  let last_same = taken
+    .items
+    .iter()
+    .filter(|item| item.source < index && item.role == role)
+    .map(|item| item.source)
+    .max();
+  let mut labels: Vec<String> = match (last_same, last_creator) {
+    (Some(same), Some(creator)) if same > creator => taken
+      .items
+      .iter()
+      .filter(|item| item.source == same && item.role == role)
+      .map(|item| item.label.clone())
+      .collect(),
+    (_, Some(_)) => resolved
+      .creators
+      .iter()
+      .zip(taken.owners)
+      .filter(|(c, _)| c.source < index && last_same.is_none_or(|same| c.source > same))
+      .map(|(_, owner)| owner.clone())
+      .collect(),
+    _ => Vec::new(),
+  };
+  let mut seen = BTreeSet::new();
+  labels.retain(|label| seen.insert(label.clone()));
+  labels
+}
+
+/// A queued call's tokens with `label={labels}` first among its keys, which the insertion places it by; none where it has
+/// no key list or no label is given.
+fn labelled(command: &Tokens, labels: &[String]) -> Option<Tokens> {
+  if labels.is_empty() {
+    return None;
+  }
+  let v = command.unlist_ref();
+  let (Some(open), Some(_)) = key_list_bounds(v) else {
+    return None;
+  };
+  let mut out: Vec<Token> = v[..=open].to_vec();
+  out.extend(key_tokens(&s!("label={{{}}},", labels.join(","))));
+  out.extend_from_slice(&v[open + 1..]);
+  Some(Tokens::new(out))
 }
 
 /// A command's fingerprint as its equality reads it, a space by its catcode (`Token::cycle_fingerprint`): equal commands

@@ -5,7 +5,8 @@
 % oracle:  pdflatex (svjour3.cls from 2206.00320, not in TL 2025) 0 errors; "Ann Able (E-mail: ann@zebra.ac.cn)" in the
 %   institute block
 % engines: rust int154a: no e-mail contact, 0 Warnings; old engine (int153m, LATEXML_FM_EMIT=0): each e-mail its
-%   owner's; perl: the same
+%   owner's; perl: both e-mails under Bob (an unlabelled `\lx@add@email`, sv_support.sty.ltxml:52), both affiliations
+%   dropped as orphans, 2 Warnings — the owner rule is the old engine's, beyond Perl
 % expect:  contact[@role=email] "ann@zebra.ac.cn" under Ann, "bob@lsec.cc.ac.cn" under Bob, before each affiliation
 % status:  RED (int154a) -> GREEN (CR2)
 % preload: ar5iv.sty

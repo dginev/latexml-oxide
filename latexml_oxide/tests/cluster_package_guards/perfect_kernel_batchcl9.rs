@@ -172,19 +172,21 @@ fn a_setter_inside_the_author_block_is_counted() {
   ];
   let (log, xml) = run(repro!("cl9_date_inside_author_counted"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let date = xml.find("<date ").map(|at| {
-    &xml[at..at
-      + xml[at..]
+  // (every date, whole: one, never a second copy — review revCR2 NIT)
+  let dates: Vec<String> = xml
+    .match_indices("<date ")
+    .map(|(at, _)| {
+      let end = xml[at..]
         .find("</date>")
-        .map_or(0, |end| end + "</date>".len())]
-  });
-  assert_eq!(
-    date
-      .map(|d| d.split_whitespace().collect::<Vec<_>>().join(" "))
-      .as_deref(),
-    Some(
-      "<date role=\"creation\"><sup xml:id=\"id3\">1</sup>Univ X<break/> <sup xml:id=\"id4\">2</sup>Univ Y</date>"
-    )
-  );
+        .unwrap_or_else(|| panic!("a <date> with no close in:\n{xml}"));
+      xml[at..at + end + "</date>".len()]
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+    })
+    .collect();
+  assert_eq!(dates, vec![
+    "<date role=\"creation\"><sup xml:id=\"id3\">1</sup>Univ X<break/> <sup xml:id=\"id4\">2</sup>Univ Y</date>"
+  ]);
   assert_eq!(creator_elements(&xml), emitted);
 }
