@@ -33178,3 +33178,48 @@ repros `class-bindings/llncs_{later_braced_email_call_keeps_its_author,list_emai
 guards `perfect_kernel_batchz18d`; the 1,434 stage2 ids and the 699 llncs papers byte-identical to the base
 (`6271ba8076`) in XML and Errors, save 0909.4443's math ids once (a rerun matched) and 2008.05861's two new "markup lost"
 Warnings for the tie its e-mails carry on the base too.
+
+### 985. What the old driver wrote at the flush and the emitter had lost: an svjour3 owner label's `\email`, and a frontmatter setter run inside an author block or an API call (CR2)
+
+Two real losses of the flip's content residual (CR1 classes B and A): pdflatex prints the words, the old driver
+(`LATEXML_FM_EMIT=0`, int153m) kept them by digesting the label, block or call at the flush; the emitter, writing from
+the reading, digested none of it. The old driver's output is the target. For A Perl keeps the words with 0 errors; for B
+Perl keeps the e-mails but files them all under the last author (svjour3's `\email`, sv_support.sty.ltxml:52, is an
+unlabelled `\lx@add@email`) and drops both affiliations as orphans (2 Warnings), so B's owner rule is the old driver's,
+beyond Perl. (1) **svjour3
+`Name (\email{…}) \at Address`** inside `\institute`: the `\email` sat only in the piece's `fuzzy:` owner label, which the
+emitter reads as text (`observer/ledger.rs` `label_text`), so no contact was filed and no Warning raised. The binding
+now files each such `\email` under the label as its own call, before the affiliation as the line prints it
+(`sv_support_sty.rs` `\lx@sv@institute@` → `\lx@sv@institute@email`, `\lx@add@email[label={fuzzy:…}]`), the label
+holding the owner's name alone. Witnesses 2206.00320 (3 e-mails), 1307.4424 (2). (2) **A setter run inside an author
+block or a call** — `\date` inside `\author` (LaTeX prints its argument as the date: 2503.02741, hep-th0304189), REVTeX
+3's two-column `\address{\begin{minipage}…\begin{abstract}…\end{abstract}\pacs{…}\end{minipage}}` (cond-mat9801109,
+cond-mat9906335, cond-mat9809277, cond-mat9909213). The rehearsal, the frontmatter frozen, notes each entry the run would
+queue as the queue would hold it (`rehearsal::note_frozen_entry`, tag + attributes + command) and each it digests where
+it stands (`\lx@add@frontmatter@until`, `rehearsal::note_frozen_digest`); a block keeps them (`AuthorBlock::queued`), and
+now a call too (`ApiCall::queued`, `reading::read_at_flush`). At the flush the emitter queues them after its own entries,
+so each is its own entry where the schema puts it (`emitter::emit::recover_queued`, once per source): a read block's,
+not one written whole (whose digestion runs the setter itself, still counted by `warn_queued_unwritten`); a call's of
+which the reading writes nothing and whose command is not already written as queued. A call the reading writes from
+recovers nothing, neither queued nor counted: its written contact's digestion at the flush runs every setter in it
+(`\address{Univ A, Oviedo, Spain \pacs{71.25.Hc}}` wrote two PACS classifications otherwise, and a false "lost" Warning
+beside an `\begin{abstract}` written; review revCR2 finding 2). A call whose run digested an entry in place is written as
+queued, the old driver's rule, so its digestion runs every setter in it — with the attributes it was queued with, back at
+its ledger position among the emitter's item calls, labelled for its run's creators (`run_labels`: the owners of the item
+of its role before it when no author came between, else the creators since that item), so the insertion places its
+contact with theirs in queue order — save a run of two or more creators since that item, whose labels go out joined as one
+`label={author:1,author:2}` the insertion's exact-label lookup (`relocate::find_targets`) never finds: its contact, always
+empty on that path (a minipage with visible text is a call the reading writes), is dropped with an orphaned-annotation
+Warning the base did not raise (RED `revtex3_minipage_address_first_joins_run_labels.tex`, review revCR2b finding 1; no census
+paper hit). Appended unlabelled, its contact went into each creator before the items' moved
+contacts, and cond-mat9809277's e-mails, cut from the first address, landed after the journal line (review revCR2
+finding 1); now Address, Email, Address(PRL), as the base, REVTeX 3's print and the old driver. An entry digested in place
+in a read block, which no step writes, is counted (`warn_queued_lost`). **Open:** 1411.6693 nests the block inside
+`\title{…\author{…\date{…}}}`: the emitter stays out at the first flush (no author block), the `\author` runs in the
+title's digestion, and the date is lost with no Warning (pre-existing, review revCR2 P1; minimal trigger
+`\title{A Title\author{Ann Able$^{1}$ \date{$^1$ School of Zebrawords}}}\maketitle` under article). cond-mat9809277
+keeps Perl's and the old driver's empty minipage `ltx:contact`, last (RED: `\vskip -0.5in $ $` after the `\pacs` keeps
+the minipage's paragraph). Repros
+`sectioning-frontmatter/{svjour3_institute_email_before_at_is_its_owners,date_inside_author_is_the_date,revtex3_abstract_inside_address_minipage,revtex3_minipage_address_keeps_contact_order,revtex3_setter_in_written_address_once}.tex`;
+guards `perfect_kernel_batchcr2` (one per path: the owner label, a block's queued setter, a call's in-place digest, the
+call's place among the items, a written call).

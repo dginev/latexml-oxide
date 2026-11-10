@@ -1,0 +1,21 @@
+% mechanism: an svjour3 `\institute` piece `Name (\email{…}) \at Address` names its owner before `\at`; the `\email`
+%   there is the owner's contact, filed under the piece's owner label as its own call (sv_support_sty.rs
+%   `\lx@sv@institute@email`; OXIDIZED_DESIGN_DIVERGENCES #985): the emitter reads a label as text and had filed nothing.
+% witness: 2206.00320, 1307.4424
+% oracle:  pdflatex (svjour3.cls from 2206.00320, not in TL 2025) 0 errors; "Ann Able (E-mail: ann@zebra.ac.cn)" in the
+%   institute block
+% engines: rust int154a: no e-mail contact, 0 Warnings; old engine (int153m, LATEXML_FM_EMIT=0): each e-mail its
+%   owner's; perl: both e-mails under Bob (an unlabelled `\lx@add@email`, sv_support.sty.ltxml:52), both affiliations
+%   dropped as orphans, 2 Warnings — the owner rule is the old engine's, beyond Perl
+% expect:  contact[@role=email] "ann@zebra.ac.cn" under Ann, "bob@lsec.cc.ac.cn" under Bob, before each affiliation
+% status:  RED (int154a) -> GREEN (CR2)
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{A Title}
+\author{Ann Able \and Bob Baker}
+\institute{Ann Able (\email{ann@zebra.ac.cn}) \at Univ A, Kunming, China
+\and Bob Baker (\email{bob@lsec.cc.ac.cn}) \at Univ B, Beijing, China}
+\maketitle
+Body.
+\end{document}

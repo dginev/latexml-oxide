@@ -144,7 +144,7 @@ pub(in crate::base_utilities) struct AuthorBlock {
   /// the tags its rehearsal queued besides its creators (`rehearsal::Rehearsal::Done::queued`): a frontmatter setter run inside
   /// the block, a `\date` in `\author` (2503.02741), which the emitter counts (`emitter::emit::warn_queued_unwritten`). Not in
   /// a dump: only the emitter reads it
-  pub queued:         Vec<String>,
+  pub queued:         Vec<RawFrontmatter>,
   /// the binding owning the `\author` meaning at the call ([`author_binding`]): a compiled binding's file name
   /// (`revtex4_support.sty`), else `kernel`, `document`, `raw` or `fallback` by its definition origin
   pub owner:          String,
@@ -225,6 +225,10 @@ pub(in crate::base_utilities) struct ApiCall {
   pub events:         Vec<Event>,
   /// whether a flush rehearsed its content
   pub rehearsed:      bool,
+  /// the entries its content's rehearsal queued besides creators, as an author block's ([`AuthorBlock::queued`]): a
+  /// setter run inside the call — REVTeX 3's `\address{\begin{minipage}…\begin{abstract}…\end{abstract}\pacs{…}
+  /// \end{minipage}}`, cond-mat9801109 —, which the emitter queues at the flush (`emitter::emit::recover_queued`)
+  pub queued:         Vec<RawFrontmatter>,
   /// the rehearsal gave up on it (`SkipReason::OverBudget`, a Fatal, `NotUndone`): no events, what it printed its
   /// content's text alone ([`content_text`]), which the content check counts (`resolver::placed::content_check`)
   pub unread:         Option<Box<ContentText>>,
@@ -896,6 +900,7 @@ pub(in crate::base_utilities) fn record_api_call(
       content,
       events: Vec::new(),
       rehearsed: false,
+      queued: Vec::new(),
       unread: None,
       inside_events: Box::default(),
       cleared: false,

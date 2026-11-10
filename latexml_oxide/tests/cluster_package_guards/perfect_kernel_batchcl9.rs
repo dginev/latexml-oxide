@@ -161,9 +161,9 @@ fn a_sequenced_contact_never_invents_a_creator() {
   ]);
 }
 
-/// `\date{…}` inside `\author{…}`: LaTeX prints it as the date, off writes it as the document's date; at `=2` the block's
-/// rehearsal records the `ltx:date` it queues, which the emitter's reading holds no place for, so its loss is counted by
-/// one Warning (int153w: lost silently).
+/// `\date{…}` inside `\author{…}`: LaTeX prints it as the date, off writes it as the document's date; the block's rehearsal
+/// records the `ltx:date` it queues, which the emitter queues at the flush (CR2, OXIDIZED_DESIGN_DIVERGENCES #985: the date
+/// written, no Warning; CL9b counted it lost, int153w lost it silently).
 #[test]
 fn a_setter_inside_the_author_block_is_counted() {
   let emitted = [
@@ -171,13 +171,22 @@ fn a_setter_inside_the_author_block_is_counted() {
     "<creator before=\" \" role=\"author\"> <personname>Bob Baker<sup xml:id=\"id2\">2</sup></personname> </creator>",
   ];
   let (log, xml) = run(repro!("cl9_date_inside_author_counted"));
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
-  assert_eq!(
-    log
-      .matches("queues besides its creators (ltx:date); it is lost")
-      .count(),
-    1,
-    "{log}"
-  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  // (every date, whole: one, never a second copy — review revCR2 NIT)
+  let dates: Vec<String> = xml
+    .match_indices("<date ")
+    .map(|(at, _)| {
+      let end = xml[at..]
+        .find("</date>")
+        .unwrap_or_else(|| panic!("a <date> with no close in:\n{xml}"));
+      xml[at..at + end + "</date>".len()]
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+    })
+    .collect();
+  assert_eq!(dates, vec![
+    "<date role=\"creation\"><sup xml:id=\"id3\">1</sup>Univ X<break/> <sup xml:id=\"id4\">2</sup>Univ Y</date>"
+  ]);
   assert_eq!(creator_elements(&xml), emitted);
 }

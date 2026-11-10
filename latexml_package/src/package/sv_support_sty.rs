@@ -165,15 +165,43 @@ LoadDefinitions!({
     }
     // (the name as written where it holds no list command)
     let label = if dropped.is_empty() && structure.is_empty() {
-      name.clone()
+      name.unlist_ref().to_vec()
     } else {
-      Tokens::new(words)
+      words
+    };
+    // (the label's `\email` calls, `Name (\email{…}) \at Address`, are its owner's e-mails, each filed under the label as
+    // its own call, before the affiliation as the line prints them: the old driver digested the label at the flush, its
+    // `\email` filing the contact, which the emitter, reading a label as text, never does — the address had been lost,
+    // no Warning (2206.00320, 1307.4424; OXIDIZED_DESIGN_DIVERGENCES #985). Not in the label any more, whose words are
+    // the owner's name)
+    let (label, calls) = split_email_calls(&label);
+    let label = Tokens::new(label);
+    let emails = if calls.is_empty() {
+      Vec::new()
+    } else {
+      cs_group_tokens("\\lx@sv@institute@emails", &[label.unlist_ref(), &calls])
     };
     Ok(Invocation!(
-      "\\ifx.#2.\\lx@sv@institute@unlabelled{#1}\\else\\lx@add@affiliation[label={fuzzy:#4}]{\\lx@sv@institute@marks#3\\lx@sv@institute@piece{#2}}\\fi",
-      vec![Some(name), Some(Tokens::new(address)), Some(Tokens::new(named)), Some(label)]
+      "\\ifx.#2.\\lx@sv@institute@unlabelled{#1}\\else#5\\lx@add@affiliation[label={fuzzy:#4}]{\\lx@sv@institute@marks#3\\lx@sv@institute@piece{#2}}\\fi",
+      vec![
+        Some(name),
+        Some(Tokens::new(address)),
+        Some(Tokens::new(named)),
+        Some(label),
+        Some(Tokens::new(emails))
+      ]
     ))
   });
+  // The e-mails the owner label of an `\institute` piece holds (`\lx@sv@institute@`): each `\email` call, filed under
+  // that label as `\email` sets it.
+  DefMacro!(
+    "\\lx@sv@institute@emails{}{}",
+    "\\begingroup\\def\\email{\\lx@sv@institute@email{#1}}#2\\endgroup"
+  );
+  DefMacro!(
+    "\\lx@sv@institute@email{} Semiverbatim",
+    "\\lx@add@email[label={fuzzy:#1},name={\\emailname: }]{\\lx@address@textfont{#2}}"
+  );
   // A labelled piece's text, without the `\at` sentinel `\lx@sv@institute` appended (the `Until:\done` part keeps it):
   // `\at` is `\relax` here, but a document may define its own (`\newcommand\at[2]{\left.#1\right|_{#2}}`, allowed as
   // `\relax` counts as undefined), which then ran at the affiliation's end with its arguments missing (svjour3
@@ -755,6 +783,17 @@ fn without_ranges(tokens: &[Token], ranges: &[Range<usize>]) -> Vec<Token> {
     .filter(|i| !ranges.iter().any(|range| range.contains(i)))
     .map(|i| tokens[i])
     .collect()
+}
+
+/// `cs` followed by each of `args` in braces.
+fn cs_group_tokens(cs: &str, args: &[&[Token]]) -> Vec<Token> {
+  let mut tokens = vec![T_CS!(cs)];
+  for arg in args {
+    tokens.push(T_BEGIN!());
+    tokens.extend_from_slice(arg);
+    tokens.push(T_END!());
+  }
+  tokens
 }
 
 /// `tokens` without their `\email{…}` calls, and the calls.

@@ -1,0 +1,20 @@
+% mechanism: a frontmatter setter run inside an author block (`\date` in `\author`) queues its own entry: its rehearsal
+%   notes the frozen entry (`rehearsal::note_frozen_entry`), and the emitter queues it at the flush
+%   (`emitter::emit::recover_queued`; OXIDIZED_DESIGN_DIVERGENCES #985), as the old driver's digestion of the block did.
+% witness: 2503.02741, hep-th0304189; 1411.6693 stays open (its block nests inside `\title`: the date lost, no Warning)
+% oracle:  pdflatex 0 errors; `\maketitle` runs the `\date` while typesetting `\@author`, so the date line prints
+%   "1 School of Zebrawords, Northeast Normal University, Changchun 130024, China"
+% engines: rust int154a: no date, 1 Warning ("queues besides its creators (ltx:date); it is lost"); old engine (int153m,
+%   LATEXML_FM_EMIT=0): the date; perl: the date
+% expect:  <date role="creation"> with the superscript 1 and the school's words; 0 Warnings
+% status:  RED (int154a) -> GREEN (CR2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$
+ \date{$^1$ School of Zebrawords, Northeast Normal University, Changchun 130024, China}}
+\maketitle
+\date{}
+Body.
+\end{document}
