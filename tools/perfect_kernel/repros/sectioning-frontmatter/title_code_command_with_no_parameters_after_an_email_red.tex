@@ -2,7 +2,9 @@
 %   right after an `\email{…}` is taken by the e-mail piece (`content::Field::past_held_undefined`), whose contact is
 %   digested without the title code's definitions, so it is undefined there; only a name is digested under them
 %   (`\lx@author@withinst`). The same with a `\def`'s delimiter alone (`\def\address[]{…}`, `\def\address.{…}`).
-%   OXIDIZED_DESIGN_DIVERGENCES #983 Known RED (RA0; revPC3 finding 2's `p/s1b.tex`)
+%   OXIDIZED_DESIGN_DIVERGENCES #983 Known RED, pre-existing for every parameterless definee: the common
+%   `\def\address{\textsuperscript{x}}` after an `\email{…}` errs so on int156a0 too (review revRA0 p14); RA0 brought
+%   `[0]` and `\def\x[]` in line (revPC3 finding 2's `p/s1b.tex`)
 % witness: synthetic
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able*x , Bob Baker"
 % engines: int156a0: 0 Errors, 1 Warning (the content check's "ann@x.org"), the "x" in no output, uncounted;

@@ -33211,10 +33211,18 @@ read already). After a name, such a definee is the name's and prints (`\author{A
 `\newcommand{\address}[0]{\textsuperscript{x}}`: "x" had been in no output, uncounted); repro
 `title_code_command_declared_with_no_parameters_is_taken`, guard
 `perfect_kernel_batchra0::a_title_code_command_declared_with_no_parameters_is_taken`, the forms pinned by
-`title_code`'s unit test `reads_arguments_counts_parameters_not_brackets`. **Known RED (RA0, synthetic):** right after
-an `\email{…}` it is the e-mail piece's, whose contact is digested without the title code's definitions:
-`<sup>*</sup><ERROR>\address</ERROR>` and 1 Error where pdflatex prints "x" (int156a0: 0 Errors, the "x" in no output,
-uncounted; the `\def\x[]` shape the same); repro `title_code_command_with_no_parameters_after_an_email_red`. Pre-existing (revPC3): a real undefined `\inst{2}` in
+`title_code`'s unit test `reads_arguments_counts_parameters_not_brackets`. **Known RED (pre-existing, synthetic; review revRA0):** any
+parameterless title-code definee right after an `\email{…}` is the e-mail piece's, whose contact is digested without
+the title code's definitions: `<sup>*</sup><ERROR>\address</ERROR>` and 1 Error where pdflatex prints "x" — the common
+`\def\address{\textsuperscript{x}}` on int156a0 already; RA0 brings `[0]` and `\def\x[]` in line with it (int156a0 had
+lost their "x" uncounted); repro `title_code_command_with_no_parameters_after_an_email_red`. So "a parameterless definee
+is taken and prints" holds for a name's piece, not an e-mail's. A count that is no literal number (`[\z@]`) is read as
+reading arguments, so such a 0 still takes the silent path `[0]` left (`title_code.rs` ~275; exotic, revRA0 N3).
+Pre-existing too (revRA0, both binaries): `\newcommand{\address}[1][d]` used without its argument prints "Ann Abled"
+in pdflatex and `Ann Able` here, 0 W (the predicate decides by the declaration, not the use); `\def\address#1\relax` used
+as `\address 1\relax` gives an empty `<sup/>` and the digit outside; `\def\address[#1]`'s `<sup>1</sup>` placed but the
+content check warns "1" missing; `\DeclareRobustCommand`/`\edef` definees raise a false Error (revPC3 N4); a
+parameterless definee prints for the first author only (the `title_code_counter_mark_first_author_only` family). Pre-existing (revPC3): a real undefined `\inst{2}` in
 an article author raises no Error (the rehearsal binds `\inst` as a mark, `rehearsal.rs` ~572) where pdflatex does;
 `\thanks{Funded\address{9}}` under the title code's `\address` raises a false Error. **Not raised, by design:** the `Error:expected:\fi` chains and `\@authorii`…`\@authorv` the old
 driver raised on sibarticle.sty's `\ifnum \c@numAuthors>1 \and …\fi` (1603.08231: 18, 2112.06251: 12): pdflatex 0

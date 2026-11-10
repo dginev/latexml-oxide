@@ -466,7 +466,7 @@ impl Field<'_> {
   /// `\email{…}`: the e-mail piece took it without its `{1}` and raised `Error:undefined:\address` there (1108.4222,
   /// 1202.2889, 1206.0451, 1207.2226, 1301.4791, 1307.2761, 2103.05801, 2408.01858, 2412.06362; pazha2.cls:126's
   /// `\addres`, 2607.07582); left out, `\address{1}` stays the name's mark and the flush's net spares it, by its meaning
-  /// recorder (`reading::HeldUndefined`). A parameterless one is still taken: it prints, under the title code's
+  /// recorder (`reading::HeldUndefined`). A parameterless one is still taken: in a name's piece it prints, under the title code's
   /// definitions the piece is digested with (`\lx@author@withinst`), what the piece holds — aaai2026.sty's `\co`, its
   /// corresponding-author note (2508.04047, 2508.08170). Repro
   /// sectioning-frontmatter/title_code_command_after_an_email_keeps_its_argument (OXIDIZED_DESIGN_DIVERGENCES #983).
