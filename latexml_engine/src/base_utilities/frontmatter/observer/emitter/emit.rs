@@ -1380,12 +1380,15 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
   let (from, to) = list
     .and_then(|(s, t)| field.balanced(usize::from(s), usize::from(t), 0))
     .unwrap_or((0, content.len()));
-  // (the ink that is the address, as printed: a brace list's `gilba\}@x` is no ink of `gilba@x`, 2411.10891)
+  // (the ink that is the address, as printed: a brace list's `gilba\}@x` is no ink of `gilba@x`, 2411.10891; without the
+  // spacing between the list's addresses its run opens with, `a@x \quad b@y`'s `\quad` before `b@y`, which prints no part
+  // of the address: 2310.01324's `\email{xinhaoli00@… \quad zyuhan0812@… \quad lmwang@…}`)
   let spaced = |text: &str| text.split_whitespace().collect::<Vec<_>>().join(" ");
   let printed = inks
     .iter()
     .find(|e| spaced(&e.text) == spaced(address))
-    .and_then(|e| event_run(&field, events, (e, e), None, &[]));
+    .and_then(|e| event_run(&field, events, (e, e), None, &[]))
+    .map(|run| run[leading_spacing_end(&run)..].to_vec());
   // (the separators the list's argument opens or ends with print no part of one address: `\email{\{neeraj.battan,
   // abbhinav.venkat\}@research.iiit.ac.in, }`, 1908.05750 — "…iiit.ac.in," had been each address)
   let separators = |run: &[Token]| {
@@ -2120,7 +2123,7 @@ fn item_call(
             })
             .find_map(|e| block.tokens.unlist_ref().get(at(e.span?.0)?).copied())
         })
-        .filter(|cs| font.is_none() && !links && calls::is_email_command(cs).unwrap_or(false));
+        .filter(|cs| font.is_none() && !links && is_email_command(cs).unwrap_or(false));
         let written = links
           .then(|| {
             with_block(index, None, |block, _| {
@@ -2146,7 +2149,7 @@ fn item_call(
           ),
         };
         let content = match command {
-          Some(cmd) => calls::email_command_address(&cmd, content)?,
+          Some(cmd) => email_command_address(&cmd, content)?,
           None => content,
         };
         return Ok(annotate_now("ltx:contact", &keys, content.unlist_ref()));

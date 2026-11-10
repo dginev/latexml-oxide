@@ -8,10 +8,12 @@
 //! `\author{Ann Able \institute{Univ A} \email{ann@a.edu} \and Bob Baker \institute{Univ B}}`. Read as the kernel's
 //! author line, the institute and e-mail stayed in the name ("Ilaria De Crescenzo Università degli Studi di Salerno
 //! Dipartimento di Informatica", 1408.5969; 1909.07676, 2406.16409, 2109.08295's "Jens Lehmann SDA Research Group, … \{grubenmann,
-//! jens.lehmann\}@cs.uni-bonn.de"). The binding reads the block as the class prints it: each `\and` cell a row of names
-//! (`Tobias Grubenmann and Jens Lehmann`, 2109.08295), every institute under the row each name's affiliation, and an
-//! e-mail the author it spells, else, a list of one address per name in order, the name at its place, else the row's
-//! only author, else the block's (FIDELITY_CHARTER §4; `row_email_owners`). A cell that opens with a `tabular` of its
+//! jens.lehmann\}@cs.uni-bonn.de"). The binding writes the block as the class prints it and gives it whole to the
+//! reading (`\lx@add@author@split`, OXIDIZED_DESIGN_DIVERGENCES #984): each `\and` cell a column, its names
+//! (`Tobias Grubenmann and Jens Lehmann`, 2109.08295) and each `\institute` and `\email` a `\\` line under them; the
+//! reading places each line — an institute every name's of the column, an e-mail the author it spells, else, a list of
+//! one address per name in order, the name at its place (1101.4424's `g.stavrinos@… \qquad tassiana98@…`), else the
+//! column's only author, else the block's (FIDELITY_CHARTER §4). A cell that opens with a `tabular` of its
 //! own — the names as its columns, a row of e-mails under them, and lines under the table (1407.7928) — or with an
 //! environment of the paper's own that opens one (2409.15014's `{authors}{5}`, its `\institute` and `\email` lines
 //! spanning the columns) is read the same way: a column's names its cell, a full row's cell a line under its column,

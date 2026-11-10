@@ -75,39 +75,6 @@ fn whole_line_cs_wrapper_rejects_non_wrappers() {
   assert!(whole_line_cs_wrapper(&tk("\\textbf{A}x")).is_none());
 }
 
-#[test]
-fn split_author_line_splits_top_level_commas() {
-  setup();
-  assert_eq!(split_author_line(tk("Alice, Bob, Carol")).len(), 3);
-}
-
-#[test]
-fn split_author_line_splits_literal_and() {
-  setup();
-  assert_eq!(split_author_line(tk("Alice and Bob")).len(), 2);
-}
-
-#[test]
-fn split_author_line_unwraps_font_wrapper_per_author() {
-  setup();
-  // Beyond-Perl: brace-hidden commas would collapse to ONE creator in Perl;
-  // we unwrap and re-apply the wrapper so each name is its own creator.
-  let got = split_author_line(tk("\\textbf{Alice, Bob, Carol}"));
-  assert_eq!(got.len(), 3);
-  for piece in &got {
-    let v = piece.unlist_ref();
-    assert_eq!(v[0], T_CS!("\\textbf"));
-    assert_eq!(v[1].get_catcode(), Catcode::BEGIN);
-  }
-}
-
-#[test]
-fn split_author_line_leaves_single_wrapped_name_intact() {
-  setup();
-  // Only unwrap when there is actually an inner list to split.
-  assert_eq!(split_author_line(tk("\\textbf{Alice}")).len(), 1);
-}
-
 // --- html_feedback#6637 helpers (OXIDIZED_DESIGN #52) ---
 
 #[test]

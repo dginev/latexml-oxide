@@ -145,8 +145,8 @@ LoadDefinitions!({
   Let!("\\endauthor", "\\relax");
   // The kernel's separators between the creators, as amsart's (ams_support_sty.rs `\@@and`), where its default joins
   // them with `\qquad` (sect05.rs `\lx@author@conj`): ", " between names and " and " before the last, synthesized from
-  // the creators' order, not the ones the list was written with: the kernel's splitter drops each name's separator
-  // (`split_author_line`, past `rejoin_name_qualifiers`) and its flush sets every later creator's `before` from these
+  // the creators' order, not the ones the list was written with: the kernel's reading drops each name's separator
+  // (a qualifier rejoined to the name before it) and its flush sets every later creator's `before` from these
   // two (base_utilities.rs), so `Roger Temam$^{1, 2}$ \& Shouhong Wang$^1$` (chao-dyn9304004) reads "… and …" and
   // `A and B and C` "A, B and C" (OXIDIZED_DESIGN #624).
   DefMacro!("\\lx@author@sep", ",\\ ");

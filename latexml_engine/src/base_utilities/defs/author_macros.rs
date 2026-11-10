@@ -226,7 +226,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
     whole_block_call(stuff, false, None, late)
   });
-  // A name list where a binding has no lines or affiliations to read: each name `split_author_line` finds (comma,
+  // A name list where a binding has no lines or affiliations to read: each name the reading finds (comma,
   // " and ", " \& ") is an author of its own, the keyvals given to each (`\author{R. Braun\inst{1} and W. B.
   // Burton\inst{2}}`, astro-ph9810433; `\IEEEauthorblockN{Clemens Paul Zengler, Niels Troldborg, Mac Gaunaa.}`,
   // 2410.19527). A collaboration the list names beside its names is a contact on them, no part of a name (batch 103b:

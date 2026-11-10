@@ -711,23 +711,23 @@ fn option_value(options: &str, key: &str) -> Option<String> {
 /// address, read twice from the target and the text — two contacts written for one print: aa 2210.16066, 1907.11241,
 /// 2007.06573, 2103.15844, llncs 2405.04152, 2603.13900; `\href{mailto:ann@a.org}{Ann}` prints no address), a `\url`'s
 /// argument (review rev92c B1). A separator it holds parts its addresses as a break does (svjour3's `\email{yjansson@kth.se
-/// \and tony@kth.se}`, 2106.06418: no `\andtony@kth.se`, review revN2). A box of a control word is what it prints, a
-/// space when it prints nothing: the space after it the tokenizer skipped parted it from the next box, and the boxes
-/// still do — `\email{a@x \qquad b@y}` is `a@x b@y`, never the address `\qquadb@y` nor the word `qquad` (eptcs's
-/// `\email{g.stavrinos@… \qquad\qquad\qquad tassiana98@gmail.com}`, 1101.4424).
+/// \and tony@kth.se}`, 2106.06418: no `\andtony@kth.se`, review revN2). A box that prints nothing but spacing is a
+/// space, as it prints, not its source: the space after a control word the tokenizer skipped parted it from the next box, and the
+/// boxes still do — `\email{a@x \qquad b@y}` is `a@x b@y`, never the address `\qquadb@y` nor the word `qquad` (eptcs's
+/// `\email{g.stavrinos@… \qquad\qquad\qquad tassiana98@gmail.com}`, 1101.4424); a skip's whatsit is a space, and a
+/// box's printing one address, no formula and no note, that address.
 fn raw_lines(w: &Whatsit, n: usize) -> String {
+  // (a box that prints spacing and nothing else: a space)
+  fn spacing(d: &Digested) -> bool {
+    let mut printed = String::new();
+    ink_text_printed(d, &mut printed);
+    !printed.is_empty() && printed.trim().is_empty()
+  }
   fn push_box(d: &Digested, out: &mut String) {
-    let text = d.to_string();
-    let control_word = text
-      .strip_prefix('\\')
-      .is_some_and(|name| !name.is_empty() && name.chars().all(|c| c.is_ascii_alphabetic()));
-    if control_word {
-      match ink_of(d) {
-        ink if ink.is_empty() => out.push(' '),
-        ink => out.push_str(&ink),
-      }
+    if matches!(d.data(), DigestedData::TBox(_)) && spacing(d) {
+      out.push(' ');
     } else {
-      out.push_str(&text);
+      out.push_str(&d.to_string());
     }
   }
   fn walk(d: &Digested, out: &mut String) {
@@ -750,6 +750,26 @@ fn raw_lines(w: &Whatsit, n: usize) -> String {
           "\\lx@fm@obs@url" => {
             if let Some(text) = w.get_arg(1) {
               walk(text, out);
+            }
+          },
+          // (a skip, or a box printing one address and nothing else, no formula and no note: a space, the address —
+          // eptcs's `\email{\makebox[0cm][c]{sbb@…}\hspace{40mm}\makebox[0cm][c]{nam@…}}`, 1210.2456, whose source had
+          // been the words `\makebox[0.0pt][c]` and the address `nam@…\hspace`; any other box as written, a mark's
+          // `\textsuperscript{\Letter}` (2410.20769) or a list's group)
+          _ if !w.is_math()
+            && formula_extent(d).is_none()
+            && !is_note_whatsit(&w)
+            && notes_in(d).is_empty() =>
+          {
+            let ink = ink_of(d);
+            let one_address = ink.matches('@').count() == 1
+              && !ink.contains(|c: char| c.is_whitespace() || "{}()[],;<>".contains(c));
+            if ink.is_empty() {
+              out.push(' ');
+            } else if one_address {
+              out.push_str(&ink);
+            } else {
+              out.push_str(&d.to_string());
             }
           },
           _ => push_box(d, out),

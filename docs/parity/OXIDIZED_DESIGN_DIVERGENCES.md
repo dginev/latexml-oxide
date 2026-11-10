@@ -26183,8 +26183,8 @@ scorer found every one of its 6 sample papers wrong, and 18 of the census's 73 e
 binding (`latexml_contrib/src/eptcs_cls.rs`) reads the shipped class raw and reads `\author` as the class prints it —
 each `\and` cell a row of names (`Tobias Grubenmann and Jens Lehmann`, 2109.08295), every institute under the row
 each name's affiliation (FIDELITY_CHARTER R12), an e-mail line the author it spells, else, a list of one address per
-name, the name at its place, else the row's only author, else the block's (§4; `row_email_owners`,
-author_block/row_emails.rs). A cell that opens with a `tabular` of names (1407.7928) or with an environment of the
+name, the name at its place, else the row's only author, else the block's (§4; since Z18k the reading places each line,
+the binding writing the block as printed to `\lx@add@author@split`: #991). A cell that opens with a `tabular` of names (1407.7928) or with an environment of the
 paper's own that opens one (2409.15014's `{authors}{5}`) is read by its columns: a column's names its cell, a full
 row's cell a line under its column, any other line every name's. A block with no `\institute`, `\email` or leading
 table is the kernel's. Open: an institute or e-mail block labelled by marks (`$^{1}$ Quantinuum … \\ $^{2}$
@@ -33666,3 +33666,44 @@ contact (`\lx@add@contact[role=note]`), unchanged (1203.0413, 2111.03202: HTML b
 
 **Witnesses.** 2404.13552 (the notice's picture note: no †, shown inline); 2107.13277 (five ORCID icons, inline spans).
 Guard `perfect_kernel_batchcr8::an_unmarked_frontmatter_note_renders_inline_without_a_dagger`.
+
+### 991. eptcs's author block and OmniBus's `\authors` list go whole to the reading; an e-mail list reads as it prints (Z18k, Z18k2)
+
+**Perl.** Perl has no eptcs binding (the class is read raw through OmniBus) and OmniBus's `\authors{}` prints nothing
+(`OmniBus.cls.ltxml:74`, `DefMacro('\authors{}', Tokens())`).
+
+**Was.** Both bindings split their lists with `author_block`'s token reader: OmniBus's `\authors` called
+`split_author_line` and wrote one `\lx@add@author` per piece, so `\affil{1,2}` became the affiliation text "1,2" and a
+numbered `\affiliation{n}{…}` landed on a nameless creator (2003.03010, 2103.05990, 2209.10103, 2512.09915's
+`\affil{7,8}`); eptcs's binding split each `\and` cell into names and placed its `\email` lines itself
+(`row_email_owners`), merging a row of boxed names (1210.2456's "Sabine Broda Nelma Moreira").
+
+**Now.** (1) OmniBus's `\authors{list}` is `\lx@add@author@split{list}` (as llncs's unmarked `\author`, #984), each
+`\affil{…}` of numbers rewritten `\inst{…}`, the request of those numbered affiliations (omnibus_cls.rs
+`numbered_affil_marks`); another `\affil{text}` stays an affiliation. (2) eptcs's block is written as the class prints
+it (eptcs.cls:153-155, 186-191): each `\and` cell a column, its `\institute{…}` and `\email{…}` `\\` lines under its names,
+the whole list to `\lx@add@author@split`; a line under a whole `tabular` of names is a
+`labelseq={affiliation},_share={authors}` entry (1407.7928). (3) The reading's e-mail text (`events::raw_lines`) is the
+argument as it prints where a box's source would glue or add words: a box printing only spacing is a space, not its
+source (`\email{a@x \qquad b@y}` had read the address `\qquadb@y` and the word "qquad": 1101.4424); a skip's whatsit is a
+space and a box printing one address (no formula, no note) is the address (`\makebox[0cm][c]{a@x}\hspace{40mm}…`:
+1210.2456). Any other box stays as written (settled dead-end: read wider — every whatsit its ink, every box printing
+nothing a space — a mark `\textsuperscript{\Letter}` glued to its address, 2410.20769, and the braces of
+`{jsliwinski,wattenhofer}@ethz.ch` were lost, 2206.10050; 1905.00862 and 2403.11192 changed too). (4) The emitter writes one address of a block's e-mail list
+in the font the class's e-mail command sets it (`calls::email_command_address`: eptcs's `{\footnotesize\tt #1}`), and one
+address of an API call's list without the spacing its printed run opens with (`emit::one_address`: llncs's
+`\email{a@x \quad b@y}`, 2310.01324, which had written `\quadb@y` as text and each address twice). (5) The token split
+these bindings were the last to reach is deleted: `split_author_line`'s closure (`names_split.rs`, `separators.rs`,
+`name_text.rs`) and `row_emails.rs`, `author_block/` 3,364 → 2,552 lines.
+
+**Decided by the charter.** 2402.13328 (`\authors{Igor Shevchenko and Dan Crisan}`, no marks, `\affiliation{1}{…}`
+`\affiliation{2}{…}`): the numbered entries stay at the block as written (FIDELITY_CHARTER §4, KNOWN_PERL_ERRORS #1195);
+the base had paired them by position.
+
+**Residual.** 2304.02524's `\email{$^{a, b}$ \{…\}@quantinuum.com, $^{c}$ john@…}`: each address now goes to its marked
+author, but the e-mail marks `a b c` find no place and the line stays a counted note of the block.
+
+**Guards.** `perfect_kernel_batchz18k::{eptcs_email_list_a_control_word_parts_keeps_the_font, eptcs_email_row_of_boxes,
+llncs_email_list_quad_parted_keeps_the_font, omnibus_authors_affil_number_lists}`; the eptcs table and cell shapes stay
+`perfect_kernel_batch84b`'s. Repros `tools/perfect_kernel/repros/class-bindings/{eptcs/eptcs_email_row_of_boxes,
+llncs_email_list_quad_parted_keeps_the_font, omnibus/omnibus_authors_affil_number_lists}.tex`.

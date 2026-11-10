@@ -695,6 +695,9 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ("_scopebegin= package/pgfsys_latexml_def.rs", 1),
   ("_sequence= base_utilities/defs/frontmatter_fields.rs", 1),
   ("_share= cas_dc_cls.rs", 1),
+  // (Z18k: a line under eptcs's whole table of names is every name's entry, `labelseq={affiliation},_share={authors}` —
+  // the key llncs's, aa's and cas-dc's shared institute already uses, no new one: 1407.7928's institute lines)
+  ("_share= eptcs_cls.rs", 1),
   ("_share= package/aa_cls.rs", 1),
   ("_share= package/llncs_cls.rs", 2),
   ("_store= frontmatter_stores.rs", 11),
@@ -1151,7 +1154,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // `defs/frontmatter_api/` (63) and `defs/frontmatter_fields/` (83), 484 = 338 + 63 + 83; none added)
   // (Z18j, 337 -> 279: the API's entry cutter and its line readers moved unchanged to `defs/frontmatter_api/` (+46), the
   // readers the field readouts share to `defs/frontmatter_fields/` (+12), 337 = 279 + 46 + 12; none added)
-  ("author_block", 279),
+  // (Z18k2, 279 -> 236: `split_author_line`'s closure and `row_email_owners` deleted, unreached once eptcs and OmniBus's
+  // `\authors` went to the reading)
+  ("author_block", 236),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
   ("classify", 349),
   ("defs/author_macros", 20),
@@ -1257,7 +1262,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("resolver", 20),
   // (DEL1 24 -> 20: the old driver's unit tests of `name_and_trailing_email`, `leading_symbol_labels`, `weldable_line`,
   // `continues_the_line`, `person_over_institution` and `strip_linebreak_options_keeping_gaps` deleted)
-  ("rest /author_split_tests.rs", 20),
+  ("rest /author_split_tests.rs", 19),
   ("rest /block_insertion.rs", 0),
   ("rest /blocks.rs", 2),
   ("rest /boxes_lists.rs", 0),
