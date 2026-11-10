@@ -52,6 +52,14 @@ pub(in crate::base_utilities::frontmatter::observer) fn hand_marked_share(
     })
 }
 
+/// The nest of a creator call's own ink ([`creator_call_pieces`]): inside the `\lx@personname` its call wraps the name in
+/// (a Layout event holding the rest, `\lx@add@creator`'s `{\lx@personname{#2}}`), else the call's top.
+pub(in crate::base_utilities::frontmatter::observer) fn creator_call_level(events: &[Event]) -> u8 {
+  u8::from(events.first().is_some_and(|e| {
+    e.kind == EventKind::Layout && e.nest == 0 && e.role.as_deref() == Some("\\lx@personname")
+  }))
+}
+
 /// The pieces a creator call's own `\and`s cut it into, each holding a name: `\lx@add@creator[role=author]{Ann Able \and
 /// Bob Baker}`, a binding handing one whole argument to the API — acmart's `\author` with no comma, quantumarticle's,
 /// authblk's and ecai's where their spelling test finds no separator (a macro-held `\and`) — whose `\and`, literal, held
@@ -65,9 +73,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn hand_marked_share(
 pub(in crate::base_utilities::frontmatter::observer) fn creator_call_pieces(
   events: &[Event],
 ) -> Option<Vec<&[Event]>> {
-  let own = u8::from(events.first().is_some_and(|e| {
-    e.kind == EventKind::Layout && e.nest == 0 && e.role.as_deref() == Some("\\lx@personname")
-  }));
+  let own = creator_call_level(events);
   let own_and = |e: &Event| e.nest == own && matches!(e.kind, EventKind::Sep(SepKind::And(_)));
   let named = |piece: &[Event]| piece.iter().any(|e| e.kind == EventKind::Name);
   let inked = |piece: &[Event]| {

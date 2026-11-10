@@ -48,8 +48,9 @@ use crate::base_utilities::{
       rehearsal::{Rehearsal, rehearse},
       resolver::{
         BlockCheck, LostInk, RCreator, RuleDrop, Written, check_blocks, contact_parts,
-        creator_call, creator_call_pieces, is_creator_call, merged_names, own_email_label,
-        printed_email_label, read_events, shares_the_row, split_pieces, uncoordinated_marks,
+        creator_call, creator_call_level, creator_call_pieces, is_creator_call, merged_names,
+        own_email_label, printed_email_label, read_events, shares_the_row, split_pieces,
+        uncoordinated_marks,
       },
     },
     place::DEFERRED_TO_FLUSH_END,
@@ -3968,10 +3969,7 @@ fn creator_call_cut(call: &ApiCall) -> Result<Option<Vec<Tokens>>> {
   let Some(pieces) = creator_call_pieces(&events).filter(|pieces| pieces.len() == count) else {
     return Ok(None);
   };
-  let own = pieces[0]
-    .first()
-    .is_some_and(|e| e.kind == EventKind::Layout && e.nest == 0);
-  let own = u8::from(own);
+  let own = creator_call_level(&events);
   let seps: Vec<&Event> = events
     .iter()
     .filter(|e| e.nest == own && matches!(e.kind, EventKind::Sep(events::SepKind::And(_))))
