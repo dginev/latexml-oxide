@@ -18,3 +18,17 @@ fn imsart_ead_url_prints_its_formula() {
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"URL:\u{a0}\" role=\"url\"><text font=\"typewriter\" xml:id=\"id1\">http://www.zebra.edu/\u{223c}ann</text></contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">ann@zebra.edu</text></contact>\n  </creator>",
   ]);
 }
+
+/// CR4 item 3 (review revCR3b finding 3): an unlabelled `\address` inside `{aug}` after `\author{A}\and\author{B}` is
+/// both authors' (imsart.sty:1021), not the last author's. Distinct: the in-frontmatter `\address`'s `annotate=run`.
+/// Repro sectioning-frontmatter/imsart_unlabelled_address_is_the_runs.
+#[test]
+fn imsart_unlabelled_address_is_the_runs() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/imsart_unlabelled_address_is_the_runs.tex"
+  );
+  assert_eq!(elements(&convert_clean(tex), "creator"), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@x.edu</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Univ AB</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@y.org</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Univ AB</contact>\n  </creator>",
+  ]);
+}

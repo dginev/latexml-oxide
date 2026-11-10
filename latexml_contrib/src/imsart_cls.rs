@@ -217,10 +217,13 @@ pub fn imsart_sty_markup() -> Result<()> {
   // end of the document prints them all (`\printaddresses`, :1269-1290), each tied to no author; the API's default
   // owner, the last author, would take every one (1301.1466's three after its `\bibliography`). It prints where it is
   // called, as `\printaddressnum` sets a block (`\address@size`, `{tabular}[t]{@{}l@{}}`, :1255-1264). Inside `{frontmatter}`, or
-  // labelled (`\address[A]`, the authors marked A), it is a contact.
+  // labelled (`\address[A]`, the authors marked A), it is a contact; unlabelled, of every author since the last
+  // `\address` (`annotate=run`, as the sty binding's `\affiliation`): imsart.sty:1021 resets `\author@fmt@init` there, so
+  // `\author{A}\and\author{B}\address{Univ AB}` prints the address under both (review revCR3b finding 3).
   RawTeX!(
     r"\AddToHook{env/frontmatter/after}{\lx@imsart@frontmatter@closed}
 \def\lx@imsart@address@contact#1#2{\lx@add@contact[label={#1},role=address]{#2}}
+\def\lx@imsart@address@run#1#2{\lx@add@contact[label={#1},role=address,annotate=run]{#2}}
 \def\lx@imsart@address@inplace#1#2{\par\begingroup\csname address@size\endcsname\noindent\begin{tabular}[t]{@{}l@{}}#2\end{tabular}\par\endgroup}"
   );
   DefPrimitive!("\\lx@imsart@frontmatter@closed", sub[_args] {
@@ -231,6 +234,8 @@ pub fn imsart_sty_markup() -> Result<()> {
     let label = label.unwrap_or_default();
     Ok(if label.is_empty() && lookup_bool("lx_imsart_frontmatter_closed") {
       Invocation!(T_CS!("\\lx@imsart@address@inplace"), vec![Some(label), Some(address)])
+    } else if label.is_empty() {
+      Invocation!(T_CS!("\\lx@imsart@address@run"), vec![Some(label), Some(address)])
     } else {
       Invocation!(T_CS!("\\lx@imsart@address@contact"), vec![Some(label), Some(address)])
     })
