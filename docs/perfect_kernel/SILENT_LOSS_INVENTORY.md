@@ -1877,6 +1877,13 @@ do not block the E/F rerun.
 - Fix: place the picture as a note at its line (the picture ruling, user 2026-11-10 "A note, kept whole") or count it by span coverage.
 - State: open (main session at the CR8b/CR8c merge `08460a0ea6`).
 
+### Bundle int156a — the residual (OD #983, #944, #992)
+
+- Landed: E0h (the e0 fence hardened: the old reader's 81 exports, its lines and the Cut/Kind's exact), RA0 (a title-code definee declared with no parameters taken and printed), Z18o2 (the stopgap tag's scope: an aas line in its author's own printed group keeps that owner; the flush reads `_stopgap`), MB1 (a labelled line named by one rule, `entry_line_label`), MB2 (aa's `\mail` name as aa.cls prints it, "Correspondence to: "). Z18n stopped under the brief trial's rule 5: the declined path's row sharing goes to Option C P2 (authblk), where the emitter writes the no-author-block flushes from the reading (keep_lists/z18n_*).
+- OD #983 REDs (revRA0, synthetic): any parameterless title-code definee right after an `\email{…}` an `<ERROR>` and 1 Error where pdflatex prints its text (`title_code_command_with_no_parameters_after_an_email_red`); `\newcommand{\x}[1][d]` used bare loses its default; `\def\x#1\relax` gives an empty `<sup/>`; `\def\x[#1]`'s false "missing" Warning; `\DeclareRobustCommand`/`\edef` definees a false Error; a parameterless definee prints for the first author only.
+- OD #992 RED (revZ18o2 R1, synthetic): an unrequested `$^*$` dropped silently from an author's own e-mail line (the line-mark path; the guard pins it as a known loss).
+- revMB2 pre-existing: `\mail{\email{x}}` loses the class's "Correspondence to:" (`name="Email: "`); a glued REVTeX line's contact named "Email:" holding `Email:zz@x.org` likely renders "Email: Email:zz@x.org" (XSLT prints name then content; unconfirmed); `aa_mail_repeated_address_stays_labelled.tex`'s header stale (one e-mail contact, W 1).
+
 ### Bundle int155a — the residual (OD #983, #987, #988, #980, #985, #989, #991)
 
 - Landed: PB/PBb (the push's B1/B2), Z18k/Z18k2/Z18k3 (eptcs + OmniBus rerouted), CR10b (CR9's glue, `\fcolorbox` line, nameless `\author`'s setters), Z18l (aas rerouted), PC3 (pazh `\address`, `\@nil`), Z18m/Z18m2 (`author_block/` deleted), Z18o (the bundle's own REDs F1, F2, R1 and the runaway guard), revCR10c's REDs recorded. Open facts, one per line; repros under `tools/perfect_kernel/repros/`.
