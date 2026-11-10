@@ -500,6 +500,9 @@ mod perfect_kernel_batchz18h;
 mod perfect_kernel_batchz18i;
 mod perfect_kernel_batchz18k;
 mod perfect_kernel_batchz18l;
+/// Z18o: bundle int155a's REDs — an unmarked line's stopgap carrier no e-mail owner, a mailbox link line an e-mail, a
+/// marked whole-bracket piece no name, the own `\email`'s runaway; OD #992, #991, #983.
+mod perfect_kernel_batchz18o;
 mod perfect_kernel_batchz2;
 mod perfect_kernel_batchz3;
 mod perfect_kernel_batchz4;

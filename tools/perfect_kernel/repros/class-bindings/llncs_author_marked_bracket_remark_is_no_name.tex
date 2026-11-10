@@ -1,11 +1,17 @@
-% RED (synthetic, review revZ18k3 R1; introduced by Z18k3, no corpus witness)
+% mechanism: a bracketed piece after a separator carrying its own mark is a name of its own only when it prints words
+%   after its bracket closes (`[ver3]S. Curry`, `[v3]{Cy Cole}`, `(Dee) Dorn`: observer/resolver/lines.rs
+%   `names_line_events`, `bracket_spans_whole`); a piece the bracket spans whole is a remark, joined to the name before
+%   it, and since both pieces carry marks the join is the safety net's counted Warning (`net::merged_names`), never a
+%   creator invented from a remark (OXIDIZED_DESIGN_DIVERGENCES #991)
+% witness: none in the corpus (synthetic; review revZ18k3 R1, introduced by Z18k3); 2308.02720 kept at 11 creators
 % oracle:  pdflatex 0 errors: "Ann Able^1, (deceased)^2, Bob Baker^2 and [corresponding author]^1" over "1 Univ One",
 %          "2 Lab Two"
-% engines: rust Z18k3 = 4 creators, "(deceased)" and "[corresponding author]" creators of their own, 0 warnings;
-%          int155a0 = 2 creators, each holding both institutes. The marked-bracket rule (`resolver/lines.rs`
-%          `names_line_events` ~1575-1580) tests that the piece opens with a bracket, not that a name follows it.
-% fix:     exempt a marked bracket piece only when it prints words after its bracket closes (`[ver3]S. Curry`,
-%          `[v3]{Cy Cole}`, `(Dee) Dorn`); a piece the bracket spans whole stays a remark, its join the counted Warning
+% engines: rust int155a4 = 4 creators, "(deceased)" and "[corresponding author]" creators of their own, 0 warnings;
+%          int155a0 = 2 creators, each holding both institutes, 0 warnings
+% expect:  0 errors, 1 warning (the safety net's: "Ann Able | (deceased)" and "Bob Baker | [corresponding author]");
+%          "Ann Able, (deceased)": Univ One, Lab Two; "Bob Baker and [corresponding author]": Univ One, Lab Two
+% status:  RED (int155a4) -> GREEN (Z18o)
+% preload: ar5iv.sty
 \documentclass{llncs}
 \begin{document}
 \title{T}

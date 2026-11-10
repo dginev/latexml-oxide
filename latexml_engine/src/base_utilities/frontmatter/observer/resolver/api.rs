@@ -772,8 +772,18 @@ impl Resolver {
         let owners = run.clone().unwrap_or_else(|| {
           self.annotate_owners(attr_value(attrs, "annotate").unwrap_or(""), role)
         });
+        // (an `annotate=new` placement reaching only authors that hold the role: its run's stopgap, `RUN_LEFTOVER` — an
+        // unrequested `\affil{$^*$ Email: zz@uni.edu}` under `$^{N}$` names, review revZ18l F1)
+        let stopgap = attr_value(attrs, "annotate") == Some("new")
+          && !owners.is_empty()
+          && owners
+            .iter()
+            .all(|&c| self.roles[c].iter().any(|r| r == role));
         for at in first_pending..self.pending.len() {
           if !withsup {
+            if stopgap {
+              self.stopgap.push(at);
+            }
             self.piled.push((at, owners.clone()));
             // (where an unshown label leaves it: the run its declared `annotate=` reached, today's attachment before
             // the label moves it — revtex's `\affiliation{$^{1}$…}` under unmarked names; not a `\lx@affiliation@withsup`
@@ -819,6 +829,8 @@ impl Resolver {
     let annotate = attr_value(attrs, "annotate").unwrap_or("");
     let n = self.out.creators.len();
     let thenote_rule: String;
+    // (whether the entry's carriers are its run's stopgap alone, [`RUN_LEFTOVER`])
+    let mut leftover = false;
     // (a note made before any author is the title's: revtex's `\title{…\thanks{…}}`, 1603.01892, 1802.05590,
     // cond-mat0502298 — no creator's, whatever the call's parent; the block's, as today's orphan note, OD #159)
     if n == 0 && (note || role == "thanks") {
@@ -892,11 +904,17 @@ impl Resolver {
       // the same, and a second such contact before any new author the same run's, at most <cap> authors —
       // frontmatter_api.rs `annotate=run`, authblk's `\AB@thenote` group)
       let run_rule = annotate.starts_with("run");
+      // (a run continuing the contact's before it is that contact's authors, as printed beside them: no stopgap)
+      let continued =
+        run_rule && matches!(&self.last_run, Some((r, count, ..)) if r == role && *count == n);
       let run = if run_rule {
         self.record_run(annotate, role, false)
       } else {
         self.new_run(role)
       };
+      leftover = !continued
+        && !run.is_empty()
+        && run.iter().all(|&c| self.roles[c].iter().any(|r| r == role));
       if run_rule && thenote_affil {
         // (its `\AB@thenote`: when the marks show it is the label, `thenote_finish`)
         let tag = s!("thenote:{}", self.thenote.affils.len());
@@ -993,6 +1011,7 @@ impl Resolver {
           ""
         }
       };
+      let stopgap = if leftover { RUN_LEFTOVER } else { "" };
       for contact in emails {
         let written = written_out(&contact);
         if written.is_empty() {
@@ -1000,7 +1019,7 @@ impl Resolver {
           self.entry_emails.push((
             carriers.clone(),
             Assoc {
-              rule: s!("{rule} api:inner-contact{tag}"),
+              rule: s!("{rule} api:inner-contact{tag}{stopgap}"),
               ..contact
             },
             false,
@@ -1012,7 +1031,7 @@ impl Resolver {
           self.entry_emails.push((
             carriers.clone(),
             Assoc {
-              rule: s!("{rule} api:inner-contact ruling3:written-out{tag}"),
+              rule: s!("{rule} api:inner-contact ruling3:written-out{tag}{stopgap}"),
               text: address,
               ..contact.clone()
             },

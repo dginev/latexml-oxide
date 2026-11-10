@@ -1,0 +1,24 @@
+% mechanism: an `\affil` a footnote symbol leads that no name requests, under names showing `$^{N}$` marks, keeps the
+%   placement its `annotate=new` gives it (`piled`, observer/resolver/post.rs `answer_pending`): where that placement is
+%   the run's stopgap alone (`Resolver::stopgap`, api.rs) the entry says so (`RUN_LEFTOVER`), and its address, which
+%   spells no one, is the block's with its symbol kept, as an unrequested line under `\altaffilmark` names is
+%   (OXIDIZED_DESIGN_DIVERGENCES #992)
+% witness: none in the corpus (synthetic; review revZ18l F1's sibling r3/s5); the aas census scan found no
+%   unrequested symbol-led e-mail line
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Ann Able1 and Bob Baker1 / 1 Uni One / ∗ Email: zz@uni.edu"
+% engines: rust int155a4 = Bob Baker's e-mail zz@uni.edu, the ∗ dropped silently, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker: 1 Uni One; the block's nameless creator: the e-mail
+%          "∗ zz@uni.edu" named "Email:"
+% status:  RED (int155a4) -> GREEN (Z18o)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{1}$}
+\affil{$^1$ Uni One}
+\affil{$^*$ Email: zz@uni.edu}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

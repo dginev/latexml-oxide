@@ -1,0 +1,19 @@
+% RED (synthetic; Z18o residual of review revZ18l F1, no corpus witness, no guard)
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Ann Able1 and Bob Baker1 / 1Univ A / Univ C; zz@x.org" — nothing
+%          ties the address to either author
+% engines: rust int155a4 and Z18o = Bob Baker's affiliation "Univ C" and e-mail zz@x.org: the flush's Kind and Link
+%          steps (`insert::kind_address_lines`, `insert::link_entry_addresses`) read no stopgap (`RUN_LEFTOVER` is the
+%          reading's); the entry itself is Bob's by Perl's `new` (Base_Utility.pool.ltxml:520-536)
+% fix:     carry the stopgap to the flush (an attribute on the entry) and read it there as `answer_inner_emails` does
+\documentclass{emulateapj}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{1}$}
+\affil{$^1$Univ A}
+\affil{Univ C; zz@x.org}
+\begin{abstract}A.\end{abstract}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

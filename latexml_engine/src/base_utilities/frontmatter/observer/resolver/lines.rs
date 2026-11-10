@@ -1099,6 +1099,29 @@ pub(super) fn is_name_remark(text: &str) -> bool {
   t.starts_with(['(', '[']) || speaks_for(t)
 }
 
+/// Whether a text is one bracket and nothing after it prints a word: `(deceased)`, `[corresponding author]`, not
+/// `[ver3]S. Curry`, `(Dee) Dorn` (a name after its remark; review revZ18k3 R1). A bracket never closed spans the text.
+pub(super) fn bracket_spans_whole(text: &str) -> bool {
+  let t = text.trim();
+  let (open, close) = match t.chars().next() {
+    Some('(') => ('(', ')'),
+    Some('[') => ('[', ']'),
+    _ => return false,
+  };
+  let mut depth = 0usize;
+  for (at, c) in t.char_indices() {
+    if c == open {
+      depth += 1;
+    } else if c == close {
+      depth -= 1;
+      if depth == 0 {
+        return !t[at + c.len_utf8()..].chars().any(char::is_alphanumeric);
+      }
+    }
+  }
+  true
+}
+
 /// Whether a text is the collaboration a name speaks for: "for" or "on behalf of" ([`SPEAKS_FOR`]) before a
 /// collaboration ([`is_collaboration`]: `for the Hall A DVCS collaboration`, 1502.03246; the article left out, `on
 /// behalf of ATLAS Collaboration`).
@@ -1571,12 +1594,17 @@ impl Resolver {
         // (OmniBus's `\authors`, 2308.02720); llncs's `Bob Baker\inst{2}, [v3]{Cy Cole}\inst{1}` — each joined to the
         // name before it with both affiliations; review revZ18k B1. A join of two marked names left is the safety net's
         // counted Warning, `net::merged_names`)
+        // (only one printing words after its bracket closes: a piece the bracket spans whole is a remark still, whose
+        // join is that Warning — llncs's `Ann Able\inst{1}, (deceased)\inst{2}, Bob Baker\inst{2} and [corresponding
+        // author]\inst{1}` made "(deceased)" and "[corresponding author]" creators, review revZ18k3 R1;
+        // `bracket_spans_whole`)
         EventKind::Name
           if !made.is_empty()
             && (is_name_qualifier(&event.text)
               || (is_name_remark(&event.text)
                 && !(last_sep.is_some()
                   && !speaks_for(&event.text)
+                  && !bracket_spans_whole(&event.text)
                   && marked_name(events, i, false, policy)))) =>
         {
           let c = *made.last().expect("a name");

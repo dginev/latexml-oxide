@@ -365,7 +365,11 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// merged (neurips_2022, 2205.14141) and its `\newcounter`s (2508.04047). The juggle reader, a split decision, moved to
 /// `fallback.rs` (`title_code_juggle`). Z18m lowered it to 2,192: the title-code reader (`title_code_author_statements`,
 /// `replayable`, `statements_at_author`, …), the class's code read, moved unchanged to `frontmatter/classify/title_code.rs`.
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_192;
+/// Z18o raised it by 19 (all in `kind.rs`; the main session's decision on review revZ18o's reading that the lines choose no
+/// owner): the Kind step's mailbox link line (review revZ18l F2, homed in the Kind step, user ruling 2026-10-20), its line
+/// recognized by `classify/links.rs` `mailbox_link_line` and written by the Kind step's existing e-mail call writer
+/// (`email_line_calls`, no new emission); Z18o2 folds its naming match into `split_email_label`, shrinking it.
+const MOVED_CUT_KIND_CODE_LINES: usize = 2_211;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]

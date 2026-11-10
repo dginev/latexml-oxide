@@ -33202,7 +33202,9 @@ missed, and `\@nil` ran undefined, held and raised by the flush's net — sig-al
 revPC3): 1810.03464's vldb-modify.cls `\email{\normalsize …}` looped the rehearsal past its 8,000,000-read budget even on
 a two-author block (revPC3's `vldb/v1.tex`: W 4 with `\normalsize`, 2 without), so the block was written whole; read
 unexpanded it is read into 7 creators with their affiliations and e-mails (2 Warnings fewer) — the block's length plays
-no part. No guard yet (next batch). **Known RED (revPC3, synthetic):** `content.rs` `reads_arguments` takes any `[` as a
+no part. Repro `own_email_normalsize_rehearsal_reads_in_budget` (the class's `\email` and `\normalsize` stood in for in
+the preamble; int155a2: `rehearsal_budget`, the block whole); guard
+`perfect_kernel_batchz18o::own_email_normalsize_rehearsal_reads_in_budget` (Z18o). **Known RED (revPC3, synthetic):** `content.rs` `reads_arguments` takes any `[` as a
 parameter count, so `\newcommand{\x}[0]{x}` is kept out of the piece and its "x", which pdflatex prints, is in neither
 output (0 Errors; the base wrote an `ERROR`); `n > 0` is the fix. Pre-existing (revPC3): a real undefined `\inst{2}` in
 an article author raises no Error (the rehearsal binds `\inst` as a mark, `rehearsal.rs` ~572) where pdflatex does;
@@ -33859,10 +33861,15 @@ llncs_email_list_quad_parted_keeps_the_font, llncs_author_bracket_piece_marked_i
 llncs_author_marked_qualifier_join_is_counted, omnibus/omnibus_authors_affil_number_lists,
 omnibus/omnibus_authors_bracket_piece_marked_is_a_name}.tex`; the omnibus repros' pdflatex stand-in class is
 `omnibus/pdflatex/aguauthors.cls`, kept apart so a repro converted in place reads its class as unknown (OmniBus).
-**Known RED (review revZ18k3 R1, synthetic, no corpus witness):** a piece that is only a bracket and carries its own mark
-(`Ann Able\inst{1}, (deceased)\inst{2}, Bob Baker\inst{2} and [corresponding author]\inst{1}`) is a creator of its own, 0
-Warnings — the rule tests the opening bracket, not a name after it; the fix is to exempt only a piece that prints words
-after its bracket closes (repro `class-bindings/llncs_author_marked_bracket_remark_is_no_name`).
+(7) The exemption of (6) holds only for a piece that prints words after its bracket closes (`bracket_spans_whole`,
+Z18o): a marked piece the bracket spans whole is a remark, joined to the name before it, the join the safety net's counted
+Warning — `Ann Able\inst{1}, (deceased)\inst{2}, Bob Baker\inst{2} and [corresponding author]\inst{1}`, `Ann Able\inst{1}
+and [equal contribution]\inst{1}`, article's `Ann Able$^{1}$, (deceased)$^{\dagger}$` had each made the remark a creator
+of its own, 0 Warnings (review revZ18k3 R1, synthetic; 2308.02720 stays at 11 creators). The joined name keeps what
+prints between them (`Ann Able<sup>1</sup>, (deceased)`), and the remark's mark requests on the joined creator. Guard
+`perfect_kernel_batchz18o::marked_bracket_remark_is_no_name`; repros
+`class-bindings/llncs_author_marked_bracket_remark_{is_no_name,after_and_is_no_name}.tex`,
+`sectioning-frontmatter/article_author_marked_bracket_remark_is_no_name.tex`.
 
 ### 992. AASTeX's `\affil` e-mail lines are the API's to place: the line goes as the affiliation it is written as, the Kind and Link steps place its addresses (Z18l)
 
@@ -33907,13 +33914,38 @@ class's `\email` font.
 name requests (`\affil{$^*$ Email: zz@uni.edu}`) is the block's e-mail with the mark in its content,
 `<sup>∗</sup>zz@uni.edu`; in the block form the base kept `<sup>∗</sup>` too, and only an `\affil` of its own had the
 mark dropped, uncounted, by the deleted reader. REVTeX's `\affiliation{$^*$ Email: …}` differs: the e-mail goes to that
-affiliation's author with the `∗` dropped. **Known REDs introduced (review revZ18l, synthetic; Z18m fixes them):** (F1) an
-unmarked e-mail-only `\affil` under `$^N$` names goes to the last author — the `annotate=new` leftover rule makes him the
-only carrier and `owners.rs` `owner:only-carrier` places the address (`aastex_affil_unmarked_email_line_under_marked_names_red`;
-the base: the block's); (F2) `\affil{\href{mailto:zz@x.org}{Write to us}}` becomes every author's affiliation, the
-deleted `mailto_line` rule (user ruling 2026-10-20) having no home on the API path
-(`aastex_affil_mailto_link_line_is_an_email_red`; the base: the block's e-mail). The label's no-break space is the Kind
-and DOM paths' form; the text-reading path still writes an ordinary space.
+affiliation's author with the `∗` dropped. The label's no-break space is the Kind and DOM paths' form; the text-reading
+path still writes an ordinary space.
+
+**The stopgap carrier and the mailbox link (Z18o; review revZ18l F1, F2, introduced by Z18l, synthetic).** (F1) Under
+`$^N$` names aas declares `annotate=new`, whose walk (Perl's `new`, Base_Utility.pool.ltxml:520-536) gives an unmarked
+`\affil` to the last author even when every author it reaches holds an affiliation already: that carrier is the run's
+stopgap, no mark, label or place, and `owner:only-carrier` had made him the owner of an address no one spells
+(`\affil{Email: zz@x.org}`, a bare `\affil{zz@x.org}`, `\affil{Correspondence: \href{mailto:zz@x.org}{zz@x.org}}`, an
+unrequested `\affil{$^*$ Email: zz@uni.edu}` whose `∗` was dropped). The reading now tags such an entry's e-mails
+(`RUN_LEFTOVER`, observer/resolver/api.rs) and, for a mark-led entry no name requests, its `annotate=` placement
+(`Resolver::stopgap`), and the Link step reads them with no carrier (`answer_inner_emails`; the text reading
+`take_out_entry_addresses`): the block's, once, the unrequested line's `∗` kept (`<sup>∗</sup>zz@uni.edu`). Only a walk's own
+stopgap: a `run` continuing the contact before it (`\author{Bob Baker}\affil{Univ B}\affil{Email: zz@x.org}`, printed
+under him) and a sole author keep their carrier; a requested `$^\dagger$` line stays its requester's. (F2) A line of an
+affiliation-kind entry that is one link to a mailbox — `\href{mailto:…}{Write to us}`, `Contact: \href{mailto:…}{here}`,
+a bare address as target (`\href{zz@x.org}{…}`, the ACL template's, `links_a_mailbox`) — is an e-mail line under the text
+before the link (user ruling 2026-10-20, batch 77p r8), the link kept a link: the Kind step's (frontmatter_api/kind.rs
+`mailbox_link_line`, the home of the deleted `mailto_line`); for every class, as the Kind step is shared. Perl reads no
+e-mail inside an `\affil` (an affiliation). Guards `perfect_kernel_batchz18o::{aastex_unmarked_email_line_under_marked_names_is_the_blocks,
+aastex_unrequested_symbol_email_line_under_marked_names_is_the_blocks, aastex_mailbox_link_line_is_an_email}`; repros
+`sectioning-frontmatter/aastex_affil_{unmarked_email_line,unmarked_bare_address,unmarked_mailbox_link,unrequested_symbol_email_line}_under_marked_names_is_the_blocks.tex`,
+`aastex_affil_{mailto_link_line,labelled_mailto_link_line,bare_address_link_line}_is_an_email.tex`. A mailbox link
+printing no address gives the Link step no address to spell (`\href{mailto:bob.baker@x.org}{Write to Bob}` is read by
+its printed text, so the block's). **Measured** (vs int155a4-rel, int154a's dumps, `kit/conv.sh` through `pool_run.sh`):
+the aas census 1,166, a REVTeX sample of 500 (`kit/pop.py`, seed 1110), OmniBus 154, llncs 699 and stage2 1,434 — 3,944
+ids, 3,938 converted — byte-identical, E/F/W identical; of 59 more (the aas papers whose `\affil` holds an `@` or a
+`mailto:`, the ruling's witnesses, 0909.0058, 2308.02720, 1810.03464) one changed: 2604.04847's `\textbf{Correspondence:}
+\href{daniel094144@gmail.com}{daniel094144@gmail.com}` keeps its link, the owner and every creator unchanged.
+**Residual (RED, synthetic; Z18o):** an address inside an unmarked line of other words under `$^N$` names,
+`\affil{Univ C; zz@x.org}`, is still the stopgap carrier's — the flush's Kind and Link steps place it
+(`insert::kind_address_lines`, `insert::link_entry_addresses`), which read no stopgap; the entry itself is that author's
+by Perl's `new`.
 
 **Guards.** `perfect_kernel_batchz18l::aastex_affil_marked_email_line_no_one_spells_is_the_marked_authors`; re-expected:
 `perfect_kernel_batch97f::aastex_affil_holding_only_an_email_is_an_authors_email` (the name's no-break space);
