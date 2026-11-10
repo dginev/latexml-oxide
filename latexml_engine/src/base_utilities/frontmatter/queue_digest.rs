@@ -577,7 +577,7 @@ fn label_ink(d: &Digested, out: &mut PrintedLabel, in_picture: bool) {
         out.push(',', in_picture);
         return;
       }
-      if let Some(Stored::Digested(a)) = w.get_property("alignment").as_deref() {
+      for a in &printed_properties(&w) {
         label_ink(a, out, in_picture);
       }
       for (arg, shown) in w.get_args().iter().zip(shown_arguments(&w)) {
