@@ -19,6 +19,29 @@ fn imsart_ead_url_prints_its_formula() {
   ]);
 }
 
+/// CR4 items 2 and 5 (review revCR3b finding 1 and NIT 4): `\printead{e1}\\ \printead{u1}` in an unlabelled `\address`
+/// after `\end{frontmatter}` prints "e-mail: …" and "url: …" as imsart.sty's `\@@printead` (1301.1466's end blocks lost
+/// both rows), the URL's formula its glyph; under `\@addressatendtrue` the block prints after the body, at the end of
+/// the document. Distinct from cr3's `imsart_address_after_frontmatter_prints_in_place` (no `\@addressatend`, printed
+/// in place): the label read back past the frontmatter's flush (`record_eads`) and the deferral. Repro
+/// sectioning-frontmatter/imsart_printead_in_address_at_end.
+#[test]
+fn imsart_printead_in_address_at_end() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/imsart_printead_in_address_at_end.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(elements(&xml, "creator"), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@x.edu</text></contact>\n    <contact name=\"URL:\u{a0}\" role=\"url\"><text font=\"typewriter\" xml:id=\"id2\">http://www.zebra.edu/\u{223c}ann</text></contact>\n  </creator>",
+  ]);
+  assert_eq!(elements(&xml, "td"), vec![
+    "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p2.1.1.1\">Ann Able</td>",
+    "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p2.1.2.1\">Univ A</td>",
+    "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p2.1.3.1\">e-mail: <text font=\"typewriter\" xml:id=\"p2.1.3.1.1\">ann@x.edu</text></td>",
+    "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p2.1.4.1\">url: <text font=\"typewriter\" xml:id=\"p2.1.4.1.1\">http://www.zebra.edu/\u{223c}ann</text></td>",
+  ]);
+}
+
 /// CR4 item 3 (review revCR3b finding 3): an unlabelled `\address` inside `{aug}` after `\author{A}\and\author{B}` is
 /// both authors' (imsart.sty:1021), not the last author's. Distinct: the in-frontmatter `\address`'s `annotate=run`.
 /// Repro sectioning-frontmatter/imsart_unlabelled_address_is_the_runs.

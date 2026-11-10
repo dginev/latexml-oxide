@@ -48,7 +48,9 @@ fn imsart_renamed_sty_copy_reads_through_its_binding() {
 /// addresses at the end, 1301.1466) is no author's: each block prints where it is called, as imsart.sty's
 /// `\printaddressnum` sets it, and no author takes it as the API's default owner (the last author took all three).
 /// Distinct from `imsart_renamed_sty_copy_reads_through_its_binding` (labelled `\address[A]` inside `{aug}`, a contact):
-/// the binding's own branch on the frontmatter's close. Repro
+/// the binding's own branch on the frontmatter's close. Each block's `\printead{eN}` row prints the author's e-mail as
+/// imsart.sty's `\@@printead` does, "e-mail: …" (CR4, review revCR3b finding 1; the row was empty, the binding's
+/// `\printead` printing nothing; the stand-in's own prints "(e1)", the locked binding replacing it). Repro
 /// sectioning-frontmatter/imsart_address_after_frontmatter_prints_in_place.
 #[test]
 fn imsart_address_after_frontmatter_prints_in_place() {
@@ -63,8 +65,10 @@ fn imsart_address_after_frontmatter_prints_in_place() {
   assert_eq!(elements(&xml, "td"), vec![
     "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p3.1.1.1\">Ann Able</td>",
     "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p3.1.2.1\">Univ A</td>",
+    "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p3.1.3.1\">e-mail: <text font=\"typewriter\" xml:id=\"p3.1.3.1.1\">ann@x.edu</text></td>",
     "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p4.1.1.1\">Bob Baker</td>",
     "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p4.1.2.1\">Univ B</td>",
+    "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p4.1.3.1\">e-mail: <text font=\"typewriter\" xml:id=\"p4.1.3.1.1\">bob@y.org</text></td>",
     "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p5.1.1.1\">Cid Cole</td>",
     "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p5.1.2.1\">Univ C</td>",
   ]);
