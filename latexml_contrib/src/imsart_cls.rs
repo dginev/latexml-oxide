@@ -257,9 +257,10 @@ pub fn imsart_sty_markup() -> Result<()> {
   // `\printaddressnum` sets a block (`\address@size`, `{tabular}[t]{@{}l@{}}`, :1255-1264), at the end of the document under
   // `\@addressatendtrue` (`\AtEndDocument`, as imsart.sty's `\enddocument` runs `\printaddresses`; review revCR3b NIT 4),
   // else where it is called. Inside `{frontmatter}`, or labelled (`\address[A]`, the authors marked A), it is a contact;
-  // unlabelled, of every author since the last `\address` (`annotate=run`, as the sty binding's `\affiliation`):
-  // imsart.sty:1021 resets `\author@fmt@init` there, so `\author{A}\and\author{B}\address{Univ AB}` prints the address
-  // under both (review revCR3b finding 3).
+  // unlabelled, of the authors whose `\ead` labels its `\printead{e1}` cites (`citing_authors`: 1407.2451's ETH block
+  // Nandy's and Maathuis's, its Washington block Richardson's; review revCR4 finding 2), else of every author since the
+  // last `\address` (`annotate=run`, as the sty binding's `\affiliation`): imsart.sty:1021 resets `\author@fmt@init`
+  // there, so `\author{A}\and\author{B}\address{Univ AB}` prints the address under both (review revCR3b finding 3).
   RawTeX!(
     r"\AddToHook{env/frontmatter/after}{\lx@imsart@frontmatter@closed}
 \def\lx@imsart@address@contact#1#2{\lx@add@contact[label={#1},role=address]{#2}}
@@ -282,7 +283,24 @@ pub fn imsart_sty_markup() -> Result<()> {
     Ok(if label.is_empty() && lookup_bool("lx_imsart_frontmatter_closed") {
       Invocation!(T_CS!("\\lx@imsart@address@inplace"), vec![Some(label), Some(address)])
     } else if label.is_empty() {
-      Invocation!(T_CS!("\\lx@imsart@address@run"), vec![Some(label), Some(address)])
+      // (the authors whose `\ead` labels its `\printead{e1,e2}` cites, each its owner — `author:N`, the N-th author's
+      // own label —, else, or when they are the run, the run's)
+      let (owners, run) = citing_authors(&printead_labels(&address));
+      if owners.is_empty() || owners == run {
+        Invocation!(T_CS!("\\lx@imsart@address@run"), vec![Some(label), Some(address)])
+      } else {
+        let mut contacts: Vec<Token> = Vec::new();
+        for owner in owners {
+          contacts.extend(
+            Invocation!(T_CS!("\\lx@imsart@address@contact"), vec![
+              Some(mouth::tokenize_internal(TeXString::assembled(format!("author:{owner}")))),
+              Some(address.clone())
+            ])
+            .unlist(),
+          );
+        }
+        Tokens::new(contacts)
+      }
     } else {
       Invocation!(T_CS!("\\lx@imsart@address@contact"), vec![Some(label), Some(address)])
     })
@@ -354,11 +372,7 @@ fn record_ead(keys: Option<&Tokens>, address: &Tokens) -> bool {
     .split(',')
     .any(|key| key.split('=').next().is_some_and(|k| k.trim() == "url"))
     || address.to_string().contains("://");
-  let label = keys.split(',').find_map(|key| {
-    let (k, v) = key.split_once('=')?;
-    (k.trim() == "label" && !v.trim().is_empty()).then(|| v.trim().to_string())
-  });
-  if let Some(label) = label {
+  if let Some(label) = ead_label(&keys) {
     let kind = if url { "url" } else { "email" };
     assign_value_past_rollback(
       &format!("lx_imsart_ead_{kind}_{label}"),
@@ -374,48 +388,125 @@ fn record_ead(keys: Option<&Tokens>, address: &Tokens) -> bool {
 
 /// Records each `\ead[keys]{address}` written in an `\author`'s argument ([`record_ead`]), at the call.
 fn record_eads(name: &Tokens) {
-  let v = name.unlist_ref();
-  // (the group opened at `v[open]` by `open_t` and closed by `close_t` outside braces: its inner tokens and the index
-  // after it)
-  let group = |open: usize, open_t: Token, close_t: Token| -> Option<(Tokens, usize)> {
-    if v.get(open) != Some(&open_t) {
-      return None;
+  for (keys, address) in ead_calls(name) {
+    record_ead(keys.as_ref(), &address);
+  }
+}
+
+/// The `label=` of an `\ead`'s keys (`\ead[label=e1]{…}`), when they give one.
+fn ead_label(keys: &str) -> Option<String> {
+  keys.split(',').find_map(|key| {
+    let (k, v) = key.split_once('=')?;
+    (k.trim() == "label" && !v.trim().is_empty()).then(|| v.trim().to_string())
+  })
+}
+
+/// The group opened at `v[open]` by `open_t` and closed by `close_t` outside braces: its inner tokens and the index after
+/// it.
+fn token_group(v: &[Token], open: usize, open_t: Token, close_t: Token) -> Option<(Tokens, usize)> {
+  if v.get(open) != Some(&open_t) {
+    return None;
+  }
+  let mut braces = usize::from(open_t == T_BEGIN!());
+  for (at, t) in v.iter().enumerate().skip(open + 1) {
+    if *t == T_BEGIN!() {
+      braces += 1;
+    } else if *t == T_END!() {
+      braces = braces.checked_sub(1)?;
     }
-    let mut braces = usize::from(open_t == T_BEGIN!());
-    for (at, t) in v.iter().enumerate().skip(open + 1) {
-      if *t == T_BEGIN!() {
-        braces += 1;
-      } else if *t == T_END!() {
-        braces = braces.checked_sub(1)?;
-      }
-      if *t == close_t && braces == 0 {
-        return Some((Tokens::new(v[open + 1..at].to_vec()), at + 1));
-      }
+    if *t == close_t && braces == 0 {
+      return Some((Tokens::new(v[open + 1..at].to_vec()), at + 1));
     }
-    None
+  }
+  None
+}
+
+/// Each call of `cs` written in `tokens` — an optional `*`, an optional `[…]`, an argument —: its `[…]` and its argument.
+fn calls_of(tokens: &Tokens, cs: Token) -> Vec<(Option<Tokens>, Tokens)> {
+  let v = tokens.unlist_ref();
+  let spaces = |mut at: usize| {
+    while v.get(at) == Some(&T_SPACE!()) {
+      at += 1;
+    }
+    at
   };
+  let mut calls = Vec::new();
   let mut at = 0;
   while at < v.len() {
-    if v[at] == T_CS!("\\ead") {
-      let mut next = at + 1;
-      while v.get(next) == Some(&T_SPACE!()) {
-        next += 1;
+    if v[at] == cs {
+      let mut next = spaces(at + 1);
+      if v.get(next) == Some(&T_OTHER!("*")) {
+        next = spaces(next + 1);
       }
-      let keys = group(next, T_OTHER!("["), T_OTHER!("]"));
+      let keys = token_group(v, next, T_OTHER!("["), T_OTHER!("]"));
       if let Some((_, after)) = &keys {
-        next = *after;
+        next = spaces(*after);
       }
-      while v.get(next) == Some(&T_SPACE!()) {
-        next += 1;
-      }
-      if let Some((address, after)) = group(next, T_BEGIN!(), T_END!()) {
-        record_ead(keys.as_ref().map(|(keys, _)| keys), &address);
+      if let Some((argument, after)) = token_group(v, next, T_BEGIN!(), T_END!()) {
+        calls.push((keys.map(|(keys, _)| keys), argument));
         at = after;
         continue;
       }
     }
     at += 1;
   }
+  calls
+}
+
+/// Each `\ead[keys]{address}` written in `tokens`: its keys and its address.
+fn ead_calls(tokens: &Tokens) -> Vec<(Option<Tokens>, Tokens)> { calls_of(tokens, T_CS!("\\ead")) }
+
+/// The labels an address's `\printead{e1,e2}` calls cite.
+fn printead_labels(address: &Tokens) -> Vec<String> {
+  calls_of(address, T_CS!("\\printead"))
+    .into_iter()
+    .flat_map(|(_, labels)| {
+      labels
+        .to_string()
+        .split(',')
+        .map(|label| label.trim().to_string())
+        .filter(|label| !label.is_empty())
+        .collect::<Vec<_>>()
+    })
+    .collect()
+}
+
+/// The places (from 1) among the queued authors of those an `\ead` in whose argument gives one of the labels `cited`:
+/// the authors an address block names by printing their e-mails — `\printead{e1}\\ \printead{e2}`, as imsart.sty's
+/// `\printead` reprints the address `\ead` labelled, which the reader of the PDF takes as theirs (1407.2451's two
+/// blocks, Nandy and Maathuis at ETH, Richardson at the University of Washington; 1409.0912, 1504.04814, 1704.07606,
+/// 1810.08264). None when it cites no queued author's label. With them, the places of the authors queued since the last
+/// queued address, the run `annotate=run` gives the block to.
+fn citing_authors(cited: &[String]) -> (Vec<usize>, Vec<usize>) {
+  if cited.is_empty() {
+    return (Vec::new(), Vec::new());
+  }
+  with_value("frontmatter_raw", |queue| {
+    let mut owners = Vec::new();
+    let mut run = Vec::new();
+    if let Some(Stored::FrontmatterRaw(queue)) = queue {
+      let mut place = 0;
+      for entry in queue {
+        let role = entry.1.get("role").map(String::as_str);
+        if entry.0 == "ltx:creator" && role == Some("author") {
+          place += 1;
+          run.push(place);
+          if ead_calls(&entry.2)
+            .iter()
+            .filter_map(|(keys, _)| {
+              ead_label(&keys.as_ref().map(ToString::to_string).unwrap_or_default())
+            })
+            .any(|label| cited.contains(&label))
+          {
+            owners.push(place);
+          }
+        } else if entry.0 == "ltx:contact" && role == Some("address") {
+          run.clear();
+        }
+      }
+    }
+    (owners, run)
+  })
 }
 
 /// imsart.sty's keyword markup ([`imsart_sty_markup`]), locked while the class loads.

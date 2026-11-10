@@ -33315,5 +33315,15 @@ unlabelled in-frontmatter `\address` is `annotate=run` (`\lx@imsart@address@run`
 `imsart_printead_in_address_at_end`, `imsart_unlabelled_address_is_the_runs`; guards
 `perfect_kernel_batchcr4::{imsart_printead_in_address_at_end, imsart_unlabelled_address_is_the_runs}`;
 `perfect_kernel_batchcr3::imsart_address_after_frontmatter_prints_in_place` now holds each block's "e-mail: …" row.
+
+**CR4b** (review revCR4 finding 2): a block whose `\printead{e1}` calls cite labels a queued author's `\ead` gave is
+those authors', each a contact `label=author:N` (`citing_authors`, the queue read when `\address` expands): imsart.sty
+ties no block to an author, but the block reprints its authors' e-mails, which tells the reader whose it is —
+1407.2451's ETH block (`\printead{e1}\\ \printead{e2}`) is Nandy's and Maathuis's, its University of Washington block
+(`\printead{e3}`) Richardson's, where `annotate=run` gave every author both (1409.0912, 1504.04814, 1704.07606,
+1810.08264 alike). `annotate=run` stays for a block citing no author's label. Repro
+`imsart_address_block_goes_to_the_authors_it_cites`; guard
+`perfect_kernel_batchcr4b::imsart_address_block_goes_to_the_authors_it_cites`.
+
 **Left** (pre-existing): imsart's `\and` between `\author`s in `{aug}` prints a stray centred "and" paragraph (int154x
 alike).
