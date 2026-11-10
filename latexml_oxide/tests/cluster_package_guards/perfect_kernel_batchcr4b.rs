@@ -64,3 +64,19 @@ fn date_inside_author_inside_title_section_after() {
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n  </creator>",
   ]);
 }
+
+/// Only a date is deferred: a `\title` run inside the author block of `\title{A Title \author{…\title{Inner}}}` changes
+/// nothing printed (`\@maketitle` prints the title before the author line; pdflatex "A Title"), so the outer title
+/// stands, with a `\section` after `\maketitle` too (review revCR4b finding 1: CR4b printed "Inner"). Distinct: the
+/// deferral's tag test, its false side.
+#[test]
+fn title_inside_author_inside_title_keeps_the_outer_title() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/title_inside_author_inside_title_keeps_the_outer_title.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(error_count(&log), 0, "{log}");
+  // (the title keeps the base's trailing space, "A Title " — the space before `\author`)
+  assert!(xml.contains("<title>A Title </title>"), "{xml}");
+  assert!(!xml.contains("Inner"), "{xml}");
+}

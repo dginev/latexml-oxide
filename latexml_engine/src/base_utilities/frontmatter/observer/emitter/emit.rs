@@ -4126,14 +4126,15 @@ fn recover_queued(
         recovered.push((after, (tag, attrs, command)));
       },
       _ => {
-        // (a title, subtitle or date set in a block read while an outer flush digests its queue — `\title{…\author{…
-        // \date{One}}}` read at `\maketitle`'s flush — is set as TeX typesets the block, after the queue's own: queued
-        // for the end of the outermost flush, so a `\date{Two}` queued before it does not replace it; pdflatex prints
-        // "One", review revCR3b finding 2, with a `\section` after `\maketitle` too, revCR4 finding 3)
-        let (deferred, queued): (Vec<RawFrontmatter>, Vec<RawFrontmatter>) =
-          queued.into_iter().partition(|entry| {
-            outer_flushing && matches!(entry.0.as_str(), "ltx:title" | "ltx:subtitle" | "ltx:date")
-          });
+        // (a date set in a block read while an outer flush digests its queue — `\title{…\author{…\date{One}}}` read at
+        // `\maketitle`'s flush — is set as TeX typesets the block, after the queue's own: queued for the end of the
+        // outermost flush, so a `\date{Two}` queued before it does not replace it; pdflatex prints "One", review revCR3b
+        // finding 2, with a `\section` after `\maketitle` too, revCR4 finding 3. A date only: `\@maketitle` prints the
+        // title before the author line, so a `\title` run in it changes nothing printed — `\title{A Title \author{Ann
+        // Able \title{Inner}}}` prints "A Title", review revCR4b finding 1)
+        let (deferred, queued): (Vec<RawFrontmatter>, Vec<RawFrontmatter>) = queued
+          .into_iter()
+          .partition(|entry| outer_flushing && entry.0 == "ltx:date");
         if !deferred.is_empty() {
           defer_to_flush_end(deferred);
         }

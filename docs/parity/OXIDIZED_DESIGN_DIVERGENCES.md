@@ -33255,8 +33255,8 @@ guards `perfect_kernel_batchcr2` (one per path: the owner label, a block's queue
 call's place among the items, a written call), `perfect_kernel_batchcr3::{revtex3_minipage_address_first_one_run` (a run
 of several owners), `date_inside_author_inside_title_is_the_date}` (a flush-time `@now` setter).
 
-A title, subtitle or date such a late block recovers while an outer flush digests its queue is set as TeX typesets the
-block, after the queue's own entries (`\maketitle` runs the inner `\date` while typesetting `\@author`, after every
+A date such a late block recovers while an outer flush digests its queue is set as TeX typesets the
+block (a date only: `\@maketitle` prints the title before the author line, so a `\title` run there changes nothing printed — `\title{A Title \author{Ann Able \title{Inner}}}` prints "A Title"; CR4/CR4b deferred titles too and printed "Inner", review revCR4b finding 1, guard `perfect_kernel_batchcr4b::title_inside_author_inside_title_keeps_the_outer_title`), after the queue's own entries (`\maketitle` runs the inner `\date` while typesetting `\@author`, after every
 `\date` before it): it is queued for the end of the outermost flush (`emitter::emit::defer_to_flush_end`, digested by
 `place::digest_front_matter` after its own queue), not digested inside the late flush, so `\title{A Title \author{Ann Able \date{Dinner
 One}}}` `\date{Dinner Two}` `\maketitle` gives "Dinner One", as pdflatex (it gave "Dinner Two", no Warning; review revCR3b
@@ -33271,6 +33271,9 @@ outermost flush, "Dinner One" holds with or without the section (repro
 **Left** (synthetic, pre-existing): a `\date` set in `\title` itself (`\title{A Title \date{Dinner One}}` `\date{Dinner
 Two}` `\author{Ann Able}` `\maketitle`; pdflatex "Dinner One") still loses to the later `\date`, with no Warning: an
 `@now` setter inside a queued entry's digestion, no late block.
+
+
+**Known REDs (review revCR4b):** a `\date` nested two levels deep (`\title{…\author{…\title{…\author{…\date{X}}}}}`) never runs in TeX (pdflatex prints the outer "Dinner Two") but is deferred and replaces it ("Dinner X", counted by the content check: `date_nested_twice_never_runs_red.tex`).
 
 ### 986. imsart.sty is a binding of its own, so a shipped copy declaring itself imsart.sty is read through it (CR3)
 
@@ -33332,3 +33335,5 @@ ties no block to an author, but the block reprints its authors' e-mails, which t
 
 **Left** (pre-existing): imsart's `\and` between `\author`s in `{aug}` prints a stray centred "and" paragraph (int154x
 alike).
+
+**Known REDs (review revCR4b finding 2, synthetic):** the per-label attribution's `annotate=run` fallback does not end its run at the `author:N` contacts an earlier cited block made, so an uncited block also reaches authors an earlier block went to (`imsart_address_block_fallback_run_q1_red.tex`), and a block naming three authors but citing only `e2` goes to that one (`…_q2_red.tex`); no word lost.
