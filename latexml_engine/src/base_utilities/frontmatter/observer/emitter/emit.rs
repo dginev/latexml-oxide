@@ -502,7 +502,10 @@ fn past_unprinted_tail(index: usize, span: (u16, u16)) -> (u16, u16) {
       }
     }
     let mut depth: i32 = tokens[from..to].iter().map(Token::group_step).sum();
-    let (mut at, mut end, mut semicolon) = (to, to, false);
+    // (one `;` ends a `\tikz` path: none past the span when the span's own last token is it — a text node's box reaches
+    // past its path's `;`, `Ann Able \tikz\node{Zebraword};; Bob Baker` printing the second, review revCR8b finding 5)
+    let ended = tokens[from..to].iter().rev().find(|t| **t != T_SPACE!()) == Some(&T_OTHER!(";"));
+    let (mut at, mut end, mut semicolon) = (to, to, ended);
     while at < limit {
       let token = &tokens[at];
       let step = token.group_step();

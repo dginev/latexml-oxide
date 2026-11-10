@@ -56,6 +56,32 @@
     </xsl:element>
   </xsl:template>
 
+  <!-- SURPASS (latexml-oxide OXIDIZED_DESIGN_DIVERGENCES #990): an unmarked frontmatter
+       note, an author's ltx:note with no @mark and no tag that is no \thanks, prints no
+       mark in the PDF: a picture, a logo, an ORCID icon (2107.13277), text the author block
+       printed in its line (2404.13552's page-overlay notice). User ruling 2026-11-10, "No
+       dagger for unmarked notes": no mark and no hidden ltx_note_content (LaTeXML.css hides
+       it until hover, which would leave the note's content invisible); its content inline,
+       with no "note: " type label. A \thanks note (role thanks, OXIDIZED_DESIGN #156) keeps
+       its dagger: it stands for the footnote mark pdflatex prints. -->
+  <xsl:template match="ltx:creator/ltx:note[not(@mark) and not(@role='thanks') and not(ltx:tags/ltx:tag[not(@role)])]" priority="1">
+    <xsl:param name="context"/>
+    <xsl:element name="span" namespace="{$html_ns}">
+      <xsl:variable name="innercontext" select="'inline'"/><!-- override -->
+      <xsl:call-template name="add_id"/>
+      <xsl:call-template name="add_attributes"/>
+      <xsl:apply-templates select="." mode="begin">
+        <xsl:with-param name="context" select="$innercontext"/>
+      </xsl:apply-templates>
+      <xsl:apply-templates>
+        <xsl:with-param name="context" select="$innercontext"/>
+      </xsl:apply-templates>
+      <xsl:apply-templates select="." mode="end">
+        <xsl:with-param name="context" select="$innercontext"/>
+      </xsl:apply-templates>
+    </xsl:element>
+  </xsl:template>
+
   <xsl:template match="ltx:note">
     <xsl:param name="context"/>
     <xsl:element name="span" namespace="{$html_ns}">

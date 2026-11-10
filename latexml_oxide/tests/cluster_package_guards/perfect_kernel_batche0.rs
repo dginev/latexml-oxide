@@ -1263,8 +1263,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // events' targets (`linkable`), review revZ18h S-a and B1r; CR8b 58 -> 68: `past_unprinted_tail`'s reads of what a
   // picture's call read past its last box and printed nothing of — spaces, one `;`, the `\end{name}` of an environment the
   // span opens, a closing brace —, which no box or event records; it decides only where the picture's own tokens end,
-  // stopping at any other token, never what anything is, review revCR8 finding 1)
-  ("emitter/emit", 68),
+  // stopping at any other token, never what anything is, review revCR8 finding 1; CR8c 68 -> 69: whether the span's own last
+  // token is already its path's `;` — a text node's box reaches past it — so the tail takes no second, printed one, the same
+  // read as the tail's `;`, which pgf consumes in expansion and no cover records, review revCR8b finding 5)
+  ("emitter/emit", 69),
   // (P1b, 0 -> 1: `emitter/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("emitter/dom+mod", 1),

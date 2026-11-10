@@ -2616,6 +2616,9 @@ fn place_pictures(events: &mut Vec<Event>) {
       EventKind::Break | EventKind::Sep(SepKind::And(_) | SepKind::Column(_))
     )
   };
+  let font_switch = |e: &Event| {
+    e.kind == EventKind::Layout && e.span.is_none() && e.role.as_deref() == Some("font")
+  };
   let mut line = 0usize;
   let mut i = 0;
   while i < events.len() {
@@ -2634,26 +2637,29 @@ fn place_pictures(events: &mut Vec<Event>) {
       .iter()
       .take_while(|e| !parts_lines(e))
       .all(|e| !inked(e));
-    if line == 0 || ends_line {
-      if !picture {
-        let mut note = Event::new(EventKind::Note);
-        note.role = Some(PICTURE_NOTE.to_string());
-        note.span = events[i].span;
-        note.nest = events[i].nest;
-        events[i] = note;
+    // (the run right after it, past a font switch, a spanless Layout writing nothing: the first marked line after a
+    // bold names line switches back, `\textbf{Ann Able $^{1}$} \\ $^{1}$ \includegraphics{…} Zebra University`,
+    // review revCR8b finding 1, 2503.08161's polyu-logo.png)
+    let next = (i + 1..events.len()).find(|&j| !font_switch(&events[j]));
+    let run_after = next.filter(|&j| events[j].kind == EventKind::Name);
+    let Some(next) = run_after.filter(|_| line > 0 && !ends_line) else {
+      // (on the names line or ending its line, a note of its own in its place; an image before ink not a run of text —
+      // a mark, an address, a URL — stays the Layout event it is: `\includegraphics{hf-logo.png} \texttt{\url{…}}`,
+      // 2503.08161, is still lost silently, as a note beside the URL, in its place or at its line's end, made two lines'
+      // URLs one affiliation, their markup lost (2505.21327, 2503.08161; review revCR8b finding 1, RED
+      // sectioning-frontmatter/fm_image_before_url_is_a_note))
+      if !picture && (line == 0 || ends_line) {
+        events[i] = picture_note(&events[i]);
       }
       i += 1;
       continue;
-    }
-    if events.get(i + 1).is_none_or(|e| e.kind != EventKind::Name) {
-      i += 1;
-      continue;
-    }
-    let mut after = events.remove(i + 1);
+    };
+    let mut after = events.remove(next);
     let picture = events.remove(i);
-    let start = if i > 0 && events[i - 1].kind == EventKind::Name {
-      i -= 1;
-      let before = events.remove(i);
+    let before_at = (0..i).rev().find(|&j| !font_switch(&events[j]));
+    let start = if let Some(at) = before_at.filter(|&j| events[j].kind == EventKind::Name) {
+      let before = events.remove(at);
+      i = at;
       after.text = [
         before.text.as_str(),
         picture.text.as_str(),
@@ -2675,6 +2681,15 @@ fn place_pictures(events: &mut Vec<Event>) {
     events.insert(i, after);
     i += 1;
   }
+}
+
+/// An image's ([`place_pictures`]) picture note: its span and nesting, role [`PICTURE_NOTE`].
+fn picture_note(image: &Event) -> Event {
+  let mut note = Event::new(EventKind::Note);
+  note.role = Some(PICTURE_NOTE.to_string());
+  note.span = image.span;
+  note.nest = image.nest;
+  note
 }
 
 /// The Declaration events of a block's definitions (`field_notes::FieldNotes`): a definition, printing nothing, is in no box, so

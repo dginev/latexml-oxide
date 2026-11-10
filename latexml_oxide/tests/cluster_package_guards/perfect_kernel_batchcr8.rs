@@ -1,10 +1,13 @@
-//! Red/green guards for batches CR8 and CR8b: a picture in a frontmatter field is kept as markup, never its text
+//! Red/green guards for batches CR8, CR8b and CR8c: a picture in a frontmatter field is kept as markup, never its text
 //! (`events::Lexer::walk_whatsit`'s picture Note, `events::place_pictures`, `emit::item_call`'s picture branch,
 //! `emit::past_unprinted_tail`). Inside `\author` one on the names' line or ending a line goes out of the name, a plain
 //! frontmatter note (`role="note"`) kept whole in source order (user ruling 2026-11-10); one inside a later line stays in
 //! that line's entry; inside a `\thanks` it stays that note's. A pgf/TikZ picture and an `\includegraphics` alike.
 //! OXIDIZED_DESIGN_DIVERGENCES #989.
-use super::perfect_kernel_batchcr2::{convert_clean, elements};
+use super::{
+  perfect_kernel_batch64::post_with,
+  perfect_kernel_batchcr2::{convert_clean, elements},
+};
 
 macro_rules! repro {
   ($name:literal) => {
@@ -99,6 +102,87 @@ fn includegraphics_in_author_is_kept() {
     .map(|c| without_candidates(c))
     .collect();
   assert_eq!(creators, CREATORS_G);
+}
+
+/// An image on the first marked affiliation line after a bold names line (review revCR8b finding 1; 2503.08161's
+/// `polyu-logo.png`, `$^{1}$ \includegraphics[width=0.36cm]{polyu-logo.png} The Hong Kong …`, dropped silently on CR8b and
+/// int154r while the second line's logo was kept): both affiliations hold their image before their words, 0 Warnings.
+/// Distinct: the font switch back from the bold line, a spanless Layout event, stood between the image and its run,
+/// which `events::place_pictures` now looks past. Repro sectioning-frontmatter/fm_image_first_marked_line_after_bold_names.
+#[test]
+fn image_on_the_first_marked_line_is_kept() {
+  let xml = convert_clean(repro!("fm_image_first_marked_line_after_bold_names"));
+  let creators: Vec<String> = elements(&xml, "creator")
+    .iter()
+    .map(|c| without_candidates(c))
+    .collect();
+  assert_eq!(
+    creators.join("\n"),
+    r##"<creator role="author">
+    <personname>Ann Able</personname>
+    <contact name="Affiliation: " role="affiliation"> <graphics graphic="example-image" options="width=10.243pt,keepaspectratio=true" xml:id="g1a"/> Zebra University</contact>
+  </creator>
+<creator before="  " role="author">
+    <personname>Bob Baker</personname>
+    <contact name="Affiliation: " role="affiliation"> <graphics graphic="example-image-a" options="width=10.243pt,keepaspectratio=true" xml:id="g2a"/> Quokka Institute</contact>
+  </creator>"##
+  );
+}
+
+/// A text node's picture then two `;` (review revCR8b finding 5): pdflatex prints the second, the note holds the
+/// picture alone and the `;` parts the two names, 0 Warnings. Distinct: the box of a text node reaches past its path's
+/// `;`, so `emit::past_unprinted_tail` takes none more (CR8b wrote the printed `;` inside the note). Repro
+/// sectioning-frontmatter/fm_picture_text_node_then_two_semicolons.
+#[test]
+fn a_text_node_picture_takes_one_semicolon() {
+  let xml = convert_clean(repro!("fm_picture_text_node_then_two_semicolons"));
+  assert_eq!(
+    elements(&xml, "creator").join("\n"),
+    r##"<creator role="author">
+    <personname>Ann Able</personname>
+    <note role="note" xml:id="id1"><picture height="18.83" width="73.1" xml:id="pic1a">
+        <svg:svg height="18.83" overflow="visible" version="1.1" viewBox="0 0 73.1 18.83" width="73.1">
+          <svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,18.83) matrix(1 0 0 -1 0 0) translate(36.55,0) translate(0,9.42) matrix(1.0 0.0 0.0 1.0 -31.94 -4.8)">
+            <svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:4.67em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="64.65"><text xml:id="pic1a.1">Zebraword</text></svg:foreignObject>
+          </svg:g>
+        </svg:svg>
+      </picture></note>
+  </creator>
+<creator before="  " role="author">
+    <personname>Bob Baker</personname>
+  </creator>"##
+  );
+}
+
+/// The HTML of an unmarked frontmatter note (user ruling 2026-11-10, "No dagger for unmarked notes"; OXIDIZED_DESIGN_DIVERGENCES
+/// #990): the picture note of 2404.13552's shape renders inline, with no † (`ltx_note_mark`) and no hover-only
+/// `ltx_note_content` (LaTeXML.css hides it), no "note:" label; the `\thanks` beside it keeps its mark (OD #156). Distinct:
+/// the meta XSLT's `ltx:creator/ltx:note[not(@mark)]` template. Repro sectioning-frontmatter/fm_picture_text_in_author_is_a_note.
+#[test]
+fn an_unmarked_frontmatter_note_renders_inline_without_a_dagger() {
+  let xml = convert_clean(repro!("fm_picture_text_in_author_is_a_note"));
+  let html = post_with(&xml, "resources/XSLT/LaTeXML-html5.xsl");
+  let note = html
+    .find("<span id=\"id2\" class=\"ltx_note ltx_role_note\"")
+    .map(|at| &html[at..])
+    .and_then(|rest| rest.find("<svg").map(|end| &rest[..end]))
+    .unwrap_or_else(|| panic!("no unmarked note in {html}"));
+  assert_eq!(
+    note,
+    r##"<span id="id2" class="ltx_note ltx_role_note"><span class="ltx_inline-block">"##
+  );
+  let thanks = html
+    .find("<span id=\"id1\" class=\"ltx_note ltx_note_frontmatter")
+    .map(|at| &html[at..])
+    .and_then(|rest| rest.find("</span></span></span>").map(|end| &rest[..end]))
+    .unwrap_or_else(|| panic!("no thanks note in {html}"));
+  assert_eq!(
+    thanks,
+    r##"<span id="id1" class="ltx_note ltx_note_frontmatter ltx_thanks_note ltx_role_thanks"><sup class="ltx_note_mark">†</sup><span class="ltx_note_outer"><span class="ltx_note_content"><sup class="ltx_note_mark">†</sup><span class="ltx_note_type">thanks: </span>Zebra University."##
+  );
+  // (the page's only marks and hidden content are the thanks': none after the picture either)
+  assert_eq!(html.matches("ltx_note_mark").count(), 2, "{html}");
+  assert_eq!(html.matches("ltx_note_content").count(), 1, "{html}");
 }
 
 /// `xml` without its `candidates="…"` attributes.

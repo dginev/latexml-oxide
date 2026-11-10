@@ -365,12 +365,15 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
           // (nor twice under two labels: an entry marked with several labels is one copy a label — OSA's
           // `\address{$^{1,2}$Univ X}`, osa_journal_sty.rs `lines_per_label`, 1406.0824 — which reaches an author
           // marked with two of them once; two entries under one label are two, as the PDF prints them; an annotation
-          // without text, an icon's link, is compared by nothing; nor a picture's note, whose text is its picture's, two
+          // without text, an icon's link, is compared by nothing; nor a picture's note — a plain `role="note"` holding a
+          // picture or an image, `emit::picture_note_call`, its creator's own label —, whose text is its picture's, two
           // pictures printing the same text two notes (`Ann Able \tikz\node{Zebraword}; \tikz\node{Zebraword};`, review
-          // revCR8 finding 3; OD #989). Guards `perfect_kernel_batch64u::osa_several_labels_one_line_each`,
+          // revCR8 finding 3; OD #989); a `\thanks` holding a logo (role `thanks`) is compared by its text as any other note
+          // (review revCR8b finding 3). Guards `perfect_kernel_batch64u::osa_several_labels_one_line_each`,
           // `perfect_kernel_batch61::marked_affiliation_review_shapes`, `perfect_kernel_batchcr8::two_same_text_pictures_are_two_notes`)
           let (role, content) = (note.get_attribute("role"), annotation_value(&note));
           let pictured = note.get_name() == "note"
+            && role.as_deref() == Some("note")
             && !document
               .findnodes(".//ltx:picture | .//ltx:graphics", Some(&note))
               .is_empty();
