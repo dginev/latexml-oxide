@@ -1,0 +1,20 @@
+% mechanism: under its row's affiliation line, a line of llncs's one `\author` that reads as no institution over a line
+%   that reads as one starts a new row of names, its affiliation under it (the row repeated), as llncs's old split
+%   read its `\author` lines by `reads_as_affiliation` (`later_line_is_names`, `after_affiliation`, asked under the
+%   llncs policy only); the last line, or one over no institution, stays the row's.
+% witness: Z18b's repro shape (a); 0803.3838 (`Chief Scientist \\ Aptex Software`, the negative); the kernel article
+%   keeps its reading (hep-th0212274's "Einstein Drive", math-ph9903017's "James Clerk Maxwell Building", 1910.07154's
+%   "IIIT Delhi" over an address line, which the rule read as names there)
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker / University of Somewhere / Cat Cole / Other Institute"
+% engines: rust Z18b3 = Cat Cole and Other Institute affiliations of Ann Able and Bob Baker
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker with University of Somewhere; Cat Cole with Other Institute
+% status:  RED (Z18b3) -> GREEN (Z18c)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able \and Bob Baker\\ University of Somewhere\\ Cat Cole\\ Other Institute}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

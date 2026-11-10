@@ -30,6 +30,28 @@ pub(in crate::base_utilities::frontmatter::observer) fn split_pieces(
     .collect()
 }
 
+/// Whether a call is a class's one shared institute (`_share=authors`, not a piece its marks split) holding marks typed by
+/// hand after a line's first words, a paper's own (`\affmark{1} City University … \quad \affmark{2} ShanghaiTech University
+/// … \\ \affmark{4} …`, 2608.21425): no line or mark of it leads an institute of its own — the one entry, which no class mark requests, the
+/// block's whole, as the old split's `marks_pick` left it ("an institute holding marks of its own" is not shared). The
+/// class's own `\inst` marks in it (aa's `\institute{\inst{1} Univ X \\ \inst{2} Univ Y}`, 1003.3020) still lead its
+/// lines. The reading keeps it whole ([`Resolver::api`]) and the emitter writes it so (`emit::item_call`).
+pub(in crate::base_utilities::frontmatter::observer) fn hand_marked_share(
+  attrs: &str,
+  events: &[Event],
+) -> bool {
+  // (a mark typed by hand after a line's first words: the line no one institute its leading mark labels — a line each
+  // led by its mark, `$^1$Univ A \\ $^2$Univ B` under `\inst{1,2}`, is still read line by line, 1803.02579)
+  shares_the_row(attrs)
+    && attr_value(attrs, "_markpiece") != Some("true")
+    && events.split(|e| e.kind == EventKind::Break).any(|line| {
+      line
+        .iter()
+        .skip_while(|e| e.kind != EventKind::Name)
+        .any(|e| e.kind == EventKind::Mark && !is_class_request(e))
+    })
+}
+
 impl Resolver {
   /// An empty entry's authors hold its role, as today's attaches the empty contact to them (`annotate=`: the last
   /// author, all, the run of new ones, the last N) — part of today's contact pile too (`distribute_upfront`: amsart's
@@ -248,7 +270,7 @@ impl Resolver {
     // 2506.20360's `\email{guolianglv@sina.com};{chunhuazhu@sina.cn}` gave the second address to the institute's
     // text, which then differed from today's and held the writing back)
     let row_lines;
-    let events = if attr_value(attrs, "_share") == Some("authors") && self.out.creators.len() > 1 {
+    let events = if shares_the_row(attrs) && self.out.creators.len() > 1 {
       row_lines = row_address_lines(events);
       &row_lines[..]
     } else {
@@ -433,7 +455,9 @@ impl Resolver {
     // (one numbered entry whose every line a mark leads — `\institute{\inst{1} Univ X \\ \inst{2} Univ Y}`, the one entry
     // the class numbers with no `\and` (aa class D of the stage-6 gate study, 1003.3020, 0904.2180): each line its own
     // entry, labelled by its mark as a leading mark labels one, not the whole by the class's number — `line_led_pieces`)
+    let hand_marked_share = hand_marked_share(attrs, events);
     if !split
+      && !hand_marked_share
       && tag != "ltx:creator"
       && policy.label_sequence
       && attr_value(attrs, "labelseq").is_some_and(|s| !s.is_empty())
@@ -658,10 +682,29 @@ impl Resolver {
           ""
         }
       };
+      // (a class's one institute every author shares unless its `\inst{n}` picks it: `_share=authors`, llncs's
+      // `\lx@llncs@institute@sole`, OD #901 — decided once every name is read, `answer_pending`)
+      // (not one whose own first line prints an address outside the class's e-mail calls — `… Hamburg, Germany
+      // \mailsa`, 1706.02124; `National University of Singapore {\tt \{joxan,…\}@…}` —: that line is no line apart
+      // from the institute, so the institute is the block's whole, as the old split's `row_email_calls` left it, its
+      // addresses placed by the chain from there — left every author's, the address on the line would be too)
+      let first_line_address = events
+        .iter()
+        .take_while(|e| e.kind != EventKind::Break)
+        .any(|e| e.kind == EventKind::Name && e.text.contains('@'));
+      let shares = label_rule == "api:labelseq" && shares_the_row(attrs) && !first_line_address;
       for contact in inner {
         // (an e-mail call printing several addresses, a braced group `\email{\{ann,bob\}@x.org}` in an `\institute`
         // entry: each address written out, to the author of the document it spells — `answer_pending`)
         let addresses = written_out(&contact);
+        // (a shared entry's call is one unit, as the old split's `row_email_calls` read it: whole where all its addresses
+        // go one way, `Resolver::answer_shared_emails`)
+        let unit = if shares && !addresses.is_empty() {
+          self.row_units.push(contact.clone());
+          s!(" row:unit:{}", self.row_units.len() - 1)
+        } else {
+          String::new()
+        };
         if addresses.is_empty() {
           let tag = mailbox(&contact.text);
           self.pending.push((labels.clone(), false, Assoc {
@@ -674,16 +717,13 @@ impl Resolver {
         for address in addresses {
           let tag = mailbox(&address);
           self.pending.push((labels.clone(), false, Assoc {
-            rule: s!("{label_rule} api:inner-contact ruling3:written-out{tag}"),
+            rule: s!("{label_rule} api:inner-contact ruling3:written-out{tag}{unit}"),
             label: labels.first().cloned(),
             text: address,
             ..contact.clone()
           }));
         }
       }
-      // (a class's one institute every author shares unless its `\inst{n}` picks it: `_share=authors`, llncs's
-      // `\lx@llncs@institute@sole`, OD #901 — decided once every name is read, `answer_pending`)
-      let shares = label_rule == "api:labelseq" && attr_value(attrs, "_share") == Some("authors");
       let marked = events.iter().any(|e| e.kind == EventKind::Mark);
       // (a store's line a mark leads, or one continuing it: the next unmarked line of the store continues it too)
       if label_rule.starts_with("api:leading-mark")

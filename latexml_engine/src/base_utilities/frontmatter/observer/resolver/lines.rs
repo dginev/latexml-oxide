@@ -43,6 +43,22 @@ pub(super) fn lines_of<'a>(events: &'a [Event], and_inline: bool) -> Vec<Line<'a
         column += 1;
         lines.push(new(column));
       },
+      // (an inline `\and` after a line of contacts alone opens the next names of the row, as the binding's old split
+      // cut its `\and` pieces (`\lx@llncs@author` until Z18e): `Ann Able\\ \email{ann@x.org} \and Bob Baker\\ University
+      // of Y`, Bob Baker a name, not words of Ann Able's e-mail line — rank 110, review probe L3)
+      EventKind::Sep(SepKind::And(_))
+        if lines.last().is_some_and(|line| {
+          line.events.iter().any(|e| e.kind == EventKind::Contact)
+            && line.events.iter().all(|e| {
+              matches!(
+                e.kind,
+                EventKind::Contact | EventKind::Layout | EventKind::Sep(_)
+              )
+            })
+        }) =>
+      {
+        lines.push(new(column));
+      },
       EventKind::ApiCall => {},
       _ => lines.last_mut().expect("a line").events.push(event),
     }

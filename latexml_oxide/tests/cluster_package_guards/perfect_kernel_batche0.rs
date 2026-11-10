@@ -733,6 +733,11 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ),
   ("const _preamble base_utilities/frontmatter/place.rs", 1),
   ("const _queued base_utilities/frontmatter/relocate.rs", 1),
+  // (Z18g, raised with its reason: an entry the reading shares among every author (`_share=authors`, llncs's sole
+  // `\institute`) says so on the entry the emitter writes, `insert::ROW_SHARED`, so the Kind step for an address line sends
+  // a later line holding an address no reader reads to the block, once, as the old split's `row_email_calls` did — `_share`
+  // itself would make the token-level Kind step pass the entry over, which reads its address lines; 1103.2027's shape)
+  ("const _rowshared base_utilities/frontmatter/insert.rs", 1),
   (
     "const _released_store base_utilities/frontmatter/queue_digest.rs",
     1,
@@ -1153,7 +1158,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (`list_setter_called`: sv_support's `\institute` in an author's group, cond-mat0605195) — a binding's definition read,
   // no name a document spells; it decides only that the emitter stays out, the output then today's)
   ("ledger", 35),
-  ("llncs_cls.rs", 32),
+  // (Z18e 32 -> 31: the unmarked `\author` split `\lx@llncs@author` gone, the block read whole)
+  ("llncs_cls.rs", 31),
   ("osa_journal_sty.rs", 77),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the owner logic, 938 = 924 + 14; none added)
   ("owners", 14),
@@ -1187,7 +1193,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // FB2b5 18 -> 19: `blocks.rs`'s shared column, a column after the last name opening with an institution, every name's
   // affiliation — `is_institution` on the line's printed text (the events' text, no token), so a person whose name does
   // not read as one (`reads_as_names` alone) never becomes an institution: 0712.1016, 1704.03168, review revG3 Q3)
-  ("resolver", 19),
+  // Z18e 19 -> 20: llncs's `\author` lines (`Policy::author_lines`), a line over the next line of its column reading as
+  // an institution starts a row — the `reads_as_affiliation` per line moved from the binding's split it replaces
+  // (`\lx@llncs@author`, whose reads leave llncs_cls.rs), one `is_institution` on the lines' printed text)
+  ("resolver", 20),
   // (DEL1 24 -> 20: the old driver's unit tests of `name_and_trailing_email`, `leading_symbol_labels`, `weldable_line`,
   // `continues_the_line`, `person_over_institution` and `strip_linebreak_options_keeping_gaps` deleted)
   ("rest /author_split_tests.rs", 20),
@@ -1232,8 +1241,14 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (Z18c 43 -> 48: not the unit cut but `one_address`'s catcode reads, a list's address written as text — `separators`, the
   // spaces, `,` and `;` a list's argument opens or ends with (1908.05750), `plain`, a list of characters and control symbols
   // writing no Warning (2501.11774), and a control-symbol test of its own — what it writes, no name spelled; Z18d 48 -> 46: the
-  // control-symbol test is the content text's `ledger::symbol`, review revZ18c S4)
-  ("emitter/emit", 46),
+  // control-symbol test is the content text's `ledger::symbol`, review revZ18c S4; Z18f 46 -> 45: `plain`'s catcode test on one
+  // line, a math shift and a group's brace admitted, the list's separators by the row's `is_call_separator`; Z18h 45 -> 44: an
+  // e-mail item of what prints several is written by `by_text`, a joined run's lost links counted, review revZ18g B1; Z18i 44
+  // -> 58: `joined_run_link` WRITES a joined run's link as printed — the `\url`/`\href` call it finds in the run's tokens,
+  // the text font commands and declaration groups still open there, the run's own tokens being what is written, as
+  // `span_tokens_of` and `plan::container_wrap` write theirs —, the decision whether an address is linked made on the
+  // events' targets (`linkable`), review revZ18h S-a and B1r)
+  ("emitter/emit", 58),
   // (P1b, 0 -> 1: `emitter/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("emitter/dom+mod", 1),
@@ -1481,7 +1496,9 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // `'\\'` (with `'~'`), whether the text it WRITES for an address of a plain list holds a control sequence's name or a tie —
   // an output check, no reading decision: `\email{\{a,b\}@x\footnote{…}}` writes `a@x\lx@fm@obs@fnnote`, counted "markup
   // lost", while `\{a,b\}@x\_y.org`'s `a@x_y.org` is all it prints, review revZ18d finding 1)
-  ("emitter", 61),
+  // (Z18i 61 -> 63: `joined_run_link`'s `"\\url"` and `"\\href"`, the calls it writes again as printed — no reading
+  // decision, which the events' targets make; review revZ18h S-a and B1r)
+  ("emitter", 63),
   // (the "Knowledge in, driver out, one pass" move: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
   // mark and note commands it reads; none added)
   ("emitter/calls", 44),

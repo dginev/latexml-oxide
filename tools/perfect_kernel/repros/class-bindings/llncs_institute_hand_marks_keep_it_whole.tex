@@ -1,0 +1,22 @@
+% mechanism: llncs's one `\institute` holding marks of the paper's own (`\affmark{1} Univ A \quad \affmark{2} Univ B \\
+%   …`) is no list of lines each its mark's: the one entry, which no `\inst{n}` requests, the block's whole, as the old
+%   split's `marks_pick` left it (`resolver::hand_marked_share`, read by the reading and the emitter alike); the class's
+%   own `\inst` marks still lead lines (aa, 1003.3020).
+% witness: 2608.21425
+% oracle:  pdflatex 0 errors; "Ann Able^1 and Bob Baker^2" over "^1 Univ A ^2 Univ B / ^3 Univ C"
+% engines: rust Z18e = each line on the names showing its first mark, "markup lost" Warnings and over-placed words;
+%   int154x = the institute on the block whole
+% expect:  0 errors, 0 warnings; the institute on the block, its marks and lines as printed
+% status:  RED (Z18e) -> GREEN (Z18g)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\newcommand{\affmark}[1]{\textsuperscript{#1}}
+\begin{document}
+\title{A Title}
+\author{Ann Able\affmark{1} \and Bob Baker\affmark{2,3}}
+\institute{\affmark{1} Univ A \quad \affmark{2} Univ B\\
+\affmark{3} Univ C}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

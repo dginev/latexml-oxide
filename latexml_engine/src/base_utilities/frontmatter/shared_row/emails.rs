@@ -8,7 +8,7 @@ const NOTE_COMMANDS: [&str; 3] = ["\\thanks", "\\footnote", "\\footnotetext"];
 
 /// The separators that print nothing of their own before an e-mail call, which go with it: spaces, commas, semicolons,
 /// a line break, spacing, a space factor's `\@` (`USA;\@ Email: \email{…}`, 2602.18622).
-fn is_call_separator(t: &Token) -> bool {
+pub(in crate::base_utilities) fn is_call_separator(t: &Token) -> bool {
   matches!(t.get_catcode(), Catcode::SPACE)
     || *t == T_OTHER!(",")
     || *t == T_OTHER!(";")
@@ -504,7 +504,9 @@ pub(super) fn row_email_calls(
 /// braces too (`\email{\{b2@x.edu\}}`, [`single_braced`]: it had stayed on the last author, review revZ18c S2); any other
 /// as written.
 /// With `only` (the entry's inner contacts written as items of their own, `\lx@frontmatter@itemonly`) the units are
-/// cut out whole, a label of the call's aside, which stays the entry's text. A call inside a note stays in it. `None` when the content holds no class e-mail call outside a note.
+/// cut out whole, a label of the call's aside, which stays the entry's text — with `shared` (a `_share=authors` entry,
+/// llncs's sole `\institute`) the label goes with the call, its item carrying it ([`shared_call_item`]). A call inside
+/// a note stays in it. `None` when the content holds no class e-mail call outside a note.
 /// Witnesses (Z18b's llncs reroute, the units left in the entry): 1709.03776, 1709.08027, 2006.03363, 2008.02173,
 /// 2009.11534, 2102.12877, 2207.10888, 2406.08136, 2407.18381, 2410.06985, 2501.02196, 2509.05139, 2510.06692,
 /// 2609.00838, cs0606057.
@@ -512,6 +514,7 @@ pub(in crate::base_utilities) fn entry_email_cut(
   command: &Tokens,
   label: &str,
   only: bool,
+  shared: bool,
 ) -> Result<Option<Tokens>> {
   let tokens = command.unlist_ref();
   let Some((open, close)) = content_group(tokens) else {
@@ -564,7 +567,9 @@ pub(in crate::base_utilities) fn entry_email_cut(
       // (with `only`, the address written apart, its item named by no label of the entry's: a label stays in the entry,
       // the call alone leaving it — 2606.02634's `Norway\\ Correspondence: \email{elias.stenhede@ahus.no}`, whose address
       // is Elias Stenhede's in another entry; the label had gone with the call, a word lost)
-      if only && (cut.labelled() || call.label.is_some()) {
+      // — not a shared row entry's, whose labels go with the call to its item (`shared_call_item`), as the row's split
+      // gave its unit to the owner or the block, never every author's (85b's `llncs_email_label_goes_with_the_call`, 104d)
+      if only && !shared && (cut.labelled() || call.label.is_some()) {
         units.push((call.at, call.end, written));
         continue;
       }
@@ -611,6 +616,64 @@ pub(in crate::base_utilities) fn entry_email_cut(
     edits,
     (inner_open, inner_close),
   ))))
+}
+
+/// A shared row entry's e-mail item as the row's split wrote its unit ([`row_email_calls`]'s `call_unit`, [`unit_cut`]):
+/// the e-mail label printed before the call, which names it, and the address as the class sets it with the label of its
+/// own before and after it ([`UnitCut::labelled_address`]).
+type SharedItem = (Option<String>, Vec<Token>);
+
+/// The item of a shared row entry's e-mail call (llncs's sole `\institute`, `_share=authors`, its inner contacts written
+/// as items of their own, [`entry_email_cut`]'s `only` with `shared`) carrying the labels [`entry_email_cut`] cuts from the
+/// entry with the call, as the row's split gave its unit: the e-mail label printed before the call, its name
+/// (`USA;\@ Email: \email{\{aable,bbaker,ccole\}@a.edu}`, each part named "Email: ", 104d; 2102.12877, 2602.18622), and
+/// the label of its own the rule recognises ([`call_label`]: `Corresponding author email: \email{zz@x.edu}`, the 85b
+/// re-review's s23; `Corresponding author:`, 2410.06985), in its content — to the address's owner or the block, never
+/// every author's. `written` is the item's e-mail call as the emitter writes it (the call, or one address of its list);
+/// the call is the one of `content` whose addresses hold `address` ([`read_call`]), else its only call. `None` when no
+/// call is found, or it carries no label.
+pub(in crate::base_utilities) fn shared_call_item(
+  content: &Tokens,
+  address: &str,
+  written: &Tokens,
+) -> Result<Option<SharedItem>> {
+  let tokens = content.unlist_ref();
+  let mut calls: Vec<EmailCall> = Vec::new();
+  email_calls_in(tokens, 0, tokens.len(), false, false, &mut calls)?;
+  calls.retain(|call| !call.in_note);
+  let (inner_open, inner_close) = wrapped_span(tokens, 0, tokens.len());
+  let lines = content_lines(tokens, inner_open, inner_close);
+  let first_text = first_text_line(tokens, &lines);
+  let wanted = address.trim().to_lowercase();
+  let only_call = calls.len() == 1;
+  let mut floor = inner_open;
+  for (place, &(_, start, end)) in lines.iter().enumerate() {
+    for call in calls.iter().filter(|call| (start..end).contains(&call.at)) {
+      let cut = unit_cut(tokens, call, (floor, start, end), Some(place) == first_text);
+      floor = cut.end;
+      let holds =
+        read_call(call)?.is_some_and(|list| list.iter().any(|a| a.to_lowercase() == wanted));
+      if !holds && !only_call {
+        continue;
+      }
+      let name = cut.name(call).map(|name| {
+        let printed = s!("{}", Tokens::new(name.clone()).untex_string());
+        printed.trim().to_string()
+      });
+      if name.is_none() && !cut.labelled() {
+        return Ok(None);
+      }
+      // (the written call's own address, the one of its list the item is)
+      let item_tokens = written.unlist_ref();
+      let mut own: Vec<EmailCall> = Vec::new();
+      email_calls_in(item_tokens, 0, item_tokens.len(), false, false, &mut own)?;
+      let Some(item) = own.into_iter().next() else {
+        return Ok(None);
+      };
+      return Ok(Some((name, cut.labelled_address(tokens, &item)?)));
+    }
+  }
+  Ok(None)
 }
 
 /// The addresses a class e-mail call's reader reads from it, each whole ([`email_addresses`], [`is_whole_address`]); one

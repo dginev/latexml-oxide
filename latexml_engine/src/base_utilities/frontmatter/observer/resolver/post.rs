@@ -1640,42 +1640,49 @@ impl Resolver {
   /// Witnesses 1912.11606, 2302.05745 (llncs class S of the stage-6 gate study).
   fn answer_shared_emails(&mut self, emails: Vec<Assoc>) -> Vec<EmailPlacement> {
     let live = self.live();
-    let flat: Vec<(Assoc, String)> = emails
+    // (each address, or a call the old split's reader does not read whole — no address of it, or one that is no whole
+    // address: `\email{[zz@insa-, yy@insa-]rouen.fr}`, a bracket list cut at its commas, 2609.24668 — the call as
+    // written, the block's, or one author's: `row_email_calls`' unread unit)
+    let flat: Vec<(Assoc, String, bool)> = emails
       .into_iter()
       .flat_map(|assoc| {
         let addresses = addresses_in(&assoc.text);
-        if addresses.is_empty() {
-          vec![(assoc.clone(), assoc.text.clone())]
+        if addresses.is_empty() || !addresses.iter().all(|a| is_whole_address(a)) {
+          vec![(assoc.clone(), assoc.text.clone(), false)]
         } else {
           addresses
             .into_iter()
-            .map(|address| (assoc.clone(), address))
+            .map(|address| (assoc.clone(), address, true))
             .collect()
         }
       })
       .collect();
     let spelled: Vec<Option<usize>> = flat
       .iter()
-      .map(|(_, address)| self.spelled(address, &live))
+      .map(|(_, address, read)| read.then(|| self.spelled(address, &live)).flatten())
       .collect();
+    // (the order only where every call is read: one not read leaves no list known to be one per author, each address
+    // then by its spelling alone, `row_address_spelled_owners`)
     let in_order = flat.len() == live.len()
       && live.len() >= 2
-      && flat.iter().all(|(_, address)| !lists_local_parts(address))
+      && flat
+        .iter()
+        .all(|(_, address, read)| *read && !lists_local_parts(address))
       && spelled
         .iter()
         .zip(&live)
         .all(|(s, c)| s.is_none_or(|s| s == *c));
-    flat
+    let placed: Vec<EmailPlacement> = flat
       .into_iter()
       .zip(spelled)
       .enumerate()
-      .map(|(at, ((assoc, address), spelled))| {
+      .map(|(at, ((assoc, address, read), spelled))| {
         let (owner, tag) = match spelled {
           Some(owner) => (Some(owner), "owner:spelled"),
           None if in_order => (Some(live[at]), "owner:order"),
           None => match live.as_slice() {
             [only] => (Some(*only), "owner:only-author"),
-            _ if is_pattern_address(&address) => (None, "owner:pattern"),
+            _ if read && is_pattern_address(&address) => (None, "owner:pattern"),
             _ => (None, "owner:block"),
           },
         };
@@ -1687,7 +1694,51 @@ impl Resolver {
           candidates: live.clone(),
         }
       })
-      .collect()
+      .collect();
+    // (a call written out whose addresses all go one way is the call as written, one contact: `\email{{zz,yy}@x.edu}`
+    // spelling no one, the block's whole, not zz@ and yy@ — the old split's "a unit whose addresses all go one way is the
+    // unit as written", `row_email_calls`; review 85b q03, 2206.10050)
+    let unit_of = |p: &EmailPlacement| {
+      p.assoc
+        .rule
+        .split_whitespace()
+        .find_map(|t| t.strip_prefix("row:unit:"))
+        .and_then(|n| n.parse::<usize>().ok())
+    };
+    let mut out: Vec<EmailPlacement> = Vec::with_capacity(placed.len());
+    let mut done: Vec<usize> = Vec::new();
+    for (at, p) in placed.iter().enumerate() {
+      let Some(unit) = unit_of(p) else {
+        out.push(p.clone());
+        continue;
+      };
+      if done.contains(&unit) {
+        continue;
+      }
+      let members: Vec<&EmailPlacement> = placed[at..]
+        .iter()
+        .filter(|q| unit_of(q) == Some(unit))
+        .collect();
+      let whole = self.row_units.get(unit);
+      match whole {
+        Some(whole) if members.len() > 1 && members.iter().all(|q| q.owner == p.owner) => {
+          done.push(unit);
+          let rule = p
+            .assoc
+            .rule
+            .split_whitespace()
+            .filter(|t| *t != "ruling3:written-out" && !t.starts_with("row:unit:"))
+            .collect::<Vec<_>>()
+            .join(" ");
+          out.push(EmailPlacement {
+            assoc: Assoc { rule, ..whole.clone() },
+            ..p.clone()
+          });
+        },
+        _ => out.push(p.clone()),
+      }
+    }
+    out
   }
 
   /// The e-mail calls inside labelled entries that print one address (an `\email` inside an `\institute` entry, the
@@ -2206,6 +2257,7 @@ fn entry_legend(inputs: &[Input], (index, span): Source) -> bool {
 /// An e-mail address the post-pass placed ([`Resolver::place_emails_left`]): its contact (the rule its chain wrote
 /// before the owner's tag), its owner by the chain so far (`None` the block), the owner's tag, and the authors the
 /// corresponding step may pick among (an entry's carriers, a shared entry's live authors).
+#[derive(Clone)]
 struct EmailPlacement {
   assoc:      Assoc,
   owner:      Option<usize>,

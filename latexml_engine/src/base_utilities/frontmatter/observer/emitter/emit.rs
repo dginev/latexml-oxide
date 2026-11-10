@@ -29,12 +29,15 @@ use crate::base_utilities::{
   defs::{
     author_macros::KEPT_WHOLE,
     frontmatter_api::{BLOCK_CREATOR, LABEL_PRINTS, PRINTED_LABEL},
+    frontmatter_fields::orcid_icon_link,
   },
   frontmatter::{
     fallback::{tabular_juggles_in_a_whole_block, whole_block_author},
     insert::NAME_PRINTED,
     observer::{
-      events::{EventKind, Formula, InkTable, lex_with_inks},
+      events::{
+        EventKind, Formula, InkTable, font_declaration, inked, lex_with_inks, text_font_command,
+      },
       field_notes::{EnvironmentStep, FieldCreator},
       ledger::{ApiCall, AuthorBlock, annotated_parent, content_text, field_stamped, symbol},
       policy::TitleMarks,
@@ -42,11 +45,12 @@ use crate::base_utilities::{
       resolver::{
         BlockCheck, LostInk, RCreator, RuleDrop, Written, check_blocks, contact_parts,
         creator_call, is_creator_call, merged_names, own_email_label, printed_email_label,
-        read_events, split_pieces, uncoordinated_marks,
+        read_events, shares_the_row, split_pieces, uncoordinated_marks,
       },
     },
     place::DEFERRED_TO_FLUSH_END,
     relocate::{BLOCK_ZONE, FOOTER_ZONE},
+    shared_row::shared_call_item,
   },
 };
 
@@ -1268,12 +1272,16 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
   // `ledger::symbol`). The text written is tested too: one holding a control sequence's name or a tie lost what it
   // printed, counted (`\email{\{a, b\}@x\footnote{…}}` writes `a@x\lx@fm@obs@fnnote`, review revZ18c S3; 2008.05861's
   // `…hk~~`); a well-formedness test would count `\{a,b\}@x\_y.org`'s `a@x_y.org`, all it prints (review revZ18d finding 1)
+  // A math shift or a group's brace around printed characters prints nothing of its own (2206.10050's
+  // `\email{{jsliwinski,wattenhofer}@ethz.ch}`), nor a separator between the list's addresses (a tie, spacing:
+  // `shared_row::is_call_separator`), which the address written holds none of (1701.08125's
+  // `$\{$stomforde$|$bsick$\}$@uni-kassel.de;~cms@…`, which the old split wrote as text too): no markup lost.
   let plain = !address.contains(['\\', '~'])
     && content[from..to].iter().all(|t| {
-      matches!(
-        t.get_catcode(),
-        Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
-      ) || symbol(t).is_some()
+      use Catcode::{BEGIN, END, LETTER, MATH, OTHER, SPACE};
+      matches!(t.get_catcode(), LETTER | OTHER | SPACE | MATH | BEGIN | END)
+        || symbol(t).is_some()
+        || is_call_separator(t)
     });
   let why = if read.is_none() {
     Some("one address of a list past the positions")
@@ -1474,6 +1482,124 @@ pub(super) fn in_its_font(font: Option<Rc<Font>>, tokens: Vec<Token>) -> Tokens 
   }
 }
 
+/// The groups a joined run's link prints inside ([`joined_run_link`]), outermost first: a text font command's
+/// argument (`\textit{`) or a group opening with font declarations (`{\tt\small`), each closed once after the address.
+struct RunWrap(Vec<Vec<Token>>);
+
+impl RunWrap {
+  fn around(&self, inner: Vec<Token>) -> Vec<Token> {
+    let mut out: Vec<Token> = self.0.concat();
+    out.extend(inner);
+    out.extend(std::iter::repeat_n(T_END!(), self.0.len()));
+    out
+  }
+}
+
+/// The plain text of a link's braced argument at `tokens[open]` and the index past it: its letters, other characters and
+/// spaces, `None` for a command or a group inside it.
+fn link_argument(tokens: &[Token], open: usize) -> Option<(String, usize)> {
+  let open = open
+    + tokens
+      .get(open..)?
+      .iter()
+      .take_while(|t| t.get_catcode() == Catcode::SPACE)
+      .count();
+  if tokens.get(open)?.get_catcode() != Catcode::BEGIN {
+    return None;
+  }
+  let mut text = String::new();
+  for (k, t) in tokens.iter().enumerate().skip(open + 1) {
+    match t.get_catcode() {
+      Catcode::END => return Some((text, k + 1)),
+      Catcode::LETTER | Catcode::OTHER => text.push_str(&t.to_string()),
+      Catcode::SPACE => text.push(' '),
+      _ => return None,
+    }
+  }
+  None
+}
+
+/// A joined run of links in the block's tokens over `span` (`resolver::joined_address_pieces`), for its `address`: the groups
+/// the link to it prints inside, else the run's first `\url`/`\href` ([`RunWrap`]), and the link to the address where one of the run targets it
+/// exactly — `\url{X}` or an `\href` whose target is `X` or `mailto:X`, as written when it prints the address whole,
+/// else the `\href` to its target printing the address (`\href{mailto:X}{X}`: review revZ18h S-a, 2505.15472). `None`
+/// when the run holds no such call.
+fn joined_run_link(
+  block: &AuthorBlock,
+  span: (u16, u16),
+  address: &str,
+) -> Option<(RunWrap, Option<Vec<Token>>)> {
+  let tokens = block.tokens.unlist_ref();
+  let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+  let (from, to) = (at(span.0)?, at(span.1)?.min(tokens.len()));
+  let mut first = None;
+  let mut link: Option<(usize, Vec<Token>)> = None;
+  for k in from..to {
+    let url = content::is_cs(&tokens[k], "\\url");
+    if !(url || content::is_cs(&tokens[k], "\\href")) {
+      continue;
+    }
+    first.get_or_insert(k);
+    if link.is_some() {
+      continue;
+    }
+    let Some((target, past)) = link_argument(tokens, k + 1) else {
+      continue;
+    };
+    let target = target.trim();
+    if url {
+      if target == address {
+        link = Some((k, tokens[k..past].to_vec()));
+      }
+      continue;
+    }
+    if target != address && target.strip_prefix("mailto:").map(str::trim) != Some(address) {
+      continue;
+    }
+    let printed = link_argument(tokens, past);
+    link = Some((k, match printed {
+      Some((text, end)) if text.trim() == address => tokens[k..end].to_vec(),
+      _ => {
+        let mut call = tokens[k..past].to_vec();
+        call.push(T_BEGIN!());
+        call.extend(text_tokens(address));
+        call.push(T_END!());
+        call
+      },
+    }));
+  }
+  let first = link.as_ref().map(|(k, _)| *k).or(first)?;
+  // (back from the first link: each group still open there, outermost last)
+  let mut opens: Vec<Vec<Token>> = Vec::new();
+  let mut depth = 0i32;
+  for i in (0..first).rev() {
+    match tokens[i].get_catcode() {
+      Catcode::END => depth += 1,
+      Catcode::BEGIN if depth > 0 => depth -= 1,
+      Catcode::BEGIN => {
+        if i > 0 && text_font_command(&tokens[i - 1]) {
+          opens.push(tokens[i - 1..=i].to_vec());
+        } else {
+          let declarations: Vec<Token> = tokens[i + 1..first]
+            .iter()
+            .take_while(|t| t.get_catcode() == Catcode::SPACE || font_declaration(t))
+            .filter(|t| t.get_catcode() != Catcode::SPACE)
+            .cloned()
+            .collect();
+          if !declarations.is_empty() {
+            let mut open = vec![tokens[i]];
+            open.extend(declarations);
+            opens.push(open);
+          }
+        }
+      },
+      _ => {},
+    }
+  }
+  opens.reverse();
+  Some((RunWrap(opens), link.map(|(_, call)| call)))
+}
+
 /// The call for one item of the reading, under `label`.
 fn item_call(
   key: &Key,
@@ -1566,7 +1692,8 @@ fn item_call(
     && let Some(call) = api_call(index)
     && (call.role == role || (note && call.parent == "ltx:creator"))
     && let Some(command) = call.command.as_ref()
-    && split_pieces(&call.events, &call.role).len() < 2
+    && (split_pieces(&call.events, &call.role).len() < 2
+      || resolver::hand_marked_share(&call.attrs, &call.events))
     // (an entry whose inner contact prints through no API call stays in its content: its piece, or its text, 2401.05290)
     && (contact_role
       || !call.events.iter().any(|e| {
@@ -1591,14 +1718,26 @@ fn item_call(
       // (an affiliation-kind entry's class e-mail calls, which the reading places: without the separators and labels
       // around them, `entry_email_cut` — `\institute{Univ X\\ \email{p1@x.edu}, \email{p2@x.edu}}` had kept "Univ X ,")
       let emails_cut = if matches!(role, "affiliation" | "address" | "altaffiliation") {
-        entry_email_cut(command, label, separate.contains(&index))?
+        entry_email_cut(
+          command,
+          label,
+          separate.contains(&index),
+          shares_the_row(&call.attrs),
+        )?
       } else {
         None
       };
-      // (an entry the block prints moves back to its place by its zone, what a label places alone: `at_queue_position`)
+      // (an entry the block prints moves back to its place by its zone, what a label places alone: `at_queue_position`;
+      // an entry the reading shares among every author says so, `insert::ROW_SHARED`, which the Kind step for an address
+      // line reads)
+      let keys = if assoc.rule.contains("api:share:authors") {
+        s!("label={{{label}}},{}={{true}}", ROW_SHARED)
+      } else {
+        s!("label={{{label}}}")
+      };
       rekeyed(
         emails_cut.as_ref().unwrap_or(command),
-        &key_tokens(&s!("label={{{label}}}")),
+        &key_tokens(&keys),
         true,
         separate.contains(&index),
         by_label(assoc) || !matches!(role, "affiliation" | "address"),
@@ -1724,6 +1863,26 @@ fn item_call(
         ) == Some(true)
         && let Some(tokens) = span_tokens_of(index, span)
       {
+        // (an ORCID whose link prints no word — the TikZ "iD" icon of the `\orcidicon` template, `\newcommand{\orcidA}
+        // {\href{https://orcid.org/…}{\orcidicon}}`, a logo graphic — is the kernel's ORCID link, its iD in the link and its
+        // title, the icon as printed (`\lx@orcid@href`), as `\lx@author@href` makes a name's link the contact
+        // (OXIDIZED_DESIGN_DIVERGENCES #960): written as a plain link, the iD's title was lost (2008.02173, 2009.11534;
+        // 2507.12319, 2503.04867, 2406.08258))
+        let printed = event_at(
+          index,
+          span,
+          |e| e.kind == EventKind::Contact,
+          |e| e.text.clone(),
+        )
+        .unwrap_or_default();
+        let icon = printed
+          .split(|c: char| !c.is_alphanumeric())
+          .all(|word| word.is_empty() || word.eq_ignore_ascii_case("id"));
+        let id = dom::orcid_id(&assoc.text).trim();
+        if role == "orcid" && icon && !id.is_empty() {
+          let content = orcid_icon_link(id, tokens.unlist_ref());
+          return Ok(annotate_now("ltx:contact", &keys, &content));
+        }
         return Ok(annotate_now("ltx:contact", &keys, tokens.unlist_ref()));
       }
       // (an entry a note holds, a mark leading it: its argument under the mark's reader, as `\\lx@add@thanks` makes it,
@@ -1754,14 +1913,73 @@ fn item_call(
           ));
         }
       }
-      // (one address of what prints several, or in a note: its text in the font it prints in there)
+      // (one address of what prints several, or in a note: its text in the font it prints in there — where its span holds
+      // two or more inks, any such address, a run of link pieces the reading joined (`resolver::joined_address_pieces`,
+      // which no event holds) or a list one font prints (IEEEtran's `{\tt\small \{gdelmas, fmoreno\}@…}`, 2210.11795),
+      // the font of the first event holding it, else of its first ink that has one. A joined run of links (`\url`,
+      // `\href`) is written as it prints, in the groups' text fonts and declarations around its first link: the address
+      // a link of the run targets exactly (`\href{mailto:X}{…}`, `\url{X}`) that link to it — `\texttt{\href{mailto:…}
+      // {\{samdie2016}, \href{mailto:…}{yanyibo70\}@gmail.com}}` is two typewriter `mailto` links to the whole addresses
+      // (2505.15472, review revZ18h S-a), `\small\textit{\url{robin.andre@ira.uka.de}, \{\url{…}}\}\url{@kit.edu}}`
+      // robin.andre@'s typewriter italic link (1710.01968, revZ18h B1r) —, any other its text, the run's links lost and
+      // counted)
       if role == "email" {
-        let font = with_block(index, None, |_, events| {
-          let holds =
-            |e: &&Event| e.span.is_some_and(|s| s.0 <= span.0 && span.1 <= s.1) && e.font.is_some();
-          events.iter().find(holds).and_then(|e| e.font.clone())
+        let address = assoc.text.trim();
+        let (font, links, linkable) = with_block(index, (None, false, false), |_, events| {
+          let holds = |e: &&Event| e.span.is_some_and(|s| s.0 <= span.0 && span.1 <= s.1);
+          // (the run's inks, two or more inside its span: its first may span the group around them all)
+          let inside: Vec<&Event> = events
+            .iter()
+            .filter(|e| inked(e) && e.span.is_some_and(|s| span.0 <= s.0 && s.1 <= span.1))
+            .collect();
+          let joined = inside.len() > 1;
+          let font = events
+            .iter()
+            .filter(holds)
+            .find_map(|e| e.font.clone())
+            .or_else(|| {
+              joined
+                .then(|| inside.iter().find_map(|e| e.font.clone()))
+                .flatten()
+            });
+          // (a link among them, whatever its target: a `\url` piece, an `\href` to a page or an address)
+          let link = |e: &&&Event| {
+            e.kind == EventKind::Contact && (e.target.is_some() || e.role.as_deref() == Some("url"))
+          };
+          let links = joined && inside.iter().any(|e| link(&e));
+          // (whether one of them links to the address itself, by its target: the decision the events make, the tokens only
+          // what is written)
+          let linkable = links
+            && inside.iter().filter(link).any(|e| {
+              let target = e.target.as_deref().unwrap_or(&e.text).trim();
+              target == address || target.strip_prefix("mailto:").map(str::trim) == Some(address)
+            });
+          (font, links, linkable)
         });
-        let content = in_its_font(font, text_tokens(&assoc.text));
+        let written = links
+          .then(|| {
+            with_block(index, None, |block, _| {
+              joined_run_link(block, span, address)
+            })
+          })
+          .flatten();
+        let content = match written {
+          Some((wrap, Some(link))) if linkable => in_its_font(font, wrap.around(link)),
+          Some((wrap, _)) => in_its_font(
+            font,
+            wrap.around(by_text(
+              Some("an address joined from link pieces, its links lost"),
+              &assoc.text,
+            )),
+          ),
+          None => in_its_font(
+            font,
+            by_text(
+              links.then_some("an address joined from link pieces, its links lost"),
+              &assoc.text,
+            ),
+          ),
+        };
         return Ok(annotate_now("ltx:contact", &keys, content.unlist_ref()));
       }
       // (several events of one span: a macro printed them, 2604.09547)
@@ -1895,6 +2113,18 @@ fn item_call(
       };
       // (a contact inside it: its command as written, as a block's)
       if contact_role && let Some(tokens) = call_contact(&call, assoc, written_out)? {
+        // (a shared row entry's e-mail: the labels its call carries go with it, as `entry_email_cut` cuts them from the
+        // entry — the e-mail label its name, a label of its own in its content, `shared_call_item`)
+        if role == "email"
+          && shares_the_row(&call.attrs)
+          && let Some((name, content)) = shared_call_item(&call.content, &assoc.text, &tokens)?
+        {
+          let keys = match name {
+            Some(name) if !keys.contains(",name=") => s!("{keys},name={{{name} }}"),
+            _ => keys,
+          };
+          return Ok(annotate_now("ltx:contact", &keys, &content));
+        }
         return Ok(annotate_now("ltx:contact", &keys, tokens.unlist_ref()));
       }
       // (a note inside it: its command's argument as written, under the note's own kind, as a block's note — its fonts,
@@ -2338,8 +2568,22 @@ fn items_to_emit<'a>(
       |e| e.kind == EventKind::Contact,
       |e| e.role.as_deref() == Some("email") && e.meaning != events::EmailMeaning::Own,
     );
+    // (a link whose ink is a binding's e-mail call — `\thanks{… E-mail: \href{mailto:a@x}{\email{a@x}}.}`, 1004.3134 —
+    // prints the address nowhere in the note: the call makes the contact, which stays, as it does without the link)
+    let call_inside = with_block(index, false, |_, events| {
+      let inner = events.iter().flat_map(|e| &e.inner);
+      events.iter().chain(inner).any(|e| {
+        e.kind == EventKind::Contact
+          && e.role.as_deref() == Some("email")
+          && e.meaning != events::EmailMeaning::Own
+          && e
+            .span
+            .is_some_and(|(s, t)| span.0 <= s && t <= span.1 && (s, t) != span)
+      })
+    });
     a.rule.contains("ruling4:inner-contact")
       && routed == Some(false)
+      && !call_inside
       && notes
         .iter()
         .any(|&(o, i, (s, t))| o == owner && i == index && s <= span.0 && span.1 <= t)
@@ -2364,7 +2608,10 @@ fn items_to_emit<'a>(
   // maarten@…\\{}$^b$IFAE …\\E-mail: peris@…}` whose names' marks the queue did not cut it by (`$^{\a 1}$` printing
   // "a1"), hep-ph0011101, brief KB1)
   let by_pieces = |index: usize| {
-    api_call(index).is_some_and(|call| split_pieces(&call.events, &call.role).len() >= 2)
+    api_call(index).is_some_and(|call| {
+      split_pieces(&call.events, &call.role).len() >= 2
+        && !resolver::hand_marked_share(&call.attrs, &call.events)
+    })
   };
   // (an entry whose inner e-mail the reading wrote out whole — each address it prints its own item, `ruling3:written-out` —
   // keeps no copy of the call either: `\institute{University of Arizona\\ \email{$\{$npcarpenter\,|\,giacobazzi$\}@$arizona.edu}}`,

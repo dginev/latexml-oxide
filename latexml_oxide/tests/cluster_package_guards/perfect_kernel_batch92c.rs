@@ -144,7 +144,8 @@ fn written_items_keep_the_print_order() {
     &[
       "C Ann Able [1] | line:names",
       "  a Zeta University | api:labelseq ruling1:request",
-      "C Bob Baker [1,2] | line:names",
+      // (Z18e: the name after llncs's inline `\and`, which the reading now sees in the line, `sep:and`)
+      "C Bob Baker [1,2] | line:names sep:and",
       "  a Zeta University | api:labelseq ruling1:request",
       "  a Alpha Institute | api:labelseq ruling1:request",
     ],

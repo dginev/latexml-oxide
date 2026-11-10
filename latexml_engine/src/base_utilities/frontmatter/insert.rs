@@ -2291,6 +2291,11 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
   );
   // (the split lists left unread, each warned of once however many holders print it)
   let mut warned: HashSet<String> = HashSet::default();
+  // (each shared row entry's later lines holding an address no reader reads, by entry, taken to the block once: their
+  // nodes, from the first copy read)
+  // (its entry's key, its nodes, the name of the e-mail label it opens with, the entry's own name)
+  type ToBlock = (String, Vec<Node>, Option<String>, Option<String>);
+  let mut to_block: Vec<ToBlock> = Vec::new();
   for entry in entries {
     let Some(creator) = entry.get_parent() else {
       continue;
@@ -2324,14 +2329,85 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
       let read = nodes.iter().all(|node| line.read(node));
       // (a legend the Kind step for a legend can make a note of: the entry's only line, opened by a mark)
       let legend = printed_lines == 1 && line.opens_with_mark();
-      let cut = read
+      let mut cut = read
         .then(|| address_line_cut(&line.text, &spells, legend))
         .flatten();
+      // (else the line read again with its links' inks joined, where a link printing a piece of an address stood in
+      // the way: taken only where the whole line is the run of addresses, behind its label or none — the old split's
+      // raw address line, `shared_row::row_email_calls`, read past a document's macros as printed (1504.01099,
+      // 1710.01968))
+      if cut.is_none() && !read {
+        let mut joined = LineText {
+          joined: true,
+          ..LineText::default()
+        };
+        if nodes.iter().all(|node| joined.read(node))
+          && joined.pieced
+          && let Some(whole) = address_line_cut(&joined.text, &spells, legend).filter(|cut| {
+            cut.start == 0
+              && cut
+                .addresses
+                .iter()
+                .all(|address| is_whole_address(address))
+          })
+        {
+          line = joined;
+          cut = Some(whole);
+        }
+      }
       let Some(mut cut) = cut else {
+        let printed: String = nodes.iter().map(Node::get_content).collect();
+        // (a later line of a class's one institute every author shares (`_share=authors`, written with
+        // [`ROW_SHARED`]) holding an address no reader reads — `{\tt (joxan, navas)@comp.nus.edu.sg}` — is the block's,
+        // as written, once: left in the entry its address would be every author's (the old split's `row_email_calls`,
+        // OD #901; 1103.2027's shape). Not one holding a note, whose address stays the note's)
+        if prints
+          && kept_before
+          && authors.len() > 1
+          && printed.contains('@')
+          && entry.get_attribute(ROW_SHARED).as_deref() == Some("true")
+          && nodes.iter().all(|node| {
+            node.get_type() != Some(NodeType::ElementNode)
+              || document
+                .findnodes("descendant-or-self::ltx:note", Some(node))
+                .is_empty()
+          })
+        {
+          let key = entry.get_attribute(ENTRY_KEY).unwrap_or_default();
+          if !to_block.iter().any(|(k, ..)| *k == key) {
+            // (one opened by an e-mail label of its own is an e-mail of the block, its label the contact's name: `\\
+            // e-mail: gil@astrax.fis.ucm.es (AGdP)`, astro-ph0007270 — the old split's same rule, `row_email_calls`, both
+            // reading the label by `is_email_label`, review revZ18g S1)
+            let (name, kept) = match cut_email_label(nodes) {
+              Some((name, kept)) => (Some(name), kept),
+              None => (None, nodes.clone()),
+            };
+            for node in nodes {
+              if kept.contains(node) {
+                node.clone().unlink_node();
+              } else {
+                document.remove_node(node.clone());
+              }
+            }
+            // (else the block's affiliation, under the entry's own name, as the line's contact had it: `name="Affiliation: "`,
+            // review revZ18h N-b)
+            to_block.push((key, kept, name, entry.get_attribute("name")));
+          } else {
+            for node in nodes {
+              document.remove_node(node.clone());
+            }
+          }
+          if let Some(separator) = break_before
+            .clone()
+            .filter(|separator| separator.get_parent().is_some())
+          {
+            document.remove_node(separator);
+          }
+          continue;
+        }
         // (a list of local parts set over several lines, which the line's reading declines — a formula or a note in
         // it, a template, a list the reader cannot part —, stays where it prints, counted: never silently an
         // affiliation's text, html_feedback #7233)
-        let printed: String = nodes.iter().map(Node::get_content).collect();
         if split_address_list(nodes) && warned.insert(printed.clone()) {
           Warn!(
             "frontmatter",
@@ -2529,6 +2605,31 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
       document.close_element("ltx:contact")?;
     }
     document.set_node(&saved);
+  }
+  if !to_block.is_empty() {
+    let authors = document.findnodes(NAMED_ROW_AUTHORS, None);
+    if let Some(creator) = block_creator(document, &authors)? {
+      let saved = document.get_node().clone();
+      document.set_node(&creator);
+      for (_, nodes, name, entry_name) in to_block {
+        let mut attributes: HashMap<String, String> = HashMap::default();
+        if let Some(name) = name {
+          attributes.insert("role".to_string(), "email".to_string());
+          attributes.insert("name".to_string(), name);
+        } else {
+          attributes.insert("role".to_string(), "affiliation".to_string());
+          if let Some(name) = entry_name {
+            attributes.insert("name".to_string(), name);
+          }
+        }
+        let mut contact = document.open_element("ltx:contact", Some(attributes), None)?;
+        for mut node in nodes {
+          contact.add_child(&mut node)?;
+        }
+        document.close_element("ltx:contact")?;
+      }
+      document.set_node(&saved);
+    }
   }
   Ok(kinded)
 }
@@ -2816,6 +2917,56 @@ fn is_mark_text(text: &str) -> bool {
       || (text.chars().count() == 1 && text.chars().all(|c| c.is_ascii_lowercase())))
 }
 
+/// The e-mail label opening a line's `nodes` — the words before its first colon, read by `is_email_label` ("e-mail:",
+/// "Emails:") — cut from them, its name as a contact's (`"e-mail:\u{a0}"`, the old split's tie after the colon, review
+/// revZ18h N-a): the text nodes it prints in, or the head of the one
+/// it ends in, go: the name and the nodes left. `None`, and nothing cut, where no label opens the line or one ends inside
+/// an element.
+fn cut_email_label(nodes: &[Node]) -> Option<(String, Vec<Node>)> {
+  let printed: String = nodes.iter().map(Node::get_content).collect();
+  let lead = printed.len() - printed.trim_start().len();
+  let colon = printed.find(':')?;
+  let label = printed[lead..colon].trim();
+  if label.is_empty() || !is_email_label(label) {
+    return None;
+  }
+  let end = colon + 1;
+  let end = end + (printed[end..].len() - printed[end..].trim_start().len());
+  // (each node the label covers whole, and the text node it ends in with its head's length; none an element it ends in)
+  let mut covered: Vec<Node> = Vec::new();
+  let mut head: Option<(Node, usize)> = None;
+  let mut at = 0usize;
+  for node in nodes {
+    let length = node.get_content().len();
+    if at >= end {
+      break;
+    }
+    if at + length <= end {
+      covered.push(node.clone());
+    } else if node.get_type() == Some(NodeType::TextNode) {
+      head = Some((node.clone(), end - at));
+    } else {
+      return None;
+    }
+    at += length;
+  }
+  if let Some((mut node, cut)) = head {
+    let content = node.get_content();
+    let _ = node.set_content(&content[cut..]);
+  }
+  let kept = nodes
+    .iter()
+    .filter(|node| !covered.contains(node))
+    .cloned()
+    .collect();
+  Some((s!("{label}:\u{a0}"), kept))
+}
+
+/// The key a class's one institute every author shares (`_share=authors`, llncs's `\lx@llncs@institute@sole`) is written
+/// with by the frontmatter emitter, which the Kind step for an address line reads: its later line holding an address no
+/// reader reads is the block's ([`kind_address_lines`]).
+pub(in crate::base_utilities) const ROW_SHARED: &str = "_rowshared";
+
 /// A line's printed text as [`kind_address_lines`] reads it, each text node's place in it and each mark's (a space), and
 /// the line breaks inside a printed brace it holds, each with its place (a newline).
 #[derive(Default)]
@@ -2823,6 +2974,11 @@ struct LineText {
   text:   String,
   pieces: Vec<(Node, usize, usize)>,
   breaks: Vec<(Node, usize)>,
+  /// a link printing no `@` of its own is read too, its text a piece of the line's addresses (the line's inks joined,
+  /// [`kind_address_lines`]'s second reading)
+  joined: bool,
+  /// whether such a link was read
+  pieced: bool,
 }
 
 impl LineText {
@@ -2842,6 +2998,13 @@ impl LineText {
       Some(NodeType::ElementNode) => match node.get_name().as_str() {
         "text" => node.get_child_nodes().iter().all(|child| self.read(child)),
         "ref" if node.get_content().contains('@') => {
+          node.get_child_nodes().iter().all(|child| self.read(child))
+        },
+        // (a link of plain text printing a piece of an address, its inks joined with the line's: `\urldef`'d `\path`
+        // pieces of one list, `\mailsa, \mailsb, \mailsc` printing `{asad.khan, amir.ali, fauzan.mirza}@seecs.edu.pk`,
+        // 1504.01099; `\url{christian.schulz}\url{@univie.ac.at}`, 1710.01968 — each read apart, none was an address)
+        "ref" if self.joined && element_nodes(node).is_empty() => {
+          self.pieced = true;
           node.get_child_nodes().iter().all(|child| self.read(child))
         },
         // (an empty superscript, which prints nothing: `\textsuperscript{}\{…\}.civ@mail.mil`, 1908.06816: 107c)

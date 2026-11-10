@@ -1,0 +1,25 @@
+% mechanism: a later line of llncs's shared `\institute` printing one list of addresses through several links of plain
+%   text, none of which prints a whole address (`\urldef`'d `\path` pieces), is read with its links' inks joined: each
+%   address its owner's (the Kind step for an address line's second reading, `LineText::joined`), as the old split's
+%   raw address line (`row_email_calls`) read it.
+% witness: 1504.01099 (`\mailsa, \mailsb, \mailsc` printing `{asad.khan, amir.ali, fauzan.mirza}@seecs.edu.pk`)
+% oracle:  pdflatex 0 errors; "Ann Able, Bob Baker, and Cat Cole" over "Univ X, Town" and "{ann.able, bob.baker,
+%   cat.cole}@x.edu"
+% engines: rust Z18e = the list in every author's institute; int154x (the old split) = each address its owner's
+% expect:  0 errors, 0 warnings; Univ X, Town on the three; ann.able@, bob.baker@, cat.cole@ each its author's
+% status:  RED (Z18e) -> GREEN (Z18g)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\usepackage{url}
+\urldef{\mailsa}\path|{ann.able|
+\urldef{\mailsb}\path|bob.baker|
+\urldef{\mailsc}\path|cat.cole}@x.edu|
+\begin{document}
+\title{A Title}
+\author{Ann Able \and Bob Baker \and Cat Cole}
+\institute{Univ X, Town\\
+\mailsa, \mailsb, \mailsc}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

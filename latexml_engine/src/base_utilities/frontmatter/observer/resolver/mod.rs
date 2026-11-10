@@ -281,7 +281,7 @@ mod placed;
 mod post;
 mod words;
 
-pub(in crate::base_utilities::frontmatter::observer) use api::split_pieces;
+pub(in crate::base_utilities::frontmatter::observer) use api::{hand_marked_share, split_pieces};
 use blocks::Chain;
 // (and the flush's Kind step for an entry's address line, `insert::kind_address_lines`: OD #966)
 pub(in crate::base_utilities::frontmatter) use labels::{AddressRun, address_runs};
@@ -313,8 +313,123 @@ pub(in crate::base_utilities::frontmatter::observer) fn read_events(
   events: &[Event],
 ) -> Vec<Event> {
   glue_shown_runs(&split_text_marks(&join_ordinals(&link_names(
-    &words_through_one_command(&trailing_alignment_as_lines(events)),
+    &words_through_one_command(&joined_address_pieces(&trailing_alignment_as_lines(events))),
   ))))
+}
+
+/// A block's events with each run of link pieces that reads as addresses only once their inks are joined one e-mail
+/// contact, the run's addresses — `\url{robin.andre@ira.uka.de}, \{\url{sebastian.schlag, christian.schulz}\}\url{@kit.edu}`,
+/// `\url{christian.schulz}\url{@univie.ac.at}` (1710.01968): each link read apart was a URL, `@univie.ac.at` on every
+/// author, `christian.schulz @univie.ac.at` too. The old split's raw address line (`shared_row::row_email_calls`), read
+/// as the line prints: a line of links (`url`) with a piece printing no `@` among them, between them only separators and
+/// the braces of a list of local parts. Only the run of pieces is joined, through the ink that completes its addresses
+/// (its span the first ink's start to the last ink's end); a link that is a whole address on its own after such a run
+/// stays its own contact, with its markup — `\texttt{\href{mailto:…}{\{samdie2016}, \href{mailto:…}
+/// {yanyibo70\}@gmail.com}}, \texttt{\href{mailto:xuminghu@hkust-gz.edu.cn}{…}}` keeps xuminghu@'s typewriter `mailto`
+/// link (2505.15472, review revZ18g B1).
+fn joined_address_pieces(events: &[Event]) -> Vec<Event> {
+  let url = |e: &Event| e.kind == EventKind::Contact && e.role.as_deref() == Some("url");
+  let glue = |e: &Event| {
+    e.kind == EventKind::Name
+      && e
+        .text
+        .chars()
+        .all(|c| "{}".contains(c) || c.is_whitespace())
+  };
+  // (the run's text as it prints: its inks, a comma's `, `, any other separator a space)
+  let text_of = |run: &[Event]| {
+    let mut joined = String::new();
+    for e in run {
+      match &e.kind {
+        EventKind::Name | EventKind::Contact => joined.push_str(&e.text),
+        EventKind::Sep(SepKind::Comma) => joined.push_str(", "),
+        EventKind::Sep(_) => joined.push(' '),
+        _ => {},
+      }
+    }
+    joined
+  };
+  // (whether a text is all addresses, each whole, its list's braces closed: a run complete, or a link that is one or more
+  // on its own)
+  let complete = |text: &str| {
+    let addresses = addresses_in(text);
+    text.contains('@')
+      && text.matches('{').count() == text.matches('}').count()
+      && only_addresses(text)
+      && !addresses.is_empty()
+      && addresses.iter().all(|a| is_whole_address(a))
+  };
+  let mut out: Vec<Event> = Vec::with_capacity(events.len());
+  let mut start = 0usize;
+  while start <= events.len() {
+    let end = (start..events.len())
+      .find(|&at| events[at].kind == EventKind::Break)
+      .unwrap_or(events.len());
+    let line = &events[start..end];
+    let take = line.iter().all(|e| {
+      (inked(e) && (url(e) || glue(e)))
+        || matches!(e.kind, EventKind::Sep(SepKind::Comma) | EventKind::Layout)
+    }) && line.iter().any(|e| url(e) && !e.text.contains('@'));
+    // (the runs of pieces, each its first and last ink's places in the line: a run opens at the line's first ink, or at
+    // the first ink after a run that is no whole address on its own, and closes at the ink after which it holds a piece
+    // and its text is all whole addresses; a whole address after a run stands alone. One before the first piece is the
+    // run's: `\textit{\url{robin.andre@…}, \{\url{…}}\}\url{@kit.edu}` (1710.01968) prints it in the pieces' own group,
+    // which the writer would take whole for it)
+    let alone = |e: &Event| url(e) && complete(&e.text);
+    let mut runs: Vec<(usize, usize)> = Vec::new();
+    let mut open: Option<usize> = None;
+    if take {
+      for (at, e) in line.iter().enumerate().filter(|(_, e)| inked(e)) {
+        if open.is_none() {
+          if alone(e) && !runs.is_empty() {
+            continue;
+          }
+          open = Some(at);
+        }
+        if let Some(from) = open
+          && line[from..=at].iter().any(|e| inked(e) && !alone(e))
+          && complete(&text_of(&line[from..=at]))
+        {
+          runs.push((from, at));
+          open = None;
+        }
+      }
+    }
+    if take && open.is_none() && !runs.is_empty() {
+      let mut at = 0usize;
+      for &(from, to) in &runs {
+        out.extend(line[at..from].iter().cloned());
+        let run = &line[from..=to];
+        let span = run
+          .iter()
+          .filter(|e| inked(e))
+          .filter_map(|e| e.span)
+          .fold(None, |acc: Option<(u16, u16)>, (s, t)| {
+            Some(acc.map_or((s, t), |(a, b)| (a.min(s), b.max(t))))
+          });
+        out.push(Event {
+          kind: EventKind::Contact,
+          role: Some("email".to_string()),
+          text: text_of(run)
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" "),
+          target: None,
+          span,
+          ..line[from].clone()
+        });
+        at = to + 1;
+      }
+      out.extend(line[at..].iter().cloned());
+    } else {
+      out.extend(line.iter().cloned());
+    }
+    if end < events.len() {
+      out.push(events[end].clone());
+    }
+    start = end + 1;
+  }
+  out
 }
 
 /// A block's events with an alignment environment (`center`, `flushleft`, `flushright`) that opens after the names and
@@ -509,6 +624,9 @@ struct Resolver {
   /// whether it is a piece its institute's marks split it into (`_markpiece=true`: the numbers shown by hand label the
   /// other pieces, not it — [`Resolver::share_unpicked`])
   shared:             Vec<(usize, bool, bool)>,
+  /// each e-mail call of a `_share=authors` entry written out (`row:unit:<n>` on each of its addresses' entries): the
+  /// call whole, which [`Resolver::answer_shared_emails`] places as written where all its addresses go one way
+  row_units:          Vec<Assoc>,
   /// the pending entries (their place in `pending`) a call labelled by a key its class never prints
   /// (`Policy::keyed_labels`, elsarticle's `\address[*]{…}`): no footnote's mark answers them (`answer_pending`)
   keyed:              Vec<usize>,
@@ -620,6 +738,7 @@ impl Resolver {
       fn_requests:        Vec::new(),
       class_requests:     Vec::new(),
       shared:             Vec::new(),
+      row_units:          Vec::new(),
       keyed:              Vec::new(),
       marked_entries:     Vec::new(),
       note_texts:         Vec::new(),
@@ -1239,10 +1358,17 @@ pub fn resolve_with(
   out
 }
 
+/// Whether a contact call is every author's share unless marks pick it (`_share=authors`: llncs's sole `\institute`, aa's,
+/// `shared_row::share_row_contacts`) — the reading's sharing (`Resolver::share_unpicked`) and the writer's labels that go
+/// with its e-mail calls (`emitter::emit::item_call`, `shared_row::entry_email_cut`).
+pub(in crate::base_utilities::frontmatter::observer) fn shares_the_row(attrs: &str) -> bool {
+  attr_value(attrs, "_share") == Some("authors")
+}
+
 /// Whether a contact call declares a run and every author's share (`_share=authors,annotate=run`: cas's unlabelled
 /// `\affiliation`, `cas_dc_cls.rs` `cas_labelled_entry`).
 pub(super) fn shares_a_run(attrs: &str) -> bool {
-  attr_value(attrs, "_share") == Some("authors") && attr_value(attrs, "annotate") == Some("run")
+  shares_the_row(attrs) && attr_value(attrs, "annotate") == Some("run")
 }
 
 /// `items` in source order: those with a source sorted by it (its block or API call's ledger index, then its span's

@@ -33183,8 +33183,6 @@ printed (2501.11774), unless the text written holds a control sequence's name or
 an address merely not well-formed (`\{a,b\}@x\_y.org` prints `a@x_y.org`, all it is: review revZ18d finding 1); an address line ending an entry takes the separator the line before it ends in (`address_cuts`:
 2407.18381's `(EPFL), \\ \texttt{…}`). **Not moved here** (the reroute's own, kept with it): the `\\` line rules of a whole
 llncs list (a names line after an affiliation line, a line after an inline `\and`, a name carrying an ORCID). **Residuals:**
-1004.3134's `\href{mailto:…}{\email{…}}` inside a `\thanks` (no contact the reading makes; counted by the content check
-before and after); address lists printed across several `\url`/`\path` pieces (1504.01099's `\urldef`s, 1710.01968);
 the Link step's corresponding-author fact reads the DOM's notes only, not a legend that says so (`\inst{1,2}` under
 `\and Corresponding author`: the left address the block's; the old rule, `Resolver::listed_corresponding`, reads both:
 RED `class-bindings/llncs_legend_corresponding_author_takes_the_left_address.tex`); separators after an entry's last call
@@ -33202,7 +33200,87 @@ content text's `ledger::symbol`; `shared_row/emails` 65 → 68 → 65, the copy 
 repros `class-bindings/llncs_{later_braced_email_call_keeps_its_author,list_email_note_written_as_text_is_counted}.tex`,
 guards `perfect_kernel_batchz18d`; the 1,434 stage2 ids and the 699 llncs papers byte-identical to the base
 (`6271ba8076`) in XML and Errors, save 0909.4443's math ids once (a rerun matched) and 2008.05861's two new "markup lost"
-Warnings for the tie its e-mails carry on the base too.
+Warnings for the tie its e-mails carry on the base too. Z18f (llncs's whole list rerouted, Z18e: the shared row's split
+no longer runs for it): (6) a `_share=authors` entry (llncs's sole `\institute`) whose inner contacts are items of their
+own cuts each call with its e-mail label and its own label (`entry_email_cut`'s `shared`), and the item carries them
+(`shared_call_item`, by the same `unit_cut`/`read_call`/`labelled_address`): the e-mail label its name (104d's `USA;\@
+Email: \email{\{aable,bbaker,ccole\}@a.edu}`, each part "Email: "), a label of its own in its content, to the address's
+owner or the block (s23's `Corresponding author email:`, 2410.06985); `one_address`'s plain test admits a math shift, a
+group's brace and a separator in the list (`shared_row::is_call_separator`: a tie), which the address written holds none
+of (1701.08125's `$\{$stomforde$|$bsick$\}$@…;~cms@…`; 2206.10050's `\email{{jsliwinski,wattenhofer}@ethz.ch}`, whose
+two "markup lost" Warnings were spurious); `resolver::shares_the_row` is the one reading of `_share=authors`. Z18g (the old split's
+line rules restated on the reading; Z18f's two REDs green): (7) a `_share=authors` entry's e-mail call written
+out is one unit (`row:unit:<n>`, `Resolver::row_units`): where all its addresses go one way it is placed whole, as
+written (`\email{{zz,yy}@x.edu}` spelling no one: one block address, not `zz@`, `yy@`, `yy@`; 85b q03, 2206.10050), and
+a call whose addresses are not whole (`[zz@insa-, yy@insa-]rouen.fr`, 2609.24668) is the block's whole, the order rule
+then off (`Resolver::answer_shared_emails`, the old `row_email_calls`' unread unit); the entry, holding an item the
+block carries, is written with its calls cut, so it keeps no copy. (8) An entry whose own first line prints an address
+outside the class's calls is not shared (`… Germany \mailsa`, 1706.02124; `National University of Singapore {\tt
+\{…\}@…}`): the block's whole, its addresses placed by the chain. (9) A later line of a shared entry holding an address no
+reader reads goes to the block once (`insert::kind_address_lines`, two or more authors; the reading marks the entry
+`insert::ROW_SHARED`; `{\tt (joxan, navas)@…}`, 1103.2027's shape). (10) A line of link pieces reads as addresses once
+their inks are joined: in an entry, the Kind step's second reading (`LineText::joined`, the whole line the run;
+1504.01099's `\mailsa, \mailsb, \mailsc`); in an author block, `resolver::joined_address_pieces` in `read_events`, the
+content check reading the same (1710.01968's `\url{robin.andre@…}, \{\url{sebastian.schlag, christian.schulz}\}\url{@kit.edu}`;
+2505.15472's `\href` pieces). (11) A shared institute holding marks typed by hand after a line's words is no lined list
+(`resolver::hand_marked_share`, the reading's `line_led_pieces` and the emitter's `item_call` both): the block's whole,
+as the old `marks_pick` left it (2608.21425's `\affmark{1} City University … \quad \affmark{2} …`; a line each led by
+its mark under `\inst{n}` is still read line by line, 1803.02579). (12) An ORCID link of a block that prints no word (an
+icon: TikZ's "iD", a logo graphic) is the kernel's ORCID link to the iD the reading read, the icon as printed
+(`frontmatter_fields::orcid_icon_link`, `\lx@orcid@href`): it had been a plain link, the iD's title lost (2008.02173,
+2009.11534; 2205.10834's own logo now inside it; 2107.01581, 2111.13066, 2303.12302, 2304.07772, 2310.19745,
+2409.13798 gain the iD's title). (13) A link whose text is a binding's e-mail call is that call in the rehearsal
+(`\lx@fm@obs@href`): `\thanks{… \href{mailto:…}{\email{samuel.mimram@cea.fr}}}` lost the address (1004.3134).
+Residual: a `\path|…|` piece's delimiters print in the rehearsal (OT1's `|`, an em dash), so the content check reads
+`cat.cole}@x.edu` as a word (2 Warnings, as on int154x; hiding them made the emitter's address cut leave that piece).
+Guards `perfect_kernel_batchz18g`; `perfect_kernel_batch85b::llncs_{each_email_call_is_decided_alone,address_lines_are_each_owners}`
+green; `perfect_kernel_batche0` key pin `const _rowshared insert.rs` 0 → 1 (its reason in the table). Z18h (review
+revZ18g): (10) joins only the run of pieces — it opens at the line's first ink or at the first ink after a run that is no
+whole address alone, and closes once it holds a piece and its text is whole addresses, braces closed; a whole link after
+a run stays its own contact as printed (2505.15472's `\texttt{\href{mailto:xuminghu@…}{…}}` keeps its typewriter
+`mailto` link: written plain, uncounted, at Z18g), and one before the first piece is the run's (1710.01968's
+`\textit{\url{robin.andre@…}, \{\url{…}}\}…`, whose group the writer would take whole). The emitter writes an
+address whose span holds two or more inks (a joined run, or any list one font prints: 2210.11795) in the font of the first
+event holding the span, else of the first of its inks that has one. In a joined run holding a link (Z18i, review revZ18h
+S-a and B1r) the address a link of the run targets exactly — `\url{X}`, an `\href` to `X` or `mailto:X` — is that link,
+as written where it prints the address whole, else `\href{<target>}{X}`, wrapped in the text font commands and the
+groups of font declarations still open at it (`emit::joined_run_link`); every other address of such a run is its text in
+the wrap around the run's first link, the run's lost links counted ("markup lost"). 2505.15472's samdie2016@ and
+yanyibo70@ are typewriter `mailto` links to their whole addresses; 1710.01968's robin.andre@ is its `ltx_url` link in
+typewriter italic 90%, its three other addresses text in italic, counted. (9) takes the old split's labelled-line rule: a later line opened
+by an e-mail label is the block's e-mail, the label its name (`insert::cut_email_label`; astro-ph0007270's `e-mail:
+gil@…`). llncs names an e-mail no call names by its own `\emailname~` (`\lx@contact@email@name`), not the kernel's
+"Email:" (1504.01099). **Two copies, not one:** rules (7)-(9) are restated on the reading; the token-level
+`shared_row::row_email_calls` still holds them and runs whenever the emitter declines a paper (`place.rs`
+`share_row_contacts`, llncs and aa, `_share=authors`). Shared between the two: the label test (`is_email_label`), the
+address test (`is_whole_address`) and the unit cut (`unit_cut`, `read_call`, `labelled_address`); the line tests (an unread
+later line, a first line printing an address, a unit whose addresses go one way) are each written twice, on tokens and on
+the reading's events or the DOM, and are deleted with the declined path. No disagreement is known beyond the labelled line,
+now ported. Residual: a run's link that targets no whole address (a `\url` piece, an `\href` to a page) is lost, counted on each
+address of the run written as text; a joined run's addresses that the resolver gives to one `\and` column's author are
+dealt among the authors in print order, not by the owners' spelling (`\{\url{bob, ann}\}\url{@x.org}` gives Ann Able
+bob@: review revZ18h S-b, RED `class-bindings/article_author_url_pieces_owner_spelling.tex`, no guard; synthetic, none of
+the 2,734 papers joins out of owner order); a Name ink's font inside a run is not compared with the written one (a run
+holds only links and brace glue). 2505.20009 dies on the same out-of-memory Fatal on both sides (rc=137, `Fatal:oom:alloc_failed`
+at one 150,994,960-byte allocation); its Error count is fixed per binary (int154x 1, Z18g 6, 3 of 3 runs each): `xpath
+descendant::*[@_xmkey] failed` Errors from allocation failures just before the Fatal, not frontmatter. Repros
+`class-bindings/{article_author_href_pieces_beside_whole_link,llncs_institute_labelled_unread_line_is_block_email,llncs_author_hand_marks_read_whole}.tex`
+(the last pins N3: the binding splits only an `\inst`-marked list, a hand-marked one read whole loses nothing); guards
+`perfect_kernel_batchz18h`; re-expected `perfect_kernel_batchp1e::an_address_in_an_api_entry_is_its_owners_email` (llncs's
+name) and `perfect_kernel_batche0` (`emitter/emit` 45 → 44). **Measured** (ERR2 dumps, the 699 llncs, 1,434 stage2 and
+614 article papers, 2,734 compared, 4 unconverted on every side): against int154x 2,625 byte-identical (paths aside); against
+Z18g 2,663 identical, 68 differing only in llncs's e-mail name (9 of them back to int154x's bytes, 1504.01099 among them),
+and 3 more: 2505.15472 and 1710.01968 (above), 2210.11795 (IEEEtran: `{\tt\small \{gdelmas, fmoreno\}@…}`'s gdelmas@ in
+its printed typewriter, plain before). E and F equal to Z18g's on all; W only on 2505.15472 (1 → 3; int154x 2). Z18i (review revZ18h): the joined run's links
+above; (9)'s cut label is named with the old split's tie (`"e-mail:\u{a0}"`, N-a), and the block's unread later line
+left an affiliation keeps its entry's `name="Affiliation: "` (N-b). Repros `class-bindings/{llncs_author_url_pieces_in_font_groups,article_author_url_before_pieces_run}.tex`,
+guards `perfect_kernel_batchz18i`; re-expected `perfect_kernel_batchz18h::{article_author_href_pieces_beside_whole_link,
+llncs_institute_labelled_unread_line_is_block_email}` (the links kept, W 2 → 0; the tie) and
+`perfect_kernel_batchz18g::llncs_author_url_pieces_are_one_address_line` (W 0 → 3, the lost links counted);
+`perfect_kernel_batche0` pins `emitter/emit` 44 → 58 and `emitter` 61 → 63 (`joined_run_link` writes the run's calls
+as printed; the decision is the events' targets). **Measured** (the same 2,734): against Z18h 2,732 byte-identical, so
+against int154x the same 2,625; the 2 others are 2505.15472 (W 3 → 1, int154x 2) and 1710.01968 (W 1 → 4, int154x 2:
+three addresses counted, robin.andre@'s link kept).
 
 ### 985. What the old driver wrote at the flush and the emitter had lost: an svjour3 owner label's `\email`, and a frontmatter setter run inside an author block or an API call (CR2)
 

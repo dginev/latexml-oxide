@@ -784,6 +784,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid,#1]{\\expandafter\\lx@orcidlink\\expandafter{\\lx@orcid@id{#2}}{\\lx@orcidlogo}}"
   );
   DefMacro!("\\lx@orcid@id Semiverbatim", sub[(id)] { Ok(orcid_id(id)) });
+  // (the iD's link of [`orcid_icon_link`], the icon as printed)
+  DefMacro!(
+    "\\lx@orcid@href[]{}{}",
+    "\\expandafter\\lx@orcidlink\\expandafter{\\lx@orcid@known}{#3}"
+  );
+
   // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #960): an `\href` to an ORCID record in an author's name that prints no
   // word — the TikZ "iD" icon of the `\orcidicon` template (`\newcommand{\orcidA}{\href{https://orcid.org/…}
   // {\orcidicon}}`, `\author{M. Ahumada \orcidA{}}`: 2507.12319, 2503.04867, 2406.08258), a logo graphic — is the
@@ -1049,4 +1055,29 @@ fn math_symbol_glyph(t: &Token) -> Option<String> {
     },
     _ => None,
   }
+}
+
+/// Rust-only (OXIDIZED_DESIGN_DIVERGENCES #960): an ORCID contact whose link prints no word (`\href{https://orcid.org/…}
+/// {\orcidicon}`, the TikZ "iD" icon of the `\orcidicon` template, a logo graphic), as the frontmatter emitter writes it
+/// from the document's `tokens`: the kernel's ORCID link to `id`, the iD the reading read (a template's `\xdef` may leave
+/// the iD's macro in the address, `https://orcid.org/\orcidauthorSKP`), its iD in the link and its title, the icon as
+/// printed — `\href` let to `\lx@orcid@href` for the contact, as `\lx@author@href` makes a name's link the contact
+/// (2008.02173, 2009.11534; the link had been written plain, the iD's title lost).
+pub(in crate::base_utilities) fn orcid_icon_link(id: &str, tokens: &[Token]) -> Vec<Token> {
+  let mut content = vec![
+    T_BEGIN!(),
+    T_CS!("\\def"),
+    T_CS!("\\lx@orcid@known"),
+    T_BEGIN!(),
+  ];
+  content.extend(mouth::tokenize_internal(TeXString::assembled(id.to_string())).unlist());
+  content.extend([
+    T_END!(),
+    T_CS!("\\let"),
+    T_CS!("\\href"),
+    T_CS!("\\lx@orcid@href"),
+  ]);
+  content.extend_from_slice(tokens);
+  content.push(T_END!());
+  content
 }

@@ -72,7 +72,8 @@ fn an_address_in_a_note_entry_is_its_owners_email() {
 /// An API call's content: llncs's `\institute{Univ A, … \texttt{ann.able@a.org} \and …}` (svmult's, astro-ph0610446,
 /// cond-mat0610708, physics0603032) and authblk's `\affil[1]{\texttt{\{ann.able,bbaker\}@a.org}, Univ A}` (2406.02913,
 /// astro-ph0412523, 2508.09777): each entry without its addresses, each address the e-mail of the author it spells —
-/// one of a local-part list each its own. Red (LO4 `=2`): every carrier of an entry held its addresses as text.
+/// one of a local-part list each its own. Red (LO4 `=2`): every carrier of an entry held its addresses as text. llncs's
+/// addresses are named by its own `\emailname~` (`\lx@contact@email@name`, Z18h, review revZ18g N2), not "Email:".
 #[test]
 fn an_address_in_an_api_entry_is_its_owners_email() {
   reads_whole(
@@ -91,9 +92,9 @@ fn an_address_in_an_api_entry_is_its_owners_email() {
       ],
     ],
     &[
-      "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Street 1, City, Country</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">ann.able@a.org</text></contact>\n  </creator>",
+      "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Street 1, City, Country</contact>\n    <contact name=\"E-mail\u{a0}\" role=\"email\"><text font=\"typewriter\">ann.able@a.org</text></contact>\n  </creator>",
       "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Street 1, City, Country</contact>\n  </creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, Road 2, Town, Country</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\">cy.cole@b.org</text></contact>\n  </creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B, Road 2, Town, Country</contact>\n    <contact name=\"E-mail\u{a0}\" role=\"email\"><text font=\"typewriter\">cy.cole@b.org</text></contact>\n  </creator>",
     ],
   );
   reads_whole(

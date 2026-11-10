@@ -3,7 +3,9 @@ use crate::prelude::*;
 /// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
 /// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own):
 /// llncs: `\institute{A \and B}` numbered by its `\and`s (`labelseq=affiliation`), `\inst` the request; an `\inst`
-/// after a comma is the name's before it; an unmarked `\\` line under names is their affiliation; `\email` prints in
+/// after a comma is the name's before it; an unmarked `\\` line under names is their affiliation, unless it reads as
+/// no institution over one that does (a new row of names) or its name carries an ORCID (`author_lines`, the old split's
+/// `reads_as_affiliation` per line, Z18e); `\email` prints in
 /// place (llncs.cls:897), so a `\thanks{Corresponding: A. Able, \email{…}}` names its address's owner. `written`:
 /// the observer's writer writes llncs's creators (FM stage 7, OD #922; a paper whose reading it cannot apply keeps
 /// today's output).
@@ -12,6 +14,7 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   binding: "llncs.cls",
   inst_after_comma: true,
   and_inline: true,
+  author_lines: true,
   email_in_place: true,
   cite: "llncs.cls:870-885, 894-897; OD #791 (2405.16615, 2512.08621), #792 (2604.11038), #807 (2401.16957), #913",
   ..FM_KERNEL_CONVENTIONS
@@ -93,13 +96,26 @@ LoadDefinitions!({
   Let!("\\phantomsection", "\\relax");
 
   DefMacro!("\\emailname", "E-mail");
+  // (the class's own name for an e-mail contact no call names — an address the Kind step for an address line reads out
+  // of a line, `\urldef`'d `\mailsa, \mailsb` pieces (1504.01099) —, as its `\email` names its own: not the kernel's
+  // generic "Email:" (author_macros.rs), review revZ18g N2)
+  DefMacro!("\\lx@contact@email@name", "\\emailname~");
   DefMacro!("\\mailname",  "\\textit{Correspondence to}:");
 
-  // Single \author, with multiple authors separated by \and  (Perl PR #2767)
-  // \inst{labels} can be used within each author to identify which affiliations apply.
-  // IMPROVEMENT over upstream: also split on \\ -- authors commonly use a manual
-  // row break in place of \and ("A\inst{1} \\ B\inst{2}"), which upstream merges
-  // into a single creator (witness 2606.19939: "Hiuyi Cheng \\ Dezhi Peng").
+  // Single \author, with multiple authors separated by \and (Perl PR #2767, llncs.cls.ltxml:40-44), `\inst{labels}`
+  // within each author naming the affiliations that apply. The block is queued whole (`\lx@add@author@split`, OD #980),
+  // as the kernel `\author`'s is, and the emitter reads it at the flush under this binding's conventions
+  // (`FRONTMATTER_CONVENTIONS`, above): llncs.cls:1019-1036 sets `\@author` as one centred paragraph, so its `\and` is
+  // inline text (llncs.cls:1013-1018, `\unskip,` or `\lastand`: `and_inline`) and a `\\` is a line break of the author
+  // list — a row break between names (IMPROVEMENT over upstream, which merges "A\inst{1} \\ B\inst{2}" into one
+  // creator: 2606.19939's "Hiuyi Cheng \\ Dezhi Peng"), or a line printed under the names since the last line under
+  // names, an affiliation or an e-mail — their affiliation, whichever `\and` joined them (`Ann Able \and Bob Baker\\
+  // University of Somewhere`, 2604.11038's Simon Fraser University on its three authors; `Ann Able\\ University of X\\
+  // Bob Baker\\ University of Y`, Y Bob Baker's only: the rev77t review's L1, L2, L4; was a creator named "University
+  // of Somewhere" holding the e-mail, review probe rv63k/llncs1; `Ann Able \and Bob Baker \and the ATLAS
+  // Collaboration`, more names, the rev77t2 re-review's L6; a list whose authors carry `\inst` marks, its `\institute`
+  // entries picked by the marks, the rev77t2 re-review's L11). Z18b moved the binding off the token split it made here
+  // at the call (`split_author_line`, `line_is_email_list`, `reads_as_affiliation`).
   // An `\institute{…}` written inside `\author` (`\author{Ann Able and Bob Baker \institute{Univ X}}`, 1609.01220) is
   // the class's store all the same, `\gdef\@institute` (llncs.cls:868), printed under the names by `\institutename`
   // (:1036): one after the names, not a part of the last name. It runs when `\@maketitle` sets `\@author`, before
@@ -110,7 +126,15 @@ LoadDefinitions!({
   DefMacro!("\\author{}", sub[(body)] {
     let (names, institutes) = take_institutes(&body);
     let mut out = mouth::tokenize_internal("\\lx@clear@creators[role=author]").unlist();
-    out.extend(Invocation!(T_CS!("\\lx@llncs@author"), vec![Some(names)]).unlist());
+    // (a list whose authors carry `\inst` marks is split at its `\and`s and `\\`s, each piece a block, as before:
+    // `Guang Yang\inst{1}\and \\ Binwei Yang\inst{2}`, 1902.08498)
+    let marked = names.unlist_ref().contains(&T_CS!("\\inst"));
+    let call = if marked { "\\lx@llncs@author@split" } else { "\\lx@add@author@split" };
+    if marked {
+      out.extend(Invocation!(T_CS!(call), vec![Some(names)]).unlist());
+    } else {
+      out.extend(Invocation!(T_CS!(call), vec![None, Some(names)]).unlist());
+    }
     let inner = !institutes.is_empty();
     out.extend(mouth::tokenize_internal("\\gdef\\lx@llncs@inner@institute{}").unlist());
     out.extend(institutes);
@@ -119,60 +143,6 @@ LoadDefinitions!({
     }
     out.push(T_CS!("\\lx@author@trailing"));
     Ok(Tokens::new(out))
-  });
-  // llncs.cls:1019-1036 sets `\@author` as one centred paragraph, so a `\\` there is a line break of the author list,
-  // and its `\and` is inline text (llncs.cls:1013-1018, `\unskip,` or `\lastand` in `\@maketitle`): a line reading as
-  // an affiliation (`\author{Ann Able\\University of Somewhere\\\email{…}}`) is printed under the names since the last
-  // line under names, an affiliation or an e-mail — their affiliation, whichever `\and` joined them (`Ann Able \and
-  // Bob Baker\\ University of Somewhere`, 2604.11038's Simon Fraser University on its three authors; `Ann Able\\
-  // University of X\\ Bob Baker\\ University of Y`, Y Bob Baker's only: the rev77t review's L1, L2, L4). Was a
-  // creator named "University of Somewhere" holding the e-mail (review probe rv63k/llncs1). It goes into each name's
-  // author content, as an `\email` there does, so `\institute`'s clearing of the affiliations queued before it (below)
-  // leaves it; only in a list with no `\inst` marks, since a contact digested with the authors comes before
-  // `\institute`'s entries in the count `labelseq=affiliation` numbers them by, which the marks request.
-  DefMacro!("\\lx@llncs@author{}", sub[(body)] {
-    // (a list whose authors carry `\inst` marks keeps the split, its `\institute` entries picked by the marks: the
-    // rev77t2 re-review's L11)
-    if author_mark_position(&body).is_some() || position_of(&body, &[T_CS!("\\inst")]).is_some() {
-      return Ok(Invocation!(T_CS!("\\lx@llncs@author@split"), vec![Some(body)]));
-    }
-    // (each author's content, the affiliation lines under it appended; the names of the row an affiliation line goes
-    // to, and whether a line under them came, so that the next names start a new row)
-    let mut authors: Vec<Vec<Token>> = Vec::new();
-    let mut row: Vec<usize> = Vec::new();
-    let mut under_row = false;
-    let pieces = split_tokens_delimited(strip_linebreak_options(body),
-      vec![T_CS!("\\and").into(), T_CS!("\\And").into(), T_CS!("\\\\").into()]);
-    for (delimiter, line) in pieces {
-      // (only a line after `\\` is printed under the names; a piece after the inline `\and` is more names, `Ann Able
-      // \and Bob Baker \and the ATLAS Collaboration`, the rev77t2 re-review's L6)
-      let line_break = delimiter.first() == Some(&T_CS!("\\\\"));
-      if line_break && !row.is_empty() && reads_as_affiliation(&line) {
-        let call = Invocation!(T_CS!("\\lx@add@affiliation"), vec![None, Some(line)]).unlist();
-        for &at in &row {
-          authors[at].extend(call.iter().copied());
-        }
-        under_row = true;
-      } else if line_is_email_list(&line) {
-        under_row |= !row.is_empty();
-        authors.extend(split_author_line(line).into_iter().map(Tokens::unlist));
-      } else {
-        let names = split_author_line(line);
-        if under_row && !names.is_empty() {
-          row.clear();
-          under_row = false;
-        }
-        for name in names {
-          row.push(authors.len());
-          authors.push(name.unlist());
-        }
-      }
-    }
-    let mut calls: Vec<Token> = Vec::new();
-    for author in authors {
-      calls.extend(Invocation!(T_CS!("\\lx@add@author"), vec![None, Some(Tokens::new(author))]).unlist());
-    }
-    Ok(Tokens::new(calls))
   });
   DefMacro!("\\lx@llncs@author@split{}", "\\lx@splitting{\\lx@add@author@split}{\\and\\And\\\\}{#1}");
   // Single \institute, with multiple institutions separated by \and (Perl
@@ -197,13 +167,19 @@ LoadDefinitions!({
   //  (c) Lazy: ONE block, no \and, hand-typed superscripts ("$^1$..\quad $^2$..")
   //      (witness 2606.19939). Upstream makes a single affiliation = the whole
   //      block attached to every \inst{1} author (duplicating it) while \inst{2}+
-  //      get nothing (reproduces identically in Perl LaTeXML 0.8.8). The shared
-  //      \lx@add@affiliations parser (`affiliation_calls`) handles this: it splits on
-  //      \quad/\qquad/\\ and extracts each superscript as the affiliation label
-  //      \inst{N} links to; a line no mark labels stays the sole institute (97c, below).
-  // So: clear, then \and-split (a), one affiliation (b) — shared by every author when no
-  // `\inst` number picks it (85b, below) — UNLESS there is no \and AND superscript
-  // markers are present (c) -- the only shape that needs the multi-parser.
+  //      get nothing (reproduces identically in Perl LaTeXML 0.8.8). It is the
+  //      one institute of (b), which the frontmatter API's Cut (`cut_marked_contact`,
+  //      OD #954) cuts at its marks when two or more of them are requested by the
+  //      names: each entry labelled by its mark, which `\inst{N}` links to (Z18b: was
+  //      the binding's own cut, `affiliation_calls`, at the call; aa's sole
+  //      `\institute` is cut the same way, 2410.00577). A list whose marks no two
+  //      names request (`\institute{Univ A, Town \\ \textsuperscript{*}Equal
+  //      contribution}`) is not cut: the sole institute every author's, as
+  //      llncs.cls:868-886 prints it unnumbered under every name — it had gone to the
+  //      last author alone, dev20k 2603.18089, 2608.22772, 2207.13038, 2609.31726,
+  //      1905.07852; repro sectioning-frontmatter/llncs_institute_legend_line_shared.
+  // So: clear, then \and-split (a), else one affiliation (b, c) — shared by every author when no
+  // `\inst` number picks it (85b, below), cut at its marks by the API.
   // (an `\institute` inside the last `\author` is the store, which an outer one does not replace: above)
   DefMacro!("\\lx@llncs@inner@institute", "");
   DefMacro!("\\institute{}",
@@ -228,7 +204,7 @@ LoadDefinitions!({
     )?))
   });
   DefMacro!("\\lx@llncs@institute@dispatch{}", sub[(body)] {
-    let has_and = position_of(&body, &[T_CS!("\\and")]).is_some();
+    let has_and = body.unlist_ref().contains(&T_CS!("\\and"));
     // The markers \lx@add@affiliations keys its superscript-label branch on (a `\let` alias of one too).
     let has_sup = author_mark_position(&body).is_some();
     let target = if !has_and && has_sup {

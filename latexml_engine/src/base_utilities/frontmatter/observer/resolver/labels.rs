@@ -392,11 +392,20 @@ pub(super) fn later_line_is_names(
   continued: bool,
   under_affiliation: bool,
   after_labelled: bool,
+  orcid_names: bool,
+  over_institution: bool,
 ) -> bool {
   let events = &line.events;
+  // (or, under a binding reading its `\\` lines as its own split did (`orcid_names`, `Policy::author_lines`), an
+  // ORCID, a person's: llncs's `Marcos Kalinowski\orcidID{…} \\ Lucas Romao\orcidID{…} \\ …`, 2501.11774, each
+  // line a name as the old split read it — six names had become the first one's affiliations)
   let marked = events.windows(2).any(|pair| {
     pair[0].kind == EventKind::Name
-      && (pair[1].kind == EventKind::Mark && !pair[1].line_first || pair[1].kind == EventKind::Note)
+      && (pair[1].kind == EventKind::Mark && !pair[1].line_first
+        || pair[1].kind == EventKind::Note
+        || orcid_names
+          && pair[1].kind == EventKind::Contact
+          && pair[1].role.as_deref() == Some("orcid"))
   });
   // (an address the run prints is the line's e-mail, no piece of its names: `\name Marvin Pförtner$^1$ \email marvin@…`,
   // jmlr2e's `\email` a font switch, 2312.14886, `names_without_addresses`)
@@ -456,10 +465,18 @@ pub(super) fn later_line_is_names(
         EventKind::Sep(SepKind::Word(word)) => word.eq_ignore_ascii_case("and") || word == "&",
         _ => false,
       });
+  // (under its row's affiliation line, a line of llncs's `\author` that reads as no institution, over a line that reads
+  // as one (`over_institution`, asked only under `Policy::author_lines`), starts a new row of names, its affiliation
+  // under it — the row
+  // repeated, as llncs's old split read its `\author` lines by `reads_as_affiliation` (`\lx@llncs@author` until Z18c):
+  // `Ann Able \and Bob Baker\\ University of Somewhere\\ Cat Cole\\ Other Institute`, Cat Cole an author with Other
+  // Institute, not an affiliation of the row above. The last line, or one over no institution, stays the row's: `Google
+  // Research \\ Mountain View`, 0803.3838's `Chief Scientist \\ Aptex Software`)
+  let after_affiliation = under_affiliation && over_institution;
   let evidence = line.after_blank
     || continued
     || and_opens
-    || (under_affiliation && (own_font || after_labelled))
+    || (under_affiliation && (own_font || after_labelled || after_affiliation))
     || marked
     || headed
     || (pieces >= 2 && !institutions);

@@ -493,17 +493,32 @@ fn place_or_note_line_under_a_shared_institution_is_no_names_row() {
   }
 }
 
-/// llncs prints `\and` inline in the names row (llncs.cls:1013-1018), so a piece after `\and` is names, never an
-/// affiliation line: `Ann Able \and Bob Baker \and the ATLAS Collaboration` is three creators (the rev77t2 re-review's
-/// finding 2, probe L6: 77t r2 gave the collaboration to Ann Able and Bob Baker as an affiliation). The one
-/// `\institute` is every author's (85b, #901).
+/// llncs prints `\and` inline in the names row (llncs.cls:1013-1018), so a piece after `\and` is of the names row, never an
+/// affiliation line (the rev77t2 re-review's finding 2, probe L6: 77t r2 gave the collaboration to Ann Able and Bob Baker
+/// as an affiliation). Re-pinned by Z18e (the block read whole, `\lx@add@author@split`): `Ann Able \and Bob Baker \and
+/// the ATLAS Collaboration` names a collaboration, a `<contact role="collaboration">` on every name of its row, not a
+/// creator of its own (FIDELITY_CHARTER "A collaboration or team named in the author line", 2026-11-01); the old split
+/// had made it a third creator. The one `\institute` is every author's (85b, #901).
 #[test]
 fn llncs_author_and_piece_is_names() {
   let xml = repro!("sectioning-frontmatter/llncs_author_and_piece_is_names.tex");
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &affiliation("Inst A")),
-    creator(false, "Bob Baker", &affiliation("Inst A")),
-    creator(false, "the ATLAS Collaboration", &affiliation("Inst A")),
+    creator(
+      true,
+      "Ann Able",
+      &format!(
+        r#"<contact role="collaboration">the ATLAS Collaboration</contact> {}"#,
+        affiliation("Inst A")
+      )
+    ),
+    creator(
+      false,
+      "Bob Baker",
+      &format!(
+        r#"<contact role="collaboration">the ATLAS Collaboration</contact> {}"#,
+        affiliation("Inst A")
+      )
+    ),
   ]);
 }
 

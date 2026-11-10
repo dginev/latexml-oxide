@@ -1,0 +1,18 @@
+% mechanism: llncs's sole `\institute` (every author's, `_share=authors`) whose later line holds an address no reader
+%   reads, opened by an e-mail label of its own: the block's e-mail, the label its name (the Kind step for an address
+%   line's `to_block`, `insert::cut_email_label`) — the old split's same rule (`shared_row::row_email_calls`,
+%   astro-ph0007270), both reading the label by `is_email_label`.
+% witness: astro-ph0007270 (`\\ e-mail: gil@astrax.fis.ucm.es (AGdP)`); review revZ18g S1 (`pa_label_line.tex`)
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker" over "Univ X, Town" and "e-mail: (ann, bob)@x.edu"
+% engines: rust Z18g = `<contact role="affiliation">e-mail: (ann, bob)@x.edu</contact>` on the block;
+%   int154x = the block's `<contact name="e-mail: " role="email">(ann, bob)@x.edu</contact>`
+% expect:  0 errors, 0 warnings; the institute each author's, the block's e-mail named "e-mail: " in typewriter
+% status:  RED (Z18g) -> GREEN (Z18h)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Univ X, Town\\ e-mail: {\tt (ann, bob)@x.edu}}
+\maketitle
+\end{document}
