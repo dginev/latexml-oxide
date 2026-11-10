@@ -252,8 +252,8 @@ fn routing_key(key: &str, keep_annotations: bool, zone: bool) -> bool {
 }
 
 /// The key list of a queued call between its brackets `open` and `close`, cut at its top-level commas: each key's name
-/// (trimmed, before any `=`) and its tokens.
-fn key_pairs(v: &[Token], open: usize, close: usize) -> Vec<(String, &[Token])> {
+/// (trimmed, before any `=`), its tokens, and how many of them come before the `=`.
+fn key_pairs(v: &[Token], open: usize, close: usize) -> Vec<(String, &[Token], usize)> {
   let mut pairs = Vec::new();
   let (mut depth, mut from) = (0, open + 1);
   for i in open + 1..=close {
@@ -262,14 +262,16 @@ fn key_pairs(v: &[Token], open: usize, close: usize) -> Vec<(String, &[Token])> 
       || (depth == 0 && v[i].get_catcode() == Catcode::OTHER && v[i].with_str(|s| s == ","))
     {
       let pair = &v[from..i];
+      let mut eq = 0;
       let key: String = pair
         .iter()
         .take_while(|t| !t.with_str(|s| s == "="))
+        .inspect(|_| eq += 1)
         .map(|t| t.with_str(ToString::to_string))
         .collect::<String>()
         .trim()
         .to_string();
-      pairs.push((key, pair));
+      pairs.push((key, pair, eq));
       from = i + 1;
     }
   }
@@ -295,16 +297,12 @@ fn rekeyed(
     // `_printedlabel`, which says it prints, the reading's label replacing the call's — the Kind step for a legend reads it,
     // `insert::legend_mark`: authblk's `\\affil[*]{Corresponding author …}`, 2605.31330, 2201.11910; P2 NT, P2r2)
     let (mut label, mut prints) = (None, false);
-    for (key, pair) in key_pairs(v, open, close) {
+    for (key, pair, eq) in key_pairs(v, open, close) {
       if !key.is_empty() && !routing_key(&key, keep_annotations, zone) {
         out.push(T_OTHER!(","));
         out.extend_from_slice(pair);
       }
       if key == "label" {
-        let eq = pair
-          .iter()
-          .take_while(|t| !t.with_str(|s| s == "="))
-          .count();
         label = pair.get(eq..);
       }
       prints |= key == LABEL_PRINTS;
@@ -4195,7 +4193,7 @@ fn labelled(command: &Tokens, label: &str) -> Option<Tokens> {
   };
   let mut out: Vec<Token> = v[..=open].to_vec();
   out.extend(key_tokens(&s!("label={{{label}}}")));
-  for (key, pair) in key_pairs(v, open, close) {
+  for (key, pair, _) in key_pairs(v, open, close) {
     if !key.is_empty() && !routing_key(&key, true, true) {
       out.push(T_OTHER!(","));
       out.extend_from_slice(pair);
