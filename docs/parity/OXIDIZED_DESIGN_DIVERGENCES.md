@@ -33248,5 +33248,13 @@ authors, or its label's), since a stand-in's copy is no raw class read for the k
 class path's raw `\affiliation` to the frontmatter (it printed in the body). The class path is unchanged (its
 `\lx@author@markup@class` provides what the refused `\author` list provides already). Witnesses 1905.11425, 2101.10506
 (e-mails and addresses on each author), math0608476 (URLs, addresses, the `\thankstext` note), 1301.1466 (e-mails and
-URLs; its affiliation kept). Repro `sectioning-frontmatter/imsart_renamed_sty_copy_reads_through_its_binding.tex`; guard
-`perfect_kernel_batchcr3::imsart_renamed_sty_copy_reads_through_its_binding`.
+URLs; its affiliation kept; its three addresses printed at the end, each no author's, as below). An unlabelled `\address`
+after `\end{frontmatter}` is no author's (review revCR3 finding 1): under the journal options that set
+`\@addressatendtrue` (`aap`, imsart.sty:150 of 1301.1466's copy) imsart.sty stores each block (:1242-1252) and prints
+them all at the end of the document (`\printaddresses`, :1269-1290), tied to no author, and the API's default owner, the
+last author, took all three of 1301.1466's (crackle.tex:1109-1125, after its `\bibliography`). The shared `\address`
+prints such a call where it is called, as `\printaddressnum` sets a block (`\address@size`, `{tabular}[t]{@{}l@{}}`;
+the `env/frontmatter/after` hook marks the close); inside `{frontmatter}`, or labelled, it stays a contact. Under the
+class binding too (the same markup). Repros
+`sectioning-frontmatter/{imsart_renamed_sty_copy_reads_through_its_binding,imsart_address_after_frontmatter_prints_in_place}.tex`;
+guards `perfect_kernel_batchcr3::{imsart_renamed_sty_copy_reads_through_its_binding,imsart_address_after_frontmatter_prints_in_place}`.

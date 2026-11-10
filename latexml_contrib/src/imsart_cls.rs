@@ -212,11 +212,29 @@ pub fn imsart_sty_markup() -> Result<()> {
     "\\lx@add@authors@append[annotations={#1}]{#2}",
     locked => true
   );
-  DefMacro!(
-    "\\address OptionalSemiverbatim {}",
-    "\\lx@add@contact[label={#1},role=address]{#2}",
-    locked => true
+  // An unlabelled `\address` after `\end{frontmatter}` is no author's: under the journal options that set
+  // `\@addressatendtrue` (`aap`, imsart.sty:150 of 1301.1466's copy) `\address` stores each block (:1242-1252) and the
+  // end of the document prints them all (`\printaddresses`, :1269-1290), each tied to no author; the API's default
+  // owner, the last author, would take every one (1301.1466's three after its `\bibliography`). It prints where it is
+  // called, as `\printaddressnum` sets a block (`\address@size`, `{tabular}[t]{@{}l@{}}`, :1255-1264). Inside `{frontmatter}`, or
+  // labelled (`\address[A]`, the authors marked A), it is a contact.
+  RawTeX!(
+    r"\AddToHook{env/frontmatter/after}{\lx@imsart@frontmatter@closed}
+\def\lx@imsart@address@contact#1#2{\lx@add@contact[label={#1},role=address]{#2}}
+\def\lx@imsart@address@inplace#1#2{\par\begingroup\csname address@size\endcsname\noindent\begin{tabular}[t]{@{}l@{}}#2\end{tabular}\par\endgroup}"
   );
+  DefPrimitive!("\\lx@imsart@frontmatter@closed", sub[_args] {
+    assign_value("lx_imsart_frontmatter_closed", true, Some(Scope::Global));
+    Ok(())
+  });
+  DefMacro!("\\address OptionalSemiverbatim {}", sub[(label, address)] {
+    let label = label.unwrap_or_default();
+    Ok(if label.is_empty() && lookup_bool("lx_imsart_frontmatter_closed") {
+      Invocation!(T_CS!("\\lx@imsart@address@inplace"), vec![Some(label), Some(address)])
+    } else {
+      Invocation!(T_CS!("\\lx@imsart@address@contact"), vec![Some(label), Some(address)])
+    })
+  }, locked => true);
   // `\thanksref[mark]{addr1,t1}` (imsart.sty:746) marks the author with the addresses and notes those labels name, and
   // `\thankstext{t1}{text}` (:789) is such a note: as elsarticle's `\thanksref`/`\thanks` (elsart_support_core_sty.rs).
   // Read raw, the note went to `\@thanks`, which nothing typesets, and its text was lost (2201.08502).

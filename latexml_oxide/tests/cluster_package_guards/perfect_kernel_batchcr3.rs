@@ -1,6 +1,6 @@
-//! Red/green guards for batch CR3: three content-residual items — a date set inside an `\author` nested in `\title`
-//! counted, a recovered call's run of several creators placed without a joined label, and the shipped imsart copies read
-//! through their binding. OXIDIZED_DESIGN_DIVERGENCES #985, #986.
+//! Red/green guards for batch CR3: content-residual items — a recovered call's run of several creators placed without a
+//! joined label, the shipped imsart copies read through their binding, an imsart `\address` after `\end{frontmatter}`
+//! printed in place, and a date set inside an `\author` nested in `\title` kept. OXIDIZED_DESIGN_DIVERGENCES #985, #986.
 use super::perfect_kernel_batchcr2::{convert_clean, elements};
 
 /// CR3 item 2 (review revCR2b finding 1 and P1): REVTeX 3's minipage `\address` (abstract and `\pacs` only) after
@@ -41,5 +41,31 @@ fn imsart_renamed_sty_copy_reads_through_its_binding() {
   assert_eq!(elements(&convert_clean(tex), "creator"), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@x.edu</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Univ A, </contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Zebra Institute</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@y.org</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Univ B, </contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Zebra Institute</contact>\n  </creator>",
+  ]);
+}
+
+/// CR3b item 1 (review revCR3 finding 1): imsart.sty's unlabelled `\address` after `\end{frontmatter}` (the `aap` option's
+/// addresses at the end, 1301.1466) is no author's: each block prints where it is called, as imsart.sty's
+/// `\printaddressnum` sets it, and no author takes it as the API's default owner (the last author took all three).
+/// Distinct from `imsart_renamed_sty_copy_reads_through_its_binding` (labelled `\address[A]` inside `{aug}`, a contact):
+/// the binding's own branch on the frontmatter's close. Repro
+/// sectioning-frontmatter/imsart_address_after_frontmatter_prints_in_place.
+#[test]
+fn imsart_address_after_frontmatter_prints_in_place() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/imsart_address_after_frontmatter_prints_in_place.tex"
+  );
+  let xml = convert_clean(tex);
+  assert_eq!(elements(&xml, "creator"), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@x.edu</text></contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@y.org</text></contact>\n  </creator>",
+  ]);
+  assert_eq!(elements(&xml, "td"), vec![
+    "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p3.1.1.1\">Ann Able</td>",
+    "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p3.1.2.1\">Univ A</td>",
+    "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p4.1.1.1\">Bob Baker</td>",
+    "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p4.1.2.1\">Univ B</td>",
+    "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p5.1.1.1\">Cid Cole</td>",
+    "<td align=\"left\" class=\"ltx_nopad_r\" xml:id=\"p5.1.2.1\">Univ C</td>",
   ]);
 }
