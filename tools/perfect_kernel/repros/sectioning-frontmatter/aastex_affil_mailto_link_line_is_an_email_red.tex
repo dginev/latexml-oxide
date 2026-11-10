@@ -1,0 +1,16 @@
+% RED (synthetic, review revZ18l F2; introduced by Z18l)
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Write to us" a mailto link under the affiliations
+% engines: rust int155a1 = the block's e-mail; Z18l = an affiliation of every author, 0 warnings: the deleted
+%          `mailto_line` rule (user ruling 2026-10-20) has no home on aas's API path — the Kind step reads only printed
+%          addresses. Siblings: `Contact: \href{mailto:…}{here}`, a link target without `mailto:`
+\documentclass{emulateapj}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{1}$}
+\affil{$^1$Univ A}
+\affil{\href{mailto:zz@x.org}{Write to us}}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

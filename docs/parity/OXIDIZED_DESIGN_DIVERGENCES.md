@@ -33870,9 +33870,17 @@ aastex*, emulateapj, aaspp4, aas2pp4, aas_support) and the 1,434 stage2 ids, 2,6
 one; 4 changed — astro-ph0408475, 1808.01089, 0911.1770 the label's space a no-break space; 1503.02933 the address in the
 class's `\email` font.
 
-**Residual (RED, pre-existing on the API path, no aas corpus witness):** an e-mail line led by a mark no name requests
-(`\affil{$^*$ Email: zz@uni.edu}`, REVTeX's `\affiliation{$^*$ Email: …}` alike) is the block's e-mail with the mark in its
-content, `<sup>∗</sup>zz@uni.edu`; the binding's reader had dropped the mark, uncounted.
+**Residual (RED, no aas corpus witness: revZ18l scanned the 1,166 aas census sources):** an e-mail line led by a mark no
+name requests (`\affil{$^*$ Email: zz@uni.edu}`) is the block's e-mail with the mark in its content,
+`<sup>∗</sup>zz@uni.edu`; in the block form the base kept `<sup>∗</sup>` too, and only an `\affil` of its own had the
+mark dropped, uncounted, by the deleted reader. REVTeX's `\affiliation{$^*$ Email: …}` differs: the e-mail goes to that
+affiliation's author with the `∗` dropped. **Known REDs introduced (review revZ18l, synthetic; Z18m fixes them):** (F1) an
+unmarked e-mail-only `\affil` under `$^N$` names goes to the last author — the `annotate=new` leftover rule makes him the
+only carrier and `owners.rs` `owner:only-carrier` places the address (`aastex_affil_unmarked_email_line_under_marked_names_red`;
+the base: the block's); (F2) `\affil{\href{mailto:zz@x.org}{Write to us}}` becomes every author's affiliation, the
+deleted `mailto_line` rule (user ruling 2026-10-20) having no home on the API path
+(`aastex_affil_mailto_link_line_is_an_email_red`; the base: the block's e-mail). The label's no-break space is the Kind
+and DOM paths' form; the text-reading path still writes an ordinary space.
 
 **Guards.** `perfect_kernel_batchz18l::aastex_affil_marked_email_line_no_one_spells_is_the_marked_authors`; re-expected:
 `perfect_kernel_batch97f::aastex_affil_holding_only_an_email_is_an_authors_email` (the name's no-break space);

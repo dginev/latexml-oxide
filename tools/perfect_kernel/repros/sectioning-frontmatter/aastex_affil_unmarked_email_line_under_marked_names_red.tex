@@ -1,0 +1,21 @@
+% RED (synthetic, review revZ18l F1; introduced by Z18l — an invented owner)
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Ann Able1 and Bob Baker1 / 1Univ A / Email: zz@x.org" — nothing
+%          in print ties the address to either author
+% engines: rust int155a1 = the block's nameless creator holds zz@x.org; Z18l = Bob Baker's e-mail, 0 warnings: every
+%          unlabelled `\affil` goes to `group_or_marked_affiliation` with `annotate=new`, whose "later lines the last
+%          author's" makes Bob the only carrier, and `owners.rs` `owner:only-carrier` places the address on him. The same:
+%          a bare `\affil{zz@x.org}`, `Correspondence: \href{mailto:…}{zz@x.org}`, an unrequested `$^*$` line under
+%          `$^N$` names (its ∗ dropped, both sides)
+% fix:     `only-carrier` only where the carrier holds the entry through a mark or label it requested, not through the
+%          `new`/`run` leftover rule
+\documentclass{emulateapj}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{1}$}
+\affil{$^1$Univ A}
+\affil{Email: zz@x.org}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}
