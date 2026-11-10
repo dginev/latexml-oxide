@@ -1062,7 +1062,7 @@ fn spacing_symbol(token: &Token) -> bool {
 
 /// A control symbol's character (`\'` → `'`), the one spelling the content text reads (review revCK1 2-3): none for a
 /// control word or a one-letter control word ([`letter_cs`]).
-fn symbol(token: &Token) -> Option<char> {
+pub(super) fn symbol(token: &Token) -> Option<char> {
   (short_cs(token) && !letter_cs(token)).then(|| token.with_str(|name| name.chars().next_back()))?
 }
 

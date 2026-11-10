@@ -478,6 +478,7 @@ mod perfect_kernel_batchta1;
 mod perfect_kernel_batchz1;
 mod perfect_kernel_batchz14;
 mod perfect_kernel_batchz18c;
+mod perfect_kernel_batchz18d;
 mod perfect_kernel_batchz2;
 mod perfect_kernel_batchz3;
 mod perfect_kernel_batchz4;

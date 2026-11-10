@@ -1,0 +1,19 @@
+% mechanism: the reading's text of an e-mail list's ink holding a `\footnote` keeps the observer's note stand-in's
+%   name, so the address the emitter writes of it reads `ann.able@a.edu\lx@fm@obs@fnnote`, and each author holds the
+%   address twice (with and without it). Pre-existing (ERR2 and int154z alike); not the emitter's `one_address`, which
+%   writes the address it is given.
+% witness: review revZ18c P2 (probe q4_tt_member)
+% oracle:  pdflatex 0 errors; "{ann.able, bob.baker}@a.edu" with footnote 1 "Both equal."
+% engines: rust Z18d = Ann Able: ann.able@a.edu and ann.able@a.edu\lx@fm@obs@fnnote (Bob Baker alike), 3 warnings
+% expect:  0 errors; ann.able@a.edu Ann Able's once, bob.baker@a.edu Bob Baker's once, the note "Both equal." kept
+% status:  RED (Z18d)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1}}
+\institute{Univ A, Town\\
+\email{\{ann.able, bob.baker\}@a.edu\footnote{Both equal.}}}
+\maketitle
+Body.
+\end{document}

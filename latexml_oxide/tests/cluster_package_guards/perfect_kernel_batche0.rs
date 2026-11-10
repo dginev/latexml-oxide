@@ -1198,7 +1198,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("rest /util_text.rs", 25),
   ("revtex4_support_sty.rs", 12),
   ("shared_row", 13),
-  ("shared_row/emails", 68),
+  // (Z18c 65 -> 68: `entry_email_cut`'s copy of the row's unit cut and reassembly; Z18d 68 -> 65: the copy gone, the entry's
+  // cut and the row's split share one cut, reader and reassembly — `unit_cut`, `read_call`, `kept_without`, review revZ18c S1)
+  ("shared_row/emails", 65),
   ("sv_support_sty.rs", 35),
   ("webofc_cls.rs", 0),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the emitter's vocabulary, 924 = 826 + 98; none added)
@@ -1221,7 +1223,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (NE4 39 -> 43: `annotations_tokens`, the `annotations` value of a block's keyvals cut from the call's tokens at its top-level
   // `,` and `=`, so the writer hands on the call's tokens, never their text retokenized (`\and Jonathan` read back
   // `\andJonathan`, 2205.13776) — what it writes; whether to carry them stays `block_annotations`' text decision)
-  ("emitter/emit", 48),
+  // (Z18c 43 -> 48: not the unit cut but `one_address`'s catcode reads, a list's address written as text — `separators`, the
+  // spaces, `,` and `;` a list's argument opens or ends with (1908.05750), `plain`, a list of characters and control symbols
+  // writing no Warning (2501.11774), and a control-symbol test of its own — what it writes, no name spelled; Z18d 48 -> 46: the
+  // control-symbol test is the content text's `ledger::symbol`, review revZ18c S4)
+  ("emitter/emit", 46),
   // (P1b, 0 -> 1: `emitter/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("emitter/dom+mod", 1),
