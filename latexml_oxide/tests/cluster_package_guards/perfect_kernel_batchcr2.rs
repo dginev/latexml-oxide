@@ -6,7 +6,7 @@
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
 /// The XML of the repro `name` converted under ar5iv, which must give no error and no warning.
-fn convert_clean(tex: &str) -> String {
+pub(super) fn convert_clean(tex: &str) -> String {
   let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
   assert_eq!(error_count(&log), 0, "{log}");
   assert_eq!(warning_count(&log), 0, "{log}");
@@ -14,7 +14,7 @@ fn convert_clean(tex: &str) -> String {
 }
 
 /// Every element `tag` of `xml`, whole and in document order; one opened and never closed fails, with the input.
-fn elements(xml: &str, tag: &str) -> Vec<String> {
+pub(super) fn elements(xml: &str, tag: &str) -> Vec<String> {
   let (open, close) = (format!("<{tag} "), format!("</{tag}>"));
   let mut found = Vec::new();
   let mut rest = xml;

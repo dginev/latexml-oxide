@@ -33207,11 +33207,14 @@ beside an `\begin{abstract}` written; review revCR2 finding 2). A call whose run
 queued, the old driver's rule, so its digestion runs every setter in it — with the attributes it was queued with, back at
 its ledger position among the emitter's item calls, labelled for its run's creators (`run_labels`: the owners of the item
 of its role before it when no author came between, else the creators since that item), so the insertion places its
-contact with theirs in queue order — save a run of two or more creators since that item, whose labels go out joined as one
-`label={author:1,author:2}` the insertion's exact-label lookup (`relocate::find_targets`) never finds: its contact, always
-empty on that path (a minipage with visible text is a call the reading writes), is dropped with an orphaned-annotation
-Warning the base did not raise (RED `revtex3_minipage_address_first_joins_run_labels.tex`, review revCR2b finding 1; no census
-paper hit). Appended unlabelled, its contact went into each creator before the items' moved
+contact with theirs in queue order. Only one owner's label is given (`labelled`, which drops the call's own `label`,
+`annotate` and `owner` keys as `rekeyed` does, `routing_key`); a run of two or more owners keeps its `annotate=run`
+unlabelled, as the old driver digested it: joined as one `label={author:1,author:2}`, the insertion's exact-label lookup
+(`relocate::find_targets`) never found it (an orphaned-annotation Warning, review revCR2b finding 1), and a copy per label
+would digest the call's setters once each. The resolver's empty `annotate=run` entry records its run
+(`Resolver::empty_entry_holds_its_role` → `record_run`), so the next `\address` is the same run's: `\author{Ann Able and
+Bob Baker}` + the minipage `\address` + `\address{Univ A}` gives Univ A to both, as the old driver (it went to Bob alone,
+review revCR2b P1). Appended unlabelled, its contact went into each creator before the items' moved
 contacts, and cond-mat9809277's e-mails, cut from the first address, landed after the journal line (review revCR2
 finding 1); now Address, Email, Address(PRL), as the base, REVTeX 3's print and the old driver. An entry digested in place
 in a read block, which no step writes, is counted (`warn_queued_lost`). **Open:** 1411.6693 nests the block inside
@@ -33220,6 +33223,7 @@ title's digestion, and the date is lost with no Warning (pre-existing, review re
 `\title{A Title\author{Ann Able$^{1}$ \date{$^1$ School of Zebrawords}}}\maketitle` under article). cond-mat9809277
 keeps Perl's and the old driver's empty minipage `ltx:contact`, last (RED: `\vskip -0.5in $ $` after the `\pacs` keeps
 the minipage's paragraph). Repros
-`sectioning-frontmatter/{svjour3_institute_email_before_at_is_its_owners,date_inside_author_is_the_date,revtex3_abstract_inside_address_minipage,revtex3_minipage_address_keeps_contact_order,revtex3_setter_in_written_address_once}.tex`;
+`sectioning-frontmatter/{svjour3_institute_email_before_at_is_its_owners,date_inside_author_is_the_date,revtex3_abstract_inside_address_minipage,revtex3_minipage_address_keeps_contact_order,revtex3_setter_in_written_address_once,revtex3_minipage_address_first_joins_run_labels}.tex`;
 guards `perfect_kernel_batchcr2` (one per path: the owner label, a block's queued setter, a call's in-place digest, the
-call's place among the items, a written call).
+call's place among the items, a written call), `perfect_kernel_batchcr3::revtex3_minipage_address_first_one_run` (a run of
+several owners).

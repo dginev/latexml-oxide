@@ -1,13 +1,15 @@
 % mechanism: a REVTeX-3 `\address` whose minipage holds only frontmatter setters is written as queued at the flush and
-%   labelled for its run's creators (`emit::run_labels`); two creators since the last item of its role go out joined as
-%   one `label={author:1,author:2}`, which the insertion's exact lookup (`relocate::find_targets`) never finds, so its
-%   (empty) contact is dropped with an orphaned-annotation Warning. OXIDIZED_DESIGN_DIVERGENCES #985 (known RED)
-% witness: review revCR2b finding 1 (synthetic; none of the 604 revtex `\address` census papers)
-% oracle:  REVTeX 3 is not in TL 2025 (no pdflatex check); the old driver and int154a: 0 Warnings
-% engines: CR2b: 1 Warning "Orphaned frontmatter annotation couldn't find target for label=author:1,author:2"; the
-%   abstract and the PACS written; Ann has no address (int154a, CR2 too; the old driver gives both authors Univ A)
+%   labelled for its run's creators (`emit::run_labels`). A run of two creators since the last item of its role used to
+%   go out joined as one `label={author:1,author:2}`, which the insertion's exact lookup (`relocate::find_targets`) never
+%   finds (an orphaned-annotation Warning); now the call is labelled only for one owner, and a run of several keeps its
+%   `annotate=run` unlabelled. The empty entry records its run (`Resolver::empty_entry_holds_its_role`), so the next
+%   `\address` is the same run's: Univ A on both authors, as the old driver. OXIDIZED_DESIGN_DIVERGENCES #985
+% witness: review revCR2b finding 1 and P1 (synthetic; none of the 604 revtex `\address` census papers)
+% oracle:  REVTeX 3 is not in TL 2025 (no pdflatex check); the old driver: 0 Warnings, Univ A on both authors
+% engines: CR2b/int154x: 1 Warning "Orphaned frontmatter annotation couldn't find target for label=author:1,author:2";
+%   Ann has no address. CR3: 0 Warnings, Univ A on both, the abstract and the PACS once
 % expect:  0 Warnings; the abstract and the PACS once; Univ A on both authors, as the old driver
-% status:  RED (CR2b)
+% status:  GREEN (CR3; guard perfect_kernel_batchcr3::revtex3_minipage_address_first_one_run)
 \documentstyle[twocolumn,aps]{revtex}
 \begin{document}
 \title{A Title}
