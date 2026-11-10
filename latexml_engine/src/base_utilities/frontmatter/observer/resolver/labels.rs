@@ -579,10 +579,10 @@ pub(super) fn is_symbol_label(label: &str) -> bool {
 }
 
 /// `text` as tokens for the classify helpers (letters and others: `ExplodeText!`).
-pub(super) fn text_tokens(text: &str) -> Tokens { Tokens::new(ExplodeText!(text)) }
+pub(super) fn text_as_tokens(text: &str) -> Tokens { Tokens::new(ExplodeText!(text)) }
 
 /// Whether a printed text reads as an institution, the classify helpers' `reads_as_affiliation` on it.
-pub(super) fn is_institution(text: &str) -> bool { reads_as_affiliation(&text_tokens(text)) }
+pub(super) fn is_institution(text: &str) -> bool { reads_as_affiliation(&text_as_tokens(text)) }
 
 /// The e-mail addresses printed in `text`, one per print (ruling 3); a braced group of local parts before a shared
 /// domain written out, one each (`{takuma,ichise}@nii.ac.jp`, 1711.05435; the `\lx@split@addresses` reading, OD #805).

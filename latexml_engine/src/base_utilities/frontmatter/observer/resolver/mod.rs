@@ -288,6 +288,7 @@ mod words;
 
 pub(in crate::base_utilities::frontmatter::observer) use api::{hand_marked_share, split_pieces};
 use blocks::Chain;
+use labels::*;
 // (and the flush's Kind step for an entry's address line, `insert::kind_address_lines`: OD #966)
 pub(in crate::base_utilities::frontmatter) use labels::{AddressRun, address_runs};
 // (the address reader of an entry's printed text, the reading's and the writer's cut of today's item alike: brief 95c)
@@ -297,7 +298,6 @@ pub(in crate::base_utilities::frontmatter::observer) use labels::{
 // (named, as the prelude has its own of these names: the resolver's shadow them)
 pub use labels::{address_take_out, addresses_in, mark_labels, only_addresses};
 pub(in crate::base_utilities::frontmatter::observer) use labels::{contact_parts, label_matches};
-use labels::{text_tokens, *};
 pub(in crate::base_utilities::frontmatter::observer) use lines::reads_as_names;
 use lines::*;
 // (the reading's word check, its block half and what the emitter's call half reads: OD #980)
@@ -1127,7 +1127,7 @@ fn spelled_names(names: &[&str], address: &str) -> Vec<usize> {
   }
   let keys: Vec<NameKeys> = names
     .iter()
-    .map(|name| NameKeys::of(&text_tokens(name)))
+    .map(|name| NameKeys::of(&text_as_tokens(name)))
     .collect();
   spelled_owners(&keys, address)
 }

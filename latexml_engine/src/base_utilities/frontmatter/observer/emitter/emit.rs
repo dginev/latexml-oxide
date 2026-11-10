@@ -224,7 +224,7 @@ fn cs_group_args(args: &[&str]) -> Vec<Token> {
 }
 
 /// The reading's text as tokens that print it: its specials as their commands (an OTHER `_` in OT1 prints `˙`: 2605.20715).
-pub(super) fn text_tokens(text: &str) -> Vec<Token> {
+pub(super) fn printed_text_tokens(text: &str) -> Vec<Token> {
   let mut out = Vec::new();
   for c in text.chars() {
     match c {
@@ -1261,7 +1261,7 @@ fn by_text(why: Option<&str>, text: &str) -> Vec<Token> {
       s!("The frontmatter emitter writes \"{text}\" as its plain text, its markup lost: {why}")
     );
   }
-  text_tokens(text)
+  printed_text_tokens(text)
 }
 
 /// A note's call under `label`, as `\lx@add@thanks` and `\lx@add@note` make it (their `Let`s in an author's content,
@@ -1699,7 +1699,7 @@ fn joined_run_link(
       _ => {
         let mut call = tokens[k..past].to_vec();
         call.push(T_BEGIN!());
-        call.extend(text_tokens(address));
+        call.extend(printed_text_tokens(address));
         call.push(T_END!());
         call
       },
