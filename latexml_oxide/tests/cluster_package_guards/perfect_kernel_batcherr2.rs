@@ -29,7 +29,7 @@ macro_rules! repro {
 fn row(items: &[&str]) -> Vec<String> { items.iter().map(ToString::to_string).collect() }
 
 /// Each `<creator>` element of `xml`, whole, in order.
-fn creator_elements(xml: &str) -> Vec<&str> {
+pub(super) fn creator_elements(xml: &str) -> Vec<&str> {
   xml
     .match_indices("<creator ")
     .map(|(at, _)| {

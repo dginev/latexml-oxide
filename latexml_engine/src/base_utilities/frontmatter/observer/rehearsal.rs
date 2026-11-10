@@ -267,10 +267,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefConstructor!("\\lx@fm@obs@email [] Semiverbatim", "", alias => "\\email");
   // (an e-mail call by the class's binding printing in place, and by no binding's meaning: `ledger::email_meaning`)
   DefConstructor!("\\lx@fm@obs@email@inplace [] Semiverbatim", "", alias => "\\email");
-  // (the label the class's own command prints before the address is read as it prints: `own_email_properties`)
-  DefConstructor!("\\lx@fm@obs@email@own [] Semiverbatim", "", alias => "\\email",
+  // (the label the class's own command prints before the address is read as it prints: `own_email_properties`; its
+  // address read as the class's macro reads its `#1`, unexpanded before it is digested — sig-alternate.cls:462 on
+  // `\email{\fontsize{11pt}{12pt}\selectfont …}`, whose `\@defaultunits` expanded ahead missed its `\@nnil` and `\@nil`
+  // ran undefined, 1802.01191: `UnexpandedSemiverbatim`)
+  DefConstructor!("\\lx@fm@obs@email@own [] UnexpandedSemiverbatim", "", alias => "\\email",
     properties => sub[args] { own_email_properties(OWN_EMAIL[0].2, args.get(1).and_then(|a| a.as_ref())) });
-  DefConstructor!("\\lx@fm@obs@emailAdd@own [] Semiverbatim", "", alias => "\\email",
+  DefConstructor!("\\lx@fm@obs@emailAdd@own [] UnexpandedSemiverbatim", "", alias => "\\email",
     properties => sub[args] { own_email_properties(OWN_EMAIL[1].2, args.get(1).and_then(|a| a.as_ref())) });
   DefConstructor!("\\lx@fm@obs@url Semiverbatim", "");
   DefConstructor!("\\lx@fm@obs@href Semiverbatim {}", "");

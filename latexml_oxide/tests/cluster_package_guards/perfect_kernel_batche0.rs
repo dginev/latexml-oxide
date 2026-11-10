@@ -415,7 +415,9 @@ fn the_moved_cut_and_kind_take_no_new_decision() {
 /// `CUT_COPY_PLACE` to `cut.rs`). `fallback.rs title_code_author_statements` (int155a, the main session's decision): PBb's
 /// juggle reader reads the class's title-code statements, which ERR2 (OD #983) put in `names.rs` beside the moved field
 /// readers — the class's code read, not the old reader's; Z18m moved that reader to `frontmatter/classify/title_code.rs`,
-/// paying it.
+/// paying it. `observer/emitter/content.rs title_code_author_definitions` (PC3, the brief's mechanism): `Field::held_undefined_at`
+/// leaves out a held undefined command the class's title code defines reading arguments — the same class code, which
+/// the flush's net already spares (1108.4222, 2607.07582); paid with that reader's move (Z18m, its `reads_arguments` with it).
 const ONE_ENGINE_REACH: &[(&str, usize)] = &[
   // (Z18m, 0 -> 2 each: no reach added — `author_block/`'s own uses of the moved field and line readers (an import and a
   // call each), counted since that code's home, `classify/`, is the one engine's directory: `collaboration_line`'s,
@@ -1208,8 +1210,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // `defs/author_macros/` (+64), 195 = 131 + 64; none added)
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
   // (Z18m, 349 -> 514: moved from `author_block` with its code (+131), and ERR2's title-code reader from
-  // `defs/frontmatter_fields/` (+34, `classify/title_code.rs`), 514 = 349 + 131 + 34; none added)
-  ("classify", 514),
+  // `defs/frontmatter_fields/` (+34, `classify/title_code.rs`), 514 = 349 + 131 + 34; none added; then 514 -> 515: PC3's
+  // `reads_arguments` moved with that reader from `emitter/content.rs`, as its row says)
+  ("classify", 515),
   ("defs/author_macros", 20),
   // (Z18m, a new directory: the IJCAI chain moved from `author_block` with its code, as that row says)
   ("defs/author_macros/", 64),
@@ -1351,7 +1354,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // NE6 11 -> 13: `arguments_end` reads an option's `[` and `]` as TeX reads the call's arguments, a mark macro written
   // with them and a call whose `\href` or `\author` reads past the run refused — 1505.07844, 2503.21719, 2603.11001;
   // NE8 13 -> 14: `past_closing_fis` reads the spaces between a run and the `\fi` closing a conditional it opens by their
-  // catcode, as `balanced` reads closing braces — the `\fi` itself by its meaning, no name spelled)
+  // catcode, as `balanced` reads closing braces — the `\fi` itself by its meaning, no name spelled; PC3 14 -> 15:
+  // `reads_arguments` reads a title-code statement's parameter text — the class's own `\def`, never a document token —
+  // for whether its definee takes arguments, so a held undefined title-code command is not cut from them, 1108.4222;
+  // Z18m 15 -> 14: `reads_arguments` moved with the title-code reader to `classify/title_code.rs`, its read with it)
   ("emitter/content", 14),
   // (Z4a, a new file: the emitter builds Perl's calls from the reading, its reads a call's own keys and pieces, `text_tokens` and the
   // catcodes of a cut: where a slice's edge falls past an option, a group or an accent's letter, OD #980; Z4ar2, 30 -> 28: an address
