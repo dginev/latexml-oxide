@@ -35,7 +35,7 @@ fn run(tex: &str) -> (String, String) {
 /// counted Warning, its pieces digested in order: five creators, the notes and Cat's recalled mark † kept, as pdflatex
 /// prints them.
 #[test]
-fn a_declaration_reading_past_its_span_writes_the_block_whole() {
+fn a_declaration_reading_past_its_span_writes_the_block_as_perl_splits_it() {
   let (log, xml) = run(repro!("ne5_decl_reads_past"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(

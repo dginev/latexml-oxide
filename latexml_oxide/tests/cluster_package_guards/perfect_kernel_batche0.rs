@@ -1251,7 +1251,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // the text font commands and declaration groups still open there, the run's own tokens being what is written, as
   // `span_tokens_of` and `plan::container_wrap` write theirs —, the decision whether an address is linked made on the
   // events' targets (`linkable`), review revZ18h S-a and B1r)
-  ("emitter/emit", 58),
+  // (CR7b, 58 -> 59: `perl_block_pieces`' text of Perl's split creators — Perl's `\lx@add@authors` cuts tokens, and its
+  // creators exist as nothing else before digestion — that `perl_piece_of` matches the reading's names against, so an item
+  // goes to the creator holding its name, not the one at its count, review revCR67 S4)
+  ("emitter/emit", 59),
   // (P1b, 0 -> 1: `emitter/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("emitter/dom+mod", 1),

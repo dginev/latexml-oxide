@@ -33434,18 +33434,27 @@ a line of no mark continuing the entry before it. Otherwise: pieces cut at `\and
 author whose `\\` lines are `\lx@add@affiliation`s. The pieces are digested in order, so the footnote counter and a
 definition step as TeX steps them. A tabular juggle (`\alignauthor`) parts two authors there, as `\and` (Perl's OmniBus makes it
 empty). The Warning names the branch taken ("the block is written as Perl's \lx@add@authors splits it at its separators, its
-pieces digested in order"). The block's creators take their Perl labels (`author:N`, `perl_block_creators`), so a later
-block's items address their own; where they are its names one for one, each name keeps its own label, so an item the reading
-gave the names goes to each (a revtex `\affiliation` after `\author{Ann\footremember{…}{…} and Bob}`). Otherwise the
-first creator holds them, as the block written whole did. The other declines (`names_fail`, cells, `mark_dropped`,
+pieces digested in order"). The block's creators take their Perl labels (`author:N`, `perl_block_pieces`), so a later
+block's items address their own. Each name the reading read takes the label of the creator whose names hold it, matched by
+name, not by count (`perl_piece_of`: most of its words of two or more ASCII letters or digits, at least half, the names in
+order), so an item the reading gave the names goes to each (a revtex `\affiliation` after `\author{Ann\footremember{…}{…}
+and Bob}`). Equal counts need not be the same names: `Robert Heath, Jr.… and Ann Able~~~~Bob Baker` is Perl's "Robert
+Heath", "Jr.", "Ann Able~~~~Bob Baker" and the reading's "Robert Heath, Jr.", "Ann Able", "Bob Baker"; matched by count, Ann's
+`\affiliation` went to "Jr." (review revCR67 S4). A name no later creator holds (one a macro spells) goes to the first
+creator, as the block written whole did. The other declines (`names_fail`, cells, `mark_dropped`,
 `names_overlap`, the unread block) still write it whole.
 
 **Divergences from Perl's split** (the kernel's own lists, #52): Perl's comma and " and " cut only a names line, never a
 `\\` line under it. Perl's `@authorsplits` cut 1302.3028's PoS `\\ Department of Physics, College of Science, Swansea
 University, …` into four authors, and its `@authoraffilsplits` " and " cut 1110.6375's `D. Schmidiger,\\ E. Wulf, S. Zhao
 and A. Zheludev$^\dag$`. The marks branch's line cuts are `author_affil_splits` (no " and ", `\newline` added; 2605.00347),
-its names lines cut at the comma and " and ". A continued line keeps the line break it was cut at, which Perl's `Tokens(…)` drops:
-1609.02993's "Soumith ChintalaFacebook AI Research" and 1110.6375's "G. EhlersOak Ridge" lost their words glued. `position_of` and
+its names lines cut at the comma and " and ". A line of no mark cut at a line break (`\\`, `\newline`) or a `\quad` continues
+the entry before it and keeps that cut, which Perl's `Tokens(…)` drops: 1609.02993's "Soumith ChintalaFacebook AI Research"
+and 1110.6375's "G. EhlersOak Ridge" lost their words glued. One cut at the `\and` family (`\and`, `\And`, `\AND`,
+`\alignauthor`) starts an author, the kernel's boundary (#52(g), `author_and_splits`): `Ann Able$^{1}$… \and Bob Baker\\
+$^{1}$Univ X` is two authors, as pdflatex prints them, where Perl glues one "Ann AbleBob Baker". Both split branches drop a
+`\\[len]`'s and a `\\*`'s option before their cuts (`strip_linebreak_options`, KNOWN_PERL_ERRORS #75; Perl's own comment,
+:670): 2007.01340's creator read "[1em] Julia Fukuyama", Perl alike. `position_of` and
 `literal_and` moved from `author_block/` to `frontmatter/classify/separators.rs` (Perl's `positionOf`, `$literaland`).
 
 **Left (Perl's own, kept):** a mark past position 8 reads a line as an author line, so `\vspace{3pt} $^{a}$Istituto …`
@@ -33453,8 +33462,11 @@ under 0809.5152's names is a creator (Perl alike). A line of no mark continues t
 second group `T. Hong, V. O. Garlea, …` joins A. Zheludev's creator. No word is lost.
 
 Repros `cr7_fncounter_and`, `cr7_ne5_footremember`, `cr7_marks_branch_footremember`, `cr7_split_lines_keep_commas`,
-`cr7_split_items_to_each_name`; guards `perfect_kernel_batchcr7::{a_counter_decline_writes_the_block_as_perl_splits_it,
+`cr7_split_items_to_each_name`, `cr7b_linebreak_option_cut`, `cr7b_and_cut_starts_author`, `cr7b_split_items_by_name`;
+guards `perfect_kernel_batchcr7::{a_counter_decline_writes_the_block_as_perl_splits_it,
 a_definition_decline_writes_the_block_as_perl_splits_it, a_declined_block_with_marks_takes_perls_marks_branch,
-a_split_keeps_the_commas_of_its_lines, a_split_gives_each_name_its_items}`; updated
-`perfect_kernel_batchne5::a_declaration_reading_past_its_span_writes_the_block_whole` (five creators) and
-`perfect_kernel_batchne2::a_counter_move_no_name_carries_writes_the_block_whole` (three creators, the notes per creator).
+a_split_keeps_the_commas_of_its_lines, a_split_gives_each_name_its_items,
+a_split_at_a_linebreak_option_leaves_no_option_text, a_line_of_no_mark_cut_at_and_starts_an_author,
+a_split_gives_each_name_its_items_by_name}`; updated
+`perfect_kernel_batchne5::a_declaration_reading_past_its_span_writes_the_block_as_perl_splits_it` (five creators) and
+`perfect_kernel_batchne2::a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it` (three creators, the notes per creator).

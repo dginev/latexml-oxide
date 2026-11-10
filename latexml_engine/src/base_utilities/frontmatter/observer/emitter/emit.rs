@@ -3281,12 +3281,46 @@ fn perl_block(index: usize, keys: &str, annotations: &[Token]) -> Option<Result<
   )
 }
 
-/// How many creators Perl's `\lx@add@authors` makes of the author block at ledger index `index` ([`perl_block`]): the
-/// labels a flush gives the creators after it.
-fn perl_block_creators(index: usize) -> usize {
+/// The names of each creator Perl's `\lx@add@authors` makes of the author block at ledger index `index` ([`perl_block`]),
+/// as written, in order: how many labels a flush gives the creators after it, and what the reading's names are matched
+/// against ([`perl_piece_of`]). `None` where the block can't be read.
+fn perl_block_pieces(index: usize) -> Option<Vec<String>> {
   block_keys(index, "", &[])
     .and_then(|(_, written)| perl_author_calls(None, None, written).ok())
-    .map_or(1, |(_, creators)| creators)
+    .map(|(_, pieces)| pieces.iter().map(ToString::to_string).collect())
+}
+
+/// The creator of Perl's split ([`perl_block_pieces`]) whose names hold the reading's name `name`, at `from` or after it
+/// (the names in order): the one holding most of its words — each run of ASCII letters and digits of two or more, matched
+/// in the piece's own letters and digits, lowercased, so a name accented in the source (`M\"uller`) still finds "ller"
+/// — and at least half of them. `None` where no piece does: a name a macro spells, or one Perl's split doesn't hold
+/// (review revCR67 S4: equal counts need not be the same names — `Robert Heath, Jr.… \and Ann Able~~~~Bob Baker` is
+/// Perl's "Robert Heath", "Jr.", "Ann Able~~~~Bob Baker" and the reading's "Robert Heath, Jr.", "Ann Able", "Bob Baker").
+fn perl_piece_of(name: &str, pieces: &[String], from: usize) -> Option<usize> {
+  let words: Vec<String> = name
+    .split(|c: char| !c.is_ascii_alphanumeric())
+    .filter(|word| word.len() > 1)
+    .map(str::to_ascii_lowercase)
+    .collect();
+  if words.is_empty() {
+    return None;
+  }
+  let mut best: Option<(usize, usize)> = None;
+  for (k, piece) in pieces.iter().enumerate().skip(from) {
+    let letters: String = piece
+      .chars()
+      .filter(char::is_ascii_alphanumeric)
+      .map(|c| c.to_ascii_lowercase())
+      .collect();
+    let found = words
+      .iter()
+      .filter(|word| letters.contains(word.as_str()))
+      .count();
+    if 2 * found >= words.len() && best.is_none_or(|(_, most)| found > most) {
+      best = Some((k, found));
+    }
+  }
+  best.map(|(k, _)| k)
 }
 
 /// The keys of the author block at ledger index `index` with `keys` and `annotations`, and its tokens.
@@ -3794,30 +3828,28 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   let mut role_counts: BTreeMap<String, i64> = BTreeMap::new();
   let mut first_of: BTreeMap<usize, usize> = BTreeMap::new();
   let mut rep: Vec<usize> = (0..resolved.creators.len()).collect();
-  // (a block written as Perl's `\lx@add@authors` writes it, whose creators are its names one for one: each name its own
-  // creator's Perl label, `author:N` after its first's, which the items the reading gave it address — a revtex
-  // `\affiliation` under `\author{Ann\footremember{…}{…} and Bob}` both names'; else the first's, as a block written whole)
-  let mut names_of: BTreeMap<usize, usize> = BTreeMap::new();
-  for c in &resolved.creators {
-    *names_of.entry(c.source).or_default() += 1;
-  }
-  let one_for_one: BTreeSet<usize> = split
+  // (a block written as Perl's `\lx@add@authors` writes it: each name the reading read the Perl label of the creator whose
+  // names hold it, `author:N` after its first's (`perl_piece_of`, matched by name, not by count: review revCR67 S4), which
+  // the items the reading gave it address — a revtex `\affiliation` under `\author{Ann\footremember{…}{…} and Bob}` both
+  // names'; a name no later creator holds the first's, as a block written whole)
+  let pieces_of: BTreeMap<usize, Vec<String>> = split
     .iter()
-    .copied()
-    .filter(|&source| names_of.get(&source) == Some(&perl_block_creators(source)))
+    .filter_map(|&source| perl_block_pieces(source).map(|pieces| (source, pieces)))
     .collect();
+  let mut piece_at: BTreeMap<usize, usize> = BTreeMap::new();
   for (i, c) in resolved.creators.iter().enumerate() {
     if whole.contains(&c.source) {
       if let Some(&first) = first_of.get(&c.source) {
-        if one_for_one.contains(&c.source)
+        let from = piece_at.get(&c.source).copied().unwrap_or(0);
+        if let Some(k) = pieces_of
+          .get(&c.source)
+          .and_then(|pieces| perl_piece_of(&c.name, pieces, from))
+          .filter(|&k| k > 0)
           && let Some((role, n)) = owners[first].rsplit_once(':')
           && let Ok(n) = n.parse::<usize>()
         {
-          let at = resolved.creators[first..i]
-            .iter()
-            .filter(|other| other.source == c.source)
-            .count();
-          owners.push(s!("{role}:{}", n + at));
+          piece_at.insert(c.source, k);
+          owners.push(s!("{role}:{}", n + k));
           continue;
         }
         rep[i] = first;
@@ -3841,8 +3873,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
         *n += 1;
         let owner = s!("{role}:{n}");
         // (a block written as Perl's `\lx@add@authors` writes it makes its creators: the labels of those after it)
-        if split.contains(&c.source) {
-          *n += i64::try_from(perl_block_creators(c.source)).unwrap_or(1) - 1;
+        if let Some(pieces) = pieces_of.get(&c.source) {
+          *n += i64::try_from(pieces.len()).unwrap_or(1) - 1;
         }
         assign_mapping(EMITTED_CREATORS, &id, Some(Stored::String(pin(&owner))));
         fresh.push(i);

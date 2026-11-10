@@ -3,7 +3,8 @@
 //! #988), split where Perl splits it and its pieces digested in order, not merged into one creator (Perl's tabular branch
 //! only, which stays `whole_block_author`). One guard per path: each decline on the split branch (CR5's repros), the
 //! marks branch, the split's `\\` lines keeping their commas (the divergence from Perl's comma), and each split name's
-//! own label for the items the reading gave it.
+//! own label for the items the reading gave it. CR7b (review revCR67): a `\\[len]` cut leaves no "[len]" in a name, a line
+//! of no mark cut at `\and` starts an author, and the labels match the reading's names to Perl's creators by name.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 
@@ -147,5 +148,64 @@ fn a_split_gives_each_name_its_items() {
     row(&["Ann Able", "note=Zebra note.", "affiliation=Univ A"]),
     row(&["Bob Baker", "affiliation=Univ A"]),
     row(&["Cat Cole", "affiliation=Univ C"]),
+  ]);
+}
+
+/// `Ann Able$^{1}$\footremember…\\[1em] Bob Baker$^{1}$\\ $^{1}$Univ X`: the split cut at `\\` left "[1em]" heading Bob's
+/// line, so the creator read "[1em] Bob Baker" with a content-check Warning (Perl alike, its own comment at
+/// Base_Utility.pool.ltxml:670); pdflatex prints no "[1em]" (2007.01340's "[1em] Julia Fukuyama"; review revCR67 B1).
+#[test]
+fn a_split_at_a_linebreak_option_leaves_no_option_text() {
+  let (log, xml) = run(repro!("cr7b_linebreak_option_cut"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!(
+    creator_elements(&xml),
+    [
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" \
+       role=\"note\">Zebra note.</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ \
+       X</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact></creator>",
+    ],
+    "{xml}"
+  );
+}
+
+/// `Ann Able$^{1}$\footremember… \and Bob Baker\\ $^{1}$Univ X`: Bob's line has no mark, and it continued Ann's entry with
+/// its `\and`, one creator "Ann Able and Bob Baker" (Perl "Ann AbleBob Baker"); a cut at the `\and` family starts an author
+/// (OD #52(g)), as pdflatex prints two (review revCR67 S1). Distinct from the `\\` continuation, which the marks-branch
+/// guard keeps.
+#[test]
+fn a_line_of_no_mark_cut_at_and_starts_an_author() {
+  let (log, xml) = run(repro!("cr7b_and_cut_starts_author"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!(
+    creator_elements(&xml),
+    [
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" \
+       role=\"note\">Zebra note.</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ \
+       X</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname></creator>",
+    ],
+    "{xml}"
+  );
+}
+
+/// `\author{Robert Heath, Jr.\footremember… and Ann Able~~~~Bob Baker}\email{bob@x.org}\affiliation{Univ A}`: Perl's three
+/// creators "Robert Heath", "Jr.", "Ann Able~~~~Bob Baker" and the reading's three names "Robert Heath, Jr.", "Ann Able",
+/// "Bob Baker" — matched by count, Ann's `\affiliation` went to "Jr."; matched by name, Ann and Bob's items go to the
+/// creator holding them (review revCR67 S4). Distinct from `a_split_gives_each_name_its_items`: equal counts, other names.
+#[test]
+fn a_split_gives_each_name_its_items_by_name() {
+  let (log, xml) = run(repro!("cr7b_split_items_by_name"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Robert Heath", "affiliation=Univ A"]),
+    row(&["Jr.", "note=Zebra note."]),
+    row(&[
+      "Ann Able Bob Baker",
+      "affiliation=Univ A",
+      "email=bob@x.org"
+    ]),
   ]);
 }

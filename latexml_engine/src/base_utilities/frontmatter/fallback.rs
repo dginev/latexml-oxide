@@ -36,7 +36,8 @@ pub(in crate::base_utilities) enum PerlAuthorBranch {
   /// `{tabular}`, `{minipage}` or `\halign` in the block: one `\lx@add@author` of it whole (:691-693)
   Whole,
   /// a superscript mark in the block: its lines cut at `@authoraffilsplits`, each an author line cut at its commas (and
-  /// " and ") or a marked affiliation, a line of no mark continuing the entry before it (:694-712)
+  /// " and ") or a marked affiliation, a line of no mark continuing the entry before it (:694-712) — but across the `\and`
+  /// family an author of its own (OD #52(g))
   Marks,
   /// neither: cut at `@authorsplits`, each piece an author whose `\\` lines are its affiliations (:713-719), the comma and
   /// " and " cutting only the piece's names line
@@ -88,28 +89,32 @@ pub(in crate::base_utilities) fn perl_author_branch(stuff: &Tokens) -> PerlAutho
 /// E. Wulf, S. Zhao and A. Zheludev$^\dag$` glued "D. SchmidigerE. Wulf, S. Zhao" (cr5_fncounter_and: Ann Able∗ and Bob Baker‡; 1003.2281, cs0404029, 2410.22720; the `\footremember`
 /// of 1404.5602, 2503.21719, 0809.5152, 1110.6375). There a juggle — a macro closing the class's tabular,
 /// `\alignauthor` — parts two authors, as `\and` does (`author_and_splits`; Perl's OmniBus makes it empty,
-/// OmniBus.cls.ltxml:76, 1003.2281's sig-alternate).
+/// OmniBus.cls.ltxml:76, 1003.2281's sig-alternate). A `\\[len]` or `\\*` cut leaves no "[len]" or "*" at the head of
+/// the next piece ([`strip_linebreak_options`], the kernel's own beyond-Perl fix of Perl's `\\[1em]` gap,
+/// Base_Utility.pool.ltxml:670, KNOWN_PERL_ERRORS #75: 2007.01340's creator "[1em] Julia Fukuyama"). With the calls,
+/// each creator's names as written, in order (the names line of its piece, not the affiliations under it): what the
+/// emitter matches the reading's names against (`emit`'s owner labels).
 pub(in crate::base_utilities) fn perl_author_calls(
   first: Option<Tokens>,
   rest: Option<Tokens>,
   stuff: Tokens,
-) -> Result<(Vec<Tokens>, usize)> {
+) -> Result<(Vec<Tokens>, Vec<Tokens>)> {
   let branch = perl_author_branch(&stuff);
   if branch == PerlAuthorBranch::Whole {
     return Ok((
       vec![whole_block_author(
         first,
-        tabular_juggles_in_a_whole_block(stuff),
+        tabular_juggles_in_a_whole_block(stuff.clone()),
       )?],
-      1,
+      vec![stuff],
     ));
   }
-  let stuff = tabular_juggles_as(stuff, T_CS!("\\and"));
-  let mut authors = 0usize;
-  let mut author = |content: Tokens| {
-    authors += 1;
+  let stuff = strip_linebreak_options(tabular_juggles_as(stuff, T_CS!("\\and")));
+  let mut pieces: Vec<Tokens> = Vec::new();
+  let mut author = |names: Tokens, content: Tokens| {
+    pieces.push(names);
     whole_block_author(
-      if authors == 1 {
+      if pieces.len() == 1 {
         first.clone()
       } else {
         rest.clone()
@@ -124,6 +129,18 @@ pub(in crate::base_utilities) fn perl_author_calls(
     ]))
   };
   let markers = perl_authorsup_markers();
+  // (the `\and` family parts two authors: OD #52(g)'s hard boundary, `author_and_splits`)
+  let parts_authors = |cut: &[Token]| {
+    cut.first().is_some_and(|t| {
+      [
+        T_CS!("\\and"),
+        T_CS!("\\And"),
+        T_CS!("\\AND"),
+        T_CS!("\\alignauthor"),
+      ]
+      .contains(t)
+    })
+  };
   // (a names line's own cuts, Perl's comma and " and " — at the top level, as `SplitTokens` cuts: a note's text keeps its
   // commas)
   let names = |line: Tokens| split_tokens(line, vec![T_OTHER!(",").into(), literal_and()]);
@@ -136,15 +153,17 @@ pub(in crate::base_utilities) fn perl_author_calls(
         continue;
       }
       match position_of(&line, &markers) {
-        // (a line of no mark continues the entry before it with the line break it was cut at, which Perl's `Tokens(…)`
-        // drops: 1609.02993's "Soumith ChintalaFacebook AI Research", 1110.6375's "G. EhlersOak Ridge" glued, their
-        // words lost)
+        // (a line of no mark continues the entry before it with the cut it was cut at — a line break, `\quad` the space
+        // it prints —, which Perl's `Tokens(…)` drops: 1609.02993's "Soumith ChintalaFacebook AI Research", 1110.6375's
+        // "G. EhlersOak Ridge" glued, their words lost; but one cut at the `\and` family starts an author, the kernel's
+        // boundary, OD #52(g): `Ann Able$^{1}$… \and Bob Baker\\ $^{1}$Univ X` is two authors, as pdflatex prints them,
+        // where Perl glues "Ann AbleBob Baker")
         None => match entries.last_mut() {
-          Some(last) => {
+          Some(last) if !parts_authors(&cut) => {
             last.1.extend(cut);
             last.1.extend(line.unlist());
           },
-          None => entries.push((true, line.unlist())),
+          _ => entries.push((true, line.unlist())),
         },
         Some(p) if p < 8 => entries.push((false, line.unlist())),
         Some(_) => entries.extend(names(line).into_iter().map(|name| (true, name.unlist()))),
@@ -153,7 +172,10 @@ pub(in crate::base_utilities) fn perl_author_calls(
     for (is_author, line) in entries {
       let line = Tokens::new(line);
       calls.push(if is_author {
-        author(Invocation!(T_CS!("\\lx@author@withsup"), vec![Some(line)]))?
+        author(
+          line.clone(),
+          Invocation!(T_CS!("\\lx@author@withsup"), vec![Some(line)]),
+        )?
       } else {
         affiliation(Invocation!(T_CS!("\\lx@affiliation@withsup"), vec![Some(
           line
@@ -180,18 +202,19 @@ pub(in crate::base_utilities) fn perl_author_calls(
       if people.is_empty() {
         people.push(Vec::new());
       }
+      let written: Vec<Tokens> = people.iter().cloned().map(Tokens::new).collect();
       // (the block's `\\` lines its last name's, as Perl's one author of the piece has them)
       if let Some(last) = people.last_mut() {
         for line in lines.filter(|line| !line.is_empty()) {
           last.extend(affiliation(line)?.unlist());
         }
       }
-      for person in people {
-        calls.push(author(Tokens::new(person))?);
+      for (person, names) in people.into_iter().zip(written) {
+        calls.push(author(names, Tokens::new(person))?);
       }
     }
   }
-  Ok((calls, authors))
+  Ok((calls, pieces))
 }
 
 /// Does an author block mark its names (`$^{a}$`, `\textsuperscript{1}`)? A superscript inside a `\footnote` or

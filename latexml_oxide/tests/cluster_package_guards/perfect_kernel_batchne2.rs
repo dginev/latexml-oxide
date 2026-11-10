@@ -120,7 +120,7 @@ fn representing_a_collaboration_is_its_contact() {
 /// Perl's tabular branch), its pieces digested in order: Ann †, Carl *, every note kept, the counted Warning. Off reads it per name, as pdflatex prints the marks. (A move a mark's box covers,
 /// `\addtocounter{footnote}{-2}\footnotemark`, is carried: `a_notes_footnote_step_runs_where_it_prints`.)
 #[test]
-fn a_counter_move_no_name_carries_writes_the_block_whole() {
+fn a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it() {
   let expected = vec![
     row(&["Ann Able † † footnote †"]),
     row(&["Bob Baker"]),
@@ -255,7 +255,7 @@ fn a_mark_after_its_names_note_stays_with_it() {
 /// 1911.13299's `Vivek Ramanujan \thanks{equal contribution} \\ \footnotemark[2]`) was dropped with no Warning, Bob
 /// Baker's mark one symbol short. The block is written whole, Perl's whole-block creator, its tokens digested in order:
 /// Ann †, Bob ‡, the note kept, the counted Warning (review revNE2r2 Q2: never a silent loss). Off reads Ann's † as the
-/// mark of an affiliation line of hers. Distinct from `a_counter_move_no_name_carries_writes_the_block_whole`: a mark, not
+/// mark of an affiliation line of hers. Distinct from `a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it`: a mark, not
 /// a counter move, that the reading has no place for.
 #[test]
 fn a_mark_on_no_name_writes_the_block_whole() {
