@@ -190,9 +190,14 @@ LoadDefinitions!({
   // Perl's `\lx@add@affiliation{#1}` (aas_support.sty.ltxml:118) gave each to the last author only. AASTeX 7 is
   // unchanged: aastex701.cls:7370 `\affil@error` stops the run when an author has no affiliation, so its authors never
   // share a run.
-  // A line holding only an e-mail (`\affil{e-mail: kangx@shao.ac.cn}`, astro-ph0408475; `\affil{$^*$ Email: …}`,
-  // 1808.01089) is no affiliation: the e-mail of the author its mark or its address names, as the class's e-mails apart
-  // from the names are placed (`placed_email_line_calls`).
+  // A line holding only an e-mail (`\affil{e-mail: kangx@shao.ac.cn}`, astro-ph0408475; `\affil{$^*$ Email:
+  // gaoyang25@…}` under `Yang Gao\altaffilmark{2, 3, *}`, 1808.01089) and an `\email` set in a line (`\affil{$^1$ Key
+  // Laboratory …\email{zhangqm@pmo.ac.cn}}`, 1503.02933: Q. M. Zhang's, not the five holders') go as the affiliation they
+  // are written as, and the frontmatter API places their addresses: the Kind step takes a line of addresses out of the
+  // entry, its label the contacts' name (`kind_entry_addresses`), and the Link step gives each address the author it
+  // spells, else the one carrier its mark or its group names, else the block (`insert::link_entry_addresses`,
+  // `entry_address_owners`), the empty entry dropped (OXIDIZED_DESIGN_DIVERGENCES #992). The binding's own token readers
+  // of those lines (`placed_email_line_calls`, `take_placed_line_emails`, `labelled_email_line`) are deleted (Z18l).
   DefMacro!("\\affiliation{}", sub[(content)] {
     // (lines set with one-argument line wrappers, `\affil{\centerline{$^{1}$Univ A}\centerline{$^{2}$Univ B}}`, are
     // those lines, read below as `\\` lines are: `relocate::wrapped_lines_as_lines`, REVTeX's call the same)
@@ -233,45 +238,20 @@ LoadDefinitions!({
     if !entries.is_empty() {
       let mut calls = Vec::new();
       for (label, rest) in entries {
-        let rest = Tokens::new(rest);
-        // (a marked e-mail line, `\affil{$^*$ Email: gaoyang25@…}` under `Yang Gao\altaffilmark{2, 3, *}`: the e-mail
-        // of the author the address names, 1808.01089)
-        if let Some(placed) = placed_email_line_calls(&rest, &Tokens::new(Vec::new()))? {
-          calls.extend(placed.unlist());
-          continue;
-        }
-        // (an e-mail set in the line is one author's, not each holder's: `take_placed_line_emails`, 1503.02933)
-        let (rest, emails) = take_placed_line_emails(&rest)?;
         let keyvals = mouth::tokenize_internal(TeXString::assembled(s!("label={{altaffil:{label}}}")));
-        calls.extend(Invocation!(T_CS!("\\lx@add@affiliation"), vec![Some(keyvals), Some(rest)]).unlist());
-        calls.extend(emails.unlist());
+        calls.extend(
+          Invocation!(T_CS!("\\lx@add@affiliation"), vec![Some(keyvals), Some(Tokens::new(rest))]).unlist(),
+        );
       }
       return Ok(Tokens::new(calls));
     }
-    match leading_line_label(&content).filter(|_| lines.len() <= 1) {
-      None => {
-        if let Some(calls) = placed_email_line_calls(&content, &Tokens::new(Vec::new()))? {
-          return Ok(calls);
-        }
-      },
-      Some((label, typed, rest)) => {
-        // (a marked e-mail line, `\affil{$^*$ Email: gaoyang25@…}` under `Yang Gao\altaffilmark{2, 3, *}`: the e-mail
-        // of the author the mark or the address names, 1808.01089)
-        let mark = if typed {
-          Tokens::new(Vec::new())
-        } else {
-          mouth::tokenize_internal(TeXString::assembled(label.clone()))
-        };
-        if let Some(calls) = placed_email_line_calls(&rest, &mark)? {
-          return Ok(calls);
-        }
-        // (a hand-printed number a queued `$^{N}$` requests: that mark, 0909.0058)
-        if typed && sup.contains(&label) {
-          let mut marked = mouth::tokenize_internal(TeXString::assembled(s!("$^{{{label}}}$"))).unlist();
-          marked.extend(rest.unlist());
-          content = Tokens::new(marked);
-        }
-      },
+    // (a hand-printed number a queued `$^{N}$` requests: that mark, 0909.0058)
+    if let Some((label, true, rest)) = leading_line_label(&content).filter(|_| lines.len() <= 1)
+      && sup.contains(&label)
+    {
+      let mut marked = mouth::tokenize_internal(TeXString::assembled(s!("$^{{{label}}}$"))).unlist();
+      marked.extend(rest.unlist());
+      content = Tokens::new(marked);
     }
     let annotate = if run_names_show_a_mark() { "new" } else { "run" };
     revtex4_support_sty::group_or_marked_affiliation(content, annotate)

@@ -245,7 +245,7 @@ fn dotted_initials_are_no_web_address() {
 #[test]
 fn is_url_line_not_a_mailbox() {
   setup();
-  // a link line to a web page is a URL contact, one to a mailbox not, an e-mail line ([`mailto_line`]; 2601.00240's
+  // a link line to a web page is a URL contact, one to a mailbox not, an e-mail line (`links_a_mailbox`; 2601.00240's
   // `\textbf{Correspondence:} \href{mailto:…}{…}`, 77p r7, r8)
   for (line, url) in [
     ("Code:~\\url{https://x.org}", true),
@@ -423,55 +423,6 @@ fn empty_marks_and_compound_symbol_labels() {
 }
 
 #[test]
-fn mailto_line_is_a_labelled_email_line() {
-  setup();
-  // a link line to a mailbox is an e-mail line under the text before it, whatever it says, and its address the one
-  // the link prints, its target's when it prints none (2601.00240, 2601.07974's placeholder target, 77p r8)
-  for (line, label, address) in [
-    (
-      "\\small{ \\textbf{Correspondence:} \\href{mailto:email@domain}{a.b@x.org} }",
-      Some("Correspondence:"),
-      "a.b@x.org",
-    ),
-    ("\\href{mailto:a@x.org}{Write to us}", None, "a@x.org"),
-    (
-      "Contact:~\\href{mailto:a@x.org}{a@x.org}",
-      Some("Contact:"),
-      "a@x.org",
-    ),
-    // (77p r9: a link to a bare address without `mailto:`, the ACL template's, 2604.04847; a footnote symbol before
-    // the label)
-    (
-      "\\textbf{Correspondence:} \\href{b@x.org}{b@x.org}",
-      Some("Correspondence:"),
-      "b@x.org",
-    ),
-    (
-      "\\lx@frontmatter@keepsup{*}\\lx@frontmatter@symbolmark{*}Corresponding author: \\href{mailto:a@x.org}{a@x.org}",
-      Some("Corresponding author:"),
-      "a@x.org",
-    ),
-  ] {
-    let (got_label, addresses) = labelled_emails(&tk(line)).unwrap().expect(line);
-    assert_eq!(
-      got_label.map(|label| label.to_string()).as_deref(),
-      label,
-      "{line}"
-    );
-    let texts: Vec<String> = addresses.iter().map(|a| address_text(&a.address)).collect();
-    assert_eq!(texts, [address], "{line}");
-  }
-  for line in [
-    "\\href",
-    "Mail: \\href",
-    "\\textbf{Code:} \\href{https://x.org}{x.org}",
-    "Write \\href{mailto:a@x.org}{a@x.org}",
-  ] {
-    assert!(labelled_emails(&tk(line)).unwrap().is_none(), "{line}");
-  }
-}
-
-#[test]
 fn email_addresses_skip_colour_arguments() {
   setup();
   // a colour command's colour is no letter of an address (2604.19440's `\href{mailto:…}{\color{black}\texttt{…}}`,
@@ -489,18 +440,6 @@ fn email_addresses_skip_colour_arguments() {
       "{line}"
     );
   }
-  // (several linked addresses behind a label, the r5 re-review's u22)
-  let (label, addresses) = labelled_emails(&tk(
-    "Emails: \\href{mailto:a@x.org}{a@x.org}, \\href{mailto:b@y.org}{b@y.org}",
-  ))
-  .unwrap()
-  .expect("a labelled list");
-  assert_eq!(
-    label.map(|label| label.to_string()).as_deref(),
-    Some("Emails:")
-  );
-  let texts: Vec<String> = addresses.iter().map(|a| address_text(&a.address)).collect();
-  assert_eq!(texts, ["a@x.org", "b@y.org"]);
 }
 
 #[test]

@@ -221,7 +221,8 @@ fn aastex_unlabelled_lines_under_marked_names() {
 /// An `\affil` holding only an e-mail is an e-mail, not an affiliation (review rev97cd F3): unmarked, the author's it
 /// spells (`\affil{e-mail: kangx@uni.edu}`, astro-ph0408475; 97f r1 an affiliation of every author), marked, the
 /// author's requesting the mark (`\affil{$^*$ Email: bbaker@uni.edu}` under `Bob Baker\altaffilmark{2,*}`, 1808.01089);
-/// the label is the contact's name.
+/// the label is the contact's name, as the API's Kind step names an e-mail line's contacts (`named_email_calls`, the
+/// label and a tie: Z18l's reroute, OD #992, the binding's own `name={label }` gone).
 #[test]
 fn aastex_affil_holding_only_an_email_is_an_authors_email() {
   let xml = both_ways(repro!("aastex_affil_email_line_is_its_authors_email"));
@@ -232,7 +233,7 @@ fn aastex_affil_holding_only_an_email_is_an_authors_email() {
   ]);
   assert_eq!(
     xml
-      .matches(r#"<contact name="e-mail: " role="email">kangx@uni.edu</contact>"#)
+      .matches("<contact name=\"e-mail:\u{a0}\" role=\"email\">kangx@uni.edu</contact>")
       .count(),
     1,
     "{xml}"
@@ -246,7 +247,7 @@ fn aastex_affil_holding_only_an_email_is_an_authors_email() {
   ]);
   assert_eq!(
     xml
-      .matches(r#"<contact name="Email: " role="email">bbaker@uni.edu</contact>"#)
+      .matches("<contact name=\"Email:\u{a0}\" role=\"email\">bbaker@uni.edu</contact>")
       .count(),
     1,
     "{xml}"

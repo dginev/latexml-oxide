@@ -229,8 +229,8 @@ fn assert_debts(name: &str, pins: &[(&str, usize)], counts: &BTreeMap<String, us
 /// What the old reader emits into the API, per file: `\lx@add@`, `\lx@annotate@frontmatter` and `queue_front_matter(`
 /// occurrences, and `annotate=` literals. Each is a decision the old engine takes, on the way to deleting it (the first and
 /// the last 42 + 4 at int140a; the study's 41 counted otherwise).
-/// Stopgaps inside these counts: 97f r2's `\lx@add@contact@placed` in `email_block_calls.rs` (`placed_email_line_calls`,
-/// `take_placed_line_emails`; rev126a N2), and its F1 and F3. 108a's six rules (`rows::own_marks_end`,
+/// Stopgaps inside these counts: 97f r2's F1 and F3 (its `\lx@add@contact@placed` in `email_block_calls.rs`,
+/// `placed_email_line_calls` and `take_placed_line_emails` of rev126a N2, deleted at Z18l). 108a's six rules (`rows::own_marks_end`,
 /// `lines_under_names_read_as_names`, `line_breaks_as_name_separators`, `separators::has_author_block_separator`,
 /// `symbols::glued_marks`, `email_lines::address_row_pieces`) added no emission: they feed the existing ones, so only
 /// [`OLD_READER_CODE_LINES`] sees that kind of growth.
@@ -243,7 +243,8 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
   // collaboration and membership readouts moved unchanged to `defs/frontmatter_fields/names.rs`)
   // (the "Knowledge in, driver out, one pass" move, 6 -> 5, and `notes.rs`' 2 -> 0: `is_email_command` and `document_note_call`, `note_call_end` moved to the emitter,
   // `emitter/calls.rs`, which writes Perl's calls; no emission added; DEL2, 5 -> 1: `block_email_calls` and its siblings deleted with the old driver)
-  ("email_block_calls.rs lx@add@", 1),
+  // (Z18l, 1 -> 0: `email_block_calls.rs` deleted, 97f r2's stopgap `placed_email_line_calls` and `take_placed_line_emails`
+  // with it, once aas's `\affil` e-mail lines went to the API's Kind and Link steps, OD #992)
   // (DEL2, 7 -> 6: the dead `AddressPlacement::Marked` arm; Z18j, 6 -> 0: the e-mail line readers moved unchanged to
   // `defs/frontmatter_api/email_lines.rs`, where [`MOVED_CUT_KIND_EMISSIONS`] counts them)
   // (the "Knowledge in, driver out, one pass" move, 3 -> 2 and 8 -> 2: the token primitives that recognize the API's commands in a note (`NAME_ANNOTATIONS`, `name_text`)
@@ -264,8 +265,10 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
 /// API's entry cutter, its e-mail line and mark readers (`affiliations.rs` whole, `email_lines.rs`' readers, `affil_splits`,
 /// `line_notes`, `starts_with_footnote_symbol`, …) moved unchanged to `defs/frontmatter_api/`, the readers the field
 /// readouts share (`only_marks_and_notes`, `collaboration_line_reading`, `queued_author_name_keys`) to
-/// `defs/frontmatter_fields/`; [`MOVED_CUT_KIND_CODE_LINES`] took them.
-const OLD_READER_CODE_LINES: usize = 2_665;
+/// `defs/frontmatter_fields/`; [`MOVED_CUT_KIND_CODE_LINES`] took them. Z18l (2026-11-10) lowered it to 1,656: Z18k's
+/// deletion (`split_author_line`'s closure, `row_emails.rs`) and Z18l's (aas's e-mail line readers, `email_block_calls.rs`,
+/// `email_owners.rs` and `links.rs` whole), the ceiling left at 2,665 by the first.
+const OLD_READER_CODE_LINES: usize = 1_656;
 
 /// What the fence counts in the old reader's code: its ways into the API's queue, and a convention's mode.
 const OLD_READER_NEEDLES: [&str; 4] = [
@@ -1165,8 +1168,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (Z18j, 337 -> 279: the API's entry cutter and its line readers moved unchanged to `defs/frontmatter_api/` (+46), the
   // readers the field readouts share to `defs/frontmatter_fields/` (+12), 337 = 279 + 46 + 12; none added)
   // (Z18k2, 279 -> 236: `split_author_line`'s closure and `row_email_owners` deleted, unreached once eptcs and OmniBus's
-  // `\authors` went to the reading)
-  ("author_block", 236),
+  // `\authors` went to the reading; Z18l, 236 -> 195: aas's e-mail line readers deleted, `labelled_email_line`,
+  // `placed_email_line_calls`, `take_placed_line_emails`, `labelled_emails`, `mailto_line` and what only they reached)
+  ("author_block", 195),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
   ("classify", 349),
   ("defs/author_macros", 20),
@@ -1279,7 +1283,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("resolver", 20),
   // (DEL1 24 -> 20: the old driver's unit tests of `name_and_trailing_email`, `leading_symbol_labels`, `weldable_line`,
   // `continues_the_line`, `person_over_institution` and `strip_linebreak_options_keeping_gaps` deleted)
-  ("rest /author_split_tests.rs", 19),
+  // (Z18l, 19 -> 18: the tests of the deleted `labelled_emails` and `mailto_line` deleted with them)
+  ("rest /author_split_tests.rs", 18),
   ("rest /block_insertion.rs", 0),
   ("rest /blocks.rs", 2),
   ("rest /boxes_lists.rs", 0),

@@ -29555,7 +29555,8 @@ class-bindings/webofc/`webofc_collaboration_after_the_notes_is_a_contact` (RED �
     5's `\altaffilmark` names over `\affil{$^{N}$…}` or `\affil{N …}` lines, whose two label spaces never met; one
     `\affil` holding a block of `\\` lines is read entry by entry (a labelled line opens one, an unlabelled line
     continues it: 1610.06611, astro-ph0108212), an entry holding only an e-mail is an e-mail (below), and an `\email`
-    set in an entry is the spelled author's, not each holder's (`take_placed_line_emails`, 1503.02933);
+    set in an entry is the spelled author's, not each holder's (`take_placed_line_emails`, 1503.02933; since Z18l the API's
+  Link step's, #992);
   - a hand-printed number a queued `$^{N}$` requests is that mark (`$^{N}$` written for it), and the line goes by
     REVTeX's marked-line rule;
   - an unlabelled line goes by REVTeX's group rule (`annotate=run`) unless the run's names request affiliations by
@@ -29578,7 +29579,8 @@ class-bindings/webofc/`webofc_collaboration_after_the_notes_is_a_contact` (RED �
   `placed_email_line_calls` (author_block/email_block_calls.rs) makes each address `\lx@add@contact@placed[role=email]`,
   the label its `name` — placed as a class's e-mails apart from the names are (`placed_contact_owner`: the author
   requesting the mark, the author the address spells, the only author of the group, else the block's shared creator,
-  #159). Perl: an affiliation of the last author (aas_support.sty.ltxml:118).
+  #159). Perl: an affiliation of the last author (aas_support.sty.ltxml:118). (Superseded by #992, Z18l: the line goes as
+  the affiliation it is, the API's Kind and Link steps place its addresses; the reader is deleted.)
 
 **Why.** Perl (revtex4_support.sty.ltxml:46) makes one creator of each `\author` call: the 2015 BESIII template
 (`\author{\begin{small}\begin{center} names \\ \vspace{0.2cm} (BESIII Collaboration)\\ {\it $^{1}$ aff\\ …}
@@ -33803,3 +33805,51 @@ omnibus/omnibus_authors_bracket_piece_marked_is_a_name}.tex`; the omnibus repros
 (`Ann Able\inst{1}, (deceased)\inst{2}, Bob Baker\inst{2} and [corresponding author]\inst{1}`) is a creator of its own, 0
 Warnings — the rule tests the opening bracket, not a name after it; the fix is to exempt only a piece that prints words
 after its bracket closes (repro `class-bindings/llncs_author_marked_bracket_remark_is_no_name`).
+
+### 992. AASTeX's `\affil` e-mail lines are the API's to place: the line goes as the affiliation it is written as, the Kind and Link steps place its addresses (Z18l)
+
+**Perl.** `\affiliation{#1}` is `\lx@add@affiliation{#1}` (aas_support.sty.ltxml:118): every line, an e-mail line
+too, an affiliation of the last author.
+
+**Was.** The binding read its e-mail lines itself, with `author_block/`'s token readers (97f r2, rev126a N2): a line
+holding only addresses (`labelled_email_line`: the label behind what prints nothing, a group around the line; 1112.1037,
+1311.3535, 2603.19228) became `\lx@add@contact@placed[role=email]` calls (`placed_email_line_calls`), the label their
+`name={label }`, the owner the address's spelling first and a leading mark only a request of the first author showing it;
+an `\email` set in a line was taken out of it and placed so (`take_placed_line_emails`). A second copy of the API's e-mail
+label rule (`split_email_label` / `named_email_calls` in the Kind step, `insert::cut_email_label` on the printed text),
+and an owner decided on tokens in the binding (FRONTMATTER_SINGLE_ENGINE_PLAN trap T1, T4).
+
+**Now.** aas_support_sty.rs `\affiliation` writes every line as the affiliation entry it is — labelled `altaffil:N` in
+the entries loop, else by `group_or_marked_affiliation` — and the API places its addresses with the rules every binding's
+entry goes through: the Kind step (`kind_entry_addresses`) takes a line of addresses out of the entry, its label the
+contacts' name (`named_email_calls`: `name={label~}`, the name ending in a no-break space where the binding wrote a
+space), and the Link step (`insert::link_entry_addresses`, `entry_address_owners`) gives each address the author it
+spells, else the entry's one carrier, else the block; the empty entry is dropped (`drop_empty_contacts`). An `\email`
+written in a line digests inside its entry (`\lx@aas@email@author`, the class's `\lx@address@textfont`, as every other
+aas `\email` prints) and is placed the same way: 1503.02933's `zhangqm@` Q. M. Zhang's, not the five holders'. A line a
+requested mark leads goes to the name requesting it even where its address spells no one (FIDELITY_CHARTER §4 R1, marks
+win): `\affil{$^*$ Email: zz@uni.edu}` under `Bob Baker\altaffilmark{2,*}`, in a block of `\\` lines or an `\affil` of
+its own, had gone to the block's nameless creator. The hand-printed number a queued `$^{N}$` requests stays the
+binding's (0909.0058), no e-mail rule. Deleted with the readers, the binding the last to reach them: `email_block_calls.rs`
+(`labelled_email_line`, `line_labelled_emails`, `placed_email_line_calls`, `take_placed_line_emails`,
+`email_command_calls`), `email_owners.rs` (`labelled_emails`, `mailto_addresses`, `after_symbol_mark`, `unwrapped`,
+`split_top_level_list`, `EmailAddress`) and `links.rs` (`mailto_line`), with their tests in `author_split_tests.rs`
+(`mailto_line_is_a_labelled_email_line`, the labelled half of `email_addresses_skip_colour_arguments`); their witnesses
+astro-ph0611258, 2604.10316, 2606.28166, 2602.16540, 2505.23260, 2602.12235, 2601.00240, 2601.07974, 2604.04847,
+2604.23002, 2604.25444, 2605.18563, 2605.29064, 2605.29893, 2606.01600, 2606.03014 read by the API's copies.
+`author_block/` 2,552 → 2,069 lines.
+
+**Measured** (vs int155a1-rel, both on int154a's dumps, `kit/conv.sh` through `pool_run.sh`): the aas census (1,166:
+aastex*, emulateapj, aaspp4, aas2pp4, aas_support) and the 1,434 stage2 ids, 2,600 papers, E/F/W identical on every
+one; 4 changed — astro-ph0408475, 1808.01089, 0911.1770 the label's space a no-break space; 1503.02933 the address in the
+class's `\email` font.
+
+**Residual (RED, pre-existing on the API path, no aas corpus witness):** an e-mail line led by a mark no name requests
+(`\affil{$^*$ Email: zz@uni.edu}`, REVTeX's `\affiliation{$^*$ Email: …}` alike) is the block's e-mail with the mark in its
+content, `<sup>∗</sup>zz@uni.edu`; the binding's reader had dropped the mark, uncounted.
+
+**Guards.** `perfect_kernel_batchz18l::aastex_affil_marked_email_line_no_one_spells_is_the_marked_authors`; re-expected:
+`perfect_kernel_batch97f::aastex_affil_holding_only_an_email_is_an_authors_email` (the name's no-break space);
+`perfect_kernel_batche0` (`OLD_READER_EMISSIONS` `email_block_calls.rs lx@add@` 1 → 0, `OLD_READER_CODE_LINES` 2,665 →
+1,656, `TOKEN_READS` `author_block` 236 → 195 and `rest /author_split_tests.rs` 19 → 18). Repros
+`tools/perfect_kernel/repros/sectioning-frontmatter/aastex_affil_marked_email_line_{no_one_spells_is_the_marked_authors,of_its_own_no_one_spells}.tex`.

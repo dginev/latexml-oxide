@@ -151,7 +151,7 @@ pub(in crate::base_utilities) fn is_spacing(t: &Token) -> bool {
 /// The commands whose arguments print no letter, each with those arguments as an xparse-style signature — `s` a star,
 /// `o` an optional `[…]` argument, `m` a mandatory one — and whether the command prints a space: what the command
 /// prints, if anything, is the argument after them. One table for every reader of an author block's printed text
-/// ([`email_addresses`], [`address_text`], [`printed_words`], [`link_line_link`], [`mailto_line`]'s label): a colour, a
+/// ([`email_addresses`], [`address_text`], [`printed_words`], [`link_line_link`]; once `author_block`'s mailbox link line's label, deleted with aas's e-mail line readers, Z18l): a colour, a
 /// font's name or size, a scale, an angle, a raise, a graphic's file, a skip's length are no letters of an address, a
 /// label or a link's text (`\href{mailto:…}{\color{black}…}`, 2604.19440; `\texttt{\fontfamily{pcr}\selectfont
 /// xw109@illinois.edu}`, 2609.25669, 2609.35216; `\scalebox{0.9}{…}`, `\fontsize{9}{11}`, the r6 re-review's w14,

@@ -495,6 +495,7 @@ mod perfect_kernel_batchz18g;
 mod perfect_kernel_batchz18h;
 mod perfect_kernel_batchz18i;
 mod perfect_kernel_batchz18k;
+mod perfect_kernel_batchz18l;
 mod perfect_kernel_batchz2;
 mod perfect_kernel_batchz3;
 mod perfect_kernel_batchz4;

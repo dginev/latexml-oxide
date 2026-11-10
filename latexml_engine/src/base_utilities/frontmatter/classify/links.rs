@@ -76,7 +76,7 @@ fn target_has_path(target: &str) -> bool {
 /// Whether `line` is a link line ([`is_link_line`]) to a web page, a URL contact of the author block
 /// (`url_contact_call`), by what the link says and where it goes, not by the shape of its words: not to a mailbox
 /// (`\textbf{Correspondence:} \href{mailto:…}{…}`, 2601.00240, 2605.18563, an address and no URL: an e-mail line,
-/// [`mailto_line`]); a `\url`, or an `\href` printing a web address or a link word before or in its text
+/// [`links_a_mailbox`]); a `\url`, or an `\href` printing a web address or a link word before or in its text
 /// ([`link_words`]: `\href{…}{Project Page}`, `Demo Code:~\href{…}{here}`, 2602.09509); not one printing an institution,
 /// that institution linked, an affiliation (`\href{https://launchsafe.com}{\textbf{LaunchSafe Research}}`, 2606.26479,
 /// the r5 re-review's u32, u33, u35), nor a person's name, that name (`\textit{Author:} \href{…}{Masashi Sekine}`,
