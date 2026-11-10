@@ -4258,7 +4258,7 @@ pub fn invoke_token(input_token: &Token) -> Result<Vec<Digested>> {
         )
       );
     }
-    result = Vec::new();
+    result.clear();
 
     // Rust notes: It would be ideal if we could unify the cases for (Primtive, Constructor,
     // MathPrimitive), as well as (Expandable, Conditional) since the

@@ -741,11 +741,11 @@ impl CrossRef {
     let loc = location.to_string();
     if let Some(fid) = fragid {
       if url == "." || loc == doc_location {
-        url = String::new();
+        url.clear();
       }
       url = format!("{}#{}", url, fid);
     } else if loc == doc_location {
-      url = String::new();
+      url.clear();
     }
 
     Some(url)

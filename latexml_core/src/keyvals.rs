@@ -1292,7 +1292,7 @@ impl KeyVals {
           let expanded = gullet::do_expand(vtks)?;
           let mut exp_str = expanded.to_string();
           if exp_str == "{}" {
-            exp_str = String::new();
+            exp_str.clear();
           }
           tks.push(T_OTHER!(exp_str));
         },

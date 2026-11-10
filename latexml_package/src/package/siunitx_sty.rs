@@ -1137,8 +1137,9 @@ fn six_parse_numbers(expr: &Tokens) -> Vec<SixParseResult> {
     let mut current = Vec::new();
     for t in expr.unlist_ref() {
       if t.text == pin!(";") {
-        results.push(SixParseResult::Raw(Tokens::new(current)));
-        current = Vec::new();
+        results.push(SixParseResult::Raw(Tokens::new(std::mem::take(
+          &mut current,
+        ))));
       } else {
         current.push(*t);
       }

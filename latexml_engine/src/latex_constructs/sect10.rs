@@ -402,13 +402,13 @@ pub(crate) fn load() -> Result<()> {
               cols_vec.push(this_num);
             }
             from = None;
-            num = String::new();
+            num.clear();
           },
           '-' => {
             // `\cline{-3}` (no leading number) is malformed but appears in
             // the wild; treat it as `\cline{1-3}` rather than panicking.
             from = Some(num.parse::<usize>().unwrap_or(1));
-            num = String::new();
+            num.clear();
           }
           c if c.is_ascii_digit() => num.push(c_next),
           _ => break

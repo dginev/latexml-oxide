@@ -555,13 +555,12 @@ impl Constructor {
           });
         }
       }
-      whatsit.set_body(post);
+      whatsit.set_body(std::mem::take(&mut post));
       if let Some(Stored::Digested(body)) = whatsit.properties.get_mut("body") {
         for (key, value) in interline {
           body.set_property(key, Stored::Dimension(value));
         }
       }
-      post = vec![];
       //info!(target: "constructor:capture", "whatsit: {:?}", whatsit);
       // info!(target: "constructor:capture", "constructor: {:?}", self.get_cs_name());
     }
