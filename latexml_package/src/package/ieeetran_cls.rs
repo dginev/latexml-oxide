@@ -1140,12 +1140,75 @@ fn split_top_level(tokens: &[Token], delim: &Token) -> Vec<Vec<Token>> {
 /// `\IEEEauthorblockA{}` so it attaches to the creator instead of leaking into the body (arXiv 1901.07768), then, when
 /// `\IEEEmembership` is the class's (`ours`), each name's grade made its contact (`block_name_memberships`).
 fn author_block_body(body: Tokens, ours: bool) -> Tokens {
-  let body = wrap_bare_author_block_text(transpose_ieee_author_grid(body));
+  let body = wrap_bare_author_block_text(transpose_ieee_author_grid(unnested_name_blocks(body)));
   if ours {
     block_name_memberships(body)
   } else {
     body
   }
+}
+
+/// An author-block body with every names block written inside another's names (`\authorblockN{\authorblockN{Ann
+/// Able, \IEEEmembership{Member, IEEE}, Bob Baker \\ and Cy Coe.} \\ \thanks{…}}`, 1511.03982) spliced into the outer
+/// one, its command and braces dropped: one names block, read as any other. In IEEEtran.cls a names block only sets
+/// its style (`\@IEEEauthorblockNstyle`), so pdflatex prints each name; Perl's `\IEEEauthorblockN` is `#1`
+/// (IEEEtran.cls.ltxml:144), every name in one creator. Each block being an author call (`\lx@add@authors@append`),
+/// the inner call ran inside the outer's argument and printed nothing there: every author lost without a Warning
+/// (OXIDIZED_DESIGN_DIVERGENCES #987).
+fn unnested_name_blocks(body: Tokens) -> Tokens {
+  fn is_names(t: &Token) -> bool {
+    *t == T_CS!("\\IEEEauthorblockN") || *t == T_CS!("\\authorblockN")
+  }
+  // the argument group of the command just before `at`, past spaces: its open and close
+  fn argument(tokens: &[Token], at: usize) -> Option<(usize, usize)> {
+    let open = at
+      + tokens[at..]
+        .iter()
+        .take_while(|t| **t == T_SPACE!())
+        .count();
+    if tokens.get(open)?.code != Catcode::BEGIN {
+      return None;
+    }
+    let mut level = 0usize;
+    let close = open
+      + tokens[open..].iter().position(|t| {
+        match t.code {
+          Catcode::BEGIN => level += 1,
+          Catcode::END => level -= 1,
+          _ => {},
+        }
+        level == 0
+      })?;
+    Some((open, close))
+  }
+  // `tokens` with each names command's argument spliced in (`inner`: its command and braces dropped), at any depth
+  fn spliced(tokens: &[Token], inner: bool, out: &mut Vec<Token>) {
+    let mut i = 0;
+    while i < tokens.len() {
+      if is_names(&tokens[i])
+        && let Some((open, close)) = argument(tokens, i + 1)
+      {
+        if inner {
+          spliced(&tokens[open + 1..close], true, out);
+        } else {
+          out.extend_from_slice(&tokens[i..=open]);
+          spliced(&tokens[open + 1..close], true, out);
+          out.push(tokens[close]);
+        }
+        i = close + 1;
+        continue;
+      }
+      out.push(tokens[i]);
+      i += 1;
+    }
+  }
+  let tokens = body.unlist();
+  if tokens.iter().filter(|t| is_names(t)).count() < 2 {
+    return Tokens::new(tokens);
+  }
+  let mut out = Vec::with_capacity(tokens.len());
+  spliced(&tokens, false, &mut out);
+  Tokens::new(out)
 }
 
 /// Transpose a genuine IEEEtran `\and`×`\\` author grid from column-major
@@ -1866,7 +1929,8 @@ fn grade_only_line(line: &[Token]) -> bool {
 
 /// `tokens` without the full stop or semicolon that closes them right after a grade: one at the top level that only
 /// what prints no text follows — spaces, `\par`, `\\`, `\vspace{…}` and authors' notes (`\thanks{…}`, `\footnote{…}`)
-/// — and only such material parts from an `\IEEEmembership{…}` before it: `…,\\ and Farshid Alambeigi$^{1}$
+/// — and only such material parts from an `\IEEEmembership{…}` before it, or from a grade written as italic text
+/// ([`grade_text`]: `{\em Senior Member, IEEE}.`, `\emph{…}.`, `\textit{…}.`, 1810.08035): `…,\\ and Farshid Alambeigi$^{1}$
 /// \IEEEmembership{Member, IEEE}\thanks{…}.}` (2405.17600), `…, Jiangchuan Liu, \IEEEmembership{Fellow, IEEE}. }` in an
 /// `\IEEEauthorblockN` (2405.10825), `…~\IEEEmembership{Fellow,~IEEE}.` + a blank line, notes and a `\\` (2510.15773),
 /// `…~\IEEEmembership{Fellow,~IEEE}` + a blank line, `\vspace{-10mm}` and notes, then `.` (2112.14209). The stop
@@ -1968,7 +2032,14 @@ fn without_stop_after_grade(mut tokens: Vec<Token>) -> Vec<Token> {
   while before > 0 && tokens[before - 1] == T_SPACE!() {
     before -= 1;
   }
-  if before == 0 || tokens[before - 1] != T_CS!("\\IEEEmembership") {
+  // (or a grade written as italic text: `{\em Member, IEEE}.`, `\emph{…}.`, `\textit{…}.`, 1810.08035)
+  let membership = before > 0 && tokens[before - 1] == T_CS!("\\IEEEmembership");
+  let italic = before > 0 && [T_CS!("\\emph"), T_CS!("\\textit")].contains(&tokens[before - 1])
+    || tokens[open + 1..grade_end - 1]
+      .iter()
+      .find(|t| **t != T_SPACE!())
+      .is_some_and(|t| [T_CS!("\\em"), T_CS!("\\it"), T_CS!("\\itshape")].contains(t));
+  if !membership && !(italic && grade_text(&tokens[open + 1..grade_end - 1])) {
     return tokens;
   }
   // (each note's argument at the top level from `from`, and `tokens` with every note taken out, at any depth)
@@ -2049,6 +2120,43 @@ fn without_stop_after_grade(mut tokens: Vec<Token>) -> Vec<Token> {
   tokens
 }
 
+/// Whether the text `tokens` print, commands aside, is a membership grade: its words, cut at spaces and commas, all a
+/// grade's rank or a society, one of them `Member` or `Fellow` (`Senior Member, IEEE`). The names reader's own test
+/// (`grade_words(…, true)` of `classify/name_text.rs`, `NAME_GRADE_SOCIETIES`), which is private to the engine.
+fn grade_text(tokens: &[Token]) -> bool {
+  let text: String = tokens
+    .iter()
+    .filter_map(|t| match t.code {
+      Catcode::LETTER | Catcode::OTHER => Some(t.to_string()),
+      // (a tie as a space: `Senior~Member,~IEEE`)
+      Catcode::SPACE | Catcode::ACTIVE => Some(" ".to_string()),
+      _ => None,
+    })
+    .collect();
+  let words: Vec<&str> = text
+    .split(|c: char| c.is_whitespace() || c == ',')
+    .filter(|w| !w.is_empty())
+    .collect();
+  let rank = [
+    "Life",
+    "Senior",
+    "Student",
+    "Graduate",
+    "Associate",
+    "Member",
+    "Fellow",
+  ];
+  let societies = [
+    "IEEE", "ACM", "OSA", "SPIE", "IET", "IEICE", "AAAI", "SIAM", "APS", "IAPR", "IFAC", "ASCE",
+    "ASME",
+  ];
+  !words.is_empty()
+    && words
+      .iter()
+      .all(|w| rank.contains(w) || societies.contains(w))
+    && words.iter().any(|w| ["Member", "Fellow"].contains(w))
+}
+
 /// The argument of the note whose command ends just before `at` (`\thanks[…]{…}`): its tokens, braces dropped, and
 /// the position after it; past spaces and an optional `[…]`, a group or else one token.
 fn note_argument(tokens: &[Token], mut at: usize) -> (Vec<Token>, usize) {
@@ -2087,7 +2195,7 @@ fn note_argument(tokens: &[Token], mut at: usize) -> (Vec<Token>, usize) {
   (tokens[at + 1..].to_vec(), tokens.len())
 }
 
-/// An explicit author-block body with the grades of each `\IEEEauthorblockN{…}` name line made its author's
+/// An explicit author-block body with the grades of each `\IEEEauthorblockN{…}` (or `\authorblockN{…}`) name line made its author's
 /// (`name_memberships`); a grade outside the name blocks stays `\IEEEmembership`, dropped.
 fn block_name_memberships(body: Tokens) -> Tokens {
   let tokens = body.unlist();
@@ -2097,7 +2205,8 @@ fn block_name_memberships(body: Tokens) -> Tokens {
     let t = tokens[i];
     out.push(t);
     i += 1;
-    if t != T_CS!("\\IEEEauthorblockN") {
+    // (its alias too, `\\authorblockN`: 1511.03982's grades)
+    if t != T_CS!("\\IEEEauthorblockN") && t != T_CS!("\\authorblockN") {
       continue;
     }
     while i < tokens.len() && tokens[i] == T_SPACE!() {
