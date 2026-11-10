@@ -1254,15 +1254,15 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
   // `ledger::symbol`). The text written is tested too: one holding a control sequence's name or a tie lost what it
   // printed, counted (`\email{\{a, b\}@x\footnote{…}}` writes `a@x\lx@fm@obs@fnnote`, review revZ18c S3; 2008.05861's
   // `…hk~~`); a well-formedness test would count `\{a,b\}@x\_y.org`'s `a@x_y.org`, all it prints (review revZ18d finding 1)
-  // A math shift around a printed character prints nothing of its own, nor a separator between the list's addresses (a
-  // tie, spacing: `shared_row::is_call_separator`), which the address written holds none of (`$\{$stomforde$|$bsick$\}$@uni-kassel.de;~cms@…`, 1701.08125, which the old split
-  // wrote as text too): no markup lost.
+  // A math shift or a group's brace around printed characters prints nothing of its own (2206.10050's
+  // `\email{{jsliwinski,wattenhofer}@ethz.ch}`), nor a separator between the list's addresses (a tie, spacing:
+  // `shared_row::is_call_separator`), which the address written holds none of (1701.08125's
+  // `$\{$stomforde$|$bsick$\}$@uni-kassel.de;~cms@…`, which the old split wrote as text too): no markup lost.
+  use Catcode::{BEGIN, END, LETTER, MATH, OTHER, SPACE};
   let plain = !address.contains(['\\', '~'])
     && content[from..to].iter().all(|t| {
-      matches!(
-        t.get_catcode(),
-        Catcode::LETTER | Catcode::OTHER | Catcode::SPACE | Catcode::MATH
-      ) || symbol(t).is_some()
+      matches!(t.get_catcode(), LETTER | OTHER | SPACE | MATH | BEGIN | END)
+        || symbol(t).is_some()
         || is_call_separator(t)
     });
   let why = if read.is_none() {
