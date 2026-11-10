@@ -644,7 +644,7 @@ pub fn addresses_in(text: &str) -> Vec<String> {
 /// spells its owner — brief 95c): its byte range — with the e-mail label word printed before it ("E-mail:", "Emails",
 /// "e-mail addresses:") and the parentheses round it —, its addresses written out, one each (a braced group, a list
 /// of local parts sharing the domain), and the label word as printed, when it took one (the e-mail contact's name, as
-/// an e-mail line's label names its contacts: `author_block::labelled_emails`, brief 95c r2 B5).
+/// an e-mail line's label names its contacts: the API's `named_email_calls`, brief 95c r2 B5).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(in crate::base_utilities::frontmatter) struct AddressRun {
   pub start:     usize,
