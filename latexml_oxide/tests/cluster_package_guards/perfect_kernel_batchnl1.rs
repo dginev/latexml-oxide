@@ -292,7 +292,7 @@ fn a_mark_inside_a_remark_goes_onto_the_name() {
 }
 
 /// The several-spellers owner rule on a document note's arm (review revNL1r2 finding 1; the old reader's
-/// `author_block/email_block_calls.rs` `spelled`, `owners.marked`: a lone address spelling several names is the marked
+/// `author_block/email_block_calls.rs` `spelled`, `owners.marked`, deleted at Z18l: a lone address spelling several names is the marked
 /// author's only if among them): A&A's `\offprints{Z. Li, \email{wang@x.org}}` names Z. Li, but the address spells X.
 /// Wang and Y. Wang — the block's, as the line chain holds it (`perfect_kernel_batch64::marked_block_email_line_owner`).
 /// Red (NL1r2): Z. Li's, `owner:corresponding api:note-name`. Distinct from the line chain's guard: the note's named

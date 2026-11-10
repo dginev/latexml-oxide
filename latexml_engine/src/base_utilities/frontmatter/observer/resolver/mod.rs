@@ -1122,7 +1122,7 @@ fn spelled_names(names: &[&str], address: &str) -> Vec<usize> {
 
 /// `text` with its letters' accents dropped (canonical decomposition, the combining marks aside), and the letters
 /// that decompose to none their base letter (`ł` l, `ø` o, `đ` d, `ı` i; `æ` a, `œ` o, `ß` s, as the author block's
-/// reading of `\ae`, `\oe`, `{\ss}` gives them, `author_block::letter_command`) — as an address spells a name (the
+/// reading of `\ae`, `\oe`, `{\ss}` gives them, `classify::letter_command`) — as an address spells a name (the
 /// reading's and `insert::respell_emails`'), one fold of it; the transliteration another ([`transliterated`]).
 pub(in crate::base_utilities) fn base_letters(text: &str) -> String {
   use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
@@ -2019,7 +2019,7 @@ mod tests {
       "Dept Z, Univ Z, write to a@z.org.",
       "Univ W, see sales@w.org, City W",
       "Univ X, E-mail: ann@x.org now",
-      // (`mail` is no e-mail label word, `author_block::is_email_label`'s, r3 N1)
+      // (`mail` is no e-mail label word, `classify::is_email_label`'s, r3 N1)
       "Univ X, please mail ann@x.org",
     ] {
       assert_eq!(

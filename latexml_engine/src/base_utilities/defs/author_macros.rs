@@ -9,6 +9,10 @@ use super::{
   *,
 };
 
+// (the IJCAI sectioned block's split, a module of its own since Z18m deleted `author_block/`)
+mod ijcai;
+use ijcai::{ijcai_block, ijcai_split_call};
+
 /// The key on the entry the frontmatter emitter is writing (its pending entry, `with_digesting_entry_attr`) saying it has read
 /// its first mark, its label (`\lx@sup@setlabel@affiliation`; taken off as each emitted item starts,
 /// `\lx@frontmatter@item@start`, and as each entry's line starts, `\lx@frontmatter@savesups`): a fact of the entry, kept on
@@ -22,58 +26,8 @@ pub(in crate::base_utilities) const EMITTED_LINE_MARK: &str = "_markread";
 /// `{opening}`, astro-ph9808358) has its own flush, which reads it or writes it whole and counted (`\lx@frontmatter@late`).
 pub(in crate::base_utilities) const KEPT_WHOLE: &str = "_merged_checked=1";
 
-/// Whether a sectioned caller's block (`\lx@add@authors`, `@adaptive`, `@list`) is an IJCAI sectioned one
-/// (`has_ijcai_section_marker`, after the sole-author and separator macro expansions): it goes to the section split
-/// ([`ijcai_split_call`]), whose names `\lx@ijcai@names` then queues whole — a piece cut through `\affiliations` is
-/// digested where a class defines it only in its `\@maketitle` (kr.sty, 2202.05511). The ledger records it too
-/// (`AuthorBlock::sectioned`), whose held Errors are an IJCAI block's section markers (`resolver::Input::Block`'s
-/// `markers`) — never a raw `\@maketitle`'s own `\name`/`\email` held in a plain `\author` (1908.02923's JAIR rows;
-/// `perfect_kernel_batch63::author_markup_title_code_forms`), whose reading ended at the marker, its address a note.
-fn ijcai_block(stuff: &Tokens) -> Result<bool> {
-  has_ijcai_section_marker(&expand_separator_macros(expand_sole_author_macro(
-    stuff.clone(),
-  )))
-}
-
-/// An IJCAI sectioned block's split ([`ijcai_block`]), the old `\lx@add@authors` driver's first step, kept as the one
-/// path that still cuts a block at the call. Beyond-Perl (surpasses Perl; KNOWN_PERL_ERRORS #100): IJCAI-style author
-/// blocks — ijcai97.sty and its derivatives (e.g. the ttm.sty in arXiv:2401.03955) — pack names, `\affiliations` and a
-/// comma-separated `\emails` list into ONE `\author{}`. Perl's splitter does not recognise those section markers, so the
-/// comma-joined email list is shredded into phantom author creators and the affiliation is dropped (Perl 0.8.8, which
-/// raises `\affiliations`/`\emails` as undefined). The block goes to the shared sectioned-author machinery
-/// (`\lx@ijcai@authorsplit`, also used by `ijcai_sty`): it consumes the markers as `Until:` delimiters (so they no longer
-/// error) and splits names / affiliations / emails, each email placed as a class's address list is (OD #908); the names
-/// re-enter as `\lx@ijcai@names`, queued whole. Witness html_feedback#1361 + #1362. A marker counts at the block's top
-/// level only, and only as a separator: undefined there or the ijcai binding's no-op. A document's own
-/// `\emails`/`\affiliations` with text is author text, which LaTeX expands — counted, the split handed it back unsplit,
-/// without end (`\emails` before any `\affiliations`, 2407.10582; `\affiliations` inside `\thanks`, 2505.05474;
-/// `PushbackLimit`). The block is read as the driver read it first: a `\let` alias of a mark command is the command
-/// (`\let\up\textsuperscript`, 2209.14855; [`unalias_mark_commands`]); a note written inside a mark is taken out after
-/// it (`\textsuperscript{\rm 1,\rm 2\thanks{…}}`, 2512.05464; [`notes_out_of_marks`]); an empty mark is none
-/// ([`drop_empty_marks`]); a mark opening a line that prints no label is none (2303.08793;
-/// [`blank_line_marks_dropped`]); a line of notes only after a `\\` joins the line above, its notes no name requests
-/// the document's, added after the split (2609.17106, 2411.05212, 2312.10807; [`notes_line_joins_names`],
-/// OXIDIZED_DESIGN_DIVERGENCES #957). Where those steps leave no top-level marker, the block is queued whole
-/// ([`whole_block_call`]), as any other.
-fn ijcai_split_call(stuff: Tokens, replace: bool, late: bool) -> Result<Tokens> {
-  let read = unalias_mark_commands(expand_separator_macros(expand_sole_author_macro(
-    stuff.clone(),
-  )));
-  let read = blank_line_marks_dropped(drop_empty_marks(notes_out_of_marks(read)));
-  let (read, document_notes) = notes_line_joins_names(read);
-  if !has_ijcai_section_marker(&read)? {
-    return whole_block_call(stuff, replace, None, late);
-  }
-  let mut out = vec![T_CS!("\\lx@ijcai@authorsplit")];
-  out.extend(read.unlist());
-  out.push(T_CS!("\\affiliations"));
-  out.push(T_CS!("\\done"));
-  out.extend(document_notes);
-  Ok(Tokens::new(out))
-}
-
 /// One whole block queued for the call (OD #980), as no reader cuts it at the call, which the emitter
-/// takes at the flush (`observer::emitter::emit`): Perl's whole-block creator (`author_block::whole_block_author`). A `late`
+/// takes at the flush (`observer::emitter::emit`): Perl's whole-block creator (`fallback::whole_block_author`). A `late`
 /// call, made while a flush digests its queue after reading it (the ledger's `AuthorBlock::late`), queues it for a flush
 /// of its own (`\lx@frontmatter@late`): Perl's `\lx@add@authors` there runs `@now`, split at the call
 /// (Base_Utility.pool.ltxml:799-806).

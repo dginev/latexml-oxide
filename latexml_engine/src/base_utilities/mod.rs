@@ -60,9 +60,7 @@ const REPLACEABLE_FRONTMATTER_TAGS: &[&str] = &[
 const PRINTED_WHERE_THEY_STAND: &[&str] = &["ltx:abstract"];
 use crate::prelude::*;
 
-mod author_block;
 mod defs;
-pub use author_block::*;
 // (the frontmatter API's attribute names, which `author_block/` declared and the insert-time passes read: moved by the plan's row "Knowledge in, driver out, one pass")
 use defs::frontmatter_api::{
   CUT_COPY_PLACE, CUT_LIST, CUT_ROLES, ENTRY_KEY, ENTRY_KINDED, ENTRY_SYMBOL, SEQUENCE_LABEL,

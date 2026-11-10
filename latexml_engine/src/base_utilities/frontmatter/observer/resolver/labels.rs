@@ -451,9 +451,9 @@ pub(super) fn later_line_is_names(
     .is_some_and(|e| after_role_heading(&e.text).is_some())
     && names.iter().all(|e| shows_a_person(e));
   // (a line under the names opening with "and" goes on with them, its piece reading as a name: `Anthony Berthelier \\ and
-  // Yongzhe Yan`, 2007.10022, `author_block::names_list_continues`; "and Max--Planck Institut für Mathematik, Bonn" reads
+  // Yongzhe Yan`, 2007.10022, `classify::names_list_continues`; "and Max--Planck Institut für Mathematik, Bonn" reads
   // as no name, math0208081; the space before the word, which the old test trims off the line's text, `text.trim()
-  // .starts_with("and ")` (`author_block::name_text::names_list_continues`), opens nothing: `\\~~and~~{\scshape Donald Robertson}`,
+  // .starts_with("and ")` (`classify::old_reader::name_text::names_list_continues`), opens nothing: `\\~~and~~{\scshape Donald Robertson}`,
   // 2603.27258, read as "and Donald Robertson" an affiliation of every name above it)
   let and_opens = !under_affiliation
     && events
@@ -611,7 +611,7 @@ pub fn addresses_in(text: &str) -> Vec<String> {
         .take_while(|c| !c.is_whitespace() && !",;()<>{}".contains(*c))
         .collect();
       // (the local parts parted as the author block's reader parts them: a comma, a semicolon, a `|` — llncs's
-      // `\email{\{ivan|carolin\}@…}`, 0902.3918, 1909.00276; `author_block::ADDRESS_GROUP_SEPARATORS`)
+      // `\email{\{ivan|carolin\}@…}`, 0902.3918, 1909.00276; `classify::ADDRESS_GROUP_SEPARATORS`)
       for local in rest[open + 1..close].split(ADDRESS_GROUP_SEPARATORS) {
         let local = local.trim();
         if !local.is_empty() && domain.contains('.') {
@@ -789,7 +789,7 @@ pub(in crate::base_utilities::frontmatter) fn address_runs(
       // (each part a local part of letters: a digit run before the address is no part of a list — `Tel:5551234,info@x.org`
       // is no `5551234@x.org`, `ORCID 0000-0002-1825-0097,ann@x.org` no `0000-…@x.org`; brief 95c r2 B3. A part with
       // no space after its comma takes the unspaced list's checks, the readers' one test
-      // `author_block::is_listed_local_part`; a part with one, the spaced-list rule's word test alone, so a labelled
+      // `classify::is_listed_local_part`; a part with one, the spaced-list rule's word test alone, so a labelled
       // `E-mail: ann, b@x.org` keeps `ann@` — review rev103a2 B1)
       let part_ok = if gap > 0 {
         !word.is_empty()
@@ -813,7 +813,7 @@ pub(in crate::base_utilities::frontmatter) fn address_runs(
         || before.ends_with(['(', '{', '[', '<', ':'])
         || label_word_before(text, at, false).is_some()
     };
-    // (an initial ends no unspaced list: `smith,j@x.org` — the readers' one test, `author_block::ends_a_listed_run`; a
+    // (an initial ends no unspaced list: `smith,j@x.org` — the readers' one test, `classify::ends_a_listed_run`; a
     // spaced one, `E-mail: ann, b@x.org`, the spaced-list rule's)
     let list_ok = !locals.is_empty()
       && (spaced || ends_a_listed_run(local))
@@ -953,7 +953,7 @@ fn label_word_before(text: &str, at: usize, ends_item: bool) -> Option<usize> {
 }
 
 /// Where the e-mail word printed just before `at` starts ("E-mail:", "Emails", "e-mail addresses:", "Email address"; a
-/// colon after it or none; `author_block::is_email_label`'s words, the e-mail line's: brief 95c r3 N1), if one.
+/// colon after it or none; `classify::is_email_label`'s words, the e-mail line's: brief 95c r3 N1), if one.
 fn mail_word_before(text: &str, at: usize) -> Option<usize> {
   let before = text[..at].trim_end();
   let before = before.strip_suffix(':').unwrap_or(before).trim_end();
@@ -1246,7 +1246,7 @@ fn domain_inside_group(inner: &str) -> Option<Vec<String>> {
 
 /// The plain addresses of `text` (no braced group); a list of local parts written without spaces before one domain
 /// written out, each part at it (`ann@a.edu; dzyang,ashishbshah@fb.com`, 2112.00969 — `dzyang` was lost: the author
-/// block's reading too, `author_block::write_out_unspaced_lists`).
+/// block's reading too, `classify::write_out_unspaced_lists`).
 pub(super) fn plain_addresses(text: &str) -> Vec<String> {
   // (a tie a space, as it prints: `\email{…@uni-kassel.de;~cms@sra.uni-hanover.de}`, 1701.08125 — "~cms@" had been the
   // address, as the old split's reader never read it)

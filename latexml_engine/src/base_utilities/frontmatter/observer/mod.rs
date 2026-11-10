@@ -40,7 +40,7 @@ pub(in crate::base_utilities) mod resolver;
 
 // (for the guards, which read a dump's events and the resolver's tuples, and the types of a public event's fields;
 // prefixed, as the prelude re-exports these)
-// (the emitter's vocabulary, moved unchanged, for its callers in `author_block/`, `frontmatter/` and `defs/`: the plan's row "Knowledge in, driver out, one pass")
+// (the emitter's vocabulary, moved unchanged, for its callers in `frontmatter/` and `defs/`: the plan's row "Knowledge in, driver out, one pass")
 pub(in crate::base_utilities) use emitter::{
   EMITTING, block_creator_written, calls::*, check_placed_content, emit_commands, emitted,
   take_digested,
@@ -66,7 +66,7 @@ pub use policy::{
 };
 pub(in crate::base_utilities) use reading::read_at_flush;
 pub use reading::{fm_reading_json, reset_fm_reading};
-// (the old reader's owner logic, moved unchanged, for its callers in `author_block/` and `frontmatter/`: the plan's row "Knowledge in, driver out, one pass")
+// (the old reader's owner logic, moved unchanged, for its callers in `frontmatter/` and `defs/`: the plan's row "Knowledge in, driver out, one pass")
 pub(in crate::base_utilities) use resolver::owners::*;
 // (for the guards, which resolve a block's input again)
 pub use resolver::{Input as FmInput, Resolved as FmResolved, resolve as fm_resolve};

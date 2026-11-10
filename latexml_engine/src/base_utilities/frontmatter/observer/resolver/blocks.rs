@@ -138,8 +138,8 @@ impl Resolver {
           // Huang, 2512.08223; `{congjing, ryanflin}@uw.edu chris20030909@gmail.com`, 2602.04785; 2604.14972)
           _ if address_count > 1 => (None, "owner:block"),
           // (an address two or more names spell is the corresponding author's, or the author a document's note names,
-          // only where they are one of them, else the block's, as the old reader holds it for both
-          // (`author_block/email_block_calls.rs` `spelled`, `owners.marked`): `wang@x.org` under X. Wang, Y. Wang and a
+          // only where they are one of them, else the block's, as the old reader held it for both
+          // (`author_block/email_block_calls.rs` `spelled`, `owners.marked`, deleted at Z18l): `wang@x.org` under X. Wang, Y. Wang and a
           // corresponding Z. Li — `perfect_kernel_batch64::marked_block_email_line_owner`, 77p r4; A&A's
           // `\offprints{Z. Li, \email{wang@x.org}}` —
           // `perfect_kernel_batchnl1::an_address_others_spell_is_not_the_named_authors`)
@@ -589,7 +589,7 @@ impl Resolver {
               }
               // (a URL line under every name of the document's author list is the block's, its shared creator (OD #159,
               // `addresses:block`): a project's page, `Ann Able, Bob Baker \\ Univ A \\ \url{…}` — the old reader's
-              // `LinkOwner::Block`, `author_block::dispatch` and `link_line_owner`, user ruling 2026-10-20, batch 77p r7:
+              // `LinkOwner::Block`, the old driver's `dispatch` (deleted, DEL2) and `link_line_owner`, user ruling 2026-10-20, batch 77p r7:
               // 2605.06223, 2602.08439, 2604.12896, 2604.20841, 2601.17879; FIDELITY_CHARTER §4 amended 2026-11-05.
               // Whether no names come after it is known at the block's end: decided there. A link printing an
               // institution is the names' affiliation, as the old rule's exception gives it every author:

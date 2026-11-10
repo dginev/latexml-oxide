@@ -1,5 +1,5 @@
 //! Red/green guards for batch 97a: a marked author list is a list by its marks (`marked_names`,
-//! author_block/names_split.rs; OXIDIZED_DESIGN_DIVERGENCES #943). A per-author class's names line (revtex, aastex,
+//! `author_block/names_split.rs`'s, deleted at Z18k2; OXIDIZED_DESIGN_DIVERGENCES #943). A per-author class's names line (revtex, aastex,
 //! amsart, an IEEE block) whose every piece carries its own mark after the name, none reading as an affiliation, is
 //! split there, whatever the names' shape — Perl's marked branch, which splits a marked names line at every comma
 //! (Base_Utility.pool.ltxml:708); a line the marks do not cover stays one creator as before, and when two or more of

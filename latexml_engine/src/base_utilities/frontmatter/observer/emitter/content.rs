@@ -15,7 +15,9 @@ use super::{
   plan::reads_as_alignment,
   *,
 };
-use crate::base_utilities::defs::frontmatter_fields::title_code_author_definitions;
+use crate::base_utilities::frontmatter::classify::title_code::{
+  reads_arguments, title_code_author_definitions,
+};
 
 /// A field's tokens as a rehearsal read them: `tokens[0]` at position `base`, and its formulas (`events::lex_with_formulas`:
 /// outermost, in order).
@@ -618,22 +620,4 @@ impl Field<'_> {
     }
     Some((start, end))
   }
-}
-
-/// Whether the title-code statement `statement` (`defs::frontmatter_fields::title_code_author_statements`) defines
-/// `definee` reading arguments: a parameter in a `\def`'s parameter text (pazhastl.cls:112's
-/// `\def\address##1{\textsuperscript{##1}}`), or a `\newcommand`'s `[n]` past its definee. Its argument prints what the
-/// rehearsal, which runs without the title code's definitions, read as the block's own (`\address{1}`'s "1", a mark), so
-/// the command is no undefined token for a piece to take alone ([`Field::held_undefined_at`]); a parameterless one
-/// (aaai2026.sty's `\co`, a note; a `\let`, a `\newcounter`'s `\c@x`) is.
-fn reads_arguments(definee: &Token, statement: &[Token]) -> bool {
-  let Some(at) = statement.iter().skip(1).position(|t| t == definee) else {
-    return false;
-  };
-  // (its parameter text up to the body's group, past a braced definee's closing brace: a `\newcommand{\x}`'s `[1]`)
-  statement[at + 2..]
-    .iter()
-    .skip_while(|t| t.group_step() == -1)
-    .take_while(|t| t.group_step() != 1)
-    .any(|t| t.get_catcode() == Catcode::PARAM || *t == T_OTHER!("["))
 }

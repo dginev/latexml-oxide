@@ -1,4 +1,6 @@
-//! Author notes and thanks: affiliation-mark splits, leading declarations, name annotations.
+//! The IEEEtran binding's lines of notes (`ieeetran_cls.rs`): a line holding authors' notes only (`notes_only_line`,
+//! which the API's line marks and the IJCAI chain read too), and a bare run of notes as the document's
+//! (`document_notes`). Moved unchanged by Z18m, which deleted `author_block/`, from `author_block/notes.rs`.
 
 use super::*;
 use crate::base_utilities::defs::frontmatter_api::line_notes;
@@ -6,7 +8,7 @@ use crate::base_utilities::defs::frontmatter_api::line_notes;
 /// Whether an author block's `line` holds authors' notes only: one or more `\thanks{…}`, `\footnote{…}` or
 /// `\IEEEcompsocitemizethanks{…}` (each with an optional `[…]`), and else only spacing (spaces, `~`, `\par`). Such a
 /// line prints no text where it stands, only its notes' marks: the notes are the line's above, as written without the
-/// `\\` before them (`author_block/preprocess.rs` `notes_line_joins_names`; the IEEE reader's grade-and-notes line,
+/// `\\` before them (`defs/author_macros/ijcai.rs` `notes_line_joins_names`; the IEEE reader's grade-and-notes line,
 /// `grade_only_line`).
 pub fn notes_only_line(line: &[Token]) -> bool {
   line_notes(line).is_some_and(|notes| !notes.is_empty())

@@ -1,4 +1,8 @@
-//! Author-line separators: line parts, words, `and` splits, alignment and ACM column unwrapping.
+//! An author line's separators as the old reader reads them: whether a block holds one (`has_author_block_separator`,
+//! authblk's `\author` gate, `authblk_sty.rs`), the separators a name's spacing and marks stand for
+//! (`spaced_name_separators`), a line wrapped whole in one group (`whole_line_group`) and the author-group split
+//! delimiters (`author_group_splits`), with the private part and word readers they share. Moved unchanged by Z18m, which deleted `author_block/`, from
+//! `author_block/separators.rs`.
 
 use super::*;
 use crate::frontmatter_stores::LAYOUT;
@@ -278,38 +282,6 @@ fn comma_out_of_mark_math(span: &[Token]) -> Option<Vec<Token>> {
   } else {
     None
   }
-}
-
-/// Whether an author block is an IJCAI sectioned one: `\affiliations` or `\emails` at its top level (the split's
-/// `Until:` delimiters match nothing deeper), each undefined, `\relax` or a no-op there — the ijcai binding's
-/// (`ijcai_sty.rs`), or a raw derivative's that defines them only in `\@maketitle` (ttm.sty).
-pub(in crate::base_utilities) fn has_ijcai_section_marker(stuff: &Tokens) -> Result<bool> {
-  let markers = [T_CS!("\\affiliations"), T_CS!("\\emails")];
-  let mut depth = 0i32;
-  for token in stuff.unlist_ref() {
-    match token.get_catcode() {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END => depth -= 1,
-      _ if depth == 0 && markers.contains(token) => {
-        let separator = token.defined_as(&TOKEN_RELAX)
-          || match lookup_definition_stored(token)? {
-            None => true,
-            Some(Stored::Expandable(e)) => {
-              e.paramlist
-                .as_ref()
-                .is_none_or(|p| p.get_parameters().is_empty())
-                && matches!(&e.expansion, Some(ExpansionBody::Tokens(t)) if t.is_empty())
-            },
-            Some(_) => false,
-          };
-        if separator {
-          return Ok(true);
-        }
-      },
-      _ => {},
-    }
-  }
-  Ok(false)
 }
 
 // GROUP-level separators for the no-marker author heuristic (OXIDIZED_DESIGN

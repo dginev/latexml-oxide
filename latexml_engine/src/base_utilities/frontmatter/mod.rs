@@ -3,7 +3,7 @@
 use super::*;
 
 // (the old reader's text rules and token primitives, moved by the plan's row "Knowledge in, driver out, one pass")
-mod classify;
+pub(in crate::base_utilities) mod classify;
 pub use classify::*;
 // (Perl's whole-block fallback with its own preparation, kept as the fallback's own, moved by that row)
 mod fallback;

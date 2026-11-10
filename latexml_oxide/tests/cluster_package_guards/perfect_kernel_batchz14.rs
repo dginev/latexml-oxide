@@ -213,7 +213,7 @@ fn an_odd_piece_stays_in_its_marked_row() {
 }
 
 /// The ACM SIG classes' `\alignauthor`, a raw class's tabular juggle, is a column in the rehearsal (1503.06772, 1305.7403, 1502.04662): nothing held, each column its creator, as
-/// `author_block::separators` splits it; a binding that declares it keeps what it prints (OmniBus, `perfect_kernel_batchz2::a_break_a_binding_declares_stands_beside_the_events`).
+/// `classify::separators` splits it; a binding that declares it keeps what it prints (OmniBus, `perfect_kernel_batchz2::a_break_a_binding_declares_stands_beside_the_events`).
 #[test]
 fn alignauthor_is_a_column_of_the_rehearsal() {
   let (xml, json) = dump(repro!("z14_alignauthor_column_of_a_raw_class"));

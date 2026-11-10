@@ -2,7 +2,7 @@
 //! consecutive authors share the affiliations after them (OXIDIZED_DESIGN_DIVERGENCES #947). The 2015 BESIII template
 //! wraps its whole author block in `\begin{small}\begin{center}…\end{center}\vspace{0.4cm}\end{small}` (1507.02068,
 //! 1512.08197, 2201.02056: 385, 377 and 472 names one creator each); `unwrap_alignment_environment`
-//! (author_block/separators.rs) now peels the declarations around the alignment environment and the spacing after it.
+//! (`author_block/separators.rs`'s, deleted with the old driver at DEL2) peeled the declarations around the alignment environment and the spacing after it.
 //! AASTeX's `\affiliation` is REVTeX's (`group_or_marked_affiliation`, revtex4_support_sty.rs): the group rule
 //! (`annotate=run`, 2403.06760) for names requesting no affiliation by a mark, `annotate=new` under `$^{N}$` names
 //! (1202.0629), a line its marks own by its marks (astro-ph0611722), a line's leading label (a mark or a hand-printed

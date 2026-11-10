@@ -9,6 +9,8 @@ mod collaborations;
 pub(in crate::base_utilities) use collaborations::*;
 mod email_block_calls;
 pub(in crate::base_utilities) use email_block_calls::*;
+// (`classify::email_lines`, the text rules on an e-mail's printed ink; not `frontmatter_api::email_lines`, the API's line
+// readers)
 mod email_lines;
 pub(in crate::base_utilities) use email_lines::*;
 mod email_owners;
@@ -27,6 +29,10 @@ mod names_split;
 pub(in crate::base_utilities) use names_split::*;
 mod notes;
 pub use notes::*;
+// (the old reader's last items, moved unchanged from `author_block/` by Z18m into files of their own, so the e0 fence
+// tells them from this library: `old_reader/mod.rs`)
+mod old_reader;
+pub use old_reader::*;
 mod preprocess;
 pub(in crate::base_utilities) use preprocess::*;
 mod rows;
@@ -35,3 +41,5 @@ mod separators;
 pub(in crate::base_utilities) use separators::*;
 mod symbols;
 pub(in crate::base_utilities) use symbols::*;
+// (a class's title code read where it reads `\@author`, ERR2's; Z18m, from `defs/frontmatter_fields/names.rs`)
+pub(in crate::base_utilities) mod title_code;

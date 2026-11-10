@@ -1,4 +1,6 @@
-//! The visible text of a name: name words, particles, qualifiers, name groups and merged creators.
+//! Whether a line continues the author names above it (`names_continue`, the IEEEtran binding's: `ieeetran_cls.rs`),
+//! its text test alone (`names_list_continues`), and the markup a line opens with (`leading_markup`, which authblk's
+//! gate `rows::lines_under_names_read_as_names` reads too). Moved unchanged by Z18m, which deleted `author_block/`, from `author_block/name_text.rs`.
 
 use super::*;
 

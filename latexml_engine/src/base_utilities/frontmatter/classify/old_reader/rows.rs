@@ -1,6 +1,9 @@
-//! Author rows: line-break options, `\hspace` separators, rows of names, spacing runs.
+//! authblk's `\author` gates on an author line's rows (`authblk_sty.rs` `has_separated_names`,
+//! `lines_of_names_before_affil`): a piece that is one macro printing a link (`holds_a_macro_printing_a_link`), lines
+//! under the names that read as more names (`lines_under_names_read_as_names`), and those lines' breaks written as
+//! name separators (`line_breaks_as_name_separators`). Moved unchanged by Z18m, which deleted `author_block/`, from `author_block/rows.rs`.
 
-use super::*;
+use super::{space_parted::space_parted_rows_joined, *};
 
 /// Whether `stuff` holds a piece, parted as the kernel's author read parts its names and lines, that is one macro whose
 /// expansion prints a link alone (`\newcommand{\githubrepo}{\href{https://github.com/NVIDIA/kvpress}{{\faGithub}
