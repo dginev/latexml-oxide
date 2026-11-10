@@ -1,8 +1,10 @@
 % mechanism: an undefined command glues an address when the same word has ink on both sides of it before its `@`
 %   (`events::glues_an_address`, `Event::glued_undef`); a Name whose characters the ink table cannot align — a mark glued
 %   into it reads "Bob Baker1b@x.org", a text no ink record has — fails closed on its span: an Error strictly inside it,
-%   an `@` token of it past the Error's end. So no address is made up of the name's word, the mark and the local part,
-%   and the segmentation is unchanged. OXIDIZED_DESIGN_DIVERGENCES #983
+%   an `@` token of it at or past the Error's end (`…b\foo@x.org` as `…b\foo{}@x.org`). So no address is made up of
+%   the name's word, the mark and the local part. The creators and their count are the reading's without the Error;
+%   the address is not: that reading (`\def\foo{}`) makes up "Baker1b@x.org" from the glued mark alone, so the
+%   decline drops an address the Error did not make. OXIDIZED_DESIGN_DIVERGENCES #983
 % witness: review revERR2b finding 2 (ERR2b: Bob's personname "Bob", the made-up e-mail "Baker1b@x.org"; with a one-word
 %   name, `Bob\textsuperscript{1}\foo b@x.org`, Ann's e-mail "Bob1b@x.org")
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 1 "Undefined control sequence": "Ann Able" and "Bob Baker1b@x.org"

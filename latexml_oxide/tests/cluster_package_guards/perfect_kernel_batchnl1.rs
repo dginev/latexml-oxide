@@ -1,6 +1,6 @@
 //! Guards for NL1, the names line of the one engine's reading ported from the old reader's procedure
 //! (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`; the rule table RT3, rows N1-N3, C2-C5, S1, A2): each fixture
-//! converted with the single engine (until DEL1 also with the switch off), the creators (name and every contact, in
+//! converted once with the single engine, the creators (name and every contact, in
 //! order) pinned. One guard per rule: a marked name (N1-N3), glued initials (S1), a collaboration remark (C2-C5),
 //! a comma a command draws inside a word (A2).
 

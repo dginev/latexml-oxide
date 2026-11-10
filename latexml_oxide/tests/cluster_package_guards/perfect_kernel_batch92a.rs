@@ -38,7 +38,7 @@ macro_rules! repro {
 }
 
 /// The XML's creators and the reading's tuples of one conversion, which must be clean, then its publication
-/// notes' text (`ltx:pubnote`, in order) and the writer's outcome (`"writer"`, null for a family not written).
+/// notes' text (`ltx:pubnote`, in order) and whether the emitter wrote the frontmatter (`"emitted"`).
 pub(super) type Reading = (Vec<Vec<String>>, Vec<String>, Vec<String>, Value);
 
 /// The XML's creators and its publication notes' text (`ltx:pubnote`, in order), the conversion clean.
@@ -65,7 +65,7 @@ fn reading_of(log: &str, xml: &str, json: &str) -> Reading {
     creators,
     tuples(&json["resolved"]),
     notes,
-    json["writer"].clone(),
+    json["emitted"].clone(),
   )
 }
 
@@ -111,7 +111,7 @@ fn with_binary(tex: &str, streaming: bool) -> (Vec<Vec<String>>, Vec<String>) {
 #[track_caller]
 pub(super) fn assert_reading(tex: &str, xml: Option<&[&[&str]]>, tuples: &[&str]) -> Reading {
   let tuples: Vec<String> = tuples.iter().map(ToString::to_string).collect();
-  let (xml_in_process, reading_in_process, notes, writer) = in_process(tex);
+  let (xml_in_process, reading_in_process, notes, emitted) = in_process(tex);
   if let Some(xml) = xml {
     let xml: Vec<Vec<String>> = xml
       .iter()
@@ -123,7 +123,7 @@ pub(super) fn assert_reading(tex: &str, xml: Option<&[&[&str]]>, tuples: &[&str]
   let printed = (xml_in_process.clone(), notes.clone());
   assert_eq!(with_binary(tex, false), printed, "the binary, eager");
   assert_eq!(with_binary(tex, true), printed, "the binary, --streaming");
-  (xml_in_process, tuples, notes, writer)
+  (xml_in_process, tuples, notes, emitted)
 }
 
 /// aa class A of the llncs and aa gate study (1707.06238, 1302.1442; 52 papers): `\inst{\ref{ia},\ref{ib}}` prints "1, 2"

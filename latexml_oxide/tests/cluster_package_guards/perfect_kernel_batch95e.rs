@@ -5,7 +5,7 @@
 //! contact (the fail-safe: an e-mail split never declines a paper's names). OXIDIZED_DESIGN_DIVERGENCES #938 (95e). Witness
 //! 2109.07363 (bundle int124b's A/B: one creator, `merged_creators`). Each repro under
 //! `tools/perfect_kernel/repros/sectioning-frontmatter/` compiles clean with pdflatex (TL 2025); each guard asserts the
-//! reading's tuples and the writer's outcome (in process and the binary, eager and
+//! reading's tuples and the ledger's `emitted` (in process and the binary, eager and
 //! `--streaming`) and the default mode's creators as whole elements (in process and the binary, eager and
 //! `--streaming`), every conversion with no Error and no Warning.
 
@@ -36,5 +36,5 @@ fn a_several_address_email_the_plan_cannot_write_out_stays_whole() {
     "  a Univ X | api:annotate:last",
     "  c email bob@y.org | api:annotate:last ruling3:written-out owner:spelled",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
 }

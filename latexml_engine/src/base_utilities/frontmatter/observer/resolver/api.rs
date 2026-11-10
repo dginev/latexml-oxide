@@ -8,7 +8,7 @@ use crate::base_utilities::clean_frontmatter_labels;
 /// An API call's marked entries as [`Resolver::api`] cuts them ([`mark_led_pieces`]), each with the text it resolves
 /// to under `role` (the e-mails and ORCIDs an affiliation's commands declare taken out, as `api` takes them): the
 /// writer's map from the entries of one call to their events, and through their spans to the tokens the document
-/// queued (FM S2b, `writer/`).
+/// queued (FM S2b; read by the emitter, `emitter::emit`).
 pub(in crate::base_utilities::frontmatter::observer) fn split_pieces(
   events: &[Event],
   role: &str,

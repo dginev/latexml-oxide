@@ -2,7 +2,7 @@
 //! OXIDIZED_DESIGN_DIVERGENCES #837, #942 and this batch's entry). Each family guard converts its family's typical
 //! shape in process and with the binary, eager and `--streaming`
 //! (`perfect_kernel_batch92a::assert_reading`), and asserts the reading's tuples, the XML's whole creator set with
-//! every contact, the writer's outcome `written`, the default mode writing the same, and no Error or Warning
+//! every contact, the ledger's `emitted`, the default mode writing the same, and no Error or Warning
 //! (`perfect_kernel_batch95b::assert_written`). Every repro compiles clean with pdflatex (TL 2025; a class TeX Live
 //! lacks from a witness's copy: jcappub.sty 1509.06963, jheppub.sty 2609.09550, jinstpub.sty 2303.05792, svproc.cls
 //! 2409.01900, ws-procs9x6.cls 0903.4972).
@@ -202,7 +202,7 @@ fn a_letter_spaced_name_is_one_name() {
 #[test]
 fn an_elsarticle_key_answers_no_footnote_mark() {
   let tex = repro!("elsarticle_key_labelled_address_is_no_mark.tex");
-  let (xml, _, _, writer) = assert_reading(
+  let (xml, _, _, emitted) = assert_reading(
     tex,
     Some(&[
       &["Ann Able", "address=Univ A, Town A"],
@@ -225,6 +225,6 @@ fn an_elsarticle_key_answers_no_footnote_mark() {
     ],
   );
   // (written: the reading's items as today's, each placed by its key or the hand mark)
-  assert_eq!(writer, "written", "the writer's outcome");
+  assert_eq!(emitted, true, "emitted");
   assert_eq!(default_mode_creators(tex), xml, "the default mode");
 }

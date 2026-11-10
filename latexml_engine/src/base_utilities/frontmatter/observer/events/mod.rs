@@ -2636,7 +2636,8 @@ pub(in crate::base_utilities) fn mark_held(
 /// Error when its own token is (else its box's cover ends by it), after it when at or past its end. A Name whose
 /// characters `inks` cannot align — no record for its span and text, or one of another length (a mark glued into it:
 /// `Bob Baker\textsuperscript{1}\foo b@x.org` reads "Bob Baker1b@x.org") — fails closed on its span: an Error strictly
-/// inside it, with an `@` token of it past the Error's end, is a glue.
+/// inside it, with an `@` token of it at or past the Error's end (its span end-exclusive, as the ink path's `after`:
+/// `…b\foo@x.org` as `…b\foo{}@x.org`, review revERR2c finding 2), is a glue.
 fn glues_an_address(event: &Event, held: &[HeldError], inks: &InkTable) -> bool {
   let errors: Vec<(u16, u16)> = held
     .iter()
@@ -2654,7 +2655,7 @@ fn glues_an_address(event: &Event, held: &[HeldError], inks: &InkTable) -> bool 
       return false;
     };
     return errors.iter().any(|&(from, to)| {
-      start < from && inks.fonts.iter().any(|&(sign, _)| to < sign && sign < end)
+      start < from && inks.fonts.iter().any(|&(sign, _)| to <= sign && sign < end)
     });
   };
   let before = |ink: &InkAt, from: u16| ink.own.map_or(ink.cover.1 <= from, |own| own < from);

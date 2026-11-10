@@ -133,6 +133,42 @@ fn an_undefined_command_past_a_mark_or_a_note_errs_in_the_name() {
   assert!(xml.contains("Supported by X."), "{xml}");
 }
 
+/// An undefined command right after a `\footnotemark` the reading writes apart from the name: the mark's piece grows over
+/// it (`content::Field::past_held_undefined`), so the name's scan past its marks (`emit::block_names`) counts the mark's
+/// run to where its piece's tokens end and takes it no more — one Error, one ERROR stub (review revERR2c finding 1: ERR2
+/// wrote two stubs for its one Error; the user's ruling "never twice"; Perl and pdflatex one). With the mark's option and
+/// an address after it, the same. Distinct: the apart mark's grown piece, which the scan past it must see.
+#[test]
+fn an_undefined_command_after_a_footnotemark_writes_one_stub() {
+  let (log, xml) = convert(
+    repro!("emitter_undefined_command_after_a_footnotemark_errs_once"),
+    false,
+  );
+  assert_eq!(undefined_errors(&log), ["\\foo"], "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert_eq!(creator_elements(&xml), [
+    "<creator role=\"author\">\n    <personname>Ann Able<note mark=\"*\" role=\"footnotemark\" \
+     xml:id=\"footnote1\"><tags>\n          <tag>*</tag>\n          <tag role=\"refnum\">*</tag>\n          <tag \
+     role=\"typerefnum\">footnote *</tag>\n        </tags></note><ERROR \
+     class=\"undefined\">\\foo</ERROR></personname>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
+  ]);
+  let (log, xml) = convert(
+    "\\documentclass{article}\n\\author{Ann Able\\footnotemark[2]\\foo{} ann@x.org}\\title{T}\n\
+     \\begin{document}\\maketitle\\end{document}\n",
+    false,
+  );
+  assert_eq!(undefined_errors(&log), ["\\foo"], "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
+  assert_eq!(creator_elements(&xml), [
+    "<creator role=\"author\">\n    <personname>Ann Able<note mark=\"\u{2020}\" role=\"footnotemark\" \
+     xml:id=\"footnotex1\"><tags>\n          <tag>\u{2020}</tag>\n          <tag role=\"refnum\">\u{2020}</tag>\n          \
+     <tag role=\"typerefnum\">footnote \u{2020}</tag>\n        </tags></note><ERROR \
+     class=\"undefined\">\\foo</ERROR></personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">ann@x.org</contact>\n  \
+     </creator>",
+  ]);
+}
+
 /// The flip A/B's lost `Error:expected:\fi` chains (1603.08231: 18 off, 2112.06251: 12) are no Errors of the paper's: an
 /// `\and` inside a conditional (sibarticle.sty's `\ifnum \c@numAuthors>1 \and …\fi`) is skipped with the name after it,
 /// as TeX reads the block in one pass (pdflatex 0 errors, "Ann Able" alone); Perl's split at the `\and` tokens cuts each
@@ -237,6 +273,23 @@ fn an_undefined_command_after_a_glued_mark_declines_the_address() {
     creator_elements(&xml)[1],
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob<sup>1</sup><ERROR \
      class=\"undefined\">\\foo</ERROR>b@x.org</personname>\n  </creator>"
+  );
+  // (an `@` token right at the Error's end is past it, the span end-exclusive as the ink path's: `…b\foo@x.org` declines
+  // the address as `…b\foo{}@x.org` does — review revERR2c finding 2, ERR2c kept the made-up "Baker1b@x.org" there)
+  let (log, xml) = convert(
+    repro!("emitter_undefined_command_before_an_address_at_declines_the_glued_mark"),
+    false,
+  );
+  assert_eq!(undefined_errors(&log), ["\\foo"], "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (1, 2), "{log}");
+  assert_eq!(creators(&xml), [
+    row(&["Ann Able"]),
+    row(&["Bob Baker 1 b \\foo @x.org"])
+  ]);
+  assert_eq!(
+    creator_elements(&xml)[1],
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<sup>1</sup>b<ERROR \
+     class=\"undefined\">\\foo</ERROR>@x.org</personname>\n  </creator>"
   );
 }
 

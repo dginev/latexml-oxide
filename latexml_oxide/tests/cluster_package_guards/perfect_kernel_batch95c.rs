@@ -7,7 +7,7 @@
 //! OXIDIZED_DESIGN_DIVERGENCES #938. Each guard converts its repro under
 //! `tools/perfect_kernel/repros/sectioning-frontmatter/` in process and with the binary, eager and
 //! `--streaming` (`perfect_kernel_batch92a::assert_reading`), asserts the XML's creators with every contact and the
-//! reading's tuples whole, no Error or Warning, the writer's outcome, and that the default mode (the fleet's) writes the
+//! reading's tuples whole, no Error or Warning, the ledger's `emitted`, and that the default mode (the fleet's) writes the
 //! same creators. Every repro compiles clean with pdflatex (TL 2025).
 
 use latexml::util::test::{convert_with_setup_then, error_count, warning_count};
@@ -55,7 +55,7 @@ fn an_address_inside_an_entry_is_its_spellers_email() {
     "  a Univ Y, Town | ruling1:request ruling3:address-out",
     "  c email zed@y.edu | ruling1:request owner:entry-address owner:only-carrier",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
@@ -90,7 +90,7 @@ fn an_email_line_continuing_an_entry_is_its_spellers_emails() {
     "  a Univ Y | ruling1:request line:continued ruling3:address-out",
     "  c email cid.cole@y.org | ruling1:request line:continued owner:entry-address owner:spelled",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
@@ -116,7 +116,7 @@ fn a_mark_led_address_line_today_an_affiliation_is_cut() {
     "  a Univ Y | ruling1:request",
     "  c email ccole@y.org | ruling1:request",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 
@@ -142,7 +142,7 @@ fn an_api_entrys_address_is_its_spellers_email() {
     "C Bob Baker [] | line:names",
     "  a Dept X, Univ Y, Ph: 123, City | api:annotate:run ruling3:address-out",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(default_mode_creators(tex), owned(xml));
   let tex = repro!("llncs_institute_address_group_is_its_spellers_emails.tex");
   let xml: &[&[&str]] = &[
@@ -169,7 +169,7 @@ fn an_api_entrys_address_is_its_spellers_email() {
     "  a Univ Y, Town | api:labelseq ruling3:address-out",
     "  c email cid.cole@y.org | api:labelseq owner:entry-address owner:spelled",
   ]);
-  assert_eq!(reading.3, Value::from("written"));
+  assert_eq!(reading.3, Value::from(true));
   assert_eq!(default_mode_creators(tex), owned(xml));
 }
 

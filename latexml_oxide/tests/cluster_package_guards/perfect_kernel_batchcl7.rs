@@ -65,7 +65,7 @@ fn a_call_the_reading_writes_nothing_of_is_written_as_queued() {
   let (log, xml) = run(repro!("cl7_iopart_ead_without_address"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
-    log.contains("the call is written as queued, as the switch off writes it"),
+    log.contains("the call is written as queued, the queue digested as Perl's"),
     "{log}"
   );
 

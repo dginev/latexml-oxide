@@ -46,8 +46,8 @@ fn run_with_reading(tex: &str) -> (String, String, String) {
 /// 650 names, 16,899 tokens, past the 16,383 positions its `\lx@field@mark` takes (BESIII's 2204.09614, 18,395 tokens; 2404.06718,
 /// 2410.11607), and 500 revtex `\author` calls of 16,500 tokens together (2607.15927, 2512.08803), are read under `=2`: every name its
 /// creator, no Warning. Each is one distinct path: the kernel block whose mark ran out, and the binding calls past them together. With the
-/// switch off both stay as the old reader cuts them, the blocks past the 14 bits the field's calls take together out of positions
-/// (`ledger::out_of_positions`), the dump's stamp `overflow` beside its reason, as before positions were per call; under `=2` none is. On
+/// switch off (gone since DEL1) both stayed as the old reader cut them, the blocks past the 14 bits the field's calls take together
+/// out of positions (`ledger::out_of_positions`), as before positions were per call; under `=2` none is. On
 /// int145a the kernel half reads one creator under `=2`; the revtex half's creators are the same there, its RED the Warning's count alone.
 #[test]
 fn a_block_past_the_stamps_positions_is_read() {
@@ -91,7 +91,7 @@ fn a_block_past_the_stamps_positions_is_read() {
 
 /// A creator call a block's own expansion makes keeps its keyvals on the Name it prints (`field_notes::FieldCreator`,
 /// `events::creator_roles`): PoS's `\speaker{Ann Able}` (`\lx@add@creator[role=speaker]`, 0910.5686, 1007.2355, 1111.2428, 1111.6944) is
-/// `role=speaker` under `=1` and `=2` as with the switch off, written from the call's name and not the call (`emitter::emit::event_run`:
+/// `role=speaker` as with the switch off, written from the call's name and not the call (`emitter::emit::event_run`:
 /// the call written again added a second creator, a nameless one, holding Ann Able's institute), Bob Baker beside it `role=author`.
 #[test]
 fn a_creator_call_in_a_block_keeps_its_role() {
@@ -153,7 +153,7 @@ fn a_link_printing_a_name_is_the_name() {
 /// `\lx@add@author`'s membership readout (`frontmatter_fields::names::written_membership_out`) reads a grade as a suffix of grade words,
 /// its commas from the last leftward, stopping at the first tail holding another word: linear (the readout per comma was quadratic on
 /// `=2`'s queued block of 418 names, 1507.02068) with no cap on what the grade's group holds. `{\itshape Fellow, IEEE\thanks{<300
-/// characters>}}` is Ann Able's `membership` with the switch off, as int145a's, the thanks the document's pubnote there; F1's 256-token
+/// characters>}}` was Ann Able's `membership` with the switch off, as int145a's, the thanks the document's pubnote there; F1's 256-token
 /// cap read it into her name. Under `=2` the thanks is her note.
 #[test]
 fn a_grade_with_a_long_note_is_the_grade() {

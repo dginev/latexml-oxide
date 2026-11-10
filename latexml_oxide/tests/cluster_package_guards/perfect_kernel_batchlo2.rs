@@ -5,7 +5,7 @@
 //! (`a_row_address_cut_keeps_its_ink`), a note after a block's labelled entries, or on a line under one, the block's: one
 //! pubnote, as Perl (`a_note_after_the_entries_is_the_blocks`, `a_note_line_under_an_entry_is_the_blocks`; LO2r2), and a
 //! label cleaned on both sides as Perl's `cleanFrontmatterLabels` (`a_creator_calls_ref_label_answers_its_ref`). The tail a raw macro appends to `\@author`:
-//! `perfect_kernel_batchz4b::annotate_made_reaches_every_name`. Each runs `=2`, most the switch off too.
+//! `perfect_kernel_batchz4b::annotate_made_reaches_every_name`. Each converts once (`=2` is the only mode).
 
 use latexml::util::test::{error_count, warning_count};
 

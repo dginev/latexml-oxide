@@ -99,7 +99,7 @@ fn reset_rehearsal_budget() {
   LEFT_OUT.set(0);
 }
 
-/// Run `rehearsals` that read for the frontmatter content check alone (`reading::read_at_flush`'s calls a block's own
+/// Run `rehearsals` that read for the frontmatter content check alone (`reading::read_pending`'s calls a block's own
 /// expansion made, `ApiCall::inside_events`) from the check's own allowance, one rehearsal's reads ([`RUN_READS`]) for
 /// the conversion, never from the reads the output's rehearsals may make: a check never moves what is written (a later
 /// call's or a later flush's block over budget for it: revtex's `\collaboration{…}` after an `\author`, its block's own

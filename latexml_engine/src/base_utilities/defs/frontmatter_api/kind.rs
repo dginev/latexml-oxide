@@ -430,7 +430,7 @@ fn mark_led_addresses(line: &Tokens) -> Option<(Vec<Token>, Tokens)> {
 
 /// The content of `content` inside the one-argument wrapper `cs` round all of it (`\lx@affiliation@withsup{…}`), and
 /// whether it was.
-pub(super) fn within_wrapper(content: &Tokens, cs: &str) -> (bool, Tokens) {
+fn within_wrapper(content: &Tokens, cs: &str) -> (bool, Tokens) {
   let v = content.unlist_ref();
   if v.len() >= 3
     && v[0] == T_CS!(cs)

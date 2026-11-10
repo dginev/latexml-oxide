@@ -31499,7 +31499,7 @@ in `\\` under each `\and` column's name (`\IEEEauthorblockN{Ann Able} \textit{Sc
 `\IEEEauthorblockA` row went to the last author. And an `\IEEEauthorrefmark{1}`-led address line
 (`\IEEEauthorrefmark{1}\{ms1801, bob\}@x.edu`, 2301.03018, 2510.06608) stayed an affiliation of every mark-1 author:
 `relocate.rs` `leading_line_label` compared the first token with `\textsuperscript` literally, so the Kind step
-(`affiliations.rs` `kind_entry_addresses`, OD #956) never took its addresses out.
+(`defs/frontmatter_api/kind.rs` `kind_entry_addresses`, OD #956) never took its addresses out.
 
 **Rust behavior**: a bare run that prints nothing once its line breaks (`\\` with its `*` and `[…]`, `\newline`) are
 left out (`prints_nothing`, email_owners.rs, now `pub`) passes through as its spaces and braces (a group it opens
@@ -33067,14 +33067,19 @@ address and made Ann's e-mail, Bob lost (one creator). **Now:** (1) a piece grow
 right after it (`emitter/content.rs` `Field::past_held_undefined`, told by the rehearsal's `Error:undefined:` record at
 the command's position, not by its spelling); (2) a name takes the held undefined commands past its marks and notes, up
 to the next separator or name, written after them (`emitter/emit.rs` `block_names`; `event_run_at` returns where the
-written tokens end, so nothing is taken twice); (3) an address is declined only where an undefined command glues it: the same word has ink before the
+written tokens end, and a mark written apart counts to where its piece's tokens end, so nothing is taken twice:
+`Ann Able\footnotemark\foo{} \and Bob Baker` writes one stub, review revERR2c finding 1); (3) an address is declined only where an undefined command glues it: the same word has ink before the
 command's Error and ink after it, both before the word's first `@` ("Bob|b@": `Bob\email{b@x.org}` prints "Bobb@x.org",
 an address no word of the source spells), told by where `InkTable` says each character prints (`events/mod.rs`
 `glues_an_address`, setting `Event::glued_undef` in `mark_held`). A Name the ink table cannot align — no record for its
 span and text, or one of another length, as when a mark is glued into it (`Bob Baker\textsuperscript{1}\foo b@x.org`
-reads "Bob Baker1b@x.org") — fails closed on its span: an Error strictly inside it with an `@` token of it past the
-Error's end declines it (review revERR2b finding 2: the ink path alone made up the e-mail "Baker1b@x.org"; it also
-declines `Bob\textsuperscript{1}b\foo{}@x.org`, whose local part is wholly before the command). Such a Name is never
+reads "Bob Baker1b@x.org") — fails closed on its span: an Error strictly inside it with an `@` token of it at or past
+the Error's end (end-exclusive, as the ink path's: `…b\foo@x.org` as `…b\foo{}@x.org`, review revERR2c finding 2)
+declines it (review revERR2b finding 2: the ink path alone made up the e-mail "Baker1b@x.org"; it also declines
+`Bob\textsuperscript{1}b\foo{}@x.org`, whose local part is wholly before the command). In that shape the decline is
+no undoing of a glue: the reading without the Error (`\def\foo{}`) makes up the same "Baker1b@x.org" from the glued
+mark alone (a pre-existing reading of a superscript mark glued before an address, `Bob Baker\textsuperscript{1}b@x.org`),
+so the fallback keeps that reading's creators and their count and declines an address the Error did not make. Such a Name is never
 read as an address, by the names line's address extraction (`resolver/lines.rs` `names_without_addresses`) or as an
 address line (`resolver/blocks.rs`): Bob stays a creator whose piece is digested from its tokens, as Perl's split at
 `\and` makes him. Every other undefined command leaves the reading exactly as without its Error: one past the `@`
@@ -33082,7 +33087,7 @@ address line (`resolver/blocks.rs`): Bob stays a creator whose piece is digested
 (`\texttt{ann@x.org}\foo{} Univ X`, `(ann@x.org\foo)`), and one with the whole local part before it ("ann|@":
 `ann\foo@x.org`, Ann's e-mail `ann@x.org` as with `\def\foo{}`; review revERR2b finding 3), each Error raised by the
 flush's net. So an undefined command never moves a separator: the creators are those of the reading without its Error,
-except that the address it glued is declined; (4) the
+except that the address it glued, or the fallback's address above, is declined; (4) the
 flush's net (`observer/reading.rs` `HeldUndefined`, from `read_at_flush`, raised in `place.rs` `digest_front_matter`
 after the digest loop): each held `\cs` whose tally of undefined names (`LogState::undefined`) did not move during the
 flush and that no code of the flush assigned a meaning, even locally (a meaning recorder over the flush,

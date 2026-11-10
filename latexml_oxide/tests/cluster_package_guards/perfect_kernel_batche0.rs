@@ -275,21 +275,9 @@ const OLD_READER_NEEDLES: [&str; 4] = [
 fn the_old_reader_takes_no_new_decision() {
   const WHY: &str = "A new ownership rule lands in `observer/resolver/`, not in the old reader, which is deleted before \
                      the merge: docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md.";
-  let dir = format!("{BASE}/author_block");
-  let mut counts: BTreeMap<String, usize> = BTreeMap::new();
-  let mut lines = 0;
-  for file in rust_files(&dir) {
-    let short = file.rsplit('/').next().expect("a file name").to_string();
-    for code in code_lines(&file) {
-      lines += usize::from(!code.trim().is_empty());
-      for needle in OLD_READER_NEEDLES {
-        let n = code.matches(needle).count();
-        if n > 0 {
-          *counts.entry(format!("{short} {needle}")).or_default() += n;
-        }
-      }
-    }
-  }
+  let (counts, lines) = emissions(&[format!("{BASE}/author_block")], |file| {
+    file.rsplit('/').next().expect("a file name").to_string()
+  });
   assert_debts(
     "the old reader's emissions",
     OLD_READER_EMISSIONS,
@@ -300,6 +288,67 @@ fn the_old_reader_takes_no_new_decision() {
     lines <= OLD_READER_CODE_LINES,
     "the old reader grew to {lines} code lines, over {OLD_READER_CODE_LINES}. {WHY} Raising this ceiling needs the main \
      session's decision."
+  );
+}
+
+/// What `dirs`' code emits into the API ([`OLD_READER_NEEDLES`], each file keyed by `key`) and its non-blank code lines.
+fn emissions(dirs: &[String], key: impl Fn(&str) -> String) -> (BTreeMap<String, usize>, usize) {
+  let mut counts: BTreeMap<String, usize> = BTreeMap::new();
+  let mut lines = 0;
+  for file in dirs.iter().flat_map(|dir| rust_files(dir)) {
+    let short = key(&file);
+    for code in code_lines(&file) {
+      lines += usize::from(!code.trim().is_empty());
+      for needle in OLD_READER_NEEDLES {
+        let n = code.matches(needle).count();
+        if n > 0 {
+          *counts.entry(format!("{short} {needle}")).or_default() += n;
+        }
+      }
+    }
+  }
+  (counts, lines)
+}
+
+/// What the API's own Cut and Kind and the field readers Z18a moved out of `author_block/` unchanged
+/// (`defs/frontmatter_api/`, `defs/frontmatter_fields/`) emit into the API, per file (review revZ18a check 3: the four
+/// [`OLD_READER_EMISSIONS`] rows the move paid, `affiliations.rs lx@annotate@frontmatter` 2, `collaborations.rs annotate=` 1
+/// and `lx@add@` 1, `name_text.rs lx@add@` 2, now these): each a debt, as there.
+const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
+  ("frontmatter_api/cut.rs lx@annotate@frontmatter", 2),
+  ("frontmatter_fields/names.rs annotate=", 1),
+  ("frontmatter_fields/names.rs lx@add@", 3),
+];
+
+/// The moved code's non-blank code lines at Z18a: a ceiling, as [`OLD_READER_CODE_LINES`] (what moved may shrink, never
+/// grow back into a reader of its own).
+const MOVED_CUT_KIND_CODE_LINES: usize = 1_393;
+
+/// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
+#[test]
+fn the_moved_cut_and_kind_take_no_new_decision() {
+  const WHY: &str = "The API's own Cut and Kind and the field readers moved out of `author_block/` unchanged (Z18a); a new \
+                     ownership rule lands in `observer/resolver/`, on the digested events, not here.";
+  let dirs = [
+    format!("{BASE}/defs/frontmatter_api"),
+    format!("{BASE}/defs/frontmatter_fields"),
+  ];
+  let (counts, lines) = emissions(&dirs, |file| {
+    file
+      .strip_prefix(&format!("{BASE}/defs/"))
+      .unwrap_or(file)
+      .to_string()
+  });
+  assert_debts(
+    "the moved Cut and Kind's emissions",
+    MOVED_CUT_KIND_EMISSIONS,
+    &counts,
+    WHY,
+  );
+  assert!(
+    lines <= MOVED_CUT_KIND_CODE_LINES,
+    "the moved Cut and Kind grew to {lines} code lines, over {MOVED_CUT_KIND_CODE_LINES}. {WHY} Raising this ceiling \
+     needs the main session's decision."
   );
 }
 
@@ -346,6 +395,22 @@ fn old_reader_exports() -> std::collections::BTreeSet<String> {
   names
 }
 
+/// How often `source` uses the old reader's `name`: in its code ([`uses_of`]), and as an inline capture of a format string,
+/// `{name}` or `{name:…}` in a literal (`s!("{CUT_COPY_PLACE}{key}:{label}")`; review revZ18a, a blind spot of the lexing,
+/// which lifts every literal out of the code); `imports` are the byte ranges of its code's `use` statements.
+fn uses_in(source: &RustSource, imports: &[std::ops::Range<usize>], name: &str) -> usize {
+  let open = format!("{{{name}");
+  let captures = |literal: &String| {
+    literal
+      .match_indices(&open)
+      .filter(|(at, _)| {
+        literal[at + open.len()..].starts_with(['}', ':']) && !literal[..*at].ends_with('{')
+      })
+      .count()
+  };
+  uses_of(&source.code, imports, name) + source.literals.iter().map(captures).sum::<usize>()
+}
+
 /// How often `code` uses the old reader's `name` (see [`ONE_ENGINE_REACH`] for what counts as a use); `imports` are the byte
 /// ranges of `code`'s `use` statements.
 fn uses_of(code: &str, imports: &[std::ops::Range<usize>], name: &str) -> usize {
@@ -388,6 +453,10 @@ fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
     1
   );
   assert_eq!(uses_of("let x = is_note; f(a, is_note)", &[], "is_note"), 1);
+  assert_eq!(
+    uses_in(&lex_rust(r#"s!("{X}{X}{{X}}{X:?}{XY}")"#), &[], "X"),
+    3
+  );
   let exported = Regex::new(
     r"(?m)^pub(?:\([^)]*\))?\s+(?:fn|const|static|struct|enum|type|trait|mod)\s+([A-Za-z_][A-Za-z0-9_]*)",
   )
@@ -441,7 +510,7 @@ fn the_one_engine_reaches_the_old_reader_only_through_its_survivors() {
       .map(|found| found.range())
       .collect();
     for name in names.iter().filter(|name| !own.contains(name.as_str())) {
-      let n = uses_of(&source.code, &imports, name);
+      let n = uses_in(source, &imports, name);
       if n > 0 {
         counts.insert(format!("{short} {name}"), n);
       }
