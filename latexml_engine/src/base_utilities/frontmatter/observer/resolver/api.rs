@@ -30,6 +30,23 @@ pub(in crate::base_utilities::frontmatter::observer) fn split_pieces(
     .collect()
 }
 
+/// Whether a call is a class's one shared institute (`_share=authors`, not a piece its marks split) holding marks typed by
+/// hand, a paper's own (`\affmark{1} City University … \quad \affmark{2} ShanghaiTech University … \\ \affmark{4} …`,
+/// 2608.21425): no line or mark of it leads an institute of its own — the one entry, which no class mark requests, the
+/// block's whole, as the old split's `marks_pick` left it ("an institute holding marks of its own" is not shared). The
+/// class's own `\inst` marks in it (aa's `\institute{\inst{1} Univ X \\ \inst{2} Univ Y}`, 1003.3020) still lead its
+/// lines. The reading keeps it whole ([`Resolver::api`]) and the emitter writes it so (`emit::item_call`).
+pub(in crate::base_utilities::frontmatter::observer) fn hand_marked_share(
+  attrs: &str,
+  events: &[Event],
+) -> bool {
+  shares_the_row(attrs)
+    && attr_value(attrs, "_markpiece") != Some("true")
+    && events
+      .iter()
+      .any(|e| e.kind == EventKind::Mark && !is_class_request(e))
+}
+
 impl Resolver {
   /// An empty entry's authors hold its role, as today's attaches the empty contact to them (`annotate=`: the last
   /// author, all, the run of new ones, the last N) — part of today's contact pile too (`distribute_upfront`: amsart's
@@ -424,16 +441,7 @@ impl Resolver {
     // (one numbered entry whose every line a mark leads — `\institute{\inst{1} Univ X \\ \inst{2} Univ Y}`, the one entry
     // the class numbers with no `\and` (aa class D of the stage-6 gate study, 1003.3020, 0904.2180): each line its own
     // entry, labelled by its mark as a leading mark labels one, not the whole by the class's number — `line_led_pieces`)
-    // (not a class's one shared institute holding marks typed by hand, a paper's own (`\affmark{1} City University …
-    // \quad \affmark{2} ShanghaiTech University … \\ \affmark{4} …`, 2608.21425): no line of it is one institute its
-    // mark labels, and no name's `\inst{n}` picks it — the one entry, which no mark requests, the block's, as the old
-    // split's `marks_pick` left it ("an institute holding marks of its own" is not shared); the class's own `\inst`
-    // marks in it (aa's `\institute{\inst{1} Univ X \\ \inst{2} Univ Y}`, 1003.3020) still lead its lines)
-    let hand_marked_share = shares_the_row(attrs)
-      && attr_value(attrs, "_markpiece") != Some("true")
-      && events
-        .iter()
-        .any(|e| e.kind == EventKind::Mark && !is_class_request(e));
+    let hand_marked_share = hand_marked_share(attrs, events);
     if !split
       && !hand_marked_share
       && tag != "ltx:creator"

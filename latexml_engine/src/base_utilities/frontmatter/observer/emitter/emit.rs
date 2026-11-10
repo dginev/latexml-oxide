@@ -1556,7 +1556,8 @@ fn item_call(
     && let Some(call) = api_call(index)
     && (call.role == role || (note && call.parent == "ltx:creator"))
     && let Some(command) = call.command.as_ref()
-    && split_pieces(&call.events, &call.role).len() < 2
+    && (split_pieces(&call.events, &call.role).len() < 2
+      || resolver::hand_marked_share(&call.attrs, &call.events))
     // (an entry whose inner contact prints through no API call stays in its content: its piece, or its text, 2401.05290)
     && (contact_role
       || !call.events.iter().any(|e| {
@@ -1726,6 +1727,40 @@ fn item_call(
         ) == Some(true)
         && let Some(tokens) = span_tokens_of(index, span)
       {
+        // (an ORCID whose link prints no word — the TikZ "iD" icon of the `\orcidicon` template, `\newcommand{\orcidA}
+        // {\href{https://orcid.org/…}{\orcidicon}}`, a logo graphic — is the kernel's ORCID link, its iD in the link and its
+        // title, the icon as printed (`\lx@orcid@href`), as `\lx@author@href` makes a name's link the contact
+        // (OXIDIZED_DESIGN_DIVERGENCES #960): written as a plain link, the iD's title was lost (2008.02173, 2009.11534;
+        // 2507.12319, 2503.04867, 2406.08258))
+        let printed = event_at(
+          index,
+          span,
+          |e| e.kind == EventKind::Contact,
+          |e| e.text.clone(),
+        )
+        .unwrap_or_default();
+        let icon = printed
+          .split(|c: char| !c.is_alphanumeric())
+          .all(|word| word.is_empty() || word.eq_ignore_ascii_case("id"));
+        let id = dom::orcid_id(&assoc.text).trim();
+        if role == "orcid" && icon && !id.is_empty() {
+          let mut content = vec![
+            T_BEGIN!(),
+            T_CS!("\\def"),
+            T_CS!("\\lx@orcid@known"),
+            T_BEGIN!(),
+          ];
+          content.extend(mouth::tokenize_internal(TeXString::assembled(id.to_string())).unlist());
+          content.extend([
+            T_END!(),
+            T_CS!("\\let"),
+            T_CS!("\\href"),
+            T_CS!("\\lx@orcid@href"),
+          ]);
+          content.extend(tokens.unlist_ref().iter().copied());
+          content.push(T_END!());
+          return Ok(annotate_now("ltx:contact", &keys, &content));
+        }
         return Ok(annotate_now("ltx:contact", &keys, tokens.unlist_ref()));
       }
       // (an entry a note holds, a mark leading it: its argument under the mark's reader, as `\\lx@add@thanks` makes it,
@@ -2352,8 +2387,22 @@ fn items_to_emit<'a>(
       |e| e.kind == EventKind::Contact,
       |e| e.role.as_deref() == Some("email") && e.meaning != events::EmailMeaning::Own,
     );
+    // (a link whose ink is a binding's e-mail call — `\thanks{… E-mail: \href{mailto:a@x}{\email{a@x}}.}`, 1004.3134 —
+    // prints the address nowhere in the note: the call makes the contact, which stays, as it does without the link)
+    let call_inside = with_block(index, false, |_, events| {
+      let inner = events.iter().flat_map(|e| &e.inner);
+      events.iter().chain(inner).any(|e| {
+        e.kind == EventKind::Contact
+          && e.role.as_deref() == Some("email")
+          && e.meaning != events::EmailMeaning::Own
+          && e
+            .span
+            .is_some_and(|(s, t)| span.0 <= s && t <= span.1 && (s, t) != span)
+      })
+    });
     a.rule.contains("ruling4:inner-contact")
       && routed == Some(false)
+      && !call_inside
       && notes
         .iter()
         .any(|&(o, i, (s, t))| o == owner && i == index && s <= span.0 && span.1 <= t)
@@ -2378,7 +2427,10 @@ fn items_to_emit<'a>(
   // maarten@…\\{}$^b$IFAE …\\E-mail: peris@…}` whose names' marks the queue did not cut it by (`$^{\a 1}$` printing
   // "a1"), hep-ph0011101, brief KB1)
   let by_pieces = |index: usize| {
-    api_call(index).is_some_and(|call| split_pieces(&call.events, &call.role).len() >= 2)
+    api_call(index).is_some_and(|call| {
+      split_pieces(&call.events, &call.role).len() >= 2
+        && !resolver::hand_marked_share(&call.attrs, &call.events)
+    })
   };
   // (an entry whose inner e-mail the reading wrote out whole — each address it prints its own item, `ruling3:written-out` —
   // keeps no copy of the call either: `\institute{University of Arizona\\ \email{$\{$npcarpenter\,|\,giacobazzi$\}@$arizona.edu}}`,

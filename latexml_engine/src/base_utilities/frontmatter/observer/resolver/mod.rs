@@ -281,7 +281,7 @@ mod placed;
 mod post;
 mod words;
 
-pub(in crate::base_utilities::frontmatter::observer) use api::split_pieces;
+pub(in crate::base_utilities::frontmatter::observer) use api::{hand_marked_share, split_pieces};
 use blocks::Chain;
 // (and the flush's Kind step for an entry's address line, `insert::kind_address_lines`: OD #966)
 pub(in crate::base_utilities::frontmatter) use labels::{AddressRun, address_runs};

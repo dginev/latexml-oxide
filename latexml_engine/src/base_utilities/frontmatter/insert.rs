@@ -2361,6 +2361,7 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
         // OD #901; 1103.2027's shape). Not one holding a note, whose address stays the note's)
         if prints
           && kept_before
+          && authors.len() > 1
           && printed.contains('@')
           && entry.get_attribute(ROW_SHARED).as_deref() == Some("true")
           && nodes.iter().all(|node| {

@@ -766,6 +766,15 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=orcid,#1]{\\expandafter\\lx@orcidlink\\expandafter{\\lx@orcid@id{#2}}{\\lx@orcidlogo}}"
   );
   DefMacro!("\\lx@orcid@id Semiverbatim", sub[(id)] { Ok(orcid_id(id)) });
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #960): the frontmatter emitter's `\href` for an ORCID contact whose link prints
+  // no word (`\href{https://orcid.org/…}{\orcidicon}`, the TikZ "iD" icon): the kernel's ORCID link to the iD the
+  // reading read (`\lx@orcid@known`, set by the emitter: a template's `\xdef` may leave the iD's macro in the address,
+  // `https://orcid.org/\orcidauthorSKP`), its iD in the link and its title, the icon as printed (2008.02173,
+  // 2009.11534).
+  DefMacro!(
+    "\\lx@orcid@href[]{}{}",
+    "\\expandafter\\lx@orcidlink\\expandafter{\\lx@orcid@known}{#3}"
+  );
   // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #960): an `\href` to an ORCID record in an author's name that prints no
   // word — the TikZ "iD" icon of the `\orcidicon` template (`\newcommand{\orcidA}{\href{https://orcid.org/…}
   // {\orcidicon}}`, `\author{M. Ahumada \orcidA{}}`: 2507.12319, 2503.04867, 2406.08258), a logo graphic — is the
