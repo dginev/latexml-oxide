@@ -1,0 +1,20 @@
+% RED (synthetic, review revZ18o R-A; introduced by Z18o, 0 of the 1,166 aas census papers)
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: zz@x.org printed in Bob Baker's own block, under "2 Univ B"
+% engines: rust int155a4 = Bob Baker's e-mail; Z18o = a nameless creator's, 0 warnings (silent): the `continued`
+%          exemption (`observer/resolver/api.rs` ~907-917) covers `annotate=run` only, so this `annotate=new` entry is
+%          tagged `RUN_LEFTOVER` although its run is the whole last `\author` call's names
+% fix:     tag no entry whose run is the whole last `\author` call's names (Z18o2)
+\documentclass{emulateapj}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\affil{$^1$Univ A}
+\author{Bob Baker$^{2}$}
+\affil{$^2$Univ B}
+\affil{Email: zz@x.org}
+\begin{abstract}A.\end{abstract}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

@@ -33927,11 +33927,19 @@ unrequested `\affil{$^*$ Email: zz@uni.edu}` whose `∗` was dropped). The readi
 (`Resolver::stopgap`), and the Link step reads them with no carrier (`answer_inner_emails`; the text reading
 `take_out_entry_addresses`): the block's, once, the unrequested line's `∗` kept (`<sup>∗</sup>zz@uni.edu`). Only a walk's own
 stopgap: a `run` continuing the contact before it (`\author{Bob Baker}\affil{Univ B}\affil{Email: zz@x.org}`, printed
-under him) and a sole author keep their carrier; a requested `$^\dagger$` line stays its requester's. (F2) A line of an
+under him) and a sole author keep their carrier; a requested `$^\dagger$` line stays its requester's. **Known RED (review revZ18o
+R-A, introduced, synthetic, 0 of the 1,166 aas census papers):** the `continued` exemption covers only `annotate=run`, so
+an `annotate=new` entry continuing its own `\author` call's block (`\author{Ann Able$^{1}$}\affil{$^1$Univ A}\author{Bob
+Baker$^{2}$}\affil{$^2$Univ B}\affil{Email: zz@x.org}`, printed in Bob's block) is tagged too and its e-mail goes to a
+nameless creator, silently (int155a4: Bob's); the place ties it, so the fix is to tag no entry whose run is the whole last
+`\author` call's names (Z18o2). Also Z18o2: the unrequested-symbol guard asserts by substring, and the Kind-step and
+text-reading rows share one guard (R-B); a labelled mailbox-link line is named by its label alone where the address path
+puts the class's entry name before it (`kind.rs` ~180-187, N1; fold into `split_email_label`); 2604.04847's link line,
+which prints an address, changed through this branch, untraced (N2). (F2) A line of an
 affiliation-kind entry that is one link to a mailbox — `\href{mailto:…}{Write to us}`, `Contact: \href{mailto:…}{here}`,
 a bare address as target (`\href{zz@x.org}{…}`, the ACL template's, `links_a_mailbox`) — is an e-mail line under the text
-before the link (user ruling 2026-10-20, batch 77p r8), the link kept a link: the Kind step's (frontmatter_api/kind.rs
-`mailbox_link_line`, the home of the deleted `mailto_line`); for every class, as the Kind step is shared. Perl reads no
+before the link (user ruling 2026-10-20, batch 77p r8), the link kept a link: the Kind step's (`classify/links.rs`
+`mailbox_link_line`, called from frontmatter_api/kind.rs; the home of the deleted `mailto_line`); for every class, as the Kind step is shared. Perl reads no
 e-mail inside an `\affil` (an affiliation). Guards `perfect_kernel_batchz18o::{aastex_unmarked_email_line_under_marked_names_is_the_blocks,
 aastex_unrequested_symbol_email_line_under_marked_names_is_the_blocks, aastex_mailbox_link_line_is_an_email}`; repros
 `sectioning-frontmatter/aastex_affil_{unmarked_email_line,unmarked_bare_address,unmarked_mailbox_link,unrequested_symbol_email_line}_under_marked_names_is_the_blocks.tex`,
