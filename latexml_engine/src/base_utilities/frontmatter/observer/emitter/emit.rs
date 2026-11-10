@@ -42,7 +42,7 @@ use crate::base_utilities::{
       resolver::{
         BlockCheck, LostInk, RCreator, RuleDrop, Written, check_blocks, contact_parts,
         creator_call, is_creator_call, merged_names, own_email_label, printed_email_label,
-        read_events, split_pieces, uncoordinated_marks,
+        read_events, shares_the_row, split_pieces, uncoordinated_marks,
       },
     },
     relocate::{BLOCK_ZONE, FOOTER_ZONE},
@@ -1254,8 +1254,8 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
   // `ledger::symbol`). The text written is tested too: one holding a control sequence's name or a tie lost what it
   // printed, counted (`\email{\{a, b\}@x\footnote{…}}` writes `a@x\lx@fm@obs@fnnote`, review revZ18c S3; 2008.05861's
   // `…hk~~`); a well-formedness test would count `\{a,b\}@x\_y.org`'s `a@x_y.org`, all it prints (review revZ18d finding 1)
-  // A math shift around a printed character prints nothing of its own, nor a tie between the list's addresses, which the
-  // address written holds none of (`$\{$stomforde$|$bsick$\}$@uni-kassel.de;~cms@…`, 1701.08125, which the old split
+  // A math shift around a printed character prints nothing of its own, nor a separator between the list's addresses (a
+  // tie, spacing: `shared_row::is_call_separator`), which the address written holds none of (`$\{$stomforde$|$bsick$\}$@uni-kassel.de;~cms@…`, 1701.08125, which the old split
   // wrote as text too): no markup lost.
   let plain = !address.contains(['\\', '~'])
     && content[from..to].iter().all(|t| {
@@ -1263,7 +1263,7 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
         t.get_catcode(),
         Catcode::LETTER | Catcode::OTHER | Catcode::SPACE | Catcode::MATH
       ) || symbol(t).is_some()
-        || *t == T_ACTIVE!('~')
+        || is_call_separator(t)
     });
   let why = if read.is_none() {
     Some("one address of a list past the positions")
@@ -1464,15 +1464,6 @@ pub(super) fn in_its_font(font: Option<Rc<Font>>, tokens: Vec<Token>) -> Tokens 
   }
 }
 
-/// Whether `call` is a row contact every author shares unless marks pick it (`_share=authors`: llncs's sole `\institute`,
-/// `shared_row::share_row_contacts`), whose e-mail calls carry their labels to their items (`entry_email_cut`).
-fn shares_the_row(call: &ApiCall) -> bool {
-  call
-    .attrs
-    .split(',')
-    .any(|kv| kv.trim() == "_share=authors" || kv.trim() == "_share={authors}")
-}
-
 /// The call for one item of the reading, under `label`.
 fn item_call(
   key: &Key,
@@ -1594,7 +1585,7 @@ fn item_call(
           command,
           label,
           separate.contains(&index),
-          shares_the_row(&call),
+          shares_the_row(&call.attrs),
         )?
       } else {
         None
@@ -1902,7 +1893,7 @@ fn item_call(
         // (a shared row entry's e-mail: the labels its call carries go with it, as `entry_email_cut` cuts them from the
         // entry — the e-mail label its name, a label of its own in its content, `shared_call_item`)
         if role == "email"
-          && shares_the_row(&call)
+          && shares_the_row(&call.attrs)
           && let Some((name, content)) = shared_call_item(&call.content, &assoc.text, &tokens)?
         {
           let keys = match name {

@@ -239,7 +239,7 @@ impl Resolver {
     // 2506.20360's `\email{guolianglv@sina.com};{chunhuazhu@sina.cn}` gave the second address to the institute's
     // text, which then differed from today's and held the writing back)
     let row_lines;
-    let events = if attr_value(attrs, "_share") == Some("authors") && self.out.creators.len() > 1 {
+    let events = if shares_the_row(attrs) && self.out.creators.len() > 1 {
       row_lines = row_address_lines(events);
       &row_lines[..]
     } else {
@@ -674,7 +674,7 @@ impl Resolver {
       }
       // (a class's one institute every author shares unless its `\inst{n}` picks it: `_share=authors`, llncs's
       // `\lx@llncs@institute@sole`, OD #901 — decided once every name is read, `answer_pending`)
-      let shares = label_rule == "api:labelseq" && attr_value(attrs, "_share") == Some("authors");
+      let shares = label_rule == "api:labelseq" && shares_the_row(attrs);
       let marked = events.iter().any(|e| e.kind == EventKind::Mark);
       // (a store's line a mark leads, or one continuing it: the next unmarked line of the store continues it too)
       if label_rule.starts_with("api:leading-mark")

@@ -8,7 +8,7 @@ const NOTE_COMMANDS: [&str; 3] = ["\\thanks", "\\footnote", "\\footnotetext"];
 
 /// The separators that print nothing of their own before an e-mail call, which go with it: spaces, commas, semicolons,
 /// a line break, spacing, a space factor's `\@` (`USA;\@ Email: \email{…}`, 2602.18622).
-fn is_call_separator(t: &Token) -> bool {
+pub(in crate::base_utilities) fn is_call_separator(t: &Token) -> bool {
   matches!(t.get_catcode(), Catcode::SPACE)
     || *t == T_OTHER!(",")
     || *t == T_OTHER!(";")
@@ -657,11 +657,8 @@ pub(in crate::base_utilities) fn shared_call_item(
         continue;
       }
       let name = cut.name(call).map(|name| {
-        Tokens::new(name.clone())
-          .untex_string()
-          .to_string()
-          .trim()
-          .to_string()
+        let printed = s!("{}", Tokens::new(name.clone()).untex_string());
+        printed.trim().to_string()
       });
       if name.is_none() && !cut.labelled() {
         return Ok(None);

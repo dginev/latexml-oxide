@@ -33177,7 +33177,16 @@ content text's `ledger::symbol`; `shared_row/emails` 65 → 68 → 65, the copy 
 repros `class-bindings/llncs_{later_braced_email_call_keeps_its_author,list_email_note_written_as_text_is_counted}.tex`,
 guards `perfect_kernel_batchz18d`; the 1,434 stage2 ids and the 699 llncs papers byte-identical to the base
 (`6271ba8076`) in XML and Errors, save 0909.4443's math ids once (a rerun matched) and 2008.05861's two new "markup lost"
-Warnings for the tie its e-mails carry on the base too.
+Warnings for the tie its e-mails carry on the base too. Z18f (llncs's whole list rerouted, Z18e: the shared row's split
+no longer runs for it): (6) a `_share=authors` entry (llncs's sole `\institute`) whose inner contacts are items of their
+own cuts each call with its e-mail label and its own label (`entry_email_cut`'s `shared`), and the item carries them
+(`shared_call_item`, by the same `unit_cut`/`read_call`/`labelled_address`): the e-mail label its name (104d's `USA;\@
+Email: \email{\{aable,bbaker,ccole\}@a.edu}`, each part "Email: "), a label of its own in its content, to the address's
+owner or the block (s23's `Corresponding author email:`, 2410.06985); `one_address`'s plain test admits a math shift and
+a tie in the list, which the address written holds none of (1701.08125's `$\{$stomforde$|$bsick$\}$@…;~cms@…`). Still
+the old split's only (RED, `perfect_kernel_batch85b`): a shared line the reader cannot read goes to the block
+(`{\tt (joxan, navas)@…}`, 1103.2027's shape), and an unparted call `\email{{zz,yy}@x.edu}` (2206.10050) is one block
+address — the reading writes it out as `zz@`, `yy@`, `yy@`.
 
 ### 985. What the old driver wrote at the flush and the emitter had lost: an svjour3 owner label's `\email`, and a frontmatter setter run inside an author block or an API call (CR2)
 

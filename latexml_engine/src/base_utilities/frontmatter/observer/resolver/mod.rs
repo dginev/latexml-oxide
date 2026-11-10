@@ -1239,10 +1239,17 @@ pub fn resolve_with(
   out
 }
 
+/// Whether a contact call is every author's share unless marks pick it (`_share=authors`: llncs's sole `\institute`, aa's,
+/// `shared_row::share_row_contacts`) — the reading's sharing (`Resolver::share_unpicked`) and the writer's labels that go
+/// with its e-mail calls (`emitter::emit::item_call`, `shared_row::entry_email_cut`).
+pub(in crate::base_utilities::frontmatter::observer) fn shares_the_row(attrs: &str) -> bool {
+  attr_value(attrs, "_share") == Some("authors")
+}
+
 /// Whether a contact call declares a run and every author's share (`_share=authors,annotate=run`: cas's unlabelled
 /// `\affiliation`, `cas_dc_cls.rs` `cas_labelled_entry`).
 pub(super) fn shares_a_run(attrs: &str) -> bool {
-  attr_value(attrs, "_share") == Some("authors") && attr_value(attrs, "annotate") == Some("run")
+  shares_the_row(attrs) && attr_value(attrs, "annotate") == Some("run")
 }
 
 /// `items` in source order: those with a source sorted by it (its block or API call's ledger index, then its span's
