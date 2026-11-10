@@ -1,11 +1,12 @@
 % mechanism: a declaration of the block whose span holds a macro reading past it (`\footremember`'s call, its arguments
-%   outside the span: it printed a note, then defined) can't be replayed; the block is written whole, Perl's whole-block
-%   creator, with a counted warning (`emitter::emit::declaration_reads_past`)
+%   outside the span: it printed a note, then defined) can't be replayed; the block is written as Perl's \lx@add@authors
+%   splits it (CR7), with a counted warning (`emitter::emit::declaration_reads_past`)
 % witness: 2505.04436, 1511.09009 (=2: `\footremember\footremember\footremember\footremember` replayed, reading past its
 %   entry: 20 x Missing {, \lx@thistheorem undefined, Fatal:Timeout:PushbackLimit)
 % oracle:  pdflatex 0 errors; "Ann Able * / Bob Baker † / Cat Cole † / Dan Dunn ‡ / Eve Ernst §" and the four notes
 % engines: rust =2 (int153d): 3 errors (2 x Missing {, \lx@thistheorem), 6 warnings; rust off: 0 errors, 0 warnings
-% expect:  =2: 0 errors, 1 warning (the decline), one whole-block creator holding the names and the notes; off unchanged
+% expect:  0 errors, 1 warning (the decline); the block written as Perl's \lx@add@authors splits it (CR7, OD #988):
+%          five creators, the notes and Cat's recalled mark kept (NE5 wrote one whole-block creator)
 % status:  RED (int153d) -> GREEN (perfect_kernel_batchne5::a_declaration_reading_past_its_span_writes_the_block_whole)
 \documentclass{article}
 \usepackage{amsthm}

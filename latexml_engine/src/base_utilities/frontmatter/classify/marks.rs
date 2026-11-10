@@ -50,7 +50,7 @@ pub(in crate::base_utilities) fn is_author_mark(t: &Token) -> bool {
   *t == T_SUPER!() || is_mark_command(t)
 }
 
-/// The 1-based position of the first author mark in `tokens`, as [`position_of`] counts: a superscript, `\textsuperscript`
+/// The 1-based position of the first author mark in `tokens`, as `position_of` (Perl's `positionOf`) counts: a superscript, `\textsuperscript`
 /// or an author reference mark (`\IEEEauthorrefmark`, `\authorrefmark`), or a `\let` alias of one
 /// (`is_author_mark`).
 pub fn author_mark_position(tokens: &Tokens) -> Option<usize> {

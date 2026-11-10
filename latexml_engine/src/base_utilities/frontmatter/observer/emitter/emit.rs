@@ -32,7 +32,10 @@ use crate::base_utilities::{
     frontmatter_fields::orcid_icon_link,
   },
   frontmatter::{
-    fallback::{tabular_juggles_in_a_whole_block, whole_block_author},
+    fallback::{
+      PerlAuthorBranch, perl_author_branch, perl_author_calls, tabular_juggles_in_a_whole_block,
+      whole_block_author,
+    },
     insert::NAME_PRINTED,
     observer::{
       events::{
@@ -2862,8 +2865,9 @@ pub(super) fn reading_drops() -> BTreeSet<RuleDrop> {
 
 /// Whether the author block at ledger index `index` is written whole, as Perl's `\\lx@add@author` writes a block its
 /// `\\lx@add@authors` can't cut (Base_Utility.pool.ltxml:692-694, its `{tabular}` fallback): where its reading would lose a
-/// name's words (`lost`: an ink failing the names, `LostInk::names_fail`). Decided once, at the flush that first reads it, which a
-/// later one keeps (its creators are emitted).
+/// name's words (`lost`: an ink failing the names, `LostInk::names_fail`) — or as Perl's `\lx@add@authors` splits it, for a
+/// footnote-counter or definition decline ([`split_decline`]). Decided once, at the flush that first reads it, which a later
+/// one keeps (its creators are emitted).
 fn written_whole(index: usize, lost: bool) -> bool {
   let once = s!("whole|{index}");
   match lookup_mapping(EMITTED_ITEMS, &once) {
@@ -2879,9 +2883,10 @@ fn written_whole(index: usize, lost: bool) -> bool {
 /// (`Outcome::Events::counter_moves`, `field_notes::FieldNotes::counter_moves`): an assignment no event says, written only
 /// where a name's run or a mark written with it holds it (`\addtocounter{footnote}{-2}\footnotemark` after a name: the
 /// mark's box covers it, NE2's A, 1507.05018's Ortega, 2505.07115); elsewhere — between a name's notes, past the marks its
-/// name takes — its place among the notes' steps decides what each prints, so the block is written whole, Perl's
-/// whole-block creator, its tokens digested in order (1507.05018's Ombao, whose `=2` creators gave Ortega † where LaTeX
-/// prints *: review revNE2 A1), with a counted Warning, once per block over the flushes.
+/// name takes — its place among the notes' steps decides what each prints, so the block is written as Perl's
+/// `\lx@add@authors` writes it ([`split_decline`], `fallback::perl_author_calls`; OD #988), its pieces digested in order
+/// (1507.05018's Ombao, whose `=2` creators gave Ortega † where LaTeX prints *: review revNE2 A1; 1003.2281, cs0404029,
+/// 2410.22720 had merged into one creator), with a counted Warning, once per block over the flushes.
 fn counter_moved(index: usize, resolved: &Resolved) -> bool {
   let moves: Vec<(usize, usize)> = with_block(index, Vec::new(), |block, _| {
     let Outcome::Events {
@@ -2925,8 +2930,10 @@ fn counter_moved(index: usize, resolved: &Resolved) -> bool {
     Warn!(
       "unexpected",
       "frontmatter",
-      "The frontmatter emitter's reading holds no place for what its author block does to the footnote counter; the block \
-       is written whole, as Perl's whole-block creator"
+      s!(
+        "The frontmatter emitter's reading holds no place for what its author block does to the footnote counter; {}",
+        declined_branch(index).written_as()
+      )
     );
   }
   true
@@ -3197,8 +3204,9 @@ fn names_overlap(index: usize, resolved: &Resolved) -> bool {
 /// defines past the note its arguments made, its call's reach the macro alone: replayed, it read the next declaration's
 /// tokens and on past the entry — `\footremember\footremember\footremember\footremember`, its `\newcounter{\footremember}`
 /// a counter of no name, every theorem then missing its `{` and a Fatal (2505.04436, 1511.09009). No cut of the
-/// block holds the definition apart from what it prints, so the block is written whole, Perl's whole-block creator, its
-/// tokens digested in order, with a counted Warning, once per block over the flushes.
+/// block holds the definition apart from what it prints, so the block is written as Perl's `\lx@add@authors` writes it
+/// ([`split_decline`]; OD #988: 1404.5602, 2503.21719, 0809.5152, 1110.6375 had merged into one creator), its pieces
+/// digested in order, with a counted Warning, once per block over the flushes.
 fn declaration_reads_past(index: usize) -> bool {
   let past = with_block(index, None, |block, _| {
     let Outcome::Events { declarations, .. } = &block.outcome else {
@@ -3225,8 +3233,10 @@ fn declaration_reads_past(index: usize) -> bool {
     Warn!(
       "unexpected",
       "frontmatter",
-      "The frontmatter emitter can't replay a definition of its author block apart from what the block prints; the block \
-       is written whole, as Perl's whole-block creator"
+      s!(
+        "The frontmatter emitter can't replay a definition of its author block apart from what the block prints; {}",
+        declined_branch(index).written_as()
+      )
     );
   }
   true
@@ -3244,6 +3254,43 @@ pub(super) fn kept_whole(index: usize) -> bool {
 /// (`author_block::whole_block_author`, the one writer of a block kept whole), its tabular juggles and columns the line
 /// breaks they print (`tabular_juggles_in_a_whole_block`: 1511.05911's vldb.cls `\\alignauthor`).
 fn whole_block(index: usize, keys: &str, annotations: &[Token]) -> Option<Result<Tokens>> {
+  let (keys, written) = block_keys(index, keys, annotations)?;
+  Some(whole_block_author(
+    Some(keys),
+    tabular_juggles_in_a_whole_block(written),
+  ))
+}
+
+/// The branch of Perl's `\lx@add@authors` the author block at ledger index `index` takes (`fallback::perl_author_branch`):
+/// what a decline writing it so ([`split_decline`]) says in its Warning.
+fn declined_branch(index: usize) -> PerlAuthorBranch {
+  with_block(index, PerlAuthorBranch::Whole, |block, _| {
+    perl_author_branch(&block.tokens)
+  })
+}
+
+/// The calls Perl's `\lx@add@authors` makes of the author block at ledger index `index` (`fallback::perl_author_calls`),
+/// each creator given its keys and `keys`, the first `annotations` too (the items of the names it folds, as the creator of
+/// a block written whole has them), joined in order: a block a decline writes as Perl does ([`split_decline`]).
+fn perl_block(index: usize, keys: &str, annotations: &[Token]) -> Option<Result<Tokens>> {
+  let (first, written) = block_keys(index, keys, annotations)?;
+  let (rest, _) = block_keys(index, keys, &[])?;
+  Some(
+    perl_author_calls(Some(first), Some(rest), written)
+      .map(|(calls, _)| Tokens::new(calls.into_iter().flat_map(Tokens::unlist).collect())),
+  )
+}
+
+/// How many creators Perl's `\lx@add@authors` makes of the author block at ledger index `index` ([`perl_block`]): the
+/// labels a flush gives the creators after it.
+fn perl_block_creators(index: usize) -> usize {
+  block_keys(index, "", &[])
+    .and_then(|(_, written)| perl_author_calls(None, None, written).ok())
+    .map_or(1, |(_, creators)| creators)
+}
+
+/// The keys of the author block at ledger index `index` with `keys` and `annotations`, and its tokens.
+fn block_keys(index: usize, keys: &str, annotations: &[Token]) -> Option<(Tokens, Tokens)> {
   let (keyvals, written) = with_ledger(|ledger| match ledger.entries().get(index) {
     Some(Entry::Author(block)) => Some((block.keyval_tokens.clone(), block.tokens.clone())),
     _ => None,
@@ -3269,10 +3316,21 @@ fn whole_block(index: usize, keys: &str, annotations: &[Token]) -> Option<Result
     }
     keys.extend_from_slice(annotations);
   }
-  Some(whole_block_author(
-    Some(Tokens::new(keys)),
-    tabular_juggles_in_a_whole_block(written),
-  ))
+  Some((Tokens::new(keys), written))
+}
+
+/// Whether the author block at ledger index `index`, written whole, is written as Perl's `\lx@add@authors` writes it
+/// (`split`: its footnote-counter or definition decline, [`counter_moved`], [`declaration_reads_past`]) rather than whole
+/// (Perl's tabular branch, [`whole_block`]), as the flush that decided it whole decided ([`written_whole`]).
+fn split_decline(index: usize, split: bool) -> bool {
+  let once = s!("split|{index}");
+  match lookup_mapping(EMITTED_ITEMS, &once) {
+    Some(Stored::Bool(split)) => split,
+    _ => {
+      assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(split)));
+      split
+    },
+  }
 }
 
 /// What the emit does with the words a block or a call prints that it doesn't write ([`warn_unwritten`]).
@@ -3516,22 +3574,31 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       || items.into_iter().any(crosses)
   };
   // (or its own digestion moves the footnote counter where no event says, which the reading has no place for: the block is
-  // Perl's whole-block creator, its tokens digested in order — 1507.05018's `\addtocounter{footnote}{-2}` between Ombao's
+  // written as Perl's `\lx@add@authors` writes it, its pieces digested in order — 1507.05018's `\addtocounter{footnote}{-2}` between Ombao's
   // notes, whose creators gave Ortega † where LaTeX prints *; review revNE2 A1)
+  // (a footnote-counter or definition decline writes the block as Perl's `\lx@add@authors` does, split where Perl splits
+  // it, its pieces digested in order: `split`, `fallback::perl_author_calls`; the others Perl's tabular branch, whole)
+  let mut split: BTreeSet<usize> = BTreeSet::new();
   let whole: BTreeSet<usize> = read_blocks
     .into_iter()
     .filter(|&source| {
       let cells = across_cells(source);
       let mut given_lost = Vec::new();
-      let whole = written_whole(
-        source,
-        names_fail(source)
-          || cells
-          || counter_moved(source, resolved)
-          || mark_dropped(source, resolved, &mut given_lost)
-          || names_overlap(source, resolved)
-          || declaration_reads_past(source),
-      );
+      let (declined, as_perl) = if names_fail(source) || cells {
+        (true, false)
+      } else if counter_moved(source, resolved) {
+        (true, true)
+      } else if mark_dropped(source, resolved, &mut given_lost) || names_overlap(source, resolved) {
+        (true, false)
+      } else if declaration_reads_past(source) {
+        (true, true)
+      } else {
+        (false, false)
+      };
+      let whole = written_whole(source, declined);
+      if whole && split_decline(source, as_perl) {
+        split.insert(source);
+      }
       if whole && cells {
         warn_across_cells(source);
       }
@@ -3727,9 +3794,32 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   let mut role_counts: BTreeMap<String, i64> = BTreeMap::new();
   let mut first_of: BTreeMap<usize, usize> = BTreeMap::new();
   let mut rep: Vec<usize> = (0..resolved.creators.len()).collect();
+  // (a block written as Perl's `\lx@add@authors` writes it, whose creators are its names one for one: each name its own
+  // creator's Perl label, `author:N` after its first's, which the items the reading gave it address — a revtex
+  // `\affiliation` under `\author{Ann\footremember{…}{…} and Bob}` both names'; else the first's, as a block written whole)
+  let mut names_of: BTreeMap<usize, usize> = BTreeMap::new();
+  for c in &resolved.creators {
+    *names_of.entry(c.source).or_default() += 1;
+  }
+  let one_for_one: BTreeSet<usize> = split
+    .iter()
+    .copied()
+    .filter(|&source| names_of.get(&source) == Some(&perl_block_creators(source)))
+    .collect();
   for (i, c) in resolved.creators.iter().enumerate() {
     if whole.contains(&c.source) {
       if let Some(&first) = first_of.get(&c.source) {
+        if one_for_one.contains(&c.source)
+          && let Some((role, n)) = owners[first].rsplit_once(':')
+          && let Ok(n) = n.parse::<usize>()
+        {
+          let at = resolved.creators[first..i]
+            .iter()
+            .filter(|other| other.source == c.source)
+            .count();
+          owners.push(s!("{role}:{}", n + at));
+          continue;
+        }
         rep[i] = first;
         owners.push(owners[first].clone());
         continue;
@@ -3750,6 +3840,10 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
           .or_insert_with(|| lookup_mapping_int("num_ltx:creator", &role));
         *n += 1;
         let owner = s!("{role}:{n}");
+        // (a block written as Perl's `\lx@add@authors` writes it makes its creators: the labels of those after it)
+        if split.contains(&c.source) {
+          *n += i64::try_from(perl_block_creators(c.source)).unwrap_or(1) - 1;
+        }
         assign_mapping(EMITTED_CREATORS, &id, Some(Stored::String(pin(&owner))));
         fresh.push(i);
         owner
@@ -3972,8 +4066,15 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     let mut keys = annotations_key(&annotations[i].join(","));
     keys.extend(whole_marks_key(c, &annotations[i]));
     // (kept whole on purpose, as a tabular block is: no merge to flag beside its Warning, `flag_merged_creators`)
+    let written = || {
+      if split.contains(&c.source) {
+        perl_block(c.source, KEPT_WHOLE, &keys)
+      } else {
+        whole_block(c.source, KEPT_WHOLE, &keys)
+      }
+    };
     if whole.contains(&c.source)
-      && let Some(tokens) = whole_block(c.source, KEPT_WHOLE, &keys)
+      && let Some(tokens) = written()
     {
       let tokens = tokens?;
       out.push(entry("ltx:creator", tokens.unlist()));

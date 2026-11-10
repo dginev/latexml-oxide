@@ -1,6 +1,6 @@
 //! Guards for NE5: the papers where `=2` failed or erred only there, the flip's no-harm gate. One guard per
 //! mechanism, each off and at `=2`: a declaration whose span holds a macro reading past it can't be replayed, the block
-//! written whole (2505.04436's and 1511.09009's `\footremember`, a Fatal each); a name's run holding a conditional cut apart is
+//! written as Perl's `\lx@add@authors` splits it (2505.04436's and 1511.09009's `\footremember`, a Fatal each; CR7); a name's run holding a conditional cut apart is
 //! its text (1409.0597's `\ifFull and \else \and \fi`); a name's run its balance grew over other names is its text (1208.0597's
 //! `flushleft` of 13 names).
 
@@ -30,8 +30,10 @@ fn run(tex: &str) -> (String, String) {
 /// `\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}` after four names: its
 /// definitions follow the note it printed, so each declaration's span is the macro alone, and `=2` replayed
 /// `\footremember\footremember\footremember\footremember`, the last reading past its entry (2 x Missing {an undefined
-/// `\lx@thistheorem`; the papers' 20 and a Fatal, 2505.04436, 1511.09009). The block is written whole, Perl's whole-block
-/// creator, a counted Warning; its notes and the recalled mark kept. Off reads five creators, no Error.
+/// `\lx@thistheorem`; the papers' 20 and a Fatal, 2505.04436, 1511.09009). The block is written as Perl's
+/// `\lx@add@authors` splits it at its `\and`s (CR7, OD #988: it was one whole-block creator, Perl's tabular branch), a
+/// counted Warning, its pieces digested in order: five creators, the notes and Cat's recalled mark † kept, as pdflatex
+/// prints them.
 #[test]
 fn a_declaration_reading_past_its_span_writes_the_block_whole() {
   let (log, xml) = run(repro!("ne5_decl_reads_past"));
@@ -39,19 +41,19 @@ fn a_declaration_reading_past_its_span_writes_the_block_whole() {
   assert!(
     log.contains(
       "The frontmatter emitter can't replay a definition of its author block apart from what the block prints; the \
-       block is written whole, as Perl's whole-block creator"
+       block is written as Perl's \\lx@add@authors splits it at its separators, its pieces digested in order"
     ),
     "{log}"
   );
   assert_eq!(
     creators(&xml),
-    [row(&[
-      "Ann Able and Bob Baker and Cat Cole \u{2020} \u{2020} footnote \u{2020} and Dan Dunn and Eve Ernst",
-      "note=Univ A. Email: ann@a.at.",
-      "note=Univ B. Emails: bob@b.il, cat@b.il.",
-      "note=Univ C.",
-      "note=Univ D.",
-    ])],
+    [
+      row(&["Ann Able", "note=Univ A. Email: ann@a.at."]),
+      row(&["Bob Baker", "note=Univ B. Emails: bob@b.il, cat@b.il."]),
+      row(&["Cat Cole \u{2020} \u{2020} footnote \u{2020}"]),
+      row(&["Dan Dunn", "note=Univ C."]),
+      row(&["Eve Ernst", "note=Univ D."]),
+    ],
     "{xml}"
   );
 }

@@ -32996,7 +32996,8 @@ are written as read and its loss counted by a Warning naming it (1912.01737, 181
 user 2026-11-09: a decline never throws away a right reading); names one shared macro prints whose run also prints a note or mark (`names_overlap`;
 synthetic); a declaration whose span holds a macro reading past it (`declaration_reads_past`, `content::reads_past` with the
 whole reach): `\footremember{#1}{#2}` = `\footnote{#2}\newcounter{#1}…` defines after the note it prints, so its span is the
-macro alone, and its replay read past the entry (2505.04436, 1511.09009: a Fatal each). A cut holding an alignment's `&`
+macro alone, and its replay read past the entry (2505.04436, 1511.09009: a Fatal each). The footnote-counter and definition declines write the block as Perl's
+`\lx@add@authors` splits it, not whole (#988). A cut holding an alignment's `&`
 outside the environment the run holds whole is refused (the item's text, counted; `Field::content_cut`), as is a cut holding
 a conditional cut apart (`content::conditional_cut`: `\ifFull and \else \and \fi Joseph A. Simons`, 1409.0597; symmetric — an
 `\if…` whose `\fi` is outside the run cuts too, else it stays open to the end of the document, `\iffull Bob Baker\fnm{2}\fi`,
@@ -33415,3 +33416,45 @@ ties no block to an author, but the block reprints its authors' e-mails, which t
 alike).
 
 **Known REDs (review revCR4b finding 2, synthetic):** the per-label attribution's `annotate=run` fallback does not end its run at the `author:N` contacts an earlier cited block made, so an uncited block also reaches authors an earlier block went to (`imsart_address_block_fallback_run_q1_red.tex`), and a block naming three authors but citing only `e2` goes to that one (`…_q2_red.tex`); no word lost.
+
+### 988. The footnote-counter and definition declines write the block as Perl's `\lx@add@authors` does, split where Perl splits it (CR7)
+
+**Defect.** The emitter's `counter_moved` and `declaration_reads_past` declines (#981) wrote the block with
+`whole_block_author`, one `\lx@add@author` of it: Perl's **tabular** branch only (`Base_Utility.pool.ltxml:691-693`). Perl
+splits a block holding no `{tabular}`, `{minipage}` or `\halign` (:694-719), so the Warning's "as Perl's whole-block creator"
+was false and the authors merged into one creator: the definition decline 6 of 6 papers (0809.5152 5→1, 1110.6375 11→1,
+1404.5602 4→1, 2404.18592 2→1, 2503.21719 3→1, 0906.2789), the counter decline 13 of 17 (1003.2281 6→1, cs0404029 6→1,
+2410.22720 4→1, 1305.0854, 1510.04579, 1609.02993, 1609.03951, 2004.03371, 2007.01340, 2605.00602, 1210.5741, 1302.3028).
+
+**Fix.** Those two declines write `fallback::perl_author_calls` of the block: Perl's three branches
+(`perl_author_branch`), the dequeue the emitter's own. Tabular: `whole_block_author` as before. Marks
+(`positionOf($stuff, T_SUPER, \textsuperscript)`): lines cut, a names line cut at its commas into
+`\lx@add@author{\lx@author@withsup{…}}`, a line led by a mark (position < 8) `\lx@add@affiliation{\lx@affiliation@withsup{…}}`,
+a line of no mark continuing the entry before it. Otherwise: pieces cut at `\and`/`\And`/`\AND`/`\quad`/`\qquad`, each an
+author whose `\\` lines are `\lx@add@affiliation`s. The pieces are digested in order, so the footnote counter and a
+definition step as TeX steps them. A tabular juggle (`\alignauthor`) parts two authors there, as `\and` (Perl's OmniBus makes it
+empty). The Warning names the branch taken ("the block is written as Perl's \lx@add@authors splits it at its separators, its
+pieces digested in order"). The block's creators take their Perl labels (`author:N`, `perl_block_creators`), so a later
+block's items address their own; where they are its names one for one, each name keeps its own label, so an item the reading
+gave the names goes to each (a revtex `\affiliation` after `\author{Ann\footremember{…}{…} and Bob}`). Otherwise the
+first creator holds them, as the block written whole did. The other declines (`names_fail`, cells, `mark_dropped`,
+`names_overlap`, the unread block) still write it whole.
+
+**Divergences from Perl's split** (the kernel's own lists, #52): Perl's comma and " and " cut only a names line, never a
+`\\` line under it. Perl's `@authorsplits` cut 1302.3028's PoS `\\ Department of Physics, College of Science, Swansea
+University, …` into four authors, and its `@authoraffilsplits` " and " cut 1110.6375's `D. Schmidiger,\\ E. Wulf, S. Zhao
+and A. Zheludev$^\dag$`. The marks branch's line cuts are `author_affil_splits` (no " and ", `\newline` added; 2605.00347),
+its names lines cut at the comma and " and ". A continued line keeps the line break it was cut at, which Perl's `Tokens(…)` drops:
+1609.02993's "Soumith ChintalaFacebook AI Research" and 1110.6375's "G. EhlersOak Ridge" lost their words glued. `position_of` and
+`literal_and` moved from `author_block/` to `frontmatter/classify/separators.rs` (Perl's `positionOf`, `$literaland`).
+
+**Left (Perl's own, kept):** a mark past position 8 reads a line as an author line, so `\vspace{3pt} $^{a}$Istituto …`
+under 0809.5152's names is a creator (Perl alike). A line of no mark continues the entry before it, so 1110.6375's
+second group `T. Hong, V. O. Garlea, …` joins A. Zheludev's creator. No word is lost.
+
+Repros `cr7_fncounter_and`, `cr7_ne5_footremember`, `cr7_marks_branch_footremember`, `cr7_split_lines_keep_commas`,
+`cr7_split_items_to_each_name`; guards `perfect_kernel_batchcr7::{a_counter_decline_writes_the_block_as_perl_splits_it,
+a_definition_decline_writes_the_block_as_perl_splits_it, a_declined_block_with_marks_takes_perls_marks_branch,
+a_split_keeps_the_commas_of_its_lines, a_split_gives_each_name_its_items}`; updated
+`perfect_kernel_batchne5::a_declaration_reading_past_its_span_writes_the_block_whole` (five creators) and
+`perfect_kernel_batchne2::a_counter_move_no_name_carries_writes_the_block_whole` (three creators, the notes per creator).
