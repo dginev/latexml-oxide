@@ -1,0 +1,25 @@
+% mechanism: a line of an `\author` block printing an address list through `\href{mailto:…}` pieces (one printing no
+%   `@`) and, after it, a link that is a whole address on its own: only the run of pieces is joined
+%   (`resolver::joined_address_pieces`), its addresses written in the run's font, their lost `mailto:` links counted
+%   (the emitter's "markup lost" Warning); the whole link after it stays its own contact, as printed.
+% witness: 2505.15472 (`\texttt{\href{mailto:samdie2016@…}{\{samdie2016}, \href{mailto:yanyibo70@…}{yanyibo70\}@gmail.com}},
+%   \texttt{\href{mailto:xuminghu@hkust-gz.edu.cn}{xuminghu@hkust-gz.edu.cn}}`)
+% oracle:  pdflatex 0 errors; "Ann Able1, Bob Baker1, Cid Cole1,2" over "1Univ X", "2Univ Y" and
+%   "{ann, bob}@x.org, cid@y.org" in typewriter
+% engines: rust Z18g = cid@y.org plain text, its typewriter `mailto` link lost, no Warning (review revZ18g B1);
+%   int154x = ann's broken list "{ann, bob}@x.org", bob's "bob}@x.org", the content check's Warning
+% expect:  0 errors, 2 warnings (ann@ and bob@ written as text, their links lost); cid@ a typewriter `mailto` link
+% status:  RED (Z18g) -> GREEN (Z18h)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{1}, \textbf{Bob Baker}\textsuperscript{1}, \textbf{Cid Cole}\textsuperscript{1,2}\\
+\textsuperscript{1}Univ X\\
+\textsuperscript{2}Univ Y\\
+\texttt{\href{mailto:ann@x.org}{\{ann}, \href{mailto:bob@x.org}{bob\}@x.org}},
+     \texttt{\href{mailto:cid@y.org}{cid@y.org}}
+}
+\maketitle
+\end{document}

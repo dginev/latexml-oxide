@@ -2293,7 +2293,7 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
   let mut warned: HashSet<String> = HashSet::default();
   // (each shared row entry's later lines holding an address no reader reads, by entry, taken to the block once: their
   // nodes, from the first copy read)
-  let mut to_block: Vec<(String, Vec<Node>)> = Vec::new();
+  let mut to_block: Vec<(String, Vec<Node>, Option<String>)> = Vec::new();
   for entry in entries {
     let Some(creator) = entry.get_parent() else {
       continue;
@@ -2372,11 +2372,22 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
           })
         {
           let key = entry.get_attribute(ENTRY_KEY).unwrap_or_default();
-          if !to_block.iter().any(|(k, _)| *k == key) {
+          if !to_block.iter().any(|(k, ..)| *k == key) {
+            // (one opened by an e-mail label of its own is an e-mail of the block, its label the contact's name: `\\
+            // e-mail: gil@astrax.fis.ucm.es (AGdP)`, astro-ph0007270 — the old split's same rule, `row_email_calls`, both
+            // reading the label by `is_email_label`, review revZ18g S1)
+            let (name, kept) = match cut_email_label(nodes) {
+              Some((name, kept)) => (Some(name), kept),
+              None => (None, nodes.clone()),
+            };
             for node in nodes {
-              node.clone().unlink_node();
+              if kept.contains(node) {
+                node.clone().unlink_node();
+              } else {
+                document.remove_node(node.clone());
+              }
             }
-            to_block.push((key, nodes.clone()));
+            to_block.push((key, kept, name));
           } else {
             for node in nodes {
               document.remove_node(node.clone());
@@ -2596,9 +2607,14 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
     if let Some(creator) = block_creator(document, &authors)? {
       let saved = document.get_node().clone();
       document.set_node(&creator);
-      for (_, nodes) in to_block {
+      for (_, nodes, name) in to_block {
         let mut attributes: HashMap<String, String> = HashMap::default();
-        attributes.insert("role".to_string(), "affiliation".to_string());
+        if let Some(name) = name {
+          attributes.insert("role".to_string(), "email".to_string());
+          attributes.insert("name".to_string(), name);
+        } else {
+          attributes.insert("role".to_string(), "affiliation".to_string());
+        }
         let mut contact = document.open_element("ltx:contact", Some(attributes), None)?;
         for mut node in nodes {
           contact.add_child(&mut node)?;
@@ -2892,6 +2908,50 @@ fn is_mark_text(text: &str) -> bool {
       .chars()
       .all(|c| is_mark_glyph(c) || c.is_ascii_digit() || c == ',' || c.is_whitespace())
       || (text.chars().count() == 1 && text.chars().all(|c| c.is_ascii_lowercase())))
+}
+
+/// The e-mail label opening a line's `nodes` — the words before its first colon, read by `is_email_label` ("e-mail:",
+/// "Emails:") — cut from them, its name as a contact's (`"e-mail: "`): the text nodes it prints in, or the head of the one
+/// it ends in, go: the name and the nodes left. `None`, and nothing cut, where no label opens the line or one ends inside
+/// an element.
+fn cut_email_label(nodes: &[Node]) -> Option<(String, Vec<Node>)> {
+  let printed: String = nodes.iter().map(Node::get_content).collect();
+  let lead = printed.len() - printed.trim_start().len();
+  let colon = printed.find(':')?;
+  let label = printed[lead..colon].trim();
+  if label.is_empty() || !is_email_label(label) {
+    return None;
+  }
+  let end = colon + 1;
+  let end = end + (printed[end..].len() - printed[end..].trim_start().len());
+  // (each node the label covers whole, and the text node it ends in with its head's length; none an element it ends in)
+  let mut covered: Vec<Node> = Vec::new();
+  let mut head: Option<(Node, usize)> = None;
+  let mut at = 0usize;
+  for node in nodes {
+    let length = node.get_content().len();
+    if at >= end {
+      break;
+    }
+    if at + length <= end {
+      covered.push(node.clone());
+    } else if node.get_type() == Some(NodeType::TextNode) {
+      head = Some((node.clone(), end - at));
+    } else {
+      return None;
+    }
+    at += length;
+  }
+  if let Some((mut node, cut)) = head {
+    let content = node.get_content();
+    let _ = node.set_content(&content[cut..]);
+  }
+  let kept = nodes
+    .iter()
+    .filter(|node| !covered.contains(node))
+    .cloned()
+    .collect();
+  Some((s!("{label}: "), kept))
 }
 
 /// The key a class's one institute every author shares (`_share=authors`, llncs's `\lx@llncs@institute@sole`) is written

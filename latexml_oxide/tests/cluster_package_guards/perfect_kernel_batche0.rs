@@ -1236,8 +1236,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // spaces, `,` and `;` a list's argument opens or ends with (1908.05750), `plain`, a list of characters and control symbols
   // writing no Warning (2501.11774), and a control-symbol test of its own — what it writes, no name spelled; Z18d 48 -> 46: the
   // control-symbol test is the content text's `ledger::symbol`, review revZ18c S4; Z18f 46 -> 45: `plain`'s catcode test on one
-  // line, a math shift and a group's brace admitted, the list's separators by the row's `is_call_separator`)
-  ("emitter/emit", 45),
+  // line, a math shift and a group's brace admitted, the list's separators by the row's `is_call_separator`; Z18h 45 -> 44: an
+  // e-mail item of what prints several is written by `by_text`, a joined run's lost links counted, review revZ18g B1)
+  ("emitter/emit", 44),
   // (P1b, 0 -> 1: `emitter/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("emitter/dom+mod", 1),

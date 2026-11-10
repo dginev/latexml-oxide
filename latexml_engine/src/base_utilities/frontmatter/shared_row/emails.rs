@@ -505,7 +505,7 @@ pub(super) fn row_email_calls(
 /// as written.
 /// With `only` (the entry's inner contacts written as items of their own, `\lx@frontmatter@itemonly`) the units are
 /// cut out whole, a label of the call's aside, which stays the entry's text — with `shared` (a `_share=authors` entry,
-/// llncs's sole `\institute`) the label goes with the call, its item carrying it ([`shared_call_labels`]). A call inside
+/// llncs's sole `\institute`) the label goes with the call, its item carrying it ([`shared_call_item`]). A call inside
 /// a note stays in it. `None` when the content holds no class e-mail call outside a note.
 /// Witnesses (Z18b's llncs reroute, the units left in the entry): 1709.03776, 1709.08027, 2006.03363, 2008.02173,
 /// 2009.11534, 2102.12877, 2207.10888, 2406.08136, 2407.18381, 2410.06985, 2501.02196, 2509.05139, 2510.06692,
@@ -567,7 +567,7 @@ pub(in crate::base_utilities) fn entry_email_cut(
       // (with `only`, the address written apart, its item named by no label of the entry's: a label stays in the entry,
       // the call alone leaving it — 2606.02634's `Norway\\ Correspondence: \email{elias.stenhede@ahus.no}`, whose address
       // is Elias Stenhede's in another entry; the label had gone with the call, a word lost)
-      // — not a shared row entry's, whose labels go with the call to its item (`shared_call_labels`), as the row's split
+      // — not a shared row entry's, whose labels go with the call to its item (`shared_call_item`), as the row's split
       // gave its unit to the owner or the block, never every author's (85b's `llncs_email_label_goes_with_the_call`, 104d)
       if only && !shared && (cut.labelled() || call.label.is_some()) {
         units.push((call.at, call.end, written));

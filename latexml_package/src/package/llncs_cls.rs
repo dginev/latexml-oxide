@@ -96,6 +96,10 @@ LoadDefinitions!({
   Let!("\\phantomsection", "\\relax");
 
   DefMacro!("\\emailname", "E-mail");
+  // (the class's own name for an e-mail contact no call names — an address the Kind step for an address line reads out
+  // of a line, `\urldef`'d `\mailsa, \mailsb` pieces (1504.01099) —, as its `\email` names its own: not the kernel's
+  // generic "Email:" (author_macros.rs), review revZ18g N2)
+  DefMacro!("\\lx@contact@email@name", "\\emailname~");
   DefMacro!("\\mailname",  "\\textit{Correspondence to}:");
 
   // Single \author, with multiple authors separated by \and (Perl PR #2767, llncs.cls.ltxml:40-44), `\inst{labels}`

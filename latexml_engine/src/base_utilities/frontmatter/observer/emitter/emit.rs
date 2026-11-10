@@ -35,7 +35,7 @@ use crate::base_utilities::{
     fallback::{tabular_juggles_in_a_whole_block, whole_block_author},
     insert::NAME_PRINTED,
     observer::{
-      events::{EventKind, Formula, InkTable, lex_with_inks},
+      events::{EventKind, Formula, InkTable, inked, lex_with_inks},
       field_notes::{EnvironmentStep, FieldCreator},
       ledger::{ApiCall, AuthorBlock, annotated_parent, content_text, field_stamped, symbol},
       policy::TitleMarks,
@@ -1778,14 +1778,40 @@ fn item_call(
           ));
         }
       }
-      // (one address of what prints several, or in a note: its text in the font it prints in there)
+      // (one address of what prints several, or in a note: its text in the font it prints in there; a run of link pieces
+      // the reading joined (`resolver::joined_address_pieces`), which no event holds, in its first ink's, as the Kind
+      // step's joined reading keeps it (`insert::LineText::joined`), its `mailto:` links lost and counted —
+      // `\texttt{\href{mailto:…}{\{samdie2016}, \href{mailto:…}{yanyibo70\}@gmail.com}}`, 2505.15472, review revZ18g B1)
       if role == "email" {
-        let font = with_block(index, None, |_, events| {
-          let holds =
-            |e: &&Event| e.span.is_some_and(|s| s.0 <= span.0 && span.1 <= s.1) && e.font.is_some();
-          events.iter().find(holds).and_then(|e| e.font.clone())
+        let (font, linked) = with_block(index, (None, false), |_, events| {
+          let holds = |e: &&Event| e.span.is_some_and(|s| s.0 <= span.0 && span.1 <= s.1);
+          // (the run's inks, two or more inside its span: its first may span the group around them all)
+          let inside: Vec<&Event> = events
+            .iter()
+            .filter(|e| inked(e) && e.span.is_some_and(|s| span.0 <= s.0 && s.1 <= span.1))
+            .collect();
+          let joined = inside.len() > 1;
+          let font = events
+            .iter()
+            .filter(holds)
+            .find_map(|e| e.font.clone())
+            .or_else(|| {
+              joined
+                .then(|| inside.iter().find_map(|e| e.font.clone()))
+                .flatten()
+            });
+          let linked = joined
+            && inside.iter().any(|e| {
+              e.kind == EventKind::Contact
+                && e
+                  .target
+                  .as_deref()
+                  .is_some_and(|target| target.starts_with("mailto:"))
+            });
+          (font, linked)
         });
-        let content = in_its_font(font, text_tokens(&assoc.text));
+        let why = linked.then_some("an address joined from link pieces, its links lost");
+        let content = in_its_font(font, by_text(why, &assoc.text));
         return Ok(annotate_now("ltx:contact", &keys, content.unlist_ref()));
       }
       // (several events of one span: a macro printed them, 2604.09547)

@@ -1,0 +1,16 @@
+% mechanism: llncs's `\author` whose names carry marks typed by hand (`$^{1}$`), not `\inst`: the binding no longer
+%   splits the list itself (`llncs_cls.rs` `\author`'s `marked` tests `\inst` only), the reading takes it whole, and
+%   each name keeps its own institutes by its marks, as the old split gave them.
+% witness: review revZ18g N3 (the dropped `author_mark_position`)
+% oracle:  pdflatex 0 errors; "Ann Able1, Bob Baker2 and Cid Cole1,2" over "Univ X, Town" and "Univ Y, City"
+% engines: int154x = the same creators; Z18h = the same
+% expect:  0 errors, 0 warnings; Ann Univ X, Bob Univ Y, Cid both
+% status:  GREEN (Z18h, a pin)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$ and Cid Cole$^{1,2}$}
+\institute{$^{1}$Univ X, Town\\ $^{2}$Univ Y, City}
+\maketitle
+\end{document}
