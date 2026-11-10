@@ -33122,3 +33122,44 @@ personname's, as ERR2's did),
 `perfect_kernel_batchfms2a1::the_rehearsal_leaves_nothing_behind` (re-expected: 2 Errors, 0 Warnings),
 `perfect_kernel_batch105a::an_error_at_depth_in_a_note_line_is_no_word` (re-expected: the Warning it pinned was the
 content check counting "songti").
+
+### 984. The emitter keeps only an affiliation entry's own text, and the Link step places every inner e-mail of it (Z18c: llncs's old split's rules, in the emitter)
+
+**Perl:** an affiliation's content is digested whole (Base_Utility.pool.ltxml:742-753); an `\email` inside it is an
+annotation of its own, the separators and labels around it stay in the affiliation's box, and only the first annotation
+digested inside an entry inherits the entry's label (Base_Utility.pool.ltxml:497-501 reads the last stub alone), so a
+second `\email` annotates the last author. **Was:** llncs's unmarked lists went through the binding's own split
+(`\lx@llncs@author`) and the shared row (`shared_row::row_email_calls`, #901), which took each e-mail unit out with its
+separators and label; every entry the emitter writes from an API call (llncs under `\inst` marks, svjour3, aa) kept them —
+`\institute{Univ X\\ \email{p1@x.edu}, \email{p2@x.edu}}` under `\inst{1}` gave "Univ X ," on both authors (Z18b's 15
+llncs papers), `…; Email: ;`, `Unity Technologies Corresponding author:`, svjour3's "Univ B " — and its e-mail calls
+after the first stayed on the last author as their own call (`owner:call`): three addresses under three names gave the
+third author two. **Now:** (1) an affiliation-kind entry the emitter writes from an API call
+(`emitter::emit::item_call`) is written by `shared_row::entry_email_cut`, the row's unit cut moved onto the entry: each
+class e-mail call takes the separators before it back to the text or call before it, the e-mail label naming it
+(`Email:`, its contact's name) and a label of its own (`call_label`: `Corresponding author:`, `(Corresponding author)`,
+in its text); a line break stays where text the entry keeps follows (2310.01324's `\url` line); an entry whose inner
+contacts are items of their own (`\lx@frontmatter@itemonly`) loses the calls only, a label staying its text
+(2606.02634's `Correspondence:`). (2) Each call after the first that reads as whole addresses is written by the entry's
+label (`\lx@row@email`), so the Link step's chain (`insert::link_entry_addresses`, #956) places it among the entry's
+carriers; a template or an unread list stays as written. (3) The chain (`entry_address_owners`) gains the row's two
+facts (`EntryOwnerFacts`): no order where an address spells several names, none the carrier at its place (`x1@, x2@,
+lee@` under Ann Lee, Bob Lee, Cid Cole: the block's; 2102.08148's `jtchen721@` at Jintai Chen's place beside Danny Z. Chen
+stays his), and the one address left of several carriers the corresponding author's, never a template's (2408.14427).
+(4) An entry whose inner e-mail the reading wrote out whole (`ruling3:written-out`, every address the call prints read)
+keeps no copy of the call (2607.09128's `$\{$npcarpenter\,|\,giacobazzi$\}@$arizona.edu`; one written out in part keeps
+it, 2410.20769). (5) One address in printed braces is that address to the Link step (2410.04091's
+`\email{\{fatima.iribu@gmail.com\}}`, on every carrier before); a tie parts addresses (`;~cms@`, 1701.08125); an address
+of a plain list is written without the list's trailing separators (1908.05750) and with no Warning, nothing but its text
+printed (2501.11774); an address line ending an entry takes the separator the line before it ends in (`address_cuts`:
+2407.18381's `(EPFL), \\ \texttt{…}`). **Not moved here** (the reroute's own, kept with it): the `\\` line rules of a whole
+llncs list (a names line after an affiliation line, a line after an inline `\and`, a name carrying an ORCID). **Residuals:**
+1004.3134's `\href{mailto:…}{\email{…}}` inside a `\thanks` (no contact the reading makes; counted by the content check
+before and after); address lists printed across several `\url`/`\path` pieces (1504.01099's `\urldef`s, 1710.01968).
+**Measured** (base ERR2, Z18a dumps): the 699 llncs papers 477 identical, 144 XML only, 75 creators changed, none worse (42 a separator gone, 25 a duplicate address placed once, 4 a whole-list copy gone, 4 an address to its author), E/F never higher, 0 distinct words lost; 614 papers whose author block has an affiliation line
+above a names line 612 identical (2505.20009 killed on both sides, 2503.14381 not compared); the 1,434 stage2 ids 30 changed, all read: 23 a trailing space or break out of an affiliation, 3 separators, 3 a duplicate placed once, 2009.10916's libraboli@ the block's once; 0 words lost; cost ≤ +0.42 % per document. Repros `class-bindings/llncs_{inner_email_separators_leave_the_institute,institute_email_calls_in_author_order,institute_last_address_line_takes_its_separator}.tex`;
+guards `perfect_kernel_batchz18c`; re-expected: `perfect_kernel_batch63::svjour3_{at_piece_naming_several_authors,sole_author_keeps_the_institute,name_only_piece_keeps_the_institute_shared}`
+and `perfect_kernel_batch64zc::class_email_paths_keep_their_font_and_underscore` (the separator's trailing space gone),
+`perfect_kernel_batchbc1::the_blocks_creator_is_no_parent_by_place` and `perfect_kernel_batchn2::an_address_placed_more_often_than_printed_is_counted`
+(the duplicate address each counted is placed once), `perfect_kernel_batche0` (token-read pins `emitter/emit` 43 → 48 and
+`shared_row/emails` 65 → 68: the unit cut reads the API call's tokens, as the row's did).

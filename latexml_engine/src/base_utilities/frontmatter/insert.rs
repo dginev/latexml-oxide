@@ -1674,7 +1674,15 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
         None
       } else {
         let text = content.trim();
-        (!lists_local_parts(text) && !is_pattern_address(text)).then(|| vec![text.to_string()])
+        // (one address in printed braces is that address, as a row contact's reader reads it (`shared_row`'s
+        // `single_braced`): `\email{\{fatima.iribu@gmail.com\}}`, 2410.04091 — left whole, it stayed on every carrier)
+        let braced_one = listed.len() == 1
+          && text
+            .strip_prefix('{')
+            .and_then(|inner| inner.strip_suffix('}'))
+            .is_some_and(|inner| inner.trim() == listed[0]);
+        (braced_one || (!lists_local_parts(text) && !is_pattern_address(text)))
+          .then(|| vec![text.to_string()])
       }
     };
     // (a contact printing several addresses and more — an ORCID's link, math, a note — is never written out: it stays
@@ -1866,6 +1874,26 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
       &mine,
       &mark_lists,
     );
+    // (every name each address spells, and the one carrier a note marks the corresponding author: `EntryOwnerFacts`, the
+    // old split's row e-mail owners)
+    let spellers: Vec<Vec<usize>> = addresses
+      .iter()
+      .map(|(text, ..)| {
+        email_address_word(text)
+          .map(|address| spelled_owners(&keys, &address))
+          .unwrap_or_default()
+      })
+      .collect();
+    let corresponding: Vec<usize> = carriers
+      .iter()
+      .copied()
+      .filter(|&c| {
+        document
+          .findnodes("ltx:note", Some(&authors[c]))
+          .iter()
+          .any(|note| names_correspondence(&note.get_content()))
+      })
+      .collect();
     let owners: Vec<(Option<Vec<usize>>, &'static str)> = entry_address_owners(
       &spelled,
       0..addresses.len(),
@@ -1873,6 +1901,17 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
       symbol,
       &addressed,
       authors.len() == 1,
+      &EntryOwnerFacts {
+        spellers:      &spellers,
+        no_ones:       &addresses
+          .iter()
+          .map(|(text, ..)| is_pattern_address(text) || lists_local_parts(text))
+          .collect::<Vec<bool>>(),
+        corresponding: match corresponding.as_slice() {
+          [one] => Some(*one),
+          _ => None,
+        },
+      },
     )
     .into_iter()
     .zip(&own_call)

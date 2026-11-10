@@ -1363,7 +1363,7 @@ fn svjour3_sole_author_keeps_the_institute() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/svjour3_sole_author_keeps_the_institute.tex"
     ),
     &[
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A </contact><contact name=\"E-mail: \" role=\"email\">ann@a.org</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact><contact name=\"E-mail: \" role=\"email\">ann@a.org</contact></creator>",
     ],
   );
 }
@@ -1474,7 +1474,7 @@ fn svjour3_name_only_piece_keeps_the_institute_shared() {
     ),
     &[
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"E-mail: \" role=\"email\">ann@a.org</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A </contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
       "<creator role=\"author\"><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">A. Able</contact></creator>",
     ],
   );
@@ -1507,8 +1507,8 @@ fn svjour3_at_piece_naming_several_authors() {
     ),
     &[
       "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B </contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B </contact><contact name=\"E-mail: \" role=\"email\">carl@b.org</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact><contact name=\"E-mail: \" role=\"email\">carl@b.org</contact></creator>",
     ],
   );
 }

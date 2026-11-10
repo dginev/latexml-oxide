@@ -559,6 +559,163 @@ pub(super) fn row_email_calls(
   Ok(((!empty || !shared).then(|| Tokens::new(kept)), placed))
 }
 
+/// An affiliation-kind entry whose class e-mail calls the frontmatter emitter places itself (the reading's inner
+/// contacts, `Resolver::entry_emails`, OXIDIZED_DESIGN_DIVERGENCES #980), as the emitter writes it: its `command` with
+/// each call's unit cut as [`row_email_calls`] cuts a row contact's — the separators before it back to the text or unit
+/// before it (one at the content's start takes those after it: `\email{a}, Univ X`), the e-mail label it is named by
+/// (`Email: \email{…}`, [`email_label_before`]), the label of its own the rule recognises ([`call_label`]: `Corresponding
+/// author: \email{…}`, `\email{…} (Corresponding author)`) — so the entry keeps only its own text: `\institute{Univ X\\
+/// \email{p1@x.edu}, \email{p2@x.edu}}` under `\inst{1}` marks is "Univ X", it had kept "Univ X ," (`…; Email: ;`,
+/// `Unity Technologies Corresponding author:`). Each call stays where it was written, so it digests inside the entry and
+/// the Link step places its addresses among the entry's carriers (`insert::link_entry_addresses`); a labelled unit, and
+/// an unlabelled one after the first that reads as whole addresses, is written as the row's e-mail is, a label of its
+/// own in its content or its name, by the entry's `label` (`\lx@row@email`, `\lx@row@email@named`); any other as written.
+/// With `only` (the entry's inner contacts written as items of their own, `\lx@frontmatter@itemonly`) the units are
+/// cut out whole, a label of the call's aside, which stays the entry's text. A call inside a note stays in it. `None` when the content holds no class e-mail call outside a note.
+/// Witnesses (Z18b's llncs reroute, the units left in the entry): 1709.03776, 1709.08027, 2006.03363, 2008.02173,
+/// 2009.11534, 2102.12877, 2207.10888, 2406.08136, 2407.18381, 2410.06985, 2501.02196, 2509.05139, 2510.06692,
+/// 2609.00838, cs0606057.
+pub(in crate::base_utilities) fn entry_email_cut(
+  command: &Tokens,
+  label: &str,
+  only: bool,
+) -> Result<Option<Tokens>> {
+  let tokens = command.unlist_ref();
+  let Some((open, close)) = content_group(tokens) else {
+    return Ok(None);
+  };
+  let mut calls: Vec<EmailCall> = Vec::new();
+  email_calls_in(tokens, open + 1, close, false, false, &mut calls)?;
+  if calls.iter().all(|call| call.in_note) {
+    return Ok(None);
+  }
+  let (inner_open, inner_close) = wrapped_span(tokens, open + 1, close);
+  let lines = content_lines(tokens, inner_open, inner_close);
+  let first_text = lines.iter().position(|(_, start, end)| {
+    tokens[*start..*end]
+      .iter()
+      .any(|t| t.get_catcode() != Catcode::SPACE)
+  });
+  let label_tokens = || mouth::tokenize_internal(TeXString::assembled(label.to_string()));
+  // (each unit: its span, and what it is written as)
+  let mut units: Vec<(usize, usize, Vec<Token>)> = Vec::new();
+  for (place, &(_, start, end)) in lines.iter().enumerate() {
+    for call in calls
+      .iter()
+      .filter(|call| !call.in_note && (start..end).contains(&call.at))
+    {
+      let floor = units.last().map_or(inner_open, |unit| unit.1);
+      let (before, after) =
+        call_label(tokens, call, (floor, start, end), Some(place) == first_text);
+      let mut first_taken = before.map_or(call.start, |(taken, ..)| taken.min(call.start));
+      while first_taken > floor && is_call_separator(&tokens[first_taken - 1]) {
+        first_taken -= 1;
+      }
+      let unit_end = after.map_or(call.end, |(_, _, end)| end);
+      // (an address the reader reads whole, no template's: the entry's to place, its call after the first written by the
+      // entry's label, which it would not inherit — a call digested after another inside an entry takes no label
+      // (Base_Utility.pool.ltxml:497-501 inherits from the last stub only), so it had stayed on the last author as their
+      // own call: `\institute{Univ X\\ \email{a1@x.edu}, \email{b2@x.edu}, \email{c3@x.edu}}` gave Cid Cole b2@ and c3@)
+      let reads_whole = email_addresses(&Invocation!(call.cs, vec![Some(Tokens::new(
+        call.arg.clone()
+      ))]))
+      .is_some_and(|list| {
+        list
+          .iter()
+          .all(|address| is_whole_address(address) && !is_template_address(address))
+      });
+      let written = if only {
+        Vec::new()
+      } else if before.is_none()
+        && after.is_none()
+        && call.label.is_none()
+        && (units.is_empty() || !reads_whole)
+      {
+        tokens[call.at..call.end].to_vec()
+      } else {
+        let mut whole: Vec<Token> = Vec::new();
+        if let Some((_, from, to)) = before {
+          whole.extend(
+            tokens[from..to]
+              .iter()
+              .map(|t| if *t == T_ACTIVE!('~') { T_SPACE!() } else { *t }),
+          );
+          whole.push(T_SPACE!());
+        }
+        whole.extend(email_command_address(&call.cs, Tokens::new(call.arg.clone()))?.unlist());
+        if let Some((from, to, _)) = after {
+          whole.push(T_SPACE!());
+          whole.extend_from_slice(&tokens[from..to]);
+        }
+        match call.label.as_ref().filter(|_| before.is_none()) {
+          Some(name) => Invocation!(T_CS!("\\lx@row@email@named"), vec![
+            Some(label_tokens()),
+            Some(Tokens::new(name.clone())),
+            Some(Tokens::new(whole))
+          ])
+          .unlist(),
+          None => Invocation!(T_CS!("\\lx@row@email"), vec![
+            Some(label_tokens()),
+            Some(Tokens::new(whole))
+          ])
+          .unlist(),
+        }
+      };
+      // (with `only`, the address written apart, its item named by no label of the entry's: a label stays in the entry,
+      // the call alone leaving it — 2606.02634's `Norway\\ Correspondence: \email{elias.stenhede@ahus.no}`, whose address
+      // is Elias Stenhede's in another entry; the label had gone with the call, a word lost)
+      if only && (before.is_some() || after.is_some() || call.label.is_some()) {
+        units.push((call.at, call.end, written));
+        continue;
+      }
+      units.push((first_taken.max(floor), unit_end, written));
+    }
+  }
+  if units.is_empty() {
+    return Ok(None);
+  }
+  // (a line break among the separators a unit takes stays where text the entry keeps comes after the unit: that text
+  // stays on a line of its own — `Shanghai AI Laboratory \\ \email{…} \url{…}`, 2310.01324, whose link line the
+  // entry's Kind step reads apart)
+  let taken = |at: usize| {
+    units
+      .iter()
+      .any(|(start, end, _)| (*start..*end).contains(&at))
+  };
+  let kept_after =
+    |end: usize| (end..inner_close).any(|at| !taken(at) && !is_call_separator(&tokens[at]));
+  let breaks: Vec<Option<Token>> = units
+    .iter()
+    .map(|(start, end, _)| {
+      tokens[*start..*end]
+        .iter()
+        .find(|t| is_line_break(t))
+        .copied()
+        .filter(|_| kept_after(*end))
+    })
+    .collect();
+  let mut kept: Vec<Token> = Vec::with_capacity(tokens.len());
+  let mut from = 0;
+  for ((start, end, written), line_break) in units.into_iter().zip(breaks) {
+    kept.extend_from_slice(&tokens[from.min(start)..start]);
+    from = end.max(from);
+    let at_start = start <= inner_open
+      || kept
+        .last()
+        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN);
+    kept.extend(line_break);
+    kept.extend(written);
+    // (the separators after a unit at the start may be the next unit's own: `\email{a}, \email{b}`)
+    if at_start {
+      while from < inner_close && is_call_separator(&tokens[from]) {
+        from += 1;
+      }
+    }
+  }
+  kept.extend_from_slice(&tokens[from..]);
+  Ok(Some(Tokens::new(kept)))
+}
+
 /// The span of `tokens[from..to]` its lines are in: within the group of the one command that wraps the whole of it
 /// (`\lx@affiliation@withinst{…}`, as `\lx@add@affiliation` gives an institute), spaces aside; else the span itself.
 fn wrapped_span(tokens: &[Token], from: usize, to: usize) -> (usize, usize) {

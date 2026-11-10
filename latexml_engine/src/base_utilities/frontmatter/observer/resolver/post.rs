@@ -1758,6 +1758,10 @@ impl Resolver {
         .collect();
       let symbol = emails.iter().any(|(_, symbol)| *symbol);
       let addressed = self.addressed(&carriers);
+      let spellers: Vec<Vec<usize>> = emails
+        .iter()
+        .map(|(assoc, _)| self.spellers(&assoc.text, &live))
+        .collect();
       let mut owners = entry_address_owners(
         &spelled,
         0..emails.len(),
@@ -1765,6 +1769,14 @@ impl Resolver {
         symbol,
         &addressed,
         live.len() == 1,
+        &EntryOwnerFacts {
+          spellers:      &spellers,
+          no_ones:       &emails
+            .iter()
+            .map(|(assoc, _)| is_pattern_address(&assoc.text) || lists_local_parts(&assoc.text))
+            .collect::<Vec<bool>>(),
+          corresponding: self.corresponding(&carriers).0,
+        },
       );
       // (one address every carrier spells alone, under each by an entry of its own: printed under each, it is each's, as the PDF
       // shows it. 2606.16069's shape, its names `1\textsuperscript{st} Lucas Krome`, whose two `\author` are one by now, the last
@@ -2038,6 +2050,7 @@ impl Resolver {
           at += len;
           continue;
         }
+        let spellers: Vec<Vec<usize>> = all.iter().map(|a| self.spellers(a, &live)).collect();
         let owners = entry_address_owners(
           &spelled,
           at..at + len,
@@ -2045,6 +2058,14 @@ impl Resolver {
           symbol_line,
           &addressed,
           live.len() == 1,
+          &EntryOwnerFacts {
+            spellers:      &spellers,
+            no_ones:       &all
+              .iter()
+              .map(|a| is_pattern_address(a) || lists_local_parts(a))
+              .collect::<Vec<bool>>(),
+            corresponding: self.corresponding(&carriers).0,
+          },
         );
         at += len;
         // (a run one address of which the chain leaves to the block stays in the entry, as today's prints it — the

@@ -1,0 +1,17 @@
+% mechanism: an address line ending an entry takes the separators the line before it ends in (`address_cuts`), as a
+%   row contact's e-mail unit takes them: the institute is "CVLab, EPFL", not "CVLab, EPFL,".
+% witness: 2407.18381
+% oracle:  pdflatex 0 errors; "Ann Able and Bob Baker" over "CVLab, EPFL," and "{able, baker}@epfl.ch"
+% engines: rust Z18b3 = "CVLab, EPFL," on both
+% expect:  0 errors, 0 warnings; "CVLab, EPFL" on both, each the address it spells
+% status:  RED (Z18b3) -> GREEN (Z18c)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able \and Bob Baker}
+\institute{CVLab, EPFL, \\ \texttt{\{able, baker\}@epfl.ch}}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}
