@@ -8,6 +8,8 @@ pub(in crate::base_utilities) use contacts::*;
 mod names;
 pub(in crate::base_utilities) use names::*;
 
+use crate::base_utilities::frontmatter::classify::title_code::title_code_author_definitions;
+
 pub(in crate::base_utilities) fn load() -> Result<()> {
   //======================================================================
   // Some shorthands?

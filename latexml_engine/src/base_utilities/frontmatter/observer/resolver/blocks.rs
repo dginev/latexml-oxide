@@ -589,7 +589,7 @@ impl Resolver {
               }
               // (a URL line under every name of the document's author list is the block's, its shared creator (OD #159,
               // `addresses:block`): a project's page, `Ann Able, Bob Baker \\ Univ A \\ \url{…}` — the old reader's
-              // `LinkOwner::Block`, `author_block::dispatch` and `link_line_owner`, user ruling 2026-10-20, batch 77p r7:
+              // `LinkOwner::Block`, the old driver's `dispatch` (deleted, DEL2) and `link_line_owner`, user ruling 2026-10-20, batch 77p r7:
               // 2605.06223, 2602.08439, 2604.12896, 2604.20841, 2601.17879; FIDELITY_CHARTER §4 amended 2026-11-05.
               // Whether no names come after it is known at the block's end: decided there. A link printing an
               // institution is the names' affiliation, as the old rule's exception gives it every author:

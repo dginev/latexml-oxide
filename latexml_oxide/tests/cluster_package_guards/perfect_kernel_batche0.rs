@@ -249,6 +249,11 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
   // `defs/frontmatter_api/email_lines.rs`, where [`MOVED_CUT_KIND_EMISSIONS`] counts them)
   // (the "Knowledge in, driver out, one pass" move, 3 -> 2 and 8 -> 2: the token primitives that recognize the API's commands in a note (`NAME_ANNOTATIONS`, `name_text`)
   // moved to `classify/`; they read, emit nothing)
+  // (Z18m, 0 -> 1 and 0 -> 6: no emission added — the fence follows the moved code into its `classify/` homes, whose own
+  // code was already there: `NAME_ANNOTATIONS`' rows and the tests by name of the API's `\lx@add@` commands a name or a
+  // note may hold, read, not written)
+  ("frontmatter/classify/name_text.rs lx@add@", 1),
+  ("frontmatter/classify/notes.rs lx@add@", 6),
 ];
 
 /// The old reader's non-blank code lines at int140a: a ceiling, for the growth its emissions don't show (108a's +703
@@ -267,8 +272,12 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
 /// readouts share (`only_marks_and_notes`, `collaboration_line_reading`, `queued_author_name_keys`) to
 /// `defs/frontmatter_fields/`; [`MOVED_CUT_KIND_CODE_LINES`] took them. Z18l (2026-11-10) lowered it to 1,656: Z18k's
 /// deletion (`split_author_line`'s closure, `row_emails.rs`) and Z18l's (aas's e-mail line readers, `email_block_calls.rs`,
-/// `email_owners.rs` and `links.rs` whole), the ceiling left at 2,665 by the first.
-const OLD_READER_CODE_LINES: usize = 1_656;
+/// `email_owners.rs` and `links.rs` whole), the ceiling left at 2,665 by the first. Z18m (2026-11-10) moved the rest of
+/// `author_block/` unchanged to its owners and deleted the directory; the ceiling follows the code to its homes
+/// ([`old_reader_homes`]) and counts them whole, 3,579 = the 1,656 moved + 23 of the IJCAI split moved with them from
+/// `defs/author_macros.rs` + the 1,900 those `classify/` files already held (the "Knowledge in, driver out, one pass" move's)
+/// — the moved lines' new home, no line added.
+const OLD_READER_CODE_LINES: usize = 3_579;
 
 /// What the fence counts in the old reader's code: its ways into the API's queue, and a convention's mode.
 const OLD_READER_NEEDLES: [&str; 4] = [
@@ -283,8 +292,16 @@ const OLD_READER_NEEDLES: [&str; 4] = [
 fn the_old_reader_takes_no_new_decision() {
   const WHY: &str = "A new ownership rule lands in `observer/resolver/`, not in the old reader, which is deleted before \
                      the merge: docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md.";
-  let (counts, lines) = emissions(&[format!("{BASE}/author_block")], |file| {
-    file.rsplit('/').next().expect("a file name").to_string()
+  // (Z18m: `author_block/` deleted, its code moved unchanged to its owners; the fence follows it there — every file of
+  // [`MOVED_OLD_READER_FILES`] outside the moved Cut and Kind's directories, which their own fence counts)
+  let files: Vec<String> = old_reader_homes()
+    .map(|file| format!("{BASE}/{file}"))
+    .collect();
+  let (counts, lines) = emissions(&files, |file| {
+    file
+      .strip_prefix(&format!("{BASE}/"))
+      .unwrap_or(file)
+      .to_string()
   });
   assert_debts(
     "the old reader's emissions",
@@ -297,6 +314,14 @@ fn the_old_reader_takes_no_new_decision() {
     "the old reader grew to {lines} code lines, over {OLD_READER_CODE_LINES}. {WHY} Raising this ceiling needs the main \
      session's decision."
   );
+}
+
+/// The files of [`MOVED_OLD_READER_FILES`] the old reader's own fence counts: those outside the directories
+/// [`the_moved_cut_and_kind_take_no_new_decision`] counts.
+fn old_reader_homes() -> impl Iterator<Item = &'static str> {
+  MOVED_OLD_READER_FILES.iter().copied().filter(|file| {
+    !file.starts_with("defs/frontmatter_api/") && !file.starts_with("defs/frontmatter_fields/")
+  })
 }
 
 /// What `dirs`' code emits into the API ([`OLD_READER_NEEDLES`], each file keyed by `key`) and its non-blank code lines.
@@ -339,8 +364,9 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// lives there; review revPB S3): the title code's raw statements apart from the replayed ones (`title_code_author_statements`,
 /// `replayable`), the macro readers of `\@author` (aaai2026's `\theauthors`, 2508.08170), the copy's kept `\@maketitle`
 /// merged (neurips_2022, 2205.14141) and its `\newcounter`s (2508.04047). The juggle reader, a split decision, moved to
-/// `fallback.rs` (`title_code_juggle`).
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_383;
+/// `fallback.rs` (`title_code_juggle`). Z18m lowered it to 2,192: the title-code reader (`title_code_author_statements`,
+/// `replayable`, `statements_at_author`, …), the class's code read, moved unchanged to `frontmatter/classify/title_code.rs`.
+const MOVED_CUT_KIND_CODE_LINES: usize = 2_192;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -371,9 +397,10 @@ fn the_moved_cut_and_kind_take_no_new_decision() {
 }
 
 /// The one engine's reach into the old reader, per file and name (user 2026-11-08: "stay focused on having only one engine
-/// for frontmatter"). `author_block/mod.rs` re-exports each of its submodules (`pub use names_split::*`, …) and
-/// `base_utilities/mod.rs` re-exports it all (`pub use author_block::*`), so a frontmatter file's `use super::*` reaches every
-/// name the old reader exports without spelling `author_block::`: the fence counts the names. A use is a call (`name(`), a
+/// for frontmatter"). Until Z18m deleted it, `author_block/mod.rs` re-exported each of its submodules (`pub use
+/// names_split::*`, …) and `base_utilities/mod.rs` re-exported it all (`pub use author_block::*`), so a frontmatter file's
+/// `use super::*` reached every name the old reader exported without spelling a path; the moved files' names still reach
+/// it through the globs of their new homes: the fence counts the names. A use is a call (`name(`), a
 /// path (`::name`, `name::`), a name in a `use` list, a function passed as a value (`.with_str(name)`, `.map(name)`), or any
 /// occurrence of a constant or type name (upper case first); a name is the one engine's own where `frontmatter/` exports it
 /// (a visible item at a file's top level) or the file itself defines it (a nested function, a method, a closure). Each
@@ -387,15 +414,24 @@ fn the_moved_cut_and_kind_take_no_new_decision() {
 /// unfenced; `relocate.rs`'s `s!("{CUT_COPY_PLACE}{key}:{label}")` is revZ18a's capture, unfenced since Z18a moved
 /// `CUT_COPY_PLACE` to `cut.rs`). `fallback.rs title_code_author_statements` (int155a, the main session's decision): PBb's
 /// juggle reader reads the class's title-code statements, which ERR2 (OD #983) put in `names.rs` beside the moved field
-/// readers — the class's code read, not the old reader's; Z18m moves that reader to `frontmatter/classify/`, paying it.
+/// readers — the class's code read, not the old reader's; Z18m moved that reader to `frontmatter/classify/title_code.rs`,
+/// paying it.
 const ONE_ENGINE_REACH: &[(&str, usize)] = &[
-  ("fallback.rs title_code_author_statements", 2),
+  // (Z18m, 0 -> 2 each: no reach added — `author_block/`'s own uses of the moved field and line readers (an import and a
+  // call each), counted since that code's home, `classify/`, is the one engine's directory: `collaboration_line`'s,
+  // `notes_only_line`'s and `space_parted_names`')
+  ("classify/collaborations.rs collaboration_line_reading", 2),
+  ("classify/notes.rs line_notes", 2),
+  ("classify/space_parted.rs only_marks_and_notes", 2),
   ("relocate.rs CUT_COPY_PLACE", 1),
 ];
 
-/// The old reader's files moved out of `author_block/` unchanged, whose exports [`old_reader_exports`] counts as the old
-/// reader's (revZ18j S1): Z18a's Cut, Kind and field readers, Z18j's entry cutter and its e-mail line and mark readers. Each
-/// is deleted or rerouted by Option C.
+/// Every file that holds the old reader's code moved out of `author_block/` unchanged, whose exports
+/// [`old_reader_exports`] counts as the old reader's (revZ18j S1): Z18a's Cut, Kind and field readers, Z18j's entry cutter
+/// and its e-mail line and mark readers, and Z18m's rest — the IJCAI chain, the authblk and IEEEtran readers, the shared
+/// mark readers — after which `author_block/` was deleted. The ones outside the moved Cut and Kind's directories are
+/// [`the_old_reader_takes_no_new_decision`]'s ([`old_reader_homes`]): their emissions pinned, their lines under
+/// [`OLD_READER_CODE_LINES`], so a later batch cannot grow them unseen. Each is deleted or rerouted by Option C (P2-P4).
 const MOVED_OLD_READER_FILES: &[&str] = &[
   "defs/frontmatter_api/cut.rs",
   "defs/frontmatter_api/kind.rs",
@@ -404,33 +440,31 @@ const MOVED_OLD_READER_FILES: &[&str] = &[
   "defs/frontmatter_api/affiliations.rs",
   "defs/frontmatter_api/email_lines.rs",
   "defs/frontmatter_api/line_marks.rs",
+  // (Z18m: the IJCAI chain, from `defs/author_macros.rs` and `author_block/{names_split,preprocess,separators}.rs`)
+  "defs/author_macros/ijcai.rs",
+  // (Z18m: the rest of `author_block/`, each file's items appended to its `classify/` counterpart, or a module of its own)
+  "frontmatter/classify/collaborations.rs",
+  "frontmatter/classify/marks.rs",
+  "frontmatter/classify/name_text.rs",
+  "frontmatter/classify/names_split.rs",
+  "frontmatter/classify/notes.rs",
+  "frontmatter/classify/rows.rs",
+  "frontmatter/classify/separators.rs",
+  "frontmatter/classify/space_parted.rs",
 ];
 
-/// The names the old reader exports into `base_utilities`: the `pub`, `pub(crate)` and `pub(in …)` items of `mod.rs`, of
-/// each submodule `mod.rs` re-exports with `pub use <submodule>::*` and of each of [`MOVED_OLD_READER_FILES`], at a file's
+/// The names the old reader exports into `base_utilities`: the `pub`, `pub(crate)` and `pub(in …)` items of each of
+/// [`MOVED_OLD_READER_FILES`] (until Z18m also `author_block/mod.rs` and each submodule it re-exported), at a file's
 /// top level: a method is no name the glob
 /// exports, its type is (a gap closed 2026-11-08: the driver's `Collaborations::author` read every `author` argument as a use).
 fn old_reader_exports() -> std::collections::BTreeSet<String> {
-  let dir = format!("{BASE}/author_block");
-  let glob = Regex::new(r"pub(?:\([^)]*\))?\s+use\s+([a-z_][a-z0-9_]*)::\*").expect("a regex");
   let item = Regex::new(
     r"(?m)^pub(?:\((?:crate|in [^)]*)\))?\s+(?:fn|const|static|struct|enum|type|trait)\s+([A-Za-z_][A-Za-z0-9_]*)",
   )
   .expect("a regex");
-  let mut files = vec![format!("{dir}/mod.rs")];
-  for found in glob.captures_iter(&read_rust(&format!("{dir}/mod.rs")).code) {
-    let sub = format!("{dir}/{}", &found[1]);
-    if repo_path(&format!("{sub}.rs")).is_file() {
-      files.push(format!("{sub}.rs"));
-    } else {
-      files.extend(rust_files(&sub));
-    }
-  }
-  files.extend(
-    MOVED_OLD_READER_FILES
-      .iter()
-      .map(|file| format!("{BASE}/{file}")),
-  );
+  let files = MOVED_OLD_READER_FILES
+    .iter()
+    .map(|file| format!("{BASE}/{file}"));
   let mut names = std::collections::BTreeSet::new();
   for file in files {
     for found in item.captures_iter(&read_rust(&file).code) {
@@ -1170,10 +1204,15 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (Z18k2, 279 -> 236: `split_author_line`'s closure and `row_email_owners` deleted, unreached once eptcs and OmniBus's
   // `\authors` went to the reading; Z18l, 236 -> 195: aas's e-mail line readers deleted, `labelled_email_line`,
   // `placed_email_line_calls`, `take_placed_line_emails`, `labelled_emails`, `mailto_line` and what only they reached)
-  ("author_block", 195),
+  // (Z18m, 195 -> 0, the row gone with the directory: its code moved unchanged, to `classify` (+131) and the IJCAI chain's
+  // `defs/author_macros/` (+64), 195 = 131 + 64; none added)
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the text rules and token primitives, 1285 = 938 + 347; none added)
-  ("classify", 349),
+  // (Z18m, 349 -> 514: moved from `author_block` with its code (+131), and ERR2's title-code reader from
+  // `defs/frontmatter_fields/` (+34, `classify/title_code.rs`), 514 = 349 + 131 + 34; none added)
+  ("classify", 514),
   ("defs/author_macros", 20),
+  // (Z18m, a new directory: the IJCAI chain moved from `author_block` with its code, as that row says)
+  ("defs/author_macros/", 64),
   // (Z4a, 7 -> 8: `\lx@frontmatter@itemnone` reads its tag argument, an element's name: an `ltx:rdf` passes through, the rest goes)
   ("defs/frontmatter_api", 8),
   // (Z18j, 63 -> 109: moved from `author_block` with its code, as that row says)
@@ -1190,7 +1229,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // bodies, TeX definitions no event says. +1 the copy's kept `\@maketitle` read beside the live one (2205.14141); +1 a macro
   // whose statement holds `\@author` is a reader of it (2508.08170); +3 a `\newcounter{x}` replayed by its `\c@x` (its arm,
   // its `{x}`, its definee: 2508.04047). The juggle reader moved to `fallback`, review revPB S3)
-  ("defs/frontmatter_fields/", 100),
+  // (Z18m, 100 -> 66: the title-code reader moved unchanged to `classify/title_code.rs`, as the `classify` row says)
+  ("defs/frontmatter_fields/", 66),
   ("defs/general", 8),
   ("epl_cls.rs", 43),
   ("eptcs_cls.rs", 28),
@@ -1388,10 +1428,6 @@ const FRONTMATTER_AREAS: &[(&str, &str)] = &[
 /// The count's areas outside `frontmatter/`, and the bindings.
 const OTHER_AREAS: &[(&str, &str)] = &[
   (
-    "author_block",
-    "latexml_engine/src/base_utilities/author_block",
-  ),
-  (
     "defs/frontmatter_api",
     "latexml_engine/src/base_utilities/defs/frontmatter_api.rs",
   ),
@@ -1410,6 +1446,11 @@ const OTHER_AREAS: &[(&str, &str)] = &[
   (
     "defs/author_macros",
     "latexml_engine/src/base_utilities/defs/author_macros.rs",
+  ),
+  // (Z18m: the IJCAI chain, moved from `defs/author_macros.rs` and `author_block/`)
+  (
+    "defs/author_macros/",
+    "latexml_engine/src/base_utilities/defs/author_macros",
   ),
   (
     "defs/general",

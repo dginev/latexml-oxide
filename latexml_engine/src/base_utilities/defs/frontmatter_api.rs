@@ -12,6 +12,9 @@ use kind::*;
 // bindings call, Z18j)
 pub(in crate::base_utilities) mod affiliations;
 pub(in crate::base_utilities) use affiliations::*;
+// (the e-mail line readers Kind and the cutter share, `frontmatter_api::email_lines`; not `classify::email_lines`, the
+// text rules on an e-mail's printed ink — two modules of that name, each named by its parent; Z18m deleted the third,
+// `author_block/email_lines.rs`, its `drop_empty_marks` now `classify::marks`')
 pub(in crate::base_utilities) mod email_lines;
 pub(in crate::base_utilities) use email_lines::*;
 mod line_marks;

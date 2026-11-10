@@ -1,5 +1,5 @@
 //! Red/green guards for batch 108a: authblk's `\author` reaches the kernel's author read on a separator it parts the block
-//! at (`authblk_sty::has_separated_names`, `author_block::has_author_block_separator`; OXIDIZED_DESIGN_DIVERGENCES #52(h)).
+//! at (`authblk_sty::has_separated_names`, `classify::has_author_block_separator`; OXIDIZED_DESIGN_DIVERGENCES #52(h)).
 //! An argument with none stayed one name: every name and line in one `personname`, every note after it, each note's author
 //! lost. Each guard converts its repros under `tools/perfect_kernel/repros/sectioning-frontmatter/` from the binary, eager
 //! and `--streaming`, with 0 errors and 0 warnings, and asserts the frontmatter whole.

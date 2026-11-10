@@ -219,7 +219,7 @@ fn an_email_label_is_written_as_printed() {
 
 /// A block past the positions, which no rehearsal reads (one call past the author field's 32,767; 2204.09614, 2404.06718 are read since positions
 /// are per call, `perfect_kernel_batchf1`), is with `=2` its queued whole entry, Perl's `\lx@add@author` of
-/// it (the one whole-block writer, `author_block::whole_block_author`), in one counted Warning and no `merged_creators` Error; with the switch off the
+/// it (the one whole-block writer, `fallback::whole_block_author`), in one counted Warning and no `merged_creators` Error; with the switch off the
 /// writer cut it.
 #[test]
 fn an_unread_block_is_written_whole() {

@@ -926,7 +926,7 @@ fn ends_a_dedication(nodes: &[Node]) -> bool {
 /// default name whose whole printed text is
 /// - one link ([`sole_link`]: `{\texttt{\url{https://github.com/…}}}` under IEEEtran's `\IEEEauthorblockA{…}\\`, which
 ///   the binding wraps into a block of its own, 2511.18438) is a URL contact (`role=url`, as an author block's link line
-///   is one, `author_block::links::is_link_line`): the block's own creator's, once, when it is the block's line — no
+///   is one, `classify::links::is_link_line`): the block's own creator's, once, when it is the block's line — no
 ///   mark labels it and every author holds a copy —, else each holder's (a line a mark labels is its owners'); a short
 ///   label before it that names a link (`Project website:`, `\textbf{Website: }`: [`link_label`]) is the contact's
 ///   name, as printed (2609.03591, 2502.19820: 107c); an entry whose every line is one such link is a contact per line

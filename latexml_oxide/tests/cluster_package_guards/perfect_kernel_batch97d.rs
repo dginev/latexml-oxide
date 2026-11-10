@@ -1,6 +1,6 @@
 //! Red/green guards for batch 97d: a collaboration or team named in the author line is a `<contact
 //! role="collaboration">` on the names it covers, no creator of its own and no part of a name (FIDELITY_CHARTER §4, user
-//! ruling 2026-11-01; author_block/collaborations.rs; OXIDIZED_DESIGN_DIVERGENCES #946) — the contact Perl's aastex
+//! ruling 2026-11-01; frontmatter/classify/collaborations.rs; OXIDIZED_DESIGN_DIVERGENCES #946) — the contact Perl's aastex
 //! binding makes of `\collaboration` (aas_support.sty.ltxml:126). A piece of the names line, a line under the names or a
 //! heading before them; the names beside it split as the marks or the separators say. Each guard converts its repro under
 //! `tools/perfect_kernel/repros/sectioning-frontmatter/` from the binary, eager and `--streaming`, asserts the same XML

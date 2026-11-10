@@ -210,7 +210,7 @@ fn a_macro_closing_a_tabular_is_no_juggle() {
 
 /// A link line under every name that prints an institution (`\href{https://www.google.com}{Google}`, a bare domain) is
 /// every name's affiliation, its link kept, as the old rule's exception to the block's URL gives it every author
-/// (`author_block::link_prints_an_institution`, user ruling R12 2026-10-20): at `=2` it was a nameless block creator's
+/// (`classify::link_prints_an_institution`, user ruling R12 2026-10-20): at `=2` it was a nameless block creator's
 /// "url: Google" (review revFB2a finding 3). Distinct from `a_url_line_under_every_name_is_the_blocks`: the exception.
 #[test]
 fn a_link_printing_an_institution_is_every_names() {

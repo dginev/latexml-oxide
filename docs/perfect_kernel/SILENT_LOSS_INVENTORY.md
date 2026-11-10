@@ -1930,7 +1930,7 @@ The bundle's history: [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSI
 - DEL3: R1 a top-level svjour `\institute` after a block with a list setter loses the block's "Lab Y"; R2 an unrequested entry of the written setter call dropped with an orphan Warning (synthetic; OD #982).
 - revX7: `resolver/mod.rs:1396` takes every held Error in an IJCAI block as a section marker (suspect, unprobed).
 - 2606.14105 (BESIII, 770 creators off): one creator, "unstamped: out of positions", counted (pre-existing since int153d).
-- The e0 fence's `ONE_ENGINE_REACH` counts only `author_block` exports — re-target at Z18m; three modules named `email_lines` (classify/, author_block/, frontmatter_api/) — qualify at Z18m.
+- The e0 fence's `ONE_ENGINE_REACH` counted only `author_block` exports; three modules were named `email_lines` (classify/, author_block/, frontmatter_api/) — DONE at Z18m: `author_block/` deleted, the fence follows `MOVED_OLD_READER_FILES`, the two left named by their parents (`classify::email_lines`, `frontmatter_api::email_lines`).
 - Private-item rustdoc has pre-existing unresolved links and unclosed tags (not gated) — the cleanup phase.
 - Z18k (no commit; WIP `agent_reports/2026-11-10_Z18k_pending/Z18k_wip.patch`): eptcs worse 1101.4424 (`\email{a \qquad b}` glued `\qquadtassiana98@`, font lost — fix on the tokens in the reading's address reader); 1709.04714, 1904.04371, 1908.10743, 2108.10490 +1 creator; 1210.2456 2 → 4; 1504.02441, 2510.13425 unread — Z18k2, after the push.
 - Z18k's gains to keep: omnibus `\authors` whole to `\lx@add@author@split` with `\affil{n}` as the `\inst` mark (17 of 154 changed: 1810.04324, 2512.09915, 1304.1392, 1304.1412); eptcs as printed columns (26 of 73 changed: 2304.02524, 1610.08171).

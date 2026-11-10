@@ -1,4 +1,7 @@
 //! Names parted by horizontal space alone: a wide space, or a name's marks and any space after them.
+//! Moved unchanged from `author_block/space_parted.rs` by Z18m, which deleted `author_block/`; its one caller is
+//! [`super::rows`]' `lines_under_names_read_as_names` (authblk's `\author` gate, `authblk_sty.rs`
+//! `has_separated_names`).
 
 use super::*;
 use crate::base_utilities::defs::frontmatter_fields::only_marks_and_notes;

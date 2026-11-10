@@ -3459,7 +3459,7 @@ pub(super) fn kept_whole(index: usize) -> bool {
 }
 
 /// The creator Perl's `\\lx@add@author` makes of the author block at ledger index `index`, with its keys and `keys`
-/// (`author_block::whole_block_author`, the one writer of a block kept whole), its tabular juggles and columns the line
+/// (`fallback::whole_block_author`, the one writer of a block kept whole), its tabular juggles and columns the line
 /// breaks they print (`tabular_juggles_in_a_whole_block`: 1511.05911's vldb.cls `\\alignauthor`).
 fn whole_block(index: usize, keys: &str, annotations: &[Token]) -> Option<Result<Tokens>> {
   let (keys, written) = block_keys(index, keys, annotations)?;

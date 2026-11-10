@@ -33136,8 +33136,8 @@ block's held Errors (its section markers, the resolver's `block_markers`, 2501.0
 code defines inside its own `\author`/`\maketitle` (vmsta's `\fnm`/`\snm`/`\inits`, the IOS `\fnms`, JAIR's row
 `\name`/`\email`/`\addr`, kr.sty's `\affiliations`: pdflatex 0 errors there; Perl raises `Error:undefined:\affiliations` on 2602.18351 (with
 `--includestyles` too) and 2604.26688, because it digests `\author` outside the class's `\maketitle`, KNOWN_PERL_ERRORS
-#1219). The title code is read where it reads `\@author` (`defs/frontmatter_fields/names.rs`
-`title_code_author_statements`, its raw statements; replayed, `title_code_author_definitions`, each but one closing a group
+#1219). The title code is read where it reads `\@author` (`frontmatter/classify/title_code.rs`, moved unchanged from
+`defs/frontmatter_fields/names.rs` by Z18m: `title_code_author_statements`, its raw statements; replayed, `title_code_author_definitions`, each but one closing a group
 it did not open; PB): (a) through a macro it defines whose statement holds
 `\@author` — its first use is the reading point (aaai2026.sty:73 `\def\theauthors{\if T\showauthors@on\@author…}`,
 used at :98 inside the `\sbox{\titlearea}` group that defines `\coo`: 2508.00545 `\equalcontriblast`, 2508.04047 `\co`,
@@ -33863,7 +33863,8 @@ binding's (0909.0058), no e-mail rule. Deleted with the readers, the binding the
 (`mailto_line_is_a_labelled_email_line`, the labelled half of `email_addresses_skip_colour_arguments`); their witnesses
 astro-ph0611258, 2604.10316, 2606.28166, 2602.16540, 2505.23260, 2602.12235, 2601.00240, 2601.07974, 2604.04847,
 2604.23002, 2604.25444, 2605.18563, 2605.29064, 2605.29893, 2606.01600, 2606.03014 read by the API's copies.
-`author_block/` 2,552 → 2,069 lines.
+`author_block/` 2,552 → 2,069 lines (Z18m then moved the rest unchanged to its owners and deleted `author_block/`:
+FRONTMATTER_SINGLE_ENGINE_PLAN, row "`author_block/`'s survivors").
 
 **Measured** (vs int155a1-rel, both on int154a's dumps, `kit/conv.sh` through `pool_run.sh`): the aas census (1,166:
 aastex*, emulateapj, aaspp4, aas2pp4, aas_support) and the 1,434 stage2 ids, 2,600 papers, E/F/W identical on every

@@ -7,8 +7,7 @@
 //! unwrapped, `\hspace` runs between names as separators, icons joined to their links) went with that driver; what is
 //! left is a binding's too (`strip_linebreak_options`, `has_author_marks`, `glued_line_marks_as_marks`).
 
-use super::*;
-use crate::base_utilities::defs::frontmatter_fields::title_code_author_statements;
+use super::{classify::title_code::title_code_author_statements, *};
 
 /// Perl's whole-block creator (Base_Utility.pool.ltxml:693, `\lx@add@authors`' `{tabular}` fallback, and :588-589):
 /// `\lx@add@author[keyvals]{…}` of the block `written`, as given. The one writer of a block kept whole, Perl's raw call —

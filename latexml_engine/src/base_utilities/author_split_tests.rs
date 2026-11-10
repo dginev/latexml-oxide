@@ -1,9 +1,7 @@
 use latexml_core::state::{State, StateOptions, set_state};
 
 // (the field readers' units, moved from `author_block/` to `defs/frontmatter_fields/` by Z18a)
-use super::defs::frontmatter_fields::{
-  math_braces_as_printed, math_glyphs_as_printed, replayable, statements_at_author,
-};
+use super::defs::frontmatter_fields::{math_braces_as_printed, math_glyphs_as_printed};
 use super::*;
 
 fn setup() {
@@ -12,90 +10,6 @@ fn setup() {
   set_state(State::new(StateOptions::default()));
 }
 fn tk(s: &'static str) -> Tokens { mouth::tokenize_internal(s) }
-
-/// The definitions of a title code `body` replayed for the author content, with their definees
-/// (`statements_at_author`, `replayable`).
-fn definitions_at_author(body: &'static str) -> Option<Vec<(Token, Vec<Token>)>> {
-  statements_at_author(tk(body).unlist_ref()).map(|statements| {
-    statements
-      .into_iter()
-      .filter(|(_, statement)| replayable(statement))
-      .collect()
-  })
-}
-
-/// The replayed statements of a title code `body`, as strings.
-fn replayed(body: &'static str) -> Vec<String> {
-  definitions_at_author(body)
-    .expect("reads \\@author")
-    .into_iter()
-    .map(|(_, statement)| Tokens::new(statement).to_string())
-    .collect()
-}
-
-#[test]
-fn title_code_definitions_open_at_author() {
-  setup();
-  // a spaced `\newcommand [1] {…}` is read whole; `\let`; the last of two `\def`s comes last; a group closed before
-  // `\@author` is not replayed
-  assert_eq!(
-    replayed(
-      r"{\let\addr\itshape\newcommand\note [1] {[#1]}\def\dup{a}{\def\dup{b}\begingroup\def\gone{G}\endgroup\@author}}"
-    ),
-    [
-      r"\let\addr\itshape",
-      r"\newcommand\note[1] {[#1]}",
-      r"\def\dup{a}",
-      r"\def\dup{b}"
-    ]
-  );
-}
-
-#[test]
-fn title_code_definitions_global_local_and_skipped() {
-  setup();
-  // a `\gdef` (and `\global\def`) made in a closed group is kept, replayed as a local `\def`; `\edef`,
-  // `\renewcommand` and a definition closing a group it did not open (2601.13359) are not replayed
-  assert_eq!(
-    replayed(
-      r"{\gdef\g{1}\global\def\h{2}}{\edef\e{3}\renewcommand\r{4}\def\affiliations{\egroup\par\bgroup}\let\x\egroup\def\sep{\end{tabular}\begin{tabular}{c}}\def\ok{\begin{center}c\end{center}}\@author}"
-    ),
-    [
-      r"\def\g{1}",
-      r"\def\h{2}",
-      r"\def\ok{\begin{center}c\end{center}}"
-    ]
-  );
-  assert!(definitions_at_author(r"{\def\name{N}}").is_none());
-}
-
-#[test]
-fn title_code_counters_replay_by_their_count_register() {
-  setup();
-  // aaai2026.sty:77's `\newcounter{corfn}`, which its `\co` reads (2508.04047): replayed, its definee `\c@corfn` (so
-  // only while that is undefined), the optional `[within]` with it
-  let definitions = definitions_at_author(
-    r"\newcounter{corfn}\setcounter{corfn}{0}\newcounter {eqfn}[section]\def\co{\value{corfn}}\@author",
-  )
-  .expect("reads \\@author");
-  assert_eq!(
-    definitions
-      .iter()
-      .map(|(definee, statement)| (
-        definee.to_string(),
-        Tokens::new(statement.clone()).to_string()
-      ))
-      .collect::<Vec<_>>(),
-    [
-      (r"\c@corfn".to_string(), r"\newcounter{corfn}".to_string()),
-      (
-        r"\c@eqfn".to_string(),
-        r"\newcounter{eqfn}[section]".to_string()
-      ),
-      (r"\co".to_string(), r"\def\co{\value{corfn}}".to_string())
-    ]
-  );
-}
 
 #[test]
 fn whole_line_cs_wrapper_detects_font_wrapper() {
@@ -759,32 +673,6 @@ fn clean_frontmatter_labels_keys_an_asterisk_one_way() {
     "affiliation:1",
     "affiliation:*"
   ]);
-}
-
-/// 78u: a note written inside a mark is taken out after it, the mark's labels left (2512.05464), and a mark holding
-/// only a note goes (2212.00809).
-#[test]
-fn notes_out_of_marks_takes_the_note_after_the_mark() {
-  setup();
-  let out = |s: &'static str| notes_out_of_marks(tk(s)).to_string();
-  let tk = |s: &'static str| tk(s).to_string();
-  assert_eq!(
-    out(r"Ann\textsuperscript{\rm 1,\rm 2\thanks{Work {done}.}}, Bob"),
-    tk(r"Ann\textsuperscript{\rm 1,\rm 2}\thanks{Work {done}.}, Bob")
-  );
-  assert_eq!(
-    out(r"Ann$^{\mathbf{1,\thanks{Equal.}}}$ and Cy$^{\thanks{Convener.}}$"),
-    tk(r"Ann$^{\mathbf{1,}}\thanks{Equal.}$ and Cy$\thanks{Convener.}$")
-  );
-  assert_eq!(
-    out(r"Ann$^{1\footnotemark[1]}$"),
-    tk(r"Ann$^{1}\footnotemark[1]$")
-  );
-  // (a note after the mark, and a mark holding none, are left as they are)
-  assert_eq!(
-    out(r"Ann$^{1}$\thanks{X}, Bob\textsuperscript{2}"),
-    tk(r"Ann$^{1}$\thanks{X}, Bob\textsuperscript{2}")
-  );
 }
 
 #[test]

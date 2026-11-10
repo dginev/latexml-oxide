@@ -1,6 +1,6 @@
 //! Red/green guards for batch 103a: a list of local parts written without spaces before one domain
 //! (`dzyang,ashishbshah@fb.com`) inside a `;`- or `,`-parted e-mail line is written out, each local part at the domain,
-//! by the one reading both address readers share (latexml_engine/src/base_utilities/author_block/email_block_calls.rs
+//! by the one reading both address readers share (latexml_engine/src/base_utilities/frontmatter/classify/email_block_calls.rs
 //! `write_out_unspaced_lists`: the author block's `email_addresses`, the frontmatter observer's `plain_addresses`), and
 //! the flush's Link step writes an e-mail out only where the two readings of it agree, so no local part is ever lost
 //! (frontmatter/insert.rs `link_entry_addresses`; OXIDIZED_DESIGN_DIVERGENCES #956). Code paths: the flush's
