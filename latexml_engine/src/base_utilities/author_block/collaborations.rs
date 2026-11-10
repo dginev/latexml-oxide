@@ -5,18 +5,10 @@
 //! the author call's `\and` group, `annotate=new:N`.
 
 use super::*;
+use crate::base_utilities::defs::frontmatter_fields::collaboration_line_reading;
 
 /// Whether a line of an author block, a line of its own, names a collaboration ([`reads_as_collaboration`], a team word
 /// framed): `(XYZ Collaboration)` under the names (2410.11607), `on behalf of the LHCb collaboration` (1905.11825).
 pub(in crate::base_utilities) fn collaboration_line(line: &Tokens) -> bool {
   collaboration_line_reading(line).is_some()
-}
-
-/// How the collaboration a line of an author block names is framed ([`collaboration_line_framing`]), `None` for a line
-/// naming none or marked.
-pub(in crate::base_utilities) fn collaboration_line_reading(line: &Tokens) -> Option<Framing> {
-  if author_mark_position(line).is_some() {
-    return None;
-  }
-  collaboration_line_framing(&visible_name_text(line.unlist_ref()))
 }

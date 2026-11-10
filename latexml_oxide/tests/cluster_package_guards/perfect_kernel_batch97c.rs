@@ -2,7 +2,7 @@
 //! #945). A block line's labelled entry of several events is cut by its whole span (resolver/blocks.rs
 //! `labelled_entries`), a digit mark glued inside a word only when the source glues it (events/lexer.rs
 //! `glued_in_source`); llncs's one `\institute` cut at its marks keeps the sole institute's share rule for the piece no
-//! mark labels (llncs_cls.rs `\lx@llncs@institute@sup`, author_block/affiliations.rs `affiliation_calls`'s
+//! mark labels (llncs_cls.rs `\lx@llncs@institute@sup`, defs/frontmatter_api/affiliations.rs `affiliation_calls`'s
 //! `unmarked_attr`), the numbers typed by hand labelling its other pieces (`_markpiece`: shared_row.rs `marks_pick`,
 //! resolver/post.rs `share_unpicked`); svproc's `\institute` is sv_support's (contrib svproc_cls.rs). Each guard converts
 //! its repro under `tools/perfect_kernel/repros/sectioning-frontmatter/` from the binary, eager and `--streaming`,

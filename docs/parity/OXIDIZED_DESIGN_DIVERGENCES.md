@@ -1881,7 +1881,7 @@ affiliations given with no names are not kept.
 An address line carrying a note (`\texttt{a@x, b@y}\thanks{Submitted …}`) is still an address line (101b): the reader
 reads the printed text, so read whole the note's words made the line an affiliation — of the last name in a marked
 block (2605.23553's second line, "cy.cole@…, dan.dorn@…", Dan Dorn's), of every name in an unmarked one. One helper,
-`author_block/email_lines.rs` `address_line_notes`, takes the notes off a line whose rest is an address line by the
+`defs/frontmatter_api/email_lines.rs` `address_line_notes`, takes the notes off a line whose rest is an address line by the
 caller's own reader (the marked block's `line_is_email_list` / `labelled_email_line`, the unmarked block's
 `line_emails`, a marked list's `entry_calls`), and makes them the document's pubnotes, added after the block's calls in
 print order among themselves — not among the block's other notes: a note on a later affiliation line is added in
@@ -22897,7 +22897,7 @@ entry, the first numbered 1. The K11 store path (`\lx@add@store@affiliations`, f
 entries and gave every author every entry (`annotate=all`): 2405.16615's two authors each held Imperial College and
 Edinburgh. Ours: when the class numbers the store's entries, the store holds at least two `\and` entries and no mark,
 and the queued authors' marks request numbers, the entries are led by their numbers as the title page prints them
-(`class_numbered_institutes`, base_utilities/author_block/affiliations.rs) and labelled by them, so `$^{1}$`/`$^2$` — or
+(`class_numbered_institutes`, base_utilities/defs/frontmatter_api/affiliations.rs) and labelled by them, so `$^{1}$`/`$^2$` — or
 the class's `\inst{1,2}`/`\inst2` (2512.08621) — pick one each. Whether the class numbers them is read from its own
 output (batch 104b, census129 cluster 3): one speculative run of the whole title page with the store set to an `\and`
 list of three letter sentinels (frontmatter_stores.rs `note_and_numbering`, at `\maketitle`, K11's store route and the
@@ -29329,7 +29329,7 @@ reading or the binding was already right and a span, a share rule or an override
   whose three addresses the first reading made one of every author; its article twin, both entries one of Ann in 97b, is
   now each name's).
 - **llncs's one `\institute` cut at its marks** (llncs_cls.rs `\lx@llncs@institute@sup`, shape (c): no `\and`, a
-  superscript in it). Its split (author_block/affiliations.rs `affiliation_calls`) labels every entry by its mark and
+  superscript in it). Its split (defs/frontmatter_api/affiliations.rs `affiliation_calls`) labels every entry by its mark and
   dropped the call's `labelseq`, so the line no mark labels (`\institute{Univ A, Town \\ \textsuperscript{*}Equal
   contribution}`) was an unlabelled affiliation of the last author, where llncs.cls:868-886 prints it unnumbered under
   every name. The call now passes `labelseq=affiliation,_share=authors,_markpiece=true` for an entry with no mark and no
@@ -30587,7 +30587,7 @@ one-argument line wrappers (`relocate::wrapped_lines_as_lines`; since 104c also 
 commands set side by side, OD #964), a superscript on a spacing nucleus, in `\( … \)` or a
 box of its own (`relocate::spaced_marks_as_marks` over `spaced_mark_at`, now past a one-argument wrapper the list opens
 with: acmart's `\institution{${}^a$…}`), a class's `\inst{n}` as the `\textsuperscript{n}` it prints (aa.cls:759,
-mem.cls:318) — by its meaning, `separators::inst_prints_its_mark` (the inst convention's, or a one-argument definition
+mem.cls:318) — by its meaning, `line_marks::inst_prints_its_mark` (the inst convention's, or a one-argument definition
 raising its argument), so a document's `\newcommand{\inst}{Institute}` stays its word (review rev99a S2); a list wholly in one group is its content, and the declarations it opens with (`\itshape`, `{\bfseries …}`)
 open every entry, as the observer writer's cut keeps them (review rev94b r3 B1). A name's marks are read on the queue
 by `email_lines::mark_operands` (`${}^{a}$`, `$^{~a,b}$`) and on the DOM by `observer::marks::read_formula`

@@ -1,7 +1,8 @@
 //! The frontmatter API's Cut step (`\lx@add@frontmatter`'s `cut_marked_contact`): a printed list of contact entries cut at
 //! its marks, one queued contact per entry, and the places of the uncut copies a binding printed earlier. Moved unchanged
 //! from `author_block/affiliations.rs` (Z18a): the API's own step, which every binding's contact goes through. The cutter
-//! it shares with the bindings' own lists (`entry_calls`, `printed_marks_as_marks`, `cut_list_key`, …) stays there.
+//! it shares with the bindings' own lists (`entry_calls`, `printed_marks_as_marks`, `cut_list_key`, …) moved beside it,
+//! to `affiliations.rs` (Z18j).
 
 use super::*;
 use crate::{base_utilities::defs::frontmatter_fields::text_tokens, frontmatter_stores::cs_in};

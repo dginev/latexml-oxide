@@ -10,7 +10,7 @@ use super::*;
 /// 1. the author the address spells ([`address_owners`]);
 /// 2. else the n-th author, the address at the n-th place — Perl's jheppub.sty.ltxml rule (`labelseq=author`) — when the
 ///    list is one place for each author and in their order: no address spells an author other than the one at its
-///    place, as [`addresses_in_order`] reads an author block's line (1303.3040's `zhl61@` for Zhen Liu, 2011.02499's
+///    place, as [`addresses_in_order`](crate::base_utilities::defs::frontmatter_api::email_lines::addresses_in_order) reads an author block's line (1303.3040's `zhl61@` for Zhen Liu, 2011.02499's
 ///    `tpsg4@`/`tpsr@`). The place is the address's, or else the call's (an `\emailAdd{a, b}` of one author's two
 ///    addresses). 2407.07862's `eichhorn@` listed first for Astrid Eichhorn, author 2, and 1804.07528's three addresses
 ///    each one place on are no list in author order. The user ruled the consistent list evidence (2026-10-21);

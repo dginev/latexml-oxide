@@ -1075,7 +1075,7 @@ pub(in crate::base_utilities) fn label_pieces(operand: &[Token]) -> Option<Vec<T
 /// agrees with, the name at its place; else `None`, the row's names' (FIDELITY_CHARTER §4). An address several names
 /// spell agrees with the list only when the name at its place is one of them: `lee@x.edu` at Cid Cole's place under
 /// "Ann Lee, Bob Lee and Cid Cole" spells another author than the one there, so the list is in no author order (the
-/// 85b review's r01; [`addresses_in_order`] reads such an address as none's). A list of local parts the reader could
+/// 85b review's r01; [`addresses_in_order`](crate::base_utilities::defs::frontmatter_api::email_lines::addresses_in_order) reads such an address as none's). A list of local parts the reader could
 /// not part (`{zz|yy}@x.edu`, [`lists_local_parts`]) is several authors' address, so no list holding one is one address
 /// per name (user ruling R10: the block's).
 pub(in crate::base_utilities) fn row_address_owners(

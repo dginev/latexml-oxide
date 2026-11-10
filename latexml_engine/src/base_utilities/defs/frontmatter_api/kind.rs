@@ -1,7 +1,8 @@
 //! The frontmatter API's Kind step for an affiliation-kind entry (`\lx@add@frontmatter`'s `kind_entry_addresses`): the
 //! addresses an entry prints, each its own contact digested inside it, and the entry key the Link step reads. Moved
 //! unchanged from `author_block/affiliations.rs` (Z18a): the API's own step, which every binding's contact goes through.
-//! The e-mail line readers it shares with the bindings (`email_line_calls`, `line_addresses`, …) stay there.
+//! The e-mail line readers it shares with the bindings (`email_line_calls`, `line_addresses`, …) moved beside it, to
+//! `email_lines.rs` and `affiliations.rs` (Z18j).
 
 use super::*;
 

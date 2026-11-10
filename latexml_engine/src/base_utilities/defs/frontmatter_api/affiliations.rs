@@ -1,6 +1,11 @@
-//! Author-block affiliations: the `\lx@add@affiliation` calls, address runs and their placement, contact owners.
+//! The frontmatter API's entry cutter: the `\lx@add@affiliation` calls for a printed list (`entry_calls`), address
+//! runs and their placement, the marks a list's entries are cut at, and the marked/shared affiliation gates
+//! (`\lx@add@affiliation@marked`/`@shared`) and class-numbered institutes the bindings and `frontmatter_stores` call. Moved
+//! unchanged from `author_block/affiliations.rs` (Z18j): the Cut's own closure, rerouted onto the reading by Option C
+//! P2-P4 (FRONTMATTER_SINGLE_ENGINE_PLAN, row "`author_block/`'s survivors").
 
 use super::*;
+use crate::base_utilities::defs::frontmatter_fields::queued_author_name_keys;
 
 /// The `\lx@add@affiliation` calls for an affiliation list: one per line or `\and`-separated
 /// entry, each with its superscript marker as its label when the list has markers (Perl
@@ -326,7 +331,7 @@ pub(in crate::base_utilities) fn printed_marks_as_marks(list: Tokens) -> Tokens 
   };
   let list = wrapped_lines_as_lines(&list).unwrap_or(list);
   let list = spaced_marks_written(&list, true).unwrap_or(list);
-  // (`\inst` by its meaning, the one-argument mark it prints: `separators::inst_prints_its_mark`)
+  // (`\inst` by its meaning, the one-argument mark it prints: `line_marks::inst_prints_its_mark`)
   if !list.unlist_ref().contains(&T_CS!("\\inst")) || !inst_prints_its_mark() {
     return list;
   }
@@ -642,21 +647,6 @@ fn place_address_runs(
     placed.push(calls);
   }
   Ok(placed.into_iter().rev().flatten().collect())
-}
-
-/// The keys ([`NameKeys`]) of each queued author's name ([`queued_name`]), in queue order (the n-th digests
-/// with `author:n`).
-pub(in crate::base_utilities) fn queued_author_name_keys() -> Vec<NameKeys> {
-  with_value("frontmatter_raw", |v| match v {
-    Some(Stored::FrontmatterRaw(queue)) => queue
-      .iter()
-      .filter(|entry| {
-        entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
-      })
-      .map(|entry| NameKeys::of(&queued_name(&entry.2)))
-      .collect(),
-    _ => Vec::new(),
-  })
 }
 
 /// Where the addresses of a line in an author block go.

@@ -2,44 +2,6 @@
 
 use super::*;
 
-pub(in crate::base_utilities) fn affil_splits() -> Vec<SplitDelim> {
-  vec![
-    // The \and CONTROL-SEQUENCE family is added (vs upstream, which splits
-    // affiliations only on \quad/\qquad/\\): it lets the shared affiliation
-    // parser handle \and-separated institute/affiliation lists (e.g. LNCS
-    // \institute{A \and B}). NOTE: the literal word " and " is deliberately NOT
-    // included (unlike author_affil_splits) — institution names routinely
-    // contain "and" ("Electrical and Computer Engineering"), so splitting on it
-    // wrongly fragments them. Affiliations never use ',' as a separator either.
-    T_CS!("\\and").into(),
-    T_CS!("\\And").into(),
-    T_CS!("\\AND").into(),
-    T_CS!("\\quad").into(),
-    T_CS!("\\qquad").into(),
-    T_CS!("\\\\").into(),
-    T_CS!("\\newline").into(),
-  ]
-}
-/// `tokens` with every alias of a mark command written as the command it means ([`mark_command_meant`]), so the
-/// readers of an author or affiliation block that match a command by name (`\textsuperscript`'s symbol and ordinal
-/// rewrites) see the alias as the command.
-pub(in crate::base_utilities) fn unalias_mark_commands(tokens: Tokens) -> Tokens {
-  if !tokens.unlist_ref().iter().any(|t| {
-    matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE)
-      && !mark_commands().contains(t)
-      && is_mark_command(t)
-  }) {
-    return tokens;
-  }
-  Tokens::new(
-    tokens
-      .unlist()
-      .into_iter()
-      .map(|t| mark_command_meant(&t).unwrap_or(t))
-      .collect(),
-  )
-}
-
 /// Does a superscript's operand read as mark labels (`1`, `1,2`, `1, 3`, `a`, `\dagger`, `\mathrm{c}`, `*`), not as
 /// text shown raised (`\textsuperscript{equal contrib.}`, `\textsuperscript{(*)}`, `$^{\rm (a)}$`,
 /// `\textsuperscript{ (equal)}`)? Labels hold no word of three or more letters, and [`clean_frontmatter_labels`] gives

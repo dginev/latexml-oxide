@@ -8,6 +8,14 @@ mod cut;
 pub(in crate::base_utilities) use cut::*;
 mod kind;
 use kind::*;
+// (`pub(in crate::base_utilities)`: `base_utilities/mod.rs` re-exports by name the gates `frontmatter_stores` and the
+// bindings call, Z18j)
+pub(in crate::base_utilities) mod affiliations;
+pub(in crate::base_utilities) use affiliations::*;
+pub(in crate::base_utilities) mod email_lines;
+pub(in crate::base_utilities) use email_lines::*;
+mod line_marks;
+pub(in crate::base_utilities) use line_marks::*;
 
 /// The attribute (and `\lx@add@contact` option, a declared `Frontmatter` key) of a contact whose label its binding
 /// prints before its line, as written: authblk's `\affil[x]` (`\AB@affilnote`, authblk.sty:142), jheppub's

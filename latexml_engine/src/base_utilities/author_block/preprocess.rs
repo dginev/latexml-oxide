@@ -1,6 +1,7 @@
 //! Author-block preprocessing: math-active scripts and environments read as commands.
 
 use super::*;
+use crate::base_utilities::defs::frontmatter_api::line_notes;
 
 /// Whether a mark's operand, its notes taken out, prints nothing: braces, spaces, `\relax` and font switches only
 /// (`^{\thanks{…}}`, `^{\mathbf{}}`).
