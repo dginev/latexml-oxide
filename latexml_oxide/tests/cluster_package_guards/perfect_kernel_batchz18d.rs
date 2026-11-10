@@ -57,3 +57,17 @@ fn a_list_address_written_with_a_name_is_counted() {
   let names: Vec<String> = creators(&xml).into_iter().map(|c| c[0].clone()).collect();
   assert_eq!(names, ["Ann Able", "Bob Baker"], "{xml}");
 }
+
+/// A plain list whose domain holds a control symbol (`\{a,b\}@x\_y.org`) prints `a@x_y.org` and `b@x_y.org`, all the
+/// text written: no "markup lost" Warning counts a loss there (review revZ18d finding 1 — a well-formedness test of the
+/// written address counted both). Only a control sequence's name or a tie in the written text is counted (the guard
+/// above). Distinct: the written-text test's false side.
+#[test]
+fn a_plain_list_with_an_escaped_domain_counts_no_lost_markup() {
+  let (log, _) = run(
+    "\\documentclass{llncs}\n\\begin{document}\n\\title{T}\n\\author{Ann Able\\inst{1} \\and Bob Baker\\inst{1}}\n\
+     \\institute{Univ A, Town\\\\ \\email{\\{a,b\\}@x\\_y.org}}\n\\maketitle\nBody.\n\\end{document}\n",
+  );
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert!(!log.contains("its markup lost"), "{log}");
+}

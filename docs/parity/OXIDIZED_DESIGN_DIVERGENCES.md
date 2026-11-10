@@ -33153,8 +33153,9 @@ keeps no copy of the call (2607.09128's `$\{$npcarpenter\,|\,giacobazzi$\}@$ariz
 it, 2410.20769). (5) One address in printed braces is that address to the Link step (2410.04091's
 `\email{\{fatima.iribu@gmail.com\}}`, on every carrier before); a tie parts addresses (`;~cms@`, 1701.08125); an address
 of a plain list is written without the list's trailing separators (1908.05750) and with no Warning, nothing but its text
-printed (2501.11774), unless the text written holds a control sequence's name (`\email{\{a, b\}@x\footnote{…}}` writes
-`a@x\lx@fm@obs@fnnote`: each address counted "markup lost", revZ18c S3); an address line ending an entry takes the separator the line before it ends in (`address_cuts`:
+printed (2501.11774), unless the text written holds a control sequence's name or a tie (`\email{\{a, b\}@x\footnote{…}}` writes
+`a@x\lx@fm@obs@fnnote`: each address counted "markup lost", revZ18c S3; 2008.05861's `…hk~~`, uncounted before), never for
+an address merely not well-formed (`\{a,b\}@x\_y.org` prints `a@x_y.org`, all it is: review revZ18d finding 1); an address line ending an entry takes the separator the line before it ends in (`address_cuts`:
 2407.18381's `(EPFL), \\ \texttt{…}`). **Not moved here** (the reroute's own, kept with it): the `\\` line rules of a whole
 llncs list (a names line after an affiliation line, a line after an inline `\and`, a name carrying an ORCID). **Residuals:**
 1004.3134's `\href{mailto:…}{\email{…}}` inside a `\thanks` (no contact the reading makes; counted by the content check
@@ -33175,4 +33176,5 @@ Z18c, `one_address`'s catcode reads of a list written as text, not the unit cut;
 content text's `ledger::symbol`; `shared_row/emails` 65 → 68 → 65, the copy gone). Z18d (review revZ18c S1-S4):
 repros `class-bindings/llncs_{later_braced_email_call_keeps_its_author,list_email_note_written_as_text_is_counted}.tex`,
 guards `perfect_kernel_batchz18d`; the 1,434 stage2 ids and the 699 llncs papers byte-identical to the base
-(`6271ba8076`), save 0909.4443's math ids, which vary run to run on the base too.
+(`6271ba8076`) in XML and Errors, save 0909.4443's math ids once (a rerun matched) and 2008.05861's two new "markup lost"
+Warnings for the tie its e-mails carry on the base too.

@@ -1471,8 +1471,11 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // queue's own `\lx@frontmatter@item*`; it writes them, no decision reads them; NE3 +1: `\lx@fm@script@char`, written for a script
   // character its rehearsal erred at, 2204.01080; CL7 +1: `block_annotations`' `'\\'`, whether an author block's keyvals
   // annotations hold a command (a note, authblk's `\author[1\thanks{…}]`, 2308.08363), which the ledger keeps as text alone, so
-  // that its creators carry them as off digests them — a label's `_` retokenized errs, 2201.04449)
-  ("emitter", 60),
+  // that its creators carry them as off digests them — a label's `_` retokenized errs, 2201.04449; int154a +1: `one_address`'
+  // `'\\'` (with `'~'`), whether the text it WRITES for an address of a plain list holds a control sequence's name or a tie —
+  // an output check, no reading decision: `\email{\{a,b\}@x\footnote{…}}` writes `a@x\lx@fm@obs@fnnote`, counted "markup
+  // lost", while `\{a,b\}@x\_y.org`'s `a@x_y.org` is all it prints, review revZ18d finding 1)
+  ("emitter", 61),
   // (the "Knowledge in, driver out, one pass" move: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
   // mark and note commands it reads; none added)
   ("emitter/calls", 44),

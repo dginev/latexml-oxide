@@ -1245,10 +1245,11 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
   // (a list written in plain characters and control symbols — `\email{\{able,baker\}@x.edu}`, as the old split
   // wrote each address of it (`shared_row::row_email_calls`): its text is all it printed, so writing an address of it
   // as text loses no markup, and no Warning counts one (2501.11774's `\email{\{kalinowski, lromao, …\}@inf.puc-rio.br}`);
-  // a control symbol prints its one character (`\{`, `\}`, `\_`, the content text's `ledger::symbol`). The text written
-  // is tested too, as the row's reader tests an address (`shared_row`'s `is_whole_address`): one that is no address whole
-  // lost what it printed, counted (`\email{\{a, b\}@x\footnote{…}}` writes `a@x\lx@fm@obs@fnnote`, review revZ18c S3)
-  let plain = is_whole_address(address)
+  // a control symbol prints its one character (`\{`, `\}`, `\_`, the content text's control-symbol test
+  // `ledger::symbol`). The text written is tested too: one holding a control sequence's name or a tie lost what it
+  // printed, counted (`\email{\{a, b\}@x\footnote{…}}` writes `a@x\lx@fm@obs@fnnote`, review revZ18c S3; 2008.05861's
+  // `…hk~~`); a well-formedness test would count `\{a,b\}@x\_y.org`'s `a@x_y.org`, all it prints (review revZ18d finding 1)
+  let plain = !address.contains(['\\', '~'])
     && content[from..to].iter().all(|t| {
       matches!(
         t.get_catcode(),
