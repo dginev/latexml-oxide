@@ -957,13 +957,15 @@ pub(in crate::base_utilities) fn address_as_printed(address: &Tokens) -> Tokens 
 
 /// An address's formula as TeX prints it where the formula is glyphs: a pair of math shifts — read as characters (a
 /// Semiverbatim argument made `$` other: the API's `\lx@add@url`/`\lx@add@email`, Perl's `neutralize`) or as shifts —
-/// round a run of characters and of math symbols that each print one glyph ([`math_symbol_glyph`]: `\sim`, `\cdot`)
-/// is the run, each symbol its glyph, the shifts and spaces dropped as math drops spaces:
+/// round a run of characters, of character commands ([`text_glyph`]: `\_`, `\{`) and of math symbols that each print
+/// one glyph ([`math_symbol_glyph`]: `\sim`, `\cdot`) is the run, each command its glyph, the shifts and spaces dropped as math drops spaces:
 /// `http://www.zebra.edu/$\sim$ann` prints "http://www.zebra.edu/∼ann", as pdflatex, where the dollars printed
 /// (1301.1466's `\ead[label=u2,url]{http://www.math.duke.edu/$\sim$omer}`, math0608476's
 /// `www.math.wisc.edu/$\sim$swanson`). The glyph is a character of the address, in its font (TeX takes it from the
-/// math font), so the address stays one text and its link whole. A run with a script (`^`, `_`: `$^*$x@y`'s mark), a
-/// command of another kind or nothing in it stays as it is.
+/// math font), so the address stays one text and its link whole. The shifts pair left to right, as TeX pairs them: a
+/// pair round a script (`^`, `_`: `$^*$x@y`'s mark), a command of another kind or nothing (`$$`) stays as it is,
+/// whole, and the next pair opens after its closing shift — `$^a$a@x, $^b$b@y` keeps both marks and the text between
+/// them (2508.20055's `ej$_$dresselhaus@berkeley.edu, s$_$g@berkeley.edu`).
 pub(in crate::base_utilities) fn math_glyphs_as_printed(address: &Tokens) -> Tokens {
   let v = address.unlist_ref();
   let shift = |t: &Token| *t == T_OTHER!("$") || t.get_catcode() == Catcode::MATH;
@@ -972,22 +974,31 @@ pub(in crate::base_utilities) fn math_glyphs_as_printed(address: &Tokens) -> Tok
     match t.get_catcode() {
       Catcode::SPACE => Some(Vec::new()),
       Catcode::LETTER | Catcode::OTHER if !shift(t) && !script(t) => Some(vec![*t]),
-      Catcode::CS => math_symbol_glyph(t).map(|glyph| text_tokens(&glyph)),
+      Catcode::CS => text_glyph(t)
+        .map(|glyph| vec![glyph])
+        .or_else(|| math_symbol_glyph(t).map(|glyph| text_tokens(&glyph))),
       _ => None,
     }
   };
   let mut out: Vec<Token> = Vec::with_capacity(v.len());
   let mut at = 0;
   while at < v.len() {
+    // the shifts pair left to right, as TeX pairs them: a pair that is not glyphs (a script, the empty `$$`) stays as
+    // read, whole, and the next pair starts after its closing shift (2508.20055's `ej$_$d@x, s$_$g@y`)
     if shift(&v[at])
       && let Some(len) = v[at + 1..].iter().position(shift)
-      && let Some(printed) = v[at + 1..at + 1 + len]
+    {
+      let pair = &v[at..at + len + 2];
+      match pair[1..=len]
         .iter()
         .map(glyphs)
         .collect::<Option<Vec<Vec<Token>>>>()
-      && printed.iter().any(|glyph| !glyph.is_empty())
-    {
-      out.extend(printed.into_iter().flatten());
+      {
+        Some(printed) if printed.iter().any(|glyph| !glyph.is_empty()) => {
+          out.extend(printed.into_iter().flatten())
+        },
+        _ => out.extend_from_slice(pair),
+      }
       at += len + 2;
       continue;
     }
@@ -995,6 +1006,27 @@ pub(in crate::base_utilities) fn math_glyphs_as_printed(address: &Tokens) -> Tok
     at += 1;
   }
   Tokens::new(out)
+}
+
+/// The command a character command prints its character with in text, where it prints the same character in math
+/// (latex.ltx's `\_`, `\{`, `\}`, `\#`, `\%`, `\&`; `\lbrace` and `\rbrace` the braces): `$\{a,b\}$@w.edu` prints
+/// "{a,b}@w.edu", `p$\_$r` "p_r". `None` for any other command.
+fn text_glyph(t: &Token) -> Option<Token> {
+  // (each command and the one it prints with in text)
+  const GLYPHS: [(&str, &str); 8] = [
+    ("\\_", "\\_"),
+    ("\\{", "\\{"),
+    ("\\}", "\\}"),
+    ("\\#", "\\#"),
+    ("\\%", "\\%"),
+    ("\\&", "\\&"),
+    ("\\lbrace", "\\{"),
+    ("\\rbrace", "\\}"),
+  ];
+  GLYPHS
+    .iter()
+    .find(|(command, _)| *t == T_CS!(*command))
+    .map(|(_, glyph)| T_CS!(*glyph))
 }
 
 /// The glyph a math symbol prints: the text of the one box a math primitive without arguments makes (`\sim` "∼",

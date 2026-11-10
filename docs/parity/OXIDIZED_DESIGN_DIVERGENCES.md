@@ -32356,7 +32356,17 @@ so the XSLT's link (its first text node) is whole. A run with a script (`$^*$x@y
 stays as read (`$x^2$` prints "$x^2$": left, no paper seen). `\lx@address@printed` gives a binding the same reading for an
 address it prints itself (imsart's `\printead`, #986). Witnesses 1301.1466, math0608476 (`www.math.wisc.edu/$\sim$swanson`).
 Repro `sectioning-frontmatter/imsart_ead_url_reads_a_tex_argument` (RED since CR3b); guard
-`perfect_kernel_batchcr4::imsart_ead_url_prints_its_formula`.
+`perfect_kernel_batchcr4::imsart_ead_url_prints_its_formula`. **CR4b (review revCR4 findings 1 and 4):** both readings
+pair the shifts left to right, as TeX pairs them — a pair that is not glyphs (a script, `$$`) stays as read, whole, and
+the next pair opens after its closing shift. CR4 resumed one token after such a pair's opening shift, so its closing shift
+paired with the next formula's opening one and the text between was "printed", spaces dropped, with no Warning:
+2508.20055's `ej$_$dresselhaus@berkeley.edu, s$_$g@berkeley.edu` became "ej$_dresselhaus@berkeley.edu,s_$g@…";
+`math_braces_as_printed` had the same restart (`$^a$\{$b$` turned the `\{` between two formulas into a brace). A
+character command in math prints its character (`text_glyph`: `\_`, `\{`, `\}`, `\#`, `\%`, `\&`, `\lbrace`/`\rbrace`),
+so `$\{a,b\}$@w.edu` is the brace list (each address) and `p$\_$r` "p_r". Repro
+`email_math_shifts_pair_as_tex_pairs_them`; guards `perfect_kernel_batchcr4b::email_math_shifts_pair_as_tex_pairs_them`,
+`author_split_tests::math_shifts_pair_left_to_right`. **Left:** `$\dag$` (2604.07356; `\dag` is an `\ifmmode` macro,
+no math primitive) keeps its dollars.
 
 ### 973. pgfmath reads arrays: a `{…}[i]` primary, text elements, `array`, `dim` (Perl: `Error:pgfparse`, its parser numeric)
 
