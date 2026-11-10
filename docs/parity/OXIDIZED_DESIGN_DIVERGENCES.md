@@ -33514,14 +33514,18 @@ textless_picture_in_thanks_stays_in_the_note, picture_glued_to_a_separator_ends_
 two_same_text_pictures_are_two_notes, picture_inside_an_affiliation_line_stays_in_place, includegraphics_in_author_is_kept,
 image_on_the_first_marked_line_is_kept, a_text_node_picture_takes_one_semicolon}`.
 
+**Known silent loss (review revCR8c finding 2; pre-existing, the base drops it too):** an image on a later line whose next event is not a run of text (before a URL, a mark or an address) stays a Layout event no written entry covers (`events/mod.rs` `place_pictures`, the `let … else` branch ~2645-2656), and `resolver/words.rs` `lost_inks` compares words only, so nothing counts it: 2503.08161's `hf-logo.png` (RED `fm_image_before_url_is_a_note`). A count of every Layout image left (tried, reverted: `scratch_CR8c/image_warning_attempt.patch`) also flags an icon the URL contact writes with its link (`perfect_kernel_batch77y::icon_parted_from_its_link_goes_with_it`, 2505.21327's `\huggingface` logos), so the count needs the written entries' span coverage, not the word check — open, in the silent-loss inventory.
+
 ### 990. An unmarked frontmatter note renders inline, with no dagger (CR8c)
 
-**What.** In HTML an author's `ltx:note` with no `@mark`, no untyped tag, and a role other than `thanks` (the meta XSLT's
-`ltx:creator/ltx:note[not(@mark) and not(@role='thanks') and not(ltx:tags/ltx:tag[not(@role)])]`,
-`LaTeXML-meta-xhtml.xsl`) is a span holding its content inline: no `ltx_note_mark` (†), no `ltx_note_outer`/
-`ltx_note_content` (which `LaTeXML.css` hides until hover, so the content would be invisible), no "note: " type label.
-These are the frontmatter's `role="note"` notes: a picture's (#989), an ink the reading holds no place for (`kept_inks`),
-a net store's text.
+**What.** In HTML an author's picture note — an `ltx:note` with `role="note"`, no `@mark`, no untyped tag, holding a
+picture or graphics (the meta XSLT's `ltx:creator/ltx:note[@role='note' and not(@mark) and not(ltx:tags/ltx:tag[not(@role)])
+and (.//ltx:picture or .//ltx:graphics)]`, `LaTeXML-meta-xhtml.xsl`) — is a span holding its content inline: no
+`ltx_note_mark` (†), no `ltx_note_outer`/`ltx_note_content` (which `LaTeXML.css` hides until hover, so the content would be
+invisible), no "note: " type label (#989's notes; 2404.13552, 2107.13277). Only those: a leftover-ink note with no mark that
+holds text — a `\titlenote`'s "Corresponding author. Email: …" (1003.2281, pdflatex prints ∗ and a footnote), `\pacs` codes
+(0803.0204, 1009.5642, printed under the abstract) — stands for a mark pdflatex prints or a line printed elsewhere and keeps
+the dagger: the first, broader rule inlined those 51 notes of 5,397 papers (review revCR8c finding 1).
 
 **Perl behavior.** The meta XSLT's `ltx:note` template (`LaTeXML-meta-xhtml.xsl`, `note-mark`) falls back to † for a
 note with no `@mark` and hides the content behind it. Perl writes no such frontmatter notes (it keeps a picture in the
