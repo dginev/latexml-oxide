@@ -1,0 +1,28 @@
+% mechanism: an `\affil` led by a symbol no name requests keeps the `annotate=new` placement (`piled`); where every
+%   author that walk reaches holds the role it is its run's stopgap (`Resolver::stopgap`, `RUN_LEFTOVER`) — except a run
+%   that is the whole group of names printed since the role's last call (`Resolver::print_group`): Bob Baker's own
+%   `\author` call and `\affil` are a block of their own in print, and the line is in it (OXIDIZED_DESIGN_DIVERGENCES
+%   #992). The pending entries' placement path, apart from the unmarked line's
+% witness: none in the corpus (synthetic; Z18o2, the sibling of review revZ18o R-A on `Resolver::stopgap`)
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Bob Baker2 / 2 Univ B and / ∗ Email: zz@x.org", in Bob Baker's
+%          own block
+% engines: rust int156a0 (Z18o) = a nameless creator's e-mail "∗ zz@x.org", 0 warnings (silent)
+% expect:  0 errors, 0 warnings; Ann Able: 1 Univ A; Bob Baker: 2 Univ B, the e-mail zz@x.org named "Email:" (the
+%          unrequested `∗` is not kept on an author's e-mail, as int155a4 dropped it: a residual of the line-mark path,
+%          not of this mechanism)
+% status:  RED (int156a0) -> GREEN (Z18o2)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\affil{$^1$Univ A}
+\author{Bob Baker$^{2}$}
+\affil{$^2$Univ B}
+\affil{$^*$ Email: zz@x.org}
+\begin{abstract}A.\end{abstract}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

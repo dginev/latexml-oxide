@@ -1,7 +1,9 @@
 //! Inserting the front matter into the document: creators, contacts, late frontmatter, unanswered marks.
 
 use super::*;
-use crate::base_utilities::defs::frontmatter_api::{CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL};
+use crate::base_utilities::defs::frontmatter_api::{
+  CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY,
+};
 
 pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   if lookup_bool("frontmatter_done") {
@@ -1639,6 +1641,17 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
     }
     carriers.sort_unstable();
     carriers.dedup();
+    // (an entry its run's stopgap alone gave its carriers, every copy of it so written, holds its addresses for none of
+    // them: no owner of an address no one spells, the block's, as the reading's `answer_inner_emails` reads
+    // `resolver::RUN_LEFTOVER` — `\affil{Univ C; zz@x.org}` under `Ann Able$^{1}$ and Bob Baker$^{1}$`, OD #992)
+    if authors.len() > 1
+      && !held.is_empty()
+      && held
+        .iter()
+        .all(|(_, entry)| entry.get_attribute(STOPGAP_ENTRY).is_some())
+    {
+      carriers.clear();
+    }
     // (its addresses, one each, in print order; each with the authors holding it now — an e-mail printing several,
     // `\email{a|b@x.org}` inside a line of the entry, written out, each its own, as the frontmatter observer reads it:
     // `resolver::addresses_in`)

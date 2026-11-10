@@ -28,7 +28,7 @@ use super::{
 use crate::base_utilities::{
   defs::{
     author_macros::KEPT_WHOLE,
-    frontmatter_api::{BLOCK_CREATOR, CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL},
+    frontmatter_api::{BLOCK_CREATOR, CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL, STOPGAP_ENTRY},
     frontmatter_fields::orcid_icon_link,
   },
   frontmatter::{
@@ -1867,11 +1867,16 @@ fn item_call(
       // (an entry the block prints moves back to its place by its zone, what a label places alone: `at_queue_position`;
       // an entry the reading shares among every author says so, `insert::ROW_SHARED`, which the Kind step for an address
       // line reads)
-      let keys = if assoc.rule.contains("api:share:authors") {
+      let mut keys = if assoc.rule.contains("api:share:authors") {
         s!("label={{{label}}},{}={{true}}", ROW_SHARED)
       } else {
         s!("label={{{label}}}")
       };
+      // (an entry its run's stopgap alone gave its carriers says so, `STOPGAP_ENTRY`, which the Link step of the
+      // addresses the Kind step takes out of it reads: `\affil{Univ C; zz@x.org}` under `$^{N}$` names)
+      if assoc.rule.contains(resolver::RUN_LEFTOVER) {
+        keys = s!("{keys},{STOPGAP_ENTRY}={{true}}");
+      }
       rekeyed(
         emails_cut.as_ref().unwrap_or(command),
         &key_tokens(&keys),

@@ -1076,6 +1076,11 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ),
   ("const _seqlabel base_utilities/defs/frontmatter_api.rs", 1),
   ("const _source base_utilities/frontmatter/insert.rs", 1),
+  // (Z18o2, raised with its reason: the reading's stopgap fact of an entry (`resolver::RUN_LEFTOVER`, an `annotate=new`
+  // walk reaching only authors that held the role, no group in print of their own), on the entry the emitter writes, which
+  // the flush's Link step of the address its Kind step takes out of the entry reads — `\affil{Univ C; zz@x.org}` under
+  // `$^N$` names, the block's (OD #992; review revZ18o). Perl's API has no key for it; internal, never written out)
+  ("const _stopgap base_utilities/defs/frontmatter_api.rs", 1),
   (
     "const _titlepage base_utilities/frontmatter/cover_order.rs",
     1,
@@ -1097,6 +1102,11 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ("declared _net base_utilities/defs/frontmatter_api.rs", 1),
   (
     "declared _printedlabel base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  // (Z18o2: the key of `const _stopgap`, declared as `_corresponding` is)
+  (
+    "declared _stopgap base_utilities/defs/frontmatter_api.rs",
     1,
   ),
   (

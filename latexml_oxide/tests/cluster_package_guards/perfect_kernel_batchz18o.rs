@@ -1,7 +1,8 @@
 //! Guards for Z18o, the REDs bundle int155a introduced (OXIDIZED_DESIGN_DIVERGENCES #992, #991, #983):
 //! - an unmarked `\affil` the `annotate=new` walk gives the last author only as its stopgap is no carrier's of an
-//!   address no one spells: the block's (`RUN_LEFTOVER`, review revZ18l F1) — on the Kind step's lines and the text
-//!   reading's (one guard), and on an unrequested symbol line's `annotate=` placement (its own path);
+//!   address no one spells: the block's (`RUN_LEFTOVER`, review revZ18l F1) — on the Kind step's lines, on the text
+//!   reading's (a guard each, review revZ18o R-B), and on an unrequested symbol line's `annotate=` placement (its own
+//!   path);
 //! - a mailbox link line in an affiliation is an e-mail line under the text before it (the Kind step's
 //!   `mailbox_link_line`, user ruling 2026-10-20; review revZ18l F2);
 //! - a marked bracketed piece the bracket spans whole is a remark, its join the counted Warning (review revZ18k3 R1);
@@ -27,7 +28,7 @@ macro_rules! repro {
 }
 
 /// The creators of `xml` as `creators` gives them, against `expected`.
-fn assert_creators(xml: &str, expected: &[&[&str]]) {
+pub(super) fn assert_creators(xml: &str, expected: &[&[&str]]) {
   let expected: Vec<Vec<String>> = expected
     .iter()
     .map(|c| c.iter().map(|s| s.to_string()).collect())
@@ -36,7 +37,7 @@ fn assert_creators(xml: &str, expected: &[&[&str]]) {
 }
 
 /// The e-mail contacts of `xml`, whole, in order.
-fn email_contacts(xml: &str) -> Vec<&str> {
+pub(super) fn email_contacts(xml: &str) -> Vec<&str> {
   xml
     .match_indices("<contact ")
     .filter(|(at, _)| {
@@ -52,33 +53,19 @@ fn email_contacts(xml: &str) -> Vec<&str> {
 }
 
 /// emulateapj's `\author{Ann Able$^{1}$ and Bob Baker$^{1}$}\affil{$^1$Univ A}` then an unmarked `\affil` holding only
-/// an address that spells no one: `Email: zz@x.org` and a bare `zz@x.org` (the Kind step's address line), and
-/// `Correspondence: \href{mailto:zz@x.org}{zz@x.org}` (its mailbox link line): the block's e-mail, never Bob Baker's,
-/// whom the `annotate=new` walk reached only as its stopgap. Red (int155a4): Bob Baker's e-mail in each.
+/// an address that spells no one: `Email: zz@x.org` and a bare `zz@x.org` (the Kind step's address line): the block's
+/// e-mail, never Bob Baker's, whom the `annotate=new` walk reached only as its stopgap. Red (int155a4): Bob Baker's
+/// e-mail in each.
 #[test]
 fn aastex_unmarked_email_line_under_marked_names_is_the_blocks() {
-  for (tex, email) in [
-    (
-      repro!(
-        "sectioning-frontmatter",
-        "aastex_affil_unmarked_email_line_under_marked_names_is_the_blocks"
-      ),
-      "<contact name=\"Email:\u{a0}\" role=\"email\">zz@x.org</contact>",
+  for tex in [
+    repro!(
+      "sectioning-frontmatter",
+      "aastex_affil_unmarked_email_line_under_marked_names_is_the_blocks"
     ),
-    (
-      repro!(
-        "sectioning-frontmatter",
-        "aastex_affil_unmarked_bare_address_under_marked_names_is_the_blocks"
-      ),
-      "<contact name=\"Email:\u{a0}\" role=\"email\">zz@x.org</contact>",
-    ),
-    (
-      repro!(
-        "sectioning-frontmatter",
-        "aastex_affil_unmarked_mailbox_link_under_marked_names_is_the_blocks"
-      ),
-      "<contact name=\"Correspondence:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" \
-       href=\"mailto:zz@x.org\">zz@x.org</ref></contact>",
+    repro!(
+      "sectioning-frontmatter",
+      "aastex_affil_unmarked_bare_address_under_marked_names_is_the_blocks"
     ),
   ] {
     let (log, xml) = run(tex);
@@ -88,8 +75,37 @@ fn aastex_unmarked_email_line_under_marked_names_is_the_blocks() {
       &["Bob Baker 1", "affiliation=1 Univ A"],
       &["email=zz@x.org"],
     ]);
-    assert_eq!(email_contacts(&xml), [email], "{xml}");
+    assert_eq!(
+      email_contacts(&xml),
+      ["<contact name=\"Email:\u{a0}\" role=\"email\">zz@x.org</contact>"],
+      "{xml}"
+    );
   }
+}
+
+/// The same names, the unmarked `\affil` `Correspondence: \href{mailto:zz@x.org}{zz@x.org}`: the block's e-mail, the
+/// link kept. Distinct: the text reading's path (`Resolver::take_out_entry_addresses`), not the Kind step's address
+/// line (review revZ18o R-B). Red (int155a4): Bob Baker's e-mail.
+#[test]
+fn aastex_unmarked_correspondence_link_line_under_marked_names_is_the_blocks() {
+  let (log, xml) = run(repro!(
+    "sectioning-frontmatter",
+    "aastex_affil_unmarked_mailbox_link_under_marked_names_is_the_blocks"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_creators(&xml, &[
+    &["Ann Able 1", "affiliation=1 Univ A"],
+    &["Bob Baker 1", "affiliation=1 Univ A"],
+    &["email=zz@x.org"],
+  ]);
+  assert_eq!(
+    email_contacts(&xml),
+    [
+      "<contact name=\"Correspondence:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" \
+      href=\"mailto:zz@x.org\">zz@x.org</ref></contact>"
+    ],
+    "{xml}"
+  );
 }
 
 /// `\affil{$^*$ Email: zz@uni.edu}` under `$^{N}$` names, no name requesting `*`: the `annotate=` placement an
@@ -107,9 +123,9 @@ fn aastex_unrequested_symbol_email_line_under_marked_names_is_the_blocks() {
     &["Bob Baker 1", "affiliation=1 Uni One"],
     &["email=∗ zz@uni.edu"],
   ]);
-  assert_eq!(email_contacts(&xml).len(), 1, "{xml}");
-  assert!(
-    email_contacts(&xml)[0].contains("∗</sup>zz@uni.edu</contact>"),
+  assert_eq!(
+    email_contacts(&xml),
+    ["<contact name=\"Email: \" role=\"email\"><sup xml:id=\"id5\">∗</sup>zz@uni.edu</contact>"],
     "{xml}"
   );
 }
