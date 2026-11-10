@@ -1,7 +1,7 @@
 //! Inserting the front matter into the document: creators, contacts, late frontmatter, unanswered marks.
 
 use super::*;
-use crate::base_utilities::defs::frontmatter_api::{LABEL_PRINTS, PRINTED_LABEL};
+use crate::base_utilities::defs::frontmatter_api::{CORRESPONDING, LABEL_PRINTS, PRINTED_LABEL};
 
 pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   if lookup_bool("frontmatter_done") {
@@ -1874,8 +1874,10 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
       &mine,
       &mark_lists,
     );
-    // (every name each address spells, and the one carrier a note marks the corresponding author: `EntryOwnerFacts`, the
-    // old split's row e-mail owners)
+    // (every name each address spells, and the one carrier the reading marks the corresponding author — by a note or a
+    // legend, its one fact, which the emitter writes as the creator's `_corresponding` (`RCreator::corresponding`;
+    // repros llncs_corresponding_author_takes_the_left_address, llncs_legend_corresponding_author_takes_the_left_address):
+    // `EntryOwnerFacts`, the old split's row e-mail owners)
     let spellers: Vec<Vec<usize>> = addresses
       .iter()
       .map(|(text, ..)| {
@@ -1887,12 +1889,7 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
     let corresponding: Vec<usize> = carriers
       .iter()
       .copied()
-      .filter(|&c| {
-        document
-          .findnodes("ltx:note", Some(&authors[c]))
-          .iter()
-          .any(|note| names_correspondence(&note.get_content()))
-      })
+      .filter(|&c| authors[c].get_attribute(CORRESPONDING).is_some())
       .collect();
     let owners: Vec<(Option<Vec<usize>>, &'static str)> = entry_address_owners(
       &spelled,

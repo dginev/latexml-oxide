@@ -686,6 +686,13 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ),
   // (the "Knowledge in, driver out, one pass" move: `_cutlist`, `_entry`, `_entrysymbol`, `_kinded`, `_seqlabel` moved unchanged from `author_block/affiliations.rs` to the
   // API that reads them, `CUT_LIST`, `ENTRY_KEY`, `ENTRY_SYMBOL`, `ENTRY_KINDED`, `SEQUENCE_LABEL`: no key added)
+  // (S5, raised with its reason: the reading's one fact of who the corresponding author is, by a note or a legend
+  // (`Resolver::corresponding`), on the creator the emitter writes, which the Link step of an entry's addresses reads in place
+  // of its own scan of the DOM's notes (revZ18d S5) — Perl's API has no key for it; internal, never written out)
+  (
+    "const _corresponding base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
   ("const _cutlist base_utilities/defs/frontmatter_api.rs", 1),
   (
     "const _deposit base_utilities/frontmatter/cover_order.rs",
@@ -760,6 +767,12 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ),
   (
     "declared _blockcreator base_utilities/defs/frontmatter_api.rs",
+    1,
+  ),
+  // (S5: the key of `const _corresponding`, declared so that its use reports no unknown key — the report changed the
+  // paragraphs after 1512.06325's title page)
+  (
+    "declared _corresponding base_utilities/defs/frontmatter_api.rs",
     1,
   ),
   ("declared _net base_utilities/defs/frontmatter_api.rs", 1),

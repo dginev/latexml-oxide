@@ -33183,9 +33183,7 @@ printed (2501.11774), unless the text written holds a control sequence's name or
 an address merely not well-formed (`\{a,b\}@x\_y.org` prints `a@x_y.org`, all it is: review revZ18d finding 1); an address line ending an entry takes the separator the line before it ends in (`address_cuts`:
 2407.18381's `(EPFL), \\ \texttt{…}`). **Not moved here** (the reroute's own, kept with it): the `\\` line rules of a whole
 llncs list (a names line after an affiliation line, a line after an inline `\and`, a name carrying an ORCID). **Residuals:**
-the Link step's corresponding-author fact reads the DOM's notes only, not a legend that says so (`\inst{1,2}` under
-`\and Corresponding author`: the left address the block's; the old rule, `Resolver::listed_corresponding`, reads both:
-RED `class-bindings/llncs_legend_corresponding_author_takes_the_left_address.tex`); separators after an entry's last call
+separators after an entry's last call
 stay (`Naples, Italy,`, 2605.21246, 2210.09234, 1408.0510, as in the old split); a later template call stays on the
 last author, a list's control-symbol macro is counted missing (pre-existing); a `\footnote` inside a list `\email`
 leaves the note's name in the address text (pre-existing, RED `class-bindings/llncs_list_email_note_name_leaks_into_address.tex`).
@@ -33280,7 +33278,22 @@ llncs_institute_labelled_unread_line_is_block_email}` (the links kept, W 2 → 0
 `perfect_kernel_batche0` pins `emitter/emit` 44 → 58 and `emitter` 61 → 63 (`joined_run_link` writes the run's calls
 as printed; the decision is the events' targets). **Measured** (the same 2,734): against Z18h 2,732 byte-identical, so
 against int154x the same 2,625; the 2 others are 2505.15472 (W 3 → 1, int154x 2) and 1710.01968 (W 1 → 4, int154x 2:
-three addresses counted, robin.andre@'s link kept).
+three addresses counted, robin.andre@'s link kept). S5 (review revZ18c S5, revZ18d): the corresponding author is
+decided once, on the reading. `Resolver::corresponding` reads a note naming the creator so **and** a legend a mark of theirs
+requests (`correspondence_legends`, `marked_corresponding`: the predicate `listed_corresponding` had alone); every step
+placing a left-over address reads it — `answer_inner_emails` and `take_out_entry_addresses` (`EntryOwnerFacts`),
+`place_emails_left`, the block's address step. The reading stores it on the creator (`RCreator::corresponding`), the
+emitter writes it as the declared transient key `_corresponding` (`frontmatter_api::CORRESPONDING`; dropped at output), and
+the Link step (`insert::link_entry_addresses`) reads that key in place of its own scan of the DOM's notes, deleted.
+`\author{Ann Able\inst{1,2} \and Bob Baker\inst{1}}\institute{Univ X, Town\\ \email{zz9@x.edu} \and Corresponding author}`
+gives zz9@ to Ann Able (the block's before). A declined paper (the emitter stays out) marks no one, its left-over address the
+block's. `insert::link_entry_addresses`' `readable` stays: it reads which addresses a contact prints, not who is the
+corresponding author. Repro `class-bindings/llncs_legend_corresponding_author_takes_the_left_address.tex` (RED → GREEN),
+guard `perfect_kernel_batchs5`; `perfect_kernel_batche0` key pins `const _corresponding` and `declared _corresponding`
+0 → 1 (undeclared, the key's `Info:undefined` report changed 1512.06325's paragraphs after its title page). **Measured**
+(ERR2 dumps, against int154u): the 699 llncs, the 1,434 stage2 ids and 658 aa/elsarticle papers using `\cortext`/`\corref`
+(2,780 ids, 2,776 compared, 4 unconverted on both sides) byte-identical in XML and E/F/W, save 0909.4443's math ids
+(differing between two runs of the base too).
 
 ### 985. What the old driver wrote at the flush and the emitter had lost: an svjour3 owner label's `\email`, and a frontmatter setter run inside an author block or an API call (CR2)
 

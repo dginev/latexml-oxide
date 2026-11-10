@@ -69,28 +69,33 @@ pub struct Assoc {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct RCreator {
   /// the name without its marks (ruling 1's fuzzy label)
-  pub name:         String,
+  pub name:          String,
   /// the marks shown on it, its requests
-  pub requests:     Vec<String>,
+  pub requests:      Vec<String>,
   /// how the name was split out
-  pub rule:         String,
+  pub rule:          String,
   /// the reading's joins of runs a separator parts into this one name, as `rule` tags them ([`NameJoin`]; the separator
   /// check reads them, `net::merged_names`)
-  pub joins:        Vec<NameJoin>,
+  pub joins:         Vec<NameJoin>,
   /// the ledger index of its block (or API call)
-  pub source:       usize,
+  pub source:        usize,
   /// the role of the creator call in its block that printed it, its Name's (`Event::role`: PoS's `\speaker`, `speaker`);
   /// none for a name the block itself printed (an author's)
-  pub role:         Option<String>,
+  pub role:          Option<String>,
   /// that call, its place among its block's (`Event::creator_call`): the keyvals the emitter writes on it
-  pub call:         Option<u16>,
-  pub affiliations: Vec<Assoc>,
-  pub contacts:     Vec<Assoc>,
-  pub notes:        Vec<Assoc>,
+  pub call:          Option<u16>,
+  pub affiliations:  Vec<Assoc>,
+  pub contacts:      Vec<Assoc>,
+  pub notes:         Vec<Assoc>,
   /// each request a glued mark of letters and digits was parted into, with that mark as printed (`part_glued_labels`):
   /// a piece no entry answers shows the whole mark, never the piece alone — BESIII's `$^{50A,50C}$` under entries
   /// numbered 1 to 54 requests entry 50 and prints "50A,50C", not "A,C" (1705.11109, 1507.02068, 2204.09614)
-  pub whole_marks:  Vec<(String, String)>,
+  pub whole_marks:   Vec<(String, String)>,
+  /// whether the reading marks them the corresponding author, by a note or a legend ([`Resolver::corresponding`]'s one
+  /// fact): the emitter writes it on their creator as the transient `_corresponding`, which the Link step of an entry's
+  /// addresses reads for the one address left of several carriers (`insert::link_entry_addresses`; dropped at output,
+  /// as every `_` attribute is; repro llncs_legend_corresponding_author_takes_the_left_address)
+  pub corresponding: bool,
 }
 
 /// A rule of the reading joining runs a separator parts into one name (`lines.rs`, `blocks.rs`), each its tag in the
@@ -954,46 +959,11 @@ impl Resolver {
     address: &str,
   ) -> (Option<usize>, &'static str) {
     let creators = &self.out.creators;
-    let says = |a: &Assoc| names_correspondence(&a.text);
-    let mut legends: Vec<(String, bool)> = Vec::new();
-    let affiliations = creators.iter().flat_map(|c| &c.affiliations).chain(
-      self
-        .out
-        .block
-        .iter()
-        .filter(|a| matches!(a.role.as_str(), "affiliation" | "address")),
-    );
-    for a in affiliations {
-      for label in a.label.as_deref().map(mark_labels).unwrap_or_default() {
-        legends.push((label, says(a)));
-      }
-    }
-    let affiliation_legends = legends.len();
-    for (mark, numbered, says) in &self.note_legends {
-      if *numbered
-        && legends[..affiliation_legends]
-          .iter()
-          .any(|(label, _)| label == mark)
-      {
-        continue;
-      }
-      legends.extend(mark_labels(mark).into_iter().map(|label| (label, *says)));
-    }
+    let legends = self.correspondence_legends();
     let marked: Vec<usize> = candidates
       .iter()
       .copied()
-      .filter(|&c| {
-        let mut own = creators[c]
-          .notes
-          .iter()
-          .chain(creators[c].contacts.iter().filter(|a| a.role == "note"));
-        own.any(says)
-          || creators[c].requests.iter().any(|request| {
-            legends
-              .iter()
-              .any(|(label, says)| *says && label == request)
-          })
-      })
+      .filter(|&c| self.marked_corresponding(c, &legends))
       .collect();
     match marked.as_slice() {
       [one] if candidates.len() > 1 => return (Some(*one), "owner:corresponding"),
@@ -1048,17 +1018,71 @@ impl Resolver {
     }
   }
 
-  /// The one candidate whose note names them the corresponding author, else the block.
+  /// The legends a request may point at, each with whether it names its carrier the corresponding author
+  /// ([`Self::listed_corresponding`]): every labelled affiliation's or address's, a creator's or the block's, and every
+  /// contact command's note's ([`Self::read_note_legends`]) but a numbered one whose number an affiliation is labelled with
+  /// too, which the number then requests (2005.05695).
+  fn correspondence_legends(&self) -> Vec<(String, bool)> {
+    let says = |a: &Assoc| names_correspondence(&a.text);
+    let mut legends: Vec<(String, bool)> = Vec::new();
+    let affiliations = self
+      .out
+      .creators
+      .iter()
+      .flat_map(|c| &c.affiliations)
+      .chain(
+        self
+          .out
+          .block
+          .iter()
+          .filter(|a| matches!(a.role.as_str(), "affiliation" | "address")),
+      );
+    for a in affiliations {
+      for label in a.label.as_deref().map(mark_labels).unwrap_or_default() {
+        legends.push((label, says(a)));
+      }
+    }
+    let affiliation_legends = legends.len();
+    for (mark, numbered, says) in &self.note_legends {
+      if *numbered
+        && legends[..affiliation_legends]
+          .iter()
+          .any(|(label, _)| label == mark)
+      {
+        continue;
+      }
+      legends.extend(mark_labels(mark).into_iter().map(|label| (label, *says)));
+    }
+    legends
+  }
+
+  /// Whether creator `c` is marked the corresponding author ([`Self::listed_corresponding`]): a note of theirs naming them
+  /// so — a `\thanks`, or a contact command's note — or a mark they request whose legend (`legends`,
+  /// [`Self::correspondence_legends`]) says so.
+  fn marked_corresponding(&self, c: usize, legends: &[(String, bool)]) -> bool {
+    let creator = &self.out.creators[c];
+    let says = |a: &Assoc| names_correspondence(&a.text);
+    let mut own = creator
+      .notes
+      .iter()
+      .chain(creator.contacts.iter().filter(|a| a.role == "note"));
+    own.any(says)
+      || creator.requests.iter().any(|request| {
+        legends
+          .iter()
+          .any(|(label, says)| *says && label == request)
+      })
+  }
+
+  /// The one candidate marked the corresponding author ([`Self::marked_corresponding`], by a note or a legend), else the
+  /// block: the reading's one fact of who the corresponding author is, which every step placing a left-over address reads —
+  /// the Link step of an entry's addresses too, on the creators the emitter marks with it ([`RCreator::corresponding`]).
   fn corresponding(&self, candidates: &[usize]) -> (Option<usize>, &'static str) {
+    let legends = self.correspondence_legends();
     let corresponding: Vec<usize> = candidates
       .iter()
       .copied()
-      .filter(|&c| {
-        self.out.creators[c]
-          .notes
-          .iter()
-          .any(|n| names_correspondence(&n.text))
-      })
+      .filter(|&c| self.marked_corresponding(c, &legends))
       .collect();
     match corresponding.as_slice() {
       [one] if candidates.len() > 1 => (Some(*one), "owner:corresponding"),
@@ -1271,6 +1295,15 @@ pub fn resolve_with(
   resolver.held_before_creators();
   resolver.sole_author_takes_the_block();
   resolver.take_out_entry_addresses(inputs);
+  // (the reading's corresponding authors, decided once on the placed reading, for the Link step of the flush: the emitter
+  // writes each as its creator's `_corresponding`)
+  let legends = resolver.correspondence_legends();
+  let marked: Vec<bool> = (0..resolver.out.creators.len())
+    .map(|c| resolver.marked_corresponding(c, &legends))
+    .collect();
+  for (creator, marked) in resolver.out.creators.iter_mut().zip(marked) {
+    creator.corresponding = marked;
+  }
   let mut out = resolver.out;
   out.continued = Some(
     resolver
