@@ -254,9 +254,10 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
   // the tests by name of the API's `\lx@add@` commands a name or a note may hold, read, not written: review revZ18m B2)
 ];
 
-/// The old reader's non-blank code lines at int140a: a ceiling, for the growth its emissions don't show (108a's +703
-/// lines, no new emission). A ceiling, so no edit that shortens the reader fails on it; **a batch that deletes from the
-/// reader lowers it to the new count**, in the same commit, so what was deleted cannot grow back. A sibling directory is no
+/// The old reader's non-blank code lines at int140a: a pin, for the growth its emissions don't show (108a's +703
+/// lines, no new emission). Exact since E0h (review revZ18m2 S1; a ceiling before): **a batch that deletes from the
+/// reader, or moves an item out of its files, lowers it to the new count** in the same commit and says what left, so
+/// what was deleted cannot grow back and what moved cannot leave unseen. A sibling directory is no
 /// escape from the rest of this fence's reach: its token reads count in `token_reads_only_fall_toward_the_floor`'s
 /// catch-all, and its API names and keys in `the_frontmatter_api_stays_perls`.
 /// The "Knowledge in, driver out, one pass" move (2026-11-08) lowered it from 15,404 to 9,275: the knowledge the one engine reached moved into its own library,
@@ -312,6 +313,13 @@ fn the_old_reader_takes_no_new_decision() {
     lines <= OLD_READER_CODE_LINES,
     "the old reader grew to {lines} code lines, over {OLD_READER_CODE_LINES}. {WHY} Raising this ceiling needs the main \
      session's decision."
+  );
+  // (exact, review revZ18m2 S1: a fall frees headroom a later batch could grow back into, and is how an item moved out of
+  // the old reader's files into a library file shows)
+  assert_eq!(
+    lines, OLD_READER_CODE_LINES,
+    "the old reader fell to {lines} code lines, under {OLD_READER_CODE_LINES}: lower the ceiling to it, and state in the \
+     commit what left (deleted, or moved to which file)."
   );
 }
 
@@ -483,6 +491,95 @@ fn old_reader_exports() -> std::collections::BTreeSet<String> {
   }
   names
 }
+
+/// Every name the old reader's files export ([`old_reader_exports`] over [`MOVED_OLD_READER_FILES`]), an exact pin (review
+/// revZ18m2 S1): the fence decides by file whether a name is the old reader's, so an item moved out of those files into
+/// one of the one engine's (`mark_prints_nothing` from `ijcai.rs` into `classify/marks.rs`) would stop counting with no
+/// test edited. A name that leaves this list was deleted, or moved with its uses rerouted: the commit that lowers the pin
+/// says which, and the review reads it. A name added is a new item of the old reader's, which takes none. 81 at E0h.
+const OLD_READER_EXPORTS: &[&str] = &[
+  "AddressPlacement",
+  "CUT_COPY_PLACE",
+  "ContactOwner",
+  "ENTRY_DIGESTING",
+  "ENTRY_KEY_COUNTER",
+  "EntryCall",
+  "address_line_notes",
+  "addresses_in_order",
+  "affil_splits",
+  "affiliation_calls",
+  "affiliation_is_marked",
+  "answered_symbol_key",
+  "author_group_splits",
+  "author_label_marks",
+  "author_marks_end_name",
+  "binding_cut_list_attr",
+  "blank_line_marks_dropped",
+  "class_numbered_institutes",
+  "collaboration_line",
+  "collaboration_line_reading",
+  "cut_list_key",
+  "cut_marked_contact",
+  "document_notes",
+  "drop_empty_marks",
+  "email_line_calls",
+  "entry_calls",
+  "expand_separator_macros",
+  "expand_sole_author_macro",
+  "frontmatter_group_first",
+  "has_author_block_separator",
+  "has_ijcai_section_marker",
+  "hoist_wrapped_separators",
+  "holds_a_macro_printing_a_link",
+  "holds_requested_marked_entries",
+  "inst_prints_its_mark",
+  "inst_takes_back_space",
+  "is_membership_grade",
+  "kind_entry_addresses",
+  "leading_markup",
+  "led_by_footnote_symbol",
+  "line_addresses",
+  "line_breaks_as_name_separators",
+  "line_is_email_list",
+  "line_notes",
+  "lines_under_names_read_as_names",
+  "mark_prints_nothing",
+  "math_braces_as_printed",
+  "membership_read_out",
+  "name_line_span",
+  "name_marks_end",
+  "named_email_calls",
+  "names_continue",
+  "names_list_continues",
+  "notes_line_joins_names",
+  "notes_only_line",
+  "notes_out_of_marks",
+  "numbered_marks_requested",
+  "only_marks_and_notes",
+  "optioned_email_calls",
+  "placed_contact_owner",
+  "printed_marks_as_marks",
+  "queued_author_name_keys",
+  "queued_row_start",
+  "requested_entry_marks",
+  "requested_marked_entries_in",
+  "requesting_authors",
+  "run_in_author_order",
+  "shared_affiliation_calls",
+  "space_parted_name_line",
+  "space_parted_names",
+  "space_parted_rows_joined",
+  "spaced_name_separators",
+  "starts_with_footnote_symbol",
+  "take_author_annotations",
+  "text_tokens",
+  "unalias_mark_commands",
+  "whole_line_group",
+  "whole_name_collaboration",
+  "wide_space_end",
+  "wrapped_collaboration_out",
+  "written_membership_out",
+];
 
 /// How often `source` uses the old reader's `name`: in its code ([`uses_of`]), and as an inline capture of a format string,
 /// `{name}` or `{name:…}` in a literal (`s!("{CUT_COPY_PLACE}{key}:{label}")`; review revZ18a, a blind spot of the lexing,
@@ -714,35 +811,32 @@ fn the_old_readers_names_never_count_as_the_one_engines_own() {
   assert_eq!(old_reader_names_owned(&both, &both), vec![
     "has_author_block_separator".to_string()
   ]);
-  for name in [
-    "author_group_splits",
-    "author_label_marks",
-    "author_marks_end_name",
-    "collaboration_line",
-    "document_notes",
-    "drop_empty_marks",
-    "has_author_block_separator",
-    "hoist_wrapped_separators",
-    "holds_a_macro_printing_a_link",
-    "leading_markup",
-    "line_breaks_as_name_separators",
-    "lines_under_names_read_as_names",
-    "name_marks_end",
-    "names_continue",
-    "names_list_continues",
-    "notes_only_line",
-    "space_parted_name_line",
-    "space_parted_names",
-    "space_parted_rows_joined",
-    "spaced_name_separators",
-    "whole_line_group",
-    "wide_space_end",
-  ] {
-    assert!(
-      exports.contains(name) && !ours.contains(name),
-      "{name}: the old reader's export, counted by the reverse fence"
-    );
-  }
+  // (N1 of review revZ18m2: the namesakes are exactly the names both sides export, so the list can only fall)
+  let shared: Vec<&str> = exports.intersection(&ours).map(String::as_str).collect();
+  assert_eq!(
+    shared, OLD_READER_NAMESAKES,
+    "the names the old reader's files and the one engine's both export are not OLD_READER_NAMESAKES: a name left the \
+     list (lower it) or a new shared name (rename one side)"
+  );
+  // (every export pinned, review revZ18m2 S1: the 22 names revZ18m B1 found sitting in `classify/` uncounted among them,
+  // `author_group_splits` … `wide_space_end`; none left the old reader's files unseen, none is the one engine's own)
+  let pinned: std::collections::BTreeSet<String> = OLD_READER_EXPORTS
+    .iter()
+    .map(|name| name.to_string())
+    .collect();
+  let left: Vec<&String> = pinned.difference(&exports).collect();
+  let added: Vec<&String> = exports.difference(&pinned).collect();
+  assert!(
+    left.is_empty(),
+    "{left:?} no longer exported by the old reader's files (MOVED_OLD_READER_FILES): deleted, or moved out of them, \
+     where the reverse fence no longer counts its uses. Lower OLD_READER_EXPORTS (and OLD_READER_CODE_LINES) and state \
+     in the commit which, and where it went."
+  );
+  assert!(
+    added.is_empty(),
+    "{added:?}: new exports of the old reader's files. The old reader takes no new item: a new rule lands in \
+     `observer/resolver/`."
+  );
 }
 
 /// Perl LaTeXML's Frontmatter API names, generated once from `LaTeXML/lib/LaTeXML` (absent in worktrees and CI, so hard-coded
@@ -1352,7 +1446,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (Z18m, 349 -> 514: moved from `author_block` with its code (+131), and ERR2's title-code reader from
   // `defs/frontmatter_fields/` (+34, `classify/title_code.rs`), 514 = 349 + 131 + 34; none added; then 514 -> 515: PC3's
   // `reads_arguments` moved with that reader from `emitter/content.rs`, as its row says)
-  ("classify", 515),
+  // (E0h, 515 -> 384: the old reader's own `classify/old_reader/` split off into a row of its own, review revZ18m2 S1's
+  // sibling, so a read the library takes cannot hide behind one the old reader drops; 515 = 384 + 131, none added)
+  ("classify", 384),
+  // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row)
+  ("old_reader", 131),
   ("defs/author_macros", 20),
   // (Z18m, a new directory: the IJCAI chain moved from `author_block` with its code, as that row says)
   ("defs/author_macros/", 64),
@@ -1546,6 +1644,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
 /// The areas under `frontmatter/`, by path; the first that holds a file takes it.
 const FRONTMATTER_AREAS: &[(&str, &str)] = &[
   // (the "Knowledge in, driver out, one pass" move: the old reader's text rules and token primitives, moved unchanged from `author_block/`, their reads with them)
+  // (E0h: the old reader's own files under `classify/`, Z18m's move of the rest of `author_block/`, a row of their own)
+  ("old_reader", "classify/old_reader/"),
   ("classify", "classify/"),
   // (the "Knowledge in, driver out, one pass" move: Perl's whole-block fallback and its own preparation, moved unchanged from `author_block/`)
   ("fallback", "fallback.rs"),
