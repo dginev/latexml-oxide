@@ -33667,7 +33667,7 @@ contact (`\lx@add@contact[role=note]`), unchanged (1203.0413, 2111.03202: HTML b
 **Witnesses.** 2404.13552 (the notice's picture note: no †, shown inline); 2107.13277 (five ORCID icons, inline spans).
 Guard `perfect_kernel_batchcr8::an_unmarked_frontmatter_note_renders_inline_without_a_dagger`.
 
-### 991. eptcs's author block and OmniBus's `\authors` list go whole to the reading; an e-mail list reads as it prints (Z18k, Z18k2)
+### 991. eptcs's author block and OmniBus's `\authors` list go whole to the reading; an e-mail list reads as it prints (Z18k, Z18k2, Z18k3)
 
 **Perl.** Perl has no eptcs binding (the class is read raw through OmniBus) and OmniBus's `\authors{}` prints nothing
 (`OmniBus.cls.ltxml:74`, `DefMacro('\authors{}', Tokens())`).
@@ -33681,29 +33681,47 @@ numbered `\affiliation{n}{…}` landed on a nameless creator (2003.03010, 2103.0
 **Now.** (1) OmniBus's `\authors{list}` is `\lx@add@author@split{list}` (as llncs's unmarked `\author`, #984), each
 `\affil{…}` of numbers rewritten `\inst{…}`, the request of those numbered affiliations (omnibus_cls.rs
 `numbered_affil_marks`); another `\affil{text}` stays an affiliation. (2) eptcs's block is written as the class prints
-it (eptcs.cls:153-155, 186-191): each `\and` cell a column, its `\institute{…}` and `\email{…}` `\\` lines under its names,
+it (eptcs.cls v1.5-v1.7: the author `tabular` :170-174, `\institute` :188-190, `\email` :191): each `\and` cell a column, its `\institute{…}` and `\email{…}` `\\` lines under its names,
 the whole list to `\lx@add@author@split`; a line under a whole `tabular` of names is a
 `labelseq={affiliation},_share={authors}` entry (1407.7928). (3) The reading's e-mail text (`events::raw_lines`) is the
 argument as it prints where a box's source would glue or add words: a box printing only spacing is a space, not its
-source (`\email{a@x \qquad b@y}` had read the address `\qquadb@y` and the word "qquad": 1101.4424); a skip's whatsit is a
-space and a box printing one address (no formula, no note) is the address (`\makebox[0cm][c]{a@x}\hspace{40mm}…`:
-1210.2456). Any other box stays as written (settled dead-end: read wider — every whatsit its ink, every box printing
-nothing a space — a mark `\textsuperscript{\Letter}` glued to its address, 2410.20769, and the braces of
-`{jsliwinski,wattenhofer}@ethz.ch` were lost, 2206.10050; 1905.00862 and 2403.11192 changed too). (4) The emitter writes one address of a block's e-mail list
+source (`\email{a@x \qquad b@y}`: Z18k's WIP reroute had read the address `\qquadb@y` and the word "qquad"; 1101.4424
+reads as the base did, W 46 → 45); every inkless whatsit that is no formula and no note — a skip, a `\label`, an
+`\includegraphics`, a phantom — is a space; a box, no script or mark, whose ink holds an `@` is its ink
+(`\makebox[0cm][c]{a@x}\hspace{40mm}…`: 1210.2456; `\mbox{able@x.org, baker@x.org}`, `\mbox{E-mail: able@x.org}`,
+which had written a note "mbox" or the box's source, review revZ18k R1). Any other box stays as written (settled
+dead-end: every whatsit read as its ink — a mark `\textsuperscript{\Letter}` glued to its address, 2410.20769, and the
+braces of `{jsliwinski,wattenhofer}@ethz.ch` were lost, 2206.10050; 1905.00862 and 2403.11192 changed too; all four
+stay byte-identical to the base under the `@` rule). (4) The emitter writes one address of a block's e-mail list
 in the font the class's e-mail command sets it (`calls::email_command_address`: eptcs's `{\footnotesize\tt #1}`), and one
 address of an API call's list without the spacing its printed run opens with (`emit::one_address`: llncs's
 `\email{a@x \quad b@y}`, 2310.01324, which had written `\quadb@y` as text and each address twice). (5) The token split
 these bindings were the last to reach is deleted: `split_author_line`'s closure (`names_split.rs`, `separators.rs`,
-`name_text.rs`) and `row_emails.rs`, `author_block/` 3,364 → 2,552 lines.
+`name_text.rs`) and `row_emails.rs`, `author_block/` 3,364 → 2,552 lines. (6) In the reading's names line
+(`resolver/lines.rs` `names_line_events`) a bracketed piece after a separator (a comma, "and") that carries its own mark is
+a name of its own, marks win (FIDELITY_CHARTER §4 R1): OmniBus's `Y. Dong\affil{6}, \add[ver3]{S. Curry}\affil{1}`
+(2308.02720, trackchanges' `\add` undefined, printing "[ver3]S. Curry") and llncs's `Bob Baker\inst{2}, [v3]{Cy
+Cole}\inst{1}` had joined the two as one creator holding both affiliations, silently (review revZ18k B1; the llncs path
+on the base too). A remark with no mark of its own, a qualifier and a collaboration spoken for still join. A join of two
+pieces each carrying its own mark that any rule still makes (`Bob Baker\inst{2}, Jr.\inst{1}`) is the safety net's
+counted Warning (`net::merged_names`: "a separator its author block prints between names parts no creators").
 
 **Decided by the charter.** 2402.13328 (`\authors{Igor Shevchenko and Dan Crisan}`, no marks, `\affiliation{1}{…}`
 `\affiliation{2}{…}`): the numbered entries stay at the block as written (FIDELITY_CHARTER §4, KNOWN_PERL_ERRORS #1195);
 the base had paired them by position.
 
 **Residual.** 2304.02524's `\email{$^{a, b}$ \{…\}@quantinuum.com, $^{c}$ john@…}`: each address now goes to its marked
-author, but the e-mail marks `a b c` find no place and the line stays a counted note of the block.
+author, but the line also stays a counted note of the block reading `a, b$ {tuomas.laakkonen, k.mei}@quantinuum.com, $^c`
+— TeX source (`$`, `^`) plus the addresses already placed on their authors (the content check counts them duplicated).
+The base wrote the same text as a nameless e-mail contact.
 
-**Guards.** `perfect_kernel_batchz18k::{eptcs_email_list_a_control_word_parts_keeps_the_font, eptcs_email_row_of_boxes,
-llncs_email_list_quad_parted_keeps_the_font, omnibus_authors_affil_number_lists}`; the eptcs table and cell shapes stay
-`perfect_kernel_batch84b`'s. Repros `tools/perfect_kernel/repros/class-bindings/{eptcs/eptcs_email_row_of_boxes,
-llncs_email_list_quad_parted_keeps_the_font, omnibus/omnibus_authors_affil_number_lists}.tex`.
+**Guards.** `perfect_kernel_batchz18k::{eptcs_email_list_a_control_word_parts_keeps_the_font` (a keep-guard of the
+reroute, green on the base too)`, eptcs_email_row_of_boxes, eptcs_email_box_holding_addresses_is_its_ink,
+llncs_email_list_quad_parted_keeps_the_font, llncs_author_bracket_piece_marked_is_a_name,
+llncs_author_marked_qualifier_join_is_counted, omnibus_authors_affil_number_lists,
+omnibus_authors_bracket_piece_marked_is_a_name}`; the eptcs table and cell shapes stay `perfect_kernel_batch84b`'s. Repros
+`tools/perfect_kernel/repros/class-bindings/{eptcs/eptcs_email_row_of_boxes, eptcs/eptcs_email_box_holding_addresses_is_its_ink,
+llncs_email_list_quad_parted_keeps_the_font, llncs_author_bracket_piece_marked_is_a_name,
+llncs_author_marked_qualifier_join_is_counted, omnibus/omnibus_authors_affil_number_lists,
+omnibus/omnibus_authors_bracket_piece_marked_is_a_name}.tex`; the omnibus repros' pdflatex stand-in class is
+`omnibus/pdflatex/aguauthors.cls`, kept apart so a repro converted in place reads its class as unknown (OmniBus).

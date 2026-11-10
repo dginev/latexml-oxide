@@ -68,8 +68,8 @@ fn eptcs_structured(body: &Tokens) -> bool {
 }
 
 /// The block as the class prints it, for the reading: each `\and` cell a column of names and the lines under them
-/// (an `\institute` or `\email` call is a `\\` line of its own, eptcs.cls:153-155 `\newcommand{\institute}[1]{\\…}`,
-/// `\newcommand{\email}[1]{\\…}`), and the lines under every name of a table, each a `_share=authors` entry.
+/// (an `\institute` or `\email` call is a `\\` line of its own, eptcs.cls:188-190 `\newcommand{\institute}[1]{…\\…}`,
+/// :191 `\newcommand{\email}[1]{\\…}`), and the lines under every name of a table, each a `_share=authors` entry.
 #[derive(Default)]
 struct Block {
   columns: Vec<Vec<Token>>,

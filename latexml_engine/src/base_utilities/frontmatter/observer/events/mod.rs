@@ -714,8 +714,9 @@ fn option_value(options: &str, key: &str) -> Option<String> {
 /// \and tony@kth.se}`, 2106.06418: no `\andtony@kth.se`, review revN2). A box that prints nothing but spacing is a
 /// space, as it prints, not its source: the space after a control word the tokenizer skipped parted it from the next box, and the
 /// boxes still do — `\email{a@x \qquad b@y}` is `a@x b@y`, never the address `\qquadb@y` nor the word `qquad` (eptcs's
-/// `\email{g.stavrinos@… \qquad\qquad\qquad tassiana98@gmail.com}`, 1101.4424); a skip's whatsit is a space, and a
-/// box's printing one address, no formula and no note, that address.
+/// `\email{g.stavrinos@… \qquad\qquad\qquad tassiana98@gmail.com}`, 1101.4424); every inkless whatsit that is no
+/// formula and no note (a skip, a `\label`, a phantom) is a space, and a box, no script or mark, whose ink holds an `@`
+/// is its ink (`\mbox{able@x.org, baker@x.org}`, review revZ18k R1).
 fn raw_lines(w: &Whatsit, n: usize) -> String {
   // (a box that prints spacing and nothing else: a space)
   fn spacing(d: &Digested) -> bool {
@@ -752,21 +753,22 @@ fn raw_lines(w: &Whatsit, n: usize) -> String {
               walk(text, out);
             }
           },
-          // (a skip, or a box printing one address and nothing else, no formula and no note: a space, the address —
-          // eptcs's `\email{\makebox[0cm][c]{sbb@…}\hspace{40mm}\makebox[0cm][c]{nam@…}}`, 1210.2456, whose source had
-          // been the words `\makebox[0.0pt][c]` and the address `nam@…\hspace`; any other box as written, a mark's
-          // `\textsuperscript{\Letter}` (2410.20769) or a list's group)
+          // (an inkless whatsit, no formula and no note — a skip, a `\label`, a phantom —: a space; a box, no script or
+          // mark (no Mark of the lexer's in it), whose ink holds an address: its ink, as it prints — eptcs's
+          // `\email{\makebox[0cm][c]{sbb@…}\hspace{40mm} \makebox[0cm][c]{nam@…}}`, 1210.2456, whose source had been
+          // the words `\makebox[0.0pt][c]` and the address `nam@…\hspace`; `\mbox{able@x.org, baker@x.org}`,
+          // `\mbox{E-mail: able@x.org}`, whose source had been a note "mbox" or `\mbox{…}` (review revZ18k R1); any
+          // other box as written, a mark's `\textsuperscript{\Letter}` (2410.20769) or a list's group)
           _ if !w.is_math()
             && formula_extent(d).is_none()
             && !is_note_whatsit(&w)
             && notes_in(d).is_empty() =>
           {
             let ink = ink_of(d);
-            let one_address = ink.matches('@').count() == 1
-              && !ink.contains(|c: char| c.is_whitespace() || "{}()[],;<>".contains(c));
             if ink.is_empty() {
               out.push(' ');
-            } else if one_address {
+            } else if ink.contains('@') && !lex_events(d).iter().any(|e| e.kind == EventKind::Mark)
+            {
               out.push_str(&ink);
             } else {
               out.push_str(&d.to_string());

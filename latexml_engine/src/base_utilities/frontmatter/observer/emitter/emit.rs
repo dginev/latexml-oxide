@@ -957,16 +957,15 @@ fn block_names(
           .flatten()
           .map_or(t, |end| end.max(t));
         // (a mark past the close of a group of names the name's run opens no part of is the last name's, its own run
-        // after the name: `{Ann Able$^{\star}$, …, David López-Pérez}$^{\sharp}$`, 2504.02633 — the old reader's names
-        // split reads it so, `split_author_line`'s step 1 (`names_in_wrapper`, `author_block/names_split.rs`: a wrapper
-        // holding names with only marks after it split into them, the marks the last name's; `math_active_scripts` only
-        // makes breqn's `^` a superscript); grown over the group's close, the run was no balanced one and the name lost
-        // its markup, FB1's P4; the depth is counted from the name's first token, so only a close of a group opened before
-        // the name counts — a group the name's run opens and closes itself is none: revtex's `D. ${\rm Dorn}^{*}$`, whose
-        // `}` closes `{\rm Dorn}` and whose mark the run already holds, written once; nor a mark in the formula the
-        // name's first token is in, the formula opening before it, which the run takes whole: revtex's `${\rm
-        // Ann~Able}^{a}$`, whose `}` closes the `{\rm` the name opens inside, its mark written twice — review revH5
-        // finding 2)
+        // after the name: `{Ann Able$^{\star}$, …, David López-Pérez}$^{\sharp}$`, 2504.02633 — as the old reader's
+        // names split, deleted in Z18k2, read it (a wrapper holding names with only marks after it split into them, the
+        // marks the last name's); this writer's run is now its one owner; grown over the group's close, the run was no
+        // balanced one and the name lost its markup, FB1's P4; the depth is counted from the name's first token, so
+        // only a close of a group opened before the name counts — a group the name's run opens and closes itself is
+        // none: revtex's `D. ${\rm Dorn}^{*}$`, whose `}` closes `{\rm Dorn}` and whose mark the run already holds,
+        // written once; nor a mark in the formula the name's first token is in, the formula opening before it, which
+        // the run takes whole: revtex's `${\rm Ann~Able}^{a}$`, whose `}` closes the `{\rm` the name opens inside, its
+        // mark written twice — review revH5 finding 2)
         let past_group = || {
           let name_from = at(found[from].1.span?.0)?;
           let formula = field.formula_start(name_from);

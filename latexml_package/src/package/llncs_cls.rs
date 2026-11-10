@@ -115,7 +115,8 @@ LoadDefinitions!({
   // of Somewhere" holding the e-mail, review probe rv63k/llncs1; `Ann Able \and Bob Baker \and the ATLAS
   // Collaboration`, more names, the rev77t2 re-review's L6; a list whose authors carry `\inst` marks, its `\institute`
   // entries picked by the marks, the rev77t2 re-review's L11). Z18b moved the binding off the token split it made here
-  // at the call (`split_author_line`, `line_is_email_list`, `reads_as_affiliation`).
+  // at the call: the reading's names line (`resolver/lines.rs` `names_line`) and its owners (`resolver/owners.rs`) read
+  // the block now.
   // An `\institute{…}` written inside `\author` (`\author{Ann Able and Bob Baker \institute{Univ X}}`, 1609.01220) is
   // the class's store all the same, `\gdef\@institute` (llncs.cls:868), printed under the names by `\institutename`
   // (:1036): one after the names, not a part of the last name. It runs when `\@maketitle` sets `\@author`, before

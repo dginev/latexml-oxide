@@ -160,7 +160,7 @@ fn begins_a_word(v: &[Token], part: LinePart) -> bool {
 ///  - a comma at the edge of a math span that holds only a superscript mark, printed between the names, is written
 ///    outside it, where the split sees it: `Wittor$^{1}, $Brüggen` (1610.00129), `Iacobuta$,^{5,6,7}$ Mabel`
 ///    (2108.04461), `Manoj$^{2},$ Chandra` (2402.11182) — a mark after the comma then goes to the name before it
-///    ([`marks_before_glued_commas`]).
+///    (the reading's `resolver/lines.rs` `mark_goes_next`).
 pub(in crate::base_utilities) fn spaced_name_separators(line: Tokens) -> Tokens {
   let v = line.unlist_ref();
   let parts = line_parts(v);
@@ -321,8 +321,8 @@ pub(in crate::base_utilities) fn has_ijcai_section_marker(stuff: &Tokens) -> Res
 // idiom). Perl's @authorsplits (Base_Utility.pool.ltxml L679) includes the comma
 // and shares this mis-split; excluding it here is a deliberate surpass-Perl
 // divergence. Name-level comma/" and " splitting still happens, but only AFTER a
-// line is known to be author names — via split_author_line — never across
-// address text. (Compare author_affil_splits(): "NO comma in affiliations!!!".)
+// line is known to be author names — in the reading's names line (`resolver/lines.rs`
+// `names_line`) — never across address text. (Compare author_affil_splits(): "NO comma in affiliations!!!".)
 pub(in crate::base_utilities) fn author_group_splits() -> Vec<SplitDelim> {
   let mut splits = author_and_splits();
   splits.extend([T_CS!("\\quad").into(), T_CS!("\\qquad").into()]);

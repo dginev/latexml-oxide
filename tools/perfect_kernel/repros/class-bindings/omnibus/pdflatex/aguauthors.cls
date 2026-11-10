@@ -1,8 +1,9 @@
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesClass{aguauthors}[2026/11/10 repro stand-in]
 % A minimal stand-in for the AGU `\authors` interface (agujournal2019.cls; not in TeX Live), written from scratch for
-% the repros beside it: no code of the class is copied. latexml_oxide reads an unknown class as OmniBus and never this
-% file; it is for pdflatex.
+% the omnibus repros: no code of the class is copied. It is for pdflatex only, run from `omnibus/` with
+% `TEXINPUTS=pdflatex//:`. It sits apart from the repros on purpose: beside a repro latexml_oxide would find it and read
+% it raw (the repro's class then no unknown class read as OmniBus, 0 creators — review revZ18k S1).
 \LoadClass{article}
 % the numbered affiliation marks after a name: a superscript of the numbers
 \newcommand\affil[1]{\textsuperscript{#1}}
