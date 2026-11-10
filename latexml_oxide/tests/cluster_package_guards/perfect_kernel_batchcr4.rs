@@ -2,7 +2,10 @@
 //! (every binding), and imsart's address residuals — `\printead` in an address printed in place (at the end under
 //! `\@addressatendtrue`), an unlabelled `\address` the run's, a date recovered from `\title`'s `\author` kept over a
 //! later `\date`. OXIDIZED_DESIGN_DIVERGENCES #972, #985, #986.
-use super::perfect_kernel_batchcr2::{convert_clean, elements};
+use super::{
+  perfect_kernel_batch46::{error_count, warning_count},
+  perfect_kernel_batchcr2::{convert_clean, elements},
+};
 
 /// CR4 item 1 (CR3b's RED; review revCR3b's answer to item 4): the API's `\lx@add@url`/`\lx@add@email` read the address
 /// Semiverbatim, which made the shifts of `$\sim$` other, so the URL printed "http://www.zebra.edu/$∼$ann"; a formula
@@ -61,5 +64,28 @@ fn imsart_unlabelled_address_is_the_runs() {
   assert_eq!(elements(&convert_clean(tex), "creator"), vec![
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@x.edu</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Univ AB</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@y.org</text></contact>\n    <contact name=\"Address:\u{a0}\" role=\"address\">Univ AB</contact>\n  </creator>",
+  ]);
+}
+
+/// CR4 item 4 (review revCR3b finding 2): `\title{A Title \author{Ann Able \date{Dinner One}}}` then `\date{Dinner Two}`:
+/// `\maketitle` runs the inner `\date` after the outer one, so "Dinner One" is the date (it was silently replaced by
+/// "Dinner Two"). Distinct from cr3's `date_inside_author_inside_title_is_the_date` (no outer `\date`): the recovered
+/// entry's place after the outer flush's queue. The one Warning is the title-page check's "unclaimed: two", a false
+/// positive erring the safe way (its run prints the outer `\date`, which TeX never prints), as with the outer `\date`
+/// before `\title`. Repro sectioning-frontmatter/date_inside_author_inside_title_over_later_date.
+#[test]
+fn date_inside_author_inside_title_over_later_date() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/date_inside_author_inside_title_over_later_date.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  assert_eq!(error_count(&log), 0, "{log}");
+  assert_eq!(warning_count(&log), 1, "{log}");
+  assert!(log.contains("unclaimed"), "{log}");
+  assert_eq!(elements(&xml, "date"), vec![
+    "<date role=\"creation\">Dinner One</date>"
+  ]);
+  assert_eq!(elements(&xml, "creator"), vec![
+    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n  </creator>",
   ]);
 }

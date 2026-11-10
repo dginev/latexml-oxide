@@ -4071,6 +4071,8 @@ fn recover_queued(
   });
   // (each entry, after the `out` entry it follows: none at the end)
   let mut recovered: Vec<(Option<usize>, RawFrontmatter)> = Vec::new();
+  // (an outer flush digests its queue around this one: a late block's, `\lx@frontmatter@late`)
+  let outer_flushing = lookup_bool("lx_frontmatter_flushing");
   for (index, queued, as_queued) in sources {
     let once = s!("recovered|{index}");
     if lookup_mapping(EMITTED_ITEMS, &once).is_some() {
@@ -4123,6 +4125,17 @@ fn recover_queued(
         recovered.push((after, (tag, attrs, command)));
       },
       _ => {
+        // (a title, subtitle or date set in a block read while an outer flush digests its queue — `\title{…\author{…
+        // \date{One}}}` read at `\maketitle`'s flush — is set as TeX typesets the block, after the queue's own: queued
+        // for the next flush, so a `\date{Two}` queued before it does not replace it; pdflatex prints "One", review
+        // revCR3b finding 2)
+        let (deferred, queued): (Vec<RawFrontmatter>, Vec<RawFrontmatter>) =
+          queued.into_iter().partition(|entry| {
+            outer_flushing && matches!(entry.0.as_str(), "ltx:title" | "ltx:subtitle" | "ltx:date")
+          });
+        if !deferred.is_empty() {
+          defer_to_next_flush(deferred);
+        }
         recovered.extend(queued.into_iter().map(|entry| (None, entry)));
         let lost: Vec<String> = digested.into_iter().map(|entry| entry.0).collect();
         warn_queued_lost(&lost);
@@ -4141,6 +4154,26 @@ fn recover_queued(
   for (at, _, entry) in placed {
     out.insert(at + 1, entry);
   }
+}
+
+/// Queues `entries` as they are for the next flush (the end of the document's, when no later `\maketitle` flushes): what
+/// a flush digests is off the queue before it digests ([`digest_front_matter`]), so they come after the outer flush's
+/// remaining entries ([`recover_queued`]).
+fn defer_to_next_flush(entries: Vec<RawFrontmatter>) {
+  if with_value("frontmatter_raw", |v| {
+    !matches!(v, Some(Stored::FrontmatterRaw(_)))
+  }) {
+    assign_value(
+      "frontmatter_raw",
+      Stored::FrontmatterRaw(Vec::new()),
+      Some(Scope::Global),
+    );
+  }
+  with_value_mut("frontmatter_raw", |queue| {
+    if let Some(&mut Stored::FrontmatterRaw(ref mut queue)) = queue {
+      queue.extend(entries);
+    }
+  });
 }
 
 /// The labels the call at ledger index `index` of role `role`, written as queued, goes to: its run's creators, as the

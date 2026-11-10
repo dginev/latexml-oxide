@@ -33245,7 +33245,17 @@ guards `perfect_kernel_batchcr2` (one per path: the owner label, a block's queue
 call's place among the items, a written call), `perfect_kernel_batchcr3::{revtex3_minipage_address_first_one_run` (a run
 of several owners), `date_inside_author_inside_title_is_the_date}` (a flush-time `@now` setter).
 
-**Residual (review revCR3b finding 2, synthetic, pre-existing):** a date recovered from `\title`'s `\author` loses to a later top-level `\date` (`\title{A Title \author{Ann Able \date{Dinner One}}}` `\date{Dinner Two}` `\maketitle`: pdflatex prints "Dinner One", we write "Dinner Two", no Warning) — the recovered entry goes in before a `\date` after `\title`; correct when the outer `\date` comes before `\title`.
+A title, subtitle or date such a late block recovers while an outer flush digests its queue is set as TeX typesets the
+block, after the queue's own entries (`\maketitle` runs the inner `\date` while typesetting `\@author`, after every
+`\date` before it): it is queued for the next flush (`emitter::emit::defer_to_next_flush`, the end of the document's when
+no later `\maketitle` flushes), not digested inside the late flush, so `\title{A Title \author{Ann Able \date{Dinner
+One}}}` `\date{Dinner Two}` `\maketitle` gives "Dinner One", as pdflatex (it gave "Dinner Two", no Warning; review revCR3b
+finding 2, CR4). The title-page check's "unclaimed: two" there (its run prints the outer `\date`, which TeX never prints)
+is a false positive erring the safe way, as with the outer `\date` before `\title`. Repro
+`date_inside_author_inside_title_over_later_date`; guard `perfect_kernel_batchcr4::date_inside_author_inside_title_over_later_date`.
+**Left** (synthetic, pre-existing): a `\date` set in `\title` itself (`\title{A Title \date{Dinner One}}` `\date{Dinner
+Two}` `\author{Ann Able}` `\maketitle`; pdflatex "Dinner One") still loses to the later `\date`, with no Warning: an
+`@now` setter inside a queued entry's digestion, no late block.
 
 ### 986. imsart.sty is a binding of its own, so a shipped copy declaring itself imsart.sty is read through it (CR3)
 
