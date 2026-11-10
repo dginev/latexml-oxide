@@ -32343,6 +32343,21 @@ and unit `author_split_tests::a_name_spells_a_run_of_the_local_parts_words` (the
 `a@x (X.X.); b@y (M.Y.)` match no printed name (2002.08904); an unbraced list beside a printed name not in brackets
 (`Ann Able: a@x`) is not read as a name; a list in reverse author order stays unplaced (2508.07950).
 
+**Fix (3) (CR4): a formula of glyphs in an e-mail or URL is its glyphs, for every binding** (Perl: the same `$∼$`, its
+`\lx@add@url`/`\lx@add@email` Semiverbatim too). The API's `\lx@add@url` and `\lx@add@email` read the address
+Semiverbatim, which turns a `$` already read as a math shift into a character (Perl's `neutralize`), so imsart's
+`\ead[label=u2,url]{http://www.math.duke.edu/$\sim$omer}` wrote "…/$∼$omer" where pdflatex prints "…/∼omer" — and so did
+any binding's call (`\def\myurl{\lx@add@url{http://www.zebra.edu/$\sim$ann}}`, review revCR3b). Both now pass the address
+through `contacts::address_as_printed`: the brace sets of fix (1), then `math_glyphs_as_printed` — a pair of shifts
+(characters or shifts) round characters and math symbols that each print one glyph (`math_symbol_glyph`: the text of the
+one box a math primitive without arguments makes, `\sim` "∼", `\cdot` "·") is that run, each symbol its glyph as a
+character of the address (TeX takes it from the math font), the shifts and spaces dropped; the address stays one text,
+so the XSLT's link (its first text node) is whole. A run with a script (`$^*$x@y`'s mark), another command or nothing in it
+stays as read (`$x^2$` prints "$x^2$": left, no paper seen). `\lx@address@printed` gives a binding the same reading for an
+address it prints itself (imsart's `\printead`, #986). Witnesses 1301.1466, math0608476 (`www.math.wisc.edu/$\sim$swanson`).
+Repro `sectioning-frontmatter/imsart_ead_url_reads_a_tex_argument` (RED since CR3b); guard
+`perfect_kernel_batchcr4::imsart_ead_url_prints_its_formula`.
+
 ### 973. pgfmath reads arrays: a `{…}[i]` primary, text elements, `array`, `dim` (Perl: `Error:pgfparse`, its parser numeric)
 
 `pgfmath_code_tex.rs`, the winnow grammar skips `{`, `}` as blanks and has only numbers, so `{1,2,3}[1]` was 1 (pgf 2),

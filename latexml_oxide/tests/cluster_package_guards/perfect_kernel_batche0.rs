@@ -1103,7 +1103,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (Z4a, 7 -> 8: `\lx@frontmatter@itemnone` reads its tag argument, an element's name: an `ltx:rdf` passes through, the rest goes)
   ("defs/frontmatter_api", 8),
   ("defs/frontmatter_api/", 63),
-  ("defs/frontmatter_fields", 21),
+  // (CR4, 21 -> 28: `address_as_printed`'s `math_glyphs_as_printed`, the API's e-mail/URL reading — how an address prints,
+  // `$\sim$` its glyph "∼" (1301.1466, math0608476; OD #972), no owner decided: a sibling of `math_braces_as_printed`, whose
+  // reads `defs/frontmatter_fields/` holds; it reads the Semiverbatim argument's tokens, which no event says)
+  ("defs/frontmatter_fields", 28),
   ("defs/frontmatter_fields/", 83),
   ("defs/general", 8),
   ("epl_cls.rs", 43),

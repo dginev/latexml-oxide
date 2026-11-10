@@ -482,7 +482,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   );
   // (Rust-only, OXIDIZED_DESIGN_DIVERGENCES #972: the address as TeX prints it, a brace set in math a brace —
   // `\email{$\{$a,b$\}$@x}` prints "{a,b}@x", which the class's verbatim reading kept as "${$a,b$}$@x": llncs's
-  // 1106.2694, 2308.00146, 1602.04934 — [`math_braces_as_printed`])
+  // 1106.2694, 2308.00146, 1602.04934 — [`math_braces_as_printed`]; a formula of glyphs its glyphs, `$\sim$` "∼",
+  // 1301.1466, math0608476 — [`address_as_printed`])
   DefMacro!("\\lx@add@email [] Semiverbatim", sub[(attr, address)] {
     let address: Tokens = address;
     let mut keyvals: Vec<Token> = mouth::tokenize_internal("role=email,").unlist();
@@ -493,7 +494,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       Some(mouth::tokenize_internal("ltx:creator")),
       Some(mouth::tokenize_internal("ltx:contact")),
       Some(Tokens::new(keyvals)),
-      Some(math_braces_as_printed(&address))
+      Some(address_as_printed(&address))
     ]))
   });
   // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #901): an address of the e-mail line under a whole row of names, placed by
@@ -699,10 +700,27 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     "\\lx@add@email@metadata [] Semiverbatim",
     "\\lx@add@creator@rdf[#1]{schema:email}{#2}"
   );
-  DefMacro!(
-    "\\lx@add@url [] Semiverbatim",
-    "\\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=url,#1]{#2}"
-  );
+  // (Rust-only, OXIDIZED_DESIGN_DIVERGENCES #972: the address as TeX prints it, a formula of glyphs its glyphs —
+  // `http://www.zebra.edu/$\sim$ann` prints "http://www.zebra.edu/∼ann", the Semiverbatim reading kept the dollars:
+  // 1301.1466, math0608476 — [`address_as_printed`])
+  DefMacro!("\\lx@add@url [] Semiverbatim", sub[(attr, address)] {
+    let address: Tokens = address;
+    let mut keyvals: Vec<Token> = mouth::tokenize_internal("role=url,").unlist();
+    if let Some(attr) = attr {
+      keyvals.extend(attr.unlist());
+    }
+    Ok(Invocation!(T_CS!("\\lx@annotate@frontmatter"), vec![
+      Some(mouth::tokenize_internal("ltx:creator")),
+      Some(mouth::tokenize_internal("ltx:contact")),
+      Some(Tokens::new(keyvals)),
+      Some(address_as_printed(&address))
+    ]))
+  });
+  // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #972): an address a binding prints itself, as the e-mail and URL contacts read
+  // it ([`address_as_printed`]: a formula of glyphs its glyphs) — imsart's `\printead` in an address printed in place.
+  DefMacro!("\\lx@address@printed Semiverbatim", sub[(address)] {
+    Ok(address_as_printed(&address))
+  });
   // Rust-only: an email or web address set as a class sets it with `\url`, `\texttt` or `\ttfamily` — url.sty's
   // `\UrlFont` (url_sty.rs `\UrlFont`): the typewriter family, in the identity ASCII encoding. A class that reads the
   // address with `_` and `~` made other (revtex4.cls:4476-4493 `\sanitize@url` … `\href{mailto:#2}{#2}`, `\href` the
@@ -928,4 +946,75 @@ fn creator_call(attr: Option<Tokens>, name: Tokens, collaboration: bool) -> Resu
     out.extend(after.unlist());
   }
   Ok(Tokens::new(out))
+}
+
+/// An address as TeX prints it where its argument holds a formula ([`math_braces_as_printed`], then
+/// [`math_glyphs_as_printed`]): the reading of every e-mail and URL contact (`\lx@add@email`, `\lx@add@url`), for
+/// every binding (OXIDIZED_DESIGN_DIVERGENCES #972).
+pub(in crate::base_utilities) fn address_as_printed(address: &Tokens) -> Tokens {
+  math_glyphs_as_printed(&math_braces_as_printed(address))
+}
+
+/// An address's formula as TeX prints it where the formula is glyphs: a pair of math shifts — read as characters (a
+/// Semiverbatim argument made `$` other: the API's `\lx@add@url`/`\lx@add@email`, Perl's `neutralize`) or as shifts —
+/// round a run of characters and of math symbols that each print one glyph ([`math_symbol_glyph`]: `\sim`, `\cdot`)
+/// is the run, each symbol its glyph, the shifts and spaces dropped as math drops spaces:
+/// `http://www.zebra.edu/$\sim$ann` prints "http://www.zebra.edu/∼ann", as pdflatex, where the dollars printed
+/// (1301.1466's `\ead[label=u2,url]{http://www.math.duke.edu/$\sim$omer}`, math0608476's
+/// `www.math.wisc.edu/$\sim$swanson`). The glyph is a character of the address, in its font (TeX takes it from the
+/// math font), so the address stays one text and its link whole. A run with a script (`^`, `_`: `$^*$x@y`'s mark), a
+/// command of another kind or nothing in it stays as it is.
+pub(in crate::base_utilities) fn math_glyphs_as_printed(address: &Tokens) -> Tokens {
+  let v = address.unlist_ref();
+  let shift = |t: &Token| *t == T_OTHER!("$") || t.get_catcode() == Catcode::MATH;
+  let script = |t: &Token| [T_OTHER!("^"), T_OTHER!("_")].contains(t);
+  let glyphs = |t: &Token| -> Option<Vec<Token>> {
+    match t.get_catcode() {
+      Catcode::SPACE => Some(Vec::new()),
+      Catcode::LETTER | Catcode::OTHER if !shift(t) && !script(t) => Some(vec![*t]),
+      Catcode::CS => math_symbol_glyph(t).map(|glyph| text_tokens(&glyph)),
+      _ => None,
+    }
+  };
+  let mut out: Vec<Token> = Vec::with_capacity(v.len());
+  let mut at = 0;
+  while at < v.len() {
+    if shift(&v[at])
+      && let Some(len) = v[at + 1..].iter().position(shift)
+      && let Some(printed) = v[at + 1..at + 1 + len]
+        .iter()
+        .map(glyphs)
+        .collect::<Option<Vec<Vec<Token>>>>()
+      && printed.iter().any(|glyph| !glyph.is_empty())
+    {
+      out.extend(printed.into_iter().flatten());
+      at += len + 2;
+      continue;
+    }
+    out.push(v[at]);
+    at += 1;
+  }
+  Tokens::new(out)
+}
+
+/// The glyph a math symbol prints: the text of the one box a math primitive without arguments makes (`\sim` "∼",
+/// `def_math_primitive`), which reads the current font and changes nothing. `None` for any other command.
+fn math_symbol_glyph(t: &Token) -> Option<String> {
+  let Ok(Some(Stored::MathPrimitive(math))) = lookup_definition_stored(t) else {
+    return None;
+  };
+  if math.nargs.unwrap_or(0) != 0 {
+    return None;
+  }
+  let boxes = (math.replacement.as_ref()?)(Vec::new()).ok()?;
+  match boxes.as_slice() {
+    [only] => match only.data() {
+      DigestedData::TBox(b) => {
+        let text = b.borrow().get_string().ok()?.to_string();
+        (!text.is_empty() && text.chars().count() == 1).then_some(text)
+      },
+      _ => None,
+    },
+    _ => None,
+  }
 }
