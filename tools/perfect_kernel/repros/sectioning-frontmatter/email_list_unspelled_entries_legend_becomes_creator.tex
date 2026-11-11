@@ -1,17 +1,17 @@
-% RED (html_feedback #7233 side shape, synthetic): one-line `{…}@domain` list where one author's entry spells no one
+% Was RED (html_feedback #7233 side shape, synthetic): one-line `{…}@domain` list where one author's entry spells no one
 %   (`xq.zz` for Bo Baker) and two entries spell no author (`dd.dunn`, `ee.egan`): the legend line
 %   `$^*$Contributed equally \quad $^1$University of Alpha` then reads as a nameless creator "* Contributed equally",
 %   the three starred authors keep a bare "*" and lose their note, and `xq.zz@alpha.edu` lands on Bo Baker by position.
 %   With every author spelled (`bo.baker`) the same block reads right (the note on all three, the two extras on the
 %   block creator). Found bisecting #7233's block with the list joined onto one line (`mo.schaeffler` the unspelled one).
 % witness: html_feedback #7233 (the one-line variant of its block; the reporter's own two-line block hits the twin
-%   email_list_umlaut_transliteration_split_red.tex instead)
+%   email_list_umlaut_transliteration_split.tex instead)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1∗ Bo Baker1∗ Cy Coe1∗ / ∗Contributed equally
 %   1University of Alpha / {ann.able,xq.zz,cy.coe,dd.dunn,ee.egan}@alpha.edu"
 % engines: rust int138a (106t on a783b56cce): 5 creators (the legend one of them), the note on none of the authors
 % expect:  0 errors; 3 author creators each with the "Contributed equally" note and University of Alpha; ann.able@ on
 %   Ann Able, cy.coe@ on Cy Coe; xq.zz@, dd.dunn@, ee.egan@ on the block creator (charter §4); no legend creator
-% status:  RED (int138a)
+% status:  RED (int138a) -> GREEN (perfect_kernel_batchst1::author_blocks_read_as_printed, int159a; ST1: the output matched the expect on 140bbb3d67)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage[T1]{fontenc}

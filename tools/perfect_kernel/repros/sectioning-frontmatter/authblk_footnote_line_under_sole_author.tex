@@ -1,9 +1,10 @@
-% RED: a `\footnote` on a line under a sole author is the author's note (charter §4, no mark or spelling applies, the line under the name's row).
+% Was RED: a `\footnote` on a line under a sole author is the author's note (charter §4, no mark or spelling applies, the line under the name's row).
 % Parted from the name it digests in the line's contact, where `\footnote` is `\lx@add@pubnote`, as in plain `article`.
 % witness: 2601.20363, 2605.13069 (rev108a3 B2)
 % oracle:  pdflatex (TL 2025) clean; Perl gives `<contact role="note">` on the creator under authblk, a `pubnote` only without it
 % engines: int139c a creator note, inside a merged name; 108a a `pubnote`, text kept
 % expect:  0 errors; `<contact role="note">` on the sole creator
+% status:  RED -> GREEN (perfect_kernel_batchst1::author_blocks_read_as_printed, int159a; ST1: the output matched the expect on 140bbb3d67)
 \documentclass{article}
 \usepackage{authblk}\title{T}
 \author{

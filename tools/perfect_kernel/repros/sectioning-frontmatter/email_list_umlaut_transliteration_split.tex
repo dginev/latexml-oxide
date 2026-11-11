@@ -1,16 +1,16 @@
-% RED (html_feedback #7233, synthetic): a local part that spells its author only through the German transliteration
+% Was RED (html_feedback #7233, synthetic): a local part that spells its author only through the German transliteration
 %   (`bo.baecker` for "Bo Bäcker", ä -> ae; the reporter's `mo.schaeffler` for "Moritz Schäffler"; `\"a` the same) spells
 %   no one, and a `{…}@domain` list split over two `\texttt` lines (`\\` between) is then not read as addresses at all:
 %   both lines stay glued into the last affiliation, "Department of Physics, University of Beta {ann.able,bo.baecker,
 %   cy.coe}@alpha.edu", every e-mail unlinked, no Warning. The one-line list reads right. Twin of
-%   email_list_split_unspelled_entry_glued_red.tex (the same fail-safe gap with a plain unspelled entry).
+%   email_list_split_unspelled_entry_glued.tex (the same fail-safe gap with a plain unspelled entry).
 % witness: html_feedback #7233 (NeurIPS 2026 `\And` block; `{e.de.bruyn,mo.schaeffler,…,u.upadhyay,}\\` +
 %   `{s.kesselheim,a.bazarova}@fz-juelich.de`, all 7 Jülich e-mails glued into Kesselheim's Cologne affiliation)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: the list printed on two lines under the two affiliations
 % engines: rust int138a (106t on a783b56cce): 3 creators, Cy Coe's affiliation holds the whole list, 0 warnings
 % expect:  0 errors, 0 warnings; ann.able@alpha.edu on Ann Able, bo.baecker@alpha.edu on Bo Bäcker, cy.coe@alpha.edu
 %   on Cy Coe, each affiliation only its institution (FIDELITY_CHARTER §4: the address goes to the author it spells)
-% status:  RED (int138a) -> GREEN (107a)
+% status:  RED (int138a) -> GREEN (107a); renamed without `_red` (ST1)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage[T1]{fontenc}

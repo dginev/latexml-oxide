@@ -190,7 +190,7 @@ fn the_whole_block_queue_still_reads() {
   assert_eq!(names, ["Ann Able", "Bob Baker ∗", "Cat Cole 3"]);
 }
 
-/// The shape of `affiliation_cut_environments_by_spelling_red` each row of [`ENVIRONMENT_ROWS`] replaces.
+/// The shape of `affiliation_cut_environments_by_spelling` each row of [`ENVIRONMENT_ROWS`] replaces.
 pub(super) const ENVIRONMENT_SHAPE: &str = "\\bx a&b\\\\ c&d\\ex";
 
 /// The environments of a cut's piece, each row a spelling and the entry it is in: a macro pair, `\\let` copies, a `\\begin` under `\\detokenize` or `\\ifx` (review
@@ -215,7 +215,7 @@ const ENVIRONMENT_ROWS: &[(&str, &str)] = &[
 
 /// The template with `row` in place of its shape, the template's `X` kept where the entry `text` prints it before the row.
 pub(super) fn environment_row(row: &str, text: &str) -> String {
-  let template = repro!("affiliation_cut_environments_by_spelling_red");
+  let template = repro!("affiliation_cut_environments_by_spelling");
   assert!(template.contains(ENVIRONMENT_SHAPE));
   let template = if text.starts_with("1 Univ X ") {
     template.to_string()

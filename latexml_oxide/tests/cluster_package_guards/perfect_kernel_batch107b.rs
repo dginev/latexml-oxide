@@ -253,7 +253,10 @@ fn semantic_creators(tex: &str) -> Vec<Vec<String>> {
 /// `S.~P.~Pacetti$^{17c}$`, `A.~Sarantsev$^{18d}$`, `C.~P.~Shen$^{36e}$`), each legend on the names requesting it alone,
 /// and the spaced-tie `N.~B. ~Li$^{22}$` one name. Red (107b r1): 342 creators, the `a` legend one and a nameless one
 /// holding the others, the sub-lettered names no institute 18. Repro
-/// sectioning-frontmatter/author_besiii_block_sub_lettered_marks_1202_2048.
+/// sectioning-frontmatter/author_besiii_block_sub_lettered_marks_1202_2048. Each name holds no mark (FIDELITY_CHARTER §4,
+/// "a name's label is the name alone"; the synthetic shape `author_sub_lettered_mark_shown_on_name`, green since ST1): the
+/// pinned names "E. Boger 18a" … became "E. Boger" …, and the rows and legend counts DEL1 left unchecked (`for _ in
+/// expected {}`) are asserted again (ST1).
 #[test]
 fn the_1202_2048_besiii_block_gives_every_name_its_lines() {
   let creators = semantic_creators(repro!("author_besiii_block_sub_lettered_marks_1202_2048"));
@@ -268,29 +271,29 @@ fn the_1202_2048_besiii_block_gives_every_name_its_lines() {
   let jinr = "affiliation=Joint Institute for Nuclear Research, 141980 Dubna, Russia";
   let a = "affiliation=also at the Moscow Institute of Physics and Technology, Moscow, Russia";
   let expected: [&[&str]; 9] = [
-    &["E. Boger 18a", collaboration, jinr, a],
-    &["G. Chelkov 18a", collaboration, jinr, a],
-    &["A. Zhemchugov 18a", collaboration, jinr, a],
+    &["E. Boger", collaboration, jinr, a],
+    &["G. Chelkov", collaboration, jinr, a],
+    &["A. Zhemchugov", collaboration, jinr, a],
     &[
-      "I. Denysenko 18b",
+      "I. Denysenko",
       collaboration,
       jinr,
       "affiliation=on leave from the Bogolyubov Institute for Theoretical Physics, Kiev, Ukraine",
     ],
     &[
-      "S. P. Pacetti 17c",
+      "S. P. Pacetti",
       collaboration,
       "affiliation=INFN Laboratori Nazionali di Frascati , Frascati, Italy",
       "affiliation=Currently at University of Perugia and INFN, Perugia, Italy",
     ],
     &[
-      "A. Sarantsev 18d",
+      "A. Sarantsev",
       collaboration,
       jinr,
       "affiliation=also at the PNPI, Gatchina, Russia",
     ],
     &[
-      "C. P. Shen 36e",
+      "C. P. Shen",
       collaboration,
       "affiliation=University of Hawaii, Honolulu, Hawaii 96822, USA",
       "affiliation=now at Nagoya University, Nagoya, Japan",
@@ -306,5 +309,30 @@ fn the_1202_2048_besiii_block_gives_every_name_its_lines() {
       "affiliation=Nanjing Normal University, Nanjing 210046, P. R. China",
     ],
   ];
-  for _ in expected {}
+  for creator in expected {
+    let found: Vec<&Vec<String>> = creators.iter().filter(|c| c[0] == creator[0]).collect();
+    assert_eq!(
+      found,
+      [&creator.iter().map(|s| s.to_string()).collect::<Vec<_>>()],
+      "{}",
+      creator[0]
+    );
+  }
+  // (each legend on the names its letter's marks request, and on no other)
+  for (legend, holders) in [
+    ("Moscow Institute of Physics", 3),
+    ("Bogolyubov Institute", 1),
+    ("University of Perugia", 1),
+    ("PNPI, Gatchina", 1),
+    ("now at Nagoya University", 1),
+  ] {
+    assert_eq!(
+      creators
+        .iter()
+        .filter(|c| c.iter().any(|item| item.contains(legend)))
+        .count(),
+      holders,
+      "{legend}"
+    );
+  }
 }
