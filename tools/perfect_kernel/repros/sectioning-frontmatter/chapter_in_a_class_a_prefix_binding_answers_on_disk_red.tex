@@ -1,0 +1,29 @@
+% mechanism: with the document's classes already on disk (the witness's shape: a pdflatex run leaves them, and
+%   `filecontents*` then writes nothing), the class binding's dependency scan does not load the raw class's `\LoadClass`
+%   chain (mn_lxthesis → lxphd → report) as it does when `filecontents*` writes them, so the prefix-alternate binding
+%   `mn` stands in with no `\chapter` and the stood-in branch warns "defines no \chapter" — a false Warning: the class
+%   TeX loads (report) defines it (review revSVCb; SVCb report open item 5)
+% witness: 0909.2812 (mn_thesis.cls loads mnphd.cls, which loads report)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors, "Chapter 1 Intro"; Perl 0.8.8 0 errors, 1 warning (missing
+%   ar5iv.sty)
+% engines: rust int160a1 and SVCb: classes on disk (run pdflatex once in the dir first) 0 errors, 2 warnings
+%   (missing_file:mn_lxthesis, undefined:\chapter stood-in); from a clean dir 0 errors, 1 warning (missing_file only)
+% expect:  classes on disk: 0 errors, 1 warning (missing_file:mn_lxthesis), the `chapter` "Chapter 1 Intro" — as from a
+%   clean dir
+% status:  RED (int160a1, SVCb) — a catalog row; how to run: pdflatex this file once in a fresh dir, then convert there
+% preload: ar5iv.sty
+\begin{filecontents*}{lxphd.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lxphd}
+\LoadClass{report}
+\end{filecontents*}
+\begin{filecontents*}{mn_lxthesis.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{mn_lxthesis}
+\LoadClass{lxphd}
+\end{filecontents*}
+\documentclass{mn_lxthesis}
+\begin{document}
+\chapter{Intro}
+Text.
+\end{document}
