@@ -650,8 +650,10 @@ LoadDefinitions!({
   // under ptephy_v1.cls:485's and ptephy_v2.cls:485's authblk-TI (authblk-TI.sty:70, `\renewcommand\author[2][]`
   // appending to `\AB@authlist`: `\author{…}\affil{…}` pairs, 2311.07297, 1606.03167; ptephy_v2's 2511.03250, as
   // inst_support's `\author` does) — OXIDIZED_DESIGN #920. The whole list is one `\lx@add@author@split` call the
-  // reading cuts at its `\and`s, no split by spelling before it (P2-1, OD #993; a trailing mark is the name's last
-  // one's as the others', 1703.03737's "M. Yokoyama", 1904.07398's).
+  // reading cuts at its `\and`s, no split by spelling before it (P2-1, OD #993). The last name's marks followed by a
+  // space or newline before the closing brace are dropped as every other name's are (1703.03737's "M. Yokoyama",
+  // 1904.07398's); glued to the brace they stay in the name (RED repro
+  // `author_one_block/ptephy_author_list_glued_trailing_mark_stays_red`).
   if stacks {
     Let!("\\lx@ptephy@kernel@author", "\\author");
   } else {

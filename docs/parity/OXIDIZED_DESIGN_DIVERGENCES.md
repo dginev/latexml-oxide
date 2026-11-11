@@ -34175,8 +34175,15 @@ lacking webofc.cls stays OmniBus's), with which the reading takes every `\\` lin
 (`resolver/blocks.rs` `names_line`), as webofc.cls:497-552 sets them: a macro-held `\\ The X Collaboration` is a creator,
 where the kernel's conventions read it as Bob Baker's collaboration contact. Changed on the corpus: ptephy 1703.03737's
 "M. Yokoyama3" and 1904.07398's "Yukinori Sakuragi1,2", the list's last name, now hold no marks, as every other name of
-theirs; OmniBus 2301.07825's jesmith@ address goes to Jane E. Smith, whose `\footnotemark[3]` is the
-note printing it. aa's and sv_support's splits stay (one queued block there changes what reads the queue per author
+theirs, and so do nine of the binding's own witnesses (revP21): 1601.07691, 1211.4904, 1304.2086, 1304.7885, 1306.3810,
+1512.04524, 1801.03251, 2209.07273, 2210.05569 (`'Yoshiharu Kawamura2,†'` → `'Yoshiharu Kawamura'`; creators, contacts
+and owners the same). Four of them (1601.07691, 1304.2086, 1304.7885, 2210.05569) gain one Warning `writes "<name>" as
+its plain text, its markup lost`, an overcount: the shape `\name{\fname{…} \surname{…}}{marks}` holds no markup
+(`\fname`/`\surname` are identity macros, `ptephy_cls.rs:700-701`) and the `personname` is plain text on both binaries;
+the emitter's by-text writer warns on every piece it writes by text (queued: warn only when the piece's events held
+markup). The marks stay when glued to the list's closing brace (RED repro
+`author_one_block/ptephy_author_list_glued_trailing_mark_stays_red`). OmniBus 2301.07825's jesmith@ address goes to
+Jane E. Smith, whose `\footnotemark[3]` is the note printing it. aa's and sv_support's splits stay (one queued block there changes what reads the queue per author
 entry: P2-1b), llncs's too (P2-3). Guards `perfect_kernel_batchp21::{an_author_list_is_one_block_the_reading_cuts,
 webofc_a_macro_held_line_break_parts_names}`; repros `class-bindings/author_one_block/`.
 

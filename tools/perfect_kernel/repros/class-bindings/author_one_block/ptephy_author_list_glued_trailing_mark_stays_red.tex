@@ -1,0 +1,18 @@
+% mechanism: ptephy_cls.rs `\lx@ptephy@kernel@author`: the list's last `\name{…}{marks}` glued to the closing brace keeps
+%   its marks in the name, where a space or newline before the brace lets the reading's cut drop them as every other
+%   name's (Option C P2-1, OD #993; revP21 finding 2, its probes p4/p5)
+% witness: synthetic (revP21 probe p4)
+% oracle:  pdflatex cannot run it: ptephy.cls is not in TL 2025 (the papers ship it); ptephy.cls prints the marks as
+%   superscripts after each name, so the names are Ann Able and Bob Baker
+% engines: Perl 0.8.8 no ptephy binding (OmniBus); int157a and P21 both give "Bob Baker2" (the trailing-newline twin
+%   gives "Bob Baker" on P21, "Bob Baker2" on int157a)
+% expect:  0 errors, 0 warnings; creators Ann Able, Bob Baker (no mark in the name)
+% status:  RED (int157a and P21: personname "Bob Baker2")
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{T}
+\author{\name{Ann Able}{1}, \name{Bob Baker}{2}}\address{\affil{1}{Univ One}\affil{2}{Univ Two}}
+\maketitle
+Text.
+\end{document}
