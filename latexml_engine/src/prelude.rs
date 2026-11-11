@@ -119,7 +119,7 @@ pub use crate::{
     declare_capital_greek, declare_capital_greek_named, declare_panel_floats_centred,
     declare_panel_page, declare_panel_parbox_width, declare_panel_width,
     declare_standard_class_page, end_appendices, given_class_options, has_chapter_counter,
-    is_document_class, keep_pending_next_numbers, kernel_chapter_with_warning, last_class_option,
+    is_document_class, keep_pending_next_numbers, kernel_chapter_with_error, last_class_option,
     last_declared_class_option, make_note_tags, note_size_in_line, only_preamble, out_of_line_size,
     relocate_footnote, set_minipage_width, set_panel_page_twocolumn, standard_class_twocolumn_page,
     start_appendices, tabular_bindings, withdraw_panel_floats_centred, withdraw_panel_page,

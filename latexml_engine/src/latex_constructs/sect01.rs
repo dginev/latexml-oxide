@@ -160,12 +160,12 @@ pub fn store_chapter_after_latex_ix_class_load(begin: bool) {
 /// `\AtBeginDocument` test of `\chapter` still gets TeX's answer), a `\chapter` the class left undefined is given
 /// LaTeXML's chapter as its stand-in (`kernel_autoload::name_undefined_fallback`, read where the undefined token is
 /// met). The name stays undefined, so a test made in the body (blindtext.sty:243 `\blinddocument`, hvfloat's test
-/// documents) also gets TeX's answer, while a document that calls `\chapter` converts, with one Warning
-/// (`\lx@chapterless@chapter`). A call made in the preamble or a begin-document hook met the undefined name, as in TeX
+/// documents) also gets TeX's answer, while a document that calls `\chapter` converts, with one Error, as TeX and Perl
+/// err (`\lx@chapterless@chapter`). A call made in the preamble or a begin-document hook met the undefined name, as in TeX
 /// (one Error), and left its undefined-error stub: TeX's `\chapter` is still undefined after it, so the stub goes and the
 /// body's call reads the stand-in. Witnesses: 0802.3014, 0909.2812, 0907.3938, 1403.2269, 1507.01872, 1511.03874,
 /// 1606.03650, 2504.00704 (`Error:undefined:\chapter` before).
-/// Guards: `perfect_kernel_batch72b::chapter_in_a_chapterless_class_is_the_kernel_chapter_with_a_warning`,
+/// Guards: `perfect_kernel_batch72b::chapter_in_a_chapterless_class_is_the_kernel_chapter_with_an_error`,
 /// `perfect_kernel_batch72b::a_preamble_chapter_errs_and_the_body_chapter_reads_the_stand_in`.
 pub(crate) fn supply_chapter_fallback() {
   let chapter = T_CS!("\\chapter");

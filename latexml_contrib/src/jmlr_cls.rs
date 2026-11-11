@@ -37,12 +37,12 @@ LoadDefinitions!({
   // jmlr.cls:743-745 `\artchapter` (`\ClassError{jmlr}{Chapters not permitted in articles}`) with `\let\chapter
   // \artchapter`, and :950-959 `\jmlrbookcommands`' `\bookchapter`: the class has a `\chapter`, so a package's
   // `\@ifundefined{chapter}` takes the chapter branch, as in TeX (OXIDIZED_DESIGN #179 (a)). An article's call, which
-  // TeX refuses with the class's error, is LaTeXML's chapter with that error's text as its one Warning (OD #734, the
-  // OD #721 precedent). The class's chapter counter (:732) is made at the call, as the stand-in's
-  // (`kernel_chapter_with_warning` marks it; `has_chapter_counter` ignores it), so the class's appendix is lettered by
+  // TeX refuses with the class's error, is LaTeXML's chapter with that error's text as its one Error (OD #734, #735: TeX
+  // errs, user ruling 2026-11-11). The class's chapter counter (:732) is made at the call, as the stand-in's
+  // (`kernel_chapter_with_error` marks it; `has_chapter_counter` ignores it), so the class's appendix is lettered by
   // section, as jmlr.cls:720-729 `\artappendix` (`\let\appendix\artappendix`): "Appendix A", not "Appendix 1.A".
   DefMacro!("\\chapter", {
-    kernel_chapter_with_warning(
+    kernel_chapter_with_error(
       "latex",
       "Class jmlr Error: Chapters not permitted in articles; LaTeXML's \\chapter is used",
     )

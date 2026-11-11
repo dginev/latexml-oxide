@@ -1,0 +1,13 @@
+% witness: synthetic (SVC, the starred sibling of chapter_call_in_a_chapterless_class; the Error side of the boundary)
+% oracle:  pdflatex 1 error ("Undefined control sequence" at \chapter; "*Preface" set as text); Perl 0.8.8 0 errors
+%          (its kernel \chapter*, which reads no \thechapter)
+% engines: rust int160a1 = 0 errors, 1 warning (undefined:\chapter "The class defines no \chapter")
+% expect:  1 error (undefined:\chapter "The class defines no \chapter"), 0 warnings; an unnumbered `chapter` "Preface"
+%          (TeX errs, so an Error: user ruling 2026-11-11, OXIDIZED_DESIGN #734)
+% status:  RED (int160a1) -> GREEN (SVC)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\chapter*{Preface}
+Text.
+\end{document}

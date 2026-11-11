@@ -561,6 +561,9 @@ mod perfect_kernel_batchs5;
 mod perfect_kernel_batchsep1;
 /// ST1: RED catalog repros already matching their `expect` on int159a, green rows of two concern tables.
 mod perfect_kernel_batchst1;
+/// SVC: a `\chapter` call in a class without chapters is an Error, as TeX and Perl; the `\chapter` Error boundary's
+/// two sides in one table (OD #734, #735).
+mod perfect_kernel_batchsvc;
 mod perfect_kernel_batchta1;
 mod perfect_kernel_batchz1;
 mod perfect_kernel_batchz14;

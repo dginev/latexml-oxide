@@ -2,8 +2,8 @@
 % oracle:  pdflatex 3 errors ("Undefined control sequence" at each \chapter; the preamble one also "Missing
 %          \begin{document}"), "InPreamble" and "FromPreambleMacro" set as text
 % engines: rust 72b r1 = 1 error, the body's \chapter the error stub ("\chapter FromPreambleMacro" as text)
-% expect:  1 error (undefined:\chapter, the preamble call), 1 warning ("The class defines no \chapter"); a `chapter`
-%          "Chapter 1 FromPreambleMacro"
+% expect:  2 errors (undefined:\chapter, the preamble call; undefined:\chapter "The class defines no \chapter", the
+%          body's), 0 warnings; a `chapter` "Chapter 1 FromPreambleMacro" (SVC: the second a Warning until int160a1)
 % status:  RED (72b r1) -> GREEN (72b r2: OXIDIZED_DESIGN #734)
 % preload: ar5iv.sty
 \documentclass{article}

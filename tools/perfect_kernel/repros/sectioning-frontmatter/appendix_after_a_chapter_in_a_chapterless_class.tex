@@ -2,7 +2,8 @@
 %          `\chapter`: WileyNJD-v2.cls:2410, WileyNJDv5.cls:5728, MRM.cls:2160; 2211.16474)
 % oracle:  pdflatex 1 error (the undefined \chapter), the appendix section "A AppSec"
 % engines: rust 72b r1 = "Appendix 1.A" (numbered within the stand-in's chapter counter); 67int21 "Appendix A"
-% expect:  0 errors, 1 warning ("The class defines no \chapter"); an `appendix` "Appendix A AppSec"
+% expect:  1 error ("The class defines no \chapter"; SVC: a Warning until int160a1), 0 warnings; an `appendix`
+%          "Appendix A AppSec"
 % status:  RED (72b r1) -> GREEN (72b r2: OXIDIZED_DESIGN #179, one "has chapters" test)
 % preload: ar5iv.sty
 \documentclass{article}
