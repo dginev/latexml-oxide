@@ -649,13 +649,15 @@ LoadDefinitions!({
   // later call replaces the earlier under ptephy.cls:427 (`\def\author#1{\gdef\@author{#1}}`, 1412.6580), and stacks
   // under ptephy_v1.cls:485's and ptephy_v2.cls:485's authblk-TI (authblk-TI.sty:70, `\renewcommand\author[2][]`
   // appending to `\AB@authlist`: `\author{…}\affil{…}` pairs, 2311.07297, 1606.03167; ptephy_v2's 2511.03250, as
-  // inst_support's `\author` does) — OXIDIZED_DESIGN #920.
+  // inst_support's `\author` does) — OXIDIZED_DESIGN #920. The whole list is one `\lx@add@author@split` call the
+  // reading cuts at its `\and`s, no split by spelling before it (P2-1, OD #993; a trailing mark is the name's last
+  // one's as the others', 1703.03737's "M. Yokoyama", 1904.07398's).
   if stacks {
     Let!("\\lx@ptephy@kernel@author", "\\author");
   } else {
     DefMacro!(
       "\\lx@ptephy@kernel@author[]{}",
-      "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author@split}{\\and\\And}{#2}\\lx@author@trailing"
+      "\\lx@clear@creators[role=author]\\lx@add@author@split{#2}\\lx@author@trailing"
     );
   }
   // Names marked with superscripts of their own instead (`\author{R.~Abbott$^{1}$, H.~Abe$^{2}$, …}` over authblk-TI's

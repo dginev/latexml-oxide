@@ -484,6 +484,8 @@ impl Resolver {
           let names_line = !only_contacts
             && !address_line
             && ((column_first && !shared_column)
+              // (every line of a class whose `\\` parts names, `Policy::break_parts_names`: webofc's)
+              || policy.break_parts_names
               || later_line_is_names(
                 line,
                 continued,

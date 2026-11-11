@@ -34164,6 +34164,22 @@ ieeetran_grid_parts_at_a_macro_held_and, eptcs_cells_part_at_a_macro_held_and}`;
 `sectioning-frontmatter/{ieeetran_author_grid_in_a_macro,ieeetran_author_grid_through_a_wrapper}.tex` (and
 `author_let_copy_of_and_parts_the_names.tex`, guarded since SEP1, #994).
 
+**P2-1 (P21): three of the S1 splits removed.** The S1 routes, found by `lx@splitting` over `latexml_package/src`,
+`latexml_contrib/src` and `base_utilities/defs`: inst_support's `\author` (reached through OmniBus, which loads it, where no
+binding defines an `\author` after it — aa, sv_support, llncs, webofc and ptephy define theirs),
+ptephy's `\lx@ptephy@kernel@author` (ptephy.cls; the stacking v1/v2 copies `\let` it to the `\author` before them) and
+webofc's `\author` now make one `\lx@add@author@split{#2}` call, the whole list one block the reading cuts at its
+`Sep(And)` events, each piece then at its commas. webofc's split also ran at `\\`: its binding declares
+`break_parts_names` (`policy.rs`, `webofc_cls.rs` `FRONTMATTER_CONVENTIONS`, made once the class is read, so a paper
+lacking webofc.cls stays OmniBus's), with which the reading takes every `\\` line of the block as names
+(`resolver/blocks.rs` `names_line`), as webofc.cls:497-552 sets them: a macro-held `\\ The X Collaboration` is a creator,
+where the kernel's conventions read it as Bob Baker's collaboration contact. Changed on the corpus: ptephy 1703.03737's
+"M. Yokoyama3" and 1904.07398's "Yukinori Sakuragi1,2", the list's last name, now hold no marks, as every other name of
+theirs; OmniBus 2301.07825's jesmith@ address goes to Jane E. Smith, whose `\footnotemark[3]` is the
+note printing it. aa's and sv_support's splits stay (one queued block there changes what reads the queue per author
+entry: P2-1b), llncs's too (P2-3). Guards `perfect_kernel_batchp21::{an_author_list_is_one_block_the_reading_cuts,
+webofc_a_macro_held_line_break_parts_names}`; repros `class-bindings/author_one_block/`.
+
 ### 994. The rehearsal binds a `\let` copy of an author-line separator or note command by its meaning, as the command it copies (SEP1)
 
 **Perl.** `\let\nx\and` then `\author{Ann Able \nx Bob Baker}` gives two creators, Ann Able and Bob Baker (Perl 0.8.8,
