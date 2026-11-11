@@ -1,0 +1,23 @@
+% mechanism: the events' walker reads a paragraph's list as no group only at the block's own level (events/mod.rs
+%   `paragraph_is_no_group`, OD #993 P2-1c). A paragraph inside a box's body (`{minipage}[t]{0.47\linewidth}`) stays a
+%   group; read as no group, the mark's group became the box, whose span (`deep_span`) reaches the box's unshown
+%   position and width arguments, and the emitter cut the contact from the `[t]`
+% witness: 2608.17538 (`\dedicatory{\begin{minipage}[t]{0.47\linewidth}\centering\textsuperscript{1}…}`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "ANN ABLE1 AND BOB BAKER2 / 1 Univ X / City Y / 2 Univ Z"
+% engines: rust int158a = each contact "t]0.47<sup class="ltx_centering">1</sup>Univ X…", 4 Warnings (two "Missing
+%          number"); int157a = P21e's XML; Perl 0 errors (the minipages kept whole)
+% expect:  0 errors, 0 warnings; Ann Able (dedicatory "<sup>1</sup>Univ X<break/>City Y"), Bob Baker (dedicatory
+%          "<sup>2</sup>Univ Z")
+% status:  RED (int158a) -> GREEN (P21e) — perfect_kernel_batchp21e::a_paragraph_in_a_box_stays_a_group
+% preload: ar5iv.sty
+\documentclass{amsart}
+\title{T}
+\author{Ann Able\textsuperscript{1} and Bob Baker\textsuperscript{2}}
+\dedicatory{\begin{minipage}[t]{0.47\linewidth}\centering
+\textsuperscript{1}Univ X\\ City Y\end{minipage}\hfill
+\begin{minipage}[t]{0.47\linewidth}\centering
+\textsuperscript{2}Univ Z\end{minipage}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

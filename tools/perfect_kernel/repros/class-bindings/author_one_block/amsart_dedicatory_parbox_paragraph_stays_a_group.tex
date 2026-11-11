@@ -1,0 +1,21 @@
+% mechanism: as amsart_dedicatory_box_paragraph_stays_a_group.tex, with a command box (`\parbox[t]{0.47\linewidth}`)
+%   in place of the environment: the paragraph inside the `\parbox` stays a group (events/mod.rs `paragraph_is_no_group`,
+%   OD #993 P2-1c); read as no group, the mark's group became the `\parbox` and each contact was written as the empty box
+% witness: 2608.17538's shape (its minipages as `\parbox[t]`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "ANN ABLE1 AND BOB BAKER2 / 1 Univ X / City Y / 2 Univ Z"
+% engines: rust int158a = each dedicatory contact an empty `<inline-block class="ltx_parbox">` (the text lost); int157a =
+%          P21e's XML
+% expect:  0 errors, 0 warnings; Ann Able (dedicatory "<sup class="ltx_centering">1</sup>Univ X<break
+%          class="ltx_centering"/>City Y"), Bob Baker (dedicatory "<sup class="ltx_centering">2</sup>Univ Z")
+% status:  RED (int158a) -> GREEN (P21e) — perfect_kernel_batchp21e::a_paragraph_in_a_box_stays_a_group
+% preload: ar5iv.sty
+\documentclass{amsart}
+\title{T}
+\author{Ann Able\textsuperscript{1} and Bob Baker\textsuperscript{2}}
+\dedicatory{\parbox[t]{0.47\linewidth}{\centering
+\textsuperscript{1}Univ X\\ City Y}\hfill
+\parbox[t]{0.47\linewidth}{\centering \textsuperscript{2}Univ Z}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -767,7 +767,11 @@ fn raw_lines(w: &Whatsit, n: usize) -> String {
             let ink = ink_of(d);
             if ink.is_empty() {
               out.push(' ');
-            } else if ink.contains('@') && !lex_events(d).iter().any(|e| e.kind == EventKind::Mark)
+            } else if ink.contains('@')
+              && !lex_body_with_inks(d)
+                .0
+                .iter()
+                .any(|e| e.kind == EventKind::Mark)
             {
               out.push_str(&ink);
             } else {
@@ -977,6 +981,9 @@ struct Walker {
   atoms:         Vec<Atom>,
   /// how many lists enclose the box being walked (the block's own is one; a braced group or argument inside it more)
   lists:         usize,
+  /// whether what is walked is a note's body (a footnote's, a `\thanks`'s, a footnote text's), a link's text or a
+  /// contact's, lexed on its own ([`lex_body_with_inks`]): no paragraph of it is the block's ([`paragraph_is_no_group`])
+  body:          bool,
   /// each in-block contact cut into its marked entries (`labelled_entries`): the entries' spans, and the one entry its
   /// leading marks label, read when a cut entry's marks are no name's ([`lex_events`])
   cuts:          Vec<(Vec<(u16, u16)>, Event)>,
@@ -995,6 +1002,13 @@ struct Walker {
 /// none. That holds while no box reader copies the current mode into a group's list: `boxes_lists.rs`
 /// `predigest_box_contents` would (its `mode` from the open paragraph), and nothing calls it; a caller added there must
 /// keep its group's list off `horizontal`, or a braced argument would be walked as no group (revP21c finding 1).
+///
+/// The walker reads it as no group only at the block's own level: a paragraph of the block's own list (`lists` one, the
+/// `{CJK*}` repack, 2608.21138), in a walk of the block, not of a note's body ([`Walker::body`]). A paragraph inside a
+/// box's body (a minipage, a varwidth, a `\parbox`: its body one list deeper), inside a braced group, or inside a
+/// note's body stays a group: there the box, not the paragraph, would become a mark's group, whose span reaches the
+/// box's unshown arguments (the `[t]{0.47\linewidth}` of 2608.17538's minipages read into a contact) and whose run
+/// takes a contact's source markup from it (2402.02104's typewriter address, 2601.03873's `mailto:` link).
 fn paragraph_is_no_group(d: &Digested) -> bool {
   d.get_property("mode")
     .is_some_and(|mode| mode.eq_text("horizontal"))
@@ -1108,8 +1122,9 @@ impl Walker {
       // horizontal mode inserts, `stomach::leave_horizontal`: CJK's `{CJK*}` — is no group: TeX's `\par` closes none, so what it
       // holds stands at the level around it. Read as a group, the paragraph a later name's `\begin{CJK*}` closed made the first
       // name's `\inst` a mark whose group held the `\corrauth` after it, which was then written by its text, its `name` lost
-      // (2608.21138, `paragraph_is_no_group`)
-      DigestedData::List(l) if paragraph_is_no_group(d) => {
+      // (2608.21138, `paragraph_is_no_group`) — at the block's own level alone: a paragraph in a box's or a note's body stays a
+      // group (2608.17538, 2402.02104, 2601.03873)
+      DigestedData::List(l) if self.lists == 1 && !self.body && paragraph_is_no_group(d) => {
         for child in l.borrow().boxes.iter() {
           self.walk(child, nest);
         }
@@ -1345,7 +1360,7 @@ impl Walker {
         note.footnote = cs.ends_with("fnnote");
         if let Some(body) = w.get_arg(2) {
           note.inkless = leaves_no_ink(body);
-          let (events, formulas, inks) = lex_with_inks(body);
+          let (events, formulas, inks) = lex_body_with_inks(body);
           self.formulas.extend(formulas);
           // (its text as printed, its contacts' too: the rehearsal's contact constructors print nothing, so the ink
           // of "available at \url{…}" lacks the address — 2105.10596)
@@ -1557,7 +1572,7 @@ impl Walker {
           && contact.label.is_none()
           && let Some(body) = w.get_arg(2)
         {
-          let (events, formulas) = lex_with_formulas(body);
+          let (events, formulas, _) = lex_body_with_inks(body);
           // (the font each entry's cut starts in, read from the call's digested ink: its first token's after the call's
           // own — the content's start —, against the call's font; review rev94b r3 B1)
           let scope = d
@@ -1619,7 +1634,7 @@ impl Walker {
         // E-mail: \href{mailto:samuel.mimram@cea.fr}{\email{samuel.mimram@cea.fr}}.}`, 1004.3134 — read as the link,
         // whose ink the call's rehearsal prints nothing of, the address was lost)
         let call = w.get_arg(2).filter(|text| {
-          lex_with_inks(text).0.iter().any(|e| {
+          lex_body_with_inks(text).0.iter().any(|e| {
             e.kind == EventKind::Contact
               && e.role.as_deref() == Some("email")
               && e.meaning != EmailMeaning::Own
@@ -2566,7 +2581,20 @@ pub(in crate::base_utilities) fn lex_with_formulas(
 pub(in crate::base_utilities) fn lex_with_inks(
   digested: &Digested,
 ) -> (Vec<Event>, Vec<Formula>, InkTable) {
-  let mut walker = Walker::default();
+  lex_walked(digested, false)
+}
+
+/// [`lex_with_inks`] of a note's body (a footnote's, a `\thanks`'s, a footnote text's), a link's text or a contact's,
+/// lexed on its own: no paragraph of it is the block's, so each stays a group ([`paragraph_is_no_group`]).
+pub(in crate::base_utilities) fn lex_body_with_inks(
+  digested: &Digested,
+) -> (Vec<Event>, Vec<Formula>, InkTable) {
+  lex_walked(digested, true)
+}
+
+/// [`lex_with_inks`], of a block or of a body ([`Walker::body`]).
+fn lex_walked(digested: &Digested, body: bool) -> (Vec<Event>, Vec<Formula>, InkTable) {
+  let mut walker = Walker { body, ..Walker::default() };
   walker.walk(digested, 0);
   let mut lexer = Lexer::default();
   // (the lines printing an `@`, whose names' characters' positions the lexer records: `InkTable`)

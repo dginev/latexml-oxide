@@ -508,6 +508,9 @@ mod perfect_kernel_batchp21c;
 /// P21d: P21's regression on the one-block lists — the reading's shared column read on the column's own ink, not a
 /// contact call's text (`\and Bob Baker\institute{Univ B}`, nucl-th0308018; OD #993).
 mod perfect_kernel_batchp21d;
+/// P21e: P21c's paragraph rule scoped to the block's own level — a paragraph in a box's body (a minipage, a `\parbox`)
+/// stays a group (2608.17538, 2402.02104, 2601.03873; OD #993).
+mod perfect_kernel_batchp21e;
 /// P24: Option C P2-4 — eptcs's author block cut where its separators are by meaning (`argument_separators`), not by
 /// spelling (OD #991, #995).
 mod perfect_kernel_batchp24;

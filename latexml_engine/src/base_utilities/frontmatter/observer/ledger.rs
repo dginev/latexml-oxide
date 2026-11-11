@@ -14,7 +14,7 @@ use latexml_core::{
 
 use super::{
   emitter::Analysis,
-  events::{EmailMeaning, Event, EventKind, HeldError, lex_events},
+  events::{EmailMeaning, Event, EventKind, HeldError, lex_body_with_inks},
   field_notes::{EnvironmentStep, FieldCreator},
   rehearsal::{past_line_break, past_tabular_call},
   resolver::printed_words,
@@ -1275,7 +1275,10 @@ pub fn record_note_text(whatsit: &Whatsit) {
   }
   let mark = printed("mark").unwrap_or_default();
   let value = printed("fnvalue");
-  let events = whatsit.get_arg(4).map(lex_events).unwrap_or_default();
+  let events = whatsit
+    .get_arg(4)
+    .map(|body| lex_body_with_inks(body).0)
+    .unwrap_or_default();
   with_ledger(|ledger| {
     let index = ledger.entries().len();
     ledger.push(Entry::NoteText(NoteText {

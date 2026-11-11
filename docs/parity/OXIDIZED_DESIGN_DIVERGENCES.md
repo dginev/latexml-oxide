@@ -34301,8 +34301,9 @@ packs the block's line so far into a paragraph list (`stomach::repack_horizontal
 paragraph made an earlier name's `\inst` a mark whose group held the contact after it; the emitter writes a contact a
 mark's formula holds by its text (`emit.rs` `in_a_mark`, the ORCID-icon rule), so `\corrauth` lost its `name` and an
 `\email` its typewriter font. With the split, each name was its own block and no paragraph held the contact. A
-paragraph's list (its `mode` property `horizontal`; a group's list has none) is now no group: its boxes are walked at
-the level around it (`paragraph_is_no_group`), as TeX's `\par` closes no group. The S1 routes now: inst_support's,
+paragraph's list (its `mode` property `horizontal`; a group's list has none) is now no group at the block's own level:
+its boxes are walked at the level around it (`paragraph_is_no_group`), as TeX's `\par` closes no group (scope: P21e,
+below). The S1 routes now: inst_support's,
 ptephy's, webofc's (P2-1), sv_support's (P2-1b) and aa's `\author` make one call; llncs's `\lx@llncs@author@split`
 still splits (P2-3), and the `\institute` splits (aa, inst_support, sv_support, llncs) are not author splits. Byte
 identity against int158a over aa's 563 papers, the stage2 1,434 and 2608.21138: 1,990 identical, 3 with no main file on
@@ -34317,6 +34318,22 @@ call (`Ann Able\inst{1}\corrauth{a@x} (\begin{CJK*}…\end{CJK*})`), writes the 
 Warning — on int158a once with its `name` and once without, here twice with it. Guard `perfect_kernel_batchp21c::a_contact_keeps_its_call_beside_a_cjk_name`; repros
 `class-bindings/author_one_block/aa_{corrauth,email}_beside_a_cjk_name_in_one_block.tex`,
 `aa_corrauth_after_a_cjk_name_in_one_block.tex`.
+
+**P2-1c's scope (P21e): only a paragraph of the block's own list is no group.** The walker flattens a paragraph's list
+only where it is a child of the walked block's list (`Walker::lists` one) in a walk of a block (`lex_with_inks`), not
+of a note's body, a link's text or a contact's, which the walker lexes on its own (`lex_body_with_inks`,
+`Walker::body`). A paragraph inside a box's body (a minipage, a varwidth, a `\parbox`: one list deeper), inside a braced
+group, or inside a note's body stays a group, as before P21c. Flattened there, the box became a mark's group:
+`enclose` spans the box by `deep_span`, which reaches its unshown position and width arguments, so 2608.17538's
+`\dedicatory{\begin{minipage}[t]{0.47\linewidth}\centering\textsuperscript{1}…}` read "t]0.47" and `\centering` into
+each contact (two "Missing number" Warnings) and a `\parbox[t]` one wrote each contact as the empty box; and the
+contact beside a braced mark lost its source run, written as its address alone (`\lx@frontmatter@itemonly`):
+2402.02104's `\texttt` e-mail in a `{varwidth}`/`{minipage}`, 2601.03873's `\thanks{…\href{mailto:…}{…}}` in
+`\parbox{\textwidth}{\Large{…}}`. The three papers' XML is int157a's again; 2608.21138 and P21c's four changed papers
+keep int158a's. Guards `perfect_kernel_batchp21e::{a_paragraph_in_a_box_stays_a_group,
+a_paragraph_in_a_box_keeps_a_contacts_markup}`; repros `class-bindings/author_one_block/`
+`amsart_dedicatory_{box,parbox}_paragraph_stays_a_group.tex`, `authblk_minipage_paragraph_keeps_a_typewriter_email.tex`,
+`mnras_parbox_paragraph_keeps_a_mailto_link.tex`.
 
 ### 994. The rehearsal binds a `\let` copy of an author-line separator or note command by its meaning, as the command it copies (SEP1)
 
