@@ -32,8 +32,6 @@ LoadDefinitions!({
     "landscape",
     "final",
     "draft",
-    "notitlepage",
-    "titlepage",
   ] {
     DeclareOption!(option, None);
   }
@@ -73,6 +71,12 @@ LoadDefinitions!({
   DeclareOption!("oneside", r"\@twosidefalse\@mparswitchfalse");
   DeclareOption!("twoside", r"\@twosidetrue\@mparswitchtrue");
   RawTeX!(r"\@twosidetrue\@mparswitchtrue");
+  // book.cls:50-51, :93-95: `\if@titlepage`, true unless `notitlepage` (Perl's binding sets it false, its options no-ops), which a
+  // class or document may test and which decides its `\maketitle` (book.cls:181-231: `declare_fnsymbol_title_block`, the
+  // kernel's `MaketitleRuns::WithoutTitlepage`, TP1c). Declared before ProcessOptions, so the options run.
+  RawTeX!(r"\newif\if@titlepage \@titlepagetrue");
+  DeclareOption!("titlepage", r"\@titlepagetrue");
+  DeclareOption!("notitlepage", r"\@titlepagefalse");
 
   ProcessOptions!();
   // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`): book.cls's in two
@@ -113,9 +117,7 @@ LoadDefinitions!({
 
   TeX!(
     r"
-\newif\if@restonecol
-\newif\if@titlepage
-\@titlepagetrue"
+\newif\if@restonecol"
   );
   //**********************************************************************
   // The core sectioning commands are defined in LaTeX.pm

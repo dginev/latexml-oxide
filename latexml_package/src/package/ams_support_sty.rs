@@ -43,9 +43,17 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
     author: FmAuthorPage::Own(&["amsart.cls", "amsproc.cls", "amsbook.cls"]),
     // (their `\maketitle` runs `\@maketitle`: a document's own is the page in force, TP1b)
     maketitle_runs: &[
-      ("amsart.cls", true, "amsart.cls:600-610"),
-      ("amsproc.cls", true, "amsproc.cls:576-586"),
-      ("amsbook.cls", true, "amsbook.cls:1334-1337"),
+      ("amsart.cls", FmMaketitleRuns::Always, "amsart.cls:600-610"),
+      (
+        "amsproc.cls",
+        FmMaketitleRuns::Always,
+        "amsproc.cls:576-586",
+      ),
+      (
+        "amsbook.cls",
+        FmMaketitleRuns::Always,
+        "amsbook.cls:1334-1337",
+      ),
     ],
     ..FM_KERNEL_CONVENTIONS.title_page
   },

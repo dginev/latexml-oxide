@@ -25,7 +25,11 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   // (its `\maketitle` runs `\@maketitle` in every layout: IEEEtran.cls:4753-4775; a document's own is the page in
   // force, TP1b)
   title_page: FmTitlePageDecl {
-    maketitle_runs: &[("IEEEtran.cls", true, "IEEEtran.cls:4753-4775")],
+    maketitle_runs: &[(
+      "IEEEtran.cls",
+      FmMaketitleRuns::Always,
+      "IEEEtran.cls:4753-4775",
+    )],
     ..FM_KERNEL_CONVENTIONS.title_page
   },
   cite: "IEEEtran.cls:4756 `\\def\\thefootnote{}`; OD #837 S2a.2 r6 (2001.02600, 1803.04996, 2504.08644, 2602.13176)",

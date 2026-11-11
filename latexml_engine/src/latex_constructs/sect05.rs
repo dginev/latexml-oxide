@@ -5148,8 +5148,9 @@ pub(crate) fn title_page_print_tokens(inject: &[Token]) -> Tokens {
 /// the page in force only where the `\maketitle` that runs runs `\@maketitle` (TP1b, OXIDIZED_DESIGN_DIVERGENCES #953):
 /// a class's or the document's own refused `\maketitle`, which the run replays ([`replays_class_maketitle`]: it reaches
 /// `\@maketitle` or not as written), else the document class's, as its binding declares it (`fm_class_maketitle_runs`:
-/// article's, amsart's, IEEEtran's, mnras's do; elsarticle's and acmart's never do, so pdflatex prints none of a
-/// document's `\@maketitle` there). Under a class no binding declares (REVTeX), a document's is not taken for its
+/// amsart's, IEEEtran's, mnras's do; elsarticle's and acmart's never do, so pdflatex prints none of a document's
+/// `\@maketitle` there; article's, report's and book's do only without their title page, as their `\if@titlepage`
+/// stood after their options, TP1c). Under a class no binding declares (REVTeX), a document's is not taken for its
 /// page, and a raw file's is, as before the reading ran the document's own.
 pub(crate) fn own_maketitle() -> bool {
   let origin = match lookup_meaning(&T_CS!("\\@maketitle")) {

@@ -68,8 +68,8 @@ pub(in crate::base_utilities) use marks::{
 // (for the bindings, which declare their conventions at load)
 pub use policy::{
   AuthorPage as FmAuthorPage, EmailOwner as FmEmailOwner, KERNEL as FM_KERNEL_CONVENTIONS,
-  Policy as FmConventions, TitleMarks as FmTitleMarks, TitlePageDecl as FmTitlePageDecl,
-  declare_frontmatter_conventions,
+  MaketitleRuns as FmMaketitleRuns, Policy as FmConventions, TitleMarks as FmTitleMarks,
+  TitlePageDecl as FmTitlePageDecl, declare_frontmatter_conventions,
 };
 pub(in crate::base_utilities) use reading::read_at_flush;
 pub use reading::{fm_reading_json, reset_fm_reading};

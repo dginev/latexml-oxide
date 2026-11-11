@@ -30651,14 +30651,24 @@ its own `\and`, aa.cls:866 and svjour3.cls:608, recorded for TP2). Perl reads no
 **TP1b: a `\@maketitle` of the document's or a file's own is the page in force only where the `\maketitle` that runs
 runs `\@maketitle`.** That is a replayed refused `\maketitle` (it reaches `\@maketitle` or not as written), else the
 document class's, as a binding the class loaded declares it (`TitlePageDecl::maketitle_runs`, read by
-`ledger::class_maketitle_runs` for the first of the class's bindings; sect05.rs `own_maketitle`): runs it — article.cls
-(the kernel's declaration, article.cls:203-219), amsart, amsproc, amsbook (ams_support.sty; amsart.cls:600-610,
-amsproc.cls:576-586, amsbook.cls:1334-1337), IEEEtran.cls (:4753-4775), mnras (mn2e_support.sty; mnras.cls:1055-1062);
-never runs it — elsarticle (elsart_support_core.sty; elsarticle.cls:918-989, `\elsarticleprelims\pprintMaketitle` and
-its journal variants) and acmart.cls (:2226-2379). With no class binding (a raw class) it is taken to run it; under a
-class no declaration names (REVTeX, whose `\maketitle` is `\frontmatter@maketitle`, revtex4-2.cls:3130-3134; report and
-book under their default `titlepage`, report.cls:176-198, book.cls:182-204; OmniBus's guess) a document's `\@maketitle`
-is not taken for its page and a raw file's is, as before TP1. Where it is not the page in force, the run stands
+`ledger::class_maketitle_runs` for the first of the class's bindings; sect05.rs `own_maketitle`; `MaketitleRuns`):
+always — amsart, amsproc, amsbook (ams_support.sty; amsart.cls:600-610, amsproc.cls:576-586, amsbook.cls:1334-1337;
+amsart's `titlepage` acts inside its `\@maketitle`, :647), IEEEtran.cls (:4753-4775), mnras (mn2e_support.sty;
+mnras.cls:1055-1062); never — elsarticle (elsart_support_core.sty; elsarticle.cls:918-989, `\elsarticleprelims
+\pprintMaketitle` and its journal variants) and acmart.cls (:2226-2379); **without a title page only (TP1c, review
+revTP1b)** — article, report and book (the kernel's declaration, `WithoutTitlepage`): article.cls:169-219,
+report.cls:175-225 and book.cls:181-231 define `\maketitle` by their `\if@titlepage`, the `titlepage` form printing its
+own page with `\@author` and running no `\@maketitle`. The value is the class's `\if@titlepage` after its options, as
+the class reads it to define `\maketitle` (article.cls:50-51 false, report.cls and book.cls:50-51 true; `titlepage` and
+`notitlepage` set it), kept per class by `declare_fnsymbol_title_block` (`class_titlepage_key`), not read at
+`\maketitle`: a document's later `\@titlepagetrue` changes no `\maketitle` (pdflatex: article still runs a title-only
+`\@maketitle`). The bindings declare `\if@titlepage` before their options and let the options set it (Perl's options are
+no-ops, its report and book set it false). TP1b left report and book undeclared, which was not "as before TP1": under
+`notitlepage` the stand-in printed an appended tail pdflatex does not print (report invented "Bob B"), and article under
+`titlepage` ran a document's title-only `\@maketitle` and lost the printed "Bob B" silently. With no class binding (a raw
+class) it is taken to run it; under a class no declaration names (REVTeX, whose `\maketitle` is `\frontmatter@maketitle`,
+revtex4-2.cls:3130-3134; OmniBus's guess) a document's `\@maketitle` is not taken for its page and a raw file's is, as
+before TP1. Where it is not the page in force, the run stands
 article.cls's page in and the binding's declaration answers (`AuthorPage`), and the walk (`own_title_page_prints_author`)
 does not start from it: under elsarticle or acmart a document `\def\@maketitle{…\@author…}` with
 `\g@addto@macro\@author{\and Bob B}` makes no creator Bob B (TP1 made one, review revTP1 B1; pdflatex prints no Bob),
@@ -30677,7 +30687,9 @@ dropped; what goes unchecked is named by the `check_budget` Warning (repro
 reading's, whose run empties `\today` and routes LaTeX's `\thanks` through `\@thanks` (before: `\thanks` printed in
 place, no inject): a date or a note's text is no store value it confirms. Guards
 `perfect_kernel_batchfx24::{an_author_tail_the_title_page_does_not_print_is_not_read,
-an_author_tail_the_title_page_prints_is_read}` (elsarticle, acmart, the title-only sibling; IEEEtran),
+an_author_tail_the_title_page_prints_is_read}` (elsarticle, acmart, the title-only sibling; IEEEtran; TP1c: report
+under `notitlepage`, article after a document's `\@titlepagetrue`; article under `titlepage` with and without a document
+title-only `\@maketitle`, report's and book's default),
 `perfect_kernel_batchr1::a_run_over_budget_leaves_no_trace`, `00_unit_state::state_generation_changes_with_every_change_of_the_state`.
 
 ### 954. A contact holding two or more marked entries is cut at its marks in the frontmatter API, for every binding (Perl: one contact, the marks printed in it)

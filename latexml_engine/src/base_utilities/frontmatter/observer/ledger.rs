@@ -20,6 +20,7 @@ use super::{
   resolver::printed_words,
   *,
 };
+use crate::latex_constructs::class_titlepage_key;
 
 /// How a block's tokens got their positions in the author field. Positions are per call: a block's start where the
 /// field's own stamps end (`lx_field_base_2`, which the document's tokens carry: a block printing `\@author` reads them
@@ -571,10 +572,11 @@ pub fn author_tail_declared() -> Option<bool> {
 /// Whether the document class's `\maketitle` runs `\@maketitle`, as a binding the class loaded declares it for the
 /// class (`CLASS_BINDINGS`' first; [`policy::TitlePageDecl::maketitle_runs`]: ams_support.sty for amsart, amsproc,
 /// amsbook; IEEEtran.cls; mn2e_support.sty for mnras; elsart_support_core.sty for elsarticle and acmart.cls, which never
-/// run it), else the kernel's declaration (article.cls). `Some(true)` with no class binding (a raw class: its own
-/// `\maketitle`, which the title-page reading replays, or LaTeX's); `None` for a class no declaration names (REVTeX,
-/// report and book under `titlepage`) and the fallback's guess for a class with no binding (OmniBus), whose page is
-/// unknown.
+/// run it), else the kernel's declaration: article.cls, report.cls and book.cls run it only without their title page,
+/// as their `\if@titlepage` stood after their options (`MaketitleRuns::WithoutTitlepage`, kept by
+/// `latex_constructs::declare_fnsymbol_title_block`; TP1c). `Some(true)` with no class binding (a raw class: its own
+/// `\maketitle`, which the title-page reading replays, or LaTeX's); `None` for a class no declaration names (REVTeX)
+/// and the fallback's guess for a class with no binding (OmniBus), whose page is unknown.
 pub fn class_maketitle_runs() -> Option<bool> {
   if lookup_bool("OmniBus:fallback") {
     return None;
@@ -584,7 +586,8 @@ pub fn class_maketitle_runs() -> Option<bool> {
     let Some(class) = c.0.first() else {
       return Some(true);
     };
-    c.0
+    let runs = c
+      .0
       .iter()
       .find_map(|binding| policy::declared_maketitle_runs(binding, class))
       .or_else(|| {
@@ -594,7 +597,14 @@ pub fn class_maketitle_runs() -> Option<bool> {
           .iter()
           .find(|(name, ..)| name == class)
           .map(|(_, runs, _)| *runs)
-      })
+      })?;
+    Some(match runs {
+      policy::MaketitleRuns::Always => true,
+      policy::MaketitleRuns::Never => false,
+      policy::MaketitleRuns::WithoutTitlepage => !lookup_bool(&class_titlepage_key(
+        class.strip_suffix(".cls").unwrap_or(class),
+      )),
+    })
   })
 }
 

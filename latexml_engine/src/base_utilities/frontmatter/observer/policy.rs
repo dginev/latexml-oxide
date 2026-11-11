@@ -70,12 +70,25 @@ pub struct TitlePageDecl {
   /// that sets it (aa.cls:866, svjour3.cls:608): the separator's meaning at the print, which the call site's is not.
   /// Recorded for the separator query (TP2); empty: the meaning the document gives it (article.cls never sets `\and`)
   pub title_and:      &'static [(&'static str, &'static str)],
-  /// the document classes (their bindings' file names) whose `\maketitle` runs `\@maketitle` (`true`) or never does
-  /// (`false`), each with the line that shows it: where it runs it, a `\@maketitle` the document or a package defines is
-  /// the title page in force, as pdflatex prints it (TP1b, OXIDIZED_DESIGN_DIVERGENCES #953); where it never does,
-  /// article.cls's stand-in stands for the class's page, and the declaration ([`Self::author`]) answers. A class no
-  /// declaration names is unknown: a document's `\@maketitle` is not taken for its page (`ledger::class_maketitle_runs`)
-  pub maketitle_runs: &'static [(&'static str, bool, &'static str)],
+  /// the document classes (their bindings' file names) whose `\maketitle` runs `\@maketitle` ([`MaketitleRuns`]), each
+  /// with the line that shows it: where it runs it, a `\@maketitle` the document or a package defines is the title page
+  /// in force, as pdflatex prints it (TP1b, OXIDIZED_DESIGN_DIVERGENCES #953); where it does not, article.cls's stand-in
+  /// stands for the class's page, and the declaration ([`Self::author`]) answers. A class no declaration names is
+  /// unknown: a document's `\@maketitle` is not taken for its page (`ledger::class_maketitle_runs`)
+  pub maketitle_runs: &'static [(&'static str, MaketitleRuns, &'static str)],
+}
+
+/// Whether a class's `\maketitle` runs `\@maketitle` ([`TitlePageDecl::maketitle_runs`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MaketitleRuns {
+  /// always (amsart.cls:600-610, IEEEtran.cls:4753-4775)
+  Always,
+  /// never (elsarticle.cls:918-989, acmart.cls:2226-2379)
+  Never,
+  /// only while the class's `\if@titlepage` is false, as it is at `\maketitle` (article.cls:169-219, report.cls:175-225,
+  /// book.cls:181-231: `\if@titlepage \newcommand\maketitle{\begin{titlepage}…` prints its own page, which prints
+  /// `\@author` and runs no `\@maketitle`, `\else` one that runs it; TP1c)
+  WithoutTitlepage,
 }
 
 /// One family's association conventions, as its binding declares them ([`declare_frontmatter_conventions`]).
@@ -180,9 +193,26 @@ pub const KERNEL: Policy = Policy {
   title_page:        TitlePageDecl {
     author:         AuthorPage::Kernel,
     title_and:      &[],
-    // (article.cls's `\maketitle` without `titlepage`, its default; report.cls and book.cls default to `titlepage`,
-    // whose `\maketitle` prints its own page, report.cls:176-198, book.cls:182-204: undeclared)
-    maketitle_runs: &[("article.cls", true, "article.cls:203-219")],
+    // (the standard classes' `\maketitle` runs `\@maketitle` only without `titlepage`, keyed on their `\if@titlepage`:
+    // article.cls:50-51 defaults it false, report.cls:50-51 and book.cls:50-51 true; `titlepage`/`notitlepage` set it,
+    // article.cls:91-93, report.cls:92-94, book.cls:93-95)
+    maketitle_runs: &[
+      (
+        "article.cls",
+        MaketitleRuns::WithoutTitlepage,
+        "article.cls:169-219",
+      ),
+      (
+        "report.cls",
+        MaketitleRuns::WithoutTitlepage,
+        "report.cls:175-225",
+      ),
+      (
+        "book.cls",
+        MaketitleRuns::WithoutTitlepage,
+        "book.cls:181-231",
+      ),
+    ],
   },
   cite:              "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4; OD #925",
 };
@@ -257,8 +287,8 @@ pub fn declares_email_in_place(binding: &str) -> bool {
 }
 
 /// Whether `binding` declared that the `\maketitle` of `class` (its binding's file name) runs `\@maketitle`
-/// ([`TitlePageDecl::maketitle_runs`], any of its hooks), `None` when it declared neither.
-pub fn declared_maketitle_runs(binding: &str, class: &str) -> Option<bool> {
+/// ([`TitlePageDecl::maketitle_runs`], any of its hooks), `None` when it declared nothing for it.
+pub fn declared_maketitle_runs(binding: &str, class: &str) -> Option<MaketitleRuns> {
   declared(binding).and_then(|d| {
     d.iter().find_map(|p| {
       p.title_page

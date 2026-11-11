@@ -22,7 +22,7 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   title_page: FmTitlePageDecl {
     author: FmAuthorPage::Own(&["acmart.cls"]),
     // (its `\maketitle` never runs `\@maketitle`: acmart.cls:2226-2379; a document's own prints nowhere, TP1b)
-    maketitle_runs: &[("acmart.cls", false, "acmart.cls:2226-2379")],
+    maketitle_runs: &[("acmart.cls", FmMaketitleRuns::Never, "acmart.cls:2226-2379")],
     ..FM_KERNEL_CONVENTIONS.title_page
   },
   cite: "acmart.cls:1620-1621 (several authors in one `\\author`); OD #942 (2311.10779, 2010.12245)",

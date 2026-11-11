@@ -136,15 +136,18 @@ fn an_authblk_email_line_appended_to_author_is_kept() {
 /// (int160a: the stand-in printed it — authblk's an Info, article's a false Warning) — but only where the class's
 /// `\maketitle` runs `\@maketitle` (TP1b, `TitlePageDecl::maketitle_runs`): elsarticle's and acmart's never do, so a
 /// document's `\@maketitle` printing `\@author` makes no creator of the tail there (TP1 invented "Bob B", review revTP1
-/// B1), and one printing the title alone leaves the check reading the stand-in's words, not the title alone. Distinct:
-/// the gate of both routes, the Info side of the check's evidence rule, and the `\maketitle` that runs no
-/// `\@maketitle`.
+/// B1), and one printing the title alone leaves the check reading the stand-in's words, not the title alone. report under
+/// `notitlepage` runs `\@maketitle` (report.cls:175-225; TP1b's undeclared report invented "Bob B", review revTP1b), and
+/// article runs it after a document's `\@titlepagetrue`, which comes after article.cls:169 read it
+/// (`MaketitleRuns::WithoutTitlepage`, keyed on the class's `\if@titlepage` after its options, TP1c). Distinct: the gate
+/// of both routes, the Info side of the check's evidence rule, the `\maketitle` that runs no `\@maketitle`, and the
+/// keyed rule's `notitlepage` side and its time of reading.
 #[test]
 fn an_author_tail_the_title_page_does_not_print_is_not_read() {
   let alice_x: &[&[&str]] = &[&["Alice A", "affiliation=Inst X"]];
   let annotated = "Info:frontmatter:annotated The title page annotates 1 word(s) that its output does not hold: bob";
   let alice: &[&[&str]] = &[&["Alice A"]];
-  let rows: [Row; 14] = [
+  let rows: [Row; 16] = [
     (
       "document \\maketitle, \\and tail",
       repro!("article_author_and_tail_unprinted_by_own_maketitle_makes_no_creator.tex"),
@@ -243,6 +246,20 @@ fn an_author_tail_the_title_page_does_not_print_is_not_read() {
       true,
       alice,
     ),
+    (
+      "report[notitlepage], document title-only \\@maketitle",
+      repro!("report_notitlepage_document_title_only_maketitle_prints_no_author_tail.tex"),
+      0,
+      false,
+      alice,
+    ),
+    (
+      "article, \\@titlepagetrue after the class, document title-only \\@maketitle",
+      repro!("article_titlepage_set_after_load_document_maketitle_prints_no_author_tail.tex"),
+      0,
+      false,
+      alice,
+    ),
   ];
   for (shape, tex, warnings, annotates, expected) in rows {
     let (log, xml) = run(tex);
@@ -325,16 +342,21 @@ fn an_author_tail_printed_but_not_read_is_counted() {
 /// article.cls's page — amsart under a document's `\@maketitle` printing `\@author`, and titling's binding
 /// `\@maketitle` (titling.sty:166-180) over amsart and elsarticle, each run its own evidence over the class binding's
 /// declaration (FX26's and revFX26b's REDs), and IEEEtran under a document's `\@maketitle` printing `\@author` (its
-/// `\maketitle` runs `\@maketitle`, as its binding declares, `TitlePageDecl::maketitle_runs`: TP1b). pdflatex prints
-/// "Bob B" in each (the repros' headers). Red (int160a): Alice A alone, 1 Warning "bob" each. Distinct: the run's
-/// evidence on both routes, kernel and binding.
+/// `\maketitle` runs `\@maketitle`, as its binding declares, `TitlePageDecl::maketitle_runs`: TP1b). Under `titlepage`
+/// (article's option, report's and book's default) the class's `\maketitle` prints its own page with `\@author` and runs
+/// no `\@maketitle` (article.cls:169-192, report.cls:175-198, book.cls:181-204), so the stand-in decides, with or
+/// without a document's title-only `\@maketitle` (`MaketitleRuns::WithoutTitlepage`, TP1c; TP1b lost article's "Bob B"
+/// silently, review revTP1b). pdflatex prints "Bob B" in each (the repros' headers). Red (int160a): Alice A alone,
+/// 1 Warning "bob" each (article[titlepage] without a `\@maketitle` of the document's: green throughout). Distinct: the
+/// run's evidence on both routes, kernel and binding, and the keyed rule's `titlepage` side for each class.
 #[test]
 fn an_author_tail_the_title_page_prints_is_read() {
   let alice_bob_x: &[&[&str]] = &[&["Alice A", "affiliation=Inst X"], &[
     "Bob B",
     "affiliation=Inst Y",
   ]];
-  let rows: [(&str, &str, &[&[&str]]); 6] = [
+  let alice_bob: &[&[&str]] = &[&["Alice A"], &["Bob B"]];
+  let rows: [(&str, &str, &[&[&str]]); 10] = [
     (
       "article, appended \\@maketitle",
       repro!("article_author_tail_under_appended_maketitle_is_kept.tex"),
@@ -364,6 +386,26 @@ fn an_author_tail_the_title_page_prints_is_read() {
       "IEEEtran, document \\@maketitle printing \\@author",
       repro!("ieeetran_author_tail_printed_by_document_maketitle_is_kept.tex"),
       &[&["Alice A"], &["Bob B"]],
+    ),
+    (
+      "article[titlepage], document title-only \\@maketitle",
+      repro!("article_titlepage_document_title_only_maketitle_author_tail_is_kept.tex"),
+      alice_bob,
+    ),
+    (
+      "article[titlepage]",
+      repro!("article_titlepage_author_tail_is_kept.tex"),
+      alice_bob,
+    ),
+    (
+      "report (titlepage, its default), document title-only \\@maketitle",
+      repro!("report_document_title_only_maketitle_author_tail_is_kept.tex"),
+      alice_bob,
+    ),
+    (
+      "book (titlepage, its default), document title-only \\@maketitle",
+      repro!("book_document_title_only_maketitle_author_tail_is_kept.tex"),
+      alice_bob,
     ),
   ];
   for (shape, tex, expected) in rows {
