@@ -20962,16 +20962,23 @@ examplep and wrapfig2 test shapes); `\let\mychap\chapter` copies the undefined m
 `Error:undefined:\mychap`, as TeX; a body `\edef` holding `\noexpand\chapter` makes a chapter where TeX stops.
 **Why**: the author meant a chapter, and the content is kept (the OD #721 precedent: the author's reading plus one
 Warning, never silent, never an Error); pdflatex stops at each call ("Undefined control sequence") and sets the title as
-text.
+text. The Warning stays though TeX (and Perl, for the unstarred call) err (user 2026-11-11: no author-facing value; the
+recovery is semantic, reach tiny — 1 of 300 article papers that call `\chapter` reaches the stand-in, 1112.4337; an
+Error would flip a paper's conversion status). A binding standing in for a class not its own is a Warning on both
+counts: TeX's class may have chapters (0909.2812: pdflatex "CHAPTER 1", no `\chapter` error).
 **Witnesses**: 1403.2269, 1511.03874, 1606.03650, 2504.00704 (1 → 0 `undefined:\chapter`); 0909.2812 (1 → 0, its
 report's chapters); 0907.3938's pre.cls `\let\chapter\part` after `\LoadClass{article}` is the class's own chapter, kept by #179
 (a), where it was retracted; 0802.3014 and 1507.01872 call it inside an undefined preamble macro's argument (pretex's
 `\UInewAction`), before the stand-in exists.
 **Guard**: `perfect_kernel_batch72b::{chapter_in_a_chapterless_class_is_the_kernel_chapter_with_a_warning,
 a_preamble_chapter_errs_and_the_body_chapter_reads_the_stand_in, a_raw_class_meets_chapter_undefined_while_it_loads,
-appendices_follow_the_class_chapters}`; repros sectioning-frontmatter/{chapter_call_in_a_chapterless_class,
-chapter_undefined_in_a_chapterless_class, chapter_in_the_preamble_errs_and_the_body_chapter_converts,
-appendix_after_a_chapter_in_a_chapterless_class}.
+appendices_follow_the_class_chapters}`; `perfect_kernel_batchsvc::chapter_error_boundary` (both sides, each row with
+its pdflatex and Perl oracle: article `\chapter`, `\chapter*` and jmlr at 0 errors 1 Warning where pdflatex errs;
+report, book, report `\chapter*`, amsbook, scrbook and a document's own `\chapter` at 0/0; 0909.2812's shape, a shipped
+raw class over report answered by the prefix alternate `mn`, at 0 errors 2 Warnings); repros
+sectioning-frontmatter/{chapter_call_in_a_chapterless_class, chapter_undefined_in_a_chapterless_class,
+chapter_in_the_preamble_errs_and_the_body_chapter_converts, appendix_after_a_chapter_in_a_chapterless_class,
+chapter_star_in_a_chapterless_class, chapter_in_a_class_a_prefix_binding_answers_warns}.
 **Upstream**: not filed.
 
 ### 735. jmlr's article `\chapter` is LaTeXML's chapter, with the class's error text as one Warning (TeX: the class's error; Perl: no jmlr binding, the kernel's `\chapter`)
@@ -20987,10 +20994,12 @@ articles; LaTeXML's \chapter is used"; the class's chapter counter (:732) is mad
 article's `\appendix` letters the sections as jmlr.cls:720-729 `\artappendix` (`\let\appendix\artappendix`) does:
 pdflatex "Appendix A. AppSec", ours "Appendix A" (72b r2: "Appendix 1.A", numbered within the stand-in's chapter).
 **Why**: the OD #721 / #734 precedent: TeX's error is the class refusing what the author wrote; the author's chapter is
-kept, with a Warning that names the class's error.
+kept, with a Warning that names the class's error (user 2026-11-11: no author-facing value in an Error; the recovery is
+semantic, reach tiny).
 **Witnesses**: the 72b review's jmlr probes (jmlr.cls TL 2025; rev72b/r2/jma for the appendix); no arXiv paper calls it (3 jmlr papers of the 72b A/B,
 unchanged).
-**Guard**: `perfect_kernel_batch72b::bindings_whose_class_has_chapters_define_them`.
+**Guard**: `perfect_kernel_batch72b::bindings_whose_class_has_chapters_define_them`,
+`perfect_kernel_batchsvc::chapter_error_boundary`.
 **Upstream**: not filed.
 
 ### 736. A stand-in class binding loads the base class its real file loads; the copy's one class slot is the net
