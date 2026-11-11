@@ -10,6 +10,8 @@
 //! and `\email` provided for it only); each row asserts every creator's name and contacts, in order, every contact
 //! element whole, and the exact Error and Warning counts. The rows of `perfect_kernel_batchp22` (today's output of the
 //! shapes the spelling already cut, and of a macro holding institutes and the separator together) stay as they were.
+//! P23 (Option C P2-3) adds llncs's rows: its `\institute` dispatch and its marked `\author` list cut the same way
+//! (llncs_cls.rs `\lx@llncs@institute@dispatch`, `\lx@llncs@author@split`), pdflatex-clean with TL 2025's llncs.cls.
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -52,6 +54,10 @@ fn an_institute_list_cut_at_the_kernel_and_by_meaning() {
   };
   let aa = |name: &str, role: &str, text: &str| {
     format!("<contact name=\"{name}: \" role=\"{role}\">{text}</contact>")
+  };
+  // (llncs's names end in a no-break space: "Affiliation:~", `\emailname~`)
+  let llncs = |name: &str, role: &str, text: &str| {
+    format!("<contact name=\"{name}\u{a0}\" role=\"{role}\">{text}</contact>")
   };
   let two = rows(&[
     &["Ann Able", "affiliation=Univ A, Town", "email=ann@a.org"],
@@ -98,6 +104,82 @@ fn an_institute_list_cut_at_the_kernel_and_by_meaning() {
           r#"<text font="typewriter" xml:id="id1">ann@a.org</text>"#,
         ),
         aa("Affiliation", "affiliation", "Univ B, City"),
+      ],
+    ),
+    // P23 (Option C P2-3): llncs's `\institute` dispatch cuts the same way (`split_at_kernel_separators` at `\and`), its
+    // gate between the split, the sole institute and the superscript-labelled block reading that cut, not the spelling.
+    // Unmarked authors: the two numbered institutes no `\inst` picks are the block's, as the written `\and` gives them
+    // (85b's `llncs_several_institutes_without_marks_stay_the_blocks`); int160a1 took the sole institute and gave both to
+    // each author, a pairing pdflatex does not print.
+    (
+      "llncs macro holding only the separator, unmarked authors",
+      repro!("llncs_institute_list_macro_held_separator_unmarked"),
+      (0, 0),
+      rows(&[&["Ann Able"], &["Bob Baker"], &[
+        "affiliation=Univ A, Town A",
+        "affiliation=Univ B, Town B",
+      ]]),
+      vec![
+        llncs("Affiliation:", "affiliation", "Univ A, Town A"),
+        llncs("Affiliation:", "affiliation", "Univ B, Town B"),
+      ],
+    ),
+    // (marked authors: each picks its piece; int160a1 the same, the sole institute's reading cut it)
+    (
+      "llncs macro holding only the separator, marked authors",
+      repro!("llncs_institute_list_macro_held_separator"),
+      (0, 0),
+      rows(&[&["Ann Able", "affiliation=Univ A, Town A"], &[
+        "Bob Baker",
+        "affiliation=Univ B, Town B",
+      ]]),
+      vec![
+        llncs("Affiliation:", "affiliation", "Univ A, Town A"),
+        llncs("Affiliation:", "affiliation", "Univ B, Town B"),
+      ],
+    ),
+    // (an `\and` the cut leaves whole, in a box, keeps the list one numbered piece — the gate asks the query at every
+    // level, `argument_separators_at_every_level`, as `\institutename` numbers at every `\and` it runs —, the block's
+    // here, no `\inst` picking it; a gate at the list's own level read the sole institute, both authors')
+    (
+      "llncs and inside a box, unmarked authors",
+      repro!("llncs_institute_list_and_inside_a_box_stays_one_piece"),
+      (0, 1),
+      rows(&[&["Ann Able"], &["Bob Baker"], &[
+        "affiliation=Univ A, Town A (North and South)",
+      ]]),
+      vec![llncs(
+        "Affiliation:",
+        "affiliation",
+        r#"Univ A, Town A <text xml:id="id1">(North  and South)</text>"#,
+      )],
+    ),
+    // (llncs's marked `\author` list, cut the same way at the call, `\lx@splitting@by@meaning`: one queued entry per
+    // name, so the e-mail line of the superscript-labelled institute, one address per author, goes to the authors in
+    // order; int160a1 queued both names as one entry and gave the line to the block. The affiliations' leading space is
+    // the `$^1$ Univ A` entry's own, as today's 61 `marked_affiliation_review_shapes` writes it)
+    (
+      "llncs marked author list, macro holding only the separator",
+      repro!("llncs_marked_author_list_macro_held_separator"),
+      (0, 0),
+      rows(&[&["Ann Able", "affiliation=Univ A", "email=u1@x.org"], &[
+        "Bob Baker",
+        "affiliation=Univ B",
+        "email=u2@x.org",
+      ]]),
+      vec![
+        llncs("Affiliation:", "affiliation", " Univ A"),
+        llncs(
+          "E-mail",
+          "email",
+          r#"<text font="typewriter" xml:id="id1">u1@x.org</text>"#,
+        ),
+        llncs("Affiliation:", "affiliation", " Univ B"),
+        llncs(
+          "E-mail",
+          "email",
+          r#"<text font="typewriter" xml:id="id2">u2@x.org</text>"#,
+        ),
       ],
     ),
   ];

@@ -1,0 +1,24 @@
+% mechanism: llncs_cls.rs `\author` → `\lx@llncs@author@split` (a list whose authors carry `\inst` marks): the list cut
+%   first at the kernel's `\and` by meaning, then by spelling at `\and`/`\And`/`\\` (`\lx@splitting@by@meaning`,
+%   `split_at_kernel_separators`, Option C P2-3, OD #995), one queued author entry per piece — a document macro holding
+%   only `\and`: two entries, so the institute's e-mail line, one address per author, goes to the authors in order
+%   (`place_address_runs`, which counts the queued entries)
+% witness: synthetic (the shape of 2403.04183, 2409.06210, 2412.12966, 2512.24562's address lines, whose lists are
+%   written with `\and`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2" over "1 Univ A", "Univ B",
+%   "{u1, u2}@x.org", "2"
+% engines: Perl 0.8.8 splits by spelling (llncs.cls.ltxml:40-44) and misses it; int160a1 (1f3949ecad): one entry for
+%   both names (the reading cut it, OC1), so the line was the block's: u1@x.org and u2@x.org on a nameless creator,
+%   0 errors, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, u1@x.org; Bob Baker: Univ B, u2@x.org
+% status:  RED (int160a1) -> GREEN (P23; guard perfect_kernel_batchp22b::an_institute_list_cut_at_the_kernel_and_by_meaning)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\newcommand\nextauthor{\and}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \nextauthor Bob Baker\inst{2}}
+\institute{$^1$ Univ A \\ $^2$ Univ B \\ \email{\{u1, u2\}@x.org}}
+\maketitle
+Text.
+\end{document}
