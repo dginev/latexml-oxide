@@ -1,6 +1,6 @@
 //! The title-page reading (TP1; OXIDIZED_DESIGN_DIVERGENCES #953, #996): what the class's whole title page prints at
 //! this `\maketitle`, from one speculative run of it with the document's own values ([`title_page_print_tokens`]),
-//! kept while the state it read is unchanged (`state_generation`, and the LaTeXML-internal values it reads,
+//! kept while the state it read is unchanged (`watch_state`, and the LaTeXML-internal values it reads,
 //! `READ_VALUES`), so every consumer reads the same run:
 //! - the title-page check's words ([`super::note_title_page_print`]), and what they are without what a document
 //!   appended to `\@author`;
@@ -92,7 +92,7 @@ impl TitlePageReading {
   }
 }
 
-/// The LaTeXML-internal values the reading reads, which [`state_generation`] does not count: `\@author`'s prefix kept by
+/// The LaTeXML-internal values the reading reads, which the state's watch ([`watch_state`]) does not see: `\@author`'s prefix kept by
 /// the frontmatter (`author_taken_prefix`), whether a deposit runs the class's title page (`replays_class_maketitle`)
 /// and a raw class's own `\@author` reader ([`CLASS_AUTHOR_READER`]).
 const READ_VALUES: [&str; 4] = [
@@ -102,14 +102,25 @@ const READ_VALUES: [&str; 4] = [
   CLASS_AUTHOR_READER,
 ];
 
-/// What a reading was made of: the state's generation ([`state_generation`]) and [`READ_VALUES`].
+/// What a reading was made of: the state's watch, begun with it ([`watch_state`]), and [`READ_VALUES`].
 type ReadingKey = (u64, [Option<Stored>; 4]);
 
 /// A reading made, with what it was made of.
 type KeptReading = (ReadingKey, Rc<TitlePageReading>);
 
-/// The key of a reading made now.
-fn reading_key() -> ReadingKey { (state_generation(), READ_VALUES.map(lookup_value)) }
+/// The key of a reading made now: it begins the state's watch.
+fn reading_key() -> ReadingKey { (watch_state(), READ_VALUES.map(lookup_value)) }
+
+/// The reading made, while the state it read is unchanged.
+fn kept_reading() -> Option<Rc<TitlePageReading>> {
+  READING.with_borrow(|r| {
+    r.as_ref()
+      .filter(|((watch, values), _)| {
+        state_unchanged_since(*watch) && *values == READ_VALUES.map(lookup_value)
+      })
+      .map(|(_, reading)| Rc::clone(reading))
+  })
+}
 
 thread_local! {
   /// The reading made, with what it was made of ([`reading_key`]).
@@ -164,14 +175,10 @@ const LATEX_THANKS: &str = r"\long\def\thanks#1{\footnotemark\protected@xdef\@th
 /// where it begins and where what a document appended to it begins and ends ([`author_marks`]), unless a raw class's own
 /// `\@author` reader replaces it in the run.
 pub(crate) fn title_page_reading() -> Result<Rc<TitlePageReading>> {
-  let key = reading_key();
-  if let Some(reading) = READING.with_borrow(|r| {
-    r.as_ref()
-      .filter(|(at, _)| *at == key)
-      .map(|(_, reading)| Rc::clone(reading))
-  }) {
+  if let Some(reading) = kept_reading() {
     return Ok(reading);
   }
+  let key = reading_key();
   let source = if replays_class_maketitle() {
     TitlePageSource::Replay
   } else if own_maketitle() {
@@ -318,4 +325,35 @@ fn author_marks() -> Result<Option<(Vec<Token>, bool)>> {
   def.extend(body);
   def.push(T_END!());
   Ok(Some((def, split.is_some())))
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  /// A kept reading goes with a LaTeXML-internal value it read ([`READ_VALUES`]) or any TeX write; another `lx…` value
+  /// keeps it (review revTP1 S1).
+  #[test]
+  fn a_kept_reading_goes_with_what_it_read() {
+    set_state(State::new(StateOptions::default()));
+    let reading = Rc::new(TitlePageReading {
+      source:   TitlePageSource::StandIn,
+      stand_in: true,
+      outcome:  RunOutcome::Printed,
+      words:    String::new(),
+      untailed: String::new(),
+      text:     String::new(),
+      author:   AuthorPrint::default(),
+    });
+    let writes = READ_VALUES
+      .map(|key| (key, false))
+      .into_iter()
+      .chain([("lx_rk1_unread", true), ("rk1_tex_value", false)]);
+    for (key, kept) in writes {
+      READING.set(Some((reading_key(), Rc::clone(&reading))));
+      assert!(kept_reading().is_some(), "{key}: kept before the write");
+      assign_value(key, true, Some(Scope::Global));
+      assert_eq!(kept_reading().is_some(), kept, "{key}");
+    }
+  }
 }
