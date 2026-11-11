@@ -1,0 +1,27 @@
+% mechanism: the emitter's cut of a numbered contact call (`emit::labelseq_call_cut`, OD #995, Option C P2-0) where a
+%   macro holds the entries and the `\and`s between them (`\newcommand\insts{Univ X \and Univ Y}`, `\institute{\insts}`):
+%   the reading cuts the call at the macro's `Sep(And)` (`resolver::api::labelseq_pieces`), and no run of the call's
+%   tokens holds one piece alone, so each piece is written by its text (`emit::cut_at_separators`' fallback, as a creator
+%   call's), one counted Warning a piece. No binding makes such a call yet: this document's own `\institute` does.
+%   Before, each author held the whole call, "Univ X and Univ Y"
+% witness: synthetic (the P2 plan's S2 institute splits; the macro-held shape P2P found in no census paper)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: the institutes printed in two columns under the names (the
+%   API call provided as the kernel title's author tabular in `\date`), "Ann Able1 Bob Baker2 / Univ X Univ Y"
+% engines: Perl 0.8.8: no such call (not run); base int157a (a8826e189a): Ann Able and Bob Baker each with "Univ X and
+%   Univ Y", 0 errors, 1 warning; P20: as expected
+% expect:  0 errors, 2 warnings (each piece written by its text); Ann Able (Univ X), Bob Baker (Univ Y)
+% status:  GREEN (P20; guard perfect_kernel_batchp20::a_numbered_contact_call_is_written_a_call_per_piece)
+\documentclass{article}
+\makeatletter
+\providecommand\lx@add@contact[2][]{\gdef\@date{\begin{tabular}[t]{c}#2\end{tabular}}}
+\providecommand\inst[1]{$^{#1}$}
+\newcommand\institute[1]{\lx@add@contact[role=affiliation,labelseq=affiliation]{#1}}
+\makeatother
+\newcommand\insts{Univ X \and Univ Y}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{\insts}
+\begin{document}
+\maketitle
+Text.
+\end{document}

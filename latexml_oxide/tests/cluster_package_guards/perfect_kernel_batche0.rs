@@ -1515,8 +1515,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (LO1: a creator call's `annotations` read as its labels, `FieldCreator::labels` — a keyval's value, argument passing; LO2,
   // 9 -> 8: read by the API's own label cleaning, `clean_frontmatter_labels`, Perl's `cleanFrontmatterLabels`)
   ("field_notes", 8),
-  // (26: C1's `queue_reading.rs` keeps a cache of what `author_block`'s readers read off the queue's tokens, and goes with them)
-  ("frontmatter (rest)", 26),
+  // (26: C1's `queue_reading.rs` keeps a cache of what `author_block`'s readers read off the queue's tokens, and goes with them;
+  // P20, 26 -> 29: `observer/separators.rs`, the one engine's separator query, reads a separator's *meaning* — its event's
+  // printing token's definition, whether it is the kernel layer's `\and` constructor (`get_cs()` against `KERNEL_SEPARATOR`),
+  // the trap-T8 test `frontmatter_stores::kernel_and_list` makes —, never its spelling: a decision by definition, OD #995)
+  ("frontmatter (rest)", 29),
   ("frontmatter_stores", 527),
   ("gretsi_cls.rs", 14),
   // (CR10a, 119 -> 128: the class's author body is read as tokens before it is digested, as `author_block_body` reads it —
@@ -1881,6 +1884,9 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   ("marks", 0),
   ("mod", 0),
   ("policy", 0),
+  // (P20, 0 -> 2: the query's own TeX front-end `\lx@fm@separators` defined, and `KERNEL_SEPARATOR`, the kernel definition a
+  // separator's meaning is compared with (a definition named, not a token's spelling), OD #995)
+  ("separators", 2),
   // (Z14 101 -> 109, the table rows above; Z4a +3: the rehearsal's `\lx@fm@obs@footnote`, the footnote a note step hears, defined and named;
   // N2r2 +7: the bound constructors' `alias`es, the commands they revert as — what a text made of an argument prints, never
   // the rehearsal's name: 2106.06418, 1401.5951, 2106.11154; FB2a 119 -> 117: the row break's constructor named once, `ROW_BREAK`,

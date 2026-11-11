@@ -495,6 +495,9 @@ mod perfect_kernel_batchp1;
 mod perfect_kernel_batchp1c;
 mod perfect_kernel_batchp1e;
 mod perfect_kernel_batchp2;
+/// P20: Option C P2-0's mechanisms, called by no binding yet — the separator query by meaning
+/// (`argument_separators`, `\lx@fm@separators`) and the emitter's cut of a numbered contact call (OD #995).
+mod perfect_kernel_batchp20;
 mod perfect_kernel_batchpb;
 /// PC3: two false undefined-command Errors of the frontmatter rehearsal — a title-code command after an e-mail
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.

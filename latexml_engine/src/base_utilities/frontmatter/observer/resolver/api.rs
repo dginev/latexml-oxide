@@ -91,6 +91,28 @@ pub(in crate::base_utilities::frontmatter::observer) fn creator_call_pieces(
   (pieces.len() > 1).then_some(pieces)
 }
 
+/// The pieces a numbered list's `\and`s cut a contact call into (`labelseq=<role>`: llncs's and aa's `\institute{A \and B}`,
+/// numbered 1, 2 as the class prints them, llncs.cls:870-885, OD #791), each holding a name or a contact: every `Sep(And)`
+/// of the call parts it, under conventions that number by place (`label_sequence`, [`Policy::label_sequence`]). `None`
+/// for a call it doesn't cut. The reading's ([`Resolver::api`]) and the emitter's (`emit::labelseq_call_cut`, which writes
+/// a call per piece: OXIDIZED_DESIGN_DIVERGENCES #995), on the same events.
+pub(in crate::base_utilities::frontmatter::observer) fn labelseq_pieces<'a>(
+  attrs: &str,
+  events: &'a [Event],
+  label_sequence: bool,
+) -> Option<Vec<&'a [Event]>> {
+  let and = |e: &Event| matches!(e.kind, EventKind::Sep(SepKind::And(_)));
+  let pieces = events.split(and).filter(|piece| {
+    piece
+      .iter()
+      .any(|e| e.kind == EventKind::Name || e.kind == EventKind::Contact)
+  });
+  (attr_value(attrs, "labelseq").is_some_and(|s| !s.is_empty())
+    && label_sequence
+    && events.iter().any(and))
+  .then(|| pieces.collect())
+}
+
 impl Resolver {
   /// An empty entry's authors hold its role, as today's attaches the empty contact to them (`annotate=`: the last
   /// author, all, the run of new ones, the last N) — part of today's contact pile too (`distribute_upfront`: amsart's
@@ -490,19 +512,9 @@ impl Resolver {
     }
     // a class's `\institute{A \and B}` list numbered by its `\and`s (`labelseq=`: llncs.cls:870-885, OD #791): each
     // piece an entry of its own, numbered in turn
-    if attr_value(attrs, "labelseq").is_some_and(|s| !s.is_empty())
-      && policy.label_sequence
-      && events
-        .iter()
-        .any(|e| matches!(e.kind, EventKind::Sep(SepKind::And(_))))
-    {
-      for piece in events.split(|e| matches!(e.kind, EventKind::Sep(SepKind::And(_)))) {
-        if piece
-          .iter()
-          .any(|e| e.kind == EventKind::Name || e.kind == EventKind::Contact)
-        {
-          self.api(index, tag, role, attrs, piece, policy);
-        }
+    if let Some(pieces) = labelseq_pieces(attrs, events, policy.label_sequence) {
+      for piece in pieces {
+        self.api(index, tag, role, attrs, piece, policy);
       }
       return;
     }
