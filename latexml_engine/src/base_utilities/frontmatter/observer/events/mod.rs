@@ -992,7 +992,9 @@ struct Walker {
 
 /// Whether `d` is a paragraph's list: the line `stomach::repack_horizontal` (or a vertical box's repack) packs, whose `mode`
 /// property says `horizontal` (Perl's `List(@para, mode => 'horizontal')`, Stomach.pm:452-475) — a braced group's list has
-/// none.
+/// none. That holds while no box reader copies the current mode into a group's list: `boxes_lists.rs`
+/// `predigest_box_contents` would (its `mode` from the open paragraph), and nothing calls it; a caller added there must
+/// keep its group's list off `horizontal`, or a braced argument would be walked as no group (revP21c finding 1).
 fn paragraph_is_no_group(d: &Digested) -> bool {
   d.get_property("mode")
     .is_some_and(|mode| mode.eq_text("horizontal"))
