@@ -1,0 +1,19 @@
+% mechanism: IEEEtran's conference author grid written column by column (`\and` a column, `\\` a row in it): the
+%   binding's block route (ieeetran_cls.rs `transpose_ieee_author_grid`) reads it row by row, the order pdflatex prints
+%   (OXIDIZED_DESIGN_DIVERGENCES #128). A pin of the order before P2-8a (`blocks_as_printed`)
+% witness: 2403.16405 (the grid's order)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: row 1 "Ann Able", "Bob Baker"; row 2 "Cy Coe", "Dan Dee"
+% engines: int158a and P28: Ann Able, Bob Baker, Cy Coe, Dan Dee, each with their Univ
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker (Univ B), Cy Coe (Univ C), Dan Dee (Univ D)
+% status:  GREEN (int158a; pin, guard perfect_kernel_batchp28)
+\documentclass[conference]{IEEEtran}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ A}\\
+\IEEEauthorblockN{Cy Coe}\IEEEauthorblockA{Univ C}
+\and
+\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B}\\
+\IEEEauthorblockN{Dan Dee}\IEEEauthorblockA{Univ D}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

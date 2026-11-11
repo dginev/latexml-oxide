@@ -1,0 +1,18 @@
+% mechanism: IEEEtran blocks written through `\let` copies of the block commands (`\let\N\IEEEauthorblockN`,
+%   `\let\A\IEEEauthorblockA`): the route by spelling (`contains("authorblockN")`) took the plain route, and the block
+%   steps read the copies as bare text. Now each copy is written as the command it means before the route
+%   (ieeetran_cls.rs `with_block_names`, P2-8a)
+% witness: synthetic (OC1's `\let` probe, on the block commands)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able Bob Baker" over "Univ A Univ B"
+% engines: int158a: Ann Able (Univ A, Univ B), Ann Able again (Univ A twice) — Bob Baker lost —, 0 errors, 1 warning;
+%   P28: Ann Able (Univ A), Bob Baker (Univ B)
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker (Univ B)
+% status:  RED (int158a) -> GREEN (P28; guard perfect_kernel_batchp28)
+\documentclass[conference]{IEEEtran}
+\let\N\IEEEauthorblockN \let\A\IEEEauthorblockA
+\title{T}
+\author{\N{Ann Able}\A{Univ A}\and\N{Bob Baker}\A{Univ B}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

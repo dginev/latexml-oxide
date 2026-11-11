@@ -1,0 +1,19 @@
+% mechanism: an IEEEtran `\and` list of blocks on one row, each affiliation of two lines (`\\` only inside
+%   `\IEEEauthorblockA`): no grid, the blocks keep their order and their lines (ieeetran_cls.rs
+%   `transpose_ieee_author_grid` leaves it). A pin
+% witness: synthetic (the single-row shape OXIDIZED_DESIGN_DIVERGENCES #128 leaves as written)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able Bob Baker Cy Coe" over their Univs and Cities
+% engines: int158a and P28: Ann Able (Univ A City A), Bob Baker (Univ B City B), Cy Coe (Univ C City C)
+% expect:  0 errors, 0 warnings; those three creators in that order
+% status:  GREEN (int158a; pin, guard perfect_kernel_batchp28)
+\documentclass[conference]{IEEEtran}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ A\\ City A}
+\and
+\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B\\ City B}
+\and
+\IEEEauthorblockN{Cy Coe}\IEEEauthorblockA{Univ C\\ City C}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

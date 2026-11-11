@@ -1,0 +1,17 @@
+% mechanism: an IEEEtran grid whose column separator is a `\let` copy of `\and` (`\let\nx\and`): the grid read by
+%   spelling saw one column and kept the column order. Now the grid's columns are the separators the separator query
+%   reads (ieeetran_cls.rs `grid_columns`, `argument_separators`; its fallback `split_top_level` reads a copy as
+%   the command): transposed to the printed rows (OXIDIZED_DESIGN_DIVERGENCES #128)
+% witness: synthetic (OC1's `\let` probe in a grid)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: row 1 "Ann Able", "Bob Baker"; row 2 "Cy Coe", "Dan Dee"
+% engines: int158a: Ann Able, Cy Coe, Bob Baker, Dan Dee (column order), 0 errors; P28: row order
+% expect:  0 errors, 0 warnings; creators Ann Able, Bob Baker, Cy Coe, Dan Dee, each with their Univ
+% status:  RED (int158a) -> GREEN (P28; guard perfect_kernel_batchp28)
+\documentclass[conference]{IEEEtran}
+\let\nx\and
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ A}\\ \IEEEauthorblockN{Cy Coe}\IEEEauthorblockA{Univ C}\nx\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B}\\ \IEEEauthorblockN{Dan Dee}\IEEEauthorblockA{Univ D}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,15 @@
+% mechanism: IEEEtran's `\author` with no names block takes the plain route (`\lx@IEEE@author@plain`,
+%   `\lx@add@authors`), its `\IEEEmembership` grades each its author's contact (`name_memberships`). A pin of the route
+%   `blocks_as_printed` leaves (no document macro)
+% witness: 2306.15457 (the grades' route; synthetic names)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able, Member, IEEE, Bob Baker, and Cy Coe, Fellow, IEEE"
+% engines: int158a and P28: Ann Able (Member, IEEE), Bob Baker, Cy Coe (Fellow, IEEE; the thanks note)
+% expect:  0 errors, 0 warnings; those three creators
+% status:  GREEN (int158a; pin, guard perfect_kernel_batchp28)
+\documentclass[journal]{IEEEtran}
+\title{T}
+\author{Ann~Able,~\IEEEmembership{Member,~IEEE}, Bob~Baker, and~Cy~Coe,~\IEEEmembership{Fellow,~IEEE}\thanks{A. Able is with Univ A.}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

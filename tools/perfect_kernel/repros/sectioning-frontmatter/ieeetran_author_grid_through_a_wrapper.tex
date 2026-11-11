@@ -1,15 +1,17 @@
 % mechanism: an IEEEtran conference grid whose `\and` a document wrapper prints (`\pair{…}{…}`, `\pair` printing
 %   `#1\and#2`, each argument an `\IEEEauthorblockN`/`\IEEEauthorblockA` pair): IEEEtran's `\author` takes the grid
 %   route by spelling and rewrites the body's tokens before `\pair` expands (ieeetran_cls.rs `author_block_body`: the
-%   grid transposed, bare text wrapped; which rewrite scrambles it not traced): the creators and their affiliations
-%   scrambled. P2 (the IEEEtran grid), not P1
+%   grid transposed, bare text wrapped: `wrap_bare_author_block_text` read `\pair` and its argument groups as bare
+%   text): the creators and their affiliations scrambled. P2 (the IEEEtran grid), not P1. Now the call, its definition
+%   holding the separator, is read as it means before the route (ieeetran_cls.rs `blocks_as_printed`, P2-8a)
 % witness: OC1's spelling probe of bindsplit ie1 (the wrapper)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able" over "Univ A", "Bob Baker" over "Univ B"
 % engines: Perl 0.8.8: one creator "Ann Able and Bob Baker" with both affiliations; int156a (MB1): three creators —
 %   Bob Baker (affiliations "and", Univ B, Univ A), Ann Able (Univ A), Ann Able again (Univ A twice) —, 0 errors,
-%   1 warning (the content check's extra "A and Univ")
-% expect:  0 errors; Ann Able (Univ A), Bob Baker (Univ B)
-% status:  RED (int156a; catalog, no guard — P2)
+%   1 warning (the content check's extra "A and Univ"); P28: Ann Able (Univ A), Bob Baker (Univ B), 0 errors,
+%   0 warnings
+% expect:  0 errors, 0 warnings; Ann Able (Univ A), Bob Baker (Univ B)
+% status:  RED (int156a, int158a) -> GREEN (P28; guard perfect_kernel_batchp28)
 \documentclass[conference]{IEEEtran}
 \newcommand\pair[2]{#1\and#2}
 \title{T}

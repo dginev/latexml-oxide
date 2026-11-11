@@ -1536,8 +1536,13 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // and a stop after an italic grade group, `{\em …}.`, `\emph{…}.` (`without_stop_after_grade`, `grade_text`, 1810.08035);
   // CR10c, 128 -> 126: the old block names read once as the ones they mean (`with_block_names`), so the block test reads
   // one name each (-3), and an outer block's own affiliation block found before an inner names block
-  // (`affiliation_before_names`, 2605.20445, +1))
-  ("ieeetran_cls.rs", 126),
+  // (`affiliation_before_names`, 2605.20445, +1); P28, 126 -> 127: the body read by meaning before the route (Option C
+  // P2-8a, OD #995) — the two spelled route tests `contains("authorblockN")` deleted (-2) for one test of the command
+  // after `with_block_names` writes every `\let` copy as it (`calls_names_block`, +1; its table of the two block
+  // commands, +1), and the table of the structure a document macro's definition may hold (`holds_author_structure`:
+  // `\IEEEauthorblockN`, `\and`, `\\`, each read with `defined_as`, +1), which decides the calls `blocks_as_printed`
+  // expands; the brace reading moved into one `brace_level`, which `grid_columns` shares (0))
+  ("ieeetran_cls.rs", 127),
   ("insert", 14),
   // (from `frontmatter (rest)`, 24 -> 23, at Z2r2: `\alignauthor`, out of the kernel's conventions into the binding's own table; no read)
   ("inst_support_sty.rs", 1),

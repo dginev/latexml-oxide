@@ -524,6 +524,10 @@ mod perfect_kernel_batchp25;
 /// P26: Option C P2-6 — the stores' `\and` gates read an argument's separators by meaning (`argument_separators`), not
 /// by spelling: a rerouted in-place line, a displaced store's list, the numbered store route (OD #995).
 mod perfect_kernel_batchp26;
+/// P28: Option C P2-8a — IEEEtran's `\author` reads the body by meaning before its route and grid: a document macro
+/// holding names blocks, `\and` or `\\` expanded (`blocks_as_printed`), a block command's `\let` copy, the grid's
+/// columns by the separator query (OD #128, #995).
+mod perfect_kernel_batchp28;
 mod perfect_kernel_batchpb;
 /// PC3: two false undefined-command Errors of the frontmatter rehearsal — a title-code command after an e-mail
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.

@@ -9,8 +9,9 @@
 //! Each converts its repro and asserts the exact Error and Warning counts and every creator's name and contacts in
 //! order. The shapes still red on the base, each a mechanism of its own: `author_let_copy_of_and_parts_the_names` (a
 //! `\let` copy of `\and` printed no `Sep(And)` in the rehearsal; green since SEP1, the copy bound by its meaning,
-//! `perfect_kernel_batchsep1`) and the catalog repros with no guard `ieeetran_author_grid_in_a_macro` /
-//! `ieeetran_author_grid_through_a_wrapper` (the IEEEtran grid's token split).
+//! `perfect_kernel_batchsep1`) and `ieeetran_author_grid_in_a_macro` / `ieeetran_author_grid_through_a_wrapper` (the
+//! IEEEtran grid's token split; green since P28, the routes reading a document macro by meaning,
+//! `perfect_kernel_batchp28`).
 //! These are the block routes only: an API creator call holding the `\and` (acmart's `\author` with no comma) is the
 //! API route's, guarded by `perfect_kernel_batchoc1c` (OD #993 "The API route").
 

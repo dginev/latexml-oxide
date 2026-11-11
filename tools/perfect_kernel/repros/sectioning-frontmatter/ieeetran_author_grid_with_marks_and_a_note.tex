@@ -1,0 +1,21 @@
+% mechanism: a 2x2 IEEEtran grid whose names carry `\IEEEauthorrefmark`s, one a `\thanks`, and whose blocks are led
+%   by marks, one holding a `\parbox`: transposed to the printed rows (OXIDIZED_DESIGN_DIVERGENCES #128) with each mark,
+%   note and box in its cell. A pin
+% witness: 2403.16405 (the grid's order; synthetic marks)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: row 1 "Ann Able*", "Bob Baker†" over "* Univ A", "† Univ C"
+%   and the e-mails; row 2 "Cy Coe†", "Dan Dee*"
+% engines: int158a and P28: Ann Able * (Univ A, ann@a.org), Bob Baker † (Univ C, bob@c.org), Cy Coe † (Univ C, the
+%   note), Dan Dee * (Univ A)
+% expect:  0 errors, 0 warnings; those four creators in that order
+% status:  GREEN (int158a; pin, guard perfect_kernel_batchp28)
+\documentclass[conference]{IEEEtran}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}}\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A\\ ann@a.org}\\
+\IEEEauthorblockN{Cy Coe\IEEEauthorrefmark{2}\thanks{Cy is funded by X.}}\IEEEauthorblockA{\IEEEauthorrefmark{2}Univ C}
+\and
+\IEEEauthorblockN{Bob Baker\IEEEauthorrefmark{2}}\IEEEauthorblockA{\IEEEauthorrefmark{2}Univ C\\ \parbox{3cm}{bob@c.org}}\\
+\IEEEauthorblockN{Dan Dee\IEEEauthorrefmark{1}}\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A}}
+\begin{document}
+\maketitle
+Text.
+\end{document}
