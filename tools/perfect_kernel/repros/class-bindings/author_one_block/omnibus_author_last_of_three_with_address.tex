@@ -1,0 +1,22 @@
+% mechanism: inst_support_sty.rs `\author` (OmniBus) hands its whole list to the reading in one block (P2-1, OD #993);
+%   the reading's shared-column rule (`resolver/blocks.rs` `shared_column`, a column holding no name of its own after
+%   the last name is every name's affiliation) reads a column on its own ink, not the text of a contact a call in it
+%   adds (`column_own_text`): the third column, "Cy Cole" with his `\address{Univ C}`, is his own, not
+%   the shared affiliation of the two names before
+% witness: synthetic (nucl-th0308018's `\address`, a third column)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, `article` for the missing class; the `\providecommand`s set the
+%          contact under its name, in its column, and are no-ops under OmniBus) 0 errors: Ann Able over Univ A | Bob Baker | Cy Cole over Univ C
+% engines: int157a and the fix: three creators; int158a: two, Ann Able and Bob Baker each [affiliation "Cy Cole",
+%   address Univ C], Cy Cole lost
+% expect:  0 errors, 1 warning (the missing class binding); creators Ann Able (affiliation Univ A); Bob Baker; Cy Cole (address Univ C)
+% status:  GREEN (int157a and P21d; RED on int158a; guard perfect_kernel_batchp21d)
+% preload: ar5iv.sty
+\documentclass{nosuchclass}
+\providecommand\institute[1]{\\#1}
+\providecommand\address[1]{\\#1}
+\begin{document}
+\title{T}
+\author{\begin{tabular}{c}Ann Able\\ Univ A\end{tabular} \and Bob Baker \and Cy Cole\address{Univ C}}
+\maketitle
+Text.
+\end{document}

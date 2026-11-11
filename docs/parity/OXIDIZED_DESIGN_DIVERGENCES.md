@@ -34245,6 +34245,21 @@ there changes what reads the queue per author entry: P2-1b, below), llncs's too 
 `perfect_kernel_batchp21::{an_author_list_is_one_block_the_reading_cuts,
 webofc_a_macro_held_line_break_parts_names}`; repros `class-bindings/author_one_block/`.
 
+**P2-1d (P21d): a column is read on its own ink.** With OmniBus's list one block, a column after an `\and` whose name a
+contact call follows (`\author{Ann Able \and Bob Baker\institute{Univ B}}`; `\address`, `\affiliation` and `\affil` the
+same) read as the shared affiliation of every name before it: the shared-column rule (`resolver/blocks.rs`
+`shared_column`, a column past the last one holding names that opens with an institution) read the line with its
+contact's text, "Bob Baker Univ B", an institution, so Bob Baker became Ann Able's affiliation (nucl-th0308018, appolb
+under OmniBus: `Yasuhisa ABE \and Bertrand BOURIQUET \address{…}`, one creator on int158a; int157a's split by spelling
+made each piece a block of its own). The rule reads the column's own ink, the contacts its calls add aside
+(`column_own_text`); a column printing only contacts is read on them, every name's shared affiliation as before
+(`\and \institute{Univ AB}`). The `tabular` in revP24b's P0 trigger (`\begin{tabular}{c}Ann Able\\ \texttt{…}
+\end{tabular}\and Bob Baker\institute{Univ B}`) was not the cause: without the `\institute`, int158a gives both
+creators. Under aa and sv_support with no class file, an `\institute` inside `\author` loses its text, counted by the
+content check's Warning, as on int157a. Guard `perfect_kernel_batchp21d::a_column_is_read_on_its_own_ink_not_its_contacts`;
+repros `class-bindings/author_one_block/omnibus_author_{name_with_institute_after_and,
+table_glued_to_and_name_with_institute,last_of_three_with_address,column_of_contacts_alone_is_shared}.tex`.
+
 **P2-1b (P21b): sv_support's split removed, aa's kept.** sv_support's `\author` makes one `\lx@add@author@split{#1}`
 call. The queue's readers read each queued `ltx:creator` entry as one name, so the whole list was one: the
 `\lx@sv@institute@` gate (an itemized `\institute` list spelling two or more queued names whole is the authors' list) failed,

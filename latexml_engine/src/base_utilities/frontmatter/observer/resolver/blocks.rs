@@ -319,12 +319,19 @@ impl Resolver {
       // old reader's collaboration reading, `reads_as_collaboration`, keeps it as the line reads: `\and \\the Solar
       // Orbiter EPD and Parker Solar Probe ISIS teams`, 2408.02330; `\and Shuang-Nan Zhang\inst{23} on behalf of the
       // \textit{SVOM} collaboration\inst{24}.`, 2607.01090 — each every author's affiliation before)
+      // (read on the column's own ink, not the text of a contact a call in it adds — `\and Bob Baker\institute{Univ
+      // B}`, OmniBus's whole list one block since P2-1, OD #993: "Bob Baker" is the column's name, "Univ B" his contact;
+      // read with the contact the line was "Bob Baker Univ B", an institution, and Bob every name's affiliation —
+      // nucl-th0308018's `\and Bertrand BOURIQUET \address{…}`; a column of contacts alone, `\and \institute{Univ
+      // B}`, is read on them)
       let shared_column = column_first
         && line.column > 0
         && last_named().is_some_and(|named| line.column > named)
         && self.out.creators.len() > block_creators_start
-        && is_institution(&events_text(&line.events))
-        && !names_collaboration(&events_text(&line.events));
+        && {
+          let own = column_own_text(&line.events);
+          is_institution(&own) && !names_collaboration(&own)
+        };
       if shared_column {
         let every: Vec<usize> = (block_creators_start..self.out.creators.len()).collect();
         run_above.push((line.column, every.clone()));
@@ -1595,6 +1602,20 @@ fn names_collaboration(text: &str) -> bool {
   let listed = t.split_whitespace().any(|w| matches!(w, "and" | "&"));
   let reads = |s: &str| collaboration_framing(s, listed, true).is_some();
   reads(t) || remark_start(t).is_some_and(|at| reads(&t[at..]))
+}
+
+/// The text a column's line prints by its own ink, the contacts its calls add aside (`Bob Baker\institute{Univ B}` reads
+/// "Bob Baker"); a line printing nothing but contacts reads as their text (`\institute{Univ B}` alone, "Univ B").
+fn column_own_text(events: &[&Event]) -> String {
+  let own: Vec<&Event> = events
+    .iter()
+    .copied()
+    .filter(|e| e.kind != EventKind::Contact)
+    .collect();
+  match events_text(&own) {
+    text if text.is_empty() => events_text(events),
+    text => text,
+  }
 }
 
 /// Where a sectioned block's address section starts in `events`: the first of the section `markers` (positions, ascending)
