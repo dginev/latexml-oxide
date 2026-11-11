@@ -2,7 +2,8 @@
 %   at its `\and` (`Sep(And)`, P1) and each piece at its commas — no `\lx@splitting` by spelling before digestion
 %   (Option C P2-1, OD #993)
 % witness: synthetic (the P2P census: no ptephy paper holds a separator the spelling split missed)
-% oracle:  pdflatex (TL 2025, -no-shell-escape, 1403.0174's ptephy.cls (`\and` prints "and", ptephy.cls:400)) 0 errors: Ann Able, Dan Dee, Bob Baker
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1403.0174's ptephy.cls (`\and` prints "and", ptephy.cls:400)) 1 error, the logo the
+%   class reads (newlogo-eps-converted-to.pdf, which the papers ship: a harness limit): Ann Able, Dan Dee, Bob Baker
 % engines: Perl 0.8.8 no ptephy binding (OmniBus); int157a (split by spelling) and P21 (one block) the same XML
 % expect:  0 errors, 0 warnings; creators Ann Able, Dan Dee, Bob Baker
 % status:  GREEN (int157a and P21; guard perfect_kernel_batchp21)
