@@ -13,16 +13,69 @@ use super::{
 /// (`p$\_$r`; the brace list `$\{a,b\}$@w.edu` in the unit test `math_shifts_pair_left_to_right`). Distinct from cr4's `imsart_ead_url_prints_its_formula`
 /// (one formula, a binding's call): the pairing across formulas and the character commands, through amsart's
 /// `\email`. Repro sectioning-frontmatter/email_math_shifts_pair_as_tex_pairs_them.
+///
+/// IV1 rows (study IV0): a formula printing spacing alone (`$~\quad~~$`, `$\quad$`, `$\,$`) is glue, no text of an
+/// address (`email_lines::spacing_formulas_as_space`, OXIDIZED_DESIGN_DIVERGENCES #972). Each row a distinct path:
+/// svjour3's institute line read by the Kind step and written whole as one address (2205.14113, int159a "$˜ ˜˜$
+/// ann@a.edu"); authblk's row of two addresses parted at the space, not at the `\quad` inside the shifts (2302.05182,
+/// int159a "ann@a.edu $" / "$ bob@b.edu" and 2 Warnings); amsart's own `\email`, which reaches the contact's reading
+/// (`math_glyphs_as_printed`) with no line reader (synthetic, int159a "$~ $ann@x.edu"). The first row keeps
+/// `$\sim$`'s glyph and `$_$` as read (1301.1466, 2508.20055).
 #[test]
 fn email_math_shifts_pair_as_tex_pairs_them() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/email_math_shifts_pair_as_tex_pairs_them.tex"
-  );
-  assert_eq!(elements(&convert_clean(tex), "creator"), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Email address: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">$^a$ann@x.edu, $^b$bob@y.edu</text></contact>\n  </creator>",
-    "<creator before=\", \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Email address: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">$^*$bob\u{223c}b@z.edu</text></contact>\n  </creator>",
-    "<creator before=\" and \" role=\"author\">\n    <personname>Carl Cole</personname>\n    <contact name=\"Email address: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">p_r@w.edu</text></contact>\n  </creator>",
-  ]);
+  macro_rules! repro {
+    ($name:literal) => {
+      include_str!(concat!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+        $name,
+        ".tex"
+      ))
+    };
+  }
+  // (a row: its name, the repro, every creator whole and in order; each converts with 0 errors and 0 warnings)
+  let rows: [(&str, &str, &[&str]); 4] = [
+    (
+      "pairs as TeX pairs them",
+      repro!("email_math_shifts_pair_as_tex_pairs_them"),
+      &[
+        "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Email address: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">$^a$ann@x.edu, $^b$bob@y.edu</text></contact>\n  </creator>",
+        "<creator before=\", \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Email address: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">$^*$bob\u{223c}b@z.edu</text></contact>\n  </creator>",
+        "<creator before=\" and \" role=\"author\">\n    <personname>Carl Cole</personname>\n    <contact name=\"Email address: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">p_r@w.edu</text></contact>\n  </creator>",
+      ],
+    ),
+    (
+      "svjour3 spacing formula",
+      repro!("svjour3_institute_spacing_formula_before_address_is_no_text"),
+      &[
+        "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">ann@a.edu</contact>\n  </creator>",
+      ],
+    ),
+    (
+      "authblk spacing formula row",
+      repro!("authblk_affil_address_row_spacing_formula_is_no_separator"),
+      &[
+        "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text fontsize=\"90%\" xml:id=\"id1\">ann@a.edu</text></contact>\n  </creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\"><text fontsize=\"90%\" xml:id=\"id2\">bob@b.edu</text></contact>\n  </creator>",
+      ],
+    ),
+    (
+      "amsart spacing formula",
+      repro!("email_spacing_formula_prints_no_text"),
+      &[
+        "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Email address: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id1\">ann@x.edu</text></contact>\n  </creator>",
+        "<creator before=\" and \" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Email address: \" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">bob@y.edu</text></contact>\n  </creator>",
+      ],
+    ),
+  ];
+  for (name, tex, expected) in rows {
+    let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{name}: {log}"
+    );
+    assert_eq!(elements(&xml, "creator"), expected, "{name}");
+  }
 }
 
 /// CR4b item 3 (review revCR4 finding 2): two unlabelled imsart address blocks after the authors, the first reprinting

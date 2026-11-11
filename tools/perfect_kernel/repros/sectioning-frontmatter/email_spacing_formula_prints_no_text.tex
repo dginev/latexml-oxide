@@ -1,0 +1,22 @@
+% mechanism: a binding's own e-mail command holding a formula of spacing alone (`\email{$~\quad$ann@x.edu}`,
+%   `\email{$\,$bob@y.edu}`) reaches the contact's reading without the e-mail line readers: `\lx@add@email`'s
+%   `math_glyphs_as_printed` reads the formula as glue (`email_lines::spacing_formulas_as_space`, the same rule), none
+%   at the edge of the address's font group; it had kept the glyph-less pair as written ("$~ $ann@x.edu"). The sibling of
+%   the line readers' shape; OXIDIZED_DESIGN_DIVERGENCES #972
+% witness: synthetic (the binding path of 2205.14113's shape; study IV0 "any binding's `\email{$~$a@x}`")
+% oracle:  pdflatex 0 errors: "Email address: ann@x.edu" / "Email address: bob@y.edu"
+% engines: rust int159a: "$~ $ann@x.edu", "$ $bob@y.edu", 0 Warnings
+% expect:  0 errors, 0 warnings; Ann Able e-mail "ann@x.edu", Bob Baker e-mail "bob@y.edu", typewriter, no "$"
+% status:  RED (int159a) -> GREEN (IV1; guard perfect_kernel_batchcr4b::email_math_shifts_pair_as_tex_pairs_them, row
+%   "amsart spacing formula")
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\email{$~\quad$ann@x.edu}
+\author{Bob Baker}
+\email{$\,$bob@y.edu}
+\maketitle
+Body.
+\end{document}

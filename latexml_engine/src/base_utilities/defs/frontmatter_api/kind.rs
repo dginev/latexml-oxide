@@ -90,11 +90,15 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
   let mut prints_else = false;
   for (delimiter, line) in split_tokens_delimited(inner, affil_splits()) {
     let printed = !line.is_empty() && !prints_nothing(&line);
+    // (an address line read as it prints: a formula of spacing alone a space, no text of an address —
+    // `$~\quad~~$ cbray@mines.edu`, 2205.14113; `a@x $\quad$ b@y`, 2302.05182; a line that is no address line
+    // stays as written)
+    let spaced = spacing_formulas_as_space(line.clone());
     // (the first line of a marked entry: the mark that labels it kept, the addresses behind it the entry's)
     if printed
       && first
       && withsup
-      && let Some((mark, rest)) = mark_led_addresses(&line)
+      && let Some((mark, rest)) = mark_led_addresses(&spaced)
       && addresses_of(&rest).is_some()
     {
       kept.push((delimiter, mark));
@@ -104,8 +108,8 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
       continue;
     }
     // (a line a mark leads is no address line: its mark is no letter of an address, `$^2$bob@y.org`)
-    if printed && author_mark_position(&line).is_none() && addresses_of(&line).is_some() {
-      address_lines.push((line, None));
+    if printed && author_mark_position(&line).is_none() && addresses_of(&spaced).is_some() {
+      address_lines.push((spaced, None));
       leading.push(!prints_else);
       first = false;
       continue;

@@ -1,0 +1,23 @@
+% mechanism: a formula printing spacing alone before an address (`$~\quad~~$ ann@a.edu`) is glue, no text of the e-mail:
+%   the e-mail line readers (`email_lines::spacing_formulas_as_space`, at the head of `email_line_calls` and in the
+%   Kind step `kind_entry_addresses`) read it as a space between printed text, none at the line's edge. The Kind step
+%   (`kind.rs` `prints_addresses_only` reads command tokens only) took the line as addresses alone, and with one address
+%   the whole line was the `\lx@add@email` argument, whose Semiverbatim reading kept the glyph-less formula as written
+%   (OXIDIZED_DESIGN_DIVERGENCES #972)
+% witness: 2205.14113 (`\institute{\Letter~~ Connor E. Bray \\ $~\quad~~$ cbray@mines.edu \\[5pt] …}`; study IV0)
+% oracle:  pdflatex (svjour3.cls from 2205.14113, not in TL 2025) 0 errors: the institute "Univ A, Town / ann@a.edu"
+%   (latex.ltx:9411 `\nobreakspace`, :9435 `\quad`: glue, no glyph)
+% engines: rust int159a: Ann's e-mail "$˜ ˜˜$ ann@a.edu" (the source text invented), 0 Warnings; perl: no Kind step,
+%   the line stays in the affiliation, its formula math spacing
+% expect:  0 errors, 0 warnings; Ann Able: affiliation "Univ A, Town", e-mail "ann@a.edu"
+% status:  RED (int159a) -> GREEN (IV1; guard perfect_kernel_batchcr4b::email_math_shifts_pair_as_tex_pairs_them, row
+%   "svjour3 spacing formula")
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\institute{Univ A, Town \\ $~\quad~~$ ann@a.edu}
+\maketitle
+Text.
+\end{document}

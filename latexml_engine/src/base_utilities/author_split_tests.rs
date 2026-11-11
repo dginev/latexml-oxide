@@ -855,6 +855,22 @@ fn math_shifts_pair_left_to_right() {
     math_glyphs_as_printed(&tk(r"$\{a,b\}$@w.org, p$\_$r@w.org")).to_string(),
     tk(r"\{a,b\}@w.org, p\_r@w.org").to_string()
   );
+  // (a formula of spacing alone is glue: a space between printed text, none at an edge — IV1, 2205.14113, 2302.05182)
+  for (spaced, printed) in [
+    (r"$~\quad~~$ a@x.org", r"a@x.org"),
+    (r"a@x.org $\quad$ b@y.org", r"a@x.org b@y.org"),
+    (r"\tt{$\,$a@x.org}", r"\tt{a@x.org}"),
+    (
+      r"$^a$a@x.org$\hspace{1em}$$^b$b@y.org",
+      r"$^a$a@x.org $^b$b@y.org",
+    ),
+  ] {
+    assert_eq!(
+      math_glyphs_as_printed(&tk(spaced)).to_string(),
+      tk(printed).to_string(),
+      "{spaced}"
+    );
+  }
   // (a brace pair after a formula that is not one: `$x$\}$y$` is two formulas round a text brace)
   for kept in [r"$x$\}$y$@w.org", r"$^a$\{$b$@w.org"] {
     assert_eq!(

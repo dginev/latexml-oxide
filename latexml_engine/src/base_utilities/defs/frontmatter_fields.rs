@@ -8,7 +8,10 @@ pub(in crate::base_utilities) use contacts::*;
 mod names;
 pub(in crate::base_utilities) use names::*;
 
-use crate::base_utilities::frontmatter::classify::title_code::title_code_author_definitions;
+use crate::base_utilities::{
+  defs::frontmatter_api::spacing_formulas_as_space,
+  frontmatter::classify::title_code::title_code_author_definitions,
+};
 
 pub(in crate::base_utilities) fn load() -> Result<()> {
   //======================================================================
@@ -973,8 +976,11 @@ pub(in crate::base_utilities) fn address_as_printed(address: &Tokens) -> Tokens 
 /// math font), so the address stays one text and its link whole. The shifts pair left to right, as TeX pairs them: a
 /// pair round a script (`^`, `_`: `$^*$x@y`'s mark), a command of another kind or nothing (`$$`) stays as it is,
 /// whole, and the next pair opens after its closing shift — `$^a$a@x, $^b$b@y` keeps both marks and the text between
-/// them (2508.20055's `ej$_$dresselhaus@berkeley.edu, s$_$g@berkeley.edu`).
+/// them (2508.20055's `ej$_$dresselhaus@berkeley.edu, s$_$g@berkeley.edu`). A pair round spacing alone
+/// ([`spacing_formulas_as_space`]: `$~\quad$`, `$\,$`) is glue, no glyph: a space between printed text, none at an
+/// edge (2205.14113's `$~\quad~~$`).
 pub(in crate::base_utilities) fn math_glyphs_as_printed(address: &Tokens) -> Tokens {
+  let address = spacing_formulas_as_space(address.clone());
   let v = address.unlist_ref();
   let shift = |t: &Token| *t == T_OTHER!("$") || t.get_catcode() == Catcode::MATH;
   let script = |t: &Token| [T_OTHER!("^"), T_OTHER!("_")].contains(t);

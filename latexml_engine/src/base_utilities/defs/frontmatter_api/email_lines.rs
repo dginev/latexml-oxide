@@ -15,11 +15,81 @@ pub(in crate::base_utilities) fn email_line_calls(
   line: Tokens,
   placement: AddressPlacement,
 ) -> Result<Vec<Token>> {
+  let line = spacing_formulas_as_space(line);
   let Some((label, rest)) = email_line_label(&line) else {
     return unlabelled_email_line_calls(line, placement);
   };
   let calls = unlabelled_email_line_calls(rest, placement)?;
   Ok(named_email_calls(calls, &label))
+}
+
+/// Whether a formula's tokens, between its shifts, print spacing alone: spaces, ties and the space commands
+/// ([`leading_spacing_end`]: `$~\quad~~$`, `$\,$`, `$\hspace{1em}$`), no glyph — latex.ltx:9411 `\nobreakspace` and
+/// :9435 `\quad` are glue. A tie counts as read either way: active as written, other as a Semiverbatim argument holds
+/// it (`\lx@add@email`, Perl's `neutralize`). The empty formula (`$$`) is none. Read on the tokens: the line readers
+/// and the contact's reading ([`spacing_formulas_as_space`], `math_glyphs_as_printed`) run before the formula is
+/// digested.
+pub(in crate::base_utilities) fn formula_prints_spacing_alone(inner: &[Token]) -> bool {
+  let mut at = 0;
+  while at < inner.len() {
+    let end = match leading_spacing_end(&inner[at..]) {
+      0 if inner[at] == T_OTHER!("~") => 1,
+      0 => return false,
+      end => end,
+    };
+    at += end;
+  }
+  !inner.is_empty()
+}
+
+/// `line` with each formula that prints spacing alone ([`formula_prints_spacing_alone`]) and the spaces around it one
+/// space between the text around it, none at an edge of the line or of a group (`\lx@address@urlfont{$\,$a@x}`):
+/// glue, as it prints, no text of an address, nor a row's separator inside its shifts. The shifts — math shifts, or
+/// characters as a Semiverbatim argument holds them — pair left to right, as TeX pairs them, and every other formula
+/// stays as written. `$~\quad~~$ cbray@mines.edu` had been read whole as the address, its source text the contact's
+/// (`$˜ ˜˜$ cbray@mines.edu`, 2205.14113); authblk's `a@x $\quad$ b@y` parted at the `\quad` inside the shifts (`a@x
+/// $`, `$ b@y`, 2302.05182). The line readers (`email_line_calls`, the Kind step) and the contact's reading
+/// (`math_glyphs_as_printed`, any binding's `\email{$\,$a@x}`) read the line through it.
+/// OXIDIZED_DESIGN_DIVERGENCES #972.
+pub(in crate::base_utilities) fn spacing_formulas_as_space(line: Tokens) -> Tokens {
+  let v = line.unlist_ref();
+  let shift = |t: &Token| *t == T_OTHER!("$") || t.get_catcode() == Catcode::MATH;
+  if !v.iter().any(shift) {
+    return line;
+  }
+  let mut out: Vec<Token> = Vec::with_capacity(v.len());
+  let mut spaced = false;
+  let mut at = 0;
+  while at < v.len() {
+    if shift(&v[at])
+      && let Some(len) = v[at + 1..].iter().position(shift)
+    {
+      let pair = &v[at..at + len + 2];
+      at += len + 2;
+      if !formula_prints_spacing_alone(&pair[1..=len]) {
+        out.extend_from_slice(pair);
+        continue;
+      }
+      spaced = true;
+      while out.last() == Some(&T_SPACE!()) {
+        out.pop();
+      }
+      while v.get(at) == Some(&T_SPACE!()) {
+        at += 1;
+      }
+      let text_before = out
+        .last()
+        .is_some_and(|t| t.get_catcode() != Catcode::BEGIN);
+      let text_after = v.get(at).is_some_and(|t| t.get_catcode() != Catcode::END);
+      if text_before && text_after {
+        out.push(T_SPACE!());
+      }
+      continue;
+    }
+    out.push(v[at]);
+    at += 1;
+  }
+  if spaced { Tokens::new(out) } else { line }
 }
 
 /// The `\lx@add@email` calls `calls`, each named by `label` (`name={<label>~}`), as an e-mail line's label names its

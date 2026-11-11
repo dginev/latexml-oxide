@@ -1,0 +1,24 @@
+% mechanism: a formula printing spacing alone between two addresses (`ann@a.edu $\quad$ bob@b.edu`) is glue between
+%   them: the e-mail line readers read it as one space (`email_lines::spacing_formulas_as_space`), so the row parts at
+%   the space, not at the `\quad` inside the shifts (`calls::address_row_pieces` had parted it there: "ann@a.edu $",
+%   "$ bob@b.edu"); OXIDIZED_DESIGN_DIVERGENCES #972
+% witness: 2302.05182 (`\affil[$$]{\small i.papastathopoulos@ed.ac.uk $\quad$ …}`; study IV0 r2)
+% oracle:  pdflatex 0 errors: "Ann Able† and Bob Baker† / †Univ A, Town / ann@a.edu bob@b.edu"
+% engines: rust int159a: e-mails "ann@a.edu $" (Ann) and "$ bob@b.edu" (Bob), 2 Warnings (the plain-text e-mail
+%   reading); perl: both `\affil` entries orphaned (label=$$), 2 Warnings
+% expect:  0 errors, 0 warnings; Ann Able: affiliation "Univ A, Town", e-mail "ann@a.edu"; Bob Baker: affiliation
+%   "Univ A, Town", e-mail "bob@b.edu" (each in the line's `\small`)
+% status:  RED (int159a) -> GREEN (IV1; guard perfect_kernel_batchcr4b::email_math_shifts_pair_as_tex_pairs_them, row
+%   "authblk spacing formula row")
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author[$\dagger$]{Ann Able}
+\author[$\dagger$]{Bob Baker}
+\affil[$\dagger$]{Univ A, Town}
+\affil[$$]{\small ann@a.edu $\quad$ bob@b.edu}
+\begin{document}
+\maketitle
+Text.
+\end{document}

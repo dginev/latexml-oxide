@@ -32414,6 +32414,21 @@ so `$\{a,b\}$@w.edu` is the brace list (each address) and `p$\_$r` "p_r". Repro
 `email_math_shifts_pair_as_tex_pairs_them`; guards `perfect_kernel_batchcr4b::email_math_shifts_pair_as_tex_pairs_them`,
 `author_split_tests::math_shifts_pair_left_to_right`. **Left:** `$\dag$` (2604.07356; `\dag` is an `\ifmmode` macro,
 no math primitive) keeps its dollars.
+**IV1 (study IV0): a formula of spacing alone is glue, no text of an address** (Perl: no Kind step, the line stays
+in its affiliation, the formula math spacing). `$~\quad~~$` prints glue only (latex.ltx:9411 `\nobreakspace`, :9435
+`\quad`), but the Kind step (`kind.rs` `prints_addresses_only` reads command tokens only) took 2205.14113's institute
+line `$~\quad~~$ cbray@mines.edu` as addresses alone, and with one address the whole line was the `\lx@add@email`
+argument, whose reading kept the glyph-less pair as written: "$˜ ˜˜$ cbray@mines.edu", invented, 0 Warnings; authblk's
+`\affil[$$]{\small a@x $\quad$ b@y}` (2302.05182) was parted at the `\quad` inside the shifts ("a@x $", "$ b@y").
+`email_lines::spacing_formulas_as_space` reads such a pair (`formula_prints_spacing_alone`: spaces, ties — active, or
+other as a Semiverbatim argument holds them — and the space commands of `leading_spacing_end`; the empty `$$` is none)
+with the spaces around it as one space between printed text, none at an edge of the line or of a group; every other
+formula stays. One rule at three sites: the head of `email_line_calls`, the Kind step's address lines
+(`kind_entry_addresses`, a line that is no address line kept as written), and the head of `math_glyphs_as_printed`
+(any binding's `\email{$\,$a@x}`). A token test: each site runs before the formula is digested. Repros
+`svjour3_institute_spacing_formula_before_address_is_no_text`, `authblk_affil_address_row_spacing_formula_is_no_separator`,
+`email_spacing_formula_prints_no_text`; rows of `perfect_kernel_batchcr4b::email_math_shifts_pair_as_tex_pairs_them`
+and `author_split_tests::math_shifts_pair_left_to_right`.
 
 ### 973. pgfmath reads arrays: a `{…}[i]` primary, text elements, `array`, `dim` (Perl: `Error:pgfparse`, its parser numeric)
 
