@@ -34493,8 +34493,9 @@ a kernel separator whose span is `None` (a macro holding names and the `\and`). 
 `\email`'s argument on its own: the block query leaves a note's separators to the note. Found by the rule-6 scan above
 at P25's base (`T_CS!("\\and")`, `split_tokens(`, `SplitDelim`, `\lx@splitting` in those files). Red on int158a, green
 since: l_aa (both authors one institute "Univ A and Univ B"), lipics ("Uni X and Inst Y"), interact's `\name` (Ann Able
-without her affiliation) and `\affil` (two affiliations for the class's "Univ A and Univ B"). Byte-identical on the
-census papers of the six classes, a 300-paper raw-class sample and stage2. Left: **aistats's `columns`**
+without her affiliation) and `\affil` (two affiliations for the class's "Univ A and Univ B"). Byte-identical (XML and
+E/F/W) against int158a on the 271 census papers of the seven P2-5 classes and a 300-paper raw-class sample, and on the
+174 of stage2's 1,434 converted. Left: **aistats's `columns`**
 (`aistats_sty.rs:108-112`, :571): it parts at the copy's own `\And`, `\AND`, `\ANDD` (read raw, so `Raw` to the query,
 as a document's renewal is; `\ANDD` is no separator of the query's family) — reading the copy's column break by meaning
 needs a rule the query does not have (brief rule 5). eptcs's `cells` (P2-4) cuts at `Kernel` alone; the two are written
