@@ -514,9 +514,12 @@ mod perfect_kernel_batchp21d;
 /// P21e: P21c's paragraph rule scoped to the block's own level — a paragraph in a box's body (a minipage, a `\parbox`)
 /// stays a group (2608.17538, 2402.02104, 2601.03873; OD #993).
 mod perfect_kernel_batchp21e;
-/// P22: Option C P2-2's pins — OmniBus's (inst_support) and aa's `\institute` lists as their split by spelling gives
-/// them today, for the step that hands each list to the reading in one call (OD #993/#995).
+/// P22: Option C P2-2's pins — OmniBus's (inst_support) and aa's `\institute` lists as their split gives them at the
+/// shapes the spelling cuts, kept by P22b's cut by meaning (OD #993/#995).
 mod perfect_kernel_batchp22;
+/// P22b: Option C P2-2 by the binding — OmniBus's and aa's `\institute` lists cut at the kernel's `\and` by meaning too
+/// (`kernel_separators_spelled`, the cut eptcs's cells share), one contact call per piece (OD #995).
+mod perfect_kernel_batchp22b;
 /// P24: Option C P2-4 — eptcs's author block cut where its separators are by meaning (`argument_separators`), not by
 /// spelling (OD #991, #995).
 mod perfect_kernel_batchp24;

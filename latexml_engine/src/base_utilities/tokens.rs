@@ -53,6 +53,21 @@ pub(super) fn paren_closes_ahead(stream: &VecDeque<Token>) -> bool {
   false
 }
 
+/// Does `t` match the single-token delimiter `d` of [`split_tokens`]? Perl: Equals($t, $delim); the Rust port
+/// additionally matches an alias of the delimiter's own definition, so `\AND` (let to `\and`) matches `\and`. Only its
+/// own: a delimiter `\let` to another command (`\and` disabled to `\relax` by a `\maketitle`) would split at every alias
+/// of that command — `\protect`, a disabled `\thanks` — in a later `\author` (59e; DIVERGENCES #36).
+pub fn delimiter_token_matches(d: &Token, t: &Token) -> bool {
+  *d == *t
+    || (t.get_catcode() == Catcode::CS && d.get_catcode() == Catcode::CS && {
+      let meaning_t = lookup_definition(t).ok().flatten();
+      let meaning_d = lookup_definition(d).ok().flatten();
+      meaning_t.is_some()
+        && meaning_t == meaning_d
+        && meaning_d.is_some_and(|own| *own.get_cs() == *d)
+    })
+}
+
 /// Perl: SplitTokens($tokens, @delims) — Base_Utility.pool.ltxml (PR #2767).
 /// Each of `delims` is a Token, OR Tokens to match a sequence.
 /// Returns a list of Tokens for the sub-sequences, with leading/trailing
@@ -93,20 +108,7 @@ pub fn split_tokens_delimited(
       for delim in &delims {
         match delim {
           SplitDelim::Token(d) => {
-            // Perl: Equals($t, $delim); the Rust port additionally matches an alias of
-            // the delimiter's own definition, so \AND (let to \and) matches \and. Only
-            // its own: a delimiter `\let` to another command (`\and` disabled to `\relax`
-            // by a `\maketitle`) would split at every alias of that command — `\protect`,
-            // a disabled `\thanks` — in a later `\author` (59e; DIVERGENCES #36).
-            if *d == t
-              || (t.get_catcode() == Catcode::CS && d.get_catcode() == Catcode::CS && {
-                let meaning_t = lookup_definition(&t).ok().flatten();
-                let meaning_d = lookup_definition(d).ok().flatten();
-                meaning_t.is_some()
-                  && meaning_t == meaning_d
-                  && meaning_d.is_some_and(|own| *own.get_cs() == *d)
-              })
-            {
+            if delimiter_token_matches(d, &t) {
               matched = true;
               delimiter = vec![t];
               break;
@@ -240,6 +242,88 @@ pub fn split_tokens_delimited(
     items.push((before, Tokens::new(toks)));
   }
   items
+}
+
+/// (Moved from `eptcs_cls.rs` with `kernel_separator_runs`, which eptcs's cells and the `\institute` lists share: Option C
+/// P2-2, OXIDIZED_DESIGN_DIVERGENCES #995.)
+/// Where the units of `tokens`' top level start, and its end ([`tokens_unit_end`]: a group, an environment, else one token).
+pub fn tokens_top_level_units(tokens: &[Token]) -> Vec<usize> {
+  let mut starts = Vec::new();
+  let mut at = 0;
+  while at < tokens.len() {
+    starts.push(at);
+    at = tokens_unit_end(tokens, at);
+  }
+  starts.push(tokens.len());
+  starts
+}
+
+/// Where the unit at `at` ends: a group, an environment (`\begin{x}…\end{x}`), else the one token.
+pub fn tokens_unit_end(tokens: &[Token], at: usize) -> usize {
+  let t = tokens[at];
+  if t.get_catcode() == Catcode::BEGIN {
+    return tokens_read_argument(tokens, at).1;
+  }
+  if t == T_CS!("\\begin") {
+    let (name, _) = tokens_read_argument(tokens, at + 1);
+    if let Some((_, end)) = tokens_environment_end(tokens, at, &Tokens::new(name).to_string()) {
+      return end;
+    }
+  }
+  at + 1
+}
+
+/// The argument of a macro at `at`: a brace group's content, else the one token there; and where it ends.
+pub fn tokens_read_argument(tokens: &[Token], at: usize) -> (Vec<Token>, usize) {
+  let mut start = at;
+  while start < tokens.len() && tokens[start].get_catcode() == Catcode::SPACE {
+    start += 1;
+  }
+  if start >= tokens.len() {
+    return (Vec::new(), start);
+  }
+  if tokens[start].get_catcode() != Catcode::BEGIN {
+    return (vec![tokens[start]], start + 1);
+  }
+  let mut depth = 0usize;
+  for (end, t) in tokens.iter().enumerate().skip(start) {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => {
+        depth -= 1;
+        if depth == 0 {
+          return (tokens[start + 1..end].to_vec(), end + 1);
+        }
+      },
+      _ => {},
+    }
+  }
+  (tokens[start + 1..].to_vec(), tokens.len())
+}
+
+/// Where the environment begun at `start` ends: the place of its `\end` and the place after `\end{name}`.
+pub fn tokens_environment_end(cell: &[Token], start: usize, name: &str) -> Option<(usize, usize)> {
+  let mut depth = 0usize;
+  let mut at = start;
+  while at < cell.len() {
+    if cell[at] == T_CS!("\\begin") || cell[at] == T_CS!("\\end") {
+      let (argument, next) = tokens_read_argument(cell, at + 1);
+      if Tokens::new(argument).to_string() == name {
+        if cell[at] == T_CS!("\\begin") {
+          depth += 1;
+        } else {
+          depth -= 1;
+          if depth == 0 {
+            return Some((at, next));
+          }
+        }
+      }
+      at = next;
+    } else {
+      at += 1;
+    }
+  }
+  None
 }
 
 /// Converts tokens to a string in the fashion of \message and others

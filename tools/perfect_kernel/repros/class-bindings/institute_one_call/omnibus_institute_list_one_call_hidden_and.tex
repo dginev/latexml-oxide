@@ -1,7 +1,8 @@
 % mechanism: inst_support_sty.rs `\institute` (OmniBus: `nosuchclass`) splits its list by spelling at `\and`/`\And`
-%   (`\lx@splitting`), each piece a `labelseq=affiliation` contact call; the pin of today's output for Option C P2-2,
-%   which hands the whole list to the reading in one call (P22 stopped short of it: report 2026-11-11_P22)
-%   — an `\and` held in a document macro, which no spelling shows: the reading cuts the one piece, the emitter writes its
+%   and at the kernel's `\and` by meaning (`\lx@splitting@by@meaning`, Option C P2-2, P22b), each piece a
+%   `labelseq=affiliation` contact call; a pin of the output (P22, report 2026-11-11_P22), which P22b keeps
+%   — an `\and` held in a document macro with the institutes, which no spelling shows and no cut by its tokens parts
+%   (`ArgSeparator::span` none): the reading cuts the one piece, the emitter writes its
 %   entries by their text (2 Warnings)
 % witness: synthetic
 % oracle:  pdflatex (TL 2025, -no-shell-escape, `article` for the missing class, with `\providecommand` of `\institute`,
@@ -10,7 +11,7 @@
 % engines: Perl 0.8.8 splits by spelling as well (inst_support.sty.ltxml:36-38, which aa_support.sty.ltxml:47 loads);
 %   int158a (2ff10b7ff9) as expected below
 % expect:  0 errors, 3 warnings (the missing class binding; two entries written by their text); Ann Able: Univ A; Bob Baker: Univ B
-% status:  GREEN (int158a; guard perfect_kernel_batchp22::an_institute_list_split_by_spelling_today)
+% status:  GREEN (int158a, P22b; guard perfect_kernel_batchp22::an_institute_list_split_by_spelling_today)
 % preload: ar5iv.sty
 \documentclass{nosuchclass}
 \newcommand\insts{Univ A \and Univ B}

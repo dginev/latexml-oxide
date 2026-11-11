@@ -76,4 +76,5 @@ pub use resolver::{Input as FmInput, Resolved as FmResolved, resolve as fm_resol
 // (for the bindings, which ask what an argument's separators mean: Option C P2, OXIDIZED_DESIGN_DIVERGENCES #995)
 pub use separators::{
   ArgSeparator as FmArgSeparator, SepMeaning as FmSepMeaning, argument_separators,
+  kernel_separator_runs, kernel_separators_spelled,
 };

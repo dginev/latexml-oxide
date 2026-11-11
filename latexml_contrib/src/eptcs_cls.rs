@@ -20,7 +20,10 @@
 //! environment of the paper's own that opens one (2409.15014's `{authors}{5}`, its `\institute` and `\email` lines
 //! spanning the columns) is read the same way: a column's names its cell, a full row's cell a line under its column,
 //! any other line under the table every name's. A block with none of these is the kernel's.
-use latexml_package::prelude::*;
+use latexml_package::prelude::{
+  tokens_environment_end as environment_end, tokens_read_argument as read_argument,
+  tokens_unit_end as unit_end, *,
+};
 
 const EPTCS: crate::shipped_class::RawRead = crate::shipped_class::RawRead {
   shipped: true,
@@ -86,12 +89,13 @@ fn eptcs_structured(body: &Tokens) -> Result<Option<Vec<Cell>>> {
 /// (`argument_separators`, OXIDIZED_DESIGN_DIVERGENCES #995; a separator of another meaning — a class's or the
 /// document's renewed `\and`, amsmath's `\And` — prints no column, trap T8). A separator is cut only where its own tokens
 /// are whole units of the block's top level (no group or environment holds them, [`unit_end`]) and print nothing else;
-/// one a macro holds together with names stays in its cell, which the reading cuts at its `Sep(And)` (#993). Where the
+/// one a macro holds together with names stays in its cell, which the reading cuts at its `Sep(And)` (#993): the runs of
+/// `kernel_separator_runs`, the cut the institute lists of inst_support and aa share (P2-2). Where the
 /// query reads nothing (`None`: inside a rehearsal, over its allowance), the cut is by spelling, at `\and`, `\And`,
 /// `\AND` and an alias of `\and`'s own definition (`split_tokens`), as before P2-4. The spaces at a cell's ends are its
 /// readers' to drop ([`leading_table`], [`cell_items`]).
 fn cells(body: &Tokens) -> Result<Vec<Cell>> {
-  let Some(separators) = argument_separators(body)? else {
+  let Some(runs) = kernel_separator_runs(body)? else {
     return Ok(
       split_tokens_delimited(body.clone(), and_delims())
         .into_iter()
@@ -103,18 +107,10 @@ fn cells(body: &Tokens) -> Result<Vec<Cell>> {
     );
   };
   let tokens = body.unlist_ref();
-  let units = top_level_units(tokens);
   let mut cells = Vec::new();
   let mut separator = Vec::new();
   let mut from = 0;
-  for (start, end) in separators
-    .iter()
-    .filter(|found| found.meaning == FmSepMeaning::Kernel)
-    .filter_map(|found| found.span)
-  {
-    if start < from || !units.contains(&start) || !units.contains(&end) {
-      continue;
-    }
+  for (start, end) in runs {
     cells.push(Cell {
       separator: std::mem::replace(&mut separator, tokens[start..end].to_vec()),
       tokens:    tokens[from..start].to_vec(),
@@ -126,18 +122,6 @@ fn cells(body: &Tokens) -> Result<Vec<Cell>> {
     tokens: tokens[from..].to_vec(),
   });
   Ok(cells)
-}
-
-/// Where the units of `tokens`' top level start, and its end ([`unit_end`]: a group, an environment, else one token).
-fn top_level_units(tokens: &[Token]) -> Vec<usize> {
-  let mut starts = Vec::new();
-  let mut at = 0;
-  while at < tokens.len() {
-    starts.push(at);
-    at = unit_end(tokens, at);
-  }
-  starts.push(tokens.len());
-  starts
 }
 
 /// The block as the class prints it, for the reading: each cell a column of names and the lines under them (an
@@ -367,31 +351,6 @@ fn leading_table(cell: &[Token]) -> Option<Table> {
   })
 }
 
-/// Where the environment begun at `start` ends: the place of its `\end` and the place after `\end{name}`.
-fn environment_end(cell: &[Token], start: usize, name: &str) -> Option<(usize, usize)> {
-  let mut depth = 0usize;
-  let mut at = start;
-  while at < cell.len() {
-    if cell[at] == T_CS!("\\begin") || cell[at] == T_CS!("\\end") {
-      let (argument, next) = read_argument(cell, at + 1);
-      if Tokens::new(argument).to_string() == name {
-        if cell[at] == T_CS!("\\begin") {
-          depth += 1;
-        } else {
-          depth -= 1;
-          if depth == 0 {
-            return Some((at, next));
-          }
-        }
-      }
-      at = next;
-    } else {
-      at += 1;
-    }
-  }
-  None
-}
-
 /// A table's rows: split at its `\\`, each `\institute`/`\email` a row of its own, each row's cells at its `&`.
 fn table_rows(body: &[Token]) -> Vec<Row> {
   let mut rows = Vec::new();
@@ -507,49 +466,6 @@ fn read_table(block: &mut Block, table: Table) {
       Item::Text { line, .. } => block.shared.push(line),
     }
   }
-}
-
-/// Where the unit at `at` ends: a group, an environment (`\begin{x}…\end{x}`), else the one token.
-fn unit_end(tokens: &[Token], at: usize) -> usize {
-  let t = tokens[at];
-  if t.get_catcode() == Catcode::BEGIN {
-    return read_argument(tokens, at).1;
-  }
-  if t == T_CS!("\\begin") {
-    let (name, _) = read_argument(tokens, at + 1);
-    if let Some((_, end)) = environment_end(tokens, at, &Tokens::new(name).to_string()) {
-      return end;
-    }
-  }
-  at + 1
-}
-
-/// The argument of a macro at `at`: a brace group's content, else the one token there; and where it ends.
-fn read_argument(tokens: &[Token], at: usize) -> (Vec<Token>, usize) {
-  let mut start = at;
-  while start < tokens.len() && tokens[start].get_catcode() == Catcode::SPACE {
-    start += 1;
-  }
-  if start >= tokens.len() {
-    return (Vec::new(), start);
-  }
-  if tokens[start].get_catcode() != Catcode::BEGIN {
-    return (vec![tokens[start]], start + 1);
-  }
-  let mut depth = 0usize;
-  for (end, t) in tokens.iter().enumerate().skip(start) {
-    match t.get_catcode() {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END => {
-        depth -= 1;
-        if depth == 0 {
-          return (tokens[start + 1..end].to_vec(), end + 1);
-        }
-      },
-      _ => {},
-    }
-  }
-  (tokens[start + 1..].to_vec(), tokens.len())
 }
 
 /// The spacing a cell's line may hold beside its text: no text of its own.

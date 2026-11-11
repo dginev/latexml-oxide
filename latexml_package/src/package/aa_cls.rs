@@ -73,9 +73,16 @@ LoadDefinitions!({
   // B3). Several institutes split as inst_support's (OD #53); an empty `\institute{}` adds none.
   DefMacro!("\\institute{}",
     "\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@aa@institute@dispatch{#1}");
+  // (Several pieces are also cut at the kernel's `\and` by meaning where the spelling misses it — a macro holding only
+  // the separator, a `\let` copy where the document renewed `\and` — one contact call each, a piece holding an `\email`
+  // too, and each such cut counts: `kernel_separators_spelled`, the cut eptcs's cells share, Option C P2-2,
+  // OXIDIZED_DESIGN_DIVERGENCES #995. aa.cls's count misses them, but its title-time `\and` (:866) prints each a
+  // numbered institute.)
   DefMacro!("\\lx@aa@institute@dispatch{}", sub[(body)] {
+    let delims = [SplitDelim::Token(T_CS!("\\and")), SplitDelim::Token(T_CS!("\\And"))];
+    let (cut, written) = kernel_separators_spelled(body.clone(), &delims)?;
     let mut depth = 0i32;
-    let mut pieces = 1usize;
+    let mut pieces = 1 + written;
     for t in body.unlist_ref() {
       match t.get_catcode() {
         Catcode::BEGIN => depth += 1,
@@ -85,12 +92,10 @@ LoadDefinitions!({
       }
     }
     let ink = body.unlist_ref().iter().any(|t| t.get_catcode() != Catcode::SPACE);
-    let target = if pieces == 1 && ink {
-      T_CS!("\\lx@aa@institute@sole")
-    } else {
-      T_CS!("\\lx@aa@institute@split")
-    };
-    Ok(Invocation!(target, vec![Some(body)]))
+    if pieces == 1 && ink {
+      return Ok(Invocation!(T_CS!("\\lx@aa@institute@sole"), vec![Some(body)]));
+    }
+    Ok(Invocation!(T_CS!("\\lx@aa@institute@split"), vec![Some(cut)]))
   });
   DefMacro!("\\lx@aa@institute@split{}",
     "\\lx@splitting{\\lx@add@contact[role=affiliation,labelseq=affiliation]}{\\and\\And}{#1}");

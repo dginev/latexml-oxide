@@ -1,12 +1,13 @@
-//! Guards for batch P22 (Option C step P2-2, the institute `\and` splits, OD #993/#995): pins of today's output, written
-//! before the step. OmniBus's `\institute` (inst_support_sty.rs, which an unknown class falls back to) and aa's
-//! (aa_cls.rs, `\lx@aa@institute@dispatch` → `\lx@aa@institute@split`) still split their list by spelling at `\and`/`\And`
-//! (`\lx@splitting`), each piece a `labelseq=affiliation` contact call. P22 found that one call the reading cuts and the
-//! emitter writes (`emit::labelseq_call_cut`) does not yet give these outputs (report 2026-11-11_P22): the next step
-//! must keep every row, or name the row it improves. Each repro compiles clean with pdflatex (TL 2025; aa with the aa.cls
-//! of 2405.18257, OmniBus's `nosuchclass` as `article` with `\institute`, `\inst` and `\email` provided for it only); each
-//! row asserts every creator's name and contacts, in order, every contact element whole, and the exact Error and Warning
-//! counts.
+//! Guards for batch P22 (Option C step P2-2, the institute `\and` splits, OD #993/#995): pins of the output at the
+//! shapes the spelling split already cut, written before the step. OmniBus's `\institute` (inst_support_sty.rs, which
+//! an unknown class falls back to) and aa's (aa_cls.rs, `\lx@aa@institute@dispatch` → `\lx@aa@institute@split`) split
+//! their list at `\and`/`\And` by spelling, each piece a `labelseq=affiliation` contact call; P22b cuts it at the
+//! kernel's `\and` by meaning as well (`perfect_kernel_batchp22b`), which leaves every row here as it was. P22 found that
+//! one call the reading cuts and the emitter writes (`emit::labelseq_call_cut`) does not give these outputs (report
+//! 2026-11-11_P22), hence the cut in the binding. Each repro compiles clean with pdflatex (TL 2025; aa with the aa.cls
+//! of 2405.18257, OmniBus's `nosuchclass` as `article` with `\institute`, `\inst` and `\email` provided for it only);
+//! each row asserts every creator's name and contacts, in order, every contact element whole, and the exact Error and
+//! Warning counts.
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -24,7 +25,7 @@ macro_rules! repro {
 }
 
 /// Every `<contact …>…</contact>` element of `xml`, whole, in document order.
-fn contact_elements(xml: &str) -> Vec<String> {
+pub(super) fn contact_elements(xml: &str) -> Vec<String> {
   xml
     .match_indices("<contact ")
     .map(|(start, _)| {

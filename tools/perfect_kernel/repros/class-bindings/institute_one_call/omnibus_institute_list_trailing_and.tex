@@ -1,6 +1,6 @@
 % mechanism: inst_support_sty.rs `\institute` (OmniBus: `nosuchclass`) splits its list by spelling at `\and`/`\And`
-%   (`\lx@splitting`), each piece a `labelseq=affiliation` contact call; the pin of today's output for Option C P2-2,
-%   which hands the whole list to the reading in one call (P22 stopped short of it: report 2026-11-11_P22)
+%   and at the kernel's `\and` by meaning (`\lx@splitting@by@meaning`, Option C P2-2, P22b), each piece a
+%   `labelseq=affiliation` contact call; a pin of the output (P22, report 2026-11-11_P22), which P22b keeps
 %   — an `\and` ending the list leaves an empty last piece, which adds nothing
 % witness: synthetic
 % oracle:  pdflatex (TL 2025, -no-shell-escape, `article` for the missing class, with `\providecommand` of `\institute`,
@@ -10,7 +10,7 @@
 %   int158a (2ff10b7ff9) as expected below
 % expect:  0 errors, 1 warning (the missing class binding); Ann Able: Univ A; Bob Baker none, his `\inst{2}`
 %   answered by no institute printed in his name ("Bob Baker 2")
-% status:  GREEN (int158a; guard perfect_kernel_batchp22::an_institute_list_split_by_spelling_today)
+% status:  GREEN (int158a, P22b; guard perfect_kernel_batchp22::an_institute_list_split_by_spelling_today)
 % preload: ar5iv.sty
 \documentclass{nosuchclass}
 

@@ -34469,10 +34469,11 @@ it (`own_run`: an environment closed right before the separator — an `\end{tab
   (an item the reading places apart, which a whole piece would print again) — `\institute{Univ X \email{a@x} \and Univ
   Y}` is written by text, each author's institute (one counted Warning each), the e-mail to its owner.
 
-**Who calls them** (P2-4: eptcs's cells, the query, `eptcs_cls.rs` `cells`). **Who will call them** (the P2P batches, by its rule-6 scan: `lx@splitting`, `split_tokens(`, `SplitDelim::`, literal
+**Who calls them** (P2-4: eptcs's cells, the query, `eptcs_cls.rs` `cells`; P2-2: OmniBus's and aa's `\institute`, the
+query through `kernel_separators_spelled`, below). **Who will call them** (the P2P batches, by its rule-6 scan: `lx@splitting`, `split_tokens(`, `SplitDelim::`, literal
 `\and`/`\And`/`\AND` in `latexml_package/src`, `latexml_contrib/src`, `frontmatter_stores.rs`, `base_utilities/defs`,
 `frontmatter/classify`): the emitter's cut — P2-2 (S2: `inst_support_sty.rs:58`, `aa_cls.rs:93` and its gate :75-80,
-`sv_support_sty.rs:69`), P2-3 (llncs `:189`, gate :208), P2-6 (the numbered stores, `frontmatter_stores.rs:3148-3151`);
+`sv_support_sty.rs:69`; P22b took the first two through the query instead, below), P2-3 (llncs `:189`, gate :208), P2-6 (the numbered stores, `frontmatter_stores.rs:3148-3151`);
 the query — P2-2 (aa :80), P2-5 (`l_aa_cls.rs:108`, `latexml_contrib/src/ecai_cls.rs:56`), P2-6
 (`frontmatter_stores.rs` :3216, :3225 `kernel_and_list`, :3239, :3378, :7483, :7697), P2-7 (`authblk_sty.rs` :125,
 :211). Not enumerated by that scan (P2P's list): the engine beyond those directories (observer, insert, place);
@@ -34481,20 +34482,44 @@ line_marks.rs:16, cut.rs, kind.rs: P4); `classify/separators.rs:212-224`, `name_
 `old_reader/space_parted.rs:205`, ijcai.rs (P3/P4); splits on `\\` alone or commas; `\def\and{…}` meanings (argument
 passing, stays). The scan is heuristic (one macro level, no class-file wrappers).
 
-**P2-2 (P22): not landed; no route changed.** OmniBus's (`inst_support_sty.rs`, which webofc and ieeetj load too) and
-aa's `\institute` still split by spelling. Tried: each list handed to the API in one `labelseq=affiliation` call, aa's
-gate counting `Kernel` separators (`None`: the written `\and`s), the emitter's cut widened to pieces holding a contact,
-mark or note, each piece keyed by the reading's entry text (its own contacts and leading marks out) and cut between
-its two `\and`s as the split cut it. Against the split on 2,903 papers (aa 563, sv 406, OmniBus 200, raw-class 300,
-stage2 1,434): 52 changed (aa 49, webofc 3; none in OmniBus, raw-class or sv), 12 worse. Cause: the emitter's
-state keyed by the call's ledger index treats one cut call's pieces as one entry — `separate`/`by_pieces`/
-`written_again` (a piece's `\email` its own item, placed after every piece) and `in_perl_order` (the pieces of one
-call sorted as one): 33 papers' contacts reordered (0803.4304, 2503.10831); the address take-out's `EntryCut` (the
-whole call cut and written for each piece: 1501.07092, 2312.03835); a creator gained or lost (1010.3154, 2602.02910,
-2309.12272) —, and a call keeps the spaces at its ends the split trimmed (2008.08518, webofc 2111.04743, 2406.15355). Not tried: sv_support's split, whose pieces are no contact call (each piece's `\at` is parsed as it
-expands, `\lx@sv@institute@`, so one call needs that reading moved first), and llncs's (P2-3), whose pieces set their
-own labels from their `\inst` (`\lx@affiliation@withinst`) and hold `\email`s as aa's do. Pins `perfect_kernel_batchp22::an_institute_list_split_by_spelling_today` (repros
-`class-bindings/institute_one_call/`).
+**P2-2 (P22b): landed by the binding's cut, not the emitter's.** OmniBus's `\institute` (`inst_support_sty.rs`, which
+webofc and ieeetj load too) and aa's (`aa_cls.rs` `\lx@aa@institute@dispatch`) cut their list at the kernel's `\and` by
+meaning as well as at `\and`/`\And` by spelling, and queue one `\lx@add@contact[role=affiliation,labelseq=affiliation]`
+call per piece, so the reading and the emitter see the calls they saw before. The one shared helper is
+`observer/separators.rs` `kernel_separator_runs` (re-exported with `kernel_separators_spelled`): the own runs
+(`ArgSeparator::span`) of the separators the query reads `Kernel`, each whole units of the argument's top level (no
+group or environment holds them), `None` where the query reads nothing; eptcs's `cells` (P2-4) now calls it instead
+of its own copy (its unit scanners moved unchanged to `base_utilities/tokens.rs`, beside `split_tokens`:
+`tokens_top_level_units`, `tokens_unit_end`, `tokens_read_argument`, `tokens_environment_end`).
+`kernel_separators_spelled(arg, delims)` writes each run the spelling misses — none of its tokens a delimiter by
+`split_tokens`' match (`tokens.rs` `delimiter_token_matches`, factored out) — as the first delimiter, and the spelling
+split then runs unchanged (its trimming, its empty last piece dropped, its protection of braces, math, parentheses and
+environments). What it adds: a macro holding only `\and`, and a `\let` copy of the kernel's `\and` made before the
+document renews `\and` (the spelling's alias match reads the renewed meaning). T8: a separator the spelling cut keeps
+its cut whatever the query says it means (`Raw`: a document's renewed `\and`, an undefined `\And`; `Binding`: amsmath's
+`\And`), since today's output depends on it and aa.cls's title-time `\and` (:866) parts its institutes there whatever the
+preamble made of it; a macro holding institutes and the separator together has no span and stays one piece, which the
+reading cuts (pins rows 3 and 6). Routes changed (rule 6):
+- `inst_support_sty.rs` `\institute`: `\lx@splitting` → `\lx@splitting@by@meaning` (`base_utilities/defs/general.rs`,
+  `\lx@splitting`'s expansion shared as `splitting`);
+- `aa_cls.rs` `\lx@aa@institute@dispatch`: the gate counts each added cut on top of the written top-level `\and`s (a
+  macro-held `\and` gives two pieces, not the sole institute; aa.cls's own count misses it, its title-time `\and` numbers
+  it), and `\lx@aa@institute@split` gets the cut list;
+- `eptcs_cls.rs` `cells`: the shared helper, no change of output.
+
+Not routed, open: sv_support (`sv_support_sty.rs:71`; each piece's `\at` is parsed as it expands, `\lx@sv@institute@`,
+so that reading moves first) and llncs (`llncs_cls.rs:189`, gate :208; P2-3, its pieces' `\inst` set their labels,
+`\lx@affiliation@withinst`). Byte-identical against the spelling split (`2ff10b7ff9`, `kit/conv.sh`) on 3,006 papers
+(aa 563, sv 406, OmniBus 200, webofc 30, eptcs 73, raw-class 300, stage2 1,434; 6 with no main file), E/F/W equal on
+each; 0909.4443's one difference is a run-to-run math-id variance of the base (both binaries give one md5 on a rerun).
+Settled dead-end (P22): one `labelseq` call per `\institute`, cut and written per piece by the emitter
+(`emit::labelseq_call_cut`), changed 52 of 2,903 papers, 12 worse (1501.07092, 2312.03835, 1010.3154, 2602.02910,
+2309.12272; 0803.4304 reordered): the emitter's state keyed by the call's ledger index (`separate`/`by_pieces`/
+`written_again`, `in_perl_order`, the address take-out's `EntryCut`) treats one cut call's pieces as one entry. Guards
+`perfect_kernel_batchp22b::an_institute_list_cut_at_the_kernel_and_by_meaning` (repros
+`class-bindings/institute_one_call/{omnibus,aa}_institute_list_macro_held_separator.tex`,
+`omnibus_institute_list_let_copy_after_renewed_and.tex`) and the pins
+`perfect_kernel_batchp22::an_institute_list_split_by_spelling_today`, unchanged.
 
 Guards `perfect_kernel_batchp20::{the_separator_query_reads_the_kernel_meanings,
 the_separator_query_reads_a_class_meaning_as_raw, the_separator_query_reads_a_binding_meaning,

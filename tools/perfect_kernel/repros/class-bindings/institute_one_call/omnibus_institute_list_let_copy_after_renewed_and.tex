@@ -1,0 +1,27 @@
+% mechanism: inst_support_sty.rs `\institute` (OmniBus: `nosuchclass`) cuts its list by spelling at `\and`/`\And` and at
+%   the kernel's `\and` by meaning (`\lx@splitting@by@meaning`, `kernel_separators_spelled`; Option C P2-2, P22b, OD #995)
+%   — a `\let` copy of the kernel's `\and` made before the document renews `\and` (the spelling's alias match reads the
+%   renewed meaning and misses the copy; the query reads it `kernel`), and the renewed `\and` itself, `raw` to the query,
+%   which keeps the spelling's cut (trap T8: what a renewed `\and` prints is the class's; aa.cls renews it at title time,
+%   :866): three pieces, one call each
+% witness: synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape, `article` for the missing class, with `\providecommand` of `\institute`,
+%   `\inst`, `\email` added for it only, OD #408) 0 errors: prints the names only
+% engines: Perl 0.8.8 splits by spelling (inst_support.sty.ltxml:36-38) and misses the copy;
+%   int158a (2ff10b7ff9): two pieces, the first written whole for Ann Able and Bob Baker ("Univ A, Town and Univ B,
+%   City"), 0 errors, 2 warnings
+% expect:  0 errors, 1 warning (the missing class binding); Ann Able: Univ A, Town, e-mail ann@a.org; Bob Baker: Univ B,
+%   City; Carl Cole: Univ C, Village
+% status:  GREEN (P22b; guard perfect_kernel_batchp22b::an_institute_list_cut_at_the_kernel_and_by_meaning)
+% preload: ar5iv.sty
+\documentclass{nosuchclass}
+\let\myand\and
+\renewcommand\and{\unskip, }
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \myand Bob Baker\inst{2} \myand Carl Cole\inst{3}}
+\institute{Univ A, Town\\ \email{ann@a.org} \myand Univ B, City \and Univ C, Village}
+
+\maketitle
+Text.
+\end{document}

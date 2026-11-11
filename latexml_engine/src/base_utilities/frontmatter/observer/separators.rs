@@ -233,3 +233,78 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   });
   Ok(())
 }
+
+/// The own runs ([`ArgSeparator::span`]) of `arg`'s separators that mean the kernel's `\and` ([`SepMeaning::Kernel`]):
+/// written, held in a macro of the document's that holds only the separator, or a `\let` copy, as the query reads them
+/// by meaning ([`argument_separators`]), each a run of whole units of `arg`'s top level (no group or environment holds
+/// it, [`tokens_unit_end`]), in order and apart; `None` where the query reads nothing (no rehearsal made, over its allowance, a
+/// group left open), for which a caller cuts by spelling. A separator of another meaning — a class's, a binding's or the
+/// document's renewed `\and`, amsmath's `\And` — is no run here (trap T8: what it prints is its caller's to say), nor
+/// one a macro holds together with ink (no span: the reading cuts that one at its `Sep(And)`, #993). The cut two bindings'
+/// routes share (Option C P2, OXIDIZED_DESIGN_DIVERGENCES #995): eptcs's cells (P2-4, `eptcs_cls.rs`) and the
+/// `\institute` lists of inst_support and aa ([`kernel_separators_spelled`], P2-2).
+pub fn kernel_separator_runs(arg: &Tokens) -> Result<Option<Vec<(usize, usize)>>> {
+  let Some(separators) = argument_separators(arg)? else {
+    return Ok(None);
+  };
+  let tokens = arg.unlist_ref();
+  let units = tokens_top_level_units(tokens);
+  let mut runs = Vec::new();
+  let mut from = 0;
+  for (start, end) in separators
+    .iter()
+    .filter(|found| found.meaning == SepMeaning::Kernel)
+    .filter_map(|found| found.span)
+  {
+    if start < from || !units.contains(&start) || !units.contains(&end) {
+      continue;
+    }
+    runs.push((start, end));
+    from = end;
+  }
+  Ok(Some(runs))
+}
+
+/// `arg` with each [`kernel_separator_runs`] run its spelling split misses — none of its tokens a delimiter of `delims`
+/// (`split_tokens`' match, [`delimiter_token_matches`]) — written as the first of them, so the spelling split cuts at the
+/// kernel separators by meaning too (a macro holding only `\and`, a `\let` copy of the kernel's `\and` where the
+/// document has renewed `\and`), and the number of runs so written. The spelling's own cuts stay, whatever their token
+/// means (a document's renewed `\and`, an undefined `\And`: the cut the split made before, which aa.cls's own title-time
+/// `\and` keeps, aa.cls:866), as do its protections (braces, math, parentheses, environments) and its trimming. Where the
+/// query reads nothing, `arg` unchanged: the spelling split alone. Option C P2-2 (OXIDIZED_DESIGN_DIVERGENCES #995): the
+/// `\institute` lists of inst_support (`\lx@splitting@by@meaning`) and aa (`aa_cls.rs` `\lx@aa@institute@dispatch`),
+/// one contact call per piece.
+pub fn kernel_separators_spelled(arg: Tokens, delims: &[SplitDelim]) -> Result<(Tokens, usize)> {
+  let Some(sentinel) = delims.iter().find_map(|d| match d {
+    SplitDelim::Token(t) => Some(*t),
+    SplitDelim::Tokens(_) => None,
+  }) else {
+    return Ok((arg, 0));
+  };
+  let Some(runs) = kernel_separator_runs(&arg)? else {
+    return Ok((arg, 0));
+  };
+  let spelled = |t: &Token| {
+    delims
+      .iter()
+      .any(|d| matches!(d, SplitDelim::Token(d) if delimiter_token_matches(d, t)))
+  };
+  let tokens = arg.unlist_ref();
+  let mut out = Vec::with_capacity(tokens.len());
+  let mut from = 0;
+  let mut written = 0;
+  for (start, end) in runs {
+    if tokens[start..end].iter().any(spelled) {
+      continue;
+    }
+    out.extend_from_slice(&tokens[from..start]);
+    out.push(sentinel);
+    from = end;
+    written += 1;
+  }
+  if written == 0 {
+    return Ok((arg, 0));
+  }
+  out.extend_from_slice(&tokens[from..]);
+  Ok((Tokens::new(out), written))
+}
