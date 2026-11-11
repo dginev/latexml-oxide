@@ -195,10 +195,11 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
     entry.extend(optioned_email_calls(calls, kinded));
   }
   for (label, line) in footnotes {
-    let calls = email_line_calls(line, AddressPlacement::Inner)?;
+    // (the note's label, then the line's own: `\footnote{Corresponding author e-mail: Email:zz@x.org}`, revGL1 B1)
+    let (label, line) = joined_line_label(label, line);
     let calls = match label {
-      Some(label) => named_email_calls(calls, &label),
-      None => calls,
+      Some(label) => named_email_calls(email_line_calls(line, AddressPlacement::Inner)?, &label),
+      None => email_line_calls(line, AddressPlacement::Inner)?,
     };
     entry.extend(optioned_email_calls(calls, &kinded));
   }

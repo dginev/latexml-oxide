@@ -126,12 +126,39 @@ pub(in crate::base_utilities) fn split_email_label(line: &Tokens) -> (Option<Tok
 }
 
 /// A line's leading e-mail label ([`split_email_label`]) where it names the addresses behind it — the rest a list of
-/// addresses the whole line is not — and that rest (`email: a@x, b@y`; `email_line_calls`).
+/// addresses, and the whole line either no list or the same addresses read through its label (the glued label,
+/// `Email:zz@x.org`, the list `[zz@x.org]` as [`email_addresses`] reads it: the label is still the contacts' name,
+/// not part of an address — hep-ph9606235, astro-ph0001190, hep-ph0411269, 2206.00543) — and that rest
+/// (`email: a@x, b@y`; `email_line_calls`). A second label the rest leads with joins it ([`joined_line_label`]).
 pub(in crate::base_utilities) fn email_line_label(line: &Tokens) -> Option<(Tokens, Tokens)> {
   let (label, rest) = split_email_label(line);
-  label
-    .filter(|_| email_addresses(line).is_none() && email_addresses(&rest).is_some())
-    .map(|label| (label, rest))
+  let label = label.filter(|_| {
+    email_addresses(&rest)
+      .is_some_and(|read| email_addresses(line).is_none_or(|whole| whole == read))
+  })?;
+  let (label, rest) = joined_line_label(Some(label), rest);
+  label.map(|label| (label, rest))
+}
+
+/// A line's label as the line's contacts take it: `label`, the one its reader split off before the line (an e-mail
+/// label, a note's `Corresponding author e-mail:`), then the line's own e-mail label ([`email_line_label`]), a space
+/// between, so a label glued to the address behind a spaced one (`E-mail: Email:zz@x.org`) names the contacts with
+/// every printed label word in printed order ("E-mail: Email: ", as the spaced `E-mail: Email: zz@x.org` gives; review
+/// revGL1 B1, where the second label's name replaced the first) — and the rest of the line.
+pub(in crate::base_utilities) fn joined_line_label(
+  label: Option<Tokens>,
+  line: Tokens,
+) -> (Option<Tokens>, Tokens) {
+  match (label, email_line_label(&line)) {
+    (Some(first), Some((second, rest))) => {
+      let mut both = first.unlist();
+      both.push(T_SPACE!());
+      both.extend(second.unlist());
+      (Some(Tokens::new(both)), rest)
+    },
+    (None, Some((second, rest))) => (Some(second), rest),
+    (label, None) => (label, line),
+  }
 }
 
 /// The name of the contacts of an entry's line led by a label of its own — an e-mail label ([`email_line_label`]) or

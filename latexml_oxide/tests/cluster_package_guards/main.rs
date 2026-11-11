@@ -451,6 +451,8 @@ mod perfect_kernel_batchfs1;
 mod perfect_kernel_batchfx3;
 mod perfect_kernel_batchfx4;
 mod perfect_kernel_batchfx5;
+/// GL1: an e-mail label glued to its address names the line's contact, the address its content; OD #956.
+mod perfect_kernel_batchgl1;
 mod perfect_kernel_batchimg1;
 mod perfect_kernel_batchint19;
 mod perfect_kernel_batchint20;
