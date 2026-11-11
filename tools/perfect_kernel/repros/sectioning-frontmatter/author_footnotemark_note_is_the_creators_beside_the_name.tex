@@ -1,0 +1,21 @@
+% mechanism: `\footnotemark[<n>]` after an author's name makes its `ltx:note` where it stands, inside the
+%   `ltx:personname`; the `\footnotetext[<n>]` after `\maketitle` fills it (relocate_footnote, Perl's relocateFootnote,
+%   latex_constructs.pool.ltxml:498). The note is the creator's, beside the name, mark and tags kept, as a `\thanks`
+%   note sits (queue_digest.rs `lift_notes_beside`, OD #1001; RT1's F17)
+% witness: 2104.12292 (spconf `\name{… Xin Wang$^\dagger$\footnotemark[1], …}`); synthetic on article
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ Bob Baker†", footnotes "1 Note A." "2 Note B."
+% engines: int159a2 (`latexml_oxide.int159a2-rel`): 0 errors, 0 warnings; `<personname>Ann Able<note mark="*"
+%   role="footnote">…Note A.</note></personname>` (the name reads "Ann Able * * footnote * Note A."); perl the same
+%   (`<personname>Bob Baker<note mark="1" role="footnote">…</note></personname>`, main-session probe)
+% expect:  0 errors, 0 warnings; `<personname>Ann Able</personname>` then `<note mark="*" role="footnote">` holding
+%   "Note A."; Bob Baker likewise with "†" and "Note B."
+% status:  RED (int159a2) -> GREEN (FN1)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\footnotemark[1] \and Bob Baker\footnotemark[2]}
+\begin{document}
+\maketitle
+\footnotetext[1]{Note A.}\footnotetext[2]{Note B.}
+Text.
+\end{document}

@@ -92,6 +92,65 @@ pub(in crate::base_utilities) fn clean_trailing_break(
   Ok(())
 }
 
+/// A note an author's name or contact holds is the creator's, beside it (Rust-only, OXIDIZED_DESIGN_DIVERGENCES #1001):
+/// the `ltx:note` a `\footnotemark[<n>]` makes where it stands — and `relocate_footnote` fills with its `\footnotetext`
+/// (latex_constructs.pool.ltxml:498) — leaves the `ltx:personname` (or the creator's `ltx:contact`) for the creator,
+/// right after it, its `mark` and tags kept, as a `\thanks` note sits beside the name; a wrapper the move leaves
+/// empty (`Bob Baker{\small\footnotemark[2]}`) goes with it. Perl keeps the note in the name, so a reader of the name
+/// got "Bob Baker * * footnote * Note B." (`Bob Baker\footnotemark[1]` and a `\footnotetext[1]{Note B.}` after
+/// `\maketitle`, on every class route: 2104.12292; RT1's F17). A note nested in another note stays in it.
+pub(in crate::base_utilities) fn lift_notes_beside(
+  document: &mut Document,
+  node: &Node,
+) -> Result<()> {
+  let Some(parent) = node.get_parent() else {
+    return Ok(());
+  };
+  // (a creator, not the `role="pending"` holder of annotations still to be placed by label: a note lifted there has no
+  // label and was orphaned; the clone placed in the creator closes again and lifts it there — revtex's
+  // `\affiliation{\footnotemark[1]Univ A}`, 1607.07280)
+  if !with(document::get_node_qname(&parent), |qname| {
+    qname == "ltx:creator"
+  }) || parent.get_attribute("role").as_deref() == Some("pending")
+  {
+    return Ok(());
+  }
+  let mut anchor = node.clone();
+  for mut note in document.findnodes(".//ltx:note[not(ancestor::ltx:note)]", Some(node)) {
+    let mut holder = note.get_parent();
+    let mut before = note.get_prev_sibling();
+    note.unlink();
+    join_texts_after(before)?;
+    anchor.add_next_sibling(&mut note)?;
+    anchor = note;
+    // (a wrapper of the mark alone, left empty, goes too)
+    while let Some(wrapper) = holder.take() {
+      if wrapper == *node || !wrapper.get_child_nodes().is_empty() {
+        break;
+      }
+      holder = wrapper.get_parent();
+      before = wrapper.get_prev_sibling();
+      document.remove_node(wrapper);
+      join_texts_after(before)?;
+    }
+  }
+  Ok(())
+}
+
+/// The text a lifted note or wrapper stood between is one text again (`Kent-Andre Mardal\footnotemark[1]
+/// \footnotemark[2]`, 1612.03574), so the name's end is cleaned whole, as with one note.
+fn join_texts_after(before: Option<Node>) -> Result<()> {
+  if let Some(mut text) = before
+    && text.get_type() == Some(NodeType::TextNode)
+    && let Some(mut next) = text.get_next_sibling()
+    && next.get_type() == Some(NodeType::TextNode)
+  {
+    text.set_content(&(text.get_content() + &next.get_content()))?;
+    next.unlink();
+  }
+  Ok(())
+}
+
 /// Unwrap a `font="bold"` that wraps an ENTIRE personname.
 ///
 /// SURPASS-Perl (html_feedback#61, OXIDIZED_DESIGN_DIVERGENCES #122). Some classes

@@ -202,6 +202,8 @@ fn a_letter_spaced_name_is_one_name() {
 /// `\footnotemark[1]` the kernel's marks printed "∗" — his `[b]` requests his affiliation, and his mark prints "1"
 /// (FIDELITY_CHARTER §4 R1; 1108.0201, review rev97e B1); a mark typed by hand still answers a key, the place the class
 /// prints when keys are in order (`Cy Cole$^{a}$`, 0907.5014). 97e r1 gave Bob Baker the line.
+/// FN1 (OD #1001; the user's ruling 2026-11-11): the note the name held is the creator's, right after
+/// `</personname>`, so the name reads without its tags; pin updated (the note's move only).
 #[test]
 fn an_elsarticle_key_answers_no_footnote_mark() {
   let tex = repro!("elsarticle_key_labelled_address_is_no_mark.tex");
@@ -209,11 +211,8 @@ fn an_elsarticle_key_answers_no_footnote_mark() {
     tex,
     Some(&[
       &["Ann Able", "address=Univ A, Town A"],
-      // (the footnote mark's tags read in the name, "1" — the kernel's marks printed "∗")
-      &[
-        "Bob Baker 1 footnote 1 1 footnote 1",
-        "address=Univ B, Town B",
-      ],
+      // (the footnote mark "1" — the kernel's marks printed "∗" — beside the name, FN1)
+      &["Bob Baker", "address=Univ B, Town B"],
       &["Cy Cole a", "address=Univ A, Town A"],
       &["address=current address"],
     ]),

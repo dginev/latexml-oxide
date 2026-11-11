@@ -36,14 +36,14 @@ fn run(tex: &str) -> (String, String) {
 /// A note's footnote step is its creator's, where it prints: `=2` wrote the notes apart, after every creator, so Bob
 /// Baker's `\addtocounter{footnote}{-2}\footnotemark` ran at the counter's 0 (5 x "Counter too large", the mark empty);
 /// now his mark is the "*" pdflatex prints, as off's.
+/// FN1 (OD #1001; the user's ruling 2026-11-11): the note the name held is the creator's, right after
+/// `</personname>`, so the name reads without its tags; the notes and marks are asserted kept below; pin updated (the
+/// note's move only).
 #[test]
 fn a_notes_footnote_step_runs_where_it_prints() {
   let (log, xml) = run(repro!("ne2_thanks_addtocounter_order"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&xml), [
-    row(&["Ann Able"]),
-    row(&["Bob Baker * * footnote *"])
-  ]);
+  assert_eq!(creators(&xml), [row(&["Ann Able"]), row(&["Bob Baker"])]);
   let notes: Vec<&str> = xml
     .match_indices("<note ")
     .map(|(at, _)| &xml[at..at + xml[at..].find('>').expect("a note's tag")])
@@ -119,13 +119,12 @@ fn representing_a_collaboration_is_its_contact() {
 /// block is written as Perl's `\lx@add@authors` splits it at its `\and`s (CR7, OD #988: it was one whole-block creator,
 /// Perl's tabular branch), its pieces digested in order: Ann †, Carl *, every note kept, the counted Warning. Off reads it per name, as pdflatex prints the marks. (A move a mark's box covers,
 /// `\addtocounter{footnote}{-2}\footnotemark`, is carried: `a_notes_footnote_step_runs_where_it_prints`.)
+/// FN1 (OD #1001; the user's ruling 2026-11-11): the note the name held is the creator's, right after
+/// `</personname>`, so the name reads without its tags; the notes and marks are asserted kept below; pin updated (the
+/// note's move only).
 #[test]
 fn a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it() {
-  let expected = vec![
-    row(&["Ann Able † † footnote †"]),
-    row(&["Bob Baker"]),
-    row(&["Carl Cole * * footnote *"]),
-  ];
+  let expected = vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])];
   let warnings = 1;
   let (log, xml) = run(repro!("ne2b_counter_moved_between_notes"));
   assert_eq!(
@@ -160,14 +159,14 @@ fn a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it() {
 /// A note before every name steps the counter before the first creator's name, where LaTeX reads it: `=2` stepped it
 /// after Ann Able's personname, so her `\footnotemark` printed * where pdflatex prints † (review revNE2 A2). Distinct
 /// from `a_notes_footnote_step_runs_where_it_prints`: the step before a name, not after one.
+/// FN1 (OD #1001; the user's ruling 2026-11-11): the note the name held is the creator's, right after
+/// `</personname>`, so the name reads without its tags; the notes and marks are asserted kept below; pin updated (the
+/// note's move only).
 #[test]
 fn a_note_before_every_name_steps_before_it() {
   let (log, xml) = run(repro!("ne2b_note_before_every_name"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(creators(&xml), [
-    row(&["Ann Able † † footnote †"]),
-    row(&["Bob Baker"])
-  ]);
+  assert_eq!(creators(&xml), [row(&["Ann Able"]), row(&["Bob Baker"])]);
 }
 
 /// The marks' notes of `xml` (a `\footnotemark`'s, an `\endnotemark`'s), each its opening tag, in document order.
@@ -186,42 +185,34 @@ fn footnotemarks(xml: &str) -> Vec<&str> {
 /// Citti\thanks{...}\footnotemark[1]`, review revNE2r2 Q2; 1703.08733's
 /// `\protect\endnotemark[1]$^,$\protect\endnotemark[2]`). Distinct from `a_notes_footnote_step_runs_where_it_prints`:
 /// the note's step inside the name's tokens, between its text and its mark.
+/// FN1 (OD #1001; the user's ruling 2026-11-11): the note the name held is the creator's, right after
+/// `</personname>`, so the name reads without its tags; the notes and marks are asserted kept below; pin updated (the
+/// note's move only).
 #[test]
 fn a_mark_after_its_names_note_stays_with_it() {
   let mark = |m: &str, n: &str| format!(r#"<note mark="{m}" role="footnotemark" xml:id="{n}""#);
   for (tex, expected, marks) in [
     (
       repro!("ne2c_mark_after_note"),
-      vec![
-        row(&["Ann Able † † footnote †"]),
-        row(&["Bob Baker ‡ ‡ footnote ‡"]),
-      ],
+      vec![row(&["Ann Able"]), row(&["Bob Baker"])],
       vec![mark("†", "footnote2"), mark("‡", "footnote3")],
     ),
     (
       repro!("ne2c_mark_after_note_spaced"),
-      vec![
-        row(&["Ann Able † † footnote †"]),
-        row(&["Bob Baker"]),
-        row(&["Carl Cole § § footnote §"]),
-      ],
+      vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
       vec![mark("†", "footnote2"), mark("§", "footnote4")],
     ),
     (
       repro!("ne2c_mark_after_note_numbered"),
-      vec![
-        row(&["Ann Able * * footnote *"]),
-        row(&["Bob Baker * * footnote *"]),
-        row(&["Carl Cole"]),
-      ],
+      vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Carl Cole"])],
       vec![mark("*", "footnotex1"), mark("*", "footnotex2")],
     ),
     (
       repro!("ne2c_mark_after_footnote_glued"),
       vec![
-        row(&["Ann Able † † footnote †"]),
-        row(&["Bob Baker * * footnote *", "note=Univ Y."]),
-        row(&["Carl Cole § § footnote §"]),
+        row(&["Ann Able"]),
+        row(&["Bob Baker", "note=Univ Y."]),
+        row(&["Carl Cole"]),
       ],
       vec![
         mark("†", "footnote2"),
@@ -232,8 +223,9 @@ fn a_mark_after_its_names_note_stays_with_it() {
     (
       repro!("ne2c_mark_after_math_comma"),
       vec![
-        row(&["Ann Able 1 1 endnote 1"]),
-        row(&["Bob Baker 1 1 endnote 1 , 2 2 endnote 2"]),
+        row(&["Ann Able"]),
+        // (the endnote marks beside the name too; the `$^,$` printed between them is left at the name's end)
+        row(&["Bob Baker ,"]),
       ],
       ["1", "2", "3"]
         .iter()
@@ -257,11 +249,11 @@ fn a_mark_after_its_names_note_stays_with_it() {
 /// Ann †, Bob ‡, the note kept, the counted Warning (review revNE2r2 Q2: never a silent loss). Off reads Ann's † as the
 /// mark of an affiliation line of hers. Distinct from `a_counter_move_no_name_carries_writes_the_block_as_perl_splits_it`: a mark, not
 /// a counter move, that the reading has no place for.
+/// FN1 (OD #1001; the user's ruling 2026-11-11, which accepts this shape): a block written whole holds its notes
+/// after the joint name, each with its mark, so the name reads without their tags; pin updated (the notes' move only).
 #[test]
 fn a_mark_on_no_name_writes_the_block_whole() {
-  let expected = vec![row(&[
-    "Ann Able † † footnote † and Bob Baker ‡ ‡ footnote ‡",
-  ])];
+  let expected = vec![row(&["Ann Able and Bob Baker"])];
   let warnings = 1;
   let (log, xml) = run(repro!("ne2c_mark_on_no_name_writes_the_block_whole"));
   assert_eq!(
@@ -294,6 +286,8 @@ fn a_mark_on_no_name_writes_the_block_whole() {
 /// naming them (user ruling 2026-11-09). A block that also drops a bare `\footnotemark` (which steps the counter: the next
 /// mark would print one symbol short; 1111.1979) is still written whole. Distinct from
 /// `a_mark_on_no_name_writes_the_block_whole`: the dropped mark's step decides, the same check's other branch.
+/// FN1 (OD #1001; the user's ruling 2026-11-11, which accepts this shape): a block written whole holds its notes
+/// after the joint name, each with its mark, so the name reads without their tags; pin updated (the notes' move only).
 #[test]
 fn a_given_mark_on_no_name_keeps_the_creators() {
   let names = |carl: &str| {
@@ -325,7 +319,7 @@ fn a_given_mark_on_no_name_keeps_the_creators() {
 
   // (a bare `\footnotemark` dropped too: the block written whole, every mark kept, its Warning)
   let expected = vec![row(&[
-    "Ann Able, 1 Bob Baker, 1 * * footnote * Carl Cole, 2 † † footnote † Dan Dory 2 ‡ ‡ footnote ‡ 1 Univ A 2 Univ B",
+    "Ann Able, 1 Bob Baker, 1 Carl Cole, 2 Dan Dory 2 1 Univ A 2 Univ B",
   ])];
   let (log, xml) = run(repro!("ne2d_given_and_fresh_mark_dropped"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");

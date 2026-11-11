@@ -1,0 +1,20 @@
+% mechanism: two authors share one `\footnotemark[1]` and one `\footnotetext[1]`: relocate_footnote (Perl's
+%   relocateFootnote, latex_constructs.pool.ltxml:498-504, every mark of the print) appends the text to each mark, so
+%   the one footnote the PDF prints is written twice; the frontmatter reading does the same by design
+%   (resolver/post.rs `answer_note_texts`, 1405.4582). A pairing rule, not FN1's placement rule
+% witness: synthetic (1405.4582's `Seo\footnotemark[3] \and Zhang\footnotemark[3]` is the shape)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ Bob Baker∗", one footnote "1 Equal contribution."
+% engines: FN1 (`latexml_oxide.FN1-rel`): 0 errors, 0 warnings; each creator a `<note mark="*" role="footnote">`
+%   holding "Equal contribution." (beside the name); int159a2 and perl the same notes inside the names
+% expect:  0 errors, 0 warnings; "Equal contribution." written once, each creator's "*" mark kept (open: which
+%   creator holds the text, and whether the other's mark is a `role="footnotemark"` note)
+% status:  RED (FN1)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\footnotemark[1] \and Bob Baker\footnotemark[1]}
+\begin{document}
+\maketitle
+\footnotetext[1]{Equal contribution.}
+Text.
+\end{document}

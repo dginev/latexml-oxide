@@ -7,9 +7,11 @@
 %   0 errors: "Ann Able†1", "1 Univ X", footnote "† Note A."
 % engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning ("writes a footnote mark of its author block on
 %   no name and no item; the block is written whole"); creator "Ann Able 1 footnote 1 1 footnote 1 Note A. 1"
-%   with a note "1 footnote 1 1 footnote 1 Note A." and Univ X; perl not run
+%   with a note "1 footnote 1 1 footnote 1 Note A." and Univ X; perl not run. FN1 (`latexml_oxide.FN1-rel`, OD
+%   #1001): 0 errors, 1 warning (the same); the note is the creator's, beside the name `Ann Able<sup>1</sup>`: still
+%   red on the warning (the block written whole)
 % expect:  0 errors, 0 warnings; creator Ann Able (Univ X) with the note "Note A."; no mark text in the name
-% status:  RED (int158a; RR1 gap 5b)
+% status:  RED (int158a; RR1 gap 5b; FN1: the block written whole left)
 % preload: ar5iv.sty
 \documentclass{ptephy}
 \begin{document}

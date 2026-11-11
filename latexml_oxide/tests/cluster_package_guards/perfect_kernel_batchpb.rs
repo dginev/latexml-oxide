@@ -43,6 +43,8 @@ fn creator_elements(xml: &str) -> Vec<String> {
 /// argument, so pdflatex prints one line "Ann Able∗, Bob Baker†, Carl Cole‡". The definition decline's split cuts the
 /// names line at the first `\\` (the kernel's comma cut of a names line only, OD #52): Bob and Carl are in no creator's
 /// names, and int155a0 lost Carl (counted). Written whole, as before the split: one creator holding every name and note.
+/// FN1 (OD #1001; the user's ruling 2026-11-11, which accepts this shape): a block written whole holds its notes
+/// after the joint name, each with its mark, so the name reads without their tags; pin updated (the notes' move only).
 #[test]
 fn a_split_losing_a_name_keeps_the_block_whole() {
   let (log, xml) = run(repro!("pb_split_loses_name"));
@@ -54,7 +56,7 @@ fn a_split_losing_a_name_keeps_the_block_whole() {
   assert_eq!(
     creator_elements(&xml),
     [
-      "<creator role=\"author\"><personname>Ann Able, Bob Baker, Carl Cole <break/><note mark=\"*\" role=\"footnotemark\" xml:id=\"footnotex1\"><tags><tag>*</tag><tag role=\"refnum\">*</tag><tag role=\"typerefnum\">footnote *</tag></tags></note><note mark=\"†\" role=\"footnotemark\" xml:id=\"footnotex2\"><tags><tag>†</tag><tag role=\"refnum\">†</tag><tag role=\"typerefnum\">footnote †</tag></tags></note> Univ X <break/><note mark=\"‡\" role=\"footnotemark\" xml:id=\"footnotex3\"><tags><tag>‡</tag><tag role=\"refnum\">‡</tag><tag role=\"typerefnum\">footnote ‡</tag></tags></note> Univ Y</personname></creator>"
+      "<creator role=\"author\"><personname>Ann Able, Bob Baker, Carl Cole <break/> Univ X <break/> Univ Y</personname><note mark=\"*\" role=\"footnotemark\" xml:id=\"footnotex1\"><tags><tag>*</tag><tag role=\"refnum\">*</tag><tag role=\"typerefnum\">footnote *</tag></tags></note><note mark=\"†\" role=\"footnotemark\" xml:id=\"footnotex2\"><tags><tag>†</tag><tag role=\"refnum\">†</tag><tag role=\"typerefnum\">footnote †</tag></tags></note><note mark=\"‡\" role=\"footnotemark\" xml:id=\"footnotex3\"><tags><tag>‡</tag><tag role=\"refnum\">‡</tag><tag role=\"typerefnum\">footnote ‡</tag></tags></note></creator>"
     ],
     "{xml}"
   );
