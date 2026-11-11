@@ -10,8 +10,8 @@
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: one column "Alice A", "Inst X und Bob B", "Inst Y"
 % engines: int159a0 (`ce9a5dc6b6`): 0 errors, 0 warnings; the check's print (`--debug=frontmatter`) "A Title Alice A
 %   Inst XBob B Inst Y", no "und"; creators Alice A (Inst X), Bob B (Inst Y); perl not run
-% expect:  0 errors, 0 warnings; the print "A Title Alice A Inst X und Bob B Inst Y"; creators Alice A (Inst X), Bob B
-%   (Inst Y)
+% expect:  0 errors, 0 warnings; the print "A Title ||||||Alice A||Inst X und Bob B||Inst Y||||" (`|` a seam, FX25b's
+%   tabular adding the cells' seams); creators Alice A (Inst X), Bob B (Inst Y)
 % status:  GREEN (FX25)
 % preload: ar5iv.sty
 \documentclass{article}

@@ -2,6 +2,15 @@
 //! `=2` does not trust a block's events when the block's rehearsal left a group open
 //! (`rehearsal::Rehearsal::Done::left_open`): the words of its content's text (`ledger::content_text`) the events lack
 //! are counted, a possible loss (`resolver::placed::content_check`).
+//!
+//! Each row's Warning count is exact. Since FX25b it includes, in 14 of the 16 juggle rows, the title-page check's
+//! `Warning:frontmatter:unclaimed` for the juggle's lost words. The check's stand-in for article.cls's `\@maketitle`
+//! now runs `\@author` inside article.cls:246-248's tabular, which the juggle's `\end{tabular}` closes and its
+//! `\begin{tabular}` reopens, so the print holds the words after it as pdflatex sets them (each repro's oracle line:
+//! "Dept" printed). Before, the juggle's `\end{tabular}` met no open tabular and the print stopped there. The content
+//! check counts the same words, so one loss is counted twice; that double count is RED,
+//! `check_and_content_check_count_one_loss_twice_red.tex`. The bare-group and the line-break-opening rows are
+//! unchanged.
 
 use latexml::util::test::{error_count, warning_count};
 
@@ -36,7 +45,7 @@ fn an_open_group_rehearsals_words_are_counted() {
     (
       "a tie between",
       repro!("author_raw_tabular_juggle_counted"),
-      1,
+      2,
       "Dept",
       vec![vec!["A One".to_string()]],
     ),
@@ -98,14 +107,14 @@ fn an_open_group_rehearsals_word_matching() {
     (
       "accented word",
       repro!("author_raw_tabular_juggle_accented_word"),
-      1,
+      2,
       "Dept",
       vec![vec!["A Müller".to_string()]],
     ),
     (
       "an accent opening a word",
       repro!("author_raw_tabular_juggle_accent_opens_word"),
-      1,
+      2,
       "Dept",
       vec![vec![
         "A One".to_string(),
@@ -115,7 +124,7 @@ fn an_open_group_rehearsals_word_matching() {
     (
       "a one-letter accent command opening a word",
       repro!("author_raw_tabular_juggle_accent_command_opens_word"),
-      1,
+      2,
       "Dept",
       vec![vec![
         "A One".to_string(),
@@ -125,7 +134,7 @@ fn an_open_group_rehearsals_word_matching() {
     (
       "a line break's star and optional argument, a tabular's own call",
       repro!("author_raw_tabular_juggle_break_optional_prints_nothing"),
-      2,
+      3,
       "Lab",
       vec![vec![
         "A One".to_string(),
@@ -136,7 +145,7 @@ fn an_open_group_rehearsals_word_matching() {
       // (a column spec's `@{…}` prints its text, its letters and a `p{…}` width nothing: review revI3 finding 1)
       "a column spec's placed text",
       repro!("author_raw_tabular_juggle_spec_at_text_prints"),
-      3,
+      4,
       "and Lab",
       vec![vec![
         "A One Dept".to_string(),
@@ -147,7 +156,7 @@ fn an_open_group_rehearsals_word_matching() {
       // (array's `>{…}` prints in each cell, inside a `*{n}{…}` too, its count nothing: the spec's recursion)
       "array's cell text inside a repeated spec",
       repro!("author_raw_tabular_juggle_array_spec_text_prints"),
-      1,
+      2,
       "Dept Inst",
       vec![vec!["A One".to_string()]],
     ),
@@ -155,7 +164,7 @@ fn an_open_group_rehearsals_word_matching() {
       // (a letter `@` under `\makeatletter` is read by its code, as `\@mkpream`'s `\if`: review revI4 finding 2)
       "a letter-catcode spec character",
       repro!("author_raw_tabular_juggle_spec_letter_at_prints"),
-      1,
+      2,
       "Dept Inst",
       vec![vec!["A One".to_string()]],
     ),
@@ -172,14 +181,14 @@ fn an_open_group_rehearsals_word_matching() {
     (
       "dotless i",
       repro!("author_raw_tabular_juggle_dotless_i"),
-      1,
+      2,
       "Dept",
       vec![vec!["A One".to_string(), "affiliation=Física".to_string()]],
     ),
     (
       "control symbol parts",
       repro!("author_raw_tabular_juggle_control_symbol_parts"),
-      1,
+      2,
       "Univ",
       vec![vec!["A One".to_string()], vec![
         "Brasília Naïve Pîle Smith".to_string(),
@@ -188,7 +197,7 @@ fn an_open_group_rehearsals_word_matching() {
     (
       "plain word, no dotless allowance",
       repro!("author_raw_tabular_juggle_plain_word_exact"),
-      1,
+      2,
       "Dept Lu",
       vec![vec![
         "Wei Liu".to_string(),
@@ -198,7 +207,7 @@ fn an_open_group_rehearsals_word_matching() {
     (
       "plain word, no base letters",
       repro!("author_raw_tabular_juggle_plain_word_unaccented"),
-      1,
+      2,
       "Dept Muller",
       vec![vec![
         "A Müller".to_string(),
@@ -208,7 +217,7 @@ fn an_open_group_rehearsals_word_matching() {
     (
       "the lost word named, not the printed one",
       repro!("author_raw_tabular_juggle_lost_beside_printed"),
-      1,
+      2,
       "Dept Lan",
       vec![vec![
         "Lian Wu".to_string(),
@@ -218,7 +227,7 @@ fn an_open_group_rehearsals_word_matching() {
     (
       "the plain word lost beside the dotless one",
       repro!("author_raw_tabular_juggle_lost_beside_dotless"),
-      1,
+      2,
       "Dept Fisica",
       vec![vec!["A One".to_string(), "affiliation=Física".to_string()]],
     ),

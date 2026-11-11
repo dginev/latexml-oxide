@@ -1,9 +1,13 @@
-//! Guards for FX25: the title-page check's run of article.cls's title page (sect05.rs `title_page_print_tokens`, its
-//! stand-in for article.cls's `\@maketitle`) runs `\@author` with `\and` as the document has it, where it let `\and` to
-//! `\relax`, which leaves no material: the words on either side of an `\and` written with no space before it ran into
-//! one in the print the check reads (`ink_word_text`, "Inst XBob"), and a loss beside it read as one unknown word, the
-//! class's own text, uncounted (RR1 gap 24, 2511.15315). Each guard pins the check's print itself
-//! (`--debug=frontmatter`'s "FRONT the title page prints:"), which no change to what the output holds moves.
+//! Guards for FX25 and FX25b: the title-page check's run of article.cls's title page (sect05.rs
+//! `title_page_print_tokens`, its stand-in for article.cls's `\@maketitle`, TL 2025 article.cls:236-251) runs `\@author`
+//! inside `\begin{tabular}[t]{c}…\end{tabular}` as article.cls:246-248 does, with `\and` as the document has it. It let
+//! `\and` to `\relax`, which leaves no material: the words on either side of an `\and` written with no space before it
+//! ran into one in the print the check reads (`ink_word_text`, "Inst XBob"), and a loss beside it read as one unknown
+//! word, the class's own text, uncounted (RR1 gap 24, 2511.15315). FX25 ran `\@author` outside the tabular, so a
+//! document's copy of latex.ltx's column break opened a tabular nobody closed and the print lost what followed
+//! (1409.7028, 2103.04211; FX25b). Each guard pins the check's print itself (`--debug=frontmatter`'s "FRONT the title
+//! page prints:", `|` a seam), which no change to what the output holds moves. FX25b moved each FX25 pin's seams only:
+//! the tabular's cells add seams around the author block, every word stays as it was.
 use std::process::Command;
 
 use super::{
@@ -63,7 +67,7 @@ fn the_check_print_ends_words_at_a_kernel_and() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(
     print,
-    "A Title Alice A Inst X Bob B Inst Y Carol C Inst Z Dan D  Eve E Inst V  ||||Inst W||"
+    "A Title ||||||Alice A||Inst X Bob B||Inst Y Carol C||Inst Z Dan D  Eve E||Inst V||||  ||||Inst W||"
   );
   assert_eq!(check_lines(&log), Vec::<&str>::new());
   assert_eq!(creators(&xml), [
@@ -85,7 +89,7 @@ fn the_check_print_ends_words_at_a_kernel_and() {
 fn the_check_print_keeps_a_class_and_word() {
   let (log, print, xml) = converted("check_print_keeps_a_class_and_word");
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(print, "A Title Alice A Inst X und Bob B Inst Y");
+  assert_eq!(print, "A Title ||||||Alice A||Inst X und Bob B||Inst Y||||");
   assert_eq!(check_lines(&log), Vec::<&str>::new());
   assert_eq!(creators(&xml), [
     vec!["Alice A", "affiliation=Inst X"],
@@ -100,7 +104,7 @@ fn the_check_print_keeps_a_class_and_word() {
 #[test]
 fn a_loss_beside_an_appended_and_is_held_or_counted() {
   let (log, print, xml) = converted("article_coauthor_appended_to_author_is_lost_silently_red");
-  assert_eq!(print, "A Title Alice A Inst X Bob B Inst Y");
+  assert_eq!(print, "A Title ||||||Alice A||Inst X Bob B||Inst Y||||");
   let lost = !creators(&xml).iter().any(|creator| creator[0] == "Bob B");
   assert_eq!(
     (error_count(&log), warning_count(&log)),
@@ -113,5 +117,42 @@ fn a_loss_beside_an_appended_and_is_held_or_counted() {
     "{log}"
   );
 }
+
+/// A document's `\and` copying latex.ltx's column break (`\end{tabular}\hskip 1em \@plus.17fil\begin{tabular}[t]{c}`),
+/// appended to `\@author` with a note and followed by a date: the stand-in's tabular is closed and reopened by it, so the
+/// print keeps the appended column, the date and the note, as pdflatex sets them; the column's loss (RR1 gap 24) is
+/// counted by one Warning of all its words. On FX25 the print stopped at "Bob Brown" (the opened tabular never closed)
+/// and "lunar institute moon note" went uncounted; on the base (int159a0) it read "Polar LabBob", an Info `class_text`.
+/// Witnesses 1409.7028, 2103.04211. Distinct path: an `\and` that ends and begins the tabular around `\@author`.
+#[test]
+fn the_check_print_keeps_columns_after_a_document_column_and() {
+  let (log, print, xml) = converted("check_print_keeps_columns_after_a_document_column_and");
+  assert_eq!(
+    print,
+    "A Title ||||||Alice Able||Polar Lab|||| ||||||Bob Brown||Lunar Institute |||| Some Day ||||Moon note||"
+  );
+  let lost = !creators(&xml)
+    .iter()
+    .any(|creator| creator[0] == "Bob Brown");
+  assert_eq!(
+    (error_count(&log), warning_count(&log)),
+    (0, usize::from(lost)),
+    "{log}"
+  );
+  assert_eq!(
+    check_lines(&log),
+    if lost { vec![LOST_BROWN] } else { vec![] },
+    "{log}"
+  );
+  if lost {
+    assert_eq!(creators(&xml), [vec![
+      "Alice Able",
+      "affiliation=Polar Lab"
+    ]]);
+  }
+  assert_eq!(xml.matches(">Some Day</date>").count(), 1, "{xml}");
+}
+
+const LOST_BROWN: &str = "Warning:frontmatter:unclaimed The title page prints 6 word(s) of the document's that its output does not hold: bob brown lunar institute moon note";
 
 const LOST_BOB: &str = "Warning:frontmatter:unclaimed The title page prints 1 word(s) of the document's that its output does not hold: bob";

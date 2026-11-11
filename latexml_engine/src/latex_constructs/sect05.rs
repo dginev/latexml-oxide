@@ -5049,16 +5049,19 @@ pub(crate) fn title_page_replay_tokens(inject: &[Token]) -> Option<Tokens> {
 
 /// The class's whole title page as pdflatex runs it at `\maketitle`: the class's own refused `\maketitle` when it is
 /// replayable ([`title_page_replay_tokens`]'s conditions), else LaTeX's, which runs `\@maketitle` — the class's, or
-/// article.cls:209-229's printing of `\@title`, `\@author` and `\@date` when no raw file defined one. A call of the
-/// kernel's `\maketitle` from the class's (`\let\@origmaketitle\maketitle`, sigplanconf.cls) is LaTeX's here too: its
-/// `\lx@maketitle@body` runs `\@maketitle`. The fields hold the document's values; labels and index entries are
+/// a stand-in for article.cls's (TL 2025 article.cls:236-251) printing `\@title`, `\@author` and `\@date` when no raw
+/// file defined one. A call of the kernel's `\maketitle` from the class's (`\let\@origmaketitle\maketitle`,
+/// sigplanconf.cls) is LaTeX's here too: its `\lx@maketitle@body` runs `\@maketitle`. The fields hold the document's values; labels and index entries are
 /// gobbled, while a footnote is typeset, and an author's note (`\thanks`, `\@firstofone` here) is typeset in place, as
 /// a store the class prints in one is printed (review probes `fn`: "KW: alpha, beta" in the title page's footnote;
-/// `fnt`: `\@author\thanks{KW: \@keywords}`). The stand-in for article.cls's `\@maketitle` runs `\@author` with `\and`
-/// as the document has it, as article.cls's tabular does: the kernel's is a whatsit printing no word, a word end for
-/// `ink_word_text` as latex.ltx's column break is in print (`Inst X\and Bob` is no word "XBob"), and a class's or
-/// document's printing a word (`\def\and{\unskip\ und\ \ignorespaces}`) prints it (FX25; the `\relax` it was let to
-/// left no material, so a loss beside it read as one unknown word, uncounted: RR1 gap 24, 2511.15315).
+/// `fnt`: `\@author\thanks{KW: \@keywords}`). The stand-in runs `\@author` as article.cls:246-248 does, inside
+/// `\begin{tabular}[t]{c}…\end{tabular}`, with `\and` as the document has it: the kernel's is a whatsit printing no
+/// word, a word end for `ink_word_text` as latex.ltx's column break is in print (`Inst X\and Bob` is no word "XBob"); a
+/// class's or document's printing a word (`\def\and{\unskip\ und\ \ignorespaces}`) prints it; and a document's copy of
+/// latex.ltx's column break (`\end{tabular}\hskip 1em \@plus.17fil\begin{tabular}[t]{c}`) closes and reopens the
+/// stand-in's tabular, so every column after it stays in the print (FX25, FX25b: 1409.7028, 2103.04211; the `\relax`
+/// `\and` was let to left no material, so a loss beside it read as one unknown word, uncounted: RR1 gap 24,
+/// 2511.15315).
 /// `inject`: as [`title_page_deposit_tokens`].
 pub(crate) fn title_page_print_tokens(inject: &[Token]) -> Tokens {
   // (a raw file's or a binding's `\@maketitle`; not the kernel's empty one, a document's teaser appended to it)
@@ -5076,8 +5079,10 @@ pub(crate) fn title_page_print_tokens(inject: &[Token]) -> Tokens {
   }
   if !class_maketitle {
     run.extend(
-      mouth::tokenize_internal(r"\def\@maketitle{{\@title\par}{\@author\par}{\@date\par}}")
-        .unlist(),
+      mouth::tokenize_internal(
+        r"\def\@maketitle{{\@title\par}{\begin{tabular}[t]{c}\@author\end{tabular}\par}{\@date\par}}",
+      )
+      .unlist(),
     );
   }
   run.extend_from_slice(inject);
