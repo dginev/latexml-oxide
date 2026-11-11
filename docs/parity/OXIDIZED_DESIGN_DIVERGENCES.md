@@ -33983,7 +33983,8 @@ Baker's alone, as pdflatex prints it, its 2 Warnings the emitter's names by text
 P24b's guard `perfect_kernel_batchp24b::eptcs_a_separator_glued_to_a_table_end_opens_a_column` (repros
 `class-bindings/eptcs/eptcs_author_table_{glued_to_and,comment_then_and,relax_then_and,glued_to_a_macro_held_and,glued_to_a_let_copy_of_and}.tex`:
 every row red on P24, the macro row red on int157a too, Univ C on all three authors); byte-identical against int158a
-(`3d274f02df`) on the 73 eptcs census papers, the 405 sv and 563 aa papers of P21b's lists and the stage2 1,434.
+(`3d274f02df`) (`kit/conv.sh`, both binaries; every XML byte and every Error, Fatal and Warning count equal) on the 73 eptcs census
+papers, P21b's sv and aa lists (405 and 560 papers; 4 ids have no main file for either binary) and the stage2 1,434.
 Residual, outside this mechanism (the reading's owner of a column's line): a table of names after another cell whose
 full row's addresses spell no name gives a nameless creator holding them (`Ann Able \and \begin{tabular}{cc} Bob Baker &
 Cy Cole \\ \texttt{qq@b.edu} & \texttt{zed@c.edu}\end{tabular}`; the same table alone gives each column's name its
