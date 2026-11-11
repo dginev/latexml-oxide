@@ -11,8 +11,8 @@
 //! `\let` copy of `\and` printed no `Sep(And)` in the rehearsal; green since SEP1, the copy bound by its meaning,
 //! `perfect_kernel_batchsep1`) and the catalog repros with no guard `ieeetran_author_grid_in_a_macro` /
 //! `ieeetran_author_grid_through_a_wrapper` (the IEEEtran grid's token split).
-//! These are the block routes only: an API creator call holding the `\and` (acmart's `\author` with no comma) is not
-//! cut (OD #993 "Open: the API route"; catalog repros `acmart_author_{and,macro_held_and}_parts_the_names_red`).
+//! These are the block routes only: an API creator call holding the `\and` (acmart's `\author` with no comma) is the
+//! API route's, guarded by `perfect_kernel_batchoc1c` (OD #993 "The API route").
 
 use latexml::util::test::{convert_files_with, error_count, warning_count};
 

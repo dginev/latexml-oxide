@@ -1,0 +1,34 @@
+% mechanism: authblk's `\author{\aut}`, `\aut` holding `Ann Able \and Bob Baker`: the binding's spelling test
+%   (authblk_sty.rs `author_call`: a spelled `\and`/`\And`, a comma, the word "and") finds no separator and falls back to
+%   one API creator call, `\lx@add@creator` — the shape of any binding whose spelling test sees none (ecai's too). The
+%   call is cut at its own `Sep(And)` and each name written by its text, counted, as acmart's macro-held form
+%   (`class-bindings/acmart_author_macro_held_and_parts_the_names.tex`). The unlabelled `\affil` after it counted the
+%   call as one queued author (`annotate={run:1}`, `affil_run`, the authors since the last `\affil`, authblk.sty:115-116):
+%   the cut raises that cap by the call's added pieces (`emit::cut_creator_calls`, `run_cap`), so Univ X and Univ Y go to
+%   both names, as pdflatex prints them under the shared mark; Cy Cole's and Dee Dunn's runs stay theirs
+% witness: review revOC1b S2 (`scratch_revOC1b/src/ablk_macro.tex`, one author, `\affil{Univ X}`; this adds an author
+%   before and after it, and a second `\affil` continuing the run)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Cy Cole1, Ann Able Bob Baker2, and Dee Dunn3", "1Univ C",
+%   "2Univ X", "2Univ Y", "3Univ D"
+% engines: Perl 0.8.8: one creator "Ann Able and Bob Baker" by authblk.sty.ltxml:52-55's spelling check (not run);
+%   int156a (OC1b-rel): Cy Cole (Univ C), "Ann Able and Bob Baker" (Univ X, Univ Y), Dee Dunn (Univ D), 1 error
+%   (`merged_creators`), 1 warning
+% expect:  0 errors, 2 warnings (each name written by its text, "a creator call cut where a macro holds its names and
+%   the separators between them"); creators Cy Cole (Univ C), Ann Able (Univ X, Univ Y), Bob Baker (Univ X, Univ Y),
+%   Dee Dunn (Univ D)
+% status:  RED (int156a) -> GREEN (OC1c; guard perfect_kernel_batchoc1c::an_api_creator_call_parts_at_its_own_and)
+\documentclass{article}
+\usepackage{authblk}
+\newcommand\aut{Ann Able \and Bob Baker}
+\title{T}
+\author{Cy Cole}
+\affil{Univ C}
+\author{\aut}
+\affil{Univ X}
+\affil{Univ Y}
+\author{Dee Dunn}
+\affil{Univ D}
+\begin{document}
+\maketitle
+Text.
+\end{document}

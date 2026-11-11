@@ -1,0 +1,27 @@
+% mechanism: authblk's `\author{\autA}\affil{Univ X}\author{\autA}\affil{Univ Y}`: two API creator calls spelled alike,
+%   both cut at their own `Sep(And)` (`emit::cut_creator_calls`). The cut calls are matched to the queue before any is
+%   replaced, so each ledger call claims its own queue entry (the first unclaimed one spelled as it is), and each
+%   `\affil`'s run counts only the pieces of the call before it: Ann Able and Bob Baker under Univ X, then again under
+%   Univ Y. A match by spelling alone would give both calls the first entry. The sibling with two calls before one
+%   `\affil`: `authblk_two_macro_held_calls_before_one_affil.tex`
+% witness: OC1c2 (the queue matched before it is rewritten, revOC1c B2's fix)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able", "Bob Baker", "Univ X", "Ann Able", "Bob Baker",
+%   "Univ Y"
+% engines: Perl 0.8.8: two creators "Ann Able and Bob Baker" (authblk.sty.ltxml:52-55's spelling check; not run); int156a
+%   (OC1b-rel): two merged creators, Univ X and Univ Y, 2 errors, 1 warning; OC1c (round 0): four creators as expected,
+%   0 errors, 5 warnings
+% expect:  0 errors, 5 warnings (each name written by its text, 4; the content check, 1: the names printed twice); creators
+%   Ann Able (Univ X), Bob Baker (Univ X), Ann Able (Univ Y), Bob Baker (Univ Y)
+% status:  GREEN (OC1c round 0, OC1c2; guard perfect_kernel_batchoc1c::an_api_creator_call_parts_at_its_own_and)
+\documentclass{article}
+\usepackage{authblk}
+\newcommand\autA{Ann Able \and Bob Baker}
+\title{T}
+\author{\autA}
+\affil{Univ X}
+\author{\autA}
+\affil{Univ Y}
+\begin{document}
+\maketitle
+Text.
+\end{document}

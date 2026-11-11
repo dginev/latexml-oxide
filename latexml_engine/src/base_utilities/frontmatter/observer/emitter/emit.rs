@@ -48,8 +48,9 @@ use crate::base_utilities::{
       rehearsal::{Rehearsal, rehearse},
       resolver::{
         BlockCheck, LostInk, RCreator, RuleDrop, Written, check_blocks, contact_parts,
-        creator_call, is_creator_call, merged_names, own_email_label, printed_email_label,
-        read_events, shares_the_row, split_pieces, uncoordinated_marks,
+        creator_call, creator_call_level, creator_call_pieces, is_creator_call, merged_names,
+        own_email_label, printed_email_label, read_events, shares_the_row, split_pieces,
+        uncoordinated_marks,
       },
     },
     place::DEFERRED_TO_FLUSH_END,
@@ -3939,6 +3940,342 @@ fn warn_net(key: &str, what: &str) {
   );
 }
 
+/// A creator call its own `\and`s cut ([`creator_call_pieces`]: acmart's `\author{Ann Able \and Bob Baker}`, authblk's
+/// `\author{\aut}`), written as one creator call per piece: the call's own command, its keyvals (role, label,
+/// annotations) and its wrappers (`\lx@personname{\lx@author@withinst{…}}`) kept, the group holding the `\and`s holding
+/// the piece alone — the tokens between two `\and`s, where each `\and`'s own tokens (a literal one, a `\csname
+/// and\endcsname`, an active character) part no ink; else, a macro holding names and `\and`s together (`\aut`), each
+/// piece's name by its text, counted ([`by_text`]), and only where the piece prints nothing but its name. `None` for a
+/// call not cut, or one whose pieces neither way gives (the call stays whole, its merge counted by
+/// `flag_merged_creators`). OXIDIZED_DESIGN_DIVERGENCES #993; witnesses 1909.10278, 2501.11185.
+fn creator_call_cut(call: &ApiCall) -> Result<Option<Vec<Tokens>>> {
+  if call.tag != "ltx:creator" || call.inside || call.cleared || call.unread.is_some() {
+    return Ok(None);
+  }
+  let Some(command) = call.command.as_ref() else {
+    return Ok(None);
+  };
+  let Some(count) = creator_call_pieces(&call.events).map(|pieces| pieces.len()) else {
+    return Ok(None);
+  };
+  let content = call.content.unlist_ref();
+  if last_group(command).unlist_ref() != content {
+    return Ok(None);
+  }
+  // (the content rehearsed again for its positions: the ledger's events carry none, `ApiCall::errors`)
+  let Some((events, ..)) = rehearsed(content)? else {
+    return Ok(None);
+  };
+  let Some(pieces) = creator_call_pieces(&events).filter(|pieces| pieces.len() == count) else {
+    return Ok(None);
+  };
+  let own = creator_call_level(&events);
+  let seps: Vec<&Event> = events
+    .iter()
+    .filter(|e| e.nest == own && matches!(e.kind, EventKind::Sep(events::SepKind::And(_))))
+    .collect();
+  // (the group each `\and` stands in, directly: the innermost brace open before it)
+  let open_at = |at: usize| {
+    let mut open: Vec<usize> = Vec::new();
+    for (i, t) in content[..at.min(content.len())].iter().enumerate() {
+      match t.group_step() {
+        1 => open.push(i),
+        -1 => {
+          open.pop();
+        },
+        _ => {},
+      }
+    }
+    open.last().copied()
+  };
+  let Some(first) = seps.first().and_then(|e| e.span) else {
+    return Ok(None);
+  };
+  let Some(group) = open_at(usize::from(first.0)) else {
+    return Ok(None);
+  };
+  let mut depth = 0i32;
+  let Some(close) = content.iter().enumerate().skip(group).find_map(|(i, t)| {
+    depth += t.group_step();
+    (depth == 0).then_some(i)
+  }) else {
+    return Ok(None);
+  };
+  let inks = |e: &&Event| {
+    matches!(
+      e.kind,
+      EventKind::Name | EventKind::Mark | EventKind::Contact | EventKind::Note
+    )
+  };
+  // (the call's ink all inside that group, each event's span past its open brace and up to its close: ink before it or
+  // after it — `Ann {Able \and Bob} Baker`, `\textsc{Ann Able \and Bob Baker} Jr.`, `{…}$^*$` — is no piece's alone, and a
+  // piece wrapped in it would print it once a piece, inventing names; such a call, or an event of no span, stays whole,
+  // its merge counted, revOC1c B1)
+  if events.iter().filter(inks).any(|e| {
+    e.span
+      .is_none_or(|(a, b)| usize::from(a) <= group || usize::from(b) > close)
+  }) {
+    return Ok(None);
+  }
+  // (each `\and`'s own tokens in that group, parting no ink: no other event's span meets them)
+  let spans: Option<Vec<(usize, usize)>> = seps
+    .iter()
+    .map(|e| {
+      let (s, t) = e.span?;
+      let (s, t) = (usize::from(s), usize::from(t));
+      let clear = open_at(s) == Some(group)
+        && s >= group
+        && t <= close
+        && !events.iter().filter(inks).any(|ink| {
+          ink
+            .span
+            .is_some_and(|(a, b)| usize::from(a) < t && usize::from(b) > s)
+        });
+      clear.then_some((s, t))
+    })
+    .collect();
+  let balanced = |run: &[Token]| {
+    let mut depth = 0i32;
+    run.iter().all(|t| {
+      depth += t.group_step();
+      depth >= 0
+    }) && depth == 0
+  };
+  // (each piece's run: from its first event's position to its last's — the spaces around the `\and`, a control space after
+  // a `\csname and\endcsname`, left out — or, where that run is no balanced one, everything between the two `\and`s)
+  let segments: Vec<&[Event]> = events
+    .split(|e| e.nest == own && matches!(e.kind, EventKind::Sep(events::SepKind::And(_))))
+    .collect();
+  let runs: Option<Vec<Vec<Token>>> = spans.and_then(|spans| {
+    let mut bounds = vec![group + 1];
+    for (s, t) in &spans {
+      bounds.push(*s);
+      bounds.push(*t);
+    }
+    bounds.push(close);
+    let mut runs = Vec::new();
+    for (k, segment) in segments.iter().enumerate() {
+      if !segment.iter().any(|e| e.kind == EventKind::Name) {
+        continue;
+      }
+      let (from, to) = (*bounds.get(2 * k)?, *bounds.get(2 * k + 1)?);
+      let held: Vec<(usize, usize)> = segment
+        .iter()
+        .filter(|e| e.nest >= own && !matches!(e.kind, EventKind::Sep(_)))
+        .filter_map(|e| e.span)
+        .map(|(a, b)| (usize::from(a), usize::from(b)))
+        .collect();
+      let tight = held
+        .iter()
+        .map(|(a, _)| *a)
+        .min()
+        .zip(held.iter().map(|(_, b)| *b).max())
+        .filter(|&(a, b)| from <= a && a < b && b <= to)
+        .and_then(|(a, b)| content.get(a..b))
+        .filter(|run| balanced(run));
+      let run = tight.or_else(|| content.get(from..to).filter(|run| balanced(run)))?;
+      runs.push(run.to_vec());
+    }
+    Some(runs)
+  });
+  let runs = match runs {
+    Some(runs) if runs.len() == count => runs,
+    // (by its text, where the piece prints its name alone)
+    _ => {
+      let plain = |piece: &[Event]| {
+        piece.iter().all(|e| match e.kind {
+          EventKind::Name | EventKind::Sep(_) => true,
+          EventKind::Layout => e.nest == 0 && own == 1,
+          _ => false,
+        })
+      };
+      if !pieces.iter().all(|piece| plain(piece)) {
+        return Ok(None);
+      }
+      pieces
+        .iter()
+        .map(|piece| {
+          let names: Vec<&Event> = piece.iter().filter(|e| e.kind == EventKind::Name).collect();
+          by_text(
+            Some(
+              "a creator call cut where a macro holds its names and the separators between them",
+            ),
+            events::events_text(&names).trim(),
+          )
+        })
+        .collect()
+    },
+  };
+  let commands = runs.into_iter().map(|run| {
+    let mut piece = content[..=group].to_vec();
+    piece.extend(run);
+    piece.extend_from_slice(&content[close..]);
+    with_last_group(command, piece)
+  });
+  Ok(commands.collect())
+}
+
+/// `command` with its last top-level group holding `content` instead ([`place::last_group`]'s), `None` for one with none.
+fn with_last_group(command: &Tokens, content: Vec<Token>) -> Option<Tokens> {
+  let v = command.unlist_ref();
+  let (mut depth, mut last) = (0i32, None);
+  let mut open = 0;
+  for (i, t) in v.iter().enumerate() {
+    match t.group_step() {
+      1 => {
+        if depth == 0 {
+          open = i;
+        }
+        depth += 1;
+      },
+      -1 if depth > 0 => {
+        depth -= 1;
+        if depth == 0 {
+          last = Some((open, i));
+        }
+      },
+      _ => {},
+    }
+  }
+  let (open, close) = last?;
+  let mut out = v[..=open].to_vec();
+  out.extend(content);
+  out.extend_from_slice(&v[close..]);
+  Some(Tokens::new(out))
+}
+
+/// A queued annotation's `annotate={run:<cap>}` (authblk's unlabelled `\affil`, `authblk_sty.rs` `affil_run`: the
+/// creators queued since the last `\affil`), its cap read off the ledger's record of the call (`ApiCall::attrs`), looked up
+/// by the call's tokens as queued. `None` for a call of no such key.
+fn run_cap(command: &Tokens) -> Option<usize> {
+  let attrs = with_ledger(|ledger| {
+    ledger.entries().iter().find_map(|entry| match entry {
+      Entry::Api(call) if call.command.as_ref() == Some(command) => Some(call.attrs.clone()),
+      _ => None,
+    })
+  })?;
+  attrs
+    .split(',')
+    .find_map(|pair| pair.trim().strip_prefix("annotate="))?
+    .trim_matches(|c| c == '{' || c == '}')
+    .strip_prefix("run:")?
+    .trim()
+    .parse()
+    .ok()
+}
+
+/// `command`, an annotation's call, with its `annotate=` key set to `run:<cap>`, its other keys as they stand. `None` for
+/// a call of no key list.
+fn with_run_cap(command: &Tokens, cap: usize) -> Option<Tokens> {
+  let v = command.unlist_ref();
+  let (Some(open), Some(close)) = key_list_bounds(v) else {
+    return None;
+  };
+  let mut out = v[..=open].to_vec();
+  for (k, (key, pair, _)) in key_pairs(v, open, close).into_iter().enumerate() {
+    if k > 0 {
+      out.push(T_OTHER!(","));
+    }
+    if key == "annotate" {
+      out.extend(internal(&s!("annotate={{run:{cap}}}")));
+    } else {
+      out.extend_from_slice(pair);
+    }
+  }
+  out.extend_from_slice(&v[close..]);
+  Some(Tokens::new(out))
+}
+
+/// The queued entries of a paper with no author block whose creator calls are cut ([`creator_call_cut`]), each replaced
+/// by its pieces' calls, in its place; the call taken (`take_digested`'s mark), as one written. An annotation after it
+/// whose run (`annotate=run:<cap>`) counted the call as one queued creator counts its pieces: authblk's `\author{\aut}`
+/// then `\affil{Univ X}`, which pdflatex prints under both names (`authblk.sty:115-116`, the `\AB@thenote` group). Every
+/// cut call's added pieces are summed per annotation first, on the queue as it stands, and each annotation rewritten once
+/// from its original cap: two cut calls before one `\affil` both counted (`\author{\autA}\author{\autB}\affil{Univ X}`,
+/// revOC1c B2), each call matched to its own queue entry where two are spelled alike.
+fn cut_creator_calls(commands: &mut Vec<RawFrontmatter>) -> Result<()> {
+  let calls: Vec<ApiCall> = with_ledger(|ledger| {
+    let calls = ledger.entries().iter().filter_map(|entry| match entry {
+      Entry::Api(call)
+        if call.tag == "ltx:creator" && creator_call_pieces(&call.events).is_some() =>
+      {
+        Some(call.clone())
+      },
+      _ => None,
+    });
+    calls.collect()
+  });
+  let mut claimed: Vec<usize> = Vec::new();
+  let mut cuts: Vec<(usize, usize, Vec<Tokens>)> = Vec::new();
+  for call in calls {
+    let Some(at) = (0..commands.len())
+      .find(|i| !claimed.contains(i) && Some(&commands[*i].2) == call.command.as_ref())
+    else {
+      continue;
+    };
+    claimed.push(at);
+    let Some(pieces) = creator_call_cut(&call)? else {
+      continue;
+    };
+    DebugFeature!(
+      "frontmatter",
+      "FRONT emit: creator call {} cut at its own separators into {}",
+      call.index,
+      pieces.len()
+    );
+    cuts.push((at, call.index, pieces));
+  }
+  if cuts.is_empty() {
+    return Ok(());
+  }
+  let caps: Vec<Option<usize>> = commands
+    .iter()
+    .map(|entry| {
+      (entry.0 != "ltx:creator")
+        .then(|| run_cap(&entry.2))
+        .flatten()
+    })
+    .collect();
+  let mut raise = vec![0usize; commands.len()];
+  for (at, _, pieces) in &cuts {
+    let mut creators = 0;
+    for (i, later) in commands.iter().enumerate().skip(*at) {
+      if later.0 == "ltx:creator" {
+        creators += 1;
+      } else if let Some(cap) = caps[i]
+        && creators <= cap
+      {
+        raise[i] += pieces.len() - 1;
+      }
+    }
+  }
+  for (i, more) in raise.into_iter().enumerate() {
+    if let Some(cap) = caps[i]
+      && more > 0
+      && let Some(raised) = with_run_cap(&commands[i].2, cap + more)
+    {
+      DebugFeature!(
+        "frontmatter",
+        "FRONT emit: a run of {cap} counts the cut calls' {more} added pieces"
+      );
+      commands[i].2 = raised;
+    }
+  }
+  cuts.sort_by_key(|(at, ..)| std::cmp::Reverse(*at));
+  for (at, index, pieces) in cuts {
+    let (tag, attrs, _) = commands.remove(at);
+    for (k, piece) in pieces.into_iter().enumerate() {
+      commands.insert(at + k, (tag.clone(), attrs.clone(), piece));
+    }
+    assign_mapping(
+      EMITTED_ITEMS,
+      &s!("taken|{index}"),
+      Some(Stored::Bool(true)),
+    );
+  }
+  Ok(())
+}
+
 /// The flush's added step: `commands`' creators and their annotations replaced by calls built from the reading. Whether
 /// it did.
 pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter>) -> Result<bool> {
@@ -3947,6 +4284,11 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   }
   if let Some(why) = stays_out() {
     DebugFeature!("frontmatter", "FRONT emit stays out: {why}");
+    // (a paper with no author block whose creator calls hold their own `\and`s: each such call written as the creators
+    // its pieces are, the rest of the queue digested as Perl's — `creator_call_cut`)
+    if why == NO_BLOCK {
+      cut_creator_calls(commands)?;
+    }
     // (with no reader cutting at the call, a block no rehearsal read is Perl's whole-block creator, its queued entry: 2204.09614,
     // a block past the positions)
     if why != NO_BLOCK {
@@ -4613,6 +4955,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   }
   // (where each source's last creator of this flush ends in `out`, for `mid_queue`)
   let mut creator_end: BTreeMap<usize, usize> = BTreeMap::new();
+  // (the creator calls cut at their own `\and`s, by source: `creator_call_cut`)
+  let mut call_cuts: BTreeMap<usize, Option<Vec<Tokens>>> = BTreeMap::new();
   for &i in &fresh {
     let c = &resolved.creators[i];
     creator_end.insert(c.source, out.len() + 1);
@@ -4644,9 +4988,30 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     keys.extend(corresponding_key(c));
     // (the call, where it is this creator alone)
     let sole = per_source.get(&c.source) == Some(&1);
+    // (or its piece, where the reading cut the call at its own `\and`s, one creator each: `creator_call_cut`)
+    let piece = if !by_block.contains_key(&c.source) && !sole {
+      if let std::collections::btree_map::Entry::Vacant(slot) = call_cuts.entry(c.source) {
+        slot.insert(match api_call(c.source) {
+          Some(call) => creator_call_cut(&call)?,
+          None => None,
+        });
+      }
+      let k = resolved.creators[..i]
+        .iter()
+        .filter(|other| other.source == c.source)
+        .count();
+      call_cuts
+        .get(&c.source)
+        .and_then(Option::as_ref)
+        .filter(|pieces| Some(&pieces.len()) == per_source.get(&c.source))
+        .and_then(|pieces| pieces.get(k).cloned())
+    } else {
+      None
+    };
     let call = (!by_block.contains_key(&c.source) && sole)
       .then(|| api_call(c.source).and_then(|call| call.command))
       .flatten()
+      .or(piece)
       .and_then(|command| {
         let mut add = keys.clone();
         add.push(T_OTHER!(","));

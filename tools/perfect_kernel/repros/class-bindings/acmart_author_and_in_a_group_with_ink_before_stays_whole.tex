@@ -1,0 +1,22 @@
+% mechanism: acmart's `\author{Ann {Able \and Bob} Baker}`: the call's `\and` stands in a brace group that holds only part
+%   of its ink ("Ann" before the group, "Baker" after it). The cut (`emit::creator_call_cut`) wraps each piece in the
+%   tokens before and after the `\and`'s group, so a piece cut there would print the ink outside the group once a piece
+%   ("Ann Able Baker", "Ann Bob Baker": names invented). The cut keeps the call whole unless every Name, Mark, Contact
+%   and Note event's span lies inside that group; this call stays one creator, its merge counted (`merged_creators`), as
+%   on the base. The ink-after sibling on the text path: `acmart_author_and_in_a_font_with_ink_after_stays_whole.tex`;
+%   a mark after the group (`\author{{Ann Able \and Bob Baker}$^*$}`) takes the same check
+% witness: review revOC1c B1 (`scratch_revOC1c/src/p2_group.tex`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "ANN ABLE BOB BAKER", "Author's Contact Information: Ann Able;
+%   Bob Baker."
+% engines: Perl 0.8.8: one creator (acmart.cls.ltxml:89, `\lx@add@creator{#1}`; not run); int156a (OC1b-rel): one creator
+%   "Ann Able and Bob Baker", 1 error (`merged_creators`), 0 warnings; OC1c (round 0): "Ann Able Baker", "Ann Bob Baker",
+%   0 errors, 1 warning
+% expect:  1 error (`merged_creators`, the merge counted), 0 warnings; one creator "Ann Able and Bob Baker"
+% status:  RED (OC1c round 0) -> GREEN (OC1c2; guard perfect_kernel_batchoc1c::an_api_creator_call_with_ink_outside_its_group_stays_whole)
+\documentclass{acmart}
+\title{T}
+\author{Ann {Able \and Bob} Baker}
+\begin{document}
+\maketitle
+Text.
+\end{document}
