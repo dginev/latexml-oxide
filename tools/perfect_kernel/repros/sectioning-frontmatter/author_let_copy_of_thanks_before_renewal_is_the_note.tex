@@ -1,8 +1,8 @@
 % mechanism: a `\let` copy of `\thanks` taken before the document renews `\thanks` (`\let\oldthanks\thanks`, then
 %   `\renewcommand\thanks[1]{}`): TeX's `\oldthanks` keeps the kernel's note and prints it. The copy scan (rehearsal.rs
 %   `let_copies_of_bound_commands`, OD #994) asked that the copy be `\ifx`-equal to the CURRENT `\thanks` as well, so
-%   the copy stayed unbound, printed the kernel's note and the creator held none. Now bound by its meaning, a definition
-%   the kernel made for `\thanks`, to `\thanks`'s event: the author's thanks note
+%   the copy stayed unbound, printed the kernel's note and the creator held none. Now bound when `defined_as` `\thanks`,
+%   with no comparison against what `\thanks` means now, to `\thanks`'s event: the author's thanks note
 % witness: revSEP1 finding 1 (its `\thanks` sibling); acl.sty's `\let\Thanks\thanks` (2407.16574) is the copy's shape
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗" and "Bob Baker", the note "Univ A, ann@a.org"
 % engines: SEP1: two creators, Ann Able with no note

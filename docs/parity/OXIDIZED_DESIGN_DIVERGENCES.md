@@ -34112,8 +34112,11 @@ per block) — whose meaning is a definition made for an `ALWAYS_BOUND` command 
 class `\let` to `\relax` or left undefined. It is not compared with what the command means now, as the command itself
 is bound by its name whatever its definition: a copy taken before the document renews the command
 (`\let\nx\and\renewcommand\and{\unskip\ and\ }`, `\let\oldthanks\thanks\renewcommand\thanks[1]{}`) keeps the
-separator or the note in TeX (SEP1b, revSEP1 finding 1: SEP1's added `\ifx`-now test left it unbound, one merged
-creator, the note lost). The distinct commands read are kept in a hash set (`Token` hashes what its equality compares; a `Vec` searched linearly was quadratic:
+separator or the note in TeX (SEP1b); a test against the command's current meaning had left it unbound, one merged
+creator, the note lost. This binds a copy of a class's own `\and` too (amsart.cls:599's word-printing `\and`, then renewed:
+two creators, the printed "and" kept as Bob Baker's `before`), as TeX does, where Perl's `Equals` would not split at it —
+Perl's split on a renewed `\and`'s older copy holds only for the kernel's `\and`, through `\And`/`\AND`'s `Let` copies
+(`latex_constructs.pool.ltxml:1095-1096`). The distinct commands read are kept in a hash set (`Token` hashes what its equality compares; a `Vec` searched linearly was quadratic:
 a 300-macro synthetic, 1.14 G instructions → 10.2 G under SEP1, 1.19 G since).
 Each is `\let` to the command's event constructor, in the rehearsal's group. A name bound by its own name
 (`ALWAYS_BOUND`, `BOUND_WHEN_DEFINED`: fixacm.sty's `\let\alignauthor\and`, 1801.02123) or one the binding declares a

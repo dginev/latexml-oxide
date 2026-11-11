@@ -589,7 +589,7 @@ const COPY_SEARCH_MACROS: usize = 256;
 /// it, so a `\relax` or an undefined name is no copy of a separator `\let` to `\relax` or left undefined), whatever the
 /// command means now — as the command itself is bound by its name, whatever its definition. A copy taken before the
 /// document renews the command keeps the command's separator or note in TeX (`\let\nx\and\renewcommand\and{…}`, two
-/// columns in pdflatex; revSEP1 finding 1); a copy of a renewed `\and` is bound as the renewed `\and` is (read as its
+/// columns in pdflatex); a copy of a renewed `\and` is bound as the renewed `\and` is (read as its
 /// macro, a `\renewcommand\and{\\}`'s copy would make the second name the first's affiliation). Read before the
 /// bindings change any meaning; a name bound by its own name, or one the binding declares a block break, is left to
 /// those. The kernel's `\and` is a constructor printing " and " (`sect05.rs`): bound by name only, the copy kept it,
