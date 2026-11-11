@@ -227,5 +227,11 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   against the PDF (reference numbers, heading numbers, e-mail and affiliation owners), not only Error/Fatal counts.
 - **Red/green TDD**: a minimal pdflatex-checked repro under `tools/perfect_kernel/repros/` and a whole-element guard,
   red before the fix.
+- **The reach bar decides new work, not deletions** (2026-11-10): "if a fix only resolves less than our threshold of our
+  articles (<500 today) but we already have the code, then we should keep the fix as-is, until we have reasons to remove
+  it due to conflicts with better / more principled approaches. A locally useful fix can also be something to generalize
+  and refactor later on, it becomes a thread to pull on when improving." An existing fix is removed only when a better
+  or more principled mechanism conflicts with it or subsumes it, shown on its witnesses. A change that replaces a
+  spelling rule with a meaning rule, removes a RED and regresses nothing is carried even below the bar (SEP1, OD #994).
 - **Repro stand-ins** (2026-10-21): a shortened copy of an LPPL file keeps its notice and says it is modified; a file
   whose source states no licence is rewritten from scratch as a minimal stand-in citing the source's line numbers.
