@@ -1,7 +1,7 @@
 % mechanism: aa_cls.rs `\institute` → `\lx@aa@institute@dispatch` (counts the written top-level `\and`s; aa.cls:745-757
-%   `\aa@cntinstitutes` counts the same way), several pieces split by spelling at `\and`/`\And` (`\lx@splitting`), cut at the kernel's `\and` by meaning
-%   too where the spelling misses it (`kernel_separators_spelled`, Option C P2-2, P22b), each a `labelseq=affiliation`
-%   contact call; a pin of the output (P22, report 2026-11-11_P22), which P22b keeps
+%   `\aa@cntinstitutes` counts the same way), several pieces cut first at the kernel's `\and` by meaning, then by spelling at `\and`/`\And`, no token
+%   rewritten (`split_at_kernel_separators`, Option C P2-2, P22b, P22c), each a `labelseq=affiliation`
+%   contact call; a pin of the output (P22, report 2026-11-11_P22), which P22b and P22c keep
 %   — an address typed as text after a label in a piece
 % witness: 1010.3154 (`…P. R. China\\e-mail: tyk450@163.com \and …`)
 % oracle:  pdflatex (TL 2025, -no-shell-escape, aa.cls of 2405.18257) 0 errors: "1 Univ A, Town / e-mail: ann@a.edu / 2 Univ B, City"

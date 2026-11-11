@@ -83,12 +83,24 @@ pub fn split_tokens(tokens: Tokens, delims: Vec<SplitDelim>) -> Vec<Tokens> {
     .collect()
 }
 
+/// A split list's pieces, each paired with the delimiter tokens that preceded it (none for the first):
+/// [`split_tokens_delimited`]'s answer.
+pub type DelimitedPieces = Vec<(Vec<Token>, Tokens)>;
+
 /// [`split_tokens`], each piece paired with the delimiter tokens that preceded it (none for the first), so a caller
 /// that joins pieces back can put the delimiter where it stood.
-pub fn split_tokens_delimited(
+pub fn split_tokens_delimited(tokens: Tokens, delims: Vec<SplitDelim>) -> DelimitedPieces {
+  split_tokens_segment(tokens, delims, false)
+}
+
+/// [`split_tokens_delimited`] of one segment of a list a caller has cut before splitting it (at the kernel's `\and` by
+/// meaning, `split_at_kernel_separators`): a segment its cut ends (`ended_by_cut`) keeps its last piece even when empty, as
+/// the split of the whole list keeps the piece a delimiter ends; the list's last segment drops an empty last piece.
+pub fn split_tokens_segment(
   tokens: Tokens,
   delims: Vec<SplitDelim>,
-) -> Vec<(Vec<Token>, Tokens)> {
+  ended_by_cut: bool,
+) -> DelimitedPieces {
   let mut items: Vec<(Vec<Token>, Tokens)> = Vec::new();
   let mut before: Vec<Token> = Vec::new();
   let mut toks: Vec<Token> = Vec::new();
@@ -238,7 +250,7 @@ pub fn split_tokens_delimited(
     }
   }
   trim_spaces(&mut toks);
-  if !toks.is_empty() {
+  if !toks.is_empty() || ended_by_cut {
     items.push((before, Tokens::new(toks)));
   }
   items

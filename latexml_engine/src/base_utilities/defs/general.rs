@@ -180,16 +180,16 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // Note: Perl tests `$delimiters ?` — a Tokens object is always truthy,
     // so the split always applies (an empty delimiter list yields one piece).
     let delims: Vec<SplitDelim> = delimiters.unlist().into_iter().map(SplitDelim::from).collect();
-    Ok(splitting(&op, delims, tokens))
+    Ok(split_calls(&op, split_tokens_delimited(tokens, delims)))
   });
   // Rust-only (Option C P2-2, OXIDIZED_DESIGN_DIVERGENCES #995): `\lx@splitting@by@meaning{op}{delims}{tokens}` —
-  // `\lx@splitting`, cut at the kernel's `\and` by meaning as well as at the delimiters by spelling
-  // (`kernel_separators_spelled`: a macro holding only `\and`, a `\let` copy of the kernel's `\and` where the document
-  // renewed `\and`), one `op` per piece; inst_support's `\institute` list.
+  // `\lx@splitting`, cut first at the kernel's `\and` by meaning, then each segment at the delimiters by spelling
+  // (`split_at_kernel_separators`: a macro holding only `\and`, a `\let` copy of the kernel's `\and` where the document
+  // renewed `\and`; no token rewritten), one `op` per piece; inst_support's `\institute` list.
   DefMacro!("\\lx@splitting@by@meaning{}{}{}", sub[(op, delimiters, tokens)] {
     let delims: Vec<SplitDelim> = delimiters.unlist().into_iter().map(SplitDelim::from).collect();
-    let (tokens, _) = kernel_separators_spelled(tokens, &delims)?;
-    Ok(splitting(&op, delims, tokens))
+    let (pieces, _) = split_at_kernel_separators(tokens, delims)?;
+    Ok(split_calls(&op, pieces))
   });
 
   // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #805): `\lx@split@addresses{op}{list}` — `op{address}` for each address of a
@@ -266,11 +266,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   Ok(())
 }
 
-/// `op{piece}` for each piece of `tokens` split at `delims` (`split_tokens_delimited`): `\lx@splitting`'s expansion.
-fn splitting(op: &Tokens, delims: Vec<SplitDelim>, tokens: Tokens) -> Tokens {
+/// `op{piece}` for each piece of a split list, each paired with the delimiter before it (`split_tokens_delimited`,
+/// `split_at_kernel_separators`): `\lx@splitting`'s expansion, and `\lx@splitting@by@meaning`'s and aa's
+/// (`aa_cls.rs` `\lx@aa@institute@dispatch`).
+pub fn split_calls(op: &Tokens, pieces: DelimitedPieces) -> Tokens {
   let mut result: Vec<Token> = Vec::new();
   let line_break = T_CS!("\\\\");
-  for (delimiter, piece) in split_tokens_delimited(tokens, delims) {
+  for (delimiter, piece) in pieces {
     // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #804): a piece after a `\\` delimiter (a split at line breaks, which no
     // Perl binding makes: llncs's `\inst` list; webofc's `\author` until P2-1, now one block the reading cuts, OD #993)
     // starts without the break's `*` and `[…]`, which are no text (`B\inst{2}\\*[2mm] C\inst{1}` made a creator

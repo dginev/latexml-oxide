@@ -1,8 +1,9 @@
 //! Guards for batch P22 (Option C step P2-2, the institute `\and` splits, OD #993/#995): pins of the output at the
 //! shapes the spelling split already cut, written before the step. OmniBus's `\institute` (inst_support_sty.rs, which
-//! an unknown class falls back to) and aa's (aa_cls.rs, `\lx@aa@institute@dispatch` → `\lx@aa@institute@split`) split
+//! an unknown class falls back to) and aa's (aa_cls.rs, `\lx@aa@institute@dispatch`) split
 //! their list at `\and`/`\And` by spelling, each piece a `labelseq=affiliation` contact call; P22b cuts it at the
-//! kernel's `\and` by meaning as well (`perfect_kernel_batchp22b`), which leaves every row here as it was. P22 found that
+//! kernel's `\and` by meaning as well, first, then by spelling (P22c; `perfect_kernel_batchp22b`), which leaves every
+//! row here as it was. P22 found that
 //! one call the reading cuts and the emitter writes (`emit::labelseq_call_cut`) does not give these outputs (report
 //! 2026-11-11_P22), hence the cut in the binding. Each repro compiles clean with pdflatex (TL 2025; aa with the aa.cls
 //! of 2405.18257, OmniBus's `nosuchclass` as `article` with `\institute`, `\inst` and `\email` provided for it only);
