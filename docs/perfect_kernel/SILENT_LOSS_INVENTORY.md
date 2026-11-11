@@ -1892,7 +1892,24 @@ do not block the E/F rerun.
   - sv `\newcommand\sep{ \and\relax}` gives "and Bob Baker";
   - aa/sv with no class file lose an `\institute` inside `\author` (counted);
   - appolb's `\address` after the last of `A \and B` sits on B only (appolb.cls:194 prints it under both, nucl-th0308018).
-- **Overcount:** the by-text Warning counts a name written by text even when it held no markup (4 ptephy witnesses, 2604.09547, …). BT1 fixes it; BT1b keeps the count where a link or note split the name (revBT1 B1).
+- **Overcount, kept on purpose:** the by-text Warning counts a name written by text even when it held no markup (4 ptephy witnesses, 2604.09547, …). BT1 (parked, branch `pk/BT1`) failed three reviews, each a silenced real loss. The redesign BT2 compares a name's written text with everything its segment prints.
+- **Silent losses, uncounted on int157a too:**
+  - IEEEtran `Ann\IEEEauthorrefmark{1} Able` → "Ann *" + "Able †";
+  - llncs `Ann\inst{1} Able\inst{2}` → "Ann" + "Able";
+  - ptephy `\name{Ann Able$^{1}$}` → "Ann Able 1 1,∗";
+  - `\name{Ann Bea \href{…}{Able}}` → "Ann Bea" holding url "Able";
+  - `Ann Able\footnotemark[2]` puts "2 footnote 2 2 footnote 2" into the name;
+  - `Ann Able\cite{y}` → "Ann Able [ ]";
+  - `An\mbox{n Ab}le` → "An n Ab le".
+- **Guard pins of known-wrong output:**
+  - `perfect_kernel_batchp21e` "parbox href" pins Ann Able as the owner of the address pdflatex prints in Cy Cole's footnote (as int157a);
+  - `perfect_kernel_batchej1` "between authors" keeps 1 Warning (a note closing the block written by its text; int157a 2).
+- **Accepted:** the ejpecp note contact's trailing newline (`Univ X⏎`, from P21's writing; no content).
+- **Pre-existing (revP21e):**
+  - authblk minipage CJK name cut at "(";
+  - amsart `\parbox` author block → "Ann Able1Univ X" plus a nameless creator holding the e-mail;
+  - an article `p{}`-column tabular block → one creator;
+  - `\thanks{..\endgraf Univ X}` loses its break.
 - **Proposed batches:**
   - P2-2 (S2 institute splits), P2-3 (llncs);
   - eptcs's table-of-names route into the reading;
