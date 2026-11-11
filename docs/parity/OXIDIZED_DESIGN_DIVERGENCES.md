@@ -30649,7 +30649,7 @@ an_author_tail_the_title_page_does_not_print_is_not_read, an_author_tail_printed
 **TP1: one title-page reading.** What the class's whole title page prints at `\maketitle` is read once
 (`latex_constructs::title_page_reading`, a `TitlePageReading`): one speculative run with the document's own values
 (`title_page_print_tokens`, the check's thanks and `\today`), under the check's read budget (`checks_run`), read for its
-words (`ink_word_text`) and its text (`ink_text`), and kept while the state is unchanged (`state_generation`, TP1b below,
+words (`ink_word_text`) and its text (`ink_text`), and kept while the state is unchanged (`watch_state`, TP1b below,
 and the LaTeXML-internal values it reads). The check, the stores'
 confirming check (`confirmed_printed`, before: two more unbudgeted runs) and the author tail (`author_tail_calls`, before:
 a walk of its own) read it. The run defines `\@author` with marks that print nothing (`\lx@title@page@author`,
@@ -30693,10 +30693,11 @@ article.cls's page in and the binding's declaration answers (`AuthorPage`), and 
 does not start from it: under elsarticle or acmart a document `\def\@maketitle{…\@author…}` with
 `\g@addto@macro\@author{\and Bob B}` makes no creator Bob B (TP1 made one, review revTP1 B1; pdflatex prints no Bob),
 the lost "bob" an Info; one printing the title alone leaves the check reading the stand-in's words, not the title alone
-(the mirror of TP0's p2). The reading's key is honest (review revTP1 S1): `state_generation` draws a number never drawn
-before at every write to the state — an assignment, a write in place (the mode, a mapping, a box's `\wd`), a group's end
-that restores values (`pop_frame`) — and a rollback puts back only the current one (no ABA); the LaTeXML-internal values
-the reading reads, which the count leaves out, are in its key (`lx_author_handed`, `lx_author_seen`,
+(the mirror of TP0's p2). The reading's key is honest (review revTP1 S1): the reading begins a watch on the state (`watch_state`, a
+number never begun before) that every write ends — an assignment, a write in place (the mode, a mapping, a box's `\wd`,
+a font's parameter), a group's end that restores values (`pop_frame`) — and a rollback puts back the watch its journal
+began with (no ABA); a write tests one flag, a journal's or a watch's (`WRITES_WATCHED`; RK1: a count drawn at every
+write cost +841 instructions per `\loop` iteration, study PF160); the LaTeXML-internal values the reading reads, which the watch leaves out, are in its key (`lx_author_handed`, `lx_author_seen`,
 `lx_depositing_class_maketitle`, `lx_class_author_reader`). LaTeX's own `\@maketitle`, its marker and the run's marks are
 read by definition identity (sect05.rs `is_latex_maketitle`, `maketitle_is_kernels`, `title_page_mark`), not by name.
 **Decision (review revTP1 S2):** over the check's read budget the reading has no text, and the stores' confirming check
@@ -30711,7 +30712,8 @@ an_author_tail_the_title_page_prints_is_read}` (elsarticle, acmart, the title-on
 under `notitlepage`, article after a document's `\@titlepagetrue`; article under `titlepage` with and without a document
 title-only `\@maketitle`, report's and book's default; extarticle, extreport and extbook under `notitlepage`, extreport's
 default),
-`perfect_kernel_batchr1::a_run_over_budget_leaves_no_trace`, `00_unit_state::state_generation_changes_with_every_change_of_the_state`.
+`perfect_kernel_batchr1::a_run_over_budget_leaves_no_trace`, `00_unit_state::a_state_watch_ends_with_every_change_of_the_state`,
+`title_page_reading::tests::a_kept_reading_goes_with_what_it_read`.
 
 ### 954. A contact holding two or more marked entries is cut at its marks in the frontmatter API, for every binding (Perl: one contact, the marks printed in it)
 

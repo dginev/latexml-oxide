@@ -397,16 +397,18 @@ fn semiverbatim() {
 }
 
 // (a mark taken now, and whether the state is unchanged since it)
-fn mark() -> u64 { state_generation() }
-fn unchanged(mark: u64) -> bool { state_generation() == mark }
+fn mark() -> u64 { watch_state() }
+fn unchanged(mark: u64) -> bool { state_unchanged_since(mark) }
+// (a row: its name, the write after a mark returning whether the state is unchanged since, and the answer expected)
+type Row = (&'static str, fn() -> bool, bool);
 
 /// Whether the state changed since a mark, the title-page reading's key (review revTP1 S1): every write counts — in
-/// place, in a frame, a mapping's entry, a box's dimension, a group's end — but a LaTeXML-internal `lx…` value's; a
-/// rollback puts back the journal's start, never a mark taken inside it (no ABA).
+/// place, in a frame, a mapping's entry, a box's dimension, a font's parameter, a group's end — but a LaTeXML-internal
+/// `lx…` value's; a rollback puts back the journal's start, never a mark taken inside it (no ABA).
 #[test]
-fn state_generation_changes_with_every_change_of_the_state() {
+fn a_state_watch_ends_with_every_change_of_the_state() {
   set_state(State::new(StateOptions::default()));
-  let rows: [(&str, fn() -> bool, bool); 15] = [
+  let rows: [Row; 16] = [
     ("nothing", || unchanged(mark()), true),
     (
       "a value",
@@ -476,6 +478,16 @@ fn state_generation_changes_with_every_change_of_the_state() {
       || {
         let m = mark();
         journal_box_dimension("rk1_box", "width");
+        unchanged(m)
+      },
+      false,
+    ),
+    (
+      "a font's parameter in place",
+      || {
+        set_font_parameter("rk1_font", 1, 5);
+        let m = mark();
+        set_font_parameter("rk1_font", 2, 7);
         unchanged(m)
       },
       false,
