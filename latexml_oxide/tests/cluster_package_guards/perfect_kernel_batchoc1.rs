@@ -41,7 +41,7 @@ macro_rules! repro {
 }
 
 /// The block a class's `\author` queues, whatever split of its own ran first — OmniBus's (`inst_support_sty.rs`
-/// `\lx@splitting{\lx@add@author@split}{\and\And}`), llncs's whole block and its marked split (`llncs_cls.rs`
+/// `\lx@add@author@split`, its whole list since P2-1), llncs's whole block and its marked split (`llncs_cls.rs`
 /// `\author`, `\lx@llncs@author@split`), the kernel's (`\lx@add@authors`, IEEEtran journal) — is cut at the `\and`
 /// the rehearsal digests from a macro, a wrapper or a `\csname`, each `\inst` picking its numbered `\institute`. The
 /// three plain-text Warnings of the macro-held rows are the emitter writing a name its events don't spell (a macro's

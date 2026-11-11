@@ -89,7 +89,8 @@ fn webofc_sidecaption_keeps_its_caption() {
 }
 
 /// webofc sets the `\author` list as a paragraph (webofc.cls:497-552), its `\\` a line break whose `*` and `[…]` are
-/// no text: the split at `\\` (`\lx@splitting`) starts the next creator without them. Red (78e r1): the creators
+/// no text: each `\\` line is names (the binding's `break_parts_names`, the reading's cut since P2-1, OD #993; the split
+/// at `\\`, `\lx@splitting`, before it), the next creator without them. Red (78e r1): the creators
 /// "*[2mm] Cat Cole" and "[1mm] The X Collaboration". The rev78e review's finding 6 (synthetic; 0 of 158 webofc
 /// papers). Repro class-bindings/webofc/webofc_author_line_break_options.
 #[test]

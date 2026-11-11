@@ -184,8 +184,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     let line_break = T_CS!("\\\\");
     for (delimiter, piece) in split_tokens_delimited(tokens, delims) {
       // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #804): a piece after a `\\` delimiter (a split at line breaks, which no
-      // Perl binding makes: llncs's `\inst` list, webofc's `\author`) starts without the break's `*` and `[…]`, which
-      // are no text (`B\inst{2}\\*[2mm] C\inst{1}` made a creator "*[2mm] C"; the rev78e review's finding 6)
+      // Perl binding makes: llncs's `\inst` list; webofc's `\author` until P2-1, now one block the reading cuts, OD #993)
+      // starts without the break's `*` and `[…]`, which are no text (`B\inst{2}\\*[2mm] C\inst{1}` made a creator
+      // "*[2mm] C"; the rev78e review's finding 6)
       let piece = if delimiter == [line_break] {
         let with_break: Vec<Token> = std::iter::once(line_break).chain(piece.unlist()).collect();
         let mut stripped = strip_linebreak_options(Tokens::new(with_break)).unlist();

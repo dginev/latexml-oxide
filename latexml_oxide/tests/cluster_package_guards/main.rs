@@ -498,6 +498,9 @@ mod perfect_kernel_batchp2;
 /// P20: Option C P2-0's mechanisms, called by no binding yet — the separator query by meaning
 /// (`argument_separators`, `\lx@fm@separators`) and the emitter's cut of a numbered contact call (OD #995).
 mod perfect_kernel_batchp20;
+/// P21: Option C P2-1 — OmniBus's (inst_support), ptephy's and webofc's `\author` hand the whole list to the reading,
+/// which cuts it at its `\and` (webofc: at its `\\` too, the binding's `break_parts_names`); no split by spelling (OD #993).
+mod perfect_kernel_batchp21;
 mod perfect_kernel_batchpb;
 /// PC3: two false undefined-command Errors of the frontmatter rehearsal — a title-code command after an e-mail
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.

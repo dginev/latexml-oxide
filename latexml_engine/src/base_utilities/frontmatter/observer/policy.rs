@@ -42,46 +42,51 @@ pub enum TitleMarks {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Policy {
   /// the declaration's name (reported with every decision it made)
-  pub name:             &'static str,
+  pub name:              &'static str,
   /// the declaring binding's file name, as the BINDINGS registry gives it (`<name>.<extension>`), and the hook
   /// (`\lx@add@authors@append`) it applies to: `*` any
-  pub binding:          &'static str,
-  pub hook:             &'static str,
+  pub binding:           &'static str,
+  pub hook:              &'static str,
   /// an `\inst` mark (the convention's own, the rehearsal's `\lx@fm@obs@mark`) after a comma is the name's before the
   /// comma, glued or not (llncs.cls:894-896 and aa.cls:759-760 `\def\inst#1{\unskip$^{#1}$}`; OD #807, 2401.16957);
   /// any other mark after a comma is the name's before only when glued to the comma
-  pub inst_after_comma: bool,
+  pub inst_after_comma:  bool,
   /// `\and` is inline text joining the names of one row, not a column (llncs.cls:1013-1018 `\def\and{\unskip,…}`
   /// in `\@maketitle`; OD #792: `Ann Able \and Bob Baker\\ University of Somewhere` is both names')
-  pub and_inline:       bool,
+  pub and_inline:        bool,
   /// the `\\` lines of the class's `\author` paragraph are read as the binding's own split read them before the block
   /// went to the reading whole (llncs's `\lx@llncs@author` until Z18e, OXIDIZED_DESIGN_DIVERGENCES #984: its
   /// `reads_as_affiliation` per line): under a row's affiliation line, a line reading as no institution over one reading
   /// as one starts a new row of names, and a line whose name carries an ORCID is names. Off for the kernel, whose `\\`
   /// lines keep their affiliation reading (an article's "Einstein Drive" over an address line, hep-th0212274)
-  pub author_lines:     bool,
+  pub author_lines:      bool,
+  /// every `\\` line of the class's `\author` paragraph is names, as its title page sets them (webofc.cls:497-552:
+  /// `\@author` a paragraph whose lines are names, the institutes apart: `\\ The X Collaboration` a creator,
+  /// 1609.01040, 2610.23498), the binding's spelling split at `\\` until P2-1 (OD #993). Off for the kernel, whose
+  /// `\\` lines under names keep their affiliation reading
+  pub break_parts_names: bool,
   /// a `labelseq=<role>` entry is labelled by its place among the entries of that role (llncs's and aa's
   /// `\institute{A \and B}`, numbered 1, 2 as the class prints them: OD #791, #159)
-  pub label_sequence:   bool,
-  pub email_owner:      EmailOwner,
+  pub label_sequence:    bool,
+  pub email_owner:       EmailOwner,
   /// each call is an author group of its own (an e-mail nothing else places is the group's only author's: iopart's
   /// `\author`, OD #808)
-  pub call_is_group:    bool,
-  pub title_marks:      TitleMarks,
+  pub call_is_group:     bool,
+  pub title_marks:       TitleMarks,
   /// authblk's notes (authblk.sty:114-118, 148-151): an unlabelled `\author` shows `\AB@thenote`, the `affil` counter
   /// stepped at the first `\author` after an `\affil`, and an unlabelled `\affil` is labelled by it; the marks show
   /// when a label is given or the counter passes `\c@Maxaffil` (`state_counter`), else the affiliations print under
   /// the run of authors (block mode)
-  pub thenote:          bool,
+  pub thenote:           bool,
   /// a counter the policy reads at each block's call (the ledger's `counter`)
-  pub state_counter:    Option<&'static str>,
+  pub state_counter:     Option<&'static str>,
   /// `\and` inside an annotation prints the word "and" (amsart.cls:599 `\def\and{\unskip{ }\@@and{ }\ignorespaces}`):
   /// the entry's text holds it
-  pub and_word:         bool,
+  pub and_word:          bool,
   /// the title's notes print no mark (IEEEtran.cls:4756 `\def\thefootnote{}` in `\maketitle`, "the \thanks{} mark type
   /// is empty"): a note stands beside a name only by its place, so its inner contacts are a name's only by spelling
   /// (main-session decision 2 of 2026-10-22, user ruling 2026-10-20 #4)
-  pub unmarked_notes:   bool,
+  pub unmarked_notes:    bool,
   /// the class's `\email` prints its address where it is called (llncs.cls:897 `\def\email#1{{\tt#1}}`, aa.cls:824
   /// `e-mail: {\aa@emailfont #1}`, svjour3.cls:303, svmult.cls:2304, svjour.cls:256): one inside a document's note
   /// (`\offprints{O. Kochukhov, \email{…}}`, a `\thanks`) prints in the note, after the name the note gives, which
@@ -89,46 +94,47 @@ pub struct Policy {
   /// the call; `Resolver::answer_document_notes`). Not amsart's (amsart.cls:538 `\def\email` stores the address for
   /// the author's address block) nor REVTeX's (the author's footnote): there the address is the call's current
   /// author's, as the binding routes it
-  pub email_in_place:   bool,
+  pub email_in_place:    bool,
   /// a call's `label=` is a key, never printed: the class prints the entry's place in its list instead
   /// (elsarticle.cls:656-662 `\theaffn`, elsart.cls v2.18 :1135-1164 `\theaddress`), so no footnote's mark answers it,
   /// a symbol's neither (FIDELITY_CHARTER §4 R1: an author whose keys request affiliations takes none by another route;
   /// 1108.0201's `\address[*]{current address}` under `M.~Pesce-Rollins\footnotemark[1]`) — an author's own keys
   /// (`annotations=` of `\author[a,b]`) and a mark typed by hand do, the places keys in order spell (0907.5014's
   /// `Denes Molnar$^{a,b}$`)
-  pub keyed_labels:     bool,
+  pub keyed_labels:      bool,
   /// the commands that part a block's lines or columns whatever they print here, as the class's title page does, each declared by
   /// the binding owning the `\author` they stand in: OmniBus's no-op `\alignauthor` a column (inst_support_sty.rs; what sig-alternate.cls,
   /// sigchi.cls print, whose `\alignauthor` read raw is the tabular it makes), ijcai's `\affiliations` and `\emails` a section
   /// (ijcai19.sty:124-130). A rehearsal notes their calls beside the block's events (`Outcome::Events` `breaks`), which they do
   /// not part; no reading reads them yet
-  pub block_breaks:     &'static [(&'static str, BreakKind)],
+  pub block_breaks:      &'static [(&'static str, BreakKind)],
   /// what the declaration reproduces
-  pub cite:             &'static str,
+  pub cite:              &'static str,
 }
 
 /// The kernel's conventions: the blocks of the kernel's `\author` under a class whose bindings declare none (`article`
 /// and every class without a frontmatter binding of its own, OD #925); and the template a declaration completes
 /// (`..KERNEL`).
 pub const KERNEL: Policy = Policy {
-  name:             "kernel",
-  binding:          "*",
-  hook:             "*",
-  inst_after_comma: false,
-  and_inline:       false,
-  author_lines:     false,
-  label_sequence:   true,
-  email_owner:      EmailOwner::Chain,
-  call_is_group:    false,
-  title_marks:      TitleMarks::Fnsymbol,
-  thenote:          false,
-  state_counter:    None,
-  and_word:         false,
-  unmarked_notes:   false,
-  email_in_place:   false,
-  keyed_labels:     false,
-  block_breaks:     &[],
-  cite:             "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4; OD #925",
+  name:              "kernel",
+  binding:           "*",
+  hook:              "*",
+  inst_after_comma:  false,
+  and_inline:        false,
+  author_lines:      false,
+  break_parts_names: false,
+  label_sequence:    true,
+  email_owner:       EmailOwner::Chain,
+  call_is_group:     false,
+  title_marks:       TitleMarks::Fnsymbol,
+  thenote:           false,
+  state_counter:     None,
+  and_word:          false,
+  unmarked_notes:    false,
+  email_in_place:    false,
+  keyed_labels:      false,
+  block_breaks:      &[],
+  cite:              "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4; OD #925",
 };
 
 /// The conventions of a binding owning the `\author` meaning that declares none of its own (JHEP.cls, aas_support.sty,

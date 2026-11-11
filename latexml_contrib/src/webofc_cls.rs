@@ -20,20 +20,33 @@ const WEBOFC: crate::shipped_class::RawRead = crate::shipped_class::RawRead {
   ..crate::shipped_class::RawRead::new("webofc", "cls")
 };
 
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared once the class is
+/// read: the kernel's, but every `\\` line of the `\author` paragraph is names (`break_parts_names`).
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "webofc",
+  binding: "webofc.cls",
+  break_parts_names: true,
+  cite: "webofc.cls:497-552 (the `\\@author` paragraph); OD #993 (1609.01040, 2610.23498)",
+  ..FM_KERNEL_CONVENTIONS
+};
+
 LoadDefinitions!({
   if !crate::shipped_class::read_raw(&WEBOFC)? {
     return Ok(());
   }
+  // (scoped to the class read: a paper lacking webofc.cls is OmniBus's, inst_support's conventions)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   RequirePackage!("inst_support");
   // (a `\\` line under the names, the template's `\\The SND Collaboration` — 1609.01040, 2610.23498's `\\ for the
   // NA61/SHINE Collaboration` —, is a line of the author paragraph, webofc.cls:497-552: a creator of its own, as
-  // llncs's split has it, where inst_support's split at `\and` only kept it in the last name; the break's `*` and
-  // `[…]` are no text, `\lx@splitting`)
+  // llncs's split has it, where inst_support's split at `\and` only kept it in the last name — the whole list one
+  // block the reading cuts at its `\and` and, by this binding's `break_parts_names`, at its `\\` (P2-1, OD #993); the
+  // break's `*` and `[…]` are no text)
   // (and a second `\author` replaces the first, as the kernel's `\author` the class keeps does: webofc.cls defines none,
   // its `\@parseauthor` reads `\@author`, :431-466 — OXIDIZED_DESIGN #920; inst_support's own `\author` stacks, OD #53)
   DefMacro!(
     "\\author[]{}",
-    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author@split}{\\and\\And\\\\}{#2}\\lx@author@trailing"
+    "\\lx@clear@creators[role=author]\\lx@add@author@split{#2}\\lx@author@trailing"
   );
   DefMacro!("\\email Semiverbatim", "\\lx@add@email{#1}");
   def_macro_noop("\\sidecaption")?;
