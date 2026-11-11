@@ -501,6 +501,9 @@ mod perfect_kernel_batchr1;
 mod perfect_kernel_batchra0;
 mod perfect_kernel_batchrc1;
 mod perfect_kernel_batchs5;
+/// SEP1: the rehearsal binds a `\let` copy of `\and`, `\\`, `\thanks` or `\footnote` by its meaning, as the command it
+/// copies (`\let\nx\and` parts the names; OD #994).
+mod perfect_kernel_batchsep1;
 mod perfect_kernel_batchta1;
 mod perfect_kernel_batchz1;
 mod perfect_kernel_batchz14;

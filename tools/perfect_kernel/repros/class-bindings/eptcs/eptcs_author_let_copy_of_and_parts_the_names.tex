@@ -1,0 +1,20 @@
+% mechanism: an eptcs `\author` with a line under each name and a `\let` copy of `\and` (`\let\nx\and`) between
+%   them: the binding's cells see one cell, the block goes whole to the reading (OD #991); the rehearsal binds the copy
+%   to the separator's event by its meaning (`\nx` is `\and`, OD #994), so the reading cuts it at that `Sep(And)`, each
+%   line its own author's
+% witness: OC1's spelling probe of bindsplit ep1 (the `\let` spelling)
+% oracle:  pdflatex with eptcs.cls beside it (TL 2025, -no-shell-escape) 0 errors: "Ann Able" over "Univ A", "Bob
+%   Baker" over "Univ B"
+% engines: perl has no eptcs binding (OmniBus); OC1b: one creator Ann Able holding "Univ A and Bob Baker" and "Univ
+%   B", 1 warning
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker (Univ B)
+% status:  GREEN (SEP1; guard perfect_kernel_batchsep1)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\let\nx\and
+\title{T}
+\author{Ann Able \\ Univ A \nx Bob Baker \\ Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

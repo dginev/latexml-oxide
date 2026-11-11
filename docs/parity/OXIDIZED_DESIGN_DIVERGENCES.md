@@ -34075,12 +34075,53 @@ omnibus (`\speaker`), ams_support (`\contrib`, `\commby`), authblk. Probed: acma
 (`\Name{Ann Able \and Bob Baker}` prints one name, "Ann Able and Bob Baker", jmlr's `\and` a word: no two-author
 shape); the others unprobed (most have no class file in TL 2025). Repros
 `class-bindings/acmart_author_{and,macro_held_and}_parts_the_names_red.tex` (catalog, no guard). Residuals, red at int156a and outside this mechanism: a
-`\let` copy of `\and` (`\let\nx\and`) keeps the kernel's meaning in the rehearsal, which binds its vocabulary by name,
-so the block holds no `Sep(And)` (one merged creator and `Error:frontmatter:merged_creators` under article, eptcs and
-IEEEtran journal; Perl two creators); and IEEEtran's `\author` routes to the grid by spelling (`body.to_string().contains("authorblockN")`,
+`\let` copy of `\and` (`\let\nx\and`) kept the kernel's meaning in the rehearsal, which bound its vocabulary by name,
+so the block held no `Sep(And)` (one merged creator and `Error:frontmatter:merged_creators` under article, eptcs and
+IEEEtran journal; Perl two creators) — green since SEP1, the copy bound by its meaning (#994); and IEEEtran's `\author` routes to the grid by spelling (`body.to_string().contains("authorblockN")`,
 `ieeetran_cls.rs` `\author`), so a grid held in a macro goes the plain route (one nameless creator) and one inside a
 wrapper's arguments is read scrambled (P2). Guards `perfect_kernel_batchoc1::{a_block_parts_at_the_and_its_spelling_hides,
 ieeetran_grid_parts_at_a_macro_held_and, eptcs_cells_part_at_a_macro_held_and}`; repros
 `sectioning-frontmatter/author_call_cut_at_{a_macro_held_and_omnibus,a_wrapper_held_and_omnibus,a_macro_held_and_llncs,a_macro_held_and_llncs_marked,a_csname_and_ieeetran,a_macro_held_and_ieeetran_grid}.tex`,
 `class-bindings/eptcs/eptcs_author_cut_at_a_macro_held_and.tex`; the residuals' catalog repros
-`sectioning-frontmatter/{author_let_copy_of_and_parts_the_names,ieeetran_author_grid_in_a_macro,ieeetran_author_grid_through_a_wrapper}.tex`.
+`sectioning-frontmatter/{ieeetran_author_grid_in_a_macro,ieeetran_author_grid_through_a_wrapper}.tex` (and
+`author_let_copy_of_and_parts_the_names.tex`, guarded since SEP1, #994).
+
+### 994. The rehearsal binds a `\let` copy of an author-line separator or note command by its meaning, as the command it copies (SEP1)
+
+**Perl.** `\let\nx\and` then `\author{Ann Able \nx Bob Baker}` gives two creators, Ann Able and Bob Baker (Perl 0.8.8,
+run on the repro; its mechanism not traced: `\lx@add@authors` splits by `SplitTokens`, which compares tokens by name,
+`Base_Utility.pool.ltxml:114-140`, :679). pdflatex prints two authors: `\nx` is `\and`.
+
+**Before.** The rehearsal bound the author line's vocabulary by name only (`observer/rehearsal.rs`
+`install_event_bindings`, `ALWAYS_BOUND`: `\and` to `\lx@fm@obs@and`, `\\` to `\lx@fm@obs@break`, `\thanks`, `\footnote`
+to their events). A `\let` copy kept the command's own meaning (the kernel `\and` a constructor printing " and ",
+`sect05.rs`), so the block held no `Sep(And)` to cut: one creator "Ann Able
+and Bob Baker", `Error:frontmatter:merged_creators`, under article, eptcs and IEEEtran journal (OC1's `\let` probe); a
+copy of `\thanks` printed the kernel's note and the creator held none; a copy of `\footnote` had its note text ("footnote",
+the mark, "Univ A") read into the name.
+
+**Now.** Before the by-name bindings, `let_copies_of_bound_commands` collects the commands the block reaches — spelled in its
+tokens, or held in the bodies of the document's own macros it spells (`DefinitionOrigin::Document`, at most 256 macros
+per block) — whose meaning is the own definition of an `ALWAYS_BOUND` command flagged bound by meaning (`\and`, `\And`,
+`\AND`, `\\`, `\thanks`, `\footnote`): `\ifx` equal to the command now (`state::x_equals`) and `defined_as` it (that
+definition made for it), so a `\relax` or an undefined name is no copy of a separator a class `\let` to `\relax` or left undefined.
+Each is `\let` to the command's event constructor, in the rehearsal's group. A name bound by its own name
+(`ALWAYS_BOUND`, `BOUND_WHEN_DEFINED`: fixacm.sty's `\let\alignauthor\and`, 1801.02123) or one the binding declares a
+block break keeps that binding. Class macros are not read into: a copy a class's own code makes (latex.ltx's
+`\@normalcr`, revtex's `\and@latex`) is the class's business.
+
+**Reach** (a source scan of the 35,942 census papers, `\let\X\and|\And|\AND|\\|\thanks|\footnote` and `X` in an
+`\author`/`\authors` argument): a copy of `\and`/`\And`/`\AND` used in an author argument, 0 papers beyond fixacm's
+`\alignauthor` (bound by name already; 294 papers define such a copy, 289 of them in a class or package); of `\\`, 5
+(all `\newline`, bound by name); of `\thanks`, 73 (72 `\footnote`, bound by name; acl.sty's `\Thanks`, 2407.16574); of
+`\footnote`, 170 (169 `\thanks`, bound by name; www-notes.cls's `\Affiliation`, 1712.07684, `\let` to `\footnote` only inside
+`\preauthor`, `\@gobble` outside it). Byte-diff against OC1b (3,283 papers: the scan's 570, the article 614, the llncs
+699, int152c's stage2 1,434; 3,263 converted on both sides, the other 20 on neither): one paper changed, 2407.16574,
+better (its two `\Thanks` notes, a `pubnote` each before, now Eunseop Yoon's and Chang D. Yoo's, as the PDF marks them);
+E/F/W totals equal on every list. Not bound by meaning: the rest of `ALWAYS_BOUND` (`\par`, `\label`, `\footnotemark`, `\footnotetext`,
+`\newline`, `\linebreak`, `\inst`), whose copies (`\endgraf`, `\@@par`) are kernel and class internals.
+
+Guards `perfect_kernel_batchsep1::{a_let_copy_of_and_parts_the_names, eptcs_cells_part_at_a_let_copy_of_and,
+a_let_copy_of_a_note_command_is_its_note}`; repros
+`sectioning-frontmatter/author_let_copy_of_{and_parts_the_names,and_parts_the_names_ieeetran,and_in_a_macro_parts_the_names,thanks_is_the_note,footnote_is_the_note}.tex`,
+`class-bindings/eptcs/eptcs_author_let_copy_of_and_parts_the_names.tex`.
