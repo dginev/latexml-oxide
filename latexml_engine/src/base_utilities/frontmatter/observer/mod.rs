@@ -45,8 +45,8 @@ pub(in crate::base_utilities) mod separators;
 // prefixed, as the prelude re-exports these)
 // (the emitter's vocabulary, moved unchanged, for its callers in `frontmatter/` and `defs/`: the plan's row "Knowledge in, driver out, one pass")
 pub(in crate::base_utilities) use emitter::{
-  EMITTING, block_creator_written, calls::*, check_placed_content, emit_commands, emitted,
-  take_digested,
+  EMITTING, SETTERS_RECOVERED, block_creator_written, calls::*, check_placed_content,
+  emit_commands, emitted, setters_recovered, take_digested,
 };
 pub use events::{
   BreakKind as FmBreakKind, EmailMeaning as FmEmailMeaning, Event as FmEvent,

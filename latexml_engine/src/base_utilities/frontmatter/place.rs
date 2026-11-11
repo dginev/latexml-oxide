@@ -709,6 +709,8 @@ fn digest_queued_entry((tag, attr, command): RawFrontmatter) -> Result<()> {
     )),
     Some(Scope::Local),
   );
+  // (and no block's setters written as queued, which an emitted item's own command says: `SETTERS_RECOVERED`)
+  assign_value(SETTERS_RECOVERED, Stored::Bool(false), Some(Scope::Local));
   digest(command)?;
   Ok(())
 }

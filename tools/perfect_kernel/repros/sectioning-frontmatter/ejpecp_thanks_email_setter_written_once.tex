@@ -1,0 +1,20 @@
+% mechanism: as ejpecp_footnote_email_setter_written_once.tex, for a `\thanks` note (the emitter's `ltx:note` branch,
+%   emit.rs `note_call`, not the footnote's contact): written from its argument, whose digestion ran its `\EMAIL` a
+%   second time beside the entry the recovery writes (emit.rs `recover_queued`)
+% witness: none in the arXiv; the sibling of 1406.5876's footnote under the class's `\thanks`
+% oracle:  pdflatex (TL 2025's ejpecp.cls, -no-shell-escape) 0 errors: "Ann Able*", footnote "*Univ X E-mail: ann@x.org"
+% engines: rust int157a = thanks "Univ X" by its text (1 Warning), one e-mail note; P21e = thanks "Univ X ", two
+%          e-mail notes
+% expect:  0 errors, 0 warnings; Ann Able (thanks "Univ X"), exactly one `<note role="email">ann@x.org</note>`
+% status:  RED (P21e) -> GREEN (EJ1)
+% preload: ar5iv.sty
+\documentclass[EJP]{ejpecp}
+\TITLE{T}
+\DOI{vVOL-PID}
+\AUTHORS{%
+  Ann Able\thanks{Univ X
+    \EMAIL{ann@x.org}} }
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -74,6 +74,29 @@ pub(in crate::base_utilities) const EMITTING: &str = "lx_fm_emitting";
 /// as queued, `taken|<index>`: [`take_digested`]).
 const EMITTED_CREATORS: &str = "lx_fm_emitted_creators";
 const EMITTED_ITEMS: &str = "lx_fm_emitted_items";
+/// The State value true while a flush digests an item the emitter wrote from an author block whose rehearsal ran a
+/// frontmatter setter making no creator (`AuthorBlock::queued`), where [`recover_queued`] wrote that block's entries as
+/// queued, at this flush or an earlier one: the item's command opens with `\lx@frontmatter@setters@of{<the block's
+/// ledger index>}`, which sets it ([`setters_recovered`]; `place::digest_queued_entry` clears it for every entry), and
+/// `\lx@add@frontmatter@now` writes nothing under it, so each setter writes its entry once — ejpecp's
+/// `\AUTHORS{Rick Durrett\footnote{Duke University \EMAIL{rtd@math.duke.edu}} }`, whose note written from its argument
+/// wrote a second `<note role="email">` (1406.5876, 1904.02213, 1904.07135, 2206.01959).
+pub(in crate::base_utilities) const SETTERS_RECOVERED: &str = "lx_fm_setters_recovered";
+
+/// Whether [`recover_queued`] wrote the entries the setters of the author block at ledger index `index` queued, at this
+/// flush or an earlier one ([`SETTERS_RECOVERED`]).
+pub(in crate::base_utilities) fn setters_recovered(index: &str) -> bool {
+  lookup_mapping(EMITTED_ITEMS, &s!("recovered|{index}")).is_some()
+}
+
+/// Whether the ledger entry at `index` is an author block whose rehearsal ran a frontmatter setter making no creator
+/// (`AuthorBlock::queued`), whose entries [`recover_queued`] writes.
+fn block_ran_setters(index: usize) -> bool {
+  with_ledger(
+    |ledger| matches!(ledger.entries().get(index), Some(Entry::Author(block)) if !block.queued.is_empty()),
+  )
+}
+
 /// The State value saying a flush wrote the author block's own creator ([`block_creator`]).
 const BLOCK_CREATOR_WRITTEN: &str = "lx_fm_block_creator";
 /// Whether a flush wrote the author block's own creator ([`block_creator`]), which `relocate_annotations` then settles.
@@ -5306,6 +5329,17 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     let mut placed = cs_group("\\lx@frontmatter@queued", &[&internal(
       &(base + item.place).to_string(),
     )]);
+    // (an item of a block whose rehearsal ran a frontmatter setter names the block, so its digestion runs none the
+    // recovery writes as queued: [`SETTERS_RECOVERED`])
+    if let Some((source, _)) = item.assoc.source
+      && block_ran_setters(source)
+    {
+      let mut named = cs_group("\\lx@frontmatter@setters@of", &[&internal(
+        &source.to_string(),
+      )]);
+      named.append(&mut placed);
+      placed = named;
+    }
     placed.extend(tokens.unlist());
     let placed = entry(tag, placed);
     if !setter_calls.is_empty()
@@ -5490,17 +5524,18 @@ struct Taken<'a> {
 /// it: `\date{$^1$ School of …}` inside `\author`, which LaTeX prints as the date (2503.02741, hep-th0304189; 1411.6693's,
 /// its block nested in `\title` and read at a flush of its own, its setter's `@now` noted as such a command), and REVTeX
 /// 3's `\pacs` inside an `\address`'s minipage (cond-mat9801109, cond-mat9906335, cond-mat9809277, cond-mat9909213), whose
-/// emitted creators digest no setter (OXIDIZED_DESIGN_DIVERGENCES #985). A call whose run also digested an entry where it
-/// stands (`rehearsal::note_frozen_digest`: that minipage's
-/// `\begin{abstract}`), which no queue holds, and of which the reading writes nothing, is written as queued, as the old
-/// driver wrote it — its digestion at the flush runs every setter in it —, with the attributes it was queued with, back at
-/// its ledger position among the item calls and labelled for its run's creators ([`run_labels`]), so its contact is placed
-/// with theirs in queue order: unlabelled, the insertion put it in each creator before the items' moved contacts, and an
-/// e-mail cut from the address before it landed after it (cond-mat9809277, review revCR2 finding 1). Each once per
-/// conversion; not a block of no creator of this reading, one written whole (`whole`, whose digestion runs the setter
-/// itself), a call the reading writes from (its written contact's digestion runs the setter: review revCR2 finding 2), a
-/// call written as queued already (in `out`) or one a later clear removed. What no step writes — an entry digested where it
-/// stands in a read block — is counted ([`warn_queued_lost`]).
+/// emitted creators digest no setter (OXIDIZED_DESIGN_DIVERGENCES #985), nor do its items written from its tokens,
+/// whose digestion writes no entry of these again ([`SETTERS_RECOVERED`]: a note's argument holding ejpecp's `\EMAIL`,
+/// 1406.5876). A call whose run also digested an entry where it stands (`rehearsal::note_frozen_digest`: that
+/// minipage's `\begin{abstract}`), which no queue holds, and of which the reading writes nothing, is written as queued,
+/// as the old driver wrote it — its digestion at the flush runs every setter in it —, with the attributes it was queued
+/// with, back at its ledger position among the item calls and labelled for its run's creators ([`run_labels`]), so its
+/// contact is placed with theirs in queue order: unlabelled, the insertion put it in each creator before the items'
+/// moved contacts, and an e-mail cut from the address before it landed after it (cond-mat9809277, review revCR2 finding
+/// 1). Each once per conversion; not a block of no creator of this reading, one written whole (`whole`, whose digestion
+/// runs the setter itself), a call the reading writes from (its written contact's digestion runs the setter: review
+/// revCR2 finding 2), a call written as queued already (in `out`) or one a later clear removed. What no step writes —
+/// an entry digested where it stands in a read block — is counted ([`warn_queued_lost`]).
 fn recover_queued(
   resolved: &Resolved,
   whole: &BTreeSet<usize>,

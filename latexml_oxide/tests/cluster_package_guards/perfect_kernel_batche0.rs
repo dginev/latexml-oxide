@@ -1925,8 +1925,10 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // (Z18i 61 -> 63: `joined_run_link`'s `"\\url"` and `"\\href"`, the calls it writes again as printed — no reading
   // decision, which the events' targets make; review revZ18h S-a and B1r; CR8b 63 -> 66: `past_unprinted_tail`'s
   // `"\\begin"`, `"\\end"` twice, pairing an environment the picture's span opens with the `\end{…}` its call read after
-  // its last box, `\end{tikzpicture}` — no box holds it — never a reading decision, review revCR8 finding 1)
-  ("emitter", 66),
+  // its last box, `\end{tikzpicture}` — no box holds it — never a reading decision, review revCR8 finding 1; EJ1 66 -> 67:
+  // `"\\lx@frontmatter@setters@of"`, the command it writes before an item of a block whose setters' entries the recovery
+  // writes as queued, beside `\lx@frontmatter@queued` — it writes it, no decision reads it; 1406.5876)
+  ("emitter", 67),
   // (the "Knowledge in, driver out, one pass" move: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
   // mark and note commands it reads; none added)
   ("emitter/calls", 44),
