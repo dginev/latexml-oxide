@@ -1,0 +1,17 @@
+% witness: manual non-decimal-units (TL 2025 doc; its tcolorbox examples read \int_use:N \c@rownum / \c@colnum in a tblr)
+% oracle:  pdflatex 0 errors, cells "1.2" and "2.2" (tabularray.sty:173-176 \int_zero_new:N \c@rownum, \c@colnum,
+%          \c@rowcount, \c@colcount; :1670 sets \c@rownum per row, the column likewise)
+% engines: rust int160a1 0 errors, 2 warnings ("Counter 'rownum'/'colnum' was not defined; assuming 0", from the
+%          error stub's deleted \c@ branch), cells "0.0"; rust GA1 6 errors (Error:undefined:\c@rownum, \c@colnum, then
+%          \the of each), cells "0.0": the contrib binding latexml_contrib/src/tabularray_sty.rs defines none of the four
+% expect:  0 errors, 0 warnings; cells "1.2" and "2.2"
+% status:  RED (int160a1, GA1)
+\documentclass{article}
+\usepackage{tabularray}
+\makeatletter
+\begin{document}
+\begin{tblr}{ll}
+a & \the\c@rownum.\the\c@colnum \\
+b & \the\c@rownum.\the\c@colnum \\
+\end{tblr}
+\end{document}
