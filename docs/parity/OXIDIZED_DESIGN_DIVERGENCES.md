@@ -33944,6 +33944,51 @@ prints between them (`Ann Able<sup>1</sup>, (deceased)`), and the remark's mark 
 `perfect_kernel_batchz18o::marked_bracket_remark_is_no_name`; repros
 `class-bindings/llncs_author_marked_bracket_remark_{is_no_name,after_and_is_no_name}.tex`,
 `sectioning-frontmatter/article_author_marked_bracket_remark_is_no_name.tex`.
+(8) **eptcs's cells cut by meaning (P2-4, Option C P2).** The binding cuts its block into cells where it holds a
+separator meaning the kernel's `\and` — eptcs.cls's column break (`\@maketitle` sets `\@author` in a `tabular[t]{c}`,
+:170-174, which latex.ltx's `\and` closes, opening the next) — as the separator query reads it (`eptcs_cls.rs` `cells`;
+`argument_separators`, #995, whose `ArgSeparator::span` gives a separator's own tokens where no name, mark, contact or
+note prints from them, the emitter's criterion, #993): written, held in a macro of the document's
+(`\newcommand\nx{\and}`) or a `\let` copy, a cut wherever its tokens are whole units of the block's top level (no group
+or environment holds them). The span is the separator's own run (`separators.rs` `own_run`, P24b): an `\end{tabular}` glued
+to it (`\end{tabular}\and`, `\end{tabular}%⏎\and`, `\end{tabular}\relax\and`, `\end{tabular}\nx`) makes no box, so the
+separator's box covers it (core `token::field_cover_pending_merge`), and the span leaves those tokens to the table they
+close (the rehearsal's environment steps, as the emitter's balanced runs take them); a `\relax` before the separator is
+its own, a unit too. Without it the span started on the `\end`, inside the table's unit, and `cells` dropped the cut the
+spelling split made: the next column's institute was every author's (P24, B1 of revP24). It was a split by spelling (`split_tokens` at `\and`/`\And`/`\AND` and an alias of
+`\and`'s own definition, so a `\let` copy was cut already) that saw one cell at a macro-held `\and`: a name after a table
+of names was glued to the table's last name, its institute every name's (Univ C on all three authors, 0 Warnings), and a
+table after the `\and` was a line under the name before it, or the gate (`eptcs_structured`, a cell opening with a table)
+missed it and the kernel's line read the block (one creator "Ann Able and Bob Baker Cy Cole bob@b.edu cole@c.edu", 1
+Warning each). The columns are no longer rejoined by a written `\and`: each column a cut opens follows the separator's
+own tokens, which the reading cuts at their `Sep(And)` (#993). A separator of another meaning (the document's renewed
+`\and`, amsmath's math `\And`) ends no cell (trap T8), where the spelling split cut at `\And`, `\AND` and a renewed
+`\and`; none of the 73 eptcs census papers writes one in its `\author` (a source scan). The split by spelling stays
+only where the query reads nothing (`None`: inside a rehearsal, over the queries' allowance, a block past the field's
+positions).
+Left in the binding, deciding structure the reading cannot see yet (rule 5 of the P2-4 brief): the table of names
+(`leading_table`, `read_table`, `table_rows`, `multicolumn`), its `&` columns joined by an `\and` the binding writes —
+reading a table in an author cell as names is a reading rule that does not exist; and the class's `\institute{…}` and
+`\email{…}` written as `\\` lines under their column (`cell_items`, `read_cell`; eptcs.cls:188-191, where each prints `\\`
+first), which the rehearsal reads as the binding's affiliation and e-mail calls with no break before them. The
+macro-held and `\let` rows of the plain cells stay `perfect_kernel_batchoc1::eptcs_cells_part_at_a_macro_held_and` and
+`perfect_kernel_batchsep1::eptcs_cells_part_at_a_let_copy_of_and`. Byte-identical against int157a (`kit/conv.sh`, both binaries; every XML byte and every Error, Fatal and Warning count equal) on the 73 eptcs census papers and on int152c's stage2 1,434 ids; on the 73, a build printing each query's answer (not committed) saw 72 papers' `\author` make the query, each answered (none `None`), 63 separators, all `kernel`, and on every call cells equal to the spelling split's, the spaces at their ends aside. Guards
+`perfect_kernel_batchp24::{eptcs_a_hidden_and_after_a_table_opens_a_column,
+eptcs_a_cell_after_a_hidden_and_opens_with_a_table, eptcs_the_gate_sees_a_table_after_a_hidden_and}` (each a macro row,
+red on int157a, and a `\let` row, green there), `eptcs_a_macro_holding_names_and_the_and_stays_one_cell` (`\author{\aut
+\institute{Univ X}}`, `\aut` holding `Ann Able \and Bob Baker`: no cell cut, the reading parts the names, Univ X Bob
+Baker's alone, as pdflatex prints it, its 2 Warnings the emitter's names by text, P3; green on int157a) and the keep-guard `eptcs_todays_shapes_keep_their_creator_elements`
+(today's shapes, their whole creator elements, pinned on int157a); repros
+`class-bindings/eptcs/eptcs_author_{table_then_a_macro_held_and,table_then_a_let_copy_of_and,macro_held_and_then_a_table,let_copy_of_and_then_a_table,macro_held_and_then_a_table_no_lines,let_copy_of_and_then_a_table_no_lines,macro_holding_names_and_the_and}.tex`.
+P24b's guard `perfect_kernel_batchp24b::eptcs_a_separator_glued_to_a_table_end_opens_a_column` (repros
+`class-bindings/eptcs/eptcs_author_table_{glued_to_and,comment_then_and,relax_then_and,glued_to_a_macro_held_and,glued_to_a_let_copy_of_and}.tex`:
+every row red on P24, the next column's institute on every author; the macro row red on int157a too); byte-identical against int158a
+(`3d274f02df`) (`kit/conv.sh`, both binaries; every XML byte and every Error, Fatal and Warning count equal) on the 73 eptcs census
+papers, P21b's sv and aa lists (405 and 560 papers; 4 ids have no main file for either binary) and the stage2 1,434.
+Residual, outside this mechanism (the reading's owner of a column's line): a table of names after another cell whose
+full row's addresses spell no name gives a nameless creator holding them (`Ann Able \and \begin{tabular}{cc} Bob Baker &
+Cy Cole \\ \texttt{qq@b.edu} & \texttt{zed@c.edu}\end{tabular}`; the same table alone gives each column's name its
+address), with a written `\and` too, on int157a as since P2-4.
 
 ### 992. AASTeX's `\affil` e-mail lines are the API's to place: the line goes as the affiliation it is written as, the Kind and Link steps place its addresses (Z18l)
 
@@ -34103,7 +34148,7 @@ spelling stay in front of the reading, redundant for the names it now cuts, and 
 (`FRONTMATTER_SINGLE_ENGINE_PLAN.md` row P2): `\lx@splitting{\lx@add@author@split}{\and\And}` in inst_support, aa,
 sv_support, webofc and ptephy; llncs's marked split; the IEEEtran grid and wrap (`ieeetran_cls.rs` `author_block_body`,
 `wrap_bare_author_block_text`) and both of its routes by spelling (`ieeetran_cls.rs:364` `\author`, `:391`
-`\lx@IEEE@authblk@author`, `contains("authorblockN")`); eptcs's cells; `note_and_numbering` (`frontmatter_stores.rs:4481`);
+`\lx@IEEE@authblk@author`, `contains("authorblockN")`); eptcs's cells (cut by meaning since P2-4, #991 (8)); `note_and_numbering` (`frontmatter_stores.rs:4481`);
 nowfnt's `\and` blocks (`frontmatter_stores.rs:6000`); and the 11 gates on a literal `\and` the plan's row counts.
 
 **The API route (OC1c; OC1b, revOC1 B1, revOC1b S1-S3).** A binding that hands one whole argument to the API makes one
@@ -34205,19 +34250,26 @@ call. The queue's readers read each queued `ltx:creator` entry as one name, so t
 `\lx@sv@institute@` gate (an itemized `\institute` list spelling two or more queued names whole is the authors' list) failed,
 and the list and every address went to the last author (2312.14898). `queue_reading.rs` `queued_author_names_spelled`
 now parts each entry first (`entry_names`) where the reading cuts it: at each `\and`-family separator not inside a layout container (a brace group is none, so
-`{A \and B}` parts inside its braces) that `argument_separators` reads and that is one of the entry's own tokens (its new `ArgSeparator::position`, which a
-macro `\and` has too: it is the separator, not a macro holding one), whatever it means at `\institute` — the rehearsal binds `\and` whatever it means (`ALWAYS_BOUND`), and each sv class sets its
+`{A \and B}` parts inside its braces) that `argument_separators` reads, at its own tokens (`ArgSeparator::span`, the field eptcs's cells part at too, #991 (8):
+a literal, a `\let` copy, a macro holding only the separator, the document's macro `\and`; never an environment closed right before it — an `\end{tabular}`, `\end{minipage}`, a user environment),
+whatever it means at `\institute` — the rehearsal binds `\and` whatever it means (`ALWAYS_BOUND`), and each sv class sets its
 own in its `\@maketitle` before the names print (svjour3.cls:608 in 2312.14898's copy; svjour, svmult and svproc likewise, revP21b), so a document's `\renewcommand\and{\unskip, }` still gives three creators and
-the shared list, as P21's split did. A macro-held separator and an entry the query cannot read (`None`) part nothing:
-the entry stays one name. The queue readers, by route: changed, `queued_author_names_spelled` (one caller,
+the shared list, as P21's split did. A separator whose tokens print ink too (a macro holding names and the `\and`) and
+an entry the query cannot read (`None`) part nothing: the entry stays one name. P21b gave the field as a position
+(`ArgSeparator::position`), which a macro holding the `\and` lacked; P24b's span gives it, so `\newcommand\sep{\and}`,
+`\author{Ann Able \sep Bob Baker}` parts as the reading cuts it, two names, and an `\institute` list naming both is the
+authors' list (int158a: one name, both addresses and the list on Bob Baker). An `\end{tabular}\and` entry's list is still not the
+authors' list (the gate's count stays at most one; both addresses on Bob Baker, int158a the same): catalog repro
+`class-bindings/author_one_block/svjour3_author_table_glued_to_and_list_stays_red.tex`. The queue readers, by route: changed, `queued_author_names_spelled` (one caller,
 `sv_support_sty.rs` `\lx@sv@institute@`); unchanged, `queued_author_name_prints` (it reads all the names' words together,
 so a part changes nothing), `queued_author_marks`, `queued_requesters` and `queued_name_marks` (one entry per position;
 the kernel `\author`'s block is one entry too, so parting their positions is the plan's P4 row). aa kept its split here:
 without it, `\corrauth`'s contact lost `name="Corresponding author: "` when a later name held a `CJK*` environment
 (2608.21138), the emitter writing the contact as its item (`\lx@frontmatter@itemonly{…}`), not as the `\corrauth` call —
 the events' walker's, a mechanism of its own (P2-1c, below).
-Guard `perfect_kernel_batchp21b::sv_institute_list_reads_a_whole_author_entry_by_its_names`; repros
-`class-bindings/author_one_block/svjour3_institute_list_names_a_whole_author_block{,_document_and}.tex`.
+Guards `perfect_kernel_batchp21b::sv_institute_list_reads_a_whole_author_entry_by_its_names`,
+`perfect_kernel_batchp24b::sv_institute_list_reads_an_entry_parted_at_a_macro_held_and`; repros
+`class-bindings/author_one_block/svjour3_institute_list_names_a_{whole_author_block,whole_author_block_document_and,macro_held_and_entry}.tex`.
 
 **P2-1c (P21c): aa's split removed; P2-1 is complete outside llncs.** aa's `\author` makes one
 `\lx@add@author@split{#2}` call after its clear (`aa_cls.rs`). What kept the split was the events' walker, not the
@@ -34303,7 +34355,11 @@ and a numbered list (`labelseq=`, `Base_Utility.pool.ltxml:489` `CleanLabel($n, 
 by its binding (llncs.cls.ltxml's `\institute`).
 
 **Now.** Two mechanisms the P2 reroutes call (the bindings stop pre-splitting by spelling; plan
-`agent_reports/2026-11-10_P2P_report.md`). No binding calls either yet, so the corpus is byte-identical.
+`agent_reports/2026-11-10_P2P_report.md`). No binding called either at P2-0, so the corpus was byte-identical; since
+P2-4, eptcs's cells call the query (#991 (8)), which gives each separator's own tokens too (`ArgSeparator::span`, where
+no name, mark, contact or note prints from them), and since P24b the queue's name reader parts at the same field (#993
+P2-1b; P21b's `ArgSeparator::position` is gone). The span is the event's run past the environments closed right before
+it (`own_run`: an environment closed right before the separator — an `\end{tabular}`, `\end{minipage}`, a nested table, a user environment — whose cover its box took, is the environment's; revP24b N1).
 - *The query* (`observer/separators.rs` `argument_separators(&Tokens) -> Result<Option<Vec<ArgSeparator>>>`, re-exported
   as `latexml_engine::base_utilities::{argument_separators, FmArgSeparator, FmSepMeaning}`; TeX front-end
   `\lx@fm@separators{<tokens>}`, expanding to the meanings' names comma-separated, empty for none, `unread` where no
@@ -34330,7 +34386,7 @@ by its binding (llncs.cls.ltxml's `\institute`).
     or `Raw` arises.
   - `Raw`: a raw file's, the document's, or no separator's meaning.
 
-  The printing token is the one the event's span covers where it is no macro, else the family command (a macro holding
+  The printing token is the one the separator's own run covers where it is no macro, else the family command (a macro holding
   the separator, a class's macro `\and` or its `\let` copy, a `\csname and\endcsname`). Trap T8: the rehearsal binds
   `\and`/`\And`/`\AND` to its event whatever the class means (`ALWAYS_BOUND`), so a `Sep` alone does not say the class
   parts names there (smfart's `&`, 2508.07946); a gate asks for the meaning too. The meaning is the call site's: a class
@@ -34352,7 +34408,7 @@ by its binding (llncs.cls.ltxml's `\institute`).
   (an item the reading places apart, which a whole piece would print again) — `\institute{Univ X \email{a@x} \and Univ
   Y}` is written by text, each author's institute (one counted Warning each), the e-mail to its owner.
 
-**Who will call them** (the P2P batches, by its rule-6 scan: `lx@splitting`, `split_tokens(`, `SplitDelim::`, literal
+**Who calls them** (P2-4: eptcs's cells, the query, `eptcs_cls.rs` `cells`). **Who will call them** (the P2P batches, by its rule-6 scan: `lx@splitting`, `split_tokens(`, `SplitDelim::`, literal
 `\and`/`\And`/`\AND` in `latexml_package/src`, `latexml_contrib/src`, `frontmatter_stores.rs`, `base_utilities/defs`,
 `frontmatter/classify`): the emitter's cut — P2-2 (S2: `inst_support_sty.rs:58`, `aa_cls.rs:93` and its gate :75-80,
 `sv_support_sty.rs:69`), P2-3 (llncs `:189`, gate :208), P2-6 (the numbered stores, `frontmatter_stores.rs:3148-3151`);

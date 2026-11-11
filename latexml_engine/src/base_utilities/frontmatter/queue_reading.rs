@@ -235,15 +235,15 @@ pub fn queued_author_names_spelled(text: &Tokens) -> Result<usize> {
 
 /// The names one queued author entry holds: the entry parted where the reading cuts its names, at each `\and`-family
 /// separator not inside a layout container (a brace group is none) the rehearsal reads ([`argument_separators`],
-/// OXIDIZED_DESIGN_DIVERGENCES #995) that is one
-/// of the entry's own tokens (a literal, a `\let` copy, an active character), whatever it means where the query is
-/// made: the rehearsal binds `\and` as the separator whatever it means (`rehearsal::ALWAYS_BOUND`), so the reading writes
-/// a creator per piece there, and svjour3, the one class whose binding asks, sets its own `\and` in its `\@maketitle`
-/// before the names print (svjour3.cls:608; svjour, svmult and svproc likewise), so a document's `\renewcommand\and`
-/// before it changes no part. A macro holding a separator
-/// gives no token to part at. An entry the query could not read (`None`: no rehearsal made, over its allowance, a group
-/// left open) is one name, as it is with no separator: unread is not "no separator", and keeping the entry whole is the
-/// reading before any part was known.
+/// OXIDIZED_DESIGN_DIVERGENCES #995), at its own tokens (`ArgSeparator::span`: a literal, a `\let` copy, an active
+/// character, a macro holding only the separator, the document's macro `\and`; never an `\end{tabular}` glued before it,
+/// which is the table's), whatever it means where the query is made: the rehearsal binds `\and` as the separator whatever
+/// it means (`rehearsal::ALWAYS_BOUND`), so the reading writes a creator per piece there, and svjour3, the one class whose
+/// binding asks, sets its own `\and` in its `\@maketitle` before the names print (svjour3.cls:608; svjour, svmult and
+/// svproc likewise), so a document's `\renewcommand\and` before it changes no part. A separator whose tokens print ink
+/// too (a macro holding names and the separator, `\newcommand\aut{Ann \and Bob}`) has no span: no part there. An entry
+/// the query could not read (`None`: no rehearsal made, over its allowance, a group left open) is one name, as it is with
+/// no separator: unread is not "no separator", and keeping the entry whole is the reading before any part was known.
 fn entry_names(name: &Tokens) -> Result<Vec<Tokens>> {
   let Some(separators) = argument_separators(name)? else {
     return Ok(vec![name.clone()]);
@@ -252,11 +252,11 @@ fn entry_names(name: &Tokens) -> Result<Vec<Tokens>> {
   let mut names = Vec::new();
   let mut from = 0;
   for separator in separators {
-    if let Some(at) = separator.position
-      && let Some(name) = content.get(from..usize::from(at))
+    if let Some((start, end)) = separator.span
+      && let Some(name) = content.get(from..start)
     {
       names.push(Tokens::new(name.to_vec()));
-      from = usize::from(at) + 1;
+      from = end;
     }
   }
   names.push(Tokens::new(

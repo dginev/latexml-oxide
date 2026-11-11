@@ -9,7 +9,9 @@
 //! author line, the institute and e-mail stayed in the name ("Ilaria De Crescenzo Università degli Studi di Salerno
 //! Dipartimento di Informatica", 1408.5969; 1909.07676, 2406.16409, 2109.08295's "Jens Lehmann SDA Research Group, … \{grubenmann,
 //! jens.lehmann\}@cs.uni-bonn.de"). The binding writes the block as the class prints it and gives it whole to the
-//! reading (`\lx@add@author@split`, OXIDIZED_DESIGN_DIVERGENCES #984): each `\and` cell a column, its names
+//! reading (`\lx@add@author@split`, OXIDIZED_DESIGN_DIVERGENCES #984): each cell a column — cut where the block holds a
+//! separator meaning the kernel's `\and`, written, held in a macro or a `\let` copy (the separator query, #995; P2-4,
+//! OD #991 (8)), and followed by that separator's own tokens, which the reading cuts at — its names
 //! (`Tobias Grubenmann and Jens Lehmann`, 2109.08295) and each `\institute` and `\email` a `\\` line under them; the
 //! reading places each line — an institute every name's of the column, an e-mail the author it spells, else, a list of
 //! one address per name in order, the name at its place (1101.4424's `g.stavrinos@… \qquad tassiana98@…`), else the
@@ -31,10 +33,10 @@ LoadDefinitions!({
   }
   let_i(&T_CS!("\\lx@eptcs@kernel@author"), &T_CS!("\\author"), None);
   DefMacro!("\\author[]{}", sub[(short, body)] {
-    if !eptcs_structured(&body) {
+    let Some(cells) = eptcs_structured(&body)? else {
       return Ok(Invocation!(T_CS!("\\lx@eptcs@kernel@author"), vec![short, Some(body)]));
-    }
-    let calls = eptcs_author_calls(body.clone())?;
+    };
+    let calls = eptcs_author_calls(cells)?;
     Ok(Invocation!(T_CS!("\\lx@eptcs@author"), vec![Some(body), Some(calls)]))
   });
   DefMacro!(
@@ -47,7 +49,8 @@ LoadDefinitions!({
   DefMacro!("\\email{}", "\\lx@add@email{\\lx@address@urlfont{#1}}");
 });
 
-/// The author separators of the class's `\@maketitle`, `\and` and its kernel aliases.
+/// The author separators of the class's `\@maketitle` by spelling, `\and` and its kernel aliases: the cut where the
+/// separator query reads nothing ([`cells`]).
 fn and_delims() -> Vec<SplitDelim> {
   vec![
     SplitDelim::Token(T_CS!("\\and")),
@@ -56,48 +59,134 @@ fn and_delims() -> Vec<SplitDelim> {
   ]
 }
 
-/// Whether the block is the class's: an `\institute` or `\email` in it, or a cell opening with a table of names.
-fn eptcs_structured(body: &Tokens) -> bool {
-  body
-    .unlist_ref()
-    .iter()
-    .any(|t| *t == T_CS!("\\institute") || *t == T_CS!("\\email"))
-    || split_tokens(body.clone(), and_delims())
-      .iter()
-      .any(|cell| leading_table(cell.unlist_ref()).is_some())
+/// A cell of the block: the separator's own tokens written before it (none for the first), and its tokens.
+struct Cell {
+  separator: Vec<Token>,
+  tokens:    Vec<Token>,
 }
 
-/// The block as the class prints it, for the reading: each `\and` cell a column of names and the lines under them
-/// (an `\institute` or `\email` call is a `\\` line of its own, eptcs.cls:188-190 `\newcommand{\institute}[1]{…\\…}`,
-/// :191 `\newcommand{\email}[1]{\\…}`), and the lines under every name of a table, each a `_share=authors` entry.
+/// The block's cells (its `\\[…]` options stripped), where it is the class's: an `\institute` or `\email` in it, or a
+/// cell opening with a table of names; `None` for a block the kernel's author line reads.
+fn eptcs_structured(body: &Tokens) -> Result<Option<Vec<Cell>>> {
+  let calls = body
+    .unlist_ref()
+    .iter()
+    .any(|t| *t == T_CS!("\\institute") || *t == T_CS!("\\email"));
+  let cells = cells(&strip_linebreak_options(body.clone()))?;
+  let structured = calls
+    || cells
+      .iter()
+      .any(|cell| leading_table(&cell.tokens).is_some());
+  Ok(structured.then_some(cells))
+}
+
+/// The block's cells, cut where it holds a separator meaning the kernel's `\and` — eptcs.cls's column break (its
+/// `\@maketitle` sets `\@author` in a `tabular[t]{c}`, :170-174, which latex.ltx's `\and` closes, opening the next):
+/// written, held in a macro of the document's, or a `\let` copy, as the separator query reads them by meaning
+/// (`argument_separators`, OXIDIZED_DESIGN_DIVERGENCES #995; a separator of another meaning — a class's or the
+/// document's renewed `\and`, amsmath's `\And` — prints no column, trap T8). A separator is cut only where its own tokens
+/// are whole units of the block's top level (no group or environment holds them, [`unit_end`]) and print nothing else;
+/// one a macro holds together with names stays in its cell, which the reading cuts at its `Sep(And)` (#993). Where the
+/// query reads nothing (`None`: inside a rehearsal, over its allowance), the cut is by spelling, at `\and`, `\And`,
+/// `\AND` and an alias of `\and`'s own definition (`split_tokens`), as before P2-4. The spaces at a cell's ends are its
+/// readers' to drop ([`leading_table`], [`cell_items`]).
+fn cells(body: &Tokens) -> Result<Vec<Cell>> {
+  let Some(separators) = argument_separators(body)? else {
+    return Ok(
+      split_tokens_delimited(body.clone(), and_delims())
+        .into_iter()
+        .map(|(separator, tokens)| Cell {
+          separator,
+          tokens: tokens.unlist(),
+        })
+        .collect(),
+    );
+  };
+  let tokens = body.unlist_ref();
+  let units = top_level_units(tokens);
+  let mut cells = Vec::new();
+  let mut separator = Vec::new();
+  let mut from = 0;
+  for (start, end) in separators
+    .iter()
+    .filter(|found| found.meaning == FmSepMeaning::Kernel)
+    .filter_map(|found| found.span)
+  {
+    if start < from || !units.contains(&start) || !units.contains(&end) {
+      continue;
+    }
+    cells.push(Cell {
+      separator: std::mem::replace(&mut separator, tokens[start..end].to_vec()),
+      tokens:    tokens[from..start].to_vec(),
+    });
+    from = end;
+  }
+  cells.push(Cell {
+    separator,
+    tokens: tokens[from..].to_vec(),
+  });
+  Ok(cells)
+}
+
+/// Where the units of `tokens`' top level start, and its end ([`unit_end`]: a group, an environment, else one token).
+fn top_level_units(tokens: &[Token]) -> Vec<usize> {
+  let mut starts = Vec::new();
+  let mut at = 0;
+  while at < tokens.len() {
+    starts.push(at);
+    at = unit_end(tokens, at);
+  }
+  starts.push(tokens.len());
+  starts
+}
+
+/// The block as the class prints it, for the reading: each cell a column of names and the lines under them (an
+/// `\institute` or `\email` call is a `\\` line of its own, eptcs.cls:188-190 `\newcommand{\institute}[1]{…\\…}`,
+/// :191 `\newcommand{\email}[1]{\\…}`), each column after the separator written before it, and the lines under every
+/// name of a table, each a `_share=authors` entry.
 #[derive(Default)]
 struct Block {
-  columns: Vec<Vec<Token>>,
-  shared:  Vec<Vec<Token>>,
+  /// each column: the separator written before it, its names and lines
+  columns:   Vec<(Vec<Token>, Vec<Token>)>,
+  shared:    Vec<Vec<Token>>,
+  /// the separator of the cell being read, for the column it opens
+  separator: Vec<Token>,
 }
 
 impl Block {
-  /// A new column holding `names`; its place.
+  /// The cell next read follows `separator` (none for the first).
+  fn follows(&mut self, separator: Vec<Token>) { self.separator = separator; }
+
+  /// A new column holding `names`, after the cell's separator, or a column of a table after another column of it
+  /// (a table's own `&` columns, which the binding reads as names: `\and`); its place.
   fn add_names(&mut self, names: Vec<Token>) -> usize {
-    self.columns.push(names);
+    let separator = match std::mem::take(&mut self.separator) {
+      separator if separator.is_empty() => vec![T_CS!("\\and")],
+      separator => separator,
+    };
+    self.columns.push((separator, names));
     self.columns.len() - 1
   }
 
   /// A line under the names of column `at`.
   fn line_under(&mut self, at: usize, line: Vec<Token>) {
-    let column = &mut self.columns[at];
+    let column = &mut self.columns[at].1;
     column.push(T_CS!("\\\\"));
     column.extend(line);
   }
 
-  /// The block's whole list to the reading (`\lx@add@author@split`, as llncs's `\author`, OD #984), its columns parted
-  /// by `\and`; then each line every name shares, an affiliation (e-mail calls in it are lines of the row, placed by the
-  /// reading: the address the author it spells, a list in order, else the block's — FIDELITY_CHARTER §4).
+  /// The block's whole list to the reading (`\lx@add@author@split`, as llncs's `\author`, OD #984), which cuts it at its
+  /// separators' `Sep(And)` (#993): each column after the separator its cell follows, as written (a literal `\and`, a
+  /// macro holding it, a `\let` copy), or a table's `\and`; then each line every name shares, an affiliation (e-mail
+  /// calls in it are lines of the row, placed by the reading: the address the author it spells, a list in order, else
+  /// the block's — FIDELITY_CHARTER §4).
   fn calls(self) -> Result<Tokens> {
     let mut list = Vec::new();
-    for (at, column) in self.columns.into_iter().enumerate() {
+    for (at, (separator, column)) in self.columns.into_iter().enumerate() {
       if at > 0 {
-        list.extend([T_SPACE!(), T_CS!("\\and"), T_SPACE!()]);
+        list.push(T_SPACE!());
+        list.extend(separator);
+        list.push(T_SPACE!());
       }
       list.extend(column);
     }
@@ -138,14 +227,14 @@ enum Item {
   Email(Vec<Token>),
 }
 
-/// The calls the block makes: each `\and` cell read in turn.
-fn eptcs_author_calls(body: Tokens) -> Result<Tokens> {
+/// The calls the block makes: each cell ([`cells`]) read in turn.
+fn eptcs_author_calls(cells: Vec<Cell>) -> Result<Tokens> {
   let mut block = Block::default();
-  for cell in split_tokens(strip_linebreak_options(body), and_delims()) {
-    let cell = cell.unlist();
-    match leading_table(&cell) {
+  for Cell { separator, tokens } in cells {
+    block.follows(separator);
+    match leading_table(&tokens) {
       Some(table) => read_table(&mut block, table),
-      None => read_cell(&mut block, cell_items(&cell)),
+      None => read_cell(&mut block, cell_items(&tokens)),
     }
   }
   block.calls()
@@ -411,7 +500,7 @@ fn read_table(block: &mut Block, table: Table) {
       Item::Institute(line) => block.shared.push(call_line(T_CS!("\\institute"), line)),
       Item::Email(line) => block.shared.push(call_line(T_CS!("\\email"), line)),
       Item::Text { after_break: false, line } => {
-        if let Some(last) = block.columns.last_mut() {
+        if let Some((_, last)) = block.columns.last_mut() {
           last.extend(line);
         }
       },

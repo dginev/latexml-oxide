@@ -1441,7 +1441,9 @@ fn every_shape_of_a_key_is_seen() {
 /// rehearsal binds by its name whatever it means (`ALWAYS_BOUND`), gets its position even where a macro defines that
 /// command (a document's `\renewcommand\and`), told from a macro holding a separator (`\aut`) by that name, so the queue's
 /// name reader parts an sv author list there as the reading cuts it (repro
-/// `svjour3_institute_list_names_a_whole_author_block_document_and`).
+/// `svjour3_institute_list_names_a_whole_author_block_document_and`). Back to 29 at P24b: that arm and the position went
+/// with `ArgSeparator::position`; the queue's name reader parts at the separator's span (`ArgSeparator::span`, no read
+/// of a token by name), which a document's macro `\and` has too (its call, no ink), so the repro keeps its output.
 const TOKEN_READS: &[(&str, usize)] = &[
   ("aa_cls.rs", 5),
   ("aas_support_sty.rs", 17),
@@ -1524,7 +1526,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // P20, 26 -> 29: `observer/separators.rs`, the one engine's separator query, reads a separator's *meaning* — its event's
   // printing token's definition, whether it is the kernel layer's `\and` constructor (`get_cs()` against `KERNEL_SEPARATOR`),
   // the trap-T8 test `frontmatter_stores::kernel_and_list` makes —, never its spelling: a decision by definition, OD #995)
-  ("frontmatter (rest)", 30),
+  ("frontmatter (rest)", 29),
   ("frontmatter_stores", 527),
   ("gretsi_cls.rs", 14),
   // (CR10a, 119 -> 128: the class's author body is read as tokens before it is digested, as `author_block_body` reads it —

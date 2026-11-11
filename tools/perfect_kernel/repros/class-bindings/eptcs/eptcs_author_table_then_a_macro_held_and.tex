@@ -1,0 +1,27 @@
+% mechanism: an eptcs `\author` opening with a `tabular` of names (an e-mail row under them), then a macro (`\nx`)
+%   holding the `\and`, then a name with an `\institute` under it: the class's `\and` closes the author column and
+%   opens one beside it, so "Cy Cole" and "Univ C" are a column of their own. The binding cuts its cells where the
+%   separators are by meaning (`eptcs_cls.rs` `cells`, `argument_separators`, OXIDIZED_DESIGN_DIVERGENCES #991, #995):
+%   the name after the table is a cell of its own, its institute its own.
+% witness: P24's probe (the table route of OC1's macro-held probe ep1); the table shape 1407.7928
+% oracle:  pdflatex with eptcs.cls beside it (TL 2025, -no-shell-escape) 0 errors: "Ann Able" over "ann@a.edu", "Bob
+%   Baker" over "bob@b.edu", "Cy Cole" over "Univ C" in a column beside them
+% engines: perl has no eptcs binding (OmniBus); int157a: the cell split by spelling saw one cell, "\nx Cy Cole" beside
+%   Bob Baker's name and the institute under the whole table: Univ C on all three authors, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able (ann@a.edu), Bob Baker (bob@b.edu), Cy Cole (Univ C)
+% status:  RED (int157a) -> GREEN (P24; guard perfect_kernel_batchp24)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\newcommand\nx{\and}
+\title{T}
+\author{\begin{tabular}{c@{\qquad}c}
+Ann Able & Bob Baker\\
+\texttt{ann@a.edu} & \texttt{bob@b.edu}
+\end{tabular}
+\nx
+Cy Cole
+\institute{Univ C}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

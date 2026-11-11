@@ -1,7 +1,7 @@
 //! Guards for batch P21b (Option C step P2-1b, OD #993): sv_support's `\author` hands its whole name list to the reading
 //! in one `\lx@add@author@split` call, where it split it by spelling first (`\lx@splitting`), and the queue's name reader
 //! parts that one entry at every `\and`-family separator that is one of its own tokens, whatever it means
-//! (`queue_reading.rs` `entry_names`, by `argument_separators`' position, OD #995), so the `\institute` reader still counts each name (`queued_author_names_spelled`). The repro
+//! (`queue_reading.rs` `entry_names`, at each separator's own tokens, `argument_separators`' span, OD #995), so the `\institute` reader still counts each name (`queued_author_names_spelled`). The repro
 //! compiles clean with pdflatex (TL 2025, 2312.14898's svjour3.cls); the guard asserts every creator's name and contacts,
 //! in order, and the exact Error and Warning counts.
 
@@ -25,7 +25,7 @@ macro_rules! repro {
 /// to the author it spells and the list is shared on the block's nameless creator (#159). Read as one name, the entry
 /// spelled no name whole and the list and all three addresses went to Cid Cole alone (P21 without sv_support's split).
 /// Two rows, two paths of the part: the kernel `\and` (a constructor, its own token), and a document's
-/// `\renewcommand\and` (a macro, which the separator query once gave no position; svjour3 sets its own `\and` at the
+/// `\renewcommand\and` (a macro, bound by the rehearsal as the separator, its own token; svjour3 sets its own `\and` at the
 /// title, so pdflatex prints the same three names). Distinct from
 /// `perfect_kernel_batch98b::svjour3_list_before_at_is_structure`: the witness's own shape, three names, and the part's
 /// two paths.

@@ -19,7 +19,8 @@
 use latexml_core::{definition::origin::DefinitionOrigin, token::AUTHOR_PROV_POS_MASK};
 
 use super::{
-  events::{EventKind, SepKind, lex_events},
+  events::{Event, EventKind, SepKind, lex_events},
+  field_notes::EnvironmentStep,
   ledger::field_stamped,
   policy::TitleMarks,
   rehearsal::{Rehearsal, for_a_query, rehearse},
@@ -64,13 +65,18 @@ impl SepMeaning {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ArgSeparator {
   /// the command of the family the rehearsal read (`\and`, `\And`, `\AND`: `SepKind::And`)
-  pub command:  &'static str,
+  pub command: &'static str,
   /// the meaning of the token that printed it, where the query is made
-  pub meaning:  SepMeaning,
-  /// where that token is in the argument, when it is one of the argument's own tokens (a literal, a `\let` copy, an
-  /// active character, the command itself whatever it means): `None` where a macro holds the separator or no span was
-  /// read (`printing_token`), so a caller parting the argument there finds no token to part at
-  pub position: Option<u16>,
+  pub meaning: SepMeaning,
+  /// its own tokens in the argument, `start..end` (a literal `\and`, a macro holding only the separator, a `\let` copy,
+  /// a `\csname and\endcsname`; a `\relax` before it, which prints nothing; never an environment closed right before
+  /// it — an `\end{tabular}`, `\end{minipage}`, a nested table, a user environment — which is the environment's,
+  /// `own_run`), where they print nothing else: no name, mark, contact or note's span meets them, the
+  /// criterion of the emitter's cut (`emit::cut_at_separators`, #993). `None` where the span is unread or the tokens
+  /// print ink too (a macro holding names and the separator together, `\newcommand\aut{Ann \and Bob}`): no cut by
+  /// tokens parts them, the reading's cut does. Its callers part an argument there: P2-4's eptcs cells
+  /// (OXIDIZED_DESIGN_DIVERGENCES #991 (8)) and the queue's name reader (`queue_reading::entry_names`, #993 P2-1b)
+  pub span:    Option<(usize, usize)>,
 }
 
 /// The kinds of meaning a definition origin says, for a meaning that is not the kernel separator's.
@@ -105,27 +111,52 @@ fn meaning_of(token: &Token) -> SepMeaning {
   }
 }
 
-/// The token whose meaning a separator has, its span `span` of `content`: the one token the span covers (a literal `\and`,
+/// The token whose meaning a separator has, its own run `span` ([`own_run`]): the one token the span covers (a literal `\and`,
 /// a `\let` copy, an active character) where it is no macro; else the family's command the rehearsal read (`command`) —
 /// a macro holding the separator, whose call the span covers (`\newcommand\aut{Ann \and Bob}`), a class's macro `\and`
 /// itself or a copy of it (`rehearsal::let_copies_of_bound_commands` binds a copy only where it means what the command
-/// means), a `\csname and\endcsname` (which names the command), a span not read. With it, the position of the one token
-/// in `content`, where it is that token or the family's command itself ([`ArgSeparator::position`]).
-fn printing_token(
-  content: &[Token],
-  span: Option<(u16, u16)>,
-  command: &'static str,
-) -> (Token, Option<u16>) {
-  let run = span.and_then(|(s, t)| Some((s, content.get(usize::from(s)..usize::from(t))?)));
+/// means), a `\csname and\endcsname` (which names the command), a span not read.
+fn printing_token(content: &[Token], span: Option<(u16, u16)>, command: &'static str) -> Token {
+  let run = span.and_then(|(s, t)| content.get(usize::from(s)..usize::from(t)));
   match run {
-    Some((at, [one])) if !matches!(lookup_meaning(one), Some(Stored::Expandable(_))) => {
-      (*one, Some(at))
-    },
-    // (the family's command itself, which the rehearsal binds by its name whatever it means here: a macro `\and` is no
-    // macro holding a separator but the separator, at its own position)
-    Some((at, [one])) if *one == T_CS!(command) => (T_CS!(command), Some(at)),
-    _ => (T_CS!(command), None),
+    Some([one]) if !matches!(lookup_meaning(one), Some(Stored::Expandable(_))) => *one,
+    _ => T_CS!(command),
   }
+}
+
+/// A separator's span `span` past the environments closed right before it (`environments`, the rehearsal's steps): its
+/// own run of the argument. An invocation making no box leaves its cover for the next box (core
+/// `token::field_cover_pending_merge`, OD #715), so a separator's box covers an `\end{tabular}` glued to it
+/// (`\end{tabular}\and`, `\end{tabular}%⏎\and`; `\end{tabular}\relax\and` covers the `\relax` too, which is the
+/// separator's as a font switch before a name is the name's). Those tokens close the table and are the environment's,
+/// as the emitter's balanced runs take them (`emitter::Field::balanced`), not the separator's. A step reaching the span's
+/// end leaves it whole: the separator keeps a token.
+fn own_run(environments: &[EnvironmentStep], span: Option<(u16, u16)>) -> Option<(u16, u16)> {
+  let (mut s, t) = span?;
+  while let Some(step) = environments
+    .iter()
+    .find(|step| !step.opens && step.start <= s && s < step.end && step.end < t)
+  {
+    s = step.end;
+  }
+  Some((s, t))
+}
+
+/// A separator's own run `run` ([`own_run`]) as positions, where no ink event's span meets it — no name, mark, contact
+/// or note prints from its tokens ([`ArgSeparator::span`]).
+fn own_tokens(events: &[Event], run: Option<(u16, u16)>) -> Option<(usize, usize)> {
+  let (s, t) = run?;
+  let inks = |e: &&Event| {
+    matches!(
+      e.kind,
+      EventKind::Name | EventKind::Mark | EventKind::Contact | EventKind::Note
+    )
+  };
+  let met = events
+    .iter()
+    .filter(inks)
+    .any(|ink| ink.span.is_some_and(|(a, b)| a < t && b > s));
+  (!met).then_some((usize::from(s), usize::from(t)))
 }
 
 /// The `\and`-family separators `arg` holds at its own level (nest 0: not one a layout container of it holds, a
@@ -166,6 +197,7 @@ pub fn argument_separators(arg: &Tokens) -> Result<Option<Vec<ArgSeparator>>> {
   let Rehearsal::Done {
     value: events,
     left_open: false,
+    environments,
     ..
   } = read
   else {
@@ -173,11 +205,11 @@ pub fn argument_separators(arg: &Tokens) -> Result<Option<Vec<ArgSeparator>>> {
   };
   let separators = events.iter().filter_map(|e| match e.kind {
     EventKind::Sep(SepKind::And(command)) if e.nest == 0 => {
-      let (token, position) = printing_token(content, e.span, command);
+      let run = own_run(&environments, e.span);
       Some(ArgSeparator {
         command,
-        meaning: meaning_of(&token),
-        position,
+        meaning: meaning_of(&printing_token(content, run, command)),
+        span: own_tokens(&events, run),
       })
     },
     _ => None,

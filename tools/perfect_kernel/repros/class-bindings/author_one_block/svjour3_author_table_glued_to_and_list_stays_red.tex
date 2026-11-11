@@ -1,0 +1,29 @@
+% mechanism: an svjour3 `\author` whose first name is set in a `tabular` glued to the `\and`; the queue's name reader
+%   parts the entry at the `\and`'s own tokens (`queue_reading.rs` `entry_names`, `ArgSeparator::span`, which leaves
+%   out the `\end{tabular}`, OD #995), but the `\institute` list is not read as the authors' list (the gate
+%   `queued_author_names_spelled` > 1 not met: the list is not shared), as on int158a
+% witness: synthetic (revP24 check 5's sv row)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 2312.14898's svjour3.cls and svglov3.clo) 0 errors: "Ann Able · Bob
+%          Baker"; the institute footnote "Ann Able / E-mail: ann@x.edu / Bob Baker / E-mail: bob@x.edu / University of X"
+% engines: int158a, P24 and P24b the same: both addresses on Bob Baker, his affiliation "Ann Able Bob Baker University
+%          of X"
+% expect:  0 errors, 0 warnings; Ann Able (ann@x.edu), Bob Baker (bob@x.edu), the nameless creator (University of X)
+% status:  RED (int158a, P24b; no guard: the list gate's name count, not the part)
+% preload: ar5iv.sty
+\documentclass[smallextended]{svjour3}
+\begin{document}
+\title{T}
+\author{\begin{tabular}{c}Ann Able\end{tabular}\and Bob Baker}
+\institute{
+    \begin{itemize}
+        \item[] Ann Able \\
+                \email{ann@x.edu} \\
+        \item[] Bob Baker \\
+                \email{bob@x.edu} \\
+        \at
+        \item[] University of X
+    \end{itemize}
+}
+\maketitle
+Text.
+\end{document}
