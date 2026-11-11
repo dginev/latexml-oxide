@@ -1,0 +1,19 @@
+% A role or note line between a marked names row and its marked address lines ("This research was supported by the
+% NSF", "Corresponding author: Professor Ann Able") is no unmarked institution: not every name's affiliation. Under
+% marked names the unmarked line is the block's text (Perl's continuation welds it into the last name, KNOWN_PERL_ERRORS
+% #446); a line naming a collaboration ("for the ATLAS Collaboration") is the names' collaboration (OD #946), guarded
+% green in perfect_kernel_batch77t `role_and_note_lines_are_no_unmarked_institution`.
+% witness: synthetic (77t review; that guard's support and correspondence cases, whose comparison DEL1 discarded — its
+%          `=2` red: "reads the role/note line under the names as an affiliation of Ann Able and Bob Baker")
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Ann Able1, Bob Baker2", "This research was supported by the
+%          NSF", "1Univ A", "2Univ B"
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: " This research was supported by the NSF" an affiliation of Ann
+%          Able and of Bob Baker (the correspondence line the same)
+% expect:  0 errors, 0 warnings; Ann Able Univ A, Bob Baker Univ B; the support line kept, no name's affiliation
+% status:  RED (int160a, HG1)
+\documentclass{article}
+\begin{document}
+\title{T}\author{Ann Able$^{1}$, Bob Baker$^{2}$\\ This research was supported by the NSF\\ $^{1}$Univ A\\ $^{2}$Univ B}
+\maketitle
+Text.
+\end{document}

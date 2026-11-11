@@ -304,15 +304,24 @@ fn parenthesized_superscript_marks_label_affiliations() {
 /// marked line is theirs.
 #[test]
 fn role_and_note_lines_are_no_unmarked_institution() {
-  for line in [
-    "This research was supported by the NSF",
-    "for the ATLAS Collaboration",
-    "Corresponding author: Professor Ann Able",
-  ] {
-    article_author(&format!(
-      r"Ann Able$^{{1}}$, Bob Baker$^{{2}}$\\ {line}\\ $^{{1}}$Univ A\\ $^{{2}}$Univ B"
-    ));
-  }
+  // (HG1: asserted again — DEL1 left the conversions alone. The support and correspondence lines are read as both
+  // names' affiliations: RED, sectioning-frontmatter/author_support_line_under_marked_names_is_no_affiliation_red.)
+  let xml = article_author(
+    r"Ann Able$^{1}$, Bob Baker$^{2}$\\ for the ATLAS Collaboration\\ $^{1}$Univ A\\ $^{2}$Univ B",
+  );
+  let collaboration = r#"<contact role="collaboration">for the ATLAS Collaboration</contact> "#;
+  assert_eq!(creators(&xml), [
+    creator(
+      true,
+      "Ann Able",
+      &format!("{collaboration}{}", affiliation("Univ A"))
+    ),
+    creator(
+      false,
+      "Bob Baker",
+      &format!("{collaboration}{}", affiliation("Univ B"))
+    ),
+  ]);
 }
 
 /// Rank 110 (rev77t finding 3): an llncs `\\` affiliation line is the names' since the last affiliation line, a names

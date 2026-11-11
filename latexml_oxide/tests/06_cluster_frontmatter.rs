@@ -569,7 +569,29 @@ fn frontmatter_hspace_author_split() {
 /// plain, and every author still splits on `\and`.
 #[test]
 fn frontmatter_symbol_superscript_mark() {
-  convert_to_xml("tests/cluster_regressions/frontmatter_symbol_superscript_mark.tex");
+  let x = convert_to_xml("tests/cluster_regressions/frontmatter_symbol_superscript_mark.tex");
+  // (HG1: asserted again — DEL1 left the conversion alone. Each marked author keeps a visible superscript symbol, a
+  // math `*` as TeX sets it, `∗`; the unmarked author stays plain; all four split; no mark an affiliation.)
+  for (name, mark) in [
+    ("Dana Delta", "<sup>∗</sup>"),
+    ("Evan Echo", "<sup>†</sup>"),
+    ("Fiona Foxtrot", "<sup>∗</sup>"),
+    ("Gina Golf", ""),
+  ] {
+    assert!(
+      x.contains(&format!("<personname>{name}{mark}</personname>")),
+      "{name} must keep {mark:?}:\n{x}"
+    );
+  }
+  assert_eq!(
+    x.matches("role=\"author\"").count(),
+    4,
+    "expected four authors:\n{x}"
+  );
+  assert!(
+    !x.contains("role=\"affiliation\""),
+    "a symbol mark was misread as an affiliation:\n{x}"
+  );
 }
 /// html_feedback#6637 combined (arXiv:2506.06941, "The Illusion of Thinking",
 /// plain article): six authors separated by `\hspace{0.5cm}`/`\\`, one lead with

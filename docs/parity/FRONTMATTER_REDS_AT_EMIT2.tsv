@@ -2,7 +2,7 @@
 # column 3 says what happened: "deleted" (the guard asserted only `=0` output) or "kept" (its `=2` assertions kept, its `=0` tail deleted).
 # Each row stays the record of a known `=2` deficit (test, what `=2` gets wrong, DEL1).
 frontmatter_thanks_literal_mark_mix	=2 drops Mirzadeh's literal $^{*}$ mark	kept
-frontmatter_symbol_superscript_mark	=2 drops Dana Delta's literal $^{*}$ mark	kept
+frontmatter_symbol_superscript_mark	=2 drops Dana Delta's literal $^{*}$ mark	kept; HG1: asserted again, the marks kept (∗ as TeX sets a math *)
 frontmatter_inst_affiliation_dedup	=2 writes a before=" " separator on Bob's creator the off reading joins without one	kept
 frontmatter_ijcai_affiliations_emails	=2 loses Jayant Kalagnanam as his own creator (writes "Jayant Kalagnanam IBM Research" as plain text)	kept
 perfect_kernel_batch100a::a_deceased_legend_is_a_note_of_its_carriers	=2 keeps the legend's star in Ann's mark ("1,⋆" for "1")	kept
@@ -258,7 +258,7 @@ perfect_kernel_batch77n::revtex_footnotetext_among_names_is_the_names	=2 writes 
 perfect_kernel_batch77n::wrapped_comma_ends_a_row_of_names	=2 a false no-place Warning ("first" kept as a note of the block)	deleted
 perfect_kernel_batch77n::wrapper_split_negatives_stay	=2 a false plain-text Warning ("Univ D, Village": note no argument)	deleted
 perfect_kernel_batch77o::aistats_in_place_leaves_assignments_alone	=2 a false Error (\lx@personname: Attempt to end mode restricted_horizontal)	deleted
-perfect_kernel_batch77o::aistats_note_marked_address_still_pairs_by_column	=2 drops the printed * marks from the names	kept
+perfect_kernel_batch77o::aistats_note_marked_address_still_pairs_by_column	=2 drops the printed * marks from the names	kept; HG1: the first case asserted again (right today), the `Univ A$^*$` case RED (aistats_address_column_symbol_mark_kept_red)
 perfect_kernel_batch77p::aero_corresponding_mark_owns_the_email	=2 a false unanswered_mark_lost Warning (cor:aero)	deleted
 perfect_kernel_batch77p::aero_setup_is_the_frontmatter	=2 a false unanswered_mark_lost Warning (cor:aero)	deleted
 perfect_kernel_batch77p::aero_variant_keeps_the_kernel_title_and_authors	=2 drops the printed (🖂) mark from Izzo	kept
@@ -300,7 +300,7 @@ perfect_kernel_batch77p::symbol_row_unmarked_institution_is_every_names	=2 drops
 perfect_kernel_batch77p::url_brace_list_is_addresses_by_spelling	=2 unverified: drops the typewriter wrappers on the spelled addresses	kept
 perfect_kernel_batch77t::symbol_led_line_under_marked_names_is_not_every_names	=2 drops Ann Able's and Dan's printed "*" marks	kept
 perfect_kernel_batch77t::parenthesized_math_marks_label_affiliations	=2 keeps the "(a)"/"(b)" leads in the affiliations and a/b sups on the names, all lines on each creator	kept
-perfect_kernel_batch77t::role_and_note_lines_are_no_unmarked_institution	=2 reads the role/note line under the names as an affiliation of Ann Able and Bob Baker	kept
+perfect_kernel_batch77t::role_and_note_lines_are_no_unmarked_institution	=2 reads the role/note line under the names as an affiliation of Ann Able and Bob Baker	kept; HG1: the collaboration case asserted again, the support and correspondence lines RED (author_support_line_under_marked_names_is_no_affiliation_red)
 perfect_kernel_batch77t::vmsta_title_page_name_parts	=2 writes the vmsta initials into the names ("Yu.Yuliya", "I.Ivan")	kept; HG1: test deleted, repro vmsta_title_page_name_parts_red
 perfect_kernel_batch77t::parenthesized_superscript_marks_label_affiliations	=2 keeps the "(a)"/"(b)" leads in the affiliations and a/b sups on the names, all lines on each creator	kept
 perfect_kernel_batch77t::thanks_affiliation_list_keeps_superscripts_in_its_text	=2 cuts the thanks affiliation at the text's "10 m²" superscript, losing the sup	kept; HG1: test deleted, repro thanks_affiliation_list_keeps_superscripts_in_its_text_red
