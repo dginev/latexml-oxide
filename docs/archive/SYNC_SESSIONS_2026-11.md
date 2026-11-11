@@ -1867,6 +1867,40 @@ The flip's facts are live in `perfect_kernel/SILENT_LOSS_INVENTORY.md` "Bundle i
 - fm_checks vs int153d: merged/lost 130 → 133 (the six NE5 blocks); 2402.02104's content check 0 distinct words lost; gone: 1208.0597, 1409.0597, 2407.13730, 2606.19583; 0907.1243's lost "dagger diamond star" are the math token names of its marks.
 - flip200 per paper 69.21 % at `=2`.
 
+## Bundle int157a — Option C P1 on both routes, separators by meaning, P2-0, the image before a URL
+
+On `pk/int157a` after the int156a push (`e25c1a4881`); every batch reviewed and merged. Its open residuals are live in
+[`../perfect_kernel/SILENT_LOSS_INVENTORY.md`](../perfect_kernel/SILENT_LOSS_INVENTORY.md) "Bundle int157a — the
+residual".
+
+- **Option C P1, the block routes (OC1, OD #993):** a hidden `\and` (a macro, a wrapper, `\csname`) parts on every class
+  route through the block reading's cut; pinned by `perfect_kernel_batchoc1`. **The API route (OC1c):** the reading cuts an
+  API creator call at its nest-1 `Sep(And)` inside `\lx@personname`, the emitter writes one call per piece (by tokens from
+  a fresh rehearsal, else by text with a counted Warning), in no-block papers too; a cut keeps the call whole unless all its
+  ink sits inside the `\and`'s group (revOC1c B1), and several cut calls' extra pieces are summed per annotation (B2).
+  1909.10278 and 2501.11185 better; acmart, authblk macro-held, quantumarticle 2 creators E 0.
+- **Separators by meaning (SEP1, SEP1b, OD #994):** the rehearsal binds a `\let` copy of `\and`/`\And`/`\AND`/`\\`/
+  `\thanks`/`\footnote` by its meaning (`defined_as`), a copy taken before the document renews the command too; Perl splits
+  by meaning (`Equals`, `Common/Object.pm:100-103`). `latexml_core` `Token` gains `Hash` + `Eq` (hashing what `Eq`
+  compares). 2407.16574's `\Thanks` notes on their authors. User ruling 2026-11-10 "Carry it" (below the reach bar).
+- **P2 mapped (P2P, `agent_reports/2026-11-10_P2P_report.md`):** batches P2-0 … P2-8 in dependency order; the spelling
+  splits P2 removes miss a real separator in ~1 census paper, so P2 is principle work whose payoff is the old-reader
+  deletions; trap T8, the rehearsal binds `\and` whatever the class means, so a gate asks the meaning.
+- **P2-0 (P20, P20b, OD #995):** `argument_separators` / `\lx@fm@separators` answers which separators a call's argument
+  holds — `Kernel` / `Binding` / `Raw` by meaning at the call site, from its own read allowance (`rehearsal::for_a_query`);
+  `emit::labelseq_call_cut` writes a reading-cut labelseq contact call one call per piece (`labelseq_pieces` shared, the cut
+  cached per call per flush). No binding calls it yet; byte-identical.
+- **The image before a URL (IMG1, IMG1b, IMG1c, OD #989):** an image leading a link on a later author line joins the link
+  contact past any gap, fill glue included (content before placement); 2503.08161's logo and 2601.17879's icon kept,
+  2505.21327 byte-identical. An image no written item holds is counted by span coverage (`Written::unwritten_pictures`, the
+  written span `entry_span_in`, the emitter key `plan::written_keys`); the link label pass counts a picture it strips.
+- **Charter §7 (user 2026-11-10):** the reach bar decides new work, not deletions.
+- **The brief trial's retrospective (10 uses):** rules 1, 3, 4, 5 kept; rules 2 + 6 → a claims table; a synthetic-only
+  finding blocks only on invented or lost content vs the base; doc-only findings fixed by the main session at integration;
+  fix briefs pass the content > markup > PDF check (IMG1b's `\hfill` rule, a reviewer's suggestion that dropped an image,
+  reverted in IMG1c).
+- **The chain** (`chain/out/int157a/`): pending.
+
 ## Bundle int156a — the e0 fence hardened, the bundle's small REDs, aa's entry name
 
 On `pk/int156a` after the int155a push (`8670d33a6c`), head `fcbd29e747`; every batch reviewed and merged. Its open

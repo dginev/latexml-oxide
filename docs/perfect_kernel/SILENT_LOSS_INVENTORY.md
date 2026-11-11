@@ -1874,6 +1874,26 @@ do not block the E/F rerun.
 - Kept from CR8c: its logo on the first marked line after bold names (`polyu-logo.png` on its 4 authors; guard `perfect_kernel_batchcr8::image_on_the_first_marked_line_is_kept`); settled dead-end: a picture note in place (CR8c's attempt, reverted) merged 2505.21327's two URL lines into one affiliation.
 - State: fixed (IMG1, IMG1b, IMG1c).
 
+### Bundle int157a — the residual (OD #993, #994, #995, #989)
+
+- Landed: OC1 + OC1c (Option C P1 on the block and API routes), SEP1 + SEP1b (separators bound by meaning), P20 (P2-0, the
+  separator query and the cut labelseq call), IMG1 (the image before a URL kept or counted).
+- OD #993 Known REDs: a font-wrapped `\and` group stays one creator (`\author{\textsc{Ann Able \and Bob Baker}}`; OC1c's
+  ink rule keeps the call whole; fix: rehearse with the group emptied — repro
+  `class-bindings/acmart_author_font_wrapped_and_parts_the_names_red`); jmlr `\Name{A \and B}` gives 2 creators where
+  pdflatex prints one slot (`jmlr_name_and_prints_the_word_red`; 0 census papers, so no new work under the reach bar).
+- Shared contacts after a cut call go to its last piece (1909.10278's e-mail) — its own batch. A cut call in a paper with
+  an unread block stays whole.
+- The separator query (revP20b): jmlr's `\and` is redefined only inside `\maketitle` (`jmlr.cls:336`), so the call-site
+  query answers `kernel` (repro `separators_query_jmlr_title_time_and_red`); a title-time reading builds on
+  `separators_redefined` / `title_page_readers` (`frontmatter_stores.rs:902-930`). A spent or inside-rehearsal query answers
+  `None`/`unread`: a P2 caller keeps its old gate on `None`, never "no separator". The emitter's rehearsals advance the
+  footnote counter and never restore it. amstex's `\and` (`amstex.rs:416`) unprobed.
+- The image before a URL (revIMG1c): `t9_web_imgafter` becomes an image-only note (pre-existing); the image the link label
+  pass strips is counted, keeping it in the contact is that pass's own batch; unchecked routes are listed in OD #989.
+- Pre-existing (revSEP1b): `\renewcommand\and{\\}` gives 2 creators where pdflatex prints one column with Bob on a second
+  line.
+
 ### Bundle int156a — the residual (OD #983, #944, #992)
 
 - Landed: E0h (the e0 fence hardened: the old reader's 81 exports, its lines and the Cut/Kind's exact), RA0 (a title-code definee declared with no parameters taken and printed), Z18o2 (the stopgap tag's scope: an aas line in its author's own printed group keeps that owner; the flush reads `_stopgap`), MB1 (a labelled line named by one rule, `entry_line_label`), MB2 (aa's `\mail` name as aa.cls prints it, "Correspondence to: "). Z18n stopped under the brief trial's rule 5: the declined path's row sharing goes to Option C P2 (authblk), where the emitter writes the no-author-block flushes from the reading (keep_lists/z18n_*).
