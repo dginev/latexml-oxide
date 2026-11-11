@@ -585,26 +585,33 @@ const COPY_SEARCH_MACROS: usize = 256;
 
 /// The `\let` copies of an [`ALWAYS_BOUND`] command bound by its meaning that the block's tokens reach — spelled in it,
 /// or held in a macro of the document's own it spells (`\newcommand\aut{Ann \nx Bob}`, `\author{\aut}`) — each with the
-/// event constructor the command is bound to: a command whose meaning is the command's own definition (`\ifx` equal,
-/// and `defined_as` it, that definition made for it, so a `\relax` or an undefined name is no copy of a separator `\let`
-/// to `\relax` or left undefined). Read before the bindings change any meaning; a name bound by its own name, or one
-/// the binding declares a block break, is left to those. The kernel's `\and` is a constructor printing " and "
-/// (`sect05.rs`): bound by name only, the copy kept it, the names merged into one creator (OC1's `\let` probe; article,
-/// eptcs, IEEEtran journal).
+/// event constructor the command is bound to: a command whose meaning is a definition made for the command (`defined_as`
+/// it, so a `\relax` or an undefined name is no copy of a separator `\let` to `\relax` or left undefined), whatever the
+/// command means now — as the command itself is bound by its name, whatever its definition. A copy taken before the
+/// document renews the command keeps the command's separator or note in TeX (`\let\nx\and\renewcommand\and{…}`, two
+/// columns in pdflatex); a copy of a renewed `\and` is bound as the renewed `\and` is (read as its
+/// macro, a `\renewcommand\and{\\}`'s copy would make the second name the first's affiliation). Read before the
+/// bindings change any meaning; a name bound by its own name, or one the binding declares a block break, is left to
+/// those. The kernel's `\and` is a constructor printing " and " (`sect05.rs`): bound by name only, the copy kept it,
+/// the names merged into one creator (OC1's `\let` probe; article, eptcs, IEEEtran journal).
 fn let_copies_of_bound_commands(
   tokens: &Tokens,
   block_breaks: &[(&str, BreakKind)],
 ) -> Vec<(Token, &'static str)> {
   let mut found = Vec::new();
-  // (the distinct commands read, few: a block's and its macros')
-  let mut seen: Vec<Token> = Vec::new();
+  let commands: Vec<(Token, &'static str)> = ALWAYS_BOUND
+    .iter()
+    .filter(|(.., by_meaning)| *by_meaning)
+    .map(|(cs, target, _)| (T_CS!(*cs), *target))
+    .collect();
+  // (the distinct commands read: a block's and its macros', which may spell thousands)
+  let mut seen: HashSet<Token> = HashSet::default();
   let mut pending: Vec<Token> = tokens.unlist_ref().iter().rev().copied().collect();
   let mut macros = 0;
   while let Some(t) = pending.pop() {
-    if !t.is_executable() || seen.contains(&t) {
+    if !t.is_executable() || !seen.insert(t) {
       continue;
     }
-    seen.push(t);
     let by_name = t.with_cs_name(|name| {
       ALWAYS_BOUND.iter().any(|(cs, ..)| *cs == name)
         || BOUND_WHEN_DEFINED.iter().any(|(cs, ..)| *cs == name)
@@ -613,11 +620,7 @@ fn let_copies_of_bound_commands(
     if by_name {
       continue;
     }
-    let copied = ALWAYS_BOUND.iter().find(|(cs, _, by_meaning)| {
-      let command = T_CS!(*cs);
-      *by_meaning && t.defined_as(&command) && x_equals(&t, &command)
-    });
-    if let Some((_, target, _)) = copied {
+    if let Some((_, target)) = commands.iter().find(|(command, _)| t.defined_as(command)) {
       found.push((t, *target));
       continue;
     }

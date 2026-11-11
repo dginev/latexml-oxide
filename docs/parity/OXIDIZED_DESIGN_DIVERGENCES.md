@@ -34025,8 +34025,9 @@ creators) and 2604.04847 byte-identical too.
 
 ### 993. An author call parts at the `\and` its spelling hides: the reading cuts the rehearsed block, or an API creator call, at its own `Sep(And)` events (OC1, Option C's P1; the API route OC1c)
 
-**Perl.** Every binding splits an author list by spelling before digestion: `SplitTokens` compares tokens by name
-(`Base_Utility.pool.ltxml:114-140`, `@authorsplits` :679), so a separator held in a macro (`\author{\aut}`,
+**Perl.** Every binding splits an author list by its tokens before digestion: `SplitTokens` matches a token whose meaning
+is the separator's, the separator itself or a `\let` copy (`Base_Utility.pool.ltxml:114-140`, `@authorsplits` :679;
+`Equals` by meaning, `Common/Object.pm:100-103`; #994), so a separator held in a macro (`\author{\aut}`,
 `\newcommand\nx{\and}`), printed by a document wrapper (`\pair{Ann Able}{Bob Baker}`, `\pair` printing `#1 \and #2`)
 or spelled `\csname and\endcsname` leaves one piece: one creator, "Ann Able and Bob Baker" (Perl 0.8.8 under OmniBus,
 inst_support.sty.ltxml:33-38; llncs, llncs.cls.ltxml:43; IEEEtran, journal and conference grid). pdflatex prints two
@@ -34121,8 +34122,12 @@ ieeetran_grid_parts_at_a_macro_held_and, eptcs_cells_part_at_a_macro_held_and}`;
 ### 994. The rehearsal binds a `\let` copy of an author-line separator or note command by its meaning, as the command it copies (SEP1)
 
 **Perl.** `\let\nx\and` then `\author{Ann Able \nx Bob Baker}` gives two creators, Ann Able and Bob Baker (Perl 0.8.8,
-run on the repro; its mechanism not traced: `\lx@add@authors` splits by `SplitTokens`, which compares tokens by name,
-`Base_Utility.pool.ltxml:114-140`, :679). pdflatex prints two authors: `\nx` is `\and`.
+run on the repro): `\lx@add@authors` splits at `@authorsplits` (`\and`, `\And`, `\AND`, …; `Base_Utility.pool.ltxml:679`)
+by `SplitTokens` (:114-140), whose `Equals` compares two tokens by their meanings (`Common/Object.pm:100-103`,
+`lookupMeaning`; `Core/Token.pm:318-320` `equals` is the by-name one), so `\nx` matches `\and`; a `\let\nx\relax` or a
+`\def\nx{\and}` is not split (Perl 0.8.8, `--debug=frontmatter`). A copy taken before `\renewcommand\and` is split too:
+it matches `\And`/`\AND`, which keep the kernel's meaning (`Let('\And', '\and')`, `latex_constructs.pool.ltxml:1095-1096`).
+pdflatex prints two authors: `\nx` is `\and`.
 
 **Before.** The rehearsal bound the author line's vocabulary by name only (`observer/rehearsal.rs`
 `install_event_bindings`, `ALWAYS_BOUND`: `\and` to `\lx@fm@obs@and`, `\\` to `\lx@fm@obs@break`, `\thanks`, `\footnote`
@@ -34134,9 +34139,17 @@ the mark, "Univ A") read into the name.
 
 **Now.** Before the by-name bindings, `let_copies_of_bound_commands` collects the commands the block reaches — spelled in its
 tokens, or held in the bodies of the document's own macros it spells (`DefinitionOrigin::Document`, at most 256 macros
-per block) — whose meaning is the own definition of an `ALWAYS_BOUND` command flagged bound by meaning (`\and`, `\And`,
-`\AND`, `\\`, `\thanks`, `\footnote`): `\ifx` equal to the command now (`state::x_equals`) and `defined_as` it (that
-definition made for it), so a `\relax` or an undefined name is no copy of a separator a class `\let` to `\relax` or left undefined.
+per block) — whose meaning is a definition made for an `ALWAYS_BOUND` command flagged bound by meaning (`\and`, `\And`,
+`\AND`, `\\`, `\thanks`, `\footnote`): `defined_as` it, so a `\relax` or an undefined name is no copy of a separator a
+class `\let` to `\relax` or left undefined. It is not compared with what the command means now, as the command itself
+is bound by its name whatever its definition: a copy taken before the document renews the command
+(`\let\nx\and\renewcommand\and{\unskip\ and\ }`, `\let\oldthanks\thanks\renewcommand\thanks[1]{}`) keeps the
+separator or the note in TeX (SEP1b); a test against the command's current meaning had left it unbound, one merged
+creator, the note lost. This binds a copy of a class's own `\and` too (amsart.cls:599's word-printing `\and`, then renewed:
+two creators, the printed "and" kept as Bob Baker's `before`), as TeX does, where Perl's `Equals` would not split at it —
+Perl's split on a renewed `\and`'s older copy holds only for the kernel's `\and`, through `\And`/`\AND`'s `Let` copies
+(`latex_constructs.pool.ltxml:1095-1096`). The distinct commands read are kept in a hash set (`Token` hashes what its equality compares; a `Vec` searched linearly was quadratic:
+a 300-macro synthetic, 1.14 G instructions → 10.2 G under SEP1, 1.19 G since).
 Each is `\let` to the command's event constructor, in the rehearsal's group. A name bound by its own name
 (`ALWAYS_BOUND`, `BOUND_WHEN_DEFINED`: fixacm.sty's `\let\alignauthor\and`, 1801.02123) or one the binding declares a
 block break keeps that binding. Class macros are not read into: a copy a class's own code makes (latex.ltx's
@@ -34155,5 +34168,5 @@ E/F/W totals equal on every list. Not bound by meaning: the rest of `ALWAYS_BOUN
 
 Guards `perfect_kernel_batchsep1::{a_let_copy_of_and_parts_the_names, eptcs_cells_part_at_a_let_copy_of_and,
 a_let_copy_of_a_note_command_is_its_note}`; repros
-`sectioning-frontmatter/author_let_copy_of_{and_parts_the_names,and_parts_the_names_ieeetran,and_in_a_macro_parts_the_names,thanks_is_the_note,footnote_is_the_note}.tex`,
+`sectioning-frontmatter/author_let_copy_of_{and_parts_the_names,and_parts_the_names_ieeetran,and_in_a_macro_parts_the_names,and_before_renewal_parts_the_names,thanks_is_the_note,thanks_before_renewal_is_the_note,footnote_is_the_note}.tex`,
 `class-bindings/eptcs/eptcs_author_let_copy_of_and_parts_the_names.tex`.

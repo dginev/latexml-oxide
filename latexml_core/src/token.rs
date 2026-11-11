@@ -349,6 +349,20 @@ impl PartialEq for Token {
   }
 }
 
+/// The comparison is reflexive (a token is equal to itself, a space to any space).
+impl Eq for Token {}
+
+/// Hashes what [`PartialEq`] compares: the catcode, and the text unless a space (every space is one), so that equal
+/// tokens hash alike (a set of the distinct tokens read: the frontmatter rehearsal's `\let`-copy scan).
+impl std::hash::Hash for Token {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    self.code.hash(state);
+    if self.code != Catcode::SPACE {
+      self.text.hash(state);
+    }
+  }
+}
+
 // Per-symbol memo for `Token::is_noexpand_family`, indexed by the symbol's
 // arena index: 0 = not yet computed, 1 = not in the family, 2 = in the family.
 // Sound because the arena is append-only (a symbol's text never changes);
