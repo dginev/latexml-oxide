@@ -34755,7 +34755,12 @@ shape (a) still, as the split of it did, where the list holds an `\and` the cut 
 which `\institutename` runs and numbers all the same (`Univ A \mbox{(North \and South)}` prints "1 Univ A (North
 ²South)") — read by the separator query at every level (`separators.rs` `argument_separators_at_every_level`, the
 query's own events without its own-level filter; unread, the spelling); else (c) the superscript-labelled block or (b)
-the sole institute, as before. A document macro holding only `\and` now parts the list: with marked authors int160a1
+the sole institute, as before. Not at every level: the query records no `\and` inside a contact call's argument, so an
+`\and` inside `\email{…}`, which `\institutename` numbers all the same (llncs.cls:875), leaves one piece and takes the
+sole-institute shape — each author the institute and one e-mail, a pairing pdflatex does not print (int160a1 gave the
+block both; synthetic, no corpus reach; RED `class-bindings/institute_one_call/llncs_institute_and_inside_an_email_numbers_the_list_red.tex`,
+review revP23). A document macro holding institutes and `\and` together (`\newcommand\insts{Univ A \and Univ B}`,
+unmarked authors) moves likewise, from every author to the block, as pdflatex numbers both. A document macro holding only `\and` now parts the list: with marked authors int160a1
 gave the same XML (the sole institute's reading cut it), with unmarked ones it took the sole institute and gave both
 institutes to every author, a pairing pdflatex does not print; now the two numbered institutes are the block's, as the
 written `\and` gives them (85b's `llncs_several_institutes_without_marks_stay_the_blocks`). The marked `\author` list
