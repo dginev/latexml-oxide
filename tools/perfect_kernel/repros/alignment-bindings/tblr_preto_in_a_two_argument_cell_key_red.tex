@@ -1,0 +1,10 @@
+% mechanism: an inner `cell{<i>}{<j>}={<outer>}{<inner>}` key (tabularray.sty's two-argument form: the span, then the cell keys) is read by `tblr_cell_styles` (tabularray_sty.rs `"cell"`) as one key list: `tblr_keys` finds no name before the first brace, so the whole value is dropped, the span and the `preto`/`appto` text with it, with no Warning.
+% witness: synthetic (review revM3r2P1 listed it in OD #976 with the `\SetCell` forms; CT1c counted those, this one is a second mechanism)
+% oracle:  pdflatex 0 errors: sp spanning two rows, ut spanning two columns
+% engines: rust int159b, CT1c: p and u without s, t and without their span, 0 Warnings
+% expect:  0 errors; the span, and the text in the cell or a counted Warning naming the key
+% status:  RED
+\documentclass{article}\usepackage{tabularray}\begin{document}
+\begin{tblr}{colspec={ll},cell{1}{1}={r=2}{preto=s}} p & q \\ & r \\ \end{tblr}
+\begin{tblr}{colspec={ll},cell{1}{1}={c=2}{appto=t}} u & \\ v & w \\ \end{tblr}
+After.\end{document}

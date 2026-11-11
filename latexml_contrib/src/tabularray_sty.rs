@@ -626,6 +626,11 @@ fn tblr_span_cells(body: Vec<Token>, math: bool) -> Vec<Token> {
         };
         let (rows, columns) = (count("r"), count("c").max(1));
         if rows > 1 || columns > 1 {
+          // the span takes the `\SetCell` before its macro, so its `preto`/`appto` text is counted here, as the
+          // macro counts an unspanned cell's (`\SetCell[c=2]{preto=W}`, repro tblr_preto_in_a_spanned_cell_red)
+          let braced = body[j].get_catcode() == Catcode::BEGIN;
+          let inner = &body[if braced { j + 1..end - 1 } else { j..end }];
+          tblr_lost_text_keys("SetCell", &Tokens::new(inner.to_vec()));
           // the cell's text and the covered cells', with the separators between them
           let mut text = Vec::new();
           if rows > 1 {

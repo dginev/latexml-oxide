@@ -499,57 +499,127 @@ fn pgfmath_array_text_is_read_as_pgf_reads_it() {
 
 /// `preto` and `appto` of every key list join the cell's text as tabularray's do, inside its math and its `cmd`; those of
 /// `\SetCell`, `\SetRow`, `\SetColumn`, which the binding does not apply, are each counted by a Warning naming the key.
+/// A row per repro: a spanned cell's `\SetCell`, which `tblr_span_cells` takes before the macro, counts its text keys
+/// too (`c=2`, `r=2`, two keys in one call, none for a span with no text key, once under `hlines`), its cells and spans
+/// unchanged (CT1c; the text stays lost, repro `tblr_preto_in_a_spanned_cell_red`).
 #[test]
 fn tblr_preto_and_appto_join_the_cell_text() {
-  let (log, xml) = convert_with(
-    repro!("alignment-bindings/tblr_preto_appto_join_the_cell_text"),
-    Some(RAW),
+  type Row = (
+    &'static str,
+    &'static [(&'static str, &'static str, &'static str)],
+    &'static [&'static str],
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 3), "{log}");
-  for (key, command, lost) in [
-    ("preto", "SetCell", "S"),
-    ("preto", "SetRow", "T"),
-    ("appto", "SetColumn", "U"),
-  ] {
-    let line = format!(
-      "Warning:tabularray_key:{key} The key {key} of \\{command} is not applied: its text '{lost}' is lost"
+  let rows: [Row; 2] = [
+    (
+      repro!("alignment-bindings/tblr_preto_appto_join_the_cell_text"),
+      &[
+        ("preto", "SetCell", "S"),
+        ("preto", "SetRow", "T"),
+        ("appto", "SetColumn", "U"),
+      ],
+      &[
+        "xf",
+        "gy",
+        "phq",
+        "i",
+        "j",
+        "ck",
+        "l",
+        "mr",
+        "anb",
+        "Ao",
+        "As",
+        "CtB",
+        "CuB",
+        "[dve]",
+        "\u{2062} α w β",
+        "21z34",
+        "E",
+        "kK",
+        "aa",
+        "bb",
+        "cc",
+        "dd",
+        "ee",
+        "ff",
+      ],
+    ),
+    (
+      repro!("alignment-bindings/tblr_preto_in_a_spanned_cell_red"),
+      &[
+        ("preto", "SetCell", "W"),
+        ("appto", "SetCell", "X"),
+        ("preto", "SetCell", "V"),
+        ("preto", "SetCell", "Y"),
+        ("appto", "SetCell", "Z"),
+        ("preto", "SetCell", "H"),
+      ],
+      &[
+        "colspan=2 a",
+        "b",
+        "c",
+        "colspan=2 d",
+        "e",
+        "f",
+        "rowspan=2 g",
+        "h",
+        "i",
+        "colspan=2 j",
+        "n",
+        "o",
+        "colspan=2 k",
+        "p",
+        "q",
+        "colspan=2 m",
+        "r",
+        "s",
+      ],
+    ),
+  ];
+  for (source, lost, expected) in rows {
+    let (log, xml) = convert_with(source, Some(RAW));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, lost.len()),
+      "{log}"
     );
-    assert!(log.contains(&line), "{line}\n{log}");
+    let warnings: Vec<&str> = log
+      .lines()
+      .filter_map(|line| line.find("Warning:").map(|at| &line[at..]))
+      .collect();
+    let wanted: Vec<String> = lost
+      .iter()
+      .map(|(key, command, text)| {
+        format!(
+          "Warning:tabularray_key:{key} The key {key} of \\{command} is not applied: its text '{text}' is lost"
+        )
+      })
+      .collect();
+    assert_eq!(warnings, wanted, "{log}");
+    let cells: Vec<String> = xml
+      .split("<td")
+      .skip(1)
+      .filter(|cell| cell.starts_with([' ', '>', '/']))
+      .map(|cell| {
+        let open = &cell[..cell.find('>').unwrap_or(cell.len())];
+        let span = ["colspan", "rowspan"]
+          .iter()
+          .find_map(|name| {
+            let at = open.find(&format!("{name}=\""))? + name.len() + 2;
+            Some(format!("{name}={} ", &open[at..at + open[at..].find('"')?]))
+          })
+          .unwrap_or_default();
+        let body = if open.ends_with('/') {
+          String::new()
+        } else {
+          text(&format!(
+            "<td{}",
+            &cell[..cell.find("</td>").unwrap_or(cell.len())]
+          ))
+        };
+        format!("{span}{body}")
+      })
+      .collect();
+    assert_eq!(cells, expected);
   }
-  let cells: Vec<String> = xml
-    .split("<td ")
-    .skip(1)
-    .map(|cell| {
-      text(&format!(
-        "<td {}",
-        &cell[..cell.find("</td>").unwrap_or(cell.len())]
-      ))
-    })
-    .collect();
-  assert_eq!(cells, [
-    "xf",
-    "gy",
-    "phq",
-    "i",
-    "j",
-    "ck",
-    "l",
-    "mr",
-    "anb",
-    "Ao",
-    "As",
-    "CtB",
-    "CuB",
-    "[dve]",
-    "\u{2062} α w β",
-    "21z34",
-    "E",
-    "kK",
-    "aa",
-    "bb",
-    "cc",
-    "dd",
-    "ee",
-    "ff",
-  ]);
 }
