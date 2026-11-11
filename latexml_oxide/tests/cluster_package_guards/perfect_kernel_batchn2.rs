@@ -3,7 +3,9 @@
 //! answering. A word an address's domain spells is never written by the address (`a_word_beside_its_domain_is_kept`,
 //! 1605.03019); an address placed more often than printed, twice on one creator or in a note and a contact
 //! (`an_address_placed_more_often_than_printed_is_counted`, 2607.00684, 0807.0895); a block whose every word is placed once,
-//! a shared entry and an ORCID logo among them, counts nothing (`a_clean_block_counts_nothing`).
+//! a shared entry and an ORCID logo among them, counts nothing (`a_clean_block_counts_nothing`), nor does a mark label
+//! repeated legitimately — shared by names, per column, on footnote marks, aas's `\altaffilmark`, in a cut list, in a
+//! box (CT1a: the other direction any rule counting a label repeated as text must keep).
 
 use latexml::util::test::{error_count, warning_count};
 
@@ -125,7 +127,9 @@ fn an_address_placed_more_often_than_printed_is_counted() {
 }
 
 /// A block whose every printed word is placed once counts nothing: an entry several creators share once (revtex's one
-/// `\affiliation` under two authors, 2103.04797), an ORCID link's logo beside a name, a `\thanks`, an `\inst` list.
+/// `\affiliation` under two authors, 2103.04797), an ORCID link's logo beside a name, a `\thanks`, an `\inst` list; and a
+/// mark label repeated legitimately (CT1a): two names requesting the label of one entry (a block, a box's lines, revtex's
+/// cut list), each column's own line 1, a footnote mark on three names, aas's `\altaffilmark` on two authors.
 #[test]
 fn a_clean_block_counts_nothing() {
   let revtex = "\\documentclass{revtex4-1}\n\\begin{document}\n\\title{T}\n\\author{Ann Able}\n\\email{ann@a.org}\n\\affiliation{Univ \
@@ -146,6 +150,47 @@ fn a_clean_block_counts_nothing() {
       row(&["Bob Baker", "affiliation=Univ A, Town"]),
       row(&["Cat Cole", "affiliation=Univ C, City"]),
     ]),
+    (repro!("emit_content_a_label_shared_by_two_names"), vec![
+      row(&["Ann Able", "affiliation=Univ X, Town"]),
+      row(&["Bob Baker", "affiliation=Univ X, Town"]),
+      row(&["Cat Cole", "affiliation=Univ Y, City"]),
+    ]),
+    (repro!("emit_content_labels_in_a_box"), vec![
+      row(&["Ann Able", "affiliation=Univ X, Town"]),
+      row(&[
+        "Bob Baker",
+        "affiliation=Univ X, Town",
+        "affiliation=Univ Y, City",
+      ]),
+    ]),
+    (
+      repro!("emit_content_revtex_label_shared_in_a_cut_list"),
+      vec![
+        row(&["Ann Able 1", "affiliation=Dept of Physics, Univ X"]),
+        row(&["Bob Baker 1", "affiliation=Dept of Physics, Univ X"]),
+        row(&["Cat Cole 2", "affiliation=Lab Y"]),
+      ],
+    ),
+    (repro!("emit_content_a_label_repeated_per_column"), vec![
+      row(&["Ann Able", "affiliation=Univ X, Town"]),
+      row(&["Bob Baker", "affiliation=Univ Y, City"]),
+    ]),
+    (
+      repro!("emit_content_a_footnote_mark_on_several_names"),
+      vec![row(&["Ann Able"]), row(&["Bob Baker"]), row(&["Cat Cole"])],
+    ),
+    (
+      repro!("emit_content_aas_altaffilmark_on_several_names"),
+      vec![
+        row(&["Ann Able", "altaffiliation=Univ X, Town"]),
+        row(&[
+          "Bob Baker",
+          "altaffiliation=Univ X, Town",
+          "altaffiliation=Univ Y, City",
+        ]),
+        row(&["Cat Cole", "altaffiliation=Univ Y, City"]),
+      ],
+    ),
   ] {
     let (log, xml) = run(tex);
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
