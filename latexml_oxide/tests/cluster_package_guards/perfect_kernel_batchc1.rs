@@ -137,13 +137,3 @@ fn a_removal_forgets_the_reading() {
   );
   assert_eq!(log.matches("FRONT cut affiliation at its marks").count(), 1);
 }
-
-/// The reading holds what the commands in the authors' mark operands meant: `\sym` is `\dagger` at the first `\address`
-/// and `7` at the second, so the second reads all five queued entries again. The creators are the same with a reading
-/// kept across it, hence the count. Repro sectioning-frontmatter/queue_reading_symbol_after_names.
-#[test]
-fn a_changed_symbol_reads_the_names_again() {
-  let (..) = converted(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/queue_reading_symbol_after_names.tex"
-  ));
-}

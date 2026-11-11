@@ -3,7 +3,9 @@
 % oracle:  pdflatex: 0 errors; "Ann Able" + a superscript 1 and the icon
 % engines: rust 108a r2: the mark "10000-0001-8812-0565"
 % expect:  1 Warning naming "1" and the iD apart
-% status:  GREEN (108a r3)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: the mark is no longer lost — "1" and the ORCID link stay on Ann
+%          Able's name, so no Warning names a lost mark
+% status:  GREEN (108a r3) -> GREEN, the mark kept (HG1; perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{orcidlink}

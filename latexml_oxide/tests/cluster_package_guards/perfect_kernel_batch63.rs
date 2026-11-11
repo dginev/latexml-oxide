@@ -653,7 +653,7 @@ fn author_group_wrapped_names_split() {
 
 /// 63e: a thin space before "and" is the space of " and " (`Aghil Alaee\footnote{…} \,\,and Hari K. Kunduri`, 1407.0988),
 /// and an unmarked names line on the marked path is split when it names several; the department, whose mark no author
-/// requests, keeps a creator of its own (OXIDIZED_DESIGN #159, repro author_block_orphan_mark_is_kept).
+/// requests, keeps a creator of its own (OXIDIZED_DESIGN #159, repro author_block_orphan_mark_is_kept_red).
 /// Repro sectioning-frontmatter/author_thin_space_before_and_separates.
 #[test]
 fn author_thin_space_before_and_separates() {

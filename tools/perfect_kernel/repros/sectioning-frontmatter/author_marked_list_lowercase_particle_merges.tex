@@ -1,4 +1,4 @@
-% status:  RED (int123a, 95b r3) -> GREEN (97a)
+% status:  RED (int123a, 95b r3) -> GREEN (97a); the names and contacts GREEN, the separators RED (int160a)
 % witness: 2410.11607 (dev20k; BESIII one-`\author` list under revtex4-1, 672 marked names — name 160 `N.~in der Wiesche`
 %          merged all 672 into one creator; 97a: 672 named creators, each with the affiliations its marks name). Holdout10k
 %          (2026-10-31, int123a): shape `name:unmatched`, 52 papers / 2,189 of 3,147 wrong creators (cause per paper unmeasured).
@@ -16,7 +16,12 @@
 % expect:  0 errors, 0 warnings; three creators in order — A. Able (Institute of One), B. in der Baker (University of
 %          Two), C. Cole (Institute of One), each with `<contact role="collaboration">(XYZ Collaboration)</contact>` since
 %          97d (the line had been welded into the last name; author_collaboration_line_welded_into_last_name.tex,
-%          OXIDIZED_DESIGN_DIVERGENCES #946). Guard `perfect_kernel_batch97a::marked_list_with_an_unknown_name_shape_is_a_list`.
+%          OXIDIZED_DESIGN_DIVERGENCES #946); B. in der Baker and C. Cole before=", " (97b).
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: the three creators right, but each before="  ", the printed ", "
+%          lost (the separator residual, RED author_marked_list_keeps_its_printed_separators_red); the same in one group
+%          (`{\bf …}`). Rows of perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed pin both, citing that RED
+%          (97a's `marked_list_with_an_unknown_name_shape_is_a_list` deleted in HG1; its amsart case is
+%          author_marked_list_amsart_comma_and_keeps_its_comma_red).
 \documentclass[aps,prd,twocolumn]{revtex4-1}
 \begin{document}
 \title{A Title}

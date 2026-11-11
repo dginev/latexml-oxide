@@ -43,13 +43,6 @@ fn both_ways(tex: &str) -> String {
   eager
 }
 
-/// The group rule's fail-safe: a block holding two labels the names request, no mark leading it and its lines not read
-/// as lines (a `\parbox`), lands once at the block — the names none — never a copy on each author.
-#[test]
-fn an_unsplit_labelled_address_block_lands_once_at_the_block() {
-  both_ways(repro!("revtex_unsplit_labelled_address_block_lands_once"));
-}
-
 /// The fail-safe fires only for a block of two or more lines led by labels the names request (review rev98e S2): lines
 /// led by a mark in `\( … \)` are read by the shared reader of a line's leading label (`relocate::spaced_mark_at`), each
 /// author its line, as `$^{1}$` lines are (review N1's shape; the coordinator's 2026-11-01 directive: one reader, not a
@@ -112,20 +105,6 @@ fn a_mark_on_a_spacing_nucleus_leads_its_line() {
       "affiliation=Univ B, City",
     ],
   ]);
-}
-
-/// A sub-lettered mark goes by its number (review rev98e B1): `23A` under multi-digit numbering is `23` and `A`, never
-/// `2`, `3` and `A`, and the `$^{23}$` line is never parted into `2` and `3` — D. Four the 23 line alone (its `(A)` a
-/// sub-entry, R6), B. Two and C. Three not (2007.02542, 1507.02068); with a line no name requests, it goes once to the
-/// block, and without one the same reading. Since 107b the kernel's reader reads the `{\it …}` group's lines as the
-/// block's (`wrapper_over_lines_as_lines`) and gives these creators itself, the writer writing nothing: the block's
-/// line is the kernel's shared orphan, which shows no mark (as `perfect_kernel_batch61::author_marks_link_their_affiliations`
-/// pins it). Only the marks a name requests matter to the frontmatter, so the orphan's printed `b` need not be kept (user
-/// ruling 2026-11-05, replacing rev98e S1); its words are, once, on the block's creator and on no author
-/// ([`once_on_the_block`]).
-#[test]
-fn a_sub_lettered_mark_goes_by_its_number() {
-  both_ways(repro!("revtex_sub_lettered_mark_every_line_answered"));
 }
 
 /// The words of a line no name requests (an orphan mark's) print once in the document, on the block's creator — the

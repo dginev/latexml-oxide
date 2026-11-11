@@ -8,6 +8,12 @@
 % status:  GREEN (98e) for the fail-safe (once at the block); the per-author cut RED, pathological — defer (author abuse,
 %   review rev98e / the coordinator's directive (b): one `\affiliation` holds one institution, REVTeX's own
 %   assumption, and a box or table of numbered lines in it contradicts it; no recovery)
+% engines: rust int160a (HG1b) = 0 errors, 0 warnings: each name keeps its mark and takes the line its mark labels (Ann Able
+%          "1 Univ A, Town", Bob Baker "2 Univ B, City"), as pdflatex pairs them, no copy per author; Bob Baker's
+%          before="  " loses the printed "and" (RED author_marked_list_keeps_its_printed_separators_red). 98e's guard
+%          ran only at =0 after DEL1 (review revHG1 S2).
+% status:  GREEN (HG1b, the cut by marks) for the names and lines; the separator RED. Today's output pinned, that RED
+%          cited, by perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed
 % preload: ar5iv.sty
 \documentclass[aps,prl]{revtex4}
 \begin{document}

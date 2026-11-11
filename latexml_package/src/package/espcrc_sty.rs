@@ -6,7 +6,8 @@ LoadDefinitions!({
   // espcrc1.sty:159-162 `\addressmark` takes an optional key, the `\address[<key>]` whose mark it prints
   // (`\@markedaddressmark[#1]`); the binding prints no address marks, so the key is read and dropped. Perl's
   // espcrc.sty.ltxml:22 takes none, and "[ETHZ]" was printed in the author's name (hep-lat0409072; KNOWN_PERL_ERRORS
-  // #1122). Guard `perfect_kernel_batch78s::espcrc_addressmark_key_not_printed`.
+  // #1122). Guard: the espcrc_addressmark_key_red row of
+  // `perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed`.
   def_macro_noop("\\addressmark[]")?;
   DefMacro!("\\addresstext{}{}", "#2");
   DefMacro!("\\filedate",    "24 November 1993");

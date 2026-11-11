@@ -294,14 +294,6 @@ fn iopart_submitted_names_the_journal() {
   );
 }
 
-/// espcrc1.sty:159-162 `\addressmark[<key>]`: the key is read, not printed (pdflatex "Philippe de Forcrand" and its
-/// mark). Red (int57a): `<personname>Philippe de Forcrand[ETHZ]</personname>` (KNOWN_PERL_ERRORS #1122). Witness
-/// hep-lat0409072. Repro sectioning-frontmatter/espcrc_addressmark_key.
-#[test]
-fn espcrc_addressmark_key_not_printed() {
-  convert_clean(repro!("sectioning-frontmatter/espcrc_addressmark_key.tex"));
-}
-
 /// minted.sty:1931-1936: with `newfloat`, `listing` is newfloat's float type, "Listing 1: Code." numbered apart from
 /// the figures, which `{wrapfloat}{listing}` wraps (2411.16612). Red (int57a): a `{figure}`, "Figure 2"
 /// (KNOWN_PERL_ERRORS #1123).

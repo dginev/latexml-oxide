@@ -817,14 +817,3 @@ After text.
     "{xml}"
   );
 }
-
-/// An ASCE membership grade before the society after the name, glued or spaced (ascexmpl.tex:48 `Matthew R. Kuhn,
-/// M.ASCE`), is no creator of its own, and no merged-author error; since 106c (OXIDIZED_DESIGN_DIVERGENCES #967) it is
-/// the author's `membership` contact, as `Member, IEEE` is, while a degree (`Ph.D., P.E.`) still qualifies the name.
-/// Repro sectioning-frontmatter/asce_membership_grade_qualifies_the_name.
-#[test]
-fn asce_membership_grade_qualifies_the_name() {
-  convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/asce_membership_grade_qualifies_the_name.tex"
-  ));
-}

@@ -1,0 +1,19 @@
+% A document's own stray `&` in `\author` (no alignment open) is pdflatex's "Extra alignment tab has been changed to
+% \cr" Error, and an escaped `\&` between two names is a printed word: the block reads them apart (the rehearsal's
+% `S:word:&` and `S:column:&`), the stray `&` still the document's Error.
+% witness: synthetic (fms2a1 `ampersand_is_a_column_separator`, whose reading the shadow observer checked; it discarded
+%          its conversion after DEL1)
+% oracle:  pdflatex 1 error ("Extra alignment tab has been changed to \cr"; TL 2025, -no-shell-escape): "Ann Able &
+%          Bob Baker" beside "Cat", "Dan" under "Cat"
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: four creators "Ann Able", "Bob Baker", "Cat", "Dan", the
+%          printed "&" lost and the stray `&` raising nothing
+% expect:  1 error (the stray `&`), 0 warnings; the printed "&" kept
+% status:  RED (int160a, HG1)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able \& Bob Baker \and Cat & Dan}
+\maketitle
+Body.
+\end{document}

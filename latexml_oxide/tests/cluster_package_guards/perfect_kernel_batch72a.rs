@@ -486,9 +486,57 @@ fn copy_setters_store_class_defaults() {
       None,
     ),
   ];
-  for (tex, cls, ..) in cases {
-    let (..) = convert_files_with(&tex, &[("atlasdoc.cls", &cls)], Some("ar5iv.sty"));
+  let creator =
+    |name: &str| format!("<creator role=\"author\"><personname>{name}</personname></creator>");
+  for (tex, cls, title, author, date) in cases {
+    let (log, xml) = convert_files_with(&tex, &[("atlasdoc.cls", &cls)], Some("ar5iv.sty"));
     // (the binding's base is the KOMA class atlasdoc.cls loads, quiet as `\documentclass{scrartcl}` is)
+    // (a known false Warning pinned, not a ruling: where the class's default author prints, the content check counts
+    // "The ATLAS Collaboration" placed more often than printed — RED in `copy_setters_class_default_author_no_warning_red`)
+    let false_warning = author == Some("The ATLAS Collaboration");
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, usize::from(false_warning)),
+      "{tex}\n{log}"
+    );
+    assert_eq!(
+      log.contains(
+        "Frontmatter content check: 3 words or addresses appear in the placed frontmatter more often than the author \
+         blocks print them: ATLAS Collaboration The."
+      ),
+      false_warning,
+      "{tex}\n{log}"
+    );
+    assert!(
+      !["scrartcl", "scrreprt", "scrbook"]
+        .iter()
+        .any(|class| koma_raw_warnings(&log, class)),
+      "{tex}\n{log}"
+    );
+    match title {
+      Some(title) => assert_element(&xml, "title", &[], &format!("<title>{title}</title>")),
+      None => assert!(!xml.contains("<title"), "no title: {tex}\n{xml}"),
+    }
+    match author {
+      Some(author) => {
+        assert_eq!(
+          xml.matches("<creator ").count(),
+          1,
+          "one creator: {tex}\n{xml}"
+        );
+        assert_element(&xml, "creator", &[], &creator(author));
+      },
+      None => assert!(!xml.contains("<creator"), "no creator: {tex}\n{xml}"),
+    }
+    match date {
+      Some(date) => assert_element(
+        &xml,
+        "date",
+        &[],
+        &format!("<date role=\"creation\">{date}</date>"),
+      ),
+      None => assert!(!xml.contains("<date"), "no date: {tex}\n{xml}"),
+    }
   }
 }
 

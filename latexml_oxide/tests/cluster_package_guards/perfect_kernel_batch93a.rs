@@ -213,7 +213,7 @@ fn a_trailing_mark_no_name_shows_leaves_the_line_unmarked() {
 /// CERN Philippe de Forcrand's), was moved to the block once the kernel family was written.
 #[test]
 fn an_unrequested_entry_keeps_todays_placement() {
-  assert_reading(repro!("espcrc_addressmark_key.tex"), None, &[
+  assert_reading(repro!("espcrc_addressmark_key_red.tex"), None, &[
     "C Slavo Kratochvila [] | line:names",
     "C Philippe de Forcrand [] | line:names sep:word",
     "B affiliation ETH Zürich | ruling1:request label:unrequested owner:block",

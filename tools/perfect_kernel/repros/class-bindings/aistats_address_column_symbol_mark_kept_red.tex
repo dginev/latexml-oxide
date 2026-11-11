@@ -1,0 +1,31 @@
+% mechanism: a symbol mark an aistats address column prints after its institution (`Univ A$^*$`, a legend's symbol the
+%   names do not carry) is the column's printed text: the affiliation keeps it. 77o
+%   `aistats_note_marked_address_still_pairs_by_column`'s second case, whose comparison DEL1 discarded (its `=2` red:
+%   "drops the printed * marks").
+% witness: synthetic (77o review probes; aistats2027.sty:321 `\And` the column break)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape, the stand-in below): "Ann Able Bob Baker Cy Cole†" over
+%   "Univ A∗ Univ B Univ A∗"
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: the columns paired (Univ A, Univ B, Univ A), Cy Cole's † kept,
+%   but both `*` dropped from the affiliations silently
+% expect:  0 errors, 0 warnings; Ann Able and Cy Cole each "Univ A" with its ∗ kept, Bob Baker "Univ B"
+% status:  RED (int160a, HG1)
+\begin{filecontents*}{aistats2027.sty}
+\ProvidesPackage{aistats2027}
+\DeclareOption{accepted}{\renewcommand{\statePaper}{\acceptedPaper}}
+\newcommand{\statePaper}{0}\newcommand{\acceptedPaper}{1}
+\ProcessOptions\relax
+\long\def\aistatstitle#1{{\centering{\Large\bfseries #1\par}}\vskip 0.25in}
+\def\ANDD{\end{tabular}\par\begin{tabular}[t]{c}}
+\long\def\aistatsauthor#1{\ifnum\statePaper=0 {\begin{tabular}[t]{c}\bfseries Anonymous Author\end{tabular}}\else
+  {\def\And{\end{tabular}\hskip 1in\begin{tabular}[t]{c}\bfseries}\begin{tabular}[t]{c}\bfseries #1\end{tabular}}\fi\par}
+\long\def\aistatsaddress#1{\ifnum\statePaper=0 {\begin{tabular}[t]{c}Anonymous Institution\end{tabular}}\else
+  {\def\And{\end{tabular}\hskip 1in\begin{tabular}[t]{c}}\begin{tabular}[t]{c}#1\end{tabular}}\fi\par}
+\end{filecontents*}
+\documentclass[twoside]{article}
+\usepackage[accepted]{aistats2027}
+\begin{document}
+\twocolumn[\aistatstitle{A Title}
+\aistatsauthor{Ann Able \And Bob Baker \And Cy Cole$^\dagger$}
+\aistatsaddress{Univ A$^*$ \And Univ B \And Univ A$^*$}]
+\section{Intro} Body.
+\end{document}

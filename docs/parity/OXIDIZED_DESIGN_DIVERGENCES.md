@@ -1831,8 +1831,9 @@ produced byte-identical output, so this is a surpass, not a Rust-only fix.
   "Apple" becomes the last author's affiliation, and Shojaee keeps his two `\thanks`. Verified
   by an OLD-vs-NEW full-XML diff over all 57 author-bearing fixtures: exactly the THREE new
   fixtures changed, zero existing regressions. Guards:
-  `06_cluster_frontmatter::{frontmatter_hspace_author_split, frontmatter_symbol_superscript_mark,
-  frontmatter_thanks_literal_mark_mix}`. (This is also why (g)'s guard fixture now uses a
+  `06_cluster_frontmatter::{frontmatter_hspace_author_split, frontmatter_thanks_literal_mark_mix}` and the
+  `frontmatter_symbol_superscript_mark` row of `perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed` (since
+  HG1b; its text asterisk written as U+2217, RED `author_textsuperscript_asterisk_stays_the_text_asterisk_red`). (This is also why (g)'s guard fixture now uses a
   numeric `$^{1}$` marker: a symbol `$^{*}$` there is now a note-mark and would reroute out of
   the marker branch it is meant to exercise.)
 - **Residual (out of scope):** the *exact* `\fnsymbol` marks the author intended next to
@@ -1988,7 +1989,7 @@ of alternating plain lines lost a name:
   its scripts and their operands (`$^\mathrm{ab}$`), is name text, a lone letter (`$e^+e^-$`) none; a byline's leading
   "by" is dropped (hep-ph9507223, hep-ph9404319); a run of bare asterisks after a comma is a mark (`S. F. Pereira,* Z.
   Y. Ou,** and H. J. Kimble`, quant-ph0003094). Guards `revtex_marked_author_list_splits_each_name`,
-  `revtex_asterisk_marked_authors_split`; hep-ex9910016's 190 `$^{n}$`-marked BES names split again.
+  `revtex_asterisk_marked_authors_split_red`; hep-ex9910016's 190 `$^{n}$`-marked BES names split again.
 - initials glued to a surname in capitals (`M.CACCIA, R.CAMPAGNOLO`, hep-ex9910019): `unglued_initials` unglues before
   a capitals surname of three letters or more, not before an abbreviation's last letter (`I.N.F.N`). Guard
   `author_caps_glued_initials_split`.
@@ -2000,12 +2001,12 @@ of alternating plain lines lost a name:
   `author_note_of`; `A.M. Green\thanks{…},\\ … \\ C. Michael\thanks{…},\\ DAMTP …`, hep-lat9404004; 1410.7277,
   1706.02584, 1403.1404); under plain names a noted affiliation stays one (`Ann Able and Bob Baker\\ Department of
   Physics\\ Ohio State\footnote{Visiting.}`). Guards `author_note_name_line_opens_next_author`,
-  `author_noted_affiliation_stays_affiliation`. With no notes the same alternation opens the next author when a gap,
+  `author_noted_affiliation_stays_affiliation_red`. With no notes the same alternation opens the next author when a gap,
   the names' styling or a person's name over an institution says so (#900); residual (RED
   `article_plain_name_line_between_affiliations`): a cue-less `Bob Baker` over `Univ Y, …` with none of these, a place
   reading as a name too (1908.10448's `Zach Shahn \\ IBM Research,`). The note command must be the first names' own
   (`\thanks` names over a `\footnote`d affiliation: the affiliation stays one; guard
-  `author_other_note_command_stays_affiliation`); with `\footnote` on names and affiliations alike the block is
+  `author_other_note_command_stays_affiliation_red`); with `\footnote` on names and affiliations alike the block is
   ambiguous and a noted affiliation name-shaped line opens an author (RED `author_footnote_everywhere_ambiguous`).
 Residual: `$^{a}$Sahng-kyoon.Yoo and $^{b}$D.K.Park` (hep-th9707026; a surname glued at a period) stays one creator.
 
@@ -7475,7 +7476,8 @@ svjour3_marked_institutes_link_by_mark, institute_with_numbered_lines_is_no_mark
 revtex_interleaved_mark_with_symbol_keeps_the_group_rule, revtex_interleaved_group_with_unanswered_mark,
 revtex_affiliation_with_inner_superscript_is_no_marked_line, revtex_marked_affiliations_with_symbol_marks_link_by_mark,
 svjour3_marked_institutes_with_thanksref_link_by_mark, svjour3_symbol_marked_institute_pairs_by_position}`, and
-`perfect_kernel_batch59::author_block_orphan_mark_is_kept`, plus `revtex_mathrm_mark_interleaved_group_keeps_the_group_rule,
+repro `author_block_orphan_mark_is_kept_red` (59's guard deleted in HG1; its counts and name a row of
+`perfect_kernel_batchhg1::reds_keep_their_counts_and_right_parts`), plus `revtex_mathrm_mark_interleaved_group_keeps_the_group_rule,
 revtex_mathrm_marked_affiliations_link_by_mark, revtex_textsuperscript_interleaved_group_keeps_the_group_rule,
 revtex_interleaved_typo_mark_keeps_the_group_rule`. Open: a name-only piece sharing the next institute (RED
 `svjour3_name_only_piece_shares_the_next_institute`), the isotope split above.
@@ -14198,7 +14200,7 @@ cjs-rcs-article's `\author`/`\affil` pairs) hands each call's tail before storin
 a value, and a tail holding `\and` (more authors) is left alone. Guards
 `perfect_kernel_batch59::{author_block_appended_after_author_is_kept,
 author_block_follows_each_author, author_block_after_a_replaced_author,
-author_block_orphan_mark_is_kept}`. Open: the template's `\addresslink` marks (`\let` to
+}` and repro `author_block_orphan_mark_is_kept_red` (RED since int160a; HG1). Open: the template's `\addresslink` marks (`\let` to
 `\textsuperscript`) are not recognized as author marks, so its rows annotate every author; a marked
 row is placed after the unmarked ones; a tail holding `\and` is dropped (pdflatex prints more
 authors); a stored value with `\and` gives its tail to every creator of the call (LaTeX prints it
@@ -21997,7 +21999,7 @@ author_authblk_mark_list_then_single_mark, author_authblk_single_mark_then_mark_
 author_authblk_comma_names_then_marked_name, author_authblk_note_comma_then_marked_name,
 author_authblk_marked_affil_keeps_its_comma, author_authblk_superscript_inside_a_name, author_mark_glued_to_and,
 author_mark_list_glued_to_and, author_superscript_inside_a_word_digit, author_authblk_affil_inside_author,
-author_authblk_affil_after_affils_in_author, author_authblk_combined_mark_affil,
+author_authblk_affil_after_affils_in_author, author_authblk_combined_mark_affil_red,
 author_authblk_mark_before_line_stays, author_authblk_textual_superscript_after_mark,
 author_authblk_textual_superscript_alone, author_authblk_superscript_marks_control,
 author_authblk_affil_in_later_author_skips_marked, author_authblk_affil_in_author_between_marked,
@@ -22009,7 +22011,7 @@ author_authblk_mark_then_address_requests, author_authblk_second_mark_then_raise
 author_ptephy_unlabelled_affil_after_labelled, author_opex3_unmarked_address_after_marked,
 author_authblk_unmarked_affil_after_all_marked, author_mark_glued_to_capital_and_is_flagged,
 author_authblk_marked_affil_after_vspace, author_orcid_glued_to_email_stays, author_authblk_glued_braced_symbol_mark,
-author_email_pile_beside_marked_affiliations, author_authblk_symbol_mark_then_address_shown_once,
+author_email_pile_beside_marked_affiliations, author_authblk_symbol_mark_then_address_shown_once_red,
 author_authblk_symbol_mark_then_raised_text_shown_once, author_authblk_glued_symbols_in_one_author_block,
 author_authblk_labelled_author_and_marked_affil, author_authblk_marked_author_and_labelled_affil,
 author_authblk_legend_after_two_unmarked_affils}` and the RED residual
@@ -22873,7 +22875,7 @@ title code. A first name no `\snm` follows is printed after the content (flushed
 `\@fnm~\@snm` prints it there: `\fnm{Ivan}~Voronov` "VoronovIvan" (vmsta.cls errs on its undefined `\@snm` there; no
 corpus paper has the shape). 71 vmsta papers (1508.02842, 1411.4499, 1601.01109). The 68v repro of #647
 (`vmsta_name_parts`) now reads its cut-down class as `vtexnames.cls`, which no binding answers. Repros
-class-bindings/vmsta/vmsta_title_page_name_parts, vmsta_first_name_without_surname; guards
+class-bindings/vmsta/vmsta_title_page_name_parts_red, vmsta_first_name_without_surname_red; guards
 `perfect_kernel_batch77t::{vmsta_title_page_name_parts, vmsta_first_name_without_surname}`.
 
 ### 790. entics.cls and entcs.cls are read raw with elsart's frontmatter interface
@@ -23045,8 +23047,8 @@ replayed `\author`, its deposited title page) it only counts the address for the
 required!" check (:550-565) and keeps the e-mail block's font for the history line after it. Perl has no vmsta binding.
 Witnesses 1508.02842, 1801.00977, 1411.4499, 1506.02940, 1601.01109 (2014-2018), 1805.02511, 1810.09681, 2001.02487,
 1912.07948 (2018+). Open: the 2018+ copies' `\thanksref{cor1}` key in the name (SYNC "quality inventory" row 17). Repros
-class-bindings/vmsta/vmsta_emails_and_addresses_are_contacts, class-bindings/vmsta_2018/
-vmsta_2018_emails_and_addresses_are_contacts (cut-down classes beside them); guards
+class-bindings/vmsta/vmsta_emails_and_addresses_are_contacts_red, class-bindings/vmsta_2018/
+vmsta_2018_emails_and_addresses_are_contacts_red (cut-down classes beside them); guards
 `perfect_kernel_batch78e::{vmsta_emails_and_addresses_are_contacts, vmsta_2018_emails_and_addresses_are_contacts}`.
 
 ### 803. A frontmatter note all of whose content became contacts is not emitted
@@ -23123,7 +23125,7 @@ rule's guess there, 1802.07622's `sma74@` likely right, 2407.07862's `hdel@` wro
 unchanged. Residuals: a surname letter the name keys drop (`\l`, `ø`; 2212.09776) or a spelling they do not read
 (`ue` for `ü`, 2211.05026; two-letter surnames, 2409.18288) leaves an address unspelled; an address that spells two
 authors equally (1710.06069's `sjkim0305@` beside two Kims) goes by the order or to the block. Repros
-sectioning-frontmatter/{jheppub_emailadd_in_author_order, jheppub_emailadd_one_call_lists_the_authors,
+sectioning-frontmatter/{jheppub_emailadd_in_author_order, jheppub_emailadd_one_call_lists_the_authors_red,
 jheppub_emailadd_out_of_order_by_spelling}; guards `perfect_kernel_batch78f::{jheppub_emailadd_in_author_order,
 jheppub_emailadd_one_call_lists_the_authors, jheppub_emailadd_out_of_order_by_spelling}`,
 `perfect_kernel_batch78e::jinstpub_emails_go_to_the_authors_they_spell`.
@@ -23188,7 +23190,7 @@ papers write `,\inst`, `, \inst` or `,~\inst`; A/B 7 of them changed, each now a
 after the first comma had moved one author on; no nameless creator; 1811.07968's B. Nikiel-Wroczyński, whose `,$^{8}$`
 is no `\inst`, keeps the mark shown without an institute, where he had held the next author's), the other 8 unchanged. Repros
 sectioning-frontmatter/{llncs_comma_before_inst_is_the_name_before, llncs_inst_leading_marks_keep_their_names,
-inst_without_unskip_keeps_the_next_name}; guards `perfect_kernel_batch78f::{llncs_comma_before_inst_is_the_name_before,
+inst_without_unskip_keeps_the_next_name_red}; guards `perfect_kernel_batch78f::{llncs_comma_before_inst_is_the_name_before,
 llncs_inst_leading_marks_keep_their_names, inst_without_unskip_keeps_the_next_name}`.
 
 ### 808. iopart's `\ead` goes to the one author its `\address`'s mark names, and each iopart `\author` is a group
@@ -23224,7 +23226,7 @@ outputs changed): by the address mark rockfish3141@ and sgess@ placed, each its 
 the author it spells, 1911.05451's `ccdxslj@` (no name spelled) the block's. int47a → r2 over the same 278: addresses on
 an author another name spells (the reviewer's spelling test) 119, in 113 papers → 5 — 1205.6797 and 1607.05491 an `\ead`
 inside an `\address` (residual, unchanged), 1902.07874 and cond-mat0404018 the test's false flags (each right), 1603.06724
-an svjour3 `\institute` line (unchanged from int47a, not this binding) —; on the author they spell 206 → 367. Repros sectioning-frontmatter/{iopart_ead_under_its_address_mark,
+an svjour3 `\institute` line (unchanged from int47a, not this binding) —; on the author they spell 206 → 367. Repros sectioning-frontmatter/{iopart_ead_under_its_address_mark_red,
 iopart_ead_after_all_addresses_takes_no_mark, iopart_author_groups_own_their_ead}; guards
 `perfect_kernel_batch78f::{iopart_ead_under_its_address_mark, iopart_ead_after_all_addresses_takes_no_mark,
 iopart_author_groups_own_their_ead}`.
@@ -26939,7 +26941,7 @@ as a paragraph (2303.00352 "Enrique García-Macíascor1", 2104.06505, 2308.04522
 every cas paper of the census writing `\corref{`). The `\corref`/`\cormark`/`\cortext` and `\fnmark`/`\fntext` links
 (cas-common.sty:204-238, :556-623) are not built.
 
-Repros `class-bindings/{ijcai_emails_grouped_address_by_spelling, ijcai_binding_emails_in_author_order,
+Repros `class-bindings/{ijcai_emails_grouped_address_by_spelling, ijcai_binding_emails_in_author_order_red,
 ijcai_emails_out_of_order_stay_on_the_block, ijcai_emails_lines_and_sections, ijcai_emails_group_broken_over_lines,
 cas_address_label_keeps_its_author, cas_dc_address_letter_labels_and_keys, cas_numeric_marks_name_letter_entries,
 cas_letter_entries_print_by_the_counter, cas_word_labels_out_of_order, cas_mixed_number_and_letter_entries,
@@ -27128,7 +27130,8 @@ order, after Univ Y).
 
 Guards: `perfect_kernel_batch90a::{a_formula_printing_only_floating_scripts_is_a_mark,
 a_script_before_printed_ink_or_on_a_base_is_text, a_formula_mark_on_a_name_answers_its_affiliation,
-a_script_inside_a_two_dimensional_layout_ends_no_line}` (the last: repros
+a_script_inside_a_two_dimensional_layout_ends_no_line}` (module removed: DEL1 deleted three, HG1 the fourth, its repro
+`revtex_affiliation_isotope_prescript_keeps_its_line_red`; the last: repros
 `amsart_address_fraction_script_ends_no_line`, `amsart_address_boxed_script_ends_no_line`);
 `observer::marks::tests::{floating_scripts_before_no_letter_or_digit_are_a_mark,
 a_script_before_or_on_printed_ink_is_no_mark}` (both vocabularies, the parsed nested bases, the accented letter and
@@ -27488,10 +27491,10 @@ author-typed `\corres{Correspondence: }` stays (1609.03883), and so do the 51 sa
 `ltx:text`) cannot decide it — the observer builds no XML, and `\colorbox{red}{}` constructs a bare `<text/>`; a
 declared font alone does not make a constructor transparent (`\openone`). Repros
 class-bindings/{aa_offprints_only_email_leaves_no_note, kernel_empty_thanks_leave_no_note,
-mdpi_corres_label_only_note_is_kept, kernel_thanks_command_text_is_ink, kernel_thanks_math_token_is_ink,
-aa_offprints_command_text_is_ink, kernel_thanks_rule_and_frame_are_ink, kernel_thanks_undefined_command_is_ink (fails
-pdflatex: the error path only), kernel_thanks_constructor_text_is_ink, kernel_thanks_colorbox_is_ink,
-kernel_thanks_empty_superscript_reads_alike, kernel_thanks_blank_notes_kept (catalog: blank notes the test keeps, no
+mdpi_corres_label_only_note_is_kept, kernel_thanks_command_text_is_ink_red, kernel_thanks_math_token_is_ink_red,
+aa_offprints_command_text_is_ink, kernel_thanks_rule_and_frame_are_ink_red, kernel_thanks_undefined_command_is_ink_red (fails
+pdflatex: the error path only), kernel_thanks_constructor_text_is_ink_red, kernel_thanks_colorbox_is_ink_red,
+kernel_thanks_empty_superscript_reads_alike_red, kernel_thanks_blank_notes_kept (catalog: blank notes the test keeps, no
 guard)}; guards `perfect_kernel_batch92e::{aa_offprints_only_email_leaves_no_note, kernel_empty_thanks_leave_no_note,
 mdpi_corres_label_only_note_is_kept, kernel_thanks_command_text_is_ink, kernel_thanks_math_token_is_ink,
 aa_offprints_command_text_is_ink, kernel_thanks_rule_and_frame_are_ink, kernel_thanks_undefined_command_is_ink,
@@ -29263,7 +29266,8 @@ the base binary): three papers' output changed — 1311.0586 (aastex, 1 → 7 cr
 
 **Left.** In 2410.11607: the `75A,75C` marks (institute 75's `(A)…; (B)…` parts) unanswered, their institutes one
 nameless creator; the collaboration line welded into the last name (OPEN_ROWS.md:810 ruling); a mark-covered list with a
-`NON_NAME_WORDS` word in a surname stays whole (F3, the word lists). Guards `perfect_kernel_batch97a` (three); repros
+`NON_NAME_WORDS` word in a surname stays whole (F3, the word lists). Guards `perfect_kernel_batch97a` (three; since HG1 two rows of
+`perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed`, the module removed); repros
 sectioning-frontmatter/`author_marked_list_lowercase_particle_merges` (RED → GREEN),
 `author_marked_list_with_an_unmarked_name_is_a_reported_merge`, `author_marked_names_beside_a_team_are_a_reported_merge`.
 
@@ -29324,14 +29328,18 @@ label (95c's order). A store-affiliation e-mail legend after empty-math spacing 
 (2508.08560, RED `store_affiliation_email_legend_after_spacing_lines`). A label part the deposit takes out of the first
 place its tokens stand: jpsj2.cls prints its keywords line in five option branches, the first (two-column) not the one
 run, so the printed "KEYWORDS:" stays in the body beside the name (int125b the same, beside "Keywords: "). Guards
-`perfect_kernel_batch97b` (five); changed, to the printed label or separator: `perfect_kernel_batch97a::
-marked_list_with_an_unknown_name_shape_is_a_list` (before ", ", amsart's ", and "),
+`perfect_kernel_batch97b` (five; two since HG1 the REDs below, their counts and right parts rows of
+`perfect_kernel_batchhg1::reds_keep_their_counts_and_right_parts`); changed, to the printed label or separator: 97a's
+`marked_list_with_an_unknown_name_shape_is_a_list` (deleted in HG1; its revtex, grouped and amsart cases are rows of
+`perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed`, which pin today's lost separators — before="  " for
+", ", amsart's " and " for ", and" — citing RED `author_marked_list_keeps_its_printed_separators_red` and
+`author_marked_list_amsart_comma_and_keeps_its_comma_red`),
 `raw_class_stores_reroute_to_frontmatter::jpsj2_stores_become_frontmatter` ("KEYWORDS:"),
 `perfect_kernel_batch77i::store_label_is_printed_text_not_a_link_target_or_key` ("G:");
 repros sectioning-frontmatter/`aa_mail_printing_copy_keeps_its_label`, `aa_mail_storing_copy_has_no_label`,
 `aa_mail_repeated_address_stays_labelled`, `raw_package_note_label_before_a_link_names_it`,
-`author_marked_list_keeps_its_printed_separators` (RED → GREEN), `author_marked_email_piece_is_no_person` (RED →
-GREEN).
+`author_marked_list_keeps_its_printed_separators_red` (RED → GREEN 97b → RED int160a, HG1),
+`author_marked_email_piece_is_no_person_red` (RED → GREEN 97b → RED int160a, HG1).
 
 ### 945. An affiliation the reading already has reaches its author: a block entry is cut by its whole span, llncs's one institute cut at its marks stays every author's, svproc's `\institute` is sv_support's (Perl: no observer, the names line split at its "and"; llncs's whole institute on the first author; svproc's per author through OmniBus's inst_support)
 
@@ -29497,16 +29505,17 @@ collaboration is read (`split_author_calls`, below) —; the IEEE block reader r
 `author_collaboration_name_with_and_stays_one`); the reading's heading over later lines and its line under one name
 (resolver/blocks.rs). Guards `perfect_kernel_batch97d` (nine); changed, to the contact: `perfect_kernel_batch94a` (five:
 `what_a_name_held_is_written_where_the_reading_puts_it`, `a_bracket_holds_its_and`, `a_bracket_after_a_mark_is_the_names`,
-`a_name_speaking_for_a_collaboration_is_a_name`, `an_institution_stops_at_a_person`), `perfect_kernel_batch97a` (three;
-`marked_names_beside_an_affiliation_are_a_reported_merge` now `marked_names_beside_a_team_are_a_list_and_its_collaboration`,
-no Error), `perfect_kernel_batchfms2a2` (two readings: `address_lists_in_author_order_and_collaborations`,
+`a_name_speaking_for_a_collaboration_is_a_name`, `an_institution_stops_at_a_person`), `perfect_kernel_batch97a` (three
+then; `marked_names_beside_an_affiliation_are_a_reported_merge` now `marked_names_beside_a_team_are_a_list_and_its_collaboration`,
+no Error; the module deleted in HG1, the team case a row of `perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed`
+pinning B. in der Baker's moved " and ", RED `author_marked_names_beside_a_team_move_their_and_red`), `perfect_kernel_batchfms2a2` (two readings: `address_lists_in_author_order_and_collaborations`,
 `an_unmarked_line_under_a_run_of_names_rows_is_every_names`), `perfect_kernel_batch77t::
 role_and_note_lines_are_no_unmarked_institution` (its "for the ATLAS Collaboration" line). Repros
 sectioning-frontmatter/`author_collaboration_line_welded_into_last_name` (RED → GREEN),
 `author_names_line_team_piece_is_a_collaboration`, `author_collaboration_heading_and_closing_line_once`,
-`author_names_for_two_collaborations_is_one_contact`, `author_name_bracketed_collaboration_covers_names_before`,
-`aastex_collaboration_line_under_names_is_a_contact`, `author_collaboration_heading_group_covers_names_after`,
-`author_team_and_group_lines_stay_affiliations`, `author_collaboration_heading_colon_outside_groups`.
+`author_names_for_two_collaborations_is_one_contact_red`, `author_name_bracketed_collaboration_covers_names_before`,
+`aastex_collaboration_line_under_names_is_a_contact`, `author_collaboration_heading_group_covers_names_after_red`,
+`author_team_and_group_lines_stay_affiliations`, `author_collaboration_heading_colon_outside_groups_red`.
 
 **Round 2** (review rev97cd). Guards `perfect_kernel_batch97d` (seven more: `collaboration_line_is_made_where_it_prints`,
 `unframed_collaboration_with_its_address_and_the_team_stay_affiliations`, `collaboration_broken_after_and_is_one_contact`,
@@ -29517,8 +29526,8 @@ sectioning-frontmatter/`author_collaboration_line_welded_into_last_name` (RED �
 `collaboration_heading_and_its_closing_piece_are_one_contact` (the heading's text, "XYZ Collaboration", first) and
 `collaboration_heading_group_covers_the_names_after_it` (the heading's contact before the affiliation). Repros
 sectioning-frontmatter/`author_collaboration_line_keeps_its_print_order`,
-`author_unframed_collaboration_with_address_stays_affiliation`, `author_collaboration_broken_after_and_is_one_contact`,
-`author_collaboration_after_and_heads_its_own_group`, `author_trailing_collaboration_group_covers_every_name`,
+`author_unframed_collaboration_with_address_stays_affiliation`, `author_collaboration_broken_after_and_is_one_contact_red`,
+`author_collaboration_after_and_heads_its_own_group_red`, `author_trailing_collaboration_group_covers_every_name_red`,
 `pos_speaker_marked_with_collaboration_keeps_his_contacts`, `elsarticle_collaboration_remark_note_reference_is_the_names`,
 `iopart_collaboration_heading_keeps_the_names_words` (RED → GREEN); `author_team_piece_mark_labels_its_own_line` RED catalog (a team piece's own mark labels a line no author
 asks for: the block's, as any such line).
@@ -30398,7 +30407,7 @@ a_bindings_own_plumbing_is_no_dropped_text, a_drop_pdflatex_makes_too_is_no_loss
 many_entries_of_one_call_share_its_arguments}`; repros `check_declared_drop_bookmark_text_unwanted`,
 `check_declared_drop_of_a_frontmatter_command_unwanted`, `check_kernel_selector_drop_is_texs_own`,
 `check_many_entries_of_one_call_share_its_arguments` (RED 106t r2 → GREEN), and sectioning-frontmatter/`check_binding_command_drops_its_argument`,
-`check_internal_command_reads_documents_optional`, `check_binding_macro_drops_inside_an_entry` (RED int135e → GREEN),
+`check_internal_command_reads_documents_optional`, `check_binding_macro_drops_inside_an_entry_red` (RED int135e → GREEN → RED int160a, HG1),
 `check_binding_plumbing_is_no_dropped_text` (RED on the unfiltered build), `check_bound_class_nothing_lost`,
 `check_bound_class_running_heads_unwanted`, `check_replaced_author_is_not_wanted` (negative). Guards updated for losses
 now counted: `perfect_kernel_batch86i::second_abstract_after_maketitle_is_kept` (amsart's `[R\'esum\'e]`, which pdflatex
@@ -30539,7 +30548,7 @@ a_document_end_in_a_stored_argument_ends_nothing, a_replacing_guess_keeps_each_c
 a_csname_store_keeps_each_call_in_the_info, an_optional_argument_stored_reaches_the_info,
 digits_count_with_a_counted_word_of_their_argument, the_bounds_of_the_third_source_say_what_they_dropped}`; repros
 sectioning-frontmatter/`check_raw_setter_store_gated`, `check_raw_setter_replay_refused`,
-`check_store_replaced_and_siblings`, `check_binding_drops_document_macro_expansion`,
+`check_store_replaced_and_siblings`, `check_binding_drops_document_macro_expansion_red`,
 `list_parameters_macro_in_an_expansion_keeps_the_next_letter` (RED int139c → GREEN 108b),
 `check_raw_setter_end_document_in_store`, `check_store_replacing_guess_drops_an_appender`,
 `check_store_csname_counter_keeps_each_call`, `check_store_optional_argument_printed`,

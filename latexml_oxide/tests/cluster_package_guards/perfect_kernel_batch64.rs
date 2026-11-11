@@ -1146,15 +1146,6 @@ fn author_bold_row_after_marked_names() {
   ]);
 }
 
-/// 64d (HF2 S3): `\bf`-led rows of names and a blank row (2401.05566). Repro sectioning-frontmatter/author_bf_rows_with_blank_line.
-#[test]
-fn author_bf_rows_with_blank_line() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_bf_rows_with_blank_line.tex"
-  );
-  convert_clean(tex);
-}
-
 /// 64d (HF2 S3, site B): `\textbf{…}` rows of names after marked names (2510.11639). Repro sectioning-frontmatter/author_bold_group_rows_after_marked_names.
 #[test]
 fn author_bold_group_rows_after_marked_names() {
@@ -1170,18 +1161,6 @@ fn author_bold_group_rows_after_marked_names() {
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Eve Eck</personname>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Fay Fox</personname>\n  </creator>",
   ]);
-}
-
-/// 64d (HF2 S3) negative: a place line after marked names is no names row. Since 77t (user ruling R12 2026-10-20) it is
-/// the affiliation of the names it stands under, each of them — was welded into the last name, "Bob
-/// Baker<break/>Department of Physics, …", as Perl does. Repro
-/// sectioning-frontmatter/author_unmarked_affiliation_after_marked_names.
-#[test]
-fn author_unmarked_affiliation_after_marked_names() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_unmarked_affiliation_after_marked_names.tex"
-  );
-  convert_clean(tex);
 }
 
 /// 64d (HF2 S3) negative: a styled place ("Bell Labs, Murray Hill") after marked names is no names row; since 77t (user
@@ -1305,17 +1284,6 @@ fn bibliography_after_appendix_at_document_level() {
   // the bibliography a child of the document, right after the appendix
   let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
   assert!(flat.contains("</appendix><bibliography"), "{xml}");
-}
-
-/// 64d review r3: an unwrapped affiliation line led by a declaration and spacing (`\small \vspace{1mm} $^{1}$Univ A,
-/// $^{2}$Univ B`) — the lead prints nothing and is no institution (`split_before_affiliation_marks`; 2407.15815).
-/// Repro sectioning-frontmatter/author_declaration_vspace_led_affiliation_line.
-#[test]
-fn author_declaration_vspace_led_affiliation_line() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_declaration_vspace_led_affiliation_line.tex"
-  );
-  convert_clean(tex);
 }
 
 /// 64d review r3: a wrapped affiliation lead's declarations after its spacing (`{\small\vspace{1mm}\noindent\it …}`)

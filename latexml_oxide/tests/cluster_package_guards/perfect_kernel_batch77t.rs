@@ -50,16 +50,6 @@ fn marked(name: &str, id: &str, mark: &str) -> String {
   format!(r#"{name}<sup xml:id="{id}">{mark}</sup>"#)
 }
 
-/// Rank 7: the thanks-abuse idiom's `$^{n}$`-led affiliation list in a `\thanks` keeps an ordinary superscript of its
-/// text — "10 m²" — where each lead labels its affiliation (2606.00313). GREEN on the 77t base already (62zq had
-/// dropped the "2"); guarded here.
-#[test]
-fn thanks_affiliation_list_keeps_superscripts_in_its_text() {
-  let xml =
-    repro!("sectioning-frontmatter/thanks_affiliation_list_keeps_superscripts_in_its_text.tex");
-  assert_no_merged_names(&xml);
-}
-
 /// Rank 15: names marked `$^{\dag}$`/`$^{\ddag}$` (a text `\dag` an affiliation mark, so the block is a marked one)
 /// over an unmarked institution line: the marks are shown, nothing answering them, and the line is each name's, as the
 /// line prints under all of them (user ruling R12 2026-10-20). Was "Cat ColeUniversity of Somewhere" one creator.
@@ -106,19 +96,6 @@ fn ieeekeywords_blocks_are_all_kept() {
   assert!(
     xml.contains(r#"<keywords name="Index Terms: ">Eps. </keywords> <keywords name="Index Terms: "> Zeta. </keywords>"#),
     "{xml}"
-  );
-}
-
-/// Rank 59: the vmsta binding (latexml_contrib vmsta_cls.rs) reads the class raw and gives the author content its title
-/// page's name parts (vmsta.cls:278-291 `\name@m@front`: `\@fnm~\@snm`, the initials dropped; 1508.02842, 1411.4499,
-/// 1601.01109). Was "Yu.YuliyaMishura".
-/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
-/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
-#[test]
-fn vmsta_title_page_name_parts() {
-  repro_with!(
-    "class-bindings/vmsta/vmsta_title_page_name_parts.tex",
-    ("vmsta.cls", "class-bindings/vmsta/vmsta.cls")
   );
 }
 
@@ -327,15 +304,24 @@ fn parenthesized_superscript_marks_label_affiliations() {
 /// marked line is theirs.
 #[test]
 fn role_and_note_lines_are_no_unmarked_institution() {
-  for line in [
-    "This research was supported by the NSF",
-    "for the ATLAS Collaboration",
-    "Corresponding author: Professor Ann Able",
-  ] {
-    article_author(&format!(
-      r"Ann Able$^{{1}}$, Bob Baker$^{{2}}$\\ {line}\\ $^{{1}}$Univ A\\ $^{{2}}$Univ B"
-    ));
-  }
+  // (HG1: asserted again — DEL1 left the conversions alone. The support and correspondence lines are read as both
+  // names' affiliations: RED, sectioning-frontmatter/author_support_line_under_marked_names_is_no_affiliation_red.)
+  let xml = article_author(
+    r"Ann Able$^{1}$, Bob Baker$^{2}$\\ for the ATLAS Collaboration\\ $^{1}$Univ A\\ $^{2}$Univ B",
+  );
+  let collaboration = r#"<contact role="collaboration">for the ATLAS Collaboration</contact> "#;
+  assert_eq!(creators(&xml), [
+    creator(
+      true,
+      "Ann Able",
+      &format!("{collaboration}{}", affiliation("Univ A"))
+    ),
+    creator(
+      false,
+      "Bob Baker",
+      &format!("{collaboration}{}", affiliation("Univ B"))
+    ),
+  ]);
 }
 
 /// Rank 110 (rev77t finding 3): an llncs `\\` affiliation line is the names' since the last affiliation line, a names
@@ -418,18 +404,6 @@ fn llncs_author_and_is_inline() {
     creator(true, "Ann Able", &somewhere),
     creator(false, "Bob Baker", &somewhere),
   ]);
-}
-
-/// Rank 59 (rev77t finding 7): a `\fnm` with no `\snm` after it is printed at the author content's end, as vmsta.cls's
-/// `\name@m@front` prints its stored `\@fnm` after the content.
-/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
-/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
-#[test]
-fn vmsta_first_name_without_surname() {
-  repro_with!(
-    "class-bindings/vmsta/vmsta_first_name_without_surname.tex",
-    ("vmsta.cls", "class-bindings/vmsta/vmsta.cls")
-  );
 }
 
 /// Rank 110 (rev77t findings 3, 4), an e-mail line under a name (review probe L3): it ends that name's row as an

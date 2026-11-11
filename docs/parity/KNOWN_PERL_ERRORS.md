@@ -3841,8 +3841,9 @@ regular arXiv idiom Perl does not structure. Upstream filing pending.
 normalize to the `\quad` separator, and footnote-SYMBOL superscripts rewrite to a visible
 `\lx@frontmatter@keepsup` sup before branch selection (`normalize_hspace_separators`,
 `rewrite_symbol_superscripts`, `base_utilities/frontmatter/observer/emitter/calls.rs`). Numeric affiliation marks are untouched.
-Guards `06_cluster_frontmatter::{frontmatter_hspace_author_split,
-frontmatter_symbol_superscript_mark, frontmatter_thanks_literal_mark_mix}`.
+Guards `06_cluster_frontmatter::{frontmatter_hspace_author_split, frontmatter_thanks_literal_mark_mix}` and the
+`frontmatter_symbol_superscript_mark` row of `perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed` (its
+text asterisk written as U+2217: RED `author_textsuperscript_asterisk_stays_the_text_asterisk_red`).
 
 ---
 
@@ -17468,7 +17469,8 @@ espcrc1.sty:159-162 (espcrc2.sty the same) `\addressmark[<key>]` prints the mark
 Perl's espcrc.sty.ltxml:22 takes no argument, so the key is printed into the author's name. Minimal trigger:
 `\usepackage{espcrc2}` and `\author{A\address[E]{X} and B\addressmark[E]}` — Perl's personname "B[E]". Fixed in Rust
 (78s, espcrc_sty.rs reads and drops the key; the binding prints no address marks). Witness hep-lat0409072. Repro
-sectioning-frontmatter/espcrc_addressmark_key; guard `perfect_kernel_batch78s::espcrc_addressmark_key_not_printed`.
+sectioning-frontmatter/espcrc_addressmark_key_red (the key fix holds; the addresses leaving their authors is the RED);
+guard: its row of `perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed`.
 
 ## 1123. minted's `listing` is a figure
 

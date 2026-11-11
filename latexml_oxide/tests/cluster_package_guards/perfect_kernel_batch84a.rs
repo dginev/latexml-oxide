@@ -191,13 +191,6 @@ fn author_aastex_mark_then_space_separates() {
   );
 }
 
-/// Names led by their notes (2406.12338's `\thanks{…} {Carla Schenker,} ⏎\thanks{…} {Xiulin Wang,}`): three creators,
-/// each with its own note, where one creator held the three names and notes, flagged `merged_creators`.
-#[test]
-fn author_prefix_notes_then_space_separate_names() {
-  clean(repro!("author_prefix_notes_then_space_separate_names.tex"));
-}
-
 /// Names led by their marks, `$^{1}$Ann Able \: $^{2}$Bob Baker \: $^{1}$Cat Cole`: three creators, each with the
 /// university its mark names, where one creator held both.
 #[test]

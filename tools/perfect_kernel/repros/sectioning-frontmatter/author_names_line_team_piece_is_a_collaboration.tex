@@ -13,7 +13,9 @@
 %   all, `Error:frontmatter:merged_creators`, "LHD experimental group" an affiliation's owner); perl: one creator
 % expect:  0 errors, 0 warnings; two creators, Ann Able (Univ A) and Bob Baker (Univ B), each with
 %   `<contact role="collaboration">the GAPS Team</contact>`
-% status:  RED (97b) -> GREEN (97d)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: as the expect; Bob Baker's before="  " (the printed ", " not kept: the
+%          separator residual, RED in author_marked_list_keeps_its_printed_separators_red)
+% status:  RED (97b) -> GREEN (97d) -> GREEN, the separator residual named (HG1; perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed)
 % preload: ar5iv.sty
 \documentclass[aps,prd]{revtex4-1}
 \begin{document}

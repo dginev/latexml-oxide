@@ -1,0 +1,18 @@
+% witness: review rev92e r1 B1 (round 1's no-ink test counted only text boxes and shown arguments, so a command that
+%          writes its own text read as inkless: `\thanks{\dots}`, `\thanks{\LaTeX}` were dropped); the user's ruling
+%          2026-10-30 (FIDELITY_CHARTER §2, §4: content is never lost)
+% oracle:  pdflatex (article): 0 errors; the title "T∗" and the footnotes "∗ . . .", "† . . .", "‡ LaTeX", "§ TeX",
+%          "¶ LaTeX 2ε"
+% engines: rust 92e r1 (8f49d20) = no note at all (the title's pubnote and the four creators' notes dropped); rust
+%          92a5 and Perl keep each (Perl as `<contact role="thanks">`)
+% expect:  0 errors, 0 warnings; the title's pubnote "Thanks: …" and each author's note, its whole content
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: every author's note dropped (\dots, \LaTeX, \TeX, \LaTeXe), none counted; 92e's guard kept only the counts after DEL1
+% status:  RED (92e r1) -> GREEN (92e r2) -> RED (int160a, HG1)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T\thanks{\ldots}}
+\author{Ann Able\thanks{\dots} \and Bob Baker\thanks{\LaTeX} \and Cat Cole\thanks{\TeX} \and Dan Doe\thanks{\LaTeXe}}
+\maketitle
+Text.
+\end{document}

@@ -432,16 +432,6 @@ fn notes_labels_fonts_and_cells() {
   );
 }
 
-/// A stray alignment tab in the field is a column separator (review revfms2a1_2 finding 4): the `&` constructor errs
-/// only when it is built into the document (tex_tables.rs), so the rehearsal holds nothing for it, and `Cat & Dan` is
-/// two names a column apart, not a gap; a printed `\&` stays the word separator. The document's own `&` errs once (as
-/// pdflatex's "Extra alignment tab"), the same with the switch on and off.
-#[test]
-fn ampersand_is_a_column_separator() {
-  let tex = "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able \\& Bob Baker \\and Cat & Dan}\n\\maketitle\nBody.\n\\end{document}\n";
-  let (..) = reading_of(tex, Some("ar5iv.sty"));
-}
-
 /// The title's footnote marks are the kernel `\maketitle`'s `\@fnsymbol` unless a binding declares its own through the
 /// hook `\lx@title@thefootnote` (review revfms2a1_2 finding 5; revtex4-2.cls:3040-3041 `\frontmatter@thefootnote`,
 /// `\@alph` under `altaffilletter` only): here `\@alph`, so the bare `\footnotemark` after one `\thanks` prints "b" and

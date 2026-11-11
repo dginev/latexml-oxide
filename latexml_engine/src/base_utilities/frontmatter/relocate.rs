@@ -174,7 +174,7 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
   //   fallback and the grid `distribute_upfront_contacts` pairs (`\author{A \and B}` + `\institute{X \and Y}`);
   // - a sole author's orphans are that author's, as Perl attaches them; its institutes only where no institute is
   //   linked otherwise (an author marked for one institute is not given the one no one marks,
-  //   `author_block_orphan_mark_is_kept`).
+  //   `author_block_orphan_mark_is_kept_red`).
   // Any other orphan is shared, gathered into ONE trailing name-LESS `<ltx:creator role="author">` below the whole
   // author row, where Perl warns and drops it, or strands one shared `\institute` on author 1 (arXiv:2402.19043, WDM: 5
   // authors + one `\institute`). The ar5iv theme breaks a last-position shared affiliation out to full width. We reuse

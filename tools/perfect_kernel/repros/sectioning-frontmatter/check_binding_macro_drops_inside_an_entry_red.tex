@@ -1,0 +1,24 @@
+% A binding's macro drops the document's text while a frontmatter entry is digested: IEEEtran's `\IEEEmembership`
+% grade inside a `\thanks` (IEEEtran.cls prints it, "Ann Able, Senior Member, IEEE, is with Lunar College.") is
+% dropped by the binding, which cannot tell whose grade it is (ieeetran_cls.rs `\lx@IEEE@membership@drop`, as Perl's
+% IEEEtran.cls.ltxml drops every grade). The title-page check's second source watches the binding macros called while
+% the document's entry digests (title_page_check.rs `begin_frontmatter_entry_digestion`, `state::note_dropped_argument`)
+% and digests once, speculatively, each required argument one drops that the document wrote: the grade's words are
+% wanted, and the output lacks them — one `Warning:frontmatter:unclaimed`. FIDELITY_CHARTER §4.
+% witness: IEEEtran 1511.03982 (grades on names inside a nested `\authorblockN`: "student member senior fellow");
+%          jmlr's `\titletag[1]{}` over the title's published-version `\thanks` (2211.07413) is the same path
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able and Bob Baker", "Body text.", the
+%          footnote "Ann Able, Senior Member, IEEE , is with Lunar College."
+% engines: rust int135e = 0 errors, 0 warnings, the grade lost silently (the note "Ann Able, , is with Lunar
+%          College."); perl = the grade dropped too (KNOWN_PERL_ERRORS #534)
+% expect:  0 errors, 1 warning (frontmatter:unclaimed "senior member ieee"); the frontmatter unchanged
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: the grade dropped silently (the note "Ann Able, , is with Lunar College."), the drop counted by no Warning; 106t's guard was emptied by DEL1 (its =2 run was RED)
+% status:  RED (int135e) -> GREEN (106t r2) -> RED (int160a, HG1)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{A Title}
+\author{Ann Able and Bob Baker\thanks{Ann Able, \IEEEmembership{Senior Member,~IEEE}, is with Lunar College.}}
+\maketitle
+Body text.
+\end{document}

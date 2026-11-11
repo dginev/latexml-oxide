@@ -127,16 +127,6 @@ fn a_refmark_led_address_line_is_its_marks_addresses() {
   );
 }
 
-/// One names line the kernel does not split (`Ann (Al) Able*, Bob Baker*\thanks{…}, Cy Cole`, 1909.04111) is re-parted
-/// by the observer's writer, the shared block on each name: the API's `annotate=new` run gives it every name of the run
-/// (`api:annotate:new`), a ruling the re-part gate accepts as it does `owner:annotate:run` (repart.rs). Distinct: the
-/// writer's path, not the binding's. Ann and Bob keep the note, as on the base. Red before: one
-/// creator holding all three names.
-#[test]
-fn a_names_line_the_writer_re_parts_gives_each_name_the_shared_block() {
-  convert_clean(repro!("starred_names_one_line.tex"));
-}
-
 /// An `\and` at the top level of an `\IEEEauthorblockA` argument that a block macro follows (a missing brace,
 /// 2105.06537) starts the next author, as pdflatex prints it: the binding closes the argument before the `\and` and
 /// drops one closing brace after the blocks. With a `\thanks` before the first block (the paper's shape) the note
