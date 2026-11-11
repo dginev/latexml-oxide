@@ -1,5 +1,5 @@
 //! Guards for Z18d, review revZ18c's should-fixes: the entry's e-mail cut and the row's split share one reader of a
-//! call (`shared_row::read_call`), so a later call in printed braces is read as the row read it; the emitter's "markup
+//! call (`read_call`, `classify/entry_emails.rs` since P27b), so a later call in printed braces is read as the row read it; the emitter's "markup
 //! lost" Warning tests the text it writes (`emit.rs` `one_address`). Each converts its repro and asserts every creator's
 //! name and contacts in order and the exact Error and Warning counts.
 

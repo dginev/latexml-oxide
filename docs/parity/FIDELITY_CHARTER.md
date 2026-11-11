@@ -181,7 +181,7 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   stores and the Cut are rerouted on the digested reading inside Option C P2-P4. **The declined path's row sharing:
   "Route via reading helpers"** (user 2026-11-10): the declined emitter's Rust-only row sharing (OD #901, ≈730 lines in
   `shared_row/`) keeps its gains but calls the reading's one copy of each rule, and the old token-level copy is deleted
-  (Z18n).
+  (Z18n; done at P27b: the emitter writes the declined no-block flush holding a row contact, `shared_row/` deleted).
 
 ## 5. Bindings and shipped copies
 

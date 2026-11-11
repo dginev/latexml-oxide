@@ -404,8 +404,8 @@ fn cas_labelled_entry(label: Option<Tokens>, keys: Option<Tokens>) -> Vec<Token>
   // with two or more the PDF cannot tell whose each is, and each is its run's, the authors since the entry before it,
   // read by authoring order as elsarticle reads an unlabelled `\address` (`annotate=run`, `\lx@els@shared`):
   // `\author{Liu}\address{RC}\author{Sun}\author{Zhang}\address{UCAS}` is Liu's RC, Sun's and Zhang's UCAS
-  // (2202.06096). Declared `_share=authors,annotate=run`: `share_row_contacts` shares such an entry only when it is the
-  // only one, OXIDIZED_DESIGN_DIVERGENCES #901. Once an author is marked, the marks link the entries (FIDELITY_CHARTER
+  // (2202.06096). Declared `_share=authors,annotate=run`: the reading shares such an entry only when it is the
+  // only one (`Resolver::sole_shared_run`), OXIDIZED_DESIGN_DIVERGENCES #901. Once an author is marked, the marks link the entries (FIDELITY_CHARTER
   // §4 R1) and an unlabelled one stays the author's before it, as elsarticle's does)
   let shared = printed.is_none()
     && text.is_empty()

@@ -468,11 +468,10 @@ pub fn digest_front_matter() -> Result<()> {
   // (the labels the queue defers, read for the readers of its keyvals here: `\lx@label@ref`, cas's `\author[a]`)
   resolve_queued_label_refs(&mut commands);
   // (the one added step, under its switch: the queue's creators and annotations written from the reading, OD #980)
-  let emitted = emit_commands(&mut commands)?;
-  // (a contact the class prints under the whole row of names, every author's: OXIDIZED_DESIGN_DIVERGENCES #901)
-  if !emitted {
-    share_row_contacts(&mut commands)?;
-  }
+  // (a contact the class prints under the whole row of names, every author's, OXIDIZED_DESIGN_DIVERGENCES #901, is the
+  // reading's: the emitter writes a flush holding one with or without an author block, `stays_out`; under a block no
+  // rehearsal read it is digested as Perl's, as the rest of the queue)
+  emit_commands(&mut commands)?;
   // (what this flush digests is off the queue: no later flush's emitter writes it again, astro-ph9808358)
   take_digested(&commands);
   // The entries a seal drops in this flush, whose annotations go with them ([`seal_digested_frontmatter`]) — this

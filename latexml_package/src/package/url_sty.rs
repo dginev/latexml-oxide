@@ -207,7 +207,7 @@ LoadDefinitions!({
     // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #901): what the command prints, as text, kept beside it — a primitive's
     // boxes are no expansion a reader of the frontmatter can look into. A `\urldef`'d address in llncs's shared
     // `\institute` (`\urldef{\mailsa}\path|{mkelly, …}@cs.odu.edu|`, 1307.8067; `\mailk, \mailt`, 1408.0384) is an
-    // e-mail line of the row (`share_row_contacts`), not every author's affiliation.
+    // e-mail line of the row (the reading's, OD #901), not every author's affiliation.
     let text: String = expansion.iter().map(ToString::to_string).collect();
     assign_value(&s!("lx@urldef@text@{cmd}"), url_printed_text(&text), None);
     DefPrimitive!(&cmd, { Ok(expansion.clone()) });

@@ -221,8 +221,8 @@ LoadDefinitions!({
   });
   DefMacro!("\\lx@llncs@affiliation{}", "\\lx@add@affiliation[labelseq={affiliation}]{#1}");
   // llncs.cls:868-886: one institute (`\c@@inst=1`, no `\and` in it) is printed under the names unnumbered, every
-  // author's, unless the authors' `\inst` marks pick it (`\inst{1}`): `_share=authors`, which the frontmatter's flush
-  // reads (`share_row_contacts`, OXIDIZED_DESIGN_DIVERGENCES #901; Perl strands it on the first author for want of an
+  // author's, unless the authors' `\inst` marks pick it (`\inst{1}`): `_share=authors`, which the frontmatter's reading
+  // places (`Resolver::share_unpicked`, OXIDIZED_DESIGN_DIVERGENCES #901; Perl strands it on the first author for want of an
   // `\inst{1}`, KNOWN_PERL_ERRORS #1195, and the kernel had kept it on a nameless creator under the names,
   // OXIDIZED_DESIGN #159, 2402.19043). Only `\inst{n}` picks it: hand-typed `$^{1}$` (2607.02596) and a paper's mark
   // macro (`\printfnsymbol{1}`, 1804.05870, 2007.07423, 2102.12877, 2403.11865) are answered by no one. Its `\email`s

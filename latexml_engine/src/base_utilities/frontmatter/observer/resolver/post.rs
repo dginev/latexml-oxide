@@ -1618,7 +1618,7 @@ impl Resolver {
   }
 
   /// Whether no mark picks a `_share=authors` entry (llncs.cls:868-886: one institute, no `\and` in it, printed
-  /// unnumbered under the names, every author's — OD #901, today's `share_row_contacts`/`marks_pick`): no live name
+  /// unnumbered under the names, every author's — OD #901, the old split's `share_row_contacts`/`marks_pick`, deleted at P27b): no live name
   /// shows the class's own request of a number (`\inst{1}`, `\inst{2}`: [`Resolver::class_requests`]; `\inst{*}`, an
   /// empty `\inst{}`, a hand-typed `$^{1}$` and a paper's mark macro pick nothing: 2207.04574, 2604.20229, 2607.02596,
   /// 1804.05870), and no name shows a number other than 1 by hand (`Ann Able$^{1,2}$`: the one institute is several,
@@ -1645,8 +1645,8 @@ impl Resolver {
   }
 
   /// The e-mail calls of a `_share=authors` entry no mark picks (`share_unpicked`: llncs's one `\institute{Univ X \\
-  /// \email{…}}`), every address placed by FIDELITY_CHARTER §4's chain over the live authors, as today's places a
-  /// shared row's lines (`shared_row::row_email_calls`, OD #901): the author it spells; else, the entry's addresses one
+  /// \email{…}}`), every address placed by FIDELITY_CHARTER §4's chain over the live authors, as the old split placed a
+  /// shared row's lines (`row_email_calls`, deleted at P27b; OD #901): the author it spells; else, the entry's addresses one
   /// per author that every spelled one agrees with, the author at its place (`owner:order`); else, one author, that
   /// author; else the block (a template's `{firstname.lastname}@x.edu`, `owner:pattern`) — the one address left of
   /// several authors the corresponding author's ([`Resolver::place_emails_left`]). No elimination.

@@ -44,7 +44,7 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
     .map(ToString::to_string)
     .unwrap_or_default();
   // (an entry a class shares among every author, llncs's one `\institute`, `_share=authors`: its lines of addresses are
-  // the shared row's, placed by the same chain where the row is read — `shared_row::row_email_calls`, OD #901;
+  // the shared row's, placed by the reading's chain (`Resolver::answer_shared_emails`; the old split's `row_email_calls` until P27b), OD #901;
   // 1103.2027)
   if !CUT_ROLES.contains(&role.as_str()) || kv.is_some_and(|kv| kv.get_value("_share").is_some()) {
     return Ok(None);

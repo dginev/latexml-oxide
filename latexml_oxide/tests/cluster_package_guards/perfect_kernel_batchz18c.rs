@@ -1,7 +1,7 @@
 //! Guards for Z18c: the frontmatter emitter learns what llncs's old split knew about affiliation lines
 //! (OXIDIZED_DESIGN_DIVERGENCES #984), before llncs's unmarked `\author` list goes to the emitter as one block. One guard
 //! per rule moved from the old split (`row_email_calls`, `row_address_owners`): the separators and labels around an
-//! affiliation entry's inner e-mail calls leave it (`shared_row::entry_email_cut`); the inner e-mail calls after the
+//! affiliation entry's inner e-mail calls leave it (`classify::entry_email_cut`, `shared_row::` until P27b); the inner e-mail calls after the
 //! first are the entry's, placed by the Link step's chain (`EntryOwnerFacts`); an address line ending an entry takes the
 //! separator before it (`address_cuts`). Each converts its repro and asserts no Error or Warning and every creator's name
 //! and contacts in order.
