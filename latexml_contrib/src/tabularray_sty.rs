@@ -1782,6 +1782,25 @@ fn tblr_cell_styles(
   (!cells.is_empty()).then_some(TblrStyles { math, cells })
 }
 
+/// Set one of tabularray's counters (tabularray.sty:185-188, count registers), locally: in a cell's group or the
+/// table's, as tabularray's `\int_set:Nn`.
+fn tblr_set_counter(register: &str, value: usize) -> Result<()> {
+  let value = i64::try_from(value).unwrap_or(i64::MAX);
+  assign_register(
+    register,
+    RegisterValue::Number(Number::new(value)),
+    None,
+    Vec::new(),
+  )
+}
+
+/// A table's size, its rows and widest row (tabularray.sty:3703-3755 `\c@rowcount`, `\c@colcount`), from the shape
+/// [`tblr_shape_of`] reads.
+fn tblr_set_size((widest, rows): (usize, usize)) -> Result<()> {
+  tblr_set_counter("\\c@rowcount", rows)?;
+  tblr_set_counter("\\c@colcount", widest)
+}
+
 /// The `$…$` (or, for a text cell of a math table, `\hbox{…}`) a cell's mode puts around its text.
 fn tblr_mode_wrap(style: &TblrCellStyle, math_table: bool) -> (Vec<Token>, Vec<Token>) {
   match style.mode.as_deref() {
@@ -2220,8 +2239,10 @@ LoadDefinitions!({
     });
     let body = if evaluate.is_empty() && expand.is_empty() {
       if let Some(body) = tblr_read_body()? {
+        let shape = tblr_shape_of(body.clone())?;
+        tblr_set_size(shape)?;
         if let Some(rules) = &mut rules {
-          rules.shape = tblr_shape_of(body.clone())?;
+          rules.shape = shape;
         }
         let spans = body.iter().any(|t| t.get_catcode() == Catcode::CS && t.with_str(|s| s == "\\SetCell"));
         unread(Tokens::new(if spans { tblr_span_cells(body, math) } else { body }));
@@ -2268,11 +2289,12 @@ LoadDefinitions!({
     // Fatal).
     // `\lx@tblr@after` follows the environment's end: a long or tall table's notes, remarks and
     // float end (`\lx@tblr@portrait`).
+    // Every table's cells open through `\lx@tblr@cell@open`, which sets `\c@rownum`/`\c@colnum` (a table without
+    // styles has an empty set of them).
     let mut out = Vec::new();
-    if let Some(styles) = styles {
-      assign_value(TBLR_PENDING_STYLES, Stored::Opaque(Rc::new(styles)), None);
-      out.extend(TokenizeInternal!(r"\let\lx@alignment@column@before\lx@tblr@cell@open").unlist());
-    }
+    let styles = styles.unwrap_or(TblrStyles { math, cells: HashMap::default() });
+    assign_value(TBLR_PENDING_STYLES, Stored::Opaque(Rc::new(styles)), None);
+    out.extend(TokenizeInternal!(r"\let\lx@alignment@column@before\lx@tblr@cell@open").unlist());
     out.extend(TokenizeInternal!(TeXString::assembled(format!(
       "\\ifx\\hline\\lx@tblr@hline\\else\\let\\lx@tblr@saved@hline\\hline\\let\\hline\\lx@tblr@hline\\fi\
        \\ifx\\cline\\lx@tblr@cline\\else\\let\\lx@tblr@saved@cline\\cline\\let\\cline\\lx@tblr@cline\\fi\
@@ -2349,13 +2371,19 @@ LoadDefinitions!({
       }
     };
     let Some(styles) = styles.downcast_ref::<TblrStyles>() else { return Ok(Tokens!()) };
-    let (row, column, before, after) = {
+    let (row, column) = {
+      let data = data.borrow();
+      (data.current_row_number(), data.current_column_number())
+    };
+    // tabularray.sty:1682-1683 `\int_set:Nn \c@rownum {#1}`, `\c@colnum {#2}`: the cell's place, read by its text
+    tblr_set_counter("\\c@rownum", row)?;
+    tblr_set_counter("\\c@colnum", column)?;
+    let (before, after) = {
       let mut data = data.borrow_mut();
-      let (row, column) = (data.current_row_number(), data.current_column_number());
       match data.current_column() {
         Some(cell) => {
           let before = cell.before.clone().unwrap_or_default();
-          (row, column, before, cell.after.clone().unwrap_or_default())
+          (before, cell.after.clone().unwrap_or_default())
         },
         None => return Ok(Tokens!()),
       }
@@ -2678,18 +2706,20 @@ LoadDefinitions!({
   RawTeX!(r"\let\lx@tblr@caption\caption\AtBeginDocument{\let\lx@tblr@caption\caption}");
   // The material after a table's end (`\lx@tblr@portrait`), in the table's group.
   // A table's rules (`TBLR_RULES`): its body's shape once `evaluate=`/`expand=` have run (`\l__tblr_body_tl`)...
+  // The table's size, `\c@rowcount`/`\c@colcount`, is that shape too (`tblr_set_size`).
   DefPrimitive!("\\lx@tblr@rules@shape", {
+    let body = lookup_definition(&T_CS!("\\l__tblr_body_tl"))?
+      .and_then(|d| d.get_expansion().cloned())
+      .and_then(|b| match b {
+        ExpansionBody::Tokens(t) => Some(t.unlist()),
+        _ => None,
+      })
+      .unwrap_or_default();
+    let shape = tblr_shape_of(body)?;
+    tblr_set_size(shape)?;
     if let Some(Stored::Opaque(rules)) = lookup_value(TBLR_RULES)
       && let Some(rules) = rules.downcast_ref::<TblrRules>()
     {
-      let body = lookup_definition(&T_CS!("\\l__tblr_body_tl"))?
-        .and_then(|d| d.get_expansion().cloned())
-        .and_then(|b| match b {
-          ExpansionBody::Tokens(t) => Some(t.unlist()),
-          _ => None,
-        })
-        .unwrap_or_default();
-      let shape = tblr_shape_of(body)?;
       let rules = TblrRules {
         keys: rules.keys.clone(),
         ncols: rules.ncols,
@@ -2862,6 +2892,19 @@ LoadDefinitions!({
 \tl_new:N \lTblrCellRightBorderStyleTl \dim_new:N \lTblrCellRightBorderWidthDim \tl_new:N \lTblrCellRightBorderColorTl
 \cs_new:Npn \ExpTblrChildId #1 {} \cs_new:Npn \ExpTblrChildClass #1 {}
 \ExplSyntaxOff"
+  );
+  // tabularray.sty:185-194: the row and column counters, registers (not `\newcounter`s) and their `\the…`; a table
+  // sets `\c@rowcount`/`\c@colcount` to its size before its cells (`\lx@tblr@env`, `\lx@tblr@rules@shape`) and
+  // `\c@rownum`/`\c@colnum` in each cell (`\lx@tblr@cell@open`; :1682-1683, :3729-3755). Witness: the manual
+  // non-decimal-units' `\int_use:N \c@rownum` in a tblr (26 errors when undefined).
+  RawTeX!(
+    r"\ExplSyntaxOn
+\int_zero_new:N \c@rownum \int_zero_new:N \c@colnum \int_zero_new:N \c@rowcount \int_zero_new:N \c@colcount
+\ExplSyntaxOff
+\ProvideExpandableDocumentCommand\therownum{}{\@arabic\c@rownum}
+\ProvideExpandableDocumentCommand\thecolnum{}{\@arabic\c@colnum}
+\ProvideExpandableDocumentCommand\therowcount{}{\@arabic\c@rowcount}
+\ProvideExpandableDocumentCommand\thecolcount{}{\@arabic\c@colcount}"
   );
   // The body preprocessing `\lx@tblr@env` runs when a table has `evaluate=`/`expand=`
   // (`\__tblr_modify_table_body:`, tabularray.sty:3567-3575): tabularray's own code on the body,

@@ -1,11 +1,13 @@
-% witness: manual non-decimal-units (TL 2025 doc; its tcolorbox examples read \int_use:N \c@rownum / \c@colnum in a tblr)
-% oracle:  pdflatex 0 errors, cells "1.2" and "2.2" (tabularray.sty:173-176 \int_zero_new:N \c@rownum, \c@colnum,
-%          \c@rowcount, \c@colcount; :1670 sets \c@rownum per row, the column likewise)
-% engines: rust int160a1 0 errors, 2 warnings ("Counter 'rownum'/'colnum' was not defined; assuming 0", from the
-%          error stub's deleted \c@ branch), cells "0.0"; rust GA1 6 errors (Error:undefined:\c@rownum, \c@colnum, then
-%          \the of each), cells "0.0": the contrib binding latexml_contrib/src/tabularray_sty.rs defines none of the four
+% witness: manual non-decimal-units (TL 2025 doc; non-decimal-units.sty:826-830 reads \int_use:N \c@rownum / \c@colnum)
+% oracle:  pdflatex 0 errors, cells "1.2" and "2.2" (tabularray.sty:185-188 \int_zero_new:N \c@rownum, \c@colnum,
+%          \c@rowcount, \c@colcount; :1682-1683 sets them per cell before the cell's text is typeset)
+% engines: rust GA1 6 errors (Error:undefined:\c@rownum, \c@colnum, then \the of each), cells "0.0"; rust GA1b 0 errors,
+%          0 warnings, cells "0.2" and "0.2": the binding sets the counters at the cell's template
+%          (\lx@tblr@cell@open), after the alignment's look for \omit has already expanded the cell's first token, so a
+%          counter read at a cell's very start sees the row's value (0); read later in the cell it is right (the GREEN
+%          sibling tabularray_rownum_colnum_counters.tex). tabularray splits its body and sets them before each cell.
 % expect:  0 errors, 0 warnings; cells "1.2" and "2.2"
-% status:  RED (int160a1, GA1)
+% status:  RED (GA1b: counts right, the first-token values wrong)
 \documentclass{article}
 \usepackage{tabularray}
 \makeatletter

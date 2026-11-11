@@ -82,11 +82,36 @@ const ROWS: &[Row] = &[
       ),
     ],
   ),
+  // tabularray's own counters (tabularray.sty:185-194): defined at the binding's load, the table's size set before its
+  // cells, each cell's place set at its template (`\lx@tblr@cell@open`); read by `\the`, `\the…` and `\arabic`,
+  // inside a cell's text and in a `\textbf`; back to 0 after the table, as pdflatex prints. Witness: the manual
+  // non-decimal-units (26 errors on GA1).
+  (
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_rownum_colnum_counters.tex"
+    ),
+    0,
+    0,
+    0,
+    "",
+    &[
+      (
+        "tabular",
+        &[],
+        r#"<tabular vattach="middle"><tbody>
+          <tr><td align="left">a1.1</td><td align="left">b1.2/2.3</td><td align="left">c1-3</td></tr>
+          <tr><td align="left">d2.1</td><td align="left">e<text font="bold">2.2</text></td>
+          <td align="left">f2.3</td></tr></tbody></tabular>"#,
+      ),
+      ("p", &[], "<p>after: 0.0/0.0</p>"),
+    ],
+  ),
 ];
 
 /// Repros macro-state/undefined_counter_register_is_an_error (GA0 finding 1), macro-state/
 /// counter_readers_keep_their_leniency and captions-floats/subfig_continuedfloat_in_a_float_without_subfloats
-/// (witness 1910.02851): exact counts, the first Error, whole elements.
+/// (witness 1910.02851), alignment-bindings/tabularray_rownum_colnum_counters (GA1b): exact counts, the first Error,
+/// whole elements.
 #[test]
 fn an_undefined_counter_register_is_the_error_tex_raises() {
   for (tex, errors, warnings, assuming, first_error, elements) in ROWS {
