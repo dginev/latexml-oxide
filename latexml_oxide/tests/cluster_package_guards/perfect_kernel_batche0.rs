@@ -1436,7 +1436,12 @@ fn every_shape_of_a_key_is_seen() {
 /// Bindings are the study's list, so a binding outside it is not watched. Raised at CR7 (main session 2026-11-10, "follow
 /// Perl"): the footnote-counter and definition declines write Perl's `\lx@add@authors` (Base_Utility.pool.ltxml:686-720),
 /// token-level by definition — its branch test and `positionOf` in `fallback` (+2), `literal_and`/`position_of` moved from
-/// `author_block/` into `classify` (+1, `author_block` -1).
+/// `author_block/` into `classify` (+1, `author_block` -1). Raised at P21b (`frontmatter (rest)` 29 -> 30,
+/// `observer/separators.rs` `printing_token`): a `Sep(And)` event whose span is the family's command itself, which the
+/// rehearsal binds by its name whatever it means (`ALWAYS_BOUND`), gets its position even where a macro defines that
+/// command (a document's `\renewcommand\and`), told from a macro holding a separator (`\aut`) by that name, so the queue's
+/// name reader parts an sv author list there as the reading cuts it (repro
+/// `svjour3_institute_list_names_a_whole_author_block_document_and`).
 const TOKEN_READS: &[(&str, usize)] = &[
   ("aa_cls.rs", 5),
   ("aas_support_sty.rs", 17),
@@ -1519,7 +1524,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // P20, 26 -> 29: `observer/separators.rs`, the one engine's separator query, reads a separator's *meaning* — its event's
   // printing token's definition, whether it is the kernel layer's `\and` constructor (`get_cs()` against `KERNEL_SEPARATOR`),
   // the trap-T8 test `frontmatter_stores::kernel_and_list` makes —, never its spelling: a decision by definition, OD #995)
-  ("frontmatter (rest)", 29),
+  ("frontmatter (rest)", 30),
   ("frontmatter_stores", 527),
   ("gretsi_cls.rs", 14),
   // (CR10a, 119 -> 128: the class's author body is read as tokens before it is digested, as `author_block_body` reads it —

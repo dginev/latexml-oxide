@@ -92,7 +92,8 @@ fn jheppub_family_is_written() {
 /// sv_support is written (`sv_support_sty.rs` `written: true`): svproc's `\institute{… \\ \email{a, b} \and …}` — an
 /// institute's addresses each its speller's (2409.01900, 2101.04527, 2206.03859, 1911.11805) — and names marked by
 /// hand under an `\and`-list of institutes numbered 1, 2 (2608.25509, 97c's one real-paper regression: the institutes
-/// were the block's). Before, every carrier of the institute held its whole address list.
+/// were the block's). Before, every carrier of the institute held its whole address list. Since P2-1b the author list is
+/// one block the reading cuts, so Bob Baker and Cy Cole each open an `\and` column (`sep:column`), the creators unchanged.
 #[test]
 fn sv_support_is_written() {
   // (since 100b, OD #956, today's writes the institute's e-mail list out itself at the flush by the chain the reading
@@ -117,10 +118,10 @@ fn sv_support_is_written() {
       "C Ann Able [1] | line:names",
       "  a Univ A, Town A | api:labelseq",
       "  c email ann.able@a.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
-      "C Bob Baker [1] | line:names",
+      "C Bob Baker [1] | line:names sep:column",
       "  a Univ A, Town A | api:labelseq",
       "  c email baker@a.org | api:labelseq api:inner-contact ruling3:written-out owner:spelled",
-      "C Cy Cole [2] | line:names",
+      "C Cy Cole [2] | line:names sep:column",
       "  a Univ B, Town B | api:labelseq",
       "  c email cy@b.org | api:labelseq api:inner-contact owner:inner-email owner:only-carrier",
     ],

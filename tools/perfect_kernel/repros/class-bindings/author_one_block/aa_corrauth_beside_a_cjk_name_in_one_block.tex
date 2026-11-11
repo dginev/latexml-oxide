@@ -1,0 +1,31 @@
+% mechanism: aa's `\author` still splits by spelling (`aa_cls.rs` `\lx@splitting{\lx@add@author@split}{\and\And}`): with
+%   the whole list one `\lx@add@author@split` call, a `CJK*` environment in one name and `\corrauth` in another, the
+%   emitter writes the corresponding contact as its item (`\lx@frontmatter@itemonly{ann@x.edu}`), not the call
+%   (`\corrauth{ann@x.edu}`), and the contact loses `name="Corresponding author: "` — a mechanism of its own, not the
+%   queue's name reading (P2-1b; trial rule 5), so aa keeps its split
+% witness: 2608.21138 (aa 2026: `Katarzyna~M.~Dutkowska \inst{\ref{STRW}}\corrauth{…} \and Bin
+%          Jia(\begin{CJK*}{UTF8}{gbsn}贾彬\end{CJK*}) \inst{\ref{STRW}} \and …`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 2608.21138's aa.cls, lineno.sty, linenoaa.sty) 0 errors: "Ann M. Able1⋆ ,
+%          Bob Baker(贾彬)1, 2 , and Cid Cole2", footnote "Corresponding author: ann@x.edu"
+% engines: rust P21 and P21b (split by spelling) = the contact `name="Corresponding author: "`; P21 with aa's split
+%          removed = the same contact with no `name`
+% expect:  0 errors, 0 warnings; Ann M. Able's contact role=corresponding name="Corresponding author: " ann@x.edu
+% status:  GREEN while aa splits by spelling (P21b); RED on a build without that split — catalog, no guard (the aa batch)
+% preload: ar5iv.sty
+\documentclass{aa}
+\usepackage{CJKutf8}
+\begin{document}
+\title{T}
+\author{
+         Ann~M.~Able \inst{\ref{X}}\corrauth{ann@x.edu}
+    \and Bob Baker(\begin{CJK*}{UTF8}{gbsn}贾彬\end{CJK*}) \inst{\ref{X},\ref{Y}}
+    \and Cid Cole\inst{\ref{Y}}
+}
+\institute{
+             University of X\label{X}
+        \and University of Y\label{Y}
+}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}
