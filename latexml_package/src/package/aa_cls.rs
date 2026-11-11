@@ -19,6 +19,11 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   binding: "aa.cls",
   inst_after_comma: true,
   email_in_place: true,
+  // (aa.cls:866 sets its own `\and` where `\maketitle` prints the authors: the separator query's, TP2)
+  title_page: FmTitlePageDecl {
+    title_and: &[("aa.cls", "aa.cls:866")],
+    ..FM_KERNEL_CONVENTIONS.title_page
+  },
   cite: "aa.cls:759-760 `\\def\\inst#1{\\unskip\\hbox{$^{#1}$}}`, :824; OD #807 (1604.07826, 2309.00573), #913",
   ..FM_KERNEL_CONVENTIONS
 };

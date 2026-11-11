@@ -1555,7 +1555,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // meaning with LaTeX's `\maketitle`/`\@maketitle` (a `\let` copy the body calls): one read; FX24's two (the `\@empty`-or-
   // blank test on the recorded `\@author`, now the binding's declaration `Policy::author_tail`, and the search for the
   // `\@author` token in a File-origin `\@maketitle`, now the walk) are gone; OD #996)
-  ("frontmatter_stores", 527),
+  // (TP1, 527 -> 528: `own_title_page_prints_author`'s walk takes the kernel's marker of LaTeX's own `\@maketitle`
+  // (`\lx@kernel@maketitle`), reached directly or in a `\let` copy, for the class's page, which the binding's declaration
+  // answers for — a definition's identity, not a document's spelling; FX24b's walk read the same bodies)
+  ("frontmatter_stores", 528),
   ("gretsi_cls.rs", 14),
   // (CR10a, 119 -> 128: the class's author body is read as tokens before it is digested, as `author_block_body` reads it —
   // a names block nested in another's spliced in (`unnested_name_blocks`, 1511.03982), the alias `\authorblockN`'s grades,
@@ -1646,7 +1649,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // `kernel_separator_runs` keeps the query's cuts at whole units, for eptcs's cells and the `\institute` lists of
   // inst_support and aa (Option C P2-2, OD #995); 28 + 26 = 18 + 36, none added)
   ("rest /tokens.rs", 36),
-  ("rest /util_text.rs", 25),
+  // (TP1, 25 -> 26: `ink_word_text` reads the title-page reading's own marks, whatsits of `INK_MARKS`' constructors, by
+  // their definition, as it reads `WORDLESS`)
+  ("rest /util_text.rs", 26),
   ("revtex4_support_sty.rs", 12),
   ("sv_support_sty.rs", 35),
   ("webofc_cls.rs", 0),

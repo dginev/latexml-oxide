@@ -791,6 +791,21 @@ const WORDLESS: &[&str] = &[
 /// `speculative_run`): what follows it is the page foot's, not the title page's text running on.
 pub const INK_INSERT: char = '\u{3}';
 
+/// The marks the title-page reading's run prints, each a constructor printing nothing (sect05.rs `title_page_reading`),
+/// and the character [`ink_word_text`] reads for it, where it stands: where `\@author` begins, where what a document
+/// appended to it begins and where it ends. No word holds them; the reading takes them out of the text it keeps.
+pub const INK_MARKS: [(&str, char); 3] = [
+  ("\\lx@title@page@author", INK_AUTHOR),
+  ("\\lx@title@page@tail", INK_TAIL),
+  ("\\lx@title@page@tail@end", INK_TAIL_END),
+];
+/// [`INK_MARKS`]' mark where `\@author` begins.
+pub const INK_AUTHOR: char = '\u{4}';
+/// [`INK_MARKS`]' mark where what a document appended to `\@author` begins.
+pub const INK_TAIL: char = '\u{5}';
+/// [`INK_MARKS`]' mark where what a document appended to `\@author` ends.
+pub const INK_TAIL_END: char = '\u{6}';
+
 /// The mark [`ink_word_text`] sets at the edges of a whatsit that prints: no word ends there in the text it reads
 /// (`Jos\'e`, `\textbf{Ab}le`), but where a word does not continue across it, the pieces are words of their own
 /// (`\centerline{Ann Able}\centerline{MIT}`, "Able" and "MIT").
@@ -802,6 +817,15 @@ pub const INK_SEAM: char = '\u{1}';
 /// accent built as an alignment runs on (combelow's `\cb{s}`, `Babe\cb{s}-Bolyai` "Babes", 2007.07526), an author
 /// table's cells end their words. The title page's printed words (`base_utilities::frontmatter::title_page_check`).
 pub fn ink_word_text(d: &Digested, out: &mut String) {
+  // (a mark the title-page reading set in its run, where it stands: [`INK_MARKS`])
+  if let DigestedData::Whatsit(w) = d.data()
+    && let Some((_, mark)) = INK_MARKS
+      .iter()
+      .find(|(cs, _)| *cs == w.borrow().get_definition().get_cs_name().as_ref())
+  {
+    out.push(*mark);
+    return;
+  }
   // (spacing — a phantom's invisible ink, a kern, `\quad` — and a script print no word: a script is a mark)
   if let DigestedData::Whatsit(w) = d.data()
     && (is_spacing_item(d)

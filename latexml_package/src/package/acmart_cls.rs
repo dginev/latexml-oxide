@@ -19,7 +19,10 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   binding: "acmart.cls",
   // (its title page prints `\addresses`, never `\@author`: acmart.cls:1619-1643, :2240 `\@mkauthors`, :2631 — a
   // document's tail on `\@author` prints nowhere, FX27b)
-  own_author_page: &["acmart.cls"],
+  title_page: FmTitlePageDecl {
+    author: FmAuthorPage::Own(&["acmart.cls"]),
+    ..FM_KERNEL_CONVENTIONS.title_page
+  },
   cite: "acmart.cls:1620-1621 (several authors in one `\\author`); OD #942 (2311.10779, 2010.12245)",
   ..FM_KERNEL_CONVENTIONS
 };

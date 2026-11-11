@@ -39,7 +39,10 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   and_word: true,
   // (their title pages print `\authors`, never `\@author`: amsart.cls:460-476, :638, :815-817; amsproc.cls:613,
   // :752-754; amsbook.cls:1356 — a document's tail on `\@author` prints nowhere, FX27b)
-  own_author_page: &["amsart.cls", "amsproc.cls", "amsbook.cls"],
+  title_page: FmTitlePageDecl {
+    author: FmAuthorPage::Own(&["amsart.cls", "amsproc.cls", "amsbook.cls"]),
+    ..FM_KERNEL_CONVENTIONS.title_page
+  },
   // (the second family: 0.38 % unclassified over 2,903 census papers, a seeded classified sample 33 of 34 right, none
   // wrong — SYNC "FM S2b next family: ams_support", int110l)
   cite: "amsart.cls:599 `\\def\\and`; Perl ams_support.sty.ltxml:94 `\\lx@author@conj`; 1712.02568",

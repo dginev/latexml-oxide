@@ -1,9 +1,13 @@
 % mechanism: a tail appended to `\@author` under a document that adds to LaTeX's `\@maketitle` (`\g@addto@macro`):
-%   `title_page_prints_author` compares with the current `\@maketitle` (LaTeXML's own is empty, sect05.rs:1273)
+%   `title_page_prints_author` compared with the current `\@maketitle` (LaTeXML's own was empty, sect05.rs:1273)
 % witness: synthetic (review revFX24b)
 % expect:  0 errors; Bob B (Inst Y) kept as a creator, as pdflatex prints him
 % preload: ar5iv.sty
-% status: RED (synthetic; review revFX24b). pdflatex prints "Alice A / Inst X  Bob B / Inst Y" then "extra":
+% status: GREEN since TP1 (was RED, revFX24b): the kernel's `\@maketitle` holds a marker (`\lx@kernel@maketitle`) where
+%   the title-page reading's run puts article.cls's page, so the addition runs around it; the run prints the tail, the
+%   frontmatter reads it: creators Alice A (Inst X), Bob B (Inst Y); E=0 W=0 (int160a: Alice A alone, W=1 "bob").
+%   pdflatex prints "Alice A / Inst X  Bob B / Inst Y" then "extra". Guard
+%   perfect_kernel_batchfx24::an_author_tail_the_title_page_prints_is_read
 % \g@addto@macro\@maketitle keeps LaTeX's body, which prints \@author with its appended tail.
 % counted: 1 Warning "bob" since FX25's stand-in; a Warning still under FX27 (LaTeX's `\author`: the stand-in is
 %   LaTeX's page); guard perfect_kernel_batchfx24::an_author_tail_printed_but_not_read_is_counted

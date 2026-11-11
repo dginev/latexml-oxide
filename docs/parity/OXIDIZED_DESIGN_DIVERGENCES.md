@@ -30599,35 +30599,54 @@ word stays a Warning, "The title page prints …", unless the title page in forc
 word only text a document appended to `\@author` after the author setter stored it prints, under a title page that
 positively does not print that tail, is an Info, `frontmatter:annotated`, "The title page annotates N word(s) that its
 output does not hold: …": the author may mean it hidden, so no damage can be claimed, and the word is still named.
-Where the check ran its stand-in for article.cls's page, the print is run again with `\@author` as the binding's setter
-left it (`lx_author_seen`, kept past `\lx@author@tail` as `lx_author_tail_seen` until `\lx@maketitle@cleanup`; sect05.rs
-`untailed_title_page_print`), and a lost word that print lacks, which the frontmatter commands' text does not name
-either, is the Info's. The other lost words keep the Warning, also where one loss has words of both. Positively not
-printed (frontmatter_stores.rs `unverified_author_tail_prefix`), only under a binding's `\author`:
-- A title page of the file's or the document's own that does not reach `\@author` (the walk; authblk under a document's
-  title-only `\@maketitle`).
-- With no such page, the binding owning `\author` declares that the document class's page prints its own author list
-  (`Policy::own_author_page`, `ledger::author_tail_unprinted`): ams_support.sty for amsart, amsproc, amsbook
-  (`\authors`, amsart.cls:460-476, :638, :815-817); elsart_support_core.sty for elsarticle (`\elsauthors`,
-  elsarticle.cls:247-288, :805, :848); acmart.cls (`\addresses`, acmart.cls:1619-1643, :2240, :2631). Keyed to the document class
-  (the first of the class's bindings), not the binding alone: OmniBus's autoload of ams_support.sty, old elsart.cls's
-  elsart_support_core.sty and a class over amsart (gen-m-l) are not declared.
+The title-page reading's run (TP1, below) marks the part a document appended to `\@author` in its print; where the
+title page in force positively does not print it, the words outside that part are the print without it, and a lost word
+only that part prints, which the frontmatter commands' text does not name either, is the Info's. The other lost words
+keep the Warning, also where one loss has words of both. Positively not printed (`TitlePageReading::tail_printed`):
+- A title page of the file's or the document's own that does not reach `\@author`: the run's own print (TP1: a
+  document's `\@maketitle` runs as written, so it prints no tail at all — authblk or article under a document's
+  title-only `\@maketitle`, no Info and no Warning, as pdflatex prints none), else the walk
+  (`own_title_page_prints_author`).
+- With no such page, or where article.cls's stand-in ran in it (the kernel's marker), the binding owning `\author`
+  declares that the document class's page prints its own author list (`TitlePageDecl::author` `AuthorPage::Own`,
+  `ledger::author_tail_declared`): ams_support.sty for amsart, amsproc, amsbook (`\authors`, amsart.cls:460-476, :638,
+  :815-817); elsart_support_core.sty for elsarticle (`\elsauthors`, elsarticle.cls:247-288, :805, :848); acmart.cls
+  (`\addresses`, acmart.cls:1619-1643, :2240, :2631). Keyed to the document class (the first of the class's bindings),
+  not the binding alone: OmniBus's autoload of ams_support.sty, old elsart.cls's elsart_support_core.sty and a class
+  over amsart (gen-m-l) are not declared.
 - The document class is OmniBus, the fallback's guess for an unknown class (`OmniBus:fallback`), whose real page is
   unknown.
 
-Every other title page counts as printing the tail, so a lost word there stays a Warning: LaTeX's `\author` in force (the
-kernel's, a raw file's, the document's: `ledger::author_is_latex_own`, even where `title_page_prints_author`'s walk says
-otherwise, its false negatives: revFX24b's REDs); an own title page reaching `\@author` (amsart under a document's
-`\@maketitle` printing it); a binding declaring that its page prints the tail (`Policy::author_tail`: authblk, llncs);
-any binding declaring no page of its own, a binding added later included (IEEEtran, mnras, revtex4-1: pdflatex prints the
-tail, revFX27's probes; FX27 had made each an Info); and wherever the check ran no stand-in (a raw file's
-`\@maketitle`, a replayed refused `\maketitle`, titling's binding `\@maketitle` over amsart or elsarticle,
-titling.sty:166-180), whose print is its own evidence. The XML is unchanged; only the log line moves. Still a Warning on
-the safe side: article with a document's title-only `\@maketitle` (the walk cannot tell it from a document `\@maketitle`
-printing a `\let` copy of `\@author`, which pdflatex prints). FX26/FX26b's declaration that dropped the tail from the
-print is parked, its mechanism not merged (revFX26, revFX26b: it silenced counted losses). Guards
-`perfect_kernel_batchfx24::{an_amsart_author_append_invents_no_creator, an_author_tail_the_title_page_does_not_print_is_not_read,
-an_author_tail_printed_but_not_read_is_counted}`.
+Every other title page counts as printing the tail, so a lost word there stays a Warning: LaTeX's `\author` in force
+(the kernel's, a raw file's, the document's); an own title page reaching `\@author` (its tail is then read, TP1); a
+binding declaring that its page prints the tail (`AuthorPage::Block`: authblk, llncs); any binding declaring no page of
+its own, a binding added later included (IEEEtran, mnras, revtex4-1: pdflatex prints the tail, revFX27's probes; FX27
+had made each an Info); and wherever the run ran no stand-in (a raw file's `\@maketitle`, a replayed refused
+`\maketitle`, titling's binding `\@maketitle` over amsart or elsarticle, titling.sty:166-180), whose print is its own
+evidence (TP1 reads the tail there: titling over amsart and elsarticle, `{amsart,elsarticle}_titling_author_tail_printed_is_kept`,
+no Warning). FX26/FX26b's declaration that dropped the tail from the print is parked, its mechanism not merged (revFX26,
+revFX26b: it silenced counted losses). Guards `perfect_kernel_batchfx24::{an_amsart_author_append_invents_no_creator,
+an_author_tail_the_title_page_does_not_print_is_not_read, an_author_tail_printed_but_not_read_is_counted}`.
+
+**TP1: one title-page reading.** What the class's whole title page prints at `\maketitle` is read once
+(`latex_constructs::title_page_reading`, a `TitlePageReading`): one speculative run with the document's own values
+(`title_page_print_tokens`, the check's thanks and `\today`), under the check's read budget (`checks_run`), read for its
+words (`ink_word_text`) and its text (`ink_text`), and kept while the state is unchanged (`state_generation`, a count
+of assignments a rolled-back journal puts back; LaTeXML-internal `lx…` values aside). The check, the stores'
+confirming check (`confirmed_printed`, before: two more unbudgeted runs) and the author tail (`author_tail_calls`, before:
+a walk of its own) read it. The run defines `\@author` with marks that print nothing (`\lx@title@page@author`,
+`\lx@title@page@tail`, `\lx@title@page@tail@end`, read where they stand: util_text.rs `INK_MARKS`), notes the `\and`
+family's meanings where `\@author` first prints (recorded for the separator query, TP2), and whether article.cls's
+stand-in ran. Its source: a replayed refused `\maketitle`, a `\@maketitle` of a raw file's, a binding's or the
+document's own, or the stand-in. **The stand-in stands at a marker:** the kernel's `\@maketitle` holds
+`\lx@kernel@maketitle` (empty outside the run), where the run puts article.cls's page (TL 2025 article.cls:236-251), so a
+document's or a raw file's addition to LaTeX's `\@maketitle` (`\g@addto@macro`) or a `\let` copy of it runs as written
+around it, and a document's own `\@maketitle` runs as written — before, the stand-in replaced every `\@maketitle` not of
+File or Binding origin (TP0's probe p2: a document's title-only page printed the authors). The sentinel runs build on
+the same `title_page_print_tokens`. Binding declarations: `Policy::title_page` (`TitlePageDecl`: `author`
+Kernel/Block/Own, absorbing FX24b's `author_tail` and FX27b's `own_author_page`; `title_and`, the classes whose page sets
+its own `\and`, aa.cls:866 and svjour3.cls:608, recorded for TP2). Perl reads no title page
+(latex_constructs.pool.ltxml:1099-1113). Guard `perfect_kernel_batchfx24::an_author_tail_the_title_page_prints_is_read`.
 
 ### 954. A contact holding two or more marked entries is cut at its marks in the frontmatter API, for every binding (Perl: one contact, the marks printed in it)
 
@@ -34763,34 +34782,37 @@ a_displaced_and_list_is_read_by_meaning, a_numbered_store_route_tries_the_number
   affiliation). Before, such a tail was dropped whole and, with the title-page check gluing the words around `\and`
   (FX25), uncounted.
 - *A binding whose `\author` stores nothing in `\@author` and whose class prints it with what is appended*: the
-  binding declares it in its frontmatter conventions (`Policy::author_tail`: authblk, whose own `\@author` prints
-  the block, authblk.sty:167-171; llncs, whose `\@maketitle` prints `\@author`, llncs.cls:1035), read off the binding
-  owning the `\author` meaning (`ledger::author_tail_printed`). `queue_front_matter` records `\@author`'s value as each
-  creator is queued (`note_author_seen`, `lx_author_seen`; the kernel `\author`'s `\lx@author@handed` clears it). At
-  `\maketitle`, with no kernel call handed, the tail after that value is read the same way, its rows every queued
-  creator's (the line is printed under the whole block). A binding that does not declare it is not this route:
-  amsart's title page prints `\authors` (its `\g@addto@macro\@author{\and Bob B}` makes no creator; pdflatex prints only
-  the first author), elsarticle's `\elsauthors`, the fallback class's (OmniBus, inst_support) is unknown (a tail there
-  stays out of the output, named by the title-page check as annotated, an Info, where the binding declares its class's
-  own author page or the class is OmniBus's guess; elsewhere a Warning: #953 "FX27").
-- *Either route reads a tail only where the title page in force prints `\@author`* (`title_page_prints_author`, FX24b):
-  a stand-in copy's title page answers for itself (`copy_title_page_prints`); else the refused `\maketitle`
-  (`\lx@dropped@maketitle`), or else a `\@maketitle`, that a raw file or the document defined is walked through the live
-  code it reaches (`reads_of_branches` over `executed_code`, following the macros of File or Document origin): it prints
-  `\@author` when it reads it, or reaches LaTeX's or a binding's `\maketitle`/`\@maketitle` by its current meaning
-  (a `\let` copy of the current `\maketitle` the body calls);
-  with neither definition the title page is LaTeX's or the binding's, which prints it. A document's `\renewcommand\maketitle`
-  or `\def\@maketitle` printing only the title, a raw class's own title page, or its `\maketitle`/`\@maketitle` over
-  `\LoadClass{article}` print no tail, so none is read — neither more authors nor 59d's rows (review revFX24 finding 1).
-  The speculative title-page run's sentinels (`before_title_page_runs`) do not answer here: `\@author` is never one of
-  their candidates (the rerouted, off-table and net stores).
-  Not covered (revFX24b, synthetic: the tail lost, counted by the title-page check's Warning since FX25's stand-in, a
-  Warning still under FX27, guard `perfect_kernel_batchfx24::an_author_tail_printed_but_not_read_is_counted`): a document that adds to LaTeX's
-  `\@maketitle` (`\g@addto@macro`, `\apptocmd`) or redefines it through a `\let` copy of it — LaTeXML's own `\@maketitle`
-  is empty (sect05.rs:1273), so the addition or the copy is no longer LaTeX's by meaning — and a `\let` copy of
-  `\@author` taken after the tail and printed by the document's `\@maketitle` (the walk matches `\@author` by name).
-  REDs `article_author_tail_under_appended_maketitle_is_lost_red`, `article_author_tail_under_let_copied_maketitle_is_lost_red`,
-  `article_author_tail_printed_through_let_copy_of_author_is_lost_red`.
+  binding declares it in its frontmatter conventions (`TitlePageDecl::author` `AuthorPage::Block`: authblk, whose own
+  `\@author` prints the block, authblk.sty:167-171; llncs, whose `\@maketitle` prints `\@author`, llncs.cls:1035), read
+  off the binding owning the `\author` meaning (`ledger::author_tail_declared`). `queue_front_matter` records `\@author`'s
+  value as each creator is queued (`note_author_seen`, `lx_author_seen`; the kernel `\author`'s `\lx@author@handed`
+  clears it). At `\maketitle`, with no kernel call handed, the tail after that value is read the same way, its rows
+  every queued creator's (the line is printed under the whole block). amsart's title page prints `\authors` (its
+  `\g@addto@macro\@author{\and Bob B}` makes no creator; pdflatex prints only the first author), elsarticle's
+  `\elsauthors`, the fallback class's (OmniBus, inst_support) is unknown (a tail there stays out of the output, named by
+  the title-page check as annotated, an Info, where the binding declares its class's own author page or the class is
+  OmniBus's guess; elsewhere a Warning: #953 "FX27").
+- *Either route reads a tail only where the title page in force prints it* (TP1, #953 "TP1"; FX24b's walk before): at
+  `\maketitle` the title-page reading's run answers where code a raw file or the document wrote ran without
+  article.cls's stand-in (its tail mark printed or not; amsart under a document's `\@maketitle` printing `\@author` reads
+  the tail, FX26's RED, now `amsart_author_tail_printed_by_document_maketitle_is_kept`); else the walk
+  (`own_title_page_prints_author`): a stand-in copy's title page answers for itself (`copy_title_page_prints`); else the
+  refused `\maketitle` (`\lx@dropped@maketitle`), or else a `\@maketitle`, that a raw file or the document defined is
+  walked through the live code it reaches (`reads_of_branches` over `executed_code`, following the macros of File or
+  Document origin): it prints `\@author` when it reads it, or reaches LaTeX's or a binding's `\maketitle`/`\@maketitle`
+  by its current meaning; reaching the kernel's marker (`\lx@kernel@maketitle`, directly or in a `\let` copy), the page is
+  the class's, as with neither definition: the binding's declaration answers (`ledger::author_tail_declared`; LaTeX's
+  `\author` prints it). Before `\maketitle` (an appending `\author`'s flush) the walk and the declaration alone answer. A
+  document's `\renewcommand\maketitle` or `\def\@maketitle` printing only the title, a raw class's own title page, or its
+  `\maketitle`/`\@maketitle` over `\LoadClass{article}` print no tail, so none is read — neither more authors nor 59d's
+  rows (review revFX24 finding 1). The speculative title-page run's sentinels (`before_title_page_runs`) do not answer
+  here: `\@author` is never one of their candidates. A document that adds to LaTeX's `\@maketitle` or redefines it through
+  a `\let` copy of it now has its tail read (revFX24b's REDs, now `article_author_tail_under_appended_maketitle_is_kept`,
+  `article_author_tail_under_let_copied_maketitle_is_kept`; guard
+  `perfect_kernel_batchfx24::an_author_tail_the_title_page_prints_is_read`). Not covered: a `\let` copy of `\@author`
+  taken after the tail and printed by the document's `\@maketitle` (the run marks `\@author`, not the copy): the tail
+  lost, counted by the check's Warning (RED `article_author_tail_printed_through_let_copy_of_author_is_lost_red`, guard
+  `perfect_kernel_batchfx24::an_author_tail_printed_but_not_read_is_counted`).
 - *The binding route's rows* (`row_calls`, FX24b): the tail printed under the whole block is an address the block's
   authors share, the frontmatter API's existing gate `\lx@add@affiliation@shared` (author_macros.rs,
   `shared_affiliation_calls`): its e-mail lines one address run placed as a block's address lines are

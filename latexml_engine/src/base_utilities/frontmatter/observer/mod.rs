@@ -54,8 +54,7 @@ pub use events::{
   PrintedLabel as FmPrintedLabel, SepKind as FmSepKind,
 };
 pub use ledger::{
-  author_is_latex_own as fm_author_is_latex_own, author_tail_printed as fm_author_tail_printed,
-  author_tail_unprinted as fm_author_tail_unprinted, note_binding_load,
+  author_tail_declared as fm_author_tail_declared, note_binding_load,
   record_note_text as fm_record_note_text,
 };
 pub(in crate::base_utilities) use ledger::{
@@ -68,8 +67,9 @@ pub(in crate::base_utilities) use marks::{
 };
 // (for the bindings, which declare their conventions at load)
 pub use policy::{
-  EmailOwner as FmEmailOwner, KERNEL as FM_KERNEL_CONVENTIONS, Policy as FmConventions,
-  TitleMarks as FmTitleMarks, declare_frontmatter_conventions,
+  AuthorPage as FmAuthorPage, EmailOwner as FmEmailOwner, KERNEL as FM_KERNEL_CONVENTIONS,
+  Policy as FmConventions, TitleMarks as FmTitleMarks, TitlePageDecl as FmTitlePageDecl,
+  declare_frontmatter_conventions,
 };
 pub(in crate::base_utilities) use reading::read_at_flush;
 pub use reading::{fm_reading_json, reset_fm_reading};

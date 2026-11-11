@@ -280,6 +280,8 @@ pub struct AssignmentJournal {
   /// each box whose `\\wd`, `\\ht` or `\\dp` was set, the property's value then, oldest first: a property of the box itself, which
   /// a register's binding shares ([`journal_box_dimension`])
   box_dimensions: Vec<(Digested, &'static str, Option<Stored>)>,
+  /// the state's generation when it began ([`state_generation`]), which a rollback puts back
+  generation:     u64,
 }
 /// A key's values in its table (`None`: unbound) and its assignment counts by frame id.
 type JournalEntry = (Option<VecDeque<Stored>>, Vec<(u64, usize)>);
@@ -1208,6 +1210,9 @@ impl State {
     value: Stored,
     mut scope_opt: Option<Scope>,
   ) {
+    if table_name != TableName::Value || arena::first_bytes::<2>(key) != Some(*b"lx") {
+      GENERATION.set(GENERATION.get() + 1);
+    }
     // (a meaning a fallback class, a kernel stub or a borrowed package installs, until anything else assigns the name:
     // `fallback_meanings`; an open journal records the standing first)
     if table_name == TableName::Meaning {
@@ -6142,6 +6147,7 @@ pub fn begin_assignment_journal() -> Option<AssignmentJournalGuard> {
     saved: rustc_hash::FxHashMap::default(),
     fallback: rustc_hash::FxHashMap::default(),
     box_dimensions: Vec::new(),
+    generation: GENERATION.get(),
   });
   JOURNAL_GUARD_LIVE.set(true);
   Some(AssignmentJournalGuard { open: true })
@@ -6233,6 +6239,18 @@ pub fn swap_meaning_log(buffer: &mut Vec<MeaningAssigned>) {
 /// for the next [`begin_assignment_journal`] to discard.
 static JOURNAL_GUARD_LIVE: std::cell::Cell<bool> = std::cell::Cell::new(false);
 
+#[thread_local]
+/// How many assignments the state took ([`state_generation`]).
+static GENERATION: std::cell::Cell<u64> = std::cell::Cell::new(0);
+
+/// A count of the state's assignments so far: a computation over the state's definitions, registers and values may be
+/// kept while it is unchanged (frontmatter's title-page reading, `latex_constructs::title_page_reading`). Every
+/// assignment counts but a LaTeXML-internal value's (a key `lx…` in the value table: a frontmatter flag, which no TeX
+/// code reads), and a journal rolled back ([`AssignmentJournalGuard::rollback`]) puts it back as it was, with the state.
+/// A group's end restores what was assigned in it without counting, so the count can say "changed" of a state the same
+/// again — never "unchanged" of one that changed.
+pub fn state_generation() -> u64 { GENERATION.get() }
+
 /// The open assignment journal ([`begin_assignment_journal`]).
 #[must_use = "an assignment journal is kept or rolled back"]
 pub struct AssignmentJournalGuard {
@@ -6319,6 +6337,7 @@ impl AssignmentJournalGuard {
         },
       }
     }
+    GENERATION.set(journal.generation);
     true
   }
 }

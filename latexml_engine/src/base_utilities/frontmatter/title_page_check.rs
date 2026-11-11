@@ -63,7 +63,7 @@ const UNTAILED: &str = "lx_title_page_untailed";
 /// in place of an earlier `\maketitle`'s, which it supersedes (DIVERGENCES #406: a later author list replaces the one
 /// flushed); none once the authors are sealed, a supplement's title page after the body began, whose entries the seal
 /// drops (`seal_digested_frontmatter`). `untailed`: what it prints with `\@author` as the binding's setter left it, when
-/// what a document appended to it since positively does not print (sect05.rs `untailed_title_page_print`): a lost word only
+/// what a document appended to it since positively does not print (the title-page reading, sect05.rs `title_page_reading`): a lost word only
 /// the appended text prints is reported as one the title page annotates ([`check_title_page_words`]).
 pub fn note_title_page_printed(text: &str, untailed: Option<&str>) {
   if frontmatter_entry_sealed("ltx:creator", "author") {
@@ -125,6 +125,7 @@ thread_local! {
 /// with none (latexml_oxide's `prepare_session` and `initialize_session`), watching the document's calls
 /// ([`note_frontmatter_entry`]).
 pub fn reset_title_page_check() {
+  crate::latex_constructs::title_page_reading::end_title_page_epoch();
   SPILLED.with_borrow_mut(|spilled| *spilled = SpilledWords::default());
   CALLED.with_borrow_mut(Vec::clear);
   QUEUED_BY_LENGTH.with_borrow_mut(HashMap::clear);
