@@ -1283,11 +1283,19 @@ pub(in crate::base_utilities) fn record_author_body_end() {
 
 /// Record the argument of a call a class switched off after its title block (REVTeX's repeated author block,
 /// revtex4_cls.rs): the content check counts its text as printed, so a word the output lacks is counted, not silent
-/// (1206.0114, 1903.12442); a call repeating an earlier one's words adds none.
+/// (1206.0114, 1903.12442); a call repeating an earlier call's text adds none (2001.07542, 1812.00931, 2305.19055).
 pub fn record_switched_off_call(content: &Tokens) {
   if records_now() {
     let text = content_text(content);
-    with_ledger(|ledger| ledger.unrecorded.push(text));
+    with_ledger(|ledger| {
+      let repeats = ledger.entries().iter().any(|entry| {
+        matches!(entry, Entry::Api(call)
+          if content_text(&call.content).split_whitespace().eq(text.split_whitespace()))
+      });
+      if !repeats {
+        ledger.unrecorded.push(text);
+      }
+    });
   }
 }
 
