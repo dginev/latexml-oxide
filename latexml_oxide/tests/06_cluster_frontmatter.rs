@@ -561,38 +561,11 @@ fn frontmatter_hspace_author_split() {
     "\\hspace authors merged or the length leaked as text:\n{x}"
   );
 }
-/// html_feedback#6637 construct 2 (OXIDIZED_DESIGN #52): a footnote-SYMBOL author
-/// superscript (`$^{*}$`, `$^{\dagger}$`, `\textsuperscript{*}` — equal-
-/// contribution / corresponding notes, never affiliation numbers) must render as
-/// a visible `<sup>`, not be consumed into an unmatched `affiliation:*` label and
-/// silently dropped. All three marker spellings are covered; a plain author stays
-/// plain, and every author still splits on `\and`.
-#[test]
-fn frontmatter_symbol_superscript_mark() {
-  let x = convert_to_xml("tests/cluster_regressions/frontmatter_symbol_superscript_mark.tex");
-  // (HG1: asserted again — DEL1 left the conversion alone. Each marked author keeps a visible superscript symbol, a
-  // math `*` as TeX sets it, `∗`; the unmarked author stays plain; all four split; no mark an affiliation.)
-  for (name, mark) in [
-    ("Dana Delta", "<sup>∗</sup>"),
-    ("Evan Echo", "<sup>†</sup>"),
-    ("Fiona Foxtrot", "<sup>∗</sup>"),
-    ("Gina Golf", ""),
-  ] {
-    assert!(
-      x.contains(&format!("<personname>{name}{mark}</personname>")),
-      "{name} must keep {mark:?}:\n{x}"
-    );
-  }
-  assert_eq!(
-    x.matches("role=\"author\"").count(),
-    4,
-    "expected four authors:\n{x}"
-  );
-  assert!(
-    !x.contains("role=\"affiliation\""),
-    "a symbol mark was misread as an affiliation:\n{x}"
-  );
-}
+// html_feedback#6637 construct 2 (OXIDIZED_DESIGN #52), the footnote-SYMBOL author superscripts (`$^{*}$`,
+// `$^{\dagger}$`, `\textsuperscript{*}`) of `frontmatter_symbol_superscript_mark.tex`: a row of
+// `cluster_package_guards::perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed` since HG1b (every creator
+// whole, exact counts); Fiona Foxtrot's text asterisk written as U+2217 is RED
+// `author_textsuperscript_asterisk_stays_the_text_asterisk_red`.
 /// html_feedback#6637 combined (arXiv:2506.06941, "The Illusion of Thinking",
 /// plain article): six authors separated by `\hspace{0.5cm}`/`\\`, one lead with
 /// two `\thanks`, a second lead with a literal `$^{*}$`, trailing "Apple"

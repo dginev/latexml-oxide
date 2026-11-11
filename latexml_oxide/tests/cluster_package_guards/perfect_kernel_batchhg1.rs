@@ -109,7 +109,8 @@ pub(super) fn assert_rows(rows: &[Row]) {
   assert!(failures.is_empty(), "{}", failures.join("\n\n"));
 }
 
-/// The restored rows, each as pdflatex prints it (a row's source and the guard it replaces in brackets):
+/// The restored rows, each as pdflatex prints it (a row's source and the guard it replaces in brackets); a part that is
+/// not is pinned as today and names its RED:
 /// - amsart's author reader keeps the lines a macro inside `\author` holds, the affiliation's `\footnotesize` lost and
 ///   counted (one Warning) — the content the 106s guard counted as lost is kept (2007.07526; 106s
 ///   `a_binding_losing_author_lines_is_counted`);
@@ -127,9 +128,19 @@ pub(super) fn assert_rows(rows: &[Row]) {
 ///   `author_note_name_line_opens_next_author`). The list's separators (the trailing commas, "and") are not kept in
 ///   `before=` — the separator residual, RED in `author_marked_list_keeps_its_printed_separators_red`;
 /// - revtex marked names with a lowercase particle (`B.~in der Baker`) and a collaboration line: a list, each name its
-///   numbered address and the collaboration (97a `marked_list_with_an_unknown_name_shape_is_a_list`); amsart marked
-///   names beside "the XYZ Team": a list and its collaboration (97a
-///   `marked_names_beside_a_team_are_a_list_and_its_collaboration`);
+///   numbered address and the collaboration, the same with the list in one group (`{\bf …}`) (97a
+///   `marked_list_with_an_unknown_name_shape_is_a_list`). Both pin before="  " where the list prints ", " — the
+///   separator residual, RED in `author_marked_list_keeps_its_printed_separators_red`;
+/// - amsart marked names (97a's amsart case): the list, each name its mark and address; C. Cole's before=" and " where
+///   the line prints ", and" is pinned, RED in `author_marked_list_amsart_comma_and_keeps_its_comma_red`;
+/// - amsart marked names beside "the XYZ Team": a list and its collaboration (97a
+///   `marked_names_beside_a_team_are_a_list_and_its_collaboration`). B. in der Baker's before=" and " — the "and"
+///   printed before the team moved between the names — is pinned, RED in
+///   `author_marked_names_beside_a_team_move_their_and_red`;
+/// - kernel `\and` names with symbol marks (`$^{*}$`, `$^{\dagger}$`, `\textsuperscript{*}`; html_feedback#6637
+///   construct 2, OD #52; was `06_cluster_frontmatter::frontmatter_symbol_superscript_mark`): four creators, each mark
+///   a visible `<sup>`, none an affiliation. Fiona Foxtrot's text asterisk written as the math `∗` (pdflatex: CMR8
+///   "*") is pinned, RED in `author_textsuperscript_asterisk_stays_the_text_asterisk_red`;
 /// - webofc's `\inst` form: each author its institute, the e-mail Ann Able's contact, no empty thanks note (2301.07438,
 ///   1411.7792, 2409.01693; 78e `webofc_authors_take_their_institutes`);
 /// - amsart `\author{C. Vignat, Universit\'e d'Orsay}`: the name and its institution (1009.2396; z14
@@ -142,6 +153,12 @@ fn hollow_guards_restored_read_as_printed() {
   let net = repro!("sectioning-frontmatter/net_shaped_store_below_the_floor_is_kept");
   let msc = net.1.replace("\\Pacs{98.80.Cq}", "\\Pacs{05C12}");
   assert_ne!(msc, net.1);
+  let particle = repro!("sectioning-frontmatter/author_marked_list_lowercase_particle_merges");
+  let grouped = particle.1.replace(
+    r"\author{A.~Able$^{1}$, B.~in der Baker$^{2}$, C.~Cole$^{1}$\\",
+    r"\author{{\bf A.~Able$^{1}$, B.~in der Baker$^{2}$, C.~Cole$^{1}$}\\",
+  );
+  assert_ne!(grouped, particle.1);
   assert_rows(&[
     Row {
       repro:    repro!("sectioning-frontmatter/check_binding_author_lines_lost_are_counted"),
@@ -217,7 +234,21 @@ fn hollow_guards_restored_read_as_printed() {
       ]),
     },
     Row {
-      repro:    repro!("sectioning-frontmatter/author_marked_list_lowercase_particle_merges"),
+      repro:    particle,
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>A. Able</personname><contact role="collaboration">(XYZ Collaboration)</contact><contact name="Affiliation: " role="affiliation"> Institute of One</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>B. in der Baker</personname><contact role="collaboration">(XYZ Collaboration)</contact><contact name="Affiliation: " role="affiliation"> University of Two</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>C. Cole</personname><contact role="collaboration">(XYZ Collaboration)</contact><contact name="Affiliation: " role="affiliation"> Institute of One</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    (
+        "author_marked_list_lowercase_particle_merges (in one group)",
+        Cow::Owned(grouped),
+      ),
       files:    &[],
       counts:   (0, 0),
       lines:    &[],
@@ -229,7 +260,20 @@ fn hollow_guards_restored_read_as_printed() {
     },
     Row {
       repro:    repro!(
-        "sectioning-frontmatter/author_marked_names_beside_a_team_are_a_reported_merge"
+        "sectioning-frontmatter/author_marked_list_amsart_comma_and_keeps_its_comma_red"
+      ),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>A. Able<sup><text font="italic">1</text></sup></personname><contact name="Address: " role="address"><sup><text font="italic">1</text></sup> Institute of One</contact></creator>"#,
+        r#"<creator before=", " role="author"><personname>B. in der Baker<sup><text font="italic">2</text></sup></personname><contact name="Address: " role="address"><sup><text font="italic">2</text></sup> University of Two</contact></creator>"#,
+        r#"<creator before=" and " role="author"><personname>C. Cole<sup><text font="italic">1</text></sup></personname><contact name="Address: " role="address"><sup><text font="italic">1</text></sup> Institute of One</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!(
+        "sectioning-frontmatter/author_marked_names_beside_a_team_move_their_and_red"
       ),
       files:    &[],
       counts:   (0, 0),
@@ -276,10 +320,28 @@ fn hollow_guards_restored_read_as_printed() {
         r#"<creator role="author"><personname>Ann Able</personname><contact name="Address: " role="address">Lunar Institute</contact></creator>"#,
       ]),
     },
+    Row {
+      repro:    (
+        "frontmatter_symbol_superscript_mark",
+        Cow::Borrowed(include_str!(
+          "../cluster_regressions/frontmatter_symbol_superscript_mark.tex"
+        )),
+      ),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Dana Delta<sup>∗</sup></personname></creator>"#,
+        r#"<creator before="  " role="author"><personname>Evan Echo<sup>†</sup></personname></creator>"#,
+        r#"<creator before="  " role="author"><personname>Fiona Foxtrot<sup>∗</sup></personname></creator>"#,
+        r#"<creator before="  " role="author"><personname>Gina Golf</personname></creator>"#,
+      ]),
+    },
   ]);
 }
 
-/// Marked author blocks the counts-only guards DEL1 left (its audit's misses), each as pdflatex prints it.
+/// Marked author blocks the counts-only guards DEL1 left (its audit's misses), each as pdflatex prints it; a part that
+/// is not is pinned as today, its comment naming the RED.
 #[test]
 fn marked_blocks_restored_read_as_printed() {
   assert_rows(&[
@@ -444,6 +506,8 @@ fn marked_blocks_restored_read_as_printed() {
         r#"<creator before="  " role="author"><personname>D. Four<sup>23A</sup></personname><contact role="collaboration">(X Collaboration)</contact><contact name="Affiliation: " role="affiliation"><text font="italic"> (A)Zeta Lab, Turin; (B)Eta Lab, Milan</text></contact></creator>"#,
       ]),
     },
+    // A. One's printed "1" lost (RED `revtex_comma_before_mark_keeps_its_mark_red`) and B. Two's ", and" lost
+    // (RED `author_marked_list_keeps_its_printed_separators_red`); the lines on the names their marks name.
     Row {
       repro:    repro!("class-bindings/revtex_unsplit_labelled_address_block_lands_once"),
       files:    &[],
@@ -452,6 +516,18 @@ fn marked_blocks_restored_read_as_printed() {
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>A. One</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Alpha University, Beijing</contact></creator>"#,
         r#"<creator before="  " role="author"><personname>B. Two<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Beta Institute, Rome</contact></creator>"#,
+      ]),
+    },
+    // (98e's `\affiliation` sibling in a `\parbox`, whose guard ran only at =0 after DEL1: each name its line; Bob
+    // Baker's printed "and" lost, RED `author_marked_list_keeps_its_printed_separators_red`.)
+    Row {
+      repro:    repro!("class-bindings/revtex_parbox_affiliation_lines_land_once"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Univ A, Town</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B, City</contact></creator>"#,
       ]),
     },
     Row {
@@ -464,8 +540,10 @@ fn marked_blocks_restored_read_as_printed() {
         r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact role="collaboration">the GAPS Team</contact><contact name="Affiliation: " role="affiliation">Univ B</contact></creator>"#,
       ]),
     },
+    // The names whole, no "[ETHZ]" text; the addresses on a nameless creator and the printed "and" lost are pinned,
+    // RED in `espcrc_addressmark_key_red` itself.
     Row {
-      repro:    repro!("sectioning-frontmatter/espcrc_addressmark_key"),
+      repro:    repro!("sectioning-frontmatter/espcrc_addressmark_key_red"),
       files:    &[],
       counts:   (0, 0),
       lines:    &[],
@@ -473,6 +551,314 @@ fn marked_blocks_restored_read_as_printed() {
         r#"<creator role="author"><personname>Slavo Kratochvila</personname></creator>"#,
         r#"<creator before="  " role="author"><personname>Philippe de Forcrand</personname></creator>"#,
         r#"<creator role="author"><contact name="Address: " role="address">ETH Zürich</contact><contact name="Address: " role="address">CERN</contact></creator>"#,
+      ]),
+    },
+  ]);
+}
+
+/// The RED repros whose deleted guard asserted their counts (92e's `clean_both_ways`, 97b's and 97d's `both_ways`,
+/// 59's, 64zd's, 65a's, 65e's, 84a's and 78s's clean conversions; review revHG1 S1): each row pins the counts and the
+/// parts of its output that are right, the rest the RED its repro's header names. Row by row:
+/// - kernel `\thanks` whose ink is a command, a math token, a rule or frame, a constructor, a colour box or an empty
+///   superscript (`kernel_thanks_*_red`, 92e): 0 E / 0 W, every name; the authors whose `\thanks` prints nothing whole
+///   (no note), Bob Baker's "B" note kept. The other notes are dropped silently: the REDs;
+/// - an undefined command in `\thanks` (`kernel_thanks_undefined_command_is_ink_red`): its one Error; the note and its
+///   error marker dropped: the RED;
+/// - the orphan mark (`author_block_orphan_mark_is_kept_red`, 59): the name; its printed "1" lost: the RED;
+/// - 64zd's asterisk-marked revtex names, noted affiliation and other note command
+///   (`revtex_asterisk_marked_authors_split_red`, `author_noted_affiliation_stays_affiliation_red`,
+///   `author_other_note_command_stays_affiliation_red`): the names and lines kept; the marks and the line read as a name
+///   (`Ohio State`): the REDs;
+/// - 65a's ASCE grade (`asce_membership_grade_qualifies_the_name_red`) and 65e's symbol mark shown by its e-mail
+///   (`symbol_mark_shown_by_its_email_red`): each creator's contacts; the grade in the name and the lost `∗`: the REDs;
+/// - 84a's prefix notes (`author_prefix_notes_then_space_separate_names_red`): the names, Ann's own note; the notes one
+///   author off: the RED;
+/// - 97b's separators and e-mail piece (`author_marked_list_keeps_its_printed_separators_red`,
+///   `author_marked_email_piece_is_no_person_red`): the names, marks and affiliations; the lost separators, the missing
+///   merge report: the REDs;
+/// - 97d's collaboration lines (`author_names_for_two_collaborations_is_one_contact_red`,
+///   `author_collaboration_heading_group_covers_names_after_red`, `author_collaboration_heading_colon_outside_groups_red`,
+///   `author_collaboration_broken_after_and_is_one_contact_red`, `author_collaboration_after_and_heads_its_own_group_red`,
+///   `author_trailing_collaboration_group_covers_every_name_red`): the names and their institutes; each collaboration
+///   split, a name, or lost: the REDs.
+#[test]
+fn reds_keep_their_counts_and_right_parts() {
+  assert_rows(&[
+    Row {
+      repro:    repro!("class-bindings/kernel_thanks_command_text_is_ink_red"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Ann Able</personname>"#,
+        r#"<personname>Bob Baker</personname>"#,
+        r#"<personname>Cat Cole</personname>"#,
+        r#"<personname>Dan Doe</personname>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/kernel_thanks_math_token_is_ink_red"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Ann Able</personname>"#,
+        r#"<personname>Bob Baker</personname>"#,
+        r#"<personname>Cat Cole</personname>"#,
+        r#"role="author"><personname>Dan Doe</personname></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/kernel_thanks_rule_and_frame_are_ink_red"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Ann Able</personname>"#,
+        r#"<personname>Bob Baker</personname>"#,
+        r#"<personname>Cat Cole</personname>"#,
+        r#"<personname>Dan Doe</personname>"#,
+        r#"role="author"><personname>Eve Ell</personname></creator>"#,
+        r#"role="author"><personname>Fay Fox</personname></creator>"#,
+        r#"role="author"><personname>Gil Gray</personname></creator>"#,
+        r#"role="author"><personname>Ida Ivy</personname></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/kernel_thanks_constructor_text_is_ink_red"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Ann Able</personname>"#,
+        r#"<personname>Bob Baker</personname>"#,
+        r#"role="author"><personname>Cat Cole</personname></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/kernel_thanks_colorbox_is_ink_red"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Ann Able</personname>"#,
+        r#"<personname>Bob Baker</personname>"#,
+        r#"<personname>Cat Cole</personname>"#,
+        r#"<personname>Dan Doe</personname>"#,
+        r#"<personname>Eve Ell</personname>"#,
+        r#"role="author"><personname>Fay Fox</personname></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/kernel_thanks_empty_superscript_reads_alike_red"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Ann Able</personname>"#,
+        r#"<personname>Bob Baker"#,
+        r#"role="thanks">B</note></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/kernel_thanks_undefined_command_is_ink_red"),
+      files:    &[],
+      counts:   (1, 0),
+      lines:    &[r#"Error:undefined:\undefinedcs"#],
+      creators: Creators::Hold(&[r#"<personname>Ann Able</personname>"#]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/author_block_orphan_mark_is_kept_red"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>A. Author"#,
+        r#">Affiliation one</contact>"#,
+        r#">Affiliation two</contact>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/revtex_asterisk_marked_authors_split_red"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>S. F. Pereira"#,
+        r#"<personname>Z. Y. Ou"#,
+        r#"<personname>H. J. Kimble</personname>"#,
+        r#"role="address">Norman Bridge Laboratory, Pasadena</contact>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/author_noted_affiliation_stays_affiliation_red"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Ann Able</personname>"#,
+        r#"<personname>Bob Baker</personname>"#,
+        r#"role="affiliation">Department of Physics</contact>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/author_other_note_command_stays_affiliation_red"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">x</note>"#,
+        r#"<personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">y</note>"#,
+        r#"role="affiliation">Dept</contact>"#,
+        r#"role="affiliation">Dept Y</contact>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/asce_membership_grade_qualifies_the_name_red"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Matthew R. Kuhn"#,
+        r#"role="affiliation">Univ. of Portland, Portland, OR 97203.</contact>"#,
+        r#"<personname>Second Author</personname>"#,
+        r#"role="affiliation">Affiliation of the second author.</contact>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/symbol_mark_shown_by_its_email_red"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Greg Hunt"#,
+        r#"role="affiliation">Univ A</contact>"#,
+        r#"gh@x.edu</contact>"#,
+        r#"<personname>Cody Ground</personname>"#,
+        r#"role="affiliation">Univ B</contact>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/author_prefix_notes_then_space_separate_names_red"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">Ann Able is with Univ A.</note>"#,
+        r#"<personname>Bob Baker</personname>"#,
+        r#"<personname>Cat Cole</personname>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!(
+        "sectioning-frontmatter/author_marked_list_keeps_its_printed_separators_red"
+      ),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>J. P. B. C. de Melo<sup><text font="italic">a</text></sup></personname>"#,
+        r#"<personname>H. W. L. Naus<sup><text font="italic">b</text></sup></personname>"#,
+        r#"<personname>T. Frederico<sup><text font="italic">c</text></sup></personname>"#,
+        r#"role="affiliation">Univ A</contact>"#,
+        r#"role="affiliation">Univ B</contact>"#,
+        r#"role="affiliation">Univ C</contact>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/author_marked_email_piece_is_no_person_red"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"role="affiliation">Institute of One</contact>"#,
+        r#"b.baker@two.edu"#,
+      ]),
+    },
+    Row {
+      repro:    repro!(
+        "sectioning-frontmatter/author_names_for_two_collaborations_is_one_contact_red"
+      ),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Ann Able</personname>"#,
+        r#"role="affiliation">Univ A</contact>"#,
+        r#"<personname>Bob Baker</personname>"#,
+        r#"role="affiliation">Univ B</contact>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!(
+        "sectioning-frontmatter/author_collaboration_heading_group_covers_names_after_red"
+      ),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Ann Able</personname>"#,
+        r#"role="affiliation">Univ A</contact>"#,
+        r#"<personname>Bob Baker</personname>"#,
+        r#"role="affiliation">Univ B</contact>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!(
+        "sectioning-frontmatter/author_collaboration_heading_colon_outside_groups_red"
+      ),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Ann Able</personname>"#,
+        r#"role="affiliation">Univ A</contact>"#,
+        r#"<personname>Bob Baker</personname>"#,
+        r#"role="affiliation">Univ B</contact>"#,
+        r#"Corresponding authors: Ann Able</note>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!(
+        "sectioning-frontmatter/author_collaboration_broken_after_and_is_one_contact_red"
+      ),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Ann Able</personname><contact role="collaboration">on behalf of the XYZ Collaboration</contact>"#,
+        r#"role="affiliation">Univ A</contact>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!(
+        "sectioning-frontmatter/author_collaboration_after_and_heads_its_own_group_red"
+      ),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Ann Able</personname><contact role="collaboration">(ATLAS Collaboration)</contact>"#,
+        r#"role="affiliation">Univ A</contact>"#,
+        r#"<personname>Bob Baker</personname><contact role="collaboration">(ATLAS Collaboration)</contact>"#,
+        r#"role="affiliation">Univ B</contact>"#,
+        r#"<personname>Cid Cole</personname>"#,
+        r#"<personname>Dan Dee</personname>"#,
+        r#"role="affiliation">Univ C</contact>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!(
+        "sectioning-frontmatter/author_trailing_collaboration_group_covers_every_name_red"
+      ),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"<personname>Ann Able</personname>"#,
+        r#"role="affiliation">Univ X</contact>"#,
+        r#"<personname>Bob Baker</personname>"#,
+        r#"role="affiliation">Univ Y</contact>"#,
       ]),
     },
   ]);

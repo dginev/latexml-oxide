@@ -1,0 +1,24 @@
+% witness: hep-lat0409072 ("[ETHZ]" printed inside the second author's name)
+% oracle:  pdflatex 0 errors (espcrc1.sty as espcrc2.sty, the same \address code); "Philippe de Forcrand" + mark "a"
+% engines: rust (int57a) = 0 errors, personname "Philippe de Forcrand[ETHZ]"; perl the same (espcrc.sty.ltxml:22)
+% expect:  0 errors; <personname>Philippe de Forcrand</personname>, no "[ETHZ]" text
+% mechanism: espcrc1.sty:159-162 `\addressmark[<key>]` takes the key of an `\address[<key>]`. KPE #1122.
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: both names whole, no "[ETHZ]" text (right), but the addresses leave
+%          their authors: a third, nameless creator holds "ETH Zürich" and "CERN" though `\address[ETHZ]` follows
+%          Kratochvila and `\addressmark[ETHZ]` and `\address[CERN]` follow de Forcrand (each a request for its label),
+%          and de Forcrand's before="  " loses the printed "and". The pre-DEL1 RED said the same: "=2 loses Philippe de
+%          Forcrand's CERN address". PDF suspected only: espcrc2.sty is not in TL 2025 and the witness ships no copy.
+% expect:  0 errors, 0 warnings; Slavo Kratochvila with ETH Zürich; Philippe de Forcrand (before=" and ") with ETH Zürich
+%          and CERN; no nameless creator
+% status:  GREEN (78s) -> RED (int160a; HG1b). Today's output pinned, this RED cited, by
+%          perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed (the names' "[ETHZ]"-free text is the part
+%          that is right)
+\documentclass[fleqn,twoside]{article}
+\usepackage{espcrc2}
+\begin{document}
+\title{T}
+\author{Slavo Kratochvila\address[ETHZ]{ETH Z\"urich}
+  and Philippe de Forcrand\addressmark[ETHZ]\address[CERN]{CERN}}
+\maketitle
+Text.
+\end{document}

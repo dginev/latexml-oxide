@@ -1,4 +1,5 @@
-% status:  GREEN (97a: one creator, the merge reported) -> GREEN (97d: a list and its collaboration)
+% status:  GREEN (97a: one creator, the merge reported) -> GREEN (97d: a list and its collaboration) -> RED (int160a;
+%          HG1b, renamed from author_marked_names_beside_a_team_are_a_reported_merge: a moved separator)
 % witness: synthetic, the second path the marked-list reading leaves to the shape test (a piece reading as an
 %          affiliation); census witnesses in OXIDIZED_DESIGN_DIVERGENCES #943.
 % oracle:  pdflatex (TL 2025, -no-shell-escape): 0 `!`; prints "A. ABLE1 , B. IN DER BAKER2 , AND THE XYZ TEAM", the
@@ -10,8 +11,14 @@
 %          Rust 97d: the team is the names' collaboration (FIDELITY_CHARTER §4, user ruling 2026-11-01;
 %          `collaboration_split`, OXIDIZED_DESIGN_DIVERGENCES #946), the two marked names a list by their marks.
 % expect:  0 errors, 0 warnings; two creators, A. Able (Institute of One) and B. in der Baker (University of Two), each
-%          with `<contact role="collaboration">the XYZ Team</contact>`.
-%          Guard `perfect_kernel_batch97a::marked_names_beside_a_team_are_a_list_and_its_collaboration`.
+%          with `<contact role="collaboration">the XYZ Team</contact>`; B. in der Baker before=", " (the list prints
+%          ", " between the names; the ", and" before the team is the team's).
+% engines: rust int160a (HG1) = 0 errors, 0 warnings; the two creators, their marks, addresses and the team right, but
+%          B. in der Baker has before=" and ": the "and" printed before "the XYZ Team" moved between the names, the ", "
+%          printed there lost (the =2 RED before DEL1 said the same). A moved separator, not only a lost one: the lost
+%          kind is author_marked_list_keeps_its_printed_separators_red. Today's output pinned, this RED cited, by
+%          perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed (was 97a
+%          `marked_names_beside_a_team_are_a_list_and_its_collaboration`, deleted in HG1).
 \documentclass{amsart}
 \begin{document}
 \title{A Title}

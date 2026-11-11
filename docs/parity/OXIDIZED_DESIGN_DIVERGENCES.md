@@ -1831,8 +1831,9 @@ produced byte-identical output, so this is a surpass, not a Rust-only fix.
   "Apple" becomes the last author's affiliation, and Shojaee keeps his two `\thanks`. Verified
   by an OLD-vs-NEW full-XML diff over all 57 author-bearing fixtures: exactly the THREE new
   fixtures changed, zero existing regressions. Guards:
-  `06_cluster_frontmatter::{frontmatter_hspace_author_split, frontmatter_symbol_superscript_mark,
-  frontmatter_thanks_literal_mark_mix}`. (This is also why (g)'s guard fixture now uses a
+  `06_cluster_frontmatter::{frontmatter_hspace_author_split, frontmatter_thanks_literal_mark_mix}` and the
+  `frontmatter_symbol_superscript_mark` row of `perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed` (since
+  HG1b; its text asterisk written as U+2217, RED `author_textsuperscript_asterisk_stays_the_text_asterisk_red`). (This is also why (g)'s guard fixture now uses a
   numeric `$^{1}$` marker: a symbol `$^{*}$` there is now a note-mark and would reroute out of
   the marker branch it is meant to exercise.)
 - **Residual (out of scope):** the *exact* `\fnsymbol` marks the author intended next to
@@ -7475,7 +7476,8 @@ svjour3_marked_institutes_link_by_mark, institute_with_numbered_lines_is_no_mark
 revtex_interleaved_mark_with_symbol_keeps_the_group_rule, revtex_interleaved_group_with_unanswered_mark,
 revtex_affiliation_with_inner_superscript_is_no_marked_line, revtex_marked_affiliations_with_symbol_marks_link_by_mark,
 svjour3_marked_institutes_with_thanksref_link_by_mark, svjour3_symbol_marked_institute_pairs_by_position}`, and
-`perfect_kernel_batch59::author_block_orphan_mark_is_kept`, plus `revtex_mathrm_mark_interleaved_group_keeps_the_group_rule,
+repro `author_block_orphan_mark_is_kept_red` (59's guard deleted in HG1; its counts and name a row of
+`perfect_kernel_batchhg1::reds_keep_their_counts_and_right_parts`), plus `revtex_mathrm_mark_interleaved_group_keeps_the_group_rule,
 revtex_mathrm_marked_affiliations_link_by_mark, revtex_textsuperscript_interleaved_group_keeps_the_group_rule,
 revtex_interleaved_typo_mark_keeps_the_group_rule`. Open: a name-only piece sharing the next institute (RED
 `svjour3_name_only_piece_shares_the_next_institute`), the isotope split above.
@@ -14198,7 +14200,7 @@ cjs-rcs-article's `\author`/`\affil` pairs) hands each call's tail before storin
 a value, and a tail holding `\and` (more authors) is left alone. Guards
 `perfect_kernel_batch59::{author_block_appended_after_author_is_kept,
 author_block_follows_each_author, author_block_after_a_replaced_author,
-author_block_orphan_mark_is_kept}`. Open: the template's `\addresslink` marks (`\let` to
+}` and repro `author_block_orphan_mark_is_kept_red` (RED since int160a; HG1). Open: the template's `\addresslink` marks (`\let` to
 `\textsuperscript`) are not recognized as author marks, so its rows annotate every author; a marked
 row is placed after the unmarked ones; a tail holding `\and` is dropped (pdflatex prints more
 authors); a stored value with `\and` gives its tail to every creator of the call (LaTeX prints it
@@ -29326,14 +29328,18 @@ label (95c's order). A store-affiliation e-mail legend after empty-math spacing 
 (2508.08560, RED `store_affiliation_email_legend_after_spacing_lines`). A label part the deposit takes out of the first
 place its tokens stand: jpsj2.cls prints its keywords line in five option branches, the first (two-column) not the one
 run, so the printed "KEYWORDS:" stays in the body beside the name (int125b the same, beside "Keywords: "). Guards
-`perfect_kernel_batch97b` (five); changed, to the printed label or separator: `perfect_kernel_batch97a::
-marked_list_with_an_unknown_name_shape_is_a_list` (before ", ", amsart's ", and "),
+`perfect_kernel_batch97b` (five; two since HG1 the REDs below, their counts and right parts rows of
+`perfect_kernel_batchhg1::reds_keep_their_counts_and_right_parts`); changed, to the printed label or separator: 97a's
+`marked_list_with_an_unknown_name_shape_is_a_list` (deleted in HG1; its revtex, grouped and amsart cases are rows of
+`perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed`, which pin today's lost separators — before="  " for
+", ", amsart's " and " for ", and" — citing RED `author_marked_list_keeps_its_printed_separators_red` and
+`author_marked_list_amsart_comma_and_keeps_its_comma_red`),
 `raw_class_stores_reroute_to_frontmatter::jpsj2_stores_become_frontmatter` ("KEYWORDS:"),
 `perfect_kernel_batch77i::store_label_is_printed_text_not_a_link_target_or_key` ("G:");
 repros sectioning-frontmatter/`aa_mail_printing_copy_keeps_its_label`, `aa_mail_storing_copy_has_no_label`,
 `aa_mail_repeated_address_stays_labelled`, `raw_package_note_label_before_a_link_names_it`,
-`author_marked_list_keeps_its_printed_separators_red` (RED → GREEN), `author_marked_email_piece_is_no_person_red` (RED →
-GREEN).
+`author_marked_list_keeps_its_printed_separators_red` (RED → GREEN 97b → RED int160a, HG1),
+`author_marked_email_piece_is_no_person_red` (RED → GREEN 97b → RED int160a, HG1).
 
 ### 945. An affiliation the reading already has reaches its author: a block entry is cut by its whole span, llncs's one institute cut at its marks stays every author's, svproc's `\institute` is sv_support's (Perl: no observer, the names line split at its "and"; llncs's whole institute on the first author; svproc's per author through OmniBus's inst_support)
 
@@ -29499,9 +29505,10 @@ collaboration is read (`split_author_calls`, below) —; the IEEE block reader r
 `author_collaboration_name_with_and_stays_one`); the reading's heading over later lines and its line under one name
 (resolver/blocks.rs). Guards `perfect_kernel_batch97d` (nine); changed, to the contact: `perfect_kernel_batch94a` (five:
 `what_a_name_held_is_written_where_the_reading_puts_it`, `a_bracket_holds_its_and`, `a_bracket_after_a_mark_is_the_names`,
-`a_name_speaking_for_a_collaboration_is_a_name`, `an_institution_stops_at_a_person`), `perfect_kernel_batch97a` (three;
-`marked_names_beside_an_affiliation_are_a_reported_merge` now `marked_names_beside_a_team_are_a_list_and_its_collaboration`,
-no Error), `perfect_kernel_batchfms2a2` (two readings: `address_lists_in_author_order_and_collaborations`,
+`a_name_speaking_for_a_collaboration_is_a_name`, `an_institution_stops_at_a_person`), `perfect_kernel_batch97a` (three
+then; `marked_names_beside_an_affiliation_are_a_reported_merge` now `marked_names_beside_a_team_are_a_list_and_its_collaboration`,
+no Error; the module deleted in HG1, the team case a row of `perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed`
+pinning B. in der Baker's moved " and ", RED `author_marked_names_beside_a_team_move_their_and_red`), `perfect_kernel_batchfms2a2` (two readings: `address_lists_in_author_order_and_collaborations`,
 `an_unmarked_line_under_a_run_of_names_rows_is_every_names`), `perfect_kernel_batch77t::
 role_and_note_lines_are_no_unmarked_institution` (its "for the ATLAS Collaboration" line). Repros
 sectioning-frontmatter/`author_collaboration_line_welded_into_last_name` (RED → GREEN),
@@ -30400,7 +30407,7 @@ a_bindings_own_plumbing_is_no_dropped_text, a_drop_pdflatex_makes_too_is_no_loss
 many_entries_of_one_call_share_its_arguments}`; repros `check_declared_drop_bookmark_text_unwanted`,
 `check_declared_drop_of_a_frontmatter_command_unwanted`, `check_kernel_selector_drop_is_texs_own`,
 `check_many_entries_of_one_call_share_its_arguments` (RED 106t r2 → GREEN), and sectioning-frontmatter/`check_binding_command_drops_its_argument`,
-`check_internal_command_reads_documents_optional`, `check_binding_macro_drops_inside_an_entry_red` (RED int135e → GREEN),
+`check_internal_command_reads_documents_optional`, `check_binding_macro_drops_inside_an_entry_red` (RED int135e → GREEN → RED int160a, HG1),
 `check_binding_plumbing_is_no_dropped_text` (RED on the unfiltered build), `check_bound_class_nothing_lost`,
 `check_bound_class_running_heads_unwanted`, `check_replaced_author_is_not_wanted` (negative). Guards updated for losses
 now counted: `perfect_kernel_batch86i::second_abstract_after_maketitle_is_kept` (amsart's `[R\'esum\'e]`, which pdflatex
