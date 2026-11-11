@@ -19,7 +19,7 @@
 use latexml_core::{definition::origin::DefinitionOrigin, token::AUTHOR_PROV_POS_MASK};
 
 use super::{
-  events::{EventKind, SepKind, lex_events},
+  events::{Event, EventKind, SepKind, lex_events},
   ledger::field_stamped,
   policy::TitleMarks,
   rehearsal::{Rehearsal, for_a_query, rehearse},
@@ -67,6 +67,12 @@ pub struct ArgSeparator {
   pub command: &'static str,
   /// the meaning of the token that printed it, where the query is made
   pub meaning: SepMeaning,
+  /// its own tokens in the argument, `start..end` (a literal `\and`, a macro holding only the separator, a `\let` copy,
+  /// a `\csname and\endcsname`), where they print nothing else: no name, mark, contact or note's span meets them, the
+  /// criterion of the emitter's cut (`emit::cut_at_separators`, #993). `None` where the span is unread or the tokens
+  /// print ink too (a macro holding names and the separator together, `\newcommand\aut{Ann \and Bob}`): no cut by
+  /// tokens parts them, the reading's cut does (P2-4's eptcs cells, OXIDIZED_DESIGN_DIVERGENCES #991)
+  pub span:    Option<(usize, usize)>,
 }
 
 /// The kinds of meaning a definition origin says, for a meaning that is not the kernel separator's.
@@ -112,6 +118,23 @@ fn printing_token(content: &[Token], span: Option<(u16, u16)>, command: &'static
     Some([one]) if !matches!(lookup_meaning(one), Some(Stored::Expandable(_))) => *one,
     _ => T_CS!(command),
   }
+}
+
+/// A separator's span `span` as positions, where no ink event's span meets it — no name, mark, contact or note prints
+/// from its tokens ([`ArgSeparator::span`]).
+fn own_tokens(events: &[Event], span: Option<(u16, u16)>) -> Option<(usize, usize)> {
+  let (s, t) = span?;
+  let inks = |e: &&Event| {
+    matches!(
+      e.kind,
+      EventKind::Name | EventKind::Mark | EventKind::Contact | EventKind::Note
+    )
+  };
+  let met = events
+    .iter()
+    .filter(inks)
+    .any(|ink| ink.span.is_some_and(|(a, b)| a < t && b > s));
+  (!met).then_some((usize::from(s), usize::from(t)))
 }
 
 /// The `\and`-family separators `arg` holds at its own level (nest 0: not one a layout container of it holds, a
@@ -161,6 +184,7 @@ pub fn argument_separators(arg: &Tokens) -> Result<Option<Vec<ArgSeparator>>> {
     EventKind::Sep(SepKind::And(command)) if e.nest == 0 => Some(ArgSeparator {
       command,
       meaning: meaning_of(&printing_token(content, e.span, command)),
+      span: own_tokens(&events, e.span),
     }),
     _ => None,
   });

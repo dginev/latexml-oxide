@@ -1,0 +1,25 @@
+% mechanism: an eptcs `\author` with no `\institute` or `\email`: a name, a macro (`\nx`) holding the `\and`, then a
+%   `tabular` of names with an e-mail row under them. The block is the class's because a cell opens with a table
+%   (`eptcs_cls.rs` `eptcs_structured`), which only a cut where the separators are by meaning sees (`cells`,
+%   `argument_separators`, OXIDIZED_DESIGN_DIVERGENCES #991, #995).
+% witness: P24's probe (the binding's gate, OC1's macro-held probe ep1); the table shape 1407.7928
+% oracle:  pdflatex with eptcs.cls beside it (TL 2025, -no-shell-escape) 0 errors: "Ann Able"; beside it "Bob Baker"
+%   over "bob@b.edu" and "Cy Cole" over "cole@c.edu"
+% engines: perl has no eptcs binding (OmniBus); int157a: the gate's split by spelling saw one cell opening with no
+%   table, the kernel's author line: one creator "Ann Able and Bob Baker Cy Cole bob@b.edu cole@c.edu", 1 warning
+% expect:  0 errors, 0 warnings; Ann Able, Bob Baker (bob@b.edu), Cy Cole (cole@c.edu)
+% status:  RED (int157a) -> GREEN (P24; guard perfect_kernel_batchp24)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\newcommand\nx{\and}
+\title{T}
+\author{Ann Able
+\nx
+\begin{tabular}{c@{\qquad}c}
+Bob Baker & Cy Cole\\
+\texttt{bob@b.edu} & \texttt{cole@c.edu}
+\end{tabular}}
+\begin{document}
+\maketitle
+Text.
+\end{document}
