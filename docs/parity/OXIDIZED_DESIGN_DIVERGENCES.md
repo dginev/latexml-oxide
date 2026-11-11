@@ -34242,7 +34242,7 @@ by its binding (llncs.cls.ltxml's `\institute`).
     (`aas_support_sty.rs:358`), stand-ins for a class's column break printing a space or nothing (colm2025
     `colm2025_conference_sty.rs:23-24` `\And`/`\AND`, `jmlr_cls.rs:104` and `jmlr2e_sty.rs:35` `\And`, `jair_sty.rs:22,24`
     `\hskip`, `neurips_sty.rs:145-146` no-ops), a word (`ims_support_sty.rs:51` `\AND`), a `&`
-    (`elsart_support_sty.rs:280` `\AND`), amsmath's math `\And` (`amsmath_sty.rs:1960`, no separator). Enumerated by grep
+    (`elsart_support_sty.rs:280` `\AND`), amsmath's math `\And` (`amsmath_sty.rs:1960`, no separator). A binding's `\let` copy of the kernel `\and` (`inst_support_sty.rs:66` `\AND`, `ijcai_sty.rs:33-34` `\AND`/`\And`, `epl_cls.rs:109` `\And`) is `Kernel`: its definition is `\and`'s own. Enumerated by grep
     of `\\and"`/`\\And"`/`\\AND"` on definition lines in `latexml_package/src`, `latexml_contrib/src`,
     `latexml_engine/src`. `Binding` alone says neither "a separator" nor "none". The P2 callers' gates (below) ask kernel
     or not, which needs no split; a caller that must tell them apart reads its own binding's definition. A caller swapping

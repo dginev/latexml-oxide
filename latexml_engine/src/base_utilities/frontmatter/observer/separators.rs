@@ -29,7 +29,9 @@ use super::{
 /// What a separator means where the query is made.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SepMeaning {
-  /// the kernel's `\and` (`latex_constructs::sect05`'s constructor, which `\And` and `\AND` are `\let` to there): the
+  /// the kernel's `\and` (`latex_constructs::sect05`'s constructor, which `\And` and `\AND` are `\let` to there, as are a
+  /// binding's `\let` copies: `inst_support_sty.rs:66` `\AND`, `ijcai_sty.rs:33-34` `\AND`/`\And`, `epl_cls.rs:109`
+  /// `\And` — their definition is `\and`'s own, so they read `Kernel`, not `Binding`): the
   /// kernel's author-line column, which the blocks' readings part names at. The definition must be `\and`'s own (its
   /// `get_cs()`), a kernel layer's: narrower than `frontmatter_stores::kernel_and_list`, which takes any pool constructor —
   /// `texvc_sty.rs:132`'s `\let\and\land` is `raw` here and kernel there (P2-6, which swaps that gate, meets it)
