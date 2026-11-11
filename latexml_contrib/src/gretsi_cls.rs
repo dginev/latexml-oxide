@@ -11,7 +11,10 @@
 //! them in.
 use latexml_package::prelude::*;
 
-use crate::shipped_class::{class_code_contains, class_option_given, shipped_class_text};
+use crate::{
+  and_by_meaning::and_runs,
+  shipped_class::{class_code_contains, class_option_given, shipped_class_text},
+};
 
 /// The calls of `cs` in `tokens`, each with its `nargs` arguments (a braced group's content, or a single token, as TeX
 /// reads an undelimited argument), replaced by what `rewrite` makes of them; every other token is kept.
@@ -146,7 +149,7 @@ fn affiliation_calls(block: &[Token]) -> Vec<Token> {
 /// affiliation, the address the author's e-mail. What the class prints between the calls is kept with the name before
 /// it (before the first, with the first), past the spaces, punctuation and spacing that separate the names
 /// (2508.03934's `\auteur{…}{1,2},`), which are the list's.
-fn auteurs_calls(names: &[Token]) -> Vec<Token> {
+fn auteurs_calls(names: &[Token]) -> Result<Vec<Token>> {
   let marker = T_CS!("\\lx@gretsi@auteur");
   let rewritten = rewrite_calls(names, &T_CS!("\\auteur"), 4, &|args| {
     let mut call = vec![marker];
@@ -179,7 +182,7 @@ fn auteurs_calls(names: &[Token]) -> Vec<Token> {
     }
     i += 1;
   }
-  let lead = without_separators(&lead);
+  let lead = without_separators(&lead)?;
   let mut calls = vec![T_CS!("\\lx@clear@creators")];
   for (n, (args, after)) in authors.iter().enumerate() {
     calls.extend([T_CS!("\\lx@add@authors@append"), T_BEGIN!()]);
@@ -188,7 +191,7 @@ fn auteurs_calls(names: &[Token]) -> Vec<Token> {
       calls.push(T_SPACE!());
     }
     calls.extend(marked_name(&args[0], &args[1], &args[3]));
-    let after = without_separators(after);
+    let after = without_separators(after)?;
     if !after.is_empty() {
       calls.push(T_SPACE!());
       calls.extend(after);
@@ -200,7 +203,7 @@ fn auteurs_calls(names: &[Token]) -> Vec<Token> {
       calls.push(T_END!());
     }
   }
-  calls
+  Ok(calls)
 }
 
 /// The index of the `}` closing the group `tokens[open]` opens (the end of `tokens` if unclosed).
@@ -222,12 +225,25 @@ fn group_end(tokens: &[Token], open: usize) -> usize {
 }
 
 /// `tokens` past the separators of a name list at either end (spaces and comments, `,`, `;`, `~`, `\and`, `\\`, `\quad`,
-/// `\qquad`, `\hfill`, `\hspace{…}`): none when it is only those.
-fn without_separators(tokens: &[Token]) -> Vec<Token> {
-  // each unit of `tokens` (a token, or `\hspace` with its argument), and whether it separates
+/// `\qquad`, `\hfill`, `\hspace{…}`): none when it is only those. The `\and`s: each
+/// written, as before, and each held in a macro of the document's, which the separator query reads as the kernel's
+/// (`and_by_meaning`, Option C P2-5).
+fn without_separators(tokens: &[Token]) -> Result<Vec<Token>> {
+  // (an empty run asks the query nothing)
+  let ands = if tokens.is_empty() {
+    Default::default()
+  } else {
+    and_runs(tokens, &[T_CS!("\\and")])?.runs
+  };
+  // each unit of `tokens` (a token, an `\and`'s own run, or `\hspace` with its argument), and whether it separates
   let mut units: Vec<(usize, usize, bool)> = Vec::new();
   let mut i = 0;
   while i < tokens.len() {
+    if let Some(end) = ands.get(&i) {
+      units.push((i, (*end).min(tokens.len()), true));
+      i = *end;
+      continue;
+    }
     let t = tokens[i];
     let end = if t == T_CS!("\\hspace") {
       let mut j = i + 1;
@@ -246,7 +262,6 @@ fn without_separators(tokens: &[Token]) -> Vec<Token> {
         T_OTHER!(","),
         T_OTHER!(";"),
         T_ACTIVE!('~'),
-        T_CS!("\\and"),
         T_CS!("\\\\"),
         T_CS!("\\quad"),
         T_CS!("\\qquad"),
@@ -259,10 +274,10 @@ fn without_separators(tokens: &[Token]) -> Vec<Token> {
   }
   let first = units.iter().position(|unit| !unit.2);
   let last = units.iter().rposition(|unit| !unit.2);
-  match (first, last) {
+  Ok(match (first, last) {
     (Some(first), Some(last)) => tokens[units[first].0..units[last].1].to_vec(),
     _ => Vec::new(),
-  }
+  })
 }
 
 LoadDefinitions!({
@@ -379,7 +394,7 @@ LoadDefinitions!({
     // each, the mark requesting the affiliation, the address the author's e-mail.
     DefMacro!("\\auteurs{}", sub[(names)] {
       let names: Tokens = names;
-      Ok(Tokens::new(auteurs_calls(names.unlist_ref())))
+      Ok(Tokens::new(auteurs_calls(names.unlist_ref())?))
     });
     DefMacro!(
       "\\auteur{}{}{}{}",

@@ -11,6 +11,8 @@
 //! file (astro-ph9601070, astro-ph9601165).
 use latexml_package::prelude::*;
 
+use crate::and_by_meaning::and_runs;
+
 LoadDefinitions!({
   DeclareOption!(None, {
     Digest!("\\PassOptionsToClass{\\CurrentOption}{aa}")?;
@@ -105,7 +107,10 @@ LoadDefinitions!({
   }, locked => true);
   DefMacro!("\\institute{}", sub[(list)] {
     let list: Tokens = list;
-    let several = list.unlist_ref().iter().any(|t| *t == T_CS!("\\and") || *t == T_CS!("\\And"));
+    // (an `\and` written, as before, or held in a macro of the document's, which the separator query reads as the
+    // kernel's: `and_by_meaning`, Option C P2-5)
+    let ands = and_runs(list.unlist_ref(), &[T_CS!("\\and"), T_CS!("\\And")])?;
+    let several = !ands.runs.is_empty() || ands.inked > 0;
     let marked = leads_with_superscript_mark(list.unlist_ref());
     Ok(if marked && lookup_bool("lx@l@aa@marked@names") || marked && several {
       Invocation!(T_CS!("\\lx@add@affiliations"), vec![None, Some(list)])

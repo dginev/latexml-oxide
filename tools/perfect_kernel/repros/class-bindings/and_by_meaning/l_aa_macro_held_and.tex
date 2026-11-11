@@ -1,0 +1,16 @@
+% mechanism: a macro-held `\and` (`\newcommand\sep{\and}`) at l_aa_cls.rs `\institute` gate (`several`): found by the separator query (Option C P2-5, `and_by_meaning`)
+% witness: P2P plan step P2-5 (no census paper holds a macro-held or `\let` separator)
+% oracle:  l-aa.sty has no copy in TL 2025 nor in the census sources unpacked: not run
+% engines: perl not run; int158a: RED (the spelling missed it), see the guard's doc for its output
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker (Univ B): two institutes numbered by position
+% status:  RED on int158a, GREEN on P25 (guard perfect_kernel_batchp25)
+% preload: ar5iv.sty
+\documentclass{l-aa}
+\newcommand\sep{\and}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ A \sep Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -23,6 +23,7 @@ pub mod script_bindings;
 // I. Add your custom binding definition as a module delcaration here
 // apackage_sty / filelistclass_cls / myclass_cls: test-local structure fixtures,
 // now local `.rhai` next to tests/structure_rhai (Perl t/structure/*.ltxml).
+pub mod and_by_meaning;
 pub mod discard_env;
 pub mod keysetopt_sty;
 pub mod keytheorems_sty;
