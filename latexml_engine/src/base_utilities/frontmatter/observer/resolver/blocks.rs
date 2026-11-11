@@ -323,7 +323,8 @@ impl Resolver {
       // B}`, OmniBus's whole list one block since P2-1, OD #993: "Bob Baker" is the column's name, "Univ B" his contact;
       // read with the contact the line was "Bob Baker Univ B", an institution, and Bob every name's affiliation —
       // nucl-th0308018's `\and Bertrand BOURIQUET \address{…}`; a column of contacts alone, `\and \institute{Univ
-      // B}`, is read on them)
+      // B}`, is read on them. The rule is the reading's, not OmniBus's: the kernel `article` route with a document's
+      // `\institute` reads the same way, revP21d)
       let shared_column = column_first
         && line.column > 0
         && last_named().is_some_and(|named| line.column > named)

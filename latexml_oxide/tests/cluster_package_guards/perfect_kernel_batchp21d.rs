@@ -1,4 +1,5 @@
-//! Guards for batch P21d (P21's regression, OD #993 P2-1): with OmniBus's `\author` list one block the reading cuts at
+//! Guards for batch P21d (P21's regression, OD #993 P2-1; the reading's rule, so the kernel `article` route with a
+//! document's `\institute` improves the same way, revP21d): with OmniBus's `\author` list one block the reading cuts at
 //! its `\and`s, a column whose name a contact call follows (`\and Bob Baker\institute{Univ B}`) read as the shared
 //! affiliation of every name before it, its text "Bob Baker Univ B" an institution: the reading's shared-column rule
 //! (`resolver/blocks.rs` `shared_column`) reads the column's own ink (`column_own_text`), and a column of contacts alone

@@ -34252,11 +34252,18 @@ same) read as the shared affiliation of every name before it: the shared-column 
 contact's text, "Bob Baker Univ B", an institution, so Bob Baker became Ann Able's affiliation (nucl-th0308018, appolb
 under OmniBus: `Yasuhisa ABE \and Bertrand BOURIQUET \address{…}`, one creator on int158a; int157a's split by spelling
 made each piece a block of its own). The rule reads the column's own ink, the contacts its calls add aside
-(`column_own_text`); a column printing only contacts is read on them, every name's shared affiliation as before
-(`\and \institute{Univ AB}`). The `tabular` in revP24b's P0 trigger (`\begin{tabular}{c}Ann Able\\ \texttt{…}
-\end{tabular}\and Bob Baker\institute{Univ B}`) was not the cause: without the `\institute`, int158a gives both
-creators. Under aa and sv_support with no class file, an `\institute` inside `\author` loses its text, counted by the
-content check's Warning, as on int157a. Guard `perfect_kernel_batchp21d::a_column_is_read_on_its_own_ink_not_its_contacts`;
+(`column_own_text`); a column printing only contacts is read on them, every name's shared affiliation as on int158a
+(`\and \institute{Univ AB}`; int157a made it a nameless creator of its own, `\and Bob Baker \and \institute{Univ X}`).
+The rule is the reading's, so the kernel `article` route improves the same way: `\author{Ann Able \and Bob
+Baker\institute{Univ B}}` there (a document's `\providecommand\institute`) gave one creator on int157a and int158a too,
+and now gives Bob his creator with Univ B, as pdflatex prints (revP21d; no stage2 or reach paper changed). The `tabular`
+in revP24b's P0 trigger (`\begin{tabular}{c}Ann Able\\ \texttt{…}\end{tabular}\and Bob Baker\institute{Univ B}`) was
+not the cause: without the `\institute`, int158a gives both creators. Under aa and sv_support with no class file, an
+`\institute` inside `\author` loses its text, counted by the content check's Warning, as on int157a (int158a kept
+"Univ B" inside its wrong merge). Known RED, pre-existing: two contacts on one name, `\and Bob Baker\institute{Univ
+B}\institute{Univ C}`, give Ann Univ B and Bob Univ C where pdflatex prints both under Bob (the reading's per-contact
+ownership; identical on int157a under OmniBus; under `article` no worse than the base, which put all three on Ann;
+repro `class-bindings/author_one_block/omnibus_author_name_with_two_institutes_after_and_red.tex`). Guard `perfect_kernel_batchp21d::a_column_is_read_on_its_own_ink_not_its_contacts`;
 repros `class-bindings/author_one_block/omnibus_author_{name_with_institute_after_and,
 table_glued_to_and_name_with_institute,last_of_three_with_address,column_of_contacts_alone_is_shared}.tex`.
 
