@@ -1,0 +1,18 @@
+% mechanism: elsarticle with `\usepackage{titling}`: titling's `\@maketitle` prints `\@author`, so a tail appended to it
+%   (`\g@addto@macro\@author{\and Bob B}`) prints; the reading makes no creator of it (the binding route reads a tail only
+%   under an `author_tail` declaration). Counted on int159a (the title-page check's Warning "bob"); FX26/FX26b's
+%   class-binding declaration silenced it (revFX26b finding 1, parked for TP1: the one title-page reading)
+% witness: synthetic (revFX26b); 0 census papers combine titling with elsarticle
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: the tail "Bob B" printed under the title
+% expect:  Bob B a creator (or, while not read, the loss counted by one Warning)
+% status:  RED (int159a: counted, not read)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\usepackage{titling}
+\begin{document}
+\title{A Title}
+\author{Alice A}
+\makeatletter\g@addto@macro\@author{\and Bob B}\makeatother
+\maketitle
+Body.
+\end{document}
