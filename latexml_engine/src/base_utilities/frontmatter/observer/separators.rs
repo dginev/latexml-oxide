@@ -173,6 +173,19 @@ fn own_tokens(events: &[Event], run: Option<(u16, u16)>) -> Option<(usize, usize
 /// rehearsal's does, `SkipReason::NotUndone`, and answers `None`).
 /// OXIDIZED_DESIGN_DIVERGENCES #995.
 pub fn argument_separators(arg: &Tokens) -> Result<Option<Vec<ArgSeparator>>> {
+  separators_of(arg, false)
+}
+
+/// [`argument_separators`] at every level of `arg`, a layout container's too (an `\mbox`, a `\parbox`, a note's): the
+/// `\and`s a class runs wherever they stand. llncs's `\institute` gate (`llncs_cls.rs` `\lx@llncs@institute@dispatch`,
+/// Option C P2-3): `\institutename` numbers an institute at every `\and` it runs, one inside a box too
+/// (llncs.cls:870-886; `Univ A \mbox{(North \and South)}` prints "1 Univ A (North ²South)").
+pub fn argument_separators_at_every_level(arg: &Tokens) -> Result<Option<Vec<ArgSeparator>>> {
+  separators_of(arg, true)
+}
+
+/// [`argument_separators`], at `arg`'s own level or (`every_level`) at all of them.
+fn separators_of(arg: &Tokens, every_level: bool) -> Result<Option<Vec<ArgSeparator>>> {
   let content = arg.unlist_ref();
   if content.len() > usize::from(AUTHOR_PROV_POS_MASK) {
     return Ok(None);
@@ -205,7 +218,7 @@ pub fn argument_separators(arg: &Tokens) -> Result<Option<Vec<ArgSeparator>>> {
     return Ok(None);
   };
   let separators = events.iter().filter_map(|e| match e.kind {
-    EventKind::Sep(SepKind::And(command)) if e.nest == 0 => {
+    EventKind::Sep(SepKind::And(command)) if every_level || e.nest == 0 => {
       let run = own_run(&environments, e.span);
       Some(ArgSeparator {
         command,
@@ -242,8 +255,9 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
 /// group left open), for which a caller cuts by spelling. A separator of another meaning — a class's, a binding's or the
 /// document's renewed `\and`, amsmath's `\And` — is no run here (trap T8: what it prints is its caller's to say), nor
 /// one a macro holds together with ink (no span: the reading cuts that one at its `Sep(And)`, #993). The cut two bindings'
-/// routes share (Option C P2, OXIDIZED_DESIGN_DIVERGENCES #995): eptcs's cells (P2-4, `eptcs_cls.rs`) and the
-/// `\institute` lists of inst_support and aa ([`split_at_kernel_separators`], P2-2).
+/// routes share (Option C P2, OXIDIZED_DESIGN_DIVERGENCES #995): eptcs's cells (P2-4, `eptcs_cls.rs`), the
+/// `\institute` lists of inst_support, aa and llncs and llncs's marked `\author` list ([`split_at_kernel_separators`],
+/// P2-2, P2-3).
 pub fn kernel_separator_runs(arg: &Tokens) -> Result<Option<Vec<(usize, usize)>>> {
   let Some(separators) = argument_separators(arg)? else {
     return Ok(None);
@@ -277,9 +291,10 @@ pub fn kernel_separator_runs(arg: &Tokens) -> Result<Option<Vec<(usize, usize)>>
 /// a run the spelling also cuts is cut once. The spelling's cuts in the segments stay, whatever their token means (a
 /// document's renewed `\and`, an undefined `\And`: trap T8, the cut the split made before, which aa.cls's own
 /// title-time `\and` keeps, aa.cls:866), as do its trimming and its protections inside a segment. Where the query reads
-/// nothing or finds no run, the spelling split of `arg` alone. Option C P2-2 (OXIDIZED_DESIGN_DIVERGENCES #995): the
-/// `\institute` lists of inst_support (`\lx@splitting@by@meaning`) and aa (`aa_cls.rs` `\lx@aa@institute@dispatch`),
-/// one contact call per piece.
+/// nothing or finds no run, the spelling split of `arg` alone. Option C P2-2, P2-3 (OXIDIZED_DESIGN_DIVERGENCES #995):
+/// the `\institute` lists of inst_support (`\lx@splitting@by@meaning`), aa (`aa_cls.rs` `\lx@aa@institute@dispatch`)
+/// and llncs (`llncs_cls.rs` `\lx@llncs@institute@dispatch`), one contact call per piece, and llncs's marked `\author`
+/// list (`\lx@llncs@author@split`), one author entry per piece.
 pub fn split_at_kernel_separators(
   arg: Tokens,
   delims: Vec<SplitDelim>,

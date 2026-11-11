@@ -34386,7 +34386,7 @@ paragraph's list (its `mode` property `horizontal`; a group's list has none) is 
 its boxes are walked at the level around it (`paragraph_is_no_group`), as TeX's `\par` closes no group (scope: P21e,
 below). The S1 routes now: inst_support's,
 ptephy's, webofc's (P2-1), sv_support's (P2-1b) and aa's `\author` make one call; llncs's `\lx@llncs@author@split`
-still splits (P2-3), and the `\institute` splits (aa, inst_support, sv_support, llncs) are not author splits. Byte
+still splits (by meaning since P2-3, #995), and the `\institute` splits (aa, inst_support, sv_support, llncs) are not author splits. Byte
 identity against int158a over aa's 563 papers, the stage2 1,434 and 2608.21138: 1,990 identical, 3 with no main file on
 both, 4 changed, all by the split's removal alone (the no-split build gives the same XML): 2408.11004, 2509.22322,
 2604.10287, whose `\author{\small …}` now sets `fontsize="90%"` on every name, as pdflatex sets the whole list (the
@@ -34669,8 +34669,7 @@ reading cuts (pins rows 3 and 6). Routes changed (rule 6):
 - `eptcs_cls.rs` `cells`: the shared helper, no change of output.
 
 Not routed, open: sv_support (`sv_support_sty.rs:71`; each piece's `\at` is parsed as it expands, `\lx@sv@institute@`,
-so that reading moves first) and llncs (`llncs_cls.rs:189`, gate :208; P2-3, its pieces' `\inst` set their labels,
-`\lx@affiliation@withinst`). Byte-identical against the spelling split (`2ff10b7ff9`, `kit/conv.sh`) on 3,006 papers
+so that reading moves first); llncs routed in P2-3, below. Byte-identical against the spelling split (`2ff10b7ff9`, `kit/conv.sh`) on 3,006 papers
 (aa 563, sv 406, OmniBus 200, webofc 30, eptcs 73, raw-class 300, stage2 1,434; 6 with no main file), E/F/W equal on
 each; 0909.4443's one difference is a run-to-run math-id variance of the base (both binaries give one md5 on a rerun).
 That run was P22b's form; the cut-first form (P22c) is byte-identical against the same base on 1,811 of them: all of
@@ -34746,6 +34745,41 @@ the frontmatter content check counts in a Warning ("appear … more often than t
 byte-identity of the gates against int158a: the P26 report. Guards `perfect_kernel_batchp26::{an_in_place_line_is_the_classs_where_a_separator_means_the_kernels,
 a_displaced_and_list_is_read_by_meaning, a_numbered_store_route_tries_the_numbering_by_meaning}`; repros
 `sectioning-frontmatter/{inplace_contact_kernel_and_line_stays_the_classs,inplace_contact_class_and_line_is_the_apis,inplace_contact_copied_or_held_kernel_and_stays_the_classs,inplace_contact_kernel_and_copy_under_a_renewed_and,inplace_contact_and_inside_a_box_or_note_parts_no_line,displaced_csname_and_institutes_stay_the_classs}.tex`.
+
+**P2-3 (P23): llncs's `\institute` and its marked `\author` list cut by meaning; the list not yet one block.**
+`llncs_cls.rs` `\lx@llncs@institute@dispatch` cuts the list with `split_at_kernel_separators` at `\and` (the cut aa's and
+inst_support's lists share) and sends two pieces or more to shape (a), one `\lx@llncs@affiliation` (`labelseq`) call per
+piece in order, as `\institutename`'s `\and` numbers them (llncs.cls:870-886): `\lx@llncs@institute@split` and its
+`\lx@splitting` deleted, and the spelling gate `has_and` (any `\and` token anywhere) with them. One piece goes to
+shape (a) still, as the split of it did, where the list holds an `\and` the cut leaves whole — in a group or a box,
+which `\institutename` runs and numbers all the same (`Univ A \mbox{(North \and South)}` prints "1 Univ A (North
+²South)") — read by the separator query at every level (`separators.rs` `argument_separators_at_every_level`, the
+query's own events without its own-level filter; unread, the spelling); else (c) the superscript-labelled block or (b)
+the sole institute, as before. A document macro holding only `\and` now parts the list: with marked authors int160a1
+gave the same XML (the sole institute's reading cut it), with unmarked ones it took the sole institute and gave both
+institutes to every author, a pairing pdflatex does not print; now the two numbered institutes are the block's, as the
+written `\and` gives them (85b's `llncs_several_institutes_without_marks_stay_the_blocks`). The marked `\author` list
+(`\lx@llncs@author@split`) is cut the same way at the call (`\lx@splitting@by@meaning{\lx@add@author@split}{\and\And\\}`),
+one queued entry per piece: a macro-held `\and` now makes two entries, so the superscript-labelled institute's e-mail
+line, one address per author, goes to the authors in order (int160a1: one entry, the line the block's). An unmarked
+list stays one block (Z18e). `\lx@splitting`'s one caller left is `sv_support_sty.rs`'s `\institute`. Not done, the
+brief's aim: the marked list as one `\lx@add@author@split` block the reading cuts. Tried (patch kept in the P23 report):
+on llncs's 699 papers 9 changed, all worse — 4 lose an `\{…\}@…` address line's per-author addresses to the block
+(2403.04183, 2409.06210, 2412.12966, 2512.24562; repros `llncs_marked_block_ambiguous_spelling_is_no_place.tex`,
+`marked_affiliation_list_email_line_leaves_no_empty_contact.tex`), because the queue's positions
+(`queue_reading.rs` `queued_author_marks`, `queued_requesters`, the Cut's `place_address_runs` count) and the resolver's
+`author:N` (`Resolver::author_entries`) count queued entries, not names; parting the queue's entries by
+`entry_names` alone moved the labels to positions the resolver does not count (the plan's P4 row, which owns both); 2
+read a marked names line after `\and \\` as an affiliation (1902.08498, 2605.10631, Z18b's shape); 2407.13764,
+2607.15806, 2607.21595 moved a mark or a URL line. RED catalog repro
+`class-bindings/author_one_block/llncs_comma_parted_marked_list_email_line_is_the_blocks_red.tex` (a comma-parted marked
+list is one entry today too). Byte-identical against int160a1 (`1f3949ecad`, `kit/conv.sh`) on 2,430 papers (llncs 699,
+stage2 1,434, raw-class 300, the binding's 12 comment witnesses; 4 with no main file), E/F/W equal on each;
+hep-ph0502035's one difference is a run-to-run math-id variance of the base (two reruns give the candidate's md5).
+Guard rows in `perfect_kernel_batchp22b::an_institute_list_cut_at_the_kernel_and_by_meaning` (repros
+`class-bindings/institute_one_call/llncs_{institute_list_macro_held_separator_unmarked,institute_list_macro_held_separator,institute_list_and_inside_a_box_stays_one_piece,marked_author_list_macro_held_separator}.tex`).
+A `\let` copy of `\and` is no llncs input: `\institutename` and `\@maketitle` redefine `\and`, and the copy keeps the
+kernel's `\end{tabular}` (pdflatex, 13 errors).
 
 ### 996. What is appended to `\@author` after the author setter stored it is the author block's continuation: rows before its first `\and`, more authors after it, also under a binding whose `\author` stores nothing in `\@author` (FX24; RR1 gap 24)
 

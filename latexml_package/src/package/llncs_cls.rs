@@ -130,13 +130,15 @@ LoadDefinitions!({
     let (names, institutes) = take_institutes(&body);
     let mut out = mouth::tokenize_internal("\\lx@clear@creators[role=author]").unlist();
     // (a list whose authors carry `\inst` marks is split at its `\and`s and `\\`s, each piece a block, as before:
-    // `Guang Yang\inst{1}\and \\ Binwei Yang\inst{2}`, 1902.08498)
-    let marked = names.unlist_ref().contains(&T_CS!("\\inst"));
-    let call = if marked { "\\lx@llncs@author@split" } else { "\\lx@add@author@split" };
-    if marked {
-      out.extend(Invocation!(T_CS!(call), vec![Some(names)]).unlist());
+    // `Guang Yang\inst{1}\and \\ Binwei Yang\inst{2}`, 1902.08498 — cut first at the kernel's `\and` by meaning, a
+    // macro holding only the separator among them, Option C P2-3, OXIDIZED_DESIGN_DIVERGENCES #995. Not yet one block
+    // the reading cuts: the queue's positions (`queued_author_marks`, the `author:N` labels the Cut's e-mail line gives
+    // one address per author by) count its entries, so a whole marked list read as one entry gives that line to the
+    // block, 2403.04183, 2409.06210, 2412.12966, 2512.24562 — the plan's P4 row)
+    if names.unlist_ref().contains(&T_CS!("\\inst")) {
+      out.extend(Invocation!(T_CS!("\\lx@llncs@author@split"), vec![Some(names)]).unlist());
     } else {
-      out.extend(Invocation!(T_CS!(call), vec![None, Some(names)]).unlist());
+      out.extend(Invocation!(T_CS!("\\lx@add@author@split"), vec![None, Some(names)]).unlist());
     }
     let inner = !institutes.is_empty();
     out.extend(mouth::tokenize_internal("\\gdef\\lx@llncs@inner@institute{}").unlist());
@@ -147,7 +149,7 @@ LoadDefinitions!({
     out.push(T_CS!("\\lx@author@trailing"));
     Ok(Tokens::new(out))
   });
-  DefMacro!("\\lx@llncs@author@split{}", "\\lx@splitting{\\lx@add@author@split}{\\and\\And\\\\}{#1}");
+  DefMacro!("\\lx@llncs@author@split{}", "\\lx@splitting@by@meaning{\\lx@add@author@split}{\\and\\And\\\\}{#1}");
   // Single \institute, with multiple institutions separated by \and (Perl
   // llncs.cls.ltxml L46-48). The n-th institution is attached to the author
   // which has that n in its \inst labels.
@@ -182,13 +184,18 @@ LoadDefinitions!({
   //      last author alone, dev20k 2603.18089, 2608.22772, 2207.13038, 2609.31726,
   //      1905.07852; repro sectioning-frontmatter/llncs_institute_legend_line_shared.
   // So: clear, then \and-split (a), else one affiliation (b, c) — shared by every author when no
-  // `\inst` number picks it (85b, below), cut at its marks by the API.
+  // `\inst` number picks it (85b, below), cut at its marks by the API. The split and the gate between the shapes read
+  // the `\and`s by meaning, as `\institutename`'s `\and` numbers them (Option C P2-3, OXIDIZED_DESIGN_DIVERGENCES #995):
+  // the list is cut first at the kernel's `\and` by meaning, then by spelling (`split_at_kernel_separators`, the cut
+  // aa's and inst_support's lists share), and two pieces or more are shape (a) — a document macro holding only `\and`
+  // too, which the spelling gate (`has_and`, any `\and` token anywhere) read as one institute and gave whole to every
+  // author; one the query reads at any level, inside a group or a box, which neither cut parts, keeps the list one
+  // numbered piece, as before (`argument_separators_at_every_level`; unread, the spelling).
   // (an `\institute` inside the last `\author` is the store, which an outer one does not replace: above)
   DefMacro!("\\lx@llncs@inner@institute", "");
   DefMacro!("\\institute{}",
     "\\ifx\\lx@llncs@inner@institute\\@empty\\expandafter\\@firstofone\\else\\expandafter\\@gobble\\fi\
      {\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@llncs@institute@dispatch{#1}}");
-  DefMacro!("\\lx@llncs@institute@split{}", "\\lx@splitting{\\lx@llncs@affiliation}{\\and}{#1}");
   // (shape (c)'s entries are labelled by their marks; one no mark labels, its first line before them (`\institute{Univ
   // A, Town \\ \textsuperscript{*}Equal contribution}`), is the sole institute llncs.cls:868-886 prints unnumbered
   // under every name, as `\lx@llncs@institute@sole` reads it — it had gone to the last author alone, dev20k 2603.18089,
@@ -207,19 +214,30 @@ LoadDefinitions!({
     )?))
   });
   DefMacro!("\\lx@llncs@institute@dispatch{}", sub[(body)] {
-    let has_and = body.unlist_ref().contains(&T_CS!("\\and"));
+    let (pieces, _) = split_at_kernel_separators(body.clone(), vec![SplitDelim::Token(T_CS!("\\and"))])?;
+    // shape (a): one `labelseq` contact per piece, numbered in order as `\institutename`'s `\and` numbers them — one
+    // piece too where an `\and` the cut leaves whole stands inside a group, `\institute{{\small Univ A \and Univ B}}`,
+    // or a box, `\mbox{(North \and South)}`, which `\institutename` numbers all the same, as the split of it made it
+    // (the query at every level; unread, the spelling)
+    let numbered = pieces.len() > 1
+      || match argument_separators_at_every_level(&body)? {
+        Some(separators) => !separators.is_empty(),
+        None => body.unlist_ref().contains(&T_CS!("\\and")),
+      };
+    if numbered {
+      return Ok(split_calls(&TokenizeInternal!("\\lx@llncs@affiliation"), pieces));
+    }
     // The markers \lx@add@affiliations keys its superscript-label branch on (a `\let` alias of one too).
-    let has_sup = author_mark_position(&body).is_some();
-    let target = if !has_and && has_sup {
-      T_CS!("\\lx@llncs@institute@sup")     // shape (c): lazy superscript-labeled block
-    } else if !has_and && body.unlist_ref().iter().any(|t| t.get_catcode() != Catcode::SPACE) {
-      // (an empty `\institute{}` stays none, as the split of nothing makes it: the `\inst` marks it answers no one
-      // stay shown, 2407.13764)
-      T_CS!("\\lx@llncs@institute@sole")    // shape (b): one institute
+    if author_mark_position(&body).is_some() {
+      // shape (c): lazy superscript-labeled block
+      Ok(Invocation!(T_CS!("\\lx@llncs@institute@sup"), vec![Some(body)]))
+    } else if body.unlist_ref().iter().any(|t| t.get_catcode() != Catcode::SPACE) {
+      // shape (b): one institute
+      Ok(Invocation!(T_CS!("\\lx@llncs@institute@sole"), vec![Some(body)]))
     } else {
-      T_CS!("\\lx@llncs@institute@split")   // shape (a): \and-split
-    };
-    Ok(Invocation!(target, vec![Some(body)]))
+      // (an empty `\institute{}` stays none: the `\inst` marks it answers no one stay shown, 2407.13764)
+      Ok(Tokens!())
+    }
   });
   DefMacro!("\\lx@llncs@affiliation{}", "\\lx@add@affiliation[labelseq={affiliation}]{#1}");
   // llncs.cls:868-886: one institute (`\c@@inst=1`, no `\and` in it) is printed under the names unnumbered, every

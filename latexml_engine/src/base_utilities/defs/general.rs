@@ -185,7 +185,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // Rust-only (Option C P2-2, OXIDIZED_DESIGN_DIVERGENCES #995): `\lx@splitting@by@meaning{op}{delims}{tokens}` —
   // `\lx@splitting`, cut first at the kernel's `\and` by meaning, then each segment at the delimiters by spelling
   // (`split_at_kernel_separators`: a macro holding only `\and`, a `\let` copy of the kernel's `\and` where the document
-  // renewed `\and`; no token rewritten), one `op` per piece; inst_support's `\institute` list.
+  // renewed `\and`; no token rewritten), one `op` per piece; inst_support's `\institute` list and llncs's marked `\author`
+  // list (P2-3).
   DefMacro!("\\lx@splitting@by@meaning{}{}{}", sub[(op, delimiters, tokens)] {
     let delims: Vec<SplitDelim> = delimiters.unlist().into_iter().map(SplitDelim::from).collect();
     let (pieces, _) = split_at_kernel_separators(tokens, delims)?;
@@ -267,8 +268,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
 }
 
 /// `op{piece}` for each piece of a split list, each paired with the delimiter before it (`split_tokens_delimited`,
-/// `split_at_kernel_separators`): `\lx@splitting`'s expansion, and `\lx@splitting@by@meaning`'s and aa's
-/// (`aa_cls.rs` `\lx@aa@institute@dispatch`).
+/// `split_at_kernel_separators`): `\lx@splitting`'s expansion, and `\lx@splitting@by@meaning`'s, aa's
+/// (`aa_cls.rs` `\lx@aa@institute@dispatch`) and llncs's (`llncs_cls.rs` `\lx@llncs@institute@dispatch`).
 pub fn split_calls(op: &Tokens, pieces: DelimitedPieces) -> Tokens {
   let mut result: Vec<Token> = Vec::new();
   let line_break = T_CS!("\\\\");
