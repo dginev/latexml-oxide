@@ -98,7 +98,8 @@ sweep on the closing head shows, on the in-scope set (the 1,602 oracle-clean man
   sectioning unit in a list item, a bilingual manual's cross-language link.
 - **G3 recall:** every manual at ≥ 95 % S3 recall, or its gap classified as no conversion loss: reference-side (text
   inside included PDFs or images, PDF-extraction garble, CJK segmentation, a golden typeset from another source —
-  `tools/perfect_kernel/golden_reference.tsv`), ruled page furniture, date words, external-tool output.
+  `tools/perfect_kernel/golden_reference.tsv`), ruled page furniture (kept as metadata once the 2026-11-11 element lands),
+  date words, external-tool output.
 - **G4 time:** no manual over 180 s at 8 GB in the sweep.
 - **G5 canaries:** no new Fatal or timeout among every other manual — the 772 no engine compiles plus the ruled-out
   ones (68 at s134: 64 Fatal and 3 timeouts of the 772, zxjafont's Fatal).
@@ -269,7 +270,7 @@ aomart); dangling `\hyperlink` idrefs stay (D15, 2026-09-18) — among them bibl
 and biblatex-chicago's 84 `cite.0@<key>` links, whose targets biblatex makes only from a biber `.bbl`
 (`biblatex.sty:10239-10245`; the harness runs no biber), philexmanual's 6 `\lbz`/`\lba` targets philex never emits
 (pdfTeX warns too), elsdoc's targets inside `{comment}`, europecv's `\hyperlink` to `\label` names; ~92 no-XML fatals
-(mostly intended engine ≠ pdflatex); page furniture dropped, semantic notes kept (2026-10-01); a second `\maketitle`
+(mostly intended engine ≠ pdflatex); page furniture dropped, semantic notes kept (2026-10-01; superseded 2026-11-11: kept as metadata, FIDELITY_CHARTER §2); a second `\maketitle`
 keeps the latest title (2026-10-01); bilingual documents (one manual per language, each half with its own
 `\maketitle` and a cross-language `\hypertarget`/`\hyperlink` pair: circledtext, joinbox, pascaltriangle, suanpan-l3)
 out of scope for now, potentially interesting later — the document keeps the last title, and the first half's anchor

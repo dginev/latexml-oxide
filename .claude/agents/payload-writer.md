@@ -69,6 +69,12 @@ to it, and where the brief is more specific, the brief wins.
 - Honest diagnostics: Error/Fatal at the problem's severity (Perl standard); a TeX-only error whose recovery is
   semantic is a Warning; never silently suppress. A Fatal stays Fatal.
 - Never delete a witness arXiv id from a comment; carry it into rewritten comments and name new ones.
+- Code a LaTeXML maintainer reads (BM, the Bruce Miller Q&A of 2026-11-05): comments of one or two lines saying what
+  the code cannot, plus witness ids and Perl/tex.web refs, the argument in the OD entry and the commit message; literal
+  to Perl in data model and interfaces, idiomatic Rust inside; the definers where they fit; reversion to user-level
+  macros; a new binding loads the real package and overrides only what carries semantics, where the raw package runs
+  cleanly; where TeX reads irregularly, mirror TeX's reading (only where TeX's reading requires it: a macro calling an internal
+  `\lx@…` constructor, the alias kept for reversion; the general macro-face design is after the merge).
 - If the same class of hole comes back a second time (yours or a reviewer's), STOP refining: report the pattern and
   propose one rule (fail-safe / consolidated) for the main session to decide.
 - A call the brief and the charter don't settle, weighed by the user's difficulty rule: an easy, pragmatic step inside

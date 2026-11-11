@@ -53,6 +53,12 @@ Your review is the writer's next brief: make every finding something a fix round
   (invisible times, roles) are not TeX's — say so rather than claim a match.
 - Witness ids: none carried out of a comment; new comments name theirs. Docs record the
   conclusion, not the play-by-play (CLAUDE.md doc rules).
+- Code a LaTeXML maintainer reads (BM, the Bruce Miller Q&A of 2026-11-05): a new comment block of 6+ lines
+  without a reason is a SHOULD-FIX ("long comments are a dead giveaway"; one or two lines, witness ids and
+  Perl/tex.web refs, the argument in the OD entry); a reversion or `tex=` showing an `\lx@` internal is a
+  finding (reversion gives user-level macros); splitting an overloaded element, class or attribute needs a
+  census of its earlier uses; a speculative run (title-page reading, rehearsal) inventing content the
+  PDF does not print is a BLOCKER (revTP1 B1; the raw-class surpasses OD #767/#953 stay, DG 2026-11-11).
 
 ## How to report
 Each finding:
