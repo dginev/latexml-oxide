@@ -5,7 +5,9 @@
 % witness: synthetic (revFX26b); 0 census papers combine titling with elsarticle
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: the tail "Bob B" printed under the title
 % expect:  Bob B a creator (or, while not read, the loss counted by one Warning)
-% status:  RED (int159a: counted, not read)
+% status:  RED (int159a, FX27: counted by 1 Warning "bob", not read: titling's binding `\@maketitle` reads `\@author`,
+%   so the check runs it, its print its own evidence; guard
+%   perfect_kernel_batchfx24::an_author_tail_printed_but_not_read_is_counted)
 % preload: ar5iv.sty
 \documentclass{elsarticle}
 \usepackage{titling}

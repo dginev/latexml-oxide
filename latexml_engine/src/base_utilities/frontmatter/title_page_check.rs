@@ -15,6 +15,9 @@
 //! is named in one `Warning:frontmatter:unclaimed`, in printed order; a word the unclaimed-text net already counted
 //! (insert.rs `keep_unclaimed_net_notes`, [`note_net_counted`]) is not counted again. Witnesses: 2007.07526 (amsart's
 //! author lines), the cpc-hepnp `\email` (1504.05444), raa 1304.5354, memsait astro-ph0102098, JUSTC 2409.17603.
+//! A lost word only text a document appended to `\@author` prints, under a title page that positively does not print that tail
+//! (a binding's declared own author page, OmniBus's, an own page not reaching `\@author`), is
+//! named apart in an Info, `frontmatter:annotated` (#953 "FX27": the author may mean it hidden).
 //!
 //! Beside the print, a second source (#953 "106t"): what TeX makes of what the document gave its frontmatter commands —
 //! the calls of LaTeXML's own macros that read their arguments from the document's text, inside whose expansion the
@@ -52,16 +55,28 @@ use crate::latex_constructs::{SpeculativeRun, speculative_word_run};
 const PRINTED: &str = "lx_title_page_printed";
 /// The words the unclaimed-text net counted in a Warning of its own ([`note_net_counted`]).
 const NET_COUNTED: &str = "lx_net_counted_words";
+/// The text the title page printed with `\@author` as the binding's setter left it, where what a document appended to it
+/// is not known to print ([`note_title_page_printed`]).
+const UNTAILED: &str = "lx_title_page_untailed";
 
 /// Note the text a title page printed (sect05.rs `note_title_page_print`, read by `ink_word_text`): the frontmatter's,
 /// in place of an earlier `\maketitle`'s, which it supersedes (DIVERGENCES #406: a later author list replaces the one
 /// flushed); none once the authors are sealed, a supplement's title page after the body began, whose entries the seal
-/// drops (`seal_digested_frontmatter`).
-pub fn note_title_page_printed(text: &str) {
+/// drops (`seal_digested_frontmatter`). `untailed`: what it prints with `\@author` as the binding's setter left it, when
+/// what a document appended to it since positively does not print (sect05.rs `untailed_title_page_print`): a lost word only
+/// the appended text prints is reported as one the title page annotates ([`check_title_page_words`]).
+pub fn note_title_page_printed(text: &str, untailed: Option<&str>) {
   if frontmatter_entry_sealed("ltx:creator", "author") {
     return;
   }
   assign_value(PRINTED, Stored::String(pin(text)), Some(Scope::Global));
+  assign_value(
+    UNTAILED,
+    untailed.map_or(Stored::Bool(false), |untailed| {
+      Stored::String(pin(untailed))
+    }),
+    Some(Scope::Global),
+  );
   // (the words spilled so far, cut to those this print wants, which alone the later spills keep)
   let mut wanted = wanted_words(&resolver::base_letters(text).to_lowercase());
   // (and those of the third source, digested before it: [`digest_raw_setter_calls`])
@@ -1723,9 +1738,32 @@ pub fn check_title_page_words(document: &Document) -> Result<()> {
       )
     );
   }
+  // (a word only what a document appended to `\@author` prints, under a title page that positively does not print it, is one the
+  // title page annotates — an Info: the author may mean it hidden; the user's ruling of 2026-11-11, FX27)
+  let print_words = wanted_words(&resolver::base_letters(&print).to_lowercase()).words;
+  let (annotated, lost): (Vec<String>, Vec<String>) = match lookup_value(UNTAILED) {
+    Some(Stored::String(_)) => {
+      let untailed = words_of(&lookup_string(UNTAILED));
+      let called = words_of(&printed[print.len()..called_end]);
+      lost.into_iter().partition(|word| {
+        print_words.contains(word) && !untailed.contains(word) && !called.contains(word)
+      })
+    },
+    _ => (Vec::new(), lost),
+  };
+  if !annotated.is_empty() {
+    Info!(
+      "frontmatter",
+      "annotated",
+      s!(
+        "The title page annotates {} word(s) that its output does not hold: {}",
+        annotated.len(),
+        annotated.join(" ")
+      )
+    );
+  }
   if !lost.is_empty() {
     // (the words the frontmatter commands were given alone, not the print's, are said so)
-    let print_words = wanted_words(&resolver::base_letters(&print).to_lowercase()).words;
     let printed = lost
       .iter()
       .filter(|word| print_words.contains(*word))

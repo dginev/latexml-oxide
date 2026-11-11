@@ -1,0 +1,20 @@
+% mechanism: the title-page check's two severities in one loss (FX27, OXIDIZED_DESIGN_DIVERGENCES #953 "FX27"): under
+%   amsart the stand-in prints both what the document appends to `\@title` and to `\@author`. "Zed" amsart's own title page
+%   prints (pdflatex "A TITLE ZED") and the output lacks: a Warning; "Bob" only the appended `\@author` tail prints,
+%   which amsart's page (`\authors`) does not: an Info, `frontmatter:annotated`
+% witness: synthetic (FX27)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A TITLE ZED / ALICE A / Body."
+% engines: int159a (`latexml_oxide.int159a-rel`): 0 errors, 1 warning naming "zed bob"; FX27: 0 errors, 1 warning
+%   "The title page prints 1 word(s) of the document's that its output does not hold: zed", and the Info
+%   "The title page annotates 1 word(s) that its output does not hold: bob"; one creator Alice A, title "A Title"
+% expect:  "Zed" in the title (a tail appended to `\@title` after `\title` stored it is not read); "Bob" in no creator
+% status:  RED ("Zed" lost, counted; guard perfect_kernel_batchfx24::an_amsart_author_append_invents_no_creator)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{A Title}
+\author{Alice A}
+\makeatletter\g@addto@macro\@author{\and Bob B}\g@addto@macro\@title{ Zed}\makeatother
+\maketitle
+Body.
+\end{document}

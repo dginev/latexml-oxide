@@ -7599,15 +7599,17 @@ fn seen_author_tail() -> Result<Option<(Tokens, i64)>> {
 /// it, or a copy of `\@author` is not seen (revFX24b; REDs `article_author_tail_*_is_lost_red`). With neither, the title page is LaTeX's or the binding's, and prints it. A raw class's own
 /// `\maketitle` that prints only the title, or a document's `\renewcommand\maketitle`/`\def\@maketitle`, does not
 /// (review revFX24 finding 1; 2511.15315's procdoc2.cls:77 does).
-fn title_page_prints_author() -> bool {
+fn title_page_prints_author() -> bool { own_title_page_prints_author().unwrap_or(true) }
+
+/// [`title_page_prints_author`]'s answer from a title page of the file's or the document's own (or a stand-in copy's),
+/// `None` when there is none: the title page is LaTeX's or the binding's.
+fn own_title_page_prints_author() -> Option<bool> {
   if let Some(prints) = copy_title_page_prints(&T_CS!("\\@author")) {
-    return prints;
+    return Some(prints);
   }
   let own = |cs: &Token| body_from(cs, &[DefinitionOrigin::File, DefinitionOrigin::Document]);
   let maketitle = T_CS!("\\@maketitle");
-  let Some(root) = own(&T_CS!("\\lx@dropped@maketitle")).or_else(|| own(&maketitle)) else {
-    return true;
-  };
+  let root = own(&T_CS!("\\lx@dropped@maketitle")).or_else(|| own(&maketitle))?;
   let target = T_CS!("\\@author").get_cs_name();
   // (LaTeX's title page, which prints `\@author`: the kernel's `\maketitle` and `\@maketitle`, and a copy of either)
   let latex_maketitle = T_CS!("\\maketitle");
@@ -7629,19 +7631,58 @@ fn title_page_prints_author() -> bool {
     for cs in reads_of_branches(&executed_code(body.unlist_ref()), true) {
       let key = cs.get_cs_name();
       if key == target {
-        return true;
+        return Some(true);
       }
       if !seen.insert(key) {
         continue;
       }
       match own(&cs) {
         Some(callee) => work.push(callee),
-        None if is_title_page(&cs) => return true,
+        None if is_title_page(&cs) => return Some(true),
         None => {},
       }
     }
   }
-  false
+  Some(false)
+}
+
+/// What `\@author` held when the frontmatter last took an author from a binding's setter (`lx_author_seen`, kept by
+/// `\lx@author@tail` for the check that runs after it), when a document appended to it since and the title page in force
+/// positively does not print what it appended: the title-page check's evidence (OXIDIZED_DESIGN_DIVERGENCES #953, FX27,
+/// FX27b), which reports a lost word only that tail prints as one the title page annotates, an Info, not as a printed
+/// word's loss. Not printed: a title page of the file's or the document's own that does not reach `\@author`
+/// ([`own_title_page_prints_author`]: authblk under a document's `\@maketitle` printing the title alone), or, with none,
+/// a binding's page that prints its own author list, as the binding owning `\author` declares for the document class
+/// (`fm_author_tail_unprinted`, `Policy::own_author_page`: amsart's `\authors`, elsarticle's `\elsauthors`, acmart's
+/// `\addresses`; pdflatex prints no "Bob B"), and OmniBus's, the fallback's guess for an unknown class. Every other title
+/// page is taken to print it, a lost word staying a Warning: LaTeX's `\author` in force (the kernel's, a raw file's, the
+/// document's: `fm_author_is_latex_own`, the check's stand-in being LaTeX's page — even where the walk says not, its
+/// known false negatives: revFX24b's REDs `article_author_tail_*_is_lost_red`), an own title page reaching `\@author`
+/// (amsart under a document's `\@maketitle` printing it), and any binding not declaring its page (IEEEtran, mnras,
+/// REVTeX, whose pages print the tail — revFX27's probes —, authblk and llncs, which declare that they do:
+/// `Policy::author_tail`). The caller asks only where the check ran its stand-in; a title page it ran of a file's or a
+/// binding's own (titling's `\@maketitle`, titling.sty:166-180) is its own evidence.
+pub(crate) fn unverified_author_tail_prefix() -> Result<Option<Tokens>> {
+  if fm_author_is_latex_own() {
+    return Ok(None);
+  }
+  let seen = match lookup_value("lx_author_seen") {
+    Some(Stored::Tokens(seen)) => seen,
+    _ => match lookup_value("lx_author_tail_seen") {
+      Some(Stored::Tokens(seen)) => seen,
+      _ => return Ok(None),
+    },
+  };
+  let Some(current) = store_value("author")? else {
+    return Ok(None);
+  };
+  let (prefix, current) = (seen.unlist_ref(), current.unlist_ref());
+  if current.len() <= prefix.len() || current[..prefix.len()] != *prefix {
+    return Ok(None);
+  }
+  let unprinted =
+    own_title_page_prints_author().map_or_else(fm_author_tail_unprinted, |prints| !prints);
+  Ok(unprinted.then_some(seen))
 }
 
 /// Records the value of `\@author` as an author is queued (`queue_front_matter`): the
@@ -8013,6 +8054,10 @@ LoadDefinitions!({
   });
   DefMacro!("\\lx@author@tail", sub[_args] {
     let calls = author_tail_calls(true)?;
+    // (the binding route's record kept past this `\maketitle`'s clearing, for the title-page check that runs after it:
+    // `unverified_author_tail_prefix`)
+    let seen = lookup_value("lx_author_seen").unwrap_or(Stored::Bool(false));
+    assign_value("lx_author_tail_seen", seen, Some(Scope::Global));
     assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global));
     assign_value("lx_author_seen", Stored::Bool(false), Some(Scope::Global));
     Ok(Tokens::new(calls))
