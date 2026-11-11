@@ -456,6 +456,7 @@ mod perfect_kernel_batchfx3;
 mod perfect_kernel_batchfx4;
 mod perfect_kernel_batchfx5;
 /// GL1: an e-mail label glued to its address names the line's contact, the address its content; OD #956.
+mod perfect_kernel_batchga1;
 mod perfect_kernel_batchgl1;
 /// HG1: the guards DEL1 left hollow asserting again — rows of one table, the wrong ones `_red.tex` catalog repros.
 mod perfect_kernel_batchhg1;

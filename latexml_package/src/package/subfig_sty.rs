@@ -250,7 +250,12 @@ LoadDefinitions!({
   // the sub-counter at whatever value the prior float ended on, so a
   // \ContinuedFloat followed by a \subfloat would keep counting from the
   // stale sub index instead of rewinding.
-  RawTeX!(r"\def\lx@subfig@continue@restore#1{\setcounter{sub#1}{\value{sub#1@save}}}");
+  // subfig.sty:587 restores only a float type that has a sub-float counter (`\@ifundefined{c@sub\@captype}{}{…}`):
+  // `\ContinuedFloat` in an `algorithm` float, which no `\newsubfloat` gave a `subalgorithm`, steps the number back and
+  // touches no sub-counter, 0 errors in pdflatex (Perl's binding warns 3 times: `SetCounter`/`CounterValue` on the
+  // missing `subalgorithm@save`, subfig.sty.ltxml:98-102). Witness 1910.02851; guard
+  // `perfect_kernel_batchga1::an_undefined_counter_register_is_the_error_tex_raises`.
+  RawTeX!(r"\def\lx@subfig@continue@restore#1{\@ifundefined{c@sub#1}{}{\setcounter{sub#1}{\value{sub#1@save}}}}");
   // subfig.sty:581-590: step back, caption's continuation (`\caption@ContinuedFloat`, a no-op
   // without caption, :591), then the sub-counter from its save. Witness 2605.17685; guards
   // `perfect_kernel_batch56::{continuedfloat_suppresses_one_step_per_real_float,

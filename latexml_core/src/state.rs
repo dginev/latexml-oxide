@@ -1925,30 +1925,13 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
 /// along with appropriate error messge.
 pub fn generate_error_stub(token: &Token) -> Result<Token> {
   let cs = token.with_cs_name(ToString::to_string);
-  // Perl-faithful counter leniency. A `\c@<ctr>` control sequence is, by
-  // LaTeX convention, the count register backing counter `<ctr>`. When code
-  // reads an *undefined* one in a number/register context (e.g.
-  // `\setcounter{x}{\value{y}}` or `\algrestore`/`\ContinuedFloat` reading
-  // `\c@subalgorithm@save`), Perl does NOT raise a hard "undefined control
-  // sequence" error — its counter machinery warns "Counter '<ctr>' was not
-  // defined; assuming 0" (Package.pm L712) and treats it as 0. Without this,
-  // `read_x_token` expands the bare undefined `\c@<ctr>` through the generic
-  // <ltx:ERROR/> path below and the run gains a spurious error. Mirror Perl:
-  // warn and define the register as 0 so the reader sees a register value,
-  // not an undefined CS. Same category/message as `counter::dialect::
-  // counter_value`. Witness 1910.02851 (`\algrestore{RLZFactorization}` +
-  // `\ContinuedFloat` → `\c@subalgorithm@save`); Perl rc=0.
-  if let Some(ctr) = cs.strip_prefix("\\c@") {
-    if !lookup_bool("SUPPRESS_UNDEFINED_ERRORS") {
-      Warn!(
-        "undefined",
-        ctr,
-        s!("Counter '{}' was not defined; assuming 0", ctr)
-      );
-    }
-    crate::binding::def::dialect::def_register(*token, None, Number::new(0), None)?;
-    return Ok(*token);
-  }
+  // Perl `generateErrorStub` (State.pm L532-553) has no counter branch: an undefined `\c@<ctr>` read as a
+  // control sequence is the error TeX raises too (`! Undefined control sequence.`). The leniency Perl has is in
+  // its counter readers, `CounterValue` (Package.pm L712; ours `counter::dialect::counter_value`): `\arabic`,
+  // `\stepcounter`, `\addtocounter`. Witness 1910.02851 (`\ContinuedFloat` in an `algorithm` float reading
+  // `\c@subalgorithm@save`; Perl's subfig binding reads it through `CounterValue`) is served by subfig.sty:587's own
+  // guard in the subfig binding, which touches no sub-counter a float type lacks.
+  // Guard `perfect_kernel_batchga1::an_undefined_counter_register_is_the_error_tex_raises`.
   // Gate the undefined-CS summary tally by SUPPRESS_UNDEFINED_ERRORS so it
   // matches the `Error!` gate at L1021 below — during expl3-code.tex raw
   // load with thousands of forward-references we install the ERROR stub
