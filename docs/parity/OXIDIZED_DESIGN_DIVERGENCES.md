@@ -34048,15 +34048,24 @@ all between its two `\and`s where that run is unbalanced — by positions from a
 ledger's events carry none, `ApiCall::errors`), where each `\and`'s own tokens (a literal one, `\csname and\endcsname`, an
 active character) part no ink; else, a macro holding names and `\and`s together
 (`\author{\aut}`), each name by its text with a counted Warning (`by_text`), only where each piece prints its name alone
-(else the call stays whole, its merge counted by `merged_creators`). In a paper with no author block, where the emitter
+(else the call stays whole, its merge counted by `merged_creators`). A call whose ink is not all inside the `\and`'s
+group (an event of `Name`, `Mark`, `Contact` or `Note` whose span starts at or before the group's open brace or ends past
+its close: `\author{Ann {Able \and Bob} Baker}`, `\author{\textsc{Ann Able \and Bob Baker} Jr.}`, `{…}$^*$`) stays whole
+too: each piece is wrapped in the tokens before and after that group, so ink there would print once a piece and invent
+names (revOC1c B1: "Ann Able Baker" / "Ann Bob Baker"; "Ann Able Jr." / "Bob Baker Jr. Jr."). In a paper with no author block, where the emitter
 otherwise stays out (`emit.rs` `stays_out`), the queued entry is replaced by its pieces' calls (`cut_creator_calls`), the
 rest of the queue digested as Perl's, and an `annotate={run:<cap>}` after it (authblk's unlabelled `\affil`, `affil_run`,
 the authors queued since the last `\affil`) counts the pieces (its cap read off the ledger's `ApiCall::attrs`), so the `\affil` goes to every name,
-as pdflatex prints it under the shared mark. The wrapper is told by its Layout role, the API's own container, not a
+as pdflatex prints it under the shared mark. Every cut call is matched to its own queue entry (the first unclaimed one
+spelled as it is) and the added pieces are summed per annotation before any entry is rewritten, each annotation rewritten
+once from its original cap: two cut calls before one `\affil` (`\author{\autA}\author{\autB}\affil{Univ X}`) put all four
+names under it, where a rewrite per call left the second call's ledger lookup, keyed by the tokens the first had
+rewritten, without a cap and the first name without the affiliation (revOC1c B2). The wrapper is told by its Layout role, the API's own container, not a
 document's spelling: the e0 fences' `resolver` pins rose by one each (`TOKEN_READS` 20 → 21,
 `OBSERVER_BACKSLASH_LITERALS` 3 → 4), the emitter's none. Beside a block the emission's per-creator loop writes each creator of the cut call as its piece, its
 own `author:N`. Witnesses 1909.10278 (one merged creator, E 1 → two, the affiliation on both and the shared
-`\email{{dlerch,dmegias}@uoc.edu}` on the last, as the PDF prints it under both; E 0) and 2501.11185 (one merged creator
+`\email{{dlerch,dmegias}@uoc.edu}` on the last piece, E 0; the PDF prints it under both names, the open shared-contacts
+residual) and 2501.11185 (one merged creator
 holding both institutes, W 1 → two, each with its institute line, W 0); 15 of the census's 873 acmart papers spell a
 literal `\and` with no top-level comma (a source scan). Routes, enumerated by the one choke point every API creator call
 passes, `queue_front_matter` → `ledger::record_api_call` (tag `ltx:creator`, not made by a block's own expansion), whose
@@ -34070,11 +34079,18 @@ bytedance_seed, mrm, ceurart, lmcs, lipics, bmcart, beilstein, brief and g_brief
 (literal, `\csname`, active character, wrapper, macro-held; beside a block), authblk macro-held, quantumarticle literal and
 macro-held (two creators; no oracle, TL 2025 pdflatex fails on the class). jmlr's `\Name{Ann Able \and Bob Baker}` now
 gives two creators where the base gave one with `merged_creators`; pdflatex prints "Ann Able and Bob Baker" in one
-`\Name` (jmlr's `\and` a word there). Not cut: a call in a paper whose author block no rehearsal read (`stays_out` with a
+`\Name`, jmlr's `\and` printing the word there (jmlr.cls:336, inside `\jmlrpreauthor`'s group), so the cut is a spelling
+rule: the rehearsal binds the name `\and` (`ALWAYS_BOUND`) and jmlr's meaning is not in force when it reads. Kept (no text
+lost, 0 census papers; review revOC1c S1), RED in the catalog: the fix is the jmlr binding's, giving `\and` the word
+meaning inside `\Name`, not a class test in the engine. Not cut: a call in a paper whose author block no rehearsal read (`stays_out` with a
 `SkipReason`: the queue is Perl's), and a call a block's own expansion made (`ApiCall::inside`). The others unprobed (most
-have no class file in TL 2025). Guard `perfect_kernel_batchoc1c::an_api_creator_call_parts_at_its_own_and`; repros
+have no class file in TL 2025). Guards `perfect_kernel_batchoc1c::{an_api_creator_call_parts_at_its_own_and,
+an_api_creator_call_with_ink_outside_its_group_stays_whole, each_piece_of_a_cut_call_keeps_its_keyvals}`; repros
 `class-bindings/acmart_author_{and,csname_and,active_and,wrapper_and,macro_held_and,and_call_beside_a_block}_parts_the_names.tex`,
-`sectioning-frontmatter/authblk_author_macro_held_and_parts_the_names.tex`. Residuals, red at int156a and outside this mechanism: a
+`class-bindings/acmart_author_and_in_a_{group_with_ink_before,font_with_ink_after}_stays_whole.tex`,
+`class-bindings/acmart_editor_and_parts_the_names_keeps_the_role.tex`,
+`sectioning-frontmatter/{authblk_author_macro_held_and_parts_the_names,authblk_two_macro_held_calls_before_one_affil,authblk_two_alike_macro_held_calls_each_own_affil}.tex`;
+the catalog RED `class-bindings/jmlr_name_and_prints_the_word_red.tex`. Residuals, red at int156a and outside this mechanism: a
 `\let` copy of `\and` (`\let\nx\and`) keeps the kernel's meaning in the rehearsal, which binds its vocabulary by name,
 so the block holds no `Sep(And)` (one merged creator and `Error:frontmatter:merged_creators` under article, eptcs and
 IEEEtran journal; Perl two creators); and IEEEtran's `\author` routes to the grid by spelling (`body.to_string().contains("authorblockN")`,

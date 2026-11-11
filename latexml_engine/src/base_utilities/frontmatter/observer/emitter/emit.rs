@@ -4001,13 +4001,23 @@ fn creator_call_cut(call: &ApiCall) -> Result<Option<Vec<Tokens>>> {
   }) else {
     return Ok(None);
   };
-  // (each `\and`'s own tokens in that group, parting no ink: no other event's span meets them)
   let inks = |e: &&Event| {
     matches!(
       e.kind,
       EventKind::Name | EventKind::Mark | EventKind::Contact | EventKind::Note
     )
   };
+  // (the call's ink all inside that group, each event's span past its open brace and up to its close: ink before it or
+  // after it — `Ann {Able \and Bob} Baker`, `\textsc{Ann Able \and Bob Baker} Jr.`, `{…}$^*$` — is no piece's alone, and a
+  // piece wrapped in it would print it once a piece, inventing names; such a call, or an event of no span, stays whole,
+  // its merge counted, revOC1c B1)
+  if events.iter().filter(inks).any(|e| {
+    e.span
+      .is_none_or(|(a, b)| usize::from(a) <= group || usize::from(b) > close)
+  }) {
+    return Ok(None);
+  }
+  // (each `\and`'s own tokens in that group, parting no ink: no other event's span meets them)
   let spans: Option<Vec<(usize, usize)>> = seps
     .iter()
     .map(|e| {
@@ -4135,23 +4145,28 @@ fn with_last_group(command: &Tokens, content: Vec<Token>) -> Option<Tokens> {
 }
 
 /// A queued annotation's `annotate={run:<cap>}` (authblk's unlabelled `\affil`, `authblk_sty.rs` `affil_run`: the
-/// creators queued since the last `\affil`), its cap read off the ledger's record of the call (`ApiCall::attrs`): the cap,
-/// and the call with it raised by `more`, its other keys as they stand. `None` for a call of no such key.
-fn run_cap(command: &Tokens, more: usize) -> Option<(usize, Tokens)> {
+/// creators queued since the last `\affil`), its cap read off the ledger's record of the call (`ApiCall::attrs`), looked up
+/// by the call's tokens as queued. `None` for a call of no such key.
+fn run_cap(command: &Tokens) -> Option<usize> {
   let attrs = with_ledger(|ledger| {
     ledger.entries().iter().find_map(|entry| match entry {
       Entry::Api(call) if call.command.as_ref() == Some(command) => Some(call.attrs.clone()),
       _ => None,
     })
   })?;
-  let cap: usize = attrs
+  attrs
     .split(',')
     .find_map(|pair| pair.trim().strip_prefix("annotate="))?
     .trim_matches(|c| c == '{' || c == '}')
     .strip_prefix("run:")?
     .trim()
     .parse()
-    .ok()?;
+    .ok()
+}
+
+/// `command`, an annotation's call, with its `annotate=` key set to `run:<cap>`, its other keys as they stand. `None` for
+/// a call of no key list.
+fn with_run_cap(command: &Tokens, cap: usize) -> Option<Tokens> {
   let v = command.unlist_ref();
   let (Some(open), Some(close)) = key_list_bounds(v) else {
     return None;
@@ -4162,19 +4177,22 @@ fn run_cap(command: &Tokens, more: usize) -> Option<(usize, Tokens)> {
       out.push(T_OTHER!(","));
     }
     if key == "annotate" {
-      out.extend(internal(&s!("annotate={{run:{}}}", cap + more)));
+      out.extend(internal(&s!("annotate={{run:{cap}}}")));
     } else {
       out.extend_from_slice(pair);
     }
   }
   out.extend_from_slice(&v[close..]);
-  Some((cap, Tokens::new(out)))
+  Some(Tokens::new(out))
 }
 
 /// The queued entries of a paper with no author block whose creator calls are cut ([`creator_call_cut`]), each replaced
 /// by its pieces' calls, in its place; the call taken (`take_digested`'s mark), as one written. An annotation after it
 /// whose run (`annotate=run:<cap>`) counted the call as one queued creator counts its pieces: authblk's `\author{\aut}`
-/// then `\affil{Univ X}`, which pdflatex prints under both names (`authblk.sty:115-116`, the `\AB@thenote` group).
+/// then `\affil{Univ X}`, which pdflatex prints under both names (`authblk.sty:115-116`, the `\AB@thenote` group). Every
+/// cut call's added pieces are summed per annotation first, on the queue as it stands, and each annotation rewritten once
+/// from its original cap: two cut calls before one `\affil` both counted (`\author{\autA}\author{\autB}\affil{Univ X}`,
+/// revOC1c B2), each call matched to its own queue entry where two are spelled alike.
 fn cut_creator_calls(commands: &mut Vec<RawFrontmatter>) -> Result<()> {
   let calls: Vec<ApiCall> = with_ledger(|ledger| {
     let calls = ledger.entries().iter().filter_map(|entry| match entry {
@@ -4187,13 +4205,15 @@ fn cut_creator_calls(commands: &mut Vec<RawFrontmatter>) -> Result<()> {
     });
     calls.collect()
   });
+  let mut claimed: Vec<usize> = Vec::new();
+  let mut cuts: Vec<(usize, usize, Vec<Tokens>)> = Vec::new();
   for call in calls {
-    let Some(at) = commands
-      .iter()
-      .position(|entry| Some(&entry.2) == call.command.as_ref())
+    let Some(at) = (0..commands.len())
+      .find(|i| !claimed.contains(i) && Some(&commands[*i].2) == call.command.as_ref())
     else {
       continue;
     };
+    claimed.push(at);
     let Some(pieces) = creator_call_cut(&call)? else {
       continue;
     };
@@ -4203,28 +4223,53 @@ fn cut_creator_calls(commands: &mut Vec<RawFrontmatter>) -> Result<()> {
       call.index,
       pieces.len()
     );
-    let more = pieces.len() - 1;
+    cuts.push((at, call.index, pieces));
+  }
+  if cuts.is_empty() {
+    return Ok(());
+  }
+  let caps: Vec<Option<usize>> = commands
+    .iter()
+    .map(|entry| {
+      (entry.0 != "ltx:creator")
+        .then(|| run_cap(&entry.2))
+        .flatten()
+    })
+    .collect();
+  let mut raise = vec![0usize; commands.len()];
+  for (at, _, pieces) in &cuts {
     let mut creators = 0;
-    for later in commands.iter_mut().skip(at) {
+    for (i, later) in commands.iter().enumerate().skip(*at) {
       if later.0 == "ltx:creator" {
         creators += 1;
-      } else if let Some((cap, raised)) = run_cap(&later.2, more)
+      } else if let Some(cap) = caps[i]
         && creators <= cap
       {
-        DebugFeature!(
-          "frontmatter",
-          "FRONT emit: a run of {cap} counts the cut call's pieces"
-        );
-        later.2 = raised;
+        raise[i] += pieces.len() - 1;
       }
     }
+  }
+  for (i, more) in raise.into_iter().enumerate() {
+    if let Some(cap) = caps[i]
+      && more > 0
+      && let Some(raised) = with_run_cap(&commands[i].2, cap + more)
+    {
+      DebugFeature!(
+        "frontmatter",
+        "FRONT emit: a run of {cap} counts the cut calls' {more} added pieces"
+      );
+      commands[i].2 = raised;
+    }
+  }
+  cuts.sort_by_key(|(at, ..)| std::cmp::Reverse(*at));
+  for (at, index, pieces) in cuts {
     let (tag, attrs, _) = commands.remove(at);
     for (k, piece) in pieces.into_iter().enumerate() {
       commands.insert(at + k, (tag.clone(), attrs.clone(), piece));
     }
     assign_mapping(
       EMITTED_ITEMS,
-      &s!("taken|{}", call.index),
+      &s!("taken|{index}"),
       Some(Stored::Bool(true)),
     );
   }

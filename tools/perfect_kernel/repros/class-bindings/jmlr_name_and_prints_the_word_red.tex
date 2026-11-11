@@ -1,0 +1,22 @@
+% mechanism: jmlr's `\Name{Ann Able \and Bob Baker}`: jmlr's `\and` prints the word, `\def\and{\unskip\enspace{\normalfont
+%   and}\enspace}` (jmlr.cls:336), set only inside `\jmlrpreauthor`'s group, so pdflatex prints one `\Name` slot "Ann Able
+%   and Bob Baker", as `\Name{Ann Able and Bob Baker}` prints. The API route's cut (`emit::creator_call_cut`) reads the
+%   kernel's `\and` there: the rehearsal binds the name `\and` (`rehearsal.rs` `ALWAYS_BOUND`), and at rehearsal time
+%   `\and` still has the kernel meaning; the jmlr binding's own `\def\and{ }` (`jmlr_cls.rs`) is scoped to
+%   `\lx@jmlr@structauthor` and does not reach the queued `\Name` content. So the call is cut in two creators. No text is
+%   lost (each person printed is one creator) and 0 of the census's jmlr papers use the shape; kept as it is. The
+%   principled fix is the binding's: inside `\Name`, jmlr's binding gives `\and` the class's meaning, the word, so the
+%   reading sees `Word("and")` and the cut does not fire. Not a class-name test in the engine
+% witness: review revOC1c S1 (`scratch_revOC1c/src/p8_jmlr.tex`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able and Bob Baker", "Univ X", "a@x.org"
+% engines: Perl 0.8.8: one creator (not run); int156a (OC1b-rel): one creator "Ann Able and Bob Baker" (a@x.org, Univ X),
+%   1 error, 1 warning; OC1c, OC1c2: Ann Able, Bob Baker (a@x.org, Univ X), 0 errors, 0 warnings
+% expect:  one creator "Ann Able and Bob Baker" with a@x.org and Univ X, as the class prints one `\Name`
+% status:  RED (catalog, no guard; the jmlr binding's `\and` inside `\Name`)
+\documentclass{jmlr}
+\title{T}
+\author{\Name{Ann Able \and Bob Baker}\Email{a@x.org}\\ \addr Univ X}
+\begin{document}
+\maketitle
+Text.
+\end{document}

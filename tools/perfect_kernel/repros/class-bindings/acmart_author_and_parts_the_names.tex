@@ -7,12 +7,15 @@
 %   the call's own command, keyvals and wrappers, the `\lx@author@withinst` group holding each piece's tokens (from
 %   its first event's position to its last's), by positions from a fresh rehearsal of the content (the ledger's events
 %   carry none). Siblings on the token path: `acmart_author_{csname,active,wrapper}_and_parts_the_names.tex`; the macro-held one is written by text
-%   (`acmart_author_macro_held_and_parts_the_names.tex`). An `\affiliation`, a `\thanks` or a brace group around the
-%   names with the `\and` makes TL 2025's acmart loop (pdflatex "TeX capacity exceeded" at `\maketitle`): invalid input
-%   there, so none here (an `\email` is fine: `acmart_author_and_call_beside_a_block_parts_the_names.tex`)
+%   (`acmart_author_macro_held_and_parts_the_names.tex`). An `\affiliation` or a `\thanks` with the `\and` makes TL
+%   2025's acmart loop (pdflatex "TeX capacity exceeded" at `\maketitle`): invalid input there, so none here (an `\email`
+%   is fine: `acmart_author_and_call_beside_a_block_parts_the_names.tex`; so is a brace group, `\author{{Ann Able \and Bob
+%   Baker}}` compiling clean, and one holding part of the ink keeps the call whole:
+%   `acmart_author_and_in_a_{group_with_ink_before,font_with_ink_after}_stays_whole.tex`)
 % witness: revOC1 B1 (`scratch_revOC1/src/acm_lit.tex`); 1909.10278 (`\author{Daniel Lerch-Hostalot \and David
 %   Meg\'{\i}as}`: one merged creator, E 1, at int156a; two at OC1c, the `\affiliation` on both, the shared
-%   `\email{{dlerch,dmegias}@uoc.edu}` on the last, E 0), 2501.11185 (`\author{Tejas S. Harith\\ Max Planck … \and
+%   `\email{{dlerch,dmegias}@uoc.edu}` on the last piece, E 0; the PDF prints it under both, the open shared-contacts
+%   residual), 2501.11185 (`\author{Tejas S. Harith\\ Max Planck … \and
 %   Antoine Kaufmann\\ …}`: one merged creator holding both institutes, W 1, at int156a; two at OC1c, each with its
 %   line, W 0); reach: of the census's 873 acmart papers, 15 hold an `\author` argument with a literal `\and` and no
 %   top-level comma in some `.tex` member (a source scan, OC1b)

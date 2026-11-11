@@ -1,0 +1,20 @@
+% mechanism: acmart's `\editor{Ann Able \and Bob Baker}` (acmart_cls.rs `\editor`, `\lx@add@creator[role=editor]{#1}`): an
+%   API creator call with a keyval, cut at its own `Sep(And)` in a paper with no author block (`emit::creator_call_cut`).
+%   Each piece is the call's own command with its last group replaced (`with_last_group`), its keyvals and the queued
+%   entry's attrs kept: both pieces carry `role="editor"`, beside the `\author`'s `role="author"`
+% witness: review revOC1c S2 (the keyvals kept on each piece, unguarded at round 0)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Cy Cole", "In Proc X , Ann Able and Bob Baker (Ed.)."
+%   (acmart.cls:1605 `\editor`, :2955 `\andify\@acmEditors`)
+% engines: Perl 0.8.8: one editor creator "Ann Able and Bob Baker" (not run); int156a (OC1b-rel): Cy Cole (author), one
+%   editor "Ann Able and Bob Baker", 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings; creators Cy Cole (role author), Ann Able (role editor), Bob Baker (role editor)
+% status:  RED (int156a) -> GREEN (OC1c; guard perfect_kernel_batchoc1c::each_piece_of_a_cut_call_keeps_its_keyvals)
+\documentclass[sigconf]{acmart}
+\title{T}
+\acmBooktitle{Proc X}
+\author{Cy Cole}
+\editor{Ann Able \and Bob Baker}
+\begin{document}
+\maketitle
+Text.
+\end{document}
