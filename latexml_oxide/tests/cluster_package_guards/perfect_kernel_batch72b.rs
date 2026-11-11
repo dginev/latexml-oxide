@@ -1,6 +1,6 @@
 //! Red/green guards for batch 72b: `\chapter` exists only where the class has chapters (OXIDIZED_DESIGN #179 (a)-(c)),
-//! and a document that calls it in a class without chapters gets LaTeXML's chapter with one Error, as TeX and Perl err
-//! (OXIDIZED_DESIGN #734; Perl: KNOWN_PERL_ERRORS #962; SVC, user ruling 2026-11-11: the Warning became an Error).
+//! and a document that calls it in a class without chapters gets LaTeXML's chapter with one Warning
+//! (OXIDIZED_DESIGN #734; Perl: KNOWN_PERL_ERRORS #962).
 //!
 //! Every expectation is pdflatex's (the repro headers and the doc comments name the oracle run).
 use super::{
@@ -108,12 +108,12 @@ fn a_class_has_chapters_when_its_code_defines_chapter() {
 
 /// OXIDIZED_DESIGN #734: in an article, `\chapter` stays undefined — in the preamble, in `\AtBeginDocument` and in the
 /// body, as pdflatex's "P=S. B=S. D=S." (repro sectioning-frontmatter/chapter_undefined_in_a_chapterless_class) — and
-/// a call of it reads LaTeXML's chapter, numbered by a counter of its own, with exactly one Error per document (SVC:
-/// one Warning before; Perl's count, its error stub silencing the second call); the name is still undefined after it
-/// (pdflatex: 2 errors, "Still undefined."). 67int21: `Error:undefined:\chapter` (0802.3014, 0909.2812, 0907.3938,
-/// 1403.2269, 1507.01872, 1511.03874, 1606.03650, 2504.00704); Perl: one `undefined:\thechapter` Error.
+/// a call of it reads LaTeXML's chapter, numbered by a counter of its own, with exactly one Warning per document; the
+/// name is still undefined after it (pdflatex: 2 errors, "Still undefined."). 67int21: `Error:undefined:\chapter`
+/// (0802.3014, 0909.2812, 0907.3938, 1403.2269, 1507.01872, 1511.03874, 1606.03650, 2504.00704); Perl: an
+/// `undefined:\thechapter` Error.
 #[test]
-fn chapter_in_a_chapterless_class_is_the_kernel_chapter_with_an_error() {
+fn chapter_in_a_chapterless_class_is_the_kernel_chapter_with_a_warning() {
   assert_elements(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/chapter_undefined_in_a_chapterless_class.tex"
@@ -127,9 +127,9 @@ fn chapter_in_a_chapterless_class_is_the_kernel_chapter_with_an_error() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/chapter_call_in_a_chapterless_class.tex"
     ),
     AR5IV,
-    (1, 0),
+    (0, 1),
     &[
-      "Error:undefined:\\chapter The class defines no \\chapter, so TeX stops here with an undefined control sequence; LaTeXML's \\chapter is used",
+      "Warning:undefined:\\chapter The class defines no \\chapter, so TeX stops here with an undefined control sequence; LaTeXML's \\chapter is used",
     ],
     &[
       (
@@ -196,10 +196,10 @@ fn a_raw_class_meets_chapter_undefined_while_it_loads() {
   assert_files_elements(
     tex,
     &[],
-    (1, 1),
+    (0, 2),
     &[
       "Warning:missing_file:IEEEtranLX Can't find binding for class IEEEtranLX (using IEEEtran)",
-      "Error:undefined:\\chapter The binding answering class IEEEtranLX defines no \\chapter; LaTeXML's \\chapter is used",
+      "Warning:undefined:\\chapter The binding answering class IEEEtranLX defines no \\chapter; LaTeXML's \\chapter is used",
     ],
     &[(
       "chapter",
@@ -212,8 +212,7 @@ fn a_raw_class_meets_chapter_undefined_while_it_loads() {
 /// 72b review finding 2 (repro sectioning-frontmatter/chapter_in_the_preamble_errs_and_the_body_chapter_converts): a
 /// `\chapter` called in the preamble errs as TeX's undefined control sequence (one Error; pdflatex 3), and its
 /// undefined-error stub does not stand at `\begin{document}`, so the body's call reads the stand-in — `<chapter>`
-/// "Chapter 1 FromPreambleMacro" with the stand-in's one Error (SVC: a Warning before) (72b r1: the stub's "\chapter
-/// FromPreambleMacro" as text).
+/// "Chapter 1 FromPreambleMacro" with the one Warning (72b r1: the stub's "\chapter FromPreambleMacro" as text).
 #[test]
 fn a_preamble_chapter_errs_and_the_body_chapter_reads_the_stand_in() {
   assert_elements_with(
@@ -221,10 +220,10 @@ fn a_preamble_chapter_errs_and_the_body_chapter_reads_the_stand_in() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/chapter_in_the_preamble_errs_and_the_body_chapter_converts.tex"
     ),
     AR5IV,
-    (2, 0),
+    (1, 1),
     &[
       "Error:undefined:\\chapter The token T_CS[\\chapter] is not defined.",
-      "Error:undefined:\\chapter The class defines no \\chapter, so TeX stops here with an undefined control sequence; LaTeXML's \\chapter is used",
+      "Warning:undefined:\\chapter The class defines no \\chapter, so TeX stops here with an undefined control sequence; LaTeXML's \\chapter is used",
     ],
     &[(
       "chapter",
@@ -252,7 +251,7 @@ fn appendices_follow_the_class_chapters() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/appendix_after_a_chapter_in_a_chapterless_class.tex"
     ),
     AR5IV,
-    (1, 0),
+    (0, 1),
     &[(
       "appendix",
       "A1",
@@ -301,7 +300,7 @@ fn appendices_follow_the_class_chapters() {
 
 /// Bindings whose real class has chapters define them (72b review findings 4, 7; r2 findings 2, 4, 6): jmlr
 /// (jmlr.cls:743-745 `\let\chapter\artchapter`, a ClassError; pdflatex "X=C." and 1 error) — a call is LaTeXML's
-/// chapter with jmlr's error text as the one Error (SVC: a Warning before), and its counter is the stand-in's, so jmlr's `\artappendix`
+/// chapter with jmlr's error text as the one Warning, and its counter is the stand-in's, so jmlr's `\artappendix`
 /// (jmlr.cls:720-729) letters the appendix sections, pdflatex "Appendix A. AppSec" (72b r2 "Appendix 1.A"; probe
 /// rev72b/r2/jma); kluwer under its `chapter` option (kluwer.cls:135-136, :2464-2508, :2704-2708; pdflatex "X=C.",
 /// "1. Intro", "1.1. Sec", sections `Ch1.S1`/`Ch2.S1` within their chapters (probe klid; 72b r2 `S1`, `S1a`), and its
@@ -323,9 +322,9 @@ fn bindings_whose_class_has_chapters_define_them() {
       "\\chapter{Intro}\n\\section{One}\nText.\n\\appendix\n\\section{AppSec}\nMore.\n",
     ),
     &[],
-    (1, 0),
+    (0, 1),
     &[
-      "Error:latex:\\chapter Class jmlr Error: Chapters not permitted in articles; LaTeXML's \\chapter is used",
+      "Warning:latex:\\chapter Class jmlr Error: Chapters not permitted in articles; LaTeXML's \\chapter is used",
     ],
     &[
       ("p", "p1.1", r#"<p xml:id="p1.1">X=C.</p>"#),

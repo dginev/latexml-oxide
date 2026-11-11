@@ -45,7 +45,7 @@ pub(crate) fn load() -> Result<()> {
   });
   // OXIDIZED_DESIGN #734: what a `\chapter` call reads in a class without chapters, where `\chapter` stays undefined
   // (`\begin{document}` names it as the undefined `\chapter`'s stand-in, sect02.rs). TeX stops there with an
-  // undefined control sequence; LaTeXML keeps the author's chapter, with one Error per document saying so.
+  // undefined control sequence; LaTeXML keeps the author's chapter, with one Warning per document saying so.
   DefMacro!("\\lx@chapterless@chapter", {
     let stood_in = lookup_string("\\chapter:class@stood@in");
     let message = if stood_in.is_empty() {
@@ -54,7 +54,7 @@ pub(crate) fn load() -> Result<()> {
       // (0909.2812: mn_thesis.cls loads report through mnphd.cls; its binding here is the prefix alternate `mn`)
       s!("The binding answering class {stood_in} defines no \\chapter; LaTeXML's \\chapter is used")
     };
-    kernel_chapter_with_error("undefined", &message)
+    kernel_chapter_with_warning("undefined", &message)
   });
 
   // not locked since sometimes redefined as partition?
@@ -732,21 +732,20 @@ pub fn toc_select() -> Result<String> {
   Ok(s_depth.join(" | "))
 }
 
-/// A `\chapter` call TeX would refuse, read as LaTeXML's chapter (OXIDIZED_DESIGN #734): one Error per document
-/// (`category`, `message` saying what TeX does there), as TeX and Perl both err (user ruling 2026-11-11: "\chapter
-/// follows TeX and Perl agreement"; Perl's kernel `\chapter` in an article raises `undefined:\thechapter` once, its
-/// error stub silencing the later calls, KNOWN_PERL_ERRORS #962; pdflatex "Undefined control sequence" at each call),
-/// a chapter counter of its own where the class made none (report.cls.ltxml's, without its reset of the sections: the
-/// class's own numbering stands), then `\lx@kernel@chapter` (the recovery, user ruling 2026-10-17). The chapterless
-/// class's stand-in (`\lx@chapterless@chapter`) and jmlr's article `\chapter` (jmlr.cls:743-745 `\artchapter`'s
-/// ClassError) read it. That counter is the stand-in's, marked so (`\chapter:stand@in@counter`): it is no chapter
-/// counter of the class's for [`has_chapter_counter`](super::has_chapter_counter), so an `\appendix` after it is
-/// lettered as the class letters it — jmlr's `\artappendix` (jmlr.cls:720-729) "Appendix A", not "Appendix 1.A" — and
-/// every binding that reuses this helper is covered.
-pub fn kernel_chapter_with_error(category: &str, message: &str) -> Result<Tokens> {
-  if !lookup_bool("\\chapter:fallback@erred") {
-    assign_value("\\chapter:fallback@erred", true, Some(Scope::Global));
-    Error!(category, "\\chapter", message);
+/// A `\chapter` call TeX would refuse, read as LaTeXML's chapter (OXIDIZED_DESIGN #734, the OD #721 precedent: a TeX
+/// error whose recovery keeps the author's content is a Warning): one Warning per document (`category`, `message`
+/// saying what TeX does there), a chapter counter of its own where the class made none (report.cls.ltxml's, without its
+/// reset of the sections: the class's own numbering stands; Perl's kernel `\chapter` in an article raises
+/// `undefined:\thechapter`, KNOWN_PERL_ERRORS #962), then `\lx@kernel@chapter`. The chapterless class's stand-in
+/// (`\lx@chapterless@chapter`) and jmlr's article `\chapter` (jmlr.cls:743-745 `\artchapter`'s ClassError) read it.
+/// That counter is the stand-in's, marked so (`\chapter:stand@in@counter`): it is no chapter counter of the class's
+/// for [`has_chapter_counter`](super::has_chapter_counter), so an `\appendix` after it is lettered as the class
+/// letters it — jmlr's `\artappendix` (jmlr.cls:720-729) "Appendix A", not "Appendix 1.A" — and every binding that
+/// reuses this helper is covered.
+pub fn kernel_chapter_with_warning(category: &str, message: &str) -> Result<Tokens> {
+  if !lookup_bool("\\chapter:fallback@warned") {
+    assign_value("\\chapter:fallback@warned", true, Some(Scope::Global));
+    Warn!(category, "\\chapter", message);
   }
   if lookup_definition(&T_CS!("\\c@chapter"))?.is_none() {
     NewCounter!("chapter", "document", idprefix => "Ch");

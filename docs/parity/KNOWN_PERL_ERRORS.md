@@ -15667,10 +15667,8 @@ body, Perl 1 error (`undefined:\thechapter`).
 
 Rust: OXIDIZED_DESIGN #179 (`\chapter` exists only where the class has chapters: cleared before the class loads, so a
 raw class's own `\@ifundefined{chapter}` also says undefined; one "has chapters" test) and #734 (a call reads LaTeXML's
-numbered chapter, with its own counter and one Error, `undefined:\chapter`: TeX's object, Perl's severity and count).
-Guards `perfect_kernel_batch72b::{chapter_exists_where_the_class_has_chapters,
-chapter_in_a_chapterless_class_is_the_kernel_chapter_with_an_error, a_raw_class_meets_chapter_undefined_while_it_loads}`,
-`perfect_kernel_batchsvc::chapter_error_boundary`.
+numbered chapter, with its own counter and one Warning). Guards `perfect_kernel_batch72b::{chapter_exists_where_the_class_has_chapters,
+chapter_in_a_chapterless_class_is_the_kernel_chapter_with_a_warning, a_raw_class_meets_chapter_undefined_while_it_loads}`.
 
 ## 964. aas_support/deluxetable: `\dataset` reads its URL as text, `\tablecaption` is `\caption` everywhere, `\bibinfo` prints the title
 
