@@ -61,8 +61,8 @@ pub struct Policy {
   /// lines keep their affiliation reading (an article's "Einstein Drive" over an address line, hep-th0212274)
   pub author_lines:      bool,
   /// every `\\` line of the class's `\author` paragraph is names, as its title page sets them (webofc.cls:497-552:
-  /// `\@author` a paragraph whose lines are names, the institutes apart: `\\ The X Collaboration` a creator,
-  /// 1609.01040, 2610.23498), the binding's spelling split at `\\` until P2-1 (OD #993). Off for the kernel, whose
+  /// `\@author` a paragraph whose lines are names, the institutes apart: the template's `\\The SND Collaboration` a
+  /// creator, 1609.01040), the binding's spelling split at `\\` until P2-1 (OD #993). Off for the kernel, whose
   /// `\\` lines under names keep their affiliation reading
   pub break_parts_names: bool,
   /// a `labelseq=<role>` entry is labelled by its place among the entries of that role (llncs's and aa's

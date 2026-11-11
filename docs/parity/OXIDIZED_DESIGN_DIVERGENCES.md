@@ -34174,15 +34174,10 @@ webofc's `\author` now make one `\lx@add@author@split{#2}` call, the whole list 
 lacking webofc.cls stays OmniBus's), with which the reading takes every `\\` line of the block as names
 (`resolver/blocks.rs` `names_line`), as webofc.cls:497-552 sets them: a macro-held `\\ The X Collaboration` is a creator,
 where the kernel's conventions read it as Bob Baker's collaboration contact. Changed on the corpus: ptephy 1703.03737's
-"M. Yokoyama3" and 1904.07398's "Yukinori Sakuragi1,2", the list's last name, keep their marks out of the name as every
-other name of theirs does; OmniBus 2301.07825's jesmith@ address goes to Jane E. Smith, whose `\footnotemark[3]` is the
-note printing it. aa's and sv_support's splits stay: one queued block there changes what reads the queue per author
-entry — `queue_reading::queued_author_names_spelled` counts the names an `\institute` piece spells among the queued
-entries, one per entry (2312.14898, svjour3: the itemized `\institute` of names and e-mails no longer reads as a list of
-the authors, its seven addresses go to the last author), and aa's `\corrauth` contact loses its `name="Corresponding
-author: "` written from a multi-name block (2608.21138); aa also moves the per-piece `\small` of `\author{\small A \and
-B}` onto every name (2408.11004, 2509.22322, 2604.10287, as pdflatex sets it) and 1407.3707's one kept thanks e-mail from
-R. López-Coto's to D. Hadasch's. llncs (P2-3) untouched. Guards `perfect_kernel_batchp21::{an_author_list_is_one_block_the_reading_cuts,
+"M. Yokoyama3" and 1904.07398's "Yukinori Sakuragi1,2", the list's last name, now hold no marks, as every other name of
+theirs; OmniBus 2301.07825's jesmith@ address goes to Jane E. Smith, whose `\footnotemark[3]` is the
+note printing it. aa's and sv_support's splits stay (one queued block there changes what reads the queue per author
+entry: P2-1b), llncs's too (P2-3). Guards `perfect_kernel_batchp21::{an_author_list_is_one_block_the_reading_cuts,
 webofc_a_macro_held_line_break_parts_names}`; repros `class-bindings/author_one_block/`.
 
 ### 994. The rehearsal binds a `\let` copy of an author-line separator or note command by its meaning, as the command it copies (SEP1)
