@@ -66,14 +66,14 @@ fn a_list_a_mark_leads_is_no_carriers_where_it_spells_others() {
 
 /// A paper repeating its author block for a supplement copies no address onto the last creator (2307.07324, 1801.07635,
 /// 1810.03867, 2510.13035, 2001.07542, 2608.31160; the bundle int139b A/B). Since RB1 REVTeX's `\maketitle` switches the
-/// second block's setters off (revtex4_cls.rs `switch_off_author_block_after_maketitle`, revtex4-2.cls:2670-2684), so
-/// its names and title no longer print as body text (pdflatex prints none of it) and this REVTeX repro no longer
-/// reaches `respell_emails`' `held` branch (a copy the owner already holds dropped), which a subfile's block
+/// second block off from its `\author` on (revtex4_cls.rs `switch_off_author_block_after_maketitle`;
+/// revtex4-2.cls:2670-2684), so its names no longer print as body text; its `\title` does, as int159b (RB1c: authored
+/// text kept, though pdflatex prints none of it), and this REVTeX repro no longer reaches `respell_emails`' `held` branch (a copy the owner already holds dropped), which a subfile's block
 /// (2307.07324, 2401.15572) and other classes' (1810.03867, bmvc2k) still reach.
 #[test]
 fn a_repeated_author_block_copies_no_address_onto_the_last_author() {
   assert_eq!(
     converted(repro!("email_repeated_author_block_for_a_supplement"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Email: " role="email">ann.able@x.org</contact> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Email: " role="email">bob.baker@y.org</contact> <contact name="Affiliation: " role="affiliation">Univ Y, City</contact> </creator> <abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">A.</p> </abstract> <para xml:id="p1"> <p xml:id="p1.1">Text. More.</p> <pagination role="newpage"/> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Email: " role="email">ann.able@x.org</contact> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Email: " role="email">bob.baker@y.org</contact> <contact name="Affiliation: " role="affiliation">Univ Y, City</contact> </creator> <abstract inlist="toc" name="Abstract" xml:id="abstract1"> <p xml:id="abstract1.1">A.</p> </abstract> <para xml:id="p1"> <p xml:id="p1.1">Text. Supplement More.</p> <pagination role="newpage"/> </para>"##
   );
 }

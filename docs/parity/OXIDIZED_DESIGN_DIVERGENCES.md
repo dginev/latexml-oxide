@@ -34988,3 +34988,38 @@ footnotemark_in_an_affiliation_is_the_creators_note_beside_it, footnotemark_in_a
 footnote_in_the_author_is_the_creators_note_contact, spaced_marks_leave_the_name_end_trimmed}`, and
 `perfect_kernel_batchfms2a2r7::a_notes_mark_is_answered_by_its_footnotemark` (the pending holder: 0 Warnings); repros
 `sectioning-frontmatter/{author_footnotemark_note_is_the_creators_beside_the_name,author_footnotemark_note_beside_the_name_omnibus,author_footnotemark_text_before_maketitle_beside_the_name,author_bare_footnotemark_beside_the_name,affiliation_footnotemark_note_beside_the_contact,author_footnotemark_in_a_wrapper_beside_the_name,author_footnote_in_the_name_is_the_creators_note,author_two_footnotemarks_name_end_trimmed}.tex`.
+
+### 1003. REVTeX's post-`\maketitle` switch-off reaches only a repeated author block, whose new words are counted, not kept (RB1, RB1c, RB1d)
+
+**TeX.** `\frontmatter@maketitle` (revtex4-2.cls:2670-2684, revtex4-1.cls:2649-2662, revtex4.cls:4709-4717) lets
+`\affiliation`, `\author`, `\email` and `\thanks` to `\@gobble` and `\and` to `\relax`, so whatever the document gives
+them after `\maketitle` prints nothing. **Perl** queues a repeated block's calls after the title block and puts every
+repeated contact on the last author (KNOWN_PERL_ERRORS #1220).
+
+**Rust** (revtex4_cls.rs `switch_off_author_block_after_maketitle`, under revtex4, revtex4-1 and revtex4-2 only, not
+AASTeX's own switch-off, aastex701.cls:13231-13266). `\maketitle` lets only `\author`, to `\lx@revtex@repeated@author`,
+which lets `\and`, `\affiliation`, `\email` and `\thanks` locally (a repeat's `\author` inside a group switches off only
+to its end, where TeX's switch lasts) and gobbles its own argument. So:
+- a block repeated after `\maketitle` (a supplement's, an erratum's) drops its names and contacts from its first
+  `\author` on (2401.15572, 1801.07635, 1812.00931, 2510.13035, 2602.09975, 2307.07324, 2001.07542);
+- an `\affiliation`, `\email` or `\thanks` used only after `\maketitle` keeps its text, as Perl and int159b do: authored
+  text is kept though pdflatex prints none of it (FIDELITY_CHARTER §2; 1309.4768, 1106.2389, 2304.09163);
+- `\title` and `\date` stay the kernel's and print as text (2606.04868); a document's own `\maketitle` (2509.25344) or
+  `\frontmatter@maketitle` (2111.12484) wins; the setters' locks lift with the switch, so a later `\renewcommand` takes
+  effect as after the class's `\let` (2412.14256); a subfile's group undoes it.
+
+**Counted loss.** Each gobbled argument, names included, goes to `ledger::record_switched_off_call`, which feeds the
+frontmatter content check (`Ledger::unrecorded`) only the words and addresses no earlier ledger entry holds, read as the
+check reads them: each entry's text both as spelled (`content_text`) and as its rehearsal printed it, an accent or a
+dotless letter read past matched by `resolver::placed::reads_as`. A pure repeat, also one spelled through a macro
+(`\UX` for `Universit\"at X`) or with braced accents, feeds nothing and warns nothing (the gobbled `\email` reads
+its argument Semiverbatim, as the live one does, so `ann_x@x.org` stays one address); a new name ("Dan Doe"), a new
+`\thanks` (1206.0114), the new words of a variant address (1903.12442: "120 C DK Munkegade Ny", not the words it
+shares) or a repeated name's initials (2305.19055 "A C J P R", 1903.12442 "M T") raise the check's "N words … missing"
+Warning naming them. Keeping them needs the repeat matched to the creators it repeats, a
+second mechanism: RED `sectioning-frontmatter/{revtex_repeated_block_new_words_kept_red,revtex_repeated_block_new_author_kept_red}.tex`.
+Known RED (pre-existing): a repeat's `\altaffiliation` stays live and lands on the last author, where TeX's
+`\@AF@join@error` prints nothing (`revtex_repeated_block_altaffiliation_on_last_author_red.tex`).
+
+Guard `perfect_kernel_batchrb1::revtex_maketitle_switches_the_author_block_off` (one row per shape, exact Error and
+Warning counts, whole creators, the body text).
