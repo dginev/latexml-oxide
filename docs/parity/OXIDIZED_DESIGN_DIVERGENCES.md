@@ -34377,7 +34377,11 @@ too. The e0 pin `TOKEN_READS` `authblk_sty.rs` 23 → 22. The gates still call t
 `lines_under_names_read_as_names`, `line_breaks_as_name_separators` and `holds_a_macro_printing_a_link` (the layout
 separators, not the `\and` family), so no old-reader line is freed. The S8 half of P2-7, the emitter writing the declined
 no-author-block flushes so that `shared_row::share_row_contacts` and `shared_row/` can go, is not done here (a batch of
-its own). Guards `perfect_kernel_batchp27::{authblk_affil_run_counts_author_calls,
+its own): `share_row_contacts`' only effect found is a no-block llncs flush of several authblk `\author` calls
+(`\lx@add@creator` each), where the emitter, let through for a flush holding a `_share` contact, gives the same output;
+letting every no-block flush through misplaces icml's labelled contacts. Byte-identical with int158a on authblk's census
+(1,569 of 1,571 compared), stage2 (1,434), a 300-paper raw-class sample (299), z18n_declined40 (40) and
+z18n_declpop2345 (2,342). Guards `perfect_kernel_batchp27::{authblk_affil_run_counts_author_calls,
 authblk_and_gates_read_the_separator_by_meaning}` and `perfect_kernel_batchoc1c::an_api_creator_call_parts_at_its_own_and`'s
 `authblk_two_alike_macro_held_calls_each_own_affil` row (5 → 4 Warnings); repros `sectioning-frontmatter/`
 `authblk_affil_run_{name_before_a_list,two_lists}.tex`, `authblk_and_let_copy_and_csname_part_names.tex`,
