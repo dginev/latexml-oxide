@@ -1,0 +1,19 @@
+% mechanism: the reading (not the emitter): a mark inside a ptephy `\name{…}` parts the name — a creator "Ann" with
+%   the mark, then a creator "Able" — one person read as two (revBT1b finding 1; BT1's second shape, carried to P3,
+%   whose writer is not its cause)
+% witness: synthetic (revBT1b)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1304.2086's ptephy.cls, a stand-in PDF for its logo graphic `newlogo`)
+%   0 errors: "Ann† Able1", "1 Univ X"
+% engines: int159a and P3: 0 errors, 1 warning ("Able" written as its plain text); creators "Ann †" and "Able" (Univ
+%   X); perl not run
+% expect:  0 errors, 0 warnings; one creator "Ann Able" with its † mark, Univ X
+% status:  RED (int159a, P3)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{T}
+\author{\name{Ann$^{\dag}$ Able}{1}}
+\address{\affil{1}{Univ X}}
+\maketitle
+Text.
+\end{document}

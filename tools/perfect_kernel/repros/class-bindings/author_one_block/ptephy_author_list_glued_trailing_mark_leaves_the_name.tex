@@ -1,0 +1,19 @@
+% mechanism: ptephy_cls.rs `\lx@ptephy@kernel@author`, emit.rs `block_names`: the list's last `\name{…}{marks}` glued
+%   to the closing brace: its name's cover stops short of the call (the call's arguments are the field's last
+%   tokens), the call's mark's cover holds it, so the call is written whole, as every other name's, its marks a
+%   request and no text of the name (Option C P3, OD #993; was RED under P2-1, revP21 finding 2, its probes p4/p5)
+% witness: synthetic (revP21 probe p4)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1304.2086's ptephy.cls, a stand-in PDF for its logo graphic
+%   `newlogo`) 0 errors: "Ann Able1 , Bob Baker2", "1 Univ One", "2 Univ Two"
+% engines: Perl 0.8.8 no ptephy binding (OmniBus); int157a, P21 and int159a give "Bob Baker2" (the trailing-newline
+%   twin gives "Bob Baker"); P3 "Bob Baker"
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ One), Bob Baker (Univ Two), no mark in the name
+% status:  GREEN (P3; guard perfect_kernel_batchp3)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{T}
+\author{\name{Ann Able}{1}, \name{Bob Baker}{2}}\address{\affil{1}{Univ One}\affil{2}{Univ Two}}
+\maketitle
+Text.
+\end{document}

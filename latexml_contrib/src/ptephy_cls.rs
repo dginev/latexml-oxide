@@ -652,8 +652,8 @@ LoadDefinitions!({
   // inst_support's `\author` does) — OXIDIZED_DESIGN #920. The whole list is one `\lx@add@author@split` call the
   // reading cuts at its `\and`s, no split by spelling before it (P2-1, OD #993). The last name's marks followed by a
   // space or newline before the closing brace are dropped as every other name's are (1703.03737's "M. Yokoyama",
-  // 1904.07398's); glued to the brace they stay in the name (RED repro
-  // `author_one_block/ptephy_author_list_glued_trailing_mark_stays_red`).
+  // 1904.07398's); glued to the brace, the emitter writes the call whole as well (P3, OD #993; repro
+  // `author_one_block/ptephy_author_list_glued_trailing_mark_leaves_the_name`).
   if stacks {
     Let!("\\lx@ptephy@kernel@author", "\\author");
   } else {
