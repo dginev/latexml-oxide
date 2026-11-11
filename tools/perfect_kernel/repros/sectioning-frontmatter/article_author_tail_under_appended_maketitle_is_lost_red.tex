@@ -1,0 +1,21 @@
+% mechanism: a tail appended to `\@author` under a document that adds to LaTeX's `\@maketitle` (`\g@addto@macro`):
+%   `title_page_prints_author` compares with the current `\@maketitle` (LaTeXML's own is empty, sect05.rs:1273)
+% witness: synthetic (review revFX24b)
+% expect:  0 errors; Bob B (Inst Y) kept as a creator, as pdflatex prints him
+% preload: ar5iv.sty
+% status: RED (synthetic; review revFX24b). pdflatex prints "Alice A / Inst X  Bob B / Inst Y" then "extra":
+% \g@addto@macro\@maketitle keeps LaTeX's body, which prints \@author with its appended tail.
+% head (FX24b, as int158a): 1 creator, Alice A (Inst X); "Bob" absent from the XML, W=0 (a silent loss).
+% FX24 kept Bob B (Inst Y). Cause: LaTeXML's kernel \@maketitle is empty (sect05.rs:1273), so the document's
+% Document-origin \@maketitle holds only the appended material and title_page_prints_author's walk finds no \@author.
+% expected: creators Alice A (Inst X), Bob B (Inst Y); E=0 W=0. Siblings: \apptocmd\@maketitle (etoolbox),
+% \let\old@maketitle\@maketitle + \def\@maketitle{\old@maketitle...} (the copy is of the kernel's, not the current meaning).
+\documentclass{article}
+\title{T}
+\author{Alice A \\ Inst X}
+\makeatletter\g@addto@macro\@author{\and Bob B \\ Inst Y}
+\g@addto@macro\@maketitle{\par\centerline{extra}}\makeatother
+\begin{document}
+\maketitle
+Text.
+\end{document}

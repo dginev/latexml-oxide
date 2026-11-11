@@ -100,10 +100,11 @@ fn the_check_print_keeps_a_class_and_word() {
 /// RR1 gap 24's repro (a macro appending `\and Bob B\\Inst Y` to `\@author`): the print holds "Inst X" and "Bob B"
 /// apart, so the appended column's word is held by the output or counted by the check's Warning — never filed as the
 /// class's own text "xbob" (the base's Info, with no Warning). Distinct: the count the print decides. The appended
-/// column is lost on the base and kept once FX24 lands; the guard pins the print, and the one Warning while it is lost.
+/// column is lost on the base and kept since FX24 (the repro renamed `…_is_kept`); the guard pins the print, and the
+/// one Warning while it is lost.
 #[test]
 fn a_loss_beside_an_appended_and_is_held_or_counted() {
-  let (log, print, xml) = converted("article_coauthor_appended_to_author_is_lost_silently_red");
+  let (log, print, xml) = converted("article_coauthor_appended_to_author_is_kept");
   assert_eq!(print, "A Title ||||||Alice A||Inst X Bob B||Inst Y||||");
   let lost = !creators(&xml).iter().any(|creator| creator[0] == "Bob B");
   assert_eq!(

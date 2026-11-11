@@ -1537,7 +1537,12 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("frontmatter (rest)", 29),
   // (P26, 527 -> 526: the stores' `\and` gates ask the separator query by meaning, `and_separators`, OD #995 P2-6; the
   // spelling read only where the query answers `None`: one spelled read fewer)
-  ("frontmatter_stores", 526),
+  // (FX24b, 526 -> 527: `title_page_prints_author` walks the title page a raw file or the document defined for a read of
+  // `\@author` — the class's code, not a document's spelling (procdoc2.cls:77, 2511.15315) — and compares a reached
+  // meaning with LaTeX's `\maketitle`/`\@maketitle` (a `\let` copy the body calls): one read; FX24's two (the `\@empty`-or-
+  // blank test on the recorded `\@author`, now the binding's declaration `Policy::author_tail`, and the search for the
+  // `\@author` token in a File-origin `\@maketitle`, now the walk) are gone; OD #996)
+  ("frontmatter_stores", 527),
   ("gretsi_cls.rs", 14),
   // (CR10a, 119 -> 128: the class's author body is read as tokens before it is digested, as `author_block_body` reads it —
   // a names block nested in another's spliced in (`unnested_name_blocks`, 1511.03982), the alias `\authorblockN`'s grades,

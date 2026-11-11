@@ -108,6 +108,12 @@ pub struct Policy {
   /// (ijcai19.sty:124-130). A rehearsal notes their calls beside the block's events (`Outcome::Events` `breaks`), which they do
   /// not part; no reading reads them yet
   pub block_breaks:      &'static [(&'static str, BreakKind)],
+  /// the class's title page prints `\@author` and what a document appends to it, though this binding's `\author` stores
+  /// nothing there: authblk's own `\@author` is its block (authblk.sty:167-171), llncs's `\@maketitle` prints
+  /// `\@author` (llncs.cls:1035). The tail appended after the value `\@author` held as the authors were queued is the
+  /// block's (`frontmatter_stores::seen_author_tail`, OXIDIZED_DESIGN_DIVERGENCES #996: 2511.15315). Not amsart's (its
+  /// title page prints `\authors`) nor elsarticle's (`\elsauthors`), which print no such tail
+  pub author_tail:       bool,
   /// what the declaration reproduces
   pub cite:              &'static str,
 }
@@ -134,6 +140,7 @@ pub const KERNEL: Policy = Policy {
   email_in_place:    false,
   keyed_labels:      false,
   block_breaks:      &[],
+  author_tail:       false,
   cite:              "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4; OD #925",
 };
 
@@ -204,6 +211,12 @@ pub fn has_entry(binding: &str) -> bool { declared(binding).is_some() }
 /// Whether a binding declared that its class's `\email` prints in place ([`Policy::email_in_place`], any of its hooks).
 pub fn declares_email_in_place(binding: &str) -> bool {
   declared(binding).is_some_and(|d| d.iter().any(|p| p.email_in_place))
+}
+
+/// Whether a binding declared that its class's title page prints the tail a document appends to `\@author`
+/// ([`Policy::author_tail`], any of its hooks).
+pub fn declares_author_tail_printed(binding: &str) -> bool {
+  declared(binding).is_some_and(|d| d.iter().any(|p| p.author_tail))
 }
 
 /// The conventions among `declared` for a block recorded under `binding` (the `\author` owner) and `hook`: the first

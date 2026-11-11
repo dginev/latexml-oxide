@@ -4352,9 +4352,12 @@ fn live_read_order(roots: &[Token], blocked: &[Token], executed: bool) -> Vec<Sy
 }
 
 /// The token body of `cs` when a raw file defined it.
-fn file_body(cs: &Token) -> Option<Tokens> {
+fn file_body(cs: &Token) -> Option<Tokens> { body_from(cs, &[DefinitionOrigin::File]) }
+
+/// The token body of `cs` when a definition of one of the `origins` made it.
+fn body_from(cs: &Token, origins: &[DefinitionOrigin]) -> Option<Tokens> {
   match lookup_meaning(cs) {
-    Some(Stored::Expandable(defn)) if defn.get_origin() == DefinitionOrigin::File => {
+    Some(Stored::Expandable(defn)) if origins.contains(&defn.get_origin()) => {
       match defn.get_expansion() {
         Some(ExpansionBody::Tokens(body)) => Some(body.clone()),
         _ => None,
@@ -7510,9 +7513,27 @@ fn braced_group_ends_the_keywords() -> Result<bool> {
 /// `at_maketitle`: no `\author` call follows, so when this one made every author, all are queued and
 /// the tail's unmarked lines may be placed by the marks (`affiliation_calls`); else they are rows of
 /// this call's creators, as a later author's marks are not yet known.
+/// A tail holding `\and` at its top level (a `\coauthor` appending `\and #1`: jaa.cls, pramana.cls `\addauthor`) goes on
+/// the block with more authors, which LaTeX's `\@maketitle` prints as more columns: what comes before its first `\and`
+/// is rows of this call's creators, the rest one more author block (`\lx@add@authors@append`), split at its `\and`s and
+/// read as the `\author` argument is (RR1 gap 24; witness 2511.15315).
+/// At `\maketitle` with no `\author` call handed, the tail of a binding's `\@author` the setters never stored
+/// ([`seen_author_tail`]: authblk's, 2511.15315).
+/// Either route reads a tail only where the title page in force prints `\@author` ([`title_page_prints_author`]):
+/// one that prints only the title (a document's or a raw class's `\maketitle` or `\@maketitle`) prints neither the
+/// names nor the lines appended (review revFX24 finding 1).
 fn author_tail_calls(at_maketitle: bool) -> Result<Vec<Token>> {
-  let Some(Stored::Tokens(handed)) = lookup_value("lx_author_handed") else {
+  if !title_page_prints_author() {
     return Ok(Vec::new());
+  }
+  // (`under_block`: the binding route's tail, printed under the whole block)
+  let (handed, made, under_block) = match lookup_value("lx_author_handed") {
+    Some(Stored::Tokens(handed)) => (handed, lookup_int("lx_author_made"), false),
+    _ if at_maketitle => match seen_author_tail()? {
+      Some((seen, made)) => (seen, made, true),
+      None => return Ok(Vec::new()),
+    },
+    _ => return Ok(Vec::new()),
   };
   let Some(current) = store_value("author")? else {
     return Ok(Vec::new());
@@ -7522,18 +7543,127 @@ fn author_tail_calls(at_maketitle: bool) -> Result<Vec<Token>> {
     return Ok(Vec::new());
   }
   let tail = &current[handed.len()..];
+  // (the tail's first top-level `\and`, by spelling as the stores' numbered split is: P26)
   let and = T_CS!("\\and");
   let mut depth = 0i32;
-  for token in tail {
+  let mut split = None;
+  for (i, token) in tail.iter().enumerate() {
     match token.get_catcode() {
       Catcode::BEGIN => depth += 1,
       Catcode::END => depth -= 1,
-      _ if depth == 0 && *token == and => return Ok(Vec::new()),
+      _ if depth == 0 && *token == and => {
+        split = Some(i);
+        break;
+      },
       _ => {},
     }
   }
-  let tail = Tokens::new(tail.to_vec());
-  let made = lookup_int("lx_author_made");
+  let (rows, more) = match split {
+    Some(i) => (&tail[..i], Some(Tokens::new(tail[i + 1..].to_vec()))),
+    None => (tail, None),
+  };
+  let mut calls = row_calls(Tokens::new(rows.to_vec()), made, at_maketitle, under_block)?;
+  if let Some(more) = more.filter(|more| !is_blank(more)) {
+    calls.extend(Invocation!(T_CS!("\\lx@add@authors@append"), vec![None, Some(more)]).unlist());
+  }
+  Ok(calls)
+}
+
+/// The value of `\@author` when the frontmatter last took an author from a binding's setter that keeps its own list
+/// (`lx_author_seen`, `note_author_seen`), when the binding owning `\author` declares the class's title page prints
+/// `\@author` with what is appended to it (`Policy::author_tail`: authblk, whose own `\@author` prints the block, authblk.sty:167-171;
+/// llncs, whose `\@maketitle` prints `\@author`, llncs.cls:1035) and creators are queued. The tail appended after it is
+/// printed under the whole block: every queued creator's. A binding that does not declare it is not this route:
+/// amsart's title page prints `\authors`, elsarticle's its own `\elsauthors`.
+fn seen_author_tail() -> Result<Option<(Tokens, i64)>> {
+  if !fm_author_tail_printed() {
+    return Ok(None);
+  }
+  let Some(Stored::Tokens(seen)) = lookup_value("lx_author_seen") else {
+    return Ok(None);
+  };
+  let creators = queued_creator_count();
+  if creators == 0 {
+    return Ok(None);
+  }
+  Ok(Some((seen, creators as i64)))
+}
+
+/// Does the title page in force print `\@author`, as the code that runs at `\maketitle` reads it? A stand-in copy's own
+/// title page answers for itself ([`copy_title_page_prints`]). Else the title page a raw file or the document defined —
+/// the refused `\maketitle` (`\lx@dropped@maketitle`), else a `\@maketitle` of the file's or the document's own — is
+/// walked through the live code it reaches (`reads_of_branches`, the switches as they are; the macros a raw file or the
+/// document defined): it prints `\@author` when it reads it, or reaches LaTeX's or a binding's `\maketitle` or
+/// `\@maketitle` by its current meaning (a `\let` copy of the current `\maketitle` the body calls), which print it
+/// (article.cls:247; a binding's title page is the frontmatter's). An addition to LaTeX's empty `\@maketitle`, a copy of
+/// it, or a copy of `\@author` is not seen (revFX24b; REDs `article_author_tail_*_is_lost_red`). With neither, the title page is LaTeX's or the binding's, and prints it. A raw class's own
+/// `\maketitle` that prints only the title, or a document's `\renewcommand\maketitle`/`\def\@maketitle`, does not
+/// (review revFX24 finding 1; 2511.15315's procdoc2.cls:77 does).
+fn title_page_prints_author() -> bool {
+  if let Some(prints) = copy_title_page_prints(&T_CS!("\\@author")) {
+    return prints;
+  }
+  let own = |cs: &Token| body_from(cs, &[DefinitionOrigin::File, DefinitionOrigin::Document]);
+  let maketitle = T_CS!("\\@maketitle");
+  let Some(root) = own(&T_CS!("\\lx@dropped@maketitle")).or_else(|| own(&maketitle)) else {
+    return true;
+  };
+  let target = T_CS!("\\@author").get_cs_name();
+  // (LaTeX's title page, which prints `\@author`: the kernel's `\maketitle` and `\@maketitle`, and a copy of either)
+  let latex_maketitle = T_CS!("\\maketitle");
+  let title_pages: Vec<Stored> = [latex_maketitle, maketitle]
+    .iter()
+    .filter_map(lookup_meaning)
+    .collect();
+  let is_title_page = |cs: &Token| {
+    lookup_meaning(cs).is_some_and(|meaning| match &meaning {
+      Stored::Expandable(defn) => title_pages
+        .iter()
+        .any(|page| matches!(page, Stored::Expandable(p) if Rc::ptr_eq(p, defn))),
+      _ => false,
+    })
+  };
+  let mut seen: FxHashSet<SymStr> = FxHashSet::default();
+  let mut work = vec![root];
+  while let Some(body) = work.pop() {
+    for cs in reads_of_branches(&executed_code(body.unlist_ref()), true) {
+      let key = cs.get_cs_name();
+      if key == target {
+        return true;
+      }
+      if !seen.insert(key) {
+        continue;
+      }
+      match own(&cs) {
+        Some(callee) => work.push(callee),
+        None if is_title_page(&cs) => return true,
+        None => {},
+      }
+    }
+  }
+  false
+}
+
+/// Records the value of `\@author` as an author is queued (`queue_front_matter`): the
+/// prefix a binding's `\@author` tail follows (`seen_author_tail`). The kernel `\author`'s own record
+/// (`\lx@author@handed`) clears it.
+pub fn note_author_seen() {
+  let value = match store_value("author") {
+    Ok(Some(value)) => Stored::Tokens(value),
+    _ => Stored::Bool(false),
+  };
+  assign_value("lx_author_seen", value, Some(Scope::Global));
+}
+
+/// The calls handing a tail's rows (no `\and` in them) to the `made` creators of the call it follows (`author_tail_calls`).
+/// `under_block`: the tail a binding's `\@author` prints under the whole block (`seen_author_tail`) is an unmarked address
+/// the block's authors share, the frontmatter API's `\lx@add@affiliation@shared` (author_macros.rs): its e-mail lines
+/// placed as a block's address lines are (one address for each author of the row in their order, else each on the author
+/// it spells, else one contact an address on the block's shared creator: `shared_affiliation_calls`,
+/// `place_address_runs`), its other lines one author-block row of every creator — not the e-mail line a row of every
+/// creator (2511.15315's `\g@addto@macro\@author{\\[0.5em]\small\texttt{…}, …}` under authblk's block: three addresses,
+/// each spelling its author; review revFX24 S2).
+fn row_calls(tail: Tokens, made: i64, at_maketitle: bool, under_block: bool) -> Result<Vec<Token>> {
   // (a call that made no creator has none to hand its tail to)
   if made <= 0 || is_blank(&tail) {
     return Ok(Vec::new());
@@ -7549,6 +7679,15 @@ fn author_tail_calls(at_maketitle: bool) -> Result<Vec<Token>> {
   let attr = mouth::tokenize_internal(TeXString::assembled(s!(
     "_store=author,annotate={annotate},role=authorblock"
   )));
+  if under_block {
+    return Ok(
+      Invocation!(T_CS!("\\lx@add@affiliation@shared"), vec![
+        Some(attr),
+        Some(tail)
+      ])
+      .unlist(),
+    );
+  }
   let marked = mouth::tokenize_internal(TeXString::assembled(
     "_store=author,role=authorblock".to_string(),
   ));
@@ -7844,7 +7983,9 @@ LoadDefinitions!({
   // (before a redefined, appending `\author` stores the next) and `\lx@author@tail` (at `\maketitle`)
   // hand the tail on. Only a tail after exactly what `\author` stored: a class that rebuilds
   // `\@author` in its own form (revtex's `{{#2}{}}`, acmart) is left alone. A tail holding `\and`
-  // (more authors) is left too.
+  // goes on with more authors (`author_tail_calls`, FX24: jaa.cls/pramana.cls `\addauthor`); a binding
+  // whose `\author` stores nothing in `\@author` (authblk) has its tail read at `\maketitle`
+  // (`seen_author_tail`, 2511.15315).
   DefPrimitive!("\\lx@author@handed", sub[_args] {
     let stored = store_value("author")?.filter(|stored| !is_blank(stored));
     match stored {
@@ -7855,6 +7996,8 @@ LoadDefinitions!({
       },
       None => assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global)),
     }
+     // (the kernel `\author` stored `\@author`: not a binding's untouched one, `seen_author_tail`)
+    assign_value("lx_author_seen", Stored::Bool(false), Some(Scope::Global));
   });
   DefMacro!("\\lx@author@flush", sub[_args] {
     // Only an appending `\author` (a class redefined it) keeps the earlier authors; the kernel's
@@ -7871,6 +8014,7 @@ LoadDefinitions!({
   DefMacro!("\\lx@author@tail", sub[_args] {
     let calls = author_tail_calls(true)?;
     assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global));
+    assign_value("lx_author_seen", Stored::Bool(false), Some(Scope::Global));
     Ok(Tokens::new(calls))
   });
   // A rerouted setter records that the document set its store, in order.

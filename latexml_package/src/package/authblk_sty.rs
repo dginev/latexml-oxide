@@ -7,12 +7,14 @@ use crate::prelude::*;
 /// number, a labelled author's too (2605.25017); in block mode (no marks shown) the run of authors since the last
 /// `\affil`, as this binding declares it at the call (`annotate=run:<n>`). `written`: the observer's writer writes
 /// authblk's creators (brief 95b, OD #942: 2511.07020, 2008.07734, 2110.01283, 2008.13643; a paper whose reading it
-/// cannot apply keeps today's output)
+/// cannot apply keeps today's output). `author_tail`: its own `\@author` (authblk.sty:168-171) prints the block
+/// and what a document appends to it (FX24b, OD #996: 2511.15315).
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "authblk",
   binding: "authblk.sty",
   thenote: true,
   state_counter: Some("Maxaffil"),
+  author_tail: true,
   cite: "authblk.sty:114-118, 148-167 (`\\AB@thenote`, `\\newaffil`, `Maxaffil`); Perl authblk.sty.ltxml:57 \
          `annotate=new`; authblk_sty.rs `\\affil` (2605.01689, 2605.25017)",
   ..FM_KERNEL_CONVENTIONS

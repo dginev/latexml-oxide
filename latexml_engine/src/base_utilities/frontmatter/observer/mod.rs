@@ -53,11 +53,14 @@ pub use events::{
   EventKind as FmEventKind, MarkBase as FmMarkBase, MarkFormula as FmMarkFormula,
   PrintedLabel as FmPrintedLabel, SepKind as FmSepKind,
 };
+pub use ledger::{
+  author_tail_printed as fm_author_tail_printed, note_binding_load,
+  record_note_text as fm_record_note_text,
+};
 pub(in crate::base_utilities) use ledger::{
   field_stamped, note_field_stamp, record_api_call, record_author_body_clear,
   record_author_body_end, record_author_call, record_clear, record_cut_copy,
 };
-pub use ledger::{note_binding_load, record_note_text as fm_record_note_text};
 // (the one reading of a formula's mark-ness, for `relocate` and `classify`)
 pub(in crate::base_utilities) use marks::{
   FormulaMarks as FmFormulaMarks, read_formula as fm_read_formula,
