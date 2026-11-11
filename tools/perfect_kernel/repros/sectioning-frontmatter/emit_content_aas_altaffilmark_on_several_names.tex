@@ -1,0 +1,21 @@
+% mechanism: the content check (`resolver::placed`) counts nothing for a mark label repeated legitimately — aas's `\altaffilmark{1}` on two authors, each `\altaffiltext` a call of its own
+%   —: the other direction any rule reading a repeated label as entry text must keep (CT1a's proposed rule did not
+%   land: it counted 23 guarded shapes falsely)
+% witness: synthetic (CT1a)
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Ann Able1, Bob Baker1,2 and Cat Cole2", "1 Univ X, Town", "2 Univ Y, City"
+% engines: rust int160a0 and CT1a's variants: 0 warnings
+% expect:  0 errors, 0 warnings; Ann "Univ X, Town", Bob both, Cat "Univ Y, City" (altaffiliation)
+% status:  GREEN (perfect_kernel_batchn2::a_clean_block_counts_nothing)
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able\altaffilmark{1}, Bob Baker\altaffilmark{1,2} and Cat Cole\altaffilmark{2}}
+\altaffiltext{1}{Univ X, Town}
+\altaffiltext{2}{Univ Y, City}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}
