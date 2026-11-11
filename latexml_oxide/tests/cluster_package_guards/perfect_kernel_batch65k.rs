@@ -5,6 +5,7 @@
 //! nag's rule commands, mathpartir's separators), and the class bindings that load those stubs define their own
 //! commands (pnas-new `\dates`/`\dropcap`, achemso `\SectionsOn`/`\AbstractOn`/the TOC-graphic lengths). Each stub
 //! keeps its one `missing_file` warning, except backref loaded through hyperref's option, whose message is an Info. Repros under `tools/perfect_kernel/repros/stub-dependencies/`.
+//! PI1 adds a table of package internals a binding defines where the original does (`internals_the_originals_define`).
 use latexml::util::test::assert_element;
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -348,4 +349,105 @@ fn arydshln_longtable_shorthand() {
     r#"<tabular xml:id="S0.T1.1"><tr xml:id="S0.T1.1.1"><td align="right" class="ltx_border_r_dashed" xml:id="S0.T1.1.1.1">a</td><td align="center" xml:id="S0.T1.1.1.2">b</td></tr></tabular>"#,
   );
   assert_eq!(xml.matches("<tabular ").count(), 1, "{xml}");
+}
+
+/// A row: the repro (name, source) and its elements whole, each (tag, an attribute it carries, the element).
+type InternalRow<'a> = ((&'a str, &'a str), &'a [(&'a str, &'a str, &'a str)]);
+
+/// Internals a binding defines where the original does (QA54), each row 0 errors and 0 warnings (red on int160b: 2, 1,
+/// 2, 3 errors, the tags inside their formulas, stray "quote" and "myk" text):
+/// - amsmath.sty:2767-2771 `\@@eqno`, `\@@leqno`, `\veqno` (1409.3102 `\let\veqno\@@leqno`), and `\veqno` under `leqno`
+///   (`\iftagsleft@`, :54-55): each tag (n) in its `<tag>`, the formula without it;
+/// - lineno.sty:264-265 loads etoolbox and kvoptions; microtype.sty:189 loads keyval.
+#[test]
+fn internals_the_originals_define() {
+  const ROWS: &[InternalRow] = &[
+    (
+      (
+        "amsmath_eqno_aliases",
+        include_str!("../../../tools/perfect_kernel/repros/ams-internals/amsmath_eqno_aliases.tex"),
+      ),
+      &[
+        (
+          "Math",
+          r#"xml:id="S0.Ex1.m2""#,
+          r#"<Math text="1" xml:id="S0.Ex1.m2"><XMath xml:id="S0.Ex1.m2.2"><XMDual xml:id="S0.Ex1.m2.2.1"><XMRef idref="S0.Ex1.m2.1" xml:id="S0.Ex1.m2.2.1.1"/><XMWrap xml:id="S0.Ex1.m2.2.1.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok meaning="1" role="NUMBER" xml:id="S0.Ex1.m2.1">1</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMath></Math>"#,
+        ),
+        (
+          "XMApp",
+          r#"xml:id="S0.Ex1.m1.1.1""#,
+          r#"<XMApp xml:id="S0.Ex1.m1.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp>"#,
+        ),
+        (
+          "Math",
+          r#"xml:id="S0.Ex2.m2""#,
+          r#"<Math text="2" xml:id="S0.Ex2.m2"><XMath xml:id="S0.Ex2.m2.2"><XMDual xml:id="S0.Ex2.m2.2.1"><XMRef idref="S0.Ex2.m2.1" xml:id="S0.Ex2.m2.2.1.1"/><XMWrap xml:id="S0.Ex2.m2.2.1.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok meaning="2" role="NUMBER" xml:id="S0.Ex2.m2.1">2</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMath></Math>"#,
+        ),
+        (
+          "XMApp",
+          r#"xml:id="S0.Ex2.m1.1.1""#,
+          r#"<XMApp xml:id="S0.Ex2.m1.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">c</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp>"#,
+        ),
+        (
+          "Math",
+          r#"xml:id="S0.Ex3.m2""#,
+          r#"<Math text="3" xml:id="S0.Ex3.m2"><XMath xml:id="S0.Ex3.m2.2"><XMDual xml:id="S0.Ex3.m2.2.1"><XMRef idref="S0.Ex3.m2.1" xml:id="S0.Ex3.m2.2.1.1"/><XMWrap xml:id="S0.Ex3.m2.2.1.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok meaning="3" role="NUMBER" xml:id="S0.Ex3.m2.1">3</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMath></Math>"#,
+        ),
+        (
+          "XMApp",
+          r#"xml:id="S0.Ex3.m1.1.1""#,
+          r#"<XMApp xml:id="S0.Ex3.m1.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">e</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp>"#,
+        ),
+      ],
+    ),
+    (
+      (
+        "amsmath_leqno_veqno",
+        include_str!("../../../tools/perfect_kernel/repros/ams-internals/amsmath_leqno_veqno.tex"),
+      ),
+      &[
+        (
+          "Math",
+          r#"xml:id="S0.Ex1.m2""#,
+          r#"<Math text="1" xml:id="S0.Ex1.m2"><XMath xml:id="S0.Ex1.m2.2"><XMDual xml:id="S0.Ex1.m2.2.1"><XMRef idref="S0.Ex1.m2.1" xml:id="S0.Ex1.m2.2.1.1"/><XMWrap xml:id="S0.Ex1.m2.2.1.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok meaning="1" role="NUMBER" xml:id="S0.Ex1.m2.1">1</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMath></Math>"#,
+        ),
+        (
+          "XMApp",
+          r#"xml:id="S0.Ex1.m1.1.1""#,
+          r#"<XMApp xml:id="S0.Ex1.m1.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp>"#,
+        ),
+        ("p", r#"xml:id="p1.1""#, r#"<p xml:id="p1.1">L.</p>"#),
+      ],
+    ),
+    (
+      (
+        "lineno_loads_etoolbox_kvoptions",
+        repro!("lineno_loads_etoolbox_kvoptions"),
+      ),
+      &[(
+        "para",
+        r#"xml:id="p1""#,
+        r#"<para xml:id="p1"><quote xml:id="p1.1"><p xml:id="p1.1.1">Quoted.</p></quote><p xml:id="p1.2">Set: yes</p></para>"#,
+      )],
+    ),
+    (
+      ("microtype_loads_keyval", repro!("microtype_loads_keyval")),
+      &[(
+        "para",
+        r#"xml:id="p1""#,
+        r#"<para xml:id="p1"><p xml:id="p1.1">Key: one</p></para>"#,
+      )],
+    ),
+  ];
+  for ((name, tex), elements) in ROWS {
+    let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{name}: {log}"
+    );
+    for (tag, attr, expected) in *elements {
+      assert_element(&xml, tag, &[attr], expected);
+    }
+  }
 }

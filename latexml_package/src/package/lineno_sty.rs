@@ -2,6 +2,8 @@ use crate::prelude::*;
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  RequirePackage!("etoolbox"); // lineno.sty:264-265
+  RequirePackage!("kvoptions");
   // lineno.sty:2628 reads its options with `\ProcessKeyvalOptions`, which marks them processed: `\@curroptions` stays as it was.
   key_options_processed()?;
   // Perl: lineno.sty.ltxml — stub (line numbering not meaningful for XML). Its DefEnvironments boxed the body in
