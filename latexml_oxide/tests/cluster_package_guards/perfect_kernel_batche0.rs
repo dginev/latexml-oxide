@@ -1452,7 +1452,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("aistats_sty.rs", 53),
   ("ams_support_sty.rs", 16),
   ("apa7_cls.rs", 7),
-  ("authblk_sty.rs", 23),
+  // (P27, 23 -> 22: authblk's two `\author` gates ask the separator query for a kernel `\and` by meaning, `separated_by_and`;
+  // its two scans of `\and`/`\And`/`,` are one comma test, `holds_a_comma`, and the query's unread fallback)
+  ("authblk_sty.rs", 22),
   // (F1r2, 1288 -> 1285: the membership readout finds its commas by `Token::group_step`, no catcode match)
   // (PF3, 628 -> 626: the layout-box and line-break membership tests read the token's own name, `frontmatter_stores::cs_in`)
   // (DEL2, 626 -> 484: the old driver deleted; Z18a, 484 -> 338: the API's Cut and Kind and the field readers moved unchanged to

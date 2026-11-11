@@ -1,6 +1,6 @@
 //! Guards for OC1c, Option C's step P1 on the API route (`docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md` "Segmentation
 //! is digested"; OXIDIZED_DESIGN_DIVERGENCES #993): a binding that hands one whole argument to the API makes one creator
-//! call holding the `\and` — acmart's `\author` with no comma, authblk's where its spelling test finds no separator —
+//! call holding the `\and` — acmart's `\author` with no comma, authblk's where its gate finds no kernel separator (a document's renewed `\and`, since P27) —
 //! and that call parts its authors as pdflatex does. The reading cuts it at the `Sep(And)` at its own level, inside its
 //! `\lx@personname` (`resolver::api::creator_call_pieces`), and the emitter writes one creator call per piece
 //! (`emit::creator_call_cut`): by the tokens between the `\and`s where the `\and`'s own tokens part no ink, by each
@@ -8,7 +8,9 @@
 //!
 //! Each row is a distinct path: no author block, the queue route (`emit::cut_creator_calls`) by tokens — a literal
 //! `\and`, a `\csname`, an active character, a document wrapper, each `\and` spelled by other tokens — and by text (a
-//! macro); authblk's spelling-test fallback, whose `\affil` run the cut widens (`run_cap`); and beside an author block,
+//! macro); authblk's macro-held rows (its spelling-test fallback, whose `\affil` run the cut widened, `run_cap`; since P27,
+//! Option C P2-7, its gate reads the `\and` by meaning, so these rows are list blocks the reading cuts, the run counting
+//! calls, `resolver/api.rs` `record_run`, the same creators); and beside an author block,
 //! the emission's per-creator loop; two cut calls before one `\affil` (its run summed over both, rewritten once) and two
 //! spelled alike (each matched to its own queue entry). Each asserts the exact Error and Warning counts and every
 //! creator's name and contacts in order. A call whose ink is not all inside its `\and`'s group stays whole (ink before
@@ -111,13 +113,15 @@ fn an_api_creator_call_parts_at_its_own_and() {
         &["Dee Dunn", "affiliation=Univ X"][..],
       ][..],
     ),
-    // (two cut calls spelled alike: each matched to its own queue entry)
+    // (two cut calls spelled alike: each matched to its own queue entry. Since P27 (Option C P2-7) authblk's gate reads
+    // the macro-held `\and` by meaning, so each call is a list block the reading cuts: the four names written by their
+    // text, and no longer the content check's false excess Warning — the names print twice, once per call)
     (
       row!(
         "sectioning-frontmatter",
         "authblk_two_alike_macro_held_calls_each_own_affil"
       ),
-      (0, 5),
+      (0, 4),
       &[
         &["Ann Able", "affiliation=Univ X"][..],
         &["Bob Baker", "affiliation=Univ X"][..],

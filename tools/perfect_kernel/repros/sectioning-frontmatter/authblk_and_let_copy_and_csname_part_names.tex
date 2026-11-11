@@ -1,0 +1,25 @@
+% mechanism: authblk's `\author` gate by meaning (Option C P2-7, `authblk_sty.rs` `separated_by_and`, the separator
+%   query `argument_separators`, OXIDIZED_DESIGN_DIVERGENCES #995): a `\let` copy of the kernel `\and` and a `\csname
+%   and\endcsname` part the names as a written `\and` does — a kernel separator at the argument's own level, the list
+%   path (`\lx@add@authors@list`), each call's names under its own `\affil`. The spelling test read the copy (its
+%   meaning is `\and`'s) but not the `\csname`, which went to `\lx@add@creator` and was cut there (OC1c); both paths
+%   give the same creators. Pins today's output on both binaries
+% witness: P27 probe t4 (scratch_P27/probes)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able", "Bob Baker", "Univ X", "Cy Cole", "Dee Dunn",
+%   "Univ Y"
+% engines: Perl 0.8.8 (authblk.sty.ltxml:52-55, read, not run): `\sep` not `\and` by name, both calls one creator each;
+%   int158a: the four creators below, 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able, Bob Baker (Univ X), Cy Cole, Dee Dunn (Univ Y)
+% status:  GREEN (int158a and P27; guard perfect_kernel_batchp27::authblk_and_gates_read_the_separator_by_meaning)
+\documentclass{article}
+\usepackage{authblk}
+\let\sep\and
+\title{T}
+\author{Ann Able \sep Bob Baker}
+\affil{Univ X}
+\author{Cy Cole \csname and\endcsname\ Dee Dunn}
+\affil{Univ Y}
+\begin{document}
+\maketitle
+Text.
+\end{document}

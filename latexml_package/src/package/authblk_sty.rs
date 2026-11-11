@@ -110,27 +110,39 @@ fn author_call(label: Option<Tokens>, author: Tokens) -> Result<Tokens> {
   if let Some(label) = label {
     // Use label attachment; a list of names under one label (`\author[1]{Ann Able, Bob Baker}`; deepseek.cls's
     // `\author[*]{…}` block, 2401.14196) is one author each, every one carrying the label (63e)
-    Ok(Invocation!(
+    return Ok(Invocation!(
       "\\lx@add@authors@append[annotations={#1}]{#2}",
       vec![Some(label), Some(author)]
-    ))
-  } else if let Some(rows) = lines_of_names_before_affil(&author) {
+    ));
+  }
+  // (the kernel `\and`s the names hold, by meaning, asked once and only where a comma or the word "and" does not decide:
+  // `separated_by_and`)
+  let mut kernel_and: Option<bool> = None;
+  let mut separated = |author: &Tokens| -> Result<bool> {
+    if let Some(found) = kernel_and {
+      return Ok(found);
+    }
+    let found = separated_by_and(author)?;
+    kernel_and = Some(found);
+    Ok(found)
+  };
+  if let Some(rows) = lines_of_names_before_affil(&author, &mut separated)? {
     // (lines under the names that read as more names, the block's institution in the `\affil` after them: names)
     Ok(Invocation!(T_CS!("\\lx@add@authors@list"), vec![Some(
       rows
     )]))
-  } else if author
-    .unlist_ref()
-    .iter()
-    .any(|t| t.defined_as(&T_CS!("\\and")) || t.defined_as(&T_CS!("\\And")) || *t == T_OTHER!(","))
+  } else if holds_a_comma(&author)
     || has_top_level_and_word(&author)
+    || separated(&author)?
     || has_separated_names(&author)
     || author_marks_end_name(&author, &[T_CS!("\\affil")])
   {
-    // `\and`/`\And` or a comma anywhere in the names (a comma inside a group too: `\textbf{Ann Able, Bob Baker}`, whose
-    // split reads into the wrapper; one in a note or a mark, `\thanks{Dept. X, Univ Y}`, `$^{1,2}$`, leaves the name
-    // whole), the word "and" between two names outside every group, as pdflatex prints them (`\author{Ajay
-    // Chandra$^{1}$\orcidlink{…} and Harprit Singh$^2$\orcidlink{…}}`, 2405.16615), a separator the kernel's author
+    // A comma anywhere in the names (a comma inside a group too: `\textbf{Ann Able, Bob Baker}`, whose split reads into
+    // the wrapper; one in a note or a mark, `\thanks{Dept. X, Univ Y}`, `$^{1,2}$`, leaves the name whole), a kernel
+    // `\and` at the names' own level by meaning (`separated_by_and`: written, `\And`, held in a macro of the document's,
+    // a `\let` copy, a `\csname and\endcsname`; Option C P2-7, where a spelling test missed the macro-held one), the
+    // word "and" between two names outside every group, as pdflatex prints them (`\author{Ajay Chandra$^{1}$\orcidlink{…}
+    // and Harprit Singh$^2$\orcidlink{…}}`, 2405.16615), a separator the kernel's author
     // read parts the block at (`has_separated_names`: `Ann Able\thanks{…} \qquad Bob Baker\thanks{…}`, 2610.06709;
     // `\hspace{2.5em}`, 2610.18435; `\quad\quad`, 2610.28573, one name holding them all with every note after it, each
     // note's author lost; 2610.39888's `\quad` came here only by the commas in its notes; a line under a name, `Ann
@@ -205,16 +217,42 @@ fn has_separated_names(author: &Tokens) -> bool {
 /// Diego`, `\\ World Agents`, `\\ Welo Data` under rows of names with no `\affil` (2404.19531, 2505.23705, 2601.06328,
 /// 2610.37518, 2610.27304). Only an argument that reaches the kernel read by its separators alone, as
 /// [`has_separated_names`] reads it.
-fn lines_of_names_before_affil(author: &Tokens) -> Option<Tokens> {
-  let bare =
-    !author.unlist_ref().iter().any(|t| {
-      t.defined_as(&T_CS!("\\and")) || t.defined_as(&T_CS!("\\And")) || *t == T_OTHER!(",")
-    }) && !has_top_level_and_word(author);
-  (bare
-    && has_author_block_separator(author)
-    && lines_under_names_read_as_names(author)
-    && next_is_affil())
-  .then(|| line_breaks_as_name_separators(author))
+fn lines_of_names_before_affil(
+  author: &Tokens,
+  separated: &mut impl FnMut(&Tokens) -> Result<bool>,
+) -> Result<Option<Tokens>> {
+  let bare = !holds_a_comma(author) && !has_top_level_and_word(author);
+  Ok(
+    (bare
+      && has_author_block_separator(author)
+      && lines_under_names_read_as_names(author)
+      && !separated(author)?
+      && next_is_affil())
+    .then(|| line_breaks_as_name_separators(author)),
+  )
+}
+
+/// Whether `author` holds a comma anywhere, a group's or a note's too (what the list path's split reads: a note's comma
+/// is no separator there, [`author_call`]).
+fn holds_a_comma(author: &Tokens) -> bool { author.unlist_ref().contains(&T_OTHER!(",")) }
+
+/// Whether `author` parts its names at an `\and`: one at its own level meaning the kernel's (`argument_separators`,
+/// OXIDIZED_DESIGN_DIVERGENCES #995) — written, held in a macro of the document's (`\newcommand\aut{Ann Able \and Bob
+/// Baker}`), a `\let` copy, as authblk.sty's `\author` (:114-145) leaves the kernel's `\and` to part the names in
+/// `\@author`. A separator of another meaning (the document's renewed `\and`, amsmath's `\And`, a class binding's
+/// stand-in) is no kernel column (trap T8 of the P2 plan). Where the query reads nothing (`None`: inside a rehearsal,
+/// over its allowance) the spelling decides, as before Option C's P2-7: a token meaning what `\and` or `\And` means,
+/// at any depth.
+fn separated_by_and(author: &Tokens) -> Result<bool> {
+  Ok(match argument_separators(author)? {
+    Some(separators) => separators
+      .iter()
+      .any(|found| found.meaning == FmSepMeaning::Kernel),
+    None => author
+      .unlist_ref()
+      .iter()
+      .any(|t| t.defined_as(&T_CS!("\\and")) || t.defined_as(&T_CS!("\\And"))),
+  })
 }
 
 /// Whether an `\affil` is what the input holds next, past spaces and paragraph breaks.

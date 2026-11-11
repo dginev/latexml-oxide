@@ -190,32 +190,40 @@ impl Resolver {
         };
         let (mut run, mut passed) = (Vec::new(), Vec::new());
         let mut reached_unanswered = false;
+        // (the calls the run holds so far: the cap counts calls, `calls_from`)
+        let mut calls = 0usize;
         for c in (0..n).rev() {
           if !run.is_empty() && self.ends_a_run(c, role) {
             break;
           }
-          // (the cap, the authors queued when the contact was called, ends the run only between two `\author` calls: a
-          // line of names the reading parts where the kernel's read welded them is one queued author, every name of the
-          // call the run's — `Ann Able$^*$ \\ Bob Baker$^*$ \\ Cat Cole$^\dagger$`, two queued over three names, whose first
-          // lost the `\affil`, 2609.33075)
-          if cap.is_some_and(|cap| run.len() >= cap)
-            && run.last().is_none_or(|last: &usize| {
-              self.out.creators[*last].source != self.out.creators[c].source
-            })
-          {
+          // (the cap, the authors queued when the contact was called, counts `\author` calls, and so ends the run only
+          // between two: a line of names the reading parts where the kernel's read welded them is one queued author,
+          // every name of the call the run's — `Ann Able$^*$ \\ Bob Baker$^*$ \\ Cat Cole$^\dagger$`, two queued over
+          // three names, whose first lost the `\affil`, 2609.33075 —, and so is a list the reading parts at its `\and`s
+          // or commas: `\author{Cy Cole}\author{Ann Able \and Bob Baker}\affil{Univ X}` is two queued over three names,
+          // all three under Univ X as pdflatex prints them, where a cap counting names gave Cy Cole none, silently)
+          let new_call = run.last().is_none_or(|last: &usize| {
+            self.out.creators[*last].source != self.out.creators[c].source
+          });
+          if new_call && cap.is_some_and(|cap| calls >= cap) {
             break;
           }
           if reached_unanswered && answered(c) {
-            // (the authors Perl's `new` reaches past here, the run's extent: up to one holding the role)
-            passed = (0..=c)
-              .rev()
-              .take(cap.map_or(usize::MAX, |cap| cap - run.len()))
+            // (the authors Perl's `new` reaches past here, the run's extent: up to one holding the role, within the cap's
+            // calls left)
+            passed = self
+              .calls_from(
+                c,
+                run.last().copied(),
+                cap.map(|cap| cap.saturating_sub(calls)),
+              )
               .take_while(|&c| !self.roles[c].iter().any(|r| r == role))
               .collect();
             break;
           }
           reached_unanswered |= !answered(c);
           run.push(c);
+          calls += usize::from(new_call);
         }
         let mut extent: Vec<usize> = run.iter().chain(&passed).copied().collect();
         run.reverse();
@@ -225,6 +233,30 @@ impl Resolver {
     };
     self.last_run = Some((role.to_string(), n, run.clone(), extent));
     run
+  }
+
+  /// The creators back from `c`, within the first `left` calls (`None`: every call) past the creator `after` (the
+  /// one before them in the walk, whose call continues into them uncounted): a creator's call is its `source`, the
+  /// queued entry it is read from ([`Self::record_run`]'s cap).
+  fn calls_from(
+    &self,
+    c: usize,
+    after: Option<usize>,
+    left: Option<usize>,
+  ) -> impl Iterator<Item = usize> + '_ {
+    let mut source = after.map(|a| self.out.creators[a].source);
+    let mut left = left.unwrap_or(usize::MAX);
+    (0..=c).rev().take_while(move |&c| {
+      let at = self.out.creators[c].source;
+      if source != Some(at) {
+        if left == 0 {
+          return false;
+        }
+        left -= 1;
+        source = Some(at);
+      }
+      true
+    })
   }
 
   /// The labels the pending entries of `role` answer that a printed mark labels — a block's labelled line, an API

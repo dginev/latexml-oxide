@@ -34357,6 +34357,32 @@ by its text, with its Warning. An API call's items are not marked: the recovery 
 `ejpecp_footnote_email_setter_written_once.tex`, `ejpecp_footnote_emails_between_authors_written_once.tex`,
 `ejpecp_thanks_email_setter_written_once.tex`.
 
+**P2-7 (P27): authblk's `\author` gates by meaning; the run's cap counts calls.** authblk's two gates
+(`authblk_sty.rs` `author_call`, `lines_of_names_before_affil`) tested the spelling of a token meaning `\and` or `\And`
+anywhere in the names. They ask the separator query (#995) for a kernel `\and` at the names' own level instead
+(`separated_by_and`): written, `\And`, held in a macro of the document's, a `\let` copy, a `\csname and\endcsname`. A
+separator of another meaning — a document's renewed `\and` (trap T8), amsmath's `\And`, a class binding's stand-in — is
+no kernel column. Where the query reads nothing (inside a rehearsal, over its allowance) the spelling decides, as before.
+The query is asked once per `\author`, and only where a comma or the word "and" does not decide. A macro-held `\and`
+now takes the list path (`\lx@add@authors@list`, the reading's block cut), as the written one does, not `\lx@add@creator`
+(the emitter's cut of the call, OC1c above). Same creators either way; the content check's false excess Warning on two
+calls of one macro is gone. The list path's run then met a reading defect: authblk's unlabelled `\affil` caps its run at
+the `\author` calls queued since the last `\affil` (`affil_run`, `annotate=run:<n>`), and the reading's `record_run`
+counted that cap in names. `\author{Cy Cole}\author{Ann Able, Bob Baker}\affil{Univ X}` (run 2) stopped at Ann Able and
+Bob Baker and gave Cy Cole none, silently, where pdflatex prints all three under Univ X. The written shapes had this
+defect before P2-7 (a comma list, a written `\and`, after a name or another list); the macro-held one inherited it with
+the gate. The cap counts calls now (`resolver/api.rs` `record_run`, `calls_from`: a creator's call is its `source`). The
+other `run:<n>` writer, `queue_digest.rs` `run_cap_past_labels` (the stores' line calls), counts queued author entries
+too. The e0 pin `TOKEN_READS` `authblk_sty.rs` 23 → 22. The gates still call the old reader's `has_author_block_separator`,
+`lines_under_names_read_as_names`, `line_breaks_as_name_separators` and `holds_a_macro_printing_a_link` (the layout
+separators, not the `\and` family), so no old-reader line is freed. The S8 half of P2-7, the emitter writing the declined
+no-author-block flushes so that `shared_row::share_row_contacts` and `shared_row/` can go, is not done here (a batch of
+its own). Guards `perfect_kernel_batchp27::{authblk_affil_run_counts_author_calls,
+authblk_and_gates_read_the_separator_by_meaning}` and `perfect_kernel_batchoc1c::an_api_creator_call_parts_at_its_own_and`'s
+`authblk_two_alike_macro_held_calls_each_own_affil` row (5 → 4 Warnings); repros `sectioning-frontmatter/`
+`authblk_affil_run_{name_before_a_list,two_lists}.tex`, `authblk_and_let_copy_and_csname_part_names.tex`,
+`authblk_renewed_and_is_no_kernel_column.tex`, `authblk_macro_held_and_line_before_affil.tex`.
+
 ### 994. The rehearsal binds a `\let` copy of an author-line separator or note command by its meaning, as the command it copies (SEP1)
 
 **Perl.** `\let\nx\and` then `\author{Ann Able \nx Bob Baker}` gives two creators, Ann Able and Bob Baker (Perl 0.8.8,
@@ -34443,8 +34469,8 @@ it (`own_run`: an environment closed right before the separator — an `\end{tab
     of `\\and"`/`\\And"`/`\\AND"` on definition lines in `latexml_package/src`, `latexml_contrib/src`,
     `latexml_engine/src`. `Binding` alone says neither "a separator" nor "none". The P2 callers' gates (below) ask kernel
     or not, which needs no split; a caller that must tell them apart reads its own binding's definition. A caller swapping
-    a spelling gate (l_aa, ecai, authblk test the token `\and`/`\And`) for `Kernel` changes the answer wherever `Binding`
-    or `Raw` arises.
+    a spelling gate (l_aa, ecai test the token `\and`/`\And`; authblk did until P2-7) for `Kernel` changes the answer
+    wherever `Binding` or `Raw` arises.
   - `Raw`: a raw file's, the document's, or no separator's meaning.
 
   The printing token is the one the separator's own run covers where it is no macro, else the family command (a macro holding
@@ -34469,13 +34495,12 @@ it (`own_run`: an environment closed right before the separator — an `\end{tab
   (an item the reading places apart, which a whole piece would print again) — `\institute{Univ X \email{a@x} \and Univ
   Y}` is written by text, each author's institute (one counted Warning each), the e-mail to its owner.
 
-**Who calls them** (P2-4: eptcs's cells, the query, `eptcs_cls.rs` `cells`). **Who will call them** (the P2P batches, by its rule-6 scan: `lx@splitting`, `split_tokens(`, `SplitDelim::`, literal
+**Who calls them** (P2-4: eptcs's cells, the query, `eptcs_cls.rs` `cells`; P2-7: authblk's two `\author` gates, the query, `authblk_sty.rs` `separated_by_and`, #993's P2-7). **Who will call them** (the P2P batches, by its rule-6 scan: `lx@splitting`, `split_tokens(`, `SplitDelim::`, literal
 `\and`/`\And`/`\AND` in `latexml_package/src`, `latexml_contrib/src`, `frontmatter_stores.rs`, `base_utilities/defs`,
 `frontmatter/classify`): the emitter's cut — P2-2 (S2: `inst_support_sty.rs:58`, `aa_cls.rs:93` and its gate :75-80,
 `sv_support_sty.rs:69`), P2-3 (llncs `:189`, gate :208), P2-6 (the numbered stores, `frontmatter_stores.rs:3148-3151`);
 the query — P2-2 (aa :80), P2-5 (`l_aa_cls.rs:108`, `latexml_contrib/src/ecai_cls.rs:56`), P2-6
-(`frontmatter_stores.rs` :3216, :3225 `kernel_and_list`, :3239, :3378, :7483, :7697), P2-7 (`authblk_sty.rs` :125,
-:211). Not enumerated by that scan (P2P's list): the engine beyond those directories (observer, insert, place);
+(`frontmatter_stores.rs` :3216, :3225 `kernel_and_list`, :3239, :3378, :7483, :7697). Not enumerated by that scan (P2P's list): the engine beyond those directories (observer, insert, place);
 `split_top_level_lines` (revtex, relocate); `\lx@split@addresses`; `frontmatter_api/` (affiliations.rs:416-429,
 line_marks.rs:16, cut.rs, kind.rs: P4); `classify/separators.rs:212-224`, `name_text.rs:36`,
 `old_reader/space_parted.rs:205`, ijcai.rs (P3/P4); splits on `\\` alone or commas; `\def\and{…}` meanings (argument
