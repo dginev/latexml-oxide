@@ -147,7 +147,7 @@ fn an_author_tail_the_title_page_does_not_print_is_not_read() {
   let alice_x: &[&[&str]] = &[&["Alice A", "affiliation=Inst X"]];
   let annotated = "Info:frontmatter:annotated The title page annotates 1 word(s) that its output does not hold: bob";
   let alice: &[&[&str]] = &[&["Alice A"]];
-  let rows: [Row; 16] = [
+  let rows: [Row; 19] = [
     (
       "document \\maketitle, \\and tail",
       repro!("article_author_and_tail_unprinted_by_own_maketitle_makes_no_creator.tex"),
@@ -260,6 +260,28 @@ fn an_author_tail_the_title_page_does_not_print_is_not_read() {
       false,
       alice,
     ),
+    // extsizes' copies, declared as the standard classes (review revTP1c: undeclared, they invented "Bob B")
+    (
+      "extarticle, document title-only \\@maketitle",
+      repro!("extarticle_document_title_only_maketitle_prints_no_author_tail.tex"),
+      0,
+      false,
+      alice,
+    ),
+    (
+      "extreport[notitlepage], document title-only \\@maketitle",
+      repro!("extreport_notitlepage_document_title_only_maketitle_prints_no_author_tail.tex"),
+      0,
+      false,
+      alice,
+    ),
+    (
+      "extbook[notitlepage], document title-only \\@maketitle",
+      repro!("extbook_notitlepage_document_title_only_maketitle_prints_no_author_tail.tex"),
+      0,
+      false,
+      alice,
+    ),
   ];
   for (shape, tex, warnings, annotates, expected) in rows {
     let (log, xml) = run(tex);
@@ -356,7 +378,7 @@ fn an_author_tail_the_title_page_prints_is_read() {
     "affiliation=Inst Y",
   ]];
   let alice_bob: &[&[&str]] = &[&["Alice A"], &["Bob B"]];
-  let rows: [(&str, &str, &[&[&str]]); 10] = [
+  let rows: [(&str, &str, &[&[&str]]); 11] = [
     (
       "article, appended \\@maketitle",
       repro!("article_author_tail_under_appended_maketitle_is_kept.tex"),
@@ -405,6 +427,11 @@ fn an_author_tail_the_title_page_prints_is_read() {
     (
       "book (titlepage, its default), document title-only \\@maketitle",
       repro!("book_document_title_only_maketitle_author_tail_is_kept.tex"),
+      alice_bob,
+    ),
+    (
+      "extreport (titlepage, its default), document title-only \\@maketitle",
+      repro!("extreport_document_title_only_maketitle_author_tail_is_kept.tex"),
       alice_bob,
     ),
   ];

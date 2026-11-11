@@ -30656,7 +30656,9 @@ always — amsart, amsproc, amsbook (ams_support.sty; amsart.cls:600-610, amspro
 amsart's `titlepage` acts inside its `\@maketitle`, :647), IEEEtran.cls (:4753-4775), mnras (mn2e_support.sty;
 mnras.cls:1055-1062); never — elsarticle (elsart_support_core.sty; elsarticle.cls:918-989, `\elsarticleprelims
 \pprintMaketitle` and its journal variants) and acmart.cls (:2226-2379); **without a title page only (TP1c, review
-revTP1b)** — article, report and book (the kernel's declaration, `WithoutTitlepage`): article.cls:169-219,
+revTP1b)** — article, report and book (the kernel's declaration, `WithoutTitlepage`), and extsizes' extarticle,
+extreport and extbook (review revTP1c; extarticle.cls:196-281, extreport.cls:198-283, extbook.cls:191-276, defaults
+extarticle.cls:28 false, extreport.cls:28 and extbook.cls:12 true): article.cls:169-219,
 report.cls:175-225 and book.cls:181-231 define `\maketitle` by their `\if@titlepage`, the `titlepage` form printing its
 own page with `\@author` and running no `\@maketitle`. The value is the class's `\if@titlepage` after its options, as
 the class reads it to define `\maketitle` (article.cls:50-51 false, report.cls and book.cls:50-51 true; `titlepage` and
@@ -30689,7 +30691,8 @@ place, no inject): a date or a note's text is no store value it confirms. Guards
 `perfect_kernel_batchfx24::{an_author_tail_the_title_page_does_not_print_is_not_read,
 an_author_tail_the_title_page_prints_is_read}` (elsarticle, acmart, the title-only sibling; IEEEtran; TP1c: report
 under `notitlepage`, article after a document's `\@titlepagetrue`; article under `titlepage` with and without a document
-title-only `\@maketitle`, report's and book's default),
+title-only `\@maketitle`, report's and book's default; extarticle, extreport and extbook under `notitlepage`, extreport's
+default),
 `perfect_kernel_batchr1::a_run_over_budget_leaves_no_trace`, `00_unit_state::state_generation_changes_with_every_change_of_the_state`.
 
 ### 954. A contact holding two or more marked entries is cut at its marks in the frontmatter API, for every binding (Perl: one contact, the marks printed in it)

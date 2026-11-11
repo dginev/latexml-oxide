@@ -212,6 +212,23 @@ pub const KERNEL: Policy = Policy {
         MaketitleRuns::WithoutTitlepage,
         "book.cls:181-231",
       ),
+      // extsizes' copies keep the standard classes' choice and defaults (extarticle.cls:28 false, extreport.cls:28 and
+      // extbook.cls:12 true; their options :64-65, extbook :49-50); review revTP1c, which found them undeclared
+      (
+        "extarticle.cls",
+        MaketitleRuns::WithoutTitlepage,
+        "extarticle.cls:196-281",
+      ),
+      (
+        "extreport.cls",
+        MaketitleRuns::WithoutTitlepage,
+        "extreport.cls:198-283",
+      ),
+      (
+        "extbook.cls",
+        MaketitleRuns::WithoutTitlepage,
+        "extbook.cls:191-276",
+      ),
     ],
   },
   cite:              "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4; OD #925",
