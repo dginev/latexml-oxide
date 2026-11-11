@@ -1,0 +1,24 @@
+% mechanism: a `\cite` after a ptephy name: the token writer writes the citation's empty shell "[ ]" into the name and
+%   the cited text is lost (ptephy_cls.rs `\name`; revBT1c pre-existing)
+% witness: cond-mat0010473 (REVTeX 3 `\author{ E. I. Rashba\cite{address} }`: "E. I. Rashba [ ]" on int158a),
+%   astro-ph9907221 ("Kari Enqvist [ ]", "Hannu Kurki-Suonio [ ]"); cond-mat0010243 by shape; synthetic for
+%   ptephy
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1304.2086's ptephy.cls, a stand-in PDF for its logo graphic `newlogo`)
+%   0 errors: "Ann AbleYee [2000]1", "1 Univ X", the reference "Y. Yee, J. 1 (2000)."
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; creator "Ann Able [ ] 1" (Univ X): the
+%   citation lost, uncounted; perl not run
+% expect:  0 errors; creator Ann Able (Univ X); the citation kept outside the name (no empty brackets)
+% status:  RED (int158a; RR1 gap 6)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{T}
+\author{\name{Ann Able\cite{y}}{1}
+}
+\address{\affil{1}{Univ X}}
+\maketitle
+Text.
+\begin{thebibliography}{9}
+\bibitem[Yee(2000)]{y} Y. Yee, J. 1 (2000).
+\end{thebibliography}
+\end{document}

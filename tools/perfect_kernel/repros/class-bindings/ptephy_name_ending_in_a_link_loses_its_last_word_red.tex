@@ -1,0 +1,21 @@
+% mechanism: a ptephy `\name{Ann Bea \href{…}{Able}}{1}` glued to the list's closing brace: the link's text leaves the
+%   name for a url contact (revBT1b check 3, the writer's probe q05; the trailing-glue sibling is
+%   `class-bindings/author_one_block/ptephy_author_list_glued_trailing_mark_stays_red.tex`)
+% witness: synthetic (revBT1b; no census ptephy paper links a name)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1304.2086's ptephy.cls, a stand-in PDF for its logo graphic `newlogo`)
+%   0 errors: "Ann Bea Able1" ("Able" a link), "1 Univ X"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; creator "Ann Bea" with a url contact "Able"
+%   (the link target lost) and Univ X: the last name lost from the name, no Warning. With a newline before `}`
+%   the creator is "Ann Bea Able" plus a url contact "Able", 1 warning (the doubled "Able"); perl not run
+% expect:  0 errors, 0 warnings; one creator "Ann Bea Able" (the link kept, its target http://x.org), Univ X
+% status:  RED (int158a; RR1 gap 4)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{\name{Ann Bea \href{http://x.org}{Able}}{1}}
+\address{\affil{1}{Univ X}}
+\maketitle
+Text.
+\end{document}

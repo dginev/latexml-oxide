@@ -1,0 +1,16 @@
+% mechanism: a `\footnote` between a first and a last name in article's kernel `\author`: the reading cuts the name at
+%   the note (revBT1b pre-existing, the kernel route)
+% witness: synthetic (revBT1b; no census paper by shape)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann∗Able    Bob Baker", footnote "∗x"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; creators "Ann" (note "x"), "Able", "Bob
+%   Baker": one creator invented, no Warning; perl not run
+% expect:  0 errors, 0 warnings; creators Ann Able (note "x"), Bob Baker
+% status:  RED (int158a; RR1 gap 9a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann\footnote{x} Able \and Bob Baker}
+\maketitle
+Text.
+\end{document}

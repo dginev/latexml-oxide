@@ -1,0 +1,18 @@
+% mechanism: an article `\author{\begin{tabular}{p{4cm}p{4cm}}…}` with a name per `p` column: the block is written
+%   whole as one creator ("can't cut an author block … joins ink across an alignment's cells"); the
+%   `c`-column table is read per column (revP21e pre-existing)
+% witness: synthetic (revP21e)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able | Bob Baker", "Univ X | Univ Y", "ann@x.org |
+%   bob@y.org"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning (the whole-block cut); one creator "Ann Able Bob
+%   Baker Univ X Univ Y ann@x.org bob@y.org"; perl not run
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ X, ann@x.org), Bob Baker (Univ Y, bob@y.org)
+% status:  RED (int158a; RR1 gap 13)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\begin{tabular}{p{4cm}p{4cm}}Ann Able & Bob Baker\\ Univ X & Univ Y\\ \texttt{ann@x.org} & \texttt{bob@y.org}\end{tabular}}
+\maketitle
+Text.
+\end{document}

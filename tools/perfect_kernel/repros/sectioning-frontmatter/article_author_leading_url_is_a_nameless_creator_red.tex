@@ -1,0 +1,17 @@
+% mechanism: a `\url` before a name in article's kernel `\author`: the url becomes a nameless creator of its own
+%   (revBT1b pre-existing, the kernel route)
+% witness: synthetic (revBT1b; no census paper by shape)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "http://x.org Ann Able    Bob Baker"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; creators "Ann Able", "Bob Baker", and a
+%   nameless creator holding the url http://x.org; perl not run
+% expect:  0 errors, 0 warnings; creators Ann Able (url http://x.org), Bob Baker; no nameless creator
+% status:  RED (int158a; RR1 gap 9c)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{url}
+\begin{document}
+\title{T}
+\author{\url{http://x.org} Ann Able \and Bob Baker}
+\maketitle
+Text.
+\end{document}

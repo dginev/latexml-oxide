@@ -1,0 +1,21 @@
+% mechanism: a `\thanks` inside a ptephy `\name`: the name is written twice, glued ("Ann AbleAnn Able"), and the note
+%   twice (ptephy_cls.rs `\name`; BT1c's shape, revBT1c pre-existing)
+% witness: synthetic for ptephy (spconf `\name{…\thanks{…}}` is common: 1411.0283, 1602.08215, 1703.07754 by shape,
+%   another route)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1304.2086's ptephy.cls, a stand-in PDF for its logo graphic `newlogo`)
+%   0 errors: "Ann Able†1", "1 Univ X", footnote "† N"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning ("2 words or addresses appear in the placed
+%   frontmatter more often than the author blocks print them: AbleAnn N"); creator "Ann AbleAnn Able" with two
+%   notes "N" and Univ X (revBT1c saw E=1 on its build; here E=0); perl not run
+% expect:  0 errors, 0 warnings; creator Ann Able (Univ X) with one note "N"
+% status:  RED (int158a; RR1 gap 8)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{T}
+\author{\name{Ann Able\thanks{N}}{1}
+}
+\address{\affil{1}{Univ X}}
+\maketitle
+Text.
+\end{document}

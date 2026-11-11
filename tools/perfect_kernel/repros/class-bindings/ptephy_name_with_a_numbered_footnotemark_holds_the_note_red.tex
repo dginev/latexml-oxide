@@ -1,0 +1,22 @@
+% mechanism: a `\footnotemark[2]` after a ptephy name: the token writer writes the mark's expansion ("2 footnote 2 2
+%   footnote 2") and the later `\footnotetext`'s body into the name (ptephy_cls.rs `\name`; revBT1c
+%   pre-existing)
+% witness: 2104.12292 (spconf `\name{… Xin Wang$^\dagger$\footnotemark[1], …}`: "Xin Wang * footnote * * footnote *"
+%   on int158a); synthetic for ptephy
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1304.2086's ptephy.cls, a stand-in PDF for its logo graphic `newlogo`)
+%   0 errors: "Ann Able†1", "1 Univ X", footnote "† Note A."
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; creator "Ann Able 2 footnote 2 2 footnote 2
+%   Note A. 1" with a note "2 footnote 2 2 footnote 2 Note A." and Univ X; perl not run
+% expect:  0 errors, 0 warnings; creator Ann Able (Univ X) with the note "Note A."; no mark text in the name
+% status:  RED (int158a; RR1 gap 5)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{T}
+\author{\name{Ann Able\footnotemark[2]}{1}
+}
+\address{\affil{1}{Univ X}}
+\maketitle
+\footnotetext[2]{Note A.}
+Text.
+\end{document}
