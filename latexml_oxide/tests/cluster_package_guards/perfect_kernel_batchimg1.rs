@@ -1,7 +1,8 @@
 //! Red/green guards for batch IMG1: an image leading a URL on a later line of `\author` is that URL contact's, kept in
 //! place (`events::place_pictures` grows the contact's span over it); a picture no written item holds is counted
 //! (`resolver::words::Written::unwritten_pictures`, `emit::warn_unwritten_pictures`): an image has no word for the word
-//! check to miss. OXIDIZED_DESIGN_DIVERGENCES #989.
+//! check to miss; each item holds what it writes, its entry's span (`resolver::words::entry_span_in`, IMG1b).
+//! OXIDIZED_DESIGN_DIVERGENCES #989.
 use latexml::util::test::convert_with;
 
 use super::{
@@ -87,17 +88,79 @@ fn image_before_an_address_is_counted() {
 }
 
 /// An image between a label and its URL (`Web: \includegraphics{…} \url{…}`; int157a2: dropped, 0 Warnings): the URL
-/// contact named "Web: ", the image counted. Distinct: the URL join grows the contact's span over the image, but the item
-/// written is the label's entry, whose span does not hold it — the Warning reads the written items, not the join.
-/// Repro sectioning-frontmatter/fm_image_before_labelled_url_is_counted.
+/// contact named "Web: ", the image counted. Distinct: the emit writes the line as one affiliation holding the image (its
+/// entry's span holds it, IMG1b), and the link label pass (`insert::kind_link_and_grade_contacts`) strips it with the
+/// label's text, counted there. Repro sectioning-frontmatter/fm_image_before_labelled_url_is_counted.
 #[test]
 fn image_after_a_url_label_is_counted() {
+  let (log, xml) = convert_with(
+    repro!("fm_image_before_labelled_url_is_counted"),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains(
+      "Warning:unexpected:frontmatter The frontmatter's link label pass drops 1 picture(s) printed between the label \
+       'Web:' and its link; they are lost"
+    ),
+    "{log}"
+  );
   assert_eq!(
-    counted(repro!("fm_image_before_labelled_url_is_counted")),
+    creators(&xml),
     r##"<creator role="author">
     <personname>Ann Able</personname>
     <contact name="Affiliation: " role="affiliation">Zebra University</contact>
     <contact name="Web: " role="url"><ref class="ltx_url" font="typewriter" href="https://example.org/x">https://example.org/x</ref></contact>
+  </creator>"##
+  );
+}
+
+/// An image after a run of text and before a URL on one later line, the line read as one affiliation holding both
+/// (`Zebra University, \includegraphics{…} \url{…}`, with `\quad` and with no separator; review revIMG1 finding 1; IMG1:
+/// the same XML as int157a2 but one false "they are lost" Warning, the check reading the affiliation's source span, narrower
+/// than the entry it writes): the whole creator, 0 Warnings. Distinct: the check's holding span is the item's written one
+/// (`resolver::words::entry_span_in`), not the join's. Repros
+/// sectioning-frontmatter/fm_image{,_quad,_glued}_inside_affiliation_before_url_is_kept.
+#[test]
+fn image_inside_an_affiliation_before_a_url_is_kept() {
+  let affiliation = |between: &str| {
+    format!(
+      r##"<creator role="author">
+    <personname>Ann Able</personname>
+    <contact name="Affiliation: " role="affiliation">Zebra University{between}<graphics graphic="example-image" options="width=8.5359pt,keepaspectratio=true" xml:id="g1a"/> <ref class="ltx_url" font="typewriter" href="https://example.org/x">https://example.org/x</ref></contact>
+  </creator>"##
+    )
+  };
+  for (tex, between) in [
+    (
+      repro!("fm_image_inside_affiliation_before_url_is_kept"),
+      ", ",
+    ),
+    (
+      repro!("fm_image_quad_inside_affiliation_before_url_is_kept"),
+      " \u{2003}",
+    ),
+    (
+      repro!("fm_image_glued_inside_affiliation_before_url_is_kept"),
+      " ",
+    ),
+  ] {
+    assert_eq!(creators(&convert_clean(tex)), affiliation(between));
+  }
+}
+
+/// An image parted from a URL by `\hfill` (review revIMG1 finding 3; IMG1: inside the url contact): pdflatex sets the image
+/// at the line's left edge and the link at its right, a decoration of its own, so the link join stops at fill glue — the
+/// url contact the link alone, the image counted. Distinct: the gap test of `events::place_pictures`.
+/// Repro sectioning-frontmatter/fm_image_hfill_before_url_is_counted.
+#[test]
+fn image_parted_from_a_url_by_fill_is_counted() {
+  assert_eq!(
+    counted(repro!("fm_image_hfill_before_url_is_counted")),
+    r##"<creator role="author">
+    <personname>Ann Able</personname>
+    <contact name="Affiliation: " role="affiliation">Zebra University, Department of Very Long Names and Places</contact>
+    <contact name="URL: " role="url"><ref class="ltx_url" font="typewriter" href="https://example.org/x">https://example.org/x</ref></contact>
   </creator>"##
   );
 }

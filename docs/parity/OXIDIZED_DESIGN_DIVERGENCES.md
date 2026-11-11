@@ -33796,26 +33796,46 @@ e-mails with 0 Warnings. The readers now walk a whatsit's printed properties (`u
 each author's e-mail, and the content check's one Warning on the brace-group spelling, the unboxed line's too (repro
 `sectioning-frontmatter/fcolorbox_email_line_in_author`; guard `perfect_kernel_batchcr10b::fcolorbox_email_line_in_author`).
 
-**An image before a URL, a mark or an address (IMG1; review revCR8c finding 2).** An image leading a URL contact on a
-later line, past a font switch and a `\quad`'s gap, is that contact's: `place_pictures` grows the contact's span over it
-(the image stays an event of its own), and the contact is written from its tokens with the icon before the link, as
-pdflatex prints it — 2503.08161's `\includegraphics{hf-logo.png} \texttt{\small\url{…}}` (its four URL copies) and
-2601.17879's `\github \quad \url{…}`, both dropped with 0 Warnings before; 2505.21327's `{\github\ \texttt{\url{…}}}` lines,
-which a note in place merged into one affiliation (CR8c, reverted), are byte-identical. One leading a mark or an address
-has no place: a note there made the mark-led affiliation its plain text (+2 Warnings), and a run printing an address is
-written as the e-mail's text, so `place_pictures` joins no address run. Such a picture is counted: an image has no word for
-the word check (`lost_inks`), so the check has a picture half, span coverage — `Written::unwritten_pictures` counts every
-image or picture note of a block whose span lies inside no written item's span (items a ruling dropped aside; no span,
-counted), and `emit::warn_unwritten_pictures` raises one Warning per block ("holds no place for N picture(s) its author
-block prints; they are lost") unless the block is written whole. It reads the items written, not the join: `Web:
-\includegraphics{…} \url{…}` is written as the label's entry, whose span does not hold the image, and is counted. Routes
-the check does not see: an image a later line's run of text joins (`place_pictures`' Name join) leaves no picture event,
-the run's words being the word check's; a picture inside an API call (`\affiliation{…}`) is its call's, unchecked. Repros
+**An image before a URL, a mark or an address (IMG1, IMG1b; reviews revCR8c finding 2, revIMG1).** An image leading a
+link on a later line — a `role="url"` Contact event, `\url` or `\href` — past font switches and any gap of natural width
+(a space, `\quad`, `\hspace{3cm}`, however wide) is that link's: `place_pictures` grows the contact's span over it (the
+image stays an event of its own), and the contact is written from its tokens with the icon before the link, as pdflatex
+prints it — 2503.08161's `\includegraphics{hf-logo.png} \texttt{\small\url{…}}` (its four URL copies) and 2601.17879's
+`\github \quad \url{…}`, both dropped with 0 Warnings before; 2505.21327's `{\github\ \texttt{\url{…}}}` lines, which a
+note in place merged into one affiliation (CR8c, reverted), are byte-identical. An e-mail printed as a link
+(`\href{mailto:…}{…}`, `\url{ann@x.org}`) is such a link, so a photo before it is written inside its `<contact
+role="email">`: the content kept, pdflatex printing the two side by side as for any link (repro
+`fm_photo_before_mailto_is_in_the_email`, a known shape, catalog only). A gap holding stretch glue (`\hfill`) is no such
+gap: pdflatex sets the image at the line's left edge and the link at its right when a wider line sets the column, a
+decoration of its own, so the image is counted, not joined. One leading a mark, an e-mail not printed as a link
+(`\texttt{ann@x.org}`) or an address has no place: a note there made the mark-led affiliation its plain text (+2
+Warnings), and a run printing an address is written as the e-mail's text, so `place_pictures` joins no address run. Such
+a picture is counted: an image has no word for the word check (`lost_inks`), so the check has a picture half, span
+coverage — `Written::unwritten_pictures` counts every image or picture note of a block whose span lies inside no written
+item's span (items a ruling dropped aside; no span, counted), and `emit::warn_unwritten_pictures` raises one Warning per
+block ("holds no place for N picture(s) its author block prints; they are lost") unless the block is written whole. An
+item's span there is the span the emit writes it from, its entry's (`resolver::words::entry_span_in`, the emitter's
+`repart::entry_span` reads the same): an affiliation running on past an image to a link, `Zebra University,
+\includegraphics{…} \url{…}`, holds the image (review revIMG1 finding 1: its source span alone gave a false loss Warning).
+It reads the items written, not the join: `Web: \includegraphics{…} \url{…}` is written as one affiliation holding the
+image, and the link label pass (`insert::kind_link_and_grade_contacts`, `strip_before_link`) then strips it with the
+label's text — counted there by its own Warning ("drops N picture(s) printed between the label … and its link"); keeping
+it in the contact is that pass's change, proposed apart. Routes the check does not see, enumerated from `check_blocks` (it walks
+`live_blocks`' `Outcome::Events` author blocks, their top-level events) and from the emit's item writers (`emit.rs`
+`item_call`'s text branches): (1) an image a later line's run of text joins (`place_pictures`' Name join) leaves no
+picture event, the run's words being the word check's; (2) a picture inside a note's `inner` events (`\thanks{…}`, a
+footnote) is the note's, not iterated; (3) a block written whole is not checked (its tokens keep its pictures); (4) an API
+call's entries (`\affiliation{…}`, `\institute{…}`, `\IEEEauthorblockA{…}`, any `Outcome` not `Events`) are not walked;
+(5) an item written by its text (the e-mail branch, "a macro's span", "span letters differ") is held by its span though
+its text drops a picture inside it — a possible under-count, unprobed on a real paper (revIMG1's `\texttt{img addr}` is
+counted, as its image is a Layout event outside the e-mail's span). Repros
 `sectioning-frontmatter/fm_image_before_url_is_in_the_url`, `fm_image_before_mark_is_counted`,
-`fm_image_before_address_is_counted`, `fm_image_before_labelled_url_is_counted`, `author_icon_macro_quad_before_url`;
-guards `perfect_kernel_batchimg1::{image_before_a_url_is_in_the_url, image_before_a_mark_is_counted,
-image_before_an_address_is_counted, image_after_a_url_label_is_counted}`,
-`perfect_kernel_batch77y::icon_parted_from_its_link_goes_with_it`.
+`fm_image_before_address_is_counted`, `fm_image_before_labelled_url_is_counted`, `author_icon_macro_quad_before_url`,
+`fm_image_inside_affiliation_before_url_is_kept`, `fm_image_quad_inside_affiliation_before_url_is_kept`,
+`fm_image_glued_inside_affiliation_before_url_is_kept`, `fm_image_hfill_before_url_is_counted`; guards
+`perfect_kernel_batchimg1::{image_before_a_url_is_in_the_url, image_before_a_mark_is_counted,
+image_before_an_address_is_counted, image_after_a_url_label_is_counted, image_inside_an_affiliation_before_a_url_is_kept,
+image_parted_from_a_url_by_fill_is_counted}`, `perfect_kernel_batch77y::icon_parted_from_its_link_goes_with_it`.
 
 ### 990. An unmarked frontmatter note renders inline, with no dagger (CR8c)
 

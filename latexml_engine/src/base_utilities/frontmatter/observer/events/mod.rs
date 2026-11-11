@@ -2638,13 +2638,19 @@ pub(in crate::base_utilities) fn lex_with_inks(
 /// one Name whose span covers it — the line's entry written with the picture in it, in source order (`Ann Able\\
 /// \tikz\draw (0,0)--(1,0); Zebra University`: review revCR8 finding 4, the picture moved after the affiliation, whose
 /// markup was lost; `Ann Able\\ \includegraphics{…} Zebra University` lost its image silently, as 2503.08161's institutes
-/// their logos, `$^{1}$ \includegraphics[width=0.36cm]{polyu-logo.png} The Hong Kong …`). An image leading a URL on a later
-/// line, past a font switch and the gap a `\quad` prints, is that URL contact's: its span grown over the image (which stays
-/// an event of its own, for the content check), the contact written from its tokens with the icon in place, as pdflatex prints it (2503.08161's `\includegraphics{hf-logo.png}
-/// \texttt{\small\url{…}}`, 2505.21327's `{\github\ \texttt{\url{…}}}`, 2601.17879's `\github \quad \url{…}`: each icon
-/// lost silently). An image leading any other ink of a later line — a mark, an e-mail contact, a run printing an address —
-/// has no place and stays as it is, counted by the content check (`resolver::words::Written::unwritten_pictures`). A pgf/TikZ
-/// picture is a note already and stays one.
+/// their logos, `$^{1}$ \includegraphics[width=0.36cm]{polyu-logo.png} The Hong Kong …`). An image leading a link (a
+/// `role="url"` Contact event: `\url`, `\href`) on a later line, past font switches and any gap of natural width (a space,
+/// `\quad`, `\hspace{3cm}`, however wide), is that link's: its span grown over the image (which stays an event of its own,
+/// for the content check), the contact written from its tokens with the icon in place, as pdflatex prints it
+/// (2503.08161's `\includegraphics{hf-logo.png} \texttt{\small\url{…}}`, 2505.21327's `{\github\ \texttt{\url{…}}}`,
+/// 2601.17879's `\github \quad \url{…}`: each icon lost silently). An e-mail printed as a link, `\href{mailto:…}{…}` or
+/// `\url{ann@x.org}`, is such a link too, so a photo before it is written inside its `<contact role="email">` (the content
+/// kept; pdflatex prints the two side by side as for any link, no print reason to part them). A gap holding stretch glue
+/// (`\hfill`) is no such gap: it parts the image from the link by the column's slack, the image at the line's left edge and
+/// the link at its right when a wider line sets the column (pdflatex), a decoration of its own. An image leading any other
+/// ink of a later line — a mark, an e-mail not printed as a link (`\texttt{ann@x.org}`), a run printing an address — or
+/// parted from its link by fill glue has no place and stays as it is, counted by the content check
+/// (`resolver::words::Written::unwritten_pictures`). A pgf/TikZ picture is a note already and stays one.
 fn place_pictures(events: &mut Vec<Event>) {
   let image = |e: &Event| {
     e.kind == EventKind::Layout
@@ -2662,7 +2668,8 @@ fn place_pictures(events: &mut Vec<Event>) {
   let font_switch = |e: &Event| {
     e.kind == EventKind::Layout && e.span.is_none() && e.role.as_deref() == Some("font")
   };
-  let gap = |e: &Event| matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }));
+  // (a gap of natural width only: fill glue parts a decoration from the link in print)
+  let gap = |e: &Event| matches!(e.kind, EventKind::Sep(SepKind::Gap { fill: false, .. }));
   let url = |e: &Event| e.kind == EventKind::Contact && e.role.as_deref() == Some("url");
   let mut line = 0usize;
   let mut i = 0;
@@ -2691,23 +2698,25 @@ fn place_pictures(events: &mut Vec<Event>) {
       events[j].kind == EventKind::Name && resolver::addresses_in(&events[j].text).is_empty()
     });
     let Some(next) = run_after.filter(|_| line > 0 && !ends_line) else {
-      // (an image leading a URL of a later line, past a font switch and a `\quad`'s gap: the URL contact's, its span grown
-      // over the image — 2503.08161's `\includegraphics{hf-logo.png} \texttt{\small\url{…}}`, lost silently (review
+      // (an image leading a link of a later line, past font switches and a gap of natural width, `\hfill`'s not: the link
+      // contact's, an e-mail printed as a link (`\href{mailto:…}`) too, its span grown over the image — 2503.08161's `\includegraphics{hf-logo.png} \texttt{\small\url{…}}`, lost silently (review
       // revCR8b finding 1); a note there instead, in its place or at its line's end, made 2505.21327's two
       // `{\github\ \texttt{\url{…}}}` lines one affiliation, their markup lost (CR8c, reverted))
       let link = (i + 1..events.len())
         .find(|&j| !font_switch(&events[j]) && !gap(&events[j]))
         .filter(|&j| url(&events[j]));
       // (the image stays an event of its own, inside the contact's span: what the content check finds held by the item
-      // written, `resolver::words::Written::unwritten_pictures` — a URL the reading writes by its label's text, `Web:
-      // \includegraphics{…} \url{…}`, holds it not, counted)
+      // written, `resolver::words::Written::unwritten_pictures` — `Web: \includegraphics{…} \url{…}` is written as one
+      // affiliation holding it, which the link label pass strips with the label, counted there:
+      // `insert::kind_link_and_grade_contacts`)
       if let Some(link) = link.filter(|_| !picture && line > 0 && !ends_line) {
         events[link].span = join_span(events[i].span, events[link].span);
         i += 1;
         continue;
       }
       // (on the names line or ending its line, a note of its own in its place. One leading other ink of a later line — a
-      // mark, an e-mail contact, a run printing an address — stays the Layout event it is, which nothing writes: a note
+      // mark, an e-mail not printed as a link, a run printing an address — or parted from its link by fill glue stays the
+      // Layout event it is, which nothing writes: a note
       // there broke the line's reading (`\includegraphics{…} $^{1}$Zebra University` its affiliation written as its text,
       // `\includegraphics{…} \texttt{ann@x.org}` its e-mail too, the note lost), and an address run is written as its text,
       // a picture joined into it lost with it. The content check counts it (`resolver::words::Written::unwritten_pictures`))

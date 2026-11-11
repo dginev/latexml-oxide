@@ -20,6 +20,52 @@ pub(in crate::base_utilities::frontmatter::observer) fn printed_words(
     .filter(|w| !w.is_empty())
 }
 
+/// Text compared by its letters and digits alone, lowercased (the deleted `ab_audit fmshadow`'s `norm`): how the emitter
+/// keys an item, and [`entry_span_in`] reads its entry.
+pub(in crate::base_utilities::frontmatter::observer) fn norm(text: &str) -> String {
+  text
+    .chars()
+    .filter(|c| c.is_alphanumeric())
+    .flat_map(char::to_lowercase)
+    .collect()
+}
+
+/// The span of a block's entry the reading keys `key` (its text by [`norm`]), its source `span` its first event's (an entry
+/// of several pieces, `$^1$Department of Physics, Univ X, Japan`, is sourced at its first Name: 2307.03384): through the
+/// `events` printed after it, until their ink joined is the entry's text — over the lines an unmarked line continued, past
+/// the layout between (an image: `Zebra University, \includegraphics{…} \url{…}` one affiliation, review revIMG1
+/// finding 1) — `None` when it never is (a note, a mark, or other ink first). The span the emitter writes the entry from
+/// (`emitter::repart::entry_span`), and what holds a block's pictures ([`Written::unwritten_pictures`]).
+pub(in crate::base_utilities::frontmatter::observer) fn entry_span_in(
+  events: &[Event],
+  span: (u16, u16),
+  key: &str,
+) -> Option<(u16, u16)> {
+  let first = events
+    .iter()
+    .position(|e| e.kind != EventKind::Layout && e.span.is_some_and(|s| s.0 == span.0))?;
+  let (mut joined, mut end) = (String::new(), span.1);
+  for event in &events[first..] {
+    match &event.kind {
+      EventKind::Name | EventKind::Contact => joined.push_str(&norm(&event.text)),
+      // (the word "and" inside an entry is the entry's: `Computer Science and Engineering`, 1304.1574)
+      EventKind::Sep(SepKind::Word(word)) => joined.push_str(&norm(word)),
+      EventKind::Sep(_) | EventKind::Break | EventKind::Layout => continue,
+      _ => return None,
+    }
+    if let Some((_, e)) = event.span {
+      end = end.max(e);
+    }
+    if joined == key {
+      return Some((span.0, end));
+    }
+    if !key.starts_with(&joined) {
+      return None;
+    }
+  }
+  None
+}
+
 /// The words a multiset of them counts: [`printed_words`], lowercased.
 pub(in crate::base_utilities::frontmatter::observer) fn words_of(
   text: &str,
@@ -312,10 +358,20 @@ impl Written {
           if a.rule.contains("ruling3:written-out") || resolved.dropped.contains(a) {
             unread.insert(item);
           }
+          // (what it writes: its entry's span, the emit's (`entry_span_in`), wider than its source span where its text
+          // runs on past layout — an affiliation holding the URL after an image, `Zebra University, \includegraphics{…}
+          // \url{…}`, review revIMG1 finding 1 — and its source span where the entry can't be read so)
           if let Some(span) = span
             && !resolved.dropped.contains(a)
           {
-            holding.insert((at, span));
+            let written = match ledger.entries().get(at) {
+              Some(Entry::Author(block)) => match &block.outcome {
+                Outcome::Events { events, .. } => entry_span_in(events, span, &norm(&a.text)),
+                _ => None,
+              },
+              _ => None,
+            };
+            holding.insert((at, written.unwrap_or(span)));
           }
         }
       }

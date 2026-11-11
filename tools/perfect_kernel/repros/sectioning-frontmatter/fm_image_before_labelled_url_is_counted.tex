@@ -2,10 +2,11 @@
 %          the URL written by the label's entry
 % oracle:  pdflatex 0 errors: "Ann Able", "Zebra University", "Web: [image] https://example.org/x"
 % engines: rust int157a2 = the image dropped, 0 warnings
-% expect:  0 errors, 1 warning (the emitter's reading holds no place for 1 picture); Ann Able, her affiliation, the url
-%          contact named "Web: "; the image lost, counted: the URL contact's grown span holds it, but the item written,
-%          the label's entry, does not (`resolver::words::Written::unwritten_pictures` reads the written items' spans)
-% status:  RED (int157a2: silent) -> GREEN (IMG1: counted)
+% expect:  0 errors, 1 warning (the link label pass drops 1 picture printed between the label 'Web:' and its link);
+%          Ann Able, her affiliation, the url contact named "Web: "; the image lost, counted: the emit writes the line as
+%          one affiliation holding it (its entry's span holds it, `resolver::words::entry_span_in`), and
+%          `insert::kind_link_and_grade_contacts` strips it with the label's text
+% status:  RED (int157a2: silent) -> GREEN (IMG1: counted by the picture check; IMG1b: counted by the link label pass)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{graphicx}\usepackage{url}\usepackage{hyperref}

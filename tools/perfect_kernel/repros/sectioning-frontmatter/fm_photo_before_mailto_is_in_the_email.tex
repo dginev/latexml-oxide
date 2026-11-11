@@ -1,0 +1,19 @@
+% witness: review revIMG1 finding 2 (probes p3_photo_mailto, p3b_photo_url_email): a photo leading an e-mail printed as a
+%          link on a later line
+% oracle:  pdflatex 0 errors: "[image] ann@x.org" side by side on one line, as for any link
+% engines: rust int157a2 = the image dropped, 0 warnings; IMG1 = the image inside the e-mail contact, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able, her affiliation, one e-mail contact holding the photo then the mailto link (the
+%          link join of `events::place_pictures` takes any `role="url"` Contact event, a mailto link one): the content
+%          kept, the photo placed inside the Email contact. Catalog only (the join's guard is
+%          perfect_kernel_batchimg1::image_before_a_url_is_in_the_url)
+% status:  KNOWN SHAPE (IMG1, IMG1b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}\usepackage{url}\usepackage{hyperref}
+\title{T}
+\author{Ann Able \\ Zebra University \\
+\includegraphics[width=2cm]{example-image} \quad \href{mailto:ann@x.org}{ann@x.org}}
+\begin{document}
+\maketitle
+Body.
+\end{document}
