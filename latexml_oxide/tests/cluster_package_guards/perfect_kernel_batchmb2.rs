@@ -35,7 +35,7 @@ macro_rules! repro {
 /// hep-ph9606235, astro-ph0001190, hep-ph0411269, 2206.00543.
 #[test]
 fn glued_label_line_names_its_contacts() {
-  let (log, xml) = run(repro!("aa_mail_glued_email_label_takes_the_class_name"));
+  let (log, xml) = run(repro!("aa_mail_glued_email_label_joins_the_class_name"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_creators(&xml, &[&[
     "A. Smith",
@@ -49,7 +49,7 @@ fn glued_label_line_names_its_contacts() {
   );
 
   let (log, xml) = run(repro!(
-    "revtex_altaffiliation_glued_email_label_takes_the_class_name"
+    "revtex_altaffiliation_glued_email_label_names_its_contact"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_creators(&xml, &[

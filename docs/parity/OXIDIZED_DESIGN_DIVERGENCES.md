@@ -31132,7 +31132,12 @@ observer read some of them (`take_out_entry_addresses`, OD #938), but its writer
   addresses as the rest behind it: `\address{Univ A, Town\\ Email:zz@x.org}` gives `<contact name="Email: "
   role="email">zz@x.org</contact>`, not the label in the content and a `mailto:Email:zz@x.org` — GL1; hep-ph9606235,
   astro-ph0001190, hep-ph0411269, 2206.00543; guards `perfect_kernel_batchgl1::{glued_label_names_an_address_line_contact,
-  glued_label_names_a_mailto_link_contact}`), and any other colon before the `@` makes no address; a two-letter surname spells a local part of its letters alone
+  glued_label_names_a_mailto_link_contact, glued_label_names_an_entry_note_contact}`; a glued label behind a first,
+  spaced one, or behind a note's label, joins the name that label made, every printed label word kept in printed order:
+  `E-mail: Email:zz@x.org` is `zz@x.org` named "E-mail: Email: ", as the spaced form gives, `\footnote{Corresponding
+  author e-mail: Email:zz@x.org}` the note "Corresponding author" and the name "e-mail: Email: " — `joined_line_label`,
+  review revGL1 B1; guards `perfect_kernel_batchgl1::{second_glued_label_joins_the_line_label,
+  second_glued_label_joins_the_note_label}`), and any other colon before the `@` makes no address; a two-letter surname spells a local part of its letters alone
   (`NameKeys::short_surnames`: `an107@` Weili An's, not Anusuya Nallathambi's initials, 2608.22602) — not a name
   particle another word of the name follows (`de`, `la`, `da`, `le`, `di`, `du`: Ana de Souza spells no `de@`, Thanh
   Le's `le@` is his), nor two letters that are a word of the address's own entry, its mailbox (`ai@` under "AI Lab" and
@@ -34025,7 +34030,10 @@ is "Correspondence to: Email: " holding `zz@x.org`, REVTeX's `\altaffiliation[Co
 gives Ann's correspondence note "Corresponding author" before the e-mail `zz@x.org` named "Email: "; before MB1 both
 were named "Email: " and the class's name was printed nowhere, and until GL1 the label stayed in the content (review
 revMB1 S1, synthetic; guard `perfect_kernel_batchmb2::glued_label_line_names_its_contacts`, repros
-`sectioning-frontmatter/{aa_mail,revtex_altaffiliation}_glued_email_label_takes_the_class_name.tex`). **The join's space
+`sectioning-frontmatter/aa_mail_glued_email_label_joins_the_class_name.tex`,
+`revtex_altaffiliation_glued_email_label_names_its_contact.tex`). A glued label behind a first, spaced one joins after
+both: aa's `\mail{E-mail: Email:zz@x.org}` is "Correspondence to: E-mail: Email: " holding `zz@x.org` (review revGL1
+B1; guard `perfect_kernel_batchgl1::second_glued_label_joins_the_line_label`). **The join's space
 (MB2; review revMB1 N1, P2).** The join adds a space after the class's name unless the name's last token is spacing
 (`is_spacing`, which counts `\ `); aa's entry name was `name={\mailname}`, which `kv.revert()` returns unexpanded, so the
 join saw the CS and added a space after the one `\mailname` held — "Correspondence to  e-mail: ", a double space, the

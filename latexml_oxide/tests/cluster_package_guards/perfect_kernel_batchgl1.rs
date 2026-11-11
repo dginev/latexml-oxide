@@ -1,9 +1,11 @@
 //! Guards for GL1: an e-mail label glued to its address names the line's contact (`email_line_label`,
 //! OXIDIZED_DESIGN_DIVERGENCES #956): `Email:zz@x.org` reads as the list `[zz@x.org]`, and the label is split off when
 //! the whole line reads the same addresses as the rest behind it, so the address is the content and the label the name,
-//! as the spaced `Email: zz@x.org` gives. Guarded here on two routes to `email_line_calls`, the Kind step's address
-//! line and an entry's note; the class-named entry's join (aa, REVTeX) is
-//! `perfect_kernel_batchmb2::glued_label_line_names_its_contacts`. The affiliation runs' routes name the contact too,
+//! as the spaced `Email: zz@x.org` gives. Guarded here on the Kind step's routes to `email_line_label`: its address
+//! line (a label glued to an address, or to a mailto link) and an entry's note; the class-named entry's join (aa,
+//! REVTeX) is `perfect_kernel_batchmb2::glued_label_line_names_its_contacts`. A glued label behind a first, spaced one
+//! or a note's label joins the name that label made (`joined_line_label`, review revGL1 B1), guarded on the address
+//! line (with and without the class's name) and on the note. The affiliation runs' routes name the contact too,
 //! but place a glued line on a block creator where the spaced line goes to an author — a separate RED (catalog repros
 //! `emulateapj_affil_glued_email_line_{under_one_author,after_affiliations}_owner.tex`).
 //!
@@ -89,6 +91,75 @@ fn glued_label_names_an_entry_note_contact() {
   assert_eq!(
     email_contacts(&xml),
     ["<contact name=\"Email:\u{a0}\" role=\"email\">zz@x.org</contact>"],
+    "{xml}"
+  );
+}
+
+/// A second label glued to the address behind a first, spaced one joins the name the first made (`joined_line_label`;
+/// review revGL1 B1, where the inner name won and the first label was lost): amsart's `\address{Univ A, Town\\ E-mail:
+/// Email:zz@x.org}` is `zz@x.org` named "E-mail: Email: ", as the spaced `E-mail: Email: zz@x.org` gives; in an entry
+/// the class names, aa's `\mail{E-mail: Email:zz@x.org}` is `zz@x.org` named "Correspondence to: E-mail: Email: ", the
+/// class's name ahead (the PDF's "Correspondence to: E-mail: Email:zz@x.org"). Red on GL1 round 0: both named
+/// "Email: " alone. Synthetic (revGL1 probes `a_nest`, `aanest`; REVTeX's `\affiliation{Univ A\\ E-mail:
+/// Email:zz@x.org}`, probe `r_aff_nest`, takes the amsart path).
+#[test]
+fn second_glued_label_joins_the_line_label() {
+  let (log, xml) = run(repro!(
+    "amsart_address_email_label_then_glued_label_keeps_both"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_creators(&xml, &[&[
+    "Ann Able",
+    "address=Univ A, Town",
+    "email=zz@x.org",
+  ]]);
+  assert_eq!(
+    email_contacts(&xml),
+    ["<contact name=\"E-mail: Email:\u{a0}\" role=\"email\">zz@x.org</contact>"],
+    "{xml}"
+  );
+
+  let (log, xml) = run(repro!("aa_mail_email_label_then_glued_label_keeps_both"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_creators(&xml, &[&[
+    "A. Smith",
+    "affiliation=Univ. X, Y",
+    "email=zz@x.org",
+  ]]);
+  assert_eq!(
+    email_contacts(&xml),
+    ["<contact name=\"Correspondence to: E-mail: Email: \" role=\"email\">zz@x.org</contact>"],
+    "{xml}"
+  );
+}
+
+/// A second label glued to the address behind a note's label joins the name the note's label made (kind.rs's
+/// footnotes, `note_addresses`' label, `joined_line_label`; review revGL1 B1): REVTeX's `\affiliation{Univ A\footnote{Corresponding author
+/// e-mail: Email:zz@x.org}}` gives Ann the correspondence note "Corresponding author" before `zz@x.org` named "e-mail:
+/// Email: ". Red on GL1 round 0: no note, the contact named "Email: " alone. Synthetic (revGL1 probe `r_foot_nest`).
+#[test]
+fn second_glued_label_joins_the_note_label() {
+  let (log, xml) = run(repro!(
+    "revtex_affiliation_footnote_email_label_then_glued_label_keeps_both"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_creators(&xml, &[&[
+    "Ann Able",
+    "affiliation=Univ A",
+    "email=zz@x.org",
+  ]]);
+  assert_eq!(
+    email_contacts(&xml),
+    ["<contact name=\"e-mail: Email:\u{a0}\" role=\"email\">zz@x.org</contact>"],
+    "{xml}"
+  );
+  let note = "<note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" \
+              xml:id=\"id1\">Corresponding author</note>";
+  assert_eq!(xml.matches("<note ").count(), 1, "{xml}");
+  assert!(
+    xml.contains(&format!(
+      "{note}\n    <contact name=\"e-mail: Email:\u{a0}\""
+    )),
     "{xml}"
   );
 }
