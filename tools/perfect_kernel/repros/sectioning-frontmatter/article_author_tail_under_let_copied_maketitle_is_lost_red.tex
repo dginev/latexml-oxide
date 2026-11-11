@@ -4,6 +4,8 @@
 % expect:  0 errors; Bob B (Inst Y) kept as a creator, as pdflatex prints him
 % preload: ar5iv.sty
 % status: RED (synthetic; review revFX24b). pdflatex prints "Alice A / Inst X  Bob B / Inst Y" then "extra".
+% counted: 1 Warning "bob" since FX25's stand-in; a Warning still under FX27 (LaTeX's `\author`: the stand-in is
+%   LaTeX's page); guard perfect_kernel_batchfx24::an_author_tail_printed_but_not_read_is_counted
 % head (FX24b, as int158a): 1 creator, Alice A (Inst X); "Bob" absent from the XML, W=0 (a silent loss); FX24 kept Bob B.
 % Cause: title_page_prints_author compares a reached macro with the CURRENT \@maketitle meaning; \old@maketitle is a
 % \let copy of the kernel's, and the current one is the document's, so the copy is not recognised (OD #996 claims

@@ -5065,10 +5065,7 @@ pub(crate) fn title_page_replay_tokens(inject: &[Token]) -> Option<Tokens> {
 /// 2511.15315).
 /// `inject`: as [`title_page_deposit_tokens`].
 pub(crate) fn title_page_print_tokens(inject: &[Token]) -> Tokens {
-  // (a raw file's or a binding's `\@maketitle`; not the kernel's empty one, a document's teaser appended to it)
-  let class_maketitle = matches!(lookup_meaning(&T_CS!("\\@maketitle")),
-    Some(Stored::Expandable(ref d)) if matches!(d.get_origin(), DefinitionOrigin::File | DefinitionOrigin::Binding)
-      && matches!(d.get_expansion(), Some(ExpansionBody::Tokens(body)) if !body.is_empty()));
+  let class_maketitle = class_at_maketitle();
   let mut run = mouth::tokenize_internal(
     r"{\let\thanks\@firstofone\let\label\@gobble\let\index\@gobble\let\lx@maketitle@body\lx@print@maketitle",
   )
@@ -5087,9 +5084,7 @@ pub(crate) fn title_page_print_tokens(inject: &[Token]) -> Tokens {
     );
   }
   run.extend_from_slice(inject);
-  let replayable =
-    !lookup_bool("lx_depositing_class_maketitle") && title_page_replay_tokens(&[]).is_some();
-  if replayable {
+  if replays_class_maketitle() {
     run.push(T_CS!("\\lx@dropped@maketitle"));
     if let Some(Stored::Expandable(ref o)) = lookup_meaning(&T_CS!("\\lx@maketitle@opts"))
       && let Some(ExpansionBody::Tokens(opts)) = o.get_expansion()
@@ -5101,6 +5096,19 @@ pub(crate) fn title_page_print_tokens(inject: &[Token]) -> Tokens {
   }
   run.push(T_END!());
   Tokens::new(run)
+}
+
+/// Is `\@maketitle` a raw file's or a binding's ([`title_page_print_tokens`] runs it, not its stand-in for article.cls's)?
+/// Not the kernel's empty one, nor a document's teaser appended to it.
+fn class_at_maketitle() -> bool {
+  matches!(lookup_meaning(&T_CS!("\\@maketitle")),
+    Some(Stored::Expandable(ref d)) if matches!(d.get_origin(), DefinitionOrigin::File | DefinitionOrigin::Binding)
+      && matches!(d.get_expansion(), Some(ExpansionBody::Tokens(body)) if !body.is_empty()))
+}
+
+/// Does [`title_page_print_tokens`] run the class's own refused `\maketitle` ([`title_page_replay_tokens`])?
+fn replays_class_maketitle() -> bool {
+  !lookup_bool("lx_depositing_class_maketitle") && title_page_replay_tokens(&[]).is_some()
 }
 
 /// What a speculative title-page run ([`speculative_title_page_run`]) gave.
@@ -5224,7 +5232,8 @@ pub(crate) fn note_title_page_print() -> Result<()> {
         "FRONT the title page prints: {}",
         text.replace(INK_SEAM, "|")
       );
-      note_title_page_printed(&text);
+      let untailed = untailed_title_page_print(&inject)?;
+      note_title_page_printed(&text, untailed.as_deref());
     },
     SpeculativeRun::OverBudget(read) => {
       note_check_left_out(s!("the class's title page, after {read} tokens read"), 0)
@@ -5232,6 +5241,50 @@ pub(crate) fn note_title_page_print() -> Result<()> {
     SpeculativeRun::Aborted | SpeculativeRun::Unavailable => {},
   }
   Ok(())
+}
+
+/// What [`note_title_page_print`]'s run prints with `\@author` as the binding's setter left it, before the document
+/// appended to it, when that run was the stand-in for article.cls's `\@maketitle` (no title page of a raw file's or a
+/// binding's own ran: its print is its own evidence; nor a raw class's `\@author` reader) and the title page in force
+/// is not known to print what was appended (frontmatter_stores.rs `unverified_author_tail_prefix`): the title-page
+/// check reports a lost word only the appended text prints as annotated, an Info (OXIDIZED_DESIGN_DIVERGENCES #953,
+/// FX27). `None` otherwise, or when the run gives no print. `inject`: the first run's.
+fn untailed_title_page_print(inject: &[Token]) -> Result<Option<String>> {
+  if lookup_value(CLASS_AUTHOR_READER).is_some()
+    || class_at_maketitle()
+    || replays_class_maketitle()
+  {
+    return Ok(None);
+  }
+  let Some(prefix) = crate::frontmatter_stores::unverified_author_tail_prefix()? else {
+    return Ok(None);
+  };
+  let mut tokens = mouth::tokenize_internal(r"{\let\lx@check@thanks\thanks").unlist();
+  let mut inject = inject.to_vec();
+  inject.extend(mouth::tokenize_internal(r"\def\@author{").unlist());
+  // (a parameter token of the stored value doubled, as a definition's body holds it)
+  for token in prefix.unlist_ref() {
+    inject.push(*token);
+    if token.get_catcode() == Catcode::PARAM {
+      inject.push(*token);
+    }
+  }
+  inject.push(T_END!());
+  let hold = util::logger::DiagnosticsHold::begin();
+  tokens.extend(title_page_print_tokens(&inject).unlist());
+  hold.discard();
+  tokens.push(T_END!());
+  Ok(match checks_word_run(Tokens::new(tokens), false)? {
+    SpeculativeRun::Printed(text) => {
+      DebugFeature!(
+        "frontmatter",
+        "FRONT the title page prints, before the appended \\@author: {}",
+        text.replace(INK_SEAM, "|")
+      );
+      Some(text)
+    },
+    _ => None,
+  })
 }
 
 /// [`speculative_title_page_run`], in a mouth of its own when `isolated` ([`speculative_isolated_run`]), its text read
