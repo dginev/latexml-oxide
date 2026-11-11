@@ -1899,7 +1899,19 @@ residual".
   finding blocks only on invented or lost content vs the base; doc-only findings fixed by the main session at integration;
   fix briefs pass the content > markup > PDF check (IMG1b's `\hfill` rule, a reviewer's suggestion that dropped an image,
   reverted in IMG1c).
-- **The chain** (`chain/out/int157a/`): pending.
+- **The chain** (`chain/out/int157a/`): gates 8047/8047, cortex 10/10, clippy 0, doc 0; A/B 28,354 papers, 11 changed,
+  worse 0, E 45,818 → 45,818, F 172 → 174.
+  - Better: 2501.11185 and 1909.10278 (OC1c); 2604.18616 (10 names merged into 1 creator → 2 at its printed `and`, each
+    counted); 2504.21751 (IMG1: the hf/github icons kept on its URL contacts).
+  - Counted, not lost: 2603.11001 (+1 Warning, IMG1's picture check — a stray `\author` inside `\author[2]` loses one ORCID
+    icon, the XML the same on both).
+  - Load noise, identical when re-run side by side: 1505.04726 and 2311.05131 (the A/B's 180 s timeouts — rc 0 on a quiet
+    core, XML identical, 721.44 G → 721.39 G and 834.35 G → 835.02 G instructions), 1710.01722, 1811.05727, 1307.6774,
+    1104.1849 (the math parser's budget under load).
+  - Stage2 0 creators changed; nets 136, worse 0; cost all within +0.37 % (1507.02068 +0.370 %, 1901.01540 +0.097 %,
+    2005.08745 +0.004 %, 2103.04797 +0.124 %, b5_fill1000 −0.044 %, hello +0.125 %).
+  - Manual sweep #171 G1-G4 0. G5 57 → 58: tikzpingus-doc timed out at 180 s (172.6 s on #170); its XML is identical on
+    both binaries at 22.49 G instructions, the time is in post-processing under load.
 
 ## Bundle int156a — the e0 fence hardened, the bundle's small REDs, aa's entry name
 
