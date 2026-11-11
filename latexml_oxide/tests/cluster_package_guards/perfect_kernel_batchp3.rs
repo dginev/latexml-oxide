@@ -6,7 +6,7 @@
 //! exact Error and Warning counts. One test, one conversion per row: the rows are the shapes of one code path
 //! (`emit::block_names`'s run of the call, `emit::made_by_its_call`), each in a context of its own (the list's first
 //! call, its last call glued to the block's end, a cite inside the call, a font macro) and the wrapper's mark the rule
-//! must leave apart (2606.08894's shape, which a draft of P3 wrote into 20 papers' names).
+//! must leave apart (2606.08894's shape, which a draft of P3 wrote into 14 papers' names).
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},

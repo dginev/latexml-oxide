@@ -10141,7 +10141,7 @@ A replay that raises an error is dropped along with its diagnostics (batch 56hh)
 replay's premise, fields emptied, is a state the class never faces. PoS proceedings'
 pos.sty:88 keeps its authors in an expl3 seq that the locked `\author` never fills.
 Its `\printAuthors` (:171-190) pops the empty seq inside `\bool_do_until:nn` and
-expands the `\q_no_value` quark: "Token \q_no_value expands into itself!" ×2 in 20
+expands the `\q_no_value` quark: "Token \q_no_value expands into itself!" ×2 in 14
 papers of arXiv sandbox 2605 (2605.02049) and 154 of 2606 (aaskaiid.sty too, 2606.25043),
 where pdflatex and Perl are clean. The
 replay runs under a `DiagnosticsHold` (logger.rs). It holds the formatted records;
@@ -34436,7 +34436,7 @@ the name's grows the name's run to that call (`emit::block_names`, never over an
 whole, which digests to the name and its marks as the block did, as every other ptephy name is written (Perl's
 personname holds the call). A mark with a position of its own stays as it was: a wrapper's after the name,
 `\textbf{Yizheng Sun\textsuperscript{1}}` (2606.08894), is written apart (P2 B; a draft reading every mark by event
-order wrote "Yizheng Sun 1" into 20 papers' names). The 4 ptephy witnesses (1304.2086, 1601.07691, 1304.7885, 2210.05569)
+order wrote "Yizheng Sun 1" into 14 papers' names). The 4 ptephy witnesses (1304.2086, 1601.07691, 1304.7885, 2210.05569)
 lose the by-text overcount; a symbol mark is kept as the PDF prints it (`Yoshiharu Kawamura<sup>∗</sup>`). Not done,
 P3's second half: a macro holding several names and their separators (`\author{\aut}`, ar1), every event's span the
 one token, stays by text, counted (RED `author_one_block/article_author_macro_of_names_written_by_text_red`): the
