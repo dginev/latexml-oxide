@@ -1640,7 +1640,14 @@ fn item_labels(xml: &str) -> Vec<(String, String)> {
 /// the kernel's (article) twin; each conversion's E/W exact. QA45 (revQA finding 1).
 #[test]
 fn list_labels_come_from_itemlabel() {
-  const ROWS: &[(&str, &str, usize, &[(&str, &str)])] = &[
+  // (repro, source, warnings, each item's (label, text))
+  type Row = (
+    &'static str,
+    &'static str,
+    usize,
+    &'static [(&'static str, &'static str)],
+  );
+  const ROWS: &[Row] = &[
     (
       "list_label_set_by_a_class_list",
       include_str!(
