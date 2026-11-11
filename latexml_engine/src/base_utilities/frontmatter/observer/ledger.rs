@@ -532,6 +532,10 @@ pub(in crate::base_utilities) fn policy_binding(owner: &str) -> String {
 /// load noted).
 pub(in crate::base_utilities) fn author_binding() -> String { meaning_owner(AUTHOR) }
 
+/// Whether the binding owning the `\author` meaning now (`author_binding`) declares that the class's title page prints
+/// what a document appends to `\@author` (`policy::declares_author_tail_printed`: authblk.sty, llncs.cls).
+pub fn author_tail_printed() -> bool { policy::declares_author_tail_printed(&author_binding()) }
+
 /// The binding owning the tracked command `n`'s meaning now ([`author_binding`]'s reading, for any of
 /// [`OWNED_COMMANDS`]); `kernel` when it has none.
 fn meaning_owner(n: usize) -> String {

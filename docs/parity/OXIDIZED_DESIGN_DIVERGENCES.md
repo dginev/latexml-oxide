@@ -34531,7 +34531,9 @@ Left by spelling (rule 3 of the P26 brief: each a mechanism of its own): the num
 spelling as `affiliations.rs` `class_numbered_institutes`, P4; a macro-held numbered list is still every author's);
 nowfnt's `\and` → `\\` in a note (`hand_untypeset_stores`, 2108.12618), whose replacement is a reading rule ("a
 `Sep(And)` in a pubnote is a `Break`"); `author_tail_calls`' `\and` split (a tail's first top-level `\and` parts its rows from more authors, #996; a
-macro-held `\and` stays in the rows' text, every word kept);
+macro-held `\and` stays in the rows' text: no word is lost, but the row also holds an "and" pdflatex does not print, which
+the frontmatter content check counts in a Warning ("appear … more often than the author blocks print them: and"); a `\let` copy of `\and` stays a row too, RED
+`article_author_tail_let_and_stays_a_row_red.tex`);
 `note_and_numbering`'s own `\and` list (sentinel entries the run prints, no reading of the document). Corpus
 byte-identity of the gates against int158a: the P26 report. Guards `perfect_kernel_batchp26::{an_in_place_line_is_the_classs_where_a_separator_means_the_kernels,
 a_displaced_and_list_is_read_by_meaning, a_numbered_store_route_tries_the_numbering_by_meaning}`; repros
@@ -34552,22 +34554,43 @@ a_displaced_and_list_is_read_by_meaning, a_numbered_store_route_tries_the_number
   `\lx@add@authors@append{…}`, read as an `\author` argument is (split at its own `\and`s, a `\\` line under a name its
   affiliation). Before, such a tail was dropped whole and, with the title-page check gluing the words around `\and`
   (FX25), uncounted.
-- *A binding whose `\author` stores nothing in `\@author`* (authblk, whose own `\@author` prints the block,
-  authblk.sty:167-171): `queue_front_matter` records `\@author`'s value as each creator is queued (`note_author_seen`,
-  `lx_author_seen`; the kernel `\author`'s `\lx@author@handed` clears it). At `\maketitle`, with no kernel call
-  handed, the tail after that value is read the same way, its rows every queued creator's (the line is printed under
-  the whole block) — only when the recorded value is the kernel's empty one (`\@empty`, or empty: the setter keeps its
-  own list), creators are queued, and the title page prints `\@author`: a raw class's `\@maketitle` reads it
-  (procdoc2.cls:77), or no class `\@maketitle` is in force (the bound classes'). A setter that stores `\@author`
-  itself is not this route: amsart's title page prints `\authors`, so its `\g@addto@macro\@author{\and Bob B}` makes
-  no creator (pdflatex prints only the first author).
+- *A binding whose `\author` stores nothing in `\@author` and whose class prints it with what is appended*: the
+  binding declares it in its frontmatter conventions (`Policy::author_tail`: authblk, whose own `\@author` prints
+  the block, authblk.sty:167-171; llncs, whose `\@maketitle` prints `\@author`, llncs.cls:1035), read off the binding
+  owning the `\author` meaning (`ledger::author_tail_printed`). `queue_front_matter` records `\@author`'s value as each
+  creator is queued (`note_author_seen`, `lx_author_seen`; the kernel `\author`'s `\lx@author@handed` clears it). At
+  `\maketitle`, with no kernel call handed, the tail after that value is read the same way, its rows every queued
+  creator's (the line is printed under the whole block). A binding that does not declare it is not this route:
+  amsart's title page prints `\authors` (its `\g@addto@macro\@author{\and Bob B}` makes no creator; pdflatex prints only
+  the first author), elsarticle's `\elsauthors`, the fallback class's (OmniBus, inst_support) is unknown (a tail there
+  stays lost, counted by the title-page check's Warning, as on int158a).
+- *Either route reads a tail only where the title page in force prints `\@author`* (`title_page_prints_author`, FX24b):
+  a stand-in copy's title page answers for itself (`copy_title_page_prints`); else the refused `\maketitle`
+  (`\lx@dropped@maketitle`), or else a `\@maketitle`, that a raw file or the document defined is walked through the live
+  code it reaches (`reads_of_branches` over `executed_code`, following the macros of File or Document origin): it prints
+  `\@author` when it reads it, or reaches LaTeX's or a binding's `\maketitle`/`\@maketitle` (or a `\let` copy of one);
+  with neither definition the title page is LaTeX's or the binding's, which prints it. A document's `\renewcommand\maketitle`
+  or `\def\@maketitle` printing only the title, a raw class's own title page, or its `\maketitle`/`\@maketitle` over
+  `\LoadClass{article}` print no tail, so none is read — neither more authors nor 59d's rows (review revFX24 finding 1).
+  The speculative title-page run's sentinels (`before_title_page_runs`) do not answer here: `\@author` is never one of
+  their candidates (the rerouted, off-table and net stores).
+- *The binding route's rows* (`row_calls`, FX24b): the tail printed under the whole block is an address the block's
+  authors share, the frontmatter API's existing gate `\lx@add@affiliation@shared` (author_macros.rs,
+  `shared_affiliation_calls`): its e-mail lines one address run placed as a block's address lines are
+  (`place_address_runs`: one address for each author of the row in their order, else each on the author it spells,
+  else one contact an address on the block's shared creator), its other lines one author-block row of every creator.
+  The kernel route's rows stay 59d's (`affiliation_calls`, one row a line). Placing them inside the moved Cut
+  (`frontmatter_api/affiliations.rs`) is fenced (`perfect_kernel_batche0::the_moved_cut_and_kind_take_no_new_decision`).
 
-Witness 2511.15315 (procdoc2/authblk; three e-mails appended under the block): int158a held none, FX24 keeps the
-line on every creator. Not done (RED repros): the e-mails of such a row are not placed on their owners
-(`authblk_email_row_appended_to_author_goes_to_every_author_red.tex`; the row is no e-mail list to the e-mail owner
-reading); a row after an `\author` naming several people goes to all of them where LaTeX prints it in the last
-column only (`class_affil_row_after_and_names_goes_to_every_author_red.tex`, 59d's choice). Guards
+Witness 2511.15315 (procdoc2/authblk; three e-mails appended under the block, each spelling its author): int158a held
+none, FX24 wrote the line on every creator, FX24b gives each address to its author (procdoc2.cls:77's `\@maketitle` reads
+`\@author`). Not done (RED repros): a row after an `\author` naming several people goes to all of them where LaTeX prints
+it in the last column only (`class_affil_row_after_and_names_goes_to_every_author_red.tex`, 59d's choice); under authblk
+a tail appended between two `\author` calls is lost, counted (`authblk_author_tail_before_a_later_author_is_lost_red.tex`:
+the later author's record holds the tail); a `\let` copy of `\and` is read as a row
+(`article_author_tail_let_and_stays_a_row_red.tex`, the separator-meaning batch's). Guards
 `perfect_kernel_batchfx24::{a_coauthor_appended_to_author_is_kept, a_class_coauthor_after_its_rows_is_kept,
 an_authblk_coauthor_appended_to_author_is_kept, an_authblk_email_line_appended_to_author_is_kept,
+an_author_tail_the_title_page_does_not_print_is_not_read, an_llncs_author_tail_is_kept,
 an_amsart_author_append_invents_no_creator}`; repros
-`sectioning-frontmatter/{article_coauthor_appended_to_author_is_kept,authblk_coauthor_appended_to_author_keeps_the_name,class_coauthor_appended_to_author_keeps_the_column}.tex`.
+`sectioning-frontmatter/{article_coauthor_appended_to_author_is_kept,authblk_coauthor_appended_to_author_keeps_the_name,class_coauthor_appended_to_author_keeps_the_column,authblk_email_row_appended_to_author_goes_to_its_owners,article_author_and_tail_unprinted_by_own_maketitle_makes_no_creator,article_author_row_tail_unprinted_by_own_maketitle_makes_no_row,raw_class_own_maketitle_author_tail_makes_no_creator,raw_class_renewed_maketitle_author_tail_makes_no_creator,raw_class_renewed_at_maketitle_author_tail_makes_no_creator,elsarticle_author_tail_outside_frontmatter_makes_no_creator,authblk_author_tail_unprinted_by_document_maketitle_makes_no_creator,llncs_author_tail_printed_keeps_the_author}.tex`.

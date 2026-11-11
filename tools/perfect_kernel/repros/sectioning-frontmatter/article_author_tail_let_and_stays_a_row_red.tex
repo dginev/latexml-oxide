@@ -1,0 +1,20 @@
+% mechanism: a `\let` copy of `\and` in a `\g@addto@macro\@author` tail: `author_tail_calls` (frontmatter_stores.rs)
+%   splits the tail at the token `\and` by its spelling, so `\myand Bob B\\Inst Y` stays author-block rows of Alice A.
+%   The separator-meaning batch's: ask the separator query (`argument_separators`) of the tail and split at a kernel
+%   `\and` by meaning (OXIDIZED_DESIGN_DIVERGENCES #995, "a separator's meaning, not its spelling"); nothing is lost
+% witness: synthetic (review revFX24 check 2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: two columns "Alice A | Bob B" over "Inst X | Inst Y"
+% engines: int158a (`latexml_oxide.int158a-rel`), FX24, FX24b: 0 errors, 0 warnings; one creator Alice A (affiliation
+%   Inst X, authorblock Bob B, authorblock Inst Y); perl not run
+% expect:  0 errors, 0 warnings; Alice A (Inst X), Bob B (Inst Y)
+% status:  RED (int158a, FX24, FX24b)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter\let\myand\and\makeatother
+\begin{document}
+\title{A Title}
+\author{Alice A\\Inst X}
+\makeatletter\g@addto@macro\@author{\myand Bob B\\Inst Y}\makeatother
+\maketitle
+Body text.
+\end{document}

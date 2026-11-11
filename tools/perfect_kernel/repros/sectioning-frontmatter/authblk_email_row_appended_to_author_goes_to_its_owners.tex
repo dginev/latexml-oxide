@@ -1,16 +1,17 @@
 % mechanism: authblk's own `\@author` (authblk.sty:167-171) prints the block; a line of e-mails a document appends to it
-%   (`\g@addto@macro\@author{\\…\texttt{…}, \texttt{…}}`) is kept since FX24 as one author-block row of every creator
-%   (frontmatter_stores.rs `seen_author_tail`, `row_calls`, `role=authorblock`), not as each address on the author it
-%   spells: the row is no e-mail list to the e-mail owner reading (`classify/email_owners.rs`), which a marked or
-%   unmarked block's e-mail lines go through. A second mechanism (rows read as contacts), not FX24's
+%   (`\g@addto@macro\@author{\\…\texttt{…}, \texttt{…}}`) is an address the block's authors share
+%   (frontmatter_stores.rs `seen_author_tail`, `row_calls` → `\lx@add@affiliation@shared`, `place_address_runs`): one
+%   address for each author in their order, else each on the author it spells, else one contact an address on the
+%   block's shared creator — not one author-block row of every creator (FX24)
 % witness: 2511.15315 (procdoc2/authblk, three e-mails `abdelhamid.ezzerg.24@`, `i.bogunovic@`, `j.knoblauch@ucl.ac.uk`
-%   in one appended line; int158a lost them, FX24 keeps the line on all three creators)
+%   in one appended line; int158a lost them, FX24 wrote the line on all three creators, FX24b each on its author)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Alice A1 and Bob B2", "1 Inst X", "2 Inst Y",
 %   "alice@x.org, bob@y.org" under the block
 % engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning (the check counts the lost words); the line lost.
-%   FX24: 0 errors, 0 warnings; Alice A and Bob B each hold the row "alice@x.org , bob@y.org"; perl not run
+%   FX24: 0 errors, 0 warnings; Alice A and Bob B each hold the row "alice@x.org , bob@y.org". FX24b: 0 errors, 0
+%   warnings; Alice A (Inst X, alice@x.org), Bob B (Inst Y, bob@y.org); perl not run
 % expect:  0 errors, 0 warnings; Alice A (Inst X, alice@x.org), Bob B (Inst Y, bob@y.org)
-% status:  RED (int158a, FX24)
+% status:  RED (int158a, FX24) -> GREEN (FX24b; guard perfect_kernel_batchfx24::an_authblk_email_line_appended_to_author_is_kept)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{authblk}
