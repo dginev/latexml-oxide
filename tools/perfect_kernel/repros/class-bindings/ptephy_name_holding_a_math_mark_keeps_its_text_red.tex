@@ -6,7 +6,9 @@
 % oracle:  pdflatex (TL 2025, -no-shell-escape, 1304.2086's ptephy.cls, a stand-in PDF for its logo graphic `newlogo`)
 %   0 errors: "Ann Able11,∗ and Bob Baker2,†", "1 Univ X", "2 Univ Y"
 % engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning (Bob Baker's plain-text overcount); creators
-%   "Ann Able 1 1,∗" (Univ X), "Bob Baker" (Univ Y): the marks' text in Ann's name, uncounted; perl not run
+%   "Ann Able 1 1,∗" (Univ X), "Bob Baker" (Univ Y): the marks' text in Ann's name, uncounted. P3 (int159a's base): Ann
+%   the same; Bob Baker's call written whole, `Bob Baker<sup>†</sup>` (its † kept, as the PDF prints), 0 warnings;
+%   perl not run
 % expect:  0 errors; creators Ann Able (Univ X), Bob Baker (Univ Y); no mark text in a name
 % status:  RED (int158a; RR1 gap 3)
 % preload: ar5iv.sty

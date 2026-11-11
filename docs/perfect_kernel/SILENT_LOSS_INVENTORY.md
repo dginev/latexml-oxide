@@ -1878,7 +1878,7 @@ do not block the E/F rerun.
 
 - Landed: P21, P21b, P21c, P21d (Option C P2-1 outside llncs), P24/P24b (P2-4 eptcs), GL1/GL1b (the glued e-mail label).
 - **Known REDs (catalog repros):**
-  - ptephy's last mark glued to the list's closing brace stays in the name (`author_one_block/ptephy_author_list_glued_trailing_mark_stays_red`);
+  - ptephy's last mark glued to the list's closing brace stayed in the name: closed by P3, the call written whole (`author_one_block/ptephy_author_list_glued_trailing_mark_leaves_the_name`);
   - three spaced e-mail labels leave two in the address and lose a colon (`email_three_spaced_labels_lose_a_colon_red`);
   - two contacts on one name after an `\and` split between authors (`omnibus_author_name_with_two_institutes_after_and_red`);
   - an sv `\begin{tabular}…\end{tabular}\and` list is not read as the authors' list (`svjour3_author_table_glued_to_and_list_stays_red`);
@@ -1892,7 +1892,7 @@ do not block the E/F rerun.
   - sv `\newcommand\sep{ \and\relax}` gives "and Bob Baker";
   - aa/sv with no class file lose an `\institute` inside `\author` (counted);
   - appolb's `\address` after the last of `A \and B` sits on B only (appolb.cls:194 prints it under both, nucl-th0308018).
-- **Overcount, kept on purpose:** the by-text Warning counts a name written by text even when it held no markup (4 ptephy witnesses, 2604.09547, …). BT1 (parked, branch `pk/BT1`) failed three reviews, each a silenced real loss. The redesign BT2 compares a name's written text with everything its segment prints.
+- **Overcount, kept on purpose:** the by-text Warning counts a name written by text even when it held no markup (2604.09547, …). BT1 (parked, branch `pk/BT1`) failed three reviews, each a silenced real loss; it and the redesign BT2 are superseded by P3 (user 2026-11-11), which writes a name a macro call prints as the call instead of by text: the 4 ptephy witnesses (1304.2086, 1601.07691, 1304.7885, 2210.05569) are no longer written by text. A macro holding several names (`\author{\aut}`) stays by text, counted (`author_one_block/article_author_macro_of_names_written_by_text_red`).
 - **Silent losses, uncounted on int157a too:**
   - IEEEtran `Ann\IEEEauthorrefmark{1} Able` → "Ann *" + "Able †";
   - llncs `Ann\inst{1} Able\inst{2}` → "Ann" + "Able";

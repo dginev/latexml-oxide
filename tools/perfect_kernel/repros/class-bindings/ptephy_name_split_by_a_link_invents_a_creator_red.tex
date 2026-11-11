@@ -1,0 +1,20 @@
+% mechanism: the reading (not the emitter): a link inside a ptephy `\name{…}` parts the name — a creator "Ann" holding
+%   the link as a url contact "Bea", then a creator "Able" — one person read as two (revBT1 finding 1; BT1's first
+%   shape, carried to P3, whose writer is not its cause)
+% witness: synthetic (revBT1; no census ptephy paper links a name)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1304.2086's ptephy.cls, a stand-in PDF for its logo graphic `newlogo`)
+%   0 errors: "Ann Bea Able1" ("Bea" a link), "1 Univ X"
+% engines: int159a and P3: 0 errors, 1 warning ("Able" written as its plain text); creators "Ann" (url "Bea") and
+%   "Able" (Univ X); perl not run
+% expect:  0 errors, 0 warnings; one creator "Ann Bea Able" (the link kept, target http://x.org), Univ X
+% status:  RED (int159a, P3)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{\name{Ann \href{http://x.org}{Bea} Able}{1}}
+\address{\affil{1}{Univ X}}
+\maketitle
+Text.
+\end{document}

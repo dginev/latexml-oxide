@@ -677,6 +677,21 @@ fn in_a_group(tokens: &[Token], start: usize, end: usize) -> usize {
   at
 }
 
+/// A mark a macro call's expansion prints: no position of its own (`Event::own_at`, a `\\textsuperscript`'s) and no
+/// formula or group but its cover, so its tokens are the call's, at the call's position (`token::inherit_field_prov`):
+/// ptephy's `\\name{…}{1,\\ast}` (`#1\\lx@inst@mark{1}\\lx@inst@mark{\\ast}`) — not a document's `\\nm{Ann Able}{1}`
+/// (`#1$^{#2}$`), whose formula mark is no call's (Known RED `omnibus_author_name_macros_with_marks_keep_them_red`); never a
+/// mark a wrapper holds, `\\textbf{Yizheng Sun\\textsuperscript{1}}` (2606.08894), whose own
+/// position is past the name's (OXIDIZED_DESIGN_DIVERGENCES #993 P3).
+fn made_by_its_call(e: &Event) -> bool {
+  e.span.is_some()
+    && e.own_at.is_none()
+    && e
+      .formula
+      .and_then(|f| f.span)
+      .is_none_or(|f| Some(f) == e.span)
+}
+
 /// The tokens from the event `first` through `last` of a block: their boxes' covers' run, or their own tokens in the font they
 /// print in where a cover is a wrapper's holding what else prints (`\\textbf{Ann, Bob}`, 2305.12182; a mark or a note after
 /// the name, `\\textbf{Yan Yan$^{1}$\\thanks{…}}`, 2309.13682, 2212.02936, which the reading writes apart: P2 B) or past
@@ -710,18 +725,27 @@ fn event_run_at(
       .and_then(|(s, t)| Some((at(s)?, at(t)?)))
   };
   let inside = |e: &Event| first.span <= e.span && e.span <= last.span;
+  // (where the first name prints among the events, digestion order: what prints before it)
+  let first_at = events
+    .iter()
+    .position(|e| e.kind == EventKind::Name && e.span == first.span && e.marks == first.marks)
+    .unwrap_or(0);
   let first_own = own_at(first).map_or(start, |(own, _)| own);
   let last_own = own_at(last).map(|(_, own)| own);
   // (the cover its own tokens fill holds nothing else: most names)
   let filled = first_own <= start && own_at(last).is_some_and(|(_, own)| own >= end);
   let wider = !filled
-    && events.iter().any(|e| {
+    && events.iter().enumerate().any(|(i, e)| {
       let mark_at = e.formula.and_then(|f| f.span).map(|s| s.0).or(e.own_at);
       (e.kind == EventKind::Name
       && !inside(e)
       && own_at(e).is_some_and(|(own, _)| start <= own && own < end))
-      // (a mark its cover holds before it, `\\textbf{$^2$Tencent Hunyuan}`, 2605.25195)
+      // (a mark its cover holds before it, `\\textbf{$^2$Tencent Hunyuan}`, 2605.25195, or whose group opens before it,
+      // `\\textbf{Yizheng Sun\\textsuperscript{1}}`, 2606.08894 — never a mark its call's expansion prints after the name,
+      // at the call's position, before the name's own tokens: ptephy's `\\name{\\fname{Yoshiharu}
+      // \\surname{Kawamura}}{1,\\ast}` (1304.2086's shape), written with the call, [`made_by_its_call`])
       || (e.kind == EventKind::Mark
+        && (i < first_at || !made_by_its_call(e))
         && mark_at.and_then(at).is_some_and(|mark| start <= mark && mark < first_own))
       // (or a mark or a note after it, which the reading answers or writes apart: `\\textbf{Yan Yan$^{1}$\\thanks{…}}`
       // kept its answered mark on the name and wrote the note twice, 2309.13682, 2212.02936 — P2 B)
@@ -919,6 +943,36 @@ fn block_names(
           grown.0 = grown.0.min(at(e.span?.0)?);
         }
       }
+      // (a kept mark whose cover holds the name's is the mark of the call that printed both, which is written whole, as it
+      // digests to the name and its marks: ptephy's `\\name{Bob Baker}{2}` glued to the block's end, whose name's cover
+      // stops short of the call, its arguments being the field's last tokens; written from inside the call, its marks'
+      // argument was the name's text, "Bob Baker2" (repro `author_one_block/ptephy_author_list_glued_trailing_mark_leaves_the_name`, OD #993 P3).
+      // Never a call printing another name)
+      let names_span = found[from]
+        .1
+        .span
+        .zip(found[to].1.span)
+        .map(|(a, b)| (a.0, b.1));
+      let other_name_in = |span: (u16, u16)| {
+        read.iter().enumerate().any(|(i, e)| {
+          e.kind == EventKind::Name
+            && !norm(&e.text).is_empty()
+            && !(found[from].0..=found[to].0).contains(&i)
+            && e.span.is_some_and(|o| span.0 <= o.0 && o.1 <= span.1)
+        })
+      };
+      let enclosing: Vec<(u16, u16)> = read
+        .iter()
+        .filter(|e| mark_kept(e) && made_by_its_call(e))
+        .filter_map(|e| e.span)
+        .filter(|span| {
+          names_span.is_some_and(|name| span.0 < name.0 && name.1 <= span.1)
+            && !other_name_in(*span)
+        })
+        .collect();
+      for span in &enclosing {
+        grown.0 = grown.0.min(at(span.0)?);
+      }
       // (an IEEE ordinal the reading joined to the name, `join_ordinals`, stays with it, as today's personname:
       // `1\\textsuperscript{st} Sertac`, 2412.10792, 2202.06596, 1907.06250, 2605.00900)
       let name_span = found[from].1.span;
@@ -1005,7 +1059,9 @@ fn block_names(
               && in_a_group(field.tokens, name_from, s) == name_from,
           )
         };
-        if marks && passed.is_empty() && stepped.is_empty() && past_group() != Some(true) {
+        if enclosing.contains(&span)
+          || (marks && passed.is_empty() && stepped.is_empty() && past_group() != Some(true))
+        {
           grown.1 = grown.1.max(t);
           seps.clear();
         } else if let Some((tokens, end)) = field.content_of((s, t), 0, s) {

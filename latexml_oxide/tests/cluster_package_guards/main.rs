@@ -540,6 +540,9 @@ mod perfect_kernel_batchp27;
 /// P27b: Option C P2-7's S8 half — a no-block flush holding a class's row contact (`_share`) is written by the emitter;
 /// `share_row_contacts` deleted (OD #901).
 mod perfect_kernel_batchp27b;
+/// P3: Option C P3 — a name a macro call prints with its marks is written as the call whole (its expansion), never by
+/// text nor from inside the call with the marks argument as the name's text (OD #993).
+mod perfect_kernel_batchp3;
 mod perfect_kernel_batchpb;
 /// PC3: two false undefined-command Errors of the frontmatter rehearsal — a title-code command after an e-mail
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.

@@ -10141,7 +10141,7 @@ A replay that raises an error is dropped along with its diagnostics (batch 56hh)
 replay's premise, fields emptied, is a state the class never faces. PoS proceedings'
 pos.sty:88 keeps its authors in an expl3 seq that the locked `\author` never fills.
 Its `\printAuthors` (:171-190) pops the empty seq inside `\bool_do_until:nn` and
-expands the `\q_no_value` quark: "Token \q_no_value expands into itself!" ×2 in 20
+expands the `\q_no_value` quark: "Token \q_no_value expands into itself!" ×2 in 14
 papers of arXiv sandbox 2605 (2605.02049) and 154 of 2606 (aaskaiid.sty too, 2606.25043),
 where pdflatex and Perl are clean. The
 replay runs under a `DiagnosticsHold` (logger.rs). It holds the formatted records;
@@ -34318,9 +34318,9 @@ theirs, and so do nine of the binding's own witnesses (revP21): 1601.07691, 1211
 and owners the same). Four of them (1601.07691, 1304.2086, 1304.7885, 2210.05569) gain one Warning `writes "<name>" as
 its plain text, its markup lost`, an overcount: the shape `\name{\fname{…} \surname{…}}{marks}` holds no markup
 (`\fname`/`\surname` are identity macros, `ptephy_cls.rs:700-701`) and the `personname` is plain text on both binaries;
-the emitter's by-text writer warns on every piece it writes by text (queued: warn only when the piece's events held
-markup). The marks stay when glued to the list's closing brace (RED repro
-`author_one_block/ptephy_author_list_glued_trailing_mark_stays_red`). OmniBus 2301.07825's jesmith@ address goes to
+the emitter's by-text writer warns on every piece it writes by text (P3, below, writes these names as their calls: no
+Warning). The marks stayed when glued to the list's closing brace (P3 closes it: repro
+`author_one_block/ptephy_author_list_glued_trailing_mark_leaves_the_name`). OmniBus 2301.07825's jesmith@ address goes to
 Jane E. Smith, whose `\footnotemark[3]` is the note printing it. aa's and sv_support's splits stayed (one queued block
 there changes what reads the queue per author entry: P2-1b, below), llncs's too (P2-3). Guards
 `perfect_kernel_batchp21::{an_author_list_is_one_block_the_reading_cuts,
@@ -34470,6 +34470,36 @@ authblk_and_gates_read_the_separator_by_meaning}` and `perfect_kernel_batchoc1c:
 `authblk_two_alike_macro_held_calls_each_own_affil` row (5 → 4 Warnings); repros `sectioning-frontmatter/`
 `authblk_affil_run_{name_before_a_list,two_lists}.tex`, `authblk_and_let_copy_and_csname_part_names.tex`,
 `authblk_renewed_and_is_no_kernel_column.tex`, `authblk_macro_held_and_line_before_affil.tex`.
+
+**P3: a name a macro call prints with its marks is written as the call.** A token a macro's expansion makes carries
+the call's field position (`token::inherit_field_prov`), and the first box digested from the call takes the call's
+cover (`field_cover_pending_merge`, OD #715). So a name a call prints with its marks — ptephy's
+`\name{\fname{Yoshiharu} \surname{Kawamura}}{1,\ast}` (`#1\lx@inst@mark{1}\lx@inst@mark{\ast}`, `ptephy_cls.rs`) — has
+the call for its span (a document's `\nm{Ann Able}{1}`, `#1$^{#2}$`, is not covered: its formula mark is no call's, Known RED
+`omnibus_author_name_macros_with_marks_keep_them_red`; revP3 NIT), and its marks the call's position, before the
+name's own tokens. The emitter (`emit::event_run_at`) read such a mark as printed before the name inside a wrapper
+(`\textbf{$^2$Tencent Hunyuan}`, 2605.25195), found no run and wrote the name by text with the Warning "a name its
+events don't spell"; and the last call's name, whose cover stops short of the call (its arguments the field's last
+tokens, `gullet::field_cover_of`), was written from inside the call, the marks argument as the name's text ("Bob
+Baker2"). Now a mark the call's expansion prints (`emit::made_by_its_call`: no position of its own, no formula or
+group but its cover) is no mark before the name unless its event comes first, and such a kept mark whose cover holds
+the name's grows the name's run to that call (`emit::block_names`, never over another name): the call is written
+whole, which digests to the name and its marks as the block did, as every other ptephy name is written (Perl's
+personname holds the call). A mark with a position of its own stays as it was: a wrapper's after the name,
+`\textbf{Yizheng Sun\textsuperscript{1}}` (2606.08894), is written apart (P2 B; a draft reading every mark by event
+order wrote "Yizheng Sun 1" into 14 papers' names). The 4 ptephy witnesses (1304.2086, 1601.07691, 1304.7885, 2210.05569)
+lose the by-text overcount; a symbol mark is kept as the PDF prints it (`Yoshiharu Kawamura<sup>∗</sup>`). Not done,
+P3's second half: a macro holding several names and their separators (`\author{\aut}`, ar1), every event's span the
+one token, stays by text, counted (RED `author_one_block/article_author_macro_of_names_written_by_text_red`): the
+rehearsal keeps no record of an expansion's tokens; the fix records a field token's one-level expansion (the core's
+`FieldInvocation::Expanded` hook, `field_notes`) and cuts it at its `Sep(And)` events as `cut_at_separators` does. Left too
+(REDs): a call in a `\parbox` (`ptephy_name_inside_its_call_in_a_parbox_red`) and a document macro's formula mark
+(`omnibus_author_name_macros_with_marks_keep_them_red`), whose marks `made_by_its_call` does not read as the call's. The
+links and marks that part a name inside a call (`ptephy_name_split_by_a_{link,mark}_invents_a_creator_red`) are the
+reading's, not the writer's. Guard `perfect_kernel_batchp3::a_name_inside_a_macro_call_is_written_from_the_call`; repros
+`class-bindings/author_one_block/{ptephy_name_inside_its_call_is_written_from_the_call,
+ptephy_name_and_cite_inside_its_call_is_written_from_the_call, article_author_name_macro_with_a_font_keeps_it,
+article_author_wrapper_mark_after_the_name_stays_apart, ptephy_author_list_glued_trailing_mark_leaves_the_name}.tex`.
 
 ### 994. The rehearsal binds a `\let` copy of an author-line separator or note command by its meaning, as the command it copies (SEP1)
 
