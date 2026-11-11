@@ -30594,30 +30594,38 @@ LaTeXML or a raw class's own file made), so a package's macro no longer takes th
 still cost, against no watch: 0.2 % (Scrabble-doc-fr) to 1.0 % (jwjournal-demo-en) on documents with no `\maketitle` to end them, the
 calls they record.
 
-**FX27: the check's two severities, by evidence** (the user's ruling of 2026-11-11). A lost word the title page in force
-is known to print stays a Warning, "The title page prints …". A lost word only text a document appended to `\@author`
-after the author setter stored it prints, under a title page not known to print that tail, is an Info,
-`frontmatter:annotated`, "The title page annotates N word(s) that its output does not hold: …": the author may mean
-it hidden, so no damage can be claimed, and the word is still named. Where the check ran its stand-in for article.cls's
-page, the print is run again with `\@author` as the binding's setter left it (`lx_author_seen`, kept past
-`\lx@author@tail` as `lx_author_tail_seen`; sect05.rs `untailed_title_page_print`), and a lost word that print lacks,
-which the frontmatter commands' text does not name either, is the Info's. The other lost words keep the Warning, also
-where one loss has words of both. Known to print (frontmatter_stores.rs `unverified_author_tail_prefix`):
-- LaTeX's `\author` is in force (the kernel's, a raw file's, the document's: `ledger::author_is_latex_own`). The stand-in
-  is then LaTeX's page, even where `title_page_prints_author`'s walk says otherwise (its false negatives: revFX24b's
-  REDs). A binding class that keeps the kernel's `\author` answers `kernel` too, so its stand-in print stays a Warning.
-- A title page of the file's or the document's own reaches `\@author` (the walk; amsart under a document's
-  `\@maketitle` printing it).
-- With no such page, the binding declares its title page prints the tail (`Policy::author_tail`: authblk, llncs).
-- The check ran no stand-in: a raw file's `\@maketitle`, a replayed refused `\maketitle`, or a binding's own
-  `\@maketitle` (titling's, titling.sty:166-180, over amsart or elsarticle). Its print is its own evidence.
+**FX27: the check's two severities, by evidence** (the user's ruling of 2026-11-11; FX27b inverts the default). A lost
+word stays a Warning, "The title page prints …", unless the title page in force positively does not print it. A lost
+word only text a document appended to `\@author` after the author setter stored it prints, under a title page that
+positively does not print that tail, is an Info, `frontmatter:annotated`, "The title page annotates N word(s) that its
+output does not hold: …": the author may mean it hidden, so no damage can be claimed, and the word is still named.
+Where the check ran its stand-in for article.cls's page, the print is run again with `\@author` as the binding's setter
+left it (`lx_author_seen`, kept past `\lx@author@tail` as `lx_author_tail_seen` until `\lx@maketitle@cleanup`; sect05.rs
+`untailed_title_page_print`), and a lost word that print lacks, which the frontmatter commands' text does not name
+either, is the Info's. The other lost words keep the Warning, also where one loss has words of both. Positively not
+printed (frontmatter_stores.rs `unverified_author_tail_prefix`), only under a binding's `\author`:
+- A title page of the file's or the document's own that does not reach `\@author` (the walk; authblk under a document's
+  title-only `\@maketitle`).
+- With no such page, the binding owning `\author` declares that the document class's page prints its own author list
+  (`Policy::own_author_page`, `ledger::author_tail_unprinted`): ams_support.sty for amsart, amsproc, amsbook
+  (`\authors`, amsart.cls:460-476, :638, :815-817); elsart_support_core.sty for elsarticle (`\elsauthors`,
+  elsarticle.cls:247-288, :805); acmart.cls (`\addresses`, acmart.cls:1619-1643, :2631). Keyed to the document class
+  (the first of the class's bindings), not the binding alone: OmniBus's autoload of ams_support.sty, old elsart.cls's
+  elsart_support_core.sty and a class over amsart (gen-m-l) are not declared.
+- The document class is OmniBus, the fallback's guess for an unknown class (`OmniBus:fallback`), whose real page is
+  unknown.
 
-Not known, so an Info: a binding class's page the stand-in replaces (amsart prints `\authors`, elsarticle
-`\elsauthors`; pdflatex prints no "Bob B"), OmniBus's, and under a binding's `\author` a document's own `\@maketitle`
-that does not reach `\@author` (authblk). The XML is unchanged; only the log line moves. Still a Warning on the safe
-side: article with a document's title-only `\@maketitle` (the walk cannot tell it from a document `\@maketitle` printing
-a `\let` copy of `\@author`, which pdflatex prints). FX26/FX26b's declaration that dropped the tail from the print is
-parked, its mechanism not merged (revFX26, revFX26b: it silenced counted losses). Guards
+Every other title page counts as printing the tail, so a lost word there stays a Warning: LaTeX's `\author` in force (the
+kernel's, a raw file's, the document's: `ledger::author_is_latex_own`, even where `title_page_prints_author`'s walk says
+otherwise, its false negatives: revFX24b's REDs); an own title page reaching `\@author` (amsart under a document's
+`\@maketitle` printing it); a binding declaring that its page prints the tail (`Policy::author_tail`: authblk, llncs);
+any binding declaring no page of its own, a binding added later included (IEEEtran, mnras, revtex4-1: pdflatex prints the
+tail, revFX27's probes; FX27 had made each an Info); and wherever the check ran no stand-in (a raw file's
+`\@maketitle`, a replayed refused `\maketitle`, titling's binding `\@maketitle` over amsart or elsarticle,
+titling.sty:166-180), whose print is its own evidence. The XML is unchanged; only the log line moves. Still a Warning on
+the safe side: article with a document's title-only `\@maketitle` (the walk cannot tell it from a document `\@maketitle`
+printing a `\let` copy of `\@author`, which pdflatex prints). FX26/FX26b's declaration that dropped the tail from the
+print is parked, its mechanism not merged (revFX26, revFX26b: it silenced counted losses). Guards
 `perfect_kernel_batchfx24::{an_amsart_author_append_invents_no_creator, an_author_tail_the_title_page_does_not_print_is_not_read,
 an_author_tail_printed_but_not_read_is_counted}`.
 
@@ -34718,7 +34726,8 @@ a_displaced_and_list_is_read_by_meaning, a_numbered_store_route_tries_the_number
   creator's (the line is printed under the whole block). A binding that does not declare it is not this route:
   amsart's title page prints `\authors` (its `\g@addto@macro\@author{\and Bob B}` makes no creator; pdflatex prints only
   the first author), elsarticle's `\elsauthors`, the fallback class's (OmniBus, inst_support) is unknown (a tail there
-  stays out of the output, named by the title-page check as annotated, an Info: #953 "FX27").
+  stays out of the output, named by the title-page check as annotated, an Info, where the binding declares its class's
+  own author page or the class is OmniBus's guess; elsewhere a Warning: #953 "FX27").
 - *Either route reads a tail only where the title page in force prints `\@author`* (`title_page_prints_author`, FX24b):
   a stand-in copy's title page answers for itself (`copy_title_page_prints`); else the refused `\maketitle`
   (`\lx@dropped@maketitle`), or else a `\@maketitle`, that a raw file or the document defined is walked through the live

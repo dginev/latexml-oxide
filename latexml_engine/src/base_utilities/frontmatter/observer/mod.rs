@@ -55,7 +55,8 @@ pub use events::{
 };
 pub use ledger::{
   author_is_latex_own as fm_author_is_latex_own, author_tail_printed as fm_author_tail_printed,
-  note_binding_load, record_note_text as fm_record_note_text,
+  author_tail_unprinted as fm_author_tail_unprinted, note_binding_load,
+  record_note_text as fm_record_note_text,
 };
 pub(in crate::base_utilities) use ledger::{
   field_stamped, note_field_stamp, record_api_call, record_author_body_clear,

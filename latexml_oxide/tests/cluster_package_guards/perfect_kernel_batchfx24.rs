@@ -115,66 +115,92 @@ fn an_authblk_email_line_appended_to_author_is_kept() {
 /// `\lx@dropped@maketitle`), a raw class's own `\maketitle` and `\@maketitle`, a raw class's `\maketitle` and its
 /// `\@maketitle` after `\LoadClass{article}` (File-origin, walked), elsarticle (a binding that does not declare
 /// `author_tail`), authblk under a document's `\def\@maketitle` (declared, but its title page does not print
-/// `\@author`). Under elsarticle and authblk the title-page check's stand-in for article.cls's page prints "bob", which
-/// pdflatex does not: the title page in force is not known to print the appended tail (a binding's `\author`, no
-/// declaration or a document's `\@maketitle` that does not reach `\@author`), so the check reports it as annotated, an
-/// Info, not a Warning (FX27, the user's ruling of 2026-11-11; int158a-int159a: 1 Warning "The title page prints …").
-/// Distinct: the gate of both routes.
+/// `\@author`), acmart, and an unknown class (OmniBus; its one Warning the missing class's). Under elsarticle, authblk,
+/// acmart and OmniBus the title-page check's stand-in for article.cls's page prints "bob", which pdflatex does not: the
+/// title page in force positively does not print the appended tail (elsarticle's `\elsauthors` and acmart's
+/// `\addresses`, which their bindings declare for their class, `Policy::own_author_page`; a document's `\@maketitle`
+/// that does not reach `\@author`; OmniBus's unknown page), so the check reports it as annotated, an Info, not a Warning
+/// (FX27/FX27b, the user's ruling of 2026-11-11; int158a-int159a: 1 Warning "The title page prints …"). Distinct: the
+/// gate of both routes, and the Info side of the check's evidence rule.
 #[test]
 fn an_author_tail_the_title_page_does_not_print_is_not_read() {
   let alice_x: &[&[&str]] = &[&["Alice A", "affiliation=Inst X"]];
   let annotated = "Info:frontmatter:annotated The title page annotates 1 word(s) that its output does not hold: bob";
-  let rows: [(&str, &str, bool, &[&[&str]]); 7] = [
+  let alice: &[&[&str]] = &[&["Alice A"]];
+  // (shape, repro, its Warning count, whether "bob" is annotated, the creators)
+  let rows: [(&str, &str, usize, bool, &[&[&str]]); 9] = [
     (
       "document \\maketitle, \\and tail",
       repro!("article_author_and_tail_unprinted_by_own_maketitle_makes_no_creator.tex"),
+      0,
       false,
       alice_x,
     ),
     (
       "document \\maketitle, row tail",
       repro!("article_author_row_tail_unprinted_by_own_maketitle_makes_no_row.tex"),
+      0,
       false,
       alice_x,
     ),
     (
       "raw class's own title page",
       repro!("raw_class_own_maketitle_author_tail_makes_no_creator.tex"),
+      0,
       false,
       alice_x,
     ),
     (
       "raw class's \\maketitle over article",
       repro!("raw_class_renewed_maketitle_author_tail_makes_no_creator.tex"),
+      0,
       false,
       alice_x,
     ),
     (
       "raw class's \\@maketitle over article",
       repro!("raw_class_renewed_at_maketitle_author_tail_makes_no_creator.tex"),
+      0,
       false,
       alice_x,
     ),
     (
       "elsarticle",
       repro!("elsarticle_author_tail_outside_frontmatter_makes_no_creator.tex"),
+      0,
       true,
       &[&["Alice A", "address=Inst X"]],
     ),
     (
       "authblk, document \\@maketitle",
       repro!("authblk_author_tail_unprinted_by_document_maketitle_makes_no_creator.tex"),
+      0,
       true,
       alice_x,
     ),
+    (
+      "acmart",
+      repro!("acmart_author_tail_unprinted_is_annotated.tex"),
+      0,
+      true,
+      alice,
+    ),
+    (
+      "OmniBus, an unknown class (its one Warning the missing class's)",
+      repro!("omnibus_unknown_class_author_tail_is_annotated.tex"),
+      1,
+      true,
+      alice,
+    ),
   ];
-  for (shape, tex, annotates, expected) in rows {
+  for (shape, tex, warnings, annotates, expected) in rows {
     let (log, xml) = run(tex);
     assert_eq!(
       (error_count(&log), warning_count(&log)),
-      (0, 0),
+      (0, warnings),
       "{shape}: {log}"
     );
+    assert!(!log.contains("frontmatter:unclaimed"), "{shape}: {log}");
     assert_eq!(log.contains(annotated), annotates, "{shape}: {log}");
     assert_eq!(creators(&xml), owned(expected), "{shape}: {xml}");
   }
@@ -185,45 +211,79 @@ fn an_author_tail_the_title_page_does_not_print_is_not_read() {
 /// appends to, `\let`-copies or prints a `\let` copy of `\@author` (revFX24b's REDs: under LaTeX's `\author` the
 /// stand-in is LaTeX's page, whatever `title_page_prints_author`'s walk says), amsart with a document `\@maketitle`
 /// printing `\@author` (the walk reaches it), and titling's `\@maketitle` (titling.sty:166-180, a binding's, which the
-/// check runs: its print is its own evidence) over amsart and elsarticle. pdflatex prints "Bob B" in each (the repros'
+/// check runs: its print is its own evidence) over amsart and elsarticle; and a binding declaring no page of its own
+/// (`Policy::own_author_page`), whose page prints the tail — IEEEtran (an `\and` tail, and an affiliation and e-mail
+/// line: 4 words), mnras, revtex4-1 (revFX27's blocker: FX27 made each an Info). pdflatex prints the tail in each (the repros'
 /// headers). Distinct: the Warning side of the check's evidence rule.
 #[test]
 fn an_author_tail_printed_but_not_read_is_counted() {
   let alice_x: &[&[&str]] = &[&["Alice A", "affiliation=Inst X"]];
   let alice: &[&[&str]] = &[&["Alice A"]];
-  let rows: [(&str, &str, &[&[&str]]); 6] = [
+  let bob = "1 word(s) of the document's that its output does not hold: bob";
+  // (shape, repro, the Warning's words, the creators)
+  let rows: [(&str, &str, &str, &[&[&str]]); 10] = [
     (
       "article, appended \\@maketitle",
       repro!("article_author_tail_under_appended_maketitle_is_lost_red.tex"),
+      bob,
       alice_x,
     ),
     (
       "article, \\let-copied \\@maketitle",
       repro!("article_author_tail_under_let_copied_maketitle_is_lost_red.tex"),
+      bob,
       alice_x,
     ),
     (
       "article, a copy of \\@author",
       repro!("article_author_tail_printed_through_let_copy_of_author_is_lost_red.tex"),
+      bob,
       alice_x,
     ),
     (
       "amsart, document \\@maketitle printing \\@author",
       repro!("amsart_author_tail_printed_by_document_maketitle_is_lost_red.tex"),
+      bob,
       alice,
     ),
     (
       "amsart, titling",
       repro!("amsart_titling_author_tail_printed_is_lost_red.tex"),
+      bob,
       alice,
     ),
     (
       "elsarticle, titling",
       repro!("elsarticle_titling_author_tail_printed_is_lost_red.tex"),
+      bob,
+      alice,
+    ),
+    (
+      "IEEEtran",
+      repro!("ieeetran_author_tail_printed_is_lost_red.tex"),
+      bob,
+      alice,
+    ),
+    (
+      "mnras",
+      repro!("mnras_author_tail_printed_is_lost_red.tex"),
+      bob,
+      alice,
+    ),
+    (
+      "revtex4-1",
+      repro!("revtex4_1_author_tail_printed_is_lost_red.tex"),
+      bob,
+      alice,
+    ),
+    (
+      "IEEEtran, an affiliation and e-mail tail",
+      repro!("ieeetran_author_affiliation_email_tail_printed_is_lost_red.tex"),
+      "4 word(s) of the document's that its output does not hold: lunar institute example org",
       alice,
     ),
   ];
-  for (shape, tex, expected) in rows {
+  for (shape, tex, words, expected) in rows {
     let (log, xml) = run(tex);
     assert_eq!(
       (error_count(&log), warning_count(&log)),
@@ -231,9 +291,9 @@ fn an_author_tail_printed_but_not_read_is_counted() {
       "{shape}: {log}"
     );
     assert!(
-      log.contains(
-        "Warning:frontmatter:unclaimed The title page prints 1 word(s) of the document's that its output does not hold: bob"
-      ),
+      log.contains(&format!(
+        "Warning:frontmatter:unclaimed The title page prints {words}"
+      )),
       "{shape}: {log}"
     );
     assert!(!log.contains("frontmatter:annotated"), "{shape}: {log}");
@@ -264,8 +324,8 @@ fn an_llncs_author_tail_is_kept() {
 /// `\g@addto@macro\@author{\and Bob B}` prints nothing (pdflatex: "ALICE A" alone), so no creator is made of it — the
 /// binding route reads a tail only under a binding declaring `author_tail` (authblk, llncs), which amsart's does
 /// not. Distinct: the route's refusal for a setter that stores `\@author` itself. The title-page check's stand-in prints
-/// `\@author` with the tail ("bob"), which amsart's title page does not: amsart's binding owns `\author` and declares no
-/// printed tail, so the check reports "bob" as annotated, an Info, not a Warning (FX27, the user's ruling of 2026-11-11:
+/// `\@author` with the tail ("bob"), which amsart's title page does not: amsart's binding owns `\author` and declares
+/// that amsart's page prints its own `\authors` (`Policy::own_author_page`, FX27b), so the check reports "bob" as annotated, an Info, not a Warning (FX27, the user's ruling of 2026-11-11:
 /// the author may mean it hidden, no damage can be claimed). int159a pinned it at 1 Warning (`ff7473bd2c`); FX26/FX26b's
 /// binding declaration, which dropped the tail from the check's print, is parked (revFX26, revFX26b: it silenced a
 /// counted loss), its mechanism not merged. Its second conversion is one loss with words of both severities (FX27's

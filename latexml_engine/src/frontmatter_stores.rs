@@ -7648,17 +7648,20 @@ fn own_title_page_prints_author() -> Option<bool> {
 
 /// What `\@author` held when the frontmatter last took an author from a binding's setter (`lx_author_seen`, kept by
 /// `\lx@author@tail` for the check that runs after it), when a document appended to it since and the title page in force
-/// is not known to print what it appended: the title-page check's evidence (OXIDIZED_DESIGN_DIVERGENCES #953, FX27), which
-/// reports a lost word only that tail prints as one the title page annotates, an Info, not as a printed word's loss. The
-/// title page is known to print it where LaTeX's `\author` is in force (the kernel's, a raw file's, the document's:
-/// `fm_author_is_latex_own`, the check's stand-in being LaTeX's page — even where the walk below says not, its known false
-/// negatives: revFX24b's REDs `article_author_tail_*_is_lost_red`), where a title page of the file's or the document's
-/// own reaches `\@author` ([`own_title_page_prints_author`]: amsart under a document's `\@maketitle` printing it), or,
-/// with none, where the binding declares its title page prints the tail (`Policy::author_tail`: authblk, llncs). Not
-/// known: a binding class's own page the stand-in replaces (amsart prints `\authors`, elsarticle `\elsauthors`;
-/// pdflatex prints no "Bob B"), OmniBus's, and a document's own `\@maketitle` that does not reach `\@author` under a
-/// binding's `\author` (authblk's). The caller asks only where the check ran its stand-in; a title page it ran of a
-/// file's or a binding's own (titling's `\@maketitle`, titling.sty:166-180) is its own evidence.
+/// positively does not print what it appended: the title-page check's evidence (OXIDIZED_DESIGN_DIVERGENCES #953, FX27,
+/// FX27b), which reports a lost word only that tail prints as one the title page annotates, an Info, not as a printed
+/// word's loss. Not printed: a title page of the file's or the document's own that does not reach `\@author`
+/// ([`own_title_page_prints_author`]: authblk under a document's `\@maketitle` printing the title alone), or, with none,
+/// a binding's page that prints its own author list, as the binding owning `\author` declares for the document class
+/// (`fm_author_tail_unprinted`, `Policy::own_author_page`: amsart's `\authors`, elsarticle's `\elsauthors`, acmart's
+/// `\addresses`; pdflatex prints no "Bob B"), and OmniBus's, the fallback's guess for an unknown class. Every other title
+/// page is taken to print it, a lost word staying a Warning: LaTeX's `\author` in force (the kernel's, a raw file's, the
+/// document's: `fm_author_is_latex_own`, the check's stand-in being LaTeX's page — even where the walk says not, its
+/// known false negatives: revFX24b's REDs `article_author_tail_*_is_lost_red`), an own title page reaching `\@author`
+/// (amsart under a document's `\@maketitle` printing it), and any binding not declaring its page (IEEEtran, mnras,
+/// REVTeX, whose pages print the tail — revFX27's probes —, authblk and llncs, which declare that they do:
+/// `Policy::author_tail`). The caller asks only where the check ran its stand-in; a title page it ran of a file's or a
+/// binding's own (titling's `\@maketitle`, titling.sty:166-180) is its own evidence.
 pub(crate) fn unverified_author_tail_prefix() -> Result<Option<Tokens>> {
   if fm_author_is_latex_own() {
     return Ok(None);
@@ -7677,12 +7680,9 @@ pub(crate) fn unverified_author_tail_prefix() -> Result<Option<Tokens>> {
   if current.len() <= prefix.len() || current[..prefix.len()] != *prefix {
     return Ok(None);
   }
-  match own_title_page_prints_author() {
-    Some(true) => return Ok(None),
-    None if fm_author_tail_printed() => return Ok(None),
-    _ => {},
-  }
-  Ok(Some(seen))
+  let unprinted =
+    own_title_page_prints_author().map_or_else(fm_author_tail_unprinted, |prints| !prints);
+  Ok(unprinted.then_some(seen))
 }
 
 /// Records the value of `\@author` as an author is queued (`queue_front_matter`): the

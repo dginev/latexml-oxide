@@ -21,6 +21,9 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   binding: "elsart_support_core.sty",
   title_marks: FmTitleMarks::Body,
   keyed_labels: true,
+  // (elsarticle's title page prints `\elsauthors`, never `\@author`, a setter of its own there: elsarticle.cls:247-288,
+  // :805, :848 — a document's tail on `\@author` prints nowhere, FX27b; not old elsart.cls's, unverified)
+  own_author_page: &["elsarticle.cls"],
   cite: "elsarticle.cls:656-662, :819, :836; elsart.cls v2.18 :1107-1108, :1135-1164; OD #948 (1108.0201)",
   ..FM_KERNEL_CONVENTIONS
 };

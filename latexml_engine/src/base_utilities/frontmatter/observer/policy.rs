@@ -114,6 +114,15 @@ pub struct Policy {
   /// block's (`frontmatter_stores::seen_author_tail`, OXIDIZED_DESIGN_DIVERGENCES #996: 2511.15315). Not amsart's (its
   /// title page prints `\authors`) nor elsarticle's (`\elsauthors`), which print no such tail
   pub author_tail:       bool,
+  /// the document classes (their bindings' file names) whose title page prints this binding's own author list, never
+  /// `\@author`, so what a document appends to `\@author` prints nowhere: amsart's, amsproc's and amsbook's `\authors`
+  /// (amsart.cls:460-476, :638, :815-817; amsproc.cls :613, :752-754; amsbook.cls :1356; ams_support.sty), elsarticle's
+  /// `\elsauthors` (elsarticle.cls:247-288, :805, :848; elsart_support_core.sty), acmart's `\addresses`
+  /// (acmart.cls:1619-1643, :2240, :2631). The counterpart of `author_tail`: the title-page check reports a lost word
+  /// only such a tail prints as one the page annotates, an Info (OXIDIZED_DESIGN_DIVERGENCES #953, FX27), where every
+  /// other binding's stays a Warning. Keyed to the document class, not the binding alone, which other classes load
+  /// whose page may print the tail (OmniBus's autoload of ams_support.sty, old elsart.cls's elsart_support_core.sty)
+  pub own_author_page:   &'static [&'static str],
   /// what the declaration reproduces
   pub cite:              &'static str,
 }
@@ -141,6 +150,7 @@ pub const KERNEL: Policy = Policy {
   keyed_labels:      false,
   block_breaks:      &[],
   author_tail:       false,
+  own_author_page:   &[],
   cite:              "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4; OD #925",
 };
 
@@ -217,6 +227,12 @@ pub fn declares_email_in_place(binding: &str) -> bool {
 /// ([`Policy::author_tail`], any of its hooks).
 pub fn declares_author_tail_printed(binding: &str) -> bool {
   declared(binding).is_some_and(|d| d.iter().any(|p| p.author_tail))
+}
+
+/// Whether a binding declared that the title page of `class` (the document class's binding file name) prints its own
+/// author list, never `\@author` ([`Policy::own_author_page`], any of its hooks).
+pub fn declares_own_author_page(binding: &str, class: &str) -> bool {
+  declared(binding).is_some_and(|d| d.iter().any(|p| p.own_author_page.contains(&class)))
 }
 
 /// The conventions among `declared` for a block recorded under `binding` (the `\author` owner) and `hook`: the first

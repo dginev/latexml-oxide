@@ -1667,6 +1667,9 @@ pub(crate) fn load() -> Result<()> {
   // over (`\maketitle:redefined`, recorded at the locked drop, state.rs).
   // Guard: `perfect_kernel_batch54::maketitle_cleanup_yields_to_a_class_redefinition`.
   DefPrimitive!("\\lx@maketitle@cleanup", sub[_args] {
+    // (the binding route's `\@author` record `\lx@author@tail` kept for this title page's check, which has run:
+    // frontmatter_stores.rs `unverified_author_tail_prefix`)
+    assign_value("lx_author_tail_seen", Stored::Bool(false), Some(Scope::Global));
     if !lookup_bool("\\maketitle:redefined") {
       for cs in ["\\maketitle", "\\title", "\\author", "\\date"] {
         let_i(&T_CS!(cs), &T_CS!("\\relax"), Some(Scope::Global));
@@ -5246,7 +5249,7 @@ pub(crate) fn note_title_page_print() -> Result<()> {
 /// What [`note_title_page_print`]'s run prints with `\@author` as the binding's setter left it, before the document
 /// appended to it, when that run was the stand-in for article.cls's `\@maketitle` (no title page of a raw file's or a
 /// binding's own ran: its print is its own evidence; nor a raw class's `\@author` reader) and the title page in force
-/// is not known to print what was appended (frontmatter_stores.rs `unverified_author_tail_prefix`): the title-page
+/// positively does not print what was appended (frontmatter_stores.rs `unverified_author_tail_prefix`): the title-page
 /// check reports a lost word only the appended text prints as annotated, an Info (OXIDIZED_DESIGN_DIVERGENCES #953,
 /// FX27). `None` otherwise, or when the run gives no print. `inject`: the first run's.
 fn untailed_title_page_print(inject: &[Token]) -> Result<Option<String>> {

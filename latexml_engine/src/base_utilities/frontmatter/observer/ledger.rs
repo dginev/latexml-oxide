@@ -536,6 +536,27 @@ pub(in crate::base_utilities) fn author_binding() -> String { meaning_owner(AUTH
 /// what a document appends to `\@author` (`policy::declares_author_tail_printed`: authblk.sty, llncs.cls).
 pub fn author_tail_printed() -> bool { policy::declares_author_tail_printed(&author_binding()) }
 
+/// Whether the title page in force positively does not print `\@author`, so what a document appends to it prints
+/// nowhere: the binding owning the `\author` meaning (`author_binding`) declares that the document class's page prints
+/// its own author list (`policy::declares_own_author_page`: ams_support.sty under amsart, amsproc, amsbook;
+/// elsart_support_core.sty under elsarticle; acmart.cls) — keyed to the document class (`CLASS_BINDINGS`' first), as
+/// such a binding loads under classes whose page may print it (OmniBus's autoload of ams_support.sty, old elsart.cls);
+/// or the document class is the fallback's guess for a class with no binding (OmniBus, `OmniBus:fallback`), whose real
+/// page is unknown (brief FX27). Any other binding's page is taken to print it: a lost word stays a Warning
+/// (OXIDIZED_DESIGN_DIVERGENCES #953, FX27b: IEEEtran, mnras and REVTeX print the tail).
+pub fn author_tail_unprinted() -> bool {
+  if lookup_bool("OmniBus:fallback") {
+    return true;
+  }
+  let owner = author_binding();
+  CLASS_BINDINGS.with(|c| {
+    c.borrow()
+      .0
+      .first()
+      .is_some_and(|class| policy::declares_own_author_page(&owner, class))
+  })
+}
+
 /// Whether LaTeX's `\author` — the kernel's, a raw file's or the document's own (`author_binding`: `kernel`, `raw`,
 /// `document`) — is in force, not a binding's (amsart's, elsarticle's, authblk's, OmniBus's `fallback`): then the
 /// title page the title-page check's stand-in prints is taken as the one in force (LaTeX's, article.cls:236-251), and

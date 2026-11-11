@@ -1,0 +1,19 @@
+% mechanism: mnras's `\@maketitle` prints `\@author` (mnras.cls), so a tail a document appends to it prints; the binding's reading makes no creator of it
+% witness: synthetic (review revFX27 finding 1); 0 of 1,536 census candidates append to `\@author`
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: the authors line prints "Alice A Bob B"
+% engines: int159a (`latexml_oxide.int159a-rel`): 0 errors, 1 warning "The title page prints 1 word(s) of the
+%   document's that its output does not hold: bob"; Alice A alone. FX27: 0 errors, 0 warnings, the words an Info
+%   "annotated" (a real loss demoted: revFX27's blocker). FX27b: as int159a; perl not run
+% expect:  the tail's words kept (or, while not read, the loss counted by one Warning, never an Info)
+% status:  RED (counted by 1 Warning, not read; FX27b: the binding declares no page of its own, `Policy::own_author_page`;
+%   guard perfect_kernel_batchfx24::an_author_tail_printed_but_not_read_is_counted)
+% preload: ar5iv.sty
+\documentclass{mnras}
+
+\begin{document}
+\title{A Title}
+\author{Alice A}
+\makeatletter\g@addto@macro\@author{\and Bob B}\makeatother
+\maketitle
+Text.
+\end{document}

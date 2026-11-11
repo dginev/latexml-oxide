@@ -7,7 +7,7 @@
 %   run replaces a Document-origin `\@maketitle` by LaTeX's, sect05.rs `title_page_print_tokens`); Alice A (Inst X).
 %   FX24: 0 errors, 0 warnings; Alice A (Inst X), Bob B (Inst Y): Bob B invented. FX24b: as int158a; perl not run
 %   FX27: 0 errors, 0 warnings; Alice A (Inst X); Info "The title page annotates 1 word(s) that its output does not
-%   hold: bob" (a document's `\@maketitle` under a binding's `\author` that does not reach `\@author`: not known to print)
+%   hold: bob" (a document's `\@maketitle` under a binding's `\author` that does not reach `\@author`: it does not print the tail)
 % expect:  0 errors, 0 warnings; one creator Alice A (Inst X); the check's "bob" an Info (annotated), not a Warning
 % status:  RED (FX24) -> GREEN (FX24b, FX27; guard perfect_kernel_batchfx24::an_author_tail_the_title_page_does_not_print_is_not_read)
 % preload: ar5iv.sty

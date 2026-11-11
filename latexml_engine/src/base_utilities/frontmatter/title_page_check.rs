@@ -15,7 +15,8 @@
 //! is named in one `Warning:frontmatter:unclaimed`, in printed order; a word the unclaimed-text net already counted
 //! (insert.rs `keep_unclaimed_net_notes`, [`note_net_counted`]) is not counted again. Witnesses: 2007.07526 (amsart's
 //! author lines), the cpc-hepnp `\email` (1504.05444), raa 1304.5354, memsait astro-ph0102098, JUSTC 2409.17603.
-//! A lost word only text a document appended to `\@author` prints, under a title page not known to print that tail, is
+//! A lost word only text a document appended to `\@author` prints, under a title page that positively does not print that tail
+//! (a binding's declared own author page, OmniBus's, an own page not reaching `\@author`), is
 //! named apart in an Info, `frontmatter:annotated` (#953 "FX27": the author may mean it hidden).
 //!
 //! Beside the print, a second source (#953 "106t"): what TeX makes of what the document gave its frontmatter commands —
@@ -62,7 +63,7 @@ const UNTAILED: &str = "lx_title_page_untailed";
 /// in place of an earlier `\maketitle`'s, which it supersedes (DIVERGENCES #406: a later author list replaces the one
 /// flushed); none once the authors are sealed, a supplement's title page after the body began, whose entries the seal
 /// drops (`seal_digested_frontmatter`). `untailed`: what it prints with `\@author` as the binding's setter left it, when
-/// what a document appended to it since is not known to print (sect05.rs `untailed_title_page_print`): a lost word only
+/// what a document appended to it since positively does not print (sect05.rs `untailed_title_page_print`): a lost word only
 /// the appended text prints is reported as one the title page annotates ([`check_title_page_words`]).
 pub fn note_title_page_printed(text: &str, untailed: Option<&str>) {
   if frontmatter_entry_sealed("ltx:creator", "author") {
@@ -1737,7 +1738,7 @@ pub fn check_title_page_words(document: &Document) -> Result<()> {
       )
     );
   }
-  // (a word only what a document appended to `\@author` prints, under a title page not known to print it, is one the
+  // (a word only what a document appended to `\@author` prints, under a title page that positively does not print it, is one the
   // title page annotates — an Info: the author may mean it hidden; the user's ruling of 2026-11-11, FX27)
   let print_words = wanted_words(&resolver::base_letters(&print).to_lowercase()).words;
   let (annotated, lost): (Vec<String>, Vec<String>) = match lookup_value(UNTAILED) {
