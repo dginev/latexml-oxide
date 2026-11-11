@@ -34169,16 +34169,39 @@ by its binding (llncs.cls.ltxml's `\institute`).
 - *The query* (`observer/separators.rs` `argument_separators(&Tokens) -> Result<Option<Vec<ArgSeparator>>>`, re-exported
   as `latexml_engine::base_utilities::{argument_separators, FmArgSeparator, FmSepMeaning}`; TeX front-end
   `\lx@fm@separators{<tokens>}`, expanding to the meanings' names comma-separated, empty for none, `unread` where no
-  rehearsal could be made). The argument is rehearsed (`rehearsal::rehearse`, everything undone; the footnote steps it
-  carries put back) and each `Sep(And)` event at nest 0 reported with its family command and the meaning of the token that
-  printed it, read outside the rehearsal: `Kernel` (the kernel layer's `\and` constructor, `latex_constructs/sect05.rs`,
-  which `\And`/`\AND` are `\let` to — the test `frontmatter_stores.rs` `kernel_and_list` makes), `Binding`
-  (`DefinitionOrigin::is_binding_made`), `Raw` (a raw file's, the document's, or no separator's meaning). The printing
-  token is the one the event's span covers where it is no macro, else the family command (a macro holding the separator,
-  a class's macro `\and` or its `\let` copy, a `\csname and\endcsname`). Trap T8: the rehearsal binds `\and`/`\And`/`\AND` to its event whatever the class means
-  (`ALWAYS_BOUND`), so a `Sep` alone does not say the class parts names there — jmlr's word (jmlr.cls:336), smfart's `&`
-  (2508.07946), colm2025's, jmlr2e's and neurips's space; a gate asks for the meaning too. A call inside a rehearsal (no
-  journal opens) or over the budget answers `None`.
+  rehearsal could be made or it left a group open). The argument is rehearsed (`rehearsal::rehearse`, everything undone;
+  the footnote steps it carries put back) from the queries' own allowance (`rehearsal::for_a_query`, as `for_the_check`
+  runs the content check's: one rehearsal's reads per conversion, never the reading's `READS_LEFT`, its `LEFT_OUT` put
+  back), so a query moves no reading — four costly queries before `\maketitle` under `LATEXML_REHEARSAL_READ_BUDGET=1500`
+  had spent the reading's budget and merged the block's two authors into one creator. Each `Sep(And)` event at nest 0 is
+  reported with its family command and the meaning of the token that printed it, read outside the rehearsal, the one in
+  force at the call site (the binding's `\author`, `\institute`):
+  - `Kernel`: the kernel layer's `\and` constructor (`latex_constructs/sect05.rs`, which `\And`/`\AND` are `\let` to), the
+    definition `\and`'s own (`get_cs()`). Narrower than `frontmatter_stores.rs` `kernel_and_list`, which takes any pool
+    constructor: `texvc_sty.rs:132` `Let!("\\and", "\\land")` is `Raw` here and kernel there — P2-6, which swaps that
+    gate, meets it.
+  - `Binding` (`DefinitionOrigin::is_binding_made`), whatever the definition prints: aas_support's real `\and`
+    (`aas_support_sty.rs:358`), stand-ins for a class's column break printing a space or nothing (colm2025
+    `colm2025_conference_sty.rs:23-24` `\And`/`\AND`, `jmlr_cls.rs:104` and `jmlr2e_sty.rs:35` `\And`, `jair_sty.rs:22,24`
+    `\hskip`, `neurips_sty.rs:145-146` no-ops), a word (`ims_support_sty.rs:51` `\AND`), a `&`
+    (`elsart_support_sty.rs:280` `\AND`), amsmath's math `\And` (`amsmath_sty.rs:1960`, no separator). Enumerated by grep
+    of `\\and"`/`\\And"`/`\\AND"` on definition lines in `latexml_package/src`, `latexml_contrib/src`,
+    `latexml_engine/src`. `Binding` alone says neither "a separator" nor "none". The P2 callers' gates (below) ask kernel
+    or not, which needs no split; a caller that must tell them apart reads its own binding's definition. A caller swapping
+    a spelling gate (l_aa, ecai, authblk test the token `\and`/`\And`) for `Kernel` changes the answer wherever `Binding`
+    or `Raw` arises.
+  - `Raw`: a raw file's, the document's, or no separator's meaning.
+
+  The printing token is the one the event's span covers where it is no macro, else the family command (a macro holding
+  the separator, a class's macro `\and` or its `\let` copy, a `\csname and\endcsname`). Trap T8: the rehearsal binds
+  `\and`/`\And`/`\AND` to its event whatever the class means (`ALWAYS_BOUND`), so a `Sep` alone does not say the class
+  parts names there (smfart's `&`, 2508.07946); a gate asks for the meaning too. The meaning is the call site's: a class
+  that defines or `\let`s `\and` only inside its title macro is read as the kernel's there, as `kernel_and_list` reads it —
+  jmlr.cls's word `\and` (jmlr.cls:336, inside `\jmlrpreauthor`, run by its `\maketitle`) answers `kernel` at `\author`
+  while the title prints "Ann Able and Bob Baker" (Known RED `separators_query_jmlr_title_time_and_red`; a title-time
+  reading is a mechanism of its own). `None`: a call inside a rehearsal (no journal opens), over the queries' allowance,
+  a run whose assignments could not be undone (they stay, as any rehearsal's), or one that left a group open (no kernel
+  author line holds a `\begingroup` without its `\endgroup`).
 - *The emitter's cut of a numbered contact call* (`emit::labelseq_call_cut`, `labelseq_piece`): a `labelseq=` contact call
   the reading cuts at its `\and`s (`resolver::api::labelseq_pieces`, now shared by the reading and the emitter, as
   `creator_call_pieces` is) is written as one call per piece — the call's own command, keyvals and wrappers kept
@@ -34186,19 +34209,27 @@ by its binding (llncs.cls.ltxml's `\institute`).
   OC1c's (#993), extracted unchanged as `cut_at_separators` (by tokens where each `\and` parts no ink; else by text, one
   counted Warning per piece written); a contact call's own content is the group when no wrapper group holds the `\and`s.
   Before, the emitter wrote the whole call for each entry (every author held "Univ X and Univ Y", the kernel `\and`
-  printing the word). Not cut, written as before: a call with an `\and` inside a layout container, or a piece holding a
-  mark, a contact or a note (an item the reading places apart, which a whole piece would print again).
+  printing the word). The cut is made once per call per flush (`emit::CallCuts`), not once per entry. Not cut here, taken
+  by the path before it: a call with an `\and` inside a layout container, or a piece holding a mark, a contact or a note
+  (an item the reading places apart, which a whole piece would print again) — `\institute{Univ X \email{a@x} \and Univ
+  Y}` is written by text, each author's institute (one counted Warning each), the e-mail to its owner.
 
 **Who will call them** (the P2P batches, by its rule-6 scan: `lx@splitting`, `split_tokens(`, `SplitDelim::`, literal
 `\and`/`\And`/`\AND` in `latexml_package/src`, `latexml_contrib/src`, `frontmatter_stores.rs`, `base_utilities/defs`,
 `frontmatter/classify`): the emitter's cut — P2-2 (S2: `inst_support_sty.rs:58`, `aa_cls.rs:93` and its gate :75-80,
 `sv_support_sty.rs:69`), P2-3 (llncs `:189`, gate :208), P2-6 (the numbered stores, `frontmatter_stores.rs:3148-3151`);
-the query — P2-2 (aa :80), P2-5 (`l_aa_cls.rs:108`, `ecai_sty.rs:56`), P2-6 (`frontmatter_stores.rs` :3216, :3225
-`kernel_and_list`, :3239, :3378, :7483, :7697), P2-7 (`authblk_sty.rs` :125, :211). Not enumerated by that scan: the
-engine beyond those directories (observer, insert, place) and splits on `\\` or commas.
+the query — P2-2 (aa :80), P2-5 (`l_aa_cls.rs:108`, `latexml_contrib/src/ecai_cls.rs:56`), P2-6
+(`frontmatter_stores.rs` :3216, :3225 `kernel_and_list`, :3239, :3378, :7483, :7697), P2-7 (`authblk_sty.rs` :125,
+:211). Not enumerated by that scan (P2P's list): the engine beyond those directories (observer, insert, place);
+`split_top_level_lines` (revtex, relocate); `\lx@split@addresses`; `frontmatter_api/` (affiliations.rs:416-429,
+line_marks.rs:16, cut.rs, kind.rs: P4); `classify/separators.rs:212-224`, `name_text.rs:36`,
+`old_reader/space_parted.rs:205`, ijcai.rs (P3/P4); splits on `\\` alone or commas; `\def\and{…}` meanings (argument
+passing, stays). The scan is heuristic (one macro level, no class-file wrappers).
 
 Guards `perfect_kernel_batchp20::{the_separator_query_reads_the_kernel_meanings,
 the_separator_query_reads_a_class_meaning_as_raw, the_separator_query_reads_a_binding_meaning,
+a_separator_query_spends_no_reading_budget, a_separator_query_over_an_open_group_is_unread,
 a_numbered_contact_call_is_written_a_call_per_piece}`; repros
-`sectioning-frontmatter/{separators_query_kernel_meanings,separators_query_class_meanings,separators_query_binding_meaning}.tex`,
-`sectioning-frontmatter/labelseq_contact_call_cut_at_{its_and,a_macro_held_and}.tex`.
+`sectioning-frontmatter/{separators_query_kernel_meanings,separators_query_class_meanings,separators_query_binding_meaning,separators_query_binding_column_breaks,separators_query_spends_no_reading_budget,separators_query_group_left_open}.tex`,
+`sectioning-frontmatter/labelseq_contact_call_cut_at_{its_and,a_macro_held_and}.tex`; Known RED
+`sectioning-frontmatter/separators_query_jmlr_title_time_and_red.tex`.

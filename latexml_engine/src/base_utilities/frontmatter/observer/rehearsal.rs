@@ -104,6 +104,9 @@ thread_local! {
   /// The reads the content check's own rehearsals may still make ([`for_the_check`]): one rehearsal's, apart from the
   /// conversion's.
   static CHECK_READS_LEFT: Cell<usize> = const { Cell::new(REHEARSAL_READS_DEFAULT) };
+  /// The reads a binding's separator queries may still make ([`for_a_query`]): one rehearsal's, apart from the
+  /// conversion's and the check's.
+  static QUERY_READS_LEFT: Cell<usize> = const { Cell::new(REHEARSAL_READS_DEFAULT) };
 }
 
 /// A new conversion's budget: [`REHEARSAL_READS_DEFAULT`], or `LATEXML_REHEARSAL_READ_BUDGET` (0: none).
@@ -116,6 +119,7 @@ fn reset_rehearsal_budget() {
   RUN_READS.set(reads);
   READS_LEFT.set(reads.saturating_mul(REHEARSALS_PER_CONVERSION));
   CHECK_READS_LEFT.set(reads);
+  QUERY_READS_LEFT.set(reads);
   LEFT_OUT.set(0);
 }
 
@@ -126,10 +130,28 @@ fn reset_rehearsal_budget() {
 /// call, read before the next author's `\affiliation`, which lost its rehearsal). One it gives up on is in no budget
 /// Warning: nothing written depends on it, and the check counts that call by its content's text (`ApiCall::unread`).
 pub(in crate::base_utilities) fn for_the_check<R>(rehearsals: impl FnOnce() -> R) -> R {
+  apart_from_the_reading(&CHECK_READS_LEFT, rehearsals)
+}
+
+/// Run a binding's separator query (`separators::argument_separators`) from the queries' own allowance, one rehearsal's
+/// reads ([`RUN_READS`]) for the conversion, never from the reads the output's rehearsals may make nor in their count of
+/// calls left out: a query moves no reading (four costly queries before `\maketitle` once spent a small budget, and
+/// the block they preceded was written whole, its two authors one creator). One it gives up on answers `None` and is in
+/// no budget Warning: nothing written depends on it.
+pub(in crate::base_utilities) fn for_a_query<R>(rehearsals: impl FnOnce() -> R) -> R {
+  apart_from_the_reading(&QUERY_READS_LEFT, rehearsals)
+}
+
+/// Run `rehearsals` with `allowance` standing in for the conversion's reads ([`READS_LEFT`]), the count of calls left
+/// out ([`LEFT_OUT`]) put back after: [`for_the_check`], [`for_a_query`].
+fn apart_from_the_reading<R>(
+  allowance: &'static std::thread::LocalKey<Cell<usize>>,
+  rehearsals: impl FnOnce() -> R,
+) -> R {
   let left_out = LEFT_OUT.get();
-  READS_LEFT.set(CHECK_READS_LEFT.replace(READS_LEFT.get()));
+  READS_LEFT.set(allowance.replace(READS_LEFT.get()));
   let read = rehearsals();
-  CHECK_READS_LEFT.set(READS_LEFT.replace(CHECK_READS_LEFT.get()));
+  allowance.set(READS_LEFT.replace(allowance.get()));
   LEFT_OUT.set(left_out);
   read
 }

@@ -3,10 +3,13 @@
 //!
 //! - The binding-callable separator query (`observer/separators.rs` `argument_separators`, its TeX front-end
 //!   `\lx@fm@separators{<tokens>}`): the `\and`-family separators an argument holds at its own level, as the rehearsal
-//!   digests it, each with the meaning of the token that printed it (`kernel`, `binding`, `raw`). Three rows, one per
-//!   meaning: the kernel's (a literal `\and`, `\And`/`\AND`, a macro-held one, a `\let` copy, a `\csname`; none inside a
-//!   box's tabular, none for the word), a raw class's (a word, a `&`: trap T8, the rehearsal's `Sep` alone says nothing of
-//!   the meaning), a binding's (aas_support's `\and`).
+//!   digests it, each with the meaning of the token that printed it (`kernel`, `binding`, `raw`), the one in force at the
+//!   call site. Three rows, one per meaning: the kernel's (a literal `\and`, `\And`/`\AND`, a macro-held one, a `\let`
+//!   copy, a `\csname`; none inside a box's tabular, none for the word), a raw class's (a word, a `&`: trap T8, the
+//!   rehearsal's `Sep` alone says nothing of the meaning), a binding's (aas_support's `\and`, colm2025's column-break
+//!   stand-ins). Two exits of their own: the query's rehearsal spends its own allowance (`rehearsal::for_a_query`: the
+//!   reading's budget untouched, the XML byte-identical to the document without the queries), and one that left a group
+//!   open answers `unread`.
 //! - The emitter's cut of a numbered contact call (`emit::labelseq_call_cut`): a `labelseq=` call the reading cut at its
 //!   `\and`s (`resolver::api::labelseq_pieces`) written as one call per piece, by its tokens (a literal `\and`) or by its
 //!   text, one counted Warning a piece (a macro holding the entries and the `\and`s).
@@ -18,6 +21,7 @@ use latexml::util::test::{error_count, warning_count};
 
 use super::{
   perfect_kernel_batch84b::creators,
+  perfect_kernel_batchz3::in_a_directory,
   perfect_kernel_batchz4::{creators_xml, run},
 };
 
@@ -80,11 +84,51 @@ fn the_separator_query_reads_a_class_meaning_as_raw() {
   ]);
 }
 
-/// A binding's own `\and` (aas_support's, under aastex701) is `binding`: what that binding says it means.
+/// A binding's own separator is `binding`, whatever it prints: aas_support's real `\and` (under aastex701), and colm2025's
+/// `\And`/`\AND`, stand-ins for the class's column breaks printing a space; the kernel `\and` the package leaves is
+/// `kernel`. One origin test (`DefinitionOrigin::is_binding_made`), so one guard, a row each.
 #[test]
 fn the_separator_query_reads_a_binding_meaning() {
   assert_eq!(answers(repro!("separators_query_binding_meaning")), [
     "B1[binding]"
+  ]);
+  assert_eq!(answers(repro!("separators_query_binding_column_breaks")), [
+    "C1[binding,binding]",
+    "C2[kernel]"
+  ]);
+}
+
+/// A query rehearses from its own allowance (`rehearsal::for_a_query`), never the reading's budget nor its count of calls
+/// left out: four costly queries before `\maketitle` under a small budget leave the XML byte-identical to the same
+/// document without them (the base: one merged creator "Ann Able and Bob Baker" and two Warnings).
+#[test]
+fn a_separator_query_spends_no_reading_budget() {
+  let tex = repro!("separators_query_spends_no_reading_budget");
+  let control = tex.replace("\\hbox{\\lx@fm@separators{#1}}", "\\hbox{}");
+  assert_ne!(control, tex);
+  let budget = [("LATEXML_REHEARSAL_READ_BUDGET", "1500")];
+  let (log, xml) = in_a_directory(tex, &[], &budget);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let (control_log, control_xml) = in_a_directory(&control, &[], &budget);
+  assert_eq!(
+    (error_count(&control_log), warning_count(&control_log)),
+    (0, 0),
+    "{control_log}"
+  );
+  assert_eq!(xml, control_xml);
+  assert_eq!(creators(&xml), [vec!["Ann Able".to_string()], vec![
+    "Bob Baker".to_string()
+  ]]);
+}
+
+/// A rehearsal that left a group open (a `\begingroup` with no `\endgroup`, after the separator or before it) answers
+/// `unread`, its separators unknown; the closed argument reads `kernel`.
+#[test]
+fn a_separator_query_over_an_open_group_is_unread() {
+  assert_eq!(answers(repro!("separators_query_group_left_open")), [
+    "G1[kernel]",
+    "G2[unread]",
+    "G3[unread]"
   ]);
 }
 

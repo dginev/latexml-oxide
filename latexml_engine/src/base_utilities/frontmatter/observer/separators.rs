@@ -3,13 +3,18 @@
 //! (`EventKind::Sep(SepKind::And)` at nest 0: literal, held in a macro of the document's, a `\let` copy, a `\csname
 //! and\endcsname`), each with whether its meaning *is* the kernel separator's. The rehearsal binds `\and`, `\And` and
 //! `\AND` to its separator event whatever they mean here (`rehearsal::ALWAYS_BOUND`), so a `Sep` alone does not say the
-//! class parts names there: jmlr's `\and` prints the word "and" (jmlr.cls:336), smfart's `&` (2508.07946), colm2025's,
-//! jmlr2e's and neurips's a space (trap T8 of the P2 plan). The meaning is read outside the rehearsal, where the binding
-//! calls the query.
+//! class parts names there (trap T8 of the P2 plan): a class's `\and` defined where the binding calls may print a word or
+//! a `&` (smfart's, 2508.07946), and a binding's own definition stands for whatever its class prints. The meaning is read
+//! outside the rehearsal, the one in force at the call site, where the binding calls the query (at `\author`,
+//! `\institute`): a class that defines or `\let`s `\and` only inside its title macro is read as the kernel's there, as
+//! `frontmatter_stores::kernel_and_list` reads it — jmlr.cls's word `\and` (jmlr.cls:336, inside `\jmlrpreauthor`,
+//! which its `\maketitle` runs) answers `kernel` before `\maketitle` (RED repro `separators_query_jmlr_title_time_and_red`;
+//! a reading of the title-time meaning is a mechanism of its own). The query rehearses from its own allowance (`rehearsal::for_a_query`),
+//! never the reading's budget nor its count of calls left out.
 //!
 //! Two front-ends of the one query: [`argument_separators`] for a binding's Rust code, and `\lx@fm@separators{<tokens>}`
 //! for a binding's macro text, expanding to the meanings' names in order, comma-separated (`kernel`, `binding`, `raw`),
-//! empty for none, `unread` where no rehearsal could be made.
+//! empty for none, `unread` where no rehearsal could be made or it left a group open.
 
 use latexml_core::{definition::origin::DefinitionOrigin, token::AUTHOR_PROV_POS_MASK};
 
@@ -17,7 +22,7 @@ use super::{
   events::{EventKind, SepKind, lex_events},
   ledger::field_stamped,
   policy::TitleMarks,
-  rehearsal::{Rehearsal, rehearse},
+  rehearsal::{Rehearsal, for_a_query, rehearse},
   *,
 };
 
@@ -25,10 +30,17 @@ use super::{
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SepMeaning {
   /// the kernel's `\and` (`latex_constructs::sect05`'s constructor, which `\And` and `\AND` are `\let` to there): the
-  /// kernel's author-line column, which the blocks' readings part names at
+  /// kernel's author-line column, which the blocks' readings part names at. The definition must be `\and`'s own (its
+  /// `get_cs()`), a kernel layer's: narrower than `frontmatter_stores::kernel_and_list`, which takes any pool constructor —
+  /// `texvc_sty.rs:132`'s `\let\and\land` is `raw` here and kernel there (P2-6, which swaps that gate, meets it)
   Kernel,
   /// a binding's own definition (its code, a fallback class's, a stand-in's or a borrowing's,
-  /// `DefinitionOrigin::is_binding_made`): what that binding says it means
+  /// `DefinitionOrigin::is_binding_made`), whatever it prints: aas_support's real `\and` (`aas_support_sty.rs:358`), the
+  /// stand-ins for a class's column break printing a space or nothing (colm2025's `\And`/`\AND`, jmlr's and jmlr2e's
+  /// `\And`, jair's `\hskip`, neurips's no-ops), a word (ims_support's `\AND`), a `&` (elsart_support's `\AND`), and
+  /// amsmath's math `\And` (no separator at all). So `Binding` alone says neither "a separator" nor "none": the P2
+  /// callers' gates ask kernel or not (`kernel_and_list`'s swap, aa, l_aa, ecai, authblk), which needs no split; a caller
+  /// that must tell them apart reads its own binding's definition
   Binding,
   /// anything else: a raw class's, a package's or the document's own definition (a word, a `&`, a space), or no
   /// separator's meaning at all (`\relax`, undefined)
@@ -102,9 +114,16 @@ fn printing_token(content: &[Token], span: Option<(u16, u16)>, command: &'static
 
 /// The `\and`-family separators `arg` holds at its own level (nest 0: not one a layout container of it holds, a
 /// `tabular`, a `\parbox`, nor a note's), in order, each with what it means where the query is made ([`SepMeaning`]).
-/// `None` where no rehearsal could be made: a call inside one (no journal opens), over the budget, or an argument past
-/// the field's positions. The rehearsal undoes everything it digested; the footnote steps it carries for the next
-/// block's rehearsal are put back, so a query moves no reading. OXIDIZED_DESIGN_DIVERGENCES #995.
+/// `None` where no rehearsal could be made — a call inside one (no journal opens), over the queries' allowance, an
+/// argument past the field's positions, a run whose assignments could not be undone (`Rehearsal::Skipped`) — or where
+/// the run left a group open (a `\begingroup` with no `\endgroup`: no kernel author line holds one, so its separators
+/// are unknown, not a list). What a rehearsal leaves for the reading, each put back (by reading `rehearse`'s writes to
+/// its thread-locals and its global assignments): the reads it spends and the calls it leaves out
+/// (`READS_LEFT`, `LEFT_OUT`: the queries' own allowance instead, `rehearsal::for_a_query`), the footnote steps it carries
+/// for the next block's rehearsal (`lx_fm_obs_counter_seen`, `lx_fm_obs_steps_carried`, restored here), its flags and its
+/// assignments (restored and rolled back by `rehearse`; a run whose assignments could not be undone keeps them, as every
+/// rehearsal's does, `SkipReason::NotUndone`, and answers `None`).
+/// OXIDIZED_DESIGN_DIVERGENCES #995.
 pub fn argument_separators(arg: &Tokens) -> Result<Option<Vec<ArgSeparator>>> {
   let content = arg.unlist_ref();
   if content.len() > usize::from(AUTHOR_PROV_POS_MASK) {
@@ -112,18 +131,28 @@ pub fn argument_separators(arg: &Tokens) -> Result<Option<Vec<ArgSeparator>>> {
   }
   const CARRIED: [&str; 2] = ["lx_fm_obs_counter_seen", "lx_fm_obs_steps_carried"];
   let carried = CARRIED.map(lookup_int);
-  let read = rehearse(
-    field_stamped(2, 0, content),
-    TitleMarks::Fnsymbol,
-    &[],
-    lex_events,
-  )?;
+  // (from the queries' own allowance, never the reading's budget nor its count of calls left out: `for_a_query`)
+  let read = for_a_query(|| {
+    rehearse(
+      field_stamped(2, 0, content),
+      TitleMarks::Fnsymbol,
+      &[],
+      lex_events,
+    )
+  })?;
   for (key, value) in CARRIED.iter().zip(carried) {
     if lookup_int(key) != value {
       assign_value(key, Stored::from(value), Some(Scope::Global));
     }
   }
-  let Rehearsal::Done { value: events, .. } = read else {
+  // (a run that left a group open read no event past where it opened — `\begingroup` and no `\endgroup`: unknown, not
+  // "no separator")
+  let Rehearsal::Done {
+    value: events,
+    left_open: false,
+    ..
+  } = read
+  else {
     return Ok(None);
   };
   let separators = events.iter().filter_map(|e| match e.kind {

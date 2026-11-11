@@ -1,12 +1,15 @@
 % mechanism: the binding-callable separator query (`observer/separators.rs` `argument_separators`, `\lx@fm@separators`;
 %   OD #995, Option C P2-0) answers a separator's meaning, not only its event: the rehearsal binds `\and` to its separator
-%   event whatever the class means by it (`rehearsal.rs` `ALWAYS_BOUND`; trap T8 of the P2 plan), so a class whose `\and`
-%   prints the word (jmlr.cls:336 `\def\and{\unskip\enspace{\normalfont and}\enspace}`) or a `&` (smfart.cls, 2508.07946)
-%   still gives a `Sep(And)` event. The query reads the meaning of the token that printed it where it is called: `raw`
-%   (a class's, a package's or the document's own), never `kernel` — a gate asking for the kernel separator
-%   (`frontmatter_stores.rs` `kernel_and_list`) sees none. A `\let` copy of such an `\and` is `raw` too, and one held in
-%   a macro. The kernel's `\and` back after the group is `kernel` again
-% witness: synthetic (the P2 plan's trap T8: jmlr's word, smfart's `&` of 2508.07946)
+%   event whatever the class means by it (`rehearsal.rs` `ALWAYS_BOUND`; trap T8 of the P2 plan), so an `\and` in force
+%   where the query is called that prints the word (the document's `\def\and{\unskip\enspace{\normalfont and}\enspace}`,
+%   jmlr.cls:336's body) or a `&` (smfart.cls, 2508.07946) still gives a `Sep(And)` event. The query reads the meaning
+%   of the token that printed it at the call site: `raw` (a class's, a package's or the document's own), never `kernel` —
+%   a gate asking for the kernel separator (`frontmatter_stores.rs` `kernel_and_list`) sees none. A `\let` copy of such an
+%   `\and` is `raw` too, and one held in a macro. The kernel's `\and` back after the group is `kernel` again. (jmlr.cls
+%   itself defines that word only inside `\jmlrpreauthor`, which its `\maketitle` runs, so at a binding's call site its
+%   `\and` is still the kernel's and reads `kernel`: the Known RED `separators_query_jmlr_title_time_and_red`)
+% witness: synthetic (the P2 plan's trap T8: the word of jmlr.cls:336 defined at document level, smfart's `&` of
+%   2508.07946)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: `\lx@fm@separators` provided as its argument printed, so the
 %   word lines print "Ann Able and Bob Baker", the `&` lines "Ann Able & Bob Baker", the last line "Ann Able Bob Baker" in
 %   two columns

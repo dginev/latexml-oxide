@@ -1744,7 +1744,7 @@ fn item_call(
   assoc: &Assoc,
   label: &str,
   separate: &BTreeSet<usize>,
-  pieces: &mut BTreeMap<usize, Vec<Piece>>,
+  memo: &mut CallCuts,
   whole: &mut BTreeSet<usize>,
   cuts: &[EntryCut],
 ) -> Result<Tokens> {
@@ -1766,7 +1766,7 @@ fn item_call(
           entry,
           label,
           separate,
-          pieces,
+          memo,
           whole,
           std::slice::from_ref(cut),
         )
@@ -1853,7 +1853,7 @@ fn item_call(
       }
     } else if let Some(tokens) = {
       // (or its piece, where the reading cut a numbered call at its `\and`s: `labelseq_call_cut`)
-      let piece = labelseq_piece(&call, assoc, &key.1)?;
+      let piece = labelseq_piece(&call, assoc, &key.1, &mut memo.labelseq)?;
       let command = cut
         .and_then(|cut| cut.command.as_ref())
         .or(piece.as_ref())
@@ -2314,7 +2314,7 @@ fn item_call(
       if note && let Some((footnote, argument)) = call_note(&call, assoc)? {
         return Ok(note_call(footnote, None, label, argument));
       }
-      let found = match pieces.entry(index) {
+      let found = match memo.pieces.entry(index) {
         Entry2::Occupied(held) => held.into_mut(),
         Entry2::Vacant(place) => place.insert(call_pieces(&call)?),
       };
@@ -2570,6 +2570,15 @@ fn call_note(call: &ApiCall, assoc: &Assoc) -> Result<Option<(bool, Vec<Token>)>
 
 /// A call's piece ([`call_pieces`]): its text, and its tokens, `None` where no balanced run holds it.
 type Piece = (String, Option<Vec<Token>>);
+
+/// What a flush's item calls cut, each call's once, by its place in the ledger (`ApiCall::index`): a call's pieces
+/// ([`call_pieces`]), and a numbered contact call's ([`labelseq_call_cut`], which rehearses the call again: each of an
+/// N-author list's entries is a piece of the one `\institute` call).
+#[derive(Default)]
+struct CallCuts {
+  pieces:   BTreeMap<usize, Vec<Piece>>,
+  labelseq: BTreeMap<usize, Option<LabelseqCut>>,
+}
 
 /// `call`'s content cut into the reading's entries (`split_pieces`), one each, its text and what it prints but its marks and its
 /// contacts, cut at their spans, in the font it prints in: an entry whose contact prints through no API call (0911.3853's `\\email`
@@ -4274,8 +4283,13 @@ fn labelseq_call_cut(call: &ApiCall) -> Result<Option<LabelseqCut>> {
 
 /// The call of the piece of `call` the reading's entry `assoc` is, its text `key` ([`labelseq_call_cut`]), where the reading
 /// numbered it by its place (`api:labelseq`, under conventions that do: `Policy::label_sequence`). A piece written by its
-/// text is counted once, as the entry it writes.
-fn labelseq_piece(call: &ApiCall, assoc: &Assoc, key: &str) -> Result<Option<Tokens>> {
+/// text is counted once, as the entry it writes. The call's cut is made once per flush (`cuts`).
+fn labelseq_piece(
+  call: &ApiCall,
+  assoc: &Assoc,
+  key: &str,
+  cuts: &mut BTreeMap<usize, Option<LabelseqCut>>,
+) -> Result<Option<Tokens>> {
   if !assoc
     .rule
     .split_whitespace()
@@ -4283,10 +4297,15 @@ fn labelseq_piece(call: &ApiCall, assoc: &Assoc, key: &str) -> Result<Option<Tok
   {
     return Ok(None);
   }
-  let Some((pieces, by_texts)) = labelseq_call_cut(call)? else {
+  let cut = match cuts.entry(call.index) {
+    Entry2::Occupied(cut) => cut.into_mut(),
+    Entry2::Vacant(place) => place.insert(labelseq_call_cut(call)?),
+  };
+  let Some((pieces, by_texts)) = cut.as_ref() else {
     return Ok(None);
   };
-  let piece = pieces.into_iter().find(|(text, _)| text == key);
+  let by_texts = *by_texts;
+  let piece = pieces.iter().find(|(text, _)| text == key).cloned();
   if by_texts && piece.is_some() {
     by_text(
       Some(
@@ -5231,7 +5250,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     });
     (rdf.0, rdf.1, keyed.unwrap_or(rdf.2))
   };
-  let mut pieces = BTreeMap::new();
+  let mut memo = CallCuts::default();
   // (the calls written whole, and the ones kept as they are)
   let mut written = wordless.clone();
   let base = lookup_int(QUEUE_ORDINAL_COUNTER);
@@ -5248,7 +5267,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       item.assoc,
       &label,
       &separate,
-      &mut pieces,
+      &mut memo,
       &mut written,
       &analysis.cuts,
     )?;
