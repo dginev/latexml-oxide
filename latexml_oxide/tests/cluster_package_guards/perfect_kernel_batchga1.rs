@@ -106,12 +106,135 @@ const ROWS: &[Row] = &[
       ("p", &[], "<p>after: 0.0/0.0</p>"),
     ],
   ),
+  // `\c@rownum` is a count whatever loaded first (colortbl.sty:269-274; tabularray.sty:185, :1682): xcolor's `[table]`
+  // before tabularray (2601.01074, 2409.12172: GA1b's `expected:register` Warnings, cells "b0.2"/"d0"), and in the
+  // same document a `\rowcolors` tabular whose rows read the count colortbl.sty:261 steps (`\the\rownum`, `\number`,
+  // `\therownum`; on int160a1 3 errors 12 warnings), each cell as pdflatex. Its one Warning is this harness's: in-process
+  // raw loading is off, so tabularray's `ninecolors` (required with xcolor) is `missing_file` (the CLI loads it: 0 W).
+  (
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_after_xcolor_table_rownum_is_a_count.tex"
+    ),
+    0,
+    1,
+    0,
+    "",
+    &[
+      (
+        "table",
+        &[r#"placement="h""#],
+        r#"<table placement="h" xml:id="tab1"><tabular vattach="middle"><tbody>
+          <tr><td align="left">a</td><td align="left">b1.2</td></tr>
+          <tr><td align="left">c</td><td align="left">d2</td></tr></tbody></tabular></table>"#,
+      ),
+      (
+        "table",
+        &[r#"placement="t""#],
+        r##"<table placement="t" xml:id="tab2"><tabular vattach="middle"><tbody>
+          <tr><td align="left">a</td><td align="left">b1.1</td></tr>
+          <tr backgroundcolor="#FFFFFF"><td align="left"><text backgroundcolor="#FFFFFF">c</text></td>
+          <td align="left"><text backgroundcolor="#FFFFFF">d2.2</text></td></tr>
+          <tr backgroundcolor="#808080"><td align="left"><text backgroundcolor="#808080">e</text></td>
+          <td align="left"><text backgroundcolor="#808080">f3</text></td></tr></tbody></tabular></table>"##,
+      ),
+    ],
+  ),
+  // The other load order: tabularray's `\c@rownum` first, colortbl.sty:272 lets `\rownum` to it (xcolor `[table]`);
+  // the harness's `ninecolors` Warning as above.
+  (
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_before_xcolor_table_rownum_is_a_count.tex"
+    ),
+    0,
+    1,
+    0,
+    "",
+    &[(
+      "tabular",
+      &[],
+      r#"<tabular vattach="middle"><tbody>
+        <tr><td align="left">a</td><td align="left">b1.2</td></tr>
+        <tr><td align="left">c</td><td align="left">d2</td></tr></tbody></tabular>"#,
+    )],
+  ),
+  // colortbl alone after tabularray: `\rownum` is tabularray's per-cell count (GA1b "b0.1", "d0": a second count).
+  (
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_before_colortbl_rownum_is_its_count.tex"
+    ),
+    0,
+    0,
+    0,
+    "",
+    &[(
+      "tabular",
+      &[],
+      r#"<tabular vattach="middle"><tbody>
+        <tr><td align="left">a</td><td align="left">b1.1</td></tr>
+        <tr><td align="left">c</td><td align="left">d2</td></tr></tbody></tabular>"#,
+    )],
+  ),
+  // xcolor `[table]` alone, `\therownum` outside a table: colortbl's count, "row 0" (GA1b: 2 Warnings).
+  (
+    include_str!("../../../tools/perfect_kernel/repros/graphics-tikz/colortbl_therownum.tex"),
+    0,
+    0,
+    0,
+    "",
+    &[("p", &[], "<p>row 0</p>")],
+  ),
+  // `\c@rowcount` counts no empty last row (tabularray.sty:3722-3731): a trailing `\hline`, `\\[2pt]` … `\\*`, the
+  // `expand=` path (`\lx@tblr@rules@shape`) and a `\SetCell[r=2]` table (GA1b "a3", "c3.2", "xm4.2", "z3/4").
+  (
+    include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_rowcount_counts_no_empty_last_row.tex"
+    ),
+    0,
+    0,
+    0,
+    "",
+    &[
+      (
+        "table",
+        &[r#"placement="h""#],
+        r#"<table placement="h" xml:id="tab1"><tabular vattach="middle"><tbody>
+          <tr><td align="left" border="t">a2</td><td align="left" border="t">b</td></tr>
+          <tr><td align="left" border="b t">c</td><td align="left" border="b t">d</td></tr></tbody></tabular></table>"#,
+      ),
+      (
+        "table",
+        &[r#"placement="t""#],
+        r#"<table placement="t" xml:id="tab2"><tabular vattach="middle"><tbody>
+          <tr><td align="left" cssstyle="padding-bottom: 2.0pt">a2</td>
+          <td align="left" cssstyle="padding-bottom: 2.0pt">b</td></tr>
+          <tr><td align="left">c</td><td align="left">d</td></tr></tbody></tabular></table>"#,
+      ),
+      (
+        "table",
+        &[r#"placement="b""#],
+        r#"<table placement="b" xml:id="tab3"><tabular vattach="middle"><tbody>
+          <tr><td align="left" border="t">a2</td><td align="left" border="t">b</td></tr>
+          <tr><td align="left" border="b">c2.2</td><td align="left" border="b">d</td></tr></tbody></tabular></table>"#,
+      ),
+      (
+        "table",
+        &[r#"placement="p""#],
+        r#"<table placement="p" xml:id="tab4"><tabular class="ltx_guessed_headers" vattach="middle"><tbody>
+          <tr><td align="left" border="l r t" rowspan="2" thead="column">xm3.2</td>
+          <td align="left" border="r t" thead="column">y1.2</td></tr>
+          <tr><td align="left" border="r t">y2.2</td></tr>
+          <tr><td align="left" border="b l r t">z3/3</td><td align="left" border="b r t">w3.2</td></tr>
+          </tbody></tabular></table>"#,
+      ),
+    ],
+  ),
 ];
 
 /// Repros macro-state/undefined_counter_register_is_an_error (GA0 finding 1), macro-state/
 /// counter_readers_keep_their_leniency and captions-floats/subfig_continuedfloat_in_a_float_without_subfloats
-/// (witness 1910.02851), alignment-bindings/tabularray_rownum_colnum_counters (GA1b): exact counts, the first Error,
-/// whole elements.
+/// (witness 1910.02851), alignment-bindings/tabularray_rownum_colnum_counters (GA1b), the `\c@rownum` count in every
+/// load order of xcolor `[table]`, colortbl and tabularray and tabularray's `\c@rowcount` (GA1c): exact counts, the first
+/// Error, whole elements.
 #[test]
 fn an_undefined_counter_register_is_the_error_tex_raises() {
   for (tex, errors, warnings, assuming, first_error, elements) in ROWS {

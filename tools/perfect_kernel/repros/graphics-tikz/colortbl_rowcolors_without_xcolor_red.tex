@@ -1,0 +1,17 @@
+% witness: synthetic (colortbl without xcolor; the GA1c review brief's "colortbl alone with \rowcolors")
+% oracle:  pdflatex 0 errors; cells "b1.1", "d2.2", "f3" (colortbl.sty:234-262 defines `\rowcolors` itself and steps
+%          `\rownum` per row)
+% engines: rust GA1c 1 error `undefined:\rowcolors` (the colortbl binding has no `\rowcolors`: the xcolor binding owns
+%          it), cells "b0.0", "d0.0", "f0"; Perl colortbl.sty.ltxml has none either
+% expect:  0 errors; the cells as pdflatex
+% status:  RED (a second mechanism: colortbl's own `\rowcolors`)
+\documentclass{article}
+\usepackage{colortbl}
+\begin{document}
+\definecolor{g}{gray}{0.8}\rowcolors{2}{g}{}
+\begin{tabular}{ll}
+a & b\therownum.\the\rownum \\
+c & d\therownum.\the\rownum \\
+e & f\therownum \\
+\end{tabular}
+\end{document}
