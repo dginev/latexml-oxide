@@ -48,9 +48,9 @@ use crate::base_utilities::{
       rehearsal::{Rehearsal, rehearse},
       resolver::{
         BlockCheck, LostInk, RCreator, RuleDrop, Written, check_blocks, contact_parts,
-        creator_call, creator_call_level, creator_call_pieces, is_creator_call, merged_names,
-        own_email_label, printed_email_label, read_events, shares_the_row, split_pieces,
-        uncoordinated_marks,
+        creator_call, creator_call_level, creator_call_pieces, is_creator_call, labelseq_pieces,
+        merged_names, own_email_label, printed_email_label, read_events, shares_the_row,
+        split_pieces, uncoordinated_marks,
       },
     },
     place::DEFERRED_TO_FLUSH_END,
@@ -1852,7 +1852,12 @@ fn item_call(
         return Ok(tokens);
       }
     } else if let Some(tokens) = {
-      let command = cut.and_then(|cut| cut.command.as_ref()).unwrap_or(command);
+      // (or its piece, where the reading cut a numbered call at its `\and`s: `labelseq_call_cut`)
+      let piece = labelseq_piece(&call, assoc, &key.1)?;
+      let command = cut
+        .and_then(|cut| cut.command.as_ref())
+        .or(piece.as_ref())
+        .unwrap_or(command);
       // (an affiliation-kind entry's class e-mail calls, which the reading places: without the separators and labels
       // around them, `entry_email_cut` — `\institute{Univ X\\ \email{p1@x.edu}, \email{p2@x.edu}}` had kept "Univ X ,")
       let emails_cut = if matches!(role, "affiliation" | "address" | "altaffiliation") {
@@ -3970,6 +3975,39 @@ fn creator_call_cut(call: &ApiCall) -> Result<Option<Vec<Tokens>>> {
     return Ok(None);
   };
   let own = creator_call_level(&events);
+  let runs = cut_at_separators(
+    content,
+    &events,
+    own,
+    &pieces,
+    false,
+    Some("a creator call cut where a macro holds its names and the separators between them"),
+  );
+  Ok(runs.and_then(|(runs, _)| {
+    runs
+      .into_iter()
+      .map(|piece| with_last_group(command, piece))
+      .collect()
+  }))
+}
+
+/// The contents of the pieces `pieces` (each holding a name) of a call's `content`, cut at its `\and`s at nest `own`
+/// (`events`, a stamped rehearsal of `content`: [`rehearsed`]) — the group holding the `\and`s holding the piece alone:
+/// the tokens between two `\and`s, where each `\and`'s own tokens (a literal one, a `\csname and\endcsname`, an active
+/// character) part no ink; else, each piece's name by its text, counted where `why` says so ([`by_text`]), and only where
+/// the piece prints nothing but its name — and whether it was. With `whole`, where no group of `content` holds the
+/// `\and`s, `content` itself is that group (a contact call's content, which no wrapper of its own holds:
+/// [`labelseq_call_cut`]). `None` where neither way gives them. [`creator_call_cut`]'s and [`labelseq_call_cut`]'s,
+/// OXIDIZED_DESIGN_DIVERGENCES #993, #995.
+fn cut_at_separators(
+  content: &[Token],
+  events: &[Event],
+  own: u8,
+  pieces: &[&[Event]],
+  whole: bool,
+  why: Option<&str>,
+) -> Option<(Vec<Vec<Token>>, bool)> {
+  let count = pieces.len();
   let seps: Vec<&Event> = events
     .iter()
     .filter(|e| e.nest == own && matches!(e.kind, EventKind::Sep(events::SepKind::And(_))))
@@ -3988,18 +4026,22 @@ fn creator_call_cut(call: &ApiCall) -> Result<Option<Vec<Tokens>>> {
     }
     open.last().copied()
   };
-  let Some(first) = seps.first().and_then(|e| e.span) else {
-    return Ok(None);
-  };
-  let Some(group) = open_at(usize::from(first.0)) else {
-    return Ok(None);
-  };
-  let mut depth = 0i32;
-  let Some(close) = content.iter().enumerate().skip(group).find_map(|(i, t)| {
-    depth += t.group_step();
-    (depth == 0).then_some(i)
-  }) else {
-    return Ok(None);
+  let first = seps.first().and_then(|e| e.span)?;
+  let group = open_at(usize::from(first.0));
+  if group.is_none() && !whole {
+    return None;
+  }
+  // (the group's content, from past its open brace to its close; the whole content where it is the group)
+  let inner = group.map_or(0, |group| group + 1);
+  let close = match group {
+    Some(group) => {
+      let mut depth = 0i32;
+      content.iter().enumerate().skip(group).find_map(|(i, t)| {
+        depth += t.group_step();
+        (depth == 0).then_some(i)
+      })?
+    },
+    None => content.len(),
   };
   let inks = |e: &&Event| {
     matches!(
@@ -4013,9 +4055,9 @@ fn creator_call_cut(call: &ApiCall) -> Result<Option<Vec<Tokens>>> {
   // its merge counted, revOC1c B1)
   if events.iter().filter(inks).any(|e| {
     e.span
-      .is_none_or(|(a, b)| usize::from(a) <= group || usize::from(b) > close)
+      .is_none_or(|(a, b)| usize::from(a) < inner || usize::from(b) > close)
   }) {
-    return Ok(None);
+    return None;
   }
   // (each `\and`'s own tokens in that group, parting no ink: no other event's span meets them)
   let spans: Option<Vec<(usize, usize)>> = seps
@@ -4023,8 +4065,8 @@ fn creator_call_cut(call: &ApiCall) -> Result<Option<Vec<Tokens>>> {
     .map(|e| {
       let (s, t) = e.span?;
       let (s, t) = (usize::from(s), usize::from(t));
-      let clear = open_at(s) == Some(group)
-        && s >= group
+      let clear = open_at(s) == group
+        && s >= inner
         && t <= close
         && !events.iter().filter(inks).any(|ink| {
           ink
@@ -4047,7 +4089,7 @@ fn creator_call_cut(call: &ApiCall) -> Result<Option<Vec<Tokens>>> {
     .split(|e| e.nest == own && matches!(e.kind, EventKind::Sep(events::SepKind::And(_))))
     .collect();
   let runs: Option<Vec<Vec<Token>>> = spans.and_then(|spans| {
-    let mut bounds = vec![group + 1];
+    let mut bounds = vec![inner];
     for (s, t) in &spans {
       bounds.push(*s);
       bounds.push(*t);
@@ -4078,8 +4120,8 @@ fn creator_call_cut(call: &ApiCall) -> Result<Option<Vec<Tokens>>> {
     }
     Some(runs)
   });
-  let runs = match runs {
-    Some(runs) if runs.len() == count => runs,
+  let (runs, by_texts) = match runs {
+    Some(runs) if runs.len() == count => (runs, false),
     // (by its text, where the piece prints its name alone)
     _ => {
       let plain = |piece: &[Event]| {
@@ -4090,29 +4132,22 @@ fn creator_call_cut(call: &ApiCall) -> Result<Option<Vec<Tokens>>> {
         })
       };
       if !pieces.iter().all(|piece| plain(piece)) {
-        return Ok(None);
+        return None;
       }
-      pieces
-        .iter()
-        .map(|piece| {
-          let names: Vec<&Event> = piece.iter().filter(|e| e.kind == EventKind::Name).collect();
-          by_text(
-            Some(
-              "a creator call cut where a macro holds its names and the separators between them",
-            ),
-            events::events_text(&names).trim(),
-          )
-        })
-        .collect()
+      let texts = pieces.iter().map(|piece| {
+        let names: Vec<&Event> = piece.iter().filter(|e| e.kind == EventKind::Name).collect();
+        by_text(why, events::events_text(&names).trim())
+      });
+      (texts.collect(), true)
     },
   };
-  let commands = runs.into_iter().map(|run| {
-    let mut piece = content[..=group].to_vec();
+  let pieces = runs.into_iter().map(|run| {
+    let mut piece = content[..inner].to_vec();
     piece.extend(run);
     piece.extend_from_slice(&content[close..]);
-    with_last_group(command, piece)
+    piece
   });
-  Ok(commands.collect())
+  Some((pieces.collect(), by_texts))
 }
 
 /// `command` with its last top-level group holding `content` instead ([`place::last_group`]'s), `None` for one with none.
@@ -4142,6 +4177,125 @@ fn with_last_group(command: &Tokens, content: Vec<Token>) -> Option<Tokens> {
   out.extend(content);
   out.extend_from_slice(&v[close..]);
   Some(Tokens::new(out))
+}
+
+/// `command` with `content` replaced by `new`: its last top-level group's content ([`place::last_group`]'s), or the content
+/// of the wrappers that group holds, one inside the other (`{\lx@affiliation@withinst{…}}`). `None` where `content` is
+/// neither.
+fn with_content(command: &Tokens, content: &[Token], new: Vec<Token>) -> Option<Tokens> {
+  fn rewrap(group: &[Token], content: &[Token], new: Vec<Token>) -> Option<Vec<Token>> {
+    if group == content {
+      return Some(new);
+    }
+    match group {
+      [cs, open, inner @ .., close]
+        if cs.is_executable() && open.group_step() == 1 && close.group_step() == -1 =>
+      {
+        let mut out = vec![*cs, *open];
+        out.extend(rewrap(inner, content, new)?);
+        out.push(*close);
+        Some(out)
+      },
+      _ => None,
+    }
+  }
+  with_last_group(
+    command,
+    rewrap(last_group(command).unlist_ref(), content, new)?,
+  )
+}
+
+/// A numbered contact call's pieces ([`labelseq_call_cut`]): each piece's text with its call, and whether they are written by
+/// their text.
+type LabelseqCut = (Vec<(String, Tokens)>, bool);
+
+/// A numbered contact call the reading cut at its `\and`s ([`labelseq_pieces`]: a binding handing a class's whole
+/// `\institute{Univ X \and Univ Y}` to the API as one `labelseq=affiliation` call, each piece an entry numbered in turn,
+/// llncs.cls:870-885), written as one call per piece, as [`creator_call_cut`] writes a creator call's: the call's own
+/// command, its keyvals and its wrappers kept, holding the piece alone ([`cut_at_separators`]: by its tokens, else by its
+/// text, uncounted here: [`labelseq_piece`] counts the one it writes). Each piece's text (`norm`ed, as the reading's
+/// entry's: what [`item_call`] matches) with its call, and whether the pieces are written by their text. Only
+/// where every `\and` is at the call's own level (one inside a layout container of it is that container's, which no
+/// piece cuts) and each piece prints its entry's words alone, its lines and containers kept — a mark, a contact or a note
+/// in it is an item the reading places apart, which a piece written whole would print again. `None` for a call not cut
+/// or one whose pieces neither way gives (the call is written as it is, today's). OXIDIZED_DESIGN_DIVERGENCES #995.
+fn labelseq_call_cut(call: &ApiCall) -> Result<Option<LabelseqCut>> {
+  if call.tag == "ltx:creator" || call.cleared || call.unread.is_some() {
+    return Ok(None);
+  }
+  let Some(command) = call.command.as_ref() else {
+    return Ok(None);
+  };
+  // (every convention numbers by place, `Policy::label_sequence`; the caller asks whether the reading numbered it)
+  let Some(count) = labelseq_pieces(&call.attrs, &call.events, true).map(|pieces| pieces.len())
+  else {
+    return Ok(None);
+  };
+  let content = call.content.unlist_ref();
+  // (the content rehearsed again for its positions: the ledger's events carry none, `ApiCall::errors`)
+  let Some((events, ..)) = rehearsed(content)? else {
+    return Ok(None);
+  };
+  if events
+    .iter()
+    .any(|e| e.nest != 0 && matches!(e.kind, EventKind::Sep(events::SepKind::And(_))))
+  {
+    return Ok(None);
+  }
+  let Some(pieces) =
+    labelseq_pieces(&call.attrs, &events, true).filter(|pieces| pieces.len() == count && count > 1)
+  else {
+    return Ok(None);
+  };
+  let words_alone = |piece: &[Event]| {
+    piece.iter().all(|e| {
+      matches!(
+        e.kind,
+        EventKind::Name | EventKind::Sep(_) | EventKind::Break | EventKind::Layout
+      )
+    })
+  };
+  if !pieces.iter().all(|piece| words_alone(piece)) {
+    return Ok(None);
+  }
+  let Some((runs, by_texts)) = cut_at_separators(content, &events, 0, &pieces, true, None) else {
+    return Ok(None);
+  };
+  let cut: Option<Vec<(String, Tokens)>> = pieces
+    .iter()
+    .zip(runs)
+    .map(|(piece, run)| {
+      let refs: Vec<&Event> = piece.iter().collect();
+      with_content(command, content, run).map(|call| (norm(&events::events_text(&refs)), call))
+    })
+    .collect();
+  Ok(cut.map(|cut| (cut, by_texts)))
+}
+
+/// The call of the piece of `call` the reading's entry `assoc` is, its text `key` ([`labelseq_call_cut`]), where the reading
+/// numbered it by its place (`api:labelseq`, under conventions that do: `Policy::label_sequence`). A piece written by its
+/// text is counted once, as the entry it writes.
+fn labelseq_piece(call: &ApiCall, assoc: &Assoc, key: &str) -> Result<Option<Tokens>> {
+  if !assoc
+    .rule
+    .split_whitespace()
+    .any(|rule| rule == "api:labelseq")
+  {
+    return Ok(None);
+  }
+  let Some((pieces, by_texts)) = labelseq_call_cut(call)? else {
+    return Ok(None);
+  };
+  let piece = pieces.into_iter().find(|(text, _)| text == key);
+  if by_texts && piece.is_some() {
+    by_text(
+      Some(
+        "a numbered contact call cut where a macro holds its entries and the separators between them",
+      ),
+      &assoc.text,
+    );
+  }
+  Ok(piece.map(|(_, call)| call))
 }
 
 /// A queued annotation's `annotate={run:<cap>}` (authblk's unlabelled `\affil`, `authblk_sty.rs` `affil_run`: the

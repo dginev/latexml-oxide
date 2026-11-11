@@ -34157,3 +34157,48 @@ Guards `perfect_kernel_batchsep1::{a_let_copy_of_and_parts_the_names, eptcs_cell
 a_let_copy_of_a_note_command_is_its_note}`; repros
 `sectioning-frontmatter/author_let_copy_of_{and_parts_the_names,and_parts_the_names_ieeetran,and_in_a_macro_parts_the_names,thanks_is_the_note,footnote_is_the_note}.tex`,
 `class-bindings/eptcs/eptcs_author_let_copy_of_and_parts_the_names.tex`.
+
+### 995. Option C P2's foundation: a binding-callable query on an argument's separators by meaning, and the emitter's cut of a numbered contact call (P20)
+
+**Perl.** No such query: Perl's bindings part an argument by spelling (`SplitTokens`, `Base_Utility.pool.ltxml:114-140`),
+and a numbered list (`labelseq=`, `Base_Utility.pool.ltxml:489` `CleanLabel($n, $labelseq)`) reaches the API already split
+by its binding (llncs.cls.ltxml's `\institute`).
+
+**Now.** Two mechanisms the P2 reroutes call (the bindings stop pre-splitting by spelling; plan
+`agent_reports/2026-11-10_P2P_report.md`). No binding calls either yet, so the corpus is byte-identical.
+- *The query* (`observer/separators.rs` `argument_separators(&Tokens) -> Result<Option<Vec<ArgSeparator>>>`, re-exported
+  as `latexml_engine::base_utilities::{argument_separators, FmArgSeparator, FmSepMeaning}`; TeX front-end
+  `\lx@fm@separators{<tokens>}`, expanding to the meanings' names comma-separated, empty for none, `unread` where no
+  rehearsal could be made). The argument is rehearsed (`rehearsal::rehearse`, everything undone; the footnote steps it
+  carries put back) and each `Sep(And)` event at nest 0 reported with its family command and the meaning of the token that
+  printed it, read outside the rehearsal: `Kernel` (the kernel layer's `\and` constructor, `latex_constructs/sect05.rs`,
+  which `\And`/`\AND` are `\let` to — the test `frontmatter_stores.rs` `kernel_and_list` makes), `Binding`
+  (`DefinitionOrigin::is_binding_made`), `Raw` (a raw file's, the document's, or no separator's meaning). The printing
+  token is the one the event's span covers where it is no macro, else the family command (a macro holding the separator,
+  a class's macro `\and` or its `\let` copy, a `\csname and\endcsname`). Trap T8: the rehearsal binds `\and`/`\And`/`\AND` to its event whatever the class means
+  (`ALWAYS_BOUND`), so a `Sep` alone does not say the class parts names there — jmlr's word (jmlr.cls:336), smfart's `&`
+  (2508.07946), colm2025's, jmlr2e's and neurips's space; a gate asks for the meaning too. A call inside a rehearsal (no
+  journal opens) or over the budget answers `None`.
+- *The emitter's cut of a numbered contact call* (`emit::labelseq_call_cut`, `labelseq_piece`): a `labelseq=` contact call
+  the reading cuts at its `\and`s (`resolver::api::labelseq_pieces`, now shared by the reading and the emitter, as
+  `creator_call_pieces` is) is written as one call per piece — the call's own command, keyvals and wrappers kept
+  (`with_content`), the piece alone, the reading's label — where the reading numbered it (`api:labelseq`). The cut is
+  OC1c's (#993), extracted unchanged as `cut_at_separators` (by tokens where each `\and` parts no ink; else by text, one
+  counted Warning per piece written); a contact call's own content is the group when no wrapper group holds the `\and`s.
+  Before, the emitter wrote the whole call for each entry (every author held "Univ X and Univ Y", the kernel `\and`
+  printing the word). Not cut, written as before: a call with an `\and` inside a layout container, or a piece holding a
+  mark, a contact or a note (an item the reading places apart, which a whole piece would print again).
+
+**Who will call them** (the P2P batches, by its rule-6 scan: `lx@splitting`, `split_tokens(`, `SplitDelim::`, literal
+`\and`/`\And`/`\AND` in `latexml_package/src`, `latexml_contrib/src`, `frontmatter_stores.rs`, `base_utilities/defs`,
+`frontmatter/classify`): the emitter's cut — P2-2 (S2: `inst_support_sty.rs:58`, `aa_cls.rs:93` and its gate :75-80,
+`sv_support_sty.rs:69`), P2-3 (llncs `:189`, gate :208), P2-6 (the numbered stores, `frontmatter_stores.rs:3148-3151`);
+the query — P2-2 (aa :80), P2-5 (`l_aa_cls.rs:108`, `ecai_sty.rs:56`), P2-6 (`frontmatter_stores.rs` :3216, :3225
+`kernel_and_list`, :3239, :3378, :7483, :7697), P2-7 (`authblk_sty.rs` :125, :211). Not enumerated by that scan: the
+engine beyond those directories (observer, insert, place) and splits on `\\` or commas.
+
+Guards `perfect_kernel_batchp20::{the_separator_query_reads_the_kernel_meanings,
+the_separator_query_reads_a_class_meaning_as_raw, the_separator_query_reads_a_binding_meaning,
+a_numbered_contact_call_is_written_a_call_per_piece}`; repros
+`sectioning-frontmatter/{separators_query_kernel_meanings,separators_query_class_meanings,separators_query_binding_meaning}.tex`,
+`sectioning-frontmatter/labelseq_contact_call_cut_at_{its_and,a_macro_held_and}.tex`.

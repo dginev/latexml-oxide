@@ -1,0 +1,29 @@
+% mechanism: the emitter writes a numbered contact call the reading cut at its `\and`s as one call per piece
+%   (`emit::labelseq_call_cut`, OD #995, Option C P2-0): a binding handing a class's whole `\institute{Univ X \and Univ Y
+%   \and Univ Z}` to the API as one `labelseq=affiliation` call (what llncs's, aa's, sv's and inst_support's bindings do
+%   once P2-2 drops their spelling split, `\lx@splitting`) is read as three entries numbered 1, 2, 3
+%   (`resolver::api::labelseq_pieces`, llncs.cls:870-885), and each is written as the call's own command holding its
+%   piece alone, its keyvals kept, its label the reading's. No binding makes such a call yet: this document's own
+%   `\institute` does. Before, the emitter wrote the whole call for each entry: every author held "Univ X and Univ Y and
+%   Univ Z", the kernel `\and` printing the word, and the content check counted the extra "and"s
+% witness: synthetic (the P2 plan's S2 institute splits, agent_reports/2026-11-10_P2P_report.md)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: the institutes printed in three columns under the names (the
+%   API call provided as the kernel title's author tabular in `\date`), "Ann Able1 Bob Baker2 Cy Coe3 / Univ X Univ Y
+%   Univ Z"
+% engines: Perl 0.8.8: no such call (not run); base int157a (a8826e189a): Ann Able, Bob Baker and Cy Coe each with
+%   "Univ X and Univ Y and Univ Z", 0 errors, 1 warning; P20: as expected
+% expect:  0 errors, 0 warnings; Ann Able (Univ X), Bob Baker (Univ Y), Cy Coe (Univ Z)
+% status:  GREEN (P20; guard perfect_kernel_batchp20::a_numbered_contact_call_is_written_a_call_per_piece)
+\documentclass{article}
+\makeatletter
+\providecommand\lx@add@contact[2][]{\gdef\@date{\begin{tabular}[t]{c}#2\end{tabular}}}
+\providecommand\inst[1]{$^{#1}$}
+\newcommand\institute[1]{\lx@add@contact[role=affiliation,labelseq=affiliation]{#1}}
+\makeatother
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2} \and Cy Coe\inst{3}}
+\institute{Univ X \and Univ Y \and Univ Z}
+\begin{document}
+\maketitle
+Text.
+\end{document}

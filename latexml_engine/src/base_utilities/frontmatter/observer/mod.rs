@@ -25,6 +25,8 @@
 //!   by Perl's calls built from the reading, its vocabulary and cuts, and the content check on the placed output. (The S2b
 //!   writer that rewrote placed frontmatter after `insert_frontmatter`, and the census switch `LATEXML_FM_SHADOW`, were
 //!   deleted in DEL4.)
+//! - [`separators`]: a binding's query on an argument's `\and`-family separators by meaning (`argument_separators`,
+//!   `\lx@fm@separators`; OD #995).
 
 use super::*;
 
@@ -37,6 +39,7 @@ pub(in crate::base_utilities) mod policy;
 pub(in crate::base_utilities) mod reading;
 pub(in crate::base_utilities) mod rehearsal;
 pub(in crate::base_utilities) mod resolver;
+pub(in crate::base_utilities) mod separators;
 
 // (for the guards, which read a dump's events and the resolver's tuples, and the types of a public event's fields;
 // prefixed, as the prelude re-exports these)
@@ -70,3 +73,7 @@ pub use reading::{fm_reading_json, reset_fm_reading};
 pub(in crate::base_utilities) use resolver::owners::*;
 // (for the guards, which resolve a block's input again)
 pub use resolver::{Input as FmInput, Resolved as FmResolved, resolve as fm_resolve};
+// (for the bindings, which ask what an argument's separators mean: Option C P2, OXIDIZED_DESIGN_DIVERGENCES #995)
+pub use separators::{
+  ArgSeparator as FmArgSeparator, SepMeaning as FmSepMeaning, argument_separators,
+};

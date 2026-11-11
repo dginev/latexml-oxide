@@ -103,6 +103,8 @@ LoadDefinitions!({
   defs::tags_refnums::load()?;
   // (the frontmatter observer's event constructors, used only by its rehearsal: OXIDIZED_DESIGN_DIVERGENCES #837)
   rehearsal::load()?;
+  // (a binding's query on an argument's separators by meaning, `\lx@fm@separators`: OXIDIZED_DESIGN_DIVERGENCES #995)
+  separators::load()?;
 });
 
 #[cfg(test)]
