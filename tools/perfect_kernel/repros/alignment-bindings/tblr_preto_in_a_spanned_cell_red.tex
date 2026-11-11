@@ -1,7 +1,14 @@
-% mechanism: a spanned cell's `\SetCell` is taken by `tblr_span_cells` (tabularray_sty.rs:585) before the macro that counts its keys, so `preto` and `appto` there lose their text with no Warning (OD #976).
-% witness: review revM3r2P1
-% oracle:  pdflatex 0 errors: the cell prints W before a
-% engines: rust int141a, M3r2: W lost, no Warning
-% expect:  0 errors; W in the cell, or a counted Warning naming the key
-% status:  RED
-\documentclass{article}\usepackage{tabularray}\begin{document}\begin{tblr}{ll}\SetCell[c=2]{preto=W} a & \\ b & c\end{tblr} After.\end{document}
+% mechanism: a spanned cell's `\SetCell` is taken by `tblr_span_cells` (tabularray_sty.rs:585) before the macro that counts its keys; the span branch counts `preto` and `appto` itself (`tblr_lost_text_keys`), as the macro does for an unspanned cell (OD #976). The text is not applied: lost, counted.
+% siblings: `c=2` `preto`, `c=2` `appto`, `r=2` (the row-span arm), two keys in one call, a span with no text key (no Warning), a table with `hlines` (its shape is scanned before the spans: one Warning, not two)
+% witness: review revM3r2P1; synthetic
+% oracle:  pdflatex 0 errors: the spanned cells print Wa, dX, Vg (two rows), YjZ, k, Hm, the others b c e f h i n o p q r s
+% engines: rust int159b: W, X, V, Y, Z, H lost with no Warning; CT1c: lost, 6 `Warning:tabularray_key:<key>` naming the text, the XML byte-identical to int159b's
+% expect:  0 errors; the text in the cell, or a counted Warning naming the key
+% status:  RED (counted: the text is not applied)
+\documentclass{article}\usepackage{tabularray}\begin{document}\begin{tblr}{ll}\SetCell[c=2]{preto=W} a & \\ b & c\end{tblr}
+\begin{tblr}{ll} \SetCell[c=2]{appto={X}} d & \\ e & f \\ \end{tblr}
+\begin{tblr}{ll} \SetCell[r=2]{preto=V} g & h \\ & i \\ \end{tblr}
+\begin{tblr}{ll} \SetCell[c=2]{preto=Y,appto=Z} j & \\ n & o \\ \end{tblr}
+\begin{tblr}{ll} \SetCell[c=2]{c} k & \\ p & q \\ \end{tblr}
+\begin{tblr}{colspec={ll},hlines} \SetCell[c=2]{preto=H} m & \\ r & s \\ \end{tblr}
+After.\end{document}
