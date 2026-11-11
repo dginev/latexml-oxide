@@ -325,19 +325,18 @@ fn aistats_unpaired_address_columns_split() {
 /// class-bindings/aistats_address_column_symbol_mark_kept_red).
 #[test]
 fn aistats_note_marked_address_still_pairs_by_column() {
-  for (names, address, expected) in [(
+  let (names, address, expected) = (
     r"Ann Able$^*$ \And Bob Baker$^*$ \And Cy Cole",
     r"Univ A \And Univ B \\ $^*$equal contribution \And Univ C",
     // (the `$^*$` legend line the starred names' note, ruling 2 — the writer's block-line cut, 94a: it was Bob Baker's
     // affiliation, the cut declining a mark whose formula's closing `$` stands before its line; the note's `mark` the
     // star, which the names then show no more: one mark on the page, 94a r6)
     r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id1"><sup xml:id="id1.1">∗</sup>equal contribution</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1">∗</sup>equal contribution</note> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation">Univ C</contact> </creator>"#,
-  )] {
-    let xml = clean(&format!(
-      "\\documentclass[twoside]{{article}}\n\\usepackage[accepted]{{aistats2027}}\n\\begin{{document}}\n\\twocolumn[\\aistatstitle{{A Title}}\n\\aistatsauthor{{{names}}}\n\\aistatsaddress{{{address}}}]\n\\section{{Intro}} Body.\n\\end{{document}}\n"
-    ));
-    assert_eq!(frontmatter(&xml), expected, "{names}: {xml}");
-  }
+  );
+  let xml = clean(&format!(
+    "\\documentclass[twoside]{{article}}\n\\usepackage[accepted]{{aistats2027}}\n\\begin{{document}}\n\\twocolumn[\\aistatstitle{{A Title}}\n\\aistatsauthor{{{names}}}\n\\aistatsaddress{{{address}}}]\n\\section{{Intro}} Body.\n\\end{{document}}\n"
+  ));
+  assert_eq!(frontmatter(&xml), expected, "{names}: {xml}");
 }
 
 /// The same row and address with material that prints nothing between the setters: the address is still paired column
