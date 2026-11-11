@@ -2,6 +2,8 @@
 use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 use latexml_package::prelude::*;
 
+use crate::and_by_meaning::and_runs;
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -26,15 +28,19 @@ LoadDefinitions!({
   // name list `\name{A\textsuperscript{a}, B\textsuperscript{b}}` is its authors, linked by their marks (Perl maps
   // `\name` to its argument, one creator; 2112.10522, 2312.11500, 2403.20182). Each later `\name` opens a group of its
   // own (`\name{A}\affil{X}\name{B}\affil{Y}`), and the class's `\and` prints "and ".
+  // The `\and`s: each written, as before (the class's whatever the document made it: `\author` defines it), and each held
+  // in a macro of the document's, which the separator query reads as the kernel's (`and_by_meaning`, Option C P2-5).
   DefMacro!("\\author{}", sub[(body)] {
     let toks = body.unlist();
+    let ands = and_runs(&toks, &[T_CS!("\\and")])?.runs;
     let mut lines: Vec<Token> = Vec::new();
     let mut named = false;
     let mut i = 0;
     while i < toks.len() {
       let t = toks[i];
       i += 1;
-      if t == T_CS!("\\and") {
+      if let Some(end) = ands.get(&(i - 1)) {
+        i = *end;
         // (before a later `\name`, which opens a group of its own, it separates nothing more)
         if toks[i..].iter().find(|u| **u != T_SPACE!()) != Some(&T_CS!("\\name")) {
           lines.extend(Tokenize!("and").unlist());
@@ -72,12 +78,19 @@ LoadDefinitions!({
           break;
         }
       }
-      for u in &toks[start + 1..i - 1] {
-        if *u == T_CS!("\\and") {
+      // (the argument read on its own: an `\affil`'s or `\email`'s is a note's, whose separators the block's query
+      // leaves to the note)
+      let argument = &toks[start + 1..i - 1];
+      let inner = and_runs(argument, &[T_CS!("\\and")])?.runs;
+      let mut k = 0;
+      while k < argument.len() {
+        if let Some(end) = inner.get(&k) {
           lines.extend(Tokenize!("and").unlist());
           lines.push(T_SPACE!());
+          k = *end;
         } else {
-          lines.push(*u);
+          lines.push(argument[k]);
+          k += 1;
         }
       }
       lines.push(T_CS!("\\\\"));

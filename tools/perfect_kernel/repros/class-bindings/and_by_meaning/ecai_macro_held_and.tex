@@ -1,0 +1,15 @@
+% mechanism: a macro-held `\and` (`\newcommand\sep{\and}`) at ecai_cls.rs `\author` gate (`and_list`): found by the separator query (Option C P2-5, `and_by_meaning`)
+% witness: P2P plan step P2-5 (no census paper holds a macro-held or `\let` separator)
+% oracle:  ecai.cls has no copy in TL 2025 nor in the census sources unpacked: not run
+% engines: perl not run; int158a: as expected (the reading cut it downstream)
+% expect:  0 errors, 0 warnings; creators Ann Able, Bob Baker
+% status:  GREEN (int158a and P25; guard perfect_kernel_batchp25)
+% preload: ar5iv.sty
+\documentclass{ecai}
+\newcommand\sep{\and}
+\title{T}
+\author{Ann Able \sep Bob Baker}
+\begin{document}
+\maketitle
+Text.
+\end{document}

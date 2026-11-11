@@ -34469,7 +34469,7 @@ it (`own_run`: an environment closed right before the separator — an `\end{tab
   (an item the reading places apart, which a whole piece would print again) — `\institute{Univ X \email{a@x} \and Univ
   Y}` is written by text, each author's institute (one counted Warning each), the e-mail to its owner.
 
-**Who calls them** (P2-4: eptcs's cells, the query, `eptcs_cls.rs` `cells`). **Who will call them** (the P2P batches, by its rule-6 scan: `lx@splitting`, `split_tokens(`, `SplitDelim::`, literal
+**Who calls them** (P2-4: eptcs's cells, the query, `eptcs_cls.rs` `cells`; P2-5: l_aa, ecai, interact, pasj00, gretsi, lipics, `and_by_meaning::and_runs`). **Who will call them** (the P2P batches, by its rule-6 scan: `lx@splitting`, `split_tokens(`, `SplitDelim::`, literal
 `\and`/`\And`/`\AND` in `latexml_package/src`, `latexml_contrib/src`, `frontmatter_stores.rs`, `base_utilities/defs`,
 `frontmatter/classify`): the emitter's cut — P2-2 (S2: `inst_support_sty.rs:58`, `aa_cls.rs:93` and its gate :75-80,
 `sv_support_sty.rs:69`), P2-3 (llncs `:189`, gate :208), P2-6 (the numbered stores, `frontmatter_stores.rs:3148-3151`);
@@ -34480,6 +34480,26 @@ the query — P2-2 (aa :80), P2-5 (`l_aa_cls.rs:108`, `latexml_contrib/src/ecai_
 line_marks.rs:16, cut.rs, kind.rs: P4); `classify/separators.rs:212-224`, `name_text.rs:36`,
 `old_reader/space_parted.rs:205`, ijcai.rs (P3/P4); splits on `\\` alone or commas; `\def\and{…}` meanings (argument
 passing, stays). The scan is heuristic (one macro level, no class-file wrappers).
+
+**P2-5 (P25): the small gates and cuts find a macro-held `\and`.** l_aa's `\institute` gate (`several`), ecai's
+`\author` gate (`and_list`), interact's `\author` (an `\and` in a `\name` or `\affil` printing the class's "and ",
+interact.cls:266; one before a later `\name` nothing), pasj00's `pasj_author_list` cut, gretsi's `without_separators`
+(v1.3 `\auteurs`) and lipics's `split_on_and` (the affiliations slot) part at the runs `and_by_meaning::and_runs`
+gives (`latexml_contrib/src/and_by_meaning.rs`): each `\and` written in the argument, as before, whatever the document
+made it — interact (`\author` sets `\def\and{and }`), pasj00 (`\maketitle`, pasj00.cls:1878) and lipics.cls (:553
+`\let\and\AB@pand`) print their own `\and` over a document's renewed one — and each separator the query reads `Kernel`
+at its own run (`ArgSeparator::span`), held in a macro of the document's, which the spelling missed; a gate also counts
+a kernel separator whose span is `None` (a macro holding names and the `\and`). interact reads an `\affil`'s or
+`\email`'s argument on its own: the block query leaves a note's separators to the note. Found by the rule-6 scan above
+at P25's base (`T_CS!("\\and")`, `split_tokens(`, `SplitDelim`, `\lx@splitting` in those files). Red on int158a, green
+since: l_aa (both authors one institute "Univ A and Univ B"), lipics ("Uni X and Inst Y"), interact's `\name` (Ann Able
+without her affiliation) and `\affil` (two affiliations for the class's "Univ A and Univ B"). Byte-identical on the
+census papers of the six classes, a 300-paper raw-class sample and stage2. Left: **aistats's `columns`**
+(`aistats_sty.rs:108-112`, :571): it parts at the copy's own `\And`, `\AND`, `\ANDD` (read raw, so `Raw` to the query,
+as a document's renewal is; `\ANDD` is no separator of the query's family) — reading the copy's column break by meaning
+needs a rule the query does not have (brief rule 5). eptcs's `cells` (P2-4) cuts at `Kernel` alone; the two are written
+apart until one shared helper serves both (P22b). Guards `perfect_kernel_batchp25`; repros
+`class-bindings/and_by_meaning/`.
 
 Guards `perfect_kernel_batchp20::{the_separator_query_reads_the_kernel_meanings,
 the_separator_query_reads_a_class_meaning_as_raw, the_separator_query_reads_a_binding_meaning,

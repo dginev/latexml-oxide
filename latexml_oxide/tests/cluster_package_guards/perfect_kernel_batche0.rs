@@ -1540,7 +1540,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (from `frontmatter (rest)`, 24 -> 23, at Z2r2: `\alignauthor`, out of the kernel's conventions into the binding's own table; no read)
   ("inst_support_sty.rs", 1),
   ("interspeech_cls.rs", 29),
-  ("l_aa_cls.rs", 13),
+  // (P25 13 -> 12: the `\institute` gate's spelled `\and`/`\And` test, now `and_by_meaning::and_runs`, Option C P2-5)
+  ("l_aa_cls.rs", 12),
   // (RC1, 24 -> 26: `ledger::content_text`, the text of a call the rehearsal gave up on or no call recorded, read at the API
   // boundary that records its content so the content check counts what TeX printed of it, a count and no decision; the
   // check itself reads text alone, `resolver/` unchanged; RC1r2, 26 -> 32: its words parted as an ink's, by catcodes and a

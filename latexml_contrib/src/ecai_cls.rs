@@ -8,6 +8,8 @@
 //! and is left to OmniBus/the kernel.
 use latexml_package::prelude::*;
 
+use crate::and_by_meaning::and_runs;
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   // ecai.cls loads no amsmath (67 copies in a 1/20 arXiv sample): amsmath's commands for papers that use them unloaded,
@@ -46,15 +48,10 @@ LoadDefinitions!({
   // Maffre \\ Fr\'{e}d\'{e}ric Maris \ Pierre R\'{e}gnier\institute{IRIT, …}}`, 1606.03244) read the second line as an
   // affiliation when split, two authors lost to it.
   DefMacro!("\\author OptionalSemiverbatim {}", sub[(addresses, names)] {
-    let mut depth = 0i32;
-    let and_list = names.unlist_ref().iter().any(|t| {
-      match t.get_catcode() {
-        Catcode::BEGIN => depth += 1,
-        Catcode::END => depth -= 1,
-        _ => {},
-      }
-      depth == 0 && *t == T_CS!("\\and")
-    });
+    // (an `\and` written, as before, or held in a macro of the document's, which the separator query reads as the
+    // kernel's: `and_by_meaning`, Option C P2-5)
+    let ands = and_runs(names.unlist_ref(), &[T_CS!("\\and")])?;
+    let and_list = !ands.top_level(names.unlist_ref()).is_empty() || ands.inked > 0;
     let addresses = addresses.unwrap_or_default();
     Ok(if and_list || !addresses.is_empty() {
       Invocation!("\\lx@add@authors@append[annotations={#1}]{#2}", vec![Some(addresses), Some(names)])

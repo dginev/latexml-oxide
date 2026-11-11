@@ -2,6 +2,8 @@
 use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 use latexml_package::prelude::*;
 
+use crate::and_by_meaning::and_runs;
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   // lipics-v2021.cls:514-1098 loads these packages, in this order. The binding stands in for the class, so they load
@@ -422,24 +424,22 @@ fn trimmed(tokens: &[Token]) -> Vec<Token> {
   tokens[start..end].to_vec()
 }
 
-/// The parts of `tokens` between its top-level `\and`s.
-fn split_on_and(tokens: &Tokens) -> Vec<Vec<Token>> {
-  let and = T_CS!("\\and");
-  let mut parts = vec![Vec::new()];
-  let mut depth = 0i32;
-  for token in tokens.unlist_ref() {
-    match token.get_catcode() {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END => depth -= 1,
-      _ => {},
+/// The parts of `tokens` between its top-level `\and`s: each written, as before, and each held in a macro of the
+/// document's, which the separator query reads as the kernel's (`and_by_meaning`, Option C P2-5).
+fn split_on_and(tokens: &Tokens) -> Result<Vec<Vec<Token>>> {
+  let tokens = tokens.unlist_ref();
+  let cuts = and_runs(tokens, &[T_CS!("\\and")])?.top_level(tokens);
+  let mut parts = Vec::new();
+  let mut from = 0;
+  for (start, end) in cuts {
+    if start < from {
+      continue;
     }
-    if depth == 0 && *token == and {
-      parts.push(Vec::new());
-    } else if let Some(part) = parts.last_mut() {
-      part.push(*token);
-    }
+    parts.push(tokens[from..start].to_vec());
+    from = end;
   }
-  parts
+  parts.push(tokens[from..].to_vec());
+  Ok(parts)
 }
 
 /// An ORCID iD (`0000-0002-1825-0097`, the last character a digit or `X`) or its orcid.org address, with or without
@@ -522,7 +522,7 @@ fn lipics_author(
     return Ok(Tokens::new(out));
   }
   out.extend(invoke("\\lx@add@creator", name.unlist_ref().to_vec()));
-  for part in split_on_and(&affiliations) {
+  for part in split_on_and(&affiliations)? {
     let part = trimmed(&part);
     if part.is_empty() {
       continue;
