@@ -37,7 +37,7 @@ perfect_kernel_batch104a::a_run_of_notes_between_the_names_and_their_block_is_th
 perfect_kernel_batch104b::a_refstepcounter_numbered_and_list_goes_by_the_authors_numbers	=2 writes Bob's mark as ∗ where the off reading keeps the printed *	deleted
 perfect_kernel_batch104d::an_aastex7_correspondent_address_list_is_spelled	=2 writes aable@a.edu as plain text, a false Warning	deleted
 perfect_kernel_batch105a::a_class_label_in_cjk_is_the_classs_text	=2 keeps the class label "作者单位：Ann Able" as a note of the author	deleted
-perfect_kernel_batch105a::a_code_or_date_line_below_the_floor_is_a_note_line	=2 misses the 2 Warnings that count the code line's words	kept
+perfect_kernel_batch105a::a_code_or_date_line_below_the_floor_is_a_note_line	=2 misses the 2 Warnings that count the code line's words	kept; HG1: test deleted, a row of perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed (right today)
 perfect_kernel_batch105a::a_labelled_code_or_date_line_below_the_floor_is_a_note_line	=2 misses the 4 Warnings that count the labelled lines' words	deleted
 perfect_kernel_batch105a::a_line_in_another_script_is_counted	=2 misses the 2 Warnings that count the other-script line	deleted
 perfect_kernel_batch105a::a_short_unshaped_store_is_counted_and_not_kept	=2 misses the Warning that counts the short unshaped store	deleted
@@ -57,9 +57,9 @@ perfect_kernel_batch106c::a_remark_naming_no_group_stays_the_names	=2 makes "for
 perfect_kernel_batch106c::a_written_grade_leaves_the_readings_name_too	=2 writes a before=" " separator on Bob's creator the off reading leaves off	deleted
 perfect_kernel_batch106c::an_author_line_opened_by_layout_is_read_safely	=2 drops the before=" " separator on Ann's creator	deleted
 perfect_kernel_batch106c::macro_printed_names_with_grades_stay_apart	=2 writes the names and grades as plain text, 9 false Warnings	deleted
-perfect_kernel_batch106s::a_binding_losing_author_lines_is_counted	=2 writes the binding's lost line as plain text but counts it with no Warning	kept
-perfect_kernel_batch106t::a_bindings_own_plumbing_is_no_dropped_text	=2 misses the Warning that counts the binding's dropped text	kept
-perfect_kernel_batch106t::a_binding_macro_dropping_the_documents_text_inside_an_entry_is_counted	=2 misses the Warning that counts the text dropped inside an entry	kept
+perfect_kernel_batch106s::a_binding_losing_author_lines_is_counted	=2 writes the binding's lost line as plain text but counts it with no Warning	kept; HG1: test deleted, a row of perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed (right today)
+perfect_kernel_batch106t::a_bindings_own_plumbing_is_no_dropped_text	=2 misses the Warning that counts the binding's dropped text	kept; HG1: test deleted, a row of perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed (right today)
+perfect_kernel_batch106t::a_binding_macro_dropping_the_documents_text_inside_an_entry_is_counted	=2 misses the Warning that counts the text dropped inside an entry	kept; HG1: test deleted, repro check_binding_macro_drops_inside_an_entry_red
 perfect_kernel_batch107a::a_split_address_list_is_read_whatever_its_entries_spell	=2 loses "Alpha edu" of the split list, a content-check Warning	kept
 perfect_kernel_batch107a::an_email_moves_to_the_author_it_spells_through_the_transliteration	=2 puts Müller's email before his address contact	deleted
 perfect_kernel_batch107b::a_creator_named_by_a_legend_is_flagged	=2 misses the Error that flags the creator named by a legend	deleted
@@ -102,7 +102,7 @@ perfect_kernel_batch108a::a_glued_star_prints_as_written_in_its_place	a comma is
 perfect_kernel_batch108a::a_glued_star_beside_a_second_symbol_prints_as_written	a comma is put between the glued symbols: "∗,†" for the printed "∗†"	kept
 perfect_kernel_batch108a::a_block_of_one_name_owns_its_addresses	the block's "Univ of Y" line and both emails are given to each named author instead of staying on the block	deleted
 perfect_kernel_batch108a::a_mark_line_list_out_of_order_places_only_what_it_spells	Dan Dee does not get his spelled address dd@x.org (his creator holds the name only)	kept
-perfect_kernel_batch108a::a_lost_marks_warning_parts_the_orcid	the expected lost-marks Warning is not raised (0 Warnings for 1)	kept
+perfect_kernel_batch108a::a_lost_marks_warning_parts_the_orcid	the expected lost-marks Warning is not raised (0 Warnings for 1)	kept; HG1: test deleted, a row of perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed (right today)
 perfect_kernel_batch108a::a_glued_mark_shows_as_it_prints	the glued "*1" becomes one mark "∗,1": the ASCII star turns into U+2217 and a comma is inserted	deleted
 perfect_kernel_batch108a::a_glued_mark_in_a_list_or_leading_a_line	a false safety-net Warning: a printed mark reaches no labelled contact	kept
 perfect_kernel_batch108a::a_wrapper_around_the_names_is_transparent	a false markup-lost Warning: "Ann Able" written as plain text (a name its events don't spell)	deleted
@@ -112,13 +112,13 @@ perfect_kernel_batch108a::an_address_line_never_names_the_block	the block's prin
 perfect_kernel_batch108a::an_empty_marked_piece_is_the_blocks	the empty piece's marks "1" stay on Ann Able and Bob Baker as unanswered sups	deleted
 perfect_kernel_batch108a::other_spaces_the_kernel_reads_part_names	Univ X is held only by Cat Cole, not by Ann Able and Bob Baker	deleted
 perfect_kernel_batch108a::a_piece_with_no_name_is_no_creator	the ORCID logo leaves the personname for a separate orcid contact	deleted
-perfect_kernel_batch108b::a_bindings_drop_inside_a_documents_macro_is_counted	the expected Warning counting the binding's drop inside the document's macro is not raised (0 for 1)	kept
+perfect_kernel_batch108b::a_bindings_drop_inside_a_documents_macro_is_counted	the expected Warning counting the binding's drop inside the document's macro is not raised (0 for 1)	kept; HG1: test deleted, repro check_binding_drops_document_macro_expansion_red
 perfect_kernel_batch131fix::unspaced_list_whose_every_part_spells_an_author_is_written_out	a false markup-lost Warning: "jconway@oso.chalmers.se" written as plain text (one address of a list no ink prints alone)	deleted
 perfect_kernel_batch56::author_inst_is_an_affiliation_link_request	the printed ASCII mark "*" on Name becomes U+2217 "∗"	kept
 perfect_kernel_batch59::author_after_a_fallback_flush_is_sealed_off	the late author "L. Late" is lost from the placed frontmatter (content-check Warning)	deleted
 perfect_kernel_batch59::author_after_a_digesting_maketitle	the late author "Max Mustermann" is lost from the placed frontmatter (content-check Warning)	deleted
 perfect_kernel_batch59::author_superseded_keeps_contacts_with_owners	the superseding authors Max and Bob, with their institutes and emails, are lost (content-check Warning)	deleted
-perfect_kernel_batch59::author_block_orphan_mark_is_kept	the orphan mark is no longer kept on A. Author's block line (expected authorblock contact differs)	kept
+perfect_kernel_batch59::author_block_orphan_mark_is_kept	the orphan mark is no longer kept on A. Author's block line (expected authorblock contact differs)	kept; HG1: test deleted, repro author_block_orphan_mark_is_kept (status RED)
 perfect_kernel_batch59::relax_aliases_do_not_split_a_late_author	the late author "M. Max" is lost from the placed frontmatter (content-check Warning)	deleted
 perfect_kernel_batch59::store_set_before_a_superseding_author	the superseding author Max, his email and the shared store are lost (content-check and unclaimed Warnings)	deleted
 perfect_kernel_batch59::superseding_maketitle_rehands_class_stores	the superseding author Max and the class stores (Shared, Inst, max@m.org) are lost (two Warnings)	deleted
@@ -211,10 +211,10 @@ perfect_kernel_batch64u::osa_style_address_email_line	=2 unverified: adds a ∗ 
 perfect_kernel_batch64u::osa_style_marked_addresses	=2 unverified: adds a ∗ sup mark on the name the off reading leaves for the correspondence note	kept
 perfect_kernel_batch64zc::llncs_institute_email_in_typewriter	=2 a false content-check Warning (carl@b.edu placed more often than printed)	deleted
 perfect_kernel_batch64zc::typewriter_address_split_keeps_its_link	=2 unverified: writes Ann's URL before her email, the line's order reversed	deleted
-perfect_kernel_batch64zd::author_note_name_line_opens_next_author	=2 unverified: drops the printed commas after "Finland" and "UK" in the affiliations	kept
-perfect_kernel_batch64zd::author_other_note_command_stays_affiliation	=2 reads the noted affiliation line (Visiting, Dept Y) as a new author with a Note contact	kept
-perfect_kernel_batch64zd::author_noted_affiliation_stays_affiliation	=2 reads the noted affiliation line as a new author, losing Ohio State and Columbus OH as Ann's affiliations	kept
-perfect_kernel_batch64zd::revtex_asterisk_marked_authors_split	=2 drops the printed * and ** marks from Pereira and Ou	kept
+perfect_kernel_batch64zd::author_note_name_line_opens_next_author	=2 unverified: drops the printed commas after "Finland" and "UK" in the affiliations	kept; HG1: test deleted, a row of perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed (right today)
+perfect_kernel_batch64zd::author_other_note_command_stays_affiliation	=2 reads the noted affiliation line (Visiting, Dept Y) as a new author with a Note contact	kept; HG1: test deleted, repro author_other_note_command_stays_affiliation_red
+perfect_kernel_batch64zd::author_noted_affiliation_stays_affiliation	=2 reads the noted affiliation line as a new author, losing Ohio State and Columbus OH as Ann's affiliations	kept; HG1: test deleted, repro author_noted_affiliation_stays_affiliation_red
+perfect_kernel_batch64zd::revtex_asterisk_marked_authors_split	=2 drops the printed * and ** marks from Pereira and Ou	kept; HG1: test deleted, repro revtex_asterisk_marked_authors_split_red
 perfect_kernel_batch65a::asce_membership_grade_qualifies_the_name	=2 unverified: keeps the grade ", M.ASCE" in Kuhn's name text	kept
 perfect_kernel_batch65a::author_kept_in_a_register_or_a_box_is_a_store	=2 a false content-check Warning (the dropped late author "Late Person" missing)	deleted
 perfect_kernel_batch65a::class_command_calling_the_kernels_does_not_loop	=2 a false content-check Warning (the dropped late author "Bob Baker" missing)	deleted
@@ -227,7 +227,7 @@ perfect_kernel_batch68r::amsppt_author_byline_is_kept	=2 drops the printed bylin
 perfect_kernel_batch68r::amsppt_extra_address_is_shared	=2 gives the shared addresses to Kharlamov instead of a shared entry	kept
 perfect_kernel_batch68x::aguplus_altaffiliations_and_addresses_go_to_their_authors	=2 4 unanswered_mark_lost Warnings (the altaffil marks answered by no entry)	deleted
 perfect_kernel_batch68x::smfart_altabstract_is_a_second_abstract	=2 a false content-check Warning ("Anne Auteur" missing)	deleted
-perfect_kernel_batch72a::copy_setters_store_class_defaults	=2 a false content-check Warning ("ATLAS Collaboration" placed more often than printed)	kept
+perfect_kernel_batch72a::copy_setters_store_class_defaults	=2 a false content-check Warning ("ATLAS Collaboration" placed more often than printed)	kept; HG1: content asserted again, the false Warning pinned and RED in copy_setters_class_default_author_no_warning_red
 perfect_kernel_batch77d::and_after_a_break_in_a_wrapper_separates_names	=2 merges Ann Able and the next name across the "and" ("Ableand") and drops the bold wrapper	kept
 perfect_kernel_batch77d::and_after_a_control_word_separates_names	=2 merges Ann Able and Bob Baker into one name ("Ann Ableand Bob Baker")	deleted
 perfect_kernel_batch77d::and_beside_a_line_break_separates_names	=2 merges Bob Baker and the next name ("Bakerand") and writes Univ B as a nameless creator	kept
@@ -252,7 +252,7 @@ perfect_kernel_batch77n::link_wrapper_with_a_graphic_splits	=2 a merged_creators
 perfect_kernel_batch77n::mark_glued_to_capital_and_is_flagged	=2 drops the merged_creators Error that flags "Ann Able, Bob Baker" as one name	deleted
 perfect_kernel_batch77n::orcid_glued_to_email_stays_in_the_name	=2 parts ann@x.org out of the name into an Email contact	kept
 perfect_kernel_batch77n::parbox_names_split_and_drop_the_box	=2 writes Univ A, City as a nameless creator instead of the name's affiliation	kept
-perfect_kernel_batch77n::parbox_single_author_stays_whole	=2 unverified: drops the parbox the single author prints in	kept
+perfect_kernel_batch77n::parbox_single_author_stays_whole	=2 unverified: drops the parbox the single author prints in	kept; HG1: test deleted, a row of perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed (right today)
 perfect_kernel_batch77n::ptephy_unlabelled_affil_after_labelled_reaches_all	=2 keeps the label 2 glued into Bob's name ("Bob2")	kept
 perfect_kernel_batch77n::revtex_footnotetext_among_names_is_the_names	=2 writes the footnotetext as a thanks note and drops the 1a mark from the name	kept
 perfect_kernel_batch77n::wrapped_comma_ends_a_row_of_names	=2 a false no-place Warning ("first" kept as a note of the block)	deleted
@@ -266,11 +266,11 @@ perfect_kernel_batch77p::at_handle_link_is_a_url	=2 keeps "Contact: @aable" in t
 perfect_kernel_batch77p::colour_in_mailto_links_is_no_letter	=2 a false content-check Warning ("Maxime Peyrard", "Univ Grenoble Alpes" missing)	deleted
 perfect_kernel_batch77p::comma_group_symbol_lines_go_by_their_marks	=2 unverified: keeps "† University of British Columbia" in a line the off reading parts by its marks; RED off too (user ruling 2026-11-09: the marks part the names, Dan Dorn at UBC alone; off gives him Uber Technologies too)	kept
 perfect_kernel_batch77p::compound_legend_mark_names_its_carrier	=2 drops Ann's † mark (shows ‡ only) and gives the contribution note the mark †‡	kept
-perfect_kernel_batch77p::email_elimination_waits_on_the_other_lines	=2 gives z99@y.edu and q77@x.edu to the wrong authors	kept
+perfect_kernel_batch77p::email_elimination_waits_on_the_other_lines	=2 gives z99@y.edu and q77@x.edu to the wrong authors	kept; HG1: test deleted, repro author_email_elimination_across_lines_red
 perfect_kernel_batch77p::email_gap_at_the_list_end_waits_on_the_other_lines	=2 gives z99@y.edu to the wrong author	kept
 perfect_kernel_batch77p::email_line_in_a_sized_group_is_an_email_line	=2 unverified: reads the "Project Page:" line as the author's URL contact instead of its own entry	kept
-perfect_kernel_batch77p::email_owner_by_confirmed_order	=2 gives info@y.edu to the wrong author	kept
-perfect_kernel_batch77p::email_owner_by_confirmed_order_marked	=2 swaps the URL https://a.github.io/ and xuta@m.com between the authors	kept
+perfect_kernel_batch77p::email_owner_by_confirmed_order	=2 gives info@y.edu to the wrong author	kept; HG1: test deleted, repro author_email_owner_confirmed_order_red
+perfect_kernel_batch77p::email_owner_by_confirmed_order_marked	=2 swaps the URL https://a.github.io/ and xuta@m.com between the authors	kept; HG1: test deleted, repro author_email_owner_confirmed_order_marked_red
 perfect_kernel_batch77p::empty_lines_under_unmarked_rows_print_nothing	=2 gives https://x.org/proj to an author instead of its own nameless entry	kept
 perfect_kernel_batch77p::icon_led_link_line_is_a_url	=2 unverified: parts the icon-led link line differently (wrappers and order of its URL contacts)	kept
 perfect_kernel_batch77p::institution_row_over_an_email_line_is_no_names	=2 reads the institution row "Carnegie Mellon / Johns Hopkins" as names (extra creators)	kept
@@ -294,7 +294,7 @@ perfect_kernel_batch77p::space_parted_names_negatives_pin_residuals	=2 unverifie
 perfect_kernel_batch77p::spacing_run_off_the_names_line_parts_nothing	=2 drops the printed \rule boxes from the line	kept
 perfect_kernel_batch77p::symbol_led_affiliation_run_is_no_creator	=2 drops the * and † marks and the "Univ D", "Univ E" affiliation	kept
 perfect_kernel_batch77p::symbol_led_email_label_is_an_email_line	=2 keeps the ∗ email label in the note's text instead of an Email contact	kept
-perfect_kernel_batch77p::symbol_marked_row_lines_go_by_their_marks	=2 drops the name's printed † mark	kept
+perfect_kernel_batch77p::symbol_marked_row_lines_go_by_their_marks	=2 drops the name's printed † mark	kept; HG1: test deleted, repro author_symbol_marked_spacing_run_lines_red
 perfect_kernel_batch77p::symbol_row_note_line_is_the_blocks	=2 drops the † and ‡ marks and keeps "Equal contribution" after a break	kept
 perfect_kernel_batch77p::symbol_row_unmarked_institution_is_every_names	=2 drops the † and ‡ marks and "Department of Physics" as every name's affiliation	kept
 perfect_kernel_batch77p::url_brace_list_is_addresses_by_spelling	=2 unverified: drops the typewriter wrappers on the spelled addresses	kept
@@ -303,7 +303,7 @@ perfect_kernel_batch77t::parenthesized_math_marks_label_affiliations	=2 keeps th
 perfect_kernel_batch77t::role_and_note_lines_are_no_unmarked_institution	=2 reads the role/note line under the names as an affiliation of Ann Able and Bob Baker	kept
 perfect_kernel_batch77t::vmsta_title_page_name_parts	=2 writes the vmsta initials into the names ("Yu.Yuliya", "I.Ivan")	kept
 perfect_kernel_batch77t::parenthesized_superscript_marks_label_affiliations	=2 keeps the "(a)"/"(b)" leads in the affiliations and a/b sups on the names, all lines on each creator	kept
-perfect_kernel_batch77t::thanks_affiliation_list_keeps_superscripts_in_its_text	=2 cuts the thanks affiliation at the text's "10 m²" superscript, losing the sup	kept
+perfect_kernel_batch77t::thanks_affiliation_list_keeps_superscripts_in_its_text	=2 cuts the thanks affiliation at the text's "10 m²" superscript, losing the sup	kept; HG1: test deleted, repro thanks_affiliation_list_keeps_superscripts_in_its_text_red
 perfect_kernel_batch77t::parenthesized_mark_lists_label_affiliations	=2 keeps the "(a)"/"(b)" leads in the affiliations and the mark lists on the names, both lines welded on each creator	kept
 perfect_kernel_batch77t::vmsta_first_name_without_surname	=2 writes the vmsta initials into the names ("Yu.Yuliya") and reorders "VoronovIvan"	kept
 perfect_kernel_batch77t::place_or_note_line_under_a_shared_institution_is_no_names_row	=2 parts the place/note line under the shared institution into a second affiliation	kept
@@ -330,7 +330,7 @@ perfect_kernel_batch77y::unnamed_line_under_symbol_lines_stays_the_blocks	=2 dro
 perfect_kernel_batch78e::vmsta_2018_emails_and_addresses_are_contacts	=2 loses both authors' email contacts	kept
 perfect_kernel_batch78e::vmsta_emails_and_addresses_are_contacts	=2 writes the vmsta initials into the names ("Yu.Yuliya", "I.Ivan")	kept
 perfect_kernel_batch78e::aa_thanks_email_leaves_no_empty_note	unverified: =2 puts Ann Able's email contact before the affiliation the off reading writes first	kept
-perfect_kernel_batch78e::webofc_authors_take_their_institutes	unverified: =2 puts Ann Able's email contact before the affiliation the off reading writes first	kept
+perfect_kernel_batch78e::webofc_authors_take_their_institutes	unverified: =2 puts Ann Able's email contact before the affiliation the off reading writes first	kept; HG1: test deleted, a row of perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed (right today)
 perfect_kernel_batch78f::inst_without_unskip_keeps_the_next_name	=2 gives Bob Baker's mark 2 to Ann Able ("1,2"), Bob shows none	kept
 perfect_kernel_batch78f::iopart_ead_under_its_address_mark	=2 writes zq77@x.org as a nameless creator, not its author's email	kept
 perfect_kernel_batch78f::jheppub_emailadd_one_call_lists_the_authors	=2 writes zq1@x.org as a nameless creator, not Ann's email	kept
@@ -374,7 +374,7 @@ perfect_kernel_batch88b::ijcai_grouped_email_list_placed_by_spelling	=2 a false 
 perfect_kernel_batch88b::ijcai_email_section_lines_part_the_addresses	=2 copies the corresponding note to every author, Bob's email and the affiliation to a nameless creator	deleted
 perfect_kernel_batch90a::a_formula_mark_on_a_name_answers_its_affiliation	old engine only: the writer outcome "same"	deleted
 perfect_kernel_batch90a::a_script_inside_a_two_dimensional_layout_ends_no_line	old engine only: the writer outcome "same"	deleted
-perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text	old engine only: the writer outcome	kept
+perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text	old engine only: the writer outcome	kept; HG1: test deleted, repro revtex_affiliation_isotope_prescript_keeps_its_line_red
 perfect_kernel_batch90a::a_formula_printing_only_floating_scripts_is_a_mark	old engine only: the writer outcome "same"	deleted
 perfect_kernel_batch91a::just_marked_address_after_maketitle_affiliates_every_name	=2 keeps the marks as text in the names ("Ann Able 1,2")	deleted
 perfect_kernel_batch91a::cpc_hepnp_is_not_routed_until_91c	=2 a content-check Warning: ann@x.org missing from the placed frontmatter	deleted
@@ -396,7 +396,7 @@ perfect_kernel_batch92c::aa_sole_institute_is_the_rows	unverified: =2 keeps a "�
 perfect_kernel_batch92e::kernel_thanks_colorbox_is_ink	=2 drops the colorbox/phantom thanks notes	kept
 perfect_kernel_batch92e::aa_offprints_only_email_leaves_no_note	=2 writes oleg@x.se as a nameless creator, not B. Baker's email	kept
 perfect_kernel_batch92e::kernel_thanks_command_text_is_ink	=2 drops the thanks notes whose ink is a command's text (the LaTeX/TeX logos, "…")	kept
-perfect_kernel_batch92e::kernel_thanks_undefined_command_is_ink	unverified: =2 the undefined command's Error is not raised	kept
+perfect_kernel_batch92e::kernel_thanks_undefined_command_is_ink	unverified: =2 the undefined command's Error is not raised	kept; HG1: test deleted, repro kernel_thanks_undefined_command_is_ink_red
 perfect_kernel_batch92e::kernel_thanks_constructor_text_is_ink	=2 drops the thanks notes whose ink is a constructor's (\openone, an empty \emph)	kept
 perfect_kernel_batch92e::kernel_thanks_empty_superscript_reads_alike	=2 drops Ann Able's thanks note holding an empty superscript	kept
 perfect_kernel_batch92e::kernel_thanks_math_token_is_ink	=2 drops the thanks notes holding a math token (\vdots, \dotsc, \ldots)	kept
@@ -459,12 +459,12 @@ perfect_kernel_batch95c::an_unspelled_entry_address_follows_the_chain_or_stays	=
 perfect_kernel_batch95d::mark_then_store_email_is_its_creators_contact	=2 moves the name's * mark into an email contact of its own	deleted
 perfect_kernel_batch95e::a_names_call_with_a_several_address_email_is_reparted	=2 a false plain-text Warning: ann@x.org loses its markup	deleted
 perfect_kernel_batch95e::a_several_address_email_the_plan_cannot_write_out_stays_whole	=2 unverified: gives ann@x.org to Ann Able where the off reading keeps the email whole with Bob Baker	kept
-perfect_kernel_batch97a::marked_list_with_an_unknown_name_shape_is_a_list	=2 writes before=" " where the list prints ", " between the names	kept
+perfect_kernel_batch97a::marked_list_with_an_unknown_name_shape_is_a_list	=2 writes before=" " where the list prints ", " between the names	kept; HG1: test deleted, a row of perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed (right today)
 perfect_kernel_batch97a::marked_list_with_an_unmarked_name_is_a_reported_merge	=2 unverified: no merged_creators Error where the off reading reports the merge	deleted
-perfect_kernel_batch97a::marked_names_beside_a_team_are_a_list_and_its_collaboration	=2 writes before=" and " where the list prints ", " between the names	kept
+perfect_kernel_batch97a::marked_names_beside_a_team_are_a_list_and_its_collaboration	=2 writes before=" and " where the list prints ", " between the names	kept; HG1: test deleted, a row of perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed (right today)
 perfect_kernel_batch97b::aa_mail_entry_whose_address_is_a_contact_is_given_back	=2 a false content-check Warning (smith@x.org missing)	deleted
-perfect_kernel_batch97b::marked_address_piece_is_no_person	=2 unverified: shows A. Able's mark 1 and B. in der Baker's "2" where the off reading shows none and "2,∗"	kept
-perfect_kernel_batch97b::marked_list_split_keeps_its_printed_separators	=2 writes before=" " where the list prints ", " and " and " between the names	kept
+perfect_kernel_batch97b::marked_address_piece_is_no_person	=2 unverified: shows A. Able's mark 1 and B. in der Baker's "2" where the off reading shows none and "2,∗"	kept; HG1: test deleted, repro author_marked_email_piece_is_no_person_red
+perfect_kernel_batch97b::marked_list_split_keeps_its_printed_separators	=2 writes before=" " where the list prints ", " and " and " between the names	kept; HG1: test deleted, repro author_marked_list_keeps_its_printed_separators_red
 perfect_kernel_batch97c::llncs_institute_legend_line_keeps_the_institute_shared	=2 unverified: shows the legend's * on Ann Able's name where the off reading leaves it on the note	deleted
 perfect_kernel_batch97d::a_heading_colon_is_the_lines_own	=2 makes "XYZ Collaboration" a creator holding the correspondence note instead of each name's collaboration contact	kept
 perfect_kernel_batch97d::a_headings_contact_leaves_the_names_words	=2 a false merged-separator Warning (XYZ Collaboration: | J Baron)	deleted
@@ -510,11 +510,11 @@ perfect_kernel_batch99a::one_printed_list_is_cut_once	=2 a false content-check W
 perfect_kernel_batch99b::a_displaced_setter_printing_a_mark_keeps_the_names_marks	unverified: a false content-check Warning (B City Town Univ missing from the placed frontmatter)	deleted
 perfect_kernel_batch99b::a_label_in_a_net_store_is_no_orphaned_annotation	loses the net-stored note words (Visiting the Lunar Geology in Tycho, Formerly at Oxford Brookes Polytechnic), 3 more Warnings	deleted
 perfect_kernel_batch99b::a_run_in_line_led_by_a_requested_mark_is_its_names_when_the_observer_declines	unverified: a false content-check Warning ("iD" placed more often than printed)	deleted
-perfect_kernel_batchc1::a_changed_symbol_reads_the_names_again	reads Ann's two marks 1 and 7 as one mark "17", so Univ Z and Univ B go to the wrong creators and a nameless creator appears	kept
+perfect_kernel_batchc1::a_changed_symbol_reads_the_names_again	reads Ann's two marks 1 and 7 as one mark "17", so Univ Z and Univ B go to the wrong creators and a nameless creator appears	kept; HG1: test deleted, repro queue_reading_symbol_after_names_red
 perfect_kernel_batche0::a_declined_paper_says_why	old engine only: the writer's declined read-back (=2 writes the paper, and its safety net counts the ‡ mark)	deleted
 perfect_kernel_batche0::a_pass_after_the_writer_shows_in_the_read_back	old engine only: the writer's outcome read back as "same" (=2 reads "written")	kept
 perfect_kernel_batche0::each_outcome_is_read_back	old engine only: the writer's outcomes read back (=2 reads "written" for "same")	kept
-perfect_kernel_batchfms2a1::ampersand_is_a_column_separator	drops the document's own stray "&" Error (pdflatex's "Extra alignment tab")	kept
+perfect_kernel_batchfms2a1::ampersand_is_a_column_separator	drops the document's own stray "&" Error (pdflatex's "Extra alignment tab")	kept; HG1: test deleted, repro author_ampersand_column_separator_red
 perfect_kernel_batchfms2a1::breaks_survive_a_rebound_newline	writes "Cat Cole" as plain text, a false markup-lost Warning	deleted
 perfect_kernel_batchfms2a1::input_field_events_carry_no_span	writes "Ann Able", "Bob Baker" and the note "From file." from an \input field as plain text, 3 false Warnings	deleted
 perfect_kernel_batchfms2a1::out_of_positions_block_is_skipped	unverified: the observer's blocks differ when a block runs out of positions	deleted
@@ -569,8 +569,8 @@ perfect_kernel_batchz14::an_address_group_in_a_names_row_is_read_whole	drops the
 perfect_kernel_batchz14::an_address_groups_braces_may_be_set_in_math	writes ann.able@a.org and bob.baker@a.org as plain text, 2 false Warnings	deleted
 perfect_kernel_batchz14::an_address_is_no_piece_of_a_later_names_row	writes bob.baker@b.org as plain note text, a false Warning	deleted
 perfect_kernel_batchz14::an_api_calls_pieces_join_in_any_order	writes "Zeta Univ, Town A" as plain text, a false Warning	deleted
-perfect_kernel_batchz14::an_elided_particle_is_a_surnames_only_after_an_initial	unverified: parts "C. Vignat, Université d'Orsay" into a name and an affiliation where the off reading keeps one creator as written	kept
-perfect_kernel_batchz14::an_entrys_addresses_are_cut_where_its_line_is_made	unverified: the IEEEtran entry's addresses are not cut where its line is made	kept
+perfect_kernel_batchz14::an_elided_particle_is_a_surnames_only_after_an_initial	unverified: parts "C. Vignat, Université d'Orsay" into a name and an affiliation where the off reading keeps one creator as written	kept; HG1: test deleted, a row of perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed (right today)
+perfect_kernel_batchz14::an_entrys_addresses_are_cut_where_its_line_is_made	unverified: the IEEEtran entry's addresses are not cut where its line is made	kept; HG1: the IEEEtran cases asserted again (the declined case now each mark answered)
 perfect_kernel_batchz14::an_only_carriers_address_beside_others_is_not_written	writes "Univ C" as plain text, a false Warning	deleted
 perfect_kernel_batchz1::a_declarations_span_holds_what_leads_to_it	loses "2 Q R ST U V" from the placed frontmatter, a content-check Warning	deleted
 perfect_kernel_batchz1::a_definition_in_the_block_is_an_event_with_its_span	loses "BakerB Dept Q" and writes "Univ A" as plain text, 3 Warnings	deleted

@@ -1988,7 +1988,7 @@ of alternating plain lines lost a name:
   its scripts and their operands (`$^\mathrm{ab}$`), is name text, a lone letter (`$e^+e^-$`) none; a byline's leading
   "by" is dropped (hep-ph9507223, hep-ph9404319); a run of bare asterisks after a comma is a mark (`S. F. Pereira,* Z.
   Y. Ou,** and H. J. Kimble`, quant-ph0003094). Guards `revtex_marked_author_list_splits_each_name`,
-  `revtex_asterisk_marked_authors_split`; hep-ex9910016's 190 `$^{n}$`-marked BES names split again.
+  `revtex_asterisk_marked_authors_split_red`; hep-ex9910016's 190 `$^{n}$`-marked BES names split again.
 - initials glued to a surname in capitals (`M.CACCIA, R.CAMPAGNOLO`, hep-ex9910019): `unglued_initials` unglues before
   a capitals surname of three letters or more, not before an abbreviation's last letter (`I.N.F.N`). Guard
   `author_caps_glued_initials_split`.
@@ -2000,12 +2000,12 @@ of alternating plain lines lost a name:
   `author_note_of`; `A.M. Green\thanks{…},\\ … \\ C. Michael\thanks{…},\\ DAMTP …`, hep-lat9404004; 1410.7277,
   1706.02584, 1403.1404); under plain names a noted affiliation stays one (`Ann Able and Bob Baker\\ Department of
   Physics\\ Ohio State\footnote{Visiting.}`). Guards `author_note_name_line_opens_next_author`,
-  `author_noted_affiliation_stays_affiliation`. With no notes the same alternation opens the next author when a gap,
+  `author_noted_affiliation_stays_affiliation_red`. With no notes the same alternation opens the next author when a gap,
   the names' styling or a person's name over an institution says so (#900); residual (RED
   `article_plain_name_line_between_affiliations`): a cue-less `Bob Baker` over `Univ Y, …` with none of these, a place
   reading as a name too (1908.10448's `Zach Shahn \\ IBM Research,`). The note command must be the first names' own
   (`\thanks` names over a `\footnote`d affiliation: the affiliation stays one; guard
-  `author_other_note_command_stays_affiliation`); with `\footnote` on names and affiliations alike the block is
+  `author_other_note_command_stays_affiliation_red`); with `\footnote` on names and affiliations alike the block is
   ambiguous and a noted affiliation name-shaped line opens an author (RED `author_footnote_everywhere_ambiguous`).
 Residual: `$^{a}$Sahng-kyoon.Yoo and $^{b}$D.K.Park` (hep-th9707026; a surname glued at a period) stays one creator.
 
@@ -27128,7 +27128,8 @@ order, after Univ Y).
 
 Guards: `perfect_kernel_batch90a::{a_formula_printing_only_floating_scripts_is_a_mark,
 a_script_before_printed_ink_or_on_a_base_is_text, a_formula_mark_on_a_name_answers_its_affiliation,
-a_script_inside_a_two_dimensional_layout_ends_no_line}` (the last: repros
+a_script_inside_a_two_dimensional_layout_ends_no_line}` (module removed: DEL1 deleted three, HG1 the fourth, its repro
+`revtex_affiliation_isotope_prescript_keeps_its_line_red`; the last: repros
 `amsart_address_fraction_script_ends_no_line`, `amsart_address_boxed_script_ends_no_line`);
 `observer::marks::tests::{floating_scripts_before_no_letter_or_digit_are_a_mark,
 a_script_before_or_on_printed_ink_is_no_mark}` (both vocabularies, the parsed nested bases, the accented letter and
@@ -27489,12 +27490,12 @@ author-typed `\corres{Correspondence: }` stays (1609.03883), and so do the 51 sa
 declared font alone does not make a constructor transparent (`\openone`). Repros
 class-bindings/{aa_offprints_only_email_leaves_no_note, kernel_empty_thanks_leave_no_note,
 mdpi_corres_label_only_note_is_kept, kernel_thanks_command_text_is_ink, kernel_thanks_math_token_is_ink,
-aa_offprints_command_text_is_ink, kernel_thanks_rule_and_frame_are_ink, kernel_thanks_undefined_command_is_ink (fails
+aa_offprints_command_text_is_ink, kernel_thanks_rule_and_frame_are_ink, kernel_thanks_undefined_command_is_ink_red (fails
 pdflatex: the error path only), kernel_thanks_constructor_text_is_ink, kernel_thanks_colorbox_is_ink,
 kernel_thanks_empty_superscript_reads_alike, kernel_thanks_blank_notes_kept (catalog: blank notes the test keeps, no
 guard)}; guards `perfect_kernel_batch92e::{aa_offprints_only_email_leaves_no_note, kernel_empty_thanks_leave_no_note,
 mdpi_corres_label_only_note_is_kept, kernel_thanks_command_text_is_ink, kernel_thanks_math_token_is_ink,
-aa_offprints_command_text_is_ink, kernel_thanks_rule_and_frame_are_ink, kernel_thanks_undefined_command_is_ink,
+aa_offprints_command_text_is_ink, kernel_thanks_rule_and_frame_are_ink, kernel_thanks_undefined_command_is_ink_red,
 observer_reads_a_note_by_the_ink_test, kernel_thanks_constructor_text_is_ink, kernel_thanks_colorbox_is_ink,
 kernel_thanks_empty_superscript_reads_alike}`, `perfect_kernel_batch78e::aa_thanks_email_leaves_no_empty_note` (Bob
 Baker's empty `\thanks{}` now no note) and `perfect_kernel_batchfms2a2::notes_labels_and_contacts` (Cat Cole's
@@ -29263,7 +29264,8 @@ the base binary): three papers' output changed — 1311.0586 (aastex, 1 → 7 cr
 
 **Left.** In 2410.11607: the `75A,75C` marks (institute 75's `(A)…; (B)…` parts) unanswered, their institutes one
 nameless creator; the collaboration line welded into the last name (OPEN_ROWS.md:810 ruling); a mark-covered list with a
-`NON_NAME_WORDS` word in a surname stays whole (F3, the word lists). Guards `perfect_kernel_batch97a` (three); repros
+`NON_NAME_WORDS` word in a surname stays whole (F3, the word lists). Guards `perfect_kernel_batch97a` (three; since HG1 two rows of
+`perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed`, the module removed); repros
 sectioning-frontmatter/`author_marked_list_lowercase_particle_merges` (RED → GREEN),
 `author_marked_list_with_an_unmarked_name_is_a_reported_merge`, `author_marked_names_beside_a_team_are_a_reported_merge`.
 
@@ -29330,7 +29332,7 @@ marked_list_with_an_unknown_name_shape_is_a_list` (before ", ", amsart's ", and 
 `perfect_kernel_batch77i::store_label_is_printed_text_not_a_link_target_or_key` ("G:");
 repros sectioning-frontmatter/`aa_mail_printing_copy_keeps_its_label`, `aa_mail_storing_copy_has_no_label`,
 `aa_mail_repeated_address_stays_labelled`, `raw_package_note_label_before_a_link_names_it`,
-`author_marked_list_keeps_its_printed_separators` (RED → GREEN), `author_marked_email_piece_is_no_person` (RED →
+`author_marked_list_keeps_its_printed_separators_red` (RED → GREEN), `author_marked_email_piece_is_no_person_red` (RED →
 GREEN).
 
 ### 945. An affiliation the reading already has reaches its author: a block entry is cut by its whole span, llncs's one institute cut at its marks stays every author's, svproc's `\institute` is sv_support's (Perl: no observer, the names line split at its "and"; llncs's whole institute on the first author; svproc's per author through OmniBus's inst_support)
@@ -30398,7 +30400,7 @@ a_bindings_own_plumbing_is_no_dropped_text, a_drop_pdflatex_makes_too_is_no_loss
 many_entries_of_one_call_share_its_arguments}`; repros `check_declared_drop_bookmark_text_unwanted`,
 `check_declared_drop_of_a_frontmatter_command_unwanted`, `check_kernel_selector_drop_is_texs_own`,
 `check_many_entries_of_one_call_share_its_arguments` (RED 106t r2 → GREEN), and sectioning-frontmatter/`check_binding_command_drops_its_argument`,
-`check_internal_command_reads_documents_optional`, `check_binding_macro_drops_inside_an_entry` (RED int135e → GREEN),
+`check_internal_command_reads_documents_optional`, `check_binding_macro_drops_inside_an_entry_red` (RED int135e → GREEN),
 `check_binding_plumbing_is_no_dropped_text` (RED on the unfiltered build), `check_bound_class_nothing_lost`,
 `check_bound_class_running_heads_unwanted`, `check_replaced_author_is_not_wanted` (negative). Guards updated for losses
 now counted: `perfect_kernel_batch86i::second_abstract_after_maketitle_is_kept` (amsart's `[R\'esum\'e]`, which pdflatex
@@ -30539,7 +30541,7 @@ a_document_end_in_a_stored_argument_ends_nothing, a_replacing_guess_keeps_each_c
 a_csname_store_keeps_each_call_in_the_info, an_optional_argument_stored_reaches_the_info,
 digits_count_with_a_counted_word_of_their_argument, the_bounds_of_the_third_source_say_what_they_dropped}`; repros
 sectioning-frontmatter/`check_raw_setter_store_gated`, `check_raw_setter_replay_refused`,
-`check_store_replaced_and_siblings`, `check_binding_drops_document_macro_expansion`,
+`check_store_replaced_and_siblings`, `check_binding_drops_document_macro_expansion_red`,
 `list_parameters_macro_in_an_expansion_keeps_the_next_letter` (RED int139c → GREEN 108b),
 `check_raw_setter_end_document_in_store`, `check_store_replacing_guess_drops_an_appender`,
 `check_store_csname_counter_keeps_each_call`, `check_store_optional_argument_printed`,

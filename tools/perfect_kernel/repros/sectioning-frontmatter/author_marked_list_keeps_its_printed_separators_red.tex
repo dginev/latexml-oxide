@@ -10,7 +10,8 @@
 % engines: rust int123a = one creator holding the line; rust int125b = three creators, before=" " on the second and
 %          third, "and" printed nowhere; perl = one creator (revtex's `\author` one author)
 % expect:  0 errors, 0 warnings; three creators, the second before=", ", the third before=" and "
-% status:  RED (int125b) -> GREEN (97b)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: three creators, each its mark and affiliation, but the second and third before="  " (the printed ", " and " and " lost); 97b's guard discarded its conversion after DEL1
+% status:  RED (int125b) -> GREEN (97b) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass{revtex4}
 \begin{document}

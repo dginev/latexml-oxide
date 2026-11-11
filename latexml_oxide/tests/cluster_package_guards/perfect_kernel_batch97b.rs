@@ -100,22 +100,3 @@ fn note_store_label_is_read_before_its_printed_occurrence() {
     labelled.replace("Correspondence: ann@x.org", "ann@x.org")
   );
 }
-
-/// A revtex names line split by its marks keeps the separators it prints: the second creator's `before` ", ", the
-/// third's " and " — the binding's space had carried neither, the word "and" printed nowhere. Witness hep-ph9710228.
-#[test]
-fn marked_list_split_keeps_its_printed_separators() {
-  let (..) = both_ways(repro!("author_marked_list_keeps_its_printed_separators"), 0);
-}
-
-/// A marked piece that is an address and no name is no marked name (review rev97a S1, synthetic): the line is no list by
-/// its marks — not a creator `b.baker@two.edu`. Since batch 100c the observer's writer writes the block as the reading
-/// reads it, two people and the address the second's by its spelling (OXIDIZED_DESIGN_DIVERGENCES #958, `Made::Email`),
-/// no longer one creator holding the line with its two marked names reported (`merged_creators`, the fail-safe while the
-/// re-part could make no e-mail item). A marked name with its address beside it is a name (imsart's `\ead`,
-/// 2107.03920; emulateapj's `\authoremail`, astro-ph9812176, which the first reading of this rule merged): the list
-/// splits.
-#[test]
-fn marked_address_piece_is_no_person() {
-  let (..) = both_ways(repro!("author_marked_email_piece_is_no_person"), 0);
-}

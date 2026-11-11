@@ -541,39 +541,6 @@ fn names_rows_by_count_or_following_line() {
   }
 }
 
-/// E-mail owners in an unmarked block (77p r4 decision: elimination only where the order is confirmed): the initials
-/// spell a name (`bb@`, `aa@`: p9), a role mailbox is no person's (`info@`: p28, the block's), an
-/// initial and a surname spell one (`lzhang@` Li Zhang, then `zhangw@` the one name left: p8), a name an address on
-/// another e-mail line spells leaves the pool (`ccruz@` on the next line: `qq@` Bo Bell's; 2605.06223), and a line not in
-/// name order (2509.10377, by institution) places no address by its place (`xx@`, `yy@` unplaced). Unplaced addresses
-/// are the block's, on the shared creator (user ruling R10 2026-10-20; 77p r9 put them on the group's last name).
-/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
-/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
-#[test]
-fn email_owner_by_confirmed_order() {
-  convert_repro!("author_email_owner_confirmed_order.tex");
-}
-
-/// E-mail owners in a marked block: an initial and a surname spell a name (2608.10670's `psingh1_be22@` among three
-/// Singhs, `kbatra_be22@`; 2606.23525's `tli104@`), an address between two spelled ones with one name between their
-/// owners is that name's (2303.11225's `xuta@`, `musclewu@`), a link line under the e-mail lines is its own entry,
-/// welded into neither the e-mail line (2403.08629) nor the affiliation before them (77p r6: it had continued "Univ M";
-/// r6 put it on the last name, Runnan Li, as an affiliation; since r7 a URL contact of the whole block, the shared
-/// creator below the authors, user ruling 2026-10-20), and a line of spacing alone under an e-mail line is no entry (2510.07961,
-/// 2607.21993: an r4 draft panicked on it; since r6 dropped, `prints_nothing`, so the `\texttt` of the line above
-/// stays on each address): every address on its author (was each line one contact on the last author, the link welded
-/// into the last).
-#[test]
-fn email_owner_by_confirmed_order_marked() {
-  let xml = convert_repro!("author_email_owner_confirmed_order_marked.tex");
-  assert_no_merged_names(&xml);
-  let (..) = (
-    affiliation("Univ T"),
-    affiliation("Univ J"),
-    affiliation("Univ M"),
-  );
-}
-
 /// A legend line after the names — a footnote symbol and its text, `\\ \textsuperscript{*}\textit{Equal
 /// contribution.}` (2509.20748, aero.cls and the article `\author` alike) — is no part of the name before it (was "Bob
 /// Baker*Equal contribution.1"). Since 93a (OD #925) its legend is the note of the names showing `*`, Ann Able and Cat
@@ -725,17 +692,6 @@ fn and_run_between_marked_entries() {
     creator(true, "Ann Able", &affiliation("Univ A")),
     creator(false, "Bob Baker", &affiliation("Univ B")),
   ]);
-}
-
-/// An e-mail address goes to a name by elimination only while no other e-mail line of the block holds an address no
-/// name spells: `q77@` is not Cat Cole's while `z99@` on the next line may be hers (the r5 re-review's probe q6). The
-/// addresses no name settles are the block's, on the shared creator (user ruling R10 2026-10-20; 77p r9 put them on
-/// the last name); every spelled one on its owner.
-#[test]
-fn email_elimination_waits_on_the_other_lines() {
-  let xml = convert_repro!("author_email_elimination_across_lines.tex");
-  assert_no_merged_names(&xml);
-  let (..) = (affiliation("Univ A"), affiliation("Univ B"));
 }
 
 /// The run of addresses between two spelled owners counts every author between them, spelled on another line or not
@@ -1113,20 +1069,6 @@ fn link_line_of_a_marked_column_of_names_is_their_url() {
 fn email_gap_at_the_list_end_waits_on_the_other_lines() {
   let xml = convert_repro!("author_email_gap_at_the_list_end_waits.tex");
   assert_no_merged_names(&xml);
-}
-
-/// Names a spacing run parts on one row, marked by footnote symbols that label the lines under the row (2601.02680; the
-/// r5 re-review's finding 6, probes r10, r11, r18): each institution goes to the names carrying its symbol, the address
-/// to the name it spells, the repository link to the block, the empty `\url{}` beside it nothing. Was every line on the
-/// last name, Dong Li.
-#[test]
-fn symbol_marked_row_lines_go_by_their_marks() {
-  let xml = convert_repro!("author_symbol_marked_spacing_run_lines.tex");
-  assert_no_merged_names(&xml);
-  let (..) = (
-    affiliation("Tsinghua University"),
-    affiliation("University of California, Merced"),
-  );
 }
 
 /// A link line opening an author block or an `\and` column is no name (the r5 re-review's finding 7, probes u4, u16):
@@ -1581,7 +1523,6 @@ fn empty_mark_in_a_marked_block_stays() {
 fn symbol_row_group_wrapped_line_goes_by_its_marks() {
   let xml = convert_repro!("author_symbol_row_group_wrapped_line.tex");
   assert_no_merged_names(&xml);
-  let (..) = (affiliation(" Univ A"), affiliation(" Univ B"));
   // (the contact line's addresses each an e-mail of the name it spells, the line keeping its word "Contact" — no e-mail
   // label word, so it stays the entry's: 95c, OD #938; the group `{aable, ccole}@x.edu` had stayed in the line)
   let email = |id: usize, address: &str| {

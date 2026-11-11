@@ -413,14 +413,6 @@ fn revtex3_unnumbered_appendix_steps_section() {
   );
 }
 
-/// Bare-asterisk marks after the names' commas (quant-ph0003094): three authors, each keeping its mark.
-#[test]
-fn revtex_asterisk_marked_authors_split() {
-  let (..) = convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_asterisk_marked_authors_split.tex"
-  ));
-}
-
 /// Every `<tag role="refnum">` text of `xml`, in order.
 fn refnums(xml: &str) -> Vec<&str> {
   xml
@@ -491,15 +483,6 @@ fn author_caps_glued_initials_split() {
     ],
     "{xml}"
   );
-}
-
-/// In an article author block, a name line with an author's `\thanks` after an affiliation opens the next author
-/// (hep-lat9404004).
-#[test]
-fn author_note_name_line_opens_next_author() {
-  let (..) = convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_note_name_line_opens_next_author.tex"
-  ));
 }
 
 /// A doubled separator, `\& and`, parts the names as one does (astro-ph9612009).
@@ -620,14 +603,6 @@ fn omnibus_provide_only_package_loads_whole_later() {
   );
 }
 
-/// Under plain names, an affiliation line with a `\footnote` stays an affiliation (review 64zd round 2, fn5.tex).
-#[test]
-fn author_noted_affiliation_stays_affiliation() {
-  let (..) = convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_noted_affiliation_stays_affiliation.tex"
-  ));
-}
-
 /// A sprocl address led by an author's mark goes to the authors showing it (review 64zd round 2, ws1.tex).
 #[test]
 fn ws_sprocl_marked_addresses() {
@@ -648,15 +623,6 @@ fn ws_sprocl_marked_addresses() {
     ],
     "{xml}"
   );
-}
-
-/// A `\footnote`d affiliation under `\thanks` names stays an affiliation: a noted line opens an author only with the
-/// first names' note command (review 64zd round 3, au5.tex).
-#[test]
-fn author_other_note_command_stays_affiliation() {
-  let (..) = convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_other_note_command_stays_affiliation.tex"
-  ));
 }
 
 /// AASTeX's `\authoremail` before `\author` is the email of the author it spells, never a creator of its own

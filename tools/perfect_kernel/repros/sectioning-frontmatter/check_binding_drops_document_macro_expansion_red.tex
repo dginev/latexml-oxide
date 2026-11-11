@@ -8,7 +8,8 @@
 % oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able, Senior Member, IEEE", "Body text."
 % engines: rust int139c = 0 errors, 0 warnings, the grade lost silently; perl = the grade dropped too
 % expect:  0 errors, 1 warning (frontmatter:unclaimed "senior member ieee"); the frontmatter unchanged
-% status:  RED (int139c) -> GREEN (108b)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: the grade dropped silently, counted by no Warning; 108b's guard was emptied by DEL1 (its =2 run was RED)
+% status:  RED (int139c) -> GREEN (108b) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass[journal]{IEEEtran}
 \newcommand{\SeMieee}{\IEEEmembership{, Senior Member,~IEEE}}

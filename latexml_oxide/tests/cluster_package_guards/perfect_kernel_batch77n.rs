@@ -350,14 +350,6 @@ fn revtex3_glue_after_names_is_no_name() {
   ]);
 }
 
-/// Negative guard: one name in a `\parbox` stays one author in its box.
-/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
-/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
-#[test]
-fn parbox_single_author_stays_whole() {
-  convert_repro!("author_parbox_single_author_stays.tex");
-}
-
 /// authblk's unlabelled `\author`s, each a name with a `\thanks` holding a comma, each with its `\affil` (r1 review probe
 /// a1): two authors, each with its note and affiliation (int31a and 77n r1 counted the note's comma as a list separator
 /// and replaced Ann Able, 0 errors).

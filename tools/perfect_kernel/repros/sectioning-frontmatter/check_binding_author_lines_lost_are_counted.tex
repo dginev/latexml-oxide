@@ -8,7 +8,9 @@
 % engines: rust int133a = 0 errors, 0 warnings, the two lines lost silently; perl = 0 errors, the lines kept in the
 %          contact
 % expect:  0 errors, 1 warning (frontmatter:unclaimed "university faculty craters"); the creator as before
-% status:  RED (int133a) -> GREEN (106s)
+% engines: rust int160a (HG1) = 0 errors, 1 warning: the lines kept, Ann Able's affiliation "Lunar University Faculty of
+%          Craters" (the content no longer lost), its `\footnotesize` lost and counted ("its markup lost: a macro's span")
+% status:  RED (int133a) -> GREEN (106s) -> GREEN, the lines kept (HG1; perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed)
 % preload: ar5iv.sty
 \documentclass{amsart}
 \newcommand{\institution}{Lunar University\\

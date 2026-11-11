@@ -230,15 +230,6 @@ fn the_documents_own_files_write_its_words() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
 }
 
-/// A binding's author reader loses the affiliation lines a macro inside `\author` holds (amsart, 2007.07526): LaTeX's
-/// title page prints them from `\@author`, and the check counts each word of them the output lacks, in printed order
-/// ("lunar" is held, the e-mail's). Distinct path: the kernel's `\@maketitle` over the fields, under a binding. The
-/// loss itself is unfixed; the creator is pinned as it is.
-#[test]
-fn a_binding_losing_author_lines_is_counted() {
-  repro!("check_binding_author_lines_lost_are_counted");
-}
-
 /// Nothing lost, nothing counted: an author's note (its text set apart from the name, the creator's note), two
 /// authors and the document's date; with no `\date`, the conversion's `\today` the class prints is no document word;
 /// a formula's letters are the output's tokens, whose attributes part no word (`$\bar pp$`, "pp": a false Warning

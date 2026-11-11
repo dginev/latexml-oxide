@@ -12,7 +12,9 @@
 % expect:  0 errors, 2 warnings (frontmatter:unclaimed, \@pacs and \@recd); the author's
 %          <ltx:contact role="email">ann.able@lunar.org</ltx:contact>, <ltx:note role="note">98.80.Cq</ltx:note>,
 %          <ltx:note role="note">3 March 2021</ltx:note>
-% status:  RED (int132a1) -> GREEN (105a)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: the code and the date each a note line of Ann Able's (kept, guarded:
+%          perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed); the e-mail line a note too, its own RED (net_shaped_store_email_line_is_a_contact_red)
+% status:  RED (int132a1) -> GREEN (105a) -> GREEN for the code and date lines, 0 warnings (HG1)
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{netshape.cls}
 \ProvidesClass{netshape}\LoadClass{article}

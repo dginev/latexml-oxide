@@ -27,16 +27,6 @@ macro_rules! repro {
   };
 }
 
-/// A code's line (`98.80.Cq`: one unclaimed word, `cq`) and a date's (`3 March 2021`) below the floor are kept as the
-/// net's note lines, one Warning each; the address beside them is the author's contact. An MSC code (`05C12`), whose
-/// letters and digits are no content words, is kept the same way. Distinct path: the shapes kept.
-#[test]
-fn a_code_or_date_line_below_the_floor_is_a_note_line() {
-  let tex = repro!("net_shaped_store_below_the_floor_is_kept");
-  let msc = tex.replace("\\Pacs{98.80.Cq}", "\\Pacs{05C12}");
-  assert_ne!(msc, tex);
-}
-
 /// An undefined font switch inside the store's bold group leaves its `ltx:ERROR` in the line's `ltx:text`: its text is
 /// no printed word (2601.14329's `{\songti\zihao{-4}#2}`). The line "Lunarfund" is kept as the creator's note, and the
 /// one Warning the guard pinned was the content check counting the ERROR's text "songti" as a word the author block

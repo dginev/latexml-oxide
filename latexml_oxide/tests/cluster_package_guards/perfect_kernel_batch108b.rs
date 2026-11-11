@@ -100,14 +100,6 @@ fn a_tex_live_packages_setter_or_no_title_page_wants_nothing() {
   }
 }
 
-/// IEEEtran's `\IEEEmembership` drop reached through the document's own macro: the dropped grade is no token of `\author`'s
-/// argument, only of the body `\SeMieee` holds. Distinct path: `title_page_check::writes` reading a document macro's body.
-/// Witness 2503.14354; the drop is Perl's too, IEEEtran.cls.ltxml:143.
-#[test]
-fn a_bindings_drop_inside_a_documents_macro_is_counted() {
-  repro!("check_binding_drops_document_macro_expansion");
-}
-
 /// `\@listi`, `\@listI` empty left `\let` with the next letter as its name when a class's non-robust `\normalsize` expands
 /// in a `\protected@xdef` (esapub2005.cls through authblk's `\affil`): two Errors and "ampus". The XML this one item
 /// changes. Witness 2310.07393.

@@ -289,9 +289,3 @@ fn a_class_store_makes_no_printed_note() {
     vec!["Bob Baker".to_string(), "affiliation=Univ B".to_string()],
   ]);
 }
-
-/// The lost mark's Warning reads the number and the ORCID iD apart (2205.05709's `10000-0001-…`). Distinct: the message.
-#[test]
-fn a_lost_marks_warning_parts_the_orcid() {
-  let (..) = cli_conversion(repro!("author_lost_mark_message_parts_the_orcid"), false);
-}

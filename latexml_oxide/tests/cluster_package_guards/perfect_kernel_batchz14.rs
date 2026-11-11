@@ -287,7 +287,7 @@ fn an_entrys_addresses_are_cut_where_its_line_is_made() {
     &["Ann Able †", "affiliation=Univ A", "email=ann@a.org"],
     &["Bob Baker ‡", "affiliation=Univ B", "email=bob@b.org"],
   ]);
-  for (author, ..) in [
+  for (author, _, expected) in [
     (
       r"\IEEEauthorblockN{Ann Able$^\dagger$, Bob Baker$^\ddagger$ \IEEEauthorblockA{$^\dagger$Univ A\\ $^\ddagger$Univ B, bob@b.org}}",
       "written",
@@ -299,32 +299,20 @@ fn an_entrys_addresses_are_cut_where_its_line_is_made() {
     ),
     (
       r"\IEEEauthorblockN{Ann Able$^\dagger$, Bob Baker$^\ddagger$ \IEEEauthorblockA{$^\dagger$Univ A\\ $^\ddagger$Univ B\\ Email: x@a.org, y@b.org}}",
-      "declined",
+      // (HG1: each entry its mark's name, as IEEEtran prints them; the e-mail line's addresses spell no one, so they
+      // are the block's — the old engine's declined cut gave both names both lines, the expectation DEL1 stopped
+      // comparing)
+      "marks answered, addresses the block's",
       &[
-        &[
-          "Ann Able †",
-          "affiliation=† Univ A ‡ Univ B",
-          "email=x@a.org",
-          "email=y@b.org",
-        ][..],
-        &[
-          "Bob Baker ‡",
-          "affiliation=† Univ A ‡ Univ B",
-          "email=x@a.org",
-          "email=y@b.org",
-        ],
+        &["Ann Able †", "affiliation=Univ A"][..],
+        &["Bob Baker ‡", "affiliation=Univ B"],
+        &["email=x@a.org", "email=y@b.org"],
       ][..],
     ),
   ] {
-    let (..) = dump(&document("IEEEtran", author));
+    let (xml, _) = dump(&document("IEEEtran", author));
+    creators_are(&xml, expected);
   }
-}
-
-/// A particle elided onto a capital is a surname's only right after an initial (hep-ph0311131's `D.~d'Enterria`): the shared shape decides today's reader too, and an
-/// institution or a place elides as well — `C. Vignat, Universit\'e d'Orsay` one creator as written (1009.2396), a `Villeneuve d'Ascq` row no person in the reading.
-#[test]
-fn an_elided_particle_is_a_surnames_only_after_an_initial() {
-  let (..) = dump(repro!("z14r2_elided_particle_only_after_an_initial"));
 }
 
 /// A role heading opens a row of names only where each piece shows a person — a name's cue or its mark (hep-ph0311131): a heading over words is a line of the

@@ -6,7 +6,8 @@
 % oracle:  pdflatex 0 errors: "ANN ABLE17 AND BOB BAKER2 / 1 Univ Z, 2 Univ Y / 1 Univ A, 2 Univ B"
 % engines: rust int142a and C1: Ann Able "1 Univ Z" and "1 Univ A", Bob Baker "2 Univ Y" and "2 Univ B"; perl: not compared, the Cut is Rust-only
 % expect:  0 errors, 0 warnings; the same creators as int142a's; "8 entries read for 5 queued" in the debug log
-% status:  GREEN (the base's output, kept)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: Ann Able's marks read as one "17" (no address of hers), Univ Y, Univ A and Univ B on Bob Baker, Univ Z on a nameless creator; c1's guard discarded its conversion after DEL1
+% status:  GREEN (the base's output, kept) -> RED (int160a, HG1)
 \documentclass{amsart}
 \newcommand\sym{\dagger}
 \begin{document}

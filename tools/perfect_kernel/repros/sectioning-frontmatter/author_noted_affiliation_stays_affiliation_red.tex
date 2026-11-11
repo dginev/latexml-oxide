@@ -5,7 +5,8 @@
 % oracle:  pdflatex: 0 errors; "Ann Able and Bob Baker" over "Department of Physics", "Ohio State¹", "Columbus OH"
 % engines: rust 64zd r4: a creator "Ohio State"; perl: two creators, the three lines their affiliations
 % expect:  0 errors; Ann Able and Bob Baker, each with the three affiliation lines; the footnote kept
-% status:  RED (64zd r4) -> GREEN (64zd)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: a third creator "Ohio State" (its Note "Visiting.", the affiliation Columbus OH), Ann Able and Bob Baker with Department of Physics only; 64zd's guard kept only the counts after DEL1
+% status:  RED (64zd r4) -> GREEN (64zd) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

@@ -381,7 +381,6 @@ mod perfect_kernel_batch89a;
 mod perfect_kernel_batch89b;
 mod perfect_kernel_batch89c;
 mod perfect_kernel_batch89d;
-mod perfect_kernel_batch90a;
 mod perfect_kernel_batch91a;
 mod perfect_kernel_batch92a;
 mod perfect_kernel_batch92b;
@@ -396,7 +395,6 @@ mod perfect_kernel_batch95b;
 mod perfect_kernel_batch95c;
 mod perfect_kernel_batch95d;
 mod perfect_kernel_batch95e;
-mod perfect_kernel_batch97a;
 mod perfect_kernel_batch97b;
 mod perfect_kernel_batch97c;
 mod perfect_kernel_batch97d;
@@ -459,6 +457,8 @@ mod perfect_kernel_batchfx4;
 mod perfect_kernel_batchfx5;
 /// GL1: an e-mail label glued to its address names the line's contact, the address its content; OD #956.
 mod perfect_kernel_batchgl1;
+/// HG1: the guards DEL1 left hollow asserting again — rows of one table, the wrong ones `_red.tex` catalog repros.
+mod perfect_kernel_batchhg1;
 mod perfect_kernel_batchimg1;
 mod perfect_kernel_batchint19;
 mod perfect_kernel_batchint20;

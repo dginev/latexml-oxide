@@ -276,20 +276,6 @@ fn author_block_after_a_replaced_author() {
   );
 }
 
-/// 59d: an author-block row whose mark matches no author is kept with the shared creator
-/// (`authorblock` is a shared contact role). Repro sectioning-frontmatter/author_block_orphan_mark_is_kept.
-#[test]
-fn author_block_orphan_mark_is_kept() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_block_orphan_mark_is_kept.tex"
-  );
-  assert_elements(tex, RAW, (0, 0), &[]);
-  for _ in [
-    "<creatorrole=\"author\"><personname>A.Author</personname><contactrole=\"authorblock\">Affiliationone</contact></creator>",
-    "<creatorrole=\"author\"><contactrole=\"authorblock\">Affiliationtwo</contact></creator>",
-  ] {}
-}
-
 /// 59e: fancyhdr's `\f@nch@setoffs`, re-run by a document after `\newgeometry` (the wheelchart manual),
 /// sizes running heads only, and converts to nothing. Repro singletons/fancyhdr_setoffs_after_newgeometry.
 #[test]

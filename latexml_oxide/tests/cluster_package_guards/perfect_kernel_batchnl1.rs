@@ -200,25 +200,24 @@ fn a_collaboration_remark_is_the_names_contact() {
 #[test]
 fn a_remark_after_a_note_keeps_its_own_span() {
   let tex = repro!("emit_a_remark_after_a_note_keeps_its_own_span");
-  let two = both(tex, 0);
+  // (one conversion: DEL1 left a loop converting the same document twice)
+  let (log, xml) = run(tex);
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let want = [vec![
     "Ann Able",
     "collaboration=(for the Atlas Collaboration)",
   ]];
-  assert_eq!(two, want);
+  assert_eq!(creators(&xml), want);
   let atlas = "<contact role=\"collaboration\">(for the <text font=\"smallcaps\">Atlas</text> Collaboration)</contact>";
-  for _ in [0, 2] {
-    let xml = run(tex).1;
-    assert_eq!(collaborations(&xml), [atlas]);
-    // (her thanks note before the collaboration, as the source prints them)
-    let note = xml.find("<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\"");
-    assert!(
-      note.is_some_and(|note| xml
-        .find("<contact role=\"collaboration\"")
-        .is_some_and(|c| note < c)),
-      "{xml}"
-    );
-  }
+  assert_eq!(collaborations(&xml), [atlas]);
+  // (her thanks note before the collaboration, as the source prints them)
+  let note = xml.find("<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\"");
+  assert!(
+    note.is_some_and(|note| xml
+      .find("<contact role=\"collaboration\"")
+      .is_some_and(|c| note < c)),
+    "{xml}"
+  );
 }
 
 /// Row N5 of the old reader (the deleted `add_authors_calls_sectioned`: an unmarked line under a labelled entry is appended to it),

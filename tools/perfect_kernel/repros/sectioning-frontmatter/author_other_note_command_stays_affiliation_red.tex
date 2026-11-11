@@ -6,7 +6,8 @@
 % oracle:  pdflatex: 0 errors; "Ann Able*", "Dept", "Ohio State¹", "Bob Baker†", "Dept Y"
 % engines: rust 64zd r5: a creator "Ohio State"; perl: one creator, Ann Able
 % expect:  0 errors; Ann Able with Dept and Ohio State, Bob Baker with Dept Y; each `\thanks` a note
-% status:  RED (64zd r5) -> GREEN (64zd)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: a creator "Ohio State" (its Note "Visiting", the affiliation Dept Y) between Ann Able and Bob Baker; 64zd's guard kept only the counts after DEL1
+% status:  RED (64zd r5) -> GREEN (64zd) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

@@ -39,22 +39,6 @@ fn contact(role: &str, text: &str) -> String {
   format!(r#"<contact name="{name}" role="{role}">{text}</contact>"#)
 }
 
-/// webofc.cls's title page is the `\inst` form: `\inst{n}` names the `n`-th `\institute` entry, the e-mail is its
-/// author's contact and `\fnsep` before a `\thanks` sets nothing (webofc.cls:217, :434-440); the `\thanks` whose whole
-/// content, the e-mail, became the contact is no note (ruling 2026-10-21). Red (int45b; the class read raw): the
-/// personname "Ann Able<sup>,</sup><sup>1</sup>", both institutes on both authors, the e-mail "e-mail: …" in a thanks
-/// note; 78e r1: an empty thanks note beside the e-mail contact. Witnesses 2301.07438, 1411.7792, 2409.01693. Repro
-/// class-bindings/webofc/webofc_authors_take_their_institutes.
-/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
-/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
-#[test]
-fn webofc_authors_take_their_institutes() {
-  repro_with!(
-    "class-bindings/webofc/webofc_authors_take_their_institutes.tex",
-    ("webofc.cls", "class-bindings/webofc/webofc.cls")
-  );
-}
-
 /// webofc's `\sidecaption` sets the float's body beside its caption (webofc.cls:824-857): the caption stays the
 /// figure's `<caption>`, which carries the label, and the class's `\@makecaption` (:788-812) closes the labels with ". "
 /// ("**Figure 1.**", the bold under the class caption fonts knob alone, user ruling 2026-10-22:

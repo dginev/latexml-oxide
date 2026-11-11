@@ -12,7 +12,8 @@
 % engines: rust int135e = 0 errors, 0 warnings, the grade lost silently (the note "Ann Able, , is with Lunar
 %          College."); perl = the grade dropped too (KNOWN_PERL_ERRORS #534)
 % expect:  0 errors, 1 warning (frontmatter:unclaimed "senior member ieee"); the frontmatter unchanged
-% status:  RED (int135e) -> GREEN (106t r2)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: the grade dropped silently (the note "Ann Able, , is with Lunar College."), the drop counted by no Warning; 106t's guard was emptied by DEL1 (its =2 run was RED)
+% status:  RED (int135e) -> GREEN (106t r2) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass[journal]{IEEEtran}
 \begin{document}

@@ -1,7 +1,8 @@
 % An author-block row with a superscript mark that matches no author is kept with the shared creator
 % (OXIDIZED_DESIGN #159), not dropped as an orphaned annotation.
 % witness: none (probe).
-% status:  GREEN (59d)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings, one creator: A. Author holds both "Affiliation one" and "Affiliation two" (authorblock contacts), the unrequested mark's line not the shared creator's; 59's guard never compared its expected creators after DEL1 (name kept: latexml_engine relocate.rs names it)
+% status:  GREEN (59d) -> RED (int160a, HG1)
 % oracle:  pdflatex 0 errors: "1Affiliation one", "2Affiliation two".
 % expect:  0 errors, 0 warnings.
 \documentclass{article}

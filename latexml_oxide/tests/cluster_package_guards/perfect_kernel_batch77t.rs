@@ -50,16 +50,6 @@ fn marked(name: &str, id: &str, mark: &str) -> String {
   format!(r#"{name}<sup xml:id="{id}">{mark}</sup>"#)
 }
 
-/// Rank 7: the thanks-abuse idiom's `$^{n}$`-led affiliation list in a `\thanks` keeps an ordinary superscript of its
-/// text — "10 m²" — where each lead labels its affiliation (2606.00313). GREEN on the 77t base already (62zq had
-/// dropped the "2"); guarded here.
-#[test]
-fn thanks_affiliation_list_keeps_superscripts_in_its_text() {
-  let xml =
-    repro!("sectioning-frontmatter/thanks_affiliation_list_keeps_superscripts_in_its_text.tex");
-  assert_no_merged_names(&xml);
-}
-
 /// Rank 15: names marked `$^{\dag}$`/`$^{\ddag}$` (a text `\dag` an affiliation mark, so the block is a marked one)
 /// over an unmarked institution line: the marks are shown, nothing answering them, and the line is each name's, as the
 /// line prints under all of them (user ruling R12 2026-10-20). Was "Cat ColeUniversity of Somewhere" one creator.

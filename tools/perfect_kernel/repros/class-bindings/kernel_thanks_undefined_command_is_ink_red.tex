@@ -5,7 +5,8 @@
 % engines: rust 92e r1 (8f49d20) = 1 Error, no note (the marker dropped with it); rust 92a5 = 1 Error and the note with
 %          `<ERROR class="undefined">\undefinedcs</ERROR>`; Perl the same (`<contact role="thanks">`)
 % expect:  exactly 1 Error (undefined `\undefinedcs`), 0 warnings; the note kept, holding the error marker
-% status:  RED (92e r1) -> GREEN (92e r2)
+% engines: rust int160a (HG1) = 1 error (undefined \undefinedcs), 0 warnings, but no note: Ann Able's thanks note and its error marker are gone; 92e's guard discarded its conversion after DEL1
+% status:  RED (92e r1) -> GREEN (92e r2) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

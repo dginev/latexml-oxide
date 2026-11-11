@@ -120,27 +120,6 @@ fn a_replaced_authors_words_are_not_wanted() {
   assert_eq!(check_lines(tex), Vec::<String>::new());
 }
 
-/// IEEEtran's binding drops an `\IEEEmembership` grade it cannot place — here inside a `\thanks`, which IEEEtran.cls
-/// prints as "Ann Able, Senior Member, IEEE, is with Lunar College." (`\lx@IEEE@membership@drop`, as Perl drops every
-/// grade): the document's text a binding's macro drops while the document's entry digests is digested once by the check
-/// (`title_page_check::begin_frontmatter_entry_digestion`, `state::note_dropped_argument`) and counted. Distinct path:
-/// a drop inside the entry's digestion, below the frontmatter command. Witnesses 1511.03982, jmlr's `\titletag`
-/// 2211.07413.
-#[test]
-fn a_binding_macro_dropping_the_documents_text_inside_an_entry_is_counted() {
-  repro!("check_binding_macro_drops_inside_an_entry");
-}
-
-/// What a binding's macro drops is wanted only when the document wrote it (`title_page_check::writes`): xkeyval's own
-/// `\@nil`-delimited pieces and `\else…\fi` fragments, which its binding-made internals drop under a raw class's
-/// `\ead[label=e1,mark]{…}`, are none — digested, they looped until the conversion timed out (2101.10506). The one
-/// Warning is 106s's: the kernel's author splitter parts the name at the comma inside `\ead`'s brackets (a content
-/// residual, SYNC 106t; the XML not pinned). Distinct path: the document-text filter.
-#[test]
-fn a_bindings_own_plumbing_is_no_dropped_text() {
-  repro!("check_binding_plumbing_is_no_dropped_text");
-}
-
 /// A drop pdflatex makes too is no loss: one the binding declares on its own definition (`drops => [n]`,
 /// `Expandable::dropped_by_design`, the expansion unchanged), and any kernel macro's (TeX's own). hyperref's `\texorpdfstring{$\Lambda$CDM}
 /// {LambdaCDM}` prints #1 and hands #2 to the PDF bookmarks only: a binding macro's drop while the title's entry digests

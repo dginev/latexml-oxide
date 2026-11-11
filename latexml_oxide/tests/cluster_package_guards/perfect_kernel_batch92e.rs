@@ -278,14 +278,6 @@ fn kernel_thanks_rule_and_frame_are_ink() {
   clean_both_ways(repro!("kernel_thanks_rule_and_frame_are_ink"));
 }
 
-/// An undefined command is no known blank item: the note stays, holding its error marker, and the
-/// conversion reports the one Error (the repro fails pdflatex too: it guards the error path only).
-#[test]
-fn kernel_thanks_undefined_command_is_ink() {
-  let tex = repro!("kernel_thanks_undefined_command_is_ink");
-  let (..) = cli_conversion(tex, false);
-}
-
 /// The frontmatter observer reads a note by the XML's test (`Event::inkless`, OD #837, #916): an
 /// empty `\thanks{}` is no note of its author's but one the ruling dropped (`ruling4:inkless`), and of the
 /// rule-and-frame repro's eight notes the four that print stay, the four blank ones dropped.

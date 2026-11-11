@@ -6,7 +6,8 @@
 % engines: rust 64zd r1: 1 creator; 64zd-base (OmniBus whole): 4, one a bare "**"; perl: "S. F. Pereira", "* Z. Y. Ou",
 %   "** and H. J. Kimble"
 % expect:  0 errors; three creators, "S. F. Pereira*", "Z. Y. Ou**", "H. J. Kimble", each with the address
-% status:  RED (64zd r1) -> GREEN (64zd)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: three creators with the address, but the printed * and ** marks dropped from Pereira and Ou; 64zd's guard kept only the counts after DEL1
+% status:  RED (64zd r1) -> GREEN (64zd) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentstyle[aps]{revtex}
 \begin{document}
