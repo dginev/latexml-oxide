@@ -5,7 +5,10 @@
 %   (`class-bindings/acmart_author_macro_held_and_parts_the_names.tex`). The unlabelled `\affil` after it counted the
 %   call as one queued author (`annotate={run:1}`, `affil_run`, the authors since the last `\affil`, authblk.sty:115-116):
 %   the cut raises that cap by the call's added pieces (`emit::cut_creator_calls`, `run_cap`), so Univ X and Univ Y go to
-%   both names, as pdflatex prints them under the shared mark; Cy Cole's and Dee Dunn's runs stay theirs
+%   both names, as pdflatex prints them under the shared mark; Cy Cole's and Dee Dunn's runs stay theirs. Since P27 (Option
+%   C P2-7) the gate reads the macro-held `\and` by meaning (`separated_by_and`): the call is a list block
+%   (`\lx@add@authors@list`) the reading cuts, the run counting the call (`resolver/api.rs` `record_run`), the same
+%   creators and the two counted Warnings (each name written by its text)
 % witness: review revOC1b S2 (`scratch_revOC1b/src/ablk_macro.tex`, one author, `\affil{Univ X}`; this adds an author
 %   before and after it, and a second `\affil` continuing the run)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Cy Cole1, Ann Able Bob Baker2, and Dee Dunn3", "1Univ C",

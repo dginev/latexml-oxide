@@ -4,7 +4,10 @@
 %   are summed per annotation first, on the queue as it stands, and the annotation rewritten once from the ledger's cap
 %   (`run_cap`, `with_run_cap`): run 2 + 1 + 1 = 4, all four names under Univ X. Round 0 rewrote the annotation per cut
 %   call, and the second call's ledger lookup, keyed by the annotation's tokens the first had already rewritten, found
-%   nothing: Ann Able lost the affiliation, silently. The sibling with two calls spelled alike, each matched to its own
+%   nothing: Ann Able lost the affiliation, silently. Since P27 (Option C P2-7) authblk's gate reads the macro-held `\and`
+%   by meaning (`authblk_sty.rs` `separated_by_and`): each call is a list block the reading cuts, and the run 2 counts the
+%   two calls (`resolver/api.rs` `record_run`; a cap counting the reading's names gave Ann Able and Bob Baker none, as it
+%   did the written `\and`s, `authblk_affil_run_two_lists.tex`). The sibling with two calls spelled alike, each matched to its own
 %   queue entry: `authblk_two_alike_macro_held_calls_each_own_affil.tex`
 % witness: review revOC1c B2 (`scratch_revOC1c/src/a2_twocalls.tex`)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able", "Bob Baker and Cy Cole", "Dee Dunn", "Univ X" (all
@@ -14,7 +17,7 @@
 %   Able (none), Bob Baker, Cy Cole, Dee Dunn (Univ X), 0 errors, 4 warnings
 % expect:  0 errors, 4 warnings (each name written by its text); creators Ann Able, Bob Baker, Cy Cole, Dee Dunn, each
 %   with Univ X
-% status:  RED (OC1c round 0) -> GREEN (OC1c2; guard perfect_kernel_batchoc1c::an_api_creator_call_parts_at_its_own_and)
+% status:  RED (OC1c round 0) -> GREEN (OC1c2; the list path since P27; guard perfect_kernel_batchoc1c::an_api_creator_call_parts_at_its_own_and)
 \documentclass{article}
 \usepackage{authblk}
 \newcommand\autA{Ann Able \and Bob Baker}
