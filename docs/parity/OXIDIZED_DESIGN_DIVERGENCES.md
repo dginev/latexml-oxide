@@ -34481,6 +34481,21 @@ line_marks.rs:16, cut.rs, kind.rs: P4); `classify/separators.rs:212-224`, `name_
 `old_reader/space_parted.rs:205`, ijcai.rs (P3/P4); splits on `\\` alone or commas; `\def\and{…}` meanings (argument
 passing, stays). The scan is heuristic (one macro level, no class-file wrappers).
 
+**P2-2 (P22): not landed; no route changed.** OmniBus's (`inst_support_sty.rs`, which webofc and ieeetj load too) and
+aa's `\institute` still split by spelling. Tried: each list handed to the API in one `labelseq=affiliation` call, aa's
+gate counting `Kernel` separators (`None`: the written `\and`s), the emitter's cut widened to pieces holding a contact,
+mark or note, each piece keyed by the reading's entry text (its own contacts and leading marks out) and cut between
+its two `\and`s as the split cut it. Against the split on 2,903 papers (aa 563, sv 406, OmniBus 200, raw-class 300,
+stage2 1,434): 52 changed (aa 49, webofc 3; none in OmniBus, raw-class or sv), 12 worse. Cause: the emitter's
+state keyed by the call's ledger index treats one cut call's pieces as one entry — `separate`/`by_pieces`/
+`written_again` (a piece's `\email` its own item, placed after every piece) and `in_perl_order` (the pieces of one
+call sorted as one): 33 papers' contacts reordered (0803.4304, 2503.10831); the address take-out's `EntryCut` (the
+whole call cut and written for each piece: 1501.07092, 2312.03835); a creator gained or lost (1010.3154, 2602.02910,
+2309.12272) —, and a call keeps the spaces at its ends the split trimmed (2008.08518, webofc 2111.04743, 2406.15355). Not tried: sv_support's split, whose pieces are no contact call (each piece's `\at` is parsed as it
+expands, `\lx@sv@institute@`, so one call needs that reading moved first), and llncs's (P2-3), whose pieces set their
+own labels from their `\inst` (`\lx@affiliation@withinst`) and hold `\email`s as aa's do. Pins `perfect_kernel_batchp22::an_institute_list_split_by_spelling_today` (repros
+`class-bindings/institute_one_call/`).
+
 Guards `perfect_kernel_batchp20::{the_separator_query_reads_the_kernel_meanings,
 the_separator_query_reads_a_class_meaning_as_raw, the_separator_query_reads_a_binding_meaning,
 a_separator_query_spends_no_reading_budget, a_separator_query_over_an_open_group_is_unread,

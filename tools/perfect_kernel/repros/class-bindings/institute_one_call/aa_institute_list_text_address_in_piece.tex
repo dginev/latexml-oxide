@@ -1,0 +1,22 @@
+% mechanism: aa_cls.rs `\institute` → `\lx@aa@institute@dispatch` (counts the written top-level `\and`s; aa.cls:745-757
+%   `\aa@cntinstitutes` counts the same way), several pieces split by spelling at `\and`/`\And` (`\lx@splitting`), each a
+%   `labelseq=affiliation` contact call; the pin of today's output for Option C P2-2 (P22 stopped short of it: report
+%   2026-11-11_P22)
+%   — an address typed as text after a label in a piece
+% witness: 1010.3154 (`…P. R. China\\e-mail: tyk450@163.com \and …`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, aa.cls of 2405.18257) 0 errors: "1 Univ A, Town / e-mail: ann@a.edu / 2 Univ B, City"
+% engines: Perl 0.8.8 splits by spelling as well (inst_support.sty.ltxml:36-38, which aa_support.sty.ltxml:47 loads);
+%   int158a (2ff10b7ff9) as expected below
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, Town, e-mail ann@a.edu; Bob Baker: Univ B, City
+% status:  GREEN (int158a; guard perfect_kernel_batchp22::an_institute_list_split_by_spelling_today)
+% preload: ar5iv.sty
+\documentclass{aa}
+
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ A, Town\\e-mail: ann@a.edu \and Univ B, City}
+\abstract{Abs.}
+\maketitle
+Text.
+\end{document}
