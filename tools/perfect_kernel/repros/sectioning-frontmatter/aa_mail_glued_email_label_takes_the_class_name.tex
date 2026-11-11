@@ -1,16 +1,21 @@
-% mechanism: the entry-name join's glued-label path (defs/frontmatter_api/kind.rs, the `(None, Some(name))` arm): a
-%   line whose e-mail label is glued to its address (`Email:zz@x.org`) is one address list (`email_addresses` reads it
-%   through its glued-label arm), so `email_line_label` gives no label and the line takes the class's name of the
-%   entry, aa's `\mail` `name={\mailname\ }` (aa_support_sty.rs); before MB1 it fell to the unnamed address call and
-%   was named "Email: ", the class's name printed nowhere. Perl reads no e-mail in `\mail` (aa_support.sty.ltxml:118-119)
-% witness: none in the corpus (synthetic, review revMB1 S1, probe p/a1)
+% mechanism: the entry-name join's glued-label path (defs/frontmatter_api/kind.rs, the `(Some((label, rest)), name)`
+%   arm): a line whose e-mail label is glued to its address (`Email:zz@x.org`) — one address list as `email_addresses`
+%   reads it through its glued-label arm — has its label split off by `email_line_label` (the whole line reads the
+%   same addresses as the rest), and `entry_line_label` joins it after the class's name of the entry, aa's `\mail`
+%   `name={\mailname\ }` (aa_support_sty.rs): "Correspondence to: Email: " holding the address alone, as the spaced
+%   `\mail{Email: zz@x.org}` gives. Before MB1 it fell to the unnamed address call, "Email: " with the class's name
+%   printed nowhere; MB1/MB2 named it by the class alone and kept the label in the content (a `mailto:Email:zz@x.org`).
+%   Perl reads no e-mail in `\mail` (aa_support.sty.ltxml:118-119)
+% witness: none in the corpus (synthetic, review revMB1 S1, probe p/a1; the glued shape's witnesses hep-ph9606235,
+%          astro-ph0001190, hep-ph0411269, 2206.00543)
 % oracle:  pdflatex (TL 2025) 0 errors: "T", "A. Smith", "Univ. X, Y", "Body.", footnote "Correspondence to:
 %          Email:zz@x.org"
 % engines: rust int156a (27ca6acecc) = <contact name="Email: " role="email">; rust MB1 (0da5a8b23c) = <contact
-%          name="Correspondence to " role="email">, the colon lost
-% expect:  0 errors, 0 warnings; A. Smith: Univ. X, Y and <contact name="Correspondence to: " role="email">
-%          Email:zz@x.org
-% status:  RED (MB1) -> GREEN (MB2) — perfect_kernel_batchmb2::glued_label_line_takes_the_class_name
+%          name="Correspondence to " role="email">, the colon lost; rust int157a (d86f58e8e2) = <contact
+%          name="Correspondence to: " role="email">Email:zz@x.org</contact>
+% expect:  0 errors, 0 warnings; A. Smith: Univ. X, Y and <contact name="Correspondence to: Email: " role="email">
+%          zz@x.org</contact>
+% status:  RED (int157a) -> GREEN (GL1) — perfect_kernel_batchmb2::glued_label_line_names_its_contacts
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{aa.cls}
 \NeedsTeXFormat{LaTeX2e}\ProvidesClass{aa}[2010/01/01 v7.0 stand-in]

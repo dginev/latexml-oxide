@@ -1,0 +1,24 @@
+% mechanism: an e-mail label glued to a mailto link names the line's contact (frontmatter/classify/email_block_calls.rs
+%   `email_line_label`; the command-glued sibling of revtex_altaffiliation_glued_email_label_takes_the_class_name.tex):
+%   `Email:\href{mailto:zz@x.org}{zz@x.org}` — `split_email_label` ends the label at its colon, the rest the link, which
+%   reads the same address as the whole line — so the link alone is the contact's content and "Email:" its name. Before
+%   GL1 the label stayed in the content before the link
+% witness: none in the corpus (synthetic; RC-GL probe o_rv_href)
+% oracle:  pdflatex (TL 2025) 0 errors: "T", "Ann Able", "Univ A∗", "A.", "Text.", footnote "∗ Email:zz@x.org"
+% engines: rust int157a (d86f58e8e2) = <contact name="Email: " role="email">Email:<ref class="ltx_href"
+%          href="mailto:zz@x.org">zz@x.org</ref></contact>
+% expect:  0 errors, 0 warnings; Ann Able: Univ A and <contact name="Email: " role="email"><ref class="ltx_href"
+%          href="mailto:zz@x.org">zz@x.org</ref></contact>
+% status:  RED (int157a) -> GREEN (GL1) — perfect_kernel_batchgl1::glued_label_names_a_mailto_link_contact
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ A}
+\altaffiliation{Email:\href{mailto:zz@x.org}{zz@x.org}}
+\begin{abstract}A.\end{abstract}
+\maketitle
+Text.
+\end{document}

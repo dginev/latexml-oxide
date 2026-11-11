@@ -126,11 +126,17 @@ pub(in crate::base_utilities) fn split_email_label(line: &Tokens) -> (Option<Tok
 }
 
 /// A line's leading e-mail label ([`split_email_label`]) where it names the addresses behind it — the rest a list of
-/// addresses the whole line is not — and that rest (`email: a@x, b@y`; `email_line_calls`).
+/// addresses, and the whole line either no list or the same addresses read through its label (the glued label,
+/// `Email:zz@x.org`, the list `[zz@x.org]` as [`email_addresses`] reads it: the label is still the contacts' name,
+/// not part of an address — hep-ph9606235, astro-ph0001190, hep-ph0411269, 2206.00543) — and that rest
+/// (`email: a@x, b@y`; `email_line_calls`).
 pub(in crate::base_utilities) fn email_line_label(line: &Tokens) -> Option<(Tokens, Tokens)> {
   let (label, rest) = split_email_label(line);
   label
-    .filter(|_| email_addresses(line).is_none() && email_addresses(&rest).is_some())
+    .filter(|_| {
+      email_addresses(&rest)
+        .is_some_and(|read| email_addresses(line).is_none_or(|whole| whole == read))
+    })
     .map(|label| (label, rest))
 }
 

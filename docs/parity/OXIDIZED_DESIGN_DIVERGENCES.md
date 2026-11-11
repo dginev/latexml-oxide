@@ -31127,8 +31127,12 @@ observer read some of them (`take_out_entry_addresses`, OD #938), but its writer
   `perfect_kernel_batch131fix::unspaced_list_whose_every_part_spells_an_author_is_written_out`);
   the flush writes an e-mail out only where its two readings (`addresses_in`, `address_take_out`) agree, else it stays
   whole where its call put it (a spaced list not opening the line, `ann@a.edu; dzyang, ashishbshah@fb.com`); an e-mail
-  label glued to an address (`Email:aable@a.edu`, `(E-mail:bogdan@…`, astro-ph0404330) is no part of it, and any other
-  colon before the `@` makes no address; a two-letter surname spells a local part of its letters alone
+  label glued to an address (`Email:aable@a.edu`, `(E-mail:bogdan@…`, astro-ph0404330) is no part of it, and names
+  the line's contacts as a spaced label does (`email_line_label` splits it off where the whole line reads the same
+  addresses as the rest behind it: `\address{Univ A, Town\\ Email:zz@x.org}` gives `<contact name="Email: "
+  role="email">zz@x.org</contact>`, not the label in the content and a `mailto:Email:zz@x.org` — GL1; hep-ph9606235,
+  astro-ph0001190, hep-ph0411269, 2206.00543; guards `perfect_kernel_batchgl1::{glued_label_names_an_address_line_contact,
+  glued_label_names_a_mailto_link_contact}`), and any other colon before the `@` makes no address; a two-letter surname spells a local part of its letters alone
   (`NameKeys::short_surnames`: `an107@` Weili An's, not Anusuya Nallathambi's initials, 2608.22602) — not a name
   particle another word of the name follows (`de`, `la`, `da`, `le`, `di`, `du`: Ana de Souza spells no `de@`, Thanh
   Le's `le@` is his), nor two letters that are a word of the address's own entry, its mailbox (`ai@` under "AI Lab" and
@@ -34015,12 +34019,12 @@ e-mail label's half, `email_line_label`, shared with `email_line_calls`): "Corre
 Correspondence: Contact: " (aa's "Correspondence to: Contact: " since MB2). 2604.04847's `\textbf{Correspondence:} \href{daniel094144@gmail.com}{…}`, which prints an
 address, is the link line's rightly: "Correspondence" is no e-mail label, so `line_addresses` reads no address of the
 line; an e-mail label's line printing a link (`e-mail: \href{mailto:zz@x.org}{zz@x.org}`) is the address reader's
-first, as before. Its link kept, the block's. A line whose label is glued to its address (`Email:zz@x.org`) is one
-address list, so it has no label of its own and takes the class's name of the entry (the arm the line with no label
-takes): aa's `\mail{Email:zz@x.org}` is "Correspondence to: ", REVTeX's `\altaffiliation[Corresponding author:
-]{Email:zz@x.org}` gives Ann's correspondence note "Corresponding author" before the e-mail; before MB1 both were named
-"Email: " and the class's name was printed nowhere (review revMB1 S1, synthetic; guard
-`perfect_kernel_batchmb2::glued_label_line_takes_the_class_name`, repros
+first, as before. Its link kept, the block's. A line whose label is glued to its address (`Email:zz@x.org`) has its
+label split off as the spaced line does (GL1, #956) and joined after the class's name: aa's `\mail{Email:zz@x.org}`
+is "Correspondence to: Email: " holding `zz@x.org`, REVTeX's `\altaffiliation[Corresponding author: ]{Email:zz@x.org}`
+gives Ann's correspondence note "Corresponding author" before the e-mail `zz@x.org` named "Email: "; before MB1 both
+were named "Email: " and the class's name was printed nowhere, and until GL1 the label stayed in the content (review
+revMB1 S1, synthetic; guard `perfect_kernel_batchmb2::glued_label_line_names_its_contacts`, repros
 `sectioning-frontmatter/{aa_mail,revtex_altaffiliation}_glued_email_label_takes_the_class_name.tex`). **The join's space
 (MB2; review revMB1 N1, P2).** The join adds a space after the class's name unless the name's last token is spacing
 (`is_spacing`, which counts `\ `); aa's entry name was `name={\mailname}`, which `kv.revert()` returns unexpanded, so the

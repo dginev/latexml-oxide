@@ -1,0 +1,21 @@
+% mechanism: an e-mail label glued to its address names the contact of an entry's note (defs/frontmatter_api/kind.rs,
+%   the entry's footnotes: `email_line_calls` of the note's line, which takes `email_line_label`'s split): REVTeX's
+%   `\affiliation{Univ A\footnote{Email:zz@x.org}}` gives Ann the contact `zz@x.org` named "Email: ", as the spaced
+%   `\footnote{Email: zz@x.org}` does (the sibling of amsart_address_glued_email_label_names_its_contact.tex on the
+%   note path). Before GL1 the label stayed in the content
+% witness: none in the corpus (synthetic, GL1 caller probe cfoot; amsart's `\address{Univ A, Town\thanks{E-mail:zz@x.org}}`
+%          takes the same path)
+% oracle:  pdflatex (TL 2025) 0 errors: "T", "Ann Able", "Univ A^a", "A.", "Text.", footnote "a Email:zz@x.org"
+% engines: rust int157a (d86f58e8e2) = <contact name="Email: " role="email">Email:zz@x.org</contact>
+% expect:  0 errors, 0 warnings; Ann Able: Univ A and <contact name="Email: " role="email">zz@x.org</contact>
+% status:  RED (int157a) -> GREEN (GL1) — perfect_kernel_batchgl1::glued_label_names_an_entry_note_contact
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ A\footnote{Email:zz@x.org}}
+\begin{abstract}A.\end{abstract}
+\maketitle
+Text.
+\end{document}
